@@ -1,0 +1,34 @@
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: start;
+}
+
+#titlebar {
+  appearance: auto;
+  -moz-default-appearance: -moz-mac-vibrant-titlebar-dark;
+  -moz-font-smoothing-background-color: -moz-mac-vibrant-titlebar-dark;
+  -moz-window-dragging: drag;
+  min-height: 33px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: start;
+}
+
+#buttonbox {
+  appearance: auto;
+  -moz-default-appearance: -moz-window-button-box;
+  margin-left: 12px;
+}
+
+#content {
+  flex: 1;
+}
