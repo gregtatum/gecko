@@ -711,6 +711,13 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
         ]:
             return False
 
+        if task.attributes.get('kind', '') not in [
+            'test',
+            'source-test',
+            'build',
+        ]:
+            return False
+
         if task.optimization is not None and platform != 'macosx64' and 'webrender' in task.optimization.get('test', []):
             return False
 
