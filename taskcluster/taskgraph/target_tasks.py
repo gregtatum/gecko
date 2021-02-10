@@ -710,10 +710,8 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
         # disable asan
         if platform == "linux64-asan":
             return False
-        # disable non-pine and tasks with a shipping phase
-        if standard_filter(task, parameters) or filter_out_shipping_phase(
-            task, parameters
-        ):
+        # disable non-pine
+        if standard_filter(task, parameters):
             return True
 
     return [l for l, t in six.iteritems(full_task_graph.tasks) if filter(t)]
