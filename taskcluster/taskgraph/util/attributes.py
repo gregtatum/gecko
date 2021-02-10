@@ -11,6 +11,7 @@ import six
 
 INTEGRATION_PROJECTS = {
     "autoland",
+    "pine",
 }
 
 TRUNK_PROJECTS = INTEGRATION_PROJECTS | {"mozilla-central", "comm-central"}

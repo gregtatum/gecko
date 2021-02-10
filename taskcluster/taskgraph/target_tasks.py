@@ -703,13 +703,27 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
     """Bug 1339179 - no mobile automation needed on pine"""
 
     def filter(task):
-        platform = task.attributes.get("build_platform")
-        # disable mobile jobs
-        if str(platform).startswith("android"):
+        platform = task.attributes.get('build_platform', '')
+        if platform not in [
+            'win64',
+            'linux64',
+            'macosx64',
+        ]:
             return False
-        # disable asan
-        if platform == "linux64-asan":
+
+        if task.optimization is not None and platform != 'macosx64' and 'webrender' in task.optimization.get('test', []):
             return False
+
+        if 'unittest_suite' in task.attributes:
+            if task.attributes['unittest_suite'] not in [
+                'xpcshell',
+                'mochitest-browser-chrome',
+            ]:
+                return False
+
+            if task.attributes.get('unittest_variant', '') != '':
+                return False
+
         return True
 
     return [
