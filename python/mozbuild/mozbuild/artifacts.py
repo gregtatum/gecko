@@ -103,6 +103,7 @@ PROCESSED_SUFFIX = ".processed.jar"
 class ArtifactJob(object):
     trust_domain = "gecko"
     candidate_trees = [
+        "projects/pine",
         "mozilla-central",
         "integration/autoland",
         "releases/mozilla-beta",

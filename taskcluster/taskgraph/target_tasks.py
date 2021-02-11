@@ -706,8 +706,11 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
         platform = task.attributes.get('build_platform', '')
         if platform not in [
             'win64',
+            'win64-shippable',
             'linux64',
+            'linux64-shippable',
             'macosx64',
+            'macosx64-shippable',
         ]:
             return False
 
@@ -740,7 +743,7 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
         if filter_out_cron(t, parameters)
         and filter_for_hg_branch(t, parameters)
         and filter_tests_without_manifests(t, parameters)
-        # and filter_out_shipping_phase(t, parameters)
+        and filter_out_shipping_phase(t, parameters)
         and filter_out_devedition(t, parameters)
         and filter(t)
     ]
