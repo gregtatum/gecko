@@ -12,109 +12,29 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
-  PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
+  //  PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
   Keyframes: "resource:///modules/Keyframes.jsm",
   Services: "resource://gre/modules/Services.jsm",
   setTimeout: "resource://gre/modules/Timer.jsm",
   clearTimeout: "resource://gre/modules/Timer.jsm",
 });
 
+XPCOMUtils.defineLazyGetter(this, "log", () => {
+  let { ConsoleAPI } = ChromeUtils.import("resource://gre/modules/Console.jsm");
+  return new ConsoleAPI({
+    prefix: "Engagement",
+    maxLogLevel: "debug",
+  });
+});
+
 const DOMWINDOW_OPENED_TOPIC = "domwindowopened";
 
 const ENGAGEMENT_TIMER = 5 * 1000; // 10 seconds
 
-let EngagementListener = {
+let Engagement = {
   _currentTimer: null,
   _currentURL: null,
 
-  isHttpURI(uri) {
-    // Only consider http(s) schemas.
-    return uri.schemeIs("http") || uri.schemeIs("https");
-  },
-
-  // DETERMINE LATER IF onStageChange is better than onLocationChange
-  /*
-  onStateChange(browser, webProgress, request, stateFlags, status) {
-    if (
-      !webProgress.isTopLevel ||
-      !(stateFlags & Ci.nsIWebProgressListener.STATE_STOP) ||
-      !(stateFlags & Ci.nsIWebProgressListener.STATE_IS_WINDOW)
-    ) {
-      return;
-    }
-
-    if (!(request instanceof Ci.nsIChannel) || !this.isHttpURI(request.URI)) {
-      return;
-    }
-
-//    Components.utils.reportError("state:" + request.originalURI.specIgnoringRef);
-  },
-*/
-
-  onLocationChange(browser, webProgress, request, uri, flags) {
-    // Don't count this URI if it's an error page.
-    if (flags & Ci.nsIWebProgressListener.LOCATION_CHANGE_ERROR_PAGE) {
-      return;
-    }
-
-    // Don't count non https URLs
-    if (!this.isHttpURI(uri)) {
-      return;
-    }
-
-    // We only care about top level loads.
-    if (!webProgress.isTopLevel) {
-      return;
-    }
-
-    // The SessionStore sets the URI of a tab first, firing onLocationChange the
-    // first time, then manages content loading using its scheduler. Once content
-    // loads, we will hit onLocationChange again.
-    // We can catch the first case by checking for null requests: be advised that
-    // this can also happen when navigating page fragments, so account for it.
-    if (
-      !request &&
-      !(flags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT)
-    ) {
-      return;
-    }
-
-    if (PrivateBrowsingUtils.isWindowPrivate(browser.ownerGlobal)) {
-      return;
-    }
-
-    if (this._currentURL != uri.specIgnoringRef) {
-      this.clearEngagementTimerIf();
-      EngagementListener._currentURL = null;
-      this.startEngagementTimer(uri);
-      this._currentURL = uri.specIgnoringRef;
-    }
-  },
-
-  QueryInterface: ChromeUtils.generateQI([
-    "nsIWebProgressListener",
-    "nsISupportsWeakReference",
-  ]),
-
-  clearEngagementTimerIf() {
-    if (this._currentTimer) {
-      clearTimeout(this._currentTimer);
-      this._currentTimer = null;
-    }
-  },
-
-  startEngagementTimer(uri) {
-    if (!this.isHttpURI(uri)) {
-      return;
-    }
-    this._currentTimer = setTimeout(function() {
-      Cu.reportError("ENGAGED WITH:" + uri.specIgnoringRef);
-      Keyframes.add(uri.specIgnoringRef);
-    }, ENGAGEMENT_TIMER);
-  },
-};
-
-let Engagement = {
   _inited: false,
 
   init() {
@@ -147,20 +67,22 @@ let Engagement = {
       case "TabSelect":
         {
           let tab = event.target;
-          EngagementListener.clearEngagementTimerIf();
-          EngagementListener.startEngagementTimer(tab.linkedBrowser.currentURI);
+          this.clearEngagementTimerIf();
+          this.startEngagementTimer(tab.linkedBrowser.currentURI);
         }
         break;
       case "focus":
         var win = event.target;
-        if (win.defaultView) {
-          let tab = win.defaultView.gBrowser.selectedTab;
-          EngagementListener.startEngagementTimer(tab.linkedBrowser.currentURI);
+        if (event.target instanceof Ci.nsIDOMWindow) {
+          if (win.defaultView) {
+            let tab = win.defaultView.gBrowser.selectedTab;
+            this.startEngagementTimer(tab.linkedBrowser.currentURI);
+          }
         }
         break;
       case "blur":
         if (event.target instanceof Ci.nsIDOMWindow) {
-          EngagementListener.clearEngagementTimerIf();
+          this.clearEngagementTimerIf();
         }
         break;
       case "unload":
@@ -188,14 +110,12 @@ let Engagement = {
     win.addEventListener("TabSelect", this, true);
     win.addEventListener("blur", this, true);
     win.addEventListener("focus", this, true);
-    win.gBrowser.addTabsProgressListener(EngagementListener);
   },
 
   _unregisterWindow(win) {
     win.removeEventListener("TabSelect", this, true);
     win.removeEventListener("blur", this, true);
     win.removeEventListener("focus", this, true);
-    win.defaultView.gBrowser.removeTabsProgressListener(EngagementListener);
   },
 
   _onWindowOpen(win) {
@@ -218,5 +138,40 @@ let Engagement = {
       this._registerWindow(win);
     };
     win.addEventListener("load", onLoad);
+  },
+
+  startTimer(msg) {
+    if (this._currentURL != msg.url) {
+      this.clearEngagementTimerIf();
+      this._currentURL = null;
+      this.startEngagementTimer(Services.io.newURI(msg.url));
+      this._currentURL = msg._currentURL;
+    }
+  },
+  isHttpURI(uri) {
+    // Only consider http(s) schemas.
+    return uri.schemeIs("http") || uri.schemeIs("https");
+  },
+
+  clearEngagementTimerIf() {
+    if (this._currentTimer) {
+      log.debug("Clearing timer " + this._currentTimer);
+      clearTimeout(this._currentTimer);
+      this._currentTimer = null;
+    }
+  },
+
+  startEngagementTimer(uri) {
+    if (!this.isHttpURI(uri)) {
+      return;
+    }
+    this._currentTimer = setTimeout(function() {
+      log.debug("ENGAGED WITH:" + uri.specIgnoringRef);
+      Keyframes.add(uri.specIgnoringRef, "automatic");
+      Engagement._currentTimer = null;
+    }, ENGAGEMENT_TIMER);
+    log.debug(
+      "started timer " + this._currentTimer + " for " + uri.specIgnoringRef
+    );
   },
 };

@@ -485,6 +485,19 @@ let JSWINDOWACTORS = {
     allFrames: true,
   },
 
+  Engagement: {
+    parent: {
+      moduleURI: "resource:///actors/EngagementParent.jsm",
+    },
+    child: {
+      moduleURI: "resource:///actors/EngagementChild.jsm",
+      events: {
+        DOMContentLoaded: {},
+        pageshow: { mozSystemGroup: true },
+      },
+    },
+  },
+
   FormValidation: {
     parent: {
       moduleURI: "resource:///actors/FormValidationParent.jsm",

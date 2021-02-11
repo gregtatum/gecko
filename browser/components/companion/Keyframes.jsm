@@ -26,7 +26,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   AsyncShutdown: "resource://gre/modules/AsyncShutdown.jsm",
 });
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 /**
  * All SQL statements should be defined here.
@@ -38,10 +38,12 @@ const SQL = {
     "CREATE TABLE keyframes (" +
     "id INTEGER PRIMARY KEY, " +
     "timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
-    "url TEXT NOT NULL" +
+    "url TEXT NOT NULL, " +
+    "type TEXT NOT NULL, " +
+    "thumbnail TEXT " +
     ");",
 
-  add: "INSERT INTO keyframes (url) VALUES (:url);",
+  add: "INSERT INTO keyframes (url, type) VALUES (:url, :type);",
 
   selectAll: "SELECT * FROM keyframes;",
 };
@@ -49,11 +51,11 @@ const SQL = {
 var Keyframes = {
   _db: null,
 
-  async add(url) {
+  async add(url, type, thumbnail) {
     if (!this._db) {
       await this.init();
     }
-    await this._db.executeCached(SQL.add, { url });
+    await this._db.executeCached(SQL.add, { url, type });
     Services.obs.notifyObservers(null, "keyframe-update");
   },
 
@@ -82,7 +84,7 @@ var Keyframes = {
         // version is undefined.
         if (dbVersion > 0) {
           // Blow away the existing database.
-          await db.execite(SQL.dropTables);
+          await db.execute(SQL.dropTables);
         }
         await db.execute(SQL.createTables);
       }
