@@ -21,13 +21,34 @@
 >
 <head>
   <title>Firefox Companion</title>
+  <script src="chrome://browser/content/utilityOverlay.js"/>
+  <script src="companion.js"/>
 </head>
 <body>
+  <template id="template-keyframe">
+    <div class="top">
+      <img class="favicon"/>
+    </div>
+    <div class="middle">
+      <img class="richicon"/>
+    </div>
+    <div class="bottom">
+      <p class="title"/>
+    </div>
+  </template>
+
   <div id="titlebar">
-    <div id="buttonbox"></div>
+    <div id="buttonbox"/>
   </div>
   <div id="content">
+    <div id="today" class="keyframe-section">
+      <h2>Today</h2>
+      <div class="keyframe-list"/>
+    </div>
+    <div id="yesterday" class="keyframe-section">
+      <h2>Yesterday</h2>
+      <div class="keyframe-list"/>
+    </div>
   </div>
-  <script type="application/javascript" src="companion.js"></script>
 </body>
 </html>

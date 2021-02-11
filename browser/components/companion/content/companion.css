@@ -5,6 +5,7 @@ html,
 body {
   padding: 0;
   margin: 0;
+  overflow: hidden;
 }
 
 body {
@@ -12,6 +13,8 @@ body {
   flex-direction: column;
   align-items: stretch;
   justify-content: start;
+  height: 100vh;
+  width: 100vw;
 }
 
 #titlebar {
@@ -34,4 +37,69 @@ body {
 
 #content {
   flex: 1;
+  overflow-y: auto;
+  padding: 5px 10px;
+}
+
+.keyframes h2 {
+  position: sticky;
+  top: 0;
+}
+
+.keyframe-list {
+  display: grid;
+  grid-auto-rows: 1fr;
+  grid-gap: 10px;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, 150px);
+}
+
+.keyframe {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  cursor: default;
+}
+
+.keyframe .top {
+  align-self: start;
+  display: flex;
+  flex-direction: row;
+  align-items: start;
+  justify-content: start;
+  padding-bottom: 5px;
+}
+
+.keyframe .top img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  object-position: 50% 50%;
+}
+
+.keyframe .middle {
+  align-self: center;
+}
+
+.keyframe .middle img {
+  width: 100px;
+  height: 75px;
+  border: 1px solid black;
+  background: white;
+  object-fit: contain;
+  object-position: 50% 50%;
+}
+
+.keyframe .bottom {
+  flex: 1;
+  padding-top: 5px;
+}
+
+.keyframe .bottom p {
+  text-align: center;
+  width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  margin: 0;
 }

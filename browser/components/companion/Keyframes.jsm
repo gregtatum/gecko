@@ -9,7 +9,7 @@ var EXPORTED_SYMBOLS = ["Keyframes"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
-//const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 ChromeUtils.defineModuleGetter(this, "OS", "resource://gre/modules/osfile.jsm");
 ChromeUtils.defineModuleGetter(
@@ -26,15 +26,18 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   AsyncShutdown: "resource://gre/modules/AsyncShutdown.jsm",
 });
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 /**
  * All SQL statements should be defined here.
  */
 const SQL = {
+  dropTables: "DROP TABLE keyframes;",
+
   createTables:
     "CREATE TABLE keyframes (" +
     "id INTEGER PRIMARY KEY, " +
+    "timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
     "url TEXT NOT NULL" +
     ");",
 
@@ -51,13 +54,20 @@ var Keyframes = {
       await this.init();
     }
     await this._db.executeCached(SQL.add, { url });
+    Services.obs.notifyObservers(null, "keyframe-update");
   },
 
   async query() {
     if (!this._db) {
       await this.init();
     }
-    return this._db.executeCached(SQL.selectAll, {});
+
+    let records = await this._db.executeCached(SQL.selectAll, {});
+    return records.map(record => ({
+      id: record.getResultByName("id"),
+      url: record.getResultByName("url"),
+      timestamp: new Date(record.getResultByName("timestamp")),
+    }));
   },
 
   async init() {
@@ -67,13 +77,14 @@ var Keyframes = {
       // Check to see if we need to perform any migrations.
       let dbVersion = parseInt(await db.getSchemaVersion());
 
-      // getSchemaVersion() returns a 0 int if the schema
-      // version is undefined.
-      if (dbVersion === 0) {
-        await await db.execute(SQL.createTables);
-      } else if (dbVersion < SCHEMA_VERSION) {
-        // TODO
-        // await upgradeDatabase(db, dbVersion, SCHEMA_VERSION);
+      if (dbVersion < SCHEMA_VERSION) {
+        // getSchemaVersion() returns a 0 int if the schema
+        // version is undefined.
+        if (dbVersion > 0) {
+          // Blow away the existing database.
+          await db.execite(SQL.dropTables);
+        }
+        await db.execute(SQL.createTables);
       }
 
       await db.setSchemaVersion(SCHEMA_VERSION);
