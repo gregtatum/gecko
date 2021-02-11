@@ -43,6 +43,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   DownloadsViewableInternally:
     "resource:///modules/DownloadsViewableInternally.jsm",
   E10SUtils: "resource://gre/modules/E10SUtils.jsm",
+  Engagement: "resource:///modules/Engagement.jsm",
   ExtensionsUI: "resource:///modules/ExtensionsUI.jsm",
   ExperimentAPI: "resource://messaging-system/experiments/ExperimentAPI.jsm",
   FeatureGate: "resource://featuregates/FeatureGate.jsm",
@@ -2114,6 +2115,7 @@ BrowserGlue.prototype = {
     }
 
     BrowserUsageTelemetry.uninit();
+    Engagement.uninit();
     SearchSERPTelemetry.uninit();
     PageThumbs.uninit();
     NewTabUtils.uninit();
@@ -2309,6 +2311,7 @@ BrowserGlue.prototype = {
     this._windowsWereRestored = true;
 
     BrowserUsageTelemetry.init();
+    Engagement.init();
     SearchSERPTelemetry.init();
 
     ExtensionsUI.init();

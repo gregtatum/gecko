@@ -8,4 +8,6 @@ JAR_MANIFESTS += ["jar.mn"]
 
 EXTRA_JS_MODULES += [
     "CompanionService.jsm",
+    "Engagement.jsm",
+    "Keyframes.jsm",
 ]
