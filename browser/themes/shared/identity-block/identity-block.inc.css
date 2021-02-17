@@ -67,8 +67,7 @@
   padding-inline: calc(@identityBoxPaddingInline@ / 2);
 }
 
-#identity-box[pageproxystate="valid"].chromeUI #identity-icon-label,
-.urlbar-label {
+#identity-box[pageproxystate="valid"].chromeUI #identity-icon-label {
   opacity: .6;
 }
 
@@ -81,8 +80,7 @@
 
 #identity-box[pageproxystate="valid"].notSecureText,
 #identity-box[pageproxystate="valid"].chromeUI,
-#identity-box[pageproxystate="valid"].extensionPage,
-#urlbar-label-box {
+#identity-box[pageproxystate="valid"].extensionPage {
   margin-inline-end: 8px;
   border-inline-end: 1px solid var(--urlbar-separator-color);
   border-image: linear-gradient(transparent 15%, var(--urlbar-separator-color) 15%, var(--urlbar-separator-color) 85%, transparent 85%);
@@ -93,25 +91,6 @@
 #identity-box[pageproxystate="valid"].chromeUI > #identity-icon-box,
 #identity-box[pageproxystate="valid"].extensionPage > #identity-icon-box {
   padding-inline: 8px;
-}
-
-#urlbar-label-box {
-  padding-inline: 4px;
-  border-inline-start: 1px solid var(--urlbar-separator-color);
-}
-
-#urlbar[searchmode]:not([breakout-extend]) > #urlbar-input-container > #urlbar-label-box {
-  border-inline-start-color: transparent;
-  border-image-width: 0 1px 0 0;
-  pointer-events: none;
-}
-
-#urlbar[searchmode]:not([breakout-extend]) > #urlbar-input-container > #urlbar-label-box:-moz-locale-dir(rtl) {
-  border-image-width: 0 0 0 1px;
-}
-
-.urlbar-label {
-  margin: 0;
 }
 
 .sharing-icon,

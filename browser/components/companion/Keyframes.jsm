@@ -68,7 +68,10 @@ var Keyframes = {
     return records.map(record => ({
       id: record.getResultByName("id"),
       url: record.getResultByName("url"),
-      timestamp: new Date(record.getResultByName("timestamp")),
+      timestamp: new Date(
+        // SQLITE stores dates in UTC.
+        record.getResultByName("timestamp").replace(" ", "T") + "Z"
+      ),
     }));
   },
 

@@ -1,0 +1,23 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+%filter substitution
+%define identityBoxPaddingInline 6px
+%define identityBoxMarginInline 3px
+%define lwtPopupBrighttextLinkColor #74c0ff
+%define themeTransition background-color 0.1s cubic-bezier(.17,.67,.83,.67)
+%define urlbarBreakoutExtend 2px
+
+%include ../../../themes/shared/urlbar-searchbar.inc.css
+%include ../../../themes/shared/urlbarView.inc.css
+%include ../../../base/content/urlbar.inc.css
+
+@import url("chrome://browser/content/urlbar.css");
+
+:root {
+  --urlbar-separator-color: hsla(0,0%,16%,.2);
+  --arrowpanel-dimmed: hsla(0,0%,80%,.35);
+  --arrowpanel-dimmed-further: hsla(0,0%,80%,.5);
+  --arrowpanel-dimmed-even-further: hsla(0,0%,80%,.8);
+}

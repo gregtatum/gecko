@@ -7,6 +7,11 @@
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   Keyframes: "resource:///modules/Keyframes.jsm",
+  UrlbarInput: "resource:///modules/UrlbarInput.jsm",
+  UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
+  UrlbarProviderSearchTips: "resource:///modules/UrlbarProviderSearchTips.jsm",
+  UrlbarTokenizer: "resource:///modules/UrlbarTokenizer.jsm",
+  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
 });
 
 XPCOMUtils.defineLazyServiceGetters(this, {
@@ -153,14 +158,41 @@ async function update() {
   updateList("yesterday", yesterdayFrames);
 }
 
-function init() {
-  Services.obs.addObserver(update, "keyframe-update");
-  window.addEventListener("load", update, { once: true });
-  window.addEventListener("unload", destroy, { once: true });
+let gBrowserInit = {
+  delayedStartupFinished: true,
+};
+window.gBrowserInit = gBrowserInit;
+
+function isInitialPage(url) {
+  if (!(url instanceof Ci.nsIURI)) {
+    try {
+      url = Services.io.newURI(url);
+    } catch (ex) {
+      return false;
+    }
+  }
+
+  if (url.spec == "about:blank") {
+    return true;
+  }
+  return false;
 }
 
-function destroy() {
+function onLoad() {
+  window.gURLBar = new UrlbarInput({
+    textbox: document.getElementById("urlbar"),
+    eventTelemetryCategory: "urlbar",
+    isInitialPage,
+  });
+
+  update();
+  Services.obs.addObserver(update, "keyframe-update");
+
+  window.addEventListener("unload", onUnload, { once: true });
+}
+
+function onUnload() {
   Services.obs.removeObserver(update, "keyframe-update");
 }
 
-init();
+window.addEventListener("load", onLoad, { once: true });

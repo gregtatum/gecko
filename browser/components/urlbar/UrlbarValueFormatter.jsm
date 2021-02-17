@@ -18,6 +18,8 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
 });
 
+const MetadataCache = new WeakMap();
+
 /**
  * Applies URL highlighting and other styling to the text in the urlbar input,
  * depending on the text.
@@ -54,7 +56,7 @@ class UrlbarValueFormatter {
     // Service.search before first paint (delayed startup) because there's a
     // performance test that prohibits it, so first bail if delayed startup
     // isn't finished.
-    if (!this.window.gBrowserInit.delayedStartupFinished) {
+    if (!this.urlbarInput.browserManager.delayedStartupFinished) {
       return;
     }
     if (!Services.search.isInitialized) {
@@ -133,15 +135,16 @@ class UrlbarValueFormatter {
     }
 
     let url = this.inputField.value;
-    let browser = this.window.gBrowser.selectedBrowser;
+    let browser = this.urlbarInput.browserManager.selectedBrowser;
 
     // Since doing a full URIFixup and offset calculations is expensive, we
     // keep the metadata cached in the browser itself, so when switching tabs
     // we can skip most of this.
-    if (browser._urlMetaData && browser._urlMetaData.url == url) {
-      return browser._urlMetaData.data;
+    let metadata = MetadataCache.get(browser);
+    if (metadata && metadata.url == url) {
+      return metadata.data;
     }
-    browser._urlMetaData = { url, data: null };
+    MetadataCache.set(browser, { url, data: null });
 
     // Get the URL from the fixup service:
     let flags =
@@ -205,7 +208,7 @@ class UrlbarValueFormatter {
       }
       try {
         this._inGetUrlMetaData = true;
-        this.window.gBrowser.userTypedValue = null;
+        this.urlbarInput.browserManager.userTypedValue = null;
         this.urlbarInput.setURI(uriInfo.fixedURI);
         return this._getUrlMetaData();
       } finally {
@@ -213,14 +216,16 @@ class UrlbarValueFormatter {
       }
     }
 
-    return (browser._urlMetaData.data = {
+    metadata = {
       domain,
       origin: uriInfo.fixedURI.host,
       preDomain,
       schemeWSlashes,
       trimmedLength,
       url,
-    });
+    };
+    MetadataCache.set(browser, metadata);
+    return metadata;
   }
 
   _removeURLFormat() {
@@ -286,7 +291,7 @@ class UrlbarValueFormatter {
     if (
       this.urlbarInput.getAttribute("pageproxystate") == "valid" &&
       url.startsWith("https:") &&
-      this.window.gBrowser.securityUI.state &
+      this.urlbarInput.browserManager.selectedBrowser.securityUIState &
         Ci.nsIWebProgressListener.STATE_LOADED_MIXED_ACTIVE_CONTENT
     ) {
       let range = this.document.createRange();

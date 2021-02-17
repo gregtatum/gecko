@@ -13,7 +13,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 
 const CompanionService = {
   openCompanion() {
-    let container = Services.wm.getMostRecentWindow("Firefox:Container");
+    let container = Services.wm.getMostRecentWindow("Firefox:Companion");
 
     if (container && !container.closed) {
       container.focus();
@@ -24,7 +24,7 @@ const CompanionService = {
       null,
       "chrome://browser/content/companion/companion.xhtml",
       "_blank",
-      "chrome,all,dialog=no,resizable=yes",
+      "chrome,all,dialog=no,resizable=yes,toolbar=yes",
       null
     );
   },

@@ -6,6 +6,8 @@
 <?xml-stylesheet href="chrome://global/skin/global.css"?>
 
 <?xml-stylesheet href="chrome://global/skin/in-content/common.css"?>
+<?xml-stylesheet href="chrome://browser/content/companion/awesomebar.css"?>
+<?xml-stylesheet href="chrome://browser/skin/searchbar.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/content/companion/companion.css"?>
 
 <!DOCTYPE html>
@@ -13,16 +15,18 @@
 <html
   id="companion"
   xmlns="http://www.w3.org/1999/xhtml"
+  xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   width="800" height="600"
   forcedarkmode="true"
   chromemargin="0,-1,-1,-1"
-  windowtype="Firefox:Container"
+  windowtype="Firefox:Companion"
   persist="screenX screenY width height sizemode"
 >
 <head>
   <title>Firefox Companion</title>
   <script src="chrome://browser/content/utilityOverlay.js"/>
   <script src="companion.js"/>
+  <link rel="localization" href="browser/browser.ftl"/>
 </head>
 <body>
   <template id="template-keyframe">
@@ -40,6 +44,52 @@
   <div id="titlebar">
     <div id="buttonbox"/>
   </div>
+  <xul:toolbar id="awesomebar">
+    <xul:toolbaritem id="urlbar-container" flex="1">
+      <xul:hbox id="urlbar" flex="1"
+                context=""
+                focused="true"
+                pageproxystate="invalid">
+        <xul:hbox id="urlbar-background"/>
+        <xul:hbox id="urlbar-input-container"
+                  flex="1"
+                  pageproxystate="invalid">
+          <xul:box id="urlbar-search-button"
+                class="chromeclass-toolbar-additional"/>
+          <xul:box id="urlbar-label-box" align="center">
+            <xul:label id="urlbar-label-switchtab" class="urlbar-label" data-l10n-id="urlbar-switch-to-tab"/>
+            <xul:label id="urlbar-label-extension" class="urlbar-label" data-l10n-id="urlbar-extension"/>
+            <xul:label id="urlbar-label-search-mode" class="urlbar-label"/>
+          </xul:box>
+          <div id="urlbar-search-mode-indicator">
+            <span id="urlbar-search-mode-indicator-title"/>
+            <div id="urlbar-search-mode-indicator-close"
+                class="close-button"
+                role="button"/>
+          </div>
+          <xul:moz-input-box tooltip="aHTMLTooltip"
+                        class="urlbar-input-box"
+                        flex="1"
+                        role="combobox"
+                        aria-owns="urlbar-results">
+            <input id="urlbar-scheme"
+                  required="required"/>
+            <input id="urlbar-input"
+                  anonid="input"
+                  aria-controls="urlbar-results"
+                  aria-autocomplete="both"
+                  inputmode="mozAwesomebar"
+                  data-l10n-id="urlbar-placeholder"
+                  data-l10n-attrs="placeholder"/>
+          </xul:moz-input-box>
+          <xul:image id="urlbar-go-button"
+                    class="urlbar-icon"
+                    onclick="gURLBar.handleCommand(event);"
+                    data-l10n-id="urlbar-go-button"/>
+        </xul:hbox>
+      </xul:hbox>
+    </xul:toolbaritem>
+  </xul:toolbar>
   <div id="content">
     <div id="today" class="keyframe-section">
       <h2>Today</h2>
