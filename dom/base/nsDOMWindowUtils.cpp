@@ -105,7 +105,6 @@
 #include "nsIBaseWindow.h"
 #include "nsIDocShellTreeOwner.h"
 #include "nsIInterfaceRequestorUtils.h"
-#include "GeckoProfiler.h"
 #include "mozilla/Preferences.h"
 #include "nsContentPermissionHelper.h"
 #include "nsCSSPseudoElements.h"  // for PseudoStyleType
@@ -121,6 +120,8 @@
 #include "mozilla/gfx/GPUProcessManager.h"
 #include "mozilla/dom/TimeoutManager.h"
 #include "mozilla/PreloadedStyleSheet.h"
+#include "mozilla/ProfilerLabels.h"
+#include "mozilla/ProfilerMarkers.h"
 #include "mozilla/layers/WebRenderBridgeChild.h"
 #include "mozilla/layers/WebRenderLayerManager.h"
 #include "mozilla/DisplayPortUtils.h"
@@ -1363,6 +1364,11 @@ nsDOMWindowUtils::CompareCanvases(nsISupports* aCanvas1, nsISupports* aCanvas2,
   RefPtr<DataSourceSurface> img1 = CanvasToDataSourceSurface(canvas1);
   RefPtr<DataSourceSurface> img2 = CanvasToDataSourceSurface(canvas2);
 
+  if (img1 == nullptr || img2 == nullptr ||
+      img1->GetSize() != img2->GetSize()) {
+    return NS_ERROR_FAILURE;
+  }
+
   if (img1->Equals(img2)) {
     // They point to the same underlying content.
     return NS_OK;
@@ -1371,8 +1377,7 @@ nsDOMWindowUtils::CompareCanvases(nsISupports* aCanvas1, nsISupports* aCanvas2,
   DataSourceSurface::ScopedMap map1(img1, DataSourceSurface::READ);
   DataSourceSurface::ScopedMap map2(img2, DataSourceSurface::READ);
 
-  if (img1 == nullptr || img2 == nullptr || !map1.IsMapped() ||
-      !map2.IsMapped() || img1->GetSize() != img2->GetSize() ||
+  if (!map1.IsMapped() || !map2.IsMapped() ||
       map1.GetStride() != map2.GetStride()) {
     return NS_ERROR_FAILURE;
   }

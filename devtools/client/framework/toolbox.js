@@ -836,6 +836,7 @@ Toolbox.prototype = {
       this._buildTabs();
       this._applyCacheSettings();
       this._applyServiceWorkersTestingSettings();
+      this._applyJavascriptEnabledSettings();
       this._addWindowListeners();
       this._addChromeEventHandlerEvents();
       this._registerOverlays();
@@ -929,11 +930,7 @@ Toolbox.prototype = {
         // Request the actor to restore the focus to the content page once the
         // target is detached. This typically happens when the console closes.
         // We restore the focus as it may have been stolen by the console input.
-        await this.target.reconfigure({
-          options: {
-            restoreFocus: true,
-          },
-        });
+        await this.targetList.updateConfiguration({ restoreFocus: true });
       }
 
       // Lazily connect to the profiler here and don't wait for it to complete,
@@ -1644,18 +1641,13 @@ Toolbox.prototype = {
     const openedConsolePanel = this.currentToolId === "webconsole";
 
     if (openedConsolePanel) {
-      deck.setAttribute("collapsed", "true");
-      splitter.setAttribute("hidden", "true");
-      webconsolePanel.removeAttribute("collapsed");
+      deck.collapsed = true;
+      splitter.hidden = true;
+      webconsolePanel.collapsed = false;
     } else {
-      deck.removeAttribute("collapsed");
-      if (this.splitConsole) {
-        webconsolePanel.removeAttribute("collapsed");
-        splitter.removeAttribute("hidden");
-      } else {
-        webconsolePanel.setAttribute("collapsed", "true");
-        splitter.setAttribute("hidden", "true");
-      }
+      deck.collapsed = false;
+      splitter.hidden = !this.splitConsole;
+      webconsolePanel.collapsed = !this.splitConsole;
     }
   },
 
@@ -2064,11 +2056,7 @@ Toolbox.prototype = {
     const pref = "devtools.cache.disabled";
     const cacheDisabled = Services.prefs.getBoolPref(pref);
 
-    await this.target.reconfigure({
-      options: {
-        cacheDisabled: cacheDisabled,
-      },
-    });
+    await this.targetList.updateConfiguration({ cacheDisabled });
 
     // This event is only emitted for tests in order to know when to reload
     if (flags.testing) {
@@ -2083,11 +2071,16 @@ Toolbox.prototype = {
   _applyServiceWorkersTestingSettings: function() {
     const pref = "devtools.serviceWorkers.testing.enabled";
     const serviceWorkersTestingEnabled = Services.prefs.getBoolPref(pref);
-    this.target.reconfigure({
-      options: {
-        serviceWorkersTestingEnabled,
-      },
-    });
+    this.targetList.updateConfiguration({ serviceWorkersTestingEnabled });
+  },
+
+  /**
+   * Read the initial javascriptEnabled configuration from the current target
+   * and forward it to the configuration actor.
+   */
+  _applyJavascriptEnabledSettings: function() {
+    const javascriptEnabled = this.target._javascriptEnabled;
+    this.targetList.updateConfiguration({ javascriptEnabled });
   },
 
   /**
@@ -2132,10 +2125,8 @@ Toolbox.prototype = {
       this.telemetry.toolClosed("paintflashing", this.sessionId, this);
     }
     this.isPaintFlashing = !this.isPaintFlashing;
-    return this.target.reconfigure({
-      options: {
-        paintFlashing: this.isPaintFlashing,
-      },
+    return this.targetList.updateConfiguration({
+      paintFlashing: this.isPaintFlashing,
     });
   },
 
@@ -3747,8 +3738,6 @@ Toolbox.prototype = {
       { onAvailable: this._onResourceAvailable }
     );
 
-    this.targetList.destroy();
-
     // Unregister buttons listeners
     this.toolbarButtons.forEach(button => {
       if (typeof button.teardown == "function") {
@@ -3810,6 +3799,12 @@ Toolbox.prototype = {
             // This is done after other destruction tasks since it may tear down
             // fronts and the debugger transport which earlier destroy methods may
             // require to complete.
+            //
+            // For similar reasons, only destroy the target-list after every
+            // other outstanding cleanup is done. Destroying the target list
+            // will lead to destroy frame targets which can temporarily make
+            // some fronts unresponsive and block the cleanup.
+            this.targetList.destroy();
             return this.target.destroy();
           }, console.error)
           .then(() => {

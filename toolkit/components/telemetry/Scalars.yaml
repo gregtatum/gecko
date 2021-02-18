@@ -1235,11 +1235,12 @@ security:
       - 1265472
       - 1558870
       - 1630155
+      - 1689269
     description: >
       Counts of how often Web Authentication was used in this session, keyed
       by authenticator protocol, method and result. Currently: U2FRegisterFinish,
       U2FRegisterAbort, U2FSignFinish, U2FSignAbort.
-    expires: "88"
+    expires: "100"
     kind: uint
     keyed: true
     notification_emails:
@@ -2241,37 +2242,19 @@ media:
     record_in_processes:
       - 'content'
 
-avif:
-  dav1d_decode_error:
+  wmf_process_usage:
     bug_numbers:
-      - 1670827
+      - 1690372
     description: >
-      Image-decode Error from dav1d decoder
-    kind: uint
-    expires: "never"
+      Record whether the WMF decoder module is used in content or chrome process.
+    expires: "93"
+    kind: boolean
     notification_emails:
-      - cchang@mozilla.com
-      - jbauman@mozilla.com
+      - alwu@mozilla.com
+      - bvandyk@mozilla.com
+    release_channel_collection: opt-out
     products:
       - 'firefox'
-      - 'geckoview_streaming'
-    record_in_processes:
-      - 'main'
-      - 'content'
-
-  aom_decode_error:
-    bug_numbers:
-      - 1670827
-    description: >
-      Image-decode Error from aom decoder
-    kind: uint
-    expires: "never"
-    notification_emails:
-      - cchang@mozilla.com
-      - jbauman@mozilla.com
-    products:
-      - 'firefox'
-      - 'geckoview_streaming'
     record_in_processes:
       - 'main'
       - 'content'
@@ -3544,6 +3527,7 @@ gfx.hdr:
   windows_display_colorspace_bitfield:
     bug_numbers:
       - 1514840
+      - 1690597
     description: >
       A bitfield representation of the available DXGI color spaces of the connected displays on Windows.
       See (https://docs.microsoft.com/en-us/windows/desktop/api/dxgicommon/ne-dxgicommon-dxgi_color_space_type)
@@ -3551,13 +3535,12 @@ gfx.hdr:
       index 'N' is available on at least one connected monitor.
     keyed: false
     kind: uint
-    expires: "70"
+    expires: never
     notification_emails:
       - gfx-telemetry-alerts@mozilla.com
-      - rhunt@mozilla.com
+      - jmuizelaaar@mozilla.com
     products:
       - 'firefox'
-      - 'fennec'
     record_in_processes:
       - 'main'
 
@@ -5194,11 +5177,14 @@ browser.searchinit:
   engine_invalid_webextension:
     bug_numbers:
       - 1665938
+      - 1691050
     description: >
       Records the WebExtension ID of a search engine where the WebExtension
-      is not installed (= 1), disabled (= 2) or where the submission URL
-      is different between the search engine and the WebExtension (= 3)
-    expires: "89"
+      is not installed (= 1), disabled (= 2), search engine no longer specified (= 4),
+      a different name (= 5), where the submission URL is different between the
+      search engine and the WebExtension (= 6). The value '3' has been replaced
+      by '6' to distinguish newer entries.
+    expires: "94"
     keyed: true
     kind: uint
     notification_emails:

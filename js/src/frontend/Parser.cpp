@@ -62,6 +62,7 @@
 #include "vm/RegExpObject.h"
 #include "vm/SelfHosting.h"
 #include "vm/StringType.h"
+#include "vm/WellKnownAtom.h"  // js_*_str
 #include "wasm/AsmJS.h"
 
 #include "frontend/ParseContext-inl.h"
@@ -200,9 +201,10 @@ PerHandlerParser<ParseHandler>::PerHandlerParser(
     CompilationStencil& stencil, CompilationState& compilationState,
     void* internalSyntaxParser)
     : ParserBase(cx, options, foldConstants, stencil, compilationState),
-      handler_(cx, compilationState.allocScope.alloc(), stencil.input.lazy),
+      handler_(cx, compilationState.allocScope.alloc(),
+               compilationState.input.lazy),
       internalSyntaxParser_(internalSyntaxParser) {
-  MOZ_ASSERT(stencil.isInitialStencil() == !stencil.input.lazy);
+  MOZ_ASSERT(stencil.isInitialStencil() == !compilationState.input.lazy);
 }
 
 template <class ParseHandler, typename Unit>
@@ -272,7 +274,9 @@ FunctionBox* PerHandlerParser<ParseHandler>::newFunctionBox(
     return nullptr;
   }
 
-  if (this->stencil_.isInitialStencil()) {
+  bool isInitialStencil = this->stencil_.isInitialStencil();
+
+  if (isInitialStencil) {
     if (!compilationState_.scriptExtra.emplaceBack()) {
       js::ReportOutOfMemory(cx_);
       return nullptr;
@@ -291,8 +295,8 @@ FunctionBox* PerHandlerParser<ParseHandler>::newFunctionBox(
    * function.
    */
   FunctionBox* funbox = alloc_.new_<FunctionBox>(
-      cx_, extent, stencil_, compilationState_, inheritedDirectives,
-      generatorKind, asyncKind, explicitName, flags, index);
+      cx_, extent, compilationState_, inheritedDirectives, generatorKind,
+      asyncKind, isInitialStencil, explicitName, flags, index);
   if (!funbox) {
     ReportOutOfMemory(cx_);
     return nullptr;
@@ -360,8 +364,8 @@ typename ParseHandler::ListNodeType GeneralParser<ParseHandler, Unit>::parse() {
   SourceExtent extent = SourceExtent::makeGlobalExtent(
       /* len = */ 0, options().lineno, options().column);
   Directives directives(options().forceStrictMode());
-  GlobalSharedContext globalsc(cx_, ScopeKind::Global, this->stencil_,
-                               directives, extent);
+  GlobalSharedContext globalsc(cx_, ScopeKind::Global, options(), directives,
+                               extent);
   SourceParseContext globalpc(this, &globalsc, /* newDirectives = */ nullptr);
   if (!globalpc.init()) {
     return null();
@@ -856,7 +860,7 @@ bool PerHandlerParser<ParseHandler>::
       //   After closed-over-bindings are snapshotted in the handler,
       //   remove this.
       auto parserAtom = this->parserAtoms().internJSAtom(
-          cx_, this->getCompilationStencil().input.atomCache, name);
+          cx_, this->getCompilationState().input.atomCache, name);
       if (!parserAtom) {
         return false;
       }
@@ -1485,7 +1489,7 @@ bool PerHandlerParser<ParseHandler>::checkForUndefinedPrivateFields(
     return true;
   }
 
-  if (!this->stencil_.input.options.privateClassFields) {
+  if (!this->compilationState_.input.options.privateClassFields) {
     return true;
   }
 
@@ -1580,7 +1584,7 @@ LexicalScopeNode* Parser<FullParseHandler, Unit>::evalBody(
 
 #ifdef DEBUG
   if (evalpc.superScopeNeedsHomeObject() &&
-      this->stencil_.input.enclosingScope) {
+      this->compilationState_.input.enclosingScope) {
     // If superScopeNeedsHomeObject_ is set and we are an entry-point
     // ParseContext, then we must be emitting an eval script, and the
     // outer function must already be marked as needing a home object
@@ -2756,7 +2760,7 @@ bool Parser<FullParseHandler, Unit>::skipLazyInnerFunction(
   TaggedParserAtomIndex displayAtom;
   if (fun->displayAtom()) {
     displayAtom = this->parserAtoms().internJSAtom(
-        cx_, this->stencil_.input.atomCache, fun->displayAtom());
+        cx_, this->compilationState_.input.atomCache, fun->displayAtom());
     if (!displayAtom) {
       return false;
     }
@@ -2941,8 +2945,8 @@ GeneralParser<ParseHandler, Unit>::functionDefinition(
   Directives newDirectives = directives;
 
   Position start(tokenStream);
-  CompilationStencil::RewindToken startObj =
-      this->stencil_.getRewindToken(this->compilationState_);
+  CompilationState::RewindToken startObj =
+      this->compilationState_.getRewindToken();
 
   // Parse the inner function. The following is a loop as we may attempt to
   // reparse a function due to failed syntax parsing and encountering new
@@ -2968,7 +2972,7 @@ GeneralParser<ParseHandler, Unit>::functionDefinition(
 
     // Rewind to retry parsing with new directives applied.
     tokenStream.rewind(start);
-    this->stencil_.rewind(this->compilationState_, startObj);
+    this->compilationState_.rewind(startObj);
 
     // functionFormalParametersAndBody may have already set body before
     // failing.
@@ -3019,8 +3023,8 @@ bool Parser<FullParseHandler, Unit>::trySyntaxParseInnerFunction(
     }
 
     UsedNameTracker::RewindToken token = usedNames_.getRewindToken();
-    CompilationStencil::RewindToken startObj =
-        this->stencil_.getRewindToken(this->compilationState_);
+    CompilationState::RewindToken startObj =
+        this->compilationState_.getRewindToken();
 
     // Move the syntax parser to the current position in the stream.  In the
     // common case this seeks forward, but it'll also seek backward *at least*
@@ -3058,7 +3062,7 @@ bool Parser<FullParseHandler, Unit>::trySyntaxParseInnerFunction(
         // correctness.
         syntaxParser->clearAbortedSyntaxParse();
         usedNames_.rewind(token);
-        this->stencil_.rewind(this->compilationState_, startObj);
+        this->compilationState_.rewind(startObj);
         MOZ_ASSERT_IF(!syntaxParser->cx_->isHelperThreadContext(),
                       !syntaxParser->cx_->isExceptionPending());
         break;
@@ -3257,7 +3261,7 @@ FunctionNode* Parser<FullParseHandler, Unit>::standaloneLazyFunction(
   TaggedParserAtomIndex displayAtom;
   if (fun->displayAtom()) {
     displayAtom = this->parserAtoms().internJSAtom(
-        cx_, this->stencil_.input.atomCache, fun->displayAtom());
+        cx_, this->compilationState_.input.atomCache, fun->displayAtom());
     if (!displayAtom) {
       return null();
     }
@@ -4773,147 +4777,179 @@ GeneralParser<ParseHandler, Unit>::lexicalDeclaration(
   return decl;
 }
 
-template <typename Unit>
-bool Parser<FullParseHandler, Unit>::namedImportsOrNamespaceImport(
-    TokenKind tt, ListNodeType importSpecSet) {
-  if (tt == TokenKind::LeftCurly) {
-    while (true) {
-      // Handle the forms |import {} from 'a'| and
-      // |import { ..., } from 'a'| (where ... is non empty), by
-      // escaping the loop early if the next token is }.
-      if (!tokenStream.getToken(&tt)) {
-        return false;
-      }
+template <class ParseHandler, typename Unit>
+typename ParseHandler::NameNodeType
+GeneralParser<ParseHandler, Unit>::moduleExportName() {
+  MOZ_ASSERT(anyChars.currentToken().type == TokenKind::String);
+  TaggedParserAtomIndex name = anyChars.currentToken().atom();
+  if (!this->parserAtoms().isModuleExportName(name)) {
+    error(JSMSG_UNPAIRED_SURROGATE_EXPORT);
+    return null();
+  }
+  return handler_.newStringLiteral(name, pos());
+}
 
-      if (tt == TokenKind::RightCurly) {
-        break;
-      }
+template <class ParseHandler, typename Unit>
+bool GeneralParser<ParseHandler, Unit>::namedImports(
+    ListNodeType importSpecSet) {
+  if (!abortIfSyntaxParser()) {
+    return false;
+  }
 
-      if (!TokenKindIsPossibleIdentifierName(tt)) {
-        error(JSMSG_NO_IMPORT_NAME);
-        return false;
-      }
-
-      auto importName = anyChars.currentName();
-      TokenPos importNamePos = pos();
-
-      bool matched;
-      if (!tokenStream.matchToken(&matched, TokenKind::As)) {
-        return false;
-      }
-
-      if (matched) {
-        TokenKind afterAs;
-        if (!tokenStream.getToken(&afterAs)) {
-          return false;
-        }
-
-        if (!TokenKindIsPossibleIdentifierName(afterAs)) {
-          error(JSMSG_NO_BINDING_NAME);
-          return false;
-        }
-      } else {
-        // Keywords cannot be bound to themselves, so an import name
-        // that is a keyword is a syntax error if it is not followed
-        // by the keyword 'as'.
-        // See the ImportSpecifier production in ES6 section 15.2.2.
-        if (IsKeyword(importName)) {
-          error(JSMSG_AS_AFTER_RESERVED_WORD, ReservedWordToCharZ(importName));
-          return false;
-        }
-      }
-
-      TaggedParserAtomIndex bindingAtom = importedBinding();
-      if (!bindingAtom) {
-        return false;
-      }
-
-      NameNodeType bindingName = newName(bindingAtom);
-      if (!bindingName) {
-        return false;
-      }
-      if (!noteDeclaredName(bindingAtom, DeclarationKind::Import, pos())) {
-        return false;
-      }
-
-      NameNodeType importNameNode = newName(importName, importNamePos);
-      if (!importNameNode) {
-        return false;
-      }
-
-      BinaryNodeType importSpec =
-          handler_.newImportSpec(importNameNode, bindingName);
-      if (!importSpec) {
-        return false;
-      }
-
-      handler_.addList(importSpecSet, importSpec);
-
-      TokenKind next;
-      if (!tokenStream.getToken(&next)) {
-        return false;
-      }
-
-      if (next == TokenKind::RightCurly) {
-        break;
-      }
-
-      if (next != TokenKind::Comma) {
-        error(JSMSG_RC_AFTER_IMPORT_SPEC_LIST);
-        return false;
-      }
-    }
-  } else {
-    MOZ_ASSERT(tt == TokenKind::Mul);
-
-    if (!mustMatchToken(TokenKind::As, JSMSG_AS_AFTER_IMPORT_STAR)) {
+  while (true) {
+    // Handle the forms |import {} from 'a'| and
+    // |import { ..., } from 'a'| (where ... is non empty), by
+    // escaping the loop early if the next token is }.
+    TokenKind tt;
+    if (!tokenStream.getToken(&tt)) {
       return false;
     }
 
-    if (!mustMatchToken(TokenKindIsPossibleIdentifierName,
-                        JSMSG_NO_BINDING_NAME)) {
+    if (tt == TokenKind::RightCurly) {
+      break;
+    }
+
+    TaggedParserAtomIndex importName;
+    NameNodeType importNameNode = null();
+    if (TokenKindIsPossibleIdentifierName(tt)) {
+      importName = anyChars.currentName();
+      importNameNode = newName(importName);
+    } else if (tt == TokenKind::String) {
+      importNameNode = moduleExportName();
+    } else {
+      error(JSMSG_NO_IMPORT_NAME);
+    }
+    if (!importNameNode) {
       return false;
     }
 
-    NameNodeType importName = newName(TaggedParserAtomIndex::WellKnown::star());
-    if (!importName) {
+    bool matched;
+    if (!tokenStream.matchToken(&matched, TokenKind::As)) {
       return false;
     }
 
-    // Namespace imports are are not indirect bindings but lexical
-    // definitions that hold a module namespace object. They are treated
-    // as const variables which are initialized during the
-    // ModuleInstantiate step.
-    TaggedParserAtomIndex bindingName = importedBinding();
+    if (matched) {
+      TokenKind afterAs;
+      if (!tokenStream.getToken(&afterAs)) {
+        return false;
+      }
+
+      if (!TokenKindIsPossibleIdentifierName(afterAs)) {
+        error(JSMSG_NO_BINDING_NAME);
+        return false;
+      }
+    } else {
+      // String export names can't refer to local bindings.
+      if (tt == TokenKind::String) {
+        error(JSMSG_AS_AFTER_STRING);
+        return false;
+      }
+
+      // Keywords cannot be bound to themselves, so an import name
+      // that is a keyword is a syntax error if it is not followed
+      // by the keyword 'as'.
+      // See the ImportSpecifier production in ES6 section 15.2.2.
+      MOZ_ASSERT(importName);
+      if (IsKeyword(importName)) {
+        error(JSMSG_AS_AFTER_RESERVED_WORD, ReservedWordToCharZ(importName));
+        return false;
+      }
+    }
+
+    TaggedParserAtomIndex bindingAtom = importedBinding();
+    if (!bindingAtom) {
+      return false;
+    }
+
+    NameNodeType bindingName = newName(bindingAtom);
     if (!bindingName) {
       return false;
     }
-    NameNodeType bindingNameNode = newName(bindingName);
-    if (!bindingNameNode) {
+    if (!noteDeclaredName(bindingAtom, DeclarationKind::Import, pos())) {
       return false;
     }
-    if (!noteDeclaredName(bindingName, DeclarationKind::Const, pos())) {
-      return false;
-    }
-
-    // The namespace import name is currently required to live on the
-    // environment.
-    pc_->varScope().lookupDeclaredName(bindingName)->value()->setClosedOver();
 
     BinaryNodeType importSpec =
-        handler_.newImportSpec(importName, bindingNameNode);
+        handler_.newImportSpec(importNameNode, bindingName);
     if (!importSpec) {
       return false;
     }
 
     handler_.addList(importSpecSet, importSpec);
+
+    TokenKind next;
+    if (!tokenStream.getToken(&next)) {
+      return false;
+    }
+
+    if (next == TokenKind::RightCurly) {
+      break;
+    }
+
+    if (next != TokenKind::Comma) {
+      error(JSMSG_RC_AFTER_IMPORT_SPEC_LIST);
+      return false;
+    }
   }
 
   return true;
 }
 
-template <typename Unit>
-BinaryNode* Parser<FullParseHandler, Unit>::importDeclaration() {
+template <class ParseHandler, typename Unit>
+bool GeneralParser<ParseHandler, Unit>::namespaceImport(
+    ListNodeType importSpecSet) {
+  if (!abortIfSyntaxParser()) {
+    return false;
+  }
+
+  if (!mustMatchToken(TokenKind::As, JSMSG_AS_AFTER_IMPORT_STAR)) {
+    return false;
+  }
+  uint32_t begin = pos().begin;
+
+  if (!mustMatchToken(TokenKindIsPossibleIdentifierName,
+                      JSMSG_NO_BINDING_NAME)) {
+    return false;
+  }
+
+  // Namespace imports are not indirect bindings but lexical
+  // definitions that hold a module namespace object. They are treated
+  // as const variables which are initialized during the
+  // ModuleInstantiate step.
+  TaggedParserAtomIndex bindingName = importedBinding();
+  if (!bindingName) {
+    return false;
+  }
+  NameNodeType bindingNameNode = newName(bindingName);
+  if (!bindingNameNode) {
+    return false;
+  }
+  if (!noteDeclaredName(bindingName, DeclarationKind::Const, pos())) {
+    return false;
+  }
+
+  // The namespace import name is currently required to live on the
+  // environment.
+  pc_->varScope().lookupDeclaredName(bindingName)->value()->setClosedOver();
+
+  UnaryNodeType importSpec =
+      handler_.newImportNamespaceSpec(begin, bindingNameNode);
+  if (!importSpec) {
+    return false;
+  }
+
+  handler_.addList(importSpecSet, importSpec);
+
+  return true;
+}
+
+template <class ParseHandler, typename Unit>
+typename ParseHandler::BinaryNodeType
+GeneralParser<ParseHandler, Unit>::importDeclaration() {
+  if (!abortIfSyntaxParser()) {
+    return null();
+  }
+
   MOZ_ASSERT(anyChars.isCurrentTokenType(TokenKind::Import));
 
   if (!pc_->atModuleLevel()) {
@@ -4936,10 +4972,14 @@ BinaryNode* Parser<FullParseHandler, Unit>::importDeclaration() {
   if (tt == TokenKind::String) {
     // Handle the form |import 'a'| by leaving the list empty. This is
     // equivalent to |import {} from 'a'|.
-    importSpecSet->pn_pos.end = importSpecSet->pn_pos.begin;
+    handler_.setEndPosition(importSpecSet, pos().begin);
   } else {
-    if (tt == TokenKind::LeftCurly || tt == TokenKind::Mul) {
-      if (!namedImportsOrNamespaceImport(tt, importSpecSet)) {
+    if (tt == TokenKind::LeftCurly) {
+      if (!namedImports(importSpecSet)) {
+        return null();
+      }
+    } else if (tt == TokenKind::Mul) {
+      if (!namespaceImport(importSpecSet)) {
         return null();
       }
     } else if (TokenKindIsPossibleIdentifierName(tt)) {
@@ -4985,12 +5025,16 @@ BinaryNode* Parser<FullParseHandler, Unit>::importDeclaration() {
           return null();
         }
 
-        if (tt != TokenKind::LeftCurly && tt != TokenKind::Mul) {
+        if (tt == TokenKind::LeftCurly) {
+          if (!namedImports(importSpecSet)) {
+            return null();
+          }
+        } else if (tt == TokenKind::Mul) {
+          if (!namespaceImport(importSpecSet)) {
+            return null();
+          }
+        } else {
           error(JSMSG_NAMED_IMPORTS_OR_NAMESPACE_IMPORT);
-          return null();
-        }
-
-        if (!namedImportsOrNamespaceImport(tt, importSpecSet)) {
           return null();
         }
       }
@@ -5017,26 +5061,13 @@ BinaryNode* Parser<FullParseHandler, Unit>::importDeclaration() {
     return null();
   }
 
-  BinaryNode* node = handler_.newImportDeclaration(importSpecSet, moduleSpec,
-                                                   TokenPos(begin, pos().end));
-  if (!node || !pc_->sc()->asModuleContext()->builder.processImport(node)) {
+  BinaryNodeType node = handler_.newImportDeclaration(
+      importSpecSet, moduleSpec, TokenPos(begin, pos().end));
+  if (!node || !processImport(node)) {
     return null();
   }
 
   return node;
-}
-
-template <typename Unit>
-inline SyntaxParseHandler::BinaryNodeType
-Parser<SyntaxParseHandler, Unit>::importDeclaration() {
-  MOZ_ALWAYS_FALSE(abortIfSyntaxParser());
-  return SyntaxParseHandler::NodeFailure;
-}
-
-template <class ParseHandler, typename Unit>
-inline typename ParseHandler::BinaryNodeType
-GeneralParser<ParseHandler, Unit>::importDeclaration() {
-  return asFinalParser()->importDeclaration();
 }
 
 template <class ParseHandler, typename Unit>
@@ -5324,6 +5355,19 @@ inline bool PerHandlerParser<SyntaxParseHandler>::processExportFrom(
   return false;
 }
 
+template <>
+inline bool PerHandlerParser<FullParseHandler>::processImport(
+    BinaryNodeType node) {
+  return pc_->sc()->asModuleContext()->builder.processImport(node);
+}
+
+template <>
+inline bool PerHandlerParser<SyntaxParseHandler>::processImport(
+    BinaryNodeType node) {
+  MOZ_ALWAYS_FALSE(abortIfSyntaxParser());
+  return false;
+}
+
 template <class ParseHandler, typename Unit>
 typename ParseHandler::BinaryNodeType
 GeneralParser<ParseHandler, Unit>::exportFrom(uint32_t begin, Node specList) {
@@ -5332,10 +5376,6 @@ GeneralParser<ParseHandler, Unit>::exportFrom(uint32_t begin, Node specList) {
   }
 
   MOZ_ASSERT(anyChars.isCurrentTokenType(TokenKind::From));
-
-  if (!abortIfSyntaxParser()) {
-    return null();
-  }
 
   if (!mustMatchToken(TokenKind::String, JSMSG_MODULE_SPEC_AFTER_FROM)) {
     return null();
@@ -5371,6 +5411,7 @@ GeneralParser<ParseHandler, Unit>::exportBatch(uint32_t begin) {
   }
 
   MOZ_ASSERT(anyChars.isCurrentTokenType(TokenKind::Mul));
+  uint32_t beginExportSpec = pos().begin;
 
   ListNodeType kid = handler_.newList(ParseNodeKind::ExportSpecList, pos());
   if (!kid) {
@@ -5383,12 +5424,19 @@ GeneralParser<ParseHandler, Unit>::exportBatch(uint32_t begin) {
   }
 
   if (foundAs) {
-    if (!mustMatchToken(TokenKindIsPossibleIdentifierName,
-                        JSMSG_NO_EXPORT_NAME)) {
+    TokenKind tt;
+    if (!tokenStream.getToken(&tt)) {
       return null();
     }
 
-    NameNodeType exportName = newName(anyChars.currentName());
+    NameNodeType exportName = null();
+    if (TokenKindIsPossibleIdentifierName(tt)) {
+      exportName = newName(anyChars.currentName());
+    } else if (tt == TokenKind::String) {
+      exportName = moduleExportName();
+    } else {
+      error(JSMSG_NO_EXPORT_NAME);
+    }
     if (!exportName) {
       return null();
     }
@@ -5397,12 +5445,8 @@ GeneralParser<ParseHandler, Unit>::exportBatch(uint32_t begin) {
       return null();
     }
 
-    NameNodeType importName = newName(TaggedParserAtomIndex::WellKnown::star());
-    if (!importName) {
-      return null();
-    }
-
-    BinaryNodeType exportSpec = handler_.newExportSpec(importName, exportName);
+    UnaryNodeType exportSpec =
+        handler_.newExportNamespaceSpec(beginExportSpec, exportName);
     if (!exportSpec) {
       return null();
     }
@@ -5431,6 +5475,12 @@ bool Parser<FullParseHandler, Unit>::checkLocalExportNames(ListNode* node) {
   // ES 2017 draft 15.2.3.1.
   for (ParseNode* next : node->contents()) {
     ParseNode* name = next->as<BinaryNode>().left();
+
+    if (name->isKind(ParseNodeKind::StringExpr)) {
+      errorAt(name->pn_pos.begin, JSMSG_BAD_LOCAL_STRING_EXPORT);
+      return false;
+    }
+
     MOZ_ASSERT(name->isKind(ParseNodeKind::Name));
 
     TaggedParserAtomIndex ident = name->as<NameNode>().atom();
@@ -5481,12 +5531,14 @@ typename ParseHandler::Node GeneralParser<ParseHandler, Unit>::exportClause(
       break;
     }
 
-    if (!TokenKindIsPossibleIdentifierName(tt)) {
+    NameNodeType bindingName = null();
+    if (TokenKindIsPossibleIdentifierName(tt)) {
+      bindingName = newName(anyChars.currentName());
+    } else if (tt == TokenKind::String) {
+      bindingName = moduleExportName();
+    } else {
       error(JSMSG_NO_BINDING_NAME);
-      return null();
     }
-
-    NameNodeType bindingName = newName(anyChars.currentName());
     if (!bindingName) {
       return null();
     }
@@ -5495,14 +5547,28 @@ typename ParseHandler::Node GeneralParser<ParseHandler, Unit>::exportClause(
     if (!tokenStream.matchToken(&foundAs, TokenKind::As)) {
       return null();
     }
+
+    NameNodeType exportName = null();
     if (foundAs) {
-      if (!mustMatchToken(TokenKindIsPossibleIdentifierName,
-                          JSMSG_NO_EXPORT_NAME)) {
+      TokenKind tt;
+      if (!tokenStream.getToken(&tt)) {
         return null();
       }
-    }
 
-    NameNodeType exportName = newName(anyChars.currentName());
+      if (TokenKindIsPossibleIdentifierName(tt)) {
+        exportName = newName(anyChars.currentName());
+      } else if (tt == TokenKind::String) {
+        exportName = moduleExportName();
+      } else {
+        error(JSMSG_NO_EXPORT_NAME);
+      }
+    } else {
+      if (tt != TokenKind::String) {
+        exportName = newName(anyChars.currentName());
+      } else {
+        exportName = moduleExportName();
+      }
+    }
     if (!exportName) {
       return null();
     }

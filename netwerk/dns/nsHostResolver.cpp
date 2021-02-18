@@ -754,7 +754,7 @@ void nsHostResolver::ClearPendingQueue(
       rec->Cancel();
       if (rec->IsAddrRecord()) {
         CompleteLookup(rec, NS_ERROR_ABORT, nullptr, rec->pb, rec->originSuffix,
-                       rec->mTRRTRRSkippedReason);
+                       rec->mTRRTRRSkippedReason, nullptr);
       } else {
         mozilla::net::TypeRecordResultType empty(Nothing{});
         CompleteLookupByType(rec, NS_ERROR_ABORT, empty, 0, rec->pb);
@@ -881,12 +881,8 @@ nsresult nsHostResolver::GetHostRecord(const nsACString& host,
   MutexAutoLock lock(mLock);
   nsHostKey key(host, aTrrServer, type, flags, af, pb, originSuffix);
 
-  RefPtr<nsHostRecord>& entry = mRecordDB.GetOrInsert(key);
-  if (!entry) {
-    entry = InitRecord(key);
-  }
-
-  RefPtr<nsHostRecord> rec = entry;
+  RefPtr<nsHostRecord> rec =
+      mRecordDB.GetOrInsertWith(key, [&] { return InitRecord(key); });
   if (rec->IsAddrRecord()) {
     RefPtr<AddrHostRecord> addrRec = do_QueryObject(rec);
     if (addrRec->addr) {
@@ -1027,12 +1023,9 @@ nsresult nsHostResolver::ResolveHost(const nsACString& aHost,
       return NS_OK;
     }
 
-    RefPtr<nsHostRecord>& entry = mRecordDB.GetOrInsert(key);
-    if (!entry) {
-      entry = InitRecord(key);
-    }
+    RefPtr<nsHostRecord> rec =
+        mRecordDB.GetOrInsertWith(key, [&] { return InitRecord(key); });
 
-    RefPtr<nsHostRecord> rec = entry;
     RefPtr<AddrHostRecord> addrRec = do_QueryObject(rec);
     MOZ_ASSERT(rec, "Record should not be null");
     MOZ_ASSERT((IS_ADDR_TYPE(type) && rec->IsAddrRecord() && addrRec) ||
@@ -1872,7 +1865,8 @@ void nsHostResolver::AddToEvictionQ(nsHostRecord* rec) {
 // returns LOOKUP_RESOLVEAGAIN, but only if 'status' is not NS_ERROR_ABORT.
 nsHostResolver::LookupStatus nsHostResolver::CompleteLookup(
     nsHostRecord* rec, nsresult status, AddrInfo* aNewRRSet, bool pb,
-    const nsACString& aOriginsuffix, nsHostRecord::TRRSkippedReason aReason) {
+    const nsACString& aOriginsuffix, nsHostRecord::TRRSkippedReason aReason,
+    mozilla::net::TRR* aTRRRequest) {
   MutexAutoLock lock(mLock);
   MOZ_ASSERT(rec);
   MOZ_ASSERT(rec->pb == pb);
@@ -2238,9 +2232,9 @@ void nsHostResolver::ThreadFunc() {
     LOG1(("DNS lookup thread - lookup completed for host [%s]: %s.\n",
           rec->host.get(), ai ? "success" : "failure: unknown host"));
 
-    if (LOOKUP_RESOLVEAGAIN == CompleteLookup(rec, status, ai, rec->pb,
-                                              rec->originSuffix,
-                                              rec->mTRRTRRSkippedReason)) {
+    if (LOOKUP_RESOLVEAGAIN ==
+        CompleteLookup(rec, status, ai, rec->pb, rec->originSuffix,
+                       rec->mTRRTRRSkippedReason, nullptr)) {
       // leave 'rec' assigned and loop to make a renewed host resolve
       LOG(("DNS lookup thread - Re-resolving host [%s].\n", rec->host.get()));
     } else {

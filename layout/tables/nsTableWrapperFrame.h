@@ -227,13 +227,25 @@ class nsTableWrapperFrame : public nsContainerFrame {
                           mozilla::LogicalPoint& aOrigin,
                           mozilla::WritingMode aWM);
 
+  // Returns the area occupied by the caption within our content box depending
+  // on the caption side.
+  //
+  // @param aCaptionMarginBoxSize the caption's margin-box size in our
+  //        writing-mode.
+  mozilla::LogicalSize GetAreaOccupiedByCaption(
+      mozilla::StyleCaptionSide,
+      const mozilla::LogicalSize& aCaptionMarginBoxSize) const;
+
   // Create and init the child reflow input, using passed-in aChildRI, so that
   // caller can use it after we return.
+  //
+  // @param aAreaOccupiedByCaption the value computed by
+  //        GetAreaOccupiedByCaption() if we have a caption.
   void CreateReflowInputForInnerTable(
       nsPresContext* aPresContext, nsTableFrame* aTableFrame,
       const ReflowInput& aOuterRI, Maybe<ReflowInput>& aChildRI,
       const nscoord aAvailISize,
-      const mozilla::Maybe<mozilla::LogicalSize>& aContainingBlockSize =
+      const mozilla::Maybe<mozilla::LogicalSize>& aAreaOccupiedByCaption =
           mozilla::Nothing()) const;
   void CreateReflowInputForCaption(nsPresContext* aPresContext,
                                    nsIFrame* aCaptionFrame,
@@ -260,14 +272,22 @@ class nsTableWrapperFrame : public nsContainerFrame {
 
   /**
    * Helper for ComputeAutoSize.
-   * Compute the margin-box inline size of aChildFrame given the inputs.
+   * Compute the margin-box inline size of the frame given the inputs.
+   *
+   * Note: CaptionShrinkWrapISize doesn't need StyleSizeOverrides parameter.
    */
-  nscoord ChildShrinkWrapISize(
-      gfxContext* aRenderingContext, nsIFrame* aChildFrame,
-      mozilla::WritingMode aWM, mozilla::LogicalSize aCBSize,
+  nscoord InnerTableShrinkWrapISize(
+      gfxContext* aRenderingContext, nsTableFrame* aTableFrame,
+      mozilla::WritingMode aWM, const mozilla::LogicalSize& aCBSize,
       nscoord aAvailableISize,
       const mozilla::StyleSizeOverrides& aSizeOverrides,
       mozilla::ComputeSizeFlags aFlag) const;
+  nscoord CaptionShrinkWrapISize(gfxContext* aRenderingContext,
+                                 nsIFrame* aCaptionFrame,
+                                 mozilla::WritingMode aWM,
+                                 const mozilla::LogicalSize& aCBSize,
+                                 nscoord aAvailableISize,
+                                 mozilla::ComputeSizeFlags aFlag) const;
 
  private:
   nsFrameList mCaptionFrames;

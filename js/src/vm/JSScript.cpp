@@ -1141,7 +1141,7 @@ XDRResult js::XDRScript(XDRState<mode>* xdr, HandleScope scriptEnclosingScope,
   }
 
   if (xdrFlags & OwnSource) {
-    ScriptSourceHolder ssHolder;
+    RefPtr<ScriptSource> source;
 
     // We are relying on the script's ScriptSource so the caller should not
     // have passed in an explicit one.
@@ -1149,13 +1149,13 @@ XDRResult js::XDRScript(XDRState<mode>* xdr, HandleScope scriptEnclosingScope,
 
     if (mode == XDR_ENCODE) {
       sourceObject = script->sourceObject();
-      ssHolder.reset(sourceObject->source());
+      source = do_AddRef(sourceObject->source());
     }
 
-    MOZ_TRY(ScriptSource::XDR(xdr, options.ptrOr(nullptr), ssHolder));
+    MOZ_TRY(ScriptSource::XDR(xdr, options.ptrOr(nullptr), source));
 
     if (mode == XDR_DECODE) {
-      sourceObject = ScriptSourceObject::create(cx, ssHolder.get());
+      sourceObject = ScriptSourceObject::create(cx, source);
       if (!sourceObject) {
         return xdr->fail(JS::TranscodeResult_Throw);
       }
@@ -1580,7 +1580,7 @@ void ScriptSourceObject::finalize(JSFreeOp* fop, JSObject* obj) {
   if (sso->isCanonical()) {
     sso->source()->finalizeGCData();
   }
-  sso->source()->decref();
+  sso->source()->Release();
 
   // Clear the private value, calling the release hook if necessary.
   sso->setPrivate(fop->runtime(), UndefinedValue());
@@ -1614,9 +1614,8 @@ ScriptSourceObject* ScriptSourceObject::createInternal(JSContext* cx,
     return nullptr;
   }
 
-  source->incref();  // The matching decref is in ScriptSourceObject::finalize.
-
-  obj->initReservedSlot(SOURCE_SLOT, PrivateValue(source));
+  // The matching decref is in ScriptSourceObject::finalize.
+  obj->initReservedSlot(SOURCE_SLOT, PrivateValue(do_AddRef(source).take()));
 
   if (canonical) {
     obj->initReservedSlot(CANONICAL_SLOT, ObjectValue(*canonical));
@@ -1657,7 +1656,7 @@ ScriptSourceObject* ScriptSourceObject::unwrappedCanonical() const {
   return &UncheckedUnwrap(obj)->as<ScriptSourceObject>();
 }
 
-static MOZ_MUST_USE bool MaybeValidateFilename(
+[[nodiscard]] static bool MaybeValidateFilename(
     JSContext* cx, HandleScriptSourceObject sso,
     const ReadOnlyCompileOptions& options) {
   // When parsing off-thread we want to do filename validation on the main
@@ -2277,7 +2276,7 @@ JSLinearString* ScriptSource::functionBodyString(JSContext* cx) {
 }
 
 template <typename Unit>
-MOZ_MUST_USE bool ScriptSource::setUncompressedSourceHelper(
+[[nodiscard]] bool ScriptSource::setUncompressedSourceHelper(
     JSContext* cx, EntryUnits<Unit>&& source, size_t length,
     SourceRetrievable retrievable) {
   auto& cache = cx->runtime()->sharedImmutableStrings();
@@ -2300,9 +2299,9 @@ MOZ_MUST_USE bool ScriptSource::setUncompressedSourceHelper(
 }
 
 template <typename Unit>
-MOZ_MUST_USE bool ScriptSource::setRetrievedSource(JSContext* cx,
-                                                   EntryUnits<Unit>&& source,
-                                                   size_t length) {
+[[nodiscard]] bool ScriptSource::setRetrievedSource(JSContext* cx,
+                                                    EntryUnits<Unit>&& source,
+                                                    size_t length) {
   MOZ_ASSERT(data.is<Retrievable<Unit>>(),
              "retrieved source can only overwrite the corresponding "
              "retrievable source");
@@ -2383,7 +2382,7 @@ void ScriptSource::triggerConvertToCompressedSource(
 }
 
 template <typename Unit>
-MOZ_MUST_USE bool ScriptSource::initializeWithUnretrievableCompressedSource(
+[[nodiscard]] bool ScriptSource::initializeWithUnretrievableCompressedSource(
     JSContext* cx, UniqueChars&& compressed, size_t rawLength,
     size_t sourceLength) {
   MOZ_ASSERT(data.is<Missing>(), "shouldn't be double-initializing");
@@ -2472,7 +2471,7 @@ ScriptSource::~ScriptSource() {
   MOZ_ASSERT(!xdrEncoder_);
 }
 
-static MOZ_MUST_USE bool reallocUniquePtr(UniqueChars& unique, size_t size) {
+[[nodiscard]] static bool reallocUniquePtr(UniqueChars& unique, size_t size) {
   auto newPtr = static_cast<char*>(js_realloc(unique.get(), size));
   if (!newPtr) {
     return false;
@@ -2486,19 +2485,18 @@ static MOZ_MUST_USE bool reallocUniquePtr(UniqueChars& unique, size_t size) {
 
 template <typename Unit>
 void SourceCompressionTask::workEncodingSpecific() {
-  ScriptSource* source = sourceHolder_.get();
-  MOZ_ASSERT(source->isUncompressed<Unit>());
+  MOZ_ASSERT(source_->isUncompressed<Unit>());
 
   // Try to keep the maximum memory usage down by only allocating half the
   // size of the string, first.
-  size_t inputBytes = source->length() * sizeof(Unit);
+  size_t inputBytes = source_->length() * sizeof(Unit);
   size_t firstSize = inputBytes / 2;
   UniqueChars compressed(js_pod_malloc<char>(firstSize));
   if (!compressed) {
     return;
   }
 
-  const Unit* chars = source->uncompressedData<Unit>()->units();
+  const Unit* chars = source_->uncompressedData<Unit>()->units();
   Compressor comp(reinterpret_cast<const unsigned char*>(chars), inputBytes);
   if (!comp.init()) {
     return;
@@ -2588,10 +2586,9 @@ void SourceCompressionTask::runTask() {
   TraceLoggerThread* logger = TraceLoggerForCurrentThread();
   AutoTraceLog logCompile(logger, TraceLogger_CompressSource);
 
-  ScriptSource* source = sourceHolder_.get();
-  MOZ_ASSERT(source->hasUncompressedSource());
+  MOZ_ASSERT(source_->hasUncompressedSource());
 
-  source->performTaskWork(this);
+  source_->performTaskWork(this);
 }
 
 void SourceCompressionTask::runHelperThreadTask(
@@ -2616,8 +2613,8 @@ void ScriptSource::triggerConvertToCompressedSourceFromTask(
 
 void SourceCompressionTask::complete() {
   if (!shouldCancel() && resultString_.isSome()) {
-    ScriptSource* source = sourceHolder_.get();
-    source->triggerConvertToCompressedSourceFromTask(std::move(*resultString_));
+    source_->triggerConvertToCompressedSourceFromTask(
+        std::move(*resultString_));
   }
 }
 
@@ -2693,7 +2690,8 @@ void ScriptSource::addSizeOfIncludingThis(mozilla::MallocSizeOf mallocSizeOf,
 }
 
 bool ScriptSource::xdrEncodeInitialStencil(
-    JSContext* cx, frontend::CompilationStencil& stencil,
+    JSContext* cx, frontend::CompilationInput& input,
+    frontend::CompilationStencil& stencil,
     UniquePtr<XDRIncrementalStencilEncoder>& xdrEncoder) {
   // Encoding failures are reported by the xdrFinalizeEncoder function.
   if (containsAsmJS()) {
@@ -2709,7 +2707,7 @@ bool ScriptSource::xdrEncodeInitialStencil(
   AutoIncrementalTimer timer(cx->realm()->timers.xdrEncodingTime);
   auto failureCase = mozilla::MakeScopeExit([&] { xdrEncoder.reset(nullptr); });
 
-  XDRResult res = xdrEncoder->codeStencil(stencil);
+  XDRResult res = xdrEncoder->codeStencil(input, stencil);
   if (res.isErr()) {
     // On encoding failure, let failureCase destroy encoder and return true
     // to avoid failing any currently executing script.
@@ -2725,9 +2723,10 @@ bool ScriptSource::xdrEncodeInitialStencil(
 }
 
 bool ScriptSource::xdrEncodeStencils(
-    JSContext* cx, frontend::CompilationStencil& stencil,
+    JSContext* cx, frontend::CompilationInput& input,
+    frontend::CompilationStencil& stencil,
     UniquePtr<XDRIncrementalStencilEncoder>& xdrEncoder) {
-  if (!xdrEncodeInitialStencil(cx, stencil, xdrEncoder)) {
+  if (!xdrEncodeInitialStencil(cx, input, stencil, xdrEncoder)) {
     return false;
   }
 
@@ -2787,7 +2786,7 @@ bool ScriptSource::xdrFinalizeEncoder(JSContext* cx,
 }
 
 template <typename Unit>
-MOZ_MUST_USE bool ScriptSource::initializeUnretrievableUncompressedSource(
+[[nodiscard]] bool ScriptSource::initializeUnretrievableUncompressedSource(
     JSContext* cx, EntryUnits<Unit>&& source, size_t length) {
   MOZ_ASSERT(data.is<Missing>(), "must be initializing a fresh ScriptSource");
   return setUncompressedSourceHelper(cx, std::move(source), length,
@@ -3125,83 +3124,80 @@ template <XDRMode mode>
 /* static */
 XDRResult ScriptSource::XDR(XDRState<mode>* xdr,
                             const ReadOnlyCompileOptions* maybeOptions,
-                            ScriptSourceHolder& holder) {
+                            RefPtr<ScriptSource>& source) {
   JSContext* cx = xdr->cx();
-  ScriptSource* ss = nullptr;
 
-  if (mode == XDR_ENCODE) {
-    ss = holder.get();
-  } else {
+  if (mode == XDR_DECODE) {
     // Allocate a new ScriptSource and root it with the holder.
-    ss = cx->new_<ScriptSource>();
-    if (!ss) {
+    source = do_AddRef(cx->new_<ScriptSource>());
+    if (!source) {
       return xdr->fail(JS::TranscodeResult_Throw);
     }
-    holder.reset(ss);
 
     // We use this CompileOptions only to initialize the ScriptSourceObject.
     // Most CompileOptions fields aren't used by ScriptSourceObject, and those
     // that are (element; elementAttributeName) aren't preserved by XDR. So
     // this can be simple.
-    if (!ss->initFromOptions(cx, *maybeOptions)) {
+    if (!source->initFromOptions(cx, *maybeOptions)) {
       return xdr->fail(JS::TranscodeResult_Throw);
     }
   }
 
-  MOZ_TRY(xdrData(xdr, ss));
+  MOZ_TRY(xdrData(xdr, source.get()));
 
-  uint8_t haveSourceMap = ss->hasSourceMapURL();
+  uint8_t haveSourceMap = source->hasSourceMapURL();
   MOZ_TRY(xdr->codeUint8(&haveSourceMap));
 
   if (haveSourceMap) {
     XDRTranscodeString<char16_t> chars;
 
     if (mode == XDR_ENCODE) {
-      chars.construct<const char16_t*>(ss->sourceMapURL());
+      chars.construct<const char16_t*>(source->sourceMapURL());
     }
     MOZ_TRY(xdr->codeCharsZ(chars));
     if (mode == XDR_DECODE) {
-      if (!ss->setSourceMapURL(cx,
-                               std::move(chars.ref<UniqueTwoByteChars>()))) {
+      if (!source->setSourceMapURL(
+              cx, std::move(chars.ref<UniqueTwoByteChars>()))) {
         return xdr->fail(JS::TranscodeResult_Throw);
       }
     }
   }
 
-  uint8_t haveDisplayURL = ss->hasDisplayURL();
+  uint8_t haveDisplayURL = source->hasDisplayURL();
   MOZ_TRY(xdr->codeUint8(&haveDisplayURL));
 
   if (haveDisplayURL) {
     XDRTranscodeString<char16_t> chars;
 
     if (mode == XDR_ENCODE) {
-      chars.construct<const char16_t*>(ss->displayURL());
+      chars.construct<const char16_t*>(source->displayURL());
     }
     MOZ_TRY(xdr->codeCharsZ(chars));
     if (mode == XDR_DECODE) {
-      if (!ss->setDisplayURL(cx, std::move(chars.ref<UniqueTwoByteChars>()))) {
+      if (!source->setDisplayURL(cx,
+                                 std::move(chars.ref<UniqueTwoByteChars>()))) {
         return xdr->fail(JS::TranscodeResult_Throw);
       }
     }
   }
 
-  uint8_t haveFilename = !!ss->filename_;
+  uint8_t haveFilename = !!source->filename_;
   MOZ_TRY(xdr->codeUint8(&haveFilename));
 
   if (haveFilename) {
     XDRTranscodeString<char> chars;
 
     if (mode == XDR_ENCODE) {
-      chars.construct<const char*>(ss->filename());
+      chars.construct<const char*>(source->filename());
     }
     MOZ_TRY(xdr->codeCharsZ(chars));
     if (mode == XDR_DECODE) {
-      if (!ss->filename()) {
-        if (!ss->setFilename(cx, std::move(chars.ref<UniqueChars>()))) {
+      if (!source->filename()) {
+        if (!source->setFilename(cx, std::move(chars.ref<UniqueChars>()))) {
           return xdr->fail(JS::TranscodeResult_Throw);
         }
       }
-      MOZ_ASSERT(ss->filename());
+      MOZ_ASSERT(source->filename());
     }
   }
 
@@ -3212,12 +3208,12 @@ template /* static */
     XDRResult
     ScriptSource::XDR(XDRState<XDR_ENCODE>* xdr,
                       const ReadOnlyCompileOptions* maybeOptions,
-                      ScriptSourceHolder& holder);
+                      RefPtr<ScriptSource>& holder);
 template /* static */
     XDRResult
     ScriptSource::XDR(XDRState<XDR_DECODE>* xdr,
                       const ReadOnlyCompileOptions* maybeOptions,
-                      ScriptSourceHolder& holder);
+                      RefPtr<ScriptSource>& holder);
 
 // Format and return a cx->pod_malloc'ed URL for a generated script like:
 //   {filename} line {lineno} > {introducer}
@@ -3855,9 +3851,10 @@ bool JSScript::fullyInitFromStencil(
 }
 
 JSScript* JSScript::fromStencil(JSContext* cx,
-                                const js::frontend::CompilationStencil& stencil,
+                                frontend::CompilationInput& input,
+                                const frontend::CompilationStencil& stencil,
                                 frontend::CompilationGCOutput& gcOutput,
-                                const js::frontend::ScriptIndex scriptIndex) {
+                                frontend::ScriptIndex scriptIndex) {
   js::frontend::ScriptStencil& scriptStencil = stencil.scriptData[scriptIndex];
   js::frontend::ScriptStencilExtra& scriptExtra =
       stencil.scriptExtra[scriptIndex];
@@ -3877,7 +3874,7 @@ JSScript* JSScript::fromStencil(JSContext* cx,
     return nullptr;
   }
 
-  if (!fullyInitFromStencil(cx, stencil.input, stencil, gcOutput, script,
+  if (!fullyInitFromStencil(cx, input, stencil, gcOutput, script,
                             scriptIndex)) {
     return nullptr;
   }
@@ -4868,6 +4865,19 @@ bool JSScript::formalIsAliased(unsigned argSlot) {
     }
   }
   MOZ_CRASH("Argument slot not found");
+}
+
+bool JSScript::anyFormalIsAliased() {
+  if (functionHasParameterExprs()) {
+    return false;
+  }
+
+  for (PositionalFormalParameterIter fi(this); fi; fi++) {
+    if (fi.closedOver()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool JSScript::formalLivesInArgumentsObject(unsigned argSlot) {

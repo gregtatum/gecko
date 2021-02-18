@@ -295,7 +295,6 @@ registerCleanupFunction(async function cleanup() {
   // Closing the browser console if there's one
   const browserConsole = BrowserConsoleManager.getBrowserConsole();
   if (browserConsole) {
-    browserConsole.targetList.destroy();
     await safeCloseBrowserConsole({ clearOutput: true });
   }
 
@@ -351,6 +350,9 @@ async function safeCloseBrowserConsole({ clearOutput = false } = {}) {
     waitForAllTargetsToBeAttached(hud.targetList),
     wait(1000),
   ]);
+
+  hud.targetList.destroy();
+
   info("Close the Browser Console");
   await BrowserConsoleManager.closeBrowserConsole();
   info("Browser Console closed");
@@ -1283,8 +1285,9 @@ async function takeNodeScreenshot(inspector) {
 
   info("Create an image using the downloaded fileas source");
   const image = new Image();
+  const onImageLoad = once(image, "load");
   image.src = OS.Path.toFileURI(filePath);
-  await once(image, "load");
+  await onImageLoad;
 
   info("Remove the downloaded screenshot file");
   await OS.File.remove(filePath);

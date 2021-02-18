@@ -47,7 +47,6 @@
 #include "nsContentUtils.h"
 #include "nsReadableUtils.h"
 #include "nsXULAppAPI.h"
-#include "GeckoProfiler.h"
 #include "WrapperFactory.h"
 
 #include "AutoMemMap.h"
@@ -58,6 +57,8 @@
 #include "mozilla/ClearOnShutdown.h"
 #include "mozilla/MacroForEach.h"
 #include "mozilla/Preferences.h"
+#include "mozilla/ProfilerLabels.h"
+#include "mozilla/ProfilerMarkers.h"
 #include "mozilla/ResultExtensions.h"
 #include "mozilla/ScriptPreloader.h"
 #include "mozilla/ScopeExit.h"
@@ -267,7 +268,7 @@ class MOZ_STACK_CLASS ComponentLoaderInfo {
 
   const nsACString& Key() { return mLocation; }
 
-  MOZ_MUST_USE nsresult GetLocation(nsCString& aLocation) {
+  [[nodiscard]] nsresult GetLocation(nsCString& aLocation) {
     nsresult rv = EnsureURI();
     NS_ENSURE_SUCCESS(rv, rv);
     return mURI->GetSpec(aLocation);
@@ -1311,7 +1312,7 @@ nsresult mozJSComponentLoader::Import(JSContext* aCx,
       return NS_ERROR_UNEXPECTED;
     }
 
-    mLocations.Put(newEntry->resolvedURL, new nsCString(info.Key()));
+    mLocations.Put(newEntry->resolvedURL, MakeUnique<nsCString>(info.Key()));
 
     RootedValue exception(aCx);
     {
@@ -1363,7 +1364,7 @@ nsresult mozJSComponentLoader::Import(JSContext* aCx,
 
   // Cache this module for later
   if (newEntry) {
-    mImports.Put(info.Key(), newEntry.release());
+    mImports.Put(info.Key(), std::move(newEntry));
   }
 
   return NS_OK;

@@ -297,28 +297,46 @@ nscoord nsTableWrapperFrame::GetPrefISize(gfxContext* aRenderingContext) {
   return maxISize;
 }
 
-nscoord nsTableWrapperFrame::ChildShrinkWrapISize(
-    gfxContext* aRenderingContext, nsIFrame* aChildFrame, WritingMode aWM,
-    LogicalSize aCBSize, nscoord aAvailableISize,
+nscoord nsTableWrapperFrame::InnerTableShrinkWrapISize(
+    gfxContext* aRenderingContext, nsTableFrame* aTableFrame, WritingMode aWM,
+    const LogicalSize& aCBSize, nscoord aAvailableISize,
     const StyleSizeOverrides& aSizeOverrides, ComputeSizeFlags aFlags) const {
-  AutoMaybeDisableFontInflation an(aChildFrame);
+  MOZ_ASSERT(InnerTableFrame() == aTableFrame);
+
+  AutoMaybeDisableFontInflation an(aTableFrame);
 
   Maybe<LogicalMargin> collapseBorder;
   Maybe<LogicalMargin> collapsePadding;
-  if (aChildFrame == InnerTableFrame()) {
-    InnerTableFrame()->GetCollapsedBorderPadding(collapseBorder,
-                                                 collapsePadding);
-  }
+  aTableFrame->GetCollapsedBorderPadding(collapseBorder, collapsePadding);
 
-  SizeComputationInput offsets(aChildFrame, aRenderingContext, aWM,
-                               aCBSize.ISize(aWM), collapseBorder,
-                               collapsePadding);
-  LogicalSize marginSize = offsets.ComputedLogicalMargin(aWM).Size(aWM);
-  LogicalSize bpSize = offsets.ComputedLogicalBorderPadding(aWM).Size(aWM);
+  SizeComputationInput input(aTableFrame, aRenderingContext, aWM,
+                             aCBSize.ISize(aWM), collapseBorder,
+                             collapsePadding);
+  LogicalSize marginSize(aWM);  // Inner table doesn't have any margin
+  LogicalSize bpSize = input.ComputedLogicalBorderPadding(aWM).Size(aWM);
 
   auto size =
-      aChildFrame->ComputeSize(aRenderingContext, aWM, aCBSize, aAvailableISize,
+      aTableFrame->ComputeSize(aRenderingContext, aWM, aCBSize, aAvailableISize,
                                marginSize, bpSize, aSizeOverrides, aFlags);
+  return size.mLogicalSize.ISize(aWM) + bpSize.ISize(aWM);
+}
+
+nscoord nsTableWrapperFrame::CaptionShrinkWrapISize(
+    gfxContext* aRenderingContext, nsIFrame* aCaptionFrame, WritingMode aWM,
+    const LogicalSize& aCBSize, nscoord aAvailableISize,
+    ComputeSizeFlags aFlags) const {
+  MOZ_ASSERT(aCaptionFrame == mCaptionFrames.FirstChild());
+
+  AutoMaybeDisableFontInflation an(aCaptionFrame);
+
+  SizeComputationInput input(aCaptionFrame, aRenderingContext, aWM,
+                             aCBSize.ISize(aWM));
+  LogicalSize marginSize = input.ComputedLogicalMargin(aWM).Size(aWM);
+  LogicalSize bpSize = input.ComputedLogicalBorderPadding(aWM).Size(aWM);
+
+  auto size = aCaptionFrame->ComputeSize(aRenderingContext, aWM, aCBSize,
+                                         aAvailableISize, marginSize, bpSize,
+                                         {}, aFlags);
   return size.mLogicalSize.ISize(aWM) + marginSize.ISize(aWM) +
          bpSize.ISize(aWM);
 }
@@ -356,26 +374,26 @@ LogicalSize nsTableWrapperFrame::ComputeAutoSize(
   Maybe<StyleCaptionSide> captionSide = GetCaptionSide();
   nscoord inlineSize;
   if (!captionSide) {
-    inlineSize =
-        ChildShrinkWrapISize(aRenderingContext, InnerTableFrame(), aWM, aCBSize,
-                             kidAvailableISize, aSizeOverrides, flags);
+    inlineSize = InnerTableShrinkWrapISize(aRenderingContext, InnerTableFrame(),
+                                           aWM, aCBSize, kidAvailableISize,
+                                           aSizeOverrides, flags);
   } else if (*captionSide == StyleCaptionSide::Left ||
              *captionSide == StyleCaptionSide::Right) {
-    nscoord capISize = ChildShrinkWrapISize(
-        aRenderingContext, mCaptionFrames.FirstChild(), aWM, aCBSize,
-        kidAvailableISize, aSizeOverrides, flags);
-    inlineSize = capISize +
-                 ChildShrinkWrapISize(aRenderingContext, InnerTableFrame(), aWM,
-                                      aCBSize, kidAvailableISize - capISize,
-                                      aSizeOverrides, flags);
+    nscoord capISize =
+        CaptionShrinkWrapISize(aRenderingContext, mCaptionFrames.FirstChild(),
+                               aWM, aCBSize, kidAvailableISize, flags);
+    inlineSize =
+        capISize + InnerTableShrinkWrapISize(
+                       aRenderingContext, InnerTableFrame(), aWM, aCBSize,
+                       kidAvailableISize - capISize, aSizeOverrides, flags);
   } else if (*captionSide == StyleCaptionSide::Top ||
              *captionSide == StyleCaptionSide::Bottom) {
-    inlineSize =
-        ChildShrinkWrapISize(aRenderingContext, InnerTableFrame(), aWM, aCBSize,
-                             kidAvailableISize, aSizeOverrides, flags);
+    inlineSize = InnerTableShrinkWrapISize(aRenderingContext, InnerTableFrame(),
+                                           aWM, aCBSize, kidAvailableISize,
+                                           aSizeOverrides, flags);
     nscoord capISize =
-        ChildShrinkWrapISize(aRenderingContext, mCaptionFrames.FirstChild(),
-                             aWM, aCBSize, inlineSize, aSizeOverrides, flags);
+        CaptionShrinkWrapISize(aRenderingContext, mCaptionFrames.FirstChild(),
+                               aWM, aCBSize, inlineSize, flags);
     if (capISize > inlineSize) {
       inlineSize = capISize;
     }
@@ -383,12 +401,12 @@ LogicalSize nsTableWrapperFrame::ComputeAutoSize(
     MOZ_ASSERT(*captionSide == StyleCaptionSide::TopOutside ||
                    *captionSide == StyleCaptionSide::BottomOutside,
                "unexpected caption-side");
-    inlineSize =
-        ChildShrinkWrapISize(aRenderingContext, InnerTableFrame(), aWM, aCBSize,
-                             kidAvailableISize, aSizeOverrides, flags);
-    nscoord capISize = ChildShrinkWrapISize(
-        aRenderingContext, mCaptionFrames.FirstChild(), aWM, aCBSize,
-        kidAvailableISize, aSizeOverrides, flags);
+    inlineSize = InnerTableShrinkWrapISize(aRenderingContext, InnerTableFrame(),
+                                           aWM, aCBSize, kidAvailableISize,
+                                           aSizeOverrides, flags);
+    nscoord capISize =
+        CaptionShrinkWrapISize(aRenderingContext, mCaptionFrames.FirstChild(),
+                               aWM, aCBSize, kidAvailableISize, flags);
     if (capISize > inlineSize) {
       inlineSize = capISize;
     }
@@ -563,40 +581,92 @@ nsresult nsTableWrapperFrame::GetInnerOrigin(
   return NS_OK;
 }
 
+LogicalSize nsTableWrapperFrame::GetAreaOccupiedByCaption(
+    StyleCaptionSide aCaptionSide,
+    const mozilla::LogicalSize& aCaptionMarginBoxSize) const {
+  const WritingMode wm = GetWritingMode();
+  LogicalSize area(wm);
+
+  switch (aCaptionSide) {
+    case StyleCaptionSide::Top:
+    case StyleCaptionSide::Bottom:
+    case StyleCaptionSide::TopOutside:
+    case StyleCaptionSide::BottomOutside:
+      area.BSize(wm) = aCaptionMarginBoxSize.BSize(wm);
+      break;
+    case StyleCaptionSide::Left:
+    case StyleCaptionSide::Right:
+      area.ISize(wm) = aCaptionMarginBoxSize.ISize(wm);
+      break;
+  }
+
+  return area;
+}
+
 void nsTableWrapperFrame::CreateReflowInputForInnerTable(
     nsPresContext* aPresContext, nsTableFrame* aTableFrame,
     const ReflowInput& aOuterRI, Maybe<ReflowInput>& aChildRI,
     const nscoord aAvailISize,
-    const Maybe<LogicalSize>& aContainingBlockSize) const {
+    const Maybe<LogicalSize>& aAreaOccupiedByCaption) const {
   MOZ_ASSERT(InnerTableFrame() == aTableFrame);
 
   const WritingMode wm = aTableFrame->GetWritingMode();
-  const LogicalSize availSize(wm, aAvailISize, aOuterRI.AvailableBSize());
-  aChildRI.emplace(aPresContext, aOuterRI, aTableFrame, availSize, Nothing(),
-                   ReflowInput::InitFlag::CallerWillInit);
+  const LogicalSize areaOccupiedByCaption =
+      aAreaOccupiedByCaption ? *aAreaOccupiedByCaption : LogicalSize(wm);
 
-  Maybe<LogicalMargin> collapseBorder;
-  Maybe<LogicalMargin> collapsePadding;
-  aTableFrame->GetCollapsedBorderPadding(collapseBorder, collapsePadding);
+  // If we have a caption occupied our content-box area, reduce the available
+  // block-size by the amount.
+  nscoord availBSize = aOuterRI.AvailableBSize();
+  if (availBSize != NS_UNCONSTRAINEDSIZE) {
+    availBSize = std::max(0, availBSize - areaOccupiedByCaption.BSize(wm));
+  }
+  const LogicalSize availSize(wm, aAvailISize, availBSize);
 
   // For inner table frames, the containing block is the same as for the outer
-  // table frame, unless our caller wants a different CB size.
-  Maybe<LogicalSize> cbSize = aContainingBlockSize
-                                  ? aContainingBlockSize
-                                  : Some(aOuterRI.mContainingBlockSize);
+  // table frame.
+  Maybe<LogicalSize> cbSize = Some(aOuterRI.mContainingBlockSize);
 
-  // However, if we are a grid item, the CB size needs to subtract our margins.
+  // However, if we are a grid item, the CB size needs to subtract our margins
+  // and the area occupied by the caption.
   //
   // Note that inner table computed margins are always zero, they're inherited
   // by the table wrapper, so we need to get our margin from aOuterRI.
   if (IsGridItem()) {
     const LogicalMargin margin = aOuterRI.ComputedLogicalMargin(wm);
-    cbSize->ISize(wm) -= margin.IStartEnd(wm);
+    cbSize->ISize(wm) = std::max(0, cbSize->ISize(wm) - margin.IStartEnd(wm) -
+                                        areaOccupiedByCaption.ISize(wm));
     if (cbSize->BSize(wm) != NS_UNCONSTRAINEDSIZE) {
-      cbSize->BSize(wm) -= margin.BStartEnd(wm);
+      cbSize->BSize(wm) = std::max(0, cbSize->BSize(wm) - margin.BStartEnd(wm) -
+                                          areaOccupiedByCaption.BSize(wm));
     }
   }
-  aChildRI->Init(aPresContext, cbSize, collapseBorder, collapsePadding);
+
+  if (!aTableFrame->IsBorderCollapse()) {
+    aChildRI.emplace(aPresContext, aOuterRI, aTableFrame, availSize, cbSize);
+    return;
+  }
+
+  Maybe<LogicalMargin> borderPadding;
+  Maybe<LogicalMargin> padding;
+  {
+    // Compute inner table frame's border & padding because we may need to
+    // reduce the size for inner table's size overrides. We won't waste time if
+    // they are not used, because we can use them directly by passing them into
+    // ReflowInput::Init().
+    Maybe<LogicalMargin> collapseBorder;
+    Maybe<LogicalMargin> collapsePadding;
+    aTableFrame->GetCollapsedBorderPadding(collapseBorder, collapsePadding);
+    SizeComputationInput input(aTableFrame, aOuterRI.mRenderingContext, wm,
+                               cbSize->ISize(wm), collapseBorder,
+                               collapsePadding);
+    borderPadding.emplace(input.ComputedLogicalBorderPadding(wm));
+    padding.emplace(input.ComputedLogicalPadding(wm));
+  }
+
+  aChildRI.emplace(aPresContext, aOuterRI, aTableFrame, availSize, Nothing(),
+                   ReflowInput::InitFlag::CallerWillInit);
+  aChildRI->Init(aPresContext, cbSize, Some(*borderPadding - *padding),
+                 padding);
 }
 
 void nsTableWrapperFrame::CreateReflowInputForCaption(
@@ -754,6 +824,7 @@ void nsTableWrapperFrame::Reflow(nsPresContext* aPresContext,
   Maybe<ReflowOutput> captionMet;
   LogicalSize captionSize(wm);
   LogicalMargin captionMargin(wm);
+  Maybe<LogicalSize> areaOccupiedByCaption;
   if (captionSide) {
     captionMet.emplace(wm);
     // We intentionally don't merge capStatus into aStatus, since we currently
@@ -761,49 +832,18 @@ void nsTableWrapperFrame::Reflow(nsPresContext* aPresContext,
     nsReflowStatus capStatus;
     ReflowChild(aPresContext, mCaptionFrames.FirstChild(), *captionRI,
                 *captionMet, capStatus);
-    captionSize.ISize(wm) = captionMet->ISize(wm);
-    captionSize.BSize(wm) = captionMet->BSize(wm);
+    captionSize = captionMet->Size(wm);
     captionMargin = captionRI->ComputedLogicalMargin(wm);
-    // Now that we know the bsize of the caption, reduce the available bsize
-    // for the table frame if we are bsize constrained and the caption is above
-    // or below the inner table.  Also reduce the CB size that we store for
-    // our children in case we're a grid item, by the same amount.
-    Maybe<LogicalSize> cbSize =
-        IsGridItem() ? Some(aOuterRI.mContainingBlockSize) : Nothing();
-    if (NS_UNCONSTRAINEDSIZE != aOuterRI.AvailableBSize() || cbSize) {
-      nscoord captionBSize = 0;
-      nscoord captionISize = 0;
-      switch (*captionSide) {
-        case StyleCaptionSide::Top:
-        case StyleCaptionSide::Bottom:
-        case StyleCaptionSide::TopOutside:
-        case StyleCaptionSide::BottomOutside:
-          captionBSize = captionSize.BSize(wm) + captionMargin.BStartEnd(wm);
-          break;
-        case StyleCaptionSide::Left:
-        case StyleCaptionSide::Right:
-          captionISize = captionSize.ISize(wm) + captionMargin.IStartEnd(wm);
-          break;
-      }
-      if (NS_UNCONSTRAINEDSIZE != aOuterRI.AvailableBSize()) {
-        innerRI->AvailableBSize() =
-            std::max(0, innerRI->AvailableBSize() - captionBSize);
-      }
-      if (cbSize) {
-        // Shrink the CB size by the size reserved for the caption.
-        LogicalSize oldCBSize = *cbSize;
-        cbSize->ISize(wm) = std::max(0, cbSize->ISize(wm) - captionISize);
-        if (cbSize->BSize(wm) != NS_UNCONSTRAINEDSIZE) {
-          cbSize->BSize(wm) = std::max(0, cbSize->BSize(wm) - captionBSize);
-        }
-        if (oldCBSize != *cbSize) {
-          // Reset the inner table's ReflowInput to stretch it to the new size.
-          innerRI.reset();
-          CreateReflowInputForInnerTable(aPresContext, InnerTableFrame(),
-                                         aOuterRI, innerRI, contentBoxISize,
-                                         cbSize);
-        }
-      }
+    areaOccupiedByCaption.emplace(GetAreaOccupiedByCaption(
+        *captionSide, captionSize + captionMargin.Size(wm)));
+
+    if (!areaOccupiedByCaption->IsAllZero()) {
+      // Reset the inner table's ReflowInput to reduce various sizes because of
+      // the area occupied by caption.
+      innerRI.reset();
+      CreateReflowInputForInnerTable(aPresContext, InnerTableFrame(), aOuterRI,
+                                     innerRI, contentBoxISize,
+                                     areaOccupiedByCaption);
     }
   }
 

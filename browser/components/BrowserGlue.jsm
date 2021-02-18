@@ -262,6 +262,21 @@ let JSWINDOWACTORS = {
     matches: ["about:plugins"],
   },
 
+  AboutPocket: {
+    parent: {
+      moduleURI: "resource:///actors/AboutPocketParent.jsm",
+    },
+    child: {
+      moduleURI: "resource:///actors/AboutPocketChild.jsm",
+
+      events: {
+        DOMWindowCreated: { capture: true },
+      },
+    },
+
+    matches: ["about:pocket-saved*", "about:pocket-signup*"],
+  },
+
   AboutPrivateBrowsing: {
     parent: {
       moduleURI: "resource:///actors/AboutPrivateBrowsingParent.jsm",
@@ -2084,17 +2099,6 @@ BrowserGlue.prototype = {
     );
   },
 
-  _sendMediaTelemetry() {
-    let win = Services.wm.getMostRecentWindow("navigator:browser");
-    if (win) {
-      let v = win.document.createElementNS(
-        "http://www.w3.org/1999/xhtml",
-        "video"
-      );
-      v.reportCanPlayTelemetry();
-    }
-  },
-
   /**
    * Application shutdown handler.
    */
@@ -2728,10 +2732,6 @@ BrowserGlue.prototype = {
   _scheduleBestEffortUserIdleTasks() {
     const idleTasks = [
       () => {
-        this._sendMediaTelemetry();
-      },
-
-      () => {
         // Telemetry for master-password - we do this after a delay as it
         // can cause IO if NSS/PSM has not already initialized.
         let tokenDB = Cc["@mozilla.org/security/pk11tokendb;1"].getService(
@@ -3306,7 +3306,7 @@ BrowserGlue.prototype = {
   _migrateUI: function BG__migrateUI() {
     // Use an increasing number to keep track of the current migration state.
     // Completely unrelated to the current Firefox release number.
-    const UI_VERSION = 106;
+    const UI_VERSION = 107;
     const BROWSER_DOCURL = AppConstants.BROWSER_CHROME_URL;
 
     if (!Services.prefs.prefHasUserValue("browser.migration.version")) {
@@ -3865,6 +3865,21 @@ BrowserGlue.prototype = {
       UrlbarPrefs.initializeShowSearchSuggestionsFirstPref();
     }
 
+    if (currentUIVersion < 107) {
+      // Migrate old http URIs for mailto handlers to their https equivalents.
+      // The handler service will do this. We need to wait with migrating
+      // until the handler service has started up, so just set a pref here.
+      const kPref = "browser.handlers.migrations";
+      // We might have set up another migration further up. Create an array,
+      // and drop empty strings resulting from the `split`:
+      let migrations = Services.prefs
+        .getCharPref(kPref, "")
+        .split(",")
+        .filter(x => !!x);
+      migrations.push("secure-mail");
+      Services.prefs.setCharPref(kPref, migrations.join(","));
+    }
+
     // Update the migration version.
     Services.prefs.setIntPref("browser.migration.version", UI_VERSION);
   },
@@ -3880,7 +3895,6 @@ BrowserGlue.prototype = {
       );
       let isFeatureEnabled = ExperimentAPI.getExperiment({
         featureId: "infobar",
-        sendExposurePing: false,
       })?.branch.feature.enabled;
       if (willPrompt) {
         // Prevent the related notification from appearing and

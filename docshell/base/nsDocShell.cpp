@@ -4305,10 +4305,18 @@ nsDocShell::Stop(uint32_t aStopFlags) {
   }
 
   if (nsIWebNavigation::STOP_CONTENT & aStopFlags) {
-    // Stop the document loading
+    // Stop the document loading and animations
     if (mContentViewer) {
       nsCOMPtr<nsIContentViewer> cv = mContentViewer;
       cv->Stop();
+    }
+  } else if (nsIWebNavigation::STOP_NETWORK & aStopFlags) {
+    // Stop the document loading only
+    if (mContentViewer) {
+      RefPtr<Document> doc = mContentViewer->GetDocument();
+      if (doc) {
+        doc->StopDocumentLoad();
+      }
     }
   }
 
@@ -7373,14 +7381,6 @@ nsresult nsDocShell::RestoreFromHistory() {
     mSavingOldViewer = CanSavePresentation(mLoadType, request, doc);
   }
 
-  nsCOMPtr<nsIContentViewer> oldCv(mContentViewer);
-  nsCOMPtr<nsIContentViewer> newCv(viewer);
-  float overrideDPPX = 0.0f;
-
-  if (oldCv) {
-    oldCv->GetOverrideDPPX(&overrideDPPX);
-  }
-
   // Protect against mLSHE going away via a load triggered from
   // pagehide or unload.
   nsCOMPtr<nsISHEntry> origLSHE = mLSHE;
@@ -7601,10 +7601,6 @@ nsresult nsDocShell::RestoreFromHistory() {
   // in CreateContentViewer.
   if (++gNumberOfDocumentsLoading == 1) {
     FavorPerformanceHint(true);
-  }
-
-  if (oldCv) {
-    newCv->SetOverrideDPPX(overrideDPPX);
   }
 
   if (document) {
@@ -8173,7 +8169,6 @@ nsresult nsDocShell::SetupNewViewer(nsIContentViewer* aNewViewer,
 
   const Encoding* hintCharset = nullptr;
   int32_t hintCharsetSource = kCharsetUninitialized;
-  float overrideDPPX = 1.0;
   // |newMUDV| also serves as a flag to set the data from the above vars
   nsCOMPtr<nsIContentViewer> newCv;
 
@@ -8204,8 +8199,6 @@ nsresult nsDocShell::SetupNewViewer(nsIContentViewer* aNewViewer,
       if (newCv) {
         hintCharset = oldCv->GetHintCharset();
         NS_ENSURE_SUCCESS(oldCv->GetHintCharacterSetSource(&hintCharsetSource),
-                          NS_ERROR_FAILURE);
-        NS_ENSURE_SUCCESS(oldCv->GetOverrideDPPX(&overrideDPPX),
                           NS_ERROR_FAILURE);
       }
     }
@@ -8263,8 +8256,9 @@ nsresult nsDocShell::SetupNewViewer(nsIContentViewer* aNewViewer,
     newCv->SetHintCharset(hintCharset);
     NS_ENSURE_SUCCESS(newCv->SetHintCharacterSetSource(hintCharsetSource),
                       NS_ERROR_FAILURE);
-    NS_ENSURE_SUCCESS(newCv->SetOverrideDPPX(overrideDPPX), NS_ERROR_FAILURE);
   }
+
+  NS_ENSURE_TRUE(mContentViewer, NS_ERROR_FAILURE);
 
   // Stuff the bgcolor from the old pres shell into the new
   // pres shell. This improves page load continuity.

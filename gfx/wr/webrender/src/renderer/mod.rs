@@ -337,6 +337,7 @@ pub enum ShaderColorMode {
     Bitmap = 7,
     ColorBitmap = 8,
     Image = 9,
+    MultiplyDualSource = 10,
 }
 
 impl From<GlyphFormat> for ShaderColorMode {
@@ -623,6 +624,39 @@ pub enum BlendMode {
     SubpixelConstantTextColor(ColorF),
     SubpixelWithBgColor,
     Advanced(MixBlendMode),
+    MultiplyDualSource,
+    Screen,
+    Exclusion,
+}
+
+impl BlendMode {
+    /// Decides when a given mix-blend-mode can be implemented in terms of
+    /// simple blending, dual-source blending, advanced blending, or not at
+    /// all based on available capabilities.
+    pub fn from_mix_blend_mode(
+        mode: MixBlendMode,
+        advanced_blend: bool,
+        coherent: bool,
+        dual_source: bool,
+    ) -> Option<BlendMode> {
+        // If we emulate a mix-blend-mode via simple or dual-source blending,
+        // care must be taken to output alpha As + Ad*(1-As) regardless of what
+        // the RGB output is to comply with the mix-blend-mode spec.
+        Some(match mode {
+            // If we have coherent advanced blend, just use that.
+            _ if advanced_blend && coherent => BlendMode::Advanced(mode),
+            // Screen can be implemented as Cs + Cd - Cs*Cd => Cs + Cd*(1-Cs)
+            MixBlendMode::Screen => BlendMode::Screen,
+            // Exclusion can be implemented as Cs + Cd - 2*Cs*Cd => Cs*(1-Cd) + Cd*(1-Cs)
+            MixBlendMode::Exclusion => BlendMode::Exclusion,
+            // Multiply can be implemented as Cs*Cd + Cs*(1-Ad) + Cd*(1-As) => Cs*(1-Ad) + Cd*(1 - SRC1=(As-Cs))
+            MixBlendMode::Multiply if dual_source => BlendMode::MultiplyDualSource,
+            // Otherwise, use advanced blend without coherency if available.
+            _ if advanced_blend => BlendMode::Advanced(mode),
+            // If advanced blend is not available, then we have to use brush_mix_blend.
+            _ => return None,
+        })
+    }
 }
 
 #[derive(PartialEq)]
@@ -1174,7 +1208,6 @@ impl Renderer {
             let lp_builder = LowPrioritySceneBuilderThread {
                 rx: low_priority_scene_rx,
                 tx: scene_tx.clone(),
-                simulate_slow_ms: 0,
             };
 
             thread::Builder::new().name(lp_scene_thread_name.clone()).spawn(move || {
@@ -1203,7 +1236,6 @@ impl Renderer {
         picture_tile_size.height = picture_tile_size.height.max(128).min(4096);
 
         let rb_scene_tx = scene_tx.clone();
-        let rb_low_priority_scene_tx = scene_tx.clone();
         let rb_font_instances = font_instances.clone();
         let enable_multithreading = options.enable_multithreading;
         thread::Builder::new().name(rb_thread_name.clone()).spawn(move || {
@@ -1233,7 +1265,6 @@ impl Renderer {
                 api_rx,
                 result_tx,
                 rb_scene_tx,
-                rb_low_priority_scene_tx,
                 device_pixel_ratio,
                 resource_cache,
                 backend_notifier,
@@ -1795,7 +1826,6 @@ impl Renderer {
             }
             DebugCommand::ClearCaches(_)
             | DebugCommand::SimulateLongSceneBuild(_)
-            | DebugCommand::SimulateLongLowPrioritySceneBuild(_)
             | DebugCommand::EnableNativeCompositor(_)
             | DebugCommand::SetBatchingLookback(_)
             | DebugCommand::EnableMultithreading(_) => {}
@@ -2928,6 +2958,15 @@ impl Renderer {
                                 self.device.gl().blend_barrier_khr();
                             }
                             self.device.set_blend_mode_advanced(mode);
+                        }
+                        BlendMode::MultiplyDualSource => {
+                            self.device.set_blend_mode_multiply_dual_source();
+                        }
+                        BlendMode::Screen => {
+                            self.device.set_blend_mode_screen();
+                        }
+                        BlendMode::Exclusion => {
+                            self.device.set_blend_mode_exclusion();
                         }
                     }
                     prev_blend_mode = batch.key.blend_mode;

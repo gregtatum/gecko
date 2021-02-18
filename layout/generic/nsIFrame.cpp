@@ -5947,10 +5947,11 @@ AspectRatio nsIFrame::GetAspectRatio() const {
   // Per spec, 'aspect-ratio' property applies to all elements except inline
   // boxes and internal ruby or table boxes.
   // https://drafts.csswg.org/css-sizing-4/#aspect-ratio
-  //
-  // Bug 1667501: If any caller is used for the elements supporting and not
-  // supporting 'aspect-ratio', we may need to add explicit exclusion to early
-  // return here.
+  // For those frame types that don't support aspect-ratio, they must not have
+  // the natural ratio, so this early return is fine.
+  if (!IsFrameOfType(eSupportsAspectRatio)) {
+    return AspectRatio();
+  }
 
   const StyleAspectRatio& aspectRatio = StylePosition()->mAspectRatio;
   // If aspect-ratio is zero or infinite, it's a degenerate ratio and behaves
@@ -6385,9 +6386,10 @@ nscoord nsIFrame::ShrinkWidthToFit(gfxContext* aRenderingContext,
 Maybe<nscoord> nsIFrame::ComputeInlineSizeFromAspectRatio(
     WritingMode aWM, const LogicalSize& aCBSize,
     const LogicalSize& aContentEdgeToBoxSizing, ComputeSizeFlags aFlags) const {
-  // FIXME: Bug 1670151: Use GetAspectRatio() to cover replaced elements.
+  // FIXME: Bug 1670151: Use GetAspectRatio() to cover replaced elements (and
+  // then we can drop the check of eSupportsAspectRatio).
   const AspectRatio aspectRatio = StylePosition()->mAspectRatio.ToLayoutRatio();
-  if (aFlags.contains(ComputeSizeFlag::SkipAspectRatio) || !aspectRatio) {
+  if (!IsFrameOfType(eSupportsAspectRatio) || !aspectRatio) {
     return Nothing();
   }
 
@@ -8544,7 +8546,8 @@ nsresult nsIFrame::PeekOffsetForCharacter(nsPeekOffsetStruct* aPos,
   // we're placed before the linefeed character on the previous line.
   if (current.mOffset < 0 && current.mJumpedLine &&
       aPos->mDirection == eDirPrevious &&
-      current.mFrame->HasSignificantTerminalNewline()) {
+      current.mFrame->HasSignificantTerminalNewline() &&
+      !current.mIgnoredBrFrame) {
     --aPos->mContentOffset;
   }
   return NS_OK;
@@ -9071,21 +9074,20 @@ nsIFrame::SelectablePeekReport nsIFrame::GetFrameFromDirection(
       return !aForceEditableRegion || aFrame->GetContent()->IsEditable();
     };
 
-    // Skip brFrames, but only we can select something before hitting the end of
-    // the line or a non-selectable region.
+    // Skip br frames, but only if we can select something before hitting the
+    // end of the line or a non-selectable region.
     if (atLineEdge && aDirection == eDirPrevious &&
         traversedFrame->IsBrFrame()) {
-      bool canSkipBr = false;
       for (nsIFrame* current = traversedFrame->GetPrevSibling(); current;
            current = current->GetPrevSibling()) {
         if (!current->IsBlockOutside() && IsSelectable(current)) {
           if (!current->IsBrFrame()) {
-            canSkipBr = true;
+            result.mIgnoredBrFrame = true;
           }
           break;
         }
       }
-      if (canSkipBr) {
+      if (result.mIgnoredBrFrame) {
         continue;
       }
     }

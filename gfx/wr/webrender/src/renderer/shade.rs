@@ -398,7 +398,9 @@ impl BrushShader {
             BlendMode::PremultipliedAlpha |
             BlendMode::PremultipliedDestOut |
             BlendMode::SubpixelConstantTextColor(..) |
-            BlendMode::SubpixelWithBgColor => {
+            BlendMode::SubpixelWithBgColor |
+            BlendMode::Screen |
+            BlendMode::Exclusion => {
                 if features.contains(BatchFeatures::ALPHA_PASS) {
                     &mut self.alpha
                 } else {
@@ -410,7 +412,8 @@ impl BrushShader {
                     .as_mut()
                     .expect("bug: no advanced blend shader loaded")
             }
-            BlendMode::SubpixelDualSource => {
+            BlendMode::SubpixelDualSource |
+            BlendMode::MultiplyDualSource => {
                 self.dual_source
                     .as_mut()
                     .expect("bug: no dual source shader loaded")
@@ -1068,6 +1071,12 @@ impl Shaders {
                 &mut self.ps_split_composite
             }
             BatchKind::Brush(brush_kind) => {
+                // SWGL uses a native anti-aliasing implementation that bypasses the shader.
+                // Don't consider it in that case when deciding whether or not to use
+                // an alpha-pass shader.
+                if device.get_capabilities().uses_native_antialiasing {
+                    features.remove(BatchFeatures::ANTIALIASING);
+                }
                 let brush_shader = match brush_kind {
                     BrushBatchKind::Solid => {
                         &mut self.brush_solid

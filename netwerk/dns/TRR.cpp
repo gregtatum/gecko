@@ -329,9 +329,10 @@ nsresult TRR::SendHTTPRequest() {
     addrRec->mTRRUsed = true;
   }
 
-  NS_NewTimerWithCallback(getter_AddRefs(mTimeout), this,
-                          gTRRService->GetRequestTimeout(),
-                          nsITimer::TYPE_ONE_SHOT);
+  NS_NewTimerWithCallback(
+      getter_AddRefs(mTimeout), this,
+      mTimeoutMs ? mTimeoutMs : gTRRService->GetRequestTimeout(),
+      nsITimer::TYPE_ONE_SHOT);
 
   mChannel = channel;
   return NS_OK;
@@ -632,7 +633,8 @@ void TRR::SaveAdditionalRecords(
     addrRec->mTrrStart = TimeStamp::Now();
     LOG(("Completing lookup for additional: %s", nsCString(iter.Key()).get()));
     (void)mHostResolver->CompleteLookup(hostRecord, NS_OK, ai, mPB,
-                                        mOriginSuffix, AddrHostRecord::TRR_OK);
+                                        mOriginSuffix, AddrHostRecord::TRR_OK,
+                                        this);
   }
 }
 
@@ -671,7 +673,7 @@ void TRR::StoreIPHintAsDNSRecord(const struct SVCB& aSVCBRecord) {
   addrRec->mTrrStart = TimeStamp::Now();
 
   (void)mHostResolver->CompleteLookup(hostRecord, NS_OK, ai, mPB, mOriginSuffix,
-                                      AddrHostRecord::TRR_OK);
+                                      AddrHostRecord::TRR_OK, this);
 }
 
 nsresult TRR::ReturnData(nsIChannel* aChannel) {
@@ -704,7 +706,7 @@ nsresult TRR::ReturnData(nsIChannel* aChannel) {
       return NS_ERROR_FAILURE;
     }
     (void)mHostResolver->CompleteLookup(mRec, NS_OK, ai, mPB, mOriginSuffix,
-                                        mTRRSkippedReason);
+                                        mTRRSkippedReason, this);
     mHostResolver = nullptr;
     mRec = nullptr;
   } else {
@@ -731,7 +733,7 @@ nsresult TRR::FailData(nsresult error) {
     RefPtr<AddrInfo> ai = new AddrInfo(mHost, mType, std::move(noAddresses));
 
     (void)mHostResolver->CompleteLookup(mRec, error, ai, mPB, mOriginSuffix,
-                                        mTRRSkippedReason);
+                                        mTRRSkippedReason, this);
   }
 
   mHostResolver = nullptr;
@@ -762,7 +764,8 @@ nsresult TRR::FollowCname(nsIChannel* aChannel) {
       auto rcode = mPacket->GetRCode();
       if (rcode.isOk() && rcode.unwrap() != 0) {
         RecordReason(nsHostRecord::TRR_RCODE_FAIL);
-      } else if (rv == NS_ERROR_UNKNOWN_HOST || rv == NS_ERROR_DEFINITIVE_UNKNOWN_HOST) {
+      } else if (rv == NS_ERROR_UNKNOWN_HOST ||
+                 rv == NS_ERROR_DEFINITIVE_UNKNOWN_HOST) {
         RecordReason(nsHostRecord::TRR_NO_ANSWERS);
       } else {
         RecordReason(nsHostRecord::TRR_DECODE_FAILED);
@@ -803,7 +806,8 @@ nsresult TRR::On200Response(nsIChannel* aChannel) {
     auto rcode = mPacket->GetRCode();
     if (rcode.isOk() && rcode.unwrap() != 0) {
       RecordReason(nsHostRecord::TRR_RCODE_FAIL);
-    } else if (rv == NS_ERROR_UNKNOWN_HOST || rv == NS_ERROR_DEFINITIVE_UNKNOWN_HOST) {
+    } else if (rv == NS_ERROR_UNKNOWN_HOST ||
+               rv == NS_ERROR_DEFINITIVE_UNKNOWN_HOST) {
       RecordReason(nsHostRecord::TRR_NO_ANSWERS);
     } else {
       RecordReason(nsHostRecord::TRR_DECODE_FAILED);
@@ -858,6 +862,8 @@ TRR::OnStopRequest(nsIRequest* aRequest, nsresult aStatusCode) {
        mType, mFailed, (unsigned int)aStatusCode));
   nsCOMPtr<nsIChannel> channel;
   channel.swap(mChannel);
+
+  mChannelStatus = aStatusCode;
 
   {
     // Cancel the timer since we don't need it anymore.

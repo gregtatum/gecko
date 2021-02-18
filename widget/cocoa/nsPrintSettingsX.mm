@@ -21,7 +21,7 @@ using namespace mozilla;
 NS_IMPL_ISUPPORTS_INHERITED(nsPrintSettingsX, nsPrintSettings, nsPrintSettingsX)
 
 nsPrintSettingsX::nsPrintSettingsX() {
-  NS_OBJC_BEGIN_TRY_ABORT_BLOCK;
+  NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
 
   mDestination = kPMDestinationInvalid;
 
@@ -34,7 +34,7 @@ nsPrintSettingsX::nsPrintSettingsX() {
    */
   mSaveOnCancel = false;
 
-  NS_OBJC_END_TRY_ABORT_BLOCK;
+  NS_OBJC_END_TRY_IGNORE_BLOCK;
 }
 
 already_AddRefed<nsIPrintSettings> CreatePlatformPrintSettings(
@@ -93,7 +93,7 @@ static const KnownMonochromeSetting kKnownMonochromeSettings[] = {
 #undef DECLARE_KNOWN_MONOCHROME_SETTING
 
 NSPrintInfo* nsPrintSettingsX::CreateOrCopyPrintInfo(bool aWithScaling) {
-  NS_OBJC_BEGIN_TRY_ABORT_BLOCK_RETURN;
+  NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
 
   // If we have a printInfo that came from the system print UI, use it so that
   // any printer-specific settings we don't know about will still be used.
@@ -224,11 +224,11 @@ NSPrintInfo* nsPrintSettingsX::CreateOrCopyPrintInfo(bool aWithScaling) {
 
   return printInfo;
 
-  NS_OBJC_END_TRY_ABORT_BLOCK_RETURN(nullptr);
+  NS_OBJC_END_TRY_BLOCK_RETURN(nullptr);
 }
 
 void nsPrintSettingsX::SetFromPrintInfo(NSPrintInfo* aPrintInfo, bool aAdoptPrintInfo) {
-  NS_OBJC_BEGIN_TRY_ABORT_BLOCK;
+  NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
 
   // Set page-size/margins.
   NSSize paperSize = [aPrintInfo paperSize];
@@ -350,5 +350,5 @@ void nsPrintSettingsX::SetFromPrintInfo(NSPrintInfo* aPrintInfo, bool aAdoptPrin
 
   SetIsInitializedFromPrinter(true);
 
-  NS_OBJC_END_TRY_ABORT_BLOCK;
+  NS_OBJC_END_TRY_IGNORE_BLOCK;
 }

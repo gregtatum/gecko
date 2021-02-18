@@ -2302,6 +2302,11 @@ bool TypedArrayObject::isOriginalByteOffsetGetter(Native native) {
   return native == TypedArray_byteOffsetGetter;
 }
 
+/* static */
+bool TypedArrayObject::isOriginalByteLengthGetter(Native native) {
+  return native == TypedArray_byteLengthGetter;
+}
+
 bool js::IsTypedArrayConstructor(const JSObject* obj) {
 #define CHECK_TYPED_ARRAY_CONSTRUCTOR(T, N)                 \
   if (IsNativeFunction(obj, N##Array::class_constructor)) { \
@@ -2704,12 +2709,12 @@ JS_FRIEND_API bool JS_IsTypedArrayObject(JSObject* obj) {
   return obj->canUnwrapAs<TypedArrayObject>();
 }
 
-JS_FRIEND_API uint32_t JS_GetTypedArrayLength(JSObject* obj) {
+JS_FRIEND_API size_t JS_GetTypedArrayLength(JSObject* obj) {
   TypedArrayObject* tarr = obj->maybeUnwrapAs<TypedArrayObject>();
   if (!tarr) {
     return 0;
   }
-  return tarr->length().deprecatedGetUint32();
+  return tarr->length().get();
 }
 
 JS_FRIEND_API size_t JS_GetTypedArrayByteOffset(JSObject* obj) {

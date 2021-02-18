@@ -2296,11 +2296,7 @@ nsresult nsGlobalWindowOuter::SetNewDocument(Document* aDocument,
                                JS::PrivateValue(nullptr));
       js::SetProxyReservedSlot(obj, HOLDER_WEAKMAP_SLOT, JS::UndefinedValue());
 
-#ifdef NIGHTLY_BUILD
       outerObject = xpc::TransplantObjectNukingXrayWaiver(cx, obj, outerObject);
-#else
-      outerObject = xpc::TransplantObject(cx, obj, outerObject);
-#endif
 
       if (!outerObject) {
         mBrowsingContext->ClearWindowProxy();
@@ -6692,9 +6688,10 @@ void nsGlobalWindowOuter::SetChromeEventHandler(
 
 void nsGlobalWindowOuter::SetFocusedElement(Element* aElement,
                                             uint32_t aFocusMethod,
-                                            bool aNeedsFocus) {
-  FORWARD_TO_INNER_VOID(SetFocusedElement,
-                        (aElement, aFocusMethod, aNeedsFocus));
+                                            bool aNeedsFocus,
+                                            bool aWillShowOutline) {
+  FORWARD_TO_INNER_VOID(SetFocusedElement, (aElement, aFocusMethod, aNeedsFocus,
+                                            aWillShowOutline));
 }
 
 uint32_t nsGlobalWindowOuter::GetFocusMethod() {

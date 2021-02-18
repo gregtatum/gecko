@@ -17,7 +17,7 @@ NS_IMPL_ISUPPORTS(nsSystemStatusBarCocoa, nsISystemStatusBar)
 
 NS_IMETHODIMP
 nsSystemStatusBarCocoa::AddItem(Element* aElement) {
-  NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
+  NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
 
   RefPtr<nsStandaloneNativeMenu> menu = new nsStandaloneNativeMenu();
   nsresult rv = menu->Init(aElement);
@@ -26,22 +26,22 @@ nsSystemStatusBarCocoa::AddItem(Element* aElement) {
   }
 
   nsCOMPtr<nsISupports> keyPtr = aElement;
-  mItems.Put(keyPtr, new StatusItem(menu));
+  mItems.Put(keyPtr, mozilla::MakeUnique<StatusItem>(menu));
 
   return NS_OK;
 
-  NS_OBJC_END_TRY_ABORT_BLOCK_NSRESULT;
+  NS_OBJC_END_TRY_BLOCK_RETURN(NS_ERROR_FAILURE);
 }
 
 NS_IMETHODIMP
 nsSystemStatusBarCocoa::RemoveItem(Element* aElement) {
-  NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
+  NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
 
   mItems.Remove(aElement);
 
   return NS_OK;
 
-  NS_OBJC_END_TRY_ABORT_BLOCK_NSRESULT;
+  NS_OBJC_END_TRY_BLOCK_RETURN(NS_ERROR_FAILURE);
 }
 
 nsSystemStatusBarCocoa::StatusItem::StatusItem(nsStandaloneNativeMenu* aMenu) : mMenu(aMenu) {

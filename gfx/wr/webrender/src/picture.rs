@@ -124,6 +124,7 @@ use crate::render_task_graph::RenderTaskId;
 use crate::render_target::RenderTargetKind;
 use crate::render_task::{BlurTask, RenderTask, RenderTaskLocation, BlurTaskCache};
 use crate::render_task::{StaticRenderTaskSurface, RenderTaskKind};
+use crate::renderer::BlendMode;
 use crate::resource_cache::{ResourceCache, ImageGeneration};
 use crate::space::{SpaceMapper, SpaceSnapper};
 use crate::scene::SceneProperties;
@@ -5003,7 +5004,6 @@ impl PicturePrimitive {
                                     tile_cache.current_tile_size.to_f32(),
                                     pic_index,
                                     content_origin,
-                                    UvRectKind::Rect,
                                     surface_spatial_node_index,
                                     device_pixel_scale,
                                     *visibility_mask,
@@ -5241,14 +5241,13 @@ impl PicturePrimitive {
                                     unclipped.size,
                                     pic_index,
                                     device_rect.origin,
-                                    uv_rect_kind,
                                     surface_spatial_node_index,
                                     device_pixel_scale,
                                     PrimitiveVisibilityMask::all(),
                                     None,
                                     None,
                                 )
-                            )
+                            ).with_uv_rect_kind(uv_rect_kind)
                         );
 
                         let blur_render_task_id = RenderTask::new_blur(
@@ -5318,14 +5317,13 @@ impl PicturePrimitive {
                                     unclipped.size,
                                     pic_index,
                                     device_rect.origin,
-                                    uv_rect_kind,
                                     surface_spatial_node_index,
                                     device_pixel_scale,
                                     PrimitiveVisibilityMask::all(),
                                     None,
                                     None,
                                 ),
-                            )
+                            ).with_uv_rect_kind(uv_rect_kind)
                         );
 
                         // Add this content picture as a dependency of the parent surface, to
@@ -5366,7 +5364,13 @@ impl PicturePrimitive {
                             device_rect,
                         );
                     }
-                    PictureCompositeMode::MixBlend(..) if !frame_context.fb_config.gpu_supports_advanced_blend => {
+                    PictureCompositeMode::MixBlend(mode) if BlendMode::from_mix_blend_mode(
+                        mode,
+                        frame_context.fb_config.gpu_supports_advanced_blend,
+                        frame_context.fb_config.advanced_blend_is_coherent,
+                        frame_context.fb_config.dual_source_blending_is_enabled &&
+                            frame_context.fb_config.dual_source_blending_is_supported,
+                    ).is_none() => {
                         if let Some(scale) = adjust_scale_for_max_surface_size(
                             raster_config, frame_context.fb_config.max_target_size,
                             pic_rect, &map_pic_to_raster, &map_raster_to_world,
@@ -5433,21 +5437,15 @@ impl PicturePrimitive {
                                 frame_state.rg_builder.add().init(
                                     RenderTask::new_dynamic(
                                         available_rect.size.to_i32(),
-                                        RenderTaskKind::new_readback(
-                                            Some(available_rect.origin),
-                                            backdrop_uv,
-                                        ),
-                                    )
+                                        RenderTaskKind::new_readback(Some(available_rect.origin)),
+                                    ).with_uv_rect_kind(backdrop_uv)
                                 )
                             }
                             None => {
                                 frame_state.rg_builder.add().init(
                                     RenderTask::new_dynamic(
                                         DeviceIntSize::new(16, 16),
-                                        RenderTaskKind::new_readback(
-                                            None,
-                                            UvRectKind::Rect,
-                                        ),
+                                        RenderTaskKind::new_readback(None),
                                     )
                                 )
                             }
@@ -5470,14 +5468,13 @@ impl PicturePrimitive {
                                     unclipped.size,
                                     pic_index,
                                     clipped.origin,
-                                    uv_rect_kind,
                                     surface_spatial_node_index,
                                     device_pixel_scale,
                                     PrimitiveVisibilityMask::all(),
                                     None,
                                     None,
                                 )
-                            )
+                            ).with_uv_rect_kind(uv_rect_kind)
                         );
 
                         frame_state.init_surface(
@@ -5515,14 +5512,13 @@ impl PicturePrimitive {
                                     unclipped.size,
                                     pic_index,
                                     clipped.origin,
-                                    uv_rect_kind,
                                     surface_spatial_node_index,
                                     device_pixel_scale,
                                     PrimitiveVisibilityMask::all(),
                                     None,
                                     None,
                                 )
-                            )
+                            ).with_uv_rect_kind(uv_rect_kind)
                         );
 
                         frame_state.init_surface(
@@ -5559,14 +5555,13 @@ impl PicturePrimitive {
                                     unclipped.size,
                                     pic_index,
                                     clipped.origin,
-                                    uv_rect_kind,
                                     surface_spatial_node_index,
                                     device_pixel_scale,
                                     PrimitiveVisibilityMask::all(),
                                     None,
                                     None,
                                 )
-                            )
+                            ).with_uv_rect_kind(uv_rect_kind)
                         );
 
                         frame_state.init_surface(
@@ -5604,14 +5599,13 @@ impl PicturePrimitive {
                                     unclipped.size,
                                     pic_index,
                                     clipped.origin,
-                                    uv_rect_kind,
                                     surface_spatial_node_index,
                                     device_pixel_scale,
                                     PrimitiveVisibilityMask::all(),
                                     None,
                                     None,
                                 )
-                            )
+                            ).with_uv_rect_kind(uv_rect_kind)
                         );
 
                         frame_state.init_surface(
@@ -5649,14 +5643,13 @@ impl PicturePrimitive {
                                     unclipped.size,
                                     pic_index,
                                     clipped.origin,
-                                    uv_rect_kind,
                                     surface_spatial_node_index,
                                     device_pixel_scale,
                                     PrimitiveVisibilityMask::all(),
                                     None,
                                     None,
                                 )
-                            )
+                            ).with_uv_rect_kind(uv_rect_kind)
                         );
 
                         let filter_task_id = RenderTask::new_svg_filter(
@@ -6347,7 +6340,6 @@ impl PicturePrimitive {
                     }
                 }
             }
-            PictureCompositeMode::MixBlend(..) if !frame_context.fb_config.gpu_supports_advanced_blend => {}
             PictureCompositeMode::Filter(ref filter) => {
                 match *filter {
                     Filter::ColorMatrix(ref m) => {

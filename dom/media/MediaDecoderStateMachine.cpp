@@ -15,6 +15,7 @@
 #include "mozilla/Logging.h"
 #include "mozilla/MathAlgorithms.h"
 #include "mozilla/NotNull.h"
+#include "mozilla/ProfilerLabels.h"
 #include "mozilla/SharedThreadPool.h"
 #include "mozilla/Sprintf.h"
 #include "mozilla/StaticPrefs_media.h"
@@ -27,7 +28,6 @@
 #include "AudioSegment.h"
 #include "DOMMediaStream.h"
 #include "ImageContainer.h"
-#include "GeckoProfiler.h"
 #include "MediaDecoder.h"
 #include "MediaDecoderStateMachine.h"
 #include "MediaShutdownManager.h"
@@ -401,10 +401,9 @@ class MediaDecoderStateMachine::DormantState
     RefPtr<MediaDecoder::SeekPromise> x =
         mPendingSeek.mPromise.Ensure(__func__);
 
-    // Reset the decoding state for the video track to ensure
-    // that any queued video frames are released and don't
-    // consume video memory.
-    mMaster->ResetDecode(TrackInfo::kVideoTrack);
+    // Reset the decoding state to ensure that any queued video frames are
+    // released and don't consume video memory.
+    mMaster->ResetDecode();
 
     // No need to call StopMediaSink() here.
     // We will do it during seeking when exiting dormant.
