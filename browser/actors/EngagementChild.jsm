@@ -6,6 +6,32 @@
 var EXPORTED_SYMBOLS = ["EngagementChild"];
 
 class EngagementChild extends JSWindowActorChild {
+  actorCreated() {
+    this.initWebProgressListener();
+  }
+
+  initWebProgressListener() {
+    const webProgress = this.manager.browsingContext.top.docShell
+      .QueryInterface(Ci.nsIInterfaceRequestor)
+      .getInterface(Ci.nsIWebProgress);
+
+    const listener = {
+      QueryInterface: ChromeUtils.generateQI([
+        "nsIWebProgressListener",
+        "nsISupportsWeakReference",
+      ]),
+    };
+
+    listener.onLocationChange = (aWebProgress, aRequest, aLocation, aFlags) => {
+      this.sendAsyncMessage("Engagement:Log", "LOCATIONCHANGE");
+    };
+
+    webProgress.addProgressListener(
+      listener,
+      Ci.nsIWebProgress.NOTIFY_LOCATION
+    );
+  }
+
   async getDocumentInfo() {
     let doc = this.document;
     if (
@@ -48,12 +74,25 @@ class EngagementChild extends JSWindowActorChild {
       case "pageshow": {
         // BFCACHE - not sure what to do here yet.
         //        check();
+        //        this.sendAsyncMessage("Engagement:Log", "PAGESHOW");
+        break;
+      }
+      case "load": {
+        //        this.sendAsyncMessage("Engagement:Log", "LOAD");
         break;
       }
       case "DOMContentLoaded": {
         let docInfo = await this.getDocumentInfo();
-        if (docInfo) {
+        let context = this.manager.browsingContext;
+        if (docInfo && context.isActive) {
           this.sendAsyncMessage("Engagement:StartTimer", docInfo);
+        }
+        break;
+      }
+      case "pagehide": {
+        let docInfo = await this.getDocumentInfo();
+        if (docInfo) {
+          this.sendAsyncMessage("Engagement:StopTimer", docInfo);
         }
         break;
       }

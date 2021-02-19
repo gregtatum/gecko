@@ -509,6 +509,8 @@ let JSWINDOWACTORS = {
       events: {
         DOMContentLoaded: {},
         pageshow: { mozSystemGroup: true },
+        pagehide: { mozSystemGroup: true },
+        load: { mozSystemGroup: true },
       },
     },
   },

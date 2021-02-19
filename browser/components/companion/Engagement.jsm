@@ -29,7 +29,7 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 
 const DOMWINDOW_OPENED_TOPIC = "domwindowopened";
 
-const ENGAGEMENT_TIMER = 5 * 1000; // 10 seconds
+const ENGAGEMENT_TIMER = 15 * 1000; // 10 seconds
 
 let Engagement = {
   _currentTimer: null,
@@ -71,16 +71,17 @@ let Engagement = {
           this.startEngagementTimer(tab.linkedBrowser.currentURI);
         }
         break;
-      case "focus":
-        var win = event.target;
+      case "activate":
+        // We only want to start timers for focus events for the whole window
         if (event.target instanceof Ci.nsIDOMWindow) {
-          if (win.defaultView) {
-            let tab = win.defaultView.gBrowser.selectedTab;
+          let win = event.target;
+          if (win.gBrowser) {
+            let tab = win.gBrowser.selectedTab;
             this.startEngagementTimer(tab.linkedBrowser.currentURI);
           }
         }
         break;
-      case "blur":
+      case "deactivate":
         if (event.target instanceof Ci.nsIDOMWindow) {
           this.clearEngagementTimerIf();
         }
@@ -108,14 +109,14 @@ let Engagement = {
 
   _registerWindow(win) {
     win.addEventListener("TabSelect", this, true);
-    win.addEventListener("blur", this, true);
-    win.addEventListener("focus", this, true);
+    win.addEventListener("deactivate", this, true);
+    win.addEventListener("activate", this, true);
   },
 
   _unregisterWindow(win) {
     win.removeEventListener("TabSelect", this, true);
-    win.removeEventListener("blur", this, true);
-    win.removeEventListener("focus", this, true);
+    win.removeEventListener("deactivate", this, true);
+    win.removeEventListener("activate", this, true);
   },
 
   _onWindowOpen(win) {
@@ -140,12 +141,22 @@ let Engagement = {
     win.addEventListener("load", onLoad);
   },
 
+  reportError(msg) {
+    log.debug(JSON.stringify(msg));
+  },
+
   startTimer(msg) {
     if (this._currentURL != msg.url) {
       this.clearEngagementTimerIf();
       this._currentURL = null;
       this.startEngagementTimer(Services.io.newURI(msg.url));
       this._currentURL = msg._currentURL;
+    }
+  },
+  stopTimer(msg) {
+    if (this._currentURL == msg.url) {
+      this.clearEngagementTimerIf();
+      this._currentURL = null;
     }
   },
   isHttpURI(uri) {
