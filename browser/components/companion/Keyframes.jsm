@@ -26,7 +26,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   AsyncShutdown: "resource://gre/modules/AsyncShutdown.jsm",
 });
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 /**
  * All SQL statements should be defined here.
@@ -40,10 +40,16 @@ const SQL = {
     "timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
     "url TEXT NOT NULL, " +
     "type TEXT NOT NULL, " +
+    "firstVisit TEXT NOT NULL, " +
+    "lastVisit TEXT NOT NULL, " +
+    "totalEngagement TEXT NOT NULL, " +
     "thumbnail TEXT " +
     ");",
 
-  add: "INSERT INTO keyframes (url, type) VALUES (:url, :type);",
+  add:
+    "INSERT INTO keyframes (url, type, firstVisit, lastVisit, totalEngagement) VALUES (:url, :type, :firstVisit, :lastVisit, :totalEngagement);",
+
+  exists: "SELECT * FROM keyframes WHERE url = :url;",
 
   selectAll: "SELECT * FROM keyframes;",
 };
@@ -51,11 +57,29 @@ const SQL = {
 var Keyframes = {
   _db: null,
 
-  async add(url, type, thumbnail) {
+  async addOrUpdate(url, type, firstVisit, lastVisit, totalEngagement) {
     if (!this._db) {
       await this.init();
     }
-    await this._db.executeCached(SQL.add, { url, type });
+    let existingRows = await this._db.executeCached(SQL.exists, { url });
+    if (existingRows.length) {
+      for (let row of existingRows) {
+        let id = row.getResultByName("id");
+        let currentEngagement = row.getResultByName("totalEngagement");
+        let newTotalEngagement =
+          parseInt(currentEngagement) + parseInt(totalEngagement);
+        let sql = `UPDATE keyframes SET lastVisit = '${lastVisit}', totalEngagement = '${newTotalEngagement}' WHERE id = '${id}'`;
+        await this._db.executeCached(sql);
+      }
+    } else {
+      await this._db.executeCached(SQL.add, {
+        url,
+        type,
+        firstVisit,
+        lastVisit,
+        totalEngagement,
+      });
+    }
     Services.obs.notifyObservers(null, "keyframe-update");
   },
 

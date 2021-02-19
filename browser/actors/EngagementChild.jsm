@@ -85,14 +85,14 @@ class EngagementChild extends JSWindowActorChild {
         let docInfo = await this.getDocumentInfo();
         let context = this.manager.browsingContext;
         if (docInfo && context.isActive) {
-          this.sendAsyncMessage("Engagement:StartTimer", docInfo);
+          this.sendAsyncMessage("Engagement:Engage", docInfo);
         }
         break;
       }
       case "pagehide": {
         let docInfo = await this.getDocumentInfo();
         if (docInfo) {
-          this.sendAsyncMessage("Engagement:StopTimer", docInfo);
+          this.sendAsyncMessage("Engagement:Disengage", docInfo);
         }
         break;
       }

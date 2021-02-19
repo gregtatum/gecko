@@ -15,8 +15,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   //  PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
   Keyframes: "resource:///modules/Keyframes.jsm",
   Services: "resource://gre/modules/Services.jsm",
-  setTimeout: "resource://gre/modules/Timer.jsm",
-  clearTimeout: "resource://gre/modules/Timer.jsm",
 });
 
 XPCOMUtils.defineLazyGetter(this, "log", () => {
@@ -29,11 +27,9 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 
 const DOMWINDOW_OPENED_TOPIC = "domwindowopened";
 
-const ENGAGEMENT_TIMER = 15 * 1000; // 10 seconds
-
 let Engagement = {
-  _currentTimer: null,
   _currentURL: null,
+  _startTimeOnPage: 0,
 
   _inited: false,
 
@@ -66,9 +62,9 @@ let Engagement = {
     switch (event.type) {
       case "TabSelect":
         {
+          this.disengage({ url: this._currentURL });
           let tab = event.target;
-          this.clearEngagementTimerIf();
-          this.startEngagementTimer(tab.linkedBrowser.currentURI);
+          this.engage({ url: tab.linkedBrowser.currentURI.specIgnoringRef });
         }
         break;
       case "activate":
@@ -77,13 +73,19 @@ let Engagement = {
           let win = event.target;
           if (win.gBrowser) {
             let tab = win.gBrowser.selectedTab;
-            this.startEngagementTimer(tab.linkedBrowser.currentURI);
+            this.engage({ url: tab.linkedBrowser.currentURI.specIgnoringRef });
           }
         }
         break;
       case "deactivate":
         if (event.target instanceof Ci.nsIDOMWindow) {
-          this.clearEngagementTimerIf();
+          let win = event.target;
+          if (win.gBrowser) {
+            let tab = win.gBrowser.selectedTab;
+            this.disengage({
+              url: tab.linkedBrowser.currentURI.specIgnoringRef,
+            });
+          }
         }
         break;
       case "unload":
@@ -145,44 +147,29 @@ let Engagement = {
     log.debug(JSON.stringify(msg));
   },
 
-  startTimer(msg) {
-    if (this._currentURL != msg.url) {
-      this.clearEngagementTimerIf();
-      this._currentURL = null;
-      this.startEngagementTimer(Services.io.newURI(msg.url));
-      this._currentURL = msg._currentURL;
-    }
-  },
-  stopTimer(msg) {
-    if (this._currentURL == msg.url) {
-      this.clearEngagementTimerIf();
-      this._currentURL = null;
-    }
-  },
   isHttpURI(uri) {
     // Only consider http(s) schemas.
     return uri.schemeIs("http") || uri.schemeIs("https");
   },
 
-  clearEngagementTimerIf() {
-    if (this._currentTimer) {
-      log.debug("Clearing timer " + this._currentTimer);
-      clearTimeout(this._currentTimer);
-      this._currentTimer = null;
-    }
+  engage(msg) {
+    log.debug("engage with " + msg.url);
+    this._currentURL = msg.url;
+    this._startTimeOnPage = new Date().getTime();
   },
 
-  startEngagementTimer(uri) {
-    if (!this.isHttpURI(uri)) {
-      return;
-    }
-    this._currentTimer = setTimeout(function() {
-      log.debug("ENGAGED WITH:" + uri.specIgnoringRef);
-      Keyframes.add(uri.specIgnoringRef, "automatic");
-      Engagement._currentTimer = null;
-    }, ENGAGEMENT_TIMER);
-    log.debug(
-      "started timer " + this._currentTimer + " for " + uri.specIgnoringRef
+  disengage(msg) {
+    log.debug("disengage with " + msg.url);
+    let stopTimeOnPage = new Date().getTime();
+    let timeOnPage = new Date().getTime() - this._startTimeOnPage;
+    log.debug(timeOnPage / 1000 + " seconds of engagement");
+    Keyframes.addOrUpdate(
+      Services.io.newURI(msg.url).specIgnoringRef,
+      "automatic",
+      this._startTimeOnPage,
+      stopTimeOnPage,
+      timeOnPage
     );
+    this._currentURL = null;
   },
 };

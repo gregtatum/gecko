@@ -16,14 +16,14 @@ class EngagementParent extends JSWindowActorParent {
     if (msg.name == "Engagement:OpenGraph") {
       Engagement.getOpenGraph(msg.data);
     }
-    if (msg.name == "Engagement:StartTimer") {
-      Engagement.startTimer(msg.data);
-    }
-    if (msg.name == "Engagement:StopTimer") {
-      Engagement.stopTimer(msg.data);
-    }
     if (msg.name == "Engagement:Log") {
       Engagement.reportError(msg.data);
+    }
+    if (msg.name == "Engagement:Engage") {
+      Engagement.engage(msg.data);
+    }
+    if (msg.name == "Engagement:Disengage") {
+      Engagement.disengage(msg.data);
     }
   }
 }
