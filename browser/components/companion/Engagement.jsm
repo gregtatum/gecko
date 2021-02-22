@@ -184,6 +184,9 @@ let Engagement = {
     ) {
       return;
     }
+    if (msg.url != this._currentURL) {
+      return;
+    }
     log.debug("disengage with " + msg.url);
     let stopTimeOnPage = new Date().getTime();
     let timeOnPage = new Date().getTime() - this._startTimeOnPage;
