@@ -178,7 +178,13 @@ let Engagement = {
   },
 
   async disengage(msg) {
-    if (!this.isHttpURI(Services.io.newURI(msg.url)) || this._startTimeOnPage) {
+    if (
+      !this.isHttpURI(Services.io.newURI(msg.url)) ||
+      !this._startTimeOnPage
+    ) {
+      return;
+    }
+    if (msg.url != this._currentURL) {
       return;
     }
     log.debug("disengage with " + msg.url);

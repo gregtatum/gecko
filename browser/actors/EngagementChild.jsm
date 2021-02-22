@@ -27,7 +27,7 @@ class EngagementChild extends JSWindowActorChild {
     };
 
     listener.onLocationChange = (aWebProgress, aRequest, aLocation, aFlags) => {
-      this.sendAsyncMessage("Engagement:Log", "LOCATIONCHANGE");
+      //      this.sendAsyncMessage("Engagement:Log", "LOCATIONCHANGE");
     };
 
     webProgress.addProgressListener(
