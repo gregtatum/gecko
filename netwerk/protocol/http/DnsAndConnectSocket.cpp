@@ -13,6 +13,7 @@
 #include "nsIDNSService.h"
 #include "nsQueryObject.h"
 #include "nsURLHelper.h"
+#include "mozilla/Components.h"
 #include "mozilla/StaticPrefs_network.h"
 #include "mozilla/SyncRunnable.h"
 
@@ -148,6 +149,7 @@ nsresult DnsAndConnectSocket::SetupDnsFlags() {
   LOG(("DnsAndConnectSocket::SetupDnsFlags [this=%p] ", this));
 
   uint32_t dnsFlags = 0;
+  bool disableIpv6ForBackup = false;
   if (mCaps & NS_HTTP_REFRESH_DNS) {
     dnsFlags = nsIDNSService::RESOLVE_BYPASS_CACHE;
   }
@@ -163,6 +165,13 @@ nsresult DnsAndConnectSocket::SetupDnsFlags() {
     }
     mPrimaryTransport.mRetryWithDifferentIPFamily = true;
     mBackupTransport.mRetryWithDifferentIPFamily = true;
+  } else if (gHttpHandler->FastFallbackToIPv4()) {
+    // For backup connections, we disable IPv6. That's because some users have
+    // broken IPv6 connectivity (leading to very long timeouts), and disabling
+    // IPv6 on the backup connection gives them a much better user experience
+    // with dual-stack hosts, though they still pay the 250ms delay for each new
+    // connection. This strategy is also known as "happy eyeballs".
+    disableIpv6ForBackup = true;
   }
 
   if (mEnt->mConnInfo->HasIPHintAddress()) {
@@ -201,6 +210,13 @@ nsresult DnsAndConnectSocket::SetupDnsFlags() {
 
   mPrimaryTransport.mDnsFlags = dnsFlags;
   mBackupTransport.mDnsFlags = dnsFlags;
+  if (disableIpv6ForBackup) {
+    mBackupTransport.mDnsFlags |= nsISocketTransport::DISABLE_IPV6;
+  }
+  NS_ASSERTION(
+      !( mBackupTransport.mDnsFlags & nsIDNSService::RESOLVE_DISABLE_IPV6) ||
+           !( mBackupTransport.mDnsFlags & nsIDNSService::RESOLVE_DISABLE_IPV4),
+      "Setting both RESOLVE_DISABLE_IPV6 and RESOLVE_DISABLE_IPV4");
   return NS_OK;
 }
 
@@ -1009,7 +1025,7 @@ nsresult DnsAndConnectSocket::TransportSetup::SetupStreams(
   nsCOMPtr<nsISocketTransport> socketTransport;
   nsCOMPtr<nsISocketTransportService> sts;
 
-  sts = services::GetSocketTransportService();
+  sts = components::SocketTransport::Service();
   if (!sts) {
     return NS_ERROR_NOT_AVAILABLE;
   }
@@ -1054,6 +1070,13 @@ nsresult DnsAndConnectSocket::TransportSetup::SetupStreams(
 
   if (dnsAndSock->mCaps & NS_HTTP_LOAD_ANONYMOUS) {
     tmpFlags |= nsISocketTransport::ANONYMOUS_CONNECT;
+  }
+
+  // When we are making a speculative connection we do not propagate all flags
+  // in mCaps, so we need to query nsHttpConnectionInfo directly as well.
+  if ((dnsAndSock->mCaps & NS_HTTP_LOAD_ANONYMOUS_CONNECT_ALLOW_CLIENT_CERT) ||
+      ci->GetAnonymousAllowClientCert()) {
+    tmpFlags |= nsISocketTransport::ANONYMOUS_CONNECT_ALLOW_CLIENT_CERT;
   }
 
   if (ci->GetPrivate()) {

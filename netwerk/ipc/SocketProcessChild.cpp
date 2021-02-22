@@ -12,6 +12,7 @@
 #include "HttpTransactionChild.h"
 #include "HttpConnectionMgrChild.h"
 #include "mozilla/Assertions.h"
+#include "mozilla/Components.h"
 #include "mozilla/dom/MemoryReportRequest.h"
 #include "mozilla/ipc/CrashReporterClient.h"
 #include "mozilla/ipc/BackgroundChild.h"
@@ -381,7 +382,7 @@ mozilla::ipc::IPCResult
 SocketProcessChild::RecvOnHttpActivityDistributorActivated(
     const bool& aIsActivated) {
   if (nsCOMPtr<nsIHttpActivityObserver> distributor =
-          services::GetHttpActivityDistributor()) {
+          components::HttpActivityDistributor::Service()) {
     distributor->SetIsActive(aIsActivated);
   }
   return IPC_OK();
@@ -440,7 +441,7 @@ void SocketProcessChild::RemoveDataBridgeFromMap(uint64_t aChannelId) {
 Maybe<RefPtr<BackgroundDataBridgeParent>>
 SocketProcessChild::GetAndRemoveDataBridge(uint64_t aChannelId) {
   MutexAutoLock lock(mMutex);
-  return mBackgroundDataBridgeMap.GetAndRemove(aChannelId);
+  return mBackgroundDataBridgeMap.Extract(aChannelId);
 }
 
 mozilla::ipc::IPCResult SocketProcessChild::RecvClearSessionCache() {

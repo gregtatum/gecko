@@ -87,7 +87,7 @@
 #include "gfx2DGlue.h"
 
 #ifdef ACCESSIBILITY
-#  include "mozilla/a11y/Accessible.h"
+#  include "mozilla/a11y/LocalAccessible.h"
 #  include "mozilla/a11y/Platform.h"
 #  include "nsAccessibilityService.h"
 
@@ -1510,16 +1510,6 @@ void nsWindow::NativeMoveResizeWaylandPopupCB(const GdkRectangle* aFinalSize,
   LOG(("  orig mBounds x=%d y=%d width=%d height=%d\n", mBounds.x, mBounds.y,
        mBounds.width, mBounds.height));
 
-  // Remove signal handler because it can also be called from
-  // xdg_popup_configure
-  GdkWindow* gdkWindow = gtk_widget_get_window(GTK_WIDGET(mShell));
-  if (g_signal_handler_find(
-          gdkWindow, G_SIGNAL_MATCH_FUNC, 0, 0, nullptr,
-          FuncToGpointer(NativeMoveResizeWaylandPopupCallback), this)) {
-    LOG(("  Disconnecting NativeMoveResizeWaylandPopupCallback"));
-    g_signal_handlers_disconnect_by_func(
-        gdkWindow, FuncToGpointer(NativeMoveResizeWaylandPopupCallback), this);
-  }
   mWaitingForMoveToRectCB = false;
 
   // We ignore the callback position data because the another resize has been
@@ -1565,8 +1555,12 @@ void nsWindow::NativeMoveResizeWaylandPopupCB(const GdkRectangle* aFinalSize,
   int32_t newWidth = NSToIntRound(scale * newBounds.width);
   int32_t newHeight = NSToIntRound(scale * newBounds.height);
 
-  LOG(("  new mBounds  x=%d y=%d width=%d height=%d\n", newBounds.x,
-       newBounds.y, newWidth, newHeight));
+  // Convert newBounds to "absolute" coordinates (relative to toplevel)
+  newBounds.x += x_parent * GdkScaleFactor();
+  newBounds.y += y_parent * GdkScaleFactor();
+
+  LOG(("  new mBounds  x=%d y=%d width=%d height=%d x_parent=%d y_parent=%d\n",
+       newBounds.x, newBounds.y, newWidth, newHeight, x_parent, y_parent));
 
   bool needsPositionUpdate =
       (newBounds.x != mBounds.x || newBounds.y != mBounds.y);
@@ -1590,6 +1584,8 @@ void nsWindow::NativeMoveResizeWaylandPopupCB(const GdkRectangle* aFinalSize,
       RefPtr<PresShell> presShell = popupFrame->PresShell();
       presShell->FrameNeedsReflow(popupFrame, IntrinsicDirty::Resize,
                                   NS_FRAME_IS_DIRTY);
+      // Force to trigger popup crop to fit the screen
+      popupFrame->SetPopupPosition(nullptr, true, false);
     }
   }
 
@@ -1687,8 +1683,10 @@ void nsWindow::NativeMoveResizeWaylandPopup(GdkPoint* aPosition,
   }
   if (popupFrame) {
 #ifdef MOZ_WAYLAND
-    anchorRect = LayoutDeviceIntRect::FromAppUnitsToOutside(
-        popupFrame->GetAnchorRect(), p2a);
+    nsRect anchorRectAppUnits = popupFrame->GetAnchorRect();
+    anchorRect = LayoutDeviceIntRect::FromUnknownRect(
+        anchorRectAppUnits.ToNearestPixels(p2a));
+
 #endif
   }
 
@@ -7407,7 +7405,7 @@ void nsWindow::DispatchEventToRootAccessible(uint32_t aEventType) {
   }
 
   // Get the root document accessible and fire event to it.
-  a11y::Accessible* acc = GetRootAccessible();
+  a11y::LocalAccessible* acc = GetRootAccessible();
   if (acc) {
     accService->FireAccessibleEvent(aEventType, acc);
   }
@@ -8026,6 +8024,56 @@ nsresult nsWindow::SynthesizeNativeTouchPoint(uint32_t aPointerId,
   LayoutDeviceIntPoint pointInWindow = aPoint - WidgetToScreenOffset();
   event.touch.x = DevicePixelsToGdkCoordRoundDown(pointInWindow.x);
   event.touch.y = DevicePixelsToGdkCoordRoundDown(pointInWindow.y);
+
+  gdk_event_put(&event);
+
+  return NS_OK;
+}
+
+nsresult nsWindow::SynthesizeNativeTouchPadPinch(TouchpadPinchPhase aEventPhase,
+                                                 float aScale,
+                                                 LayoutDeviceIntPoint aPoint,
+                                                 int32_t aModifierFlags) {
+  if (!mGdkWindow) {
+    return NS_OK;
+  }
+  GdkEvent event;
+  memset(&event, 0, sizeof(GdkEvent));
+
+  GdkEventTouchpadPinch* touchpad_event =
+      reinterpret_cast<GdkEventTouchpadPinch*>(&event);
+  touchpad_event->type = GDK_TOUCHPAD_PINCH;
+
+  switch (aEventPhase) {
+    case PHASE_BEGIN:
+      touchpad_event->phase = GDK_TOUCHPAD_GESTURE_PHASE_BEGIN;
+      break;
+    case PHASE_UPDATE:
+      touchpad_event->phase = GDK_TOUCHPAD_GESTURE_PHASE_UPDATE;
+      break;
+    case PHASE_END:
+      touchpad_event->phase = GDK_TOUCHPAD_GESTURE_PHASE_END;
+      break;
+
+    default:
+      return NS_ERROR_NOT_IMPLEMENTED;
+  }
+
+  touchpad_event->window = mGdkWindow;
+  // We only set the fields of GdkEventTouchpadPinch which are
+  // actually used in OnTouchpadPinchEvent().
+  // GdkEventTouchpadPinch has additional fields (for example, `dx` and `dy`).
+  // If OnTouchpadPinchEvent() is changed to use other fields, this function
+  // will need to change to set them as well.
+  touchpad_event->time = GDK_CURRENT_TIME;
+  touchpad_event->scale = aScale;
+  touchpad_event->x_root = DevicePixelsToGdkCoordRoundDown(aPoint.x);
+  touchpad_event->y_root = DevicePixelsToGdkCoordRoundDown(aPoint.y);
+
+  LayoutDeviceIntPoint pointInWindow = aPoint - WidgetToScreenOffset();
+  touchpad_event->x = DevicePixelsToGdkCoordRoundDown(pointInWindow.x);
+  touchpad_event->y = DevicePixelsToGdkCoordRoundDown(pointInWindow.y);
+  touchpad_event->state = aModifierFlags;
 
   gdk_event_put(&event);
 

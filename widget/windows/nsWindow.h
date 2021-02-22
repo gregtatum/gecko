@@ -42,7 +42,7 @@
 
 #ifdef ACCESSIBILITY
 #  include "oleacc.h"
-#  include "mozilla/a11y/Accessible.h"
+#  include "mozilla/a11y/LocalAccessible.h"
 #endif
 
 #include "nsUXThemeData.h"
@@ -125,8 +125,6 @@ class nsWindow final : public nsWindowBase {
       mozilla::WidgetContentCommandEvent* aEvent) override;
   virtual nsWindowBase* GetParentWindowBase(bool aIncludeOwner) override;
   virtual bool IsTopLevelWidget() override { return mIsTopWidgetWindow; }
-
-  using nsWindowBase::DispatchPluginEvent;
 
   // nsIWidget interface
   using nsWindowBase::Create;  // for Create signature not overridden here
@@ -271,15 +269,13 @@ class nsWindow final : public nsWindowBase {
   virtual bool DispatchWindowEvent(mozilla::WidgetGUIEvent* aEvent,
                                    nsEventStatus& aStatus);
   void DispatchPendingEvents();
-  bool DispatchPluginEvent(UINT aMessage, WPARAM aWParam, LPARAM aLParam,
-                           bool aDispatchPendingEvents);
   void DispatchCustomEvent(const nsString& eventName);
 
 #ifdef ACCESSIBILITY
   /**
    * Return an accessible associated with the window.
    */
-  mozilla::a11y::Accessible* GetAccessible();
+  mozilla::a11y::LocalAccessible* GetAccessible();
 #endif  // ACCESSIBILITY
 
   /**

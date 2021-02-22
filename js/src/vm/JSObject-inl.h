@@ -84,10 +84,9 @@ inline void JSObject::finalize(JSFreeOp* fop) {
 #endif
 
   const JSClass* clasp = getClass();
-  js::NativeObject* nobj = nullptr;
-  if (clasp->isNative()) {
-    nobj = &as<js::NativeObject>();
-  }
+  js::NativeObject* nobj =
+      clasp->isNativeObject() ? &as<js::NativeObject>() : nullptr;
+
   if (clasp->hasFinalize()) {
     clasp->doFinalize(fop, this);
   }
@@ -168,7 +167,7 @@ inline bool ClassCanHaveFixedData(const JSClass* clasp) {
   // arrays we only use enough to cover the class reserved slots, so that
   // the remaining space in the object's allocation is available for the
   // buffer's data.
-  return !clasp->isNative() || clasp == &js::ArrayBufferObject::class_ ||
+  return !clasp->isNativeObject() || clasp == &js::ArrayBufferObject::class_ ||
          js::IsTypedArrayClass(clasp);
 }
 
@@ -237,7 +236,7 @@ inline bool JSObject::hasAllFlags(js::BaseShape::Flag flags) const {
 }
 
 inline bool JSObject::nonProxyIsExtensible() const {
-  MOZ_ASSERT(!uninlinedIsProxy());
+  MOZ_ASSERT(!uninlinedIsProxyObject());
 
   // [[Extensible]] for ordinary non-proxy objects is an object flag.
   return !hasAllFlags(js::BaseShape::NOT_EXTENSIBLE);
@@ -256,7 +255,7 @@ inline bool JSObject::hasUncacheableProto() const {
 }
 
 MOZ_ALWAYS_INLINE bool JSObject::maybeHasInterestingSymbolProperty() const {
-  if (isNative()) {
+  if (is<js::NativeObject>()) {
     return as<js::NativeObject>().hasInterestingSymbol();
   }
   return true;
@@ -280,16 +279,6 @@ static MOZ_ALWAYS_INLINE bool IsFunctionObject(const js::Value& v,
     return true;
   }
   return false;
-}
-
-static MOZ_ALWAYS_INLINE bool IsNativeFunction(const js::Value& v) {
-  JSFunction* fun;
-  return IsFunctionObject(v, &fun) && fun->isNative();
-}
-
-static MOZ_ALWAYS_INLINE bool IsNativeFunction(const js::Value& v,
-                                               JSFunction** fun) {
-  return IsFunctionObject(v, fun) && (*fun)->isNative();
 }
 
 static MOZ_ALWAYS_INLINE bool IsNativeFunction(const js::Value& v,

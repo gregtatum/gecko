@@ -2033,6 +2033,19 @@ class StorageOperationBase {
 
   nsresult RemoveObsoleteOrigin(const OriginProps& aOriginProps);
 
+  /**
+   * Rename the origin if the origin string generation from nsIPrincipal
+   * changed. This consists of renaming the origin in the metadata files and
+   * renaming the origin directory itself. For simplicity, the origin in
+   * metadata files is not actually updated, but the metadata files are
+   * recreated instead.
+   *
+   * @param  aOriginProps the properties of the origin to check.
+   *
+   * @return whether origin was renamed.
+   */
+  Result<bool, nsresult> MaybeRenameOrigin(const OriginProps& aOriginProps);
+
   nsresult ProcessOriginDirectories();
 
   virtual nsresult ProcessOriginDirectory(const OriginProps& aOriginProps) = 0;
@@ -2191,16 +2204,6 @@ class UpgradeStorageFrom1_0To2_0Helper final : public RepositoryOperationBase {
    * @return whether the origin directory was removed.
    */
   Result<bool, nsresult> MaybeRemoveAppsData(const OriginProps& aOriginProps);
-
-  /**
-   * Strip obsolete origin attributes from the origin in aOriginProps.
-   *
-   * @param  aOriginProps the properties of the origin to check.
-   *
-   * @return whether obsolete origin attributes were stripped.
-   */
-  Result<bool, nsresult> MaybeStripObsoleteOriginAttributes(
-      const OriginProps& aOriginProps);
 
   nsresult PrepareOriginDirectory(OriginProps& aOriginProps,
                                   bool* aRemoved) override;
@@ -4365,15 +4368,12 @@ already_AddRefed<QuotaObject> QuotaManager::GetQuotaObject(
     // pointer directly since QuotaObject::AddRef would try to acquire the same
     // mutex.
     const NotNull<QuotaObject*> quotaObject =
-        originInfo->mQuotaObjects.WithEntryHandle(
-            path, [&](auto&& entryHandle) {
-              return entryHandle.OrInsertWith([&] {
-                // Create a new QuotaObject. The hashtable is not responsible to
-                // delete the QuotaObject.
-                return WrapNotNullUnchecked(
-                    new QuotaObject(originInfo, aClientType, path, fileSize));
-              });
-            });
+        originInfo->mQuotaObjects.GetOrInsertWith(path, [&] {
+          // Create a new QuotaObject. The hashtable is not responsible to
+          // delete the QuotaObject.
+          return WrapNotNullUnchecked(
+              new QuotaObject(originInfo, aClientType, path, fileSize));
+        });
 
     // Addref the QuotaObject and move the ownership to the result. This must
     // happen before we unlock!
@@ -6938,21 +6938,16 @@ auto QuotaManager::GetDirectoryLockTable(PersistenceType aPersistenceType)
 bool QuotaManager::IsSanitizedOriginValid(const nsACString& aSanitizedOrigin) {
   AssertIsOnIOThread();
 
-  return mValidOrigins.WithEntryHandle(
-      aSanitizedOrigin, [&aSanitizedOrigin](auto&& entry) {
-        if (entry) {
-          // We already parsed this sanitized origin string.
-          return entry.Data();
-        }
+  // Do not parse this sanitized origin string, if we already parsed it.
+  return mValidOrigins.GetOrInsertWith(aSanitizedOrigin, [&aSanitizedOrigin] {
+    nsCString spec;
+    OriginAttributes attrs;
+    nsCString originalSuffix;
+    const auto result = OriginParser::ParseOrigin(aSanitizedOrigin, spec,
+                                                  &attrs, originalSuffix);
 
-        nsCString spec;
-        OriginAttributes attrs;
-        nsCString originalSuffix;
-        const auto result = OriginParser::ParseOrigin(aSanitizedOrigin, spec,
-                                                      &attrs, originalSuffix);
-
-        return entry.Insert(result == OriginParser::ValidOrigin);
-      });
+    return result == OriginParser::ValidOrigin;
+  });
 }
 
 int64_t QuotaManager::GenerateDirectoryLockId() {
@@ -9640,6 +9635,57 @@ nsresult StorageOperationBase::RemoveObsoleteOrigin(
   return NS_OK;
 }
 
+Result<bool, nsresult> StorageOperationBase::MaybeRenameOrigin(
+    const OriginProps& aOriginProps) {
+  AssertIsOnIOThread();
+  MOZ_ASSERT(aOriginProps.mDirectory);
+
+  const nsAString& oldLeafName = aOriginProps.mLeafName;
+
+  const auto newLeafName =
+      MakeSanitizedOriginString(aOriginProps.mOriginMetadata.mOrigin);
+
+  if (oldLeafName == newLeafName) {
+    return false;
+  }
+
+  QM_TRY(CreateDirectoryMetadata(*aOriginProps.mDirectory,
+                                 aOriginProps.mTimestamp,
+                                 aOriginProps.mOriginMetadata));
+
+  QM_TRY(CreateDirectoryMetadata2(
+      *aOriginProps.mDirectory, aOriginProps.mTimestamp,
+      /* aPersisted */ false, aOriginProps.mOriginMetadata));
+
+  QM_TRY_INSPECT(const auto& newFile,
+                 MOZ_TO_RESULT_INVOKE_TYPED(
+                     nsCOMPtr<nsIFile>, aOriginProps.mDirectory, GetParent));
+
+  QM_TRY(newFile->Append(newLeafName));
+
+  QM_TRY_INSPECT(const bool& exists, MOZ_TO_RESULT_INVOKE(newFile, Exists));
+
+  if (exists) {
+    QM_WARNING(
+        "Can't rename %s directory to %s, the target already exists, removing "
+        "instead of renaming!",
+        NS_ConvertUTF16toUTF8(oldLeafName).get(),
+        NS_ConvertUTF16toUTF8(newLeafName).get());
+  }
+
+  QM_TRY(CallWithDelayedRetriesIfAccessDenied(
+      [&exists, &aOriginProps, &newLeafName] {
+        if (exists) {
+          QM_TRY_RETURN(aOriginProps.mDirectory->Remove(/* recursive */ true));
+        }
+        QM_TRY_RETURN(aOriginProps.mDirectory->RenameTo(nullptr, newLeafName));
+      },
+      StaticPrefs::dom_quotaManager_directoryRemovalOrRenaming_maxRetries(),
+      StaticPrefs::dom_quotaManager_directoryRemovalOrRenaming_delayMs()));
+
+  return true;
+}
+
 nsresult StorageOperationBase::ProcessOriginDirectories() {
   AssertIsOnIOThread();
   MOZ_ASSERT(!mOriginProps.IsEmpty());
@@ -10464,9 +10510,7 @@ nsresult CreateOrUpgradeDirectoryMetadataHelper::ProcessOriginDirectory(
                       QM_NewLocalFile(permanentStoragePath));
       }
 
-      QM_TRY_INSPECT(const auto& leafName,
-                     MOZ_TO_RESULT_INVOKE_TYPED(
-                         nsAutoString, aOriginProps.mDirectory, GetLeafName));
+      const nsAString& leafName = aOriginProps.mLeafName;
 
       QM_TRY_INSPECT(const auto& newDirectory,
                      CloneFileAndAppend(*mPermanentStorageDir, leafName));
@@ -10532,6 +10576,14 @@ nsresult UpgradeStorageFrom0_0To1_0Helper::ProcessOriginDirectory(
     const OriginProps& aOriginProps) {
   AssertIsOnIOThread();
 
+  // This handles changes in origin string generation from nsIPrincipal,
+  // especially the change from: appId+inMozBrowser+originNoSuffix
+  // to: origin (with origin suffix).
+  QM_TRY_INSPECT(const bool& renamed, MaybeRenameOrigin(aOriginProps));
+  if (renamed) {
+    return NS_OK;
+  }
+
   if (aOriginProps.mNeedsRestore) {
     QM_TRY(CreateDirectoryMetadata(*aOriginProps.mDirectory,
                                    aOriginProps.mTimestamp,
@@ -10541,17 +10593,6 @@ nsresult UpgradeStorageFrom0_0To1_0Helper::ProcessOriginDirectory(
   QM_TRY(CreateDirectoryMetadata2(
       *aOriginProps.mDirectory, aOriginProps.mTimestamp,
       /* aPersisted */ false, aOriginProps.mOriginMetadata));
-
-  QM_TRY_INSPECT(const auto& oldName,
-                 MOZ_TO_RESULT_INVOKE_TYPED(
-                     nsAutoString, aOriginProps.mDirectory, GetLeafName));
-
-  const auto newName =
-      MakeSanitizedOriginString(aOriginProps.mOriginMetadata.mOrigin);
-
-  if (!oldName.Equals(newName)) {
-    QM_TRY(aOriginProps.mDirectory->RenameTo(nullptr, newName));
-  }
 
   return NS_OK;
 }
@@ -10616,52 +10657,6 @@ Result<bool, nsresult> UpgradeStorageFrom1_0To2_0Helper::MaybeRemoveAppsData(
   return false;
 }
 
-Result<bool, nsresult>
-UpgradeStorageFrom1_0To2_0Helper::MaybeStripObsoleteOriginAttributes(
-    const OriginProps& aOriginProps) {
-  AssertIsOnIOThread();
-  MOZ_ASSERT(aOriginProps.mDirectory);
-
-  const nsAString& oldLeafName = aOriginProps.mLeafName;
-
-  const auto newLeafName =
-      MakeSanitizedOriginString(aOriginProps.mOriginMetadata.mOrigin);
-
-  if (oldLeafName == newLeafName) {
-    return false;
-  }
-
-  QM_TRY(CreateDirectoryMetadata(*aOriginProps.mDirectory,
-                                 aOriginProps.mTimestamp,
-                                 aOriginProps.mOriginMetadata));
-
-  QM_TRY(CreateDirectoryMetadata2(
-      *aOriginProps.mDirectory, aOriginProps.mTimestamp,
-      /* aPersisted */ false, aOriginProps.mOriginMetadata));
-
-  QM_TRY_INSPECT(const auto& newFile,
-                 MOZ_TO_RESULT_INVOKE_TYPED(
-                     nsCOMPtr<nsIFile>, aOriginProps.mDirectory, GetParent));
-
-  QM_TRY(newFile->Append(newLeafName));
-
-  QM_TRY_INSPECT(const bool& exists, MOZ_TO_RESULT_INVOKE(newFile, Exists));
-
-  if (exists) {
-    QM_WARNING(
-        "Can't rename %s directory, %s directory already exists, "
-        "removing!",
-        NS_ConvertUTF16toUTF8(oldLeafName).get(),
-        NS_ConvertUTF16toUTF8(newLeafName).get());
-
-    QM_TRY(aOriginProps.mDirectory->Remove(/* recursive */ true));
-  } else {
-    QM_TRY(aOriginProps.mDirectory->RenameTo(nullptr, newLeafName));
-  }
-
-  return true;
-}
-
 nsresult UpgradeStorageFrom1_0To2_0Helper::PrepareOriginDirectory(
     OriginProps& aOriginProps, bool* aRemoved) {
   AssertIsOnIOThread();
@@ -10708,9 +10703,10 @@ nsresult UpgradeStorageFrom1_0To2_0Helper::ProcessOriginDirectory(
     const OriginProps& aOriginProps) {
   AssertIsOnIOThread();
 
-  QM_TRY_INSPECT(const bool& stripped,
-                 MaybeStripObsoleteOriginAttributes(aOriginProps));
-  if (stripped) {
+  // This handles changes in origin string generation from nsIPrincipal,
+  // especially the stripping of obsolete origin attributes like addonId.
+  QM_TRY_INSPECT(const bool& renamed, MaybeRenameOrigin(aOriginProps));
+  if (renamed) {
     return NS_OK;
   }
 

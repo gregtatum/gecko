@@ -81,7 +81,7 @@ void main(void) {
         aUvRect0.xy,
         aUvRect0.zw,
         uv,
-        TEX_SIZE(sColor0),
+        TEX_SIZE_YUV(sColor0),
         vUV_y,
         vUVBounds_y
     );
@@ -89,7 +89,7 @@ void main(void) {
         aUvRect1.xy,
         aUvRect1.zw,
         uv,
-        TEX_SIZE(sColor1),
+        TEX_SIZE_YUV(sColor1),
         vUV_u,
         vUVBounds_u
     );
@@ -97,7 +97,7 @@ void main(void) {
         aUvRect2.xy,
         aUvRect2.zw,
         uv,
-        TEX_SIZE(sColor2),
+        TEX_SIZE_YUV(sColor2),
         vUV_v,
         vUVBounds_v
     );
@@ -112,7 +112,7 @@ void main(void) {
     {
         // using an atlas, so UVs are in pixels, and need to be
         // normalized and clamped.
-        vec2 texture_size = TEX_SIZE(sColor0);
+        vec2 texture_size = TEX_SIZE_YUV(sColor0);
         vUVBounds += vec4(0.5, 0.5, -0.5, -0.5);
     #ifndef WR_FEATURE_TEXTURE_RECT
         vUv /= texture_size;
@@ -161,39 +161,23 @@ void main(void) {
 void swgl_drawSpanRGBA8() {
 #ifdef WR_FEATURE_YUV
     if (vYuvFormat == YUV_FORMAT_PLANAR) {
-        if (!swgl_isTextureLinear(sColor0) || !swgl_isTextureLinear(sColor1) || !swgl_isTextureLinear(sColor2)) {
-            return;
-        }
-
         swgl_commitTextureLinearYUV(sColor0, vUV_y, vUVBounds_y, vYuvLayers.x,
                                     sColor1, vUV_u, vUVBounds_u, vYuvLayers.y,
                                     sColor2, vUV_v, vUVBounds_v, vYuvLayers.z,
                                     vYuvColorSpace, vRescaleFactor);
     } else if (vYuvFormat == YUV_FORMAT_NV12) {
-        if (!swgl_isTextureLinear(sColor0) || !swgl_isTextureLinear(sColor1)) {
-            return;
-        }
-
         swgl_commitTextureLinearYUV(sColor0, vUV_y, vUVBounds_y, vYuvLayers.x,
                                     sColor1, vUV_u, vUVBounds_u, vYuvLayers.y,
                                     vYuvColorSpace, vRescaleFactor);
     } else if (vYuvFormat == YUV_FORMAT_INTERLEAVED) {
-        if (!swgl_isTextureLinear(sColor0) || !swgl_isTextureLinear(sColor1)) {
-            return;
-        }
-
         swgl_commitTextureLinearYUV(sColor0, vUV_y, vUVBounds_y, vYuvLayers.x,
                                     vYuvColorSpace, vRescaleFactor);
     }
 #else
-    if (!swgl_isTextureLinear(sColor0)) {
-        return;
-    }
-
     if (vColor != vec4(1.0)) {
-        swgl_commitTextureLinearColorRGBA8(sColor0, vUv, vUVBounds, vColor, vLayer);
+        swgl_commitTextureColorRGBA8(sColor0, vUv, vUVBounds, vColor, vLayer);
     } else {
-        swgl_commitTextureLinearRGBA8(sColor0, vUv, vUVBounds, vLayer);
+        swgl_commitTextureRGBA8(sColor0, vUv, vUVBounds, vLayer);
     }
 #endif
 }

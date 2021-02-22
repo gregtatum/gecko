@@ -834,7 +834,7 @@ class MOZ_RAII CacheIRWriter : public JS::CustomAutoRooter {
   void guardShapeForOwnProperties(ObjOperandId obj, Shape* shape) {
     // Guard shape to detect changes to (non-dense) own properties. This
     // also implies |guardShapeForClass|.
-    MOZ_ASSERT(shape->getObjectClass()->isNative());
+    MOZ_ASSERT(shape->getObjectClass()->isNativeObject());
     guardShape(obj, shape);
   }
 
@@ -842,11 +842,6 @@ class MOZ_RAII CacheIRWriter : public JS::CustomAutoRooter {
   // Instead of calling guardGroup manually, use (or create) a specialization
   // below to clarify what constraint the group guard is implying.
   void guardGroupForProto(ObjOperandId obj, ObjectGroup* group) {
-    guardGroup(obj, group);
-  }
-
-  void guardGroupForLayout(ObjOperandId obj, ObjectGroup* group) {
-    MOZ_ASSERT(IsTypedObjectClass(group->clasp()));
     guardGroup(obj, group);
   }
 

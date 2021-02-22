@@ -1637,9 +1637,7 @@ class Document : public nsINode,
     RawServoSelectorList* GetListOrInsertFrom(const nsACString& aSelector,
                                               F&& aFrom) {
       MOZ_ASSERT(NS_IsMainThread());
-      return mTable.WithEntryHandle(aSelector, [&aFrom](auto&& entry) {
-        return entry.OrInsertWith(std::forward<F>(aFrom)).get();
-      });
+      return mTable.GetOrInsertWith(aSelector, std::forward<F>(aFrom)).get();
     }
 
     ~SelectorCache();
@@ -3739,7 +3737,7 @@ class Document : public nsINode,
   }
   DOMIntersectionObserver& EnsureLazyLoadImageObserver();
   DOMIntersectionObserver& EnsureLazyLoadImageObserverViewport();
-  void IncLazyLoadImageCount() { ++mLazyLoadImageCount; }
+  void IncLazyLoadImageCount();
   void DecLazyLoadImageCount() {
     MOZ_DIAGNOSTIC_ASSERT(mLazyLoadImageCount > 0);
     --mLazyLoadImageCount;

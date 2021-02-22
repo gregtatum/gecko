@@ -73,10 +73,9 @@ class nsBaseHashtableET : public KeyClass {
   typedef typename KeyClass::KeyType KeyType;
   typedef typename KeyClass::KeyTypePointer KeyTypePointer;
 
-  explicit nsBaseHashtableET(KeyTypePointer aKey);
-  nsBaseHashtableET(KeyTypePointer aKey, const DataType& aData);
-  nsBaseHashtableET(KeyTypePointer aKey, DataType&& aData);
-  nsBaseHashtableET(nsBaseHashtableET<KeyClass, DataType>&& aToMove);
+  template <typename... Args>
+  explicit nsBaseHashtableET(KeyTypePointer aKey, Args&&... aArgs);
+  nsBaseHashtableET(nsBaseHashtableET<KeyClass, DataType>&& aToMove) = default;
   ~nsBaseHashtableET() = default;
 };
 
@@ -248,7 +247,7 @@ class nsBaseHashtable
    * into *aData.  Return true if found.
    *
    * This overload can only be used if DataType is default-constructible. Use
-   * the single-argument Remove or GetAndRemove with non-default-constructible
+   * the single-argument Remove or Extract with non-default-constructible
    * DataType.
    *
    * @param aKey the key to remove from the hashtable
@@ -294,7 +293,7 @@ class nsBaseHashtable
    * @return the found value, or Nothing if no entry was found with the
    *   given key.
    */
-  [[nodiscard]] mozilla::Maybe<DataType> GetAndRemove(KeyType aKey) {
+  [[nodiscard]] mozilla::Maybe<DataType> Extract(KeyType aKey) {
     mozilla::Maybe<DataType> value;
     if (EntryType* ent = this->GetEntry(aKey)) {
       value.emplace(std::move(ent->mData));
@@ -672,22 +671,9 @@ class nsBaseHashtable
 //
 
 template <class KeyClass, class DataType>
-nsBaseHashtableET<KeyClass, DataType>::nsBaseHashtableET(KeyTypePointer aKey)
-    : KeyClass(aKey), mData() {}
-
-template <class KeyClass, class DataType>
+template <typename... Args>
 nsBaseHashtableET<KeyClass, DataType>::nsBaseHashtableET(KeyTypePointer aKey,
-                                                         const DataType& aData)
-    : KeyClass(aKey), mData(aData) {}
-
-template <class KeyClass, class DataType>
-nsBaseHashtableET<KeyClass, DataType>::nsBaseHashtableET(KeyTypePointer aKey,
-                                                         DataType&& aData)
-    : KeyClass(aKey), mData(std::move(aData)) {}
-
-template <class KeyClass, class DataType>
-nsBaseHashtableET<KeyClass, DataType>::nsBaseHashtableET(
-    nsBaseHashtableET<KeyClass, DataType>&& aToMove)
-    : KeyClass(std::move(aToMove)), mData(std::move(aToMove.mData)) {}
+                                                         Args&&... aArgs)
+    : KeyClass(aKey), mData(std::forward<Args>(aArgs)...) {}
 
 #endif  // nsBaseHashtable_h__

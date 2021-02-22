@@ -1785,7 +1785,7 @@ bool js::RegExpPrototypeOptimizable(JSContext* cx, unsigned argc, Value* vp) {
 bool js::RegExpPrototypeOptimizableRaw(JSContext* cx, JSObject* proto) {
   AutoUnsafeCallWithABI unsafe;
   AutoAssertNoPendingException aanpe(cx);
-  if (!proto->isNative()) {
+  if (!proto->is<NativeObject>()) {
     return false;
   }
 
@@ -2011,7 +2011,7 @@ bool js::intrinsic_GetElemBaseForLambda(JSContext* cx, unsigned argc,
 
   JSObject& bobj = b.toObject();
   const JSClass* clasp = bobj.getClass();
-  if (!clasp->isNative() || clasp->getOpsLookupProperty() ||
+  if (!clasp->isNativeObject() || clasp->getOpsLookupProperty() ||
       clasp->getOpsGetProperty()) {
     return true;
   }
@@ -2031,7 +2031,7 @@ bool js::intrinsic_GetStringDataProperty(JSContext* cx, unsigned argc,
   MOZ_ASSERT(args.length() == 2);
 
   RootedObject obj(cx, &args[0].toObject());
-  if (!obj->isNative()) {
+  if (!obj->is<NativeObject>()) {
     // The object is already checked to be native in GetElemBaseForLambda,
     // but it can be swapped to another class that is non-native.
     // Return undefined to mark failure to get the property.

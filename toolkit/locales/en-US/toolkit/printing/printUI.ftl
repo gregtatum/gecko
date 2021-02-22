@@ -48,10 +48,10 @@ printui-scale-pcent = Scale
 # Section title (noun) for the two-sided print options
 printui-two-sided-printing = Two-sided printing
 printui-two-sided-printing-off = Off
-# Flip the page on the side (like a book).
-printui-two-sided-printing-side-edge = Flip on side edge
-# Flip the page on the top (like a vertical calendar).
-printui-two-sided-printing-top-edge = Flip on top edge
+# Flip the sheet as if it were bound along its long edge.
+printui-two-sided-printing-long-edge = Flip on long edge
+# Flip the sheet as if it were bound along its short edge.
+printui-two-sided-printing-short-edge = Flip on short edge
 
 # Section title for miscellaneous print options
 printui-options = Options
@@ -118,6 +118,7 @@ printui-paper-tabloid = Tabloid
 
 printui-error-invalid-scale = Scale must be a number between 10 and 200.
 printui-error-invalid-margin = Please enter a valid margin for the selected paper size.
+printui-error-invalid-copies = Copies must be a number between 1 and 10000.
 
 # Variables
 # $numPages (integer) - Number of pages

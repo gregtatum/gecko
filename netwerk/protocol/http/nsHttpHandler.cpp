@@ -951,6 +951,18 @@ void nsHttpHandler::InitUserAgentComponents() {
   if (GetVersionEx(&info)) {
 #    pragma warning(pop)
 
+    if (info.dwMajorVersion >= 10) {
+      // Cap the reported Windows version to 10.0. This way, Microsoft doesn't
+      // get to change Web compat-sensitive values without our veto. The
+      // compat-sensitivity keeps going up as 10.0 stays as the current value
+      // for longer and longer. If the system-reported version ever changes,
+      // we'll be able to take our time to evaluate the Web compat impact
+      // instead of having to scamble to react like happened with macOS
+      // changing from 10.x to 11.x.
+      info.dwMajorVersion = 10;
+      info.dwMinorVersion = 0;
+    }
+
     const char* format;
 #    if defined _M_X64 || defined _M_AMD64
     format = OSCPU_WIN64;
@@ -972,10 +984,12 @@ void nsHttpHandler::InitUserAgentComponents() {
   SInt32 majorVersion = nsCocoaFeatures::macOSVersionMajor();
   SInt32 minorVersion = nsCocoaFeatures::macOSVersionMinor();
 
+  // Cap the reported macOS version at 10.15 (like Safari) to avoid breaking
+  // sites that assume the UA's macOS version always begins with "10.".
+  int uaVersion = (majorVersion >= 11 || minorVersion > 15) ? 15 : minorVersion;
+
   // Always return an "Intel" UA string, even on ARM64 macOS like Safari does.
-  mOscpu =
-      nsPrintfCString("Intel Mac OS X %d.%d", static_cast<int>(majorVersion),
-                      static_cast<int>(minorVersion));
+  mOscpu = nsPrintfCString("Intel Mac OS X 10.%d", uaVersion);
 #  elif defined(XP_UNIX)
   struct utsname name;
   int ret = uname(&name);

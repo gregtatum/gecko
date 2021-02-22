@@ -139,6 +139,12 @@ panelview[mainview] > .panel-header {
   transition: height var(--panelui-subview-transition-duration);
 }
 
+@supports -moz-bool-pref("browser.proton.doorhangers.enabled") {
+:is(panel, menupopup)::part(arrow) {
+  display: none;
+}
+} /** END Proton **/
+
 @supports -moz-bool-pref("layout.css.emulate-moz-box-with-flex") {
   #tabbrowser-tabs {
     /* Without this, the tabs container width extends beyond the window width */
@@ -229,6 +235,7 @@ panelview[mainview] > .panel-header {
   pointer-events: none; /* avoid blocking dragover events on scroll buttons */
 }
 
+#tabbrowser-tabs[movingtab] > #tabbrowser-arrowscrollbox > .tabbrowser-tab[fadein]:not([selected]):not([multiselected]),
 .tabbrowser-tab[tab-grouping],
 .tabbrowser-tab[tabdrop-samewindow] {
   transition: transform 200ms var(--animation-easing-function);
@@ -947,6 +954,10 @@ toolbarpaletteitem[place="palette"] > #downloads-button[indicator] > .toolbarbut
 
 #ContentSelectDropdown > menupopup::part(arrowscrollbox-scrollbox) {
   scrollbar-width: var(--content-select-scrollbar-width, auto);
+}
+
+#ContentSelectDropdown > menupopup::part(arrowscrollbox) {
+  background-image: var(--content-select-background-image, none);
 }
 
 /* Indent options in optgroups */

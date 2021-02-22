@@ -122,7 +122,32 @@ extern int32_t gXULModalLevel;
 
 static bool gAppShellMethodsSwizzled = false;
 
+void OnUncaughtException(NSException* aException) {
+  nsObjCExceptionLog(aException);
+  MOZ_CRASH("Uncaught Objective C exception from NSSetUncaughtExceptionHandler");
+}
+
 @implementation GeckoNSApplication
+
+// Load is called very early during startup, when the Objective C runtime loads this class.
++ (void)load {
+  NSSetUncaughtExceptionHandler(OnUncaughtException);
+}
+
+// This method is called from NSDefaultTopLevelErrorHandler, which is invoked when an Objective C
+// exception propagates up into the native event loop. It is possible that it is also called in
+// other cases.
+- (void)reportException:(NSException*)aException {
+  if (ShouldIgnoreObjCException(aException)) {
+    return;
+  }
+
+  nsObjCExceptionLog(aException);
+
+#ifdef NIGHTLY_BUILD
+  MOZ_CRASH("Uncaught Objective C exception from -[GeckoNSApplication reportException:]");
+#endif
+}
 
 - (void)sendEvent:(NSEvent*)anEvent {
   mozilla::BackgroundHangMonitor().NotifyActivity();

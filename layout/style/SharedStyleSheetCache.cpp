@@ -313,7 +313,7 @@ void SharedStyleSheetCache::LoadCompletedInternal(
   if (aData.mIsLoading) {
     MOZ_ASSERT(aCache);
     SheetLoadDataHashKey key(aData);
-    Maybe<SheetLoadData*> loadingData = aCache->mLoadingDatas.GetAndRemove(key);
+    Maybe<SheetLoadData*> loadingData = aCache->mLoadingDatas.Extract(key);
     MOZ_DIAGNOSTIC_ASSERT(loadingData);
     MOZ_DIAGNOSTIC_ASSERT(loadingData.value() == &aData);
     Unused << loadingData;
@@ -573,9 +573,8 @@ void SharedStyleSheetCache::CancelLoadsForLoader(css::Loader& aLoader) {
 
 void SharedStyleSheetCache::RegisterLoader(css::Loader& aLoader) {
   MOZ_ASSERT(aLoader.GetDocument());
-  mLoaderPrincipalRefCnt.WithEntryHandle(
-      aLoader.GetDocument()->NodePrincipal(),
-      [](auto&& entry) { entry.OrInsert(0) += 1; });
+  mLoaderPrincipalRefCnt.GetOrInsert(aLoader.GetDocument()->NodePrincipal(),
+                                     0) += 1;
 }
 
 void SharedStyleSheetCache::UnregisterLoader(css::Loader& aLoader) {

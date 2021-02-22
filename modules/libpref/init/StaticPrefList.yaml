@@ -2557,6 +2557,23 @@
     mirror: always
 #endif
 
+# How many times we should retry directory removal or renaming if access was
+# denied?
+- name: dom.quotaManager.directoryRemovalOrRenaming.maxRetries
+  type: RelaxedAtomicUint32
+#ifdef XP_WIN
+  value: 10
+#else
+  value: 0
+#endif
+  mirror: always
+
+# How long we should wait between retries (in milliseconds)?
+- name: dom.quotaManager.directoryRemovalOrRenaming.delayMs
+  type: RelaxedAtomicUint32
+  value: 200
+  mirror: always
+
 # Reporting API.
 - name: dom.reporting.enabled
   type: RelaxedAtomicBool
@@ -6956,7 +6973,7 @@
 - name: media.cubeb.wasapi-raw
   type: RelaxedAtomicUint32
   mirror: always
-  value: 1
+  value: 0
 #endif // XP_WIN
 
 # ClockDrift desired buffering in milliseconds
@@ -8555,6 +8572,14 @@
   value: false
   mirror: always
 
+# When this pref is true we enforce a 253 character limit on domains we try to
+# resolve. See bug 1264117. If it doesn't cause any web-compat issues we can
+# remove it in a few releases
+- name: network.dns.limit_253_chars
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
+
 # The proxy type. See nsIProtocolProxyService.idl
 #     PROXYCONFIG_DIRECT   = 0
 #     PROXYCONFIG_MANUAL   = 1
@@ -8919,6 +8944,13 @@
 - name: network.cache.frecency_array_check_enabled
   type: RelaxedAtomicBool
   value: @IS_EARLY_BETA_OR_EARLIER@
+  mirror: always
+
+#  This is used for a temporary workaround for a web-compat issue. If pref is
+# true CORS preflight requests are allowed to send client certificates.
+- name: network.cors_preflight.allow_client_cert
+  type: RelaxedAtomicBool
+  value: false
   mirror: always
 
 #---------------------------------------------------------------------------

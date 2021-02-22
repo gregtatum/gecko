@@ -49,6 +49,17 @@
   color: FieldText;
 }
 
+@supports -moz-bool-pref("browser.proton.toolbar.enabled") {
+#urlbar-container,
+#search-container {
+  padding-block: 8px;
+}
+#urlbar,
+#searchbar {
+  min-height: 32px;
+}
+} /* END proton */
+
 #urlbar-background,
 #searchbar {
   background-color: Field;
@@ -870,7 +881,7 @@
 
 #urlbar-zoom-button:-moz-focusring {
   outline: var(--toolbarbutton-focus-outline);
-  outline-offset: unset;
+  outline-offset: calc(var(--focus-outline-width) * -1);
   -moz-outline-radius: 1em;
 }
 

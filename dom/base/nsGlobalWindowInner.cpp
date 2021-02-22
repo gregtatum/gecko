@@ -71,7 +71,7 @@
 #include "mozilla/ScopeExit.h"
 #include "mozilla/ScrollOrigin.h"
 #include "mozilla/ScrollTypes.h"
-#include "mozilla/Services.h"
+#include "mozilla/Components.h"
 #include "mozilla/SizeOfState.h"
 #include "mozilla/Span.h"
 #include "mozilla/SpinEventLoopUntil.h"
@@ -1684,7 +1684,7 @@ void nsGlobalWindowInner::UpdateShortcutsPermission() {
 uint32_t nsGlobalWindowInner::GetShortcutsPermission(nsIPrincipal* aPrincipal) {
   uint32_t perm = nsIPermissionManager::DENY_ACTION;
   nsCOMPtr<nsIPermissionManager> permMgr =
-      mozilla::services::GetPermissionManager();
+      mozilla::components::PermissionManager::Service();
   if (aPrincipal && permMgr) {
     permMgr->TestExactPermissionFromPrincipal(aPrincipal, "shortcuts"_ns,
                                               &perm);
@@ -7160,13 +7160,13 @@ ChromeMessageBroadcaster* nsGlobalWindowInner::GetGroupMessageManager(
     const nsAString& aGroup) {
   MOZ_ASSERT(IsChromeWindow());
 
-  return mChromeFields.mGroupMessageManagers.WithEntryHandle(
-      aGroup, [&](auto&& entry) {
-        return entry
-            .OrInsertWith(
-                [&] { return new ChromeMessageBroadcaster(MessageManager()); })
-            .get();
-      });
+  return mChromeFields.mGroupMessageManagers
+      .GetOrInsertWith(
+          aGroup,
+          [&] {
+            return MakeAndAddRef<ChromeMessageBroadcaster>(MessageManager());
+          })
+      .get();
 }
 
 void nsGlobalWindowInner::InitWasOffline() { mWasOffline = NS_IsOffline(); }

@@ -589,7 +589,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
    to access experiment values */
 XPCOMUtils.defineLazyGetter(this, "aboutWelcomeFeature", () => {
   const { ExperimentFeature } = ChromeUtils.import(
-    "resource://messaging-system/experiments/ExperimentAPI.jsm"
+    "resource://nimbus/ExperimentAPI.jsm"
   );
   return new ExperimentFeature("aboutwelcome");
 });
@@ -1932,7 +1932,7 @@ var gBrowserInit = {
     this._handleURIToLoad();
 
     Services.obs.addObserver(gIdentityHandler, "perm-changed");
-    Services.obs.addObserver(gRemoteControl, "devtools-listening");
+    Services.obs.addObserver(gRemoteControl, "devtools-socket");
     Services.obs.addObserver(gRemoteControl, "marionette-listening");
     Services.obs.addObserver(gRemoteControl, "remote-listening");
     Services.obs.addObserver(
@@ -2571,7 +2571,7 @@ var gBrowserInit = {
       FullZoom.destroy();
 
       Services.obs.removeObserver(gIdentityHandler, "perm-changed");
-      Services.obs.removeObserver(gRemoteControl, "devtools-listening");
+      Services.obs.removeObserver(gRemoteControl, "devtools-socket");
       Services.obs.removeObserver(gRemoteControl, "marionette-listening");
       Services.obs.removeObserver(gRemoteControl, "remote-listening");
       Services.obs.removeObserver(
@@ -5779,6 +5779,15 @@ var TabsProgressListener = {
           stopwatchRunning /* we won't see STATE_START events for pre-rendered tabs */
         ) {
           if (recordLoadTelemetry) {
+            if (aBrowser.browsingContext?.topWindowContext?.hadLazyLoadImage) {
+              let timeElapsed = TelemetryStopwatch.timeElapsed(
+                histogram,
+                aBrowser
+              );
+              Services.telemetry
+                .getHistogramById("FX_LAZYLOAD_IMAGE_PAGE_LOAD_MS")
+                .add(timeElapsed);
+            }
             TelemetryStopwatch.finish(histogram, aBrowser);
             BrowserTelemetryUtils.recordSiteOriginTelemetry(browserWindows());
           }

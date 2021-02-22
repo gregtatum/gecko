@@ -380,7 +380,7 @@ struct DefaultConstructible_DefaultConstructible {
   static constexpr uint32_t kExpectedAddRefCnt_Put_Rvalue_Fallible = 1;
   static constexpr uint32_t kExpectedAddRefCnt_Remove_OutputParam = 1;
   static constexpr uint32_t kExpectedAddRefCnt_Remove = 1;
-  static constexpr uint32_t kExpectedAddRefCnt_GetAndRemove = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_Extract = 1;
   static constexpr uint32_t kExpectedAddRefCnt_RemoveIf = 1;
   static constexpr uint32_t kExpectedAddRefCnt_Lookup = 1;
   static constexpr uint32_t kExpectedAddRefCnt_Lookup_Remove = 1;
@@ -415,7 +415,7 @@ struct NonDefaultConstructible_NonDefaultConstructible {
   static constexpr uint32_t kExpectedAddRefCnt_Put_Rvalue = 2;
   static constexpr uint32_t kExpectedAddRefCnt_Put_Rvalue_Fallible = 2;
   static constexpr uint32_t kExpectedAddRefCnt_Remove = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_GetAndRemove = 3;
+  static constexpr uint32_t kExpectedAddRefCnt_Extract = 3;
   static constexpr uint32_t kExpectedAddRefCnt_RemoveIf = 2;
   static constexpr uint32_t kExpectedAddRefCnt_Lookup = 2;
   static constexpr uint32_t kExpectedAddRefCnt_Lookup_Remove = 2;
@@ -434,32 +434,32 @@ struct NonDefaultConstructible_MovingNonDefaultConstructible {
   using DataType = NonDefaultConstructible;
   using UserDataType = MovingNonDefaultConstructible;
 
-  static constexpr uint32_t kExpectedAddRefCnt_Contains = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_GetGeneration = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_SizeOfExcludingThis = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_SizeOfIncludingThis = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_Count = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_IsEmpty = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_Get_OutputParam = 3;
-  static constexpr uint32_t kExpectedAddRefCnt_MaybeGet = 3;
-  static constexpr uint32_t kExpectedAddRefCnt_Put = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_Put_Fallible = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_Put_Rvalue = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_Put_Rvalue_Fallible = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_Remove = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_GetAndRemove = 3;
-  static constexpr uint32_t kExpectedAddRefCnt_RemoveIf = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_Lookup = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_Lookup_Remove = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_Iter = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_ConstIter = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_begin_end = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_cbegin_cend = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_Clear = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_ShallowSizeOfExcludingThis = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_ShallowSizeOfIncludingThis = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_SwapElements = 2;
-  static constexpr uint32_t kExpectedAddRefCnt_MarkImmutable = 2;
+  static constexpr uint32_t kExpectedAddRefCnt_Contains = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_GetGeneration = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_SizeOfExcludingThis = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_SizeOfIncludingThis = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_Count = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_IsEmpty = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_Get_OutputParam = 2;
+  static constexpr uint32_t kExpectedAddRefCnt_MaybeGet = 2;
+  static constexpr uint32_t kExpectedAddRefCnt_Put = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_Put_Fallible = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_Put_Rvalue = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_Put_Rvalue_Fallible = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_Remove = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_Extract = 2;
+  static constexpr uint32_t kExpectedAddRefCnt_RemoveIf = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_Lookup = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_Lookup_Remove = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_Iter = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_ConstIter = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_begin_end = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_cbegin_cend = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_Clear = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_ShallowSizeOfExcludingThis = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_ShallowSizeOfIncludingThis = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_SwapElements = 1;
+  static constexpr uint32_t kExpectedAddRefCnt_MarkImmutable = 1;
 };
 
 template <bool flag = false>
@@ -800,11 +800,11 @@ TYPED_TEST_P(BaseHashtableTest, Remove) {
   EXPECT_TRUE(res);
 }
 
-TYPED_TEST_P(BaseHashtableTest, GetAndRemove) {
+TYPED_TEST_P(BaseHashtableTest, Extract) {
   auto table =
-      MakeBaseHashtable<TypeParam>(TypeParam::kExpectedAddRefCnt_GetAndRemove);
+      MakeBaseHashtable<TypeParam>(TypeParam::kExpectedAddRefCnt_Extract);
 
-  auto maybeData = table.GetAndRemove(1);
+  auto maybeData = table.Extract(1);
   EXPECT_TRUE(maybeData);
   EXPECT_EQ(maybeData->CharRef()->GetChar(), 42u);
 }
@@ -995,9 +995,9 @@ REGISTER_TYPED_TEST_CASE_P(
     GetOrInsert_Default, GetOrInsert_NonDefault,
     GetOrInsert_NonDefault_AlreadyPresent, GetOrInsertWith,
     GetOrInsertWith_AlreadyPresent, Put, Put_Fallible, Put_Rvalue,
-    Put_Rvalue_Fallible, Remove_OutputParam, Remove, GetAndRemove, RemoveIf,
-    Lookup, Lookup_Remove, WithEntryHandle_NoOp,
-    WithEntryHandle_NotFound_OrInsert, WithEntryHandle_NotFound_OrInsertFrom,
+    Put_Rvalue_Fallible, Remove_OutputParam, Remove, Extract, RemoveIf, Lookup,
+    Lookup_Remove, WithEntryHandle_NoOp, WithEntryHandle_NotFound_OrInsert,
+    WithEntryHandle_NotFound_OrInsertFrom,
     WithEntryHandle_NotFound_OrInsertFrom_Exists,
     WithEntryHandle_NotFound_OrRemove, WithEntryHandle_NotFound_OrRemove_Exists,
     Iter, ConstIter, begin_end, cbegin_cend, Clear, ShallowSizeOfExcludingThis,
@@ -1442,7 +1442,7 @@ TEST(Hashtables, ClassHashtable_WithEntryHandle)
   ASSERT_TRUE(0 == EntToUniClass.Count());
 }
 
-TEST(Hashtables, ClassHashtable_LookupOrAdd_Present)
+TEST(Hashtables, ClassHashtable_GetOrInsertNew_Present)
 {
   nsClassHashtable<nsCStringHashKey, TestUniChar> EntToUniClass(ENTITY_COUNT);
 
@@ -1451,16 +1451,16 @@ TEST(Hashtables, ClassHashtable_LookupOrAdd_Present)
                       mozilla::MakeUnique<TestUniCharDerived>(entity.mUnicode));
   }
 
-  auto* entry = EntToUniClass.LookupOrAdd("uml"_ns, 42);
+  auto* entry = EntToUniClass.GetOrInsertNew("uml"_ns, 42);
   EXPECT_EQ(168u, entry->GetChar());
 }
 
-TEST(Hashtables, ClassHashtable_LookupOrAdd_NotPresent)
+TEST(Hashtables, ClassHashtable_GetOrInsertNew_NotPresent)
 {
   nsClassHashtable<nsCStringHashKey, TestUniChar> EntToUniClass(ENTITY_COUNT);
 
   // This is going to insert a TestUniChar.
-  auto* entry = EntToUniClass.LookupOrAdd("uml"_ns, 42);
+  auto* entry = EntToUniClass.GetOrInsertNew("uml"_ns, 42);
   EXPECT_EQ(42u, entry->GetChar());
 }
 

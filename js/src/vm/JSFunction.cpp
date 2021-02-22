@@ -574,7 +574,7 @@ XDRResult js::XDRInterpretedFunction(XDRState<mode>* xdr,
   if (mode == XDR_ENCODE) {
     fun = objp;
     if (!fun->isInterpreted() || fun->isBoundFunction()) {
-      return xdr->fail(JS::TranscodeResult_Failure_NotInterpretedFun);
+      return xdr->fail(JS::TranscodeResult::Failure_NotInterpretedFun);
     }
 
     if (fun->isGenerator()) {
@@ -622,7 +622,7 @@ XDRResult js::XDRInterpretedFunction(XDRState<mode>* xdr,
 
     RootedObject proto(cx);
     if (!GetFunctionPrototype(cx, generatorKind, asyncKind, &proto)) {
-      return xdr->fail(JS::TranscodeResult_Throw);
+      return xdr->fail(JS::TranscodeResult::Throw);
     }
 
     gc::AllocKind allocKind = gc::AllocKind::FUNCTION;
@@ -636,13 +636,13 @@ XDRResult js::XDRInterpretedFunction(XDRState<mode>* xdr,
         FunctionFlags::MUTABLE_FLAGS | FunctionFlags::SELFHOSTLAZY |
         FunctionFlags::BOUND_FUN | FunctionFlags::WASM_JIT_ENTRY;
     if ((flags & UnsupportedFlags) != 0) {
-      return xdr->fail(JS::TranscodeResult_Failure_BadDecode);
+      return xdr->fail(JS::TranscodeResult::Failure_BadDecode);
     }
 
     fun = NewFunctionWithProto(cx, nullptr, nargs, FunctionFlags(flags),
                                nullptr, atom, proto, allocKind, TenuredObject);
     if (!fun) {
-      return xdr->fail(JS::TranscodeResult_Throw);
+      return xdr->fail(JS::TranscodeResult::Throw);
     }
     objp.set(fun);
   }
@@ -1217,7 +1217,7 @@ bool JSFunction::getLength(JSContext* cx, HandleFunction fun,
                            uint16_t* length) {
   MOZ_ASSERT(!fun->isBoundFunction());
 
-  if (fun->isNative()) {
+  if (fun->isNativeFun()) {
     *length = fun->nargs();
     return true;
   }
@@ -1932,7 +1932,7 @@ bool JSFunction::isBuiltinFunctionConstructor() {
 }
 
 bool JSFunction::needsExtraBodyVarEnvironment() const {
-  if (isNative()) {
+  if (isNativeFun()) {
     return false;
   }
 
@@ -1957,7 +1957,7 @@ bool JSFunction::needsNamedLambdaEnvironment() const {
 }
 
 bool JSFunction::needsCallObject() const {
-  if (isNative()) {
+  if (isNativeFun()) {
     return false;
   }
 
@@ -2042,7 +2042,7 @@ JSFunction* js::NewFunctionWithProto(
     fun->initScript(nullptr);
     fun->initEnvironment(enclosingEnv);
   } else {
-    MOZ_ASSERT(fun->isNative());
+    MOZ_ASSERT(fun->isNativeFun());
     fun->initNative(native, nullptr);
   }
   if (allocKind == gc::AllocKind::FUNCTION_EXTENDED) {
@@ -2236,7 +2236,7 @@ JSFunction* js::CloneFunctionAndScript(JSContext* cx, HandleFunction fun,
 }
 
 JSFunction* js::CloneAsmJSModuleFunction(JSContext* cx, HandleFunction fun) {
-  MOZ_ASSERT(fun->isNative());
+  MOZ_ASSERT(fun->isNativeFun());
   MOZ_ASSERT(IsAsmJSModule(fun));
   MOZ_ASSERT(fun->isExtended());
   MOZ_ASSERT(cx->compartment() == fun->compartment());
@@ -2256,7 +2256,7 @@ JSFunction* js::CloneAsmJSModuleFunction(JSContext* cx, HandleFunction fun) {
 }
 
 JSFunction* js::CloneSelfHostingIntrinsic(JSContext* cx, HandleFunction fun) {
-  MOZ_ASSERT(fun->isNative());
+  MOZ_ASSERT(fun->isNativeFun());
   MOZ_ASSERT(fun->realm()->isSelfHostingRealm());
   MOZ_ASSERT(!fun->isExtended());
   MOZ_ASSERT(cx->compartment() != fun->compartment());
@@ -2438,7 +2438,7 @@ void js::ReportIncompatibleMethod(JSContext* cx, const CallArgs& args,
   switch (thisv.type()) {
     case ValueType::Object:
       MOZ_ASSERT(thisv.toObject().getClass() != clasp ||
-                 !thisv.toObject().isNative() ||
+                 !thisv.toObject().is<NativeObject>() ||
                  !thisv.toObject().staticPrototype() ||
                  thisv.toObject().staticPrototype()->getClass() != clasp);
       break;

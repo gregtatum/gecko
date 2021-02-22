@@ -513,7 +513,7 @@ bool js::SetIntegrityLevel(JSContext* cx, HandleObject obj,
   }
 
   // Steps 6-9, loosely interpreted.
-  if (obj->isNative() && !obj->as<NativeObject>().inDictionaryMode() &&
+  if (obj->is<NativeObject>() && !obj->as<NativeObject>().inDictionaryMode() &&
       !obj->is<TypedArrayObject>() && !obj->is<MappedArgumentsObject>()) {
     HandleNativeObject nobj = obj.as<NativeObject>();
 
@@ -616,7 +616,7 @@ bool js::SetIntegrityLevel(JSContext* cx, HandleObject obj,
   }
 
   // Finally, freeze or seal the dense elements.
-  if (obj->isNative()) {
+  if (obj->is<NativeObject>()) {
     if (!ObjectElements::FreezeOrSeal(cx, obj.as<NativeObject>(), level)) {
       return false;
     }
@@ -665,7 +665,7 @@ bool js::TestIntegrityLevel(JSContext* cx, HandleObject obj,
   }
 
   // Fast path for native objects.
-  if (obj->isNative()) {
+  if (obj->is<NativeObject>()) {
     HandleNativeObject nobj = obj.as<NativeObject>();
 
     // Force lazy properties to be resolved.
@@ -784,7 +784,7 @@ static inline JSObject* NewObject(JSContext* cx, HandleObjectGroup group,
   if (clasp->isJSFunction()) {
     JS_TRY_VAR_OR_RETURN_NULL(cx, obj,
                               JSFunction::create(cx, kind, heap, shape, group));
-  } else if (MOZ_LIKELY(clasp->isNative())) {
+  } else if (MOZ_LIKELY(clasp->isNativeObject())) {
     JS_TRY_VAR_OR_RETURN_NULL(
         cx, obj, NativeObject::create(cx, kind, heap, shape, group));
   } else {
@@ -810,7 +810,7 @@ bool js::NewObjectWithTaggedProtoIsCachable(JSContext* cx,
                                             NewObjectKind newKind,
                                             const JSClass* clasp) {
   return !cx->isHelperThreadContext() && proto.isObject() &&
-         newKind == GenericObject && clasp->isNative() &&
+         newKind == GenericObject && clasp->isNativeObject() &&
          !proto.toObject()->is<GlobalObject>();
 }
 
@@ -861,7 +861,7 @@ JSObject* js::NewObjectWithGivenTaggedProto(JSContext* cx, const JSClass* clasp,
 static bool NewObjectIsCachable(JSContext* cx, NewObjectKind newKind,
                                 const JSClass* clasp) {
   return !cx->isHelperThreadContext() && newKind == GenericObject &&
-         clasp->isNative();
+         clasp->isNativeObject();
 }
 
 JSObject* js::NewObjectWithClassProto(JSContext* cx, const JSClass* clasp,
@@ -928,7 +928,7 @@ JSObject* js::NewObjectWithClassProto(JSContext* cx, const JSClass* clasp,
 static bool NewObjectWithGroupIsCachable(JSContext* cx, HandleObjectGroup group,
                                          NewObjectKind newKind) {
   if (!group->proto().isObject() || newKind != GenericObject ||
-      !group->clasp()->isNative() || cx->isHelperThreadContext()) {
+      !group->clasp()->isNativeObject() || cx->isHelperThreadContext()) {
     return false;
   }
 
@@ -1311,7 +1311,7 @@ XDRResult js::XDRObjectLiteral(XDRState<mode>* xdr, MutableHandleObject obj) {
     if (mode == XDR_ENCODE) {
       RootedArrayObject arr(cx, &obj->as<ArrayObject>());
       if (!GetScriptArrayObjectElements(arr, &values)) {
-        return xdr->fail(JS::TranscodeResult_Throw);
+        return xdr->fail(JS::TranscodeResult::Throw);
       }
     }
 
@@ -1322,7 +1322,7 @@ XDRResult js::XDRObjectLiteral(XDRState<mode>* xdr, MutableHandleObject obj) {
     MOZ_TRY(xdr->codeUint32(&initialized));
     if (mode == XDR_DECODE &&
         !values.appendN(MagicValue(JS_ELEMENTS_HOLE), initialized)) {
-      return xdr->fail(JS::TranscodeResult_Throw);
+      return xdr->fail(JS::TranscodeResult::Throw);
     }
 
     // Recursively copy dense elements.
@@ -1334,7 +1334,7 @@ XDRResult js::XDRObjectLiteral(XDRState<mode>* xdr, MutableHandleObject obj) {
       obj.set(NewDenseCopiedArray(cx, values.length(), values.begin(),
                                   /* proto = */ nullptr, TenuredObject));
       if (!obj) {
-        return xdr->fail(JS::TranscodeResult_Throw);
+        return xdr->fail(JS::TranscodeResult::Throw);
       }
     }
 
@@ -1344,14 +1344,14 @@ XDRResult js::XDRObjectLiteral(XDRState<mode>* xdr, MutableHandleObject obj) {
   // Code the properties in the object.
   Rooted<IdValueVector> properties(cx, IdValueVector(cx));
   if (mode == XDR_ENCODE && !GetScriptPlainObjectProperties(obj, &properties)) {
-    return xdr->fail(JS::TranscodeResult_Throw);
+    return xdr->fail(JS::TranscodeResult::Throw);
   }
 
   uint32_t nproperties = properties.length();
   MOZ_TRY(xdr->codeUint32(&nproperties));
 
   if (mode == XDR_DECODE && !properties.appendN(IdValuePair(), nproperties)) {
-    return xdr->fail(JS::TranscodeResult_Throw);
+    return xdr->fail(JS::TranscodeResult::Throw);
   }
 
   for (size_t i = 0; i < nproperties; i++) {
@@ -1365,7 +1365,7 @@ XDRResult js::XDRObjectLiteral(XDRState<mode>* xdr, MutableHandleObject obj) {
 
     if (mode == XDR_DECODE) {
       if (!PrimitiveValueToId<CanGC>(cx, tmpIdValue, &tmpId)) {
-        return xdr->fail(JS::TranscodeResult_Throw);
+        return xdr->fail(JS::TranscodeResult::Throw);
       }
       properties[i].get().id = tmpId;
       properties[i].get().value = tmpValue;
@@ -1376,7 +1376,7 @@ XDRResult js::XDRObjectLiteral(XDRState<mode>* xdr, MutableHandleObject obj) {
     obj.set(NewPlainObjectWithProperties(cx, properties.begin(),
                                          properties.length(), TenuredObject));
     if (!obj) {
-      return xdr->fail(JS::TranscodeResult_Throw);
+      return xdr->fail(JS::TranscodeResult::Throw);
     }
   }
 
@@ -1449,7 +1449,7 @@ bool NativeObject::fillInAfterSwap(JSContext* cx, HandleNativeObject obj,
 void JSObject::fixDictionaryShapeAfterSwap() {
   // Dictionary shapes can point back to their containing objects, so after
   // swapping the guts of those objects fix the pointers up.
-  if (isNative() && as<NativeObject>().inDictionaryMode()) {
+  if (is<NativeObject>() && as<NativeObject>().inDictionaryMode()) {
     shape()->dictNext.setObject(this);
   }
 }
@@ -1467,7 +1467,7 @@ bool js::ObjectMayBeSwapped(const JSObject* obj) {
   // WindowProxy, Wrapper, DeadProxyObject, DOMProxy, and DOMClass (non-global)
   // types may be swapped. It is hard to detect DOMProxy from shell, so target
   // proxies in general.
-  return clasp->isProxy() || clasp->isDOMClass();
+  return clasp->isProxyObject() || clasp->isDOMClass();
 }
 
 [[nodiscard]] static bool CopyProxyValuesBeforeSwap(
@@ -1500,7 +1500,7 @@ bool js::ObjectMayBeSwapped(const JSObject* obj) {
 
 bool ProxyObject::initExternalValueArrayAfterSwap(
     JSContext* cx, const HandleValueVector values) {
-  MOZ_ASSERT(getClass()->isProxy());
+  MOZ_ASSERT(getClass()->isProxyObject());
 
   size_t nreserved = numReservedSlots();
 
@@ -1579,9 +1579,9 @@ void JSObject::swap(JSContext* cx, HandleObject a, HandleObject b,
   // teleporting optimizations.
   //
   // See: ReshapeForProtoMutation, ReshapeForShadowedProp
-  MOZ_ASSERT_IF(a->isNative() && a->isDelegate(),
+  MOZ_ASSERT_IF(a->is<NativeObject>() && a->isDelegate(),
                 a->taggedProto() == TaggedProto());
-  MOZ_ASSERT_IF(b->isNative() && b->isDelegate(),
+  MOZ_ASSERT_IF(b->is<NativeObject>() && b->isDelegate(),
                 b->taggedProto() == TaggedProto());
 
   bool aIsProxyWithInlineValues =
@@ -1627,8 +1627,8 @@ void JSObject::swap(JSContext* cx, HandleObject a, HandleObject b,
     // When the objects have different sizes, they will have different
     // numbers of fixed slots before and after the swap, so the slots for
     // native objects will need to be rearranged.
-    NativeObject* na = a->isNative() ? &a->as<NativeObject>() : nullptr;
-    NativeObject* nb = b->isNative() ? &b->as<NativeObject>() : nullptr;
+    NativeObject* na = a->is<NativeObject>() ? &a->as<NativeObject>() : nullptr;
+    NativeObject* nb = b->is<NativeObject>() ? &b->as<NativeObject>() : nullptr;
 
     // Remember the original values from the objects.
     RootedValueVector avals(cx);
@@ -1827,7 +1827,7 @@ static bool ReshapeForProtoMutation(JSContext* cx, HandleObject obj) {
 
   RootedObject pobj(cx, obj);
 
-  while (pobj && pobj->isNative()) {
+  while (pobj && pobj->is<NativeObject>()) {
     if (!JSObject::setUncacheableProto(cx, pobj)) {
       return false;
     }
@@ -2164,7 +2164,7 @@ bool js::LookupOwnPropertyPure(JSContext* cx, JSObject* obj, jsid id,
     *isTypedArrayOutOfRange = false;
   }
 
-  if (obj->isNative()) {
+  if (obj->is<NativeObject>()) {
     // Search for a native dense element, typed array element, or property.
 
     if (JSID_IS_INT(id)) {
@@ -2254,7 +2254,7 @@ bool js::GetPropertyPure(JSContext* cx, JSObject* obj, jsid id, Value* vp) {
     return true;
   }
 
-  return pobj->isNative() &&
+  return pobj->is<NativeObject>() &&
          NativeGetPureInline(&pobj->as<NativeObject>(), id, prop, vp, cx);
 }
 
@@ -2272,7 +2272,7 @@ bool js::GetOwnPropertyPure(JSContext* cx, JSObject* obj, jsid id, Value* vp,
   }
 
   *found = true;
-  return obj->isNative() &&
+  return obj->is<NativeObject>() &&
          NativeGetPureInline(&obj->as<NativeObject>(), id, prop, vp, cx);
 }
 
@@ -2344,7 +2344,7 @@ bool js::GetOwnNativeGetterPure(JSContext* cx, JSObject* obj, jsid id,
   }
 
   JSFunction* getter = &getterObj->as<JSFunction>();
-  if (!getter->isNative()) {
+  if (!getter->isNativeFun()) {
     return true;
   }
 
@@ -3095,7 +3095,7 @@ void GetObjectSlotNameFunctor::operator()(JS::TracingContext* tcx, char* buf,
   uint32_t slot = uint32_t(tcx->index());
 
   Shape* shape;
-  if (obj->isNative()) {
+  if (obj->is<NativeObject>()) {
     shape = obj->as<NativeObject>().lastProperty();
     while (shape && (shape->isEmptyShape() || !shape->isDataProperty() ||
                      shape->slot() != slot)) {
@@ -3322,7 +3322,7 @@ bool JSObject::hasSameRealmAs(JSContext* cx) const {
   return nonCCWRealm() == cx->realm();
 }
 
-bool JSObject::uninlinedIsProxy() const { return is<ProxyObject>(); }
+bool JSObject::uninlinedIsProxyObject() const { return is<ProxyObject>(); }
 
 bool JSObject::uninlinedNonProxyIsExtensible() const {
   return nonProxyIsExtensible();
@@ -3360,7 +3360,7 @@ void JSObject::dump(js::GenericPrinter& out) const {
   }
 
   const NativeObject* nobj =
-      obj->isNative() ? &obj->as<NativeObject>() : nullptr;
+      obj->is<NativeObject>() ? &obj->as<NativeObject>() : nullptr;
   if (nobj) {
     if (nobj->inDictionaryMode()) {
       out.put(" inDictionaryMode");
@@ -3637,7 +3637,7 @@ js::gc::AllocKind JSObject::allocKindForTenure(
   }
 
   // Proxies that are CrossCompartmentWrappers may be nursery allocated.
-  if (IsProxy(this)) {
+  if (is<ProxyObject>()) {
     return as<ProxyObject>().allocKindForTenure();
   }
 
@@ -3652,9 +3652,8 @@ js::gc::AllocKind JSObject::allocKindForTenure(
     return InlineTypedObject::allocKindForTypeDescriptor(&descr);
   }
 
-  // Outline typed objects use the minimum allocation kind.
   if (is<OutlineTypedObject>()) {
-    return gc::AllocKind::OBJECT0;
+    return OutlineTypedObject::allocKind;
   }
 
   // All nursery allocatable non-native objects are handled above.
@@ -3764,10 +3763,10 @@ const char16_t JS::ubi::Concrete<JSObject>::concreteTypeName[] = u"JSObject";
 void JSObject::traceChildren(JSTracer* trc) {
   TraceCellHeaderEdge(trc, this, "group");
 
-  traceShape(trc);
+  TraceEdge(trc, shapePtr(), "shape");
 
   const JSClass* clasp = group()->clasp();
-  if (clasp->isNative()) {
+  if (clasp->isNativeObject()) {
     NativeObject* nobj = &as<NativeObject>();
 
     {
@@ -3925,7 +3924,7 @@ void JSObject::debugCheckNewObject(ObjectGroup* group, Shape* shape,
       JSCLASS_FOREGROUND_FINALIZE | JSCLASS_BACKGROUND_FINALIZE;
   uint32_t flags = clasp->flags;
   uint32_t finalizeFlags = flags & FinalizeMask;
-  if (clasp->hasFinalize() && !clasp->isProxy()) {
+  if (clasp->hasFinalize() && !clasp->isProxyObject()) {
     MOZ_ASSERT(finalizeFlags == JSCLASS_FOREGROUND_FINALIZE ||
                finalizeFlags == JSCLASS_BACKGROUND_FINALIZE);
     MOZ_ASSERT((finalizeFlags == JSCLASS_BACKGROUND_FINALIZE) ==
@@ -3937,15 +3936,15 @@ void JSObject::debugCheckNewObject(ObjectGroup* group, Shape* shape,
   MOZ_ASSERT_IF(clasp->hasFinalize(),
                 heap == gc::TenuredHeap ||
                     CanNurseryAllocateFinalizedClass(clasp) ||
-                    clasp->isProxy());
+                    clasp->isProxyObject());
 
   MOZ_ASSERT(!group->realm()->hasObjectPendingMetadata());
 
   // Non-native classes manage their own data and slots, so numFixedSlots and
   // slotSpan are always 0. Note that proxy classes can have reserved slots
   // but they're also not included in numFixedSlots/slotSpan.
-  if (!clasp->isNative()) {
-    MOZ_ASSERT_IF(!clasp->isProxy(), JSCLASS_RESERVED_SLOTS(clasp) == 0);
+  if (!clasp->isNativeObject()) {
+    MOZ_ASSERT_IF(!clasp->isProxyObject(), JSCLASS_RESERVED_SLOTS(clasp) == 0);
     MOZ_ASSERT(!clasp->hasPrivate());
     MOZ_ASSERT_IF(shape, shape->numFixedSlots() == 0);
     MOZ_ASSERT_IF(shape, shape->slotSpan() == 0);
