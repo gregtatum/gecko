@@ -31,6 +31,8 @@ let Engagement = {
   _currentURL: null,
   _startTimeOnPage: 0,
 
+  _thumbnails: new Map(),
+
   _inited: false,
 
   init() {
@@ -155,21 +157,26 @@ let Engagement = {
   engage(msg) {
     log.debug("engage with " + msg.url);
     this._currentURL = msg.url;
+    if ("thumbnail" in msg) {
+      this._thumbnails.set(msg.url, msg.thumbnail);
+    }
     this._startTimeOnPage = new Date().getTime();
   },
 
-  disengage(msg) {
+  async disengage(msg) {
     log.debug("disengage with " + msg.url);
     let stopTimeOnPage = new Date().getTime();
     let timeOnPage = new Date().getTime() - this._startTimeOnPage;
     log.debug(timeOnPage / 1000 + " seconds of engagement");
-    Keyframes.addOrUpdate(
+    await Keyframes.addOrUpdate(
       Services.io.newURI(msg.url).specIgnoringRef,
       "automatic",
       this._startTimeOnPage,
       stopTimeOnPage,
-      timeOnPage
+      timeOnPage,
+      this._thumbnails.get(msg.url)
     );
+    this._thumbnails.delete(msg.url);
     this._currentURL = null;
   },
 };

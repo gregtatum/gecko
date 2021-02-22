@@ -127,6 +127,9 @@ async function updateList(id, frames) {
     if (!data) {
       continue;
     }
+    if (frame.thumbnail) {
+      data.richIcon = frame.thumbnail;
+    }
 
     list.appendChild(new KeyFrame(data));
   }

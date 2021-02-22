@@ -47,7 +47,7 @@ const SQL = {
     ");",
 
   add:
-    "INSERT INTO keyframes (url, type, firstVisit, lastVisit, totalEngagement) VALUES (:url, :type, :firstVisit, :lastVisit, :totalEngagement);",
+    "INSERT INTO keyframes (url, type, firstVisit, lastVisit, totalEngagement, thumbnail) VALUES (:url, :type, :firstVisit, :lastVisit, :totalEngagement, :thumbnail);",
 
   exists: "SELECT * FROM keyframes WHERE url = :url;",
 
@@ -57,7 +57,14 @@ const SQL = {
 var Keyframes = {
   _db: null,
 
-  async addOrUpdate(url, type, firstVisit, lastVisit, totalEngagement) {
+  async addOrUpdate(
+    url,
+    type,
+    firstVisit,
+    lastVisit,
+    totalEngagement,
+    thumbnail
+  ) {
     if (!this._db) {
       await this.init();
     }
@@ -78,6 +85,7 @@ var Keyframes = {
         firstVisit,
         lastVisit,
         totalEngagement,
+        thumbnail,
       });
     }
     Services.obs.notifyObservers(null, "keyframe-update");
@@ -92,6 +100,7 @@ var Keyframes = {
     return records.map(record => ({
       id: record.getResultByName("id"),
       url: record.getResultByName("url"),
+      thumbnail: record.getResultByName("thumbnail"),
       timestamp: new Date(
         // SQLITE stores dates in UTC.
         record.getResultByName("timestamp").replace(" ", "T") + "Z"
