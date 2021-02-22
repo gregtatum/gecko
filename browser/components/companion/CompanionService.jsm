@@ -9,10 +9,43 @@ const { XPCOMUtils } = ChromeUtils.import(
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   Services: "resource://gre/modules/Services.jsm",
+  MuxerUnifiedComplete: "resource:///modules/UrlbarMuxerUnifiedComplete.jsm",
+  UrlbarProvidersManager: "resource:///modules/UrlbarProvidersManager.jsm",
+  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
 });
 
+class CompanionWindowMuxer extends MuxerUnifiedComplete {
+  get name() {
+    return "companion";
+  }
+
+  sort(queryContext) {
+    super.sort(queryContext);
+
+    let switchEntry = queryContext.results.findIndex(
+      entry => entry.type == UrlbarUtils.RESULT_TYPE.TAB_SWITCH
+    );
+
+    if (switchEntry >= 0) {
+      let [entry] = queryContext.results.splice(switchEntry, 1);
+      queryContext.results.unshift(entry);
+    }
+  }
+}
+
 const CompanionService = {
+  init() {
+    if (this.inited) {
+      return;
+    }
+    this.inited = true;
+
+    UrlbarProvidersManager.registerMuxer(new CompanionWindowMuxer());
+  },
+
   openCompanion() {
+    this.init();
+
     let container = Services.wm.getMostRecentWindow("Firefox:Companion");
 
     if (container && !container.closed) {

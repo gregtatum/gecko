@@ -144,6 +144,15 @@ class ProvidersManager {
   }
 
   /**
+   * Verifies that a named muxer exists.
+   * @param {string} name the name of a muxer.
+   * @returns {boolean}
+   */
+  hasMuxer(name) {
+    return this.muxers.has(name);
+  }
+
+  /**
    * Registers a muxer object with the manager.
    * @param {object} muxer a UrlbarMuxer object
    */

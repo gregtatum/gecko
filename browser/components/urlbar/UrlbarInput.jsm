@@ -14,6 +14,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   AppConstants: "resource://gre/modules/AppConstants.jsm",
   BrowserSearchTelemetry: "resource:///modules/BrowserSearchTelemetry.jsm",
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.jsm",
+  BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   ExtensionSearchHandler: "resource://gre/modules/ExtensionSearchHandler.jsm",
   ObjectUtils: "resource://gre/modules/ObjectUtils.jsm",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
@@ -291,6 +292,23 @@ class BrowserManager {
     return true;
   }
 
+  switchToTabHavingURI(aURI, aOpenNew, aOpenParams = {}) {
+    let window = BrowserWindowTracker.getTopWindow({
+      allowPopups: aOpenParams.allowPopups,
+    });
+
+    if (window) {
+      window.switchToTabHavingURI(aURI, aOpenNew, aOpenParams);
+      return;
+    }
+
+    if (!aOpenNew) {
+      return;
+    }
+
+    this.window.openTrustedLinkIn(aURI, "window", aOpenParams);
+  }
+
   removeBrowser(browser) {
     // no-op
   }
@@ -349,6 +367,7 @@ class UrlbarInput {
    */
   constructor(options = {}) {
     this.textbox = options.textbox;
+    this.muxer = options.muxer;
 
     this.window = this.textbox.ownerGlobal;
     if ("gBrowser" in this.window) {
@@ -1059,7 +1078,7 @@ class UrlbarInput {
         }
 
         this.handleRevert();
-        let prevBrowser = this.browserElement.selectedBrowser;
+        let prevBrowser = this.browserManager.selectedBrowser;
         let loadOpts = {
           adoptIntoActiveWindow: UrlbarPrefs.get(
             "switchTabs.adoptIntoActiveWindow"
@@ -1073,7 +1092,7 @@ class UrlbarInput {
           provider: result.providerName,
         });
 
-        let switched = this.window.switchToTabHavingURI(
+        let switched = this.browserManager.switchToTabHavingURI(
           Services.io.newURI(url),
           false,
           loadOpts
@@ -1543,6 +1562,10 @@ class UrlbarInput {
         !event.data ||
         event.data.length <= UrlbarPrefs.get("maxCharsForSearchSuggestions"),
     };
+
+    if (this.muxer) {
+      options.muxer = this.muxer;
+    }
 
     if (this.searchMode) {
       this.confirmSearchMode();

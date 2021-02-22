@@ -183,6 +183,7 @@ function onLoad() {
     textbox: document.getElementById("urlbar"),
     eventTelemetryCategory: "urlbar",
     isInitialPage,
+    muxer: "companion",
   });
 
   update();
