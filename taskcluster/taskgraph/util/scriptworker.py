@@ -55,6 +55,7 @@ SIGNING_SCOPE_ALIAS_TO_PROJECT = [
                 "mozilla-central",
                 "comm-central",
                 "oak",
+                "pine",
             ]
         ),
     ],
@@ -106,6 +107,7 @@ BEETMOVER_SCOPE_ALIAS_TO_PROJECT = [
                 "mozilla-central",
                 "comm-central",
                 "oak",
+                "pine",
             ]
         ),
     ],
