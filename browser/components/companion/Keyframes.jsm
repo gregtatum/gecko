@@ -26,6 +26,18 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   AsyncShutdown: "resource://gre/modules/AsyncShutdown.jsm",
 });
 
+/*
+XPCOMUtils.defineLazyGetter(this, "log", () => {
+  let { ConsoleAPI } = ChromeUtils.import("resource://gre/modules/Console.jsm");
+  return new ConsoleAPI({
+    prefix: "Keyframes",
+    maxLogLevel: "debug",
+  });
+});
+*/
+
+const ENGAGEMENT_TIMER = 1 * 1000; // 10 seconds
+
 const SCHEMA_VERSION = 4;
 
 /**
@@ -78,7 +90,7 @@ var Keyframes = {
         let sql = `UPDATE keyframes SET lastVisit = '${lastVisit}', totalEngagement = '${newTotalEngagement}' WHERE id = '${id}'`;
         await this._db.executeCached(sql);
       }
-    } else {
+    } else if (type != "automatic" || totalEngagement > ENGAGEMENT_TIMER) {
       await this._db.executeCached(SQL.add, {
         url,
         type,
@@ -87,6 +99,21 @@ var Keyframes = {
         totalEngagement,
         thumbnail,
       });
+    }
+    Services.obs.notifyObservers(null, "keyframe-update");
+  },
+
+  async updateThumbnail(url, thumbnail) {
+    if (!this._db) {
+      await this.init();
+    }
+    let existingRows = await this._db.executeCached(SQL.exists, { url });
+    if (existingRows.length) {
+      for (let row of existingRows) {
+        let id = row.getResultByName("id");
+        let sql = `UPDATE keyframes SET thumbnail = '${thumbnail}' WHERE id = '${id}'`;
+        await this._db.executeCached(sql);
+      }
     }
     Services.obs.notifyObservers(null, "keyframe-update");
   },

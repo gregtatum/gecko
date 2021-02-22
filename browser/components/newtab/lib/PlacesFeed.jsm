@@ -29,6 +29,11 @@ ChromeUtils.defineModuleGetter(
   "PrivateBrowsingUtils",
   "resource://gre/modules/PrivateBrowsingUtils.jsm"
 );
+ChromeUtils.defineModuleGetter(
+  this,
+  "Keyframes",
+  "resource:///modules/Keyframes.jsm"
+);
 
 const LINK_BLOCKED_EVENT = "newtab-linkBlocked";
 const PLACES_LINKS_CHANGED_DELAY_TIME = 1000; // time in ms to delay timer for places links changed events
@@ -529,6 +534,14 @@ class PlacesFeed {
         this.handoffSearchToAwesomebar(action);
         break;
       case at.OPEN_LINK: {
+        let visitTime = new Date().getTime();
+        Keyframes.addOrUpdate(
+          action.data.url,
+          "newtab",
+          visitTime,
+          visitTime,
+          0
+        );
         this.openLink(action);
         break;
       }

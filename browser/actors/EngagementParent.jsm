@@ -19,6 +19,9 @@ class EngagementParent extends JSWindowActorParent {
     if (msg.name == "Engagement:Log") {
       Engagement.reportError(msg.data);
     }
+    if (msg.name == "Engagement:UpdateThumbnail") {
+      Engagement.updateThumbnail(msg.data);
+    }
     if (msg.name == "Engagement:Engage") {
       Engagement.engage(msg.data);
     }

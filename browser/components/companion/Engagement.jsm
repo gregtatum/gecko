@@ -154,16 +154,33 @@ let Engagement = {
     return uri.schemeIs("http") || uri.schemeIs("https");
   },
 
+  updateThumbnail(msg) {
+    if (!this.isHttpURI(Services.io.newURI(msg.url))) {
+      return;
+    }
+    if ("thumbnail" in msg) {
+      this._thumbnails.set(msg.url, msg.thumbnail);
+      Keyframes.updateThumbnail(msg.url, msg.thumbnail);
+    }
+  },
+
   engage(msg) {
+    if (!this.isHttpURI(Services.io.newURI(msg.url))) {
+      return;
+    }
     log.debug("engage with " + msg.url);
     this._currentURL = msg.url;
     if ("thumbnail" in msg) {
       this._thumbnails.set(msg.url, msg.thumbnail);
+      Keyframes.updateThumbnail(msg.url, msg.thumbnail);
     }
     this._startTimeOnPage = new Date().getTime();
   },
 
   async disengage(msg) {
+    if (!this.isHttpURI(Services.io.newURI(msg.url)) || this._startTimeOnPage) {
+      return;
+    }
     log.debug("disengage with " + msg.url);
     let stopTimeOnPage = new Date().getTime();
     let timeOnPage = new Date().getTime() - this._startTimeOnPage;

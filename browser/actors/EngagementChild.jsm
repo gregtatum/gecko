@@ -5,6 +5,10 @@
 
 var EXPORTED_SYMBOLS = ["EngagementChild"];
 
+const { PrivateBrowsingUtils } = ChromeUtils.import(
+  "resource://gre/modules/PrivateBrowsingUtils.jsm"
+);
+
 class EngagementChild extends JSWindowActorChild {
   actorCreated() {
     this.initWebProgressListener();
@@ -70,6 +74,9 @@ class EngagementChild extends JSWindowActorChild {
    * @param {object} event The event details.
    */
   async handleEvent(event) {
+    if (PrivateBrowsingUtils.isContentWindowPrivate(this.contentWindow)) {
+      return;
+    }
     switch (event.type) {
       case "pageshow": {
         // BFCACHE - not sure what to do here yet.
@@ -84,8 +91,12 @@ class EngagementChild extends JSWindowActorChild {
       case "DOMContentLoaded": {
         let docInfo = await this.getDocumentInfo();
         let context = this.manager.browsingContext;
-        if (docInfo && context.isActive) {
-          this.sendAsyncMessage("Engagement:Engage", docInfo);
+        if (docInfo) {
+          if (context.isActive) {
+            this.sendAsyncMessage("Engagement:Engage", docInfo);
+          } else {
+            this.sendAsyncMessage("Engagement:UpdateThumbnail", docInfo);
+          }
         }
         break;
       }
