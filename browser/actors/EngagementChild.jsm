@@ -46,25 +46,9 @@ class EngagementChild extends JSWindowActorChild {
     }
     let docInfo = {};
     docInfo.url = doc.documentURIObject.specIgnoringRef;
-    /*
-    // Just using doc URL for now because we would have to fix engagement to get the canonical
-    // URLs too
-
-    let link = doc.querySelector("link[rel='canonical']")?.getAttribute("href");
-    if (link) {
-      docInfo.url = link;
-    }
-    let ogURL = doc.querySelector("meta[property='og:url']")?.getAttribute('content');
-    if (ogURL) {
-      docInfo.url = ogURL;
-    }
-*/
-    let ogImage = doc
+    docInfo.thumbnail = doc
       .querySelector("meta[property='og:image']")
       ?.getAttribute("content");
-    if (ogImage) {
-      docInfo.thumbnail = ogImage;
-    }
     return docInfo;
   }
 

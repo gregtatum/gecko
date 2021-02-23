@@ -32,6 +32,8 @@ let Engagement = {
   _startTimeOnPage: 0,
 
   _thumbnails: new Map(),
+  _docInfos: new Map(),
+  _delayedEngagements: new Map(),
 
   _inited: false,
 
@@ -154,52 +156,84 @@ let Engagement = {
     return uri.schemeIs("http") || uri.schemeIs("https");
   },
 
+  /* If a page is loaded in the background, we store the
+     document information in case we need it later. */
   updateThumbnail(msg) {
     if (!this.isHttpURI(Services.io.newURI(msg.url))) {
       return;
     }
-    if ("thumbnail" in msg) {
-      this._thumbnails.set(msg.url, msg.thumbnail);
-      Keyframes.updateThumbnail(msg.url, msg.thumbnail);
+    /*
+    if (msg.thumbnail) {
+      let url = msg.canonicalURL || Services.io.newURI(msg.url).specIgnoringRef;
+      this._thumbnails.set(url, msg.thumbnail);
+      Keyframes.updateThumbnail(url, msg.thumbnail);
     }
+    if (msg.canonicalURL) {
+    */
+    this._docInfos.set(msg.url, msg);
+    /*
+    }
+    */
   },
 
-  engage(msg) {
+  async engage(msg) {
     if (!this.isHttpURI(Services.io.newURI(msg.url))) {
       return;
     }
     log.debug("engage with " + msg.url);
     this._currentURL = msg.url;
+    // Anytime a page is loaded, we update the thumbnail just in case it changed.
     if ("thumbnail" in msg) {
-      this._thumbnails.set(msg.url, msg.thumbnail);
       Keyframes.updateThumbnail(msg.url, msg.thumbnail);
     }
     this._startTimeOnPage = new Date().getTime();
+    /* This page was loaded as a result of a user action. Add it to the
+       keyframe database immediately. */
+    if (this._delayedEngagements.has(msg.url)) {
+      let type = this._delayedEngagements.get(msg.url);
+      await Keyframes.addOrUpdate(
+        msg.url,
+        type,
+        this._startTimeOnPage,
+        this._startTimeOnPage,
+        0,
+        msg.thumbnail
+      );
+      this._delayedEngagements.delete(msg.url);
+    }
   },
 
   async disengage(msg) {
     if (
       !this.isHttpURI(Services.io.newURI(msg.url)) ||
-      !this._startTimeOnPage
+      !this._startTimeOnPage ||
+      msg.url != this._currentURL
     ) {
       return;
     }
-    if (msg.url != this._currentURL) {
-      return;
+    if (this._docInfos.has(msg.url)) {
+      msg = this._docInfos.get(msg.url);
     }
     log.debug("disengage with " + msg.url);
     let stopTimeOnPage = new Date().getTime();
     let timeOnPage = new Date().getTime() - this._startTimeOnPage;
     log.debug(timeOnPage / 1000 + " seconds of engagement");
     await Keyframes.addOrUpdate(
-      Services.io.newURI(msg.url).specIgnoringRef,
+      msg.url,
       "automatic",
       this._startTimeOnPage,
       stopTimeOnPage,
       timeOnPage,
-      this._thumbnails.get(msg.url)
+      msg.thumbnail
     );
-    this._thumbnails.delete(msg.url);
     this._currentURL = null;
+  },
+
+  /* In case where we know we want to add a URL to Keyframes
+   without engagement (yet), we use this function so that
+   we can keep track of URLs we need to add.
+  */
+  async delayEngage(url, type) {
+    this._delayedEngagements.set(url, type);
   },
 };

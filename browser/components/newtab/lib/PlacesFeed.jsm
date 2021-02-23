@@ -31,8 +31,8 @@ ChromeUtils.defineModuleGetter(
 );
 ChromeUtils.defineModuleGetter(
   this,
-  "Keyframes",
-  "resource:///modules/Keyframes.jsm"
+  "Engagement",
+  "resource:///modules/Engagement.jsm"
 );
 
 const LINK_BLOCKED_EVENT = "newtab-linkBlocked";
@@ -534,14 +534,7 @@ class PlacesFeed {
         this.handoffSearchToAwesomebar(action);
         break;
       case at.OPEN_LINK: {
-        let visitTime = new Date().getTime();
-        Keyframes.addOrUpdate(
-          action.data.url,
-          "newtab",
-          visitTime,
-          visitTime,
-          0
-        );
+        Engagement.delayEngage(action.data.url, "newtab");
         this.openLink(action);
         break;
       }
