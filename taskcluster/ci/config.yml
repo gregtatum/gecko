@@ -628,7 +628,7 @@ workers:
 mac-notarization:
     mac-behavior:
         by-project:
-            mozilla-(central|beta|release|esr.*):
+            pine:
                 by-shippable:
                     "true": mac_notarize
                     default: mac_sign_and_pkg
