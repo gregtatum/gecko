@@ -120,7 +120,7 @@ async function updateList(id, frames) {
   let list = document.querySelector(`#${id} .keyframe-list`);
   list.replaceChildren([]);
 
-  frames.sort((a, b) => a - b);
+  frames.sort((a, b) => b.lastVisit - a.lastVisit);
 
   for (let frame of frames) {
     let data = await getPlacesData(frame.url);
@@ -150,9 +150,9 @@ async function update() {
   let yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
 
   for (let frame of frames) {
-    if (frame.timestamp >= today) {
+    if (frame.lastVisit >= today) {
       todayFrames.push(frame);
-    } else if (frame.timestamp >= yesterday) {
+    } else if (frame.lastVisit >= yesterday) {
       yesterdayFrames.push(frame);
     }
   }

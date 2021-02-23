@@ -66,6 +66,14 @@ const SQL = {
   selectAll: "SELECT * FROM keyframes;",
 };
 
+function int(dateStr) {
+  if (!dateStr) {
+    return null;
+  }
+
+  return parseInt(dateStr);
+}
+
 var Keyframes = {
   _db: null,
 
@@ -124,15 +132,19 @@ var Keyframes = {
     }
 
     let records = await this._db.executeCached(SQL.selectAll, {});
-    return records.map(record => ({
-      id: record.getResultByName("id"),
-      url: record.getResultByName("url"),
-      thumbnail: record.getResultByName("thumbnail"),
-      timestamp: new Date(
-        // SQLITE stores dates in UTC.
-        record.getResultByName("timestamp").replace(" ", "T") + "Z"
-      ),
-    }));
+    return records.map(record => {
+      let lastVisit =
+        int(record.getResultByName("lastVisit")) ??
+        record.getResultByName("timestamp").replace(" ", "T") + "Z";
+
+      return {
+        id: record.getResultByName("id"),
+        url: record.getResultByName("url"),
+        thumbnail: record.getResultByName("thumbnail"),
+        lastVisit: new Date(lastVisit),
+        totalEngagement: int(record.getResultByName("totalEngagement")) ?? 0,
+      };
+    });
   },
 
   async init() {
