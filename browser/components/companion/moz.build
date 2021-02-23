@@ -10,4 +10,5 @@ EXTRA_JS_MODULES += [
     "CompanionService.jsm",
     "Engagement.jsm",
     "Keyframes.jsm",
+    "OAuth2.jsm",
 ]

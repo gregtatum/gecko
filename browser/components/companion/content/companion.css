@@ -29,6 +29,7 @@ body {
 #awesomebar {
   padding: 10px;
   height: 40px;
+  margin-bottom: 20px;
   appearance: none;
 }
 
@@ -114,6 +115,13 @@ body {
 :root:not([sizemode=maximized]) .titlebar-restore,
 :root[sizemode=maximized] .titlebar-max {
   display: none;
+}
+
+#services {
+  display: flex;
+  flex-direction: row;
+  justify-content: end;
+  padding: 5px 10px;
 }
 
 #content {

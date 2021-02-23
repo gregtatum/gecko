@@ -14,6 +14,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   UrlbarProviderSearchTips: "resource:///modules/UrlbarProviderSearchTips.jsm",
   UrlbarTokenizer: "resource:///modules/UrlbarTokenizer.jsm",
   UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
+  OAuth2: "resource:///modules/OAuth2.jsm",
 });
 
 XPCOMUtils.defineLazyServiceGetters(this, {
@@ -23,6 +24,30 @@ XPCOMUtils.defineLazyServiceGetters(this, {
     "nsINavHistoryService",
   ],
 });
+
+const GOOGLE_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
+const GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
+const GOOGLE_CLIENT_ID =
+  "913967847322-m8ij544g2i23pssvchhru1hceg08irud.apps.googleusercontent.com";
+const GOOGLE_CLIENT_SECRET = "G7bg5a1bahnVWxd6GKQcO4Ro";
+const GOOGLE_SCOPES = [
+  "https://www.googleapis.com/auth/gmail.metadata",
+  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/calendar.events.readonly",
+];
+
+let Api = new OAuth2(
+  GOOGLE_ENDPOINT,
+  GOOGLE_TOKEN_ENDPOINT,
+  GOOGLE_SCOPES.join(" "),
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET
+);
+
+async function signin() {
+  let token = await Api.getToken();
+  console.log(token);
+}
 
 function openUrl(url) {
   let win = BrowserWindowTracker.getTopWindow({
