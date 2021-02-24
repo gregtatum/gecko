@@ -21,3 +21,13 @@
   --arrowpanel-dimmed-further: hsla(0,0%,80%,.5);
   --arrowpanel-dimmed-even-further: hsla(0,0%,80%,.8);
 }
+
+%ifdef MOZ_WIDGET_COCOA
+#win-buttonbox {
+  display: none;
+}
+%else
+#mac-buttonbox {
+  display: none;
+}
+%endif

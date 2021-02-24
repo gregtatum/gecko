@@ -41,9 +41,29 @@
     </div>
   </template>
 
-  <div id="titlebar">
-    <div id="buttonbox"/>
-  </div>
+  <xul:hbox id="titlebar">
+    <xul:hbox id="mac-buttonbox"/>
+    <xul:hbox id="win-buttonbox" flex="1" pack="end" class="titlebar-buttonbox-container">
+      <xul:hbox class="titlebar-buttonbox titlebar-color">
+        <xul:toolbarbutton class="titlebar-button titlebar-min"
+                           oncommand="window.minimize();"
+                           data-l10n-id="browser-window-minimize-button"
+                           />
+        <xul:toolbarbutton class="titlebar-button titlebar-max"
+                           oncommand="window.maximize();"
+                           data-l10n-id="browser-window-maximize-button"
+                           />
+        <xul:toolbarbutton class="titlebar-button titlebar-restore"
+                           oncommand="window.restore();"
+                           data-l10n-id="browser-window-restore-down-button"
+                           />
+        <xul:toolbarbutton class="titlebar-button titlebar-close"
+                           oncommand="window.close();"
+                           data-l10n-id="browser-window-close-button"
+                           />
+      </xul:hbox>
+    </xul:hbox>
+  </xul:hbox>
   <xul:toolbar id="awesomebar">
     <xul:toolbaritem id="urlbar-container" flex="1">
       <xul:hbox id="urlbar" flex="1"

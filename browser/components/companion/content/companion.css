@@ -24,10 +24,6 @@ body {
   -moz-font-smoothing-background-color: -moz-mac-vibrant-titlebar-dark;
   -moz-window-dragging: drag;
   min-height: 33px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: start;
 }
 
 #awesomebar {
@@ -61,10 +57,63 @@ body {
   list-style-image: url(chrome://global/skin/icons/search-glass.svg);
 }
 
-#buttonbox {
+#mac-buttonbox {
   appearance: auto;
   -moz-default-appearance: -moz-window-button-box;
   margin-left: 12px;
+}
+
+.titlebar-buttonbox,
+.titlebar-button {
+  appearance: none !important;
+}
+
+.titlebar-button {
+  border: none;
+  margin: 0 !important;
+  padding: 8px 17px;
+  -moz-context-properties: stroke;
+  stroke: currentColor;
+}
+
+.titlebar-min {
+  list-style-image: url(chrome://browser/skin/window-controls/minimize.svg);
+}
+
+.titlebar-max {
+  list-style-image: url(chrome://browser/skin/window-controls/maximize.svg);
+}
+
+.titlebar-restore {
+  list-style-image: url(chrome://browser/skin/window-controls/restore.svg);
+}
+
+.titlebar-close {
+  list-style-image: url(chrome://browser/skin/window-controls/close.svg);
+}
+
+.titlebar-button:not(.titlebar-close):hover {
+  background-color: hsla(0,0%,100%,.22);
+}
+.titlebar-button:not(.titlebar-close):hover:active {
+  background-color: hsla(0,0%,100%,.32);
+}
+
+.titlebar-close:hover {
+  stroke: white;
+  background-color: hsl(355,86%,49%);
+}
+.titlebar-close:hover:active {
+  background-color: hsl(355,82%,69%);
+}
+
+.titlebar-button:not(:hover) > .toolbarbutton-icon:-moz-window-inactive {
+  opacity: 0.5;
+}
+
+:root:not([sizemode=maximized]) .titlebar-restore,
+:root[sizemode=maximized] .titlebar-max {
+  display: none;
 }
 
 #content {
