@@ -4,8 +4,8 @@
 
 // This file contains branding-specific prefs.
 
-pref("startup.homepage_override_url", "https://www.mozilla.org/projects/firefox/%VERSION%/whatsnew/?oldversion=%OLD_VERSION%");
-pref("startup.homepage_welcome_url", "https://www.mozilla.org/projects/firefox/%VERSION%/firstrun/");
+pref("startup.homepage_override_url", "");
+pref("startup.homepage_welcome_url", "");
 pref("startup.homepage_welcome_url.additional", "");
 // The time interval between checks for a new version (in seconds)
 pref("app.update.interval", 7200); // 2 hours

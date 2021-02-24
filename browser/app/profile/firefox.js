@@ -232,14 +232,14 @@ pref("browser.uidensity", 0);
 pref("browser.touchmode.auto", true);
 
 // At startup, check if we're the default browser and prompt user if not.
-pref("browser.shell.checkDefaultBrowser", true);
+pref("browser.shell.checkDefaultBrowser", false);
 pref("browser.shell.shortcutFavicons",true);
 pref("browser.shell.mostRecentDateSetAsDefault", "");
 pref("browser.shell.skipDefaultBrowserCheckOnFirstRun", true);
 pref("browser.shell.didSkipDefaultBrowserCheckOnFirstRun", false);
 pref("browser.shell.defaultBrowserCheckCount", 0);
 #ifdef EARLY_BETA_OR_EARLIER
-pref("browser.defaultbrowser.notificationbar", true);
+pref("browser.defaultbrowser.notificationbar", false);
 #else
 pref("browser.defaultbrowser.notificationbar", false);
 #endif
