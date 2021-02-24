@@ -719,6 +719,7 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
             'source-test',
             'build',
             'build-signing',
+            'repackage',
         ]:
             return False
 
