@@ -4417,9 +4417,6 @@ pref("toolkit.legacyUserProfileCustomizations.stylesheets", false);
 #ifdef MOZ_SERVICES_HEALTHREPORT
   #if !defined(ANDROID)
     pref("datareporting.healthreport.infoURL", "https://www.mozilla.org/legal/privacy/firefox.html#health-report");
-
-    // Health Report is enabled by default on all channels.
-    pref("datareporting.healthreport.uploadEnabled", false);
   #endif
 #endif
 

@@ -703,28 +703,30 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
     """Bug 1339179 - no mobile automation needed on pine"""
 
     def filter(task):
-        platform = task.attributes.get('build_platform', '')
+        platform = task.attributes.get("build_platform", "")
         if platform not in [
-            'win64',
-            'win64-shippable',
-            'linux64',
-            'linux64-shippable',
-            'macosx64',
-            'macosx64-shippable',
+            "win64",
+            "win64-shippable",
+            "linux64",
+            "linux64-shippable",
+            "macosx64",
+            "macosx64-shippable",
         ]:
             return False
 
-        if task.attributes.get('kind', '') not in [
+        if task.attributes.get("kind", "") not in [
             # 'test',
-            'source-test',
-            'build',
-            'build-signing',
-            'repackage',
+            "source-test",
+            "build",
+            "build-signing",
+            "repackage",
         ]:
             return False
 
-        if task.optimization is not None and platform != 'macosx64' and 'webrender' in task.optimization.get('test', []):
-            return False
+        if task.optimization is not None:
+            if platform != "macosx64":
+                if "webrender" in task.optimization.get("test", []):
+                    return False
 
         # if 'unittest_suite' in task.attributes:
         #     if task.attributes['unittest_suite'] not in [
