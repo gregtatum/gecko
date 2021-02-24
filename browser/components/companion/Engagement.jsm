@@ -29,6 +29,7 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 
 const PASSIVE_ENGAGEMENT_TIMER = 10 * 1000; // 10 seconds
 const ACTIVE_ENGAGEMENT_TIMER = 2 * 1000; // 10 seconds
+const ENGAGEMENT_TIMER_INTERVAL = 1000;
 
 const DOMWINDOW_OPENED_TOPIC = "domwindowopened";
 
@@ -87,6 +88,8 @@ let Engagement = {
         if (event.target instanceof Ci.nsIDOMWindow) {
           let win = event.target;
           if (win.gBrowser) {
+            this._currentURL =
+              win.gBrowser.selectedTab.linkedBrowser.currentURI.specIgnoringRef;
             this.startEngagementTimer();
           }
         }
@@ -166,7 +169,10 @@ let Engagement = {
   _engagementTimer: 0,
   startEngagementTimer() {
     if (this._engagementTimer == 0) {
-      this._engagementTimer = setInterval(this.processEngagements, 1000);
+      this._engagementTimer = setInterval(
+        this.processEngagements,
+        ENGAGEMENT_TIMER_INTERVAL
+      );
     }
   },
 
@@ -179,7 +185,7 @@ let Engagement = {
     Engagement._engagements.forEach(function(engagementData, url) {
       if (Engagement._currentURL == url) {
         engagementData.lastTimeOnPage = new Date().getTime();
-        engagementData.totalEngagement += 1000;
+        engagementData.totalEngagement += ENGAGEMENT_TIMER_INTERVAL;
         if (engagementData.addedKeyframe) {
           return;
         }
@@ -226,7 +232,9 @@ let Engagement = {
     }
     this._engagements.set(url, engagementData);
 
-    this._currentURL = url;
+    if (msg.isActive) {
+      this._currentURL = url;
+    }
   },
 
   async disengage(msg) {

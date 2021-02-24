@@ -36,8 +36,6 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 });
 */
 
-const ENGAGEMENT_TIMER = 1 * 1000; // 10 seconds
-
 const SCHEMA_VERSION = 5;
 
 /**
@@ -90,7 +88,7 @@ var Keyframes = {
         let sql = `UPDATE keyframes SET lastVisit = '${lastVisit}', totalEngagement = '${newTotalEngagement}' WHERE id = '${id}'`;
         await this._db.executeCached(sql);
       }
-    } else if (type != "automatic" || totalEngagement > ENGAGEMENT_TIMER) {
+    } else {
       await this._db.executeCached(SQL.add, {
         url,
         type,

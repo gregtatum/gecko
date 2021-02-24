@@ -73,9 +73,8 @@ class EngagementChild extends JSWindowActorChild {
         let docInfo = await this.getDocumentInfo();
         let context = this.manager.browsingContext;
         if (docInfo) {
-          if (context.isActive) {
-            this.sendAsyncMessage("Engagement:Engage", docInfo);
-          }
+          docInfo.isActive = context.isActive;
+          this.sendAsyncMessage("Engagement:Engage", docInfo);
         }
         break;
       }
