@@ -715,7 +715,7 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
             return False
 
         if task.attributes.get('kind', '') not in [
-            'test',
+            # 'test',
             'source-test',
             'build',
             'build-signing',
@@ -726,15 +726,15 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
         if task.optimization is not None and platform != 'macosx64' and 'webrender' in task.optimization.get('test', []):
             return False
 
-        if 'unittest_suite' in task.attributes:
-            if task.attributes['unittest_suite'] not in [
-                'xpcshell',
-                'mochitest-browser-chrome',
-            ]:
-                return False
+        # if 'unittest_suite' in task.attributes:
+        #     if task.attributes['unittest_suite'] not in [
+        #         'xpcshell',
+        #         'mochitest-browser-chrome',
+        #     ]:
+        #         return False
 
-            if task.attributes.get('unittest_variant', '') != '':
-                return False
+        #     if task.attributes.get('unittest_variant', '') != '':
+        #         return False
 
         return True
 
