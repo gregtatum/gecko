@@ -15,6 +15,8 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   //  PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
   Keyframes: "resource:///modules/Keyframes.jsm",
   Services: "resource://gre/modules/Services.jsm",
+  setTimeout: "resource://gre/modules/Timer.jsm",
+  clearTimeout: "resource://gre/modules/Timer.jsm",
 });
 
 XPCOMUtils.defineLazyGetter(this, "log", () => {
@@ -25,10 +27,15 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
   });
 });
 
+const ENGAGEMENT_TIMER = 30 * 1000; // 10 seconds
+
 const DOMWINDOW_OPENED_TOPIC = "domwindowopened";
 
 let Engagement = {
   _currentURL: null,
+  _currentTimer: 0,
+  _currentTimerLength: 0,
+  _currentTimerStart: 0,
   _startTimeOnPage: 0,
 
   _thumbnails: new Map(),
@@ -62,6 +69,10 @@ let Engagement = {
     }
   },
 
+  _reengageURL: null,
+  _reengageTime: 0,
+  _foo: 0,
+
   handleEvent(event) {
     switch (event.type) {
       case "TabSelect":
@@ -76,8 +87,12 @@ let Engagement = {
         if (event.target instanceof Ci.nsIDOMWindow) {
           let win = event.target;
           if (win.gBrowser) {
-            let tab = win.gBrowser.selectedTab;
-            this.engage({ url: tab.linkedBrowser.currentURI.specIgnoringRef });
+            if (this._reengageTime && this._reengageURL) {
+              this.startEngagementTimer(
+                Services.io.newURI(this._reengageURL),
+                this._reengageTime
+              );
+            }
           }
         }
         break;
@@ -85,10 +100,18 @@ let Engagement = {
         if (event.target instanceof Ci.nsIDOMWindow) {
           let win = event.target;
           if (win.gBrowser) {
+            if (!this._currentTimer) {
+              this._reengageURL = null;
+              this._reengageTime = 0;
+              return;
+            }
+            clearTimeout(this._currentTimer);
+            this._currentTimer = null;
+            this._reengageTime =
+              this._currentTimerLength -
+              (new Date().getTime() - this._currentTimerStart);
             let tab = win.gBrowser.selectedTab;
-            this.disengage({
-              url: tab.linkedBrowser.currentURI.specIgnoringRef,
-            });
+            this._reengageURL = tab.linkedBrowser.currentURI.specIgnoringRef;
           }
         }
         break;
@@ -182,25 +205,8 @@ let Engagement = {
     }
     log.debug("engage with " + msg.url);
     this._currentURL = msg.url;
-    // Anytime a page is loaded, we update the thumbnail just in case it changed.
-    if ("thumbnail" in msg) {
-      Keyframes.updateThumbnail(msg.url, msg.thumbnail);
-    }
     this._startTimeOnPage = new Date().getTime();
-    /* This page was loaded as a result of a user action. Add it to the
-       keyframe database immediately. */
-    if (this._delayedEngagements.has(msg.url)) {
-      let type = this._delayedEngagements.get(msg.url);
-      await Keyframes.addOrUpdate(
-        msg.url,
-        type,
-        this._startTimeOnPage,
-        this._startTimeOnPage,
-        0,
-        msg.thumbnail
-      );
-      this._delayedEngagements.delete(msg.url);
-    }
+    this.startEngagementTimer(Services.io.newURI(msg.url), ENGAGEMENT_TIMER);
   },
 
   async disengage(msg) {
@@ -211,9 +217,6 @@ let Engagement = {
     ) {
       return;
     }
-    if (this._docInfos.has(msg.url)) {
-      msg = this._docInfos.get(msg.url);
-    }
     log.debug("disengage with " + msg.url);
     let stopTimeOnPage = new Date().getTime();
     let timeOnPage = new Date().getTime() - this._startTimeOnPage;
@@ -223,8 +226,7 @@ let Engagement = {
       "automatic",
       this._startTimeOnPage,
       stopTimeOnPage,
-      timeOnPage,
-      msg.thumbnail
+      timeOnPage
     );
     this._currentURL = null;
   },
@@ -235,5 +237,55 @@ let Engagement = {
   */
   async delayEngage(url, type) {
     this._delayedEngagements.set(url, type);
+  },
+
+  startTimer(msg) {
+    if (this._currentURL != msg.url) {
+      this.clearEngagementTimerIf();
+      this._currentURL = null;
+      this.startEngagementTimer(Services.io.newURI(msg.url));
+      this._currentURL = msg._currentURL;
+    }
+  },
+  stopTimer(msg) {
+    if (this._currentURL == msg.url) {
+      this.clearEngagementTimerIf();
+      this._currentURL = null;
+    }
+  },
+
+  clearEngagementTimerIf() {
+    if (this._currentTimer) {
+      log.debug("Clearing timer " + this._currentTimer);
+      clearTimeout(this._currentTimer);
+      this._currentTimer = null;
+    }
+  },
+
+  startEngagementTimer(uri, engagementTimeout) {
+    if (!this.isHttpURI(uri)) {
+      return;
+    }
+    this._currentTimer = setTimeout(function() {
+      log.debug("Added:" + uri.specIgnoringRef + " to the database");
+      Keyframes.addOrUpdate(
+        uri.specIgnoringRef,
+        "automatic",
+        Engagement._startTimeOnPage,
+        new Date().getTime(),
+        engagementTimeout
+      );
+      Engagement._currentTimer = null;
+    }, engagementTimeout);
+    this._currentTimerLength = engagementTimeout;
+    this._currentTimerStart = new Date().getTime();
+    log.debug(
+      "started timer " +
+        this._currentTimer +
+        " for " +
+        uri.specIgnoringRef +
+        " with timeout " +
+        engagementTimeout
+    );
   },
 };

@@ -17,8 +17,8 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   ContextualIdentityService:
     "resource://gre/modules/ContextualIdentityService.jsm",
+  Engagement: "resource:///modules/Engagement.jsm",
   ExtensionSettingsStore: "resource://gre/modules/ExtensionSettingsStore.jsm",
-  Keyframes: "resource:///modules/Keyframes.jsm",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
   ShellService: "resource:///modules/ShellService.jsm",
 });
@@ -421,8 +421,7 @@ function openLinkIn(url, where, params) {
     (where == "tab" || where == "tabshifted") &&
     (url.startsWith("http:") || url.startsWith("https:"))
   ) {
-    let visitTime = new Date().getTime();
-    Keyframes.addOrUpdate(url, "useraction", visitTime, visitTime, 0);
+    Engagement.delayEngage(url, "useraction");
   }
 
   // Establish which window we'll load the link in.

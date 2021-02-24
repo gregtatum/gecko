@@ -38,7 +38,7 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 
 const ENGAGEMENT_TIMER = 1 * 1000; // 10 seconds
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 /**
  * All SQL statements should be defined here.
@@ -52,14 +52,13 @@ const SQL = {
     "timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
     "url TEXT NOT NULL, " +
     "type TEXT NOT NULL, " +
-    "firstVisit TEXT NOT NULL, " +
-    "lastVisit TEXT NOT NULL, " +
-    "totalEngagement TEXT NOT NULL, " +
-    "thumbnail TEXT " +
+    "firstVisit INTEGER NOT NULL, " +
+    "lastVisit INTEGER NOT NULL, " +
+    "totalEngagement INTEGER NOT NULL " +
     ");",
 
   add:
-    "INSERT INTO keyframes (url, type, firstVisit, lastVisit, totalEngagement, thumbnail) VALUES (:url, :type, :firstVisit, :lastVisit, :totalEngagement, :thumbnail);",
+    "INSERT INTO keyframes (url, type, firstVisit, lastVisit, totalEngagement) VALUES (:url, :type, :firstVisit, :lastVisit, :totalEngagement);",
 
   exists: "SELECT * FROM keyframes WHERE url = :url;",
 
@@ -77,14 +76,7 @@ function int(dateStr) {
 var Keyframes = {
   _db: null,
 
-  async addOrUpdate(
-    url,
-    type,
-    firstVisit,
-    lastVisit,
-    totalEngagement,
-    thumbnail
-  ) {
+  async addOrUpdate(url, type, firstVisit, lastVisit, totalEngagement) {
     if (!this._db) {
       await this.init();
     }
@@ -105,7 +97,6 @@ var Keyframes = {
         firstVisit,
         lastVisit,
         totalEngagement,
-        thumbnail,
       });
     }
     Services.obs.notifyObservers(null, "keyframe-update");
@@ -140,7 +131,6 @@ var Keyframes = {
       return {
         id: record.getResultByName("id"),
         url: record.getResultByName("url"),
-        thumbnail: record.getResultByName("thumbnail"),
         lastVisit: new Date(lastVisit),
         totalEngagement: int(record.getResultByName("totalEngagement")) ?? 0,
       };

@@ -46,9 +46,6 @@ class EngagementChild extends JSWindowActorChild {
     }
     let docInfo = {};
     docInfo.url = doc.documentURIObject.specIgnoringRef;
-    docInfo.thumbnail = doc
-      .querySelector("meta[property='og:image']")
-      ?.getAttribute("content");
     return docInfo;
   }
 
@@ -78,8 +75,6 @@ class EngagementChild extends JSWindowActorChild {
         if (docInfo) {
           if (context.isActive) {
             this.sendAsyncMessage("Engagement:Engage", docInfo);
-          } else {
-            this.sendAsyncMessage("Engagement:UpdateThumbnail", docInfo);
           }
         }
         break;

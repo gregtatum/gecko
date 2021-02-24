@@ -506,6 +506,7 @@ let JSWINDOWACTORS = {
     },
     child: {
       moduleURI: "resource:///actors/EngagementChild.jsm",
+      group: "browsers",
       events: {
         DOMContentLoaded: {},
         pageshow: { mozSystemGroup: true },

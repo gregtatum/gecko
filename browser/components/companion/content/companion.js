@@ -7,6 +7,8 @@
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   Keyframes: "resource:///modules/Keyframes.jsm",
+  OS: "resource://gre/modules/osfile.jsm",
+  Sqlite: "resource://gre/modules/Sqlite.jsm",
   UrlbarInput: "resource:///modules/UrlbarInput.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
   UrlbarProviderSearchTips: "resource:///modules/UrlbarProviderSearchTips.jsm",
@@ -84,6 +86,28 @@ function getFavicon(page, width = 0) {
   });
 }
 
+async function getPreviewImageURL(url) {
+  let placesDbPath = OS.Path.join(
+    OS.Constants.Path.profileDir,
+    "places.sqlite"
+  );
+  let previewImage;
+  let db = await Sqlite.openConnection({ path: placesDbPath });
+  let sql = "SELECT * FROM moz_places WHERE url = :url;";
+  let rows = await db.executeCached(sql, { url });
+  if (rows.length) {
+    for (let row of rows) {
+      previewImage = row.getResultByName("preview_image_url");
+      if (previewImage) {
+        break;
+      }
+    }
+  }
+
+  await db.close();
+  return previewImage;
+}
+
 let cache = new Map();
 async function getPlacesData(url) {
   let data = cache.get(url);
@@ -111,6 +135,7 @@ async function getPlacesData(url) {
     title: result.title,
     icon: await getFavicon(url, 16),
     richIcon: await getFavicon(url),
+    previewImage: await getPreviewImageURL(url),
   };
   cache.set(url, data);
   return data;
@@ -127,8 +152,8 @@ async function updateList(id, frames) {
     if (!data) {
       continue;
     }
-    if (frame.thumbnail) {
-      data.richIcon = frame.thumbnail;
+    if (data.previewImage) {
+      data.richIcon = data.previewImage;
     }
 
     list.appendChild(new KeyFrame(data));
