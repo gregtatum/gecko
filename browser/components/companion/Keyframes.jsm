@@ -102,21 +102,6 @@ var Keyframes = {
     Services.obs.notifyObservers(null, "keyframe-update");
   },
 
-  async updateThumbnail(url, thumbnail) {
-    if (!this._db) {
-      await this.init();
-    }
-    let existingRows = await this._db.executeCached(SQL.exists, { url });
-    if (existingRows.length) {
-      for (let row of existingRows) {
-        let id = row.getResultByName("id");
-        let sql = `UPDATE keyframes SET thumbnail = '${thumbnail}' WHERE id = '${id}'`;
-        await this._db.executeCached(sql);
-      }
-    }
-    Services.obs.notifyObservers(null, "keyframe-update");
-  },
-
   async query() {
     if (!this._db) {
       await this.init();

@@ -15,8 +15,8 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   //  PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
   Keyframes: "resource:///modules/Keyframes.jsm",
   Services: "resource://gre/modules/Services.jsm",
-  setTimeout: "resource://gre/modules/Timer.jsm",
-  clearTimeout: "resource://gre/modules/Timer.jsm",
+  setInterval: "resource://gre/modules/Timer.jsm",
+  clearInterval: "resource://gre/modules/Timer.jsm",
 });
 
 XPCOMUtils.defineLazyGetter(this, "log", () => {
@@ -27,19 +27,16 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
   });
 });
 
-const ENGAGEMENT_TIMER = 30 * 1000; // 10 seconds
+const PASSIVE_ENGAGEMENT_TIMER = 10 * 1000; // 10 seconds
+const ACTIVE_ENGAGEMENT_TIMER = 2 * 1000; // 10 seconds
 
 const DOMWINDOW_OPENED_TOPIC = "domwindowopened";
 
 let Engagement = {
-  _currentURL: null,
-  _currentTimer: 0,
-  _currentTimerLength: 0,
-  _currentTimerStart: 0,
-  _startTimeOnPage: 0,
+  _engagements: new Map(),
 
-  _thumbnails: new Map(),
-  _docInfos: new Map(),
+  _currentURL: null,
+
   _delayedEngagements: new Map(),
 
   _inited: false,
@@ -47,6 +44,7 @@ let Engagement = {
   init() {
     this._setupAfterRestore();
     this._inited = true;
+    this.startEngagementTimer();
   },
 
   QueryInterface: ChromeUtils.generateQI([
@@ -59,6 +57,7 @@ let Engagement = {
       return;
     }
     Services.obs.removeObserver(this, DOMWINDOW_OPENED_TOPIC);
+    this.stopEngagementTimer();
   },
 
   observe(subject, topic, data) {
@@ -69,30 +68,26 @@ let Engagement = {
     }
   },
 
-  _reengageURL: null,
-  _reengageTime: 0,
-  _foo: 0,
-
   handleEvent(event) {
     switch (event.type) {
       case "TabSelect":
         {
-          this.disengage({ url: this._currentURL });
           let tab = event.target;
-          this.engage({ url: tab.linkedBrowser.currentURI.specIgnoringRef });
+          if (!this.isHttpURI(tab.linkedBrowser.currentURI)) {
+            return;
+          }
+          let url = tab.linkedBrowser.currentURI.specIgnoringRef;
+          if (!this._engagements.has(url)) {
+            this.engage({ url });
+          }
+          this._currentURL = tab.linkedBrowser.currentURI.specIgnoringRef;
         }
         break;
       case "activate":
-        // We only want to start timers for focus events for the whole window
         if (event.target instanceof Ci.nsIDOMWindow) {
           let win = event.target;
           if (win.gBrowser) {
-            if (this._reengageTime && this._reengageURL) {
-              this.startEngagementTimer(
-                Services.io.newURI(this._reengageURL),
-                this._reengageTime
-              );
-            }
+            this.startEngagementTimer();
           }
         }
         break;
@@ -100,18 +95,7 @@ let Engagement = {
         if (event.target instanceof Ci.nsIDOMWindow) {
           let win = event.target;
           if (win.gBrowser) {
-            if (!this._currentTimer) {
-              this._reengageURL = null;
-              this._reengageTime = 0;
-              return;
-            }
-            clearTimeout(this._currentTimer);
-            this._currentTimer = null;
-            this._reengageTime =
-              this._currentTimerLength -
-              (new Date().getTime() - this._currentTimerStart);
-            let tab = win.gBrowser.selectedTab;
-            this._reengageURL = tab.linkedBrowser.currentURI.specIgnoringRef;
+            this.stopEngagementTimer();
           }
         }
         break;
@@ -179,56 +163,101 @@ let Engagement = {
     return uri.schemeIs("http") || uri.schemeIs("https");
   },
 
-  /* If a page is loaded in the background, we store the
-     document information in case we need it later. */
-  updateThumbnail(msg) {
-    if (!this.isHttpURI(Services.io.newURI(msg.url))) {
-      return;
+  _engagementTimer: 0,
+  startEngagementTimer() {
+    if (this._engagementTimer == 0) {
+      this._engagementTimer = setInterval(this.processEngagements, 1000);
     }
-    /*
-    if (msg.thumbnail) {
-      let url = msg.canonicalURL || Services.io.newURI(msg.url).specIgnoringRef;
-      this._thumbnails.set(url, msg.thumbnail);
-      Keyframes.updateThumbnail(url, msg.thumbnail);
-    }
-    if (msg.canonicalURL) {
-    */
-    this._docInfos.set(msg.url, msg);
-    /*
-    }
-    */
+  },
+
+  stopEngagementTimer() {
+    clearInterval(this._engagementTimer);
+    this._engagementTimer = 0;
+  },
+
+  async processEngagements() {
+    Engagement._engagements.forEach(function(engagementData, url) {
+      if (Engagement._currentURL == url) {
+        engagementData.lastTimeOnPage = new Date().getTime();
+        engagementData.totalEngagement += 1000;
+        if (engagementData.addedKeyframe) {
+          return;
+        }
+        let engagementTimer =
+          engagementData.type == "automatic"
+            ? PASSIVE_ENGAGEMENT_TIMER
+            : ACTIVE_ENGAGEMENT_TIMER;
+        if (engagementData.totalEngagement > engagementTimer) {
+          engagementData.addedKeyframe = true;
+          log.debug(`Adding ${url} to database`);
+          Keyframes.addOrUpdate(
+            url,
+            engagementData.type,
+            engagementData.startTimeOnPage,
+            engagementData.lastTimeOnPage,
+            // totalEngagement will be added when the page is unloaded
+            0
+          );
+        }
+        Engagement._engagements.set(url, engagementData);
+      }
+    });
   },
 
   async engage(msg) {
-    if (!this.isHttpURI(Services.io.newURI(msg.url))) {
+    let uri = Services.io.newURI(msg.url);
+    if (!this.isHttpURI(uri)) {
       return;
     }
-    log.debug("engage with " + msg.url);
-    this._currentURL = msg.url;
-    this._startTimeOnPage = new Date().getTime();
-    this.startEngagementTimer(Services.io.newURI(msg.url), ENGAGEMENT_TIMER);
+    let url = uri.specIgnoringRef;
+    let engagementData = this._engagements.get(url);
+    if (engagementData) {
+      engagementData.engagedPages += 1;
+    } else {
+      let type = this._delayedEngagements.get(url) || "automatic";
+      this._delayedEngagements.delete(url);
+      engagementData = {
+        type,
+        startTimeOnPage: new Date().getTime(),
+        lastTimeOnPage: new Date().getTime(),
+        totalEngagement: 0,
+        engagedPages: 1,
+      };
+    }
+    this._engagements.set(url, engagementData);
+
+    this._currentURL = url;
   },
 
   async disengage(msg) {
-    if (
-      !this.isHttpURI(Services.io.newURI(msg.url)) ||
-      !this._startTimeOnPage ||
-      msg.url != this._currentURL
-    ) {
+    let uri = Services.io.newURI(msg.url);
+    if (!this.isHttpURI(uri)) {
       return;
     }
-    log.debug("disengage with " + msg.url);
-    let stopTimeOnPage = new Date().getTime();
-    let timeOnPage = new Date().getTime() - this._startTimeOnPage;
-    log.debug(timeOnPage / 1000 + " seconds of engagement");
-    await Keyframes.addOrUpdate(
-      msg.url,
-      "automatic",
-      this._startTimeOnPage,
-      stopTimeOnPage,
-      timeOnPage
-    );
-    this._currentURL = null;
+    let url = uri.specIgnoringRef;
+    let engagementData = Engagement._engagements.get(url);
+    if (engagementData) {
+      if (engagementData.engagedPages == 1) {
+        if (engagementData.addedKeyframe) {
+          log.debug(`Updating ${url} in database`);
+          Keyframes.addOrUpdate(
+            url,
+            "automatic",
+            engagementData.startTimeOnPage,
+            engagementData.lastTimeOnPage,
+            engagementData.totalEngagement
+          );
+        }
+        this._engagements.delete(url);
+      } else {
+        engagementData.engagedPages -= 1;
+        this._engagements.set(url, engagementData);
+      }
+    }
+
+    if (this._currentURL == url) {
+      this.currentURL = null;
+    }
   },
 
   /* In case where we know we want to add a URL to Keyframes
@@ -236,56 +265,11 @@ let Engagement = {
    we can keep track of URLs we need to add.
   */
   async delayEngage(url, type) {
-    this._delayedEngagements.set(url, type);
-  },
-
-  startTimer(msg) {
-    if (this._currentURL != msg.url) {
-      this.clearEngagementTimerIf();
-      this._currentURL = null;
-      this.startEngagementTimer(Services.io.newURI(msg.url));
-      this._currentURL = msg._currentURL;
-    }
-  },
-  stopTimer(msg) {
-    if (this._currentURL == msg.url) {
-      this.clearEngagementTimerIf();
-      this._currentURL = null;
-    }
-  },
-
-  clearEngagementTimerIf() {
-    if (this._currentTimer) {
-      log.debug("Clearing timer " + this._currentTimer);
-      clearTimeout(this._currentTimer);
-      this._currentTimer = null;
-    }
-  },
-
-  startEngagementTimer(uri, engagementTimeout) {
+    let uri = Services.io.newURI(url);
     if (!this.isHttpURI(uri)) {
       return;
     }
-    this._currentTimer = setTimeout(function() {
-      log.debug("Added:" + uri.specIgnoringRef + " to the database");
-      Keyframes.addOrUpdate(
-        uri.specIgnoringRef,
-        "automatic",
-        Engagement._startTimeOnPage,
-        new Date().getTime(),
-        engagementTimeout
-      );
-      Engagement._currentTimer = null;
-    }, engagementTimeout);
-    this._currentTimerLength = engagementTimeout;
-    this._currentTimerStart = new Date().getTime();
-    log.debug(
-      "started timer " +
-        this._currentTimer +
-        " for " +
-        uri.specIgnoringRef +
-        " with timeout " +
-        engagementTimeout
-    );
+    url = uri.specIgnoringRef;
+    this._delayedEngagements.set(url, type);
   },
 };
