@@ -117,11 +117,20 @@ body {
   display: none;
 }
 
-#services {
+#service-login {
   display: flex;
   flex-direction: row;
   justify-content: end;
   padding: 5px 10px;
+  display: none;
+}
+
+#services.connected {
+
+}
+
+#services.disconnected #service-login {
+  display: flex;
 }
 
 #content {

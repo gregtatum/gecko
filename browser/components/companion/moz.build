@@ -11,4 +11,5 @@ EXTRA_JS_MODULES += [
     "Engagement.jsm",
     "Keyframes.jsm",
     "OAuth2.jsm",
+    "OnlineServices.jsm",
 ]

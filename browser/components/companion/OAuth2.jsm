@@ -122,7 +122,8 @@ class OAuth2 {
     tokenEndpoint,
     scope,
     clientId,
-    clientSecret = null
+    clientSecret = null,
+    config = null
   ) {
     this.authorizationEndpoint = authorizationEndpoint;
     this.tokenEndpoint = tokenEndpoint;
@@ -131,6 +132,10 @@ class OAuth2 {
     this.consumerSecret = clientSecret;
 
     this.extraAuthParams = [];
+
+    if (config) {
+      this.deserialize(config);
+    }
   }
 
   clientId = null;
@@ -160,7 +165,7 @@ class OAuth2 {
     return this.accessToken;
   }
 
-  serialize() {
+  toJSON() {
     if (!this.refreshToken) {
       return null;
     }
@@ -173,11 +178,9 @@ class OAuth2 {
   }
 
   deserialize(data) {
-    if (data) {
-      this.accessToken = data.accessToken;
-      this.refreshToken = data.accessToken;
-      this.tokenExpires = data.tokenExpires;
-    }
+    this.accessToken = data.accessToken;
+    this.refreshToken = data.accessToken;
+    this.tokenExpires = data.tokenExpires;
   }
 
   /**
