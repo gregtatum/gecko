@@ -12,6 +12,8 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   Services: "resource://gre/modules/Services.jsm",
 });
 
+Cu.importGlobalProperties(["fetch"]);
+
 const GOOGLE_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const GOOGLE_CLIENT_ID =
@@ -22,6 +24,28 @@ const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/calendar.readonly",
   "https://www.googleapis.com/auth/calendar.events.readonly",
 ];
+
+function getConferenceInfo(result) {
+  if (!result.conferenceData?.conferenceSolution) {
+    return null;
+  }
+
+  let base = {
+    icon: result.conferenceData.conferenceSolution.iconUri,
+    name: result.conferenceData.conferenceSolution.name,
+  };
+
+  for (let entry of result.conferenceData.entryPoints) {
+    if (entry.uri.startsWith("https:")) {
+      return {
+        ...base,
+        url: entry.uri,
+      };
+    }
+  }
+
+  return null;
+}
 
 class GoogleService {
   constructor(config = null) {
@@ -38,6 +62,39 @@ class GoogleService {
   connect() {
     // This will force login if not already logged in.
     return this.auth.getToken();
+  }
+
+  async getNextMeetings() {
+    let token = await this.auth.getToken();
+
+    let apiTarget = new URL(
+      "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+    );
+
+    apiTarget.searchParams.set("maxResults", 5);
+    apiTarget.searchParams.set("orderBy", "startTime");
+    apiTarget.searchParams.set("singleEvents", "true");
+    apiTarget.searchParams.set("timeMin", new Date().toISOString());
+
+    let headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    let response = await fetch(apiTarget, {
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(response.statusText);
+    }
+
+    let results = await response.json();
+    return results.items.map(result => ({
+      summary: result.summary,
+      start: new Date(result.start.dateTime),
+      end: new Date(result.end.dateTime),
+      conference: getConferenceInfo(result),
+    }));
   }
 
   toJSON() {

@@ -41,6 +41,15 @@
     </div>
   </template>
 
+  <template id="template-event">
+    <div class="date"/>
+    <div class="summary"/>
+    <div class="conference">
+      <img class="conference-icon"/>
+      <div class="conference-label"/>
+    </div>
+  </template>
+
   <xul:hbox id="titlebar">
     <xul:hbox id="mac-buttonbox"/>
     <xul:hbox id="win-buttonbox" flex="1" pack="end" class="titlebar-buttonbox-container">
@@ -116,6 +125,8 @@
   <div id="services">
     <div id="service-login">
       <button onclick="signin()">Sign in to Google</button>
+    </div>
+    <div id="service-panel">
     </div>
   </div>
   <div id="content">

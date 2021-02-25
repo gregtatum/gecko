@@ -151,16 +151,18 @@ class OAuth2 {
     if (
       !this.accessToken ||
       !this.tokenExpires ||
-      this.tokenExpires > Date.now()
+      this.tokenExpires < Date.now()
     ) {
       if (this.refreshToken) {
         this.accessToken = null;
         this.tokenExpires = null;
-        await this.requestAccessToken(this.refreshToken, true);
+        await this.requestAccessToken();
       } else {
         await OAuthConnect.connect(this);
       }
     }
+
+    console.log(this.toJSON());
 
     return this.accessToken;
   }
@@ -185,10 +187,9 @@ class OAuth2 {
 
   /**
    * Request a new access token, or refresh an existing one.
-   * @param {string} aCode - The token issued to the client.
-   * @param {boolean} aRefresh - Whether it's a refresh of a token or not.
+   * @param {string} aCode - The token issued to the client or null to refresh.
    */
-  async requestAccessToken(aCode, aRefresh) {
+  async requestAccessToken(aCode) {
     // @see RFC 6749 section 4.1.3. Access Token Request
     // @see RFC 6749 section 6. Refreshing an Access Token
 
@@ -201,7 +202,7 @@ class OAuth2 {
       data.append("client_secret", this.consumerSecret);
     }
 
-    if (aRefresh) {
+    if (!aCode) {
       data.append("grant_type", "refresh_token");
       data.append("refresh_token", this.refreshToken);
     } else {
@@ -210,6 +211,7 @@ class OAuth2 {
       data.append("redirect_uri", this.redirectionEndpoint);
     }
 
+    console.log(data.toString());
     let response = await fetch(this.tokenEndpoint, {
       method: "POST",
       cache: "no-cache",

@@ -117,22 +117,6 @@ body {
   display: none;
 }
 
-#service-login {
-  display: flex;
-  flex-direction: row;
-  justify-content: end;
-  padding: 5px 10px;
-  display: none;
-}
-
-#services.connected {
-
-}
-
-#services.disconnected #service-login {
-  display: flex;
-}
-
 #content {
   flex: 1;
   overflow-y: auto;
@@ -200,4 +184,55 @@ body {
   text-overflow: ellipsis;
   overflow: hidden;
   margin: 0;
+}
+
+#service-login {
+  display: flex;
+  flex-direction: row;
+  justify-content: end;
+  padding: 5px 10px;
+}
+
+#service-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: start;
+  padding: 5px 10px;
+}
+
+#services:not(.connected) #service-panel {
+  display: none;
+}
+
+#services:not(.disconnected) #service-login {
+  display: none;
+}
+
+.conference-icon {
+  height: 16px;
+  width: 16px;
+  padding-right: 5px;
+}
+
+.event {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: start;
+  padding-bottom: 5px;
+  cursor: default;
+}
+
+.summary {
+  flex: 1;
+  padding-left: 10px;
+  padding-right: 10px;
+  text-overflow: ellipsis;
+}
+
+.conference {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: end;
 }

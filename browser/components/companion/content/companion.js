@@ -25,9 +25,80 @@ XPCOMUtils.defineLazyServiceGetters(this, {
   ],
 });
 
+let today = new Date();
+today.setHours(0);
+today.setMinutes(0);
+today.setSeconds(0);
+today.setMilliseconds(0);
+
+// Yes I know this is wrong in various cases.
+let tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+const timeFormat = new Intl.DateTimeFormat([], {
+  timeStyle: "short",
+});
+
+const dateFormat = new Intl.DateTimeFormat([], {
+  dateStyle: "short",
+});
+
+class Event extends HTMLElement {
+  constructor(data) {
+    super();
+    this.data = data;
+  }
+
+  connectedCallback() {
+    this.className = "event";
+
+    let template = document.getElementById("template-event");
+    let fragment = template.content.cloneNode(true);
+
+    let date =
+      this.data.start > tomorrow
+        ? dateFormat.format(this.data.start)
+        : timeFormat.format(this.data.start);
+
+    fragment.querySelector(".date").textContent = date;
+    fragment.querySelector(".summary").textContent = this.data.summary;
+
+    fragment.querySelector(".conference-icon").src = this.data.conference.icon;
+    fragment.querySelector(
+      ".conference-label"
+    ).textContent = this.data.conference.name;
+
+    this.appendChild(fragment);
+    this.addEventListener("click", this);
+  }
+
+  handleEvent(event) {
+    openUrl(this.data.conference.url);
+  }
+}
+
+customElements.define("e-event", Event);
+
+async function buildEvents(services) {
+  let panel = document.getElementById("service-panel");
+  while (panel.firstChild) {
+    panel.firstChild.remove();
+  }
+
+  for (let service of services) {
+    for (let event of await service.getNextMeetings()) {
+      if (!event.conference) {
+        continue;
+      }
+
+      panel.appendChild(new Event(event));
+    }
+  }
+}
+
 async function signin() {
   await OnlineServices.createService("google");
   document.getElementById("services").className = "connected";
+  buildEvents(OnlineServices.getServices());
 }
 
 function openUrl(url) {
@@ -171,12 +242,6 @@ async function update() {
   let todayFrames = [];
   let yesterdayFrames = [];
 
-  let today = new Date();
-  today.setHours(0);
-  today.setMinutes(0);
-  today.setSeconds(0);
-  today.setMilliseconds(0);
-
   // Yes I know this is wrong in various cases.
   let yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
 
@@ -228,6 +293,7 @@ function onLoad() {
   let services = OnlineServices.getServices();
   if (services.length) {
     document.getElementById("services").className = "connected";
+    buildEvents(services);
   } else {
     document.getElementById("services").className = "disconnected";
   }
