@@ -70,6 +70,12 @@ class EngagementChild extends JSWindowActorChild {
         break;
       }
       case "DOMContentLoaded": {
+        if (
+          this.docShell.currentDocumentChannel.QueryInterface(Ci.nsIHttpChannel)
+            .responseStatus == 404
+        ) {
+          return;
+        }
         let docInfo = await this.getDocumentInfo();
         let context = this.manager.browsingContext;
         if (docInfo) {
@@ -79,6 +85,12 @@ class EngagementChild extends JSWindowActorChild {
         break;
       }
       case "pagehide": {
+        if (
+          this.docShell.currentDocumentChannel.QueryInterface(Ci.nsIHttpChannel)
+            .responseStatus == 404
+        ) {
+          return;
+        }
         let docInfo = await this.getDocumentInfo();
         if (docInfo) {
           this.sendAsyncMessage("Engagement:Disengage", docInfo);
