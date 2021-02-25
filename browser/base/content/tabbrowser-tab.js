@@ -44,6 +44,7 @@
             </hbox>
             <label class="tab-text tab-label" role="presentation"/>
           </vbox>
+          <button class="tab-key-button key-icon" role="presentation">🔑</button>
           <image class="tab-close-button close-icon" role="presentation"/>
         </hbox>
       </stack>
@@ -445,6 +446,11 @@
         // This enables double-click protection for the tab container
         // (see tabbrowser-tabs 'click' handler).
         gBrowser.tabContainer._blockDblClick = true;
+      }
+
+      if (event.target.classList.contains("tab-key-button")) {
+        let browser = this.linkedBrowser;
+        Engagement.manualEngage(browser.currentURI.spec, "manual");
       }
     }
 

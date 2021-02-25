@@ -91,3 +91,8 @@ browser[pendingpaint] {
   background-position: center center;
   background-size: 30px;
 }
+
+.key-icon {
+  min-width: 16px;
+  min-height: 16px;
+}

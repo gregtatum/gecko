@@ -268,7 +268,7 @@ let Engagement = {
     }
   },
 
-  /* In case where we know we want to add a URL to Keyframes
+  /* In the case where we know we want to add a URL to Keyframes
    without engagement (yet), we use this function so that
    we can keep track of URLs we need to add.
   */
@@ -279,5 +279,29 @@ let Engagement = {
     }
     url = uri.specIgnoringRef;
     this._delayedEngagements.set(url, type);
+  },
+
+  /* If we know something is going to be added, use this. */
+  async manualEngage(url, type) {
+    let uri = Services.io.newURI(url);
+    if (!this.isHttpURI(uri)) {
+      return;
+    }
+    url = uri.specIgnoringRef;
+    let engagementData = this._engagements.get(url);
+    if (engagementData.addedKeyframe) {
+      // NEED TO ADD NEW TYPE HERE
+      return;
+    }
+    engagementData.addedKeyframe = true;
+    log.debug(`Adding ${url} to database`);
+    Keyframes.addOrUpdate(
+      url,
+      engagementData.type,
+      engagementData.startTimeOnPage,
+      engagementData.lastTimeOnPage,
+      // totalEngagement will be added when the page is unloaded
+      0
+    );
   },
 };
