@@ -128,10 +128,11 @@ class KeyFrame extends HTMLElement {
     let template = document.getElementById("template-keyframe");
     let fragment = template.content.cloneNode(true);
     fragment.querySelector(".favicon").src = this.data.icon;
-    fragment.querySelector(".richicon").src =
-      this.data.richIcon ?? this.data.icon;
     fragment.querySelector(".title").textContent = this.data.title;
     fragment.querySelector(".title").setAttribute("title", this.data.title);
+    fragment.querySelector(".last-access").textContent = timeFormat.format(
+      this.data.lastVisit
+    );
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
@@ -233,7 +234,12 @@ async function updateList(id, frames) {
       data.richIcon = data.previewImage;
     }
 
-    list.appendChild(new KeyFrame(data));
+    list.appendChild(
+      new KeyFrame({
+        ...frame,
+        ...data,
+      })
+    );
   }
 }
 
