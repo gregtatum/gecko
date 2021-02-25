@@ -71,7 +71,7 @@ class GoogleService {
       "https://www.googleapis.com/calendar/v3/calendars/primary/events"
     );
 
-    apiTarget.searchParams.set("maxResults", 5);
+    apiTarget.searchParams.set("maxResults", 1);
     apiTarget.searchParams.set("orderBy", "startTime");
     apiTarget.searchParams.set("singleEvents", "true");
     apiTarget.searchParams.set("timeMin", new Date().toISOString());

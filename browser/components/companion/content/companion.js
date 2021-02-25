@@ -62,10 +62,16 @@ class Event extends HTMLElement {
     fragment.querySelector(".date").textContent = date;
     fragment.querySelector(".summary").textContent = this.data.summary;
 
-    fragment.querySelector(".conference-icon").src = this.data.conference.icon;
-    fragment.querySelector(
-      ".conference-label"
-    ).textContent = this.data.conference.name;
+    if (this.data.conference) {
+      fragment.querySelector(
+        ".conference-icon"
+      ).src = this.data.conference.icon;
+      fragment.querySelector(
+        ".conference-label"
+      ).textContent = this.data.conference.name;
+    } else {
+      fragment.querySelector(".conference").style.display = "none";
+    }
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
@@ -86,10 +92,6 @@ async function buildEvents(services) {
 
   for (let service of services) {
     for (let event of await service.getNextMeetings()) {
-      if (!event.conference) {
-        continue;
-      }
-
       panel.appendChild(new Event(event));
     }
   }
