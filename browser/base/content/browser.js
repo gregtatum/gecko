@@ -733,28 +733,6 @@ function updateFxaToolbarMenu(enable, isInitialUpdate = false) {
     }
 
     Services.telemetry.setEventRecordingEnabled("fxa_avatar_menu", true);
-
-    // When the pref for a FxA service is removed, we remove it from
-    // the FxA toolbar menu as well. This is useful when the service
-    // might not be available that browser.
-    PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-send-button"
-    ).hidden = !gFxaSendLoginUrl;
-    PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-monitor-button"
-    ).hidden = !gFxaMonitorLoginUrl;
-    // If there are no services left, remove the label and sep.
-    let hideSvcs = !gFxaSendLoginUrl && !gFxaMonitorLoginUrl;
-    PanelMultiView.getViewNode(
-      document,
-      "fxa-menu-service-separator"
-    ).hidden = hideSvcs;
-    PanelMultiView.getViewNode(
-      document,
-      "fxa-menu-service-label"
-    ).hidden = hideSvcs;
   } else {
     mainWindowEl.removeAttribute("fxatoolbarmenu");
   }
@@ -993,18 +971,8 @@ const gStoragePressureObserver = {
         "browser.storageManager.pressureNotification.usageThresholdGB"
       );
     let msg = "";
-    let buttons = [];
+    let buttons = [{ supportPage: "storage-permissions" }];
     let usage = subject.QueryInterface(Ci.nsISupportsPRUint64).data;
-    buttons.push({
-      "l10n-id": "space-alert-learn-more-button",
-      callback(notificationBar, button) {
-        let learnMoreURL =
-          Services.urlFormatter.formatURLPref("app.support.baseURL") +
-          "storage-permissions";
-        // This is a content URL, loaded from trusted UX.
-        openTrustedLinkIn(learnMoreURL, "tab");
-      },
-    });
     if (usage < USAGE_THRESHOLD_BYTES) {
       // The firefox-used space < 5GB, then warn user to free some disk space.
       // This is because this usage is small and not the main cause for space issue.
@@ -1013,10 +981,6 @@ const gStoragePressureObserver = {
       [msg] = await document.l10n.formatValues([
         { id: "space-alert-under-5gb-message" },
       ]);
-      buttons.push({
-        "l10n-id": "space-alert-under-5gb-ok-button",
-        callback() {},
-      });
     } else {
       // The firefox-used space >= 5GB, then guide users to about:preferences
       // to clear some data stored on firefox by websites.
@@ -1440,18 +1404,6 @@ var gKeywordURIFixup = {
               openTrustedLinkIn(fixedURI.spec, "current");
             },
           },
-          {
-            label: gNavigatorBundle.getString("keywordURIFixup.dismiss"),
-            accessKey: gNavigatorBundle.getString(
-              "keywordURIFixup.dismiss.accesskey"
-            ),
-            callback() {
-              let notification = notificationBox.getNotificationWithValue(
-                "keyword-uri-fixup"
-              );
-              notificationBox.removeNotification(notification, true);
-            },
-          },
         ];
         let notification = notificationBox.appendNotification(
           message,
@@ -1786,9 +1738,11 @@ var gBrowserInit = {
       }
     });
 
-    this._setInitialFocus();
-
     updateFxaToolbarMenu(gFxaToolbarEnabled, true);
+
+    // Setting the focus will cause a style flush, it's preferable to call anything
+    // that will modify the DOM from within this function before this call.
+    this._setInitialFocus();
 
     this.domContentLoaded = true;
   },
@@ -1895,6 +1849,11 @@ var gBrowserInit = {
     if (BrowserUIUtils.quitShortcutDisabled) {
       document.getElementById("key_quitApplication").remove();
       document.getElementById("menu_FileQuitItem").removeAttribute("key");
+
+      PanelMultiView.getViewNode(
+        document,
+        "appMenu-quit-button2"
+      )?.removeAttribute("key");
       PanelMultiView.getViewNode(
         document,
         "appMenu-quit-button"
@@ -4293,6 +4252,9 @@ const BrowserSearch = {
    *        The principal to use for a new window or tab.
    * @param csp
    *        The content security policy to use for a new window or tab.
+   * @param flipLoadInBackground [optional]
+   *        If a modifier/middle mouse button is used:
+   *        Flip preference to load search in background tab.
    * @param engine [optional]
    *        The search engine to use for the search.
    * @param tab [optional]
@@ -4308,6 +4270,7 @@ const BrowserSearch = {
     purpose,
     triggeringPrincipal,
     csp,
+    flipLoadInBackground = false,
     engine = null,
     tab = null
   ) {
@@ -4340,7 +4303,7 @@ const BrowserSearch = {
     openLinkIn(submission.uri.spec, where || "current", {
       private: usePrivate && !PrivateBrowsingUtils.isWindowPrivate(window),
       postData: submission.postData,
-      inBackground,
+      inBackground: flipLoadInBackground ? !inBackground : inBackground,
       relatedToCurrent: true,
       triggeringPrincipal,
       csp,
@@ -4356,19 +4319,36 @@ const BrowserSearch = {
    * This should only be called from the context menu. See
    * BrowserSearch.loadSearch for the preferred API.
    */
-  async loadSearchFromContext(terms, usePrivate, triggeringPrincipal, csp) {
+  async loadSearchFromContext(
+    terms,
+    usePrivate,
+    triggeringPrincipal,
+    csp,
+    event
+  ) {
+    event = getRootEvent(event);
+    let where = whereToOpenLink(event);
+    if (where == "current") {
+      // override: historically search opens in new tab
+      where = "tab";
+    }
+    if (usePrivate && !PrivateBrowsingUtils.isWindowPrivate(window)) {
+      where = "window";
+    }
+    let flipLoadInBackground = event.button == 1 || event.ctrlKey;
+
     let { engine, url } = await BrowserSearch._loadSearch(
       terms,
-      usePrivate && !PrivateBrowsingUtils.isWindowPrivate(window)
-        ? "window"
-        : "tab",
+      where,
       usePrivate,
       "contextmenu",
       Services.scriptSecurityManager.createNullPrincipal(
         triggeringPrincipal.originAttributes
       ),
-      csp
+      csp,
+      flipLoadInBackground
     );
+
     if (engine) {
       BrowserSearchTelemetry.recordSearch(
         gBrowser.selectedBrowser,
@@ -4412,6 +4392,7 @@ const BrowserSearch = {
       "webextension",
       triggeringPrincipal,
       null,
+      false,
       engine,
       tab
     );
@@ -6315,6 +6296,22 @@ function onViewToolbarsPopupShowing(aEvent, aInsertPoint) {
       el.removeAttribute("data-lazy-l10n-id");
     });
 
+  // The "normal" toolbar items menu separator is hidden because it's unused
+  // when hiding the "moveToPanel" and "removeFromToolbar" items on flexible
+  // space items. But we need to ensure its hidden state is reset in the case
+  // the context menu is subsequently opened on a non-flexible space item.
+  let menuSeparator = document.getElementById("toolbarItemsMenuSeparator");
+  menuSeparator.hidden = false;
+
+  if (
+    !CustomizationHandler.isCustomizing() &&
+    CustomizableUI.isSpecialWidget(toolbarItem?.id || "")
+  ) {
+    moveToPanel.hidden = true;
+    removeFromToolbar.hidden = true;
+    menuSeparator.hidden = !showTabStripItems;
+  }
+
   if (showTabStripItems) {
     let multipleTabsSelected = !!gBrowser.multiSelectedTabsCount;
     document.getElementById(
@@ -8117,6 +8114,22 @@ function ReportFalseDeceptiveSite() {
 
     contextsToVisit.push(...currentContext.children);
   }
+}
+
+/**
+ * This is a temporary hack to connect a Help menu item for reporting
+ * site issues to the WebCompat team's Site Compatability Reporter
+ * WebExtension, which ships by default and is enabled on pre-release
+ * channels.
+ *
+ * Once we determine if Help is the right place for it, we'll do something
+ * slightly better than this.
+ *
+ * See bug 1690573.
+ */
+function ReportSiteIssue() {
+  let subject = { wrappedJSObject: gBrowser.selectedTab };
+  Services.obs.notifyObservers(subject, "report-site-issue");
 }
 
 /**

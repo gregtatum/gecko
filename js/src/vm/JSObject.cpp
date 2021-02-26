@@ -1969,8 +1969,8 @@ bool js::LookupProperty(JSContext* cx, HandleObject obj, js::HandleId id,
   if (LookupPropertyOp op = obj->getOpsLookupProperty()) {
     return op(cx, obj, id, objp, propp);
   }
-  return LookupPropertyInline<CanGC>(cx, obj.as<NativeObject>(), id, objp,
-                                     propp);
+  return NativeLookupPropertyInline<CanGC>(cx, obj.as<NativeObject>(), id, objp,
+                                           propp);
 }
 
 bool js::LookupName(JSContext* cx, HandlePropertyName name,
@@ -1983,7 +1983,7 @@ bool js::LookupName(JSContext* cx, HandlePropertyName name,
     if (!LookupProperty(cx, env, id, pobjp, propp)) {
       return false;
     }
-    if (propp) {
+    if (propp.isFound()) {
       objp.set(env);
       return true;
     }
@@ -2000,17 +2000,17 @@ bool js::LookupNameNoGC(JSContext* cx, PropertyName* name, JSObject* envChain,
                         PropertyResult* propp) {
   AutoAssertNoPendingException nogc(cx);
 
-  MOZ_ASSERT(!*objp && !*pobjp && !*propp);
+  MOZ_ASSERT(!*objp && !*pobjp && propp->isNotFound());
 
   for (JSObject* env = envChain; env; env = env->enclosingEnvironment()) {
     if (env->getOpsLookupProperty()) {
       return false;
     }
-    if (!LookupPropertyInline<NoGC>(cx, &env->as<NativeObject>(),
-                                    NameToId(name), pobjp, propp)) {
+    if (!NativeLookupPropertyInline<NoGC>(cx, &env->as<NativeObject>(),
+                                          NameToId(name), pobjp, propp)) {
       return false;
     }
-    if (*propp) {
+    if (propp->isFound()) {
       *objp = env;
       return true;
     }
@@ -2032,7 +2032,7 @@ bool js::LookupNameWithGlobalDefault(JSContext* cx, HandlePropertyName name,
     if (!LookupProperty(cx, env, id, &pobj, &prop)) {
       return false;
     }
-    if (prop) {
+    if (prop.isFound()) {
       break;
     }
   }
@@ -2054,7 +2054,7 @@ bool js::LookupNameUnqualified(JSContext* cx, HandlePropertyName name,
     if (!LookupProperty(cx, env, id, &pobj, &prop)) {
       return false;
     }
-    if (prop) {
+    if (prop.isFound()) {
       break;
     }
   }
@@ -2062,7 +2062,7 @@ bool js::LookupNameUnqualified(JSContext* cx, HandlePropertyName name,
   // See note above RuntimeLexicalErrorObject.
   if (pobj == env) {
     bool isTDZ = false;
-    if (prop && name != cx->names().dotThis) {
+    if (prop.isFound() && name != cx->names().dotThis) {
       // Treat Debugger environments specially for TDZ checks, as they
       // look like non-native environments but in fact wrap native
       // environments.
@@ -2132,91 +2132,21 @@ bool js::HasOwnProperty(JSContext* cx, HandleObject obj, HandleId id,
 
 bool js::LookupPropertyPure(JSContext* cx, JSObject* obj, jsid id,
                             JSObject** objp, PropertyResult* propp) {
-  bool isTypedArrayOutOfRange = false;
-  do {
-    if (!LookupOwnPropertyPure(cx, obj, id, propp, &isTypedArrayOutOfRange)) {
-      return false;
-    }
-
-    if (*propp) {
-      *objp = obj;
-      return true;
-    }
-
-    if (isTypedArrayOutOfRange) {
-      *objp = nullptr;
-      return true;
-    }
-
-    obj = obj->staticPrototype();
-  } while (obj);
-
-  *objp = nullptr;
-  propp->setNotFound();
-  return true;
+  if (obj->getOpsLookupProperty()) {
+    return false;
+  }
+  return NativeLookupPropertyInline<NoGC, LookupResolveMode::CheckMayResolve>(
+      cx, &obj->as<NativeObject>(), id, objp, propp);
 }
 
 bool js::LookupOwnPropertyPure(JSContext* cx, JSObject* obj, jsid id,
-                               PropertyResult* propp,
-                               bool* isTypedArrayOutOfRange /* = nullptr */) {
-  JS::AutoCheckCannotGC nogc;
-  if (isTypedArrayOutOfRange) {
-    *isTypedArrayOutOfRange = false;
-  }
-
-  if (obj->is<NativeObject>()) {
-    // Search for a native dense element, typed array element, or property.
-
-    if (JSID_IS_INT(id)) {
-      uint32_t index = JSID_TO_INT(id);
-      if (obj->as<NativeObject>().containsDenseElement(index)) {
-        propp->setDenseElement(index);
-        return true;
-      }
-    }
-
-    if (obj->is<TypedArrayObject>()) {
-      JS::Result<mozilla::Maybe<uint64_t>> index = IsTypedArrayIndex(cx, id);
-      if (index.isErr()) {
-        cx->recoverFromOutOfMemory();
-        return false;
-      }
-
-      if (index.inspect()) {
-        if (index.inspect().value() <
-            obj->as<TypedArrayObject>().length().get()) {
-          propp->setTypedArrayElement(index.inspect().value());
-        } else {
-          propp->setNotFound();
-          if (isTypedArrayOutOfRange) {
-            *isTypedArrayOutOfRange = true;
-          }
-        }
-        return true;
-      }
-    }
-
-    if (Shape* shape = obj->as<NativeObject>().lookupPure(id)) {
-      propp->setNativeProperty(shape);
-      return true;
-    }
-
-    // Fail if there's a resolve hook, unless the mayResolve hook tells
-    // us the resolve hook won't define a property with this id.
-    if (ClassMayResolveId(cx->names(), obj->getClass(), id, obj)) {
-      return false;
-    }
-  } else if (obj->is<TypedObject>()) {
-    if (obj->as<TypedObject>().typeDescr().hasProperty(cx, id)) {
-      propp->setNonNativeProperty();
-      return true;
-    }
-  } else {
+                               PropertyResult* propp) {
+  if (obj->getOpsLookupProperty()) {
     return false;
   }
-
-  propp->setNotFound();
-  return true;
+  return NativeLookupOwnPropertyInline<NoGC,
+                                       LookupResolveMode::CheckMayResolve>(
+      cx, &obj->as<NativeObject>(), id, propp);
 }
 
 static inline bool NativeGetPureInline(NativeObject* pobj, jsid id,
@@ -2249,7 +2179,7 @@ bool js::GetPropertyPure(JSContext* cx, JSObject* obj, jsid id, Value* vp) {
     return false;
   }
 
-  if (!prop) {
+  if (prop.isNotFound()) {
     vp->setUndefined();
     return true;
   }
@@ -2265,7 +2195,7 @@ bool js::GetOwnPropertyPure(JSContext* cx, JSObject* obj, jsid id, Value* vp,
     return false;
   }
 
-  if (!prop) {
+  if (prop.isNotFound()) {
     *found = false;
     vp->setUndefined();
     return true;
@@ -2301,7 +2231,7 @@ bool js::GetGetterPure(JSContext* cx, JSObject* obj, jsid id, JSFunction** fp) {
     return false;
   }
 
-  if (!prop) {
+  if (prop.isNotFound()) {
     *fp = nullptr;
     return true;
   }
@@ -2317,7 +2247,7 @@ bool js::GetOwnGetterPure(JSContext* cx, JSObject* obj, jsid id,
     return false;
   }
 
-  if (!prop) {
+  if (prop.isNotFound()) {
     *fp = nullptr;
     return true;
   }
@@ -2334,7 +2264,7 @@ bool js::GetOwnNativeGetterPure(JSContext* cx, JSObject* obj, jsid id,
     return false;
   }
 
-  if (!prop || !prop.isNativeProperty() || !prop.shape()->hasGetterObject()) {
+  if (!prop.isNativeProperty() || !prop.shape()->hasGetterObject()) {
     return true;
   }
 
@@ -2359,7 +2289,7 @@ bool js::HasOwnDataPropertyPure(JSContext* cx, JSObject* obj, jsid id,
     return false;
   }
 
-  *result = prop && prop.isNativeProperty() && prop.shape()->isDataProperty();
+  *result = prop.isNativeProperty() && prop.shape()->isDataProperty();
   return true;
 }
 

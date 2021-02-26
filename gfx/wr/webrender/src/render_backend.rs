@@ -820,8 +820,13 @@ pub struct RenderBackend {
     blob_image_handler: Option<Box<dyn BlobImageHandler>>,
 
     recycler: Recycler,
+
     #[cfg(feature = "capture")]
+    /// If `Some`, do 'sequence capture' logging, recording updated documents,
+    /// frames, etc. This is set only through messages from the scene builder,
+    /// so all control of sequence capture goes through there.
     capture_config: Option<CaptureConfig>,
+
     #[cfg(feature = "replay")]
     loaded_resource_sequence_id: u32,
 
@@ -1263,6 +1268,10 @@ impl RenderBackend {
 
                 self.bookkeep_after_frames();
             },
+            #[cfg(feature = "capture")]
+            SceneBuilderResult::StopCaptureSequence => {
+                self.capture_config = None;
+            }
             SceneBuilderResult::GetGlyphDimensions(request) => {
                 let mut glyph_dimensions = Vec::with_capacity(request.glyph_indices.len());
                 if let Some(base) = self.resource_cache.get_font_instance(request.key) {
@@ -1480,13 +1489,9 @@ impl RenderBackend {
         // external image with NativeTexture or when platform requested to composite frame.
         if invalidate_rendered_frame {
             doc.rendered_frame_is_valid = false;
-            if let CompositorKind::Draw { max_partial_present_rects, .. } = doc.scene.config.compositor_kind {
-
-              // When partial present is enabled, we need to force redraw.
-              if max_partial_present_rects > 0 {
-                  let msg = ResultMsg::ForceRedraw;
-                  self.result_tx.send(msg).unwrap();
-              }
+            if doc.scene.config.compositor_kind.should_redraw_on_invalidation() {
+                let msg = ResultMsg::ForceRedraw;
+                self.result_tx.send(msg).unwrap();
             }
         }
 

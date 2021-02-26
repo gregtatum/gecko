@@ -30,6 +30,7 @@ namespace frontend {
 
 struct CompilationAtomCache;
 struct CompilationStencil;
+class BorrowingCompilationStencil;
 class ParserAtom;
 
 template <typename CharT>
@@ -554,10 +555,12 @@ bool InstantiateMarkedAtoms(JSContext* cx, const ParserAtomSpan& entries,
  * associated with a given compile session.
  */
 class ParserAtomsTable {
+  friend class BorrowingCompilationStencil;
+
  private:
   const WellKnownParserAtoms& wellKnownTable_;
 
-  LifoAlloc& alloc_;
+  LifoAlloc* alloc_;
 
   // The ParserAtom are owned by the LifoAlloc.
   using EntryMap = HashMap<const ParserAtom*, TaggedParserAtomIndex,
@@ -568,6 +571,21 @@ class ParserAtomsTable {
  public:
   ParserAtomsTable(JSRuntime* rt, LifoAlloc& alloc);
   ParserAtomsTable(ParserAtomsTable&&) = default;
+  ParserAtomsTable& operator=(ParserAtomsTable&& other) noexcept {
+    entryMap_ = std::move(other.entryMap_);
+    entries_ = std::move(other.entries_);
+    return *this;
+  }
+
+  void fixupAlloc(LifoAlloc& alloc) { alloc_ = &alloc; }
+
+  size_t sizeOfExcludingThis(mozilla::MallocSizeOf mallocSizeOf) const {
+    return entryMap_.shallowSizeOfExcludingThis(mallocSizeOf) +
+           entries_.sizeOfExcludingThis(mallocSizeOf);
+  }
+  size_t sizeOfIncludingThis(mozilla::MallocSizeOf mallocSizeOf) const {
+    return mallocSizeOf(this) + sizeOfExcludingThis(mallocSizeOf);
+  }
 
  private:
   // Internal APIs for interning to the table after well-known atoms cases have

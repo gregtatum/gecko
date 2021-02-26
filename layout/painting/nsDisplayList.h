@@ -990,7 +990,7 @@ class nsDisplayListBuilder {
   }
 
   void AddEffectUpdate(RemoteBrowser* aBrowser, EffectsInfo aUpdate) {
-    mEffectsUpdates.Put(aBrowser, aUpdate);
+    mEffectsUpdates.InsertOrUpdate(aBrowser, aUpdate);
   }
 
   /**
@@ -2093,11 +2093,6 @@ void AssertUniqueItem(nsDisplayItem* aItem);
 bool ShouldBuildItemForEvents(const DisplayItemType aType);
 
 /**
- * Updates the item DisplayItemData if needed.
- */
-void UpdateDisplayItemData(nsPaintedDisplayItem* aItem);
-
-/**
  * Initializes the hit test information of |aItem| if the item type supports it.
  */
 void InitializeHitTestInfo(nsDisplayListBuilder* aBuilder,
@@ -2130,7 +2125,6 @@ MOZ_ALWAYS_INLINE T* MakeDisplayItemWithIndex(nsDisplayListBuilder* aBuilder,
 
   nsPaintedDisplayItem* paintedItem = item->AsPaintedDisplayItem();
   if (paintedItem) {
-    UpdateDisplayItemData(paintedItem);
     InitializeHitTestInfo(aBuilder, paintedItem, type);
   }
 
@@ -2249,7 +2243,6 @@ class nsDisplayItemBase : public nsDisplayItemLink {
     MOZ_ASSERT(aFrame);
 
     if (mFrame && aFrame == mFrame) {
-      MOZ_ASSERT(!mFrame->HasDisplayItem(this));
       mFrame = nullptr;
       SetDeletedFrame();
     }
@@ -3184,30 +3177,6 @@ class nsPaintedDisplayItem : public nsDisplayItem {
     return this;
   }
 
-  ~nsPaintedDisplayItem() override { SetDisplayItemData(nullptr, nullptr); }
-
-  void SetDisplayItemData(mozilla::DisplayItemData* aDID,
-                          mozilla::layers::LayerManager* aLayerManager) {
-    if (mDisplayItemData) {
-      MOZ_ASSERT(!mDisplayItemData->GetItem() ||
-                 mDisplayItemData->GetItem() == this);
-      mDisplayItemData->SetItem(nullptr);
-    }
-    if (aDID) {
-      if (aDID->GetItem()) {
-        aDID->GetItem()->SetDisplayItemData(nullptr, nullptr);
-      }
-      aDID->SetItem(this);
-    }
-    mDisplayItemData = aDID;
-    mDisplayItemDataLayerManager = aLayerManager;
-  }
-
-  mozilla::DisplayItemData* GetDisplayItemData() { return mDisplayItemData; }
-  mozilla::layers::LayerManager* GetDisplayItemDataLayerManager() {
-    return mDisplayItemDataLayerManager;
-  }
-
   /**
    * Stores the given opacity value to be applied when drawing. It is an error
    * to call this if CanApplyOpacity returned false.
@@ -3300,13 +3269,9 @@ class nsPaintedDisplayItem : public nsDisplayItem {
                        const nsPaintedDisplayItem& aOther)
       : nsDisplayItem(aBuilder, aOther), mHitTestInfo(aOther.mHitTestInfo) {}
 
- private:
-  mozilla::DisplayItemData* mDisplayItemData = nullptr;
-  mozilla::layers::LayerManager* mDisplayItemDataLayerManager = nullptr;
-  mozilla::Maybe<uint16_t> mCacheIndex;
-
  protected:
   mozilla::HitTestInfo mHitTestInfo;
+  mozilla::Maybe<uint16_t> mCacheIndex;
 };
 
 /**

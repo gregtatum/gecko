@@ -360,6 +360,12 @@ namespace js {
 template <XDRMode mode>
 XDRResult XDRSharedDataContainer(XDRState<mode>* xdr,
                                  SharedDataContainer& sharedData) {
+  if (mode == XDR_ENCODE) {
+    if (sharedData.isBorrow()) {
+      return XDRSharedDataContainer(xdr, *sharedData.asBorrow());
+    }
+  }
+
   enum class Kind : uint8_t {
     Single,
     Vector,
@@ -620,8 +626,12 @@ template XDRResult XDRBaseCompilationStencil(XDRState<XDR_DECODE>* xdr,
 template <XDRMode mode>
 XDRResult XDRCompilationStencil(XDRState<mode>* xdr,
                                 CompilationStencil& stencil) {
-  if (!stencil.asmJS.empty()) {
+  if (stencil.asmJS) {
     return xdr->fail(JS::TranscodeResult::Failure_AsmJSNotSupported);
+  }
+
+  if (mode == XDR_DECODE) {
+    stencil.hasExternalDependency = true;
   }
 
   MOZ_TRY(XDRBaseCompilationStencil(xdr, stencil));
@@ -633,9 +643,9 @@ XDRResult XDRCompilationStencil(XDRState<mode>* xdr,
 
   if (stencil.scriptExtra[CompilationStencil::TopLevelIndex].isModule()) {
     if (mode == XDR_DECODE) {
-      stencil.moduleMetadata = MakeUnique<StencilModuleMetadata>();
+      stencil.moduleMetadata =
+          xdr->cx()->template new_<StencilModuleMetadata>();
       if (!stencil.moduleMetadata) {
-        js::ReportOutOfMemory(xdr->cx());
         return xdr->fail(JS::TranscodeResult::Throw);
       }
     }

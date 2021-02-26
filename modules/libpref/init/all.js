@@ -340,6 +340,13 @@ pref("browser.triple_click_selects_paragraph", true);
 // Enable fillable forms in the PDF viewer.
 pref("pdfjs.renderInteractiveForms", true);
 
+// Enable JavaScript support in the PDF viewer.
+#ifdef NIGHTLY_BUILD
+  pref("pdfjs.enableScripting", true);
+#else
+  pref("pdfjs.enableScripting", false);
+#endif
+
 // Disable support for MathML
 pref("mathml.disabled",    false);
 
@@ -388,9 +395,9 @@ pref("media.gmp.storage.version.expected", 1);
 // Filter what triggers user notifications.
 // See DecoderDoctorDocumentWatcher::ReportAnalysis for details.
 #ifdef NIGHTLY_BUILD
-  pref("media.decoder-doctor.notifications-allowed", "MediaWMFNeeded,MediaWidevineNoWMF,MediaCannotInitializePulseAudio,MediaCannotPlayNoDecoders,MediaUnsupportedLibavcodec,MediaDecodeError");
+  pref("media.decoder-doctor.notifications-allowed", "MediaWMFNeeded,MediaWidevineNoWMF,MediaCannotInitializePulseAudio,MediaCannotPlayNoDecoders,MediaUnsupportedLibavcodec,MediaPlatformDecoderNotFound,MediaDecodeError");
 #else
-  pref("media.decoder-doctor.notifications-allowed", "MediaWMFNeeded,MediaWidevineNoWMF,MediaCannotInitializePulseAudio,MediaCannotPlayNoDecoders,MediaUnsupportedLibavcodec");
+  pref("media.decoder-doctor.notifications-allowed", "MediaWMFNeeded,MediaWidevineNoWMF,MediaCannotInitializePulseAudio,MediaCannotPlayNoDecoders,MediaUnsupportedLibavcodec,MediaPlatformDecoderNotFound");
 #endif
 pref("media.decoder-doctor.decode-errors-allowed", "");
 pref("media.decoder-doctor.decode-warnings-allowed", "");
@@ -4391,11 +4398,7 @@ pref("toolkit.aboutProcesses.showThreads", false);
   pref("toolkit.crashreporter.include_context_heap", true);
 #endif
 
-#if defined(XP_WIN) || defined(XP_MACOSX) || defined(MOZ_WIDGET_GTK)
-  pref("layers.omtp.enabled", true);
-#else
-  pref("layers.omtp.enabled", false);
-#endif
+pref("layers.omtp.enabled", false);
 
 // Support for legacy customizations that rely on checking the
 // user profile directory for these stylesheets:

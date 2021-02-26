@@ -641,6 +641,8 @@ static bool MinorGC(JSContext* cx, unsigned argc, Value* vp) {
     JSGC_NURSERY_FREE_THRESHOLD_FOR_IDLE_COLLECTION, true)                 \
   _("nurseryFreeThresholdForIdleCollectionPercent",                        \
     JSGC_NURSERY_FREE_THRESHOLD_FOR_IDLE_COLLECTION_PERCENT, true)         \
+  _("nurseryTimeoutForIdleCollectionMS",                                   \
+    JSGC_NURSERY_TIMEOUT_FOR_IDLE_COLLECTION_MS, true)                     \
   _("pretenureThreshold", JSGC_PRETENURE_THRESHOLD, true)                  \
   _("pretenureGroupThreshold", JSGC_PRETENURE_GROUP_THRESHOLD, true)       \
   _("zoneAllocDelayKB", JSGC_ZONE_ALLOC_DELAY_KB, true)                    \
@@ -649,7 +651,8 @@ static bool MinorGC(JSContext* cx, unsigned argc, Value* vp) {
   _("chunkBytes", JSGC_CHUNK_BYTES, false)                                 \
   _("helperThreadRatio", JSGC_HELPER_THREAD_RATIO, true)                   \
   _("maxHelperThreads", JSGC_MAX_HELPER_THREADS, true)                     \
-  _("helperThreadCount", JSGC_HELPER_THREAD_COUNT, false)
+  _("helperThreadCount", JSGC_HELPER_THREAD_COUNT, false)                  \
+  _("systemPageSizeKB", JSGC_SYSTEM_PAGE_SIZE_KB, false)
 
 static const struct ParamInfo {
   const char* name;
@@ -5003,17 +5006,19 @@ static bool CompileStencilXDR(JSContext* cx, uint32_t argc, Value* vp) {
 
   Rooted<frontend::CompilationInput> input(cx,
                                            frontend::CompilationInput(options));
-  UniquePtr<frontend::CompilationStencil> stencil =
-      frontend::CompileGlobalScriptToStencil(cx, input.get(), srcBuf,
-                                             ScopeKind::Global);
+  auto stencil = frontend::CompileGlobalScriptToExtensibleStencil(
+      cx, input.get(), srcBuf, ScopeKind::Global);
   if (!stencil) {
     return false;
   }
 
   /* Serialize the stencil to XDR. */
   JS::TranscodeBuffer xdrBytes;
-  if (!stencil->serializeStencils(cx, input.get(), xdrBytes)) {
-    return false;
+  {
+    frontend::BorrowingCompilationStencil borrowingStencil(*stencil);
+    if (!borrowingStencil.serializeStencils(cx, input.get(), xdrBytes)) {
+      return false;
+    }
   }
 
   /* Dump the bytes into a javascript ArrayBuffer and return a UInt8Array. */
@@ -5060,7 +5065,7 @@ static bool EvalStencilXDR(JSContext* cx, uint32_t argc, Value* vp) {
   if (!input.get().initForGlobal(cx)) {
     return false;
   }
-  frontend::CompilationStencil stencil(input.get());
+  frontend::CompilationStencil stencil(nullptr);
 
   /* Deserialize the stencil from XDR. */
   JS::TranscodeRange xdrRange(src->dataPointer(), src->byteLength().get());

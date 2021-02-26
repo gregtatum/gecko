@@ -990,47 +990,22 @@ static void AddAndRemoveImageAssociations(
 }
 
 void nsIFrame::AddDisplayItem(nsDisplayItemBase* aItem) {
-  DisplayItemArray* items = GetProperty(DisplayItems());
-  if (!items) {
-    items = new DisplayItemArray();
-    AddProperty(DisplayItems(), items);
-  }
-  MOZ_DIAGNOSTIC_ASSERT(!items->Contains(aItem));
-  items->AppendElement(aItem);
+  MOZ_DIAGNOSTIC_ASSERT(!mDisplayItems.Contains(aItem));
+  mDisplayItems.AppendElement(aItem);
 }
 
 bool nsIFrame::RemoveDisplayItem(nsDisplayItemBase* aItem) {
-  DisplayItemArray* items = GetProperty(DisplayItems());
-  if (!items) {
-    return false;
-  }
-  bool result = items->RemoveElement(aItem);
-  if (items->IsEmpty()) {
-    RemoveProperty(DisplayItems());
-  }
-  return result;
+  return mDisplayItems.RemoveElement(aItem);
 }
 
-bool nsIFrame::HasDisplayItems() {
-  DisplayItemArray* items = GetProperty(DisplayItems());
-  return items != nullptr;
-}
+bool nsIFrame::HasDisplayItems() { return !mDisplayItems.IsEmpty(); }
 
 bool nsIFrame::HasDisplayItem(nsDisplayItemBase* aItem) {
-  DisplayItemArray* items = GetProperty(DisplayItems());
-  if (!items) {
-    return false;
-  }
-  return items->Contains(aItem);
+  return mDisplayItems.Contains(aItem);
 }
 
 bool nsIFrame::HasDisplayItem(uint32_t aKey) {
-  DisplayItemArray* items = GetProperty(DisplayItems());
-  if (!items) {
-    return false;
-  }
-
-  for (nsDisplayItemBase* i : *items) {
+  for (nsDisplayItemBase* i : mDisplayItems) {
     if (i->GetPerFrameKey() == aKey) {
       return true;
     }
@@ -1040,12 +1015,7 @@ bool nsIFrame::HasDisplayItem(uint32_t aKey) {
 
 template <typename Condition>
 static void DiscardDisplayItems(nsIFrame* aFrame, Condition aCondition) {
-  auto* items = aFrame->GetProperty(nsIFrame::DisplayItems());
-  if (!items) {
-    return;
-  }
-
-  for (nsDisplayItemBase* i : *items) {
+  for (nsDisplayItemBase* i : aFrame->DisplayItems()) {
     // Only discard items that are invalidated by this frame, as we're only
     // guaranteed to rebuild those items. Table background items are created by
     // the relevant table part, but have the cell frame as the primary frame,
@@ -1078,19 +1048,16 @@ void nsIFrame::RemoveDisplayItemDataForDeletion() {
     delete userDataTable;
   }
 
-  FrameLayerBuilder::RemoveFrameFromLayerManager(this, DisplayItemData());
-  DisplayItemData().Clear();
+  FrameLayerBuilder::RemoveFrameFromLayerManager(this);
 
-  DisplayItemArray* items = TakeProperty(DisplayItems());
-  if (items) {
-    for (nsDisplayItemBase* i : *items) {
-      if (i->GetDependentFrame() == this && !i->HasDeletedFrame()) {
-        i->Frame()->MarkNeedsDisplayItemRebuild();
-      }
-      i->RemoveFrame(this);
+  for (nsDisplayItemBase* i : DisplayItems()) {
+    if (i->GetDependentFrame() == this && !i->HasDeletedFrame()) {
+      i->Frame()->MarkNeedsDisplayItemRebuild();
     }
-    delete items;
+    i->RemoveFrame(this);
   }
+
+  DisplayItems().Clear();
 
   if (!nsLayoutUtils::AreRetainedDisplayListsEnabled()) {
     // Retained display lists are disabled, no need to update
@@ -1171,20 +1138,17 @@ void nsIFrame::MarkNeedsDisplayItemRebuild() {
 
   // Hopefully this is cheap, but we could use a frame state bit to note
   // the presence of dependencies to speed it up.
-  DisplayItemArray* items = GetProperty(DisplayItems());
-  if (items) {
-    for (nsDisplayItemBase* i : *items) {
-      if (i->HasDeletedFrame() || i->Frame() == this) {
-        // Ignore the items with deleted frames, and the items with |this| as
-        // the primary frame.
-        continue;
-      }
+  for (nsDisplayItemBase* i : DisplayItems()) {
+    if (i->HasDeletedFrame() || i->Frame() == this) {
+      // Ignore the items with deleted frames, and the items with |this| as
+      // the primary frame.
+      continue;
+    }
 
-      if (i->GetDependentFrame() == this) {
-        // For items with |this| as a dependent frame, mark the primary frame
-        // for rebuild.
-        i->Frame()->MarkNeedsDisplayItemRebuild();
-      }
+    if (i->GetDependentFrame() == this) {
+      // For items with |this| as a dependent frame, mark the primary frame
+      // for rebuild.
+      i->Frame()->MarkNeedsDisplayItemRebuild();
     }
   }
 }
@@ -4905,6 +4869,12 @@ NS_IMETHODIMP nsIFrame::HandleDrag(nsPresContext* aPresContext,
   MOZ_ASSERT(aEvent->mClass == eMouseEventClass,
              "HandleDrag can only handle mouse event");
 
+  NS_ENSURE_ARG_POINTER(aEventStatus);
+
+  if (*aEventStatus == nsEventStatus_eConsumeNoDefault) {
+    return NS_OK;
+  }
+
   RefPtr<nsFrameSelection> frameselection = GetFrameSelection();
   if (!frameselection) {
     return NS_OK;
@@ -6065,6 +6035,9 @@ nsIFrame::SizeComputationResult nsIFrame::ComputeSize(
   const auto& styleBSize = aSizeOverrides.mStyleBSize
                                ? *aSizeOverrides.mStyleBSize
                                : stylePos->BSize(aWM);
+  const auto& aspectRatio = aSizeOverrides.mAspectRatio
+                                ? *aSizeOverrides.mAspectRatio
+                                : GetAspectRatio();
 
   auto parentFrame = GetParent();
   auto alignCB = parentFrame;
@@ -6097,7 +6070,6 @@ nsIFrame::SizeComputationResult nsIFrame::ComputeSize(
                        : eLogicalAxisBlock;
   }
 
-  const auto aspectRatio = GetAspectRatio();
   const bool isOrthogonal = aWM.IsOrthogonalTo(alignCB->GetWritingMode());
   const bool isAutoISize = styleISize.IsAuto();
   // Compute inline-axis size
@@ -7136,9 +7108,7 @@ void nsIFrame::ClearInvalidationStateBits() {
 
 void nsIFrame::InvalidateFrame(uint32_t aDisplayItemKey,
                                bool aRebuildDisplayItems /* = true */) {
-  bool hasDisplayItem =
-      !aDisplayItemKey ||
-      FrameLayerBuilder::HasRetainedDataFor(this, aDisplayItemKey);
+  bool hasDisplayItem = !aDisplayItemKey || HasDisplayItem(aDisplayItemKey);
   InvalidateFrameInternal(this, hasDisplayItem, aRebuildDisplayItems);
 }
 
@@ -7148,9 +7118,7 @@ void nsIFrame::InvalidateFrameWithRect(const nsRect& aRect,
   if (aRect.IsEmpty()) {
     return;
   }
-  bool hasDisplayItem =
-      !aDisplayItemKey ||
-      FrameLayerBuilder::HasRetainedDataFor(this, aDisplayItemKey);
+  bool hasDisplayItem = !aDisplayItemKey || HasDisplayItem(aDisplayItemKey);
   bool alreadyInvalid = false;
   if (!HasAnyStateBits(NS_FRAME_NEEDS_PAINT)) {
     InvalidateFrameInternal(this, hasDisplayItem, aRebuildDisplayItems);
@@ -11946,7 +11914,6 @@ void DR_State::InitFrameTypeTable() {
   AddFrameTypeInfo(LayoutFrameType::Text, "text", "text");
   AddFrameTypeInfo(LayoutFrameType::Viewport, "VP", "viewport");
 #  ifdef MOZ_XUL
-  AddFrameTypeInfo(LayoutFrameType::XULLabel, "XULLabel", "XULLabel");
   AddFrameTypeInfo(LayoutFrameType::Box, "Box", "Box");
   AddFrameTypeInfo(LayoutFrameType::Slider, "Slider", "Slider");
   AddFrameTypeInfo(LayoutFrameType::PopupSet, "PopupSet", "PopupSet");

@@ -430,6 +430,9 @@ nsDNSByTypeRecord::GetResults(mozilla::net::TypeRecordResultType* aResults) {
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsDNSByTypeRecord::GetTtl(uint32_t* aTtl) { return mHostRecord->GetTtl(aTtl); }
+
 //-----------------------------------------------------------------------------
 
 class nsDNSAsyncRequest final : public nsResolveHostCallback,
@@ -1431,9 +1434,7 @@ nsDNSService::ReportFailedSVCDomainName(const nsACString& aOwnerName,
                                         const nsACString& aSVCDomainName) {
   MutexAutoLock lock(mLock);
 
-  mFailedSVCDomainNames
-      .GetOrInsertWith(aOwnerName,
-                       [] { return MakeUnique<nsTArray<nsCString>>(1); })
+  mFailedSVCDomainNames.GetOrInsertNew(aOwnerName, 1)
       ->AppendElement(aSVCDomainName);
   return NS_OK;
 }

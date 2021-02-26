@@ -1156,8 +1156,7 @@ bool js::NativeLookupOwnProperty(
     JSContext* cx, typename MaybeRooted<NativeObject*, allowGC>::HandleType obj,
     typename MaybeRooted<jsid, allowGC>::HandleType id,
     typename MaybeRooted<PropertyResult, allowGC>::MutableHandleType propp) {
-  bool done;
-  return LookupOwnPropertyInline<allowGC>(cx, obj, id, propp, &done);
+  return NativeLookupOwnPropertyInline<allowGC>(cx, obj, id, propp);
 }
 
 template bool js::NativeLookupOwnProperty<CanGC>(
@@ -1537,7 +1536,9 @@ bool js::NativeDefineProperty(JSContext* cx, HandleNativeObject obj,
     // 9.4.5.3 step 3. Indexed properties of typed arrays are special.
     Rooted<TypedArrayObject*> tobj(cx, &obj->as<TypedArrayObject>());
     mozilla::Maybe<uint64_t> index;
-    JS_TRY_VAR_OR_RETURN_FALSE(cx, index, IsTypedArrayIndex(cx, id));
+    if (!ToTypedArrayIndex(cx, id, &index)) {
+      return false;
+    }
 
     if (index) {
       MOZ_ASSERT(!cx->isHelperThreadContext());
@@ -1577,7 +1578,7 @@ bool js::NativeDefineProperty(JSContext* cx, HandleNativeObject obj,
     // We are being called from a resolve or enumerate hook to reify a
     // lazily-resolved property. To avoid reentering the resolve hook and
     // recursing forever, skip the resolve hook when doing this lookup.
-    if (!NativeLookupOwnPropertyNoResolve(cx, obj, id, &prop)) {
+    if (!NativeLookupOwnPropertyNoResolve(cx, obj, id, prop.address())) {
       return false;
     }
   } else {
@@ -1597,7 +1598,7 @@ bool js::NativeDefineProperty(JSContext* cx, HandleNativeObject obj,
   Rooted<PropertyDescriptor> desc(cx, desc_);
 
   // Step 2.
-  if (!prop) {
+  if (prop.isNotFound()) {
     // Note: We are sharing the property definition machinery with private
     //       fields. Private fields may be added to non-extensible objects.
     if (!obj->isExtensible() && !id.isPrivateName()) {
@@ -1857,7 +1858,9 @@ static bool DefineNonexistentProperty(JSContext* cx, HandleNativeObject obj,
   } else if (obj->is<TypedArrayObject>()) {
     // 9.4.5.5 step 2. Indexed properties of typed arrays are special.
     mozilla::Maybe<uint64_t> index;
-    JS_TRY_VAR_OR_RETURN_FALSE(cx, index, IsTypedArrayIndex(cx, id));
+    if (!ToTypedArrayIndex(cx, id, &index)) {
+      return false;
+    }
 
     if (index) {
       // This method is only called for non-existent properties, which
@@ -1897,11 +1900,11 @@ static bool DefineNonexistentProperty(JSContext* cx, HandleNativeObject obj,
   }
 
 #ifdef DEBUG
-  Rooted<PropertyResult> prop(cx);
+  PropertyResult prop;
   if (!NativeLookupOwnPropertyNoResolve(cx, obj, id, &prop)) {
     return false;
   }
-  MOZ_ASSERT(!prop, "didn't expect to find an existing property");
+  MOZ_ASSERT(prop.isNotFound(), "didn't expect to find an existing property");
 #endif
 
   // 9.1.6.3, ValidateAndApplyPropertyDescriptor.
@@ -1982,31 +1985,28 @@ bool js::NativeHasProperty(JSContext* cx, HandleNativeObject obj, HandleId id,
   // This loop isn't explicit in the spec algorithm. See the comment on step
   // 7.a. below.
   for (;;) {
-    // Steps 2-3. ('done' is a SpiderMonkey-specific thing, used below.)
-    bool done;
-    if (!LookupOwnPropertyInline<CanGC>(cx, pobj, id, &prop, &done)) {
+    // Steps 2-3.
+    if (!NativeLookupOwnPropertyInline<CanGC>(cx, pobj, id, &prop)) {
       return false;
     }
 
     // Step 4.
-    if (prop) {
+    if (prop.isFound()) {
       *foundp = true;
       return true;
     }
 
-    // Step 5-6. The check for 'done' on this next line is tricky.
-    // done can be true in exactly these unlikely-sounding cases:
-    // - We're looking up an element, and pobj is a TypedArray that
-    //   doesn't have that many elements.
-    // - We're being called from a resolve hook to assign to the property
-    //   being resolved.
-    // What they all have in common is we do not want to keep walking
-    // the prototype chain, and always claim that the property
-    // doesn't exist.
-    JSObject* proto = done ? nullptr : pobj->staticPrototype();
+    // Step 5-6.
+    JSObject* proto = pobj->staticPrototype();
 
     // Step 8.
-    if (!proto) {
+    // As a side-effect of NativeLookupOwnPropertyInline, we may determine that
+    // a property is not found and the proto chain should not be searched. This
+    // can occur for:
+    //  - Out-of-range numeric properties of a TypedArrayObject
+    //  - Recursive resolve hooks (which is expected when they try to set the
+    //    property being resolved).
+    if (!proto || prop.shouldIgnoreProtoChain()) {
       *foundp = false;
       return true;
     }
@@ -2034,7 +2034,7 @@ bool js::NativeGetOwnPropertyDescriptor(
   if (!NativeLookupOwnProperty<CanGC>(cx, obj, id, &prop)) {
     return false;
   }
-  if (!prop) {
+  if (prop.isNotFound()) {
     desc.object().set(nullptr);
     return true;
   }
@@ -2256,13 +2256,12 @@ static MOZ_ALWAYS_INLINE bool NativeGetPropertyInline(
   // This loop isn't explicit in the spec algorithm. See the comment on step
   // 4.d below.
   for (;;) {
-    // Steps 2-3. ('done' is a SpiderMonkey-specific thing, used below.)
-    bool done;
-    if (!LookupOwnPropertyInline<allowGC>(cx, pobj, id, &prop, &done)) {
+    // Steps 2-3.
+    if (!NativeLookupOwnPropertyInline<allowGC>(cx, pobj, id, &prop)) {
       return false;
     }
 
-    if (prop) {
+    if (prop.isFound()) {
       // Steps 5-8. Special case for dense elements because
       // GetExistingProperty doesn't support those.
       if (prop.isDenseElement()) {
@@ -2279,19 +2278,12 @@ static MOZ_ALWAYS_INLINE bool NativeGetPropertyInline(
       return GetExistingProperty<allowGC>(cx, receiver, pobj, shape, vp);
     }
 
-    // Steps 4.a-b. The check for 'done' on this next line is tricky.
-    // done can be true in exactly these unlikely-sounding cases:
-    // - We're looking up an element, and pobj is a TypedArray that
-    //   doesn't have that many elements.
-    // - We're being called from a resolve hook to assign to the property
-    //   being resolved.
-    // What they all have in common is we do not want to keep walking
-    // the prototype chain.
-    JSObject* proto = done ? nullptr : pobj->staticPrototype();
+    // Steps 4.a-b.
+    JSObject* proto = pobj->staticPrototype();
 
     // Step 4.c. The spec algorithm simply returns undefined if proto is
     // null, but see the comment on GetNonexistentProperty.
-    if (!proto) {
+    if (!proto || prop.shouldIgnoreProtoChain()) {
       return GetNonexistentProperty(cx, id, nameLookup, vp);
     }
 
@@ -2648,27 +2640,25 @@ bool js::NativeSetProperty(JSContext* cx, HandleNativeObject obj, HandleId id,
   // Bug 1502889 showed that this behavior isn't web-compatible. This issue is
   // also reported at <https://github.com/tc39/ecma262/issues/1541>.
   for (;;) {
-    // Steps 2-3. ('done' is a SpiderMonkey-specific thing, used below.)
-    bool done;
-    if (!LookupOwnPropertyInline<CanGC>(cx, pobj, id, &prop, &done)) {
+    // Steps 2-3.
+    if (!NativeLookupOwnPropertyInline<CanGC>(cx, pobj, id, &prop)) {
       return false;
     }
 
-    if (prop) {
+    if (prop.isFound()) {
       // Steps 5-6.
       return SetExistingProperty(cx, id, v, receiver, pobj, prop, result);
     }
 
-    // Steps 4.a-b. The check for 'done' on this next line is tricky.
-    // done can be true in exactly these unlikely-sounding cases:
-    // - We're looking up an element, and pobj is a TypedArray that
-    //   doesn't have that many elements.
-    // - We're being called from a resolve hook to assign to the property
-    //   being resolved.
-    // What they all have in common is we do not want to keep walking
-    // the prototype chain.
-    JSObject* proto = done ? nullptr : pobj->staticPrototype();
-    if (!proto) {
+    // Steps 4.a-b.
+    // As a side-effect of NativeLookupOwnPropertyInline, we may determine that
+    // a property is not found and the proto chain should not be searched. This
+    // can occur for:
+    //  - Out-of-range numeric properties of a TypedArrayObject
+    //  - Recursive resolve hooks (which is expected when they try to set the
+    //    property being resolved).
+    JSObject* proto = pobj->staticPrototype();
+    if (!proto || prop.shouldIgnoreProtoChain()) {
       // Step 4.d.i (and step 5).
       return SetNonexistentProperty<IsQualified>(cx, obj, id, v, receiver,
                                                  result);
@@ -2735,7 +2725,7 @@ bool js::NativeDeleteProperty(JSContext* cx, HandleNativeObject obj,
   }
 
   // Step 4.
-  if (!prop) {
+  if (prop.isNotFound()) {
     // If no property call the class's delProperty hook, passing succeeded
     // as the result parameter. This always succeeds when there is no hook.
     return CallJSDeletePropertyOp(cx, obj->getClass()->getDelProperty(), obj,

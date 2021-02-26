@@ -234,7 +234,19 @@ this.TopSitesFeed = class TopSitesFeed {
       if (siteData.search_shortcut) {
         link = await this.topSiteToSearchTopSite(link);
       } else if (siteData.sponsored_position) {
-        link.sponsored_position = siteData.sponsored_position;
+        const {
+          sponsored_position,
+          sponsored_tile_id,
+          sponsored_impression_url,
+          sponsored_click_url,
+        } = siteData;
+        link = {
+          sponsored_position,
+          sponsored_tile_id,
+          sponsored_impression_url,
+          sponsored_click_url,
+          ...link,
+        };
       }
       DEFAULT_TOP_SITES.push(link);
     }
@@ -1113,7 +1125,7 @@ this.TopSitesFeed = class TopSitesFeed {
         break;
       // All these actions mean we need new top sites
       case at.PLACES_HISTORY_CLEARED:
-      case at.PLACES_LINK_DELETED:
+      case at.PLACES_LINKS_DELETED:
         this.frecentCache.expire();
         this.refresh({ broadcast: true });
         break;

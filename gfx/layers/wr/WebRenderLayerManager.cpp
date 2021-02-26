@@ -339,7 +339,8 @@ void WebRenderLayerManager::EndTransactionWithoutLayer(
   size_t preallocate =
       mLastDisplayListSize < kMaxPrealloc ? mLastDisplayListSize : kMaxPrealloc;
 
-  wr::DisplayListBuilder builder(WrBridge()->GetPipeline(), preallocate,
+  wr::DisplayListBuilder builder(WrBridge()->GetPipeline(),
+                                 WrBridge()->GetWebRenderBackend(), preallocate,
                                  &mDisplayItemCache);
 
   wr::IpcResourceUpdateQueue resourceUpdates(WrBridge());
@@ -741,9 +742,11 @@ void WebRenderLayerManager::SetRoot(Layer* aLayer) {
 already_AddRefed<PersistentBufferProvider>
 WebRenderLayerManager::CreatePersistentBufferProvider(
     const gfx::IntSize& aSize, gfx::SurfaceFormat aFormat) {
-  // Ensure devices initialization for canvas 2d. The devices are lazily
-  // initialized with WebRender to reduce memory usage.
-  gfxPlatform::GetPlatform()->EnsureDevicesInitialized();
+  // Ensure devices initialization for canvas 2d if not remote. The devices are
+  // lazily initialized with WebRender to reduce memory usage.
+  if (!gfxPlatform::UseRemoteCanvas()) {
+    gfxPlatform::GetPlatform()->EnsureDevicesInitialized();
+  }
 
   RefPtr<PersistentBufferProvider> provider =
       PersistentBufferProviderShared::Create(aSize, aFormat,

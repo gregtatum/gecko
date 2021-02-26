@@ -185,29 +185,6 @@ nsresult HTMLFormElement::BeforeSetAttr(int32_t aNamespaceID, nsAtom* aName,
                                              aNotify);
 }
 
-nsresult HTMLFormElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
-                                       const nsAttrValue* aValue,
-                                       const nsAttrValue* aOldValue,
-                                       nsIPrincipal* aSubjectPrincipal,
-                                       bool aNotify) {
-  if (aName == nsGkAtoms::novalidate && aNameSpaceID == kNameSpaceID_None) {
-    // Update all form elements states because they might be [no longer]
-    // affected by :-moz-ui-valid or :-moz-ui-invalid.
-    for (uint32_t i = 0, length = mControls->mElements.Length(); i < length;
-         ++i) {
-      mControls->mElements[i]->UpdateState(true);
-    }
-
-    for (uint32_t i = 0, length = mControls->mNotInElements.Length();
-         i < length; ++i) {
-      mControls->mNotInElements[i]->UpdateState(true);
-    }
-  }
-
-  return nsGenericHTMLElement::AfterSetAttr(
-      aNameSpaceID, aName, aValue, aOldValue, aSubjectPrincipal, aNotify);
-}
-
 void HTMLFormElement::GetAutocomplete(nsAString& aValue) {
   GetEnumAttr(nsGkAtoms::autocomplete, kFormDefaultAutocomplete->tag, aValue);
 }
@@ -2048,7 +2025,7 @@ HTMLFormElement::IndexOfControl(nsIFormControl* aControl) {
 
 void HTMLFormElement::SetCurrentRadioButton(const nsAString& aName,
                                             HTMLInputElement* aRadio) {
-  mSelectedRadioButtons.Put(aName, RefPtr{aRadio});
+  mSelectedRadioButtons.InsertOrUpdate(aName, RefPtr{aRadio});
 }
 
 HTMLInputElement* HTMLFormElement::GetCurrentRadioButton(
@@ -2170,7 +2147,7 @@ HTMLFormElement::WalkRadioGroup(const nsAString& aName,
 void HTMLFormElement::AddToRadioGroup(const nsAString& aName,
                                       HTMLInputElement* aRadio) {
   if (aRadio->IsRequired()) {
-    uint32_t& value = mRequiredRadioButtonCounts.GetOrInsert(aName, 0);
+    uint32_t& value = mRequiredRadioButtonCounts.LookupOrInsert(aName, 0);
     ++value;
   }
 }
@@ -2200,8 +2177,8 @@ uint32_t HTMLFormElement::GetRequiredRadioCount(const nsAString& aName) const {
 void HTMLFormElement::RadioRequiredWillChange(const nsAString& aName,
                                               bool aRequiredAdded) {
   if (aRequiredAdded) {
-    mRequiredRadioButtonCounts.Put(aName,
-                                   mRequiredRadioButtonCounts.Get(aName) + 1);
+    mRequiredRadioButtonCounts.InsertOrUpdate(
+        aName, mRequiredRadioButtonCounts.Get(aName) + 1);
   } else {
     uint32_t requiredNb = mRequiredRadioButtonCounts.Get(aName);
     NS_ASSERTION(requiredNb >= 1,
@@ -2209,7 +2186,7 @@ void HTMLFormElement::RadioRequiredWillChange(const nsAString& aName,
     if (requiredNb == 1) {
       mRequiredRadioButtonCounts.Remove(aName);
     } else {
-      mRequiredRadioButtonCounts.Put(aName, requiredNb - 1);
+      mRequiredRadioButtonCounts.InsertOrUpdate(aName, requiredNb - 1);
     }
   }
 }
@@ -2220,7 +2197,7 @@ bool HTMLFormElement::GetValueMissingState(const nsAString& aName) const {
 
 void HTMLFormElement::SetValueMissingState(const nsAString& aName,
                                            bool aValue) {
-  mValueMissingRadioGroups.Put(aName, aValue);
+  mValueMissingRadioGroups.InsertOrUpdate(aName, aValue);
 }
 
 EventStates HTMLFormElement::IntrinsicState() const {
@@ -2384,7 +2361,7 @@ void HTMLFormElement::AddToPastNamesMap(const nsAString& aName,
   // previous entry with the same name, if any.
   nsCOMPtr<nsIContent> node = do_QueryInterface(aChild);
   if (node) {
-    mPastNameLookupTable.Put(aName, ToSupports(node));
+    mPastNameLookupTable.InsertOrUpdate(aName, ToSupports(node));
     node->SetFlags(MAY_BE_IN_PAST_NAMES_MAP);
   }
 }

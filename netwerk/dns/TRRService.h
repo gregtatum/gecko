@@ -49,7 +49,7 @@ class TRRService : public TRRServiceBase,
 
   LookupStatus CompleteLookup(nsHostRecord*, nsresult, mozilla::net::AddrInfo*,
                               bool pb, const nsACString& aOriginSuffix,
-                              nsHostRecord::TRRSkippedReason aReason,
+                              TRRSkippedReason aReason,
                               TRR* aTrrRequest) override;
   LookupStatus CompleteLookupByType(nsHostRecord*, nsresult,
                                     mozilla::net::TypeRecordResultType&,
@@ -71,7 +71,10 @@ class TRRService : public TRRServiceBase,
   bool IsOnTRRThread();
 
   bool IsUsingAutoDetectedURL() { return mURISetByDetection; }
-  static const nsCString& AutoDetectedKey();
+
+  // Returns a reference to a static string identifying the current DoH server
+  // If the DoH server is not one of the built-in ones it will return "(other)"
+  static const nsCString& ProviderKey();
 
  private:
   virtual ~TRRService();

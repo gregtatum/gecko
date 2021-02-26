@@ -300,7 +300,8 @@ void BrowserParent::AddBrowserParentToTable(layers::LayersId aLayersId,
   if (!sLayerToBrowserParentTable) {
     sLayerToBrowserParentTable = new LayerToBrowserParentTable();
   }
-  sLayerToBrowserParentTable->Put(uint64_t(aLayersId), aBrowserParent);
+  sLayerToBrowserParentTable->InsertOrUpdate(uint64_t(aLayersId),
+                                             aBrowserParent);
 }
 
 void BrowserParent::RemoveBrowserParentFromTable(layers::LayersId aLayersId) {
@@ -1780,12 +1781,16 @@ mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeKeyEvent(
 
 mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeMouseEvent(
     const LayoutDeviceIntPoint& aPoint, const uint32_t& aNativeMessage,
-    const uint32_t& aModifierFlags, const uint64_t& aObserverId) {
+    const int16_t& aButton, const uint32_t& aModifierFlags,
+    const uint64_t& aObserverId) {
   AutoSynthesizedEventResponder responder(this, aObserverId, "mouseevent");
   nsCOMPtr<nsIWidget> widget = GetWidget();
   if (widget) {
-    widget->SynthesizeNativeMouseEvent(aPoint, aNativeMessage, aModifierFlags,
-                                       responder.GetObserver());
+    widget->SynthesizeNativeMouseEvent(
+        aPoint, static_cast<nsIWidget::NativeMouseMessage>(aNativeMessage),
+        static_cast<mozilla::MouseButton>(aButton),
+        static_cast<nsIWidget::Modifiers>(aModifierFlags),
+        responder.GetObserver());
   }
   return IPC_OK();
 }

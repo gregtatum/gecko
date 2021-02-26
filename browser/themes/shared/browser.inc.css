@@ -100,6 +100,10 @@
   transition: @themeTransition@;
 }
 
+/* Places tooltips */
+
+%include places/places-tooltip.inc.css
+
 /* Bookmark toolbar */
 
 #PersonalToolbar {
@@ -115,7 +119,7 @@
 
 @supports -moz-bool-pref("browser.proton.toolbar.enabled") {
 #PersonalToolbar {
-  padding-inline: 2px;
+  padding-inline: 6px;
 }
 } /*** END proton ***/
 
@@ -767,4 +771,9 @@ menupopup::part(drop-indicator) {
 
 #sharing-warning-proceed-to-tab:hover {
   background-color: rgb(0,62,170);
+}
+
+.webRTC-selectDevice-label {
+  margin-top: 6px;
+  font-weight: 600;
 }

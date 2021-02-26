@@ -868,7 +868,9 @@ nsresult nsChildView::SynthesizeNativeKeyEvent(int32_t aNativeKeyboardLayout,
 }
 
 nsresult nsChildView::SynthesizeNativeMouseEvent(LayoutDeviceIntPoint aPoint,
-                                                 uint32_t aNativeMessage, uint32_t aModifierFlags,
+                                                 NativeMouseMessage aNativeMessage,
+                                                 MouseButton aButton,
+                                                 nsIWidget::Modifiers aModifierFlags,
                                                  nsIObserver* aObserver) {
   NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
 
@@ -884,10 +886,54 @@ nsresult nsChildView::SynthesizeNativeMouseEvent(LayoutDeviceIntPoint aPoint,
   // expects a point in a coordinate system that has its origin on the bottom left.
   NSPoint screenPoint = NSMakePoint(pt.x, nsCocoaUtils::FlippedScreenY(pt.y));
   NSPoint windowPoint = nsCocoaUtils::ConvertPointFromScreen([mView window], screenPoint);
+  NSEventModifierFlags modifierFlags =
+      nsCocoaUtils::ConvertWidgetModifiersToMacModifierFlags(aModifierFlags);
 
-  NSEvent* event = [NSEvent mouseEventWithType:(NSEventType)aNativeMessage
+  if (aButton == MouseButton::eX1 || aButton == MouseButton::eX2) {
+    // NSEvent has `buttonNumber` for `NSEventTypeOther*`.  However, it seems that
+    // there is no way to specify it.  Therefore, we should return error for now.
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  NSEventType nativeEventType;
+  switch (aNativeMessage) {
+    case NativeMouseMessage::ButtonDown:
+    case NativeMouseMessage::ButtonUp: {
+      switch (aButton) {
+        case MouseButton::ePrimary:
+          nativeEventType = aNativeMessage == NativeMouseMessage::ButtonDown
+                                ? NSEventTypeLeftMouseDown
+                                : NSEventTypeLeftMouseUp;
+          break;
+        case MouseButton::eMiddle:
+          nativeEventType = aNativeMessage == NativeMouseMessage::ButtonDown
+                                ? NSEventTypeOtherMouseDown
+                                : NSEventTypeOtherMouseUp;
+          break;
+        case MouseButton::eSecondary:
+          nativeEventType = aNativeMessage == NativeMouseMessage::ButtonDown
+                                ? NSEventTypeRightMouseDown
+                                : NSEventTypeRightMouseUp;
+          break;
+        default:
+          return NS_ERROR_INVALID_ARG;
+      }
+      break;
+    }
+    case NativeMouseMessage::Move:
+      nativeEventType = NSEventTypeMouseMoved;
+      break;
+    case NativeMouseMessage::EnterWindow:
+      nativeEventType = NSEventTypeMouseEntered;
+      break;
+    case NativeMouseMessage::LeaveWindow:
+      nativeEventType = NSEventTypeMouseExited;
+      break;
+  }
+
+  NSEvent* event = [NSEvent mouseEventWithType:nativeEventType
                                       location:windowPoint
-                                 modifierFlags:aModifierFlags
+                                 modifierFlags:modifierFlags
                                      timestamp:[[NSProcessInfo processInfo] systemUptime]
                                   windowNumber:[[mView window] windowNumber]
                                        context:nil
@@ -901,15 +947,15 @@ nsresult nsChildView::SynthesizeNativeMouseEvent(LayoutDeviceIntPoint aPoint,
     // Tracking area events don't end up in their tracking areas when sent
     // through [NSApp sendEvent:], so pass them directly to the right methods.
     BaseWindow* window = (BaseWindow*)[mView window];
-    if (aNativeMessage == NSEventTypeMouseEntered) {
+    if (nativeEventType == NSEventTypeMouseEntered) {
       [window mouseEntered:event];
       return NS_OK;
     }
-    if (aNativeMessage == NSEventTypeMouseExited) {
+    if (nativeEventType == NSEventTypeMouseExited) {
       [window mouseExited:event];
       return NS_OK;
     }
-    if (aNativeMessage == NSEventTypeMouseMoved) {
+    if (nativeEventType == NSEventTypeMouseMoved) {
       [window mouseMoved:event];
       return NS_OK;
     }
@@ -1889,8 +1935,8 @@ nsEventStatus nsChildView::DispatchAPZInputEvent(InputData& aEvent) {
     result = mAPZC->InputBridge()->ReceiveInputEvent(aEvent);
   }
 
-  if (result.mStatus == nsEventStatus_eConsumeNoDefault) {
-    return result.mStatus;
+  if (result.GetStatus() == nsEventStatus_eConsumeNoDefault) {
+    return result.GetStatus();
   }
 
   if (aEvent.mInputType == PINCHGESTURE_INPUT) {
@@ -1899,7 +1945,7 @@ nsEventStatus nsChildView::DispatchAPZInputEvent(InputData& aEvent) {
     ProcessUntransformedAPZEvent(&wheelEvent, result);
   }
 
-  return result.mStatus;
+  return result.GetStatus();
 }
 
 void nsChildView::DispatchAPZWheelInputEvent(InputData& aEvent, bool aCanTriggerSwipe) {
@@ -1921,7 +1967,7 @@ void nsChildView::DispatchAPZWheelInputEvent(InputData& aEvent, bool aCanTrigger
     switch (aEvent.mInputType) {
       case PANGESTURE_INPUT: {
         result = mAPZC->InputBridge()->ReceiveInputEvent(aEvent);
-        if (result.mStatus == nsEventStatus_eConsumeNoDefault) {
+        if (result.GetStatus() == nsEventStatus_eConsumeNoDefault) {
           return;
         }
 
@@ -1932,7 +1978,7 @@ void nsChildView::DispatchAPZWheelInputEvent(InputData& aEvent, bool aCanTrigger
           SwipeInfo swipeInfo = SendMayStartSwipe(panInput);
           event.mCanTriggerSwipe = swipeInfo.wantsSwipe;
           if (swipeInfo.wantsSwipe) {
-            if (result.mStatus == nsEventStatus_eIgnore) {
+            if (result.GetStatus() == nsEventStatus_eIgnore) {
               // APZ has determined and that scrolling horizontally in the
               // requested direction is impossible, so it didn't do any
               // scrolling for the event.
@@ -1965,7 +2011,7 @@ void nsChildView::DispatchAPZWheelInputEvent(InputData& aEvent, bool aCanTrigger
         // go straight to the APZCTreeManager subclass.
         event = aEvent.AsScrollWheelInput().ToWidgetEvent(this);
         result = mAPZC->InputBridge()->ReceiveInputEvent(event);
-        if (result.mStatus == nsEventStatus_eConsumeNoDefault) {
+        if (result.GetStatus() == nsEventStatus_eConsumeNoDefault) {
           return;
         }
         break;

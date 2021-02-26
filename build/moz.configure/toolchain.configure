@@ -32,48 +32,6 @@ set_config("MOZ_OPTIMIZE", moz_optimize.optimize)
 add_old_configure_assignment("MOZ_OPTIMIZE", moz_optimize.optimize)
 add_old_configure_assignment("MOZ_CONFIGURE_OPTIMIZE_FLAGS", moz_optimize.flags)
 
-# yasm detection
-# ==============================================================
-yasm = check_prog("YASM", ["yasm"], allow_missing=True)
-
-
-@depends_if(yasm)
-@checking("yasm version")
-def yasm_version(yasm):
-    version = (
-        check_cmd_output(
-            yasm, "--version", onerror=lambda: die("Failed to get yasm version.")
-        )
-        .splitlines()[0]
-        .split()[1]
-    )
-    return Version(version)
-
-
-@depends(yasm, target)
-def yasm_asflags(yasm, target):
-    if yasm:
-        asflags = {
-            ("OSX", "x86"): ["-f", "macho32"],
-            ("OSX", "x86_64"): ["-f", "macho64"],
-            ("WINNT", "x86"): ["-f", "win32"],
-            ("WINNT", "x86_64"): ["-f", "x64"],
-        }.get((target.os, target.cpu), None)
-        if asflags is None:
-            # We're assuming every x86 platform we support that's
-            # not Windows or Mac is ELF.
-            if target.cpu == "x86":
-                asflags = ["-f", "elf32"]
-            elif target.cpu == "x86_64":
-                asflags = ["-f", "elf64"]
-        if asflags:
-            asflags += ["-rnasm", "-pnasm"]
-        return asflags
-
-
-set_config("YASM_ASFLAGS", yasm_asflags)
-
-
 # Android NDK
 # ==============================================================
 
@@ -658,10 +616,10 @@ def vc_toolchain_search_path(vc_compiler_path, original_path):
     return result
 
 
-clang_search_path = bootstrap_search_path("clang", "bin")
+clang_search_path = bootstrap_search_path("clang/bin")
 
 
-@depends(bootstrap_search_path("rustc", "bin", when="MOZ_AUTOMATION"), original_path)
+@depends(bootstrap_search_path("rustc/bin", when="MOZ_AUTOMATION"), original_path)
 @imports("os")
 @imports(_from="os", _import="environ")
 def rust_search_path(rust_path, original_path):
@@ -719,7 +677,9 @@ ccache = check_prog(
     "CCACHE",
     progs=(),
     input=ccache,
-    paths=bootstrap_search_path("sccache"),
+    paths=bootstrap_search_path(
+        "sccache", when=depends("CCACHE")(lambda c: len(c) and c[0] == "sccache")
+    ),
     allow_missing=True,
 )
 
@@ -962,7 +922,7 @@ def provided_program(env_var, when=None):
 # on automation.
 @depends(
     bootstrap_path("sysroot", context=target, when=target_is_linux),
-    bootstrap,
+    "--enable-bootstrap",
     "MOZ_AUTOMATION",
 )
 def sysroot_path(path, bootstrap, automation):
@@ -1966,47 +1926,6 @@ def frame_pointer_flags(enable, flags):
 
 
 set_config("MOZ_FRAMEPTR_FLAGS", frame_pointer_flags)
-
-
-# nasm detection
-# ==============================================================
-nasm = check_prog(
-    "NASM", ["nasm"], allow_missing=True, paths=bootstrap_search_path("nasm")
-)
-
-
-@depends_if(nasm)
-@checking("nasm version")
-def nasm_version(nasm):
-    (retcode, stdout, _) = get_cmd_output(nasm, "-v")
-    if retcode:
-        # mac stub binary
-        return None
-
-    version = stdout.splitlines()[0].split()[2]
-    return Version(version)
-
-
-@depends(nasm, target)
-def nasm_asflags(nasm, target):
-    if nasm:
-        asflags = {
-            ("OSX", "x86"): ["-f", "macho32"],
-            ("OSX", "x86_64"): ["-f", "macho64"],
-            ("WINNT", "x86"): ["-f", "win32"],
-            ("WINNT", "x86_64"): ["-f", "win64"],
-        }.get((target.os, target.cpu), None)
-        if asflags is None:
-            # We're assuming every x86 platform we support that's
-            # not Windows or Mac is ELF.
-            if target.cpu == "x86":
-                asflags = ["-f", "elf32"]
-            elif target.cpu == "x86_64":
-                asflags = ["-f", "elf64"]
-        return asflags
-
-
-set_config("NASM_ASFLAGS", nasm_asflags)
 
 
 # Code Coverage

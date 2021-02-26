@@ -283,10 +283,6 @@ pref("browser.startup.preXulSkeletonUI", false);
 // platforms that don't always need it (Win/Linux).
 pref("toolkit.lazyHiddenWindow", true);
 
-pref("browser.slowStartup.notificationDisabled", false);
-pref("browser.slowStartup.timeThreshold", 20000);
-pref("browser.slowStartup.maxSamples", 5);
-
 pref("browser.chrome.site_icons", true);
 // browser.warnOnQuit == false will override all other possible prompts when quitting or restarting
 pref("browser.warnOnQuit", true);
@@ -335,6 +331,14 @@ pref("browser.urlbar.suggest.quicksuggest",         true);
 
 // Whether the QuickSuggest experiment is enabled.
 pref("browser.urlbar.quicksuggest.enabled", false);
+
+// The URL for clicks on QuickSuggest help buttons and learn-more links.
+// TODO (bug 1693671): Replace this URL with the final URL of the blog post.
+pref("browser.urlbar.quicksuggest.helpURL", "https://www.mozilla.org/");
+
+// How many times to show the QuickSuggest onboarding help button.
+pref("browser.urlbar.quicksuggest.onboardingCount", 0);
+pref("browser.urlbar.quicksuggest.onboardingMaxCount", 5);
 
 // Whether to show search suggestions before general results like history and
 // bookmarks.

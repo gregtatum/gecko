@@ -34,8 +34,6 @@ add_task(async function test_text_input() {
     null, // ignore clipboard state
     "context-delete",
     false,
-    "---",
-    null,
     "context-selectall",
     false,
     "---",
@@ -61,8 +59,6 @@ add_task(async function test_text_input_disabled() {
       null, // ignore clipboard state
       "context-delete",
       false,
-      "---",
-      null,
       "context-selectall",
       false,
       "---",
@@ -111,8 +107,6 @@ add_task(async function test_password_input() {
       null, // ignore clipboard state
       "context-delete",
       false,
-      "---",
-      null,
       "context-selectall",
       null,
     ],
@@ -178,8 +172,6 @@ add_task(async function test_tel_email_url_number_input() {
         null, // ignore clipboard state
         "context-delete",
         false,
-        "---",
-        null,
         "context-selectall",
         null,
       ],
@@ -238,8 +230,6 @@ add_task(
           null,
           "context-viewsource",
           true,
-          "context-viewinfo",
-          true,
         ],
         {
           // XXX Bug 1345081. Currently the Screenshots menu option is shown for
@@ -274,8 +264,6 @@ add_task(async function test_search_input() {
       null, // ignore clipboard state
       "context-delete",
       false,
-      "---",
-      null,
       "context-selectall",
       null,
       "---",
@@ -312,8 +300,6 @@ add_task(async function test_text_input_readonly() {
       null, // ignore clipboard state
       "context-delete",
       false,
-      "---",
-      null,
       "context-selectall",
       null,
     ],

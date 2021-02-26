@@ -47,6 +47,20 @@ TRRService* gTRRService = nullptr;
 StaticRefPtr<nsIThread> sTRRBackgroundThread;
 static Atomic<TRRService*> sTRRServicePtr;
 
+static Atomic<size_t, Relaxed> sDomainIndex(0);
+
+constexpr nsLiteralCString kTRRDomains[] = {
+    // clang-format off
+    "(other)"_ns,
+    "mozilla.cloudflare-dns.com"_ns,
+    "firefox.dns.nextdns.io"_ns,
+    "doh.xfinity.com"_ns,  // Steered clients
+    // clang-format on
+};
+
+// static
+const nsCString& TRRService::ProviderKey() { return kTRRDomains[sDomainIndex]; }
+
 NS_IMPL_ISUPPORTS(TRRService, nsIObserver, nsISupportsWeakReference)
 
 TRRService::TRRService()
@@ -105,17 +119,6 @@ bool TRRService::CheckCaptivePortalIsPassed() {
   return result;
 }
 
-constexpr auto kTRRIsAutoDetectedKey = "(auto-detected)"_ns;
-constexpr auto kTRRNotAutoDetectedKey = "(default)"_ns;
-// static
-const nsCString& TRRService::AutoDetectedKey() {
-  if (gTRRService && gTRRService->IsUsingAutoDetectedURL()) {
-    return kTRRIsAutoDetectedKey.AsString();
-  }
-
-  return kTRRNotAutoDetectedKey.AsString();
-}
-
 static void RemoveTRRBlocklistFile() {
   MOZ_ASSERT(NS_IsMainThread(), "Getting the profile dir on the main thread");
 
@@ -140,6 +143,12 @@ static void RemoveTRRBlocklistFile() {
     return;
   }
   Preferences::SetBool("network.trr.blocklist_cleanup_done", true);
+}
+
+static void EventTelemetryPrefChanged(const char* aPref, void* aData) {
+  Telemetry::SetEventRecordingEnabled(
+      "network.dns"_ns,
+      StaticPrefs::network_trr_confirmation_telemetry_enabled());
 }
 
 nsresult TRRService::Init() {
@@ -201,7 +210,9 @@ nsresult TRRService::Init() {
     return NS_ERROR_FAILURE;
   }
 
-  Telemetry::SetEventRecordingEnabled("network.dns"_ns, true);
+  Preferences::RegisterCallbackAndCall(
+      EventTelemetryPrefChanged,
+      "network.trr.confirmation_telemetry_enabled"_ns);
 
   LOG(("Initialized TRRService\n"));
   return NS_OK;
@@ -304,6 +315,30 @@ bool TRRService::MaybeSetPrivateURI(const nsACString& aURI) {
       bl->Clear();
       clearCache = true;
     }
+
+    nsCOMPtr<nsIURI> url;
+    nsresult rv =
+        NS_MutateURI(NS_STANDARDURLMUTATOR_CONTRACTID)
+            .Apply(NS_MutatorMethod(&nsIStandardURLMutator::Init,
+                                    nsIStandardURL::URLTYPE_STANDARD, 443,
+                                    newURI, nullptr, nullptr, nullptr))
+            .Finalize(url);
+    if (NS_FAILED(rv)) {
+      LOG(("TRRService::MaybeSetPrivateURI failed to create URI!\n"));
+      return false;
+    }
+
+    nsAutoCString host;
+    url->GetHost(host);
+
+    sDomainIndex = 0;
+    for (size_t i = 1; i < std::size(kTRRDomains); i++) {
+      if (host.Equals(kTRRDomains[i])) {
+        sDomainIndex = i;
+        break;
+      }
+    }
+
     mPrivateURI = newURI;
   }
 
@@ -869,7 +904,7 @@ void TRRService::AddToBlocklist(const nsACString& aHost,
   // this overwrites any existing entry
   {
     auto bl = mTRRBLStorage.Lock();
-    bl->Put(hashkey, NowInSeconds());
+    bl->InsertOrUpdate(hashkey, NowInSeconds());
   }
 
   if (aParentsToo) {
@@ -917,12 +952,11 @@ void TRRService::TRRIsOkay(enum TrrOkay aReason) {
   MOZ_ASSERT_IF(XRE_IsSocketProcess(), NS_IsMainThread());
 
   Telemetry::AccumulateCategoricalKeyed(
-      AutoDetectedKey(),
-      aReason == OKAY_NORMAL
-          ? Telemetry::LABELS_DNS_TRR_SUCCESS2::Fine
-          : (aReason == OKAY_TIMEOUT
-                 ? Telemetry::LABELS_DNS_TRR_SUCCESS2::Timeout
-                 : Telemetry::LABELS_DNS_TRR_SUCCESS2::Bad));
+      ProviderKey(), aReason == OKAY_NORMAL
+                         ? Telemetry::LABELS_DNS_TRR_SUCCESS3::Fine
+                         : (aReason == OKAY_TIMEOUT
+                                ? Telemetry::LABELS_DNS_TRR_SUCCESS3::Timeout
+                                : Telemetry::LABELS_DNS_TRR_SUCCESS3::Bad));
   if (aReason == OKAY_NORMAL) {
     mConfirmation.mTRRFailures = 0;
   } else if ((mMode == nsIDNSService::MODE_TRRFIRST) &&
@@ -1045,7 +1079,7 @@ void TRRService::ConfirmationContext::RequestCompleted(
 
 AHostResolver::LookupStatus TRRService::CompleteLookup(
     nsHostRecord* rec, nsresult status, AddrInfo* aNewRRSet, bool pb,
-    const nsACString& aOriginSuffix, nsHostRecord::TRRSkippedReason aReason,
+    const nsACString& aOriginSuffix, TRRSkippedReason aReason,
     TRR* aTRRRequest) {
   // this is an NS check for the TRR blocklist or confirmationNS check
 
@@ -1102,8 +1136,8 @@ AHostResolver::LookupStatus TRRService::CompleteLookup(
     if (mMode != nsIDNSService::MODE_TRRONLY) {
       // don't accumulate trr-only data here since we only care about
       // confirmation in trr-first mode
-      Telemetry::Accumulate(Telemetry::DNS_TRR_NS_VERFIFIED2,
-                            TRRService::AutoDetectedKey(),
+      Telemetry::Accumulate(Telemetry::DNS_TRR_NS_VERFIFIED3,
+                            TRRService::ProviderKey(),
                             (mConfirmation.mState == CONFIRM_OK));
     }
 

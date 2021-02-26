@@ -16,6 +16,7 @@
 #include "mozilla/layers/PTextureChild.h"
 #include "mozilla/layers/WebRenderLayerManager.h"
 #include "mozilla/webrender/WebRenderAPI.h"
+#include "PDMFactory.h"
 
 namespace mozilla {
 namespace layers {
@@ -290,7 +291,7 @@ Maybe<wr::FontInstanceKey> WebRenderBridgeChild::GetFontKeyForScaledFont(
     UpdateResources(resources.ref());
   }
 
-  mFontInstanceKeys.Put(aScaledFont, instanceKey);
+  mFontInstanceKeys.InsertOrUpdate(aScaledFont, instanceKey);
 
   return Some(instanceKey);
 }
@@ -319,7 +320,7 @@ Maybe<wr::FontKey> WebRenderBridgeChild::GetFontKeyForUnscaledFont(
       UpdateResources(resources.ref());
     }
 
-    mFontKeys.Put(aUnscaled, fontKey);
+    mFontKeys.InsertOrUpdate(aUnscaled, fontKey);
   }
 
   return Some(fontKey);
@@ -379,7 +380,7 @@ void WebRenderBridgeChild::Connect(CompositableClient* aCompositable,
   static uint64_t sNextID = 1;
   uint64_t id = sNextID++;
 
-  mCompositables.Put(id, aCompositable);
+  mCompositables.InsertOrUpdate(id, aCompositable);
 
   CompositableHandle handle(id);
   aCompositable->InitIPDL(handle);
@@ -557,9 +558,11 @@ ipc::IShmemAllocator* WebRenderBridgeChild::GetShmemAllocator() {
 RefPtr<KnowsCompositor> WebRenderBridgeChild::GetForMedia() {
   MOZ_ASSERT(NS_IsMainThread());
 
-  // Ensure devices initialization for video playback. The devices are lazily
-  // initialized with WebRender to reduce memory usage.
-  gfxPlatform::GetPlatform()->EnsureDevicesInitialized();
+  // Ensure device initialization for video playback unless they are all remote.
+  // The devices are lazily initialized with WebRender to reduce memory usage.
+  if (!PDMFactory::AllDecodersAreRemote()) {
+    gfxPlatform::GetPlatform()->EnsureDevicesInitialized();
+  }
 
   return MakeAndAddRef<KnowsCompositorMediaProxy>(
       GetTextureFactoryIdentifier());
@@ -607,8 +610,14 @@ void WebRenderBridgeChild::DeallocResourceShmem(RefCountedShmem& aShm) {
 }
 
 void WebRenderBridgeChild::Capture() { this->SendCapture(); }
-void WebRenderBridgeChild::ToggleCaptureSequence() {
-  this->SendToggleCaptureSequence();
+
+void WebRenderBridgeChild::StartCaptureSequence(const nsCString& aPath,
+                                                uint32_t aFlags) {
+  this->SendStartCaptureSequence(aPath, aFlags);
+}
+
+void WebRenderBridgeChild::StopCaptureSequence() {
+  this->SendStopCaptureSequence();
 }
 
 }  // namespace layers

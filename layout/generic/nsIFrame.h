@@ -656,6 +656,8 @@ class nsIFrame : public nsQueryFrame {
   typedef mozilla::LogicalSides LogicalSides;
   typedef mozilla::SmallPointerArray<mozilla::DisplayItemData>
       DisplayItemDataArray;
+  typedef mozilla::SmallPointerArray<nsDisplayItemBase> DisplayItemArray;
+
   typedef nsQueryFrame::ClassID ClassID;
 
   // nsQueryFrame
@@ -1298,8 +1300,6 @@ class nsIFrame : public nsQueryFrame {
 
   nsPoint GetPositionIgnoringScrolling() const;
 
-  typedef AutoTArray<nsDisplayItemBase*, 4> DisplayItemArray;
-
 #define NS_DECLARE_FRAME_PROPERTY_WITH_DTOR(prop, type, dtor)              \
   static const mozilla::FramePropertyDescriptor<type>* prop() {            \
     /* Use of constexpr caused startup crashes with MSVC2015u1 PGO. */     \
@@ -1392,8 +1392,6 @@ class nsIFrame : public nsQueryFrame {
   NS_DECLARE_FRAME_PROPERTY_SMALL_VALUE(IBaselinePadProperty, nscoord)
   NS_DECLARE_FRAME_PROPERTY_SMALL_VALUE(BBaselinePadProperty, nscoord)
 
-  NS_DECLARE_FRAME_PROPERTY_DELETABLE(DisplayItems, DisplayItemArray)
-
   NS_DECLARE_FRAME_PROPERTY_SMALL_VALUE(BidiDataProperty,
                                         mozilla::FrameBidiData)
 
@@ -1401,6 +1399,9 @@ class nsIFrame : public nsQueryFrame {
                                          nsPlaceholderFrame)
 
   NS_DECLARE_FRAME_PROPERTY_RELEASABLE(OffsetPathCache, mozilla::gfx::Path)
+
+  NS_DECLARE_FRAME_PROPERTY_DELETABLE(DisplayItemDataProperty,
+                                      DisplayItemDataArray)
 
   mozilla::FrameBidiData GetBidiData() const {
     bool exists;
@@ -2179,6 +2180,11 @@ class nsIFrame : public nsQueryFrame {
       nsPresContext* aPresContext, mozilla::WidgetGUIEvent* aEvent,
       nsEventStatus* aEventStatus, bool aControlHeld);
 
+  /**
+   * @param aPresContext must be non-nullptr.
+   * @param aEvent must be non-nullptr.
+   * @param aEventStatus must be non-nullptr.
+   */
   MOZ_CAN_RUN_SCRIPT
   NS_IMETHOD HandleDrag(nsPresContext* aPresContext,
                         mozilla::WidgetGUIEvent* aEvent,
@@ -4790,10 +4796,12 @@ class nsIFrame : public nsQueryFrame {
                              aSize.AsExtremumLength(), aFlags);
   }
 
-  DisplayItemDataArray& DisplayItemData() { return mDisplayItemData; }
-  const DisplayItemDataArray& DisplayItemData() const {
-    return mDisplayItemData;
+  DisplayItemDataArray* DisplayItemData() const {
+    return GetProperty(nsIFrame::DisplayItemDataProperty());
   }
+
+  DisplayItemArray& DisplayItems() { return mDisplayItems; }
+  const DisplayItemArray& DisplayItems() const { return mDisplayItems; }
 
   void AddDisplayItem(nsDisplayItemBase* aItem);
   bool RemoveDisplayItem(nsDisplayItemBase* aItem);
@@ -4977,7 +4985,7 @@ class nsIFrame : public nsQueryFrame {
   nsIFrame* mNextSibling;  // doubly-linked list of frames
   nsIFrame* mPrevSibling;  // Do not touch outside SetNextSibling!
 
-  DisplayItemDataArray mDisplayItemData;
+  DisplayItemArray mDisplayItems;
 
   void MarkAbsoluteFramesForDisplayList(nsDisplayListBuilder* aBuilder);
 

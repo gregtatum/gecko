@@ -1688,7 +1688,7 @@ void ScrollFrameHelper::ScrollByLine(
 }
 
 void ScrollFrameHelper::RepeatButtonScroll(nsScrollbarFrame* aScrollbar) {
-  aScrollbar->MoveToNewPosition();
+  aScrollbar->MoveToNewPosition(nsScrollbarFrame::ImplementsScrollByUnit::Yes);
 }
 
 void ScrollFrameHelper::ThumbMoved(nsScrollbarFrame* aScrollbar,
@@ -3486,7 +3486,7 @@ static void ClipItemsExceptCaret(
         i->SetClipChain(intersection, true);
       } else {
         i->IntersectClip(aBuilder, aExtraClip, true);
-        aCache.Put(clip, i->GetClipChain());
+        aCache.InsertOrUpdate(clip, i->GetClipChain());
       }
     }
     nsDisplayList* children = i->GetSameCoordinateSystemChildren();
@@ -4112,18 +4112,15 @@ void ScrollFrameHelper::BuildDisplayList(nsDisplayListBuilder* aBuilder,
       int32_t zIndex = MaxZIndexInListOfItemsContainedInFrame(
           scrolledContent.PositionedDescendants(), mOuter);
       if (aBuilder->IsPartialUpdate()) {
-        if (auto* items =
-                mScrolledFrame->GetProperty(nsIFrame::DisplayItems())) {
-          for (nsDisplayItemBase* item : *items) {
-            if (item->GetType() ==
-                DisplayItemType::TYPE_COMPOSITOR_HITTEST_INFO) {
-              auto* hitTestItem =
-                  static_cast<nsDisplayCompositorHitTestInfo*>(item);
-              if (hitTestItem->GetHitTestInfo().Info().contains(
-                      CompositorHitTestFlags::eInactiveScrollframe)) {
-                zIndex = std::max(zIndex, hitTestItem->ZIndex());
-                item->SetCantBeReused();
-              }
+        for (nsDisplayItemBase* item : mScrolledFrame->DisplayItems()) {
+          if (item->GetType() ==
+              DisplayItemType::TYPE_COMPOSITOR_HITTEST_INFO) {
+            auto* hitTestItem =
+                static_cast<nsDisplayCompositorHitTestInfo*>(item);
+            if (hitTestItem->GetHitTestInfo().Info().contains(
+                    CompositorHitTestFlags::eInactiveScrollframe)) {
+              zIndex = std::max(zIndex, hitTestItem->ZIndex());
+              item->SetCantBeReused();
             }
           }
         }

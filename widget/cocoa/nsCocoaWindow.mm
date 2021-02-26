@@ -2442,15 +2442,17 @@ void nsCocoaWindow::SetDrawsInTitlebar(bool aState) {
 }
 
 NS_IMETHODIMP nsCocoaWindow::SynthesizeNativeMouseEvent(LayoutDeviceIntPoint aPoint,
-                                                        uint32_t aNativeMessage,
-                                                        uint32_t aModifierFlags,
+                                                        NativeMouseMessage aNativeMessage,
+                                                        MouseButton aButton,
+                                                        nsIWidget::Modifiers aModifierFlags,
                                                         nsIObserver* aObserver) {
   NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
 
   AutoObserverNotifier notifier(aObserver, "mouseevent");
-  if (mPopupContentView)
-    return mPopupContentView->SynthesizeNativeMouseEvent(aPoint, aNativeMessage, aModifierFlags,
-                                                         nullptr);
+  if (mPopupContentView) {
+    return mPopupContentView->SynthesizeNativeMouseEvent(aPoint, aNativeMessage, aButton,
+                                                         aModifierFlags, nullptr);
+  }
 
   return NS_OK;
 

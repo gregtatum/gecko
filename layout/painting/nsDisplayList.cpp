@@ -139,12 +139,7 @@ static bool SpammyLayoutWarningsEnabled() {
 
 #ifdef MOZ_DIAGNOSTIC_ASSERT_ENABLED
 void AssertUniqueItem(nsDisplayItem* aItem) {
-  nsIFrame::DisplayItemArray* items =
-      aItem->Frame()->GetProperty(nsIFrame::DisplayItems());
-  if (!items) {
-    return;
-  }
-  for (nsDisplayItemBase* i : *items) {
+  for (nsDisplayItemBase* i : aItem->Frame()->DisplayItems()) {
     if (i != aItem && !i->HasDeletedFrame() && i->Frame() == aItem->Frame() &&
         i->GetPerFrameKey() == aItem->GetPerFrameKey()) {
       if (i->IsPreProcessedItem()) {
@@ -159,19 +154,6 @@ void AssertUniqueItem(nsDisplayItem* aItem) {
 bool ShouldBuildItemForEvents(const DisplayItemType aType) {
   return aType == DisplayItemType::TYPE_COMPOSITOR_HITTEST_INFO ||
          (GetDisplayItemFlagsForType(aType) & TYPE_IS_CONTAINER);
-}
-
-void UpdateDisplayItemData(nsPaintedDisplayItem* aItem) {
-  for (mozilla::DisplayItemData* did : aItem->Frame()->DisplayItemData()) {
-    if (did->GetDisplayItemKey() == aItem->GetPerFrameKey() &&
-        did->GetLayer()->AsPaintedLayer()) {
-      if (!did->HasMergedFrames()) {
-        aItem->SetDisplayItemData(did, did->GetLayer()->Manager());
-      }
-
-      return;
-    }
-  }
 }
 
 static bool ItemTypeSupportsHitTesting(const DisplayItemType aType) {
@@ -667,7 +649,7 @@ static PresShell* GetFocusedPresShell() {
 void nsDisplayListBuilder::BeginFrame() {
   nsCSSRendering::BeginFrameTreesLocked();
   mCurrentAGR = mRootAGR;
-  mFrameToAnimatedGeometryRootMap.Put(mReferenceFrame, mRootAGR);
+  mFrameToAnimatedGeometryRootMap.InsertOrUpdate(mReferenceFrame, mRootAGR);
 
   mIsPaintingToWindow = false;
   mUseHighQualityScaling = false;
@@ -808,7 +790,8 @@ AnimatedGeometryRoot* nsDisplayListBuilder::WrapAGRForFrame(
     }
     result = AnimatedGeometryRoot::CreateAGRForFrame(
         aAnimatedGeometryRoot, parent, aIsAsync, IsRetainingDisplayList());
-    mFrameToAnimatedGeometryRootMap.Put(aAnimatedGeometryRoot, result);
+    mFrameToAnimatedGeometryRootMap.InsertOrUpdate(aAnimatedGeometryRoot,
+                                                   result);
   }
   MOZ_ASSERT(!aParent || result->mParentAGR == aParent);
   return result;
@@ -839,7 +822,7 @@ AnimatedGeometryRoot* nsDisplayListBuilder::FindAnimatedGeometryRootFor(
   bool isAsync;
   nsIFrame* agrFrame = FindAnimatedGeometryRootFrameFor(aFrame, isAsync);
   result = WrapAGRForFrame(agrFrame, isAsync);
-  mFrameToAnimatedGeometryRootMap.Put(aFrame, result);
+  mFrameToAnimatedGeometryRootMap.InsertOrUpdate(aFrame, result);
   return result;
 }
 
@@ -1953,15 +1936,15 @@ bool nsDisplayListBuilder::AddToWillChangeBudget(nsIFrame* aFrame,
   const uint32_t cost = GetLayerizationCost(aSize);
 
   DocumentWillChangeBudget& documentBudget =
-      mDocumentWillChangeBudgets.GetOrInsert(presContext);
+      mDocumentWillChangeBudgets.LookupOrInsert(presContext);
 
   const bool onBudget =
       (documentBudget + cost) / gWillChangeAreaMultiplier < budgetLimit;
 
   if (onBudget) {
     documentBudget += cost;
-    mFrameWillChangeBudgets.Put(aFrame,
-                                FrameWillChangeBudget(presContext, cost));
+    mFrameWillChangeBudgets.InsertOrUpdate(
+        aFrame, FrameWillChangeBudget(presContext, cost));
     aFrame->SetMayHaveWillChangeBudget(true);
   }
 
