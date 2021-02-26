@@ -765,7 +765,7 @@
         <toolbarbutton id="appMenu-companion-button"
                        class="subviewbutton subviewbutton-iconic"
                        label="Open Firefox Companion"
-                       oncommand="CompanionService.openCompanion()"/>
+                       oncommand="Browser:OpenCompanion"/>
         <toolbarseparator class="sync-ui-item"/>
         <toolbaritem>
           <toolbarbutton id="appMenu-protection-report-button"
@@ -2092,6 +2092,13 @@
                         <image id="fxa-avatar-image"/>
                        </vbox>
         </toolbarbutton>
+        <toolbarbutton id="companion-button" class="toolbarbutton-1 chromeclass-toolbar-additional subviewbutton-nav"
+                       removable="true"
+                       command="Browser:OpenCompanion"
+                       closemenu="none"
+                       cui-areatype="toolbar"
+                       tooltiptext="Companion"
+                       label="Companion"/>
       </hbox>
 
       <toolbarbutton id="nav-bar-overflow-button"

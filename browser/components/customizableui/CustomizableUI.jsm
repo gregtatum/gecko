@@ -263,8 +263,9 @@ var CustomizableUIInternal = {
       "downloads-button",
       gProtonToolbarEnabled ? null : "library-button",
       AppConstants.MOZ_DEV_EDITION ? "developer-button" : null,
-      "sidebar-button",
+      AppConstants.COMPANION_UI_ENABLED ? null : "sidebar-button",
       "fxa-toolbar-menu-button",
+      AppConstants.COMPANION_UI_ENABLED ? "companion-button" : null,
     ].filter(name => name);
 
     this.registerArea(

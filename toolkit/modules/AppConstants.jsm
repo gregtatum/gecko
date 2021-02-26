@@ -14,6 +14,8 @@ this.EXPORTED_SYMBOLS = ["AppConstants"];
 
 // Immutable for export.
 this.AppConstants = Object.freeze({
+  COMPANION_UI_ENABLED: true,
+
   // See this wiki page for more details about channel specific build
   // defines: https://wiki.mozilla.org/Platform/Channel-specific_build_defines
   NIGHTLY_BUILD:

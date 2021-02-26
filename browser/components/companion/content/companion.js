@@ -6,6 +6,7 @@
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
 XPCOMUtils.defineLazyModuleGetters(this, {
+  BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   Keyframes: "resource:///modules/Keyframes.jsm",
   OS: "resource://gre/modules/osfile.jsm",
   Sqlite: "resource://gre/modules/Sqlite.jsm",
@@ -295,6 +296,13 @@ function onLoad() {
 
   update();
   Services.obs.addObserver(update, "keyframe-update");
+
+  document.addEventListener("keydown", e => {
+    if (e.key == "e" && e.metaKey) {
+      let browserWindow = BrowserWindowTracker.getTopWindow();
+      browserWindow?.focus();
+    }
+  })
 
   window.addEventListener("unload", onUnload, { once: true });
 

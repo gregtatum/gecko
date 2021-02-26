@@ -22,6 +22,7 @@
     <command id="cmd_newNavigatorTab" oncommand="BrowserOpenTab(event);"/>
     <command id="cmd_newNavigatorTabNoEvent" oncommand="BrowserOpenTab();"/>
     <command id="Browser:OpenFile"  oncommand="BrowserOpenFileWindow();"/>
+    <command id="Browser:OpenCompanion"  oncommand="CompanionService.openCompanion();"/>
     <command id="Browser:SavePage" oncommand="saveBrowser(gBrowser.selectedBrowser);"/>
 
     <command id="Browser:SendLink"
@@ -170,6 +171,7 @@
          modifiers="accel"
 #endif
          command="Tools:Downloads"/>
+    <key id="key_companion" key="e" command="Browser:OpenCompanion" modifiers="accel"/>
     <key id="key_openAddons" data-l10n-id="addons-shortcut" command="Tools:Addons" modifiers="accel,shift"/>
     <key id="openFileKb" data-l10n-id="file-open-shortcut" command="Browser:OpenFile"  modifiers="accel"/>
     <key id="key_savePage" data-l10n-id="save-page-shortcut" command="Browser:SavePage" modifiers="accel"/>
