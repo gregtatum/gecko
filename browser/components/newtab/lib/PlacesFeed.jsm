@@ -29,11 +29,6 @@ ChromeUtils.defineModuleGetter(
   "PrivateBrowsingUtils",
   "resource://gre/modules/PrivateBrowsingUtils.jsm"
 );
-ChromeUtils.defineModuleGetter(
-  this,
-  "Engagement",
-  "resource:///modules/Engagement.jsm"
-);
 
 const LINK_BLOCKED_EVENT = "newtab-linkBlocked";
 const PLACES_LINKS_CHANGED_DELAY_TIME = 1000; // time in ms to delay timer for places links changed events
@@ -534,7 +529,6 @@ class PlacesFeed {
         this.handoffSearchToAwesomebar(action);
         break;
       case at.OPEN_LINK: {
-        Engagement.delayEngage(action.data.url, "newtab");
         this.openLink(action);
         break;
       }

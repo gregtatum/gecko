@@ -36,8 +36,6 @@ const DOMWINDOW_OPENED_TOPIC = "domwindowopened";
 let Engagement = {
   _engagements: new Map(),
 
-  _currentURL: null,
-
   _delayedEngagements: new Map(),
 
   _inited: false,
@@ -78,18 +76,20 @@ let Engagement = {
             return;
           }
           let url = tab.linkedBrowser.currentURI.specIgnoringRef;
-          if (!this._engagements.has(url)) {
-            this.engage({ url });
+          let contextId = tab.linkedBrowser.browsingContext.id;
+          let engagementId = `${contextId}: ${url}`;
+          if (!this._engagements.has(engagementId)) {
+            this.engage({ url, contextId });
           }
-          this._currentURL = tab.linkedBrowser.currentURI.specIgnoringRef;
+          this._currentContextId = contextId;
         }
         break;
       case "activate":
         if (event.target instanceof Ci.nsIDOMWindow) {
           let win = event.target;
           if (win.gBrowser) {
-            this._currentURL =
-              win.gBrowser.selectedTab.linkedBrowser.currentURI.specIgnoringRef;
+            this._currentContextId =
+              win.gBrowser.selectedTab.linkedBrowser.browsingContext.id;
             this.startEngagementTimer();
           }
         }
@@ -182,11 +182,13 @@ let Engagement = {
   },
 
   async processEngagements() {
-    Engagement._engagements.forEach(function(engagementData, url) {
-      if (Engagement._currentURL == url) {
+    let engagementId, engagementData;
+    for ([engagementId, engagementData] of Engagement._engagements) {
+      if (Engagement._currentContextId == engagementData.contextId) {
         engagementData.lastTimeOnPage = new Date().getTime();
         engagementData.totalEngagement += ENGAGEMENT_TIMER_INTERVAL;
-        if (engagementData.addedKeyframe) {
+        if (engagementData.id) {
+          // Already in database
           return;
         }
         let engagementTimer =
@@ -194,10 +196,9 @@ let Engagement = {
             ? PASSIVE_ENGAGEMENT_TIMER
             : ACTIVE_ENGAGEMENT_TIMER;
         if (engagementData.totalEngagement > engagementTimer) {
-          engagementData.addedKeyframe = true;
-          log.debug(`Adding ${url} to database`);
-          Keyframes.addOrUpdate(
-            url,
+          log.debug(`Adding ${engagementData.url} to database`);
+          engagementData.id = await Keyframes.add(
+            engagementData.url,
             engagementData.type,
             engagementData.startTimeOnPage,
             engagementData.lastTimeOnPage,
@@ -205,35 +206,52 @@ let Engagement = {
             0
           );
         }
-        Engagement._engagements.set(url, engagementData);
+        Engagement._engagements.set(engagementId, engagementData);
       }
-    });
+    }
   },
 
   async engage(msg) {
+    log.debug("engage " + msg.url);
     let uri = Services.io.newURI(msg.url);
     if (!this.isHttpURI(uri)) {
       return;
     }
     let url = uri.specIgnoringRef;
-    let engagementData = this._engagements.get(url);
-    if (engagementData) {
-      engagementData.engagedPages += 1;
-    } else {
-      let type = this._delayedEngagements.get(url) || "automatic";
-      this._delayedEngagements.delete(url);
-      engagementData = {
-        type,
-        startTimeOnPage: new Date().getTime(),
-        lastTimeOnPage: new Date().getTime(),
-        totalEngagement: 0,
-        engagedPages: 1,
-      };
+    let contextId = msg.contextId;
+
+    if (contextId == this._currentContextId) {
+      // engage without disengage
+      // find and disengage
+      let engagementId, engagementData;
+      // eslint-disable-next-line no-unused-vars
+      for ([engagementId, engagementData] of Engagement._engagements) {
+        if (Engagement._currentContextId == engagementData.contextId) {
+          this.disengage({
+            url: engagementData.url,
+            contextId: engagementData.contextId,
+          });
+          break;
+        }
+      }
     }
-    this._engagements.set(url, engagementData);
+
+    let engagementId = `${contextId}: ${url}`;
+    let engagementData = this._engagements.get(engagementId);
+    let type = this._delayedEngagements.get(url) || "automatic";
+    this._delayedEngagements.delete(url);
+    engagementData = {
+      url,
+      type,
+      startTimeOnPage: new Date().getTime(),
+      lastTimeOnPage: new Date().getTime(),
+      totalEngagement: 0,
+      contextId,
+    };
+    this._engagements.set(engagementId, engagementData);
 
     if (msg.isActive) {
-      this._currentURL = url;
+      this._currentContextId = contextId;
     }
   },
 
@@ -243,28 +261,23 @@ let Engagement = {
       return;
     }
     let url = uri.specIgnoringRef;
-    let engagementData = Engagement._engagements.get(url);
-    if (engagementData) {
-      if (engagementData.engagedPages == 1) {
-        if (engagementData.addedKeyframe) {
-          log.debug(`Updating ${url} in database`);
-          Keyframes.addOrUpdate(
-            url,
-            "automatic",
-            engagementData.startTimeOnPage,
-            engagementData.lastTimeOnPage,
-            engagementData.totalEngagement
-          );
-        }
-        this._engagements.delete(url);
-      } else {
-        engagementData.engagedPages -= 1;
-        this._engagements.set(url, engagementData);
-      }
-    }
+    let contextId = msg.contextId;
+    let engagementId = `${contextId}: ${url}`;
 
-    if (this._currentURL == url) {
-      this.currentURL = null;
+    let engagementData = Engagement._engagements.get(engagementId);
+    if (engagementData) {
+      if (engagementData.id) {
+        log.debug(`Updating ${url} in database`);
+        Keyframes.update(
+          engagementData.id,
+          engagementData.lastTimeOnPage,
+          engagementData.totalEngagement
+        );
+      }
+      this._engagements.delete(engagementId);
+      if (this._currentContextId == engagementData.contextId) {
+        this._currentContextId = 0;
+      }
     }
   },
 
@@ -282,26 +295,29 @@ let Engagement = {
   },
 
   /* If we know something is going to be added, use this. */
-  async manualEngage(url, type) {
-    let uri = Services.io.newURI(url);
+  async manualEngage(msg) {
+    let uri = Services.io.newURI(msg.url);
     if (!this.isHttpURI(uri)) {
       return;
     }
-    url = uri.specIgnoringRef;
-    let engagementData = this._engagements.get(url);
-    if (engagementData.addedKeyframe) {
-      // NEED TO ADD NEW TYPE HERE
-      return;
+    let url = uri.specIgnoringRef;
+    let contextId = msg.contextId;
+    let engagementId = `${contextId}: ${url}`;
+
+    let engagementData = this._engagements.get(engagementId);
+    if (engagementData.id) {
+      Keyframes.updateType(engagementData.id, "manual");
+    } else {
+      log.debug(`Adding ${url} to database`);
+      engagementData.id = await Keyframes.add(
+        url,
+        "manual",
+        engagementData.startTimeOnPage,
+        engagementData.lastTimeOnPage,
+        // totalEngagement will be added when the page is unloaded
+        0
+      );
+      Engagement._engagements.set(engagementId, engagementData);
     }
-    engagementData.addedKeyframe = true;
-    log.debug(`Adding ${url} to database`);
-    Keyframes.addOrUpdate(
-      url,
-      engagementData.type,
-      engagementData.startTimeOnPage,
-      engagementData.lastTimeOnPage,
-      // totalEngagement will be added when the page is unloaded
-      0
-    );
   },
 };

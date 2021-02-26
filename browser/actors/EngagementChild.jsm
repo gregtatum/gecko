@@ -10,12 +10,13 @@ const { PrivateBrowsingUtils } = ChromeUtils.import(
 );
 
 class EngagementChild extends JSWindowActorChild {
-  actorCreated() {
-    this.initWebProgressListener();
-  }
-
   initWebProgressListener() {
-    const webProgress = this.manager.browsingContext.top.docShell
+    if (this.inited) {
+      return;
+    }
+    this.inited = true;
+
+    const webProgress = this.docShell
       .QueryInterface(Ci.nsIInterfaceRequestor)
       .getInterface(Ci.nsIWebProgress);
 
@@ -27,7 +28,21 @@ class EngagementChild extends JSWindowActorChild {
     };
 
     listener.onLocationChange = (aWebProgress, aRequest, aLocation, aFlags) => {
-      //      this.sendAsyncMessage("Engagement:Log", "LOCATIONCHANGE");
+      if (PrivateBrowsingUtils.isContentWindowPrivate(this.contentWindow)) {
+        return;
+      }
+
+      if (!aWebProgress.isTopLevel) {
+        return;
+      }
+      let docInfo = {};
+      docInfo.url = aLocation.specIgnoringRef;
+      let context = this.manager.browsingContext;
+      if (docInfo) {
+        docInfo.isActive = context.isActive;
+        docInfo.contextId = this.browsingContext.id;
+        this.sendAsyncMessage("Engagement:Engage", docInfo);
+      }
     };
 
     webProgress.addProgressListener(
@@ -70,9 +85,11 @@ class EngagementChild extends JSWindowActorChild {
         break;
       }
       case "DOMContentLoaded": {
+        this.initWebProgressListener();
         if (
-          this.docShell.currentDocumentChannel.QueryInterface(Ci.nsIHttpChannel)
-            .responseStatus == 404
+          this.docShell.currentDocumentChannel?.QueryInterface(
+            Ci.nsIHttpChannel
+          ).responseStatus == 404
         ) {
           return;
         }
@@ -80,19 +97,22 @@ class EngagementChild extends JSWindowActorChild {
         let context = this.manager.browsingContext;
         if (docInfo) {
           docInfo.isActive = context.isActive;
+          docInfo.contextId = this.browsingContext.id;
           this.sendAsyncMessage("Engagement:Engage", docInfo);
         }
         break;
       }
       case "pagehide": {
         if (
-          this.docShell.currentDocumentChannel.QueryInterface(Ci.nsIHttpChannel)
-            .responseStatus == 404
+          this.docShell.currentDocumentChannel?.QueryInterface(
+            Ci.nsIHttpChannel
+          ).responseStatus == 404
         ) {
           return;
         }
         let docInfo = await this.getDocumentInfo();
         if (docInfo) {
+          docInfo.contextId = this.browsingContext.id;
           this.sendAsyncMessage("Engagement:Disengage", docInfo);
         }
         break;

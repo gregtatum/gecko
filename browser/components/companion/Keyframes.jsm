@@ -36,7 +36,7 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 });
 */
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 7;
 
 /**
  * All SQL statements should be defined here.
@@ -48,7 +48,7 @@ const SQL = {
     "CREATE TABLE keyframes (" +
     "id INTEGER PRIMARY KEY, " +
     "timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
-    "url TEXT NOT NULL, " +
+    "url TEXT NOT NULL," +
     "type TEXT NOT NULL, " +
     "firstVisit INTEGER NOT NULL, " +
     "lastVisit INTEGER NOT NULL, " +
@@ -58,9 +58,13 @@ const SQL = {
   add:
     "INSERT INTO keyframes (url, type, firstVisit, lastVisit, totalEngagement) VALUES (:url, :type, :firstVisit, :lastVisit, :totalEngagement);",
 
-  exists: "SELECT * FROM keyframes WHERE url = :url;",
+  getId:
+    "SELECT id FROM keyframes WHERE url = (:url) AND type = (:type) AND firstVisit = (:firstVisit);",
 
-  selectAll: "SELECT * FROM keyframes;",
+  exists: "SELECT * FROM keyframes WHERE id = :id;",
+
+  selectAll:
+    "SELECT id, url, max(lastVisit) AS lastVisit, totalEngagement FROM keyframes GROUP BY url;",
 };
 
 function int(dateStr) {
@@ -74,29 +78,35 @@ function int(dateStr) {
 var Keyframes = {
   _db: null,
 
-  async addOrUpdate(url, type, firstVisit, lastVisit, totalEngagement) {
+  async add(url, type, firstVisit, lastVisit, totalEngagement) {
     if (!this._db) {
       await this.init();
     }
-    let existingRows = await this._db.executeCached(SQL.exists, { url });
-    if (existingRows.length) {
-      for (let row of existingRows) {
-        let id = row.getResultByName("id");
-        let currentEngagement = row.getResultByName("totalEngagement");
-        let newTotalEngagement =
-          parseInt(currentEngagement) + parseInt(totalEngagement);
-        let sql = `UPDATE keyframes SET lastVisit = '${lastVisit}', totalEngagement = '${newTotalEngagement}' WHERE id = '${id}'`;
-        await this._db.executeCached(sql);
-      }
-    } else {
-      await this._db.executeCached(SQL.add, {
-        url,
-        type,
-        firstVisit,
-        lastVisit,
-        totalEngagement,
-      });
-    }
+    await this._db.executeCached(SQL.add, {
+      url,
+      type,
+      firstVisit,
+      lastVisit,
+      totalEngagement,
+    });
+    let rows = await this._db.executeCached(SQL.getId, {
+      url,
+      type,
+      firstVisit,
+    });
+    Services.obs.notifyObservers(null, "keyframe-update");
+    return rows.length ? rows[0].getResultByName("id") : null;
+  },
+
+  async update(id, lastVisit, totalEngagement) {
+    let sql = `UPDATE keyframes SET lastVisit = '${lastVisit}', totalEngagement = '${totalEngagement}' WHERE id = '${id}'`;
+    await this._db.executeCached(sql);
+    Services.obs.notifyObservers(null, "keyframe-update");
+  },
+
+  async updateType(id, newType) {
+    let sql = `UPDATE keyframes SET type = '${newType}' WHERE id = '${id}'`;
+    await this._db.executeCached(sql);
     Services.obs.notifyObservers(null, "keyframe-update");
   },
 
