@@ -17,6 +17,7 @@ const { AppConstants } = ChromeUtils.import(
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
+  Engagement: "resource:///modules/Engagement.jsm",
   HeadlessShell: "resource:///modules/HeadlessShell.jsm",
   HomePage: "resource:///modules/HomePage.jsm",
   FirstStartup: "resource://gre/modules/FirstStartup.jsm",
@@ -912,6 +913,11 @@ function handURIToExistingBrowser(
   // windows only if we're in perma-private mode.
   var allowPrivate =
     forcePrivate || PrivateBrowsingUtils.permanentPrivateBrowsing;
+
+  if (!forcePrivate) {
+    Engagement.delayEngage(uri.spec, "external");
+  }
+
   var navWin = BrowserWindowTracker.getTopWindow({ private: allowPrivate });
   if (!navWin) {
     // if we couldn't load it in an existing window, open a new one
