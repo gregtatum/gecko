@@ -87,12 +87,16 @@ class EngagementChild extends JSWindowActorChild {
       case "DOMContentLoaded": {
         this.initWebProgressListener();
         if (
-          this.docShell.currentDocumentChannel?.QueryInterface(
-            Ci.nsIHttpChannel
-          ).responseStatus == 404
+          !this.docShell.currentDocumentChannel ||
+          !(this.docShell.currentDocumentChannel instanceof Ci.nsIHttpChannel)
         ) {
           return;
         }
+
+        if (this.docShell.currentDocumentChannel.responseStatus == 404) {
+          return;
+        }
+
         let docInfo = await this.getDocumentInfo();
         let context = this.manager.browsingContext;
         if (docInfo) {
