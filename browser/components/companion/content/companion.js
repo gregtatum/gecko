@@ -302,7 +302,7 @@ function onLoad() {
       let browserWindow = BrowserWindowTracker.getTopWindow();
       browserWindow?.focus();
     }
-  })
+  });
 
   window.addEventListener("unload", onUnload, { once: true });
 
