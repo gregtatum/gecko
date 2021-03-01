@@ -78,6 +78,7 @@ let Engagement = {
           let url = tab.linkedBrowser.currentURI.specIgnoringRef;
           let contextId = tab.linkedBrowser.browsingContext.id;
           let engagementId = `${contextId}: ${url}`;
+          log.debug(`Switch to id ${engagementId}`);
           if (!this._engagements.has(engagementId)) {
             this.engage({ url, contextId });
           }
@@ -237,18 +238,19 @@ let Engagement = {
     }
 
     let engagementId = `${contextId}: ${url}`;
-    let engagementData = this._engagements.get(engagementId);
-    let type = this._delayedEngagements.get(url) || "automatic";
-    this._delayedEngagements.delete(url);
-    engagementData = {
-      url,
-      type,
-      startTimeOnPage: new Date().getTime(),
-      lastTimeOnPage: new Date().getTime(),
-      totalEngagement: 0,
-      contextId,
-    };
-    this._engagements.set(engagementId, engagementData);
+    if (!this._engagements.has(engagementId)) {
+      let type = this._delayedEngagements.get(url) || "automatic";
+      this._delayedEngagements.delete(url);
+      let engagementData = {
+        url,
+        type,
+        startTimeOnPage: new Date().getTime(),
+        lastTimeOnPage: new Date().getTime(),
+        totalEngagement: 0,
+        contextId,
+      };
+      this._engagements.set(engagementId, engagementData);
+    }
 
     if (msg.isActive) {
       this._currentContextId = contextId;

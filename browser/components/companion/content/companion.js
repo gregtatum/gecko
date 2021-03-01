@@ -119,6 +119,23 @@ function openUrl(url) {
   openTrustedLinkIn(url, "tab");
 }
 
+function textForTime(time) {
+  time = Math.floor(time / 1000);
+
+  if (time == 1) {
+    return "1 second";
+  }
+  if (time <= 60) {
+    return `${time} seconds`;
+  }
+
+  time = Math.floor(time / 60);
+  if (time == 1) {
+    return "1 minute";
+  }
+  return `${time} minutes`;
+}
+
 class KeyFrame extends HTMLElement {
   constructor(data) {
     super();
@@ -133,6 +150,9 @@ class KeyFrame extends HTMLElement {
     fragment.querySelector(".favicon").src = this.data.icon;
     fragment.querySelector(".title").textContent = this.data.title;
     fragment.querySelector(".title").setAttribute("title", this.data.title);
+    fragment.querySelector(".total-engagement").textContent = textForTime(
+      this.data.totalEngagement
+    );
     fragment.querySelector(".last-access").textContent = timeFormat.format(
       this.data.lastVisit
     );

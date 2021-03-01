@@ -64,7 +64,7 @@ const SQL = {
   exists: "SELECT * FROM keyframes WHERE id = :id;",
 
   selectAll:
-    "SELECT id, url, max(lastVisit) AS lastVisit, totalEngagement FROM keyframes GROUP BY url;",
+    "SELECT id, url, max(lastVisit) AS lastVisit, sum(totalEngagement) as totalEngagement FROM keyframes GROUP BY url;",
 };
 
 function int(dateStr) {

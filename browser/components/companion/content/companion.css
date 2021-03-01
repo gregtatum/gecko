@@ -161,7 +161,8 @@ body {
   margin: 0;
 }
 
-.keyframe .last-access {
+.keyframe .last-access,
+.keyframe .total-engagement {
   padding-left: 5px;
   margin: 0;
 }
