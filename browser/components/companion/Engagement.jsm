@@ -27,8 +27,8 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
   });
 });
 
-const PASSIVE_ENGAGEMENT_TIMER = 10 * 1000; // 10 seconds
-const ACTIVE_ENGAGEMENT_TIMER = 2 * 1000; // 10 seconds
+const PASSIVE_ENGAGEMENT_TIMER = 30 * 1000; // 10 seconds
+const ACTIVE_ENGAGEMENT_TIMER = 10 * 1000; // 10 seconds
 const ENGAGEMENT_TIMER_INTERVAL = 1000;
 
 const DOMWINDOW_OPENED_TOPIC = "domwindowopened";
