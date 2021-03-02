@@ -20,10 +20,10 @@ class EngagementParent extends JSWindowActorParent {
       Engagement.reportError(msg.data);
     }
     if (msg.name == "Engagement:Engage") {
-      Engagement.engage(msg.data);
+      Engagement.engage(this.browsingContext.embedderElement, msg.data);
     }
     if (msg.name == "Engagement:Disengage") {
-      Engagement.disengage(msg.data);
+      Engagement.disengage(this.browsingContext.embedderElement, msg.data);
     }
   }
 }

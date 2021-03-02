@@ -63,8 +63,9 @@ const SQL = {
 
   exists: "SELECT * FROM keyframes WHERE id = :id;",
 
-  selectAll:
-    "SELECT id, url, max(lastVisit) AS lastVisit, sum(totalEngagement) as totalEngagement FROM keyframes GROUP BY url;",
+  selectAfter:
+    "SELECT id, type, url, max(lastVisit) AS lastVisit, sum(totalEngagement) as totalEngagement FROM " +
+    "keyframes WHERE lastVisit > :after GROUP BY url;",
 };
 
 function int(dateStr) {
@@ -110,12 +111,15 @@ var Keyframes = {
     Services.obs.notifyObservers(null, "keyframe-update");
   },
 
-  async query() {
+  async queryAfter(after) {
     if (!this._db) {
       await this.init();
     }
 
-    let records = await this._db.executeCached(SQL.selectAll, {});
+    let records = await this._db.executeCached(SQL.selectAfter, {
+      after,
+    });
+
     return records.map(record => {
       let lastVisit =
         int(record.getResultByName("lastVisit")) ??
@@ -123,6 +127,7 @@ var Keyframes = {
 
       return {
         id: record.getResultByName("id"),
+        type: record.getResultByName("type"),
         url: record.getResultByName("url"),
         lastVisit: new Date(lastVisit),
         totalEngagement: int(record.getResultByName("totalEngagement")) ?? 0,

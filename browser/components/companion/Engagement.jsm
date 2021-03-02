@@ -27,18 +27,20 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
   });
 });
 
-const PASSIVE_ENGAGEMENT_TIMER = 30 * 1000; // 30 seconds
-const ACTIVE_ENGAGEMENT_TIMER = 10 * 1000; // 10 seconds
+const ENGAGEMENT_CUTOFF = 2000; // 2 seconds
 const ENGAGEMENT_TIMER_INTERVAL = 1000;
 
 const DOMWINDOW_OPENED_TOPIC = "domwindowopened";
 
 let Engagement = {
-  _engagements: new Map(),
+  _engagements: new WeakMap(),
+  _currentEngagement: undefined,
 
   _delayedEngagements: new Map(),
 
   _inited: false,
+
+  _lastTimeUpdate: Date.now(),
 
   init() {
     this._setupAfterRestore();
@@ -67,30 +69,76 @@ let Engagement = {
     }
   },
 
+  async updateDb(engagement) {
+    if (engagement.id) {
+      // Already in the database, update.
+      await Keyframes.update(
+        engagement.id,
+        engagement.lastTimeOnPage,
+        engagement.totalEngagement
+      );
+    } else if (
+      engagement.type == "manual" ||
+      engagement.totalEngagement >= ENGAGEMENT_CUTOFF
+    ) {
+      // Need to add to database.
+      log.debug(
+        "Adding",
+        engagement.totalEngagement,
+        engagement.type,
+        engagement.url
+      );
+      engagement.id = await Keyframes.add(
+        engagement.url,
+        engagement.type,
+        engagement.startTimeOnPage,
+        engagement.lastTimeOnPage,
+        engagement.totalEngagement
+      );
+    }
+  },
+
+  updateEngagementTime() {
+    let now = Date.now();
+
+    if (this._currentEngagement) {
+      let toAdd = now - this._lastTimeUpdate;
+      this._currentEngagement.lastTimeOnPage = now;
+      this._currentEngagement.totalEngagement += toAdd;
+
+      this.updateDb(this._currentEngagement);
+    }
+
+    this._lastTimeUpdate = now;
+  },
+
   handleEvent(event) {
     switch (event.type) {
       case "TabSelect":
         {
+          log.debug("Update from tab switch");
+          this.updateEngagementTime();
+
           let tab = event.target;
           if (!this.isHttpURI(tab.linkedBrowser.currentURI)) {
+            this._currentEngagement = undefined;
             return;
           }
-          let url = tab.linkedBrowser.currentURI.specIgnoringRef;
-          let contextId = tab.linkedBrowser.browsingContext.id;
-          let engagementId = `${contextId}: ${url}`;
-          log.debug(`Switch to id ${engagementId}`);
-          if (!this._engagements.has(engagementId)) {
-            this.engage({ url, contextId });
+
+          this._currentEngagement = this._engagements.get(tab.linkedBrowser);
+
+          if (!this._currentEngagement) {
+            // Unknown engagement.
           }
-          this._currentContextId = contextId;
         }
         break;
       case "activate":
         if (event.target instanceof Ci.nsIDOMWindow) {
           let win = event.target;
           if (win.gBrowser) {
-            this._currentContextId =
-              win.gBrowser.selectedTab.linkedBrowser.browsingContext.id;
+            this._currentEngagement = this._engagements.get(
+              win.gBrowser.selectedTab.linkedBrowser
+            );
             this.startEngagementTimer();
           }
         }
@@ -99,6 +147,8 @@ let Engagement = {
         if (event.target instanceof Ci.nsIDOMWindow) {
           let win = event.target;
           if (win.gBrowser) {
+            log.debug("Update from deactivate");
+            this.updateEngagementTime();
             this.stopEngagementTimer();
           }
         }
@@ -170,8 +220,10 @@ let Engagement = {
   _engagementTimer: 0,
   startEngagementTimer() {
     if (this._engagementTimer == 0) {
+      this._lastTimeUpdate = Date.now();
+
       this._engagementTimer = setInterval(
-        this.processEngagements,
+        () => this.updateEngagementTime(),
         ENGAGEMENT_TIMER_INTERVAL
       );
     }
@@ -182,103 +234,62 @@ let Engagement = {
     this._engagementTimer = 0;
   },
 
-  async processEngagements() {
-    let engagementId, engagementData;
-    for ([engagementId, engagementData] of Engagement._engagements) {
-      if (Engagement._currentContextId == engagementData.contextId) {
-        engagementData.lastTimeOnPage = new Date().getTime();
-        engagementData.totalEngagement += ENGAGEMENT_TIMER_INTERVAL;
-        if (engagementData.id) {
-          // Already in database
-          return;
-        }
-        let engagementTimer =
-          engagementData.type == "automatic"
-            ? PASSIVE_ENGAGEMENT_TIMER
-            : ACTIVE_ENGAGEMENT_TIMER;
-        if (engagementData.totalEngagement > engagementTimer) {
-          log.debug(`Adding ${engagementData.url} to database`);
-          engagementData.id = await Keyframes.add(
-            engagementData.url,
-            engagementData.type,
-            engagementData.startTimeOnPage,
-            engagementData.lastTimeOnPage,
-            // totalEngagement will be added when the page is unloaded
-            0
-          );
-        }
-        Engagement._engagements.set(engagementId, engagementData);
-      }
-    }
-  },
-
-  async engage(msg) {
+  async engage(browser, msg) {
     let uri = Services.io.newURI(msg.url);
     if (!this.isHttpURI(uri)) {
       return;
     }
     let url = uri.specIgnoringRef;
-    let contextId = msg.contextId;
 
-    if (contextId == this._currentContextId) {
-      // engage without disengage
-      // find and disengage
-      let engagementId, engagementData;
-      // eslint-disable-next-line no-unused-vars
-      for ([engagementId, engagementData] of Engagement._engagements) {
-        if (Engagement._currentContextId == engagementData.contextId) {
-          this.disengage({
-            url: engagementData.url,
-            contextId: engagementData.contextId,
-          });
-          break;
-        }
+    let engagementData = this._engagements.get(browser);
+
+    if (engagementData && url != engagementData.url) {
+      // Already have an engagement for this browser but for a different page.
+      if (this._currentEngagement === engagementData) {
+        log.debug("Update before new engagement.");
+        this.updateEngagementTime();
+        this._currentEngagement = undefined;
       }
+
+      // Build a new engagement.
+      engagementData = undefined;
     }
 
-    let engagementId = `${contextId}: ${url}`;
-    if (!this._engagements.has(engagementId)) {
+    if (!engagementData) {
       let type = this._delayedEngagements.get(url) || "automatic";
-      log.debug("engage", type, msg.url);
       this._delayedEngagements.delete(url);
-      let engagementData = {
+
+      engagementData = {
         url,
         type,
         startTimeOnPage: new Date().getTime(),
         lastTimeOnPage: new Date().getTime(),
         totalEngagement: 0,
-        contextId,
       };
-      this._engagements.set(engagementId, engagementData);
+
+      this._engagements.set(browser, engagementData);
+      this.updateDb(engagementData);
     }
 
-    if (msg.isActive) {
-      this._currentContextId = contextId;
+    if (msg.isActive && this._currentEngagement !== engagementData) {
+      log.debug("Update before new engagement.");
+      this.updateEngagementTime();
+
+      this._currentEngagement = engagementData;
     }
   },
 
-  async disengage(msg) {
-    let uri = Services.io.newURI(msg.url);
-    if (!this.isHttpURI(uri)) {
-      return;
-    }
-    let url = uri.specIgnoringRef;
-    let contextId = msg.contextId;
-    let engagementId = `${contextId}: ${url}`;
+  async disengage(browser) {
+    let engagementData = this._engagements.get(browser);
 
-    let engagementData = Engagement._engagements.get(engagementId);
     if (engagementData) {
-      if (engagementData.id) {
-        log.debug(`Updating ${url} in database`);
-        Keyframes.update(
-          engagementData.id,
-          engagementData.lastTimeOnPage,
-          engagementData.totalEngagement
-        );
-      }
-      this._engagements.delete(engagementId);
-      if (this._currentContextId == engagementData.contextId) {
-        this._currentContextId = 0;
+      engagementData.lastTimeOnPage = Date.now();
+      if (this._currentEngagement === engagementData) {
+        log.debug("Update from page unload.");
+        this.updateEngagementTime();
+        this._currentEngagement = undefined;
+      } else {
+        this.updateDb(engagementData);
       }
     }
   },
@@ -297,29 +308,23 @@ let Engagement = {
   },
 
   /* If we know something is going to be added, use this. */
-  async manualEngage(msg) {
-    let uri = Services.io.newURI(msg.url);
-    if (!this.isHttpURI(uri)) {
+  async manualEngage(browser) {
+    let engagementData = this._engagements.get(browser);
+    if (!engagementData) {
+      // Missing engagement.
       return;
     }
-    let url = uri.specIgnoringRef;
-    let contextId = msg.contextId;
-    let engagementId = `${contextId}: ${url}`;
 
-    let engagementData = this._engagements.get(engagementId);
+    if (engagementData.type == "manual") {
+      // Already manual.
+      return;
+    }
+    engagementData.type = "manual";
+
     if (engagementData.id) {
       Keyframes.updateType(engagementData.id, "manual");
     } else {
-      log.debug(`Adding ${url} to database`);
-      engagementData.id = await Keyframes.add(
-        url,
-        "manual",
-        engagementData.startTimeOnPage,
-        engagementData.lastTimeOnPage,
-        // totalEngagement will be added when the page is unloaded
-        0
-      );
-      Engagement._engagements.set(engagementId, engagementData);
+      this.updateDb(engagementData);
     }
   },
 };

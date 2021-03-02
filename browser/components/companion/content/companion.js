@@ -261,9 +261,9 @@ async function updateList(id, frames) {
   document.getElementById(id).removeAttribute("hidden");
 
   let list = document.querySelector(`#${id} .keyframe-list`);
-  list.replaceChildren([]);
 
-  frames.sort((a, b) => b.lastVisit - a.lastVisit);
+  frames.sort((a, b) => b.totalEngagement - a.totalEngagement);
+  let nodes = [];
 
   for (let frame of frames) {
     let data = await getPlacesData(frame.url);
@@ -274,33 +274,54 @@ async function updateList(id, frames) {
       data.richIcon = data.previewImage;
     }
 
-    list.appendChild(
+    nodes.push(
       new KeyFrame({
         ...frame,
         ...data,
       })
     );
   }
+
+  // Make sure to do this synchronously.
+  list.replaceChildren([]);
+  for (let node of nodes) {
+    list.appendChild(node);
+  }
 }
 
-async function update() {
-  let frames = await Keyframes.query();
-  let todayFrames = [];
-  let yesterdayFrames = [];
-
+let keyframes = [];
+function updateDisplay() {
   // Yes I know this is wrong in various cases.
   let yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
 
-  for (let frame of frames) {
+  let cutoff = document.getElementById("range").valueAsNumber;
+  document.getElementById("cutoff").textContent = `${cutoff / 1000} seconds`;
+
+  let filterFrame = frame => {
+    return frame.totalEngagement >= cutoff || frame.type == "manual";
+  };
+
+  let todayFrames = [];
+  let yesterdayFrames = [];
+
+  keyframes.filter(filterFrame).forEach(frame => {
     if (frame.lastVisit >= today) {
       todayFrames.push(frame);
     } else if (frame.lastVisit >= yesterday) {
       yesterdayFrames.push(frame);
     }
-  }
+  });
 
   updateList("today", todayFrames);
   updateList("yesterday", yesterdayFrames);
+}
+
+async function update() {
+  // Yes I know this is wrong in various cases.
+  let yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+
+  keyframes = await Keyframes.queryAfter(yesterday.getTime());
+  updateDisplay();
 }
 
 let gBrowserInit = {

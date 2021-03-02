@@ -450,11 +450,7 @@
       }
 
       if (event.target.classList.contains("tab-key-button")) {
-        let browser = this.linkedBrowser;
-        Engagement.manualEngage({
-          url: browser.currentURI.spec,
-          contextId: browser.browsingContext.id,
-        });
+        Engagement.manualEngage(this.linkedBrowser);
       }
     }
 
