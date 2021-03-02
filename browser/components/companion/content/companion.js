@@ -9,6 +9,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   Keyframes: "resource:///modules/Keyframes.jsm",
   OS: "resource://gre/modules/osfile.jsm",
+  PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   Sqlite: "resource://gre/modules/Sqlite.jsm",
   UrlbarInput: "resource:///modules/UrlbarInput.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
@@ -156,12 +157,16 @@ class KeyFrame extends HTMLElement {
     fragment.querySelector(".favicon").src = this.data.icon;
     fragment.querySelector(".title").textContent = this.data.title;
     fragment.querySelector(".title").setAttribute("title", this.data.title);
-    fragment.querySelector(".total-engagement").textContent = textForTime(
-      this.data.totalEngagement
-    );
-    fragment.querySelector(".last-access").textContent = timeFormat.format(
-      this.data.lastVisit
-    );
+    if (this.data.totalEngagement) {
+      fragment.querySelector(".total-engagement").textContent = textForTime(
+        this.data.totalEngagement
+      );
+    }
+    if (this.data.lastVisit) {
+      fragment.querySelector(".last-access").textContent = timeFormat.format(
+        this.data.lastVisit
+      );
+    }
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
@@ -345,6 +350,8 @@ function onLoad() {
   } else {
     document.getElementById("services").className = "disconnected";
   }
+
+  getTopSites();
 }
 
 function onUnload() {
@@ -352,3 +359,44 @@ function onUnload() {
 }
 
 window.addEventListener("load", onLoad, { once: true });
+
+const NUM_TOPSITES = 5;
+
+async function getTopSites() {
+  let query = NavHistory.getNewQuery();
+  // Two days of history
+  query.beginTime = PlacesUtils.toPRTime(Date.now() - 2 * 24 * 60 * 60 * 1000);
+  query.endTime == null;
+
+  let queryOptions = NavHistory.getNewQueryOptions();
+  queryOptions.resultType = Ci.nsINavHistoryQueryOptions.RESULTS_AS_URI;
+  queryOptions.sortingMode =
+    Ci.nsINavHistoryQueryOptions.SORT_BY_VISITCOUNT_DESCENDING;
+  queryOptions.queryType = Ci.nsINavHistoryQueryOptions.QUERY_TYPE_HISTORY;
+
+  let results = NavHistory.executeQuery(query, queryOptions);
+  results.root.containerOpen = true;
+
+  let frames = [];
+  let domains = new Set();
+
+  for (let i = 0; i < results.root.childCount; ++i) {
+    let childNode = results.root.getChild(i);
+    if (childNode.type == childNode.RESULT_TYPE_URI && childNode.title) {
+      let frame = {};
+      let uri = Services.io.newURI(childNode.uri);
+      if (domains.has(uri.host)) {
+        continue;
+      }
+      domains.add(uri.host);
+      frame.url = childNode.uri;
+      frame.lastVisit = childNode.time / 1000;
+      frames.push(frame);
+    }
+    if (frames.length == NUM_TOPSITES) {
+      break;
+    }
+  }
+
+  updateList("topsites", frames);
+}
