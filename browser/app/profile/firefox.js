@@ -2539,3 +2539,15 @@ pref("first-startup.timeout", 30000);
   pref("app.normandy.test-prefs.integer", 0);
   pref("app.normandy.test-prefs.string", "");
 #endif
+
+pref("onlineservices.google.endpoint", "https://accounts.google.com/o/oauth2/v2/auth");
+pref("onlineservices.google.tokenEndpoint", "https://oauth2.googleapis.com/token");
+pref("onlineservices.google.clientId", "913967847322-m8ij544g2i23pssvchhru1hceg08irud.apps.googleusercontent.com");
+pref("onlineservices.google.clientSecret", "G7bg5a1bahnVWxd6GKQcO4Ro");
+
+pref("onlineservices.google-test.endpoint", "https://accounts.google.com/o/oauth2/v2/auth");
+pref("onlineservices.google-test.tokenEndpoint", "https://oauth2.googleapis.com/token");
+pref("onlineservices.google-test.clientId", "1008059134576-ki9j8bfsrdho6ot9aun1mjljoegch6pn.apps.googleusercontent.com");
+pref("onlineservices.google-test.clientSecret", "jraQ3WNSCLK6g7uVKQd3PwUX");
+
+// pref("onlineservices.defaultType", "google-test");

@@ -162,8 +162,6 @@ class OAuth2 {
       }
     }
 
-    console.log(this.toJSON());
-
     return this.accessToken;
   }
 
@@ -211,7 +209,6 @@ class OAuth2 {
       data.append("redirect_uri", this.redirectionEndpoint);
     }
 
-    console.log(data.toString());
     let response = await fetch(this.tokenEndpoint, {
       method: "POST",
       cache: "no-cache",

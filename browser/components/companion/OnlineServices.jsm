@@ -7,23 +7,14 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+const PREF_STORE = "onlineservices.config";
+
 XPCOMUtils.defineLazyModuleGetters(this, {
   OAuth2: "resource:///modules/OAuth2.jsm",
   Services: "resource://gre/modules/Services.jsm",
 });
 
 Cu.importGlobalProperties(["fetch"]);
-
-const GOOGLE_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
-const GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
-const GOOGLE_CLIENT_ID =
-  "913967847322-m8ij544g2i23pssvchhru1hceg08irud.apps.googleusercontent.com";
-const GOOGLE_CLIENT_SECRET = "G7bg5a1bahnVWxd6GKQcO4Ro";
-const GOOGLE_SCOPES = [
-  "https://www.googleapis.com/auth/gmail.metadata",
-  "https://www.googleapis.com/auth/calendar.readonly",
-  "https://www.googleapis.com/auth/calendar.events.readonly",
-];
 
 function getConferenceInfo(result) {
   if (!result.conferenceData?.conferenceSolution) {
@@ -48,14 +39,29 @@ function getConferenceInfo(result) {
 }
 
 class GoogleService {
-  constructor(config = null) {
+  constructor(config) {
+    this.app = config.type;
+
+    let scopes = [
+      "https://www.googleapis.com/auth/gmail.metadata",
+      "https://www.googleapis.com/auth/calendar.readonly",
+      "https://www.googleapis.com/auth/calendar.events.readonly",
+    ];
+
     this.auth = new OAuth2(
-      GOOGLE_ENDPOINT,
-      GOOGLE_TOKEN_ENDPOINT,
-      GOOGLE_SCOPES.join(" "),
-      GOOGLE_CLIENT_ID,
-      GOOGLE_CLIENT_SECRET,
+      this.getPref("endpoint"),
+      this.getPref("tokenEndpoint"),
+      scopes.join(" "),
+      this.getPref("clientId"),
+      this.getPref("clientSecret"),
       config?.auth
+    );
+  }
+
+  getPref(name, deflt = undefined) {
+    return Services.prefs.getCharPref(
+      `onlineservices.${this.app}.${name}`,
+      deflt
     );
   }
 
@@ -99,7 +105,7 @@ class GoogleService {
 
   toJSON() {
     return {
-      type: "google",
+      type: this.app,
       auth: this.auth,
     };
   }
@@ -109,7 +115,7 @@ const ServiceInstances = new Set();
 
 function persist() {
   let config = JSON.stringify(Array.from(ServiceInstances));
-  Services.prefs.setCharPref("onlineservices.config", config);
+  Services.prefs.setCharPref(PREF_STORE, config);
 }
 
 let loaded = false;
@@ -119,14 +125,10 @@ function load() {
   }
   loaded = true;
 
-  let config = JSON.parse(
-    Services.prefs.getCharPref("onlineservices.config", "[]")
-  );
+  let config = JSON.parse(Services.prefs.getCharPref(PREF_STORE, "[]"));
 
   for (let service of config) {
-    if (service.type == "google") {
-      ServiceInstances.add(new GoogleService(service));
-    }
+    ServiceInstances.add(new GoogleService(service));
   }
 }
 
@@ -134,13 +136,9 @@ const OnlineServices = {
   async createService(type) {
     load();
 
-    if (type == "google") {
-      let service = new GoogleService();
-      ServiceInstances.add(service);
-      await service.connect();
-    } else {
-      throw new Error("Unknown service type.");
-    }
+    let service = new GoogleService({ type });
+    ServiceInstances.add(service);
+    await service.connect();
 
     persist();
   },

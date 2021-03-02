@@ -27,7 +27,7 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
   });
 });
 
-const PASSIVE_ENGAGEMENT_TIMER = 30 * 1000; // 10 seconds
+const PASSIVE_ENGAGEMENT_TIMER = 30 * 1000; // 30 seconds
 const ACTIVE_ENGAGEMENT_TIMER = 10 * 1000; // 10 seconds
 const ENGAGEMENT_TIMER_INTERVAL = 1000;
 
@@ -213,7 +213,6 @@ let Engagement = {
   },
 
   async engage(msg) {
-    log.debug("engage " + msg.url);
     let uri = Services.io.newURI(msg.url);
     if (!this.isHttpURI(uri)) {
       return;
@@ -240,6 +239,7 @@ let Engagement = {
     let engagementId = `${contextId}: ${url}`;
     if (!this._engagements.has(engagementId)) {
       let type = this._delayedEngagements.get(url) || "automatic";
+      log.debug("engage", type, msg.url);
       this._delayedEngagements.delete(url);
       let engagementData = {
         url,

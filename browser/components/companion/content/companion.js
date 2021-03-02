@@ -50,7 +50,7 @@ class Event extends HTMLElement {
   }
 
   connectedCallback() {
-    this.className = "event";
+    this.className = "event card";
 
     let template = document.getElementById("template-event");
     let fragment = template.content.cloneNode(true);
@@ -60,6 +60,9 @@ class Event extends HTMLElement {
         ? dateFormat.format(this.data.start)
         : timeFormat.format(this.data.start);
 
+    fragment
+      .querySelector(".favicon")
+      .setAttribute("src", "chrome://browser/content/companion/event.svg");
     fragment.querySelector(".date").textContent = date;
     fragment.querySelector(".summary").textContent = this.data.summary;
 
@@ -99,9 +102,12 @@ async function buildEvents(services) {
 }
 
 async function signin() {
-  await OnlineServices.createService("google");
+  await OnlineServices.createService(
+    Services.prefs.getCharPref("onlineservices.defaultType", "google")
+  );
   document.getElementById("services").className = "connected";
   buildEvents(OnlineServices.getServices());
+  window.focus();
 }
 
 function openUrl(url) {
@@ -243,6 +249,12 @@ async function getPlacesData(url) {
 }
 
 async function updateList(id, frames) {
+  if (!frames.length) {
+    document.getElementById(id).setAttribute("hidden", "true");
+    return;
+  }
+  document.getElementById(id).removeAttribute("hidden");
+
   let list = document.querySelector(`#${id} .keyframe-list`);
   list.replaceChildren([]);
 
