@@ -290,6 +290,7 @@ async function updateList(id, frames) {
 }
 
 let keyframes = [];
+let documents = [];
 function updateDisplay() {
   // Yes I know this is wrong in various cases.
   let yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
@@ -314,6 +315,7 @@ function updateDisplay() {
 
   updateList("today", todayFrames);
   updateList("yesterday", yesterdayFrames);
+  updateList("working", documents);
 }
 
 async function update() {
@@ -321,6 +323,8 @@ async function update() {
   let yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
 
   keyframes = await Keyframes.queryAfter(yesterday.getTime());
+  documents = await Keyframes.queryAfter(yesterday.getTime(), "document");
+
   updateDisplay();
 }
 

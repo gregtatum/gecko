@@ -66,6 +66,10 @@ const SQL = {
   selectAfter:
     "SELECT id, type, url, max(lastVisit) AS lastVisit, sum(totalEngagement) as totalEngagement FROM " +
     "keyframes WHERE lastVisit > :after GROUP BY url;",
+
+  selectAfterByType:
+    "SELECT id, type, url, max(lastVisit) AS lastVisit, sum(totalEngagement) as totalEngagement FROM " +
+    "keyframes WHERE lastVisit > :after AND type = (:type) GROUP BY url;",
 };
 
 function int(dateStr) {
@@ -111,14 +115,23 @@ var Keyframes = {
     Services.obs.notifyObservers(null, "keyframe-update");
   },
 
-  async queryAfter(after) {
+  async queryAfter(after, type) {
     if (!this._db) {
       await this.init();
     }
 
-    let records = await this._db.executeCached(SQL.selectAfter, {
-      after,
-    });
+    let records;
+
+    if (type) {
+      records = await this._db.executeCached(SQL.selectAfterByType, {
+        after,
+        type,
+      });
+    } else {
+      records = await this._db.executeCached(SQL.selectAfter, {
+        after,
+      });
+    }
 
     return records.map(record => {
       let lastVisit =

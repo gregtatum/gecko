@@ -5,11 +5,26 @@
 
 var EXPORTED_SYMBOLS = ["EngagementChild"];
 
-const { PrivateBrowsingUtils } = ChromeUtils.import(
-  "resource://gre/modules/PrivateBrowsingUtils.jsm"
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+XPCOMUtils.defineLazyModuleGetters(this, {
+  PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
+  setTimeout: "resource://gre/modules/Timer.jsm",
+  clearTimeout: "resource://gre/modules/Timer.jsm",
+});
+
+const CPM = 100; // Characters per minute
+
 class EngagementChild extends JSWindowActorChild {
+  actorCreated() {
+    this.contentWindow.addEventListener("keyup", this);
+  }
+
+  /*
+   * Events
+   */
   didDestroy() {
     this.destroyed = true;
   }
@@ -72,6 +87,12 @@ class EngagementChild extends JSWindowActorChild {
     return docInfo;
   }
 
+  checkForDocument() {
+    if (this._keysPerMinute >= CPM) {
+      this._isDocument = true;
+      this.sendAsyncMessage("Engagement:UpdateType", "document");
+    }
+  }
   /**
    * Handles events received from the actor child notifications.
    *
@@ -82,6 +103,22 @@ class EngagementChild extends JSWindowActorChild {
       return;
     }
     switch (event.type) {
+      case "keyup":
+        if (this._isDocument) {
+          return;
+        }
+        if (event.code.startsWith("Key")) {
+          if (!this._inputTimer) {
+            let self = this;
+            this._inputTimer = setTimeout(
+              function() {
+                self.checkForDocument()
+              }, 60*1000);
+            this._keysPerMinute = 0;
+          }
+          this._keysPerMinute++;
+        }
+        break;
       case "pageshow": {
         // BFCACHE - not sure what to do here yet.
         //        check();
@@ -131,6 +168,12 @@ class EngagementChild extends JSWindowActorChild {
           docInfo.contextId = this.browsingContext.id;
           this.sendAsyncMessage("Engagement:Disengage", docInfo);
         }
+        this._isDocument = false;
+        if (this._inputTimer) {
+          clearTimeout(this._inputTimer);
+          this._inputTimer = 0;
+        }
+        this._keysPerMinute = 0;
         break;
       }
     }

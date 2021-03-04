@@ -13,11 +13,11 @@ ChromeUtils.defineModuleGetter(
 
 class EngagementParent extends JSWindowActorParent {
   receiveMessage(msg) {
-    if (msg.name == "Engagement:OpenGraph") {
-      Engagement.getOpenGraph(msg.data);
-    }
     if (msg.name == "Engagement:Log") {
       Engagement.reportError(msg.data);
+    }
+    if (msg.name == "Engagement:UpdateType") {
+      Engagement.updateType(this.browsingContext.embedderElement, msg.data);
     }
     if (msg.name == "Engagement:Engage") {
       Engagement.engage(this.browsingContext.embedderElement, msg.data);

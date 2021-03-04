@@ -309,20 +309,22 @@ let Engagement = {
 
   /* If we know something is going to be added, use this. */
   async manualEngage(browser) {
+    this.updateType(browser, "manual");
+  },
+
+  async updateType(browser, type) {
     let engagementData = this._engagements.get(browser);
     if (!engagementData) {
       // Missing engagement.
       return;
     }
 
-    if (engagementData.type == "manual") {
-      // Already manual.
-      return;
-    }
-    engagementData.type = "manual";
+    engagementData.type = type;
+
+    log.debug(`Updating type for ${engagementData.url} to ${type}`);
 
     if (engagementData.id) {
-      Keyframes.updateType(engagementData.id, "manual");
+      Keyframes.updateType(engagementData.id, type);
     } else {
       this.updateDb(engagementData);
     }
