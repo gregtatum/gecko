@@ -825,8 +825,14 @@ pref("browser.preferences.experimental", false);
 pref("browser.preferences.experimental.hidden", false);
 pref("browser.preferences.defaultPerformanceSettings.enabled", true);
 
-pref("browser.proton.enabled", false);
-pref("browser.proton.toolbar.version", 0);
+user_pref("browser.proton.appmenu.enabled", true);
+user_pref("browser.proton.contextmenus.enabled", true);
+user_pref("browser.proton.doorhangers.enabled", true);
+user_pref("browser.proton.enabled", true);
+user_pref("browser.proton.tabs.enabled", true);
+user_pref("browser.proton.toolbar.enabled", true);
+user_pref("browser.proton.toolbar.version", 3);
+user_pref("browser.proton.urlbar.enabled", true);
 
 // Backspace and Shift+Backspace behavior
 // 0 goes Back/Forward
