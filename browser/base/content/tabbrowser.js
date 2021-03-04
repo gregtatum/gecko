@@ -71,6 +71,12 @@
         ],
       });
 
+      let tabTooltip = document.getElementById("tabbrowser-tab-tooltip");
+      if (gProtonTabs) {
+        tabTooltip.setAttribute("position", "after_start");
+        tabTooltip.setAttribute("anchortoclosest", "tab");
+      }
+
       // We take over setting the document title, so remove the l10n id to
       // avoid it being re-translated and overwriting document content if
       // we ever switch languages at runtime. After a language change, the
@@ -4966,6 +4972,34 @@
       }
     },
 
+    /**
+     * _maybeRequestReplyFromRemoteContent may call
+     * aEvent.requestReplyFromRemoteContent if necessary.
+     *
+     * @param aEvent    The handling event.
+     * @return          true if the handler should wait a reply event.
+     *                  false if the handle can handle the immediately.
+     */
+    _maybeRequestReplyFromRemoteContent(aEvent) {
+      if (aEvent.defaultPrevented) {
+        return false;
+      }
+      // If the event target is a remote browser, and the event has not been
+      // handled by the remote content yet, we should wait a reply event
+      // from the content.
+      if (aEvent.isWaitingReplyFromRemoteContent) {
+        return true; // Somebody called requestReplyFromRemoteContent already.
+      }
+      if (
+        !aEvent.isReplyEventFromRemoteContent &&
+        aEvent.target?.isRemoteBrowser === true
+      ) {
+        aEvent.requestReplyFromRemoteContent();
+        return true;
+      }
+      return false;
+    },
+
     _handleKeyDownEvent(aEvent) {
       if (!aEvent.isTrusted) {
         // Don't let untrusted events mess with tabs.
@@ -4981,6 +5015,9 @@
       // navigation should always work for better user experience.
 
       switch (ShortcutUtils.getSystemActionForEvent(aEvent)) {
+        case ShortcutUtils.TOGGLE_CARET_BROWSING:
+          this._maybeRequestReplyFromRemoteContent(aEvent);
+          return;
         case ShortcutUtils.MOVE_TAB_BACKWARD:
           this.moveTabBackward();
           aEvent.preventDefault();
@@ -5068,9 +5105,13 @@
 
       switch (ShortcutUtils.getSystemActionForEvent(aEvent, { rtl: RTL_UI })) {
         case ShortcutUtils.TOGGLE_CARET_BROWSING:
-          if (!aEvent.defaultPrevented) {
-            this.toggleCaretBrowsing();
+          if (
+            aEvent.defaultPrevented ||
+            this._maybeRequestReplyFromRemoteContent(aEvent)
+          ) {
+            break;
           }
+          this.toggleCaretBrowsing();
           break;
 
         case ShortcutUtils.NEXT_TAB:
@@ -5205,7 +5246,7 @@
         label = this.getTabTooltip(tab);
       }
 
-      if (!gProton) {
+      if (!gProtonTabs) {
         event.target.setAttribute("label", label);
         return;
       }

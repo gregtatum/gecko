@@ -1543,6 +1543,7 @@ nsEventStatus AsyncPanZoomController::OnScale(const PinchGestureInput& aEvent) {
     MOZ_ASSERT(Metrics().IsRootContent());
     MOZ_ASSERT(Metrics().GetZoom().AreScalesSame());
 
+    // TODO: Need to handle different x-and y-scales.
     CSSToParentLayerScale userZoom = Metrics().GetZoom().ToScaleFactor();
     ParentLayerPoint focusPoint =
         aEvent.mLocalFocusPoint - Metrics().GetCompositionBounds().TopLeft();
@@ -4884,6 +4885,7 @@ void AsyncPanZoomController::NotifyLayersUpdated(
   }
 
   bool scrollOffsetUpdated = false;
+  bool smoothScrollRequested = false;
   for (const auto& scrollUpdate : aScrollMetadata.GetScrollUpdates()) {
     APZC_LOG("%p processing scroll update %s\n", this,
              ToString(scrollUpdate).c_str());
@@ -4907,7 +4909,7 @@ void AsyncPanZoomController::NotifyLayersUpdated(
 
     if (scrollUpdate.GetMode() == ScrollMode::Smooth ||
         scrollUpdate.GetMode() == ScrollMode::SmoothMsd) {
-      scrollOffsetUpdated = true;
+      smoothScrollRequested = true;
 
       // Requests to animate the visual scroll position override requests to
       // simply update the visual scroll offset to a particular point. Since
@@ -5078,6 +5080,12 @@ void AsyncPanZoomController::NotifyLayersUpdated(
     }
   }
 
+  if (smoothScrollRequested && !scrollOffsetUpdated) {
+    mExpectedGeckoMetrics.UpdateFrom(aLayerMetrics);
+    // Need to acknowledge the request.
+    needContentRepaint = true;
+  }
+
   // If `isDefault` is true, this APZC is a "new" one (this is the first time
   // it's getting a NotifyLayersUpdated call). In this case we want to apply the
   // visual scroll offset from the main thread to our scroll offset.
@@ -5246,6 +5254,7 @@ void AsyncPanZoomController::ZoomToRect(CSSRect aRect, const uint32_t aFlags) {
     ParentLayerRect compositionBounds = Metrics().GetCompositionBounds();
     CSSRect cssPageRect = Metrics().GetScrollableRect();
     CSSPoint scrollOffset = Metrics().GetVisualScrollOffset();
+    // TODO: Need to handle different x-and y-scales.
     CSSToParentLayerScale currentZoom = Metrics().GetZoom().ToScaleFactor();
     CSSToParentLayerScale targetZoom;
 

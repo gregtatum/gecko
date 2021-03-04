@@ -50,6 +50,7 @@ class ResourceWatcher {
     // race conditions.
     // Maps a target front to an array of resource types.
     this._existingLegacyListeners = new WeakMap();
+    this._processingExistingResources = new Set();
 
     this._notifyWatchers = this._notifyWatchers.bind(this);
     this._throttledNotifyWatchers = throttle(this._notifyWatchers, 100);
@@ -404,6 +405,12 @@ class ResourceWatcher {
         targetFront = await this._getTargetForWatcherResource(resource);
       }
 
+      // isAlreadyExistingResource indicates that the resources already existed before
+      // the resource watcher started watching for this type of resource.
+      resource.isAlreadyExistingResource = this._processingExistingResources.has(
+        resourceType
+      );
+
       // Put the targetFront on the resource for easy retrieval.
       // (Resources from the legacy listeners may already have the attribute set)
       if (!resource.targetFront) {
@@ -703,6 +710,8 @@ class ResourceWatcher {
       }
     }
 
+    this._processingExistingResources.add(resourceType);
+
     // If the server supports the Watcher API and the Watcher supports
     // this resource type, use this API
     if (this.hasResourceWatcherSupport(resourceType)) {
@@ -712,6 +721,7 @@ class ResourceWatcher {
         resourceType
       );
       if (!shouldRunLegacyListeners) {
+        this._processingExistingResources.delete(resourceType);
         return;
       }
     }
@@ -726,6 +736,7 @@ class ResourceWatcher {
       promises.push(this._watchResourcesForTarget(target, resourceType));
     }
     await Promise.all(promises);
+    this._processingExistingResources.delete(resourceType);
   }
 
   /**
@@ -784,7 +795,7 @@ class ResourceWatcher {
     const legacyListeners =
       this._existingLegacyListeners.get(targetFront) || [];
     if (legacyListeners.includes(resourceType)) {
-      console.error(
+      console.warn(
         `Already started legacy listener for ${resourceType} on ${targetFront.actorID}`
       );
       return;
@@ -965,11 +976,11 @@ const LegacyListeners = {
   [ResourceWatcher.TYPES
     .COOKIE]: require("devtools/shared/resources/legacy-listeners/cookie"),
   [ResourceWatcher.TYPES
+    .CACHE_STORAGE]: require("devtools/shared/resources/legacy-listeners/cache-storage"),
+  [ResourceWatcher.TYPES
     .LOCAL_STORAGE]: require("devtools/shared/resources/legacy-listeners/local-storage"),
   [ResourceWatcher.TYPES
     .SESSION_STORAGE]: require("devtools/shared/resources/legacy-listeners/session-storage"),
-  [ResourceWatcher.TYPES
-    .CACHE_STORAGE]: require("devtools/shared/resources/legacy-listeners/cache-storage"),
   [ResourceWatcher.TYPES
     .EXTENSION_STORAGE]: require("devtools/shared/resources/legacy-listeners/extension-storage"),
   [ResourceWatcher.TYPES
@@ -993,6 +1004,8 @@ const ResourceTransformers = {
     .CONSOLE_MESSAGE]: require("devtools/shared/resources/transformers/console-messages"),
   [ResourceWatcher.TYPES
     .ERROR_MESSAGE]: require("devtools/shared/resources/transformers/error-messages"),
+  [ResourceWatcher.TYPES
+    .CACHE_STORAGE]: require("devtools/shared/resources/transformers/storage-cache.js"),
   [ResourceWatcher.TYPES
     .LOCAL_STORAGE]: require("devtools/shared/resources/transformers/storage-local-storage.js"),
   [ResourceWatcher.TYPES

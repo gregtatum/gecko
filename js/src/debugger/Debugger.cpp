@@ -195,8 +195,11 @@ ArrayObject* js::GetFunctionParameterNamesArray(JSContext* cx,
     for (size_t i = 0; i < fun->nargs(); i++, fi++) {
       MOZ_ASSERT(fi.argumentSlot() == i);
       if (JSAtom* atom = fi.name()) {
-        cx->markAtom(atom);
-        names[i].setString(atom);
+        // Skip any internal, non-identifier names, like for example ".args".
+        if (IsIdentifier(atom)) {
+          cx->markAtom(atom);
+          names[i].setString(atom);
+        }
       }
     }
   }
@@ -1253,7 +1256,7 @@ bool DebugAPI::slowPathOnNewGenerator(JSContext* cx, AbstractFramePtr frame,
 
         AutoRealm ar(cx, frameObj);
 
-        if (!frameObj->setGeneratorInfo(cx, genObj)) {
+        if (!DebuggerFrame::setGeneratorInfo(cx, frameObj, genObj)) {
           // This leaves `genObj` and `frameObj` unassociated. It's OK
           // because we won't pause again with this generator on the stack:
           // the caller will immediately discard `genObj` and unwind `frame`.

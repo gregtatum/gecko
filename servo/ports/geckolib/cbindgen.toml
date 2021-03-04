@@ -91,7 +91,6 @@ include = [
   "DisplayMode",
   "PrefersColorScheme",
   "PrefersContrast",
-  "ExtremumLength",
   "FillRule",
   "FontDisplay",
   "FontFaceSourceListComponent",
@@ -490,6 +489,7 @@ renaming_overrides_prefixing = true
 """
 
 "GenericColor" = """
+  static inline StyleGenericColor CurrentColor();
   static inline StyleGenericColor FromColor(nscolor);
   static inline StyleGenericColor Black();
   static inline StyleGenericColor White();

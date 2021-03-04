@@ -87,9 +87,7 @@ struct APZEventResult {
     mStatus = nsEventStatus_eConsumeNoDefault;
   }
 
-  void SetStatusAsIgnore() {
-    mStatus = nsEventStatus_eIgnore;
-  }
+  void SetStatusAsIgnore() { mStatus = nsEventStatus_eIgnore; }
 
   // Set mStatus to nsEventStatus_eConsumeDoDefault and set mHandledResult
   // depending on |aTarget|.
@@ -103,7 +101,8 @@ struct APZEventResult {
   // APZC in the case where the target APZC area is covered by dynamic toolbar
   // so that browser apps can move the toolbar corresponding to the event.
   void SetStatusAsConsumeDoDefaultWithTargetConfirmationFlags(
-      const InputBlockState& aBlock, TargetConfirmationFlags aFlags);
+      const InputBlockState& aBlock, TargetConfirmationFlags aFlags,
+      const AsyncPanZoomController& aTarget);
 
   // DO NOT USE THIS UpdateStatus DIRECTLY. THIS FUNCTION IS ONLY FOR
   // SERIALIZATION / DESERIALIZATION OF THIS STRUCT IN IPC.

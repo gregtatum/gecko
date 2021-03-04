@@ -20,6 +20,7 @@
 #include "nsWhitespaceTokenizer.h"
 #include "mozilla/Telemetry.h"
 #include "mozilla/gfx/Logging.h"
+#include "mozilla/SSE.h"
 
 #include "GfxInfoX11.h"
 
@@ -462,7 +463,7 @@ void GfxInfo::GetData() {
   mAdapterDescription.Assign(glRenderer);
 #ifdef MOZ_WAYLAND
   mIsWayland = gdk_display_get_default() &&
-               !GDK_IS_X11_DISPLAY(gdk_display_get_default());
+               GDK_IS_WAYLAND_DISPLAY(gdk_display_get_default());
   if (mIsWayland) {
     mIsWaylandDRM = GetDMABufDevice()->IsDMABufVAAPIEnabled() ||
                     GetDMABufDevice()->IsDMABufWebGLEnabled() ||
@@ -473,8 +474,8 @@ void GfxInfo::GetData() {
   // Make a best effort guess at whether or not we are using the XWayland compat
   // layer. For all intents and purposes, we should otherwise believe we are
   // using X11.
-  const char* windowEnv = getenv("XDG_SESSION_TYPE");
-  mIsXWayland = windowEnv && strcmp(windowEnv, "wayland") == 0;
+  const char* waylandDisplay = getenv("WAYLAND_DISPLAY");
+  mIsXWayland = !mIsWayland && waylandDisplay;
 
   // Make a best effort guess at the desktop environment in use. Sadly there
   // does not appear to be a standard way to do this, so we check a few
@@ -802,6 +803,35 @@ const nsTArray<GfxDriverInfo>& GfxInfo::GetGfxDriverInfo() {
                                "FEATURE_ROLLOUT_EARLY_BETA_SOFTWARE_WR", "");
 #  endif
 #endif
+
+#if defined(_M_IX86) || defined(_M_X64) || defined(__i386__) || \
+    defined(__i386) || defined(__amd64__)
+    // Initial Linux release population for SW-WR.
+    if (mozilla::supports_avx2()) {
+      APPEND_TO_DRIVER_BLOCKLIST_EXT(
+          OperatingSystem::Linux, ScreenSizeStatus::Small, BatteryStatus::All,
+          DesktopEnvironment::All, WindowProtocol::X11,
+          DriverVendor::NonMesaAll, DeviceFamily::NvidiaAll,
+          nsIGfxInfo::FEATURE_WEBRENDER_SOFTWARE,
+          nsIGfxInfo::FEATURE_ALLOW_ALWAYS, DRIVER_LESS_THAN, V(460, 32, 3, 0),
+          "FEATURE_ROLLOUT_OLD_NVIDIA_RELEASE_SOFTWARE_WR", "");
+
+      APPEND_TO_DRIVER_BLOCKLIST_EXT(
+          OperatingSystem::Linux, ScreenSizeStatus::Small, BatteryStatus::All,
+          DesktopEnvironment::All, WindowProtocol::X11,
+          DriverVendor::MesaLLVMPipe, DeviceFamily::All,
+          nsIGfxInfo::FEATURE_WEBRENDER_SOFTWARE,
+          nsIGfxInfo::FEATURE_ALLOW_ALWAYS, DRIVER_COMPARISON_IGNORED,
+          V(0, 0, 0, 0), "FEATURE_ROLLOUT_LLVMPIPE_RELEASE_SOFTWARE_WR", "");
+    }
+#endif
+
+    ////////////////////////////////////
+    // FEATURE_X11_EGL
+    APPEND_TO_DRIVER_BLOCKLIST(
+        OperatingSystem::Linux, DeviceFamily::All, nsIGfxInfo::FEATURE_X11_EGL,
+        nsIGfxInfo::FEATURE_BLOCKED_DEVICE, DRIVER_COMPARISON_IGNORED,
+        V(0, 0, 0, 0), "FEATURE_FAILURE_X11_EGL_DISABLED", "");
 
     ////////////////////////////////////
 

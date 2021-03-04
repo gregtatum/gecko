@@ -236,11 +236,6 @@
         <menupopup id="context-sendpagetodevice-popup"
                    onpopupshowing="(() => { gSync.populateSendTabToDevicesMenu(event.target, gBrowser.currentURI.spec, gBrowser.contentTitle); })()"/>
       </menu>
-      <menuseparator id="context-sep-viewbgimage"/>
-      <menuitem id="context-viewbgimage"
-                data-l10n-id="main-context-menu-view-background-image"
-                oncommand="gContextMenu.viewBGImage(event);"
-                onclick="checkForMiddleClick(this, event);"/>
       <menu id="fill-login"
             label="&fillLoginMenu.label;"
             label-login="&fillLoginMenu.label;"
@@ -256,21 +251,24 @@
                     label="&noLoginSuggestions.label;"
                     disabled="true"
                     hidden="true"/>
-          <menuseparator id="saved-logins-separator"/>
-          <menuitem id="fill-login-saved-passwords"
-                    label="&viewSavedLogins.label;"
-                    oncommand="gContextMenu.openPasswordManager();"/>
         </menupopup>
       </menu>
      <menuitem id="fill-login-generated-password"
                data-l10n-id="main-context-menu-generate-new-password"
                hidden="true"
                oncommand="gContextMenu.useGeneratedPassword();"/>
-      <menuseparator id="fill-login-and-generated-password-separator"/>
+     <menuitem id="manage-saved-logins"
+               data-l10n-id="main-context-menu-manage-logins"
+               hidden = "true"
+               oncommand="gContextMenu.openPasswordManager();"/>
+      <menuseparator id="passwordmgr-items-separator"/>
       <menuitem id="context-undo"
                 data-l10n-id="text-action-undo"
                 command="cmd_undo"/>
-      <menuseparator id="context-sep-undo"/>
+      <menuitem id="context-redo"
+                data-l10n-id="text-action-redo"
+                command="cmd_redo"/>
+      <menuseparator id="context-sep-redo"/>
       <menuitem id="context-cut"
                 data-l10n-id="text-action-cut"
                 command="cmd_cut"/>

@@ -383,7 +383,7 @@ TEST_F(APZEventResultTesterLayersOnly, HandledByRootApzcFlag) {
                                    {AllowedTouchBehavior::VERTICAL_PAN});
   manager->SetTargetAPZC(result.mInputBlockId, {result.mTargetGuid});
   manager->ContentReceivedInputBlock(result.mInputBlockId,
-                                     /*preventDefault=*/false);
+                                     /*aPreventDefault=*/false);
 
   // Check that we received the delayed answer and it is what we expect.
   EXPECT_EQ(delayedAnswer,
@@ -404,7 +404,7 @@ TEST_F(APZEventResultTesterLayersOnly, HandledByRootApzcFlag) {
                                    {AllowedTouchBehavior::VERTICAL_PAN});
   manager->SetTargetAPZC(result.mInputBlockId, {result.mTargetGuid});
   manager->ContentReceivedInputBlock(result.mInputBlockId,
-                                     /*preventDefault=*/true);
+                                     /*aPreventDefault=*/true);
   EXPECT_EQ(delayedAnswer,
             (APZHandledResult{APZHandledPlace::HandledByContent,
                               SideBits::eBottom, EitherScrollDirection}));
@@ -428,7 +428,7 @@ TEST_F(APZEventResultTesterLayersOnly, HandledByRootApzcFlag) {
                                    {AllowedTouchBehavior::VERTICAL_PAN});
   manager->SetTargetAPZC(result.mInputBlockId, {result.mTargetGuid});
   manager->ContentReceivedInputBlock(result.mInputBlockId,
-                                     /*preventDefault=*/false);
+                                     /*aPreventDefault=*/false);
   EXPECT_EQ(delayedAnswer,
             (APZHandledResult{APZHandledPlace::Unhandled, SideBits::eNone,
                               ScrollDirections()}));

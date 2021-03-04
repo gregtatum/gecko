@@ -914,6 +914,11 @@ class UrlbarView {
       return true;
     }
     let row = this._rows.children[rowIndex];
+    // Don't reuse rows with different suggested indexes since they stick to the
+    // same spot in the view, making any flicker very noticeable.
+    if (result.suggestedIndex !== row.result.suggestedIndex) {
+      return false;
+    }
     let resultIsSearchSuggestion = this._resultIsSearchSuggestion(result);
     // If the row is same type, just update it.
     if (
@@ -1082,13 +1087,22 @@ class UrlbarView {
       item.appendChild(helpButton);
       item._elements.set("helpButton", helpButton);
       item._content.setAttribute("selectable", "true");
+
+      // Remove role=option on the row and set it on row-inner since the latter
+      // is the selectable logical row element when the help button is present.
+      // Since row-inner is not a child of the role=listbox element (the row
+      // container, this._rows), screen readers will not automatically recognize
+      // it as a listbox option.  To compensate, set role=presentation on the
+      // row so that screen readers ignore it.
+      item.setAttribute("role", "presentation");
+      item._content.setAttribute("role", "option");
     }
   }
 
   _createRowContentForTip(item) {
     // We use role="group" so screen readers will read the group's label when a
     // button inside it gets focus. (Screen readers don't do this for
-    // role="option".) We set aria-labelledby for the group in _updateIndices.
+    // role="option".) We set aria-labelledby for the group in _updateRowForTip.
     item._content.setAttribute("role", "group");
 
     let favicon = this._createElement("img");
@@ -1204,6 +1218,7 @@ class UrlbarView {
         this._createRowContent(item, result);
       }
     }
+    item._content.id = item.id + "-inner";
 
     if (
       result.type == UrlbarUtils.RESULT_TYPE.SEARCH &&
@@ -1346,7 +1361,7 @@ class UrlbarView {
       default:
         if (result.heuristic) {
           isVisitAction = true;
-        } else {
+        } else if (result.providerName != "UrlbarProviderQuickSuggest") {
           setURL = true;
         }
         break;
@@ -1369,12 +1384,18 @@ class UrlbarView {
       result.type != UrlbarUtils.RESULT_TYPE.TAB_SWITCH
     ) {
       item.toggleAttribute("sponsored", true);
-      actionSetter = () => {
-        this.document.l10n.setAttributes(
-          action,
-          "urlbar-result-action-sponsored"
-        );
-      };
+      if (result.payload.sponsoredText) {
+        action.removeAttribute("data-l10n-id");
+        actionSetter = () =>
+          (action.textContent = result.payload.sponsoredText);
+      } else {
+        actionSetter = () => {
+          this.document.l10n.setAttributes(
+            action,
+            "urlbar-result-action-sponsored"
+          );
+        };
+      }
     } else {
       item.removeAttribute("sponsored");
     }
@@ -1427,6 +1448,8 @@ class UrlbarView {
 
     if (item._elements.has("helpButton")) {
       item.setAttribute("has-help", "true");
+      let helpButton = item._elements.get("helpButton");
+      helpButton.id = item.id + "-help";
     } else {
       item.removeAttribute("has-help");
     }

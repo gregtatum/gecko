@@ -58,6 +58,10 @@ const TEST_MULTISTAGE_CONTENT = {
             data: { entrypoint: "test" },
           },
         },
+        help_text: {
+          text: { string_id: "onboarding-multistage-set-default-subtitle" },
+          position: "footer",
+        },
       },
     },
     {
@@ -78,6 +82,14 @@ const TEST_MULTISTAGE_CONTENT = {
         },
         secondary_button: {
           label: "link",
+        },
+        help_text: {
+          text: "Here's some helptext with an icon",
+          img: {
+            src:
+              "chrome://activity-stream/content/data/content/assets/cfr_fb_container.png",
+          },
+          position: "footer",
         },
       },
     },
@@ -220,23 +232,27 @@ add_task(async function setup() {
  */
 add_task(async function test_multistage_zeroOnboarding_experimentAPI() {
   await setAboutWelcomePref(true);
-  let updatePromise = ExperimentFakes.waitForExperimentUpdate(ExperimentAPI, {
-    slug: "mochitest-1-aboutwelcome",
-  });
-  ExperimentAPI._store.addExperiment({
-    slug: "mochitest-1-aboutwelcome",
-    branch: {
-      slug: "mochitest-1-aboutwelcome",
-      feature: {
-        enabled: false,
-        featureId: "aboutwelcome",
-        value: null,
-      },
-    },
-    active: true,
-  });
 
-  await updatePromise;
+  let {
+    enrollmentPromise,
+    doExperimentCleanup,
+  } = ExperimentFakes.enrollmentHelper(
+    ExperimentFakes.recipe("mochitest-1-aboutwelcome", {
+      branches: [
+        {
+          slug: "mochitest-1-aboutwelcome",
+          feature: {
+            enabled: false,
+            featureId: "aboutwelcome",
+            value: null,
+          },
+        },
+      ],
+      active: true,
+    })
+  );
+
+  await enrollmentPromise;
   ExperimentAPI._store._syncToChildren({ flush: true });
 
   let tab = await BrowserTestUtils.openNewForegroundTab(
@@ -244,6 +260,7 @@ add_task(async function test_multistage_zeroOnboarding_experimentAPI() {
     "about:welcome",
     true
   );
+
   registerCleanupFunction(() => {
     BrowserTestUtils.removeTab(tab);
   });
@@ -259,7 +276,7 @@ add_task(async function test_multistage_zeroOnboarding_experimentAPI() {
     ["div.onboardingContainer", "main.AW_STEP1"]
   );
 
-  ExperimentAPI._store._deleteForTests("mochitest-1-aboutwelcome");
+  await doExperimentCleanup();
   Assert.equal(ExperimentAPI._store.getAll().length, 0, "Cleanup done");
 });
 
@@ -268,24 +285,27 @@ add_task(async function test_multistage_zeroOnboarding_experimentAPI() {
  */
 add_task(async function test_multistage_aboutwelcome_experimentAPI() {
   await setAboutWelcomePref(true);
-  await setAboutWelcomeMultiStage({});
-  let updatePromise = ExperimentFakes.waitForExperimentUpdate(ExperimentAPI, {
-    slug: "mochitest-aboutwelcome",
-  });
-  ExperimentAPI._store.addExperiment({
-    slug: "mochitest-aboutwelcome",
-    branch: {
-      slug: "mochitest-aboutwelcome",
-      feature: {
-        enabled: true,
-        featureId: "aboutwelcome",
-        value: TEST_MULTISTAGE_CONTENT,
-      },
-    },
-    active: true,
-  });
 
-  await updatePromise;
+  let {
+    enrollmentPromise,
+    doExperimentCleanup,
+  } = ExperimentFakes.enrollmentHelper(
+    ExperimentFakes.recipe("mochitest-aboutwelcome", {
+      branches: [
+        {
+          slug: "mochitest-aboutwelcome-branch",
+          feature: {
+            enabled: true,
+            featureId: "aboutwelcome",
+            value: TEST_MULTISTAGE_CONTENT,
+          },
+        },
+      ],
+      active: true,
+    })
+  );
+
+  await enrollmentPromise;
   ExperimentAPI._store._syncToChildren({ flush: true });
 
   let tab = await BrowserTestUtils.openNewForegroundTab(
@@ -315,6 +335,7 @@ add_task(async function test_multistage_aboutwelcome_experimentAPI() {
       "label.theme",
       "input[type='radio']",
       "div.indicator.current",
+      "p.helptext.footer[data-l10n-id='onboarding-multistage-set-default-subtitle']",
     ],
     // Unexpected selectors:
     ["main.AW_STEP2", "main.AW_STEP3", "div.tiles-container.info"]
@@ -332,6 +353,8 @@ add_task(async function test_multistage_aboutwelcome_experimentAPI() {
       "h1.welcomeZap",
       "span.zap.long",
       "div.tiles-container.info",
+      "p.helptext",
+      "img.helptext-img",
     ],
     // Unexpected selectors:
     ["main.AW_STEP1", "main.AW_STEP3", "div.secondary-cta.top", "div.test-img"]
@@ -362,7 +385,7 @@ add_task(async function test_multistage_aboutwelcome_experimentAPI() {
     ["div.onboardingContainer"]
   );
 
-  ExperimentAPI._store._deleteForTests("mochitest-aboutwelcome");
+  await doExperimentCleanup();
   Assert.equal(ExperimentAPI._store.getAll().length, 0, "Cleanup done");
 });
 
@@ -804,23 +827,17 @@ add_task(async function test_AWMultistage_Import() {
   );
 });
 
-// Test events from AboutWelcomeUtils
-async function test_set_message() {
+add_task(async function test_onContentMessage() {
   Services.prefs.setBoolPref(DID_SEE_ABOUT_WELCOME_PREF, false);
+  await setAboutWelcomePref(true);
+
   await openAboutWelcome();
   Assert.equal(
     Services.prefs.getBoolPref(DID_SEE_ABOUT_WELCOME_PREF, false),
     true,
     "Pref was set"
   );
-}
-
-add_task(async function test_onContentMessage() {
-  await setAboutWelcomePref(true);
-  await openAboutWelcome();
-
-  //case "SET_WELCOME_MESSAGE_SEEN"
-  await test_set_message();
+  Services.prefs.clearUserPref(DID_SEE_ABOUT_WELCOME_PREF);
 });
 
 // Test Fxaccounts MetricsFlowURI

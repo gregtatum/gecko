@@ -1996,8 +1996,8 @@ void nsDisplayListBuilder::RemoveFromWillChangeBudgets(const nsIFrame* aFrame) {
   if (auto entry = mFrameWillChangeBudgets.Lookup(aFrame)) {
     const FrameWillChangeBudget& frameBudget = entry.Data();
 
-    DocumentWillChangeBudget* documentBudget =
-        mDocumentWillChangeBudgets.GetValue(frameBudget.mPresContext);
+    auto documentBudget =
+        mDocumentWillChangeBudgets.Lookup(frameBudget.mPresContext);
 
     if (documentBudget) {
       *documentBudget -= frameBudget.mUsage;
@@ -6327,9 +6327,14 @@ bool nsDisplayOwnLayer::CreateWebRenderCommands(
   if (IsScrollThumbLayer()) {
     params.prim_flags |= wr::PrimitiveFlags::IS_SCROLLBAR_THUMB;
   }
-  if (IsZoomingLayer()) {
-    params.reference_frame_kind = wr::WrReferenceFrameKind::Zoom;
+  if (IsZoomingLayer() ||
+      ((IsFixedPositionLayer() && HasDynamicToolbar()) ||
+       (IsStickyPositionLayer() && HasDynamicToolbar()) ||
+       (IsRootScrollbarContainer() && HasDynamicToolbar()))) {
+    params.is_2d_scale_translation = true;
+    params.should_snap = true;
   }
+
   StackingContextHelper sc(aSc, GetActiveScrolledRoot(), mFrame, this, aBuilder,
                            params);
 

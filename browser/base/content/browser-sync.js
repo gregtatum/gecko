@@ -111,6 +111,10 @@ this.SyncedTabsPanelList = class SyncedTabsPanelList {
       // resolving and now.
       return undefined;
     }
+    const syncPrefsButtonEl = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-sync-prefs-button"
+    );
     return SyncedTabs.getTabClients()
       .then(clients => {
         let noTabs = !UIState.get().syncEnabled || !clients.length;
@@ -118,6 +122,9 @@ this.SyncedTabsPanelList = class SyncedTabsPanelList {
         if (this.separator) {
           this.separator.hidden = noTabs;
         }
+
+        syncPrefsButtonEl.hidden =
+          !UIState.get().syncEnabled || clients.length <= 1;
 
         // The view may have been hidden while the promise was resolving.
         if (!this.tabsList) {
@@ -296,7 +303,9 @@ this.SyncedTabsPanelList = class SyncedTabsPanelList {
       "subviewbutton-nav",
       "subviewbutton-nav-down"
     );
-    let label = this.tabsList.getAttribute(labelAttr);
+    let label = gSync.fluentStrings.formatValueSync(
+      this.tabsList.getAttribute(labelAttr)
+    );
     showMoreItem.setAttribute("label", label);
     let tooltipText = this.tabsList.getAttribute(tooltipAttr);
     showMoreItem.setAttribute("tooltiptext", tooltipText);
@@ -819,11 +828,6 @@ var gSync = {
       "PanelUI-fxa-menu-setup-sync-button"
     );
 
-    const syncPrefsButtonEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sync-prefs-button"
-    );
-
     const syncNowButtonEl = PanelMultiView.getViewNode(
       document,
       "PanelUI-fxa-menu-syncnow-button"
@@ -861,7 +865,6 @@ var gSync = {
     syncNowButtonEl.hidden = true;
     fxaMenuAccountButtonEl.classList.remove("subviewbutton-nav");
     fxaMenuAccountButtonEl.removeAttribute("closemenu");
-    syncPrefsButtonEl.hidden = true;
     syncSetupButtonEl.removeAttribute("hidden");
 
     if (state.status === UIState.STATUS_NOT_CONFIGURED) {
@@ -909,7 +912,6 @@ var gSync = {
 
       if (state.syncEnabled) {
         syncNowButtonEl.removeAttribute("hidden");
-        syncPrefsButtonEl.removeAttribute("hidden");
         syncSetupButtonEl.hidden = true;
         document.l10n.setAttributes(
           syncNowLabel,
@@ -1588,19 +1590,8 @@ var gSync = {
         contextMenu.onTextInput
       );
 
-    // Avoids double separator on images with links.
-    const hideSeparator =
-      contextMenu.isContentSelected &&
-      contextMenu.onLink &&
-      contextMenu.onImage;
-    [
-      "context-sendpagetodevice",
-      ...(hideSeparator ? [] : ["context-sep-sendpagetodevice"]),
-    ].forEach(id => contextMenu.showItem(id, showSendPage));
-    [
-      "context-sendlinktodevice",
-      ...(hideSeparator ? [] : ["context-sep-sendlinktodevice"]),
-    ].forEach(id => contextMenu.showItem(id, showSendLink));
+    contextMenu.showItem("context-sendpagetodevice", showSendPage);
+    contextMenu.showItem("context-sendlinktodevice", showSendLink);
 
     if (!showSendLink && !showSendPage) {
       return;

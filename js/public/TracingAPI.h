@@ -44,6 +44,7 @@ enum class TracerKind {
   GrayBuffering,
   ClearEdges,
   Sweeping,
+  Barrier,
 
   // Callback tracers: General-purpose tracers that have a single virtual
   // method called on every edge.
@@ -53,7 +54,7 @@ enum class TracerKind {
 
   // Specific kinds of callback tracer.
   UnmarkGray,
-  VerifyTraceProtoAndIface
+  VerifyTraceProtoAndIface,
 };
 
 enum class WeakMapTraceAction {

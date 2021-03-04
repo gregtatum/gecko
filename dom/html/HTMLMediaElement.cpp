@@ -2115,8 +2115,7 @@ void HTMLMediaElement::SetDecodeError(const nsAString& aError,
       {"NS_ERROR_DOM_MEDIA_DEMUXER_ERR", NS_ERROR_DOM_MEDIA_DEMUXER_ERR},
       {"NS_ERROR_DOM_MEDIA_CDM_ERR", NS_ERROR_DOM_MEDIA_CDM_ERR},
       {"NS_ERROR_DOM_MEDIA_CUBEB_INITIALIZATION_ERR",
-       NS_ERROR_DOM_MEDIA_CUBEB_INITIALIZATION_ERR}
-  };
+       NS_ERROR_DOM_MEDIA_CUBEB_INITIALIZATION_ERR}};
   for (auto& error : kSupportedErrorList) {
     if (strcmp(error.mName, NS_ConvertUTF16toUTF8(aError).get()) == 0) {
       DecoderDoctorDiagnostics diagnostics;
@@ -3725,7 +3724,7 @@ void HTMLMediaElement::UpdateOutputTrackSources() {
                           source.get(), NS_ConvertUTF16toUTF8(id).get()));
 
     track->QueueSetAutoend(false);
-    MOZ_DIAGNOSTIC_ASSERT(!mOutputTrackSources.GetWeak(id));
+    MOZ_DIAGNOSTIC_ASSERT(!mOutputTrackSources.Contains(id));
     mOutputTrackSources.InsertOrUpdate(id, RefPtr{source});
 
     // Add the new track source to any existing output streams

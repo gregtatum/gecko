@@ -2068,10 +2068,10 @@ void ReflowInput::InitConstraints(
     nsPresContext* aPresContext, const Maybe<LogicalSize>& aContainingBlockSize,
     const Maybe<LogicalMargin>& aBorder, const Maybe<LogicalMargin>& aPadding,
     LayoutFrameType aFrameType) {
-  MOZ_ASSERT(
-      !IsFloating() || (mStyleDisplay->mDisplay != StyleDisplay::MozBox &&
-                        mStyleDisplay->mDisplay != StyleDisplay::MozInlineBox),
-      "Please don't try to float a -moz-box or a -moz-inline-box");
+  MOZ_ASSERT(!mStyleDisplay->IsFloating(mFrame) ||
+                 (mStyleDisplay->mDisplay != StyleDisplay::MozBox &&
+                  mStyleDisplay->mDisplay != StyleDisplay::MozInlineBox),
+             "Please don't try to float a -moz-box or a -moz-inline-box");
 
   WritingMode wm = GetWritingMode();
   LogicalSize cbSize = aContainingBlockSize.valueOr(
@@ -2272,9 +2272,17 @@ void ReflowInput::InitConstraints(
       AutoMaybeDisableFontInflation an(mFrame);
 
       const bool isBlockLevel =
-          (mStyleDisplay->DisplayOutside() == StyleDisplayOutside::Block ||
-           mStyleDisplay->DisplayOutside() ==
-               StyleDisplayOutside::TableCaption ||
+          ((!mStyleDisplay->IsInlineOutsideStyle() &&
+            // internal table values on replaced elements behaves as inline
+            // https://drafts.csswg.org/css-tables-3/#table-structure
+            // "... it is handled instead as though the author had declared
+            //  either 'block' (for 'table' display) or 'inline' (for all
+            //  other values)"
+            !(mFlags.mIsReplaced && (mStyleDisplay->IsInnerTableStyle() ||
+                                     mStyleDisplay->DisplayOutside() ==
+                                         StyleDisplayOutside::TableCaption))) ||
+           // The inner table frame always fills its outer wrapper table frame,
+           // even for 'inline-table'.
            mFrame->IsTableFrame()) &&
           // XXX abs.pos. continuations treated like blocks, see comment in
           // the else-if condition above.
@@ -2888,10 +2896,6 @@ void ReflowInput::ComputeMinMaxValues(const LogicalSize& aCBSize) {
   if (ComputedMinBSize() > ComputedMaxBSize()) {
     ComputedMaxBSize() = ComputedMinBSize();
   }
-}
-
-bool ReflowInput::IsFloating() const {
-  return mStyleDisplay->IsFloating(mFrame);
 }
 
 bool ReflowInput::IsInternalTableFrame() const {

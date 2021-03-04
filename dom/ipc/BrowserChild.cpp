@@ -1679,6 +1679,19 @@ mozilla::ipc::IPCResult BrowserChild::RecvNormalPriorityRealMouseButtonEvent(
   return RecvRealMouseButtonEvent(aEvent, aGuid, aInputBlockId);
 }
 
+mozilla::ipc::IPCResult BrowserChild::RecvRealMouseEnterExitWidgetEvent(
+    const WidgetMouseEvent& aEvent, const ScrollableLayerGuid& aGuid,
+    const uint64_t& aInputBlockId) {
+  return RecvRealMouseButtonEvent(aEvent, aGuid, aInputBlockId);
+}
+
+mozilla::ipc::IPCResult
+BrowserChild::RecvNormalPriorityRealMouseEnterExitWidgetEvent(
+    const WidgetMouseEvent& aEvent, const ScrollableLayerGuid& aGuid,
+    const uint64_t& aInputBlockId) {
+  return RecvRealMouseButtonEvent(aEvent, aGuid, aInputBlockId);
+}
+
 // In case handling repeated mouse wheel takes much time, we skip firing current
 // wheel event if it may be coalesced to the next one.
 bool BrowserChild::MaybeCoalesceWheelEvent(const WidgetWheelEvent& aEvent,
@@ -2171,7 +2184,7 @@ RefPtr<VsyncChild> BrowserChild::GetVsyncChild() {
   // given platform. Note: this only makes sense if nsWindow returns a
   // window-specific VsyncSource.
 #if defined(MOZ_WAYLAND)
-  if (!IsWaylandDisabled() && !mVsyncChild) {
+  if (IsWaylandEnabled() && !mVsyncChild) {
     PVsyncChild* actor = SendPVsyncConstructor();
     mVsyncChild = static_cast<VsyncChild*>(actor);
   }

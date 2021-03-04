@@ -3920,8 +3920,10 @@ static CursorImage ComputeCustomCursor(nsPresContext* aPresContext,
   // consumer know.
   bool loading = false;
   for (const auto& image : style.StyleUI()->mCursor.images.AsSpan()) {
+    MOZ_ASSERT(image.image.IsImageRequestType(),
+               "Cursor image should only parse url() type");
     uint32_t status;
-    imgRequestProxy* req = image.url.GetImage();
+    imgRequestProxy* req = image.image.GetImageRequest();
     if (!req || NS_FAILED(req->GetImageStatus(&status))) {
       continue;
     }
@@ -4689,10 +4691,7 @@ OverOutElementsWrapper* EventStateManager::GetWrapperByEventID(
     }
     return mMouseEnterLeaveHelper;
   }
-  return mPointersEnterLeaveHelper
-      .LookupOrInsertWith(pointer->pointerId,
-                          [] { return new OverOutElementsWrapper(); })
-      .get();
+  return mPointersEnterLeaveHelper.GetOrInsertNew(pointer->pointerId);
 }
 
 /* static */

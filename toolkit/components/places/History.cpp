@@ -819,6 +819,9 @@ class InsertVisitedURIs final : public Runnable {
     mozStorageTransaction transaction(
         mDBConn, false, mozIStorageConnection::TRANSACTION_IMMEDIATE);
 
+    // XXX Handle the error, bug 1696133.
+    Unused << NS_WARN_IF(NS_FAILED(transaction.Start()));
+
     const VisitData* lastFetchedPlace = nullptr;
     uint32_t lastFetchedVisitCount = 0;
     bool shouldChunkNotifications = mPlaces.Length() > NOTIFY_VISITS_CHUNK_SIZE;
@@ -1843,9 +1846,8 @@ History::VisitURI(nsIWidget* aWidget, nsIURI* aURI, nsIURI* aLastVisitedURI,
     auto entry = mRecentlyVisitedURIs.Lookup(aURI);
     // Check if the entry exists and is younger than
     // RECENTLY_VISITED_URIS_MAX_AGE.
-    if (entry &&
-        (PR_Now() - entry.Data().mTime) < RECENTLY_VISITED_URIS_MAX_AGE) {
-      bool wasHidden = entry.Data().mHidden;
+    if (entry && (PR_Now() - entry->mTime) < RECENTLY_VISITED_URIS_MAX_AGE) {
+      bool wasHidden = entry->mHidden;
       // Regardless of whether we store the visit or not, we must update the
       // stored visit time.
       AppendToRecentlyVisitedURIs(aURI, place.hidden);

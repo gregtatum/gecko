@@ -64,19 +64,19 @@ void APZEventResult::SetStatusAsConsumeDoDefault(
     const RefPtr<AsyncPanZoomController>& aTarget) {
   mStatus = nsEventStatus_eConsumeDoDefault;
   mHandledResult =
-      Some(aTarget->IsRootContent()
+      Some(aTarget && aTarget->IsRootContent()
                ? APZHandledResult{APZHandledPlace::HandledByRoot, aTarget}
                : APZHandledResult{APZHandledPlace::HandledByContent, aTarget});
 }
 
 void APZEventResult::SetStatusAsConsumeDoDefaultWithTargetConfirmationFlags(
-    const InputBlockState& aBlock, TargetConfirmationFlags aFlags) {
+    const InputBlockState& aBlock, TargetConfirmationFlags aFlags,
+    const AsyncPanZoomController& aTarget) {
   mStatus = nsEventStatus_eConsumeDoDefault;
 
-  const RefPtr<AsyncPanZoomController>& target = aBlock.GetTargetApzc();
-  if (!target->IsRootContent() &&
+  if (!aTarget.IsRootContent() &&
       aBlock.GetOverscrollHandoffChain()->ScrollingDownWillMoveDynamicToolbar(
-          target)) {
+          &aTarget)) {
     // The event is actually consumed by a non-root APZC but scroll
     // positions in all relevant APZCs are at the bottom edge, so if there's
     // still contents covered by the dynamic toolbar we need to move the
@@ -90,7 +90,7 @@ void APZEventResult::SetStatusAsConsumeDoDefaultWithTargetConfirmationFlags(
     mHandledResult =
         aFlags.mDispatchToContent
             ? Nothing()
-            : Some(APZHandledResult{APZHandledPlace::HandledByRoot, target});
+            : Some(APZHandledResult{APZHandledPlace::HandledByRoot, &aTarget});
   }
 }
 
@@ -264,8 +264,10 @@ APZHandledResult::APZHandledResult(APZHandledPlace aPlace,
     case APZHandledPlace::Unhandled:
       break;
     case APZHandledPlace::HandledByContent:
-      mScrollableDirections = aTarget->ScrollableDirections();
-      mOverscrollDirections = aTarget->GetAllowedHandoffDirections();
+      if (aTarget) {
+        mScrollableDirections = aTarget->ScrollableDirections();
+        mOverscrollDirections = aTarget->GetAllowedHandoffDirections();
+      }
       break;
     case APZHandledPlace::HandledByRoot: {
       // The only way we can have mPlace == HandledByRoot but target is not the
@@ -274,13 +276,15 @@ APZHandledResult::APZHandledResult(APZHandledPlace aPlace,
       // scroll range. Therefore, it's the scroll directions of the root which
       // are relevant.
       const AsyncPanZoomController* target = aTarget;
-      while (!target->IsRootContent()) {
+      while (target && !target->IsRootContent()) {
         target = target->GetParent();
       }
 
       MOZ_ASSERT(target && target->IsRootContent());
-      mScrollableDirections = target->ScrollableDirections();
-      mOverscrollDirections = target->GetAllowedHandoffDirections();
+      if (target) {
+        mScrollableDirections = target->ScrollableDirections();
+        mOverscrollDirections = target->GetAllowedHandoffDirections();
+      }
       break;
     }
     default:

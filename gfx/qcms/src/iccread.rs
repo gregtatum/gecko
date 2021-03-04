@@ -22,12 +22,15 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 use std::{
+    convert::TryInto,
     sync::atomic::{AtomicBool, Ordering},
     sync::Arc,
-    convert::TryInto,
 };
 
-use crate::{double_to_s15Fixed16Number, transform::{set_rgb_colorants, PrecacheOuput}};
+use crate::{
+    double_to_s15Fixed16Number,
+    transform::{set_rgb_colorants, PrecacheOuput},
+};
 use crate::{matrix::Matrix, s15Fixed16Number, s15Fixed16Number_to_float, Intent, Intent::*};
 
 pub static SUPPORTS_ICCV4: AtomicBool = AtomicBool::new(cfg!(feature = "iccv4-enabled"));
@@ -178,7 +181,7 @@ fn invalid_source(mut mem: &mut MemSource, reason: &'static str) {
     mem.invalid_reason = Some(reason);
 }
 fn read_u32(mem: &mut MemSource, offset: usize) -> u32 {
-    let val = mem.buf.get(offset..offset+4);
+    let val = mem.buf.get(offset..offset + 4);
     if let Some(val) = val {
         let val = val.try_into().unwrap();
         u32::from_be_bytes(val)
@@ -188,7 +191,7 @@ fn read_u32(mem: &mut MemSource, offset: usize) -> u32 {
     }
 }
 fn read_u16(mem: &mut MemSource, offset: usize) -> u16 {
-    let val = mem.buf.get(offset..offset+2);
+    let val = mem.buf.get(offset..offset + 2);
     if let Some(val) = val {
         let val = val.try_into().unwrap();
         u16::from_be_bytes(val)
@@ -218,14 +221,14 @@ fn read_uInt16Number(mem: &mut MemSource, offset: usize) -> uInt16Number {
 pub fn write_u32(mem: &mut [u8], offset: usize, value: u32) {
     // we use get() and expect() instead of [..] so there's only one call to panic
     // instead of two
-    mem.get_mut(offset..offset+std::mem::size_of_val(&value))
+    mem.get_mut(offset..offset + std::mem::size_of_val(&value))
         .expect("OOB")
         .copy_from_slice(&value.to_be_bytes());
 }
 pub fn write_u16(mem: &mut [u8], offset: usize, value: u16) {
     // we use get() and expect() instead of [..] so there's only one call to panic
     // intead of two
-    mem.get_mut(offset..offset+std::mem::size_of_val(&value))
+    mem.get_mut(offset..offset + std::mem::size_of_val(&value))
         .expect("OOB")
         .copy_from_slice(&value.to_be_bytes());
 }
@@ -731,18 +734,25 @@ fn read_tag_lutType(src: &mut MemSource, tag: &Tag) -> Option<Box<lutType>> {
     }
     let in_chan = read_u8(src, (offset + 8) as usize);
     let out_chan = read_u8(src, (offset + 9) as usize);
+    if in_chan != 3 || out_chan != 3 {
+        invalid_source(src, "CLUT only supports RGB");
+        return None;
+    }
+
     let grid_points = read_u8(src, (offset + 10) as usize);
-    let clut_size = (grid_points as f64).powf(in_chan as f64) as u32;
+    let clut_size = match (grid_points as u32).checked_pow(in_chan as u32) {
+        Some(clut_size) => clut_size,
+        _ => {
+            invalid_source(src, "CLUT size overflow");
+            return None;
+        }
+    };
     if clut_size > MAX_LUT_SIZE {
         invalid_source(src, "CLUT too large");
         return None;
     }
     if clut_size <= 0 {
         invalid_source(src, "CLUT must not be empty.");
-        return None;
-    }
-    if in_chan != 3 || out_chan != 3 {
-        invalid_source(src, "CLUT only supports RGB");
         return None;
     }
 
@@ -775,35 +785,20 @@ fn read_tag_lutType(src: &mut MemSource, tag: &Tag) -> Option<Box<lutType>> {
         as u32;
 
     let mut clut_table = Vec::with_capacity((clut_size * out_chan as u32) as usize);
-    for i in (0..clut_size * out_chan as u32).step_by(3) {
+    for i in 0..clut_size * out_chan as u32 {
         if type_0 == LUT8_TYPE {
             clut_table.push(uInt8Number_to_float(read_uInt8Number(
                 src,
-                clut_offset as usize + i as usize * entry_size + 0,
+                clut_offset as usize + i as usize * entry_size,
             )));
-            clut_table.push(uInt8Number_to_float(read_uInt8Number(
-                src,
-                clut_offset as usize + i as usize * entry_size + 1,
-            )));
-            clut_table.push(uInt8Number_to_float(read_uInt8Number(
-                src,
-                clut_offset as usize + i as usize * entry_size + 2,
-            )))
-        } else {
+        } else if type_0 == LUT16_TYPE {
             clut_table.push(uInt16Number_to_float(read_uInt16Number(
                 src,
-                clut_offset as usize + i as usize * entry_size + 0,
+                clut_offset as usize + i as usize * entry_size,
             )));
-            clut_table.push(uInt16Number_to_float(read_uInt16Number(
-                src,
-                clut_offset as usize + i as usize * entry_size + 2,
-            )));
-            clut_table.push(uInt16Number_to_float(read_uInt16Number(
-                src,
-                clut_offset as usize + i as usize * entry_size + 4,
-            )))
         }
     }
+
     let output_offset =
         (clut_offset as usize + (clut_size * out_chan as u32) as usize * entry_size) as u32;
 
