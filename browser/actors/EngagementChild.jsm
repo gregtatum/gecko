@@ -88,7 +88,7 @@ class EngagementChild extends JSWindowActorChild {
   }
 
   checkForDocument() {
-    if (this._keysPerMinute >= CPM) {
+    if (this._keysPerMinute >= CPM / 2) {
       this._isDocument = true;
       this.sendAsyncMessage("Engagement:UpdateType", "document");
     }
@@ -110,10 +110,9 @@ class EngagementChild extends JSWindowActorChild {
         if (event.code.startsWith("Key")) {
           if (!this._inputTimer) {
             let self = this;
-            this._inputTimer = setTimeout(
-              function() {
-                self.checkForDocument()
-              }, 60*1000);
+            this._inputTimer = setTimeout(function() {
+              self.checkForDocument();
+            }, 30 * 1000);
             this._keysPerMinute = 0;
           }
           this._keysPerMinute++;
