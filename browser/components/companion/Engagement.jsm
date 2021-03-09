@@ -17,6 +17,8 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   Services: "resource://gre/modules/Services.jsm",
   setInterval: "resource://gre/modules/Timer.jsm",
   clearInterval: "resource://gre/modules/Timer.jsm",
+  setTimeout: "resource://gre/modules/Timer.jsm",
+  clearTimeout: "resource://gre/modules/Timer.jsm",
 });
 
 XPCOMUtils.defineLazyGetter(this, "log", () => {
@@ -26,6 +28,8 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
     maxLogLevel: "debug",
   });
 });
+
+const CPM = 100; // Characters per minute
 
 const ENGAGEMENT_CUTOFF = 2000; // 2 seconds
 const ENGAGEMENT_TIMER_INTERVAL = 1000;
@@ -41,6 +45,10 @@ let Engagement = {
   _inited: false,
 
   _lastTimeUpdate: Date.now(),
+
+  _keysPerMinute: 0,
+  _isDocument: false,
+  _inputTimer: 0,
 
   init() {
     this._setupAfterRestore();
@@ -130,6 +138,7 @@ let Engagement = {
           if (!this._currentEngagement) {
             // Unknown engagement.
           }
+          this.cancelInputTimer();
         }
         break;
       case "activate":
@@ -156,6 +165,22 @@ let Engagement = {
       case "unload":
         this._unregisterWindow(event.target);
         break;
+      case "keyup":
+        if (event.target.ownerGlobal.gBrowser.selectedBrowser == event.target) {
+          if (this._isDocument) {
+            return;
+          }
+          if (event.code.startsWith("Key")) {
+            if (!this._inputTimer) {
+              let self = this;
+              this._inputTimer = setTimeout(function() {
+                self.checkForDocument();
+              }, 30 * 1000);
+              this._keysPerMinute = 0;
+            }
+            this._keysPerMinute++;
+          }
+        }
     }
   },
 
@@ -178,12 +203,14 @@ let Engagement = {
     win.addEventListener("TabSelect", this, true);
     win.addEventListener("deactivate", this, true);
     win.addEventListener("activate", this, true);
+    Services.els.addSystemEventListener(win.document, "keyup", this, false);
   },
 
   _unregisterWindow(win) {
     win.removeEventListener("TabSelect", this, true);
     win.removeEventListener("deactivate", this, true);
     win.removeEventListener("activate", this, true);
+    Services.els.removeSystemEventListener(win.document, "keyup", this, false);
   },
 
   _onWindowOpen(win) {
@@ -292,6 +319,7 @@ let Engagement = {
         this.updateDb(engagementData);
       }
     }
+    this.cancelInputTimer();
   },
 
   /* In the case where we know we want to add a URL to Keyframes
@@ -327,6 +355,23 @@ let Engagement = {
       Keyframes.updateType(engagementData.id, type);
     } else {
       this.updateDb(engagementData);
+    }
+  },
+
+  async cancelInputTimer() {
+    this._isDocument = false;
+    if (this._inputTimer) {
+      clearTimeout(this._inputTimer);
+      this._inputTimer = 0;
+    }
+    this._keysPerMinute = 0;
+  },
+
+  async checkForDocument() {
+    if (this._keysPerMinute >= CPM / 2) {
+      this._isDocument = true;
+      log.debug(`Converting ${this._currentEngagement.url} to document`);
+      Keyframes.updateType(this._currentEngagement.id, "document");
     }
   },
 };
