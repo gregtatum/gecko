@@ -249,6 +249,9 @@ async function getPlacesData(url) {
     richIcon: await getFavicon(url),
     previewImage: await getPreviewImageURL(url),
   };
+  if (!data.icon) {
+    return null;
+  }
   cache.set(url, data);
   return data;
 }
