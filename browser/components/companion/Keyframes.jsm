@@ -63,13 +63,9 @@ const SQL = {
 
   exists: "SELECT * FROM keyframes WHERE id = :id;",
 
-  selectAfter:
+  select:
     "SELECT id, type, url, max(lastVisit) AS lastVisit, sum(totalEngagement) as totalEngagement FROM " +
-    "keyframes WHERE lastVisit > :after GROUP BY url;",
-
-  selectAfterByType:
-    "SELECT id, type, url, max(lastVisit) AS lastVisit, sum(totalEngagement) as totalEngagement FROM " +
-    "keyframes WHERE lastVisit > :after AND type = (:type) GROUP BY url;",
+    "keyframes WHERE {WHERE} GROUP BY url;",
 };
 
 function int(dateStr) {
@@ -115,23 +111,27 @@ var Keyframes = {
     Services.obs.notifyObservers(null, "keyframe-update");
   },
 
-  async queryAfter(after, type) {
+  async query(minTime, maxTime = null, type = null) {
     if (!this._db) {
       await this.init();
     }
 
-    let records;
+    let params = {
+      minTime,
+    };
 
-    if (type) {
-      records = await this._db.executeCached(SQL.selectAfterByType, {
-        after,
-        type,
-      });
-    } else {
-      records = await this._db.executeCached(SQL.selectAfter, {
-        after,
-      });
+    let where = "lastVisit > :minTime";
+    if (maxTime) {
+      where += " AND firstVisit < :maxTime";
+      params.maxTime = maxTime;
     }
+    if (type) {
+      where += " AND type = :type";
+      params.type = type;
+    }
+    let sql = SQL.select.replace("{WHERE}", where);
+
+    let records = await this._db.executeCached(sql, params);
 
     return records.map(record => {
       let lastVisit =
