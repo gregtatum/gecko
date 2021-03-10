@@ -23,8 +23,6 @@ export class TopSites extends KeyframeList {
   }
 
   async connectedCallback() {
-    super.connectedCallback();
-
     let query = NavHistory.getNewQuery();
     // Two days of history
     query.beginTime = PlacesUtils.toPRTime(

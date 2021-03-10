@@ -30,6 +30,16 @@ export class Keyframe extends HidableElement {
   constructor(data) {
     super();
     this.data = data;
+
+    this.className = "keyframe card";
+    this.setAttribute("url", this.data.url);
+
+    let template = document.getElementById("template-keyframe");
+    let fragment = template.content.cloneNode(true);
+    this.updateDOM(fragment);
+
+    this.appendChild(fragment);
+    this.addEventListener("click", this);
   }
 
   static prioritise(url) {
@@ -78,16 +88,6 @@ export class Keyframe extends HidableElement {
   }
 
   connectedCallback() {
-    this.className = "keyframe card";
-    this.setAttribute("url", this.data.url);
-
-    let template = document.getElementById("template-keyframe");
-    let fragment = template.content.cloneNode(true);
-    this.updateDOM(fragment);
-
-    this.appendChild(fragment);
-    this.addEventListener("click", this);
-
     Keyframe.prioritise(this.data.url);
   }
 
@@ -107,9 +107,6 @@ export class KeyframeList extends HidableElement {
     super();
 
     this.title = title;
-  }
-
-  connectedCallback() {
     let shadow = this.attachShadow({ mode: "open" });
     let template = document.getElementById("template-keyframe-list");
     let fragment = template.content.cloneNode(true);

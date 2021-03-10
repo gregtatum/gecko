@@ -37,7 +37,6 @@ export class KeyframeDbList extends KeyframeList {
   }
 
   async connectedCallback() {
-    super.connectedCallback();
     this.updateFrames();
 
     Services.obs.addObserver(this.dbListener, "keyframe-update");

@@ -15,9 +15,7 @@ class Event extends HTMLElement {
   constructor(data) {
     super();
     this.data = data;
-  }
 
-  connectedCallback() {
     this.className = "event card";
 
     let template = document.getElementById("template-event");
