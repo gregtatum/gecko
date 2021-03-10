@@ -53,12 +53,16 @@ export class TopSites extends KeyframeList {
           if (domains.has(uri.host)) {
             continue;
           }
+          let placesData = await getPlacesData(childNode.uri);
+          if (!placesData) {
+            continue;
+          }
           domains.add(uri.host);
           frame.url = childNode.uri;
           frame.lastVisit = childNode.time / 1000;
           frames.push({
             ...frame,
-            ...(await getPlacesData(frame.url)),
+            ...placesData,
           });
         }
         if (frames.length == NUM_TOPSITES) {
