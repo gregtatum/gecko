@@ -375,7 +375,7 @@ class UrlbarInput {
     this.muxer = options.muxer;
 
     this.window = this.textbox.ownerGlobal;
-    if ("gBrowser" in this.window) {
+    if ("gBrowser" in this.window && this.window.gBrowser) {
       this.browserManager = new TabBrowserManager({
         input: this,
       });

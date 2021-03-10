@@ -12,7 +12,12 @@ import { KeyframeDbList } from "./keyframes.js";
 import { AwesomeBar } from "./awesomebar.js";
 
 onLoad(() => {
-  window.gURLBar = new AwesomeBar();
+  // on macOS gURLBar is a lazy getter for the real awesomebar from browser.js
+  Object.defineProperty(window, "gURLBar", {
+    value: new AwesomeBar(),
+    configurable: true,
+    enumerable: true,
+  });
 
   document.addEventListener("keydown", e => {
     if (e.key == "e" && e.metaKey) {

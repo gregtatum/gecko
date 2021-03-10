@@ -8,7 +8,7 @@ browser.jar:
     content/browser/companion/calendar.js (content/calendar.js)
     content/browser/companion/companion.css (content/companion.css)
     content/browser/companion/companion.js (content/companion.js)
-    content/browser/companion/companion.xhtml (content/companion.xhtml)
+*   content/browser/companion/companion.xhtml (content/companion.xhtml)
     content/browser/companion/event.svg (content/event.svg)
     content/browser/companion/keyframe-list.css (content/keyframe-list.css)
     content/browser/companion/keyframes.js (content/keyframes.js)

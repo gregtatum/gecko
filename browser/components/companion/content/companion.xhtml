@@ -10,11 +10,16 @@
 <?xml-stylesheet href="chrome://browser/skin/searchbar.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/content/companion/companion.css"?>
 
-<!DOCTYPE html>
+<!DOCTYPE html [
+#ifdef XP_MACOSX
+#include ../../../base/content/browser-doctype.inc
+#endif
+]>
 
 <html
   id="companion"
   xmlns="http://www.w3.org/1999/xhtml"
+  xmlns:html="http://www.w3.org/1999/xhtml"
   xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   width="800" height="600"
   forcedarkmode="true"
@@ -24,12 +29,18 @@
 >
 <head>
   <title>Firefox Companion</title>
-  <script src="chrome://browser/content/utilityOverlay.js"/>
   <script type="module" src="companion.js"/>
   <link rel="localization" href="browser/browser.ftl"/>
 </head>
-<body>
-  <template id="template-keyframe-list">
+<html:body xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+#ifdef XP_MACOSX
+#include ../../../base/content/macWindow.inc.xhtml
+#else
+  <script src="chrome://browser/content/utilityOverlay.js"/>
+#endif
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-keyframe-list">
     <link rel="stylesheet" href="keyframe-list.css"/>
     <h2 class="list-title"/>
     <div class="keyframe-list">
@@ -37,14 +48,14 @@
     </div>
   </template>
 
-  <template id="template-keyframe">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-keyframe">
     <img class="favicon"/>
     <p class="title"/>
     <p class="total-engagement"/>
     <p class="last-access"/>
   </template>
 
-  <template id="template-event">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-event">
     <img class="favicon"/>
     <div class="date"/>
     <div class="summary"/>
@@ -54,81 +65,81 @@
     </div>
   </template>
 
-  <xul:hbox id="titlebar">
-    <xul:hbox id="mac-buttonbox"/>
-    <xul:hbox id="win-buttonbox" flex="1" pack="end" class="titlebar-buttonbox-container">
-      <xul:hbox class="titlebar-buttonbox titlebar-color">
-        <xul:toolbarbutton class="titlebar-button titlebar-min"
+  <hbox id="titlebar">
+    <hbox id="mac-buttonbox"/>
+    <hbox id="win-buttonbox" flex="1" pack="end" class="titlebar-buttonbox-container">
+      <hbox class="titlebar-buttonbox titlebar-color">
+        <toolbarbutton class="titlebar-button titlebar-min"
                            oncommand="window.minimize();"
                            data-l10n-id="browser-window-minimize-button"
                            />
-        <xul:toolbarbutton class="titlebar-button titlebar-max"
+        <toolbarbutton class="titlebar-button titlebar-max"
                            oncommand="window.maximize();"
                            data-l10n-id="browser-window-maximize-button"
                            />
-        <xul:toolbarbutton class="titlebar-button titlebar-restore"
+        <toolbarbutton class="titlebar-button titlebar-restore"
                            oncommand="window.restore();"
                            data-l10n-id="browser-window-restore-down-button"
                            />
-        <xul:toolbarbutton class="titlebar-button titlebar-close"
+        <toolbarbutton class="titlebar-button titlebar-close"
                            oncommand="window.close();"
                            data-l10n-id="browser-window-close-button"
                            />
-      </xul:hbox>
-    </xul:hbox>
-  </xul:hbox>
+      </hbox>
+    </hbox>
+  </hbox>
 
-  <xul:toolbar id="awesomebar">
-    <xul:toolbaritem id="urlbar-container" flex="1">
-      <xul:hbox id="urlbar" flex="1"
+  <toolbar id="awesomebar">
+    <toolbaritem id="urlbar-container" flex="1">
+      <hbox id="urlbar" flex="1"
                 context=""
                 focused="true"
                 pageproxystate="invalid">
-        <xul:hbox id="urlbar-background"/>
-        <xul:hbox id="urlbar-input-container"
+        <hbox id="urlbar-background"/>
+        <hbox id="urlbar-input-container"
                   flex="1"
                   pageproxystate="invalid">
-          <xul:box id="urlbar-search-button"
+          <box id="urlbar-search-button"
                 class="chromeclass-toolbar-additional"/>
-          <xul:box id="urlbar-icon-container" orient="vertical" align="center" pack="center">
-            <xul:image id="urlbar-icon"/>
-          </xul:box>
-          <xul:box id="urlbar-label-box" align="center">
-            <xul:label id="urlbar-label-switchtab" class="urlbar-label" data-l10n-id="urlbar-switch-to-tab"/>
-            <xul:label id="urlbar-label-extension" class="urlbar-label" data-l10n-id="urlbar-extension"/>
-            <xul:label id="urlbar-label-search-mode" class="urlbar-label"/>
-          </xul:box>
-          <div id="urlbar-search-mode-indicator">
+          <box id="urlbar-icon-container" orient="vertical" align="center" pack="center">
+            <image id="urlbar-icon"/>
+          </box>
+          <box id="urlbar-label-box" align="center">
+            <label id="urlbar-label-switchtab" class="urlbar-label" data-l10n-id="urlbar-switch-to-tab"/>
+            <label id="urlbar-label-extension" class="urlbar-label" data-l10n-id="urlbar-extension"/>
+            <label id="urlbar-label-search-mode" class="urlbar-label"/>
+          </box>
+          <div xmlns="http://www.w3.org/1999/xhtml" id="urlbar-search-mode-indicator">
             <span id="urlbar-search-mode-indicator-title"/>
             <div id="urlbar-search-mode-indicator-close"
                 class="close-button"
                 role="button"/>
           </div>
-          <xul:moz-input-box tooltip="aHTMLTooltip"
+          <moz-input-box tooltip="aHTMLTooltip"
                         class="urlbar-input-box"
                         flex="1"
                         role="combobox"
                         aria-owns="urlbar-results">
-            <input id="urlbar-scheme"
+            <html:input id="urlbar-scheme"
                   required="required"/>
-            <input id="urlbar-input"
+            <html:input id="urlbar-input"
                   anonid="input"
                   aria-controls="urlbar-results"
                   aria-autocomplete="both"
                   inputmode="mozAwesomebar"
                   data-l10n-id="urlbar-placeholder"
                   data-l10n-attrs="placeholder"/>
-          </xul:moz-input-box>
-          <xul:image id="urlbar-go-button"
+          </moz-input-box>
+          <image id="urlbar-go-button"
                     class="urlbar-icon"
                     onclick="gURLBar.handleCommand(event);"
                     data-l10n-id="urlbar-go-button"/>
-        </xul:hbox>
-      </xul:hbox>
-    </xul:toolbaritem>
-  </xul:toolbar>
+        </hbox>
+      </hbox>
+    </toolbaritem>
+  </toolbar>
 
-  <div id="services">
+  <div xmlns="http://www.w3.org/1999/xhtml" id="services">
     <div id="service-login">
       <button id="service-signin">Sign in to Google</button>
     </div>
@@ -136,11 +147,11 @@
     </div>
   </div>
 
-  <div id="content">
+  <div xmlns="http://www.w3.org/1999/xhtml" id="content">
   </div>
-  <div id="sliders">
+  <div xmlns="http://www.w3.org/1999/xhtml" id="sliders">
     <input id="range" type="range" min="1000" max="30000" step="1000" value="4000"/>
     <p id="cutoff"/>
   </div>
-</body>
+</html:body>
 </html>
