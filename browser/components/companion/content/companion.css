@@ -123,10 +123,6 @@ body {
   padding: 5px 10px;
 }
 
-[hidden] {
-  display: none;
-}
-
 .keyframe {
   display: flex;
   flex-direction: row;
@@ -226,4 +222,8 @@ body {
   flex-direction: row;
   align-items: center;
   justify-content: center;
+}
+
+[hidden] {
+  display: none !important;
 }

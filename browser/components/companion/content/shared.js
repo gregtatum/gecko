@@ -12,10 +12,42 @@ const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
   Ci.nsINavHistoryService
 );
 
-export class Keyframe extends HTMLElement {
+class HidableElement extends HTMLElement {
+  get hidden() {
+    return this.hasAttribute("hidden");
+  }
+
+  set hidden(val) {
+    if (val) {
+      this.setAttribute("hidden", "true");
+    } else {
+      this.removeAttribute("hidden");
+    }
+  }
+}
+
+export class Keyframe extends HidableElement {
   constructor(data) {
     super();
     this.data = data;
+  }
+
+  static prioritise(url) {
+    // These will be in document order so frames in earlier sections will appear earlier.
+    let keyframes = Array.from(
+      document.querySelectorAll(`.keyframe[url="${CSS.escape(url)}"]`)
+    );
+
+    let first = keyframes.shift();
+    if (first) {
+      first.hidden = false;
+      first.parentElement.updateVisibility();
+    }
+
+    for (let frame of keyframes) {
+      frame.hidden = true;
+      frame.parentElement.updateVisibility();
+    }
   }
 
   updateDOM(target) {
@@ -35,6 +67,12 @@ export class Keyframe extends HTMLElement {
   }
 
   update(data) {
+    if (data.url != this.data.url) {
+      this.setAttribute("url", data.url);
+      Keyframe.prioritise(this.data.url);
+      Keyframe.prioritise(data.url);
+    }
+
     this.data = data;
     this.updateDOM(this);
   }
@@ -49,6 +87,12 @@ export class Keyframe extends HTMLElement {
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
+
+    Keyframe.prioritise(this.data.url);
+  }
+
+  disconnectedCallback() {
+    Keyframe.prioritise(this.data.url);
   }
 
   handleEvent() {
@@ -58,7 +102,7 @@ export class Keyframe extends HTMLElement {
 
 customElements.define("e-keyframe", Keyframe);
 
-export class KeyframeList extends HTMLElement {
+export class KeyframeList extends HidableElement {
   constructor(title) {
     super();
 
@@ -74,14 +118,33 @@ export class KeyframeList extends HTMLElement {
     shadow.appendChild(fragment);
   }
 
+  updateVisibility() {
+    for (let keyframe of this.childNodes) {
+      if (!keyframe.hidden) {
+        this.hidden = false;
+        return;
+      }
+    }
+
+    this.hidden = true;
+  }
+
   displayFrames(frames) {
-    let elements = frames.map(frame => new Keyframe(frame));
+    let elements = frames.map(frame => {
+      let element = this.querySelector(
+        `.keyframe[url="${CSS.escape(frame.url)}"`
+      );
+      if (element) {
+        element.update(frame);
+        return element;
+      }
+
+      return new Keyframe(frame);
+    });
     this.replaceChildren(...elements);
 
-    if (elements.length) {
-      this.removeAttribute("hidden");
-    } else {
-      this.setAttribute("hidden", "true");
+    if (!elements.length) {
+      this.hidden = true;
     }
   }
 }
