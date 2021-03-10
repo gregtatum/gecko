@@ -148,21 +148,21 @@ class OAuth2 {
   tokenExpires = null;
 
   async getToken() {
-    if (
-      !this.accessToken ||
-      !this.tokenExpires ||
-      this.tokenExpires < Date.now()
-    ) {
-      if (this.refreshToken) {
-        this.accessToken = null;
-        this.tokenExpires = null;
-        await this.requestAccessToken();
-      } else {
-        await OAuthConnect.connect(this);
+    if (this.accessToken && this.tokenExpires < Date.now()) {
+      return this.accessToken;
+    }
+
+    if (this.refreshToken) {
+      this.accessToken = null;
+      this.tokenExpires = null;
+      try {
+        return await this.requestAccessToken();
+      } catch (e) {
+        console.error("Failed to refresh token, attempting to log in again.");
       }
     }
 
-    return this.accessToken;
+    return OAuthConnect.connect(this);
   }
 
   toJSON() {
@@ -243,5 +243,7 @@ class OAuth2 {
     } else {
       this.tokenExpires = Number.MAX_VALUE;
     }
+
+    return this.accessToken;
   }
 }

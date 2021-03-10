@@ -143,6 +143,11 @@ const OnlineServices = {
     persist();
   },
 
+  deleteService(service) {
+    ServiceInstances.delete(service);
+    persist();
+  },
+
   getServices() {
     load();
 

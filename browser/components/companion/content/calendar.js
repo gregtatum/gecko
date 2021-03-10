@@ -62,10 +62,26 @@ async function buildEvents(services) {
     panel.firstChild.remove();
   }
 
+  let goodService = false;
   for (let service of services) {
-    for (let event of await service.getNextMeetings()) {
+    let meetings;
+    try {
+      meetings = await service.getNextMeetings();
+    } catch (e) {
+      console.error(e);
+      OnlineServices.deleteService(service);
+      continue;
+    }
+
+    goodService = true;
+
+    for (let event of meetings) {
       panel.appendChild(new Event(event));
     }
+  }
+
+  if (!goodService) {
+    document.getElementById("services").className = "disconnected";
   }
 }
 
