@@ -46,10 +46,10 @@ const CompanionService = {
   openCompanion() {
     this.init();
 
-    let container = Services.wm.getMostRecentWindow("Firefox:Companion");
+    let companion = Services.wm.getMostRecentWindow("Firefox:Companion");
 
-    if (container && !container.closed) {
-      container.focus();
+    if (companion && !companion.closed) {
+      companion.focus();
       return;
     }
 
@@ -60,5 +60,12 @@ const CompanionService = {
       "chrome,all,dialog=no,resizable=yes,toolbar=yes",
       null
     );
+  },
+
+  closeCompanion() {
+    let companion = Services.wm.getMostRecentWindow("Firefox:Companion");
+    if (companion && !companion.closed) {
+      companion.close();
+    }
   },
 };
