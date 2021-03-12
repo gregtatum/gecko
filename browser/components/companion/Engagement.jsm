@@ -166,7 +166,9 @@ let Engagement = {
         this._unregisterWindow(event.target);
         break;
       case "keyup":
-        if (event.target.ownerGlobal.gBrowser.selectedBrowser == event.target) {
+        if (
+          event.target.ownerGlobal.gBrowser?.selectedBrowser == event.target
+        ) {
           if (this._isDocument) {
             return;
           }
