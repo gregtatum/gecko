@@ -191,6 +191,14 @@ body {
   cursor: default;
 }
 
+.event-info {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: start;
+}
+
 .event img {
   width: 16px;
   height: 16px;
@@ -203,7 +211,6 @@ body {
 }
 
 .summary {
-  flex: 1;
   padding-left: 10px;
   padding-right: 10px;
   text-overflow: ellipsis;

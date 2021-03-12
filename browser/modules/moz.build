@@ -153,6 +153,7 @@ EXTRA_JS_MODULES += [
     "TabUnloader.jsm",
     "ThemeVariableMap.jsm",
     "TransientPrefs.jsm",
+    "UtilityOverlay.jsm",
     "webrtcUI.jsm",
     "ZoomUI.jsm",
 ]

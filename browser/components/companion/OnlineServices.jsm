@@ -10,8 +10,10 @@ const { XPCOMUtils } = ChromeUtils.import(
 const PREF_STORE = "onlineservices.config";
 
 XPCOMUtils.defineLazyModuleGetters(this, {
+  BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   OAuth2: "resource:///modules/OAuth2.jsm",
   Services: "resource://gre/modules/Services.jsm",
+  UtilityOverlay: "resource:///modules/UtilityOverlay.jsm",
 });
 
 Cu.importGlobalProperties(["fetch"]);
@@ -44,7 +46,6 @@ class GoogleService {
 
     let scopes = [
       "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/calendar.readonly",
       "https://www.googleapis.com/auth/calendar.events.readonly",
     ];
 
@@ -68,6 +69,73 @@ class GoogleService {
   connect() {
     // This will force login if not already logged in.
     return this.auth.getToken();
+  }
+
+  async getAccountAddress() {
+    let token = await this.auth.getToken();
+
+    let apiTarget = new URL(
+      "https://gmail.googleapis.com/gmail/v1/users/me/profile"
+    );
+
+    let headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    let response = await fetch(apiTarget, {
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(response.statusText);
+    }
+
+    let results = await response.json();
+    return results.emailAddress;
+  }
+
+  async openLink(target) {
+    let account = await this.getAccountAddress();
+
+    let url = `https://accounts.google.com/AccountChooser?Email=${account}&continue=${target}`;
+
+    for (let window of BrowserWindowTracker.orderedWindows) {
+      for (let browser of window.gBrowser.browsers) {
+        try {
+          if (browser.currentURI.hostPort == target.host) {
+            window.gBrowser.selectedTab = window.gBrowser.getTabForBrowser(
+              browser
+            );
+            browser.loadURI(url, {
+              triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+            });
+            return;
+          }
+        } catch (e) {
+          // Bad hostPort.
+        }
+      }
+    }
+
+    let win = BrowserWindowTracker.getTopWindow({
+      allowPopups: false,
+    });
+
+    if (win) {
+      win.switchToTabHavingURI(url, true, {
+        ignoreFragment: true,
+      });
+    }
+
+    UtilityOverlay.openTrustedLinkIn(url, "tab");
+  }
+
+  openCalendar(year, month, day) {
+    this.openLink(
+      new URL(
+        `https://calendar.google.com/calendar/r/day/${year}/${month}/${day}`
+      )
+    );
   }
 
   async getNextMeetings() {

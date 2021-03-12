@@ -12,8 +12,9 @@ const { OnlineServices } = ChromeUtils.import(
 );
 
 class Event extends HTMLElement {
-  constructor(data) {
+  constructor(service, data) {
     super();
+    this.service = service;
     this.data = data;
 
     this.className = "event card";
@@ -32,6 +33,10 @@ class Event extends HTMLElement {
     fragment.querySelector(".date").textContent = date;
     fragment.querySelector(".summary").textContent = this.data.summary;
 
+    fragment
+      .querySelector(".event-info")
+      .addEventListener("click", () => this.openCalendar());
+
     if (this.data.conference) {
       fragment.querySelector(
         ".conference-icon"
@@ -39,16 +44,23 @@ class Event extends HTMLElement {
       fragment.querySelector(
         ".conference-label"
       ).textContent = this.data.conference.name;
+
+      fragment
+        .querySelector(".conference")
+        .addEventListener("click", () => openUrl(this.data.conference.url));
     } else {
       fragment.querySelector(".conference").style.display = "none";
     }
 
     this.appendChild(fragment);
-    this.addEventListener("click", this);
   }
 
-  handleEvent(event) {
-    openUrl(this.data.conference.url);
+  openCalendar() {
+    this.service.openCalendar(
+      this.data.start.getFullYear(),
+      this.data.start.getMonth() + 1,
+      this.data.start.getDate()
+    );
   }
 }
 
@@ -74,7 +86,7 @@ async function buildEvents(services) {
     goodService = true;
 
     for (let event of meetings) {
-      panel.appendChild(new Event(event));
+      panel.appendChild(new Event(service, event));
     }
   }
 
