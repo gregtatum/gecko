@@ -5,77 +5,65 @@
 // These come from utilityOverlay.js
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
-import { openUrl, tomorrow, dateFormat, timeFormat } from "./shared.js";
+import { openUrl } from "./shared.js";
 
 const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
 );
 
-class Event extends HTMLElement {
+class Email extends HTMLElement {
   constructor(data) {
     super();
     this.data = data;
 
-    this.className = "event card";
+    this.className = "email card";
 
-    let template = document.getElementById("template-event");
+    let template = document.getElementById("template-email");
     let fragment = template.content.cloneNode(true);
 
-    let date =
-      this.data.start > tomorrow
-        ? dateFormat.format(this.data.start)
-        : timeFormat.format(this.data.start);
-
-    fragment
-      .querySelector(".favicon")
-      .setAttribute("src", "chrome://browser/content/companion/event.svg");
-    fragment.querySelector(".date").textContent = date;
-    fragment.querySelector(".summary").textContent = this.data.summary;
-
-    if (this.data.conference) {
-      fragment.querySelector(
-        ".conference-icon"
-      ).src = this.data.conference.icon;
-      fragment.querySelector(
-        ".conference-label"
-      ).textContent = this.data.conference.name;
-    } else {
-      fragment.querySelector(".conference").style.display = "none";
-    }
+    fragment.querySelector(".summary").textContent = this.data.subject;
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
   }
 
   handleEvent(event) {
-    openUrl(this.data.conference.url);
+    openUrl("https://mail.google.com/mail/#inbox/" + this.data.id);
+    setTimeout(function() {
+      let services = OnlineServices.getServices();
+      getEmail(services);
+    }, 5000);
   }
 }
 
-customElements.define("e-event", Event);
+customElements.define("e-email", Email);
 
-async function buildEvents(services) {
-  let panel = document.getElementById("calendar-panel");
-  while (panel.firstChild) {
-    panel.firstChild.remove();
-  }
+async function getEmail(services) {
+  let panel = document.getElementById("email-panel");
+
+  let allEmails = [];
 
   let goodService = false;
   for (let service of services) {
-    let meetings;
+    let emails;
     try {
-      meetings = await service.getNextMeetings();
+      emails = await service.getUnreadEmail();
     } catch (e) {
       console.error(e);
       OnlineServices.deleteService(service);
       continue;
     }
+    allEmails = allEmails.concat(emails);
 
     goodService = true;
+  }
 
-    for (let event of meetings) {
-      panel.appendChild(new Event(event));
-    }
+  while (panel.firstChild) {
+    panel.firstChild.remove();
+  }
+
+  for (let email of allEmails) {
+    panel.appendChild(new Email(email));
   }
 
   if (!goodService) {
@@ -88,17 +76,17 @@ async function signin() {
     Services.prefs.getCharPref("onlineservices.defaultType", "google")
   );
   document.getElementById("services").className = "connected";
-  buildEvents(OnlineServices.getServices());
+  getEmail(OnlineServices.getServices());
   window.focus();
 }
 
-export function initCalendarServices() {
+export function initEmailServices() {
   document.getElementById("service-signin").addEventListener("click", signin);
 
   let services = OnlineServices.getServices();
   if (services.length) {
     document.getElementById("services").className = "connected";
-    buildEvents(services);
+    getEmail(services);
   } else {
     document.getElementById("services").className = "disconnected";
   }

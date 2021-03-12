@@ -5,7 +5,8 @@
 // These come from utilityOverlay.js
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
-import { initServices } from "./calendar.js";
+import { initCalendarServices } from "./calendar.js";
+import { initEmailServices } from "./email.js";
 import { TopSites } from "./topsites.js";
 import { onLoad, yesterday, today } from "./shared.js";
 import { KeyframeDbList } from "./keyframes.js";
@@ -26,7 +27,8 @@ onLoad(() => {
     }
   });
 
-  initServices();
+  initCalendarServices();
+  initEmailServices();
 
   let content = document.getElementById("content");
   content.appendChild(new TopSites());

@@ -43,7 +43,7 @@ class GoogleService {
     this.app = config.type;
 
     let scopes = [
-      "https://www.googleapis.com/auth/gmail.metadata",
+      "https://www.googleapis.com/auth/gmail.readonly",
       "https://www.googleapis.com/auth/calendar.readonly",
       "https://www.googleapis.com/auth/calendar.events.readonly",
     ];
@@ -101,6 +101,72 @@ class GoogleService {
       end: new Date(result.end.dateTime),
       conference: getConferenceInfo(result),
     }));
+  }
+
+  async getEmailInfo(messageId) {
+    let token = await this.auth.getToken();
+
+    let apiTarget = new URL(
+      `https://www.googleapis.com/gmail/v1/users/me/messages/${messageId}`
+    );
+
+    let headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    let response = await fetch(apiTarget, {
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(response.statusText);
+    }
+
+    let results = await response.json();
+
+    return {
+      id: results.id,
+      subject: results.payload.headers.find(
+        header => header.name.toLowerCase() == "subject"
+      )?.value,
+      from: results.payload.headers.find(
+        header => header.name.toLowerCase() == "from"
+      )?.value,
+      date: new Date(parseInt(results.payload.internalDate)),
+    };
+  }
+
+  async getUnreadEmail() {
+    let token = await this.auth.getToken();
+
+    let apiTarget = new URL(
+      "https://www.googleapis.com/gmail/v1/users/me/messages"
+    );
+
+    apiTarget.searchParams.set("q", "is:unread");
+    apiTarget.searchParams.set("maxResults", 5);
+
+    let headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    let response = await fetch(apiTarget, {
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(response.statusText);
+    }
+
+    let results = await response.json();
+
+    let foo = [];
+
+    for (const message of results.messages) {
+      let result = await this.getEmailInfo(message.id);
+      foo.push(result);
+    }
+    return foo;
   }
 
   toJSON() {
