@@ -71,23 +71,6 @@ async function getEmail(services) {
   }
 }
 
-async function signin() {
-  await OnlineServices.createService(
-    Services.prefs.getCharPref("onlineservices.defaultType", "google")
-  );
-  document.getElementById("services").className = "connected";
-  getEmail(OnlineServices.getServices());
-  window.focus();
-}
-
-export function initEmailServices() {
-  document.getElementById("service-signin").addEventListener("click", signin);
-
-  let services = OnlineServices.getServices();
-  if (services.length) {
-    document.getElementById("services").className = "connected";
-    getEmail(services);
-  } else {
-    document.getElementById("services").className = "disconnected";
-  }
+export function initEmailServices(services) {
+  getEmail(services);
 }

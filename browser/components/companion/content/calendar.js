@@ -83,23 +83,6 @@ async function buildEvents(services) {
   }
 }
 
-async function signin() {
-  await OnlineServices.createService(
-    Services.prefs.getCharPref("onlineservices.defaultType", "google")
-  );
-  document.getElementById("services").className = "connected";
-  buildEvents(OnlineServices.getServices());
-  window.focus();
-}
-
-export function initCalendarServices() {
-  document.getElementById("service-signin").addEventListener("click", signin);
-
-  let services = OnlineServices.getServices();
-  if (services.length) {
-    document.getElementById("services").className = "connected";
-    buildEvents(services);
-  } else {
-    document.getElementById("services").className = "disconnected";
-  }
+export function initCalendarServices(services) {
+  buildEvents(services);
 }
