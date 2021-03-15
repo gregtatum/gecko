@@ -5,16 +5,17 @@
 // These come from utilityOverlay.js
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
-import { openUrl } from "./shared.js";
-
 const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
 );
 
+const EMAIL_CHECK_TIME = 10 * 60 * 1000; // 10 minutes
+
 class Email extends HTMLElement {
-  constructor(data) {
+  constructor(service, data) {
     super();
     this.data = data;
+    this.service = service;
 
     this.className = "email card";
 
@@ -25,7 +26,9 @@ class Email extends HTMLElement {
       .querySelector(".favicon")
       .setAttribute("src", "chrome://browser/content/companion/email.svg");
 
-    fragment.querySelector(".subject").textContent = this.data.subject;
+    fragment.querySelector(
+      ".subject"
+    ).textContent = `${this.data.subject} (${this.data.from})`;
 
     let date = new Date(this.data.date);
     let today = new Date();
@@ -50,7 +53,7 @@ class Email extends HTMLElement {
   }
 
   handleEvent(event) {
-    openUrl("https://mail.google.com/mail/#inbox/" + this.data.id);
+    this.service.openEmail(this.data.id);
     setTimeout(function() {
       let services = OnlineServices.getServices();
       getEmail(services);
@@ -75,7 +78,9 @@ async function getEmail(services) {
       OnlineServices.deleteService(service);
       continue;
     }
-    allEmails = allEmails.concat(emails);
+    for (let email of emails) {
+      allEmails.push(new Email(service, email));
+    }
 
     goodService = true;
   }
@@ -84,8 +89,15 @@ async function getEmail(services) {
     panel.firstChild.remove();
   }
 
-  for (let email of allEmails) {
-    panel.appendChild(new Email(email));
+  if (!allEmails.length) {
+    document.querySelector(".email-title").textContent = "No Unread emails";
+  } else {
+    document.querySelector(
+      ".email-title"
+    ).textContent = `Email (${allEmails.length})`;
+    for (let email of allEmails) {
+      panel.appendChild(email);
+    }
   }
 
   if (!goodService) {
@@ -95,4 +107,7 @@ async function getEmail(services) {
 
 export function initEmailServices(services) {
   getEmail(services);
+  setTimeout(function() {
+    getEmail(services);
+  }, EMAIL_CHECK_TIME);
 }

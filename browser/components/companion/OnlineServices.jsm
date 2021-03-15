@@ -171,6 +171,10 @@ class GoogleService {
     }));
   }
 
+  openEmail(messageId) {
+    this.openLink(new URL(`https://mail.google.com/mail/#inbox/${messageId}`));
+  }
+
   async getEmailInfo(messageId) {
     let token = await this.auth.getToken();
 
@@ -211,7 +215,7 @@ class GoogleService {
       "https://www.googleapis.com/gmail/v1/users/me/messages"
     );
 
-    apiTarget.searchParams.set("q", "is:unread");
+    apiTarget.searchParams.set("q", "is:unread in:inbox");
     apiTarget.searchParams.set("maxResults", 5);
 
     let headers = {
@@ -228,13 +232,15 @@ class GoogleService {
 
     let results = await response.json();
 
-    let foo = [];
+    let messages = [];
 
-    for (const message of results.messages) {
-      let result = await this.getEmailInfo(message.id);
-      foo.push(result);
+    if ("messages" in results) {
+      for (const message of results.messages) {
+        let result = await this.getEmailInfo(message.id);
+        messages.push(result);
+      }
     }
-    return foo;
+    return messages;
   }
 
   toJSON() {
