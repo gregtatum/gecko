@@ -200,7 +200,7 @@ class GoogleService {
       from: results.payload.headers.find(
         header => header.name.toLowerCase() == "from"
       )?.value,
-      date: new Date(parseInt(results.payload.internalDate)),
+      date: new Date(parseInt(results.internalDate)),
     };
   }
 

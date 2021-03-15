@@ -21,7 +21,29 @@ class Email extends HTMLElement {
     let template = document.getElementById("template-email");
     let fragment = template.content.cloneNode(true);
 
-    fragment.querySelector(".summary").textContent = this.data.subject;
+    fragment
+      .querySelector(".favicon")
+      .setAttribute("src", "chrome://browser/content/companion/email.svg");
+
+    fragment.querySelector(".subject").textContent = this.data.subject;
+
+    let date = new Date(this.data.date);
+    let today = new Date();
+    if (
+      date.getDate() == today.getDate() &&
+      date.getMonth() == today.getMonth() &&
+      date.getFullYear() == today.getFullYear()
+    ) {
+      fragment.querySelector(".date").textContent = date.toLocaleTimeString(
+        [],
+        { hour: "2-digit", minute: "2-digit" }
+      );
+    } else {
+      fragment.querySelector(".date").textContent = date.toLocaleDateString(
+        [],
+        { month: "short", day: "numeric" }
+      );
+    }
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
