@@ -25,7 +25,7 @@
 #include "nsIURI.h"
 #include "nsIXULRuntime.h"
 #include "nsNetUtil.h"
-#include "nsDataHashtable.h"
+#include "nsTHashMap.h"
 #include "nsSHEntry.h"
 #include "SessionHistoryEntry.h"
 #include "nsTArray.h"
@@ -137,16 +137,17 @@ extern mozilla::LazyLogModule gSHIPBFCacheLog;
 // Calls a given method on all registered session history listeners.
 // Listeners may return 'false' to cancel an action so make sure that we
 // set the return value to 'false' if one of the listeners wants to cancel.
-#define NOTIFY_LISTENERS_CANCELABLE(method, retval, args) \
-  PR_BEGIN_MACRO {                                        \
-    bool canceled = false;                                \
-    retval = true;                                        \
-    ITERATE_LISTENERS(listener->method args;              \
-                      if (!retval) { canceled = true; }); \
-    if (canceled) {                                       \
-      retval = false;                                     \
-    }                                                     \
-  }                                                       \
+#define NOTIFY_LISTENERS_CANCELABLE(method, retval, args)                     \
+  PR_BEGIN_MACRO {                                                            \
+    bool canceled = false;                                                    \
+    (retval) = true;                                                          \
+    ITERATE_LISTENERS(if (NS_SUCCEEDED(listener->method args) && !(retval)) { \
+      canceled = true;                                                        \
+    });                                                                       \
+    if (canceled) {                                                           \
+      (retval) = false;                                                       \
+    }                                                                         \
+  }                                                                           \
   PR_END_MACRO
 
 class MOZ_STACK_CLASS SHistoryChangeNotifier {
@@ -157,8 +158,6 @@ class MOZ_STACK_CLASS SHistoryChangeNotifier {
     if (!aHistory->HasOngoingUpdate()) {
       aHistory->SetHasOngoingUpdate(true);
       mSHistory = aHistory;
-      mInitialIndex = aHistory->Index();
-      mInitialLength = aHistory->Length();
     }
   }
 
@@ -166,11 +165,6 @@ class MOZ_STACK_CLASS SHistoryChangeNotifier {
     if (mSHistory) {
       MOZ_ASSERT(mSHistory->HasOngoingUpdate());
       mSHistory->SetHasOngoingUpdate(false);
-      if (mSHistory->GetBrowsingContext()) {
-        mSHistory->GetBrowsingContext()->SessionHistoryChanged(
-            mSHistory->Index() - mInitialIndex,
-            mSHistory->Length() - mInitialLength);
-      }
 
       if (mozilla::SessionHistoryInParent() &&
           mSHistory->GetBrowsingContext()) {
@@ -182,8 +176,6 @@ class MOZ_STACK_CLASS SHistoryChangeNotifier {
   }
 
   RefPtr<nsSHistory> mSHistory;
-  int32_t mInitialIndex;
-  int32_t mInitialLength;
 };
 
 enum HistCmd { HIST_CMD_GOTOINDEX, HIST_CMD_RELOAD };
@@ -994,7 +986,7 @@ void nsSHistory::WindowIndices(int32_t aIndex, int32_t* aOutStartIndex,
 
 static void MarkAsInitialEntry(
     SessionHistoryEntry* aEntry,
-    nsDataHashtable<nsIDHashKey, SessionHistoryEntry*>& aHashtable) {
+    nsTHashMap<nsIDHashKey, SessionHistoryEntry*>& aHashtable) {
   if (!aEntry->BCHistoryLength().Modified()) {
     ++(aEntry->BCHistoryLength());
   }
@@ -1030,7 +1022,7 @@ nsSHistory::PurgeHistory(int32_t aNumEntries) {
   // Set all the entries hanging of the first entry that we keep
   // (mEntries[aNumEntries]) as being created as the result of a load
   // (so contributing one to their BCHistoryLength).
-  nsDataHashtable<nsIDHashKey, SessionHistoryEntry*> docshellIDToEntry;
+  nsTHashMap<nsIDHashKey, SessionHistoryEntry*> docshellIDToEntry;
   if (aNumEntries != Length()) {
     nsCOMPtr<SessionHistoryEntry> she =
         do_QueryInterface(mEntries[aNumEntries]);
@@ -1199,6 +1191,71 @@ void nsSHistory::LoadURIOrBFCache(LoadEntryResult& aLoadEntry) {
     RefPtr<nsFrameLoader> frameLoader = she->GetFrameLoader();
     if (canonicalBC->Group()->Toplevels().Length() == 1 && frameLoader &&
         (!currentShe || she->SharedInfo() != currentShe->SharedInfo())) {
+      auto restore = [canonicalBC, loadState,
+                      she](const nsTArray<bool> aCanSaves) {
+        bool canSave = !aCanSaves.Contains(false);
+        MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug,
+                ("nsSHistory::LoadURIOrBFCache "
+                 "saving presentation=%i",
+                 canSave));
+
+        nsCOMPtr<nsFrameLoaderOwner> frameLoaderOwner =
+            do_QueryInterface(canonicalBC->GetEmbedderElement());
+        if (frameLoaderOwner) {
+          RefPtr<nsFrameLoader> fl = she->GetFrameLoader();
+          if (fl) {
+            she->SetFrameLoader(nullptr);
+            RefPtr<BrowsingContext> loadingBC =
+                fl->GetMaybePendingBrowsingContext();
+            if (loadingBC) {
+              RefPtr<nsFrameLoader> currentFrameLoader =
+                  frameLoaderOwner->GetFrameLoader();
+              // The current page can be bfcached, store the
+              // nsFrameLoader in the current SessionHistoryEntry.
+              if (canSave && canonicalBC->GetActiveSessionHistoryEntry()) {
+                canonicalBC->GetActiveSessionHistoryEntry()->SetFrameLoader(
+                    currentFrameLoader);
+                Unused << canonicalBC->SetIsInBFCache(true);
+              }
+
+              // ReplacedBy will swap the entry back.
+              canonicalBC->SetActiveSessionHistoryEntry(she);
+              loadingBC->Canonical()->SetActiveSessionHistoryEntry(nullptr);
+              RemotenessChangeOptions options;
+              canonicalBC->ReplacedBy(loadingBC->Canonical(), options);
+              frameLoaderOwner->ReplaceFrameLoader(fl);
+
+              // The old page can't be stored in the bfcache,
+              // destroy the nsFrameLoader.
+              if (!canSave && currentFrameLoader) {
+                currentFrameLoader->Destroy();
+              }
+              // The current active entry should not store
+              // nsFrameLoader.
+              loadingBC->Canonical()->GetSessionHistory()->UpdateIndex();
+              loadingBC->Canonical()->HistoryCommitIndexAndLength();
+              Unused << loadingBC->SetIsInBFCache(false);
+              // ResetSHEntryHasUserInteractionCache(); ?
+              // browser.navigation.requireUserInteraction is still
+              // disabled everywhere.
+              return;
+            }
+          }
+        }
+
+        // Fall back to do a normal load.
+        canonicalBC->LoadURI(loadState, false);
+      };
+
+      if (currentShe && !currentShe->GetSaveLayoutStateFlag()) {
+        // Current page can't enter bfcache because of
+        // SaveLayoutStateFlag, just run the restore immediately.
+        nsTArray<bool> canSaves;
+        canSaves.AppendElement(false);
+        restore(std::move(canSaves));
+        return;
+      }
+
       nsTArray<RefPtr<PContentParent::CanSavePresentationPromise>>
           canSavePromises;
       canonicalBC->Group()->EachParent([&](ContentParent* aParent) {
@@ -1210,72 +1267,13 @@ void nsSHistory::LoadURIOrBFCache(LoadEntryResult& aLoadEntry) {
       // Check if the current page can enter bfcache.
       PContentParent::CanSavePresentationPromise::All(
           GetCurrentSerialEventTarget(), canSavePromises)
-          ->Then(
-              GetMainThreadSerialEventTarget(), __func__,
-              [canonicalBC, loadState, she](const nsTArray<bool> aCanSaves) {
-                bool canSave = !aCanSaves.Contains(false);
-                MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug,
-                        ("nsSHistory::LoadURIOrBFCache "
-                         "saving presentation=%i",
-                         canSave));
-
-                nsCOMPtr<nsFrameLoaderOwner> frameLoaderOwner =
-                    do_QueryInterface(canonicalBC->GetEmbedderElement());
-                if (frameLoaderOwner) {
-                  RefPtr<nsFrameLoader> fl = she->GetFrameLoader();
-                  if (fl) {
-                    she->SetFrameLoader(nullptr);
-                    RefPtr<BrowsingContext> loadingBC =
-                        fl->GetMaybePendingBrowsingContext();
-                    if (loadingBC) {
-                      RefPtr<nsFrameLoader> currentFrameLoader =
-                          frameLoaderOwner->GetFrameLoader();
-                      // The current page can be bfcached, store the
-                      // nsFrameLoader in the current SessionHistoryEntry.
-                      if (canSave &&
-                          canonicalBC->GetActiveSessionHistoryEntry()) {
-                        canonicalBC->GetActiveSessionHistoryEntry()
-                            ->SetFrameLoader(currentFrameLoader);
-                        Unused << canonicalBC->SetIsInBFCache(true);
-                      }
-
-                      // ReplacedBy will swap the entry back.
-                      canonicalBC->SetActiveSessionHistoryEntry(she);
-                      loadingBC->Canonical()->SetActiveSessionHistoryEntry(
-                          nullptr);
-                      RemotenessChangeOptions options;
-                      canonicalBC->ReplacedBy(loadingBC->Canonical(), options);
-                      frameLoaderOwner->ReplaceFrameLoader(fl);
-
-                      // The old page can't be stored in the bfcache,
-                      // destroy the nsFrameLoader.
-                      if (!canSave && currentFrameLoader) {
-                        currentFrameLoader->Destroy();
-                      }
-                      // The current active entry should not store
-                      // nsFrameLoader.
-                      loadingBC->Canonical()
-                          ->GetSessionHistory()
-                          ->UpdateIndex();
-                      loadingBC->Canonical()->HistoryCommitIndexAndLength();
-                      Unused << loadingBC->SetIsInBFCache(false);
-                      // ResetSHEntryHasUserInteractionCache(); ?
-                      // browser.navigation.requireUserInteraction is still
-                      // disabled everywhere.
-                      return;
-                    }
-                  }
-                }
-
-                // Fall back to do a normal load.
-                canonicalBC->LoadURI(loadState, false);
-              },
-              [canonicalBC, loadState](mozilla::ipc::ResponseRejectReason) {
-                MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug,
-                        ("nsSHistory::LoadURIOrBFCache "
-                         "error in trying to save presentation"));
-                canonicalBC->LoadURI(loadState, false);
-              });
+          ->Then(GetMainThreadSerialEventTarget(), __func__, std::move(restore),
+                 [canonicalBC, loadState](mozilla::ipc::ResponseRejectReason) {
+                   MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug,
+                           ("nsSHistory::LoadURIOrBFCache "
+                            "error in trying to save presentation"));
+                   canonicalBC->LoadURI(loadState, false);
+                 });
       return;
     }
     if (frameLoader) {
@@ -2200,7 +2198,7 @@ nsSHistory::IsEmptyOrHasEntriesForSingleTopLevelPage() {
 }
 
 static void CollectEntries(
-    nsDataHashtable<nsIDHashKey, SessionHistoryEntry*>& aHashtable,
+    nsTHashMap<nsIDHashKey, SessionHistoryEntry*>& aHashtable,
     SessionHistoryEntry* aEntry) {
   aHashtable.InsertOrUpdate(aEntry->DocshellID(), aEntry);
   for (const RefPtr<SessionHistoryEntry>& entry : aEntry->Children()) {
@@ -2211,7 +2209,7 @@ static void CollectEntries(
 }
 
 static void UpdateEntryLength(
-    nsDataHashtable<nsIDHashKey, SessionHistoryEntry*>& aHashtable,
+    nsTHashMap<nsIDHashKey, SessionHistoryEntry*>& aHashtable,
     SessionHistoryEntry* aNewEntry, bool aMove) {
   SessionHistoryEntry* oldEntry = aHashtable.Get(aNewEntry->DocshellID());
   if (oldEntry) {
@@ -2250,7 +2248,7 @@ void nsSHistory::UpdateEntryLength(nsISHEntry* aOldEntry, nsISHEntry* aNewEntry,
     return;
   }
 
-  nsDataHashtable<nsIDHashKey, SessionHistoryEntry*> docshellIDToEntry;
+  nsTHashMap<nsIDHashKey, SessionHistoryEntry*> docshellIDToEntry;
   CollectEntries(docshellIDToEntry, oldSHE);
 
   ::UpdateEntryLength(docshellIDToEntry, newSHE, aMove);

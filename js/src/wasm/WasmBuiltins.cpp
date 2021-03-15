@@ -37,6 +37,7 @@
 #include "util/Poison.h"
 #include "vm/BigIntType.h"
 #include "vm/ErrorObject.h"
+#include "wasm/TypedObject.h"
 #include "wasm/WasmInstance.h"
 #include "wasm/WasmStubs.h"
 #include "wasm/WasmTypes.h"
@@ -216,12 +217,6 @@ const SymbolicAddressSignature SASigPostBarrierFiltering = {
     {_PTR, _PTR, _END}};
 const SymbolicAddressSignature SASigStructNew = {
     SymbolicAddress::StructNew, _RoN, _FailOnNullPtr, 2, {_PTR, _RoN, _END}};
-const SymbolicAddressSignature SASigStructNarrow = {
-    SymbolicAddress::StructNarrow,
-    _RoN,
-    _Infallible,
-    3,
-    {_PTR, _RoN, _RoN, _END}};
 #ifdef ENABLE_WASM_EXCEPTIONS
 const SymbolicAddressSignature SASigExceptionNew = {
     SymbolicAddress::ExceptionNew,
@@ -241,7 +236,22 @@ const SymbolicAddressSignature SASigGetLocalExceptionIndex = {
     _Infallible,
     2,
     {_PTR, _RoN, _END}};
+const SymbolicAddressSignature SASigPushRefIntoExn = {
+    SymbolicAddress::PushRefIntoExn,
+    _I32,
+    _FailOnNegI32,
+    3,
+    {_PTR, _RoN, _RoN, _END}};
 #endif
+const SymbolicAddressSignature SASigArrayNew = {SymbolicAddress::ArrayNew,
+                                                _RoN,
+                                                _FailOnNullPtr,
+                                                3,
+                                                {_PTR, _I32, _RoN, _END}};
+const SymbolicAddressSignature SASigRefTest = {
+    SymbolicAddress::RefTest, _I32, _Infallible, 3, {_PTR, _RoN, _RoN, _END}};
+const SymbolicAddressSignature SASigRttSub = {
+    SymbolicAddress::RttSub, _RoN, _FailOnNullPtr, 2, {_PTR, _RoN, _END}};
 
 }  // namespace wasm
 }  // namespace js
@@ -626,6 +636,8 @@ static void* WasmHandleTrap() {
       return ReportError(cx, JSMSG_WASM_IND_CALL_BAD_SIG);
     case Trap::NullPointerDereference:
       return ReportError(cx, JSMSG_WASM_DEREF_NULL);
+    case Trap::BadCast:
+      return ReportError(cx, JSMSG_WASM_BAD_CAST);
     case Trap::OutOfBounds:
       return ReportError(cx, JSMSG_WASM_OUT_OF_BOUNDS);
     case Trap::UnalignedAccess:
@@ -1191,11 +1203,23 @@ void* wasm::AddressOf(SymbolicAddress imm, ABIFunctionType* abiType) {
                                      {ArgType_General, ArgType_General});
       MOZ_ASSERT(*abiType == ToABIType(SASigStructNew));
       return FuncCast(Instance::structNew, *abiType);
-    case SymbolicAddress::StructNarrow:
+    case SymbolicAddress::ArrayNew:
       *abiType = MakeABIFunctionType(
-          ArgType_General, {ArgType_General, ArgType_General, ArgType_General});
-      MOZ_ASSERT(*abiType == ToABIType(SASigStructNarrow));
-      return FuncCast(Instance::structNarrow, *abiType);
+          ArgType_General, {ArgType_General, ArgType_Int32, ArgType_General});
+      MOZ_ASSERT(*abiType == ToABIType(SASigArrayNew));
+      return FuncCast(Instance::arrayNew, *abiType);
+    case SymbolicAddress::RefTest:
+      *abiType = MakeABIFunctionType(
+          ArgType_Int32, {ArgType_General, ArgType_General, ArgType_General});
+      MOZ_ASSERT(*abiType == ToABIType(SASigRefTest));
+      return FuncCast(Instance::refTest, *abiType);
+    case SymbolicAddress::RttSub:
+      *abiType = MakeABIFunctionType(ArgType_General,
+                                     {ArgType_General, ArgType_General});
+      MOZ_ASSERT(*abiType == ToABIType(SASigRttSub));
+      return FuncCast(Instance::rttSub, *abiType);
+    case SymbolicAddress::InlineTypedObjectClass:
+      return (void*)&js::InlineTypedObject::class_;
 
 #if defined(ENABLE_WASM_EXCEPTIONS)
     case SymbolicAddress::ExceptionNew:
@@ -1213,6 +1237,11 @@ void* wasm::AddressOf(SymbolicAddress imm, ABIFunctionType* abiType) {
                                      {ArgType_General, ArgType_General});
       MOZ_ASSERT(*abiType == ToABIType(SASigGetLocalExceptionIndex));
       return FuncCast(Instance::getLocalExceptionIndex, *abiType);
+    case SymbolicAddress::PushRefIntoExn:
+      *abiType = MakeABIFunctionType(
+          ArgType_Int32, {ArgType_General, ArgType_General, ArgType_General});
+      MOZ_ASSERT(*abiType == ToABIType(SASigPushRefIntoExn));
+      return FuncCast(Instance::pushRefIntoExn, *abiType);
 #endif
 
 #if defined(JS_CODEGEN_MIPS32)
@@ -1255,6 +1284,7 @@ bool wasm::NeedsBuiltinThunk(SymbolicAddress sym) {
     case SymbolicAddress::CoerceInPlace_ToNumber:
     case SymbolicAddress::CoerceInPlace_ToBigInt:
     case SymbolicAddress::BoxValue_Anyref:
+    case SymbolicAddress::InlineTypedObjectClass:
 #if defined(JS_CODEGEN_MIPS32)
     case SymbolicAddress::js_jit_gAtomic64Lock:
 #endif
@@ -1329,12 +1359,15 @@ bool wasm::NeedsBuiltinThunk(SymbolicAddress sym) {
     case SymbolicAddress::PostBarrier:
     case SymbolicAddress::PostBarrierFiltering:
     case SymbolicAddress::StructNew:
-    case SymbolicAddress::StructNarrow:
 #ifdef ENABLE_WASM_EXCEPTIONS
     case SymbolicAddress::ExceptionNew:
     case SymbolicAddress::ThrowException:
     case SymbolicAddress::GetLocalExceptionIndex:
+    case SymbolicAddress::PushRefIntoExn:
 #endif
+    case SymbolicAddress::ArrayNew:
+    case SymbolicAddress::RefTest:
+    case SymbolicAddress::RttSub:
       return true;
     case SymbolicAddress::Limit:
       break;

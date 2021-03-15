@@ -897,15 +897,16 @@ nsresult nsWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
   if (aInitData->mWindowType == eWindowType_toplevel && !aParent &&
       !sFirstTopLevelWindowCreated) {
     sFirstTopLevelWindowCreated = true;
-    auto skeletonUIResult = ConsumePreXULSkeletonUIHandle();
-    if (skeletonUIResult.isErr()) {
+    mWnd = ConsumePreXULSkeletonUIHandle();
+    auto skeletonUIError = GetPreXULSkeletonUIErrorReason();
+    if (skeletonUIError) {
       nsAutoString errorString(
-          GetPreXULSkeletonUIErrorString(skeletonUIResult.unwrapErr()));
+          GetPreXULSkeletonUIErrorString(skeletonUIError.value()));
       Telemetry::ScalarSet(
           Telemetry::ScalarID::STARTUP_SKELETON_UI_DISABLED_REASON,
           errorString);
-    } else {
-      mWnd = skeletonUIResult.unwrap();
+    }
+    if (mWnd) {
       MOZ_ASSERT(style == kPreXULSkeletonUIWindowStyle,
                  "The skeleton UI window style should match the expected "
                  "style for the first window created");
@@ -5312,6 +5313,21 @@ bool nsWindow::ProcessMessage(UINT msg, WPARAM& wParam, LPARAM& lParam,
             }
           }
         }
+
+        // UserInteractionMode, ConvertibleSlateMode, SystemDockMode may cause
+        // @media(pointer) queries to change, which layout needs to know about
+        //
+        // (WM_SETTINGCHANGE will be sent to all top-level windows, so we
+        //  only respond to the hidden top-level window to avoid hammering
+        //  layout with a bunch of NotifyThemeChanged() calls)
+        //
+        if (mWindowType == eWindowType_invisible) {
+          if (!wcscmp(lParamString, L"UserInteractionMode") ||
+              !wcscmp(lParamString, L"ConvertibleSlateMode") ||
+              !wcscmp(lParamString, L"SystemDockMode")) {
+            NotifyThemeChanged(widget::ThemeChangeKind::MediaQueriesOnly);
+          }
+        }
       }
     } break;
 
@@ -8538,8 +8554,9 @@ void nsWindow::PickerClosed() {
 }
 
 bool nsWindow::WidgetTypePrefersSoftwareWebRender() const {
-  return (StaticPrefs::gfx_webrender_software_unaccelerated_widget_allow() &&
-          mTransparencyMode == eTransparencyTransparent) ||
+  return (mTransparencyMode == eTransparencyTransparent &&
+          (StaticPrefs::gfx_webrender_software_unaccelerated_widget_allow() ||
+           gfxPlatform::DoesFissionForceWebRender())) ||
          nsBaseWidget::WidgetTypePrefersSoftwareWebRender();
 }
 

@@ -53,7 +53,7 @@ function sleep(ms) {
  *   of the last result.
  * @param {boolean} [isSponsored]
  *   True if the result is expected to be sponsored and false if non-sponsored
- *   (i.e., "Firefox Suggests").
+ *   (i.e., "Firefox Suggest").
  * @param {object} [win]
  *   The window in which to read the results from.
  * @returns {result}
@@ -84,7 +84,7 @@ async function assertIsQuickSuggest({
     actionText = "Sponsored";
   } else {
     url = `${TEST_URL}?q=nonsponsored`;
-    actionText = "Firefox Suggests";
+    actionText = "Firefox Suggest";
   }
   Assert.equal(result.url, url, "Result URL");
   Assert.equal(
@@ -125,18 +125,15 @@ add_task(async function init() {
   });
 
   // Add a mock engine so we don't hit the network loading the SERP.
-  let engine = await Services.search.addEngineWithDetails("Test", {
-    template: "http://example.com/?search={searchTerms}",
-  });
+  await SearchTestUtils.installSearchExtension();
   let oldDefaultEngine = await Services.search.getDefault();
-  Services.search.setDefault(engine);
+  await Services.search.setDefault(Services.search.getEngineByName("Example"));
 
   await UrlbarQuickSuggest.init();
   await UrlbarQuickSuggest._processSuggestionsJSON(TEST_DATA);
 
   registerCleanupFunction(async function() {
     Services.search.setDefault(oldDefaultEngine);
-    await Services.search.removeEngine(engine);
     await PlacesUtils.history.clear();
     await UrlbarTestUtils.formHistory.clear();
   });

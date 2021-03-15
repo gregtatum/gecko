@@ -1446,8 +1446,6 @@ static const char* ThunkedNativeToDescription(SymbolicAddress func) {
       return "call to native filtering GC postbarrier (in wasm)";
     case SymbolicAddress::StructNew:
       return "call to native struct.new (in wasm)";
-    case SymbolicAddress::StructNarrow:
-      return "call to native struct.narrow (in wasm)";
 #if defined(ENABLE_WASM_EXCEPTIONS)
     case SymbolicAddress::ExceptionNew:
       return "call to native exception new (in wasm)";
@@ -1455,7 +1453,17 @@ static const char* ThunkedNativeToDescription(SymbolicAddress func) {
       return "call to native throw exception (in wasm)";
     case SymbolicAddress::GetLocalExceptionIndex:
       return "call to native get the local index of an exn's tag (in wasm)";
+    case SymbolicAddress::PushRefIntoExn:
+      return "call to native that pushes a ref value into an exn (in wasm)";
 #endif
+    case SymbolicAddress::ArrayNew:
+      return "call to native array.new (in wasm)";
+    case SymbolicAddress::RefTest:
+      return "call to native ref.test (in wasm)";
+    case SymbolicAddress::RttSub:
+      return "call to native rtt.sub (in wasm)";
+    case SymbolicAddress::InlineTypedObjectClass:
+      MOZ_CRASH();
 #if defined(JS_CODEGEN_MIPS32)
     case SymbolicAddress::js_jit_gAtomic64Lock:
       MOZ_CRASH();

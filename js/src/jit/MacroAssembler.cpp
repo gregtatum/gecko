@@ -440,15 +440,6 @@ void MacroAssembler::createGCObject(Register obj, Register temp,
   initGCThing(obj, temp, templateObj, initContents);
 }
 
-// Inlined equivalent of gc::AllocateNonObject, without failure case handling.
-// Non-object allocation does not need to worry about slots, so can take a
-// simpler path.
-void MacroAssembler::allocateNonObject(Register result, Register temp,
-                                       gc::AllocKind allocKind, Label* fail) {
-  checkAllocatorState(fail);
-  freeListAllocate(result, temp, allocKind, fail);
-}
-
 // Inline version of Nursery::allocateString.
 void MacroAssembler::nurseryAllocateString(Register result, Register temp,
                                            gc::AllocKind allocKind,
@@ -824,9 +815,6 @@ void MacroAssembler::initGCThing(Register obj, Register temp,
                                  const TemplateObject& templateObj,
                                  bool initContents) {
   // Fast initialization of an empty object returned by allocateObject().
-
-  storePtr(ImmGCPtr(templateObj.group()),
-           Address(obj, JSObject::offsetOfGroup()));
 
   storePtr(ImmGCPtr(templateObj.shape()),
            Address(obj, JSObject::offsetOfShape()));
@@ -1644,8 +1632,9 @@ void MacroAssembler::switchToRealm(const void* realm, Register scratch) {
 }
 
 void MacroAssembler::switchToObjectRealm(Register obj, Register scratch) {
-  loadPtr(Address(obj, JSObject::offsetOfGroup()), scratch);
-  loadPtr(Address(scratch, ObjectGroup::offsetOfRealm()), scratch);
+  loadPtr(Address(obj, JSObject::offsetOfShape()), scratch);
+  loadPtr(Address(scratch, Shape::offsetOfBaseShape()), scratch);
+  loadPtr(Address(scratch, BaseShape::offsetOfRealm()), scratch);
   switchToRealm(scratch);
 }
 
@@ -1685,8 +1674,9 @@ void MacroAssembler::setIsCrossRealmArrayConstructor(Register obj,
 
   // The object's realm must not be cx->realm.
   Label isFalse, done;
-  loadPtr(Address(obj, JSObject::offsetOfGroup()), output);
-  loadPtr(Address(output, ObjectGroup::offsetOfRealm()), output);
+  loadPtr(Address(obj, JSObject::offsetOfShape()), output);
+  loadPtr(Address(output, Shape::offsetOfBaseShape()), output);
+  loadPtr(Address(output, BaseShape::offsetOfRealm()), output);
   branchPtr(Assembler::Equal, AbsoluteAddress(ContextRealmPtr()), output,
             &isFalse);
 
@@ -2065,20 +2055,6 @@ void MacroAssembler::assumeUnreachable(const char* output) {
   breakpoint();
 }
 
-template <typename T>
-void MacroAssembler::assertTestInt32(Condition cond, const T& value,
-                                     const char* output) {
-#ifdef DEBUG
-  Label ok;
-  branchTestInt32(cond, value, &ok);
-  assumeUnreachable(output);
-  bind(&ok);
-#endif
-}
-
-template void MacroAssembler::assertTestInt32(Condition, const Address&,
-                                              const char*);
-
 void MacroAssembler::printf(const char* output) {
 #ifdef JS_MASM_VERBOSE
   AllocatableRegisterSet regs(RegisterSet::Volatile());
@@ -2230,15 +2206,6 @@ void MacroAssembler::tracelogStopId(Register logger, Register textId) {
   PopRegsInMask(save);
 }
 #endif
-
-void MacroAssembler::convertInt32ValueToDouble(const Address& address,
-                                               Register scratch, Label* done) {
-  branchTestInt32(Assembler::NotEqual, address, done);
-  unboxInt32(address, scratch);
-  ScratchDoubleScope fpscratch(*this);
-  convertInt32ToDouble(scratch, fpscratch);
-  storeDouble(fpscratch, address);
-}
 
 void MacroAssembler::convertInt32ValueToDouble(ValueOperand val) {
   Label done;
@@ -2836,12 +2803,6 @@ void MacroAssembler::Push(const Register64 reg) {
   Push(reg.high);
   Push(reg.low);
 #endif
-}
-
-void MacroAssembler::PushValue(const Address& addr) {
-  MOZ_ASSERT(addr.base != getStackPointer());
-  pushValue(addr);
-  framePushed_ += sizeof(Value);
 }
 
 void MacroAssembler::PushEmptyRooted(VMFunctionData::RootType rootType) {
@@ -3525,78 +3486,13 @@ void MacroAssembler::loadFunctionName(Register func, Register output,
   bind(&hasName);
 }
 
-void MacroAssembler::branchTestObjGroupNoSpectreMitigations(
-    Condition cond, Register obj, const Address& group, Register scratch,
-    Label* label) {
-  // Note: obj and scratch registers may alias.
-  MOZ_ASSERT(group.base != scratch);
-  MOZ_ASSERT(group.base != obj);
-
-  loadPtr(Address(obj, JSObject::offsetOfGroup()), scratch);
-  branchPtr(cond, group, scratch, label);
-}
-
-void MacroAssembler::branchTestObjGroup(Condition cond, Register obj,
-                                        const Address& group, Register scratch,
-                                        Register spectreRegToZero,
-                                        Label* label) {
-  // Note: obj and scratch registers may alias.
-  MOZ_ASSERT(group.base != scratch);
-  MOZ_ASSERT(group.base != obj);
-  MOZ_ASSERT(scratch != spectreRegToZero);
-
-  loadPtr(Address(obj, JSObject::offsetOfGroup()), scratch);
-  branchPtr(cond, group, scratch, label);
-
-  if (JitOptions.spectreObjectMitigationsMisc) {
-    spectreZeroRegister(cond, scratch, spectreRegToZero);
-  }
-}
-
-void MacroAssembler::branchTestObjTypeDescr(Condition cond, Register obj,
-                                            Register descr, Register scratch,
-                                            Register spectreRegToZero,
-                                            Label* label) {
-  MOZ_ASSERT(obj != scratch);
-  MOZ_ASSERT(obj != descr);
-  MOZ_ASSERT(spectreRegToZero != scratch);
-
-  if (JitOptions.spectreObjectMitigationsMisc) {
-    move32(Imm32(0), scratch);
-  }
-
-  branchPtr(cond, Address(obj, TypedObject::offsetOfTypeDescr()), descr, label);
-
-  if (JitOptions.spectreObjectMitigationsMisc) {
-    spectreMovePtr(cond, scratch, spectreRegToZero);
-  }
-}
-
-void MacroAssembler::branchTestObjTypeDescr(Condition cond, Register obj,
-                                            TypeDescr* descr, Register scratch,
-                                            Register spectreRegToZero,
-                                            Label* label) {
-  MOZ_ASSERT(obj != scratch);
-  MOZ_ASSERT(spectreRegToZero != scratch);
-
-  if (JitOptions.spectreObjectMitigationsMisc) {
-    move32(Imm32(0), scratch);
-  }
-
-  branchPtr(cond, Address(obj, TypedObject::offsetOfTypeDescr()),
-            ImmGCPtr(descr), label);
-
-  if (JitOptions.spectreObjectMitigationsMisc) {
-    spectreMovePtr(cond, scratch, spectreRegToZero);
-  }
-}
-
 void MacroAssembler::branchTestObjCompartment(Condition cond, Register obj,
                                               const Address& compartment,
                                               Register scratch, Label* label) {
   MOZ_ASSERT(obj != scratch);
-  loadPtr(Address(obj, JSObject::offsetOfGroup()), scratch);
-  loadPtr(Address(scratch, ObjectGroup::offsetOfRealm()), scratch);
+  loadPtr(Address(obj, JSObject::offsetOfShape()), scratch);
+  loadPtr(Address(scratch, Shape::offsetOfBaseShape()), scratch);
+  loadPtr(Address(scratch, BaseShape::offsetOfRealm()), scratch);
   loadPtr(Address(scratch, Realm::offsetOfCompartment()), scratch);
   branchPtr(cond, compartment, scratch, label);
 }
@@ -3605,8 +3501,9 @@ void MacroAssembler::branchTestObjCompartment(
     Condition cond, Register obj, const JS::Compartment* compartment,
     Register scratch, Label* label) {
   MOZ_ASSERT(obj != scratch);
-  loadPtr(Address(obj, JSObject::offsetOfGroup()), scratch);
-  loadPtr(Address(scratch, ObjectGroup::offsetOfRealm()), scratch);
+  loadPtr(Address(obj, JSObject::offsetOfShape()), scratch);
+  loadPtr(Address(scratch, Shape::offsetOfBaseShape()), scratch);
+  loadPtr(Address(scratch, BaseShape::offsetOfRealm()), scratch);
   loadPtr(Address(scratch, Realm::offsetOfCompartment()), scratch);
   branchPtr(cond, scratch, ImmPtr(compartment), label);
 }
@@ -3621,12 +3518,11 @@ void MacroAssembler::branchIfNonNativeObj(Register obj, Register scratch,
 void MacroAssembler::branchIfObjectNotExtensible(Register obj, Register scratch,
                                                  Label* label) {
   loadPtr(Address(obj, JSObject::offsetOfShape()), scratch);
-  loadPtr(Address(scratch, Shape::offsetOfBaseShape()), scratch);
 
   // Spectre-style checks are not needed here because we do not interpret data
   // based on this check.
   static_assert(sizeof(ObjectFlags) == sizeof(uint16_t));
-  load16ZeroExtend(Address(scratch, BaseShape::offsetOfFlags()), scratch);
+  load16ZeroExtend(Address(scratch, Shape::offsetOfObjectFlags()), scratch);
   branchTest32(Assembler::NonZero, scratch,
                Imm32(uint32_t(ObjectFlag::NotExtensible)), label);
 }
@@ -3752,7 +3648,7 @@ CodeOffset MacroAssembler::wasmCallBuiltinInstanceMethod(
     Label noTrap;
     switch (failureMode) {
       case wasm::FailureMode::Infallible:
-        MOZ_MAKE_COMPILER_ASSUME_IS_UNREACHABLE();
+        MOZ_CRASH();
       case wasm::FailureMode::FailOnNegI32:
         branchTest32(Assembler::NotSigned, ReturnReg, ReturnReg, &noTrap);
         break;
@@ -3879,7 +3775,7 @@ void MacroAssembler::emitPreBarrierFastPath(JSRuntime* rt, MIRType type,
     unboxGCThingForGCBarrier(Address(PreBarrierReg, 0), temp1);
   } else {
     MOZ_ASSERT(type == MIRType::Object || type == MIRType::String ||
-               type == MIRType::Shape || type == MIRType::ObjectGroup);
+               type == MIRType::Shape);
     loadPtr(Address(PreBarrierReg, 0), temp1);
   }
 
@@ -4072,11 +3968,6 @@ void MacroAssembler::memoryBarrierBefore(const Synchronization& sync) {
 
 void MacroAssembler::memoryBarrierAfter(const Synchronization& sync) {
   memoryBarrier(sync.barrierAfter);
-}
-
-void MacroAssembler::BranchGCPtr::emit(MacroAssembler& masm) {
-  MOZ_ASSERT(isInitialized());
-  masm.branchPtr(cond(), reg(), ptr_, jump());
 }
 
 void MacroAssembler::debugAssertIsObject(const ValueOperand& val) {

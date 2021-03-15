@@ -9,8 +9,8 @@
 
 #include "mozilla/InitializedOnce.h"
 #include "mozilla/dom/FlippedOnce.h"
+#include "mozilla/dom/quota/CommonMetadata.h"
 #include "mozilla/dom/quota/DirectoryLock.h"
-#include "mozilla/dom/quota/OriginMetadata.h"
 #include "mozilla/dom/quota/OriginScope.h"
 
 namespace mozilla::dom::quota {
@@ -191,7 +191,8 @@ class DirectoryLockImpl final : public ClientDirectoryLock,
   quota::OriginMetadata OriginMetadata() const override {
     MOZ_DIAGNOSTIC_ASSERT(!mGroup.IsEmpty());
 
-    return quota::OriginMetadata{mSuffix, mGroup, nsCString(Origin())};
+    return quota::OriginMetadata{mSuffix, mGroup, nsCString(Origin()),
+                                 GetPersistenceType()};
   }
 
   const nsACString& Origin() const override {

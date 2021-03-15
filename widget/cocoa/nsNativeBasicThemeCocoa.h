@@ -26,41 +26,48 @@ class nsNativeBasicThemeCocoa : public nsNativeBasicTheme {
   ScrollbarSizes GetScrollbarSizes(nsPresContext*, StyleScrollbarWidth,
                                    Overlay) override;
 
+  template <typename PaintBackendData>
+  void DoPaintScrollbarThumb(PaintBackendData&, const LayoutDeviceRect& aRect,
+                             bool aHorizontal, nsIFrame* aFrame,
+                             const ComputedStyle& aStyle,
+                             const EventStates& aElementState,
+                             const EventStates& aDocumentState,
+                             DPIRatio);
   bool PaintScrollbarThumb(DrawTarget&, const LayoutDeviceRect& aRect,
                            bool aHorizontal, nsIFrame* aFrame,
                            const ComputedStyle& aStyle,
                            const EventStates& aElementState,
                            const EventStates& aDocumentState,
-                           DPIRatio aDpiRatio) override;
+                           UseSystemColors, DPIRatio) override;
   bool PaintScrollbarThumb(WebRenderBackendData&, const LayoutDeviceRect& aRect,
                            bool aHorizontal, nsIFrame* aFrame,
                            const ComputedStyle& aStyle,
                            const EventStates& aElementState,
                            const EventStates& aDocumentState,
-                           DPIRatio aDpiRatio) override {
-    // TODO: Seems this should be relatively straight-forward.
-    return false;
-  }
+                           UseSystemColors, DPIRatio) override;
 
+  template <typename PaintBackendData>
+  void DoPaintScrollbarTrack(PaintBackendData&, const LayoutDeviceRect& aRect,
+                             bool aHorizontal, nsIFrame* aFrame,
+                             const ComputedStyle& aStyle,
+                             const EventStates& aDocumentState,
+                             DPIRatio aDpiRatio);
   bool PaintScrollbarTrack(DrawTarget&, const LayoutDeviceRect& aRect,
                            bool aHorizontal, nsIFrame* aFrame,
                            const ComputedStyle& aStyle,
                            const EventStates& aDocumentState,
-                           DPIRatio aDpiRatio) override;
+                           UseSystemColors, DPIRatio) override;
   bool PaintScrollbarTrack(WebRenderBackendData&, const LayoutDeviceRect& aRect,
                            bool aHorizontal, nsIFrame* aFrame,
                            const ComputedStyle& aStyle,
                            const EventStates& aDocumentState,
-                           DPIRatio aDpiRatio) override {
-    // TODO: Seems this should be relatively straight-forward.
-    return false;
-  }
+                           UseSystemColors, DPIRatio) override;
 
   bool PaintScrollbar(DrawTarget&, const LayoutDeviceRect& aRect,
                       bool aHorizontal, nsIFrame* aFrame,
                       const ComputedStyle& aStyle,
                       const EventStates& aDocumentState,
-                      DPIRatio aDpiRatio) override {
+                      UseSystemColors, DPIRatio) override {
     // Draw nothing; the scrollbar track is drawn in PaintScrollbarTrack.
     return true;
   }
@@ -68,22 +75,29 @@ class nsNativeBasicThemeCocoa : public nsNativeBasicTheme {
                       bool aHorizontal, nsIFrame* aFrame,
                       const ComputedStyle& aStyle,
                       const EventStates& aDocumentState,
-                      DPIRatio aDpiRatio) override {
+                      UseSystemColors, DPIRatio) override {
     // Draw nothing; the scrollbar track is drawn in PaintScrollbarTrack.
     return true;
   }
 
+  template <typename PaintBackendData>
+  void DoPaintScrollCorner(PaintBackendData&, const LayoutDeviceRect& aRect,
+                           nsIFrame* aFrame, const ComputedStyle& aStyle,
+                           const EventStates& aDocumentState,
+                           DPIRatio aDpiRatio);
+
   bool PaintScrollCorner(DrawTarget&, const LayoutDeviceRect& aRect,
                          nsIFrame* aFrame, const ComputedStyle& aStyle,
                          const EventStates& aDocumentState,
-                         DPIRatio aDpiRatio) override;
+                         UseSystemColors, DPIRatio aDpiRatio) override;
   bool PaintScrollCorner(WebRenderBackendData&, const LayoutDeviceRect& aRect,
                          nsIFrame* aFrame, const ComputedStyle& aStyle,
                          const EventStates& aDocumentState,
-                         DPIRatio aDpiRatio) override {
-    // TODO: Seems this should be relatively straight-forward.
-    return false;
-  }
+                         UseSystemColors, DPIRatio aDpiRatio) override;
+
+  ThemeGeometryType ThemeGeometryTypeForWidget(nsIFrame*,
+                                               StyleAppearance) override;
+  bool ThemeSupportsWidget(nsPresContext*, nsIFrame*, StyleAppearance) override;
 
  protected:
   virtual ~nsNativeBasicThemeCocoa() = default;

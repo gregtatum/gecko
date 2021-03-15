@@ -110,17 +110,6 @@ JS_FRIEND_API JSFunction* JS_GetObjectFunction(JSObject* obj) {
   return nullptr;
 }
 
-JS_FRIEND_API bool JS_SplicePrototype(JSContext* cx, HandleObject global,
-                                      HandleObject proto) {
-  CHECK_THREAD(cx);
-  cx->check(global, proto);
-
-  MOZ_ASSERT(global->is<GlobalObject>());
-
-  Rooted<TaggedProto> tagged(cx, TaggedProto(proto));
-  return GlobalObject::splicePrototype(cx, global.as<GlobalObject>(), tagged);
-}
-
 JS_FRIEND_API JSObject* JS_NewObjectWithoutMetadata(
     JSContext* cx, const JSClass* clasp, JS::Handle<JSObject*> proto) {
   cx->check(proto);
@@ -182,12 +171,6 @@ JS_FRIEND_API void JS_TraceShapeCycleCollectorChildren(JS::CallbackTracer* trc,
                                                        JS::GCCellPtr shape) {
   MOZ_ASSERT(shape.is<Shape>());
   TraceCycleCollectorChildren(trc, &shape.as<Shape>());
-}
-
-JS_FRIEND_API void JS_TraceObjectGroupCycleCollectorChildren(
-    JS::CallbackTracer* trc, JS::GCCellPtr group) {
-  MOZ_ASSERT(group.is<ObjectGroup>());
-  TraceCycleCollectorChildren(trc, &group.as<ObjectGroup>());
 }
 
 static bool DefineHelpProperty(JSContext* cx, HandleObject obj,
@@ -436,8 +419,7 @@ bool js::GetObjectProto(JSContext* cx, JS::Handle<JSObject*> obj,
     return JS_GetPrototype(cx, obj, proto);
   }
 
-  proto.set(
-      reinterpret_cast<const JS::shadow::Object*>(obj.get())->group->proto);
+  proto.set(obj->staticPrototype());
   return true;
 }
 

@@ -497,8 +497,7 @@ enum class MIRType : uint8_t {
   RefOrNull,     // Wasm Ref/AnyRef/NullRef: a raw JSObject* or a raw (void*)0
   StackResults,  // Wasm multi-value stack result area, which may contain refs
   Shape,         // A Shape pointer.
-  ObjectGroup,   // An ObjectGroup pointer.
-  Last = ObjectGroup
+  Last = Shape
 };
 
 static inline MIRType MIRTypeFromValueType(JSValueType type) {
@@ -637,8 +636,6 @@ static inline const char* StringFromMIRType(MIRType type) {
       return "StackResults";
     case MIRType::Shape:
       return "Shape";
-    case MIRType::ObjectGroup:
-      return "ObjectGroup";
     case MIRType::Simd128:
       return "Simd128";
   }
@@ -899,6 +896,8 @@ enum ABIFunctionType : uint32_t {
                       ArgType_Int32, ArgType_Int32}),
   Args_Int32_GeneralGeneral = detail::MakeABIFunctionType(
       ArgType_Int32, {ArgType_General, ArgType_General}),
+  Args_Int32_GeneralGeneralGeneral = detail::MakeABIFunctionType(
+      ArgType_Int32, {ArgType_General, ArgType_General, ArgType_General}),
   Args_Int32_GeneralGeneralInt32Int32 = detail::MakeABIFunctionType(
       ArgType_Int32,
       {ArgType_General, ArgType_General, ArgType_Int32, ArgType_Int32}),

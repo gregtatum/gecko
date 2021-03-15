@@ -971,7 +971,7 @@ AbortReasonOr<bool> WarpScriptOracle::maybeInlineCall(
   }
 
   RootedFunction targetFunction(cx_, inlineData->target);
-  if (!TrialInliner::canInline(targetFunction, script_)) {
+  if (!TrialInliner::canInline(targetFunction, script_, loc)) {
     return false;
   }
 
@@ -1066,10 +1066,6 @@ bool WarpScriptOracle::replaceNurseryPointers(ICCacheIRStub* stub,
       case StubField::Type::Shape:
         static_assert(std::is_convertible_v<Shape*, gc::TenuredCell*>,
                       "Code assumes shapes are tenured");
-        break;
-      case StubField::Type::ObjectGroup:
-        static_assert(std::is_convertible_v<ObjectGroup*, gc::TenuredCell*>,
-                      "Code assumes groups are tenured");
         break;
       case StubField::Type::Symbol:
         static_assert(std::is_convertible_v<JS::Symbol*, gc::TenuredCell*>,

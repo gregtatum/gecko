@@ -158,6 +158,8 @@ exports.WatcherActor = protocol.ActorClassWithSpec(watcherSpec, {
             enableServerWatcher && hasBrowserElement,
           [Resources.TYPES.SOURCE]: hasBrowserElement,
           [Resources.TYPES.THREAD_STATE]: hasBrowserElement,
+          [Resources.TYPES.SERVER_SENT_EVENT]: hasBrowserElement,
+          [Resources.TYPES.WEBSOCKET]: hasBrowserElement,
         },
         // @backward-compat { version 85 } When removing this trait, consumers using
         // the TargetList to retrieve the Breakpoints front should still be careful to check
@@ -169,6 +171,11 @@ exports.WatcherActor = protocol.ActorClassWithSpec(watcherSpec, {
         // When removing this trait, consumers should still check that the Watcher is
         // available.
         "target-configuration": true,
+        // @backward-compat { version 88 } Watcher now supports setting the XHR via
+        // the BreakpointListActor.
+        // When removing this trait, consumers should still check that the Watcher is
+        // available.
+        "set-xhr-breakpoints": true,
       },
     };
   },
@@ -512,8 +519,15 @@ exports.WatcherActor = protocol.ActorClassWithSpec(watcherSpec, {
 
     await Promise.all(
       Object.values(Targets.TYPES)
-        .filter(targetType =>
-          WatcherRegistry.isWatchingTargets(this, targetType)
+        .filter(
+          targetType =>
+            // We process frame targets even if we aren't watching them,
+            // because frame target helper codepath handles the top level target, if it runs in the *content* process.
+            // It will do another check to `isWatchingTargets(FRAME)` internally.
+            // Note that the workaround at the end of this method, using TargetActorRegistry
+            // is specific to top level target running in the *parent* process.
+            WatcherRegistry.isWatchingTargets(this, targetType) ||
+            targetType === Targets.TYPES.FRAME
         )
         .map(async targetType => {
           const targetHelperModule = TARGET_HELPERS[targetType];
@@ -546,7 +560,12 @@ exports.WatcherActor = protocol.ActorClassWithSpec(watcherSpec, {
     WatcherRegistry.removeWatcherDataEntry(this, type, entries);
 
     Object.values(Targets.TYPES)
-      .filter(targetType => WatcherRegistry.isWatchingTargets(this, targetType))
+      .filter(
+        targetType =>
+          // See comment in addDataEntry
+          WatcherRegistry.isWatchingTargets(this, targetType) ||
+          targetType === Targets.TYPES.FRAME
+      )
       .forEach(targetType => {
         const targetHelperModule = TARGET_HELPERS[targetType];
         targetHelperModule.removeWatcherDataEntry({
@@ -556,7 +575,7 @@ exports.WatcherActor = protocol.ActorClassWithSpec(watcherSpec, {
         });
       });
 
-    // See comment in watchResources
+    // See comment in addDataEntry
     const targetActor = this._getTargetActorInParentProcess();
     if (targetActor) {
       targetActor.removeWatcherDataEntry(type, entries);

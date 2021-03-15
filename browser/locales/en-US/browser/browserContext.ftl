@@ -161,31 +161,24 @@ main-context-menu-media-unmute =
     .label = Unmute
     .accesskey = m
 
-main-context-menu-media-play-speed =
-    .label = Play Speed
+main-context-menu-media-play-speed-2 =
+    .label = Speed
     .accesskey = d
 
-main-context-menu-media-play-speed-slow =
-    .label = Slow (0.5×)
-    .accesskey = S
+main-context-menu-media-play-speed-slow-2 =
+    .label = 0.5×
 
-main-context-menu-media-play-speed-normal =
-    .label = Normal
-    .accesskey = N
+main-context-menu-media-play-speed-normal-2 =
+    .label = 1.0×
 
-main-context-menu-media-play-speed-fast =
-    .label = Fast (1.25×)
-    .accesskey = F
+main-context-menu-media-play-speed-fast-2 =
+    .label = 1.25×
 
-main-context-menu-media-play-speed-faster =
-    .label = Faster (1.5×)
-    .accesskey = a
+main-context-menu-media-play-speed-faster-2 =
+    .label = 1.5×
 
-# "Ludicrous" is a reference to the movie "Space Balls" and is meant
-# to say that this speed is very fast.
-main-context-menu-media-play-speed-fastest =
-    .label = Ludicrous (2×)
-    .accesskey = L
+main-context-menu-media-play-speed-fastest-2 =
+    .label = 2×
 
 main-context-menu-media-loop =
     .label = Loop
@@ -214,20 +207,20 @@ main-context-menu-media-video-leave-fullscreen =
 
 # This is used when right-clicking on a video in the
 # content area when the Picture-in-Picture feature is enabled.
-main-context-menu-media-pip =
-    .label = Picture-in-Picture
+main-context-menu-media-watch-pip =
+    .label = Watch in Picture-in-Picture
     .accesskey = u
 
 main-context-menu-image-reload =
     .label = Reload Image
     .accesskey = R
 
-main-context-menu-image-view =
-    .label = View Image
+main-context-menu-image-view-new-tab =
+    .label = Open Image in New Tab
     .accesskey = I
 
-main-context-menu-video-view =
-    .label = View Video
+main-context-menu-video-view-new-tab =
+    .label = Open Video in New Tab
     .accesskey = i
 
 main-context-menu-image-copy =
@@ -270,8 +263,8 @@ main-context-menu-audio-save-as =
     .label = Save Audio As…
     .accesskey = v
 
-main-context-menu-video-image-save-as =
-    .label = Save Snapshot As…
+main-context-menu-video-take-snapshot =
+    .label = Take Snapshot…
     .accesskey = S
 
 main-context-menu-video-email =
@@ -298,9 +291,23 @@ main-context-menu-send-to-device =
     .label = Send Page to Device
     .accesskey = n
 
-main-context-menu-generate-new-password =
-    .label = Use Generated Password…
-    .accesskey = G
+## The access keys for "Use Saved Login" and "Use Saved Password"
+## should be the same if possible; the two context menu items
+## are mutually exclusive.
+
+main-context-menu-use-saved-login =
+    .label = Use Saved Login
+    .accesskey = o
+
+main-context-menu-use-saved-password =
+    .label = Use Saved Password
+    .accesskey = o
+
+##
+
+main-context-menu-suggest-strong-password =
+    .label = Suggest Strong Password…
+    .accesskey = S
 
 main-context-menu-manage-logins =
     .label = Manage Logins…
@@ -361,6 +368,10 @@ main-context-menu-print-selection =
 main-context-menu-view-selection-source =
     .label = View Selection Source
     .accesskey = e
+
+main-context-menu-take-screenshot =
+    .label = Take Screenshot
+    .accesskey = T
 
 main-context-menu-view-page-source =
     .label = View Page Source

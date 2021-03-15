@@ -979,12 +979,12 @@ void nsHTMLScrollFrame::PlaceScrollArea(ScrollReflowInput& aState,
   // for now, but it's possible that we may need to update both in the future.
   AdjustForPerspective(aState.mContentsOverflowAreas.ScrollableOverflow());
 
-  nsRect scrolledArea;
   // Preserve the width or height of empty rects
   nsSize portSize = mHelper.mScrollPort.Size();
   nsRect scrolledRect = mHelper.GetUnsnappedScrolledRectInternal(
       aState.mContentsOverflowAreas.ScrollableOverflow(), portSize);
-  scrolledArea.UnionRectEdges(scrolledRect, nsRect(nsPoint(0, 0), portSize));
+  nsRect scrolledArea =
+      scrolledRect.UnionEdges(nsRect(nsPoint(0, 0), portSize));
 
   // Store the new overflow area. Note that this changes where an outline
   // of the scrolled frame would be painted, but scrolled frames can't have
@@ -3470,8 +3470,8 @@ static bool ShouldBeClippedByFrame(nsIFrame* aClipFrame,
 static void ClipItemsExceptCaret(
     nsDisplayList* aList, nsDisplayListBuilder* aBuilder, nsIFrame* aClipFrame,
     const DisplayItemClipChain* aExtraClip,
-    nsDataHashtable<nsPtrHashKey<const DisplayItemClipChain>,
-                    const DisplayItemClipChain*>& aCache) {
+    nsTHashMap<nsPtrHashKey<const DisplayItemClipChain>,
+               const DisplayItemClipChain*>& aCache) {
   for (nsDisplayItem* i = aList->GetBottom(); i; i = i->GetAbove()) {
     if (!ShouldBeClippedByFrame(aClipFrame, i->Frame())) {
       continue;
@@ -3500,8 +3500,8 @@ static void ClipListsExceptCaret(nsDisplayListCollection* aLists,
                                  nsDisplayListBuilder* aBuilder,
                                  nsIFrame* aClipFrame,
                                  const DisplayItemClipChain* aExtraClip) {
-  nsDataHashtable<nsPtrHashKey<const DisplayItemClipChain>,
-                  const DisplayItemClipChain*>
+  nsTHashMap<nsPtrHashKey<const DisplayItemClipChain>,
+             const DisplayItemClipChain*>
       cache;
   ClipItemsExceptCaret(aLists->BorderBackground(), aBuilder, aClipFrame,
                        aExtraClip, cache);
@@ -5162,8 +5162,10 @@ auto ScrollFrameHelper::GetPageLoadingState() -> LoadingState {
   if (ds) {
     nsCOMPtr<nsIContentViewer> cv;
     ds->GetContentViewer(getter_AddRefs(cv));
-    loadCompleted = cv->GetLoadCompleted();
-    stopped = cv->GetIsStopped();
+    if (cv) {
+      loadCompleted = cv->GetLoadCompleted();
+      stopped = cv->GetIsStopped();
+    }
   }
   return loadCompleted
              ? (stopped ? LoadingState::Stopped : LoadingState::Loaded)

@@ -12,6 +12,8 @@
 #include "mozilla/DebugOnly.h"
 #include "mozilla/Maybe.h"
 
+#include <type_traits>
+
 #include "gc/Allocator.h"
 #include "gc/GCProbes.h"
 #include "gc/MaybeRooted.h"
@@ -21,7 +23,6 @@
 #include "vm/JSContext.h"
 #include "vm/ProxyObject.h"
 #include "vm/TypedArrayObject.h"
-#include "wasm/TypedObject.h"
 
 #include "gc/Heap-inl.h"
 #include "gc/Marking-inl.h"
@@ -57,16 +58,19 @@ inline void NativeObject::removeLastProperty(JSContext* cx) {
 }
 
 inline bool NativeObject::canRemoveLastProperty() {
-  /*
-   * Check that the information about the object stored in the last
-   * property's base shape is consistent with that stored in the previous
-   * shape. If not consistent, then the last property cannot be removed as it
-   * will induce a change in the object itself, and the object must be
-   * converted to dictionary mode instead. See BaseShape comment in jsscope.h
-   */
+  // Check that the information about the object stored in the last property's
+  // Shape is consistent with that stored in the previous shape. If not
+  // consistent, then the last property cannot be removed as it will induce a
+  // change in the object itself, and the object must be converted to dictionary
+  // mode instead.
   MOZ_ASSERT(!inDictionaryMode());
   Shape* previous = lastProperty()->previous().get();
-  return previous->objectFlags() == lastProperty()->objectFlags();
+  if (previous->objectFlags() != lastProperty()->objectFlags() ||
+      previous->proto() != lastProperty()->proto()) {
+    return false;
+  }
+  MOZ_ASSERT(lastProperty()->base() == previous->base());
+  return true;
 }
 
 inline void NativeObject::initDenseElementHole(uint32_t index) {
@@ -447,10 +451,10 @@ inline bool NativeObject::isInWholeCellBuffer() const {
 
 /* static */ inline JS::Result<NativeObject*, JS::OOM> NativeObject::create(
     JSContext* cx, js::gc::AllocKind kind, js::gc::InitialHeap heap,
-    js::HandleShape shape, js::HandleObjectGroup group) {
-  debugCheckNewObject(group, shape, kind, heap);
+    js::HandleShape shape) {
+  debugCheckNewObject(shape, kind, heap);
 
-  const JSClass* clasp = group->clasp();
+  const JSClass* clasp = shape->getObjectClass();
   MOZ_ASSERT(clasp->isNativeObject());
   MOZ_ASSERT(!clasp->isJSFunction(), "should use JSFunction::create");
 
@@ -463,7 +467,6 @@ inline bool NativeObject::isInWholeCellBuffer() const {
   }
 
   NativeObject* nobj = static_cast<NativeObject*>(obj);
-  nobj->initGroup(group);
   nobj->initShape(shape);
   // NOTE: Dynamic slots are created internally by Allocate<JSObject>.
   if (!nDynamicSlots) {
@@ -770,7 +773,9 @@ template <AllowGC allowGC,
 static MOZ_ALWAYS_INLINE bool NativeLookupPropertyInline(
     JSContext* cx, typename MaybeRooted<NativeObject*, allowGC>::HandleType obj,
     typename MaybeRooted<jsid, allowGC>::HandleType id,
-    typename MaybeRooted<JSObject*, allowGC>::MutableHandleType objp,
+    typename MaybeRooted<
+        std::conditional_t<allowGC == AllowGC::CanGC, JSObject*, NativeObject*>,
+        allowGC>::MutableHandleType objp,
     typename MaybeRooted<PropertyResult, allowGC>::MutableHandleType propp) {
   /* Search scopes starting with obj and following the prototype link. */
   typename MaybeRooted<NativeObject*, allowGC>::RootType current(cx, obj);
@@ -851,11 +856,11 @@ inline bool IsPackedArray(JSObject* obj) {
   return true;
 }
 
-MOZ_ALWAYS_INLINE bool AddDataPropertyNonDelegate(JSContext* cx,
-                                                  HandlePlainObject obj,
-                                                  HandleId id, HandleValue v) {
+MOZ_ALWAYS_INLINE bool AddDataPropertyNonPrototype(JSContext* cx,
+                                                   HandlePlainObject obj,
+                                                   HandleId id, HandleValue v) {
   MOZ_ASSERT(!JSID_IS_INT(id));
-  MOZ_ASSERT(!obj->isDelegate());
+  MOZ_ASSERT(!obj->isUsedAsPrototype());
 
   // If we know this is a new property we can call addProperty instead of
   // the slower putProperty.

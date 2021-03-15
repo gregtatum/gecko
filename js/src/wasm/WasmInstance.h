@@ -22,7 +22,6 @@
 #include "gc/Barrier.h"
 #include "gc/Zone.h"
 #include "vm/SharedMem.h"
-#include "wasm/TypedObject.h"
 #include "wasm/WasmCode.h"
 #include "wasm/WasmDebug.h"
 #include "wasm/WasmFrameIter.h"  // js::wasm::WasmFrameIter
@@ -221,14 +220,17 @@ class Instance {
   static void postBarrier(Instance* instance, gc::Cell** location);
   static void postBarrierFiltering(Instance* instance, gc::Cell** location);
   static void* structNew(Instance* instance, void* structDescr);
-  static void* structNarrow(Instance* instance, void* outputStructDescr,
-                            void* maybeNullPtr);
 #ifdef ENABLE_WASM_EXCEPTIONS
   static void* exceptionNew(Instance* instance, uint32_t exnIndex,
                             uint32_t nbytes);
   static void* throwException(Instance* instance, JSObject* exn);
   static uint32_t getLocalExceptionIndex(Instance* instance, JSObject* exn);
+  static int32_t pushRefIntoExn(Instance* instance, JSObject* exn,
+                                JSObject* ref);
 #endif
+  static void* arrayNew(Instance* instance, uint32_t length, void* arrayDescr);
+  static int32_t refTest(Instance* instance, void* refPtr, void* rttPtr);
+  static void* rttSub(Instance* instance, void* rttPtr);
 };
 
 using UniqueInstance = UniquePtr<Instance>;

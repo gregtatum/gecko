@@ -756,7 +756,6 @@ static bool CreateLazyScript(JSContext* cx, const CompilationInput& input,
 //
 // NOTE: Keep this in sync with `js::NewFunctionWithProto`.
 static JSFunction* CreateFunctionFast(JSContext* cx, CompilationInput& input,
-                                      HandleObjectGroup group,
                                       HandleShape shape,
                                       const ScriptStencil& script,
                                       const ScriptStencilExtra& scriptExtra) {
@@ -773,8 +772,7 @@ static JSFunction* CreateFunctionFast(JSContext* cx, CompilationInput& input,
 
   JSFunction* fun;
   JS_TRY_VAR_OR_RETURN_NULL(
-      cx, fun,
-      JSFunction::create(cx, allocKind, gc::TenuredHeap, shape, group));
+      cx, fun, JSFunction::create(cx, allocKind, gc::TenuredHeap, shape));
 
   fun->setArgCount(scriptExtra.nargs);
   fun->setFlags(flags);
@@ -922,14 +920,10 @@ static bool InstantiateFunctions(JSContext* cx, CompilationInput& input,
   if (!proto) {
     return false;
   }
-  RootedObjectGroup group(cx, ObjectGroup::defaultNewGroup(
-                                  cx, &JSFunction::class_, TaggedProto(proto)));
-  if (!group) {
-    return false;
-  }
-  RootedShape shape(cx, EmptyShape::getInitialShape(
-                            cx, &JSFunction::class_, TaggedProto(proto),
-                            /* nfixed = */ 0, ObjectFlags()));
+  RootedShape shape(
+      cx, EmptyShape::getInitialShape(cx, &JSFunction::class_, cx->realm(),
+                                      TaggedProto(proto),
+                                      /* nfixed = */ 0, ObjectFlags()));
   if (!shape) {
     return false;
   }
@@ -948,11 +942,11 @@ static bool InstantiateFunctions(JSContext* cx, CompilationInput& input,
         !scriptExtra.immutableFlags.hasFlag(ImmutableFlags::IsGenerator) &&
         !scriptStencil.functionFlags.isAsmJSNative();
 
-    JSFunction* fun = useFastPath
-                          ? CreateFunctionFast(cx, input, group, shape,
-                                               scriptStencil, scriptExtra)
-                          : CreateFunction(cx, input, stencil, scriptStencil,
-                                           scriptExtra, index);
+    JSFunction* fun =
+        useFastPath
+            ? CreateFunctionFast(cx, input, shape, scriptStencil, scriptExtra)
+            : CreateFunction(cx, input, stencil, scriptStencil, scriptExtra,
+                             index);
     if (!fun) {
       return false;
     }
@@ -1393,7 +1387,7 @@ bool CompilationStencil::deserializeStencils(JSContext* cx,
     *succeededOut = false;
   }
   MOZ_ASSERT(parserAtomData.empty());
-  XDRStencilDecoder decoder(cx, &input.options, range);
+  XDRStencilDecoder decoder(cx, range);
 
   XDRResult res = decoder.codeStencil(input, *this);
   if (res.isErr()) {
@@ -2985,6 +2979,25 @@ bool CompilationState::allocateGCThingsUninitialized(
   return true;
 }
 
+bool CompilationState::appendScriptStencilAndData(JSContext* cx) {
+  if (!scriptData.emplaceBack()) {
+    js::ReportOutOfMemory(cx);
+    return false;
+  }
+
+  if (isInitialStencil()) {
+    if (!scriptExtra.emplaceBack()) {
+      scriptData.popBack();
+      MOZ_ASSERT(scriptData.length() == scriptExtra.length());
+
+      js::ReportOutOfMemory(cx);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool CompilationState::appendGCThings(
     JSContext* cx, ScriptIndex scriptIndex,
     mozilla::Span<const TaggedScriptThingIndex> things) {
@@ -3024,6 +3037,11 @@ void CompilationState::rewind(const CompilationState::RewindToken& pos) {
       asmJS->moduleMap.remove(ScriptIndex(i));
     }
     MOZ_ASSERT(asmJS->moduleMap.count() == pos.asmJSCount);
+  }
+  // scriptExtra is empty for delazification.
+  if (scriptExtra.length()) {
+    MOZ_ASSERT(scriptExtra.length() == scriptData.length());
+    scriptExtra.shrinkTo(pos.scriptDataLength);
   }
   scriptData.shrinkTo(pos.scriptDataLength);
 }
@@ -3484,7 +3502,7 @@ JS::TranscodeResult JS::DecodeStencil(JSContext* cx,
   if (!stencil) {
     return TranscodeResult::Throw;
   }
-  XDRStencilDecoder decoder(cx, &options, range);
+  XDRStencilDecoder decoder(cx, range);
   XDRResult res = decoder.codeStencil(input.get(), *stencil);
   if (res.isErr()) {
     return res.unwrapErr();

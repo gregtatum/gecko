@@ -72,7 +72,7 @@
       });
 
       let tabTooltip = document.getElementById("tabbrowser-tab-tooltip");
-      if (gProtonTabs) {
+      if (gProtonPlacesTooltip) {
         tabTooltip.setAttribute("position", "after_start");
         tabTooltip.setAttribute("anchortoclosest", "tab");
       }
@@ -667,6 +667,7 @@
     _updateTabBarForPinnedTabs() {
       this.tabContainer._unlockTabSizing();
       this.tabContainer._positionPinnedTabs();
+      this.tabContainer._setPositionalAttributes();
       this.tabContainer._updateCloseButtons();
     },
 
@@ -806,15 +807,59 @@
       return (aBrowser || this.selectedBrowser).parentNode.parentNode;
     },
 
+    getTabNotificationDeck() {
+      if (!this._tabNotificationDeck) {
+        let template = document.getElementById(
+          "tab-notification-deck-template"
+        );
+        template.replaceWith(template.content);
+        this._tabNotificationDeck = document.getElementById(
+          "tab-notification-deck"
+        );
+      }
+      return this._tabNotificationDeck;
+    },
+
+    _nextNotificationBoxId: 0,
     getNotificationBox(aBrowser) {
       let browser = aBrowser || this.selectedBrowser;
       if (!browser._notificationBox) {
         browser._notificationBox = new MozElements.NotificationBox(element => {
           element.setAttribute("notificationside", "top");
-          this.getBrowserContainer(browser).prepend(element);
+          if (
+            Services.prefs.getBoolPref("browser.proton.infobars.enabled", false)
+          ) {
+            element.setAttribute(
+              "name",
+              `tab-notification-box-${this._nextNotificationBoxId++}`
+            );
+            // With Proton enabled all notification boxes are at the top, built into the browser chrome.
+            this.getTabNotificationDeck().append(element);
+            if (browser == this.selectedBrowser) {
+              this._updateVisibleNotificationBox(browser);
+            }
+          } else {
+            this.getBrowserContainer(browser).prepend(element);
+          }
         });
       }
       return browser._notificationBox;
+    },
+
+    readNotificationBox(aBrowser) {
+      let browser = aBrowser || this.selectedBrowser;
+      return browser._notificationBox || null;
+    },
+
+    _updateVisibleNotificationBox(aBrowser) {
+      if (!this._tabNotificationDeck) {
+        // If the deck hasn't been created we don't need to create it here.
+        return;
+      }
+      let notificationBox = this.readNotificationBox(aBrowser);
+      this.getTabNotificationDeck().selectedViewName = notificationBox
+        ? notificationBox.stack.getAttribute("name")
+        : "";
     },
 
     getTabModalPromptBox(aBrowser) {
@@ -1068,6 +1113,12 @@
       this.showTab(newTab);
 
       this._appendStatusPanel();
+
+      if (
+        Services.prefs.getBoolPref("browser.proton.infobars.enabled", false)
+      ) {
+        this._updateVisibleNotificationBox(newBrowser);
+      }
 
       let oldBrowserPopupsBlocked = oldBrowser.popupBlocker.getBlockedPopupCount();
       let newBrowserPopupsBlocked = newBrowser.popupBlocker.getBlockedPopupCount();
@@ -2281,7 +2332,7 @@
 
       let { uriIsAboutBlank, usingPreloadedContent } = aTab._browserParams;
       delete aTab._browserParams;
-      delete aTab._cachedCurrentURI;
+      delete browser._cachedCurrentURI;
 
       let panel = this.getPanel(browser);
       let uniqueId = this._generateUniquePanelID();
@@ -3089,7 +3140,7 @@
       // see bug #350299 for more details
       window.focus();
       let warningMessage = gTabBrowserBundle.GetStringFromName(
-        "tabs.closeWarningMultiple"
+        "tabs.closeWarningMultipleTabs"
       );
       warningMessage = PluralForm.get(tabsToClose, warningMessage).replace(
         "#1",
@@ -3100,7 +3151,7 @@
         ps.BUTTON_TITLE_CANCEL * ps.BUTTON_POS_1;
       let checkboxLabel =
         aCloseTabs == this.closingTabsEnum.ALL
-          ? gTabBrowserBundle.GetStringFromName("tabs.closeWarningPromptMe")
+          ? gTabBrowserBundle.GetStringFromName("tabs.closeWarningPrompt")
           : null;
       var buttonPressed = ps.confirmEx(
         window,
@@ -3351,7 +3402,9 @@
 
       // Guarantee that _clearMultiSelectionLocked lock gets released.
       try {
-        let tabsWithBeforeUnload = [];
+        let tabsWithBeforeUnloadPrompt = [];
+        let tabsWithoutBeforeUnload = [];
+        let beforeUnloadPromises = [];
         let lastToClose;
         let aParams = { animate, prewarmed: true };
 
@@ -3363,12 +3416,77 @@
               this._getSwitcher().warmupTab(toBlurTo);
             }
           } else if (this._hasBeforeUnload(tab)) {
-            tabsWithBeforeUnload.push(tab);
+            TelemetryStopwatch.start("FX_TAB_CLOSE_PERMIT_UNLOAD_TIME_MS", tab);
+            // We need to block while calling permitUnload() because it
+            // processes the event queue and may lead to another removeTab()
+            // call before permitUnload() returns.
+            tab._pendingPermitUnload = true;
+            beforeUnloadPromises.push(
+              // To save time, we first run the beforeunload event listeners in all
+              // content processes in parallel. Tabs that would have shown a prompt
+              // will be handled again later.
+              tab.linkedBrowser.asyncPermitUnload("dontUnload").then(
+                ({ permitUnload }) => {
+                  tab._pendingPermitUnload = false;
+                  TelemetryStopwatch.finish(
+                    "FX_TAB_CLOSE_PERMIT_UNLOAD_TIME_MS",
+                    tab
+                  );
+                  if (tab.closing) {
+                    // The tab was closed by the user while we were in permitUnload, don't
+                    // attempt to close it a second time.
+                  } else if (permitUnload) {
+                    // OK to close without prompting, do it immediately.
+                    this.removeTab(tab, {
+                      animate,
+                      prewarmed: true,
+                      skipPermitUnload: true,
+                    });
+                  } else {
+                    // We will need to prompt, queue it so it happens sequentially.
+                    tabsWithBeforeUnloadPrompt.push(tab);
+                  }
+                },
+                err => {
+                  console.log("error while calling asyncPermitUnload", err);
+                  tab._pendingPermitUnload = false;
+                  TelemetryStopwatch.finish(
+                    "FX_TAB_CLOSE_PERMIT_UNLOAD_TIME_MS",
+                    tab
+                  );
+                }
+              )
+            );
           } else {
-            this.removeTab(tab, aParams);
+            tabsWithoutBeforeUnload.push(tab);
           }
         }
-        for (let tab of tabsWithBeforeUnload) {
+        // Now that all the beforeunload IPCs have been sent to content processes,
+        // we can queue unload messages for all the tabs without beforeunload listeners.
+        // Doing this first would cause content process main threads to be busy and delay
+        // beforeunload responses, which would be user-visible.
+        for (let tab of tabsWithoutBeforeUnload) {
+          this.removeTab(tab, aParams);
+        }
+
+        // Wait for all the beforeunload events to have been processed by content processes.
+        // The permitUnload() promise will, alas, not call its resolution
+        // callbacks after the browser window the promise lives in has closed,
+        // so we have to check for that case explicitly.
+        let done = false;
+        Promise.all(beforeUnloadPromises).then(() => {
+          done = true;
+        });
+        Services.tm.spinEventLoopUntilOrShutdown(
+          "tabbrowser.js:removeTabs",
+          () => done || window.closed
+        );
+        if (!done) {
+          return;
+        }
+
+        // Now run again sequentially the beforeunload listeners that will result in a prompt.
+        for (let tab of tabsWithBeforeUnloadPrompt) {
           this.removeTab(tab, aParams);
         }
 
@@ -3685,6 +3803,9 @@
           "BrowserTab"
         );
       }
+
+      let notificationBox = this.readNotificationBox(browser);
+      notificationBox?.stack.remove();
 
       if (aTab.linkedPanel) {
         if (!adoptedByTab && !gMultiProcessBrowser) {
@@ -4029,6 +4150,15 @@
         aOurTab._sharingState = aOtherTab._sharingState;
         webrtcUI.swapBrowserForNotification(otherBrowser, ourBrowser);
       }
+      if (aOtherTab.hasAttribute("pictureinpicture")) {
+        aOurTab.setAttribute("pictureinpicture", true);
+        modifiedAttrs.push("pictureinpicture");
+
+        let event = new CustomEvent("TabSwapPictureInPicture", {
+          detail: aOurTab,
+        });
+        aOtherTab.dispatchEvent(event);
+      }
 
       SitePermissions.copyTemporaryPermissions(otherBrowser, ourBrowser);
 
@@ -4241,7 +4371,7 @@
       let browser = this.getBrowserForTab(aTab);
       // Reset temporary permissions on the current tab. This is done here
       // because we only want to reset permissions on user reload.
-      SitePermissions.clearTemporaryPermissions(browser);
+      SitePermissions.clearTemporaryBlockPermissions(browser);
       // Also reset DOS mitigations for the basic auth prompt on reload.
       delete browser.authPromptAbuseCounter;
       gIdentityHandler.hidePopup();
@@ -5217,7 +5347,7 @@
       // When Picture-in-Picture is open, we repurpose '.tab-icon-sound' as
       // an inert Picture-in-Picture indicator, so we should display
       // the default tooltip
-      else if (tab._overPlayingIcon && !tab.pictureinpicture) {
+      else if (!gProtonTabs && tab._overPlayingIcon && !tab.pictureinpicture) {
         let stringID;
         if (tab.selected) {
           stringID = tab.linkedBrowser.audioMuted
@@ -5246,15 +5376,20 @@
         label = this.getTabTooltip(tab);
       }
 
-      if (!gProtonTabs) {
+      if (!gProtonPlacesTooltip) {
         event.target.setAttribute("label", label);
         return;
       }
 
       let title = event.target.querySelector(".places-tooltip-title");
-      title.value = label;
+      title.textContent = label;
       let url = event.target.querySelector(".places-tooltip-uri");
-      url.value = tab.linkedBrowser?.currentURI?.spec;
+      url.value = tab.linkedBrowser?.currentURI?.spec.replace(
+        /^https:\/\//,
+        ""
+      );
+      let icon = event.target.querySelector("#places-tooltip-insecure-icon");
+      icon.hidden = !url.value.startsWith("http://");
     },
 
     handleEvent(aEvent) {
@@ -6974,8 +7109,14 @@ var TabContextMenu = {
   },
 
   updateShareURLMenuItem() {
-    // We don't show a "share URL" in Linux, so bail.
-    if (!gProton || AppConstants.platform == "linux") {
+    // We only support "share URL" on macOS and on Windows 10:
+    if (
+      !gProton ||
+      !(
+        AppConstants.platform == "macosx" ||
+        AppConstants.isPlatformAndVersionAtLeast("win", "6.4")
+      )
+    ) {
       return;
     }
 

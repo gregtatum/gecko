@@ -24,9 +24,8 @@
 
 namespace js {
 
-/*
- * Get the GC kind to use for scripted 'new'.
- */
+// Get the GC kind to use for scripted 'new', empty object literals ({}), and
+// the |Object| constructor.
 static inline gc::AllocKind NewObjectGCKind() { return gc::AllocKind::OBJECT4; }
 
 }  // namespace js
@@ -128,12 +127,6 @@ js::NativeObject::updateDictionaryListPointerAfterMinorGC(NativeObject* old) {
   if (shape()->dictNext == DictionaryShapeLink(old)) {
     shape()->dictNext = DictionaryShapeLink(this);
   }
-}
-
-inline void JSObject::setGroup(js::ObjectGroup* group) {
-  MOZ_RELEASE_ASSERT(group);
-  MOZ_ASSERT(maybeCCWRealm() == group->realm());
-  setGroupRaw(group);
 }
 
 /* * */
@@ -241,10 +234,6 @@ inline bool JSObject::isBoundFunction() const {
   return is<JSFunction>() && as<JSFunction>().isBoundFunction();
 }
 
-inline bool JSObject::isDelegate() const {
-  return hasFlag(js::ObjectFlag::Delegate);
-}
-
 inline bool JSObject::hasUncacheableProto() const {
   return hasFlag(js::ObjectFlag::UncacheableProto);
 }
@@ -309,7 +298,7 @@ static MOZ_ALWAYS_INLINE bool HasNoToPrimitiveMethodPure(JSObject* obj,
   JSObject* holder;
   if (!MaybeHasInterestingSymbolProperty(cx, obj, toPrimitive, &holder)) {
 #ifdef DEBUG
-    JSObject* pobj;
+    NativeObject* pobj;
     PropertyResult prop;
     MOZ_ASSERT(
         LookupPropertyPure(cx, obj, SYMBOL_TO_JSID(toPrimitive), &pobj, &prop));
@@ -318,7 +307,7 @@ static MOZ_ALWAYS_INLINE bool HasNoToPrimitiveMethodPure(JSObject* obj,
     return true;
   }
 
-  JSObject* pobj;
+  NativeObject* pobj;
   PropertyResult prop;
   if (!LookupPropertyPure(cx, holder, SYMBOL_TO_JSID(toPrimitive), &pobj,
                           &prop)) {
@@ -360,11 +349,6 @@ inline gc::InitialHeap GetInitialHeap(NewObjectKind newKind,
     return gc::TenuredHeap;
   }
   return gc::DefaultHeap;
-}
-
-inline gc::InitialHeap GetInitialHeap(NewObjectKind newKind,
-                                      ObjectGroup* group) {
-  return GetInitialHeap(newKind, group->clasp());
 }
 
 /*

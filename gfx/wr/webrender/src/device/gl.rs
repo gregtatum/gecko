@@ -1525,11 +1525,14 @@ impl Device {
         };
 
         let is_software_webrender = renderer_name.starts_with("Software WebRender");
-        let (depth_format, upload_method) = if is_software_webrender {
-            (gl::DEPTH_COMPONENT16, UploadMethod::Immediate)
+        let upload_method = if is_software_webrender {
+            // Uploads in SWGL generally reduce to simple memory copies.
+            UploadMethod::Immediate
         } else {
-            (gl::DEPTH_COMPONENT24, upload_method)
+            upload_method
         };
+        // Prefer 24-bit depth format. While 16-bit depth also works, it may exhaust depth ids easily.
+        let depth_format = gl::DEPTH_COMPONENT24;
 
         info!("GL texture cache {:?}, bgra {:?} swizzle {:?}, texture storage {:?}, depth {:?}",
             color_formats, bgra_formats, bgra8_sampling_swizzle, texture_storage_usage, depth_format);
@@ -1920,7 +1923,15 @@ impl Device {
         // wrapper from our GL context.
         let being_profiled = profiler::thread_is_being_profiled();
         let using_wrapper = self.base_gl.is_some();
-        if being_profiled && !using_wrapper {
+
+        // We can usually unwind driver stacks on x86 so we don't need to manually instrument
+        // gl calls there. Timestamps can be pretty expensive on Windows (2us each and perhaps
+        // an opportunity to be descheduled?) which makes the profiles gathered with this
+        // turned on less useful so only profile on ARM.
+        if cfg!(any(target_arch = "arm", target_arch = "aarch64"))
+            && being_profiled
+            && !using_wrapper
+        {
             fn note(name: &str, duration: Duration) {
                 profiler::add_text_marker(cstr!("OpenGL Calls"), name, duration);
             }

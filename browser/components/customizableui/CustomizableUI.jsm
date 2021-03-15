@@ -1825,18 +1825,12 @@ var CustomizableUIInternal = {
       if (aWidget.tabSpecific) {
         node.setAttribute("tabspecific", aWidget.tabSpecific);
       }
-      node.setAttribute("label", this.getLocalizedProperty(aWidget, "label"));
-      if (button != node) {
-        button.setAttribute("label", node.getAttribute("label"));
-      }
 
-      let additionalTooltipArguments = [];
+      let shortcut;
       if (aWidget.shortcutId) {
         let keyEl = aDocument.getElementById(aWidget.shortcutId);
         if (keyEl) {
-          additionalTooltipArguments.push(
-            ShortcutUtils.prettifyShortcut(keyEl)
-          );
+          shortcut = ShortcutUtils.prettifyShortcut(keyEl);
         } else {
           log.error(
             "Key element with id '" +
@@ -1848,15 +1842,27 @@ var CustomizableUIInternal = {
         }
       }
 
-      let tooltip = this.getLocalizedProperty(
-        aWidget,
-        "tooltiptext",
-        additionalTooltipArguments
-      );
-      if (tooltip) {
-        node.setAttribute("tooltiptext", tooltip);
+      if (aWidget.l10nId) {
+        node.setAttribute("data-l10n-id", aWidget.l10nId);
+        if (shortcut) {
+          node.setAttribute("data-l10n-args", JSON.stringify({ shortcut }));
+        }
+      } else {
+        node.setAttribute("label", this.getLocalizedProperty(aWidget, "label"));
         if (button != node) {
-          button.setAttribute("tooltiptext", tooltip);
+          button.setAttribute("label", node.getAttribute("label"));
+        }
+
+        let tooltip = this.getLocalizedProperty(
+          aWidget,
+          "tooltiptext",
+          shortcut ? [shortcut] : []
+        );
+        if (tooltip) {
+          node.setAttribute("tooltiptext", tooltip);
+          if (button != node) {
+            button.setAttribute("tooltiptext", tooltip);
+          }
         }
       }
 
@@ -2867,6 +2873,7 @@ var CustomizableUIInternal = {
       shortcutId: null,
       tabSpecific: false,
       tooltiptext: null,
+      l10nId: null,
       showInPrivateBrowsing: true,
       _introducedInVersion: -1,
     };
@@ -2896,7 +2903,7 @@ var CustomizableUIInternal = {
       widget[prop] = aData[prop];
     }
 
-    const kOptStringProps = ["label", "tooltiptext", "shortcutId"];
+    const kOptStringProps = ["l10nId", "label", "tooltiptext", "shortcutId"];
     for (let prop of kOptStringProps) {
       if (typeof aData[prop] == "string") {
         widget[prop] = aData[prop];
@@ -3962,6 +3969,9 @@ var CustomizableUI = {
    *                  value `false`, the view will not be shown.
    * - onViewHiding(aEvt): Only useful for views; a function that will be
    *                  invoked when a user hides your view.
+   * - l10nId:        fluent string identifier to use for localizing attributes
+   *                  on the widget. If present, preferred over the
+   *                  label/tooltiptext.
    * - tooltiptext:   string to use for the tooltip of the widget
    * - label:         string to use for the label of the widget
    * - localized:     If true, or undefined, attempt to retrieve the
@@ -3980,6 +3990,8 @@ var CustomizableUI = {
    *                  (which have strings inside
    *                  customizableWidgets.properties). If you're in an add-on,
    *                  you should not set this property.
+   *                  If l10nId is provided, the resulting shortcut is passed
+   *                  as the "$shortcut" variable to the fluent message.
    * - showInPrivateBrowsing: whether to show the widget in private browsing
    *                          mode (optional, default: true)
    *
@@ -4329,6 +4341,8 @@ var CustomizableUI = {
   },
 
   /**
+   * DEPRECATED! Use fluent instead.
+   *
    * Get a localized property off a (widget?) object.
    *
    * NB: this is unlikely to be useful unless you're in Firefox code, because
@@ -4620,6 +4634,10 @@ var CustomizableUI = {
 
   getCustomizationTarget(aElement) {
     return CustomizableUIInternal.getCustomizationTarget(aElement);
+  },
+
+  get protonToolbarEnabled() {
+    return gProtonToolbarEnabled;
   },
 };
 Object.freeze(CustomizableUI);

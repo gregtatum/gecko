@@ -200,6 +200,86 @@ using mozilla::TimeStamp;
 using mozilla::Utf8Unit;
 using mozilla::Variant;
 
+#ifdef FUZZING_JS_FUZZILLI
+#  define REPRL_CRFD 100
+#  define REPRL_CWFD 101
+#  define REPRL_DRFD 102
+#  define REPRL_DWFD 103
+
+#  define SHM_SIZE 0x100000
+#  define MAX_EDGES ((SHM_SIZE - 4) * 8)
+
+struct shmem_data {
+  uint32_t num_edges;
+  unsigned char edges[];
+};
+
+struct shmem_data* __shmem;
+
+uint32_t *__edges_start, *__edges_stop;
+void __sanitizer_cov_reset_edgeguards() {
+  uint64_t N = 0;
+  for (uint32_t* x = __edges_start; x < __edges_stop && N < MAX_EDGES; x++)
+    *x = ++N;
+}
+
+extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t* start,
+                                                    uint32_t* stop) {
+  // Avoid duplicate initialization
+  if (start == stop || *start) return;
+
+  if (__edges_start != NULL || __edges_stop != NULL) {
+    fprintf(stderr,
+            "Coverage instrumentation is only supported for a single module\n");
+    _exit(-1);
+  }
+
+  __edges_start = start;
+  __edges_stop = stop;
+
+  // Map the shared memory region
+  const char* shm_key = getenv("SHM_ID");
+  if (!shm_key) {
+    puts("[COV] no shared memory bitmap available, skipping");
+    __shmem = (struct shmem_data*)malloc(SHM_SIZE);
+  } else {
+    int fd = shm_open(shm_key, O_RDWR, S_IREAD | S_IWRITE);
+    if (fd <= -1) {
+      fprintf(stderr, "Failed to open shared memory region: %s\n",
+              strerror(errno));
+      _exit(-1);
+    }
+
+    __shmem = (struct shmem_data*)mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE,
+                                       MAP_SHARED, fd, 0);
+    if (__shmem == MAP_FAILED) {
+      fprintf(stderr, "Failed to mmap shared memory region\n");
+      _exit(-1);
+    }
+  }
+
+  __sanitizer_cov_reset_edgeguards();
+
+  __shmem->num_edges = stop - start;
+  printf("[COV] edge counters initialized. Shared memory: %s with %u edges\n",
+         shm_key, __shmem->num_edges);
+}
+
+extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t* guard) {
+  // There's a small race condition here: if this function executes in two
+  // threads for the same edge at the same time, the first thread might disable
+  // the edge (by setting the guard to zero) before the second thread fetches
+  // the guard value (and thus the index). However, our instrumentation ignores
+  // the first edge (see libcoverage.c) and so the race is unproblematic.
+  uint32_t index = *guard;
+  // If this function is called before coverage instrumentation is properly
+  // initialized we want to return early.
+  if (!index) return;
+  __shmem->edges[index / 8] |= 1 << (index % 8);
+  *guard = 0;
+}
+#endif /* FUZZING_JS_FUZZILLI */
+
 enum JSShellExitCode {
   EXITCODE_RUNTIME_ERROR = 3,
   EXITCODE_FILE_NOT_FOUND = 4,
@@ -2333,25 +2413,6 @@ static bool Evaluate(JSContext* cx, unsigned argc, Value* vp) {
       }
     }
 
-    if (!JS_GetProperty(cx, opts, "global", &v)) {
-      return false;
-    }
-    if (!v.isUndefined()) {
-      if (v.isObject()) {
-        global = js::CheckedUnwrapDynamic(&v.toObject(), cx,
-                                          /* stopAtWindowProxy = */ false);
-        if (!global) {
-          return false;
-        }
-      }
-      if (!global || !(JS::GetClass(global)->flags & JSCLASS_IS_GLOBAL)) {
-        JS_ReportErrorNumberASCII(
-            cx, GetErrorMessage, nullptr, JSMSG_UNEXPECTED_TYPE,
-            "\"global\" passed to evaluate()", "not a global object");
-        return false;
-      }
-    }
-
     if (!JS_GetProperty(cx, opts, "catchTermination", &v)) {
       return false;
     }
@@ -2440,6 +2501,46 @@ static bool Evaluate(JSContext* cx, unsigned argc, Value* vp) {
       JS_ReportErrorASCII(
           cx, "saveIncrementalBytecode cannot be used with assertEqBytecode.");
       return false;
+    }
+
+    // NOTE: Check custom "global" after handling all CompileOption-related
+    //       properties.
+    if (!JS_GetProperty(cx, opts, "global", &v)) {
+      return false;
+    }
+    if (!v.isUndefined()) {
+      if (v.isObject()) {
+        global = js::CheckedUnwrapDynamic(&v.toObject(), cx,
+                                          /* stopAtWindowProxy = */ false);
+        if (!global) {
+          return false;
+        }
+      }
+      if (!global || !(JS::GetClass(global)->flags & JSCLASS_IS_GLOBAL)) {
+        JS_ReportErrorNumberASCII(
+            cx, GetErrorMessage, nullptr, JSMSG_UNEXPECTED_TYPE,
+            "\"global\" passed to evaluate()", "not a global object");
+        return false;
+      }
+
+      // Validate the consistency between the passed CompileOptions and
+      // global's option.
+      {
+        JSAutoRealm ar(cx, global);
+        JS::CompileOptions globalOptions(cx);
+
+        // If the passed global discards source, delazification isn't allowed.
+        // The CompileOption should discard source as well.
+        if (globalOptions.discardSource && !options.discardSource) {
+          JS_ReportErrorASCII(cx, "discardSource option mismatch");
+          return false;
+        }
+        if (globalOptions.instrumentationKinds !=
+            options.instrumentationKinds) {
+          JS_ReportErrorASCII(cx, "instrumentationKinds mismatch");
+          return false;
+        }
+      }
     }
   }
 
@@ -2806,6 +2907,44 @@ static bool Run(JSContext* cx, unsigned argc, Value* vp) {
   return true;
 }
 
+static int js_fgets(char* buf, int size, FILE* file) {
+  int n, i, c;
+  bool crflag;
+
+  n = size - 1;
+  if (n < 0) {
+    return -1;
+  }
+
+  // Use the fastest available getc.
+  auto fast_getc =
+#if defined(HAVE_GETC_UNLOCKED)
+      getc_unlocked
+#elif defined(HAVE__GETC_NOLOCK)
+      _getc_nolock
+#else
+      getc
+#endif
+      ;
+
+  crflag = false;
+  for (i = 0; i < n && (c = fast_getc(file)) != EOF; i++) {
+    buf[i] = c;
+    if (c == '\n') {  // any \n ends a line
+      i++;            // keep the \n; we know there is room for \0
+      break;
+    }
+    if (crflag) {  // \r not followed by \n ends line at the \r
+      ungetc(c, file);
+      break;  // and overwrite c in buf with \0
+    }
+    crflag = (c == '\r');
+  }
+
+  buf[i] = '\0';
+  return i;
+}
+
 /*
  * function readline()
  * Provides a hook for scripts to read a line from stdin.
@@ -2813,7 +2952,7 @@ static bool Run(JSContext* cx, unsigned argc, Value* vp) {
 static bool ReadLine(JSContext* cx, unsigned argc, Value* vp) {
   CallArgs args = CallArgsFromVp(argc, vp);
 
-#define BUFSIZE 256
+  static constexpr size_t BUFSIZE = 256;
   FILE* from = stdin;
   size_t buflength = 0;
   size_t bufsize = BUFSIZE;
@@ -4006,6 +4145,148 @@ static bool Intern(JSContext* cx, unsigned argc, Value* vp) {
   return true;
 }
 
+#ifdef FUZZING_JS_FUZZILLI
+// We have to assume that the fuzzer will be able to call this function e.g. by
+// enumerating the properties of the global object and eval'ing them. As such
+// this function is implemented in a way that requires passing some magic value
+// as first argument (with the idea being that the fuzzer won't be able to
+// generate this value) which then also acts as a selector for the operation
+// to perform.
+static bool Fuzzilli(JSContext* cx, unsigned argc, Value* vp) {
+  CallArgs args = CallArgsFromVp(argc, vp);
+
+  RootedString arg(cx, JS::ToString(cx, args.get(0)));
+  if (!arg) {
+    return false;
+  }
+  RootedLinearString operation(cx, StringToLinearString(cx, arg));
+  if (!operation) {
+    return false;
+  }
+
+  if (StringEqualsAscii(operation, "FUZZILLI_CRASH")) {
+    int type;
+    if (!ToInt32(cx, args.get(1), &type)) {
+      return false;
+    }
+
+    // With this, we can test the various ways the JS shell can crash and make
+    // sure that Fuzzilli is able to detect all of these failures properly.
+    switch (type) {
+      case 0:
+        *((int*)0x41414141) = 0x1337;
+        break;
+      case 1:
+        MOZ_RELEASE_ASSERT(false);
+        break;
+      case 2:
+        MOZ_ASSERT(false);
+        break;
+      case 3:
+        __asm__("int3");
+        break;
+      default:
+        exit(1);
+    }
+  } else if (StringEqualsAscii(operation, "FUZZILLI_PRINT")) {
+    static FILE* fzliout = fdopen(REPRL_DWFD, "w");
+    if (!fzliout) {
+      fprintf(
+          stderr,
+          "Fuzzer output channel not available, printing to stdout instead\n");
+      fzliout = stdout;
+    }
+
+    RootedString str(cx, JS::ToString(cx, args.get(1)));
+    if (!str) {
+      return false;
+    }
+    UniqueChars bytes = JS_EncodeStringToUTF8(cx, str);
+    if (!bytes) {
+      return false;
+    }
+    fprintf(fzliout, "%s\n", bytes.get());
+    fflush(fzliout);
+  }
+
+  args.rval().setUndefined();
+  return true;
+}
+
+static bool FuzzilliReprlGetAndRun(JSContext* cx) {
+  size_t scriptSize = 0;
+
+  unsigned action;
+  MOZ_RELEASE_ASSERT(read(REPRL_CRFD, &action, 4) == 4);
+  if (action == 'cexe') {
+    MOZ_RELEASE_ASSERT(read(REPRL_CRFD, &scriptSize, 8) == 8);
+  } else {
+    fprintf(stderr, "Unknown action: %u\n", action);
+    _exit(-1);
+  }
+
+  CompileOptions options(cx);
+  options.setIntroductionType("reprl")
+      .setFileAndLine("reprl", 1)
+      .setIsRunOnce(true)
+      .setNoScriptRval(true);
+
+  char* scriptSrc = static_cast<char*>(js_malloc(scriptSize));
+
+  char* ptr = scriptSrc;
+  size_t remaining = scriptSize;
+  while (remaining > 0) {
+    ssize_t rv = read(REPRL_DRFD, ptr, remaining);
+    if (rv <= 0) {
+      fprintf(stderr, "Failed to load script\n");
+      _exit(-1);
+    }
+    remaining -= rv;
+    ptr += rv;
+  }
+
+  JS::SourceText<Utf8Unit> srcBuf;
+  if (!srcBuf.init(cx, scriptSrc, scriptSize,
+                   JS::SourceOwnership::TakeOwnership)) {
+    return false;
+  }
+
+  RootedScript script(cx, JS::Compile(cx, options, srcBuf));
+  if (!script) {
+    return false;
+  }
+
+  if (!JS_ExecuteScript(cx, script)) {
+    return false;
+  }
+
+  return true;
+}
+
+#endif /* FUZZING_JS_FUZZILLI */
+
+static bool FuzzilliUseReprlMode(OptionParser* op) {
+#ifdef FUZZING_JS_FUZZILLI
+  // Check if we should use REPRL mode
+  bool reprl_mode = op->getBoolOption("reprl");
+  if (reprl_mode) {
+    // Check in with parent
+    char helo[] = "HELO";
+    if (write(REPRL_CWFD, helo, 4) != 4 || read(REPRL_CRFD, helo, 4) != 4) {
+      reprl_mode = false;
+    }
+
+    if (memcmp(helo, "HELO", 4) != 0) {
+      fprintf(stderr, "Invalid response from parent\n");
+      _exit(-1);
+    }
+  }
+  return reprl_mode;
+#else
+  return false;
+#endif /* FUZZING_JS_FUZZILLI */
+}
+
 static bool Crash(JSContext* cx, unsigned argc, Value* vp) {
   CallArgs args = CallArgsFromVp(argc, vp);
   if (args.length() == 0) {
@@ -4617,33 +4898,6 @@ static bool ShapeOf(JSContext* cx, unsigned argc, JS::Value* vp) {
   }
   JSObject* obj = &args[0].toObject();
   args.rval().set(JS_NumberValue(double(uintptr_t(obj->shape()) >> 3)));
-  return true;
-}
-
-static bool GroupOf(JSContext* cx, unsigned argc, JS::Value* vp) {
-  CallArgs args = CallArgsFromVp(argc, vp);
-  if (!args.get(0).isObject()) {
-    JS_ReportErrorASCII(cx, "groupOf: object expected");
-    return false;
-  }
-  RootedObject obj(cx, &args[0].toObject());
-  ObjectGroup* group = obj->group();
-  args.rval().set(JS_NumberValue(double(uintptr_t(group) >> 3)));
-  return true;
-}
-
-static bool UnwrappedObjectsHaveSameShape(JSContext* cx, unsigned argc,
-                                          JS::Value* vp) {
-  CallArgs args = CallArgsFromVp(argc, vp);
-  if (!args.get(0).isObject() || !args.get(1).isObject()) {
-    JS_ReportErrorASCII(cx, "2 objects expected");
-    return false;
-  }
-
-  RootedObject obj1(cx, UncheckedUnwrap(&args[0].toObject()));
-  RootedObject obj2(cx, UncheckedUnwrap(&args[1].toObject()));
-
-  args.rval().setBoolean(obj1->shape() == obj2->shape());
   return true;
 }
 
@@ -5470,12 +5724,7 @@ static bool DumpAST(JSContext* cx, const JS::ReadOnlyCompileOptions& options,
   // Emplace the top-level stencil.
   MOZ_ASSERT(compilationState.scriptData.length() ==
              CompilationStencil::TopLevelIndex);
-  if (!compilationState.scriptData.emplaceBack()) {
-    ReportOutOfMemory(cx);
-    return false;
-  }
-  if (!compilationState.scriptExtra.emplaceBack()) {
-    ReportOutOfMemory(cx);
+  if (!compilationState.appendScriptStencilAndData(cx)) {
     return false;
   }
 
@@ -6742,13 +6991,6 @@ static bool NewGlobal(JSContext* cx, unsigned argc, Value* vp) {
     }
     if (v.isBoolean() && v.toBoolean()) {
       creationOptions.setNewCompartmentAndZone();
-    }
-
-    if (!JS_GetProperty(cx, opts, "disableLazyParsing", &v)) {
-      return false;
-    }
-    if (v.isBoolean()) {
-      behaviors.setDisableLazyParsing(v.toBoolean());
     }
 
     if (!JS_GetProperty(cx, opts, "discardSource", &v)) {
@@ -9032,16 +9274,6 @@ static const JSFunctionSpecWithHelp shell_functions[] = {
 "shapeOf(obj)",
 "  Get the shape of obj (an implementation detail)."),
 
-    JS_FN_HELP("groupOf", GroupOf, 1, 0,
-"groupOf(obj)",
-"  Get the group of obj (an implementation detail)."),
-
-    JS_FN_HELP("unwrappedObjectsHaveSameShape", UnwrappedObjectsHaveSameShape, 2, 0,
-"unwrappedObjectsHaveSameShape(obj1, obj2)",
-"  Returns true iff obj1 and obj2 have the same shape, false otherwise. Both\n"
-"  objects are unwrapped first, so this can be used on objects from different\n"
-"  globals."),
-
 #ifdef DEBUG
     JS_FN_HELP("arrayInfo", ArrayInfo, 1, 0,
 "arrayInfo(a1, a2, ...)",
@@ -9233,8 +9465,6 @@ static const JSFunctionSpecWithHelp shell_functions[] = {
 "         compartment and zone.\n"
 "      invisibleToDebugger: If true, the global will be invisible to the\n"
 "         debugger (default false)\n"
-"      disableLazyParsing: If true, don't create lazy scripts for functions\n"
-"         (default false).\n"
 "      discardSource: If true, discard source after compiling a script\n"
 "         (default false).\n"
 "      useWindowProxy: the global will be created with a WindowProxy attached. In this\n"
@@ -9490,6 +9720,12 @@ static const JSFunctionSpecWithHelp shell_functions[] = {
 "cpuNow()",
 " Returns the approximate processor time used by the process since an arbitrary epoch, in seconds.\n"
 " Only the difference between two calls to `cpuNow()` is meaningful."),
+
+#ifdef FUZZING_JS_FUZZILLI
+    JS_FN_HELP("fuzzilli", Fuzzilli, 0, 0,
+"fuzzilli(operation, arg)",
+"  Exposes functionality used by the Fuzzilli JavaScript fuzzer."),
+#endif
 
     JS_FS_HELP_END
 };
@@ -10516,6 +10752,13 @@ static bool OptionFailure(const char* option, const char* str) {
   MultiStringRange codeChunks = op->getMultiStringOption('e');
   MultiStringRange modulePaths = op->getMultiStringOption('m');
 
+#ifdef FUZZING_JS_FUZZILLI
+  // Check for REPRL file source
+  if (op->getBoolOption("reprl")) {
+    return FuzzilliReprlGetAndRun(cx);
+  }
+#endif /* FUZZING_JS_FUZZILLI */
+
   if (filePaths.empty() && utf16FilePaths.empty() && codeChunks.empty() &&
       modulePaths.empty() && !op->getStringArg("script")) {
     // Always use the interactive shell when -i is used. Without -i we let
@@ -10751,15 +10994,13 @@ static bool SetContextOptions(JSContext* cx, const OptionParser& op) {
   if (const char* str = op.getStringOption("spectre-mitigations")) {
     if (strcmp(str, "on") == 0) {
       jit::JitOptions.spectreIndexMasking = true;
-      jit::JitOptions.spectreObjectMitigationsBarriers = true;
-      jit::JitOptions.spectreObjectMitigationsMisc = true;
+      jit::JitOptions.spectreObjectMitigations = true;
       jit::JitOptions.spectreStringMitigations = true;
       jit::JitOptions.spectreValueMasking = true;
       jit::JitOptions.spectreJitToCxxCalls = true;
     } else if (strcmp(str, "off") == 0) {
       jit::JitOptions.spectreIndexMasking = false;
-      jit::JitOptions.spectreObjectMitigationsBarriers = false;
-      jit::JitOptions.spectreObjectMitigationsMisc = false;
+      jit::JitOptions.spectreObjectMitigations = false;
       jit::JitOptions.spectreStringMitigations = false;
       jit::JitOptions.spectreValueMasking = false;
       jit::JitOptions.spectreJitToCxxCalls = false;
@@ -11306,58 +11547,78 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
     defaultToSameCompartment = false;
   }
 
-  JS::RealmOptions options;
-  SetStandardRealmOptions(options);
-  RootedObject glob(
-      cx, NewGlobalObject(cx, options, nullptr, ShellGlobalKind::WindowProxy,
-                          /* immutablePrototype = */ true));
-  if (!glob) {
-    return 1;
-  }
+  bool reprl_mode = FuzzilliUseReprlMode(op);
 
-  JSAutoRealm ar(cx, glob);
+  // Begin REPRL Loop
+  int result = EXIT_SUCCESS;
+  do {
+    JS::RealmOptions options;
+    SetStandardRealmOptions(options);
+    RootedObject glob(
+        cx, NewGlobalObject(cx, options, nullptr, ShellGlobalKind::WindowProxy,
+                            /* immutablePrototype = */ true));
+    if (!glob) {
+      return 1;
+    }
+
+    JSAutoRealm ar(cx, glob);
 
 #ifdef FUZZING_INTERFACES
-  if (fuzzHaveModule) {
-    return FuzzJSRuntimeStart(cx, &sArgc, &sArgv);
-  }
+    if (fuzzHaveModule) {
+      return FuzzJSRuntimeStart(cx, &sArgc, &sArgv);
+    }
 #endif
 
-  ShellContext* sc = GetShellContext(cx);
-  int result = EXIT_SUCCESS;
-  {
-    AutoReportException are(cx);
-    if (!ProcessArgs(cx, op) && !sc->quitting) {
-      result = EXITCODE_RUNTIME_ERROR;
+    ShellContext* sc = GetShellContext(cx);
+    sc->exitCode = 0;
+    result = EXIT_SUCCESS;
+    {
+      AutoReportException are(cx);
+      if (!ProcessArgs(cx, op) && !sc->quitting) {
+        result = EXITCODE_RUNTIME_ERROR;
+      }
     }
-  }
 
-  /*
-   * The job queue must be drained even on error to finish outstanding async
-   * tasks before the main thread JSRuntime is torn down. Drain after
-   * uncaught exceptions have been reported since draining runs callbacks.
-   */
-  RunShellJobs(cx);
+    /*
+     * The job queue must be drained even on error to finish outstanding async
+     * tasks before the main thread JSRuntime is torn down. Drain after
+     * uncaught exceptions have been reported since draining runs callbacks.
+     */
+    RunShellJobs(cx);
 
-  // Only if there's no other error, report unhandled rejections.
-  if (!result && !sc->exitCode) {
-    AutoReportException are(cx);
-    if (!ReportUnhandledRejections(cx)) {
-      FILE* fp = ErrorFilePointer();
-      fputs("Error while printing unhandled rejection\n", fp);
+    // Only if there's no other error, report unhandled rejections.
+    if (!result && !sc->exitCode) {
+      AutoReportException are(cx);
+      if (!ReportUnhandledRejections(cx)) {
+        FILE* fp = ErrorFilePointer();
+        fputs("Error while printing unhandled rejection\n", fp);
+      }
     }
-  }
 
-  if (sc->exitCode) {
-    result = sc->exitCode;
-  }
-
-  if (enableDisassemblyDumps) {
-    AutoReportException are(cx);
-    if (!js::DumpRealmPCCounts(cx)) {
-      result = EXITCODE_OUT_OF_MEMORY;
+    if (sc->exitCode) {
+      result = sc->exitCode;
     }
-  }
+
+#ifdef FUZZING_JS_FUZZILLI
+    if (reprl_mode) {
+      fflush(stdout);
+      fflush(stderr);
+      // Send return code to parent and reset edge counters.
+      int status = (result & 0xff) << 8;
+      MOZ_RELEASE_ASSERT(write(REPRL_CWFD, &status, 4) == 4);
+      __sanitizer_cov_reset_edgeguards();
+    }
+#endif
+
+    if (enableDisassemblyDumps) {
+      AutoReportException are(cx);
+      if (!js::DumpRealmPCCounts(cx)) {
+        result = EXITCODE_OUT_OF_MEMORY;
+      }
+    }
+
+    // End REPRL loop
+  } while (reprl_mode);
 
   return result;
 }
@@ -11907,6 +12168,9 @@ int main(int argc, char** argv, char** envp) {
       !op.addBoolOption('\0', "wasm-compile-and-serialize",
                         "Compile the wasm bytecode from stdin and serialize "
                         "the results to stdout") ||
+#ifdef FUZZING_JS_FUZZILLI
+      !op.addBoolOption('\0', "reprl", "Enable REPRL mode for fuzzing") ||
+#endif
       !op.addStringOption('\0', "telemetry-dir", "[directory]",
                           "Output telemetry results in a directory")) {
     return EXIT_FAILURE;

@@ -185,7 +185,7 @@ class BlobURLsReporter final : public nsIMemoryReporter {
       return NS_OK;
     }
 
-    nsDataHashtable<nsPtrHashKey<mozilla::dom::BlobImpl>, uint32_t> refCounts;
+    nsTHashMap<nsPtrHashKey<mozilla::dom::BlobImpl>, uint32_t> refCounts;
 
     // Determine number of URLs per mozilla::dom::BlobImpl, to handle the case
     // where it's > 1.
@@ -876,9 +876,6 @@ NS_IMETHODIMP
 BlobURLProtocolHandler::NewChannel(nsIURI* aURI, nsILoadInfo* aLoadInfo,
                                    nsIChannel** aResult) {
   auto channel = MakeRefPtr<BlobURLChannel>(aURI, aLoadInfo);
-  if (!channel) {
-    return NS_ERROR_NOT_INITIALIZED;
-  }
   channel.forget(aResult);
   return NS_OK;
 }

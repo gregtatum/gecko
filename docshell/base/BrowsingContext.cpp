@@ -134,7 +134,7 @@ extern mozilla::LazyLogModule gUserInteractionPRLog;
 static LazyLogModule gBrowsingContextLog("BrowsingContext");
 static LazyLogModule gBrowsingContextSyncLog("BrowsingContextSync");
 
-typedef nsDataHashtable<nsUint64HashKey, BrowsingContext*> BrowsingContextMap;
+typedef nsTHashMap<nsUint64HashKey, BrowsingContext*> BrowsingContextMap;
 
 // All BrowsingContexts indexed by Id
 static StaticAutoPtr<BrowsingContextMap> sBrowsingContexts;
@@ -3141,35 +3141,6 @@ bool BrowsingContext::CanSet(FieldIndex<IDX_PendingInitialization>,
   // Can only be cleared from `true` to `false`, and should only ever be set on
   // the toplevel BrowsingContext.
   return IsTop() && GetPendingInitialization() && !aNewValue;
-}
-
-void BrowsingContext::SessionHistoryChanged(int32_t aIndexDelta,
-                                            int32_t aLengthDelta) {
-  if (XRE_IsParentProcess() || mozilla::SessionHistoryInParent()) {
-    // This method is used to test index and length for the session history
-    // in child process only.
-    return;
-  }
-
-  if (!IsTop()) {
-    // Some tests have unexpected setup while Fission shistory is being
-    // implemented.
-    return;
-  }
-
-  RefPtr<ChildSHistory> shistory = GetChildSessionHistory();
-  if (!shistory || !shistory->AsyncHistoryLength()) {
-    return;
-  }
-
-  nsID changeID = shistory->AddPendingHistoryChange(aIndexDelta, aLengthDelta);
-  uint32_t index = shistory->Index();
-  uint32_t length = shistory->Count();
-
-  // Do artificial history update through parent process to test asynchronous
-  // history.length handling.
-  ContentChild::GetSingleton()->SendSessionHistoryUpdate(this, index, length,
-                                                         changeID);
 }
 
 bool BrowsingContext::IsPopupAllowed() {

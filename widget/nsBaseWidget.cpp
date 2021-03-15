@@ -122,7 +122,7 @@ int32_t nsIWidget::sPointerIdCounter = 0;
 // Some statics from nsIWidget.h
 /*static*/
 uint64_t AutoObserverNotifier::sObserverId = 0;
-/*static*/ nsDataHashtable<nsUint64HashKey, nsCOMPtr<nsIObserver>>
+/*static*/ nsTHashMap<uint64_t, nsCOMPtr<nsIObserver>>
     AutoObserverNotifier::sSavedObservers;
 
 // The maximum amount of time to let the EnableDragDrop runnable wait in the
@@ -1237,7 +1237,16 @@ already_AddRefed<LayerManager> nsBaseWidget::CreateCompositorSession(
 #ifdef XP_WIN
     if (supportsAcceleration) {
       options.SetAllowSoftwareWebRenderD3D11(
-          StaticPrefs::gfx_webrender_software_d3d11_AtStartup());
+          gfx::gfxVars::AllowSoftwareWebRenderD3D11());
+    }
+#elif defined(MOZ_WIDGET_ANDROID)
+    MOZ_ASSERT(supportsAcceleration);
+    options.SetAllowSoftwareWebRenderOGL(
+        StaticPrefs::gfx_webrender_software_opengl_AtStartup());
+#elif defined(MOZ_WIDGET_GTK)
+    if (supportsAcceleration) {
+      options.SetAllowSoftwareWebRenderOGL(
+          StaticPrefs::gfx_webrender_software_opengl_AtStartup());
     }
 #endif
 

@@ -112,6 +112,10 @@ if (
     "firefox-compact-proton-dark@mozilla.org",
     "chrome://mozapps/content/extensions/firefox-compact-dark.svg"
   );
+  BUILTIN_THEME_PREVIEWS.set(
+    "firefox-compact-proton-light@mozilla.org",
+    "chrome://mozapps/content/extensions/firefox-compact-light.svg"
+  );
 }
 
 const PERMISSION_MASKS = {
@@ -1764,6 +1768,8 @@ class DiscoverButton extends CategoryButton {
 }
 customElements.define("discover-button", DiscoverButton, { extends: "button" });
 
+// Create the button-group element so it gets loaded.
+document.createElement("button-group");
 class CategoriesBox extends customElements.get("button-group") {
   constructor() {
     super();
@@ -3110,10 +3116,8 @@ class AddonCard extends HTMLElement {
         case "remove":
           {
             this.panel.hide();
-            let {
-              remove,
-              report,
-            } = windowRoot.ownerGlobal.BrowserAddonUI.promptRemoveExtension(
+            let { BrowserAddonUI } = windowRoot.ownerGlobal;
+            let { remove, report } = await BrowserAddonUI.promptRemoveExtension(
               addon
             );
             let value = remove ? "accepted" : "cancelled";

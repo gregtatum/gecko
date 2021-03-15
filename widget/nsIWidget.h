@@ -18,7 +18,6 @@
 #include "mozilla/RefPtr.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/UniquePtr.h"
-#include "mozilla/dom/BindingDeclarations.h"
 #include "mozilla/gfx/Matrix.h"
 #include "mozilla/gfx/Rect.h"
 #include "mozilla/layers/LayersTypes.h"
@@ -27,7 +26,6 @@
 #include "mozilla/widget/IMEData.h"
 #include "nsCOMPtr.h"
 #include "nsColor.h"
-#include "nsDataHashtable.h"
 #include "nsDebug.h"
 #include "nsID.h"
 #include "nsIObserver.h"
@@ -39,6 +37,7 @@
 #include "nsSize.h"
 #include "nsStringFwd.h"
 #include "nsTArray.h"
+#include "nsTHashMap.h"
 #include "nsWidgetInitData.h"
 #include "nsXULAppAPI.h"
 
@@ -72,6 +71,7 @@ class Shmem;
 #endif  // defined(MOZ_WIDGET_ANDROID)
 namespace dom {
 class BrowserChild;
+enum class CallerType : uint32_t;
 }  // namespace dom
 namespace plugins {
 class PluginWidgetChild;
@@ -351,8 +351,7 @@ struct AutoObserverNotifier {
 
  private:
   static uint64_t sObserverId;
-  static nsDataHashtable<nsUint64HashKey, nsCOMPtr<nsIObserver>>
-      sSavedObservers;
+  static nsTHashMap<uint64_t, nsCOMPtr<nsIObserver>> sSavedObservers;
 };
 
 }  // namespace widget
@@ -1713,6 +1712,13 @@ class nsIWidget : public nsISupports {
    * sequence has been cleared.
    */
   virtual nsresult ClearNativeTouchSequence(nsIObserver* aObserver);
+
+  /*
+   * Send a native event as if the user double tapped the touchpad with two
+   * fingers.
+   */
+  virtual nsresult SynthesizeNativeTouchpadDoubleTap(
+      LayoutDeviceIntPoint aPoint, uint32_t aModifierFlags) = 0;
 
   virtual void StartAsyncScrollbarDrag(
       const AsyncDragMetrics& aDragMetrics) = 0;

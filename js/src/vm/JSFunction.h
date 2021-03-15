@@ -133,7 +133,7 @@ class JSFunction : public js::NativeObject {
  public:
   static inline JS::Result<JSFunction*, JS::OOM> create(
       JSContext* cx, js::gc::AllocKind kind, js::gc::InitialHeap heap,
-      js::HandleShape shape, js::HandleObjectGroup group);
+      js::HandleShape shape);
 
   /* Call objects must be created for each invocation of this function. */
   bool needsCallObject() const;
@@ -267,7 +267,6 @@ class JSFunction : public js::NativeObject {
 
   // Make the function constructible.
   void setIsConstructor() { flags_.setIsConstructor(); }
-  void setIsClassConstructor() { flags_.setIsClassConstructor(); }
 
   // Can be called multiple times by the parser.
   void setArgCount(uint16_t nargs) { this->nargs_ = nargs; }

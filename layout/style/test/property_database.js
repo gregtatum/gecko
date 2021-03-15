@@ -5490,6 +5490,7 @@ var gCSSProperties = {
       "counter(foo, symbols(numeric '0' '1'))",
       "counters(foo, '.', symbols('*'))",
       "counters(foo, '.', symbols(numeric '0' '1'))",
+      "image-set(url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKElEQVR42u3NQQ0AAAgEoNP+nTWFDzcoQE1udQQCgUAgEAgEAsGTYAGjxAE/G/Q2tQAAAABJRU5ErkJggg==))",
     ],
     invalid_values: [
       "counter(foo, none)",
@@ -7377,8 +7378,8 @@ var gCSSProperties = {
     inherited: true,
     type: CSS_TYPE_LONGHAND,
     applies_to_cue: true,
-    initial_values: ["over"],
-    other_values: ["under"],
+    initial_values: ["alternate", "alternate over", "over alternate"],
+    other_values: ["over", "under", "alternate under", "under alternate"],
     invalid_values: [
       "left",
       "right",
@@ -7387,6 +7388,8 @@ var gCSSProperties = {
       "not_a_position",
       "over left",
       "right under",
+      "over under",
+      "alternate alternate",
       "0",
       "100px",
       "50%",
@@ -13536,6 +13539,24 @@ if (IsCSSPropertyPrefEnabled("layout.css.math-style.enabled")) {
     other_values: ["compact"],
     invalid_values: [],
   };
+}
+
+if (IsCSSPropertyPrefEnabled("layout.css.color-mix.enabled")) {
+  gCSSProperties.color.other_values.push(
+    "color-mix(in srgb, red, blue)",
+    "color-mix(in srgb, highlight, rgba(0, 0, 0, .5))",
+    "color-mix(in srgb, color-mix(in srgb, red 10%, blue), green)",
+    "color-mix(in srgb, blue, red 80%)",
+    "color-mix(in srgb, rgba(0, 200, 32, .5) 90%, red 50%)",
+    "color-mix(in srgb, currentColor, red)"
+  );
+
+  gCSSProperties.color.invalid_values.push(
+    "color-mix(red, blue)",
+    "color-mix(red blue)",
+    "color-mix(in srgb, red blue)",
+    "color-mix(in srgb, red 10% blue)"
+  );
 }
 
 // Copy aliased properties' fields from their alias targets. Keep this logic

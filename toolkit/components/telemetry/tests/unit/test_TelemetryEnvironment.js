@@ -33,7 +33,6 @@ const { OS } = ChromeUtils.import("resource://gre/modules/osfile.jsm");
 const { SearchTestUtils } = ChromeUtils.import(
   "resource://testing-common/SearchTestUtils.jsm"
 );
-Cu.importGlobalProperties(["Glean"]);
 
 // AttributionCode is only needed for Firefox
 ChromeUtils.defineModuleGetter(
@@ -2170,7 +2169,7 @@ add_task(async function test_defaultSearchEngine_paramsChanged() {
   checkEnvironmentData(data);
   Assert.deepEqual(data.settings.defaultSearchEngineData, {
     name: "TestEngine",
-    loadPath: "[other]addEngineWithDetails:example@tests.mozilla.org",
+    loadPath: "[other]addEngineWithDetails:testengine@tests.mozilla.org",
     origin: "verified",
     submissionURL: "https://www.google.com/fake1?q=",
   });
@@ -2198,7 +2197,7 @@ add_task(async function test_defaultSearchEngine_paramsChanged() {
   checkEnvironmentData(data);
   Assert.deepEqual(data.settings.defaultSearchEngineData, {
     name: "TestEngine",
-    loadPath: "[other]addEngineWithDetails:example@tests.mozilla.org",
+    loadPath: "[other]addEngineWithDetails:testengine@tests.mozilla.org",
     origin: "verified",
     submissionURL: "https://www.google.com/fake2?q=",
   });
@@ -2521,20 +2520,6 @@ if (gIsWindows) {
       checkString(data.system.hdd[k].model);
       checkString(data.system.hdd[k].revision);
       checkString(data.system.hdd[k].type);
-    }
-
-    if (data.system.hdd.profile.type == "SSD") {
-      Assert.equal(
-        true,
-        Glean.fogValidation.profileDiskIsSsd.testGetValue(),
-        "SSDness should be recorded in Glean"
-      );
-    } else {
-      Assert.equal(
-        false,
-        Glean.fogValidation.profileDiskIsSsd.testGetValue(),
-        "nonSSDness should be recorded in Glean"
-      );
     }
   });
 

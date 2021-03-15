@@ -3,8 +3,6 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 %filter substitution
-%define identityBoxPaddingInline 6px
-%define identityBoxMarginInline 3px
 %define lwtPopupBrighttextLinkColor #74c0ff
 %define themeTransition background-color 0.1s cubic-bezier(.17,.67,.83,.67)
 %define urlbarBreakoutExtend 2px
@@ -20,6 +18,45 @@
   --arrowpanel-dimmed: hsla(0,0%,80%,.35);
   --arrowpanel-dimmed-further: hsla(0,0%,80%,.5);
   --arrowpanel-dimmed-even-further: hsla(0,0%,80%,.8);
+
+  --identity-box-margin-inline: 4px;
+  --identity-box-label-opacity: .8;
+  --urlbar-box-bg-overlay: hsla(0,0%,70%,.2);
+  --urlbar-box-unfocused-bg-overlay: hsla(0,0%,100%,.7);
+
+  --urlbar-min-height: 32px;
+  --urlbar-icon-padding: 6px; /* (32px - 2px border - 2px padding - 16px icon) / 2 */
+}
+
+@supports not -moz-bool-pref("browser.proton.enabled") {
+  :root {
+    --focus-outline-width: 0;
+    --identity-box-margin-inline: 3px;
+    --identity-box-label-opacity: .6;
+  }
+}
+
+@supports -moz-bool-pref("browser.proton.enabled") {
+:root {
+  --focus-outline-width: 2px;
+  --focus-outline-color: currentColor;
+  --focus-outline: var(--focus-outline-width) solid var(--focus-outline-color);
+}
+
+@media not (prefers-contrast) {
+  :root {
+    --focus-outline-color: #0061E0;
+  }
+
+  :root:-moz-lwtheme-brighttext {
+    --focus-outline-color: #00DDFF;
+  }
+}
+
+@media (prefers-contrast) {
+  :root {
+    --urlbar-box-unfocused-bg-overlay: var(--urlbar-box-bg-overlay)
+  }
 }
 
 %ifdef MOZ_WIDGET_COCOA

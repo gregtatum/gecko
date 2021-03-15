@@ -65,7 +65,7 @@ function nativeHorizontalWheelEventMsg() {
 
 // Given an event target which may be a window or an element, get the associated window.
 function windowForTarget(aTarget) {
-  if (aTarget instanceof Window) {
+  if (aTarget.Window && aTarget instanceof aTarget.Window) {
     return aTarget;
   }
   return aTarget.ownerDocument.defaultView;
@@ -73,7 +73,7 @@ function windowForTarget(aTarget) {
 
 // Given an event target which may be a window or an element, get the associated element.
 function elementForTarget(aTarget) {
-  if (aTarget instanceof Window) {
+  if (aTarget.Window && aTarget instanceof aTarget.Window) {
     return aTarget.document.documentElement;
   }
   return aTarget;
@@ -202,7 +202,11 @@ function getTargetRect(aTarget) {
   // If the target is the root content window, its origin relative
   // to the visual viewport is (0, 0).
   if (aTarget instanceof Window) {
-    // FIXME: Assert that it's not an iframe window.
+    return rect;
+  }
+  if (aTarget.Window && aTarget instanceof aTarget.Window) {
+    // iframe window
+    // FIXME: Compute proper rect against the root content window
     return rect;
   }
 
@@ -496,6 +500,26 @@ function promiseNativeWheelAndWaitForScrollEvent(
   });
 }
 
+function synthesizeTouchpadPinch(scales, focusX, focusY) {
+  var modifierFlags = 0;
+  var pt = coordinatesRelativeToScreen({
+    offsetX: focusX,
+    offsetY: focusY,
+    target: document.body,
+  });
+  var utils = utilsForTarget(document.body);
+  for (let i = 0; i < scales.length; i++) {
+    var phase;
+    if (i === 0) {
+      phase = SpecialPowers.DOMWindowUtils.PHASE_BEGIN;
+    } else if (i === scales.length - 1) {
+      phase = SpecialPowers.DOMWindowUtils.PHASE_END;
+    } else {
+      phase = SpecialPowers.DOMWindowUtils.PHASE_UPDATE;
+    }
+    utils.sendNativeTouchpadPinch(phase, scales[i], pt.x, pt.y, modifierFlags);
+  }
+}
 // Synthesizes a native touch event and dispatches it. aX and aY in CSS pixels
 // relative to the top-left of |aTarget|'s bounding rect.
 function synthesizeNativeTouch(
@@ -781,6 +805,17 @@ function synthesizeNativeTap(aElement, aX, aY, aObserver = null) {
     aElement.ownerDocument.defaultView
   );
   utils.sendNativeTouchTap(pt.x, pt.y, false, aObserver);
+  return true;
+}
+
+function synthesizeNativeTouchpadDoubleTap(aTarget, aX, aY) {
+  let pt = coordinatesRelativeToScreen({
+    offsetX: aX,
+    offsetY: aY,
+    target: aTarget,
+  });
+  let utils = utilsForTarget(aTarget);
+  utils.sendNativeTouchpadDoubleTap(pt.x, pt.y, 0);
   return true;
 }
 
@@ -1219,7 +1254,7 @@ async function pinchZoomInWithTouchpad(focusX, focusY) {
   // Register the listener for the TransformEnd observer topic
   let transformEndPromise = promiseTopic("APZ:TransformEnd");
 
-  var scales = [
+  var zoomIn = [
     1.0,
     1.019531,
     1.035156,
@@ -1249,24 +1284,70 @@ async function pinchZoomInWithTouchpad(focusX, focusY) {
     1.421875,
     1.0,
   ];
-  var modifierFlags = 0;
-  var pt = coordinatesRelativeToScreen({
-    offsetX: focusX,
-    offsetY: focusY,
-    target: document.body,
-  });
-  var utils = utilsForTarget(document.body);
-  for (let i = 0; i < scales.length; i++) {
-    var phase;
-    if (i === 0) {
-      phase = SpecialPowers.DOMWindowUtils.PHASE_BEGIN;
-    } else if (i === scales.length - 1) {
-      phase = SpecialPowers.DOMWindowUtils.PHASE_END;
-    } else {
-      phase = SpecialPowers.DOMWindowUtils.PHASE_UPDATE;
-    }
-    utils.sendNativeTouchpadPinch(phase, scales[i], pt.x, pt.y, modifierFlags);
-  }
+  synthesizeTouchpadPinch(zoomIn, focusX, focusY);
+  // Wait for TransformEnd to fire.
+  await transformEndPromise;
+}
+
+async function pinchZoomOutWithTouchpad(focusX, focusY) {
+  // Register the listener for the TransformEnd observer topic
+  let transformEndPromise = promiseTopic("APZ:TransformEnd");
+  // The last item equal one to indicate scale end
+  var zoomOut = [
+    1.0,
+    1.375,
+    1.359375,
+    1.339844,
+    1.316406,
+    1.296875,
+    1.277344,
+    1.257812,
+    1.238281,
+    1.21875,
+    1.199219,
+    1.175781,
+    1.15625,
+    1.132812,
+    1.101562,
+    1.078125,
+    1.054688,
+    1.03125,
+    1.011719,
+    0.992188,
+    0.972656,
+    0.953125,
+    0.933594,
+    1.0,
+  ];
+  synthesizeTouchpadPinch(zoomOut, focusX, focusY);
+  // Wait for TransformEnd to fire.
+  await transformEndPromise;
+}
+
+async function pinchZoomInOutWithTouchpad(focusX, focusY) {
+  // Register the listener for the TransformEnd observer topic
+  let transformEndPromise = promiseTopic("APZ:TransformEnd");
+  // Use the same scale for two events in a row to make sure the code handles this properly.
+  var zoomInOut = [
+    1.0,
+    1.082031,
+    1.089844,
+    1.097656,
+    1.101562,
+    1.109375,
+    1.121094,
+    1.128906,
+    1.128906,
+    1.125,
+    1.097656,
+    1.074219,
+    1.054688,
+    1.035156,
+    1.015625,
+    1.0,
+    1.0,
+  ];
+  synthesizeTouchpadPinch(zoomInOut, focusX, focusY);
   // Wait for TransformEnd to fire.
   await transformEndPromise;
 }

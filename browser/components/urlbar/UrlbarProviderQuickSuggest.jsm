@@ -26,8 +26,8 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 const EXPERIMENT_PREF = "quicksuggest.enabled";
 const SUGGEST_PREF = "suggest.quicksuggest";
 
-const NONSPONSORED_ACTION_TEXT = "Firefox Suggests";
-const HELP_TITLE = "Learn more about Firefox Suggests";
+const NONSPONSORED_ACTION_TEXT = "Firefox Suggest";
+const HELP_TITLE = "Learn more about Firefox Suggest";
 
 const TELEMETRY_SCALAR_IMPRESSION =
   "contextual.services.quicksuggest.impression";
@@ -69,7 +69,7 @@ class ProviderQuickSuggest extends UrlbarProvider {
     return (
       this._helpUrl ||
       Services.urlFormatter.formatURLPref("app.support.baseURL") +
-        "sponsored-search"
+        "firefox-suggest"
     );
   }
 
@@ -115,7 +115,7 @@ class ProviderQuickSuggest extends UrlbarProvider {
   async startQuery(queryContext, addCallback) {
     let instance = this.queryInstance;
     let suggestion = await UrlbarQuickSuggest.query(
-      queryContext.trimmedSearchString
+      queryContext.searchString.trimStart()
     );
     if (!suggestion || instance != this.queryInstance) {
       return;

@@ -80,7 +80,6 @@
 using namespace mozilla;
 using namespace xpc;
 using namespace JS;
-using mozilla::dom::AutoEntryScript;
 
 // The watchdog thread loop is pretty trivial, and should not require much stack
 // space to do its job. So only give it 32KiB or the platform minimum.
@@ -620,7 +619,6 @@ bool XPCJSContext::InterruptCallback(JSContext* cx) {
 
   nsString addonId;
   const char* prefName;
-  bool runningContentJS = false;
   auto principal = BasePrincipal::Cast(nsContentUtils::SubjectPrincipal(cx));
   bool chrome = principal->Is<SystemPrincipal>();
   if (chrome) {
@@ -634,7 +632,6 @@ bool XPCJSContext::InterruptCallback(JSContext* cx) {
   } else {
     prefName = PREF_MAX_SCRIPT_RUN_TIME_CONTENT;
     limit = StaticPrefs::dom_max_script_run_time();
-    runningContentJS = true;
   }
 
   // When the parent process slow script dialog is disabled, we still want
@@ -661,9 +658,13 @@ bool XPCJSContext::InterruptCallback(JSContext* cx) {
     return true;
   }
 
-  // For content scripts, we only want to show the slow script dialogue if the
-  // user is actually trying to perform an important interaction.
-  if (runningContentJS && XRE_IsContentProcess() &&
+  // For scripts in content processes, we only want to show the slow script
+  // dialogue if the user is actually trying to perform an important
+  // interaction. In theory this could be a chrome script running in the
+  // content process, which we probably don't want to give the user the ability
+  // to terminate. However, if this is the case we won't be able to map the
+  // script global to a window and we'll bail out below.
+  if (XRE_IsContentProcess() &&
       StaticPrefs::dom_max_script_run_time_require_critical_input()) {
     // Call possibly slow PeekMessages after the other common early returns in
     // this method.
@@ -700,19 +701,11 @@ bool XPCJSContext::InterruptCallback(JSContext* cx) {
   // running in a non-DOM scope, we have to just let it keep running.
   RootedObject global(cx, JS::CurrentGlobalOrNull(cx));
   RefPtr<nsGlobalWindowInner> win = WindowOrNull(global);
-  if (!win && IsSandbox(global)) {
+  if (!win) {
     // If this is a sandbox associated with a DOMWindow via a
-    // sandboxPrototype, use that DOMWindow. This supports GreaseMonkey
-    // and JetPack content scripts.
-    JS::Rooted<JSObject*> proto(cx);
-    if (!JS_GetPrototype(cx, global, &proto)) {
-      return false;
-    }
-    if (proto && xpc::IsSandboxPrototypeProxy(proto) &&
-        (proto = js::CheckedUnwrapDynamic(proto, cx,
-                                          /* stopAtWindowProxy = */ false))) {
-      win = WindowGlobalOrNull(proto);
-    }
+    // sandboxPrototype, use that DOMWindow. This supports WebExtension
+    // content scripts.
+    win = SandboxWindowOrNull(global, cx);
   }
 
   if (!win) {
@@ -833,20 +826,21 @@ static void LoadStartupJSPrefs(XPCJSContext* xpccx) {
 
   JSContext* cx = xpccx->Context();
 
+  // Some prefs are unlisted in all.js / StaticPrefs (and thus are invisible in
+  // about:config). Make sure we use explicit defaults here.
+  bool useJitForTrustedPrincipals =
+      Preferences::GetBool(JS_OPTIONS_DOT_STR "jit_trustedprincipals", false);
+  bool disableWasmHugeMemory = Preferences::GetBool(
+      JS_OPTIONS_DOT_STR "wasm_disable_huge_memory", false);
+
   bool useBaselineInterp = Preferences::GetBool(JS_OPTIONS_DOT_STR "blinterp");
   bool useBaselineJit = Preferences::GetBool(JS_OPTIONS_DOT_STR "baselinejit");
   bool useIon = Preferences::GetBool(JS_OPTIONS_DOT_STR "ion");
-  bool useJitForTrustedPrincipals =
-      Preferences::GetBool(JS_OPTIONS_DOT_STR "jit_trustedprincipals");
   bool useNativeRegExp =
       Preferences::GetBool(JS_OPTIONS_DOT_STR "native_regexp");
 
   bool offthreadIonCompilation =
       Preferences::GetBool(JS_OPTIONS_DOT_STR "ion.offthread_compilation");
-  bool useBaselineEager = Preferences::GetBool(
-      JS_OPTIONS_DOT_STR "baselinejit.unsafe_eager_compilation");
-  bool useIonEager =
-      Preferences::GetBool(JS_OPTIONS_DOT_STR "ion.unsafe_eager_compilation");
 #ifdef DEBUG
   bool fullJitDebugChecks =
       Preferences::GetBool(JS_OPTIONS_DOT_STR "jit.full_debug_checks");
@@ -863,19 +857,14 @@ static void LoadStartupJSPrefs(XPCJSContext* xpccx) {
 
   bool spectreIndexMasking =
       Preferences::GetBool(JS_OPTIONS_DOT_STR "spectre.index_masking");
-  bool spectreObjectMitigationsBarriers = Preferences::GetBool(
-      JS_OPTIONS_DOT_STR "spectre.object_mitigations.barriers");
-  bool spectreObjectMitigationsMisc = Preferences::GetBool(
-      JS_OPTIONS_DOT_STR "spectre.object_mitigations.misc");
+  bool spectreObjectMitigations =
+      Preferences::GetBool(JS_OPTIONS_DOT_STR "spectre.object_mitigations");
   bool spectreStringMitigations =
       Preferences::GetBool(JS_OPTIONS_DOT_STR "spectre.string_mitigations");
   bool spectreValueMasking =
       Preferences::GetBool(JS_OPTIONS_DOT_STR "spectre.value_masking");
   bool spectreJitToCxxCalls =
       Preferences::GetBool(JS_OPTIONS_DOT_STR "spectre.jit_to_C++_calls");
-
-  bool disableWasmHugeMemory =
-      Preferences::GetBool(JS_OPTIONS_DOT_STR "wasm_disable_huge_memory");
 
   nsCOMPtr<nsIXULRuntime> xr = do_GetService("@mozilla.org/xre/runtime;1");
   if (xr) {
@@ -905,9 +894,9 @@ static void LoadStartupJSPrefs(XPCJSContext* xpccx) {
       cx, JSJITCOMPILER_BASELINE_INTERPRETER_WARMUP_TRIGGER,
       baselineInterpThreshold);
   JS_SetGlobalJitCompilerOption(cx, JSJITCOMPILER_BASELINE_WARMUP_TRIGGER,
-                                useBaselineEager ? 0 : baselineThreshold);
+                                baselineThreshold);
   JS_SetGlobalJitCompilerOption(cx, JSJITCOMPILER_ION_NORMAL_WARMUP_TRIGGER,
-                                useIonEager ? 0 : normalIonThreshold);
+                                normalIonThreshold);
   JS_SetGlobalJitCompilerOption(cx,
                                 JSJITCOMPILER_ION_FREQUENT_BAILOUT_THRESHOLD,
                                 ionFrequentBailoutThreshold);
@@ -919,12 +908,8 @@ static void LoadStartupJSPrefs(XPCJSContext* xpccx) {
 
   JS_SetGlobalJitCompilerOption(cx, JSJITCOMPILER_SPECTRE_INDEX_MASKING,
                                 spectreIndexMasking);
-  JS_SetGlobalJitCompilerOption(
-      cx, JSJITCOMPILER_SPECTRE_OBJECT_MITIGATIONS_BARRIERS,
-      spectreObjectMitigationsBarriers);
-  JS_SetGlobalJitCompilerOption(cx,
-                                JSJITCOMPILER_SPECTRE_OBJECT_MITIGATIONS_MISC,
-                                spectreObjectMitigationsMisc);
+  JS_SetGlobalJitCompilerOption(cx, JSJITCOMPILER_SPECTRE_OBJECT_MITIGATIONS,
+                                spectreObjectMitigations);
   JS_SetGlobalJitCompilerOption(cx, JSJITCOMPILER_SPECTRE_STRING_MITIGATIONS,
                                 spectreStringMitigations);
   JS_SetGlobalJitCompilerOption(cx, JSJITCOMPILER_SPECTRE_VALUE_MASKING,

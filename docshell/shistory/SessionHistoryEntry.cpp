@@ -18,6 +18,7 @@
 #include "mozilla/PresState.h"
 #include "mozilla/StaticPrefs_fission.h"
 #include "mozilla/Tuple.h"
+#include "mozilla/dom/BrowserParent.h"
 #include "mozilla/dom/ContentChild.h"
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/dom/CSPMessageUtils.h"
@@ -199,6 +200,12 @@ bool SessionHistoryInfo::IsSubFrame() const {
   return mSharedState.Get()->mIsFrameNavigation;
 }
 
+void SessionHistoryInfo::SetSaveLayoutStateFlag(bool aSaveLayoutStateFlag) {
+  MOZ_ASSERT(XRE_IsParentProcess());
+  static_cast<SHEntrySharedParentState*>(mSharedState.Get())->mSaveLayoutState =
+      aSaveLayoutStateFlag;
+}
+
 void SessionHistoryInfo::FillLoadInfo(nsDocShellLoadState& aLoadState) const {
   aLoadState.SetOriginalURI(mOriginalURI);
   aLoadState.SetMaybeResultPrincipalURI(Some(mResultPrincipalURI));
@@ -326,7 +333,7 @@ void SessionHistoryInfo::SharedState::Init(
 
 static uint64_t gLoadingSessionHistoryInfoLoadId = 0;
 
-nsDataHashtable<nsUint64HashKey, SessionHistoryEntry*>*
+nsTHashMap<nsUint64HashKey, SessionHistoryEntry*>*
     SessionHistoryEntry::sLoadIdToEntry = nullptr;
 
 LoadingSessionHistoryInfo::LoadingSessionHistoryInfo(
@@ -368,8 +375,7 @@ SessionHistoryEntry* SessionHistoryEntry::GetByLoadId(uint64_t aLoadId) {
 void SessionHistoryEntry::SetByLoadId(uint64_t aLoadId,
                                       SessionHistoryEntry* aEntry) {
   if (!sLoadIdToEntry) {
-    sLoadIdToEntry =
-        new nsDataHashtable<nsUint64HashKey, SessionHistoryEntry*>();
+    sLoadIdToEntry = new nsTHashMap<nsUint64HashKey, SessionHistoryEntry*>();
   }
 
   MOZ_LOG(
@@ -1352,6 +1358,10 @@ void SessionHistoryEntry::SetFrameLoader(nsFrameLoader* aFrameLoader) {
   MOZ_RELEASE_ASSERT(!aFrameLoader || mozilla::BFCacheInParent());
   SharedInfo()->mFrameLoader = aFrameLoader;
   if (aFrameLoader) {
+    if (BrowserParent* bp = aFrameLoader->GetBrowserParent()) {
+      bp->Deactivated();
+    }
+
     // When a new frameloader is stored, try to evict some older
     // frameloaders. Non-SHIP session history has a similar call in
     // nsDocumentViewer::Show.

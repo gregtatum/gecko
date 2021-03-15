@@ -621,8 +621,11 @@
              class="places-tooltip"
              onpopupshowing="gBrowser.createTooltip(event);">
       <vbox class="places-tooltip-box" flex="1">
-        <description crop="center" class="tooltip-label places-tooltip-title"/>
-        <description crop="center" class="tooltip-label places-tooltip-uri uri-element"/>
+        <description class="tooltip-label places-tooltip-title"/>
+        <hbox>
+          <image id="places-tooltip-insecure-icon"></image>
+          <description crop="center" class="tooltip-label places-tooltip-uri uri-element"/>
+        </hbox>
       </vbox>
     </tooltip>
 
@@ -988,7 +991,7 @@
                         closemenu="none"
                         oncommand="gSync.toggleAccountPanel(this, event)"/>
         </toolbaritem>
-        <toolbarseparator class="proton-zap"/>
+        <toolbarseparator id="appMenu-fxa-separator" class="proton-zap"/>
         <toolbarbutton id="appMenu-new-tab-button2"
                        class="subviewbutton"
                        label="&tabCmd.label;"
@@ -1386,12 +1389,18 @@
                            <observes element="sidebar-box" attribute="positionend"/>
             </toolbarbutton>
             <toolbarbutton id="PanelUI-remotetabs-syncnow"
-                           data-l10n-id="appmenuitem-fxa-toolbar-sync-now"
-                           syncinglabel="fxa-toolbar-sync-syncing-tabs"
-                           class="syncNowBtn subviewbutton subviewbutton-iconic"
+                           align="center"
+                           class="subviewbutton subviewbutton-iconic"
                            oncommand="gSync.doSync();"
                            onmouseover="gSync.refreshSyncButtonsTooltip();"
-                           closemenu="none"/>
+                           closemenu="none">
+              <hbox flex="1">
+                <image class="syncNowBtn"/>
+                <label class="syncnow-label"
+                       data-l10n-id="appmenuitem-fxa-toolbar-sync-now2"
+                       crop="end"/>
+              </hbox>
+            </toolbarbutton>
             <toolbarseparator id="PanelUI-remotetabs-separator"/>
           </vbox>
           <deck id="PanelUI-remotetabs-deck">
@@ -1519,18 +1528,15 @@
                        align="center"
                        class="subviewbutton subviewbutton-iconic"
                        oncommand="gSync.doSyncFromFxaMenu(this);"
+                       onmouseover="gSync.refreshSyncButtonsTooltip();"
                        closemenu="none">
-          <vbox flex="1">
-            <label id="PanelUI-fxa-menu-syncnow-label"
+          <hbox flex="1">
+            <image id="PanelUI-appMenu-fxa-image-last-synced"
+                   class="syncNowBtn"/>
+            <label class="syncnow-label"
+                   data-l10n-id="appmenuitem-fxa-toolbar-sync-now2"
                    crop="end"/>
-            <hbox>
-              <label id="PanelUI-appMenu-fxa-label-last-synced"
-                     crop="end"/>
-              <image id="PanelUI-appMenu-fxa-image-last-synced"
-                     class="syncNowBtn"
-                     syncinglabel="fxa-toolbar-sync-syncing-tabs"/>
-            </hbox>
-          </vbox>
+          </hbox>
         </toolbarbutton>
         <toolbarbutton id="PanelUI-fxa-menu-setup-sync-button"
                         class="subviewbutton subviewbutton-iconic"
@@ -2227,6 +2233,11 @@
         </hbox>
       </toolbaritem>
     </toolbar>
+
+    <html:template id="tab-notification-deck-template">
+      <html:named-deck id="tab-notification-deck"></html:named-deck>
+    </html:template>
+
 
     <html:template id="BrowserToolbarPalette">
       <toolbarbutton id="import-button"
