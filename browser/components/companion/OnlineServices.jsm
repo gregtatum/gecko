@@ -171,8 +171,14 @@ class GoogleService {
     }));
   }
 
-  openEmail(messageId) {
-    this.openLink(new URL(`https://mail.google.com/mail/#inbox/${messageId}`));
+  openEmail(messageData) {
+    if ("link" in messageData) {
+      this.openLink(new URL(messageData.link));
+    } else {
+      this.openLink(
+        new URL(`https://mail.google.com/mail/#inbox/${messageData.id}`)
+      );
+    }
   }
 
   async getEmailInfo(messageId) {
@@ -240,6 +246,44 @@ class GoogleService {
         messages.push(result);
       }
     }
+    return messages;
+  }
+
+  async getUnreadEmailAtom() {
+    let response = await fetch("https://mail.google.com/mail/u/0/feed/atom");
+
+    if (!response.ok) {
+      if (response.status == 403) {
+        // Atom feed won't work unless we've navigated to the inbox
+        UtilityOverlay.openTrustedLinkIn(
+          "https://mail.google.com/mail/u/0/ =",
+          "tab"
+        );
+        // Should set a timer to recheck mail
+        return [];
+      }
+      throw new Error(response.statusText);
+    }
+
+    let results = await response.text();
+
+    let doc = new DOMParser().parseFromString(results, "text/xml");
+
+    let entries = doc.querySelectorAll("entry");
+
+    let messages = [];
+
+    for (let entry of entries) {
+      let message = {};
+      message.subject = entry.querySelector("title").textContent;
+      message.from = `${entry.querySelector("author > name").textContent} <${
+        entry.querySelector("author > email").textContent
+      }>`;
+      message.url = entry.querySelector("link").getAttribute("href");
+      message.date = new Date(entry.querySelector("issued").textContent);
+      messages.push(message);
+    }
+
     return messages;
   }
 

@@ -72,6 +72,7 @@ async function getEmail(services) {
   for (let service of services) {
     let emails;
     try {
+      // emails = await service.getUnreadEmailAtom();
       emails = await service.getUnreadEmail();
     } catch (e) {
       console.error(e);
