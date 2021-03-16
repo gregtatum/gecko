@@ -12,6 +12,8 @@ import { KeyframeDbList } from "./keyframes.js";
 import { AwesomeBar } from "./awesomebar.js";
 
 onLoad(() => {
+  window.docShell.browsingContext.prefersColorSchemeOverride = "dark";
+
   // on macOS gURLBar is a lazy getter for the real awesomebar from browser.js
   Object.defineProperty(window, "gURLBar", {
     value: new AwesomeBar(),
