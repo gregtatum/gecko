@@ -4,7 +4,7 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["SessionStore"];
+var EXPORTED_SYMBOLS = ["SessionStore", "LastSession"];
 
 // Current version of the format used by Session Restore.
 const FORMAT_VERSION = 1;

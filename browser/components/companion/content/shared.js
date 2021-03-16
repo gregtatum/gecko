@@ -7,6 +7,12 @@
 
 const { OS } = ChromeUtils.import("resource://gre/modules/osfile.jsm");
 const { Sqlite } = ChromeUtils.import("resource://gre/modules/Sqlite.jsm");
+const { LastSession } = ChromeUtils.import(
+  "resource:///modules/sessionstore/SessionStore.jsm"
+);
+
+let sessionStart = new Date();
+let lastSessionEnd = LastSession.getState()?.session?.lastUpdate;
 
 const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
   Ci.nsINavHistoryService
@@ -172,8 +178,15 @@ today.setSeconds(0);
 today.setMilliseconds(0);
 
 // Yes I know this is wrong in various cases.
-export const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-export const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+export const tomorrow = new Date(today + 24 * 60 * 60 * 1000);
+
+let yesterday = new Date(today - 24 * 60 * 60 * 1000);
+// If yesterday is before the start of the session then push back by the time since the end of the
+// the last session
+if (yesterday < sessionStart && lastSessionEnd) {
+  yesterday = new Date(yesterday - (sessionStart - lastSessionEnd));
+}
+export { yesterday };
 
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",

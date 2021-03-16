@@ -36,5 +36,5 @@ onLoad(() => {
     new KeyframeDbList("What I'm Working On", yesterday, null, "document")
   );
   content.appendChild(new KeyframeDbList("Today", today));
-  content.appendChild(new KeyframeDbList("Yesterday", yesterday, today));
+  content.appendChild(new KeyframeDbList("Earlier", yesterday, today));
 });
