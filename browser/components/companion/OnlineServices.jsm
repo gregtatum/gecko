@@ -145,7 +145,7 @@ class GoogleService {
       "https://www.googleapis.com/calendar/v3/calendars/primary/events"
     );
 
-    apiTarget.searchParams.set("maxResults", 1);
+    apiTarget.searchParams.set("maxResults", 4);
     apiTarget.searchParams.set("orderBy", "startTime");
     apiTarget.searchParams.set("singleEvents", "true");
     apiTarget.searchParams.set("timeMin", new Date().toISOString());
@@ -163,12 +163,23 @@ class GoogleService {
     }
 
     let results = await response.json();
-    return results.items.map(result => ({
+    let events = results.items.map(result => ({
       summary: result.summary,
       start: new Date(result.start.dateTime),
       end: new Date(result.end.dateTime),
       conference: getConferenceInfo(result),
     }));
+
+    events.sort((a, b) => a.start - b.start);
+    while (
+      events.length > 1 &&
+      events[events.length - 1].start > events[0].start
+    ) {
+      events.pop();
+    }
+    events.sort((a, b) => a.summary.localeCompare(b.summary));
+
+    return events;
   }
 
   openEmail(messageData) {
