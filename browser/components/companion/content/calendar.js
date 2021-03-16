@@ -11,6 +11,8 @@ const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
 );
 
+const CALENDAR_CHECK_TIME = 10 * 60 * 1000; // 5 minutes
+
 class Event extends HTMLElement {
   constructor(service, data) {
     super();
@@ -68,9 +70,7 @@ customElements.define("e-event", Event);
 
 async function buildEvents(services) {
   let panel = document.getElementById("calendar-panel");
-  while (panel.firstChild) {
-    panel.firstChild.remove();
-  }
+  let nodes = [];
 
   let goodService = false;
   for (let service of services) {
@@ -85,10 +85,10 @@ async function buildEvents(services) {
 
     goodService = true;
 
-    for (let event of meetings) {
-      panel.appendChild(new Event(service, event));
-    }
+    nodes = nodes.concat(meetings.map(event => new Event(service, event)));
   }
+
+  panel.replaceChildren(...nodes);
 
   if (!goodService) {
     document.getElementById("scroll").className = "disconnected";
@@ -97,4 +97,7 @@ async function buildEvents(services) {
 
 export function initCalendarServices(services) {
   buildEvents(services);
+  setInterval(function() {
+    buildEvents(services);
+  }, CALENDAR_CHECK_TIME);
 }
