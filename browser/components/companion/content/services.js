@@ -16,7 +16,7 @@ async function signin() {
   await OnlineServices.createService(
     Services.prefs.getCharPref("onlineservices.defaultType", "google")
   );
-  document.getElementById("services").className = "connected";
+  document.getElementById("scroll").className = "connected";
   let services = OnlineServices.getServices();
   initCalendarServices(services);
   initEmailServices(services);
@@ -28,10 +28,10 @@ export function initServices() {
 
   let services = OnlineServices.getServices();
   if (services.length) {
-    document.getElementById("services").className = "connected";
+    document.getElementById("scroll").className = "connected";
     initCalendarServices(services);
     initEmailServices(services);
   } else {
-    document.getElementById("services").className = "disconnected";
+    document.getElementById("scroll").className = "disconnected";
   }
 }

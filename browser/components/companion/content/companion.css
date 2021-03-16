@@ -18,6 +18,11 @@ body {
   width: 100vw;
 }
 
+h2 {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
 #titlebar {
   appearance: auto;
   -moz-default-appearance: -moz-mac-vibrant-titlebar-dark;
@@ -117,9 +122,17 @@ body {
   display: none;
 }
 
-#content {
+#scroll {
   flex: 1;
   overflow-y: auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: start;
+  flex-direction: column;
+}
+
+#content {
+  flex: 1;
   padding: 5px 10px;
 }
 
@@ -154,6 +167,16 @@ body {
   margin: 0;
 }
 
+#calendar-panel {
+  position: sticky;
+  top: 0;
+  background: var(--in-content-page-background);
+}
+
+#calendar-panel:empty {
+  display: none;
+}
+
 #service-login {
   display: flex;
   flex-direction: row;
@@ -161,18 +184,15 @@ body {
   padding: 5px 10px;
 }
 
-#service-panel {
-  display: flex;
-  flex-direction: column;
-  justify-content: start;
+.service-panel {
   padding: 5px 10px;
 }
 
-#services:not(.connected) #service-panel {
+#scroll:not(.connected) .service-panel {
   display: none;
 }
 
-#services:not(.disconnected) #service-login {
+#scroll:not(.disconnected) #service-login {
   display: none;
 }
 

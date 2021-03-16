@@ -101,7 +101,7 @@ async function getEmail(services) {
   }
 
   if (!goodService) {
-    document.getElementById("services").className = "disconnected";
+    document.getElementById("scroll").className = "disconnected";
   }
 }
 

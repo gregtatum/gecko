@@ -147,23 +147,27 @@
     </toolbaritem>
   </toolbar>
 
-  <div xmlns="http://www.w3.org/1999/xhtml" id="services">
+  <div xmlns="http://www.w3.org/1999/xhtml" id="scroll">
+
     <div id="service-login">
       <button id="service-signin">Sign in to Google</button>
     </div>
-    <div id="service-panel">
-      <div id="calendar-panel">
-      </div>
+    <div id="calendar-panel" class="service-panel">
+    </div>
+    <div class="service-panel">
       <h2 class="email-title">Email</h2>
       <div id="email-panel"/>
     </div>
+
+    <div id="content">
+    </div>
+
   </div>
 
-  <div xmlns="http://www.w3.org/1999/xhtml" id="content">
-  </div>
   <div xmlns="http://www.w3.org/1999/xhtml" id="sliders">
     <input id="range" type="range" min="1000" max="30000" step="1000" value="4000"/>
     <p id="cutoff"/>
   </div>
+
 </html:body>
 </html>
