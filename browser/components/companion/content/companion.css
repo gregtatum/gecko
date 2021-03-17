@@ -167,6 +167,7 @@ h2 {
   margin: 0;
 }
 
+#service-login,
 #calendar-panel {
   position: sticky;
   top: 0;
