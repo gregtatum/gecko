@@ -53,7 +53,7 @@ class Email extends HTMLElement {
   }
 
   handleEvent(event) {
-    this.service.openEmail(this.data.id);
+    this.service.openEmail(this.data);
     setTimeout(function() {
       let services = OnlineServices.getServices();
       getEmail(services);
@@ -108,7 +108,7 @@ async function getEmail(services) {
 
 export function initEmailServices(services) {
   getEmail(services);
-  setTimeout(function() {
+  setInterval(function() {
     getEmail(services);
   }, EMAIL_CHECK_TIME);
 }
