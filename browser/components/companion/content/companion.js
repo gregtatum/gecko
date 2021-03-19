@@ -10,6 +10,7 @@ import { TopSites } from "./topsites.js";
 import { onLoad, yesterday, today } from "./shared.js";
 import { KeyframeDbList } from "./keyframes.js";
 import { AwesomeBar } from "./awesomebar.js";
+import { MediaList } from "./media.js";
 
 onLoad(() => {
   window.docShell.browsingContext.prefersColorSchemeOverride = "dark";
@@ -37,4 +38,5 @@ onLoad(() => {
   );
   content.appendChild(new KeyframeDbList("Today", today));
   content.appendChild(new KeyframeDbList("Earlier", yesterday, today));
+  content.appendChild(new MediaList("Media"));
 });

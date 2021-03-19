@@ -55,6 +55,46 @@
     <p class="last-access"/>
   </template>
 
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-media-list">
+    <link rel="stylesheet" href="chrome://global/skin/in-content/common.css"/>
+    <style>
+      :host {
+        grid-template-columns: 1fr auto;
+        display: grid;
+        grid-template-areas:
+                  "title buttons"
+                  "list list";
+      }
+      .list-title {
+        grid-area: title;
+      }
+      .mute-all {
+        grid-area: buttons;
+        align-self: center;
+      }
+      .media-list {
+        grid-area: list;
+      }
+    </style>
+    <h2 class="list-title"/>
+    <button class="mute-all">Mute all</button>
+    <div class="media-list">
+      <slot/>
+    </div>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-media">
+    <img class="artwork"/>
+    <p class="title"/>
+    <div class="buttons">
+    <button class="play">Play</button>
+    <button class="pause">Pause</button>
+    <button class="mute">Mute</button>
+    <button class="unmute">Unmute</button>
+    <button class="tab">Go to tab</button>
+    </div>
+  </template>
+
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-event">
     <div class="event-info">
       <img class="favicon"/>

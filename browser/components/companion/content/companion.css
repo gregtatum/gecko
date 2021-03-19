@@ -265,3 +265,21 @@ h2 {
 .subject {
   flex: 1;
 }
+
+.media.card {
+  display: flex;
+  align-items: center;
+}
+.media .artwork {
+  max-height: 32px;
+  max-width: 32px;
+  padding-inline-end: 5px;
+}
+.media .title {
+  max-height: 38px;
+  overflow: hidden;
+  flex-grow: 1;
+}
+.media .buttons {
+  flex-shrink: 0;
+}

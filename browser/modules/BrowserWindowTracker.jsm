@@ -120,6 +120,7 @@ var WindowHelper = {
 
     // Update the selected tab's content outer window ID.
     _updateCurrentContentOuterWindowID(window.gBrowser.selectedBrowser);
+    Services.obs.notifyObservers(null, "browser-window-tracker-change");
   },
 
   removeWindow(window) {
@@ -132,6 +133,7 @@ var WindowHelper = {
     WINDOW_EVENTS.forEach(function(event) {
       window.removeEventListener(event, _handleEvent);
     });
+    Services.obs.notifyObservers(null, "browser-window-tracker-change");
   },
 
   onActivate(window) {
@@ -173,6 +175,7 @@ this.BrowserWindowTracker = {
   },
 
   windowCreated(browser) {
+    Services.obs.notifyObservers(null, "browser-window-tracker-new-tab");
     if (browser === browser.ownerGlobal.gBrowser.selectedBrowser) {
       _updateCurrentContentOuterWindowID(browser);
     }
