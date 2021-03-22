@@ -32,11 +32,8 @@ onLoad(() => {
   initServices();
 
   let content = document.getElementById("content");
-  content.appendChild(new TopSites());
-  content.appendChild(
-    new KeyframeDbList("What I'm Working On", yesterday, null, "document")
-  );
+  content.appendChild(new MediaList("Media"));
+  // content.appendChild(new TopSites());
   content.appendChild(new KeyframeDbList("Today", today));
   content.appendChild(new KeyframeDbList("Earlier", yesterday, today));
-  content.appendChild(new MediaList("Media"));
 });

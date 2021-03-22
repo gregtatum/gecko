@@ -13,12 +13,11 @@ const { XPCOMUtils } = ChromeUtils.import(
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   //  PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
+  DeferredTask: "resource://gre/modules/DeferredTask.jsm",
   Keyframes: "resource:///modules/Keyframes.jsm",
   Services: "resource://gre/modules/Services.jsm",
   setInterval: "resource://gre/modules/Timer.jsm",
   clearInterval: "resource://gre/modules/Timer.jsm",
-  setTimeout: "resource://gre/modules/Timer.jsm",
-  clearTimeout: "resource://gre/modules/Timer.jsm",
 });
 
 XPCOMUtils.defineLazyGetter(this, "log", () => {
@@ -29,12 +28,24 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
   });
 });
 
-const CPM = 100; // Characters per minute
+const KEYBOARD_TIMEOUT = 2000; // How long after the last keypress do we consider typing to have ended.
 
 const ENGAGEMENT_CUTOFF = 2000; // 2 seconds
 const ENGAGEMENT_TIMER_INTERVAL = 1000;
 
 const DOMWINDOW_OPENED_TOPIC = "domwindowopened";
+
+function isTypingKey(code) {
+  if (["Space", "Comma", "Period", "Quote"].includes(code)) {
+    return true;
+  }
+
+  return (
+    code.startsWith("Key") ||
+    code.startsWith("Digit") ||
+    code.startsWith("Numpad")
+  );
+}
 
 let Engagement = {
   _engagements: new WeakMap(),
@@ -46,9 +57,15 @@ let Engagement = {
 
   _lastTimeUpdate: Date.now(),
 
-  _keysPerMinute: 0,
-  _isDocument: false,
-  _inputTimer: 0,
+  _inputTimer: new DeferredTask(
+    () => Engagement.typingEnded(),
+    KEYBOARD_TIMEOUT,
+    100
+  ),
+
+  _typingStart: null,
+  _typingEnd: null,
+  _keypresses: 0,
 
   init() {
     this._setupAfterRestore();
@@ -80,9 +97,8 @@ let Engagement = {
   async updateDb(engagement) {
     if (engagement.id) {
       // Already in the database, update.
-      await Keyframes.update(
+      await Keyframes.updateEngagement(
         engagement.id,
-        engagement.lastTimeOnPage,
         engagement.totalEngagement
       );
     } else if (
@@ -100,7 +116,6 @@ let Engagement = {
         engagement.url,
         engagement.type,
         engagement.startTimeOnPage,
-        engagement.lastTimeOnPage,
         engagement.totalEngagement
       );
     }
@@ -111,7 +126,6 @@ let Engagement = {
 
     if (this._currentEngagement) {
       let toAdd = now - this._lastTimeUpdate;
-      this._currentEngagement.lastTimeOnPage = now;
       this._currentEngagement.totalEngagement += toAdd;
 
       this.updateDb(this._currentEngagement);
@@ -126,6 +140,7 @@ let Engagement = {
         {
           log.debug("Update from tab switch");
           this.updateEngagementTime();
+          this.typingEnded();
 
           let tab = event.target;
           if (!this.isHttpURI(tab.linkedBrowser.currentURI)) {
@@ -138,7 +153,6 @@ let Engagement = {
           if (!this._currentEngagement) {
             // Unknown engagement.
           }
-          this.cancelInputTimer();
         }
         break;
       case "activate":
@@ -158,6 +172,7 @@ let Engagement = {
           if (win.gBrowser) {
             log.debug("Update from deactivate");
             this.updateEngagementTime();
+            this.typingEnded();
             this.stopEngagementTimer();
           }
         }
@@ -167,23 +182,42 @@ let Engagement = {
         break;
       case "keyup":
         if (
-          event.target.ownerGlobal.gBrowser?.selectedBrowser == event.target
+          event.target.ownerGlobal.gBrowser?.selectedBrowser == event.target &&
+          isTypingKey(event.code)
         ) {
-          if (this._isDocument) {
-            return;
+          this._keypresses++;
+          if (!this._typingStart) {
+            this._typingStart = Date.now();
           }
-          if (event.code.startsWith("Key")) {
-            if (!this._inputTimer) {
-              let self = this;
-              this._inputTimer = setTimeout(function() {
-                self.checkForDocument();
-              }, 30 * 1000);
-              this._keysPerMinute = 0;
-            }
-            this._keysPerMinute++;
-          }
+          this._typingEnd = Date.now();
+          this._inputTimer.disarm();
+          this._inputTimer.arm();
         }
+        break;
     }
+  },
+
+  typingEnded() {
+    this._inputTimer.disarm();
+
+    // We don't consider a single keystroke to be typing, not least because it would have 0 typing
+    // time which would equate to infinite keystrokes per minute.
+    if (
+      this._keypresses > 1 &&
+      this._currentEngagement &&
+      this._currentEngagement.id
+    ) {
+      let typingTime = this._typingEnd - this._typingStart;
+      Keyframes.updateKeypresses(
+        this._currentEngagement.id,
+        typingTime,
+        this._keypresses
+      );
+    }
+
+    this._keypresses = 0;
+    this._typingStart = null;
+    this._typingEnd = null;
   },
 
   /**
@@ -292,7 +326,6 @@ let Engagement = {
         url,
         type,
         startTimeOnPage: new Date().getTime(),
-        lastTimeOnPage: new Date().getTime(),
         totalEngagement: 0,
       };
 
@@ -312,16 +345,15 @@ let Engagement = {
     let engagementData = this._engagements.get(browser);
 
     if (engagementData) {
-      engagementData.lastTimeOnPage = Date.now();
       if (this._currentEngagement === engagementData) {
         log.debug("Update from page unload.");
         this.updateEngagementTime();
+        this.typingEnded();
         this._currentEngagement = undefined;
       } else {
         this.updateDb(engagementData);
       }
     }
-    this.cancelInputTimer();
   },
 
   /* In the case where we know we want to add a URL to Keyframes
@@ -357,23 +389,6 @@ let Engagement = {
       Keyframes.updateType(engagementData.id, type);
     } else {
       this.updateDb(engagementData);
-    }
-  },
-
-  async cancelInputTimer() {
-    this._isDocument = false;
-    if (this._inputTimer) {
-      clearTimeout(this._inputTimer);
-      this._inputTimer = 0;
-    }
-    this._keysPerMinute = 0;
-  },
-
-  async checkForDocument() {
-    if (this._keysPerMinute >= CPM / 2) {
-      this._isDocument = true;
-      log.debug(`Converting ${this._currentEngagement.url} to document`);
-      Keyframes.updateType(this._currentEngagement.id, "document");
     }
   },
 };

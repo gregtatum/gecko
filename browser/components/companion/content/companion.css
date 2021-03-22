@@ -32,10 +32,16 @@ h2 {
 }
 
 #awesomebar {
-  padding: 10px;
-  height: 40px;
-  margin-bottom: 20px;
+  margin: 10px;
   appearance: none;
+  -moz-box-align: center;
+}
+
+#settings-button {
+  width: 32px;
+  height: 32px;
+  padding-left: 10px;
+  color: rgba(249, 249, 250, 1);
 }
 
 #urlbar {
@@ -129,6 +135,7 @@ h2 {
   align-items: stretch;
   justify-content: start;
   flex-direction: column;
+  margin-top: 20px;
 }
 
 #content {
@@ -162,7 +169,7 @@ h2 {
 }
 
 .keyframe .last-access,
-.keyframe .total-engagement {
+.keyframe .score {
   padding-left: 5px;
   margin: 0;
 }
@@ -246,10 +253,26 @@ h2 {
 
 #sliders {
   padding: 10px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
+  display: grid;
+  grid-template-columns: max-content max-content max-content;
   justify-content: center;
+  gap: 10px;
+}
+
+.range {
+  grid-column-start: 1;
+  grid-column-end: 4;
+  display: grid;
+  grid-template-columns: subgrid;
+}
+
+.range label {
+  grid-column-start: 1;
+  grid-column-end: 3;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  text-align: right;
 }
 
 [hidden] {

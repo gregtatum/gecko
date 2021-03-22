@@ -36,13 +36,13 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 });
 */
 
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 
 /**
  * All SQL statements should be defined here.
  */
 const SQL = {
-  dropTables: "DROP TABLE keyframes;",
+  dropTables: "DROP TABLE IF EXISTS keyframes;",
 
   createTables:
     "CREATE TABLE keyframes (" +
@@ -52,7 +52,9 @@ const SQL = {
     "type TEXT NOT NULL, " +
     "firstVisit INTEGER NOT NULL, " +
     "lastVisit INTEGER NOT NULL, " +
-    "totalEngagement INTEGER NOT NULL " +
+    "totalEngagement INTEGER NOT NULL, " +
+    "typingTime INTEGER NOT NULL DEFAULT 0, " +
+    "keypresses INTEGER NOT NULL DEFAULT 0 " +
     ");",
 
   add:
@@ -64,12 +66,15 @@ const SQL = {
   exists: "SELECT * FROM keyframes WHERE id = :id;",
 
   select:
-    "SELECT id, type, url, max(lastVisit) AS lastVisit, sum(totalEngagement) as totalEngagement FROM " +
+    "SELECT id, type, url, max(lastVisit) AS lastVisit, " +
+    "sum(totalEngagement) as totalEngagement, " +
+    "sum(typingTime) as typingTime, " +
+    "sum(keypresses) as keypresses FROM " +
     "keyframes WHERE {WHERE} GROUP BY url;",
 };
 
 function int(dateStr) {
-  if (!dateStr) {
+  if (typeof dateStr != "number") {
     return null;
   }
 
@@ -78,8 +83,9 @@ function int(dateStr) {
 
 var Keyframes = {
   _db: null,
+  _initPromise: null,
 
-  async add(url, type, firstVisit, lastVisit, totalEngagement) {
+  async add(url, type, firstVisit, totalEngagement) {
     if (!this._db) {
       await this.init();
     }
@@ -87,7 +93,7 @@ var Keyframes = {
       url,
       type,
       firstVisit,
-      lastVisit,
+      lastVisit: Date.now(),
       totalEngagement,
     });
     let rows = await this._db.executeCached(SQL.getId, {
@@ -99,15 +105,44 @@ var Keyframes = {
     return rows.length ? rows[0].getResultByName("id") : null;
   },
 
-  async update(id, lastVisit, totalEngagement) {
-    let sql = `UPDATE keyframes SET lastVisit = '${lastVisit}', totalEngagement = '${totalEngagement}' WHERE id = '${id}'`;
-    await this._db.executeCached(sql);
+  async updateKeypresses(id, typingTime, keypresses) {
+    if (!this._db) {
+      await this.init();
+    }
+    console.log("Adding keypresses", typingTime, keypresses);
+    let sql = `UPDATE keyframes SET lastVisit = :lastVisit, typingTime = typingTime + :typingTime, keypresses = keypresses + :keypresses WHERE id = :id`;
+    await this._db.executeCached(sql, {
+      id,
+      typingTime,
+      keypresses,
+      lastVisit: Date.now(),
+    });
+    Services.obs.notifyObservers(null, "keyframe-update");
+  },
+
+  async updateEngagement(id, totalEngagement) {
+    if (!this._db) {
+      await this.init();
+    }
+    let sql = `UPDATE keyframes SET lastVisit = :lastVisit, totalEngagement = :totalEngagement WHERE id = :id`;
+    await this._db.executeCached(sql, {
+      id,
+      totalEngagement,
+      lastVisit: Date.now(),
+    });
     Services.obs.notifyObservers(null, "keyframe-update");
   },
 
   async updateType(id, newType) {
-    let sql = `UPDATE keyframes SET type = '${newType}' WHERE id = '${id}'`;
-    await this._db.executeCached(sql);
+    if (!this._db) {
+      await this.init();
+    }
+    let sql = `UPDATE keyframes SET type = :newType WHERE id = :id`;
+    await this._db.executeCached(sql, {
+      id,
+      newType,
+      lastVisit: Date.now(),
+    });
     Services.obs.notifyObservers(null, "keyframe-update");
   },
 
@@ -144,24 +179,22 @@ var Keyframes = {
         url: record.getResultByName("url"),
         lastVisit: new Date(lastVisit),
         totalEngagement: int(record.getResultByName("totalEngagement")) ?? 0,
+        typingTime: int(record.getResultByName("typingTime")),
+        keypresses: int(record.getResultByName("keypresses")),
       };
     });
   },
 
-  async init() {
+  async _init() {
     let db = await Sqlite.openConnection({ path: DB_PATH });
 
     try {
       // Check to see if we need to perform any migrations.
       let dbVersion = parseInt(await db.getSchemaVersion());
 
-      if (dbVersion < SCHEMA_VERSION) {
-        // getSchemaVersion() returns a 0 int if the schema
-        // version is undefined.
-        if (dbVersion > 0) {
-          // Blow away the existing database.
-          await db.execute(SQL.dropTables);
-        }
+      if (dbVersion != SCHEMA_VERSION) {
+        // Blow away any existing table.
+        await db.execute(SQL.dropTables);
         await db.execute(SQL.createTables);
       }
 
@@ -177,6 +210,14 @@ var Keyframes = {
       () => this._shutdown()
     );
     this._db = db;
+  },
+
+  init() {
+    if (!this._initPromise) {
+      this._initPromise = this._init();
+    }
+
+    return this._initPromise;
   },
 
   async _shutdown() {

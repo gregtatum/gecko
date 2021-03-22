@@ -40,6 +40,14 @@
   <script src="chrome://browser/content/utilityOverlay.js"/>
 #endif
 
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-range">
+    <label>
+      <span class="range-label"/>
+      <input class="range-slider" type="range"/>
+    </label>
+    <p class="range-value"/>
+  </template>
+
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-keyframe-list">
     <link rel="stylesheet" href="keyframe-list.css"/>
     <h2 class="list-title"/>
@@ -51,7 +59,7 @@
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-keyframe">
     <img class="favicon"/>
     <p class="title"/>
-    <p class="total-engagement"/>
+    <p class="score"/>
     <p class="last-access"/>
   </template>
 
@@ -185,6 +193,7 @@
         </hbox>
       </hbox>
     </toolbaritem>
+    <image id="settings-button" src="chrome://browser/skin/preferences/category-general.svg"/>
   </toolbar>
 
   <div xmlns="http://www.w3.org/1999/xhtml" id="scroll">
@@ -204,9 +213,7 @@
 
   </div>
 
-  <div xmlns="http://www.w3.org/1999/xhtml" id="sliders">
-    <input id="range" type="range" min="1000" max="60000" step="1000" value="30000"/>
-    <p id="cutoff"/>
+  <div xmlns="http://www.w3.org/1999/xhtml" id="sliders" hidden="true">
   </div>
 
 </html:body>

@@ -70,11 +70,19 @@ export class Keyframe extends HidableElement {
     target.querySelector(".favicon").src = this.data.icon;
     target.querySelector(".title").textContent = this.data.title;
     target.querySelector(".title").setAttribute("title", this.data.title);
-    if (this.data.totalEngagement) {
-      target.querySelector(".total-engagement").textContent = textForTime(
-        this.data.totalEngagement
-      );
-    }
+
+    let score = target.querySelector(".score");
+    score.textContent = this.data.score.toFixed(1);
+    score.setAttribute(
+      "title",
+      `Engagement: ${(this.data.totalEngagement / 1000).toFixed(1)}s
+Typing time: ${(this.data.typingTime / 1000).toFixed(1)}s
+Keypresses: ${this.data.keypresses}
+Characters per second: ${Math.round(
+        this.data.keypresses / (this.data.typingTime / 1000)
+      )}`
+    );
+
     if (this.data.lastVisit) {
       target.querySelector(".last-access").textContent = timeFormat.format(
         this.data.lastVisit
@@ -153,23 +161,6 @@ export class KeyframeList extends HidableElement {
 }
 
 customElements.define("e-keyframelist", KeyframeList);
-
-function textForTime(time) {
-  time = Math.floor(time / 1000);
-
-  if (time == 1) {
-    return "1 second";
-  }
-  if (time <= 60) {
-    return `${time} seconds`;
-  }
-
-  time = Math.floor(time / 60);
-  if (time == 1) {
-    return "1 minute";
-  }
-  return `${time} minutes`;
-}
 
 export const today = new Date();
 today.setHours(0);

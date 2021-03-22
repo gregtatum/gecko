@@ -6,6 +6,7 @@
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
 import { KeyframeList, onLoad, getPlacesData } from "./shared.js";
+import { Range } from "./range.js";
 
 const { Keyframes } = ChromeUtils.import("resource:///modules/Keyframes.jsm");
 
@@ -49,13 +50,31 @@ export class KeyframeDbList extends KeyframeList {
   }
 
   filterFrames() {
-    let cutoff = document.getElementById("range").valueAsNumber;
+    let displayFrames = [];
 
-    let filterFrame = frame => {
-      return frame.totalEngagement >= cutoff || frame.type == "manual";
-    };
+    for (let frame of this.frames) {
+      let score = 0;
 
-    this.displayFrames(this.frames.filter(filterFrame));
+      for (let [range, apply] of ranges) {
+        let change = apply(frame, range.value);
+        if (!Number.isNaN(change)) {
+          score += change;
+        }
+      }
+
+      if (score < threshold.value) {
+        continue;
+      }
+
+      displayFrames.push({
+        ...frame,
+        score,
+      });
+    }
+
+    displayFrames.sort((a, b) => b.score - a.score);
+
+    this.displayFrames(displayFrames);
   }
 
   async updateFrames() {
@@ -93,16 +112,84 @@ export class KeyframeDbList extends KeyframeList {
 
 customElements.define("e-keyframedblist", KeyframeDbList);
 
-function filterChangeTrigger(element, event = "input") {
-  element.addEventListener(event, notifyFilterListeners);
+let scoring = [
+  {
+    label: "Engagement time",
+    min: 0,
+    max: 10,
+    step: 0.1,
+    value: 1,
+    apply: (frame, value) => (frame.totalEngagement / 1000) * value,
+  },
+  {
+    label: "Typing time",
+    min: 0,
+    max: 10,
+    step: 0.1,
+    value: 0,
+    apply: (frame, value) => (frame.typingTime / 1000) * value,
+  },
+  {
+    label: "Typing ratio",
+    min: 0,
+    max: 10,
+    step: 0.1,
+    value: 0,
+    apply: (frame, value) => (frame.typingTime / frame.totalEngagement) * value,
+  },
+  {
+    label: "Keypresses",
+    min: 0,
+    max: 10,
+    step: 0.1,
+    value: 0,
+    apply: (frame, value) => frame.keypresses * value,
+  },
+  {
+    label: "Characters per second",
+    min: 0,
+    max: 10,
+    step: 0.1,
+    value: 0,
+    apply: (frame, value) =>
+      (frame.keypresses / (frame.typingTime / 1000)) * value,
+  },
+];
+
+let ranges = new Map();
+let threshold = new Range("Threshold", 0, 100, 1, 0);
+
+function addRange(scorer) {
+  let range = new Range(
+    scorer.label,
+    scorer.min,
+    scorer.max,
+    scorer.step,
+    scorer.value
+  );
+  ranges.set(range, scorer.apply);
+  range.addEventListener("input", notifyFilterListeners);
+  document.getElementById("sliders").appendChild(range);
 }
 
-onFilterChange(() => {
-  let cutoff = document.getElementById("range").valueAsNumber;
-  document.getElementById("cutoff").textContent = `${cutoff / 1000} seconds`;
-});
+function toggleSettings() {
+  let sliders = document.getElementById("sliders");
+  if (sliders.hasAttribute("hidden")) {
+    sliders.removeAttribute("hidden");
+  } else {
+    sliders.setAttribute("hidden", "true");
+  }
+}
 
 onLoad(() => {
+  for (let scorer of scoring) {
+    addRange(scorer);
+  }
+  document.getElementById("sliders").appendChild(threshold);
+  threshold.addEventListener("input", notifyFilterListeners);
+  document
+    .getElementById("settings-button")
+    .addEventListener("click", toggleSettings);
+
   notifyFilterListeners();
-  filterChangeTrigger(document.getElementById("range"));
 });
