@@ -318,8 +318,11 @@ h2 {
 
 .media-icon {
   height: 16px;
-  width: 16px;
   color: rgba(249, 249, 250, 1);
   fill: currentColor;
   -moz-context-properties: fill;
+}
+
+.previous-track {
+  transform: scaleX(-1);
 }

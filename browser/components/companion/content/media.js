@@ -209,6 +209,24 @@ export class Media extends HTMLElement {
       this.browser.ownerGlobal.focus();
       this.render();
     });
+    this.next.addEventListener("click", event => {
+      if (event.button != 0) {
+        return;
+      }
+      event.stopPropagation();
+
+      this.mediaController.nextTrack();
+      this.render();
+    });
+    this.prev.addEventListener("click", event => {
+      if (event.button != 0) {
+        return;
+      }
+      event.stopPropagation();
+
+      this.mediaController.prevTrack();
+      this.render();
+    });
   }
 
   get tab() {
@@ -245,6 +263,12 @@ export class Media extends HTMLElement {
   get switchToTab() {
     return this.querySelector(".tab");
   }
+  get prev() {
+    return this.querySelector(".prev");
+  }
+  get next() {
+    return this.querySelector(".next");
+  }
 
   render() {
     // TODO: Check supportedkeys to dynamically add / remove buttons
@@ -268,7 +292,13 @@ export class Media extends HTMLElement {
     } else {
       this.hidden = true;
     }
-    if (this.mediaController.isPlaying) {
+    if (!this.mediaController.supportedKeys.includes("play") ||
+        !this.mediaController.supportedKeys.includes("pause")) {
+      // Only offer play/pause option if the site supports both
+      // options.
+      this.play.hidden = true;
+      this.pause.hidden = true;
+    } else if (this.mediaController.isPlaying) {
       this.play.hidden = true;
       this.pause.hidden = false;
     } else {
@@ -282,6 +312,8 @@ export class Media extends HTMLElement {
       this.unmute.hidden = true;
       this.mute.hidden = false;
     }
+    this.prev.hidden = !this.mediaController.supportedKeys.includes("previoustrack");
+    this.next.hidden = !this.mediaController.supportedKeys.includes("nexttrack");
   }
 }
 
