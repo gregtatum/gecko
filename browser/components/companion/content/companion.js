@@ -7,6 +7,7 @@
 
 import { initServices } from "./services.js";
 import { TopSites } from "./topsites.js";
+import { PocketList } from "./pocket.js";
 import { onLoad, yesterday, today } from "./shared.js";
 import { KeyframeDbList } from "./keyframes.js";
 import { AwesomeBar } from "./awesomebar.js";
@@ -34,6 +35,7 @@ onLoad(() => {
   let content = document.getElementById("content");
   content.appendChild(new MediaList("Media"));
   // content.appendChild(new TopSites());
+  content.appendChild(new PocketList());
   content.appendChild(new KeyframeDbList("Today", today));
   content.appendChild(new KeyframeDbList("Earlier", yesterday, today));
 });

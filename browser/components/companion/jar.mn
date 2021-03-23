@@ -15,6 +15,7 @@ browser.jar:
     content/browser/companion/keyframe-list.css (content/keyframe-list.css)
     content/browser/companion/keyframes.js (content/keyframes.js)
     content/browser/companion/media.js (content/media.js)
+   content/browser/companion/pocket.js (content/pocket.js)
     content/browser/companion/range.js (content/range.js)
     content/browser/companion/services.js (content/services.js)
     content/browser/companion/shared.js (content/shared.js)

@@ -145,7 +145,7 @@ h2 {
   padding: 5px 10px;
 }
 
-.keyframe, .email {
+.keyframe, .email, .pocket {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -161,7 +161,7 @@ h2 {
   object-position: 50% 50%;
 }
 
-.keyframe .title {
+.keyframe .title, .pocket .title, .pocket .excerpt, .pocket .domain {
   flex: 1;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -240,7 +240,7 @@ h2 {
   padding-left: 10px;
 }
 
-.summary, .subject {
+.summary, .subject, .title {
   padding-left: 10px;
   padding-right: 10px;
   text-overflow: ellipsis;
@@ -325,4 +325,20 @@ h2 {
 
 .previous-track {
   transform: scaleX(-1);
+}
+
+.pocket img {
+  width: 128px;
+  object-fit: contain;
+  object-position: 50% 50%;
+  padding-right: 5px;
+}
+
+.pocket .excerpt {
+  font-size: smaller;
+}
+
+.pocket .domain {
+  font-size: smaller;
+  color: gray;
 }

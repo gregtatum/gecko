@@ -122,6 +122,25 @@
     <div class="date"/>
   </template>
 
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-pocket-list">
+    <link rel="stylesheet" href="keyframe-list.css"/>
+    <h2 class="list-title"/>
+    <div class="pocket-list">
+      <slot/>
+    </div>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-pocket-story">
+    <div style="display: flex; flex-direction: row; align-items: center;">
+      <img class="preview"/>
+      <div style="display: flex; flex-direction: column;">
+        <p class="domain"/>
+        <p class="title"/>
+        <p class="excerpt"/>
+      </div>
+    </div>
+  </template>
+
   <hbox id="titlebar">
     <hbox id="mac-buttonbox"/>
     <hbox id="win-buttonbox" flex="1" pack="end" class="titlebar-buttonbox-container">
