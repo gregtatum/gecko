@@ -78,9 +78,15 @@ export class Keyframe extends HidableElement {
       `Engagement: ${(this.data.totalEngagement / 1000).toFixed(1)}s
 Typing time: ${(this.data.typingTime / 1000).toFixed(1)}s
 Keypresses: ${this.data.keypresses}
-Characters per second: ${Math.round(
-        this.data.keypresses / (this.data.typingTime / 1000)
-      )}`
+
+Typing ratio: ${Math.round(
+        (100 * this.data.typingTime) / this.data.totalEngagement
+      )}%
+Characters per second: ${
+        this.data.keypresses == 0
+          ? 0
+          : Math.round(this.data.keypresses / (this.data.typingTime / 1000))
+      }`
     );
 
     if (this.data.lastVisit) {
