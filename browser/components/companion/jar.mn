@@ -19,8 +19,4 @@ browser.jar:
     content/browser/companion/services.js (content/services.js)
     content/browser/companion/shared.js (content/shared.js)
     content/browser/companion/topsites.js (content/topsites.js)
-    content/browser/companion/play.svg (content/play.svg)
-    content/browser/companion/pause.svg (content/pause.svg)
-    content/browser/companion/mute.svg (content/mute.svg)
-    content/browser/companion/unmute.svg (content/unmute.svg)
     content/browser/companion/next.svg (content/next.svg)
