@@ -163,23 +163,47 @@ export class Media extends HTMLElement {
 
     this.appendChild(fragment);
     this.render();
-    this.play.addEventListener("click", () => {
+    this.play.addEventListener("click", event => {
+      if (event.button != 0) {
+        return;
+      }
+      event.stopPropagation();
+
       this.mediaController.play();
       this.render();
     });
-    this.pause.addEventListener("click", () => {
+    this.pause.addEventListener("click", event => {
+      if (event.button != 0) {
+        return;
+      }
+      event.stopPropagation();
+
       this.mediaController.pause();
       this.render();
     });
-    this.mute.addEventListener("click", () => {
+    this.mute.addEventListener("click", event => {
+      if (event.button != 0) {
+        return;
+      }
+      event.stopPropagation();
+
       this.tab.toggleMuteAudio();
       this.render();
     });
-    this.unmute.addEventListener("click", () => {
+    this.unmute.addEventListener("click", event => {
+      if (event.button != 0) {
+        return;
+      }
+      event.stopPropagation();
+
       this.tab.toggleMuteAudio();
       this.render();
     });
-    this.switchToTab.addEventListener("click", () => {
+    this.addEventListener("click", event => {
+      if (event.button != 0) {
+        return;
+      }
+
       // i'm sure there's a better way to do this
       this.browser.ownerGlobal.gBrowser.selectedTab = this.tab;
       this.browser.ownerGlobal.focus();

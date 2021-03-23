@@ -112,7 +112,7 @@ export class KeyframeDbList extends KeyframeList {
 
 customElements.define("e-keyframedblist", KeyframeDbList);
 
-let scoring = [
+let scorers = [
   {
     label: "Engagement time",
     min: 0,
@@ -135,7 +135,8 @@ let scoring = [
     max: 10,
     step: 0.1,
     value: 0,
-    apply: (frame, value) => (frame.typingTime / frame.totalEngagement) * value,
+    apply: (frame, value) =>
+      ((100 * frame.typingTime) / frame.totalEngagement) * value,
   },
   {
     label: "Keypresses",
@@ -182,7 +183,7 @@ function toggleSettings() {
 }
 
 onLoad(() => {
-  for (let scorer of scoring) {
+  for (let scorer of scorers) {
     addRange(scorer);
   }
   document.getElementById("sliders").appendChild(threshold);

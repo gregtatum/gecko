@@ -42,6 +42,8 @@ h2 {
   height: 32px;
   padding-left: 10px;
   color: rgba(249, 249, 250, 1);
+  fill: currentColor;
+  -moz-context-properties: fill;
 }
 
 #urlbar {
@@ -293,16 +295,31 @@ h2 {
   display: flex;
   align-items: center;
 }
+
 .media .artwork {
   max-height: 32px;
   max-width: 32px;
   padding-inline-end: 5px;
 }
+
 .media .title {
   max-height: 38px;
   overflow: hidden;
   flex-grow: 1;
 }
+
 .media .buttons {
   flex-shrink: 0;
+}
+
+.media button {
+  min-width: auto;
+}
+
+.media-icon {
+  height: 16px;
+  width: 16px;
+  color: rgba(249, 249, 250, 1);
+  fill: currentColor;
+  -moz-context-properties: fill;
 }
