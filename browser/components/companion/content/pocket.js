@@ -43,7 +43,8 @@ export class PocketList extends HTMLElement {
     let template = document.getElementById("template-pocket-list");
     let fragment = template.content.cloneNode(true);
     fragment.querySelector(".list-title").textContent = "Pocket";
-    this.appendChild(fragment);
+    let shadow = this.attachShadow({ mode: "open" });
+    shadow.appendChild(fragment);
   }
 
   async connectedCallback() {

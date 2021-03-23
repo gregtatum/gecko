@@ -327,6 +327,14 @@ h2 {
   transform: scaleX(-1);
 }
 
+.pocket-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+}
+
 .pocket img {
   width: 128px;
   object-fit: contain;
@@ -341,4 +349,8 @@ h2 {
 .pocket .domain {
   font-size: smaller;
   color: gray;
+}
+
+.pocket p {
+  width: 100%;
 }
