@@ -301,9 +301,6 @@ export class Media extends HTMLElement {
   get unmute() {
     return this.querySelector(".unmute");
   }
-  get switchToTab() {
-    return this.querySelector(".tab");
-  }
   get prev() {
     return this.querySelector(".prev");
   }
