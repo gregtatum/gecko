@@ -263,6 +263,9 @@ h2 {
 
 #settings {
   padding: 10px;
+}
+
+#sliders {
   display: grid;
   grid-template-columns: max-content max-content max-content;
   justify-content: center;

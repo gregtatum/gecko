@@ -170,28 +170,16 @@ function addRange(scorer) {
   );
   ranges.set(range, scorer.apply);
   range.addEventListener("input", notifyFilterListeners);
-  document.getElementById("settings").appendChild(range);
-}
-
-function toggleSettings() {
-  let settings = document.getElementById("settings");
-  if (settings.hasAttribute("hidden")) {
-    settings.removeAttribute("hidden");
-  } else {
-    settings.setAttribute("hidden", "true");
-  }
+  document.getElementById("sliders").appendChild(range);
 }
 
 onLoad(() => {
   for (let scorer of scorers) {
     addRange(scorer);
   }
-  document.getElementById("settings").appendChild(threshold);
+  document.getElementById("sliders").appendChild(threshold);
 
   threshold.addEventListener("input", notifyFilterListeners);
-  document
-    .getElementById("settings-button")
-    .addEventListener("click", toggleSettings);
 
   notifyFilterListeners();
 });

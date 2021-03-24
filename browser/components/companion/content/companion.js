@@ -51,6 +51,10 @@ onLoad(() => {
     }
   });
 
+  document
+    .getElementById("settings-button")
+    .addEventListener("click", toggleSettings);
+
   initServices();
   let content = document.getElementById("content");
   content.appendChild(new MediaList("Media"));
@@ -60,6 +64,15 @@ onLoad(() => {
   content.appendChild(new KeyframeDbList("Earlier", yesterday, today));
   content.appendChild(new PocketList());
 });
+
+function toggleSettings() {
+  let settings = document.getElementById("settings");
+  if (settings.hasAttribute("hidden")) {
+    settings.removeAttribute("hidden");
+  } else {
+    settings.setAttribute("hidden", "true");
+  }
+}
 
 onUnload(() => {
   for (let [prefName, cb] of OBSERVED_PREFS) {
