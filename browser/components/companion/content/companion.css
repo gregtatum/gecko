@@ -261,12 +261,16 @@ h2 {
   justify-content: end;
 }
 
-#sliders {
+#settings {
   padding: 10px;
   display: grid;
   grid-template-columns: max-content max-content max-content;
   justify-content: center;
   gap: 10px;
+}
+
+#settings label input {
+  vertical-align: middle;
 }
 
 .range {

@@ -170,15 +170,15 @@ function addRange(scorer) {
   );
   ranges.set(range, scorer.apply);
   range.addEventListener("input", notifyFilterListeners);
-  document.getElementById("sliders").appendChild(range);
+  document.getElementById("settings").appendChild(range);
 }
 
 function toggleSettings() {
-  let sliders = document.getElementById("sliders");
-  if (sliders.hasAttribute("hidden")) {
-    sliders.removeAttribute("hidden");
+  let settings = document.getElementById("settings");
+  if (settings.hasAttribute("hidden")) {
+    settings.removeAttribute("hidden");
   } else {
-    sliders.setAttribute("hidden", "true");
+    settings.setAttribute("hidden", "true");
   }
 }
 
@@ -186,7 +186,8 @@ onLoad(() => {
   for (let scorer of scorers) {
     addRange(scorer);
   }
-  document.getElementById("sliders").appendChild(threshold);
+  document.getElementById("settings").appendChild(threshold);
+
   threshold.addEventListener("input", notifyFilterListeners);
   document
     .getElementById("settings-button")

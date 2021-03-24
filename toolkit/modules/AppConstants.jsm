@@ -15,7 +15,6 @@ this.EXPORTED_SYMBOLS = ["AppConstants"];
 // Immutable for export.
 this.AppConstants = Object.freeze({
   COMPANION_UI_ENABLED: true,
-  COMPANION_UI_PINNED_TABS_AS_APPS: false,
 
   // See this wiki page for more details about channel specific build
   // defines: https://wiki.mozilla.org/Platform/Channel-specific_build_defines

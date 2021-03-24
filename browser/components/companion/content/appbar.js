@@ -8,11 +8,10 @@
 import { getPlacesData } from "./shared.js";
 import { Email } from "./email.js";
 
-let AppState = new WeakMap();
-
 export class WindowList extends HTMLElement {
   constructor(title) {
     super();
+    this.render = this.render.bind(this);
     this.title = title;
     let shadow = this.attachShadow({ mode: "open" });
     let template = document.getElementById("template-window-list");
@@ -27,6 +26,7 @@ export class WindowList extends HTMLElement {
   }
   connectedCallback() {
     this.render();
+    document.addEventListener("CompanionObservedPrefChanged", this.render);
     Services.obs.addObserver(
       this.windowListener,
       "browser-window-tracker-change"
@@ -37,6 +37,7 @@ export class WindowList extends HTMLElement {
     );
   }
   disconnectedCallback() {
+    document.removeEventListener("CompanionObservedPrefChanged", this.render);
     Services.obs.addObserver(
       this.windowListener,
       "browser-window-tracker-change"
@@ -63,7 +64,17 @@ export class WindowList extends HTMLElement {
     this.render();
   }
 
+  get enabled() {
+    return Services.prefs.getBoolPref("browser.companion.appbar");
+  }
+
   render() {
+    if (!this.enabled) {
+      this.hidden = true;
+      return;
+    }
+
+    this.hidden = false;
     let orderedWindows = BrowserWindowTracker.orderedWindows;
     console.debug(`Windows: render (${orderedWindows.length})`);
     this.innerHTML = "";
@@ -134,7 +145,6 @@ export class App extends HTMLElement {
 
   get switchToAppButton() {
     return this.querySelector(".switch-to-app");
-
   }
 
   get extraDetails() {
@@ -217,7 +227,6 @@ customElements.define("e-window-list", WindowList);
 customElements.define("e-window", Window);
 customElements.define("e-app", App);
 
-
 // TODO:
 // This is copy/pasted from OnlineServices.jsm - how can we share this
 // Who should own caching values, refetching on an interval, etc
@@ -227,10 +236,7 @@ async function getUnreadEmailAtom() {
   if (!response.ok) {
     if (response.status == 403) {
       // Atom feed won't work unless we've navigated to the inbox
-      UtilityOverlay.openTrustedLinkIn(
-        "https://mail.google.com/mail/u/0/ =",
-        "tab"
-      );
+      openTrustedLinkIn("https://mail.google.com/mail/u/0/ =", "tab");
       // Should set a timer to recheck mail
       return [];
     }

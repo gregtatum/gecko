@@ -393,6 +393,8 @@ pref("browser.urlbar.keepPanelOpenDuringImeComposition", false);
 
 pref("browser.altClickSave", false);
 
+pref("browser.companion.appbar", false);
+
 // Enable logging downloads operations to the Console.
 pref("browser.download.loglevel", "Error");
 
