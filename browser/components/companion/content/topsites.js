@@ -5,7 +5,7 @@
 // These come from utilityOverlay.js
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
-import { KeyframeList, getPlacesData } from "./shared.js";
+import { timeFormat, getPlacesData, openUrl } from "./shared.js";
 
 const { PlacesUtils } = ChromeUtils.import(
   "resource://gre/modules/PlacesUtils.jsm"
@@ -17,9 +17,43 @@ const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
 
 const NUM_TOPSITES = 5;
 
-export class TopSites extends KeyframeList {
+export class TopSite extends HTMLElement {
+  constructor(data) {
+    super();
+    this.data = data;
+
+    this.className = "topsite card";
+    this.setAttribute("url", this.data.url);
+
+    let template = document.getElementById("template-topsite");
+    let fragment = template.content.cloneNode(true);
+
+    fragment.querySelector(".title").textContent = this.data.title;
+    fragment.querySelector(".favicon").setAttribute("src", this.data.icon);
+    fragment.querySelector(".last-access").textContent = timeFormat.format(
+      this.data.lastVisit
+    );
+
+    this.appendChild(fragment);
+    this.addEventListener("click", this);
+  }
+
+  handleEvent() {
+    openUrl(this.data.url);
+  }
+}
+
+customElements.define("e-topsite", TopSite);
+
+export class TopSites extends HTMLElement {
   constructor() {
-    super("Top Sites");
+    super();
+
+    let template = document.getElementById("template-keyframe-list");
+    let fragment = template.content.cloneNode(true);
+    fragment.querySelector(".list-title").textContent = "Top Sites";
+    let shadow = this.attachShadow({ mode: "open" });
+    shadow.appendChild(fragment);
   }
 
   async connectedCallback() {
@@ -46,7 +80,6 @@ export class TopSites extends KeyframeList {
       for (let i = 0; i < results.root.childCount; ++i) {
         let childNode = results.root.getChild(i);
         if (childNode.type == childNode.RESULT_TYPE_URI && childNode.title) {
-          let frame = {};
           let uri = Services.io.newURI(childNode.uri);
           if (domains.has(uri.host)) {
             continue;
@@ -56,19 +89,20 @@ export class TopSites extends KeyframeList {
             continue;
           }
           domains.add(uri.host);
-          frame.url = childNode.uri;
-          frame.lastVisit = childNode.time / 1000;
-          frames.push({
-            ...frame,
-            ...placesData,
-          });
+          this.appendChild(
+            new TopSite({
+              url: childNode.uri,
+              title: placesData.title,
+              // icon: placesData.richIcon || placesData.icon,
+              icon: placesData.icon,
+              lastVisit: childNode.time / 1000,
+            })
+          );
         }
         if (frames.length == NUM_TOPSITES) {
           break;
         }
       }
-
-      this.displayFrames(frames);
     } finally {
       results.root.containerOpen = false;
     }

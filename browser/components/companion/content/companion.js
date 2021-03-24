@@ -37,7 +37,7 @@ onLoad(() => {
   if (AppConstants.COMPANION_UI_PINNED_TABS_AS_APPS) {
     content.appendChild(new WindowList("Apps"));
   }
-  // content.appendChild(new TopSites());
+  content.appendChild(new TopSites());
   content.appendChild(new PocketList());
   content.appendChild(new KeyframeDbList("Today", today));
   content.appendChild(new KeyframeDbList("Earlier", yesterday, today));

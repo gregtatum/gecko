@@ -152,7 +152,7 @@ h2 {
   flex-shrink: 0;
 }
 
-.keyframe, .email, .pocket, .app-overview {
+.keyframe, .email, .pocket, .app-overview, .topsite {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -161,14 +161,14 @@ h2 {
   padding: 5px;
 }
 
-.keyframe img, .app-overview img {
+.keyframe img, .app-overview img, .topsite img {
   width: 16px;
   height: 16px;
   object-fit: contain;
   object-position: 50% 50%;
 }
 
-.keyframe .title, .pocket .title, .pocket .excerpt, .pocket .domain, .app-overview .title {
+.keyframe .title, .pocket .title, .pocket .excerpt, .pocket .domain, .app-overview .title, .topsite .title {
   flex: 1;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -178,6 +178,7 @@ h2 {
 }
 
 .keyframe .last-access,
+.topsite .last-access,
 .keyframe .score {
   padding-left: 20px;
   margin: 0;
