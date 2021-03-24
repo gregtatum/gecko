@@ -40,6 +40,7 @@ export class MediaList extends HTMLElement {
     shadow.appendChild(fragment);
 
     this.trackedControllers = new WeakSet();
+    this.trackedTabs = new WeakSet();
     this.windowListener = () => this.render();
   }
   connectedCallback() {
@@ -81,6 +82,7 @@ export class MediaList extends HTMLElement {
         continue;
       }
       this.connectMediaController(browser.browsingContext);
+      this.connectTab(tabForBrowser(browser));
       // console.log(browser.browsingContext.mediaController);
       // if (!browser.browsingContext.mediaController.isActive) {
       //     continue;
@@ -122,6 +124,15 @@ export class MediaList extends HTMLElement {
     controller.addEventListener("positionstatechange", this, options);
     controller.addEventListener("metadatachange", this, options);
     controller.addEventListener("playbackstatechange", this, options);
+  }
+
+  connectTab(tab) {
+    if (!tab || this.trackedTabs.has(tab)) {
+      return;
+    }
+    this.trackedTabs.add(tab);
+
+    tab.addEventListener("TabAttrModified", this);
   }
 
   handleEvent(aEvent) {
@@ -242,6 +253,9 @@ export class Media extends HTMLElement {
     } catch (e) {}
     return metadata;
   }
+  get documentTitle() {
+    return this.browser?.browsingContext?.currentWindowGlobal?.documentTitle;
+  }
   get artwork() {
     return this.querySelector(".artwork");
   }
@@ -289,11 +303,17 @@ export class Media extends HTMLElement {
       } else {
         this.artwork.hidden = true;
       }
+    } else if (this.tab.soundPlaying && this.documentTitle) {
+      this.title.textContent = this.documentTitle;
+      // TODO: Use favicon here too
+      this.artwork.hidden = true;
     } else {
       this.hidden = true;
     }
-    if (!this.mediaController.supportedKeys.includes("play") ||
-        !this.mediaController.supportedKeys.includes("pause")) {
+    if (
+      !this.mediaController.supportedKeys.includes("play") ||
+      !this.mediaController.supportedKeys.includes("pause")
+    ) {
       // Only offer play/pause option if the site supports both
       // options.
       this.play.hidden = true;
@@ -312,8 +332,12 @@ export class Media extends HTMLElement {
       this.unmute.hidden = true;
       this.mute.hidden = false;
     }
-    this.prev.hidden = !this.mediaController.supportedKeys.includes("previoustrack");
-    this.next.hidden = !this.mediaController.supportedKeys.includes("nexttrack");
+    this.prev.hidden = !this.mediaController.supportedKeys.includes(
+      "previoustrack"
+    );
+    this.next.hidden = !this.mediaController.supportedKeys.includes(
+      "nexttrack"
+    );
   }
 }
 
