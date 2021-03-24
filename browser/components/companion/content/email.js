@@ -11,7 +11,7 @@ const { OnlineServices } = ChromeUtils.import(
 
 const EMAIL_CHECK_TIME = 10 * 60 * 1000; // 10 minutes
 
-class Email extends HTMLElement {
+export class Email extends HTMLElement {
   constructor(service, data) {
     super();
     this.data = data;
@@ -53,6 +53,10 @@ class Email extends HTMLElement {
   }
 
   handleEvent(event) {
+    // TODO: App bar uses this element but doesn't have a "service" right now
+    if (!this.service) {
+      return;
+    }
     this.service.openEmail(this.data);
     setTimeout(function() {
       let services = OnlineServices.getServices();

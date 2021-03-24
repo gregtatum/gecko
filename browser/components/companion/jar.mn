@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 browser.jar:
+    content/browser/companion/appbar.js (content/appbar.js)
 *   content/browser/companion/awesomebar.css (content/awesomebar.css)
     content/browser/companion/awesomebar.js (content/awesomebar.js)
     content/browser/companion/calendar.js (content/calendar.js)

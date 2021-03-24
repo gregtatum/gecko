@@ -12,6 +12,7 @@ import { onLoad, yesterday, today } from "./shared.js";
 import { KeyframeDbList } from "./keyframes.js";
 import { AwesomeBar } from "./awesomebar.js";
 import { MediaList } from "./media.js";
+import { WindowList } from "./appbar.js";
 
 onLoad(() => {
   window.docShell.browsingContext.prefersColorSchemeOverride = "dark";
@@ -31,9 +32,11 @@ onLoad(() => {
   });
 
   initServices();
-
   let content = document.getElementById("content");
   content.appendChild(new MediaList("Media"));
+  if (AppConstants.COMPANION_UI_PINNED_TABS_AS_APPS) {
+    content.appendChild(new WindowList("Apps"));
+  }
   // content.appendChild(new TopSites());
   content.appendChild(new PocketList());
   content.appendChild(new KeyframeDbList("Today", today));

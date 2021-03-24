@@ -148,7 +148,11 @@ h2 {
   padding: 5px 10px;
 }
 
-.keyframe, .email, .pocket {
+.app .switch-to-app {
+  flex-shrink: 0;
+}
+
+.keyframe, .email, .pocket, .app-overview {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -157,14 +161,14 @@ h2 {
   padding: 5px;
 }
 
-.keyframe img {
+.keyframe img, .app-overview img {
   width: 16px;
   height: 16px;
   object-fit: contain;
   object-position: 50% 50%;
 }
 
-.keyframe .title, .pocket .title, .pocket .excerpt, .pocket .domain {
+.keyframe .title, .pocket .title, .pocket .excerpt, .pocket .domain, .app-overview .title {
   flex: 1;
   white-space: nowrap;
   text-overflow: ellipsis;

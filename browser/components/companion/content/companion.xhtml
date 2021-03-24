@@ -91,6 +91,50 @@
     </div>
   </template>
 
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-window-list">
+    <link rel="stylesheet" href="chrome://global/skin/in-content/common.css"/>
+    <style>
+      :host {
+        grid-template-columns: 1fr auto;
+        display: grid;
+        grid-template-areas:
+                  "title buttons"
+                  "list list";
+      }
+      .list-title {
+        grid-area: title;
+      }
+      .add-pinned-tab {
+        grid-area: buttons;
+        align-self: center;
+      }
+      .window-list {
+        grid-area: list;
+      }
+    </style>
+    <h2 class="list-title"/>
+    <button class="add-pinned-tab">Add</button>
+    <div class="window-list">
+      <slot/>
+    </div>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-window">
+    <div class="label"></div>
+    <slot />
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-app">
+    <div class="app card">
+      <div class="app-overview">
+        <img class="favicon"/>
+        <p class="title"/>
+        <button class="switch-to-app">View</button>
+      </div>
+      <details hidden="true"><summary></summary><div class="extra-details-content"></div></details>
+    </div>
+  </template>
+
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-media">
     <img class="artwork"/>
     <p class="title"/>
