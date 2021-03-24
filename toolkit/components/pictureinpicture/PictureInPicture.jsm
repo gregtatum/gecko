@@ -66,6 +66,11 @@ class PictureInPictureLauncherParent extends JSWindowActorParent {
 }
 
 class PictureInPictureToggleParent extends JSWindowActorParent {
+  constructor() {
+    super();
+    this.trackingMouseOverVideos = false;
+  }
+
   receiveMessage(aMessage) {
     let browsingContext = aMessage.target.browsingContext;
     let browser = browsingContext.top.embedderElement;
@@ -73,6 +78,22 @@ class PictureInPictureToggleParent extends JSWindowActorParent {
       case "PictureInPicture:OpenToggleContextMenu": {
         let win = browser.ownerGlobal;
         PictureInPicture.openToggleContextMenu(win, aMessage.data);
+        break;
+      }
+      case "PictureInPicture:StartTrackingMouseOverVideos": {
+        this.trackingMouseOverVideos = true;
+        let gBrowser = browser.ownerGlobal.gBrowser;
+        let tab = gBrowser.getTabForBrowser(browser);
+        let evt = new CustomEvent("TabPipToggleChanged", {});
+        tab.dispatchEvent(evt);
+        break;
+      }
+      case "PictureInPicture:StopTrackingMouseOverVideos": {
+        this.trackingMouseOverVideos = false;
+        let gBrowser = browser.ownerGlobal.gBrowser;
+        let tab = gBrowser.getTabForBrowser(browser);
+        let evt = new CustomEvent("TabPipToggleChanged", {});
+        tab.dispatchEvent(evt);
         break;
       }
     }

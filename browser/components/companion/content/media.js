@@ -139,6 +139,7 @@ export class MediaList extends HTMLElement {
     this.trackedTabs.add(tab);
 
     tab.addEventListener("TabAttrModified", this);
+    tab.addEventListener("TabPipToggleChanged", this);
   }
 
   handleEvent(aEvent) {
@@ -244,6 +245,18 @@ export class Media extends HTMLElement {
       this.mediaController.prevTrack();
       this.render();
     });
+    this.pip.addEventListener("click", event => {
+      if (event.button != 0) {
+        return;
+      }
+      event.stopPropagation();
+
+      let actor = this.browser.browsingContext.currentWindowGlobal.getActor(
+        "PictureInPictureLauncher"
+      );
+      actor.sendAsyncMessage("PictureInPicture:CompanionToggle");
+      this.render();
+    });
   }
 
   get tab() {
@@ -251,6 +264,14 @@ export class Media extends HTMLElement {
   }
   get mediaController() {
     return this.browser?.browsingContext?.mediaController;
+  }
+  get pipToggleParent() {
+    return this.browser?.browsingContext?.currentWindowGlobal?.getActor(
+      "PictureInPictureToggle"
+    );
+  }
+  get canTogglePip() {
+    return this.pipToggleParent && this.pipToggleParent.trackingMouseOverVideos;
   }
   get metadata() {
     let metadata = null;
@@ -289,6 +310,9 @@ export class Media extends HTMLElement {
   get next() {
     return this.querySelector(".next");
   }
+  get pip() {
+    return this.querySelector(".pip");
+  }
 
   render() {
     // TODO: Check supportedkeys to dynamically add / remove buttons
@@ -309,7 +333,10 @@ export class Media extends HTMLElement {
       } else {
         this.artwork.hidden = true;
       }
-    } else if (this.tab.soundPlaying && this.documentTitle) {
+    } else if (
+      (this.canTogglePip || this.tab.soundPlaying) &&
+      this.documentTitle
+    ) {
       this.title.textContent = this.documentTitle;
       // TODO: Use favicon here too
       this.artwork.hidden = true;
@@ -318,7 +345,8 @@ export class Media extends HTMLElement {
     }
     if (
       !this.mediaController.supportedKeys.includes("play") ||
-      !this.mediaController.supportedKeys.includes("pause")
+      !this.mediaController.supportedKeys.includes("pause") ||
+      !metadata
     ) {
       // Only offer play/pause option if the site supports both
       // options.
@@ -344,6 +372,10 @@ export class Media extends HTMLElement {
     this.next.hidden = !this.mediaController.supportedKeys.includes(
       "nexttrack"
     );
+
+    if (!this.canTogglePip) {
+      this.pip.hidden = true;
+    }
   }
 }
 

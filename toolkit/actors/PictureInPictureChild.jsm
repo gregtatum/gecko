@@ -94,6 +94,10 @@ class PictureInPictureLauncherChild extends JSWindowActorChild {
         this.keyToggle();
         break;
       }
+      case "PictureInPicture:CompanionToggle": {
+        this.companionToggle();
+        break;
+      }
     }
   }
 
@@ -139,7 +143,20 @@ class PictureInPictureLauncherChild extends JSWindowActorChild {
     });
   }
 
-  //
+  toggleIn(doc) {
+    let listOfVideos = [...doc.querySelectorAll("video")].filter(
+      video => !isNaN(video.duration)
+    );
+    // Get the first non-paused video, otherwise the longest video. This
+    // fallback is designed to skip over "preview"-style videos on sidebars.
+    let video =
+      listOfVideos.filter(v => !v.paused)[0] ||
+      listOfVideos.sort((a, b) => b.duration - a.duration)[0];
+    if (video) {
+      this.togglePictureInPicture(video);
+    }
+  }
+
   /**
    * The keyboard was used to attempt to open Picture-in-Picture. In this case,
    * find the focused window, and open Picture-in-Picture for the first
@@ -151,18 +168,15 @@ class PictureInPictureLauncherChild extends JSWindowActorChild {
     if (focusedWindow) {
       let doc = focusedWindow.document;
       if (doc) {
-        let listOfVideos = [...doc.querySelectorAll("video")].filter(
-          video => !isNaN(video.duration)
-        );
-        // Get the first non-paused video, otherwise the longest video. This
-        // fallback is designed to skip over "preview"-style videos on sidebars.
-        let video =
-          listOfVideos.filter(v => !v.paused)[0] ||
-          listOfVideos.sort((a, b) => b.duration - a.duration)[0];
-        if (video) {
-          this.togglePictureInPicture(video);
-        }
+        this.toggleIn(doc);
       }
+    }
+  }
+
+  companionToggle() {
+    let doc = this.document;
+    if (doc) {
+      this.toggleIn(doc);
     }
   }
 }
@@ -564,6 +578,7 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
     });
     this.addMouseButtonListeners();
     state.isTrackingVideos = true;
+    this.sendAsyncMessage("PictureInPicture:StartTrackingMouseOverVideos", {});
   }
 
   /**
@@ -599,6 +614,7 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
       this.onMouseLeaveVideo(oldOverVideo);
     }
     state.isTrackingVideos = false;
+    this.sendAsyncMessage("PictureInPicture:StopTrackingMouseOverVideos", {});
   }
 
   /**
