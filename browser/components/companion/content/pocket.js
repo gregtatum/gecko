@@ -7,7 +7,7 @@
 
 import { openUrl } from "./shared.js";
 
-const NUM_POCKET_STORIES = 5;
+const NUM_POCKET_STORIES = 3;
 
 export class PocketStory extends HTMLElement {
   constructor(data) {

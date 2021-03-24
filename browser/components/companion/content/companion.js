@@ -38,7 +38,7 @@ onLoad(() => {
     content.appendChild(new WindowList("Apps"));
   }
   content.appendChild(new TopSites());
-  content.appendChild(new PocketList());
   content.appendChild(new KeyframeDbList("Today", today));
   content.appendChild(new KeyframeDbList("Earlier", yesterday, today));
+  content.appendChild(new PocketList());
 });
