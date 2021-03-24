@@ -81,6 +81,12 @@ export class MediaList extends HTMLElement {
       if (!browser.browsingContext) {
         continue;
       }
+      // TODO: This only handles the browsingContext for the top-level
+      // document and not subdocs (like a youtube embed). We may want to
+      // recurse into children to find a media session if the top-level
+      // doc doesn't have one. Should we try to handle the case where we
+      // have multiple within a tab?
+
       this.connectMediaController(browser.browsingContext);
       this.connectTab(tabForBrowser(browser));
       // console.log(browser.browsingContext.mediaController);
