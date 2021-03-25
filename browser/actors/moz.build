@@ -64,8 +64,6 @@ FINAL_TARGET_FILES.actors += [
     "DOMFullscreenParent.jsm",
     "EncryptedMediaChild.jsm",
     "EncryptedMediaParent.jsm",
-    "EngagementChild.jsm",
-    "EngagementParent.jsm",
     "FormValidationChild.jsm",
     "FormValidationParent.jsm",
     "LightweightThemeChild.jsm",
