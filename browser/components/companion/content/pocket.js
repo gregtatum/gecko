@@ -21,7 +21,9 @@ export class PocketStory extends HTMLElement {
     let fragment = template.content.cloneNode(true);
 
     fragment.querySelector(".title").textContent = this.data.title;
-    fragment.querySelector(".preview").setAttribute("src", this.data.image_src);
+    fragment
+      .querySelector(".preview")
+      .setAttribute("src", this.data.raw_image_src);
     fragment.querySelector(".excerpt").textContent = this.data.excerpt;
     fragment.querySelector(".domain").textContent = this.data.domain;
 
@@ -80,7 +82,7 @@ export class PocketList extends HTMLElement {
           domain: recommendations[index].domain,
           title: recommendations[index].title,
           excerpt: recommendations[index].excerpt,
-          image_src: recommendations[index].image_src,
+          raw_image_src: recommendations[index].raw_image_src,
         })
       );
     }
