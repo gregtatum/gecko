@@ -153,7 +153,7 @@ class WindowGlobalParent final : public WindowContext,
   already_AddRefed<Promise> GetSecurityInfo(ErrorResult& aRv);
 
   static already_AddRefed<WindowGlobalParent> CreateDisconnected(
-      const WindowGlobalInit& aInit, bool aInProcess = false);
+      const WindowGlobalInit& aInit);
 
   // Initialize the mFrameLoader fields for a created WindowGlobalParent. Must
   // be called after setting the Manager actor.
@@ -261,10 +261,12 @@ class WindowGlobalParent final : public WindowContext,
   mozilla::ipc::IPCResult RecvAccumulatePageUseCounters(
       const UseCounters& aUseCounters);
 
+  mozilla::ipc::IPCResult RecvRequestRestoreTabContent();
+
  private:
   WindowGlobalParent(CanonicalBrowsingContext* aBrowsingContext,
                      uint64_t aInnerWindowId, uint64_t aOuterWindowId,
-                     bool aInProcess, FieldValues&& aInit);
+                     FieldValues&& aInit);
 
   ~WindowGlobalParent();
 

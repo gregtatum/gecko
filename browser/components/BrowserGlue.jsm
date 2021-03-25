@@ -1576,7 +1576,7 @@ BrowserGlue.prototype = {
     win.gNotificationBox.appendNotification(
       message,
       "reset-profile-notification",
-      "chrome://global/skin/icons/question-64.png",
+      "chrome://global/skin/icons/help.svg",
       win.gNotificationBox.PRIORITY_INFO_LOW,
       buttons
     );
@@ -1649,26 +1649,6 @@ BrowserGlue.prototype = {
     } catch (ex) {
       Cu.reportError(ex);
     }
-  },
-
-  _collectFirstPartyIsolationTelemetry() {
-    let update = aIsFirstPartyIsolated => {
-      Services.telemetry.scalarSet(
-        "privacy.feature.first_party_isolation_enabled",
-        aIsFirstPartyIsolated
-      );
-    };
-
-    XPCOMUtils.defineLazyPreferenceGetter(
-      this,
-      "_firstPartyIsolated",
-      "privacy.firstparty.isolate",
-      false,
-      (_data, _previous, latest) => {
-        update(latest);
-      }
-    );
-    update(this._firstPartyIsolated);
   },
 
   // the first browser window has finished initializing
@@ -1764,8 +1744,6 @@ BrowserGlue.prototype = {
     this._firstWindowLoaded();
 
     this._collectStartupConditionsTelemetry();
-
-    this._collectFirstPartyIsolationTelemetry();
 
     if (!this._placesTelemetryGathered && TelemetryUtils.isTelemetryEnabled) {
       this._placesTelemetryGathered = true;

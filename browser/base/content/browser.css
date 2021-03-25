@@ -676,6 +676,15 @@ toolbar:not(#TabsToolbar) > #personal-bookmarks {
     display: none;
   }
 }
+
+@supports -moz-bool-pref("browser.proton.urlbar.enabled") {
+  /* The page actions menu is hidden by default, it is only shown in small
+     windows as the overflow target of multiple page action buttons */
+  #pageActionButton {
+    visibility: collapse;
+  }
+}
+
 /* 680px is just below half of popular 1366px wide screens, so when putting two
    browser windows next to each other on such a screen, they'll be above this
    threshold. */
@@ -683,8 +692,14 @@ toolbar:not(#TabsToolbar) > #personal-bookmarks {
   /* Page action buttons are duplicated in the page action menu so we can
      safely hide them in small windows. */
   #pageActionSeparator,
-  #pageActionButton ~ .urlbar-page-action {
+  #pageActionButton[multiple-children] ~ .urlbar-page-action {
     display: none;
+  }
+
+  @supports -moz-bool-pref("browser.proton.urlbar.enabled") {
+    #pageActionButton[multiple-children] {
+      visibility: visible;
+    }
   }
 }
 @media (max-width: 550px) {
@@ -1167,6 +1182,10 @@ toolbarpaletteitem > toolbaritem {
   -moz-box-pack: center;
 }
 
+toolbarpaletteitem > #stop-reload-button {
+  -moz-box-pack: inherit;
+}
+
 :root[customizing=true] .addon-banner-item,
 :root[customizing=true] .panel-banner-item {
   display: none;
@@ -1287,12 +1306,23 @@ toolbarpaletteitem > toolbaritem {
 #pageActionContextMenu > .pageActionContextMenuItem {
   visibility: collapse;
 }
+
+#pageActionContextMenu[state=extensionPinned] > .pageActionContextMenuItem.manageExtensionItem,
+#pageActionContextMenu[state=extensionUnpinned] > .pageActionContextMenuItem.manageExtensionItem,
+#pageActionContextMenu[state=extensionPinned] > .pageActionContextMenuItem.removeExtensionItem,
+#pageActionContextMenu[state=extensionUnpinned] > .pageActionContextMenuItem.removeExtensionItem {
+  visibility: visible;
+}
+
+@supports not -moz-bool-pref("browser.proton.urlbar.enabled") {
+/* These pin/unpin menu options should be removed after Proton is released */
 #pageActionContextMenu[state=builtInPinned] > .pageActionContextMenuItem.builtInPinned,
 #pageActionContextMenu[state=builtInUnpinned] > .pageActionContextMenuItem.builtInUnpinned,
 #pageActionContextMenu[state=extensionPinned] > .pageActionContextMenuItem.extensionPinned,
 #pageActionContextMenu[state=extensionUnpinned] > .pageActionContextMenuItem.extensionUnpinned {
   visibility: visible;
 }
+} /*** !proton ***/
 
 /* Print pending */
 .printSettingsBrowser {
@@ -1534,8 +1564,10 @@ toolbar[keyNav=true]:not([collapsed=true], [customizing=true]) toolbartabstop {
  * End Dialogs
  */
 
+@supports not -moz-bool-pref("browser.proton.doorhangers.enabled") {
 /* Password update/save doorhanger */
 #password-notification-username,
 #password-notification-password {
   margin-inline-start: 6px;
 }
+} /** END not Proton **/

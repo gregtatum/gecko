@@ -51,8 +51,8 @@ struct AnimationEventInfo {
     event.mPseudoElement =
         nsCSSPseudoElements::PseudoTypeAsString(aTarget.mPseudoType);
 
-#ifdef MOZ_GECKO_PROFILER
-    if (aMessage == eAnimationCancel && profiler_can_accept_markers()) {
+    if ((aMessage == eAnimationCancel || aMessage == eAnimationEnd) &&
+        profiler_can_accept_markers()) {
       nsCString markerText;
       aAnimationName->ToUTF8String(markerText);
       PROFILER_MARKER_TEXT(
@@ -62,7 +62,6 @@ struct AnimationEventInfo {
                                  aScheduledEventTimeStamp),
           markerText);
     }
-#endif
   }
 
   // For CSS transition events
@@ -84,7 +83,6 @@ struct AnimationEventInfo {
     event.mPseudoElement =
         nsCSSPseudoElements::PseudoTypeAsString(aTarget.mPseudoType);
 
-#ifdef MOZ_GECKO_PROFILER
     if ((aMessage == eTransitionEnd || aMessage == eTransitionCancel) &&
         profiler_can_accept_markers()) {
       nsCString markerText;
@@ -99,7 +97,6 @@ struct AnimationEventInfo {
                                  aScheduledEventTimeStamp),
           markerText);
     }
-#endif
   }
 
   // For web animation events

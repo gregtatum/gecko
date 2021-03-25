@@ -376,7 +376,6 @@ nsDocShell::nsDocShell(BrowsingContext* aBrowsingContext,
       mItemType(aBrowsingContext->IsContent() ? typeContent : typeChrome),
       mPreviousEntryIndex(-1),
       mLoadedEntryIndex(-1),
-      mChildOffset(0),
       mBusyFlags(BUSY_FLAGS_NONE),
       mAppType(nsIDocShell::APP_TYPE_UNKNOWN),
       mLoadType(0),
@@ -1023,7 +1022,7 @@ bool nsDocShell::MaybeHandleSubframeHistory(
         // it wasn't originally for some other frame.
         nsCOMPtr<nsISHEntry> shEntry;
         currentSH->GetChildSHEntryIfHasNoDynamicallyAddedChild(
-            mChildOffset, getter_AddRefs(shEntry));
+            mBrowsingContext->ChildOffset(), getter_AddRefs(shEntry));
         if (shEntry) {
           aLoadState->SetSHEntry(shEntry);
         }
@@ -1208,6 +1207,8 @@ void nsDocShell::FirePageHideShowNonRecursive(bool aShow) {
   // For pagehide, set mFiredUnloadEvent to true, so that unload doesn't fire.
   nsCOMPtr<nsIContentViewer> contentViewer(mContentViewer);
   if (aShow) {
+    mRefreshURIList = std::move(mBFCachedRefreshURIList);
+    RefreshURIFromQueue();
     mFiredUnloadEvent = false;
     RefPtr<Document> doc = contentViewer->GetDocument();
     if (doc) {
@@ -1232,7 +1233,9 @@ void nsDocShell::FirePageHideShowNonRecursive(bool aShow) {
 
       nsCOMPtr<nsIChannel> channel = doc->GetChannel();
       if (channel) {
-        SetCurrentURI(doc->GetDocumentURI(), channel, true, 0);
+        SetCurrentURI(doc->GetDocumentURI(), channel,
+                      /* aFireOnLocationChange */ true,
+                      /* aIsInitialAboutBlank */ false, /* aLocationFlags */ 0);
         mEODForCurrentDocument = false;
         mIsRestoringDocument = true;
         mLoadGroup->AddRequest(channel, nullptr);
@@ -1243,10 +1246,24 @@ void nsDocShell::FirePageHideShowNonRecursive(bool aShow) {
       if (presShell) {
         presShell->Thaw(false);
       }
+
+      if (inner) {
+        inner->FireDelayedDOMEvents(false);
+      }
     }
   } else if (!mFiredUnloadEvent) {
     // XXXBFCache check again that the page can enter bfcache.
     // XXXBFCache should mTiming->NotifyUnloadEventStart()/End() be called here?
+
+    if (mRefreshURIList) {
+      RefreshURIToQueue();
+      mBFCachedRefreshURIList = std::move(mRefreshURIList);
+    } else {
+      // If Stop was called, the list was moved to mSavedRefreshURIList after
+      // calling SuspendRefreshURIs, which calls RefreshURIToQueue.
+      mBFCachedRefreshURIList = std::move(mSavedRefreshURIList);
+    }
+
     mFiredUnloadEvent = true;
     contentViewer->PageHide(false);
 
@@ -1461,12 +1478,14 @@ NS_IMETHODIMP
 nsDocShell::SetCurrentURI(nsIURI* aURI) {
   // Note that securityUI will set STATE_IS_INSECURE, even if
   // the scheme of |aURI| is "https".
-  SetCurrentURI(aURI, nullptr, true, 0);
+  SetCurrentURI(aURI, nullptr, /* aFireOnLocationChange */ true,
+                /* aIsInitialAboutBlank */ false, /* aLocationFlags */ 0);
   return NS_OK;
 }
 
 bool nsDocShell::SetCurrentURI(nsIURI* aURI, nsIRequest* aRequest,
                                bool aFireOnLocationChange,
+                               bool aIsInitialAboutBlank,
                                uint32_t aLocationFlags) {
   MOZ_ASSERT(!mIsBeingDestroyed);
 
@@ -1496,11 +1515,11 @@ bool nsDocShell::SetCurrentURI(nsIURI* aURI, nsIRequest* aRequest,
     mHasLoadedNonBlankURI = true;
   }
 
-  // Don't bother firing onLocationChange when creating a subframe's initial
-  // about:blank document, as this can happen when it's not safe for us to run
-  // script.
-  if (!(mLoadingEntry || mLSHE) && !mHasLoadedNonBlankURI && !aRequest &&
-      aLocationFlags == 0 && !mBrowsingContext->IsTop()) {
+  // Don't fire onLocationChange when creating a subframe's initial about:blank
+  // document, as this can happen when it's not safe for us to run script.
+  if (aIsInitialAboutBlank && !mHasLoadedNonBlankURI &&
+      !mBrowsingContext->IsTop()) {
+    MOZ_ASSERT(!aRequest && aLocationFlags == 0);
     return false;
   }
 
@@ -1618,6 +1637,7 @@ nsDocShell::GatherCharsetMenuTelemetry() {
             Telemetry::LABELS_ENCODING_OVERRIDE_SITUATION_2::ChannelNonUtf8);
       }
       break;
+    case kCharsetFromXmlDeclaration:
     case kCharsetFromMetaPrescan:
     case kCharsetFromMetaTag:
       if (isFileURL) {
@@ -2990,12 +3010,6 @@ nsDocShell::SetTreeOwner(nsIDocShellTreeOwner* aTreeOwner) {
   return NS_OK;
 }
 
-void nsDocShell::SetChildOffset(int32_t aChildOffset) {
-  mChildOffset = aChildOffset;
-}
-
-int32_t nsDocShell::GetChildOffset() { return mChildOffset; }
-
 NS_IMETHODIMP
 nsDocShell::GetHistoryID(nsID& aID) {
   aID = mBrowsingContext->GetHistoryID();
@@ -3049,24 +3063,11 @@ nsDocShell::AddChild(nsIDocShellTreeItem* aChild) {
   NS_ASSERTION(!mChildList.IsEmpty(),
                "child list must not be empty after a successful add");
 
-  nsCOMPtr<nsIDocShell> childDocShell = do_QueryInterface(aChild);
-  bool dynamic = nsDocShell::Cast(childDocShell)->GetCreatedDynamically();
-  if (!dynamic) {
-    nsCOMPtr<nsISHEntry> currentSH;
-    bool oshe = false;
-    GetCurrentSHEntry(getter_AddRefs(currentSH), &oshe);
-    if (currentSH) {
-      currentSH->HasDynamicallyAddedChild(&dynamic);
-    }
-  }
-  childDocShell->SetChildOffset(dynamic ? -1 : mChildList.Length() - 1);
-
   /* Set the child's global history if the parent has one */
   if (mBrowsingContext->GetUseGlobalHistory()) {
     // childDocShell->SetUseGlobalHistory(true);
     // this should be set through BC inherit
-    MOZ_ASSERT(nsDocShell::Cast(childDocShell)
-                   ->mBrowsingContext->GetUseGlobalHistory());
+    MOZ_ASSERT(aChild->GetBrowsingContext()->GetUseGlobalHistory());
   }
 
   if (aChild->ItemType() != mItemType) {
@@ -4928,9 +4929,8 @@ nsDocShell::GetVisibility(bool* aVisibility) {
     }
 
     nsIFrame* frame = view ? view->GetFrame() : nullptr;
-    if (frame &&
-        !frame->IsVisibleConsideringAncestors(
-            nsIFrame::VISIBILITY_CROSS_CHROME_CONTENT_BOUNDARY)) {
+    if (frame && !frame->IsVisibleConsideringAncestors(
+                     nsIFrame::VISIBILITY_CROSS_CHROME_CONTENT_BOUNDARY)) {
       return NS_OK;
     }
 
@@ -5314,6 +5314,7 @@ nsDocShell::ForceRefreshURI(nsIURI* aURI, nsIPrincipal* aPrincipal,
   loadState->SetResultPrincipalURI(aURI);
   loadState->SetResultPrincipalURIIsSome(true);
   loadState->SetKeepResultPrincipalURIIfSet(true);
+  loadState->SetIsMetaRefresh(aMetaRefresh);
 
   // Set the triggering pricipal to aPrincipal if available, or current
   // document's principal otherwise.
@@ -5677,8 +5678,10 @@ NS_IMETHODIMP
 nsDocShell::CancelRefreshURITimers() {
   DoCancelRefreshURITimers(mRefreshURIList);
   DoCancelRefreshURITimers(mSavedRefreshURIList);
+  DoCancelRefreshURITimers(mBFCachedRefreshURIList);
   mRefreshURIList = nullptr;
   mSavedRefreshURIList = nullptr;
+  mBFCachedRefreshURIList = nullptr;
 
   return NS_OK;
 }
@@ -5698,8 +5701,7 @@ nsDocShell::GetRefreshPending(bool* aResult) {
   return rv;
 }
 
-NS_IMETHODIMP
-nsDocShell::SuspendRefreshURIs() {
+void nsDocShell::RefreshURIToQueue() {
   if (mRefreshURIList) {
     uint32_t n = 0;
     mRefreshURIList->GetLength(&n);
@@ -5719,6 +5721,11 @@ nsDocShell::SuspendRefreshURIs() {
       mRefreshURIList->ReplaceElementAt(callback, i);
     }
   }
+}
+
+NS_IMETHODIMP
+nsDocShell::SuspendRefreshURIs() {
+  RefreshURIToQueue();
 
   // Suspend refresh URIs for our child shells as well.
   for (auto* child : mChildList.ForwardRange()) {
@@ -6863,7 +6870,9 @@ nsresult nsDocShell::CreateAboutBlankContentViewer(
         rv = Embed(viewer, aActor, true, false);
         NS_ENSURE_SUCCESS(rv, rv);
 
-        SetCurrentURI(blankDoc->GetDocumentURI(), nullptr, true, 0);
+        SetCurrentURI(blankDoc->GetDocumentURI(), nullptr,
+                      /* aFireLocationChange */ true,
+                      /* aIsInitialAboutBlank */ true, /* aLocationFlags */ 0);
         rv = mIsBeingDestroyed ? NS_ERROR_NOT_AVAILABLE : NS_OK;
       }
     }
@@ -7656,7 +7665,8 @@ nsresult nsDocShell::RestoreFromHistory() {
     // origLSHE we don't have to worry about whether the entry in question
     // is still mLSHE or whether it's now mOSHE.
     nsCOMPtr<nsIURI> uri = origLSHE->GetURI();
-    SetCurrentURI(uri, document->GetChannel(), true, 0);
+    SetCurrentURI(uri, document->GetChannel(), /* aFireLocationChange */ true,
+                  /* aIsInitialAboutBlank */ false, /* aLocationFlags */ 0);
   }
 
   // This is the end of our CreateContentViewer() replacement.
@@ -7860,7 +7870,7 @@ nsresult nsDocShell::RestoreFromHistory() {
     presShell->Thaw();
   }
 
-  return privWin->FireDelayedDOMEvents();
+  return privWin->FireDelayedDOMEvents(true);
 }
 
 nsresult nsDocShell::CreateContentViewer(const nsACString& aContentType,
@@ -10414,6 +10424,7 @@ nsresult nsDocShell::DoURILoad(nsDocShellLoadState* aLoadState,
     loadInfo->SetHasValidUserGestureActivation(true);
   }
   loadInfo->SetTriggeringSandboxFlags(aLoadState->TriggeringSandboxFlags());
+  loadInfo->SetIsMetaRefresh(aLoadState->IsMetaRefresh());
 
   uint32_t cacheKey = 0;
   if (aCacheKey) {
@@ -11098,7 +11109,8 @@ bool nsDocShell::OnNewURI(nsIURI* aURI, nsIChannel* aChannel,
       aCloneSHChildren ? uint32_t(LOCATION_CHANGE_SAME_DOCUMENT) : 0;
 
   bool onLocationChangeNeeded =
-      SetCurrentURI(aURI, aChannel, aFireOnLocationChange, locationFlags);
+      SetCurrentURI(aURI, aChannel, aFireOnLocationChange,
+                    /* aIsInitialAboutBlank */ false, locationFlags);
   // Make sure to store the referrer from the channel, if any
   SetupReferrerInfoFromChannel(aChannel);
   return onLocationChangeNeeded;
@@ -11504,7 +11516,9 @@ nsresult nsDocShell::UpdateURLAndHistory(Document* aDocument, nsIURI* aNewURI,
   // can't load into a docshell that is being destroyed.
   if (!aEqualURIs && !mIsBeingDestroyed) {
     aDocument->SetDocumentURI(aNewURI);
-    SetCurrentURI(aNewURI, nullptr, true, LOCATION_CHANGE_SAME_DOCUMENT);
+    SetCurrentURI(aNewURI, nullptr, /* aFireLocationChange */ true,
+                  /* aIsInitialAboutBlank */ false,
+                  LOCATION_CHANGE_SAME_DOCUMENT);
 
     AddURIVisit(aNewURI, aCurrentURI, 0);
 
@@ -11831,7 +11845,8 @@ nsresult nsDocShell::AddToSessionHistory(
       MOZ_ALWAYS_SUCCEEDS(topWc->SetSHEntryHasUserInteraction(false));
     }
     if (!mOSHE || !LOAD_TYPE_HAS_FLAGS(mLoadType, LOAD_FLAGS_REPLACE_HISTORY)) {
-      rv = AddChildSHEntryToParent(entry, mChildOffset, aCloneChildren);
+      rv = AddChildSHEntryToParent(entry, mBrowsingContext->ChildOffset(),
+                                   aCloneChildren);
     }
   }
 

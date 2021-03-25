@@ -70,6 +70,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   RFPHelper: "resource://gre/modules/RFPHelper.jsm",
   SafeBrowsing: "resource://gre/modules/SafeBrowsing.jsm",
   Sanitizer: "resource:///modules/Sanitizer.jsm",
+  SaveToPocket: "chrome://pocket/content/SaveToPocket.jsm",
   SessionStartup: "resource:///modules/sessionstore/SessionStartup.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.jsm",
@@ -238,7 +239,7 @@ XPCOMUtils.defineLazyScriptGetter(
 XPCOMUtils.defineLazyScriptGetter(
   this,
   "pktUI",
-  "chrome://pocket/content/main.js"
+  "chrome://pocket/content/pktUI.js"
 );
 XPCOMUtils.defineLazyScriptGetter(
   this,
@@ -584,13 +585,19 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
+/* Work around the pref callback being run after the document has been unlinked.
+   See bug 1543537. */
+var docWeak = Cu.getWeakReference(document);
 XPCOMUtils.defineLazyPreferenceGetter(
   this,
   "gProton",
   "browser.proton.enabled",
   false,
   (pref, oldValue, newValue) => {
-    document.documentElement.toggleAttribute("proton", newValue);
+    let doc = docWeak.get();
+    if (doc) {
+      doc.documentElement.toggleAttribute("proton", newValue);
+    }
   }
 );
 
@@ -1130,7 +1137,7 @@ var gPopupBlockerObserver = {
             },
           ];
 
-          const priority = notificationBox.PRIORITY_WARNING_MEDIUM;
+          const priority = notificationBox.PRIORITY_INFO_MEDIUM;
           notificationBox.appendNotification(
             message,
             "popup-blocked",
@@ -4313,9 +4320,8 @@ const BrowserSearch = {
    *        The principal to use for a new window or tab.
    * @param csp
    *        The content security policy to use for a new window or tab.
-   * @param flipLoadInBackground [optional]
-   *        If a modifier/middle mouse button is used:
-   *        Flip preference to load search in background tab.
+   * @param inBackground [optional]
+   *        Set to true for the tab to be loaded in the background, default false.
    * @param engine [optional]
    *        The search engine to use for the search.
    * @param tab [optional]
@@ -4331,7 +4337,7 @@ const BrowserSearch = {
     purpose,
     triggeringPrincipal,
     csp,
-    flipLoadInBackground = false,
+    inBackground = false,
     engine = null,
     tab = null
   ) {
@@ -4357,14 +4363,10 @@ const BrowserSearch = {
       return null;
     }
 
-    let inBackground = Services.prefs.getBoolPref(
-      "browser.search.context.loadInBackground"
-    );
-
     openLinkIn(submission.uri.spec, where || "current", {
       private: usePrivate && !PrivateBrowsingUtils.isWindowPrivate(window),
       postData: submission.postData,
-      inBackground: flipLoadInBackground ? !inBackground : inBackground,
+      inBackground,
       relatedToCurrent: true,
       triggeringPrincipal,
       csp,
@@ -4396,7 +4398,12 @@ const BrowserSearch = {
     if (usePrivate && !PrivateBrowsingUtils.isWindowPrivate(window)) {
       where = "window";
     }
-    let flipLoadInBackground = event.button == 1 || event.ctrlKey;
+    let inBackground = Services.prefs.getBoolPref(
+      "browser.search.context.loadInBackground"
+    );
+    if (event.button == 1 || event.ctrlKey) {
+      inBackground = !inBackground;
+    }
 
     let { engine, url } = await BrowserSearch._loadSearch(
       terms,
@@ -4407,7 +4414,7 @@ const BrowserSearch = {
         triggeringPrincipal.originAttributes
       ),
       csp,
-      flipLoadInBackground
+      inBackground
     );
 
     if (engine) {
@@ -5269,6 +5276,15 @@ var XULBrowserWindow = {
       );
     }
 
+    // About pages other than about:reader are not currently supported by
+    // screenshots (see Bug 1620992).
+    Services.obs.notifyObservers(
+      null,
+      "toggle-screenshot-disable",
+      aLocationURI.scheme == "about" &&
+        !aLocationURI.spec.startsWith("about:reader")
+    );
+
     gPermissionPanel.onLocationChange();
 
     gProtectionsHandler.onLocationChange();
@@ -5276,6 +5292,8 @@ var XULBrowserWindow = {
     BrowserPageActions.onLocationChange();
 
     SafeBrowsingNotificationBox.onLocationChange(aLocationURI);
+
+    SaveToPocket.onLocationChange(window);
 
     UrlbarProviderSearchTips.onLocationChange(
       window,
@@ -8926,7 +8944,7 @@ const SafeBrowsingNotificationBox = {
     let notification = notificationBox.appendNotification(
       title,
       value,
-      "chrome://global/skin/icons/blocklist_favicon.png",
+      "chrome://global/skin/icons/blocked.svg",
       notificationBox.PRIORITY_CRITICAL_HIGH,
       buttons
     );
@@ -9475,6 +9493,10 @@ var gDialogBox = {
     let haveClosedPromise = new Promise(resolve => {
       this._didCloseHTMLDialog = resolve;
     });
+
+    // Bring the window to the front in case we're minimized or occluded:
+    window.focus();
+
     try {
       await this._open(uri, args);
     } catch (ex) {
@@ -9639,7 +9661,7 @@ var ConfirmationHint = {
    * Shows a transient, non-interactive confirmation hint anchored to an
    * element, usually used in response to a user action to reaffirm that it was
    * successful and potentially provide extra context. Examples for such hints:
-   * - "Saved to Library!" after bookmarking a page
+   * - "Saved to bookmarks" after bookmarking a page
    * - "Sent!" after sending a tab to another device
    * - "Queued (offline)" when attempting to send a tab to another device
    *   while offline

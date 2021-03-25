@@ -87,6 +87,7 @@
 #include "mozilla/dom/FrameLoaderBinding.h"
 #include "mozilla/dom/MozFrameLoaderOwnerBinding.h"
 #include "mozilla/dom/PBrowser.h"
+#include "mozilla/dom/SessionHistoryEntry.h"
 #include "mozilla/dom/SessionStoreListener.h"
 #include "mozilla/dom/WindowGlobalParent.h"
 #include "mozilla/dom/XULFrameElement.h"
@@ -1299,15 +1300,32 @@ nsresult nsFrameLoader::SwapWithOtherRemoteLoader(
         nsGlobalWindowOuter::Cast(newWin)->GetMainWidget();
     const ManagedContainer<mozilla::plugins::PPluginWidgetParent>& plugins =
         otherBrowserParent->ManagedPPluginWidgetParent();
-    for (auto iter = plugins.ConstIter(); !iter.Done(); iter.Next()) {
-      static_cast<mozilla::plugins::PluginWidgetParent*>(iter.Get()->GetKey())
-          ->SetParent(newParent);
+    for (auto* key : plugins) {
+      static_cast<mozilla::plugins::PluginWidgetParent*>(key)->SetParent(
+          newParent);
     }
   }
 #endif  // XP_WIN
 
   MaybeUpdatePrimaryBrowserParent(eBrowserParentRemoved);
   aOther->MaybeUpdatePrimaryBrowserParent(eBrowserParentRemoved);
+
+  if (mozilla::BFCacheInParent() && XRE_IsParentProcess()) {
+    // nsFrameLoaders in session history can't be moved to another owner since
+    // there are no corresponging message managers on which swap can be done.
+    // See the line mMessageManager.swap(aOther->mMessageManager); below.
+    auto evict = [](nsFrameLoader* aFrameLoader) {
+      if (BrowsingContext* bc =
+              aFrameLoader->GetMaybePendingBrowsingContext()) {
+        nsCOMPtr<nsISHistory> shistory = bc->Canonical()->GetSessionHistory();
+        if (shistory) {
+          shistory->EvictAllContentViewers();
+        }
+      }
+    };
+    evict(this);
+    evict(aOther);
+  }
 
   SetOwnerContent(otherContent);
   aOther->SetOwnerContent(ourContent);
@@ -1338,6 +1356,9 @@ nsresult nsFrameLoader::SwapWithOtherRemoteLoader(
     otherMessageManager->SetCallback(this);
   }
   mMessageManager.swap(aOther->mMessageManager);
+
+  // XXXsmaug what should be done to JSWindowActorParent objects when swapping
+  // frameloaders? Currently they leak very easily, bug 1697918.
 
   // Perform the actual swap of the internal refptrs. We keep a strong reference
   // to ourselves to make sure we don't die while we overwrite our reference to
@@ -2066,6 +2087,23 @@ void nsFrameLoader::SetOwnerContent(Element* aContent) {
 
   if (RefPtr<nsFrameLoaderOwner> owner = do_QueryObject(mOwnerContent)) {
     owner->AttachFrameLoader(this);
+
+#ifdef NIGHTLY_BUILD
+    if (mozilla::BFCacheInParent() && XRE_IsParentProcess()) {
+      if (BrowsingContext* bc = GetMaybePendingBrowsingContext()) {
+        nsISHistory* shistory = bc->Canonical()->GetSessionHistory();
+        if (shistory) {
+          uint32_t count = shistory->GetCount();
+          for (uint32_t i = 0; i < count; ++i) {
+            nsCOMPtr<nsISHEntry> entry;
+            shistory->GetEntryAtIndex(i, getter_AddRefs(entry));
+            nsCOMPtr<SessionHistoryEntry> she = do_QueryInterface(entry);
+            MOZ_RELEASE_ASSERT(!she || !she->GetFrameLoader());
+          }
+        }
+      }
+    }
+#endif
   }
 
   if (mSessionStoreListener && mOwnerContent) {
@@ -3016,18 +3054,6 @@ void nsFrameLoader::ApplySandboxFlags(uint32_t sandboxFlags) {
   // The child can only add restrictions, never remove them.
   sandboxFlags |= parentSandboxFlags;
 
-  // XXX this probably isn't fission compatible.
-  if (GetDocShell()) {
-    // If this frame is a receiving browsing context, we should add
-    // sandboxed auxiliary navigation flag to sandboxFlags. See
-    // https://w3c.github.io/presentation-api/#creating-a-receiving-browsing-context
-    nsAutoString presentationURL;
-    nsContentUtils::GetPresentationURL(GetDocShell(), presentationURL);
-    if (!presentationURL.IsEmpty()) {
-      sandboxFlags |= SANDBOXED_AUXILIARY_NAVIGATION;
-    }
-  }
-
   MOZ_ALWAYS_SUCCEEDS(context->SetSandboxFlags(sandboxFlags));
 }
 
@@ -3550,10 +3576,6 @@ void nsFrameLoader::MaybeUpdatePrimaryBrowserParent(
 
 nsresult nsFrameLoader::GetNewTabContext(MutableTabContext* aTabContext,
                                          nsIURI* aURI) {
-  nsAutoString presentationURLStr;
-  mOwnerContent->GetAttr(kNameSpaceID_None, nsGkAtoms::mozpresentation,
-                         presentationURLStr);
-
   nsCOMPtr<nsIDocShell> docShell = mOwnerContent->OwnerDoc()->GetDocShell();
   nsCOMPtr<nsILoadContext> parentContext = do_QueryInterface(docShell);
   NS_ENSURE_STATE(parentContext);
@@ -3580,7 +3602,7 @@ nsresult nsFrameLoader::GetNewTabContext(MutableTabContext* aTabContext,
   uint32_t maxTouchPoints = BrowserParent::GetMaxTouchPoints(mOwnerContent);
 
   bool tabContextUpdated = aTabContext->SetTabContext(
-      chromeOuterWindowID, showFocusRings, presentationURLStr, maxTouchPoints);
+      chromeOuterWindowID, showFocusRings, maxTouchPoints);
   NS_ENSURE_STATE(tabContextUpdated);
 
   return NS_OK;

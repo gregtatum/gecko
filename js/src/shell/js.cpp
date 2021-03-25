@@ -591,6 +591,11 @@ bool shell::enableWasm = false;
 bool shell::enableSharedMemory = SHARED_MEMORY_DEFAULT;
 bool shell::enableWasmBaseline = false;
 bool shell::enableWasmOptimizing = false;
+#ifdef JS_CODEGEN_ARM64
+// Cranelift->Ion transition.  The right value for fuzzing-but-not-enabled is
+// 'false'; when we land for phase 2, we remove this flag.
+bool shell::forceWasmIon = false;
+#endif
 bool shell::enableWasmReftypes = true;
 #ifdef ENABLE_WASM_FUNCTION_REFERENCES
 bool shell::enableWasmFunctionReferences = false;
@@ -10856,6 +10861,9 @@ static bool SetContextOptions(JSContext* cx, const OptionParser& op) {
   enableWasmBaseline = true;
   enableWasmOptimizing = true;
 
+  bool commandLineRequestedWasmIon = false;
+  bool commandLineRequestedWasmCranelift = false;
+
   if (const char* str = op.getStringOption("wasm-compiler")) {
     if (strcmp(str, "none") == 0) {
       enableWasm = false;
@@ -10874,17 +10882,20 @@ static bool SetContextOptions(JSContext* cx, const OptionParser& op) {
     } else if (strcmp(str, "cranelift") == 0) {
       enableWasmBaseline = false;
       enableWasmOptimizing = true;
+      commandLineRequestedWasmCranelift = true;
     } else if (strcmp(str, "baseline+cranelift") == 0) {
       MOZ_ASSERT(enableWasmBaseline);
       enableWasmOptimizing = true;
-#else
+      commandLineRequestedWasmCranelift = true;
+#endif
     } else if (strcmp(str, "ion") == 0) {
       enableWasmBaseline = false;
       enableWasmOptimizing = true;
+      commandLineRequestedWasmIon = true;
     } else if (strcmp(str, "baseline+ion") == 0) {
       MOZ_ASSERT(enableWasmBaseline);
       enableWasmOptimizing = true;
-#endif
+      commandLineRequestedWasmIon = true;
     } else {
       return OptionFailure("wasm-compiler", str);
     }
@@ -10931,13 +10942,35 @@ static bool SetContextOptions(JSContext* cx, const OptionParser& op) {
   enableTopLevelAwait = op.getBoolOption("enable-top-level-await");
   useOffThreadParseGlobal = op.getBoolOption("off-thread-parse-global");
 
+  // ifdeffing the defs and uses of these two so as to avoid unused-variable
+  // complaints on all targets is difficult.  Simpler just to create fake uses.
+  mozilla::Unused << commandLineRequestedWasmIon;
+  mozilla::Unused << commandLineRequestedWasmCranelift;
+#ifdef JS_CODEGEN_ARM64
+  // Cranelift->Ion transition.  When we land for phase 1, this becomes
+  // wasm-force-ion (be sure to update below around line 11500), and the default
+  // value of the flag is flipped to false, see comments above.  When we land
+  // for phase 2, this goes away.
+  MOZ_ASSERT(
+      !(commandLineRequestedWasmIon && commandLineRequestedWasmCranelift));
+  if (commandLineRequestedWasmIon) {
+    forceWasmIon = true;
+  } else if (commandLineRequestedWasmCranelift) {
+    forceWasmIon = false;
+  } else {
+    forceWasmIon = op.getBoolOption("wasm-force-ion");
+  }
+#endif
+
   JS::ContextOptionsRef(cx)
       .setAsmJS(enableAsmJS)
       .setWasm(enableWasm)
       .setWasmForTrustedPrinciples(enableWasm)
       .setWasmBaseline(enableWasmBaseline)
-#ifdef ENABLE_WASM_CRANELIFT
-      .setWasmCranelift(enableWasmOptimizing)
+#if defined(ENABLE_WASM_CRANELIFT) && defined(JS_CODEGEN_ARM64)
+      // Cranelift->Ion transition
+      .setWasmCranelift(enableWasmOptimizing && !forceWasmIon)
+      .setWasmIon(enableWasmOptimizing && forceWasmIon)
 #else
       .setWasmIon(enableWasmOptimizing)
 #endif
@@ -11342,8 +11375,10 @@ static void SetWorkerContextOptions(JSContext* cx) {
       .setAsmJS(enableAsmJS)
       .setWasm(enableWasm)
       .setWasmBaseline(enableWasmBaseline)
-#ifdef ENABLE_WASM_CRANELIFT
-      .setWasmCranelift(enableWasmOptimizing)
+#if defined(ENABLE_WASM_CRANELIFT) && defined(JS_CODEGEN_ARM64)
+      // Cranelift->Ion transition
+      .setWasmCranelift(enableWasmOptimizing && !forceWasmIon)
+      .setWasmIon(enableWasmOptimizing && forceWasmIon)
 #else
       .setWasmIon(enableWasmOptimizing)
 #endif
@@ -11896,7 +11931,13 @@ int main(int argc, char** argv, char** envp) {
 #else
       !op.addBoolOption('\0', "wasm-exceptions", "No-op") ||
 #endif
-
+#ifdef JS_CODEGEN_ARM64
+      // Cranelift->Ion transition.  This disappears at Phase 2 of the landing.
+      // See sundry comments above.
+      !op.addBoolOption(
+          '\0', "wasm-force-ion",
+          "Temporary: Force Ion in builds with both Cranelift and Ion") ||
+#endif
       !op.addBoolOption('\0', "no-native-regexp",
                         "Disable native regexp compilation") ||
       !op.addIntOption(
@@ -12342,6 +12383,12 @@ int main(int argc, char** argv, char** envp) {
   }
 
   size_t nurseryBytes = op.getIntOption("nursery-size") * 1024L * 1024L;
+  if (nurseryBytes == 0) {
+    fprintf(stderr, "Error: --nursery-size parameter must be non-zero.\n");
+    fprintf(stderr,
+            "The nursery can be disabled by passing the --no-ggc option.\n");
+    return EXIT_FAILURE;
+  }
   JS_SetGCParameter(cx, JSGC_MAX_NURSERY_BYTES, nurseryBytes);
 
   auto destroyCx = MakeScopeExit([cx] { JS_DestroyContext(cx); });

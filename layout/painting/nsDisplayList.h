@@ -55,7 +55,7 @@
 
 #include <stdint.h>
 #include "nsClassHashtable.h"
-#include "nsTHashtable.h"
+#include "nsTHashSet.h"
 #include "nsTHashMap.h"
 
 #include <stdlib.h>
@@ -807,9 +807,6 @@ class nsDisplayListBuilder {
    */
   bool IsInFilter() const { return mInFilter; }
 
-  bool IsInPageSequence() const { return mInPageSequence; }
-  void SetInPageSequence(bool aInPage) { mInPageSequence = aInPage; }
-
   /**
    * Return true if we're currently building a display list for a
    * nested presshell.
@@ -932,8 +929,8 @@ class nsDisplayListBuilder {
   nsTArray<ThemeGeometry> GetThemeGeometries() const {
     nsTArray<ThemeGeometry> geometries;
 
-    for (auto iter = mThemeGeometries.ConstIter(); !iter.Done(); iter.Next()) {
-      geometries.AppendElements(*iter.Data());
+    for (const auto& data : mThemeGeometries.Values()) {
+      geometries.AppendElements(*data);
     }
 
     return geometries;
@@ -1779,7 +1776,7 @@ class nsDisplayListBuilder {
       void* mFrame;
     };
 
-    nsTHashtable<nsPtrHashKey<void>> mFrameSet;
+    nsTHashSet<void*> mFrameSet;
     nsTArray<WeakFrameWrapper> mFrames;
     nsTArray<pixman_box32_t> mRects;
 
@@ -1789,7 +1786,7 @@ class nsDisplayListBuilder {
         return;
       }
 
-      mFrameSet.PutEntry(aFrame);
+      mFrameSet.Insert(aFrame);
       mFrames.AppendElement(WeakFrameWrapper(aFrame));
       mRects.AppendElement(nsRegion::RectToBox(aRect));
     }
@@ -1939,7 +1936,7 @@ class nsDisplayListBuilder {
   // Area of animated geometry root budget already allocated
   uint32_t mUsedAGRBudget;
   // Set of frames already counted in budget
-  nsTHashtable<nsPtrHashKey<nsIFrame>> mAGRBudgetSet;
+  nsTHashSet<nsIFrame*> mAGRBudgetSet;
 
   nsTHashMap<nsPtrHashKey<RemoteBrowser>, EffectsInfo> mEffectsUpdates;
 
@@ -4482,13 +4479,6 @@ class nsDisplayBackgroundImage : public nsDisplayImageContainer {
                                     nsIFrame* aFrameForBounds = nullptr);
   ~nsDisplayBackgroundImage() override;
 
-  bool RestoreState() override {
-    bool superChanged = nsDisplayImageContainer::RestoreState();
-    bool opacityChanged = (mOpacity != 1.0f);
-    mOpacity = 1.0f;
-    return (superChanged || opacityChanged);
-  }
-
   NS_DISPLAY_DECL_NAME("Background", TYPE_BACKGROUND)
 
   /**
@@ -4528,13 +4518,6 @@ class nsDisplayBackgroundImage : public nsDisplayImageContainer {
                            bool* aSnap) const override;
   mozilla::Maybe<nscolor> IsUniform(
       nsDisplayListBuilder* aBuilder) const override;
-
-  bool CanApplyOpacity() const override { return true; }
-
-  void ApplyOpacity(nsDisplayListBuilder* aBuilder, float aOpacity,
-                    const DisplayItemClipChain* aClip) override {
-    mOpacity = aOpacity;
-  }
 
   /**
    * GetBounds() returns the background painting area.
@@ -4644,7 +4627,6 @@ class nsDisplayBackgroundImage : public nsDisplayImageContainer {
   /* Whether the image should be treated as fixed to the viewport. */
   bool mShouldFixToViewport;
   uint32_t mImageFlags;
-  float mOpacity;
 };
 
 /**

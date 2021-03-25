@@ -214,9 +214,9 @@ class BrowserParent final : public PBrowserParent,
   template <typename Callback>
   void VisitAllDescendants(Callback aCallback) {
     const auto& browserBridges = ManagedPBrowserBridgeParent();
-    for (auto iter = browserBridges.ConstIter(); !iter.Done(); iter.Next()) {
+    for (const auto& key : browserBridges) {
       BrowserBridgeParent* browserBridge =
-          static_cast<BrowserBridgeParent*>(iter.Get()->GetKey());
+          static_cast<BrowserBridgeParent*>(key);
       BrowserParent* browserParent = browserBridge->GetBrowserParent();
 
       aCallback(browserParent);
@@ -230,9 +230,9 @@ class BrowserParent final : public PBrowserParent,
   template <typename Callback>
   void VisitChildren(Callback aCallback) {
     const auto& browserBridges = ManagedPBrowserBridgeParent();
-    for (auto iter = browserBridges.ConstIter(); !iter.Done(); iter.Next()) {
+    for (const auto& key : browserBridges) {
       BrowserBridgeParent* browserBridge =
-          static_cast<BrowserBridgeParent*>(iter.Get()->GetKey());
+          static_cast<BrowserBridgeParent*>(key);
       aCallback(browserBridge);
     }
   }
@@ -473,6 +473,11 @@ class BrowserParent final : public PBrowserParent,
   DimensionInfo GetDimensionInfo();
 
   nsresult UpdatePosition();
+
+  // Notify position update to all descendant documents in this browser parent.
+  // NOTE: This should use only for browsers in popup windows attached to the
+  // main browser window.
+  void NotifyPositionUpdatedForContentsInPopup();
 
   void SizeModeChanged(const nsSizeMode& aSizeMode);
 

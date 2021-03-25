@@ -429,8 +429,8 @@ a11y::DocAccessibleParent* BrowserParent::GetTopLevelDocAccessible() const {
   // document accessible.
   const ManagedContainer<PDocAccessibleParent>& docs =
       ManagedPDocAccessibleParent();
-  for (auto iter = docs.ConstIter(); !iter.Done(); iter.Next()) {
-    auto doc = static_cast<a11y::DocAccessibleParent*>(iter.Get()->GetKey());
+  for (auto* key : docs) {
+    auto* doc = static_cast<a11y::DocAccessibleParent*>(key);
     // We want the document for this BrowserParent even if it's for an
     // embedded out-of-process iframe. Therefore, we use
     // IsTopLevelInContentProcess. In contrast, using IsToplevel would only
@@ -630,9 +630,8 @@ void BrowserParent::DestroyInternal() {
   // is shut down.
   const ManagedContainer<PPluginWidgetParent>& kids =
       ManagedPPluginWidgetParent();
-  for (auto iter = kids.ConstIter(); !iter.Done(); iter.Next()) {
-    static_cast<mozilla::plugins::PluginWidgetParent*>(iter.Get()->GetKey())
-        ->ParentDestroy();
+  for (const auto& key : kids) {
+    static_cast<mozilla::plugins::PluginWidgetParent*>(key)->ParentDestroy();
   }
 #endif
 }
@@ -1063,6 +1062,20 @@ nsresult BrowserParent::UpdatePosition() {
                     NS_ERROR_FAILURE);
   UpdateDimensions(windowDims, mDimensions);
   return NS_OK;
+}
+
+void BrowserParent::NotifyPositionUpdatedForContentsInPopup() {
+  if (CanonicalBrowsingContext* bc = GetBrowsingContext()) {
+    bc->PreOrderWalk([](BrowsingContext* aContext) {
+      if (WindowGlobalParent* windowGlobalParent =
+              aContext->Canonical()->GetCurrentWindowGlobal()) {
+        if (RefPtr<BrowserParent> browserParent =
+                windowGlobalParent->GetBrowserParent()) {
+          browserParent->UpdatePosition();
+        }
+      }
+    });
+  }
 }
 
 void BrowserParent::UpdateDimensions(const nsIntRect& rect,
@@ -4123,10 +4136,21 @@ mozilla::ipc::IPCResult BrowserParent::RecvIsWindowSupportingWebVR(
   return IPC_OK();
 }
 
+static BrowserParent* GetTopLevelBrowserParent(BrowserParent* aBrowserParent) {
+  MOZ_ASSERT(aBrowserParent);
+  BrowserParent* parent = aBrowserParent;
+  while (BrowserBridgeParent* bridge = parent->GetBrowserBridgeParent()) {
+    parent = bridge->Manager();
+  }
+  return parent;
+}
+
 mozilla::ipc::IPCResult BrowserParent::RecvRequestPointerLock(
     RequestPointerLockResolver&& aResolve) {
   nsCString error;
-  if (!PointerLockManager::SetLockedRemoteTarget(this)) {
+  if (sTopLevelWebFocus != GetTopLevelBrowserParent(this)) {
+    error = "PointerLockDeniedNotFocused";
+  } else if (!PointerLockManager::SetLockedRemoteTarget(this)) {
     error = "PointerLockDeniedInUse";
   } else {
     PointerEventHandler::ReleaseAllPointerCaptureRemoteTarget();

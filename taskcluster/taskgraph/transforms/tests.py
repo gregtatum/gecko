@@ -393,7 +393,11 @@ test_description_schema = Schema(
         # build task's run-on-projects, meaning that tests run only on platforms
         # that are built.
         Optional("run-on-projects"): optionally_keyed_by(
-            "test-platform", "test-name", "variant", Any([text_type], "built-projects")
+            "app",
+            "test-platform",
+            "test-name",
+            "variant",
+            Any([text_type], "built-projects"),
         ),
         # When set only run on projects where the build would already be running.
         # This ensures tasks where this is True won't be the cause of the build
@@ -970,9 +974,6 @@ def setup_browsertime(config, tasks):
             yield task
             continue
 
-        # This is appropriate as the browsertime task variants mature.
-        task["tier"] = max(task["tier"], 1)
-
         ts = {
             "by-test-platform": {
                 "android.*": ["browsertime", "linux64-geckodriver", "linux64-node"],
@@ -1200,10 +1201,6 @@ def split_variants(config, tasks):
             taskv["treeherder-symbol"] = join_symbol(group, symbol)
 
             taskv.update(variant.get("replace", {}))
-
-            if task["suite"] == "raptor":
-                taskv["tier"] = max(taskv["tier"], 2)
-
             yield merge(taskv, variant.get("merge", {}))
 
 
@@ -1383,6 +1380,23 @@ def handle_tier(config, tasks):
             else:
                 task["tier"] = 2
 
+        yield task
+
+
+@transforms.add
+def apply_raptor_tier_optimization(config, tasks):
+    for task in tasks:
+        if task["suite"] != "raptor":
+            yield task
+            continue
+
+        if not task["test-platform"].startswith("android-hw"):
+            task["optimization"] = {"skip-unless-expanded": None}
+            if task["tier"] > 1:
+                task["optimization"] = {"skip-unless-backstop": None}
+
+        if task["attributes"].get("unittest_variant"):
+            task["tier"] = max(task["tier"], 2)
         yield task
 
 
@@ -1671,13 +1685,7 @@ def enable_webrender(config, tasks):
     """
     for task in tasks:
         if task.get("webrender"):
-            extra_options = task.get("mozharness", {}).get("extra-options", [])
-
-            if task["attributes"]["unittest_category"] in ["raptor"] and (
-                "--app=chrome" in extra_options or "--app=chromium" in extra_options
-            ):
-                continue
-
+            extra_options = task["mozharness"].setdefault("extra-options", [])
             extra_options.append("--enable-webrender")
             # We only want to 'setpref' on tests that have a profile
             if not task["attributes"]["unittest_category"] in [
@@ -1760,12 +1768,12 @@ def set_worker_type(config, tasks):
             # This test already has its worker type defined, so just use that (yields below)
             pass
         elif test_platform.startswith("macosx1014-64"):
+            task["worker-type"] = MACOSX_WORKER_TYPES["macosx1014-64"]
+        elif test_platform.startswith("macosx1015-64"):
             if "--power-test" in task["mozharness"]["extra-options"]:
                 task["worker-type"] = MACOSX_WORKER_TYPES["macosx1014-64-power"]
             else:
-                task["worker-type"] = MACOSX_WORKER_TYPES["macosx1014-64"]
-        elif test_platform.startswith("macosx1015-64"):
-            task["worker-type"] = MACOSX_WORKER_TYPES["macosx1015-64"]
+                task["worker-type"] = MACOSX_WORKER_TYPES["macosx1015-64"]
         elif test_platform.startswith("win"):
             # figure out what platform the job needs to run on
             if task["virtualization"] == "hardware":

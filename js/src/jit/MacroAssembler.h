@@ -268,6 +268,48 @@ constexpr uint32_t WasmCallerTLSOffsetBeforeCall =
 constexpr uint32_t WasmCalleeTLSOffsetBeforeCall =
     wasm::FrameWithTls::calleeTLSOffset() + ShadowStackSpace;
 
+// [SMDOC] Code generation invariants (incomplete)
+//
+// ## 64-bit GPRs carrying 32-bit values
+//
+// At least at the end of every JS or Wasm operation (= SpiderMonkey bytecode or
+// Wasm bytecode; this is necessarily a little vague), if a 64-bit GPR has a
+// 32-bit value, then the upper 32 bits of the register may be predictable in
+// accordance with platform-specific rules, as follows.
+//
+// - On x64 and arm64, the upper bits are zero
+// - On mips64 the upper bits are the sign extension of the lower bits
+// - (On risc-v we have no rule, having no port yet.  Sign extension is the most
+//   likely rule, but "unpredictable" is an option.)
+//
+// In most cases no extra work needs to be done to maintain the invariant:
+//
+// - 32-bit operations on x64 and arm64 zero-extend the result to 64 bits.
+//   These operations ignore the upper bits of the inputs.
+// - 32-bit operations on mips64 sign-extend the result to 64 bits (even many
+//   that are labeled as "unsigned", eg ADDU, though not all, eg LU).
+//   Additionally, the inputs to many 32-bit operations must be properly
+//   sign-extended to avoid "unpredictable" behavior, and our simulators check
+//   that inputs conform.
+// - (32-bit operations on risc-v sign-extend, much as mips, but appear to
+//   ignore the upper bits of the inputs.)
+//
+// The upshot of these invariants is, among other things, that:
+//
+// - No code needs to be generated when a 32-bit value is extended to 64 bits
+//   or a 64-bit value is wrapped to 32 bits, if the upper bits are known to be
+//   correct because they resulted from an operation that produced them
+//   predictably.
+// - Literal loads must be careful to avoid instructions that might extend the
+//   literal in the wrong way.
+// - Code that produces values using intermediate values with non-canonical
+//   extensions must extend according to platform conventions before being
+//   "done".
+//
+// All optimizations are necessarily platform-specific and should only be used
+// in platform-specific code.  We may add architectures in the future that do
+// not follow the patterns of the few architectures we already have.
+
 // The public entrypoint for emitting assembly. Note that a MacroAssembler can
 // use cx->lifoAlloc, so take care not to interleave masm use with other
 // lifoAlloc use if one will be destroyed before the other.
@@ -2103,11 +2145,8 @@ class MacroAssembler : public MacroAssemblerSpecific {
 
   // Swizzle - permute with variable indices.  `rhs` holds the lanes parameter.
 
-  inline void swizzleInt8x16(FloatRegister rhs, FloatRegister lhsDest,
-                             FloatRegister temp) DEFINED_ON(x86_shared);
-
   inline void swizzleInt8x16(FloatRegister rhs, FloatRegister lhsDest)
-      DEFINED_ON(arm64);
+      DEFINED_ON(x86_shared, arm64);
 
   // Integer Add
 
@@ -2387,6 +2426,9 @@ class MacroAssembler : public MacroAssemblerSpecific {
   inline void absInt32x4(FloatRegister src, FloatRegister dest)
       DEFINED_ON(x86_shared, arm64);
 
+  inline void absInt64x2(FloatRegister src, FloatRegister dest)
+      DEFINED_ON(x86_shared, arm64);
+
   // Left shift by scalar.  Immediates must have been masked; shifts of zero
   // will work but may or may not generate code.
 
@@ -2539,6 +2581,14 @@ class MacroAssembler : public MacroAssemblerSpecific {
   inline void bitwiseSelectSimd128(FloatRegister onTrue, FloatRegister onFalse,
                                    FloatRegister maskDest) DEFINED_ON(arm64);
 
+  // Population count
+
+  inline void popcntInt8x16(FloatRegister src, FloatRegister dest,
+                            FloatRegister temp) DEFINED_ON(x86_shared);
+
+  inline void popcntInt8x16(FloatRegister src, FloatRegister dest)
+      DEFINED_ON(arm64);
+
   // Any lane true, ie, any bit set
 
   inline void anyTrueSimd128(FloatRegister src, Register dest)
@@ -2625,10 +2675,17 @@ class MacroAssembler : public MacroAssemblerSpecific {
                                      FloatRegister temp1, FloatRegister temp2)
       DEFINED_ON(x86_shared);
 
-  // On x86_shared, limited to !=, ==
+  inline void compareForEqualityInt64x2(Assembler::Condition cond,
+                                        FloatRegister rhs,
+                                        FloatRegister lhsDest)
+      DEFINED_ON(x86_shared);
+
+  inline void compareForOrderingInt64x2(
+      Assembler::Condition cond, FloatRegister rhs, FloatRegister lhsDest,
+      FloatRegister temp1, FloatRegister temp2) DEFINED_ON(x86_shared);
+
   inline void compareInt64x2(Assembler::Condition cond, FloatRegister rhs,
-                             FloatRegister lhsDest)
-      DEFINED_ON(x86_shared, arm64);
+                             FloatRegister lhsDest) DEFINED_ON(arm64);
 
   inline void compareFloat32x4(Assembler::Condition cond, FloatRegister rhs,
                                FloatRegister lhsDest)
@@ -2770,6 +2827,22 @@ class MacroAssembler : public MacroAssemblerSpecific {
 
   inline void mulFloat64x2(const SimdConstant& rhs, FloatRegister lhsDest)
       DEFINED_ON(x86_shared);
+
+  // Pairwise add
+
+  inline void extAddPairwiseInt8x16(FloatRegister src, FloatRegister dest)
+      DEFINED_ON(x86_shared, arm64);
+
+  inline void unsignedExtAddPairwiseInt8x16(FloatRegister src,
+                                            FloatRegister dest)
+      DEFINED_ON(x86_shared, arm64);
+
+  inline void extAddPairwiseInt16x8(FloatRegister src, FloatRegister dest)
+      DEFINED_ON(x86_shared, arm64);
+
+  inline void unsignedExtAddPairwiseInt16x8(FloatRegister src,
+                                            FloatRegister dest)
+      DEFINED_ON(x86_shared, arm64);
 
   // Floating square root
 
@@ -4023,6 +4096,8 @@ class MacroAssembler : public MacroAssemblerSpecific {
 
     call(preBarrier);
     Pop(PreBarrierReg);
+    // On arm64, SP may be < PSP now (that's OK).
+    // eg testcase: tests/auto-regress/bug702915.js
     bind(&done);
   }
 

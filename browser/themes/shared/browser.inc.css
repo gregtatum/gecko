@@ -22,18 +22,29 @@
   --short-notification-background: #0250BB;
   --short-notification-gradient: #9059FF;
 
-  --buttons-secondary-bgcolor: hsla(0,0%,80%,.3);
-  --buttons-secondary-hover-bgcolor: hsla(0,0%,80%,.5);
-  --buttons-secondary-active-bgcolor: hsla(0,0%,80%,.8);
-  --buttons-secondary-color: currentColor;
+  --button-bgcolor: color-mix(in srgb, currentColor 13%, transparent);
+  --button-hover-bgcolor: color-mix(in srgb, currentColor 17%, transparent);
+  --button-active-bgcolor: color-mix(in srgb, currentColor 30%, transparent);
+  --button-color: currentColor;
+
+  --buttons-destructive-bgcolor: #e22850;
+  --buttons-destructive-hover-bgcolor: #c50042;
+  --buttons-destructive-active-bgcolor: #810220;
+  --buttons-destructive-color: #fbfbfe;
+
+  --arrowpanel-dimmed: color-mix(in srgb, currentColor 17%, transparent);
+  --arrowpanel-dimmed-further: color-mix(in srgb, currentColor 30%, transparent);
+  --arrowpanel-dimmed-even-further: color-mix(in srgb, currentColor 35%, transparent);
 
   --identity-box-margin-inline: 4px;
   --identity-box-label-opacity: .8;
-  --urlbar-box-bg-overlay: hsla(0,0%,70%,.2);
-  --urlbar-box-unfocused-bg-overlay: hsla(0,0%,100%,.7);
+  --urlbar-box-bgcolor: var(--button-bgcolor);
+  --urlbar-box-hover-bgcolor: color-mix(in srgb, var(--urlbar-box-bgcolor), currentColor 12%);
+  --urlbar-box-active-bgcolor: color-mix(in srgb, var(--urlbar-box-bgcolor), currentColor 21%);
 
   --urlbar-min-height: 32px;
   --urlbar-icon-padding: 6px; /* (32px - 2px border - 2px padding - 16px icon) / 2 */
+  --urlbar-separator-color: var(--panel-separator-color);
 
   --lwt-additional-images: none;
   --lwt-background-alignment: right top;
@@ -47,9 +58,7 @@
     --identity-box-margin-inline: 3px;
     --identity-box-label-opacity: .6;
   }
-}
-
-/*** END !proton ***/
+} /*** END !proton ***/
 
 :root[uidensity=compact] {
   --urlbar-min-height: 26px;
@@ -97,13 +106,7 @@
 }
 
 :root[lwt-toolbar-field-brighttext] {
-  --urlbar-box-unfocused-bg-overlay: var(--urlbar-box-bg-overlay);
   --lwt-popup-brighttext-url-color: #00ddff;
-}
-@media (prefers-contrast) {
-  :root {
-    --urlbar-box-unfocused-bg-overlay: var(--urlbar-box-bg-overlay)
-  }
 }
 } /*** END proton ***/
 
@@ -149,7 +152,7 @@
   border-bottom-style: none;
 }
 
-@supports -moz-bool-pref("browser.proton.toolbar.enabled") {
+@supports -moz-bool-pref("browser.proton.enabled") {
 /* Add space to beginning of toolbar and make that space click the first <toolbarbutton> */
 #nav-bar-customization-target > :is(toolbarbutton, toolbaritem):first-child,
 #nav-bar-customization-target > toolbarpaletteitem:first-child > :is(toolbarbutton, toolbaritem) {
@@ -172,13 +175,13 @@
   max-height: 4em;
 }
 
-@supports not -moz-bool-pref("browser.proton.toolbar.enabled") {
+@supports not -moz-bool-pref("browser.proton.enabled") {
 #PersonalToolbar {
   padding: 2px 6px;
 }
 } /*** END !proton ***/
 
-@supports -moz-bool-pref("browser.proton.toolbar.enabled") {
+@supports -moz-bool-pref("browser.proton.enabled") {
 #PersonalToolbar {
   padding-inline: 6px;
 }
@@ -307,6 +310,12 @@ menupopup::part(drop-indicator) {
 :root:not([lwtheme-image]) .browserContainer > findbar:-moz-lwtheme:-moz-window-inactive {
   background-color: var(--lwt-accent-color-inactive, var(--lwt-accent-color));
 }
+
+@supports -moz-bool-pref("browser.proton.enabled") {
+.browserContainer > findbar {
+  padding: 6px;
+}
+} /*** END proton ***/
 
 /* Private browsing and accessibility indicators */
 
@@ -793,7 +802,7 @@ menupopup::part(drop-indicator) {
 .ac-dropmarker::part(icon) {
   list-style-image: url(chrome://global/skin/icons/arrow-dropdown-12.svg);
   -moz-context-properties: fill;
-  fill: -moz-DialogText;
+  fill: var(--input-color, -moz-DialogText);
 }
 
 .ac-has-end-icon {
@@ -836,11 +845,6 @@ menupopup::part(drop-indicator) {
   background-color: rgb(0,62,170);
 }
 
-.webRTC-selectDevice-label {
-  margin-top: 6px;
-  font-weight: 600;
-}
-
 .webRTC-selectDevice-selector-container {
   display: flex;
   align-items: center;
@@ -851,6 +855,11 @@ menupopup::part(drop-indicator) {
 }
 
 @supports not -moz-bool-pref("browser.proton.doorhangers.enabled") {
+.webRTC-selectDevice-label {
+  margin-top: 6px;
+  font-weight: 600;
+}
+
 #webRTC-selectCamera-icon,
 #webRTC-selectMicrophone-icon {
   display: none;
@@ -858,6 +867,18 @@ menupopup::part(drop-indicator) {
 } /** END not Proton **/
 
 @supports -moz-bool-pref("browser.proton.doorhangers.enabled") {
+popupnotificationcontent {
+  margin-block-start: 8px;
+}
+
+.popup-notification-checkbox {
+  margin-block: 8px 0;
+}
+
+.popup-notification-body-container {
+  padding-block-end: 0;
+}
+
 #webRTC-selectCamera-label,
 #webRTC-selectMicrophone-label {
   display: none;
@@ -866,6 +887,7 @@ menupopup::part(drop-indicator) {
 .webRTC-selectDevice-icon {
   -moz-context-properties: fill;
   fill: currentColor;
+  margin-inline-end: 6px;
 }
 
 #webRTC-selectCamera-icon {
@@ -874,6 +896,52 @@ menupopup::part(drop-indicator) {
 
 #webRTC-selectMicrophone-icon {
   list-style-image: url("chrome://browser/skin/notification-icons/microphone.svg");
+}
+
+.popup-notification-body :is(description, label, checkbox, input) {
+  margin-inline-start: 0;
+}
+
+.popup-notification-body html|input {
+  padding: 8px;
+  border-radius: 4px;
+  border: 0;
+  outline: 1px solid var(--input-border-color, ThreeDShadow);
+  background-color: var(--input-bgcolor, Field);
+  color: var(--input-color, FieldText);
+}
+
+.popup-notification-body html|input:focus-visible {
+  outline: 2px solid var(--focus-outline-color);
+}
+
+/**
+ * There's already a margin-block-start of 8px on popupnotificationcontent,
+ * so the first label only needs 8px of margin-block-start to match the
+ * spec.
+ */
+.password-notification-label:first-of-type {
+  margin-block-start: 8px;
+}
+
+.password-notification-label:not(:first-of-type) {
+  margin-block-start: 16px;
+}
+
+#password-notification-visibilityToggle {
+  margin-block-start: 14px;
+}
+
+#password-notification-visibilityToggle > .checkbox-label-box > .checkbox-label {
+  opacity: 0.7;
+}
+
+.popup-notification-description > b {
+  font-weight: inherit;
+}
+
+.popup-notification-description {
+  font-weight: 600;
 }
 } /** END Proton **/
 

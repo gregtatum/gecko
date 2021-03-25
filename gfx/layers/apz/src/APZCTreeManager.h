@@ -565,6 +565,10 @@ class APZCTreeManager : public IAPZCTreeManager, public APZInputBridge {
     // Make it move-only.
     HitTestResult(HitTestResult&&) = default;
     HitTestResult& operator=(HitTestResult&&) = default;
+
+    // Make a copy of all the fields except mScrollbarNode (the field
+    // that makes this move-only).
+    HitTestResult CopyWithoutScrollbarNode() const;
   };
 
   /* Some helper functions to find an APZC given some identifying input. These
@@ -675,7 +679,28 @@ class APZCTreeManager : public IAPZCTreeManager, public APZInputBridge {
   HitTestResult GetTouchInputBlockAPZC(
       const MultiTouchInput& aEvent,
       nsTArray<TouchBehaviorFlags>* aOutTouchBehaviors);
-  APZEventResult ProcessTouchInput(MultiTouchInput& aInput);
+
+  /**
+   * A helper structure for use by ReceiveInputEvent() and its helpers.
+   */
+  struct InputHandlingState {
+    // A reference to the event being handled.
+    InputData& mEvent;
+
+    // The value that will be returned by ReceiveInputEvent().
+    APZEventResult mResult;
+
+    // If we performed a hit-test while handling this input event, or
+    // reused the result of a previous hit-test in the input block,
+    // this is populated with the result of the hit test.
+    HitTestResult mHit;
+
+    // Called at the end of ReceiveInputEvent() to perform any final
+    // computations, and then return mResult.
+    APZEventResult Finish() const;
+  };
+
+  void ProcessTouchInput(InputHandlingState& aState, MultiTouchInput& aInput);
   /**
    * Given a mouse-down event that hit a scroll thumb node, set up APZ
    * dragging of the scroll thumb.
