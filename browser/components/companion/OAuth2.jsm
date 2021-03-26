@@ -148,7 +148,7 @@ class OAuth2 {
   tokenExpires = null;
 
   async getToken() {
-    if (this.accessToken && this.tokenExpires < Date.now()) {
+    if (this.accessToken && this.tokenExpires > Date.now()) {
       return this.accessToken;
     }
 
