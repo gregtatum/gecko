@@ -11,6 +11,8 @@ const { LastSession } = ChromeUtils.import(
   "resource:///modules/sessionstore/SessionStore.jsm"
 );
 
+const NUM_KEYFRAMES = 20;
+
 let sessionStart = new Date();
 let lastSessionEnd = LastSession.getState()?.session?.lastUpdate;
 
@@ -158,7 +160,7 @@ export class KeyframeList extends HidableElement {
 
       return new Keyframe(frame);
     });
-    this.replaceChildren(...elements);
+    this.replaceChildren(...elements.slice(0, NUM_KEYFRAMES));
 
     if (!elements.length) {
       this.hidden = true;
