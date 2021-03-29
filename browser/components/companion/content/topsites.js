@@ -74,7 +74,6 @@ export class TopSites extends HTMLElement {
     results.root.containerOpen = true;
 
     try {
-      let frames = [];
       let domains = new Set();
 
       for (let i = 0; i < results.root.childCount; ++i) {
@@ -99,7 +98,7 @@ export class TopSites extends HTMLElement {
             })
           );
         }
-        if (frames.length == NUM_TOPSITES) {
+        if (this.childNodes.length == NUM_TOPSITES) {
           break;
         }
       }
