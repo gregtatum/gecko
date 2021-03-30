@@ -578,6 +578,14 @@
   value: false
   mirror: always
 
+# The "test async scroll offset" (used via reftest-async-scroll
+# or nsIDOMWindowUtils.setAsyncScrollOffset()) can be used to
+# trigger overscroll. Used for tests only.
+- name: apz.overscroll.test_async_scroll_offset.enabled
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
 - name: apz.overscroll.min_pan_distance_ratio
   type: AtomicFloat
   value: 1.0f
@@ -1006,7 +1014,7 @@
 # Whether focus rings are always shown by default.
 #
 # This is the initial value of nsWindowRoot::mShowFocusRings, but it can be
-# overridden by system preferences. 
+# overridden by system preferences.
 - name: browser.display.show_focus_rings
   type: bool
   value: false
@@ -1107,6 +1115,12 @@
   value: false
   mirror: always
 
+# Enable Proton restyle. Requires restart.
+- name: browser.proton.enabled
+  type: bool
+  value: false
+  mirror: always
+
 # Blocked plugin content
 - name: browser.safebrowsing.blockedURIs.enabled
   type: bool
@@ -1137,11 +1151,25 @@
   value: 512*1024
   mirror: always
 
-# ContentSessionStore prefs
+# SessionStore prefs
 # Maximum number of bytes of DOMSessionStorage data we collect per origin.
 - name: browser.sessionstore.dom_storage_limit
   type: uint32_t
   value: 2048
+  mirror: always
+
+# Minimal interval between two save operations in milliseconds (while the user is active).
+- name: browser.sessionstore.interval
+  type: uint32_t
+  value: 15000
+  mirror: always
+
+# Causes SessionStore to ignore non-final update messages from
+# browser tabs that were not caused by a flush from the parent.
+# This is a testing flag and should not be used by end-users.
+- name: browser.sessionstore.debug.no_auto_updates
+  type: bool
+  value: false
   mirror: always
 
 # If set, use DocumentChannel to directly initiate loads entirely
@@ -1751,7 +1779,7 @@
 # Whether event timing will be gathered and returned by performance observer*
 - name: dom.enable_event_timing
   type: RelaxedAtomicBool
-  value: @IS_NIGHTLY_BUILD@
+  value: true
   mirror: always
 
 # Whether performance.GetEntries* will contain an entry for the active document
@@ -4202,7 +4230,11 @@
 
 - name: gfx.color_management.enablev4
   type: RelaxedAtomicBool
+#if defined(XP_MACOSX) && defined(NIGHTLY_BUILD)
+  value: true
+#else
   value: false
+#endif
   mirror: always
 
 # 0 = Off, 1 = Full, 2 = Tagged Images Only.
@@ -4763,7 +4795,11 @@
 # Whether or not to fallback from WebRender to Software WebRender.
 - name: gfx.webrender.fallback.software
   type: bool
+#if defined(MOZ_WIDGET_ANDROID)
+  value: false
+#else
   value: @IS_NIGHTLY_BUILD@
+#endif
   mirror: once
 
 #ifdef XP_WIN
@@ -5153,6 +5189,27 @@
   type: RelaxedAtomicBool
   value: true
   mirror: always
+
+# Force unmapping of unused shared surfaces after a timeout period or when we
+# encounter virtual memory pressure. By default this is only enabled on 32-bit
+# Firefox.
+- name: image.mem.shared.unmap.force-enabled
+  type: bool
+  value: false
+  mirror: once
+
+# Minimum timeout to unmap shared surfaces since they have been last used,
+# in milliseconds.
+- name: image.mem.shared.unmap.min_expiration_ms
+  type: uint32_t
+  value: 60*1000
+  mirror: once
+
+# Mininum size for shared surfaces to consider unmapping, in kilobytes.
+- name: image.mem.shared.unmap.min_threshold_kb
+  type: uint32_t
+  value: 100
+  mirror: once
 
 # How much of the data in the surface cache is discarded when we get a memory
 # pressure notification, as a fraction. The discard factor is interpreted as a
@@ -6407,6 +6464,13 @@
 - name: layout.css.font-variations.enabled
   type: RelaxedAtomicBool
   value: true
+  mirror: always
+  rust: true
+
+# Is support for the size-adjust @font-face descriptor enabled?
+- name: layout.css.size-adjust.enabled
+  type: RelaxedAtomicBool
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
   rust: true
 
@@ -8426,6 +8490,12 @@
   value: false
   mirror: always
 
+# The cookieBehavior to be used in Private Browsing mode.
+- name: network.cookie.cookieBehavior.pbmode
+  type: RelaxedAtomicInt32
+  value: 0 # accept all cookies
+  mirror: always
+
 # Stale threshold for cookies in seconds.
 - name: network.cookie.staleThreshold
   type: uint32_t
@@ -9243,6 +9313,41 @@
 - name: nglayout.debug.widget_update_flashing
   type: RelaxedAtomicBool
   value: false
+  mirror: always
+
+- name: nglayout.initialpaint.delay
+  type: int32_t
+  value: 5
+  mirror: always
+
+- name: nglayout.initialpaint.delay_in_oopif
+  type: int32_t
+  value: 5
+  mirror: always
+
+# Whether we should unsuppress painting from the initial paint timer when
+# there's no CSS background specified on the page.
+- name: nglayout.initialpaint.unsuppress_with_no_background
+  type: bool
+  value: false
+  mirror: always
+
+# If we retried, what is the extra delay we should use.
+# Note that this increment is multiplied for the current retry number.
+- name: nglayout.initialpaint.retry.extra_delay
+  type: int32_t
+  # Somewhat arbitrary, but not too high so as to miss lots of frames if the
+  # page begins to get styled. Note that we forcefully unsuppress when the load
+  # event arrives too, or on max retries, so this won't block painting if the
+  # page has loaded.
+  value: 25
+  mirror: always
+
+- name: nglayout.initialpaint.retry.max_retry_count
+  type: int32_t
+  # This gives us 5 + 30 + 55 + ... 380 == 2705ms before forcibly
+  # unsuppressing, which seems plenty.
+  value: 15
   mirror: always
 
 #---------------------------------------------------------------------------

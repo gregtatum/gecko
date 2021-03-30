@@ -61,6 +61,8 @@ function commonDialogOnLoad() {
         title = { l10nId: "common-dialog-title-unknown" };
       }
     }
+
+    dialog.setAttribute("buttonpack", "end");
   }
   root.setAttribute("headertitle", JSON.stringify(title));
 
@@ -72,6 +74,7 @@ function commonDialogOnLoad() {
     password1Container: document.getElementById("password1Container"),
     password1Textbox: document.getElementById("password1Textbox"),
     password1Label: document.getElementById("password1Label"),
+    infoRow: document.getElementById("infoRow"),
     infoBody: document.getElementById("infoBody"),
     infoTitle: document.getElementById("infoTitle"),
     infoIcon: document.getElementById("infoIcon"),

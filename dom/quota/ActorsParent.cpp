@@ -2389,12 +2389,14 @@ int64_t GetLastModifiedTime(PersistenceType aPersistenceType, nsIFile& aFile) {
 Result<bool, nsresult> EnsureDirectory(nsIFile& aDirectory) {
   AssertIsOnIOThread();
 
+  // Callers call this function without checking if the file already exists
+  // (idempotent usage). QM_OR_ELSE_WARN is not used here since we want to
+  // ignore NS_ERROR_FILE_ALREADY_EXISTS completely.
   QM_TRY_INSPECT(
       const auto& exists,
-      QM_OR_ELSE_WARN(MOZ_TO_RESULT_INVOKE(aDirectory, Create,
-                                           nsIFile::DIRECTORY_TYPE, 0755)
-                          .map([](Ok) { return false; }),
-                      (ErrToOkOrErr<NS_ERROR_FILE_ALREADY_EXISTS, true>)));
+      MOZ_TO_RESULT_INVOKE(aDirectory, Create, nsIFile::DIRECTORY_TYPE, 0755)
+          .map([](Ok) { return false; })
+          .orElse(ErrToOkOrErr<NS_ERROR_FILE_ALREADY_EXISTS, true>));
 
   if (exists) {
     QM_TRY_INSPECT(const bool& isDirectory,
@@ -2405,17 +2407,17 @@ Result<bool, nsresult> EnsureDirectory(nsIFile& aDirectory) {
   return !exists;
 }
 
-enum FileFlag { kTruncateFileFlag, kUpdateFileFlag, kAppendFileFlag };
+enum FileFlag { Truncate, Update, Append };
 
 Result<nsCOMPtr<nsIOutputStream>, nsresult> GetOutputStream(
     nsIFile& aFile, FileFlag aFileFlag) {
   AssertIsOnIOThread();
 
   switch (aFileFlag) {
-    case kTruncateFileFlag:
+    case FileFlag::Truncate:
       QM_TRY_RETURN(NS_NewLocalFileOutputStream(&aFile));
 
-    case kUpdateFileFlag: {
+    case FileFlag::Update: {
       QM_TRY_INSPECT(const bool& exists, MOZ_TO_RESULT_INVOKE(&aFile, Exists));
 
       if (!exists) {
@@ -2430,7 +2432,7 @@ Result<nsCOMPtr<nsIOutputStream>, nsresult> GetOutputStream(
       return outputStream;
     }
 
-    case kAppendFileFlag:
+    case FileFlag::Append:
       QM_TRY_RETURN(NS_NewLocalFileOutputStream(
           &aFile, PR_WRONLY | PR_CREATE_FILE | PR_APPEND));
 
@@ -2502,7 +2504,7 @@ nsresult CreateDirectoryMetadata(nsIFile& aDirectory, int64_t aTimestamp,
   QM_TRY(file->Append(nsLiteralString(METADATA_TMP_FILE_NAME)));
 
   QM_TRY_INSPECT(const auto& stream,
-                 GetBinaryOutputStream(*file, kTruncateFileFlag));
+                 GetBinaryOutputStream(*file, FileFlag::Truncate));
   MOZ_ASSERT(stream);
 
   QM_TRY(stream->Write64(aTimestamp));
@@ -2534,7 +2536,7 @@ nsresult CreateDirectoryMetadata2(nsIFile& aDirectory, int64_t aTimestamp,
   QM_TRY(file->Append(nsLiteralString(METADATA_V2_TMP_FILE_NAME)));
 
   QM_TRY_INSPECT(const auto& stream,
-                 GetBinaryOutputStream(*file, kTruncateFileFlag));
+                 GetBinaryOutputStream(*file, FileFlag::Truncate));
   MOZ_ASSERT(stream);
 
   QM_TRY(stream->Write64(aTimestamp));
@@ -7604,7 +7606,7 @@ nsresult SaveOriginAccessTimeOp::DoDirectoryWork(QuotaManager& aQuotaManager) {
     QM_TRY(file->Append(nsLiteralString(METADATA_V2_FILE_NAME)));
 
     QM_TRY_INSPECT(const auto& stream,
-                   GetBinaryOutputStream(*file, kUpdateFileFlag));
+                   GetBinaryOutputStream(*file, FileFlag::Update));
     MOZ_ASSERT(stream);
 
     QM_TRY(stream->Write64(mTimestamp));
@@ -9325,7 +9327,7 @@ nsresult PersistOp::DoDirectoryWork(QuotaManager& aQuotaManager) {
                          *directory, nsLiteralString(METADATA_V2_FILE_NAME)));
 
       QM_TRY_INSPECT(const auto& stream,
-                     GetBinaryOutputStream(*file, kUpdateFileFlag));
+                     GetBinaryOutputStream(*file, FileFlag::Update));
 
       MOZ_ASSERT(stream);
 
@@ -10660,7 +10662,7 @@ nsresult CreateOrUpgradeDirectoryMetadataHelper::ProcessOriginDirectory(
                                       nsLiteralString(METADATA_FILE_NAME)));
 
     QM_TRY_INSPECT(const auto& stream,
-                   GetBinaryOutputStream(*file, kAppendFileFlag));
+                   GetBinaryOutputStream(*file, FileFlag::Append));
 
     MOZ_ASSERT(stream);
 

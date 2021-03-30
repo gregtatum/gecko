@@ -981,7 +981,14 @@
           <label id="appMenu-fxa-text" class="toolbarbutton-text" data-l10n-id="appmenu-fxa-sync-and-save-data"/>
           <toolbarbutton id="appMenu-fxa-label2"
                         class="subviewbutton"
-                        oncommand="gSync.toggleAccountPanel(this, event)"/>
+                        oncommand="gSync.toggleAccountPanel(this, event)">
+            <vbox flex="1">
+              <label id="appMenu-header-title"
+                     crop="end"/>
+              <label id="appMenu-header-description"
+                     crop="end"/>
+            </vbox>
+          </toolbarbutton>
         </toolbaritem>
         <toolbarseparator id="appMenu-fxa-separator" class="proton-zap"/>
         <toolbarbutton id="appMenu-new-tab-button2"
@@ -1818,17 +1825,6 @@
             </box>
           </toolbarbutton>
         </toolbaritem>
-        <toolbarbutton id="home-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
-                       removable="true"
-                       label="&homeButton.label;"
-                       ondragover="homeButtonObserver.onDragOver(event)"
-                       ondragenter="homeButtonObserver.onDragOver(event)"
-                       ondrop="homeButtonObserver.onDrop(event)"
-                       ondragexit="homeButtonObserver.onDragExit(event)"
-                       key="goHome"
-                       onclick="BrowserHome(event);"
-                       cui-areatype="toolbar"
-                       tooltiptext="&homeButton.defaultPage.tooltip;"/>
         <toolbarspring cui-areatype="toolbar" class="chromeclass-toolbar-additional"/>
         <toolbaritem id="urlbar-container" flex="400" persist="width"
                      removable="false"
@@ -2085,15 +2081,6 @@
             </stack>
           </toolbarbutton>
 
-        <toolbarbutton id="library-button" class="toolbarbutton-1 chromeclass-toolbar-additional subviewbutton-nav"
-                       removable="true"
-                       onmousedown="PanelUI.showSubView('appMenu-libraryView', this, event);"
-                       onkeypress="PanelUI.showSubView('appMenu-libraryView', this, event);"
-                       closemenu="none"
-                       cui-areatype="toolbar"
-                       tooltiptext="&libraryButton.tooltip;"
-                       label="&places.library.title;"/>
-
         <toolbarbutton id="fxa-toolbar-menu-button" class="toolbarbutton-1 chromeclass-toolbar-additional subviewbutton-nav"
                        badged="true"
                        onmousedown="gSync.toggleAccountPanel(this, event)"
@@ -2145,7 +2132,7 @@
                        class="toolbarbutton-1"
                        badged="true"
                        consumeanchor="PanelUI-button"
-                       data-l10n-id="appmenu-menu-button-closed"/>
+                       data-l10n-id="appmenu-menu-button-closed2"/>
       </toolbaritem>
 
       <hbox id="window-controls" hidden="true" pack="end" skipintoolbarset="true"
@@ -2375,6 +2362,27 @@
         <searchbar id="searchbar" flex="1"/>
         <toolbartabstop/>
       </toolbaritem>
+
+      <toolbarbutton id="home-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
+                     removable="true"
+                     label="&homeButton.label;"
+                     ondragover="homeButtonObserver.onDragOver(event)"
+                     ondragenter="homeButtonObserver.onDragOver(event)"
+                     ondrop="homeButtonObserver.onDrop(event)"
+                     ondragexit="homeButtonObserver.onDragExit(event)"
+                     key="goHome"
+                     onclick="BrowserHome(event);"
+                     cui-areatype="toolbar"
+                     tooltiptext="&homeButton.defaultPage.tooltip;"/>
+
+      <toolbarbutton id="library-button" class="toolbarbutton-1 chromeclass-toolbar-additional subviewbutton-nav"
+                     removable="true"
+                     onmousedown="PanelUI.showSubView('appMenu-libraryView', this, event);"
+                     onkeypress="PanelUI.showSubView('appMenu-libraryView', this, event);"
+                     closemenu="none"
+                     cui-areatype="toolbar"
+                     tooltiptext="&libraryButton.tooltip;"
+                     label="&places.library.title;"/>
     </html:template>
   </toolbox>
   </box>

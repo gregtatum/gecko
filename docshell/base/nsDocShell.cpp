@@ -74,6 +74,9 @@
 #include "mozilla/dom/ServiceWorkerUtils.h"
 #include "mozilla/dom/SessionHistoryEntry.h"
 #include "mozilla/dom/SessionStorageManager.h"
+#include "mozilla/dom/SessionStoreChangeListener.h"
+#include "mozilla/dom/SessionStoreDataCollector.h"
+#include "mozilla/dom/SessionStoreUtils.h"
 #include "mozilla/dom/BrowserChild.h"
 #include "mozilla/dom/ToJSValue.h"
 #include "mozilla/dom/UserActivation.h"
@@ -5349,7 +5352,7 @@ nsDocShell::ForceRefreshURI(nsIURI* aURI, nsIPrincipal* aPrincipal,
      * we have in mind (15000 ms as defined by REFRESH_REDIRECT_TIMER).
      * Pass a REPLACE flag to LoadURI().
      */
-    loadState->SetLoadType(LOAD_NORMAL_REPLACE);
+    loadState->SetLoadType(LOAD_REFRESH_REPLACE);
 
     /* For redirects we mimic HTTP, which passes the
      * original referrer.
@@ -5827,6 +5830,7 @@ nsresult nsDocShell::Embed(nsIContentViewer* aContentViewer,
   // Determine if this type of load should update history
   switch (mLoadType) {
     case LOAD_NORMAL_REPLACE:
+    case LOAD_REFRESH_REPLACE:
     case LOAD_STOP_CONTENT_AND_REPLACE:
     case LOAD_RELOAD_BYPASS_CACHE:
     case LOAD_RELOAD_BYPASS_PROXY:
@@ -5892,6 +5896,12 @@ nsDocShell::OnStateChange(nsIWebProgress* aProgress, nsIRequest* aRequest,
           mainWidget->SetCursor(eCursor_spinning, nullptr, 0, 0);
         }
       }
+
+      if constexpr (SessionStoreUtils::NATIVE_LISTENER) {
+        if (IsForceReloadType(mLoadType)) {
+          SessionStoreUtils::ResetSessionStore(mBrowsingContext);
+        }
+      }
     }
   } else if ((~aStateFlags & (STATE_TRANSFERRING | STATE_IS_DOCUMENT)) == 0) {
     // Page is loading
@@ -5909,6 +5919,7 @@ nsDocShell::OnStateChange(nsIWebProgress* aProgress, nsIRequest* aRequest,
       }
     }
   }
+
   if ((~aStateFlags & (STATE_IS_DOCUMENT | STATE_STOP)) == 0) {
     nsCOMPtr<nsIWebProgress> webProgress =
         do_QueryInterface(GetAsSupports(this));
@@ -6650,6 +6661,17 @@ nsresult nsDocShell::EndPageLoad(nsIWebProgress* aProgress,
     // If we have a host
     nsCOMPtr<nsILoadInfo> loadInfo = aChannel->LoadInfo();
     PredictorLearnRedirect(url, aChannel, loadInfo->GetOriginAttributes());
+  }
+
+  if constexpr (SessionStoreUtils::NATIVE_LISTENER) {
+    if (Document* document = GetDocument()) {
+      if (WindowGlobalChild* windowChild = document->GetWindowGlobalChild()) {
+        RefPtr<SessionStoreDataCollector> collector =
+            SessionStoreDataCollector::CollectSessionStoreData(windowChild);
+        collector->RecordInputChange();
+        collector->RecordScrollChange();
+      }
+    }
   }
 
   return NS_OK;
@@ -8713,7 +8735,6 @@ nsresult nsDocShell::PerformRetargeting(nsDocShellLoadState* aLoadState) {
       targetContext = newBC;
     }
   }
-
   NS_ENSURE_SUCCESS(rv, rv);
   NS_ENSURE_TRUE(targetContext, rv);
 
@@ -8733,6 +8754,27 @@ nsresult nsDocShell::PerformRetargeting(nsDocShellLoadState* aLoadState) {
   // No forced download
   aLoadState->SetFileName(VoidString());
   return targetContext->InternalLoad(aLoadState);
+}
+
+static nsAutoCString RefMaybeNull(nsIURI* aURI) {
+  nsAutoCString result;
+  if (NS_FAILED(aURI->GetRef(result))) {
+    result.SetIsVoid(true);
+  }
+  return result;
+}
+
+uint32_t nsDocShell::GetSameDocumentNavigationFlags(nsIURI* aNewURI) {
+  uint32_t flags = LOCATION_CHANGE_SAME_DOCUMENT;
+
+  bool equal = false;
+  if (mCurrentURI &&
+      NS_SUCCEEDED(mCurrentURI->EqualsExceptRef(aNewURI, &equal)) && equal &&
+      RefMaybeNull(mCurrentURI) != RefMaybeNull(aNewURI)) {
+    flags |= LOCATION_CHANGE_HASHCHANGE;
+  }
+
+  return flags;
 }
 
 bool nsDocShell::IsSameDocumentNavigation(nsDocShellLoadState* aLoadState,
@@ -8779,6 +8821,21 @@ bool nsDocShell::IsSameDocumentNavigation(nsDocShellLoadState* aLoadState,
       if (NS_FAILED(currentExposableURI->EqualsExceptRef(
               aLoadState->URI(), &aState.mSameExceptHashes))) {
         aState.mSameExceptHashes = false;
+      }
+      // HTTPS-Only Mode upgrades schemes from http to https in Necko, hence we
+      // have to perform a special check here to avoid an actual navigation. If
+      // HTTPS-Only Mode is enabled and the two URIs are same-origin (modulo the
+      // fact that the new URI is currently http), then set mSameExceptHashes to
+      // true and only perform a fragment navigation.
+      nsCOMPtr<nsIChannel> docChannel = GetCurrentDocChannel();
+      nsCOMPtr<nsILoadInfo> loadInfo;
+      if (docChannel) {
+        loadInfo = docChannel->LoadInfo();
+      }
+      if (!aState.mSameExceptHashes &&
+          nsHTTPSOnlyUtils::IsEqualURIExceptSchemeAndRef(
+              currentExposableURI, aLoadState->URI(), loadInfo)) {
+        aState.mSameExceptHashes = true;
       }
     }
   }
@@ -8832,7 +8889,6 @@ bool nsDocShell::IsSameDocumentNavigation(nsDocShellLoadState* aLoadState,
         (aState.mHistoryNavBetweenSameDoc && mOSHE != aLoadState->SHEntry()) ||
         (!aLoadState->SHEntry() && !aLoadState->PostDataStream() &&
          aState.mSameExceptHashes && aState.mNewURIHasRef);
-
     MOZ_LOG(gSHLog, LogLevel::Debug,
             ("nsDocShell %p NavBetweenSameDoc=%d is same doc = %d", this,
              aState.mHistoryNavBetweenSameDoc, doSameDocumentNavigation));
@@ -8936,6 +8992,10 @@ nsresult nsDocShell::HandleSameDocumentNavigation(
     newURIPartitionedPrincipalToInherit = doc->PartitionedPrincipal();
     newCsp = doc->GetCsp();
   }
+
+  uint32_t locationChangeFlags =
+      GetSameDocumentNavigationFlags(aLoadState->URI());
+
   // Pass true for aCloneSHChildren, since we're not
   // changing documents here, so all of our subframes are
   // still relevant to the new session history entry.
@@ -8987,6 +9047,23 @@ nsresult nsDocShell::HandleSameDocumentNavigation(
       }
     }
   } else {
+    if (mActiveEntry) {
+      mActiveEntry->SetScrollPosition(scrollPos.x, scrollPos.y);
+      if (mBrowsingContext) {
+        if (XRE_IsParentProcess()) {
+          SessionHistoryEntry* entry =
+              mBrowsingContext->Canonical()->GetActiveSessionHistoryEntry();
+          if (entry) {
+            entry->SetScrollPosition(scrollPos.x, scrollPos.y);
+          }
+        } else {
+          mozilla::Unused << ContentChild::GetSingleton()
+                                 ->SendSessionHistoryEntryScrollPosition(
+                                     mBrowsingContext, scrollPos.x,
+                                     scrollPos.y);
+        }
+      }
+    }
     if (mLoadingEntry) {
       if (!mLoadingEntry->mLoadIsFromSessionHistory) {
         // If we're not doing a history load, scroll restoration
@@ -9123,8 +9200,7 @@ nsresult nsDocShell::HandleSameDocumentNavigation(
   }
 
   if (locationChangeNeeded) {
-    FireOnLocationChange(this, nullptr, aLoadState->URI(),
-                         LOCATION_CHANGE_SAME_DOCUMENT);
+    FireOnLocationChange(this, nullptr, aLoadState->URI(), locationChangeFlags);
   }
 
   /* Restore the original LSHE if we were loading something
@@ -11093,7 +11169,7 @@ bool nsDocShell::OnNewURI(nsIURI* aURI, nsIChannel* aChannel,
   // in session history.
   if (!mozilla::SessionHistoryInParent() && rootSH &&
       ((mLoadType & (LOAD_CMD_HISTORY | LOAD_CMD_RELOAD)) ||
-       mLoadType == LOAD_NORMAL_REPLACE)) {
+       mLoadType == LOAD_NORMAL_REPLACE || mLoadType == LOAD_REFRESH_REPLACE)) {
     mPreviousEntryIndex = rootSH->Index();
     if (!mozilla::SessionHistoryInParent()) {
       rootSH->LegacySHistory()->UpdateIndex();
@@ -11518,7 +11594,7 @@ nsresult nsDocShell::UpdateURLAndHistory(Document* aDocument, nsIURI* aNewURI,
     aDocument->SetDocumentURI(aNewURI);
     SetCurrentURI(aNewURI, nullptr, /* aFireLocationChange */ true,
                   /* aIsInitialAboutBlank */ false,
-                  LOCATION_CHANGE_SAME_DOCUMENT);
+                  GetSameDocumentNavigationFlags(aNewURI));
 
     AddURIVisit(aNewURI, aCurrentURI, 0);
 
@@ -12198,22 +12274,23 @@ nsDocShell::MakeEditable(bool aInWaitForUriLoad) {
     return;
   }
 
-  nsresult rv = props->GetPropertyAsInterface(u"docshell.previousURI"_ns,
-                                              NS_GET_IID(nsIURI),
-                                              reinterpret_cast<void**>(aURI));
+  nsresult rv;
+  nsCOMPtr<nsIURI> uri(do_GetProperty(props, u"docshell.previousURI"_ns, &rv));
+  if (NS_SUCCEEDED(rv)) {
+    uri.forget(aURI);
 
-  if (NS_FAILED(rv)) {
-    // There is no last visit for this channel, so this must be the first
-    // link.  Link the visit to the referrer of this request, if any.
-    // Treat referrer as null if there is an error getting it.
-    (void)NS_GetReferrerFromChannel(aChannel, aURI);
-  } else {
     rv = props->GetPropertyAsUint32(u"docshell.previousFlags"_ns,
                                     aChannelRedirectFlags);
 
     NS_WARNING_ASSERTION(
         NS_SUCCEEDED(rv),
         "Could not fetch previous flags, URI will be treated like referrer");
+
+  } else {
+    // There is no last visit for this channel, so this must be the first
+    // link.  Link the visit to the referrer of this request, if any.
+    // Treat referrer as null if there is an error getting it.
+    NS_GetReferrerFromChannel(aChannel, aURI);
   }
 }
 

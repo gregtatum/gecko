@@ -6937,9 +6937,53 @@ class BaseCompiler final : public BaseCompilerInterface {
 
     if (!moduleEnv_.hugeMemoryEnabled() && !check->omitBoundsCheck) {
       Label ok;
-      masm.wasmBoundsCheck32(
-          Assembler::Below, ptr,
-          Address(tls, offsetof(TlsData, boundsCheckLimit32)), &ok);
+#ifdef JS_64BIT
+      // If the bounds check uses the full 64 bits of the bounds check limit,
+      // then the index must be zero-extended to 64 bits before checking and
+      // wrapped back to 32-bits after Spectre masking.  (And it's important
+      // that the value we end up with has flowed through the Spectre mask.)
+      //
+      // If the memory's max size is known to be smaller than 64K pages exactly,
+      // we can use a 32-bit check and avoid extension and wrapping.
+      if ((moduleEnv_.maxMemoryLength.isNothing() ||
+           moduleEnv_.maxMemoryLength.value() >= 0x100000000) &&
+          ArrayBufferObject::maxBufferByteLength() >= 0x100000000) {
+        // Note, ptr and ptr64 are the same register.
+        RegI64 ptr64 = fromI32(ptr);
+
+        // In principle there may be non-zero bits in the upper bits of the
+        // register; clear them.
+#  if defined(JS_CODEGEN_X64) || defined(JS_CODEGEN_ARM64)
+        // The canonical value is zero-extended (see comment block "64-bit GPRs
+        // carrying 32-bit values" in MacroAssembler.h); we already have that.
+        masm.assertCanonicalInt32(ptr);
+#  else
+        MOZ_CRASH("Platform code needed here");
+#  endif
+
+        // Any Spectre mitigation will appear to update the ptr64 register.
+        masm.wasmBoundsCheck64(
+            Assembler::Below, ptr64,
+            Address(tls, offsetof(TlsData, boundsCheckLimit)), &ok);
+
+        // Restore the value to the canonical form for a 32-bit value in a
+        // 64-bit register and/or the appropriate form for further use in the
+        // indexing instruction.
+#  if defined(JS_CODEGEN_X64) || defined(JS_CODEGEN_ARM64)
+        // The canonical value is zero-extended; we already have that.
+#  else
+        MOZ_CRASH("Platform code needed here");
+#  endif
+      } else {
+        masm.wasmBoundsCheck32(
+            Assembler::Below, ptr,
+            Address(tls, offsetof(TlsData, boundsCheckLimit)), &ok);
+      }
+#else
+      masm.wasmBoundsCheck32(Assembler::Below, ptr,
+                             Address(tls, offsetof(TlsData, boundsCheckLimit)),
+                             &ok);
+#endif
       masm.wasmTrap(Trap::OutOfBounds, bytecodeOffset());
       masm.bind(&ok);
     }
@@ -14661,7 +14705,7 @@ static void MulF32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
 #  if defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64)
 static void MulI64x2(MacroAssembler& masm, RegV128 rs, RegV128 rsd,
                      RegV128 temp) {
-  masm.mulInt64x2(rs, rsd, temp);
+  masm.mulInt64x2(rsd, rs, rsd, temp);
 }
 #  endif
 
@@ -15395,10 +15439,16 @@ static void ConvertF32x4ToI32x4(MacroAssembler& masm, RegV128 rs, RegV128 rd) {
   masm.truncSatFloat32x4ToInt32x4(rs, rd);
 }
 
+#  if defined(JS_CODEGEN_ARM64)
+static void ConvertF32x4ToUI32x4(MacroAssembler& masm, RegV128 rs, RegV128 rd) {
+  masm.unsignedTruncSatFloat32x4ToInt32x4(rs, rd);
+}
+#  else
 static void ConvertF32x4ToUI32x4(MacroAssembler& masm, RegV128 rs, RegV128 rd,
                                  RegV128 temp) {
   masm.unsignedTruncSatFloat32x4ToInt32x4(rs, rd, temp);
 }
+#  endif  // JS_CODEGEN_ARM64
 
 static void ConvertI32x4ToF64x2(MacroAssembler& masm, RegV128 rs, RegV128 rd) {
   masm.convertInt32x4ToFloat64x2(rs, rd);

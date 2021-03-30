@@ -301,6 +301,12 @@ class ResourceWatcher {
    *        composed of a BrowsingContextTargetFront or ContentProcessTargetFront.
    */
   async _onTargetAvailable({ targetFront, isTargetSwitching }) {
+    // We put the resourceWatcher on the targetFront so it can be retrieved in the
+    // inspector and style-rule fronts. This might be removed in the future if/when we
+    // turn the resourceWatcher into a Command.
+    // ⚠️ This shouldn't be used anywhere else ⚠️
+    targetFront.resourceWatcher = this;
+
     const resources = [];
     if (isTargetSwitching) {
       this._onWillNavigate(targetFront);
@@ -932,7 +938,7 @@ ResourceWatcher.TYPES = ResourceWatcher.prototype.TYPES = {
   STYLESHEET: "stylesheet",
   NETWORK_EVENT: "network-event",
   WEBSOCKET: "websocket",
-  COOKIE: "cookie",
+  COOKIE: "cookies",
   LOCAL_STORAGE: "local-storage",
   SESSION_STORAGE: "session-storage",
   CACHE_STORAGE: "Cache",
@@ -1019,6 +1025,8 @@ const ResourceTransformers = {
     .ERROR_MESSAGE]: require("devtools/shared/resources/transformers/error-messages"),
   [ResourceWatcher.TYPES
     .CACHE_STORAGE]: require("devtools/shared/resources/transformers/storage-cache.js"),
+  [ResourceWatcher.TYPES
+    .COOKIE]: require("devtools/shared/resources/transformers/storage-cookie.js"),
   [ResourceWatcher.TYPES
     .LOCAL_STORAGE]: require("devtools/shared/resources/transformers/storage-local-storage.js"),
   [ResourceWatcher.TYPES

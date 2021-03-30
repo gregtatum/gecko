@@ -1448,6 +1448,9 @@ class AsyncPanZoomController {
   // Start an overscroll animation with the given initial velocity.
   void StartOverscrollAnimation(const ParentLayerPoint& aVelocity);
 
+  // Return the directions in which this APZC allows overscrolling.
+  ScrollDirections GetOverscrollableDirections() const;
+
   // Start a smooth-scrolling animation to the given destination, with physics
   // based on the prefs for the indicated origin.
   void SmoothScrollTo(const CSSPoint& aDestination,
@@ -1630,9 +1633,9 @@ class AsyncPanZoomController {
   // its composition bounds.
   bool Contains(const ScreenIntPoint& aPoint) const;
 
-  bool IsOverscrolled() const {
-    return mX.IsOverscrolled() || mY.IsOverscrolled();
-  }
+  bool IsInOverscrollGutter(const ScreenPoint& aPoint) const;
+
+  bool IsOverscrolled() const;
 
   bool IsInPanningState() const;
 

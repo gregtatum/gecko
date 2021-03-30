@@ -245,6 +245,7 @@ this.TopSitesFeed = class TopSitesFeed {
           sponsored_tile_id,
           sponsored_impression_url,
           sponsored_click_url,
+          show_sponsored_label: link.hostname !== "yandex",
           ...link,
         };
       }
@@ -509,7 +510,13 @@ this.TopSitesFeed = class TopSitesFeed {
     let notBlockedDefaultSites = [];
     let sponsored = [];
     for (let link of DEFAULT_TOP_SITES) {
-      if (this.shouldFilterSearchTile(link.hostname)) {
+      // For sponsored Yandex links, default filtering is reversed: we only
+      // show them if Yandex is the default search engine.
+      if (link.sponsored_position && link.hostname === "yandex") {
+        if (link.hostname !== this._currentSearchHostname) {
+          continue;
+        }
+      } else if (this.shouldFilterSearchTile(link.hostname)) {
         continue;
       }
       // Drop blocked default sites.

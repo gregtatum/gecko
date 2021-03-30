@@ -70,17 +70,9 @@ class InlineTranslator : public Translator {
     return result;
   }
 
-  GradientStops* LookupGradientStops(ReferencePtr aRefPtr) final {
-    DebugOnly<bool> found;
-    GradientStops* result = mGradientStops.GetWeak(aRefPtr
-#if defined(DEBUG)
-                                                   ,
-                                                   &found
-#endif
-    );
-    // GradientStops can be null in some circumstances.
-    MOZ_ASSERT(found);
-    return result;
+  already_AddRefed<GradientStops> LookupGradientStops(
+      ReferencePtr aRefPtr) final {
+    return mGradientStops.Get(aRefPtr);
   }
 
   ScaledFont* LookupScaledFont(ReferencePtr aRefPtr) final {
@@ -177,12 +169,12 @@ class InlineTranslator : public Translator {
 
  protected:
   RefPtr<DrawTarget> mBaseDT;
+  nsRefPtrHashtable<nsPtrHashKey<void>, DrawTarget> mDrawTargets;
 
  private:
   void* mFontContext;
   std::string mError;
 
-  nsRefPtrHashtable<nsPtrHashKey<void>, DrawTarget> mDrawTargets;
   nsRefPtrHashtable<nsPtrHashKey<void>, Path> mPaths;
   nsRefPtrHashtable<nsPtrHashKey<void>, SourceSurface> mSourceSurfaces;
   nsRefPtrHashtable<nsPtrHashKey<void>, FilterNode> mFilterNodes;

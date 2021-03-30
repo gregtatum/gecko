@@ -68,7 +68,7 @@ class NodeOffsetRange {
  *
  *    The basic operation is:
  *
- *    1. Call Init with the weak pointer to the editor that you're using.
+ *    1. Call Init with the editor that you're using.
  *    2. Call SetPositionAndEnd to to initialize the current position inside the
  *       previously given range and set where you want to stop spellchecking.
  *       We'll stop at the word boundary after that. If SetEnd is not called,
@@ -86,7 +86,7 @@ class MOZ_STACK_CLASS mozInlineSpellWordUtil {
         mNextWordIndex(-1),
         mSoftTextValid(false) {}
 
-  nsresult Init(mozilla::TextEditor* aTextEditor);
+  nsresult Init(const mozilla::TextEditor& aTextEditor);
 
   // sets the current position, this should be inside the range. If we are in
   // the middle of a word, we'll move to its start.
@@ -106,7 +106,8 @@ class MOZ_STACK_CLASS mozInlineSpellWordUtil {
                            nsRange** aRange);
 
   // Convenience functions, object must be initialized
-  nsresult MakeRange(NodeOffset aBegin, NodeOffset aEnd, nsRange** aRange);
+  nsresult MakeRange(NodeOffset aBegin, NodeOffset aEnd,
+                     nsRange** aRange) const;
   static already_AddRefed<nsRange> MakeRange(const NodeOffsetRange& aRange);
 
   // Moves to the the next word in the range, and retrieves it's text and range.
@@ -121,7 +122,7 @@ class MOZ_STACK_CLASS mozInlineSpellWordUtil {
   static void NormalizeWord(nsAString& aWord);
 
   mozilla::dom::Document* GetDocument() const { return mDocument; }
-  nsINode* GetRootNode() { return mRootNode; }
+  const nsINode* GetRootNode() const { return mRootNode; }
 
  private:
   // cached stuff for the editor, set by Init

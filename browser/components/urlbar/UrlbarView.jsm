@@ -676,7 +676,7 @@ class UrlbarView {
     ) {
       let engine = secondResult.payload.engine;
       this.window.A11yUtils.announce({
-        id: UrlbarUtils.WEB_ENGINE_NAMES.has(engine)
+        id: secondResult.payload.isGeneralPurposeEngine
           ? "urlbar-result-action-before-tabtosearch-web"
           : "urlbar-result-action-before-tabtosearch-other",
         args: { engine },
@@ -909,7 +909,7 @@ class UrlbarView {
       return true;
     }
     let row = this._rows.children[rowIndex];
-    if (result.suggestedIndex >= 0) {
+    if (result.hasSuggestedIndex) {
       // Always allow a result with a suggested index to replace any other
       // result.  Otherwise it can briefly end up at some larger index due to
       // the presence of visible stale rows.  Then, if the user makes a
@@ -917,7 +917,7 @@ class UrlbarView {
       // the suggested-index row in the wrong spot.
       return true;
     }
-    if (row.result.suggestedIndex >= 0) {
+    if (row.result.hasSuggestedIndex) {
       // Never allow a result without a suggested index to replace a result with
       // a suggested index.  If the suggested-index row is not stale, then it
       // needs to remain in the same spot to avoid flicker.
@@ -1344,7 +1344,7 @@ class UrlbarView {
           actionSetter = () => {
             this.document.l10n.setAttributes(
               action,
-              UrlbarUtils.WEB_ENGINE_NAMES.has(result.payload.engine)
+              result.payload.isGeneralPurposeEngine
                 ? "urlbar-result-action-tabtosearch-web"
                 : "urlbar-result-action-tabtosearch-other-engine",
               { engine: result.payload.engine }

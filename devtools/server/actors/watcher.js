@@ -5,8 +5,8 @@
 "use strict";
 const protocol = require("devtools/shared/protocol");
 const { watcherSpec } = require("devtools/shared/specs/watcher");
-const Services = require("Services");
 
+const Services = require("Services");
 const Resources = require("devtools/server/actors/resources/index");
 const {
   TargetActorRegistry,
@@ -154,14 +154,15 @@ exports.WatcherActor = protocol.ActorClassWithSpec(watcherSpec, {
           [Resources.TYPES.CSS_MESSAGE]: true,
           [Resources.TYPES.DOCUMENT_EVENT]: hasBrowserElement,
           [Resources.TYPES.CACHE_STORAGE]: hasBrowserElement,
+          // TODO: Bug 1700904 remove the enableServerWatcher guard
+          [Resources.TYPES.COOKIE]: hasBrowserElement && enableServerWatcher,
           [Resources.TYPES.ERROR_MESSAGE]: true,
           [Resources.TYPES.LOCAL_STORAGE]: hasBrowserElement,
           [Resources.TYPES.SESSION_STORAGE]: hasBrowserElement,
           [Resources.TYPES.PLATFORM_MESSAGE]: true,
           [Resources.TYPES.NETWORK_EVENT]: hasBrowserElement,
           [Resources.TYPES.NETWORK_EVENT_STACKTRACE]: hasBrowserElement,
-          [Resources.TYPES.STYLESHEET]:
-            enableServerWatcher && hasBrowserElement,
+          [Resources.TYPES.STYLESHEET]: hasBrowserElement,
           [Resources.TYPES.SOURCE]: hasBrowserElement,
           [Resources.TYPES.THREAD_STATE]: hasBrowserElement,
           [Resources.TYPES.SERVER_SENT_EVENT]: hasBrowserElement,

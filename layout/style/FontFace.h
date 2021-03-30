@@ -52,12 +52,13 @@ class FontFace final : public nsISupports, public nsWrapperCache {
           const nsTArray<gfxFontVariation>& aVariationSettings,
           uint32_t aLanguageOverride, gfxCharacterMap* aUnicodeRanges,
           StyleFontDisplay aFontDisplay, RangeFlags aRangeFlags,
-          float aAscentOverride, float aDescentOverride, float aLineGapOverride)
+          float aAscentOverride, float aDescentOverride, float aLineGapOverride,
+          float aSizeAdjust)
         : gfxUserFontEntry(aFontSet, aFontFaceSrcList, aWeight, aStretch,
                            aStyle, aFeatureSettings, aVariationSettings,
                            aLanguageOverride, aUnicodeRanges, aFontDisplay,
                            aRangeFlags, aAscentOverride, aDescentOverride,
-                           aLineGapOverride) {}
+                           aLineGapOverride, aSizeAdjust) {}
 
     virtual void SetLoadState(UserFontLoadState aLoadState) override;
     virtual void GetUserFontSets(nsTArray<gfxUserFontSet*>& aResult) override;
@@ -96,6 +97,7 @@ class FontFace final : public nsISupports, public nsWrapperCache {
   Maybe<StylePercentage> GetAscentOverride() const;
   Maybe<StylePercentage> GetDescentOverride() const;
   Maybe<StylePercentage> GetLineGapOverride() const;
+  Maybe<StylePercentage> GetSizeAdjust() const;
 
   gfxUserFontEntry* CreateUserFontEntry();
   gfxUserFontEntry* GetUserFontEntry() const { return mUserFontEntry; }
@@ -182,6 +184,8 @@ class FontFace final : public nsISupports, public nsWrapperCache {
   void SetDescentOverride(const nsACString& aValue, ErrorResult& aRv);
   void GetLineGapOverride(nsACString& aResult);
   void SetLineGapOverride(const nsACString& aValue, ErrorResult& aRv);
+  void GetSizeAdjust(nsACString& aResult);
+  void SetSizeAdjust(const nsACString& aValue, ErrorResult& aRv);
 
   FontFaceLoadStatus Status();
   Promise* Load(ErrorResult& aRv);

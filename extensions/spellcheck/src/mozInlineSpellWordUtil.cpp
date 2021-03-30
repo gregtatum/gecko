@@ -99,21 +99,17 @@ static bool IsDOMWordSeparator(char16_t ch) {
 
 // mozInlineSpellWordUtil::Init
 
-nsresult mozInlineSpellWordUtil::Init(TextEditor* aTextEditor) {
-  if (NS_WARN_IF(!aTextEditor)) {
-    return NS_ERROR_FAILURE;
-  }
-
-  mDocument = aTextEditor->GetDocument();
+nsresult mozInlineSpellWordUtil::Init(const TextEditor& aTextEditor) {
+  mDocument = aTextEditor.GetDocument();
   if (NS_WARN_IF(!mDocument)) {
     return NS_ERROR_FAILURE;
   }
 
-  mIsContentEditableOrDesignMode = !!aTextEditor->AsHTMLEditor();
+  mIsContentEditableOrDesignMode = !!aTextEditor.AsHTMLEditor();
 
   // Find the root node for the editor. For contenteditable the mRootNode could
   // change to shadow root if the begin and end are inside the shadowDOM.
-  mRootNode = aTextEditor->GetRoot();
+  mRootNode = aTextEditor.GetRoot();
   if (NS_WARN_IF(!mRootNode)) {
     return NS_ERROR_FAILURE;
   }
@@ -367,7 +363,7 @@ bool mozInlineSpellWordUtil::GetNextWord(nsAString& aText,
 //    Convenience function for creating a range over the current document.
 
 nsresult mozInlineSpellWordUtil::MakeRange(NodeOffset aBegin, NodeOffset aEnd,
-                                           nsRange** aRange) {
+                                           nsRange** aRange) const {
   NS_ENSURE_ARG_POINTER(aBegin.mNode);
   if (!mDocument) {
     return NS_ERROR_NOT_INITIALIZED;

@@ -25,6 +25,7 @@
 #include "mozilla/webrender/RendererOGL.h"
 #include "mozilla/webrender/RenderTextureHost.h"
 #include "mozilla/widget/CompositorWidget.h"
+#include "OGLShaderProgram.h"
 
 #ifdef XP_WIN
 #  include "GLContextEGL.h"
@@ -63,6 +64,7 @@ RenderThread::RenderThread(base::Thread* aThread)
     : mThread(aThread),
       mThreadPool(false),
       mThreadPoolLP(true),
+      mSingletonGLIsForHardwareWebRender(true),
       mWindowInfos("RenderThread.mWindowInfos"),
       mRenderTextureMapLock("RenderThread.mRenderTextureMapLock"),
       mHasShutdown(false),
@@ -120,6 +122,8 @@ void RenderThread::ShutDown() {
   sRenderThread->Loop()->PostTask(runnable.forget());
   task.Wait();
 
+  layers::SharedSurfacesParent::Shutdown();
+
   sRenderThread = nullptr;
 #ifdef XP_WIN
   if (widget::WinCompositorWindowThread::Get()) {
@@ -140,7 +144,7 @@ void RenderThread::ShutDownTask(layers::SynchronousTask* aTask) {
 
   // Releasing on the render thread will allow us to avoid dispatching to remove
   // remaining textures from the texture map.
-  layers::SharedSurfacesParent::Shutdown();
+  layers::SharedSurfacesParent::ShutdownRenderThread();
 
   ClearAllBlobImageResources();
   ClearSingletonGL();
@@ -772,7 +776,7 @@ void RenderThread::InitDeviceTask() {
   }
 
   nsAutoCString err;
-  mSingletonGL = CreateGLContext(err);
+  CreateSingletonGL(err);
   if (gfx::gfxVars::UseWebRenderProgramBinaryDisk()) {
     mProgramCache = MakeUnique<WebRenderProgramCache>(ThreadPool().Raw());
   }
@@ -907,10 +911,15 @@ gl::GLContext* RenderThread::SingletonGL() {
   return gl;
 }
 
+void RenderThread::CreateSingletonGL(nsACString& aError) {
+  mSingletonGL = CreateGLContext(aError);
+  mSingletonGLIsForHardwareWebRender = !gfx::gfxVars::UseSoftwareWebRender();
+}
+
 gl::GLContext* RenderThread::SingletonGL(nsACString& aError) {
   MOZ_ASSERT(IsInRenderThread());
   if (!mSingletonGL) {
-    mSingletonGL = CreateGLContext(aError);
+    CreateSingletonGL(aError);
     mShaders = nullptr;
   }
   if (mSingletonGL && !mShaders) {
@@ -920,13 +929,40 @@ gl::GLContext* RenderThread::SingletonGL(nsACString& aError) {
   return mSingletonGL.get();
 }
 
+gl::GLContext* RenderThread::SingletonGLForCompositorOGL() {
+  MOZ_RELEASE_ASSERT(gfx::gfxVars::UseSoftwareWebRender());
+
+  if (mSingletonGLIsForHardwareWebRender) {
+    // Clear singleton GL, since GLContext is for hardware WebRender.
+    ClearSingletonGL();
+  }
+  return SingletonGL();
+}
+
 void RenderThread::ClearSingletonGL() {
   MOZ_ASSERT(IsInRenderThread());
   if (mSurfacePool) {
     mSurfacePool->DestroyGLResourcesForContext(mSingletonGL);
   }
+  if (mProgramsForCompositorOGL) {
+    mProgramsForCompositorOGL->Clear();
+    mProgramsForCompositorOGL = nullptr;
+  }
   mShaders = nullptr;
   mSingletonGL = nullptr;
+}
+
+RefPtr<layers::ShaderProgramOGLsHolder>
+RenderThread::GetProgramsForCompositorOGL() {
+  if (!mSingletonGL) {
+    return nullptr;
+  }
+
+  if (!mProgramsForCompositorOGL) {
+    mProgramsForCompositorOGL =
+        MakeAndAddRef<layers::ShaderProgramOGLsHolder>(mSingletonGL);
+  }
+  return mProgramsForCompositorOGL;
 }
 
 RefPtr<layers::SurfacePool> RenderThread::SharedSurfacePool() {

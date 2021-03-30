@@ -134,7 +134,7 @@ Preferences.addAll([
   { id: "browser.tabs.loadInBackground", type: "bool", inverted: true },
   { id: "browser.tabs.warnOnClose", type: "bool" },
   { id: "browser.tabs.warnOnOpen", type: "bool" },
-  { id: "browser.ctrlTab.recentlyUsedOrder", type: "bool" },
+  { id: "browser.ctrlTab.sortByRecentlyUsed", type: "bool" },
 
   // CFR
   {
@@ -1917,9 +1917,9 @@ var gMainPane = {
 
   async reportUpdatePrefWriteError(error) {
     let [title, message] = await document.l10n.formatValues([
-      { id: "update-setting-write-failure-title" },
+      { id: "update-setting-write-failure-title2" },
       {
-        id: "update-setting-write-failure-message",
+        id: "update-setting-write-failure-message2",
         args: { path: error.path },
       },
     ]);

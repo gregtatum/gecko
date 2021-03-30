@@ -75,7 +75,6 @@
 #define APPLICATION_RDF_XML "application/rdf+xml"
 #define APPLICATION_WAPXHTML_XML "application/vnd.wap.xhtml+xml"
 #define APPLICATION_PACKAGE "application/package"
-#define APPLICATION_JAVASCRIPT_BINAST "application/javascript-binast"
 #define APPLICATION_WASM "application/wasm"
 
 #define AUDIO_BASIC "audio/basic"
@@ -91,6 +90,7 @@
 #define AUDIO_MIDI "audio/x-midi"
 #define AUDIO_MATROSKA "audio/x-matroska"
 #define AUDIO_AAC "audio/aac"
+#define AUDIO_MPEG_TS "audio/mp2t"
 
 #define BINARY_OCTET_STREAM "binary/octet-stream"
 

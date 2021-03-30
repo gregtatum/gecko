@@ -15,6 +15,7 @@
 #include "mozilla/layers/Effects.h"
 #include "mozilla/layers/TextureHostOGL.h"
 #include "mozilla/widget/CompositorWidget.h"
+#include "OGLShaderProgram.h"
 
 #ifdef MOZ_WIDGET_ANDROID
 #  include "mozilla/java/GeckoSurfaceTextureWrappers.h"
@@ -42,17 +43,24 @@ UniquePtr<RenderCompositor> RenderCompositorOGLSWGL::Create(
 
   RefPtr<Compositor> compositor;
 #ifdef MOZ_WIDGET_ANDROID
-  RefPtr<gl::GLContext> context = RenderThread::Get()->SingletonGL();
+  RefPtr<gl::GLContext> context =
+      RenderThread::Get()->SingletonGLForCompositorOGL();
   if (!context) {
     gfxCriticalNote << "SingletonGL does not exist for SWGL";
     return nullptr;
   }
+  auto programs = RenderThread::Get()->GetProgramsForCompositorOGL();
+  if (!programs) {
+    gfxCriticalNote << "Failed to get Programs for CompositorOGL for SWGL";
+    return nullptr;
+  }
+
   nsCString log;
   RefPtr<CompositorOGL> compositorOGL;
   compositorOGL = new CompositorOGL(nullptr, aWidget, /* aSurfaceWidth */ -1,
                                     /* aSurfaceHeight */ -1,
                                     /* aUseExternalSurfaceSize */ true);
-  if (!compositorOGL->Initialize(context, &log)) {
+  if (!compositorOGL->Initialize(context, programs, &log)) {
     gfxCriticalNote << "Failed to initialize CompositorOGL for SWGL: "
                     << log.get();
     return nullptr;

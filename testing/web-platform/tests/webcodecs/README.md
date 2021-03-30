@@ -33,6 +33,24 @@ cp four-colors.png four-colors2.png
 gifski -o four-colors.gif four-colors*.png
 ```
 
+### four-colors-flip.gif
+High quality encoding must be used to ensure colors are perfect.
+```
+ffmpeg -i four-colors.png -vf "rotate=PI" four-colors2.png
+gifski -o four-colors-flip.gif four-colors*.png
+```
+
+### four-colors-flip.avif
+```
+ffmpeg -i four-colors-flip.gif -vcodec libaom-av1 -crf 16 four-colors-flip.mp4
+mp4box -add-image ref:primary:tk=1:samp=1 -ab avis -ab avif -ab miaf -brand avis four-colors-flip.mp4 -out four-colors-flip.avif
+```
+
+### four-colors-full-range-bt2020-pq-444-10bpc.avif
+```
+avifenc -r f -d 10 -y 444 -s 0 --nclx 9/16/9 four-colors.png four-colors-full-range-bt2020-pq-444-10bpc.avif
+```
+
 ### four-colors.jpg
 Used [Sqoosh.app](https://squoosh.app/) with MozJPEG compression then used
 exiftool to add an orientation marker.

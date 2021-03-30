@@ -826,9 +826,7 @@
       if (!browser._notificationBox) {
         browser._notificationBox = new MozElements.NotificationBox(element => {
           element.setAttribute("notificationside", "top");
-          if (
-            Services.prefs.getBoolPref("browser.proton.infobars.enabled", false)
-          ) {
+          if (gProtonInfobarsEnabled) {
             element.setAttribute(
               "name",
               `tab-notification-box-${this._nextNotificationBoxId++}`
@@ -1114,9 +1112,7 @@
 
       this._appendStatusPanel();
 
-      if (
-        Services.prefs.getBoolPref("browser.proton.infobars.enabled", false)
-      ) {
+      if (gProtonInfobarsEnabled) {
         this._updateVisibleNotificationBox(newBrowser);
       }
 
@@ -4133,7 +4129,10 @@
       if (aOtherTab.hasAttribute("muted")) {
         aOurTab.setAttribute("muted", "true");
         aOurTab.muteReason = aOtherTab.muteReason;
-        ourBrowser.mute();
+        // For non-lazy tabs, mute() must be called.
+        if (aOurTab.linkedPanel) {
+          ourBrowser.mute();
+        }
         modifiedAttrs.push("muted");
       }
       if (aOtherTab.hasAttribute("soundplaying")) {
@@ -4166,7 +4165,13 @@
       // then do not switch docShells but retrieve the other tab's state
       // and apply it to our tab.
       if (isPending) {
+        // Tag tab so that the extension framework can ignore tab events that
+        // are triggered amidst the tab/browser restoration process
+        // (TabHide, TabPinned, TabUnpinned, "muted" attribute changes, etc.).
+        aOurTab.initializingTab = true;
+        delete ourBrowser._cachedCurrentURI;
         SessionStore.setTabState(aOurTab, SessionStore.getTabState(aOtherTab));
+        delete aOurTab.initializingTab;
 
         // Make sure to unregister any open URIs.
         this._swapRegisteredOpenURIs(ourBrowser, otherBrowser);
@@ -5347,7 +5352,7 @@
       // When Picture-in-Picture is open, we repurpose '.tab-icon-sound' as
       // an inert Picture-in-Picture indicator, so we should display
       // the default tooltip
-      else if (!gProtonTabs && tab._overPlayingIcon && !tab.pictureinpicture) {
+      else if (!gProton && tab._overPlayingIcon && !tab.pictureinpicture) {
         let stringID;
         if (tab.selected) {
           stringID = tab.linkedBrowser.audioMuted

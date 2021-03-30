@@ -340,8 +340,13 @@ panelmultiview[transitioning] > .panel-viewcontainer > .panel-viewstack > panelv
 }
 
 @supports -moz-bool-pref("browser.proton.doorhangers.enabled") {
+#BMB_bookmarksPopup::part(arrowscrollbox) {
+  border: 0;
+}
+
 #BMB_bookmarksPopup menupopup::part(arrowscrollbox) {
   padding: var(--panel-subview-body-padding);
+  border: 0;
 }
 
 #BMB_bookmarksPopup .subviewbutton {
@@ -785,7 +790,7 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
     padding: 0;
   }
 
-  #appMenu-fxa-status2[fxastatus] > #appMenu-fxa-label2,
+  #appMenu-fxa-status2[fxastatus] > #appMenu-fxa-label2 > vbox > #appMenu-header-description,
   #appMenu-fxa-text {
     font-weight: 600;
   }
@@ -819,6 +824,10 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
   #PanelUI-fxa-menu-syncnow-button > hbox > label,
   #PanelUI-remotetabs-syncnow > hbox > label {
     margin-inline-start: 0;
+  }
+
+  #appMenu-fxa-label2 > vbox > label {
+    margin-inline: 0;
   }
 
   .syncNowBtn {
@@ -2473,6 +2482,12 @@ panelview:not([mainview]) #PanelUI-whatsNew-title {
 
 #customizationui-widget-panel[viewId="PanelUI-profiler"][mainviewshowing][arrowposition="after_start"][isinfoexpanded="true"]::part(arrow) {
   fill: #0556cd;
+}
+
+/* Override themes for the Pocket panel, because the Pocket
+   panel doesn't currently support multiple themes. */
+#customizationui-widget-panel[viewId="PanelUI-savetopocket"] {
+  --arrowpanel-background: #fbfbfb;
 }
 
 /* Hide the unused box that gets added here. */

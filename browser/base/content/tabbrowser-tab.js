@@ -9,11 +9,10 @@
 {
   class MozTabbrowserTab extends MozElements.MozTab {
     static get markup() {
-      let background = gProtonTabs
+      let background = gProton
         ? `
         <vbox class="tab-background">
           <hbox class="tab-context-line"/>
-          <hbox class="tab-line"/>
           <spacer flex="1" class="tab-background-inner"/>
         </vbox>
 `
@@ -274,7 +273,7 @@
     }
 
     get soundPlayingIcon() {
-      return gProtonTabs ? null : this.querySelector(".tab-icon-sound");
+      return gProton ? null : this.querySelector(".tab-icon-sound");
     }
 
     get overlayIcon() {
@@ -309,7 +308,7 @@
       if (event.target.classList.contains("tab-close-button")) {
         this.mOverCloseButton = true;
       }
-      if (gProtonTabs && this._overPlayingIcon) {
+      if (gProton && this._overPlayingIcon) {
         const selectedTabs = gBrowser.selectedTabs;
         const contextTabInSelection = selectedTabs.includes(this);
         const affectedTabsLength = contextTabInSelection
@@ -334,7 +333,7 @@
       if (event.target.classList.contains("tab-close-button")) {
         this.mOverCloseButton = false;
       }
-      if (gProtonTabs && event.target == this.overlayIcon) {
+      if (gProton && event.target == this.overlayIcon) {
         this.setSecondaryTabTooltipLabel(null);
       }
       this._mouseleave();

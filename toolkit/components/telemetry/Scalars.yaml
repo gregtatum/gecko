@@ -3327,6 +3327,52 @@ telemetry:
     record_in_processes:
       - main
 
+  state_file_read_errors:
+    bug_numbers:
+      - 1700835
+    description: >
+      How many times we errored out trying to load state.json
+    expires: "94"
+    kind: uint
+    notification_emails:
+      - chutten@mozilla.com
+    products:
+      - 'firefox'
+    release_channel_collection: opt-out
+    record_in_processes:
+      - main
+
+  using_pref_client_id:
+    bug_numbers:
+      - 1700835
+    description: >
+      How often we loaded the client_id from prefs instead of state.json.
+    expires: "94"
+    kind: uint
+    notification_emails:
+      - chutten@mozilla.com
+    products:
+      - 'firefox'
+    release_channel_collection: opt-out
+    record_in_processes:
+      - main
+
+  removed_client_ids:
+    bug_numbers:
+      - 1700835
+    description: >
+      How many times we removed the client ids.
+    expires: "94"
+    kind: uint
+    notification_emails:
+      - chutten@mozilla.com
+    products:
+      - 'firefox'
+    release_channel_collection: opt-out
+    record_in_processes:
+      - main
+
+
 telemetry.discarded:
   accumulations:
     bug_numbers:
@@ -6745,7 +6791,7 @@ migration:
       - 1672585
     description: >
       Set when a profile refresh is initiated from the uninstaller.
-    expires: "90"
+    expires: never
     kind: boolean
     notification_emails:
       - agashlin@mozilla.com
@@ -6855,6 +6901,7 @@ telemetry.test:
   unsigned_int_kind:
     bug_numbers:
       - 1276190
+      - 1685406
     description: >
       This is a test uint type with a really long description, maybe spanning even multiple
       lines, to just prove a point: everything works just fine.
@@ -6874,6 +6921,7 @@ telemetry.test:
   string_kind:
     bug_numbers:
       - 1276190
+      - 1685406
     description: A string test type with a one line comment that works just fine!
     expires: never
     kind: string
@@ -6891,6 +6939,7 @@ telemetry.test:
   boolean_kind:
     bug_numbers:
       - 1281214
+      - 1685406
     description: A boolean test type with a one line comment that works just fine!
     expires: never
     kind: boolean
@@ -7020,6 +7069,7 @@ telemetry.test:
   keyed_unsigned_int:
     bug_numbers:
       - 1277806
+      - 1685406
     description: A testing keyed uint scalar; not meant to be touched.
     expires: never
     kind: uint
@@ -7073,6 +7123,7 @@ telemetry.test:
   keyed_boolean_kind:
     bug_numbers:
       - 1277806
+      - 1685406
     description: A testing keyed boolean scalar; not meant to be touched.
     expires: never
     kind: boolean
@@ -7310,6 +7361,7 @@ telemetry.test:
   multiple_stores_string:
     bug_numbers:
       - 1498164
+      - 1685406
     description: >
       This is a test string type with multiple stores.
     expires: never
@@ -7364,6 +7416,35 @@ telemetry.test:
     record_into_store:
       - 'main'
       - 'sync'
+
+  mirror_for_date:
+    bug_numbers: [1685406]
+    description: Test only. This is a mirror probe for a Glean datetime metric.
+    expires: never
+    kind: string
+    notification_emails: [glean-team@mozilla.com]
+    products: ["firefox", "thunderbird"]
+    record_in_processes: ["all"]
+
+  mirror_for_timespan:
+    bug_numbers: [1685406]
+    description: Test only. This is a mirror probe for a Glean timespan metric.
+    expires: never
+    kind: uint
+    notification_emails: [glean-team@mozilla.com]
+    products: ["firefox", "thunderbird"]
+    record_in_processes: ["all"]
+
+  mirror_for_labeled_bool:
+    bug_numbers: [1685406]
+    description: Test only. This is a mirror probe for a Glean labeled_boolean metric.
+    expires: never
+    kind: boolean
+    keyed: true
+    notification_emails: [glean-team@mozilla.com]
+    products: ["firefox", "thunderbird"]
+    record_in_processes: ["all"]
+
 
 # The following section contains counters for corruption of internal omni jar files.
 corroborate:

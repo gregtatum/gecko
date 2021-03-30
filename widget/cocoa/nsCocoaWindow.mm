@@ -262,7 +262,49 @@ static bool UseNativePopupWindows() {
 #endif /* MOZ_USE_NATIVE_POPUP_WINDOWS */
 }
 
+DesktopToLayoutDeviceScale ParentBackingScaleFactor(nsIWidget* aParent, NSView* aParentView) {
+  if (aParent) {
+    return aParent->GetDesktopToDeviceScale();
+  }
+  NSWindow* parentWindow = [aParentView window];
+  if (parentWindow) {
+    return DesktopToLayoutDeviceScale([parentWindow backingScaleFactor]);
+  }
+  return DesktopToLayoutDeviceScale(1.0);
+}
+
+// Returns the screen rectangle for the given widget.
+// Child widgets are positioned relative to this rectangle.
+// Exactly one of the arguments must be non-null.
+static DesktopRect GetWidgetScreenRectForChildren(nsIWidget* aWidget, NSView* aView) {
+  if (aWidget) {
+    mozilla::DesktopToLayoutDeviceScale scale = aWidget->GetDesktopToDeviceScale();
+    if (aWidget->WindowType() == eWindowType_child) {
+      return aWidget->GetScreenBounds() / scale;
+    }
+    return aWidget->GetClientBounds() / scale;
+  }
+
+  MOZ_RELEASE_ASSERT(aView);
+
+  // 1. Transform the view rect into window coords.
+  // The returned rect is in "origin bottom-left" coordinates.
+  NSRect rectInWindowCoordinatesOBL = [aView convertRect:[aView bounds] toView:nil];
+
+  // 2. Turn the window-coord rect into screen coords, still origin bottom-left.
+  NSRect rectInScreenCoordinatesOBL =
+      [[aView window] convertRectToScreen:rectInWindowCoordinatesOBL];
+
+  // 3. Convert the NSRect to a DesktopRect. This will convert to coordinates
+  // with the origin in the top left corner of the primary screen.
+  return DesktopRect(nsCocoaUtils::CocoaRectToGeckoRect(rectInScreenCoordinatesOBL));
+}
+
 // aRect here is specified in desktop pixels
+//
+// For child windows (where either aParent or aNativeParent is non-null),
+// aRect.{x,y} are offsets from the origin of the parent window and not an
+// absolute position.
 nsresult nsCocoaWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
                                const DesktopIntRect& aRect, nsWidgetInitData* aInitData) {
   NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
@@ -290,14 +332,26 @@ nsresult nsCocoaWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
   // Applications that use native popups don't want us to create popup windows.
   if ((mWindowType == eWindowType_popup) && UseNativePopupWindows()) return NS_OK;
 
+  // If we have a parent widget, the new widget will be offset from the
+  // parent widget by aRect.{x,y}. Otherwise, we'll use aRect for the
+  // new widget coordinates.
+  DesktopIntPoint parentOrigin;
+
+  // Do we have a parent widget?
+  if (aParent || aNativeParent) {
+    DesktopRect parentDesktopRect = GetWidgetScreenRectForChildren(aParent, (NSView*)aNativeParent);
+    parentOrigin = gfx::RoundedToInt(parentDesktopRect.TopLeft());
+  }
+
+  DesktopIntRect widgetRect = aRect + parentOrigin;
+
   nsresult rv =
-      CreateNativeWindow(nsCocoaUtils::GeckoRectToCocoaRect(newBounds), mBorderStyle, false);
+      CreateNativeWindow(nsCocoaUtils::GeckoRectToCocoaRect(widgetRect), mBorderStyle, false);
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (mWindowType == eWindowType_popup) {
     SetWindowMouseTransparent(aInitData->mMouseTransparent);
-
-    // now we can convert newBounds to device pixels for the window we created,
+    // now we can convert widgetRect to device pixels for the window we created,
     // as the child view expects a rect expressed in the dev pix of its parent
     LayoutDeviceIntRect devRect = RoundedToInt(newBounds * GetDesktopToDeviceScale());
     return CreatePopupContentView(devRect, aInitData);
@@ -312,7 +366,8 @@ nsresult nsCocoaWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
 
 nsresult nsCocoaWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
                                const LayoutDeviceIntRect& aRect, nsWidgetInitData* aInitData) {
-  DesktopIntRect desktopRect = RoundedToInt(aRect / GetDesktopToDeviceScale());
+  DesktopIntRect desktopRect =
+      RoundedToInt(aRect / ParentBackingScaleFactor(aParent, (NSView*)aNativeParent));
   return Create(aParent, aNativeParent, desktopRect, aInitData);
 }
 
@@ -1085,29 +1140,32 @@ void nsCocoaWindow::SetSizeConstraints(const SizeConstraints& aConstraints) {
   NSRect rect = (mWindowType == eWindowType_popup) ? NSZeroRect : NSMakeRect(0.0, 0.0, 32, 32);
   rect = [mWindow frameRectForChildViewRect:rect];
 
-  CGFloat scaleFactor = BackingScaleFactor();
-
   SizeConstraints c = aConstraints;
-  c.mMinSize.width = std::max(nsCocoaUtils::CocoaPointsToDevPixels(rect.size.width, scaleFactor),
-                              c.mMinSize.width);
-  c.mMinSize.height = std::max(nsCocoaUtils::CocoaPointsToDevPixels(rect.size.height, scaleFactor),
-                               c.mMinSize.height);
 
-  NSSize minSize = {nsCocoaUtils::DevPixelsToCocoaPoints(c.mMinSize.width, scaleFactor),
-                    nsCocoaUtils::DevPixelsToCocoaPoints(c.mMinSize.height, scaleFactor)};
+  if (c.mScale.scale == MOZ_WIDGET_INVALID_SCALE) {
+    c.mScale.scale = BackingScaleFactor();
+  }
+
+  c.mMinSize.width = std::max(nsCocoaUtils::CocoaPointsToDevPixels(rect.size.width, c.mScale.scale),
+                              c.mMinSize.width);
+  c.mMinSize.height = std::max(
+      nsCocoaUtils::CocoaPointsToDevPixels(rect.size.height, c.mScale.scale), c.mMinSize.height);
+
+  NSSize minSize = {nsCocoaUtils::DevPixelsToCocoaPoints(c.mMinSize.width, c.mScale.scale),
+                    nsCocoaUtils::DevPixelsToCocoaPoints(c.mMinSize.height, c.mScale.scale)};
   [mWindow setMinSize:minSize];
 
-  c.mMaxSize.width = std::max(nsCocoaUtils::CocoaPointsToDevPixels(c.mMaxSize.width, scaleFactor),
-                              c.mMaxSize.width);
-  c.mMaxSize.height = std::max(nsCocoaUtils::CocoaPointsToDevPixels(c.mMaxSize.height, scaleFactor),
-                               c.mMaxSize.height);
+  c.mMaxSize.width = std::max(
+      nsCocoaUtils::CocoaPointsToDevPixels(c.mMaxSize.width, c.mScale.scale), c.mMaxSize.width);
+  c.mMaxSize.height = std::max(
+      nsCocoaUtils::CocoaPointsToDevPixels(c.mMaxSize.height, c.mScale.scale), c.mMaxSize.height);
 
   NSSize maxSize = {c.mMaxSize.width == NS_MAXSIZE
                         ? FLT_MAX
-                        : nsCocoaUtils::DevPixelsToCocoaPoints(c.mMaxSize.width, scaleFactor),
+                        : nsCocoaUtils::DevPixelsToCocoaPoints(c.mMaxSize.width, c.mScale.scale),
                     c.mMaxSize.height == NS_MAXSIZE
                         ? FLT_MAX
-                        : nsCocoaUtils::DevPixelsToCocoaPoints(c.mMaxSize.height, scaleFactor)};
+                        : nsCocoaUtils::DevPixelsToCocoaPoints(c.mMaxSize.height, c.mScale.scale)};
   [mWindow setMaxSize:maxSize];
 
   nsBaseWidget::SetSizeConstraints(c);
@@ -1622,12 +1680,19 @@ void nsCocoaWindow::DoResize(double aX, double aY, double aWidth, double aHeight
   AutoRestore<bool> reentrantResizeGuard(mInResize);
   mInResize = true;
 
-  // ConstrainSize operates in device pixels, so we need to convert using
-  // the backing scale factor here
-  CGFloat scale = BackingScaleFactor();
+  CGFloat scale = mSizeConstraints.mScale.scale;
+  if (scale == MOZ_WIDGET_INVALID_SCALE) {
+    scale = BackingScaleFactor();
+  }
+
+  // mSizeConstraints is in device pixels.
   int32_t width = NSToIntRound(aWidth * scale);
   int32_t height = NSToIntRound(aHeight * scale);
-  ConstrainSize(&width, &height);
+
+  width =
+      std::max(mSizeConstraints.mMinSize.width, std::min(mSizeConstraints.mMaxSize.width, width));
+  height = std::max(mSizeConstraints.mMinSize.height,
+                    std::min(mSizeConstraints.mMaxSize.height, height));
 
   DesktopIntRect newBounds(NSToIntRound(aX), NSToIntRound(aY), NSToIntRound(width / scale),
                            NSToIntRound(height / scale));
@@ -1768,28 +1833,12 @@ CGFloat nsCocoaWindow::BackingScaleFactor() {
 }
 
 void nsCocoaWindow::BackingScaleFactorChanged() {
-  CGFloat oldScale = mBackingScaleFactor;
   CGFloat newScale = GetBackingScaleFactor(mWindow);
 
   // ignore notification if it hasn't really changed (or maybe we have
   // disabled HiDPI mode via prefs)
   if (mBackingScaleFactor == newScale) {
     return;
-  }
-
-  if (mBackingScaleFactor > 0.0) {
-    // convert size constraints to the new device pixel coordinate space
-    double scaleFactor = newScale / mBackingScaleFactor;
-    mSizeConstraints.mMinSize.width = NSToIntRound(mSizeConstraints.mMinSize.width * scaleFactor);
-    mSizeConstraints.mMinSize.height = NSToIntRound(mSizeConstraints.mMinSize.height * scaleFactor);
-    if (mSizeConstraints.mMaxSize.width < NS_MAXSIZE) {
-      mSizeConstraints.mMaxSize.width =
-          std::min(NS_MAXSIZE, NSToIntRound(mSizeConstraints.mMaxSize.width * scaleFactor));
-    }
-    if (mSizeConstraints.mMaxSize.height < NS_MAXSIZE) {
-      mSizeConstraints.mMaxSize.height =
-          std::min(NS_MAXSIZE, NSToIntRound(mSizeConstraints.mMaxSize.height * scaleFactor));
-    }
   }
 
   mBackingScaleFactor = newScale;
@@ -1802,23 +1851,6 @@ void nsCocoaWindow::BackingScaleFactorChanged() {
     presShell->BackingScaleFactorChanged();
   }
   mWidgetListener->UIResolutionChanged();
-
-  if ((mWindowType == eWindowType_popup) && (mBackingScaleFactor == 2.0)) {
-    // Recalculate the size and y-origin for the popup now that the backing
-    // scale factor has changed. After creating the popup window NSWindow,
-    // setting the frame when the menu is moved into the correct location
-    // causes the backing scale factor to change if the window is not on the
-    // menu bar display. Update the dimensions and y-origin here so that the
-    // frame is correct for the following ::Show(). Only do this when the
-    // scale factor changes from 1.0 to 2.0. When the scale factor changes
-    // from 2.0 to 1.0, the view will resize the widget before it is shown.
-    NSRect frame = [mWindow frame];
-    CGFloat previousYOrigin = frame.origin.y + frame.size.height;
-    frame.size.width = mBounds.Width() * (oldScale / newScale);
-    frame.size.height = mBounds.Height() * (oldScale / newScale);
-    frame.origin.y = previousYOrigin - frame.size.height;
-    [mWindow setFrame:frame display:NO animate:NO];
-  }
 }
 
 int32_t nsCocoaWindow::RoundsWidgetCoordinatesTo() {
@@ -2512,6 +2544,13 @@ bool nsCocoaWindow::GetEditCommands(NativeKeyBindingsType aType, const WidgetKey
   // treated as in a vertical content.
   keyBindings->GetEditCommands(aEvent, Nothing(), aCommands);
   return true;
+}
+
+bool nsCocoaWindow::AsyncPanZoomEnabled() const {
+  if (mPopupContentView) {
+    return mPopupContentView->AsyncPanZoomEnabled();
+  }
+  return nsBaseWidget::AsyncPanZoomEnabled();
 }
 
 already_AddRefed<nsIWidget> nsIWidget::CreateTopLevelWindow() {
@@ -3366,10 +3405,46 @@ static const NSString* kStateWantsTitleDrawn = @"wantsTitleDrawn";
 
 @end
 
+#if !defined(MAC_OS_VERSION_11_0) || MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_VERSION_11_0
+typedef NS_ENUM(NSInteger, NSTitlebarSeparatorStyle) {
+  NSTitlebarSeparatorStyleAutomatic,
+  NSTitlebarSeparatorStyleNone,
+  NSTitlebarSeparatorStyleLine,
+  NSTitlebarSeparatorStyleShadow
+};
+@interface NSWindow (NSTitlebarSeparatorStyle)
+@property NSTitlebarSeparatorStyle titlebarSeparatorStyle;
+@end
+#endif
+
+@interface MOZTitlebarAccessoryView : NSView
+@end
+
+@implementation MOZTitlebarAccessoryView : NSView
+- (void)viewWillMoveToWindow:(NSWindow*)aWindow {
+  if (aWindow) {
+    // When entering full screen mode, titlebar accessory views are inserted
+    // into a floating NSWindow which houses the window titlebar and toolbars.
+    // In order to work around a drawing bug with titlebarAppearsTransparent
+    // windows in full screen mode, disable titlebar separators for all
+    // NSWindows that this view is used in, including the floating full screen
+    // toolbar window. The drawing bug was filed as FB9056136. See bug 1700211
+    // for more details.
+#if !defined(MAC_OS_VERSION_11_0) || MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_VERSION_11_0
+    if (nsCocoaFeatures::OnBigSurOrLater()) {
+#else
+    if (@available(macOS 11.0, *)) {
+#endif
+      aWindow.titlebarSeparatorStyle = NSTitlebarSeparatorStyleNone;
+    }
+  }
+}
+@end
+
 @implementation FullscreenTitlebarTracker
 - (FullscreenTitlebarTracker*)init {
   [super init];
-  self.view = [[[NSView alloc] initWithFrame:NSZeroRect] autorelease];
+  self.view = [[[MOZTitlebarAccessoryView alloc] initWithFrame:NSZeroRect] autorelease];
   self.hidden = YES;
   return self;
 }
@@ -3448,6 +3523,13 @@ static const NSString* kStateWantsTitleDrawn = @"wantsTitleDrawn";
     mInitialTitlebarHeight = [self titlebarHeight];
 
     [self setTitlebarAppearsTransparent:YES];
+#if !defined(MAC_OS_VERSION_11_0) || MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_VERSION_11_0
+    if (nsCocoaFeatures::OnBigSurOrLater()) {
+#else
+    if (@available(macOS 11.0, *)) {
+#endif
+      self.titlebarSeparatorStyle = NSTitlebarSeparatorStyleNone;
+    }
     [self updateTitlebarView];
 
     mFullscreenTitlebarTracker = [[FullscreenTitlebarTracker alloc] init];
@@ -3458,13 +3540,9 @@ static const NSString* kStateWantsTitleDrawn = @"wantsTitleDrawn";
                                  forKeyPath:@"revealAmount"
                                     options:NSKeyValueObservingOptionNew
                                     context:nil];
-    // TODO: Adding this accessory view controller allows us to shift the
-    // toolbar down when the user mouses to the top of the screen in fullscreen.
-    // It also draws a flickering 1px white line at the top of the window in
-    // fullscreen mode. This pref can be removed when the latter issue is fixed.
-    if (Preferences::GetBool("full-screen-api.macos.shiftToolbar", false)) {
-      [(NSWindow*)self addTitlebarAccessoryViewController:mFullscreenTitlebarTracker];
-    }
+    // Adding this accessory view controller allows us to shift the toolbar down
+    // when the user mouses to the top of the screen in fullscreen.
+    [(NSWindow*)self addTitlebarAccessoryViewController:mFullscreenTitlebarTracker];
   }
   return self;
 

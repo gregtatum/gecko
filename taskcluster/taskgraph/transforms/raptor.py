@@ -31,7 +31,7 @@ raptor_description_schema = Schema(
         Optional("binary-path"): optionally_keyed_by("app", text_type),
         # Configs defined in the 'test_description_schema'.
         Optional("max-run-time"): optionally_keyed_by(
-            "app", test_description_schema["max-run-time"]
+            "app", "subtest", "test-platform", test_description_schema["max-run-time"]
         ),
         Optional("run-on-projects"): optionally_keyed_by(
             "app",
@@ -40,14 +40,6 @@ raptor_description_schema = Schema(
             "subtest",
             "variant",
             test_description_schema["run-on-projects"],
-        ),
-        Optional("fission-run-on-projects"): optionally_keyed_by(
-            "app",
-            "test-name",
-            "raptor-test",
-            "subtest",
-            "test-platform",
-            test_description_schema["fission-run-on-projects"],
         ),
         Optional("webrender-run-on-projects"): optionally_keyed_by(
             "app",
@@ -175,7 +167,6 @@ def handle_keyed_by(config, tests):
         "activity",
         "binary-path",
         "fetches.fetch",
-        "fission-run-on-projects",
         "max-run-time",
         "run-on-projects",
         "target",
@@ -197,7 +188,9 @@ def split_page_load_by_url(config, tests):
         # `chunk-number` and 'subtest' only exists when the task had a
         # definition for `raptor-subtests`
         chunk_number = test.pop("chunk-number", None)
-        subtest = test.pop("subtest", None)
+        subtest = test.get(
+            "subtest"
+        )  # don't pop as some tasks need this value after splitting variants
         subtest_symbol = test.pop("subtest-symbol", None)
 
         if not chunk_number or not subtest:
@@ -252,7 +245,9 @@ def add_extra_options(config, tests):
             test["attributes"]["run-visual-metrics"] = True
 
         if "app" in test:
-            extra_options.append("--app={}".format(test.pop("app")))
+            extra_options.append(
+                "--app={}".format(test["app"])
+            )  # don't pop as some tasks need this value after splitting variants
 
         if "activity" in test:
             extra_options.append("--activity={}".format(test.pop("activity")))

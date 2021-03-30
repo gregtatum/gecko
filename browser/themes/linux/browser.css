@@ -25,6 +25,7 @@
 
   --panel-separator-color: ThreeDShadow;
 
+  --tabs-border-color: rgba(0,0,0,.3);
 
   --chrome-content-separator-color: ThreeDShadow;
 }
@@ -35,13 +36,11 @@
 }
 } /*** END proton ***/
 
-#navigator-toolbox {
-  --tabs-border-color: rgba(0,0,0,.3);
-}
-
+@supports not -moz-bool-pref("browser.proton.enabled") {
 #tabbrowser-tabs {
   --tab-line-color: -moz-accent-color;
 }
+} /*** end !proton ***/
 
 :root:-moz-lwtheme {
   --chrome-content-separator-color: rgba(0,0,0,.3);
@@ -203,11 +202,16 @@ menuitem.bookmark-item {
 %include ../shared/urlbarView.inc.css
 
 :root:not(:-moz-lwtheme) {
-  --urlbar-popup-url-color: -moz-nativehyperlinktext;
   --urlbar-popup-action-color: -moz-nativehyperlinktext;
   --autocomplete-popup-highlight-background: Highlight;
   --autocomplete-popup-highlight-color: HighlightText;
 }
+
+@supports not -moz-bool-pref("browser.proton.urlbar.enabled") {
+:root:not(:-moz-lwtheme) {
+  --urlbar-popup-url-color: -moz-nativehyperlinktext;
+}
+} /*** END !proton ***/
 
 /* Translation infobar */
 
@@ -270,7 +274,7 @@ menuitem.bookmark-item {
   }
 }
 
-@supports not -moz-bool-pref("browser.proton.tabs.enabled") {
+@supports not -moz-bool-pref("browser.proton.enabled") {
 .keyboard-focused-tab > .tab-stack > .tab-content,
 .tabbrowser-tab:focus:not([aria-activedescendant]) > .tab-stack > .tab-content {
   outline: 1px dotted;
@@ -384,6 +388,10 @@ menuitem.bookmark-item {
   /* override toolkit/themes/linux/global/menu.css */
   padding-inline-end: 0 !important;
   margin-inline-end: 0 !important;
+}
+
+.cui-widget-panelview[id^=PanelUI-webext-] {
+  border-radius: var(--arrowpanel-border-radius);
 }
 
 .webextension-popup-browser,

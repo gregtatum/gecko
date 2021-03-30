@@ -1951,6 +1951,10 @@ pref("font.cjk_pref_fallback_order",        "zh-cn,zh-hk,zh-tw,ja,ko");
 
 pref("intl.uidirection", -1); // -1 to set from locale; 0 for LTR; 1 for RTL
 
+// This pref controls pseudolocales for testing localization.
+// See https://firefox-source-docs.mozilla.org/l10n/fluent/tutorial.html#pseudolocalization.
+pref("intl.l10n.pseudo", "");
+
 // use en-US hyphenation by default for content tagged with plain lang="en"
 pref("intl.hyphenation-alias.en", "en-us");
 // and for other subtags of en-*, if no specific patterns are available
@@ -3880,9 +3884,6 @@ pref("alerts.showFavicons", false);
 #ifdef XP_MACOSX
   // Whether to use macOS native full screen for Fullscreen API
   pref("full-screen-api.macos-native-full-screen", false);
-  // Whether the toolbar should slide down with the menubar when the user mouses
-  // to the top of the screen in fullscreen mode.
-  pref("full-screen-api.macos.shiftToolbar", false);
 #endif
 // whether to prevent the top level widget from going fullscreen
 pref("full-screen-api.ignore-widgets", false);

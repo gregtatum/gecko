@@ -11,14 +11,16 @@
 #include "js/Class.h"         // JSClass
 #include "js/Result.h"        // JS::OOM, JS::Result
 #include "js/RootingAPI.h"    // JS::Handle
+#include "vm/JSObject.h"      // js::NewObjectKind
 #include "vm/NativeObject.h"  // js::NativeObject
-#include "vm/ObjectGroup.h"   // js::NewObjectKind
 
 struct JS_PUBLIC_API JSContext;
 class JS_PUBLIC_API JSFunction;
 class JS_PUBLIC_API JSObject;
 
 namespace js {
+
+struct IdValuePair;
 
 // Object class for plain native objects created using '{}' object literals,
 // 'new Object()', 'Object.create', etc.
@@ -61,6 +63,11 @@ extern PlainObject* CreateThisForFunction(JSContext* cx,
                                           JS::Handle<JSFunction*> callee,
                                           JS::Handle<JSObject*> newTarget,
                                           NewObjectKind newKind);
+
+extern PlainObject* NewPlainObjectWithProperties(JSContext* cx,
+                                                 IdValuePair* properties,
+                                                 size_t nproperties,
+                                                 NewObjectKind newKind);
 
 }  // namespace js
 
