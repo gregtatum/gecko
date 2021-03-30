@@ -1025,10 +1025,11 @@ def target_tasks_nightly_desktop(full_task_graph, parameters, graph_config):
         for l, t in six.iteritems(full_task_graph.tasks)
         if release_filter(t, parameters)
     ]
-    # Avoid duplicate tasks.
-    return list(
-        set(target_tasks_nightly_win32(full_task_graph, parameters, graph_config))
-        | set(target_tasks_nightly_win64(full_task_graph, parameters, graph_config))
+    all_pine_release_tasks = list(
+        # No win32 nightlies on pine
+        # set(target_tasks_nightly_win32(full_task_graph, parameters, graph_config))
+        # | set(target_tasks_nightly_win64(full_task_graph, parameters, graph_config))
+        set(target_tasks_nightly_win64(full_task_graph, parameters, graph_config))
         # No win64-aarch64 nightlies on pine
         # | set(
         #     target_tasks_nightly_win64_aarch64(
@@ -1042,6 +1043,16 @@ def target_tasks_nightly_desktop(full_task_graph, parameters, graph_config):
         # | set(target_tasks_nightly_asan(full_task_graph, parameters, graph_config))
         | set(release_tasks)
     )
+
+    def filter(label, task):
+        if label not in all_pine_release_tasks:
+            return False
+        # We want all release tasks, except for the tests
+        if task.attributes.get("kind", "") in ['test']:
+            return False
+        return True
+
+    return [l for l, t in six.iteritems(full_task_graph.tasks) if filter(l, t)]
 
 
 # Run Searchfox analysis once daily.

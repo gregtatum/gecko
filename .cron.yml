@@ -66,7 +66,6 @@ jobs:
           include-push-tasks: true
       run-on-projects:
           - mozilla-central
-          - pine
       when: []  # never (hook only)
 
     - name: nightly-desktop-win64
