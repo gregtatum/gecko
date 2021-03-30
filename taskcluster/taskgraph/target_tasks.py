@@ -1048,7 +1048,7 @@ def target_tasks_nightly_desktop(full_task_graph, parameters, graph_config):
         if label not in all_pine_release_tasks:
             return False
         # We want all release tasks, except for the tests
-        if task.attributes.get("kind", "") in ['test']:
+        if task.attributes.get("kind", "") in ["test"]:
             return False
         return True
 
