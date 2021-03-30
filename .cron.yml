@@ -27,11 +27,14 @@ jobs:
           include-push-tasks: true
       run-on-projects:
           - mozilla-central
+          - pine
       when:
           by-project:
               # Please update the `searchfox-index` job `mozilla-central` `when`
               # times as well if updating the times here.
               mozilla-central: [{hour: 10, minute: 0}, {hour: 22, minute: 0}]
+              # Test on a hook initially
+              pine: []
               # No default
 
     - name: nightly-desktop-linux
@@ -52,6 +55,7 @@ jobs:
           include-push-tasks: true
       run-on-projects:
           - mozilla-central
+          - pine
       when: []  # never (hook only)
 
     - name: nightly-desktop-win32
@@ -62,6 +66,7 @@ jobs:
           include-push-tasks: true
       run-on-projects:
           - mozilla-central
+          - pine
       when: []  # never (hook only)
 
     - name: nightly-desktop-win64
@@ -72,6 +77,7 @@ jobs:
           include-push-tasks: true
       run-on-projects:
           - mozilla-central
+          - pine
       when: []  # never (hook only)
 
     - name: nightly-desktop-win64-aarch64
