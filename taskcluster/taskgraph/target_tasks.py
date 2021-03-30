@@ -1029,14 +1029,17 @@ def target_tasks_nightly_desktop(full_task_graph, parameters, graph_config):
     return list(
         set(target_tasks_nightly_win32(full_task_graph, parameters, graph_config))
         | set(target_tasks_nightly_win64(full_task_graph, parameters, graph_config))
-        | set(
-            target_tasks_nightly_win64_aarch64(
-                full_task_graph, parameters, graph_config
-            )
-        )
+        # No win64-aarch64 nightlies on pine
+        # | set(
+        #     target_tasks_nightly_win64_aarch64(
+        #         full_task_graph, parameters, graph_config
+        #     )
+        # )
         | set(target_tasks_nightly_macosx(full_task_graph, parameters, graph_config))
-        | set(target_tasks_nightly_linux(full_task_graph, parameters, graph_config))
-        | set(target_tasks_nightly_asan(full_task_graph, parameters, graph_config))
+        # No linux nightlies on pine
+        # | set(target_tasks_nightly_linux(full_task_graph, parameters, graph_config))
+        # No asan nightlies on pine
+        # | set(target_tasks_nightly_asan(full_task_graph, parameters, graph_config))
         | set(release_tasks)
     )
 
