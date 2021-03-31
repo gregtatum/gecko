@@ -68,11 +68,14 @@ class GoogleService {
 
   connect() {
     // This will force login if not already logged in.
-    return this.auth.getToken();
+    let token = this.auth.getToken();
+    OnlineServices.persist();
+    return token;
   }
 
   async getAccountAddress() {
     let token = await this.auth.getToken();
+    OnlineServices.persist();
 
     let apiTarget = new URL(
       "https://gmail.googleapis.com/gmail/v1/users/me/profile"
@@ -140,6 +143,7 @@ class GoogleService {
 
   async getNextMeetings() {
     let token = await this.auth.getToken();
+    OnlineServices.persist();
 
     let apiTarget = new URL(
       "https://www.googleapis.com/calendar/v3/calendars/primary/events"
@@ -194,6 +198,7 @@ class GoogleService {
 
   async getEmailInfo(messageId) {
     let token = await this.auth.getToken();
+    OnlineServices.persist();
 
     let apiTarget = new URL(
       `https://www.googleapis.com/gmail/v1/users/me/messages/${messageId}`
@@ -308,11 +313,6 @@ class GoogleService {
 
 const ServiceInstances = new Set();
 
-function persist() {
-  let config = JSON.stringify(Array.from(ServiceInstances));
-  Services.prefs.setCharPref(PREF_STORE, config);
-}
-
 let loaded = false;
 function load() {
   if (loaded) {
@@ -335,17 +335,23 @@ const OnlineServices = {
     ServiceInstances.add(service);
     await service.connect();
 
-    persist();
+    this.persist();
   },
 
   deleteService(service) {
     ServiceInstances.delete(service);
-    persist();
+    this.persist();
   },
 
   getServices() {
     load();
 
     return [...ServiceInstances];
+  },
+
+  persist() {
+    let config = JSON.stringify(Array.from(ServiceInstances));
+    Cu.reportError(config);
+    Services.prefs.setCharPref(PREF_STORE, config);
   },
 };
