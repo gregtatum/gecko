@@ -28,15 +28,14 @@ export class MediaList extends HTMLElement {
       if (this.muteAll.hasAttribute("disabled")) {
         return;
       }
-      for (let browser of this.allBrowsers) {
-        let tab = tabForBrowser(browser);
-        if (tab.soundPlaying) {
+      for (let media of this.allActiveMediaChildren) {
+        let tab = media.tab;
+        if (tab.soundPlaying && !tab.muted) {
           tab.toggleMuteAudio();
         }
       }
       this.render();
     });
-    this.muteAll.hidden = true;
     shadow.appendChild(fragment);
 
     this.trackedControllers = new WeakSet();
@@ -73,10 +72,13 @@ export class MediaList extends HTMLElement {
     }
     return browsers;
   }
+
+  get allActiveMediaChildren() {
+    return this.querySelectorAll("e-media:not([hidden])");
+  }
+
   render() {
-    console.debug(`Media: render`);
     this.innerHTML = "";
-    let anyNoisy = false;
     for (let browser of this.allBrowsers) {
       if (!browser.browsingContext) {
         continue;
@@ -86,27 +88,24 @@ export class MediaList extends HTMLElement {
       // recurse into children to find a media session if the top-level
       // doc doesn't have one. Should we try to handle the case where we
       // have multiple within a tab?
-
       this.connectMediaController(browser.browsingContext);
       this.connectTab(tabForBrowser(browser));
-      // console.log(browser.browsingContext.mediaController);
-      // if (!browser.browsingContext.mediaController.isActive) {
-      //     continue;
-      // }
       this.append(new Media(browser));
-      if (!browser.audioMuted) {
-        anyNoisy = true;
-      }
     }
 
-    if (anyNoisy) {
-      this.muteAll.removeAttribute("disabled");
-    } else {
-      this.muteAll.setAttribute("disabled", "true");
-    }
-
-    if (this.querySelector("e-media:not([hidden])")) {
+    if (this.allActiveMediaChildren.length) {
       this.removeAttribute("hidden");
+      let anyNoisy = false;
+      for (let media of this.allActiveMediaChildren) {
+        if (media.tab.soundPlaying && !media.tab.muted) {
+          anyNoisy = true;
+        }
+        if (anyNoisy) {
+          this.muteAll.removeAttribute("disabled");
+        } else {
+          this.muteAll.setAttribute("disabled", "true");
+        }
+      }
     } else {
       this.setAttribute("hidden", "true");
     }
