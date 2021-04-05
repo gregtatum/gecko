@@ -114,6 +114,7 @@ customElements.define("e-keyframedblist", KeyframeDbList);
 
 let scorers = [
   {
+    id: "engagement",
     label: "Engagement time",
     min: 0,
     max: 10,
@@ -122,6 +123,7 @@ let scorers = [
     apply: (frame, value) => (frame.totalEngagement / 1000) * value,
   },
   {
+    id: "typing-time",
     label: "Typing time",
     min: 0,
     max: 10,
@@ -130,6 +132,7 @@ let scorers = [
     apply: (frame, value) => (frame.typingTime / 1000) * value,
   },
   {
+    id: "typing-ratio",
     label: "Typing ratio",
     min: 0,
     max: 10,
@@ -139,6 +142,7 @@ let scorers = [
       ((100 * frame.typingTime) / frame.totalEngagement) * value,
   },
   {
+    id: "keypresses",
     label: "Keypresses",
     min: 0,
     max: 10,
@@ -147,6 +151,7 @@ let scorers = [
     apply: (frame, value) => frame.keypresses * value,
   },
   {
+    id: "cps",
     label: "Characters per second",
     min: 0,
     max: 10,
@@ -158,10 +163,11 @@ let scorers = [
 ];
 
 let ranges = new Map();
-let threshold = new Range("Threshold", 0, 100, 1, 100);
+let threshold = new Range("threshold", "Threshold", 0, 100, 1, 100);
 
 function addRange(scorer) {
   let range = new Range(
+    scorer.id,
     scorer.label,
     scorer.min,
     scorer.max,

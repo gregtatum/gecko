@@ -2,11 +2,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+// These come from utilityOverlay.js
+/* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
+
+const PREF_BRANCH = "companion.range.";
+
 export class Range extends HTMLElement {
-  constructor(label, min, max, step, value) {
+  constructor(id, label, min, max, step, value) {
     super();
 
+    this.id = id;
     this.className = "range";
+
+    value = parseFloat(Services.prefs.getCharPref(PREF_BRANCH + id, value));
 
     let template = document.getElementById("template-range");
     let fragment = template.content.cloneNode(true);
@@ -19,7 +27,10 @@ export class Range extends HTMLElement {
     this.slider.setAttribute("step", step);
     this.slider.setAttribute("value", value);
 
-    this.slider.addEventListener("input", () => this.updateValue());
+    this.slider.addEventListener("input", () => {
+      Services.prefs.setCharPref(PREF_BRANCH + id, this.value);
+      this.updateValue();
+    });
     this.appendChild(fragment);
 
     this.updateValue();
