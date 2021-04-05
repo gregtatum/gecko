@@ -204,7 +204,9 @@ class BrowserElement extends Browser {
   }
 
   clearTemporaryPermissions() {
-    this.window.SitePermissions.clearTemporaryBlockPermissions(this.browserElement);
+    this.window.SitePermissions.clearTemporaryBlockPermissions(
+      this.browserElement
+    );
   }
 
   focus() {
