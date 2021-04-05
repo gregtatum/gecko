@@ -118,7 +118,7 @@ let scorers = [
     min: 0,
     max: 10,
     step: 0.1,
-    value: 1,
+    value: 3,
     apply: (frame, value) => (frame.totalEngagement / 1000) * value,
   },
   {
@@ -126,7 +126,7 @@ let scorers = [
     min: 0,
     max: 10,
     step: 0.1,
-    value: 0,
+    value: 5,
     apply: (frame, value) => (frame.typingTime / 1000) * value,
   },
   {
@@ -134,7 +134,7 @@ let scorers = [
     min: 0,
     max: 10,
     step: 0.1,
-    value: 0,
+    value: 4,
     apply: (frame, value) =>
       ((100 * frame.typingTime) / frame.totalEngagement) * value,
   },
@@ -143,7 +143,7 @@ let scorers = [
     min: 0,
     max: 10,
     step: 0.1,
-    value: 0,
+    value: 6,
     apply: (frame, value) => frame.keypresses * value,
   },
   {
@@ -151,14 +151,14 @@ let scorers = [
     min: 0,
     max: 10,
     step: 0.1,
-    value: 0,
+    value: 3,
     apply: (frame, value) =>
       (frame.keypresses / (frame.typingTime / 1000)) * value,
   },
 ];
 
 let ranges = new Map();
-let threshold = new Range("Threshold", 0, 100, 1, 0);
+let threshold = new Range("Threshold", 0, 100, 1, 100);
 
 function addRange(scorer) {
   let range = new Range(
