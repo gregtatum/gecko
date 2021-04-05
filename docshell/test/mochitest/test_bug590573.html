@@ -90,7 +90,7 @@ function pageLoad() {
 
 function continueAsync() {
   popup.addEventListener("popstate", function() {
-      setTimeout(function() { gTestContinuation.next(); });
+      popup.requestAnimationFrame(function() { gTestContinuation.next(); });
     },
     {once: true});
 }

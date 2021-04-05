@@ -8,7 +8,11 @@
 // (please try to keep the list alphabetically sorted)
 /*eslint sort-keys: "error"*/
 const Commands = {
+  inspectedWindowCommand:
+    "devtools/shared/commands/inspected-window/inspected-window-command",
   targetCommand: "devtools/shared/commands/target/target-command",
+  targetConfigurationCommand:
+    "devtools/shared/commands/target-configuration/target-configuration-command",
 };
 
 /**

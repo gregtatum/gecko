@@ -2035,6 +2035,7 @@ class nsDisplayListBuilder {
   bool mContainsBackdropFilter;
   bool mIsRelativeToLayoutViewport;
   bool mUseOverlayScrollbars;
+  bool mAlwaysLayerizeScrollbars;
 
   mozilla::Maybe<float> mVisibleThreshold;
   mozilla::gfx::CompositorHitTestInfo mCompositorHitTestInfo;
@@ -5126,6 +5127,7 @@ class nsDisplayOutline final : public nsPaintedDisplayItem {
   void Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) override;
 
  private:
+  nsRect GetInnerRect() const;
   bool IsThemedOutline() const;
   bool HasRadius() const;
 };

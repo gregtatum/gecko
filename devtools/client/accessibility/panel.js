@@ -103,10 +103,12 @@ AccessibilityPanel.prototype = {
       EVENTS.ACCESSIBILITY_INSPECTOR_UPDATED,
       this.onAccessibilityInspectorUpdated
     );
+    // Expose a promise so that tests can wait for the UI to be ready.
+    this._accessibilityViewInitialized = this.panelWin.once(EVENTS.INITIALIZED);
 
     this.shouldRefresh = true;
 
-    this.accessibilityProxy = new AccessibilityProxy(this._toolbox);
+    this.accessibilityProxy = new AccessibilityProxy(this._commands);
     this.accessibilityProxy.startListeningForTargetUpdated(
       this.onTargetUpdated
     );
@@ -129,8 +131,6 @@ AccessibilityPanel.prototype = {
       shutdown: this.onLifecycleEvent,
     });
 
-    this.isReady = true;
-    this.emit("ready");
     resolver(this);
     return this._opening;
   },
@@ -173,9 +173,15 @@ AccessibilityPanel.prototype = {
    * refreshed immediatelly if it's currently selected or lazily when the user
    * actually selects it.
    */
-  onTabNavigated() {
+  async onTabNavigated() {
     this.shouldRefresh = true;
-    this._opening.then(() => this.refresh());
+    await this._opening;
+
+    const onUpdated = this.panelWin.once(EVENTS.INITIALIZED);
+    this.refresh();
+    await onUpdated;
+
+    this.emit("reloaded");
   },
 
   onTargetUpdated({ isTargetSwitching }) {

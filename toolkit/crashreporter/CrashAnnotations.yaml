@@ -384,6 +384,12 @@ GraphicsCriticalError:
     Information of a critical error that occurred within the graphics code.
   type: string
 
+GraphicsDrawShader:
+  description: >
+    Name of the shader that is currently bound for a draw call, if applicable.
+    See file names in gfx/wr/webrender/res/* for the possible values.
+  type: string
+
 GraphicsSanityTest:
   description: >
     Annotation used in tests.
@@ -600,10 +606,10 @@ LauncherProcessState:
     mozilla::LauncherRegistryInfo::EnableState enum
   type: integer
 
-LowCommitSpaceEvents:
+LowPhysicalMemoryEvents:
   description: >
-    Number of times the available memory tracker has detected a that
-    commit-space was running low. This is a Windows-specific annotation.
+    Number of times the available memory tracker has detected that free
+    physical memory is running low. This is a Windows-specific annotation.
   type: integer
   ping: true
 

@@ -7,14 +7,14 @@
 
 const { OS } = ChromeUtils.import("resource://gre/modules/osfile.jsm");
 const { Sqlite } = ChromeUtils.import("resource://gre/modules/Sqlite.jsm");
-const { LastSession } = ChromeUtils.import(
+const { _LastSession } = ChromeUtils.import(
   "resource:///modules/sessionstore/SessionStore.jsm"
 );
 
 const NUM_KEYFRAMES = 20;
 
 let sessionStart = new Date();
-let lastSessionEnd = LastSession.getState()?.session?.lastUpdate;
+let lastSessionEnd = _LastSession.getState()?.session?.lastUpdate;
 
 const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
   Ci.nsINavHistoryService

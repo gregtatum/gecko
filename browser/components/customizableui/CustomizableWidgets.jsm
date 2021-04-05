@@ -135,6 +135,11 @@ const CustomizableWidgets = [
         "appMenuRecentlyClosedWindows"
       ).disabled = SessionStore.getClosedWindowCount(window) == 0;
 
+      PanelMultiView.getViewNode(
+        document,
+        "appMenuRestoreSession"
+      ).hidden = !SessionStore.canRestoreLastSession;
+
       // We restrict the amount of results to 42. Not 50, but 42. Why? Because 42.
       let query =
         "place:queryType=" +
@@ -277,7 +282,7 @@ const CustomizableWidgets = [
   {
     id: "add-ons-button",
     shortcutId: "key_openAddons",
-    tooltiptext: "add-ons-button.tooltiptext3",
+    l10nId: "toolbar-addons-themes-button",
     onCommand(aEvent) {
       let win = aEvent.target.ownerGlobal;
       win.BrowserOpenAddonsMgr();
@@ -664,26 +669,25 @@ if (!screenshotsDisabled) {
       Services.obs.addObserver(this, "toggle-screenshot-disable");
     },
     observe(subj, topic, data) {
-      this.screenshotNode.setAttribute("disabled", data);
+      if (data == "true") {
+        this.screenshotNode.setAttribute("disabled", "true");
+      } else {
+        this.screenshotNode.removeAttribute("disabled");
+      }
     },
   });
 }
 
 let preferencesButton = {
   id: "preferences-button",
+  l10nId: "toolbar-settings-button",
   onCommand(aEvent) {
     let win = aEvent.target.ownerGlobal;
     win.openPreferences(undefined);
   },
 };
-if (AppConstants.platform == "win") {
-  preferencesButton.label = "preferences-button.labelWin";
-  preferencesButton.tooltiptext = "preferences-button.tooltipWin2";
-} else if (AppConstants.platform == "macosx") {
-  preferencesButton.tooltiptext = "preferences-button.tooltiptext.withshortcut";
+if (AppConstants.platform == "macosx") {
   preferencesButton.shortcutId = "key_preferencesCmdMac";
-} else {
-  preferencesButton.tooltiptext = "preferences-button.tooltiptext2";
 }
 CustomizableWidgets.push(preferencesButton);
 

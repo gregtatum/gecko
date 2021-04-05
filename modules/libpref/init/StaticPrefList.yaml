@@ -1211,6 +1211,14 @@
 #endif
   mirror: always
 
+# When this pref is enabled, opaque response is only allowed to enter the
+# content process if it's a response for media (audio, image, video), CSS, or
+# JavaScript.
+- name: browser.opaqueResponseBlocking
+  type: RelaxedAtomicBool
+  value: @IS_NIGHTLY_BUILD@
+  mirror: always
+
 # When true, zooming will be enabled on all sites, even ones that declare
 # user-scalable=no.
 - name: browser.ui.zoom.force-user-scalable
@@ -1450,6 +1458,7 @@
   value: true
   mirror: always
 
+# KaiOS-only, see https://bugzilla.mozilla.org/show_bug.cgi?id=1699707#c10
 - name: device.sensors.ambientLight.enabled
   type: bool
   value: false
@@ -1463,6 +1472,12 @@
 - name: device.sensors.orientation.enabled
   type: bool
   value: true
+  mirror: always
+
+# KaiOS-only, see https://bugzilla.mozilla.org/show_bug.cgi?id=1699707#c10
+- name: device.sensors.proximity.enabled
+  type: bool
+  value: false
   mirror: always
 
 - name: device.sensors.test.events
@@ -4789,7 +4804,11 @@
 # Whether or not to fallback from WebRender/WebRender Software to Basic.
 - name: gfx.webrender.fallback.basic
   type: bool
+#if defined(MOZ_WIDGET_ANDROID)
   value: true
+#else
+  value: @IS_NOT_EARLY_BETA_OR_EARLIER@
+#endif
   mirror: once
 
 # Whether or not to fallback from WebRender to Software WebRender.
@@ -4798,7 +4817,7 @@
 #if defined(MOZ_WIDGET_ANDROID)
   value: false
 #else
-  value: @IS_NIGHTLY_BUILD@
+  value: @IS_EARLY_BETA_OR_EARLIER@
 #endif
   mirror: once
 
@@ -5433,6 +5452,17 @@
   type: int32_t
   value: 10
   mirror: always  # LoadStartupJSPrefs
+  do_not_use_directly: true
+
+# A threshold for Warp to decide whether a function can be inlined.
+# If the size of a function is smaller than this threshold, then it
+# may be inlined. 
+#
+# NOTE: These must match JitOptions defaults.
+- name: javascript.options.inlining_bytecode_max_length
+  type: uint32_t
+  value: 130
+  mirror: always
   do_not_use_directly: true
 
 - name: javascript.options.compact_on_user_inactive
@@ -9325,31 +9355,6 @@
   value: 5
   mirror: always
 
-# Whether we should unsuppress painting from the initial paint timer when
-# there's no CSS background specified on the page.
-- name: nglayout.initialpaint.unsuppress_with_no_background
-  type: bool
-  value: false
-  mirror: always
-
-# If we retried, what is the extra delay we should use.
-# Note that this increment is multiplied for the current retry number.
-- name: nglayout.initialpaint.retry.extra_delay
-  type: int32_t
-  # Somewhat arbitrary, but not too high so as to miss lots of frames if the
-  # page begins to get styled. Note that we forcefully unsuppress when the load
-  # event arrives too, or on max retries, so this won't block painting if the
-  # page has loaded.
-  value: 25
-  mirror: always
-
-- name: nglayout.initialpaint.retry.max_retry_count
-  type: int32_t
-  # This gives us 5 + 30 + 55 + ... 380 == 2705ms before forcibly
-  # unsuppressing, which seems plenty.
-  value: 15
-  mirror: always
-
 #---------------------------------------------------------------------------
 # Prefs starting with "page_load."
 #---------------------------------------------------------------------------
@@ -10867,6 +10872,13 @@
 #endif
   mirror: always
 
+# Whether the active thumb color should always use the themed colors, even if
+# dark scrollbars are in use.
+- name: widget.non-native-theme.scrollbar.active-always-themed
+  type: bool
+  value: true
+  mirror: always
+
 # Whether we use the Windows CSS scrollbar sizes, or the scrollbar sizes
 # defined above.
 - name: widget.non-native-theme.win.scrollbar.use-system-size
@@ -10951,6 +10963,37 @@
   value: false
   mirror: always
 
+# Whether selection colors get passed from the real GTK theme even if
+# allow-gtk-dark-theme is false.
+- name: widget.content.allow-gtk-dark-theme.selection
+  type: bool
+  value: true
+  mirror: always
+
+# Whether form control accent colors get passed from the real GTK theme even if
+# allow-gtk-dark-theme is false.
+- name: widget.content.allow-gtk-dark-theme.accent
+  type: bool
+  value: true
+  mirror: always
+
+# Whether the scrollbar thumb active color gets passed from the real GTK theme
+# even if allow-gtk-dark-theme is false.
+- name: widget.content.allow-gtk-dark-theme.scrollbar_active
+  type: bool
+  value: true
+  mirror: always
+
+# Whether other scrollbar colors get passed from the real GTK theme even if
+# allow-gtk-dark-theme is false.
+#
+# This is default false because light scrollbars usually match better websites,
+# and we have automatic scrollbar darkening.
+- name: widget.content.allow-gtk-dark-theme.scrollbar
+  type: bool
+  value: false
+  mirror: always
+
 # Whether to use gtk high contrast themes to disable content styling like on
 # windows high contrast mode.
 - name: widget.content.gtk-high-contrast.enabled
@@ -10983,10 +11026,13 @@
   mirror: always
 #endif
 
-# Use smooth rendering for Wayland basic compositor.
+# Smooth rendering mode for Wayland basic compositor.
+# 0 - direct draw
+# 1 - basic caching
+# 2 - all caching
 - name: widget.wayland-smooth-rendering
-  type: RelaxedAtomicBool
-  value: false
+  type: RelaxedAtomicUint32
+  value: 1
   mirror: always
 
 # Use DMABuf backend for WebGL.
@@ -11001,15 +11047,6 @@
   value: true
   mirror: always
 #endif
-
-# Enable the RemoteLookAndFeel in content processes, which will cause all
-# LookAndFeel values to be queried in the parent process and sent to content
-# processes using IPC.  This is required for widgets to paint and behave
-# correctly when `security.sandbox.content.headless` is enabled.
-- name: widget.remote-look-and-feel
-  type: bool
-  value: true
-  mirror: once
 
 #---------------------------------------------------------------------------
 # Prefs starting with "xul."

@@ -8,7 +8,7 @@
  * Instead of adding reflows to the list, you should be modifying your code to
  * avoid the reflow.
  *
- * See https://developer.mozilla.org/en-US/Firefox/Performance_best_practices_for_Firefox_fe_engineers
+ * See https://firefox-source-docs.mozilla.org/performance/bestpractices.html
  * for tips on how to do that.
  */
 const EXPECTED_REFLOWS = [
@@ -24,6 +24,11 @@ const EXPECTED_REFLOWS = [
 add_task(async function() {
   // Force-enable tab animations
   gReduceMotionOverride = false;
+
+  // TODO (bug 1702653): Disable tab shadows for tests since the shadow
+  // can extend outside of the boundingClientRect. The tabRect will need
+  // to grow to include the shadow size.
+  gBrowser.tabContainer.setAttribute("noshadowfortests", "true");
 
   await ensureNoPreloadedBrowser();
   await disableFxaBadge();
@@ -42,6 +47,11 @@ add_task(async function() {
   let tabStripRect = gBrowser.tabContainer.arrowScrollbox.getBoundingClientRect();
 
   let firstTabRect = gBrowser.selectedTab.getBoundingClientRect();
+  let tabPaddingStart = parseFloat(
+    getComputedStyle(gBrowser.selectedTab).paddingInlineStart
+  );
+  let minTabWidth = firstTabRect.width - 2 * tabPaddingStart;
+  let maxTabWidth = firstTabRect.width;
   let firstTabLabelRect = gBrowser.selectedTab.textLabel.getBoundingClientRect();
   let textBoxRect = gURLBar
     .querySelector("moz-input-box")
@@ -76,8 +86,12 @@ add_task(async function() {
                   // The first tab should get deselected at the same time as the next
                   // tab starts appearing, so we should have one rect that includes the
                   // first tab but is wider.
-                  ((inRange(r.w, firstTabRect.width, firstTabRect.width * 2) &&
-                    r.x1 == firstTabRect.x) ||
+                  ((inRange(r.w, minTabWidth, maxTabWidth * 2) &&
+                    inRange(
+                      r.x1,
+                      firstTabRect.x,
+                      firstTabRect.x + tabPaddingStart
+                    )) ||
                   // The second tab gets painted several times due to tabopen animation.
                   (inRange(
                     r.x1,

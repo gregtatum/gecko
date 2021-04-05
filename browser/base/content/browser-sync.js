@@ -359,6 +359,7 @@ var gSync = {
         "browser/accounts.ftl",
         "browser/appmenu.ftl",
         "browser/sync.ftl",
+        "browser/branding/sync-brand.ftl",
       ],
       true
     ));
@@ -498,6 +499,10 @@ var gSync = {
         document,
         "appMenu-header-description"
       );
+      const appMenuHeaderText = PanelMultiView.getViewNode(
+        document,
+        "appMenu-fxa-text"
+      );
       appMenuHeaderTitle.hidden = true;
       // We must initialize the label attribute here instead of the markup
       // due to a timing error. The fluent label attribute was being applied
@@ -505,6 +510,9 @@ var gSync = {
       // label for signed in users.
       appMenuHeaderDescription.value = this.fluentStrings.formatValueSync(
         "appmenu-fxa-signed-in-label"
+      );
+      appMenuHeaderText.textContent = this.fluentStrings.formatValueSync(
+        "appmenu-fxa-sync-and-save-data2"
       );
     }
 
@@ -876,8 +884,8 @@ var gSync = {
     );
 
     let headerTitle = menuHeaderTitleEl.getAttribute("defaultLabel");
-    let headerDescription = menuHeaderDescriptionEl.getAttribute(
-      "defaultLabel"
+    let headerDescription = this.fluentStrings.formatValueSync(
+      "fxa-menu-turn-on-sync-default"
     );
 
     if (PanelUI.protonAppMenuEnabled) {
@@ -949,6 +957,10 @@ var gSync = {
 
     menuHeaderTitleEl.value = headerTitle;
     menuHeaderDescriptionEl.value = headerDescription;
+    // We remove the data-l10n-id attribute here to prevent the node's value
+    // attribute from being overwritten by Fluent when the panel is moved
+    // around in the DOM.
+    menuHeaderDescriptionEl.removeAttribute("data-l10n-id");
   },
 
   enableSendTabIfValidTab() {
@@ -1025,6 +1037,7 @@ var gSync = {
       document,
       "appMenu-header-description"
     );
+    const fxaPanelView = PanelMultiView.getViewNode(document, "PanelUI-fxa");
 
     let defaultLabel = PanelUI.protonAppMenuEnabled
       ? this.fluentStrings.formatValueSync("appmenu-fxa-signed-in-label")
@@ -1104,6 +1117,10 @@ var gSync = {
     appMenuStatus.setAttribute("fxastatus", "signedin");
     appMenuLabel.setAttribute("label", state.email);
     appMenuLabel.classList.add("subviewbutton-nav");
+    fxaPanelView.setAttribute(
+      "title",
+      this.fluentStrings.formatValueSync("appmenu-fxa-header2")
+    );
     appMenuStatus.removeAttribute("tooltiptext");
   },
 
@@ -1842,11 +1859,9 @@ var gSync = {
   // Prompt the user to confirm disconnect from sync. In this case the data
   // on the device is not deleted.
   async _confirmSyncDisconnect() {
-    const l10nPrefix = "sync-disconnect-dialog";
-
     const [title, body, button] = await document.l10n.formatValues([
-      { id: `${l10nPrefix}-title` },
-      { id: `${l10nPrefix}-body` },
+      { id: `sync-disconnect-dialog-title2` },
+      { id: `sync-disconnect-dialog-body` },
       { id: "sync-disconnect-dialog-button" },
     ]);
 

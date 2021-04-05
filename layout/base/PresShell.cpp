@@ -1822,14 +1822,10 @@ void PresShell::InitPaintSuppressionTimer() {
   int32_t delay = inProcess
                       ? StaticPrefs::nglayout_initialpaint_delay()
                       : StaticPrefs::nglayout_initialpaint_delay_in_oopif();
-  if (mPaintSuppressionAttempts) {
-    delay += mPaintSuppressionAttempts *
-             StaticPrefs::nglayout_initialpaint_retry_extra_delay();
-  }
   mPaintSuppressionTimer->InitWithNamedFuncCallback(
       [](nsITimer* aTimer, void* aPresShell) {
         RefPtr<PresShell> self = static_cast<PresShell*>(aPresShell);
-        self->UnsuppressPaintingFromTimer();
+        self->UnsuppressPainting();
       },
       this, delay, nsITimer::TYPE_ONE_SHOT,
       "PresShell::sPaintSuppressionCallback");
@@ -3418,10 +3414,7 @@ static void ScrollToShowRect(nsIScrollableFrame* aFrameAsScrollable,
   const nsRect visibleRect(scrollPt,
                            aFrameAsScrollable->GetVisualViewportSize());
 
-  const nsMargin scrollPadding =
-      (aScrollFlags & ScrollFlags::IgnoreMarginAndPadding)
-          ? nsMargin()
-          : aFrameAsScrollable->GetScrollPadding();
+  const nsMargin scrollPadding = aFrameAsScrollable->GetScrollPadding();
 
   const nsRect rectToScrollIntoView = [&] {
     nsRect r(aRect);
@@ -3590,10 +3583,7 @@ void PresShell::DoScrollContentIntoView() {
 
   // Get the scroll-margin here since |frame| is going to be changed to iterate
   // over all continuation frames below.
-  nsMargin scrollMargin;
-  if (!(data->mContentToScrollToFlags & ScrollFlags::IgnoreMarginAndPadding)) {
-    scrollMargin = frame->StyleMargin()->GetScrollMargin();
-  }
+  const nsMargin scrollMargin = frame->StyleMargin()->GetScrollMargin();
 
   // This is a two-step process.
   // Step 1: Find the bounds of the rect we want to scroll into view.  For
@@ -3910,28 +3900,6 @@ void PresShell::CancelPaintSuppressionTimer() {
     mPaintSuppressionTimer->Cancel();
     mPaintSuppressionTimer = nullptr;
   }
-}
-
-void PresShell::UnsuppressPaintingFromTimer() {
-  if (mIsDocumentGone || !mPaintingSuppressed) {
-    CancelPaintSuppressionTimer();
-    return;
-  }
-  if (!StaticPrefs::nglayout_initialpaint_unsuppress_with_no_background()) {
-    if (mPresContext->IsRootContentDocumentCrossProcess()) {
-      UpdateCanvasBackground();
-      if (!mHasCSSBackgroundColor) {
-        // We don't unsuppress painting if the page has a transparent
-        // background, as that usually means that the page is unstyled.
-        if (mPaintSuppressionAttempts++ <
-            StaticPrefs::nglayout_initialpaint_retry_max_retry_count()) {
-          InitPaintSuppressionTimer();
-          return;
-        }
-      }
-    }
-  }
-  UnsuppressPainting();
 }
 
 void PresShell::UnsuppressPainting() {
@@ -9000,8 +8968,7 @@ bool PresShell::EventHandler::PrepareToUseCaretPosition(
             ->ScrollContentIntoView(
                 content, ScrollAxis(kScrollMinimum, WhenToScroll::IfNotVisible),
                 ScrollAxis(kScrollMinimum, WhenToScroll::IfNotVisible),
-                ScrollFlags::ScrollOverflowHidden |
-                    ScrollFlags::IgnoreMarginAndPadding);
+                ScrollFlags::ScrollOverflowHidden);
     NS_ENSURE_SUCCESS(rv, false);
     frame = content->GetPrimaryFrame();
     NS_WARNING_ASSERTION(frame, "No frame for focused content?");

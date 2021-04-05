@@ -1150,7 +1150,12 @@ class Shape : public gc::CellWithTenuredGCPointer<gc::TenuredCell, BaseShape> {
                             uint32_t aslot, unsigned aattrs, JSObject* getter,
                             JSObject* setter) const {
     return base == this->base() && objectFlags() == aobjectFlags &&
-           maybeSlot() == aslot && attrs == aattrs &&
+           matchesPropertyParamsAfterId(aslot, aattrs, getter, setter);
+  }
+
+  bool matchesPropertyParamsAfterId(uint32_t aslot, unsigned aattrs,
+                                    JSObject* getter, JSObject* setter) const {
+    return maybeSlot() == aslot && attrs == aattrs &&
            maybeGetterObject() == getter && maybeSetterObject() == setter;
   }
 
@@ -1573,6 +1578,7 @@ class WrappedPtrOperations<StackShape, Wrapper> {
   bool isAccessorShape() const { return ss().isAccessorShape(); }
   uint8_t attrs() const { return ss().attrs; }
   ObjectFlags objectFlags() const { return ss().objectFlags; }
+  jsid propid() const { return ss().propid; }
 };
 
 template <typename Wrapper>

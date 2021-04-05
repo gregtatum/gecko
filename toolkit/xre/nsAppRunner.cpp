@@ -4524,6 +4524,25 @@ int XREMain::XRE_mainStartup(bool* aExitFlag) {
     return 0;
   }
 
+#ifdef MOZ_BACKGROUNDTASKS
+  if (BackgroundTasks::IsBackgroundTaskMode()) {
+    // Allow tests to specify profile path via the environment.
+    if (!EnvHasValue("XRE_PROFILE_PATH")) {
+      nsString installHash;
+      mDirProvider.GetInstallHash(installHash);
+
+      nsCOMPtr<nsIFile> file;
+      nsresult rv = BackgroundTasks::CreateTemporaryProfileDirectory(
+          NS_LossyConvertUTF16toASCII(installHash), getter_AddRefs(file));
+      if (NS_WARN_IF(NS_FAILED(rv))) {
+        return 1;
+      }
+
+      SaveFileToEnv("XRE_PROFILE_PATH", file);
+    }
+  }
+#endif
+
   rv = NS_NewToolkitProfileService(getter_AddRefs(mProfileSvc));
   if (rv == NS_ERROR_FILE_ACCESS_DENIED) {
     PR_fprintf(PR_STDERR,
@@ -4535,22 +4554,6 @@ int XREMain::XRE_mainStartup(bool* aExitFlag) {
     ProfileMissingDialog(mNativeApp);
     return 1;
   }
-
-#ifdef MOZ_BACKGROUNDTASKS
-  if (BackgroundTasks::IsBackgroundTaskMode()) {
-    if (!EnvHasValue("XRE_PROFILE_PATH")) {
-      // Allow tests to specify profile path via the environment.
-      nsCOMPtr<nsIFile> file;
-      nsresult rv = BackgroundTasks::GetOrCreateTemporaryProfileDirectory(
-          getter_AddRefs(file));
-      if (NS_WARN_IF(NS_FAILED(rv))) {
-        return 1;
-      }
-
-      SaveFileToEnv("XRE_PROFILE_PATH", file);
-    }
-  }
-#endif
 
   bool wasDefaultSelection;
   nsCOMPtr<nsIToolkitProfile> profile;
@@ -5562,10 +5565,6 @@ int XREMain::XRE_main(int argc, char* argv[], const BootstrapConfig& aConfig) {
   mProfileLock->Unlock();
   gProfileLock = nullptr;
 
-#ifdef MOZ_BACKGROUNDTASKS
-  BackgroundTasks::Shutdown();
-#endif
-
   gLastAppVersion.Truncate();
   gLastAppBuildID.Truncate();
 
@@ -5599,6 +5598,11 @@ int XRE_main(int argc, char* argv[], const BootstrapConfig& aConfig) {
 
   int result = main.XRE_main(argc, argv, aConfig);
   mozilla::RecordShutdownEndTimeStamp();
+#ifdef MOZ_BACKGROUNDTASKS
+  // This is well after the profile has been unlocked, so it's okay if this does
+  // delete this background task's temporary profile.
+  mozilla::BackgroundTasks::Shutdown();
+#endif
   return result;
 }
 

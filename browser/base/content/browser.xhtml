@@ -322,7 +322,7 @@
 #ifndef XP_UNIX
             <button id="editBookmarkPanelDoneButton"
                     class="editBookmarkPanelBottomButton"
-                    data-l10n-id="bookmark-panel-done-button"
+                    data-l10n-id="bookmark-panel-save-button"
                     default="true"
                     oncommand="StarUI.panel.hidePopup();"/>
             <button id="editBookmarkPanelRemoveButton"
@@ -334,7 +334,7 @@
                     oncommand="StarUI.removeBookmarkButtonCommand();"/>
             <button id="editBookmarkPanelDoneButton"
                     class="editBookmarkPanelBottomButton"
-                    data-l10n-id="bookmark-panel-done-button"
+                    data-l10n-id="bookmark-panel-save-button"
                     default="true"
                     oncommand="StarUI.panel.hidePopup();"/>
 #endif
@@ -978,7 +978,7 @@
         <toolbaritem id="appMenu-fxa-status2"
                      closemenu="none"
                      class="subviewbutton toolbaritem-combined-buttons">
-          <label id="appMenu-fxa-text" class="toolbarbutton-text" data-l10n-id="appmenu-fxa-sync-and-save-data"/>
+          <label id="appMenu-fxa-text" data-l10n-id="appmenu-fxa-sync-and-save-data2"/>
           <toolbarbutton id="appMenu-fxa-label2"
                         class="subviewbutton"
                         oncommand="gSync.toggleAccountPanel(this, event)">
@@ -1120,6 +1120,10 @@
                        class="subviewbutton subviewbutton-iconic subviewbutton-nav"
                        closemenu="none"
                        oncommand="PanelUI.showSubView('appMenu-library-recentlyClosedWindows', this)"/>
+        <toolbarbutton id="appMenuRestoreSession"
+                       label="&appMenuHistory.restoreSession.label;"
+                       class="subviewbutton subviewbutton-iconic"
+                       command="Browser:RestoreLastSession"/>
         <toolbarseparator/>
         <toolbarbutton id="appMenuClearRecentHistory"
                        label="&appMenuHistory.clearRecent.label;"
@@ -1464,7 +1468,7 @@
             <label class="PanelUI-remotetabs-instruction-label">&appMenuRemoteTabs.welcome.label;</label>
             <toolbarbutton class="PanelUI-remotetabs-button"
                            id="PanelUI-remotetabs-setupsync-button"
-                           label="&appMenuRemoteTabs.signintosync.label;"
+                           data-l10n-id="appmenu-remote-tabs-sign-into-sync"
                            oncommand="gSync.openPrefs('synced-tabs');"/>
           </vbox>
           <!-- When Sync is not enabled -->
@@ -1477,7 +1481,7 @@
             <label class="PanelUI-remotetabs-instruction-label">&appMenuRemoteTabs.welcome.label;</label>
             <toolbarbutton class="PanelUI-remotetabs-button"
                            id="PanelUI-remotetabs-syncdisabled-button"
-                           label="&appMenuRemoteTabs.turnonsync.label;"
+                           data-l10n-id="appmenu-remote-tabs-turn-on-sync"
                            oncommand="gSync.openPrefs('synced-tabs');"/>
           </vbox>
           <!-- When Sync needs re-authentication -->
@@ -1490,7 +1494,7 @@
             <label class="PanelUI-remotetabs-instruction-label">&appMenuRemoteTabs.welcome.label;</label>
             <toolbarbutton class="PanelUI-remotetabs-button"
                            id="PanelUI-remotetabs-reauthsync-button"
-                           label="&appMenuRemoteTabs.signintosync.label;"
+                           data-l10n-id="appmenu-remote-tabs-sign-into-sync"
                            oncommand="gSync.openPrefs('synced-tabs');"/>
           </vbox>
           <!-- When Sync needs verification -->
@@ -1510,7 +1514,7 @@
       </vbox>
     </panelview>
 
-    <panelview id="PanelUI-fxa" data-l10n-id="appmenu-fxa-header" class="PanelUI-subView" descriptionheightworkaround="true">
+    <panelview id="PanelUI-fxa" class="PanelUI-subView" descriptionheightworkaround="true">
       <vbox id="PanelUI-fxa-menu" class="panel-subview-body">
         <toolbarbutton id="fxa-manage-account-button"
                        align="center"
@@ -1524,8 +1528,7 @@
                    defaultLabel="&fxa.menu.signin.label;"/>
             <label id="fxa-menu-header-description"
                    crop="end"
-                   value="&fxa.menu.turnOnSync.label;"
-                   defaultLabel="&fxa.menu.turnOnSync.label;"/>
+                   data-l10n-id="fxa-menu-turn-on-sync"/>
           </vbox>
         </toolbarbutton>
         <toolbarbutton id="PanelUI-fxa-menu-syncnow-button"
@@ -1551,7 +1554,7 @@
         <!-- The `Connect Another Device` button is disabled by default until the user logs into Sync. -->
         <toolbarbutton id="PanelUI-fxa-menu-connect-device-button"
                         class="subviewbutton subviewbutton-iconic"
-                        label="&fxa.menu.connectAnotherDevice2.label;"
+                        data-l10n-id="fxa-menu-connect-another-device"
                         disabled="true"
                         oncommand="gSync.openConnectAnotherDeviceFromFxaMenu(this);"/>
         <toolbarbutton id="PanelUI-fxa-menu-sendtab-button"
@@ -1560,13 +1563,13 @@
                         oncommand="gSync.showSendToDeviceViewFromFxaMenu(this);"/>
         <toolbarbutton id="PanelUI-fxa-menu-sync-prefs-button"
                         class="subviewbutton subviewbutton-iconic"
-                        label="&fxa.menu.syncSettings2.label;"
+                        data-l10n-id="fxa-menu-sync-settings"
                         hidden="true"
                         oncommand="gSync.openPrefsFromFxaMenu('sync_settings', this);"/>
         <toolbarseparator id="PanelUI-sign-out-separator"/>
         <toolbarbutton id="PanelUI-fxa-menu-account-signout-button"
                 class="subviewbutton subviewbutton-iconic"
-                label="&fxa.menu.signOut.label;"
+                data-l10n-id="fxa-menu-sign-out"
                 oncommand="gSync.disconnect();"/>
         <toolbarseparator id="PanelUI-remote-tabs-separator"/>
         <deck id="PanelUI-fxa-remotetabs-deck">
@@ -2087,8 +2090,7 @@
                        onkeypress="gSync.toggleAccountPanel(this, event)"
                        consumeanchor="fxa-toolbar-menu-button"
                        closemenu="none"
-                       label="&fxa.menu.firefoxAccount;"
-                       tooltiptext="&fxa.menu.firefoxAccount;"
+                       data-l10n-id="toolbar-button-fxaccount"
                        cui-areatype="toolbar"
                        removable="true">
                        <vbox>

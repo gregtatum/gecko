@@ -353,6 +353,8 @@ linux/opt:
     worker-type: b-linux
     worker:
         max-run-time: 7200
+        env:
+            MOZ_AUTOMATION_PACKAGE_TESTS: "1"
     run:
         using: mozharness
         actions: [get-secrets, build]
@@ -393,6 +395,8 @@ linux/debug:
     worker-type: b-linux
     worker:
         max-run-time: 5400
+        env:
+            MOZ_AUTOMATION_PACKAGE_TESTS: "1"
     run:
         using: mozharness
         actions: [get-secrets, build]
@@ -705,7 +709,6 @@ linux64-asan/opt:
     worker:
         env:
             PERFHERDER_EXTRA_OPTIONS: "opt asan"
-            ASAN_OPTIONS: "detect_leaks=0"
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
         max-run-time: 5400
     run:
@@ -843,7 +846,6 @@ linux64-asan-fuzzing/opt:
     worker:
         env:
             PERFHERDER_EXTRA_OPTIONS: asan-fuzzing
-            ASAN_OPTIONS: "detect_leaks=0"
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
         max-run-time: 5400
     run:
@@ -893,7 +895,6 @@ linux64-asan-fuzzing-ccov/opt:
     worker:
         env:
             PERFHERDER_EXTRA_OPTIONS: asan-fuzzing-ccov
-            ASAN_OPTIONS: "detect_leaks=0"
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
         max-run-time: 5400
     run:
@@ -941,7 +942,6 @@ linux64-fuzzing-ccov/opt:
         max-run-time: 5400
         env:
             PERFHERDER_EXTRA_OPTIONS: fuzzing-ccov
-            ASAN_OPTIONS: "detect_leaks=0"
             RUSTC_BOOTSTRAP: '1'
     run:
         using: mozharness
@@ -996,7 +996,6 @@ linux64-asan-reporter-shippable/opt:
     worker:
         env:
             PERFHERDER_EXTRA_OPTIONS: asan-reporter
-            ASAN_OPTIONS: "detect_leaks=0"
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
         max-run-time: 3600
     run:
@@ -1043,7 +1042,6 @@ linux64-asan/debug:
     worker:
         env:
             PERFHERDER_EXTRA_OPTIONS: "debug asan"
-            ASAN_OPTIONS: "detect_leaks=0"
         max-run-time: 5400
     run:
         using: mozharness

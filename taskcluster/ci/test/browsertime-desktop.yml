@@ -13,6 +13,13 @@ job-defaults:
         by-test-platform:
             linux.*shippable[^-qr].*: ['mozilla-central']
             default: []
+    limit-platforms:
+        by-app:
+            chrome:
+                - .*shippable(?!-qr).*
+            chromium:
+                - .*shippable(?!-qr).*
+            default: []
     test-manifest-loader: null  # don't load tests in the taskgraph
     tier: 3
     virtualization: hardware
@@ -28,7 +35,6 @@ job-defaults:
                     - raptor/linux_config.py
         extra-options:
             - --browsertime
-            - --no-conditioned-profile
     variants:
         by-app:
             firefox:
@@ -56,12 +62,10 @@ browsertime-tp6:
                     windows10.*shippable.*-qr.*:
                         - --chimera
                         - --browsertime
-                        - --no-conditioned-profile
                         - --browsertime-no-ffwindowrecorder
                     default:
                         - --chimera
                         - --browsertime
-                        - --no-conditioned-profile
         raptor-test: tp6
         run-on-projects:
             by-variant:
@@ -83,7 +87,11 @@ browsertime-tp6:
     raptor-subtests:
         - apple
         - [bing-search, bing]
+        - buzzfeed
+        - cnn
         - ebay
+        - espn
+        - expedia
         - [facebook, fb]
         - fandom
         - [google-docs, gdocs]
@@ -94,11 +102,13 @@ browsertime-tp6:
         - linkedin
         - microsoft
         - netflix
+        - nytimes
         - office
         - outlook
         - paypal
         - pinterest
         - reddit
+        - wikia
         - wikipedia
         - yahoo-mail
         - yahoo-news
@@ -161,8 +171,7 @@ browsertime-benchmark:
         - [wasm-misc, wm]
         - [wasm-misc-baseline, wm-b]
         - [wasm-misc-optimizing, wm-i]
-    variants: ["fission"]
-    apps: ["firefox"]
+    apps: [firefox, chrome, chromium]
     treeherder-symbol: Btime()
     tier:
         by-variant:

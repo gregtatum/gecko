@@ -2012,6 +2012,15 @@ class nsLayoutUtils {
                                      mozilla::Side aSide);
 
   /**
+   * Return the border radius size (width, height) based only on the top-left
+   * corner. This is a special case used for drawing the Windows 10 drop-shadow,
+   * and only supports a specified length (not percentages) on the top-left
+   * corner.
+   */
+  static LayoutDeviceIntSize GetBorderRadiusForMenuDropShadow(
+      const nsIFrame* aFrame);
+
+  /**
    * Determine if a widget is likely to require transparency or translucency.
    *   @param aBackgroundFrame The frame that the background is set on. For
    *                           <window>s, this will be the canvas frame.
@@ -2142,7 +2151,10 @@ class nsLayoutUtils {
     SFE_NO_RASTERIZING_VECTORS = 1 << 4,
     /* If image type is vector, the return surface size will same as
        element size, not image's intrinsic size. */
-    SFE_USE_ELEMENT_SIZE_IF_VECTOR = 1 << 5
+    SFE_USE_ELEMENT_SIZE_IF_VECTOR = 1 << 5,
+    /* Instead of converting the colorspace to the display's colorspace,
+       use sRGB. */
+    SFE_TO_SRGB_COLORSPACE = 1 << 6
   };
 
   // This function can be called on any thread.

@@ -574,9 +574,9 @@ static bool IsFontSizeInflationContainer(nsIFrame* aFrame,
        (aFrame->GetParent()->GetContent() == content) ||
        (content &&
         // Form controls shouldn't become inflation containers.
-        (content->IsAnyOfHTMLElements(nsGkAtoms::option, nsGkAtoms::optgroup,
-                                      nsGkAtoms::select, nsGkAtoms::input,
-                                      nsGkAtoms::button)))) &&
+        (content->IsAnyOfHTMLElements(
+            nsGkAtoms::option, nsGkAtoms::optgroup, nsGkAtoms::select,
+            nsGkAtoms::input, nsGkAtoms::button, nsGkAtoms::textarea)))) &&
       !(aFrame->IsXULBoxFrame() && aFrame->GetParent()->IsXULBoxFrame());
   NS_ASSERTION(!aFrame->IsFrameOfType(nsIFrame::eLineParticipant) || isInline ||
                    // br frames and mathml frames report being line
@@ -9462,7 +9462,7 @@ static void ComputeAndIncludeOutlineArea(nsIFrame* aFrame,
     }
   }
 
-  // Keep this code in sync with GetOutlineInnerRect in nsCSSRendering.cpp.
+  // Keep this code in sync with nsDisplayOutline::GetInnerRect.
   SetOrUpdateRectValuedProperty(aFrame, nsIFrame::OutlineInnerRectProperty(),
                                 innerRect);
   const nscoord offset = outline->mOutlineOffset.ToAppUnits();

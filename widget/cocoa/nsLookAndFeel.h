@@ -9,14 +9,13 @@
 
 class nsLookAndFeel final : public nsXPLookAndFeel {
  public:
-  explicit nsLookAndFeel(const LookAndFeelCache* aCache);
+  nsLookAndFeel();
   virtual ~nsLookAndFeel();
 
-  void NativeInit() final;
-  virtual void RefreshImpl() override;
-  nsresult NativeGetColor(ColorID aID, nscolor& aResult) override;
-  nsresult NativeGetInt(IntID aID, int32_t& aResult) override;
-  nsresult NativeGetFloat(FloatID aID, float& aResult) override;
+  void NativeInit() final { RecordTelemetry(); }
+  nsresult NativeGetColor(ColorID, ColorScheme, nscolor& aColor) override;
+  nsresult NativeGetInt(IntID, int32_t& aResult) override;
+  nsresult NativeGetFloat(FloatID, float& aResult) override;
   bool NativeGetFont(FontID aID, nsString& aFontName,
                      gfxFontStyle& aFontStyle) override;
 
@@ -25,67 +24,9 @@ class nsLookAndFeel final : public nsXPLookAndFeel {
     return 0x2022;
   }
 
-  static bool UseOverlayScrollbars();
-
-  LookAndFeelCache GetCacheImpl() override;
-  void SetCacheImpl(const LookAndFeelCache& aCache) override;
-
  protected:
-  void DoSetCache(const LookAndFeelCache& aCache);
-  static bool AllowOverlayScrollbarsOverlap();
-
   static bool SystemWantsDarkTheme();
   static nscolor ProcessSelectionBackground(nscolor aColor);
-
- private:
-  int32_t mUseOverlayScrollbars;
-  bool mUseOverlayScrollbarsCached;
-
-  int32_t mAllowOverlayScrollbarsOverlap;
-  bool mAllowOverlayScrollbarsOverlapCached;
-
-  int32_t mSystemUsesDarkTheme;
-  bool mSystemUsesDarkThemeCached;
-
-  int32_t mPrefersReducedMotion = -1;
-  bool mPrefersReducedMotionCached = false;
-
-  int32_t mUseAccessibilityTheme;
-  bool mUseAccessibilityThemeCached;
-
-  nscolor mColorTextSelectBackground;
-  nscolor mColorTextSelectBackgroundDisabled;
-  nscolor mColorHighlight;
-  nscolor mColorTextSelectForeground;
-  nscolor mColorAlternateSelectedControlText;
-  nscolor mColorControlText;
-  nscolor mColorText;
-  nscolor mColorWindowText;
-  nscolor mColorGrid;
-  nscolor mColorActiveBorder;
-  nscolor mColorGrayText;
-  nscolor mColorControlBackground;
-  nscolor mColorScrollbar;
-  nscolor mColorThreeDHighlight;
-  nscolor mColorDialog;
-  nscolor mColorDragTargetZone;
-  nscolor mColorChromeActive;
-  nscolor mColorChromeInactive;
-  nscolor mColorFocusRing;
-  nscolor mColorTextSelect;
-  nscolor mColorDisabledToolbarText;
-  nscolor mColorMenuSelect;
-  nscolor mColorCellHighlight;
-  nscolor mColorEvenTreeRow;
-  nscolor mColorOddTreeRow;
-  nscolor mColorMenuFontSmoothingBg;
-  nscolor mColorSourceListFontSmoothingBg;
-  nscolor mColorSourceListSelectionFontSmoothingBg;
-  nscolor mColorActiveSourceListSelectionFontSmoothingBg;
-
-  bool mInitialized;
-
-  void EnsureInit();
 };
 
 #endif  // nsLookAndFeel_h_

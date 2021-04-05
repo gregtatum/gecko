@@ -438,8 +438,11 @@ nsresult nsGenericHTMLElement::BindToTree(BindContext& aContext,
   nsresult rv = nsGenericHTMLElementBase::BindToTree(aContext, aParent);
   NS_ENSURE_SUCCESS(rv, rv);
 
+  if (IsInComposedDoc()) {
+    RegUnRegAccessKey(true);
+  }
+
   if (IsInUncomposedDoc()) {
-    RegAccessKey();
     if (HasName() && CanHaveName(NodeInfo()->NameAtom())) {
       aContext.OwnerDoc().AddToNameTable(
           this, GetParsedAttr(nsGkAtoms::name)->GetAtomValue());
@@ -477,8 +480,8 @@ nsresult nsGenericHTMLElement::BindToTree(BindContext& aContext,
 }
 
 void nsGenericHTMLElement::UnbindFromTree(bool aNullParent) {
-  if (IsInUncomposedDoc()) {
-    UnregAccessKey();
+  if (IsInComposedDoc()) {
+    RegUnRegAccessKey(false);
   }
 
   RemoveFromNameTable();
@@ -604,7 +607,7 @@ nsresult nsGenericHTMLElement::BeforeSetAttr(int32_t aNamespaceID,
   if (aNamespaceID == kNameSpaceID_None) {
     if (aName == nsGkAtoms::accesskey) {
       // Have to unregister before clearing flag. See UnregAccessKey
-      UnregAccessKey();
+      RegUnRegAccessKey(false);
       if (!aValue) {
         UnsetFlags(NODE_HAS_ACCESSKEY);
       }
@@ -704,7 +707,7 @@ nsresult nsGenericHTMLElement::AfterSetAttr(
     } else if (aName == nsGkAtoms::accesskey) {
       if (aValue && !aValue->Equals(u""_ns, eIgnoreCase)) {
         SetFlags(NODE_HAS_ACCESSKEY);
-        RegAccessKey();
+        RegUnRegAccessKey(true);
       }
     } else if (aName == nsGkAtoms::inert &&
                StaticPrefs::html5_inert_enabled()) {
@@ -2407,7 +2410,7 @@ bool nsGenericHTMLElement::IsHTMLFocusable(bool aWithMouse, bool* aIsFocusable,
 
 bool nsGenericHTMLElement::PerformAccesskey(bool aKeyCausesActivation,
                                             bool aIsTrustedEvent) {
-  nsPresContext* presContext = GetPresContext(eForUncomposedDoc);
+  nsPresContext* presContext = GetPresContext(eForComposedDoc);
   if (!presContext) {
     return false;
   }

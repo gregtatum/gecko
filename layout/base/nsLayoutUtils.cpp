@@ -4116,7 +4116,12 @@ already_AddRefed<nsFontMetrics> nsLayoutUtils::GetFontMetricsForComputedStyle(
   }
 
   nsFont font = styleFont->mFont;
+  MOZ_ASSERT(!IsNaN(float(font.size.ToCSSPixels())),
+             "Style font should never be NaN");
   font.size.ScaleBy(aInflation);
+  if (MOZ_UNLIKELY(IsNaN(float(font.size.ToCSSPixels())))) {
+    font.size = {0};
+  }
   font.variantWidth = aVariantWidth;
   return aPresContext->DeviceContext()->GetMetricsFor(font, params);
 }
@@ -6659,6 +6664,27 @@ bool nsLayoutUtils::HasNonZeroCornerOnSide(const BorderRadius& aCorners,
 }
 
 /* static */
+LayoutDeviceIntSize nsLayoutUtils::GetBorderRadiusForMenuDropShadow(
+    const nsIFrame* aFrame) {
+  if (aFrame->StyleUIReset()->mWindowShadow == StyleWindowShadow::Cliprounded) {
+    const auto& corners = aFrame->StyleBorder()->mBorderRadius;
+
+    // Get the width and height of the top-left corner.
+    const LengthPercentage& cornerX = corners.Get(eCornerTopLeftX);
+    const LengthPercentage& cornerY = corners.Get(eCornerTopLeftY);
+    nscoord lengthX = (cornerX.IsLength() ? cornerX.ToLength() : 0);
+    nscoord lengthY = (cornerY.IsLength() ? cornerY.ToLength() : 0);
+    if (lengthX || lengthY) {
+      const nsPresContext* presContext = aFrame->PresContext();
+      return LayoutDeviceIntSize(presContext->AppUnitsToDevPixels(lengthX),
+                                 presContext->AppUnitsToDevPixels(lengthY));
+    }
+  }
+
+  return LayoutDeviceIntSize();
+}
+
+/* static */
 nsTransparencyMode nsLayoutUtils::GetFrameTransparency(
     nsIFrame* aBackgroundFrame, nsIFrame* aCSSRootFrame) {
   if (aCSSRootFrame->StyleEffects()->mOpacity < 1.0f)
@@ -7015,6 +7041,9 @@ SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
       imgIContainer::FLAG_SYNC_DECODE | imgIContainer::FLAG_ASYNC_NOTIFY;
   if (aSurfaceFlags & SFE_NO_COLORSPACE_CONVERSION)
     frameFlags |= imgIContainer::FLAG_DECODE_NO_COLORSPACE_CONVERSION;
+  if (aSurfaceFlags & SFE_TO_SRGB_COLORSPACE) {
+    frameFlags |= imgIContainer::FLAG_DECODE_TO_SRGB_COLORSPACE;
+  }
   if (aSurfaceFlags & SFE_ALLOW_NON_PREMULT) {
     frameFlags |= imgIContainer::FLAG_DECODE_NO_PREMULTIPLY_ALPHA;
   }

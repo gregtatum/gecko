@@ -81,6 +81,7 @@ nsMenuX::nsMenuX(nsMenuParentX* aParent, nsMenuGroupOwnerX* aMenuGroupOwner, nsI
   SwizzleDynamicIndexingMethods();
 
   mMenuDelegate = [[MenuDelegate alloc] initWithGeckoMenu:this];
+  mMenuDelegate.menuIsInMenubar = mMenuGroupOwner->GetMenuBar() != nullptr;
 
   if (!nsMenuBarX::sNativeEventTarget) {
     nsMenuBarX::sNativeEventTarget = [[NativeMenuItemTarget alloc] init];
@@ -126,12 +127,14 @@ nsMenuX::nsMenuX(nsMenuParentX* aParent, nsMenuGroupOwnerX* aMenuGroupOwner, nsI
 nsMenuX::~nsMenuX() {
   NS_OBJC_BEGIN_TRY_ABORT_BLOCK;
 
-  RemoveAll();
-
-  if (mPendingAsyncMenuCloseRunnable) {
-    mPendingAsyncMenuCloseRunnable->Cancel();
-    mPendingAsyncMenuCloseRunnable = nullptr;
+  if (mIsOpen) {
+    [mNativeMenu cancelTracking];
   }
+
+  // Make sure pending popuphiding/popuphidden events aren't dropped.
+  FlushMenuClosedRunnable();
+
+  RemoveAll();
 
   mNativeMenu.delegate = nil;
   [mNativeMenu release];
@@ -325,10 +328,8 @@ nsEventStatus nsMenuX::MenuOpened() {
 
   mIsOpen = true;
 
-  if (mPendingAsyncMenuCloseRunnable) {
-    // Make sure we fire any pending popuphiding / popuphidden events first.
-    MenuClosedAsync();
-  }
+  // Make sure we fire any pending popuphiding / popuphidden events first.
+  FlushMenuClosedRunnable();
 
   mIsOpenForGecko = true;
 
@@ -398,6 +399,12 @@ void nsMenuX::MenuClosed() {
   NS_DispatchToCurrentThread(mPendingAsyncMenuCloseRunnable);
 }
 
+void nsMenuX::FlushMenuClosedRunnable() {
+  if (mPendingAsyncMenuCloseRunnable) {
+    MenuClosedAsync();
+  }
+}
+
 void nsMenuX::MenuClosedAsync() {
   if (mPendingAsyncMenuCloseRunnable) {
     mPendingAsyncMenuCloseRunnable->Cancel();
@@ -424,6 +431,22 @@ void nsMenuX::MenuClosedAsync() {
   if (mObserver) {
     mObserver->OnMenuClosed();
   }
+}
+
+bool nsMenuX::Close() {
+  NS_OBJC_BEGIN_TRY_ABORT_BLOCK;
+
+  bool wasOpen = mIsOpenForGecko;
+
+  if (mIsOpen) {
+    [mNativeMenu cancelTracking];
+  }
+
+  FlushMenuClosedRunnable();
+
+  return wasOpen;
+
+  NS_OBJC_END_TRY_ABORT_BLOCK;
 }
 
 void nsMenuX::RebuildMenu() {
@@ -785,13 +808,17 @@ void nsMenuX::Dump(uint32_t aIndent) const {
     return;
   }
 
-  nsIRollupListener* rollupListener = nsBaseWidget::GetActiveRollupListener();
-  if (rollupListener) {
-    nsCOMPtr<nsIWidget> rollupWidget = rollupListener->GetRollupWidget();
-    if (rollupWidget) {
-      rollupListener->Rollup(0, true, nullptr, nullptr);
-      [menu cancelTracking];
-      return;
+  if (self.menuIsInMenubar) {
+    // If a menu in the menubar is trying open while a non-native menu is open, roll up the
+    // non-native menu and reject the menubar opening attempt, effectively consuming the event.
+    nsIRollupListener* rollupListener = nsBaseWidget::GetActiveRollupListener();
+    if (rollupListener) {
+      nsCOMPtr<nsIWidget> rollupWidget = rollupListener->GetRollupWidget();
+      if (rollupWidget) {
+        rollupListener->Rollup(0, true, nullptr, nullptr);
+        [menu cancelTracking];
+        return;
+      }
     }
   }
 

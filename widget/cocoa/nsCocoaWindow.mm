@@ -6,6 +6,7 @@
 
 #include "nsCocoaWindow.h"
 
+#include "AppearanceOverride.h"
 #include "NativeKeyBindings.h"
 #include "ScreenHelperCocoa.h"
 #include "TextInputHandler.h"
@@ -33,6 +34,7 @@
 #include "nsCocoaFeatures.h"
 #include "nsIScreenManager.h"
 #include "nsIWidgetListener.h"
+#include "SDKDeclarations.h"
 #include "VibrancyManager.h"
 #include "nsPresContext.h"
 #include "nsDocShell.h"
@@ -140,6 +142,7 @@ nsCocoaWindow::nsCocoaWindow()
       mAspectRatioLocked(false),
       mNumModalDescendents(0),
       mWindowAnimationBehavior(NSWindowAnimationBehaviorDefault),
+      mWindowAppearance(nsIWidget::WindowAppearance::eSystem),
       mWasShown(false) {
   // Disable automatic tabbing. We need to do this before we
   // orderFront any of our windows.
@@ -549,6 +552,13 @@ nsresult nsCocoaWindow::CreateNativeWindow(const NSRect& aRect, nsBorderStyle aB
 
   [[WindowDataMap sharedWindowDataMap] ensureDataForWindow:mWindow];
   mWindowMadeHere = true;
+
+  if (@available(macOS 10.14, *)) {
+    // When the window's appearance is set to nil (no override), make sure it respects the global
+    // aqua override.
+    mWindow.appearanceSource = MOZGlobalAppearance.sharedInstance;
+  }
+  [mWindow setWindowAppearance:mWindowAppearance];
 
   return NS_OK;
 
@@ -2423,6 +2433,15 @@ void nsCocoaWindow::SetDrawsTitle(bool aDrawTitle) {
   NS_OBJC_END_TRY_IGNORE_BLOCK;
 }
 
+/* virtual */ void nsCocoaWindow::SetWindowAppearance(nsIWidget::WindowAppearance aAppearance) {
+  NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
+
+  mWindowAppearance = aAppearance;
+  [mWindow setWindowAppearance:mWindowAppearance];
+
+  NS_OBJC_END_TRY_IGNORE_BLOCK;
+}
+
 nsresult nsCocoaWindow::SetNonClientMargins(LayoutDeviceIntMargin& margins) {
   NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
 
@@ -2953,12 +2972,6 @@ static NSMutableSet* gSwizzledFrameViewClasses = nil;
 - (void)_setNeedsDisplayInRect:(NSRect)aRect;
 @end
 
-#if !defined(MAC_OS_X_VERSION_10_12_2) || MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_12_2
-@interface NSView (NSTouchBarProvider)
-- (NSTouchBar*)makeTouchBar;
-@end
-#endif
-
 @interface NSView (NSVisualEffectViewSetMaskImage)
 - (void)setMaskImage:(NSImage*)image;
 @end
@@ -3208,6 +3221,23 @@ static const NSString* kStateWantsTitleDrawn = @"wantsTitleDrawn";
   return mDrawTitle;
 }
 
+- (void)setWindowAppearance:(nsIWidget::WindowAppearance)aAppearance {
+  if (@available(macOS 10.14, *)) {
+    switch (aAppearance) {
+      case nsIWidget::WindowAppearance::eLight:
+        self.appearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
+        break;
+      case nsIWidget::WindowAppearance::eDark:
+        self.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+        break;
+      default:
+        // nil means "inherit effectiveAppearance from self.appearanceSource".
+        self.appearance = nil;
+        break;
+    }
+  }
+}
+
 - (NSView*)trackingAreaView {
   NSView* contentView = [self contentView];
   return [contentView superview] ? [contentView superview] : contentView;
@@ -3405,18 +3435,6 @@ static const NSString* kStateWantsTitleDrawn = @"wantsTitleDrawn";
 
 @end
 
-#if !defined(MAC_OS_VERSION_11_0) || MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_VERSION_11_0
-typedef NS_ENUM(NSInteger, NSTitlebarSeparatorStyle) {
-  NSTitlebarSeparatorStyleAutomatic,
-  NSTitlebarSeparatorStyleNone,
-  NSTitlebarSeparatorStyleLine,
-  NSTitlebarSeparatorStyleShadow
-};
-@interface NSWindow (NSTitlebarSeparatorStyle)
-@property NSTitlebarSeparatorStyle titlebarSeparatorStyle;
-@end
-#endif
-
 @interface MOZTitlebarAccessoryView : NSView
 @end
 
@@ -3557,6 +3575,8 @@ typedef NS_ENUM(NSInteger, NSTitlebarSeparatorStyle) {
     [[self mainChildView] ensureNextCompositeIsAtomicWithMainThreadPaint];
     NSNumber* revealAmount = (change[NSKeyValueChangeNewKey]);
     [self updateTitlebarShownAmount:[revealAmount doubleValue]];
+  } else {
+    [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
   }
 }
 
@@ -3863,6 +3883,7 @@ static const NSUInteger kWindowShadowOptionsTooltipMojaveOrLater = 4;
     case StyleWindowShadow::Default:  // we treat "default" as "default panel"
     case StyleWindowShadow::Menu:
     case StyleWindowShadow::Sheet:
+    case StyleWindowShadow::Cliprounded:  // this is a Windows-only value.
       return kWindowShadowOptionsMenu;
 
     case StyleWindowShadow::Tooltip:

@@ -1717,12 +1717,14 @@ class HTMLMediaElement::ChannelLoader final {
       return;
     }
 
+    nsCOMPtr<nsILoadInfo> loadInfo = channel->LoadInfo();
     if (setAttrs) {
-      nsCOMPtr<nsILoadInfo> loadInfo = channel->LoadInfo();
       // The function simply returns NS_OK, so we ignore the return value.
       Unused << loadInfo->SetOriginAttributes(
           triggeringPrincipal->OriginAttributesRef());
     }
+    loadInfo->SetIsMediaRequest(true);
+    loadInfo->SetIsMediaInitialRequest(true);
 
     nsCOMPtr<nsIClassOfService> cos(do_QueryInterface(channel));
     if (cos) {
@@ -6601,9 +6603,17 @@ void HTMLMediaElement::FireTimeUpdate(TimeupdateType aType) {
 MediaError* HTMLMediaElement::GetError() const { return mErrorSink->mError; }
 
 void HTMLMediaElement::GetCurrentSpec(nsCString& aString) {
+  // If playing a regular URL, an ObjectURL of a Blob/File, return that.
   if (mLoadingSrc) {
     mLoadingSrc->GetSpec(aString);
+  } else if (mSrcMediaSource) {
+    // If playing an ObjectURL, and it's a MediaSource, return the value of the
+    // `src` attribute.
+    nsAutoString src;
+    GetSrc(src);
+    CopyUTF16toUTF8(src, aString);
   } else {
+    // Playing e.g. a MediaStream via an object URL - return an empty string
     aString.Truncate();
   }
 }

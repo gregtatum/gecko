@@ -9,6 +9,10 @@ ChromeUtils.defineModuleGetter(
   "resource://testing-common/TestUtils.jsm"
 );
 
+XPCOMUtils.defineLazyGetter(this, "gFluentStrings", function() {
+  return new Localization(["branding/brand.ftl", "browser/browser.ftl"], true);
+});
+
 if (AppConstants.TSAN) {
   // A test in this folder used to rely on the initial timer of
   // TestUtils.waitForCondition. Removing these timers makes
@@ -461,6 +465,28 @@ var withSidebarTree = async function(type, taskFn) {
     await taskFn(tree);
   } finally {
     SidebarUI.hide();
+  }
+};
+
+/**
+ * Executes a task after opening the Library on a given root. Takes care
+ * of closing the library once done.
+ *
+ * @param hierarchy
+ *        The left pane hierarchy to open.
+ * @param taskFn
+ *        The task to execute once the Library is ready.
+ *        Will get { left, right } trees as argument.
+ */
+var withLibraryWindow = async function(hierarchy, taskFn) {
+  let library = await promiseLibrary(hierarchy);
+  let left = library.document.getElementById("placesList");
+  let right = library.document.getElementById("placeContent");
+  info("withLibrary: executing the task");
+  try {
+    await taskFn({ left, right });
+  } finally {
+    await promiseLibraryClosed(library);
   }
 };
 

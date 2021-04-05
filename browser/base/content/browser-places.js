@@ -236,9 +236,13 @@ var StarUI = {
     this._isNewBookmark = aIsNewBookmark;
     this._itemGuids = null;
 
-    this._element("editBookmarkPanelTitle").textContent = this._isNewBookmark
-      ? gNavigatorBundle.getString("editBookmarkPanel.newBookmarkTitle")
-      : gNavigatorBundle.getString("editBookmarkPanel.editBookmarkTitle");
+    let titleL10nID = this._isNewBookmark
+      ? "bookmarks-add-bookmark"
+      : "bookmarks-edit-bookmark";
+    document.l10n.setAttributes(
+      this._element("editBookmarkPanelTitle"),
+      titleL10nID
+    );
 
     this._element(
       "editBookmarkPanel_showForNewBookmarks"
@@ -561,7 +565,10 @@ var PlacesCommandHook = {
     let bm = await PlacesUtils.bookmarks.fetch({ url });
     if (bm) {
       let node = await PlacesUIUtils.promiseNodeLikeFromFetchInfo(bm);
-      PlacesUIUtils.showBookmarkDialog({ action: "edit", node }, window.top);
+      await PlacesUIUtils.showBookmarkDialog(
+        { action: "edit", node },
+        window.top
+      );
       return;
     }
 
@@ -571,7 +578,7 @@ var PlacesCommandHook = {
       parentId,
       parentGuid,
     });
-    PlacesUIUtils.showBookmarkDialog(
+    await PlacesUIUtils.showBookmarkDialog(
       {
         action: "add",
         type: "bookmark",

@@ -267,12 +267,13 @@ search-one-offs-history =
 
 ## Bookmark Panel
 
+bookmarks-add-bookmark = Add Bookmark
+bookmarks-edit-bookmark = Edit Bookmark
 bookmark-panel-show-editor-checkbox =
     .label = Show editor when saving
     .accesskey = S
-
-bookmark-panel-done-button =
-    .label = Done
+bookmark-panel-save-button =
+    .label = Save
 
 # Width of the bookmark panel.
 # Should be large enough to fully display the Done and
@@ -637,6 +638,23 @@ library-recent-activity-title =
 save-to-pocket-button =
   .label = Save to { -pocket-brand-name }
   .tooltiptext = Save to { -pocket-brand-name }
+
+## Customize Toolbar Buttons
+
+# Variables:
+#  $shortcut (String): keyboard shortcut to open the add-ons manager
+toolbar-addons-themes-button =
+  .label = Add-ons and themes
+  .tooltiptext = Manage your add-ons and themes ({ $shortcut })
+
+# Variables:
+#  $shortcut (String): keyboard shortcut to open settings (only on macOS)
+toolbar-settings-button =
+  .label = Settings
+  .tooltiptext = { PLATFORM() ->
+      [macos] Open settings ({ $shortcut })
+     *[other] Open settings
+  }
 
 ## More items
 

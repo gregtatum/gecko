@@ -571,6 +571,7 @@ nsDisplayListBuilder::nsDisplayListBuilder(nsIFrame* aReferenceFrame,
       mUsedAGRBudget(0),
       mDirtyRect(-1, -1, -1, -1),
       mGlassDisplayItem(nullptr),
+      mHasGlassItemDuringPartial(false),
       mCaretFrame(nullptr),
       mScrollInfoItemsForHoisting(nullptr),
       mFirstClipChainToDestroy(nullptr),
@@ -616,7 +617,8 @@ nsDisplayListBuilder::nsDisplayListBuilder(nsIFrame* aReferenceFrame,
       mBuildAsyncZoomContainer(false),
       mContainsBackdropFilter(false),
       mIsRelativeToLayoutViewport(false),
-      mUseOverlayScrollbars(false) {
+      mUseOverlayScrollbars(false),
+      mAlwaysLayerizeScrollbars(false) {
   MOZ_COUNT_CTOR(nsDisplayListBuilder);
 
   mBuildCompositorHitTestInfo = mAsyncPanZoomEnabled && IsForPainting();
@@ -625,6 +627,9 @@ nsDisplayListBuilder::nsDisplayListBuilder(nsIFrame* aReferenceFrame,
 
   mUseOverlayScrollbars =
       (LookAndFeel::GetInt(LookAndFeel::IntID::UseOverlayScrollbars) != 0);
+
+  mAlwaysLayerizeScrollbars =
+      StaticPrefs::layout_scrollbars_always_layerize_track();
 
   static_assert(
       static_cast<uint32_t>(DisplayItemType::TYPE_MAX) < (1 << TYPE_BITS),
@@ -872,11 +877,19 @@ bool nsDisplayListBuilder::ShouldRebuildDisplayListDueToPrefChange() {
   mUseOverlayScrollbars =
       (LookAndFeel::GetInt(LookAndFeel::IntID::UseOverlayScrollbars) != 0);
 
+  bool alwaysLayerizedScrollbarsLastTime = mAlwaysLayerizeScrollbars;
+  mAlwaysLayerizeScrollbars =
+      StaticPrefs::layout_scrollbars_always_layerize_track();
+
   if (didBuildAsyncZoomContainer != mBuildAsyncZoomContainer) {
     return true;
   }
 
   if (hadOverlayScrollbarsLastTime != mUseOverlayScrollbars) {
+    return true;
+  }
+
+  if (alwaysLayerizedScrollbarsLastTime != mAlwaysLayerizeScrollbars) {
     return true;
   }
 
@@ -4755,15 +4768,34 @@ nsRect nsDisplayOutline::GetBounds(nsDisplayListBuilder* aBuilder,
   return mFrame->InkOverflowRectRelativeToSelf() + ToReferenceFrame();
 }
 
+nsRect nsDisplayOutline::GetInnerRect() const {
+  nsRect* savedOutlineInnerRect =
+      mFrame->GetProperty(nsIFrame::OutlineInnerRectProperty());
+  if (savedOutlineInnerRect) {
+    return *savedOutlineInnerRect;
+  }
+
+  // FIXME bug 1221888
+  NS_ERROR("we should have saved a frame property");
+  return nsRect(nsPoint(), mFrame->GetSize());
+}
+
 void nsDisplayOutline::Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) {
   // TODO join outlines together
   MOZ_ASSERT(mFrame->StyleOutline()->ShouldPaintOutline(),
              "Should have not created a nsDisplayOutline!");
 
-  nsPoint offset = ToReferenceFrame();
-  nsCSSRendering::PaintOutline(
-      mFrame->PresContext(), *aCtx, mFrame, GetPaintRect(),
-      nsRect(offset, mFrame->GetSize()), mFrame->Style());
+  nsRect rect = GetInnerRect() + ToReferenceFrame();
+  nsPresContext* pc = mFrame->PresContext();
+  if (IsThemedOutline()) {
+    rect.Inflate(mFrame->StyleOutline()->mOutlineOffset.ToAppUnits());
+    pc->Theme()->DrawWidgetBackground(
+        aCtx, mFrame, StyleAppearance::FocusOutline, rect, GetPaintRect());
+    return;
+  }
+
+  nsCSSRendering::PaintNonThemedOutline(pc, *aCtx, mFrame, GetPaintRect(), rect,
+                                        mFrame->Style());
 }
 
 bool nsDisplayOutline::IsThemedOutline() const {
@@ -4784,16 +4816,19 @@ bool nsDisplayOutline::CreateWebRenderCommands(
     const StackingContextHelper& aSc,
     mozilla::layers::RenderRootStateManager* aManager,
     nsDisplayListBuilder* aDisplayListBuilder) {
+  nsPresContext* pc = mFrame->PresContext();
+  nsRect rect = GetInnerRect() + ToReferenceFrame();
   if (IsThemedOutline()) {
-    return false;
+    rect.Inflate(mFrame->StyleOutline()->mOutlineOffset.ToAppUnits());
+    return pc->Theme()->CreateWebRenderCommandsForWidget(
+        aBuilder, aResources, aSc, aManager, mFrame,
+        StyleAppearance::FocusOutline, rect);
   }
 
-  nsPoint offset = ToReferenceFrame();
-
-  mozilla::Maybe<nsCSSBorderRenderer> borderRenderer =
-      nsCSSRendering::CreateBorderRendererForOutline(
-          mFrame->PresContext(), nullptr, mFrame, GetPaintRect(),
-          nsRect(offset, mFrame->GetSize()), mFrame->Style());
+  Maybe<nsCSSBorderRenderer> borderRenderer =
+      nsCSSRendering::CreateBorderRendererForNonThemedOutline(
+          pc, /* aDrawTarget = */ nullptr, mFrame, GetPaintRect(), rect,
+          mFrame->Style());
 
   if (!borderRenderer) {
     // No border renderer means "there is no outline".

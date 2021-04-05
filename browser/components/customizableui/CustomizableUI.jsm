@@ -3109,6 +3109,7 @@ var CustomizableUIInternal = {
               viewNode.removeEventListener(eventName, widget[handler]);
             }
           }
+          viewNode._addedEventListeners = false;
         }
       }
       if (widgetNode && widget.onDestroyed) {

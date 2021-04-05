@@ -3,7 +3,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 DIRS += [
+    "inspected-window",
     "target",
+    "target-configuration",
 ]
 
 DevToolsModules(

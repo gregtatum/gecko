@@ -160,13 +160,18 @@
 } /** END not Proton **/
 
 #PanelUI-menu-button[badge-status="addon-alert"] > .toolbarbutton-badge-stack > .toolbarbutton-badge,
-#PanelUI-menu-button[badge-status="fxa-needs-authentication"] > .toolbarbutton-badge-stack > .toolbarbutton-badge {
+#PanelUI-menu-button[badge-status="fxa-needs-authentication"] > .toolbarbutton-badge-stack > .toolbarbutton-badge,
+#fxa-toolbar-menu-button[badge-status="login_failed"] > .toolbarbutton-badge-stack > .toolbarbutton-badge {
   height: 13px;
   background: url(chrome://browser/skin/warning.svg) center / contain no-repeat transparent;
   box-shadow: none;
   border-radius: 0;
   /* Use the included fallbacks defined in the SVG file instead of inheriting from .toolbarbutton-1. */
   -moz-context-properties: none;
+}
+
+#fxa-toolbar-menu-button[badge-status="login_failed"] > .toolbarbutton-badge-stack > .toolbarbutton-badge {
+  display: flex;
 }
 
 #PanelUI-menu-button[badge-status] > .toolbarbutton-badge-stack > .toolbarbutton-badge:-moz-window-inactive {
@@ -501,8 +506,7 @@ panelview:not([mainview]) .toolbarbutton-text,
 
 #appMenu-popup panelview,
 #customizationui-widget-multiview panelview:not([extension]) {
-  min-width: @menuPanelWidth@;
-  max-width: 35em;
+  width: 22.5em;
 }
 
 #customizationui-widget-multiview #appMenu-libraryView,
@@ -682,6 +686,12 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
 #appMenu-addon-banners:not(:empty) ~ #appMenu-fxa-status,
 .panel-banner-item:not([hidden]) + #appMenu-fxa-status {
   margin-top: 6px;
+}
+
+#appMenu-popup panelview,
+#customizationui-widget-multiview panelview:not([extension]) {
+  min-width: @menuPanelWidth@;
+  max-width: 35em;
 }
 } /** END not Proton **/
 
@@ -939,14 +949,6 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
 
 :root {
   --avatar-image-url: url(chrome://browser/skin/fxa/avatar.svg);
-}
-
-:root[fxastatus="unverified"] {
-  --avatar-image-url: url(chrome://browser/skin/fxa/avatar-confirm.svg);
-}
-
-:root[fxastatus="login-failed"] {
-  --avatar-image-url: url(chrome://browser/skin/fxa/avatar-alert.svg);
 }
 
 :root[fxastatus="not_configured"] {
@@ -1693,10 +1695,19 @@ menuitem.panel-subview-footer@menuStateActive@,
 }
 
 @supports -moz-bool-pref("browser.proton.enabled") {
+.PanelUI-subView menuseparator {
+  appearance: none;
+  min-height: 0;
+  border-top: 1px solid var(--panel-separator-color);
+  border-bottom: none;
+  margin: var(--panel-separator-margin);
+  padding: 0;
+}
+
 .PanelUI-subView toolbarseparator.proton-zap {
   border-image: var(--panel-separator-zap-gradient) 1;
 }
-}
+} /** END Proton **/
 
 .PanelUI-subView toolbarseparator.small-separator {
   margin-inline: 5px;

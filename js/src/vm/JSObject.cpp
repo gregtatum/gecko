@@ -11,7 +11,6 @@
 #include "vm/JSObject-inl.h"
 
 #include "mozilla/MathAlgorithms.h"
-#include "mozilla/Maybe.h"
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/TemplateLib.h"
 
@@ -85,6 +84,8 @@
 #include "wasm/TypedObject-inl.h"
 
 using namespace js;
+
+using mozilla::Maybe;
 
 void js::ReportNotObject(JSContext* cx, JSErrNum err, int spindex,
                          HandleValue v) {
@@ -543,6 +544,7 @@ bool js::SetIntegrityLevel(JSContext* cx, HandleObject obj,
 
     for (Shape* shape : shapes) {
       Rooted<StackShape> child(cx, StackShape(shape));
+
       bool isPrivate = JSID_IS_SYMBOL(child.get().propid) &&
                        JSID_TO_SYMBOL(child.get().propid)->isPrivateName();
       // Private fields are not visible to SetIntegrity.
@@ -550,6 +552,10 @@ bool js::SetIntegrityLevel(JSContext* cx, HandleObject obj,
         child.setAttrs(child.attrs() |
                        GetSealedOrFrozenAttributes(child.attrs(), level));
       }
+
+      ObjectFlags flags =
+          GetObjectFlagsForNewProperty(last, child.propid(), child.attrs(), cx);
+      child.setObjectFlags(flags);
 
       last = cx->zone()->propertyTree().getChild(cx, last, child);
       if (!last) {
@@ -590,18 +596,18 @@ bool js::SetIntegrityLevel(JSContext* cx, HandleObject obj,
         desc.setAttributes(AllowConfigure | JSPROP_PERMANENT);
       } else {
         // 9.a.i-ii.
-        Rooted<PropertyDescriptor> currentDesc(cx);
+        Rooted<Maybe<PropertyDescriptor>> currentDesc(cx);
         if (!GetOwnPropertyDescriptor(cx, obj, id, &currentDesc)) {
           return false;
         }
 
         // 9.a.iii.
-        if (!currentDesc.object()) {
+        if (currentDesc.isNothing()) {
           continue;
         }
 
         // 9.a.iii.1-2
-        if (currentDesc.isAccessorDescriptor()) {
+        if (currentDesc->isAccessorDescriptor()) {
           desc.setAttributes(AllowConfigure | JSPROP_PERMANENT);
         } else {
           desc.setAttributes(AllowConfigureAndWritable | JSPROP_PERMANENT |
@@ -726,7 +732,7 @@ bool js::TestIntegrityLevel(JSContext* cx, HandleObject obj,
 
     // Step 9.
     RootedId id(cx);
-    Rooted<PropertyDescriptor> desc(cx);
+    Rooted<Maybe<PropertyDescriptor>> desc(cx);
     for (size_t i = 0, len = props.length(); i < len; i++) {
       id = props[i];
 
@@ -736,13 +742,14 @@ bool js::TestIntegrityLevel(JSContext* cx, HandleObject obj,
       }
 
       // Step 9.c.
-      if (!desc.object()) {
+      if (desc.isNothing()) {
         continue;
       }
 
       // Steps 9.c.i-ii.
-      if (desc.configurable() || (level == IntegrityLevel::Frozen &&
-                                  desc.isDataDescriptor() && desc.writable())) {
+      if (desc->configurable() ||
+          (level == IntegrityLevel::Frozen && desc->isDataDescriptor() &&
+           desc->writable())) {
         *result = false;
         return true;
       }
@@ -969,7 +976,7 @@ bool js::GetPrototypeFromConstructor(JSContext* cx, HandleObject newTarget,
     // Step 4.b: Set proto to realm's intrinsic object named
     //           intrinsicDefaultProto.
     {
-      mozilla::Maybe<AutoRealm> ar;
+      Maybe<AutoRealm> ar;
       if (cx->realm() != realm) {
         ar.emplace(cx, realm->maybeGlobal());
       }
@@ -1199,6 +1206,11 @@ static bool InitializePropertiesFromCompatibleNativeObject(
     for (Shape* shapeToClone : shapes) {
       Rooted<StackShape> child(cx, StackShape(shapeToClone));
       child.setBase(nbase);
+
+      ObjectFlags flags = GetObjectFlagsForNewProperty(shape, child.propid(),
+                                                       child.attrs(), cx);
+      child.setObjectFlags(flags);
+
       shape = cx->zone()->propertyTree().getChild(cx, shape, child);
       if (!shape) {
         return false;
@@ -2366,6 +2378,23 @@ bool js::GetOwnPropertyDescriptor(JSContext* cx, HandleObject obj, HandleId id,
   }
 
   return NativeGetOwnPropertyDescriptor(cx, obj.as<NativeObject>(), id, desc);
+}
+
+bool js::GetOwnPropertyDescriptor(
+    JSContext* cx, HandleObject obj, HandleId id,
+    MutableHandle<Maybe<PropertyDescriptor>> desc) {
+  Rooted<PropertyDescriptor> descriptor(cx);
+  if (!GetOwnPropertyDescriptor(cx, obj, id, &descriptor)) {
+    return false;
+  }
+
+  if (descriptor.object()) {
+    // descriptor is not *undefined*.
+    desc.set(mozilla::Some(descriptor.get()));
+  } else {
+    desc.reset();
+  }
+  return true;
 }
 
 bool js::DefineProperty(JSContext* cx, HandleObject obj, HandleId id,

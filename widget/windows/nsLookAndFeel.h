@@ -47,20 +47,17 @@ class nsLookAndFeel final : public nsXPLookAndFeel {
   static OperatingSystemVersion GetOperatingSystemVersion();
 
  public:
-  explicit nsLookAndFeel(const LookAndFeelCache* aCache);
+  nsLookAndFeel();
   virtual ~nsLookAndFeel();
 
   void NativeInit() final;
   void RefreshImpl() override;
-  nsresult NativeGetInt(IntID aID, int32_t& aResult) override;
-  nsresult NativeGetFloat(FloatID aID, float& aResult) override;
-  nsresult NativeGetColor(ColorID aID, nscolor& aResult) override;
+  nsresult NativeGetInt(IntID, int32_t& aResult) override;
+  nsresult NativeGetFloat(FloatID, float& aResult) override;
+  nsresult NativeGetColor(ColorID, ColorScheme, nscolor& aResult) override;
   bool NativeGetFont(FontID aID, nsString& aFontName,
                      gfxFontStyle& aFontStyle) override;
   char16_t GetPasswordCharacterImpl() override;
-
-  LookAndFeelCache GetCacheImpl() override;
-  void SetCacheImpl(const LookAndFeelCache& aCache) override;
 
  private:
   enum CachedValueKind {
@@ -68,8 +65,6 @@ class nsLookAndFeel final : public nsXPLookAndFeel {
     AllPointerCapabilitiesKind,
     CachedValueKindMax = AllPointerCapabilitiesKind,
   };
-
-  void DoSetCache(const LookAndFeelCache& aCache);
 
   /**
    * Fetches the Windows accent color from the Windows settings if

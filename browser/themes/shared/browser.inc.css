@@ -63,6 +63,11 @@
   --urlbar-icon-padding: 3px; /* (26px - 2px border - 2px padding - 16px icon) / 2 */
 }
 
+:root[uidensity=touch] {
+  --urlbar-min-height: 34px;
+  --urlbar-icon-padding: 7px; /* (34px - 2px border - 2px padding - 16px icon) / 2 */
+}
+
 @supports not -moz-bool-pref("browser.proton.urlbar.enabled") {
 :root {
   --urlbar-min-height: 30px;
@@ -308,12 +313,6 @@ menupopup::part(drop-indicator) {
 :root:not([lwtheme-image]) .browserContainer > findbar:-moz-lwtheme:-moz-window-inactive {
   background-color: var(--lwt-accent-color-inactive, var(--lwt-accent-color));
 }
-
-@supports -moz-bool-pref("browser.proton.enabled") {
-.browserContainer > findbar {
-  padding: 6px;
-}
-} /*** END proton ***/
 
 /* Private browsing and accessibility indicators */
 
@@ -885,7 +884,7 @@ popupnotificationcontent {
 .webRTC-selectDevice-icon {
   -moz-context-properties: fill;
   fill: currentColor;
-  margin-inline-end: 6px;
+  margin-inline-end: 8px;
 }
 
 #webRTC-selectCamera-icon {
@@ -905,6 +904,7 @@ popupnotificationcontent {
   border-radius: 4px;
   border: 0;
   outline: 1px solid var(--input-border-color, ThreeDShadow);
+  outline-offset: -1px;
   background-color: var(--input-bgcolor, Field);
   color: var(--input-color, FieldText);
 }

@@ -31,6 +31,7 @@ class nsIWidget;
   nsMenuX* mGeckoMenu;  // weak ref
 }
 - (id)initWithGeckoMenu:(nsMenuX*)geckoMenu;
+@property BOOL menuIsInMenubar;
 @end
 
 // Once instantiated, this object lives until its DOM node or its parent window is destroyed.
@@ -95,6 +96,9 @@ class nsMenuX final : public nsMenuParentX,
   // references to this object can be dropped during the handling of the DOM event.
   void MenuClosedAsync();
 
+  // Close the menu if it's open, and flush any pending popuphiding / popuphidden events.
+  bool Close();
+
   void SetRebuild(bool aMenuEvent);
   void SetupIcon();
   nsIContent* Content() { return mContent; }
@@ -155,6 +159,10 @@ class nsMenuX final : public nsMenuParentX,
   // children, and the NSMenu only contains visible items. So the insertion index is equal to the
   // number of visible previous siblings of aChild in mMenuChildren.
   NSInteger CalculateNativeInsertionPoint(nsMenuX* aChild);
+
+  // If mPendingAsyncMenuCloseRunnable is non-null, call MenuClosedAsync() to send out pending
+  // popuphiding/popuphidden events.
+  void FlushMenuClosedRunnable();
 
   nsCOMPtr<nsIContent> mContent;  // XUL <menu> or <menupopup>
 

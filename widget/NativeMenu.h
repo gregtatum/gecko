@@ -9,6 +9,10 @@
 #include "nsISupportsImpl.h"
 #include "Units.h"
 
+namespace mozilla::dom {
+class Element;
+}
+
 namespace mozilla::widget {
 
 class NativeMenu {
@@ -18,6 +22,13 @@ class NativeMenu {
   // Show this menu as a context menu at the specified position.
   // Returns false if the popupshowing handler does not want this popup to open.
   virtual bool ShowAsContextMenu(const mozilla::DesktopPoint& aPosition) = 0;
+
+  // Close the menu and synchronously fire popuphiding / popuphidden events.
+  // Returns false if the menu wasn't open.
+  virtual bool Close() = 0;
+
+  // Return this NativeMenu's DOM element.
+  virtual RefPtr<dom::Element> Element() = 0;
 
   class Observer {
    public:

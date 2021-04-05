@@ -300,7 +300,14 @@ pref("toolkit.lazyHiddenWindow", true);
 pref("browser.chrome.site_icons", true);
 // browser.warnOnQuit == false will override all other possible prompts when quitting or restarting
 pref("browser.warnOnQuit", true);
-pref("browser.fullscreen.autohide", true);
+
+// TODO bug 1702563: Renable fullscreen autohide by default on macOS.
+#ifdef XP_MACOSX
+  pref("browser.fullscreen.autohide", false);
+#else
+  pref("browser.fullscreen.autohide", true);
+#endif
+
 pref("browser.overlink-delay", 80);
 
 // Whether using `ctrl` when hitting return/enter in the URL bar
@@ -1937,7 +1944,7 @@ pref("extensions.pocket.onSaveRecs.locales", "en-US,en-GB,en-CA");
 // Possibilities are: `control`, `control-one-button`, `variant_a`, `variant_b`, `variant_c`
 pref("extensions.pocket.loggedOutVariant", "control");
 
-pref("signon.management.page.fileImport.enabled", true);
+pref("signon.management.page.fileImport.enabled", false);
 
 #ifdef NIGHTLY_BUILD
 pref("signon.management.page.os-auth.enabled", true);
@@ -1952,7 +1959,6 @@ pref("signon.management.page.sort", "name");
 // the utm_creative param be last.
 pref("signon.management.page.breachAlertUrl",
      "https://monitor.firefox.com/breach-details/");
-pref("signon.management.page.showPasswordSyncNotification", true);
 pref("signon.passwordEditCapture.enabled", true);
 pref("signon.relatedRealms.enabled", false);
 pref("signon.showAutoCompleteFooter", true);
@@ -2151,6 +2157,9 @@ pref("devtools.browsertoolbox.fission", true);
 #else
 pref("devtools.browsertoolbox.fission", false);
 #endif
+
+// This preference will enable watching top-level targets from the server side.
+pref("devtools.target-switching.server.enabled", false);
 
 // Toolbox Button preferences
 pref("devtools.command-button-pick.enabled", true);

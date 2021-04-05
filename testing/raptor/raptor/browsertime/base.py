@@ -299,7 +299,7 @@ class Browsertime(Perftest):
             browsertime_options.extend(["--video", "false", "--visualMetrics", "false"])
 
         # have browsertime use our newly-created conditioned-profile path
-        if self.using_condprof:
+        if self.config.get("conditioned_profile"):
             self.profile.profile = self.conditioned_profile_dir
 
         if self.config["gecko_profile"]:
@@ -445,7 +445,9 @@ class Browsertime(Perftest):
                 if self.vismet_failed:
                     raise Exception(
                         "Browsertime visual metrics dependencies were not "
-                        "installed correctly."
+                        "installed correctly. Try removing the virtual environment at "
+                        "%s before running your command again."
+                        % os.environ["VIRTUAL_ENV"]
                     )
 
             proc = self.process_handler(cmd, processOutputLine=_line_handler, env=env)
