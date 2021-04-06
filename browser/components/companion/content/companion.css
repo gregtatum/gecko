@@ -49,13 +49,7 @@ h2 {
   height: 32px;
 }
 
-#urlbar {
-  color: rgba(249, 249, 250, 1);
-}
-
 #urlbar-background {
-  background-color: rgb(71, 71, 73) !important;
-  border-color: rgba(249, 249, 250, 0.2);
   border-radius: 4px;
 }
 

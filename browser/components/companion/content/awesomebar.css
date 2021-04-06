@@ -3,7 +3,6 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 %filter substitution
-%define lwtPopupBrighttextLinkColor #74c0ff
 %define themeTransition background-color 0.1s cubic-bezier(.17,.67,.83,.67)
 %define urlbarBreakoutExtend 2px
 
@@ -14,15 +13,8 @@
 @import url("chrome://browser/content/urlbar.css");
 
 :root {
-  --urlbar-separator-color: hsla(0,0%,16%,.2);
-  --arrowpanel-dimmed: hsla(0,0%,80%,.35);
-  --arrowpanel-dimmed-further: hsla(0,0%,80%,.5);
-  --arrowpanel-dimmed-even-further: hsla(0,0%,80%,.8);
-
   --identity-box-margin-inline: 4px;
   --identity-box-label-opacity: .8;
-  --urlbar-box-bg-overlay: hsla(0,0%,70%,.2);
-  --urlbar-box-unfocused-bg-overlay: hsla(0,0%,100%,.7);
 
   --urlbar-min-height: 32px;
   --urlbar-icon-padding: 6px; /* (32px - 2px border - 2px padding - 16px icon) / 2 */

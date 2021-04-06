@@ -16,8 +16,6 @@ import { WindowList } from "./appbar.js";
 
 let OBSERVED_PREFS = new Map();
 onLoad(() => {
-  window.docShell.browsingContext.prefersColorSchemeOverride = "dark";
-
   // Cheesy approximation of preferences for the demo settings. Add a checkbox with
   // data-pref attribute and the state will get synced & toggled automatically.
   // Components that care about it can listen to CompanionObservedPrefChanged to rerender.
