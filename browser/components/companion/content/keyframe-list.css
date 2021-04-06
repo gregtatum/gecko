@@ -7,6 +7,14 @@ h2 {
   margin-bottom: 10px;
 }
 
+.list-subtitle {
+  color: var(--in-content-deemphasized-text);
+  margin: -10px 0 10px 0;
+  font-size: 1em;
+  padding: 0;
+  font-weight: normal;
+}
+
 .keyframe-list {
   display: flex;
   flex-direction: column;
