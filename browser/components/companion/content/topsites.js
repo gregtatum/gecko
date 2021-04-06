@@ -23,7 +23,6 @@ export class TopSite extends HTMLElement {
     this.data = data;
 
     this.className = "topsite card";
-    this.setAttribute("url", this.data.url);
 
     let template = document.getElementById("template-topsite");
     let fragment = template.content.cloneNode(true);

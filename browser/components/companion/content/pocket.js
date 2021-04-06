@@ -15,7 +15,6 @@ export class PocketStory extends HTMLElement {
     this.data = data;
 
     this.className = "pocket card";
-    this.setAttribute("url", this.data.url);
 
     let template = document.getElementById("template-pocket-story");
     let fragment = template.content.cloneNode(true);

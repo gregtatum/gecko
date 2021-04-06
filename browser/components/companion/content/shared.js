@@ -40,7 +40,6 @@ export class Keyframe extends HidableElement {
     this.data = data;
 
     this.className = "keyframe card";
-    this.setAttribute("url", this.data.url);
 
     let template = document.getElementById("template-keyframe");
     let fragment = template.content.cloneNode(true);
@@ -48,24 +47,6 @@ export class Keyframe extends HidableElement {
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
-  }
-
-  static prioritise(url) {
-    // These will be in document order so frames in earlier sections will appear earlier.
-    let keyframes = Array.from(
-      document.querySelectorAll(`.keyframe[url="${CSS.escape(url)}"]`)
-    );
-
-    let first = keyframes.shift();
-    if (first) {
-      first.hidden = false;
-      first.parentElement.updateVisibility();
-    }
-
-    for (let frame of keyframes) {
-      frame.hidden = true;
-      frame.parentElement.updateVisibility();
-    }
   }
 
   updateDOM(target) {
@@ -99,22 +80,8 @@ Characters per second: ${
   }
 
   update(data) {
-    if (data.url != this.data.url) {
-      this.setAttribute("url", data.url);
-      Keyframe.prioritise(this.data.url);
-      Keyframe.prioritise(data.url);
-    }
-
     this.data = data;
     this.updateDOM(this);
-  }
-
-  connectedCallback() {
-    Keyframe.prioritise(this.data.url);
-  }
-
-  disconnectedCallback() {
-    Keyframe.prioritise(this.data.url);
   }
 
   handleEvent() {
@@ -137,17 +104,6 @@ export class KeyframeList extends HidableElement {
     shadow.appendChild(fragment);
   }
 
-  updateVisibility() {
-    for (let keyframe of this.childNodes) {
-      if (!keyframe.hidden) {
-        this.hidden = false;
-        return;
-      }
-    }
-
-    this.hidden = true;
-  }
-
   displayFrames(frames) {
     let elements = frames.map(frame => {
       let element = this.querySelector(
@@ -162,9 +118,7 @@ export class KeyframeList extends HidableElement {
     });
     this.replaceChildren(...elements.slice(0, NUM_KEYFRAMES));
 
-    if (!elements.length) {
-      this.hidden = true;
-    }
+    this.hidden = !elements.length;
   }
 }
 
