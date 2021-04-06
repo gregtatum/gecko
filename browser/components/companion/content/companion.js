@@ -72,6 +72,27 @@ function toggleSettings() {
   }
 }
 
+window.addEventListener(
+  "load",
+  () => {
+    console.log("Here");
+    if (!document.documentElement.hasAttribute("width")) {
+      const TARGET_WIDTH = 1280;
+      const TARGET_HEIGHT = 1040;
+      let width = Math.min(screen.availWidth * 0.9, TARGET_WIDTH);
+      let height = Math.min(screen.availHeight * 0.9, TARGET_HEIGHT);
+
+      document.documentElement.setAttribute("width", width);
+      document.documentElement.setAttribute("height", height);
+
+      if (width < TARGET_WIDTH && height < TARGET_HEIGHT) {
+        document.documentElement.setAttribute("sizemode", "maximized");
+      }
+    }
+  },
+  { once: true }
+);
+
 onUnload(() => {
   for (let [prefName, cb] of OBSERVED_PREFS) {
     console.log(`Removing observer for ${prefName}`);
