@@ -141,7 +141,6 @@ var Keyframes = {
     await this._db.executeCached(sql, {
       id,
       newType,
-      lastVisit: Date.now(),
     });
     Services.obs.notifyObservers(null, "keyframe-update");
   },
