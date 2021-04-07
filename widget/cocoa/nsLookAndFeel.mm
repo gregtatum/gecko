@@ -4,6 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "AppearanceOverride.h"
+#include "mozilla/widget/ThemeChangeKind.h"
 #include "nsLookAndFeel.h"
 #include "nsCocoaFeatures.h"
 #include "nsNativeThemeColors.h"
@@ -27,23 +28,36 @@
 
 using namespace mozilla;
 
+@interface MOZLookAndFeelDynamicChangeObserver : NSObject
++ (void)startObserving;
+@end
+
 nsLookAndFeel::nsLookAndFeel() = default;
 
 nsLookAndFeel::~nsLookAndFeel() = default;
 
-static nscolor GetColorFromNSColor(NSColor* aColor) {
-  NSColor* deviceColor = [aColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-  return NS_RGB((unsigned int)([deviceColor redComponent] * 255.0),
-                (unsigned int)([deviceColor greenComponent] * 255.0),
-                (unsigned int)([deviceColor blueComponent] * 255.0));
+void nsLookAndFeel::NativeInit() {
+  NS_OBJC_BEGIN_TRY_ABORT_BLOCK
+
+  [MOZLookAndFeelDynamicChangeObserver startObserving];
+  RecordTelemetry();
+
+  NS_OBJC_END_TRY_ABORT_BLOCK
 }
 
-static nscolor GetColorFromNSColorWithAlpha(NSColor* aColor, float alpha) {
+static nscolor GetColorFromNSColor(NSColor* aColor) {
   NSColor* deviceColor = [aColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-  return NS_RGBA((unsigned int)([deviceColor redComponent] * 255.0),
-                 (unsigned int)([deviceColor greenComponent] * 255.0),
-                 (unsigned int)([deviceColor blueComponent] * 255.0),
-                 (unsigned int)(alpha * 255.0));
+  return NS_RGBA((unsigned int)(deviceColor.redComponent * 255.0),
+                 (unsigned int)(deviceColor.greenComponent * 255.0),
+                 (unsigned int)(deviceColor.blueComponent * 255.0),
+                 (unsigned int)(deviceColor.alphaComponent * 255.0));
+}
+
+static nscolor GetColorFromNSColorWithCustomAlpha(NSColor* aColor, float alpha) {
+  NSColor* deviceColor = [aColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+  return NS_RGBA((unsigned int)(deviceColor.redComponent * 255.0),
+                 (unsigned int)(deviceColor.greenComponent * 255.0),
+                 (unsigned int)(deviceColor.blueComponent * 255.0), (unsigned int)(alpha * 255.0));
 }
 
 // Turns an opaque selection color into a partially transparent selection color,
@@ -212,11 +226,9 @@ nsresult nsLookAndFeel::NativeGetColor(ColorID aID, ColorScheme aScheme, nscolor
     case ColorID::Buttonshadow:
       color = NS_RGB(0xDC, 0xDC, 0xDC);
       break;
-    case ColorID::Graytext: {
-      NSColor* disabledColor = NSColor.disabledControlTextColor;
-      color = GetColorFromNSColorWithAlpha(disabledColor, [disabledColor alphaComponent]);
+    case ColorID::Graytext:
+      color = GetColorFromNSColor(NSColor.disabledControlTextColor);
       break;
-    }
     case ColorID::Inactiveborder:
     case ColorID::Inactivecaption:
       color = GetColorFromNSColor(NSColor.controlBackgroundColor);
@@ -283,7 +295,7 @@ nsresult nsLookAndFeel::NativeGetColor(ColorID aID, ColorScheme aScheme, nscolor
       break;
     }
     case ColorID::MozMacFocusring:
-      color = GetColorFromNSColorWithAlpha(NSColor.keyboardFocusIndicatorColor, 0.48);
+      color = GetColorFromNSColorWithCustomAlpha(NSColor.keyboardFocusIndicatorColor, 0.48);
       break;
     case ColorID::MozMacMenushadow:
       color = NS_RGB(0xA3, 0xA3, 0xA3);
@@ -480,10 +492,7 @@ nsresult nsLookAndFeel::NativeGetInt(IntID aID, int32_t& aResult) {
       aResult = 0;
       break;
     case IntID::SwipeAnimationEnabled:
-      aResult = 0;
-      if ([NSEvent respondsToSelector:@selector(isSwipeTrackingFromScrollEventsEnabled)]) {
-        aResult = [NSEvent isSwipeTrackingFromScrollEventsEnabled];
-      }
+      aResult = NSEvent.isSwipeTrackingFromScrollEventsEnabled;
       break;
     case IntID::ContextMenuOffsetVertical:
       aResult = -6;
@@ -564,3 +573,87 @@ bool nsLookAndFeel::NativeGetFont(FontID aID, nsString& aFontName, gfxFontStyle&
 
   NS_OBJC_END_TRY_BLOCK_RETURN(false);
 }
+
+@implementation MOZLookAndFeelDynamicChangeObserver
+
++ (void)startObserving {
+  static MOZLookAndFeelDynamicChangeObserver* gInstance = nil;
+  if (!gInstance) {
+    gInstance = [[MOZLookAndFeelDynamicChangeObserver alloc] init];  // leaked
+  }
+}
+
+- (instancetype)init {
+  self = [super init];
+
+  [NSNotificationCenter.defaultCenter addObserver:self
+                                         selector:@selector(colorsChanged)
+                                             name:NSControlTintDidChangeNotification
+                                           object:nil];
+  [NSNotificationCenter.defaultCenter addObserver:self
+                                         selector:@selector(colorsChanged)
+                                             name:NSSystemColorsDidChangeNotification
+                                           object:nil];
+
+  if (@available(macOS 10.14, *)) {
+    [NSWorkspace.sharedWorkspace.notificationCenter
+        addObserver:self
+           selector:@selector(mediaQueriesChanged)
+               name:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification
+             object:nil];
+  } else {
+    [NSNotificationCenter.defaultCenter
+        addObserver:self
+           selector:@selector(mediaQueriesChanged)
+               name:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification
+             object:nil];
+  }
+
+  [NSNotificationCenter.defaultCenter addObserver:self
+                                         selector:@selector(scrollbarsChanged)
+                                             name:NSPreferredScrollerStyleDidChangeNotification
+                                           object:nil];
+  [NSDistributedNotificationCenter.defaultCenter
+             addObserver:self
+                selector:@selector(scrollbarsChanged)
+                    name:@"AppleAquaScrollBarVariantChanged"
+                  object:nil
+      suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];
+
+  [MOZGlobalAppearance.sharedInstance addObserver:self
+                                       forKeyPath:@"effectiveAppearance"
+                                          options:0
+                                          context:nil];
+  [NSApp addObserver:self forKeyPath:@"effectiveAppearance" options:0 context:nil];
+
+  return self;
+}
+
+- (void)observeValueForKeyPath:(NSString*)keyPath
+                      ofObject:(id)object
+                        change:(NSDictionary<NSKeyValueChangeKey, id>*)change
+                       context:(void*)context {
+  if ([keyPath isEqualToString:@"effectiveAppearance"]) {
+    [self entireThemeChanged];
+  } else {
+    [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
+  }
+}
+
+- (void)entireThemeChanged {
+  LookAndFeel::NotifyChangedAllWindows(widget::ThemeChangeKind::StyleAndLayout);
+}
+
+- (void)scrollbarsChanged {
+  LookAndFeel::NotifyChangedAllWindows(widget::ThemeChangeKind::StyleAndLayout);
+}
+
+- (void)mediaQueriesChanged {
+  LookAndFeel::NotifyChangedAllWindows(widget::ThemeChangeKind::MediaQueriesOnly);
+}
+
+- (void)colorsChanged {
+  LookAndFeel::NotifyChangedAllWindows(widget::ThemeChangeKind::Style);
+}
+
+@end

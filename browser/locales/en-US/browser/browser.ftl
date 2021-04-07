@@ -267,8 +267,20 @@ search-one-offs-history =
 
 ## Bookmark Panel
 
-bookmarks-add-bookmark = Add Bookmark
-bookmarks-edit-bookmark = Edit Bookmark
+bookmarks-add-bookmark = Add bookmark
+bookmarks-edit-bookmark = Edit bookmark
+bookmark-panel-cancel =
+    .label = Cancel
+    .accesskey = C
+# Variables:
+#  $count (number): number of bookmarks that will be removed
+bookmark-panel-remove =
+    .label =
+        { $count ->
+            [1] Remove bookmark
+           *[other] Remove { $count } bookmarks
+        }
+    .accesskey = R
 bookmark-panel-show-editor-checkbox =
     .label = Show editor when saving
     .accesskey = S
@@ -529,6 +541,13 @@ urlbar-result-action-tabtosearch-web = Search with { $engine } directly from the
 #  $engine (String): the name of a search engine that searches a specific site
 #  (e.g. Amazon).
 urlbar-result-action-tabtosearch-other-engine = Search { $engine } directly from the address bar
+# Action text for copying to clipboard.
+urlbar-result-action-copy-to-clipboard = Copy
+# Shows the result of a formula expression being calculated, the last = sign will be shown
+# as part of the result (e.g. "= 2").
+# Variables
+#  $result (String): the string representation for a formula result
+urlbar-result-action-calculator-result = = { $result }
 
 ## Action text shown in urlbar results, usually appended after the search
 ## string or the url, like "result value - action text".
@@ -561,7 +580,7 @@ pointerlock-warning-no-domain = This document has control of your pointer. Press
 
 crashed-subframe-message = <strong>Part of this page crashed.</strong> To let { -brand-product-name } know about this issue and get it fixed faster, please submit a report.
 crashed-subframe-learnmore-link =
-  .value = Learn More
+  .value = Learn more
 crashed-subframe-submit =
   .label = Submit report
   .accesskey = S

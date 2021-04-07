@@ -248,6 +248,7 @@ class StubField {
     RawInt32,
     RawPointer,
     Shape,
+    GetterSetter,
     JSObject,
     Symbol,
     String,
@@ -655,6 +656,10 @@ class MOZ_RAII CacheIRWriter : public JS::CustomAutoRooter {
     assertSameZone(shape);
     addStubField(uintptr_t(shape), StubField::Type::Shape);
   }
+  void writeGetterSetterField(GetterSetter* gs) {
+    MOZ_ASSERT(gs);
+    addStubField(uintptr_t(gs), StubField::Type::GetterSetter);
+  }
   void writeObjectField(JSObject* obj) {
     MOZ_ASSERT(obj);
     assertSameCompartment(obj);
@@ -734,6 +739,11 @@ class MOZ_RAII CacheIRWriter : public JS::CustomAutoRooter {
 
   void writeWasmValTypeImm(wasm::ValType::Kind kind) {
     static_assert(unsigned(wasm::TypeCode::Limit) <= UINT8_MAX);
+    buffer_.writeByte(uint8_t(kind));
+  }
+
+  void writeAllocKindImm(gc::AllocKind kind) {
+    static_assert(unsigned(gc::AllocKind::LIMIT) <= UINT8_MAX);
     buffer_.writeByte(uint8_t(kind));
   }
 
@@ -1137,6 +1147,7 @@ class MOZ_RAII CacheIRReader {
   wasm::ValType::Kind wasmValType() {
     return wasm::ValType::Kind(buffer_.readByte());
   }
+  gc::AllocKind allocKind() { return gc::AllocKind(buffer_.readByte()); }
 
   Scalar::Type scalarType() { return Scalar::Type(buffer_.readByte()); }
   uint32_t rttValueKey() { return buffer_.readByte(); }
@@ -1202,6 +1213,7 @@ class MOZ_RAII CacheIRCloner {
   int64_t readStubInt64(uint32_t offset);
 
   Shape* getShapeField(uint32_t stubOffset);
+  GetterSetter* getGetterSetterField(uint32_t stubOffset);
   JSObject* getObjectField(uint32_t stubOffset);
   JSString* getStringField(uint32_t stubOffset);
   JSAtom* getAtomField(uint32_t stubOffset);
@@ -1914,6 +1926,8 @@ class MOZ_RAII NewObjectIRGenerator : public IRGenerator {
                        ICState::Mode, JSOp op, HandleObject templateObj);
 
   AttachDecision tryAttachStub();
+  AttachDecision tryAttachPlainObject();
+  AttachDecision tryAttachTemplateObject();
 };
 
 // Retrieve Xray JIT info set by the embedder.

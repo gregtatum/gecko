@@ -142,19 +142,20 @@ JS_PUBLIC_API const char* JS::InformalValueTypeName(const Value& v) {
 }
 
 // ES6 draft rev37 6.2.4.4 FromPropertyDescriptor
-JS_PUBLIC_API bool JS::FromPropertyDescriptor(JSContext* cx,
-                                              Handle<PropertyDescriptor> desc,
-                                              MutableHandleValue vp) {
+JS_PUBLIC_API bool JS::FromPropertyDescriptor(
+    JSContext* cx, Handle<Maybe<PropertyDescriptor>> desc_,
+    MutableHandleValue vp) {
   AssertHeapIsIdle();
   CHECK_THREAD(cx);
-  cx->check(desc);
+  cx->check(desc_);
 
   // Step 1.
-  if (!desc.object()) {
+  if (desc_.isNothing()) {
     vp.setUndefined();
     return true;
   }
 
+  Rooted<PropertyDescriptor> desc(cx, *desc_);
   return FromPropertyDescriptorToObject(cx, desc, vp);
 }
 
@@ -2144,14 +2145,15 @@ bool js::GetOwnPropertyPure(JSContext* cx, JSObject* obj, jsid id, Value* vp,
          NativeGetPureInline(&obj->as<NativeObject>(), id, prop, vp, cx);
 }
 
-static inline bool NativeGetGetterPureInline(PropertyResult prop,
+static inline bool NativeGetGetterPureInline(NativeObject* holder,
+                                             PropertyResult prop,
                                              JSFunction** fp) {
   MOZ_ASSERT(prop.isNativeProperty());
 
-  if (prop.shape()->hasGetterObject()) {
-    Shape* shape = prop.shape();
-    if (shape->getterObject()->is<JSFunction>()) {
-      *fp = &shape->getterObject()->as<JSFunction>();
+  if (holder->hasGetter(prop.shape())) {
+    JSObject* getter = holder->getGetter(prop.shape());
+    if (getter->is<JSFunction>()) {
+      *fp = &getter->as<JSFunction>();
       return true;
     }
   }
@@ -2174,7 +2176,7 @@ bool js::GetGetterPure(JSContext* cx, JSObject* obj, jsid id, JSFunction** fp) {
     return true;
   }
 
-  return prop.isNativeProperty() && NativeGetGetterPureInline(prop, fp);
+  return prop.isNativeProperty() && NativeGetGetterPureInline(pobj, prop, fp);
 }
 
 bool js::GetOwnGetterPure(JSContext* cx, JSObject* obj, jsid id,
@@ -2190,7 +2192,8 @@ bool js::GetOwnGetterPure(JSContext* cx, JSObject* obj, jsid id,
     return true;
   }
 
-  return prop.isNativeProperty() && NativeGetGetterPureInline(prop, fp);
+  return prop.isNativeProperty() &&
+         NativeGetGetterPureInline(&obj->as<NativeObject>(), prop, fp);
 }
 
 bool js::GetOwnNativeGetterPure(JSContext* cx, JSObject* obj, jsid id,
@@ -2202,11 +2205,16 @@ bool js::GetOwnNativeGetterPure(JSContext* cx, JSObject* obj, jsid id,
     return false;
   }
 
-  if (!prop.isNativeProperty() || !prop.shape()->hasGetterObject()) {
+  if (!prop.isNativeProperty()) {
     return true;
   }
 
-  JSObject* getterObj = prop.shape()->getterObject();
+  NativeObject* nobj = &obj->as<NativeObject>();
+  if (!nobj->hasGetter(prop.shape())) {
+    return true;
+  }
+
+  JSObject* getterObj = nobj->getGetter(prop.shape());
   if (!getterObj->is<JSFunction>()) {
     return true;
   }
@@ -2976,7 +2984,7 @@ void GetObjectSlotNameFunctor::operator()(JS::TracingContext* tcx, char* buf,
   Shape* shape;
   if (obj->is<NativeObject>()) {
     shape = obj->as<NativeObject>().lastProperty();
-    while (shape && (shape->isEmptyShape() || !shape->isDataProperty() ||
+    while (shape && (shape->isEmptyShape() || !shape->hasSlot() ||
                      shape->slot() != slot)) {
       shape = shape->previous();
     }
@@ -3169,28 +3177,29 @@ static void DumpProperty(const NativeObject* obj, Shape& shape,
   if (shape.isDataProperty()) {
     out.printf(": ");
     dumpValue(obj->getSlot(shape.maybeSlot()), out);
+  } else if (shape.isAccessorDescriptor()) {
+    out.printf(": getter %p setter %p", obj->getGetter(&shape),
+               obj->getSetter(&shape));
   }
 
   out.printf(" (shape %p", (void*)&shape);
 
   uint8_t attrs = shape.attributes();
-  if (attrs & JSPROP_ENUMERATE) out.put(" enumerate");
-  if (attrs & JSPROP_READONLY) out.put(" readonly");
-  if (attrs & JSPROP_PERMANENT) out.put(" permanent");
-
-  if (shape.hasGetterValue()) {
-    out.printf(" getterValue %p", shape.getterObject());
+  if (attrs & JSPROP_ENUMERATE) {
+    out.put(" enumerate");
   }
-
-  if (shape.hasSetterValue()) {
-    out.printf(" setterValue %p", shape.setterObject());
+  if (attrs & JSPROP_READONLY) {
+    out.put(" readonly");
+  }
+  if (attrs & JSPROP_PERMANENT) {
+    out.put(" permanent");
   }
 
   if (shape.isCustomDataProperty()) {
     out.printf(" <custom-data-prop>");
   }
 
-  if (shape.isDataProperty()) {
+  if (shape.hasSlot()) {
     out.printf(" slot %u", shape.slot());
   }
 
@@ -3264,6 +3273,9 @@ void JSObject::dump(js::GenericPrinter& out) const {
     }
     if (nobj->hadElementsAccess()) {
       out.put(" had_elements_access");
+    }
+    if (nobj->hadGetterSetterChange()) {
+      out.put(" had_getter_setter_change");
     }
     if (nobj->isIndexed()) {
       out.put(" indexed");

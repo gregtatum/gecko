@@ -1612,10 +1612,19 @@ vec3_scalar step(vec3_scalar edge, vec3_scalar x) {
 SI vec3 min(vec3 a, vec3 b) {
   return vec3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z));
 }
+SI vec3 min(vec3 a, Float b) {
+  return vec3(min(a.x, b), min(a.y, b), min(a.z, b));
+}
+SI vec3_scalar min(vec3_scalar a, vec3_scalar b) {
+  return vec3_scalar{min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
+}
+
 SI vec3 max(vec3 a, vec3 b) {
   return vec3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
 }
-
+SI vec3 max(vec3 a, Float b) {
+  return vec3(max(a.x, b), max(a.y, b), max(a.z, b));
+}
 SI vec3_scalar max(vec3_scalar a, vec3_scalar b) {
   return vec3_scalar{max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
 }
@@ -1665,6 +1674,10 @@ struct vec4_scalar {
   constexpr vec4_scalar(float x, float y, float z, float w)
       : x(x), y(y), z(z), w(w) {}
   vec4_scalar(vec3_scalar xyz, float w) : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
+
+  static vec4_scalar load_from_ptr(const float* f) {
+    return vec4_scalar(f[0], f[1], f[2], f[3]);
+  }
 
   ALWAYS_INLINE float& select(XYZW c) {
     switch (c) {

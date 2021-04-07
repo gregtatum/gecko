@@ -94,7 +94,6 @@
 #include "mozilla/layers/LayerTransactionChild.h"
 #include "mozilla/layers/ShadowLayers.h"
 #include "mozilla/layers/WebRenderLayerManager.h"
-#include "mozilla/plugins/PPluginWidgetChild.h"
 #include "nsBrowserStatusFilter.h"
 #include "nsColorPickerProxy.h"
 #include "nsCommandParams.h"
@@ -143,10 +142,6 @@
 #include "nsWebBrowser.h"
 #include "nsWindowWatcher.h"
 #include "nsIXULRuntime.h"
-
-#ifdef XP_WIN
-#  include "mozilla/plugins/PluginWidgetChild.h"
-#endif
 
 #ifdef MOZ_WAYLAND
 #  include "nsAppRunner.h"
@@ -567,7 +562,6 @@ NS_IMPL_CYCLE_COLLECTION_CLASS(BrowserChild)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(BrowserChild)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mBrowserChildMessageManager)
   tmp->nsMessageManagerScriptExecutor::Unlink();
-  NS_IMPL_CYCLE_COLLECTION_UNLINK(mWebBrowserChrome)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mStatusFilter)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mWebNav)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mBrowsingContext)
@@ -578,7 +572,6 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(BrowserChild)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mBrowserChildMessageManager)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mWebBrowserChrome)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mStatusFilter)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mWebNav)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mBrowsingContext)
@@ -810,10 +803,6 @@ BrowserChild::FocusPrevElement(bool aForDocumentNavigation) {
 
 NS_IMETHODIMP
 BrowserChild::GetInterface(const nsIID& aIID, void** aSink) {
-  if (aIID.Equals(NS_GET_IID(nsIWebBrowserChrome3))) {
-    return GetWebBrowserChrome(reinterpret_cast<nsIWebBrowserChrome3**>(aSink));
-  }
-
   // XXXbz should we restrict the set of interfaces we hand out here?
   // See bug 537429
   return QueryInterface(aIID, aSink);
@@ -2899,26 +2888,6 @@ BrowserChild::GetMessageManager(ContentFrameMessageManager** aResult) {
   return *aResult ? NS_OK : NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP
-BrowserChild::GetWebBrowserChrome(nsIWebBrowserChrome3** aWebBrowserChrome) {
-  nsCOMPtr<nsIDocShell> docShell = do_GetInterface(WebNavigation());
-  if (nsCOMPtr<nsIWebBrowserChrome3> chrome =
-          do_QueryActor("WebBrowserChrome", docShell->GetDocument())) {
-    chrome.forget(aWebBrowserChrome);
-  } else {
-    // TODO: remove fallback
-    NS_IF_ADDREF(*aWebBrowserChrome = mWebBrowserChrome);
-  }
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-BrowserChild::SetWebBrowserChrome(nsIWebBrowserChrome3* aWebBrowserChrome) {
-  mWebBrowserChrome = aWebBrowserChrome;
-  return NS_OK;
-}
-
 void BrowserChild::SendRequestFocus(bool aCanFocus, CallerType aCallerType) {
   nsFocusManager* fm = nsFocusManager::GetFocusManager();
   if (!fm) {
@@ -3265,53 +3234,6 @@ mozilla::ipc::IPCResult BrowserChild::RecvReleaseAllPointerCapture() {
   PointerEventHandler::ReleaseAllPointerCapture();
   return IPC_OK();
 }
-
-mozilla::plugins::PPluginWidgetChild* BrowserChild::AllocPPluginWidgetChild() {
-#ifdef XP_WIN
-  return new mozilla::plugins::PluginWidgetChild();
-#else
-  MOZ_ASSERT_UNREACHABLE("AllocPPluginWidgetChild only supports Windows");
-  return nullptr;
-#endif
-}
-
-bool BrowserChild::DeallocPPluginWidgetChild(
-    mozilla::plugins::PPluginWidgetChild* aActor) {
-  delete aActor;
-  return true;
-}
-
-#ifdef XP_WIN
-nsresult BrowserChild::CreatePluginWidget(nsIWidget* aParent,
-                                          nsIWidget** aOut) {
-  *aOut = nullptr;
-  mozilla::plugins::PluginWidgetChild* child =
-      static_cast<mozilla::plugins::PluginWidgetChild*>(
-          SendPPluginWidgetConstructor());
-  if (!child) {
-    NS_ERROR("couldn't create PluginWidgetChild");
-    return NS_ERROR_UNEXPECTED;
-  }
-  nsCOMPtr<nsIWidget> pluginWidget =
-      nsIWidget::CreatePluginProxyWidget(this, child);
-  if (!pluginWidget) {
-    NS_ERROR("couldn't create PluginWidgetProxy");
-    return NS_ERROR_UNEXPECTED;
-  }
-
-  nsWidgetInitData initData;
-  initData.mWindowType = eWindowType_plugin_ipc_content;
-  initData.clipChildren = true;
-  initData.clipSiblings = true;
-  nsresult rv = pluginWidget->Create(
-      aParent, nullptr, LayoutDeviceIntRect(0, 0, 0, 0), &initData);
-  if (NS_FAILED(rv)) {
-    NS_WARNING("Creating native plugin widget on the chrome side failed.");
-  }
-  pluginWidget.forget(aOut);
-  return rv;
-}
-#endif  // XP_WIN
 
 PPaymentRequestChild* BrowserChild::AllocPPaymentRequestChild() {
   MOZ_CRASH(

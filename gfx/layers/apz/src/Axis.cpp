@@ -41,7 +41,8 @@ Axis::Axis(AsyncPanZoomController* aAsyncPanZoomController)
       mAxisLocked(false),
       mAsyncPanZoomController(aAsyncPanZoomController),
       mOverscroll(0),
-      mMSDModel(0.0, 0.0, 0.0, 400.0, 1.2),
+      mMSDModel(0.0, 0.0, 0.0, StaticPrefs::apz_overscroll_spring_stiffness(),
+                StaticPrefs::apz_overscroll_damping()),
       mVelocityTracker(mAsyncPanZoomController->GetPlatformSpecificState()
                            ->CreateVelocityTracker(this)) {}
 
@@ -112,6 +113,11 @@ bool Axis::AdjustDisplacement(
   mOverscroll -= consumedOverscroll;
   displacement += consumedOverscroll;
 
+  if (consumedOverscroll != 0.0f) {
+    AXIS_LOG("%p|%s changed overscroll amount to %f\n", mAsyncPanZoomController,
+             Name(), mOverscroll.value);
+  }
+
   // Split the requested displacement into an allowed displacement that does
   // not overscroll, and an overscroll amount.
   aOverscrollAmountOut = DisplacementWillOverscrollAmount(displacement);
@@ -176,6 +182,9 @@ void Axis::OverscrollBy(ParentLayerCoord aOverscroll) {
     MOZ_ASSERT(mOverscroll <= 0);
   }
   mOverscroll += aOverscroll;
+
+  AXIS_LOG("%p|%s changed overscroll amount to %f\n", mAsyncPanZoomController,
+           Name(), mOverscroll.value);
 }
 
 ParentLayerCoord Axis::GetOverscroll() const { return mOverscroll; }
@@ -185,12 +194,17 @@ void Axis::RestoreOverscroll(ParentLayerCoord aOverscroll) {
 }
 
 void Axis::StartOverscrollAnimation(float aVelocity) {
-  aVelocity = clamped(aVelocity / 2.0f, -20.0f, 20.0f);
+  const float maxVelocity = StaticPrefs::apz_overscroll_max_velocity();
+  aVelocity = clamped(aVelocity / 2.0f, -maxVelocity, maxVelocity);
   SetVelocity(aVelocity);
   mMSDModel.SetPosition(mOverscroll);
   // Convert velocity from ParentLayerCoords/millisecond to
   // ParentLayerCoords/second.
   mMSDModel.SetVelocity(DoGetVelocity() * 1000.0);
+
+  AXIS_LOG(
+      "%p|%s beginning overscroll animation with amount %f and velocity %f\n",
+      mAsyncPanZoomController, Name(), mOverscroll.value, DoGetVelocity());
 }
 
 void Axis::EndOverscrollAnimation() {
@@ -201,6 +215,9 @@ void Axis::EndOverscrollAnimation() {
 bool Axis::SampleOverscrollAnimation(const TimeDuration& aDelta) {
   mMSDModel.Simulate(aDelta);
   mOverscroll = mMSDModel.GetPosition();
+
+  AXIS_LOG("%p|%s changed overscroll amount to %f\n", mAsyncPanZoomController,
+           Name(), mOverscroll.value);
 
   if (mMSDModel.IsFinished(1.0)) {
     // "Jump" to the at-rest state. The jump shouldn't be noticeable as the

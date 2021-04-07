@@ -130,7 +130,7 @@ nsHttpTransaction::nsHttpTransaction()
       mForTakeResponseTrailers(nullptr),
       mResponseTrailersTaken(false),
       mRestarted(false),
-      mTopLevelOuterContentWindowId(0),
+      mTopBrowsingContextId(0),
       mSubmittedRatePacing(false),
       mPassedRatePacing(false),
       mSynchronousRatePaceRequest(false),
@@ -267,7 +267,7 @@ nsresult nsHttpTransaction::Init(
     nsIInputStream* requestBody, uint64_t requestContentLength,
     bool requestBodyHasHeaders, nsIEventTarget* target,
     nsIInterfaceRequestor* callbacks, nsITransportEventSink* eventsink,
-    uint64_t topLevelOuterContentWindowId, HttpTrafficCategory trafficCategory,
+    uint64_t topBrowsingContextId, HttpTrafficCategory trafficCategory,
     nsIRequestContext* requestContext, uint32_t classOfService,
     uint32_t initialRwin, bool responseTimeoutEnabled, uint64_t channelId,
     TransactionObserverFunc&& transactionObserver,
@@ -285,8 +285,7 @@ nsresult nsHttpTransaction::Init(
   mChannelId = channelId;
   mTransactionObserver = std::move(transactionObserver);
   mOnPushCallback = std::move(aOnPushCallback);
-  mTopLevelOuterContentWindowId = topLevelOuterContentWindowId;
-  LOG(("  window-id = %" PRIx64, mTopLevelOuterContentWindowId));
+  mTopBrowsingContextId = topBrowsingContextId;
 
   mTrafficCategory = trafficCategory;
 
@@ -983,8 +982,8 @@ nsresult nsHttpTransaction::WriteSegments(nsAHttpSegmentWriter* writer,
   }
 
   if (mThrottlingReadAllowance == 0) {  // depleted
-    if (gHttpHandler->ConnMgr()->CurrentTopLevelOuterContentWindowId() !=
-        mTopLevelOuterContentWindowId) {
+    if (gHttpHandler->ConnMgr()->CurrentTopBrowsingContextId() !=
+        mTopBrowsingContextId) {
       nsHttp::NotifyActiveTabLoadOptimization();
     }
 
@@ -1233,7 +1232,6 @@ void nsHttpTransaction::PrepareConnInfoForRetry(nsresult aReason) {
 
   if (mFastFallbackTriggered) {
     mFastFallbackTriggered = false;
-    SetRestartReason(TRANSACTION_RESTART_HTTPS_RR_FAST_FALLBACK);
     mConnInfo = PrepareFastFallbackConnInfo(echConfigUsed);
     return;
   }
@@ -3180,9 +3178,11 @@ void nsHttpTransaction::MaybeCancelFallbackTimer() {
   }
 }
 
-void nsHttpTransaction::OnBackupConnectionReady() {
-  LOG(("nsHttpTransaction::OnBackupConnectionReady [%p] mConnected=%d", this,
-       mConnected));
+void nsHttpTransaction::OnBackupConnectionReady(bool aHTTPSRRUsed) {
+  LOG(
+      ("nsHttpTransaction::OnBackupConnectionReady [%p] mConnected=%d "
+       "aHTTPSRRUsed=%d",
+       this, mConnected, aHTTPSRRUsed));
   if (mConnected || mClosed || mRestarted) {
     return;
   }
@@ -3191,12 +3191,30 @@ void nsHttpTransaction::OnBackupConnectionReady() {
     // The transaction will only be restarted when we already have a connection.
     // When there is no connection, this transaction will be moved to another
     // connection entry.
-    SetRestartReason(TRANSACTION_RESTART_HTTP3_FAST_FALLBACK);
+    SetRestartReason(aHTTPSRRUsed ? TRANSACTION_RESTART_HTTPS_RR_FAST_FALLBACK
+                                  : TRANSACTION_RESTART_HTTP3_FAST_FALLBACK);
   }
-  HandleFallback(mBackupConnInfo);
 
-  mCaps |= NS_HTTP_DISALLOW_HTTP3;
+  // Need to backup the origin conn info, since UpdateConnectionInfo() will be
+  // called in HandleFallback() and mOrigConnInfo will be
+  // replaced.
+  RefPtr<nsHttpConnectionInfo> backup = mOrigConnInfo;
+  HandleFallback(mBackupConnInfo);
+  mOrigConnInfo.swap(backup);
+
+  // When we have HTTPS RR, we could fallback to other records that have http3
+  // alpn. So, we should not disallow this transaction to use http3.
+  if (!aHTTPSRRUsed) {
+    mCaps |= NS_HTTP_DISALLOW_HTTP3;
+  }
   RemoveAlternateServiceUsedHeader(mRequestHead);
+
+  if (mResolver && mBackupConnInfo) {
+    const nsCString& host = mBackupConnInfo->GetRoutedHost().IsEmpty()
+                                ? mBackupConnInfo->GetOrigin()
+                                : mBackupConnInfo->GetRoutedHost();
+    mResolver->PrefetchAddrRecord(host, Caps() & NS_HTTP_REFRESH_DNS);
+  }
 }
 
 void nsHttpTransaction::OnHttp3BackupTimer() {
@@ -3212,7 +3230,7 @@ void nsHttpTransaction::OnHttp3BackupTimer() {
   RefPtr<nsHttpTransaction> self = this;
   auto callback = [self](bool aSucceded) {
     if (aSucceded) {
-      self->OnBackupConnectionReady();
+      self->OnBackupConnectionReady(false);
     }
   };
 
@@ -3228,29 +3246,35 @@ void nsHttpTransaction::OnFastFallbackTimer() {
        mConnected));
 
   mFastFallbackTimer = nullptr;
-  mFastFallbackTriggered = true;
 
   MOZ_ASSERT(mHTTPSSVCRecord && mOrigConnInfo);
   if (!mHTTPSSVCRecord || !mOrigConnInfo) {
     return;
   }
 
-  RefPtr<nsHttpConnectionInfo> fallbackConnInfo;
   bool echConfigUsed =
       gHttpHandler->EchConfigEnabled() && !mConnInfo->GetEchConfig().IsEmpty();
-  fallbackConnInfo = PrepareFastFallbackConnInfo(echConfigUsed);
-
-  // Need to backup the origin conn info, since UpdateConnectionInfo() will be
-  // called in HandleFallback() and mOrigConnInfo will be
-  // replaced.
-  RefPtr<nsHttpConnectionInfo> backup = mOrigConnInfo;
-  HandleFallback(fallbackConnInfo);
-  mOrigConnInfo.swap(backup);
-
-  if (mResolver && fallbackConnInfo) {
-    mResolver->PrefetchAddrRecord(fallbackConnInfo->GetRoutedHost(),
-                                  mCaps & NS_HTTP_REFRESH_DNS);
+  mBackupConnInfo = PrepareFastFallbackConnInfo(echConfigUsed);
+  if (!mBackupConnInfo) {
+    return;
   }
+
+  MOZ_ASSERT(!mBackupConnInfo->IsHttp3());
+
+  RefPtr<nsHttpTransaction> self = this;
+  auto callback = [self](bool aSucceded) {
+    if (!aSucceded) {
+      return;
+    }
+
+    self->mFastFallbackTriggered = true;
+    self->OnBackupConnectionReady(true);
+  };
+
+  RefPtr<SpeculativeTransaction> trans = new SpeculativeTransaction(
+      mBackupConnInfo, mCallbacks, mCaps | NS_HTTP_DISALLOW_HTTP3,
+      std::move(callback));
+  gHttpHandler->ConnMgr()->DoSpeculativeConnection(trans, false);
 }
 
 void nsHttpTransaction::HandleFallback(

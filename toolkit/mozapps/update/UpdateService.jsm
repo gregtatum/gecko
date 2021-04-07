@@ -295,6 +295,14 @@ var gBITSInUseByAnotherUser = false;
 // accurate than checking for STATE_APPLYING because there are brief periods of
 // time at the beginning and end of staging when that will not be the state.
 let gStagingInProgress = false;
+// The update service can be invoked as part of a standalone headless background
+// task.  In this context, when the background task kicks off an update
+// download, we don't want it to move on to staging. As soon as the download has
+// kicked off, the task begins shutting down and, even if the the download
+// completes incredibly quickly, we don't want staging to begin while we are
+// shutting down. That isn't a well tested scenario and it's possible that it
+// could leave us in a bad state.
+let gOnlyDownloadUpdatesThisSession = false;
 
 XPCOMUtils.defineLazyGetter(this, "gLogEnabled", function aus_gLogEnabled() {
   return (
@@ -1635,7 +1643,7 @@ function getPatchOfType(update, patch_type) {
  *
  * @param postStaging true if we have just attempted to stage an update.
  */
-function handleFallbackToCompleteUpdate(postStaging) {
+async function handleFallbackToCompleteUpdate(postStaging) {
   // If we failed to install an update, we need to fall back to a complete
   // update. If the install directory has been modified, more partial updates
   // will fail for the same reason. Since we only download partial updates
@@ -1661,7 +1669,7 @@ function handleFallbackToCompleteUpdate(postStaging) {
     return;
   }
 
-  aus.stopDownload();
+  await aus.stopDownload();
   cleanupActiveUpdates();
 
   if (!update.selectedPatch) {
@@ -2579,7 +2587,7 @@ UpdateService.prototype = {
       // intentional fallthrough
       case "test-post-update-processing":
         // Clean up any extant updates
-        this._postUpdateProcessing();
+        await this._postUpdateProcessing();
         break;
       case "network:offline-status-changed":
         this._offlineStatusChanged(data);
@@ -2624,8 +2632,13 @@ UpdateService.prototype = {
         // be resumed the next time the application starts. Downloads using
         // Windows BITS are not stopped since they don't require Firefox to be
         // running to perform the download.
-        if (this._downloader && !this._downloader.usingBits) {
-          this.stopDownload();
+        if (this._downloader) {
+          if (this._downloader.usingBits) {
+            await this._downloader.cleanup();
+          } else {
+            // stopDownload() calls _downloader.cleanup()
+            await this.stopDownload();
+          }
         }
         // Prevent leaking the downloader (bug 454964)
         this._downloader = null;
@@ -2666,7 +2679,7 @@ UpdateService.prototype = {
    * notify the user of install success.
    */
   /* eslint-disable-next-line complexity */
-  _postUpdateProcessing: function AUS__postUpdateProcessing() {
+  _postUpdateProcessing: async function AUS__postUpdateProcessing() {
     if (this.disabledByPolicy) {
       // This function is a point when we can potentially enter the update
       // system, even with update disabled. Make sure that we do not continue
@@ -2984,7 +2997,7 @@ UpdateService.prototype = {
       }
 
       // Something went wrong with the patch application process.
-      handleFallbackToCompleteUpdate(false);
+      await handleFallbackToCompleteUpdate(false);
     }
   },
 
@@ -3937,17 +3950,20 @@ UpdateService.prototype = {
   /**
    * See nsIUpdateService.idl
    */
-  stopDownload: function AUS_stopDownload() {
+  stopDownload: async function AUS_stopDownload() {
     if (this.isDownloading) {
-      this._downloader.cancel();
+      await this._downloader.cancel();
     } else if (this._retryTimer) {
       // Download status is still considered as 'downloading' during retry.
       // We need to cancel both retry and download at this stage.
       this._retryTimer.cancel();
       this._retryTimer = null;
       if (this._downloader) {
-        this._downloader.cancel();
+        await this._downloader.cancel();
       }
+    }
+    if (this._downloader) {
+      await this._downloader.cleanup();
     }
     this._downloader = null;
   },
@@ -4006,6 +4022,20 @@ UpdateService.prototype = {
       }
     }
     LOG("End of UpdateService status");
+  },
+
+  /**
+   * See nsIUpdateService.idl
+   */
+  get onlyDownloadUpdatesThisSession() {
+    return gOnlyDownloadUpdatesThisSession;
+  },
+
+  /**
+   * See nsIUpdateService.idl
+   */
+  set onlyDownloadUpdatesThisSession(newValue) {
+    gOnlyDownloadUpdatesThisSession = newValue;
   },
 
   classID: UPDATESERVICE_CID,
@@ -4449,7 +4479,7 @@ UpdateManager.prototype = {
         update.state = getBestPendingState();
         writeStatusFile(getReadyUpdateDir(), update.state);
       } else if (!handleUpdateFailure(update, parts[1])) {
-        handleFallbackToCompleteUpdate(true);
+        await handleFallbackToCompleteUpdate(true);
       }
     }
     if (update.state == STATE_APPLIED && shouldUseService()) {
@@ -4466,14 +4496,13 @@ UpdateManager.prototype = {
 
     // Send an observer notification which the app update doorhanger uses to
     // display a restart notification after any langpacks have staged.
-    promiseLangPacksUpdated(update).then(() => {
-      LOG(
-        "UpdateManager:refreshUpdateStatus - Notifying observers that " +
-          "the update was staged. topic: update-staged, status: " +
-          update.state
-      );
-      Services.obs.notifyObservers(update, "update-staged", update.state);
-    });
+    await promiseLangPacksUpdated(update);
+    LOG(
+      "UpdateManager:refreshUpdateStatus - Notifying observers that " +
+        "the update was staged. topic: update-staged, status: " +
+        update.state
+    );
+    Services.obs.notifyObservers(update, "update-staged", update.state);
   },
 
   /**
@@ -4987,6 +5016,14 @@ Downloader.prototype = {
   _langPackTimeout: null,
 
   /**
+   * If gOnlyDownloadUpdatesThisSession is true, we prevent the update process
+   * from progressing past the downloading stage. If the download finishes,
+   * pretend that it hasn't in order to keep the current update in the
+   * "downloading" state.
+   */
+  _pretendingDownloadIsNotDone: false,
+
+  /**
    * Cancels the active download.
    *
    * For a BITS download, this will cancel and remove the download job. For
@@ -5026,7 +5063,21 @@ Downloader.prototype = {
         throw e;
       }
     } else if (this._request && this._request instanceof Ci.nsIRequest) {
-      this._request.cancel(cancelError);
+      // Normally, cancelling an nsIIncrementalDownload results in it stopping
+      // the download but leaving the downloaded data so that we can resume the
+      // download later. If we've already finished the download, there is no
+      // transfer to stop.
+      // Note that this differs from the BITS case. Cancelling a BITS job, even
+      // when the transfer has completed, results in all data being deleted.
+      // Therefore, even if the transfer has completed, cancelling a BITS job
+      // has effects that we must not skip.
+      if (this._pretendingDownloadIsNotDone) {
+        LOG(
+          "Downloader: cancel - Ignoring cancel request of finished download"
+        );
+      } else {
+        this._request.cancel(cancelError);
+      }
     }
   },
 
@@ -5708,6 +5759,22 @@ Downloader.prototype = {
    */
   /* eslint-disable-next-line complexity */
   onStopRequest: async function Downloader_onStopRequest(request, status) {
+    if (gOnlyDownloadUpdatesThisSession) {
+      LOG(
+        "Downloader:onStopRequest - End of update download detected and " +
+          "ignored because we are restricted to update downloads this " +
+          "session. We will continue with this update next session."
+      );
+      // In order to keep the update from progressing past the downloading
+      // stage, we will pretend that the download is still going.
+      // A lot of this work is done for us by just not setting this._request to
+      // null, which usually signals that the transfer has completed.
+      this._pretendingDownloadIsNotDone = true;
+      // This notification is currently used only for testing.
+      Services.obs.notifyObservers(null, "update-download-restriction-hit");
+      return;
+    }
+
     if (!this.usingBits) {
       LOG(
         "Downloader:onStopRequest - downloader: nsIIncrementalDownload, " +
@@ -6204,13 +6271,12 @@ Downloader.prototype = {
    * This function should be called when shutting down so that resources get
    * freed properly.
    */
-  cleanup: function Downloader_cleanup() {
+  cleanup: async function Downloader_cleanup() {
     if (this.usingBits) {
       if (this._pendingRequest) {
-        this._pendingRequest.then(() => this._request.shutdown());
-      } else {
-        this._request.shutdown();
+        await this._pendingRequest;
       }
+      this._request.shutdown();
     }
   },
 

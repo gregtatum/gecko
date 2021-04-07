@@ -244,6 +244,7 @@
 #include "util/Windows.h"
 #include "vm/BigIntType.h"
 #include "vm/GeckoProfiler.h"
+#include "vm/GetterSetter.h"
 #include "vm/HelperThreadState.h"
 #include "vm/JSAtom.h"
 #include "vm/JSContext.h"
@@ -402,7 +403,7 @@ static constexpr FinalizePhase BackgroundFinalizePhases[] = {
       AllocKind::EXTERNAL_STRING, AllocKind::FAT_INLINE_ATOM, AllocKind::ATOM,
       AllocKind::SYMBOL, AllocKind::BIGINT}},
     {gcstats::PhaseKind::SWEEP_SHAPE,
-     {AllocKind::SHAPE, AllocKind::ACCESSOR_SHAPE, AllocKind::BASE_SHAPE}}};
+     {AllocKind::SHAPE, AllocKind::BASE_SHAPE, AllocKind::GETTER_SETTER}}};
 
 void Arena::unmarkAll() {
   MarkBitmapWord* arenaBits = chunk()->markBits.arenaBits(this);
@@ -2460,6 +2461,9 @@ js::BaseScript* MovingTracer::onScriptEdge(js::BaseScript* script) {
 BaseShape* MovingTracer::onBaseShapeEdge(BaseShape* base) {
   return onEdge(base);
 }
+GetterSetter* MovingTracer::onGetterSetterEdge(GetterSetter* gs) {
+  return onEdge(gs);
+}
 Scope* MovingTracer::onScopeEdge(Scope* scope) { return onEdge(scope); }
 RegExpShared* MovingTracer::onRegExpSharedEdge(RegExpShared* shared) {
   return onEdge(shared);
@@ -2748,9 +2752,9 @@ void GCRuntime::updateCellPointers(Zone* zone, AllocKinds kinds) {
 // arbitrary phases.
 
 static constexpr AllocKinds UpdatePhaseOne{
-    AllocKind::SCRIPT,         AllocKind::BASE_SHAPE, AllocKind::SHAPE,
-    AllocKind::ACCESSOR_SHAPE, AllocKind::STRING,     AllocKind::JITCODE,
-    AllocKind::REGEXP_SHARED,  AllocKind::SCOPE};
+    AllocKind::SCRIPT, AllocKind::BASE_SHAPE,   AllocKind::SHAPE,
+    AllocKind::STRING, AllocKind::JITCODE,      AllocKind::REGEXP_SHARED,
+    AllocKind::SCOPE,  AllocKind::GETTER_SETTER};
 
 // UpdatePhaseTwo is typed object descriptor objects.
 
@@ -2996,7 +3000,6 @@ ArenaLists::ArenaLists(Zone* zone)
       incrementalSweptArenaKind(zone, AllocKind::LIMIT),
       incrementalSweptArenas(zone),
       gcShapeArenasToUpdate(zone, nullptr),
-      gcAccessorShapeArenasToUpdate(zone, nullptr),
       savedEmptyArenas(zone, nullptr) {
   for (auto i : AllAllocKinds()) {
     concurrentUse(i) = ConcurrentUse::None;
@@ -3133,7 +3136,6 @@ Arena* ArenaLists::takeSweptEmptyArenas() {
 
 void ArenaLists::queueForegroundThingsForSweep() {
   gcShapeArenasToUpdate = arenasToSweep(AllocKind::SHAPE);
-  gcAccessorShapeArenasToUpdate = arenasToSweep(AllocKind::ACCESSOR_SHAPE);
 }
 
 void ArenaLists::checkGCStateNotInUse() {
@@ -3159,18 +3161,12 @@ void ArenaLists::checkSweepStateNotInUse() {
 #endif
 }
 
-void ArenaLists::checkNoArenasToUpdate() {
-  MOZ_ASSERT(!gcShapeArenasToUpdate);
-  MOZ_ASSERT(!gcAccessorShapeArenasToUpdate);
-}
+void ArenaLists::checkNoArenasToUpdate() { MOZ_ASSERT(!gcShapeArenasToUpdate); }
 
 void ArenaLists::checkNoArenasToUpdateForKind(AllocKind kind) {
 #ifdef DEBUG
   switch (kind) {
     case AllocKind::SHAPE:
-      MOZ_ASSERT(!gcShapeArenasToUpdate);
-      break;
-    case AllocKind::ACCESSOR_SHAPE:
       MOZ_ASSERT(!gcShapeArenasToUpdate);
       break;
     default:
@@ -4228,10 +4224,6 @@ void GCRuntime::purgeShapeCachesForShrinkingGC() {
       continue;
     }
     for (auto shape = zone->cellIterUnsafe<Shape>(); !shape.done();
-         shape.next()) {
-      shape->maybePurgeCache(rt->defaultFreeOp());
-    }
-    for (auto shape = zone->cellIterUnsafe<AccessorShape>(); !shape.done();
          shape.next()) {
       shape->maybePurgeCache(rt->defaultFreeOp());
     }
@@ -6092,11 +6084,6 @@ IncrementalProgress GCRuntime::sweepShapeTree(JSFreeOp* fop,
   ArenaLists& al = sweepZone->arenas;
 
   if (!SweepArenaList<Shape>(fop, &al.gcShapeArenasToUpdate.ref(), budget)) {
-    return NotFinished;
-  }
-
-  if (!SweepArenaList<AccessorShape>(
-          fop, &al.gcAccessorShapeArenasToUpdate.ref(), budget)) {
     return NotFinished;
   }
 
@@ -8547,11 +8534,6 @@ void GCRuntime::checkHashTablesAfterMovingGC() {
       ShapeCachePtr p = shape->getCache(nogc);
       p.checkAfterMovingGC();
     }
-    for (auto shape = zone->cellIterUnsafe<AccessorShape>(); !shape.done();
-         shape.next()) {
-      ShapeCachePtr p = shape->getCache(nogc);
-      p.checkAfterMovingGC();
-    }
   }
 
   for (CompartmentsIter c(this); !c.done(); c.next()) {
@@ -9221,6 +9203,10 @@ js::Shape* js::gc::ClearEdgesTracer::onShapeEdge(js::Shape* shape) {
 }
 js::BaseShape* js::gc::ClearEdgesTracer::onBaseShapeEdge(js::BaseShape* base) {
   return onEdge(base);
+}
+js::GetterSetter* js::gc::ClearEdgesTracer::onGetterSetterEdge(
+    js::GetterSetter* gs) {
+  return onEdge(gs);
 }
 js::jit::JitCode* js::gc::ClearEdgesTracer::onJitCodeEdge(
     js::jit::JitCode* code) {

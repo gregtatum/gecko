@@ -37,7 +37,7 @@
 #include "mozilla/layers/APZCCallbackHelper.h"
 #include "mozilla/layers/CompositorOptions.h"
 #include "mozilla/layers/GeckoContentControllerTypes.h"
-#include "nsIWebBrowserChrome3.h"
+#include "nsIWebBrowserChrome.h"
 #include "mozilla/dom/ipc/IdType.h"
 #include "AudioChannelService.h"
 #include "PuppetWidget.h"
@@ -559,16 +559,6 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
       const uintptr_t& aNewHandle);
 
   mozilla::ipc::IPCResult RecvWillChangeProcess();
-  /**
-   * Native widget remoting protocol for use with windowed plugins with e10s.
-   */
-  PPluginWidgetChild* AllocPPluginWidgetChild();
-
-  bool DeallocPPluginWidgetChild(PPluginWidgetChild* aActor);
-
-#ifdef XP_WIN
-  nsresult CreatePluginWidget(nsIWidget* aParent, nsIWidget** aOut);
-#endif
 
   PPaymentRequestChild* AllocPPaymentRequestChild();
 
@@ -794,12 +784,10 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
                                        nsIRequest* aRequest,
                                        WebProgressData& aWebProgressData,
                                        RequestData& aRequestData);
-  already_AddRefed<nsIWebBrowserChrome3> GetWebBrowserChromeActor();
 
   class DelayedDeleteRunnable;
 
   RefPtr<BrowserChildMessageManager> mBrowserChildMessageManager;
-  nsCOMPtr<nsIWebBrowserChrome3> mWebBrowserChrome;
   TextureFactoryIdentifier mTextureFactoryIdentifier;
   RefPtr<nsWebBrowser> mWebBrowser;
   nsCOMPtr<nsIWebNavigation> mWebNav;

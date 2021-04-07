@@ -247,13 +247,33 @@ static void DrawCellIncludingFocusRing(NSCell* aCell, NSRect aWithFrame, NSView*
 
 @end
 
-@interface MOZToolbarSearchFieldCell : NSSearchFieldCell
+@interface MOZSearchFieldCell : NSSearchFieldCell
+@property BOOL shouldUseToolbarStyle;
 @end
 
-@implementation MOZToolbarSearchFieldCell
+@implementation MOZSearchFieldCell
+
+- (instancetype)init {
+  // We would like to render a search field which has the magnifying glass icon at the start of the
+  // search field, and no cancel button.
+  // On 10.12 and 10.13, empty search fields render the magnifying glass icon in the middle of the
+  // field. So in order to get the icon to show at the start of the field, we need to give the field
+  // some content. We achieve this with a single space character.
+  self = [super initTextCell:@" "];
+
+  // However, because the field is now non-empty, by default it shows a cancel button. To hide the
+  // cancel button, override it with a custom NSButtonCell which renders nothing.
+  NSButtonCell* invisibleCell = [[NSButtonCell alloc] initImageCell:nil];
+  invisibleCell.bezeled = NO;
+  invisibleCell.bordered = NO;
+  self.cancelButtonCell = invisibleCell;
+  [invisibleCell release];
+
+  return self;
+}
 
 - (BOOL)_isToolbarMode {
-  return YES;
+  return self.shouldUseToolbarStyle;
 }
 
 @end
@@ -413,17 +433,11 @@ nsNativeThemeCocoa::nsNativeThemeCocoa() {
   [mTextFieldCell setEditable:YES];
   [mTextFieldCell setFocusRingType:NSFocusRingTypeExterior];
 
-  mSearchFieldCell = [[NSSearchFieldCell alloc] initTextCell:@""];
+  mSearchFieldCell = [[MOZSearchFieldCell alloc] init];
   [mSearchFieldCell setBezelStyle:NSTextFieldRoundedBezel];
   [mSearchFieldCell setBezeled:YES];
   [mSearchFieldCell setEditable:YES];
   [mSearchFieldCell setFocusRingType:NSFocusRingTypeExterior];
-
-  mToolbarSearchFieldCell = [[MOZToolbarSearchFieldCell alloc] initTextCell:@""];
-  [mToolbarSearchFieldCell setBezelStyle:NSTextFieldRoundedBezel];
-  [mToolbarSearchFieldCell setBezeled:YES];
-  [mToolbarSearchFieldCell setEditable:YES];
-  [mToolbarSearchFieldCell setFocusRingType:NSFocusRingTypeExterior];
 
   mDropdownCell = [[NSPopUpButtonCell alloc] initTextCell:@"" pullsDown:NO];
 
@@ -471,7 +485,6 @@ nsNativeThemeCocoa::~nsNativeThemeCocoa() {
   [mCheckboxCell release];
   [mTextFieldCell release];
   [mSearchFieldCell release];
-  [mToolbarSearchFieldCell release];
   [mDropdownCell release];
   [mComboBoxCell release];
   [mCellDrawWindow release];
@@ -1007,19 +1020,16 @@ void nsNativeThemeCocoa::DrawSearchField(CGContextRef cgContext, const HIRect& i
                                          const TextFieldParams& aParams) {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
 
-  NSSearchFieldCell* cell = aParams.insideToolbar ? mToolbarSearchFieldCell : mSearchFieldCell;
-  [cell setEnabled:!aParams.disabled];
-  [cell setShowsFirstResponder:aParams.focused];
-
-  // When using the 10.11 SDK, the default string will be shown if we don't
-  // set the placeholder string.
-  [cell setPlaceholderString:@""];
+  mSearchFieldCell.enabled = !aParams.disabled;
+  mSearchFieldCell.showsFirstResponder = aParams.focused;
+  mSearchFieldCell.placeholderString = @"";
+  mSearchFieldCell.shouldUseToolbarStyle = aParams.insideToolbar;
 
   if (mCellDrawWindow) {
     mCellDrawWindow.cellsShouldLookActive = YES;  // TODO: propagate correct activeness state
   }
-  DrawCellWithSnapping(cell, cgContext, inBoxRect, searchFieldSettings, aParams.verticalAlignFactor,
-                       mCellDrawView, aParams.rtl);
+  DrawCellWithSnapping(mSearchFieldCell, cgContext, inBoxRect, searchFieldSettings,
+                       aParams.verticalAlignFactor, mCellDrawView, aParams.rtl);
 
   NS_OBJC_END_TRY_IGNORE_BLOCK;
 }

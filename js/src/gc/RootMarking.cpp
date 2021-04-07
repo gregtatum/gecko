@@ -236,14 +236,6 @@ void StackShape::trace(JSTracer* trc) {
   }
 
   TraceRoot(trc, (jsid*)&propid, "StackShape id");
-
-  if (getter) {
-    TraceRoot(trc, &getter, "StackShape getter");
-  }
-
-  if (setter) {
-    TraceRoot(trc, &setter, "StackShape setter");
-  }
 }
 
 void StackBaseShape::trace(JSTracer* trc) { proto.trace(trc); }
@@ -513,6 +505,10 @@ class BufferGrayRootsTracer final : public GenericTracer {
     return nullptr;
   }
   js::BaseShape* onBaseShapeEdge(js::BaseShape* base) override {
+    unsupportedEdge();
+    return nullptr;
+  }
+  js::GetterSetter* onGetterSetterEdge(js::GetterSetter* gs) override {
     unsupportedEdge();
     return nullptr;
   }

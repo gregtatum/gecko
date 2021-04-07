@@ -341,8 +341,10 @@ interface nsIApplicationUpdateService : nsISupports
    * calling nsIRequest::Cancel on the download's nsIRequest. When downloading
    * with nsIIncrementalDownload, this will leave the partial download in place.
    * When downloading with BITS, any partial download progress will be removed.
+   *
+   * @returns A Promise that resolves once the download has been stopped.
    */
-  void stopDownload();
+  Promise stopDownload();
 
   /**
    * Whether or not there is an download happening at the moment.
@@ -435,6 +437,15 @@ interface nsIApplicationUpdateService : nsISupports
    * bothering them with a doorhanger.
    */
   readonly attribute boolean manualUpdateOnly;
+
+  /**
+   * This can be set to true to prevent updates being processed beyond starting
+   * an update download. This should only be used when we are being run as a
+   * background task.
+   * This exists to prevent a particularly fast update download from beginning
+   * to stage while the background task is shutting down.
+   */
+  attribute boolean onlyDownloadUpdatesThisSession;
 };
 
 /**
@@ -554,8 +565,10 @@ interface nsIUpdateManager : nsISupports
 
   /**
    * Refresh the update status based on the information in update.status.
+   *
+   * @returns A Promise that resolves after the update status is refreshed.
    */
-  void refreshUpdateStatus();
+  Promise refreshUpdateStatus();
 
   /**
    * The user agreed to proceed with an elevated update and we are now

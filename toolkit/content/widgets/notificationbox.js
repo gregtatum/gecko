@@ -64,13 +64,11 @@
       }
 
       var closedNotification = this._closedNotification;
-      var notifications = this.stack.getElementsByTagName(
-        this.protonInfobarsEnabled ? "notification-message" : "notification"
-      );
-      return Array.prototype.filter.call(
-        notifications,
-        n => n != closedNotification
-      );
+      var notifications = [
+        ...this.stack.getElementsByTagName("notification"),
+        ...this.stack.getElementsByTagName("notification-message"),
+      ];
+      return notifications.filter(n => n != closedNotification);
     }
 
     getNotificationWithValue(aValue) {
@@ -173,7 +171,7 @@
 
       // Create the Custom Element and connect it to the document immediately.
       var newitem;
-      if (this.protonInfobarsEnabled) {
+      if (this.protonInfobarsEnabled && !aNotificationIs) {
         if (!customElements.get("notification-message")) {
           // There's some weird timing stuff when this element is created at
           // script load time, we don't need it until now anyway so be lazy.
@@ -263,7 +261,7 @@
       if (aChild.eventCallback) {
         aChild.eventCallback("removed");
       }
-      this.stack.removeChild(aChild);
+      aChild.remove();
 
       // make sure focus doesn't get lost (workaround for bug 570835)
       if (!Services.focus.getFocusedElementForWindow(window, false, {})) {
@@ -422,6 +420,8 @@
         ["messageImage", ".messageImage"],
         ["messageText", ".messageText"],
         ["spacer", "spacer"],
+        ["buttonContainer", ".messageDetails"],
+        ["closeButton", ".messageCloseButton"],
       ]) {
         this[propertyName] = this.querySelector(selector);
       }
@@ -454,6 +454,7 @@
           });
           buttonElem.setAttribute("href", link);
           buttonElem.classList.add("notification-link");
+          buttonElem.onclick = (...args) => this._doButtonCommand(...args);
         } else {
           buttonElem = document.createXULElement(
             "button",
@@ -561,6 +562,13 @@
     // gets handled automatically if needed.
     class NotificationMessage extends document.createElement("message-bar")
       .constructor {
+      constructor() {
+        super();
+        this.persistence = 0;
+        this.priority = 0;
+        this.timeout = 0;
+      }
+
       connectedCallback() {
         this.toggleAttribute("dismissable", true);
         this.closeButton.classList.add("notification-close");
@@ -576,6 +584,8 @@
         this.buttonContainer = document.createElement("span");
         this.buttonContainer.classList.add("notification-button-container");
 
+        this.messageImage = this.shadowRoot.querySelector(".icon");
+
         messageContent.append(this.messageText, this.buttonContainer);
         this.shadowRoot.addEventListener("click", this);
       }
@@ -586,10 +596,15 @@
         }
       }
 
+      get control() {
+        return this.closest(".notificationbox-stack")._notificationBox;
+      }
+
       close() {
-        this.closest(
-          ".notificationbox-stack"
-        )._notificationBox.removeNotification(this);
+        if (!this.parentNode) {
+          return;
+        }
+        this.control.removeNotification(this);
       }
 
       addFtl(filepaths) {
@@ -599,7 +614,10 @@
           link.href = filepath;
           this.shadowRoot.append(link);
         }
-        document.l10n.connectRoot(this.shadowRoot);
+        if (!this._rootConnected) {
+          this._rootConnected = true;
+          document.l10n.connectRoot(this.shadowRoot);
+        }
       }
 
       _insertNotificationFtl() {
@@ -610,15 +628,10 @@
       }
 
       handleEvent(e) {
-        if (e.type == "click" && "buttonInfo" in e.target) {
+        if ("buttonInfo" in e.target) {
           let { buttonInfo } = e.target;
           let { callback, popup } = buttonInfo;
-          if (callback) {
-            if (!callback(this, buttonInfo, e.target, e)) {
-              this.close();
-            }
-            e.stopPropagation();
-          } else if (popup) {
+          if (popup) {
             document
               .getElementById(popup)
               .openPopup(
@@ -630,6 +643,11 @@
                 false,
                 e
               );
+            e.stopPropagation();
+          } else if (callback) {
+            if (!callback(this, buttonInfo, e.target, e)) {
+              this.close();
+            }
             e.stopPropagation();
           }
         }
@@ -676,7 +694,7 @@
           if (localeId) {
             document.l10n.setAttributes(buttonElem, localeId);
           } else {
-            buttonElem.textContent = button.label;
+            buttonElem.setAttribute(link ? "value" : "label", button.label);
             if (typeof button.accessKey == "string") {
               buttonElem.setAttribute("accesskey", button.accessKey);
             }

@@ -2239,8 +2239,6 @@ Document::~Document() {
 
   mPendingTitleChangeEvent.Revoke();
 
-  mPlugins.Clear();
-
   MOZ_ASSERT(mDOMMediaQueryLists.isEmpty(),
              "must not have media query lists left");
 
@@ -7181,16 +7179,19 @@ nsIGlobalObject* Document::GetScopeObject() const {
 }
 
 bool Document::CrossOriginIsolated() const {
-  // For a data document, it doesn't have a browsing context so that we check
-  // the cross-origin-isolated state from its creator's inner window.
+  if (auto* bc = GetBrowsingContext()) {
+    return bc->CrossOriginIsolated();
+  }
+
+  // For a data document without a browsing context we check the
+  // cross-origin-isolated state from its creator's inner window.
   if (mLoadedAsData) {
     nsCOMPtr<nsPIDOMWindowInner> window = do_QueryInterface(GetScopeObject());
-
     return window && window->GetBrowsingContext() &&
            window->GetBrowsingContext()->CrossOriginIsolated();
   }
 
-  return GetBrowsingContext() && GetBrowsingContext()->CrossOriginIsolated();
+  return false;
 }
 
 DocGroup* Document::GetDocGroupOrCreate() {
@@ -13014,15 +13015,6 @@ mozilla::dom::ImageTracker* Document::ImageTracker() {
   return mImageTracker;
 }
 
-void Document::GetPlugins(nsTArray<nsIObjectLoadingContent*>& aPlugins) {
-  aPlugins.AppendElements(ToArray(mPlugins));
-  auto recurse = [&aPlugins](Document& aSubDoc) {
-    aSubDoc.GetPlugins(aPlugins);
-    return CallState::Continue;
-  };
-  EnumerateSubDocuments(recurse);
-}
-
 void Document::ScheduleSVGUseElementShadowTreeUpdate(
     SVGUseElement& aUseElement) {
   MOZ_ASSERT(aUseElement.IsInComposedDoc());
@@ -15851,7 +15843,7 @@ void Document::IncLazyLoadImageCount() {
   if (!mLazyLoadImageCount) {
     if (WindowContext* wc = GetTopLevelWindowContext()) {
       if (!wc->HadLazyLoadImage()) {
-        MOZ_ALWAYS_SUCCEEDS(wc->SetHadLazyLoadImage(true));
+        Unused << wc->SetHadLazyLoadImage(true);
       }
     }
   }

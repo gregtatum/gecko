@@ -437,7 +437,7 @@ class MacroAssembler : public MacroAssemblerSpecific {
   void Push(FloatRegister reg) PER_SHARED_ARCH;
   void PushBoxed(FloatRegister reg) PER_ARCH;
   void PushFlags() DEFINED_ON(x86_shared);
-  void Push(jsid id, Register scratchReg);
+  void Push(JS::PropertyKey key, Register scratchReg);
   void Push(const Address& addr);
   void Push(TypedOrValueRegister v);
   void Push(const ConstantOrRegister& v);
@@ -856,6 +856,8 @@ class MacroAssembler : public MacroAssemblerSpecific {
                  const ValueOperand& dest) PER_ARCH;
   void moveValue(const ValueOperand& src, const ValueOperand& dest) PER_ARCH;
   void moveValue(const Value& src, const ValueOperand& dest) PER_ARCH;
+
+  void movePropertyKey(JS::PropertyKey key, Register dest);
 
   // ===============================================================
   // Load instructions
@@ -1289,7 +1291,7 @@ class MacroAssembler : public MacroAssemblerSpecific {
       DEFINED_ON(arm, arm64, mips_shared, x86, x64);
 
   inline void branch32(Condition cond, const BaseIndex& lhs, Register rhs,
-                       Label* label) DEFINED_ON(x86_shared);
+                       Label* label) DEFINED_ON(arm, x86_shared);
   inline void branch32(Condition cond, const BaseIndex& lhs, Imm32 rhs,
                        Label* label) PER_SHARED_ARCH;
 
@@ -1343,6 +1345,8 @@ class MacroAssembler : public MacroAssemblerSpecific {
                         Label* label) PER_SHARED_ARCH;
 
   inline void branchPtr(Condition cond, const BaseIndex& lhs, ImmWord rhs,
+                        Label* label) PER_SHARED_ARCH;
+  inline void branchPtr(Condition cond, const BaseIndex& lhs, Register rhs,
                         Label* label) PER_SHARED_ARCH;
 
   inline void branchPtr(Condition cond, const AbsoluteAddress& lhs,
@@ -1732,6 +1736,9 @@ class MacroAssembler : public MacroAssemblerSpecific {
 
   void branchTestValue(Condition cond, const ValueOperand& lhs,
                        const Value& rhs, Label* label) PER_ARCH;
+
+  inline void branchTestValue(Condition cond, const BaseIndex& lhs,
+                              const ValueOperand& rhs, Label* label) PER_ARCH;
 
   // Checks if given Value is evaluated to true or false in a condition.
   // The type of the value should match the type of the method.
@@ -4628,6 +4635,11 @@ class MacroAssembler : public MacroAssemblerSpecific {
                       const TemplateObject& templateObj,
                       gc::InitialHeap initialHeap, Label* fail,
                       bool initContents = true);
+
+  void createPlainGCObject(Register result, Register shape, Register temp,
+                           Register temp2, uint32_t numFixedSlots,
+                           uint32_t numDynamicSlots, gc::AllocKind allocKind,
+                           gc::InitialHeap initialHeap, Label* fail);
 
   void initGCThing(Register obj, Register temp,
                    const TemplateObject& templateObj, bool initContents = true);

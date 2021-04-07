@@ -17,6 +17,7 @@
 #include "util/Memory.h"
 #include "util/Text.h"
 #include "vm/BigIntType.h"
+#include "vm/GetterSetter.h"
 #include "vm/JSFunction.h"
 #include "vm/JSScript.h"
 #include "vm/Shape.h"
@@ -100,18 +101,6 @@ void gc::TraceCycleCollectorChildren(JS::CallbackTracer* trc, Shape* shape) {
 
     // Don't trace the propid because the CC doesn't care about jsid.
 
-    if (shape->hasGetterObject()) {
-      JSObject* tmp = shape->getterObject();
-      TraceEdgeInternal(trc, &tmp, "getter");
-      MOZ_ASSERT(tmp == shape->getterObject());
-    }
-
-    if (shape->hasSetterObject()) {
-      JSObject* tmp = shape->setterObject();
-      TraceEdgeInternal(trc, &tmp, "setter");
-      MOZ_ASSERT(tmp == shape->setterObject());
-    }
-
     shape = shape->previous();
   } while (shape);
 }
@@ -172,6 +161,10 @@ void js::gc::GetTraceThingInfo(char* buf, size_t bufsize, void* thing,
   switch (kind) {
     case JS::TraceKind::BaseShape:
       name = "base_shape";
+      break;
+
+    case JS::TraceKind::GetterSetter:
+      name = "getter_setter";
       break;
 
     case JS::TraceKind::JitCode:

@@ -132,7 +132,7 @@ class ProcessPriorityManagerImpl final : public nsIObserver,
    * given topic with the given data.  This is used for testing
    */
   void FireTestOnlyObserverNotification(const char* aTopic,
-                                        const nsACString& aData = ""_ns);
+                                        const nsACString& aData);
 
   /**
    * This must be called by a ParticularProcessPriorityManager when it changes
@@ -163,7 +163,6 @@ class ProcessPriorityManagerImpl final : public nsIObserver,
   already_AddRefed<ParticularProcessPriorityManager>
   GetParticularProcessPriorityManager(ContentParent* aContentParent);
 
-  void ObserveContentParentCreated(nsISupports* aContentParent);
   void ObserveContentParentDestroyed(nsISupports* aSubject);
 
   nsTHashMap<uint64_t, RefPtr<ParticularProcessPriorityManager> >
@@ -263,11 +262,7 @@ class ParticularProcessPriorityManager final : public WakeLockObserver,
   }
 
  private:
-  void FireTestOnlyObserverNotification(const char* aTopic,
-                                        const nsACString& aData = ""_ns);
-
-  void FireTestOnlyObserverNotification(const char* aTopic,
-                                        const char* aData = nullptr);
+  void FireTestOnlyObserverNotification(const char* aTopic, const char* aData);
 
   bool IsHoldingWakeLock(const nsAString& aTopic);
 
@@ -382,7 +377,6 @@ void ProcessPriorityManagerImpl::Init() {
 
   nsCOMPtr<nsIObserverService> os = services::GetObserverService();
   if (os) {
-    os->AddObserver(this, "ipc:content-created", /* ownsWeak */ true);
     os->AddObserver(this, "ipc:content-shutdown", /* ownsWeak */ true);
   }
 }
@@ -391,9 +385,7 @@ NS_IMETHODIMP
 ProcessPriorityManagerImpl::Observe(nsISupports* aSubject, const char* aTopic,
                                     const char16_t* aData) {
   nsDependentCString topic(aTopic);
-  if (topic.EqualsLiteral("ipc:content-created")) {
-    ObserveContentParentCreated(aSubject);
-  } else if (topic.EqualsLiteral("ipc:content-shutdown")) {
+  if (topic.EqualsLiteral("ipc:content-shutdown")) {
     ObserveContentParentDestroyed(aSubject);
   } else {
     MOZ_ASSERT(false);
@@ -410,8 +402,6 @@ ProcessPriorityManagerImpl::GetParticularProcessPriorityManager(
     if (!entry) {
       entry.Insert(new ParticularProcessPriorityManager(aContentParent));
       entry.Data()->Init();
-      FireTestOnlyObserverNotification("process-created",
-                                       nsPrintfCString("%" PRIu64, cpId));
     }
     return do_AddRef(entry.Data());
   });
@@ -425,15 +415,6 @@ void ProcessPriorityManagerImpl::SetProcessPriority(
   if (pppm) {
     pppm->SetPriorityNow(aPriority);
   }
-}
-
-void ProcessPriorityManagerImpl::ObserveContentParentCreated(
-    nsISupports* aContentParent) {
-  // Do nothing; it's sufficient to get the PPPM.  But assign to nsRefPtr so we
-  // don't leak the already_AddRefed object.
-  RefPtr<ContentParent> cp = do_QueryObject(aContentParent);
-  RefPtr<ParticularProcessPriorityManager> pppm =
-      GetParticularProcessPriorityManager(cp);
 }
 
 void ProcessPriorityManagerImpl::ObserveContentParentDestroyed(
@@ -755,11 +736,6 @@ void ParticularProcessPriorityManager::SetPriorityNow(
     return;
   }
 
-  if (mPriority == aPriority) {
-    hal::SetProcessPriority(Pid(), mPriority);
-    return;
-  }
-
   LOGP("Changing priority from %s to %s.", ProcessPriorityToString(mPriority),
        ProcessPriorityToString(aPriority));
 
@@ -820,7 +796,7 @@ void ParticularProcessPriorityManager::ShutDown() {
 }
 
 void ProcessPriorityManagerImpl::FireTestOnlyObserverNotification(
-    const char* aTopic, const nsACString& aData /* = ""_ns */) {
+    const char* aTopic, const nsACString& aData) {
   if (!TestMode()) {
     return;
   }
@@ -836,30 +812,16 @@ void ProcessPriorityManagerImpl::FireTestOnlyObserverNotification(
 }
 
 void ParticularProcessPriorityManager::FireTestOnlyObserverNotification(
-    const char* aTopic, const char* aData /* = nullptr */) {
-  if (!ProcessPriorityManagerImpl::TestMode()) {
-    return;
-  }
+    const char* aTopic, const char* aData) {
+  MOZ_ASSERT(aData, "Pass in data");
 
-  nsAutoCString data;
-  if (aData) {
-    data.AppendASCII(aData);
-  }
-
-  FireTestOnlyObserverNotification(aTopic, data);
-}
-
-void ParticularProcessPriorityManager::FireTestOnlyObserverNotification(
-    const char* aTopic, const nsACString& aData /* = ""_ns */) {
   if (!ProcessPriorityManagerImpl::TestMode()) {
     return;
   }
 
   nsAutoCString data(nsPrintfCString("%" PRIu64, ChildID()));
-  if (!aData.IsEmpty()) {
-    data.Append(':');
-    data.Append(aData);
-  }
+  data.Append(':');
+  data.AppendASCII(aData);
 
   // ProcessPriorityManagerImpl::GetSingleton() is guaranteed not to return
   // null, since ProcessPriorityManagerImpl is the only class which creates

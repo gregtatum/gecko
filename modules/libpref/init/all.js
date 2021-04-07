@@ -29,11 +29,7 @@ pref("security.tls.insecure_fallback_hosts", "");
 // https://tools.ietf.org/html/draft-davidben-http2-tls13-00
 pref("security.tls.enable_post_handshake_auth", false);
 pref("security.tls.hello_downgrade_check", true);
-#ifdef NIGHTLY_BUILD
-  pref("security.tls.enable_delegated_credentials", true);
-#else if MOZ_UPDATE_CHANNEL != esr
-  pref("security.tls.enable_delegated_credentials", false);
-#endif
+pref("security.tls.enable_delegated_credentials", true);
 
 pref("security.ssl.treat_unsafe_negotiation_as_broken", false);
 pref("security.ssl.require_safe_negotiation",  false);
@@ -803,7 +799,7 @@ pref("toolkit.telemetry.unified", true);
   #if defined(MOZ_TSAN)
     pref("toolkit.asyncshutdown.crash_timeout", 360000); // 6 minutes
   #else
-    pref("toolkit.asyncshutdown.crash_timeout", 180000); // 3 minutes
+    pref("toolkit.asyncshutdown.crash_timeout", 300000); // 5 minutes
   #endif
 #endif // !defined(MOZ_ASAN) && !defined(MOZ_TSAN)
 // Extra logging for AsyncShutdown barriers and phases
@@ -4026,8 +4022,8 @@ pref("network.trr.blacklist-duration", 60);
 pref("network.trr.excluded-domains", "");
 pref("network.trr.builtin-excluded-domains", "localhost,local");
 
-pref("captivedetect.canonicalURL", "http://detectportal.firefox.com/success.txt");
-pref("captivedetect.canonicalContent", "success\n");
+pref("captivedetect.canonicalURL", "http://detectportal.firefox.com/canonical.html");
+pref("captivedetect.canonicalContent", "<meta http-equiv=\"refresh\" content=\"0;url=https://support.mozilla.org/kb/captive-portal\"/>");
 pref("captivedetect.maxWaitingTime", 5000);
 pref("captivedetect.pollingTime", 3000);
 pref("captivedetect.maxRetryCount", 5);

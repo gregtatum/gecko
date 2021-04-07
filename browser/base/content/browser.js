@@ -5087,16 +5087,6 @@ var XULBrowserWindow = {
     return gBrowser.tabs.length;
   },
 
-  // Called before links are navigated to to allow us to retarget them if needed.
-  onBeforeLinkTraversal(originalTarget, linkURI, linkNode, isAppTab) {
-    return BrowserUtils.onBeforeLinkTraversal(
-      originalTarget,
-      linkURI,
-      linkNode,
-      isAppTab
-    );
-  },
-
   onProgressChange(
     aWebProgress,
     aRequest,
@@ -9341,11 +9331,11 @@ TabModalPromptBox.prototype = {
       allowFocusRow.appendChild(spacer);
 
       allowFocusCheckbox = document.createXULElement("checkbox");
-      let label = gTabBrowserBundle.formatStringFromName(
-        "tabs.allowTabFocusByPromptForSite",
-        [hostForAllowFocusCheckbox]
+      document.l10n.setAttributes(
+        allowFocusCheckbox,
+        "tabbrowser-allow-dialogs-to-get-focus",
+        { domain: hostForAllowFocusCheckbox }
       );
-      allowFocusCheckbox.setAttribute("label", label);
       allowFocusRow.appendChild(allowFocusCheckbox);
 
       newPrompt.ui.rows.append(allowFocusRow);
