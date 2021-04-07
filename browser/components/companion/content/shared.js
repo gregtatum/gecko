@@ -53,6 +53,7 @@ export class Keyframe extends HidableElement {
     target.querySelector(".favicon").src = this.data.icon;
     target.querySelector(".title").textContent = this.data.title;
     target.querySelector(".title").setAttribute("title", this.data.title);
+    target.querySelector(".category").textContent = this.data.category;
 
     let score = target.querySelector(".score");
     score.textContent = this.data.score.toFixed(1);

@@ -48,7 +48,7 @@ function isTypingKey(code) {
 }
 
 let Engagement = {
-  _engagements: new WeakMap(),
+  _engagements: new WeakMap(),  // browser -> {url, type, startTimeOnPage, totalEngagement}
   _currentEngagement: undefined,
 
   _delayedEngagements: new Map(),
@@ -94,7 +94,7 @@ let Engagement = {
     }
   },
 
-  async updateDb(engagement) {
+  async updateDb(engagement, browser) {
     if (engagement.id) {
       // Already in the database, update.
       await Keyframes.updateEngagement(
@@ -118,17 +118,34 @@ let Engagement = {
         engagement.startTimeOnPage,
         engagement.totalEngagement
       );
+
+      // Have Fathom categorize the page in the child process, then update the
+      // DB entry here. The ideal is to categorize no more than once per page
+      // load. I'd like to run it iff it becomes a Keyframe and then only once
+      // per load.
+      // TODO: Recategorize at some point in case the page content changes.
+      // Although, this actually does seem to re-run when we load an old
+      // Keyframe from the Companion.
+      if (browser && browser.browsingContext) {
+        // TODO: I haven't worked out a way of getting a browser object when
+        // this is called (indirectly) through init()->startEngagementTimer().
+        // This seems to be rare. Nonetheless, we should fix it.
+        const category = await browser.browsingContext.currentWindowGlobal
+               .getActor("Engagement")
+               .sendQuery("Engagement:Categorize",
+                          { engagementId: engagement.id });
+        Keyframes.updateCategory(engagement.id, category);
+      }
     }
   },
 
-  updateEngagementTime() {
+  updateEngagementTime(browser) {
     let now = Date.now();
 
     if (this._currentEngagement) {
       let toAdd = now - this._lastTimeUpdate;
       this._currentEngagement.totalEngagement += toAdd;
-
-      this.updateDb(this._currentEngagement);
+      this.updateDb(this._currentEngagement, browser);
     }
 
     this._lastTimeUpdate = now;
@@ -139,10 +156,10 @@ let Engagement = {
       case "TabSelect":
         {
           log.debug("Update from tab switch");
-          this.updateEngagementTime();
+          let tab = event.target;
+          this.updateEngagementTime(tab.linkedBrowser);
           this.typingEnded();
 
-          let tab = event.target;
           if (!this.isHttpURI(tab.linkedBrowser.currentURI)) {
             this._currentEngagement = undefined;
             return;
@@ -162,7 +179,7 @@ let Engagement = {
             this._currentEngagement = this._engagements.get(
               win.gBrowser.selectedTab.linkedBrowser
             );
-            this.startEngagementTimer();
+            this.startEngagementTimer(win.gBrowser.selectedTab.linkedBrowser);
           }
         }
         break;
@@ -171,7 +188,7 @@ let Engagement = {
           let win = event.target;
           if (win.gBrowser) {
             log.debug("Update from deactivate");
-            this.updateEngagementTime();
+            this.updateEngagementTime(win.gBrowser.selectedTab.linkedBrowser);
             this.typingEnded();
             this.stopEngagementTimer();
           }
@@ -281,12 +298,12 @@ let Engagement = {
   },
 
   _engagementTimer: 0,
-  startEngagementTimer() {
+  startEngagementTimer(browser) {
     if (this._engagementTimer == 0) {
       this._lastTimeUpdate = Date.now();
 
       this._engagementTimer = setInterval(
-        () => this.updateEngagementTime(),
+        () => this.updateEngagementTime(browser),
         ENGAGEMENT_TIMER_INTERVAL
       );
     }
@@ -310,7 +327,7 @@ let Engagement = {
       // Already have an engagement for this browser but for a different page.
       if (this._currentEngagement === engagementData) {
         log.debug("Update before new engagement.");
-        this.updateEngagementTime();
+        this.updateEngagementTime(browser);
         this._currentEngagement = undefined;
       }
 
@@ -330,12 +347,12 @@ let Engagement = {
       };
 
       this._engagements.set(browser, engagementData);
-      this.updateDb(engagementData);
+      this.updateDb(engagementData, browser);
     }
 
     if (msg.isActive && this._currentEngagement !== engagementData) {
       log.debug("Update before new engagement.");
-      this.updateEngagementTime();
+      this.updateEngagementTime(browser);
 
       this._currentEngagement = engagementData;
     }
@@ -347,11 +364,11 @@ let Engagement = {
     if (engagementData) {
       if (this._currentEngagement === engagementData) {
         log.debug("Update from page unload.");
-        this.updateEngagementTime();
+        this.updateEngagementTime(browser);
         this.typingEnded();
         this._currentEngagement = undefined;
       } else {
-        this.updateDb(engagementData);
+        this.updateDb(engagementData, browser);
       }
     }
   },
@@ -388,7 +405,7 @@ let Engagement = {
     if (engagementData.id) {
       Keyframes.updateType(engagementData.id, type);
     } else {
-      this.updateDb(engagementData);
+      this.updateDb(engagementData, browser);
     }
   },
 };

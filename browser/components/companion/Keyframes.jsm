@@ -36,7 +36,7 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 });
 */
 
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 
 /**
  * All SQL statements should be defined here.
@@ -54,7 +54,8 @@ const SQL = {
     "lastVisit INTEGER NOT NULL, " +
     "totalEngagement INTEGER NOT NULL, " +
     "typingTime INTEGER NOT NULL DEFAULT 0, " +
-    "keypresses INTEGER NOT NULL DEFAULT 0 " +
+    "keypresses INTEGER NOT NULL DEFAULT 0, " +
+    "category TEXT NOT NULL DEFAULT \"\" " +  // "shopping", "article", or "" for unknown
     ");",
 
   add:
@@ -69,7 +70,8 @@ const SQL = {
     "SELECT id, type, url, max(lastVisit) AS lastVisit, " +
     "sum(totalEngagement) as totalEngagement, " +
     "sum(typingTime) as typingTime, " +
-    "sum(keypresses) as keypresses FROM " +
+    "sum(keypresses) as keypresses, " +
+    "category FROM " +
     "keyframes WHERE {WHERE} GROUP BY url;",
 };
 
@@ -145,6 +147,18 @@ var Keyframes = {
     Services.obs.notifyObservers(null, "keyframe-update");
   },
 
+  async updateCategory(id, newCategory) {
+    if (!this._db) {
+      await this.init();
+    }
+    let sql = `UPDATE keyframes SET category = :newCategory WHERE id = :id`;
+    await this._db.executeCached(sql, {
+      id,
+      newCategory,
+    });
+    Services.obs.notifyObservers(null, "keyframe-update");
+  },
+
   async query(minTime, maxTime = null, type = null) {
     if (!this._db) {
       await this.init();
@@ -180,6 +194,7 @@ var Keyframes = {
         totalEngagement: int(record.getResultByName("totalEngagement")) ?? 0,
         typingTime: int(record.getResultByName("typingTime")),
         keypresses: int(record.getResultByName("keypresses")),
+        category: record.getResultByName("category"),
       };
     });
   },

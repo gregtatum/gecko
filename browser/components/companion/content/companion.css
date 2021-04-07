@@ -175,6 +175,7 @@ h2 {
 
 .keyframe .last-access,
 .topsite .last-access,
+.keyframe .category,
 .keyframe .score {
   padding-left: 20px;
   margin: 0;
