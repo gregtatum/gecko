@@ -428,6 +428,10 @@ function _setProperties(root, active, themeData) {
       let elem = optionalElementID
         ? root.ownerDocument.getElementById(optionalElementID)
         : root;
+      if (!elem) {
+        continue;
+      }
+
       let val = propertyOverrides.get(lwtProperty) || themeData[lwtProperty];
       if (isColor) {
         val = _cssColorToRGBA(root.ownerDocument, val);

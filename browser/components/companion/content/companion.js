@@ -14,6 +14,10 @@ import { AwesomeBar } from "./awesomebar.js";
 import { MediaList } from "./media.js";
 import { WindowList } from "./appbar.js";
 
+const { LightweightThemeConsumer } = ChromeUtils.import(
+  "resource://gre/modules/LightweightThemeConsumer.jsm"
+);
+
 let OBSERVED_PREFS = new Map();
 onLoad(() => {
   // Cheesy approximation of preferences for the demo settings. Add a checkbox with
@@ -75,7 +79,8 @@ function toggleSettings() {
 window.addEventListener(
   "load",
   () => {
-    console.log("Here");
+    new LightweightThemeConsumer(document);
+
     if (!document.documentElement.hasAttribute("width")) {
       const TARGET_WIDTH = 1280;
       const TARGET_HEIGHT = 1040;

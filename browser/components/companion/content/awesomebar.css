@@ -9,6 +9,7 @@
 %include ../../../themes/shared/urlbar-searchbar.inc.css
 %include ../../../themes/shared/urlbarView.inc.css
 %include ../../../base/content/urlbar.inc.css
+%include ../../../themes/shared/browser-custom-colors.inc.css
 
 @import url("chrome://browser/content/urlbar.css");
 
