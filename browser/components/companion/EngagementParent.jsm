@@ -15,11 +15,9 @@ class EngagementParent extends JSWindowActorParent {
   receiveMessage(msg) {
     if (msg.name == "Engagement:Log") {
       Engagement.reportError(msg.data);
-    }
-    if (msg.name == "Engagement:Engage") {
+    } else if (msg.name == "Engagement:Engage") {
       Engagement.engage(this.browsingContext.embedderElement, msg.data);
-    }
-    if (msg.name == "Engagement:Disengage") {
+    } else if (msg.name == "Engagement:Disengage") {
       Engagement.disengage(this.browsingContext.embedderElement, msg.data);
     }
   }
