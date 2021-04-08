@@ -19,6 +19,10 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/third_party/fathom/fathom.jsm"
 );
 
+// Compile each ruleset only once:
+XPCOMUtils.defineLazyGetter(this, "articleRules", makeArticleRuleset);
+XPCOMUtils.defineLazyGetter(this, "shoppingRules", makeShoppingRuleset);
+
 class EngagementChild extends JSWindowActorChild {
   actorCreated() {
     this.contentWindow.addEventListener("keyup", this);
@@ -168,9 +172,6 @@ class EngagementChild extends JSWindowActorChild {
  * 50% confidence.
  */
 function category(document) {
-  const shoppingRules = makeShoppingRuleset();
-  const articleRules = makeArticleRuleset();
-  // TODO: Compile each ruleset only once.
   const shoppingFnodes = shoppingRules.against(document).get("shopping");
   const articleFnodes = articleRules.against(document).get("article");
   const scores = {
