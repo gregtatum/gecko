@@ -191,7 +191,7 @@ class OAuth2 {
 
   deserialize(data) {
     this.accessToken = data.accessToken;
-    this.refreshToken = data.accessToken;
+    this.refreshToken = data.refreshToken;
     this.tokenExpires = data.tokenExpires;
   }
 
