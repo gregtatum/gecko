@@ -259,12 +259,20 @@ h2 {
   justify-content: end;
 }
 
-button.conference, button.conference:hover, button.conference:hover:active, button.conference:active {
-  background-color: #0061E0;
+button.conference {
+  background-color: var(--buttons-primary-button-bgcolor, -moz-accent-color);
+}
+
+button.conference:hover {
+  background-color: var(--buttons-primary-button-hover-bgcolor, color-mix(in srgb, black 10%, -moz-accent-color));
+}
+
+button.conference:hover:active {
+  background-color: var(--buttons-primary-button-active-bgcolor, color-mix(in srgb, black 20%, -moz-accent-color));
 }
 
 .conference-label {
-  color: white;
+  color: var(--buttons-primary-button-color, -moz-accent-color-foreground) !important;
 }
 
 #settings {
