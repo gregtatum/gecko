@@ -156,10 +156,10 @@ let Engagement = {
       case "TabSelect":
         {
           log.debug("Update from tab switch");
-          let tab = event.target;
-          this.updateEngagementTime(tab.linkedBrowser);
+          this.updateEngagementTime(event.detail.previousTab.linkedBrowser);
           this.typingEnded();
 
+          let tab = event.target;
           if (!this.isHttpURI(tab.linkedBrowser.currentURI)) {
             this._currentEngagement = undefined;
             return;
