@@ -151,10 +151,13 @@ h2 {
 .keyframe, .email, .pocket, .app-overview, .topsite {
   display: flex;
   flex-direction: row;
-  align-items: center;
   justify-content: start;
   cursor: default;
   padding: 5px;
+}
+
+.keyframe, .email, .app-overview, .topsite {
+  align-items: center;
 }
 
 .keyframe img, .app-overview img, .topsite img {
@@ -164,7 +167,7 @@ h2 {
   object-position: 50% 50%;
 }
 
-.keyframe .title, .pocket .title, .pocket .excerpt, .pocket .domain, .app-overview .title, .topsite .title {
+.keyframe .title, .app-overview .title, .topsite .title {
   flex: 1;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -343,15 +346,13 @@ h2 {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  overflow: hidden;
+  justify-content: flex-start;
 }
 
 .pocket img {
-  width: 128px;
-  object-fit: contain;
-  object-position: 50% 50%;
-  padding-right: 5px;
+  width: 158px;
+  height: 96px;
+  margin-right: 5px;
 }
 
 .pocket .excerpt {
@@ -365,4 +366,13 @@ h2 {
 
 .pocket p {
   width: 100%;
+}
+
+.pocket .preview {
+  border-radius: 4px;
+}
+
+.pocket .title, .pocket .excerpt, .pocket .domain {
+  padding-left: 5px;
+  margin: 0;
 }
