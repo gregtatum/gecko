@@ -22,10 +22,6 @@ export class Email extends HTMLElement {
     let template = document.getElementById("template-email");
     let fragment = template.content.cloneNode(true);
 
-    fragment
-      .querySelector(".favicon")
-      .setAttribute("src", "chrome://browser/content/companion/email.svg");
-
     fragment.querySelector(
       ".subject"
     ).textContent = `${this.data.subject} (${this.data.from})`;

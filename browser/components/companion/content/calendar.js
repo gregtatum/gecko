@@ -5,7 +5,7 @@
 // These come from utilityOverlay.js
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
-import { openUrl, tomorrow, dateFormat, timeFormat } from "./shared.js";
+import { openUrl, timeFormat } from "./shared.js";
 
 const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
@@ -24,14 +24,10 @@ class Event extends HTMLElement {
     let template = document.getElementById("template-event");
     let fragment = template.content.cloneNode(true);
 
-    let date =
-      this.data.start > tomorrow
-        ? dateFormat.format(this.data.start)
-        : timeFormat.format(this.data.start);
+    let date = `${timeFormat.format(this.data.start)} - ${timeFormat.format(
+      this.data.end
+    )}`;
 
-    fragment
-      .querySelector(".favicon")
-      .setAttribute("src", "chrome://browser/content/companion/event.svg");
     fragment.querySelector(".date").textContent = date;
     fragment.querySelector(".summary").textContent = this.data.summary;
 

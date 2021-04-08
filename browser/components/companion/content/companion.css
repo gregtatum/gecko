@@ -245,12 +245,10 @@ h2 {
 }
 
 .date {
-  padding-left: 10px;
+  font-weight: 600;
 }
 
 .summary, .subject, .title {
-  padding-left: 10px;
-  padding-right: 10px;
   text-overflow: ellipsis;
 }
 
@@ -379,4 +377,11 @@ h2 {
 
 .calendar-title {
   text-transform: capitalize;
+}
+
+.event-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
