@@ -9,6 +9,8 @@ const { XPCOMUtils } = ChromeUtils.import(
 
 const PREF_STORE = "onlineservices.config";
 
+const NUM_EVENTS = 1;
+
 XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   OAuth2: "resource:///modules/OAuth2.jsm",
@@ -176,8 +178,8 @@ class GoogleService {
 
     events.sort((a, b) => a.start - b.start);
     while (
-      events.length > 1 &&
-      events[events.length - 1].start > events[0].start
+      events.length > NUM_EVENTS &&
+      events[events.length - NUM_EVENTS].start > events[0].start
     ) {
       events.pop();
     }
