@@ -147,7 +147,9 @@ class OAuth2 {
   refreshToken = null;
   tokenExpires = null;
 
-  async getToken() {
+  getTokenPromise = null;
+
+  async internalGetToken() {
     if (this.accessToken && this.tokenExpires > Date.now()) {
       return this.accessToken;
     }
@@ -163,6 +165,16 @@ class OAuth2 {
     }
 
     return OAuthConnect.connect(this);
+  }
+
+  async getToken() {
+    if (!this.getTokenPromise) {
+      this.getTokenPromise = this.internalGetToken().finally(
+        () => (this.getTokenPromise = null)
+      );
+    }
+
+    return this.getTokenPromise;
   }
 
   toJSON() {
