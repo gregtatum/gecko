@@ -259,6 +259,14 @@ h2 {
   justify-content: end;
 }
 
+button.conference, button.conference:hover, button.conference:hover:active, button.conference:active {
+  background-color: #0061E0;
+}
+
+.conference-label {
+  color: white;
+}
+
 #settings {
   padding: 10px;
 }
