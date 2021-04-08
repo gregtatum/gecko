@@ -55,6 +55,31 @@ class Event extends HTMLElement {
     }
 
     this.appendChild(fragment);
+
+    // TODO!!!!!
+    // THIS WILL NOT WORK WITH MORE THAN ONE EVENT OR MORE THAN ONE PROVIDER!!!!
+    let rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+    let today = new Date();
+    let event = this.data.start;
+    let options = { year: "numeric", month: "long", day: "numeric" };
+    let formattedEventDate = event.toLocaleDateString("en-US", options);
+    if (
+      today.getDate() == event.getDate() &&
+      today.getMonth() == event.getMonth() &&
+      today.getFullYear == event.getFullYear()
+    ) {
+      document.querySelector(".calendar-title").textContent =
+        rtf.format(0, "day") + " " + formattedEventDate;
+    } else {
+      let midnight = new Date();
+      midnight.setHours(24, 0, 0, 0);
+      let daysApart = Math.ceil(
+        (event.getTime() - midnight.getTime()) / (1000 * 3600 * 24)
+      );
+      document.querySelector(".calendar-title").textContent =
+        rtf.format(daysApart, "day") + " " + formattedEventDate;
+    }
   }
 
   openCalendar() {

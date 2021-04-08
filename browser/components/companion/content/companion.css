@@ -376,3 +376,7 @@ h2 {
   padding-left: 5px;
   margin: 0;
 }
+
+.calendar-title {
+  text-transform: capitalize;
+}
