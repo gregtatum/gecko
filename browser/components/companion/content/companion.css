@@ -433,6 +433,8 @@ button.conference:hover:active {
 
 .snippet {
   opacity: 0.5;
-  max-height: 3em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
 }
