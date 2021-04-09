@@ -35,7 +35,8 @@ export class Email extends HTMLElement {
 
     fragment.querySelector(".subject").textContent = this.data.subject;
     fragment.querySelector(".from").textContent = sender;
-    fragment.querySelector(".snippet").textContent = this.data.snippet;
+    // eslint-disable-next-line no-unsanitized/property
+    fragment.querySelector(".snippet").innerHTML = this.data.snippet;
 
     let date = new Date(this.data.date);
     let today = new Date();
