@@ -156,7 +156,11 @@ h2 {
   padding: 5px;
 }
 
-.keyframe, .email, .app-overview, .topsite {
+.email {
+  flex-direction: column;
+}
+
+.keyframe, .app-overview, .topsite {
   align-items: center;
 }
 
@@ -247,11 +251,7 @@ h2 {
 .date {
   font-weight: 600;
   opacity: 0.5;
-  font-size: 11px;
-}
-
-.summary {
-  font-size: 13px;
+  font-size: smaller;
 }
 
 .summary, .subject, .title {
@@ -263,7 +263,7 @@ h2 {
   flex-direction: row;
   align-items: center;
   justify-content: end;
-  font-size: 10px;
+  font-size: smaller;
 }
 
 button.conference {
@@ -321,10 +321,6 @@ button.conference:hover:active {
   height: 16px;
   width: 16px;
   padding-right: 5px;
-}
-
-.subject {
-  flex: 1;
 }
 
 .media.card {
@@ -398,8 +394,12 @@ button.conference:hover:active {
   margin: 0;
 }
 
+.pocket .title {
+  font-weight: bold;
+}
 .calendar-title {
   text-transform: capitalize;
+  font-weight: bold;
 }
 
 .event-content {
@@ -407,4 +407,32 @@ button.conference:hover:active {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+}
+
+.from-date {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  padding-bottom: 2px;
+}
+.from {
+  font-weight: bold;
+  flex: 1;
+}
+.subject, .snippet {
+  padding-top: 2px;
+  font-size: smaller;
+}
+
+.subject {
+  padding-bottom: 2px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.snippet {
+  opacity: 0.5;
+  max-height: 3em;
+  overflow: hidden;
 }

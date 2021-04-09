@@ -229,6 +229,7 @@ class GoogleService {
         header => header.name.toLowerCase() == "from"
       )?.value,
       date: new Date(parseInt(results.internalDate)),
+      snippet: results.snippet,
     };
   }
 
@@ -353,7 +354,6 @@ const OnlineServices = {
 
   persist() {
     let config = JSON.stringify(Array.from(ServiceInstances));
-    Cu.reportError(config);
     Services.prefs.setCharPref(PREF_STORE, config);
   },
 };

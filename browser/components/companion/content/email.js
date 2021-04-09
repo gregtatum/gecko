@@ -22,9 +22,20 @@ export class Email extends HTMLElement {
     let template = document.getElementById("template-email");
     let fragment = template.content.cloneNode(true);
 
-    fragment.querySelector(
-      ".subject"
-    ).textContent = `${this.data.subject} (${this.data.from})`;
+    let sender;
+
+    let names = this.data.from.split(/\s+/);
+
+    if (names.length > 1) {
+      names.pop();
+      sender = names.join(" ").replace(/"/g, "");
+    } else {
+      sender = names[0];
+    }
+
+    fragment.querySelector(".subject").textContent = this.data.subject;
+    fragment.querySelector(".from").textContent = sender;
+    fragment.querySelector(".snippet").textContent = this.data.snippet;
 
     let date = new Date(this.data.date);
     let today = new Date();
@@ -57,7 +68,7 @@ export class Email extends HTMLElement {
     setTimeout(function() {
       let services = OnlineServices.getServices();
       getEmail(services);
-    }, 5000);
+    }, 10000);
   }
 }
 
@@ -91,11 +102,12 @@ async function getEmail(services) {
   }
 
   if (!allEmails.length) {
-    document.querySelector(".email-title").textContent = "No Unread emails";
+    document.querySelector("#email").hidden = true;
   } else {
+    document.querySelector("#email").hidden = false;
     document.querySelector(
       ".email-title"
-    ).textContent = `Email (${allEmails.length})`;
+    ).textContent = `New Mail (${allEmails.length})`;
     for (let email of allEmails) {
       panel.appendChild(email);
     }

@@ -122,3 +122,7 @@ export function initCalendarServices(services) {
     buildEvents(services);
   }, CALENDAR_CHECK_TIME);
 }
+
+document.getElementById("calendar-link").addEventListener("click", function() {
+  openUrl("https://calendar.google.com");
+});

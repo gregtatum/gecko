@@ -163,8 +163,12 @@
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-email">
+    <div class="from-date">
+      <div class="from"/>
+      <div class="date"/>
+    </div>
     <div class="subject"/>
-    <div class="date"/>
+    <div class="snippet"/>
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-topsite">
@@ -272,10 +276,12 @@
       <button id="service-signin">Sign in to Google</button>
     </div>
     <div class="service-panel">
-      <h2 class="calendar-title"></h2>
+      <a href="#" id="calendar-link"><h2 class="calendar-title"></h2></a>
       <div id="calendar-panel"/>
-      <h2 class="email-title">Email</h2>
-      <div id="email-panel"/>
+      <div id="email">
+        <h2 class="email-title">New Mail</h2>
+        <div id="email-panel"/>
+      </div>
     </div>
 
     <div id="content">

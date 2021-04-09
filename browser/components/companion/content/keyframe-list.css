@@ -20,3 +20,12 @@ h2 {
   flex-direction: column;
   align-items: stretch;
 }
+
+:host(.pocket-list) .list-title {
+  font-weight: bold;
+  opacity: 0.9;
+}
+
+:host(.pocket-list) .list-subtitle {
+  opacity: 0.75;
+}
