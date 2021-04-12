@@ -13,6 +13,7 @@ browser.jar:
     content/browser/companion/email.js (content/email.js)
     content/browser/companion/email.svg (content/email.svg)
     content/browser/companion/event.svg (content/event.svg)
+    content/browser/companion/companion-settings.svg (content/companion-settings.svg)
     content/browser/companion/keyframe-list.css (content/keyframe-list.css)
     content/browser/companion/keyframes.js (content/keyframes.js)
     content/browser/companion/media.js (content/media.js)

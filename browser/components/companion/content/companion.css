@@ -31,6 +31,15 @@ h2 {
   -moz-font-smoothing-background-color: -moz-mac-vibrant-titlebar-dark;
   -moz-window-dragging: drag;
   min-height: 33px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@media (-moz-windows-default-theme) {
+  #titlebar {
+    flex-direction: row-reverse;
+  }
 }
 
 #awesomebar {
@@ -40,15 +49,19 @@ h2 {
 }
 
 #settings-button {
-  padding-left: 10px;
+  -moz-context-properties: fill, fill-opacity;
   fill: currentColor;
-  -moz-context-properties: fill;
-  list-style-image: url("chrome://browser/skin/preferences/category-general.svg")
+  fill-opacity: .6;
+  list-style-image: url("chrome://browser/content/companion/companion-settings.svg")
+}
+
+#settings-button:hover {
+  fill-opacity: .8;
 }
 
 #settings-button image {
-  width: 32px;
-  height: 32px;
+  width: 16px;
+  height: 16px;
 }
 
 #urlbar-background {
@@ -272,15 +285,15 @@ h2 {
   font-size: smaller;
 }
 
-button.conference {
+button.conference, .btn {
   background-color: var(--buttons-primary-button-bgcolor, -moz-accent-color);
 }
 
-button.conference:hover {
+button.conference:hover, .btn:hover {
   background-color: var(--buttons-primary-button-hover-bgcolor, color-mix(in srgb, black 10%, -moz-accent-color));
 }
 
-button.conference:hover:active {
+button.conference:hover:active, .btn:hover:active {
   background-color: var(--buttons-primary-button-active-bgcolor, color-mix(in srgb, black 20%, -moz-accent-color));
 }
 
@@ -290,6 +303,14 @@ button.conference:hover:active {
 
 #settings {
   padding: 10px;
+  position: absolute;
+  z-index: 999;
+  top: 30px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--in-content-page-background);
+  overflow-y: scroll;
 }
 
 #sliders {

@@ -197,7 +197,7 @@
 
   <hbox id="titlebar">
     <hbox id="mac-buttonbox"/>
-    <hbox id="win-buttonbox" flex="1" pack="end" class="titlebar-buttonbox-container">
+    <hbox id="win-buttonbox" class="titlebar-buttonbox-container">
       <hbox class="titlebar-buttonbox titlebar-color">
         <toolbarbutton class="titlebar-button titlebar-min"
                            oncommand="window.minimize();"
@@ -217,6 +217,7 @@
                            />
       </hbox>
     </hbox>
+    <toolbarbutton id="settings-button"/>
   </hbox>
 
   <toolbar id="awesomebar">
@@ -267,15 +268,10 @@
         </hbox>
       </hbox>
     </toolbaritem>
-    <toolbarbutton id="settings-button"/>
   </toolbar>
 
   <div xmlns="http://www.w3.org/1999/xhtml" id="scroll">
-
     <div id="sticky">
-      <div id="service-login">
-        <button id="service-signin">Sign in to Google</button>
-      </div>
       <a href="#" id="calendar-link"><h2 class="calendar-title"></h2></a>
       <div id="calendar-panel"/>
     </div>
@@ -291,6 +287,9 @@
   </div>
 
   <div xmlns="http://www.w3.org/1999/xhtml" id="settings" hidden="true">
+    <div id="service-login">
+      <button id="service-signin" class="btn">Sign in to Google</button>
+    </div>
     <div id="sliders"></div>
     <label><input type="checkbox" id="setting-appbar" data-pref="browser.companion.appbar" /> Enable App Bar</label>
   </div>
