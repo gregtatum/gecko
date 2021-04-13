@@ -26,7 +26,10 @@ export class PocketStory extends HTMLElement {
 
     fragment
       .querySelector(".preview")
-      .setAttribute("src", POCKET_IMG_URL + encodeURI(this.data.raw_image_src));
+      .setAttribute(
+        "src",
+        POCKET_IMG_URL + encodeURIComponent(this.data.raw_image_src)
+      );
     fragment.querySelector(".excerpt").textContent = this.data.excerpt;
     fragment.querySelector(".domain").textContent = this.data.domain;
 
