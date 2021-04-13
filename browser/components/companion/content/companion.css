@@ -188,13 +188,6 @@ h2 {
   margin: 0;
 }
 
-#service-login,
-#calendar-panel {
-  position: sticky;
-  top: 0;
-  background: var(--in-content-page-background);
-}
-
 #calendar-panel:empty {
   display: none;
 }
@@ -206,7 +199,20 @@ h2 {
   padding: 5px 10px;
 }
 
-.service-panel {
+#sticky {
+  position: sticky;
+  top: 0;
+  background: var(--in-content-page-background);
+  z-index: 1;
+}
+
+#calendar-link {
+  padding: 0 10px;
+  display: block;
+}
+
+#calendar-panel,
+#email {
   padding: 5px 10px;
 }
 
@@ -374,6 +380,10 @@ button.conference:hover:active {
 
 .pocket .excerpt {
   font-size: smaller;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .pocket .domain {
