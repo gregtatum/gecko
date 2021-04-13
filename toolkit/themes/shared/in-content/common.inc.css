@@ -135,11 +135,12 @@
 
 @media (prefers-color-scheme: dark) {
   :host,
-  :root {
+  :root:not(:-moz-lwtheme-darktext) {
 %include darkmode.inc.css
   }
 }
 
+:host,
 :root:-moz-lwtheme-brighttext {
 %include darkmode.inc.css
 }
@@ -147,13 +148,14 @@
 @media not (-moz-proton) {
 @media (prefers-color-scheme: dark) {
   :host,
-  :root {
+  :root:not(:-moz-lwtheme-darktext) {
 %include darkmode-nonproton.inc.css
   }
+}
 
-  :root:-moz-lwtheme-brighttext {
+:host,
+:root:-moz-lwtheme-brighttext {
 %include darkmode-nonproton.inc.css
-  }
 }
 }
 
