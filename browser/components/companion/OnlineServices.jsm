@@ -241,7 +241,7 @@ class GoogleService {
     );
 
     apiTarget.searchParams.set("q", "is:unread in:inbox");
-    apiTarget.searchParams.set("maxResults", 5);
+    apiTarget.searchParams.set("maxResults", 3);
 
     let headers = {
       Authorization: `Bearer ${token}`,
