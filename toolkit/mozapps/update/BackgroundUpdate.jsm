@@ -238,7 +238,8 @@ var BackgroundUpdate = {
     let binary = Services.dirsvc.get("XREExeF", Ci.nsIFile);
     let args = [
       "--MOZ_LOG",
-      "prependheader,timestamp,append,maxsize:1,Dump:5",
+      // Note: `maxsize:1` means 1Mb total size, trimmed to 512kb on overflow.
+      "sync,prependheader,timestamp,append,maxsize:1,Dump:5",
       "--MOZ_LOG_FILE",
       // The full path might hit command line length limits, but also makes it
       // much easier to find the relevant log file when starting from the
@@ -284,11 +285,15 @@ var BackgroundUpdate = {
           `to per-installation pref default "app.update.background.enabled": ${scheduling}`
       );
     } catch (e) {
-      if (
-        !(e instanceof Ci.nsIException && e.result == Cr.NS_ERROR_UNEXPECTED)
-      ) {
-        throw e;
+      if (e instanceof Ci.nsIException && e.result == Cr.NS_ERROR_UNEXPECTED) {
+        // The preference doesn't exist.
+        return;
       }
+      console.warn(
+        `ignoring failure to mirror per-profile pref "app.update.background.scheduling.enabled" default ` +
+          `to per-installation pref default "app.update.background.enabled"`,
+        e
+      );
     }
   },
 
@@ -330,10 +335,15 @@ var BackgroundUpdate = {
       `${SLUG}: checking eligibility before scheduling background update task`
     );
 
-    const previousEnabled = Services.prefs.getBoolPref(
-      "app.update.background.previous.enabled",
-      false
-    );
+    let previousEnabled;
+    let successfullyReadPrevious;
+    try {
+      previousEnabled = await TaskScheduler.taskExists(this.taskId);
+      successfullyReadPrevious = true;
+    } catch (ex) {
+      successfullyReadPrevious = false;
+    }
+
     const previousReasons = Services.prefs.getCharPref(
       "app.update.background.previous.reasons",
       null
@@ -404,12 +414,6 @@ var BackgroundUpdate = {
     }
 
     let updatePreviousPrefs = () => {
-      // Squirrel away our previous values: keeping them allows us to witness both the rising edge
-      // (disabled -> enabled) and the falling (enabled -> disabled) edge.
-      Services.prefs.setBoolPref(
-        "app.update.background.previous.enabled",
-        !reasons.length
-      );
       if (reasons.length) {
         Services.prefs.setCharPref(
           "app.update.background.previous.reasons",
@@ -429,7 +433,7 @@ var BackgroundUpdate = {
           )}'`
         );
 
-        if (previousEnabled) {
+        if (!successfullyReadPrevious || previousEnabled) {
           await TaskScheduler.deleteTask(this.taskId);
           log.debug(
             `${SLUG}: witnessed falling (enabled -> disabled) edge; deleted task ${this.taskId}.`
@@ -441,7 +445,7 @@ var BackgroundUpdate = {
         return false;
       }
 
-      if (previousEnabled) {
+      if (successfullyReadPrevious && previousEnabled) {
         log.info(
           `${SLUG}: background update was previously enabled; not registering task.`
         );

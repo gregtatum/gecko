@@ -54,10 +54,18 @@ function SubDialog({
   this._overlay.classList.add(`dialogOverlay-${id}`);
   this._frame.setAttribute("name", `dialogFrame-${id}`);
   this._frameCreated = new Promise(resolve => {
-    this._frame.addEventListener("load", resolve, {
-      once: true,
-      capture: true,
-    });
+    this._frame.addEventListener(
+      "load",
+      () => {
+        // We intentionally avoid handling or passing the event to the
+        // resolve method to avoid shutdown window leaks. See bug 1686743.
+        resolve();
+      },
+      {
+        once: true,
+        capture: true,
+      }
+    );
   });
 
   parentElement.appendChild(this._overlay);
@@ -79,6 +87,10 @@ SubDialog.prototype = {
   _id: null,
   _titleElement: null,
   _closeButton: null,
+
+  get frameContentWindow() {
+    return this._frame?.contentWindow;
+  },
 
   get _window() {
     return this._overlay?.ownerGlobal;
@@ -985,6 +997,10 @@ class SubDialogManager {
       return false;
     }
     return this._dialogs.some(dialog => !dialog._isClosing);
+  }
+
+  get dialogs() {
+    return [...this._dialogs];
   }
 
   focusTopDialog() {

@@ -981,11 +981,11 @@ bool DebuggerObject::CallData::applyMethod() {
 
     RootedObject argsobj(cx, &args[1].toObject());
 
-    unsigned argc = 0;
+    uint64_t argc = 0;
     if (!GetLengthProperty(cx, argsobj, &argc)) {
       return false;
     }
-    argc = unsigned(std::min(argc, ARGS_LENGTH_MAX));
+    argc = std::min(argc, uint64_t(ARGS_LENGTH_MAX));
 
     if (!nargs.growBy(argc) || !GetElements(cx, argsobj, argc, nargs.begin())) {
       return false;
@@ -1368,8 +1368,13 @@ bool DebuggerObject::CallData::setInstrumentationMethod() {
   }
   RootedObject kindsObj(cx, &args[1].toObject());
 
-  unsigned length = 0;
+  uint64_t length = 0;
   if (!GetLengthProperty(cx, kindsObj, &length)) {
+    return false;
+  }
+
+  if (length > UINT32_MAX) {
+    JS_ReportErrorASCII(cx, "Invalid length for instrumentation kinds array");
     return false;
   }
 

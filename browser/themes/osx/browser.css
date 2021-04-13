@@ -14,7 +14,7 @@
 
   --toolbarbutton-vertical-text-padding: calc(var(--toolbarbutton-inner-padding) + 1px);
   --toolbarbutton-border-radius: 4px;
-  --toolbarbutton-icon-fill-opacity: .7;
+  --toolbarbutton-icon-fill-opacity: 1;
 
   --panel-separator-color: hsla(210,4%,10%,.14);
 
@@ -33,6 +33,10 @@
 }
 
 @media not (-moz-proton) {
+:root {
+  --toolbarbutton-icon-fill-opacity: .7;
+}
+
 #navigator-toolbox {
   appearance: none;
   --tabs-border-color: rgba(0,0,0,.2);
@@ -238,7 +242,7 @@
 %include ../shared/urlbar-searchbar.inc.css
 
 @media not (prefers-contrast) {
-  @media (-moz-proton-urlbar) {
+  @media (-moz-proton) {
   :root:not(:-moz-lwtheme) #urlbar:not([focused="true"]) {
     --urlbar-box-bgcolor: white;
   }
@@ -299,6 +303,17 @@ moz-input-box > menupopup .context-menu-add-engine > .menu-iconic-left {
 
 #BMB_bookmarksPopup[side="top"],
 #BMB_bookmarksPopup[side="bottom"] {
+  margin-inline: -17px;
+}
+
+#BMB_bookmarksPopup[side="left"],
+#BMB_bookmarksPopup[side="right"] {
+  margin-block: -17px;
+}
+
+@media not (-moz-proton) {
+#BMB_bookmarksPopup[side="top"],
+#BMB_bookmarksPopup[side="bottom"] {
   margin-inline: -26px;
 }
 
@@ -306,6 +321,7 @@ moz-input-box > menupopup .context-menu-add-engine > .menu-iconic-left {
 #BMB_bookmarksPopup[side="right"] {
   margin-block: -26px;
 }
+} /** END not Proton **/
 
 /* Bookmarking panel */
 
@@ -553,10 +569,6 @@ moz-input-box > menupopup .context-menu-add-engine > .menu-iconic-left {
   box-shadow: var(--focus-ring-box-shadow);
 }
 } /*** END !proton ***/
-
-#TabsToolbar > .toolbar-items {
-  padding-top: var(--space-above-tabbar);
-}
 
 @media not (-moz-proton) {
 #TabsToolbar:not(:-moz-lwtheme) {

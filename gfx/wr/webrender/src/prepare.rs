@@ -613,7 +613,10 @@ fn prepare_interned_prim_for_render(
                 prim_data.common.may_need_repetition = false;
             }
 
-            if prim_data.supports_caching {
+            // We disable cached gradients with the software fallback because in this
+            // configuration rendering the gradient directly into a picture is faster
+            // than reading from the texture cache.
+            if prim_data.supports_caching && !frame_context.fb_config.is_software {
                 let gradient_size = (prim_data.end_point - prim_data.start_point).to_size();
 
                 // Calculate what the range of the gradient is that covers this
@@ -853,6 +856,7 @@ fn prepare_interned_prim_for_render(
                 }
                 else
                 {
+                    let mut prev_segment_start_point = None;
                     let mut segment_start_point = prim_start_offset;
                     while segment_start_point < prim_end_offset {
 
@@ -881,6 +885,13 @@ fn prepare_interned_prim_for_render(
                         );
 
                         segment_start_point = repeat_end + gradient_offset_base;
+
+                        // Break out of the loop if we aren't making progress
+                        if prev_segment_start_point == Some(segment_start_point) {
+                            debug_assert!(segment_start_point.approx_eq(&prim_end_offset));
+                            break;
+                        }
+                        prev_segment_start_point = Some(segment_start_point)
                     }
                 }
             }

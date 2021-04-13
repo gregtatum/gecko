@@ -40,6 +40,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   DownloadUtils: "resource://gre/modules/DownloadUtils.jsm",
   E10SUtils: "resource://gre/modules/E10SUtils.jsm",
   Engagement: "resource:///modules/Engagement.jsm",
+  NimbusFeatures: "resource://nimbus/ExperimentAPI.jsm",
   ExtensionsUI: "resource:///modules/ExtensionsUI.jsm",
   HomePage: "resource:///modules/HomePage.jsm",
   LightweightThemeConsumer:
@@ -399,7 +400,7 @@ XPCOMUtils.defineLazyGetter(this, "gHighPriorityNotificationBox", () => {
   return new MozElements.NotificationBox(element => {
     element.classList.add("global-notificationbox");
     element.setAttribute("notificationside", "top");
-    if (gProtonInfobarsEnabled) {
+    if (gProton) {
       // With Proton enabled all notification boxes are at the top, built into the browser chrome.
       let tabNotifications = document.getElementById("tab-notification-deck");
       gNavToolbox.insertBefore(element, tabNotifications);
@@ -411,7 +412,7 @@ XPCOMUtils.defineLazyGetter(this, "gHighPriorityNotificationBox", () => {
 
 // Regular notification bars shown at the bottom of the window.
 XPCOMUtils.defineLazyGetter(this, "gNotificationBox", () => {
-  return gProtonInfobarsEnabled
+  return gProton
     ? gHighPriorityNotificationBox
     : new MozElements.NotificationBox(element => {
         element.classList.add("global-notificationbox");
@@ -539,36 +540,6 @@ XPCOMUtils.defineLazyPreferenceGetter(
 
 XPCOMUtils.defineLazyPreferenceGetter(
   this,
-  "gFxaSendLoginUrl",
-  "identity.fxaccounts.service.sendLoginUrl",
-  false,
-  (aPref, aOldVal, aNewVal) => {
-    updateFxaToolbarMenu(gFxaToolbarEnabled);
-  }
-);
-
-XPCOMUtils.defineLazyPreferenceGetter(
-  this,
-  "gFxaMonitorLoginUrl",
-  "identity.fxaccounts.service.monitorLoginUrl",
-  null,
-  (aPref, aOldVal, aNewVal) => {
-    updateFxaToolbarMenu(gFxaToolbarEnabled);
-  }
-);
-
-XPCOMUtils.defineLazyPreferenceGetter(
-  this,
-  "gFxaDeviceName",
-  "identity.fxaccounts.account.device.name",
-  false,
-  (aPref, aOldVal, aNewVal) => {
-    updateFxaToolbarMenu(gFxaToolbarEnabled);
-  }
-);
-
-XPCOMUtils.defineLazyPreferenceGetter(
-  this,
   "gAddonAbuseReportEnabled",
   "extensions.abuseReport.enabled",
   false
@@ -590,14 +561,6 @@ XPCOMUtils.defineLazyPreferenceGetter(
   }
 );
 
-/* Temporary pref while the Proton infobars work stabilizes. */
-XPCOMUtils.defineLazyPreferenceGetter(
-  this,
-  "gProtonInfobarsEnabled",
-  "browser.proton.infobars.enabled",
-  false
-);
-
 /* Temporary pref while the dust settles around the updated tooltip design
    for tabs and bookmarks toolbar. This will eventually be removed and
    browser.proton.enabled will be used instead. */
@@ -615,15 +578,6 @@ XPCOMUtils.defineLazyPreferenceGetter(
   "browser.proton.doorhangers.enabled",
   false
 );
-
-/* Import aboutWelcomeFeature from Nimbus Experiment API
-   to access experiment values */
-XPCOMUtils.defineLazyGetter(this, "aboutWelcomeFeature", () => {
-  const { ExperimentFeature } = ChromeUtils.import(
-    "resource://nimbus/ExperimentAPI.jsm"
-  );
-  return new ExperimentFeature("aboutwelcome");
-});
 
 customElements.setElementCreationCallback("translation-notification", () => {
   Services.scriptloader.loadSubScript(
@@ -1057,10 +1011,7 @@ const gStoragePressureObserver = {
       NOTIFICATION_VALUE,
       null,
       gHighPriorityNotificationBox.PRIORITY_WARNING_HIGH,
-      buttons,
-      null,
-      null,
-      ["branding/brand.ftl", "browser/preferences/preferences.ftl"]
+      buttons
     );
 
     // This seems to be necessary to get the buttons to display correctly
@@ -2235,7 +2186,7 @@ var gBrowserInit = {
       // property set to true, if yes remove focus from urlbar for about:welcome
       const aboutWelcomeSkipUrlBarFocus =
         uriToLoad == "about:welcome" &&
-        aboutWelcomeFeature.getValue()?.skipFocus;
+        NimbusFeatures.aboutwelcome.getValue()?.skipFocus;
 
       if (
         (isBlankPageURL(uriToLoad) && !aboutWelcomeSkipUrlBarFocus) ||
@@ -2861,6 +2812,7 @@ function BrowserHome(aEvent) {
         gBrowser.selectedBrowser.focus();
       }
       notifyObservers = true;
+      aEvent?.preventDefault();
       break;
     case "tabshifted":
     case "tab":
@@ -2879,11 +2831,20 @@ function BrowserHome(aEvent) {
         triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
         csp: null,
       });
+      if (!loadInBackground) {
+        if (isBlankPageURL(homePage)) {
+          gURLBar.select();
+        } else {
+          gBrowser.selectedBrowser.focus();
+        }
+      }
+      aEvent?.preventDefault();
       break;
     case "window":
       // OpenBrowserWindow will trigger the observer event, so no need to do so here.
       notifyObservers = false;
       OpenBrowserWindow();
+      aEvent?.preventDefault();
       break;
   }
   if (notifyObservers) {
@@ -4212,9 +4173,7 @@ const BrowserSearch = {
    * has search engines.
    */
   updateOpenSearchBadge() {
-    // When removing browser.proton.urlbar.enabled change this to only check
-    // gProton.
-    if (gProton && gURLBar.addSearchEngineHelper) {
+    if (gProton) {
       gURLBar.addSearchEngineHelper.setEnginesFromBrowser(
         gBrowser.selectedBrowser
       );
@@ -6386,6 +6345,10 @@ function onViewToolbarsPopupShowing(aEvent, aInsertPoint) {
   let menuSeparator = document.getElementById("toolbarItemsMenuSeparator");
   menuSeparator.hidden = false;
 
+  document.getElementById(
+    "toolbarNavigatorItemsMenuSeparator"
+  ).hidden = !showTabStripItems;
+
   if (
     !CustomizationHandler.isCustomizing() &&
     CustomizableUI.isSpecialWidget(toolbarItem?.id || "")
@@ -6540,13 +6503,6 @@ function setToolbarVisibility(
   };
   let event = new CustomEvent("toolbarvisibilitychange", eventParams);
   toolbar.dispatchEvent(event);
-
-  if (
-    toolbar.getAttribute("type") == "menubar" &&
-    CustomizationHandler.isCustomizing()
-  ) {
-    gCustomizeMode._updateDragSpaceCheckbox();
-  }
 }
 
 function updateToggleControlLabel(control) {
@@ -6986,33 +6942,11 @@ function handleLinkClick(event, href, linkNode) {
     return true;
   }
 
-  // if the mixedContentChannel is present and the referring URI passes
-  // a same origin check with the target URI, we can preserve the users
-  // decision of disabling MCB on a page for it's child tabs.
-  var persistAllowMixedContentInChildTab = false;
-
-  if (where == "tab" && gBrowser.docShell.mixedContentChannel) {
-    const sm = Services.scriptSecurityManager;
-    try {
-      var targetURI = makeURI(href);
-      let isPrivateWin =
-        doc.nodePrincipal.originAttributes.privateBrowsingId > 0;
-      sm.checkSameOriginURI(
-        doc.documentURIObject,
-        targetURI,
-        false,
-        isPrivateWin
-      );
-      persistAllowMixedContentInChildTab = true;
-    } catch (e) {}
-  }
-
   let frameID = WebNavigationFrames.getFrameId(doc.defaultView);
 
   urlSecurityCheck(href, doc.nodePrincipal);
   let params = {
     charset: doc.characterSet,
-    allowMixedContent: persistAllowMixedContentInChildTab,
     referrerInfo,
     originPrincipal: doc.nodePrincipal,
     originStoragePrincipal: doc.effectiveStoragePrincipal,
@@ -8611,7 +8545,7 @@ function safeModeRestart() {
     return;
   }
 
-  Services.obs.notifyObservers(null, "restart-in-safe-mode");
+  Services.obs.notifyObservers(window, "restart-in-safe-mode");
 }
 
 /* duplicateTabIn duplicates tab in a place specified by the parameter |where|.

@@ -5031,20 +5031,6 @@ nsDocShell::GetDefaultLoadFlags(uint32_t* aDefaultLoadFlags) {
 }
 
 NS_IMETHODIMP
-nsDocShell::SetMixedContentChannel(nsIChannel* aMixedContentChannel) {
-#ifdef DEBUG
-  // if the channel is non-null
-  if (aMixedContentChannel) {
-    NS_WARNING_ASSERTION(mBrowsingContext->IsTop(),
-                         "Setting mMixedContentChannel on a docshell that is "
-                         "not the root docshell");
-  }
-#endif
-  mMixedContentChannel = aMixedContentChannel;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
 nsDocShell::GetFailedChannel(nsIChannel** aFailedChannel) {
   NS_ENSURE_ARG_POINTER(aFailedChannel);
   Document* doc = GetDocument();
@@ -5053,13 +5039,6 @@ nsDocShell::GetFailedChannel(nsIChannel** aFailedChannel) {
     return NS_OK;
   }
   NS_IF_ADDREF(*aFailedChannel = doc->GetFailedChannel());
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsDocShell::GetMixedContentChannel(nsIChannel** aMixedContentChannel) {
-  NS_ENSURE_ARG_POINTER(aMixedContentChannel);
-  NS_IF_ADDREF(*aMixedContentChannel = mMixedContentChannel);
   return NS_OK;
 }
 
@@ -5956,20 +5935,6 @@ void nsDocShell::OnRedirectStateChange(nsIChannel* aOldChannel,
                                        uint32_t aStateFlags) {
   NS_ASSERTION(aStateFlags & STATE_REDIRECTING,
                "Calling OnRedirectStateChange when there is no redirect");
-
-  // If mixed content is allowed for the old channel, we forward
-  // the permission to the new channel if it has the same origin
-  // as the old one.
-  if (mMixedContentChannel && mMixedContentChannel == aOldChannel) {
-    nsresult rv =
-        nsContentUtils::CheckSameOrigin(mMixedContentChannel, aNewChannel);
-    if (NS_SUCCEEDED(rv)) {
-      SetMixedContentChannel(aNewChannel);  // Same origin: forward permission.
-    } else {
-      SetMixedContentChannel(
-          nullptr);  // Different origin: clear mMixedContentChannel.
-    }
-  }
 
   if (!(aStateFlags & STATE_IS_DOCUMENT)) {
     return;  // not a toplevel document
@@ -8826,15 +8791,17 @@ bool nsDocShell::IsSameDocumentNavigation(nsDocShellLoadState* aLoadState,
       // HTTPS-Only Mode is enabled and the two URIs are same-origin (modulo the
       // fact that the new URI is currently http), then set mSameExceptHashes to
       // true and only perform a fragment navigation.
-      nsCOMPtr<nsIChannel> docChannel = GetCurrentDocChannel();
-      nsCOMPtr<nsILoadInfo> loadInfo;
-      if (docChannel) {
-        loadInfo = docChannel->LoadInfo();
-      }
-      if (!aState.mSameExceptHashes &&
-          nsHTTPSOnlyUtils::IsEqualURIExceptSchemeAndRef(
-              currentExposableURI, aLoadState->URI(), loadInfo)) {
-        aState.mSameExceptHashes = true;
+      if (!aState.mSameExceptHashes) {
+        nsCOMPtr<nsIChannel> docChannel = GetCurrentDocChannel();
+        if (docChannel) {
+          nsCOMPtr<nsILoadInfo> docLoadInfo = docChannel->LoadInfo();
+          if (!docLoadInfo->GetLoadErrorPage()) {
+            if (nsHTTPSOnlyUtils::IsEqualURIExceptSchemeAndRef(
+                    currentExposableURI, aLoadState->URI(), docLoadInfo)) {
+              aState.mSameExceptHashes = true;
+            }
+          }
+        }
       }
     }
   }
@@ -10213,6 +10180,11 @@ nsresult nsDocShell::DoURILoad(nsDocShellLoadState* aLoadState,
     return NS_ERROR_UNEXPECTED;
   }
 
+  // Persist and sync layout history state before we load a new uri, as this
+  // might be our last chance to do so, in the content process.
+  PersistLayoutHistoryState();
+  SynchronizeLayoutHistoryState();
+
   nsresult rv;
   nsContentPolicyType contentPolicyType = DetermineContentType();
 
@@ -10670,34 +10642,10 @@ static nsresult AppendSegmentToString(nsIInputStream* aIn, void* aClosure,
   return openFlags;
 }
 
-void nsDocShell::UpdateMixedContentChannelForNewLoad(nsIChannel* aChannel) {
-  if (mLoadType == LOAD_NORMAL_ALLOW_MIXED_CONTENT ||
-      mLoadType == LOAD_RELOAD_ALLOW_MIXED_CONTENT) {
-    SetMixedContentChannel(aChannel);
-  } else if (mMixedContentChannel) {
-    /*
-     * If the user "Disables Protection on This Page", we call
-     * SetMixedContentChannel for the first time, otherwise
-     * mMixedContentChannel is still null.
-     * Later, if the new channel passes a same orign check, we remember the
-     * users decision by calling SetMixedContentChannel using the new channel.
-     * This way, the user does not have to click the disable protection button
-     * over and over for browsing the same site.
-     */
-    nsresult rv =
-        nsContentUtils::CheckSameOrigin(mMixedContentChannel, aChannel);
-    if (NS_FAILED(rv) || NS_FAILED(SetMixedContentChannel(aChannel))) {
-      SetMixedContentChannel(nullptr);
-    }
-  }
-}
-
 nsresult nsDocShell::OpenInitializedChannel(nsIChannel* aChannel,
                                             nsIURILoader* aURILoader,
                                             uint32_t aOpenFlags) {
   nsresult rv = NS_OK;
-
-  UpdateMixedContentChannelForNewLoad(aChannel);
 
   // If anything fails here, make sure to clear our initial ClientSource.
   auto cleanupInitialClient =
@@ -10754,8 +10702,6 @@ nsresult nsDocShell::OpenInitializedChannel(nsIChannel* aChannel,
 nsresult nsDocShell::OpenRedirectedChannel(nsDocShellLoadState* aLoadState) {
   nsCOMPtr<nsIChannel> channel = aLoadState->GetPendingRedirectedChannel();
   MOZ_ASSERT(channel);
-
-  UpdateMixedContentChannelForNewLoad(channel);
 
   // If anything fails here, make sure to clear our initial ClientSource.
   auto cleanupInitialClient =

@@ -4968,10 +4968,13 @@ nscoord nsLayoutUtils::IntrinsicForAxis(
             minContentSize = minISize;
           }
         }
-        if (MOZ_UNLIKELY(aFlags & nsLayoutUtils::MIN_INTRINSIC_ISIZE)) {
+
+        if (MOZ_UNLIKELY(aFlags & nsLayoutUtils::MIN_INTRINSIC_ISIZE) &&
+            aFrame->IsFrameOfType(nsIFrame::eReplaced)) {
           // This is the 'min-width/height:auto' "transferred size" piece of:
-          // https://www.w3.org/TR/css-flexbox-1/#min-width-automatic-minimum-size
+          // https://drafts.csswg.org/css-flexbox-1/#min-size-auto
           // https://drafts.csswg.org/css-grid/#min-size-auto
+          // Per spec, we handle it only for replaced elements.
           result = std::min(result, minContentSize);
         }
       }
@@ -6583,18 +6586,11 @@ already_AddRefed<imgIContainer> nsLayoutUtils::OrientImage(
   MOZ_ASSERT(aContainer, "Should have an image container");
   nsCOMPtr<imgIContainer> img(aContainer);
 
-  bool handledOrientation = img->HandledOrientation();
-
   switch (aOrientation) {
     case StyleImageOrientation::FromImage:
-      if (!handledOrientation) {
-        img = ImageOps::Orient(img, img->GetOrientation());
-      }
       break;
     case StyleImageOrientation::None:
-      if (handledOrientation) {
-        img = ImageOps::Unorient(img);
-      }
+      img = ImageOps::Unorient(img);
       break;
   }
 
@@ -6799,8 +6795,8 @@ nsIFrame* nsLayoutUtils::GetReferenceFrame(nsIFrame* aFrame) {
       aStyleText->mTextJustify == StyleTextJustify::InterCharacter) {
     result |= gfx::ShapedTextFlags::TEXT_DISABLE_OPTIONAL_LIGATURES;
   }
-  if (aStyleText->mControlCharacterVisibility ==
-      StyleControlCharacterVisibility::Hidden) {
+  if (aStyleText->mMozControlCharacterVisibility ==
+      StyleMozControlCharacterVisibility::Hidden) {
     result |= gfx::ShapedTextFlags::TEXT_HIDE_CONTROL_CHARACTERS;
   }
   switch (aComputedStyle->StyleText()->mTextRendering) {
@@ -7024,9 +7020,7 @@ SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
   nsCOMPtr<nsIContent> content = do_QueryInterface(aElement);
 
   // Ensure that the image is oriented the same way as it's displayed.
-  auto orientation = StaticPrefs::image_honor_orientation_metadata()
-                         ? StyleImageOrientation::FromImage
-                         : StyleImageOrientation::None;
+  auto orientation = StyleImageOrientation::FromImage;
   if (nsIFrame* f = content->GetPrimaryFrame()) {
     orientation = f->StyleVisibility()->mImageOrientation;
   }
@@ -9001,16 +8995,18 @@ nsBlockFrame* nsLayoutUtils::GetFloatContainingBlock(nsIFrame* aFrame) {
 // Element::GetBoundingClientRect().
 /* static */
 CSSRect nsLayoutUtils::GetBoundingContentRect(
-    const nsIContent* aContent, const nsIScrollableFrame* aRootScrollFrame) {
+    const nsIContent* aContent, const nsIScrollableFrame* aRootScrollFrame,
+    Maybe<CSSRect>* aOutNearestScrollClip) {
   if (nsIFrame* frame = aContent->GetPrimaryFrame()) {
-    return GetBoundingFrameRect(frame, aRootScrollFrame);
+    return GetBoundingFrameRect(frame, aRootScrollFrame, aOutNearestScrollClip);
   }
   return CSSRect();
 }
 
 /* static */
 CSSRect nsLayoutUtils::GetBoundingFrameRect(
-    nsIFrame* aFrame, const nsIScrollableFrame* aRootScrollFrame) {
+    nsIFrame* aFrame, const nsIScrollableFrame* aRootScrollFrame,
+    Maybe<CSSRect>* aOutNearestScrollClip) {
   CSSRect result;
   nsIFrame* relativeTo = aRootScrollFrame->GetScrolledFrame();
   result = CSSRect::FromAppUnits(nsLayoutUtils::GetAllInFlowRectsUnion(
@@ -9029,6 +9025,10 @@ CSSRect nsLayoutUtils::GetBoundingFrameRect(
     CSSRect subFrameRect =
         CSSRect::FromAppUnits(nsLayoutUtils::TransformFrameRectToAncestor(
             subFrame, subFrame->GetRectRelativeToSelf(), relativeTo));
+
+    if (aOutNearestScrollClip) {
+      *aOutNearestScrollClip = Some(subFrameRect);
+    }
 
     result = subFrameRect.Intersect(result);
   }
@@ -9431,14 +9431,6 @@ nsPoint nsLayoutUtils::ComputeOffsetToUserSpace(nsDisplayListBuilder* aBuilder,
               nsPresContext::CSSPixelsToAppUnits(float(toUserSpaceGfx.y)));
 
   return (offsetToBoundingBox - toUserSpace);
-}
-
-/* static */
-mozilla::StyleControlCharacterVisibility
-nsLayoutUtils::ControlCharVisibilityDefault() {
-  return StaticPrefs::layout_css_control_characters_visible()
-             ? StyleControlCharacterVisibility::Visible
-             : StyleControlCharacterVisibility::Hidden;
 }
 
 /* static */

@@ -740,13 +740,24 @@
   margin-top: 0 !important;
 }
 
-#TabsToolbar:not([brighttext]) #tabbrowser-tabs:not([noshadowfortests]) .tabbrowser-tab[visuallyselected=true] > .tab-stack > .tab-background {
-  box-shadow: 0 0 1.5px var(--tab-line-color, var(--tabs-border-color, rgba(128,128,142,0.9))),
+#TabsToolbar:not([brighttext]) #tabbrowser-tabs:not([noshadowfortests]) .tabbrowser-tab:is([visuallyselected=true], [multiselected]) > .tab-stack > .tab-background {
+  box-shadow: 0 0 1px var(--tab-line-color, rgba(128,128,142,0.9)),
               0 0 4px rgba(128,128,142,0.5);
 }
 
 #TabsToolbar[brighttext] #tabbrowser-tabs:not([noshadowfortests]) .tabbrowser-tab:is([visuallyselected=true], [multiselected]) > .tab-stack > .tab-background:-moz-lwtheme {
-  box-shadow: 0 0 1.5px var(--tab-line-color, var(--tabs-border-color, rgba(128,128,142,0.9)));
+  box-shadow: 0 0 1px var(--tab-line-color, rgba(128,128,142,0.9));
+}
+
+/* For themes outside of Light and Dark (which are curated by Mozilla), show a thicker border
+   around the tab to help themes that are dependent on tab_line to show the selected tab. */
+:root:not([lwtheme-mozlightdark]) #TabsToolbar:not([brighttext]) #tabbrowser-tabs:not([noshadowfortests]) .tabbrowser-tab:is([visuallyselected=true], [multiselected]) > .tab-stack > .tab-background:-moz-lwtheme {
+  box-shadow: 0 0 0 1px var(--tab-line-color, var(--tabs-border-color, rgba(128,128,142,0.9))),
+              0 0 4px rgba(128,128,142,0.5);
+}
+
+:root:not([lwtheme-mozlightdark]) #TabsToolbar[brighttext] #tabbrowser-tabs:not([noshadowfortests]) .tabbrowser-tab:is([visuallyselected=true], [multiselected]) > .tab-stack > .tab-background:-moz-lwtheme {
+  box-shadow: 0 0 0 1px var(--tab-line-color, var(--tabs-border-color, rgba(128,128,142,0.9)));
 }
 } /*** END proton ***/
 
@@ -755,16 +766,14 @@
 %ifdef MENUBAR_CAN_AUTOHIDE
 #toolbar-menubar:not([autohide=true]) + #TabsToolbar,
 %endif
-:root:not([tabsintitlebar]),
-:root[extradragspace] {
+:root:not([tabsintitlebar]) {
   --tabs-top-border-width: 1px;
 }
 
 %ifdef MENUBAR_CAN_AUTOHIDE
 #toolbar-menubar:not([autohide=true]) + #TabsToolbar .tabbrowser-tab > .tab-stack > .tab-background,
 %endif
-:root:not([tabsintitlebar]) .tab-background,
-:root[extradragspace] .tab-background {
+:root:not([tabsintitlebar]) .tab-background {
   border-top-style: solid;
 }
 } /*** END !proton ***/
@@ -953,9 +962,9 @@
 }
 
 %ifdef MENUBAR_CAN_AUTOHIDE
-:root[tabsintitlebar]:not([extradragspace]) #toolbar-menubar[autohide=true] + #TabsToolbar .tabbrowser-tab::after,
+:root[tabsintitlebar] #toolbar-menubar[autohide=true] + #TabsToolbar .tabbrowser-tab::after,
 %else
-:root[tabsintitlebar]:not([extradragspace]) .tabbrowser-tab::after,
+:root[tabsintitlebar] .tabbrowser-tab::after,
 %endif
 /* Show full height tab separators on hover and multiselection. */
 .tabbrowser-tab:hover::after,

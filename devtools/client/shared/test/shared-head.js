@@ -352,11 +352,9 @@ async function safeCloseBrowserConsole({ clearOutput = false } = {}) {
   // It might happen that waitForAllTargetsToBeAttached does not resolve, so we set a
   // timeout of 1s before closing
   await Promise.race([
-    waitForAllTargetsToBeAttached(hud.targetList),
+    waitForAllTargetsToBeAttached(hud.commands.targetCommand),
     wait(1000),
   ]);
-
-  hud.targetList.destroy();
 
   info("Close the Browser Console");
   await BrowserConsoleManager.closeBrowserConsole();
@@ -366,12 +364,12 @@ async function safeCloseBrowserConsole({ clearOutput = false } = {}) {
 /**
  * Returns a Promise that resolves when all the targets are fully attached.
  *
- * @param {TargetList} targetList
+ * @param {TargetCommand} targetCommand
  */
-function waitForAllTargetsToBeAttached(targetList) {
+function waitForAllTargetsToBeAttached(targetCommand) {
   return Promise.allSettled(
-    targetList
-      .getAllTargets(targetList.ALL_TYPES)
+    targetCommand
+      .getAllTargets(targetCommand.ALL_TYPES)
       .map(target => target._onThreadInitialized)
   );
 }

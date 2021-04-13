@@ -5,6 +5,7 @@
 
 #include "nsMenuX.h"
 
+#include <_types/_uint32_t.h>
 #include <dlfcn.h>
 
 #include "mozilla/dom/Document.h"
@@ -134,6 +135,7 @@ nsMenuX::~nsMenuX() {
   // Make sure pending popuphiding/popuphidden events aren't dropped.
   FlushMenuClosedRunnable();
 
+  OnHighlightedItemChanged(Nothing());
   RemoveAll();
 
   mNativeMenu.delegate = nil;
@@ -287,6 +289,18 @@ Maybe<nsMenuX::MenuChild> nsMenuX::GetVisibleItemAt(uint32_t aPos) {
   return {};
 }
 
+Maybe<nsMenuX::MenuChild> nsMenuX::GetItemForElement(Element* aMenuChildElement) {
+  for (auto& child : mMenuChildren) {
+    RefPtr<nsIContent> content =
+        child.match([](const RefPtr<nsMenuX>& aMenu) { return aMenu->Content(); },
+                    [](const RefPtr<nsMenuItemX>& aMenuItem) { return aMenuItem->Content(); });
+    if (content == aMenuChildElement) {
+      return Some(child);
+    }
+  }
+  return {};
+}
+
 nsresult nsMenuX::RemoveAll() {
   NS_OBJC_BEGIN_TRY_ABORT_BLOCK;
 
@@ -313,7 +327,11 @@ nsresult nsMenuX::RemoveAll() {
   NS_OBJC_END_TRY_ABORT_BLOCK;
 }
 
-nsEventStatus nsMenuX::MenuOpened() {
+void nsMenuX::MenuOpened() {
+  if (mIsOpen) {
+    return;
+  }
+
   if (!mDidFirePopupshowingAndIsApprovedToOpen) {
     // Fire popupshowing now.
     bool approvedToOpen = OnOpen();
@@ -354,16 +372,22 @@ nsEventStatus nsMenuX::MenuOpened() {
   }
 
   if (mNeedsRebuild) {
+    OnHighlightedItemChanged(Nothing());
     RemoveAll();
     RebuildMenu();
   }
-
-  return nsEventStatus_eConsumeNoDefault;
 }
 
 void nsMenuX::MenuClosed() {
   if (!mIsOpen) {
     return;
+  }
+
+  // If any of our submenus were opened programmatically, make sure they get closed first.
+  for (auto& child : mMenuChildren) {
+    if (child.is<RefPtr<nsMenuX>>()) {
+      child.as<RefPtr<nsMenuX>>()->MenuClosed();
+    }
   }
 
   mIsOpen = false;
@@ -400,6 +424,13 @@ void nsMenuX::MenuClosed() {
 }
 
 void nsMenuX::FlushMenuClosedRunnable() {
+  // If any of our submenus have a pending menu closed runnable, make sure those run first.
+  for (auto& child : mMenuChildren) {
+    if (child.is<RefPtr<nsMenuX>>()) {
+      child.as<RefPtr<nsMenuX>>()->FlushMenuClosedRunnable();
+    }
+  }
+
   if (mPendingAsyncMenuCloseRunnable) {
     MenuClosedAsync();
   }
@@ -410,6 +441,16 @@ void nsMenuX::MenuClosedAsync() {
     mPendingAsyncMenuCloseRunnable->Cancel();
     mPendingAsyncMenuCloseRunnable = nullptr;
   }
+
+  // If we have pending command events, run those first.
+  for (auto& runnable : mPendingCommandRunnables) {
+    runnable->Run();
+    runnable->Cancel();  // The runnable is still in the event loop, make sure it doesn't run again.
+  }
+  mPendingCommandRunnables.Clear();
+
+  // Make sure no item is highlighted.
+  OnHighlightedItemChanged(Nothing());
 
   nsCOMPtr<nsIContent> popupContent = GetMenuPopupContent();
   nsCOMPtr<nsIContent> dispatchTo = popupContent ? popupContent : mContent;
@@ -433,6 +474,47 @@ void nsMenuX::MenuClosedAsync() {
   }
 }
 
+void nsMenuX::ActivateItemAndClose(RefPtr<nsMenuItemX>&& aItem, NSEventModifierFlags aModifiers) {
+  NS_OBJC_BEGIN_TRY_ABORT_BLOCK;
+
+  // Run the command asynchronously so that the menu can hide before the command runs.
+  class DoCommandRunnable final : public mozilla::CancelableRunnable {
+   public:
+    explicit DoCommandRunnable(RefPtr<nsMenuItemX>&& aItem, NSEventModifierFlags aModifiers)
+        : CancelableRunnable("DoCommandRunnable"), mMenuItem(aItem), mModifiers(aModifiers) {}
+
+    nsresult Run() override {
+      if (mMenuItem) {
+        RefPtr<nsMenuItemX> menuItem = std::move(mMenuItem);
+        menuItem->DoCommand(mModifiers);
+      }
+      return NS_OK;
+    }
+    nsresult Cancel() override {
+      mMenuItem = nullptr;
+      return NS_OK;
+    }
+
+   private:
+    RefPtr<nsMenuItemX> mMenuItem;  // cleared by Cancel() and Run()
+    NSEventModifierFlags mModifiers;
+  };
+  RefPtr<CancelableRunnable> doCommandAsync = new DoCommandRunnable(std::move(aItem), aModifiers);
+  mPendingCommandRunnables.AppendElement(doCommandAsync);
+  NS_DispatchToCurrentThread(doCommandAsync);
+
+  if (mIsOpen) {
+    // cancelTracking(WithoutAnimation) is asynchronous; the menu only hides once the stack unwinds
+    // from NSMenu's nested "tracking" event loop.
+    [mNativeMenu cancelTrackingWithoutAnimation];
+  }
+
+  // We don't call FlushMenuClosedRunnable() here, so that the command event runs before
+  // MenuClosedAsync().
+
+  NS_OBJC_END_TRY_ABORT_BLOCK;
+}
+
 bool nsMenuX::Close() {
   NS_OBJC_BEGIN_TRY_ABORT_BLOCK;
 
@@ -453,6 +535,30 @@ bool nsMenuX::Close() {
   return wasOpen;
 
   NS_OBJC_END_TRY_ABORT_BLOCK;
+}
+
+void nsMenuX::OnHighlightedItemChanged(const Maybe<uint32_t>& aNewHighlightedIndex) {
+  if (mHighlightedItemIndex == aNewHighlightedIndex) {
+    return;
+  }
+
+  if (mHighlightedItemIndex) {
+    Maybe<nsMenuX::MenuChild> target = GetVisibleItemAt(*mHighlightedItemIndex);
+    if (target && target->is<RefPtr<nsMenuItemX>>()) {
+      bool handlerCalledPreventDefault;  // but we don't actually care
+      target->as<RefPtr<nsMenuItemX>>()->DispatchDOMEvent(u"DOMMenuItemInactive"_ns,
+                                                          &handlerCalledPreventDefault);
+    }
+  }
+  if (aNewHighlightedIndex) {
+    Maybe<nsMenuX::MenuChild> target = GetVisibleItemAt(*aNewHighlightedIndex);
+    if (target && target->is<RefPtr<nsMenuItemX>>()) {
+      bool handlerCalledPreventDefault;  // but we don't actually care
+      target->as<RefPtr<nsMenuItemX>>()->DispatchDOMEvent(u"DOMMenuItemActive"_ns,
+                                                          &handlerCalledPreventDefault);
+    }
+  }
+  mHighlightedItemIndex = aNewHighlightedIndex;
 }
 
 void nsMenuX::RebuildMenu() {
@@ -586,25 +692,27 @@ bool nsMenuX::OnOpen() {
     return false;
   }
 
+  DidFirePopupShowing();
+
+  return true;
+}
+
+void nsMenuX::DidFirePopupShowing() {
   mDidFirePopupshowingAndIsApprovedToOpen = true;
 
   // If the open is going to succeed we need to walk our menu items, checking to
   // see if any of them have a command attribute. If so, several attributes
   // must potentially be updated.
 
-  // Get new popup content first since it might have changed as a result of the
-  // eXULPopupShowing event above.
-  popupContent = GetMenuPopupContent();
+  nsCOMPtr<nsIContent> popupContent = GetMenuPopupContent();
   if (!popupContent) {
-    return true;
+    return;
   }
 
   nsXULPopupManager* pm = nsXULPopupManager::GetInstance();
   if (pm) {
     pm->UpdateMenuItems(popupContent);
   }
-
-  return true;
 }
 
 // Find the |menupopup| child in the |popup| representing this menu. It should be one
@@ -788,18 +896,14 @@ void nsMenuX::Dump(uint32_t aIndent) const {
   return self;
 }
 
-- (void)menu:(NSMenu*)menu willHighlightItem:(NSMenuItem*)item {
-  if (!menu || !item || !mGeckoMenu) {
+- (void)menu:(NSMenu*)aMenu willHighlightItem:(NSMenuItem*)aItem {
+  if (!aMenu || !mGeckoMenu) {
     return;
   }
 
-  Maybe<nsMenuX::MenuChild> target =
-      mGeckoMenu->GetVisibleItemAt((uint32_t)[menu indexOfItem:item]);
-  if (target && target->is<RefPtr<nsMenuItemX>>()) {
-    bool handlerCalledPreventDefault;  // but we don't actually care
-    target->as<RefPtr<nsMenuItemX>>()->DispatchDOMEvent(u"DOMMenuItemActive"_ns,
-                                                        &handlerCalledPreventDefault);
-  }
+  Maybe<uint32_t> index =
+      aItem ? Some(static_cast<uint32_t>([aMenu indexOfItem:aItem])) : Nothing();
+  mGeckoMenu->OnHighlightedItemChanged(index);
 }
 
 - (void)menuWillOpen:(NSMenu*)menu {

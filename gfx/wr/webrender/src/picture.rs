@@ -2199,6 +2199,10 @@ pub struct TileCacheParams {
     pub shared_clip_chain: ClipChainId,
     // Virtual surface sizes are always square, so this represents both the width and height
     pub virtual_surface_size: i32,
+    // The number of compositor surfaces that are being requested for this tile cache.
+    // This is only a suggestion - the tile cache will clamp this as a reasonable number
+    // and only promote a limited number of surfaces.
+    pub compositor_surface_count: usize,
 }
 
 /// Represents a cache of tiles that make up a picture primitives.
@@ -2218,8 +2222,6 @@ pub struct TileCacheInstance {
     pub spatial_node_index: SpatialNodeIndex,
     /// Hash of tiles present in this picture.
     pub tiles: FastHashMap<TileOffset, Box<Tile>>,
-    /// A helper struct to map local rects into surface coords.
-    map_local_to_surface: SpaceMapper<LayoutPixel, PicturePixel>,
     /// List of opacity bindings, with some extra information
     /// about whether they changed since last frame.
     opacity_bindings: FastHashMap<PropertyBindingId, OpacityBindingInfo>,
@@ -2320,10 +2322,6 @@ impl TileCacheInstance {
             slice_flags: params.slice_flags,
             spatial_node_index: params.spatial_node_index,
             tiles: FastHashMap::default(),
-            map_local_to_surface: SpaceMapper::new(
-                ROOT_SPATIAL_NODE_INDEX,
-                PictureRect::zero(),
-            ),
             opacity_bindings: FastHashMap::default(),
             old_opacity_bindings: FastHashMap::default(),
             spatial_node_comparer: SpatialNodeComparer::new(),
@@ -2361,6 +2359,11 @@ impl TileCacheInstance {
             external_native_surface_cache: FastHashMap::default(),
             frame_id: FrameId::INVALID,
         }
+    }
+
+    /// Return the total number of tiles allocated by this tile cache
+    pub fn tile_count(&self) -> usize {
+        self.tile_rect.size.area() as usize
     }
 
     /// Reset this tile cache with the updated parameters from a new scene
@@ -2460,10 +2463,6 @@ impl TileCacheInstance {
         // during the prim dependency checks.
         self.backdrop = BackdropInfo::empty();
 
-        self.map_local_to_surface = SpaceMapper::new(
-            self.spatial_node_index,
-            pic_rect,
-        );
         let pic_to_world_mapper = SpaceMapper::new_with_target(
             ROOT_SPATIAL_NODE_INDEX,
             self.spatial_node_index,
@@ -2478,6 +2477,11 @@ impl TileCacheInstance {
             let shared_clips = &mut frame_state.scratch.picture.clip_chain_ids;
             shared_clips.clear();
 
+            let map_local_to_surface = SpaceMapper::new(
+                self.spatial_node_index,
+                pic_rect,
+            );
+
             let mut current_clip_chain_id = self.shared_clip_chain;
             while current_clip_chain_id != ClipChainId::NONE {
                 shared_clips.push(current_clip_chain_id);
@@ -2488,7 +2492,7 @@ impl TileCacheInstance {
             frame_state.clip_store.set_active_clips(
                 LayoutRect::max_rect(),
                 self.spatial_node_index,
-                self.map_local_to_surface.ref_spatial_node_index,
+                map_local_to_surface.ref_spatial_node_index,
                 &shared_clips,
                 frame_context.spatial_tree,
                 &mut frame_state.data_stores.clip,
@@ -2496,7 +2500,7 @@ impl TileCacheInstance {
 
             let clip_chain_instance = frame_state.clip_store.build_clip_chain_instance(
                 pic_rect.cast_unit(),
-                &self.map_local_to_surface,
+                &map_local_to_surface,
                 &pic_to_world_mapper,
                 frame_context.spatial_tree,
                 frame_state.gpu_cache,
@@ -2902,7 +2906,6 @@ impl TileCacheInstance {
         &mut self,
         prim_info: &mut PrimitiveDependencyInfo,
         flags: PrimitiveFlags,
-        prim_rect: PictureRect,
         local_prim_rect: LayoutRect,
         prim_spatial_node_index: SpatialNodeIndex,
         frame_context: &FrameVisibilityContext,
@@ -2930,7 +2933,6 @@ impl TileCacheInstance {
         self.setup_compositor_surfaces_impl(
             prim_info,
             flags,
-            prim_rect,
             local_prim_rect,
             prim_spatial_node_index,
             frame_context,
@@ -2951,7 +2953,6 @@ impl TileCacheInstance {
         &mut self,
         prim_info: &mut PrimitiveDependencyInfo,
         flags: PrimitiveFlags,
-        prim_rect: PictureRect,
         local_prim_rect: LayoutRect,
         prim_spatial_node_index: SpatialNodeIndex,
         frame_context: &FrameVisibilityContext,
@@ -2983,7 +2984,6 @@ impl TileCacheInstance {
         self.setup_compositor_surfaces_impl(
             prim_info,
             flags,
-            prim_rect,
             local_prim_rect,
             prim_spatial_node_index,
             frame_context,
@@ -3004,7 +3004,6 @@ impl TileCacheInstance {
         &mut self,
         prim_info: &mut PrimitiveDependencyInfo,
         flags: PrimitiveFlags,
-        prim_rect: PictureRect,
         local_prim_rect: LayoutRect,
         prim_spatial_node_index: SpatialNodeIndex,
         frame_context: &FrameVisibilityContext,
@@ -3015,6 +3014,24 @@ impl TileCacheInstance {
         image_rendering: ImageRendering,
     ) -> bool {
         prim_info.is_compositor_surface = true;
+
+        let map_local_to_surface = SpaceMapper::new_with_target(
+            self.spatial_node_index,
+            prim_spatial_node_index,
+            self.local_rect,
+            frame_context.spatial_tree,
+        );
+
+        // Map the primitive local rect into picture space.
+        let prim_rect = match map_local_to_surface.map(&local_prim_rect) {
+            Some(rect) => rect,
+            None => return true,
+        };
+
+        // If the rect is invalid, no need to create dependencies.
+        if prim_rect.size.is_empty() {
+            return true;
+        }
 
         let pic_to_world_mapper = SpaceMapper::new_with_target(
             ROOT_SPATIAL_NODE_INDEX,
@@ -3215,22 +3232,6 @@ impl TileCacheInstance {
         let prim_surface_index = *surface_stack.last().unwrap();
         let prim_clip_chain = &prim_instance.vis.clip_chain;
 
-        self.map_local_to_surface.set_target_spatial_node(
-            prim_spatial_node_index,
-            frame_context.spatial_tree,
-        );
-
-        // Map the primitive local rect into picture space.
-        let prim_rect = match self.map_local_to_surface.map(&local_prim_rect) {
-            Some(rect) => rect,
-            None => return,
-        };
-
-        // If the rect is invalid, no need to create dependencies.
-        if prim_rect.size.is_empty() {
-            return;
-        }
-
         // If the primitive is directly drawn onto this picture cache surface, then
         // the pic_clip_rect is in the same space. If not, we need to map it from
         // the surface space into the picture cache space.
@@ -3394,7 +3395,6 @@ impl TileCacheInstance {
                     promote_to_surface = self.setup_compositor_surfaces_rgb(
                         &mut prim_info,
                         image_key.common.flags,
-                        prim_rect,
                         local_prim_rect,
                         prim_spatial_node_index,
                         frame_context,
@@ -3454,7 +3454,6 @@ impl TileCacheInstance {
                     promote_to_surface = self.setup_compositor_surfaces_yuv(
                         &mut prim_info,
                         prim_data.common.flags,
-                        prim_rect,
                         local_prim_rect,
                         prim_spatial_node_index,
                         frame_context,
@@ -4314,6 +4313,9 @@ pub struct PrimitiveList {
     pub clusters: Vec<PrimitiveCluster>,
     pub prim_instances: Vec<PrimitiveInstance>,
     pub child_pictures: Vec<PictureIndex>,
+    /// The number of preferred compositor surfaces that were found when
+    /// adding prims to this list.
+    pub compositor_surface_count: usize,
 }
 
 impl PrimitiveList {
@@ -4326,6 +4328,7 @@ impl PrimitiveList {
             clusters: Vec::new(),
             prim_instances: Vec::new(),
             child_pictures: Vec::new(),
+            compositor_surface_count: 0,
         }
     }
 
@@ -4353,6 +4356,10 @@ impl PrimitiveList {
 
         if prim_flags.contains(PrimitiveFlags::IS_BACKFACE_VISIBLE) {
             flags.insert(ClusterFlags::IS_BACKFACE_VISIBLE);
+        }
+
+        if prim_flags.contains(PrimitiveFlags::PREFER_COMPOSITOR_SURFACE) {
+            self.compositor_surface_count += 1;
         }
 
         let culling_rect = prim_instance.clip_set.local_clip_rect
@@ -4692,7 +4699,7 @@ impl PicturePrimitive {
             Some(RasterConfig { surface_index, composite_mode: PictureCompositeMode::TileCache { slice_id }, .. }) => {
                 let tile_cache = tile_caches.get_mut(&slice_id).unwrap();
                 let mut debug_info = SliceDebugInfo::new();
-                let mut surface_tasks = Vec::with_capacity(tile_cache.tiles.len());
+                let mut surface_tasks = Vec::with_capacity(tile_cache.tile_count());
                 let mut surface_device_rect = DeviceRect::zero();
                 let device_pixel_scale = frame_state
                     .surfaces[surface_index.0]

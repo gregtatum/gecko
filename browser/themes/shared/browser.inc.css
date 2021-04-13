@@ -14,8 +14,6 @@
   --toolbar-bgimage: var(--toolbar-non-lwt-bgimage);
   --toolbar-color: var(--toolbar-non-lwt-textcolor);
 
-  /* Note: Setting this to 0 (without px) breaks CSS calculations for OSX. */
-  --space-above-tabbar: 0px;
   --tabs-navbar-shadow-size: 1px;
 
   --panelui-subview-transition-duration: 150ms;
@@ -40,6 +38,7 @@
   --urlbar-box-active-bgcolor: color-mix(in srgb, var(--urlbar-box-bgcolor), currentColor 21%);
 
   --urlbar-min-height: 32px;
+  --urlbar-icon-fill-opacity: 1;
   --urlbar-icon-padding: 6px; /* (32px - 2px border - 2px padding - 16px icon) / 2 */
   --urlbar-separator-color: var(--panel-separator-color);
   --urlbar-popup-url-color: -moz-nativehyperlinktext;
@@ -55,6 +54,7 @@
     --focus-outline-width: 0;
     --identity-box-margin-inline: 3px;
     --identity-box-label-opacity: .6;
+    --urlbar-icon-fill-opacity: .6;
   }
 } /*** END !proton ***/
 
@@ -68,7 +68,7 @@
   --urlbar-icon-padding: 7px; /* (34px - 2px border - 2px padding - 16px icon) / 2 */
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 :root {
   --urlbar-min-height: 30px;
   --urlbar-icon-padding: 6px; /* (30px - 2px border - 16px icon) / 2 */
@@ -108,14 +108,10 @@
   }
 }
 
-:root[lwt-toolbar-field-brighttext] {
+:root[lwt-toolbar-field-focus-brighttext] {
   --lwt-popup-brighttext-url-color: #00ddff;
 }
 } /*** END proton ***/
-
-:root[extradragspace][tabsintitlebar]:not([inFullscreen]) {
-  --space-above-tabbar: 8px;
-}
 
 @media (min-resolution: 1.5dppx) {
   :root {

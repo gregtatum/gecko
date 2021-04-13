@@ -38,6 +38,7 @@
 #include "js/UniquePtr.h"
 #include "js/Utility.h"
 #include "js/Vector.h"
+#include "js/WasmFeatures.h"
 #include "vm/MallocProvider.h"
 #include "vm/NativeObject.h"
 #include "wasm/WasmConstants.h"
@@ -1268,36 +1269,27 @@ struct FeatureOptions {
 
 struct FeatureArgs {
   FeatureArgs()
-      : sharedMemory(Shareable::False),
-        refTypes(false),
-        functionReferences(false),
-        gcTypes(false),
-        multiValue(false),
-        v128(false),
+      :
+#define WASM_FEATURE(NAME, LOWER_NAME, ...) LOWER_NAME(false),
+        JS_FOR_WASM_FEATURES(WASM_FEATURE, WASM_FEATURE)
+#undef WASM_FEATURE
+            sharedMemory(Shareable::False),
         hugeMemory(false),
-        simdWormhole(false),
-        exceptions(false) {}
+        simdWormhole(false) {
+  }
   FeatureArgs(const FeatureArgs&) = default;
   FeatureArgs& operator=(const FeatureArgs&) = default;
   FeatureArgs(FeatureArgs&&) = default;
 
   static FeatureArgs build(JSContext* cx, const FeatureOptions& options);
 
-  FeatureArgs withRefTypes(bool refTypes) const {
-    FeatureArgs features = *this;
-    features.refTypes = refTypes;
-    return features;
-  }
+#define WASM_FEATURE(NAME, LOWER_NAME, ...) bool LOWER_NAME;
+  JS_FOR_WASM_FEATURES(WASM_FEATURE, WASM_FEATURE)
+#undef WASM_FEATURE
 
   Shareable sharedMemory;
-  bool refTypes;
-  bool functionReferences;
-  bool gcTypes;
-  bool multiValue;
-  bool v128;
   bool hugeMemory;
   bool simdWormhole;
-  bool exceptions;
 };
 
 // The LitVal class represents a single WebAssembly value of a given value
@@ -1851,17 +1843,13 @@ class ResultType {
   enum Kind {
     EmptyKind = Tagged::ImmediateKind1,
     SingleKind = Tagged::ImmediateKind2,
-#ifdef ENABLE_WASM_MULTI_VALUE
     VectorKind = Tagged::PointerKind1,
-#endif
     InvalidKind = Tagged::PointerKind2,
   };
 
   ResultType(Kind kind, uint32_t imm) : tagged_(Tagged::Kind(kind), imm) {}
-#ifdef ENABLE_WASM_MULTI_VALUE
   explicit ResultType(const ValTypeVector* ptr)
       : tagged_(Tagged::Kind(VectorKind), ptr) {}
-#endif
 
   Kind kind() const { return Kind(tagged_.kind()); }
 
@@ -1870,12 +1858,10 @@ class ResultType {
     return ValType(PackedTypeCode::fromBits(tagged_.immediate()));
   }
 
-#ifdef ENABLE_WASM_MULTI_VALUE
   const ValTypeVector& values() const {
     MOZ_ASSERT(kind() == VectorKind);
     return *tagged_.pointer();
   }
-#endif
 
  public:
   ResultType() : tagged_(Tagged::Kind(InvalidKind), nullptr) {}
@@ -1891,11 +1877,7 @@ class ResultType {
       case 1:
         return Single(vals[0]);
       default:
-#ifdef ENABLE_WASM_MULTI_VALUE
         return ResultType(&vals);
-#else
-        MOZ_CRASH("multi-value returns not supported");
-#endif
     }
   }
 
@@ -1906,10 +1888,8 @@ class ResultType {
         return true;
       case SingleKind:
         return out->append(singleValType());
-#ifdef ENABLE_WASM_MULTI_VALUE
       case VectorKind:
         return out->appendAll(values());
-#endif
       default:
         MOZ_CRASH("bad resulttype");
     }
@@ -1923,10 +1903,8 @@ class ResultType {
         return 0;
       case SingleKind:
         return 1;
-#ifdef ENABLE_WASM_MULTI_VALUE
       case VectorKind:
         return values().length();
-#endif
       default:
         MOZ_CRASH("bad resulttype");
     }
@@ -1937,10 +1915,8 @@ class ResultType {
       case SingleKind:
         MOZ_ASSERT(i == 0);
         return singleValType();
-#ifdef ENABLE_WASM_MULTI_VALUE
       case VectorKind:
         return values()[i];
-#endif
       default:
         MOZ_CRASH("bad resulttype");
     }
@@ -1952,14 +1928,12 @@ class ResultType {
       case SingleKind:
       case InvalidKind:
         return tagged_.bits() == rhs.tagged_.bits();
-#ifdef ENABLE_WASM_MULTI_VALUE
       case VectorKind: {
         if (rhs.kind() != VectorKind) {
           return false;
         }
         return EqualContainers(values(), rhs.values());
       }
-#endif
       default:
         MOZ_CRASH("bad resulttype");
     }
@@ -1982,17 +1956,13 @@ class BlockType {
   enum Kind {
     VoidToVoidKind = Tagged::ImmediateKind1,
     VoidToSingleKind = Tagged::ImmediateKind2,
-#ifdef ENABLE_WASM_MULTI_VALUE
     FuncKind = Tagged::PointerKind1,
     FuncResultsKind = Tagged::PointerKind2
-#endif
   };
 
   BlockType(Kind kind, uint32_t imm) : tagged_(Tagged::Kind(kind), imm) {}
-#ifdef ENABLE_WASM_MULTI_VALUE
   BlockType(Kind kind, const FuncType& type)
       : tagged_(Tagged::Kind(kind), &type) {}
-#endif
 
   Kind kind() const { return Kind(tagged_.kind()); }
   ValType singleValType() const {
@@ -2000,9 +1970,7 @@ class BlockType {
     return ValType(PackedTypeCode::fromBits(tagged_.immediate()));
   }
 
-#ifdef ENABLE_WASM_MULTI_VALUE
   const FuncType& funcType() const { return *tagged_.pointer(); }
-#endif
 
  public:
   BlockType()
@@ -2016,15 +1984,10 @@ class BlockType {
     return BlockType(VoidToSingleKind, vt.bitsUnsafe());
   }
   static BlockType Func(const FuncType& type) {
-#ifdef ENABLE_WASM_MULTI_VALUE
     if (type.args().length() == 0) {
       return FuncResults(type);
     }
     return BlockType(FuncKind, type);
-#else
-    MOZ_ASSERT(type.args().length() == 0);
-    return FuncResults(type);
-#endif
   }
   static BlockType FuncResults(const FuncType& type) {
     switch (type.results().length()) {
@@ -2033,11 +1996,7 @@ class BlockType {
       case 1:
         return VoidToSingle(type.results()[0]);
       default:
-#ifdef ENABLE_WASM_MULTI_VALUE
         return BlockType(FuncResultsKind, type);
-#else
-        MOZ_CRASH("multi-value returns not supported");
-#endif
     }
   }
 
@@ -2045,14 +2004,10 @@ class BlockType {
     switch (kind()) {
       case VoidToVoidKind:
       case VoidToSingleKind:
-#ifdef ENABLE_WASM_MULTI_VALUE
       case FuncResultsKind:
-#endif
         return ResultType::Empty();
-#ifdef ENABLE_WASM_MULTI_VALUE
       case FuncKind:
         return ResultType::Vector(funcType().args());
-#endif
       default:
         MOZ_CRASH("unexpected kind");
     }
@@ -2064,11 +2019,9 @@ class BlockType {
         return ResultType::Empty();
       case VoidToSingleKind:
         return ResultType::Single(singleValType());
-#ifdef ENABLE_WASM_MULTI_VALUE
       case FuncKind:
       case FuncResultsKind:
         return ResultType::Vector(funcType().results());
-#endif
       default:
         MOZ_CRASH("unexpected kind");
     }
@@ -2082,12 +2035,10 @@ class BlockType {
       case VoidToVoidKind:
       case VoidToSingleKind:
         return tagged_.bits() == rhs.tagged_.bits();
-#ifdef ENABLE_WASM_MULTI_VALUE
       case FuncKind:
         return funcType() == rhs.funcType();
       case FuncResultsKind:
         return EqualContainers(funcType().results(), rhs.funcType().results());
-#endif
       default:
         MOZ_CRASH("unexpected kind");
     }

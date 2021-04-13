@@ -33,13 +33,13 @@
   --urlbarView-item-inline-padding: calc(var(--urlbar-icon-padding) / 2 + 3px);
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 :root {
   --urlbar-popup-url-color: hsl(210, 77%, 47%);
 }
 } /*** END !proton ***/
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
 :root:-moz-lwtheme {
   --urlbar-popup-url-color: rgb(0,97,224);
 }
@@ -55,7 +55,7 @@
   --urlbarView-button-background-active: rgba(249, 249, 250, 0.2);
 }
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
 :root {
   --urlbarView-item-inline-padding: var(--urlbar-icon-padding);
 }
@@ -93,7 +93,7 @@
   border-inline: 1px solid transparent;
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 .urlbarView {
   margin-inline: calc(4px + var(--identity-box-margin-inline));
   width: calc(100% - 2 * (4px + var(--identity-box-margin-inline)));
@@ -131,16 +131,25 @@
   padding-block: 3px;
 }
 
+@media not (-moz-proton) {
 :root[uidensity=compact] .urlbarView-row {
   padding-block: 2px;
 }
+} /*** END !proton ***/
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
+.urlbarView-row {
+  padding-block: 2px;
+}
+
 :root:not([uidensity=compact]) .urlbarView-row:not([type=tip], [type=dynamic]) {
   min-height: 32px;
-  padding-block: 4px;
 }
 } /*** END proton ***/
+
+:root[uidensity=touch] .urlbarView-row:not([type=tip], [type=dynamic]) {
+  padding-block: 11px;
+}
 
 .urlbarView-row-inner {
   display: flex;
@@ -153,15 +162,12 @@
   padding-block: 6px;
 }
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
 .urlbarView-row-inner {
   border-radius: var(--toolbarbutton-border-radius);
 }
 } /*** END proton ***/
 
-:root[uidensity=touch] .urlbarView-row:not([type=tip], [type=dynamic]) {
-  padding-block: 11px;
-}
 
 .urlbarView-row[type=tip] {
   padding-block-start: 18px;
@@ -178,7 +184,7 @@
   justify-content: start;
 }
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
 .urlbarView-row-inner,
 .urlbarView-no-wrap {
   align-items: center;
@@ -295,7 +301,7 @@
   -moz-context-properties: fill, fill-opacity;
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 .urlbarView-favicon {
   /* 2px is from identity-block.inc.css */
   margin-inline-end: calc(var(--urlbar-icon-padding) / 2 + var(--identity-box-margin-inline) + 2px);
@@ -315,40 +321,11 @@
 }
 
 .urlbarView-row[type=tabtosearch] > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-favicon {
-  color: rgb(0,97,224);
-  stroke: #fff;
-  -moz-context-properties: fill, stroke;
-}
-
-.urlbarView-row[type=tabtosearch][selected] > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-favicon {
-  color: #fff;
-  stroke: rgb(0,97,224);
-}
-
-:root[lwt-toolbar-field-focus-brighttext] .urlbarView-row[type=tabtosearch]:not([selected]) > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-favicon {
-  color: rgb(0,221,255);
-}
-
-:root[lwt-toolbar-field-focus-brighttext] .urlbarView-row[type=tabtosearch][selected] > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-favicon {
-  stroke: rgb(0,221,255);
-}
-
-@media not (-moz-proton-urlbar) {
-.urlbarView-row[type=tabtosearch] > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-favicon {
-  color: #0060df; /* Blue-60 */
-}
-
-.urlbarView-row[type=tabtosearch][selected] > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-favicon {
-  stroke: #0060df;
-}
-
-:root[lwt-toolbar-field-focus-brighttext] .urlbarView-row[type=tabtosearch]:not([selected]) > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-favicon {
-  color: #0a84ff; /* Blue-50 */
-}
-
-:root[lwt-toolbar-field-focus-brighttext] .urlbarView-row[type=tabtosearch][selected] > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-favicon {
-  stroke: #0a84ff;
-}
+  /* We use the URL color for this icon to inherit its accessibility
+     properties, like adapting to high contrast modes. We also want to ensure
+     contrast from the result highlight. */
+  color: var(--urlbar-popup-url-color);
+  -moz-context-properties: fill;
 }
 
 /* Type icon */
@@ -389,7 +366,7 @@
   stroke: rgb(50,49,60);
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 .urlbarView-row[type=bookmark] > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-type-icon {
   color: #0060df; /* Blue-60 */
 }
@@ -441,7 +418,7 @@
   -moz-context-properties: fill, fill-opacity;
 }
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
 .urlbarView-help {
   border-radius: var(--toolbarbutton-border-radius);
 }
@@ -511,7 +488,7 @@
   margin-inline-end: 4px;
 }
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
 .urlbarView-tip-button {
   border-radius: var(--toolbarbutton-border-radius);
 }
@@ -663,7 +640,7 @@
   display: none;
 }
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
 /* Switch-to-tab action text is styled as a chiclet. */
 .urlbarView-row:is([type=switchtab], [type=remotetab]) > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-action {
   background-color: var(--urlbar-box-bgcolor);
@@ -682,9 +659,15 @@
   background-color: var(--urlbar-box-active-bgcolor);
 }
 
-.urlbarView-row[type=remotetab]:not([selected], :hover) > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-title-separator,
-.urlbarView:not([actionoverride]) .urlbarView-row[type=switchtab] > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-title-separator {
-  visibility: collapse;
+.urlbarView-row[type=remotetab]:not([selected], :hover) > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-title-separator::before,
+.urlbarView:not([actionoverride]) .urlbarView-row[type=switchtab] > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-title-separator::before {
+  /* We make the title separator transparent so it stays in the accessibility
+     tree. We want screen readers to pause between the result title and the
+     switch-to-tab action text. */
+  opacity: 0;
+  /* -1em for the width of the \2014 character. -.4em to offset the
+     margin-inline-start already set on this element. */
+  margin-inline-end: -1.4em;
 }
 } /*** END !proton ***/
 
@@ -718,10 +701,14 @@
   border-top: 1px solid var(--panel-separator-color);
 }
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
 #urlbar .search-one-offs:not([hidden]) {
-  padding-block: 10px;
+  padding-block: 6px;
   border-top-color: var(--urlbar-separator-color);
+}
+
+:root[uidensity=touch] #urlbar .search-one-offs:not([hidden]) {
+  padding-block: 11px;
 }
 } /*** END proton ***/
 
@@ -750,7 +737,7 @@
   margin-inline-end: 8px;
 }
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
 #urlbar .searchbar-engine-one-off-item {
   border-radius: var(--toolbarbutton-border-radius);
 }
@@ -807,7 +794,7 @@
   fill-opacity: .9;
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 .urlbarView-row[source="bookmarks"] > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-favicon,
 #urlbar-engine-one-off-item-bookmarks {
   fill: #0060df; /* Blue-60 */
@@ -838,14 +825,17 @@
   border-color: var(--arrowpanel-border-color);
 }
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
 #PopupSearchAutoComplete {
-  background-color: var(--lwt-toolbar-field-focus);
   border: 1px solid var(--arrowpanel-border-color);
   /* Remove the top border since the panel is flush with the input. */
   border-top-width: 0;
   /* override autocomplete.css padding */
   padding: var(--panel-subview-body-padding) !important;
+}
+
+#PopupSearchAutoComplete:-moz-lwtheme {
+  background-color: var(--lwt-toolbar-field-focus);
 }
 } /*** END proton ***/
 

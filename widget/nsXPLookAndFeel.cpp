@@ -418,11 +418,9 @@ void nsXPLookAndFeel::OnPrefChanged(const char* aPref, void* aClosure) {
 
 static constexpr nsLiteralCString kBoolMediaQueryPrefs[] = {
     "browser.proton.enabled"_ns,
-    "browser.proton.urlbar.enabled"_ns,
     "browser.proton.contextmenus.enabled"_ns,
     "browser.proton.modals.enabled"_ns,
     "browser.proton.doorhangers.enabled"_ns,
-    "browser.proton.infobars.enabled"_ns,
     "browser.proton.places-tooltip.enabled"_ns,
 };
 

@@ -418,6 +418,9 @@ class MacroAssembler : public MacroAssemblerSpecific {
   // Like PushRegsInMask, but instead of pushing the registers, store them to
   // |dest|. |dest| should point to the end of the reserved space, so the
   // first register will be stored at |dest.offset - sizeof(register)|.
+  // PushRegsInMask, PopRegsInMask{Ignore} and storeRegsInMask must use the
+  // same memory layout, and that also needs to be consistent with what
+  // FloatRegisterSet::getPushSizeInBytes claims.
   void storeRegsInMask(LiveRegisterSet set, Address dest, Register scratch)
       DEFINED_ON(arm, arm64, mips32, mips64, x86_shared);
 
@@ -2899,11 +2902,6 @@ class MacroAssembler : public MacroAssemblerSpecific {
                              FloatRegister rhs, FloatRegister dest)
       DEFINED_ON(arm64);
 
-  inline void unsignedCompareInt8x16(Assembler::Condition cond,
-                                     FloatRegister rhs, FloatRegister lhsDest,
-                                     FloatRegister temp1, FloatRegister temp2)
-      DEFINED_ON(x86_shared);
-
   inline void compareInt16x8(Assembler::Condition cond, FloatRegister rhs,
                              FloatRegister lhsDest)
       DEFINED_ON(x86_shared, arm64);
@@ -2915,11 +2913,6 @@ class MacroAssembler : public MacroAssemblerSpecific {
   // On x86_shared, limited to !=, ==, <=, >
   inline void compareInt16x8(Assembler::Condition cond, const SimdConstant& rhs,
                              FloatRegister lhsDest) DEFINED_ON(x86_shared);
-
-  inline void unsignedCompareInt16x8(Assembler::Condition cond,
-                                     FloatRegister rhs, FloatRegister lhsDest,
-                                     FloatRegister temp1, FloatRegister temp2)
-      DEFINED_ON(x86_shared);
 
   // On x86_shared, limited to !=, ==, <=, >
   inline void compareInt32x4(Assembler::Condition cond, FloatRegister rhs,
@@ -2933,11 +2926,6 @@ class MacroAssembler : public MacroAssemblerSpecific {
   inline void compareInt32x4(Assembler::Condition cond, FloatRegister lhs,
                              FloatRegister rhs, FloatRegister dest)
       DEFINED_ON(arm64);
-
-  inline void unsignedCompareInt32x4(Assembler::Condition cond,
-                                     FloatRegister rhs, FloatRegister lhsDest,
-                                     FloatRegister temp1, FloatRegister temp2)
-      DEFINED_ON(x86_shared);
 
   inline void compareForEqualityInt64x2(Assembler::Condition cond,
                                         FloatRegister rhs,

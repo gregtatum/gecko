@@ -132,10 +132,12 @@
 #PanelUI-menu-button[badge-status="update-other-instance"] > .toolbarbutton-badge-stack > .toolbarbutton-badge,
 #PanelUI-menu-button[badge-status="update-restart"] > .toolbarbutton-badge-stack > .toolbarbutton-badge {
   background: #74BF43 url(chrome://browser/skin/update-badge.svg) no-repeat center;
+  background-size: 10px;
 }
 
 #PanelUI-menu-button[badge-status="update-unsupported"] > .toolbarbutton-badge-stack > .toolbarbutton-badge {
   background: #FFE900 url(chrome://browser/skin/update-badge.svg) no-repeat center;
+  background-size: 10px;
 }
 
 @media (-moz-proton) {
@@ -144,10 +146,14 @@
 .panel-banner-item[notificationid="update-manual"] > .toolbarbutton-icon,
 .panel-banner-item[notificationid="update-other-instance"] > .toolbarbutton-icon,
 .panel-banner-item[notificationid="update-restart"] > .toolbarbutton-icon {
-  background: var(--panel-banner-item-update-supported-bgcolor) url(chrome://browser/skin/update-badge.svg) no-repeat center;
+  background-color: var(--panel-banner-item-update-supported-bgcolor);
+  background-image: url(chrome://browser/skin/update-badge.svg);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 10px;
   border-radius: 50%;
-  -moz-context-properties: stroke;
-  stroke: var(--arrowpanel-background);
+  -moz-context-properties: fill;
+  fill: var(--arrowpanel-background);
 }
 
 .panel-banner-item[notificationid="update-unsupported"] > .toolbarbutton-icon {
@@ -164,12 +170,22 @@
 .panel-banner-item[notificationid="update-manual"]::after,
 .panel-banner-item[notificationid="update-other-instance"]::after,
 .panel-banner-item[notificationid="update-restart"]::after {
-  background: var(--panel-banner-item-update-supported-bgcolor) url(chrome://browser/skin/update-badge.svg) no-repeat center;
+  background-color: var(--panel-banner-item-update-supported-bgcolor);
+  background-image: url(chrome://browser/skin/update-badge.svg);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 10px;
   border-radius: 50%;
+  -moz-context-properties: fill;
+  fill: #fff;
 }
 
 .panel-banner-item[notificationid="update-unsupported"]::after {
-  background: var(--panel-banner-item-warning-icon-bgcolor) url(chrome://browser/skin/update-badge.svg) no-repeat center;
+  background-color: var(--panel-banner-item-warning-icon-bgcolor);
+  background-image: url(chrome://browser/skin/update-badge.svg);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 10px;
   border-radius: 50%;
 }
 .panel-banner-item[notificationid^=update] {
@@ -232,6 +248,27 @@ panelmultiview[transitioning] > .panel-viewcontainer > .panel-viewstack > panelv
   overflow-y: hidden;
 }
 
+#downloadsPanel,
+#widget-overflow,
+#appMenu-popup,
+#customizationui-widget-panel,
+#identity-popup,
+#permission-popup,
+#protections-popup {
+  margin-top: -4px;
+}
+
+#BMB_bookmarksPopup {
+  margin-top: -8px;
+}
+
+@media (-moz-proton) {
+#notification-popup {
+  margin-top: 2px;
+}
+} /** END Proton **/
+
+@media not (-moz-proton) {
 /* This section is to anchor all the drop down panels at the same height, shift the
   panel`s top margin according to its positioning and the uidensity of the window. */
 #downloadsPanel,
@@ -261,12 +298,6 @@ panelmultiview[transitioning] > .panel-viewcontainer > .panel-viewstack > panelv
   margin-top: -1px;
 }
 
-/* The BMB_bookmarksPopup is unique because it is built into the
-   bookmarks-menu-button, resulting in many edge cases. */
-#BMB_bookmarksPopup {
-  margin-top: -8px;
-}
-
 :root:not([uidensity]) #nav-bar #BMB_bookmarksPopup {
   margin-top: -11px;
 }
@@ -288,6 +319,7 @@ panelmultiview[transitioning] > .panel-viewcontainer > .panel-viewstack > panelv
 :root[uidensity=touch] #PersonalToolbar #BMB_bookmarksPopup {
   margin-top: -5px;
 }
+} /** END not Proton **/
 
 .panel-subview-body {
   overflow-y: auto;
@@ -961,7 +993,7 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
 @media (-moz-proton) {
 .addon-banner-item > .toolbarbutton-text,
 .panel-banner-item > .toolbarbutton-text {
-  margin-inline-start: 8px;
+  margin-inline: 8px;
   padding: 0;
 }
 } /** END Proton **/
@@ -1793,6 +1825,7 @@ menuitem.panel-subview-footer@menuStateActive@,
 #widget-overflow-mainView > toolbarseparator,
 #widget-overflow-mainView > .panel-subview-body > toolbarseparator,
 .PanelUI-subView toolbarseparator,
+#permission-popup-mainView > toolbarseparator,
 .cui-widget-panelview menuseparator,
 .cui-widget-panel toolbarseparator {
   appearance: none;
@@ -2655,6 +2688,10 @@ panelview:not([mainview]) #PanelUI-whatsNew-title {
 }
 
 #PanelUI-profiler-presets {
+  margin: 8px 15px;
+}
+@media not (-moz-proton) {
+#PanelUI-profiler-presets {
   appearance: none;
   position: relative; /* Ensure there is a stacking context for the dropdown arrow. */
   width: 100%;
@@ -2667,7 +2704,6 @@ panelview:not([mainview]) #PanelUI-whatsNew-title {
   padding-inline: 4px;
   text-decoration: none;
   font-size: 12px;
-  margin: 8px 15px;
 }
 
 /* This is dark-mode specific styling. */
@@ -2724,6 +2760,7 @@ panelview:not([mainview]) #PanelUI-whatsNew-title {
 #PanelUI-profiler-presets:-moz-locale-dir(rtl)::after {
   left: 22px;
 }
+} /*** END !Proton ***/
 
 #PanelUI-profiler-content-custom-button {
   appearance: none;

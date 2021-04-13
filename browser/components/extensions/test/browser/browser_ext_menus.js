@@ -173,6 +173,16 @@ add_task(async function test_actionContextMenus() {
 });
 
 add_task(async function test_hiddenPageActionContextMenu() {
+  // In Proton the disabled pageAction are hidden in the urlbar
+  // and in the overflow menu, and so the pageAction context menu
+  // cannot be triggered on a disabled pageACtion.
+  //
+  // When we will sunset the proton about:config pref, this test
+  // won't be necessary anymore since the user won't be able to
+  // open the context menu on disabled actions.
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.proton.enabled", false]],
+  });
   const manifest = {
     page_action: {},
     permissions: ["menus"],
@@ -219,6 +229,8 @@ add_task(async function test_hiddenPageActionContextMenu() {
   await closeChromeContextMenu(menu.id);
   await closeChromeContextMenu(BrowserPageActions.panelNode.id);
 
+  // Undo the Proton pref change.
+  await SpecialPowers.popPrefEnv();
   BrowserTestUtils.removeTab(tab);
   await extension.unload();
 });

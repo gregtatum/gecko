@@ -209,27 +209,6 @@ class nsMenuChainItem {
   void Detach(nsMenuChainItem** aRoot);
 };
 
-// this class is used for dispatching popupshowing events asynchronously.
-class nsXULPopupShowingEvent : public mozilla::Runnable {
- public:
-  nsXULPopupShowingEvent(nsIContent* aPopup, bool aIsContextMenu,
-                         bool aSelectFirstItem)
-      : mozilla::Runnable("nsXULPopupShowingEvent"),
-        mPopup(aPopup),
-        mIsContextMenu(aIsContextMenu),
-        mSelectFirstItem(aSelectFirstItem) {
-    NS_ASSERTION(aPopup,
-                 "null popup supplied to nsXULPopupShowingEvent constructor");
-  }
-
-  NS_IMETHOD Run() override;
-
- private:
-  nsCOMPtr<nsIContent> mPopup;
-  bool mIsContextMenu;
-  bool mSelectFirstItem;
-};
-
 // this class is used for dispatching popuphiding events asynchronously.
 class nsXULPopupHidingEvent : public mozilla::Runnable {
  public:
@@ -264,8 +243,8 @@ class nsXULPopupPositionedEvent : public mozilla::Runnable {
  public:
   explicit nsXULPopupPositionedEvent(nsIContent* aPopup)
       : mozilla::Runnable("nsXULPopupPositionedEvent"), mPopup(aPopup) {
-    NS_ASSERTION(aPopup,
-                 "null popup supplied to nsXULPopupShowingEvent constructor");
+    NS_ASSERTION(
+        aPopup, "null popup supplied to nsXULPopupPositionedEvent constructor");
   }
 
   NS_IMETHOD Run() override;
@@ -282,15 +261,12 @@ class nsXULPopupPositionedEvent : public mozilla::Runnable {
 class nsXULMenuCommandEvent : public mozilla::Runnable {
  public:
   nsXULMenuCommandEvent(mozilla::dom::Element* aMenu, bool aIsTrusted,
-                        bool aShift, bool aControl, bool aAlt, bool aMeta,
-                        bool aUserInput, bool aFlipChecked)
+                        mozilla::Modifiers aModifiers, bool aUserInput,
+                        bool aFlipChecked)
       : mozilla::Runnable("nsXULMenuCommandEvent"),
         mMenu(aMenu),
+        mModifiers(aModifiers),
         mIsTrusted(aIsTrusted),
-        mShift(aShift),
-        mControl(aControl),
-        mAlt(aAlt),
-        mMeta(aMeta),
         mUserInput(aUserInput),
         mFlipChecked(aFlipChecked),
         mCloseMenuMode(CloseMenuMode_Auto) {
@@ -306,11 +282,9 @@ class nsXULMenuCommandEvent : public mozilla::Runnable {
 
  private:
   RefPtr<mozilla::dom::Element> mMenu;
+
+  mozilla::Modifiers mModifiers;
   bool mIsTrusted;
-  bool mShift;
-  bool mControl;
-  bool mAlt;
-  bool mMeta;
   bool mUserInput;
   bool mFlipChecked;
   CloseMenuMode mCloseMenuMode;
@@ -321,7 +295,6 @@ class nsXULPopupManager final : public nsIDOMEventListener,
                                 public nsIObserver,
                                 public mozilla::widget::NativeMenu::Observer {
  public:
-  friend class nsXULPopupShowingEvent;
   friend class nsXULPopupHidingEvent;
   friend class nsXULPopupPositionedEvent;
   friend class nsXULMenuCommandEvent;
@@ -511,6 +484,11 @@ class nsXULPopupManager final : public nsIDOMEventListener,
                  bool aAsynchronous, bool aIsCancel,
                  nsIContent* aLastPopup = nullptr);
 
+  /*
+   * Hide the popup of a <menu>.
+   */
+  void HideMenu(nsIContent* aMenu);
+
   /**
    * Hide a popup after a short delay. This is used when rolling over menu
    * items. This timer is stored in mCloseTimer. The timer may be cancelled and
@@ -553,6 +531,14 @@ class nsXULPopupManager final : public nsIDOMEventListener,
    *          event which triggered the menu to be executed, may not be null
    */
   void ExecuteMenu(nsIContent* aMenu, nsXULMenuCommandEvent* aEvent);
+
+  /**
+   * If a native menu is open, and aItem is an item in the menu's subtree,
+   * execute the item with the help of the native menu and close the menu.
+   * Returns true if a native menu was open.
+   */
+  bool ActivateNativeMenuItem(nsIContent* aItem, mozilla::Modifiers aModifiers,
+                              mozilla::ErrorResult& aRv);
 
   /**
    * Return true if the popup for the supplied content node is open.
@@ -718,7 +704,8 @@ class nsXULPopupManager final : public nsIDOMEventListener,
                          nsPopupType aPopupType, bool aDeselectMenu);
 
   /**
-   * Fire a popupshowing event on the popup and then open the popup.
+   * Trigger frame construction and reflow in the popup, fire a popupshowing
+   * event on the popup and then open the popup.
    *
    * aPopup - the popup to open
    * aIsContextMenu - true for context menus
@@ -727,9 +714,9 @@ class nsXULPopupManager final : public nsIDOMEventListener,
    *                 This is currently used to propagate the
    *                 inputSource attribute. May be null.
    */
-  void FirePopupShowingEvent(nsIContent* aPopup, bool aIsContextMenu,
-                             bool aSelectFirstItem,
-                             mozilla::dom::Event* aTriggerEvent);
+  void BeginShowingPopup(nsIContent* aPopup, bool aIsContextMenu,
+                         bool aSelectFirstItem,
+                         mozilla::dom::Event* aTriggerEvent);
 
   /**
    * Fire a popuphiding event and then hide the popup. This will be called
@@ -780,6 +767,13 @@ class nsXULPopupManager final : public nsIDOMEventListener,
  protected:
   already_AddRefed<nsINode> GetLastTriggerNode(
       mozilla::dom::Document* aDocument, bool aIsTooltip);
+
+  /**
+   * Fire a popupshowing event for aPopup.
+   */
+  nsEventStatus FirePopupShowingEvent(nsIContent* aPopup,
+                                      nsPresContext* aPresContext,
+                                      mozilla::dom::Event* aTriggerEvent);
 
   /**
    * Set mouse capturing for the current popup. This traps mouse clicks that

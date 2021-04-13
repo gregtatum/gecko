@@ -275,10 +275,6 @@ enum PrefersReducedMotion {
     Reduce,
 }
 
-fn color_scheme_no_preference_enabled(_: &crate::parser::ParserContext) -> bool {
-    static_prefs::pref!("layout.css.prefers-color-scheme-no-preference.enabled")
-}
-
 /// Values for the prefers-color-scheme media feature.
 #[derive(Clone, Copy, Debug, FromPrimitive, Parse, PartialEq, ToCss)]
 #[repr(u8)]
@@ -286,8 +282,6 @@ fn color_scheme_no_preference_enabled(_: &crate::parser::ParserContext) -> bool 
 pub enum PrefersColorScheme {
     Light,
     Dark,
-    #[parse(condition = "color_scheme_no_preference_enabled")]
-    NoPreference,
 }
 
 /// https://drafts.csswg.org/mediaqueries-5/#prefers-reduced-motion
@@ -408,7 +402,7 @@ fn eval_prefers_color_scheme(device: &Device, query_value: Option<PrefersColorSc
         unsafe { bindings::Gecko_MediaFeatures_PrefersColorScheme(device.document()) };
     match query_value {
         Some(v) => prefers_color_scheme == v,
-        None => prefers_color_scheme != PrefersColorScheme::NoPreference,
+        None => true,
     }
 }
 
@@ -630,7 +624,7 @@ macro_rules! bool_pref_feature {
 /// to support new types in these entries and (2) ensuring that either
 /// nsPresContext::MediaFeatureValuesChanged is called when the value that
 /// would be returned by the evaluator function could change.
-pub static MEDIA_FEATURES: [MediaFeatureDescription; 63] = [
+pub static MEDIA_FEATURES: [MediaFeatureDescription; 61] = [
     feature!(
         atom!("width"),
         AllowsRanges::Yes,
@@ -866,10 +860,8 @@ pub static MEDIA_FEATURES: [MediaFeatureDescription; 63] = [
     lnf_int_feature!(atom!("-moz-system-dark-theme"), SystemUsesDarkTheme),
 
     bool_pref_feature!(atom!("-moz-proton"), "browser.proton.enabled"),
-    bool_pref_feature!(atom!("-moz-proton-urlbar"), "browser.proton.urlbar.enabled"),
     bool_pref_feature!(atom!("-moz-proton-modals"), "browser.proton.modals.enabled"),
     bool_pref_feature!(atom!("-moz-proton-contextmenus"), "browser.proton.contextmenus.enabled"),
     bool_pref_feature!(atom!("-moz-proton-doorhangers"), "browser.proton.doorhangers.enabled"),
-    bool_pref_feature!(atom!("-moz-proton-infobars"), "browser.proton.infobars.enabled"),
     bool_pref_feature!(atom!("-moz-proton-places-tooltip"), "browser.proton.places-tooltip.enabled"),
 ];

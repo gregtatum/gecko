@@ -60,7 +60,6 @@ const kPrefCustomizationState = "browser.uiCustomization.state";
 const kPrefCustomizationAutoAdd = "browser.uiCustomization.autoAdd";
 const kPrefCustomizationDebug = "browser.uiCustomization.debug";
 const kPrefDrawInTitlebar = "browser.tabs.drawInTitlebar";
-const kPrefExtraDragSpace = "browser.tabs.extraDragSpace";
 const kPrefUIDensity = "browser.uidensity";
 const kPrefAutoTouchMode = "browser.touchmode.auto";
 const kPrefAutoHideDownloadsButton = "browser.download.autohideButton";
@@ -196,7 +195,6 @@ var gListeners = new Set();
 var gUIStateBeforeReset = {
   uiCustomizationState: null,
   drawInTitlebar: null,
-  extraDragSpace: null,
   currentTheme: null,
   uiDensity: null,
   autoTouchMode: null,
@@ -3170,9 +3168,6 @@ var CustomizableUIInternal = {
         kPrefDrawInTitlebar,
         false
       );
-      gUIStateBeforeReset.extraDragSpace = Services.prefs.getBoolPref(
-        kPrefExtraDragSpace
-      );
       gUIStateBeforeReset.uiCustomizationState = Services.prefs.getCharPref(
         kPrefCustomizationState
       );
@@ -3189,7 +3184,6 @@ var CustomizableUIInternal = {
 
     Services.prefs.clearUserPref(kPrefCustomizationState);
     Services.prefs.clearUserPref(kPrefDrawInTitlebar);
-    Services.prefs.clearUserPref(kPrefExtraDragSpace);
     Services.prefs.clearUserPref(kPrefUIDensity);
     Services.prefs.clearUserPref(kPrefAutoTouchMode);
     Services.prefs.clearUserPref(kPrefAutoHideDownloadsButton);
@@ -3254,7 +3248,6 @@ var CustomizableUIInternal = {
       uiDensity,
       autoTouchMode,
       autoHideDownloadsButton,
-      extraDragSpace,
     } = gUIStateBeforeReset;
     gNewElementCount = gUIStateBeforeReset.newElementCount;
 
@@ -3264,7 +3257,6 @@ var CustomizableUIInternal = {
 
     Services.prefs.setCharPref(kPrefCustomizationState, uiCustomizationState);
     Services.prefs.setBoolPref(kPrefDrawInTitlebar, drawInTitlebar);
-    Services.prefs.setBoolPref(kPrefExtraDragSpace, extraDragSpace);
     Services.prefs.setIntPref(kPrefUIDensity, uiDensity);
     Services.prefs.setBoolPref(kPrefAutoTouchMode, autoTouchMode);
     Services.prefs.setBoolPref(
@@ -3537,11 +3529,6 @@ var CustomizableUIInternal = {
 
     if (Services.prefs.prefHasUserValue(kPrefDrawInTitlebar)) {
       log.debug(kPrefDrawInTitlebar + " pref is non-default");
-      return false;
-    }
-
-    if (Services.prefs.prefHasUserValue(kPrefExtraDragSpace)) {
-      log.debug(kPrefExtraDragSpace + " pref is non-default");
       return false;
     }
 
@@ -4286,7 +4273,6 @@ var CustomizableUI = {
     return (
       gUIStateBeforeReset.uiCustomizationState != null ||
       gUIStateBeforeReset.drawInTitlebar != null ||
-      gUIStateBeforeReset.extraDragSpace != null ||
       gUIStateBeforeReset.currentTheme != null ||
       gUIStateBeforeReset.autoTouchMode != null ||
       gUIStateBeforeReset.uiDensity != null

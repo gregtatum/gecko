@@ -4,6 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #import <Cocoa/Cocoa.h>
+#include "mozilla/BasicEvents.h"
 #include "nsThreadUtils.h"
 #include "mozilla/dom/Document.h"
 
@@ -216,12 +217,8 @@ static NSView* NativeViewForContent(nsIContent* aContent) {
   return (NSView*)widget->GetNativeData(NS_NATIVE_WIDGET);
 }
 
-bool NativeMenuMac::ShowAsContextMenu(const mozilla::DesktopPoint& aPosition) {
-  bool allowOpening = mMenu->OnOpen();
-  if (!allowOpening) {
-    // preventDefault() was called on the popupshowing event. Do not display the menu.
-    return false;
-  }
+void NativeMenuMac::ShowAsContextMenu(const mozilla::DesktopPoint& aPosition) {
+  mMenu->PopupShowingEventWasSentAndApprovedExternally();
 
   // Do the actual opening off of a runnable, so that this ShowAsContextMenu call does not spawn a
   // nested event loop, which would be surprising to our callers.
@@ -229,8 +226,6 @@ bool NativeMenuMac::ShowAsContextMenu(const mozilla::DesktopPoint& aPosition) {
   RefPtr<NativeMenuMac> self = this;
   NS_DispatchToCurrentThread(NS_NewRunnableFunction("nsStandaloneNativeMenu::OpenMenu",
                                                     [=]() { self->OpenMenu(position); }));
-
-  return true;
 }
 
 void NativeMenuMac::OpenMenu(const mozilla::DesktopPoint& aPosition) {
@@ -297,6 +292,91 @@ void NativeMenuMac::OpenMenu(const mozilla::DesktopPoint& aPosition) {
 }
 
 bool NativeMenuMac::Close() { return mMenu->Close(); }
+
+RefPtr<nsMenuX> NativeMenuMac::GetOpenMenuContainingElement(dom::Element* aElement) {
+  nsTArray<RefPtr<dom::Element>> submenuChain;
+  RefPtr<dom::Element> currentElement = aElement->GetParentElement();
+  while (currentElement && currentElement != mElement) {
+    if (currentElement->IsXULElement(nsGkAtoms::menu)) {
+      submenuChain.AppendElement(currentElement);
+    }
+    currentElement = currentElement->GetParentElement();
+  }
+  if (!currentElement) {
+    // aElement was not a descendent of mElement. Refuse to activate the item.
+    return nullptr;
+  }
+
+  // Traverse submenuChain from shallow to deep, to find the nsMenuX that contains aElement.
+  submenuChain.Reverse();
+  RefPtr<nsMenuX> menu = mMenu;
+  for (const auto& submenu : submenuChain) {
+    if (!menu->IsOpenForGecko()) {
+      // Refuse to descend into closed menus.
+      return nullptr;
+    }
+    Maybe<nsMenuX::MenuChild> menuChild = menu->GetItemForElement(submenu);
+    if (!menuChild || !menuChild->is<RefPtr<nsMenuX>>()) {
+      // Couldn't find submenu.
+      return nullptr;
+    }
+    menu = menuChild->as<RefPtr<nsMenuX>>();
+  }
+
+  return menu;
+}
+
+static NSEventModifierFlags ConvertModifierFlags(Modifiers aModifiers) {
+  NSEventModifierFlags flags = 0;
+  if (aModifiers & MODIFIER_CONTROL) {
+    flags |= NSEventModifierFlagControl;
+  }
+  if (aModifiers & MODIFIER_ALT) {
+    flags |= NSEventModifierFlagOption;
+  }
+  if (aModifiers & MODIFIER_SHIFT) {
+    flags |= NSEventModifierFlagShift;
+  }
+  if (aModifiers & MODIFIER_META) {
+    flags |= NSEventModifierFlagCommand;
+  }
+  return flags;
+}
+
+void NativeMenuMac::ActivateItem(dom::Element* aItemElement, Modifiers aModifiers,
+                                 ErrorResult& aRv) {
+  RefPtr<nsMenuX> menu = GetOpenMenuContainingElement(aItemElement);
+  if (!menu) {
+    aRv.ThrowInvalidStateError("Menu containing menu item is not open");
+    return;
+  }
+  Maybe<nsMenuX::MenuChild> item = menu->GetItemForElement(aItemElement);
+  if (!item || !item->is<RefPtr<nsMenuItemX>>()) {
+    aRv.ThrowInvalidStateError("Could not find the supplied menu item");
+    return;
+  }
+
+  mMenu->ActivateItemAndClose(std::move(item->as<RefPtr<nsMenuItemX>>()),
+                              ConvertModifierFlags(aModifiers));
+}
+
+void NativeMenuMac::OpenSubmenu(dom::Element* aMenuElement) {
+  if (RefPtr<nsMenuX> menu = GetOpenMenuContainingElement(aMenuElement)) {
+    Maybe<nsMenuX::MenuChild> item = menu->GetItemForElement(aMenuElement);
+    if (item && item->is<RefPtr<nsMenuX>>()) {
+      item->as<RefPtr<nsMenuX>>()->MenuOpened();
+    }
+  }
+}
+
+void NativeMenuMac::CloseSubmenu(dom::Element* aMenuElement) {
+  if (RefPtr<nsMenuX> menu = GetOpenMenuContainingElement(aMenuElement)) {
+    Maybe<nsMenuX::MenuChild> item = menu->GetItemForElement(aMenuElement);
+    if (item && item->is<RefPtr<nsMenuX>>()) {
+      item->as<RefPtr<nsMenuX>>()->MenuClosed();
+    }
+  }
+}
 
 RefPtr<Element> NativeMenuMac::Element() { return mElement; }
 

@@ -131,6 +131,9 @@
     <menupopup id="tabContextMenu"
                onpopupshowing="if (event.target == this) TabContextMenu.updateContextMenu(this);"
                onpopuphidden="if (event.target == this) TabContextMenu.contextTab = null;">
+      <menuitem id="context_openANewTab" data-lazy-l10n-id="tab-context-open-a-new-tab"
+                oncommand="gBrowser.addAdjacentNewTab(TabContextMenu.contextTab)"/>
+      <menuseparator/>
       <menuitem id="context_reloadTab" data-lazy-l10n-id="reload-tab"
                 oncommand="gBrowser.reloadTab(TabContextMenu.contextTab);"/>
       <menuitem id="context_reloadSelectedTabs" data-lazy-l10n-id="reload-tabs" hidden="true"
@@ -457,6 +460,11 @@
                 data-lazy-l10n-id="toolbar-context-menu-remove-from-toolbar"
                 contexttype="toolbaritem"
                 class="customize-context-removeFromToolbar"/>
+      <menuitem id="toolbar-context-openANewTab"
+                contexttype="tabbar"
+                command="cmd_newNavigatorTab"
+                data-lazy-l10n-id="toolbar-context-menu-open-a-new-tab"/>
+      <menuseparator id="toolbarNavigatorItemsMenuSeparator"/>
       <menuitem id="toolbar-context-reloadSelectedTab"
                 contexttype="tabbar"
                 oncommand="gBrowser.reloadMultiSelectedTabs();"
@@ -754,7 +762,7 @@
       <vbox class="panel-subview-body">
         <vbox id="appMenu-addon-banners"/>
         <toolbarbutton id="appMenu-update-banner" class="panel-banner-item"
-                       data-l10n-id="appmenuitem-update-banner2"
+                       data-l10n-id="appmenuitem-update-banner3"
                        data-l10n-attrs="label-update-downloading, label-update-available, label-update-manual, label-update-unsupported, label-update-restart"
                        oncommand="PanelUI._onBannerItemSelected(event)"
                        wrap="true"
@@ -971,7 +979,7 @@
       <vbox class="panel-subview-body">
         <vbox id="appMenu-proton-addon-banners"/>
         <toolbarbutton id="appMenu-proton-update-banner" class="panel-banner-item"
-                       data-l10n-id="appmenuitem-update-banner2"
+                       data-l10n-id="appmenuitem-update-banner3"
                        data-l10n-attrs="label-update-downloading, label-update-available, label-update-manual, label-update-unsupported, label-update-restart"
                        oncommand="PanelUI._onBannerItemSelected(event)"
                        wrap="true"
@@ -1240,7 +1248,8 @@
                    data-l10n-id="profiler-popup-settings" />
             <menulist id="PanelUI-profiler-presets"
                       flex="1"
-                      value="custom">
+                      value="custom"
+                      size="large">
               <menupopup id="PanelUI-profiler-presets-menupopup" presetsbuilt="false">
                 <!-- The rest of the values get dynamically inserted. The "presetsbuilt"
                     attribute will get updated to "true" once the presets have been

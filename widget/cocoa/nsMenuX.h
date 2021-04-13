@@ -73,18 +73,29 @@ class nsMenuX final : public nsMenuParentX,
   mozilla::Maybe<MenuChild> GetVisibleItemAt(uint32_t aPos);
   nsresult GetVisibleItemCount(uint32_t& aCount);
 
+  mozilla::Maybe<MenuChild> GetItemForElement(mozilla::dom::Element* aMenuChildElement);
+
+  // Asynchronously runs the command event on aItem, and closes the menu.
+  void ActivateItemAndClose(RefPtr<nsMenuItemX>&& aItem, NSEventModifierFlags aModifiers);
+
+  bool IsOpenForGecko() const { return mIsOpenForGecko; }
+
   // Fires the popupshowing event and returns whether the handler allows the popup to open.
   // When calling this method, the caller must hold a strong reference to this object, because other
   // references to this object can be dropped during the handling of the DOM event.
   bool OnOpen();
 
-  // Called from the menu delegate during menuWillOpen.
-  // Fires the popupshown event.
+  void PopupShowingEventWasSentAndApprovedExternally() { DidFirePopupShowing(); }
+
+  // Called from the menu delegate during menuWillOpen, or to simulate opening.
+  // Ignored if the menu is already considered open.
+  // Fires the popupshown event, if it hasn't been sent yet for this opening.
   // When calling this method, the caller must hold a strong reference to this object, because other
   // references to this object can be dropped during the handling of the DOM event.
-  nsEventStatus MenuOpened();
+  void MenuOpened();
 
-  // Called from the menu delegate during menuDidClose.
+  // Called from the menu delegate during menuDidClose, or to simulate closing.
+  // Ignored if the menu is already considered closed.
   // When calling this method, the caller must hold a strong reference to this object, because other
   // references to this object can be dropped during the handling of the DOM event.
   void MenuClosed();
@@ -98,6 +109,12 @@ class nsMenuX final : public nsMenuParentX,
 
   // Close the menu if it's open, and flush any pending popuphiding / popuphidden events.
   bool Close();
+
+  // Called from the menu delegate during menu:willHighlightItem:.
+  // If called with Nothing(), it means that no item is highlighted.
+  // The index only accounts for visible items, i.e. items for which there exists an NSMenuItem* in
+  // mNativeMenu.
+  void OnHighlightedItemChanged(const mozilla::Maybe<uint32_t>& aNewHighlightedIndex);
 
   void SetRebuild(bool aMenuEvent);
   void SetupIcon();
@@ -152,6 +169,7 @@ class nsMenuX final : public nsMenuParentX,
   void LoadSubMenu(nsIContent* aMenuContent);
   GeckoNSMenu* CreateMenuWithGeckoString(nsString& aMenuTitle);
   void UnregisterCommands();
+  void DidFirePopupShowing();
 
   // Calculates the index at which aChild's NSMenuItem should be inserted into our NSMenu.
   // The order of NSMenuItems in the NSMenu is the same as the order of menu children in
@@ -184,14 +202,24 @@ class nsMenuX final : public nsMenuParentX,
   // menuItemHit.
   RefPtr<mozilla::CancelableRunnable> mPendingAsyncMenuCloseRunnable;
 
+  // Any runnables for running asynchronous command events.
+  // These are only used during automated tests, via ActivateItemAndClose.
+  // We keep track of them here so that we can ensure they're run before popuphiding/popuphidden.
+  nsTArray<RefPtr<mozilla::CancelableRunnable>> mPendingCommandRunnables;
+
   GeckoNSMenu* mNativeMenu = nil;     // [strong]
   MenuDelegate* mMenuDelegate = nil;  // [strong]
   // nsMenuX objects should always have a valid native menu item.
   NSMenuItem* mNativeMenuItem = nil;  // [strong]
+
+  // Nothing() if no item is highlighted. The index only accounts for visible items.
+  mozilla::Maybe<uint32_t> mHighlightedItemIndex;
+
   bool mIsEnabled = true;
   bool mNeedsRebuild = true;
 
-  // Whether the native NSMenu is open, from the macOS perspective.
+  // Whether the native NSMenu is considered open.
+  // Also affected by MenuOpened() / MenuClosed() calls for simulated opening / closing.
   bool mIsOpen = false;
 
   // Whether the popup is open from Gecko's perspective, based on popupshowing / popuphiding events.

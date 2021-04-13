@@ -10,7 +10,7 @@
   margin-inline-end: var(--identity-box-margin-inline);
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 #identity-box {
   margin-inline-start: var(--identity-box-margin-inline);
 }
@@ -28,10 +28,10 @@
   /* Set default fill for icons in the identity block.
      Individual icons can override this. */
   fill: currentColor;
-  fill-opacity: .6;
+  fill-opacity: var(--urlbar-icon-fill-opacity);
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 #identity-box[pageproxystate="invalid"] {
   margin-inline-end: calc(var(--identity-box-margin-inline) + 2px);
 }
@@ -62,7 +62,7 @@
   background-color: hsla(0,0%,70%,.3);
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 .identity-box-button:hover:not([open=true]),
 .identity-box-button:hover:active,
 .identity-box-button[open=true],
@@ -85,7 +85,7 @@
   border-radius: var(--toolbarbutton-border-radius);
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 .identity-box-button {
   padding-inline: calc(var(--urlbar-icon-padding) / 2);
   border-radius: 0;
@@ -118,7 +118,7 @@
   border-radius: var(--toolbarbutton-border-radius);
 }
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
 #identity-box[pageproxystate="valid"].notSecureText > .identity-box-button,
 #identity-box[pageproxystate="valid"].chromeUI > .identity-box-button,
 #identity-box[pageproxystate="valid"].extensionPage > .identity-box-button {
@@ -145,7 +145,7 @@
   pointer-events: none;
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 #identity-box[pageproxystate="valid"].notSecureText,
 #identity-box[pageproxystate="valid"].chromeUI,
 #identity-box[pageproxystate="valid"].extensionPage {
@@ -200,7 +200,7 @@
   }
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 #identity-box[pageproxystate="valid"].chromeUI #identity-icon {
   list-style-image: url(chrome://branding/content/identity-icons-brand.svg);
 }
@@ -212,7 +212,12 @@
 
 #urlbar:not(.searchButton) > #urlbar-input-container > #identity-box[pageproxystate="invalid"] #identity-icon {
   list-style-image: url(chrome://global/skin/icons/search-glass.svg);
+}
+
+@media not (-moz-proton) {
+#urlbar:not(.searchButton) > #urlbar-input-container > #identity-box[pageproxystate="invalid"] #identity-icon {
   fill-opacity: .4;
+}
 }
 
 #urlbar[actiontype="extension"] > #urlbar-input-container > #identity-box #identity-icon {
@@ -300,7 +305,7 @@
   position: relative;
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 #tracking-protection-icon-container {
   border-radius: 0;
   /* Separator */

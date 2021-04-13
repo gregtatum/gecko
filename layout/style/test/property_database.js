@@ -8526,6 +8526,7 @@ var gCSSProperties = {
     type: CSS_TYPE_LONGHAND,
     applies_to_placeholder: true,
     applies_to_cue: true,
+    applies_to_marker: true,
     initial_values: ["normal"],
     other_values: [
       "pre",
@@ -13480,13 +13481,6 @@ if (IsCSSPropertyPrefEnabled("layout.css.prefixes.columns")) {
     alias_for: "column-width",
     subproperties: ["column-width"],
   };
-}
-
-if (
-  !IsCSSPropertyPrefEnabled("layout.css.image-orientation.initial-from-image")
-) {
-  gCSSProperties["image-orientation"].initial_values = ["none"];
-  gCSSProperties["image-orientation"].other_values = ["from-image"];
 }
 
 if (IsCSSPropertyPrefEnabled("layout.css.aspect-ratio.enabled")) {

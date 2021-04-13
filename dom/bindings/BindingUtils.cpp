@@ -735,13 +735,15 @@ bool DefinePrefable(JSContext* cx, JS::Handle<JSObject*> obj,
   return true;
 }
 
-bool DefineUnforgeableMethods(JSContext* cx, JS::Handle<JSObject*> obj,
-                              const Prefable<const JSFunctionSpec>* props) {
+bool DefineLegacyUnforgeableMethods(
+    JSContext* cx, JS::Handle<JSObject*> obj,
+    const Prefable<const JSFunctionSpec>* props) {
   return DefinePrefable(cx, obj, props);
 }
 
-bool DefineUnforgeableAttributes(JSContext* cx, JS::Handle<JSObject*> obj,
-                                 const Prefable<const JSPropertySpec>* props) {
+bool DefineLegacyUnforgeableAttributes(
+    JSContext* cx, JS::Handle<JSObject*> obj,
+    const Prefable<const JSPropertySpec>* props) {
   return DefinePrefable(cx, obj, props);
 }
 
@@ -802,7 +804,7 @@ static bool DefineConstructor(JSContext* cx, JS::Handle<JSObject*> global,
 static JSObject* CreateInterfaceObject(
     JSContext* cx, JS::Handle<JSObject*> global,
     JS::Handle<JSObject*> constructorProto, const JSClass* constructorClass,
-    unsigned ctorNargs, const NamedConstructor* namedConstructors,
+    unsigned ctorNargs, const LegacyFactoryFunction* namedConstructors,
     JS::Handle<JSObject*> proto, const NativeProperties* properties,
     const NativeProperties* chromeOnlyProperties, const char* name,
     bool isChrome, bool defineOnGlobal, const char* const* legacyWindowAliases,
@@ -1020,7 +1022,7 @@ void CreateInterfaceObjects(
     JS::Handle<JSObject*> protoProto, const JSClass* protoClass,
     JS::Heap<JSObject*>* protoCache, JS::Handle<JSObject*> constructorProto,
     const JSClass* constructorClass, unsigned ctorNargs,
-    const NamedConstructor* namedConstructors,
+    const LegacyFactoryFunction* namedConstructors,
     JS::Heap<JSObject*>* constructorCache, const NativeProperties* properties,
     const NativeProperties* chromeOnlyProperties, const char* name,
     bool defineOnGlobal, const char* const* unscopableNames, bool isGlobal,

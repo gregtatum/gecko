@@ -184,7 +184,8 @@ class AboutWelcome extends react__WEBPACK_IMPORTED_MODULE_0___default.a.PureComp
       metricsFlowUri: this.state.metricsFlowUri,
       message_id: props.messageId,
       utm_term: props.UTMTerm,
-      design: props.design
+      design: props.design,
+      background_url: props.background_url
     });
   }
 
@@ -371,7 +372,10 @@ const MultiStageAboutWelcome = props => {
     })();
   }, [useImportable, region]);
   return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(react__WEBPACK_IMPORTED_MODULE_0___default.a.Fragment, null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
-    className: `outer-wrapper onboardingContainer ${props.design}`
+    className: `outer-wrapper onboardingContainer ${props.design}`,
+    style: {
+      backgroundImage: `url(${props.background_url})`
+    }
   }, props.screens.map(screen => {
     return index === screen.order ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(WelcomeScreen, {
       key: screen.id,
@@ -1098,6 +1102,18 @@ class MultiStageProtonScreen extends react__WEBPACK_IMPORTED_MODULE_0___default.
     })) : null) : null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
       className: "section-main"
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
+      className: `noodle orange-L`
+    }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
+      className: `noodle purple-C`
+    }), isWelcomeScreen ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
+      className: `noodle solid-L`
+    }) : null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
+      className: `noodle outline-L`
+    }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
+      className: `noodle yellow-circle`
+    }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
+      className: "main-content"
+    }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
       className: "brand-logo"
     }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
       className: "welcome-text"
@@ -1126,7 +1142,7 @@ class MultiStageProtonScreen extends react__WEBPACK_IMPORTED_MODULE_0___default.
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("br", null), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("p", null), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_3__["StepsIndicator"], {
       order: this.props.order,
       totalNumberOfScreens: this.props.totalNumberOfScreens
-    })) : null));
+    })) : null)));
   }
 
 }

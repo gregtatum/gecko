@@ -18,10 +18,12 @@
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 1,
     viewCount: 10,
   },
@@ -47,10 +49,12 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 2,
     viewCount: 10,
   },
@@ -77,10 +81,12 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 9,
     viewCount: 10,
   },
@@ -106,10 +112,12 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: -1,
     viewCount: 10,
   },
@@ -135,10 +143,12 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: -2,
     viewCount: 10,
   },
@@ -165,10 +175,12 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: -9,
     viewCount: 10,
   },
@@ -195,11 +207,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: 1,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 1,
     viewCount: 10,
   },
@@ -224,11 +238,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: 1,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 2,
     viewCount: 10,
   },
@@ -261,11 +277,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: 1,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 9,
     viewCount: 10,
   },
@@ -297,11 +315,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: 1,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: -1,
     viewCount: 10,
   },
@@ -333,11 +353,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: 1,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: -2,
     viewCount: 10,
   },
@@ -370,11 +392,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: 1,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: -9,
     viewCount: 10,
   },
@@ -406,11 +430,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: 9,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 1,
     viewCount: 10,
   },
@@ -442,11 +468,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: 9,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 9,
     viewCount: 10,
   },
@@ -478,11 +506,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: 9,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: -1,
     viewCount: 10,
   },
@@ -514,11 +544,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: 9,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: -9,
     viewCount: 10,
   },
@@ -550,11 +582,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: -1,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 1,
     viewCount: 10,
   },
@@ -586,11 +620,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: -1,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 9,
     viewCount: 10,
   },
@@ -622,11 +658,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: -1,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: -1,
     viewCount: 10,
   },
@@ -658,11 +696,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: -1,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: -9,
     viewCount: 10,
   },
@@ -694,11 +734,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: -9,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 1,
     viewCount: 10,
   },
@@ -730,11 +772,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: -9,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 9,
     viewCount: 10,
   },
@@ -766,11 +810,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: -9,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: -1,
     viewCount: 10,
   },
@@ -802,11 +848,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: -9,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: -9,
     viewCount: 10,
   },
@@ -831,10 +879,12 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndexes: [1, -1],
     viewCount: 10,
   },
@@ -866,11 +916,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: 1,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndexes: [1, -1],
     viewCount: 10,
   },
@@ -901,11 +953,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndex: -1,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndexes: [1, -1],
     viewCount: 10,
   },
@@ -943,10 +997,12 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndex: 1,
     resultSpan: 2,
     viewCount: 9,
@@ -976,10 +1032,12 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     viewCount: 10,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndexes: [[1, 2], -1],
     viewCount: 9,
   },
@@ -1014,11 +1072,13 @@ add_suggestedIndex_task({
 add_suggestedIndex_task({
   search1: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.SEARCH,
     suggestedIndexes: [[1, 2]],
     viewCount: 9,
   },
   search2: {
     otherCount: 10,
+    otherType: UrlbarUtils.RESULT_TYPE.URL,
     suggestedIndexes: [[1, 2], -1],
     viewCount: 9,
   },

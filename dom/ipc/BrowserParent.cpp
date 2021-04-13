@@ -604,6 +604,7 @@ void BrowserParent::Deactivated() {
   PointerLockManager::ReleaseLockedRemoteTarget(this);
   PointerEventHandler::ReleasePointerCaptureRemoteTarget(this);
   PresShell::ReleaseCapturingRemoteTarget(this);
+  ProcessPriorityManager::ActivityChanged(this, /* aIsActive = */ false);
 }
 
 void BrowserParent::DestroyInternal() {
@@ -1326,6 +1327,28 @@ IPCResult BrowserParent::RecvNewWindowGlobal(
   }
   if (!aInit.principal()) {
     return IPC_FAIL(this, "Cannot create without valid principal");
+  }
+
+  // Ensure we never load a document with a content principal in
+  // the wrong type of webIsolated process
+  EnumSet<ContentParent::ValidatePrincipalOptions> validationOptions = {};
+  nsCOMPtr<nsIURI> docURI = aInit.documentURI();
+  if (docURI->SchemeIs("about") || docURI->SchemeIs("blob") ||
+      docURI->SchemeIs("chrome")) {
+    // XXXckerschb TODO - Do not use SystemPrincipal for:
+    // Bug 1700639: about:plugins
+    // Bug 1699385: Remove allowSystem for blobs
+    // Bug 1698087: chrome://devtools/content/shared/webextension-fallback.html
+    // chrome reftests, e.g.
+    //   * chrome://reftest/content/writing-mode/ua-style-sheet-button-1a-ref.html
+    //   * chrome://reftest/content/xul-document-load/test003.xhtml
+    //   * chrome://reftest/content/forms/input/text/centering-1.xhtml
+    validationOptions = {ContentParent::ValidatePrincipalOptions::AllowSystem};
+  }
+
+  if (!mManager->ValidatePrincipal(aInit.principal(), validationOptions)) {
+    ContentParent::LogAndAssertFailedPrincipalValidationInfo(aInit.principal(),
+                                                             __func__);
   }
 
   // Construct our new WindowGlobalParent, bind, and initialize it.
@@ -3334,7 +3357,7 @@ void BrowserParent::SetRenderLayers(bool aEnabled) {
     mActiveInPriorityManager = aEnabled;
     // Let's inform the priority manager. This operation can end up with the
     // changing of the process priority.
-    ProcessPriorityManager::TabActivityChanged(this, aEnabled);
+    ProcessPriorityManager::ActivityChanged(this, aEnabled);
   }
 
   if (aEnabled == mRenderLayers) {
@@ -3401,7 +3424,7 @@ void BrowserParent::NotifyResolutionChanged() {
 
 void BrowserParent::Deprioritize() {
   if (mActiveInPriorityManager) {
-    ProcessPriorityManager::TabActivityChanged(this, false);
+    ProcessPriorityManager::ActivityChanged(this, false);
     mActiveInPriorityManager = false;
   }
 }

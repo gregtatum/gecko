@@ -1077,13 +1077,12 @@ var gSync = {
         "account-disconnected"
       );
       appMenuStatus.setAttribute("tooltiptext", tooltipDescription);
+      appMenuLabel.setAttribute("label", errorLabel);
       if (PanelUI.protonAppMenuEnabled) {
         appMenuLabel.classList.add("subviewbutton-nav");
         appMenuHeaderTitle.hidden = false;
         appMenuHeaderTitle.value = errorLabel;
         appMenuHeaderDescription.value = state.email;
-      } else {
-        appMenuLabel.setAttribute("label", errorLabel);
       }
       return;
     } else if (status == UIState.STATUS_NOT_VERIFIED) {
@@ -1096,13 +1095,12 @@ var gSync = {
         "account-finish-account-setup"
       );
       appMenuStatus.setAttribute("tooltiptext", tooltipDescription);
+      appMenuLabel.setAttribute("label", unverifiedLabel);
       if (PanelUI.protonAppMenuEnabled) {
         appMenuLabel.classList.add("subviewbutton-nav");
         appMenuHeaderTitle.hidden = false;
         appMenuHeaderTitle.value = unverifiedLabel;
         appMenuHeaderDescription.value = state.email;
-      } else {
-        appMenuLabel.setAttribute("label", unverifiedLabel);
       }
       return;
     }
@@ -1259,35 +1257,6 @@ var gSync = {
     this.openFxAManagePage(entryPoint);
   },
 
-  async openSendFromFxaMenu(panel) {
-    this.emitFxaToolbarTelemetry("open_send", panel);
-    this.launchFxaService(gFxaSendLoginUrl);
-  },
-
-  async openMonitorFromFxaMenu(panel) {
-    this.emitFxaToolbarTelemetry("open_monitor", panel);
-    this.launchFxaService(gFxaMonitorLoginUrl);
-  },
-
-  launchFxaService(serviceUrl, panel) {
-    let entryPoint = "fxa_discoverability_native";
-    if (this.isPanelInsideAppMenu(panel)) {
-      entryPoint = "fxa_app_menu";
-    }
-
-    const url = new URL(serviceUrl);
-    url.searchParams.set("utm_source", "fxa-toolbar");
-    url.searchParams.set("utm_medium", "referral");
-    url.searchParams.set("entrypoint", entryPoint);
-
-    const state = UIState.get();
-    if (state.status == UIState.STATUS_SIGNED_IN) {
-      url.searchParams.set("email", state.email);
-    }
-
-    switchToTabHavingURI(url, true, { replaceQueryString: true });
-  },
-
   // Returns true if we managed to send the tab to any targets, false otherwise.
   async sendTabToDevice(url, targets, title) {
     const fxaCommandsDevices = [];
@@ -1437,10 +1406,6 @@ var gSync = {
           this.sendTabToDevice(t.url, to, t.title)
         )
       ).then(results => {
-        if (results.includes(true)) {
-          let action = PageActions.actionForID("sendToDevice");
-          showBrowserPageActionFeedback(action);
-        }
         fxAccounts.flushLogFile();
       });
     };

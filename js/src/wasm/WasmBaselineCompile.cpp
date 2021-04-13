@@ -8704,13 +8704,11 @@ class BaseCompiler final : public BaseCompilerInterface {
   [[nodiscard]] bool emitMemFillCall(uint32_t lineOrBytecode);
   [[nodiscard]] bool emitMemFillInline();
   [[nodiscard]] bool emitMemOrTableInit(bool isMem);
-#ifdef ENABLE_WASM_REFTYPES
   [[nodiscard]] bool emitTableFill();
   [[nodiscard]] bool emitTableGet();
   [[nodiscard]] bool emitTableGrow();
   [[nodiscard]] bool emitTableSet();
   [[nodiscard]] bool emitTableSize();
-#endif
   [[nodiscard]] bool emitStructNewWithRtt();
   [[nodiscard]] bool emitStructNewDefaultWithRtt();
   [[nodiscard]] bool emitStructGet(FieldExtension extension);
@@ -13681,7 +13679,6 @@ bool BaseCompiler::emitMemOrTableInit(bool isMem) {
   return true;
 }
 
-#ifdef ENABLE_WASM_REFTYPES
 [[nodiscard]] bool BaseCompiler::emitTableFill() {
   uint32_t lineOrBytecode = readCallSiteLineOrBytecode();
 
@@ -13772,7 +13769,6 @@ bool BaseCompiler::emitMemOrTableInit(bool isMem) {
   pushI32(tableIndex);
   return emitInstanceCall(lineOrBytecode, SASigTableSize);
 }
-#endif
 
 void BaseCompiler::emitGcNullCheck(RegRef rp) {
   Label ok;
@@ -14898,22 +14894,6 @@ static void CmpI64x2(MacroAssembler& masm, Assembler::Condition cond,
 }
 #  endif  // JS_CODEGEN_X86 || JS_CODEGEN_X64
 
-#  if defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64)
-static void CmpUI8x16(MacroAssembler& masm, Assembler::Condition cond,
-                      RegV128 rs, RegV128 rsd, RegV128 temp1, RegV128 temp2) {
-  masm.unsignedCompareInt8x16(cond, rs, rsd, temp1, temp2);
-}
-
-static void CmpUI16x8(MacroAssembler& masm, Assembler::Condition cond,
-                      RegV128 rs, RegV128 rsd, RegV128 temp1, RegV128 temp2) {
-  masm.unsignedCompareInt16x8(cond, rs, rsd, temp1, temp2);
-}
-
-static void CmpUI32x4(MacroAssembler& masm, Assembler::Condition cond,
-                      RegV128 rs, RegV128 rsd, RegV128 temp1, RegV128 temp2) {
-  masm.unsignedCompareInt32x4(cond, rs, rsd, temp1, temp2);
-}
-#  else
 static void CmpUI8x16(MacroAssembler& masm, Assembler::Condition cond,
                       RegV128 rs, RegV128 rsd) {
   masm.compareInt8x16(cond, rs, rsd);
@@ -14928,7 +14908,6 @@ static void CmpUI32x4(MacroAssembler& masm, Assembler::Condition cond,
                       RegV128 rs, RegV128 rsd) {
   masm.compareInt32x4(cond, rs, rsd);
 }
-#  endif
 
 static void CmpF32x4(MacroAssembler& masm, Assembler::Condition cond,
                      RegV128 rs, RegV128 rsd) {
@@ -16252,20 +16231,15 @@ bool BaseCompiler::emitBody() {
         CHECK_NEXT(emitGetGlobal());
       case uint16_t(Op::SetGlobal):
         CHECK_NEXT(emitSetGlobal());
-#ifdef ENABLE_WASM_REFTYPES
       case uint16_t(Op::TableGet):
         CHECK_NEXT(emitTableGet());
       case uint16_t(Op::TableSet):
         CHECK_NEXT(emitTableSet());
-#endif
 
       // Select
       case uint16_t(Op::SelectNumeric):
         CHECK_NEXT(emitSelect(/*typed*/ false));
       case uint16_t(Op::SelectTyped):
-        if (!moduleEnv_.refTypesEnabled()) {
-          return iter_.unrecognizedOpcode(&op);
-        }
         CHECK_NEXT(emitSelect(/*typed*/ true));
 
       // I32
@@ -16778,13 +16752,12 @@ bool BaseCompiler::emitBody() {
 #endif
 #ifdef ENABLE_WASM_GC
       case uint16_t(Op::RefEq):
-        if (!moduleEnv_.gcTypesEnabled()) {
+        if (!moduleEnv_.gcEnabled()) {
           return iter_.unrecognizedOpcode(&op);
         }
         CHECK_NEXT(dispatchComparison(emitCompareRef, RefType::eq(),
                                       Assembler::Equal));
 #endif
-#ifdef ENABLE_WASM_REFTYPES
       case uint16_t(Op::RefFunc):
         CHECK_NEXT(emitRefFunc());
         break;
@@ -16794,12 +16767,11 @@ bool BaseCompiler::emitBody() {
       case uint16_t(Op::RefIsNull):
         CHECK_NEXT(emitRefIsNull());
         break;
-#endif
 
 #ifdef ENABLE_WASM_GC
       // "GC" operations
       case uint16_t(Op::GcPrefix): {
-        if (!moduleEnv_.gcTypesEnabled()) {
+        if (!moduleEnv_.gcEnabled()) {
           return iter_.unrecognizedOpcode(&op);
         }
         switch (op.b1) {
@@ -17462,14 +17434,12 @@ bool BaseCompiler::emitBody() {
             CHECK_NEXT(emitDataOrElemDrop(/*isData=*/false));
           case uint32_t(MiscOp::TableInit):
             CHECK_NEXT(emitMemOrTableInit(/*isMem=*/false));
-#ifdef ENABLE_WASM_REFTYPES
           case uint32_t(MiscOp::TableFill):
             CHECK_NEXT(emitTableFill());
           case uint32_t(MiscOp::TableGrow):
             CHECK_NEXT(emitTableGrow());
           case uint32_t(MiscOp::TableSize):
             CHECK_NEXT(emitTableSize());
-#endif
           default:
             break;
         }  // switch (op.b1)
@@ -17478,6 +17448,9 @@ bool BaseCompiler::emitBody() {
 
       // Thread operations
       case uint16_t(Op::ThreadPrefix): {
+        // Though thread ops can be used on nonshared memories, we make them
+        // unavailable if shared memory has been disabled in the prefs, for
+        // maximum predictability and safety and consistency with JS.
         if (moduleEnv_.sharedMemoryEnabled() == Shareable::False) {
           return iter_.unrecognizedOpcode(&op);
         }

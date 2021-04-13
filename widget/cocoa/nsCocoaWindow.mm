@@ -2572,6 +2572,22 @@ bool nsCocoaWindow::AsyncPanZoomEnabled() const {
   return nsBaseWidget::AsyncPanZoomEnabled();
 }
 
+bool nsCocoaWindow::StartAsyncAutoscroll(const ScreenPoint& aAnchorLocation,
+                                         const ScrollableLayerGuid& aGuid) {
+  if (mPopupContentView) {
+    return mPopupContentView->StartAsyncAutoscroll(aAnchorLocation, aGuid);
+  }
+  return nsBaseWidget::StartAsyncAutoscroll(aAnchorLocation, aGuid);
+}
+
+void nsCocoaWindow::StopAsyncAutoscroll(const ScrollableLayerGuid& aGuid) {
+  if (mPopupContentView) {
+    mPopupContentView->StopAsyncAutoscroll(aGuid);
+    return;
+  }
+  nsBaseWidget::StopAsyncAutoscroll(aGuid);
+}
+
 already_AddRefed<nsIWidget> nsIWidget::CreateTopLevelWindow() {
   nsCOMPtr<nsIWidget> window = new nsCocoaWindow();
   return window.forget();
@@ -3227,9 +3243,15 @@ static const NSString* kStateWantsTitleDrawn = @"wantsTitleDrawn";
       case nsIWidget::WindowAppearance::eLight:
         self.appearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
         break;
-      case nsIWidget::WindowAppearance::eDark:
+      // eDark is currently disabled.
+      // The sheet window background always follows the sheetParent window's
+      // appearance. So we can only use the dark appearance if child sheet
+      // contents use text colors that are compatible with the dark appearance.
+      // But at the moment, sheet documents always use the Light ColorScheme for
+      // their system colors, resulting in black-on-dark text. See bug 1704016.
+      /*case nsIWidget::WindowAppearance::eDark:
         self.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
-        break;
+        break;*/
       default:
         // nil means "inherit effectiveAppearance from self.appearanceSource".
         self.appearance = nil;

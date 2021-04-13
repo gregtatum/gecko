@@ -29,8 +29,12 @@ class NativeMenuMac : public NativeMenu,
   explicit NativeMenuMac(mozilla::dom::Element* aElement);
 
   // NativeMenu
-  bool ShowAsContextMenu(const mozilla::DesktopPoint& aPosition) override;
+  void ShowAsContextMenu(const mozilla::DesktopPoint& aPosition) override;
   bool Close() override;
+  void ActivateItem(dom::Element* aItemElement, Modifiers aModifiers,
+                    ErrorResult& aRv) override;
+  void OpenSubmenu(dom::Element* aMenuElement) override;
+  void CloseSubmenu(dom::Element* aMenuElement) override;
   RefPtr<dom::Element> Element() override;
   void AddObserver(NativeMenu::Observer* aObserver) override {
     mObservers.AppendElement(aObserver);
@@ -67,6 +71,12 @@ class NativeMenuMac : public NativeMenu,
   // This is done from a runnable so that the nested event loop doesn't run
   // during ShowAsContextMenu.
   void OpenMenu(const mozilla::DesktopPoint& aPosition);
+
+  // Find the deepest nsMenuX which contains aElement, only descending into open
+  // menus.
+  // Returns nullptr if the element was not found or if the menus on the path
+  // were not all open.
+  RefPtr<nsMenuX> GetOpenMenuContainingElement(dom::Element* aElement);
 
   RefPtr<dom::Element> mElement;
   RefPtr<nsMenuGroupOwnerX> mMenuGroupOwner;

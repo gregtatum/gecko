@@ -2653,10 +2653,7 @@ nsChangeHint nsStyleDisplay::CalcDifference(
 //
 
 nsStyleVisibility::nsStyleVisibility(const Document& aDocument)
-    : mImageOrientation(
-          StaticPrefs::layout_css_image_orientation_initial_from_image()
-              ? StyleImageOrientation::FromImage
-              : StyleImageOrientation::None),
+    : mImageOrientation(StyleImageOrientation::FromImage),
       mDirection(aDocument.GetBidiOptions() == IBMBIDI_TEXTDIRECTION_RTL
                      ? StyleDirection::Rtl
                      : StyleDirection::Ltr),
@@ -2864,8 +2861,10 @@ nsStyleText::nsStyleText(const Document& aDocument)
                         : StyleRubyPosition::Over),
       mTextSizeAdjust(StyleTextSizeAdjust::Auto),
       mTextCombineUpright(NS_STYLE_TEXT_COMBINE_UPRIGHT_NONE),
-      mControlCharacterVisibility(
-          nsLayoutUtils::ControlCharVisibilityDefault()),
+      mMozControlCharacterVisibility(
+          StaticPrefs::layout_css_control_characters_visible()
+              ? StyleMozControlCharacterVisibility::Visible
+              : StyleMozControlCharacterVisibility::Hidden),
       mTextRendering(StyleTextRendering::Auto),
       mTextEmphasisColor(StyleColor::CurrentColor()),
       mWebkitTextFillColor(StyleColor::CurrentColor()),
@@ -2904,7 +2903,7 @@ nsStyleText::nsStyleText(const nsStyleText& aSource)
       mRubyPosition(aSource.mRubyPosition),
       mTextSizeAdjust(aSource.mTextSizeAdjust),
       mTextCombineUpright(aSource.mTextCombineUpright),
-      mControlCharacterVisibility(aSource.mControlCharacterVisibility),
+      mMozControlCharacterVisibility(aSource.mMozControlCharacterVisibility),
       mTextEmphasisPosition(aSource.mTextEmphasisPosition),
       mTextRendering(aSource.mTextRendering),
       mTextEmphasisColor(aSource.mTextEmphasisColor),
@@ -2934,7 +2933,8 @@ nsChangeHint nsStyleText::CalcDifference(const nsStyleText& aNewData) const {
   }
 
   if (mTextCombineUpright != aNewData.mTextCombineUpright ||
-      mControlCharacterVisibility != aNewData.mControlCharacterVisibility) {
+      mMozControlCharacterVisibility !=
+          aNewData.mMozControlCharacterVisibility) {
     return nsChangeHint_ReconstructFrame;
   }
 

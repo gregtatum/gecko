@@ -57,6 +57,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   LoginBreaches: "resource:///modules/LoginBreaches.jsm",
   NetUtil: "resource://gre/modules/NetUtil.jsm",
   NewTabUtils: "resource://gre/modules/NewTabUtils.jsm",
+  NimbusFeatures: "resource://nimbus/ExperimentAPI.jsm",
   Normandy: "resource://normandy/Normandy.jsm",
   OS: "resource://gre/modules/osfile.jsm",
   OsEnvironment: "resource://gre/modules/OsEnvironment.jsm",
@@ -115,12 +116,10 @@ let initializedModules = {};
   });
 });
 
-XPCOMUtils.defineLazyServiceGetter(
-  this,
-  "PushService",
-  "@mozilla.org/push/Service;1",
-  "nsIPushService"
-);
+XPCOMUtils.defineLazyServiceGetters(this, {
+  BrowserHandler: ["@mozilla.org/browser/clh;1", "nsIBrowserHandler"],
+  PushService: ["@mozilla.org/push/Service;1", "nsIPushService"],
+});
 
 const PREF_PDFJS_ISDEFAULT_CACHE_STATE = "pdfjs.enabledCache.state";
 
@@ -1042,7 +1041,7 @@ BrowserGlue.prototype = {
         Services.console.reset();
         break;
       case "restart-in-safe-mode":
-        this._onSafeModeRestart();
+        this._onSafeModeRestart(subject);
         break;
       case "quit-application-requested":
         this._onQuitRequest(subject, data);
@@ -1437,7 +1436,7 @@ BrowserGlue.prototype = {
     }
   },
 
-  _onSafeModeRestart: function BG_onSafeModeRestart() {
+  async _onSafeModeRestart(window) {
     // prompt the user to confirm
     let productName = gBrandBundle.GetStringFromName("brandShortName");
     let strings = gBrowserBundle;
@@ -1456,8 +1455,9 @@ BrowserGlue.prototype = {
       Services.prompt.BUTTON_POS_1 * Services.prompt.BUTTON_TITLE_CANCEL +
       Services.prompt.BUTTON_POS_0_DEFAULT;
 
-    let rv = Services.prompt.confirmEx(
-      null,
+    let rv = await Services.prompt.asyncConfirmEx(
+      window.browsingContext,
+      Ci.nsIPrompt.MODAL_TYPE_INTERNAL_WINDOW,
       promptTitle,
       promptMessage,
       buttonFlags,
@@ -1467,7 +1467,7 @@ BrowserGlue.prototype = {
       null,
       {}
     );
-    if (rv != 0) {
+    if (rv.get("buttonNumClicked") != 0) {
       return;
     }
 
@@ -2546,8 +2546,7 @@ BrowserGlue.prototype = {
       },
 
       {
-        condition:
-          AppConstants.MOZ_BACKGROUNDTASKS && AppConstants.MOZ_UPDATE_AGENT,
+        condition: AppConstants.MOZ_UPDATE_AGENT,
         task: () => {
           // Never in automation!  This is close to
           // `UpdateService.disabledForTesting`, but without creating the
@@ -3776,41 +3775,99 @@ BrowserGlue.prototype = {
     Services.prefs.setIntPref("browser.migration.version", UI_VERSION);
   },
 
-  _maybeShowDefaultBrowserPrompt() {
-    Promise.all([
+  _showUpgradeDialog() {
+    BrowserWindowTracker.getTopWindow().gDialogBox.open(
+      "chrome://browser/content/upgradeDialog.html"
+    );
+  },
+
+  async _maybeShowDefaultBrowserPrompt() {
+    // Highest priority is the upgrade dialog, which can include a "primary
+    // browser" request and is limited in various ways, e.g., major upgrades.
+    const dialogVersion = 89;
+    const dialogVersionPref = "browser.startup.upgradeDialog.version";
+    const dialogReason = await (async () => {
+      if (!Services.prefs.getBoolPref("browser.proton.enabled", true)) {
+        return "no-proton";
+      }
+      if (!BrowserHandler.majorUpgrade) {
+        return "not-major";
+      }
+      const lastVersion = Services.prefs.getIntPref(dialogVersionPref, 0);
+      if (lastVersion > dialogVersion) {
+        return "newer-shown";
+      }
+      if (lastVersion === dialogVersion) {
+        return "already-shown";
+      }
+      if (
+        !Services.prefs.getBoolPref(
+          "browser.messaging-system.whatsNewPanel.enabled",
+          true
+        )
+      ) {
+        return "no-whatsNew";
+      }
+      if (!Services.prefs.getBoolPref("browser.aboutwelcome.enabled", true)) {
+        return "no-welcome";
+      }
+      if (!Services.policies.isAllowed("postUpdateCustomPage")) {
+        return "disallow-postUpdate";
+      }
+
+      // Check enabled last to avoid waiting on remote data in the common case.
+      await NimbusFeatures.upgradeDialog.ready();
+      return NimbusFeatures.upgradeDialog.isEnabled() ? "" : "disabled";
+    })();
+
+    // Record why the dialog is showing or not.
+    Services.telemetry.setEventRecordingEnabled("upgrade_dialog", true);
+    Services.telemetry.recordEvent(
+      "upgrade_dialog",
+      "trigger",
+      "reason",
+      dialogReason || "satisfied"
+    );
+
+    // Show the upgrade dialog if allowed and remember the version.
+    if (!dialogReason) {
+      Services.prefs.setIntPref(dialogVersionPref, dialogVersion);
+      this._showUpgradeDialog();
+      return;
+    }
+
+    // Determine if the modal prompt or infobar message should be shown.
+    const [willPrompt] = await Promise.all([
       DefaultBrowserCheck.willCheckDefaultBrowser(/* isStartupCheck */ true),
-      ExperimentAPI.ready,
-    ]).then(async ([willPrompt]) => {
-      let { DefaultBrowserNotification } = ChromeUtils.import(
-        "resource:///actors/AboutNewTabParent.jsm",
-        {}
-      );
-      let isFeatureEnabled = ExperimentAPI.getExperiment({
-        featureId: "infobar",
-      })?.branch.feature.enabled;
-      if (willPrompt) {
-        // Prevent the related notification from appearing and
-        // show the modal prompt.
-        DefaultBrowserNotification.notifyModalDisplayed();
-      }
-      // If no experiment go ahead with default experience
-      if (willPrompt && !isFeatureEnabled) {
-        let win = BrowserWindowTracker.getTopWindow();
-        DefaultBrowserCheck.prompt(win);
-      }
-      // If in experiment notify ASRouter to dispatch message
-      if (isFeatureEnabled) {
-        ASRouter.waitForInitialized.then(() =>
-          ASRouter.sendTriggerMessage({
-            browser: BrowserWindowTracker.getTopWindow()?.gBrowser
-              .selectedBrowser,
-            // triggerId and triggerContext
-            id: "defaultBrowserCheck",
-            context: { willShowDefaultPrompt: willPrompt },
-          })
-        );
-      }
-    });
+      ExperimentAPI.ready(),
+    ]);
+    let { DefaultBrowserNotification } = ChromeUtils.import(
+      "resource:///actors/AboutNewTabParent.jsm",
+      {}
+    );
+    let isFeatureEnabled = ExperimentAPI.getExperiment({
+      featureId: "infobar",
+    })?.branch.feature.enabled;
+    if (willPrompt) {
+      // Prevent the related notification from appearing and
+      // show the modal prompt.
+      DefaultBrowserNotification.notifyModalDisplayed();
+    }
+    // If no experiment go ahead with default experience
+    if (willPrompt && !isFeatureEnabled) {
+      let win = BrowserWindowTracker.getTopWindow();
+      DefaultBrowserCheck.prompt(win);
+    }
+    // If in experiment notify ASRouter to dispatch message
+    if (isFeatureEnabled) {
+      await ASRouter.waitForInitialized;
+      ASRouter.sendTriggerMessage({
+        browser: BrowserWindowTracker.getTopWindow()?.gBrowser.selectedBrowser,
+        // triggerId and triggerContext
+        id: "defaultBrowserCheck",
+        context: { willShowDefaultPrompt: willPrompt },
+      });
+    }
   },
 
   /**

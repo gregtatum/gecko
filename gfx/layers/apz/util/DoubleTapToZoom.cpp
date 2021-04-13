@@ -19,6 +19,7 @@
 #include "nsIScrollableFrame.h"
 #include "nsLayoutUtils.h"
 #include "nsStyleConsts.h"
+#include "mozilla/ViewportUtils.h"
 
 namespace mozilla {
 namespace layers {
@@ -62,7 +63,9 @@ static already_AddRefed<dom::Element> ElementFromPoint(
   return nullptr;
 }
 
-static bool ShouldZoomToElement(const nsCOMPtr<dom::Element>& aElement) {
+static bool ShouldZoomToElement(
+    const nsCOMPtr<dom::Element>& aElement,
+    const RefPtr<dom::Document>& aRootContentDocument) {
   if (nsIFrame* frame = aElement->GetPrimaryFrame()) {
     if (frame->StyleDisplay()->IsInlineFlow() &&
         // Replaced elements are suitable zoom targets because they act like
@@ -71,6 +74,13 @@ static bool ShouldZoomToElement(const nsCOMPtr<dom::Element>& aElement) {
         !frame->IsFrameOfType(nsIFrame::eReplaced)) {
       return false;
     }
+  }
+  // Trying to zoom to the html element will just end up scrolling to the start
+  // of the document, return false and we'll run out of elements and just
+  // zoomout (without scrolling to the start).
+  if (aElement->OwnerDoc() == aRootContentDocument &&
+      aElement->IsHTMLElement(nsGkAtoms::html)) {
+    return false;
   }
   if (aElement->IsAnyOfHTMLElements(nsGkAtoms::li, nsGkAtoms::q)) {
     return false;
@@ -121,7 +131,7 @@ CSSRect CalculateRectToZoomTo(const RefPtr<dom::Document>& aRootContentDocument,
     return zoomOut;
   }
 
-  while (element && !ShouldZoomToElement(element)) {
+  while (element && !ShouldZoomToElement(element, aRootContentDocument)) {
     element = element->GetParentElement();
   }
 
@@ -135,8 +145,36 @@ CSSRect CalculateRectToZoomTo(const RefPtr<dom::Document>& aRootContentDocument,
   CSSRect compositedArea(visualScrollOffset,
                          metrics.CalculateCompositedSizeInCssPixels());
   const CSSCoord margin = 15;
-  CSSRect rect =
-      nsLayoutUtils::GetBoundingContentRect(element, rootScrollFrame);
+  Maybe<CSSRect> nearestScrollClip;
+  CSSRect rect = nsLayoutUtils::GetBoundingContentRect(element, rootScrollFrame,
+                                                       &nearestScrollClip);
+
+  CSSPoint point = CSSPoint::FromAppUnits(
+      ViewportUtils::VisualToLayout(CSSPoint::ToAppUnits(aPoint), presShell));
+
+  CSSPoint documentRelativePoint =
+      point + CSSPoint::FromAppUnits(rootScrollFrame->GetScrollPosition());
+
+  // In some cases, like overflow: visible and overflowing content, the bounding
+  // client rect of the targeted element won't contain the point the user double
+  // tapped on. In that case we use the scrollable overflow rect if it contains
+  // the user point.
+  if (!rect.Contains(documentRelativePoint)) {
+    if (nsIFrame* scrolledFrame = rootScrollFrame->GetScrolledFrame()) {
+      if (nsIFrame* f = element->GetPrimaryFrame()) {
+        CSSRect overflowRect =
+            CSSRect::FromAppUnits(nsLayoutUtils::TransformFrameRectToAncestor(
+                f, f->ScrollableOverflowRect(),
+                RelativeTo{scrolledFrame, ViewportType::Layout}));
+        if (nearestScrollClip.isSome()) {
+          overflowRect = nearestScrollClip->Intersect(overflowRect);
+        }
+        if (overflowRect.Contains(documentRelativePoint)) {
+          rect = overflowRect;
+        }
+      }
+    }
+  }
 
   // If the element is taller than the visible area of the page scale
   // the height of the |rect| so that it has the same aspect ratio as
@@ -146,9 +184,7 @@ CSSRect CalculateRectToZoomTo(const RefPtr<dom::Document>& aRootContentDocument,
     const float widthRatio = rect.Width() / compositedArea.Width();
     float targetHeight = compositedArea.Height() * widthRatio;
     if (widthRatio < 0.9 && targetHeight < rect.Height()) {
-      const CSSPoint scrollPoint =
-          CSSPoint::FromAppUnits(rootScrollFrame->GetScrollPosition());
-      float newY = aPoint.y + scrollPoint.y - (targetHeight * 0.5f);
+      float newY = documentRelativePoint.y - (targetHeight * 0.5f);
       if ((newY + targetHeight) > rect.YMost()) {
         rect.MoveByY(rect.Height() - targetHeight);
       } else if (newY > rect.Y()) {

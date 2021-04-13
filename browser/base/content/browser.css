@@ -686,7 +686,7 @@ toolbar:not(#TabsToolbar) > #personal-bookmarks {
   }
 }
 
-@media (-moz-proton-urlbar) {
+@media (-moz-proton) {
   /* The page actions menu is hidden by default, it is only shown in small
      windows as the overflow target of multiple page action buttons */
   #pageActionButton {
@@ -705,7 +705,7 @@ toolbar:not(#TabsToolbar) > #personal-bookmarks {
     display: none;
   }
 
-  @media (-moz-proton-urlbar) {
+  @media (-moz-proton) {
     #pageActionButton[multiple-children] {
       visibility: visible;
     }
@@ -1338,7 +1338,7 @@ toolbarpaletteitem > #stop-reload-button {
   visibility: visible;
 }
 
-@media not (-moz-proton-urlbar) {
+@media not (-moz-proton) {
 /* These pin/unpin menu options should be removed after Proton is released */
 #pageActionContextMenu[state=builtInPinned] > .pageActionContextMenuItem.builtInPinned,
 #pageActionContextMenu[state=builtInUnpinned] > .pageActionContextMenuItem.builtInUnpinned,
@@ -1570,6 +1570,10 @@ toolbar[keyNav=true]:not([collapsed=true], [customizing=true]) toolbartabstop {
 .dialogOverlay[topmost="true"],
 #window-modal-dialog::backdrop {
   background-color: rgba(91, 91, 102, 0.45);
+}
+
+#window-modal-dialog.showToolbar::backdrop {
+  background: linear-gradient(transparent, rgba(91, 91, 102, 0.45) 20%);
 }
 
 /* For the window-modal dialog, the background is supplied by the HTML dialog

@@ -1059,9 +1059,6 @@ nsresult nsFtpState::S_list() {
 FTP_STATE
 nsFtpState::R_list() {
   if (mResponseCode / 100 == 1) {
-    Telemetry::ScalarAdd(
-        Telemetry::ScalarID::NETWORKING_FTP_OPENED_CHANNELS_LISTINGS, 1);
-
     mRlist1xxReceived = true;
 
     // OK, time to start reading from the data connection.
@@ -1102,10 +1099,6 @@ nsFtpState::R_retr() {
 
   if (mResponseCode / 100 == 1) {
     mChannel->SetContentType(nsLiteralCString(APPLICATION_OCTET_STREAM));
-
-    Telemetry::ScalarAdd(
-        Telemetry::ScalarID::NETWORKING_FTP_OPENED_CHANNELS_FILES, 1);
-
     mRretr1xxReceived = true;
 
     if (mDataStream && HasPendingCallback())
@@ -1189,9 +1182,6 @@ nsFtpState::R_stor() {
   }
 
   if (mResponseCode / 100 == 1) {
-    Telemetry::ScalarAdd(
-        Telemetry::ScalarID::NETWORKING_FTP_OPENED_CHANNELS_FILES, 1);
-
     LOG(("FTP:(%p) writing on DT\n", this));
     mRstor1xxReceived = true;
     return FTP_READ_BUF;
@@ -1521,11 +1511,11 @@ nsresult nsFtpState::Init(nsFtpChannel* channel) {
     // now unescape it... %xx reduced inline to resulting character
     int32_t len = NS_UnescapeURL(fwdPtr);
     mPath.Assign(fwdPtr, len);
-
-#ifdef DEBUG
-    if (mPath.FindCharInSet(CRLF) >= 0)
-      NS_ERROR("NewURI() should've prevented this!!!");
-#endif
+    if (mPath.FindCharInSet(CRLF) != kNotFound ||
+        mPath.FindChar('\0') != kNotFound) {
+      mPath.Truncate();
+      return NS_ERROR_MALFORMED_URI;
+    }
   }
 
   // pull any username and/or password out of the uri

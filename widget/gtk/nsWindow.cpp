@@ -2220,11 +2220,15 @@ void nsWindow::SetFocus(Raise aRaise, mozilla::dom::CallerType aCallerType) {
     if (gRaiseWindows && owningWindow->mIsShown && owningWindow->mShell &&
         !gtk_window_is_active(GTK_WINDOW(owningWindow->mShell))) {
       if (!mIsX11Display &&
-          Preferences::GetBool("testing.browserTestHarness.running", false)) {
+          Preferences::GetBool("widget.wayland.test-workarounds.enabled",
+                               false)) {
         // Wayland does not support focus changes so we need to workaround it
-        // by window hide/show sequence but only when it's running in testsuite.
+        // by window hide/show sequence.
         owningWindow->NativeShow(false);
-        owningWindow->NativeShow(true);
+        RefPtr<nsWindow> self(owningWindow);
+        NS_DispatchToMainThread(NS_NewRunnableFunction(
+            "nsWindow::NativeShow()",
+            [self]() -> void { self->NativeShow(true); }));
         return;
       }
 
@@ -4287,6 +4291,14 @@ bool nsWindow::IsHandlingTouchSequence(GdkEventSequence* aSequence) {
 
 gboolean nsWindow::OnTouchpadPinchEvent(GdkEventTouchpadPinch* aEvent) {
   if (StaticPrefs::apz_gtk_touchpad_pinch_enabled()) {
+    // Do not respond to pinch gestures involving more than two fingers
+    // unless specifically preffed on. These are sometimes hooked up to other
+    // actions at the desktop environment level and having the browser also
+    // pinch can be undesirable.
+    if (aEvent->n_fingers > 2 &&
+        !StaticPrefs::apz_gtk_touchpad_pinch_three_fingers_enabled()) {
+      return FALSE;
+    }
     PinchGestureInput::PinchGestureType pinchGestureType =
         PinchGestureInput::PINCHGESTURE_SCALE;
     ScreenCoord CurrentSpan;
