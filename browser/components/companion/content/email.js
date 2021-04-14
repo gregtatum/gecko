@@ -5,6 +5,8 @@
 // These come from utilityOverlay.js
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
+import { openUrl } from "./shared.js";
+
 const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
 );
@@ -125,3 +127,7 @@ export function initEmailServices(services) {
     getEmail(services);
   }, EMAIL_CHECK_TIME);
 }
+
+document.getElementById("inbox-link").addEventListener("click", function() {
+  openUrl("https://mail.google.com");
+});

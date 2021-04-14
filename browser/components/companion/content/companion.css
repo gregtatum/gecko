@@ -427,6 +427,10 @@ button.conference:hover:active, .btn:hover:active {
 
 .pocket .title {
   font-weight: bold;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 .calendar-title {
   text-transform: capitalize;
@@ -440,7 +444,7 @@ button.conference:hover:active, .btn:hover:active {
   justify-content: flex-start;
 }
 
-.from-date {
+.from-date, .email-header {
   display: flex;
   flex-direction: row;
   align-items: stretch;
@@ -468,4 +472,45 @@ button.conference:hover:active, .btn:hover:active {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+}
+
+.card {
+  background: none;
+  border: none;
+  border-radius: 0px;
+  box-shadow: none;
+  margin: 0 0 8px;
+  transition: none;
+}
+
+.card:not(.card-no-hover):hover {
+  cursor: pointer;
+  box-shadow: none;
+}
+
+#email {
+  background-color: #F0F0F4;
+  border-radius: 4px;
+  margin-right: 5px;
+  margin-left: 5px;
+}
+
+:root:-moz-lwtheme-brighttext #email {
+  background-color: #42414D;
+}
+
+@media (prefers-color-scheme: dark) {
+  #email {
+    background-color: #42414D;
+  }
+}
+
+.email-title {
+  flex: 1;
+}
+
+#inbox-link {
+  cursor: pointer;
+  opacity: 0.75;
+  font-size: smaller;
 }
