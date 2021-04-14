@@ -35,7 +35,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserUsageTelemetry: "resource:///modules/BrowserUsageTelemetry.jsm",
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.jsm",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
-  CompanionService: "resource:///modules/CompanionService.jsm",
   ContextualIdentityService:
     "resource://gre/modules/ContextualIdentityService.jsm",
   Corroborate: "resource://gre/modules/Corroborate.jsm",
@@ -2227,8 +2226,6 @@ BrowserGlue.prototype = {
     }
 
     FirefoxMonitor.init();
-
-    CompanionService.openCompanion();
   },
 
   /**

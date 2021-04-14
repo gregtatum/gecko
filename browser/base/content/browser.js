@@ -1718,6 +1718,8 @@ var gBrowserInit = {
     delete window._gBrowser;
     gBrowser.init();
 
+    CompanionService.addBrowserWindow(window);
+
     BrowserWindowTracker.track(window);
 
     gNavToolbox.palette = document.getElementById(
@@ -2590,11 +2592,6 @@ var gBrowserInit = {
       .QueryInterface(Ci.nsIInterfaceRequestor)
       .getInterface(Ci.nsIAppWindow).XULBrowserWindow = null;
     window.browserDOMWindow = null;
-
-    // Is this the last window closing?
-    if (BrowserWindowTracker.windowCount == 1) {
-      CompanionService.closeCompanion();
-    }
   },
 };
 

@@ -18,6 +18,10 @@ const { LightweightThemeConsumer } = ChromeUtils.import(
   "resource://gre/modules/LightweightThemeConsumer.jsm"
 );
 
+const { CompanionService } = ChromeUtils.import(
+  "resource:///modules/CompanionService.jsm"
+);
+
 let OBSERVED_PREFS = new Map();
 onLoad(() => {
   // Cheesy approximation of preferences for the demo settings. Add a checkbox with
@@ -56,6 +60,9 @@ onLoad(() => {
   document
     .getElementById("settings-button")
     .addEventListener("click", toggleSettings);
+  document
+    .getElementById("dock-button")
+    .addEventListener("click", () => CompanionService.dockCompanion());
 
   initServices();
   let content = document.getElementById("content");
@@ -81,18 +88,22 @@ window.addEventListener(
   () => {
     new LightweightThemeConsumer(document);
 
-    if (!document.documentElement.hasAttribute("width")) {
-      const TARGET_WIDTH = 1280;
-      const TARGET_HEIGHT = 1040;
-      let width = Math.min(screen.availWidth * 0.9, TARGET_WIDTH);
-      let height = Math.min(screen.availHeight * 0.9, TARGET_HEIGHT);
+    if (window.top === window) {
+      if (!document.documentElement.hasAttribute("width")) {
+        const TARGET_WIDTH = 1280;
+        const TARGET_HEIGHT = 1040;
+        let width = Math.min(screen.availWidth * 0.9, TARGET_WIDTH);
+        let height = Math.min(screen.availHeight * 0.9, TARGET_HEIGHT);
 
-      document.documentElement.setAttribute("width", width);
-      document.documentElement.setAttribute("height", height);
+        document.documentElement.setAttribute("width", width);
+        document.documentElement.setAttribute("height", height);
 
-      if (width < TARGET_WIDTH && height < TARGET_HEIGHT) {
-        document.documentElement.setAttribute("sizemode", "maximized");
+        if (width < TARGET_WIDTH && height < TARGET_HEIGHT) {
+          document.documentElement.setAttribute("sizemode", "maximized");
+        }
       }
+    } else {
+      document.documentElement.setAttribute("docked", "true");
     }
   },
   { once: true }

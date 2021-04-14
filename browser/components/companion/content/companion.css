@@ -25,6 +25,12 @@ h2 {
   margin-bottom: 10px;
 }
 
+:root[docked] #main-menubar,
+:root[docked] #titlebar,
+:root[docked] #awesomebar {
+  display: none;
+}
+
 #titlebar {
   appearance: auto;
   -moz-default-appearance: -moz-mac-vibrant-titlebar-dark;
@@ -60,6 +66,22 @@ h2 {
 }
 
 #settings-button image {
+  width: 16px;
+  height: 16px;
+}
+
+#dock-button {
+  -moz-context-properties: fill, fill-opacity;
+  fill: currentColor;
+  fill-opacity: .6;
+  list-style-image: url("chrome://browser/content/companion/dock.svg")
+}
+
+#dock-button:hover {
+  fill-opacity: .8;
+}
+
+#dock-button image {
   width: 16px;
   height: 16px;
 }

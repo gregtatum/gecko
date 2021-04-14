@@ -22,6 +22,7 @@
 <?xml-stylesheet href="chrome://browser/content/downloads/downloads.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/content/places/places.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/content/usercontext/usercontext.css" type="text/css"?>
+<?xml-stylesheet href="chrome://browser/content/companion/browser.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/skin/" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/skin/controlcenter/panel.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/skin/customizableui/panelUI.css" type="text/css"?>
@@ -765,11 +766,6 @@
                         closemenu="none"
                         oncommand="gSync.toggleAccountPanel(this, event)"/>
         </toolbaritem>
-        <toolbarbutton id="appMenu-companion-button"
-                       class="subviewbutton subviewbutton-iconic"
-                       label="Open Firefox Companion"
-                       key="key_companion"
-                       command="Browser:OpenCompanion"/>
         <toolbarseparator class="sync-ui-item"/>
         <toolbaritem>
           <toolbarbutton id="appMenu-protection-report-button"
@@ -1786,7 +1782,37 @@
              overflowpanel="widget-overflow"
              context="toolbar-context-menu">
 
+      <hbox id="companion-titlebar">
+        <vbox pack="start">
+          <hbox id="companion-mac-buttonbox"/>
+        </vbox>
+        <hbox flex="1" pack="end">
+          <toolbarbutton
+            id="companion-undock-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
+            oncommand="CompanionService.undockCompanion()"
+            onclick="checkForMiddleClick(this, event);"/>
+        </hbox>
+      </hbox>
+
       <toolbartabstop/>
+      <hbox id="companion-toolbar" flex="10">
+        <toolbarbutton id="companion-back-button" class="toolbarbutton-1"
+                       data-l10n-id="toolbar-button-back-2"
+                       command="Browser:BackOrBackDuplicate"
+                       onclick="checkForMiddleClick(this, event);"
+                       tooltip="back-button-tooltip"
+                       context="backForwardMenu"/>
+        <vbox id="companion-view-manager" pack="center" flex="1">
+          <label id="companion-page-title" crop="end"/>
+          <label id="companion-page-domain"/>
+        </vbox>
+        <toolbarbutton id="companion-reload-button" class="toolbarbutton-1"
+                       data-l10n-id="toolbar-button-reload"
+                       command="Browser:ReloadOrDuplicate"
+                       onclick="checkForMiddleClick(this, event);"
+                       tooltip="dynamic-shortcut-tooltip"/>
+      </hbox>
+
       <hbox id="nav-bar-customization-target" flex="1">
         <toolbarbutton id="back-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
                        data-l10n-id="toolbar-button-back-2"
@@ -2095,14 +2121,15 @@
                         <image id="fxa-avatar-image"/>
                        </vbox>
         </toolbarbutton>
-        <toolbarbutton id="companion-button" class="toolbarbutton-1 chromeclass-toolbar-additional subviewbutton-nav"
-                       removable="true"
-                       command="Browser:OpenCompanion"
-                       closemenu="none"
-                       cui-areatype="toolbar"
-                       tooltiptext="Companion"
-                       label="Companion"/>
       </hbox>
+
+      <toolbarbutton id="companion-button" class="toolbarbutton-1 chromeclass-toolbar-additional subviewbutton-nav"
+                      removable="true"
+                      command="Browser:ToggleCompanion"
+                      closemenu="none"
+                      cui-areatype="toolbar"
+                      tooltiptext="Companion"
+                      label="Companion"/>
 
       <toolbarbutton id="nav-bar-overflow-button"
                      class="toolbarbutton-1 chromeclass-toolbar-additional overflow-button"
@@ -2387,6 +2414,10 @@
   </toolbox>
   </box>
 
+  <hbox flex="1">
+  <vbox id="companion-box"/>
+
+  <vbox flex="1">
   <hbox flex="1" id="browser">
     <vbox id="sidebar-box" hidden="true" class="chromeclass-extrachrome">
       <box id="sidebar-header" align="center">
@@ -2459,5 +2490,8 @@
 
   <!-- Put it at the very end to make sure it's not covered by anything. -->
   <html:div id="fullscr-toggler" hidden="hidden"/>
+
+  </vbox>
+  </hbox>
 </html:body>
 </html>
