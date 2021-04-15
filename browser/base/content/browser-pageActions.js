@@ -109,9 +109,6 @@ var BrowserPageActions = {
       template.replaceWith(template.content);
       this._panelNode = document.getElementById("pageActionPanel");
       this._panelNode.addEventListener("popupshowing", this._onPanelShowing);
-      this._panelNode.addEventListener("popuphiding", () => {
-        this.mainButtonNode.removeAttribute("open");
-      });
     }
 
     for (let action of PageActions.actionsInPanel(window)) {
@@ -348,15 +345,6 @@ var BrowserPageActions = {
     PanelMultiView.hidePopup(this.panelNode);
 
     let anchorNode = this.panelAnchorNodeForAction(action);
-    anchorNode.setAttribute("open", "true");
-    panelNode.addEventListener(
-      "popuphiding",
-      () => {
-        anchorNode.removeAttribute("open");
-      },
-      { once: true }
-    );
-
     PanelMultiView.openPopup(panelNode, anchorNode, {
       position: "bottomcenter topright",
       triggerEvent: event,
@@ -948,7 +936,6 @@ var BrowserPageActions = {
    */
   showPanel(event = null) {
     this.panelNode.hidden = false;
-    this.mainButtonNode.setAttribute("open", "true");
     PanelMultiView.openPopup(this.panelNode, this.mainButtonNode, {
       position: "bottomcenter topright",
       triggerEvent: event,
@@ -980,18 +967,6 @@ var BrowserPageActions = {
     }
     this._contextAction = action;
 
-    let state;
-    if (this._contextAction._isMozillaAction) {
-      state = this._contextAction.pinnedToUrlbar
-        ? "builtInPinned"
-        : "builtInUnpinned";
-    } else {
-      state = this._contextAction.pinnedToUrlbar
-        ? "extensionPinned"
-        : "extensionUnpinned";
-    }
-    popup.setAttribute("state", state);
-
     let removeExtension = popup.querySelector(".removeExtensionItem");
     let { extensionID } = this._contextAction;
     let addon = extensionID && (await AddonManager.getAddonByID(extensionID));
@@ -1001,24 +976,6 @@ var BrowserPageActions = {
         addon.permissions & AddonManager.PERM_CAN_UNINSTALL
       );
     }
-  },
-
-  /**
-   * Call this from the menu item in the context menu that toggles pinning.
-   */
-  togglePinningForContextAction() {
-    if (!this._contextAction) {
-      return;
-    }
-    let action = this._contextAction;
-    this._contextAction = null;
-
-    action.pinnedToUrlbar = !action.pinnedToUrlbar;
-    BrowserUsageTelemetry.recordWidgetChange(
-      action.id,
-      action.pinnedToUrlbar ? "page-action-buttons" : null,
-      "pageaction-context"
-    );
   },
 
   /**

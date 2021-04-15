@@ -14,7 +14,7 @@ use crate::gpu_types::{PrimitiveHeaders, TransformPalette, ZBufferIdGenerator};
 use crate::gpu_types::TransformData;
 use crate::internal_types::{FastHashMap, PlaneSplitter};
 use crate::picture::{DirtyRegion, PictureUpdateState, SliceId, TileCacheInstance};
-use crate::picture::{SurfaceInfo, SurfaceIndex, ROOT_SURFACE_INDEX, SurfaceRenderTasks};
+use crate::picture::{SurfaceInfo, SurfaceIndex, ROOT_SURFACE_INDEX, SurfaceRenderTasks, SubSliceIndex};
 use crate::picture::{BackdropKind, SubpixelMode, TileCacheLogger, RasterConfig, PictureCompositeMode};
 use crate::prepare::prepare_primitives;
 use crate::prim_store::{PictureIndex, PrimitiveDebugId};
@@ -455,6 +455,7 @@ impl FrameBuilder {
         );
         default_dirty_region.add_dirty_region(
             frame_context.global_screen_world_rect.cast_unit(),
+            SubSliceIndex::DEFAULT,
             frame_context.spatial_tree,
         );
         frame_state.push_dirty_region(default_dirty_region);
@@ -468,7 +469,7 @@ impl FrameBuilder {
                     root_spatial_node_index,
                     root_spatial_node_index,
                     ROOT_SURFACE_INDEX,
-                    &SubpixelMode::Allow,
+                    SubpixelMode::Allow,
                     &mut frame_state,
                     &frame_context,
                     &mut scratch.primitive,
@@ -889,36 +890,12 @@ pub fn build_render_pass(
             }
         };
 
-        // Determine the clear color for this picture cache.
-        // If the entire tile cache is opaque, we can skip clear completely.
-        // If it's the first layer, clear it to white to allow subpixel AA on that
-        // first layer even if it's technically transparent.
-        // Otherwise, clear to transparent and composite with alpha.
-        // TODO(gw): We can detect per-tile opacity for the clear color here
-        //           which might be a significant win on some pages?
-        let forced_opaque = match tile_cache.background_color {
-            Some(color) => color.a >= 1.0,
-            None => false,
-        };
-        let mut clear_color = if forced_opaque {
-            Some(ColorF::WHITE)
-        } else {
-            Some(ColorF::TRANSPARENT)
-        };
-
-        // If this picture cache has a valid color backdrop, we will use
-        // that as the clear color, skipping the draw of the backdrop
-        // primitive (and anything prior to it) during batching.
-        if let Some(BackdropKind::Color { color }) = tile_cache.backdrop.kind {
-            clear_color = Some(color);
-        }
-
         // Create an alpha batcher for each of the tasks of this picture.
         let mut batchers = Vec::new();
         for task_id in &task_ids {
             let task_id = *task_id;
-            let dirty_rect = match render_tasks[task_id].kind {
-                RenderTaskKind::Picture(ref info) => info.dirty_rect,
+            let batch_filter = match render_tasks[task_id].kind {
+                RenderTaskKind::Picture(ref info) => info.batch_filter,
                 _ => unreachable!(),
             };
             batchers.push(AlphaBatchBuilder::new(
@@ -927,7 +904,7 @@ pub fn build_render_pass(
                 ctx.batch_lookback_count,
                 task_id,
                 task_id.into(),
-                dirty_rect,
+                batch_filter,
                 0,
             ));
         }
@@ -966,11 +943,30 @@ pub fn build_render_pass(
                     //           designed to support batch merging, which isn't
                     //           relevant for picture cache targets. We
                     //           can restructure / tidy this up a bit.
-                    let (scissor_rect, valid_rect)  = match render_tasks[task_id].kind {
+                    let (scissor_rect, valid_rect, clear_color)  = match render_tasks[task_id].kind {
                         RenderTaskKind::Picture(ref info) => {
+                            let mut clear_color = ColorF::TRANSPARENT;
+
+                            // TODO(gw): The way we check the batch filter for is_primary is a bit hacky, tidy up somehow?
+                            if let Some(batch_filter) = info.batch_filter {
+                                if batch_filter.sub_slice_index.is_primary() {
+                                    if let Some(background_color) = tile_cache.background_color {
+                                        clear_color = background_color;
+                                    }
+
+                                    // If this picture cache has a valid color backdrop, we will use
+                                    // that as the clear color, skipping the draw of the backdrop
+                                    // primitive (and anything prior to it) during batching.
+                                    if let Some(BackdropKind::Color { color }) = tile_cache.backdrop.kind {
+                                        clear_color = color;
+                                    }
+                                }
+                            }
+
                             (
                                 info.scissor_rect.expect("bug: must be set for cache tasks"),
                                 info.valid_rect.expect("bug: must be set for cache tasks"),
+                                clear_color,
                             )
                         }
                         _ => unreachable!(),
@@ -987,7 +983,7 @@ pub fn build_render_pass(
 
                     let target = PictureCacheTarget {
                         surface: surface.clone(),
-                        clear_color,
+                        clear_color: Some(clear_color),
                         alpha_batch_container,
                         dirty_rect: scissor_rect,
                         valid_rect,

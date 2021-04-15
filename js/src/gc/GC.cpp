@@ -206,7 +206,7 @@
 #include <iterator>
 #include <string.h>
 #include <utility>
-#ifndef XP_WIN
+#if !defined(XP_WIN) && !defined(__wasi__)
 #  include <sys/mman.h>
 #  include <unistd.h>
 #endif
@@ -4811,7 +4811,7 @@ void GCRuntime::groupZonesForSweeping(JS::GCReason reason) {
 #endif
 
   JSContext* cx = rt->mainContextFromOwnThread();
-  ZoneComponentFinder finder(cx->nativeStackLimit[JS::StackForSystemCode]);
+  ZoneComponentFinder finder(cx);
   if (!isIncremental || !findSweepGroupEdges()) {
     finder.useOneComponent();
   }

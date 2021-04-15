@@ -513,11 +513,16 @@ html|input:is([type="email"], [type="tel"], [type="text"], [type="password"], [t
 html|textarea {
   font-family: inherit;
   font-size: inherit;
-  padding: 5px 8px;
+  padding: 8px;
   margin: 2px 4px;
 }
 
 @media not (-moz-proton) {
+html|input:is([type="email"], [type="tel"], [type="text"], [type="password"], [type="url"], [type="number"]),
+html|textarea {
+  padding: 5px 8px;
+}
+
 html|input:is([type="email"], [type="tel"], [type="text"], [type="password"], [type="url"], [type="number"]):enabled:not(:focus):hover,
 html|textarea:enabled:not(:focus):hover,
 xul|search-textbox:not([disabled="true"], [focused]):hover {
@@ -674,7 +679,7 @@ html|input[type="checkbox"] {
   border: 1px solid var(--checkbox-border-color);
   background-color: var(--checkbox-unchecked-bgcolor);
   border-radius: 2px;
-  margin-inline-end: 6px;
+  margin-inline: 0 6px;
   flex-shrink: 0; /* avoid shrinking inside flex container */
 }
 
@@ -731,8 +736,8 @@ xul|*.radio-check {
   padding: 0;
   border: 1px solid var(--in-content-box-border-color);
   border-radius: 100%;
-  margin-block: 3px; /* extend the vertical clicktarget */
-  margin-inline: 0 10px;
+  margin-block: 2px; /* extend the vertical clicktarget */
+  margin-inline: 0 6px;
   background-color: var(--in-content-button-background);
   background-position: center;
   flex-shrink: 0; /* avoid shrinking inside flex container */
@@ -1347,5 +1352,9 @@ xul|*.addons-icon {
 :host(dialog[subdialog]) .dialog-button-box > button {
   margin: 0 4px;
   min-width: auto;
+}
+
+:host(dialog[subdialog]) {
+  font-size: var(--subdialog-font-size);
 }
 }

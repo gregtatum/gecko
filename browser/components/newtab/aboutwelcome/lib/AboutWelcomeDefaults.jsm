@@ -224,6 +224,18 @@ const DEFAULT_PROTON_WELCOME_CONTENT = {
             navigate: true,
           },
         },
+        secondary_button_top: {
+          label: {
+            string_id: "onboarding-multistage-welcome-secondary-button-label",
+          },
+          action: {
+            data: {
+              entrypoint: "activity-stream-firstrun",
+            },
+            type: "SHOW_FIREFOX_ACCOUNTS",
+            addFlowParams: true,
+          },
+        },
       },
     },
     {
@@ -418,7 +430,7 @@ const RULES = [
   {
     description: "Proton Default AW content",
     getDefaults(featureConfig) {
-      if (featureConfig?.design === "proton") {
+      if (featureConfig?.isProton) {
         return { ...DEFAULT_PROTON_WELCOME_CONTENT };
       }
 

@@ -37,8 +37,6 @@
 }
 
 /*** Visibility of controls inside download items ***/
-
-.download-state[buttonhidden] > toolbarseparator,
 .download-state[buttonhidden] > .downloadButton {
   display: none;
 }
@@ -140,8 +138,19 @@
 }
 
 @media (-moz-proton-doorhangers) {
+#downloadsPanel-blockedSubview,
 #downloadsPanel-mainView {
-  font: caption;
+  font-size: var(--panel-font-size);
   width: 35em;
+  padding: 0.62em;
+}
+
+#downloadsFooterButtons {
+  margin: 0;
+}
+
+#downloadsHistory {
+  padding: 0.62em;
+  margin: 0.62em 0 0;
 }
 } /** END Proton **/

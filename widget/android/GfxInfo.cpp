@@ -612,6 +612,9 @@ nsresult GfxInfo::GetFeatureStatusImpl(
                      // Excluding G31 due to bug 1689947.
                      gpu.Find("Mali-G31", /*ignoreCase*/ true) == kNotFound;
 
+      // Enable Webrender on all PowerVR Rogue GPUs
+      isUnblocked |= gpu.Find("PowerVR Rogue", /*ignoreCase*/ true) >= 0;
+
       if (!isUnblocked) {
         *aStatus = nsIGfxInfo::FEATURE_BLOCKED_DEVICE;
         aFailureId = "FEATURE_FAILURE_WEBRENDER_BLOCKED_DEVICE";
@@ -681,6 +684,20 @@ nsresult GfxInfo::GetFeatureStatusImpl(
       return NS_OK;
     }
 #endif
+  }
+
+  if (aFeature == FEATURE_GL_SWIZZLE) {
+    // Swizzling appears to be buggy on PowerVR Rogue devices with webrender.
+    // See bug 1704783.
+    const bool isPowerVRRogue =
+        mGLStrings->Renderer().Find("PowerVR Rogue", /*ignoreCase*/ true) >= 0;
+    if (isPowerVRRogue) {
+      *aStatus = nsIGfxInfo::FEATURE_BLOCKED_DEVICE;
+      aFailureId = "FEATURE_FAILURE_POWERVR_ROGUE";
+    } else {
+      *aStatus = nsIGfxInfo::FEATURE_STATUS_OK;
+    }
+    return NS_OK;
   }
 
   return GfxInfoBase::GetFeatureStatusImpl(

@@ -1399,7 +1399,7 @@ pref("prompts.windowPromptSubDialog", true);
 pref("browser.newtab.preload", true);
 
 // Preference to enable the entire new newtab experience at once.
-pref("browser.newtabpage.activity-stream.newNewtabExperience.enabled", false);
+pref("browser.newtabpage.activity-stream.newNewtabExperience.enabled", true);
 
 // A preference which allows us to enable the fly out customization overlay
 // on the newtab page.
@@ -1473,7 +1473,7 @@ pref("browser.newtabpage.activity-stream.feeds.section.topstories", true);
 // The pref controls if search hand-off is enabled for Activity Stream.
 pref("browser.newtabpage.activity-stream.improvesearch.handoffToAwesomebar", true);
 
-pref("browser.newtabpage.activity-stream.logowordmark.alwaysVisible", false);
+pref("browser.newtabpage.activity-stream.logowordmark.alwaysVisible", true);
 
 // Used to display triplet cards on newtab
 pref("trailhead.firstrun.newtab.triplets", "");
@@ -1482,7 +1482,6 @@ pref("browser.aboutwelcome.enabled", true);
 // Used to set multistage welcome UX
 pref("browser.aboutwelcome.screens", "");
 pref("browser.aboutwelcome.skipFocus", false);
-pref("browser.aboutwelcome.design", "");
 
 // The pref that controls if the What's New panel is enabled.
 pref("browser.messaging-system.whatsNewPanel.enabled", true);
@@ -1692,12 +1691,13 @@ pref("media.gmp-provider.enabled", true);
 #ifdef NIGHTLY_BUILD
 // Enable Dynamic First-Party Isolation in Nightly.
 pref("network.cookie.cookieBehavior", 5 /* BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN */);
-pref("network.cookie.cookieBehavior.pbmode", 5 /* BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN */);
 #else
 // Enable blocking access to storage from tracking resources by default.
 pref("network.cookie.cookieBehavior", 4 /* BEHAVIOR_REJECT_TRACKER */);
-pref("network.cookie.cookieBehavior.pbmode", 4 /* BEHAVIOR_REJECT_TRACKER */);
 #endif
+
+// Enable Dynamic First-Party Isolation in the private browsing mode.
+pref("network.cookie.cookieBehavior.pbmode", 5 /* BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN */);
 
 // Enable fingerprinting blocking by default for all channels, only on desktop.
 pref("privacy.trackingprotection.fingerprinting.enabled", true);
@@ -1732,6 +1732,9 @@ pref("browser.contentblocking.state-partitioning.mvp.ui.enabled", true);
 //   Social Tracking Protection:
 //     "stp": social tracking protection enabled
 //     "-stp": social tracking protection disabled
+//   Level 2 Tracking list:
+//     "lvl2": Level 2 tracking list enabled
+//     "-lvl2": Level 2 tracking list disabled
 //   Cookie behavior:
 //     "cookieBehavior0": cookie behaviour BEHAVIOR_ACCEPT
 //     "cookieBehavior1": cookie behaviour BEHAVIOR_REJECT_FOREIGN
@@ -1739,8 +1742,15 @@ pref("browser.contentblocking.state-partitioning.mvp.ui.enabled", true);
 //     "cookieBehavior3": cookie behaviour BEHAVIOR_LIMIT_FOREIGN
 //     "cookieBehavior4": cookie behaviour BEHAVIOR_REJECT_TRACKER
 //     "cookieBehavior5": cookie behaviour BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN
+//   Cookie behavior for private windows:
+//     "cookieBehaviorPBM0": cookie behaviour BEHAVIOR_ACCEPT
+//     "cookieBehaviorPBM1": cookie behaviour BEHAVIOR_REJECT_FOREIGN
+//     "cookieBehaviorPBM2": cookie behaviour BEHAVIOR_REJECT
+//     "cookieBehaviorPBM3": cookie behaviour BEHAVIOR_LIMIT_FOREIGN
+//     "cookieBehaviorPBM4": cookie behaviour BEHAVIOR_REJECT_TRACKER
+//     "cookieBehaviorPBM5": cookie behaviour BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN
 // One value from each section must be included in the browser.contentblocking.features.strict pref.
-pref("browser.contentblocking.features.strict", "tp,tpPrivate,cookieBehavior5,cm,fp,stp,lvl2");
+pref("browser.contentblocking.features.strict", "tp,tpPrivate,cookieBehavior5,cookieBehaviorPBM5,cm,fp,stp,lvl2");
 
 // Hide the "Change Block List" link for trackers/tracking content in the custom
 // Content Blocking/ETP panel. By default, it will not be visible. There is also
@@ -1846,7 +1856,7 @@ pref("privacy.webrtc.sharedTabWarning", false);
 // re-prompting without the user having to persist permission to the site, in a
 // common case of a web conference asking them for the camera in a lobby page,
 // before navigating to the actual meeting room page. Doesn't survive tab close.
-pref("privacy.webrtc.deviceGracePeriodTimeoutMs", 50000);
+pref("privacy.webrtc.deviceGracePeriodTimeoutMs", 3600000);
 
 // Start the browser in e10s mode
 pref("browser.tabs.remote.autostart", true);
@@ -1924,6 +1934,9 @@ pref("extensions.pocket.site", "getpocket.com");
 pref("extensions.pocket.onSaveRecs", true);
 pref("extensions.pocket.onSaveRecs.locales", "en-US,en-GB,en-CA");
 
+// Enable Pocket button home panel for non link pages.
+pref("extensions.pocket.showHome", true);
+
 // Control what version of the logged out doorhanger is displayed
 // Possibilities are: `control`, `control-one-button`, `variant_a`, `variant_b`, `variant_c`
 pref("extensions.pocket.loggedOutVariant", "control");
@@ -1986,9 +1999,6 @@ pref("browser.suppress_first_window_animation", true);
 
 // Preference that allows individual users to disable Screenshots.
 pref("extensions.screenshots.disabled", false);
-// Preference that allows individual users to leave Screenshots enabled, but
-// disable uploading to the server.
-pref("extensions.screenshots.upload-disabled", false);
 
 // DoH Rollout: whether to enable automatic performance-based TRR-selection.
 // This pref is controlled by a Normandy rollout so we don't overload providers.

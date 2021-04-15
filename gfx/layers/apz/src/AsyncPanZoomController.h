@@ -72,6 +72,7 @@ class WidgetOverscrollEffect;
 class GenericOverscrollEffect;
 class AndroidSpecificState;
 struct KeyboardScrollAction;
+struct ZoomTarget;
 
 // Base class for grouping platform-specific APZC state variables.
 class PlatformSpecificStateBase {
@@ -219,7 +220,7 @@ class AsyncPanZoomController {
    * in. The actual animation is done on the sampler thread after being set
    * up.
    */
-  void ZoomToRect(CSSRect aRect, const uint32_t aFlags);
+  void ZoomToRect(const ZoomTarget& aZoomTarget, const uint32_t aFlags);
 
   /**
    * Updates any zoom constraints contained in the <meta name="viewport"> tag.
@@ -632,7 +633,12 @@ class AsyncPanZoomController {
   nsEventStatus OnPanMayBegin(const PanGestureInput& aEvent);
   nsEventStatus OnPanCancelled(const PanGestureInput& aEvent);
   nsEventStatus OnPanBegin(const PanGestureInput& aEvent);
-  nsEventStatus OnPan(const PanGestureInput& aEvent, bool aFingersOnTouchpad);
+  enum class FingersOnTouchpad {
+    Yes,
+    No,
+  };
+  nsEventStatus OnPan(const PanGestureInput& aEvent,
+                      FingersOnTouchpad aFingersOnTouchpad);
   nsEventStatus OnPanEnd(const PanGestureInput& aEvent);
   nsEventStatus OnPanMomentumStart(const PanGestureInput& aEvent);
   nsEventStatus OnPanMomentumEnd(const PanGestureInput& aEvent);
@@ -803,6 +809,12 @@ class AsyncPanZoomController {
    * Gets the amount by which this APZC is overscrolled along both axes.
    */
   ParentLayerPoint GetOverscrollAmount() const;
+
+  /**
+   * Returns SideBits where this APZC is overscrolled.
+   */
+  SideBits GetOverscrollSideBits() const;
+
   /**
    * Restore the amount by which this APZC is overscrolled along both axes
    * to the specified amount. This is for test-related use; overscrolling
@@ -1242,6 +1254,13 @@ class AsyncPanZoomController {
    */
   CSSRect GetVisibleRect(const RecursiveMutexAutoLock& aProofOfLock) const;
 
+  /**
+   * Returns a pair of displacements both in logical/physical units for
+   * |aEvent|.
+   */
+  std::tuple<ParentLayerPoint, ScreenPoint> GetDisplacementsForPanGesture(
+      const PanGestureInput& aEvent);
+
  private:
   friend class AutoApplyAsyncTestAttributes;
 
@@ -1439,14 +1458,16 @@ class AsyncPanZoomController {
   // later in the handoff chain, or if there are no takers, continuing the
   // fling and entering an overscrolled state.
   void HandleFlingOverscroll(
-      const ParentLayerPoint& aVelocity,
+      const ParentLayerPoint& aVelocity, SideBits aOverscrollSideBits,
       const RefPtr<const OverscrollHandoffChain>& aOverscrollHandoffChain,
       const RefPtr<const AsyncPanZoomController>& aScrolledApzc);
 
-  void HandleSmoothScrollOverscroll(const ParentLayerPoint& aVelocity);
+  void HandleSmoothScrollOverscroll(const ParentLayerPoint& aVelocity,
+                                    SideBits aOverscrollSideBits);
 
   // Start an overscroll animation with the given initial velocity.
-  void StartOverscrollAnimation(const ParentLayerPoint& aVelocity);
+  void StartOverscrollAnimation(const ParentLayerPoint& aVelocity,
+                                SideBits aOverscrollSideBits);
 
   // Return the directions in which this APZC allows overscrolling.
   ScrollDirections GetOverscrollableDirections() const;

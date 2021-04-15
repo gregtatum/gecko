@@ -34,8 +34,8 @@
   --identity-box-margin-inline: 4px;
   --identity-box-label-opacity: .8;
   --urlbar-box-bgcolor: var(--button-bgcolor);
-  --urlbar-box-hover-bgcolor: color-mix(in srgb, var(--urlbar-box-bgcolor), currentColor 12%);
-  --urlbar-box-active-bgcolor: color-mix(in srgb, var(--urlbar-box-bgcolor), currentColor 21%);
+  --urlbar-box-hover-bgcolor: var(--button-hover-bgcolor);
+  --urlbar-box-active-bgcolor: var(--button-active-bgcolor);
 
   --urlbar-min-height: 32px;
   --urlbar-icon-fill-opacity: 1;
@@ -110,6 +110,20 @@
 
 :root[lwt-toolbar-field-focus-brighttext] {
   --lwt-popup-brighttext-url-color: #00ddff;
+}
+
+/* Increase the contrast of urlbar boxes in brighttext LWT.
+   In practice these are bumped-up --button(-hover)-bgcolor rules */
+:root:-moz-lwtheme-brighttext:not([lwt-default-theme-in-dark-mode]) {
+  --urlbar-box-bgcolor: color-mix(in srgb, currentColor 16%, transparent);
+  --urlbar-box-hover-bgcolor: color-mix(in srgb, currentColor 22%, transparent);
+}
+/* Linux dark OS */
+@media (prefers-color-scheme: dark) {
+  :root:not(:-moz-lwtheme) {
+    --urlbar-box-bgcolor: color-mix(in srgb, currentColor 16%, transparent);
+    --urlbar-box-hover-bgcolor: color-mix(in srgb, currentColor 22%, transparent);
+  }
 }
 } /*** END proton ***/
 
@@ -799,8 +813,6 @@ menupopup::part(drop-indicator) {
 }
 
 .ac-has-end-icon {
-  /* icon width + icon end margin */
-  padding-inline-end: calc(12px + 8px);
   text-overflow: ellipsis;
   overflow: hidden;
 }
@@ -857,9 +869,18 @@ menupopup::part(drop-indicator) {
 #webRTC-selectMicrophone-icon {
   display: none;
 }
+
+.ac-has-end-icon {
+  /* Password manager's username field icon width + icon end margin */
+  padding-inline-end: calc(12px + 8px);
+}
 } /** END not Proton **/
 
 @media (-moz-proton-doorhangers) {
+popupnotification {
+  font-size: var(--panel-font-size);
+}
+
 popupnotificationcontent {
   margin-block-start: 8px;
 }
@@ -892,10 +913,10 @@ popupnotificationcontent {
 }
 
 .popup-notification-body :is(description, label, checkbox, input) {
-  margin-inline-start: 0;
+  margin-inline: 0;
 }
 
-.popup-notification-body html|input {
+.popup-notification-body input {
   padding: 8px;
   border-radius: 4px;
   border: 0;
@@ -905,7 +926,22 @@ popupnotificationcontent {
   color: var(--input-color, FieldText);
 }
 
-.popup-notification-body html|input:focus-visible {
+.popup-notification-body input.ac-has-end-icon {
+  --input-padding-from-arrow-side: calc(8px + 16px + 8px); /* spacing from the end + arrow element width + extra spacing) */
+  padding-inline-end: var(--input-padding-from-arrow-side);
+}
+
+/* Avoid overlapping the text on the arrow icon when switching input text direction */
+.popup-notification-body:-moz-locale-dir(rtl) input.ac-has-end-icon:dir(ltr) {
+  padding-left: var(--input-padding-from-arrow-side);
+  padding-right: 8px;
+}
+.popup-notification-body:-moz-locale-dir(ltr) input.ac-has-end-icon:dir(rtl) {
+  padding-right: var(--input-padding-from-arrow-side);
+  padding-left: 8px;
+}
+
+.popup-notification-body input:focus-visible {
   outline: 2px solid var(--focus-outline-color);
 }
 
