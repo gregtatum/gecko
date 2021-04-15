@@ -43,7 +43,7 @@ job-defaults:
             by-release-type:
                 nightly: nightly
                 nightly-oak: nightly-oak
-                nightly-pine: null
+                nightly-pine: nightly-pine
                 beta:
                     by-shipping-product:
                         devedition: aurora
