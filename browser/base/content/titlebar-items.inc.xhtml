@@ -21,4 +21,8 @@
                    data-l10n-id="browser-window-close-button"
                    />
   </hbox>
+  <toolbarbutton
+    id="companion-sidebar-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
+    oncommand="CompanionService.dockAndToggle()"
+    onclick="checkForMiddleClick(this, event);"/>
 </hbox>

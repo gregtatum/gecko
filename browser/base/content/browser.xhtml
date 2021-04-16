@@ -1784,7 +1784,13 @@
 
       <hbox id="companion-titlebar">
         <vbox pack="start">
-          <hbox id="companion-mac-buttonbox"/>
+          <hbox>
+            <hbox id="companion-mac-buttonbox"/>
+            <toolbarbutton
+              id="companion-sidebar-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
+              oncommand="CompanionService.dockAndToggle()"
+              onclick="checkForMiddleClick(this, event);"/>
+          </hbox>
         </vbox>
         <hbox flex="1" pack="end">
           <toolbarbutton

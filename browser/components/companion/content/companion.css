@@ -86,6 +86,22 @@ h2 {
   height: 16px;
 }
 
+#sidebar-button {
+  -moz-context-properties: fill, fill-opacity;
+  fill: currentColor;
+  fill-opacity: .6;
+  list-style-image: url("chrome://browser/skin/sidebars-right.svg")
+}
+
+#sidebar-button:hover {
+  fill-opacity: .8;
+}
+
+#sidebar-button image {
+  width: 16px;
+  height: 16px;
+}
+
 #urlbar-background {
   border-radius: 4px;
 }

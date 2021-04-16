@@ -232,6 +232,14 @@ const CompanionService = {
       companion.close();
     }
   },
+
+  dockAndToggle() {
+    if (this.isOpen) {
+      this.closeCompanion();
+    } else {
+      this.dockCompanion();
+    }
+  },
 };
 
 CompanionService.init();

@@ -51,6 +51,15 @@
   list-style-image: url("chrome://browser/content/companion/undock.svg");
 }
 
+#companion-sidebar-button {
+  list-style-image: url("chrome://browser/skin/sidebars-right.svg");
+}
+
+#companion-titlebar #companion-sidebar-button {
+  margin-bottom: -14px;
+  margin-left: 2px;
+}
+
 #companion-view-manager {
   min-width: 50px;
 }
