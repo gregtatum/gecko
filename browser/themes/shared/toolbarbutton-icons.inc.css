@@ -392,10 +392,6 @@ toolbar[brighttext] #panic-button[open] {
   list-style-image: url("chrome://browser/skin/library.svg");
 }
 
-#companion-button {
-  list-style-image: url("chrome://browser/skin/ion.svg");
-}
-
 @keyframes library-bookmark-animation {
   from {
     transform: translateX(0);
