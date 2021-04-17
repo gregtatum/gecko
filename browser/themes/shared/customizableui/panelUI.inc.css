@@ -846,6 +846,26 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
   fill: currentColor;
 }
 
+#PanelUI-menu-button {
+  list-style-image: var(--avatar-image-url);
+  -moz-context-properties: fill;
+  fill: currentColor;
+}
+
+:root:not([fxastatus="signedin"]) #PanelUI-menu-button {
+   --avatar-image-url: url(chrome://browser/skin/fxa/avatar-empty.svg);
+}
+
+#PanelUI-menu-button.toolbarbutton-1 > .toolbarbutton-badge-stack > .toolbarbutton-icon {
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+}
+
+#PanelUI-menu-button > .toolbarbutton-badge-stack {
+  padding: 0;
+}
+
 /* Handle different UI states. */
 #appMenu-fxa-status[fxastatus="signedin"] > #appMenu-fxa-label > .toolbarbutton-icon,
 #appMenu-fxa-status:not([fxastatus="signedin"]) > #appMenu-fxa-avatar,
@@ -1111,7 +1131,8 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
 
 /* Non-signedin statuses icons are not totally round. */
 :root[fxastatus="signedin"] #fxa-menu-avatar,
-:root[fxastatus="signedin"] #fxa-avatar-image {
+:root[fxastatus="signedin"] #fxa-avatar-image,
+#PanelUI-menu-button {
   border-radius: 50%;
 }
 
