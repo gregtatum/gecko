@@ -7,6 +7,10 @@
 
 import { timeFormat, getPlacesData, openUrl } from "./shared.js";
 
+const { shortURL } = ChromeUtils.import(
+  "resource://activity-stream/lib/ShortURL.jsm"
+);
+
 const { PlacesUtils } = ChromeUtils.import(
   "resource://gre/modules/PlacesUtils.jsm"
 );
@@ -28,10 +32,7 @@ export class TopSite extends HTMLElement {
     let fragment = template.content.cloneNode(true);
 
     fragment.querySelector(".title").textContent = this.data.title;
-    fragment.querySelector(".favicon").setAttribute("src", this.data.icon);
-    fragment.querySelector(".last-access").textContent = timeFormat.format(
-      this.data.lastVisit
-    );
+    fragment.querySelector(".topsite-favicon img").setAttribute("src", this.data.icon);
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
@@ -47,12 +48,7 @@ customElements.define("e-topsite", TopSite);
 export class TopSites extends HTMLElement {
   constructor() {
     super();
-
-    let template = document.getElementById("template-keyframe-list");
-    let fragment = template.content.cloneNode(true);
-    fragment.querySelector(".list-title").textContent = "Top Sites";
-    let shadow = this.attachShadow({ mode: "open" });
-    shadow.appendChild(fragment);
+    this.className = "topsites";
   }
 
   async connectedCallback() {
@@ -90,10 +86,8 @@ export class TopSites extends HTMLElement {
           this.appendChild(
             new TopSite({
               url: childNode.uri,
-              title: placesData.title,
-              // icon: placesData.richIcon || placesData.icon,
+              title: shortURL({url: uri.spec}),
               icon: placesData.icon,
-              lastVisit: childNode.time / 1000,
             })
           );
         }

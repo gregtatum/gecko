@@ -66,9 +66,9 @@ onLoad(() => {
 
   initServices();
   let content = document.getElementById("content");
+  content.appendChild(new TopSites());
   content.appendChild(new MediaList("Media"));
   content.appendChild(new WindowList("Apps"));
-  content.appendChild(new TopSites());
   content.appendChild(new KeyframeDbList("Today", today));
   content.appendChild(new KeyframeDbList("Earlier", yesterday, today));
   content.appendChild(new PocketList());
