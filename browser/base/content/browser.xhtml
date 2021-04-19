@@ -1794,6 +1794,10 @@
         </vbox>
         <hbox flex="1" pack="end">
           <toolbarbutton
+            id="companion-settings-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
+            oncommand="ToggleCompanionSettings()"
+            onclick="checkForMiddleClick(this, event);"/>
+          <toolbarbutton
             id="companion-undock-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
             oncommand="CompanionService.undockCompanion()"
             onclick="checkForMiddleClick(this, event);"/>

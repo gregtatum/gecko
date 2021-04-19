@@ -82,6 +82,7 @@ function toggleSettings() {
     settings.setAttribute("hidden", "true");
   }
 }
+window.toggleSettings = toggleSettings;
 
 window.addEventListener(
   "load",

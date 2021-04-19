@@ -55,6 +55,10 @@
   list-style-image: url("chrome://browser/skin/sidebars-right.svg");
 }
 
+#companion-settings-button {
+  list-style-image: url("chrome://browser/content/companion/companion-settings.svg");
+}
+
 #companion-titlebar #companion-sidebar-button {
   margin-bottom: -14px;
   margin-left: 2px;
