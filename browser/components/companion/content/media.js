@@ -180,22 +180,17 @@ export class Media extends HTMLElement {
 
     this.appendChild(fragment);
     this.render();
-    this.play.addEventListener("click", event => {
+    this.playPause.addEventListener("click", event => {
       if (event.button != 0) {
         return;
       }
       event.stopPropagation();
 
-      this.mediaController.play();
-      this.render();
-    });
-    this.pause.addEventListener("click", event => {
-      if (event.button != 0) {
-        return;
+      if (this.mediaController.isPlaying) {
+        this.mediaController.pause();
+      } else {
+        this.mediaController.play();
       }
-      event.stopPropagation();
-
-      this.mediaController.pause();
       this.render();
     });
     this.mute.addEventListener("click", event => {
@@ -285,14 +280,17 @@ export class Media extends HTMLElement {
   get artwork() {
     return this.querySelector(".artwork");
   }
+  get artworkBackground() {
+    return this.querySelector(".artwork-background");
+  }
   get title() {
     return this.querySelector(".title");
   }
-  get play() {
-    return this.querySelector(".play");
+  get artist() {
+    return this.querySelector(".artist");
   }
-  get pause() {
-    return this.querySelector(".pause");
+  get playPause() {
+    return this.querySelector(".play-pause button");
   }
   get mute() {
     return this.querySelector(".mute");
@@ -312,66 +310,40 @@ export class Media extends HTMLElement {
 
   render() {
     // TODO: Check supportedkeys to dynamically add / remove buttons
-
+    let hasMedia = (this.canTogglePip || this.tab.soundPlaying) && this.documentTitle;
     let metadata = this.metadata;
-    if (metadata) {
-      this.title.textContent =
-        this.metadata.title +
-        " - " +
-        this.metadata.artist +
-        " - " +
-        this.metadata.album;
-      if (metadata.artwork[0]) {
-        // TODO:
-        // 1) This is loading a remote URL
-        // 2) Use favicon as fallback
-        this.artwork.src = metadata.artwork[0].src;
-      } else {
-        this.artwork.hidden = true;
-      }
-    } else if (
-      (this.canTogglePip || this.tab.soundPlaying) &&
-      this.documentTitle
-    ) {
-      this.title.textContent = this.documentTitle;
-      // TODO: Use favicon here too
-      this.artwork.hidden = true;
-    } else {
+
+    if (!metadata || !hasMedia) {
       this.hidden = true;
+      return;
     }
+
+    let artwork = metadata?.artwork[0] ? "url(" + metadata.artwork[0].src + ")" : "";
+    this.title.textContent = this.metadata.title ?? this.documentTitle;
+    this.artist.textContent = this.metadata.artist ?? "";
+    this.artwork.style.backgroundImage = artwork;
+    this.artworkBackground.style.backgroundImage = artwork;
+
+    let supportedKeys = this.mediaController.supportedKeys;
     if (
-      !this.mediaController.supportedKeys.includes("play") ||
-      !this.mediaController.supportedKeys.includes("pause") ||
+      !supportedKeys.includes("play") ||
+      !supportedKeys.includes("pause") ||
       !metadata
     ) {
       // Only offer play/pause option if the site supports both
       // options.
-      this.play.hidden = true;
-      this.pause.hidden = true;
-    } else if (this.mediaController.isPlaying) {
-      this.play.hidden = true;
-      this.pause.hidden = false;
+      this.playPause.hidden = true;
     } else {
-      this.pause.hidden = true;
-      this.play.hidden = false;
+      this.playPause.dataset.state = this.mediaController.isPlaying ? "playing" : "paused";
     }
-    if (this.browser.audioMuted) {
-      this.mute.hidden = true;
-      this.unmute.hidden = false;
-    } else {
-      this.unmute.hidden = true;
-      this.mute.hidden = false;
-    }
-    this.prev.hidden = !this.mediaController.supportedKeys.includes(
-      "previoustrack"
-    );
-    this.next.hidden = !this.mediaController.supportedKeys.includes(
-      "nexttrack"
-    );
 
-    if (!this.canTogglePip) {
-      this.pip.hidden = true;
-    }
+    this.mute.hidden = this.browser.audioMuted;
+    this.unmute.hidden = !this.browser.audioMuted;
+
+    this.prev.hidden = !supportedKeys.includes("previoustrack");
+    this.next.hidden = !supportedKeys.includes("nexttrack");
+
+    this.pip.hidden = !this.canTogglePip;
   }
 }
 
