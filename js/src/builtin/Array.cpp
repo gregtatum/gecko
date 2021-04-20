@@ -633,9 +633,9 @@ bool js::ArraySetLength(JSContext* cx, Handle<ArrayObject*> arr, HandleId id,
   bool lengthIsWritable = arr->lengthIsWritable();
 #ifdef DEBUG
   {
-    RootedShape lengthShape(cx, arr->lookupPure(id));
-    MOZ_ASSERT(lengthShape);
-    MOZ_ASSERT(lengthShape->writable() == lengthIsWritable);
+    mozilla::Maybe<ShapeProperty> lengthProp = arr->lookupPure(id);
+    MOZ_ASSERT(lengthProp.isSome());
+    MOZ_ASSERT(lengthProp->writable() == lengthIsWritable);
   }
 #endif
   uint32_t oldLen = arr->length();
@@ -825,9 +825,10 @@ bool js::ArraySetLength(JSContext* cx, Handle<ArrayObject*> arr, HandleId id,
 
   // Step 20.
   if (attrs & JSPROP_READONLY) {
-    RootedShape lengthShape(cx, arr->lookup(cx, id));
-    MOZ_ASSERT(lengthShape->isCustomDataProperty());
-    unsigned attrs = lengthShape->attributes() | JSPROP_READONLY;
+    Maybe<ShapeProperty> lengthProp = arr->lookup(cx, id);
+    MOZ_ASSERT(lengthProp.isSome());
+    MOZ_ASSERT(lengthProp->isCustomDataProperty());
+    unsigned attrs = lengthProp->attributes() | JSPROP_READONLY;
     if (!NativeObject::changeCustomDataPropAttributes(cx, arr, id, attrs)) {
       return false;
     }
@@ -924,17 +925,9 @@ bool js::ObjectMayHaveExtraIndexedProperties(JSObject* obj) {
 }
 
 static bool AddLengthProperty(JSContext* cx, HandleArrayObject obj) {
-  // Add the 'length' property for a newly created array. Shapes are shared
-  // across realms within a zone and because we update the initial shape with
-  // a Shape that contains the length-property (in NewArray), it's possible
-  // the length property has already been defined.
+  // Add the 'length' property for a newly created array.
 
-  Shape* shape = obj->lastProperty();
-  if (!shape->isEmptyShape()) {
-    MOZ_ASSERT(shape->propidRaw().isAtom(cx->names().length));
-    MOZ_ASSERT(shape->previous()->isEmptyShape());
-    return true;
-  }
+  MOZ_ASSERT(obj->empty());
 
   RootedId lengthId(cx, NameToId(cx->names().length));
   return NativeObject::addCustomDataProperty(
@@ -3155,10 +3148,9 @@ static bool GetIndexedPropertiesInRange(JSContext* cx, HandleObject obj,
 
     // Append sparse elements.
     if (nativeObj->isIndexed()) {
-      Shape::Range<NoGC> r(nativeObj->lastProperty());
-      for (; !r.empty(); r.popFront()) {
-        Shape& shape = r.front();
-        jsid id = shape.propid();
+      ShapePropertyIter<NoGC> iter(nativeObj->shape());
+      for (; !iter.done(); iter++) {
+        jsid id = iter->key();
         uint32_t i;
         if (!IdIsIndex(id, &i)) {
           continue;
@@ -3169,7 +3161,7 @@ static bool GetIndexedPropertiesInRange(JSContext* cx, HandleObject obj,
         }
 
         // Watch out for getters, they can add new properties.
-        if (!shape.isDataProperty()) {
+        if (!iter->isDataProperty()) {
           return true;
         }
 
@@ -4061,15 +4053,16 @@ void js::ArraySpeciesLookup::initialize(JSContext* cx) {
   state_ = State::Disabled;
 
   // Look up Array.prototype[@@iterator] and ensure it's a data property.
-  Shape* ctorShape = arrayProto->lookup(cx, NameToId(cx->names().constructor));
-  if (!ctorShape || !ctorShape->isDataProperty()) {
+  Maybe<ShapeProperty> ctorProp =
+      arrayProto->lookup(cx, NameToId(cx->names().constructor));
+  if (ctorProp.isNothing() || !ctorProp->isDataProperty()) {
     return;
   }
 
   // Get the referred value, and ensure it holds the canonical Array
   // constructor.
   JSFunction* ctorFun;
-  if (!IsFunctionObject(arrayProto->getSlot(ctorShape->slot()), &ctorFun)) {
+  if (!IsFunctionObject(arrayProto->getSlot(ctorProp->slot()), &ctorFun)) {
     return;
   }
   if (ctorFun != arrayCtor) {
@@ -4077,15 +4070,15 @@ void js::ArraySpeciesLookup::initialize(JSContext* cx) {
   }
 
   // Look up the '@@species' value on Array
-  Shape* speciesShape =
+  Maybe<ShapeProperty> speciesProp =
       arrayCtor->lookup(cx, SYMBOL_TO_JSID(cx->wellKnownSymbols().species));
-  if (!speciesShape || !arrayCtor->hasGetter(speciesShape)) {
+  if (speciesProp.isNothing() || !arrayCtor->hasGetter(*speciesProp)) {
     return;
   }
 
   // Get the referred value, ensure it holds the canonical Array[@@species]
   // function.
-  uint32_t speciesGetterSlot = speciesShape->slot();
+  uint32_t speciesGetterSlot = speciesProp->slot();
   JSObject* speciesGetter = arrayCtor->getGetter(speciesGetterSlot);
   if (!speciesGetter || !speciesGetter->is<JSFunction>()) {
     return;
@@ -4100,7 +4093,6 @@ void js::ArraySpeciesLookup::initialize(JSContext* cx) {
   MOZ_ASSERT(!IsInsideNursery(arrayProto));
   MOZ_ASSERT(!IsInsideNursery(arrayCtor));
   MOZ_ASSERT(!IsInsideNursery(arrayCtor->lastProperty()));
-  MOZ_ASSERT(!IsInsideNursery(speciesShape));
   MOZ_ASSERT(!IsInsideNursery(speciesFun));
   MOZ_ASSERT(!IsInsideNursery(arrayProto->lastProperty()));
 
@@ -4111,7 +4103,7 @@ void js::ArraySpeciesLookup::initialize(JSContext* cx) {
   arraySpeciesGetterSlot_ = speciesGetterSlot;
   canonicalSpeciesFunc_ = speciesFun;
   arrayProtoShape_ = arrayProto->lastProperty();
-  arrayProtoConstructorSlot_ = ctorShape->slot();
+  arrayProtoConstructorSlot_ = ctorProp->slot();
 }
 
 void js::ArraySpeciesLookup::reset() {
@@ -4174,12 +4166,15 @@ bool js::ArraySpeciesLookup::tryOptimizeArray(JSContext* cx,
   // non-deletable "length" property. This serves as a quick check to make
   // sure |array| doesn't define an own "constructor" property which may
   // shadow Array.prototype.constructor.
-  Shape* shape = array->shape();
-  if (shape->previous() && !shape->previous()->isEmptyShape()) {
+  ShapePropertyIter<NoGC> iter(array->shape());
+  MOZ_ASSERT(!iter.done(), "Array must have at least one property");
+  DebugOnly<JS::PropertyKey> key = iter->key();
+  iter++;
+  if (!iter.done()) {
     return false;
   }
 
-  MOZ_ASSERT(shape->propidRaw().isAtom(cx->names().length));
+  MOZ_ASSERT(key.inspect().isAtom(cx->names().length));
   return true;
 }
 

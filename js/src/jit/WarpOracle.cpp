@@ -215,12 +215,12 @@ template <typename T, typename... Args>
   ModuleEnvironmentObject* env = GetModuleEnvironmentForScript(script);
   MOZ_ASSERT(env);
 
-  Shape* shape;
+  mozilla::Maybe<ShapeProperty> prop;
   ModuleEnvironmentObject* targetEnv;
-  MOZ_ALWAYS_TRUE(env->lookupImport(NameToId(name), &targetEnv, &shape));
+  MOZ_ALWAYS_TRUE(env->lookupImport(NameToId(name), &targetEnv, &prop));
 
-  uint32_t numFixedSlots = shape->numFixedSlots();
-  uint32_t slot = shape->slot();
+  uint32_t numFixedSlots = targetEnv->numFixedSlots();
+  uint32_t slot = prop->slot();
 
   // In the rare case where this import hasn't been initialized already (we have
   // an import cycle where modules reference each other's imports), we need a
@@ -688,6 +688,7 @@ AbortReasonOr<WarpScriptSnapshot*> WarpScriptOracle::createScriptSnapshot() {
       case JSOp::PopLexicalEnv:
       case JSOp::FreshenLexicalEnv:
       case JSOp::RecreateLexicalEnv:
+      case JSOp::PushClassBodyEnv:
       case JSOp::ImplicitThis:
       case JSOp::GImplicitThis:
       case JSOp::CheckClassHeritage:

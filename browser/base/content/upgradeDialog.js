@@ -67,8 +67,8 @@ let gPrevTheme = AddonManager.getAddonsByTypes(["theme"]).then(addons => {
     }
   }
 
-  // Assuming there's always one active theme, this won't happen.
-  return {};
+  // If there were no active themes, the default will be selected.
+  return { id: THEME_IDS[0] };
 });
 
 // Helper to switch themes.
@@ -95,6 +95,13 @@ function closeDialog(reason) {
   gCloseReason = reason;
   close();
 }
+
+// Detect quit requests to proactively dismiss to allow the quit prompt to show
+// as otherwise gDialogBox queues the prompt as these share the same display.
+const QUIT_TOPIC = "quit-application-requested";
+const QUIT_OBSERVER = () => closeDialog(QUIT_TOPIC);
+Services.obs.addObserver(QUIT_OBSERVER, QUIT_TOPIC);
+CLEANUP.push(() => Services.obs.removeObserver(QUIT_OBSERVER, QUIT_TOPIC));
 
 // Hook up dynamic behaviors of the dialog.
 function onLoad(ready) {
@@ -181,8 +188,10 @@ function onLoad(ready) {
     document.l10n.setAttributes(primary, await strings.primary);
     document.l10n.setAttributes(secondary, strings.secondary);
 
-    // Ensure the primary button is focused on each screen.
+    // Wait for initial translations to load before getting sizing information.
+    await document.l10n.ready;
     requestAnimationFrame(() => {
+      // Ensure the primary button is focused on each screen.
       primary.focus();
 
       // Save first screen height, so later screens can flex and anchor content.

@@ -1144,6 +1144,14 @@
   value: false
   mirror: always
 
+# Whether the toolbar is dark/light/auto.
+# Controls @media -moz-toolbar-prefers-color-scheme.
+- name: browser.theme.dark-toolbar-theme
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+  rust: true
+
 # Enable Proton restyle. Requires restart.
 - name: browser.proton.enabled
   type: RelaxedAtomicBool
@@ -2302,8 +2310,19 @@
   value: @IS_NIGHTLY_BUILD@
   mirror: always
 
-# Support for input type=month, type=week and type=datetime-local. By default,
-# disabled.
+# Support for input type=datetime-local.
+- name: dom.forms.datetime-local
+  type: bool
+  value: @IS_ANDROID@
+  mirror: always
+
+# Support for input type=datetime-local widget. Disabled for now.
+- name: dom.forms.datetime-local.widget
+  type: bool
+  value: false
+  mirror: always
+
+# Support for input type=month, type=week. By default, disabled.
 - name: dom.forms.datetime.others
   type: bool
   value: @IS_ANDROID@
@@ -6478,6 +6497,13 @@
   mirror: always
   rust: true
 
+# Whether the `-moz-outline-radius` pseudo-class is exposed to content.
+- name: layout.css.moz-outline-radius.enabled
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+  rust: true
+
 # Whether the `aspect-ratio` in css-sizing-4 is enabled.
 - name: layout.css.aspect-ratio.enabled
   type: bool
@@ -9417,6 +9443,12 @@
 - name: network.dns.use_https_rr_for_speculative_connection
   type: RelaxedAtomicBool
   value: false
+  mirror: always
+
+# The TTL for negative responses of TXT and HTTPS records.
+- name: network.dns.negative_ttl_for_type_record
+  type: RelaxedAtomicUint32
+  value: 300   # 5 minutes (in seconds)
   mirror: always
 
 - name: network.cache.frecency_array_check_enabled

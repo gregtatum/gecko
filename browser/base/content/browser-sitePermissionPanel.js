@@ -14,6 +14,12 @@ var gPermissionPanel = {
     if (!this._popupInitialized) {
       let wrapper = document.getElementById("template-permission-popup");
       wrapper.replaceWith(wrapper.content);
+
+      let baseURL = Services.urlFormatter.formatURLPref("app.support.baseURL");
+      document.getElementById(
+        "permission-popup-storage-access-permission-learn-more"
+      ).href = baseURL + "site-information-third-party-access";
+
       this._popupInitialized = true;
     }
   },
@@ -987,18 +993,15 @@ var gPermissionPanel = {
     let icon = document.createXULElement("image");
     icon.setAttribute("class", "popup-subitem");
 
+    MozXULElement.insertFTLIfNeeded("browser/sitePermissions.ftl");
     let text = document.createXULElement("label", { is: "text-link" });
     text.setAttribute("flex", "1");
     text.setAttribute("class", "permission-popup-permission-label");
-
-    let messageBase = gNavigatorBundle.getString(
-      "popupShowBlockedPopupsIndicatorText"
+    text.setAttribute("data-l10n-id", "site-permissions-open-blocked-popups");
+    text.setAttribute(
+      "data-l10n-args",
+      JSON.stringify({ count: aTotalBlockedPopups })
     );
-    let message = PluralForm.get(aTotalBlockedPopups, messageBase).replace(
-      "#1",
-      aTotalBlockedPopups
-    );
-    text.textContent = message;
 
     text.addEventListener("click", () => {
       gBrowser.selectedBrowser.popupBlocker.unblockAllPopups();

@@ -25,6 +25,7 @@
 #include "mozilla/ipc/ProtocolUtils.h"
 #include "mozilla/net/DocumentLoadListener.h"
 #include "mozilla/NullPrincipal.h"
+#include "mozilla/StaticPrefs_docshell.h"
 #include "mozilla/StaticPrefs_fission.h"
 #include "nsIWebNavigation.h"
 #include "mozilla/MozPromiseInlines.h"
@@ -42,10 +43,16 @@
 #include "nsIBrowser.h"
 #include "nsTHashSet.h"
 
+#ifdef NS_PRINTING
+#  include "mozilla/embedding/printingui/PrintingParent.h"
+#  include "nsIWebBrowserPrint.h"
+#endif
+
 using namespace mozilla::ipc;
 
 extern mozilla::LazyLogModule gAutoplayPermissionLog;
 extern mozilla::LazyLogModule gSHLog;
+extern mozilla::LazyLogModule gSHIPBFCacheLog;
 
 #define AUTOPLAY_LOG(msg, ...) \
   MOZ_LOG(gAutoplayPermissionLog, LogLevel::Debug, (msg, ##__VA_ARGS__))
@@ -479,6 +486,120 @@ CanonicalBrowsingContext::ReplaceLoadingSessionHistoryEntryForLoad(
   return MakeUnique<LoadingSessionHistoryInfo>(newEntry, aInfo->mLoadId);
 }
 
+#ifdef NS_PRINTING
+class PrintListenerAdapter final : public nsIWebProgressListener {
+ public:
+  explicit PrintListenerAdapter(Promise* aPromise) : mPromise(aPromise) {}
+
+  NS_DECL_ISUPPORTS
+
+  // NS_DECL_NSIWEBPROGRESSLISTENER
+  NS_IMETHOD OnStateChange(nsIWebProgress* aWebProgress, nsIRequest* aRequest,
+                           uint32_t aStateFlags, nsresult aStatus) override {
+    if (aStateFlags & nsIWebProgressListener::STATE_STOP &&
+        aStateFlags & nsIWebProgressListener::STATE_IS_DOCUMENT && mPromise) {
+      mPromise->MaybeResolveWithUndefined();
+      mPromise = nullptr;
+    }
+    return NS_OK;
+  }
+  NS_IMETHOD OnStatusChange(nsIWebProgress* aWebProgress, nsIRequest* aRequest,
+                            nsresult aStatus,
+                            const char16_t* aMessage) override {
+    if (aStatus != NS_OK && mPromise) {
+      mPromise->MaybeReject(ErrorResult(aStatus));
+      mPromise = nullptr;
+    }
+    return NS_OK;
+  }
+  NS_IMETHOD OnProgressChange(nsIWebProgress* aWebProgress,
+                              nsIRequest* aRequest, int32_t aCurSelfProgress,
+                              int32_t aMaxSelfProgress,
+                              int32_t aCurTotalProgress,
+                              int32_t aMaxTotalProgress) override {
+    return NS_OK;
+  }
+  NS_IMETHOD OnLocationChange(nsIWebProgress* aWebProgress,
+                              nsIRequest* aRequest, nsIURI* aLocation,
+                              uint32_t aFlags) override {
+    return NS_OK;
+  }
+  NS_IMETHOD OnSecurityChange(nsIWebProgress* aWebProgress,
+                              nsIRequest* aRequest, uint32_t aState) override {
+    return NS_OK;
+  }
+  NS_IMETHOD OnContentBlockingEvent(nsIWebProgress* aWebProgress,
+                                    nsIRequest* aRequest,
+                                    uint32_t aEvent) override {
+    return NS_OK;
+  }
+
+ private:
+  ~PrintListenerAdapter() = default;
+
+  RefPtr<Promise> mPromise;
+};
+
+NS_IMPL_ISUPPORTS(PrintListenerAdapter, nsIWebProgressListener)
+#endif
+
+already_AddRefed<Promise> CanonicalBrowsingContext::Print(
+    nsIPrintSettings* aPrintSettings, ErrorResult& aRv) {
+  RefPtr<Promise> promise = Promise::Create(GetIncumbentGlobal(), aRv);
+  if (NS_WARN_IF(aRv.Failed())) {
+    return promise.forget();
+  }
+
+#ifndef NS_PRINTING
+  promise->MaybeReject(ErrorResult(NS_ERROR_NOT_AVAILABLE));
+  return promise.forget();
+#else
+
+  auto listener = MakeRefPtr<PrintListenerAdapter>(promise);
+  if (IsInProcess()) {
+    RefPtr<nsGlobalWindowOuter> outerWindow =
+        nsGlobalWindowOuter::Cast(GetDOMWindow());
+    if (NS_WARN_IF(!outerWindow)) {
+      promise->MaybeReject(ErrorResult(NS_ERROR_FAILURE));
+      return promise.forget();
+    }
+
+    ErrorResult rv;
+    outerWindow->Print(aPrintSettings, listener,
+                       /* aDocShellToCloneInto = */ nullptr,
+                       nsGlobalWindowOuter::IsPreview::No,
+                       nsGlobalWindowOuter::IsForWindowDotPrint::No,
+                       /* aPrintPreviewCallback = */ nullptr, rv);
+    if (rv.Failed()) {
+      promise->MaybeReject(std::move(rv));
+    }
+    return promise.forget();
+  }
+
+  auto* browserParent = GetBrowserParent();
+  if (NS_WARN_IF(!browserParent)) {
+    promise->MaybeReject(ErrorResult(NS_ERROR_FAILURE));
+    return promise.forget();
+  }
+
+  RefPtr<embedding::PrintingParent> printingParent =
+      browserParent->Manager()->GetPrintingParent();
+
+  embedding::PrintData printData;
+  nsresult rv = printingParent->SerializeAndEnsureRemotePrintJob(
+      aPrintSettings, listener, nullptr, &printData);
+  if (NS_WARN_IF(NS_FAILED(rv))) {
+    promise->MaybeReject(ErrorResult(rv));
+    return promise.forget();
+  }
+
+  if (NS_WARN_IF(!browserParent->SendPrint(this, printData))) {
+    promise->MaybeReject(ErrorResult(NS_ERROR_FAILURE));
+  }
+  return promise.forget();
+#endif
+}
+
 void CanonicalBrowsingContext::CallOnAllTopDescendants(
     const std::function<mozilla::CallState(CanonicalBrowsingContext*)>&
         aCallback) {
@@ -890,6 +1011,11 @@ void CanonicalBrowsingContext::CanonicalDiscard() {
   if (mTabMediaController) {
     mTabMediaController->Shutdown();
     mTabMediaController = nullptr;
+  }
+
+  if (mWebProgress) {
+    RefPtr<BrowsingContextWebProgress> progress = mWebProgress;
+    progress->ContextDiscarded();
   }
 
   if (IsTop()) {
@@ -1924,6 +2050,117 @@ void CanonicalBrowsingContext::ShowSubframeCrashedUI(
   SetCurrentBrowserParent(aBridge->Manager());
 
   Unused << aBridge->SendSubFrameCrashed();
+}
+
+static void LogBFCacheBlockingForDoc(BrowsingContext* aBrowsingContext,
+                                     uint16_t aBFCacheCombo, bool aIsSubDoc) {
+  if (aIsSubDoc) {
+    nsAutoCString uri("[no uri]");
+    nsCOMPtr<nsIURI> currentURI =
+        aBrowsingContext->Canonical()->GetCurrentURI();
+    if (currentURI) {
+      uri = currentURI->GetSpecOrDefault();
+    }
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug,
+            (" ** Blocked for document %s", uri.get()));
+  }
+  if (aBFCacheCombo & BFCacheStatus::EVENT_HANDLING_SUPPRESSED) {
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug,
+            (" * event handling suppression"));
+  }
+  if (aBFCacheCombo & BFCacheStatus::SUSPENDED) {
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug, (" * suspended Window"));
+  }
+  if (aBFCacheCombo & BFCacheStatus::UNLOAD_LISTENER) {
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug,
+            (" * beforeunload or unload listener"));
+  }
+  if (aBFCacheCombo & BFCacheStatus::REQUEST) {
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug, (" * requests in the loadgroup"));
+  }
+  if (aBFCacheCombo & BFCacheStatus::ACTIVE_GET_USER_MEDIA) {
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug, (" * GetUserMedia"));
+  }
+  if (aBFCacheCombo & BFCacheStatus::ACTIVE_PEER_CONNECTION) {
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug, (" * PeerConnection"));
+  }
+  if (aBFCacheCombo & BFCacheStatus::CONTAINS_EME_CONTENT) {
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug, (" * EME content"));
+  }
+  if (aBFCacheCombo & BFCacheStatus::CONTAINS_MSE_CONTENT) {
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug, (" * MSE use"));
+  }
+  if (aBFCacheCombo & BFCacheStatus::HAS_ACTIVE_SPEECH_SYNTHESIS) {
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug, (" * Speech use"));
+  }
+  if (aBFCacheCombo & BFCacheStatus::HAS_USED_VR) {
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug, (" * used VR"));
+  }
+}
+
+bool CanonicalBrowsingContext::AllowedInBFCache(
+    const Maybe<uint64_t>& aChannelId) {
+  if (MOZ_UNLIKELY(MOZ_LOG_TEST(gSHIPBFCacheLog, LogLevel::Debug))) {
+    nsAutoCString uri("[no uri]");
+    nsCOMPtr<nsIURI> currentURI = GetCurrentURI();
+    if (currentURI) {
+      uri = currentURI->GetSpecOrDefault();
+    }
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug, ("Checking %s", uri.get()));
+  }
+
+  if (IsInProcess()) {
+    return false;
+  }
+
+  uint16_t bfcacheCombo = 0;
+  if (Group()->Toplevels().Length() > 1) {
+    bfcacheCombo |= BFCacheStatus::NOT_ONLY_TOPLEVEL_IN_BCG;
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug,
+            (" * auxiliary BrowsingContexts"));
+  }
+
+  // For telemetry we're collecting all the flags for all the BCs hanging
+  // from this top-level BC.
+  PreOrderWalk([&](BrowsingContext* aBrowsingContext) {
+    WindowGlobalParent* wgp =
+        aBrowsingContext->Canonical()->GetCurrentWindowGlobal();
+    uint16_t subDocBFCacheCombo = wgp ? wgp->GetBFCacheStatus() : 0;
+    if (wgp) {
+      const Maybe<uint64_t>& singleChannelId = wgp->GetSingleChannelId();
+      if (singleChannelId.isSome()) {
+        if (singleChannelId.value() == 0 || aChannelId.isNothing() ||
+            singleChannelId.value() != aChannelId.value()) {
+          subDocBFCacheCombo |= BFCacheStatus::REQUEST;
+        }
+      }
+    }
+
+    if (MOZ_UNLIKELY(MOZ_LOG_TEST(gSHIPBFCacheLog, LogLevel::Debug))) {
+      LogBFCacheBlockingForDoc(aBrowsingContext, subDocBFCacheCombo,
+                               aBrowsingContext != this);
+    }
+
+    bfcacheCombo |= subDocBFCacheCombo;
+  });
+
+  nsDocShell::ReportBFCacheComboTelemetry(bfcacheCombo);
+  if (MOZ_UNLIKELY(MOZ_LOG_TEST(gSHIPBFCacheLog, LogLevel::Debug))) {
+    nsAutoCString uri("[no uri]");
+    nsCOMPtr<nsIURI> currentURI = GetCurrentURI();
+    if (currentURI) {
+      uri = currentURI->GetSpecOrDefault();
+    }
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug,
+            (" +> %s %s be blocked from going into the BFCache", uri.get(),
+             bfcacheCombo == 0 ? "shouldn't" : "should"));
+  }
+
+  if (StaticPrefs::docshell_shistory_bfcache_allow_unload_listeners()) {
+    bfcacheCombo &= ~BFCacheStatus::UNLOAD_LISTENER;
+  }
+
+  return bfcacheCombo == 0;
 }
 
 NS_IMPL_CYCLE_COLLECTION_INHERITED(CanonicalBrowsingContext, BrowsingContext,

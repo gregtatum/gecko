@@ -19,6 +19,7 @@
 #include "js/Wrapper.h"
 #include "vm/BytecodeUtil.h"
 #include "vm/Printer.h"
+#include "vm/PropertyResult.h"
 #include "vm/Shape.h"
 #include "vm/StringType.h"
 #include "vm/Xdr.h"
@@ -836,8 +837,7 @@ extern bool ReadPropertyDescriptors(
 /* Read the name using a dynamic lookup on the scopeChain. */
 extern bool LookupName(JSContext* cx, HandlePropertyName name,
                        HandleObject scopeChain, MutableHandleObject objp,
-                       MutableHandleObject pobjp,
-                       MutableHandle<PropertyResult> propp);
+                       MutableHandleObject pobjp, PropertyResult* propp);
 
 extern bool LookupNameNoGC(JSContext* cx, PropertyName* name,
                            JSObject* scopeChain, JSObject** objp,

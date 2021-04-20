@@ -9,6 +9,7 @@
 
 #include "mozilla/Assertions.h"
 #include "mozilla/Attributes.h"
+#include "mozilla/Maybe.h"
 
 #include <algorithm>
 #include <stdint.h>
@@ -25,6 +26,7 @@
 #include "js/Value.h"
 #include "vm/GetterSetter.h"
 #include "vm/JSObject.h"
+#include "vm/PropertyResult.h"
 #include "vm/Shape.h"
 #include "vm/StringType.h"
 
@@ -905,27 +907,31 @@ class NativeObject : public JSObject {
 
   bool empty() const { return lastProperty()->isEmptyShape(); }
 
-  Shape* lookup(JSContext* cx, jsid id);
-  Shape* lookup(JSContext* cx, PropertyName* name) {
+  mozilla::Maybe<ShapeProperty> lookup(JSContext* cx, jsid id);
+  mozilla::Maybe<ShapeProperty> lookup(JSContext* cx, PropertyName* name) {
     return lookup(cx, NameToId(name));
   }
 
-  bool contains(JSContext* cx, jsid id) { return lookup(cx, id) != nullptr; }
+  bool contains(JSContext* cx, jsid id) { return lookup(cx, id).isSome(); }
   bool contains(JSContext* cx, PropertyName* name) {
-    return lookup(cx, name) != nullptr;
+    return lookup(cx, name).isSome();
   }
-  bool contains(JSContext* cx, Shape* shape) {
-    return lookup(cx, shape->propid()) == shape;
+  bool contains(JSContext* cx, jsid id, ShapeProperty prop) {
+    mozilla::Maybe<ShapeProperty> found = lookup(cx, id);
+    return found.isSome() && *found == prop;
   }
 
   /* Contextless; can be called from other pure code. */
-  Shape* lookupPure(jsid id);
-  Shape* lookupPure(PropertyName* name) { return lookupPure(NameToId(name)); }
+  mozilla::Maybe<ShapeProperty> lookupPure(jsid id);
+  mozilla::Maybe<ShapeProperty> lookupPure(PropertyName* name) {
+    return lookupPure(NameToId(name));
+  }
 
-  bool containsPure(jsid id) { return lookupPure(id) != nullptr; }
+  bool containsPure(jsid id) { return lookupPure(id).isSome(); }
   bool containsPure(PropertyName* name) { return containsPure(NameToId(name)); }
-  bool containsPure(Shape* shape) {
-    return lookupPure(shape->propid()) == shape;
+  bool containsPure(jsid id, ShapeProperty prop) {
+    mozilla::Maybe<ShapeProperty> found = lookupPure(id);
+    return found.isSome() && *found == prop;
   }
 
   /*
@@ -1089,44 +1095,44 @@ class NativeObject : public JSObject {
   GetterSetter* getGetterSetter(uint32_t slot) const {
     return getSlot(slot).toGCThing()->as<GetterSetter>();
   }
-  GetterSetter* getGetterSetter(Shape* shape) const {
-    MOZ_ASSERT(shape->isAccessorDescriptor());
-    return getGetterSetter(shape->slot());
+  GetterSetter* getGetterSetter(ShapeProperty prop) const {
+    MOZ_ASSERT(prop.isAccessorProperty());
+    return getGetterSetter(prop.slot());
   }
 
-  // Returns the (possibly nullptr) getter or setter object. The shape must be
-  // for an accessor property.
+  // Returns the (possibly nullptr) getter or setter object. |prop| and |slot|
+  // must be (for) an accessor property.
   JSObject* getGetter(uint32_t slot) const {
     return getGetterSetter(slot)->getter();
   }
-  JSObject* getGetter(Shape* shape) const {
-    return getGetterSetter(shape)->getter();
+  JSObject* getGetter(ShapeProperty prop) const {
+    return getGetterSetter(prop)->getter();
   }
-  JSObject* getSetter(Shape* shape) const {
-    return getGetterSetter(shape)->setter();
+  JSObject* getSetter(ShapeProperty prop) const {
+    return getGetterSetter(prop)->setter();
   }
 
-  // Returns true if the property has a non-nullptr getter or setter object. The
-  // shape can be any property shape.
-  bool hasGetter(Shape* shape) const {
-    return shape->hasGetterValue() && getGetter(shape);
+  // Returns true if the property has a non-nullptr getter or setter object.
+  // |prop| can be any property.
+  bool hasGetter(ShapeProperty prop) const {
+    return prop.isAccessorProperty() && getGetter(prop);
   }
-  bool hasSetter(Shape* shape) const {
-    return shape->hasSetterValue() && getSetter(shape);
+  bool hasSetter(ShapeProperty prop) const {
+    return prop.isAccessorProperty() && getSetter(prop);
   }
 
   // If the property has a non-nullptr getter/setter, return it as ObjectValue.
-  // Else return |undefined|. The shape must be for an accessor property.
-  Value getGetterValue(Shape* shape) const {
-    MOZ_ASSERT(shape->hasGetterValue());
-    if (JSObject* getterObj = getGetter(shape)) {
+  // Else return |undefined|. |prop| must be an accessor property.
+  Value getGetterValue(ShapeProperty prop) const {
+    MOZ_ASSERT(prop.isAccessorProperty());
+    if (JSObject* getterObj = getGetter(prop)) {
       return ObjectValue(*getterObj);
     }
     return UndefinedValue();
   }
-  Value getSetterValue(Shape* shape) const {
-    MOZ_ASSERT(shape->hasSetterValue());
-    if (JSObject* setterObj = getSetter(shape)) {
+  Value getSetterValue(ShapeProperty prop) const {
+    MOZ_ASSERT(prop.isAccessorProperty());
+    if (JSObject* setterObj = getSetter(prop)) {
       return ObjectValue(*setterObj);
     }
     return UndefinedValue();
@@ -1638,7 +1644,7 @@ extern bool NativeHasProperty(JSContext* cx, HandleNativeObject obj,
 
 extern bool NativeGetOwnPropertyDescriptor(
     JSContext* cx, HandleNativeObject obj, HandleId id,
-    MutableHandle<JS::PropertyDescriptor> desc);
+    MutableHandle<mozilla::Maybe<JS::PropertyDescriptor>> desc);
 
 extern bool NativeGetProperty(JSContext* cx, HandleNativeObject obj,
                               HandleValue receiver, HandleId id,
@@ -1696,18 +1702,17 @@ extern bool NativeDeleteProperty(JSContext* cx, HandleNativeObject obj,
 template <AllowGC allowGC>
 extern bool NativeLookupOwnProperty(
     JSContext* cx, typename MaybeRooted<NativeObject*, allowGC>::HandleType obj,
-    typename MaybeRooted<jsid, allowGC>::HandleType id,
-    typename MaybeRooted<PropertyResult, allowGC>::MutableHandleType propp);
+    typename MaybeRooted<jsid, allowGC>::HandleType id, PropertyResult* propp);
 
 /*
  * Get a property from `receiver`, after having already done a lookup and found
  * the property on a native object `obj`.
  *
- * `shape` must not be null and must not be an implicit dense property. It must
- * be present in obj's shape chain.
+ * `prop` must be present in obj's shape.
  */
 extern bool NativeGetExistingProperty(JSContext* cx, HandleObject receiver,
-                                      HandleNativeObject obj, HandleShape shape,
+                                      HandleNativeObject obj, HandleId id,
+                                      ShapeProperty prop,
                                       MutableHandleValue vp);
 
 /* * */

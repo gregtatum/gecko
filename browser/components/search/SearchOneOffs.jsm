@@ -42,7 +42,7 @@ class SearchOneOffs {
       </box>
       <vbox class="search-add-engines"/>
       <menuseparator class="searchbar-separator"/>
-      <button class="search-setting-button" data-l10n-id="search-one-offs-change-settings-button"/>
+      <button class="search-setting-button" pack="start" data-l10n-id="search-one-offs-change-settings-button"/>
       <box>
         <menupopup class="search-one-offs-context-menu">
           <menuitem class="search-one-offs-context-open-in-new-tab" data-l10n-id="search-one-offs-context-open-new-tab"/>
@@ -1153,7 +1153,9 @@ class SearchOneOffs {
     if (target.classList.contains("addengine-menu-button")) {
       return;
     }
-    // Required to receive click events from the buttons on Linux.
+    // This is necessary to prevent the input from losing focus and closing the
+    // popup. Unfortunately it also has the side effect of preventing the
+    // buttons from receiving the `:active` pseudo-class.
     event.preventDefault();
   }
 

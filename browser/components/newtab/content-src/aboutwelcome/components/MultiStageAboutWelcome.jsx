@@ -154,7 +154,7 @@ export const SecondaryCTA = props => {
       </Localized>
       <Localized text={props.content[targetElement].label}>
         <button
-          className="secondary"
+          className="secondary text-link"
           value={targetElement}
           onClick={props.handleAction}
         />
@@ -287,7 +287,7 @@ export class WelcomeScreen extends React.PureComponent {
           id={this.props.id}
           order={this.props.order}
           activeTheme={this.props.activeTheme}
-          totalNumberOfScreens={this.props.totalNumberOfScreens}
+          totalNumberOfScreens={this.props.totalNumberOfScreens - 1}
           handleAction={this.handleAction}
           design={this.props.design}
         />

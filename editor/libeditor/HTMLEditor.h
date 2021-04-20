@@ -833,18 +833,6 @@ class HTMLEditor final : public TextEditor,
   MOZ_CAN_RUN_SCRIPT nsresult CollapseAdjacentTextNodes(nsRange& aRange);
 
   /**
-   * IsInVisibleTextFrames() returns true if all text in aText is in visible
-   * text frames.  Callers have to guarantee that there is no pending reflow.
-   */
-  bool IsInVisibleTextFrames(dom::Text& aText) const;
-
-  /**
-   * IsVisibleTextNode() returns true if aText has visible text.  If it has
-   * only white-spaces and they are collapsed, returns false.
-   */
-  bool IsVisibleTextNode(Text& aText) const;
-
-  /**
    * IsEmptyNode() figures out if aNode is an empty node.  A block can have
    * children and still be considered empty, if the children are empty or
    * non-editable.
@@ -4584,14 +4572,6 @@ class HTMLEditor final : public TextEditor,
    * during moving.
    */
   MOZ_CAN_RUN_SCRIPT nsresult RefreshInlineTableEditingUIInternal();
-
-  /**
-   * IsEmptyTextNode() returns true if aNode is a text node and does not have
-   * any visible characters.
-   */
-  bool IsEmptyTextNode(nsINode& aNode) const {
-    return aNode.IsText() && IsEmptyNode(aNode);
-  }
 
   /**
    * ElementIsGoodContainerForTheStyle() returns true if aElement is a

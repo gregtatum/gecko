@@ -23,6 +23,7 @@
 #include "nsTArray.h"
 
 class nsAtom;
+class nsPresContext;
 
 namespace mozilla {
 
@@ -226,6 +227,24 @@ class HTMLEditUtils final {
    */
   static bool IsNonListSingleLineContainer(nsINode& aNode);
   static bool IsSingleLineContainer(nsINode& aNode);
+
+  /**
+   * IsVisibleTextNode() returns true if aText has visible text.  If it has
+   * only white-spaces and they are collapsed, returns false.
+   *
+   * If aEditingHost is omitted, this computes parent editable block for you.
+   * But if you call this a lot, please specify proper editing host (or parent
+   * block) for the performance.
+   */
+  static bool IsVisibleTextNode(dom::Text& aText,
+                                Element* aEditingHost = nullptr);
+
+  /**
+   * IsInVisibleTextFrames() returns true if all text in aText is in visible
+   * text frames.  Callers have to guarantee that there is no pending reflow.
+   */
+  static bool IsInVisibleTextFrames(nsPresContext* aPresContext,
+                                    dom::Text& aText);
 
   /**
    * IsPointAtEdgeOfLink() returns true if aPoint is at start or end of a

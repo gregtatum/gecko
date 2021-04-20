@@ -441,10 +441,10 @@ bool JSFunction::hasNonConfigurablePrototypeDataProperty() {
 #ifdef DEBUG
     PropertyName* prototypeName =
         runtimeFromMainThread()->commonNames->prototype;
-    Shape* shape = lookupPure(prototypeName);
-    MOZ_ASSERT(shape);
-    MOZ_ASSERT(shape->isDataProperty());
-    MOZ_ASSERT(!shape->configurable());
+    Maybe<ShapeProperty> prop = lookupPure(prototypeName);
+    MOZ_ASSERT(prop.isSome());
+    MOZ_ASSERT(prop->isDataProperty());
+    MOZ_ASSERT(!prop->configurable());
 #endif
     return true;
   }
@@ -455,12 +455,12 @@ bool JSFunction::hasNonConfigurablePrototypeDataProperty() {
   }
 
   PropertyName* prototypeName = runtimeFromMainThread()->commonNames->prototype;
-  Shape* shape = lookupPure(prototypeName);
-  return shape && shape->isDataProperty() && !shape->configurable();
+  Maybe<ShapeProperty> prop = lookupPure(prototypeName);
+  return prop.isSome() && prop->isDataProperty() && !prop->configurable();
 }
 
 static bool fun_mayResolve(const JSAtomState& names, jsid id, JSObject*) {
-  if (!JSID_IS_ATOM(id)) {
+  if (!id.isAtom()) {
     return false;
   }
 
@@ -470,13 +470,13 @@ static bool fun_mayResolve(const JSAtomState& names, jsid id, JSObject*) {
 
 static bool fun_resolve(JSContext* cx, HandleObject obj, HandleId id,
                         bool* resolvedp) {
-  if (!JSID_IS_ATOM(id)) {
+  if (!id.isAtom()) {
     return true;
   }
 
   RootedFunction fun(cx, &obj->as<JSFunction>());
 
-  if (JSID_IS_ATOM(id, cx->names().prototype)) {
+  if (id.isAtom(cx->names().prototype)) {
     if (!fun->needsPrototypeProperty()) {
       return true;
     }
@@ -489,8 +489,8 @@ static bool fun_resolve(JSContext* cx, HandleObject obj, HandleId id,
     return true;
   }
 
-  bool isLength = JSID_IS_ATOM(id, cx->names().length);
-  if (isLength || JSID_IS_ATOM(id, cx->names().name)) {
+  bool isLength = id.isAtom(cx->names().length);
+  if (isLength || id.isAtom(cx->names().name)) {
     MOZ_ASSERT(!IsInternalFunctionObject(*obj));
 
     RootedValue v(cx);
@@ -2290,7 +2290,7 @@ JSAtom* js::IdToFunctionName(
   MOZ_ASSERT(JSID_IS_STRING(id) || JSID_IS_SYMBOL(id) || JSID_IS_INT(id));
 
   // No prefix fastpath.
-  if (JSID_IS_ATOM(id) && prefixKind == FunctionPrefixKind::None) {
+  if (id.isAtom() && prefixKind == FunctionPrefixKind::None) {
     return JSID_TO_ATOM(id);
   }
 

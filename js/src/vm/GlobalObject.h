@@ -749,13 +749,13 @@ class GlobalObject : public NativeObject {
     }
 
     NativeObject* holder = &slot.toObject().as<NativeObject>();
-    Shape* shape = holder->lookupPure(name);
-    if (!shape) {
+    mozilla::Maybe<ShapeProperty> prop = holder->lookupPure(name);
+    if (prop.isNothing()) {
       *vp = UndefinedValue();
       return false;
     }
 
-    *vp = holder->getSlot(shape->slot());
+    *vp = holder->getSlot(prop->slot());
     return true;
   }
 
@@ -768,8 +768,8 @@ class GlobalObject : public NativeObject {
       return false;
     }
 
-    if (Shape* shape = holder->lookup(cx, name)) {
-      vp.set(holder->getSlot(shape->slot()));
+    if (mozilla::Maybe<ShapeProperty> prop = holder->lookup(cx, name)) {
+      vp.set(holder->getSlot(prop->slot()));
       *exists = true;
     } else {
       *exists = false;

@@ -84,6 +84,8 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   ExperimentStore: "resource://nimbus/lib/ExperimentStore.jsm",
   ExperimentManager: "resource://nimbus/lib/ExperimentManager.jsm",
   RemoteSettings: "resource://services-settings/remote-settings.js",
+  setTimeout: "resource://gre/modules/Timer.jsm",
+  clearTimeout: "resource://gre/modules/Timer.jsm",
 });
 
 const IS_MAIN_PROCESS =
@@ -367,7 +369,7 @@ class ExperimentFeature {
     this._waitForRemote = new Promise(
       resolve => (this._onRemoteReady = resolve)
     );
-    this._remoteReady = false;
+    this._listenForRemoteDefaults = this._listenForRemoteDefaults.bind(this);
     const variables = this.manifest?.variables || {};
 
     // Add special enabled flag
@@ -404,6 +406,36 @@ class ExperimentFeature {
         );
       }
     });
+
+    /**
+     * There are multiple events that can resolve the wait for remote defaults:
+     * 1. The feature can receive data via the RS update cycle
+     * 2. The RS update cycle finished; no record exists for this feature
+     * 3. User was enrolled in an experiment that targets this feature, resolve
+     * because experiments take priority.
+     */
+    ExperimentAPI._store.on(
+      "remote-defaults-finalized",
+      this._listenForRemoteDefaults
+    );
+    this.onUpdate(this._listenForRemoteDefaults);
+  }
+
+  _listenForRemoteDefaults(eventName, reason) {
+    if (
+      // When the update cycle finished
+      eventName === "remote-defaults-finalized" ||
+      // remote default or experiment available
+      reason === "experiment-updated" ||
+      reason === "remote-defaults-update"
+    ) {
+      ExperimentAPI._store.off(
+        "remote-defaults-updated",
+        this._listenForRemoteDefaults
+      );
+      this.off(this._listenForRemoteDefaults);
+      this._onRemoteReady();
+    }
   }
 
   _getUserPrefsValues() {
@@ -422,33 +454,22 @@ class ExperimentFeature {
     return userPrefs;
   }
 
-  async ready() {
+  /**
+   * Wait for ExperimentStore to load giving access to experiment features that
+   * do not have a pref cache and wait for remote defaults to load from Remote
+   * Settings.
+   *
+   * @param {number} timeout Optional timeout parameter
+   */
+  async ready(timeout) {
+    const REMOTE_DEFAULTS_TIMEOUT_MS = 15 * 1000; // 15 seconds
     await ExperimentAPI.ready();
-    // If Remote Defaults or Experiment Value are already available
-    // we can proceed
-    if (
-      // We need to check for remote configs using the store directly
-      // this instance won't do it until `ready()` completed.
-      ExperimentAPI._store.getRemoteConfig(this.featureId) ||
-      ExperimentAPI.activateBranch({ featureId: this.featureId })
-    ) {
-      this._remoteReady = true;
-      this._onRemoteReady();
-    } else {
-      // We need to wait for the updates to come in
-      let resolveEvent = (featureId, reason) => {
-        if (
-          reason === "remote-defaults-update" ||
-          reason === "experiment-updated"
-        ) {
-          this._remoteReady = true;
-          this._onRemoteReady();
-          this.off(resolveEvent);
-        }
-      };
-      this.onUpdate(resolveEvent);
-    }
-    return this._waitForRemote;
+    let remoteTimeoutId = setTimeout(
+      this._onRemoteReady,
+      timeout || REMOTE_DEFAULTS_TIMEOUT_MS
+    );
+    await this._waitForRemote;
+    clearTimeout(remoteTimeoutId);
   }
 
   /**
@@ -517,15 +538,14 @@ class ExperimentFeature {
   }
 
   getRemoteConfig() {
-    if (this._remoteReady) {
-      let remoteConfig = ExperimentAPI._store.getRemoteConfig(this.featureId);
-      // Used to select a matching client config
-      delete remoteConfig.targeting;
-
-      return remoteConfig;
+    let remoteConfig = ExperimentAPI._store.getRemoteConfig(this.featureId);
+    if (!remoteConfig) {
+      return null;
     }
+    // Used to select a matching client config
+    delete remoteConfig.targeting;
 
-    return null;
+    return remoteConfig;
   }
 
   recordExposureEvent() {
@@ -552,7 +572,6 @@ class ExperimentFeature {
 
   debug() {
     return {
-      _remoteReady: this._remoteReady,
       enabled: this.isEnabled(),
       value: this.getValue(),
       experiment: ExperimentAPI.getExperimentMetaData({

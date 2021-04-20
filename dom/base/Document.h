@@ -1201,10 +1201,7 @@ class Document : public nsINode,
 
   // Instead using this method, what you probably want is
   // RemoveFromBFCacheSync() as we do in MessagePort and BroadcastChannel.
-  void DisallowBFCaching() {
-    NS_ASSERTION(!mBFCacheEntry, "We're already in the bfcache!");
-    mBFCacheDisallowed = true;
-  }
+  void DisallowBFCaching();
 
   bool IsBFCachingAllowed() const { return !mBFCacheDisallowed; }
 
@@ -1519,6 +1516,9 @@ class Document : public nsINode,
   bool HasThirdPartyChannel();
 
   bool ShouldIncludeInTelemetry(bool aAllowExtensionURIs);
+
+  void AddMediaElementWithMSE();
+  void RemoveMediaElementWithMSE();
 
  protected:
   friend class nsUnblockOnloadEvent;
@@ -3253,8 +3253,11 @@ class Document : public nsINode,
 
   WindowContext* GetTopLevelWindowContext() const;
 
-  Document* GetTopLevelContentDocument();
-  const Document* GetTopLevelContentDocument() const;
+  // If the top-level ancestor content document for this document is in the same
+  // process, returns it. Otherwise, returns null. This function is not
+  // Fission-compatible, and should not be used in new code.
+  Document* GetTopLevelContentDocumentIfSameProcess();
+  const Document* GetTopLevelContentDocumentIfSameProcess() const;
 
   // Returns the associated app window if this is a top-level chrome document,
   // null otherwise.
@@ -4154,7 +4157,8 @@ class Document : public nsINode,
              mCommand != mozilla::Command::Copy &&
              mCommand != mozilla::Command::Paste &&
              mCommand != mozilla::Command::SetDocumentReadOnly &&
-             mCommand != mozilla::Command::GetHTML;
+             mCommand != mozilla::Command::GetHTML &&
+             mCommand != mozilla::Command::SelectAll;
     }
     bool IsCutOrCopyCommand() const {
       return mCommand == mozilla::Command::Cut ||
@@ -5229,6 +5233,8 @@ class Document : public nsINode,
   // See GetNextFormNumber and GetNextControlNumber.
   int32_t mNextFormNumber;
   int32_t mNextControlNumber;
+
+  uint32_t mMediaElementWithMSECount = 0;
 
   // Scope preloads per document.  This is used by speculative loading as well.
   PreloadService mPreloadService;

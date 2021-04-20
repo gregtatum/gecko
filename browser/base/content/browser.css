@@ -585,8 +585,12 @@ toolbar:not(#TabsToolbar) > #personal-bookmarks {
     transparent 25px,
     rgba(255,255,255,.3) 25px,
     rgba(255,255,255,.3) 50px);
+  background-attachment: fixed;
   background-color: rgba(255,170,68,.8);
   color: black;
+  /* Override the usual breakout animation so the gradient doesn't shift around
+     when the panel opens. */
+  animation: none !important;
 }
 
 #PopupAutoComplete > richlistbox > richlistitem[originaltype="loginsFooter"] {
@@ -1387,7 +1391,7 @@ printpreview-pagination:focus-within,
   opacity: 0;
 }
 
-@media (prefers-color-scheme: dark) {
+@media (-moz-toolbar-prefers-color-scheme: dark) {
   .previewStack {
     background-color: #2A2A2E;
     color: rgb(249, 249, 250);
@@ -1535,7 +1539,7 @@ toolbar[keyNav=true]:not([collapsed=true], [customizing=true]) toolbartabstop {
   margin: 0;
   -moz-box-flex: 1;
   /* Default dialog dimensions */
-  width: 59.5ch;
+  width: 34em;
   /* will get overridden, but need to change the default so small
    * dialogs don't end up being 150px tall */
   height: 80px;

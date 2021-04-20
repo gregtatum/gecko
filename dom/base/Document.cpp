@@ -5289,7 +5289,8 @@ bool Document::ExecCommand(const nsAString& aHTMLCommandName, bool aShowUI,
       return false;
     }
 
-    MOZ_ASSERT(commandData.IsPasteCommand());
+    MOZ_ASSERT(commandData.IsPasteCommand() ||
+               commandData.mCommand == Command::SelectAll);
     nsresult rv =
         commandManager->DoCommand(commandData.mXULCommandName, nullptr, window);
     return NS_SUCCEEDED(rv) && rv != NS_SUCCESS_DOM_NO_OPERATION;
@@ -6781,6 +6782,17 @@ void Document::DeletePresShell() {
   mQuirkSheetAdded = false;
   mContentEditableSheetAdded = false;
   mDesignModeSheetAdded = false;
+}
+
+void Document::DisallowBFCaching() {
+  NS_ASSERTION(!mBFCacheEntry, "We're already in the bfcache!");
+  if (!mBFCacheDisallowed) {
+    WindowGlobalChild* wgc = GetWindowGlobalChild();
+    if (wgc) {
+      wgc->BlockBFCacheFor(BFCacheStatus::NOT_ALLOWED);
+    }
+  }
+  mBFCacheDisallowed = true;
 }
 
 void Document::SetBFCacheEntry(nsIBFCacheEntry* aEntry) {
@@ -8909,6 +8921,11 @@ void Document::DoNotifyPossibleTitleChange() {
   nsContentUtils::DispatchChromeEvent(this, ToSupports(this),
                                       u"DOMTitleChanged"_ns, CanBubble::eYes,
                                       Cancelable::eYes);
+
+  nsCOMPtr<nsIObserverService> obs = mozilla::services::GetObserverService();
+  if (obs) {
+    obs->NotifyObservers(ToSupports(this), "document-title-changed", nullptr);
+  }
 }
 
 already_AddRefed<MediaQueryList> Document::MatchMedia(
@@ -11857,6 +11874,12 @@ void Document::GetReadyState(nsAString& aReadyState) const {
 
 void Document::SuppressEventHandling(uint32_t aIncrease) {
   mEventsSuppressed += aIncrease;
+  if (mEventsSuppressed == aIncrease) {
+    WindowGlobalChild* wgc = GetWindowGlobalChild();
+    if (wgc) {
+      wgc->BlockBFCacheFor(BFCacheStatus::EVENT_HANDLING_SUPPRESSED);
+    }
+  }
   UpdateFrameRequestCallbackSchedulingState();
   for (uint32_t i = 0; i < aIncrease; ++i) {
     ScriptLoader()->AddExecuteBlocker();
@@ -12255,6 +12278,11 @@ void Document::UnsuppressEventHandlingAndFireEvents(bool aFireEvents) {
   }
 
   if (!EventHandlingSuppressed()) {
+    WindowGlobalChild* wgc = GetWindowGlobalChild();
+    if (wgc) {
+      wgc->UnblockBFCacheFor(BFCacheStatus::EVENT_HANDLING_SUPPRESSED);
+    }
+
     MOZ_ASSERT(NS_IsMainThread());
     nsTArray<RefPtr<net::ChannelEventQueue>> queues =
         std::move(mSuspendedQueues);
@@ -15081,7 +15109,7 @@ WindowContext* Document::GetTopLevelWindowContext() const {
   return windowContext ? windowContext->TopWindowContext() : nullptr;
 }
 
-Document* Document::GetTopLevelContentDocument() {
+Document* Document::GetTopLevelContentDocumentIfSameProcess() {
   Document* parent;
 
   if (!mLoadedAsData) {
@@ -15115,38 +15143,8 @@ Document* Document::GetTopLevelContentDocument() {
   return parent;
 }
 
-const Document* Document::GetTopLevelContentDocument() const {
-  const Document* parent;
-
-  if (!mLoadedAsData) {
-    parent = this;
-  } else {
-    nsCOMPtr<nsPIDOMWindowInner> window = do_QueryInterface(GetScopeObject());
-    if (!window) {
-      return nullptr;
-    }
-
-    parent = window->GetExtantDoc();
-    if (!parent) {
-      return nullptr;
-    }
-  }
-
-  do {
-    if (parent->IsTopLevelContentDocument()) {
-      break;
-    }
-
-    // If we ever have a non-content parent before we hit a toplevel content
-    // parent, then we're never going to find one.  Just bail.
-    if (!parent->IsContentDocument()) {
-      return nullptr;
-    }
-
-    parent = parent->GetInProcessParentDocument();
-  } while (parent);
-
-  return parent;
+const Document* Document::GetTopLevelContentDocumentIfSameProcess() const {
+  return const_cast<Document*>(this)->GetTopLevelContentDocumentIfSameProcess();
 }
 
 void Document::PropagateImageUseCounters(Document* aReferencingDocument) {
@@ -17259,6 +17257,25 @@ void Document::EnableChildElementInPictureInPictureMode() {
 void Document::DisableChildElementInPictureInPictureMode() {
   mPictureInPictureChildElementCount--;
   MOZ_ASSERT(mPictureInPictureChildElementCount >= 0);
+}
+
+void Document::AddMediaElementWithMSE() {
+  if (mMediaElementWithMSECount++ == 0) {
+    WindowGlobalChild* wgc = GetWindowGlobalChild();
+    if (wgc) {
+      wgc->BlockBFCacheFor(BFCacheStatus::CONTAINS_MSE_CONTENT);
+    }
+  }
+}
+
+void Document::RemoveMediaElementWithMSE() {
+  MOZ_ASSERT(mMediaElementWithMSECount > 0);
+  if (--mMediaElementWithMSECount == 0) {
+    WindowGlobalChild* wgc = GetWindowGlobalChild();
+    if (wgc) {
+      wgc->UnblockBFCacheFor(BFCacheStatus::CONTAINS_MSE_CONTENT);
+    }
+  }
 }
 
 }  // namespace mozilla::dom

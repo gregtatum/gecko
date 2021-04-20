@@ -132,7 +132,7 @@
     <menupopup id="tabContextMenu"
                onpopupshowing="if (event.target == this) TabContextMenu.updateContextMenu(this);"
                onpopuphidden="if (event.target == this) TabContextMenu.contextTab = null;">
-      <menuitem id="context_openANewTab" data-lazy-l10n-id="tab-context-open-a-new-tab"
+      <menuitem id="context_openANewTab" data-lazy-l10n-id="tab-context-new-tab"
                 oncommand="gBrowser.addAdjacentNewTab(TabContextMenu.contextTab)"/>
       <menuseparator/>
       <menuitem id="context_reloadTab" data-lazy-l10n-id="reload-tab"
@@ -464,7 +464,7 @@
       <menuitem id="toolbar-context-openANewTab"
                 contexttype="tabbar"
                 command="cmd_newNavigatorTab"
-                data-lazy-l10n-id="toolbar-context-menu-open-a-new-tab"/>
+                data-lazy-l10n-id="toolbar-context-menu-new-tab"/>
       <menuseparator id="toolbarNavigatorItemsMenuSeparator"/>
       <menuitem id="toolbar-context-reloadSelectedTab"
                 contexttype="tabbar"
@@ -1887,9 +1887,6 @@
                    tooltip="tracking-protection-icon-tooltip">
                 <box id="tracking-protection-icon-box">
                   <image id="tracking-protection-icon"/>
-                  <box id="tracking-protection-icon-animatable-box" flex="1">
-                    <image id="tracking-protection-icon-animatable-image" flex="1"/>
-                  </box>
                 </box>
                 <tooltip id="tracking-protection-icon-tooltip">
                   <description id="tracking-protection-icon-tooltip-label" class="tooltip-label"/>

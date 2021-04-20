@@ -17,6 +17,7 @@
   --in-content-box-border-color: rgb(143, 143, 157);
   --in-content-box-info-background: #f0f0f4;
   --in-content-item-hover: color-mix(in srgb, var(--in-content-primary-button-background) 20%, transparent);
+  --in-content-item-hover-text: var(--in-content-page-color);
   --in-content-item-selected: var(--in-content-primary-button-background);
   --in-content-item-selected-text: var(--in-content-primary-button-text-color);
   --in-content-icon-color: rgb(91,91,102);
@@ -133,30 +134,161 @@
 }
 }
 
-@media (prefers-color-scheme: dark) {
+@media (-moz-toolbar-prefers-color-scheme: dark) {
   :host,
-  :root:not(:-moz-lwtheme-darktext) {
-%include darkmode.inc.css
-  }
-}
+  :root {
+    /* Keep these in sync with layout/base/PresShell.cpp, and plaintext.css */
+    --in-content-page-background: rgb(28,27,34);
+    --in-content-page-color: rgb(251,251,254);
+    --in-content-deemphasized-text: rgb(191,191,201);
 
-:host,
-:root:-moz-lwtheme-brighttext {
-%include darkmode.inc.css
+    --in-content-box-background: rgb(35, 34, 43);
+    --in-content-box-background-odd: rgba(249,249,250,0.05);
+    --in-content-box-info-background: rgba(249,249,250,0.15);
+
+    --in-content-border-color: rgba(249,249,250,0.2);
+    --in-content-border-hover: rgba(249,249,250,0.3);
+    --in-content-border-invalid: rgb(255,132,139);
+
+    --in-content-button-background: rgb(43,42,51);
+    --in-content-button-background-hover: rgb(82,82,94);
+    --in-content-button-background-active: rgb(91,91,102);
+    --in-content-icon-color: rgb(251,251,254);
+
+    --in-content-primary-button-text-color: rgb(21,20,26);
+    --in-content-primary-button-background: rgb(0,221,255);
+    --in-content-primary-button-background-hover: rgb(128,235,255);
+    --in-content-primary-button-background-active: rgb(170,242,255);
+
+    --in-content-danger-button-background: #ff848b;
+    --in-content-danger-button-background-hover: #ffbdc5;
+    --in-content-danger-button-background-active: #ffdfe7;
+
+    --in-content-table-background: rgb(35, 34, 43);
+    --in-content-table-border-dark-color: rgba(249,249,250,0.2);
+    --in-content-table-header-background: rgb(5, 64, 150);
+    --in-content-dialog-header-background: rgba(249,249,250,0.05);
+
+    --in-content-accent-color: var(--in-content-primary-button-background);
+    --in-content-accent-color-active: var(--in-content-primary-button-background-hover);
+    --in-content-link-color: var(--in-content-primary-button-background);
+    --in-content-link-color-hover: var(--in-content-primary-button-background-hover);
+    --in-content-link-color-active: var(--in-content-primary-button-background-active);
+    --in-content-link-color-visited: var(--in-content-link-color);
+
+    --card-outline-color: var(--grey-60);
+
+    --dialog-warning-text-color: var(--red-40);
+
+    --checkbox-unchecked-bgcolor: rgb(43, 42, 51);
+    --checkbox-unchecked-hover-bgcolor: rgb(82, 82, 94);
+    --checkbox-unchecked-active-bgcolor: rgb(91, 91, 102);
+    --checkbox-checked-bgcolor: rgb(0, 221, 255);
+    --checkbox-checked-color: rgb(43, 42, 51);
+    --checkbox-checked-hover-bgcolor: rgb(128, 235, 255);
+    --checkbox-checked-active-bgcolor: rgb(170, 242, 255);
+
+    scrollbar-color: rgba(249,249,250,.4) rgba(20,20,25,.3);
+  }
 }
 
 @media not (-moz-proton) {
-@media (prefers-color-scheme: dark) {
+@media (-moz-toolbar-prefers-color-scheme: dark) {
   :host,
-  :root:not(:-moz-lwtheme-darktext) {
-%include darkmode-nonproton.inc.css
+  :root {
+    --in-content-page-background: #2A2A2E;
+    --in-content-page-color: rgb(249, 249, 250);
+    --in-content-deemphasized-text: var(--grey-40);
+
+    --in-content-box-background: #202023;
+    --in-content-box-border-color: rgba(249,249,250,0.2);
+
+    --in-content-button-background: rgba(249,249,250,0.1);
+    --in-content-button-background-hover: rgba(249,249,250,0.15);
+    --in-content-button-background-active: rgba(249,249,250,0.2);
+
+    --in-content-primary-button-text-color: rgb(255,255,255);
+    --in-content-primary-button-background: var(--blue-60);
+    --in-content-primary-button-background-hover: var(--blue-70);
+    --in-content-primary-button-background-active: var(--blue-80);
+
+    --in-content-accent-color: var(--blue-40);
+    --in-content-accent-color-active: var(--blue-50);
+    --in-content-link-color: var(--blue-40);
+    --in-content-link-color-hover: var(--blue-50);
+    --in-content-link-color-active: var(--blue-60);
+    --in-content-link-color-visited: var(--blue-40);
+
+    --in-content-table-background: #202023;
+    --in-content-table-header-background: #002b57;
   }
 }
-
-:host,
-:root:-moz-lwtheme-brighttext {
-%include darkmode-nonproton.inc.css
 }
+
+@media (prefers-contrast) {
+  :host,
+  :root {
+    --in-content-page-color: -moz-DialogText;
+    --in-content-page-background: -moz-Dialog;
+    --in-content-deemphasized-text: GrayText;
+
+    --in-content-box-background: -moz-Dialog;
+    --in-content-box-background-odd: -moz-Dialog;
+    --in-content-box-border-color: ThreeDShadow;
+    --in-content-box-info-background: -moz-Dialog;
+
+    --in-content-item-hover: ButtonFace;
+    --in-content-item-hover-text: ButtonText;
+    --in-content-item-selected: Highlight;
+    --in-content-item-selected-text: HighlightText;
+    --in-content-icon-color: -moz-DialogText;
+
+    --in-content-accent-color: -moz-DialogText;
+    --in-content-accent-color-active: -moz-DialogText;
+
+    --in-content-border-hover: ThreeDShadow;
+    /* This is not great, but there is no suitable keyword for this.
+     * In theory, we shouldn't be conveying invalid state just with a colour
+     * change... */
+    --in-content-border-invalid: ThreeDShadow;
+    --in-content-border-color: ThreeDShadow;
+
+    --in-content-link-color: -moz-nativehyperlinktext;
+    --in-content-link-color-hover: -moz-nativehyperlinktext;
+    --in-content-link-color-active: -moz-nativehyperlinktext;
+    --in-content-link-color-visited: -moz-nativehyperlinktext;
+
+    --in-content-button-background: ButtonFace;
+    --in-content-button-background-hover: -moz-ButtonHoverFace;
+    --in-content-button-background-active: ButtonFace;
+
+    --in-content-primary-button-text-color: HighlightText;
+    --in-content-primary-button-background: Highlight;
+    --in-content-primary-button-background-hover: Highlight;
+    --in-content-primary-button-background-active: Highlight;
+
+    --in-content-danger-button-background: Highlight;
+    --in-content-danger-button-background-hover: Highlight;
+    --in-content-danger-button-background-active: Highlight;
+
+    --in-content-table-border-dark-color: ThreeDDarkShadow;
+    --in-content-table-background: -moz-Dialog;
+    --in-content-table-header-background: -moz-Dialog;
+    --in-content-dialog-header-background: -moz-Dialog;
+
+    --dialog-warning-text-color: -moz-FieldText;
+
+    --checkbox-border-color: ThreeDShadow;
+    --checkbox-unchecked-bgcolor: -moz-Field;
+    --checkbox-unchecked-hover-bgcolor: -moz-ButtonHoverFace;
+    --checkbox-unchecked-active-bgcolor: -moz-Field;
+    --checkbox-checked-bgcolor: -moz-Field;
+    --checkbox-checked-color: -moz-FieldText;
+    --checkbox-checked-border-color: -moz-FieldText;
+    --checkbox-checked-hover-bgcolor: -moz-Field;
+    --checkbox-checked-active-bgcolor: -moz-Field;
+
+  }
 }
 
 :root {
@@ -250,7 +382,7 @@ xul|menulist {
   min-height: 32px;
   /* !important overrides button.css for disabled and default XUL buttons: */
   color: inherit !important;
-  border: 1px solid transparent; /* needed for high-contrast mode, where it'll show up */
+  border: 1px solid transparent; /* shows up in high-contrast mode */
   border-radius: var(--in-content-button-border-radius);
   background-color: var(--in-content-button-background);
   font-weight: 400;
@@ -259,6 +391,15 @@ xul|menulist {
   margin: 4px 8px;
   /* Ensure font-size isn't overridden by widget styling (e.g. in forms.css) */
   font-size: 1em;
+}
+
+@media (prefers-contrast) {
+  button:not(.primary, [default], [type="submit"], [autofocus]),
+  html|select,
+  html|input[type="color"],
+  xul|menulist {
+    border-color: ThreeDShadow;
+  }
 }
 
 @media (-moz-proton) {
@@ -309,12 +450,6 @@ xul|tab:-moz-focusring > .tab-middle > .tab-text {
   box-shadow: none;
   outline: 2px solid var(--in-content-focus-outline-color);
   outline-offset: 2px;
-  -moz-outline-radius: 6px;
-}
-
-html|input[type="radio"]:-moz-focusring,
-xul|radio[focused="true"] > .radio-check {
-  -moz-outline-radius: 100%;
 }
 
 html|select:not([size], [multiple]) {
@@ -466,7 +601,7 @@ xul|menulist > xul|menupopup xul|menuitem {
 
 xul|menulist > xul|menupopup > xul|menu:not([disabled="true"])[_moz-menuactive="true"],
 xul|menulist > xul|menupopup > xul|menuitem:not([disabled="true"])[_moz-menuactive="true"] {
-  color: var(--in-content-text-color);
+  color: var(--in-content-item-hover-text);
   background-color: var(--in-content-item-hover);
 }
 
@@ -532,15 +667,19 @@ xul|search-textbox:not([disabled="true"], [focused]):hover {
 
 html|input:is([type="email"], [type="tel"], [type="text"], [type="password"], [type="url"], [type="number"]):focus,
 html|textarea:focus,
-xul|search-textbox[focused] {
-  border-color: var(--in-content-focus-outline-color);
-  outline: 1px solid var(--in-content-focus-outline-color);
+xul|search-textbox[focused],
+xul|tree:focus-visible,
+xul|richlistbox:focus-visible {
+  border-color: transparent;
+  outline: 2px solid var(--in-content-focus-outline-color);
+  outline-offset: -1px; /* Prevents antialising around the corners */
 }
 
 html|input:is([type="email"], [type="tel"], [type="text"], [type="password"], [type="url"], [type="number"]):-moz-ui-invalid,
 html|textarea:-moz-ui-invalid {
-  border-color: var(--in-content-border-invalid);
-  outline: 1px solid var(--in-content-border-invalid);
+  border-color: transparent;
+  outline: 2px solid var(--in-content-border-invalid);
+  outline-offset: -1px; /* Prevents antialising around the corners */
 }
 
 @media not (-moz-proton) {
@@ -659,7 +798,6 @@ html|a:-moz-focusring,
 .text-link:-moz-focusring {
   outline: 2px solid var(--in-content-focus-outline-color);
   outline-offset: 1px;
-  -moz-outline-radius: 4px;
   border-radius: 4px;
 }
 
@@ -1019,6 +1157,7 @@ xul|treechildren::-moz-tree-row(multicol, odd) {
 html|select[size][multiple] > html|option:hover,
 xul|treechildren::-moz-tree-row(hover) {
   background-color: var(--in-content-item-hover);
+  color: var(--in-content-item-hover-text);
 }
 
 xul|richlistbox > xul|richlistitem[selected],
@@ -1059,12 +1198,6 @@ xul|tree {
   background-color: var(--in-content-box-background);
   color: inherit;
   margin: 0;
-}
-
-xul|tree:-moz-focusring,
-xul|richlistbox:-moz-focusring {
-  border-color: var(--in-content-focus-outline-color);
-  outline: 1px solid var(--in-content-focus-outline-color);
 }
 
 xul|treecols {
@@ -1273,7 +1406,6 @@ xul|*.sidebar-footer-link {
 .sidebar-footer-link:-moz-focusring {
   outline: 2px solid var(--in-content-focus-outline-color);
   outline-offset: -2px;
-  -moz-outline-radius: 6px;
 }
 
 .sidebar-footer-icon {

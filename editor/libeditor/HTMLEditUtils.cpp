@@ -341,6 +341,64 @@ bool HTMLEditUtils::SupportsAlignAttr(nsINode& aNode) {
       nsGkAtoms::h4, nsGkAtoms::h5, nsGkAtoms::h6);
 }
 
+bool HTMLEditUtils::IsVisibleTextNode(Text& aText,
+                                      Element* aEditingHost /* = nullptr */) {
+  if (!aText.TextDataLength()) {
+    return false;
+  }
+
+  if (!aText.TextIsOnlyWhitespace()) {
+    return true;
+  }
+
+  if (!aEditingHost) {
+    aEditingHost = HTMLEditUtils::
+        GetInclusiveAncestorEditableBlockElementOrInlineEditingHost(aText);
+  }
+  WSScanResult nextWSScanResult =
+      WSRunScanner::ScanNextVisibleNodeOrBlockBoundary(
+          aEditingHost, EditorRawDOMPoint(&aText, 0));
+  return nextWSScanResult.InNormalWhiteSpacesOrText() &&
+         nextWSScanResult.TextPtr() == &aText;
+}
+
+bool HTMLEditUtils::IsInVisibleTextFrames(nsPresContext* aPresContext,
+                                          Text& aText) {
+  MOZ_ASSERT(aPresContext);
+
+  nsIFrame* frame = aText.GetPrimaryFrame();
+  if (!frame) {
+    return false;
+  }
+
+  nsCOMPtr<nsISelectionController> selectionController;
+  nsresult rv = frame->GetSelectionController(
+      aPresContext, getter_AddRefs(selectionController));
+  NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
+                       "nsIFrame::GetSelectionController() failed");
+  if (NS_FAILED(rv) || !selectionController) {
+    return false;
+  }
+
+  if (!aText.TextDataLength()) {
+    return false;
+  }
+
+  // Ask the selection controller for information about whether any of the
+  // data in the node is really rendered.  This is really something that
+  // frames know about, but we aren't supposed to talk to frames.  So we put
+  // a call in the selection controller interface, since it's already in bed
+  // with frames anyway.  (This is a fix for bug 22227, and a partial fix for
+  // bug 46209.)
+  bool isVisible = false;
+  rv = selectionController->CheckVisibilityContent(
+      &aText, 0, aText.TextDataLength(), &isVisible);
+  NS_WARNING_ASSERTION(
+      NS_SUCCEEDED(rv),
+      "nsISelectionController::CheckVisibilityContent() failed");
+  return NS_SUCCEEDED(rv) && isVisible;
+}
+
 // We use bitmasks to test containment of elements. Elements are marked to be
 // in certain groups by setting the mGroup member of the `ElementInfo` struct
 // to the corresponding GROUP_ values (OR'ed together). Similarly, elements are

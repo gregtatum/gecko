@@ -74,6 +74,7 @@ using namespace js;
 
 using mozilla::AssertedCast;
 using mozilla::AsVariant;
+using mozilla::DebugOnly;
 using mozilla::Maybe;
 using mozilla::Nothing;
 using mozilla::PointerRangeSize;
@@ -575,7 +576,8 @@ bool PerHandlerParser<ParseHandler>::noteDestructuredPositionalFormalParameter(
 
 template <class ParseHandler, typename Unit>
 bool GeneralParser<ParseHandler, Unit>::noteDeclaredName(
-    TaggedParserAtomIndex name, DeclarationKind kind, TokenPos pos) {
+    TaggedParserAtomIndex name, DeclarationKind kind, TokenPos pos,
+    ClosedOver isClosedOver) {
   // The asm.js validator does all its own symbol-table management so, as an
   // optimization, avoid doing any work here.
   if (pc_->useAsmOrInsideUseAsm()) {
@@ -609,7 +611,8 @@ bool GeneralParser<ParseHandler, Unit>::noteDeclaredName(
         return false;
       }
 
-      if (!pc_->varScope().addDeclaredName(pc_, p, name, kind, pos.begin)) {
+      if (!pc_->varScope().addDeclaredName(pc_, p, name, kind, pos.begin,
+                                           isClosedOver)) {
         return false;
       }
 
@@ -630,8 +633,8 @@ bool GeneralParser<ParseHandler, Unit>::noteDeclaredName(
         return false;
       }
 
-      if (!pc_->functionScope().addDeclaredName(pc_, p, name, kind,
-                                                pos.begin)) {
+      if (!pc_->functionScope().addDeclaredName(pc_, p, name, kind, pos.begin,
+                                                isClosedOver)) {
         return false;
       }
 
@@ -639,7 +642,9 @@ bool GeneralParser<ParseHandler, Unit>::noteDeclaredName(
     }
 
     case DeclarationKind::LexicalFunction:
-    case DeclarationKind::PrivateName: {
+    case DeclarationKind::PrivateName:
+    case DeclarationKind::Synthetic:
+    case DeclarationKind::PrivateMethod: {
       ParseContext::Scope* scope = pc_->innermostScope();
       AddDeclaredNamePtr p = scope->lookupDeclaredNameForAdd(name);
       if (p) {
@@ -647,7 +652,8 @@ bool GeneralParser<ParseHandler, Unit>::noteDeclaredName(
         return false;
       }
 
-      if (!scope->addDeclaredName(pc_, p, name, kind, pos.begin)) {
+      if (!scope->addDeclaredName(pc_, p, name, kind, pos.begin,
+                                  isClosedOver)) {
         return false;
       }
 
@@ -672,7 +678,8 @@ bool GeneralParser<ParseHandler, Unit>::noteDeclaredName(
           return false;
         }
       } else {
-        if (!scope->addDeclaredName(pc_, p, name, kind, pos.begin)) {
+        if (!scope->addDeclaredName(pc_, p, name, kind, pos.begin,
+                                    isClosedOver)) {
           return false;
         }
       }
@@ -723,7 +730,8 @@ bool GeneralParser<ParseHandler, Unit>::noteDeclaredName(
         return false;
       }
 
-      if (!scope->addDeclaredName(pc_, p, name, kind, pos.begin)) {
+      if (!scope->addDeclaredName(pc_, p, name, kind, pos.begin,
+                                  isClosedOver)) {
         return false;
       }
 
@@ -753,10 +761,12 @@ bool GeneralParser<ParseHandler, Unit>::noteDeclaredName(
 template <class ParseHandler, typename Unit>
 bool GeneralParser<ParseHandler, Unit>::noteDeclaredPrivateName(
     Node nameNode, TaggedParserAtomIndex name, PropertyType propType,
-    TokenPos pos) {
+    FieldPlacement placement, TokenPos pos) {
   ParseContext::Scope* scope = pc_->innermostScope();
   AddDeclaredNamePtr p = scope->lookupDeclaredNameForAdd(name);
 
+  DeclarationKind declKind = DeclarationKind::PrivateName;
+  ClosedOver closedOver = ClosedOver::No;
   PrivateNameKind kind;
   switch (propType) {
     case PropertyType::Field:
@@ -766,6 +776,13 @@ bool GeneralParser<ParseHandler, Unit>::noteDeclaredPrivateName(
     case PropertyType::GeneratorMethod:
     case PropertyType::AsyncMethod:
     case PropertyType::AsyncGeneratorMethod:
+      if (placement == FieldPlacement::Instance) {
+        // Optimized private method. Must be marked closed-over so that
+        // EmitterScope::lookupPrivate() works even if the method is used, but
+        // not within any method (from a computed property name).
+        declKind = DeclarationKind::PrivateMethod;
+        closedOver = ClosedOver::Yes;
+      }
       kind = PrivateNameKind::Method;
       break;
     case PropertyType::Getter:
@@ -793,8 +810,7 @@ bool GeneralParser<ParseHandler, Unit>::noteDeclaredPrivateName(
     return false;
   }
 
-  if (!scope->addDeclaredName(pc_, p, name, DeclarationKind::PrivateName,
-                              pos.begin)) {
+  if (!scope->addDeclaredName(pc_, p, name, declKind, pos.begin, closedOver)) {
     return false;
   }
   scope->lookupDeclaredName(name)->value()->setPrivateNameKind(kind);
@@ -1261,7 +1277,11 @@ Maybe<FunctionScope::ParserData*> NewFunctionScopeData(
           return Nothing();
         }
         break;
+      case BindingKind::Let:
+      case BindingKind::Const:
+        break;
       default:
+        MOZ_CRASH("bad function scope BindingKind");
         break;
     }
   }
@@ -1337,6 +1357,10 @@ Maybe<VarScope::ParserData*> NewVarScopeData(JSContext* cx,
       if (!vars.append(binding)) {
         return Nothing();
       }
+    } else {
+      MOZ_ASSERT(
+          bi.kind() == BindingKind::Let || bi.kind() == BindingKind::Const,
+          "bad var scope BindingKind");
     }
   }
 
@@ -1396,7 +1420,11 @@ Maybe<LexicalScope::ParserData*> NewLexicalScopeData(JSContext* cx,
           return Nothing();
         }
         break;
+      case BindingKind::Var:
+      case BindingKind::FormalParameter:
+        break;
       default:
+        MOZ_CRASH("Bad lexical scope BindingKind");
         break;
     }
   }
@@ -1448,6 +1476,90 @@ Maybe<LexicalScope::ParserData*> ParserBase::newLexicalScopeData(
   return NewLexicalScopeData(cx_, scope, stencilAlloc(), pc_);
 }
 
+Maybe<ClassBodyScope::ParserData*> NewClassBodyScopeData(
+    JSContext* cx, ParseContext::Scope& scope, LifoAlloc& alloc,
+    ParseContext* pc) {
+  ParserBindingNameVector privateBrand(cx);
+  ParserBindingNameVector synthetics(cx);
+  ParserBindingNameVector privateMethods(cx);
+
+  bool allBindingsClosedOver =
+      pc->sc()->allBindingsClosedOver() || scope.tooBigToOptimize();
+
+  for (BindingIter bi = scope.bindings(pc); bi; bi++) {
+    ParserBindingName binding(bi.name(),
+                              allBindingsClosedOver || bi.closedOver());
+    switch (bi.kind()) {
+      case BindingKind::Synthetic:
+        if (bi.name() == TaggedParserAtomIndex::WellKnown::dotPrivateBrand()) {
+          MOZ_ASSERT(privateBrand.empty());
+          if (!privateBrand.append(binding)) {
+            return Nothing();
+          }
+        } else {
+          if (!synthetics.append(binding)) {
+            return Nothing();
+          }
+        }
+        break;
+
+      case BindingKind::PrivateMethod:
+        if (!privateMethods.append(binding)) {
+          return Nothing();
+        }
+        break;
+
+      default:
+        MOZ_CRASH("bad class body scope BindingKind");
+        break;
+    }
+  }
+
+  // We should have zero or one private brands.
+  MOZ_ASSERT(privateBrand.length() == 0 || privateBrand.length() == 1);
+
+  ClassBodyScope::ParserData* bindings = nullptr;
+  uint32_t numBindings =
+      privateBrand.length() + synthetics.length() + privateMethods.length();
+
+  if (numBindings > 0) {
+    bindings = NewEmptyBindingData<ClassBodyScope>(cx, alloc, numBindings);
+    if (!bindings) {
+      return Nothing();
+    }
+    // To simplify initialization of the bindings, we concatenate the
+    // synthetics+privateBrand vector such that the private brand is always the
+    // first element, as ordering is important. See comments in ClassBodyScope.
+    ParserBindingNameVector brandAndSynthetics(cx);
+    if (!brandAndSynthetics.appendAll(privateBrand)) {
+      return Nothing();
+    }
+    if (!brandAndSynthetics.appendAll(synthetics)) {
+      return Nothing();
+    }
+
+    // The ordering here is important. See comments in ClassBodyScope.
+    InitializeBindingData(bindings, numBindings, brandAndSynthetics,
+                          &ParserClassBodyScopeSlotInfo::privateMethodStart,
+                          privateMethods);
+  }
+
+  // `EmitterScope::lookupPrivate()` requires `.privateBrand` to be stored in a
+  // predictable slot: the first slot available in the environment object,
+  // `JSSLOT_FREE(&ClassBodyLexicalEnvironmentObject::class_)`. We assume that
+  // if `.privateBrand` is first in the scope, it will be stored there.
+  MOZ_ASSERT_IF(!privateBrand.empty(),
+                GetScopeDataTrailingNames(bindings)[0].name() ==
+                    TaggedParserAtomIndex::WellKnown::dotPrivateBrand());
+
+  return Some(bindings);
+}
+
+Maybe<ClassBodyScope::ParserData*> ParserBase::newClassBodyScopeData(
+    ParseContext::Scope& scope) {
+  return NewClassBodyScopeData(cx_, scope, stencilAlloc(), pc_);
+}
+
 template <>
 SyntaxParseHandler::LexicalScopeNodeType
 PerHandlerParser<SyntaxParseHandler>::finishLexicalScope(
@@ -1472,6 +1584,32 @@ LexicalScopeNode* PerHandlerParser<FullParseHandler>::finishLexicalScope(
   }
 
   return handler_.newLexicalScope(*bindings, body, kind);
+}
+
+template <>
+SyntaxParseHandler::ClassBodyScopeNodeType
+PerHandlerParser<SyntaxParseHandler>::finishClassBodyScope(
+    ParseContext::Scope& scope, ListNodeType body) {
+  if (!propagateFreeNamesAndMarkClosedOverBindings(scope)) {
+    return null();
+  }
+
+  return handler_.newClassBodyScope(body);
+}
+
+template <>
+ClassBodyScopeNode* PerHandlerParser<FullParseHandler>::finishClassBodyScope(
+    ParseContext::Scope& scope, ListNode* body) {
+  if (!propagateFreeNamesAndMarkClosedOverBindings(scope)) {
+    return nullptr;
+  }
+
+  Maybe<ClassBodyScope::ParserData*> bindings = newClassBodyScopeData(scope);
+  if (!bindings) {
+    return nullptr;
+  }
+
+  return handler_.newClassBodyScope(*bindings, body);
 }
 
 template <class ParseHandler>
@@ -6423,7 +6561,7 @@ bool GeneralParser<ParseHandler, Unit>::forHeadStart(
         return false;
       }
     }
-  } else if (handler_.isPropertyAccess(*forInitialPart)) {
+  } else if (handler_.isPropertyOrPrivateMemberAccess(*forInitialPart)) {
     // Permitted: no additional testing/fixup needed.
   } else if (handler_.isFunctionCall(*forInitialPart)) {
     if (!strictModeErrorAt(exprOffset, JSMSG_BAD_FOR_LEFTSIDE)) {
@@ -7398,7 +7536,10 @@ bool GeneralParser<ParseHandler, Unit>::classMember(
       }
 
       auto privateName = propAtom;
-      if (!noteDeclaredPrivateName(propName, privateName, propType, pos())) {
+      if (!noteDeclaredPrivateName(
+              propName, privateName, propType,
+              isStatic ? FieldPlacement::Static : FieldPlacement::Instance,
+              pos())) {
         return false;
       }
     }
@@ -7541,58 +7682,52 @@ bool GeneralParser<ParseHandler, Unit>::classMember(
     }
 
     TaggedParserAtomIndex privateName = propAtom;
-    if (!noteDeclaredPrivateName(propName, privateName, propType, pos())) {
+    if (!noteDeclaredPrivateName(
+            propName, privateName, propType,
+            isStatic ? FieldPlacement::Static : FieldPlacement::Instance,
+            pos())) {
       return false;
     }
 
-    // Private non-static methods are stamped onto every instance using
-    // initializers. Private static methods are stored directly on the
-    // constructor during class evaluation; see
-    // BytecodeEmitter::emitPropertyList.
+    // Private non-static methods are stored in the class body environment.
+    // Private non-static accessors are stamped onto every instance using
+    // initializers. Private static methods are stamped onto the constructor
+    // during class evaluation; see BytecodeEmitter::emitPropertyList.
     if (!isStatic) {
-      classInitializedMembers.privateMethods++;
+      if (atype == AccessorType::Getter || atype == AccessorType::Setter) {
+        classInitializedMembers.privateAccessors++;
 
-      // Synthesize a name for the lexical variable that will store the
-      // private method body.
-      StringBuffer storedMethodName(cx_);
-      if (!storedMethodName.append(this->parserAtoms(), propAtom)) {
-        return false;
-      }
-      switch (atype) {
-        case AccessorType::None:
-          if (!storedMethodName.append(".method")) {
-            return false;
-          }
-          break;
-        case AccessorType::Getter:
-          if (!storedMethodName.append(".getter")) {
-            return false;
-          }
-          break;
-        case AccessorType::Setter:
-          if (!storedMethodName.append(".setter")) {
-            return false;
-          }
-          break;
-        default:
-          MOZ_CRASH("Invalid private method accessor type");
-      }
-      auto storedMethodProp =
-          storedMethodName.finishParserAtom(this->parserAtoms());
-      if (!storedMethodProp) {
-        return false;
-      }
-      if (!noteDeclaredName(storedMethodProp, DeclarationKind::Const, pos())) {
-        return false;
-      }
+        // Synthesize a name for the lexical variable that will store the
+        // accessor body.
+        StringBuffer storedMethodName(cx_);
+        if (!storedMethodName.append(this->parserAtoms(), propAtom)) {
+          return false;
+        }
+        if (!storedMethodName.append(
+                atype == AccessorType::Getter ? ".getter" : ".setter")) {
+          return false;
+        }
+        auto storedMethodProp =
+            storedMethodName.finishParserAtom(this->parserAtoms());
+        if (!storedMethodProp) {
+          return false;
+        }
+        if (!noteDeclaredName(storedMethodProp, DeclarationKind::Synthetic,
+                              pos())) {
+          return false;
+        }
 
-      TokenPos propNamePos(propNameOffset, pos().end);
-      auto initializerNode =
-          privateMethodInitializer(propNamePos, propAtom, storedMethodProp);
-      if (!initializerNode) {
-        return false;
+        TokenPos propNamePos(propNameOffset, pos().end);
+        auto initializerNode =
+            privateMethodInitializer(propNamePos, propAtom, storedMethodProp);
+        if (!initializerNode) {
+          return false;
+        }
+        initializerIfPrivate = Some(initializerNode);
+      } else {
+        MOZ_ASSERT(atype == AccessorType::None);
+        classInitializedMembers.privateMethods++;
       }
-      initializerIfPrivate = Some(initializerNode);
     }
   }
 
@@ -7671,11 +7806,12 @@ bool GeneralParser<ParseHandler, Unit>::finishClassConstructor(
   // finished parsing the class.
   ctorbox->setCtorToStringEnd(classEndOffset);
 
-  size_t numMemberInitializers = classInitializedMembers.privateMethods +
+  size_t numMemberInitializers = classInitializedMembers.privateAccessors +
                                  classInitializedMembers.instanceFields;
-  if (numMemberInitializers) {
+  bool hasPrivateBrand = classInitializedMembers.hasPrivateBrand();
+  if (hasPrivateBrand || numMemberInitializers > 0) {
     // Now that we have full set of initializers, update the constructor.
-    MemberInitializers initializers(numMemberInitializers);
+    MemberInitializers initializers(hasPrivateBrand, numMemberInitializers);
     ctorbox->setMemberInitializers(initializers);
 
     // Field initialization need access to `this`.
@@ -7735,7 +7871,7 @@ GeneralParser<ParseHandler, Unit>::classDefinition(
   Node nameNode = null();
   Node classHeritage = null();
   LexicalScopeNodeType classBlock = null();
-  LexicalScopeNodeType classBodyBlock = null();
+  ClassBodyScopeNodeType classBodyBlock = null();
   uint32_t classEndOffset;
   {
     // A named class creates a new lexical scope with a const binding of the
@@ -7791,9 +7927,23 @@ GeneralParser<ParseHandler, Unit>::classDefinition(
         }
       }
 
+      if (classInitializedMembers.privateMethods +
+              classInitializedMembers.privateAccessors >
+          0) {
+        // We declare `.privateBrand` as ClosedOver because the constructor
+        // always uses it, even a default constructor. We could equivalently
+        // `noteNameUsed` when parsing the constructor, except that at that
+        // time, we don't necessarily know if the class has a private brand.
+        if (!noteDeclaredName(
+                TaggedParserAtomIndex::WellKnown::dotPrivateBrand(),
+                DeclarationKind::Synthetic, namePos, ClosedOver::Yes)) {
+          return null();
+        }
+      }
+
       if (classInitializedMembers.instanceFieldKeys > 0) {
         if (!noteDeclaredName(TaggedParserAtomIndex::WellKnown::dotFieldKeys(),
-                              DeclarationKind::Let, namePos)) {
+                              DeclarationKind::Synthetic, namePos)) {
           return null();
         }
       }
@@ -7801,7 +7951,7 @@ GeneralParser<ParseHandler, Unit>::classDefinition(
       if (classInitializedMembers.staticFields > 0) {
         if (!noteDeclaredName(
                 TaggedParserAtomIndex::WellKnown::dotStaticInitializers(),
-                DeclarationKind::Let, namePos)) {
+                DeclarationKind::Synthetic, namePos)) {
           return null();
         }
       }
@@ -7809,7 +7959,7 @@ GeneralParser<ParseHandler, Unit>::classDefinition(
       if (classInitializedMembers.staticFieldKeys > 0) {
         if (!noteDeclaredName(
                 TaggedParserAtomIndex::WellKnown::dotStaticFieldKeys(),
-                DeclarationKind::Let, namePos)) {
+                DeclarationKind::Synthetic, namePos)) {
           return null();
         }
       }
@@ -7821,7 +7971,7 @@ GeneralParser<ParseHandler, Unit>::classDefinition(
         return null();
       }
 
-      classBodyBlock = finishLexicalScope(bodyScope, classMembers);
+      classBodyBlock = finishClassBodyScope(bodyScope, classMembers);
       if (!classBodyBlock) {
         return null();
       }
@@ -8342,7 +8492,7 @@ GeneralParser<ParseHandler, Unit>::fieldInitializerOpt(
       return null();
     }
 
-    propAssignFieldAccess = handler_.newPropertyByValue(
+    propAssignFieldAccess = handler_.newPrivateMemberAccess(
         propAssignThis, privateNameNode, wholeInitializerPos.end);
     if (!propAssignFieldAccess) {
       return null();
@@ -9510,7 +9660,7 @@ typename ParseHandler::Node GeneralParser<ParseHandler, Unit>::assignExpr(
         return null();
       }
     }
-  } else if (handler_.isPropertyAccess(lhs)) {
+  } else if (handler_.isPropertyOrPrivateMemberAccess(lhs)) {
     // Permitted: no additional testing/fixup needed.
   } else if (handler_.isFunctionCall(lhs)) {
     // We don't have to worry about backward compatibility issues with the new
@@ -9572,7 +9722,7 @@ bool GeneralParser<ParseHandler, Unit>::checkIncDecOperand(
         return false;
       }
     }
-  } else if (handler_.isPropertyAccess(operand)) {
+  } else if (handler_.isPropertyOrPrivateMemberAccess(operand)) {
     // Permitted: no additional testing/fixup needed.
   } else if (handler_.isFunctionCall(operand)) {
     // Assignment to function calls is forbidden in ES6.  We're still
@@ -9799,7 +9949,7 @@ typename ParseHandler::Node GeneralParser<ParseHandler, Unit>::unaryExpr(
         pc_->sc()->setBindingsAccessedDynamically();
       }
 
-      if (handler_.isPrivateField(expr)) {
+      if (handler_.isPrivateMemberAccess(expr)) {
         errorAt(exprOffset, JSMSG_PRIVATE_DELETE);
         return null();
       }
@@ -10213,9 +10363,9 @@ GeneralParser<ParseHandler, Unit>::memberPrivateAccess(
 
   if (optionalKind == OptionalKind::Optional) {
     MOZ_ASSERT(!handler_.isSuperBase(lhs));
-    return handler_.newOptionalPropertyByValue(lhs, privateName, pos().end);
+    return handler_.newOptionalPrivateMemberAccess(lhs, privateName, pos().end);
   }
-  return handler_.newPropertyByValue(lhs, privateName, pos().end);
+  return handler_.newPrivateMemberAccess(lhs, privateName, pos().end);
 }
 
 template <class ParseHandler, typename Unit>
@@ -10274,8 +10424,9 @@ typename ParseHandler::Node GeneralParser<ParseHandler, Unit>::memberCall(
     TokenKind tt, Node lhs, YieldHandling yieldHandling,
     PossibleError* possibleError /* = nullptr */,
     OptionalKind optionalKind /* = OptionalKind::NonOptional */) {
-  if (options().selfHostingMode && (handler_.isPropertyAccess(lhs) ||
-                                    handler_.isOptionalPropertyAccess(lhs))) {
+  if (options().selfHostingMode &&
+      (handler_.isPropertyOrPrivateMemberAccess(lhs) ||
+       handler_.isOptionalPropertyOrPrivateMemberAccess(lhs))) {
     error(JSMSG_SELFHOSTED_METHOD_CALL);
     return null();
   }
@@ -10704,7 +10855,7 @@ bool GeneralParser<ParseHandler, Unit>::checkDestructuringAssignmentTarget(
   // Report any pending expression error if we're definitely not in a
   // destructuring context or the possible destructuring target is a
   // property accessor.
-  if (!possibleError || handler_.isPropertyAccess(expr)) {
+  if (!possibleError || handler_.isPropertyOrPrivateMemberAccess(expr)) {
     return exprPossibleError->checkForExpressionError();
   }
 

@@ -607,7 +607,7 @@ nsresult HTMLEditor::MaybeCollapseSelectionAtFirstEditableNode(
   EditorRawDOMPoint pointToPutCaret(editingHost, 0);
   for (;;) {
     WSScanResult forwardScanFromPointToPutCaretResult =
-        WSRunScanner::ScanNextVisibleNodeOrBlockBoundary(*this,
+        WSRunScanner::ScanNextVisibleNodeOrBlockBoundary(editingHost,
                                                          pointToPutCaret);
     if (forwardScanFromPointToPutCaretResult.Failed()) {
       NS_WARNING("WSRunScanner::ScanNextVisibleNodeOrBlockBoundary failed");
@@ -1009,8 +1009,8 @@ bool HTMLEditor::IsVisibleBRElement(const nsINode* aNode) const {
   if (NS_WARN_IF(!afterBRElement.IsSet())) {
     return false;
   }
-  return !WSRunScanner::ScanNextVisibleNodeOrBlockBoundary(*this,
-                                                           afterBRElement)
+  return !WSRunScanner::ScanNextVisibleNodeOrBlockBoundary(
+              GetActiveEditingHost(), afterBRElement)
               .ReachedBlockBoundary();
 }
 
@@ -1636,7 +1636,7 @@ EditorRawDOMPoint HTMLEditor::GetBetterInsertionPointFor(
     return pointToInsert;
   }
 
-  WSRunScanner wsScannerForPointToInsert(*this, pointToInsert);
+  WSRunScanner wsScannerForPointToInsert(GetActiveEditingHost(), pointToInsert);
 
   // If the insertion position is after the last visible item in a line,
   // i.e., the insertion position is just before a visible line break <br>,
@@ -5137,47 +5137,6 @@ nsIContent* HTMLEditor::GetLastEditableLeaf(nsINode& aNode) const {
   return child;
 }
 
-bool HTMLEditor::IsInVisibleTextFrames(Text& aText) const {
-  nsISelectionController* selectionController = GetSelectionController();
-  if (NS_WARN_IF(!selectionController)) {
-    return false;
-  }
-
-  if (!aText.TextDataLength()) {
-    return false;
-  }
-
-  // Ask the selection controller for information about whether any of the
-  // data in the node is really rendered.  This is really something that
-  // frames know about, but we aren't supposed to talk to frames.  So we put
-  // a call in the selection controller interface, since it's already in bed
-  // with frames anyway.  (This is a fix for bug 22227, and a partial fix for
-  // bug 46209.)
-  bool isVisible = false;
-  nsresult rv = selectionController->CheckVisibilityContent(
-      &aText, 0, aText.TextDataLength(), &isVisible);
-  NS_WARNING_ASSERTION(
-      NS_SUCCEEDED(rv),
-      "nsISelectionController::CheckVisibilityContent() failed, but ignored");
-  return NS_SUCCEEDED(rv) && isVisible;
-}
-
-bool HTMLEditor::IsVisibleTextNode(Text& aText) const {
-  if (!aText.TextDataLength()) {
-    return false;
-  }
-
-  if (!aText.TextIsOnlyWhitespace()) {
-    return true;
-  }
-
-  WSScanResult nextWSScanResult =
-      WSRunScanner::ScanNextVisibleNodeOrBlockBoundary(
-          *this, EditorRawDOMPoint(&aText, 0));
-  return nextWSScanResult.InNormalWhiteSpacesOrText() &&
-         nextWSScanResult.TextPtr() == &aText;
-}
-
 bool HTMLEditor::IsEmpty() const {
   if (mPaddingBRElementForEmptyEditor) {
     return true;
@@ -5207,9 +5166,12 @@ bool HTMLEditor::IsEmptyNodeImpl(nsINode& aNode, bool aSingleBRDoesntCount,
                                  bool aSafeToAskFrames, bool* aSeenBR) const {
   MOZ_ASSERT(aSeenBR);
 
+  Element* editingHost = GetActiveEditingHost();
+
   if (Text* text = aNode.GetAsText()) {
-    return aSafeToAskFrames ? !IsInVisibleTextFrames(*text)
-                            : !IsVisibleTextNode(*text);
+    return aSafeToAskFrames
+               ? !HTMLEditUtils::IsInVisibleTextFrames(GetPresContext(), *text)
+               : !HTMLEditUtils::IsVisibleTextNode(*text, editingHost);
   }
 
   // if it's not a text node (handled above) and it's not a container,
@@ -5239,8 +5201,10 @@ bool HTMLEditor::IsEmptyNodeImpl(nsINode& aNode, bool aSingleBRDoesntCount,
     if (EditorUtils::IsEditableContent(*child, EditorType::HTML)) {
       if (Text* text = child->GetAsText()) {
         // break out if we find we aren't empty
-        if (!(aSafeToAskFrames ? !IsInVisibleTextFrames(*text)
-                               : !IsVisibleTextNode(*text))) {
+        if (!(aSafeToAskFrames
+                  ? !HTMLEditUtils::IsInVisibleTextFrames(GetPresContext(),
+                                                          *text)
+                  : !HTMLEditUtils::IsVisibleTextNode(*text, editingHost))) {
           return false;
         }
       } else {

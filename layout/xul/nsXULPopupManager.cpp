@@ -864,11 +864,27 @@ void nsXULPopupManager::OnNativeMenuClosed() {
   }
   mNativeMenu->RemoveObserver(this);
   mNativeMenu = nullptr;
+  mNativeMenuSubmenuStates.Clear();
 
   // Stop hiding the menu from accessibility code, in case it gets opened as a
   // non-native menu in the future.
   popup->AsElement()->UnsetAttr(kNameSpaceID_None, nsGkAtoms::aria_hidden,
                                 true);
+}
+
+void nsXULPopupManager::OnNativeSubMenuWillOpen(
+    mozilla::dom::Element* aPopupElement) {
+  mNativeMenuSubmenuStates.InsertOrUpdate(aPopupElement, ePopupShowing);
+}
+
+void nsXULPopupManager::OnNativeSubMenuDidOpen(
+    mozilla::dom::Element* aPopupElement) {
+  mNativeMenuSubmenuStates.InsertOrUpdate(aPopupElement, ePopupShown);
+}
+
+void nsXULPopupManager::OnNativeSubMenuClosed(
+    mozilla::dom::Element* aPopupElement) {
+  mNativeMenuSubmenuStates.Remove(aPopupElement);
 }
 
 void nsXULPopupManager::ShowPopupAtScreenRect(
@@ -1829,37 +1845,30 @@ bool nsXULPopupManager::MayShowPopup(nsMenuPopupFrame* aPopup) {
 
   nsCOMPtr<nsPIDOMWindowOuter> rootWin = root->GetWindow();
 
-  if (XRE_IsParentProcess()) {
-    // chrome shells can always open popups, but other types of shells can only
-    // open popups when they are focused and visible
-    if (docShell->ItemType() != nsIDocShellTreeItem::typeChrome) {
-      // only allow popups in active windows
-      nsFocusManager* fm = nsFocusManager::GetFocusManager();
-      if (!fm || !rootWin) {
-        return false;
-      }
+  MOZ_RELEASE_ASSERT(XRE_IsParentProcess(),
+                     "Cannot have XUL in content process showing popups.");
 
-      nsCOMPtr<nsPIDOMWindowOuter> activeWindow = fm->GetActiveWindow();
-      if (activeWindow != rootWin) {
-        return false;
-      }
-
-      // only allow popups in visible frames
-      // TODO: This visibility check should be replaced with a check of
-      // bc->IsActive(). It is okay for now since this is only called
-      // in the parent process. Bug 1698533.
-      bool visible;
-      baseWin->GetVisibility(&visible);
-      if (!visible) {
-        return false;
-      }
-    }
-  } else {
+  // chrome shells can always open popups, but other types of shells can only
+  // open popups when they are focused and visible
+  if (docShell->ItemType() != nsIDocShellTreeItem::typeChrome) {
+    // only allow popups in active windows
     nsFocusManager* fm = nsFocusManager::GetFocusManager();
-    BrowsingContext* bc = docShell->GetBrowsingContext();
-    if (!fm || !bc || fm->GetActiveBrowsingContext() != bc->Top()) {
-      // fm->GetActiveBrowsingContext() == bc->Top() would imply bc->IsActive(),
-      // so we don't bother checking/early returning for !bc->IsActive().
+    if (!fm || !rootWin) {
+      return false;
+    }
+
+    nsCOMPtr<nsPIDOMWindowOuter> activeWindow = fm->GetActiveWindow();
+    if (activeWindow != rootWin) {
+      return false;
+    }
+
+    // only allow popups in visible frames
+    // TODO: This visibility check should be replaced with a check of
+    // bc->IsActive(). It is okay for now since this is only called
+    // in the parent process. Bug 1698533.
+    bool visible;
+    baseWin->GetVisibility(&visible);
+    if (!visible) {
       return false;
     }
   }
@@ -2673,6 +2682,25 @@ nsresult nsXULPopupManager::UpdateIgnoreKeys(bool aIgnoreKeys) {
   }
   UpdateKeyboardListeners();
   return NS_OK;
+}
+
+nsPopupState nsXULPopupManager::GetPopupState(
+    mozilla::dom::Element* aPopupElement) {
+  if (mNativeMenu && mNativeMenu->Element()->Contains(aPopupElement)) {
+    if (aPopupElement != mNativeMenu->Element()) {
+      // Submenu state is stored in mNativeMenuSubmenuStates.
+      return mNativeMenuSubmenuStates.MaybeGet(aPopupElement)
+          .valueOr(ePopupClosed);
+    }
+    // mNativeMenu->Element()'s state is stored in its nsMenuPopupFrame.
+  }
+
+  nsMenuPopupFrame* menuPopupFrame =
+      do_QueryFrame(aPopupElement->GetPrimaryFrame());
+  if (menuPopupFrame) {
+    return menuPopupFrame->PopupState();
+  }
+  return ePopupClosed;
 }
 
 nsresult nsXULPopupManager::KeyUp(KeyboardEvent* aKeyEvent) {

@@ -14,7 +14,7 @@
   --tabpanel-background-color: #f9f9fa;
 }
 
-@media (prefers-color-scheme: dark) {
+@media (-moz-toolbar-prefers-color-scheme: dark) {
   :root {
     /* Value for --in-content-page-background for dark mode in in-content/common.inc.css */
     --tabpanel-background-color: #2a2a2e;
@@ -36,7 +36,7 @@
   /* Value for --in-content-page-background in in-content/common.inc.css */
   --tabpanel-background-color: #fff;
 }
-@media (prefers-color-scheme: dark) {
+@media (-moz-toolbar-prefers-color-scheme: dark) {
   :root {
     /* Value for --in-content-page-background for dark mode in in-content/common.inc.css */
     --tabpanel-background-color: rgb(28,27,34);
@@ -122,7 +122,6 @@
 .keyboard-focused-tab > .tab-stack > .tab-background,
 .tabbrowser-tab:focus:not([aria-activedescendant]) > .tab-stack > .tab-background {
   outline: var(--focus-outline);
-  -moz-outline-radius: var(--tab-border-radius);
   outline-offset: -2px;
 }
 } /*** END proton ***/
@@ -1063,10 +1062,6 @@
   padding-bottom: 0;
 }
 
-#allTabsMenu-tabsSeparator {
-  margin-bottom: 0;
-}
-
 .all-tabs-item > .all-tabs-secondary-button {
   padding: 0;
   padding-inline-start: 6px;
@@ -1080,7 +1075,7 @@
 }
 
 .all-tabs-item:hover {
-  background-color: var(--arrowpanel-dimmed)
+  background-color: var(--panelview-toolbarbutton-hover-bgcolor);
 }
 
 .all-tabs-item:hover > .all-tabs-button,
@@ -1091,11 +1086,16 @@
 
 .all-tabs-item[selected] {
   font-weight: bold;
+}
+
+@media not (-moz-proton-doorhangers) {
+.all-tabs-item[selected] {
   box-shadow: inset 4px 0 var(--blue-40);
 }
 
 .all-tabs-item[selected]:-moz-locale-dir(rtl) {
   box-shadow: inset -4px 0 var(--blue-40);
+}
 }
 
 .all-tabs-button {
@@ -1115,6 +1115,31 @@
   list-style-image: url(chrome://browser/skin/tabbrowser/tab-audio-muted.svg);
 }
 
+@media (-moz-proton) {
+#allTabsMenu-allTabsViewTabs {
+  padding-bottom: 8px;
+}
+
+#allTabsMenu-allTabsViewTabs > .all-tabs-item {
+  margin-inline: 8px;
+  border-radius: 4px;
+}
+
+.all-tabs-item > toolbarbutton {
+  margin-inline-start: 0;
+}
+} /*** END proton ***/
+
+@media not (-moz-proton) {
 #allTabsMenu-searchTabs {
   list-style-image: url(chrome://global/skin/icons/search-glass.svg);
 }
+
+#allTabsMenu-tabsSeparator {
+  margin-bottom: 0;
+}
+
+.all-tabs-item:hover {
+  background-color: var(--arrowpanel-dimmed);
+}
+} /*** END !proton ***/

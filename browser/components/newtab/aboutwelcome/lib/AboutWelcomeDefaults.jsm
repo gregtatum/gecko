@@ -3,16 +3,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 "use strict";
 
-const EXPORTED_SYMBOLS = ["AboutWelcomeDefaults"];
+const EXPORTED_SYMBOLS = ["AboutWelcomeDefaults", "DEFAULT_WELCOME_CONTENT"];
 
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
-  ShellService: "resource:///modules/ShellService.jsm",
-  AttributionCode: "resource:///modules/AttributionCode.jsm",
   AddonRepository: "resource://gre/modules/addons/AddonRepository.jsm",
+  AttributionCode: "resource:///modules/AttributionCode.jsm",
+  Services: "resource://gre/modules/Services.jsm",
+  ShellService: "resource:///modules/ShellService.jsm",
 });
 
 const DEFAULT_WELCOME_CONTENT = {
@@ -197,28 +198,34 @@ const DEFAULT_PROTON_WELCOME_CONTENT = {
   id: "DEFAULT_ABOUTWELCOME_PROTON",
   template: "multistage",
   background_url:
-    "chrome://activity-stream/content/data/content/assets/proton-bkg.avif",
+    "chrome://activity-stream/content/data/content/assets/proton-bkg.webp",
   screens: [
     {
       id: "AW_SET_DEFAULT",
       order: 0,
       content: {
-        title: "Welcome to Firefox",
-        subtitle: "An inspiring headline goes here",
+        title: {
+          string_id: "mr1-onboarding-welcome-header",
+        },
+        subtitle: {
+          string_id: "mr1-welcome-screen-hero-text",
+        },
+        // This is dynamically removed for non-en locales below.
         help_text: {
-          text: "Placeholder Name - Metal drummer, Firefox aficianado",
+          text: "Photograph by Sam Moqadam via Unsplash",
         },
         primary_button: {
-          label: "Always use Firefox",
+          label: {
+            string_id: "mr1-onboarding-set-default-only-primary-button-label",
+          },
           action: {
             navigate: true,
-            type: "SET_DEFAULT_BROWSER",
+            type: "PIN_AND_DEFAULT",
           },
         },
         secondary_button: {
           label: {
-            string_id:
-              "onboarding-multistage-set-default-secondary-button-label",
+            string_id: "mr1-onboarding-set-default-secondary-button-label",
           },
           action: {
             navigate: true,
@@ -226,7 +233,7 @@ const DEFAULT_PROTON_WELCOME_CONTENT = {
         },
         secondary_button_top: {
           label: {
-            string_id: "onboarding-multistage-welcome-secondary-button-label",
+            string_id: "mr1-onboarding-sign-in-button-label",
           },
           action: {
             data: {
@@ -242,11 +249,16 @@ const DEFAULT_PROTON_WELCOME_CONTENT = {
       id: "AW_IMPORT_SETTINGS",
       order: 1,
       content: {
-        title: "Dive right in",
-        subtitle: "Import your passwords, bookmarks, and more",
+        title: {
+          string_id: "mr1-onboarding-import-header",
+        },
+        subtitle: {
+          string_id: "mr1-onboarding-import-subtitle",
+        },
         primary_button: {
           label: {
-            string_id: "onboarding-multistage-import-primary-button-label",
+            string_id:
+              "mr1-onboarding-import-primary-button-label-no-attribution",
           },
           action: {
             type: "SHOW_MIGRATION_WIZARD",
@@ -255,7 +267,7 @@ const DEFAULT_PROTON_WELCOME_CONTENT = {
         },
         secondary_button: {
           label: {
-            string_id: "onboarding-multistage-import-secondary-button-label",
+            string_id: "mr1-onboarding-import-secondary-button-label",
           },
           action: {
             navigate: true,
@@ -267,9 +279,11 @@ const DEFAULT_PROTON_WELCOME_CONTENT = {
       id: "AW_CHOOSE_THEME",
       order: 2,
       content: {
-        title: "Get a fresh look",
+        title: {
+          string_id: "mr1-onboarding-theme-header",
+        },
         subtitle: {
-          string_id: "onboarding-multistage-theme-subtitle",
+          string_id: "mr1-onboarding-theme-subtitle",
         },
         tiles: {
           type: "theme",
@@ -279,54 +293,57 @@ const DEFAULT_PROTON_WELCOME_CONTENT = {
           data: [
             {
               theme: "automatic",
-              label: "Automatic",
+              label: {
+                string_id: "mr1-onboarding-theme-label-system",
+              },
               tooltip: {
-                string_id: "onboarding-multistage-theme-tooltip-automatic-2",
+                string_id: "mr1-onboarding-theme-tooltip-system",
               },
               description: {
-                string_id:
-                  "onboarding-multistage-theme-description-automatic-2",
+                string_id: "mr1-onboarding-theme-description-system",
               },
             },
             {
               theme: "light",
               label: {
-                string_id: "onboarding-multistage-theme-label-light",
+                string_id: "mr1-onboarding-theme-label-light",
               },
               tooltip: {
-                string_id: "onboarding-multistage-theme-tooltip-light-2",
+                string_id: "mr1-onboarding-theme-tooltip-light",
               },
               description: {
-                string_id: "onboarding-multistage-theme-description-light",
+                string_id: "mr1-onboarding-theme-description-light",
               },
             },
             {
               theme: "dark",
               label: {
-                string_id: "onboarding-multistage-theme-label-dark",
+                string_id: "mr1-onboarding-theme-label-dark",
               },
               tooltip: {
-                string_id: "onboarding-multistage-theme-tooltip-dark-2",
+                string_id: "mr1-onboarding-theme-tooltip-dark",
               },
               description: {
-                string_id: "onboarding-multistage-theme-description-dark",
+                string_id: "mr1-onboarding-theme-description-dark",
               },
             },
             {
               theme: "alpenglow",
-              label: "Alpenglow",
+              label: {
+                string_id: "mr1-onboarding-theme-label-alpenglow",
+              },
               tooltip: {
-                string_id: "onboarding-multistage-theme-tooltip-alpenglow-2",
+                string_id: "mr1-onboarding-theme-tooltip-alpenglow",
               },
               description: {
-                string_id: "onboarding-multistage-theme-description-alpenglow",
+                string_id: "mr1-onboarding-theme-description-alpenglow",
               },
             },
           ],
         },
         primary_button: {
           label: {
-            string_id: "onboarding-multistage-theme-primary-button-label2",
+            string_id: "mr1-onboarding-theme-primary-button-label",
           },
           action: {
             navigate: true,
@@ -334,7 +351,7 @@ const DEFAULT_PROTON_WELCOME_CONTENT = {
         },
         secondary_button: {
           label: {
-            string_id: "onboarding-multistage-theme-secondary-button-label",
+            string_id: "mr1-onboarding-theme-secondary-button-label",
           },
           action: {
             theme: "automatic",
@@ -345,19 +362,6 @@ const DEFAULT_PROTON_WELCOME_CONTENT = {
     },
   ],
 };
-
-// Helper function to determine if Windows platform supports
-// automated pinning to taskbar.
-// See https://searchfox.org/mozilla-central/rev/002023eb262be9db3479142355e1675645d52d52/browser/components/shell/nsIWindowsShellService.idl#17
-function canPinCurrentAppToTaskbar() {
-  try {
-    ShellService.QueryInterface(
-      Ci.nsIWindowsShellService
-    ).checkPinCurrentAppToTaskbar();
-    return true;
-  } catch (e) {}
-  return false;
-}
 
 async function getAddonFromRepository(data) {
   const [addonInfo] = await AddonRepository.getAddonsByIDs([data]);
@@ -429,9 +433,23 @@ async function getAttributionContent() {
 const RULES = [
   {
     description: "Proton Default AW content",
-    getDefaults(featureConfig) {
+    async getDefaults(featureConfig) {
       if (featureConfig?.isProton) {
-        return { ...DEFAULT_PROTON_WELCOME_CONTENT };
+        const content = { ...DEFAULT_PROTON_WELCOME_CONTENT };
+
+        // Switch to "primary" if we also need to pin.
+        if (await ShellService.doesAppNeedPin()) {
+          content.screens[0].content.primary_button.label.string_id =
+            "mr1-onboarding-set-default-pin-primary-button-label";
+          content.screens[0].id = "AW_PIN_AND_DEFAULT";
+        }
+
+        // Remove the English-only image caption.
+        if (Services.locale.appLocaleAsBCP47.split("-")[0] !== "en") {
+          delete content.screens[0].content.help_text;
+        }
+
+        return content;
       }
 
       return null;
@@ -439,8 +457,8 @@ const RULES = [
   },
   {
     description: "Windows pin to task bar screen",
-    getDefaults() {
-      if (canPinCurrentAppToTaskbar()) {
+    async getDefaults() {
+      if (await ShellService.doesAppNeedPin()) {
         return {
           template: "multistage",
           screens: [
@@ -506,9 +524,9 @@ const RULES = [
   },
 ];
 
-function getDefaults(featureConfig) {
+async function getDefaults(featureConfig) {
   for (const rule of RULES) {
-    const result = rule.getDefaults(featureConfig);
+    const result = await rule.getDefaults(featureConfig);
     if (result) {
       return result;
     }

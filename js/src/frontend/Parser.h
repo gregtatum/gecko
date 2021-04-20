@@ -407,6 +407,8 @@ class MOZ_STACK_CLASS ParserBase : public ParserSharedBase,
       ParseContext::Scope& scope);
   mozilla::Maybe<LexicalScope::ParserData*> newLexicalScopeData(
       ParseContext::Scope& scope);
+  mozilla::Maybe<ClassBodyScope::ParserData*> newClassBodyScopeData(
+      ParseContext::Scope& scope);
 
  protected:
   enum InvokedPrediction { PredictUninvoked = false, PredictInvoked = true };
@@ -512,6 +514,8 @@ class MOZ_STACK_CLASS PerHandlerParser : public ParserBase {
   bool finishFunctionScopes(bool isStandaloneFunction);
   LexicalScopeNodeType finishLexicalScope(ParseContext::Scope& scope, Node body,
                                           ScopeKind kind = ScopeKind::Lexical);
+  ClassBodyScopeNodeType finishClassBodyScope(ParseContext::Scope& scope,
+                                              ListNodeType body);
   bool finishFunction(bool isStandaloneFunction = false);
 
   inline NameNodeType newName(TaggedParserAtomIndex name);
@@ -660,6 +664,7 @@ enum YieldHandling { YieldIsName, YieldIsKeyword };
 enum InHandling { InAllowed, InProhibited };
 enum DefaultHandling { NameRequired, AllowDefaultName };
 enum TripledotHandling { TripledotAllowed, TripledotProhibited };
+enum class FieldPlacement { Instance, Static };
 
 template <class ParseHandler, typename Unit>
 class Parser;
@@ -698,6 +703,7 @@ class MOZ_STACK_CLASS GeneralParser : public PerHandlerParser<ParseHandler> {
   using Base::checkOptionsCalled_;
 #endif
   using Base::checkForUndefinedPrivateFields;
+  using Base::finishClassBodyScope;
   using Base::finishFunctionScopes;
   using Base::finishLexicalScope;
   using Base::foldConstants_;
@@ -1260,6 +1266,13 @@ class MOZ_STACK_CLASS GeneralParser : public PerHandlerParser<ParseHandler> {
 
     // The number of instance class private methods.
     size_t privateMethods = 0;
+
+    // The number of instance class private accessors.
+    size_t privateAccessors = 0;
+
+    bool hasPrivateBrand() const {
+      return privateMethods > 0 || privateAccessors > 0;
+    }
   };
   [[nodiscard]] bool classMember(
       YieldHandling yieldHandling,
@@ -1432,10 +1445,11 @@ class MOZ_STACK_CLASS GeneralParser : public PerHandlerParser<ParseHandler> {
   bool matchOrInsertSemicolon(Modifier modifier = TokenStream::SlashIsRegExp);
 
   bool noteDeclaredName(TaggedParserAtomIndex name, DeclarationKind kind,
-                        TokenPos pos);
+                        TokenPos pos, ClosedOver isClosedOver = ClosedOver::No);
 
   bool noteDeclaredPrivateName(Node nameNode, TaggedParserAtomIndex name,
-                               PropertyType propType, TokenPos pos);
+                               PropertyType propType, FieldPlacement placement,
+                               TokenPos pos);
 
  private:
   inline bool asmJS(ListNodeType list);
@@ -1646,6 +1660,7 @@ class MOZ_STACK_CLASS Parser<FullParseHandler, Unit> final
 #endif
   using Base::checkForUndefinedPrivateFields;
   using Base::cx_;
+  using Base::finishClassBodyScope;
   using Base::finishFunctionScopes;
   using Base::finishLexicalScope;
   using Base::innerFunction;

@@ -1897,6 +1897,8 @@ void AssertIsOnIOThread() {
   NS_ASSERTION(IsOnIOThread(), "Running on the wrong thread!");
 }
 
+void DiagnosticAssertIsOnIOThread() { MOZ_DIAGNOSTIC_ASSERT(IsOnIOThread()); }
+
 void AssertCurrentThreadOwnsQuotaMutex() {
 #ifdef DEBUG
   QuotaManager* quotaManager = QuotaManager::Get();
@@ -2823,6 +2825,8 @@ QuotaManager::Observer::Observe(nsISupports* aSubject, const char* aTopic,
     if (NS_WARN_IF(NS_FAILED(rv))) {
       return rv;
     }
+
+    MaybeEnableNextGenLocalStorage();
 
     return NS_OK;
   }
@@ -5963,7 +5967,7 @@ Result<Ok, nsresult> QuotaManager::CreateEmptyLocalStorageArchive(
 }
 
 nsresult QuotaManager::EnsureStorageIsInitialized() {
-  AssertIsOnIOThread();
+  DiagnosticAssertIsOnIOThread();
 
   if (mStorageConnection) {
     mInitializationInfo.AssertInitializationAttempted(Initialization::Storage);

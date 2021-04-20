@@ -4,6 +4,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#ifdef MOZ_WIDGET_ANDROID
+#  include "AndroidDecoderModule.h"
+#endif
+
 #include "BrowserChild.h"
 #include "ContentChild.h"
 #include "GeckoProfiler.h"
@@ -2881,12 +2885,32 @@ void ContentChild::ShutdownInternal() {
 
 #ifdef MOZ_GECKO_PROFILER
   if (mProfilerController) {
+    const bool isProfiling = profiler_is_active();
+    CrashReporter::AnnotateCrashReport(
+        CrashReporter::Annotation::ProfilerChildShutdownPhase,
+        isProfiling ? "Profiling - GrabShutdownProfileAndShutdown"_ns
+                    : "Not profiling - GrabShutdownProfileAndShutdown"_ns);
     nsCString shutdownProfile =
         mProfilerController->GrabShutdownProfileAndShutdown();
+    CrashReporter::AnnotateCrashReport(
+        CrashReporter::Annotation::ProfilerChildShutdownPhase,
+        isProfiling ? "Profiling - Destroying ChildProfilerController"_ns
+                    : "Not profiling - Destroying ChildProfilerController"_ns);
     mProfilerController = nullptr;
+    CrashReporter::AnnotateCrashReport(
+        CrashReporter::Annotation::ProfilerChildShutdownPhase,
+        isProfiling ? "Profiling - SendShutdownProfile (sending)"_ns
+                    : "Not profiling - SendShutdownProfile (sending)"_ns);
     // Send the shutdown profile to the parent process through our own
     // message channel, which we know will survive for long enough.
-    Unused << SendShutdownProfile(shutdownProfile);
+    bool sent = SendShutdownProfile(shutdownProfile);
+    CrashReporter::AnnotateCrashReport(
+        CrashReporter::Annotation::ProfilerChildShutdownPhase,
+        sent ? (isProfiling ? "Profiling - SendShutdownProfile (sent)"_ns
+                            : "Not profiling - SendShutdownProfile (sent)"_ns)
+             : (isProfiling
+                    ? "Profiling - SendShutdownProfile (failed)"_ns
+                    : "Not profiling - SendShutdownProfile (failed)"_ns));
   }
 #endif
 
@@ -4235,6 +4259,14 @@ mozilla::ipc::IPCResult ContentChild::RecvCanSavePresentation(
 
   aResolver(canSave);
 
+  return IPC_OK();
+}
+
+mozilla::ipc::IPCResult ContentChild::RecvDecoderSupportedMimeTypes(
+    nsTArray<nsCString>&& aSupportedTypes) {
+#ifdef MOZ_WIDGET_ANDROID
+  AndroidDecoderModule::SetSupportedMimeTypes(std::move(aSupportedTypes));
+#endif
   return IPC_OK();
 }
 

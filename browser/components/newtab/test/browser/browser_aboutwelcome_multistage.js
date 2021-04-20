@@ -995,13 +995,13 @@ add_task(async function test_multistage_aboutwelcome_proton() {
     // Expected selectors:
     [
       "div.onboardingContainer",
-      "div.proton[style*='.avif']",
+      "div.proton[style*='.webp']",
       "div.section-left",
       "span.attrib-text",
       "div.secondary-cta.top",
     ],
     // Unexpected selectors:
-    ["main.AW_STEP2", "main.AW_STEP3"]
+    ["main.AW_STEP2", "main.AW_STEP3", "nav.steps"]
   );
 
   await onButtonClick(browser, "button.primary");
@@ -1028,8 +1028,9 @@ add_task(async function test_multistage_aboutwelcome_proton() {
     // Expected selectors:
     [
       "div.onboardingContainer",
-      "div.proton[style*='.avif']",
+      "div.proton[style*='.webp']",
       "div.section-main",
+      "nav.steps",
     ],
     // Unexpected selectors:
     ["main.AW_STEP1", "main.AW_STEP3", "div.section-left"]
@@ -1043,9 +1044,10 @@ add_task(async function test_multistage_aboutwelcome_proton() {
     // Expected selectors:
     [
       "div.onboardingContainer",
-      "div.proton[style*='.avif']",
+      "div.proton[style*='.webp']",
       "div.section-main",
       "div.tiles-theme-container",
+      "nav.steps",
     ],
     // Unexpected selectors:
     ["main.AW_STEP2", "main.AW_STEP1", "div.section-left"]

@@ -47,8 +47,9 @@ class NativeMenuMac : public NativeMenu,
   void IconUpdated() override;
 
   // nsMenuX::Observer
-  void OnMenuOpened() override;
-  void OnMenuClosed() override;
+  void OnMenuWillOpen(mozilla::dom::Element* aPopupElement) override;
+  void OnMenuDidOpen(mozilla::dom::Element* aPopupElement) override;
+  void OnMenuClosed(mozilla::dom::Element* aPopupElement) override;
 
   NSMenu* NativeNSMenu() { return mMenu ? mMenu->NativeNSMenu() : nil; }
   void MenuWillOpen();
@@ -79,6 +80,7 @@ class NativeMenuMac : public NativeMenu,
   RefPtr<nsMenuX> GetOpenMenuContainingElement(dom::Element* aElement);
 
   RefPtr<dom::Element> mElement;
+  RefPtr<CancelableRunnable> mOpenRunnable;
   RefPtr<nsMenuGroupOwnerX> mMenuGroupOwner;
   RefPtr<nsMenuX> mMenu;
   nsTArray<NativeMenu::Observer*> mObservers;

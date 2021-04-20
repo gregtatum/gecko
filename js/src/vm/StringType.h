@@ -717,16 +717,20 @@ class JSRope : public JSString {
   js::UniquePtr<CharT[], JS::FreePolicy> copyCharsInternal(
       JSContext* cx, arena_id_t destArenaId) const;
 
-  enum UsingBarrier { WithIncrementalBarrier, NoBarrier };
-
-  template <UsingBarrier b, typename CharT>
-  JSLinearString* flattenInternal(JSContext* cx);
-
-  template <UsingBarrier b>
-  JSLinearString* flattenInternal(JSContext* cx);
+  enum UsingBarrier : bool { NoBarrier = false, WithIncrementalBarrier = true };
 
   friend class JSString;
-  JSLinearString* flatten(JSContext* cx);
+  JSLinearString* flatten(JSContext* maybecx);
+
+  JSLinearString* flattenInternal();
+  template <UsingBarrier usingBarrier>
+  JSLinearString* flattenInternal();
+
+  template <UsingBarrier usingBarrier, typename CharT>
+  static JSLinearString* flattenInternal(JSRope* root);
+
+  template <UsingBarrier usingBarrier>
+  static void ropeBarrierDuringFlattening(JSString* str);
 
   void init(JSContext* cx, JSString* left, JSString* right, size_t length);
 

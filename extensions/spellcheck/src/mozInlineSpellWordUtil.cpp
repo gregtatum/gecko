@@ -436,10 +436,10 @@ struct MOZ_STACK_CLASS WordSplitState {
   // rules.
   bool ShouldSkipWord(int32_t aStart, int32_t aLength) const;
 
-  // Checks to see if there's a DOM word separator before aBeforeOffset within
-  // it. This function does not modify aSeparatorOffset when it returns false.
-  bool GetDOMWordSeparatorOffset(int32_t aOffset,
-                                 int32_t* aSeparatorOffset) const;
+  // Finds the last sequence of DOM word separators before aBeforeOffset and
+  // returns the offset to its first element.
+  Maybe<int32_t> FindOffsetOfLastDOMWordSeparatorSequence(
+      int32_t aBeforeOffset) const;
 
   char16_t GetUnicharAt(int32_t aIndex) const;
 };
@@ -627,9 +627,9 @@ bool WordSplitState<T>::ShouldSkipWord(int32_t aStart, int32_t aLength) const {
 }
 
 template <class T>
-bool WordSplitState<T>::GetDOMWordSeparatorOffset(
-    int32_t aOffset, int32_t* aSeparatorOffset) const {
-  for (int32_t i = aOffset - 1; i >= 0; --i) {
+Maybe<int32_t> WordSplitState<T>::FindOffsetOfLastDOMWordSeparatorSequence(
+    const int32_t aBeforeOffset) const {
+  for (int32_t i = aBeforeOffset - 1; i >= 0; --i) {
     if (IsDOMWordSeparator(mDOMWordText[i]) ||
         (!IsAmbiguousDOMWordSeprator(mDOMWordText[i]) &&
          ClassifyCharacter(i, true) == CHAR_CLASS_SEPARATOR)) {
@@ -643,11 +643,10 @@ bool WordSplitState<T>::GetDOMWordSeparatorOffset(
           break;
         }
       }
-      *aSeparatorOffset = i;
-      return true;
+      return Some(i);
     }
   }
-  return false;
+  return Nothing();
 }
 
 template <>
@@ -667,21 +666,16 @@ static inline bool IsBRElement(nsINode* aNode) {
 }
 
 /**
- * Given a TextNode, checks to see if there's a DOM word separator before
- * aBeforeOffset within it. This function does not modify aSeparatorOffset when
- * it returns false.
+ * Given a TextNode, finds the last sequence of DOM word separators before
+ * aBeforeOffset and returns the offset to its first element.
  *
  * @param aContent the TextNode to check.
  * @param aBeforeOffset the offset in the TextNode before which we will search
  *        for the DOM separator. You can pass INT32_MAX to search the entire
  *        length of the string.
- * @param aSeparatorOffset will be set to the offset of the first separator it
- *        encounters. Will not be written to if no separator is found.
- * @returns True if it found a separator.
  */
-static bool TextNodeContainsDOMWordSeparator(nsIContent* aContent,
-                                             int32_t aBeforeOffset,
-                                             int32_t* aSeparatorOffset) {
+static Maybe<int32_t> FindOffsetOfLastDOMWordSeparatorSequence(
+    nsIContent* aContent, int32_t aBeforeOffset) {
   const nsTextFragment* textFragment = aContent->GetText();
   NS_ASSERTION(textFragment, "Where is our text?");
   int32_t end = std::min(aBeforeOffset, int32_t(textFragment->GetLength()));
@@ -689,12 +683,12 @@ static bool TextNodeContainsDOMWordSeparator(nsIContent* aContent,
   if (textFragment->Is2b()) {
     nsDependentSubstring targetText(textFragment->Get2b(), end);
     WordSplitState<nsDependentSubstring> state(targetText);
-    return state.GetDOMWordSeparatorOffset(end, aSeparatorOffset);
+    return state.FindOffsetOfLastDOMWordSeparatorSequence(end);
   }
 
   nsDependentCSubstring targetText(textFragment->Get1b(), end);
   WordSplitState<nsDependentCSubstring> state(targetText);
-  return state.GetDOMWordSeparatorOffset(end, aSeparatorOffset);
+  return state.FindOffsetOfLastDOMWordSeparatorSequence(end);
 }
 
 /**
@@ -714,8 +708,15 @@ static bool ContainsDOMWordSeparator(nsINode* aNode, int32_t aBeforeOffset,
 
   if (!IsSpellCheckingTextNode(aNode)) return false;
 
-  return TextNodeContainsDOMWordSeparator(aNode->AsContent(), aBeforeOffset,
-                                          aSeparatorOffset);
+  const Maybe<int32_t> separatorOffset =
+      FindOffsetOfLastDOMWordSeparatorSequence(aNode->AsContent(),
+                                               aBeforeOffset);
+  if (separatorOffset) {
+    *aSeparatorOffset = *separatorOffset;
+    return true;
+  }
+
+  return false;
 }
 
 static bool IsBreakElement(nsINode* aNode) {
@@ -795,8 +796,10 @@ void mozInlineSpellWordUtil::AdjustSoftBeginAndBuildSoftText() {
             nsIContent* prevNode = node->GetPreviousSibling();
             while (prevNode && IsSpellCheckingTextNode(prevNode)) {
               mSoftBegin.mNode = prevNode;
-              if (TextNodeContainsDOMWordSeparator(prevNode, INT32_MAX,
-                                                   &newOffset)) {
+              const Maybe<int32_t> separatorOffset =
+                  FindOffsetOfLastDOMWordSeparatorSequence(prevNode, INT32_MAX);
+              if (separatorOffset) {
+                newOffset = *separatorOffset;
                 break;
               }
               prevNode = prevNode->GetPreviousSibling();

@@ -88,14 +88,14 @@ impl Default for PrecacheOuput {
 #[derive(Clone, Default)]
 pub struct qcms_transform {
     pub matrix: [[f32; 4]; 3],
-    pub input_gamma_table_r: Option<Vec<f32>>,
-    pub input_gamma_table_g: Option<Vec<f32>>,
-    pub input_gamma_table_b: Option<Vec<f32>>,
+    pub input_gamma_table_r: Option<Box<[f32; 256]>>,
+    pub input_gamma_table_g: Option<Box<[f32; 256]>>,
+    pub input_gamma_table_b: Option<Box<[f32; 256]>>,
     pub input_clut_table_length: u16,
     pub clut: Option<Vec<f32>>,
     pub grid_size: u16,
     pub output_clut_table_length: u16,
-    pub input_gamma_table_gray: Option<Vec<f32>>,
+    pub input_gamma_table_gray: Option<Box<[f32; 256]>>,
     pub out_gamma_r: f32,
     pub out_gamma_g: f32,
     pub out_gamma_b: f32,
@@ -405,11 +405,7 @@ unsafe extern "C" fn qcms_transform_data_gray_template_lut<I: GrayFormat, F: For
     length: usize,
 ) {
     let components: u32 = if F::kAIndex == 0xff { 3 } else { 4 } as u32;
-    let input_gamma_table_gray = (*transform)
-        .input_gamma_table_gray
-        .as_ref()
-        .unwrap()
-        .as_ptr();
+    let input_gamma_table_gray = transform.input_gamma_table_gray.as_ref().unwrap();
 
     let mut i: u32 = 0;
     while (i as usize) < length {
@@ -422,7 +418,7 @@ unsafe extern "C" fn qcms_transform_data_gray_template_lut<I: GrayFormat, F: For
             src = src.offset(1);
             alpha = *fresh1
         }
-        let linear: f32 = *input_gamma_table_gray.offset(device as isize);
+        let linear: f32 = input_gamma_table_gray[device as usize];
 
         let out_device_r: f32 = lut_interp_linear(
             linear as f64,
@@ -1295,22 +1291,42 @@ pub fn transform_create(
 }
 /// A transform from an input profile to an output one.
 pub struct Transform {
-    ty: DataType,
+    src_ty: DataType,
+    dst_ty: DataType,
     xfm: Box<qcms_transform>,
 }
 
 impl Transform {
     /// Create a new transform from `input` to `output` for pixels of `DataType` `ty` with `intent`
     pub fn new(input: &Profile, output: &Profile, ty: DataType, intent: Intent) -> Option<Self> {
-        transform_create(input, ty, output, ty, intent).map(|xfm| Transform { ty, xfm })
+        transform_create(input, ty, output, ty, intent).map(|xfm| Transform {
+            src_ty: ty,
+            dst_ty: ty,
+            xfm,
+        })
+    }
+
+    /// Create a new transform from `input` to `output` for pixels of `DataType` `ty` with `intent`
+    pub fn new_to(
+        input: &Profile,
+        output: &Profile,
+        src_ty: DataType,
+        dst_ty: DataType,
+        intent: Intent,
+    ) -> Option<Self> {
+        transform_create(input, src_ty, output, dst_ty, intent).map(|xfm| Transform {
+            src_ty,
+            dst_ty,
+            xfm,
+        })
     }
 
     /// Apply the color space transform to `data`
     pub fn apply(&self, data: &mut [u8]) {
-        if data.len() % self.ty.bytes_per_pixel() != 0 {
+        if data.len() % self.src_ty.bytes_per_pixel() != 0 {
             panic!(
                 "incomplete pixels: should be a multiple of {} got {}",
-                self.ty.bytes_per_pixel(),
+                self.src_ty.bytes_per_pixel(),
                 data.len()
             )
         }
@@ -1319,7 +1335,37 @@ impl Transform {
                 &*self.xfm,
                 data.as_ptr(),
                 data.as_mut_ptr(),
-                data.len() / self.ty.bytes_per_pixel(),
+                data.len() / self.src_ty.bytes_per_pixel(),
+            );
+        }
+    }
+
+    /// Apply the color space transform to `data`
+    pub fn convert(&self, src: &[u8], dst: &mut [u8]) {
+        if src.len() % self.src_ty.bytes_per_pixel() != 0 {
+            panic!(
+                "incomplete pixels: should be a multiple of {} got {}",
+                self.src_ty.bytes_per_pixel(),
+                src.len()
+            )
+        }
+        if dst.len() % self.dst_ty.bytes_per_pixel() != 0 {
+            panic!(
+                "incomplete pixels: should be a multiple of {} got {}",
+                self.dst_ty.bytes_per_pixel(),
+                dst.len()
+            )
+        }
+        assert_eq!(
+            src.len() / self.src_ty.bytes_per_pixel(),
+            dst.len() / self.dst_ty.bytes_per_pixel()
+        );
+        unsafe {
+            self.xfm.transform_fn.expect("non-null function pointer")(
+                &*self.xfm,
+                src.as_ptr(),
+                dst.as_mut_ptr(),
+                src.len() / self.src_ty.bytes_per_pixel(),
             );
         }
     }

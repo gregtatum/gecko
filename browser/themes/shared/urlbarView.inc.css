@@ -17,7 +17,6 @@
   --autocomplete-popup-highlight-background: Highlight;
   --autocomplete-popup-highlight-color: HighlightText;
 
-  --urlbar-result-hover-bgcolor: var(--arrowpanel-dimmed);
   --urlbar-popup-action-color: hsl(178, 100%, 28%);
 
   /* Colors copied from in-content button styling */
@@ -278,7 +277,7 @@
 
 .urlbarView-row:not([type=tip], [type=dynamic], [has-help]):hover > .urlbarView-row-inner,
 .urlbarView-row[has-help] > .urlbarView-row-inner:not([selected]):hover {
-  background-color: var(--urlbar-result-hover-bgcolor);
+  background-color: var(--autocomplete-popup-hover-background);
 }
 
 .urlbarView-row:not([type=tip], [type=dynamic])[selected] > .urlbarView-row-inner,

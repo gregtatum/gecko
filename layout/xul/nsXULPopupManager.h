@@ -12,6 +12,7 @@
 #define nsXULPopupManager_h__
 
 #include "mozilla/Logging.h"
+#include "nsHashtablesFwd.h"
 #include "nsIContent.h"
 #include "nsIRollupListener.h"
 #include "nsIDOMEventListener.h"
@@ -68,6 +69,48 @@ class Event;
 class KeyboardEvent;
 }  // namespace dom
 }  // namespace mozilla
+
+// XUL popups can be in several different states. When opening a popup, the
+// state changes as follows:
+//   ePopupClosed - initial state
+//   ePopupShowing - during the period when the popupshowing event fires
+//   ePopupOpening - between the popupshowing event and being visible. Creation
+//                   of the child frames, layout and reflow occurs in this
+//                   state. The popup is stored in the popup manager's list of
+//                   open popups during this state.
+//   ePopupVisible - layout is done and the popup's view and widget are made
+//                   visible. The popup is visible on screen but may be
+//                   transitioning. The popupshown event has not yet fired.
+//   ePopupShown - the popup has been shown and is fully ready. This state is
+//                 assigned just before the popupshown event fires.
+// When closing a popup:
+//   ePopupHidden - during the period when the popuphiding event fires and
+//                  the popup is removed.
+//   ePopupClosed - the popup's widget is made invisible.
+enum nsPopupState {
+  // state when a popup is not open
+  ePopupClosed,
+  // state from when a popup is requested to be shown to after the
+  // popupshowing event has been fired.
+  ePopupShowing,
+  // state while a popup is waiting to be laid out and positioned
+  ePopupPositioning,
+  // state while a popup is open but the widget is not yet visible
+  ePopupOpening,
+  // state while a popup is visible and waiting for the popupshown event
+  ePopupVisible,
+  // state while a popup is open and visible on screen
+  ePopupShown,
+  // state from when a popup is requested to be hidden to when it is closed.
+  ePopupHiding,
+  // state which indicates that the popup was hidden without firing the
+  // popuphiding or popuphidden events. It is used when executing a menu
+  // command because the menu needs to be hidden before the command event
+  // fires, yet the popuphiding and popuphidden events are fired after. This
+  // state can also occur when the popup is removed because the document is
+  // unloaded.
+  ePopupInvisible
+};
 
 // when a menu command is executed, the closemenu attribute may be used
 // to define how the menu should be closed up
@@ -320,6 +363,9 @@ class nsXULPopupManager final : public nsIDOMEventListener,
   // NativeMenu::Observer
   void OnNativeMenuOpened() override;
   void OnNativeMenuClosed() override;
+  void OnNativeSubMenuWillOpen(mozilla::dom::Element* aPopupElement) override;
+  void OnNativeSubMenuDidOpen(mozilla::dom::Element* aPopupElement) override;
+  void OnNativeSubMenuClosed(mozilla::dom::Element* aPopupElement) override;
 
   static nsXULPopupManager* sInstance;
 
@@ -670,6 +716,8 @@ class nsXULPopupManager final : public nsIDOMEventListener,
   // Sets mIgnoreKeys of the Top Visible Menu Item
   nsresult UpdateIgnoreKeys(bool aIgnoreKeys);
 
+  nsPopupState GetPopupState(mozilla::dom::Element* aPopupElement);
+
   nsresult KeyUp(mozilla::dom::KeyboardEvent* aKeyEvent);
   nsresult KeyDown(mozilla::dom::KeyboardEvent* aKeyEvent);
   nsresult KeyPress(mozilla::dom::KeyboardEvent* aKeyEvent);
@@ -837,6 +885,15 @@ class nsXULPopupManager final : public nsIDOMEventListener,
   // native menu is open.
   // mNativeMenu has a strong reference to the menupopup nsIContent.
   RefPtr<mozilla::widget::NativeMenu> mNativeMenu;
+
+  // If a popup is displayed as a native menu, this map contains the popup state
+  // for any of its non-closed submenus. This state cannot be stored on the
+  // submenus' nsMenuPopupFrames, because we usually don't generate frames for
+  // the contents of native menus.
+  // If a submenu is not present in this map, it means it's closed.
+  // This map is empty if mNativeMenu is null.
+  nsTHashMap<RefPtr<mozilla::dom::Element>, nsPopupState>
+      mNativeMenuSubmenuStates;
 };
 
 #endif
