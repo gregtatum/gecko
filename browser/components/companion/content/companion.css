@@ -39,7 +39,7 @@ h2 {
   --light-bg-color: #42414D;
 }
 
-@media (prefers-color-scheme: dark) {
+@media (-moz-toolbar-prefers-color-scheme: dark) {
   :root {
     --light-bg-color: #F0F0F4;
   }
@@ -688,7 +688,7 @@ button.conference:hover:active, .btn:hover:active {
   background-color: #42414D;
 }
 
-@media (prefers-color-scheme: dark) {
+@media (-moz-toolbar-prefers-color-scheme: dark) {
   #email {
     background-color: #42414D;
   }
