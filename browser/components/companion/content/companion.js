@@ -69,6 +69,7 @@ onLoad(() => {
   content.appendChild(new TopSites());
   content.appendChild(new MediaList("Media"));
   content.appendChild(new WindowList("Apps"));
+  content.appendChild(new KeyframeDbList("Currently Working On", yesterday, null, null, "getTopKeypresses"));
   content.appendChild(new KeyframeDbList("Today", today));
   content.appendChild(new KeyframeDbList("Earlier", yesterday, today));
   content.appendChild(new PocketList());

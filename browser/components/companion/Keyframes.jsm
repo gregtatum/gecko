@@ -72,7 +72,7 @@ const SQL = {
     "sum(typingTime) as typingTime, " +
     "sum(keypresses) as keypresses, " +
     "category FROM " +
-    "keyframes WHERE {WHERE} GROUP BY url;",
+    "keyframes WHERE {WHERE} GROUP BY url ORDER BY {ORDER};",
 };
 
 function int(dateStr) {
@@ -159,7 +159,7 @@ var Keyframes = {
     Services.obs.notifyObservers(null, "keyframe-update");
   },
 
-  async query(minTime, maxTime = null, type = null) {
+  async query(minTime, maxTime = null, type = null, where = null, orderBy = "url ASC") {
     if (!this._db) {
       await this.init();
     }
@@ -168,16 +168,22 @@ var Keyframes = {
       minTime,
     };
 
-    let where = "lastVisit > :minTime";
+
+    let _where = "lastVisit > :minTime";
     if (maxTime) {
-      where += " AND firstVisit < :maxTime";
+      _where += " AND firstVisit < :maxTime";
       params.maxTime = maxTime;
     }
     if (type) {
-      where += " AND type = :type";
+      _where += " AND type = :type";
       params.type = type;
     }
-    let sql = SQL.select.replace("{WHERE}", where);
+    if (where) {
+      _where += " AND " + where;
+    }
+    let sql = SQL.select
+      .replace("{WHERE}", _where)
+      .replace("{ORDER}", orderBy);
 
     let records = await this._db.executeCached(sql, params);
 
@@ -197,6 +203,11 @@ var Keyframes = {
         category: record.getResultByName("category"),
       };
     });
+  },
+
+  // Generates the list of "Currently Working On" keyframes/documents
+  async getTopKeypresses(minTime, maxTime = null, type = null) {
+    return await this.query(minTime, maxTime, type, "keypresses > 100", "keypresses DESC");
   },
 
   async _init() {

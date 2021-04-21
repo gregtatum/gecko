@@ -26,12 +26,13 @@ function notifyFilterListeners() {
 }
 
 export class KeyframeDbList extends KeyframeList {
-  constructor(title, minTime, maxTime, type) {
+  constructor(title, minTime, maxTime, type, query = "query") {
     super(title);
     this.minTime = minTime;
     this.maxTime = maxTime;
     this.type = type;
     this.frames = [];
+    this.query = query;
 
     this.dbListener = () => this.updateFrames();
     this.filterListener = () => this.filterFrames();
@@ -102,7 +103,7 @@ export class KeyframeDbList extends KeyframeList {
   }
 
   listFrames() {
-    return Keyframes.query(
+    return Keyframes[this.query](
       this.minTime.getTime(),
       this.maxTime?.getTime(),
       this.type
