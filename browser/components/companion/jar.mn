@@ -6,7 +6,7 @@ browser.jar:
     content/browser/companion/appbar.js (content/appbar.js)
 *   content/browser/companion/awesomebar.css (content/awesomebar.css)
     content/browser/companion/awesomebar.js (content/awesomebar.js)
-    content/browser/companion/browser.css (content/browser.css)
+*   content/browser/companion/browser.css (content/browser.css)
     content/browser/companion/calendar.js (content/calendar.js)
     content/browser/companion/companion.css (content/companion.css)
     content/browser/companion/companion.js (content/companion.js)

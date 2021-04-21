@@ -3,6 +3,12 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 <hbox class="titlebar-buttonbox-container" skipintoolbarset="true">
+#ifdef XP_WIN
+  <toolbarbutton
+    id="companion-sidebar-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
+    oncommand="CompanionService.dockAndToggle()"
+    onclick="checkForMiddleClick(this, event);"/>
+#endif
   <hbox class="titlebar-buttonbox titlebar-color">
     <toolbarbutton class="titlebar-button titlebar-min"
                    oncommand="window.minimize();"
@@ -21,8 +27,10 @@
                    data-l10n-id="browser-window-close-button"
                    />
   </hbox>
+#ifdef XP_MACOSX
   <toolbarbutton
     id="companion-sidebar-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
     oncommand="CompanionService.dockAndToggle()"
     onclick="checkForMiddleClick(this, event);"/>
+#endif
 </hbox>

@@ -9,7 +9,8 @@
 
 :root:not([companion]) #companion-box,
 :root:not([companion]) #companion-titlebar,
-:root:not([companion]) #companion-toolbar {
+:root:not([companion]) #companion-toolbar,
+:root:not([companion]) #companion-window-controls {
   display: none;
 }
 
@@ -31,7 +32,7 @@
   background: var(--companion-background);
 }
 
-#companion-mac-buttonbox {
+#companion-mac-buttonbox                {
   position: relative;
   appearance: auto;
   -moz-default-appearance: -moz-window-button-box;
@@ -75,3 +76,13 @@
 #companion-page-domain {
   font-size: 0.7rem;
 }
+
+%ifdef MOZ_WIDGET_COCOA
+#companion-window-controls {
+  display: none;
+}
+%else
+#companion-titlebar #companion-mac-buttonbox {
+  display: none;
+}
+%endif
