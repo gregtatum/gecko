@@ -427,6 +427,7 @@ button.conference:hover:active, .btn:hover:active {
   background-color: var(--in-content-button-background);
   display: flex;
   justify-content: center;
+  position: relative;
 }
 
 .topsite.card:hover .topsite-favicon {
@@ -451,6 +452,22 @@ button.conference:hover:active, .btn:hover:active {
   text-align: center;
   margin-block-start: .5em;
   margin-block-end: 0;
+}
+
+.topsite-favicon .badge {
+  position: absolute;
+  background-color: #0090ED;
+  color: white;
+  right: -5px;
+  top: -5px;
+  min-width: 10px;
+  padding-left: 5px;
+  padding-right: 5px;
+  height: 20px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: smaller;
+  line-height: 20px;
 }
 
 .media.card {

@@ -5,13 +5,13 @@
 // These come from utilityOverlay.js
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
-import { openUrl } from "./shared.js";
+//import { openUrl } from "./shared.js";
 
 const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
 );
 
-const EMAIL_CHECK_TIME = 10 * 60 * 1000; // 10 minutes
+const EMAIL_CHECK_TIME = 1 * 60 * 1000; // 1 minute (since we're not using the API)
 
 export class Email extends HTMLElement {
   constructor(service, data) {
@@ -128,6 +128,37 @@ export function initEmailServices(services) {
   }, EMAIL_CHECK_TIME);
 }
 
+/*
 document.getElementById("inbox-link").addEventListener("click", function() {
   openUrl("https://mail.google.com");
 });
+*/
+
+export async function getUnreadCountAtom() {
+  let response = await fetch("https://mail.google.com/mail/u/0/feed/atom");
+
+  if (!response.ok) {
+    // If we don't have an atom feed, click will just login
+    return 0;
+  }
+
+  let results = await response.text();
+
+  let doc = new DOMParser().parseFromString(results, "text/xml");
+
+  return parseInt(doc.querySelector("fullcount").textContent);
+}
+
+async function updateUnreadCount() {
+  let gmail = document.getElementById("gmail");
+  if (gmail) {
+    let unreadCount = await getUnreadCountAtom();
+    if (unreadCount) {
+      gmail.querySelector(".badge").textContent = unreadCount;
+    }
+  }
+}
+
+setInterval(function() {
+  updateUnreadCount();
+}, EMAIL_CHECK_TIME);

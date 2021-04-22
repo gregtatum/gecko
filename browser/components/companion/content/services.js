@@ -6,7 +6,7 @@
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
 import { initCalendarServices } from "./calendar.js";
-import { initEmailServices } from "./email.js";
+//import { initEmailServices } from "./email.js";
 
 const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
@@ -19,7 +19,7 @@ async function signin() {
   document.getElementById("scroll").className = "connected";
   let services = OnlineServices.getServices();
   initCalendarServices(services);
-  initEmailServices(services);
+  //initEmailServices(services);
   window.focus();
 }
 
@@ -30,7 +30,7 @@ export function initServices() {
   if (services.length) {
     document.getElementById("scroll").className = "connected";
     initCalendarServices(services);
-    initEmailServices(services);
+    //initEmailServices(services);
   } else {
     document.getElementById("scroll").className = "disconnected";
   }

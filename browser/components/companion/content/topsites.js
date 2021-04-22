@@ -5,7 +5,8 @@
 // These come from utilityOverlay.js
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
-import { timeFormat, getPlacesData, openUrl } from "./shared.js";
+import { getPlacesData, openUrl } from "./shared.js";
+import { getUnreadCountAtom } from "./email.js";
 
 const { shortURL } = ChromeUtils.import(
   "resource://activity-stream/lib/ShortURL.jsm"
@@ -19,7 +20,7 @@ const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
   Ci.nsINavHistoryService
 );
 
-const NUM_TOPSITES = 5;
+const NUM_TOPSITES = 4;
 
 export class TopSite extends HTMLElement {
   constructor(data) {
@@ -32,7 +33,18 @@ export class TopSite extends HTMLElement {
     let fragment = template.content.cloneNode(true);
 
     fragment.querySelector(".title").textContent = this.data.title;
-    fragment.querySelector(".topsite-favicon img").setAttribute("src", this.data.icon);
+    fragment
+      .querySelector(".topsite-favicon img")
+      .setAttribute("src", this.data.icon);
+    if (this.data.badge) {
+      fragment.querySelector(
+        ".topsite-favicon .badge"
+      ).textContent = this.data.badge;
+      fragment.querySelector(".topsite-favicon .badge").hidden = false;
+    }
+    if (this.data.id) {
+      this.id = this.data.id;
+    }
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
@@ -86,7 +98,7 @@ export class TopSites extends HTMLElement {
           this.appendChild(
             new TopSite({
               url: childNode.uri,
-              title: shortURL({url: uri.spec}),
+              title: shortURL({ url: uri.spec }),
               icon: placesData.icon,
             })
           );
@@ -98,6 +110,16 @@ export class TopSites extends HTMLElement {
     } finally {
       results.root.containerOpen = false;
     }
+    // Add gmail
+    this.appendChild(
+      new TopSite({
+        url: "https://mail.google.com",
+        title: "gmail",
+        icon: "chrome://browser/content/companion/email.svg",
+        badge: await getUnreadCountAtom(),
+        id: "gmail",
+      })
+    );
   }
 }
 
