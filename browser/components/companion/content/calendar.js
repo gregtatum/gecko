@@ -52,6 +52,7 @@ class Event extends HTMLElement {
 
     this.appendChild(fragment);
 
+    /*
     // TODO!!!!!
     // THIS WILL NOT WORK WITH MORE THAN ONE EVENT OR MORE THAN ONE PROVIDER!!!!
     let rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
@@ -76,6 +77,7 @@ class Event extends HTMLElement {
       document.querySelector(".calendar-title").textContent =
         rtf.format(daysApart, "day") + " " + formattedEventDate;
     }
+*/
   }
 
   openCalendar() {
@@ -109,7 +111,12 @@ async function buildEvents(services) {
     nodes = nodes.concat(meetings.map(event => new Event(service, event)));
   }
 
-  panel.replaceChildren(...nodes);
+  if (!nodes.length) {
+    document.querySelector("#calendar").hidden = true;
+  } else {
+    document.querySelector("#calendar").hidden = false;
+    panel.replaceChildren(...nodes);
+  }
 
   if (!goodService) {
     document.getElementById("scroll").className = "disconnected";
@@ -122,7 +129,3 @@ export function initCalendarServices(services) {
     buildEvents(services);
   }, CALENDAR_CHECK_TIME);
 }
-
-document.getElementById("calendar-link").addEventListener("click", function() {
-  openUrl("https://calendar.google.com");
-});
