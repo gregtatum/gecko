@@ -689,7 +689,8 @@ class UrlbarInput {
     }
 
     let isDifferentValidValue = valid && value != this.untrimmedValue;
-    this.value = value;
+    // Prevent newly-loaded URLs from being shown in the urlbar. FFX2021OV-106
+    this.value = "";
     this.valueIsTyped = !valid;
     this.removeAttribute("usertyping");
     if (isDifferentValidValue) {
