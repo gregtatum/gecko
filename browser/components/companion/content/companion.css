@@ -424,10 +424,11 @@ button.conference:hover:active, .btn:hover:active {
   width: 56px;
   height: 56px;
   border-radius: 8px;
-  background-color: var(--in-content-button-background);
+  background-color: rgba(255, 255, 255, 0.2);
   display: flex;
   justify-content: center;
   position: relative;
+  box-shadow: 0px 1px 4px 0px #3A39441A;
 }
 
 .topsite.card:hover .topsite-favicon {
@@ -444,6 +445,7 @@ button.conference:hover:active, .btn:hover:active {
 
 .topsites .title {
   text-overflow: ellipsis;
+  text-transform: capitalize;
   overflow: hidden;
   white-space: nowrap;
   font-size: smaller;

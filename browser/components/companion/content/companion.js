@@ -64,9 +64,9 @@ onLoad(() => {
     .getElementById("dock-button")
     .addEventListener("click", () => CompanionService.dockCompanion());
 
+  document.getElementById("top-sites-placeholder").appendChild(new TopSites());
   initServices();
   let content = document.getElementById("content");
-  content.appendChild(new TopSites());
   content.appendChild(new MediaList("Media"));
   content.appendChild(new WindowList("Apps"));
   content.appendChild(new KeyframeDbList("Currently Working On", yesterday, null, null, "getTopKeypresses"));

@@ -22,6 +22,14 @@ const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
 
 const NUM_TOPSITES = 4;
 
+function formatName(url) {
+  let shortName = shortURL({ url });
+  if (shortName.endsWith(".google")) {
+    shortName = shortName.slice(0, -7);
+  }
+  return shortName;
+}
+
 export class TopSite extends HTMLElement {
   constructor(data) {
     super();
@@ -98,7 +106,7 @@ export class TopSites extends HTMLElement {
           this.appendChild(
             new TopSite({
               url: childNode.uri,
-              title: shortURL({ url: uri.spec }),
+              title: formatName(uri.spec),
               icon: placesData.icon,
             })
           );
