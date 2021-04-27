@@ -155,6 +155,10 @@ class GoogleService {
     apiTarget.searchParams.set("orderBy", "startTime");
     apiTarget.searchParams.set("singleEvents", "true");
     apiTarget.searchParams.set("timeMin", new Date().toISOString());
+    // If we want to reduce the window, we can just make
+    // timeMax an hour from now.
+    let midnight = new Date().setHours(24, 0, 0, 0);
+    apiTarget.searchParams.set("timeMax", midnight.toISOString());
 
     let headers = {
       Authorization: `Bearer ${token}`,
