@@ -9,8 +9,6 @@ const { XPCOMUtils } = ChromeUtils.import(
 
 const PREF_STORE = "onlineservices.config";
 
-const NUM_EVENTS = 1;
-
 XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   OAuth2: "resource:///modules/OAuth2.jsm",
@@ -151,7 +149,7 @@ class GoogleService {
       "https://www.googleapis.com/calendar/v3/calendars/primary/events"
     );
 
-    apiTarget.searchParams.set("maxResults", 4);
+    apiTarget.searchParams.set("maxResults", 5);
     apiTarget.searchParams.set("orderBy", "startTime");
     apiTarget.searchParams.set("singleEvents", "true");
     apiTarget.searchParams.set("timeMin", new Date().toISOString());
@@ -182,13 +180,6 @@ class GoogleService {
     }));
 
     events.sort((a, b) => a.start - b.start);
-    while (
-      events.length > NUM_EVENTS &&
-      events[events.length - NUM_EVENTS].start > events[0].start
-    ) {
-      events.pop();
-    }
-    events.sort((a, b) => a.summary.localeCompare(b.summary));
 
     return events;
   }

@@ -11,7 +11,10 @@ const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
 );
 
-const CALENDAR_CHECK_TIME = 10 * 60 * 1000; // 5 minutes
+// Query new events every fifteen minutes
+const CALENDAR_CHECK_TIME = 15 * 60 * 1000; // 15 minutes
+// Update display every minute
+const CALENDAR_UPDATE_TIME = 60 * 1000; // 1 minute
 
 class Event extends HTMLElement {
   constructor(service, data) {
@@ -91,6 +94,33 @@ class Event extends HTMLElement {
 
 customElements.define("e-event", Event);
 
+async function updateEvents() {
+  let visibleEventStart;
+  let events = document.querySelectorAll("e-event");
+  let now = new Date();
+  for (let event of events) {
+    // Never show meetings that have happened
+    if (event.data.end < now) {
+      event.hidden = true;
+      continue;
+    }
+    // Always show meetings that are happening
+    if (now >= event.data.start && now < event.data.end) {
+      event.hidden = false;
+      continue;
+    }
+
+    // Show the next upcoming meeting and any other
+    // meetings that start at the same time.
+    if (visibleEventStart) {
+      event.hidden = event.data.start > visibleEventStart;
+    } else {
+      visibleEventStart = event.data.start;
+      event.hidden = false;
+    }
+  }
+}
+
 async function buildEvents(services) {
   let panel = document.getElementById("calendar-panel");
   let nodes = [];
@@ -116,6 +146,7 @@ async function buildEvents(services) {
   } else {
     document.querySelector("#calendar").hidden = false;
     panel.replaceChildren(...nodes);
+    updateEvents();
   }
 
   if (!goodService) {
@@ -128,4 +159,7 @@ export function initCalendarServices(services) {
   setInterval(function() {
     buildEvents(services);
   }, CALENDAR_CHECK_TIME);
+  setInterval(function() {
+    updateEvents(services);
+  }, CALENDAR_UPDATE_TIME);
 }
