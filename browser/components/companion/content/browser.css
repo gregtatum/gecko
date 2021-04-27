@@ -4,7 +4,7 @@
 
 :root {
   --companion-width: 380px;
-  --companion-background: var(--tabpanel-background-color);
+  --companion-background: var(--toolbar-non-lwt-bgcolor);;
 }
 
 :root:not([companion]) #companion-box,

@@ -18,6 +18,7 @@ body {
   justify-content: start;
   height: 100vh;
   width: 100vw;
+  background-color: var(--toolbar-non-lwt-bgcolor);
 }
 
 h2 {
@@ -252,8 +253,8 @@ h2 {
 }
 
 .keyframe img, .app-overview img {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
   object-position: 50% 50%;
 }
@@ -446,7 +447,7 @@ button.conference:hover:active, .btn:hover:active {
   width: 56px;
   height: 56px;
   border-radius: 8px;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255);
   display: flex;
   justify-content: center;
   position: relative;
@@ -719,20 +720,9 @@ button.conference:hover:active, .btn:hover:active {
 }
 
 #email {
-  background-color: #F0F0F4;
   border-radius: 4px;
   margin-right: 5px;
   margin-left: 5px;
-}
-
-:root:-moz-lwtheme-brighttext #email {
-  background-color: #42414D;
-}
-
-@media (-moz-toolbar-prefers-color-scheme: dark) {
-  #email {
-    background-color: #42414D;
-  }
 }
 
 .email-title {
