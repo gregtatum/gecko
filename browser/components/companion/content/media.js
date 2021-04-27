@@ -310,7 +310,8 @@ export class Media extends HTMLElement {
 
   render() {
     // TODO: Check supportedkeys to dynamically add / remove buttons
-    let hasMedia = (this.canTogglePip || this.tab.soundPlaying) && this.documentTitle;
+    let hasMedia =
+      (this.canTogglePip || this.tab.soundPlaying) && this.documentTitle;
     let metadata = this.metadata;
 
     if (!metadata || !hasMedia) {
@@ -318,7 +319,9 @@ export class Media extends HTMLElement {
       return;
     }
 
-    let artwork = metadata?.artwork[0] ? "url(" + metadata.artwork[0].src + ")" : "";
+    let artwork = metadata?.artwork[0]
+      ? "url(" + metadata.artwork[0].src + ")"
+      : "";
     this.title.textContent = this.metadata.title ?? this.documentTitle;
     this.artist.textContent = this.metadata.artist ?? "";
     this.artwork.style.backgroundImage = artwork;
@@ -334,7 +337,9 @@ export class Media extends HTMLElement {
       // options.
       this.playPause.hidden = true;
     } else {
-      this.playPause.dataset.state = this.mediaController.isPlaying ? "playing" : "paused";
+      this.playPause.dataset.state = this.mediaController.isPlaying
+        ? "playing"
+        : "paused";
     }
 
     this.mute.hidden = this.browser.audioMuted;

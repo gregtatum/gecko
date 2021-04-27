@@ -55,7 +55,7 @@ const SQL = {
     "totalEngagement INTEGER NOT NULL, " +
     "typingTime INTEGER NOT NULL DEFAULT 0, " +
     "keypresses INTEGER NOT NULL DEFAULT 0, " +
-    "category TEXT NOT NULL DEFAULT \"\" " +  // "shopping", "article", or "" for unknown
+    'category TEXT NOT NULL DEFAULT "" ' + // "shopping", "article", or "" for unknown
     ");",
 
   add:
@@ -159,7 +159,13 @@ var Keyframes = {
     Services.obs.notifyObservers(null, "keyframe-update");
   },
 
-  async query(minTime, maxTime = null, type = null, where = null, orderBy = "url ASC") {
+  async query(
+    minTime,
+    maxTime = null,
+    type = null,
+    where = null,
+    orderBy = "url ASC"
+  ) {
     if (!this._db) {
       await this.init();
     }
@@ -167,7 +173,6 @@ var Keyframes = {
     let params = {
       minTime,
     };
-
 
     let _where = "lastVisit > :minTime";
     if (maxTime) {
@@ -181,9 +186,7 @@ var Keyframes = {
     if (where) {
       _where += " AND " + where;
     }
-    let sql = SQL.select
-      .replace("{WHERE}", _where)
-      .replace("{ORDER}", orderBy);
+    let sql = SQL.select.replace("{WHERE}", _where).replace("{ORDER}", orderBy);
 
     let records = await this._db.executeCached(sql, params);
 
@@ -207,7 +210,14 @@ var Keyframes = {
 
   // Generates the list of "Currently Working On" keyframes/documents
   async getTopKeypresses(minTime, maxTime = null, type = null) {
-    return await this.query(minTime, maxTime, type, "keypresses > 100", "keypresses DESC");
+    let keypresses = await this.query(
+      minTime,
+      maxTime,
+      type,
+      "keypresses > 100",
+      "keypresses DESC"
+    );
+    return keypresses;
   },
 
   async _init() {

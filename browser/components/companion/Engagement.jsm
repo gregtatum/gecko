@@ -48,7 +48,7 @@ function isTypingKey(code) {
 }
 
 let Engagement = {
-  _engagements: new WeakMap(),  // browser -> {url, type, startTimeOnPage, totalEngagement}
+  _engagements: new WeakMap(), // browser -> {url, type, startTimeOnPage, totalEngagement}
   _currentEngagement: undefined,
 
   _delayedEngagements: new Map(),
@@ -131,9 +131,8 @@ let Engagement = {
         // this is called (indirectly) through init()->startEngagementTimer().
         // This seems to be rare. Nonetheless, we should fix it.
         const category = await browser.browsingContext.currentWindowGlobal
-               .getActor("Engagement")
-               .sendQuery("Engagement:Categorize",
-                          { engagementId: engagement.id });
+          .getActor("Engagement")
+          .sendQuery("Engagement:Categorize", { engagementId: engagement.id });
         Keyframes.updateCategory(engagement.id, category);
       }
     }

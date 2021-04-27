@@ -74,7 +74,9 @@ Characters per second: ${
     );
 
     if (this.data.lastVisit) {
-      target.querySelector(".last-access").textContent = timeSince(this.data.lastVisit);
+      target.querySelector(".last-access").textContent = timeSince(
+        this.data.lastVisit
+      );
     }
   }
 
