@@ -50,6 +50,10 @@ h2 {
   display: none;
 }
 
+.debugUI .debug {
+  display: block;
+}
+
 #titlebar {
   appearance: auto;
   -moz-default-appearance: -moz-mac-vibrant-titlebar-dark;

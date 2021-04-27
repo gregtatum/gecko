@@ -118,6 +118,18 @@ window.addEventListener(
   { once: true }
 );
 
+// Add the ability to show elements with class="debug" that help development
+// behind the "companion.debugUI" pref.
+let DEBUG_PREF = "companion.debugUI";
+let toggleDebug = () =>
+  document.body.classList.toggle(
+    "debugUI",
+    Services.prefs.getBoolPref(DEBUG_PREF, false)
+  );
+
+Services.prefs.addObserver(DEBUG_PREF, toggleDebug);
+toggleDebug();
+
 onUnload(() => {
   for (let [prefName, cb] of OBSERVED_PREFS) {
     console.log(`Removing observer for ${prefName}`);
