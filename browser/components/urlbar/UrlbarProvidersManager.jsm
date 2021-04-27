@@ -37,6 +37,7 @@ var localProviderModules = {
     "resource:///modules/UrlbarProviderUnifiedComplete.jsm",
   UrlbarProviderAutofill: "resource:///modules/UrlbarProviderAutofill.jsm",
   UrlbarProviderCalculator: "resource:///modules/UrlbarProviderCalculator.jsm",
+  UrlbarProviderCommands: "resource:///modules/UrlbarProviderCommands.jsm",
   UrlbarProviderHeuristicFallback:
     "resource:///modules/UrlbarProviderHeuristicFallback.jsm",
   UrlbarProviderInterventions:
