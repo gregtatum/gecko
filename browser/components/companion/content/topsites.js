@@ -33,6 +33,15 @@ function formatName(url) {
   return shortName;
 }
 
+const EXCLUDED_DOMAINS = [
+  // We have a special gmail top site, so exclude the domain to avoid dupes.
+  "mail.google.com",
+  // Exclude interstitial domains that could pop up during/after first run.
+  "accounts.google.com",
+  "accounts.firefox.com",
+  "auth.mozilla.auth0.com",
+];
+
 export class TopSite extends HTMLElement {
   constructor(data) {
     super();
@@ -93,6 +102,8 @@ export class TopSites extends HTMLElement {
 
     try {
       let domains = new Set();
+
+      EXCLUDED_DOMAINS.forEach(excluded => domains.add(excluded));
 
       for (let i = 0; i < results.root.childCount; ++i) {
         let childNode = results.root.getChild(i);
