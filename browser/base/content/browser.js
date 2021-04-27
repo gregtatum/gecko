@@ -664,7 +664,6 @@ var gPageIcons = {
   "about:home": "chrome://branding/content/icon32.png",
   "about:newtab": "chrome://branding/content/icon32.png",
   "about:welcome": "chrome://branding/content/icon32.png",
-  "about:newinstall": "chrome://branding/content/icon32.png",
   "about:privatebrowsing": "chrome://browser/skin/privatebrowsing/favicon.svg",
 };
 
@@ -676,7 +675,6 @@ var gInitialPages = [
   "about:welcomeback",
   "about:sessionrestore",
   "about:welcome",
-  "about:newinstall",
 ];
 
 function isInitialPage(url) {
@@ -841,6 +839,7 @@ const gClickAndHoldListenersOnElement = {
         aEvent.altKey,
         aEvent.shiftKey,
         aEvent.metaKey,
+        0,
         null,
         aEvent.mozInputSource
       );
@@ -2113,10 +2112,6 @@ var gBrowserInit = {
           managedBookmarksPopup.setAttribute(
             "oncommand",
             "PlacesToolbarHelper.openManagedBookmark(event);"
-          );
-          managedBookmarksPopup.setAttribute(
-            "onclick",
-            "checkForMiddleClick(this, event);"
           );
           managedBookmarksPopup.setAttribute(
             "ondragover",

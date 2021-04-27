@@ -910,7 +910,7 @@ var gSync = {
       }
     } else if (state.status === UIState.STATUS_LOGIN_FAILED) {
       stateValue = "login-failed";
-      headerTitle = this.fluentStrings.formatValueSync("account-disconnected");
+      headerTitle = this.fluentStrings.formatValueSync("account-disconnected2");
       headerDescription = state.email;
       mainWindowEl.style.removeProperty("--avatar-image-url");
     } else if (state.status === UIState.STATUS_NOT_VERIFIED) {
@@ -1074,7 +1074,7 @@ var gSync = {
       );
       appMenuStatus.setAttribute("fxastatus", "login-failed");
       let errorLabel = this.fluentStrings.formatValueSync(
-        "account-disconnected"
+        "account-disconnected2"
       );
       appMenuStatus.setAttribute("tooltiptext", tooltipDescription);
       appMenuLabel.setAttribute("label", errorLabel);
@@ -1406,6 +1406,18 @@ var gSync = {
           this.sendTabToDevice(t.url, to, t.title)
         )
       ).then(results => {
+        // Show the Sent! confirmation if any of the sends succeeded.
+        if (results.includes(true)) {
+          // FxA button could be hidden with CSS since the user is logged out,
+          // although it seems likely this would only happen in testing...
+          let fxastatus = document.documentElement.getAttribute("fxastatus");
+          let anchorNode =
+            (fxastatus &&
+              fxastatus != "not_configured" &&
+              document.getElementById("fxa-toolbar-menu-button")) ||
+            document.getElementById("PanelUI-menu-button");
+          ConfirmationHint.show(anchorNode, "sendToDevice");
+        }
         fxAccounts.flushLogFile();
       });
     };

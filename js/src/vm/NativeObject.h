@@ -570,6 +570,10 @@ class NativeObject : public JSObject {
     return shape();
   }
 
+  ShapePropertyWithKey getLastProperty() const {
+    return shape()->propertyWithKey();
+  }
+
   uint32_t propertyCount() const { return lastProperty()->entryCount(); }
 
   bool hasShapeTable() const { return lastProperty()->hasTable(); }
@@ -643,11 +647,6 @@ class NativeObject : public JSObject {
 #else
   void checkShapeConsistency() {}
 #endif
-
-  static Shape* replaceWithNewEquivalentShape(JSContext* cx,
-                                              HandleNativeObject obj,
-                                              Shape* existingShape,
-                                              Shape* newShape = nullptr);
 
   /*
    * Remove the last property of an object, provided that it is safe to do so
@@ -776,10 +775,7 @@ class NativeObject : public JSObject {
 
   [[nodiscard]] static bool generateOwnShape(JSContext* cx,
                                              HandleNativeObject obj,
-                                             Shape* newShape = nullptr) {
-    return replaceWithNewEquivalentShape(cx, obj, obj->lastProperty(),
-                                         newShape);
-  }
+                                             Shape* newShape = nullptr);
 
   [[nodiscard]] static bool reshapeForShadowedProp(JSContext* cx,
                                                    HandleNativeObject obj);
@@ -953,52 +949,46 @@ class NativeObject : public JSObject {
       JSContext* cx, HandleNativeObject obj, HandleShape parent,
       MutableHandle<StackShape> child);
 
-  static MOZ_ALWAYS_INLINE bool maybeConvertToOrGrowDictionaryForAdd(
-      JSContext* cx, HandleNativeObject obj, HandleId id, ShapeTable** table,
-      ShapeTable::Entry** entry, const AutoKeepShapeCaches& keep);
+  static MOZ_ALWAYS_INLINE bool maybeConvertToDictionaryForAdd(
+      JSContext* cx, HandleNativeObject obj);
 
-  static bool maybeToDictionaryModeForPut(JSContext* cx, HandleNativeObject obj,
-                                          MutableHandleShape shape);
+  static bool maybeToDictionaryModeForChange(JSContext* cx,
+                                             HandleNativeObject obj,
+                                             MutableHandleShape shape);
 
  public:
-  /* Add a property whose id is not yet in this scope. */
-  static MOZ_ALWAYS_INLINE Shape* addProperty(JSContext* cx,
-                                              HandleNativeObject obj,
-                                              HandleId id, uint32_t slot,
-                                              unsigned attrs);
+  // Add a new property. Must only be used when the |id| is not already present
+  // in the object's shape. Checks for non-extensibility must be done by the
+  // callers.
+  static bool addProperty(JSContext* cx, HandleNativeObject obj, HandleId id,
+                          uint32_t slot, unsigned attrs, uint32_t* slotOut);
 
-  static Shape* addCustomDataProperty(JSContext* cx, HandleNativeObject obj,
-                                      HandleId id, unsigned attrs);
+  static bool addProperty(JSContext* cx, HandleNativeObject obj,
+                          HandlePropertyName name, uint32_t slot,
+                          unsigned attrs, uint32_t* slotOut) {
+    RootedId id(cx, NameToId(name));
+    return addProperty(cx, obj, id, slot, attrs, slotOut);
+  }
 
-  static Shape* addEnumerableDataProperty(JSContext* cx, HandleNativeObject obj,
-                                          HandleId id);
+  static bool addCustomDataProperty(JSContext* cx, HandleNativeObject obj,
+                                    HandleId id, unsigned attrs);
 
-  /* Add a data property whose id is not yet in this scope. */
-  static Shape* addProperty(JSContext* cx, HandleNativeObject obj,
-                            HandlePropertyName name, uint32_t slot,
-                            unsigned attrs);
+  static bool addEnumerableDataProperty(JSContext* cx, HandleNativeObject obj,
+                                        HandleId id, uint32_t* slotOut);
 
-  /* Add or overwrite a property for id in this scope. */
-  static Shape* putProperty(JSContext* cx, HandleNativeObject obj, HandleId id,
-                            unsigned attrs);
+  // Change a property with key |id| in this object. The object must already
+  // have a property (stored in the shape tree) with this |id|.
+  static bool changeProperty(JSContext* cx, HandleNativeObject obj, HandleId id,
+                             unsigned attrs, uint32_t* slotOut);
 
-  static Shape* changeCustomDataPropAttributes(JSContext* cx,
-                                               HandleNativeObject obj,
-                                               HandleId id, unsigned attrs);
+  static bool changeCustomDataPropAttributes(JSContext* cx,
+                                             HandleNativeObject obj,
+                                             HandleId id, unsigned attrs);
 
-  /* Remove the property named by id from this object. */
+  // Remove the property named by id from this object.
   static bool removeProperty(JSContext* cx, HandleNativeObject obj, jsid id);
 
  protected:
-  /*
-   * Internal helper that adds a shape not yet mapped by this object.
-   * Note: checks for non-extensibility must be done by callers.
-   */
-  static Shape* addPropertyInternal(JSContext* cx, HandleNativeObject obj,
-                                    HandleId id, uint32_t slot, unsigned attrs,
-                                    ShapeTable* table, ShapeTable::Entry* entry,
-                                    const AutoKeepShapeCaches& keep);
-
   [[nodiscard]] static bool fillInAfterSwap(JSContext* cx,
                                             HandleNativeObject obj,
                                             NativeObject* old,

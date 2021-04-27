@@ -156,6 +156,7 @@ MACOSX_WORKER_TYPES = {
     "macosx1014-64": "t-osx-1014",
     "macosx1014-64-power": "t-osx-1014-power",
     "macosx1015-64": "t-osx-1015-r8",
+    "macosx1100-64": "t-osx-1100-m1",
 }
 
 
@@ -874,6 +875,8 @@ def set_treeherder_machine_platform(config, tasks):
         "macosx1014-64/debug": "osx-10-14/debug",
         "macosx1014-64/opt": "osx-10-14/opt",
         "macosx1014-64-shippable/opt": "osx-10-14-shippable/opt",
+        "macosx1100-64/opt": "osx-1100/opt",
+        "macosx1100-64-shippable/opt": "osx-1100-shippable/opt",
         "win64-asan/opt": "windows10-64/asan",
         "win64-aarch64/opt": "windows10-aarch64/opt",
     }
@@ -1741,11 +1744,34 @@ def set_retry_exit_status(config, tasks):
 @transforms.add
 def set_profile(config, tasks):
     """Set profiling mode for tests."""
-    profile = config.params["try_task_config"].get("gecko-profile", False)
+    ttconfig = config.params["try_task_config"]
+    profile = ttconfig.get("gecko-profile", False)
+    settings = (
+        "gecko-profile-interval",
+        "gecko-profile-entries",
+        "gecko-profile-threads",
+        "gecko-profile-features",
+    )
 
     for task in tasks:
         if profile and task["suite"] in ["talos", "raptor"]:
-            task["mozharness"]["extra-options"].append("--gecko-profile")
+            extras = task["mozharness"]["extra-options"]
+            extras.append("--gecko-profile")
+            for setting in settings:
+                value = ttconfig.get(setting)
+                if value is not None:
+                    # These values can contain spaces (eg the "DOM Worker"
+                    # thread) and the command is constructed in different,
+                    # incompatible ways on different platforms.
+
+                    if task["test-platform"].startswith("win"):
+                        # Double quotes for Windows (single won't work).
+                        extras.append("--" + setting + '="' + str(value) + '"')
+                    else:
+                        # Other platforms keep things as separate values,
+                        # rather than joining with spaces.
+                        extras.append("--" + setting + "=" + str(value))
+
         yield task
 
 
@@ -1788,6 +1814,8 @@ def set_worker_type(config, tasks):
                 task["worker-type"] = MACOSX_WORKER_TYPES["macosx1014-64-power"]
             else:
                 task["worker-type"] = MACOSX_WORKER_TYPES["macosx1015-64"]
+        elif test_platform.startswith("macosx1100-64"):
+            task["worker-type"] = MACOSX_WORKER_TYPES["macosx1100-64"]
         elif test_platform.startswith("win"):
             # figure out what platform the job needs to run on
             if task["virtualization"] == "hardware":

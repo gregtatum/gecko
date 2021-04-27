@@ -774,7 +774,9 @@ bool nsXULPopupManager::ShowPopupAsNativeMenu(nsIContent* aPopup, int32_t aXPos,
                                               Event* aTriggerEvent) {
   if (mNativeMenu) {
     NS_WARNING("Native menu still open when trying to open another");
-    mNativeMenu->RemoveObserver(this);
+    RefPtr<NativeMenu> menu = mNativeMenu;
+    (void)menu->Close();
+    menu->RemoveObserver(this);
     mNativeMenu = nullptr;
   }
 
@@ -818,9 +820,14 @@ bool nsXULPopupManager::ShowPopupAsNativeMenu(nsIContent* aPopup, int32_t aXPos,
     return true;
   }
 
+  nsPresContext* presContext = popupFrame->PresContext();
+  auto scale = presContext->CSSToDevPixelScale() /
+               presContext->DeviceContext()->GetDesktopToDeviceScale();
+  DesktopPoint position = CSSPoint(aXPos, aYPos) * scale;
+
   mNativeMenu = menu;
   mNativeMenu->AddObserver(this);
-  mNativeMenu->ShowAsContextMenu(DesktopPoint(aXPos, aYPos));
+  mNativeMenu->ShowAsContextMenu(position);
 
   // While the native menu is open, it consumes mouseup events.
   // Clear any :active state and mouse capture now so that we don't get stuck in
@@ -1476,10 +1483,11 @@ void nsXULPopupManager::ExecuteMenu(nsIContent* aMenu,
 
 bool nsXULPopupManager::ActivateNativeMenuItem(nsIContent* aItem,
                                                mozilla::Modifiers aModifiers,
+                                               int16_t aButton,
                                                mozilla::ErrorResult& aRv) {
   if (mNativeMenu && aItem->IsElement() &&
       mNativeMenu->Element()->Contains(aItem)) {
-    mNativeMenu->ActivateItem(aItem->AsElement(), aModifiers, aRv);
+    mNativeMenu->ActivateItem(aItem->AsElement(), aModifiers, aButton, aRv);
     return true;
   }
   return false;
@@ -2980,7 +2988,7 @@ nsXULMenuCommandEvent::Run() {
     nsContentUtils::DispatchXULCommand(
         menu, mIsTrusted, nullptr, presShell, mModifiers & MODIFIER_CONTROL,
         mModifiers & MODIFIER_ALT, mModifiers & MODIFIER_SHIFT,
-        mModifiers & MODIFIER_META);
+        mModifiers & MODIFIER_META, 0, mButton);
   }
 
   if (popup && mCloseMenuMode != CloseMenuMode_None)

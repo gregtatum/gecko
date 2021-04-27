@@ -599,8 +599,9 @@ nsresult GfxInfo::GetFeatureStatusImpl(
       const nsCString& gpu = mGLStrings->Renderer();
       NS_LossyConvertUTF16toASCII model(mModel);
 
-      // Enable Webrender on all Adreno 4xx, 5xx and 6xx GPUs
-      isUnblocked |= gpu.Find("Adreno (TM) 4", /*ignoreCase*/ true) >= 0 ||
+      // Enable Webrender on all Adreno 3xx, 4xx, 5xx and 6xx GPUs
+      isUnblocked |= gpu.Find("Adreno (TM) 3", /*ignoreCase*/ true) >= 0 ||
+                     gpu.Find("Adreno (TM) 4", /*ignoreCase*/ true) >= 0 ||
                      gpu.Find("Adreno (TM) 5", /*ignoreCase*/ true) >= 0 ||
                      gpu.Find("Adreno (TM) 6", /*ignoreCase*/ true) >= 0;
 
@@ -614,6 +615,9 @@ nsresult GfxInfo::GetFeatureStatusImpl(
 
       // Enable Webrender on all PowerVR Rogue GPUs
       isUnblocked |= gpu.Find("PowerVR Rogue", /*ignoreCase*/ true) >= 0;
+
+      // Enable Webrender on all Intel GPUs with Mesa drivers (chromebooks)
+      isUnblocked |= gpu.Find("Mesa DRI Intel", /*ignoreCase*/ true) >= 0;
 
       if (!isUnblocked) {
         *aStatus = nsIGfxInfo::FEATURE_BLOCKED_DEVICE;
@@ -656,13 +660,12 @@ nsresult GfxInfo::GetFeatureStatusImpl(
     }
 
     if (aFeature == FEATURE_WEBRENDER_OPTIMIZED_SHADERS) {
-      // Optimized shaders result in completely broken rendering in at least one
-      // Mali-T6xx device. Disable on all T6xx as a precaution until we know
-      // more specifically which devices are affected. See bug 1689064 for
-      // details.
-      const bool isMaliT6xx =
-          mGLStrings->Renderer().Find("Mali-T6", /*ignoreCase*/ true) >= 0;
-      if (isMaliT6xx) {
+      // Optimized shaders result in completely broken rendering on Mali-T
+      // devices running android versions up to 5.1.
+      // See bug 1689064 and bug 1707283 for details.
+      const bool isMaliT =
+          mGLStrings->Renderer().Find("Mali-T", /*ignoreCase*/ true) >= 0;
+      if (isMaliT && mSDKVersion <= 22) {
         *aStatus = nsIGfxInfo::FEATURE_BLOCKED_DEVICE;
         aFailureId = "FEATURE_FAILURE_BUG_1689064";
       } else {

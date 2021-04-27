@@ -265,8 +265,14 @@ Shape* RegExpObject::assignInitialShape(JSContext* cx,
   static_assert(LAST_INDEX_SLOT == 0);
 
   /* The lastIndex property alone is writable but non-configurable. */
-  return NativeObject::addProperty(cx, self, cx->names().lastIndex,
-                                   LAST_INDEX_SLOT, JSPROP_PERMANENT);
+  uint32_t slot;
+  if (!NativeObject::addProperty(cx, self, cx->names().lastIndex,
+                                 LAST_INDEX_SLOT, JSPROP_PERMANENT, &slot)) {
+    return nullptr;
+  }
+  MOZ_ASSERT(slot == LAST_INDEX_SLOT);
+
+  return self->shape();
 }
 
 void RegExpObject::initIgnoringLastIndex(JSAtom* source, RegExpFlags flags) {
@@ -893,7 +899,7 @@ ArrayObject* RegExpRealm::createMatchResultTemplateObject(
                                   groupsVal, JSPROP_ENUMERATE)) {
       return nullptr;
     }
-    MOZ_ASSERT(templateObject->lastProperty()->slot() == IndicesGroupsSlot);
+    MOZ_ASSERT(templateObject->getLastProperty().slot() == IndicesGroupsSlot);
 
     matchResultTemplateObjects_[kind].set(templateObject);
     return matchResultTemplateObjects_[kind];
@@ -905,7 +911,7 @@ ArrayObject* RegExpRealm::createMatchResultTemplateObject(
                                 JSPROP_ENUMERATE)) {
     return nullptr;
   }
-  MOZ_ASSERT(templateObject->lastProperty()->slot() ==
+  MOZ_ASSERT(templateObject->getLastProperty().slot() ==
              MatchResultObjectIndexSlot);
 
   /* Set dummy input property */
@@ -914,7 +920,7 @@ ArrayObject* RegExpRealm::createMatchResultTemplateObject(
                                 JSPROP_ENUMERATE)) {
     return nullptr;
   }
-  MOZ_ASSERT(templateObject->lastProperty()->slot() ==
+  MOZ_ASSERT(templateObject->getLastProperty().slot() ==
              MatchResultObjectInputSlot);
 
   /* Set dummy groups property */
@@ -923,7 +929,7 @@ ArrayObject* RegExpRealm::createMatchResultTemplateObject(
                                 groupsVal, JSPROP_ENUMERATE)) {
     return nullptr;
   }
-  MOZ_ASSERT(templateObject->lastProperty()->slot() ==
+  MOZ_ASSERT(templateObject->getLastProperty().slot() ==
              MatchResultObjectGroupsSlot);
 
   if (kind == ResultTemplateKind::WithIndices) {
@@ -933,7 +939,7 @@ ArrayObject* RegExpRealm::createMatchResultTemplateObject(
                                   indicesVal, JSPROP_ENUMERATE)) {
       return nullptr;
     }
-    MOZ_ASSERT(templateObject->lastProperty()->slot() ==
+    MOZ_ASSERT(templateObject->getLastProperty().slot() ==
                MatchResultObjectIndicesSlot);
   }
 

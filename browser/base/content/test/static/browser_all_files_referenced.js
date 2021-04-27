@@ -27,6 +27,9 @@ var gExceptionPaths = [
   // These resources are referenced using relative paths from html files.
   "resource://payments/",
 
+  // These chrome resources are referenced using relative paths from JS files.
+  "chrome://global/content/certviewer/components/",
+
   // https://github.com/mozilla/activity-stream/issues/3053
   "chrome://activity-stream/content/data/content/tippytop/images/",
   "chrome://activity-stream/content/data/content/tippytop/favicons/",
@@ -46,6 +49,10 @@ var gExceptionPaths = [
   // Exclude all services-automation because they are used through webdriver
   "resource://gre/modules/services-automation/",
   "resource://services-automation/ServicesAutomation.jsm",
+
+  // Paths from this folder are constructed in NetErrorParent.jsm based on
+  // the type of cert or net error the user is encountering.
+  "chrome://browser/content/certerror/supportpages/",
 ];
 
 // These are not part of the omni.ja file, so we find them only when running

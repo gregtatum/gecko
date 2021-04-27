@@ -4,8 +4,22 @@
 
 /* eslint-env mozilla/frame-script */
 
-import { parse } from "chrome://global/content/certviewer/certDecoder.js";
-import { pemToDER } from "chrome://global/content/certviewer/utils.js";
+import "chrome://global/content/certviewer/pvutils_bundle.js";
+import "chrome://global/content/certviewer/asn1js_bundle.js";
+import "chrome://global/content/certviewer/pkijs_bundle.js";
+import "chrome://global/content/certviewer/certDecoder.js";
+
+const { Integer, fromBER } = globalThis.asn1js.asn1js;
+const { Certificate } = globalThis.pkijs.pkijs;
+const { fromBase64, stringToArrayBuffer } = globalThis.pvutils.pvutils;
+const { parse, pemToDER } = globalThis.certDecoderInitializer(
+  Integer,
+  fromBER,
+  Certificate,
+  fromBase64,
+  stringToArrayBuffer,
+  crypto
+);
 
 const formatter = new Intl.DateTimeFormat("default");
 
@@ -226,6 +240,23 @@ function setErrorPageStrings(err) {
 }
 
 function initPage() {
+  // We show an offline support page in case of a system-wide error,
+  // when a user cannot connect to the internet and access the SUMO website.
+  // For example, clock error, which causes certerrors across the web or
+  // a security software conflict where the user is unable to connect
+  // to the internet.
+  // The URL that prompts us to show an offline support page should have the following
+  // format: "https://support.mozilla.org/1/firefox/%VERSION%/%OS%/%LOCALE%/supportPageSlug",
+  // so we can extract the support page slug.
+  let baseURL = RPMGetFormatURLPref("app.support.baseURL");
+  let location = document.location.href;
+  if (location.startsWith(baseURL)) {
+    let supportPageSlug = document.location.pathname.split("/").pop();
+    RPMSendAsyncMessage("DisplayOfflineSupportPage", {
+      supportPageSlug,
+    });
+  }
+
   var err = getErrorCode();
   // List of error pages with an illustration.
   let illustratedErrors = [
@@ -327,7 +358,6 @@ function initPage() {
   }
 
   let learnMoreLink = document.getElementById("learnMoreLink");
-  let baseURL = RPMGetFormatURLPref("app.support.baseURL");
   learnMoreLink.setAttribute("href", baseURL + "connection-not-secure");
 
   if (err == "cspBlocked" || err == "xfoBlocked") {

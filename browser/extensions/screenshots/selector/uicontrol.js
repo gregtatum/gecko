@@ -180,14 +180,6 @@ this.uicontrol = (function() {
       e.stopPropagation();
       exports.deactivate();
     },
-    onOpenMyShots: () => {
-      sendEvent("goto-myshots", "selection-button");
-      callBackground("openMyShots")
-        .then(() => exports.deactivate())
-        .catch(() => {
-          // Handled in communication.js
-        });
-    },
     onClickVisible: () => {
       sendEvent("capture-visible", "selection-button");
       selectedPos = new Selection(
@@ -987,7 +979,7 @@ this.uicontrol = (function() {
       sendEvent("cancel-shot", "keyboard-escape");
       exports.deactivate();
     }
-    // Enter to trigger Save or Download by default. But if the user tabbed to
+    // Enter to trigger Download by default. But if the user tabbed to
     // select another button, then we do not want this.
     if (
       (event.key || event.code) === "Enter" &&

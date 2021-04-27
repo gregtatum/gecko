@@ -220,14 +220,12 @@
     -->
     <menupopup id="backForwardMenu"
                onpopupshowing="return FillHistoryMenu(event.target);"
-               oncommand="gotoHistoryIndex(event); event.stopPropagation();"
-               onclick="checkForMiddleClick(this, event);"/>
+               oncommand="gotoHistoryIndex(event); event.stopPropagation();"/>
     <tooltip id="aHTMLTooltip" page="true"/>
     <tooltip id="remoteBrowserTooltip"/>
 
     <menupopup id="new-tab-button-popup"
-               onpopupshowing="return CreateContainerTabMenu(event);"
-               onclick="checkForMiddleClick(this, event);"/>
+               onpopupshowing="return CreateContainerTabMenu(event);"/>
     <!-- for search and content formfill/pw manager -->
 
     <panel is="autocomplete-richlistbox-popup"
@@ -306,13 +304,15 @@
             <image/>
           </toolbarbutton>
         </box>
-        <html:div id="editBookmarkPanelInfoArea">
-          <html:div id="editBookmarkPanelRecommendation"></html:div>
-          <html:div id="editBookmarkPanelFaviconContainer">
-            <html:img id="editBookmarkPanelFavicon"/>
+        <vbox class="panel-subview-body">
+          <html:div id="editBookmarkPanelInfoArea">
+            <html:div id="editBookmarkPanelRecommendation"></html:div>
+            <html:div id="editBookmarkPanelFaviconContainer">
+              <html:img id="editBookmarkPanelFavicon"/>
+            </html:div>
+            <html:div id="editBookmarkPanelImage"></html:div>
           </html:div>
-          <html:div id="editBookmarkPanelImage"></html:div>
-        </html:div>
+          <toolbarseparator id="editBookmarkSeparator"></toolbarseparator>
 #include ../../components/places/content/editBookmarkPanel.inc.xhtml
           <vbox id="editBookmarkPanelBottomContent"
                 flex="1">
@@ -344,6 +344,7 @@
                     oncommand="StarUI.panel.hidePopup();"/>
 #endif
           </hbox>
+        </vbox>
       </panel>
     </html:template>
 
@@ -2070,10 +2071,6 @@
                   <image id="star-button"
                          class="urlbar-icon"
                          role="button"/>
-                  <hbox id="star-button-animatable-box">
-                    <image id="star-button-animatable-image"
-                           role="presentation"/>
-                  </hbox>
                 </hbox>
               </hbox>
             </hbox>
@@ -2189,10 +2186,6 @@
                        data-l10n-id="browser-window-close-button"
                        oncommand="BrowserTryToCloseWindow();"/>
       </hbox>
-
-      <box id="library-animatable-box" class="toolbarbutton-animatable-box">
-        <image class="toolbarbutton-animatable-image"/>
-      </box>
     </toolbar>
 
     <toolbar id="PersonalToolbar"

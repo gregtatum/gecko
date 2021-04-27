@@ -72,6 +72,7 @@ class nsISupports;
 namespace mozilla {
 
 using namespace dom;
+using EmptyCheckOption = HTMLEditUtils::EmptyCheckOption;
 using LeafNodeType = HTMLEditUtils::LeafNodeType;
 using LeafNodeTypes = HTMLEditUtils::LeafNodeTypes;
 using StyleDifference = HTMLEditUtils::StyleDifference;
@@ -664,16 +665,17 @@ EditActionResult HTMLEditor::CanHandleHTMLEditSubAction() const {
 
   const nsRange* range = SelectionRef().GetRangeAt(0);
   nsINode* selStartNode = range->GetStartContainer();
-  if (NS_WARN_IF(!selStartNode)) {
+  if (NS_WARN_IF(!selStartNode) || NS_WARN_IF(!selStartNode->IsContent())) {
     return EditActionResult(NS_ERROR_FAILURE);
   }
 
-  if (!HTMLEditUtils::IsSimplyEditableNode(*selStartNode)) {
+  if (!HTMLEditUtils::IsSimplyEditableNode(*selStartNode) ||
+      HTMLEditUtils::IsNonEditableReplacedContent(*selStartNode->AsContent())) {
     return EditActionCanceled();
   }
 
   nsINode* selEndNode = range->GetEndContainer();
-  if (NS_WARN_IF(!selEndNode)) {
+  if (NS_WARN_IF(!selEndNode) || NS_WARN_IF(!selEndNode->IsContent())) {
     return EditActionResult(NS_ERROR_FAILURE);
   }
 
@@ -681,7 +683,8 @@ EditActionResult HTMLEditor::CanHandleHTMLEditSubAction() const {
     return EditActionIgnored();
   }
 
-  if (!HTMLEditUtils::IsSimplyEditableNode(*selEndNode)) {
+  if (!HTMLEditUtils::IsSimplyEditableNode(*selEndNode) ||
+      HTMLEditUtils::IsNonEditableReplacedContent(*selEndNode->AsContent())) {
     return EditActionCanceled();
   }
 
@@ -1779,7 +1782,7 @@ EditActionResult HTMLEditor::SplitMailCiteElements(
 
   // delete any empty cites
   if (previousNodeOfSplitPoint &&
-      IsEmptyNode(*previousNodeOfSplitPoint, true, false)) {
+      HTMLEditUtils::IsEmptyNode(*previousNodeOfSplitPoint)) {
     nsresult rv =
         DeleteNodeWithTransaction(MOZ_KnownLive(*previousNodeOfSplitPoint));
     if (NS_WARN_IF(Destroyed())) {
@@ -1791,7 +1794,7 @@ EditActionResult HTMLEditor::SplitMailCiteElements(
     }
   }
 
-  if (citeNode && IsEmptyNode(*citeNode, true, false)) {
+  if (citeNode && HTMLEditUtils::IsEmptyNode(*citeNode)) {
     nsresult rv = DeleteNodeWithTransaction(*citeNode);
     if (NS_WARN_IF(Destroyed())) {
       return EditActionIgnored(NS_ERROR_EDITOR_DESTROYED);
@@ -4724,7 +4727,11 @@ bool HTMLEditor::IsEmptyBlockElement(Element& aElement,
   if (!HTMLEditUtils::IsBlockElement(aElement)) {
     return false;
   }
-  return IsEmptyNode(aElement, aIgnoreSingleBR == IgnoreSingleBR::Yes);
+  HTMLEditUtils::EmptyCheckOptions options;
+  if (aIgnoreSingleBR != IgnoreSingleBR::Yes) {
+    options += EmptyCheckOption::TreatSingleBRElementAsVisible;
+  }
+  return HTMLEditUtils::IsEmptyNode(aElement, options);
 }
 
 EditActionResult HTMLEditor::AlignAsSubAction(const nsAString& aAlignType) {
@@ -5057,7 +5064,8 @@ nsresult HTMLEditor::AlignNodesAndDescendants(
         ((HTMLEditUtils::IsAnyTableElement(atContent.GetContainer()) &&
           !HTMLEditUtils::IsTableCellOrCaption(*atContent.GetContainer())) ||
          HTMLEditUtils::IsAnyListElement(atContent.GetContainer()) ||
-         IsEmptyNode(*content))) {
+         HTMLEditUtils::IsEmptyNode(
+             *content, {EmptyCheckOption::TreatSingleBRElementAsVisible}))) {
       continue;
     }
 
@@ -5746,7 +5754,7 @@ void HTMLEditor::SelectBRElementIfCollapsedInEmptyBlock(
     return;
   }
 
-  if (IsEmptyNode(*blockElement, true, false)) {
+  if (HTMLEditUtils::IsEmptyNode(*blockElement)) {
     aStartRef = {blockElement, 0u};
     aEndRef = {blockElement, blockElement->Length()};
   }
@@ -6434,7 +6442,8 @@ nsresult HTMLEditor::HandleInsertParagraphInHeadingElement(Element& aHeader,
   nsCOMPtr<nsIContent> prevItem = GetPriorHTMLSibling(&aHeader);
   if (prevItem) {
     MOZ_DIAGNOSTIC_ASSERT(HTMLEditUtils::IsHeader(*prevItem));
-    if (IsEmptyNode(*prevItem)) {
+    if (HTMLEditUtils::IsEmptyNode(
+            *prevItem, {EmptyCheckOption::TreatSingleBRElementAsVisible})) {
       CreateElementResult createPaddingBRResult =
           InsertPaddingBRElementForEmptyLastLineWithTransaction(
               EditorDOMPoint(prevItem, 0));
@@ -6946,7 +6955,8 @@ nsresult HTMLEditor::HandleInsertParagraphInListItemElement(Element& aListItem,
   // left empty.
   nsCOMPtr<nsIContent> prevItem = GetPriorHTMLSibling(&aListItem);
   if (prevItem && HTMLEditUtils::IsListItem(prevItem)) {
-    if (IsEmptyNode(*prevItem)) {
+    if (HTMLEditUtils::IsEmptyNode(
+            *prevItem, {EmptyCheckOption::TreatSingleBRElementAsVisible})) {
       CreateElementResult createPaddingBRResult =
           InsertPaddingBRElementForEmptyLastLineWithTransaction(
               EditorDOMPoint(prevItem, 0));
@@ -6957,7 +6967,7 @@ nsresult HTMLEditor::HandleInsertParagraphInListItemElement(Element& aListItem,
         return createPaddingBRResult.Rv();
       }
     } else {
-      if (IsEmptyNode(aListItem, true)) {
+      if (HTMLEditUtils::IsEmptyNode(aListItem)) {
         if (aListItem.IsAnyOfHTMLElements(nsGkAtoms::dd, nsGkAtoms::dt)) {
           nsCOMPtr<nsINode> list = aListItem.GetParentNode();
           int32_t itemOffset = list ? list->ComputeIndexOf(&aListItem) : -1;
@@ -7860,8 +7870,8 @@ nsresult HTMLEditor::InsertBRElementToEmptyListItemsAndTableCellsInRange(
              !HTMLEditUtils::IsTableCellOrCaption(*element))) {
           return false;
         }
-        return static_cast<HTMLEditor*>(aSelf)->IsEmptyNode(*element, false,
-                                                            false);
+        return HTMLEditUtils::IsEmptyNode(
+            *element, {EmptyCheckOption::TreatSingleBRElementAsVisible});
       },
       arrayOfEmptyElements, this);
 
@@ -8051,7 +8061,8 @@ nsresult HTMLEditor::AdjustCaretPositionAndEnsurePaddingBRElement(
               *point.ContainerAsContent())) {
     if (blockElement &&
         EditorUtils::IsEditableContent(*blockElement, EditorType::HTML) &&
-        IsEmptyNode(*blockElement, false, false) &&
+        HTMLEditUtils::IsEmptyNode(
+            *blockElement, {EmptyCheckOption::TreatSingleBRElementAsVisible}) &&
         HTMLEditUtils::CanNodeContain(*point.GetContainer(), *nsGkAtoms::br)) {
       Element* bodyOrDocumentElement = GetRoot();
       if (NS_WARN_IF(!bodyOrDocumentElement)) {
@@ -8345,7 +8356,13 @@ nsresult HTMLEditor::RemoveEmptyNodesIn(nsRange& aRange) {
     if (isCandidate) {
       // We delete mailcites even if they have a solo br in them.  Other
       // nodes we require to be empty.
-      isEmptyNode = IsEmptyNode(*content, isMailCite, true);
+      HTMLEditUtils::EmptyCheckOptions options{
+          EmptyCheckOption::TreatListItemAsVisible,
+          EmptyCheckOption::TreatTableCellAsVisible};
+      if (!isMailCite) {
+        options += EmptyCheckOption::TreatSingleBRElementAsVisible;
+      }
+      isEmptyNode = HTMLEditUtils::IsEmptyNode(*content, options);
       if (isEmptyNode) {
         if (isMailCite) {
           // mailcites go on a separate list from other empty nodes
@@ -8382,7 +8399,10 @@ nsresult HTMLEditor::RemoveEmptyNodesIn(nsRange& aRange) {
   // Now delete the empty mailcites.  This is a separate step because we want
   // to pull out any br's and preserve them.
   for (OwningNonNull<nsIContent>& emptyCite : arrayOfEmptyCites) {
-    if (!IsEmptyNode(emptyCite, false, true)) {
+    if (!HTMLEditUtils::IsEmptyNode(
+            emptyCite, {EmptyCheckOption::TreatSingleBRElementAsVisible,
+                        EmptyCheckOption::TreatListItemAsVisible,
+                        EmptyCheckOption::TreatTableCellAsVisible})) {
       // We are deleting a cite that has just a `<br>`.  We want to delete cite,
       // but preserve `<br>`.
       RefPtr<Element> brElement =
@@ -8686,7 +8706,8 @@ nsresult HTMLEditor::InsertPaddingBRElementForEmptyLastLineIfNeeded(
     return NS_OK;
   }
 
-  if (!IsEmptyNode(aElement)) {
+  if (!HTMLEditUtils::IsEmptyNode(
+          aElement, {EmptyCheckOption::TreatSingleBRElementAsVisible})) {
     return NS_OK;
   }
 
@@ -8707,7 +8728,8 @@ nsresult HTMLEditor::InsertBRElementIfEmptyBlockElement(Element& aElement) {
     return NS_OK;
   }
 
-  if (!IsEmptyNode(aElement)) {
+  if (!HTMLEditUtils::IsEmptyNode(
+          aElement, {EmptyCheckOption::TreatSingleBRElementAsVisible})) {
     return NS_OK;
   }
 

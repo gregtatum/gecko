@@ -409,7 +409,39 @@ class MacroAssembler : public MacroAssemblerSpecific {
 
  public:
   // ===============================================================
-  // Stack manipulation functions.
+  // Stack manipulation functions -- sets of registers.
+
+  // Approximately speaking, the following routines must use the same memory
+  // layout.  Any inconsistencies will certainly lead to crashing in generated
+  // code:
+  //
+  //   PushRegsInMaskSizeInBytes PushRegsInMask storeRegsInMask
+  //   PopRegsInMask PopRegsInMaskIgnore
+  //
+  // To be more exact, the invariants are:
+  //
+  // * The save area is conceptually viewed as starting at a highest address
+  //   and working down to some lower address.
+  //
+  // * PushRegsInMask, storeRegsInMask and PopRegsInMask{Ignore} must use
+  //   exactly the same memory layout, when starting from the abovementioned
+  //   highest address.
+  //
+  // * PushRegsInMaskSizeInBytes must produce a value which is exactly equal
+  //   to the change in the machine's stack pointer register as a result of
+  //   calling PushRegsInMask or PopRegsInMask{Ignore}.  This value must be at
+  //   least uintptr_t-aligned on the target, and may be more aligned than that.
+  //
+  // * PushRegsInMaskSizeInBytes must produce a value which is greater than or
+  //   equal to the amount of space used by storeRegsInMask.
+  //
+  // * Hence, regardless of whether the save area is created with
+  //   storeRegsInMask or PushRegsInMask, it is guaranteed to fit inside an
+  //   area of size calculated by PushRegsInMaskSizeInBytes.
+
+  // The size of the area used by PushRegsInMask.
+  size_t PushRegsInMaskSizeInBytes(LiveRegisterSet set)
+      DEFINED_ON(arm, arm64, mips32, mips64, x86_shared);
 
   void PushRegsInMask(LiveRegisterSet set)
       DEFINED_ON(arm, arm64, mips32, mips64, x86_shared);
@@ -418,9 +450,6 @@ class MacroAssembler : public MacroAssemblerSpecific {
   // Like PushRegsInMask, but instead of pushing the registers, store them to
   // |dest|. |dest| should point to the end of the reserved space, so the
   // first register will be stored at |dest.offset - sizeof(register)|.
-  // PushRegsInMask, PopRegsInMask{Ignore} and storeRegsInMask must use the
-  // same memory layout, and that also needs to be consistent with what
-  // FloatRegisterSet::getPushSizeInBytes claims.
   void storeRegsInMask(LiveRegisterSet set, Address dest, Register scratch)
       DEFINED_ON(arm, arm64, mips32, mips64, x86_shared);
 
@@ -428,6 +457,9 @@ class MacroAssembler : public MacroAssemblerSpecific {
   void PopRegsInMask(LiveGeneralRegisterSet set);
   void PopRegsInMaskIgnore(LiveRegisterSet set, LiveRegisterSet ignore)
       DEFINED_ON(arm, arm64, mips32, mips64, x86_shared);
+
+  // ===============================================================
+  // Stack manipulation functions -- single registers/values.
 
   void Push(const Operand op) DEFINED_ON(x86_shared);
   void Push(Register reg) PER_SHARED_ARCH;
@@ -440,7 +472,7 @@ class MacroAssembler : public MacroAssemblerSpecific {
   void Push(FloatRegister reg) PER_SHARED_ARCH;
   void PushBoxed(FloatRegister reg) PER_ARCH;
   void PushFlags() DEFINED_ON(x86_shared);
-  void Push(JS::PropertyKey key, Register scratchReg);
+  void Push(PropertyKey key, Register scratchReg);
   void Push(const Address& addr);
   void Push(TypedOrValueRegister v);
   void Push(const ConstantOrRegister& v);
@@ -860,7 +892,7 @@ class MacroAssembler : public MacroAssemblerSpecific {
   void moveValue(const ValueOperand& src, const ValueOperand& dest) PER_ARCH;
   void moveValue(const Value& src, const ValueOperand& dest) PER_ARCH;
 
-  void movePropertyKey(JS::PropertyKey key, Register dest);
+  void movePropertyKey(PropertyKey key, Register dest);
 
   // ===============================================================
   // Load instructions
@@ -4628,6 +4660,12 @@ class MacroAssembler : public MacroAssemblerSpecific {
                            Register temp2, uint32_t numFixedSlots,
                            uint32_t numDynamicSlots, gc::AllocKind allocKind,
                            gc::InitialHeap initialHeap, Label* fail);
+
+  void createArrayWithFixedElements(Register result, Register shape,
+                                    Register temp, uint32_t arrayLength,
+                                    uint32_t arrayCapacity,
+                                    gc::AllocKind allocKind,
+                                    gc::InitialHeap initialHeap, Label* fail);
 
   void initGCThing(Register obj, Register temp,
                    const TemplateObject& templateObj, bool initContents = true);

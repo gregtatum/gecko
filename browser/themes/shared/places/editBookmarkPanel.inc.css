@@ -4,6 +4,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 %endif
 
+#editBookmarkPanel > .panel-subview-body {
+  padding-block: 0;
+}
+
 #editBookmarkPanelTitle {
   margin-inline-start: 32px;
 }
@@ -152,6 +156,10 @@ html|img#editBookmarkPanelFavicon[src] {
   display: flex;
 }
 
+#editBookmarkPanel > .panel-subview-body > #editBookmarkSeparator {
+  margin-bottom: 0;
+}
+
 @media (-moz-proton-doorhangers) {
 #editBookmarkPanel {
   font-size: var(--panel-font-size);
@@ -161,7 +169,7 @@ html|img#editBookmarkPanelFavicon[src] {
   padding: 6px var(--arrowpanel-padding) 0;
 }
 
-#editBookmarkPanelRows > vbox {
+#editBookmarkPanelRows > vbox:not(#editBMPanel_nameRow) {
   padding-block: var(--arrowpanel-padding) 0;
 }
 
@@ -175,7 +183,11 @@ html|img#editBookmarkPanelFavicon[src] {
 }
 
 #editBookmarkPanelRows {
-  padding: calc(var(--arrowpanel-padding) / 2) var(--arrowpanel-padding) var(--arrowpanel-padding);
+  padding: 0.8em var(--arrowpanel-padding) var(--arrowpanel-padding);
+}
+
+#editBMPanel_selectionCount {
+  padding-top: 0.8em;
 }
 
 #editBookmarkPanelBottomContent {
@@ -284,5 +296,9 @@ html|img#editBookmarkPanelFavicon[src] {
 
 #editBookmarkPanelImage {
   margin: 0 2px;
+}
+
+#editBookmarkSeparator {
+  display: none;
 }
 } /** END not Proton **/

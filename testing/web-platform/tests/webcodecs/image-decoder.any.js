@@ -167,8 +167,7 @@ promise_test(t => {
 promise_test(t => {
   return fetch('four-colors.png').then(response => {
     let decoder = new ImageDecoder({data: response.body, type: 'junk/type'});
-    return promise_rejects_dom(
-        t, 'NotSupportedError', decoder.decodeMetadata());
+    return promise_rejects_dom(t, 'NotSupportedError', decoder.tracks.ready);
   });
 }, 'Test invalid mime type rejects decodeMetadata() requests');
 
@@ -185,18 +184,42 @@ promise_test(t => {
 }, 'Test out of range index returns IndexSizeError');
 
 promise_test(t => {
+  var decoder;
+  var p1;
+  return fetch('four-colors.png')
+      .then(response => {
+        return response.arrayBuffer();
+      })
+      .then(buffer => {
+        decoder =
+            new ImageDecoder({data: buffer.slice(0, 100), type: 'image/png'});
+        return decoder.tracks.ready;
+      })
+      .then(_ => {
+        // Queue two decodes to ensure index verification and decoding are
+        // properly ordered.
+        p1 = decoder.decode({frameIndex: 0});
+        return promise_rejects_dom(
+            t, 'IndexSizeError', decoder.decode({frameIndex: 1}));
+      })
+      .then(_ => {
+        return promise_rejects_dom(t, 'IndexSizeError', p1);
+      })
+}, 'Test partial decoding without a frame results in an error');
+
+promise_test(t => {
   var decoder = null;
 
   return fetch('four-colors.png')
       .then(response => {
         decoder = new ImageDecoder({data: response.body, type: 'image/png'});
-        return decoder.decodeMetadata();
+        return decoder.tracks.ready;
       })
       .then(_ => {
         decoder.tracks.selectedTrack.selected = false;
         assert_equals(decoder.tracks.selectedIndex, -1);
         assert_equals(decoder.tracks.selectedTrack, null);
-        return decoder.decodeMetadata();
+        return decoder.tracks.ready;
       })
       .then(_ => {
         return promise_rejects_dom(t, 'InvalidStateError', decoder.decode());
@@ -220,7 +243,7 @@ promise_test(t => {
       .then(response => {
         decoder = new ImageDecoder(
             {data: response.body, type: 'image/avif', preferAnimation: false});
-        return decoder.decodeMetadata();
+        return decoder.tracks.ready;
       })
       .then(_ => {
         assert_equals(decoder.tracks.length, 2);
@@ -289,7 +312,7 @@ promise_test(async t => {
 
   let stream = new ReadableStream(source, {type: 'bytes'});
   let decoder = new ImageDecoder({data: stream, type: 'image/gif'});
-  return decoder.decodeMetadata()
+  return decoder.tracks.ready
       .then(_ => {
         assert_equals(decoder.tracks.selectedTrack.frameCount, 2);
         assert_equals(decoder.tracks.selectedTrack.repetitionCount, 5);
@@ -341,10 +364,6 @@ promise_test(async t => {
       .then(_ => {
         // Ensure feeding the source after closing doesn't crash.
         source.addFrame();
-        return promise_rejects_dom(
-            t, 'InvalidStateError', decoder.decodeMetadata());
-      })
-      .then(_ => {
         return promise_rejects_dom(t, 'InvalidStateError', decoder.decode());
       });
 }, 'Test ReadableStream of gif');
@@ -355,13 +374,13 @@ promise_test(async t => {
 
   let stream = new ReadableStream(source, {type: 'bytes'});
   let decoder = new ImageDecoder({data: stream, type: 'image/gif'});
-  return decoder.decodeMetadata().then(_ => {
+  return decoder.tracks.ready.then(_ => {
     assert_equals(decoder.tracks.selectedTrack.frameCount, 2);
     assert_equals(decoder.tracks.selectedTrack.repetitionCount, 5);
 
     decoder.decode({frameIndex: 2}).then(t.unreached_func());
     decoder.decode({frameIndex: 1}).then(t.unreached_func());
-    return decoder.decodeMetadata();
+    return decoder.tracks.ready;
   });
 }, 'Test that decode requests are serialized.');
 
@@ -371,7 +390,7 @@ promise_test(async t => {
 
   let stream = new ReadableStream(source, {type: 'bytes'});
   let decoder = new ImageDecoder({data: stream, type: 'image/gif'});
-  return decoder.decodeMetadata().then(_ => {
+  return decoder.tracks.ready.then(_ => {
     assert_equals(decoder.tracks.selectedTrack.frameCount, 2);
     assert_equals(decoder.tracks.selectedTrack.repetitionCount, 5);
 

@@ -1839,6 +1839,11 @@
   value: false
   mirror: always
 
+- name: dom.mouse_capture.enabled
+  type: bool
+  value: true
+  mirror: always
+
 # Is support for Performance.mozMemory enabled?
 - name: dom.enable_memory_stats
   type: bool
@@ -1943,7 +1948,13 @@
   value: true
   mirror: always
 
-# Disable ClipboardItem and clipboard.read/write by default
+# Disable clipboard.read() by default
+- name: dom.events.asyncClipboard.read
+  type: bool
+  value: false
+  mirror: always
+
+# Disable ClipboardItem and clipboard.write by default
 - name: dom.events.asyncClipboard.clipboardItem
   type: bool
   value: false
@@ -2175,7 +2186,7 @@
 # Whether we perform a more strict alignment with vsync for input events
 - name: dom.input_events.strict_input_vsync_alignment
   type: bool
-  value: false
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
 
 # Enable not moving the cursor to end when a text input or textarea has .value
@@ -2653,6 +2664,19 @@
   value: true
   mirror: always
 
+# Should we check build ID as part of the cache validation?
+# When enabled, the cache is invalidated on any upgrade (or downgrade),
+# ensuring that changes in how quota usage is calculated can't cause
+# inconsistencies at the cost of a slower initialization. Currently, this
+# should only be set to false in tests using a packaged profile that inherently
+# includes a build id different from the building running the tests. In the
+# future this may be set to false if we are confident that we have sufficiently
+# thorough schema versioning.
+- name: dom.quotaManager.caching.checkBuildId
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
+
 # Preference that users can set to override temporary storage smart limit
 # calculation.
 - name: dom.quotaManager.temporaryStorage.fixedLimit
@@ -2962,15 +2986,15 @@
 
 # If true, top-level request will get upgraded to HTTPS and
 # downgraded again if the request failed.
-- name: dom.security.https_only_mode_https_first
+- name: dom.security.https_first
   type: RelaxedAtomicBool
   value: false
   mirror: always
 
 # If true, top-level requests in Private Browsing Mode will get
-# upgraded to HTTPS. (If dom.security.https_only_mode_https_first
+# upgraded to HTTPS. (If dom.security.https_first
 # is set to true then this pref has no effect)
-- name: dom.security.https_only_mode_https_first_pbm
+- name: dom.security.https_first_pbm
   type: RelaxedAtomicBool
   value: false
   mirror: always
@@ -3491,6 +3515,11 @@
     type: bool
     value: false
     mirror: always
+
+-   name: dom.w3c_pointer_events.scroll_by_pen.enabled
+    type: bool
+    value: false
+    mirror: always
 #endif
 
 # If the value is >= 0, it will be used for max touch points in child processes.
@@ -3591,6 +3620,24 @@
 - name: dom.webnotifications.requireinteraction.enabled
   type: RelaxedAtomicBool
   value: @IS_NIGHTLY_BUILD@
+  mirror: always
+
+- name: dom.webnotifications.silent.enabled
+  type: RelaxedAtomicBool
+#if defined(MOZ_WIDGET_ANDROID)
+  value: @IS_NIGHTLY_BUILD@
+#else
+  value: false
+#endif
+  mirror: always
+
+- name: dom.webnotifications.vibrate.enabled
+  type: RelaxedAtomicBool
+#if defined(MOZ_WIDGET_ANDROID)
+  value: @IS_NIGHTLY_BUILD@
+#else
+  value: false
+#endif
   mirror: always
 
 - name: dom.webnotifications.serviceworker.enabled
@@ -5629,6 +5676,12 @@
     mirror: always
 #endif  // NIGHTLY_BUILD
 
+  # Experimental support for the ergonomic brand check proposal.
+- name: javascript.options.experimental.ergonomic_brand_checks
+  type: bool
+  value: false
+  mirror: always
+
   # Experimental support for Top-level Await in JavaScript.
 -   name: javascript.options.experimental.top_level_await
     type: bool
@@ -6084,9 +6137,9 @@
   type: RelaxedAtomicInt32
 #if defined(XP_WIN) || defined(MOZ_WIDGET_GTK)
   #if defined(NIGHTLY_BUILD)
-  value: 3
+  value: 6
   #else
-  value: 1
+  value: 3
   #endif
 #else
   value: 1
@@ -11102,7 +11155,7 @@
 #ifdef XP_MACOSX
 - name: widget.macos.native-context-menus
   type: RelaxedAtomicBool
-  value: false
+  value: true
   mirror: always
 
 - name: widget.macos.respect-system-appearance
@@ -11199,6 +11252,12 @@
 - name: widget.wayland.opaque-region.enabled
   type: RelaxedAtomicBool
   value: true
+  mirror: always
+
+# Force fractional scaling using wp_viewporter. Valid values: 0.5 - 8
+- name: widget.wayland.fractional_buffer_scale
+  type: AtomicFloat
+  value: 0.0f
   mirror: always
 #endif
 

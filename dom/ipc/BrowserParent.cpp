@@ -218,11 +218,6 @@ BrowserParent::BrowserParent(ContentParent* aManager, const TabId& aTabId,
       mChromeOffset{},
       mCreatingWindow(false),
       mDelayedFrameScripts{},
-      mCursor(eCursorInvalid),
-      mCustomCursor{},
-      mCustomCursorHotspotX(0),
-      mCustomCursorHotspotY(0),
-      mVerifyDropLinks{},
       mVsyncParent(nullptr),
       mMarkedDestroying(false),
       mIsDestroyed(false),
@@ -233,7 +228,8 @@ BrowserParent::BrowserParent(ContentParent* aManager, const TabId& aTabId,
       mHasLayers(false),
       mHasPresented(false),
       mIsReadyToHandleInputEvents(false),
-      mIsMouseEnterIntoWidgetEventSuppressed(false) {
+      mIsMouseEnterIntoWidgetEventSuppressed(false),
+      mLockedNativePointer(false) {
   MOZ_ASSERT(aManager);
   // When the input event queue is disabled, we don't need to handle the case
   // that some input events are dispatched before PBrowserConstructor.
@@ -587,6 +583,7 @@ void BrowserParent::RemoveWindowListeners() {
 }
 
 void BrowserParent::Deactivated() {
+  UnlockNativePointer();
   UnsetTopLevelWebFocus(this);
   UnsetLastMouseRemoteTarget(this);
   PointerLockManager::ReleaseLockedRemoteTarget(this);
@@ -1071,6 +1068,7 @@ void BrowserParent::UpdateDimensions(const nsIntRect& rect,
     mChromeOffset = chromeOffset;
 
     Unused << SendUpdateDimensions(GetDimensionInfo());
+    UpdateNativePointerLockCenter(widget);
   }
 }
 
@@ -1089,6 +1087,17 @@ DimensionInfo BrowserParent::GetDimensionInfo() {
   DimensionInfo di(unscaledRect, unscaledSize, mOrientation, mClientOffset,
                    mChromeOffset);
   return di;
+}
+
+void BrowserParent::UpdateNativePointerLockCenter(nsIWidget* aWidget) {
+  if (!mLockedNativePointer) {
+    return;
+  }
+  LayoutDeviceIntRect dims(
+      {0, 0},
+      ViewAs<LayoutDevicePixel>(
+          mDimensions, PixelCastJustification::LayoutDeviceIsScreenForTabDims));
+  aWidget->SetNativePointerLockCenter((dims + mChromeOffset).Center());
 }
 
 void BrowserParent::SizeModeChanged(const nsSizeMode& aSizeMode) {
@@ -1380,15 +1389,11 @@ void BrowserParent::SendMouseEvent(const nsAString& aType, float aX, float aY,
 }
 
 void BrowserParent::MouseEnterIntoWidget() {
-  nsCOMPtr<nsIWidget> widget = GetWidget();
-  if (widget) {
+  if (nsCOMPtr<nsIWidget> widget = GetWidget()) {
     // When we mouseenter the remote target, the remote target's cursor should
     // become the current cursor.  When we mouseexit, we stop.
     mRemoteTargetSetsCursor = true;
-    if (mCursor != eCursorInvalid) {
-      widget->SetCursor(mCursor, mCustomCursor, mCustomCursorHotspotX,
-                        mCustomCursorHotspotY);
-    }
+    widget->SetCursor(mCursor);
   }
 
   // Mark that we have missed a mouse enter event, so that
@@ -1427,10 +1432,7 @@ void BrowserParent::SendRealMouseEvent(WidgetMouseEvent& aEvent) {
     // become the current cursor.  When we mouseexit, we stop.
     if (eMouseEnterIntoWidget == aEvent.mMessage) {
       mRemoteTargetSetsCursor = true;
-      if (mCursor != eCursorInvalid) {
-        widget->SetCursor(mCursor, mCustomCursor, mCustomCursorHotspotX,
-                          mCustomCursorHotspotY);
-      }
+      widget->SetCursor(mCursor);
     } else if (eMouseExitFromWidget == aEvent.mMessage) {
       mRemoteTargetSetsCursor = false;
     }
@@ -1672,6 +1674,25 @@ mozilla::ipc::IPCResult BrowserParent::RecvDispatchKeyboardEvent(
   return IPC_OK();
 }
 
+mozilla::ipc::IPCResult BrowserParent::RecvDispatchTouchEvent(
+    const mozilla::WidgetTouchEvent& aEvent) {
+  nsCOMPtr<nsIWidget> widget = GetWidget();
+  if (!widget) {
+    return IPC_OK();
+  }
+
+  WidgetTouchEvent localEvent(aEvent);
+  localEvent.mWidget = widget;
+
+  for (uint32_t i = 0; i < localEvent.mTouches.Length(); i++) {
+    localEvent.mTouches[i]->mRefPoint =
+        TransformChildToParent(localEvent.mTouches[i]->mRefPoint);
+  }
+
+  widget->DispatchInputEvent(&localEvent);
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult BrowserParent::RecvRequestNativeKeyBindings(
     const uint32_t& aType, const WidgetKeyboardEvent& aEvent,
     nsTArray<CommandInt>* aCommands) {
@@ -1896,6 +1917,30 @@ mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeTouchpadDoubleTap(
   if (widget) {
     widget->SynthesizeNativeTouchpadDoubleTap(aPoint, aModifierFlags);
   }
+  return IPC_OK();
+}
+
+mozilla::ipc::IPCResult BrowserParent::RecvLockNativePointer() {
+  if (nsCOMPtr<nsIWidget> widget = GetWidget()) {
+    mLockedNativePointer = true;  // do before updating the center
+    UpdateNativePointerLockCenter(widget);
+    widget->LockNativePointer();
+  }
+  return IPC_OK();
+}
+
+void BrowserParent::UnlockNativePointer() {
+  if (!mLockedNativePointer) {
+    return;
+  }
+  if (nsCOMPtr<nsIWidget> widget = GetWidget()) {
+    widget->UnlockNativePointer();
+    mLockedNativePointer = false;
+  }
+}
+
+mozilla::ipc::IPCResult BrowserParent::RecvUnlockNativePointer() {
+  UnlockNativePointer();
   return IPC_OK();
 }
 
@@ -2138,7 +2183,7 @@ mozilla::ipc::IPCResult BrowserParent::RecvAsyncMessage(
 mozilla::ipc::IPCResult BrowserParent::RecvSetCursor(
     const nsCursor& aCursor, const bool& aHasCustomCursor,
     const nsCString& aCursorData, const uint32_t& aWidth,
-    const uint32_t& aHeight, const uint32_t& aStride,
+    const uint32_t& aHeight, const float& aResolution, const uint32_t& aStride,
     const gfx::SurfaceFormat& aFormat, const uint32_t& aHotspotX,
     const uint32_t& aHotspotY, const bool& aForce) {
   nsCOMPtr<nsIWidget> widget = GetWidget();
@@ -2167,16 +2212,13 @@ mozilla::ipc::IPCResult BrowserParent::RecvSetCursor(
     cursorImage = image::ImageOps::CreateFromDrawable(drawable);
   }
 
-  mCursor = aCursor;
-  mCustomCursor = cursorImage;
-  mCustomCursorHotspotX = aHotspotX;
-  mCustomCursorHotspotY = aHotspotY;
-
+  mCursor = nsIWidget::Cursor{aCursor, std::move(cursorImage), aHotspotX,
+                              aHotspotY, aResolution};
   if (!mRemoteTargetSetsCursor) {
     return IPC_OK();
   }
 
-  widget->SetCursor(aCursor, cursorImage, aHotspotX, aHotspotY);
+  widget->SetCursor(mCursor);
   return IPC_OK();
 }
 
@@ -2449,7 +2491,14 @@ BrowserParent::GetChildToParentConversionMatrix() {
 void BrowserParent::SetChildToParentConversionMatrix(
     const Maybe<LayoutDeviceToLayoutDeviceMatrix4x4>& aMatrix,
     const ScreenRect& aRemoteDocumentRect) {
+  if (mChildToParentConversionMatrix == aMatrix &&
+      mRemoteDocumentRect.isSome() &&
+      mRemoteDocumentRect.value() == aRemoteDocumentRect) {
+    return;
+  }
+
   mChildToParentConversionMatrix = aMatrix;
+  mRemoteDocumentRect = Some(aRemoteDocumentRect);
   if (mIsDestroyed) {
     return;
   }

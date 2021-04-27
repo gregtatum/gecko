@@ -393,46 +393,29 @@ nsresult nsMenuFrame::HandleEvent(nsPresContext* aPresContext,
         OpenMenu(false);
       }
     }
-  } else if (
-#ifndef NSCONTEXTMENUISMOUSEUP
-      (aEvent->mMessage == eMouseUp &&
-       (aEvent->AsMouseEvent()->mButton == MouseButton::eSecondary
-#  ifdef XP_MACOSX
-        // On Mac, we get the context menu event on left-click when ctrl key is
-        // pressed, listen it as well to dismiss the menu.
-        || (aEvent->AsMouseEvent()->mButton == MouseButton::ePrimary &&
-            aEvent->AsMouseEvent()->IsControl())
-#  endif
-            )) &&
-#else
-      aEvent->mMessage == eContextMenu &&
+  } else if (aEvent->mMessage == eMouseUp && !IsMenu() && !IsDisabled()) {
+    // We accept left and middle clicks on all menu items to activate the item.
+    // On context menus we also accept right click to activate the item, because
+    // right-clicking on an item in a context menu cannot open another context
+    // menu.
+    bool isMacCtrlClick = false;
+#ifdef XP_MACOSX
+    isMacCtrlClick = aEvent->AsMouseEvent()->mButton == MouseButton::ePrimary &&
+                     aEvent->AsMouseEvent()->IsControl();
 #endif
-      onmenu && !IsMenu() && !IsDisabled()) {
-    // if this menu is a context menu it accepts right-clicks...fire away!
-    // Make sure we cancel default processing of the context menu event so
-    // that it doesn't bubble and get seen again by the popuplistener and show
-    // another context menu.
-    //
-    // Furthermore (there's always more, isn't there?), on some platforms
-    // (win32 being one of them) we get the context menu event on a mouse up
-    // while on others we get it on a mouse down. For the ones where we get it
-    // on a mouse down, we must continue listening for the right button up
-    // event to dismiss the menu.
-    if (menuParent->IsContextMenu()) {
+    bool clickMightOpenContextMenu =
+        aEvent->AsMouseEvent()->mButton == MouseButton::eSecondary ||
+        isMacCtrlClick;
+    if (!clickMightOpenContextMenu || (onmenu && menuParent->IsContextMenu())) {
       *aEventStatus = nsEventStatus_eConsumeNoDefault;
       Execute(aEvent);
     }
-  } else if (aEvent->mMessage == eMouseUp &&
-             aEvent->AsMouseEvent()->mButton == MouseButton::ePrimary &&
-#ifdef XP_MACOSX
-             // On Mac, we get the context menu event on left-click when ctrl
-             // key is pressed, so we don't want to execute the event handler.
-             !aEvent->AsMouseEvent()->IsControl() &&
-#endif
-             !IsMenu() && !IsDisabled()) {
-    // Execute the execute event handler.
+  } else if (aEvent->mMessage == eContextMenu && onmenu && !IsMenu() &&
+             !IsDisabled() && menuParent->IsContextMenu()) {
+    // Make sure we cancel default processing of the context menu event so
+    // that it doesn't bubble and get seen again by the popuplistener and show
+    // another context menu.
     *aEventStatus = nsEventStatus_eConsumeNoDefault;
-    Execute(aEvent);
   } else if (aEvent->mMessage == eMouseOut) {
     // Kill our timer if one is active.
     if (mOpenTimer) {
@@ -895,14 +878,21 @@ void nsMenuFrame::Execute(WidgetGUIEvent* aEvent) {
     modifiers = inputEvent->mModifiers;
   }
 
+  int16_t button = 0;
+  WidgetMouseEventBase* mouseEvent =
+      aEvent ? aEvent->AsMouseEventBase() : nullptr;
+  if (mouseEvent) {
+    button = mouseEvent->mButton;
+  }
+
   StopBlinking();
-  CreateMenuCommandEvent(isTrusted, modifiers);
+  CreateMenuCommandEvent(isTrusted, modifiers, button);
   StartBlinking();
 }
 
-void nsMenuFrame::ActivateItem(Modifiers aModifiers) {
+void nsMenuFrame::ActivateItem(Modifiers aModifiers, int16_t aButton) {
   StopBlinking();
-  CreateMenuCommandEvent(nsContentUtils::IsCallerChrome(), aModifiers);
+  CreateMenuCommandEvent(nsContentUtils::IsCallerChrome(), aModifiers, aButton);
   StartBlinking();
 }
 
@@ -950,7 +940,8 @@ void nsMenuFrame::StopBlinking() {
 }
 
 void nsMenuFrame::CreateMenuCommandEvent(bool aIsTrusted,
-                                         mozilla::Modifiers aModifiers) {
+                                         mozilla::Modifiers aModifiers,
+                                         int16_t aButton) {
   // Because the command event is firing asynchronously, a flag is needed to
   // indicate whether user input is being handled. This ensures that a popup
   // window won't get blocked.
@@ -966,7 +957,7 @@ void nsMenuFrame::CreateMenuCommandEvent(bool aIsTrusted,
 
   mDelayedMenuCommandEvent =
       new nsXULMenuCommandEvent(mContent->AsElement(), aIsTrusted, aModifiers,
-                                userinput, needToFlipChecked);
+                                userinput, needToFlipChecked, aButton);
 }
 
 void nsMenuFrame::PassMenuCommandEventToPopupManager() {

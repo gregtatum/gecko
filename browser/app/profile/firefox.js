@@ -260,13 +260,6 @@ pref("browser.shell.mostRecentDateSetAsDefault", "");
 pref("browser.shell.skipDefaultBrowserCheckOnFirstRun", true);
 pref("browser.shell.didSkipDefaultBrowserCheckOnFirstRun", false);
 pref("browser.shell.defaultBrowserCheckCount", 0);
-#ifdef EARLY_BETA_OR_EARLIER
-pref("browser.defaultbrowser.notificationbar", false);
-#else
-pref("browser.defaultbrowser.notificationbar", false);
-#endif
-pref("browser.defaultbrowser.notificationbar.checkcount", 0);
-pref("browser.defaultbrowser.notificationbar.checklimit", 10000);
 
 // 0 = blank, 1 = home (browser.startup.homepage), 2 = last visited page, 3 = resume previous browser session
 // The behavior of option 3 is detailed at: http://wiki.mozilla.org/Session_Restore
@@ -360,6 +353,13 @@ pref("browser.urlbar.suggest.calculator",           false);
 
 // Whether the QuickSuggest experiment is enabled.
 pref("browser.urlbar.quicksuggest.enabled", false);
+
+// Whether unit conversion is enabled.
+#ifdef NIGHTLY_BUILD
+pref("browser.urlbar.unitConversion.enabled", true);
+#else
+pref("browser.urlbar.unitConversion.enabled", false);
+#endif
 
 // Whether to show search suggestions before general results like history and
 // bookmarks.
@@ -1478,7 +1478,7 @@ pref("trailhead.firstrun.newtab.triplets", "");
 pref("browser.aboutwelcome.enabled", true);
 // Used to set multistage welcome UX
 pref("browser.aboutwelcome.screens", "");
-pref("browser.aboutwelcome.skipFocus", false);
+pref("browser.aboutwelcome.skipFocus", true);
 
 // The pref that controls if the What's New panel is enabled.
 pref("browser.messaging-system.whatsNewPanel.enabled", true);

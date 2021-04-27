@@ -395,6 +395,15 @@ static bool GetBuildConfiguration(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
+#ifdef __wasi__
+  value = BooleanValue(true);
+#else
+  value = BooleanValue(false);
+#endif
+  if (!JS_SetProperty(cx, info, "wasi", value)) {
+    return false;
+  }
+
 #ifdef MOZ_ASAN
   value = BooleanValue(true);
 #else
@@ -1224,11 +1233,13 @@ static bool WasmGlobalsEqual(JSContext* cx, unsigned argc, Value* vp) {
       break;
     }
     case wasm::ValType::F32: {
-      result = mozilla::EqualOrBothNaN(aVal.f32(), aVal.f32());
+      result = mozilla::BitwiseCast<uint32_t>(aVal.f32()) ==
+               mozilla::BitwiseCast<uint32_t>(aVal.f32());
       break;
     }
     case wasm::ValType::F64: {
-      result = mozilla::EqualOrBothNaN(aVal.f64(), aVal.f64());
+      result = mozilla::BitwiseCast<uint64_t>(aVal.f64()) ==
+               mozilla::BitwiseCast<uint64_t>(aVal.f64());
       break;
     }
     case wasm::ValType::V128: {
@@ -1244,6 +1255,121 @@ static bool WasmGlobalsEqual(JSContext* cx, unsigned argc, Value* vp) {
     }
     default:
       JS_ReportErrorASCII(cx, "unsupported type");
+      return false;
+  }
+  args.rval().setBoolean(result);
+  return true;
+}
+
+// Flavors of NaN values for WebAssembly.
+// See
+// https://webassembly.github.io/spec/core/syntax/values.html#floating-point.
+enum class NaNFlavor {
+  // A canonical NaN value.
+  //  - the sign bit is unspecified,
+  //  - the 8-bit exponent is set to all 1s
+  //  - the MSB of the payload is set to 1 (a quieted NaN) and all others to 0.
+  Canonical,
+  // An arithmetic NaN. This is the same as a canonical NaN including that the
+  // payload MSB is set to 1, but one or more of the remaining payload bits MAY
+  // BE set to 1 (a canonical NaN specifies all 0s).
+  Arithmetic,
+};
+
+static bool IsNaNFlavor(uint32_t bits, NaNFlavor flavor) {
+  switch (flavor) {
+    case NaNFlavor::Canonical: {
+      return (bits & 0x7fffffff) == 0x7fc00000;
+    }
+    case NaNFlavor::Arithmetic: {
+      const uint32_t ArithmeticNaN = 0x7f800000;
+      const uint32_t ArithmeticPayloadMSB = 0x00400000;
+      bool isNaN = (bits & ArithmeticNaN) == ArithmeticNaN;
+      bool isMSBSet = (bits & ArithmeticPayloadMSB) == ArithmeticPayloadMSB;
+      return isNaN && isMSBSet;
+    }
+    default:
+      MOZ_CRASH();
+  }
+}
+
+static bool IsNaNFlavor(uint64_t bits, NaNFlavor flavor) {
+  switch (flavor) {
+    case NaNFlavor::Canonical: {
+      return (bits & 0x7fffffffffffffff) == 0x7ff8000000000000;
+    }
+    case NaNFlavor::Arithmetic: {
+      uint64_t ArithmeticNaN = 0x7ff0000000000000;
+      uint64_t ArithmeticPayloadMSB = 0x0008000000000000;
+      bool isNaN = (bits & ArithmeticNaN) == ArithmeticNaN;
+      bool isMsbSet = (bits & ArithmeticPayloadMSB) == ArithmeticPayloadMSB;
+      return isNaN && isMsbSet;
+    }
+    default:
+      MOZ_CRASH();
+  }
+}
+
+static bool ToNaNFlavor(JSContext* cx, HandleValue v, NaNFlavor* out) {
+  RootedString flavorStr(cx, ToString(cx, v));
+  if (!flavorStr) {
+    return false;
+  }
+  RootedLinearString flavorLinearStr(cx, flavorStr->ensureLinear(cx));
+  if (!flavorLinearStr) {
+    return false;
+  }
+
+  if (StringEqualsLiteral(flavorLinearStr, "canonical_nan")) {
+    *out = NaNFlavor::Canonical;
+    return true;
+  } else if (StringEqualsLiteral(flavorLinearStr, "arithmetic_nan")) {
+    *out = NaNFlavor::Arithmetic;
+    return true;
+  }
+
+  JS_ReportErrorASCII(cx, "invalid nan flavor");
+  return false;
+}
+
+static bool WasmGlobalIsNaN(JSContext* cx, unsigned argc, Value* vp) {
+  if (!wasm::HasSupport(cx)) {
+    JS_ReportErrorASCII(cx, "wasm support unavailable");
+    return false;
+  }
+  CallArgs args = CallArgsFromVp(argc, vp);
+
+  if (args.length() < 2) {
+    JS_ReportErrorASCII(cx, "not enough arguments");
+    return false;
+  }
+
+  if (!args.get(0).isObject() ||
+      !args.get(0).toObject().is<WasmGlobalObject>()) {
+    JS_ReportErrorASCII(cx, "argument is not wasm value");
+    return false;
+  }
+  RootedWasmGlobalObject global(cx,
+                                &args.get(0).toObject().as<WasmGlobalObject>());
+
+  NaNFlavor flavor;
+  if (!ToNaNFlavor(cx, args.get(1), &flavor)) {
+    return false;
+  }
+
+  bool result;
+  const wasm::Val& val = global->val().get();
+  switch (global->type().kind()) {
+    case wasm::ValType::F32: {
+      result = IsNaNFlavor(mozilla::BitwiseCast<uint32_t>(val.f32()), flavor);
+      break;
+    }
+    case wasm::ValType::F64: {
+      result = IsNaNFlavor(mozilla::BitwiseCast<uint64_t>(val.f64()), flavor);
+      break;
+    }
+    default:
+      JS_ReportErrorASCII(cx, "global is not a floating point value");
       return false;
   }
   args.rval().setBoolean(result);
@@ -4486,22 +4612,20 @@ class ShapeSnapshot {
 
   struct PropertyInfo {
     HeapPtr<Shape*> propShape;
-    HeapPtr<JS::PropertyKey> key;
-    uint32_t slot;
-    uint8_t attrs;
+    HeapPtr<PropertyKey> key;
+    ShapeProperty prop;
 
     explicit PropertyInfo(Shape* shape)
         : propShape(shape),
-          key(shape->propid()),
-          slot(shape->maybeSlot()),
-          attrs(propShape->attributes()) {}
+          key(shape->propertyWithKey().key()),
+          prop(propShape->property()) {}
     void trace(JSTracer* trc) {
       TraceEdge(trc, &propShape, "propShape");
       TraceEdge(trc, &key, "key");
     }
     bool operator==(const PropertyInfo& other) const {
       return propShape == other.propShape && key == other.key &&
-             slot == other.slot && attrs == other.attrs;
+             prop == other.prop;
     }
     bool operator!=(const PropertyInfo& other) const {
       return !operator==(other);
@@ -4621,32 +4745,33 @@ void ShapeSnapshot::checkSelf(JSContext* cx) const {
     MOZ_RELEASE_ASSERT(shape_->objectFlags() == objectFlags_);
   }
 
-  for (const PropertyInfo& prop : properties_) {
-    Shape* propShape = prop.propShape;
+  for (const PropertyInfo& propInfo : properties_) {
+    Shape* propShape = propInfo.propShape;
+    ShapeProperty prop = propInfo.prop;
 
     // Skip if the Shape no longer matches the snapshotted data. This can
     // only happen for non-configurable dictionary properties.
-    if (PropertyInfo(propShape) != prop) {
+    if (PropertyInfo(propShape) != propInfo) {
       MOZ_RELEASE_ASSERT(propShape->inDictionary());
-      MOZ_RELEASE_ASSERT(!(prop.attrs & JSPROP_PERMANENT));
+      MOZ_RELEASE_ASSERT(!(prop.attributes() & JSPROP_PERMANENT));
       continue;
     }
 
     // Ensure ObjectFlags depending on property information are set if needed.
-    ObjectFlags expectedFlags =
-        GetObjectFlagsForNewProperty(shape_, prop.key, prop.attrs, cx);
+    ObjectFlags expectedFlags = GetObjectFlagsForNewProperty(
+        shape_, propInfo.key, prop.attributes(), cx);
     MOZ_RELEASE_ASSERT(expectedFlags == objectFlags_);
 
     // Accessors must have a PrivateGCThingValue(GetterSetter*) slot value.
-    if (propShape->isAccessorDescriptor()) {
-      Value slotVal = slots_[prop.slot];
+    if (prop.isAccessorProperty()) {
+      Value slotVal = slots_[prop.slot()];
       MOZ_RELEASE_ASSERT(slotVal.isPrivateGCThing());
       MOZ_RELEASE_ASSERT(slotVal.toGCThing()->is<GetterSetter>());
     }
 
     // Data properties must not have a PrivateGCThingValue slot value.
-    if (propShape->isDataProperty()) {
-      Value slotVal = slots_[prop.slot];
+    if (prop.isDataProperty()) {
+      Value slotVal = slots_[prop.slot()];
       MOZ_RELEASE_ASSERT(!slotVal.isPrivateGCThing());
     }
   }
@@ -4683,11 +4808,11 @@ void ShapeSnapshot::check(JSContext* cx, const ShapeSnapshot& later) const {
       MOZ_RELEASE_ASSERT(properties_[i] == later.properties_[i]);
       // Non-configurable accessor properties and non-configurable, non-writable
       // data properties shouldn't have had their slot mutated.
-      Shape* propShape = properties_[i].propShape;
-      if (!propShape->configurable()) {
-        if (propShape->isAccessorDescriptor() ||
-            (propShape->isDataProperty() && !propShape->writable())) {
-          size_t slot = propShape->slot();
+      ShapeProperty prop = properties_[i].prop;
+      if (!prop.configurable()) {
+        if (prop.isAccessorProperty() ||
+            (prop.isDataProperty() && !prop.writable())) {
+          size_t slot = prop.slot();
           MOZ_RELEASE_ASSERT(slots_[slot] == later.slots_[slot]);
         }
       }
@@ -7606,8 +7731,12 @@ JS_FOR_WASM_FEATURES(WASM_FEATURE, WASM_FEATURE)
     JS_FN_HELP("wasmGlobalsEqual", WasmGlobalsEqual, 2, 0,
 "wasmGlobalsEqual(globalA, globalB)",
 "  Compares two WebAssembly.Global objects for if their types and values are\n"
-"  equal. Mutability is not compared. NaN values are considered equal and are\n"
-"  not required to have the same bit pattern.\n"),
+"  equal. Mutability is not compared. Floating point values are compared for\n"
+"  bitwise equality, not IEEE 754 equality.\n"),
+    JS_FN_HELP("wasmGlobalIsNaN", WasmGlobalIsNaN, 2, 0,
+"wasmGlobalIsNaN(global, flavor)",
+"  Compares a floating point WebAssembly.Global object for if its value is a\n"
+"  specific NaN flavor. Valid flavors are `arithmetic_nan` and `canonical_nan`.\n"),
     JS_FN_HELP("wasmGlobalToString", WasmGlobalToString, 1, 0,
 "wasmGlobalToString(global)",
 "  Returns a debug representation of the contents of a WebAssembly.Global\n"

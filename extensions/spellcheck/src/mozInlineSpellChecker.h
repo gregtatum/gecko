@@ -84,10 +84,15 @@ class mozInlineSpellStatus {
 
  private:
   // @param aSpellChecker must be non-nullptr.
-  explicit mozInlineSpellStatus(mozInlineSpellChecker* aSpellChecker);
+  // @param aOp see mOp.
+  // @param aForceNavigationWordCheck see mForceNavigationWordCheck.
+  // @param aNewNavigationPositionOffset see mNewNavigationPositionOffset.
+  explicit mozInlineSpellStatus(mozInlineSpellChecker* aSpellChecker,
+                                Operation aOp, bool aForceNavigationWordCheck,
+                                int32_t aNewNavigationPositionOffset);
 
   // For resuming a previously started check.
-  Operation mOp;
+  const Operation mOp;
 
   //
   // If we happen to know something was inserted, this is that range.
@@ -116,18 +121,18 @@ class mozInlineSpellStatus {
   // Set when we should force checking the current word. See
   // mozInlineSpellChecker::HandleNavigationEvent for a description of why we
   // have this.
-  bool mForceNavigationWordCheck;
+  const bool mForceNavigationWordCheck;
 
   // Contains the offset passed in to HandleNavigationEvent
-  int32_t mNewNavigationPositionOffset;
+  const int32_t mNewNavigationPositionOffset;
 
   nsresult FinishNavigationEvent(mozInlineSpellWordUtil& aWordUtil);
 
   nsresult FillNoCheckRangeFromAnchor(mozInlineSpellWordUtil& aWordUtil);
 
   mozilla::dom::Document* GetDocument() const;
-  already_AddRefed<nsRange> PositionToCollapsedRange(nsINode* aNode,
-                                                     uint32_t aOffset);
+  static already_AddRefed<nsRange> PositionToCollapsedRange(nsINode* aNode,
+                                                            uint32_t aOffset);
 };
 
 class mozInlineSpellChecker final : public nsIInlineSpellChecker,
@@ -239,8 +244,8 @@ class mozInlineSpellChecker final : public nsIInlineSpellChecker,
   // helper routine to determine if a point is inside of the passed in
   // selection.
   static nsresult IsPointInSelection(mozilla::dom::Selection& aSelection,
-                              nsINode* aNode, int32_t aOffset,
-                              nsRange** aRange);
+                                     nsINode* aNode, int32_t aOffset,
+                                     nsRange** aRange);
 
   nsresult CleanupRangesInSelection(mozilla::dom::Selection* aSelection);
 

@@ -8,6 +8,7 @@
 #include "nsStyleConsts.h"
 #include "gtkdrawing.h"
 #include "ScreenHelperGTK.h"
+#include "WidgetUtilsGtk.h"
 
 #include "gfx2DGlue.h"
 #include "nsIObserverService.h"
@@ -32,7 +33,6 @@
 #include <gtk/gtk.h>
 
 #include "gfxContext.h"
-#include "gfxPlatformGtk.h"
 #include "gfxGdkNativeRenderer.h"
 #include "mozilla/gfx/BorrowedContext.h"
 #include "mozilla/gfx/HelpersCairo.h"
@@ -838,7 +838,6 @@ static void DrawThemeWithCairo(gfxContext* aContext, DrawTarget* aDrawTarget,
                                const nsIntSize& aDrawSize,
                                GdkRectangle& aGDKRect,
                                nsITheme::Transparency aTransparency) {
-  bool isX11Display = gfxPlatformGtk::GetPlatform()->IsX11Display();
   static auto sCairoSurfaceSetDeviceScalePtr =
       (void (*)(cairo_surface_t*, double, double))dlsym(
           RTLD_DEFAULT, "cairo_surface_set_device_scale");
@@ -875,7 +874,7 @@ static void DrawThemeWithCairo(gfxContext* aContext, DrawTarget* aDrawTarget,
   // A direct Cairo draw target is not available, so we need to create a
   // temporary one.
 #if defined(MOZ_X11) && defined(CAIRO_HAS_XLIB_SURFACE)
-  if (isX11Display) {
+  if (GdkIsX11Display()) {
     // If using a Cairo xlib surface, then try to reuse it.
     BorrowedXlibDrawable borrow(aDrawTarget);
     if (borrow.GetDrawable()) {
@@ -1176,7 +1175,7 @@ nsNativeThemeGTK::DrawWidgetBackground(gfxContext* aContext, nsIFrame* aFrame,
   if (!safeState) {
     // gdk_flush() call from expose event crashes Gtk+ on Wayland
     // (Gnome BZ #773307)
-    if (gfxPlatformGtk::GetPlatform()->IsX11Display()) {
+    if (GdkIsX11Display()) {
       gdk_flush();
     }
     gLastGdkError = gdk_error_trap_pop();

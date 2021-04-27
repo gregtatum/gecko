@@ -47,24 +47,30 @@
 #  include "Units.h"
 
 extern mozilla::LazyLogModule gWidgetLog;
-extern mozilla::LazyLogModule gWidgetFocusLog;
 extern mozilla::LazyLogModule gWidgetDragLog;
-extern mozilla::LazyLogModule gWidgetDrawLog;
 
 #  define LOG(args) MOZ_LOG(gWidgetLog, mozilla::LogLevel::Debug, args)
-#  define LOGFOCUS(args) \
-    MOZ_LOG(gWidgetFocusLog, mozilla::LogLevel::Debug, args)
 #  define LOGDRAG(args) MOZ_LOG(gWidgetDragLog, mozilla::LogLevel::Debug, args)
-#  define LOGDRAW(args) MOZ_LOG(gWidgetDrawLog, mozilla::LogLevel::Debug, args)
 
 #else
 
 #  define LOG(args)
-#  define LOGFOCUS(args)
 #  define LOGDRAG(args)
-#  define LOGDRAW(args)
 
 #endif /* MOZ_LOGGING */
+
+#ifdef MOZ_WAYLAND
+class nsWaylandDragContext;
+
+gboolean WindowDragMotionHandler(GtkWidget* aWidget,
+                                 GdkDragContext* aDragContext,
+                                 nsWaylandDragContext* aWaylandDragContext,
+                                 gint aX, gint aY, guint aTime);
+gboolean WindowDragDropHandler(GtkWidget* aWidget, GdkDragContext* aDragContext,
+                               nsWaylandDragContext* aWaylandDragContext,
+                               gint aX, gint aY, guint aTime);
+void WindowDragLeaveHandler(GtkWidget* aWidget);
+#endif
 
 class gfxPattern;
 class nsIFrame;
@@ -142,8 +148,7 @@ class nsWindow final : public nsBaseWidget {
   virtual LayoutDeviceIntRect GetClientBounds() override;
   virtual LayoutDeviceIntSize GetClientSize() override;
   virtual LayoutDeviceIntPoint GetClientOffset() override;
-  virtual void SetCursor(nsCursor aDefaultCursor, imgIContainer* aCursor,
-                         uint32_t aHotspotX, uint32_t aHotspotY) override;
+  virtual void SetCursor(const Cursor&) override;
   virtual void Invalidate(const LayoutDeviceIntRect& aRect) override;
   virtual void* GetNativeData(uint32_t aDataType) override;
   virtual nsresult SetTitle(const nsAString& aTitle) override;
@@ -376,7 +381,9 @@ class nsWindow final : public nsBaseWidget {
       const LayoutDeviceIntRegion& aRegion) override;
 
   // HiDPI scale conversion
-  gint GdkScaleFactor();
+  gint GdkCeiledScaleFactor();
+  bool UseFractionalScale();
+  double FractionalScaleFactor();
 
   // To GDK
   gint DevicePixelsToGdkCoordRoundUp(int pixels);
@@ -411,6 +418,13 @@ class nsWindow final : public nsBaseWidget {
   static bool GetTopLevelWindowActiveState(nsIFrame* aFrame);
   static bool TitlebarUseShapeMask();
 #ifdef MOZ_WAYLAND
+  LayoutDeviceIntPoint GetNativePointerLockCenter() {
+    return mNativePointerLockCenter;
+  }
+  virtual void SetNativePointerLockCenter(
+      const LayoutDeviceIntPoint& aLockCenter) override;
+  virtual void LockNativePointer() override;
+  virtual void UnlockNativePointer() override;
   virtual nsresult GetScreenRect(LayoutDeviceIntRect* aRect) override;
   virtual nsRect GetPreferredPopupRect() override {
     return mPreferredPopupRect;
@@ -463,11 +477,10 @@ class nsWindow final : public nsBaseWidget {
   bool mHandleTouchEvent;
   // true if this is a drag and drop feedback popup
   bool mIsDragPopup;
-  // Can we access X?
-  bool mIsX11Display;
 #ifdef MOZ_WAYLAND
   bool mNeedsCompositorResume;
   bool mCompositorInitiallyPaused;
+  LayoutDeviceIntPoint mNativePointerLockCenter;
 #endif
   bool mWindowScaleFactorChanged;
   int mWindowScaleFactor;
@@ -549,6 +562,8 @@ class nsWindow final : public nsBaseWidget {
 #endif
 #ifdef MOZ_WAYLAND
   RefPtr<mozilla::gfx::VsyncSource> mWaylandVsyncSource;
+  zwp_locked_pointer_v1* mLockedPointer;
+  zwp_relative_pointer_v1* mRelativePointer;
 #endif
 
   // Upper bound on pending ConfigureNotify events to be dispatched to the

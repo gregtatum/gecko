@@ -46,6 +46,21 @@ class HTMLEditUtils final {
     return aNode.IsEditable();
   }
 
+  /**
+   * IsNonEditableReplacedContent() returns true when aContent is an inclusive
+   * descendant of a replaced element whose content shouldn't be editable by
+   * user's operation.
+   */
+  static bool IsNonEditableReplacedContent(const nsIContent& aContent) {
+    for (Element* element : aContent.InclusiveAncestorsOfType<Element>()) {
+      if (element->IsAnyOfHTMLElements(nsGkAtoms::select, nsGkAtoms::option,
+                                       nsGkAtoms::optgroup)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /*
    * IsRemovalNode() returns true when parent of aContent is editable even
    * if aContent isn't editable.
@@ -245,6 +260,35 @@ class HTMLEditUtils final {
    */
   static bool IsInVisibleTextFrames(nsPresContext* aPresContext,
                                     dom::Text& aText);
+
+  /**
+   * IsEmptyNode() returns false if aNode has some visible content nodes,
+   * list elements or table elements.
+   *
+   * @param aPresContext    Must not be nullptr if
+   *                        EmptyCheckOption::SafeToAskLayout is set.
+   * @param aNode           The node to check whether it's empty.
+   * @param aOptions        You can specify which type of elements are visible
+   *                        and/or whether this can access layout information.
+   * @param aSeenBR         [Out] Set to true if this meets an <br> element
+   *                        before meething visible things.
+   */
+  enum class EmptyCheckOption {
+    TreatSingleBRElementAsVisible,
+    TreatListItemAsVisible,
+    TreatTableCellAsVisible,
+    SafeToAskLayout,
+  };
+  using EmptyCheckOptions = EnumSet<EmptyCheckOption, uint32_t>;
+  static bool IsEmptyNode(nsPresContext* aPresContext, nsINode& aNode,
+                          const EmptyCheckOptions& aOptions = {},
+                          bool* aSeenBR = nullptr);
+  static bool IsEmptyNode(nsINode& aNode,
+                          const EmptyCheckOptions& aOptions = {},
+                          bool* aSeenBR = nullptr) {
+    MOZ_ASSERT(!aOptions.contains(EmptyCheckOption::SafeToAskLayout));
+    return IsEmptyNode(nullptr, aNode, aOptions, aSeenBR);
+  }
 
   /**
    * IsPointAtEdgeOfLink() returns true if aPoint is at start or end of a

@@ -13,7 +13,7 @@
 <body>
 <script>
 const {HTTPS_REMOTE_ORIGIN} = get_host_info();
-const SAME_ORIGIN = document.location.host;
+const SAME_ORIGIN = location.origin;
 let destUrl = `${HTTPS_REMOTE_ORIGIN}/resource-timing/resources/multi_redirect.py?`;
 destUrl += `page_origin=http://${SAME_ORIGIN}`;
 destUrl += `&cross_origin=${HTTPS_REMOTE_ORIGIN}`;
@@ -22,7 +22,7 @@ destUrl += '&tao_steps=3';
 destUrl += '&tao_value=' + SAME_ORIGIN;
 
 attribute_test(
-  () => load.image(destUrl),
+  load.image, destUrl,
   invariants.assert_cross_origin_redirected_resource,
   "Verify that cross origin resources' timings are not exposed when " +
   "same-origin=>cross-origin=>same-origin redirects have " +

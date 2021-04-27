@@ -78,7 +78,8 @@ browsertime-tp6:
                         firefox:
                             by-test-platform:
                                 linux.*shippable.*: [trunk, mozilla-beta]
-                                macos.*shippable-qr.*: [trunk, mozilla-beta]
+                                macosx1014-64-shippable-qr.*: [trunk]
+                                macosx1015.*shippable-qr.*: [trunk, mozilla-beta]
                                 windows10-64.*shippable.*: [trunk, mozilla-beta]
                                 default: []
                         default: []
@@ -139,8 +140,10 @@ browsertime-tp6-essential:
                     firefox:
                         by-test-platform:
                             linux.*shippable.*: ["trunk", "mozilla-beta"]
-                            macos.*shippable.*: ["trunk", "mozilla-beta"]
+                            macosx1014-64-shippable-qr.*: ["trunk"]
+                            macosx1015.*shippable.*: ["trunk", "mozilla-beta"]
                             windows10-64.*shippable.*: ["trunk", "mozilla-beta"]
+                            macosx1100.*shippable.*: ["mozilla-central", "mozilla-beta"]
                             default: []
                     default: []
     tier:
@@ -171,13 +174,17 @@ browsertime-benchmark:
                     firefox:
                         by-subtest:
                             motionmark-animometer: 1
+                            unity-webgl: 3
                             default:
                                 by-test-platform:
                                     windows10-64-ref-hw-2017/opt: 2
                                     windows10-64-ccov.*/.*: 3
                                     linux64-ccov.*/.*: 3
                                     default: 2
-                    default: 2
+                    default:
+                        by-subtest:
+                            unity-webgl: 3
+                            default: 2
     run-on-projects:
         by-variant:
             fission:
@@ -208,7 +215,8 @@ browsertime-benchmark:
                                 by-test-platform:
                                     (linux|windows|macos)(?!.*shippable).*: []
                                     linux.*shippable.*: ["trunk", "mozilla-beta"]
-                                    macos.*shippable.*: ["trunk", "mozilla-beta"]
+                                    macosx1014-64-shippable-qr.*: ["trunk"]
+                                    macosx1015.*shippable.*: ["trunk", "mozilla-beta"]
                                     windows10-64.*shippable.*: ["trunk", "mozilla-beta"]
                                     default: []
                             default: []
@@ -251,14 +259,16 @@ browsertime-benchmark-wasm:
             fission:
                 by-test-platform:
                     windows.*-32.*: []
+                    macosx1014.*: []
                     default: [mozilla-central]
             default:
                 by-app:
                     firefox:
                         by-test-platform:
+                            macosx1014.*: []
                             (linux|windows|macos)(?!.*shippable).*: []
                             linux.*shippable.*: ["trunk", "mozilla-beta"]
-                            macos.*shippable.*: ["trunk", "mozilla-beta"]
+                            macosx1015.*shippable.*: ["trunk", "mozilla-beta"]
                             windows10-64.*shippable.*: ["trunk", "mozilla-beta"]
                             default: []
                     default: []
@@ -327,6 +337,7 @@ browsertime-tp6-live-sheriffed:
                 by-test-platform:
                     (linux|windows10-64|macos)(?!.*shippable).*: []
                     windows.*-32.*shippable.*: []
+                    macosx1014.*: []
                     default: [autoland]
     tier: 2
     treeherder-symbol: Btime-live(tp6)

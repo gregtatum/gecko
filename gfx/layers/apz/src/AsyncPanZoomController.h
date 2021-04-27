@@ -514,6 +514,9 @@ class AsyncPanZoomController {
   // overscroll-behavior).
   ScrollDirections GetAllowedHandoffDirections() const;
 
+  // Return the directions in which this APZC allows overscrolling.
+  ScrollDirections GetOverscrollableDirections() const;
+
   // Return whether or not a scroll delta will be able to scroll in either
   // direction.
   bool CanScroll(const ParentLayerPoint& aDelta) const;
@@ -637,6 +640,7 @@ class AsyncPanZoomController {
   nsEventStatus OnPanMomentumStart(const PanGestureInput& aEvent);
   nsEventStatus OnPanMomentumEnd(const PanGestureInput& aEvent);
   nsEventStatus HandleEndOfPan();
+  nsEventStatus OnPanInterrupted(const PanGestureInput& aEvent);
 
   /**
    * Helper methods for handling scroll wheel events.
@@ -1469,9 +1473,6 @@ class AsyncPanZoomController {
   // Start an overscroll animation with the given initial velocity.
   void StartOverscrollAnimation(const ParentLayerPoint& aVelocity,
                                 SideBits aOverscrollSideBits);
-
-  // Return the directions in which this APZC allows overscrolling.
-  ScrollDirections GetOverscrollableDirections() const;
 
   // Start a smooth-scrolling animation to the given destination, with physics
   // based on the prefs for the indicated origin.

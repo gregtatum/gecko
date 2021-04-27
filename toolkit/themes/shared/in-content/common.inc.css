@@ -11,7 +11,7 @@
   --in-content-page-color: rgb(21, 20, 26);
   --in-content-page-background: #fff;
   --in-content-text-color: var(--in-content-page-color);
-  --in-content-deemphasized-text: var(--grey-60);
+  --in-content-deemphasized-text: rgb(91, 91, 102);
   --in-content-box-background: #fff;
   --in-content-box-background-odd: rgba(12, 12, 13, 0.05); /* grey 90 a05 */
   --in-content-box-border-color: rgb(143, 143, 157);
@@ -26,6 +26,7 @@
   --in-content-border-hover: var(--grey-90-a50);
   --in-content-border-invalid: var(--red-50);
   --in-content-border-color: #d7d7db;
+  --in-content-error-text-color: #c50042;
   --in-content-link-color: var(--blue-60);
   --in-content-link-color-hover: var(--blue-70);
   --in-content-link-color-active: var(--blue-80);
@@ -149,6 +150,8 @@
     --in-content-border-color: rgba(249,249,250,0.2);
     --in-content-border-hover: rgba(249,249,250,0.3);
     --in-content-border-invalid: rgb(255,132,139);
+
+    --in-content-error-text-color: #FF9AA2;
 
     --in-content-button-background: rgb(43,42,51);
     --in-content-button-background-hover: rgb(82,82,94);
@@ -588,13 +591,13 @@ xul|menulist > xul|menupopup {
   border: 1px solid var(--in-content-box-border-color);
   border-radius: 2px;
   background-color: var(--in-content-box-background);
+  color: var(--in-content-text-color);
 }
 
 xul|menulist > xul|menupopup xul|menu,
 xul|menulist > xul|menupopup xul|menuitem {
   appearance: none;
   font-size: 1em;
-  color: var(--in-content-text-color);
   padding-block: 0.2em;
   padding-inline: 10px 30px;
 }

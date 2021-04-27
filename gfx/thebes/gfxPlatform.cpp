@@ -61,6 +61,7 @@
 #endif
 
 #include "nsXULAppAPI.h"
+#include "nsIXULAppInfo.h"
 #include "nsDirectoryServiceUtils.h"
 #include "nsDirectoryServiceDefs.h"
 
@@ -1986,6 +1987,12 @@ void gfxPlatform::InitBackendPrefs(BackendPrefsData&& aPrefsData) {
     mSoftwareBackend = BackendType::SKIA;
   }
 
+  // If we don't have a fallback canvas backend then use the same software
+  // fallback as content.
+  if (mFallbackCanvasBackend == BackendType::NONE) {
+    mFallbackCanvasBackend = mSoftwareBackend;
+  }
+
   if (XRE_IsParentProcess()) {
     gfxVars::SetContentBackend(mContentBackend);
     gfxVars::SetSoftwareBackend(mSoftwareBackend);
@@ -3303,6 +3310,14 @@ void gfxPlatform::NotifyCompositorCreated(LayersBackend aBackend) {
     Telemetry::ScalarSet(
         Telemetry::ScalarID::GFX_COMPOSITOR,
         NS_ConvertUTF8toUTF16(GetLayersBackendName(mCompositorBackend)));
+
+    nsCString geckoVersion;
+    nsCOMPtr<nsIXULAppInfo> app = do_GetService("@mozilla.org/xre/app-info;1");
+    if (app) {
+      app->GetVersion(geckoVersion);
+    }
+    Telemetry::ScalarSet(Telemetry::ScalarID::GFX_LAST_COMPOSITOR_GECKO_VERSION,
+                         NS_ConvertASCIItoUTF16(geckoVersion));
 
     Telemetry::ScalarSet(
         Telemetry::ScalarID::GFX_FEATURE_WEBRENDER,

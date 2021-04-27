@@ -385,7 +385,8 @@ class BrowserParent final : public PBrowserParent,
 
   mozilla::ipc::IPCResult RecvSetCursor(
       const nsCursor& aValue, const bool& aHasCustomCursor,
-      const nsCString& aUri, const uint32_t& aWidth, const uint32_t& aHeight,
+      const nsCString& aCursorData, const uint32_t& aWidth,
+      const uint32_t& aHeight, const float& aResolution,
       const uint32_t& aStride, const gfx::SurfaceFormat& aFormat,
       const uint32_t& aHotspotX, const uint32_t& aHotspotY, const bool& aForce);
 
@@ -411,6 +412,9 @@ class BrowserParent final : public PBrowserParent,
 
   mozilla::ipc::IPCResult RecvDispatchKeyboardEvent(
       const mozilla::WidgetKeyboardEvent& aEvent);
+
+  mozilla::ipc::IPCResult RecvDispatchTouchEvent(
+      const mozilla::WidgetTouchEvent& aEvent);
 
   mozilla::ipc::IPCResult RecvScrollRectIntoView(
       const nsRect& aRect, const ScrollAxis& aVertical,
@@ -542,6 +546,10 @@ class BrowserParent final : public PBrowserParent,
 
   mozilla::ipc::IPCResult RecvSynthesizeNativeTouchpadDoubleTap(
       const LayoutDeviceIntPoint& aPoint, const uint32_t& aModifierFlags);
+
+  mozilla::ipc::IPCResult RecvLockNativePointer();
+
+  mozilla::ipc::IPCResult RecvUnlockNativePointer();
 
   void SendMouseEvent(const nsAString& aType, float aX, float aY,
                       int32_t aButton, int32_t aClickCount, int32_t aModifiers);
@@ -790,6 +798,10 @@ class BrowserParent final : public PBrowserParent,
   // and have to ensure that the child did not modify links to be loaded.
   bool QueryDropLinksForVerification();
 
+  void UnlockNativePointer();
+
+  void UpdateNativePointerLockCenter(nsIWidget* aWidget);
+
  private:
   // This is used when APZ needs to find the BrowserParent associated with a
   // layer to dispatch events.
@@ -885,6 +897,7 @@ class BrowserParent final : public PBrowserParent,
   LayersObserverEpoch mLayerTreeEpoch;
 
   Maybe<LayoutDeviceToLayoutDeviceMatrix4x4> mChildToParentConversionMatrix;
+  Maybe<ScreenRect> mRemoteDocumentRect;
 
   nsIntRect mRect;
   ScreenIntSize mDimensions;
@@ -925,9 +938,7 @@ class BrowserParent final : public PBrowserParent,
 
   // Cached cursor setting from BrowserChild.  When the cursor is over the
   // tab, it should take this appearance.
-  nsCursor mCursor;
-  nsCOMPtr<imgIContainer> mCustomCursor;
-  uint32_t mCustomCursorHotspotX, mCustomCursorHotspotY;
+  nsIWidget::Cursor mCursor;
 
   nsTArray<nsString> mVerifyDropLinks;
 
@@ -975,6 +986,10 @@ class BrowserParent final : public PBrowserParent,
   // BrowserChild was not ready to handle it. We will resend it when the next
   // time we fire a mouse event and the BrowserChild is ready.
   bool mIsMouseEnterIntoWidgetEventSuppressed : 1;
+
+  // True after RecvLockNativePointer has been called and until
+  // UnlockNativePointer has been called.
+  bool mLockedNativePointer : 1;
 };
 
 struct MOZ_STACK_CLASS BrowserParent::AutoUseNewTab final {

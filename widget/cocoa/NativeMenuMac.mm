@@ -356,6 +356,10 @@ RefPtr<nsMenuX> NativeMenuMac::GetOpenMenuContainingElement(dom::Element* aEleme
     menu = menuChild->as<RefPtr<nsMenuX>>();
   }
 
+  if (!menu->IsOpenForGecko()) {
+    // Refuse to descend into closed menus.
+    return nullptr;
+  }
   return menu;
 }
 
@@ -376,7 +380,7 @@ static NSEventModifierFlags ConvertModifierFlags(Modifiers aModifiers) {
   return flags;
 }
 
-void NativeMenuMac::ActivateItem(dom::Element* aItemElement, Modifiers aModifiers,
+void NativeMenuMac::ActivateItem(dom::Element* aItemElement, Modifiers aModifiers, int16_t aButton,
                                  ErrorResult& aRv) {
   RefPtr<nsMenuX> menu = GetOpenMenuContainingElement(aItemElement);
   if (!menu) {
@@ -390,7 +394,7 @@ void NativeMenuMac::ActivateItem(dom::Element* aItemElement, Modifiers aModifier
   }
 
   mMenu->ActivateItemAndClose(std::move(item->as<RefPtr<nsMenuItemX>>()),
-                              ConvertModifierFlags(aModifiers));
+                              ConvertModifierFlags(aModifiers), aButton);
 }
 
 void NativeMenuMac::OpenSubmenu(dom::Element* aMenuElement) {

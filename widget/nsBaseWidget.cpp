@@ -156,7 +156,6 @@ nsBaseWidget::nsBaseWidget()
       mPreviouslyAttachedWidgetListener(nullptr),
       mLayerManager(nullptr),
       mCompositorVsyncDispatcher(nullptr),
-      mCursor(eCursor_standard),
       mBorderStyle(eBorderStyle_none),
       mBounds(0, 0, 0, 0),
       mOriginalBounds(nullptr),
@@ -524,6 +523,19 @@ CSSToLayoutDeviceScale nsIWidget::GetDefaultScale() {
   return CSSToLayoutDeviceScale(devPixelsPerCSSPixel);
 }
 
+nsIntSize nsIWidget::CustomCursorSize(const Cursor& aCursor) {
+  MOZ_ASSERT(aCursor.IsCustom());
+  int32_t width = 0;
+  int32_t height = 0;
+  aCursor.mContainer->GetWidth(&width);
+  aCursor.mContainer->GetHeight(&height);
+  if (aCursor.mResolution != 0.0f && aCursor.mResolution != 1.0f) {
+    width = std::round(float(width) / aCursor.mResolution);
+    height = std::round(float(height) / aCursor.mResolution);
+  }
+  return {width, height};
+}
+
 //-------------------------------------------------------------------------
 //
 // Add a child to the list of children
@@ -655,11 +667,7 @@ void nsBaseWidget::MoveToWorkspace(const nsAString& workspaceID) {
 //
 //-------------------------------------------------------------------------
 
-void nsBaseWidget::SetCursor(nsCursor aCursor, imgIContainer*, uint32_t,
-                             uint32_t) {
-  // We don't support the cursor image.
-  mCursor = aCursor;
-}
+void nsBaseWidget::SetCursor(const Cursor& aCursor) { mCursor = aCursor; }
 
 //-------------------------------------------------------------------------
 //
@@ -1075,10 +1083,10 @@ void nsBaseWidget::DispatchTouchInput(MultiTouchInput& aInput) {
       return;
     }
 
-    WidgetTouchEvent event = aInput.ToWidgetTouchEvent(this);
+    WidgetTouchEvent event = aInput.ToWidgetEvent(this);
     ProcessUntransformedAPZEvent(&event, result);
   } else {
-    WidgetTouchEvent event = aInput.ToWidgetTouchEvent(this);
+    WidgetTouchEvent event = aInput.ToWidgetEvent(this);
 
     nsEventStatus status;
     DispatchEvent(&event, status);
@@ -1149,6 +1157,15 @@ nsIWidget::ContentAndAPZEventStatus nsBaseWidget::DispatchInputEvent(
       RefPtr<Runnable> r =
           new DispatchInputOnControllerThread<MouseInput, WidgetMouseEvent>(
               *mouseEvent, mAPZC, this);
+      APZThreadUtils::RunOnControllerThread(std::move(r));
+      status.mContentStatus = nsEventStatus_eConsumeDoDefault;
+      return status;
+    }
+    if (WidgetTouchEvent* touchEvent = aEvent->AsTouchEvent()) {
+      RefPtr<Runnable> r =
+          new DispatchInputOnControllerThread<MultiTouchInput,
+                                              WidgetTouchEvent>(*touchEvent,
+                                                                mAPZC, this);
       APZThreadUtils::RunOnControllerThread(std::move(r));
       status.mContentStatus = nsEventStatus_eConsumeDoDefault;
       return status;

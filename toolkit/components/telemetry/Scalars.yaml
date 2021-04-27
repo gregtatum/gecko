@@ -3689,6 +3689,21 @@ gfx:
     record_in_processes:
       - 'main'
     release_channel_collection: opt-out
+  last_compositor_gecko_version:
+    bug_numbers:
+      - 1704842
+    description: >
+      The gecko version at the last time a compositor was initialized.
+    expires: never
+    kind: string
+    notification_emails:
+      - jnicol@mozilla.com
+      - gfx-telemetry-alerts@mozilla.com
+    products:
+      - 'geckoview_streaming'
+    record_in_processes:
+      - 'main'
+    release_channel_collection: opt-out
   headless:
     bug_numbers:
       - 1594145
@@ -5441,9 +5456,10 @@ encoding:
       - 1554592
       - 1603047
       - 1648464
+      - 1706838
     description: >-
       Whether an item other than Automatic in the Text Encoding menu was used to override an encoding in this subsession.
-    expires: "91"
+    expires: "96"
     kind: boolean
     notification_emails:
       - hsivonen@mozilla.com
@@ -5457,9 +5473,10 @@ encoding:
   override_used_automatic:
     bug_numbers:
       - 1648464
+      - 1706838
     description: >-
       Whether the item Automatic in the Text Encoding menu was used to override an encoding in this subsession.
-    expires: "91"
+    expires: "96"
     kind: boolean
     notification_emails:
       - hsivonen@mozilla.com
@@ -7593,6 +7610,15 @@ telemetry.test:
     expires: never
     kind: boolean
     keyed: true
+    notification_emails: [glean-team@mozilla.com]
+    products: ["firefox", "thunderbird"]
+    record_in_processes: ["all"]
+
+  mirror_for_quantity:
+    bug_numbers: [1704846]
+    description: Test only. This is a mirror probe for a Glean quantity metric.
+    expires: never
+    kind: uint
     notification_emails: [glean-team@mozilla.com]
     products: ["firefox", "thunderbird"]
     record_in_processes: ["all"]

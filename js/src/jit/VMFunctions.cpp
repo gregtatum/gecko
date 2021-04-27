@@ -1837,11 +1837,12 @@ static MOZ_ALWAYS_INLINE bool GetNativeDataPropertyPure(JSContext* cx,
 
   while (true) {
     if (Shape* shape = obj->lastProperty()->search(cx, id)) {
-      if (!shape->isDataProperty()) {
+      ShapeProperty prop = shape->property();
+      if (!prop.isDataProperty()) {
         return false;
       }
 
-      *vp = obj->getSlot(shape->slot());
+      *vp = obj->getSlot(prop.slot());
       return true;
     }
 
@@ -1940,11 +1941,16 @@ bool SetNativeDataPropertyPure(JSContext* cx, JSObject* obj, PropertyName* name,
 
   NativeObject* nobj = &obj->as<NativeObject>();
   Shape* shape = nobj->lastProperty()->search(cx, NameToId(name));
-  if (!shape || !shape->isDataProperty() || !shape->writable()) {
+  if (!shape) {
     return false;
   }
 
-  nobj->setSlot(shape->slot(), *val);
+  ShapeProperty prop = shape->property();
+  if (!prop.isDataProperty() || !prop.writable()) {
+    return false;
+  }
+
+  nobj->setSlot(prop.slot(), *val);
   return true;
 }
 
@@ -1962,11 +1968,11 @@ bool ObjectHasGetterSetterPure(JSContext* cx, JSObject* objArg, jsid id,
 
   while (true) {
     if (Shape* shape = nobj->lastProperty()->search(cx, id)) {
-      if (!shape->isAccessorDescriptor()) {
+      ShapeProperty prop = shape->property();
+      if (!prop.isAccessorProperty()) {
         return false;
       }
-      GetterSetter* actualGetterSetter =
-          nobj->getGetterSetter(ShapeProperty(shape));
+      GetterSetter* actualGetterSetter = nobj->getGetterSetter(prop);
       if (actualGetterSetter == getterSetter) {
         return true;
       }

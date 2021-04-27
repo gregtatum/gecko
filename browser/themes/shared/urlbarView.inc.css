@@ -109,7 +109,7 @@
 }
 
 #urlbar[open] > .urlbarView > .urlbarView-body-outer > .urlbarView-body-inner {
-  border-top: 1px solid var(--urlbar-separator-color);
+  border-top: 1px solid var(--autocomplete-popup-separator-color);
 }
 
 .urlbarView-results {
@@ -618,7 +618,8 @@
 .urlbarView-row[selected] > .urlbarView-row-inner > .urlbarView-no-wrap >.urlbarView-action,
 .urlbarView-row[selected] > .urlbarView-row-inner > .urlbarView-url,
 .urlbarView-row-inner[selected] > .urlbarView-no-wrap >.urlbarView-action,
-.urlbarView-row-inner[selected] > .urlbarView-url {
+.urlbarView-row-inner[selected] > .urlbarView-url,
+.urlbarView-row[type=tabtosearch][selected] > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-favicon {
   color: inherit;
 }
 
@@ -697,13 +698,12 @@
 }
 
 .urlbarView:not([noresults]) > .search-one-offs:not([hidden]) {
-  border-top: 1px solid var(--panel-separator-color);
+  border-top: 1px solid var(--autocomplete-popup-separator-color);
 }
 
 @media (-moz-proton) {
 #urlbar .search-one-offs:not([hidden]) {
   padding-block: 6px;
-  border-top-color: var(--urlbar-separator-color);
 }
 
 :root[uidensity=touch] #urlbar .search-one-offs:not([hidden]) {

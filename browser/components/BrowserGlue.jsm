@@ -46,7 +46,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   E10SUtils: "resource://gre/modules/E10SUtils.jsm",
   Engagement: "resource:///modules/Engagement.jsm",
   ExtensionsUI: "resource:///modules/ExtensionsUI.jsm",
-  ExperimentAPI: "resource://nimbus/ExperimentAPI.jsm",
   FeatureGate: "resource://featuregates/FeatureGate.jsm",
   FirefoxMonitor: "resource:///modules/FirefoxMonitor.jsm",
   FxAccounts: "resource://gre/modules/FxAccounts.jsm",
@@ -209,21 +208,6 @@ let JSWINDOWACTORS = {
       },
     },
     matches: ["about:logins", "about:logins?*", "about:loginsimportreport"],
-  },
-
-  AboutNewInstall: {
-    parent: {
-      moduleURI: "resource:///actors/AboutNewInstallParent.jsm",
-    },
-    child: {
-      moduleURI: "resource:///actors/AboutNewInstallChild.jsm",
-
-      events: {
-        DOMWindowCreated: { capture: true },
-      },
-    },
-
-    matches: ["about:newinstall"],
   },
 
   AboutNewTab: {
@@ -2125,27 +2109,6 @@ BrowserGlue.prototype = {
     Services.wm.addListener(windowListener);
   },
 
-  _showNewInstallModal() {
-    // Allow other observers of the same topic to run while we open the dialog.
-    Services.tm.dispatchToMainThread(() => {
-      let win = BrowserWindowTracker.getTopWindow();
-
-      let stack = win.gBrowser.getPanel().querySelector(".browserStack");
-      let mask = win.document.createXULElement("box");
-      mask.setAttribute("id", "content-mask");
-      stack.appendChild(mask);
-
-      Services.ww.openWindow(
-        win,
-        "chrome://browser/content/newInstall.xhtml",
-        "_blank",
-        "chrome,modal,resizable=no,centerscreen",
-        null
-      );
-      mask.remove();
-    });
-  },
-
   // All initial windows have opened.
   _onWindowsRestored: function BG__onWindowsRestored() {
     if (this._windowsWereRestored) {
@@ -2218,13 +2181,6 @@ BrowserGlue.prototype = {
     this._monitorHTTPSOnlyPref();
     this._monitorIonPref();
     this._monitorIonStudies();
-
-    let pService = Cc["@mozilla.org/toolkit/profile-service;1"].getService(
-      Ci.nsIToolkitProfileService
-    );
-    if (pService.createdAlternateProfile) {
-      this._showNewInstallModal();
-    }
 
     FirefoxMonitor.init();
   },
@@ -3848,38 +3804,20 @@ BrowserGlue.prototype = {
       return;
     }
 
-    // Determine if the modal prompt or infobar message should be shown.
-    const [willPrompt] = await Promise.all([
-      DefaultBrowserCheck.willCheckDefaultBrowser(/* isStartupCheck */ true),
-      ExperimentAPI.ready(),
-    ]);
-    let { DefaultBrowserNotification } = ChromeUtils.import(
-      "resource:///actors/AboutNewTabParent.jsm",
-      {}
+    const willPrompt = await DefaultBrowserCheck.willCheckDefaultBrowser(
+      /* isStartupCheck */ true
     );
-    let isFeatureEnabled = ExperimentAPI.getExperiment({
-      featureId: "infobar",
-    })?.branch.feature.enabled;
     if (willPrompt) {
-      // Prevent the related notification from appearing and
-      // show the modal prompt.
-      DefaultBrowserNotification.notifyModalDisplayed();
-    }
-    // If no experiment go ahead with default experience
-    if (willPrompt && !isFeatureEnabled) {
       let win = BrowserWindowTracker.getTopWindow();
       DefaultBrowserCheck.prompt(win);
     }
-    // If in experiment notify ASRouter to dispatch message
-    if (isFeatureEnabled) {
-      await ASRouter.waitForInitialized;
-      ASRouter.sendTriggerMessage({
-        browser: BrowserWindowTracker.getTopWindow()?.gBrowser.selectedBrowser,
-        // triggerId and triggerContext
-        id: "defaultBrowserCheck",
-        context: { willShowDefaultPrompt: willPrompt },
-      });
-    }
+    await ASRouter.waitForInitialized;
+    ASRouter.sendTriggerMessage({
+      browser: BrowserWindowTracker.getTopWindow()?.gBrowser.selectedBrowser,
+      // triggerId and triggerContext
+      id: "defaultBrowserCheck",
+      context: { willShowDefaultPrompt: willPrompt, source: "startup" },
+    });
   },
 
   /**
@@ -4708,14 +4646,7 @@ var DefaultBrowserCheck = {
     }
 
     let shouldCheck =
-      !AppConstants.DEBUG &&
-      shellService.shouldCheckDefaultBrowser &&
-      // Ignore notificationbar pref if proton to show the prompt.
-      (Services.prefs.getBoolPref("browser.proton.enabled", true) ||
-        !Services.prefs.getBoolPref(
-          "browser.defaultbrowser.notificationbar",
-          false
-        ));
+      !AppConstants.DEBUG && shellService.shouldCheckDefaultBrowser;
 
     // Even if we shouldn't check the default browser, we still continue when
     // isStartupCheck = true to set prefs and telemetry.

@@ -105,22 +105,22 @@
   border-radius: var(--toolbarbutton-border-radius);
 }
 
-@supports -moz-bool-pref("browser.proton.urlbar.enabled") {
+@media (-moz-proton) {
 #urlbar-label-box {
   background-color: var(--urlbar-box-bg-overlay);
 }
 } /*** END proton ***/
 
-@supports not -moz-bool-pref("browser.proton.urlbar.enabled") {
+@media not (-moz-proton) {
 #urlbar-label-box {
-  border-inline-end: 1px solid var(--urlbar-separator-color);
-  border-image: linear-gradient(transparent 15%, var(--urlbar-separator-color) 15%, var(--urlbar-separator-color) 85%, transparent 85%);
+  border-inline-end: 1px solid var(--autocomplete-popup-separator-color);
+  border-image: linear-gradient(transparent 15%, var(--autocomplete-popup-separator-color) 15%, var(--autocomplete-popup-separator-color) 85%, transparent 85%);
   border-image-slice: 1;
 }
 
 #urlbar-label-box {
   padding-inline: 4px;
-  border-inline-start: 1px solid var(--urlbar-separator-color);
+  border-inline-start: 1px solid var(--autocomplete-popup-separator-color);
   border-radius: 0;
 }
 
