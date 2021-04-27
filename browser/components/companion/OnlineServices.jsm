@@ -157,7 +157,8 @@ class GoogleService {
     apiTarget.searchParams.set("timeMin", new Date().toISOString());
     // If we want to reduce the window, we can just make
     // timeMax an hour from now.
-    let midnight = new Date().setHours(24, 0, 0, 0);
+    let midnight = new Date();
+    midnight.setHours(24, 0, 0, 0);
     apiTarget.searchParams.set("timeMax", midnight.toISOString());
 
     let headers = {
