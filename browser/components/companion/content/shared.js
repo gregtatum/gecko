@@ -74,9 +74,7 @@ Characters per second: ${
     );
 
     if (this.data.lastVisit) {
-      target.querySelector(".last-access").textContent = timeFormat.format(
-        this.data.lastVisit
-      );
+      target.querySelector(".last-access").textContent = timeSince(this.data.lastVisit);
     }
   }
 
@@ -149,6 +147,30 @@ export const timeFormat = new Intl.DateTimeFormat([], {
 export const dateFormat = new Intl.DateTimeFormat([], {
   dateStyle: "short",
 });
+
+function timeSince(date) {
+  let seconds = Math.floor((new Date() - date) / 1000);
+  let interval = seconds / 31536000;
+  let rtf = new Intl.RelativeTimeFormat("en", {
+    style: "short",
+    numeric: "auto",
+  });
+
+  interval = seconds / 86400;
+  if (interval > 1) {
+    return rtf.format(-Math.floor(interval), "day");
+  }
+  interval = Math.floor(seconds / 3600);
+  if (interval > 1) {
+    return Math.floor(interval) + "hr ago";
+  }
+  interval = Math.floor(seconds / 60);
+  if (interval > 1) {
+    // rtf.format will format this as "5 min. ago"
+    return Math.floor(interval) + "m ago";
+  }
+  return "now";
+}
 
 async function getPreviewImageURL(url) {
   let placesDbPath = OS.Path.join(

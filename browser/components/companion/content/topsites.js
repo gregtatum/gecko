@@ -24,8 +24,11 @@ const NUM_TOPSITES = 4;
 
 function formatName(url) {
   let shortName = shortURL({ url });
-  if (shortName.endsWith(".google")) {
-    shortName = shortName.slice(0, -7);
+  const PREFIXES = [".google", ".mozilla"];
+  for (const prefix of PREFIXES) {
+    if (shortName.endsWith(prefix)) {
+      shortName = shortName.slice(0, prefix.length);
+    }
   }
   return shortName;
 }
