@@ -163,7 +163,7 @@ const PREF_URLBAR_DEFAULTS = new Map([
   ["suggest.calculator", false],
 
   // Whether results will include the user's bookmarks.
-  ["suggest.commands", false],
+  ["suggest.commands", true],
 
   // Whether results will include QuickSuggest suggestions.
   ["suggest.quicksuggest", true],
