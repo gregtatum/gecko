@@ -39,9 +39,11 @@ class Event extends HTMLElement {
       .addEventListener("click", () => this.openCalendar());
 
     if (this.data.conference) {
-      fragment.querySelector(
-        ".conference-icon"
-      ).src = this.data.conference.icon;
+      if (this.data.conference.icon) {
+        fragment.querySelector(
+          ".conference-icon"
+        ).src = this.data.conference.icon;
+      }
       fragment.querySelector(
         ".conference-label"
       ).textContent = this.data.conference.name;

@@ -19,24 +19,34 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 Cu.importGlobalProperties(["fetch"]);
 
 function getConferenceInfo(result) {
-  if (!result.conferenceData?.conferenceSolution) {
-    return null;
-  }
+  if (result.conferenceData?.conferenceSolution) {
+    let base = {
+      icon: result.conferenceData.conferenceSolution.iconUri,
+      name: result.conferenceData.conferenceSolution.name,
+    };
 
-  let base = {
-    icon: result.conferenceData.conferenceSolution.iconUri,
-    name: result.conferenceData.conferenceSolution.name,
-  };
-
-  for (let entry of result.conferenceData.entryPoints) {
-    if (entry.uri.startsWith("https:")) {
-      return {
-        ...base,
-        url: entry.uri,
-      };
+    for (let entry of result.conferenceData.entryPoints) {
+      if (entry.uri.startsWith("https:")) {
+        return {
+          ...base,
+          url: entry.uri,
+        };
+      }
+    }
+  } else if (result.location) {
+    try {
+      let locationURL = new URL(result.location);
+      if (locationURL.hostname.endsWith(".zoom.us")) {
+        return {
+          icon: "chrome://browser/content/companion/zoom.png",
+          name: "Zoom Meeting",
+          url: result.location,
+        };
+      }
+    } catch (e) {
+      // Location was not a URL, just ignore
     }
   }
-
   return null;
 }
 
@@ -152,7 +162,9 @@ class GoogleService {
     apiTarget.searchParams.set("maxResults", 5);
     apiTarget.searchParams.set("orderBy", "startTime");
     apiTarget.searchParams.set("singleEvents", "true");
-    apiTarget.searchParams.set("timeMin", new Date().toISOString());
+    let oneHourAgo = new Date();
+    oneHourAgo.setHours(oneHourAgo.getHours() - 2);
+    apiTarget.searchParams.set("timeMin", oneHourAgo.toISOString());
     // If we want to reduce the window, we can just make
     // timeMax an hour from now.
     let midnight = new Date();

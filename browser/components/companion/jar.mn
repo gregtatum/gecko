@@ -27,3 +27,4 @@ browser.jar:
     content/browser/companion/next.svg (content/next.svg)
     content/browser/companion/dock.svg (content/dock.svg)
     content/browser/companion/undock.svg (content/undock.svg)
+    content/browser/companion/zoom.png (content/zoom.png)
