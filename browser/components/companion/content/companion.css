@@ -289,7 +289,6 @@ h2 {
 #sticky {
   position: sticky;
   top: 0;
-  background: var(--in-content-page-background);
   z-index: 1;
   padding-left: 10px;
 }
