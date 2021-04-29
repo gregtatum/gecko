@@ -10,7 +10,7 @@ import { openUrl } from "./shared.js";
 const NUM_POCKET_STORIES = 3;
 
 const POCKET_IMG_URL =
-  "https://img-getpocket.cdn.mozilla.net/158x96/filters:format(jpeg):quality(60):no_upscale():strip_exif()/";
+  "https://img-getpocket.cdn.mozilla.net/158x96/filters:format(jpeg):quality(100):no_upscale():strip_exif()/";
 
 export class PocketStory extends HTMLElement {
   constructor(data) {
