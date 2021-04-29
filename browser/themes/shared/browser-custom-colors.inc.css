@@ -34,7 +34,7 @@
     --arrowpanel-dimmed-further: color-mix(in srgb, currentColor 20%, transparent);
     --arrowpanel-dimmed-even-further: color-mix(in srgb, currentColor 27%, transparent);
 
-    --error-text-color: #C50042;
+    --error-text-color: rgb(197,0,66);
 
     --input-color: rgb(21,20,26);
     --input-bgcolor: rgb(255,255,255);
@@ -46,14 +46,15 @@
     --tabs-border-color: transparent;
     --toolbar-color: rgb(21,20,26);
     --toolbar-non-lwt-bgcolor: #f9f9fb;
+    --toolbar-non-lwt-textcolor: rgb(21, 20, 26);
     --toolbarbutton-icon-fill: rgb(91,91,102);
 
-    --urlbar-popup-action-color: rgb(21,20,26);
+    --urlbar-popup-action-color: rgb(91,91,102);
     --urlbar-popup-url-color: rgb(0,97,224);
 
     --autocomplete-popup-separator-color: rgb(240,240,244);
     --toolbar-field-border-color: transparent;
-    --arrowpanel-border-color: transparent;
+    --arrowpanel-border-color: rgb(240,240,244);
     --chrome-content-separator-color: rgb(204,204,204);
 
     --toolbar-field-non-lwt-bgcolor: rgb(240,240,244);

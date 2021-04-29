@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* globals browser, log, util, catcher, inlineSelectionCss, callBackground, assertIsTrusted, assertIsBlankDocument, buildSettings blobConverters */
+/* globals browser, log, util, catcher, inlineSelectionCss, callBackground, assertIsTrusted, assertIsBlankDocument, blobConverters */
 
 "use strict";
 
@@ -56,19 +56,6 @@ this.ui = (function() {
       }),
       50
     );
-  }
-
-  function highContrastCheck(win) {
-    const doc = win.document;
-    const el = doc.createElement("div");
-    el.style.backgroundImage = "url('#')";
-    el.style.display = "none";
-    doc.body.appendChild(el);
-    const computed = win.getComputedStyle(el);
-    doc.body.removeChild(el);
-    // When Windows is in High Contrast mode, Firefox replaces background
-    // image URLs with the string "none".
-    return computed && computed.backgroundImage === "none";
   }
 
   function initializeIframe() {
@@ -150,9 +137,6 @@ this.ui = (function() {
       catcher.watchPromise(
         callBackground("sendEvent", "internal", "unhide-selection-frame")
       );
-      if (highContrastCheck(this.element.contentWindow)) {
-        this.element.contentDocument.body.classList.add("hcm");
-      }
       this.initSizeWatch();
       this.element.focus();
     },
@@ -362,9 +346,6 @@ this.ui = (function() {
       catcher.watchPromise(
         callBackground("sendEvent", "internal", "unhide-preselection-frame")
       );
-      if (highContrastCheck(this.element.contentWindow)) {
-        this.element.contentDocument.body.classList.add("hcm");
-      }
       this.element.focus();
     },
 

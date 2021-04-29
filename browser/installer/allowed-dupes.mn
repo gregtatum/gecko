@@ -109,10 +109,6 @@ chrome/toolkit/skin/classic/global/icons/find-previous-arrow.svg
 chrome/toolkit/skin/classic/global/icons/success.svg
 chrome/toolkit/skin/classic/global/icons/check.svg
 
-# Bug 1699631 - De-duplicate the stop/close icons
-browser/chrome/browser/skin/classic/browser/stop.svg
-chrome/toolkit/skin/classic/global/icons/close.svg
-
 # Bug 1706206 - De-duplicate storage icons
 browser/chrome/browser/skin/classic/browser/notification-icons/indexedDB.svg
 browser/chrome/browser/skin/classic/browser/notification-icons/persistent-storage.svg
@@ -132,3 +128,7 @@ browser/chrome/browser/skin/classic/browser/controlcenter/tracker-image-disabled
 browser/chrome/browser/skin/classic/browser/notification-icons/canvas-blocked.svg
 browser/chrome/browser/skin/classic/browser/controlcenter/fingerprinters.svg
 browser/chrome/browser/skin/classic/browser/notification-icons/webauthn.svg
+
+# Bug 1708008 - De-duplicate extension icons
+chrome/toolkit/skin/classic/mozapps/extensions/extension.svg
+chrome/toolkit/skin/classic/mozapps/extensions/extensionGeneric.svg

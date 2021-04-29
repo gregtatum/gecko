@@ -11,6 +11,7 @@ const { XPCOMUtils } = ChromeUtils.import(
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   AddonRepository: "resource://gre/modules/addons/AddonRepository.jsm",
+  AppConstants: "resource://gre/modules/AppConstants.jsm",
   AttributionCode: "resource:///modules/AttributionCode.jsm",
   Services: "resource://gre/modules/Services.jsm",
   ShellService: "resource:///modules/ShellService.jsm",
@@ -262,6 +263,7 @@ const DEFAULT_PROTON_WELCOME_CONTENT = {
           },
           action: {
             type: "SHOW_MIGRATION_WIZARD",
+            data: {},
             navigate: true,
           },
         },
@@ -410,10 +412,18 @@ function hasAMOAttribution(attributionData) {
 
 async function formatAttributionData(attribution) {
   if (hasAMOAttribution(attribution)) {
-    let extraProps = await getAddonInfo(attribution);
-    if (extraProps) {
-      return extraProps;
+    let addonInfo = await getAddonInfo(attribution);
+    if (addonInfo) {
+      return {
+        hasAMOAttribution: true,
+        ...addonInfo,
+      };
     }
+  }
+  if (attribution?.ua) {
+    return {
+      ua: decodeURIComponent(attribution.ua),
+    };
   }
   return null;
 }
@@ -422,9 +432,11 @@ async function getAttributionContent() {
   let attributionContent = await formatAttributionData(
     await AttributionCode.getAttrDataAsync()
   );
-
+  // We check for AMO attribution here to add the right template
   if (attributionContent) {
-    return { ...attributionContent, template: "return_to_amo" };
+    return attributionContent.hasAMOAttribution
+      ? { ...attributionContent, template: "return_to_amo" }
+      : attributionContent;
   }
 
   return null;
@@ -435,8 +447,7 @@ const RULES = [
     description: "Proton Default AW content",
     async getDefaults(featureConfig) {
       if (featureConfig?.isProton) {
-        const content = { ...DEFAULT_PROTON_WELCOME_CONTENT };
-
+        let content = Cu.cloneInto(DEFAULT_PROTON_WELCOME_CONTENT, {});
         // Switch to "primary" if we also need to pin.
         if (await ShellService.doesAppNeedPin()) {
           content.screens[0].content.primary_button.label.string_id =
@@ -524,6 +535,47 @@ const RULES = [
   },
 ];
 
+function prepareContentForReact(content) {
+  if (content.isProton) {
+    content.design = "proton";
+  }
+
+  if (content.template === "return_to_amo") {
+    return content;
+  }
+
+  // Set the primary import button source based on attribution.
+  if (content.ua) {
+    // This check will make sure that we add the source correctly
+    // whether or not 'data: {source: ""}' is in the JSON
+    const { action } =
+      content.screens?.find(
+        screen =>
+          screen?.content?.primary_button?.action?.type ===
+          "SHOW_MIGRATION_WIZARD"
+      )?.content.primary_button ?? {};
+    if (action) {
+      action.data = { ...action.data, source: content.ua };
+    }
+  }
+
+  // Change content for Windows 7 because non-light themes aren't quite right.
+  if (AppConstants.isPlatformAndVersionAtMost("win", "6.1")) {
+    const { screens } = content;
+    let removed = 0;
+    for (let i = 0; i < screens?.length; i++) {
+      if (screens[i].content?.tiles?.type === "theme") {
+        screens.splice(i--, 1);
+        removed++;
+      } else if (screens[i].order) {
+        screens[i].order -= removed;
+      }
+    }
+  }
+
+  return content;
+}
+
 async function getDefaults(featureConfig) {
   for (const rule of RULES) {
     const result = await rule.getDefaults(featureConfig);
@@ -535,6 +587,7 @@ async function getDefaults(featureConfig) {
 }
 
 const AboutWelcomeDefaults = {
+  prepareContentForReact,
   getDefaults,
   getAttributionContent,
 };

@@ -406,33 +406,32 @@ const TEST_DATA = [
         queryString: "now to utc",
         timezone: "EST5EDT",
         assertResult: output => {
+          const outputRegexResult = /([0-9]+):([0-9]+)/.exec(output);
+          const outputMinutes =
+            parseInt(outputRegexResult[1]) * 60 +
+            parseInt(outputRegexResult[2]);
           const nowDate = new Date();
-          nowDate.setUTCMinutes(nowDate.getUTCMinutes() + 60 * 4);
-          const outputRegexResult = /([0-2]?[0-9]):([0-5][0-9])/.exec(output);
-          const outputDate = new Date();
-          outputDate.setUTCFullYear(nowDate.getUTCFullYear());
-          outputDate.setUTCMonth(nowDate.getUTCMonth());
-          outputDate.setUTCDate(nowDate.getUTCDate());
-          outputDate.setUTCHours(parseInt(outputRegexResult[1]));
-          outputDate.setUTCMinutes(parseInt(outputRegexResult[2]));
-
-          // The timing that output was evaluated is different,
-          // we have a buffer (1sec) for it, just to be safe.
-          Assert.ok(outputDate.getTime() <= nowDate.getTime() + 1000);
+          let nowMinutes = nowDate.getUTCHours() * 60 + nowDate.getUTCMinutes();
+          // When we cross the day between the unit converter calculation and the
+          // assertion here.
+          nowMinutes =
+            outputMinutes > nowMinutes ? nowMinutes + 1440 : nowMinutes;
+          Assert.lessOrEqual(nowMinutes - outputMinutes, 1);
         },
       },
       {
         queryString: "now to here",
+        timezone: "EST5EDT",
         assertResult: output => {
+          const outputRegexResult = /([0-9]+):([0-9]+)/.exec(output);
+          const outputMinutes =
+            parseInt(outputRegexResult[1]) * 60 +
+            parseInt(outputRegexResult[2]);
           const nowDate = new Date();
-          const outputRegexResult = /([0-2]?[0-9]):([0-5][0-9])/.exec(output);
-          const outputDate = new Date();
-          outputDate.setUTCFullYear(nowDate.getUTCFullYear());
-          outputDate.setUTCMonth(nowDate.getUTCMonth());
-          outputDate.setUTCDate(nowDate.getUTCDate());
-          outputDate.setUTCHours(parseInt(outputRegexResult[1]));
-          outputDate.setUTCMinutes(parseInt(outputRegexResult[2]));
-          Assert.ok(outputDate.getTime() <= nowDate.getTime() + 1000);
+          let nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
+          nowMinutes =
+            outputMinutes > nowMinutes ? nowMinutes + 1440 : nowMinutes;
+          Assert.lessOrEqual(nowMinutes - outputMinutes, 1);
         },
       },
     ],

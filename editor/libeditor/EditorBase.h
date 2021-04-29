@@ -1681,10 +1681,10 @@ class EditorBase : public nsIEditor,
    *                        will append the element to the container.
    *                        Otherwise, will insert the element before the
    *                        child node referred by this.
-   * @return                The created new element node.
+   * @return                The created new element node or an error.
    */
-  MOZ_CAN_RUN_SCRIPT already_AddRefed<Element> CreateNodeWithTransaction(
-      nsAtom& aTag, const EditorDOMPoint& aPointToInsert);
+  MOZ_CAN_RUN_SCRIPT Result<RefPtr<Element>, nsresult>
+  CreateNodeWithTransaction(nsAtom& aTag, const EditorDOMPoint& aPointToInsert);
 
   /**
    * DeleteTextWithTransaction() removes text in the range from aTextNode.
@@ -1723,122 +1723,6 @@ class EditorBase : public nsIEditor,
   DoTransactionInternal(nsITransaction* aTransaction);
 
   /**
-   * Get the previous node.
-   */
-  nsIContent* GetPreviousNode(const EditorRawDOMPoint& aPoint) const {
-    return GetPreviousNodeInternal(aPoint, false, true, false);
-  }
-  nsIContent* GetPreviousElementOrText(const EditorRawDOMPoint& aPoint) const {
-    return GetPreviousNodeInternal(aPoint, false, false, false);
-  }
-  nsIContent* GetPreviousEditableNode(const EditorRawDOMPoint& aPoint) const {
-    return GetPreviousNodeInternal(aPoint, true, true, false);
-  }
-  nsIContent* GetPreviousNodeInBlock(const EditorRawDOMPoint& aPoint) const {
-    return GetPreviousNodeInternal(aPoint, false, true, true);
-  }
-  nsIContent* GetPreviousElementOrTextInBlock(
-      const EditorRawDOMPoint& aPoint) const {
-    return GetPreviousNodeInternal(aPoint, false, false, true);
-  }
-  nsIContent* GetPreviousEditableNodeInBlock(
-      const EditorRawDOMPoint& aPoint) const {
-    return GetPreviousNodeInternal(aPoint, true, true, true);
-  }
-  nsIContent* GetPreviousNode(const nsINode& aNode) const {
-    return GetPreviousNodeInternal(aNode, false, true, false);
-  }
-  nsIContent* GetPreviousElementOrText(const nsINode& aNode) const {
-    return GetPreviousNodeInternal(aNode, false, false, false);
-  }
-  nsIContent* GetPreviousEditableNode(const nsINode& aNode) const {
-    return GetPreviousNodeInternal(aNode, true, true, false);
-  }
-  nsIContent* GetPreviousNodeInBlock(const nsINode& aNode) const {
-    return GetPreviousNodeInternal(aNode, false, true, true);
-  }
-  nsIContent* GetPreviousElementOrTextInBlock(const nsINode& aNode) const {
-    return GetPreviousNodeInternal(aNode, false, false, true);
-  }
-  nsIContent* GetPreviousEditableNodeInBlock(const nsINode& aNode) const {
-    return GetPreviousNodeInternal(aNode, true, true, true);
-  }
-
-  /**
-   * Get the next node.
-   *
-   * Note that methods taking EditorRawDOMPoint behavior includes the
-   * child at offset as search target.  E.g., following code causes infinite
-   * loop.
-   *
-   * EditorRawDOMPoint point(aEditableNode);
-   * while (nsIContent* content = GetNextEditableNode(point)) {
-   *   // Do something...
-   *   point.Set(content);
-   * }
-   *
-   * Following code must be you expected:
-   *
-   * while (nsIContent* content = GetNextEditableNode(point)) {
-   *   // Do something...
-   *   DebugOnly<bool> advanced = point.Advanced();
-   *   MOZ_ASSERT(advanced);
-   *   point.Set(point.GetChild());
-   * }
-   *
-   * On the other hand, the methods taking nsINode behavior must be what
-   * you want.  They start to search the result from next node of the given
-   * node.
-   */
-  template <typename PT, typename CT>
-  nsIContent* GetNextNode(const EditorDOMPointBase<PT, CT>& aPoint) const {
-    return GetNextNodeInternal(aPoint, false, true, false);
-  }
-  template <typename PT, typename CT>
-  nsIContent* GetNextElementOrText(
-      const EditorDOMPointBase<PT, CT>& aPoint) const {
-    return GetNextNodeInternal(aPoint, false, false, false);
-  }
-  template <typename PT, typename CT>
-  nsIContent* GetNextEditableNode(
-      const EditorDOMPointBase<PT, CT>& aPoint) const {
-    return GetNextNodeInternal(aPoint, true, true, false);
-  }
-  template <typename PT, typename CT>
-  nsIContent* GetNextNodeInBlock(
-      const EditorDOMPointBase<PT, CT>& aPoint) const {
-    return GetNextNodeInternal(aPoint, false, true, true);
-  }
-  template <typename PT, typename CT>
-  nsIContent* GetNextElementOrTextInBlock(
-      const EditorDOMPointBase<PT, CT>& aPoint) const {
-    return GetNextNodeInternal(aPoint, false, false, true);
-  }
-  template <typename PT, typename CT>
-  nsIContent* GetNextEditableNodeInBlock(
-      const EditorDOMPointBase<PT, CT>& aPoint) const {
-    return GetNextNodeInternal(aPoint, true, true, true);
-  }
-  nsIContent* GetNextNode(const nsINode& aNode) const {
-    return GetNextNodeInternal(aNode, false, true, false);
-  }
-  nsIContent* GetNextElementOrText(const nsINode& aNode) const {
-    return GetNextNodeInternal(aNode, false, false, false);
-  }
-  nsIContent* GetNextEditableNode(const nsINode& aNode) const {
-    return GetNextNodeInternal(aNode, true, true, false);
-  }
-  nsIContent* GetNextNodeInBlock(const nsINode& aNode) const {
-    return GetNextNodeInternal(aNode, false, true, true);
-  }
-  nsIContent* GetNextElementOrTextInBlock(const nsINode& aNode) const {
-    return GetNextNodeInternal(aNode, false, false, true);
-  }
-  nsIContent* GetNextEditableNodeInBlock(const nsINode& aNode) const {
-    return GetNextNodeInternal(aNode, true, true, true);
-  }
-
-  /**
    * Returns true if aNode is our root node.
    */
   bool IsRoot(const nsINode* inNode) const;
@@ -1854,11 +1738,6 @@ class EditorBase : public nsIEditor,
    * Counts number of editable child nodes.
    */
   uint32_t CountEditableChildren(nsINode* aNode);
-
-  /**
-   * Find the deep first and last children.
-   */
-  nsINode* GetFirstEditableNode(nsINode* aRoot);
 
   /**
    * Returns true when inserting text should be a part of current composition.
@@ -2206,65 +2085,6 @@ class EditorBase : public nsIEditor,
    * match.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult ScrollSelectionFocusIntoView();
-
-  /**
-   * Helper for GetPreviousNodeInternal() and GetNextNodeInternal().
-   */
-  nsIContent* FindNextLeafNode(const nsINode* aCurrentNode, bool aGoForward,
-                               bool bNoBlockCrossing) const;
-  nsIContent* FindNode(const nsINode* aCurrentNode, bool aGoForward,
-                       bool aEditableNode, bool aFindAnyDataNode,
-                       bool bNoBlockCrossing) const;
-
-  /**
-   * Get the node immediately previous node of aNode.
-   * @param atNode               The node from which we start the search.
-   * @param aFindEditableNode    If true, only return an editable node.
-   * @param aFindAnyDataNode     If true, may return invisible data node
-   *                             like Comment.
-   * @param aNoBlockCrossing     If true, don't move across "block" nodes,
-   *                             whatever that means.
-   * @return                     The node that occurs before aNode in
-   *                             the tree, skipping non-editable nodes if
-   *                             aFindEditableNode is true.  If there is no
-   *                             previous node, returns nullptr.
-   */
-  nsIContent* GetPreviousNodeInternal(const nsINode& aNode,
-                                      bool aFindEditableNode,
-                                      bool aFindAnyDataNode,
-                                      bool aNoBlockCrossing) const;
-
-  /**
-   * And another version that takes a point in DOM tree rather than a node.
-   */
-  nsIContent* GetPreviousNodeInternal(const EditorRawDOMPoint& aPoint,
-                                      bool aFindEditableNode,
-                                      bool aFindAnyDataNode,
-                                      bool aNoBlockCrossing) const;
-
-  /**
-   * Get the node immediately next node of aNode.
-   * @param aNode                The node from which we start the search.
-   * @param aFindEditableNode    If true, only return an editable node.
-   * @param aFindAnyDataNode     If true, may return invisible data node
-   *                             like Comment.
-   * @param aNoBlockCrossing     If true, don't move across "block" nodes,
-   *                             whatever that means.
-   * @return                     The node that occurs after aNode in the
-   *                             tree, skipping non-editable nodes if
-   *                             aFindEditableNode is true.  If there is no
-   *                             next node, returns nullptr.
-   */
-  nsIContent* GetNextNodeInternal(const nsINode& aNode, bool aFindEditableNode,
-                                  bool aFindAnyDataNode,
-                                  bool aNoBlockCrossing) const;
-
-  /**
-   * And another version that takes a point in DOM tree rather than a node.
-   */
-  nsIContent* GetNextNodeInternal(const EditorRawDOMPoint& aPoint,
-                                  bool aFindEditableNode, bool aFindAnyDataNode,
-                                  bool aNoBlockCrossing) const;
 
   virtual nsresult InstallEventListeners();
   virtual void CreateEventListeners();

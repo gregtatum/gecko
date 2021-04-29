@@ -7,6 +7,7 @@
 #define HTMLEditUtils_h
 
 #include "mozilla/Attributes.h"
+#include "mozilla/EditorBase.h"
 #include "mozilla/EditorDOMPoint.h"
 #include "mozilla/EditorUtils.h"
 #include "mozilla/EnumSet.h"
@@ -370,6 +371,82 @@ class HTMLEditUtils final {
   }
 
   /**
+   * Get adjacent content node of aNode if there is (even if one is in different
+   * parent element).
+   *
+   * @param aNode               The node from which we start to walk the DOM
+   *                            tree.
+   * @param aOptions            See WalkTreeOption for the detail.
+   * @param aAncestorLimiter    Ancestor limiter element which these methods
+   *                            never cross its boundary.  This is typically
+   *                            the editing host.
+   */
+  enum class WalkTreeOption {
+    IgnoreNonEditableNode,     // Ignore non-editable nodes and their children.
+    IgnoreDataNodeExceptText,  // Ignore data nodes which are not text node.
+    StopAtBlockBoundary,       // Stop waking the tree at a block boundary.
+  };
+  using WalkTreeOptions = EnumSet<WalkTreeOption>;
+  static nsIContent* GetPreviousContent(
+      const nsINode& aNode, const WalkTreeOptions& aOptions,
+      const Element* aAncestorLimiter = nullptr) {
+    if (&aNode == aAncestorLimiter ||
+        (aAncestorLimiter &&
+         !aNode.IsInclusiveDescendantOf(aAncestorLimiter))) {
+      return nullptr;
+    }
+    return HTMLEditUtils::GetAdjacentContent(aNode, WalkTreeDirection::Backward,
+                                             aOptions, aAncestorLimiter);
+  }
+  static nsIContent* GetNextContent(const nsINode& aNode,
+                                    const WalkTreeOptions& aOptions,
+                                    const Element* aAncestorLimiter = nullptr) {
+    if (&aNode == aAncestorLimiter ||
+        (aAncestorLimiter &&
+         !aNode.IsInclusiveDescendantOf(aAncestorLimiter))) {
+      return nullptr;
+    }
+    return HTMLEditUtils::GetAdjacentContent(aNode, WalkTreeDirection::Forward,
+                                             aOptions, aAncestorLimiter);
+  }
+
+  /**
+   * And another version that takes a point in DOM tree rather than a node.
+   */
+  template <typename PT, typename CT>
+  static nsIContent* GetPreviousContent(
+      const EditorDOMPointBase<PT, CT>& aPoint, const WalkTreeOptions& aOptions,
+      const Element* aAncestorLimiter = nullptr);
+
+  /**
+   * And another version that takes a point in DOM tree rather than a node.
+   *
+   * Note that this may return the child at the offset.  E.g., following code
+   * causes infinite loop.
+   *
+   * EditorRawDOMPoint point(aEditableNode);
+   * while (nsIContent* content =
+   *          GetNextContent(point, {WalkTreeOption::IgnoreNonEditableNode})) {
+   *   // Do something...
+   *   point.Set(content);
+   * }
+   *
+   * Following code must be you expected:
+   *
+   * while (nsIContent* content =
+   *          GetNextContent(point, {WalkTreeOption::IgnoreNonEditableNode}) {
+   *   // Do something...
+   *   DebugOnly<bool> advanced = point.Advanced();
+   *   MOZ_ASSERT(advanced);
+   *   point.Set(point.GetChild());
+   * }
+   */
+  template <typename PT, typename CT>
+  static nsIContent* GetNextContent(const EditorDOMPointBase<PT, CT>& aPoint,
+                                    const WalkTreeOptions& aOptions,
+                                    const Element* aAncestorLimiter = nullptr);
+
+  /**
    * GetLastLeafChild() returns rightmost leaf content in aNode.  It depends on
    * aLeafNodeTypes whether this which types of nodes are treated as leaf nodes.
    */
@@ -408,7 +485,7 @@ class HTMLEditUtils final {
    * aLeafNodeTypes whether this scans into a block child or treat
    * block as a leaf.
    */
-  static nsIContent* GetFirstLeafChild(nsINode& aNode,
+  static nsIContent* GetFirstLeafChild(const nsINode& aNode,
                                        const LeafNodeTypes& aLeafNodeTypes) {
     for (nsIContent* content = aNode.GetFirstChild(); content;
          content = content->GetFirstChild()) {
@@ -683,6 +760,23 @@ class HTMLEditUtils final {
     }
     // Else return the node itself
     return previousContent;
+  }
+
+  /**
+   * GetFirstEditableLeafContent() returns first editable leaf node in
+   * aRootElement.  When there is no editable leaf element in it, this returns
+   * nullptr.
+   */
+  static nsIContent* GetFirstEditableLeafContent(const Element& aRootElement) {
+    nsIContent* leafContent = HTMLEditUtils::GetFirstLeafChild(
+        aRootElement, {LeafNodeType::OnlyLeafNode});
+    if (leafContent && !EditorUtils::IsEditableContent(
+                           *leafContent, EditorBase::EditorType::HTML)) {
+      leafContent = HTMLEditUtils::GetNextContent(
+          *leafContent, {WalkTreeOption::IgnoreNonEditableNode}, &aRootElement);
+    }
+    MOZ_ASSERT(leafContent != &aRootElement);
+    return leafContent;
   }
 
   /**
@@ -1049,6 +1143,19 @@ class HTMLEditUtils final {
          aContent.IsHTMLElement(nsGkAtoms::table));
     return !cannotCrossBoundary;
   }
+
+  /**
+   * Helper for GetPreviousContent() and GetNextContent().
+   */
+  enum class WalkTreeDirection { Forward, Backward };
+  static nsIContent* GetAdjacentLeafContent(
+      const nsINode& aNode, WalkTreeDirection aWalkTreeDirection,
+      const WalkTreeOptions& aOptions,
+      const Element* aAncestorLimiter = nullptr);
+  static nsIContent* GetAdjacentContent(
+      const nsINode& aNode, WalkTreeDirection aWalkTreeDirection,
+      const WalkTreeOptions& aOptions,
+      const Element* aAncestorLimiter = nullptr);
 };
 
 /**

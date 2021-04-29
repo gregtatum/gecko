@@ -920,7 +920,7 @@ void CanonicalBrowsingContext::RemoveFromSessionHistory(const nsID& aChangeID) {
 
 void CanonicalBrowsingContext::HistoryGo(
     int32_t aOffset, uint64_t aHistoryEpoch, bool aRequireUserInteraction,
-    Maybe<ContentParentId> aContentId,
+    bool aUserActivation, Maybe<ContentParentId> aContentId,
     std::function<void(int32_t&&)>&& aResolver) {
   if (aRequireUserInteraction && aOffset != -1 && aOffset != 1) {
     NS_ERROR(
@@ -976,7 +976,8 @@ void CanonicalBrowsingContext::HistoryGo(
 
   // GoToIndex checks that index is >= 0 and < length.
   nsTArray<nsSHistory::LoadEntryResult> loadResults;
-  nsresult rv = shistory->GotoIndex(index.value(), loadResults, sameEpoch);
+  nsresult rv = shistory->GotoIndex(index.value(), loadResults, sameEpoch,
+                                    aUserActivation);
   if (NS_FAILED(rv)) {
     MOZ_LOG(gSHLog, LogLevel::Debug,
             ("Dropping HistoryGo - bad index or same epoch (not in same doc)"));
@@ -1110,7 +1111,7 @@ void CanonicalBrowsingContext::LoadURI(const nsAString& aURI,
 
 void CanonicalBrowsingContext::GoBack(
     const Optional<int32_t>& aCancelContentJSEpoch,
-    bool aRequireUserInteraction) {
+    bool aRequireUserInteraction, bool aUserActivation) {
   if (IsDiscarded()) {
     return;
   }
@@ -1124,19 +1125,19 @@ void CanonicalBrowsingContext::GoBack(
     if (aCancelContentJSEpoch.WasPassed()) {
       docShell->SetCancelContentJSEpoch(aCancelContentJSEpoch.Value());
     }
-    docShell->GoBack(aRequireUserInteraction);
+    docShell->GoBack(aRequireUserInteraction, aUserActivation);
   } else if (ContentParent* cp = GetContentParent()) {
     Maybe<int32_t> cancelContentJSEpoch;
     if (aCancelContentJSEpoch.WasPassed()) {
       cancelContentJSEpoch = Some(aCancelContentJSEpoch.Value());
     }
     Unused << cp->SendGoBack(this, cancelContentJSEpoch,
-                             aRequireUserInteraction);
+                             aRequireUserInteraction, aUserActivation);
   }
 }
 void CanonicalBrowsingContext::GoForward(
     const Optional<int32_t>& aCancelContentJSEpoch,
-    bool aRequireUserInteraction) {
+    bool aRequireUserInteraction, bool aUserActivation) {
   if (IsDiscarded()) {
     return;
   }
@@ -1150,18 +1151,19 @@ void CanonicalBrowsingContext::GoForward(
     if (aCancelContentJSEpoch.WasPassed()) {
       docShell->SetCancelContentJSEpoch(aCancelContentJSEpoch.Value());
     }
-    docShell->GoForward(aRequireUserInteraction);
+    docShell->GoForward(aRequireUserInteraction, aUserActivation);
   } else if (ContentParent* cp = GetContentParent()) {
     Maybe<int32_t> cancelContentJSEpoch;
     if (aCancelContentJSEpoch.WasPassed()) {
       cancelContentJSEpoch.emplace(aCancelContentJSEpoch.Value());
     }
     Unused << cp->SendGoForward(this, cancelContentJSEpoch,
-                                aRequireUserInteraction);
+                                aRequireUserInteraction, aUserActivation);
   }
 }
 void CanonicalBrowsingContext::GoToIndex(
-    int32_t aIndex, const Optional<int32_t>& aCancelContentJSEpoch) {
+    int32_t aIndex, const Optional<int32_t>& aCancelContentJSEpoch,
+    bool aUserActivation) {
   if (IsDiscarded()) {
     return;
   }
@@ -1175,13 +1177,14 @@ void CanonicalBrowsingContext::GoToIndex(
     if (aCancelContentJSEpoch.WasPassed()) {
       docShell->SetCancelContentJSEpoch(aCancelContentJSEpoch.Value());
     }
-    docShell->GotoIndex(aIndex);
+    docShell->GotoIndex(aIndex, aUserActivation);
   } else if (ContentParent* cp = GetContentParent()) {
     Maybe<int32_t> cancelContentJSEpoch;
     if (aCancelContentJSEpoch.WasPassed()) {
       cancelContentJSEpoch.emplace(aCancelContentJSEpoch.Value());
     }
-    Unused << cp->SendGoToIndex(this, aIndex, cancelContentJSEpoch);
+    Unused << cp->SendGoToIndex(this, aIndex, cancelContentJSEpoch,
+                                aUserActivation);
   }
 }
 void CanonicalBrowsingContext::Reload(uint32_t aReloadFlags) {
@@ -2118,6 +2121,18 @@ bool CanonicalBrowsingContext::AllowedInBFCache(
     bfcacheCombo |= BFCacheStatus::NOT_ONLY_TOPLEVEL_IN_BCG;
     MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug,
             (" * auxiliary BrowsingContexts"));
+  }
+
+  // There are not a lot of about:* pages that are allowed to load in
+  // subframes, so it's OK to allow those few about:* pages enter BFCache.
+  MOZ_ASSERT(IsTop(), "Trying to put a non top level BC into BFCache");
+
+  nsCOMPtr<nsIURI> currentURI = GetCurrentURI();
+  // Exempt about:* pages from bfcache, with the exception of about:blank
+  if (currentURI && currentURI->SchemeIs("about") &&
+      !currentURI->GetSpecOrDefault().EqualsLiteral("about:blank")) {
+    bfcacheCombo |= BFCacheStatus::ABOUT_PAGE;
+    MOZ_LOG(gSHIPBFCacheLog, LogLevel::Debug, (" * about:* page"));
   }
 
   // For telemetry we're collecting all the flags for all the BCs hanging

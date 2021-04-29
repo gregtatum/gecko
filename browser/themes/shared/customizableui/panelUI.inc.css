@@ -226,7 +226,7 @@
 
 .cui-widget-panel,
 #widget-overflow {
-  font-size: var(--panel-font-size);
+  font: menu;
 }
 
 panelview {
@@ -920,7 +920,6 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
   }
 
   #appMenu-fxa-status2[fxastatus] > #appMenu-fxa-label2 {
-    padding-block: 16px;
     -moz-box-flex: 1;
   }
 
@@ -2432,10 +2431,6 @@ panelview:not([mainview]) #PanelUI-whatsNew-title {
 
 #PanelUI-whatsNew checkbox:hover .checkbox-check {
   border-color: #0a84ff;
-}
-
-#PanelUI-whatsNew .checkbox-icon {
-  display: none;
 }
 } /*** END !proton ***/
 

@@ -8,7 +8,9 @@
 #define nsDocShell_h__
 
 #include "Units.h"
+#include "mozilla/Encoding.h"
 #include "mozilla/Maybe.h"
+#include "mozilla/NotNull.h"
 #include "mozilla/ScrollbarPreferences.h"
 #include "mozilla/TimelineConsumers.h"
 #include "mozilla/UniquePtr.h"
@@ -333,8 +335,8 @@ class nsDocShell final : public nsDocLoader,
   nsresult SetHTMLEditorInternal(mozilla::HTMLEditor* aHTMLEditor);
 
   // Handle page navigation due to charset changes
-  nsresult CharsetChangeReloadDocument(const char* aCharset = nullptr,
-                                       int32_t aSource = kCharsetUninitialized);
+  nsresult CharsetChangeReloadDocument(
+      mozilla::NotNull<const mozilla::Encoding*> aEncoding, int32_t aSource);
   nsresult CharsetChangeStopDocumentLoad();
 
   nsDOMNavigationTiming* GetNavigationTiming() const;
@@ -978,10 +980,11 @@ class nsDocShell final : public nsDocLoader,
                  bool aIsTransientAboutBlank, bool aPersist);
   nsPresContext* GetEldestPresContext();
   nsresult CheckLoadingPermissions();
-  nsresult LoadHistoryEntry(nsISHEntry* aEntry, uint32_t aLoadType);
+  nsresult LoadHistoryEntry(nsISHEntry* aEntry, uint32_t aLoadType,
+                            bool aUserActivation);
   nsresult LoadHistoryEntry(
-      const mozilla::dom::LoadingSessionHistoryInfo& aEntry,
-      uint32_t aLoadType);
+      const mozilla::dom::LoadingSessionHistoryInfo& aEntry, uint32_t aLoadType,
+      bool aUserActivation);
   nsresult LoadHistoryEntry(nsDocShellLoadState* aLoadState, uint32_t aLoadType,
                             bool aReloadingActiveEntry);
   nsresult GetHttpChannel(nsIChannel* aChannel, nsIHttpChannel** aReturn);
