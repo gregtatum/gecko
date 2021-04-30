@@ -29,7 +29,6 @@
 #companion-box,
 #companion-titlebar {
   width: var(--companion-width);
-  background: var(--companion-background);
 }
 
 #companion-mac-buttonbox                {
