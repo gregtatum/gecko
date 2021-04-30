@@ -127,7 +127,6 @@ async function buildEvents(services) {
   let panel = document.getElementById("calendar-panel");
   let nodes = [];
 
-  let goodService = false;
   for (let service of services) {
     let meetings;
     try {
@@ -137,8 +136,6 @@ async function buildEvents(services) {
       OnlineServices.deleteService(service);
       continue;
     }
-
-    goodService = true;
 
     nodes = nodes.concat(meetings.map(event => new Event(service, event)));
   }
@@ -150,18 +147,31 @@ async function buildEvents(services) {
     panel.replaceChildren(...nodes);
     updateEvents();
   }
-
-  if (!goodService) {
-    document.getElementById("scroll").className = "disconnected";
-  }
 }
+
+let calendarCheckTimer;
+let calendarUpdateTimer;
 
 export function initCalendarServices(services) {
   buildEvents(services);
-  setInterval(function() {
+  calendarCheckTimer = setInterval(function() {
     buildEvents(services);
   }, CALENDAR_CHECK_TIME);
-  setInterval(function() {
+  calendarUpdateTimer = setInterval(function() {
     updateEvents(services);
   }, CALENDAR_UPDATE_TIME);
+}
+
+export function uninitCalendarServices(services) {
+  if (calendarCheckTimer) {
+    clearInterval(calendarCheckTimer);
+    calendarCheckTimer = 0;
+  }
+  if (calendarUpdateTimer) {
+    clearInterval(calendarUpdateTimer);
+    calendarUpdateTimer = 0;
+  }
+  let panel = document.getElementById("calendar-panel");
+  panel.replaceChildren([]);
+  document.querySelector("#calendar").hidden = true;
 }

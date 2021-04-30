@@ -5,7 +5,7 @@
 // These come from utilityOverlay.js
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
-import { initCalendarServices } from "./calendar.js";
+import { initCalendarServices, uninitCalendarServices } from "./calendar.js";
 //import { initEmailServices } from "./email.js";
 
 const { OnlineServices } = ChromeUtils.import(
@@ -16,22 +16,32 @@ async function signin() {
   await OnlineServices.createService(
     Services.prefs.getCharPref("onlineservices.defaultType", "google")
   );
-  document.getElementById("scroll").className = "connected";
+  document.getElementById("service-login").className = "connected";
   let services = OnlineServices.getServices();
   initCalendarServices(services);
   //initEmailServices(services);
   window.focus();
 }
 
+async function signout() {
+  let services = OnlineServices.getServices();
+  for (let service of services) {
+    OnlineServices.deleteService(service);
+  }
+  uninitCalendarServices();
+  document.getElementById("service-login").className = "disconnected";
+}
+
 export function initServices() {
   document.getElementById("service-signin").addEventListener("click", signin);
+  document.getElementById("service-signout").addEventListener("click", signout);
 
   let services = OnlineServices.getServices();
   if (services.length) {
-    document.getElementById("scroll").className = "connected";
+    document.getElementById("service-login").className = "connected";
     initCalendarServices(services);
     //initEmailServices(services);
   } else {
-    document.getElementById("scroll").className = "disconnected";
+    document.getElementById("service-login").className = "disconnected";
   }
 }
