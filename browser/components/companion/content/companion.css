@@ -291,6 +291,7 @@ h2 {
   top: 0;
   z-index: 1;
   padding-left: 10px;
+  background-color: var(--toolbar-non-lwt-bgcolor);
 }
 
 #calendar-link {
