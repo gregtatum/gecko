@@ -15,6 +15,8 @@ const { OnlineServices } = ChromeUtils.import(
 const CALENDAR_CHECK_TIME = 15 * 60 * 1000; // 15 minutes
 // Update display every minute
 const CALENDAR_UPDATE_TIME = 60 * 1000; // 1 minute
+// Number of minutes after start that an event is hidden
+const MEETING_HIDE_DELAY = 10;
 
 class Event extends HTMLElement {
   constructor(service, data) {
@@ -100,27 +102,31 @@ async function updateEvents() {
   let visibleEventStart;
   let events = document.querySelectorAll("e-event");
   let now = new Date();
+  let showCalendar = false;
   for (let event of events) {
-    // Never show meetings that have happened
     if (event.data.end < now) {
+      // Never show meetings that have happened
       event.hidden = true;
-      continue;
-    }
-    // Always show meetings that are happening
-    if (now >= event.data.start && now < event.data.end) {
-      event.hidden = false;
-      continue;
-    }
-
-    // Show the next upcoming meeting and any other
-    // meetings that start at the same time.
-    if (visibleEventStart) {
+    } else if (now >= event.data.start) {
+      // Show meetings that have started until MEETING_HIDE_DELAY
+      let startPlusXMinutes = new Date(event.data.start.getTime());
+      startPlusXMinutes.setMinutes(
+        startPlusXMinutes.getMinutes() + MEETING_HIDE_DELAY
+      );
+      event.hidden = now > startPlusXMinutes;
+    } else if (visibleEventStart) {
+      // Show the next upcoming meeting and any other
+      // meetings that start at the same time.
       event.hidden = event.data.start > visibleEventStart;
     } else {
       visibleEventStart = event.data.start;
       event.hidden = false;
     }
+    if (event.hidden === false) {
+      showCalendar = true;
+    }
   }
+  document.querySelector("#calendar").hidden = !showCalendar;
 }
 
 async function buildEvents(services) {
@@ -140,13 +146,8 @@ async function buildEvents(services) {
     nodes = nodes.concat(meetings.map(event => new Event(service, event)));
   }
 
-  if (!nodes.length) {
-    document.querySelector("#calendar").hidden = true;
-  } else {
-    document.querySelector("#calendar").hidden = false;
-    panel.replaceChildren(...nodes);
-    updateEvents();
-  }
+  panel.replaceChildren(...nodes);
+  updateEvents();
 }
 
 let calendarCheckTimer;

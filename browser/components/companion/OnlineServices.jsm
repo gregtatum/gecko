@@ -163,7 +163,7 @@ class GoogleService {
     apiTarget.searchParams.set("orderBy", "startTime");
     apiTarget.searchParams.set("singleEvents", "true");
     let oneHourAgo = new Date();
-    oneHourAgo.setHours(oneHourAgo.getHours() - 2);
+    oneHourAgo.setHours(oneHourAgo.getHours() - 1);
     apiTarget.searchParams.set("timeMin", oneHourAgo.toISOString());
     // If we want to reduce the window, we can just make
     // timeMax an hour from now.
