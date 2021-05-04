@@ -40,6 +40,13 @@ class CompanionWindowMuxer extends MuxerUnifiedComplete {
 class BrowserWindowHandler {
   constructor(window) {
     this.window = window;
+
+    let lock = this.window.document.getElementById("identity-box");
+    let companionIdentityBox = this.window.document.getElementById(
+      "companion-identity-box"
+    );
+    companionIdentityBox.appendChild(lock);
+
     Services.prefs.addObserver(COMPANION_OPEN_PREF, this);
     Services.prefs.addObserver(COMPANION_DOCKED_PREF, this);
 

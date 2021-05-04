@@ -18,6 +18,8 @@
 :root[companion] #TabsToolbar,
 :root[companion] #PersonalToolbar,
 :root[companion] #nav-bar-overflow-button,
+:root[companion] #page-action-buttons,
+:root[companion] #tracking-protection-icon-container,
 :root[companion] #nav-bar-customization-target > *:not(#urlbar-container) {
   display: none;
 }
@@ -92,3 +94,7 @@
   display: none;
 }
 %endif
+
+#companion-identity-box #identity-box[pageproxystate="invalid"] #identity-icon-box {
+  display: none;
+}

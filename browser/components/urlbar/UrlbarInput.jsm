@@ -512,7 +512,8 @@ class UrlbarInput {
 
     this.inputField = this.querySelector("#urlbar-input");
     this._inputContainer = this.querySelector("#urlbar-input-container");
-    this._identityBox = this.querySelector("#identity-box");
+    // Needed for MR2 since the identity-box is no longer a child of the URL bar
+    this._identityBox = this.window.document.querySelector("#identity-box");
     this._searchModeIndicator = this.querySelector(
       "#urlbar-search-mode-indicator"
     );
@@ -1363,7 +1364,8 @@ class UrlbarInput {
     // Usually this is set by a previous input event, but in certain cases, like
     // when opening Top Sites on a loaded page, it wouldn't happen. To avoid
     // confusing the user, we always enforce it when a result changes our value.
-    this.setPageProxyState("invalid", true);
+    // Necessary so the lock icon doesn't disappear in MR2
+    // this.setPageProxyState("invalid", true);
 
     // A previous result may have previewed search mode. If we don't expect that
     // we might stay in a search mode of some kind, exit it now.
@@ -3309,7 +3311,8 @@ class UrlbarInput {
       this.getAttribute("pageproxystate") == "valid" &&
       this.value != this._lastValidURLStr
     ) {
-      this.setPageProxyState("invalid", true);
+      // Necessary so the lock icon doesn't disappear in MR2
+      // this.setPageProxyState("invalid", true);
     }
 
     if (!this.view.isOpen) {
