@@ -1790,7 +1790,7 @@
               onclick="checkForMiddleClick(this, event);"/>
           </hbox>
         </vbox>
-        <hbox flex="1" pack="end">
+        <hbox flex="1" pack="end" id="companion-titlebar-inner">
           <toolbarbutton
             id="companion-settings-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
             oncommand="ToggleCompanionSettings()"
@@ -1803,7 +1803,7 @@
       </hbox>
 
       <toolbartabstop/>
-      <hbox id="companion-toolbar" flex="10">
+      <hbox id="companion-toolbar" flex="1">
         <toolbarbutton id="companion-back-button" class="toolbarbutton-1"
                        data-l10n-id="toolbar-button-back-2"
                        command="Browser:BackOrBackDuplicate"

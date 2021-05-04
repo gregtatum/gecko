@@ -8,28 +8,27 @@
 }
 
 :root:not([companion]) #companion-box,
-:root:not([companion]) #companion-titlebar,
-:root:not([companion]) #companion-toolbar,
-:root:not([companion]) #companion-window-controls {
+:root:not([companion]) #companion-titlebar-inner {
   display: none;
 }
 
-:root[companion] #titlebar,
-:root[companion] #TabsToolbar,
-:root[companion] #PersonalToolbar,
-:root[companion] #nav-bar-overflow-button,
-:root[companion] #page-action-buttons,
-:root[companion] #tracking-protection-icon-container,
-:root[companion] #nav-bar-customization-target > *:not(#urlbar-container) {
+#titlebar,
+#TabsToolbar,
+#PersonalToolbar,
+#nav-bar-overflow-button,
+#page-action-buttons,
+#tracking-protection-icon-container,
+:root[companion] #companion-sidebar-button-win,
+#nav-bar-customization-target > *:not(#urlbar-container) {
   display: none;
 }
 
-:root[companion] #navigator-toolbox {
+#navigator-toolbox {
   border-bottom: 0px none;
 }
 
-#companion-box,
-#companion-titlebar {
+:root[companion] #companion-box,
+:root[companion] #companion-titlebar {
   width: var(--companion-width);
 }
 
