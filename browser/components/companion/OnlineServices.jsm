@@ -16,6 +16,19 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   UtilityOverlay: "resource:///modules/UtilityOverlay.jsm",
 });
 
+const PREF_LOGLEVEL = "browser.companion.loglevel";
+
+XPCOMUtils.defineLazyGetter(this, "log", () => {
+  let { ConsoleAPI } = ChromeUtils.import("resource://gre/modules/Console.jsm");
+  return new ConsoleAPI({
+    prefix: "OnlineServices.jsm",
+    // tip: set maxLogLevel to "debug" and use log.debug() to create detailed
+    // messages during development. See LOG_LEVELS in Console.jsm for details.
+    maxLogLevel: "error",
+    maxLogLevelPref: PREF_LOGLEVEL,
+  });
+});
+
 Cu.importGlobalProperties(["fetch"]);
 
 function getConferenceInfo(result) {
@@ -99,11 +112,14 @@ class GoogleService {
       headers,
     });
 
+    log.debug(response);
+
     if (!response.ok) {
       throw new Error(response.statusText);
     }
 
     let results = await response.json();
+    log.debug(JSON.stringify(results));
     return results.emailAddress;
   }
 
@@ -179,11 +195,15 @@ class GoogleService {
       headers,
     });
 
+    log.debug(response);
+
     if (!response.ok) {
       throw new Error(response.statusText);
     }
 
     let results = await response.json();
+    log.debug(JSON.stringify(results));
+
     let events = results.items.map(result => ({
       summary: result.summary,
       start: new Date(result.start.dateTime),
@@ -227,6 +247,7 @@ class GoogleService {
     }
 
     let results = await response.json();
+    log.debug(JSON.stringify(results));
 
     return {
       id: results.id,
@@ -264,6 +285,7 @@ class GoogleService {
     }
 
     let results = await response.json();
+    log.debug(JSON.stringify(results));
 
     let messages = [];
 
