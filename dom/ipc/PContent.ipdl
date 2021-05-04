@@ -29,7 +29,6 @@ include protocol PGMP;
 include protocol PPrinting;
 include protocol PChildToParentStream;
 include protocol PParentToChildStream;
-include protocol POfflineCacheUpdate;
 #ifdef MOZ_WEBSPEECH
 include protocol PSpeechSynthesis;
 #endif
@@ -194,6 +193,22 @@ struct SystemFontListEntry {
     bool      appFontFamily;
 };
 #endif
+
+#ifdef MOZ_WIDGET_GTK
+struct SystemFontOptions {
+    int32_t antialias; // cairo_antialias_t
+    int32_t subpixelOrder; // cairo_subpixel_order_t
+    int32_t hintStyle; // cairo_hint_style_t
+    int32_t lcdFilter; // cairo_lcd_filter_t
+};
+#endif
+
+struct SystemFontList {
+    SystemFontListEntry[] entries;
+#ifdef MOZ_WIDGET_GTK
+    SystemFontOptions options;
+#endif
+};
 
 union SystemParameterValue {
   bool;
@@ -414,7 +429,6 @@ nested(upto inside_cpow) sync protocol PContent
     manages PRemoteLazyInputStream;
     manages PMedia;
     manages PNecko;
-    manages POfflineCacheUpdate;
     manages PPrinting;
     manages PChildToParentStream;
     manages PParentToChildStream;
@@ -603,7 +617,7 @@ child:
 
     async UpdateDictionaryList(nsCString[] dictionaries);
 
-    async UpdateFontList(SystemFontListEntry[] fontList);
+    async UpdateFontList(SystemFontList fontList);
 
     /**
      * The shared font list has been updated by the parent, so child processes
@@ -693,7 +707,7 @@ child:
                                     StructuredCloneData initialData,
                                     FullLookAndFeel lookAndFeeldata,
                                     /* used on MacOSX/Linux/Android only: */
-                                    SystemFontListEntry[] systemFontList,
+                                    SystemFontList systemFontList,
                                     SharedMemoryHandle? sharedUASheetHandle,
                                     uintptr_t sharedUASheetAddress,
                                     SharedMemoryHandle[] sharedFontListBlocks);
@@ -1170,36 +1184,6 @@ parent:
     async BackUpXResources(FileDescriptor aXSocketFd);
 
     async RequestAnonymousTemporaryFile(uint64_t aID);
-
-    /**
-     * Starts an offline application cache update.
-     * @param manifestURI
-     *   URI of the manifest to fetch, the application cache group ID
-     * @param documentURI
-     *   URI of the document that referred the manifest
-     * @param loadingPrincipal
-     *   Principal of the document that referred the manifest
-     * @param stickDocument
-     *   True if the update was initiated by a document load that referred
-     *   a manifest.
-     *   False if the update was initiated by applicationCache.update() call.
-     *
-     *   Tells the update to carry the documentURI to a potential separate
-     *   update of implicit (master) items.
-     *
-     *   Why this argument? If the document was not found in an offline cache
-     *   before load and refers a manifest and this manifest itself has not
-     *   been changed since the last fetch, we will not do the application
-     *   cache group update. But we must cache the document (identified by the
-     *   documentURI). This argument will ensure that a previously uncached
-     *   document will get cached and that we don't re-cache a document that
-     *   has already been cached (stickDocument=false).
-     * @param tabId
-     *   To identify which tab owns the app.
-     */
-    async POfflineCacheUpdate(nsIURI manifestURI, nsIURI documentURI,
-                              PrincipalInfo loadingPrincipal, bool stickDocument,
-                              CookieJarSettingsArgs cookieJarSettings);
 
     /**
      * Sets "offline-app" permission for the principal.  Called when we hit

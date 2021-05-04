@@ -77,12 +77,15 @@ body {
        (-moz-os-version: windows-win8) {
   :root:-moz-lwtheme {
     background-color: var(--lwt-accent-color);
+    background-image: var(--lwt-additional-images);
+    background-repeat: var(--lwt-background-tiling);
+    background-position: var(--lwt-background-alignment);
   }
 
   :root[lwtheme-image] {
-    background-image: var(--lwt-header-image) !important;
-    background-repeat: no-repeat;
-    background-position: right top !important;
+    background-image: var(--lwt-header-image, linear-gradient(transparent, transparent)),  var(--lwt-additional-images) !important;
+    background-repeat: no-repeat, var(--lwt-background-tiling);
+    background-position: right top, var(--lwt-background-alignment) !important;
   }
 
   :root:-moz-lwtheme:-moz-window-inactive {
@@ -579,15 +582,13 @@ toolbar:not(#TabsToolbar) > #personal-bookmarks {
  * Attribute is controlled by browser.js:/gRemoteControl.
  */
 :root[remotecontrol] #urlbar-background {
-  background: repeating-linear-gradient(
+  background-image: repeating-linear-gradient(
     -45deg,
-    transparent,
-    transparent 25px,
-    rgba(255,255,255,.3) 25px,
-    rgba(255,255,255,.3) 50px);
+    rgba(255, 60, 60, 0.25) 0 25px,
+    rgba(175, 0, 0, 0.25) 25px 50px
+  );
+
   background-attachment: fixed;
-  background-color: rgba(255,170,68,.8);
-  color: black;
   /* Override the usual breakout animation so the gradient doesn't shift around
      when the panel opens. */
   animation: none !important;
@@ -965,11 +966,8 @@ browser[tabmodalPromptShowing], browser[tabDialogShowing] {
 
 /*** Visibility of downloads indicator controls ***/
 
-/* Bug 924050: If we've loaded the indicator, for now we hide it in the menu panel,
-   and just show the icon. This is a hack to side-step very weird layout bugs that
-   seem to be caused by the indicator stack interacting with the menu panel. */
-#downloads-button[indicator]:not([cui-areatype="menu-panel"]) > .toolbarbutton-badge-stack > image.toolbarbutton-icon,
-#downloads-button[indicator][cui-areatype="menu-panel"] > .toolbarbutton-badge-stack > #downloads-indicator-anchor {
+/* Hide the default icon, show the anchor instead. */
+#downloads-button[indicator] > .toolbarbutton-badge-stack > image.toolbarbutton-icon {
   display: none;
 }
 
@@ -1188,6 +1186,13 @@ toolbarpaletteitem[dragover] {
   display: -moz-box;
 }
 
+@media (-moz-proton) {
+#customization-lwtheme-button > .box-inherit > .button-menu-dropmarker,
+#customization-uidensity-button > .box-inherit > .button-menu-dropmarker {
+  display: -moz-box;
+}
+} /*** END proton ***/
+
 toolbarpaletteitem[place="palette"] {
   -moz-box-orient: vertical;
   width: 7em;
@@ -1212,7 +1217,7 @@ toolbarpaletteitem > toolbaritem {
   -moz-box-pack: center;
 }
 
-toolbarpaletteitem > #stop-reload-button {
+toolbarpaletteitem:not([place="palette"]) > #stop-reload-button {
   -moz-box-pack: inherit;
 }
 

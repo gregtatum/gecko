@@ -10289,7 +10289,7 @@ bool BaseCompiler::emitEnd() {
 #endif
       iter_.popEnd();
       MOZ_ASSERT(iter_.controlStackEmpty());
-      return iter_.readFunctionEnd(iter_.end());
+      return iter_.endFunction(iter_.end());
     case LabelKind::Block:
       if (!endBlock(type)) {
         return false;
@@ -12681,7 +12681,8 @@ bool BaseCompiler::emitRefFunc() {
 }
 
 bool BaseCompiler::emitRefNull() {
-  if (!iter_.readRefNull()) {
+  RefType type;
+  if (!iter_.readRefNull(&type)) {
     return false;
   }
 
@@ -15753,7 +15754,7 @@ bool BaseCompiler::emitVectorMulI64x2() {
 bool BaseCompiler::emitBody() {
   MOZ_ASSERT(stackMapGenerator_.framePushedAtEntryToBody.isSome());
 
-  if (!iter_.readFunctionStart(func_.index)) {
+  if (!iter_.startFunction(func_.index)) {
     return false;
   }
 

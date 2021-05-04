@@ -433,6 +433,8 @@ bitflags! {
     pub struct SliceFlags : u8 {
         /// Slice created by a prim that has PrimitiveFlags::IS_SCROLLBAR_CONTAINER
         const IS_SCROLLBAR = 1;
+        /// Represents a mix-blend container (can't split out compositor surfaces in this slice)
+        const IS_BLEND_CONTAINER = 2;
     }
 }
 
@@ -565,6 +567,7 @@ impl<'a> SceneBuilder<'a> {
             &builder.config,
             &mut builder.clip_store,
             &mut builder.prim_store,
+            builder.interners,
         );
 
         BuiltScene {
@@ -1244,8 +1247,8 @@ impl<'a> SceneBuilder<'a> {
                     &mut end,
                     info.gradient.extend_mode,
                     &mut stops,
-                    &mut |rect, clip, start, end, stops| {
-                        let layout = LayoutPrimitiveInfo { rect: *rect, clip_rect: *clip, flags };
+                    &mut |rect, start, end, stops| {
+                        let layout = LayoutPrimitiveInfo { rect: *rect, clip_rect: *rect, flags };
                         if let Some(prim_key_kind) = self.create_linear_gradient_prim(
                             &layout,
                             start,
@@ -2087,6 +2090,7 @@ impl<'a> SceneBuilder<'a> {
                 self.interners,
                 &self.config,
                 self.root_iframe_clip,
+                SliceFlags::IS_BLEND_CONTAINER,
             );
 
             return;

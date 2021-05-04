@@ -85,11 +85,15 @@ class mozInlineSpellStatus {
  private:
   // @param aSpellChecker must be non-nullptr.
   // @param aOp see mOp.
+  // @param aRange see mRange.
+  // @param aCreatedRange see mCreatedRange.
   // @param aAnchorRange see mAnchorRange.
   // @param aForceNavigationWordCheck see mForceNavigationWordCheck.
   // @param aNewNavigationPositionOffset see mNewNavigationPositionOffset.
   explicit mozInlineSpellStatus(mozInlineSpellChecker* aSpellChecker,
-                                Operation aOp, RefPtr<nsRange>&& aAnchorRange,
+                                Operation aOp, RefPtr<nsRange>&& aRange,
+                                RefPtr<nsRange>&& aCreatedRange,
+                                RefPtr<nsRange>&& aAnchorRange,
                                 bool aForceNavigationWordCheck,
                                 int32_t aNewNavigationPositionOffset);
 
@@ -100,7 +104,7 @@ class mozInlineSpellStatus {
   // If we happen to know something was inserted, this is that range.
   // Can be nullptr (this only allows an optimization, so not setting doesn't
   // hurt)
-  RefPtr<nsRange> mCreatedRange;
+  const RefPtr<const nsRange> mCreatedRange;
 
   // Contains the range computed for the current word. Can be nullptr.
   RefPtr<nsRange> mNoCheckRange;
@@ -258,6 +262,7 @@ class mozInlineSpellChecker final : public nsIInlineSpellChecker,
   // (https://bugzilla.mozilla.org/show_bug.cgi?id=1620540).
   MOZ_CAN_RUN_SCRIPT_BOUNDARY nsresult
   RemoveRange(mozilla::dom::Selection* aSpellCheckSelection, nsRange* aRange);
+
   MOZ_CAN_RUN_SCRIPT_BOUNDARY nsresult
   AddRange(mozilla::dom::Selection* aSpellCheckSelection, nsRange* aRange);
   bool IsSpellCheckSelectionFull() const {
@@ -295,6 +300,13 @@ class mozInlineSpellChecker final : public nsIInlineSpellChecker,
  protected:
   virtual ~mozInlineSpellChecker();
 
+  // Adds the ranges corresponding to the misspelled words as long as
+  // aSpellCheckerSelection isn't full.
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY void AddRangesForMisspelledWords(
+      const nsTArray<NodeOffsetRange>& aRanges,
+      const nsTArray<bool>& aIsMisspelled,
+      mozilla::dom::Selection& aSpellCheckerSelection);
+
   // called when async nsIEditorSpellCheck methods complete
   nsresult EditorSpellCheckInited();
   nsresult CurrentDictionaryUpdated();
@@ -308,9 +320,9 @@ class mozInlineSpellChecker final : public nsIInlineSpellChecker,
   void StartToListenToEditSubActions() { mIsListeningToEditSubActions = true; }
   void EndListeningToEditSubActions() { mIsListeningToEditSubActions = false; }
 
-  void CheckCurrentWordsNoSuggest(mozilla::dom::Selection* aSpellCheckSelection,
-                                  const nsTArray<nsString>& aWords,
-                                  nsTArray<NodeOffsetRange>&& aRanges);
+  void CheckWordsAndAddRangesForMisspellings(
+      mozilla::dom::Selection* aSpellCheckSelection,
+      const nsTArray<nsString>& aWords, nsTArray<NodeOffsetRange>&& aRanges);
 };
 
 #endif  // #ifndef mozilla_mozInlineSpellChecker_h

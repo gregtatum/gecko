@@ -74,6 +74,10 @@ class AndroidSpecificState;
 struct KeyboardScrollAction;
 struct ZoomTarget;
 
+namespace apz {
+struct AsyncScrollThumbTransformer;
+}
+
 // Base class for grouping platform-specific APZC state variables.
 class PlatformSpecificStateBase {
  public:
@@ -1398,6 +1402,11 @@ class AsyncPanZoomController {
   void ResetTouchInputState();
 
   /**
+     Clear internal state relating to pan gesture input handling.
+   */
+  void ResetPanGestureInputState();
+
+  /**
    * Gets a ref to the input queue that is shared across the entire tree
    * manager.
    */
@@ -1451,6 +1460,7 @@ class AsyncPanZoomController {
 
   friend class GenericOverscrollEffect;
   friend class WidgetOverscrollEffect;
+  friend struct apz::AsyncScrollThumbTransformer;
 
   FlingAccelerator mFlingAccelerator;
 

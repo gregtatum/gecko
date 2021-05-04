@@ -8990,7 +8990,7 @@ class TabDialogBox {
           this._onLastDialogClose();
         }
 
-        if (allowFocusCheckbox) {
+        if (allowFocusCheckbox && !event.detail?.abort) {
           this.maybeSetAllowTabSwitchPermission(event.target);
         }
       };

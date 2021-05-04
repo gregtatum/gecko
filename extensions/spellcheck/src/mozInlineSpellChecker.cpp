@@ -96,10 +96,13 @@ static const PRTime kMaxSpellCheckTimeInUsec =
 
 mozInlineSpellStatus::mozInlineSpellStatus(
     mozInlineSpellChecker* aSpellChecker, const Operation aOp,
+    RefPtr<nsRange>&& aRange, RefPtr<nsRange>&& aCreatedRange,
     RefPtr<nsRange>&& aAnchorRange, const bool aForceNavigationWordCheck,
     const int32_t aNewNavigationPositionOffset)
     : mSpellChecker(aSpellChecker),
+      mRange(std::move(aRange)),
       mOp(aOp),
+      mCreatedRange(std::move(aCreatedRange)),
       mAnchorRange(std::move(aAnchorRange)),
       mForceNavigationWordCheck(aForceNavigationWordCheck),
       mNewNavigationPositionOffset(aNewNavigationPositionOffset) {}
@@ -138,22 +141,25 @@ mozInlineSpellStatus::CreateForEditorChange(
     return Err(NS_ERROR_FAILURE);
   }
 
+  // Deletes are easy, the range is just the current anchor. We set the range
+  // to check to be empty, FinishInitOnEvent will fill in the range to be
+  // the current word.
+  RefPtr<nsRange> range = deleted ? nullptr : nsRange::Create(aPreviousNode);
+
+  // On insert save this range: DoSpellCheck optimizes things in this range.
+  // Otherwise, just leave this nullptr.
+  RefPtr<nsRange> createdRange =
+      (aEditSubAction == EditSubAction::eInsertText) ? range : nullptr;
+
   UniquePtr<mozInlineSpellStatus> status{
       /* The constructor is `private`, hence the explicit allocation. */
       new mozInlineSpellStatus{&aSpellChecker,
                                deleted ? eOpChangeDelete : eOpChange,
+                               std::move(range), std::move(createdRange),
                                std::move(anchorRange), false, 0}};
-
   if (deleted) {
-    // Deletes are easy, the range is just the current anchor. We set the range
-    // to check to be empty, FinishInitOnEvent will fill in the range to be
-    // the current word.
-    status->mRange = nullptr;
     return status;
   }
-
-  // range to check
-  status->mRange = nsRange::Create(aPreviousNode);
 
   // ...we need to put the start and end in the correct order
   ErrorResult errorResult;
@@ -177,12 +183,6 @@ mozInlineSpellStatus::CreateForEditorChange(
     if (NS_WARN_IF(NS_FAILED(rv))) {
       return Err(rv);
     }
-  }
-
-  // On insert save this range: DoSpellCheck optimizes things in this range.
-  // Otherwise, just leave this nullptr.
-  if (aEditSubAction == EditSubAction::eInsertText) {
-    status->mCreatedRange = status->mRange;
   }
 
   // if we were given a range, we need to expand our range to encompass it
@@ -239,7 +239,7 @@ mozInlineSpellStatus::CreateForNavigation(
 
   UniquePtr<mozInlineSpellStatus> status{
       /* The constructor is `private`, hence the explicit allocation. */
-      new mozInlineSpellStatus{&aSpellChecker, eOpNavigation,
+      new mozInlineSpellStatus{&aSpellChecker, eOpNavigation, nullptr, nullptr,
                                std::move(anchorRange), aForceCheck,
                                aNewPositionOffset}};
 
@@ -282,8 +282,8 @@ UniquePtr<mozInlineSpellStatus> mozInlineSpellStatus::CreateForSelection(
 
   UniquePtr<mozInlineSpellStatus> status{
       /* The constructor is `private`, hence the explicit allocation. */
-      new mozInlineSpellStatus{&aSpellChecker, eOpSelection, nullptr, false,
-                               0}};
+      new mozInlineSpellStatus{&aSpellChecker, eOpSelection, nullptr, nullptr,
+                               nullptr, false, 0}};
   return status;
 }
 
@@ -300,7 +300,8 @@ UniquePtr<mozInlineSpellStatus> mozInlineSpellStatus::CreateForRange(
 
   UniquePtr<mozInlineSpellStatus> status{
       /* The constructor is `private`, hence the explicit allocation. */
-      new mozInlineSpellStatus{&aSpellChecker, eOpChange, nullptr, false, 0}};
+      new mozInlineSpellStatus{&aSpellChecker, eOpChange, nullptr, nullptr,
+                               nullptr, false, 0}};
 
   status->mRange = aRange;
   return status;
@@ -1384,8 +1385,8 @@ nsresult mozInlineSpellChecker::DoSpellCheck(
           sInlineSpellCheckerLog, LogLevel::Verbose,
           ("%s: we have run out of time, schedule next round.", __FUNCTION__));
 
-      CheckCurrentWordsNoSuggest(aSpellCheckSelection, words,
-                                 std::move(checkRanges));
+      CheckWordsAndAddRangesForMisspellings(aSpellCheckSelection, words,
+                                            std::move(checkRanges));
 
       // move the range to encompass the stuff that needs checking.
       nsresult rv = aStatus->mRange->SetStart(beginNode, beginOffset);
@@ -1452,8 +1453,8 @@ nsresult mozInlineSpellChecker::DoSpellCheck(
     checkRanges.AppendElement(wordNodeOffsetRange);
     wordsChecked++;
     if (words.Length() >= requestChunkSize) {
-      CheckCurrentWordsNoSuggest(aSpellCheckSelection, words,
-                                 std::move(checkRanges));
+      CheckWordsAndAddRangesForMisspellings(aSpellCheckSelection, words,
+                                            std::move(checkRanges));
       // Set new empty data for spellcheck range in DOM to avoid
       // clang-tidy detection.
       words.Clear();
@@ -1461,8 +1462,8 @@ nsresult mozInlineSpellChecker::DoSpellCheck(
     }
   }
 
-  CheckCurrentWordsNoSuggest(aSpellCheckSelection, words,
-                             std::move(checkRanges));
+  CheckWordsAndAddRangesForMisspellings(aSpellCheckSelection, words,
+                                        std::move(checkRanges));
 
   return NS_OK;
 }
@@ -1483,7 +1484,7 @@ class MOZ_RAII AutoChangeNumPendingSpellChecks final {
   int32_t mDelta;
 };
 
-void mozInlineSpellChecker::CheckCurrentWordsNoSuggest(
+void mozInlineSpellChecker::CheckWordsAndAddRangesForMisspellings(
     Selection* aSpellCheckSelection, const nsTArray<nsString>& aWords,
     nsTArray<NodeOffsetRange>&& aRanges) {
   MOZ_ASSERT(aWords.Length() == aRanges.Length());
@@ -1516,19 +1517,8 @@ void mozInlineSpellChecker::CheckCurrentWordsNoSuggest(
           return;
         }
 
-        for (size_t i = 0; i < aIsMisspelled.Length(); i++) {
-          if (!aIsMisspelled[i]) {
-            continue;
-          }
-
-          RefPtr<nsRange> wordRange =
-              mozInlineSpellWordUtil::MakeRange(ranges[i]);
-          // If we somehow can't make a range for this word, just ignore
-          // it.
-          if (wordRange) {
-            self->AddRange(spellCheckerSelection, wordRange);
-          }
-        }
+        self->AddRangesForMisspelledWords(ranges, aIsMisspelled,
+                                          *spellCheckerSelection);
       },
       [self, token](nsresult aRv) {
         if (!self->mTextEditor || self->mTextEditor->Destroyed()) {
@@ -1690,6 +1680,23 @@ nsresult mozInlineSpellChecker::RemoveRange(Selection* aSpellCheckSelection,
   if (!rv.Failed() && mNumWordsInSpellSelection) mNumWordsInSpellSelection--;
 
   return rv.StealNSResult();
+}
+
+void mozInlineSpellChecker::AddRangesForMisspelledWords(
+    const nsTArray<NodeOffsetRange>& aRanges,
+    const nsTArray<bool>& aIsMisspelled, Selection& aSpellCheckerSelection) {
+  for (size_t i = 0; i < aIsMisspelled.Length(); i++) {
+    if (!aIsMisspelled[i]) {
+      continue;
+    }
+
+    RefPtr<nsRange> wordRange = mozInlineSpellWordUtil::MakeRange(aRanges[i]);
+    // If we somehow can't make a range for this word, just ignore
+    // it.
+    if (wordRange) {
+      AddRange(&aSpellCheckerSelection, wordRange);
+    }
+  }
 }
 
 // mozInlineSpellChecker::AddRange

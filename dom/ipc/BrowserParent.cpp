@@ -1133,7 +1133,7 @@ void BrowserParent::HandleAccessKey(const WidgetKeyboardEvent& aEvent,
 }
 
 void BrowserParent::Activate(uint64_t aActionId) {
-  LOGBROWSERFOCUS(("Activate %p", this));
+  LOGBROWSERFOCUS(("Activate %p actionid: %" PRIu64, this, aActionId));
   if (!mIsDestroyed) {
     SetTopLevelWebFocus(this);  // Intentionally inside "if"
     Unused << SendActivate(aActionId);
@@ -1141,7 +1141,7 @@ void BrowserParent::Activate(uint64_t aActionId) {
 }
 
 void BrowserParent::Deactivate(bool aWindowLowering, uint64_t aActionId) {
-  LOGBROWSERFOCUS(("Deactivate %p", this));
+  LOGBROWSERFOCUS(("Deactivate %p actionid: %" PRIu64, this, aActionId));
   if (!aWindowLowering) {
     UnsetTopLevelWebFocus(this);  // Intentionally outside the next "if"
   }
@@ -1198,7 +1198,7 @@ mozilla::ipc::IPCResult BrowserParent::RecvPDocAccessibleConstructor(
 
 #  ifdef XP_WIN
     MOZ_ASSERT(aDocCOMProxy.IsNull());
-    a11y::WrapperFor(doc)->SetID(aMsaaID);
+    a11y::WrapperFor(doc)->GetMsaa()->SetID(aMsaaID);
     if (a11y::nsWinUtils::IsWindowEmulationStarted()) {
       doc->SetEmulatedWindowHandle(parentDoc->GetEmulatedWindowHandle());
     }
@@ -1225,7 +1225,7 @@ mozilla::ipc::IPCResult BrowserParent::RecvPDocAccessibleConstructor(
     // before that.
     a11y::AccessibleWrap* wrapper = a11y::WrapperFor(doc);
     MOZ_ASSERT(wrapper);
-    wrapper->SetID(aMsaaID);
+    wrapper->GetMsaa()->SetID(aMsaaID);
 #  endif
     a11y::DocAccessibleParent* embedderDoc;
     uint64_t embedderID;
@@ -1259,7 +1259,7 @@ mozilla::ipc::IPCResult BrowserParent::RecvPDocAccessibleConstructor(
     doc->SetTopLevel();
     a11y::DocManager::RemoteDocAdded(doc);
 #  ifdef XP_WIN
-    a11y::WrapperFor(doc)->SetID(aMsaaID);
+    a11y::WrapperFor(doc)->GetMsaa()->SetID(aMsaaID);
     MOZ_ASSERT(!aDocCOMProxy.IsNull());
 
     RefPtr<IAccessible> proxy(aDocCOMProxy.Get());

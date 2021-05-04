@@ -830,11 +830,6 @@
   value: @IS_NOT_EARLY_BETA_OR_EARLIER@
   mirror: always
 
-- name: browser.cache.offline.storage.enable
-  type: bool
-  value: false
-  mirror: always
-
 - name: browser.cache.disk.enable
   type: RelaxedAtomicBool
   value: true
@@ -5665,19 +5660,19 @@
     type: bool
     value: false
     mirror: always
+#endif  // NIGHTLY_BUILD
 
-  # Experimental support for Private Fields in JavaScript.
--   name: javascript.options.experimental.private_fields
-    type: bool
-    value: false
-    mirror: always
+  # Support for Private Fields in JavaScript.
+- name: javascript.options.experimental.private_fields
+  type: bool
+  value: true
+  mirror: always
 
   # Experimental support for Private Methods in JavaScript.
--   name: javascript.options.experimental.private_methods
-    type: bool
-    value: false
-    mirror: always
-#endif  // NIGHTLY_BUILD
+- name: javascript.options.experimental.private_methods
+  type: bool
+  value: true
+  mirror: always
 
   # Experimental support for the ergonomic brand check proposal.
 - name: javascript.options.experimental.ergonomic_brand_checks
@@ -5784,12 +5779,19 @@
     mirror: always
 #endif  // defined(ENABLE_WASM_SIMD)
 
-#if defined(ENABLE_WASM_REFTYPES)
--   name: javascript.options.wasm_reftypes
+#if defined(ENABLE_WASM_RELAXED_SIMD)
+-   name: javascript.options.wasm_relaxed_simd
     type: bool
-    value: true
+    value: false
     mirror: always
-#endif // defined(ENABLE_WASM_REFTYPES)
+#endif  // defined(ENABLE_WASM_RELAXED_SIMD)
+
+#if defined(ENABLE_WASM_EXTENDED_CONST)
+-   name: javascript.options.wasm_extended_const
+    type: bool
+    value: @IS_NIGHTLY_BUILD@
+    mirror: always
+#endif  // defined(ENABLE_WASM_EXTENDED_CONST)
 
 #if defined(ENABLE_WASM_EXCEPTIONS)
 -   name: javascript.options.wasm_exceptions
@@ -6910,13 +6912,6 @@
   type: bool
   value: false
   mirror: always
-
-# Is ruby-position: alternate enabled?
-- name: layout.css.ruby.position-alternate.enabled
-  type: RelaxedAtomicBool
-  value: true
-  mirror: always
-  rust: true
 
 - name: layout.css.scroll-behavior.damping-ratio
   type: AtomicFloat
@@ -9538,6 +9533,12 @@
   value: @IS_EARLY_BETA_OR_EARLIER@
   mirror: always
 
+# Support http3 version1
+- name: network.http.http3.support_version1
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
 #---------------------------------------------------------------------------
 # Prefs starting with "nglayout."
 #---------------------------------------------------------------------------
@@ -9937,6 +9938,16 @@
 - name: privacy.resistFingerprinting.target_video_res
   type: uint32_t
   value: 480
+  mirror: always
+
+# Bitfield for selectively disabling RFP
+#   0 for no new behavior
+#   1 for disabling RFP if it's a WebExtension
+#   2 for disabling RFP if we are not in PBM
+#   4 for disabling RFP on specific domains (see privacy.resistFingerprinting.exemptedDomains)
+- name: privacy.resistFingerprinting.testGranularityMask
+  type: RelaxedAtomicUint32
+  value: 0
   mirror: always
 
 # Anti-tracking permission expiration.
@@ -11167,6 +11178,22 @@
   value: false
   mirror: always
 
+# Whether system colors follow the document theme rather than the system on
+# chrome documents.
+- name: widget.system-colors-follow-theme
+  type: RelaxedAtomicBool
+#ifdef XP_MACOSX
+  value: true
+#else
+  # TODO(emilio): In order to enable this on GTK we need to teach
+  # nsNativeThemeGTK to draw non-system-themed widgets, which seems a bit hard,
+  # or alternatively do this only for documents which use the non-native theme.
+  #
+  # We also need to enable widget.gtk.alt-theme.dark.
+  value: false
+#endif
+  mirror: always
+
 - name: widget.window-transforms.disabled
   type: RelaxedAtomicBool
   value: false
@@ -11174,6 +11201,11 @@
 
 #ifdef XP_MACOSX
 - name: widget.macos.native-context-menus
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
+
+- name: widget.macos.enable-pre-bigsur-workaround-for-dark-mode-context-menus
   type: RelaxedAtomicBool
   value: true
   mirror: always
@@ -11190,33 +11222,43 @@
   value: false
   mirror: always
 
-# Whether selection colors get passed from the real GTK theme even if
-# allow-gtk-dark-theme is false.
-- name: widget.content.allow-gtk-dark-theme.selection
+# Whether we try to extract dark theme GTK colors.
+#
+# This has a startup performance cost (see bug 1709295), so until we need them
+# (that is, until we implement the color-scheme CSS property / meta tag / etc,
+# or we start following the firefox theme color scheme in our UI with
+# widget.system-colors-follow-theme) we keep this code pref'd off.
+- name: widget.gtk.alt-theme.dark
+  type: bool
+  value: false
+  mirror: always
+
+# Whether selection colors for the non-system theme get passed from the system
+# GTK theme.
+- name: widget.gtk.alt-theme.selection
   type: bool
   value: true
   mirror: always
 
-# Whether form control accent colors get passed from the real GTK theme even if
-# allow-gtk-dark-theme is false.
-- name: widget.content.allow-gtk-dark-theme.accent
+# Whether form control accent colors for the non-system theme get passed from
+# the system GTK theme.
+- name: widget.gtk.alt-theme.accent
   type: bool
   value: true
   mirror: always
 
-# Whether the scrollbar thumb active color gets passed from the real GTK theme
-# even if allow-gtk-dark-theme is false.
-- name: widget.content.allow-gtk-dark-theme.scrollbar_active
+# Whether the scrollbar thumb active color from the non-system theme gets
+# passed from the system GTK theme.
+- name: widget.gtk.alt-theme.scrollbar_active
   type: bool
   value: true
   mirror: always
 
-# Whether other scrollbar colors get passed from the real GTK theme even if
-# allow-gtk-dark-theme is false.
+# Whether other scrollbar colors get passed from the real GTK theme.
 #
 # This is default false because light scrollbars usually match better websites,
 # and we have automatic scrollbar darkening.
-- name: widget.content.allow-gtk-dark-theme.scrollbar
+- name: widget.gtk.alt-theme.scrollbar
   type: bool
   value: false
   mirror: always

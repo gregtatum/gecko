@@ -2892,6 +2892,9 @@ void CodeGenerator::visitWasmVariableShiftSimd128(
     case wasm::SimdOp::I64x2Shl:
       masm.leftShiftInt64x2(rhs, lhsDest, temp1);
       break;
+    case wasm::SimdOp::I64x2ShrS:
+      masm.rightShiftInt64x2(rhs, lhsDest, temp1, temp2);
+      break;
     case wasm::SimdOp::I64x2ShrU:
       masm.unsignedRightShiftInt64x2(rhs, lhsDest, temp1);
       break;
@@ -2913,22 +2916,12 @@ void CodeGenerator::visitWasmConstantShiftSimd128(
     return;
   }
 
-  FloatRegister temp;
-  switch (ins->simdOp()) {
-    case wasm::SimdOp::I8x16ShrS:
-      temp = ToFloatRegister(ins->temp());
-      break;
-    default:
-      MOZ_ASSERT(ins->temp()->isBogusTemp());
-      break;
-  }
-
   switch (ins->simdOp()) {
     case wasm::SimdOp::I8x16Shl:
       masm.leftShiftInt8x16(Imm32(shift), src, dest);
       break;
     case wasm::SimdOp::I8x16ShrS:
-      masm.rightShiftInt8x16(Imm32(shift), src, dest, temp);
+      masm.rightShiftInt8x16(Imm32(shift), src, dest);
       break;
     case wasm::SimdOp::I8x16ShrU:
       masm.unsignedRightShiftInt8x16(Imm32(shift), src, dest);

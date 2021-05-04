@@ -126,8 +126,16 @@ namespace SessionStoreUtils {
 
    nsISessionStoreRestoreData constructSessionStoreRestoreData();
 
-   boolean setRestoreData(CanonicalBrowsingContext browsingContext,
-                          nsISessionStoreRestoreData? data);
+   [Throws]
+   Promise<void> initializeRestore(CanonicalBrowsingContext browsingContext,
+                                   nsISessionStoreRestoreData? data);
+
+   [Throws]
+   Promise<void> restoreDocShellState(
+      CanonicalBrowsingContext browsingContext,
+      UTF8String? url,
+      ByteString? docShellCaps,
+      record<UTF8String, record<DOMString, DOMString>> sessionStorage);
 };
 
 [GenerateConversionToJS, GenerateInit]

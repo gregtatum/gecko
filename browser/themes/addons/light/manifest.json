@@ -35,7 +35,7 @@
       "toolbar_field_border": "transparent",
       "toolbar_field_focus": "white",
       "toolbar_text": "rgb(21,20,26)",
-      "ntp_background": "#fff",
+      "ntp_background": "#F9F9FB",
       "ntp_text": "rgb(21, 20, 26)",
       "popup_action_color": "rgb(91,91,102)",
       "button": "rgb(240,240,244)",
@@ -63,7 +63,8 @@
     "properties": {
       "panel_hover": "color-mix(in srgb, currentColor 12%, transparent)",
       "panel_active": "color-mix(in srgb, currentColor 20%, transparent)",
-      "panel_active_darker": "color-mix(in srgb, currentColor 27%, transparent)"
+      "panel_active_darker": "color-mix(in srgb, currentColor 27%, transparent)",
+      "toolbar_field_icon_opacity": "0.72"
     }
   },
 
@@ -74,10 +75,10 @@
       "button": "--button-bgcolor",
       "button_hover": "--button-hover-bgcolor",
       "button_active": "--button-active-bgcolor",
-      "button_primary": "--buttons-primary-button-bgcolor",
-      "button_primary_hover": "--buttons-primary-button-hover-bgcolor",
-      "button_primary_active": "--buttons-primary-button-active-bgcolor",
-      "button_primary_color": "--buttons-primary-button-color",
+      "button_primary": "--button-primary-bgcolor",
+      "button_primary_hover": "--button-primary-hover-bgcolor",
+      "button_primary_active": "--button-primary-active-bgcolor",
+      "button_primary_color": "--button-primary-color",
       "checkbox_border_color": "--checkbox-border-color",
       "checkbox_unchecked_background": "--checkbox-unchecked-bgcolor",
       "checkbox_unchecked_background_hover": "--checkbox-unchecked-hover-bgcolor",
@@ -96,7 +97,8 @@
     "properties": {
       "panel_hover": "--arrowpanel-dimmed",
       "panel_active": "-arrowpanel-dimmed-further",
-      "panel_active_darker": "--arrowpanel-dimmed-even-further"
+      "panel_active_darker": "--arrowpanel-dimmed-even-further",
+      "toolbar_field_icon_opacity": "--urlbar-icon-fill-opacity"
     }
   }
 }

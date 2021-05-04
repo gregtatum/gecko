@@ -141,6 +141,7 @@
 #include "js/Warnings.h"     // JS::SetWarningReporter
 #include "js/WasmModule.h"   // JS::WasmModule
 #include "js/Wrapper.h"
+#include "proxy/DeadObjectProxy.h"  // js::IsDeadProxyObject
 #include "shell/jsoptparse.h"
 #include "shell/jsshell.h"
 #include "shell/OSObject.h"
@@ -4716,9 +4717,16 @@ static void DestroyShellCompartmentPrivate(JSFreeOp* fop,
 static void SetWorkerContextOptions(JSContext* cx);
 static bool ShellBuildId(JS::BuildIdCharVector* buildId);
 
-JSObject* GetElementCallback(JSContext* cx, JS::HandleValue value) {
-  RootedValue privateValue(cx, value);
+static JSObject* ShellSourceElementCallback(JSContext* cx,
+                                            JS::HandleValue privateValue) {
   if (!privateValue.isObject()) {
+    return nullptr;
+  }
+
+  // Due to nukeCCW shenanigans in the shell, we need to check for dead-proxy
+  // objects that may have replaced an CCW.  Otherwise the GetProperty below
+  // would throw an exception which we do not want to support in this callback.
+  if (js::IsDeadProxyObject(&privateValue.toObject())) {
     return nullptr;
   }
 
@@ -4737,6 +4745,7 @@ JSObject* GetElementCallback(JSContext* cx, JS::HandleValue value) {
   if (elementValue.isObject()) {
     return &elementValue.toObject();
   }
+
   return nullptr;
 }
 
@@ -4774,7 +4783,7 @@ static void WorkerMain(WorkerInput* input) {
                                   DummyHasReleasedWrapperCallback);
   JS_InitDestroyPrincipalsCallback(cx, ShellPrincipals::destroy);
   JS_SetDestroyCompartmentCallback(cx, DestroyShellCompartmentPrivate);
-  JS::SetGetElementCallback(cx, &GetElementCallback);
+  JS::SetSourceElementCallback(cx, ShellSourceElementCallback);
 
   js::SetWindowProxyClass(cx, &ShellWindowProxyClass);
 
@@ -11019,9 +11028,8 @@ static bool SetContextOptions(JSContext* cx, const OptionParser& op) {
   enablePropertyErrorMessageFix =
       !op.getBoolOption("disable-property-error-message-fix");
   enableIteratorHelpers = op.getBoolOption("enable-iterator-helpers");
-  enablePrivateClassFields = op.getBoolOption("enable-private-fields") ||
-                             op.getBoolOption("enable-private-methods");
-  enablePrivateClassMethods = op.getBoolOption("enable-private-methods");
+  enablePrivateClassFields = !op.getBoolOption("disable-private-fields");
+  enablePrivateClassMethods = !op.getBoolOption("disable-private-methods");
   enableErgonomicBrandChecks =
       op.getBoolOption("enable-ergonomic-brand-checks");
   enableTopLevelAwait = op.getBoolOption("enable-top-level-await");
@@ -11993,10 +12001,10 @@ int main(int argc, char** argv) {
                         "property of null or undefined") ||
       !op.addBoolOption('\0', "enable-iterator-helpers",
                         "Enable iterator helpers") ||
-      !op.addBoolOption('\0', "enable-private-fields",
-                        "Enable private class fields") ||
-      !op.addBoolOption('\0', "enable-private-methods",
-                        "Enable private class methods") ||
+      !op.addBoolOption('\0', "disable-private-fields",
+                        "Disable private class fields") ||
+      !op.addBoolOption('\0', "disable-private-methods",
+                        "Disable private class methods") ||
       !op.addBoolOption(
           '\0', "enable-ergonomic-brand-checks",
           "Enable ergonomic brand checks for private class fields") ||
@@ -12413,7 +12421,7 @@ int main(int argc, char** argv) {
   JS_SetSecurityCallbacks(cx, &ShellPrincipals::securityCallbacks);
   JS_InitDestroyPrincipalsCallback(cx, ShellPrincipals::destroy);
   JS_SetDestroyCompartmentCallback(cx, DestroyShellCompartmentPrivate);
-  JS::SetGetElementCallback(cx, &GetElementCallback);
+  JS::SetSourceElementCallback(cx, ShellSourceElementCallback);
 
   js::SetWindowProxyClass(cx, &ShellWindowProxyClass);
 

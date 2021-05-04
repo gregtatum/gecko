@@ -72,7 +72,6 @@ using namespace mozilla;
 using namespace mozilla::gfx;
 using namespace mozilla::unicode;
 using namespace mozilla::widget;
-using mozilla::dom::SystemFontListEntry;
 
 static FT_Library gPlatformFTLibrary = nullptr;
 static int32_t sDPI;
@@ -339,7 +338,7 @@ void gfxPlatformGtk::GetCommonFallbackFonts(uint32_t aCh, Script aRunScript,
 }
 
 void gfxPlatformGtk::ReadSystemFontList(
-    nsTArray<SystemFontListEntry>* retValue) {
+    mozilla::dom::SystemFontList* retValue) {
   gfxFcPlatformFontList::PlatformFontList()->ReadSystemFontList(retValue);
 }
 
@@ -413,7 +412,7 @@ gfxImageFormat gfxPlatformGtk::GetOffscreenFormat() {
 
 void gfxPlatformGtk::FontsPrefsChanged(const char* aPref) {
   // only checking for generic substitions, pass other changes up
-  if (strcmp(GFX_PREF_MAX_GENERIC_SUBSTITUTIONS, aPref)) {
+  if (strcmp(GFX_PREF_MAX_GENERIC_SUBSTITUTIONS, aPref) != 0) {
     gfxPlatform::FontsPrefsChanged(aPref);
     return;
   }
@@ -519,7 +518,7 @@ nsTArray<uint8_t> gfxPlatformGtk::GetPlatformCMSOutputProfileData() {
   }
 
   // Format documented in "VESA E-EDID Implementation Guide"
-  float gamma = (100 + retProperty[0x17]) / 100.0f;
+  float gamma = (100 + (float)retProperty[0x17]) / 100.0f;
 
   qcms_CIE_xyY whitePoint;
   whitePoint.x =
@@ -739,7 +738,7 @@ class GtkVsyncSource final : public VsyncSource {
         // until the parity of the counter value changes.
         unsigned int nextSync = syncCounter + 1;
         int status;
-        if ((status = gl::sGLXLibrary.fWaitVideoSync(2, nextSync % 2,
+        if ((status = gl::sGLXLibrary.fWaitVideoSync(2, (int)nextSync % 2,
                                                      &syncCounter)) != 0) {
           gfxWarningOnce() << "glXWaitVideoSync returned " << status;
           useSoftware = true;
@@ -755,7 +754,7 @@ class GtkVsyncSource final : public VsyncSource {
           double remaining =
               (1000.f / 60.f) - (TimeStamp::Now() - lastVsync).ToMilliseconds();
           if (remaining > 0) {
-            PlatformThread::Sleep(remaining);
+            PlatformThread::Sleep((int)remaining);
           }
         }
 

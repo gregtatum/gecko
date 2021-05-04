@@ -165,15 +165,6 @@ void WarpRest::dumpData(GenericPrinter& out) const {
   out.printf("    template: 0x%p\n", templateObject());
 }
 
-void WarpNewArray::dumpData(GenericPrinter& out) const {
-  out.printf("    template: 0x%p\n", templateObject());
-  out.printf("    useVMCall: %u\n", useVMCall());
-}
-
-void WarpNewObject::dumpData(GenericPrinter& out) const {
-  out.printf("    template: 0x%p\n", templateObject());
-}
-
 void WarpBindGName::dumpData(GenericPrinter& out) const {
   out.printf("    globalEnv: 0x%p\n", globalEnv());
 }
@@ -297,14 +288,6 @@ void WarpLambda::traceData(JSTracer* trc) {
 
 void WarpRest::traceData(JSTracer* trc) {
   TraceWarpGCPtr(trc, templateObject_, "warp-rest-template");
-}
-
-void WarpNewArray::traceData(JSTracer* trc) {
-  TraceWarpGCPtr(trc, templateObject_, "warp-newarray-template");
-}
-
-void WarpNewObject::traceData(JSTracer* trc) {
-  TraceWarpGCPtr(trc, templateObject_, "warp-newobject-template");
 }
 
 void WarpBindGName::traceData(JSTracer* trc) {

@@ -14,7 +14,7 @@
   fill: currentColor;
   fill-opacity: var(--urlbar-icon-fill-opacity);
   color: inherit;
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbar-icon-border-radius);
 }
 #notification-popup-box:hover {
   background-color: hsla(0,0%,70%,.2);
@@ -29,7 +29,7 @@
 .permission-popup-permission-icon {
   -moz-context-properties: fill, fill-opacity;
   fill: currentColor;
-  fill-opacity: 0.6;
+  fill-opacity: var(--toolbarbutton-icon-fill-opacity);
 }
 
 .blocked-permission-icon:-moz-focusring,
@@ -325,6 +325,16 @@
 /* This icon has a block sign in it, so we don't need a blocked version. */
 .popup-icon {
   list-style-image: url("chrome://browser/skin/notification-icons/popup.svg");
+}
+
+/**
+ * Bug 1708716: The blocked popup icon is just slightly vertically offset from
+ * the other icons that can appear alongside it in the URL bar due to how it's
+ * placed in the SVG file. We nudge it a little here to make it line up in a
+ * more aesthetically pleasing way.
+ */
+#blocked-permissions-container > .popup-icon {
+  transform: translateY(2px);
 }
 
 .popup-subitem {

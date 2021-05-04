@@ -350,8 +350,7 @@ class ContentChild final : public PContentChild,
   mozilla::ipc::IPCResult RecvUpdateDictionaryList(
       nsTArray<nsCString>&& aDictionaries);
 
-  mozilla::ipc::IPCResult RecvUpdateFontList(
-      nsTArray<SystemFontListEntry>&& aFontList);
+  mozilla::ipc::IPCResult RecvUpdateFontList(SystemFontList&&);
   mozilla::ipc::IPCResult RecvRebuildFontList(const bool& aFullRebuild);
 
   mozilla::ipc::IPCResult RecvUpdateAppLocales(
@@ -381,6 +380,8 @@ class ContentChild final : public PContentChild,
       const nsCString& sourceURL, const nsCString& updateURL);
 
   mozilla::ipc::IPCResult RecvRemoteType(const nsCString& aRemoteType);
+
+  void PreallocInit();
 
   // Call RemoteTypePrefix() on the result to remove URIs if you want to use
   // this for telemetry.
@@ -533,8 +534,7 @@ class ContentChild final : public PContentChild,
 
   mozilla::ipc::IPCResult RecvSetXPCOMProcessAttributes(
       XPCOMInitData&& aXPCOMInit, const StructuredCloneData& aInitialData,
-      FullLookAndFeel&& aLookAndFeelData,
-      nsTArray<SystemFontListEntry>&& aFontList,
+      FullLookAndFeel&& aLookAndFeelData, SystemFontList&& aFontList,
       const Maybe<base::SharedMemoryHandle>& aSharedUASheetHandle,
       const uintptr_t& aSharedUASheetAddress,
       nsTArray<base::SharedMemoryHandle>&& aSharedFontListBlocks);
@@ -568,9 +568,7 @@ class ContentChild final : public PContentChild,
 
   // Get a reference to the font list passed from the chrome process,
   // for use during gfx initialization.
-  nsTArray<mozilla::dom::SystemFontListEntry>& SystemFontList() {
-    return mFontList;
-  }
+  SystemFontList& SystemFontList() { return mFontList; }
 
   nsTArray<base::SharedMemoryHandle>& SharedFontListBlocks() {
     return mSharedFontListBlocks;
@@ -858,7 +856,7 @@ class ContentChild final : public PContentChild,
   // Temporary storage for a list of available fonts, passed from the
   // parent process and used to initialize gfx in the child. Currently used
   // only on MacOSX and Linux.
-  nsTArray<mozilla::dom::SystemFontListEntry> mFontList;
+  dom::SystemFontList mFontList;
   // Temporary storage for look and feel data.
   FullLookAndFeel mLookAndFeelData;
   // Temporary storage for list of shared-fontlist memory blocks.

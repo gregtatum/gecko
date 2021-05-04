@@ -66,8 +66,8 @@ class HTMLFormElement final : public nsGenericHTMLElement,
   NS_IMETHOD GetNextRadioButton(const nsAString& aName, const bool aPrevious,
                                 HTMLInputElement* aFocusedRadio,
                                 HTMLInputElement** aRadioOut) override;
-  NS_IMETHOD WalkRadioGroup(const nsAString& aName, nsIRadioVisitor* aVisitor,
-                            bool aFlushContent) override;
+  NS_IMETHOD WalkRadioGroup(const nsAString& aName,
+                            nsIRadioVisitor* aVisitor) override;
   void AddToRadioGroup(const nsAString& aName,
                        HTMLInputElement* aRadio) override;
   void RemoveFromRadioGroup(const nsAString& aName,
@@ -485,8 +485,7 @@ class HTMLFormElement final : public nsGenericHTMLElement,
    * Find form controls in this form with the correct value in the name
    * attribute.
    */
-  already_AddRefed<nsISupports> DoResolveName(const nsAString& aName,
-                                              bool aFlushContent);
+  already_AddRefed<nsISupports> DoResolveName(const nsAString& aName);
 
   /**
    * Check the form validity following this algorithm:

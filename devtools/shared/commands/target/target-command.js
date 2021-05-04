@@ -273,7 +273,23 @@ class TargetCommand extends EventEmitter {
     return this._listenersStarted.has(type);
   }
 
-  hasTargetWatcherSupport(type) {
+  /**
+   * Check if the watcher is currently supported.
+   *
+   * When no typeOrTrait is provided, we will only check that the watcher is
+   * available.
+   *
+   * When a typeOrTrait is provided, we will check for an explicit trait on the
+   * watcherFront that indicates either that:
+   *   - a target type is supported
+   *   - or that a custom trait is true
+   *
+   * @param {String} [targetTypeOrTrait]
+   *        Optional target type or trait.
+   * @return {Boolean} true if the watcher is available and supports the
+   *          optional targetTypeOrTrait
+   */
+  hasTargetWatcherSupport(targetTypeOrTrait) {
     // If the top level target is a parent process, we're in the browser console or browser toolbox.
     // In such case, if the browser toolbox fission pref is disabled, we don't want to use watchers
     // (even if traits on the server are enabled).
@@ -284,7 +300,14 @@ class TargetCommand extends EventEmitter {
       return false;
     }
 
-    return !!this.watcherFront?.traits[type];
+    if (targetTypeOrTrait) {
+      // Target types are also exposed as traits, where resource types are
+      // exposed under traits.resources (cf hasResourceWatcherSupport
+      // implementation).
+      return !!this.watcherFront?.traits[targetTypeOrTrait];
+    }
+
+    return !!this.watcherFront;
   }
 
   isServerTargetSwitchingEnabled() {
@@ -326,7 +349,7 @@ class TargetCommand extends EventEmitter {
     }
 
     // Cache the Watcher once for all, the first time we call `startListening()`.
-    // This `watcherFront` attribute may be then used in any function in TargetCommand or ResourceWatcher after this.
+    // This `watcherFront` attribute may be then used in any function in TargetCommand or ResourceCommand after this.
     if (!this.watcherFront) {
       // Bug 1675763: Watcher actor is not available in all situations yet.
       const supportsWatcher = this.descriptorFront.traits?.watcher;
@@ -605,7 +628,7 @@ class TargetCommand extends EventEmitter {
    */
   async onLocalTabRemotenessChange(targetFront) {
     if (this.isServerTargetSwitchingEnabled()) {
-      // For server-side target switchting, everything will be handled by the
+      // For server-side target switching, everything will be handled by the
       // _onTargetAvailable callback.
       return;
     }
@@ -619,6 +642,16 @@ class TargetCommand extends EventEmitter {
 
     // Fetch the new target from the descriptor.
     const newTarget = await this.descriptorFront.getTarget();
+
+    // If a navigation happens while we try to get the target for the page that triggered
+    // the remoteness change, `getTarget` will return null. In such case, we'll get the
+    // "next" target through onTargetAvailable so it's safe to bail here.
+    if (!newTarget) {
+      console.warn(
+        `Couldn't get the target for descriptor ${this.descriptorFront.actorID}`
+      );
+      return;
+    }
 
     this.switchToTarget(newTarget);
   }

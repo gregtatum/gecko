@@ -5,6 +5,7 @@
 #include "AudioDecoderInputTrack.h"
 
 #include "MediaData.h"
+#include "mozilla/ScopeExit.h"
 
 namespace mozilla {
 
@@ -215,6 +216,7 @@ void AudioDecoderInputTrack::PushDataToSPSCQueue(SPSCData& data) {
   AssertOnDecoderThread();
   const bool rv = mSPSCQueue.Enqueue(data);
   MOZ_DIAGNOSTIC_ASSERT(rv, "Failed to push data, SPSC queue is full!");
+  Unused << rv;
 }
 
 void AudioDecoderInputTrack::SetVolume(float aVolume) {

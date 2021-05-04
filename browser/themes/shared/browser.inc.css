@@ -25,6 +25,10 @@
   --button-hover-bgcolor: color-mix(in srgb, currentColor 17%, transparent);
   --button-active-bgcolor: color-mix(in srgb, currentColor 30%, transparent);
   --button-color: currentColor;
+  --button-primary-bgcolor: -moz-accent-color;
+  --button-primary-hover-bgcolor: color-mix(in srgb, black 10%, -moz-accent-color);
+  --button-primary-active-bgcolor: color-mix(in srgb, black 20%, -moz-accent-color);
+  --button-primary-color: -moz-accent-color-foreground;
 
   --buttons-destructive-bgcolor: #e22850;
   --buttons-destructive-hover-bgcolor: #c50042;
@@ -40,8 +44,11 @@
   --urlbar-box-hover-bgcolor: var(--button-hover-bgcolor);
   --urlbar-box-active-bgcolor: var(--button-active-bgcolor);
   --urlbar-min-height: 32px;
-  --urlbar-icon-fill-opacity: 1;
+  --urlbar-icon-fill-opacity: 0.9;
   --urlbar-icon-padding: 6px; /* (32px - 2px border - 2px padding - 16px icon) / 2 */
+  /* This should be used for icons and chiclets inside the input field. It makes
+     the gap around them more uniform when they are close to the field edges */
+  --urlbar-icon-border-radius: calc(var(--toolbarbutton-border-radius) - 1px);
   --urlbar-popup-url-color: -moz-nativehyperlinktext;
 
   --lwt-additional-images: none;
@@ -53,6 +60,7 @@
 @media (prefers-contrast) {
   :root {
     --autocomplete-popup-separator-color: color-mix(in srgb, currentColor 86%, transparent);
+    --urlbar-icon-fill-opacity: 1;
   }
 }
 
@@ -62,6 +70,7 @@
     --identity-box-margin-inline: 3px;
     --identity-box-label-opacity: .6;
     --urlbar-icon-fill-opacity: .6;
+    --urlbar-icon-border-radius: 0;
   }
 } /*** END !proton ***/
 
@@ -862,6 +871,10 @@ menupopup::part(drop-indicator) {
   display: none;
 }
 
+#webRTC-selectWindow-menulist {
+  margin-inline: 2px;
+}
+
 .ac-has-end-icon {
   /* Password manager's username field icon width + icon end margin */
   padding-inline-end: calc(12px + 8px);
@@ -871,6 +884,10 @@ menupopup::part(drop-indicator) {
 @media (-moz-proton-doorhangers) {
 popupnotificationcontent {
   margin-block-start: 8px;
+}
+
+.popup-notification-body menulist {
+  margin-inline: 0;
 }
 
 .popup-notification-checkbox {
@@ -960,6 +977,7 @@ popupnotificationcontent {
 
 .popup-notification-description {
   font-weight: 600;
+  margin-top: 0;
 }
 } /** END Proton **/
 

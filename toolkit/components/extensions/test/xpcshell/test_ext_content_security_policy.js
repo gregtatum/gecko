@@ -101,7 +101,7 @@ async function testPolicy(manifest_version = 2, customCSP = null) {
   function background() {
     browser.test.sendMessage(
       "base-url",
-      browser.extension.getURL("").replace(/\/$/, "")
+      browser.runtime.getURL("").replace(/\/$/, "")
     );
 
     browser.test.sendMessage("background-csp", window.getCSP());
@@ -127,6 +127,13 @@ async function testPolicy(manifest_version = 2, customCSP = null) {
       } catch (e) {
         postMessage({ loaded: false });
       }
+    };
+  }
+
+  if (manifest_version == 3) {
+    let extension_pages = content_security_policy;
+    content_security_policy = {
+      extension_pages,
     };
   }
 

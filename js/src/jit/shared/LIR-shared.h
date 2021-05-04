@@ -415,6 +415,41 @@ class LNewObject : public LInstructionHelper<1, 0, 1> {
   MNewObject* mir() const { return mir_->toNewObject(); }
 };
 
+class LNewPlainObject : public LInstructionHelper<1, 0, 3> {
+ public:
+  LIR_HEADER(NewPlainObject)
+
+  explicit LNewPlainObject(const LDefinition& temp0, const LDefinition& temp1,
+                           const LDefinition& temp2)
+      : LInstructionHelper(classOpcode) {
+    setTemp(0, temp0);
+    setTemp(1, temp1);
+    setTemp(2, temp2);
+  }
+
+  const LDefinition* temp0() { return getTemp(0); }
+  const LDefinition* temp1() { return getTemp(1); }
+  const LDefinition* temp2() { return getTemp(2); }
+
+  MNewPlainObject* mir() const { return mir_->toNewPlainObject(); }
+};
+
+class LNewArrayObject : public LInstructionHelper<1, 0, 2> {
+ public:
+  LIR_HEADER(NewArrayObject)
+
+  explicit LNewArrayObject(const LDefinition& temp0, const LDefinition& temp1)
+      : LInstructionHelper(classOpcode) {
+    setTemp(0, temp0);
+    setTemp(1, temp1);
+  }
+
+  const LDefinition* temp0() { return getTemp(0); }
+  const LDefinition* temp1() { return getTemp(1); }
+
+  MNewArrayObject* mir() const { return mir_->toNewArrayObject(); }
+};
+
 // Allocates a new NamedLambdaObject.
 //
 // This instruction generates two possible instruction sets:
@@ -9097,7 +9132,7 @@ class LWasmVariableShiftSimd128 : public LInstructionHelper<1, 2, 2> {
 };
 
 // (v128, i32) -> v128 effect-free constant-width shift operations
-class LWasmConstantShiftSimd128 : public LInstructionHelper<1, 1, 1> {
+class LWasmConstantShiftSimd128 : public LInstructionHelper<1, 1, 0> {
   int32_t shift_;
 
  public:
@@ -9105,15 +9140,12 @@ class LWasmConstantShiftSimd128 : public LInstructionHelper<1, 1, 1> {
 
   static constexpr uint32_t Src = 0;
 
-  LWasmConstantShiftSimd128(const LAllocation& src, const LDefinition& temp,
-                            int32_t shift)
+  LWasmConstantShiftSimd128(const LAllocation& src, int32_t shift)
       : LInstructionHelper(classOpcode), shift_(shift) {
     setOperand(Src, src);
-    setTemp(0, temp);
   }
 
   const LAllocation* src() { return getOperand(Src); }
-  const LDefinition* temp() { return getTemp(0); }
   int32_t shift() { return shift_; }
   wasm::SimdOp simdOp() const { return mir_->toWasmShiftSimd128()->simdOp(); }
 };

@@ -1255,21 +1255,41 @@ class CGTemplatedType(CGWrapper):
         CGWrapper.__init__(self, child, pre=pre, post=post)
 
 
-class CGNamespace(CGWrapper):
-    def __init__(self, namespace, child, declareOnly=False):
-        pre = "namespace %s {\n" % namespace
-        post = "} // namespace %s\n" % namespace
-        CGWrapper.__init__(self, child, pre=pre, post=post, declareOnly=declareOnly)
+class CGNamespace(CGThing):
+    """
+    Generates namespace block that wraps other CGThings.
+    """
+
+    def __init__(self, namespace, child):
+        CGThing.__init__(self)
+        self.child = child
+        self.pre = "namespace %s {\n" % namespace
+        self.post = "} // namespace %s\n" % namespace
+
+    def declare(self):
+        decl = self.child.declare()
+        if len(decl.strip()) == 0:
+            return ""
+        return self.pre + decl + self.post
+
+    def define(self):
+        defn = self.child.define()
+        if len(defn.strip()) == 0:
+            return ""
+        return self.pre + defn + self.post
+
+    def deps(self):
+        return self.child.deps()
 
     @staticmethod
-    def build(namespaces, child, declareOnly=False):
+    def build(namespaces, child):
         """
         Static helper method to build multiple wrapped namespaces.
         """
         if not namespaces:
-            return CGWrapper(child, declareOnly=declareOnly)
-        inner = CGNamespace.build(namespaces[1:], child, declareOnly=declareOnly)
-        return CGNamespace(namespaces[0], inner, declareOnly=declareOnly)
+            return CGWrapper(child)
+        inner = CGNamespace.build(namespaces[1:], child)
+        return CGNamespace(namespaces[0], inner)
 
 
 class CGIncludeGuard(CGWrapper):
@@ -2670,7 +2690,6 @@ class PropertyDefiner:
         specType = "const " + specType
         arrays = fill(
             """
-            // We deliberately use brace-elision to make Visual Studio produce better initalization code.
             static ${specType} ${name}_specs[] = {
             ${specs}
             };
@@ -5107,7 +5126,6 @@ class CGCrossOriginProperties(CGThing):
         )
         return fill(
             """
-            // We deliberately use brace-elision to make Visual Studio produce better initalization code.
             static const JSPropertySpec sCrossOriginAttributes[] = {
               $*{attributeSpecs}
             };
@@ -14449,7 +14467,7 @@ class CGDOMJSProxyHandler_getOwnPropDescriptor(ClassMethod):
             Argument("JS::Handle<JSObject*>", "proxy"),
             Argument("JS::Handle<jsid>", "id"),
             Argument("bool", "ignoreNamedProps"),
-            Argument("JS::MutableHandle<JS::PropertyDescriptor>", "desc"),
+            Argument("JS::MutableHandle<Maybe<JS::PropertyDescriptor>>", "desc"),
         ]
         ClassMethod.__init__(
             self,
@@ -14485,11 +14503,12 @@ class CGDOMJSProxyHandler_getOwnPropDescriptor(ClassMethod):
         if self.descriptor.supportsIndexedProperties():
             readonly = toStringBool(indexedSetter is None)
             fillDescriptor = (
-                "FillPropertyDescriptor(desc, proxy, %s);\nreturn true;\n" % readonly
+                "FillPropertyDescriptor(cx, desc, proxy, value, %s);\nreturn true;\n"
+                % readonly
             )
             templateValues = {
-                "jsvalRef": "desc.value()",
-                "jsvalHandle": "desc.value()",
+                "jsvalRef": "value",
+                "jsvalHandle": "&value",
                 "obj": "proxy",
                 "successCode": fillDescriptor,
             }
@@ -14497,6 +14516,7 @@ class CGDOMJSProxyHandler_getOwnPropDescriptor(ClassMethod):
                 """
                 uint32_t index = GetArrayIndexFromId(id);
                 if (IsArrayIndex(index)) {
+                  JS::Rooted<JS::Value> value(cx);
                   $*{callGetter}
                 }
 
@@ -14514,13 +14534,13 @@ class CGDOMJSProxyHandler_getOwnPropDescriptor(ClassMethod):
             operations = self.descriptor.operations
             readonly = toStringBool(operations["NamedSetter"] is None)
             fillDescriptor = (
-                "FillPropertyDescriptor(desc, proxy, %s, %s);\n"
+                "FillPropertyDescriptor(cx, desc, proxy, value, %s, %s);\n"
                 "return true;\n"
                 % (readonly, toStringBool(self.descriptor.namedPropertiesEnumerable))
             )
             templateValues = {
-                "jsvalRef": "desc.value()",
-                "jsvalHandle": "desc.value()",
+                "jsvalRef": "value",
+                "jsvalHandle": "&value",
                 "obj": "proxy",
                 "successCode": fillDescriptor,
             }
@@ -14558,6 +14578,7 @@ class CGDOMJSProxyHandler_getOwnPropDescriptor(ClassMethod):
                   $*{computeCondition}
                 }
                 if (callNamedGetter) {
+                  JS::Rooted<JS::Value> value(cx);
                   $*{namedGetCode}
                 }
                 """,
@@ -14579,15 +14600,13 @@ class CGDOMJSProxyHandler_getOwnPropDescriptor(ClassMethod):
               if (!JS_GetOwnPropertyDescriptorById(cx, expando, id, desc)) {
                 return false;
               }
-              if (desc.object()) {
-                // Pretend the property lives on the wrapper.
-                desc.object().set(proxy);
+              if (desc.isSome()) {
                 return true;
               }
             }
 
             $*{namedGet}
-            desc.object().set(nullptr);
+            desc.reset();
             return true;
             """,
             xrayDecl=xrayDecl,
@@ -17882,9 +17901,7 @@ class ForwardDeclarationBuilder:
                 )
             )
         for namespace, child in sorted(six.iteritems(self.children)):
-            decls.append(
-                CGNamespace(namespace, child._build(atTopLevel=False), declareOnly=True)
-            )
+            decls.append(CGNamespace(namespace, child._build(atTopLevel=False)))
 
         cg = CGList(decls, "\n")
         if not atTopLevel and len(decls) + len(self.decls) > 1:

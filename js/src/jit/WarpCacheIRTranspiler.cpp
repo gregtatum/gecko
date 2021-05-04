@@ -4778,6 +4778,50 @@ bool WarpCacheIRTranspiler::emitAssertRecoveredOnBailoutResult(
   return true;
 }
 
+bool WarpCacheIRTranspiler::emitGuardNoAllocationMetadataBuilder(
+    uint32_t builderAddrOffset) {
+  // This is a no-op because we discard all JIT code when set an allocation
+  // metadata callback.
+  return true;
+}
+
+bool WarpCacheIRTranspiler::emitNewPlainObjectResult(uint32_t numFixedSlots,
+                                                     uint32_t numDynamicSlots,
+                                                     gc::AllocKind allocKind,
+                                                     uint32_t shapeOffset) {
+  Shape* shape = shapeStubField(shapeOffset);
+
+  // TODO: support pre-tenuring.
+  gc::InitialHeap heap = gc::DefaultHeap;
+
+  auto* shapeConstant = MConstant::NewShape(alloc(), shape);
+  add(shapeConstant);
+
+  auto* obj = MNewPlainObject::New(alloc(), shapeConstant, numFixedSlots,
+                                   numDynamicSlots, allocKind, heap);
+  addEffectful(obj);
+
+  pushResult(obj);
+  return resumeAfter(obj);
+}
+
+bool WarpCacheIRTranspiler::emitNewArrayObjectResult(uint32_t length,
+                                                     uint32_t shapeOffset) {
+  Shape* shape = shapeStubField(shapeOffset);
+
+  // TODO: support pre-tenuring.
+  gc::InitialHeap heap = gc::DefaultHeap;
+
+  auto* shapeConstant = MConstant::NewShape(alloc(), shape);
+  add(shapeConstant);
+
+  auto* obj = MNewArrayObject::New(alloc(), shapeConstant, length, heap);
+  addEffectful(obj);
+
+  pushResult(obj);
+  return resumeAfter(obj);
+}
+
 static void MaybeSetImplicitlyUsed(uint32_t numInstructionIdsBefore,
                                    MDefinition* input) {
   // When building MIR from bytecode, for each MDefinition that's an operand to

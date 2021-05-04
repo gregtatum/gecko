@@ -200,6 +200,18 @@ void LIRGenerator::visitNewObject(MNewObject* ins) {
   assignSafepoint(lir, ins);
 }
 
+void LIRGenerator::visitNewPlainObject(MNewPlainObject* ins) {
+  LNewPlainObject* lir = new (alloc()) LNewPlainObject(temp(), temp(), temp());
+  define(lir, ins);
+  assignSafepoint(lir, ins);
+}
+
+void LIRGenerator::visitNewArrayObject(MNewArrayObject* ins) {
+  LNewArrayObject* lir = new (alloc()) LNewArrayObject(temp(), temp());
+  define(lir, ins);
+  assignSafepoint(lir, ins);
+}
+
 void LIRGenerator::visitNewNamedLambdaObject(MNewNamedLambdaObject* ins) {
   LNewNamedLambdaObject* lir = new (alloc()) LNewNamedLambdaObject(temp());
   define(lir, ins);
@@ -5610,6 +5622,9 @@ void LIRGenerator::visitConstant(MConstant* ins) {
       break;
     case MIRType::Object:
       define(new (alloc()) LPointer(&ins->toObject()), ins);
+      break;
+    case MIRType::Shape:
+      MOZ_ASSERT(ins->isEmittedAtUses());
       break;
     default:
       // Constants of special types (undefined, null) should never flow into

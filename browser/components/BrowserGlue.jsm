@@ -4989,7 +4989,7 @@ var AboutHomeStartupCache = {
     });
 
     let lci = Services.loadContextInfo.default;
-    let storage = Services.cache2.diskCacheStorage(lci, false);
+    let storage = Services.cache2.diskCacheStorage(lci);
     try {
       storage.asyncOpenURI(
         this.aboutHomeURI,
@@ -5721,11 +5721,11 @@ var AboutHomeStartupCache = {
 
   /** nsICacheEntryOpenCallback **/
 
-  onCacheEntryCheck(aEntry, aApplicationCache) {
+  onCacheEntryCheck(aEntry) {
     return Ci.nsICacheEntryOpenCallback.ENTRY_WANTED;
   },
 
-  onCacheEntryAvailable(aEntry, aNew, aApplicationCache, aResult) {
+  onCacheEntryAvailable(aEntry, aNew, aResult) {
     this.log.trace("Cache entry is available.");
 
     this._cacheEntry = aEntry;

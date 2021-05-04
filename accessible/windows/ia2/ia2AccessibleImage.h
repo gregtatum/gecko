@@ -9,14 +9,18 @@
 #define _ACCESSIBLE_IMAGE_H
 
 #include "AccessibleImage.h"
+#include "IUnknownImpl.h"
+#include "MsaaAccessible.h"
 
 namespace mozilla {
 namespace a11y {
+class ImageAccessible;
 
-class ia2AccessibleImage : public IAccessibleImage {
+class ia2AccessibleImage : public IAccessibleImage, public MsaaAccessible {
  public:
   // IUnknown
-  STDMETHODIMP QueryInterface(REFIID, void**);
+  DECL_IUNKNOWN_INHERITED
+  IMPL_IUNKNOWN_REFCOUNTING_INHERITED(MsaaAccessible)
 
   // IAccessibleImage
   virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_description(
@@ -30,6 +34,12 @@ class ia2AccessibleImage : public IAccessibleImage {
   virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_imageSize(
       /* [out] */ long* height,
       /* [retval][out] */ long* width);
+
+ protected:
+  using MsaaAccessible::MsaaAccessible;
+
+ private:
+  ImageAccessible* ImageAcc();
 };
 
 }  // namespace a11y

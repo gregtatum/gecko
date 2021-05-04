@@ -112,7 +112,7 @@ checksum = "9a7d5b8723950951411ee34d271d99dddcc2035a16ab25310ea2c8cfd4369652"
 dependencies = [
  "libc",
  "termion",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -135,7 +135,7 @@ dependencies = [
  "libc",
  "log",
  "mach",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -157,13 +157,13 @@ dependencies = [
  "mio",
  "mio-named-pipes",
  "mio-uds",
- "miow 0.3.3",
+ "miow",
  "serde",
  "serde_derive",
  "tokio 0.1.11",
  "tokio-io",
  "tokio-reactor",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -210,7 +210,7 @@ dependencies = [
  "log",
  "rand",
  "runloop",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -336,7 +336,7 @@ dependencies = [
  "guid_win",
  "serde",
  "serde_derive",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -664,7 +664,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74428ae4f7f05f32f4448e9f42d371538196919c4834979f4f96d1fdebffcb47"
 dependencies = [
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -779,42 +779,42 @@ dependencies = [
 
 [[package]]
 name = "cranelift-bforest"
-version = "0.68.0"
-source = "git+https://github.com/mozilla-spidermonkey/wasmtime?rev=a25399760e9f12b679aa267dd2af7cfedc72bb71#a25399760e9f12b679aa267dd2af7cfedc72bb71"
+version = "0.73.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
 dependencies = [
- "cranelift-entity 0.68.0",
+ "cranelift-entity 0.73.0",
 ]
 
 [[package]]
 name = "cranelift-codegen"
-version = "0.68.0"
-source = "git+https://github.com/mozilla-spidermonkey/wasmtime?rev=a25399760e9f12b679aa267dd2af7cfedc72bb71#a25399760e9f12b679aa267dd2af7cfedc72bb71"
+version = "0.73.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
 dependencies = [
  "byteorder",
  "cranelift-bforest",
  "cranelift-codegen-meta",
  "cranelift-codegen-shared",
- "cranelift-entity 0.68.0",
+ "cranelift-entity 0.73.0",
  "log",
  "regalloc",
  "smallvec",
- "target-lexicon 0.11.0",
+ "target-lexicon 0.12.0",
  "thiserror",
 ]
 
 [[package]]
 name = "cranelift-codegen-meta"
-version = "0.68.0"
-source = "git+https://github.com/mozilla-spidermonkey/wasmtime?rev=a25399760e9f12b679aa267dd2af7cfedc72bb71#a25399760e9f12b679aa267dd2af7cfedc72bb71"
+version = "0.73.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
 dependencies = [
  "cranelift-codegen-shared",
- "cranelift-entity 0.68.0",
+ "cranelift-entity 0.73.0",
 ]
 
 [[package]]
 name = "cranelift-codegen-shared"
-version = "0.68.0"
-source = "git+https://github.com/mozilla-spidermonkey/wasmtime?rev=a25399760e9f12b679aa267dd2af7cfedc72bb71#a25399760e9f12b679aa267dd2af7cfedc72bb71"
+version = "0.73.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
 
 [[package]]
 name = "cranelift-entity"
@@ -823,33 +823,33 @@ source = "git+https://github.com/PLSysSec/lucet_sandbox_compiler?rev=cd07861d1c9
 
 [[package]]
 name = "cranelift-entity"
-version = "0.68.0"
-source = "git+https://github.com/mozilla-spidermonkey/wasmtime?rev=a25399760e9f12b679aa267dd2af7cfedc72bb71#a25399760e9f12b679aa267dd2af7cfedc72bb71"
+version = "0.73.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
 
 [[package]]
 name = "cranelift-frontend"
-version = "0.68.0"
-source = "git+https://github.com/mozilla-spidermonkey/wasmtime?rev=a25399760e9f12b679aa267dd2af7cfedc72bb71#a25399760e9f12b679aa267dd2af7cfedc72bb71"
+version = "0.73.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
 dependencies = [
  "cranelift-codegen",
  "log",
  "smallvec",
- "target-lexicon 0.11.0",
+ "target-lexicon 0.12.0",
 ]
 
 [[package]]
 name = "cranelift-wasm"
-version = "0.68.0"
-source = "git+https://github.com/mozilla-spidermonkey/wasmtime?rev=a25399760e9f12b679aa267dd2af7cfedc72bb71#a25399760e9f12b679aa267dd2af7cfedc72bb71"
+version = "0.73.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
 dependencies = [
  "cranelift-codegen",
- "cranelift-entity 0.68.0",
+ "cranelift-entity 0.73.0",
  "cranelift-frontend",
- "itertools 0.9.0",
+ "itertools 0.10.0",
  "log",
  "smallvec",
  "thiserror",
- "wasmparser 0.67.0",
+ "wasmparser",
 ]
 
 [[package]]
@@ -1058,7 +1058,7 @@ source = "git+https://github.com/gfx-rs/d3d12-rs?rev=be19a243b86e0bafb9937d661fc
 dependencies = [
  "bitflags",
  "libloading 0.7.0",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -1116,12 +1116,13 @@ name = "defaultagent-static"
 version = "0.1.0"
 dependencies = [
  "log",
+ "mozilla-central-workspace-hack",
  "serde",
  "serde_derive",
  "serde_json",
  "url",
  "viaduct",
- "winapi 0.3.9",
+ "winapi",
  "wineventlog",
  "wio",
 ]
@@ -1196,7 +1197,7 @@ dependencies = [
  "cfg-if 0.1.10",
  "libc",
  "redox_users",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -1244,7 +1245,7 @@ dependencies = [
  "libc",
  "serde",
  "serde_derive",
- "winapi 0.3.9",
+ "winapi",
  "wio",
 ]
 
@@ -1355,16 +1356,16 @@ dependencies = [
 
 [[package]]
 name = "failure"
-version = "0.1.6"
-source = "git+https://github.com/badboy/failure?rev=64af847bc5fdcb6d2438bec8a6030812a80519a5#64af847bc5fdcb6d2438bec8a6030812a80519a5"
+version = "0.1.8"
 dependencies = [
  "failure_derive",
 ]
 
 [[package]]
 name = "failure_derive"
-version = "0.1.6"
-source = "git+https://github.com/badboy/failure?rev=64af847bc5fdcb6d2438bec8a6030812a80519a5#64af847bc5fdcb6d2438bec8a6030812a80519a5"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa4da3c766cd7a0db8242e326e9e4e081edd567072893ed320008189715366a4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1424,7 +1425,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b12c2c8d7d9f04d7952cc33bac89b7425fb3cf4c44773b06ea49ac3df259ac57"
 dependencies = [
  "comedy",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -1869,7 +1870,7 @@ dependencies = [
  "smallvec",
  "spirv_cross",
  "thunderdome",
- "winapi 0.3.9",
+ "winapi",
  "wio",
 ]
 
@@ -1891,7 +1892,7 @@ dependencies = [
  "smallvec",
  "spirv_cross",
  "thunderdome",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -1947,7 +1948,7 @@ dependencies = [
  "parking_lot",
  "raw-window-handle",
  "smallvec",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -2085,9 +2086,9 @@ dependencies = [
 
 [[package]]
 name = "glean"
-version = "36.0.1"
+version = "37.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "189c370f4d17144dc0af5b9640de2ac1016b603e583d3eb1050a142dba3df9dd"
+checksum = "4cacd10ebcc8d4ff7b60dc864e7d1a214df4d10ca4d3d9df1d983d7262a93914"
 dependencies = [
  "chrono",
  "crossbeam-channel 0.5.0",
@@ -2105,9 +2106,9 @@ dependencies = [
 
 [[package]]
 name = "glean-core"
-version = "36.0.1"
+version = "37.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66d4e6fd10f9824bb8f46587536bcc20d858087513d7f913d4d9db2c18c2fe2f"
+checksum = "6210924f86da7bb55dcf61baa6d1a66c3e37506b65443f05d9f386c5d716ae17"
 dependencies = [
  "bincode",
  "chrono",
@@ -2118,6 +2119,7 @@ dependencies = [
  "rkv",
  "serde",
  "serde_json",
+ "time",
  "uuid",
  "zeitstempel",
 ]
@@ -2226,7 +2228,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d87f4be87a557b98b4e4316f2009834f4448652938a950c1e8b33ae25f6f183b"
 dependencies = [
  "comedy",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -2537,9 +2539,9 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
+checksum = "37d572918e350e82412fe766d24b15e6682fb2ed2bbe018280caa810397cb319"
 dependencies = [
  "either",
 ]
@@ -2646,7 +2648,7 @@ version = "0.1.0"
 dependencies = [
  "jsrust_shared",
  "mozglue-static",
- "wasmparser 0.48.2",
+ "wasmparser",
  "wat",
 ]
 
@@ -2673,16 +2675,6 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "thiserror",
-]
-
-[[package]]
-name = "kernel32-sys"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
-dependencies = [
- "winapi 0.2.8",
- "winapi-build",
 ]
 
 [[package]]
@@ -2770,7 +2762,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2b111a074963af1d37a139918ac6d49ad1d0d5e47f72fd55388619691a7d753"
 dependencies = [
  "cc",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -2779,7 +2771,7 @@ version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2cadb8e769f070c45df05c78c7520eb4cd17061d4ab262e43cfc68b4d00ac71c"
 dependencies = [
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -2789,7 +2781,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f84d96438c15fcd6c3f244c8fce01d1e2b9c6b5623e9c711dc9286d8fc92d6a"
 dependencies = [
  "cfg-if 1.0.0",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -3045,7 +3037,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6585fd95e7bb50d6cc31e20d4cf9afb4e2ba16c5846fc76793f11218da9c475b"
 dependencies = [
  "libc",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -3114,20 +3106,17 @@ dependencies = [
 [[package]]
 name = "mio"
 version = "0.6.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "302dec22bcf6bae6dfb69c647187f4b4d0fb6f535521f7bc022430ce8e12008f"
 dependencies = [
  "cfg-if 0.1.10",
  "fuchsia-zircon",
  "fuchsia-zircon-sys",
  "iovec",
- "kernel32-sys",
  "libc",
  "log",
- "miow 0.2.1",
+ "miow",
  "net2",
  "slab",
- "winapi 0.2.8",
+ "winapi",
 ]
 
 [[package]]
@@ -3149,8 +3138,8 @@ source = "git+https://github.com/kinetiknz/mio-named-pipes?rev=21c26326f5f45f415
 dependencies = [
  "log",
  "mio",
- "miow 0.3.3",
- "winapi 0.3.9",
+ "miow",
+ "winapi",
 ]
 
 [[package]]
@@ -3166,24 +3155,12 @@ dependencies = [
 
 [[package]]
 name = "miow"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c1f2f3b1cf331de6896aabf6e9d55dca90356cc9960cca7eaaf408a355ae919"
-dependencies = [
- "kernel32-sys",
- "net2",
- "winapi 0.2.8",
- "ws2_32-sys",
-]
-
-[[package]]
-name = "miow"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "396aa0f2003d7df8395cb93e09871561ccc3e785f0acb369170e8cc74ddf9226"
 dependencies = [
  "socket2",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -3243,7 +3220,7 @@ dependencies = [
  "serde_derive",
  "syn",
  "void",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -3294,7 +3271,7 @@ dependencies = [
  "serde",
  "serde_json",
  "uuid",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -3335,7 +3312,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aad9dfe950c057b1bfe9c1f2aa51583a8468ef2a5baba2ebbe06d775efeb7729"
 dependencies = [
  "time",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -3370,7 +3347,7 @@ dependencies = [
  "lazy_static",
  "log",
  "qlog",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -3453,7 +3430,7 @@ checksum = "42550d9fb7b6684a6d404d9fa7250c2eb2646df731d1c06afc06dcee9e1bcf88"
 dependencies = [
  "cfg-if 0.1.10",
  "libc",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -3687,10 +3664,11 @@ dependencies = [
  "lazy_static",
  "libloading 0.5.2",
  "log",
+ "mozilla-central-workspace-hack",
  "pkcs11",
  "rental",
  "sha2",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -3760,7 +3738,7 @@ dependencies = [
  "libc",
  "redox_syscall",
  "smallvec",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -4026,7 +4004,7 @@ version = "0.1.0"
 dependencies = [
  "libc",
  "nserror",
- "winapi 0.3.9",
+ "winapi",
  "xpcom",
 ]
 
@@ -4275,7 +4253,8 @@ dependencies = [
 [[package]]
 name = "regalloc"
 version = "0.0.31"
-source = "git+https://github.com/mozilla-spidermonkey/regalloc.rs?rev=fc5d1d33317b0fbd36725757f80a95127eff5109#fc5d1d33317b0fbd36725757f80a95127eff5109"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "571f7f397d61c4755285cd37853fe8e03271c243424a907415909379659381c5"
 dependencies = [
  "log",
  "rustc-hash",
@@ -4319,7 +4298,7 @@ version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a83fa3702a688b9359eccba92d153ac33fd2e8462f9e0e3fdf155239ea7792e"
 dependencies = [
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -4519,7 +4498,7 @@ version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfb6eded0b06a0b512c8ddbcf04089138c9b4362c2f696f3c3d76039d68f3637"
 dependencies = [
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -4804,7 +4783,7 @@ dependencies = [
  "cfg-if 0.1.10",
  "libc",
  "redox_syscall",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -5100,9 +5079,9 @@ checksum = "6f4c118a7a38378f305a9e111fcb2f7f838c0be324bfb31a77ea04f7f6e684b4"
 
 [[package]]
 name = "target-lexicon"
-version = "0.11.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe2635952a442a01fd4cb53d98858b5e4bb461b02c0d111f22f31772e3e7a8b2"
+checksum = "64ae3b39281e4b14b8123bdbaddd472b7dfe215e444181f2f9d2443c2444f834"
 
 [[package]]
 name = "tempfile"
@@ -5115,18 +5094,17 @@ dependencies = [
  "rand",
  "redox_syscall",
  "remove_dir_all",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
 name = "term_size"
-version = "0.3.0"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2b6b55df3198cc93372e85dd2ed817f0e38ce8cc0f22eb32391bfad9c4bf209"
+checksum = "1e4129646ca0ed8f45d09b929036bafad5377103edd06e50bf574b353d2b08d9"
 dependencies = [
- "kernel32-sys",
  "libc",
- "winapi 0.2.8",
+ "winapi",
 ]
 
 [[package]]
@@ -5220,7 +5198,7 @@ checksum = "d825be0eb33fda1a7e68012d51e9c7f451dc1a69391e7fdc197060bb8c56667b"
 dependencies = [
  "libc",
  "redox_syscall",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -5657,7 +5635,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "777182bc735b6424e1a57516d35ed72cb8019d85c8c9bf536dccb3445c1a2f7d"
 dependencies = [
  "same-file",
- "winapi 0.3.9",
+ "winapi",
  "winapi-util",
 ]
 
@@ -5703,20 +5681,15 @@ checksum = "cccddf32554fecc6acb585f82a32a72e28b48f8c4c1883ddfeeeaa96f7d8e519"
 
 [[package]]
 name = "wasmparser"
-version = "0.48.2"
+version = "0.77.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "073da89bf1c84db000dd68ce660c1b4a08e3a2d28fd1e3394ab9e7abdde4a0f8"
-
-[[package]]
-name = "wasmparser"
-version = "0.67.0"
-source = "git+https://github.com/mozilla-spidermonkey/wasm-tools?rev=1b7763faa484e62752538b78e7a69883f4faceee#1b7763faa484e62752538b78e7a69883f4faceee"
+checksum = "b35c86d22e720a07d954ebbed772d01180501afe7d03d464f413bb5f8914a8d6"
 
 [[package]]
 name = "wast"
-version = "35.0.1"
+version = "35.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a5800e9f86a1eae935e38bea11e60fd253f6d514d153fb39b3e5535a7b37b56"
+checksum = "2ef140f1b49946586078353a453a1d28ba90adfc54dde75710bc1931de204d68"
 dependencies = [
  "leb128",
 ]
@@ -5882,7 +5855,7 @@ dependencies = [
  "tracy-rs",
  "uuid",
  "webrender",
- "winapi 0.3.9",
+ "winapi",
  "wr_malloc_size_of",
 ]
 
@@ -5966,12 +5939,6 @@ dependencies = [
 
 [[package]]
 name = "winapi"
-version = "0.2.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "167dc9d6949a9b857f3451275e911c3f44255842c1f7a76f33c55103a909087a"
-
-[[package]]
-name = "winapi"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419"
@@ -5979,12 +5946,6 @@ dependencies = [
  "winapi-i686-pc-windows-gnu",
  "winapi-x86_64-pc-windows-gnu",
 ]
-
-[[package]]
-name = "winapi-build"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d315eee3b34aca4797b2da6b13ed88266e6d612562a0c46390af8299fc699bc"
 
 [[package]]
 name = "winapi-i686-pc-windows-gnu"
@@ -5998,7 +5959,7 @@ version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7168bab6e1daee33b4557efd0e95d5ca70a03706d39fa5f3fe7a236f584b03c9"
 dependencies = [
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -6013,7 +5974,7 @@ version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96f5016b18804d24db43cebf3c77269e7569b8954a8464501c216cc5e070eaa9"
 dependencies = [
- "winapi 0.3.9",
+ "winapi",
  "winapi-util",
 ]
 
@@ -6022,7 +5983,7 @@ name = "wineventlog"
 version = "0.1.0"
 dependencies = [
  "log",
- "winapi 0.3.9",
+ "winapi",
  "wio",
 ]
 
@@ -6032,7 +5993,7 @@ version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a27a759395c1195c4cc5cda607ef6f8f6498f64e78f7900f5de0a127a424704a"
 dependencies = [
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -6041,7 +6002,7 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d129932f4644ac2396cb456385cbf9e63b5b30c6e8dc4820bdca4eb082037a5"
 dependencies = [
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -6068,16 +6029,6 @@ dependencies = [
  "sha-1",
  "slab",
  "url",
-]
-
-[[package]]
-name = "ws2_32-sys"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d59cefebd0c892fa2dd6de581e937301d8552cb44489cdff035c6187cb63fa5e"
-dependencies = [
- "winapi 0.2.8",
- "winapi-build",
 ]
 
 [[package]]

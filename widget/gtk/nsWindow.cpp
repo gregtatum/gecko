@@ -89,6 +89,7 @@
 #include "ScreenHelperGTK.h"
 #include "SystemTimeConverter.h"
 #include "WidgetUtilsGtk.h"
+#include "mozilla/X11Util.h"
 
 #ifdef ACCESSIBILITY
 #  include "mozilla/a11y/LocalAccessible.h"
@@ -388,9 +389,12 @@ static void UpdateLastInputEventTime(void* aGdkEvent) {
 }
 
 void GetWindowOrigin(GdkWindow* aWindow, int* aX, int* aY) {
-  MOZ_RELEASE_ASSERT(aWindow);
+  *aX = 0;
+  *aY = 0;
 
-  gdk_window_get_origin(aWindow, aX, aY);
+  if (aWindow) {
+    gdk_window_get_origin(aWindow, aX, aY);
+  }
 
   // TODO(bug 1655924): gdk_window_get_origin is can block waiting for the x
   // server for a long time, we would like to use the implementation below
@@ -468,17 +472,19 @@ nsWindow::nsWindow()
       mBoundsAreValid(true),
       mPreferredPopupRectFlushed(false),
       mWaitingForMoveToRectCB(false),
-      mPendingSizeRect(LayoutDeviceIntRect(0, 0, 0, 0)),
+      mPendingSizeRect(LayoutDeviceIntRect(0, 0, 0, 0))
 #ifdef ACCESSIBILITY
-      mRootAccessible(nullptr),
+      ,
+      mRootAccessible(nullptr)
 #endif
 #ifdef MOZ_X11
-      mXDisplay(nullptr),
+      ,
       mXWindow(X11None),
       mXVisual(nullptr),
-      mXDepth(0),
+      mXDepth(0)
 #endif
 #ifdef MOZ_WAYLAND
+      ,
       mLockedPointer(nullptr),
       mRelativePointer(nullptr)
 #endif
@@ -1550,7 +1556,7 @@ void nsWindow::NativeMoveResizeWaylandPopupCB(const GdkRectangle* aFinalSize,
     // The newBounds are in coordinates relative to the parent window/popup.
     // The NotifyWindowMoved requires the coordinates relative to the toplevel.
     // We use the gdk_window_get_origin to get correct coordinates.
-    gint x = 0, y = 0;
+    gint x, y;
     GetWindowOrigin(gtk_widget_get_window(GTK_WIDGET(mShell)), &x, &y);
     NotifyWindowMoved(GdkCoordToDevicePixels(x), GdkCoordToDevicePixels(y));
   }
@@ -2584,7 +2590,7 @@ void nsWindow::SetIcon(const nsAString& aIconSpec) {
 }
 
 LayoutDeviceIntPoint nsWindow::WidgetToScreenOffset() {
-  nsIntPoint origin(0, 0);
+  nsIntPoint origin;
   GetWindowOrigin(mGdkWindow, &origin.x, &origin.y);
 
   return GdkPointToDevicePixels({origin.x, origin.y});
@@ -5119,7 +5125,6 @@ nsresult nsWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
 
 #ifdef MOZ_X11
   if (GdkIsX11Display() && mGdkWindow) {
-    mXDisplay = GDK_WINDOW_XDISPLAY(mGdkWindow);
     mXWindow = gdk_x11_window_get_xid(mGdkWindow);
 
     GdkVisual* gdkVisual = gdk_window_get_visual(mGdkWindow);
@@ -5127,7 +5132,7 @@ nsresult nsWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
     mXDepth = gdk_visual_get_depth(gdkVisual);
     bool shaped = popupNeedsAlphaVisual && !mHasAlphaVisual;
 
-    mSurfaceProvider.Initialize(mXDisplay, mXWindow, mXVisual, mXDepth, shaped);
+    mSurfaceProvider.Initialize(mXWindow, mXVisual, mXDepth, shaped);
 
     if (mIsTopLevel) {
       // Set window manager hint to keep fullscreen windows composited.
@@ -5139,7 +5144,9 @@ nsresult nsWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
     }
     // Dummy call to a function in mozgtk to prevent the linker from removing
     // the dependency with --as-needed.
-    XShmQueryExtension(mXDisplay);
+    if (GdkIsX11Display()) {
+      XShmQueryExtension(DefaultXDisplay());
+    }
   }
 #  ifdef MOZ_WAYLAND
   else if (GdkIsWaylandDisplay()) {
@@ -7919,7 +7926,7 @@ double nsWindow::FractionalScaleFactor() {
 
 gint nsWindow::DevicePixelsToGdkCoordRoundUp(int pixels) {
   double scale = FractionalScaleFactor();
-  return ceil((pixels + scale - 1) / scale);
+  return ceil(pixels / scale);
 }
 
 gint nsWindow::DevicePixelsToGdkCoordRoundDown(int pixels) {
@@ -7936,16 +7943,16 @@ GdkRectangle nsWindow::DevicePixelsToGdkRectRoundOut(LayoutDeviceIntRect rect) {
   double scale = FractionalScaleFactor();
   int x = floor(rect.x / scale);
   int y = floor(rect.y / scale);
-  int right = ceil((rect.x + rect.width + scale - 1) / scale);
-  int bottom = ceil((rect.y + rect.height + scale - 1) / scale);
+  int right = ceil((rect.x + rect.width) / scale);
+  int bottom = ceil((rect.y + rect.height) / scale);
   return {x, y, right - x, bottom - y};
 }
 
 GdkRectangle nsWindow::DevicePixelsToGdkSizeRoundUp(
     LayoutDeviceIntSize pixelSize) {
   double scale = FractionalScaleFactor();
-  gint width = ceil((pixelSize.width + scale - 1) / scale);
-  gint height = ceil((pixelSize.height + scale - 1) / scale);
+  gint width = ceil(pixelSize.width / scale);
+  gint height = ceil(pixelSize.height / scale);
   return {0, 0, width, height};
 }
 
@@ -8348,18 +8355,21 @@ int32_t nsWindow::RoundsWidgetCoordinatesTo() { return GdkCeiledScaleFactor(); }
 
 void nsWindow::GetCompositorWidgetInitData(
     mozilla::widget::CompositorWidgetInitData* aInitData) {
-  // Make sure the window XID is propagated to X server, we can fail otherwise
-  // in GPU process (Bug 1401634).
-  if (mXDisplay && mXWindow != X11None) {
-    XFlush(mXDisplay);
+  nsCString displayName;
+
+  if (GdkIsX11Display() && mXWindow != X11None) {
+    // Make sure the window XID is propagated to X server, we can fail otherwise
+    // in GPU process (Bug 1401634).
+    Display* display = DefaultXDisplay();
+    XFlush(display);
+    displayName = nsCString(XDisplayString(display));
   }
 
   bool isShaped =
       mIsTransparent && !mHasAlphaVisual && !mTransparencyBitmapForTitlebar;
   *aInitData = mozilla::widget::GtkCompositorWidgetInitData(
-      (mXWindow != X11None) ? mXWindow : (uintptr_t) nullptr,
-      mXDisplay ? nsCString(XDisplayString(mXDisplay)) : nsCString(), isShaped,
-      GdkIsX11Display(), GetClientSize());
+      (mXWindow != X11None) ? mXWindow : (uintptr_t) nullptr, displayName,
+      isShaped, GdkIsX11Display(), GetClientSize());
 }
 
 #ifdef MOZ_WAYLAND

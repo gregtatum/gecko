@@ -49,7 +49,6 @@
 #include "mozilla/Unused.h"
 #include "mozilla/WebBrowserPersistDocumentChild.h"
 #include "mozilla/devtools/HeapSnapshotTempFileHelperChild.h"
-#include "mozilla/docshell/OfflineCacheUpdateChild.h"
 #include "mozilla/dom/AutoSuppressEventHandlingAndSuspend.h"
 #include "mozilla/dom/BlobImpl.h"
 #include "mozilla/dom/BrowserBridgeHost.h"
@@ -296,7 +295,6 @@
 extern mozilla::LazyLogModule gSHIPBFCacheLog;
 
 using namespace mozilla;
-using namespace mozilla::docshell;
 using namespace mozilla::dom::ipc;
 using namespace mozilla::media;
 using namespace mozilla::embedding;
@@ -608,8 +606,7 @@ NS_INTERFACE_MAP_END
 
 mozilla::ipc::IPCResult ContentChild::RecvSetXPCOMProcessAttributes(
     XPCOMInitData&& aXPCOMInit, const StructuredCloneData& aInitialData,
-    FullLookAndFeel&& aLookAndFeelData,
-    nsTArray<SystemFontListEntry>&& aFontList,
+    FullLookAndFeel&& aLookAndFeelData, dom::SystemFontList&& aFontList,
     const Maybe<SharedMemoryHandle>& aSharedUASheetHandle,
     const uintptr_t& aSharedUASheetAddress,
     nsTArray<SharedMemoryHandle>&& aSharedFontListBlocks) {
@@ -2346,7 +2343,7 @@ mozilla::ipc::IPCResult ContentChild::RecvUpdateDictionaryList(
 }
 
 mozilla::ipc::IPCResult ContentChild::RecvUpdateFontList(
-    nsTArray<SystemFontListEntry>&& aFontList) {
+    dom::SystemFontList&& aFontList) {
   mFontList = std::move(aFontList);
   gfxPlatform::GetPlatform()->UpdateFontList(true);
   return IPC_OK();
@@ -2531,6 +2528,10 @@ mozilla::ipc::IPCResult ContentChild::RecvRemoteType(
     MOZ_LOG(ContentParent::GetLog(), LogLevel::Debug,
             ("Setting remoteType of process %d to %s", getpid(),
              aRemoteType.get()));
+
+    if (aRemoteType == PREALLOC_REMOTE_TYPE) {
+      PreallocInit();
+    }
   }
 
   auto remoteTypePrefix = RemoteTypePrefix(aRemoteType);
@@ -2585,6 +2586,9 @@ mozilla::ipc::IPCResult ContentChild::RecvRemoteType(
 
   return IPC_OK();
 }
+
+// A method to initialize anything we need during the preallocation phase
+void ContentChild::PreallocInit() {}
 
 // Call RemoteTypePrefix() on the result to remove URIs if you want to use this
 // for telemetry.

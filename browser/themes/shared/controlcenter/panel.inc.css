@@ -77,6 +77,7 @@
 #identity-popup[connection=file] [when-connection~=file],
 #identity-popup[connection=extension] [when-connection~=extension],
 #identity-popup[connection=cert-error-page] [when-connection~=cert-error-page],
+#identity-popup[connection=net-error-page] [when-connection~=net-error-page],
 #identity-popup[connection=https-only-error-page] [when-connection~=https-only-error-page],
 /* Show weak cipher messages when needed. */
 #identity-popup[ciphers=weak] [when-ciphers~=weak],
@@ -236,7 +237,7 @@
   -moz-context-properties: fill, fill-opacity;
   fill: currentColor;
   fill-opacity: .6;
-  color: inherit !important; /* !important overrides :hover and :active:hover colors from button.css on Mac and Linux */
+  color: inherit;
 }
 
 .identity-popup-expander:-moz-locale-dir(ltr) {
@@ -439,7 +440,7 @@
 }
 
 #identity-popup[connection=file] .identity-popup-security-connection {
-  background-image: url(chrome://global/skin/icons/document.svg);
+  background-image: url(chrome://global/skin/icons/page-portrait.svg);
 }
 
 #identity-popup[connection^=secure] .identity-popup-security-connection {
@@ -462,6 +463,12 @@
 #identity-popup[connection=secure-cert-user-overridden] .identity-popup-security-connection,
 #identity-popup[connection=cert-error-page] .identity-popup-security-connection {
   background-image: url(chrome://global/skin/icons/security-warning.svg);
+  fill: unset;
+  -moz-context-properties: fill;
+}
+
+#identity-popup[connection=net-error-page] .identity-popup-security-connection {
+  background-image: url(chrome://global/skin/icons/info.svg);
   fill: unset;
   -moz-context-properties: fill;
 }
@@ -501,15 +508,18 @@
 }
 
 .identity-popup-security-connection > hbox > description {
-  padding: 2px;
   margin-inline-start: 8px;
   margin-block: 0;
 }
 
 #identity-popup-security-button {
-  padding: 3px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  padding-inline: 3px;
   -moz-box-pack: start;
+}
+
+#identity-popup-security-button[footerHidden=true] {
+  margin-bottom: 6px;
 }
 
 .identity-popup-security-connection {
@@ -542,13 +552,18 @@
 }
 
 #identity-popup-clear-sitedata-footer {
-  margin-block: -4px 8px;
+  margin-top: 0;
 }
 
 #identity-popup-security-httpsonlymode,
 #identity-popup-security-ev-content-owner,
 .identity-popup-warning-box {
   padding-inline: 2.4em 3em;
+}
+
+#identity-popup-securityView-body > .identity-popup-warning-box {
+  padding-inline: 0;
+  font-weight: 600;
 }
 }/** END Proton **/
 
@@ -956,9 +971,9 @@ description#identity-popup-content-verifier,
   border-width: 0;
   min-width: 0;
   padding: 2px;
+  padding-inline-end: 6px;
   background-color: var(--button-bgcolor);
-  /* !important overrides :hover and :active colors from button.css */
-  color: inherit !important;
+  color: var(--button-color);
   opacity: 0.6;
   border-radius: 4px;
 }
@@ -1293,6 +1308,15 @@ description#identity-popup-content-verifier,
 
 .permission-popup-section {
   padding-bottom: 12px;
+}
+
+#permission-popup-menulist::part(dropmarker-icon) {
+  height: 12px;
+  width: 12px;
+}
+
+#permission-popup-menulist {
+  padding-inline: 12px 6px;
 }
 
 .protections-popup-footer-button,

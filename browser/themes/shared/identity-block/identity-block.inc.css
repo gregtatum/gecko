@@ -81,13 +81,12 @@
 
 .identity-box-button {
   padding-inline: var(--urlbar-icon-padding);
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbar-icon-border-radius);
 }
 
 @media not (-moz-proton) {
 .identity-box-button {
   padding-inline: calc(var(--urlbar-icon-padding) / 2);
-  border-radius: 0;
 }
 
 #identity-box:not(.chromeUI, .extensionPage, .notSecureText) {
@@ -115,7 +114,7 @@
 #identity-box[pageproxystate="valid"].chromeUI > .identity-box-button,
 #identity-box[pageproxystate="valid"].extensionPage > .identity-box-button {
   padding-inline: 8px;
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbar-icon-border-radius);
 }
 
 @media (-moz-proton) {
@@ -163,7 +162,6 @@
 #identity-box[pageproxystate="valid"].chromeUI > #identity-icon-box,
 #identity-box[pageproxystate="valid"].extensionPage > #identity-icon-box {
   padding-inline: 8px;
-  border-radius: 0;
 }
 }/*** END !proton ***/
 
@@ -212,7 +210,7 @@
 } /*** END !proton ***/
 
 #identity-box[pageproxystate="valid"].localResource #identity-icon {
-  list-style-image: url(chrome://global/skin/icons/document.svg);
+  list-style-image: url(chrome://global/skin/icons/page-portrait.svg);
 }
 
 #urlbar:not(.searchButton) > #urlbar-input-container > #identity-box[pageproxystate="invalid"] #identity-icon {
@@ -305,14 +303,13 @@
 
 #tracking-protection-icon-container {
   padding-inline: var(--urlbar-icon-padding);
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbar-icon-border-radius);
   /* This is needed in order to position the blue dot indicator. */
   position: relative;
 }
 
 @media not (-moz-proton) {
 #tracking-protection-icon-container {
-  border-radius: 0;
   /* Separator */
   border-inline-end: 1px solid var(--autocomplete-popup-separator-color);
   border-image: linear-gradient(transparent 15%, var(--autocomplete-popup-separator-color) 15%, var(--autocomplete-popup-separator-color) 85%, transparent 85%);

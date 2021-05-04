@@ -57,6 +57,7 @@ APPLICATIONS = OrderedDict(
         ("Firefox for Desktop", "browser"),
         ("GeckoView/Firefox for Android Artifact Mode", "mobile_android_artifact_mode"),
         ("GeckoView/Firefox for Android", "mobile_android"),
+        ("SpiderMonkey JavaScript engine", "js"),
     ]
 )
 
@@ -428,7 +429,7 @@ class Bootstrapper(object):
                     mozconfig_path,
                     raw_mozconfig,
                 )
-                print(suggestion)
+                print(suggestion, end="")
 
     def _validate_python_environment(self):
         valid = True

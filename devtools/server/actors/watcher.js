@@ -162,27 +162,6 @@ exports.WatcherActor = protocol.ActorClassWithSpec(watcherSpec, {
           [Resources.TYPES.SERVER_SENT_EVENT]: hasBrowserElement,
           [Resources.TYPES.WEBSOCKET]: hasBrowserElement,
         },
-        // @backward-compat { version 85 } When removing this trait, consumers using
-        // the TargetCommand to retrieve the Breakpoints front should still be careful to check
-        // that the Watcher is available
-        "set-breakpoints": true,
-        // @backward-compat { version 87 } Starting with FF87, if the watcher is
-        // supported, the TargetConfiguration actor can be used to set configuration
-        // flags which impact BrowsingContext targets.
-        // When removing this trait, consumers should still check that the Watcher is
-        // available.
-        "target-configuration": true,
-        // @backward-compat { version 88 } Starting with FF88, if the watcher is
-        // supported, the ThreadConfiguration actor can be used to maintain thread configuration
-        // options.
-        // When removing this trait, consumers should still check that the Watcher is
-        // available.
-        "thread-configuration": true,
-        // @backward-compat { version 88 } Watcher now supports setting the XHR via
-        // the BreakpointListActor.
-        // When removing this trait, consumers should still check that the Watcher is
-        // available.
-        "set-xhr-breakpoints": true,
       },
     };
   },
