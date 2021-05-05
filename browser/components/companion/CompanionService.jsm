@@ -247,6 +247,13 @@ const CompanionService = {
       this.dockCompanion();
     }
   },
+
+  copy(string) {
+    let clipboard = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(
+      Ci.nsIClipboardHelper
+    );
+    clipboard.copyString(string);
+  },
 };
 
 CompanionService.init();

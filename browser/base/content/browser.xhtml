@@ -129,6 +129,9 @@
 # top level windows in macWindow.inc.xhtml.
 #include browser-sets.inc
   <popupset id="mainPopupSet">
+    <menupopup id="companion-view-manager-contextmenu">
+      <menuitem data-l10n-id="text-action-copy" oncommand="CompanionService.copy(gBrowser.currentURI.spec);"/>
+    </menupopup>
     <menupopup id="tabContextMenu"
                onpopupshowing="if (event.target == this) TabContextMenu.updateContextMenu(this);"
                onpopuphidden="if (event.target == this) TabContextMenu.contextTab = null;">
@@ -1805,7 +1808,7 @@
                        onclick="checkForMiddleClick(this, event);"
                        tooltip="back-button-tooltip"
                        context="backForwardMenu"/>
-        <vbox id="companion-view-manager" pack="center" flex="1">
+        <vbox id="companion-view-manager" pack="center" flex="1" context="companion-view-manager-contextmenu">
           <label id="companion-page-title" crop="end"/>
           <hbox>
           <box id="companion-identity-box"/>
