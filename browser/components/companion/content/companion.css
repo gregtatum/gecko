@@ -18,7 +18,7 @@ body {
   justify-content: start;
   height: 100vh;
   width: 100vw;
-  background-color: var(--toolbar-non-lwt-bgcolor);
+  background-color: var(--tabpanel-background-color);
 }
 
 h2 {
