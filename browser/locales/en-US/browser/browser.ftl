@@ -448,11 +448,12 @@ sharing-warning-disable-for-session =
 enable-devtools-popup-description = To use the F12 shortcut, first open DevTools via the Web Developer menu.
 
 ## URL Bar
+# MR2 todo: bump string revs when text is settled
 
 # This placeholder is used when not in search mode and the user's default search
 # engine is unknown.
 urlbar-placeholder =
-  .placeholder = Where to next, search apps, history or more…
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # This placeholder is used in search mode with search engines that search the
 # entire web.
@@ -460,7 +461,7 @@ urlbar-placeholder =
 #  $name (String): the name of a search engine that searches the entire Web
 #  (e.g. Google).
 urlbar-placeholder-search-mode-web-2 =
-  .placeholder = Where to next, search apps, history or more…
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # This placeholder is used in search mode with search engines that search a
 # specific site (e.g., Amazon).
@@ -468,24 +469,24 @@ urlbar-placeholder-search-mode-web-2 =
 #  $name (String): the name of a search engine that searches a specific site
 #  (e.g. Amazon).
 urlbar-placeholder-search-mode-other-engine =
-  .placeholder = Where to next, search apps, history or more…
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # This placeholder is used when searching bookmarks.
 urlbar-placeholder-search-mode-other-bookmarks =
-  .placeholder = Where to next, search apps, history or more…
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # This placeholder is used when searching history.
 urlbar-placeholder-search-mode-other-history =
-  .placeholder = Where to next, search apps, history or more…
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # This placeholder is used when searching open tabs.
 urlbar-placeholder-search-mode-other-tabs =
-  .placeholder = Where to next, search apps, history or more…
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # Variables
 #  $name (String): the name of the user's default search engine
 urlbar-placeholder-with-name =
-  .placeholder = Where to next, search apps, history or more…
+  .placeholder = Where to next? Search the web, apps, history and more…
 urlbar-remote-control-notification-anchor =
   .tooltiptext = Browser is under remote control
 urlbar-permissions-granted =
