@@ -18,7 +18,7 @@ body {
   justify-content: start;
   height: 100vh;
   width: 100vw;
-  background-color: var(--tabpanel-background-color);
+  background-color: var(--in-content-page-background);
 }
 
 h2 {
@@ -290,7 +290,7 @@ h2 {
   top: 0;
   z-index: 1;
   padding-left: 10px;
-  background-color: var(--toolbar-non-lwt-bgcolor);
+  background-color: var(--in-content-page-background);
 }
 
 #calendar-link {
