@@ -3,7 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 :root {
-  --companion-width: 380px;
+  --companion-width: 300px;
   --companion-background: var(--in-content-page-background);;
 }
 
