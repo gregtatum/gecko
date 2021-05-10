@@ -1179,7 +1179,6 @@ bool nsOuterWindowProxy::MaybeGetPDFJSPrintMethod(
   // JSPROP_ENUMERATE because that's what it would have been in the same-origin
   // case without the PDF viewer messing with things.
   pd.setDataDescriptor(funVal, JSPROP_ENUMERATE);
-  pd.object().set(proxy);
   desc.set(Some(pd.get()));
   return true;
 }
@@ -7426,7 +7425,7 @@ void nsGlobalWindowOuter::SetCursorOuter(const nsACString& aCursor,
 
     // Call esm and set cursor.
     aError = presContext->EventStateManager()->SetCursor(
-        cursor, nullptr, 1.0f, Nothing(), widget, true);
+        cursor, nullptr, {}, Nothing(), widget, true);
   }
 }
 

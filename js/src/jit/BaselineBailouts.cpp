@@ -663,7 +663,7 @@ bool BaselineStackBuilder::buildBaselineFrame() {
 
   // Get |argsObj| if present.
   ArgumentsObject* argsObj = nullptr;
-  if (script_->argumentsHasVarBinding()) {
+  if (script_->needsArgsObj()) {
     Value maybeArgsObj = iter_.read();
     MOZ_ASSERT(maybeArgsObj.isObject() || maybeArgsObj.isUndefined() ||
                maybeArgsObj.isMagic(JS_OPTIMIZED_OUT));
@@ -2092,12 +2092,6 @@ bool jit::FinishBailoutToBaseline(BaselineBailoutInfo* bailoutInfoArg) {
       // invalidate and recompile.
       action = BailoutAction::InvalidateIfFrequent;
       saveFailedICHash = true;
-      break;
-
-    case BailoutKind::NotOptimizedArgumentsGuard:
-      // Optimized-arguments escaped to a slow path. Disable the optimization to
-      // prevent bailout loops.
-      JSScript::argumentsOptimizationFailed(cx, innerScript);
       break;
 
     case BailoutKind::UninitializedLexical:

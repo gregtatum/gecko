@@ -624,68 +624,6 @@ bool BaselineCacheIRCompiler::emitProxyGetResult(ObjOperandId objId,
   return true;
 }
 
-bool BaselineCacheIRCompiler::emitGuardFrameHasNoArgumentsObject() {
-  JitSpew(JitSpew_Codegen, "%s", __FUNCTION__);
-  FailurePath* failure;
-  if (!addFailurePath(&failure)) {
-    return false;
-  }
-
-  masm.branchTest32(
-      Assembler::NonZero,
-      Address(BaselineFrameReg, BaselineFrame::reverseOffsetOfFlags()),
-      Imm32(BaselineFrame::HAS_ARGS_OBJ), failure->label());
-  return true;
-}
-
-bool BaselineCacheIRCompiler::emitLoadFrameCalleeResult() {
-  JitSpew(JitSpew_Codegen, "%s", __FUNCTION__);
-  AutoOutputRegister output(*this);
-  AutoScratchRegisterMaybeOutput scratch(allocator, masm, output);
-
-  Address callee(BaselineFrameReg, BaselineFrame::offsetOfCalleeToken());
-  masm.loadFunctionFromCalleeToken(callee, scratch);
-  masm.tagValue(JSVAL_TYPE_OBJECT, scratch, output.valueReg());
-  return true;
-}
-
-bool BaselineCacheIRCompiler::emitLoadFrameNumActualArgsResult() {
-  JitSpew(JitSpew_Codegen, "%s", __FUNCTION__);
-  AutoOutputRegister output(*this);
-  AutoScratchRegisterMaybeOutput scratch(allocator, masm, output);
-
-  Address actualArgs(BaselineFrameReg, BaselineFrame::offsetOfNumActualArgs());
-  masm.loadPtr(actualArgs, scratch);
-  masm.tagValue(JSVAL_TYPE_INT32, scratch, output.valueReg());
-  return true;
-}
-
-bool BaselineCacheIRCompiler::emitLoadFrameArgumentResult(
-    Int32OperandId indexId) {
-  JitSpew(JitSpew_Codegen, "%s", __FUNCTION__);
-  AutoOutputRegister output(*this);
-  Register index = allocator.useRegister(masm, indexId);
-  AutoScratchRegister scratch1(allocator, masm);
-  AutoScratchRegisterMaybeOutput scratch2(allocator, masm, output);
-
-  FailurePath* failure;
-  if (!addFailurePath(&failure)) {
-    return false;
-  }
-
-  // Bounds check.
-  masm.loadPtr(
-      Address(BaselineFrameReg, BaselineFrame::offsetOfNumActualArgs()),
-      scratch1);
-  masm.spectreBoundsCheck32(index, scratch1, scratch2, failure->label());
-
-  // Load the argument.
-  masm.loadValue(
-      BaseValueIndex(BaselineFrameReg, index, BaselineFrame::offsetOfArg(0)),
-      output.valueReg());
-  return true;
-}
-
 bool BaselineCacheIRCompiler::emitFrameIsConstructingResult() {
   JitSpew(JitSpew_Codegen, "%s", __FUNCTION__);
 
@@ -1864,6 +1802,7 @@ bool BaselineCacheIRCompiler::init(CacheKind kind) {
       BaselineICAvailableGeneralRegs(numInputsInRegs);
 
   switch (kind) {
+    case CacheKind::NewArray:
     case CacheKind::NewObject:
     case CacheKind::GetIntrinsic:
       MOZ_ASSERT(numInputs == 0);
@@ -1875,7 +1814,6 @@ bool BaselineCacheIRCompiler::init(CacheKind kind) {
     case CacheKind::OptimizeSpreadCall:
     case CacheKind::ToBool:
     case CacheKind::UnaryArith:
-    case CacheKind::NewArray:
       MOZ_ASSERT(numInputs == 1);
       allocator.initInputLocation(0, R0);
       break;
@@ -1895,8 +1833,8 @@ bool BaselineCacheIRCompiler::init(CacheKind kind) {
     case CacheKind::GetElemSuper:
       MOZ_ASSERT(numInputs == 3);
       allocator.initInputLocation(0, BaselineFrameSlot(0));
-      allocator.initInputLocation(1, R0);
-      allocator.initInputLocation(2, R1);
+      allocator.initInputLocation(1, R1);
+      allocator.initInputLocation(2, R0);
       break;
     case CacheKind::SetElem:
       MOZ_ASSERT(numInputs == 3);
@@ -2137,13 +2075,6 @@ bool BaselineCacheIRCompiler::updateArgc(CallFlags flags, Register argcReg,
       masm.load32(Address(scratch, ObjectElements::offsetOfLength()), scratch);
       break;
     }
-    case CallFlags::FunApplyMagicArgs: {
-      // The length of |arguments| is stored in the baseline frame.
-      Address numActualArgsAddr(BaselineFrameReg,
-                                BaselineFrame::offsetOfNumActualArgs());
-      masm.load32(numActualArgsAddr, scratch);
-      break;
-    }
     case CallFlags::FunApplyArgsObj: {
       // Load the arguments object length.
       BaselineFrameSlot slot(0);
@@ -2180,9 +2111,6 @@ void BaselineCacheIRCompiler::pushArguments(Register argcReg,
       break;
     case CallFlags::FunCall:
       pushFunCallArguments(argcReg, calleeReg, scratch, scratch2, isJitCall);
-      break;
-    case CallFlags::FunApplyMagicArgs:
-      pushFunApplyMagicArgs(argcReg, calleeReg, scratch, scratch2, isJitCall);
       break;
     case CallFlags::FunApplyArgsObj:
       pushFunApplyArgsObj(argcReg, calleeReg, scratch, scratch2, isJitCall);
@@ -2350,45 +2278,6 @@ void BaselineCacheIRCompiler::pushFunCallArguments(Register argcReg,
   }
 
   masm.bind(&done);
-}
-
-void BaselineCacheIRCompiler::pushFunApplyMagicArgs(Register argcReg,
-                                                    Register calleeReg,
-                                                    Register scratch,
-                                                    Register scratch2,
-                                                    bool isJitCall) {
-  // Push the caller's arguments onto the stack.
-
-  // Find the start of the caller's arguments.
-  Register startReg = scratch;
-  masm.loadPtr(Address(BaselineFrameReg, 0), startReg);
-  masm.addPtr(Imm32(BaselineFrame::offsetOfArg(0)), startReg);
-
-  if (isJitCall) {
-    masm.alignJitStackBasedOnNArgs(argcReg, /*countIncludesThis =*/false);
-  }
-
-  Register endReg = scratch2;
-  BaseValueIndex endAddr(startReg, argcReg);
-  masm.computeEffectiveAddress(endAddr, endReg);
-
-  // Copying pre-decrements endReg by 8 until startReg is reached
-  Label copyDone;
-  Label copyStart;
-  masm.bind(&copyStart);
-  masm.branchPtr(Assembler::Equal, endReg, startReg, &copyDone);
-  masm.subPtr(Imm32(sizeof(Value)), endReg);
-  masm.pushValue(Address(endReg, 0));
-  masm.jump(&copyStart);
-  masm.bind(&copyDone);
-
-  // Push arg0 as |this| for call
-  masm.pushValue(Address(BaselineFrameReg, STUB_FRAME_SIZE + sizeof(Value)));
-
-  // Push |callee| if needed.
-  if (!isJitCall) {
-    masm.Push(TypedOrValueRegister(MIRType::Object, AnyRegister(calleeReg)));
-  }
 }
 
 void BaselineCacheIRCompiler::pushFunApplyArgsObj(Register argcReg,

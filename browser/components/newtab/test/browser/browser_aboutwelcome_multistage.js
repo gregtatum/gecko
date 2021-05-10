@@ -18,7 +18,6 @@ const DID_SEE_ABOUT_WELCOME_PREF = "trailhead.firstrun.didSeeAboutWelcome";
 
 // Test differently for windows 7 as theme screens are removed.
 const win7Content = AppConstants.isPlatformAndVersionAtMost("win", "6.1");
-const condSelect = (cond, select) => (cond ? [select] : []);
 
 const TEST_MULTISTAGE_CONTENT = [
   {
@@ -497,9 +496,153 @@ add_task(async function test_multistage_aboutwelcome_experimentAPI() {
 });
 
 /**
+ * Test the multistage proton welcome UI using ExperimentAPI with transitions
+ */
+add_task(async function test_multistage_aboutwelcome_transitions() {
+  const sandbox = sinon.createSandbox();
+  await setAboutWelcomePref(true);
+  await setProton(true);
+
+  let {
+    enrollmentPromise,
+    doExperimentCleanup,
+  } = ExperimentFakes.enrollmentHelper(
+    ExperimentFakes.recipe("mochitest-transitions-on", {
+      branches: [
+        {
+          slug: "mochitest-aboutwelcome-branch",
+          feature: {
+            enabled: true,
+            featureId: "aboutwelcome",
+            value: {
+              id: "my-mochitest-experiment",
+              screens: TEST_PROTON_CONTENT,
+              isProton: true,
+              transitions: true,
+            },
+          },
+        },
+      ],
+      active: true,
+    })
+  );
+
+  await enrollmentPromise;
+  ExperimentAPI._store._syncToChildren({ flush: true });
+
+  let tab = await BrowserTestUtils.openNewForegroundTab(
+    gBrowser,
+    "about:welcome",
+    true
+  );
+
+  const browser = tab.linkedBrowser;
+
+  let aboutWelcomeActor = await getAboutWelcomeParent(browser);
+  // Stub AboutWelcomeParent Content Message Handler
+  sandbox.spy(aboutWelcomeActor, "onContentMessage");
+  registerCleanupFunction(() => {
+    BrowserTestUtils.removeTab(tab);
+    sandbox.restore();
+  });
+
+  await test_screen_content(
+    browser,
+    "multistage proton step 1",
+    // Expected selectors:
+    ["div.proton.transition- .screen-0"],
+    // Unexpected selectors:
+    ["div.proton.transition-out"]
+  );
+
+  await onButtonClick(browser, "button.primary");
+  await test_screen_content(
+    browser,
+    "multistage proton step 1 transition to 2",
+    // Expected selectors:
+    ["div.proton.transition-out .screen-0", "div.proton.transition- .screen-1"]
+  );
+
+  await doExperimentCleanup();
+});
+
+/**
+ * Test the multistage proton welcome UI using ExperimentAPI without transitions
+ */
+add_task(async function test_multistage_aboutwelcome_transitions_off() {
+  const sandbox = sinon.createSandbox();
+  await setAboutWelcomePref(true);
+
+  let {
+    enrollmentPromise,
+    doExperimentCleanup,
+  } = ExperimentFakes.enrollmentHelper(
+    ExperimentFakes.recipe("mochitest-transitions-off", {
+      branches: [
+        {
+          slug: "mochitest-aboutwelcome-branch",
+          feature: {
+            enabled: true,
+            featureId: "aboutwelcome",
+            value: {
+              id: "my-mochitest-experiment",
+              screens: TEST_PROTON_CONTENT,
+              isProton: true,
+              transitions: false,
+            },
+          },
+        },
+      ],
+      active: true,
+    })
+  );
+
+  await enrollmentPromise;
+  ExperimentAPI._store._syncToChildren({ flush: true });
+
+  let tab = await BrowserTestUtils.openNewForegroundTab(
+    gBrowser,
+    "about:welcome",
+    true
+  );
+
+  const browser = tab.linkedBrowser;
+
+  let aboutWelcomeActor = await getAboutWelcomeParent(browser);
+  // Stub AboutWelcomeParent Content Message Handler
+  sandbox.spy(aboutWelcomeActor, "onContentMessage");
+  registerCleanupFunction(() => {
+    BrowserTestUtils.removeTab(tab);
+    sandbox.restore();
+  });
+
+  await test_screen_content(
+    browser,
+    "multistage proton step 1",
+    // Expected selectors:
+    ["div.proton.transition- .screen-0"],
+    // Unexpected selectors:
+    ["div.proton.transition-out"]
+  );
+
+  await onButtonClick(browser, "button.primary");
+  await test_screen_content(
+    browser,
+    "multistage proton step 1 no transition to 2",
+    // Expected selectors:
+    [],
+    // Unexpected selectors:
+    ["div.proton.transition-out .screen-0"]
+  );
+
+  await doExperimentCleanup();
+});
+
+/**
  * Test the multistage welcome UI rendered using TEST_MULTISTAGE_JSON
  */
 add_task(async function test_Multistage_About_Welcome_branches() {
+  await setProton(false);
   let browser = await openAboutWelcome();
 
   // Test first (theme) screen for non-win7.
@@ -1017,6 +1160,7 @@ add_task(async function test_multistage_aboutwelcome_proton() {
     "multistage proton step 1",
     // Expected selectors:
     [
+      "main.AW_STEP1",
       "div.onboardingContainer",
       "div.proton[style*='.jpg']",
       "div.section-left",
@@ -1050,18 +1194,14 @@ add_task(async function test_multistage_aboutwelcome_proton() {
     "multistage proton step 2",
     // Expected selectors:
     [
+      "main.AW_STEP2",
       "div.onboardingContainer",
       "div.proton[style*='.jpg']",
       "div.section-main",
-      ...condSelect(!win7Content, "nav.steps"),
+      "nav.steps",
     ],
     // Unexpected selectors:
-    [
-      "main.AW_STEP1",
-      "main.AW_STEP3",
-      "div.section-left",
-      ...condSelect(win7Content, "nav.steps"),
-    ]
+    ["main.AW_STEP1", "main.AW_STEP3", "div.section-left"]
   );
 
   await onButtonClick(browser, "button.primary");
@@ -1074,6 +1214,7 @@ add_task(async function test_multistage_aboutwelcome_proton() {
     "multistage proton step 3",
     // Expected selectors:
     [
+      "main.AW_STEP3",
       "div.onboardingContainer",
       "div.proton[style*='.jpg']",
       "div.section-main",

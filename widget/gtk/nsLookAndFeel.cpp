@@ -25,6 +25,7 @@
 #include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/StaticPrefs_widget.h"
 #include "mozilla/Telemetry.h"
+#include "mozilla/ScopeExit.h"
 #include "ScreenHelperGTK.h"
 #include "nsNativeBasicThemeGTK.h"
 
@@ -90,19 +91,23 @@ static void GetLightAndDarkness(const GdkRGBA& aColor, double* aLightness,
 
 static bool GetGradientColors(const GValue* aValue, GdkRGBA* aLightColor,
                               GdkRGBA* aDarkColor) {
-  if (!G_TYPE_CHECK_VALUE_TYPE(aValue, CAIRO_GOBJECT_TYPE_PATTERN))
+  if (!G_TYPE_CHECK_VALUE_TYPE(aValue, CAIRO_GOBJECT_TYPE_PATTERN)) {
     return false;
+  }
 
   auto pattern = static_cast<cairo_pattern_t*>(g_value_get_boxed(aValue));
-  if (!pattern) return false;
+  if (!pattern) {
+    return false;
+  }
 
   // Just picking the lightest and darkest colors as simple samples rather
   // than trying to blend, which could get messy if there are many stops.
   if (CAIRO_STATUS_SUCCESS !=
       cairo_pattern_get_color_stop_rgba(pattern, 0, nullptr, &aDarkColor->red,
                                         &aDarkColor->green, &aDarkColor->blue,
-                                        &aDarkColor->alpha))
+                                        &aDarkColor->alpha)) {
     return false;
+  }
 
   double maxLightness, maxDarkness;
   GetLightAndDarkness(*aDarkColor, &maxLightness, &maxDarkness);
@@ -127,6 +132,52 @@ static bool GetGradientColors(const GValue* aValue, GdkRGBA* aLightColor,
   }
 
   return true;
+}
+
+static bool GetColorFromImagePattern(const GValue* aValue, nscolor* aColor) {
+  if (!G_TYPE_CHECK_VALUE_TYPE(aValue, CAIRO_GOBJECT_TYPE_PATTERN)) {
+    return false;
+  }
+
+  auto pattern = static_cast<cairo_pattern_t*>(g_value_get_boxed(aValue));
+  if (!pattern) {
+    return false;
+  }
+
+  cairo_surface_t* surface;
+  if (cairo_pattern_get_surface(pattern, &surface) != CAIRO_STATUS_SUCCESS) {
+    return false;
+  }
+
+  cairo_format_t format = cairo_image_surface_get_format(surface);
+  if (format == CAIRO_FORMAT_INVALID) {
+    return false;
+  }
+  int width = cairo_image_surface_get_width(surface);
+  int height = cairo_image_surface_get_height(surface);
+  int stride = cairo_image_surface_get_stride(surface);
+  if (!width || !height) {
+    return false;
+  }
+
+  // Guesstimate the central pixel would have a sensible color.
+  int x = width / 2;
+  int y = height / 2;
+
+  unsigned char* data = cairo_image_surface_get_data(surface);
+  switch (format) {
+    // Most (all?) GTK images / patterns / etc use ARGB32.
+    case CAIRO_FORMAT_ARGB32: {
+      size_t offset = x * 4 + y * stride;
+      uint32_t* pixel = reinterpret_cast<uint32_t*>(data + offset);
+      *aColor = gfx::sRGBColor::UnusualFromARGB(*pixel).ToABGR();
+      return true;
+    }
+    default:
+      break;
+  }
+
+  return false;
 }
 
 static bool GetUnicoBorderGradientColors(GtkStyleContext* aContext,
@@ -266,37 +317,6 @@ void nsLookAndFeel::RefreshImpl() {
   mInitialized = false;
 }
 
-static bool IsSelectionColorForeground(LookAndFeel::ColorID aID) {
-  using ColorID = LookAndFeel::ColorID;
-  switch (aID) {
-    case ColorID::WidgetSelectForeground:
-    case ColorID::TextSelectForeground:
-    case ColorID::IMESelectedRawTextForeground:
-    case ColorID::IMESelectedConvertedTextForeground:
-    case ColorID::Highlighttext:
-    case ColorID::MozHtmlCellhighlighttext:
-      return true;
-    default:
-      return false;
-  }
-}
-
-static bool IsSelectionColorBackground(LookAndFeel::ColorID aID) {
-  using ColorID = LookAndFeel::ColorID;
-  switch (aID) {
-    case ColorID::WidgetSelectBackground:
-    case ColorID::TextSelectBackground:
-    case ColorID::IMESelectedRawTextBackground:
-    case ColorID::IMESelectedConvertedTextBackground:
-    case ColorID::MozDragtargetzone:
-    case ColorID::MozHtmlCellhighlight:
-    case ColorID::Highlight:
-      return true;
-    default:
-      return false;
-  }
-}
-
 nsresult nsLookAndFeel::NativeGetColor(ColorID aID, ColorScheme aScheme,
                                        nscolor& aColor) {
   EnsureInit();
@@ -308,16 +328,6 @@ nsresult nsLookAndFeel::NativeGetColor(ColorID aID, ColorScheme aScheme,
 nsresult nsLookAndFeel::PerThemeData::GetColor(ColorID aID,
                                                nscolor& aColor) const {
   nsresult res = NS_OK;
-
-  if (IsSelectionColorBackground(aID)) {
-    aColor = mTextSelectedBackground;
-    return NS_OK;
-  }
-
-  if (IsSelectionColorForeground(aID)) {
-    aColor = mTextSelectedText;
-    return NS_OK;
-  }
 
   switch (aID) {
       // These colors don't seem to be used for anything anymore in Mozilla
@@ -349,13 +359,26 @@ nsresult nsLookAndFeel::PerThemeData::GetColor(ColorID aID,
     case ColorID::IMESelectedRawTextBackground:
     case ColorID::IMESelectedConvertedTextBackground:
     case ColorID::MozDragtargetzone:
-    case ColorID::MozHtmlCellhighlight:
     case ColorID::Highlight:  // preference selected item,
       aColor = mTextSelectedBackground;
       break;
+    case ColorID::TextSelectForeground:
+      if (NS_GET_A(mTextSelectedBackground) < 155) {
+        aColor = NS_SAME_AS_FOREGROUND_COLOR;
+        break;
+      }
+      [[fallthrough]];
+    case ColorID::WidgetSelectForeground:
+    case ColorID::IMESelectedRawTextForeground:
+    case ColorID::IMESelectedConvertedTextForeground:
+    case ColorID::Highlighttext:
+      aColor = mTextSelectedText;
+      break;
+    case ColorID::MozHtmlCellhighlight:
     case ColorID::MozAccentColor:
       aColor = mAccentColor;
       break;
+    case ColorID::MozHtmlCellhighlighttext:
     case ColorID::MozAccentColorForeground:
       aColor = mAccentColorForeground;
       break;
@@ -1201,6 +1224,43 @@ void nsLookAndFeel::GetGtkContentTheme(LookAndFeelTheme& aTheme) {
   aTheme.themeName() = theme.mName;
 }
 
+static nscolor GetBackgroundColor(
+    GtkStyleContext* aStyle, nscolor aForForegroundColor,
+    GtkStateFlags aState = GTK_STATE_FLAG_NORMAL) {
+  GdkRGBA gdkColor;
+  gtk_style_context_get_background_color(aStyle, aState, &gdkColor);
+  nscolor color = GDK_RGBA_TO_NS_RGBA(gdkColor);
+  if (NS_GET_A(color)) {
+    return color;
+  }
+
+  // Try to synthesize a color from a background-image.
+  GValue value = G_VALUE_INIT;
+  gtk_style_context_get_property(aStyle, "background-image", aState, &value);
+  auto cleanup = MakeScopeExit([&] { g_value_unset(&value); });
+
+  if (GetColorFromImagePattern(&value, &color)) {
+    return color;
+  }
+
+  {
+    GdkRGBA light, dark;
+    if (GetGradientColors(&value, &light, &dark)) {
+      nscolor l = GDK_RGBA_TO_NS_RGBA(light);
+      nscolor d = GDK_RGBA_TO_NS_RGBA(dark);
+      // Return the one with more contrast.
+      // TODO(emilio): This could do interpolation or what not but seems
+      // overkill.
+      return NS_LUMINOSITY_DIFFERENCE(l, aForForegroundColor) >
+                     NS_LUMINOSITY_DIFFERENCE(d, aForForegroundColor)
+                 ? l
+                 : d;
+    }
+  }
+
+  return NS_TRANSPARENT;
+}
+
 void nsLookAndFeel::PerThemeData::Init() {
   mName = GetGtkTheme();
 
@@ -1276,17 +1336,20 @@ void nsLookAndFeel::PerThemeData::Init() {
 
   // Window colors
   style = GetStyleContext(MOZ_GTK_WINDOW);
-  gtk_style_context_get_background_color(style, GTK_STATE_FLAG_NORMAL, &color);
-  mMozWindowBackground = GDK_RGBA_TO_NS_RGBA(color);
+
   gtk_style_context_get_color(style, GTK_STATE_FLAG_NORMAL, &color);
   mMozWindowText = GDK_RGBA_TO_NS_RGBA(color);
+
+  mMozWindowBackground = GetBackgroundColor(style, mMozWindowText);
+
   gtk_style_context_get_border_color(style, GTK_STATE_FLAG_NORMAL, &color);
   mMozWindowActiveBorder = GDK_RGBA_TO_NS_RGBA(color);
+
   gtk_style_context_get_border_color(style, GTK_STATE_FLAG_INSENSITIVE, &color);
   mMozWindowInactiveBorder = GDK_RGBA_TO_NS_RGBA(color);
-  gtk_style_context_get_background_color(style, GTK_STATE_FLAG_INSENSITIVE,
-                                         &color);
-  mMozWindowInactiveCaption = GDK_RGBA_TO_NS_RGBA(color);
+
+  mMozWindowInactiveCaption =
+      GetBackgroundColor(style, mMozWindowText, GTK_STATE_FLAG_INSENSITIVE);
 
   style = GetStyleContext(MOZ_GTK_WINDOW_CONTAINER);
   {
@@ -1296,13 +1359,12 @@ void nsLookAndFeel::PerThemeData::Init() {
   }
 
   // tooltip foreground and background
-  style = GetStyleContext(MOZ_GTK_TOOLTIP);
-  gtk_style_context_get_background_color(style, GTK_STATE_FLAG_NORMAL, &color);
-  mInfoBackground = GDK_RGBA_TO_NS_RGBA(color);
-
   style = GetStyleContext(MOZ_GTK_TOOLTIP_BOX_LABEL);
   gtk_style_context_get_color(style, GTK_STATE_FLAG_NORMAL, &color);
   mInfoText = GDK_RGBA_TO_NS_RGBA(color);
+
+  style = GetStyleContext(MOZ_GTK_TOOLTIP);
+  mInfoBackground = GetBackgroundColor(style, mInfoText);
 
   style = GetStyleContext(MOZ_GTK_MENUITEM);
   {
@@ -1319,15 +1381,13 @@ void nsLookAndFeel::PerThemeData::Init() {
   }
 
   style = GetStyleContext(MOZ_GTK_MENUPOPUP);
-  gtk_style_context_get_background_color(style, GTK_STATE_FLAG_NORMAL, &color);
-  mMenuBackground = GDK_RGBA_TO_NS_RGBA(color);
+  mMenuBackground = GetBackgroundColor(style, mMenuText);
 
   style = GetStyleContext(MOZ_GTK_MENUITEM);
-  gtk_style_context_get_background_color(style, GTK_STATE_FLAG_PRELIGHT,
-                                         &color);
-  mMenuHover = GDK_RGBA_TO_NS_RGBA(color);
   gtk_style_context_get_color(style, GTK_STATE_FLAG_PRELIGHT, &color);
   mMenuHoverText = GDK_RGBA_TO_NS_RGBA(color);
+  mMenuHover =
+      GetBackgroundColor(style, mMenuHoverText, GTK_STATE_FLAG_PRELIGHT);
 
   GtkWidget* parent = gtk_fixed_new();
   GtkWidget* window = gtk_window_new(GTK_WINDOW_POPUP);
@@ -1386,12 +1446,34 @@ void nsLookAndFeel::PerThemeData::Init() {
       GrabSelectionColors(style);
     }
 
+    // Default accent color is the selection background / foreground colors.
     mAccentColor = mTextSelectedBackground;
     mAccentColorForeground = mTextSelectedText;
 
-    // Accent is the darker of the selection background / foreground, unless the
-    // foreground isn't really a color (is all white / black / gray) and the
-    // background is, in which case we stick to what we have.
+    // But prefer named colors, as those are more general purpose than the
+    // actual selection style, which might e.g. be too-transparent.
+    //
+    // NOTE(emilio): It's unclear which one of the theme_selected_* or the
+    // selected_* pairs should we prefer, in all themes that define both that
+    // I've found, they're always the same.
+    {
+      GdkRGBA bg, fg;
+      const bool found =
+          (gtk_style_context_lookup_color(style, "selected_bg_color", &bg) &&
+           gtk_style_context_lookup_color(style, "selected_fg_color", &fg)) ||
+          (gtk_style_context_lookup_color(style, "theme_selected_bg_color",
+                                          &bg) &&
+           gtk_style_context_lookup_color(style, "theme_selected_fg_color",
+                                          &fg));
+      if (found) {
+        mAccentColor = GDK_RGBA_TO_NS_RGBA(bg);
+        mAccentColorForeground = GDK_RGBA_TO_NS_RGBA(fg);
+      }
+    }
+
+    // Accent is the darker one, unless the foreground isn't really a color (is
+    // all white / black / gray) and the background is, in which case we stick
+    // to what we have.
     if (RelativeLuminanceUtils::Compute(mAccentColor) >
             RelativeLuminanceUtils::Compute(mAccentColorForeground) &&
         (AnyColorChannelIsDifferent(mAccentColorForeground) ||

@@ -658,6 +658,24 @@ void nsXULPopupManager::SetActiveMenuBar(nsMenuBarFrame* aMenuBar,
   UpdateKeyboardListeners();
 }
 
+static CloseMenuMode GetCloseMenuMode(nsIContent* aMenu) {
+  if (!aMenu->IsElement()) {
+    return CloseMenuMode_Auto;
+  }
+
+  static Element::AttrValuesArray strings[] = {nsGkAtoms::none,
+                                               nsGkAtoms::single, nullptr};
+  switch (aMenu->AsElement()->FindAttrValueIn(
+      kNameSpaceID_None, nsGkAtoms::closemenu, strings, eCaseMatters)) {
+    case 0:
+      return CloseMenuMode_None;
+    case 1:
+      return CloseMenuMode_Single;
+    default:
+      return CloseMenuMode_Auto;
+  }
+}
+
 void nsXULPopupManager::ShowMenu(nsIContent* aMenu, bool aSelectFirstItem,
                                  bool aAsynchronous) {
   if (mNativeMenu && aMenu->IsElement() &&
@@ -860,6 +878,9 @@ void nsXULPopupManager::OnNativeMenuClosed() {
 
   RefPtr<nsXULPopupManager> kungFuDeathGrip(this);
 
+  bool shouldHideChain =
+      (mNativeMenuActivatedItemCloseMenuMode == Some(CloseMenuMode_Auto));
+
   nsCOMPtr<nsIContent> popup = mNativeMenu->Element();
   nsMenuPopupFrame* popupFrame = GetPopupFrameForContent(popup, true);
   if (popupFrame) {
@@ -868,12 +889,22 @@ void nsXULPopupManager::OnNativeMenuClosed() {
   }
   mNativeMenu->RemoveObserver(this);
   mNativeMenu = nullptr;
+  mNativeMenuActivatedItemCloseMenuMode = Nothing();
   mNativeMenuSubmenuStates.Clear();
 
   // Stop hiding the menu from accessibility code, in case it gets opened as a
   // non-native menu in the future.
   popup->AsElement()->UnsetAttr(kNameSpaceID_None, nsGkAtoms::aria_hidden,
                                 true);
+
+  if (shouldHideChain && mPopups && mPopups->PopupType() == ePopupTypeMenu) {
+    // A menu item was activated before this menu closed, and the item requested
+    // the entire popup chain to be closed, which includes any open non-native
+    // menus.
+    // Close the non-native menus now. This matches the HidePopup call in
+    // nsXULMenuCommandEvent::Run.
+    HidePopup(mPopups->Content(), true, false, false, false);
+  }
 }
 
 void nsXULPopupManager::OnNativeSubMenuWillOpen(
@@ -889,6 +920,23 @@ void nsXULPopupManager::OnNativeSubMenuDidOpen(
 void nsXULPopupManager::OnNativeSubMenuClosed(
     mozilla::dom::Element* aPopupElement) {
   mNativeMenuSubmenuStates.Remove(aPopupElement);
+}
+
+void nsXULPopupManager::OnNativeMenuWillActivateItem(
+    mozilla::dom::Element* aMenuItemElement) {
+  if (!mNativeMenu) {
+    return;
+  }
+
+  CloseMenuMode cmm = GetCloseMenuMode(aMenuItemElement);
+  mNativeMenuActivatedItemCloseMenuMode = Some(cmm);
+
+  if (cmm == CloseMenuMode_Auto) {
+    // If any non-native menus are visible (for example because the context menu
+    // was opened on a non-native menu item, e.g. in a bookmarks folder), hide
+    // the non-native menus before executing the item.
+    HideOpenMenusBeforeExecutingMenu(CloseMenuMode_Auto);
+  }
 }
 
 void nsXULPopupManager::ShowPopupAtScreenRect(
@@ -1429,25 +1477,9 @@ void nsXULPopupManager::UpdateFollowAnchor(nsMenuPopupFrame* aPopup) {
   }
 }
 
-void nsXULPopupManager::ExecuteMenu(nsIContent* aMenu,
-                                    nsXULMenuCommandEvent* aEvent) {
-  CloseMenuMode cmm = CloseMenuMode_Auto;
-
-  static Element::AttrValuesArray strings[] = {nsGkAtoms::none,
-                                               nsGkAtoms::single, nullptr};
-
-  if (aMenu->IsElement()) {
-    switch (aMenu->AsElement()->FindAttrValueIn(
-        kNameSpaceID_None, nsGkAtoms::closemenu, strings, eCaseMatters)) {
-      case 0:
-        cmm = CloseMenuMode_None;
-        break;
-      case 1:
-        cmm = CloseMenuMode_Single;
-        break;
-      default:
-        break;
-    }
+void nsXULPopupManager::HideOpenMenusBeforeExecutingMenu(CloseMenuMode aMode) {
+  if (aMode == CloseMenuMode_None) {
+    return;
   }
 
   // When a menuitem is selected to be executed, first hide all the open
@@ -1457,22 +1489,30 @@ void nsXULPopupManager::ExecuteMenu(nsIContent* aMenu,
   // the popuphiding/popuphidden events are fired afterwards.
   nsTArray<nsMenuPopupFrame*> popupsToHide;
   nsMenuChainItem* item = GetTopVisibleMenu();
-  if (cmm != CloseMenuMode_None) {
-    while (item) {
-      // if it isn't a <menupopup>, don't close it automatically
-      if (!item->IsMenu()) break;
-      nsMenuChainItem* next = item->GetParent();
-      popupsToHide.AppendElement(item->Frame());
-      if (cmm == CloseMenuMode_Single)  // only close one level of menu
-        break;
-      item = next;
+  while (item) {
+    // if it isn't a <menupopup>, don't close it automatically
+    if (!item->IsMenu()) {
+      break;
     }
 
-    // Now hide the popups. If the closemenu mode is auto, deselect the menu,
-    // otherwise only one popup is closing, so keep the parent menu selected.
-    HidePopupsInList(popupsToHide);
+    nsMenuChainItem* next = item->GetParent();
+    popupsToHide.AppendElement(item->Frame());
+    if (aMode == CloseMenuMode_Single) {
+      // only close one level of menu
+      break;
+    }
+    item = next;
   }
 
+  // Now hide the popups. If the closemenu mode is auto, deselect the menu,
+  // otherwise only one popup is closing, so keep the parent menu selected.
+  HidePopupsInList(popupsToHide);
+}
+
+void nsXULPopupManager::ExecuteMenu(nsIContent* aMenu,
+                                    nsXULMenuCommandEvent* aEvent) {
+  CloseMenuMode cmm = GetCloseMenuMode(aMenu);
+  HideOpenMenusBeforeExecutingMenu(cmm);
   aEvent->SetCloseMenuMode(cmm);
   nsCOMPtr<nsIRunnable> event = aEvent;
   aMenu->OwnerDoc()->Dispatch(TaskCategory::Other, event.forget());

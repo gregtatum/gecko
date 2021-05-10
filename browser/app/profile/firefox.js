@@ -354,6 +354,12 @@ pref("browser.urlbar.suggest.calculator",           false);
 // Whether the QuickSuggest experiment is enabled.
 pref("browser.urlbar.quicksuggest.enabled", false);
 
+// Whether to show the QuickSuggest onboarding dialog.
+pref("browser.urlbar.quicksuggest.shouldShowOnboardingDialog", true);
+
+// Show QuickSuggest onboarding dialog on the nth browser restarts.
+pref("browser.urlbar.quicksuggest.showOnboardingDialogAfterNRestarts", 2);
+
 // Whether unit conversion is enabled.
 #ifdef NIGHTLY_BUILD
 pref("browser.urlbar.unitConversion.enabled", true);
@@ -420,6 +426,9 @@ pref("browser.urlbar.dnsResolveSingleWordsAfterSearch", 1);
 // for everyone.
 pref("browser.urlbar.keepPanelOpenDuringImeComposition", false);
 
+// Whether Firefox Suggest labels are shown in the urlbar view.
+pref("browser.urlbar.experimental.firefoxSuggestLabels.enabled", false);
+
 pref("browser.altClickSave", false);
 
 pref("browser.companion.appbar", false);
@@ -455,7 +464,7 @@ pref("browser.download.alwaysOpenInSystemViewerContextMenuItem", true);
 // Open downloaded file types internally for the given types.
 // This is a comma-separated list, the empty string ("") means no types are
 // viewable internally.
-pref("browser.download.viewableInternally.enabledTypes", "xml,svg,webp,avif");
+pref("browser.download.viewableInternally.enabledTypes", "xml,svg,webp,avif,jxl");
 
 
 // This controls whether the button is automatically shown/hidden depending
@@ -1493,6 +1502,7 @@ pref("browser.messaging-system.personalized-cfr.score-threshold", 5000);
 pref("messaging-system.log", "warn");
 pref("messaging-system.rsexperimentloader.enabled", true);
 pref("messaging-system.rsexperimentloader.collection_id", "nimbus-desktop-experiments");
+pref("nimbus.debug", false);
 
 // Enable the DOM fullscreen API.
 pref("full-screen-api.enabled", true);

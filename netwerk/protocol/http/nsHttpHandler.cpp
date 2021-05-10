@@ -188,6 +188,10 @@ static nsCString ImageAcceptHeader() {
     mimeTypes.Append("image/avif,");
   }
 
+  if (mozilla::StaticPrefs::image_jxl_enabled()) {
+    mimeTypes.Append("image/jxl,");
+  }
+
   if (mozilla::StaticPrefs::image_webp_enabled()) {
     mimeTypes.Append("image/webp,");
   }
@@ -355,6 +359,7 @@ static const char* gCallbackPrefs[] = {
     DOM_SECURITY_PREFIX,
     "image.http.accept",
     "image.avif.enabled",
+    "image.jxl.enabled",
     "image.webp.enabled",
     nullptr,
 };
@@ -688,8 +693,9 @@ bool nsHttpHandler::IsAcceptableEncoding(const char* enc, bool isSecure) {
   // gzip and deflate are inherently acceptable in modern HTTP - always
   // process them if a stream converter can also be found.
   if (!rv &&
-      (!PL_strcasecmp(enc, "gzip") || !PL_strcasecmp(enc, "deflate") ||
-       !PL_strcasecmp(enc, "x-gzip") || !PL_strcasecmp(enc, "x-deflate"))) {
+      (!nsCRT::strcasecmp(enc, "gzip") || !nsCRT::strcasecmp(enc, "deflate") ||
+       !nsCRT::strcasecmp(enc, "x-gzip") ||
+       !nsCRT::strcasecmp(enc, "x-deflate"))) {
     rv = true;
   }
   LOG(("nsHttpHandler::IsAceptableEncoding %s https=%d %d\n", enc, isSecure,
@@ -1828,9 +1834,9 @@ void nsHttpHandler::PrefsChanged(const char* pref) {
     }
   }
 
-  const bool imageAcceptPrefChanged = PREF_CHANGED("image.http.accept") ||
-                                      PREF_CHANGED("image.avif.enabled") ||
-                                      PREF_CHANGED("image.webp.enabled");
+  const bool imageAcceptPrefChanged =
+      PREF_CHANGED("image.http.accept") || PREF_CHANGED("image.avif.enabled") ||
+      PREF_CHANGED("image.jxl.enabled") || PREF_CHANGED("image.webp.enabled");
 
   if (imageAcceptPrefChanged) {
     nsAutoCString userSetImageAcceptHeader;

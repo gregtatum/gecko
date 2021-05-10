@@ -838,8 +838,9 @@ void LIRGenerator::visitTest(MTest* test) {
     }
   }
 
-#if defined(ENABLE_WASM_SIMD) && \
-    (defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64))
+#if defined(ENABLE_WASM_SIMD) &&                           \
+    (defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64) || \
+     defined(JS_CODEGEN_ARM64))
   // Check if the operand for this test is an any_true/all_true SIMD operation.
   // If it is, we want to emit an LWasmReduceAndBranchSimd128 node to avoid
   // generating an intermediate boolean result.
@@ -4209,15 +4210,6 @@ void LIRGenerator::visitNurseryObject(MNurseryObject* ins) {
 void LIRGenerator::visitGuardValue(MGuardValue* ins) {
   MOZ_ASSERT(ins->value()->type() == MIRType::Value);
   auto* lir = new (alloc()) LGuardValue(useBox(ins->value()));
-  assignSnapshot(lir, ins->bailoutKind());
-  add(lir, ins);
-  redefine(ins, ins->value());
-}
-
-void LIRGenerator::visitGuardNotOptimizedArguments(
-    MGuardNotOptimizedArguments* ins) {
-  MOZ_ASSERT(ins->value()->type() == MIRType::Value);
-  auto* lir = new (alloc()) LGuardNotOptimizedArguments(useBox(ins->value()));
   assignSnapshot(lir, ins->bailoutKind());
   add(lir, ins);
   redefine(ins, ins->value());

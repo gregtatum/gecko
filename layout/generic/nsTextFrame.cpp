@@ -441,7 +441,8 @@ class nsTextPaintStyle {
   // Ensures sufficient contrast between the frame background color and the
   // selection background color, and swaps the selection text and background
   // colors accordingly.
-  // Only used on platforms where mSelectionTextColor != NS_DONT_CHANGE_COLOR
+  // Only used on platforms where mSelectionTextColor !=
+  // NS_SAME_AS_FOREGROUND_COLOR
   bool EnsureSufficientContrast(nscolor* aForeColor, nscolor* aBackColor);
 
   nscolor GetResolvedForeColor(nscolor aColor, nscolor aDefaultForeColor,
@@ -3865,7 +3866,9 @@ bool nsTextPaintStyle::EnsureSufficientContrast(nscolor* aForeColor,
 
 nscolor nsTextPaintStyle::GetTextColor() {
   if (SVGUtils::IsInSVGTextSubtree(mFrame)) {
-    if (!mResolveColors) return NS_SAME_AS_FOREGROUND_COLOR;
+    if (!mResolveColors) {
+      return NS_SAME_AS_FOREGROUND_COLOR;
+    }
 
     const nsStyleSVG* style = mFrame->StyleSVG();
     switch (style->mFill.kind.tag) {
@@ -4140,7 +4143,7 @@ bool nsTextPaintStyle::InitSelectionColorsAndShadow() {
   if (mResolveColors) {
     // On MacOS X, only the background color gets set,
     // the text color remains intact.
-    if (mSelectionTextColor == NS_DONT_CHANGE_COLOR) {
+    if (mSelectionTextColor == NS_SAME_AS_FOREGROUND_COLOR) {
       nscolor frameColor =
           SVGUtils::IsInSVGTextSubtree(mFrame)
               ? mFrame->GetVisitedDependentColor(&nsStyleSVG::mFill)
@@ -4148,22 +4151,8 @@ bool nsTextPaintStyle::InitSelectionColorsAndShadow() {
                     &nsStyleText::mWebkitTextFillColor);
       mSelectionTextColor =
           EnsureDifferentColors(frameColor, mSelectionBGColor);
-    } else if (mSelectionTextColor == NS_CHANGE_COLOR_IF_SAME_AS_BG) {
-      nscolor frameColor =
-          SVGUtils::IsInSVGTextSubtree(mFrame)
-              ? mFrame->GetVisitedDependentColor(&nsStyleSVG::mFill)
-              : mFrame->GetVisitedDependentColor(
-                    &nsStyleText::mWebkitTextFillColor);
-      if (frameColor == mSelectionBGColor) {
-        mSelectionTextColor = LookAndFeel::Color(
-            LookAndFeel::ColorID::TextSelectForegroundCustom, mFrame);
-      }
     } else {
       EnsureSufficientContrast(&mSelectionTextColor, &mSelectionBGColor);
-    }
-  } else {
-    if (mSelectionTextColor == NS_DONT_CHANGE_COLOR) {
-      mSelectionTextColor = NS_SAME_AS_FOREGROUND_COLOR;
     }
   }
   return true;

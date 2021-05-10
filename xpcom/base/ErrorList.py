@@ -636,7 +636,6 @@ with modules["FILES"]:
     errors["NS_ERROR_FILE_COPY_OR_MOVE_FAILED"] = FAILURE(7)
     errors["NS_ERROR_FILE_ALREADY_EXISTS"] = FAILURE(8)
     errors["NS_ERROR_FILE_INVALID_PATH"] = FAILURE(9)
-    errors["NS_ERROR_FILE_DISK_FULL"] = FAILURE(10)
     errors["NS_ERROR_FILE_CORRUPTED"] = FAILURE(11)
     errors["NS_ERROR_FILE_NOT_DIRECTORY"] = FAILURE(12)
     errors["NS_ERROR_FILE_IS_DIRECTORY"] = FAILURE(13)
@@ -1157,13 +1156,6 @@ with modules["DOM_FILESYSTEM"]:
 # =======================================================================
 with modules["SIGNED_APP"]:
     errors["NS_ERROR_SIGNED_APP_MANIFEST_INVALID"] = FAILURE(1)
-
-
-# =======================================================================
-# 39: NS_ERROR_MODULE_DOM_ANIM
-# =======================================================================
-with modules["DOM_ANIM"]:
-    errors["NS_ERROR_DOM_ANIM_MISSING_PROPS_ERR"] = FAILURE(1)
 
 
 # =======================================================================

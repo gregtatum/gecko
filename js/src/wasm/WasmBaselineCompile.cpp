@@ -213,7 +213,6 @@ static constexpr FloatRegister RabaldrScratchF64 = InvalidFloatReg;
 
 #ifdef JS_CODEGEN_ARM64
 #  define RABALDR_CHUNKY_STACK
-#  define RABALDR_SIDEALLOC_V128
 #  define RABALDR_SCRATCH_I32
 #  define RABALDR_SCRATCH_F32
 #  define RABALDR_SCRATCH_F64
@@ -386,40 +385,6 @@ struct RegF64 : public FloatRegister {
 };
 
 #ifdef ENABLE_WASM_SIMD
-#  ifdef RABALDR_SIDEALLOC_V128
-class RegV128 {
-  // fpr_ is either invalid or a double that aliases the simd register, see
-  // comments below at BaseRegAlloc.
-  FloatRegister fpr_;
-
- public:
-  RegV128() : fpr_(FloatRegister()) {}
-  explicit RegV128(FloatRegister reg)
-      : fpr_(FloatRegister(reg.encoding(), FloatRegisters::Double)) {
-    MOZ_ASSERT(reg.isSimd128());
-  }
-  static RegV128 fromDouble(FloatRegister reg) {
-    MOZ_ASSERT(reg.isDouble());
-    return RegV128(FloatRegister(reg.encoding(), FloatRegisters::Simd128));
-  }
-  FloatRegister asDouble() const { return fpr_; }
-  bool isInvalid() const { return fpr_.isInvalid(); }
-  bool isValid() const { return !isInvalid(); }
-  static RegV128 Invalid() { return RegV128(); }
-
-  operator FloatRegister() const {
-    return FloatRegister(fpr_.encoding(), FloatRegisters::Simd128);
-  }
-
-  bool operator==(const RegV128& that) const {
-    return asDouble() == that.asDouble();
-  }
-
-  bool operator!=(const RegV128& that) const {
-    return asDouble() != that.asDouble();
-  }
-};
-#  else
 struct RegV128 : public FloatRegister {
   RegV128() : FloatRegister() {}
   explicit RegV128(FloatRegister reg) : FloatRegister(reg) {
@@ -428,7 +393,6 @@ struct RegV128 : public FloatRegister {
   bool isValid() const { return !isInvalid(); }
   static RegV128 Invalid() { return RegV128(); }
 };
-#  endif
 #endif
 
 struct AnyReg {
@@ -635,13 +599,6 @@ class BaseRegAlloc {
   // properly with aliasing of registers: if s0 or s1 are allocated then d0 is
   // not allocatable; if s0 and s1 are freed individually then d0 becomes
   // allocatable.
-  //
-  // On platforms with RABALDR_SIDEALLOC_V128, the register set does not
-  // represent SIMD registers.  Instead, we allocate and free these registers as
-  // doubles and change the kind to Simd128 while the register is exposed to
-  // masm.  (This is the case on ARM64 for now, and is a consequence of needing
-  // more than 64 bits for FloatRegisters::SetType to represent SIMD registers.
-  // See lengty comment in Architecture-arm64.h.)
 
   BaseCompilerInterface* bc;
   AllocatableGeneralRegisterSet availGPR;
@@ -674,25 +631,12 @@ class BaseRegAlloc {
 
   template <MIRType t>
   bool hasFPU() {
-#ifdef RABALDR_SIDEALLOC_V128
-    // Workaround for GCC problem, bug 1677690
-    if constexpr (t == MIRType::Simd128) {
-      MOZ_CRASH("Should not happen");
-    } else
-#endif
-    {
-      return availFPU.hasAny<RegTypeOf<t>::value>();
-    }
+    return availFPU.hasAny<RegTypeOf<t>::value>();
   }
 
   bool isAvailableGPR(Register r) { return availGPR.has(r); }
 
-  bool isAvailableFPU(FloatRegister r) {
-#ifdef RABALDR_SIDEALLOC_V128
-    MOZ_ASSERT(!r.isSimd128());
-#endif
-    return availFPU.has(r);
-  }
+  bool isAvailableFPU(FloatRegister r) { return availFPU.has(r); }
 
   void allocGPR(Register r) {
     MOZ_ASSERT(isAvailableGPR(r));
@@ -757,24 +701,13 @@ class BaseRegAlloc {
 #endif
 
   void allocFPU(FloatRegister r) {
-#ifdef RABALDR_SIDEALLOC_V128
-    MOZ_ASSERT(!r.isSimd128());
-#endif
     MOZ_ASSERT(isAvailableFPU(r));
     availFPU.take(r);
   }
 
   template <MIRType t>
   FloatRegister allocFPU() {
-#ifdef RABALDR_SIDEALLOC_V128
-    // Workaround for GCC problem, bug 1677690
-    if constexpr (t == MIRType::Simd128) {
-      MOZ_CRASH("Should not happen");
-    } else
-#endif
-    {
-      return availFPU.takeAny<RegTypeOf<t>::value>();
-    }
+    return availFPU.takeAny<RegTypeOf<t>::value>();
   }
 
   void freeGPR(Register r) { availGPR.add(r); }
@@ -788,12 +721,7 @@ class BaseRegAlloc {
 #endif
   }
 
-  void freeFPU(FloatRegister r) {
-#ifdef RABALDR_SIDEALLOC_V128
-    MOZ_ASSERT(!r.isSimd128());
-#endif
-    availFPU.add(r);
-  }
+  void freeFPU(FloatRegister r) { availFPU.add(r); }
 
  public:
   explicit BaseRegAlloc()
@@ -888,11 +816,7 @@ class BaseRegAlloc {
   bool isAvailableF64(RegF64 r) { return isAvailableFPU(r); }
 
 #ifdef ENABLE_WASM_SIMD
-#  ifdef RABALDR_SIDEALLOC_V128
-  bool isAvailableV128(RegV128 r) { return isAvailableFPU(r.asDouble()); }
-#  else
   bool isAvailableV128(RegV128 r) { return isAvailableFPU(r); }
-#  endif
 #endif
 
   // TODO / OPTIMIZE (Bug 1316802): Do not sync everything on allocation
@@ -998,31 +922,17 @@ class BaseRegAlloc {
 
 #ifdef ENABLE_WASM_SIMD
   [[nodiscard]] RegV128 needV128() {
-#  ifdef RABALDR_SIDEALLOC_V128
-    if (!hasFPU<MIRType::Double>()) {
-      bc->sync();
-    }
-    return RegV128::fromDouble(allocFPU<MIRType::Double>());
-#  else
     if (!hasFPU<MIRType::Simd128>()) {
       bc->sync();
     }
     return RegV128(allocFPU<MIRType::Simd128>());
-#  endif
   }
 
   void needV128(RegV128 specific) {
-#  ifdef RABALDR_SIDEALLOC_V128
-    if (!isAvailableV128(specific)) {
-      bc->sync();
-    }
-    allocFPU(specific.asDouble());
-#  else
     if (!isAvailableV128(specific)) {
       bc->sync();
     }
     allocFPU(specific);
-#  endif
   }
 #endif
 
@@ -1039,13 +949,7 @@ class BaseRegAlloc {
   void freeF32(RegF32 r) { freeFPU(r); }
 
 #ifdef ENABLE_WASM_SIMD
-  void freeV128(RegV128 r) {
-#  ifdef RABALDR_SIDEALLOC_V128
-    freeFPU(r.asDouble());
-#  else
-    freeFPU(r);
-#  endif
-  }
+  void freeV128(RegV128 r) { freeFPU(r); }
 #endif
 
   void freeTempPtr(RegPtr r, bool saved) {
@@ -1103,13 +1007,7 @@ class BaseRegAlloc {
     void addKnownF64(RegF64 r) { knownFPU_.add(r); }
 
 #  ifdef ENABLE_WASM_SIMD
-    void addKnownV128(RegV128 r) {
-#    ifdef RABALDR_SIDEALLOC_V128
-      knownFPU_.add(r.asDouble());
-#    else
-      knownFPU_.add(r);
-#    endif
-    }
+    void addKnownV128(RegV128 r) { knownFPU_.add(r); }
 #  endif
 
     void addKnownRef(RegRef r) { knownGPR_.add(r); }
@@ -8741,7 +8639,6 @@ class BaseCompiler final : public BaseCompilerInterface {
   [[nodiscard]] bool emitBitselect();
   [[nodiscard]] bool emitVectorShuffle();
   [[nodiscard]] bool emitVectorShiftRightI64x2(bool isUnsigned);
-  [[nodiscard]] bool emitVectorMulI64x2();
 #endif
 };
 
@@ -14577,6 +14474,11 @@ static void MulI64x2(MacroAssembler& masm, RegV128 rs, RegV128 rsd,
                      RegV128 temp) {
   masm.mulInt64x2(rsd, rs, rsd, temp);
 }
+#  elif defined(JS_CODEGEN_ARM64)
+static void MulI64x2(MacroAssembler& masm, RegV128 rs, RegV128 rsd,
+                     RegV128 temp1, RegV128 temp2) {
+  masm.mulInt64x2(rsd, rs, rsd, temp1, temp2);
+}
 #  endif
 
 static void MulF64x2(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
@@ -14750,7 +14652,7 @@ static void CmpI64x2ForOrdering(MacroAssembler& masm, Assembler::Condition cond,
 #  else
 static void CmpI64x2(MacroAssembler& masm, Assembler::Condition cond,
                      RegV128 rs, RegV128 rsd, RegV128 temp1, RegV128 temp2) {
-  masm.compareInt64x2(cond, rs, rsd, temp1, temp2);
+  masm.compareInt64x2(cond, rs, rsd);
 }
 #  endif  // JS_CODEGEN_X86 || JS_CODEGEN_X64
 
@@ -14930,49 +14832,51 @@ static void ShiftRightUI64x2(MacroAssembler& masm, RegI32 rs, RegV128 rsd,
 }
 #  elif defined(JS_CODEGEN_ARM64)
 static void ShiftLeftI8x16(MacroAssembler& masm, RegI32 rs, RegV128 rsd) {
-  masm.leftShiftInt8x16(rs, rsd);
+  masm.leftShiftInt8x16(rsd, rs, rsd);
 }
 
 static void ShiftLeftI16x8(MacroAssembler& masm, RegI32 rs, RegV128 rsd) {
-  masm.leftShiftInt16x8(rs, rsd);
+  masm.leftShiftInt16x8(rsd, rs, rsd);
 }
 
 static void ShiftLeftI32x4(MacroAssembler& masm, RegI32 rs, RegV128 rsd) {
-  masm.leftShiftInt32x4(rs, rsd);
+  masm.leftShiftInt32x4(rsd, rs, rsd);
 }
 
 static void ShiftLeftI64x2(MacroAssembler& masm, RegI32 rs, RegV128 rsd) {
-  masm.leftShiftInt64x2(rs, rsd);
+  masm.leftShiftInt64x2(rsd, rs, rsd);
 }
 
-static void ShiftRightI8x16(MacroAssembler& masm, RegI32 rs, RegV128 rsd,
-                            RegV128 temp) {
-  masm.rightShiftInt8x16(rs, rsd, temp);
+static void ShiftRightI8x16(MacroAssembler& masm, RegI32 rs, RegV128 rsd) {
+  masm.rightShiftInt8x16(rsd, rs, rsd);
 }
 
-static void ShiftRightUI8x16(MacroAssembler& masm, RegI32 rs, RegV128 rsd,
-                             RegV128 temp) {
-  masm.unsignedRightShiftInt8x16(rs, rsd, temp);
+static void ShiftRightUI8x16(MacroAssembler& masm, RegI32 rs, RegV128 rsd) {
+  masm.unsignedRightShiftInt8x16(rsd, rs, rsd);
 }
 
-static void ShiftRightI16x8(MacroAssembler& masm, RegI32 rs, RegV128 rsd,
-                            RegV128 temp) {
-  masm.rightShiftInt16x8(rs, rsd, temp);
+static void ShiftRightI16x8(MacroAssembler& masm, RegI32 rs, RegV128 rsd) {
+  masm.rightShiftInt16x8(rsd, rs, rsd);
 }
 
-static void ShiftRightUI16x8(MacroAssembler& masm, RegI32 rs, RegV128 rsd,
-                             RegV128 temp) {
-  masm.unsignedRightShiftInt16x8(rs, rsd, temp);
+static void ShiftRightUI16x8(MacroAssembler& masm, RegI32 rs, RegV128 rsd) {
+  masm.unsignedRightShiftInt16x8(rsd, rs, rsd);
 }
 
-static void ShiftRightI32x4(MacroAssembler& masm, RegI32 rs, RegV128 rsd,
-                            RegV128 temp) {
-  masm.rightShiftInt32x4(rs, rsd, temp);
+static void ShiftRightI32x4(MacroAssembler& masm, RegI32 rs, RegV128 rsd) {
+  masm.rightShiftInt32x4(rsd, rs, rsd);
 }
 
-static void ShiftRightUI32x4(MacroAssembler& masm, RegI32 rs, RegV128 rsd,
-                             RegV128 temp) {
-  masm.unsignedRightShiftInt32x4(rs, rsd, temp);
+static void ShiftRightUI32x4(MacroAssembler& masm, RegI32 rs, RegV128 rsd) {
+  masm.unsignedRightShiftInt32x4(rsd, rs, rsd);
+}
+
+static void ShiftRightI64x2(MacroAssembler& masm, RegI32 rs, RegV128 rsd) {
+  masm.rightShiftInt64x2(rsd, rs, rsd);
+}
+
+static void ShiftRightUI64x2(MacroAssembler& masm, RegI32 rs, RegV128 rsd) {
+  masm.unsignedRightShiftInt64x2(rsd, rs, rsd);
 }
 #  endif
 
@@ -15672,12 +15576,11 @@ bool BaseCompiler::emitVectorShiftRightI64x2(bool isUnsigned) {
     emitBinop(ShiftRightUI64x2);
     return true;
   }
-#  endif
 
-#  if defined(JS_CODEGEN_X86)
+#    if defined(JS_CODEGEN_X86)
   needI32(specific_.ecx);
   RegI32 count = popI32ToSpecific(specific_.ecx);
-#  elif defined(JS_CODEGEN_X64)
+#    elif defined(JS_CODEGEN_X64)
   RegI32 count;
   if (Assembler::HasBMI2()) {
     count = popI32();
@@ -15685,9 +15588,7 @@ bool BaseCompiler::emitVectorShiftRightI64x2(bool isUnsigned) {
     needI32(specific_.ecx);
     count = popI32ToSpecific(specific_.ecx);
   }
-#  elif defined(JS_CODEGEN_ARM64)
-  RegI32 count = popI32();
-#  endif
+#    endif
   RegV128 lhsDest = popV128();
   RegI64 tmp = needI64();
   masm.and32(Imm32(63), count);
@@ -15708,43 +15609,12 @@ bool BaseCompiler::emitVectorShiftRightI64x2(bool isUnsigned) {
   freeI64(tmp);
   freeI32(count);
   pushV128(lhsDest);
-
-  return true;
-}
-
-// Must be scalarized on ARM64.
-bool BaseCompiler::emitVectorMulI64x2() {
-  Nothing unused_a, unused_b;
-
-  if (!iter_.readBinary(ValType::V128, &unused_a, &unused_b)) {
-    return false;
-  }
-
-  if (deadCode_) {
-    return true;
-  }
-
-#  if defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64)
-  emitBinop(MulI64x2);
 #  elif defined(JS_CODEGEN_ARM64)
-  RegV128 r, rs;
-  pop2xV128(&r, &rs);
-  RegI64 temp1 = needI64();
-  RegI64 temp2 = needI64();
-  masm.extractLaneInt64x2(0, r, temp1);
-  masm.extractLaneInt64x2(0, rs, temp2);
-  masm.mul64(temp2, temp1, Register::Invalid());
-  masm.replaceLaneInt64x2(0, temp1, r);
-  masm.extractLaneInt64x2(1, r, temp1);
-  masm.extractLaneInt64x2(1, rs, temp2);
-  masm.mul64(temp2, temp1, Register::Invalid());
-  masm.replaceLaneInt64x2(1, temp1, r);
-  freeI64(temp1);
-  freeI64(temp2);
-  freeV128(rs);
-  pushV128(r);
-#  else
-  MOZ_CRASH("NYI");
+  if (isUnsigned) {
+    emitBinop(ShiftRightUI64x2);
+  } else {
+    emitBinop(ShiftRightI64x2);
+  }
 #  endif
 
   return true;
@@ -16883,7 +16753,7 @@ bool BaseCompiler::emitBody() {
           case uint32_t(SimdOp::I64x2Sub):
             CHECK_NEXT(dispatchVectorBinary(SubI64x2));
           case uint32_t(SimdOp::I64x2Mul):
-            CHECK_NEXT(emitVectorMulI64x2());
+            CHECK_NEXT(dispatchVectorBinary(MulI64x2));
           case uint32_t(SimdOp::F32x4Add):
             CHECK_NEXT(dispatchVectorBinary(AddF32x4));
           case uint32_t(SimdOp::F32x4Sub):
@@ -17650,44 +17520,6 @@ bool js::wasm::BaselineCompileFunctions(const ModuleEnvironment& moduleEnv,
 
   return code->swap(masm);
 }
-
-#ifdef DEBUG
-bool js::wasm::IsValidStackMapKey(bool debugEnabled, const uint8_t* nextPC) {
-#  if defined(JS_CODEGEN_X64) || defined(JS_CODEGEN_X86)
-  const uint8_t* insn = nextPC;
-  return (insn[-2] == 0x0F && insn[-1] == 0x0B) ||           // ud2
-         (insn[-2] == 0xFF && (insn[-1] & 0xF8) == 0xD0) ||  // call *%r_
-         insn[-5] == 0xE8 ||                                 // call simm32
-         (debugEnabled && insn[-5] == 0x0F && insn[-4] == 0x1F &&
-          insn[-3] == 0x44 && insn[-2] == 0x00 &&
-          insn[-1] == 0x00);  // nop_five
-
-#  elif defined(JS_CODEGEN_ARM)
-  const uint32_t* insn = (const uint32_t*)nextPC;
-  return ((uintptr_t(insn) & 3) == 0) &&              // must be ARM, not Thumb
-         (insn[-1] == 0xe7f000f0 ||                   // udf
-          (insn[-1] & 0xfffffff0) == 0xe12fff30 ||    // blx reg (ARM, enc A1)
-          (insn[-1] & 0xff000000) == 0xeb000000 ||    // bl simm24 (ARM, enc A1)
-          (debugEnabled && insn[-1] == 0xe320f000));  // "as_nop"
-
-#  elif defined(JS_CODEGEN_ARM64)
-  const uint32_t hltInsn = 0xd4a00000;
-  const uint32_t* insn = (const uint32_t*)nextPC;
-  return ((uintptr_t(insn) & 3) == 0) &&
-         (insn[-1] == hltInsn ||                      // hlt
-          (insn[-1] & 0xfffffc1f) == 0xd63f0000 ||    // blr reg
-          (insn[-1] & 0xfc000000) == 0x94000000 ||    // bl simm26
-          (debugEnabled && insn[-1] == 0xd503201f));  // nop
-
-#  elif defined(JS_CODEGEN_MIPS64)
-  // TODO (bug 1699696): Implement this.  As for the platforms above, we need to
-  // enumerate all code sequences that can precede the stack map location.
-  return true;
-#  else
-  MOZ_CRASH("IsValidStackMapKey: requires implementation on this platform");
-#  endif
-}
-#endif
 
 #undef RABALDR_INT_DIV_I64_CALLOUT
 #undef RABALDR_I64_TO_FLOAT_CALLOUT

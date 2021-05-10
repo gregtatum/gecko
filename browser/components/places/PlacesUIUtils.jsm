@@ -1174,14 +1174,26 @@ var PlacesUIUtils = {
     // This listener is for counting new bookmarks
     let placesUtilsObserversListener = events => {
       for (let event of events) {
-        if (
-          event.type == "bookmark-added" &&
-          event.parentGuid == PlacesUtils.bookmarks.toolbarGuid
-        ) {
-          Services.telemetry.scalarAdd(
-            "browser.engagement.bookmarks_toolbar_bookmark_added",
-            1
-          );
+        switch (event.type) {
+          case "bookmark-added":
+            if (event.parentGuid == PlacesUtils.bookmarks.toolbarGuid) {
+              Services.telemetry.scalarAdd(
+                "browser.engagement.bookmarks_toolbar_bookmark_added",
+                1
+              );
+            }
+            break;
+          case "bookmark-moved":
+            let hasMovedToToolbar =
+              event.parentGuid == PlacesUtils.bookmarks.toolbarGuid &&
+              event.oldParentGuid != PlacesUtils.bookmarks.toolbarGuid;
+            if (hasMovedToToolbar) {
+              Services.telemetry.scalarAdd(
+                "browser.engagement.bookmarks_toolbar_bookmark_added",
+                1
+              );
+            }
+            break;
         }
       }
     };
@@ -1191,10 +1203,8 @@ var PlacesUIUtils = {
       onItemChanged() {},
       onItemMoved(
         aItemId,
-        aProperty,
-        aIsAnnotationProperty,
-        aNewValue,
-        aLastModified,
+        aOldIndex,
+        aNewIndex,
         aItemType,
         aGuid,
         oldParentGuid,
@@ -1214,13 +1224,13 @@ var PlacesUIUtils = {
 
     this._bookmarkToolbarTelemetryListening = true;
     PlacesUtils.observers.addListener(
-      ["bookmark-added"],
+      ["bookmark-added", "bookmark-moved"],
       placesUtilsObserversListener
     );
     PlacesUtils.bookmarks.addObserver(placesUtilsBookmarksObserver);
     PlacesUtils.registerShutdownFunction(() => {
       PlacesUtils.observers.removeListener(
-        ["bookmark-added"],
+        ["bookmark-added", "bookmark-moved"],
         placesUtilsObserversListener
       );
       PlacesUtils.bookmarks.removeObserver(placesUtilsBookmarksObserver);

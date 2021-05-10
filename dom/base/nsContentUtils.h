@@ -2446,10 +2446,10 @@ class nsContentUtils {
   static bool HasPluginWithUncontrolledEventDispatch(nsIContent* aContent);
 
   /**
-   * Returns the root document in a document hierarchy. Normally this
-   * will be the chrome document.
+   * Returns the in-process subtree root document in a document hierarchy.
+   * This could be a chrome document.
    */
-  static Document* GetRootDocument(Document* aDoc);
+  static Document* GetInProcessSubtreeRootDocument(Document* aDoc);
 
   static void GetShiftText(nsAString& text);
   static void GetControlText(nsAString& text);
@@ -3084,6 +3084,14 @@ class nsContentUtils {
     return QueryTriggeringPrincipal(aLoadingNode, nullptr,
                                     aTriggeringPrincipal);
   }
+
+  // Returns whether the image for the given URI and triggering principal is
+  // already available. Ideally this should exactly match the "list of available
+  // images" in the HTML spec, but our implementation of that at best only
+  // resembles it.
+  static bool IsImageAvailable(nsIContent*, nsIURI*,
+                               nsIPrincipal* aDefaultTriggeringPrincipal,
+                               mozilla::CORSMode);
 
   /**
    * Returns the content policy type that should be used for loading images

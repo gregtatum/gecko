@@ -9182,35 +9182,35 @@ static ParseNodeKind BinaryOpTokenKindToParseNodeKind(TokenKind tok) {
 //   - the binary operators in TokenKind.h
 //   - the JSOp code list in BytecodeEmitter.cpp
 static const int PrecedenceTable[] = {
-    1,  /* ParseNodeKind::PipeLine */
-    2,  /* ParseNodeKind::Coalesce */
-    3,  /* ParseNodeKind::Or */
-    4,  /* ParseNodeKind::And */
-    5,  /* ParseNodeKind::BitOr */
-    6,  /* ParseNodeKind::BitXor */
-    7,  /* ParseNodeKind::BitAnd */
-    8,  /* ParseNodeKind::StrictEq */
-    8,  /* ParseNodeKind::Eq */
-    8,  /* ParseNodeKind::StrictNe */
-    8,  /* ParseNodeKind::Ne */
-    9,  /* ParseNodeKind::Lt */
-    9,  /* ParseNodeKind::Le */
-    9,  /* ParseNodeKind::Gt */
-    9,  /* ParseNodeKind::Ge */
-    9,  /* ParseNodeKind::InstanceOf */
-    9,  /* ParseNodeKind::In */
-    10, /* ParseNodeKind::Lsh */
-    10, /* ParseNodeKind::Rsh */
-    10, /* ParseNodeKind::Ursh */
-    11, /* ParseNodeKind::Add */
-    11, /* ParseNodeKind::Sub */
-    12, /* ParseNodeKind::Star */
-    12, /* ParseNodeKind::Div */
-    12, /* ParseNodeKind::Mod */
-    13  /* ParseNodeKind::Pow */
+    1,  /* ParseNodeKind::Coalesce */
+    2,  /* ParseNodeKind::Or */
+    3,  /* ParseNodeKind::And */
+    4,  /* ParseNodeKind::BitOr */
+    5,  /* ParseNodeKind::BitXor */
+    6,  /* ParseNodeKind::BitAnd */
+    7,  /* ParseNodeKind::StrictEq */
+    7,  /* ParseNodeKind::Eq */
+    7,  /* ParseNodeKind::StrictNe */
+    7,  /* ParseNodeKind::Ne */
+    8,  /* ParseNodeKind::Lt */
+    8,  /* ParseNodeKind::Le */
+    8,  /* ParseNodeKind::Gt */
+    8,  /* ParseNodeKind::Ge */
+    8,  /* ParseNodeKind::InstanceOf */
+    8,  /* ParseNodeKind::In */
+    8,  /* ParseNodeKind::PrivateIn */
+    9,  /* ParseNodeKind::Lsh */
+    9,  /* ParseNodeKind::Rsh */
+    9,  /* ParseNodeKind::Ursh */
+    10, /* ParseNodeKind::Add */
+    10, /* ParseNodeKind::Sub */
+    11, /* ParseNodeKind::Star */
+    11, /* ParseNodeKind::Div */
+    11, /* ParseNodeKind::Mod */
+    12  /* ParseNodeKind::Pow */
 };
 
-static const int PRECEDENCE_CLASSES = 13;
+static const int PRECEDENCE_CLASSES = 12;
 
 static int Precedence(ParseNodeKind pnk) {
   // Everything binds tighter than ParseNodeKind::Limit, because we want
@@ -9280,6 +9280,7 @@ GeneralParser<ParseHandler, Unit>::orExpr(InHandling inHandling,
         return null();
       }
 
+      bool isErgonomicBrandCheck = false;
       switch (tok) {
         // Report an error for unary expressions on the LHS of **.
         case TokenKind::Pow:
@@ -9325,6 +9326,8 @@ GeneralParser<ParseHandler, Unit>::orExpr(InHandling inHandling,
               error(JSMSG_ILLEGAL_PRIVATE_NAME);
               return null();
             }
+
+            isErgonomicBrandCheck = true;
           }
           break;
 
@@ -9333,7 +9336,12 @@ GeneralParser<ParseHandler, Unit>::orExpr(InHandling inHandling,
           break;
       }
 
-      pnk = BinaryOpTokenKindToParseNodeKind(tok);
+      if (isErgonomicBrandCheck) {
+        pnk = ParseNodeKind::PrivateInExpr;
+      } else {
+        pnk = BinaryOpTokenKindToParseNodeKind(tok);
+      }
+
     } else {
       tok = TokenKind::Eof;
       pnk = ParseNodeKind::Limit;

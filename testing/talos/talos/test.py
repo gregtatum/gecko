@@ -486,7 +486,7 @@ class tabswitch(PageloaderTest):
     extensions = ["${talos}/tests/tabswitch", "${talos}/pageloader"]
     tpmanifest = "${talos}/tests/tabswitch/tabswitch.manifest"
     tppagecycles = 5
-    timeout = 600
+    timeout = 900
     gecko_profile_entries = 5000000
     tploadnocache = True
     preferences = {
@@ -497,6 +497,21 @@ class tabswitch(PageloaderTest):
         # See bug 1674053 and bug 1675809 for context.
         "browser.toolbars.bookmarks.visibility": "never",
     }
+    unit = "ms"
+
+
+@register_test()
+class cross_origin_pageload(PageloaderTest):
+    """
+    Tests the amount of time it takes to load a page which
+    has 20 cross origin iframes
+    """
+
+    extensions = ["${talos}/pageloader"]
+    tpmanifest = "${talos}/tests/cross_origin_pageload/cross_origin_pageload.manifest"
+    tppagecycles = 10
+    timeout = 100
+    tploadnocache = True
     unit = "ms"
 
 

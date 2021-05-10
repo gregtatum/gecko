@@ -16,6 +16,7 @@
 
   --tabs-navbar-shadow-size: 1px;
 
+  --panel-shortcut-color: inherit;
   --panelui-subview-transition-duration: 150ms;
 
   --short-notification-background: #0250BB;
@@ -34,6 +35,16 @@
   --buttons-destructive-hover-bgcolor: #c50042;
   --buttons-destructive-active-bgcolor: #810220;
   --buttons-destructive-color: #fbfbfe;
+
+  --checkbox-border-color: var(--input-border-color);
+  --checkbox-unchecked-bgcolor: var(--button-bgcolor);
+  --checkbox-unchecked-hover-bgcolor: var(--button-hover-bgcolor);
+  --checkbox-unchecked-active-bgcolor: var(--button-active-bgcolor);
+  --checkbox-checked-border-color: transparent;
+  --checkbox-checked-bgcolor: var(--button-primary-bgcolor);
+  --checkbox-checked-color: var(--button-primary-color);
+  --checkbox-checked-hover-bgcolor: var(--button-primary-hover-bgcolor);
+  --checkbox-checked-active-bgcolor: var(--button-primary-active-bgcolor);
 
   --autocomplete-popup-hover-background: var(--arrowpanel-dimmed);
   --autocomplete-popup-separator-color: color-mix(in srgb, currentColor 14%, transparent);
@@ -887,7 +898,7 @@ popupnotificationcontent {
 }
 
 .popup-notification-body menulist {
-  margin-inline: 0;
+  margin: 0;
 }
 
 .popup-notification-checkbox {

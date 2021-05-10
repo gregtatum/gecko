@@ -598,7 +598,7 @@ AutoApplyAsyncTestAttributes::AutoApplyAsyncTestAttributes(
     // query the async transforms non-const.
     : mApzc(const_cast<AsyncPanZoomController*>(aApzc)),
       mPrevFrameMetrics(aApzc->Metrics()),
-      mPrevOverscroll(aApzc->GetOverscrollAmount()),
+      mPrevOverscroll(aApzc->GetOverscrollAmountInternal()),
       mProofOfLock(aProofOfLock) {
   mApzc->ApplyAsyncTestAttributes(aProofOfLock);
 }
@@ -2681,7 +2681,7 @@ nsEventStatus AsyncPanZoomController::OnPan(
     // If there is an on-going overscroll animation, we tell the animation
     // whether the displacements should be handled by the animation or not.
     MOZ_ASSERT(mAnimation->AsOverscrollAnimation());
-    if (OverscrollAnimation* overscrollAnimation =
+    if (RefPtr<OverscrollAnimation> overscrollAnimation =
             mAnimation->AsOverscrollAnimation()) {
       overscrollAnimation->HandlePanMomentum(logicalPanDisplacement);
       // And then as a result of the above call, if the animation is currently
@@ -3905,6 +3905,15 @@ ExternalPoint AsyncPanZoomController::GetFirstExternalTouchPoint(
 }
 
 ParentLayerPoint AsyncPanZoomController::GetOverscrollAmount() const {
+  if (StaticPrefs::apz_overscroll_test_async_scroll_offset_enabled()) {
+    RecursiveMutexAutoLock lock(mRecursiveMutex);
+    AutoApplyAsyncTestAttributes testAttributeApplier(this, lock);
+    return GetOverscrollAmountInternal();
+  }
+  return GetOverscrollAmountInternal();
+}
+
+ParentLayerPoint AsyncPanZoomController::GetOverscrollAmountInternal() const {
   return {mX.GetOverscroll(), mY.GetOverscroll()};
 }
 
@@ -4328,7 +4337,8 @@ void AsyncPanZoomController::RequestContentRepaint(
   ParentLayerPoint velocity = GetVelocityVector();
   ScreenMargin displayportMargins = CalculatePendingDisplayPort(
       Metrics(), velocity,
-      mState == PINCHING ? ZoomInProgress::Yes : ZoomInProgress::No);
+      (mState == PINCHING || mState == ANIMATING_ZOOM) ? ZoomInProgress::Yes
+                                                       : ZoomInProgress::No);
   Metrics().SetPaintRequestTime(TimeStamp::Now());
   RequestContentRepaint(Metrics(), velocity, displayportMargins, aUpdateType);
 }
@@ -5650,35 +5660,7 @@ void AsyncPanZoomController::ZoomToRect(const ZoomTarget& aZoomTarget,
         *this, Metrics().GetVisualScrollOffset(), Metrics().GetZoom(),
         endZoomToMetrics.GetVisualScrollOffset(), endZoomToMetrics.GetZoom()));
 
-    FrameMetrics metricsToRequestRepaintWith = Metrics();
-
-    ParentLayerPoint velocity(0, 0);
-    ScreenMargin displayportMargins = CalculatePendingDisplayPort(
-        metricsToRequestRepaintWith, velocity, ZoomInProgress::Yes);
-    metricsToRequestRepaintWith.SetPaintRequestTime(TimeStamp::Now());
-
-    RefPtr<GeckoContentController> controller = GetGeckoContentController();
-    if (!controller) {
-      return;
-    }
-    if (controller->IsRepaintThread()) {
-      RequestContentRepaint(metricsToRequestRepaintWith, velocity,
-                            displayportMargins, RepaintUpdateType::eUserAction);
-    } else {
-      // See comment on similar code in RequestContentRepaint
-      mExpectedGeckoMetrics.UpdateFrom(metricsToRequestRepaintWith);
-
-      // use a local var to resolve the function overload
-      auto func = static_cast<void (AsyncPanZoomController::*)(
-          const FrameMetrics&, const ParentLayerPoint&, const ScreenMargin&,
-          RepaintUpdateType)>(&AsyncPanZoomController::RequestContentRepaint);
-      controller->DispatchToRepaintThread(
-          NewRunnableMethod<FrameMetrics, ParentLayerPoint, ScreenMargin,
-                            RepaintUpdateType>(
-              "layers::AsyncPanZoomController::ZoomToRect", this, func,
-              metricsToRequestRepaintWith, velocity, displayportMargins,
-              RepaintUpdateType::eUserAction));
-    }
+    RequestContentRepaint(RepaintUpdateType::eUserAction);
   }
 }
 

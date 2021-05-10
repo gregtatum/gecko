@@ -1,13 +1,3 @@
-/*
-Distributed under both the W3C Test Suite License [1] and the W3C
-3-clause BSD License [2]. To contribute to a W3C Test Suite, see the
-policies and contribution forms [3].
-
-[1] http://www.w3.org/Consortium/Legal/2008/04-testsuite-license
-[2] http://www.w3.org/Consortium/Legal/2008/03-bsd-license
-[3] http://www.w3.org/2004/10/27-testcases
-*/
-
 /* For user documentation see docs/_writing-tests/idlharness.md */
 
 /**
@@ -99,6 +89,16 @@ function globalOf(func)
     // with a weird proto chain or weird .constructor property, just fall back
     // to 'self'.
     return self;
+}
+
+// https://esdiscuss.org/topic/isconstructor#content-11
+function isConstructor(o) {
+    try {
+        new (new Proxy(o, {construct: () => ({})}));
+        return true;
+    } catch(e) {
+        return false;
+    }
 }
 
 function throwOrReject(a_test, operation, fn, obj, args, message, cb)
@@ -581,13 +581,11 @@ IdlArray.prototype.is_json_type = function(type)
 
            //  dictionaries where all of their members are JSON types
            if (thing instanceof IdlDictionary) {
-               var stack = thing.get_inheritance_stack();
-               var map = new Map();
-               while (stack.length)
-               {
-                   stack.pop().members.forEach(function(m) {
-                       map.set(m.name, m.idlType)
-                   });
+               const map = new Map();
+               for (const dict of thing.get_reverse_inheritance_stack()) {
+                   for (const m of dict.members) {
+                       map.set(m.name, m.idlType);
+                   }
                }
                return Array.from(map.values()).every(this.is_json_type, this);
            }
@@ -715,7 +713,7 @@ IdlArray.prototype.test = function()
             if (!rhs_is_interface) throw new IdlHarnessError(`${lhs} inherits ${rhs}, but ${rhs} is not an interface.`);
         }
         // Check for circular dependencies.
-        member.get_inheritance_stack();
+        member.get_reverse_inheritance_stack();
     }
 
     Object.getOwnPropertyNames(this.members).forEach(function(memberName) {
@@ -1176,8 +1174,8 @@ function IdlDictionary(obj)
 
 IdlDictionary.prototype = Object.create(IdlObject.prototype);
 
-IdlDictionary.prototype.get_inheritance_stack = function() {
-    return IdlInterface.prototype.get_inheritance_stack.call(this);
+IdlDictionary.prototype.get_reverse_inheritance_stack = function() {
+    return IdlInterface.prototype.get_reverse_inheritance_stack.call(this);
 };
 
 /// IdlInterface ///
@@ -1319,39 +1317,39 @@ IdlInterface.prototype.has_default_to_json_regular_operation = function() {
     });
 };
 
-IdlInterface.prototype.get_inheritance_stack = function() {
-    /**
-     * See https://heycam.github.io/webidl/#create-an-inheritance-stack
-     *
-     * Returns an array of IdlInterface objects which contains itself
-     * and all of its inherited interfaces.
-     *
-     * So given:
-     *
-     *   A : B {};
-     *   B : C {};
-     *   C {};
-     *
-     * then A.get_inheritance_stack() should return [A, B, C],
-     * and B.get_inheritance_stack() should return [B, C].
-     *
-     * Note: as dictionary inheritance is expressed identically by the AST,
-     * this works just as well for getting a stack of inherited dictionaries.
-     */
-
-    var stack = [this];
-    var idl_interface = this;
+/**
+ * Implementation of https://heycam.github.io/webidl/#create-an-inheritance-stack
+ * with the order reversed.
+ *
+ * The order is reversed so that the base class comes first in the list, because
+ * this is what all call sites need.
+ *
+ * So given:
+ *
+ *   A : B {};
+ *   B : C {};
+ *   C {};
+ *
+ * then A.get_reverse_inheritance_stack() returns [C, B, A],
+ * and B.get_reverse_inheritance_stack() returns [C, B].
+ *
+ * Note: as dictionary inheritance is expressed identically by the AST,
+ * this works just as well for getting a stack of inherited dictionaries.
+ */
+IdlInterface.prototype.get_reverse_inheritance_stack = function() {
+    const stack = [this];
+    let idl_interface = this;
     while (idl_interface.base) {
-        var base = this.array.members[idl_interface.base];
+        const base = this.array.members[idl_interface.base];
         if (!base) {
             throw new Error(idl_interface.type + " " + idl_interface.base + " not found (inherited by " + idl_interface.name + ")");
         } else if (stack.indexOf(base) > -1) {
-            stack.push(base);
-            let dep_chain = stack.map(i => i.name).join(',');
+            stack.unshift(base);
+            const dep_chain = stack.map(i => i.name).join(',');
             throw new IdlHarnessError(`${this.name} has a circular dependency: ${dep_chain}`);
         }
         idl_interface = base;
-        stack.push(idl_interface);
+        stack.unshift(idl_interface);
     }
     return stack;
 };
@@ -1366,19 +1364,20 @@ IdlInterface.prototype.get_inheritance_stack = function() {
  * comparison with actual value
  */
 IdlInterface.prototype.default_to_json_operation = function() {
-    var map = new Map(), isDefault = false;
-    this.get_inheritance_stack().reverse().forEach(function(I) {
+    const map = new Map()
+    let isDefault = false;
+    for (const I of this.get_reverse_inheritance_stack()) {
         if (I.has_default_to_json_regular_operation()) {
             isDefault = true;
-            I.members.forEach(function(m) {
+            for (const m of I.members) {
                 if (m.special !== "static" && m.type == "attribute" && I.array.is_json_type(m.idlType)) {
                     map.set(m.name, m.idlType);
                 }
-            });
+            }
         } else if (I.has_to_json_regular_operation()) {
             isDefault = false;
         }
-    });
+    }
     return isDefault ? map : null;
 };
 
@@ -1431,8 +1430,6 @@ IdlInterface.prototype.test_self = function()
 {
     subsetTestByKey(this.name, test, function()
     {
-        // This function tests WebIDL as of 2015-01-13.
-
         if (!this.should_have_interface_object()) {
             return;
         }
@@ -1474,8 +1471,6 @@ IdlInterface.prototype.test_self = function()
 
         // "* Its [[Construct]] internal property is set as described in
         //    ECMA-262 section 19.2.2.3."
-        // Tested below if no constructor is defined.  TODO: test constructors
-        // if defined.
 
         // "* Its @@hasInstance property is set as described in ECMA-262
         //    section 19.2.3.8, unless otherwise specified."
@@ -1507,6 +1502,10 @@ IdlInterface.prototype.test_self = function()
             assert_equals(prototype, Function.prototype,
                           "prototype of self's property " + format_value(this.name) + " is not Function.prototype");
         }
+
+        // Always test for [[Construct]]:
+        // https://github.com/heycam/webidl/issues/698
+        assert_true(isConstructor(this.get_interface_object()), "interface object must pass IsConstructor check");
 
         if (!this.constructors().length) {
             // "If I was not declared with a constructor operation, then throw a TypeError."
@@ -2627,9 +2626,6 @@ IdlInterface.prototype.test_object = function(desc)
     {
         // Result of [[IsHTMLDDA]] slot
         expected_typeof = "undefined";
-    } else if (this.members.some(function(member) { return member.legacycaller; }))
-    {
-        expected_typeof = "function";
     }
     else
     {

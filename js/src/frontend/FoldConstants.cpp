@@ -371,6 +371,7 @@ restart:
     case ParseNodeKind::GeExpr:
     case ParseNodeKind::InstanceOfExpr:
     case ParseNodeKind::InExpr:
+    case ParseNodeKind::PrivateInExpr:
     case ParseNodeKind::LshExpr:
     case ParseNodeKind::RshExpr:
     case ParseNodeKind::UrshExpr:
@@ -449,11 +450,6 @@ restart:
       MOZ_CRASH(
           "ContainsHoistedDeclaration should have indicated false on "
           "some parent node without recurring to test this node");
-
-    case ParseNodeKind::PipelineExpr:
-      MOZ_ASSERT(node->is<ListNode>());
-      *result = false;
-      return true;
 
     case ParseNodeKind::LastUnused:
     case ParseNodeKind::Limit:

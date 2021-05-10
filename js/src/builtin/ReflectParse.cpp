@@ -109,7 +109,6 @@ enum BinaryOperator {
   /* misc */
   BINOP_IN,
   BINOP_INSTANCEOF,
-  BINOP_PIPELINE,
   BINOP_COALESCE,
 
   BINOP_LIMIT
@@ -189,7 +188,6 @@ static const char* const binopNames[] = {
     "&",          /* BINOP_BITAND */
     "in",         /* BINOP_IN */
     "instanceof", /* BINOP_INSTANCEOF */
-    "|>",         /* BINOP_PIPELINE */
     "??",         /* BINOP_COALESCE */
 };
 
@@ -1917,11 +1915,10 @@ BinaryOperator ASTSerializer::binop(ParseNodeKind kind) {
     case ParseNodeKind::BitAndExpr:
       return BINOP_BITAND;
     case ParseNodeKind::InExpr:
+    case ParseNodeKind::PrivateInExpr:
       return BINOP_IN;
     case ParseNodeKind::InstanceOfExpr:
       return BINOP_INSTANCEOF;
-    case ParseNodeKind::PipelineExpr:
-      return BINOP_PIPELINE;
     case ParseNodeKind::CoalesceExpr:
       return BINOP_COALESCE;
     default:
@@ -2879,7 +2876,6 @@ bool ASTSerializer::expression(ParseNode* pn, MutableHandleValue dst) {
                                           dst);
     }
 
-    case ParseNodeKind::PipelineExpr:
     case ParseNodeKind::AddExpr:
     case ParseNodeKind::SubExpr:
     case ParseNodeKind::StrictEqExpr:
@@ -2900,6 +2896,7 @@ bool ASTSerializer::expression(ParseNode* pn, MutableHandleValue dst) {
     case ParseNodeKind::BitXorExpr:
     case ParseNodeKind::BitAndExpr:
     case ParseNodeKind::InExpr:
+    case ParseNodeKind::PrivateInExpr:
     case ParseNodeKind::InstanceOfExpr:
       return leftAssociate(&pn->as<ListNode>(), dst);
 

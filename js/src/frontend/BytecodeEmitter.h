@@ -778,6 +778,7 @@ struct MOZ_STACK_CLASS BytecodeEmitter {
   [[nodiscard]] bool emitUnary(UnaryNode* unaryNode);
   [[nodiscard]] bool emitRightAssociative(ListNode* node);
   [[nodiscard]] bool emitLeftAssociative(ListNode* node);
+  [[nodiscard]] bool emitPrivateInExpr(ListNode* node);
   [[nodiscard]] bool emitShortCircuit(ListNode* node);
   [[nodiscard]] bool emitSequenceExpr(
       ListNode* node, ValueUsage valueUsage = ValueUsage::WantValue);
@@ -878,8 +879,6 @@ struct MOZ_STACK_CLASS BytecodeEmitter {
                                                CallNode* call,
                                                CallOrNewEmitter& cone,
                                                OptionalEmitter& oe);
-
-  [[nodiscard]] bool emitPipeline(ListNode* node);
 
   [[nodiscard]] bool emitExportDefault(BinaryNode* exportNode);
 

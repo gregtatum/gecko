@@ -59,6 +59,7 @@
 #    define HREPORT HANDLE
 #    define PWER_SUBMIT_RESULT WER_SUBMIT_RESULT*
 #    define WER_MAX_PREFERRED_MODULES_BUFFER (256)
+#    define WER_FAULT_REPORTING_DISABLE_SNAPSHOT_HANG (256)
 #  endif               // defined(__MINGW32__) || defined(__MINGW64__)
 #  include "werapi.h"  // For WerRegisterRuntimeExceptionModule()
 #elif defined(XP_MACOSX)
@@ -1963,6 +1964,11 @@ void RegisterRuntimeExceptionModule(void) {
   wchar_t path[kPathLength] = {};
   if (GetRuntimeExceptionModulePath(path, kPathLength)) {
     Unused << WerRegisterRuntimeExceptionModule(path, nullptr);
+  }
+
+  DWORD dwFlags = 0;
+  if (WerGetFlags(GetCurrentProcess(), &dwFlags) == S_OK) {
+    Unused << WerSetFlags(dwFlags | WER_FAULT_REPORTING_DISABLE_SNAPSHOT_HANG);
   }
 #endif  // XP_WIN
 }

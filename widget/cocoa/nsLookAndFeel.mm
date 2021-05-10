@@ -148,12 +148,8 @@ nsresult nsLookAndFeel::NativeGetColor(ColorID aID, ColorScheme aScheme, nscolor
                                          aScheme);
       break;
     case ColorID::Highlight:  // CSS2 color
-    case ColorID::MozAccentColor:
     case ColorID::MozMenuhover:
       color = GetColorFromNSColor(NSColor.alternateSelectedControlColor);
-      break;
-    case ColorID::TextSelectForeground:
-      color = NS_DONT_CHANGE_COLOR;
       break;
     case ColorID::Highlighttext:  // CSS2 color
     case ColorID::MozAccentColorForeground:
@@ -170,6 +166,7 @@ nsresult nsLookAndFeel::NativeGetColor(ColorID aID, ColorScheme aScheme, nscolor
     case ColorID::IMESelectedConvertedTextForeground:
     case ColorID::IMERawInputForeground:
     case ColorID::IMEConvertedTextForeground:
+    case ColorID::TextSelectForeground:
       color = NS_SAME_AS_FOREGROUND_COLOR;
       break;
     case ColorID::IMERawInputUnderline:
@@ -368,6 +365,7 @@ nsresult nsLookAndFeel::NativeGetColor(ColorID aID, ColorScheme aScheme, nscolor
       break;
     case ColorID::MozMacActiveMenuitem:
     case ColorID::MozMacActiveSourceListSelection:
+    case ColorID::MozAccentColor:
       color = GetColorFromNSColor(ControlAccentColor());
       break;
     default:

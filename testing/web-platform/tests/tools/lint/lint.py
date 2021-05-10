@@ -3,7 +3,6 @@ from __future__ import print_function, unicode_literals
 import abc
 import argparse
 import ast
-import io
 import json
 import logging
 import multiprocessing
@@ -34,7 +33,6 @@ if MYPY:
     from typing import Callable
     from typing import Dict
     from typing import IO
-    from typing import Iterator
     from typing import Iterable
     from typing import List
     from typing import Optional
@@ -59,17 +57,6 @@ if MYPY:
         from xml.etree import cElementTree as ElementTree
     except ImportError:
         from xml.etree import ElementTree as ElementTree  # type: ignore
-
-
-if sys.version_info >= (3, 7):
-    from contextlib import nullcontext
-else:
-    from contextlib import contextmanager
-
-    @contextmanager
-    def nullcontext(enter_result=None):
-        # type: (Optional[T]) -> Iterator[Optional[T]]
-        yield enter_result
 
 
 logger = None  # type: Optional[logging.Logger]
@@ -844,12 +831,13 @@ def check_file_contents(repo_root, path, f=None):
     :param f: a file-like object with the file contents
     :returns: a list of errors found in ``f``
     """
-    with io.open(os.path.join(repo_root, path), 'rb') if f is None else nullcontext(f) as real_f:
-        assert real_f is not None  # Py2: prod mypy -2 into accepting this isn't None
+    if f is None:
+        f = open(os.path.join(repo_root, path), 'rb')
+    with f:
         errors = []
         for file_fn in file_lints:
-            errors.extend(file_fn(repo_root, path, real_f))
-            real_f.seek(0)
+            errors.extend(file_fn(repo_root, path, f))
+            f.seek(0)
         return errors
 
 
@@ -1027,7 +1015,7 @@ def lint(repo_root, paths, output_format, ignore_glob=None, github_checks_output
     if jobs == 0:
         jobs = multiprocessing.cpu_count()
 
-    with io.open(os.path.join(repo_root, "lint.ignore"), "r") as f:
+    with open(os.path.join(repo_root, "lint.ignore"), "r") as f:
         ignorelist, skipped_files = parse_ignorelist(f)
 
     if ignore_glob:

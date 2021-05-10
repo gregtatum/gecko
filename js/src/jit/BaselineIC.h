@@ -679,14 +679,8 @@ class ICToPropertyKey_Fallback : public ICFallbackStub {
 class ICRest_Fallback : public ICFallbackStub {
   friend class ICStubSpace;
 
-  GCPtrArrayObject templateObject_;
-
-  ICRest_Fallback(TrampolinePtr stubCode, ArrayObject* templateObject)
-      : ICFallbackStub(ICStub::Rest_Fallback, stubCode),
-        templateObject_(templateObject) {}
-
- public:
-  GCPtrArrayObject& templateObject() { return templateObject_; }
+  explicit ICRest_Fallback(TrampolinePtr stubCode)
+      : ICFallbackStub(ICStub::Rest_Fallback, stubCode) {}
 };
 
 // UnaryArith
@@ -851,8 +845,7 @@ extern bool DoBinaryArithFallback(JSContext* cx, BaselineFrame* frame,
                                   HandleValue rhs, MutableHandleValue ret);
 
 extern bool DoNewArrayFallback(JSContext* cx, BaselineFrame* frame,
-                               ICNewArray_Fallback* stub, uint32_t length,
-                               MutableHandleValue res);
+                               ICNewArray_Fallback* stub, MutableHandleValue res);
 
 extern bool DoNewObjectFallback(JSContext* cx, BaselineFrame* frame,
                                 ICNewObject_Fallback* stub,

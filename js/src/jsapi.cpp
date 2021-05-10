@@ -1348,7 +1348,7 @@ JS_PUBLIC_API void JS::RunIdleTimeGCTask(JSRuntime* rt) {
 JS_PUBLIC_API void JS_GC(JSContext* cx, JS::GCReason reason) {
   AssertHeapIsIdle();
   JS::PrepareForFullGC(cx);
-  cx->runtime()->gc.gc(GC_NORMAL, reason);
+  cx->runtime()->gc.gc(JS::GCOptions::Normal, reason);
 }
 
 JS_PUBLIC_API void JS_MaybeGC(JSContext* cx) {
@@ -1993,26 +1993,6 @@ JS_PUBLIC_API bool JS_SetImmutablePrototype(JSContext* cx, JS::HandleObject obj,
 
 JS_PUBLIC_API bool JS_GetOwnPropertyDescriptorById(
     JSContext* cx, HandleObject obj, HandleId id,
-    MutableHandle<PropertyDescriptor> desc) {
-  AssertHeapIsIdle();
-  CHECK_THREAD(cx);
-  cx->check(obj, id);
-
-  Rooted<Maybe<PropertyDescriptor>> desc_(cx);
-  if (!GetOwnPropertyDescriptor(cx, obj, id, &desc_)) {
-    return false;
-  }
-
-  if (desc_.isNothing()) {
-    desc.object().set(nullptr);
-  } else {
-    desc.set(*desc_);
-  }
-  return true;
-}
-
-JS_PUBLIC_API bool JS_GetOwnPropertyDescriptorById(
-    JSContext* cx, HandleObject obj, HandleId id,
     MutableHandle<Maybe<PropertyDescriptor>> desc) {
   AssertHeapIsIdle();
   CHECK_THREAD(cx);
@@ -2022,7 +2002,7 @@ JS_PUBLIC_API bool JS_GetOwnPropertyDescriptorById(
 
 JS_PUBLIC_API bool JS_GetOwnPropertyDescriptor(
     JSContext* cx, HandleObject obj, const char* name,
-    MutableHandle<PropertyDescriptor> desc) {
+    MutableHandle<Maybe<PropertyDescriptor>> desc) {
   JSAtom* atom = Atomize(cx, name, strlen(name));
   if (!atom) {
     return false;
@@ -2033,7 +2013,7 @@ JS_PUBLIC_API bool JS_GetOwnPropertyDescriptor(
 
 JS_PUBLIC_API bool JS_GetOwnUCPropertyDescriptor(
     JSContext* cx, HandleObject obj, const char16_t* name, size_t namelen,
-    MutableHandle<PropertyDescriptor> desc) {
+    MutableHandle<Maybe<PropertyDescriptor>> desc) {
   JSAtom* atom = AtomizeChars(cx, name, namelen);
   if (!atom) {
     return false;
@@ -3170,7 +3150,6 @@ JS_PUBLIC_API bool JS::ObjectToCompletePropertyDescriptor(
     return false;
   }
   CompletePropertyDescriptor(desc);
-  desc.object().set(obj);
   return true;
 }
 
@@ -3558,8 +3537,11 @@ bool JS::OwningCompileOptions::copy(JSContext* cx,
 
 JS::CompileOptions::CompileOptions(JSContext* cx) : ReadOnlyCompileOptions() {
   discardSource = cx->realm()->behaviors().discardSource();
-  if (!cx->options().asmJS()) {
-    asmJSOption = AsmJSOption::Disabled;
+  if (!js::IsAsmJSCompilationAvailable(cx)) {
+    // Distinguishing the cases is just for error reporting.
+    asmJSOption = !cx->options().asmJS()
+                      ? AsmJSOption::DisabledByAsmJSPref
+                      : AsmJSOption::DisabledByNoWasmCompiler;
   } else if (cx->realm()->debuggerObservesAsmJS()) {
     asmJSOption = AsmJSOption::DisabledByDebugger;
   } else {

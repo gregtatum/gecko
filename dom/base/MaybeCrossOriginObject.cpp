@@ -90,19 +90,7 @@ bool MaybeCrossOriginObjectMixins::CrossOriginGetOwnPropertyHelper(
     return false;
   }
 
-  JS::Rooted<JS::PropertyDescriptor> holderDesc(cx);
-  if (!JS_GetOwnPropertyDescriptorById(cx, holder, id, &holderDesc)) {
-    return false;
-  }
-
-  if (holderDesc.object()) {
-    holderDesc.object().set(obj);
-    desc.set(Some(holderDesc.get()));
-  } else {
-    desc.reset();
-  }
-
-  return true;
+  return JS_GetOwnPropertyDescriptorById(cx, holder, id, desc);
 }
 
 /* static */
@@ -117,10 +105,8 @@ bool MaybeCrossOriginObjectMixins::CrossOriginPropertyFallback(
     //   [[Value]]: undefined, [[Writable]]: false, [[Enumerable]]: false,
     //   [[Configurable]]: true
     // }.
-    JS::Rooted<JS::PropertyDescriptor> descUndef(cx);
-    descUndef.setDataDescriptor(JS::UndefinedHandleValue, JSPROP_READONLY);
-    descUndef.object().set(obj);
-    desc.set(Some(descUndef.get()));
+    desc.set(Some(JS::PropertyDescriptor::Data(
+        JS::UndefinedValue(), {JS::PropertyAttribute::Configurable})));
     return true;
   }
 
@@ -294,7 +280,7 @@ bool MaybeCrossOriginObjectMixins::EnsureHolder(
   // existing wrapper in the cache, that contains the security wrapper created
   // here.  We should use unique/private object here, so that this doesn't
   // affect later wrap operation.
-  JS::Rooted<JSObject*> key(cx, JS::GetRealmWeakMapKey(cx));
+  JS::Rooted<JSObject*> key(cx, JS::GetRealmKeyObject(cx));
   if (!key) {
     return false;
   }

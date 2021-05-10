@@ -9,6 +9,7 @@
 
 #include "gfxPlatform.h"
 
+#include "ImageFactory.h"
 #include "imgITools.h"
 #include "mozilla/Preferences.h"
 #include "nsComponentManagerUtils.h"
@@ -44,6 +45,10 @@ AutoInitializeImageLib::AutoInitializeImageLib() {
 
   // Ensure AVIF is enabled to run decoder tests.
   rv = Preferences::SetBool("image.avif.enabled", true);
+  EXPECT_TRUE(rv == NS_OK);
+
+  // Ensure JXL is enabled to run decoder tests.
+  rv = Preferences::SetBool("image.jxl.enabled", true);
   EXPECT_TRUE(rv == NS_OK);
 
   // Ensure that ImageLib services are initialized.
@@ -437,6 +442,10 @@ ImageTestCase GreenAVIFTestCase() {
       .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
 }
 
+ImageTestCase GreenJXLTestCase() {
+  return ImageTestCase("green.jxl", "image/jxl", IntSize(100, 100));
+}
+
 // Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
 // See bug 1634741
 ImageTestCase Transparent10bit420AVIFTestCase() {
@@ -564,6 +573,11 @@ ImageTestCase LargeAVIFTestCase() {
                        TEST_CASE_IGNORE_OUTPUT);
 }
 
+ImageTestCase LargeJXLTestCase() {
+  return ImageTestCase("large.jxl", "image/jxl", IntSize(1200, 660),
+                       TEST_CASE_IGNORE_OUTPUT);
+}
+
 ImageTestCase GreenWebPIccSrgbTestCase() {
   return ImageTestCase("green.icc_srgb.webp", "image/webp", IntSize(100, 100));
 }
@@ -660,6 +674,11 @@ ImageTestCase TransparentWebPTestCase() {
   return test;
 }
 
+ImageTestCase TransparentJXLTestCase() {
+  return ImageTestCase("transparent.jxl", "image/jxl", IntSize(1200, 1200),
+                       TEST_CASE_IS_TRANSPARENT);
+}
+
 ImageTestCase TransparentNoAlphaHeaderWebPTestCase() {
   ImageTestCase test("transparent-no-alpha-header.webp", "image/webp",
                      IntSize(100, 100), TEST_CASE_IS_FUZZY);
@@ -749,6 +768,11 @@ ImageTestCase DownscaledAVIFTestCase() {
                        IntSize(20, 20));
 }
 
+ImageTestCase DownscaledJXLTestCase() {
+  return ImageTestCase("downscaled.jxl", "image/jxl", IntSize(100, 100),
+                       IntSize(20, 20));
+}
+
 ImageTestCase DownscaledTransparentICOWithANDMaskTestCase() {
   // This test case is an ICO with AND mask transparency. We want to ensure that
   // we can downscale it without crashing or triggering ASAN failures, but its
@@ -829,6 +853,42 @@ ImageTestCase PerfRgbAlphaLossyWebPTestCase() {
 
 ImageTestCase PerfRgbGIFTestCase() {
   return ImageTestCase("perf_srgb.gif", "image/gif", IntSize(1000, 1000));
+}
+
+ImageTestCase ExifResolutionTestCase() {
+  return ImageTestCase("exif_resolution.jpg", "image/jpeg", IntSize(100, 50));
+}
+
+RefPtr<Image> TestCaseToDecodedImage(const ImageTestCase& aTestCase) {
+  RefPtr<Image> image = ImageFactory::CreateAnonymousImage(
+      nsDependentCString(aTestCase.mMimeType));
+  MOZ_RELEASE_ASSERT(!image->HasError());
+
+  nsCOMPtr<nsIInputStream> inputStream = LoadFile(aTestCase.mPath);
+  MOZ_RELEASE_ASSERT(inputStream);
+
+  // Figure out how much data we have.
+  uint64_t length;
+  nsresult rv = inputStream->Available(&length);
+  MOZ_RELEASE_ASSERT(NS_SUCCEEDED(rv));
+
+  // Write the data into the image.
+  rv = image->OnImageDataAvailable(nullptr, nullptr, inputStream, 0,
+                                   static_cast<uint32_t>(length));
+  MOZ_RELEASE_ASSERT(NS_SUCCEEDED(rv));
+
+  // Let the image know we've sent all the data.
+  rv = image->OnImageDataComplete(nullptr, nullptr, NS_OK, true);
+  MOZ_RELEASE_ASSERT(NS_SUCCEEDED(rv));
+
+  RefPtr<ProgressTracker> tracker = image->GetProgressTracker();
+  tracker->SyncNotifyProgress(FLAG_LOAD_COMPLETE);
+
+  // Use GetFrame() to force a sync decode of the image.
+  RefPtr<SourceSurface> surface = image->GetFrame(
+      imgIContainer::FRAME_CURRENT, imgIContainer::FLAG_SYNC_DECODE);
+  Unused << surface;
+  return image;
 }
 
 }  // namespace image

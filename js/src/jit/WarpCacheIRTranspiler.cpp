@@ -248,8 +248,6 @@ class MOZ_RAII WarpCacheIRTranspiler : public WarpBuilderShared {
                                       Int32OperandId argcId,
                                       mozilla::Maybe<ObjOperandId> thisObjId,
                                       CallFlags flags, CallKind kind);
-  [[nodiscard]] bool emitFunApplyMagicArgs(WrappedFunction* wrappedTarget,
-                                           CallFlags flags);
   [[nodiscard]] bool emitFunApplyArgsObj(WrappedFunction* wrappedTarget,
                                          CallFlags flags);
 
@@ -897,24 +895,6 @@ bool WarpCacheIRTranspiler::emitGuardNoDenseElements(ObjOperandId objId) {
   return true;
 }
 
-bool WarpCacheIRTranspiler::emitGuardMagicValue(ValOperandId valId,
-                                                JSWhyMagic magic) {
-  MDefinition* val = getOperand(valId);
-
-  auto* ins = MGuardValue::New(alloc(), val, MagicValue(magic));
-  add(ins);
-
-  setOperand(valId, ins);
-  return true;
-}
-
-bool WarpCacheIRTranspiler::emitGuardFrameHasNoArgumentsObject() {
-  // WarpOracle ensures this op isn't transpiled in functions that need an
-  // arguments object.
-  MOZ_ASSERT(!currentBlock()->info().needsArgsObj());
-  return true;
-}
-
 bool WarpCacheIRTranspiler::emitGuardFunctionHasJitEntry(ObjOperandId funId,
                                                          bool constructing) {
   MDefinition* fun = getOperand(funId);
@@ -997,51 +977,6 @@ bool WarpCacheIRTranspiler::emitGuardArgumentsObjectFlags(ObjOperandId objId,
   add(ins);
 
   setOperand(objId, ins);
-  return true;
-}
-
-bool WarpCacheIRTranspiler::emitLoadFrameCalleeResult() {
-  if (const CallInfo* callInfo = builder_->inlineCallInfo()) {
-    pushResult(callInfo->callee());
-    return true;
-  }
-
-  auto* ins = MCallee::New(alloc());
-  add(ins);
-  pushResult(ins);
-  return true;
-}
-
-bool WarpCacheIRTranspiler::emitLoadFrameNumActualArgsResult() {
-  if (const CallInfo* callInfo = builder_->inlineCallInfo()) {
-    auto* ins = constant(Int32Value(callInfo->argc()));
-    pushResult(ins);
-    return true;
-  }
-
-  auto* ins = MArgumentsLength::New(alloc());
-  add(ins);
-  pushResult(ins);
-  return true;
-}
-
-bool WarpCacheIRTranspiler::emitLoadFrameArgumentResult(
-    Int32OperandId indexId) {
-  // We don't support arguments[i] in inlined functions. Scripts using
-  // arguments[i] are marked as uninlineable in arguments analysis.
-  MOZ_ASSERT(!builder_->inlineCallInfo());
-
-  MDefinition* index = getOperand(indexId);
-
-  auto* length = MArgumentsLength::New(alloc());
-  add(length);
-
-  index = addBoundsCheck(index, length);
-
-  auto* load = MGetFrameArgument::New(alloc(), index);
-  add(load);
-
-  pushResult(load);
   return true;
 }
 
@@ -4141,25 +4076,6 @@ bool WarpCacheIRTranspiler::updateCallInfo(MDefinition* callee,
 
       callInfo_->setArgFormat(CallInfo::ArgFormat::FunApplyArgsObj);
       break;
-    case CallFlags::FunApplyMagicArgs:
-      MOZ_ASSERT(!callInfo_->constructing());
-      MOZ_ASSERT(callInfo_->argFormat() == CallInfo::ArgFormat::Standard);
-
-      // If we are building an inlined function, we know the arguments
-      // being used.
-      if (const CallInfo* outerCallInfo = builder_->inlineCallInfo()) {
-        MDefinition* argFunc = callInfo_->thisArg();
-        MDefinition* argThis = callInfo_->getArg(0);
-
-        if (!callInfo_->replaceArgs(outerCallInfo->argv())) {
-          return false;
-        }
-        callInfo_->setCallee(argFunc);
-        callInfo_->setThis(argThis);
-      } else {
-        callInfo_->setArgFormat(CallInfo::ArgFormat::FunApplyMagicArgs);
-      }
-      break;
     case CallFlags::FunApplyArray: {
       MDefinition* argFunc = callInfo_->thisArg();
       MDefinition* argThis = callInfo_->getArg(0);
@@ -4282,41 +4198,11 @@ bool WarpCacheIRTranspiler::emitCallFunction(
 
       return resumeAfter(call);
     }
-    case CallInfo::ArgFormat::FunApplyMagicArgs: {
-      return emitFunApplyMagicArgs(wrappedTarget, flags);
-    }
     case CallInfo::ArgFormat::FunApplyArgsObj: {
       return emitFunApplyArgsObj(wrappedTarget, flags);
     }
   }
   MOZ_CRASH("unreachable");
-}
-
-bool WarpCacheIRTranspiler::emitFunApplyMagicArgs(
-    WrappedFunction* wrappedTarget, CallFlags flags) {
-  MOZ_ASSERT(!callInfo_->constructing());
-  MOZ_ASSERT(!builder_->inlineCallInfo());
-
-  MDefinition* argFunc = callInfo_->thisArg();
-  MDefinition* argThis = callInfo_->getArg(0);
-
-  MArgumentsLength* numArgs = MArgumentsLength::New(alloc());
-  add(numArgs);
-
-  MApplyArgs* apply =
-      MApplyArgs::New(alloc(), wrappedTarget, argFunc, numArgs, argThis);
-
-  if (flags.isSameRealm()) {
-    apply->setNotCrossRealm();
-  }
-  if (callInfo_->ignoresReturnValue()) {
-    apply->setIgnoresReturnValue();
-  }
-
-  addEffectful(apply);
-  pushResult(apply);
-
-  return resumeAfter(apply);
 }
 
 bool WarpCacheIRTranspiler::emitFunApplyArgsObj(WrappedFunction* wrappedTarget,
@@ -4816,10 +4702,10 @@ bool WarpCacheIRTranspiler::emitNewArrayObjectResult(uint32_t length,
   add(shapeConstant);
 
   auto* obj = MNewArrayObject::New(alloc(), shapeConstant, length, heap);
-  addEffectful(obj);
+  add(obj);
 
   pushResult(obj);
-  return resumeAfter(obj);
+  return true;
 }
 
 static void MaybeSetImplicitlyUsed(uint32_t numInstructionIdsBefore,

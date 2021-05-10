@@ -30,16 +30,25 @@ struct Statistics;
 }  // namespace gcstats
 }  // namespace js
 
-/**
- * Kinds of js_GC invocation.
- */
-typedef enum JSGCInvocationKind {
-  /* Normal invocation. */
-  GC_NORMAL = 0,
+namespace JS {
 
-  /* Minimize GC triggers and release empty GC chunks right away. */
-  GC_SHRINK = 1
-} JSGCInvocationKind;
+// Options used when starting a GC.
+enum class GCOptions : uint32_t {
+  // Normal GC invocation.
+  //
+  // Some objects that are unreachable from the program may still be alive after
+  // collection because of internal references
+  Normal = 0,
+
+  // Try to release as much memory as possible by clearing internal caches,
+  // aggressively discarding JIT code and decommitting unused chunks. This
+  // ensures all unreferenced objects are removed from the system.
+  //
+  // Finally, compact the GC heap.
+  Shrink = 1,
+};
+
+}  // namespace JS
 
 typedef enum JSGCParamKey {
   /**
@@ -634,15 +643,8 @@ extern JS_PUBLIC_API void SkipZoneForGC(JSContext* cx, Zone* zone);
 
 /**
  * Performs a non-incremental collection of all selected zones.
- *
- * If the gckind argument is GC_NORMAL, then some objects that are unreachable
- * from the program may still be alive afterwards because of internal
- * references; if GC_SHRINK is passed then caches and other temporary references
- * to objects will be cleared and all unreferenced objects will be removed from
- * the system.
  */
-extern JS_PUBLIC_API void NonIncrementalGC(JSContext* cx,
-                                           JSGCInvocationKind gckind,
+extern JS_PUBLIC_API void NonIncrementalGC(JSContext* cx, JS::GCOptions options,
                                            GCReason reason);
 
 /*
@@ -674,7 +676,7 @@ extern JS_PUBLIC_API void NonIncrementalGC(JSContext* cx,
  *       shorter than the requested interval.
  */
 extern JS_PUBLIC_API void StartIncrementalGC(JSContext* cx,
-                                             JSGCInvocationKind gckind,
+                                             JS::GCOptions options,
                                              GCReason reason,
                                              int64_t millis = 0);
 
@@ -778,14 +780,14 @@ enum GCProgress {
 struct JS_PUBLIC_API GCDescription {
   bool isZone_;
   bool isComplete_;
-  JSGCInvocationKind invocationKind_;
+  JS::GCOptions options_;
   GCReason reason_;
 
-  GCDescription(bool isZone, bool isComplete, JSGCInvocationKind kind,
+  GCDescription(bool isZone, bool isComplete, JS::GCOptions options,
                 GCReason reason)
       : isZone_(isZone),
         isComplete_(isComplete),
-        invocationKind_(kind),
+        options_(options),
         reason_(reason) {}
 
   char16_t* formatSliceMessage(JSContext* cx) const;

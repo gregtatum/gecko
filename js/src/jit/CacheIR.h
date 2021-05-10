@@ -319,7 +319,6 @@ class CallFlags {
     Standard,
     Spread,
     FunCall,
-    FunApplyMagicArgs,
     FunApplyArgsObj,
     FunApplyArray,
     LastArgFormat = FunApplyArray
@@ -468,7 +467,6 @@ inline int32_t GetIndexOfArgument(ArgumentKind kind, CallFlags flags,
       break;
     case CallFlags::Unknown:
     case CallFlags::FunCall:
-    case CallFlags::FunApplyMagicArgs:
     case CallFlags::FunApplyArgsObj:
     case CallFlags::FunApplyArray:
       MOZ_CRASH("Currently unreachable");
@@ -1320,10 +1318,7 @@ class MOZ_RAII GetPropIRGenerator : public IRGenerator {
   AttachDecision tryAttachPrimitive(ValOperandId valId, HandleId id);
   AttachDecision tryAttachStringChar(ValOperandId valId, ValOperandId indexId);
   AttachDecision tryAttachStringLength(ValOperandId valId, HandleId id);
-  AttachDecision tryAttachMagicArgumentsName(ValOperandId valId, HandleId id);
 
-  AttachDecision tryAttachMagicArgument(ValOperandId valId,
-                                        ValOperandId indexId);
   AttachDecision tryAttachArgumentsObjectArg(HandleObject obj,
                                              ObjOperandId objId, uint32_t index,
                                              Int32OperandId indexId);
@@ -1347,8 +1342,7 @@ class MOZ_RAII GetPropIRGenerator : public IRGenerator {
 
   AttachDecision tryAttachProxyElement(HandleObject obj, ObjOperandId objId);
 
-  void attachMegamorphicNativeSlot(ObjOperandId objId, jsid id,
-                                   bool handleMissing);
+  void attachMegamorphicNativeSlot(ObjOperandId objId, jsid id);
 
   ValOperandId getElemKeyValueId() const {
     MOZ_ASSERT(cacheKind_ == CacheKind::GetElem ||

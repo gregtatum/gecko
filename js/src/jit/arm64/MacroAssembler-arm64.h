@@ -250,11 +250,6 @@ class MacroAssemblerCompat : public vixl::MacroAssembler {
     vixl::MacroAssembler::Drop(Operand(ARMRegister(amount, 64)));
   }
 
-#ifdef ENABLE_WASM_SIMD
-  void PushRegsInMaskForWasmStubs(LiveRegisterSet set);
-  void PopRegsInMaskForWasmStubs(LiveRegisterSet set, LiveRegisterSet ignore);
-#endif
-
   // Update sp with the value of the current active stack pointer, if necessary.
   void syncStackPtr() {
     if (!GetStackPointer64().Is(vixl::sp)) {
@@ -1421,12 +1416,14 @@ class MacroAssemblerCompat : public vixl::MacroAssembler {
                          ARMFPRegister lhs, ARMFPRegister rhs);
   void compareSimd128Float(Assembler::Condition cond, ARMFPRegister dest,
                            ARMFPRegister lhs, ARMFPRegister rhs);
-  void rightShiftInt8x16(Register rhs, FloatRegister lhsDest,
-                         FloatRegister temp, bool isUnsigned);
-  void rightShiftInt16x8(Register rhs, FloatRegister lhsDest,
-                         FloatRegister temp, bool isUnsigned);
-  void rightShiftInt32x4(Register rhs, FloatRegister lhsDest,
-                         FloatRegister temp, bool isUnsigned);
+  void rightShiftInt8x16(FloatRegister lhs, Register rhs, FloatRegister dest,
+                         bool isUnsigned);
+  void rightShiftInt16x8(FloatRegister lhs, Register rhs, FloatRegister dest,
+                         bool isUnsigned);
+  void rightShiftInt32x4(FloatRegister lhs, Register rhs, FloatRegister dest,
+                         bool isUnsigned);
+  void rightShiftInt64x2(FloatRegister lhs, Register rhs, FloatRegister dest,
+                         bool isUnsigned);
 
   void branchNegativeZero(FloatRegister reg, Register scratch, Label* label) {
     MOZ_CRASH("branchNegativeZero");

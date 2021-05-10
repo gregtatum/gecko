@@ -680,6 +680,7 @@ IMAGE_GTEST_DECODER_BASE_F(BMP)
 IMAGE_GTEST_DECODER_BASE_F(ICO)
 IMAGE_GTEST_DECODER_BASE_F(Icon)
 IMAGE_GTEST_DECODER_BASE_F(WebP)
+IMAGE_GTEST_DECODER_BASE_F(JXL)
 
 TEST_F(ImageDecoders, ICOWithANDMaskDownscaleDuringDecode) {
   CheckDownscaleDuringDecode(DownscaledTransparentICOWithANDMaskTestCase());
@@ -766,6 +767,10 @@ TEST_F(ImageDecoders, AVIFLargeMultiChunk) {
 
 TEST_F(ImageDecoders, AVIFDownscaleDuringDecode) {
   CheckDownscaleDuringDecode(DownscaledAVIFTestCase());
+}
+
+TEST_F(ImageDecoders, JXLLargeMultiChunk) {
+  CheckDecoderMultiChunk(LargeJXLTestCase(), /* aChunkSize */ 64);
 }
 
 TEST_F(ImageDecoders, AnimatedGIFSingleChunk) {
@@ -866,37 +871,11 @@ TEST_F(ImageDecoders, AnimatedGIFWithExtraImageSubBlocks) {
   // extra data shouldn't confuse the decoder or cause the decode to fail.
 
   // Create an image.
-  RefPtr<Image> image = ImageFactory::CreateAnonymousImage(
-      nsDependentCString(testCase.mMimeType));
-  ASSERT_TRUE(!image->HasError());
-
-  nsCOMPtr<nsIInputStream> inputStream = LoadFile(testCase.mPath);
-  ASSERT_TRUE(inputStream);
-
-  // Figure out how much data we have.
-  uint64_t length;
-  nsresult rv = inputStream->Available(&length);
-  ASSERT_TRUE(NS_SUCCEEDED(rv));
-
-  // Write the data into the image.
-  rv = image->OnImageDataAvailable(nullptr, nullptr, inputStream, 0,
-                                   static_cast<uint32_t>(length));
-  ASSERT_TRUE(NS_SUCCEEDED(rv));
-
-  // Let the image know we've sent all the data.
-  rv = image->OnImageDataComplete(nullptr, nullptr, NS_OK, true);
-  ASSERT_TRUE(NS_SUCCEEDED(rv));
-
-  RefPtr<ProgressTracker> tracker = image->GetProgressTracker();
-  tracker->SyncNotifyProgress(FLAG_LOAD_COMPLETE);
-
-  // Use GetFrame() to force a sync decode of the image.
-  RefPtr<SourceSurface> surface = image->GetFrame(
-      imgIContainer::FRAME_CURRENT, imgIContainer::FLAG_SYNC_DECODE);
+  RefPtr<Image> image = TestCaseToDecodedImage(testCase);
 
   // Ensure that the image's metadata meets our expectations.
   IntSize imageSize(0, 0);
-  rv = image->GetWidth(&imageSize.width);
+  nsresult rv = image->GetWidth(&imageSize.width);
   EXPECT_TRUE(NS_SUCCEEDED(rv));
   rv = image->GetHeight(&imageSize.height);
   EXPECT_TRUE(NS_SUCCEEDED(rv));
@@ -904,6 +883,7 @@ TEST_F(ImageDecoders, AnimatedGIFWithExtraImageSubBlocks) {
   EXPECT_EQ(testCase.mSize.width, imageSize.width);
   EXPECT_EQ(testCase.mSize.height, imageSize.height);
 
+  RefPtr<ProgressTracker> tracker = image->GetProgressTracker();
   Progress imageProgress = tracker->GetProgress();
 
   EXPECT_TRUE(bool(imageProgress & FLAG_HAS_TRANSPARENCY) == false);
@@ -1027,4 +1007,9 @@ TEST_F(ImageDecoders, MultipleSizesICOSingleChunk) {
   for (int i = 0; i < 6; ++i) {
     EXPECT_EQ(expectedSizes[i], nativeSizes[i]);
   }
+}
+
+TEST_F(ImageDecoders, ExifResolutionEven) {
+  RefPtr<Image> image = TestCaseToDecodedImage(ExifResolutionTestCase());
+  EXPECT_EQ(image->GetResolution(), Resolution(2.0, 2.0));
 }

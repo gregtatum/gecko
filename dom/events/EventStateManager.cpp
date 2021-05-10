@@ -2598,11 +2598,6 @@ nsIFrame* EventStateManager::ComputeScrollTargetAndMayAdjustWheelEvent(
 nsIFrame* EventStateManager::ComputeScrollTargetAndMayAdjustWheelEvent(
     nsIFrame* aTargetFrame, double aDirectionX, double aDirectionY,
     WidgetWheelEvent* aEvent, ComputeScrollTargetOptions aOptions) {
-  if ((aOptions & INCLUDE_PLUGIN_AS_TARGET) &&
-      !StaticPrefs::plugin_mousewheel_enabled()) {
-    aOptions = RemovePluginFromTarget(aOptions);
-  }
-
   bool isAutoDir = false;
   bool honoursRoot = false;
   if (MAY_BE_ADJUSTED_BY_AUTO_DIR & aOptions) {
@@ -3906,7 +3901,7 @@ void EventStateManager::ClearFrameRefs(nsIFrame* aFrame) {
 struct CursorImage {
   gfx::IntPoint mHotspot;
   nsCOMPtr<imgIContainer> mContainer;
-  float mResolution = 1.0f;
+  ImageResolution mResolution;
   bool mEarlierCursorLoading = false;
 };
 
@@ -3934,10 +3929,7 @@ static bool ShouldBlockCustomCursor(nsPresContext* aPresContext,
   int32_t height = 0;
   aCursor.mContainer->GetWidth(&width);
   aCursor.mContainer->GetHeight(&height);
-  if (aCursor.mResolution != 0.0f && aCursor.mResolution != 1.0f) {
-    width = std::round(width / aCursor.mResolution);
-    height = std::round(height / aCursor.mResolution);
-  }
+  aCursor.mResolution.ApplyTo(width, height);
 
   int32_t maxSize = StaticPrefs::layout_cursor_block_max_size();
 
@@ -4010,8 +4002,7 @@ static CursorImage ComputeCustomCursor(nsPresContext* aPresContext,
     MOZ_ASSERT(image.image.IsImageRequestType(),
                "Cursor image should only parse url() types");
     uint32_t status;
-    auto [finalImage, resolution] = image.image.FinalImageAndResolution();
-    imgRequestProxy* req = finalImage->GetImageRequest();
+    imgRequestProxy* req = image.image.GetImageRequest();
     if (!req || NS_FAILED(req->GetImageStatus(&status))) {
       continue;
     }
@@ -4033,14 +4024,15 @@ static CursorImage ComputeCustomCursor(nsPresContext* aPresContext,
         image.has_hotspot ? Some(gfx::Point{image.hotspot_x, image.hotspot_y})
                           : Nothing();
     gfx::IntPoint hotspot = ComputeHotspot(container, specifiedHotspot);
-    CursorImage result{hotspot, std::move(container), resolution, loading};
+    CursorImage result{hotspot, std::move(container),
+                       image.image.GetResolution(), loading};
     if (ShouldBlockCustomCursor(aPresContext, aEvent, result)) {
       continue;
     }
     // This is the one we want!
     return result;
   }
-  return {{}, nullptr, 1.0f, loading};
+  return {{}, nullptr, {}, loading};
 }
 
 void EventStateManager::UpdateCursor(nsPresContext* aPresContext,
@@ -4053,7 +4045,7 @@ void EventStateManager::UpdateCursor(nsPresContext* aPresContext,
 
   auto cursor = StyleCursorKind::Default;
   nsCOMPtr<imgIContainer> container;
-  float resolution = 1.0f;
+  ImageResolution resolution;
   Maybe<gfx::IntPoint> hotspot;
 
   // If cursor is locked just use the locked one
@@ -4138,7 +4130,7 @@ void EventStateManager::ClearCachedWidgetCursor(nsIFrame* aTargetFrame) {
 
 nsresult EventStateManager::SetCursor(StyleCursorKind aCursor,
                                       imgIContainer* aContainer,
-                                      float aResolution,
+                                      const ImageResolution& aResolution,
                                       const Maybe<gfx::IntPoint>& aHotspot,
                                       nsIWidget* aWidget, bool aLockCursor) {
   EnsureDocument(mPresContext);

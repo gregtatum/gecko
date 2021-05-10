@@ -124,7 +124,8 @@ class GlobalObject : public NativeObject {
     GLOBAL_THIS_RESOLVED,
     INSTRUMENTATION,
     SOURCE_URLS,
-    REALM_WEAK_MAP_KEY,
+    REALM_KEY_OBJECT,
+    ARRAY_SHAPE,
 
     /* Total reserved-slot count for global objects. */
     RESERVED_SLOTS
@@ -905,9 +906,19 @@ class GlobalObject : public NativeObject {
     getSlotRef(SOURCE_URLS).unbarrieredSet(UndefinedValue());
   }
 
-  // Returns a key for a weak map, used by embedder.
-  static JSObject* getOrCreateRealmWeakMapKey(JSContext* cx,
-                                              Handle<GlobalObject*> global);
+  void setArrayShape(Shape* shape) {
+    MOZ_ASSERT(getSlot(ARRAY_SHAPE).isUndefined());
+    initSlot(ARRAY_SHAPE, PrivateGCThingValue(shape));
+  }
+  Shape* maybeArrayShape() const {
+    Value v = getSlot(ARRAY_SHAPE);
+    MOZ_ASSERT(v.isUndefined() || v.isPrivateGCThing());
+    return v.isPrivateGCThing() ? v.toGCThing()->as<Shape>() : nullptr;
+  }
+
+  // Returns an object that represents the realm, used by embedder.
+  static JSObject* getOrCreateRealmKeyObject(JSContext* cx,
+                                             Handle<GlobalObject*> global);
 
   // A class used in place of a prototype during off-thread parsing.
   struct OffThreadPlaceholderObject : public NativeObject {

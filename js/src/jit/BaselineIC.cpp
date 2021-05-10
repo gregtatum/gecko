@@ -522,11 +522,7 @@ bool ICScript::initICEntries(JSContext* cx, JSScript* script) {
         break;
       }
       case JSOp::Rest: {
-        ArrayObject* templateObject = NewTenuredDenseEmptyArray(cx);
-        if (!templateObject) {
-          return false;
-        }
-        auto* stub = alloc.newStub<ICRest_Fallback>(Kind::Rest, templateObject);
+        auto* stub = alloc.newStub<ICRest_Fallback>(Kind::Rest);
         if (!addIC(loc, stub)) {
           return false;
         }
@@ -602,16 +598,6 @@ void ICCacheIRStub::trace(JSTracer* trc) {
 void ICFallbackStub::trace(JSTracer* trc) {
   // Fallback stubs use runtime-wide trampoline code we don't need to trace.
   MOZ_ASSERT(usesTrampolineCode());
-
-  switch (kind()) {
-    case ICStub::Rest_Fallback: {
-      ICRest_Fallback* stub = toRest_Fallback();
-      TraceEdge(trc, &stub->templateObject(), "baseline-rest-template");
-      break;
-    }
-    default:
-      break;
-  }
 }
 
 static void MaybeTransition(JSContext* cx, BaselineFrame* frame,
@@ -853,23 +839,11 @@ bool DoGetElemFallback(JSContext* cx, BaselineFrame* frame,
   MOZ_ASSERT(JSOp(*pc) == JSOp::GetElem);
 #endif
 
-  // Don't pass lhs directly, we need it when generating stubs.
-  RootedValue lhsCopy(cx, lhs);
-
-  bool isOptimizedArgs = false;
-  if (lhs.isMagic(JS_OPTIMIZED_ARGUMENTS)) {
-    // Handle optimized arguments[i] access.
-    isOptimizedArgs =
-        MaybeGetElemOptimizedArguments(cx, frame, &lhsCopy, rhs, res);
-  }
-
   TryAttachStub<GetPropIRGenerator>("GetElem", cx, frame, stub,
                                     CacheKind::GetElem, lhs, rhs);
 
-  if (!isOptimizedArgs) {
-    if (!GetElementOperation(cx, lhsCopy, rhs, res)) {
-      return false;
-    }
+  if (!GetElementOperation(cx, lhs, rhs, res)) {
+    return false;
   }
 
   return true;
@@ -1410,38 +1384,6 @@ bool FallbackICCodeCompiler::emit_GetIntrinsic() {
 // GetProp_Fallback
 //
 
-static bool ComputeGetPropResult(JSContext* cx, BaselineFrame* frame, JSOp op,
-                                 HandlePropertyName name,
-                                 MutableHandleValue val,
-                                 MutableHandleValue res) {
-  // Handle arguments.length and arguments.callee on optimized arguments, as
-  // it is not an object.
-  if (val.isMagic(JS_OPTIMIZED_ARGUMENTS) && IsOptimizedArguments(frame, val)) {
-    if (name == cx->names().length) {
-      res.setInt32(frame->numActualArgs());
-    } else {
-      MOZ_ASSERT(name == cx->names().callee);
-      MOZ_ASSERT(frame->script()->hasMappedArgsObj());
-      res.setObject(*frame->callee());
-    }
-  } else {
-    if (op == JSOp::GetBoundName) {
-      RootedObject env(cx, &val.toObject());
-      RootedId id(cx, NameToId(name));
-      if (!GetNameBoundInEnvironment(cx, env, id, res)) {
-        return false;
-      }
-    } else {
-      MOZ_ASSERT(op == JSOp::GetProp);
-      if (!GetProperty(cx, val, name, res)) {
-        return false;
-      }
-    }
-  }
-
-  return true;
-}
-
 bool DoGetPropFallback(JSContext* cx, BaselineFrame* frame,
                        ICGetProp_Fallback* stub, MutableHandleValue val,
                        MutableHandleValue res) {
@@ -1461,7 +1403,18 @@ bool DoGetPropFallback(JSContext* cx, BaselineFrame* frame,
   TryAttachStub<GetPropIRGenerator>("GetProp", cx, frame, stub,
                                     CacheKind::GetProp, val, idVal);
 
-  return ComputeGetPropResult(cx, frame, op, name, val, res);
+  if (op == JSOp::GetBoundName) {
+    RootedObject env(cx, &val.toObject());
+    RootedId id(cx, NameToId(name));
+    return GetNameBoundInEnvironment(cx, env, id, res);
+  }
+
+  MOZ_ASSERT(op == JSOp::GetProp);
+  if (!GetProperty(cx, val, name, res)) {
+    return false;
+  }
+
+  return true;
 }
 
 bool DoGetPropSuperFallback(JSContext* cx, BaselineFrame* frame,
@@ -1762,12 +1715,6 @@ bool DoCallFallback(JSContext* cx, BaselineFrame* frame, ICCall_Fallback* stub,
                                      constructing, ignoresReturnValue);
   RootedValue callee(cx, vp[0]);
   RootedValue newTarget(cx, constructing ? callArgs.newTarget() : NullValue());
-
-  // Handle funapply with JSOp::Arguments
-  if (op == JSOp::FunApply && argc == 2 &&
-      callArgs[1].isMagic(JS_OPTIMIZED_ARGUMENTS)) {
-    GuardFunApplyArgumentsOptimization(cx, frame, callArgs);
-  }
 
   // Transition stub state to megamorphic or generic if warranted.
   MaybeTransition(cx, frame, stub);
@@ -2601,14 +2548,18 @@ bool FallbackICCodeCompiler::emit_Compare() {
 //
 
 bool DoNewArrayFallback(JSContext* cx, BaselineFrame* frame,
-                        ICNewArray_Fallback* stub, uint32_t length,
-                        MutableHandleValue res) {
+                        ICNewArray_Fallback* stub, MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
   FallbackICSpew(cx, stub, "NewArray");
 
   RootedScript script(cx, frame->script());
   jsbytecode* pc = stub->icEntry()->pc(script);
+
+  uint32_t length = GET_UINT32(pc);
+  MOZ_ASSERT(length <= INT32_MAX,
+             "the bytecode emitter must fail to compile code that would "
+             "produce a length exceeding int32_t range");
 
   RootedArrayObject array(cx, NewArrayOperation(cx, length));
   if (!array) {
@@ -2625,12 +2576,11 @@ bool DoNewArrayFallback(JSContext* cx, BaselineFrame* frame,
 bool FallbackICCodeCompiler::emit_NewArray() {
   EmitRestoreTailCallReg(masm);
 
-  masm.push(R0.scratchReg());  // length
   masm.push(ICStubReg);        // stub.
   masm.pushBaselineFramePtr(BaselineFrameReg, R0.scratchReg());
 
   using Fn = bool (*)(JSContext*, BaselineFrame*, ICNewArray_Fallback*,
-                      uint32_t, MutableHandleValue);
+                      MutableHandleValue);
   return tailCallVM<Fn, DoNewArrayFallback>(masm);
 }
 

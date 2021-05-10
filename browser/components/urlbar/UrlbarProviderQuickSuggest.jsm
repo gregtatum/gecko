@@ -26,8 +26,9 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 // These prefs are relative to the `browser.urlbar` branch.
 const SUGGEST_PREF = "suggest.quicksuggest";
 
-const NONSPONSORED_ACTION_TEXT = "Firefox Suggest";
-const HELP_TITLE = "Learn more about Firefox Suggest";
+const FEATURE_NAME = "Firefox Suggest";
+const NONSPONSORED_ACTION_TEXT = FEATURE_NAME;
+const HELP_TITLE = `Learn more about ${FEATURE_NAME}`;
 
 const TELEMETRY_SCALAR_IMPRESSION =
   "contextual.services.quicksuggest.impression";
@@ -64,6 +65,14 @@ class ProviderQuickSuggest extends UrlbarProvider {
   }
 
   /**
+   * @returns {string} The name of the Firefox Suggest feature, suitable for
+   *   display to the user. en-US only for now.
+   */
+  get featureName() {
+    return FEATURE_NAME;
+  }
+
+  /**
    * @returns {string} The help URL for the Quick Suggest feature.
    */
   get helpUrl() {
@@ -96,8 +105,9 @@ class ProviderQuickSuggest extends UrlbarProvider {
     return (
       queryContext.trimmedSearchString &&
       !queryContext.searchMode &&
-      NimbusFeatures.urlbar.getValue().quickSuggestEnabled &&
-      UrlbarPrefs.get("quicksuggest.showedOnboardingDialog") &&
+      UrlbarPrefs.get("quickSuggestEnabled") &&
+      (UrlbarPrefs.get("quicksuggest.showedOnboardingDialog") ||
+        !UrlbarPrefs.get("quickSuggestShouldShowOnboardingDialog")) &&
       UrlbarPrefs.get(SUGGEST_PREF) &&
       UrlbarPrefs.get("suggest.searches") &&
       UrlbarPrefs.get("browser.search.suggest.enabled") &&

@@ -3,11 +3,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 :root {
-  --toolbarbutton-icon-fill-attention: var(--lwt-toolbarbutton-icon-fill-attention, rgb(0,97,224));
+  --toolbarbutton-icon-fill-attention: -moz-accent-color;
 }
 
 :root:-moz-lwtheme {
   --toolbarbutton-icon-fill-opacity: 1;
+  --toolbarbutton-icon-fill-attention: var(--lwt-toolbarbutton-icon-fill-attention, rgb(0,97,224));
 }
 
 :root[lwt-popup-brighttext] panel,
@@ -16,7 +17,7 @@ toolbar[brighttext]:-moz-lwtheme {
 }
 
 @media not (-moz-proton) {
-:root {
+:root:-moz-lwtheme {
   --toolbarbutton-icon-fill-attention: var(--lwt-toolbarbutton-icon-fill-attention, #0a84ff);
 }
 
@@ -108,6 +109,11 @@ toolbar[brighttext] {
 #stop-reload-button[animate] > #reload-button,
 #stop-reload-button[animate] > #stop-button {
   position: relative;
+}
+
+:where(#reload-button, #stop-button) > .toolbarbutton-icon,
+:where(#reload-button, #stop-button) > .toolbarbutton-animatable-box {
+  translate: 0 1px; /* The animation is 18px but the other icons are 16px, lower it by 1px so it is vertically centered */
 }
 
 #reload-button > .toolbarbutton-animatable-box,

@@ -4667,17 +4667,13 @@ Scope* JSScript::innermostScope(jsbytecode* pc) const {
   return bodyScope();
 }
 
-void JSScript::setNeedsArgsObj(bool needsArgsObj) {
-  MOZ_ASSERT_IF(needsArgsObj, argumentsHasVarBinding());
-  clearFlag(MutableFlags::NeedsArgsAnalysis);
-  setFlag(MutableFlags::NeedsArgsObj, needsArgsObj);
-}
-
 void js::SetFrameArgumentsObject(JSContext* cx, AbstractFramePtr frame,
                                  HandleScript script, JSObject* argsobj) {
   /*
-   * Replace any optimized arguments in the frame with an explicit arguments
-   * object. Note that 'arguments' may have already been overwritten.
+   * If the arguments object was optimized out by scalar replacement,
+   * we must recreate it when we bail out. Because 'arguments' may have
+   * already been overwritten, we must check to see if the slot already
+   * contains a value.
    */
 
   Rooted<BindingIter> bi(cx, BindingIter(script));
@@ -4689,9 +4685,12 @@ void js::SetFrameArgumentsObject(JSContext* cx, AbstractFramePtr frame,
   }
 
   if (bi.location().kind() == BindingLocation::Kind::Environment) {
+#ifdef DEBUG
     /*
-     * Scan the script to find the slot in the call object that 'arguments'
-     * is assigned to.
+     * If |arguments| lives in the call object, we should not have
+     * optimized it. Scan the script to find the slot in the call
+     * object that |arguments| is assigned to and verify that it
+     * already exists.
      */
     jsbytecode* pc = script->code();
     while (JSOp(*pc) != JSOp::Arguments) {
@@ -4700,95 +4699,16 @@ void js::SetFrameArgumentsObject(JSContext* cx, AbstractFramePtr frame,
     pc += JSOpLength_Arguments;
     MOZ_ASSERT(JSOp(*pc) == JSOp::SetAliasedVar);
 
-    // Note that here and below, it is insufficient to only check for
-    // JS_OPTIMIZED_ARGUMENTS, as Ion could have optimized out the
-    // arguments slot.
     EnvironmentObject& env = frame.callObj().as<EnvironmentObject>();
-    if (IsOptimizedPlaceholderMagicValue(env.aliasedBinding(bi))) {
-      env.setAliasedBinding(cx, bi, ObjectValue(*argsobj));
-    }
-  } else {
-    MOZ_ASSERT(bi.location().kind() == BindingLocation::Kind::Frame);
-    uint32_t frameSlot = bi.location().slot();
-    if (IsOptimizedPlaceholderMagicValue(frame.unaliasedLocal(frameSlot))) {
-      frame.unaliasedLocal(frameSlot) = ObjectValue(*argsobj);
-    }
-  }
-
-  // JS_OPTIMIZED_ARGUMENTS may also have been stored to a local slot
-  // during bailout. Update those local slots.
-  for (uint32_t i = 0; i < script->nfixed(); i++) {
-    Value& value = frame.unaliasedLocal(i);
-    if (value.isMagic() && value.whyMagic() == JS_OPTIMIZED_ARGUMENTS) {
-      frame.unaliasedLocal(i) = ObjectValue(*argsobj);
-    }
-  }
-}
-
-/* static */
-void JSScript::argumentsOptimizationFailed(JSContext* cx, HandleScript script) {
-  MOZ_ASSERT(script->isFunction());
-  MOZ_ASSERT(!script->needsArgsAnalysis());
-  MOZ_ASSERT(script->argumentsHasVarBinding());
-
-  /*
-   * It is possible that the arguments optimization has already failed,
-   * everything has been fixed up, but there was an outstanding magic value
-   * on the stack that has just now flowed into an apply. In this case, there
-   * is nothing to do; GuardFunApplySpeculation will patch in the real
-   * argsobj.
-   */
-  if (script->needsArgsObj()) {
+    MOZ_ASSERT(!env.aliasedBinding(bi).isMagic(JS_OPTIMIZED_OUT));
+#endif
     return;
   }
 
-  MOZ_ASSERT(!script->isGenerator());
-  MOZ_ASSERT(!script->isAsync());
-
-  script->setFlag(MutableFlags::NeedsArgsObj);
-
-  // Warp code depends on the NeedsArgsObj flag so invalidate the script
-  // (including compilations inlining the script).
-  {
-    jit::RecompileInfoVector invalid;
-    AddPendingInvalidation(invalid, script);
-    Invalidate(cx, invalid);
-  }
-
-  /*
-   * By design, the arguments optimization is only made when there are no
-   * outstanding cases of MagicValue(JS_OPTIMIZED_ARGUMENTS) at any points
-   * where the optimization could fail, other than an active invocation of
-   * 'f.apply(x, arguments)'. Thus, there are no outstanding values of
-   * MagicValue(JS_OPTIMIZED_ARGUMENTS) on the stack. However, there are
-   * three things that need fixup:
-   *  - there may be any number of activations of this script that don't have
-   *    an argsObj that now need one.
-   *  - jit code compiled (and possible active on the stack) with the static
-   *    assumption of !script->needsArgsObj();
-   *  - type inference data for the script assuming script->needsArgsObj
-   */
-  for (AllScriptFramesIter i(cx); !i.done(); ++i) {
-    /*
-     * We cannot reliably create an arguments object for Ion activations of
-     * this script.  To maintain the invariant that "script->needsArgsObj
-     * implies fp->hasArgsObj", the Ion bail mechanism will create an
-     * arguments object right after restoring the BaselineFrame and before
-     * entering Baseline code (in jit::FinishBailoutToBaseline).
-     */
-    if (i.isIon()) {
-      continue;
-    }
-    AbstractFramePtr frame = i.abstractFramePtr();
-    if (frame.isFunctionFrame() && frame.script() == script) {
-      /* We crash on OOM since cleaning up here would be complicated. */
-      AutoEnterOOMUnsafeRegion oomUnsafe;
-      ArgumentsObject* argsobj = ArgumentsObject::createExpected(cx, frame);
-      if (!argsobj) {
-        oomUnsafe.crash("JSScript::argumentsOptimizationFailed");
-      }
-      SetFrameArgumentsObject(cx, frame, script, argsobj);
-    }
+  MOZ_ASSERT(bi.location().kind() == BindingLocation::Kind::Frame);
+  uint32_t frameSlot = bi.location().slot();
+  if (frame.unaliasedLocal(frameSlot).isMagic(JS_OPTIMIZED_OUT)) {
+    frame.unaliasedLocal(frameSlot) = ObjectValue(*argsobj);
   }
 }
 
@@ -4900,7 +4820,7 @@ bool JSScript::hasLoops() {
 }
 
 bool JSScript::mayReadFrameArgsDirectly() {
-  return argumentsHasVarBinding() || hasRest();
+  return needsArgsObj() || hasRest();
 }
 
 void JSScript::resetWarmUpCounterToDelayIonCompilation() {

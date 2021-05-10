@@ -15,12 +15,12 @@ rev = "4af6c367603869a30fddb5ffb0aba2b9477ba92e"
 [source."https://github.com/msirringhaus/minidump_writer_linux.git"]
 git = "https://github.com/msirringhaus/minidump_writer_linux.git"
 replace-with = "vendored-sources"
-rev = "47cba046aabef76233942a09f31e6ef7a8a4eda9"
+rev = "5cea1c9a3d8ed3ed2d7bdd5be3285e7821400b7f"
 
 [source."https://github.com/mozilla/neqo"]
 git = "https://github.com/mozilla/neqo"
 replace-with = "vendored-sources"
-tag = "v0.4.23"
+tag = "v0.4.24"
 
 [source."https://github.com/mozilla/mp4parse-rust"]
 git = "https://github.com/mozilla/mp4parse-rust"
@@ -65,7 +65,7 @@ rev = "21c26326f5f45f415c49eac4ba5bc41a2f961321"
 [source."https://github.com/jfkthame/mapped_hyph.git"]
 git = "https://github.com/jfkthame/mapped_hyph.git"
 replace-with = "vendored-sources"
-rev = "578d7058a638c955a597f035ce1a11049c3021d7"
+rev = "746743227485a83123784df0c53227ab466612ed"
 
 [source."https://github.com/hsivonen/xmldecl"]
 git = "https://github.com/hsivonen/xmldecl"

@@ -368,6 +368,8 @@ class nsXULPopupManager final : public nsIDOMEventListener,
   void OnNativeSubMenuWillOpen(mozilla::dom::Element* aPopupElement) override;
   void OnNativeSubMenuDidOpen(mozilla::dom::Element* aPopupElement) override;
   void OnNativeSubMenuClosed(mozilla::dom::Element* aPopupElement) override;
+  void OnNativeMenuWillActivateItem(
+      mozilla::dom::Element* aMenuItemElement) override;
 
   static nsXULPopupManager* sInstance;
 
@@ -740,6 +742,11 @@ class nsXULPopupManager final : public nsIDOMEventListener,
   // cause style changes and frame destruction.
   void HidePopupsInList(const nsTArray<nsMenuPopupFrame*>& aFrames);
 
+  // Hide, but don't close, visible menus. Called before executing a menu item.
+  // The caller promises to close the menus properly (with a call to HidePopup)
+  // once the item has been executed.
+  void HideOpenMenusBeforeExecutingMenu(CloseMenuMode aMode);
+
   // set the event that was used to trigger the popup, or null to clear the
   // event details. aTriggerContent will be set to the target of the event.
   MOZ_CAN_RUN_SCRIPT_BOUNDARY
@@ -887,6 +894,11 @@ class nsXULPopupManager final : public nsIDOMEventListener,
   // native menu is open.
   // mNativeMenu has a strong reference to the menupopup nsIContent.
   RefPtr<mozilla::widget::NativeMenu> mNativeMenu;
+
+  // If the currently open native menu activated an item, this is the item's
+  // close menu mode. Nothing() if mNativeMenu is null or if no item was
+  // activated.
+  mozilla::Maybe<CloseMenuMode> mNativeMenuActivatedItemCloseMenuMode;
 
   // If a popup is displayed as a native menu, this map contains the popup state
   // for any of its non-closed submenus. This state cannot be stored on the

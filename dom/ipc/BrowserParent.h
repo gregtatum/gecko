@@ -386,9 +386,10 @@ class BrowserParent final : public PBrowserParent,
   mozilla::ipc::IPCResult RecvSetCursor(
       const nsCursor& aValue, const bool& aHasCustomCursor,
       const nsCString& aCursorData, const uint32_t& aWidth,
-      const uint32_t& aHeight, const float& aResolution,
-      const uint32_t& aStride, const gfx::SurfaceFormat& aFormat,
-      const uint32_t& aHotspotX, const uint32_t& aHotspotY, const bool& aForce);
+      const uint32_t& aHeight, const float& aResolutionX,
+      const float& aResolutionY, const uint32_t& aStride,
+      const gfx::SurfaceFormat& aFormat, const uint32_t& aHotspotX,
+      const uint32_t& aHotspotY, const bool& aForce);
 
   mozilla::ipc::IPCResult RecvSetLinkStatus(const nsString& aStatus);
 
@@ -701,8 +702,6 @@ class BrowserParent final : public PBrowserParent,
   void PreserveLayers(bool aPreserveLayers);
   void NotifyResolutionChanged();
 
-  void Deprioritize();
-
   bool StartApzAutoscroll(float aAnchorX, float aAnchorY, nsViewID aScrollId,
                           uint32_t aPresShellId);
   void StopApzAutoscroll(nsViewID aScrollId, uint32_t aPresShellId);
@@ -967,9 +966,6 @@ class BrowserParent final : public PBrowserParent,
   // does not necessarily mean that the layers have finished rendering
   // and have uploaded - for that, use mHasLayers.
   bool mRenderLayers : 1;
-
-  // Whether this is active for the ProcessPriorityManager or not.
-  bool mActiveInPriorityManager : 1;
 
   // True if the compositor has reported that the BrowserChild has uploaded
   // layers.

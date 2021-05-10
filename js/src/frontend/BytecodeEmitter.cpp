@@ -1295,6 +1295,7 @@ restart:
     case ParseNodeKind::GeExpr:
     case ParseNodeKind::InstanceOfExpr:
     case ParseNodeKind::InExpr:
+    case ParseNodeKind::PrivateInExpr:
     case ParseNodeKind::LshExpr:
     case ParseNodeKind::RshExpr:
     case ParseNodeKind::UrshExpr:
@@ -1414,11 +1415,6 @@ restart:
 
     case ParseNodeKind::OptionalChain:
       MOZ_ASSERT(pn->is<UnaryNode>());
-      *answer = true;
-      return true;
-
-    case ParseNodeKind::PipelineExpr:
-      MOZ_ASSERT(pn->as<ListNode>().count() >= 2);
       *answer = true;
       return true;
 
@@ -2044,6 +2040,21 @@ static ElemOpEmitter::Kind ConvertIncDecKind(ParseNodeKind kind) {
   }
 }
 
+static PrivateOpEmitter::Kind PrivateConvertIncDecKind(ParseNodeKind kind) {
+  switch (kind) {
+    case ParseNodeKind::PostIncrementExpr:
+      return PrivateOpEmitter::Kind::PostIncrement;
+    case ParseNodeKind::PreIncrementExpr:
+      return PrivateOpEmitter::Kind::PreIncrement;
+    case ParseNodeKind::PostDecrementExpr:
+      return PrivateOpEmitter::Kind::PostDecrement;
+    case ParseNodeKind::PreDecrementExpr:
+      return PrivateOpEmitter::Kind::PreDecrement;
+    default:
+      MOZ_CRASH("unexpected inc/dec node kind");
+  }
+}
+
 bool BytecodeEmitter::emitElemIncDec(UnaryNode* incDec) {
   PropertyByValue* elemExpr = &incDec->kid()->as<PropertyByValue>();
   bool isSuper = elemExpr->isSuper();
@@ -2092,7 +2103,7 @@ bool BytecodeEmitter::emitCallIncDec(UnaryNode* incDec) {
 bool BytecodeEmitter::emitPrivateIncDec(UnaryNode* incDec) {
   PrivateMemberAccess* privateExpr = &incDec->kid()->as<PrivateMemberAccess>();
   ParseNodeKind kind = incDec->getKind();
-  PrivateOpEmitter xoe(this, ConvertIncDecKind(kind),
+  PrivateOpEmitter xoe(this, PrivateConvertIncDecKind(kind),
                        privateExpr->privateName().name());
   if (!emitTree(&privateExpr->expression())) {
     //              [stack] OBJ
@@ -8004,38 +8015,6 @@ bool BytecodeEmitter::emitCalleeAndThis(ParseNode* callee, ParseNode* call,
   return true;
 }
 
-bool BytecodeEmitter::emitPipeline(ListNode* node) {
-  MOZ_ASSERT(node->count() >= 2);
-
-  if (!emitTree(node->head())) {
-    //              [stack] ARG
-    return false;
-  }
-
-  ParseNode* callee = node->head()->pn_next;
-  CallOrNewEmitter cone(this, JSOp::Call,
-                        CallOrNewEmitter::ArgumentsKind::Other,
-                        ValueUsage::WantValue);
-  do {
-    if (!emitCalleeAndThis(callee, node, cone)) {
-      //            [stack] ARG CALLEE THIS
-      return false;
-    }
-    if (!emit2(JSOp::Pick, 2)) {
-      //            [stack] CALLEE THIS ARG
-      return false;
-    }
-    if (!cone.emitEnd(1, Some(node->pn_pos.begin))) {
-      //            [stack] RVAL
-      return false;
-    }
-
-    cone.reset();
-  } while ((callee = callee->pn_next));
-
-  return true;
-}
-
 ParseNode* BytecodeEmitter::getCoordNode(ParseNode* callNode,
                                          ParseNode* calleeNode, JSOp op,
                                          ListNode* argsList) {
@@ -8316,13 +8295,14 @@ bool BytecodeEmitter::emitCallOrNew(
 //   - the binary operators in TokenKind.h
 //   - the precedence list in Parser.cpp
 static const JSOp ParseNodeKindToJSOp[] = {
-    // JSOp::Nop is for pipeline operator which does not emit its own JSOp
-    // but has highest precedence in binary operators
-    JSOp::Nop,        JSOp::Coalesce, JSOp::Or,       JSOp::And, JSOp::BitOr,
-    JSOp::BitXor,     JSOp::BitAnd,   JSOp::StrictEq, JSOp::Eq,  JSOp::StrictNe,
-    JSOp::Ne,         JSOp::Lt,       JSOp::Le,       JSOp::Gt,  JSOp::Ge,
-    JSOp::Instanceof, JSOp::In,       JSOp::Lsh,      JSOp::Rsh, JSOp::Ursh,
-    JSOp::Add,        JSOp::Sub,      JSOp::Mul,      JSOp::Div, JSOp::Mod,
+    // Some binary ops require special code generation (PrivateIn);
+    // these should not use BinaryOpParseNodeKindToJSOp. This table fills those
+    // slots with Nops to make the rest of the table lookup work.
+    JSOp::Coalesce, JSOp::Or,       JSOp::And, JSOp::BitOr,    JSOp::BitXor,
+    JSOp::BitAnd,   JSOp::StrictEq, JSOp::Eq,  JSOp::StrictNe, JSOp::Ne,
+    JSOp::Lt,       JSOp::Le,       JSOp::Gt,  JSOp::Ge,       JSOp::Instanceof,
+    JSOp::In,       JSOp::Nop,      JSOp::Lsh, JSOp::Rsh,      JSOp::Ursh,
+    JSOp::Add,      JSOp::Sub,      JSOp::Mul, JSOp::Div,      JSOp::Mod,
     JSOp::Pow};
 
 static inline JSOp BinaryOpParseNodeKindToJSOp(ParseNodeKind pnk) {
@@ -8334,6 +8314,9 @@ static inline JSOp BinaryOpParseNodeKindToJSOp(ParseNodeKind pnk) {
   int parseNodeKindListSize =
       size_t(ParseNodeKind::BinOpLast) - parseNodeFirst + 1;
   MOZ_ASSERT(jsopArraySize == parseNodeKindListSize);
+  // Ensure we don't use this to find an op for a parse node
+  // requiring special emission rules.
+  MOZ_ASSERT(ParseNodeKindToJSOp[size_t(pnk) - parseNodeFirst] != JSOp::Nop);
 #endif
   return ParseNodeKindToJSOp[size_t(pnk) - parseNodeFirst];
 }
@@ -8371,6 +8354,49 @@ bool BytecodeEmitter::emitLeftAssociative(ListNode* node) {
       return false;
     }
   } while ((nextExpr = nextExpr->pn_next));
+  return true;
+}
+
+bool BytecodeEmitter::emitPrivateInExpr(ListNode* node) {
+  MOZ_ASSERT(node->head()->isKind(ParseNodeKind::PrivateName));
+
+  NameNode& privateNameNode = node->head()->as<NameNode>();
+  TaggedParserAtomIndex privateName = privateNameNode.name();
+
+  PrivateOpEmitter xoe(this, PrivateOpEmitter::Kind::ErgonomicBrandCheck,
+                       privateName);
+
+  ParseNode* valueNode = node->head()->pn_next;
+  MOZ_ASSERT(valueNode->pn_next == nullptr);
+
+  if (!emitTree(valueNode)) {
+    //              [stack] OBJ
+    return false;
+  }
+
+  if (!xoe.emitReference()) {
+    //              [stack] OBJ BRAND  if private method
+    //              [stack] OBJ NAME   if private field or accessor.
+    return false;
+  }
+
+  if (!xoe.emitBrandCheck()) {
+    //              [stack] OBJ BRAND BOOL if private method
+    //              [stack] OBJ NAME  BOOL if private field or accessor.
+    return false;
+  }
+
+  if (!emitUnpickN(2)) {
+    //              [stack] BOOL OBJ BRAND if private method
+    //              [stack] BOOL OBJ NAME   if private field or accessor.
+    return false;
+  }
+
+  if (!emitPopN(2)) {
+    //              [stack] BOOL
+    return false;
+  }
+
   return true;
 }
 
@@ -10509,7 +10535,7 @@ bool BytecodeEmitter::emitInitializeFunctionSpecialNames() {
       };
 
   // Do nothing if the function doesn't have an arguments binding.
-  if (funbox->argumentsHasVarBinding()) {
+  if (funbox->needsArgsObj()) {
     if (!emitInitializeFunctionSpecialName(
             this, TaggedParserAtomIndex::WellKnown::arguments(),
             JSOp::Arguments)) {
@@ -11277,14 +11303,14 @@ bool BytecodeEmitter::emitTree(
       }
       break;
 
-    case ParseNodeKind::PowExpr:
-      if (!emitRightAssociative(&pn->as<ListNode>())) {
+    case ParseNodeKind::PrivateInExpr:
+      if (!emitPrivateInExpr(&pn->as<ListNode>())) {
         return false;
       }
       break;
 
-    case ParseNodeKind::PipelineExpr:
-      if (!emitPipeline(&pn->as<ListNode>())) {
+    case ParseNodeKind::PowExpr:
+      if (!emitRightAssociative(&pn->as<ListNode>())) {
         return false;
       }
       break;

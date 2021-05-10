@@ -6,12 +6,9 @@ http://creativecommons.org/publicdomain/zero/1.0/ */
 const { ExperimentFakes } = ChromeUtils.import(
   "resource://testing-common/NimbusTestUtils.jsm"
 );
-const { NimbusFeatures, ExperimentFeature } = ChromeUtils.import(
+const { NimbusFeatures, ExperimentFeature, ExperimentAPI } = ChromeUtils.import(
   "resource://nimbus/ExperimentAPI.jsm"
 );
-
-const BROWSER_GLUE = Cc["@mozilla.org/browser/browserglue;1"].getService()
-  .wrappedJSObject;
 
 function mockAppConstants({ isWin7 }) {
   if (mockAppConstants.value === undefined) {
@@ -23,20 +20,6 @@ function mockAppConstants({ isWin7 }) {
     registerCleanupFunction(() => stub.restore());
   }
   mockAppConstants.value = isWin7;
-}
-
-function waitForDialog(callback = win => win.close()) {
-  return BrowserTestUtils.promiseAlertDialog(
-    null,
-    "chrome://browser/content/upgradeDialog.html",
-    { callback, isSubDialog: true }
-  );
-}
-
-function showAndWaitForDialog(callback) {
-  const promise = waitForDialog(callback);
-  BROWSER_GLUE._showUpgradeDialog();
-  return promise;
 }
 
 function AssertEvents(message, ...events) {
@@ -294,6 +277,7 @@ add_task(async function not_major_upgrade() {
 });
 
 add_task(async function remote_disabled() {
+  await ExperimentAPI.ready();
   await ExperimentFakes.remoteDefaultsHelper({
     feature: NimbusFeatures.upgradeDialog,
     configuration: { enabled: false, variables: {} },

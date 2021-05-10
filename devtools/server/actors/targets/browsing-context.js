@@ -557,17 +557,9 @@ const browsingContextTargetPrototype = {
         // @backward-compat { version 64 } Exposes a new trait to help identify
         // BrowsingContextActor's inherited actors from the client side.
         isBrowsingContext: true,
-        // @backward-compat { version 87 } Print & color scheme simulations
-        // should now be set using reconfigure.
-        reconfigureSupportsSimulationFeatures: true,
-        // @backward-compat { version 88 } Browsing context targets can compute
-        // the isTopLevelTarget flag on the server. Note that not all targets
-        // support this, so we might keep this trait until all top level targets
-        // can provide this flag consistently from the server.
+        // Browsing context targets can compute the isTopLevelTarget flag on the
+        // server. But other target actors don't support this yet. See Bug 1709314.
         supportsTopLevelTargetFlag: true,
-        // @backward-compat { version 88 } Added in version 88, will not be
-        // available on targets from older servers.
-        supportsFollowWindowGlobalLifeCycleFlag: true,
       },
     };
 
@@ -1674,9 +1666,14 @@ DebuggerProgressListener.prototype = {
     //  - reporting the contents of HTML loaded in the docshells,
     //  - or capturing stacks for the network monitor.
     //
-    // This attribute may already have been toggled by a parent BrowsingContext.
-    // Typically the parent process or tab target. Both are top level BrowsingContext.
-    if (docShell.browsingContext.top == docShell.browsingContext) {
+    // This flag is also set in frame-helper but in the case of the browser toolbox, we
+    // don't have the watcher enabled by default yet, and as a result we need to set it
+    // here for the parent process browsing context.
+    // This should be removed as part of Bug 1709529.
+    if (
+      this._targetActor.typeName === "parentProcessTarget" &&
+      docShell.browsingContext.top == docShell.browsingContext
+    ) {
       docShell.browsingContext.watchedByDevTools = true;
     }
   },
@@ -1711,11 +1708,12 @@ DebuggerProgressListener.prototype = {
       this._knownWindowIDs.delete(getWindowID(win));
     }
 
-    // We can only toggle this attribute on top level BrowsingContext,
-    // this will be propagated over the whole tree of BC.
-    // So we only need to set it from Parent Process Target
-    // and Tab Target. Tab's BrowsingContext are actually considered as top level BC.
-    if (docShell.browsingContext.top == docShell.browsingContext) {
+    // We only reset it for parent process target actor as the flag should be set in parent
+    // process, and thus is set elsewhere for other type of BrowsingContextActor.
+    if (
+      this._targetActor.typeName === "parentProcessTarget" &&
+      docShell.browsingContext.top == docShell.browsingContext
+    ) {
       docShell.browsingContext.watchedByDevTools = false;
     }
   },

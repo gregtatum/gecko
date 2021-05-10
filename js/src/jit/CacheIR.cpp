@@ -89,6 +89,7 @@ const uint32_t js::jit::CacheIROpHealth[] = {
 #ifdef DEBUG
 size_t js::jit::NumInputsForCacheKind(CacheKind kind) {
   switch (kind) {
+    case CacheKind::NewArray:
     case CacheKind::NewObject:
     case CacheKind::GetIntrinsic:
       return 0;
@@ -102,7 +103,6 @@ size_t js::jit::NumInputsForCacheKind(CacheKind kind) {
     case CacheKind::BindName:
     case CacheKind::Call:
     case CacheKind::OptimizeSpreadCall:
-    case CacheKind::NewArray:
       return 1;
     case CacheKind::Compare:
     case CacheKind::GetElem:
@@ -427,7 +427,6 @@ AttachDecision GetPropIRGenerator::tryAttachStub() {
   if (nameOrSymbol) {
     TRY_ATTACH(tryAttachPrimitive(valId, id));
     TRY_ATTACH(tryAttachStringLength(valId, id));
-    TRY_ATTACH(tryAttachMagicArgumentsName(valId, id));
 
     trackAttached(IRGenerator::NotAttached);
     return AttachDecision::NoAction;
@@ -436,7 +435,6 @@ AttachDecision GetPropIRGenerator::tryAttachStub() {
   if (idVal_.isInt32()) {
     ValOperandId indexId = getElemKeyValueId();
     TRY_ATTACH(tryAttachStringChar(valId, indexId));
-    TRY_ATTACH(tryAttachMagicArgument(valId, indexId));
 
     trackAttached(IRGenerator::NotAttached);
     return AttachDecision::NoAction;
@@ -1018,8 +1016,7 @@ static void EmitCallDOMGetterResult(JSContext* cx, CacheIRWriter& writer,
 }
 
 void GetPropIRGenerator::attachMegamorphicNativeSlot(ObjOperandId objId,
-                                                     jsid id,
-                                                     bool handleMissing) {
+                                                     jsid id) {
   MOZ_ASSERT(mode_ == ICState::Mode::Megamorphic);
 
   if (cacheKind_ == CacheKind::GetProp ||
@@ -1051,7 +1048,7 @@ AttachDecision GetPropIRGenerator::tryAttachNative(HandleObject obj,
       auto* nobj = &obj->as<NativeObject>();
 
       if (mode_ == ICState::Mode::Megamorphic) {
-        attachMegamorphicNativeSlot(objId, id, holder == nullptr);
+        attachMegamorphicNativeSlot(objId, id);
         return AttachDecision::Attach;
       }
 
@@ -2273,52 +2270,6 @@ AttachDecision GetPropIRGenerator::tryAttachStringChar(ValOperandId valId,
   writer.returnFromIC();
 
   trackAttached("StringChar");
-  return AttachDecision::Attach;
-}
-
-AttachDecision GetPropIRGenerator::tryAttachMagicArgumentsName(
-    ValOperandId valId, HandleId id) {
-  if (!val_.isMagic(JS_OPTIMIZED_ARGUMENTS)) {
-    return AttachDecision::NoAction;
-  }
-
-  if (!id.isAtom(cx_->names().length) && !id.isAtom(cx_->names().callee)) {
-    return AttachDecision::NoAction;
-  }
-
-  maybeEmitIdGuard(id);
-  writer.guardMagicValue(valId, JS_OPTIMIZED_ARGUMENTS);
-  writer.guardFrameHasNoArgumentsObject();
-
-  if (id.isAtom(cx_->names().length)) {
-    writer.loadFrameNumActualArgsResult();
-  } else {
-    MOZ_ASSERT(id.isAtom(cx_->names().callee));
-    writer.loadFrameCalleeResult();
-  }
-
-  writer.returnFromIC();
-
-  trackAttached("MagicArgumentsName");
-  return AttachDecision::Attach;
-}
-
-AttachDecision GetPropIRGenerator::tryAttachMagicArgument(
-    ValOperandId valId, ValOperandId indexId) {
-  MOZ_ASSERT(idVal_.isInt32());
-
-  if (!val_.isMagic(JS_OPTIMIZED_ARGUMENTS)) {
-    return AttachDecision::NoAction;
-  }
-
-  writer.guardMagicValue(valId, JS_OPTIMIZED_ARGUMENTS);
-  writer.guardFrameHasNoArgumentsObject();
-
-  Int32OperandId int32IndexId = writer.guardToInt32Index(indexId);
-  writer.loadFrameArgumentResult(int32IndexId);
-  writer.returnFromIC();
-
-  trackAttached("MagicArgument");
   return AttachDecision::Attach;
 }
 
@@ -8477,9 +8428,6 @@ AttachDecision CallIRGenerator::tryAttachFunApply(HandleFunction calleeFunc) {
       return AttachDecision::NoAction;
     }
     format = CallFlags::FunApplyArgsObj;
-  } else if (args_[1].isMagic(JS_OPTIMIZED_ARGUMENTS) &&
-             !script_->needsArgsObj()) {
-    format = CallFlags::FunApplyMagicArgs;
   } else if (args_[1].isObject() && args_[1].toObject().is<ArrayObject>() &&
              args_[1].toObject().as<ArrayObject>().length() <=
                  JIT_ARGS_LENGTH_MAX) {
@@ -8515,9 +8463,6 @@ AttachDecision CallIRGenerator::tryAttachFunApply(HandleFunction calleeFunc) {
     uint8_t flags = ArgumentsObject::ELEMENT_OVERRIDDEN_BIT |
                     ArgumentsObject::FORWARDED_ARGUMENTS_BIT;
     writer.guardArgumentsObjectFlags(argObjId, flags);
-  } else if (format == CallFlags::FunApplyMagicArgs) {
-    writer.guardMagicValue(argValId, JS_OPTIMIZED_ARGUMENTS);
-    writer.guardFrameHasNoArgumentsObject();
   } else {
     MOZ_ASSERT(format == CallFlags::FunApplyArray);
     ObjOperandId argObjId = writer.guardToObject(argValId);
@@ -9149,12 +9094,6 @@ ScriptedThisResult CallIRGenerator::getThisForScripted(
 AttachDecision CallIRGenerator::tryAttachCallScripted(
     HandleFunction calleeFunc) {
   MOZ_ASSERT(calleeFunc->hasJitEntry());
-
-  // Never attach optimized scripted call stubs for JSOp::FunApply.
-  // MagicArguments may escape the frame through them.
-  if (op_ == JSOp::FunApply) {
-    return AttachDecision::NoAction;
-  }
 
   if (calleeFunc->isWasmWithJitEntry()) {
     TRY_ATTACH(tryAttachWasmCall(calleeFunc));
@@ -11087,9 +11026,6 @@ AttachDecision NewArrayIRGenerator::tryAttachArrayObject() {
 
   writer.guardNoAllocationMetadataBuilder(
       cx_->realm()->addressOfMetadataBuilder());
-
-  // Length input is not currently used.
-  mozilla::Unused << writer.setInputOperandId(0);
 
   Shape* shape = arrayObj->lastProperty();
   uint32_t length = arrayObj->length();

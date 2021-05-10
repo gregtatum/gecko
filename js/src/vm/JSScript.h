@@ -1515,17 +1515,6 @@ class BaseScript : public gc::TenuredCellWithNonGCPointer<uint8_t> {
     MOZ_ASSERT(extent_.toStringStart <= extent_.sourceStart);
     MOZ_ASSERT(extent_.sourceStart <= extent_.sourceEnd);
     MOZ_ASSERT(extent_.sourceEnd <= extent_.toStringEnd);
-
-    // The immutableFlags determine if the arguments-analysis will need to be
-    // run. We track if we need to run the analysis and the result of the
-    // analysis on the mutableFlags. The analysis is deterministic so we only
-    // need it once, even if we relazify, etc.
-    if (argumentsHasVarBinding()) {
-      setFlag(MutableFlags::NeedsArgsObj, alwaysNeedsArgsObj());
-      setFlag(MutableFlags::NeedsArgsAnalysis, !alwaysNeedsArgsObj());
-    } else {
-      MOZ_ASSERT(!alwaysNeedsArgsObj());
-    }
   }
 
   void setJitCodeRaw(uint8_t* code) { setHeaderPtr(code); }
@@ -1649,16 +1638,13 @@ class BaseScript : public gc::TenuredCellWithNonGCPointer<uint8_t> {
                         NeedsFunctionEnvironmentObjects)
   // FunctionHasExtraBodyVarScope: custom logic below.
   IMMUTABLE_FLAG_GETTER(shouldDeclareArguments, ShouldDeclareArguments)
-  IMMUTABLE_FLAG_GETTER(argumentsHasVarBinding, ArgumentsHasVarBinding)
-  IMMUTABLE_FLAG_GETTER(alwaysNeedsArgsObj, AlwaysNeedsArgsObj)
+  IMMUTABLE_FLAG_GETTER(needsArgsObj, NeedsArgsObj)
   IMMUTABLE_FLAG_GETTER(hasMappedArgsObj, HasMappedArgsObj)
   IMMUTABLE_FLAG_GETTER(isInlinableLargeFunction, IsInlinableLargeFunction)
 
   MUTABLE_FLAG_GETTER_SETTER(hasRunOnce, HasRunOnce)
   MUTABLE_FLAG_GETTER_SETTER(hasScriptCounts, HasScriptCounts)
   MUTABLE_FLAG_GETTER_SETTER(hasDebugScript, HasDebugScript)
-  MUTABLE_FLAG_GETTER_SETTER(needsArgsAnalysis, NeedsArgsAnalysis)
-  // NeedsArgsObj: custom logic below.
   MUTABLE_FLAG_GETTER_SETTER(allowRelazify, AllowRelazify)
   MUTABLE_FLAG_GETTER_SETTER(spewEnabled, SpewEnabled)
   MUTABLE_FLAG_GETTER_SETTER(needsFinalWarmUpCount, NeedsFinalWarmUpCount)
@@ -2022,29 +2008,6 @@ class JSScript : public js::BaseScript {
     // true.  So just pretend like we never ran this script.
     clearFlag(MutableFlags::HasRunOnce);
   }
-
-  bool argumentsAliasesFormals() const {
-    return argumentsHasVarBinding() && hasMappedArgsObj();
-  }
-
-  /*
-   * As an optimization, even when argumentsHasVarBinding, the function
-   * prologue may not need to create an arguments object. This is determined by
-   * needsArgsObj which is set by AnalyzeArgumentsUsage. When !needsArgsObj,
-   * the prologue may simply write MagicValue(JS_OPTIMIZED_ARGUMENTS) to
-   * 'arguments's slot and any uses of 'arguments' will be guaranteed to handle
-   * this magic value. To avoid spurious arguments object creation, we maintain
-   * the invariant that needsArgsObj is only called after the script has been
-   * analyzed.
-   */
-  inline bool ensureHasAnalyzedArgsUsage(JSContext* cx);
-  bool needsArgsObj() const {
-    MOZ_ASSERT(!needsArgsAnalysis());
-    return hasFlag(MutableFlags::NeedsArgsObj);
-  }
-  void setNeedsArgsObj(bool needsArgsObj);
-  static void argumentsOptimizationFailed(JSContext* cx,
-                                          js::HandleScript script);
 
   /*
    * Arguments access (via JSOp::*Arg* opcodes) must access the canonical

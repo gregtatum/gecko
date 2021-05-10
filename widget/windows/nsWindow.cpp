@@ -2097,6 +2097,10 @@ void nsWindow::Resize(double aWidth, double aHeight, bool aRepaint) {
 
   NS_ASSERTION((width >= 0), "Negative width passed to nsWindow::Resize");
   NS_ASSERTION((height >= 0), "Negative height passed to nsWindow::Resize");
+  if (width < 0 || height < 0) {
+    gfxCriticalNoteOnce << "Negative passed to Resize(" << width << ", "
+                        << height << ") repaint: " << aRepaint;
+  }
 
   ConstrainSize(&width, &height);
 
@@ -2167,6 +2171,11 @@ void nsWindow::Resize(double aX, double aY, double aWidth, double aHeight,
 
   NS_ASSERTION((width >= 0), "Negative width passed to nsWindow::Resize");
   NS_ASSERTION((height >= 0), "Negative height passed to nsWindow::Resize");
+  if (width < 0 || height < 0) {
+    gfxCriticalNoteOnce << "Negative passed to Resize(" << x << " ," << y
+                        << ", " << width << ", " << height
+                        << ") repaint: " << aRepaint;
+  }
 
   ConstrainSize(&width, &height);
 
@@ -8575,6 +8584,9 @@ bool nsWindow::DispatchTouchEventFromWMPointer(
                             ScreenSize(1, 1),  // pixel size radius for pen
                             0.0f,              // no radius rotation
                             aPointerInfo.mPressure);
+  touchData.mTiltX = aPointerInfo.tiltX;
+  touchData.mTiltY = aPointerInfo.tiltY;
+  touchData.mTwist = aPointerInfo.twist;
 
   MultiTouchInput touchInput;
   touchInput.mType = touchType;
@@ -8582,7 +8594,7 @@ bool nsWindow::DispatchTouchEventFromWMPointer(
   touchInput.mTimeStamp = GetMessageTimeStamp(touchInput.mTime);
   touchInput.mTouches.AppendElement(touchData);
 
-  DispatchTouchInput(touchInput);
+  DispatchTouchInput(touchInput, MouseEvent_Binding::MOZ_SOURCE_PEN);
   return true;
 }
 
@@ -8675,6 +8687,7 @@ bool nsWindow::OnPointerEvents(UINT msg, WPARAM aWParam, LPARAM aLParam) {
                                  : MouseButtonsFlag::eNoButtons;
   WinPointerInfo pointerInfo(pointerId, penInfo.tiltX, penInfo.tiltY, pressure,
                              buttons);
+  pointerInfo.twist = penInfo.rotation;
 
   if (StaticPrefs::dom_w3c_pointer_events_scroll_by_pen_enabled() &&
       DispatchTouchEventFromWMPointer(msg, aLParam, pointerInfo)) {

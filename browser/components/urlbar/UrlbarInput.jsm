@@ -3892,10 +3892,6 @@ class AddSearchEngineHelper {
   constructor(input) {
     this.input = input;
     this.shortcutButtons = input.view.oneOffSearchButtons;
-
-    XPCOMUtils.defineLazyGetter(this, "_bundle", () =>
-      Services.strings.createBundle("chrome://browser/locale/search.properties")
-    );
   }
 
   /**
@@ -3922,9 +3918,6 @@ class AddSearchEngineHelper {
       this.shortcutButtons.updateWebEngines(
         engines.slice(0, this.maxInlineEngines).map(e => ({
           name: e.title,
-          tooltip: this._bundle.formatStringFromName("cmd_addFoundEngine", [
-            e.title,
-          ]),
           uri: e.uri,
           get icon() {
             // The icon is actually the browser favicon, that may not be in
@@ -3952,9 +3945,10 @@ class AddSearchEngineHelper {
     elt.setAttribute("anonid", `add-engine-${index}`);
     elt.classList.add("menuitem-iconic");
     elt.classList.add("context-menu-add-engine");
+    elt.setAttribute("data-l10n-id", "search-one-offs-add-engine");
     elt.setAttribute(
-      "label",
-      this._bundle.formatStringFromName("cmd_addFoundEngine", [engine.title])
+      "data-l10n-args",
+      JSON.stringify({ engineName: engine.title })
     );
     elt.setAttribute("uri", engine.uri);
     if (engine.icon) {
@@ -3971,10 +3965,7 @@ class AddSearchEngineHelper {
     elt.setAttribute("anonid", "add-engine-menu");
     elt.classList.add("menu-iconic");
     elt.classList.add("context-menu-add-engine");
-    elt.setAttribute(
-      "label",
-      this._bundle.GetStringFromName("cmd_addFoundEngineMenu")
-    );
+    elt.setAttribute("data-l10n-id", "search-one-offs-add-engine-menu");
     if (engine.icon) {
       elt.setAttribute("image", engine.icon);
     }

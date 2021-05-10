@@ -860,11 +860,16 @@ static BOOL gMenuItemsExecuteCommands = YES;
     return;
   }
 
-  int tag = [aSender tag];
+  if (![aSender isKindOfClass:[NSMenuItem class]]) {
+    return;
+  }
+
+  NSMenuItem* nativeMenuItem = (NSMenuItem*)aSender;
+  NSInteger tag = nativeMenuItem.tag;
 
   nsMenuGroupOwnerX* menuGroupOwner = nullptr;
   nsMenuBarX* menuBar = nullptr;
-  MOZMenuItemRepresentedObject* representedObject = [aSender representedObject];
+  MOZMenuItemRepresentedObject* representedObject = nativeMenuItem.representedObject;
 
   if (representedObject) {
     menuGroupOwner = representedObject.menuGroupOwner;
@@ -872,6 +877,12 @@ static BOOL gMenuItemsExecuteCommands = YES;
       return;
     }
     menuBar = menuGroupOwner->GetMenuBar();
+  }
+
+  // Notify containing menu about the fact that a menu item will be activated.
+  NSMenu* menu = nativeMenuItem.menu;
+  if ([menu.delegate isKindOfClass:[MenuDelegate class]]) {
+    [(MenuDelegate*)menu.delegate menu:menu willActivateItem:nativeMenuItem];
   }
 
   // Get the modifier flags and button for this menu item activation. The menu system does not pass
