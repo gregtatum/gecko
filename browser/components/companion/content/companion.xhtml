@@ -299,7 +299,13 @@
 
   <div xmlns="http://www.w3.org/1999/xhtml" id="settings" hidden="true">
     <div id="service-login">
-        <button id="service-signin" class="btn">Sign in to Google</button>
+        <button xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" type="menu" id="service-signin" class="btn" label="Sign in">
+            <menupopup>
+                <menuitem id="google" label="Google"/>
+                <menuitem id="google-mozilla" label="Google (Mozilla)"/>
+                <menuitem id="google-mozilla-test" label="Google (Mozilla Test)"/>
+            </menupopup>
+            </button>
         <button id="service-signout" class="btn">Sign out of Google</button>
     </div>
     <div id="sliders"></div>

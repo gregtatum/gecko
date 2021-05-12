@@ -12,9 +12,9 @@ const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
 );
 
-async function signin() {
+async function signin(event) {
   await OnlineServices.createService(
-    Services.prefs.getCharPref("onlineservices.defaultType", "google")
+    Services.prefs.getCharPref("onlineservices.defaultType", event.target.id)
   );
   document.getElementById("service-login").className = "connected";
   let services = OnlineServices.getServices();
@@ -33,7 +33,7 @@ async function signout() {
 }
 
 export function initServices() {
-  document.getElementById("service-signin").addEventListener("click", signin);
+  document.getElementById("service-signin").addEventListener("command", signin);
   document.getElementById("service-signout").addEventListener("click", signout);
 
   let services = OnlineServices.getServices();

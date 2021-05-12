@@ -73,11 +73,11 @@ class GoogleService {
     ];
 
     this.auth = new OAuth2(
-      this.getPref("endpoint"),
-      this.getPref("tokenEndpoint"),
+      services[this.app].endpoint,
+      services[this.app].tokenEndpoint,
       scopes.join(" "),
-      this.getPref("clientId"),
-      this.getPref("clientSecret"),
+      services[this.app].clientId,
+      services[this.app].clientSecret,
       config?.auth
     );
   }
@@ -359,6 +359,30 @@ function load() {
     ServiceInstances.add(new GoogleService(service));
   }
 }
+
+let services = {
+  google: {
+    endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenEndpoint: "https://oauth2.googleapis.com/token",
+    clientId:
+      "290111995646-hrdpn27kp4jl0r6gej8540cg3cc4i0g6.apps.googleusercontent.com",
+    clientSecret: "mjlcpD5iiSNABCq_3PRtUglS",
+  },
+  "google-mozilla": {
+    endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenEndpoint: "https://oauth2.googleapis.com/token",
+    clientId:
+      "913967847322-m8ij544g2i23pssvchhru1hceg08irud.apps.googleusercontent.com",
+    clientSecret: "G7bg5a1bahnVWxd6GKQcO4Ro",
+  },
+  "google-mozilla-test": {
+    endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenEndpoint: "https://oauth2.googleapis.com/token",
+    clientId:
+      "1008059134576-ki9j8bfsrdho6ot9aun1mjljoegch6pn.apps.googleusercontent.com",
+    clientSecret: "jraQ3WNSCLK6g7uVKQd3PwUX",
+  },
+};
 
 const OnlineServices = {
   async createService(type) {
