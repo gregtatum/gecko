@@ -30,6 +30,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   CharsetMenu: "resource://gre/modules/CharsetMenu.jsm",
   Color: "resource://gre/modules/Color.jsm",
   CompanionService: "resource:///modules/CompanionService.jsm",
+  CompanionGlobalHistory: "resource:///modules/CompanionGlobalHistory.jsm",
   ContextualIdentityService:
     "resource://gre/modules/ContextualIdentityService.jsm",
   CustomizableUI: "resource:///modules/CustomizableUI.jsm",
@@ -765,7 +766,7 @@ function UpdateBackForwardCommands(aWebNavigation) {
 
   var backDisabled = backCommand.hasAttribute("disabled");
   var forwardDisabled = forwardCommand.hasAttribute("disabled");
-  if (backDisabled == aWebNavigation.canGoBack) {
+  if (backDisabled == CompanionGlobalHistory.canGoBack()) {
     if (backDisabled) {
       backCommand.removeAttribute("disabled");
     } else {
@@ -773,7 +774,7 @@ function UpdateBackForwardCommands(aWebNavigation) {
     }
   }
 
-  if (forwardDisabled == aWebNavigation.canGoForward) {
+  if (forwardDisabled == CompanionGlobalHistory.canGoForward()) {
     if (forwardDisabled) {
       forwardCommand.removeAttribute("disabled");
     } else {
@@ -1726,6 +1727,7 @@ var gBrowserInit = {
     gBrowser.init();
 
     CompanionService.addBrowserWindow(window);
+    CompanionGlobalHistory.addBrowserWindow(window);
 
     BrowserWindowTracker.track(window);
 
@@ -2692,6 +2694,11 @@ function gotoHistoryIndex(aEvent) {
 }
 
 function BrowserForward(aEvent) {
+  // browserForward returns true if it handled the request.
+  // otherwise, let the current code do its thing.
+  if (CompanionGlobalHistory.browserForward()) {
+    return;
+  }
   let where = whereToOpenLink(aEvent, false, true);
 
   if (where == "current") {
@@ -2704,6 +2711,11 @@ function BrowserForward(aEvent) {
 }
 
 function BrowserBack(aEvent) {
+  // browserBack returns true if it handled the request.
+  // otherwise, let the current code do its thing.
+  if (CompanionGlobalHistory.browserBack()) {
+    return;
+  }
   let where = whereToOpenLink(aEvent, false, true);
 
   if (where == "current") {
