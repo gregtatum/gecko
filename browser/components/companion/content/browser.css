@@ -44,6 +44,11 @@
   list-style-image: url("chrome://browser/skin/back.svg");
 }
 
+#companion-forward-button {
+  list-style-image: url("chrome://browser/skin/forward.svg");
+  display: none; /* Comment out for debugging */
+}
+
 #companion-reload-button {
   list-style-image: url("chrome://browser/skin/reload.svg");
 }

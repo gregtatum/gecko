@@ -766,7 +766,7 @@ function UpdateBackForwardCommands(aWebNavigation) {
 
   var backDisabled = backCommand.hasAttribute("disabled");
   var forwardDisabled = forwardCommand.hasAttribute("disabled");
-  if (backDisabled == CompanionGlobalHistory.canGoBack()) {
+  if (backDisabled == CompanionGlobalHistory.canGoBack(window)) {
     if (backDisabled) {
       backCommand.removeAttribute("disabled");
     } else {
@@ -774,7 +774,7 @@ function UpdateBackForwardCommands(aWebNavigation) {
     }
   }
 
-  if (forwardDisabled == CompanionGlobalHistory.canGoForward()) {
+  if (forwardDisabled == CompanionGlobalHistory.canGoForward(window)) {
     if (forwardDisabled) {
       forwardCommand.removeAttribute("disabled");
     } else {
@@ -2533,6 +2533,7 @@ var gBrowserInit = {
 
     BrowserSearch.uninit();
 
+    CompanionGlobalHistory.removeBrowserWindow(window);
     NewTabPagePreloading.removePreloadedBrowser(window);
 
     // Now either cancel delayedStartup, or clean up the services initialized from
@@ -2713,7 +2714,7 @@ function BrowserForward(aEvent) {
 function BrowserBack(aEvent) {
   // browserBack returns true if it handled the request.
   // otherwise, let the current code do its thing.
-  if (CompanionGlobalHistory.browserBack()) {
+  if (CompanionGlobalHistory.browserBack(window)) {
     return;
   }
   let where = whereToOpenLink(aEvent, false, true);
