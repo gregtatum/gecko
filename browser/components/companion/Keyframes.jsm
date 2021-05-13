@@ -72,7 +72,7 @@ const SQL = {
     "sum(typingTime) as typingTime, " +
     "sum(keypresses) as keypresses, " +
     "category FROM " +
-    "keyframes WHERE {WHERE} GROUP BY url ORDER BY {ORDER};",
+    "keyframes WHERE {WHERE} GROUP BY url ORDER BY {ORDER} LIMIT 5;",
 };
 
 function int(dateStr) {
