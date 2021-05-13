@@ -55,6 +55,10 @@ h2 {
   display: block;
 }
 
+.debug-container {
+  white-space: pre-line;
+}
+
 #titlebar {
   appearance: auto;
   -moz-default-appearance: -moz-mac-vibrant-titlebar-dark;

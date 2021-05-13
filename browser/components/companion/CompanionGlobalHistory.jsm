@@ -105,6 +105,9 @@ const progressListener = {
     );
     // Because we're navigating to a new page, reset _historyDepth to 0.
     HISTORY_STATE.get(window)._historyDepth = 0;
+    CompanionGlobalHistory.dispatchEvent(
+      new CustomEvent("CompanionGlobalHistoryChange")
+    );
     window.UpdateBackForwardCommands();
   },
 
@@ -124,7 +127,7 @@ const progressListener = {
 // Also move the tab into the correct location in the history to get to the proper
 // url.
 // Todo: Handle removed tabs by opening the URL in a new tab?
-const CompanionGlobalHistory = {
+const CompanionGlobalHistory = Object.assign(new EventTarget(), {
   init() {
     console.debug("CompanionGlobalHistory.init");
     if (this.inited) {
@@ -220,6 +223,9 @@ const CompanionGlobalHistory = {
       // TODO: this seems weird, but since switching tabs adds to history,
       // we need to reset our history depth. We can refine this as we go.
       HISTORY_STATE.get(window)._historyDepth = 0;
+      CompanionGlobalHistory.dispatchEvent(
+        new CustomEvent("CompanionGlobalHistoryChange")
+      );
       window.UpdateBackForwardCommands();
     }
   },
@@ -237,6 +243,9 @@ const CompanionGlobalHistory = {
 
     // Keep track of how deep we're traveling into history.
     HISTORY_STATE.get(aWindow)._historyDepth++;
+    CompanionGlobalHistory.dispatchEvent(
+      new CustomEvent("CompanionGlobalHistoryChange")
+    );
 
     let sessionHistory = SessionStore.getSessionHistory(previousStep.tab);
     let index = sessionHistory.entries
@@ -263,6 +272,9 @@ const CompanionGlobalHistory = {
 
     // Keep track of how deep we're traveling into history.
     HISTORY_STATE.get(aWindow)._historyDepth--;
+    CompanionGlobalHistory.dispatchEvent(
+      new CustomEvent("CompanionGlobalHistoryChange")
+    );
 
     let sessionHistory = SessionStore.getSessionHistory(nextStep.tab);
     let index = sessionHistory.entries
@@ -296,6 +308,6 @@ const CompanionGlobalHistory = {
   historyForWindow(aWindow) {
     return HISTORY_STATE.get(aWindow);
   },
-};
+});
 
 CompanionGlobalHistory.init();

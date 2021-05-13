@@ -13,6 +13,7 @@ import { KeyframeDbList } from "./keyframes.js";
 import { AwesomeBar } from "./awesomebar.js";
 import { MediaList } from "./media.js";
 import { WindowList } from "./appbar.js";
+import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
 
 const { LightweightThemeConsumer } = ChromeUtils.import(
   "resource://gre/modules/LightweightThemeConsumer.jsm"
@@ -79,6 +80,7 @@ onLoad(() => {
     )
   );
   content.appendChild(new KeyframeDbList("Current Session", today));
+  content.appendChild(new GlobalHistoryDebugging("Debugging"));
   content.appendChild(new PocketList());
 });
 

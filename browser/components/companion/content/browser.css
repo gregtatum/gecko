@@ -46,7 +46,13 @@
 
 #companion-forward-button {
   list-style-image: url("chrome://browser/skin/forward.svg");
-  display: none; /* Comment out for debugging */
+  display: none;
+}
+
+@supports -moz-bool-pref("browser.companion.globalhistorydebugging") {
+  #companion-forward-button {
+    display: -moz-box;
+  }
 }
 
 #companion-reload-button {
