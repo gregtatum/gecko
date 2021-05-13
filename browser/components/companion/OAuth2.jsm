@@ -25,10 +25,6 @@ XPCOMUtils.defineLazyServiceGetter(
 
 Cu.importGlobalProperties(["fetch"]);
 
-function checkFlags(flags, mask) {
-  return (flags & mask) == mask;
-}
-
 const OAuthConnect = {
   connections: new Map(),
 
@@ -67,8 +63,11 @@ const OAuthConnect = {
 
   onStateChange(progress, request, flags) {
     if (
-      progress.isTopLevel &&
-      checkFlags(flags, Ci.nsIWebProgressListener.STATE_START) &&
+      (progress.isTopLevel &&
+        request &&
+        flags &
+          (Ci.nsIWebProgressListener.STATE_START |
+            Ci.nsIWebProgressListener.STATE_IS_NETWORK)) ||
       request instanceof Ci.nsIChannel
     ) {
       let params = new URLSearchParams(request.URI.query);

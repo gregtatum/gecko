@@ -82,13 +82,6 @@ class GoogleService {
     );
   }
 
-  getPref(name, deflt = undefined) {
-    return Services.prefs.getCharPref(
-      `onlineservices.${this.app}.${name}`,
-      deflt
-    );
-  }
-
   connect() {
     // This will force login if not already logged in.
     let token = this.auth.getToken();
@@ -344,6 +337,94 @@ class GoogleService {
   }
 }
 
+class MicrosoftService {
+  constructor(config) {
+    this.app = config.type;
+
+    let scopes = ["https://graph.microsoft.com/Calendars.Read"];
+
+    this.auth = new OAuth2(
+      services[this.app].endpoint,
+      services[this.app].tokenEndpoint,
+      scopes.join(" "),
+      services[this.app].clientId,
+      services[this.app].clientSecret,
+      config?.auth
+    );
+  }
+
+  connect() {
+    // This will force login if not already logged in.
+    let token = this.auth.getToken();
+    OnlineServices.persist();
+    return token;
+  }
+
+  openCalendar(year, month, day) {
+    this.openLink(
+      new URL(
+        `https://calendar.google.com/calendar/r/day/${year}/${month}/${day}`
+      )
+    );
+  }
+
+  async getNextMeetings() {
+    let token = await this.auth.getToken();
+    OnlineServices.persist();
+
+    let apiTarget = new URL(
+      "https://graph.microsoft.com/v1.0/me/calendar/events"
+    );
+
+    apiTarget.searchParams.set("maxResults", 5);
+    apiTarget.searchParams.set("orderBy", "startTime");
+    apiTarget.searchParams.set("singleEvents", "true");
+    let oneHourAgo = new Date();
+    oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+    apiTarget.searchParams.set("timeMin", oneHourAgo.toISOString());
+    // If we want to reduce the window, we can just make
+    // timeMax an hour from now.
+    let midnight = new Date();
+    midnight.setHours(24, 0, 0, 0);
+    apiTarget.searchParams.set("timeMax", midnight.toISOString());
+
+    let headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    let response = await fetch(apiTarget, {
+      headers,
+    });
+
+    log.debug(response);
+
+    if (!response.ok) {
+      throw new Error(response.statusText);
+    }
+
+    let results = await response.json();
+    log.debug(JSON.stringify(results));
+
+    let events = results.items.map(result => ({
+      summary: result.summary,
+      start: new Date(result.start.dateTime),
+      end: new Date(result.end.dateTime),
+      conference: getConferenceInfo(result),
+    }));
+
+    events.sort((a, b) => a.start - b.start);
+
+    return events;
+  }
+
+  toJSON() {
+    return {
+      type: this.app,
+      auth: this.auth,
+    };
+  }
+}
+
 const ServiceInstances = new Set();
 
 let loaded = false;
@@ -382,13 +463,24 @@ let services = {
       "1008059134576-ki9j8bfsrdho6ot9aun1mjljoegch6pn.apps.googleusercontent.com",
     clientSecret: "jraQ3WNSCLK6g7uVKQd3PwUX",
   },
+  microsoft: {
+    endpoint: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+    tokenEndpoint: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+    clientId: "66d9891f-d284-4158-a9b3-27aebf6b0f8c",
+    clientSecret: "P8_.eMal60dY1VFEU1K6N_-22o4cA6vo.d",
+  },
 };
 
 const OnlineServices = {
   async createService(type) {
     load();
 
-    let service = new GoogleService({ type });
+    let service;
+    if (type.startsWith("google")) {
+      service = new GoogleService({ type });
+    } else if (type.startsWith("microsoft")) {
+      service = new MicrosoftService({ type });
+    }
     ServiceInstances.add(service);
     await service.connect();
 
