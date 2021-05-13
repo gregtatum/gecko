@@ -6,28 +6,35 @@ const EXPORTED_SYMBOLS = ["CompanionGlobalHistory"];
 var { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
+
 ChromeUtils.import("resource://gre/modules/NotificationDB.jsm");
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
 });
 
+XPCOMUtils.defineLazyGetter(this, "log", () => {
+  return console.createInstance({
+    prefix: "CompanionGlobalHistory",
+    maxLogLevel: "Debug",
+  });
+});
+
 const HISTORY_STATE = new WeakMap();
 
 const progressListener = {
   onStateChange(aBrowser, aWebProgress, aRequest, aStateFlags, aStatus) {
-    console.debug(
-      "CompanionGlobalHistory.onStateChange: aStateFlags & STATE_RESTORING is ",
-      aStateFlags & Ci.nsIWebProgressListener.STATE_RESTORING
-    );
-    console.debug(
-      "CompanionGlobalHistory.onStateChange: aStateFlags & STATE_IS_NETWORK is ",
+    log.debug(
+      "onStateChange: aStateFlags & STATE_RESTORING is ",
+      aStateFlags & Ci.nsIWebProgressListener.STATE_RESTORING,
+      "onStateChange: aStateFlags & STATE_IS_NETWORK is ",
       aStateFlags & Ci.nsIWebProgressListener.STATE_IS_NETWORK
     );
 
     let window = aBrowser.ownerGlobal;
-    if (!HISTORY_STATE.has(window)) {
-      console.error("CompanionGlobalHistory.onStateChange: unknown window");
+    let state = HISTORY_STATE.get(window);
+    if (!state) {
+      log.error("onStateChange: unknown window");
       return;
     }
 
@@ -50,61 +57,57 @@ const progressListener = {
     // TODO the STATE_RESTORING check isn't always seem reliable; adding some
     // logging to try to understand when it fails.
     if (aStateFlags & Ci.nsIWebProgressListener.STATE_RESTORING) {
-      console.debug(
-        "CompanionGlobalHistory.onStateChange: STATE_RESTORING detected, not adding this visit to history."
+      log.debug(
+        "onStateChange: STATE_RESTORING detected, not adding this visit to history."
       );
       return;
     }
 
     // Exclude about: pages related to new tabs from _history.
     if (window.isInitialPage(aBrowser.currentURI)) {
-      console.debug(
-        "CompanionGlobalHistory.onStateChange: not including this state change in _history, because it's an about page: ",
+      log.debug(
+        "onStateChange: not including this state change in _history, because it's an about page: ",
         aBrowser.currentURI.spec
       );
       return;
     }
     if (aBrowser !== window.gBrowser.selectedBrowser) {
-      console.debug(
-        "CompanionGlobalHistory.onStateChange: not including this state change in _history, because it's not from the selected browser: ",
+      log.debug(
+        "onStateChange: not including this state change in _history, because it's not from the selected browser: ",
         aBrowser.currentURI.spec
       );
       return;
     }
 
-    let _history = HISTORY_STATE.get(window)._history;
-
     // Todo: we probably need to do something smarter if this already exists in history.
     // Maybe move it up to the top of the stack, or something?
     if (
-      _history.map(h => h.plainURI).indexOf(window.gBrowser.currentURI.spec) >
-      -1
+      state._history
+        .map(h => h.plainURI)
+        .indexOf(window.gBrowser.currentURI.spec) > -1
     ) {
-      console.debug(
-        "CompanionGlobalHistory.onStateChange: already have URI in stack so skipping",
+      log.debug(
+        "onStateChange: already have URI in stack so skipping",
         window.gBrowser.currentURI.spec
       );
       return;
     }
 
     // We have a legit page visit, so add a new entry to _history.
-    console.debug(
-      "CompanionGlobalHistory.onStateChange: adding a history entry for ",
+    log.debug(
+      "onStateChange: adding a history entry for ",
       aBrowser.currentURI.spec
     );
 
-    HISTORY_STATE.get(window)._history.push({
+    state._history.push({
       tab: aBrowser.getTabBrowser().selectedTab,
       type: "navigate",
       uri: aBrowser.currentURI,
       plainURI: aBrowser.currentURI.spec,
     });
-    console.debug(
-      "CompanionGlobalHistory.onStateChange: _history.length is ",
-      HISTORY_STATE.get(window)._history.length
-    );
+    log.debug("onStateChange: _history.length is ", state._history.length);
     // Because we're navigating to a new page, reset _historyDepth to 0.
-    HISTORY_STATE.get(window)._historyDepth = 0;
+    state._historyDepth = 0;
     CompanionGlobalHistory.dispatchEvent(
       new CustomEvent("CompanionGlobalHistoryChange")
     );
@@ -129,7 +132,6 @@ const progressListener = {
 // Todo: Handle removed tabs by opening the URL in a new tab?
 const CompanionGlobalHistory = Object.assign(new EventTarget(), {
   init() {
-    console.debug("CompanionGlobalHistory.init");
     if (this.inited) {
       return;
     }
@@ -137,11 +139,9 @@ const CompanionGlobalHistory = Object.assign(new EventTarget(), {
   },
 
   addBrowserWindow(aWindow) {
-    console.debug("CompanionGlobalHistory.addBrowserWindow");
+    log.debug("addBrowserWindow");
     if (HISTORY_STATE.has(aWindow)) {
-      console.error(
-        "CompanionGlobalHistory.addBrowserWindow called with existing window"
-      );
+      log.error("addBrowserWindow called with existing window");
       return;
     }
     HISTORY_STATE.set(aWindow, {
@@ -166,9 +166,7 @@ const CompanionGlobalHistory = Object.assign(new EventTarget(), {
 
   removeBrowserWindow(aWindow) {
     if (!HISTORY_STATE.has(aWindow)) {
-      console.error(
-        "CompanionGlobalHistory.removeBrowserWindow error: unknown window"
-      );
+      log.error("removeBrowserWindow error: unknown window");
       return;
     }
     aWindow.gBrowser.tabContainer.removeEventListener("TabSelect", this);
@@ -179,42 +177,47 @@ const CompanionGlobalHistory = Object.assign(new EventTarget(), {
   handleEvent(event) {
     if (event.type === "TabSelect") {
       let window = event.target.ownerGlobal;
+      let state = HISTORY_STATE.get(window);
 
-      if (!HISTORY_STATE.has(window)) {
-        console.error(
-          "CompanionGlobalHistory.handleEvent: error: unknown window"
-        );
+      if (!state) {
+        log.error("handleEvent: error: unknown window");
         return;
       }
 
-      let _history = HISTORY_STATE.get(window)._history;
-
       // Todo: we probably need to do something smarter if this already exists in history.
       // Maybe move it up to the top of the stack, or something?
-      if (
-        _history.map(h => h.plainURI).indexOf(window.gBrowser.currentURI.spec) >
-        -1
-      ) {
-        console.debug(
-          "CompanionGlobalHistory.handleEvent: already have URI in stack so skipping",
-          window.gBrowser.currentURI.spec
+
+      let index = state._history
+        .map(h => h.plainURI)
+        .lastIndexOf(window.gBrowser.currentURI.spec);
+      if (index > -1) {
+        log.debug(
+          "handleEvent: already have URI in stack so resetting depth",
+          window.gBrowser.currentURI.spec,
+          index
+        );
+        // If a tab already in the history gets focused then move the depth to the
+        // right place and return
+        state._historyDepth = state._history.length - 1 - index;
+        CompanionGlobalHistory.dispatchEvent(
+          new CustomEvent("CompanionGlobalHistoryChange")
         );
         return;
       }
 
       // Exclude about: pages related to new tabs from _history.
       if (window.isInitialPage(window.gBrowser.currentURI)) {
-        console.debug(
-          "CompanionGlobalHistory.onStateChange: not including this state change in _history, because it's an about page: ",
+        log.debug(
+          "onStateChange: not including this state change in _history, because it's an about page: ",
           window.gBrowser.currentURI.spec
         );
         return;
       }
 
-      console.debug(
-        "CompanionGlobalHistory.handleEvent: TabSelect fired. Adding a 'tabswitch' to history."
+      log.debug(
+        "handleEvent: TabSelect fired. Adding a 'tabswitch' to history."
       );
-      HISTORY_STATE.get(window)._history.push({
+      state._history.push({
         tab: event.target,
         uri: window.gBrowser.currentURI,
         type: "tabswitch",
@@ -222,7 +225,7 @@ const CompanionGlobalHistory = Object.assign(new EventTarget(), {
       });
       // TODO: this seems weird, but since switching tabs adds to history,
       // we need to reset our history depth. We can refine this as we go.
-      HISTORY_STATE.get(window)._historyDepth = 0;
+      state._historyDepth = 0;
       CompanionGlobalHistory.dispatchEvent(
         new CustomEvent("CompanionGlobalHistoryChange")
       );
@@ -235,14 +238,14 @@ const CompanionGlobalHistory = Object.assign(new EventTarget(), {
       return false;
     }
 
-    let { _history, _historyDepth } = HISTORY_STATE.get(aWindow);
-
-    let currentHistoryPosition = _history.length - 1 - _historyDepth;
-    // let currentStep = _history[currentHistoryPosition];
-    let previousStep = _history[currentHistoryPosition - 1];
+    let state = HISTORY_STATE.get(aWindow);
+    let currentHistoryPosition =
+      state._history.length - 1 - state._historyDepth;
+    // let currentStep = state._history[currentHistoryPosition];
+    let previousStep = state._history[currentHistoryPosition - 1];
 
     // Keep track of how deep we're traveling into history.
-    HISTORY_STATE.get(aWindow)._historyDepth++;
+    state._historyDepth++;
     CompanionGlobalHistory.dispatchEvent(
       new CustomEvent("CompanionGlobalHistoryChange")
     );
@@ -253,7 +256,6 @@ const CompanionGlobalHistory = Object.assign(new EventTarget(), {
       .lastIndexOf(previousStep.plainURI);
     aWindow.gBrowser.selectedTab = previousStep.tab;
 
-    aWindow.gBrowser.selectedTab = previousStep.tab;
     if (index > -1) {
       aWindow.gBrowser.selectedBrowser.gotoIndex(index);
     }
@@ -266,12 +268,13 @@ const CompanionGlobalHistory = Object.assign(new EventTarget(), {
       return false;
     }
 
-    let { _history, _historyDepth } = HISTORY_STATE.get(aWindow);
-    let currentHistoryPosition = _history.length - 1 - _historyDepth;
-    let nextStep = _history[currentHistoryPosition + 1];
+    let state = HISTORY_STATE.get(aWindow);
+    let currentHistoryPosition =
+      state._history.length - 1 - state._historyDepth;
+    let nextStep = state._history[currentHistoryPosition + 1];
 
     // Keep track of how deep we're traveling into history.
-    HISTORY_STATE.get(aWindow)._historyDepth--;
+    state._historyDepth--;
     CompanionGlobalHistory.dispatchEvent(
       new CustomEvent("CompanionGlobalHistoryChange")
     );
