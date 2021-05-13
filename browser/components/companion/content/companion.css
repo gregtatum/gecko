@@ -285,14 +285,6 @@ h2 {
   padding: 5px 10px;
 }
 
-#sticky {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding-left: 10px;
-  background-color: var(--in-content-page-background);
-}
-
 #calendar-link {
   padding: 0 10px;
   display: block;
