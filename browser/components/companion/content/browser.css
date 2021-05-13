@@ -108,3 +108,24 @@
 #companion-identity-box #identity-box[pageproxystate="invalid"] #identity-icon-box {
   display: none;
 }
+
+#companion-identity-box {
+  width: 10px;
+  min-width: 10px;
+  margin-left: 6px;
+}
+
+#companion-identity-box #identity-box {
+  width: 10px;
+  min-width: 10px;
+  margin-right: 0px;
+}
+
+#companion-identity-box #identity-icon-box {
+  padding: 0px;
+}
+
+#companion-identity-box #identity-icon {
+  width: 10px;
+  height: 10px;
+}
