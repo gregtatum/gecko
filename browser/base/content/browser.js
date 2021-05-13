@@ -1728,6 +1728,10 @@ var gBrowserInit = {
 
     CompanionService.addBrowserWindow(window);
     CompanionGlobalHistory.addBrowserWindow(window);
+    CompanionGlobalHistory.addEventListener(
+      "CompanionGlobalHistoryChange",
+      UpdateBackForwardCommands
+    );
 
     BrowserWindowTracker.track(window);
 
@@ -2534,6 +2538,10 @@ var gBrowserInit = {
     BrowserSearch.uninit();
 
     CompanionGlobalHistory.removeBrowserWindow(window);
+    CompanionGlobalHistory.removeEventListener(
+      "CompanionGlobalHistoryChange",
+      UpdateBackForwardCommands
+    );
     NewTabPagePreloading.removePreloadedBrowser(window);
 
     // Now either cancel delayedStartup, or clean up the services initialized from
@@ -2697,7 +2705,7 @@ function gotoHistoryIndex(aEvent) {
 function BrowserForward(aEvent) {
   // browserForward returns true if it handled the request.
   // otherwise, let the current code do its thing.
-  if (CompanionGlobalHistory.browserForward()) {
+  if (CompanionGlobalHistory.browserForward(window)) {
     return;
   }
   let where = whereToOpenLink(aEvent, false, true);

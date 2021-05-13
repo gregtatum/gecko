@@ -111,7 +111,6 @@ const progressListener = {
     CompanionGlobalHistory.dispatchEvent(
       new CustomEvent("CompanionGlobalHistoryChange")
     );
-    window.UpdateBackForwardCommands();
   },
 
   QueryInterface: ChromeUtils.generateQI([
@@ -229,7 +228,6 @@ const CompanionGlobalHistory = Object.assign(new EventTarget(), {
       CompanionGlobalHistory.dispatchEvent(
         new CustomEvent("CompanionGlobalHistoryChange")
       );
-      window.UpdateBackForwardCommands();
     }
   },
 
@@ -283,6 +281,7 @@ const CompanionGlobalHistory = Object.assign(new EventTarget(), {
     let index = sessionHistory.entries
       .map(e => e.url)
       .lastIndexOf(nextStep.plainURI);
+
     aWindow.gBrowser.selectedTab = nextStep.tab;
     if (index > -1) {
       aWindow.gBrowser.selectedBrowser.gotoIndex(index);
