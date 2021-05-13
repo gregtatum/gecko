@@ -117,6 +117,20 @@ activity_stream:
       page: about:home or about_newtab - the page where the event occurred
       user_prefs: An integer representaing a user's A-S settings.
 
+aboutprivatebrowsing:
+  click:
+    objects: ["info_link", "promo_link"]
+    release_channel_collection: opt-out
+    record_in_processes: ["content"]
+    description: >
+      This is recorded when a user clicks a link on the private browsing newtab.
+    bug_numbers: [1709344]
+    notification_emails:
+      - "khudson@mozilla.com"
+    expiry_version: "93"
+    products:
+      - "firefox"
+
 readermode:
   view:
     objects: ["on", "off"]
@@ -165,9 +179,13 @@ addonsManager:
       error: The AddonManager error related to an install or update failure.
       source: >
         The source that originally triggered the add-on installation, one of "about:addons",
-        "about:debugging", "about:preferences", "amo", "app:profile", "disco", "distribution",
+        "about:debugging", "about:preferences", "amo", "disco", "distribution",
         "extension", "enterprise-policy", "file-url", "geckoview-app", "gmp-plugin",
         "internal", "plugin", "rtamo", "sync", "system-addon", "temporary-addon", "unknown".
+        For events with method set to "sideload", the source value is derived from the XPIProvider
+        location name (e.g. possible values are "app-builtin", "app-global", "app-profile",
+        "app-system-addons", "app-system-defaults", "app-system-local", "app-system-profile",
+        "app-system-share", "app-system-user", "winreg-app-user", "winreg-app-gobal")
       method: >
         The method used by the source to install the add-on (included when the source can use more than one,
         e.g. install events with source "about:addons" may have "install-from-file" or "url" as method),
@@ -2343,6 +2361,7 @@ security:
       contenttype: Information about the content-type we expect to receive
       remotetype: Information about the remoteType in which we triggered the load
       filedetails: Information about the file that triggered the load
+      redirects: Comma-separated string listing schemes for URLs that we redirected from
 
 pictureinpicture:
   create:

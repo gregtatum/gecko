@@ -441,6 +441,12 @@ nsresult nsLookAndFeel::PerThemeData::GetColor(ColorID aID,
       // inactive window border
       aColor = mMozWindowInactiveBorder;
       break;
+    case ColorID::MozGtkTitlebarText:
+      aColor = mTitlebarText;
+      break;
+    case ColorID::MozGtkTitlebarInactiveText:
+      aColor = mTitlebarInactiveText;
+      break;
     case ColorID::Graytext:             // disabled text in windows, menus, etc.
     case ColorID::Inactivecaptiontext:  // text in inactive window caption
       aColor = mMenuTextInactive;
@@ -542,9 +548,6 @@ nsresult nsLookAndFeel::PerThemeData::GetColor(ColorID aID,
       break;
     case ColorID::MozMenubarhovertext:
       aColor = mMenuBarHoverText;
-      break;
-    case ColorID::MozGtkInfoBarText:
-      aColor = mInfoBarText;
       break;
     case ColorID::MozColheadertext:
       aColor = mMozColHeaderText;
@@ -1380,6 +1383,15 @@ void nsLookAndFeel::PerThemeData::Init() {
     g_object_unref(accelStyle);
   }
 
+  style = GetStyleContext(MOZ_GTK_HEADER_BAR);
+  {
+    gtk_style_context_get_color(style, GTK_STATE_FLAG_NORMAL, &color);
+    mTitlebarText = GDK_RGBA_TO_NS_RGBA(color);
+
+    gtk_style_context_get_color(style, GTK_STATE_FLAG_BACKDROP, &color);
+    mTitlebarInactiveText = GDK_RGBA_TO_NS_RGBA(color);
+  }
+
   style = GetStyleContext(MOZ_GTK_MENUPOPUP);
   mMenuBackground = GetBackgroundColor(style, mMenuText);
 
@@ -1560,18 +1572,6 @@ void nsLookAndFeel::PerThemeData::Init() {
     GetBorderColors(style, &mFrameOuterLightBorder, &mFrameInnerDarkBorder);
   }
 
-  // GtkInfoBar
-  // TODO - Use WidgetCache for it?
-  GtkWidget* infoBar = gtk_info_bar_new();
-  GtkWidget* infoBarContent =
-      gtk_info_bar_get_content_area(GTK_INFO_BAR(infoBar));
-  GtkWidget* infoBarLabel = gtk_label_new(nullptr);
-  gtk_container_add(GTK_CONTAINER(parent), infoBar);
-  gtk_container_add(GTK_CONTAINER(infoBarContent), infoBarLabel);
-  style = gtk_widget_get_style_context(infoBarLabel);
-  gtk_style_context_add_class(style, GTK_STYLE_CLASS_INFO);
-  gtk_style_context_get_color(style, GTK_STATE_FLAG_NORMAL, &color);
-  mInfoBarText = GDK_RGBA_TO_NS_RGBA(color);
   // Some themes have a unified menu bar, and support window dragging on it
   gboolean supports_menubar_drag = FALSE;
   GParamSpec* param_spec = gtk_widget_class_find_style_property(

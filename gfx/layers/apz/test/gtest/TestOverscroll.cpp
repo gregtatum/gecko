@@ -1403,6 +1403,49 @@ TEST_F(APZCOverscrollTester, NoOverscrollForMousewheel) {
 #endif
 
 #ifndef MOZ_WIDGET_ANDROID  // Only applies to GenericOverscrollEffect
+TEST_F(APZCOverscrollTester, ClickWhileOverscrolled) {
+  SCOPED_GFX_PREF_BOOL("apz.overscroll.enabled", true);
+
+  ScrollMetadata metadata;
+  FrameMetrics& metrics = metadata.GetMetrics();
+  metrics.SetCompositionBounds(ParentLayerRect(0, 0, 100, 100));
+  metrics.SetScrollableRect(CSSRect(0, 0, 100, 1000));
+  metrics.SetVisualScrollOffset(CSSPoint(0, 0));
+  apzc->SetFrameMetrics(metrics);
+
+  // Pan into overscroll at the top.
+  ScreenIntPoint panPoint(50, 50);
+  PanGesture(PanGestureInput::PANGESTURE_START, apzc, panPoint,
+             ScreenPoint(0, -1), mcc->Time());
+  mcc->AdvanceByMillis(10);
+  PanGesture(PanGestureInput::PANGESTURE_PAN, apzc, panPoint,
+             ScreenPoint(0, -100), mcc->Time());
+  EXPECT_TRUE(apzc->IsOverscrolled());
+  EXPECT_TRUE(apzc->GetOverscrollAmount().y < 0);  // overscrolled at top
+
+  // End the pan. This should start an overscroll animation.
+  mcc->AdvanceByMillis(10);
+  PanGesture(PanGestureInput::PANGESTURE_END, apzc, panPoint, ScreenPoint(0, 0),
+             mcc->Time());
+  EXPECT_TRUE(apzc->GetOverscrollAmount().y < 0);  // overscrolled at top
+  EXPECT_TRUE(apzc->IsOverscrollAnimationRunning());
+
+  // Send a mouse-down. This should interrupt the animation but not relieve
+  // overscroll yet.
+  ParentLayerPoint overscrollBefore = apzc->GetOverscrollAmount();
+  MouseDown(apzc, panPoint, mcc->Time());
+  EXPECT_FALSE(apzc->IsOverscrollAnimationRunning());
+  EXPECT_EQ(overscrollBefore, apzc->GetOverscrollAmount());
+
+  // Send a mouse-up. This should start an overscroll animation again.
+  MouseUp(apzc, panPoint, mcc->Time());
+  EXPECT_TRUE(apzc->IsOverscrollAnimationRunning());
+
+  SampleAnimationUntilRecoveredFromOverscroll(ParentLayerPoint(0, 0));
+}
+#endif
+
+#ifndef MOZ_WIDGET_ANDROID  // Only applies to GenericOverscrollEffect
 TEST_F(APZCOverscrollTester, DynamicallyLoadingContent) {
   SCOPED_GFX_PREF_BOOL("apz.overscroll.enabled", true);
 
@@ -1416,7 +1459,7 @@ TEST_F(APZCOverscrollTester, DynamicallyLoadingContent) {
   // Pan to the bottom of the page, and further, into overscroll.
   ScreenIntPoint panPoint(50, 50);
   PanGesture(PanGestureInput::PANGESTURE_START, apzc, panPoint,
-             ScreenPoint(0, -1), mcc->Time());
+             ScreenPoint(0, 1), mcc->Time());
   for (int i = 0; i < 12; ++i) {
     mcc->AdvanceByMillis(10);
     PanGesture(PanGestureInput::PANGESTURE_PAN, apzc, panPoint,
@@ -1434,6 +1477,30 @@ TEST_F(APZCOverscrollTester, DynamicallyLoadingContent) {
 
   // Check that the modified scrollable rect cleared the overscroll.
   EXPECT_FALSE(apzc->IsOverscrolled());
+
+  // Pan back up to the top, and further, into overscroll.
+  PanGesture(PanGestureInput::PANGESTURE_START, apzc, panPoint,
+             ScreenPoint(0, -1), mcc->Time());
+  for (int i = 0; i < 12; ++i) {
+    mcc->AdvanceByMillis(10);
+    PanGesture(PanGestureInput::PANGESTURE_PAN, apzc, panPoint,
+               ScreenPoint(0, -100), mcc->Time());
+  }
+  EXPECT_TRUE(apzc->IsOverscrolled());
+  ParentLayerPoint overscrollAmount = apzc->GetOverscrollAmount();
+  EXPECT_TRUE(overscrollAmount.y < 0);  // overscrolled at top
+
+  // Grow the scrollable rect at the bottom again.
+  scrollableRect = metrics.GetScrollableRect();
+  scrollableRect.height += 500;
+  metrics.SetScrollableRect(scrollableRect);
+  apzc->NotifyLayersUpdated(metadata, false, true);
+
+  // Check that the modified scrollable rect did NOT clear overscroll at the
+  // top.
+  EXPECT_TRUE(apzc->IsOverscrolled());
+  EXPECT_EQ(overscrollAmount,
+            apzc->GetOverscrollAmount());  // overscroll did not change at all
 }
 #endif
 
@@ -1534,6 +1601,107 @@ TEST_F(APZCOverscrollTesterForLayersOnly, OverscrollHandoff) {
   PanGesture(PanGestureInput::PANGESTURE_START, manager, ScreenIntPoint(50, 20),
              ScreenPoint(0, -2), mcc->Time());
   EXPECT_TRUE(rootApzc->IsOverscrolled());
+}
+#endif
+
+#ifndef MOZ_WIDGET_ANDROID  // Currently fails on Android
+TEST_F(APZCOverscrollTesterForLayersOnly,
+       VerticalOverscrollHandoffToScrollableRoot) {
+  SCOPED_GFX_PREF_BOOL("apz.overscroll.enabled", true);
+
+  // Create a layer tree having two vertical scrollable layers.
+  const char* layerTreeSyntax = "c(c)";
+  nsIntRegion layerVisibleRegion[] = {nsIntRegion(IntRect(0, 0, 100, 100)),
+                                      nsIntRegion(IntRect(0, 0, 100, 50))};
+  root =
+      CreateLayerTree(layerTreeSyntax, layerVisibleRegion, nullptr, lm, layers);
+  SetScrollableFrameMetrics(root, ScrollableLayerGuid::START_SCROLL_ID,
+                            CSSRect(0, 0, 100, 200));
+  SetScrollableFrameMetrics(layers[1], ScrollableLayerGuid::START_SCROLL_ID + 1,
+                            CSSRect(0, 0, 100, 200));
+
+  SetScrollHandoff(layers[1], root);
+
+  registration =
+      MakeUnique<ScopedLayerTreeRegistration>(LayersId{0}, root, mcc);
+  UpdateHitTestingTree();
+  rootApzc = ApzcOf(root);
+  rootApzc->GetFrameMetrics().SetIsRootContent(true);
+
+  // A vertical pan gesture on the child scroller which will be handed off to
+  // the root APZC.
+  PanGesture(PanGestureInput::PANGESTURE_START, manager, ScreenIntPoint(50, 20),
+             ScreenPoint(0, -2), mcc->Time());
+  EXPECT_TRUE(rootApzc->IsOverscrolled());
+  EXPECT_FALSE(ApzcOf(layers[1])->IsOverscrolled());
+}
+#endif
+
+#ifndef MOZ_WIDGET_ANDROID  // Currently fails on Android
+TEST_F(APZCOverscrollTesterForLayersOnly,
+       NoOverscrollHandoffToNonScrollableRoot) {
+  SCOPED_GFX_PREF_BOOL("apz.overscroll.enabled", true);
+
+  // Create a layer tree having non-scrollable root and a vertical scrollable
+  // child.
+  const char* layerTreeSyntax = "c(c)";
+  nsIntRegion layerVisibleRegion[] = {nsIntRegion(IntRect(0, 0, 100, 100)),
+                                      nsIntRegion(IntRect(0, 0, 100, 50))};
+  root =
+      CreateLayerTree(layerTreeSyntax, layerVisibleRegion, nullptr, lm, layers);
+  SetScrollableFrameMetrics(root, ScrollableLayerGuid::START_SCROLL_ID,
+                            CSSRect(0, 0, 100, 100));
+  SetScrollableFrameMetrics(layers[1], ScrollableLayerGuid::START_SCROLL_ID + 1,
+                            CSSRect(0, 0, 100, 200));
+
+  SetScrollHandoff(layers[1], root);
+
+  registration =
+      MakeUnique<ScopedLayerTreeRegistration>(LayersId{0}, root, mcc);
+  UpdateHitTestingTree();
+  rootApzc = ApzcOf(root);
+  rootApzc->GetFrameMetrics().SetIsRootContent(true);
+
+  // A vertical pan gesture on the child scroller which should not be handed
+  // off the root APZC.
+  PanGesture(PanGestureInput::PANGESTURE_START, manager, ScreenIntPoint(50, 20),
+             ScreenPoint(0, -2), mcc->Time());
+  EXPECT_FALSE(rootApzc->IsOverscrolled());
+  EXPECT_TRUE(ApzcOf(layers[1])->IsOverscrolled());
+}
+#endif
+
+#ifndef MOZ_WIDGET_ANDROID  // Currently fails on Android
+TEST_F(APZCOverscrollTesterForLayersOnly,
+       NoOverscrollHandoffOrthogonalPanGesture) {
+  SCOPED_GFX_PREF_BOOL("apz.overscroll.enabled", true);
+
+  // Create a layer tree having horizontal scrollable root and a vertical
+  // scrollable child.
+  const char* layerTreeSyntax = "c(c)";
+  nsIntRegion layerVisibleRegion[] = {nsIntRegion(IntRect(0, 0, 100, 100)),
+                                      nsIntRegion(IntRect(0, 0, 100, 50))};
+  root =
+      CreateLayerTree(layerTreeSyntax, layerVisibleRegion, nullptr, lm, layers);
+  SetScrollableFrameMetrics(root, ScrollableLayerGuid::START_SCROLL_ID,
+                            CSSRect(0, 0, 200, 100));
+  SetScrollableFrameMetrics(layers[1], ScrollableLayerGuid::START_SCROLL_ID + 1,
+                            CSSRect(0, 0, 100, 200));
+
+  SetScrollHandoff(layers[1], root);
+
+  registration =
+      MakeUnique<ScopedLayerTreeRegistration>(LayersId{0}, root, mcc);
+  UpdateHitTestingTree();
+  rootApzc = ApzcOf(root);
+  rootApzc->GetFrameMetrics().SetIsRootContent(true);
+
+  // A vertical pan gesture on the child scroller which should not be handed
+  // off the root APZC because the root APZC is not scrollable vertically.
+  PanGesture(PanGestureInput::PANGESTURE_START, manager, ScreenIntPoint(50, 20),
+             ScreenPoint(0, -2), mcc->Time());
+  EXPECT_FALSE(rootApzc->IsOverscrolled());
+  EXPECT_TRUE(ApzcOf(layers[1])->IsOverscrolled());
 }
 #endif
 

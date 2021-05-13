@@ -1373,14 +1373,17 @@ impl BatchBuilder {
                                     device_bounding_rect = device_bounding_rect.union(&device_glyph_rect);
                                 }
 
-                                let map_device_to_surface: SpaceMapper<DevicePixel, PicturePixel> = SpaceMapper::new_with_target(
-                                    surface_spatial_node_index,
+                                let map_device_to_surface: SpaceMapper<PicturePixel, DevicePixel> = SpaceMapper::new_with_target(
                                     root_spatial_node_index,
-                                    *bounding_rect,
+                                    surface_spatial_node_index,
+                                    device_bounding_rect,
                                     ctx.spatial_tree,
                                 );
 
-                                map_device_to_surface.map(&device_bounding_rect)
+                                match map_device_to_surface.unmap(&device_bounding_rect) {
+                                    Some(r) => r.intersection(&bounding_rect),
+                                    None => Some(*bounding_rect),
+                                }
                             } else {
                                 let mut local_bounding_rect = LayoutRect::default();
 
@@ -3600,7 +3603,7 @@ impl ClipBatcher {
                         // ensure nothing is drawn outside the target. If for some reason we can't map the
                         // rect back to local space, we also fall back to just using a scissor rectangle.
                         let world_rect =
-                            sub_rect.translate(actual_rect.origin.to_vector()) / global_device_pixel_scale;
+                            sub_rect.translate(actual_rect.origin.to_vector()) / surface_device_pixel_scale;
                         let (clip_transform_id, local_rect, scissor) = match map_local_to_world.unmap(&world_rect) {
                             Some(local_rect)
                                 if clip_transform_id.transform_kind() == TransformedRectKind::AxisAligned &&
@@ -3650,7 +3653,7 @@ impl ClipBatcher {
                                     let tile_world_rect = map_local_to_world
                                         .map(&tile.tile_rect)
                                         .expect("bug: should always map as axis-aligned");
-                                    let tile_device_rect = tile_world_rect * global_device_pixel_scale;
+                                    let tile_device_rect = tile_world_rect * surface_device_pixel_scale;
                                     tile_device_rect
                                         .translate(-actual_rect.origin.to_vector())
                                         .round_out()
@@ -3680,7 +3683,7 @@ impl ClipBatcher {
                     if is_first_clip &&
                         (!clip_is_axis_aligned ||
                          !(map_local_to_world.map(&rect).expect("bug: should always map as axis-aligned")
-                            * global_device_pixel_scale).contains_rect(&actual_rect)) {
+                            * surface_device_pixel_scale).contains_rect(&actual_rect)) {
                         clear_to_one = true;
                     }
                     true

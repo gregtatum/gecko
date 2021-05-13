@@ -341,6 +341,7 @@ struct ActiveScrolledRoot {
 
 enum class nsDisplayListBuilderMode : uint8_t {
   Painting,
+  PaintForPrinting,
   EventDelivery,
   FrameVisibility,
   TransformComputation,
@@ -463,10 +464,20 @@ class nsDisplayListBuilder {
   }
 
   /**
-   * @return true if the display list is being built for painting.
+   * @return true if the display list is being built for painting. This
+   * includes both painting to a window or other buffer and painting to
+   * a print/pdf destination.
    */
   bool IsForPainting() const {
-    return mMode == nsDisplayListBuilderMode::Painting;
+    return mMode == nsDisplayListBuilderMode::Painting ||
+           mMode == nsDisplayListBuilderMode::PaintForPrinting;
+  }
+
+  /**
+   * @return true if the display list is being built specifically for printing.
+   */
+  bool IsForPrinting() const {
+    return mMode == nsDisplayListBuilderMode::PaintForPrinting;
   }
 
   /**
@@ -1813,6 +1824,25 @@ class nsDisplayListBuilder {
   void AddScrollFrameToNotify(nsIScrollableFrame* aScrollFrame);
   void NotifyAndClearScrollFrames();
 
+  // Helper class to find what link spec (if any) to associate with a frame,
+  // recording it in the builder, and generate the corresponding DisplayItem.
+  class Linkifier {
+   public:
+    Linkifier(nsDisplayListBuilder* aBuilder, nsIFrame* aFrame);
+
+    ~Linkifier() {
+      if (mBuilderToReset) {
+        mBuilderToReset->mLinkSpec.Truncate(0);
+      }
+    }
+
+    void MaybeAppendLink(nsDisplayListBuilder* aBuilder, nsIFrame* aFrame,
+                         nsDisplayList* aList);
+
+   private:
+    nsDisplayListBuilder* mBuilderToReset = nullptr;
+  };
+
  private:
   bool MarkOutOfFlowFrameForDisplay(nsIFrame* aDirtyFrame, nsIFrame* aFrame,
                                     const nsRect& aVisibleRect,
@@ -1991,6 +2021,7 @@ class nsDisplayListBuilder {
   // filter. Otherwise nullptr.
   const ActiveScrolledRoot* mFilterASR;
   std::unordered_set<nsIScrollableFrame*> mScrollFramesToNotify;
+  nsCString mLinkSpec;  // Destination of link currently being emitted, if any.
   bool mContainsBlendMode;
   bool mIsBuildingScrollbar;
   bool mCurrentScrollbarWillHaveLayer;
@@ -7286,6 +7317,26 @@ class nsDisplayForeignObject : public nsDisplayWrapList {
       const StackingContextHelper& aSc,
       mozilla::layers::RenderRootStateManager* aManager,
       nsDisplayListBuilder* aDisplayListBuilder) override;
+};
+
+/**
+ * A display item to represent a hyperlink.
+ */
+class nsDisplayLink : public nsPaintedDisplayItem {
+ public:
+  nsDisplayLink(nsDisplayListBuilder* aBuilder, nsIFrame* aFrame,
+                const char* aLinkSpec, const nsRect& aRect)
+      : nsPaintedDisplayItem(aBuilder, aFrame),
+        mLinkSpec(aLinkSpec),
+        mRect(aRect) {}
+
+  NS_DISPLAY_DECL_NAME("Link", TYPE_LINK)
+
+  void Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) override;
+
+ private:
+  nsCString mLinkSpec;
+  nsRect mRect;
 };
 
 class FlattenedDisplayListIterator {

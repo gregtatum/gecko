@@ -800,10 +800,7 @@ async function reload(dbg, ...sources) {
  * @static
  */
 async function navigate(dbg, url, ...sources) {
-  info(`Navigating to ${url}`);
-  const navigated = waitForDispatch(dbg.store, "NAVIGATE");
-  await dbg.client.navigate(url);
-  await navigated;
+  await navigateTo(EXAMPLE_URL + url);
   return waitForSources(dbg, ...sources);
 }
 
@@ -1073,7 +1070,13 @@ function clickElementInTab(selector) {
     gBrowser.selectedBrowser,
     [{ selector }],
     function({ selector }) {
-      content.wrappedJSObject.document.querySelector(selector).click();
+      const element = content.document.querySelector(selector);
+      // Run the click in another event loop in order to immediately resolve spawn's promise.
+      // Otherwise if we pause on click and navigate, the JSWindowActor used by spawn will
+      // be destroyed while its query is still pending. And this would reject the promise.
+      content.setTimeout(() => {
+        element.click();
+      });
     }
   );
 }

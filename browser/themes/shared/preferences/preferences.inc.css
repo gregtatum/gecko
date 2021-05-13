@@ -482,6 +482,14 @@ checkbox {
   stroke: var(--in-content-item-selected);
 }
 
+@media (prefers-contrast) {
+  #engineList > treechildren::-moz-tree-image(hover),
+  #blocklistsTree > treechildren::-moz-tree-image(hover) {
+    fill: var(--in-content-item-hover-text);
+    stroke: var(--in-content-item-hover);
+  }
+}
+
 #engineList > treechildren::-moz-tree-row,
 #blocklistsTree > treechildren::-moz-tree-row {
   min-height: 36px;
@@ -578,6 +586,15 @@ checkbox {
   padding: 0;
   overflow-x: auto;
 }
+
+@media (-moz-toolbar-prefers-color-scheme: dark) {
+  @media not (prefers-contrast) {
+    .dialogBox {
+      --in-content-page-background: #42414d;
+    }
+  }
+}
+
 
 .dialogBox[resizable="true"] {
   resize: both;

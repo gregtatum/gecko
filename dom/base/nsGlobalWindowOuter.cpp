@@ -614,7 +614,12 @@ bool nsOuterWindowProxy::getOwnPropertyDescriptor(
   }
   if (found) {
     // Step 2.4.
-    FillPropertyDescriptor(cx, desc, proxy, subframe, true);
+
+    desc.set(Some(JS::PropertyDescriptor::Data(
+        subframe, {
+                      JS::PropertyAttribute::Configurable,
+                      JS::PropertyAttribute::Enumerable,
+                  })));
     return true;
   }
 
@@ -698,9 +703,8 @@ bool nsOuterWindowProxy::getOwnPropertyDescriptor(
       if (!ToJSValue(cx, WindowProxyHolder(childDOMWin), &childValue)) {
         return false;
       }
-      FillPropertyDescriptor(cx, desc, proxy, childValue,
-                             /* readonly = */ true,
-                             /* enumerable = */ false);
+      desc.set(Some(JS::PropertyDescriptor::Data(
+          childValue, {JS::PropertyAttribute::Configurable})));
       return true;
     }
   }
@@ -5103,11 +5107,6 @@ void nsGlobalWindowOuter::FocusOuter(CallerType aCallerType,
       NS_WARNING("Should not try to set the focus on a disabled window");
       return;
     }
-
-    // XXXndeakin not sure what this is for or if it should go somewhere else
-    nsCOMPtr<nsIEmbeddingSiteWindow> embeddingWin(
-        do_GetInterface(treeOwnerAsWin));
-    if (embeddingWin) embeddingWin->SetFocus();
   }
 
   if (!mDocShell) {
@@ -5238,6 +5237,20 @@ void nsGlobalWindowOuter::PrintOuter(ErrorResult& aError) {
 #endif
 }
 
+class MOZ_RAII AutoModalState {
+ public:
+  explicit AutoModalState(nsGlobalWindowOuter& aWin)
+      : mModalStateWin(aWin.EnterModalState()) {}
+
+  ~AutoModalState() {
+    if (mModalStateWin) {
+      mModalStateWin->LeaveModalState();
+    }
+  }
+
+  RefPtr<nsGlobalWindowOuter> mModalStateWin;
+};
+
 Nullable<WindowProxyHolder> nsGlobalWindowOuter::Print(
     nsIPrintSettings* aPrintSettings, nsIWebProgressListener* aListener,
     nsIDocShell* aDocShellToCloneInto, IsPreview aIsPreview,
@@ -5266,8 +5279,7 @@ Nullable<WindowProxyHolder> nsGlobalWindowOuter::Print(
   }
 
   nsAutoSyncOperation sync(docToPrint, SyncOperationBehavior::eAllowInput);
-  EnterModalState();
-  auto exitModal = MakeScopeExit([&] { LeaveModalState(); });
+  AutoModalState modalState(*this);
 
   nsCOMPtr<nsIContentViewer> cv;
   RefPtr<BrowsingContext> bc;
@@ -6328,14 +6340,14 @@ void nsGlobalWindowOuter::ReallyCloseWindow() {
   CleanUp();
 }
 
-void nsGlobalWindowOuter::EnterModalState() {
+nsGlobalWindowOuter* nsGlobalWindowOuter::EnterModalState() {
   // GetInProcessScriptableTop, not GetInProcessTop, so that EnterModalState
   // works properly with <iframe mozbrowser>.
   nsGlobalWindowOuter* topWin = GetInProcessScriptableTopInternal();
 
   if (!topWin) {
     NS_ERROR("Uh, EnterModalState() called w/o a reachable top window?");
-    return;
+    return nullptr;
   }
 
   // If there is an active ESM in this window, clear it. Otherwise, this can
@@ -6390,33 +6402,38 @@ void nsGlobalWindowOuter::EnterModalState() {
     }
   }
   topWin->mModalStateDepth++;
+  return topWin;
 }
 
 void nsGlobalWindowOuter::LeaveModalState() {
-  nsGlobalWindowOuter* topWin = GetInProcessScriptableTopInternal();
+  {
+    nsGlobalWindowOuter* topWin = GetInProcessScriptableTopInternal();
+    if (!topWin) {
+      NS_WARNING("Uh, LeaveModalState() called w/o a reachable top window?");
+      return;
+    }
 
-  if (!topWin) {
-    NS_WARNING("Uh, LeaveModalState() called w/o a reachable top window?");
-    return;
+    if (topWin != this) {
+      MOZ_ASSERT(IsSuspended());
+      return topWin->LeaveModalState();
+    }
   }
 
-  MOZ_ASSERT(topWin->mModalStateDepth != 0);
+  MOZ_ASSERT(mModalStateDepth != 0);
   MOZ_ASSERT(IsSuspended());
-  MOZ_ASSERT(topWin->IsSuspended());
-  topWin->mModalStateDepth--;
+  mModalStateDepth--;
 
-  nsGlobalWindowInner* inner = topWin->GetCurrentInnerWindowInternal();
-
-  if (topWin->mModalStateDepth == 0) {
+  nsGlobalWindowInner* inner = GetCurrentInnerWindowInternal();
+  if (mModalStateDepth == 0) {
     if (inner) {
       inner->Resume();
     }
 
-    if (topWin->mSuspendedDoc) {
-      nsCOMPtr<Document> currentDoc = topWin->GetExtantDoc();
-      topWin->mSuspendedDoc->UnsuppressEventHandlingAndFireEvents(
-          currentDoc == topWin->mSuspendedDoc);
-      topWin->mSuspendedDoc = nullptr;
+    if (mSuspendedDoc) {
+      nsCOMPtr<Document> currentDoc = GetExtantDoc();
+      mSuspendedDoc->UnsuppressEventHandlingAndFireEvents(currentDoc ==
+                                                          mSuspendedDoc);
+      mSuspendedDoc = nullptr;
     }
   }
 
@@ -6425,12 +6442,12 @@ void nsGlobalWindowOuter::LeaveModalState() {
     inner->mLastDialogQuitTime = TimeStamp::Now();
   }
 
-  if (topWin->mModalStateDepth == 0) {
+  if (mModalStateDepth == 0) {
     RefPtr<Event> event = NS_NewDOMEvent(inner, nullptr, nullptr);
     event->InitEvent(u"endmodalstate"_ns, true, false);
     event->SetTrusted(true);
     event->WidgetEventPtr()->mFlags.mOnlyChromeDispatch = true;
-    topWin->DispatchEvent(*event);
+    DispatchEvent(*event);
   }
 }
 

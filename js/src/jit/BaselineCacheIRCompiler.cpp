@@ -754,6 +754,55 @@ bool BaselineCacheIRCompiler::emitCompareStringResult(JSOp op,
   return true;
 }
 
+bool BaselineCacheIRCompiler::emitSameValueResult(ValOperandId lhsId,
+                                                  ValOperandId rhsId) {
+  JitSpew(JitSpew_Codegen, "%s", __FUNCTION__);
+
+  AutoOutputRegister output(*this);
+  AutoScratchRegister scratch(allocator, masm);
+  ValueOperand lhs = allocator.useValueRegister(masm, lhsId);
+#ifdef JS_CODEGEN_X86
+  // Use the output to avoid running out of registers.
+  allocator.copyToScratchValueRegister(masm, rhsId, output.valueReg());
+  ValueOperand rhs = output.valueReg();
+#else
+  ValueOperand rhs = allocator.useValueRegister(masm, rhsId);
+#endif
+
+  allocator.discardStack(masm);
+
+  Label done;
+  Label call;
+
+  // Check to see if the values have identical bits.
+  // This is correct for SameValue because SameValue(NaN,NaN) is true,
+  // and SameValue(0,-0) is false.
+  masm.branch64(Assembler::NotEqual, lhs.toRegister64(), rhs.toRegister64(),
+                &call);
+  masm.moveValue(BooleanValue(true), output.valueReg());
+  masm.jump(&done);
+
+  {
+    masm.bind(&call);
+
+    AutoStubFrame stubFrame(*this);
+    stubFrame.enter(masm, scratch);
+
+    masm.pushValue(lhs);
+    masm.pushValue(rhs);
+
+    using Fn = bool (*)(JSContext*, HandleValue, HandleValue, bool*);
+    callVM<Fn, SameValue>(masm);
+
+    stubFrame.leave(masm);
+    masm.mov(ReturnReg, scratch);
+    masm.tagValue(JSVAL_TYPE_BOOLEAN, scratch, output.valueReg());
+  }
+
+  masm.bind(&done);
+  return true;
+}
+
 bool BaselineCacheIRCompiler::emitStoreSlotShared(bool isFixed,
                                                   ObjOperandId objId,
                                                   uint32_t offsetOffset,
@@ -1871,17 +1920,21 @@ bool BaselineCacheIRCompiler::init(CacheKind kind) {
   return true;
 }
 
-static void ResetEnteredCounts(ICFallbackStub* stub) {
-  for (ICStubIterator iter = stub->beginChain(); *iter != stub; iter++) {
-    iter->toCacheIRStub()->resetEnteredCount();
+static void ResetEnteredCounts(const ICEntry* icEntry) {
+  ICStub* stub = icEntry->firstStub();
+  while (true) {
+    stub->resetEnteredCount();
+    if (stub->isFallback()) {
+      return;
+    }
+    stub = stub->toCacheIRStub()->next();
   }
-  stub->resetEnteredCount();
 }
 
 static ICStubSpace* StubSpaceForStub(bool makesGCCalls, JSScript* script,
                                      ICScript* icScript) {
   if (makesGCCalls) {
-    return icScript->fallbackStubSpace();
+    return icScript->jitScriptStubSpace();
   }
   return script->zone()->jitZone()->optimizedStubSpace();
 }
@@ -1953,11 +2006,13 @@ ICCacheIRStub* js::jit::AttachBaselineCacheIRStub(
   MOZ_ASSERT(stubInfo);
   MOZ_ASSERT(stubInfo->stubDataSize() == writer.stubDataSize());
 
+  ICEntry* icEntry = icScript->icEntryForStub(stub);
+
   // Ensure we don't attach duplicate stubs. This can happen if a stub failed
   // for some reason and the IR generator doesn't check for exactly the same
   // conditions.
-  for (ICStubConstIterator iter = stub->beginChainConst(); *iter != stub;
-       iter++) {
+  for (ICStub* iter = icEntry->firstStub(); iter != stub;
+       iter = iter->toCacheIRStub()->next()) {
     auto otherStub = iter->toCacheIRStub();
     if (otherStub->stubInfo() != stubInfo) {
       continue;
@@ -1989,7 +2044,7 @@ ICCacheIRStub* js::jit::AttachBaselineCacheIRStub(
 
   // Resetting the entered counts on the IC chain makes subsequent reasoning
   // about the chain much easier.
-  ResetEnteredCounts(stub);
+  ResetEnteredCounts(icEntry);
 
   switch (stub->trialInliningState()) {
     case TrialInliningState::Initial:
@@ -2005,7 +2060,7 @@ ICCacheIRStub* js::jit::AttachBaselineCacheIRStub(
 
   auto newStub = new (newStubMem) ICCacheIRStub(code, stubInfo);
   writer.copyStubData(newStub->stubDataStart());
-  stub->addNewStub(newStub);
+  stub->addNewStub(icEntry, newStub);
   *attached = true;
   return newStub;
 }

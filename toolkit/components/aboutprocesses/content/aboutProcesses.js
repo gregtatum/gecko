@@ -31,6 +31,15 @@ const ONE_MEGA = 1024 * 1024;
 const ONE_KILO = 1024;
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
+);
+
+XPCOMUtils.defineLazyModuleGetters(this, {
+  ContextualIdentityService:
+    "resource://gre/modules/ContextualIdentityService.jsm",
+});
+
 const { WebExtensionPolicy } = Cu.getGlobalForObject(Services);
 
 const SHOW_THREADS = Services.prefs.getBoolPref(
@@ -71,14 +80,14 @@ function wait(ms = 0) {
 /**
  * For the time being, Fluent doesn't support duration or memory formats, so we need
  * to fetch units from Fluent. To avoid re-fetching at each update, we prefetch these
- * units during initialization, asynchronously.
+ * units during initialization, asynchronously, and keep them.
  *
- * @type Promise<{
+ * @type {
  *   duration: { ns: String, us: String, ms: String, s: String, m: String, h: String, d: String },
  *   memory: { B: String, KB: String, MB: String, GB: String, TB: String, PB: String, EB: String }
  * }.
  */
-let gPromisePrefetchedUnits;
+let gLocalizedUnits;
 
 let tabFinder = {
   update() {
@@ -194,10 +203,9 @@ var State = {
   },
 
   _getThreadDelta(cur, prev, deltaT) {
-    let name = cur.name || "???";
     let result = {
       tid: cur.tid,
-      name,
+      name: cur.name || `(${cur.tid})`,
       // Total amount of CPU used, in ns (user).
       totalCpuUser: cur.cpuUser,
       slopeCpuUser: null,
@@ -435,7 +443,7 @@ var View = {
   insertAfterRow(row) {
     let tbody = row.parentNode;
     let nextRow;
-    while ((nextRow = this._orderedRows.shift())) {
+    while ((nextRow = this._orderedRows.pop())) {
       tbody.insertBefore(nextRow, row.nextSibling);
     }
   },
@@ -466,7 +474,7 @@ var View = {
    * @param {ProcessDelta} data The data to display.
    * @return {DOMElement} The row displaying the process.
    */
-  displayProcessRow(data, units) {
+  displayProcessRow(data) {
     const cellCount = 4;
     let rowId = "p:" + data.pid;
     let row = this._getOrCreateRow(rowId, cellCount);
@@ -482,76 +490,109 @@ var View = {
     // Column: Name
     let nameCell = row.firstChild;
     {
-      let fluentName;
       let classNames = [];
+      let fluentName;
+      let fluentArgs = {
+        pid: "" + data.pid, // Make sure that this number is not localized
+      };
       switch (data.type) {
         case "web":
-          fluentName = "about-processes-web-process-name";
+          fluentName = "about-processes-web-process";
           break;
         case "webIsolated":
-          fluentName = "about-processes-web-isolated-process-name";
+          fluentName = "about-processes-web-isolated-process";
+          fluentArgs.origin = data.origin;
           break;
         case "webLargeAllocation":
-          fluentName = "about-processes-web-large-allocation-process-name";
+          fluentName = "about-processes-web-large-allocation-process";
+          fluentArgs.origin = data.origin;
           break;
         case "file":
-          fluentName = "about-processes-file-process-name";
+          fluentName = "about-processes-file-process";
           break;
         case "extension":
-          fluentName = "about-processes-extension-process-name";
+          fluentName = "about-processes-extension-process";
           classNames = ["extensions"];
           break;
         case "privilegedabout":
-          fluentName = "about-processes-privilegedabout-process-name";
+          fluentName = "about-processes-privilegedabout-process";
+          break;
+        case "privilegedmozilla":
+          fluentName = "about-processes-privilegedmozilla-process";
           break;
         case "withCoopCoep":
-          fluentName = "about-processes-with-coop-coep-process-name";
+          fluentName = "about-processes-with-coop-coep-process";
+          fluentArgs.origin = data.origin;
           break;
         case "browser":
-          fluentName = "about-processes-browser-process-name";
+          fluentName = "about-processes-browser-process";
           break;
         case "plugin":
-          fluentName = "about-processes-plugin-process-name";
+          fluentName = "about-processes-plugin-process";
           break;
         case "gmpPlugin":
-          fluentName = "about-processes-gmp-plugin-process-name";
+          fluentName = "about-processes-gmp-plugin-process";
           break;
         case "gpu":
-          fluentName = "about-processes-gpu-process-name";
+          fluentName = "about-processes-gpu-process";
           break;
         case "vr":
-          fluentName = "about-processes-vr-process-name";
+          fluentName = "about-processes-vr-process";
           break;
         case "rdd":
-          fluentName = "about-processes-rdd-process-name";
+          fluentName = "about-processes-rdd-process";
           break;
         case "socket":
-          fluentName = "about-processes-socket-process-name";
+          fluentName = "about-processes-socket-process";
           break;
         case "remoteSandboxBroker":
-          fluentName = "about-processes-remote-sandbox-broker-process-name";
+          fluentName = "about-processes-remote-sandbox-broker-process";
           break;
         case "forkServer":
-          fluentName = "about-processes-fork-server-process-name";
+          fluentName = "about-processes-fork-server-process";
           break;
         case "preallocated":
-          fluentName = "about-processes-preallocated-process-name";
+          fluentName = "about-processes-preallocated-process";
           break;
         // The following are probably not going to show up for users
         // but let's handle the case anyway to avoid heisenoranges
         // during tests in case of a leftover process from a previous
         // test.
         default:
-          fluentName = "about-processes-unknown-process-name";
+          fluentName = "about-processes-unknown-process";
+          fluentArgs.type = data.type;
           break;
       }
+
+      // Show container names instead of raw origin attribute suffixes.
+      if (fluentArgs.origin?.includes("^")) {
+        let origin = fluentArgs.origin;
+        let privateBrowsingId, userContextId;
+        try {
+          ({
+            privateBrowsingId,
+            userContextId,
+          } = ChromeUtils.createOriginAttributesFromOrigin(origin));
+          fluentArgs.origin = origin.slice(0, origin.indexOf("^"));
+        } catch (e) {
+          // createOriginAttributesFromOrigin can throw NS_ERROR_FAILURE for incorrect origin strings.
+        }
+        if (userContextId) {
+          let identityLabel = ContextualIdentityService.getUserContextLabel(
+            userContextId
+          );
+          if (identityLabel) {
+            fluentArgs.origin += ` — ${identityLabel}`;
+          }
+        }
+        if (privateBrowsingId) {
+          fluentName += "-private";
+        }
+      }
+
       this._fillCell(nameCell, {
         fluentName,
-        fluentArgs: {
-          pid: "" + data.pid, // Make sure that this number is not localized
-          origin: data.origin,
-          type: data.type,
-        },
+        fluentArgs,
         classes: ["type", "favicon", ...classNames],
       });
 
@@ -601,12 +642,12 @@ var View = {
       if (data.deltaRamSize) {
         let formattedDelta = this._formatMemory(data.deltaRamSize);
         this._fillCell(memoryCell, {
-          fluentName: "about-processes-total-memory-size",
+          fluentName: "about-processes-total-memory-size-changed",
           fluentArgs: {
             total: formattedTotal.amount,
-            totalUnit: units.memory[formattedTotal.unit],
+            totalUnit: gLocalizedUnits.memory[formattedTotal.unit],
             delta: Math.abs(formattedDelta.amount),
-            deltaUnit: units.memory[formattedDelta.unit],
+            deltaUnit: gLocalizedUnits.memory[formattedDelta.unit],
             deltaSign: data.deltaRamSize > 0 ? "+" : "-",
           },
           classes: ["memory"],
@@ -616,7 +657,7 @@ var View = {
           fluentName: "about-processes-total-memory-size-no-change",
           fluentArgs: {
             total: formattedTotal.amount,
-            totalUnit: units.memory[formattedTotal.unit],
+            totalUnit: gLocalizedUnits.memory[formattedTotal.unit],
           },
           classes: ["memory"],
         });
@@ -632,10 +673,10 @@ var View = {
       });
     } else {
       let { duration, unit } = this._getDuration(data.totalCpu);
-      let localizedUnit = units.duration[unit];
+      let localizedUnit = gLocalizedUnits.duration[unit];
       if (data.slopeCpu == 0) {
         this._fillCell(cpuCell, {
-          fluentName: "about-processes-cpu-user-and-kernel-idle",
+          fluentName: "about-processes-cpu-idle",
           fluentArgs: {
             total: duration,
             unit: localizedUnit,
@@ -644,7 +685,7 @@ var View = {
         });
       } else {
         this._fillCell(cpuCell, {
-          fluentName: "about-processes-cpu-user-and-kernel",
+          fluentName: "about-processes-cpu",
           fluentArgs: {
             percent: data.slopeCpu,
             total: duration,
@@ -701,25 +742,53 @@ var View = {
 
     // Column: Name
     let nameCell = row.firstChild;
-    let fluentName = "about-processes-thread-summary";
-    let fluentArgs = { number: data.threads.length };
-    if (!nameCell.firstChild) {
-      // Create the nodes
-      this._fillCell(nameCell, {
-        fluentName,
-        fluentArgs,
-        classes: ["name", "indent"],
+    let threads = data.threads;
+    let activeThreads = data.threads.filter(t => t.slopeCpu);
+    let fluentName, fluentArgs;
+    if (activeThreads.length) {
+      let percentFormatter = new Intl.NumberFormat(undefined, {
+        style: "percent",
+        minimumSignificantDigits: 1,
       });
+      activeThreads.sort((t1, t2) => (t2.slopeCpu || 0) - (t1.slopeCpu || 0));
+      fluentName = "about-processes-active-threads";
+      fluentArgs = {
+        number: threads.length,
+        active: activeThreads.length,
+        list: new Intl.ListFormat(undefined, { style: "narrow" }).format(
+          activeThreads.map(t => {
+            let percent = Math.round((t.slopeCpu || 0) * 1000) / 1000;
+            if (percent) {
+              return `${t.name} ${percentFormatter.format(percent)}`;
+            }
+            return t.name;
+          })
+        ),
+      };
+    } else {
+      fluentName = "about-processes-inactive-threads";
+      fluentArgs = {
+        number: threads.length,
+      };
+    }
+
+    let span;
+    if (!nameCell.firstChild) {
+      nameCell.className = "name indent";
+      // Create the nodes
       let img = document.createElement("span");
-      img.classList.add("twisty");
-      nameCell.insertBefore(img, nameCell.firstChild);
+      img.className = "twisty";
+      nameCell.appendChild(img);
+
+      span = document.createElement("span");
+      nameCell.appendChild(span);
     } else {
       // The only thing that can change is the thread count.
       let img = nameCell.firstChild;
       isOpen = img.classList.contains("open");
-      let span = img.nextSibling;
-      document.l10n.setAttributes(span, fluentName, fluentArgs);
+      span = img.nextSibling;
     }
+    document.l10n.setAttributes(span, fluentName, fluentArgs);
 
     // Column: action
     let actionCell = nameCell.nextSibling;
@@ -739,46 +808,31 @@ var View = {
     let nameCell = row.firstChild;
     let tab = tabFinder.get(data.outerWindowId);
     let fluentName;
-    let name;
+    let fluentArgs = {};
     let className;
-    if (parent.type == "extension") {
-      fluentName = "about-processes-extension-name";
-      if (data.addon) {
-        name = data.addon.name;
-      } else if (data.documentURI.scheme == "about") {
-        // about: URLs don't have an host.
-        name = data.documentURI.spec;
-      } else {
-        name = data.documentURI.host;
-      }
-    } else if (tab && tab.tabbrowser) {
+    if (tab && tab.tabbrowser) {
       fluentName = "about-processes-tab-name";
-      name = data.documentTitle;
+      fluentArgs.name = tab.tab.label;
       className = "tab";
     } else if (tab) {
       fluentName = "about-processes-preloaded-tab";
-      name = null;
       className = "preloaded-tab";
     } else if (data.count == 1) {
       fluentName = "about-processes-frame-name-one";
-      name = data.prePath;
+      fluentArgs.url = data.documentURI.spec;
       className = "frame-one";
     } else {
       fluentName = "about-processes-frame-name-many";
-      name = data.prePath;
+      fluentArgs.number = data.count;
+      fluentArgs.shortUrl =
+        data.documentURI.scheme == "about"
+          ? data.documentURI.spec
+          : data.documentURI.prePath;
       className = "frame-many";
     }
     this._fillCell(nameCell, {
       fluentName,
-      fluentArgs: {
-        name,
-        url: data.documentURI.spec,
-        number: data.count,
-        shortUrl:
-          data.documentURI.scheme == "about"
-            ? data.documentURI.spec
-            : data.documentURI.prePath,
-      },
+      fluentArgs,
       classes: ["name", "indent", "favicon", className],
     });
     let image = tab?.tab.getAttribute("image");
@@ -819,7 +873,7 @@ var View = {
    *
    * @param {ThreadDelta} data The data to display.
    */
-  displayThreadRow(data, units) {
+  displayThreadRow(data) {
     const cellCount = 3;
     let rowId = "t:" + data.tid;
     let row = this._getOrCreateRow(rowId, cellCount);
@@ -829,7 +883,7 @@ var View = {
     // Column: filename
     let nameCell = row.firstChild;
     this._fillCell(nameCell, {
-      fluentName: "about-processes-thread-name",
+      fluentName: "about-processes-thread-name-and-id",
       fluentArgs: {
         name: data.name,
         tid: "" + data.tid /* Make sure that this number is not localized */,
@@ -846,10 +900,10 @@ var View = {
       });
     } else {
       let { duration, unit } = this._getDuration(data.totalCpu);
-      let localizedUnit = units.duration[unit];
+      let localizedUnit = gLocalizedUnits.duration[unit];
       if (data.slopeCpu == 0) {
         this._fillCell(cpuCell, {
-          fluentName: "about-processes-cpu-user-and-kernel-idle",
+          fluentName: "about-processes-cpu-idle",
           fluentArgs: {
             total: duration,
             unit: localizedUnit,
@@ -858,7 +912,7 @@ var View = {
         });
       } else {
         this._fillCell(cpuCell, {
-          fluentName: "about-processes-cpu-user-and-kernel",
+          fluentName: "about-processes-cpu",
           fluentArgs: {
             percent: data.slopeCpu,
             total: duration,
@@ -874,12 +928,7 @@ var View = {
 
   _orderedRows: [],
   _fillCell(elt, { classes, fluentName, fluentArgs }) {
-    let span = elt.firstChild;
-    if (!span) {
-      span = document.createElement("span");
-      elt.appendChild(span);
-    }
-    document.l10n.setAttributes(span, fluentName, fluentArgs);
+    document.l10n.setAttributes(elt, fluentName, fluentArgs);
     elt.className = classes.join(" ");
   },
 
@@ -969,7 +1018,7 @@ var Control = {
     this._initHangReports();
 
     // Start prefetching units.
-    gPromisePrefetchedUnits = (async function() {
+    this._promisePrefetchedUnits = (async function() {
       let [
         ns,
         us,
@@ -1163,7 +1212,10 @@ var Control = {
   // moved recently.
   async _updateDisplay(force = false) {
     let counters = State.getCounters();
-    let units = await gPromisePrefetchedUnits;
+    if (this._promisePrefetchedUnits) {
+      gLocalizedUnits = await this._promisePrefetchedUnits;
+      this._promisePrefetchedUnits = null;
+    }
 
     // We reset `_hungItems`, based on the assumption that the process hang
     // monitor will inform us again before the next update. Since the process hang monitor
@@ -1179,7 +1231,7 @@ var Control = {
 
       process.isHung = process.childID && hungItems.has(process.childID);
 
-      let processRow = View.displayProcessRow(process, units);
+      let processRow = View.displayProcessRow(process);
 
       if (process.type != "extension") {
         // We do not want to display extensions.
@@ -1192,7 +1244,7 @@ var Control = {
 
       if (SHOW_THREADS) {
         if (View.displayThreadSummaryRow(process)) {
-          this._showThreads(processRow, units);
+          this._showThreads(processRow);
         }
       }
       if (
@@ -1228,11 +1280,11 @@ var Control = {
       this.selectedRow = null;
     }
   },
-  _showThreads(row, units) {
+  _showThreads(row) {
     let process = row.process;
     this._sortThreads(process.threads);
     for (let thread of process.threads) {
-      View.displayThreadRow(thread, units);
+      View.displayThreadRow(thread);
     }
   },
   _sortThreads(threads) {
@@ -1240,16 +1292,14 @@ var Control = {
       let order;
       switch (this._sortColumn) {
         case "column-name":
-          order = a.name.localeCompare(b.name) || a.pid - b.pid;
+          order = a.name.localeCompare(b.name) || a.tid - b.tid;
           break;
         case "column-cpu-total":
           order = b.slopeCpu - a.slopeCpu;
           break;
-
         case "column-memory-resident":
-        case "column-pid":
         case null:
-          order = b.tid - a.tid;
+          order = a.tid - b.tid;
           break;
         default:
           throw new Error("Unsupported order: " + this._sortColumn);
@@ -1264,9 +1314,6 @@ var Control = {
     return counters.sort((a, b) => {
       let order;
       switch (this._sortColumn) {
-        case "column-pid":
-          order = b.pid - a.pid;
-          break;
         case "column-name":
           order =
             String(a.origin).localeCompare(b.origin) ||
@@ -1361,13 +1408,10 @@ var Control = {
   },
 
   // Open/close list of threads.
-  async _handleTwisty(target) {
-    // We await immediately, to ensure that all DOM changes are made in the same tick.
-    // Otherwise, it's both wasteful and harder to test.
-    let units = await gPromisePrefetchedUnits;
+  _handleTwisty(target) {
     let row = target.parentNode.parentNode;
     if (target.classList.toggle("open")) {
-      this._showThreads(row, units);
+      this._showThreads(row);
       View.insertAfterRow(row);
     } else {
       this._removeSubtree(row);

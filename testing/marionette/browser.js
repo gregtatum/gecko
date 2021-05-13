@@ -101,6 +101,14 @@ class MobileTabBrowser {
   get selectedBrowser() {
     return this.selectedTab.linkedBrowser;
   }
+
+  addEventListener() {
+    this.window.addEventListener(...arguments);
+  }
+
+  removeEventListener() {
+    this.window.removeEventListener(...arguments);
+  }
 }
 
 /**
@@ -176,8 +184,6 @@ browser.Context = class {
     // browser window, this.tab will still point to tab A, despite tab B
     // being the currently selected tab.
     this.tab = null;
-
-    this.frameRegsPending = 0;
   }
 
   /**

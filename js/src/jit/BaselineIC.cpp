@@ -172,7 +172,7 @@ AllocatableGeneralRegisterSet BaselineICAvailableGeneralRegs(size_t numInputs) {
 void FallbackICSpew(JSContext* cx, ICFallbackStub* stub, const char* fmt, ...) {
   if (JitSpewEnabled(JitSpew_BaselineICFallback)) {
     RootedScript script(cx, GetTopJitJSScript(cx));
-    jsbytecode* pc = stub->icEntry()->pc(script);
+    jsbytecode* pc = stub->pc(script);
 
     char fmtbuf[100];
     va_list args;
@@ -190,75 +190,170 @@ void FallbackICSpew(JSContext* cx, ICFallbackStub* stub, const char* fmt, ...) {
 }
 #endif  // JS_JITSPEW
 
-ICFallbackStub* ICEntry::fallbackStub() const {
-  return firstStub()->getChainFallback();
-}
-
 void ICEntry::trace(JSTracer* trc) {
-#ifdef JS_64BIT
-  // If we have filled our padding with a magic value, check it now.
-  MOZ_DIAGNOSTIC_ASSERT(traceMagic_ == EXPECTED_TRACE_MAGIC);
-#endif
   ICStub* stub = firstStub();
+
+  // Trace CacheIR stubs.
   while (!stub->isFallback()) {
     stub->toCacheIRStub()->trace(trc);
     stub = stub->toCacheIRStub()->next();
   }
-  stub->toFallbackStub()->trace(trc);
+
+  // Fallback stubs use runtime-wide trampoline code we don't need to trace.
+  MOZ_ASSERT(stub->usesTrampolineCode());
 }
 
-// Allocator for Baseline IC fallback stubs. These stubs use trampoline code
-// stored in JitRuntime.
-class MOZ_RAII FallbackStubAllocator {
-  JSContext* cx_;
-  ICStubSpace& stubSpace_;
-  const BaselineICFallbackCode& code_;
+// constexpr table mapping JSOp to BaselineICFallbackKind. Each value in the
+// table is either a fallback kind or a sentinel value (NoICValue) indicating
+// the JSOp is not a JOF_IC op.
+class MOZ_STATIC_CLASS OpToFallbackKindTable {
+  static_assert(sizeof(BaselineICFallbackKind) == sizeof(uint8_t));
+  uint8_t table_[JSOP_LIMIT] = {};
+
+  constexpr void setKind(JSOp op, BaselineICFallbackKind kind) {
+    MOZ_ASSERT(uint8_t(kind) != NoICValue);
+    table_[size_t(op)] = uint8_t(kind);
+  }
 
  public:
-  FallbackStubAllocator(JSContext* cx, ICStubSpace& stubSpace)
-      : cx_(cx),
-        stubSpace_(stubSpace),
-        code_(cx->runtime()->jitRuntime()->baselineICFallbackCode()) {}
+  static constexpr uint8_t NoICValue = uint8_t(BaselineICFallbackKind::Count);
 
-  template <typename T, typename... Args>
-  T* newStub(BaselineICFallbackKind kind, Args&&... args) {
-    TrampolinePtr addr = code_.addr(kind);
-    return ICStub::NewFallback<T>(cx_, &stubSpace_, addr,
-                                  std::forward<Args>(args)...);
+  uint8_t lookup(JSOp op) const { return table_[size_t(op)]; }
+
+  constexpr OpToFallbackKindTable() {
+    for (size_t i = 0; i < JSOP_LIMIT; i++) {
+      table_[i] = NoICValue;
+    }
+
+    setKind(JSOp::Not, BaselineICFallbackKind::ToBool);
+    setKind(JSOp::And, BaselineICFallbackKind::ToBool);
+    setKind(JSOp::Or, BaselineICFallbackKind::ToBool);
+    setKind(JSOp::JumpIfTrue, BaselineICFallbackKind::ToBool);
+    setKind(JSOp::JumpIfFalse, BaselineICFallbackKind::ToBool);
+
+    setKind(JSOp::BitNot, BaselineICFallbackKind::UnaryArith);
+    setKind(JSOp::Pos, BaselineICFallbackKind::UnaryArith);
+    setKind(JSOp::Neg, BaselineICFallbackKind::UnaryArith);
+    setKind(JSOp::Inc, BaselineICFallbackKind::UnaryArith);
+    setKind(JSOp::Dec, BaselineICFallbackKind::UnaryArith);
+    setKind(JSOp::ToNumeric, BaselineICFallbackKind::UnaryArith);
+
+    setKind(JSOp::BitOr, BaselineICFallbackKind::BinaryArith);
+    setKind(JSOp::BitXor, BaselineICFallbackKind::BinaryArith);
+    setKind(JSOp::BitAnd, BaselineICFallbackKind::BinaryArith);
+    setKind(JSOp::Lsh, BaselineICFallbackKind::BinaryArith);
+    setKind(JSOp::Rsh, BaselineICFallbackKind::BinaryArith);
+    setKind(JSOp::Ursh, BaselineICFallbackKind::BinaryArith);
+    setKind(JSOp::Add, BaselineICFallbackKind::BinaryArith);
+    setKind(JSOp::Sub, BaselineICFallbackKind::BinaryArith);
+    setKind(JSOp::Mul, BaselineICFallbackKind::BinaryArith);
+    setKind(JSOp::Div, BaselineICFallbackKind::BinaryArith);
+    setKind(JSOp::Mod, BaselineICFallbackKind::BinaryArith);
+    setKind(JSOp::Pow, BaselineICFallbackKind::BinaryArith);
+
+    setKind(JSOp::Eq, BaselineICFallbackKind::Compare);
+    setKind(JSOp::Ne, BaselineICFallbackKind::Compare);
+    setKind(JSOp::Lt, BaselineICFallbackKind::Compare);
+    setKind(JSOp::Le, BaselineICFallbackKind::Compare);
+    setKind(JSOp::Gt, BaselineICFallbackKind::Compare);
+    setKind(JSOp::Ge, BaselineICFallbackKind::Compare);
+    setKind(JSOp::StrictEq, BaselineICFallbackKind::Compare);
+    setKind(JSOp::StrictNe, BaselineICFallbackKind::Compare);
+
+    setKind(JSOp::NewArray, BaselineICFallbackKind::NewArray);
+
+    setKind(JSOp::NewObject, BaselineICFallbackKind::NewObject);
+    setKind(JSOp::NewInit, BaselineICFallbackKind::NewObject);
+
+    setKind(JSOp::InitElem, BaselineICFallbackKind::SetElem);
+    setKind(JSOp::InitHiddenElem, BaselineICFallbackKind::SetElem);
+    setKind(JSOp::InitLockedElem, BaselineICFallbackKind::SetElem);
+    setKind(JSOp::InitElemInc, BaselineICFallbackKind::SetElem);
+    setKind(JSOp::SetElem, BaselineICFallbackKind::SetElem);
+    setKind(JSOp::StrictSetElem, BaselineICFallbackKind::SetElem);
+
+    setKind(JSOp::InitProp, BaselineICFallbackKind::SetProp);
+    setKind(JSOp::InitLockedProp, BaselineICFallbackKind::SetProp);
+    setKind(JSOp::InitHiddenProp, BaselineICFallbackKind::SetProp);
+    setKind(JSOp::InitGLexical, BaselineICFallbackKind::SetProp);
+    setKind(JSOp::SetProp, BaselineICFallbackKind::SetProp);
+    setKind(JSOp::StrictSetProp, BaselineICFallbackKind::SetProp);
+    setKind(JSOp::SetName, BaselineICFallbackKind::SetProp);
+    setKind(JSOp::StrictSetName, BaselineICFallbackKind::SetProp);
+    setKind(JSOp::SetGName, BaselineICFallbackKind::SetProp);
+    setKind(JSOp::StrictSetGName, BaselineICFallbackKind::SetProp);
+
+    setKind(JSOp::GetProp, BaselineICFallbackKind::GetProp);
+    setKind(JSOp::GetBoundName, BaselineICFallbackKind::GetProp);
+
+    setKind(JSOp::GetPropSuper, BaselineICFallbackKind::GetPropSuper);
+
+    setKind(JSOp::GetElem, BaselineICFallbackKind::GetElem);
+
+    setKind(JSOp::GetElemSuper, BaselineICFallbackKind::GetElemSuper);
+
+    setKind(JSOp::In, BaselineICFallbackKind::In);
+
+    setKind(JSOp::HasOwn, BaselineICFallbackKind::HasOwn);
+
+    setKind(JSOp::CheckPrivateField, BaselineICFallbackKind::CheckPrivateField);
+
+    setKind(JSOp::GetName, BaselineICFallbackKind::GetName);
+    setKind(JSOp::GetGName, BaselineICFallbackKind::GetName);
+
+    setKind(JSOp::BindName, BaselineICFallbackKind::BindName);
+    setKind(JSOp::BindGName, BaselineICFallbackKind::BindName);
+
+    setKind(JSOp::GetIntrinsic, BaselineICFallbackKind::GetIntrinsic);
+
+    setKind(JSOp::Call, BaselineICFallbackKind::Call);
+    setKind(JSOp::CallIgnoresRv, BaselineICFallbackKind::Call);
+    setKind(JSOp::CallIter, BaselineICFallbackKind::Call);
+    setKind(JSOp::FunCall, BaselineICFallbackKind::Call);
+    setKind(JSOp::FunApply, BaselineICFallbackKind::Call);
+    setKind(JSOp::Eval, BaselineICFallbackKind::Call);
+    setKind(JSOp::StrictEval, BaselineICFallbackKind::Call);
+
+    setKind(JSOp::SuperCall, BaselineICFallbackKind::CallConstructing);
+    setKind(JSOp::New, BaselineICFallbackKind::CallConstructing);
+
+    setKind(JSOp::SpreadCall, BaselineICFallbackKind::SpreadCall);
+    setKind(JSOp::SpreadEval, BaselineICFallbackKind::SpreadCall);
+    setKind(JSOp::StrictSpreadEval, BaselineICFallbackKind::SpreadCall);
+
+    setKind(JSOp::SpreadSuperCall,
+            BaselineICFallbackKind::SpreadCallConstructing);
+    setKind(JSOp::SpreadNew, BaselineICFallbackKind::SpreadCallConstructing);
+
+    setKind(JSOp::Instanceof, BaselineICFallbackKind::InstanceOf);
+
+    setKind(JSOp::Typeof, BaselineICFallbackKind::TypeOf);
+    setKind(JSOp::TypeofExpr, BaselineICFallbackKind::TypeOf);
+
+    setKind(JSOp::ToPropertyKey, BaselineICFallbackKind::ToPropertyKey);
+
+    setKind(JSOp::Iter, BaselineICFallbackKind::GetIterator);
+
+    setKind(JSOp::OptimizeSpreadCall,
+            BaselineICFallbackKind::OptimizeSpreadCall);
+
+    setKind(JSOp::Rest, BaselineICFallbackKind::Rest);
   }
 };
 
-bool ICScript::initICEntries(JSContext* cx, JSScript* script) {
+void ICScript::initICEntries(JSContext* cx, JSScript* script) {
   MOZ_ASSERT(cx->realm()->jitRealm());
   MOZ_ASSERT(jit::IsBaselineInterpreterEnabled());
 
   MOZ_ASSERT(numICEntries() == script->numICEntries());
 
-  FallbackStubAllocator alloc(cx, *fallbackStubSpace());
-
   // Index of the next ICEntry to initialize.
   uint32_t icEntryIndex = 0;
 
-  using Kind = BaselineICFallbackKind;
+  static constexpr OpToFallbackKindTable opTable;
 
-  auto addIC = [cx, this, script, &icEntryIndex](BytecodeLocation loc,
-                                                 ICFallbackStub* stub) {
-    if (MOZ_UNLIKELY(!stub)) {
-      MOZ_ASSERT(cx->isExceptionPending());
-      mozilla::Unused << cx;  // Silence -Wunused-lambda-capture in opt builds.
-      return false;
-    }
-
-    // Initialize the ICEntry.
-    uint32_t offset = loc.bytecodeToOffset(script);
-    ICEntry& entryRef = this->icEntry(icEntryIndex);
-    icEntryIndex++;
-    new (&entryRef) ICEntry(stub, offset);
-
-    // Fix up pointers from fallback stubs to the ICEntry.
-    stub->fixupICEntry(&entryRef);
-    return true;
-  };
+  const BaselineICFallbackCode& fallbackCode =
+      cx->runtime()->jitRuntime()->baselineICFallbackCode();
 
   // For JOF_IC ops: initialize ICEntries and fallback stubs.
   for (BytecodeLocation loc : js::AllBytecodesIterable(script)) {
@@ -267,311 +362,31 @@ bool ICScript::initICEntries(JSContext* cx, JSScript* script) {
     // Assert the frontend stored the correct IC index in jump target ops.
     MOZ_ASSERT_IF(BytecodeIsJumpTarget(op), loc.icIndex() == icEntryIndex);
 
-    if (!BytecodeOpHasIC(op)) {
+    uint8_t tableValue = opTable.lookup(op);
+
+    if (tableValue == OpToFallbackKindTable::NoICValue) {
+      MOZ_ASSERT(!BytecodeOpHasIC(op),
+                 "Missing entry in OpToFallbackKindTable for JOF_IC op");
       continue;
     }
 
-    switch (op) {
-      case JSOp::Not:
-      case JSOp::And:
-      case JSOp::Or:
-      case JSOp::JumpIfFalse:
-      case JSOp::JumpIfTrue: {
-        auto* stub = alloc.newStub<ICToBool_Fallback>(Kind::ToBool);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::BitNot:
-      case JSOp::Pos:
-      case JSOp::Neg:
-      case JSOp::Inc:
-      case JSOp::Dec:
-      case JSOp::ToNumeric: {
-        auto* stub = alloc.newStub<ICUnaryArith_Fallback>(Kind::UnaryArith);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::BitOr:
-      case JSOp::BitXor:
-      case JSOp::BitAnd:
-      case JSOp::Lsh:
-      case JSOp::Rsh:
-      case JSOp::Ursh:
-      case JSOp::Add:
-      case JSOp::Sub:
-      case JSOp::Mul:
-      case JSOp::Div:
-      case JSOp::Mod:
-      case JSOp::Pow: {
-        auto* stub = alloc.newStub<ICBinaryArith_Fallback>(Kind::BinaryArith);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::Eq:
-      case JSOp::Ne:
-      case JSOp::Lt:
-      case JSOp::Le:
-      case JSOp::Gt:
-      case JSOp::Ge:
-      case JSOp::StrictEq:
-      case JSOp::StrictNe: {
-        auto* stub = alloc.newStub<ICCompare_Fallback>(Kind::Compare);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::NewArray: {
-        auto* stub = alloc.newStub<ICNewArray_Fallback>(Kind::NewArray);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::NewObject:
-      case JSOp::NewInit: {
-        auto* stub = alloc.newStub<ICNewObject_Fallback>(Kind::NewObject);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::InitElem:
-      case JSOp::InitHiddenElem:
-      case JSOp::InitLockedElem:
-      case JSOp::InitElemInc:
-      case JSOp::SetElem:
-      case JSOp::StrictSetElem: {
-        auto* stub = alloc.newStub<ICSetElem_Fallback>(Kind::SetElem);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::InitProp:
-      case JSOp::InitLockedProp:
-      case JSOp::InitHiddenProp:
-      case JSOp::InitGLexical:
-      case JSOp::SetProp:
-      case JSOp::StrictSetProp:
-      case JSOp::SetName:
-      case JSOp::StrictSetName:
-      case JSOp::SetGName:
-      case JSOp::StrictSetGName: {
-        auto* stub = alloc.newStub<ICSetProp_Fallback>(Kind::SetProp);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::GetProp:
-      case JSOp::GetBoundName: {
-        auto* stub = alloc.newStub<ICGetProp_Fallback>(Kind::GetProp);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::GetPropSuper: {
-        auto* stub = alloc.newStub<ICGetProp_Fallback>(Kind::GetPropSuper);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::GetElem: {
-        auto* stub = alloc.newStub<ICGetElem_Fallback>(Kind::GetElem);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::GetElemSuper: {
-        auto* stub = alloc.newStub<ICGetElem_Fallback>(Kind::GetElemSuper);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::In: {
-        auto* stub = alloc.newStub<ICIn_Fallback>(Kind::In);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::HasOwn: {
-        auto* stub = alloc.newStub<ICHasOwn_Fallback>(Kind::HasOwn);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::CheckPrivateField: {
-        auto* stub = alloc.newStub<ICCheckPrivateField_Fallback>(
-            Kind::CheckPrivateField);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::GetName:
-      case JSOp::GetGName: {
-        auto* stub = alloc.newStub<ICGetName_Fallback>(Kind::GetName);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::BindName:
-      case JSOp::BindGName: {
-        auto* stub = alloc.newStub<ICBindName_Fallback>(Kind::BindName);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::GetIntrinsic: {
-        auto* stub = alloc.newStub<ICGetIntrinsic_Fallback>(Kind::GetIntrinsic);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::Call:
-      case JSOp::CallIgnoresRv:
-      case JSOp::CallIter:
-      case JSOp::FunCall:
-      case JSOp::FunApply:
-      case JSOp::Eval:
-      case JSOp::StrictEval: {
-        auto* stub = alloc.newStub<ICCall_Fallback>(Kind::Call);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::SuperCall:
-      case JSOp::New: {
-        auto* stub = alloc.newStub<ICCall_Fallback>(Kind::CallConstructing);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::SpreadCall:
-      case JSOp::SpreadEval:
-      case JSOp::StrictSpreadEval: {
-        auto* stub = alloc.newStub<ICCall_Fallback>(Kind::SpreadCall);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::SpreadSuperCall:
-      case JSOp::SpreadNew: {
-        auto* stub =
-            alloc.newStub<ICCall_Fallback>(Kind::SpreadCallConstructing);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::Instanceof: {
-        auto* stub = alloc.newStub<ICInstanceOf_Fallback>(Kind::InstanceOf);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::Typeof:
-      case JSOp::TypeofExpr: {
-        auto* stub = alloc.newStub<ICTypeOf_Fallback>(Kind::TypeOf);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::ToPropertyKey: {
-        auto* stub =
-            alloc.newStub<ICToPropertyKey_Fallback>(Kind::ToPropertyKey);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::Iter: {
-        auto* stub = alloc.newStub<ICGetIterator_Fallback>(Kind::GetIterator);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::OptimizeSpreadCall: {
-        auto* stub = alloc.newStub<ICOptimizeSpreadCall_Fallback>(
-            Kind::OptimizeSpreadCall);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      case JSOp::Rest: {
-        auto* stub = alloc.newStub<ICRest_Fallback>(Kind::Rest);
-        if (!addIC(loc, stub)) {
-          return false;
-        }
-        break;
-      }
-      default:
-        MOZ_CRASH("JOF_IC op not handled");
-    }
+    MOZ_ASSERT(BytecodeOpHasIC(op),
+               "Unexpected fallback kind for non-JOF_IC op");
+
+    BaselineICFallbackKind kind = BaselineICFallbackKind(tableValue);
+    TrampolinePtr stubCode = fallbackCode.addr(kind);
+
+    // Initialize the ICEntry and ICFallbackStub.
+    uint32_t offset = loc.bytecodeToOffset(script);
+    ICEntry& entryRef = this->icEntry(icEntryIndex);
+    ICFallbackStub* stub = fallbackStub(icEntryIndex);
+    icEntryIndex++;
+    new (&entryRef) ICEntry(stub);
+    new (stub) ICFallbackStub(offset, stubCode);
   }
 
   // Assert all ICEntries have been initialized.
   MOZ_ASSERT(icEntryIndex == numICEntries());
-  return true;
-}
-
-ICStubConstIterator& ICStubConstIterator::operator++() {
-  MOZ_ASSERT(currentStub_ != nullptr);
-  currentStub_ = currentStub_->toCacheIRStub()->next();
-  return *this;
-}
-
-ICStubIterator::ICStubIterator(ICFallbackStub* fallbackStub, bool end)
-    : icEntry_(fallbackStub->icEntry()),
-      fallbackStub_(fallbackStub),
-      previousStub_(nullptr),
-      currentStub_(end ? fallbackStub : icEntry_->firstStub()),
-      unlinked_(false) {}
-
-ICStubIterator& ICStubIterator::operator++() {
-  MOZ_ASSERT(!currentStub_->isFallback());
-  if (!unlinked_) {
-    previousStub_ = currentStub_->toCacheIRStub();
-  }
-  currentStub_ = currentStub_->toCacheIRStub()->next();
-  unlinked_ = false;
-  return *this;
-}
-
-void ICStubIterator::unlink(JSContext* cx) {
-  MOZ_ASSERT(currentStub_ != fallbackStub_);
-  MOZ_ASSERT(currentStub_->maybeNext() != nullptr);
-  MOZ_ASSERT(!unlinked_);
-
-  fallbackStub_->unlinkStub(cx->zone(), previousStub_,
-                            currentStub_->toCacheIRStub());
-
-  // Mark the current iterator position as unlinked, so operator++ works
-  // properly.
-  unlinked_ = true;
 }
 
 bool ICCacheIRStub::makesGCCalls() const { return stubInfo()->makesGCCalls(); }
@@ -595,24 +410,19 @@ void ICCacheIRStub::trace(JSTracer* trc) {
   TraceCacheIRStub(trc, this, stubInfo());
 }
 
-void ICFallbackStub::trace(JSTracer* trc) {
-  // Fallback stubs use runtime-wide trampoline code we don't need to trace.
-  MOZ_ASSERT(usesTrampolineCode());
-}
-
 static void MaybeTransition(JSContext* cx, BaselineFrame* frame,
                             ICFallbackStub* stub) {
   if (stub->state().maybeTransition()) {
+    ICEntry* icEntry = frame->icScript()->icEntryForStub(stub);
 #ifdef JS_CACHEIR_SPEW
     if (cx->spewer().enabled(cx, frame->script(),
                              SpewChannel::CacheIRHealthReport)) {
       CacheIRHealth cih;
       RootedScript script(cx, frame->script());
-      cih.healthReportForIC(cx, stub->icEntry(), script,
-                            SpewContext::Transition);
+      cih.healthReportForIC(cx, icEntry, stub, script, SpewContext::Transition);
     }
 #endif
-    stub->discardStubs(cx);
+    stub->discardStubs(cx, icEntry);
   }
 }
 
@@ -626,7 +436,7 @@ static void TryAttachStub(const char* name, JSContext* cx, BaselineFrame* frame,
   if (stub->state().canAttachStub()) {
     RootedScript script(cx, frame->script());
     ICScript* icScript = frame->icScript();
-    jsbytecode* pc = stub->icEntry()->pc(script);
+    jsbytecode* pc = stub->pc(script);
     bool attached = false;
     IRGenerator gen(cx, script, pc, stub->state(), std::forward<Args>(args)...);
     switch (gen.tryAttachStub()) {
@@ -651,14 +461,14 @@ static void TryAttachStub(const char* name, JSContext* cx, BaselineFrame* frame,
   }
 }
 
-void ICFallbackStub::unlinkStub(Zone* zone, ICCacheIRStub* prev,
-                                ICCacheIRStub* stub) {
+void ICFallbackStub::unlinkStub(Zone* zone, ICEntry* icEntry,
+                                ICCacheIRStub* prev, ICCacheIRStub* stub) {
   if (prev) {
     MOZ_ASSERT(prev->next() == stub);
     prev->setNext(stub->next());
   } else {
-    MOZ_ASSERT(icEntry()->firstStub() == stub);
-    icEntry()->setFirstStub(stub->next());
+    MOZ_ASSERT(icEntry->firstStub() == stub);
+    icEntry->setFirstStub(stub->next());
   }
 
   state_.trackUnlinkedStub();
@@ -678,9 +488,12 @@ void ICFallbackStub::unlinkStub(Zone* zone, ICCacheIRStub* prev,
 #endif
 }
 
-void ICFallbackStub::discardStubs(JSContext* cx) {
-  for (ICStubIterator iter = beginChain(); !iter.atEnd(); iter++) {
-    iter.unlink(cx);
+void ICFallbackStub::discardStubs(JSContext* cx, ICEntry* icEntry) {
+  ICStub* stub = icEntry->firstStub();
+  while (stub != this) {
+    unlinkStub(cx->zone(), icEntry, /* prev = */ nullptr,
+               stub->toCacheIRStub());
+    stub = stub->toCacheIRStub()->next();
   }
 }
 
@@ -790,9 +603,8 @@ void FallbackICCodeCompiler::PushStubPayload(MacroAssembler& masm,
 // ToBool_Fallback
 //
 
-bool DoToBoolFallback(JSContext* cx, BaselineFrame* frame,
-                      ICToBool_Fallback* stub, HandleValue arg,
-                      MutableHandleValue ret) {
+bool DoToBoolFallback(JSContext* cx, BaselineFrame* frame, ICFallbackStub* stub,
+                      HandleValue arg, MutableHandleValue ret) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
   FallbackICSpew(cx, stub, "ToBool");
@@ -818,8 +630,8 @@ bool FallbackICCodeCompiler::emit_ToBool() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICToBool_Fallback*,
-                      HandleValue, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
+                      MutableHandleValue);
   return tailCallVM<Fn, DoToBoolFallback>(masm);
 }
 
@@ -828,14 +640,14 @@ bool FallbackICCodeCompiler::emit_ToBool() {
 //
 
 bool DoGetElemFallback(JSContext* cx, BaselineFrame* frame,
-                       ICGetElem_Fallback* stub, HandleValue lhs,
-                       HandleValue rhs, MutableHandleValue res) {
+                       ICFallbackStub* stub, HandleValue lhs, HandleValue rhs,
+                       MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
   FallbackICSpew(cx, stub, "GetElem");
 
 #ifdef DEBUG
-  jsbytecode* pc = stub->icEntry()->pc(frame->script());
+  jsbytecode* pc = stub->pc(frame->script());
   MOZ_ASSERT(JSOp(*pc) == JSOp::GetElem);
 #endif
 
@@ -850,14 +662,14 @@ bool DoGetElemFallback(JSContext* cx, BaselineFrame* frame,
 }
 
 bool DoGetElemSuperFallback(JSContext* cx, BaselineFrame* frame,
-                            ICGetElem_Fallback* stub, HandleValue lhs,
+                            ICFallbackStub* stub, HandleValue lhs,
                             HandleValue rhs, HandleValue receiver,
                             MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(frame->script());
+  jsbytecode* pc = stub->pc(frame->script());
 
   JSOp op = JSOp(*pc);
   FallbackICSpew(cx, stub, "GetElemSuper(%s)", CodeName(op));
@@ -896,7 +708,7 @@ bool FallbackICCodeCompiler::emitGetElem(bool hasReceiver) {
     masm.pushBaselineFramePtr(BaselineFrameReg, R0.scratchReg());
 
     using Fn =
-        bool (*)(JSContext*, BaselineFrame*, ICGetElem_Fallback*, HandleValue,
+        bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
                  HandleValue, HandleValue, MutableHandleValue);
     if (!tailCallVM<Fn, DoGetElemSuperFallback>(masm)) {
       return false;
@@ -912,7 +724,7 @@ bool FallbackICCodeCompiler::emitGetElem(bool hasReceiver) {
     masm.push(ICStubReg);
     masm.pushBaselineFramePtr(BaselineFrameReg, R0.scratchReg());
 
-    using Fn = bool (*)(JSContext*, BaselineFrame*, ICGetElem_Fallback*,
+    using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*,
                         HandleValue, HandleValue, MutableHandleValue);
     if (!tailCallVM<Fn, DoGetElemFallback>(masm)) {
       return false;
@@ -946,7 +758,7 @@ bool FallbackICCodeCompiler::emit_GetElemSuper() {
 }
 
 bool DoSetElemFallback(JSContext* cx, BaselineFrame* frame,
-                       ICSetElem_Fallback* stub, Value* stack, HandleValue objv,
+                       ICFallbackStub* stub, Value* stack, HandleValue objv,
                        HandleValue index, HandleValue rhs) {
   using DeferType = SetPropIRGenerator::DeferType;
 
@@ -955,7 +767,7 @@ bool DoSetElemFallback(JSContext* cx, BaselineFrame* frame,
 
   RootedScript script(cx, frame->script());
   RootedScript outerScript(cx, script);
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
   JSOp op = JSOp(*pc);
   FallbackICSpew(cx, stub, "SetElem(%s)", CodeName(JSOp(*pc)));
 
@@ -1107,7 +919,7 @@ bool FallbackICCodeCompiler::emit_SetElem() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICSetElem_Fallback*, Value*,
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, Value*,
                       HandleValue, HandleValue, HandleValue);
   return tailCallVM<Fn, DoSetElemFallback>(masm);
 }
@@ -1116,7 +928,7 @@ bool FallbackICCodeCompiler::emit_SetElem() {
 // In_Fallback
 //
 
-bool DoInFallback(JSContext* cx, BaselineFrame* frame, ICIn_Fallback* stub,
+bool DoInFallback(JSContext* cx, BaselineFrame* frame, ICFallbackStub* stub,
                   HandleValue key, HandleValue objValue,
                   MutableHandleValue res) {
   stub->incrementEnteredCount();
@@ -1154,7 +966,7 @@ bool FallbackICCodeCompiler::emit_In() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICIn_Fallback*, HandleValue,
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
                       HandleValue, MutableHandleValue);
   return tailCallVM<Fn, DoInFallback>(masm);
 }
@@ -1163,9 +975,9 @@ bool FallbackICCodeCompiler::emit_In() {
 // HasOwn_Fallback
 //
 
-bool DoHasOwnFallback(JSContext* cx, BaselineFrame* frame,
-                      ICHasOwn_Fallback* stub, HandleValue keyValue,
-                      HandleValue objValue, MutableHandleValue res) {
+bool DoHasOwnFallback(JSContext* cx, BaselineFrame* frame, ICFallbackStub* stub,
+                      HandleValue keyValue, HandleValue objValue,
+                      MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
   FallbackICSpew(cx, stub, "HasOwn");
@@ -1195,8 +1007,8 @@ bool FallbackICCodeCompiler::emit_HasOwn() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICHasOwn_Fallback*,
-                      HandleValue, HandleValue, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
+                      HandleValue, MutableHandleValue);
   return tailCallVM<Fn, DoHasOwnFallback>(masm);
 }
 
@@ -1205,14 +1017,13 @@ bool FallbackICCodeCompiler::emit_HasOwn() {
 //
 
 bool DoCheckPrivateFieldFallback(JSContext* cx, BaselineFrame* frame,
-                                 ICCheckPrivateField_Fallback* stub,
-                                 HandleValue objValue, HandleValue keyValue,
-                                 MutableHandleValue res) {
+                                 ICFallbackStub* stub, HandleValue objValue,
+                                 HandleValue keyValue, MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
 
   FallbackICSpew(cx, stub, "CheckPrivateField");
 
@@ -1244,8 +1055,8 @@ bool FallbackICCodeCompiler::emit_CheckPrivateField() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICCheckPrivateField_Fallback*,
-                      HandleValue, HandleValue, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
+                      HandleValue, MutableHandleValue);
   return tailCallVM<Fn, DoCheckPrivateFieldFallback>(masm);
 }
 
@@ -1254,13 +1065,13 @@ bool FallbackICCodeCompiler::emit_CheckPrivateField() {
 //
 
 bool DoGetNameFallback(JSContext* cx, BaselineFrame* frame,
-                       ICGetName_Fallback* stub, HandleObject envChain,
+                       ICFallbackStub* stub, HandleObject envChain,
                        MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
   mozilla::DebugOnly<JSOp> op = JSOp(*pc);
   FallbackICSpew(cx, stub, "GetName(%s)", CodeName(JSOp(*pc)));
 
@@ -1294,8 +1105,8 @@ bool FallbackICCodeCompiler::emit_GetName() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICGetName_Fallback*,
-                      HandleObject, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleObject,
+                      MutableHandleValue);
   return tailCallVM<Fn, DoGetNameFallback>(masm);
 }
 
@@ -1304,12 +1115,12 @@ bool FallbackICCodeCompiler::emit_GetName() {
 //
 
 bool DoBindNameFallback(JSContext* cx, BaselineFrame* frame,
-                        ICBindName_Fallback* stub, HandleObject envChain,
+                        ICFallbackStub* stub, HandleObject envChain,
                         MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
 
-  jsbytecode* pc = stub->icEntry()->pc(frame->script());
+  jsbytecode* pc = stub->pc(frame->script());
   mozilla::DebugOnly<JSOp> op = JSOp(*pc);
   FallbackICSpew(cx, stub, "BindName(%s)", CodeName(JSOp(*pc)));
 
@@ -1338,8 +1149,8 @@ bool FallbackICCodeCompiler::emit_BindName() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICBindName_Fallback*,
-                      HandleObject, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleObject,
+                      MutableHandleValue);
   return tailCallVM<Fn, DoBindNameFallback>(masm);
 }
 
@@ -1348,13 +1159,12 @@ bool FallbackICCodeCompiler::emit_BindName() {
 //
 
 bool DoGetIntrinsicFallback(JSContext* cx, BaselineFrame* frame,
-                            ICGetIntrinsic_Fallback* stub,
-                            MutableHandleValue res) {
+                            ICFallbackStub* stub, MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
   mozilla::DebugOnly<JSOp> op = JSOp(*pc);
   FallbackICSpew(cx, stub, "GetIntrinsic(%s)", CodeName(JSOp(*pc)));
 
@@ -1375,8 +1185,8 @@ bool FallbackICCodeCompiler::emit_GetIntrinsic() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICGetIntrinsic_Fallback*,
-                      MutableHandleValue);
+  using Fn =
+      bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, MutableHandleValue);
   return tailCallVM<Fn, DoGetIntrinsicFallback>(masm);
 }
 
@@ -1385,13 +1195,13 @@ bool FallbackICCodeCompiler::emit_GetIntrinsic() {
 //
 
 bool DoGetPropFallback(JSContext* cx, BaselineFrame* frame,
-                       ICGetProp_Fallback* stub, MutableHandleValue val,
+                       ICFallbackStub* stub, MutableHandleValue val,
                        MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
   JSOp op = JSOp(*pc);
   FallbackICSpew(cx, stub, "GetProp(%s)", CodeName(op));
 
@@ -1418,13 +1228,13 @@ bool DoGetPropFallback(JSContext* cx, BaselineFrame* frame,
 }
 
 bool DoGetPropSuperFallback(JSContext* cx, BaselineFrame* frame,
-                            ICGetProp_Fallback* stub, HandleValue receiver,
+                            ICFallbackStub* stub, HandleValue receiver,
                             MutableHandleValue val, MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
   FallbackICSpew(cx, stub, "GetPropSuper(%s)", CodeName(JSOp(*pc)));
 
   MOZ_ASSERT(JSOp(*pc) == JSOp::GetPropSuper);
@@ -1457,7 +1267,7 @@ bool FallbackICCodeCompiler::emitGetProp(bool hasReceiver) {
     masm.push(ICStubReg);
     masm.pushBaselineFramePtr(BaselineFrameReg, R0.scratchReg());
 
-    using Fn = bool (*)(JSContext*, BaselineFrame*, ICGetProp_Fallback*,
+    using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*,
                         HandleValue, MutableHandleValue, MutableHandleValue);
     if (!tailCallVM<Fn, DoGetPropSuperFallback>(masm)) {
       return false;
@@ -1471,7 +1281,7 @@ bool FallbackICCodeCompiler::emitGetProp(bool hasReceiver) {
     masm.push(ICStubReg);
     masm.pushBaselineFramePtr(BaselineFrameReg, R0.scratchReg());
 
-    using Fn = bool (*)(JSContext*, BaselineFrame*, ICGetProp_Fallback*,
+    using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*,
                         MutableHandleValue, MutableHandleValue);
     if (!tailCallVM<Fn, DoGetPropFallback>(masm)) {
       return false;
@@ -1509,7 +1319,7 @@ bool FallbackICCodeCompiler::emit_GetPropSuper() {
 //
 
 bool DoSetPropFallback(JSContext* cx, BaselineFrame* frame,
-                       ICSetProp_Fallback* stub, Value* stack, HandleValue lhs,
+                       ICFallbackStub* stub, Value* stack, HandleValue lhs,
                        HandleValue rhs) {
   using DeferType = SetPropIRGenerator::DeferType;
 
@@ -1517,7 +1327,7 @@ bool DoSetPropFallback(JSContext* cx, BaselineFrame* frame,
   MaybeNotifyWarp(frame->outerScript(), stub);
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
   JSOp op = JSOp(*pc);
   FallbackICSpew(cx, stub, "SetProp(%s)", CodeName(op));
 
@@ -1670,7 +1480,7 @@ bool FallbackICCodeCompiler::emit_SetProp() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICSetProp_Fallback*, Value*,
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, Value*,
                       HandleValue, HandleValue);
   if (!tailCallVM<Fn, DoSetPropFallback>(masm)) {
     return false;
@@ -1693,13 +1503,13 @@ bool FallbackICCodeCompiler::emit_SetProp() {
 // Call_Fallback
 //
 
-bool DoCallFallback(JSContext* cx, BaselineFrame* frame, ICCall_Fallback* stub,
+bool DoCallFallback(JSContext* cx, BaselineFrame* frame, ICFallbackStub* stub,
                     uint32_t argc, Value* vp, MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
   JSOp op = JSOp(*pc);
   FallbackICSpew(cx, stub, "Call(%s)", CodeName(op));
 
@@ -1783,13 +1593,13 @@ bool DoCallFallback(JSContext* cx, BaselineFrame* frame, ICCall_Fallback* stub,
 }
 
 bool DoSpreadCallFallback(JSContext* cx, BaselineFrame* frame,
-                          ICCall_Fallback* stub, Value* vp,
+                          ICFallbackStub* stub, Value* vp,
                           MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
   JSOp op = JSOp(*pc);
   bool constructing = (op == JSOp::SpreadNew || op == JSOp::SpreadSuperCall);
   FallbackICSpew(cx, stub, "SpreadCall(%s)", CodeName(op));
@@ -1931,7 +1741,7 @@ bool FallbackICCodeCompiler::emitCall(bool isSpread, bool isConstructing) {
 
     PushStubPayload(masm, R0.scratchReg());
 
-    using Fn = bool (*)(JSContext*, BaselineFrame*, ICCall_Fallback*, Value*,
+    using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, Value*,
                         MutableHandleValue);
     if (!callVM<Fn, DoSpreadCallFallback>(masm)) {
       return false;
@@ -1958,7 +1768,7 @@ bool FallbackICCodeCompiler::emitCall(bool isSpread, bool isConstructing) {
 
   PushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICCall_Fallback*, uint32_t,
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, uint32_t,
                       Value*, MutableHandleValue);
   if (!callVM<Fn, DoCallFallback>(masm)) {
     return false;
@@ -2027,7 +1837,7 @@ bool FallbackICCodeCompiler::emit_SpreadCallConstructing() {
 //
 
 bool DoGetIteratorFallback(JSContext* cx, BaselineFrame* frame,
-                           ICGetIterator_Fallback* stub, HandleValue value,
+                           ICFallbackStub* stub, HandleValue value,
                            MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
@@ -2054,8 +1864,8 @@ bool FallbackICCodeCompiler::emit_GetIterator() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICGetIterator_Fallback*,
-                      HandleValue, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
+                      MutableHandleValue);
   return tailCallVM<Fn, DoGetIteratorFallback>(masm);
 }
 
@@ -2064,8 +1874,8 @@ bool FallbackICCodeCompiler::emit_GetIterator() {
 //
 
 bool DoOptimizeSpreadCallFallback(JSContext* cx, BaselineFrame* frame,
-                                  ICOptimizeSpreadCall_Fallback* stub,
-                                  HandleValue value, MutableHandleValue res) {
+                                  ICFallbackStub* stub, HandleValue value,
+                                  MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
   FallbackICSpew(cx, stub, "OptimizeSpreadCall");
@@ -2089,9 +1899,8 @@ bool FallbackICCodeCompiler::emit_OptimizeSpreadCall() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn =
-      bool (*)(JSContext*, BaselineFrame*, ICOptimizeSpreadCall_Fallback*,
-               HandleValue, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
+                      MutableHandleValue);
   return tailCallVM<Fn, DoOptimizeSpreadCallFallback>(masm);
 }
 
@@ -2100,7 +1909,7 @@ bool FallbackICCodeCompiler::emit_OptimizeSpreadCall() {
 //
 
 bool DoInstanceOfFallback(JSContext* cx, BaselineFrame* frame,
-                          ICInstanceOf_Fallback* stub, HandleValue lhs,
+                          ICFallbackStub* stub, HandleValue lhs,
                           HandleValue rhs, MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
@@ -2144,8 +1953,8 @@ bool FallbackICCodeCompiler::emit_InstanceOf() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICInstanceOf_Fallback*,
-                      HandleValue, HandleValue, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
+                      HandleValue, MutableHandleValue);
   return tailCallVM<Fn, DoInstanceOfFallback>(masm);
 }
 
@@ -2153,9 +1962,8 @@ bool FallbackICCodeCompiler::emit_InstanceOf() {
 // TypeOf_Fallback
 //
 
-bool DoTypeOfFallback(JSContext* cx, BaselineFrame* frame,
-                      ICTypeOf_Fallback* stub, HandleValue val,
-                      MutableHandleValue res) {
+bool DoTypeOfFallback(JSContext* cx, BaselineFrame* frame, ICFallbackStub* stub,
+                      HandleValue val, MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
   FallbackICSpew(cx, stub, "TypeOf");
@@ -2175,8 +1983,8 @@ bool FallbackICCodeCompiler::emit_TypeOf() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICTypeOf_Fallback*,
-                      HandleValue, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
+                      MutableHandleValue);
   return tailCallVM<Fn, DoTypeOfFallback>(masm);
 }
 
@@ -2185,7 +1993,7 @@ bool FallbackICCodeCompiler::emit_TypeOf() {
 //
 
 bool DoToPropertyKeyFallback(JSContext* cx, BaselineFrame* frame,
-                             ICToPropertyKey_Fallback* stub, HandleValue val,
+                             ICFallbackStub* stub, HandleValue val,
                              MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
@@ -2204,8 +2012,8 @@ bool FallbackICCodeCompiler::emit_ToPropertyKey() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICToPropertyKey_Fallback*,
-                      HandleValue, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
+                      MutableHandleValue);
   return tailCallVM<Fn, DoToPropertyKeyFallback>(masm);
 }
 
@@ -2213,7 +2021,7 @@ bool FallbackICCodeCompiler::emit_ToPropertyKey() {
 // Rest_Fallback
 //
 
-bool DoRestFallback(JSContext* cx, BaselineFrame* frame, ICRest_Fallback* stub,
+bool DoRestFallback(JSContext* cx, BaselineFrame* frame, ICFallbackStub* stub,
                     MutableHandleValue res) {
   unsigned numFormals = frame->numFormalArgs() - 1;
   unsigned numActuals = frame->numActualArgs();
@@ -2234,8 +2042,8 @@ bool FallbackICCodeCompiler::emit_Rest() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICRest_Fallback*,
-                      MutableHandleValue);
+  using Fn =
+      bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, MutableHandleValue);
   return tailCallVM<Fn, DoRestFallback>(masm);
 }
 
@@ -2244,13 +2052,13 @@ bool FallbackICCodeCompiler::emit_Rest() {
 //
 
 bool DoUnaryArithFallback(JSContext* cx, BaselineFrame* frame,
-                          ICUnaryArith_Fallback* stub, HandleValue val,
+                          ICFallbackStub* stub, HandleValue val,
                           MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
   JSOp op = JSOp(*pc);
   FallbackICSpew(cx, stub, "UnaryArith(%s)", CodeName(op));
 
@@ -2319,8 +2127,8 @@ bool FallbackICCodeCompiler::emit_UnaryArith() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICUnaryArith_Fallback*,
-                      HandleValue, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
+                      MutableHandleValue);
   return tailCallVM<Fn, DoUnaryArithFallback>(masm);
 }
 
@@ -2329,13 +2137,13 @@ bool FallbackICCodeCompiler::emit_UnaryArith() {
 //
 
 bool DoBinaryArithFallback(JSContext* cx, BaselineFrame* frame,
-                           ICBinaryArith_Fallback* stub, HandleValue lhs,
+                           ICFallbackStub* stub, HandleValue lhs,
                            HandleValue rhs, MutableHandleValue ret) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
   JSOp op = JSOp(*pc);
   FallbackICSpew(
       cx, stub, "CacheIRBinaryArith(%s,%d,%d)", CodeName(op),
@@ -2441,8 +2249,8 @@ bool FallbackICCodeCompiler::emit_BinaryArith() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICBinaryArith_Fallback*,
-                      HandleValue, HandleValue, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
+                      HandleValue, MutableHandleValue);
   return tailCallVM<Fn, DoBinaryArithFallback>(masm);
 }
 
@@ -2450,13 +2258,13 @@ bool FallbackICCodeCompiler::emit_BinaryArith() {
 // Compare_Fallback
 //
 bool DoCompareFallback(JSContext* cx, BaselineFrame* frame,
-                       ICCompare_Fallback* stub, HandleValue lhs,
-                       HandleValue rhs, MutableHandleValue ret) {
+                       ICFallbackStub* stub, HandleValue lhs, HandleValue rhs,
+                       MutableHandleValue ret) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
   JSOp op = JSOp(*pc);
 
   FallbackICSpew(cx, stub, "Compare(%s)", CodeName(op));
@@ -2538,8 +2346,8 @@ bool FallbackICCodeCompiler::emit_Compare() {
   masm.push(ICStubReg);
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICCompare_Fallback*,
-                      HandleValue, HandleValue, MutableHandleValue);
+  using Fn = bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleValue,
+                      HandleValue, MutableHandleValue);
   return tailCallVM<Fn, DoCompareFallback>(masm);
 }
 
@@ -2548,13 +2356,13 @@ bool FallbackICCodeCompiler::emit_Compare() {
 //
 
 bool DoNewArrayFallback(JSContext* cx, BaselineFrame* frame,
-                        ICNewArray_Fallback* stub, MutableHandleValue res) {
+                        ICFallbackStub* stub, MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
   FallbackICSpew(cx, stub, "NewArray");
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
 
   uint32_t length = GET_UINT32(pc);
   MOZ_ASSERT(length <= INT32_MAX,
@@ -2576,11 +2384,11 @@ bool DoNewArrayFallback(JSContext* cx, BaselineFrame* frame,
 bool FallbackICCodeCompiler::emit_NewArray() {
   EmitRestoreTailCallReg(masm);
 
-  masm.push(ICStubReg);        // stub.
+  masm.push(ICStubReg);  // stub.
   masm.pushBaselineFramePtr(BaselineFrameReg, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICNewArray_Fallback*,
-                      MutableHandleValue);
+  using Fn =
+      bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, MutableHandleValue);
   return tailCallVM<Fn, DoNewArrayFallback>(masm);
 }
 
@@ -2588,13 +2396,13 @@ bool FallbackICCodeCompiler::emit_NewArray() {
 // NewObject_Fallback
 //
 bool DoNewObjectFallback(JSContext* cx, BaselineFrame* frame,
-                         ICNewObject_Fallback* stub, MutableHandleValue res) {
+                         ICFallbackStub* stub, MutableHandleValue res) {
   stub->incrementEnteredCount();
   MaybeNotifyWarp(frame->outerScript(), stub);
   FallbackICSpew(cx, stub, "NewObject");
 
   RootedScript script(cx, frame->script());
-  jsbytecode* pc = stub->icEntry()->pc(script);
+  jsbytecode* pc = stub->pc(script);
 
   RootedObject obj(cx, NewObjectOperation(cx, script, pc));
   if (!obj) {
@@ -2614,8 +2422,8 @@ bool FallbackICCodeCompiler::emit_NewObject() {
   masm.push(ICStubReg);  // stub.
   pushStubPayload(masm, R0.scratchReg());
 
-  using Fn = bool (*)(JSContext*, BaselineFrame*, ICNewObject_Fallback*,
-                      MutableHandleValue);
+  using Fn =
+      bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, MutableHandleValue);
   return tailCallVM<Fn, DoNewObjectFallback>(masm);
 }
 

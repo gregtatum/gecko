@@ -517,6 +517,9 @@ let JSWINDOWACTORS = {
       moduleURI: "resource:///actors/FormValidationChild.jsm",
       events: {
         MozInvalidForm: {},
+        // Listening to ‘pageshow’ event is only relevant if an invalid form
+        // popup was open, so don't create the actor when fired.
+        pageshow: { createActor: false },
       },
     },
 
@@ -554,7 +557,9 @@ let JSWINDOWACTORS = {
         DOMLinkAdded: {},
         DOMLinkChanged: {},
         pageshow: {},
-        pagehide: {},
+        // The `pagehide` event is only used to clean up state which will not be
+        // present if the actor hasn't been created.
+        pagehide: { createActor: false },
       },
     },
 
@@ -673,7 +678,9 @@ let JSWINDOWACTORS = {
       events: {
         DOMContentLoaded: {},
         pageshow: { mozSystemGroup: true },
-        unload: {},
+        // The 'unload' event is only used to clean up state, and should not
+        // force actor creation.
+        unload: { createActor: false },
       },
     },
   },

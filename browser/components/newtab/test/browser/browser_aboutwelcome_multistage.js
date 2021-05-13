@@ -196,6 +196,22 @@ const TEST_PROTON_CONTENT = [
       },
     },
   },
+  {
+    id: "AW_STEP4",
+    order: 3,
+    content: {
+      title: "Step 4",
+      primary_button: {
+        label: "Next",
+        action: {
+          navigate: true,
+        },
+      },
+      secondary_button: {
+        label: "link",
+      },
+    },
+  },
 ];
 
 async function getAboutWelcomeParent(browser) {
@@ -304,27 +320,13 @@ add_task(async function setup() {
  */
 add_task(async function test_multistage_zeroOnboarding_experimentAPI() {
   await setAboutWelcomePref(true);
+  await ExperimentAPI.ready();
+  let doExperimentCleanup = await ExperimentFakes.enrollWithFeatureConfig({
+    enabled: false,
+    featureId: "aboutwelcome",
+    value: null,
+  });
 
-  let {
-    enrollmentPromise,
-    doExperimentCleanup,
-  } = ExperimentFakes.enrollmentHelper(
-    ExperimentFakes.recipe("mochitest-1-aboutwelcome", {
-      branches: [
-        {
-          slug: "mochitest-1-aboutwelcome",
-          feature: {
-            enabled: false,
-            featureId: "aboutwelcome",
-            value: null,
-          },
-        },
-      ],
-      active: true,
-    })
-  );
-
-  await enrollmentPromise;
   ExperimentAPI._store._syncToChildren({ flush: true });
 
   let tab = await BrowserTestUtils.openNewForegroundTab(
@@ -358,30 +360,17 @@ add_task(async function test_multistage_aboutwelcome_experimentAPI() {
   const sandbox = sinon.createSandbox();
   NimbusFeatures.aboutwelcome._sendExposureEventOnce = true;
   await setAboutWelcomePref(true);
+  await ExperimentAPI.ready();
 
-  let {
-    enrollmentPromise,
-    doExperimentCleanup,
-  } = ExperimentFakes.enrollmentHelper(
-    ExperimentFakes.recipe("mochitest-aboutwelcome", {
-      branches: [
-        {
-          slug: "mochitest-aboutwelcome-branch",
-          feature: {
-            enabled: true,
-            featureId: "aboutwelcome",
-            value: {
-              id: "my-mochitest-experiment",
-              screens: TEST_MULTISTAGE_CONTENT,
-            },
-          },
-        },
-      ],
-      active: true,
-    })
-  );
+  let doExperimentCleanup = await ExperimentFakes.enrollWithFeatureConfig({
+    enabled: true,
+    featureId: "aboutwelcome",
+    value: {
+      id: "my-mochitest-experiment",
+      screens: TEST_MULTISTAGE_CONTENT,
+    },
+  });
 
-  await enrollmentPromise;
   ExperimentAPI._store._syncToChildren({ flush: true });
 
   sandbox.spy(ExperimentAPI, "recordExposureEvent");
@@ -502,32 +491,19 @@ add_task(async function test_multistage_aboutwelcome_transitions() {
   const sandbox = sinon.createSandbox();
   await setAboutWelcomePref(true);
   await setProton(true);
+  await ExperimentAPI.ready();
 
-  let {
-    enrollmentPromise,
-    doExperimentCleanup,
-  } = ExperimentFakes.enrollmentHelper(
-    ExperimentFakes.recipe("mochitest-transitions-on", {
-      branches: [
-        {
-          slug: "mochitest-aboutwelcome-branch",
-          feature: {
-            enabled: true,
-            featureId: "aboutwelcome",
-            value: {
-              id: "my-mochitest-experiment",
-              screens: TEST_PROTON_CONTENT,
-              isProton: true,
-              transitions: true,
-            },
-          },
-        },
-      ],
-      active: true,
-    })
-  );
+  let doExperimentCleanup = await ExperimentFakes.enrollWithFeatureConfig({
+    enabled: true,
+    featureId: "aboutwelcome",
+    value: {
+      id: "my-mochitest-experiment",
+      screens: TEST_PROTON_CONTENT,
+      isProton: true,
+      transitions: true,
+    },
+  });
 
-  await enrollmentPromise;
   ExperimentAPI._store._syncToChildren({ flush: true });
 
   let tab = await BrowserTestUtils.openNewForegroundTab(
@@ -572,32 +548,19 @@ add_task(async function test_multistage_aboutwelcome_transitions() {
 add_task(async function test_multistage_aboutwelcome_transitions_off() {
   const sandbox = sinon.createSandbox();
   await setAboutWelcomePref(true);
+  await ExperimentAPI.ready();
 
-  let {
-    enrollmentPromise,
-    doExperimentCleanup,
-  } = ExperimentFakes.enrollmentHelper(
-    ExperimentFakes.recipe("mochitest-transitions-off", {
-      branches: [
-        {
-          slug: "mochitest-aboutwelcome-branch",
-          feature: {
-            enabled: true,
-            featureId: "aboutwelcome",
-            value: {
-              id: "my-mochitest-experiment",
-              screens: TEST_PROTON_CONTENT,
-              isProton: true,
-              transitions: false,
-            },
-          },
-        },
-      ],
-      active: true,
-    })
-  );
+  let doExperimentCleanup = await ExperimentFakes.enrollWithFeatureConfig({
+    enabled: true,
+    featureId: "aboutwelcome",
+    value: {
+      id: "my-mochitest-experiment",
+      screens: TEST_PROTON_CONTENT,
+      isProton: true,
+      transitions: false,
+    },
+  });
 
-  await enrollmentPromise;
   ExperimentAPI._store._syncToChildren({ flush: true });
 
   let tab = await BrowserTestUtils.openNewForegroundTab(
@@ -1168,7 +1131,13 @@ add_task(async function test_multistage_aboutwelcome_proton() {
       "div.secondary-cta.top",
     ],
     // Unexpected selectors:
-    ["main.AW_STEP2", "main.AW_STEP3", "nav.steps"]
+    [
+      "main.AW_STEP2",
+      "main.AW_STEP3",
+      "nav.steps",
+      "main.dialog-initial",
+      "main.dialog-last",
+    ]
   );
 
   await onButtonClick(browser, "button.primary");
@@ -1194,14 +1163,14 @@ add_task(async function test_multistage_aboutwelcome_proton() {
     "multistage proton step 2",
     // Expected selectors:
     [
-      "main.AW_STEP2",
+      "main.AW_STEP2.dialog-initial",
       "div.onboardingContainer",
       "div.proton[style*='.jpg']",
       "div.section-main",
       "nav.steps",
     ],
     // Unexpected selectors:
-    ["main.AW_STEP1", "main.AW_STEP3", "div.section-left"]
+    ["main.AW_STEP1", "main.AW_STEP3", "div.section-left", "main.dialog-last"]
   );
 
   await onButtonClick(browser, "button.primary");
@@ -1222,8 +1191,35 @@ add_task(async function test_multistage_aboutwelcome_proton() {
       "nav.steps",
     ],
     // Unexpected selectors:
-    ["main.AW_STEP2", "main.AW_STEP1", "div.section-left"]
+    [
+      "main.AW_STEP2",
+      "main.AW_STEP1",
+      "div.section-left",
+      "main.dialog-initial",
+      "main.dialog-last",
+    ]
   );
 
   await onButtonClick(browser, "button.primary");
+
+  await test_screen_content(
+    browser,
+    "multistage proton step 4",
+    // Expected selectors:
+    [
+      "main.AW_STEP4.screen-1",
+      "main.AW_STEP4.dialog-last",
+      "div.onboardingContainer",
+    ],
+    // Unexpected selectors:
+    [
+      "main.AW_STEP2",
+      "main.AW_STEP1",
+      "main.AW_STEP3",
+      "main.dialog-initial",
+      "main.AW_STEP4.screen-0",
+      "main.AW_STEP4.screen-2",
+      "main.AW_STEP4.screen-3",
+    ]
+  );
 });

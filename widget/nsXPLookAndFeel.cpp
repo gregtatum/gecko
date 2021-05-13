@@ -308,9 +308,11 @@ static const char sColorPrefs[][41] = {
     "ui.-moz-visitedhyperlinktext",
     "ui.-moz-comboboxtext",
     "ui.-moz-combobox",
-    "ui.-moz-gtk-info-bar-text",
     "ui.-moz-colheadertext",
-    "ui.-moz-colheaderhovertext"};
+    "ui.-moz-colheaderhovertext",
+    "ui.-moz-gtk-titlebar-text",
+    "ui.-moz-gtk-titlebar-inactive-text",
+};
 
 static_assert(ArrayLength(sColorPrefs) == size_t(LookAndFeel::ColorID::End),
               "Should have a pref for each color value");
@@ -885,8 +887,8 @@ namespace mozilla {
 // static
 void LookAndFeel::NotifyChangedAllWindows(widget::ThemeChangeKind aKind) {
   if (nsCOMPtr<nsIObserverService> obs = services::GetObserverService()) {
-    obs->NotifyObservers(nullptr, "look-and-feel-changed",
-                         reinterpret_cast<char16_t*>(uintptr_t(aKind)));
+    const char16_t kind[] = {char16_t(aKind), 0};
+    obs->NotifyObservers(nullptr, "look-and-feel-changed", kind);
   }
 }
 

@@ -3991,7 +3991,8 @@ void GCRuntime::purgeRuntime() {
 bool GCRuntime::shouldPreserveJITCode(Realm* realm,
                                       const TimeStamp& currentTime,
                                       JS::GCReason reason,
-                                      bool canAllocateMoreCode) {
+                                      bool canAllocateMoreCode,
+                                      bool isActiveCompartment) {
   if (cleanUpEverything) {
     return false;
   }
@@ -3999,17 +4000,18 @@ bool GCRuntime::shouldPreserveJITCode(Realm* realm,
     return false;
   }
 
+  if (isActiveCompartment) {
+    return true;
+  }
   if (alwaysPreserveCode) {
     return true;
   }
   if (realm->preserveJitCode()) {
     return true;
   }
-
   if (IsCurrentlyAnimating(realm->lastAnimationTime, currentTime)) {
     return true;
   }
-
   if (reason == JS::GCReason::DEBUG_GC) {
     return true;
   }
@@ -4369,27 +4371,28 @@ void GCRuntime::endPreparePhase(JS::GCReason reason) {
   bool canAllocateMoreCode = jit::CanLikelyAllocateMoreExecutableMemory();
   auto currentTime = ReallyNow();
 
+  Compartment* activeCompartment = nullptr;
+  jit::JitActivationIterator activation(rt->mainContextFromOwnThread());
+  if (!activation.done()) {
+    activeCompartment = activation->compartment();
+  }
+
   for (CompartmentsIter c(rt); !c.done(); c.next()) {
     c->gcState.scheduledForDestruction = false;
     c->gcState.maybeAlive = false;
     c->gcState.hasEnteredRealm = false;
+    bool isActiveCompartment = c == activeCompartment;
     for (RealmsInCompartmentIter r(c); !r.done(); r.next()) {
       if (r->shouldTraceGlobal() || !r->zone()->isGCScheduled()) {
         c->gcState.maybeAlive = true;
       }
-      if (shouldPreserveJITCode(r, currentTime, reason, canAllocateMoreCode)) {
+      if (shouldPreserveJITCode(r, currentTime, reason, canAllocateMoreCode,
+                                isActiveCompartment)) {
         r->zone()->setPreservingCode(true);
       }
       if (r->hasBeenEnteredIgnoringJit()) {
         c->gcState.hasEnteredRealm = true;
       }
-    }
-  }
-
-  if (!cleanUpEverything && canAllocateMoreCode) {
-    jit::JitActivationIterator activation(rt->mainContextFromOwnThread());
-    if (!activation.done()) {
-      activation->compartment()->zone()->setPreservingCode(true);
     }
   }
 
@@ -4591,14 +4594,14 @@ IncrementalProgress GCRuntime::markWeakReferences(
   // We may have already entered weak marking mode.
   if (!marker.isWeakMarking() && marker.enterWeakMarkingMode()) {
     // Do not rely on the information about not-yet-marked weak keys that have
-    // been collected by barriers. Clear out the gcWeakKeys entries and rebuild
-    // the full table. Note that this a cross-zone operation; delegate zone
-    // entries will be populated by map zone traversals, so everything needs to
-    // be cleared first, then populated.
+    // been collected by barriers. Clear out the gcEphemeronEdges entries and
+    // rebuild the full table. Note that this a cross-zone operation; delegate
+    // zone entries will be populated by map zone traversals, so everything
+    // needs to be cleared first, then populated.
     if (!marker.incrementalWeakMapMarkingEnabled) {
       for (ZoneIterT zone(this); !zone.done(); zone.next()) {
         AutoEnterOOMUnsafeRegion oomUnsafe;
-        if (!zone->gcWeakKeys().clear()) {
+        if (!zone->gcEphemeronEdges().clear()) {
           oomUnsafe.crash("clearing weak keys when entering weak marking mode");
         }
       }
@@ -4612,12 +4615,6 @@ IncrementalProgress GCRuntime::markWeakReferences(
       }
     }
   }
-
-#ifdef DEBUG
-  for (ZoneIterT zone(this); !zone.done(); zone.next()) {
-    zone->checkWeakMarkingMode();
-  }
-#endif
 
   // This is not strictly necessary; if we yield here, we could run the mutator
   // in weak marking mode and unmark gray would end up doing the key lookups.
@@ -5345,7 +5342,7 @@ void GCRuntime::sweepWeakMaps() {
   for (SweepGroupZonesIter zone(this); !zone.done(); zone.next()) {
     /* No need to look up any more weakmap keys from this sweep group. */
     AutoEnterOOMUnsafeRegion oomUnsafe;
-    if (!zone->gcWeakKeys().clear()) {
+    if (!zone->gcEphemeronEdges().clear()) {
       oomUnsafe.crash("clearing weak keys in beginSweepingSweepGroup()");
     }
 
@@ -7658,6 +7655,13 @@ struct MOZ_RAII AutoSetZoneSliceThresholds {
 
 void GCRuntime::collect(bool nonincrementalByAPI, const SliceBudget& budget,
                         const MaybeGCOptions& optionsArg, JS::GCReason reason) {
+  mozilla::TimeStamp startTime = TimeStamp::Now();
+  auto timer = mozilla::MakeScopeExit([&] {
+    if (Realm* realm = rt->mainContextFromOwnThread()->realm()) {
+      realm->timers.gcTime += TimeStamp::Now() - startTime;
+    }
+  });
+
   MOZ_ASSERT(reason != JS::GCReason::NO_REASON);
 
   MaybeGCOptions options = optionsArg;

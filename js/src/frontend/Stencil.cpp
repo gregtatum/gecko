@@ -44,6 +44,7 @@
 #include "vm/RegExpObject.h"  // js::RegExpObject
 #include "vm/Scope.h"  // Scope, *Scope, ScopeKindString, ScopeIter, ScopeKindIsCatch, BindingIter, GetScopeDataTrailingNames
 #include "vm/ScopeKind.h"     // ScopeKind
+#include "vm/SelfHosting.h"   // SetClonedSelfHostedFunctionName
 #include "vm/StencilEnums.h"  // ImmutableScriptFlagsEnum
 #include "vm/StringType.h"    // JSAtom, js::CopyChars
 #include "vm/Xdr.h"           // XDRMode, XDRResult, XDREncoder
@@ -996,6 +997,15 @@ static bool InstantiateFunctions(JSContext* cx, CompilationInput& input,
                              index);
     if (!fun) {
       return false;
+    }
+
+    // Self-hosted functions may have an canonical name that differs from the
+    // function name.  In that case, store this canonical name in an extended
+    // slot.
+    if (scriptStencil.hasSelfHostedCanonicalName()) {
+      JSAtom* canonicalName = input.atomCache.getExistingAtomAt(
+          cx, scriptStencil.selfHostedCanonicalName());
+      SetUnclonedSelfHostedCanonicalName(fun, canonicalName);
     }
 
     gcOutput.functions[index] = fun;
@@ -2749,7 +2759,13 @@ void ScriptStencil::dumpFields(js::JSONPrinter& json,
 
     if (hasLazyFunctionEnclosingScopeIndex()) {
       json.formatProperty("lazyFunctionEnclosingScopeIndex", "ScopeIndex(%zu)",
-                          size_t(lazyFunctionEnclosingScopeIndex_));
+                          size_t(lazyFunctionEnclosingScopeIndex()));
+    }
+
+    if (hasSelfHostedCanonicalName()) {
+      json.beginObjectProperty("selfHostCanonicalName");
+      DumpTaggedParserAtomIndex(json, selfHostedCanonicalName(), stencil);
+      json.endObject();
     }
   }
 }
@@ -3100,11 +3116,13 @@ bool CompilationState::appendGCThings(
   return true;
 }
 
-CompilationState::RewindToken CompilationState::getRewindToken() {
-  return RewindToken{scriptData.length(), asmJS ? asmJS->moduleMap.count() : 0};
+CompilationState::CompilationStatePosition CompilationState::getPosition() {
+  return CompilationStatePosition{scriptData.length(),
+                                  asmJS ? asmJS->moduleMap.count() : 0};
 }
 
-void CompilationState::rewind(const CompilationState::RewindToken& pos) {
+void CompilationState::rewind(
+    const CompilationState::CompilationStatePosition& pos) {
   if (asmJS && asmJS->moduleMap.count() != pos.asmJSCount) {
     for (size_t i = pos.scriptDataLength; i < scriptData.length(); i++) {
       asmJS->moduleMap.remove(ScriptIndex(i));
@@ -3117,6 +3135,13 @@ void CompilationState::rewind(const CompilationState::RewindToken& pos) {
     scriptExtra.shrinkTo(pos.scriptDataLength);
   }
   scriptData.shrinkTo(pos.scriptDataLength);
+}
+
+void CompilationState::markGhost(
+    const CompilationState::CompilationStatePosition& pos) {
+  for (size_t i = pos.scriptDataLength; i < scriptData.length(); i++) {
+    scriptData[i].setIsGhost();
+  }
 }
 
 bool CompilationStencilMerger::buildFunctionKeyToIndex(JSContext* cx) {

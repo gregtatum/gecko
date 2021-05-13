@@ -3231,8 +3231,12 @@ void nsIFrame::BuildDisplayListForStackingContext(
   // containing block), then we should assume we have one.
   // Either we have an explicit one, or nothing in our subtree changed and
   // we have an implicit empty rect.
+  //
+  // These conditions should match |CanStoreDisplayListBuildingRect()| in
+  // RetainedDisplayListBuilder.cpp
   if (aBuilder->IsPartialUpdate() && !aBuilder->InInvalidSubtree() &&
-      !IsFrameModified() && IsFixedPosContainingBlock()) {
+      !IsFrameModified() && IsFixedPosContainingBlock() &&
+      !GetPrevContinuation() && !GetNextContinuation()) {
     dirtyRect = nsRect();
     if (HasOverrideDirtyRegion()) {
       nsDisplayListBuilder::DisplayListBuildingData* data =
@@ -3985,6 +3989,20 @@ void nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder* aBuilder,
 
   if (ShouldSkipFrame(aBuilder, aChild)) {
     return;
+  }
+
+  // If we're generating a display list for printing, include Link items for
+  // frames that correspond to HTML link elements so that we can have active
+  // links in saved PDF output. Note that the state of "within a link" is
+  // set on the display-list builder, such that all descendants of the link
+  // element will generate display-list links.
+  // TODO: we should be able to optimize this so as to avoid creating links
+  // for the same destination that entirely overlap each other, which adds
+  // nothing useful to the final PDF.
+  Maybe<nsDisplayListBuilder::Linkifier> linkifier;
+  if (aBuilder->IsForPrinting()) {
+    linkifier.emplace(aBuilder, aChild);
+    linkifier->MaybeAppendLink(aBuilder, aChild, aLists.Content());
   }
 
   nsIFrame* child = aChild;
@@ -9832,9 +9850,13 @@ void nsIFrame::ComputePreserve3DChildrenOverflow(
   }
 }
 
+bool nsIFrame::ZIndexApplies() const {
+  return StyleDisplay()->IsPositionedStyle() || IsFlexOrGridItem();
+}
+
 Maybe<int32_t> nsIFrame::ZIndex() const {
-  if (!StyleDisplay()->IsPositionedStyle() && !IsFlexOrGridItem()) {
-    return Nothing();  // z-index doesn't apply.
+  if (!ZIndexApplies()) {
+    return Nothing();
   }
   const auto& zIndex = StylePosition()->mZIndex;
   if (zIndex.IsAuto()) {
@@ -11007,21 +11029,40 @@ void nsIFrame::CreateOwnLayerIfNeeded(nsDisplayListBuilder* aBuilder,
 
 bool nsIFrame::IsStackingContext(const nsStyleDisplay* aStyleDisplay,
                                  const nsStyleEffects* aStyleEffects) {
-  return HasOpacity(aStyleDisplay, aStyleEffects, nullptr) || IsTransformed() ||
-         ((aStyleDisplay->IsContainPaint() ||
-           aStyleDisplay->IsContainLayout()) &&
-          IsFrameOfType(eSupportsContainLayoutAndPaint)) ||
-         // strictly speaking, 'perspective' doesn't require visual atomicity,
-         // but the spec says it acts like the rest of these
-         ChildrenHavePerspective(aStyleDisplay) ||
-         aStyleEffects->mMixBlendMode != StyleBlend::Normal ||
+  // Properties that influence the output of this function should be handled in
+  // change_bits_for_longhand as well.
+  if (HasOpacity(aStyleDisplay, aStyleEffects, nullptr)) {
+    return true;
+  }
+  if (IsTransformed()) {
+    return true;
+  }
+  auto willChange = aStyleDisplay->mWillChange.bits;
+  if (aStyleDisplay->IsContainPaint() || aStyleDisplay->IsContainLayout() ||
+      willChange & StyleWillChangeBits::CONTAIN) {
+    if (IsFrameOfType(eSupportsContainLayoutAndPaint)) {
+      return true;
+    }
+  }
+  // strictly speaking, 'perspective' doesn't require visual atomicity,
+  // but the spec says it acts like the rest of these
+  if (aStyleDisplay->HasPerspectiveStyle() ||
+      willChange & StyleWillChangeBits::PERSPECTIVE) {
+    if (IsFrameOfType(eSupportsCSSTransforms)) {
+      return true;
+    }
+  }
+  if (!StylePosition()->mZIndex.IsAuto() ||
+      willChange & StyleWillChangeBits::Z_INDEX) {
+    if (ZIndexApplies()) {
+      return true;
+    }
+  }
+  return aStyleEffects->mMixBlendMode != StyleBlend::Normal ||
          SVGIntegrationUtils::UsingEffectsForFrame(this) ||
          aStyleDisplay->IsPositionForcingStackingContext() ||
-         ZIndex().isSome() ||
-         (aStyleDisplay->mWillChange.bits &
-          StyleWillChangeBits::STACKING_CONTEXT) ||
          aStyleDisplay->mIsolation != StyleIsolation::Auto ||
-         aStyleEffects->HasBackdropFilters();
+         willChange & StyleWillChangeBits::STACKING_CONTEXT_UNCONDITIONAL;
 }
 
 bool nsIFrame::IsStackingContext() {
