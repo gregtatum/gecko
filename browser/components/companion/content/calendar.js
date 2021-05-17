@@ -40,21 +40,15 @@ class Event extends HTMLElement {
       .querySelector(".event-info")
       .addEventListener("click", () => this.openCalendar());
 
-    if (this.data.conference) {
-      if (this.data.conference.icon) {
-        fragment.querySelector(
-          ".conference-icon"
-        ).src = this.data.conference.icon;
-      }
-      fragment.querySelector(
-        ".conference-label"
-      ).textContent = this.data.conference.name;
-
-      fragment
-        .querySelector(".conference")
-        .addEventListener("click", () => openUrl(this.data.conference.url));
+    let conferenceIcon = fragment.querySelector(".conference-icon");
+    if (this.data.conference && this.data.conference.icon) {
+      conferenceIcon.src = this.data.conference.icon;
+      conferenceIcon.title = this.data.conference.name;
+      conferenceIcon.addEventListener("click", () =>
+        openUrl(this.data.conference.url)
+      );
     } else {
-      fragment.querySelector(".conference").style.display = "none";
+      conferenceIcon.style.display = "none";
     }
 
     this.appendChild(fragment);
