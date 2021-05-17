@@ -124,7 +124,7 @@
          data-l10n-id="window-new-shortcut"
          command="cmd_newNavigator"
          modifiers="accel" reserved="true"/>
-    <key id="key_newNavigatorTab" data-l10n-id="location-open-shortcut" modifiers="accel"
+    <key id="key_newNavigatorTab" data-l10n-id="tab-new-shortcut" modifiers="accel"
          command="Browser:OpenLocation" reserved="true"/>
     <key id="focusURLBar" data-l10n-id="location-open-shortcut" command="Browser:OpenLocation"
          modifiers="accel"/>
