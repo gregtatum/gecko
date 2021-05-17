@@ -278,6 +278,10 @@ h2 {
   margin: 0;
 }
 
+#calendar {
+  padding: 5px 10px;
+}
+
 #calendar-panel:empty {
   display: none;
 }
@@ -294,7 +298,6 @@ h2 {
   display: block;
 }
 
-#calendar-panel,
 #email {
   padding: 5px 10px;
 }
@@ -310,7 +313,7 @@ h2 {
 .conference-icon {
   height: 16px;
   width: 16px;
-  padding-right: 5px;
+  padding-left: 10px;
 }
 
 .event {
