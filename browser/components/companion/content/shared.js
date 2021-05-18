@@ -151,27 +151,48 @@ export const dateFormat = new Intl.DateTimeFormat([], {
 });
 
 function timeSince(date) {
+  let DAY_IN_MS = 1000 * 60 * 60 * 24;
   let seconds = Math.floor((new Date() - date) / 1000);
-  let interval = seconds / 31536000;
-  let rtf = new Intl.RelativeTimeFormat("en", {
-    style: "short",
-    numeric: "auto",
-  });
+  let minutes = Math.floor(seconds / 60);
 
-  interval = seconds / 86400;
-  if (interval > 1) {
-    return rtf.format(-Math.floor(interval), "day");
+  if (minutes <= 0) {
+    return "now";
   }
-  interval = Math.floor(seconds / 3600);
-  if (interval > 1) {
-    return Math.floor(interval) + "hr ago";
+  let hours = Math.floor(minutes / 60);
+  if (hours <= 0) {
+    return minutes + "m ago";
   }
-  interval = Math.floor(seconds / 60);
-  if (interval > 1) {
-    // rtf.format will format this as "5 min. ago"
-    return Math.floor(interval) + "m ago";
+
+  let today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Take the day into account when we handle hours, if
+  // something happened 6 hours ago but its 3AM, it happened
+  // yesterday. This doesnt happen with minutes.
+  if (hours < 24 && date > today) {
+    return hours + "hr ago";
   }
-  return "now";
+
+  let midnight = new Date(date);
+  midnight.setHours(0, 0, 0, 0);
+
+  // Once we are measuring days we only care about what day it
+  // is not the time that it occured (2 days ago is the whole
+  // of the day)
+  let daysDiff = today - midnight;
+  let days = Math.floor(daysDiff / DAY_IN_MS);
+
+  if (days == 1) {
+    return "yesterday";
+  }
+
+  let weeks = Math.floor(days / 7);
+
+  if (weeks <= 0) {
+    return days + " days ago";
+  }
+
+  return weeks + " week" + ((weeks == 1) ? "" : "s") + " ago";
 }
 
 async function getPreviewImageURL(url) {
