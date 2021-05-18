@@ -2564,3 +2564,8 @@ pref("first-startup.timeout", 30000);
 // are expected to go away once a standardized alternative becomes
 // available.
 pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox.com,profile.stage.mozaws.net");
+
+// MR2
+pref("startup.homepage_welcome_url", "", locked);
+pref("browser.aboutwelcome.enabled", false, locked);
+pref("startup.homepage_override_url", "", locked);
