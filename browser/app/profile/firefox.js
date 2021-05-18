@@ -1730,6 +1730,10 @@ pref("browser.contentblocking.database.enabled", true);
 
 pref("dom.storage_access.enabled", true);
 
+pref("browser.contentblocking.category", "strict");
+pref("privacy.trackingprotection.enabled", true);
+pref("privacy.trackingprotection.socialtracking.enabled", true);
+
 pref("browser.contentblocking.cryptomining.preferences.ui.enabled", true);
 pref("browser.contentblocking.fingerprinting.preferences.ui.enabled", true);
 // Enable cookieBehavior = BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN as an option in the custom category ui

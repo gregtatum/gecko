@@ -4362,10 +4362,10 @@ var ContentBlockingCategoriesPrefs = {
     // If PREF_CB_CATEGORY is not set match users to a Content Blocking category. Check if prefs fit
     // perfectly into strict or standard, otherwise match with custom. If PREF_CB_CATEGORY has previously been set,
     // a change of one of these prefs necessarily puts us in "custom".
-    if (this.prefsMatch("standard")) {
-      Services.prefs.setStringPref(this.PREF_CB_CATEGORY, "standard");
-    } else if (this.prefsMatch("strict")) {
+    if (this.prefsMatch("strict")) {
       Services.prefs.setStringPref(this.PREF_CB_CATEGORY, "strict");
+    } else if (this.prefsMatch("standard")) {
+      Services.prefs.setStringPref(this.PREF_CB_CATEGORY, "standard");
     } else {
       Services.prefs.setStringPref(this.PREF_CB_CATEGORY, "custom");
     }
