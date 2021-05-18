@@ -13,9 +13,7 @@ const { OnlineServices } = ChromeUtils.import(
 );
 
 async function signin(event) {
-  await OnlineServices.createService(
-    Services.prefs.getCharPref("onlineservices.defaultType", event.target.id)
-  );
+  await OnlineServices.createService(event.target.id);
   document.getElementById("service-login").className = "connected";
   let services = OnlineServices.getServices();
   initCalendarServices(services);
