@@ -152,15 +152,13 @@
                               command="cmd_CustomizeToolbars" data-l10n-id="menu-view-customize-toolbar2"/>
                   </menupopup>
                 </menu>
-                <menu id="viewSidebarMenuMenu" data-l10n-id="menu-view-sidebar">
+                <menu id="viewSidebarMenuMenu" data-l10n-id="menu-view-sidebar" hidden="true">
                   <menupopup id="viewSidebarMenu">
                     <menuitem id="menu_bookmarksSidebar"
                               type="checkbox"
-                              key="viewBookmarksSidebarKb"
                               oncommand="SidebarUI.toggle('viewBookmarksSidebar');" data-l10n-id="menu-view-bookmarks"/>
                     <menuitem id="menu_historySidebar"
                               type="checkbox"
-                              key="key_gotoHistory"
                               oncommand="SidebarUI.toggle('viewHistorySidebar');" data-l10n-id="menu-view-history-button"/>
                     <menuitem id="menu_tabsSidebar"
                               type="checkbox"

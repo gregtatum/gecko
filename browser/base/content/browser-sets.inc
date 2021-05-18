@@ -265,10 +265,6 @@
          oncommand="PlacesUIUtils.showBookmarkPagesDialog(PlacesCommandHook.uniqueCurrentPages);"
          modifiers="accel,shift"/>
     <key id="manBookmarkKb" data-l10n-id="bookmark-show-library-shortcut" command="Browser:ShowAllBookmarks" modifiers="accel,shift"/>
-    <key id="viewBookmarksSidebarKb"
-         data-l10n-id="bookmark-show-sidebar-shortcut"
-         modifiers="accel"
-         oncommand="SidebarUI.toggle('viewBookmarksSidebar');"/>
     <key id="viewBookmarksToolbarKb"
          data-l10n-id="bookmark-show-toolbar-shortcut"
          oncommand="BookmarkingUI.toggleBookmarksToolbar('shortcut');"
@@ -279,15 +275,6 @@
 #ifdef XP_MACOSX
     <key id="key_stop_mac" modifiers="accel" data-l10n-id="nav-stop-shortcut" command="Browser:Stop"/>
 #endif
-
-    <key id="key_gotoHistory"
-         data-l10n-id="history-sidebar-shortcut"
-#ifdef XP_MACOSX
-         modifiers="accel,shift"
-#else
-         modifiers="accel"
-#endif
-         oncommand="SidebarUI.toggle('viewHistorySidebar');"/>
 
     <key id="key_fullZoomReduce" data-l10n-id="full-zoom-reduce-shortcut" command="cmd_fullZoomReduce"  modifiers="accel"/>
     <key                         data-l10n-id="full-zoom-reduce-shortcut-alt-a" command="cmd_fullZoomReduce"  modifiers="accel"/>
