@@ -2569,3 +2569,9 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
 pref("startup.homepage_welcome_url", "", locked);
 pref("browser.aboutwelcome.enabled", false, locked);
 pref("startup.homepage_override_url", "", locked);
+pref("browser.startup.homepage", 1, locked);
+pref("browser.startup.homepage", "about:blank", locked);
+pref("pref.browser.homepage.disable_button.current_page", true, locked);
+pref("pref.browser.homepage.disable_button.bookmark_page", true, locked);
+pref("pref.browser.homepage.disable_button.restore_default", true, locked);
+pref("browser.newtabpage.enabled", false, locked);

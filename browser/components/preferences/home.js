@@ -117,6 +117,10 @@ var gHomePane = {
       if (newValue !== menulist.value) {
         menulist.value = newValue;
       }
+      if (Services.prefs.prefIsLocked(this.NEWTAB_ENABLED_PREF)) {
+        menulist.disabled = true;
+      }
+
       // If change was triggered by installing an addon we need to update
       // the value of the menulist to be that addon.
     } else {
