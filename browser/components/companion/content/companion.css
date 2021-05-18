@@ -286,13 +286,6 @@ h2 {
   display: none;
 }
 
-#service-login {
-  display: flex;
-  flex-direction: row;
-  justify-content: end;
-  padding: 5px 10px;
-}
-
 #calendar-link {
   padding: 0 10px;
   display: block;
@@ -378,7 +371,7 @@ button.conference:hover:active, .btn:hover:active {
   padding: 10px;
   position: absolute;
   z-index: 999;
-  top: 30px;
+  top: 0;
   bottom: 0;
   left: 0;
   right: 0;
