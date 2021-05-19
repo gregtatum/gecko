@@ -8035,6 +8035,9 @@ var MailIntegration = {
 
 function BrowserOpenAddonsMgr(aView) {
   return new Promise(resolve => {
+    if (!Services.prefs.getBoolPref("xpinstall.enabled", true)) {
+      return;
+    }
     let emWindow;
     let browserWindow;
 

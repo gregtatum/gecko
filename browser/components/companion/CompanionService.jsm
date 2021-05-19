@@ -257,3 +257,47 @@ const CompanionService = {
 };
 
 CompanionService.init();
+
+let ChromeURLBlockPolicy = {
+  shouldLoad(contentLocation, loadInfo, mimeTypeGuess) {
+    let contentType = loadInfo.externalContentPolicyType;
+    if (
+      (contentLocation.scheme != "chrome" &&
+        contentLocation.scheme != "about") ||
+      (contentType != Ci.nsIContentPolicy.TYPE_DOCUMENT &&
+        contentType != Ci.nsIContentPolicy.TYPE_SUBDOCUMENT)
+    ) {
+      return Ci.nsIContentPolicy.ACCEPT;
+    }
+    if (contentLocation.spec.startsWith("about:addons")) {
+      return Ci.nsIContentPolicy.REJECT_REQUEST;
+    }
+    return Ci.nsIContentPolicy.ACCEPT;
+  },
+  shouldProcess(contentLocation, loadInfo, mimeTypeGuess) {
+    return Ci.nsIContentPolicy.ACCEPT;
+  },
+  classDescription: "MR2 Content Policy",
+  contractID: "@mozilla-org/mr2-content-policy-service;1",
+  classID: Components.ID("{ba7b9118-cabc-4845-8b26-4215d2a59ed8}"),
+  QueryInterface: ChromeUtils.generateQI(["nsIContentPolicy"]),
+  createInstance(outer, iid) {
+    return this.QueryInterface(iid);
+  },
+};
+
+let registrar = Components.manager.QueryInterface(Ci.nsIComponentRegistrar);
+registrar.registerFactory(
+  ChromeURLBlockPolicy.classID,
+  ChromeURLBlockPolicy.classDescription,
+  ChromeURLBlockPolicy.contractID,
+  ChromeURLBlockPolicy
+);
+
+Services.catMan.addCategoryEntry(
+  "content-policy",
+  ChromeURLBlockPolicy.contractID,
+  ChromeURLBlockPolicy.contractID,
+  false,
+  true
+);

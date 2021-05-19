@@ -2579,3 +2579,4 @@ pref("pref.browser.homepage.disable_button.current_page", true, locked);
 pref("pref.browser.homepage.disable_button.bookmark_page", true, locked);
 pref("pref.browser.homepage.disable_button.restore_default", true, locked);
 pref("browser.newtabpage.enabled", false, locked);
+pref("xpinstall.enabled", false, locked);

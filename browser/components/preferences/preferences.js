@@ -162,18 +162,22 @@ function init_all() {
       "preferences";
     helpButton.setAttribute("href", helpUrl);
 
-    document.getElementById("addonsButton").addEventListener("click", e => {
-      if (e.button >= 2) {
-        // Ignore right clicks.
-        return;
-      }
-      let mainWindow = window.browsingContext.topChromeWindow;
-      mainWindow.BrowserOpenAddonsMgr();
-      AMTelemetry.recordLinkEvent({
-        object: "aboutPreferences",
-        value: "about:addons",
+    if (Services.prefs.getBoolPref("xpinstall.enabled", true)) {
+      document.getElementById("addonsButton").addEventListener("click", e => {
+        if (e.button >= 2) {
+          // Ignore right clicks.
+          return;
+        }
+        let mainWindow = window.browsingContext.topChromeWindow;
+        mainWindow.BrowserOpenAddonsMgr();
+        AMTelemetry.recordLinkEvent({
+          object: "aboutPreferences",
+          value: "about:addons",
+        });
       });
-    });
+    } else {
+      document.getElementById("addonsButton").style.display = "none";
+    }
 
     document.dispatchEvent(
       new CustomEvent("Initialized", {

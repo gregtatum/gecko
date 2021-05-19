@@ -381,9 +381,9 @@
               <menuitem id="menu_openDownloads"
                         key="key_openDownloads"
                         command="Tools:Downloads" data-l10n-id="menu-tools-downloads"/>
-              <menuitem id="menu_openAddons"
+<!--              <menuitem id="menu_openAddons"
                         key="key_openAddons"
-                        command="Tools:Addons" data-l10n-id="menu-tools-addons-and-themes"/>
+                        command="Tools:Addons" data-l10n-id="menu-tools-addons-and-themes"/> -->
 
               <!-- only one of sync-setup, sync-enable, sync-unverifieditem, sync-syncnowitem or sync-reauthitem will be showing at once -->
               <menuitem id="sync-setup"
