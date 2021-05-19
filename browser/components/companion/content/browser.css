@@ -21,6 +21,11 @@
 :root[companion] #companion-sidebar-button-win,
 #nav-bar-customization-target > *:not(#urlbar-container) {
   display: none;
+  -moz-box-flex: 1;
+}
+
+#urlbar-container {
+  min-width: 576px;
 }
 
 #navigator-toolbox {
@@ -81,6 +86,7 @@
 
 #companion-view-manager {
   min-width: 50px;
+  -moz-box-flex: 1;
 }
 
 #companion-page-title {
