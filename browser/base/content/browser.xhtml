@@ -1077,6 +1077,10 @@
                        key="key_preferencesCmdMac"
 #endif
                        oncommand="openPreferences()"/>
+        <toolbarbutton id="companion-settings-button"
+                       label="Companion Settings"
+                       class="subviewbutton"
+                       oncommand="ToggleCompanionSettings()"/>
         <toolbarbutton id="appMenu-more-button2"
                        class="subviewbutton subviewbutton-nav"
                        data-l10n-id="appmenuitem-more-tools"
@@ -1791,10 +1795,6 @@
           </hbox>
         </vbox>
         <hbox flex="1" pack="end" id="companion-titlebar-inner">
-          <toolbarbutton
-            id="companion-settings-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
-            oncommand="ToggleCompanionSettings()"
-            onclick="checkForMiddleClick(this, event);"/>
           <toolbarbutton
             id="companion-undock-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
             oncommand="CompanionService.undockCompanion()"

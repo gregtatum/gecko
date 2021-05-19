@@ -11,7 +11,6 @@ browser.jar:
     content/browser/companion/companion.css (content/companion.css)
     content/browser/companion/companion.js (content/companion.js)
 *   content/browser/companion/companion.xhtml (content/companion.xhtml)
-    content/browser/companion/companion-settings.svg (content/companion-settings.svg)
     content/browser/companion/email.js (content/email.js)
     content/browser/companion/email.svg (content/email.svg)
     content/browser/companion/event.svg (content/event.svg)
