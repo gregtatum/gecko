@@ -40,6 +40,7 @@ class CompanionWindowMuxer extends MuxerUnifiedComplete {
 class BrowserWindowHandler {
   constructor(window) {
     this.window = window;
+    this.selectedTab = window.gBrowser.selectedTab;
 
     let lock = this.window.document.getElementById("identity-box");
     let companionIdentityBox = this.window.document.getElementById(
@@ -53,7 +54,7 @@ class BrowserWindowHandler {
     window.addEventListener("unload", () => this.destroy(), { once: true });
     this.observe();
 
-    window.gBrowser.addEventListener("TabAttrModified", () => {
+    this.selectedTab.addEventListener("TabAttrModified", () => {
       this.updateTab();
     });
     window.gBrowser.addEventListener("TabSelect", () => {
@@ -64,7 +65,18 @@ class BrowserWindowHandler {
   }
 
   updateTab() {
-    let title = this.window.gBrowser.selectedTab.getAttribute("label");
+    if (this.selectedTab != this.window.gBrowser.selectedTab) {
+      // If the selected tab has changed, unregister the event listener
+      // for the previously selected tab and register a new one
+      // for the currently selected tab.
+      this.selectedTab.removeEventListener("TabAttrModified", this);
+      this.selectedTab = this.window.gBrowser.selectedTab;
+      this.selectedTab.addEventListener("TabAttrModified", () => {
+        this.updateTab();
+      });
+    }
+
+    let title = this.selectedTab.getAttribute("label");
     this.window.document.getElementById("companion-page-title").value = title;
     this.window.document.getElementById(
       "companion-page-title"
