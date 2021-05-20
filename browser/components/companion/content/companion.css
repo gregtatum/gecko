@@ -220,7 +220,7 @@ h2 {
 
 #content {
   flex: 1;
-  padding: 5px 10px;
+  padding: 5px 0;
 }
 
 .app .switch-to-app {
@@ -276,6 +276,21 @@ h2 {
 .keyframe .score {
   padding-left: 20px;
   margin: 0;
+}
+
+.keyframe {
+  position: relative;
+}
+
+.keyframe[current]::before {
+  content: "";
+  position: absolute;
+  width: 4px;
+  height: 20px;
+  left: 0;
+  top: 0;
+  background: #0090ED;
+  border-radius: 0px 4px 4px 0px;
 }
 
 #calendar {
@@ -713,6 +728,7 @@ button.conference:hover:active, .btn:hover:active {
   box-shadow: none;
   margin: 0 0 8px;
   transition: none;
+  padding: 0 10px;
 }
 
 .card:not(.card-no-hover):hover {

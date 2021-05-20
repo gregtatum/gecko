@@ -55,6 +55,11 @@ export class Keyframe extends HidableElement {
     target.querySelector(".title").setAttribute("title", this.data.title);
     target.querySelector(".category").textContent = this.data.category;
 
+    let win = BrowserWindowTracker.getTopWindow({
+      allowPopups: false,
+    });
+    this.toggleAttribute("current", win.gBrowser.currentURI.spec == this.data.url);
+
     let score = target.querySelector(".score");
     score.textContent = this.data.score.toFixed(1);
     score.setAttribute(
