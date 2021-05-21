@@ -17,6 +17,7 @@ browser.jar:
     content/browser/companion/globalhistorydebugging.js (content/globalhistorydebugging.js)
     content/browser/companion/keyframe-list.css (content/keyframe-list.css)
     content/browser/companion/keyframes.js (content/keyframes.js)
+    content/browser/companion/link.svg (content/link.svg)
     content/browser/companion/media.js (content/media.js)
     content/browser/companion/pip.svg (content/pip.svg)
     content/browser/companion/pocket.js (content/pocket.js)

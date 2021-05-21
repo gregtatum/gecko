@@ -64,6 +64,10 @@
   list-style-image: url("chrome://browser/skin/reload.svg");
 }
 
+#companion-copy-button {
+  list-style-image: url("chrome://browser/content/companion/link.svg");
+}
+
 #companion-undock-button {
   display: none;
 }
