@@ -12,6 +12,7 @@ const { _LastSession } = ChromeUtils.import(
 );
 
 const NUM_KEYFRAMES = 20;
+const CACHE_ITEM_DURATION = 10 * 1000; // 10 seconds
 
 let sessionStart = new Date();
 let lastSessionEnd = _LastSession.getState()?.session?.lastUpdate;
@@ -244,7 +245,15 @@ function getFavicon(page, width = 0) {
 let cache = new Map();
 export async function getPlacesData(url) {
   if (cache.has(url)) {
-    return cache.get(url);
+    const entry = cache.get(url);
+    // Expire the cache to make sure the UI gets updated as titles change
+    // Ideally this will become more selective and happen more immediately when pages change
+    if (
+      entry.timeStamp != undefined &&
+      Date.now() - entry.timeStamp < CACHE_ITEM_DURATION
+    ) {
+      return entry;
+    }
   }
 
   let query = NavHistory.getNewQuery();
@@ -274,6 +283,7 @@ export async function getPlacesData(url) {
       icon: favicon,
       richIcon: await getFavicon(url),
       previewImage: await getPreviewImageURL(url),
+      timeStamp: Date.now(),
     };
     cache.set(url, data);
     return data;
