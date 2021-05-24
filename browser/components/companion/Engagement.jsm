@@ -24,7 +24,7 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
   let { ConsoleAPI } = ChromeUtils.import("resource://gre/modules/Console.jsm");
   return new ConsoleAPI({
     prefix: "Engagement",
-    maxLogLevel: "debug",
+    maxLogLevel: "error",
   });
 });
 

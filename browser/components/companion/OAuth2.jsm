@@ -65,6 +65,7 @@ const OAuthConnect = {
     if (
       (progress.isTopLevel &&
         request &&
+        request.URI &&
         flags &
           (Ci.nsIWebProgressListener.STATE_START |
             Ci.nsIWebProgressListener.STATE_IS_NETWORK)) ||
