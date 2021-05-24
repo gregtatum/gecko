@@ -185,6 +185,10 @@ GeckoDriver.prototype.QueryInterface = ChromeUtils.generateQI([
  * during the session's lifetime.
  */
 GeckoDriver.prototype.handleModalDialog = function(action, dialog) {
+  if (!this.currentSession) {
+    return;
+  }
+
   if (action === modal.ACTION_OPENED) {
     this.dialog = new modal.Dialog(() => this.curBrowser, dialog);
     this.getActor().notifyDialogOpened();
@@ -233,16 +237,16 @@ GeckoDriver.prototype.getActor = function(options = {}) {
  *     otherwise the one from the currently selected frame. Defaults to false.
  *
  * @return {BrowsingContext}
- *     The browsing context.
+ *     The browsing context, or `null` if none is available
  */
 GeckoDriver.prototype.getBrowsingContext = function(options = {}) {
   const { context = this.context, parent = false, top = false } = options;
 
   let browsingContext = null;
   if (context === Context.Chrome) {
-    browsingContext = this.currentSession.chromeBrowsingContext;
+    browsingContext = this.currentSession?.chromeBrowsingContext;
   } else {
-    browsingContext = this.currentSession.contentBrowsingContext;
+    browsingContext = this.currentSession?.contentBrowsingContext;
   }
 
   if (browsingContext && parent) {
@@ -620,14 +624,6 @@ GeckoDriver.prototype.handleEvent = function({ target, type }) {
         );
 
         this.currentSession.contentBrowsingContext = target.browsingContext;
-
-        // Manually update the stored browsing context id.
-        // Switching to browserId instead of browsingContext.id would make
-        // this call unnecessary. See Bug 1681973.
-        windowManager.updateIdForBrowser(
-          this.curBrowser.contentBrowser,
-          target.browsingContext.id
-        );
       }
       break;
   }
@@ -1087,14 +1083,14 @@ GeckoDriver.prototype.refresh = async function() {
  *     Top-level browsing context has been discarded.
  */
 GeckoDriver.prototype.getWindowHandle = function() {
-  const browsingContext = assert.open(
+  assert.open(
     this.getBrowsingContext({
       context: Context.Content,
       top: true,
     })
   );
 
-  return browsingContext.id.toString();
+  return windowManager.getIdForBrowser(this.curBrowser.contentBrowser);
 };
 
 /**
@@ -1129,14 +1125,14 @@ GeckoDriver.prototype.getWindowHandles = function() {
  *     Internal browsing context reference not found
  */
 GeckoDriver.prototype.getChromeWindowHandle = function() {
-  const browsingContext = assert.open(
+  assert.open(
     this.getBrowsingContext({
       context: Context.Chrome,
       top: true,
     })
   );
 
-  return browsingContext.id.toString();
+  return windowManager.getIdForWindow(this.curBrowser.window);
 };
 
 /**
@@ -1268,7 +1264,7 @@ GeckoDriver.prototype.switchToWindow = async function(cmd) {
   );
   assert.boolean(focus, pprint`Expected "focus" to be a boolean, got ${focus}`);
 
-  const found = windowManager.findWindowByHandle(parseInt(handle));
+  const found = windowManager.findWindowByHandle(handle);
 
   let selected = false;
   if (found) {
@@ -2234,11 +2230,6 @@ GeckoDriver.prototype.deleteSession = function() {
     return;
   }
 
-  clearElementIdCache();
-
-  unregisterCommandsActor();
-  unregisterEventsActor();
-
   for (let win of windowManager.windows) {
     this.unregisterListenersForWindow(win);
   }
@@ -2252,6 +2243,13 @@ GeckoDriver.prototype.deleteSession = function() {
   }
 
   Services.obs.removeObserver(this, "browser-delayed-startup-finished");
+
+  clearElementIdCache();
+
+  // Always unregister actors after all other observers
+  // and listeners have been removed.
+  unregisterCommandsActor();
+  unregisterEventsActor();
 
   this.currentSession.destroy();
   this.currentSession = null;

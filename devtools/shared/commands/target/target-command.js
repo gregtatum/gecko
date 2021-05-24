@@ -125,6 +125,8 @@ class TargetCommand extends EventEmitter {
     //                but we wait for the watcher actor to notify us about it
     //                via target-available-form avent.
     this._gotFirstTopLevelTarget = false;
+    this.commands = commands;
+    this._onResourceAvailable = this._onResourceAvailable.bind(this);
   }
 
   // Called whenever a new Target front is available.
@@ -398,6 +400,21 @@ class TargetCommand extends EventEmitter {
       }
     }
 
+    if (!this._watchingDocumentEvent && !this.isDestroyed()) {
+      // We want to watch DOCUMENT_EVENT in order to update the url and title of target fronts,
+      // as the initial value that is set in them might be erroneous (if the target was
+      // created so early that the document url is still pointing to about:blank and the
+      // html hasn't be parsed yet, so we can't know the <title> content).
+
+      this._watchingDocumentEvent = true;
+      await this.commands.resourceCommand.watchResources(
+        [this.commands.resourceCommand.TYPES.DOCUMENT_EVENT],
+        {
+          onAvailable: this._onResourceAvailable,
+        }
+      );
+    }
+
     if (this.isServerTargetSwitchingEnabled()) {
       await this._onFirstTarget;
     }
@@ -456,6 +473,16 @@ class TargetCommand extends EventEmitter {
    *        but still unregister listeners set via Legacy Listeners.
    */
   stopListening({ onlyLegacy = false } = {}) {
+    if (this._watchingDocumentEvent) {
+      this.commands.resourceCommand.unwatchResources(
+        [this.commands.resourceCommand.TYPES.DOCUMENT_EVENT],
+        {
+          onAvailable: this._onResourceAvailable,
+        }
+      );
+      this._watchingDocumentEvent = false;
+    }
+
     for (const type of TargetCommand.ALL_TYPES) {
       if (!this._isListening(type)) {
         continue;
@@ -509,6 +536,23 @@ class TargetCommand extends EventEmitter {
 
   _matchTargetType(type, target) {
     return type === target.targetType;
+  }
+
+  _onResourceAvailable(resources) {
+    for (const resource of resources) {
+      if (
+        resource.resourceType ===
+        this.commands.resourceCommand.TYPES.DOCUMENT_EVENT
+      ) {
+        const { targetFront } = resource;
+        if (resource.title !== undefined && targetFront?.setTitle) {
+          targetFront.setTitle(resource.title);
+        }
+        if (resource.url !== undefined && targetFront?.setUrl) {
+          targetFront.setUrl(resource.url);
+        }
+      }
+    }
   }
 
   /**
@@ -635,16 +679,19 @@ class TargetCommand extends EventEmitter {
   }
 
   /**
-   * For all the target fronts of a given type, retrieve all the target-scoped fronts of a given type.
+   * For all the target fronts of given types, retrieve all the target-scoped fronts of the given types.
    *
-   * @param {String} targetType
-   *        The type of target to iterate over. Constant of TargetCommand.TYPES.
+   * @param {Array<String>} targetTypes
+   *        The types of target to iterate over. Constant of TargetCommand.TYPES.
    * @param {String} frontType
    *        The type of target-scoped front to retrieve. It can be "inspector", "console", "thread",...
    */
-  async getAllFronts(targetType, frontType) {
+  async getAllFronts(targetTypes, frontType) {
+    if (!Array.isArray(targetTypes) || !targetTypes?.length) {
+      throw new Error("getAllFronts expects a non-empty array of target types");
+    }
     const fronts = [];
-    const targets = this.getAllTargets([targetType]);
+    const targets = this.getAllTargets(targetTypes);
     for (const target of targets) {
       const front = await target.getFront(frontType);
       fronts.push(front);
@@ -770,6 +817,7 @@ class TargetCommand extends EventEmitter {
     this.stopListening();
     this._createListeners.off();
     this._destroyListeners.off();
+
     this._isDestroyed = true;
   }
 }

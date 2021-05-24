@@ -623,7 +623,7 @@ bool shell::enableIteratorHelpers = false;
 bool shell::enablePrivateClassFields = false;
 bool shell::enablePrivateClassMethods = false;
 bool shell::enableTopLevelAwait = true;
-bool shell::enableErgonomicBrandChecks = false;
+bool shell::enableErgonomicBrandChecks = true;
 bool shell::useOffThreadParseGlobal = true;
 #ifdef JS_GC_ZEAL
 uint32_t shell::gZealBits = 0;
@@ -11032,7 +11032,7 @@ static bool SetContextOptions(JSContext* cx, const OptionParser& op) {
   enablePrivateClassFields = !op.getBoolOption("disable-private-fields");
   enablePrivateClassMethods = !op.getBoolOption("disable-private-methods");
   enableErgonomicBrandChecks =
-      op.getBoolOption("enable-ergonomic-brand-checks");
+      !op.getBoolOption("disable-ergonomic-brand-checks");
   enableTopLevelAwait = op.getBoolOption("enable-top-level-await");
   useOffThreadParseGlobal = op.getBoolOption("off-thread-parse-global");
 
@@ -11856,6 +11856,12 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  // `selfHostedXDRBuffer` contains XDR buffer of the self-hosted JS.
+  // A part of it is borrowed by ImmutableScriptData of the self-hosted scripts.
+  //
+  // This buffer's should outlive JS_Shutdown.
+  Maybe<FileContents> selfHostedXDRBuffer;
+
   auto shutdownEngine = MakeScopeExit([] { JS_ShutDown(); });
 
   OptionParser op("Usage: {progname} [options] [[script] scriptArgs*]");
@@ -12007,7 +12013,10 @@ int main(int argc, char** argv) {
                         "Disable private class methods") ||
       !op.addBoolOption(
           '\0', "enable-ergonomic-brand-checks",
-          "Enable ergonomic brand checks for private class fields") ||
+          "Enable ergonomic brand checks for private class fields (no-op)") ||
+      !op.addBoolOption(
+          '\0', "disable-ergonomic-brand-checks",
+          "Disable ergonomic brand checks for private class fields") ||
       !op.addBoolOption('\0', "enable-top-level-await",
                         "Enable top-level await") ||
       !op.addBoolOption('\0', "off-thread-parse-global",
@@ -12479,17 +12488,17 @@ int main(int argc, char** argv) {
 
   // The file content should stay alive as long as Worker thread can be
   // initialized.
-  Maybe<FileContents> buffer;
   JS::SelfHostedCache xdrSpan = nullptr;
   JS::SelfHostedWriter xdrWriter = nullptr;
   if (selfHostedXDRPath) {
     if (encodeSelfHostedCode) {
       xdrWriter = WriteSelfHostedXDRFile;
     } else {
-      buffer.emplace(cx);
-      if (ReadSelfHostedXDRFile(cx, *buffer)) {
-        MOZ_ASSERT(buffer->length() > 0);
-        JS::SelfHostedCache span(buffer->begin(), buffer->end());
+      selfHostedXDRBuffer.emplace(cx);
+      if (ReadSelfHostedXDRFile(cx, *selfHostedXDRBuffer)) {
+        MOZ_ASSERT(selfHostedXDRBuffer->length() > 0);
+        JS::SelfHostedCache span(selfHostedXDRBuffer->begin(),
+                                 selfHostedXDRBuffer->end());
         xdrSpan = span;
       } else {
         fprintf(stderr, "Falling back on parsing source.\n");

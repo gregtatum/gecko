@@ -521,6 +521,9 @@ class AsyncPanZoomController {
   // Return the directions in which this APZC allows overscrolling.
   ScrollDirections GetOverscrollableDirections() const;
 
+  // Return the directions in which this APZC allows scrolling.
+  ScrollDirections GetScrollableDirections() const;
+
   // Return whether or not a scroll delta will be able to scroll in either
   // direction.
   bool CanScroll(const ParentLayerPoint& aDelta) const;
@@ -1592,10 +1595,18 @@ class AsyncPanZoomController {
   void FlushRepaintForOverscrollHandoff();
 
   /**
-   * If overscrolled, start a snap-back animation and return true.
+   * If overscrolled, start a snap-back animation and return true. Even if not
+   * overscrolled, this function tries to snap back to if there's an applicable
+   * scroll snap point.
    * Otherwise return false.
    */
   bool SnapBackIfOverscrolled();
+
+  /**
+   * NOTE: Similar to above but this function doesn't snap back to the scroll
+   * snap point.
+   */
+  bool SnapBackIfOverscrolledForMomentum(const ParentLayerPoint& aVelocity);
 
   /**
    * Build the chain of APZCs along which scroll will be handed off when

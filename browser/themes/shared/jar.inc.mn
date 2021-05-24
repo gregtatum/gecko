@@ -120,12 +120,9 @@
   skin/classic/browser/preferences/siteDataSettings.css        (../shared/preferences/siteDataSettings.css)
 * skin/classic/browser/preferences/containers.css              (../shared/preferences/containers.css)
 * skin/classic/browser/preferences/containers-dialog.css       (../shared/preferences/containers-dialog.css)
-
-  skin/classic/browser/upgradeDialog.css                       (../shared/upgradeDialog.css)
   skin/classic/browser/upgradeDialog/highlights-24.svg         (../shared/upgradeDialog/highlights-24.svg)
   skin/classic/browser/upgradeDialog/menu-24.svg               (../shared/upgradeDialog/menu-24.svg)
   skin/classic/browser/upgradeDialog/tabs-24.svg               (../shared/upgradeDialog/tabs-24.svg)
-
   skin/classic/browser/fxa/fxa-spinner.svg                     (../shared/fxa/fxa-spinner.svg)
   skin/classic/browser/fxa/sync-illustration.svg               (../shared/fxa/sync-illustration.svg)
   skin/classic/browser/fxa/sync-illustration-issue.svg         (../shared/fxa/sync-illustration-issue.svg)
@@ -139,6 +136,7 @@
   skin/classic/browser/fxa/monitor.svg                         (../shared/fxa/monitor.svg)
   skin/classic/browser/fxa/add-device.svg                      (../shared/fxa/add-device.svg)
 
+  skin/classic/browser/add-circle-fill.svg            (../shared/icons/add-circle-fill.svg)
   skin/classic/browser/back.svg                       (../shared/icons/back.svg)
   skin/classic/browser/back-12.svg                    (../shared/icons/back-12.svg)
   skin/classic/browser/bookmark.svg                   (../shared/icons/bookmark.svg)
@@ -200,6 +198,7 @@
   skin/classic/browser/sort.svg                       (../shared/icons/sort.svg)
 #endif
   skin/classic/browser/stop-to-reload.svg             (../shared/icons/stop-to-reload.svg)
+  skin/classic/browser/subtract-circle-fill.svg       (../shared/icons/subtract-circle-fill.svg)
   skin/classic/browser/success-animation.svg          (../shared/icons/success-animation.svg)
   skin/classic/browser/sync.svg                       (../shared/icons/sync.svg)
   skin/classic/browser/tab.svg                        (../shared/icons/tab.svg)

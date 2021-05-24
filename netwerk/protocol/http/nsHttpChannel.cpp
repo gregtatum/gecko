@@ -114,6 +114,7 @@
 #include "HttpChannelParent.h"
 #include "HttpTransactionParent.h"
 #include "ParentChannelListener.h"
+#include "ThirdPartyUtil.h"
 #include "InterceptedHttpChannel.h"
 #include "../../cache2/CacheFileUtils.h"
 #include "nsIMultiplexInputStream.h"
@@ -131,6 +132,7 @@
 #include "js/Conversions.h"
 #include "mozilla/dom/SecFetch.h"
 #include "mozilla/net/TRRService.h"
+#include "mozilla/URLQueryStringStripper.h"
 
 #ifdef MOZ_TASK_TRACER
 #  include "GeckoTaskTracer.h"
@@ -5000,6 +5002,26 @@ nsresult nsHttpChannel::AsyncProcessRedirection(uint32_t redirectType) {
     return NS_ERROR_CORRUPTED_CONTENT;
   }
 
+  // Perform the URL query string stripping for redirects. We will only strip
+  // the query string if it is redirecting to a third-party URI in the top
+  // level.
+  if (StaticPrefs::privacy_query_stripping_redirect()) {
+    ThirdPartyUtil* thirdPartyUtil = ThirdPartyUtil::GetInstance();
+    bool isThirdPartyRedirectURI = true;
+    thirdPartyUtil->IsThirdPartyURI(mURI, mRedirectURI,
+                                    &isThirdPartyRedirectURI);
+
+    if (isThirdPartyRedirectURI && mLoadInfo->GetExternalContentPolicyType() ==
+                                       ExtContentPolicy::TYPE_DOCUMENT) {
+      Unused << URLQueryStringStripper::Strip(mRedirectURI, mRedirectURI);
+    }
+  }
+
+  if (NS_WARN_IF(!mRedirectURI)) {
+    LOG(("Invalid redirect URI after performaing query string stripping"));
+    return NS_ERROR_FAILURE;
+  }
+
   return ContinueProcessRedirectionAfterFallback(NS_OK);
 }
 
@@ -5038,6 +5060,9 @@ nsresult nsHttpChannel::ContinueProcessRedirectionAfterFallback(nsresult rv) {
       timings = mTransaction->Timings();
     }
 
+    uint64_t size = 0;
+    GetEncodedBodySize(&size);
+
     nsAutoCString contentType;
     if (mResponseHead) {
       mResponseHead->ContentType(contentType);
@@ -5046,8 +5071,8 @@ nsresult nsHttpChannel::ContinueProcessRedirectionAfterFallback(nsresult rv) {
     profiler_add_network_marker(
         mURI, requestMethod, priority, mChannelId,
         NetworkLoadType::LOAD_REDIRECT, mLastStatusReported, TimeStamp::Now(),
-        mLogicalOffset, mCacheDisposition, mLoadInfo->GetInnerWindowID(),
-        &timings, mRedirectURI, std::move(mSource),
+        size, mCacheDisposition, mLoadInfo->GetInnerWindowID(), &timings,
+        mRedirectURI, std::move(mSource),
         Some(nsDependentCString(contentType.get())));
   }
 #endif
@@ -7345,8 +7370,6 @@ nsresult nsHttpChannel::ContinueOnStopRequest(nsresult aStatus, bool aIsFromNet,
     nsAutoCString requestMethod;
     GetRequestMethod(requestMethod);
 
-    nsCOMPtr<nsIURI> uri;
-    GetURI(getter_AddRefs(uri));
     int32_t priority = PRIORITY_NORMAL;
     GetPriority(&priority);
 
@@ -7358,7 +7381,7 @@ nsresult nsHttpChannel::ContinueOnStopRequest(nsresult aStatus, bool aIsFromNet,
       mResponseHead->ContentType(contentType);
     }
     profiler_add_network_marker(
-        uri, requestMethod, priority, mChannelId, NetworkLoadType::LOAD_STOP,
+        mURI, requestMethod, priority, mChannelId, NetworkLoadType::LOAD_STOP,
         mLastStatusReported, TimeStamp::Now(), size, mCacheDisposition,
         mLoadInfo->GetInnerWindowID(), &mTransactionTimings, nullptr,
         std::move(mSource), Some(nsDependentCString(contentType.get())));

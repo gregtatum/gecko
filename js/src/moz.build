@@ -253,6 +253,7 @@ EXPORTS.js.friend += [
     "../public/friend/ErrorMessages.h",
     "../public/friend/ErrorNumbers.msg",
     "../public/friend/JSMEnvironment.h",
+    "../public/friend/PerformanceHint.h",
     "../public/friend/StackLimits.h",
     "../public/friend/UsageStatistics.h",
     "../public/friend/WindowProxy.h",
@@ -533,6 +534,8 @@ if CONFIG["MOZ_VTUNE"]:
     ]
     if CONFIG["CC_TYPE"] == "gcc":
         SOURCES["vtune/ittnotify_static.c"].flags += ["-Wno-stringop-overflow"]
+        if int(CONFIG["CC_VERSION"].split(".")[0]) >= 8:
+            SOURCES["vtune/ittnotify_static.c"].flags += ["-Wno-stringop-truncation"]
 
 DIRS += ["build", "debugger", "frontend", "gc", "irregexp", "jit", "wasm"]
 

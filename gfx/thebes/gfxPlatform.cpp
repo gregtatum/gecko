@@ -968,9 +968,10 @@ void gfxPlatform::Init() {
 
   gPlatform->mHasVariationFontSupport = gPlatform->CheckVariationFontSupport();
 
-  nsresult rv;
-  rv = gfxPlatformFontList::Init();
-  if (NS_FAILED(rv)) {
+  // This *create* the platform font list instance, but may not *initialize* it
+  // yet if the gfx.font-list.lazy-init.enabled pref is set. The first *use*
+  // of the list will ensure it is initialized.
+  if (!gPlatform->CreatePlatformFontList()) {
     MOZ_CRASH("Could not initialize gfxPlatformFontList");
   }
 
@@ -993,8 +994,7 @@ void gfxPlatform::Init() {
     }
   }
 
-  rv = gfxFontCache::Init();
-  if (NS_FAILED(rv)) {
+  if (NS_FAILED(gfxFontCache::Init())) {
     MOZ_CRASH("Could not initialize gfxFontCache");
   }
 
@@ -2671,18 +2671,6 @@ void gfxPlatform::InitWebRenderConfig() {
 
   bool hasHardware = gfxConfig::IsEnabled(Feature::WEBRENDER);
   bool hasSoftware = gfxConfig::IsEnabled(Feature::WEBRENDER_SOFTWARE);
-
-#if defined(XP_WIN) && !defined(EARLY_BETA_OR_EARLIER)
-  // If we have D3D11 compositing, and Software WebRender isn't forced on, then
-  // we should prefer D3D11 compositing over Software WebRender in late beta and
-  // release by default. We may chose to fallback to Software WebRender in
-  // gfxPlatform::FallbackFromAcceleration.
-  if (gfxConfig::IsEnabled(Feature::D3D11_COMPOSITING) &&
-      !gfxConfig::IsForcedOnByUser(Feature::WEBRENDER_SOFTWARE)) {
-    hasSoftware = false;
-  }
-#endif
-
   bool hasWebRender = hasHardware || hasSoftware;
 
 #ifdef XP_WIN

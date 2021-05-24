@@ -2134,10 +2134,8 @@ void CodeGenerator::visitCtzI64(LCtzI64* ins) {
 void CodeGenerator::visitMulI64(LMulI64* lir) {
   const Register64 lhs = ToRegister64(lir->getInt64Operand(LMulI64::Lhs));
   const Register64 rhs = ToRegister64(lir->getInt64Operand(LMulI64::Rhs));
-  const mozilla::DebugOnly<Register64> output = ToOutRegister64(lir);
-  MOZ_ASSERT(lhs == output);
-
-  masm.mul64(rhs, lhs, Register::Invalid());
+  const Register64 output = ToOutRegister64(lir);
+  masm.mul64(lhs, rhs, output);
 }
 
 void CodeGenerator::visitNotI64(LNotI64* lir) {
@@ -3461,25 +3459,7 @@ void CodeGenerator::visitWasmPermuteSimd128(LWasmPermuteSimd128* ins) {
       }
       MOZ_ASSERT(i < 8, "Should have been a MOVE operation");
 #  endif
-      uint16_t op = mask[0] >> 8;
-      MOZ_ASSERT(op != 0);
-      if (op & LWasmPermuteSimd128::SWAP_QWORDS) {
-        uint32_t dwordMask[4] = {2, 3, 0, 1};
-        masm.permuteInt32x4(dwordMask, src, dest);
-        src = dest;
-      }
-      if (op & LWasmPermuteSimd128::PERM_LOW) {
-        uint16_t control[4];
-        memcpy(control, mask, sizeof(control));
-        control[0] &= 15;
-        masm.permuteLowInt16x8(control, src, dest);
-        src = dest;
-      }
-      if (op & LWasmPermuteSimd128::PERM_HIGH) {
-        masm.permuteHighInt16x8(reinterpret_cast<const uint16_t*>(mask) + 4,
-                                src, dest);
-        src = dest;
-      }
+      masm.permuteInt16x8(reinterpret_cast<const uint16_t*>(mask), src, dest);
       break;
     }
     case LWasmPermuteSimd128::PERMUTE_32x4: {

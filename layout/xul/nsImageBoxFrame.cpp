@@ -39,6 +39,7 @@
 #include "nsThreadUtils.h"
 #include "nsDisplayList.h"
 #include "ImageLayers.h"
+#include "ImageRegion.h"
 #include "ImageContainer.h"
 #include "nsIContent.h"
 
@@ -48,6 +49,7 @@
 #include "mozilla/EventDispatcher.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/PresShell.h"
+#include "mozilla/StaticPrefs_image.h"
 #include "mozilla/SVGImageContext.h"
 #include "Units.h"
 #include "mozilla/layers/RenderRootStateManager.h"
@@ -419,19 +421,25 @@ ImgDrawResult nsImageBoxFrame::CreateWebRenderCommands(
   if (aFlags & nsImageRenderer::FLAG_SYNC_DECODE_IMAGES) {
     containerFlags |= imgIContainer::FLAG_SYNC_DECODE;
   }
+  if (StaticPrefs::image_svg_blob_image() &&
+      imgCon->GetType() == imgIContainer::TYPE_VECTOR) {
+    containerFlags |= imgIContainer::FLAG_RECORD_BLOB;
+  }
 
   const int32_t appUnitsPerDevPixel = PresContext()->AppUnitsPerDevPixel();
   LayoutDeviceRect fillRect =
       LayoutDeviceRect::FromAppUnits(dest, appUnitsPerDevPixel);
 
   Maybe<SVGImageContext> svgContext;
+  Maybe<ImageIntRegion> region;
   gfx::IntSize decodeSize =
       nsLayoutUtils::ComputeImageContainerDrawingParameters(
-          imgCon, aItem->Frame(), fillRect, aSc, containerFlags, svgContext);
+          imgCon, aItem->Frame(), fillRect, fillRect, aSc, containerFlags,
+          svgContext, region);
 
   RefPtr<layers::ImageContainer> container;
   result = imgCon->GetImageContainerAtSize(aManager->LayerManager(), decodeSize,
-                                           svgContext, containerFlags,
+                                           svgContext, region, containerFlags,
                                            getter_AddRefs(container));
   if (!container) {
     NS_WARNING("Failed to get image container");
@@ -440,6 +448,20 @@ ImgDrawResult nsImageBoxFrame::CreateWebRenderCommands(
 
   mozilla::wr::ImageRendering rendering = wr::ToImageRendering(
       nsLayoutUtils::GetSamplingFilterForFrame(aItem->Frame()));
+  wr::LayoutRect fill = wr::ToLayoutRect(fillRect);
+
+  if (containerFlags & imgIContainer::FLAG_RECORD_BLOB) {
+    Maybe<wr::BlobImageKey> key = aManager->CommandBuilder().CreateBlobImageKey(
+        aItem, container, aResources);
+    if (key.isNothing()) {
+      return result;
+    }
+
+    aBuilder.PushImage(fill, fill, !BackfaceIsHidden(), rendering,
+                       wr::AsImageKey(key.value()));
+    return result;
+  }
+
   gfx::IntSize size;
   Maybe<wr::ImageKey> key = aManager->CommandBuilder().CreateImageKey(
       aItem, container, aBuilder, aResources, rendering, aSc, size, Nothing());
@@ -447,7 +469,6 @@ ImgDrawResult nsImageBoxFrame::CreateWebRenderCommands(
     return result;
   }
 
-  wr::LayoutRect fill = wr::ToLayoutRect(fillRect);
   aBuilder.PushImage(fill, fill, !BackfaceIsHidden(), rendering, key.value());
 
   return result;

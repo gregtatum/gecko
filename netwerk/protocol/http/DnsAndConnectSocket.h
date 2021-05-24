@@ -52,16 +52,18 @@ class DnsAndConnectSocket final : public nsIOutputStreamCallback,
   NS_DECL_NSINAMED
   NS_DECL_NSIDNSLISTENER
 
-  DnsAndConnectSocket(nsHttpConnectionInfo* ci, nsAHttpTransaction* trans,
+  DnsAndConnectSocket(ConnectionEntry* ent, nsAHttpTransaction* trans,
                       uint32_t caps, bool speculative, bool isFromPredictor,
                       bool urgentStart);
 
-  [[nodiscard]] nsresult Init(ConnectionEntry* ent);
+  [[nodiscard]] nsresult Init();
   void Abandon();
   double Duration(TimeStamp epoch);
   void CloseTransports(nsresult error);
 
   bool IsSpeculative() { return mSpeculative; }
+
+  bool IsFromPredictor() { return mIsFromPredictor; }
 
   bool Allow1918() { return mAllow1918; }
   void SetAllow1918(bool val) { mAllow1918 = val; }
@@ -176,6 +178,7 @@ class DnsAndConnectSocket final : public nsIOutputStreamCallback,
                        HttpConnectionBase** connection);
     [[nodiscard]] nsresult SetupStreams(DnsAndConnectSocket* dnsAndSock);
     nsresult ResolveHost(DnsAndConnectSocket* dnsAndSock);
+    bool ShouldRetryDNS();
     nsresult OnLookupComplete(DnsAndConnectSocket* dnsAndSock,
                               nsIDNSRecord* rec, nsresult status);
     nsresult CheckConnectedResult(DnsAndConnectSocket* dnsAndSock);
@@ -199,7 +202,7 @@ class DnsAndConnectSocket final : public nsIOutputStreamCallback,
       bool removeWhenFound);
 
   void CheckProxyConfig();
-  nsresult SetupDnsFlags(ConnectionEntry* ent);
+  nsresult SetupDnsFlags();
   nsresult SetupEvent(SetupEvents event);
 
   RefPtr<nsAHttpTransaction> mTransaction;
@@ -240,7 +243,7 @@ class DnsAndConnectSocket final : public nsIOutputStreamCallback,
   // transactions.
   bool mFreeToUse = true;
 
-  RefPtr<nsHttpConnectionInfo> mConnInfo;
+  RefPtr<ConnectionEntry> mEnt;
   nsCOMPtr<nsITimer> mSynTimer;
   TransportSetup mBackupTransport;
 

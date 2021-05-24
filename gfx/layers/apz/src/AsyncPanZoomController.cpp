@@ -1924,11 +1924,10 @@ ParentLayerPoint AsyncPanZoomController::GetScrollWheelDelta(
   delta.y *= aMultiplierY;
 
   // For the conditions under which we allow system scroll overrides, see
-  // EventStateManager::DeltaAccumulator::ComputeScrollAmountForDefaultAction
-  // and WheelTransaction::OverrideSystemScrollSpeed. Note that we do *not*
-  // restrict this to the root content, see bug 1217715 for discussion on this.
-  if (StaticPrefs::
-          mousewheel_system_scroll_override_on_root_content_enabled() &&
+  // WidgetWheelEvent::OverriddenDelta{X,Y}.
+  // Note that we do *not* restrict this to the root content, see bug 1217715
+  // for discussion on this.
+  if (StaticPrefs::mousewheel_system_scroll_override_enabled() &&
       !aEvent.IsCustomizedByUserPrefs() &&
       aEvent.mDeltaType == ScrollWheelInput::SCROLLDELTA_LINE &&
       aEvent.mAllowToOverrideSystemScrollSpeed) {
@@ -2790,20 +2789,25 @@ nsEventStatus AsyncPanZoomController::OnPanEnd(const PanGestureInput& aEvent) {
     return HandleEndOfPan();
   }
 
-  if (IsOverscrolled() && mState != OVERSCROLL_ANIMATION) {
-    // If we are in overscrolled state, trigger OverscrollAnimation to
-    // ensure we will snap back to the scroll edge.
-    StartOverscrollAnimation(GetVelocityVector(), GetOverscrollSideBits());
-  } else {
+  MOZ_ASSERT(GetCurrentPanGestureBlock());
+  RefPtr<const OverscrollHandoffChain> overscrollHandoffChain =
+      GetCurrentPanGestureBlock()->GetOverscrollHandoffChain();
+
+  // Call SnapBackOverscrolledApzcForMomentum regardless whether this APZC is
+  // overscrolled or not since overscroll animations for ancestor APZCs in this
+  // overscroll handoff chain might have been cancelled by the current pan
+  // gesture block.
+  overscrollHandoffChain->SnapBackOverscrolledApzcForMomentum(
+      this, GetVelocityVector());
+  // If this APZC is overscrolled, the above SnapBackOverscrolledApzcForMomemtum
+  // triggers an overscroll animation, do not reset the state in such case.
+  if (mState != OVERSCROLL_ANIMATION) {
     SetState(NOTHING);
   }
 
   // Drop any velocity on axes where we don't have room to scroll anyways
   // (in this APZC, or an APZC further in the handoff chain).
   // This ensures that we don't enlarge the display port unnecessarily.
-  MOZ_ASSERT(GetCurrentPanGestureBlock());
-  RefPtr<const OverscrollHandoffChain> overscrollHandoffChain =
-      GetCurrentPanGestureBlock()->GetOverscrollHandoffChain();
   {
     RecursiveMutexAutoLock lock(mRecursiveMutex);
     if (!overscrollHandoffChain->CanScrollInDirection(
@@ -3557,14 +3561,27 @@ ScrollDirections AsyncPanZoomController::GetOverscrollableDirections() const {
     return result;
   }
 
-  if (mX.CanScroll() && mX.OverscrollBehaviorAllowsOverscrollEffect()) {
+  if (mX.AllowOverscroll()) {
     result += ScrollDirection::eHorizontal;
   }
 
-  if (mY.CanScroll() && mY.OverscrollBehaviorAllowsOverscrollEffect()) {
+  if (mY.AllowOverscroll()) {
     result += ScrollDirection::eVertical;
   }
 
+  return result;
+}
+
+ScrollDirections AsyncPanZoomController::GetScrollableDirections() const {
+  ScrollDirections result;
+  RecursiveMutexAutoLock lock(mRecursiveMutex);
+
+  if (mX.CanScroll()) {
+    result += ScrollDirection::eHorizontal;
+  }
+  if (mY.CanScroll()) {
+    result += ScrollDirection::eVertical;
+  }
   return result;
 }
 
@@ -4267,11 +4284,7 @@ void AsyncPanZoomController::FlushRepaintForNewInputBlock() {
 
 bool AsyncPanZoomController::SnapBackIfOverscrolled() {
   RecursiveMutexAutoLock lock(mRecursiveMutex);
-  // It's possible that we're already in the middle of an overscroll
-  // animation - if so, don't start a new one.
-  if (IsOverscrolled() && mState != OVERSCROLL_ANIMATION) {
-    APZC_LOG("%p is overscrolled, starting snap-back\n", this);
-    StartOverscrollAnimation(ParentLayerPoint(0, 0), GetOverscrollSideBits());
+  if (SnapBackIfOverscrolledForMomentum(ParentLayerPoint(0, 0))) {
     return true;
   }
   // If we don't kick off an overscroll animation, we still need to ask the
@@ -4279,6 +4292,19 @@ bool AsyncPanZoomController::SnapBackIfOverscrolled() {
   // done so when we started this fling
   if (mState != FLING) {
     ScrollSnap();
+  }
+  return false;
+}
+
+bool AsyncPanZoomController::SnapBackIfOverscrolledForMomentum(
+    const ParentLayerPoint& aVelocity) {
+  RecursiveMutexAutoLock lock(mRecursiveMutex);
+  // It's possible that we're already in the middle of an overscroll
+  // animation - if so, don't start a new one.
+  if (IsOverscrolled() && mState != OVERSCROLL_ANIMATION) {
+    APZC_LOG("%p is overscrolled, starting snap-back\n", this);
+    StartOverscrollAnimation(aVelocity, GetOverscrollSideBits());
+    return true;
   }
   return false;
 }
@@ -5574,6 +5600,7 @@ void AsyncPanZoomController::ZoomToRect(const ZoomTarget& aZoomTarget,
     }
 
     FrameMetrics endZoomToMetrics = Metrics();
+    CSSSize sizeBeforeZoom = Metrics().CalculateCompositedSizeInCssPixels();
     if (zoomOut) {
       // Set our zoom to the min zoom and then calculate what the after-zoom
       // composited size is, and then calculate the new scroll offset so that we
@@ -5583,8 +5610,6 @@ void AsyncPanZoomController::ZoomToRect(const ZoomTarget& aZoomTarget,
 
       CSSSize sizeAfterZoom =
           endZoomToMetrics.CalculateCompositedSizeInCssPixels();
-
-      CSSSize sizeBeforeZoom = Metrics().CalculateCompositedSizeInCssPixels();
 
       rect = CSSRect(
           scrollOffset.x + (sizeBeforeZoom.width - sizeAfterZoom.width) / 2,
@@ -5641,6 +5666,30 @@ void AsyncPanZoomController::ZoomToRect(const ZoomTarget& aZoomTarget,
       if (rect.X() < 0.0f) {
         rect.MoveToX(0.0f);
       }
+    }
+
+    bool intersectRectAgain = false;
+    // If we can't zoom out enough to show the full rect then shift the rect we
+    // are able to show to center what was visible.
+    // Note that this calculation works no matter the relation of sizeBeforeZoom
+    // to sizeAfterZoom, ie whether we are increasing or decreasing zoom.
+    if (!zoomOut && (sizeAfterZoom.height < rect.Height())) {
+      rect.y =
+          scrollOffset.y + (sizeBeforeZoom.height - sizeAfterZoom.height) / 2;
+      rect.height = sizeAfterZoom.Height();
+
+      intersectRectAgain = true;
+    }
+
+    if (!zoomOut && (sizeAfterZoom.width < rect.Width())) {
+      rect.x =
+          scrollOffset.x + (sizeBeforeZoom.width - sizeAfterZoom.width) / 2;
+      rect.width = sizeAfterZoom.Width();
+
+      intersectRectAgain = true;
+    }
+    if (intersectRectAgain) {
+      rect = rect.Intersect(cssPageRect);
     }
 
     // If any of these conditions are met, the page will be overscrolled after

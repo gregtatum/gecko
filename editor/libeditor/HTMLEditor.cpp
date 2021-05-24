@@ -899,76 +899,6 @@ NS_IMETHODIMP HTMLEditor::NodeIsBlock(nsINode* aNode, bool* aIsBlock) {
   return NS_OK;
 }
 
-bool HTMLEditor::IsEmptyInlineNode(nsIContent& aContent) const {
-  MOZ_ASSERT(IsEditActionDataAvailable());
-
-  if (!HTMLEditUtils::IsInlineElement(aContent) ||
-      !HTMLEditUtils::IsContainerNode(aContent)) {
-    return false;
-  }
-  return HTMLEditUtils::IsEmptyNode(
-      aContent, {EmptyCheckOption::TreatSingleBRElementAsVisible});
-}
-
-/**
- * IsNextCharInNodeWhiteSpace() checks the adjacent content in the same node to
- * see if following selection is white-space or nbsp.
- */
-void HTMLEditor::IsNextCharInNodeWhiteSpace(nsIContent* aContent,
-                                            int32_t aOffset, bool* outIsSpace,
-                                            bool* outIsNBSP,
-                                            nsIContent** outNode,
-                                            int32_t* outOffset) {
-  MOZ_ASSERT(aContent && outIsSpace && outIsNBSP);
-  MOZ_ASSERT((outNode && outOffset) || (!outNode && !outOffset));
-  *outIsSpace = false;
-  *outIsNBSP = false;
-  if (outNode && outOffset) {
-    *outNode = nullptr;
-    *outOffset = -1;
-  }
-
-  if (aContent->IsText() && (uint32_t)aOffset < aContent->Length()) {
-    char16_t ch = aContent->GetText()->CharAt(aOffset);
-    *outIsSpace = nsCRT::IsAsciiSpace(ch);
-    *outIsNBSP = (ch == kNBSP);
-    if (outNode && outOffset) {
-      NS_IF_ADDREF(*outNode = aContent);
-      // yes, this is _past_ the character
-      *outOffset = aOffset + 1;
-    }
-  }
-}
-
-/**
- * IsPrevCharInNodeWhiteSpace() checks the adjacent content in the same node to
- * see if following selection is white-space.
- */
-void HTMLEditor::IsPrevCharInNodeWhiteSpace(nsIContent* aContent,
-                                            int32_t aOffset, bool* outIsSpace,
-                                            bool* outIsNBSP,
-                                            nsIContent** outNode,
-                                            int32_t* outOffset) {
-  MOZ_ASSERT(aContent && outIsSpace && outIsNBSP);
-  MOZ_ASSERT((outNode && outOffset) || (!outNode && !outOffset));
-  *outIsSpace = false;
-  *outIsNBSP = false;
-  if (outNode && outOffset) {
-    *outNode = nullptr;
-    *outOffset = -1;
-  }
-
-  if (aContent->IsText() && aOffset > 0) {
-    char16_t ch = aContent->GetText()->CharAt(aOffset - 1);
-    *outIsSpace = nsCRT::IsAsciiSpace(ch);
-    *outIsNBSP = (ch == kNBSP);
-    if (outNode && outOffset) {
-      NS_IF_ADDREF(*outNode = aContent);
-      *outOffset = aOffset - 1;
-    }
-  }
-}
-
 NS_IMETHODIMP HTMLEditor::UpdateBaseURL() {
   RefPtr<Document> document = GetDocument();
   if (NS_WARN_IF(!document)) {
@@ -1575,61 +1505,6 @@ NS_IMETHODIMP HTMLEditor::RebuildDocumentFromSource(
   return rv;
 }
 
-EditorRawDOMPoint HTMLEditor::GetBetterInsertionPointFor(
-    nsIContent& aContentToInsert,
-    const EditorRawDOMPoint& aPointToInsert) const {
-  if (NS_WARN_IF(!aPointToInsert.IsSet())) {
-    return aPointToInsert;
-  }
-
-  EditorRawDOMPoint pointToInsert(aPointToInsert.GetNonAnonymousSubtreePoint());
-  if (NS_WARN_IF(!pointToInsert.IsSet())) {
-    // Cannot insert aContentToInsert into this DOM tree.
-    return EditorRawDOMPoint();
-  }
-
-  // If the node to insert is not a block level element, we can insert it
-  // at any point.
-  if (!HTMLEditUtils::IsBlockElement(aContentToInsert)) {
-    return pointToInsert;
-  }
-
-  WSRunScanner wsScannerForPointToInsert(GetActiveEditingHost(), pointToInsert);
-
-  // If the insertion position is after the last visible item in a line,
-  // i.e., the insertion position is just before a visible line break <br>,
-  // we want to skip to the position just after the line break (see bug 68767).
-  WSScanResult forwardScanFromPointToInsertResult =
-      wsScannerForPointToInsert.ScanNextVisibleNodeOrBlockBoundaryFrom(
-          pointToInsert);
-  // So, if the next visible node isn't a <br> element, we can insert the block
-  // level element to the point.
-  if (!forwardScanFromPointToInsertResult.GetContent() ||
-      !forwardScanFromPointToInsertResult.ReachedBRElement()) {
-    return pointToInsert;
-  }
-
-  // However, we must not skip next <br> element when the caret appears to be
-  // positioned at the beginning of a block, in that case skipping the <br>
-  // would not insert the <br> at the caret position, but after the current
-  // empty line.
-  WSScanResult backwardScanFromPointToInsertResult =
-      wsScannerForPointToInsert.ScanPreviousVisibleNodeOrBlockBoundaryFrom(
-          pointToInsert);
-  // So, if there is no previous visible node,
-  // or, if both nodes of the insertion point is <br> elements,
-  // or, if the previous visible node is different block,
-  // we need to skip the following <br>.  So, otherwise, we can insert the
-  // block at the insertion point.
-  if (!backwardScanFromPointToInsertResult.GetContent() ||
-      backwardScanFromPointToInsertResult.ReachedBRElement() ||
-      backwardScanFromPointToInsertResult.ReachedCurrentBlockBoundary()) {
-    return pointToInsert;
-  }
-
-  return forwardScanFromPointToInsertResult.RawPointAfterContent();
-}
-
 NS_IMETHODIMP HTMLEditor::InsertElementAtSelection(Element* aElement,
                                                    bool aDeleteSelection) {
   nsresult rv = InsertElementAtSelectionAsAction(aElement, aDeleteSelection);
@@ -1759,12 +1634,24 @@ nsresult HTMLEditor::InsertElementAtSelectionAsAction(
     return NS_OK;
   }
 
+  Element* editingHost = GetActiveEditingHost();
+  if (NS_WARN_IF(!editingHost)) {
+    // In theory, we should return NS_ERROR_FAILURE here, but we've not
+    // thrown exception in this case.  Therefore, we should allow to use
+    // the root element instead for now.
+    editingHost = GetRoot();
+    if (NS_WARN_IF(!editingHost)) {
+      return EditorBase::ToGenericNSResult(NS_ERROR_FAILURE);
+    }
+  }
+
   EditorRawDOMPoint atAnchor(SelectionRef().AnchorRef());
   // Adjust position based on the node we are going to insert.
   EditorDOMPoint pointToInsert =
-      GetBetterInsertionPointFor(*aElement, atAnchor);
+      HTMLEditUtils::GetBetterInsertionPointFor<EditorDOMPoint>(
+          *aElement, atAnchor, *editingHost);
   if (!pointToInsert.IsSet()) {
-    NS_WARNING("HTMLEditor::GetBetterInsertionPointFor() failed");
+    NS_WARNING("HTMLEditUtils::GetBetterInsertionPointFor() failed");
     return NS_ERROR_FAILURE;
   }
 
@@ -1798,7 +1685,9 @@ nsresult HTMLEditor::InsertElementAtSelectionAsAction(
 
   // check for inserting a whole table at the end of a block. If so insert
   // a br after it.
-  if (!HTMLEditUtils::IsTable(aElement) || !IsLastEditableChild(aElement)) {
+  if (!HTMLEditUtils::IsTable(aElement) ||
+      !HTMLEditUtils::IsLastChild(*aElement,
+                                  {WalkTreeOption::IgnoreNonEditableNode})) {
     return NS_OK;
   }
 
@@ -2809,7 +2698,7 @@ already_AddRefed<Element> HTMLEditor::GetSelectedElement(const nsAtom* aTagName,
       if (nextSibling->IsHTMLElement(nsGkAtoms::br)) {
         return nullptr;
       }
-      nsIContent* firstEditableLeaf = HTMLEditUtils::GetFirstLeafChild(
+      nsIContent* firstEditableLeaf = HTMLEditUtils::GetFirstLeafContent(
           *nextSibling, {LeafNodeType::OnlyLeafNode});
       if (firstEditableLeaf &&
           firstEditableLeaf->IsHTMLElement(nsGkAtoms::br)) {
@@ -3913,41 +3802,6 @@ nsresult HTMLEditor::SelectAllInternal() {
   return error.StealNSResult();
 }
 
-// this will NOT find aAttribute unless aAttribute has a non-null value
-// so singleton attributes like <Table border> will not be matched!
-bool HTMLEditor::IsTextPropertySetByContent(nsINode* aNode, nsAtom* aProperty,
-                                            nsAtom* aAttribute,
-                                            const nsAString* aValue,
-                                            nsAString* outValue) {
-  MOZ_ASSERT(aNode && aProperty);
-
-  for (Element* element = aNode->GetAsElementOrParentElement(); element;
-       element = element->GetParentElement()) {
-    if (aProperty != element->NodeInfo()->NameAtom()) {
-      continue;
-    }
-    if (!aAttribute) {
-      return true;
-    }
-    nsAutoString value;
-    element->GetAttr(kNameSpaceID_None, aAttribute, value);
-    if (outValue) {
-      *outValue = value;
-    }
-    if (!value.IsEmpty()) {
-      if (!aValue) {
-        return true;
-      }
-      if (aValue->Equals(value, nsCaseInsensitiveStringComparator)) {
-        return true;
-      }
-      // We found the prop with the attribute, but the value doesn't match.
-      return false;
-    }
-  }
-  return false;
-}
-
 bool HTMLEditor::SetCaretInTableCell(Element* aElement) {
   MOZ_ASSERT(IsEditActionDataAvailable());
 
@@ -4052,16 +3906,16 @@ nsresult HTMLEditor::RemoveBlockContainerWithTransaction(Element& aElement) {
   // sibling and first child to determine if we need a leading br, and compare
   // following sibling and last child to determine if we need a trailing br.
 
-  nsCOMPtr<nsIContent> child = GetFirstEditableChild(aElement);
-
-  if (child) {
+  if (nsCOMPtr<nsIContent> child = HTMLEditUtils::GetFirstChild(
+          aElement, {WalkTreeOption::IgnoreNonEditableNode})) {
     // The case of aNode not being empty.  We need a br at start unless:
     // 1) previous sibling of aNode is a block, OR
     // 2) previous sibling of aNode is a br, OR
     // 3) first child of aNode is a block OR
     // 4) either is null
 
-    if (nsIContent* previousSibling = GetPriorHTMLSibling(&aElement)) {
+    if (nsIContent* previousSibling = HTMLEditUtils::GetPreviousSibling(
+            aElement, {WalkTreeOption::IgnoreNonEditableNode})) {
       if (!HTMLEditUtils::IsBlockElement(*previousSibling) &&
           !previousSibling->IsHTMLElement(nsGkAtoms::br) &&
           !HTMLEditUtils::IsBlockElement(*child)) {
@@ -4082,9 +3936,11 @@ nsresult HTMLEditor::RemoveBlockContainerWithTransaction(Element& aElement) {
     // 3) last child of aNode is a br OR
     // 4) either is null
 
-    if (nsIContent* nextSibling = GetNextHTMLSibling(&aElement)) {
+    if (nsIContent* nextSibling = HTMLEditUtils::GetNextSibling(
+            aElement, {WalkTreeOption::IgnoreNonEditableNode})) {
       if (nextSibling && !HTMLEditUtils::IsBlockElement(*nextSibling)) {
-        if (nsIContent* lastChild = GetLastEditableChild(aElement)) {
+        if (nsIContent* lastChild = HTMLEditUtils::GetLastChild(
+                aElement, {WalkTreeOption::IgnoreNonEditableNode})) {
           if (!HTMLEditUtils::IsBlockElement(*lastChild) &&
               !lastChild->IsHTMLElement(nsGkAtoms::br)) {
             Result<RefPtr<Element>, nsresult> resultOfInsertingBRElement =
@@ -4099,7 +3955,8 @@ nsresult HTMLEditor::RemoveBlockContainerWithTransaction(Element& aElement) {
         }
       }
     }
-  } else if (nsIContent* previousSibling = GetPriorHTMLSibling(&aElement)) {
+  } else if (nsIContent* previousSibling = HTMLEditUtils::GetPreviousSibling(
+                 aElement, {WalkTreeOption::IgnoreNonEditableNode})) {
     // The case of aNode being empty.  We need a br at start unless:
     // 1) previous sibling of aNode is a block, OR
     // 2) previous sibling of aNode is a br, OR
@@ -4108,7 +3965,8 @@ nsresult HTMLEditor::RemoveBlockContainerWithTransaction(Element& aElement) {
     // 5) either is null
     if (!HTMLEditUtils::IsBlockElement(*previousSibling) &&
         !previousSibling->IsHTMLElement(nsGkAtoms::br)) {
-      if (nsIContent* nextSibling = GetNextHTMLSibling(&aElement)) {
+      if (nsIContent* nextSibling = HTMLEditUtils::GetNextSibling(
+              aElement, {WalkTreeOption::IgnoreNonEditableNode})) {
         if (!HTMLEditUtils::IsBlockElement(*nextSibling) &&
             !nextSibling->IsHTMLElement(nsGkAtoms::br)) {
           Result<RefPtr<Element>, nsresult> resultOfInsertingBRElement =
@@ -4926,106 +4784,6 @@ nsresult HTMLEditor::DeleteSelectionAndPrepareToCreateNode() {
   return error.StealNSResult();
 }
 
-nsIContent* HTMLEditor::GetPriorHTMLSibling(nsINode* aNode,
-                                            SkipWhiteSpace aSkipWS) const {
-  MOZ_ASSERT(aNode);
-
-  nsIContent* content = aNode->GetPreviousSibling();
-  while (content &&
-         (!EditorUtils::IsEditableContent(*content, EditorType::HTML) ||
-          SkippableWhiteSpace(content, aSkipWS))) {
-    content = content->GetPreviousSibling();
-  }
-
-  return content;
-}
-
-nsIContent* HTMLEditor::GetNextHTMLSibling(nsINode* aNode,
-                                           SkipWhiteSpace aSkipWS) const {
-  MOZ_ASSERT(aNode);
-
-  nsIContent* content = aNode->GetNextSibling();
-  while (content &&
-         (!EditorUtils::IsEditableContent(*content, EditorType::HTML) ||
-          SkippableWhiteSpace(content, aSkipWS))) {
-    content = content->GetNextSibling();
-  }
-
-  return content;
-}
-
-bool HTMLEditor::IsFirstEditableChild(nsINode* aNode) const {
-  MOZ_ASSERT(aNode);
-  // find first editable child and compare it to aNode
-  nsCOMPtr<nsINode> parentNode = aNode->GetParentNode();
-  if (NS_WARN_IF(!parentNode)) {
-    return false;
-  }
-  return GetFirstEditableChild(*parentNode) == aNode;
-}
-
-bool HTMLEditor::IsLastEditableChild(nsINode* aNode) const {
-  MOZ_ASSERT(aNode);
-  // find last editable child and compare it to aNode
-  nsCOMPtr<nsINode> parentNode = aNode->GetParentNode();
-  if (NS_WARN_IF(!parentNode)) {
-    return false;
-  }
-  return GetLastEditableChild(*parentNode) == aNode;
-}
-
-nsIContent* HTMLEditor::GetFirstEditableChild(nsINode& aNode) const {
-  nsIContent* child = aNode.GetFirstChild();
-  while (child && !EditorUtils::IsEditableContent(*child, EditorType::HTML)) {
-    child = child->GetNextSibling();
-  }
-  return child;
-}
-
-nsIContent* HTMLEditor::GetLastEditableChild(nsINode& aNode) const {
-  nsIContent* child = aNode.GetLastChild();
-  while (child && !EditorUtils::IsEditableContent(*child, EditorType::HTML)) {
-    child = child->GetPreviousSibling();
-  }
-  return child;
-}
-
-nsIContent* HTMLEditor::GetFirstEditableLeaf(nsINode& aNode) const {
-  Element* editingHost = GetActiveEditingHost();
-  if (NS_WARN_IF(!editingHost) ||
-      editingHost->IsInclusiveDescendantOf(&aNode)) {
-    return nullptr;
-  }
-  nsIContent* child =
-      HTMLEditUtils::GetFirstLeafChild(aNode, {LeafNodeType::OnlyLeafNode});
-  while (child && (!EditorUtils::IsEditableContent(*child, EditorType::HTML) ||
-                   child->HasChildren())) {
-    child = HTMLEditUtils::GetNextContent(
-        *child, {WalkTreeOption::IgnoreNonEditableNode},
-        aNode.IsElement() ? aNode.AsElement() : editingHost);
-  }
-
-  return child;
-}
-
-nsIContent* HTMLEditor::GetLastEditableLeaf(nsINode& aNode) const {
-  Element* editingHost = GetActiveEditingHost();
-  if (NS_WARN_IF(!editingHost) ||
-      editingHost->IsInclusiveDescendantOf(&aNode)) {
-    return nullptr;
-  }
-  nsIContent* child =
-      HTMLEditUtils::GetLastLeafChild(aNode, {LeafNodeType::OnlyLeafNode});
-  while (child && (!EditorUtils::IsEditableContent(*child, EditorType::HTML) ||
-                   child->HasChildren())) {
-    child = HTMLEditUtils::GetPreviousContent(
-        *child, {WalkTreeOption::IgnoreNonEditableNode},
-        aNode.IsElement() ? aNode.AsElement() : editingHost);
-  }
-
-  return child;
-}
-
 bool HTMLEditor::IsEmpty() const {
   if (mPaddingBRElementForEmptyEditor) {
     return true;
@@ -5581,7 +5339,8 @@ nsresult HTMLEditor::CopyLastEditableChildStylesWithTransaction(
   // Then, if found one is a <br> element, look for non-<br> element.
   nsIContent* deepestEditableContent = nullptr;
   for (nsCOMPtr<nsIContent> child = previousBlock.get(); child;
-       child = GetLastEditableChild(*child)) {
+       child = HTMLEditUtils::GetLastChild(
+           *child, {WalkTreeOption::IgnoreNonEditableNode})) {
     deepestEditableContent = child;
   }
   while (deepestEditableContent &&

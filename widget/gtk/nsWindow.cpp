@@ -221,8 +221,6 @@ static void hierarchy_changed_cb(GtkWidget* widget,
                                  GtkWidget* previous_toplevel);
 static gboolean window_state_event_cb(GtkWidget* widget,
                                       GdkEventWindowState* event);
-static void settings_changed_cb(GtkSettings* settings, GParamSpec* pspec,
-                                nsWindow* data);
 static void settings_xft_dpi_changed_cb(GtkSettings* settings,
                                         GParamSpec* pspec, nsWindow* data);
 static void check_resize_cb(GtkContainer* container, gpointer user_data);
@@ -277,13 +275,6 @@ static SystemTimeConverter<guint32>& TimeConverter() {
 nsWindow::GtkWindowDecoration nsWindow::sGtkWindowDecoration =
     GTK_DECORATION_UNKNOWN;
 bool nsWindow::sTransparentMainWindow = false;
-static bool sIgnoreChangedSettings = false;
-
-void nsWindow::WithSettingsChangesIgnored(const std::function<void()>& aFn) {
-  AutoRestore ar(sIgnoreChangedSettings);
-  sIgnoreChangedSettings = true;
-  aFn();
-}
 
 namespace mozilla {
 
@@ -923,8 +914,9 @@ bool nsWindow::WidgetTypeSupportsAcceleration() {
   // We draw transparent popups on non-compositing screens by SW as we don't
   // implement X shape masks in WebRender.
   if (mWindowType == eWindowType_popup) {
-    return mCompositedScreen;
+    return HasRemoteContent() && mCompositedScreen;
   }
+
   return true;
 }
 
@@ -4058,7 +4050,10 @@ gboolean nsWindow::OnKeyReleaseEvent(GdkEventKey* aEvent) {
 
 void nsWindow::OnScrollEvent(GdkEventScroll* aEvent) {
   // check to see if we should rollup
-  if (CheckForRollup(aEvent->x_root, aEvent->y_root, true, false)) return;
+  if (CheckForRollup(aEvent->x_root, aEvent->y_root, true, false)) {
+    return;
+  }
+
   // check for duplicate legacy scroll event, see GNOME bug 726878
   if (aEvent->direction != GDK_SCROLL_SMOOTH &&
       mLastScrollEventTime == aEvent->time) {
@@ -4119,21 +4114,27 @@ void nsWindow::OnScrollEvent(GdkEventScroll* aEvent) {
       // Multiply event deltas by 3 to emulate legacy behaviour.
       wheelEvent.mDeltaX = aEvent->delta_x * 3;
       wheelEvent.mDeltaY = aEvent->delta_y * 3;
+      wheelEvent.mWheelTicksX = aEvent->delta_x;
+      wheelEvent.mWheelTicksY = aEvent->delta_y;
       wheelEvent.mIsNoLineOrPageDelta = true;
 
       break;
     }
     case GDK_SCROLL_UP:
       wheelEvent.mDeltaY = wheelEvent.mLineOrPageDeltaY = -3;
+      wheelEvent.mWheelTicksY = -1;
       break;
     case GDK_SCROLL_DOWN:
       wheelEvent.mDeltaY = wheelEvent.mLineOrPageDeltaY = 3;
+      wheelEvent.mWheelTicksY = 1;
       break;
     case GDK_SCROLL_LEFT:
       wheelEvent.mDeltaX = wheelEvent.mLineOrPageDeltaX = -1;
+      wheelEvent.mWheelTicksX = -1;
       break;
     case GDK_SCROLL_RIGHT:
       wheelEvent.mDeltaX = wheelEvent.mLineOrPageDeltaX = 1;
+      wheelEvent.mWheelTicksX = 1;
       break;
   }
 
@@ -4291,30 +4292,6 @@ void nsWindow::OnWindowStateEvent(GtkWidget* aWidget,
       ClearTransparencyBitmap();
     }
   }
-}
-
-void nsWindow::ThemeChanged() {
-  // Everything could've changed.
-  NotifyThemeChanged(ThemeChangeKind::StyleAndLayout);
-
-  if (!mGdkWindow || MOZ_UNLIKELY(mIsDestroyed)) return;
-
-  // Dispatch theme change notification to all child windows
-  GList* children = gdk_window_peek_children(mGdkWindow);
-  while (children) {
-    GdkWindow* gdkWin = GDK_WINDOW(children->data);
-
-    auto* win = (nsWindow*)g_object_get_data(G_OBJECT(gdkWin), "nsWindow");
-
-    if (win && win != this) {  // guard against infinite recursion
-      RefPtr<nsWindow> kungFuDeathGrip = win;
-      win->ThemeChanged();
-    }
-
-    children = children->next;
-  }
-
-  IMContextWrapper::OnThemeChanged();
 }
 
 void nsWindow::OnDPIChanged() {
@@ -5168,34 +5145,8 @@ nsresult nsWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
     }
 
     GtkSettings* default_settings = gtk_settings_get_default();
-    g_signal_connect_after(default_settings, "notify::gtk-theme-name",
-                           G_CALLBACK(settings_changed_cb), this);
-    g_signal_connect_after(default_settings, "notify::gtk-font-name",
-                           G_CALLBACK(settings_changed_cb), this);
-    g_signal_connect_after(default_settings, "notify::gtk-enable-animations",
-                           G_CALLBACK(settings_changed_cb), this);
-    g_signal_connect_after(default_settings, "notify::gtk-decoration-layout",
-                           G_CALLBACK(settings_changed_cb), this);
     g_signal_connect_after(default_settings, "notify::gtk-xft-dpi",
                            G_CALLBACK(settings_xft_dpi_changed_cb), this);
-    // Text resolution affects system fonts and widget sizes.
-    g_signal_connect_after(default_settings, "notify::resolution",
-                           G_CALLBACK(settings_changed_cb), this);
-    // For remote LookAndFeel, to refresh the content processes' copies:
-    g_signal_connect_after(default_settings, "notify::gtk-cursor-blink-time",
-                           G_CALLBACK(settings_changed_cb), this);
-    g_signal_connect_after(default_settings, "notify::gtk-cursor-blink",
-                           G_CALLBACK(settings_changed_cb), this);
-    g_signal_connect_after(default_settings,
-                           "notify::gtk-entry-select-on-focus",
-                           G_CALLBACK(settings_changed_cb), this);
-    g_signal_connect_after(default_settings,
-                           "notify::gtk-primary-button-warps-slider",
-                           G_CALLBACK(settings_changed_cb), this);
-    g_signal_connect_after(default_settings, "notify::gtk-menu-popup-delay",
-                           G_CALLBACK(settings_changed_cb), this);
-    g_signal_connect_after(default_settings, "notify::gtk-dnd-drag-threshold",
-                           G_CALLBACK(settings_changed_cb), this);
   }
 
   if (mContainer) {
@@ -6915,7 +6866,10 @@ static GdkCursor* get_gtk_cursor(nsCursor aCursor) {
       if (!gdkcursor) newType = MOZ_CURSOR_NOT_ALLOWED;
       break;
     case eCursor_vertical_text:
-      newType = MOZ_CURSOR_VERTICAL_TEXT;
+      gdkcursor = gdk_cursor_new_from_name(defaultDisplay, "vertical-text");
+      if (!gdkcursor) {
+        newType = MOZ_CURSOR_VERTICAL_TEXT;
+      }
       break;
     case eCursor_all_scroll:
       gdkcursor = gdk_cursor_new_for_display(defaultDisplay, GDK_FLEUR);
@@ -7398,15 +7352,6 @@ static gboolean window_state_event_cb(GtkWidget* widget,
   window->OnWindowStateEvent(widget, event);
 
   return FALSE;
-}
-
-static void settings_changed_cb(GtkSettings* settings, GParamSpec* pspec,
-                                nsWindow* data) {
-  if (sIgnoreChangedSettings) {
-    return;
-  }
-  RefPtr<nsWindow> window = data;
-  window->ThemeChanged();
 }
 
 static void settings_xft_dpi_changed_cb(GtkSettings* gtk_settings,

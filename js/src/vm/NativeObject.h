@@ -83,12 +83,11 @@ class ArrayObject;
 /*
  * ES6 20130308 draft 8.4.2.4 ArraySetLength.
  *
- * |id| must be "length", |attrs| are the attributes to be used for the newly-
- * changed length property, |value| is the value for the new length, and
+ * |id| must be "length", |desc| is the new non-accessor descriptor, and
  * |result| receives an error code if the change is invalid.
  */
 extern bool ArraySetLength(JSContext* cx, Handle<ArrayObject*> obj, HandleId id,
-                           unsigned attrs, HandleValue value,
+                           Handle<PropertyDescriptor> desc,
                            ObjectOpResult& result);
 
 /*
@@ -245,7 +244,7 @@ class ObjectElements {
                                     IntegrityLevel level);
 
   friend bool ArraySetLength(JSContext* cx, Handle<ArrayObject*> obj,
-                             HandleId id, unsigned attrs, HandleValue value,
+                             HandleId id, Handle<PropertyDescriptor> desc,
                              ObjectOpResult& result);
 
   // The NumShiftedElementsBits high bits of this are used to store the
@@ -382,14 +381,16 @@ class ObjectElements {
 
   bool isPacked() const { return !(flags & NON_PACKED); }
 
-  uint8_t elementAttributes() const {
+  JS::PropertyAttributes elementAttributes() const {
     if (isFrozen()) {
-      return JSPROP_ENUMERATE | JSPROP_PERMANENT | JSPROP_READONLY;
+      return {JS::PropertyAttribute::Enumerable};
     }
     if (isSealed()) {
-      return JSPROP_ENUMERATE | JSPROP_PERMANENT;
+      return {JS::PropertyAttribute::Enumerable,
+              JS::PropertyAttribute::Writable};
     }
-    return JSPROP_ENUMERATE;
+    return {JS::PropertyAttribute::Configurable,
+            JS::PropertyAttribute::Enumerable, JS::PropertyAttribute::Writable};
   }
 
   uint32_t numShiftedElements() const {

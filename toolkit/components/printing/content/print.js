@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 const {
-  gBrowser,
   PrintUtils,
   Services,
   AppConstants,
@@ -67,7 +66,7 @@ function serializeSettings(settings, logPrefix) {
       logger.warn("Exception accessing setting: ", key, e);
     }
   }
-  return nameValues;
+  return JSON.stringify(nameValues, null, 2);
 }
 
 let printPending = false;
@@ -281,9 +280,9 @@ var PrintEventHandler = {
       // We cannot close the window yet because the browsing context for the
       // print preview browser is needed to print the page.
       let sourceBrowser = this.getSourceBrowsingContext().top.embedderElement;
-      let dialogBoxManager = gBrowser
-        .getTabDialogBox(sourceBrowser)
-        .getTabDialogManager();
+      let dialogBoxManager = PrintUtils.getTabDialogBox(
+        sourceBrowser
+      ).getTabDialogManager();
       dialogBoxManager.hideDialog(sourceBrowser);
 
       // Use our settings to prepopulate the system dialog.
@@ -1032,6 +1031,7 @@ var PrintEventHandler = {
   },
 
   reportPrintingError(aMessage) {
+    logger.debug("reportPrintingError:", aMessage);
     Services.telemetry.keyedScalarAdd("printing.error", aMessage, 1);
   },
 
@@ -1261,6 +1261,7 @@ var PrintSettingsViewProxy = {
 
     // The printer properties don't change, mark this as resolved for next time
     printerInfo._resolved = true;
+    logger.debug("Resolved printerInfo:", printerInfo);
     return printerInfo;
   },
 

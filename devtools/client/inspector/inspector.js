@@ -273,7 +273,7 @@ Inspector.prototype = {
    */
   async getAllInspectorFronts() {
     return this.commands.targetCommand.getAllFronts(
-      this.commands.targetCommand.TYPES.FRAME,
+      [this.commands.targetCommand.TYPES.FRAME],
       "inspector"
     );
   },
@@ -1875,7 +1875,7 @@ Inspector.prototype = {
       "devtools.screenshot.clipboard.enabled"
     );
     const args = {
-      file: true,
+      file: !clipboardEnabled,
       nodeActorID: this.selection.nodeFront.actorID,
       clipboard: clipboardEnabled,
     };

@@ -2004,6 +2004,26 @@ nsDOMWindowUtils::GetIMEStatus(uint32_t* aState) {
 }
 
 NS_IMETHODIMP
+nsDOMWindowUtils::GetInputContextOrigin(uint32_t* aOrigin) {
+  NS_ENSURE_ARG_POINTER(aOrigin);
+
+  nsCOMPtr<nsIWidget> widget = GetWidget();
+  if (!widget) {
+    return NS_ERROR_FAILURE;
+  }
+
+  InputContext context = widget->GetInputContext();
+  static_assert(static_cast<uint32_t>(InputContext::Origin::ORIGIN_MAIN) ==
+                INPUT_CONTEXT_ORIGIN_MAIN);
+  static_assert(static_cast<uint32_t>(InputContext::Origin::ORIGIN_CONTENT) ==
+                INPUT_CONTEXT_ORIGIN_CONTENT);
+  MOZ_ASSERT(context.mOrigin == InputContext::Origin::ORIGIN_MAIN ||
+             context.mOrigin == InputContext::Origin::ORIGIN_CONTENT);
+  *aOrigin = static_cast<uint32_t>(context.mOrigin);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsDOMWindowUtils::GetFocusedInputType(nsAString& aType) {
   nsCOMPtr<nsIWidget> widget = GetWidget();
   if (!widget) {
@@ -2337,7 +2357,8 @@ nsDOMWindowUtils::SendSelectionSetEvent(uint32_t aOffset, uint32_t aLength,
 
 NS_IMETHODIMP
 nsDOMWindowUtils::SendContentCommandEvent(const nsAString& aType,
-                                          nsITransferable* aTransferable) {
+                                          nsITransferable* aTransferable,
+                                          const nsAString& aString) {
   // get the widget to send the event to
   nsCOMPtr<nsIWidget> widget = GetWidget();
   if (!widget) return NS_ERROR_FAILURE;
@@ -2355,6 +2376,8 @@ nsDOMWindowUtils::SendContentCommandEvent(const nsAString& aType,
     msg = eContentCommandUndo;
   } else if (aType.EqualsLiteral("redo")) {
     msg = eContentCommandRedo;
+  } else if (aType.EqualsLiteral("insertText")) {
+    msg = eContentCommandInsertText;
   } else if (aType.EqualsLiteral("pasteTransferable")) {
     msg = eContentCommandPasteTransferable;
   } else {
@@ -2362,6 +2385,9 @@ nsDOMWindowUtils::SendContentCommandEvent(const nsAString& aType,
   }
 
   WidgetContentCommandEvent event(true, msg, widget);
+  if (msg == eContentCommandInsertText) {
+    event.mString.emplace(aString);
+  }
   if (msg == eContentCommandPasteTransferable) {
     event.mTransferable = aTransferable;
   }
@@ -2613,7 +2639,7 @@ nsDOMWindowUtils::AudioDevices(uint16_t aSide, nsIArray** aDevices) {
     enumerator->EnumerateAudioOutputDevices(collection);
   }
 
-  for (auto device : collection) {
+  for (const auto& device : collection) {
     devices->AppendElement(device);
   }
 
@@ -3136,8 +3162,9 @@ static bool CheckLeafLayers(Layer* aLayer, const nsIntPoint& aOffset,
                             nsIntRegion* aCoveredRegion) {
   gfx::Matrix transform;
   if (!aLayer->GetTransform().Is2D(&transform) ||
-      transform.HasNonIntegerTranslation())
+      transform.HasNonIntegerTranslation()) {
     return false;
+  }
   transform.NudgeToIntegers();
   IntPoint offset = aOffset + IntPoint::Truncate(transform._31, transform._32);
 
@@ -3735,7 +3762,7 @@ nsDOMWindowUtils::AddSheet(nsIPreloadedStyleSheet* aSheet,
   NS_ENSURE_TRUE(doc, NS_ERROR_FAILURE);
 
   StyleSheet* sheet = nullptr;
-  auto preloadedSheet = static_cast<PreloadedStyleSheet*>(aSheet);
+  auto* preloadedSheet = static_cast<PreloadedStyleSheet*>(aSheet);
   nsresult rv = preloadedSheet->GetSheet(&sheet);
   NS_ENSURE_SUCCESS(rv, rv);
   NS_ENSURE_TRUE(sheet, NS_ERROR_FAILURE);

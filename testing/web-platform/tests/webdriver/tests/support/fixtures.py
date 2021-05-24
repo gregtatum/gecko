@@ -6,8 +6,6 @@ import asyncio
 import pytest
 import webdriver
 
-from six import string_types
-
 from urllib.parse import urlunsplit
 
 from tests.support import defaults
@@ -107,7 +105,8 @@ def http(configuration):
 
 @pytest.fixture
 def server_config():
-    return json.loads(os.environ.get("WD_SERVER_CONFIG"))
+    with open(os.environ.get("WD_SERVER_CONFIG_FILE"), "r") as f:
+        return json.load(f)
 
 
 @pytest.fixture(scope="session")
@@ -245,7 +244,7 @@ def create_dialog(session):
         if text is None:
             text = ""
 
-        assert isinstance(text, string_types), "`text` parameter must be a string"
+        assert isinstance(text, str), "`text` parameter must be a string"
 
         # Script completes itself when the user prompt has been opened.
         # For prompt() dialogs, add a value for the 'default' argument,

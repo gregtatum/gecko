@@ -74,7 +74,7 @@ body {
 .category[badge-count]::after {
   display: inline-block;
   min-width: 20px;
-  background-color: var(--blue-50);
+  background-color: var(--in-content-accent-color);
   color: #fff;
   font-weight: bold;
   /* Use a large border-radius to get semi-circles on the sides. */
@@ -99,7 +99,7 @@ body {
   background-image: url("chrome://mozapps/skin/extensions/category-themes.svg");
 }
 .category[name="plugin"] {
-  background-image: url("chrome://global/skin/icons/plugin.svg");
+  background-image: url("chrome://mozapps/skin/extensions/category-plugins.svg");
 }
 .category[name="dictionary"] {
   background-image: url("chrome://mozapps/skin/extensions/category-dictionaries.svg");
@@ -579,7 +579,7 @@ addon-details {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--blue-50);
+  background: var(--in-content-accent-color);;
 }
 
 panel-item {
@@ -748,5 +748,7 @@ section:not(:empty) ~ #empty-addons-message {
     border-radius: 50%;
     min-width: auto;
     padding: 0;
+    /* move the badged dot into the top-end (right in ltr, left in rtl) corner. */
+    margin-top: -20px;
   }
 }

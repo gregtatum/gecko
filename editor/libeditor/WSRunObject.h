@@ -227,6 +227,14 @@ class MOZ_STACK_CLASS WSScanResult final {
    * The scanner reached a <br> element.
    */
   bool ReachedBRElement() const { return mReason == WSType::BRElement; }
+  bool ReachedVisibleBRElement() const {
+    return ReachedBRElement() &&
+           HTMLEditUtils::IsVisibleBRElement(*BRElementPtr());
+  }
+  bool ReachedInvisibleBRElement() const {
+    return ReachedBRElement() &&
+           HTMLEditUtils::IsInvisibleBRElement(*BRElementPtr());
+  }
 
   /**
    * The scanner reached a <hr> element.
@@ -258,6 +266,13 @@ class MOZ_STACK_CLASS WSScanResult final {
   }
 
   /**
+   * The scanner reached other block element that isn't editable
+   */
+  bool ReachedNonEditableOtherBlockElement() const {
+    return ReachedOtherBlockElement() && !GetContent()->IsEditable();
+  }
+
+  /**
    * The scanner reached something non-text node.
    */
   bool ReachedSomething() const { return !InNormalWhiteSpacesOrText(); }
@@ -275,10 +290,10 @@ class MOZ_STACK_CLASS WSRunScanner final {
   using WSType = WSScanResult::WSType;
 
   template <typename EditorDOMPointType>
-  WSRunScanner(dom::Element* aEditingHost,
+  WSRunScanner(const dom::Element* aEditingHost,
                const EditorDOMPointType& aScanStartPoint)
       : mScanStartPoint(aScanStartPoint),
-        mEditingHost(aEditingHost),
+        mEditingHost(const_cast<dom::Element*>(aEditingHost)),
         mTextFragmentDataAtStart(mScanStartPoint, mEditingHost) {}
 
   // ScanNextVisibleNodeOrBlockBoundaryForwardFrom() returns the first visible
@@ -290,7 +305,8 @@ class MOZ_STACK_CLASS WSRunScanner final {
       const EditorDOMPointBase<PT, CT>& aPoint) const;
   template <typename PT, typename CT>
   static WSScanResult ScanNextVisibleNodeOrBlockBoundary(
-      dom::Element* aEditingHost, const EditorDOMPointBase<PT, CT>& aPoint) {
+      const dom::Element* aEditingHost,
+      const EditorDOMPointBase<PT, CT>& aPoint) {
     return WSRunScanner(aEditingHost, aPoint)
         .ScanNextVisibleNodeOrBlockBoundaryFrom(aPoint);
   }
@@ -304,7 +320,8 @@ class MOZ_STACK_CLASS WSRunScanner final {
       const EditorDOMPointBase<PT, CT>& aPoint) const;
   template <typename PT, typename CT>
   static WSScanResult ScanPreviousVisibleNodeOrBlockBoundary(
-      dom::Element* aEditingHost, const EditorDOMPointBase<PT, CT>& aPoint) {
+      const dom::Element* aEditingHost,
+      const EditorDOMPointBase<PT, CT>& aPoint) {
     return WSRunScanner(aEditingHost, aPoint)
         .ScanPreviousVisibleNodeOrBlockBoundaryFrom(aPoint);
   }
@@ -478,6 +495,12 @@ class MOZ_STACK_CLASS WSRunScanner final {
   bool StartsFromBRElement() const {
     return TextFragmentDataAtStartRef().StartsFromBRElement();
   }
+  bool StartsFromVisibleBRElement() const {
+    return TextFragmentDataAtStartRef().StartsFromVisibleBRElement();
+  }
+  bool StartsFromInvisibleBRElement() const {
+    return TextFragmentDataAtStartRef().StartsFromInvisibleBRElement();
+  }
   bool StartsFromCurrentBlockBoundary() const {
     return TextFragmentDataAtStartRef().StartsFromCurrentBlockBoundary();
   }
@@ -498,6 +521,12 @@ class MOZ_STACK_CLASS WSRunScanner final {
   }
   bool EndsByBRElement() const {
     return TextFragmentDataAtStartRef().EndsByBRElement();
+  }
+  bool EndsByVisibleBRElement() const {
+    return TextFragmentDataAtStartRef().EndsByVisibleBRElement();
+  }
+  bool EndsByInvisibleBRElement() const {
+    return TextFragmentDataAtStartRef().EndsByInvisibleBRElement();
   }
   bool EndsByCurrentBlockBoundary() const {
     return TextFragmentDataAtStartRef().EndsByCurrentBlockBoundary();
@@ -876,6 +905,16 @@ class MOZ_STACK_CLASS WSRunScanner final {
     bool StartsFromNormalText() const { return mStart.IsNormalText(); }
     bool StartsFromSpecialContent() const { return mStart.IsSpecialContent(); }
     bool StartsFromBRElement() const { return mStart.IsBRElement(); }
+    bool StartsFromVisibleBRElement() const {
+      return StartsFromBRElement() &&
+             HTMLEditUtils::IsVisibleBRElement(*GetStartReasonContent(),
+                                               mEditingHost);
+    }
+    bool StartsFromInvisibleBRElement() const {
+      return StartsFromBRElement() &&
+             HTMLEditUtils::IsInvisibleBRElement(*GetStartReasonContent(),
+                                                 mEditingHost);
+    }
     bool StartsFromCurrentBlockBoundary() const {
       return mStart.IsCurrentBlockBoundary();
     }
@@ -887,6 +926,14 @@ class MOZ_STACK_CLASS WSRunScanner final {
     bool EndsByNormalText() const { return mEnd.IsNormalText(); }
     bool EndsBySpecialContent() const { return mEnd.IsSpecialContent(); }
     bool EndsByBRElement() const { return mEnd.IsBRElement(); }
+    bool EndsByVisibleBRElement() const {
+      return EndsByBRElement() && HTMLEditUtils::IsVisibleBRElement(
+                                      *GetEndReasonContent(), mEditingHost);
+    }
+    bool EndsByInvisibleBRElement() const {
+      return EndsByBRElement() && HTMLEditUtils::IsInvisibleBRElement(
+                                      *GetEndReasonContent(), mEditingHost);
+    }
     bool EndsByCurrentBlockBoundary() const {
       return mEnd.IsCurrentBlockBoundary();
     }

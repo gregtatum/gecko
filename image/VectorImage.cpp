@@ -37,6 +37,7 @@
 #include "ISurfaceProvider.h"
 #include "LookupResult.h"
 #include "Orientation.h"
+#include "SourceSurfaceBlobImage.h"
 #include "SVGDocumentWrapper.h"
 #include "SVGDrawingCallback.h"
 #include "SVGDrawingParameters.h"
@@ -374,6 +375,7 @@ void VectorImage::CollectSizeOfSurfaces(
     nsTArray<SurfaceMemoryCounter>& aCounters,
     MallocSizeOf aMallocSizeOf) const {
   SurfaceCache::CollectSizeOfSurfaces(ImageKey(this), aCounters, aMallocSizeOf);
+  ImageResource::CollectSizeOfSurfaces(aCounters, aMallocSizeOf);
 }
 
 nsresult VectorImage::OnImageDataComplete(nsIRequest* aRequest,
@@ -689,13 +691,15 @@ VectorImage::GetFrameAtSize(const IntSize& aSize, uint32_t aWhichFrame,
   NotifyDrawingObservers();
 #endif
 
-  auto result = GetFrameInternal(aSize, Nothing(), aWhichFrame, aFlags);
+  auto result =
+      GetFrameInternal(aSize, Nothing(), Nothing(), aWhichFrame, aFlags);
   return Get<2>(result).forget();
 }
 
 Tuple<ImgDrawResult, IntSize, RefPtr<SourceSurface>>
 VectorImage::GetFrameInternal(const IntSize& aSize,
                               const Maybe<SVGImageContext>& aSVGContext,
+                              const Maybe<ImageIntRegion>& aRegion,
                               uint32_t aWhichFrame, uint32_t aFlags) {
   MOZ_ASSERT(aWhichFrame <= FRAME_MAX_VALUE);
 
@@ -710,6 +714,8 @@ VectorImage::GetFrameInternal(const IntSize& aSize,
   if (!mIsFullyLoaded) {
     return MakeTuple(ImgDrawResult::NOT_READY, aSize, RefPtr<SourceSurface>());
   }
+
+  uint32_t whichFrame = mHaveAnimations ? aWhichFrame : FRAME_FIRST;
 
   RefPtr<SourceSurface> sourceSurface;
   IntSize decodeSize;
@@ -726,18 +732,33 @@ VectorImage::GetFrameInternal(const IntSize& aSize,
                      RefPtr<SourceSurface>());
   }
 
-  float animTime = (aWhichFrame == FRAME_FIRST)
+  float animTime = (whichFrame == FRAME_FIRST)
                        ? 0.0f
                        : mSVGDocumentWrapper->GetCurrentTimeAsFloat();
+
+  // If we aren't given a region, create one that covers the whole SVG image.
+  ImageRegion region =
+      aRegion ? aRegion->ToImageRegion() : ImageRegion::Create(decodeSize);
 
   // By using a null gfxContext, we ensure that we will always attempt to
   // create a surface, even if we aren't capable of caching it (e.g. due to our
   // flags, having an animation, etc). Otherwise CreateSurface will assume that
   // the caller is capable of drawing directly to its own draw target if we
   // cannot cache.
-  SVGDrawingParameters params(
-      nullptr, decodeSize, aSize, ImageRegion::Create(decodeSize),
-      SamplingFilter::POINT, aSVGContext, animTime, aFlags, 1.0);
+  SVGDrawingParameters params(nullptr, decodeSize, aSize, region,
+                              SamplingFilter::POINT, aSVGContext, animTime,
+                              aFlags, 1.0);
+
+  // Blob recorded vector images just create a simple surface responsible for
+  // generating blob keys and recording bindings. The recording won't happen
+  // until the caller requests the key after GetImageContainerAtSize.
+  if (aFlags & FLAG_RECORD_BLOB) {
+    RefPtr<SourceSurface> surface =
+        new SourceSurfaceBlobImage(mSVGDocumentWrapper, aSVGContext, aRegion,
+                                   decodeSize, whichFrame, aFlags);
+
+    return MakeTuple(ImgDrawResult::SUCCESS, decodeSize, std::move(surface));
+  }
 
   bool didCache;  // Was the surface put into the cache?
   bool contextPaint = aSVGContext && aSVGContext->GetContextPaint();
@@ -815,6 +836,7 @@ NS_IMETHODIMP_(ImgDrawResult)
 VectorImage::GetImageContainerAtSize(layers::LayerManager* aManager,
                                      const gfx::IntSize& aSize,
                                      const Maybe<SVGImageContext>& aSVGContext,
+                                     const Maybe<ImageIntRegion>& aRegion,
                                      uint32_t aFlags,
                                      layers::ImageContainer** aOutContainer) {
   Maybe<SVGImageContext> newSVGContext;
@@ -825,7 +847,7 @@ VectorImage::GetImageContainerAtSize(layers::LayerManager* aManager,
   uint32_t flags = aFlags & ~(FLAG_FORCE_PRESERVEASPECTRATIO_NONE);
   return GetImageContainerImpl(aManager, aSize,
                                newSVGContext ? newSVGContext : aSVGContext,
-                               flags, aOutContainer);
+                               aRegion, flags, aOutContainer);
 }
 
 bool VectorImage::MaybeRestrictSVGContext(
@@ -914,7 +936,9 @@ VectorImage::Draw(gfxContext* aContext, const nsIntSize& aSize,
              "Viewport size is required when using "
              "FLAG_FORCE_PRESERVEASPECTRATIO_NONE");
 
-  float animTime = (aWhichFrame == FRAME_FIRST)
+  uint32_t whichFrame = mHaveAnimations ? aWhichFrame : FRAME_FIRST;
+
+  float animTime = (whichFrame == FRAME_FIRST)
                        ? 0.0f
                        : mSVGDocumentWrapper->GetCurrentTimeAsFloat();
 
@@ -975,14 +999,12 @@ already_AddRefed<gfxDrawable> VectorImage::CreateSVGDrawable(
 Tuple<RefPtr<SourceSurface>, IntSize> VectorImage::LookupCachedSurface(
     const IntSize& aSize, const Maybe<SVGImageContext>& aSVGContext,
     uint32_t aFlags) {
-  // If we're not allowed to use a cached surface, don't attempt a lookup.
-  if (aFlags & FLAG_BYPASS_SURFACE_CACHE) {
-    return MakeTuple(RefPtr<SourceSurface>(), aSize);
-  }
-
-  // We don't do any caching if we have animation, so don't bother with a lookup
-  // in this case either.
-  if (mHaveAnimations) {
+  // We can't use cached surfaces if we:
+  // - Explicitly disallow it via FLAG_BYPASS_SURFACE_CACHE
+  // - Want a blob recording which aren't supported by the cache.
+  // - Have animations which aren't supported by the cache.
+  if (aFlags & (FLAG_BYPASS_SURFACE_CACHE | FLAG_RECORD_BLOB) ||
+      mHaveAnimations) {
     return MakeTuple(RefPtr<SourceSurface>(), aSize);
   }
 
@@ -1019,6 +1041,7 @@ already_AddRefed<SourceSurface> VectorImage::CreateSurface(
     const SVGDrawingParameters& aParams, gfxDrawable* aSVGDrawable,
     bool& aWillCache) {
   MOZ_ASSERT(mSVGDocumentWrapper->IsDrawing());
+  MOZ_ASSERT(!(aParams.flags & FLAG_RECORD_BLOB));
 
   mSVGDocumentWrapper->UpdateViewportBounds(aParams.viewportSize);
   mSVGDocumentWrapper->FlushImageTransformInvalidation();

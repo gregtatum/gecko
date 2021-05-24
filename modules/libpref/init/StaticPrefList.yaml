@@ -217,6 +217,13 @@
 #endif
   mirror: always
 
+# Whether to cache the entire accessibility trees of all content processes in
+# the parent process.
+- name: accessibility.cache.enabled
+  type: bool
+  value: false
+  mirror: once
+
 #---------------------------------------------------------------------------
 # Prefs starting with "alerts."
 #---------------------------------------------------------------------------
@@ -1358,7 +1365,7 @@
 # Is support for CanvasRenderingContext2D's createConicGradient API enabled?
 - name: canvas.createConicGradient.enabled
   type: RelaxedAtomicBool
-  value: @IS_NIGHTLY_BUILD@
+  value: true
   mirror: always
 
 # Provide ability to turn on support for canvas mozGetAsFile API.
@@ -1928,6 +1935,12 @@
   type: String
   value: ""
   mirror: never
+
+# Whether WheelEvent should expose wheelDelta / wheelDeltaX / wheelDeltaY
+- name: dom.event.wheelDelta.enabled
+  type: bool
+  value: true
+  mirror: always
 
 #if defined(XP_MACOSX)
 # Whether to disable treating ctrl click as right click
@@ -4604,6 +4617,15 @@
   value: true
   mirror: once
 
+- name: gfx.font-list-omt.enabled
+  type: bool
+#if defined(XP_MACOSX)
+  value: true
+#else
+  value: false
+#endif
+  mirror: once
+
 # Whether to load fonts (e.g. Twemoji Mozilla) bundled with the application:
 #  -1 - Auto behavior based on OS version (currently, disables loading on
 #       "low-memory" Android devices)
@@ -4997,10 +5019,8 @@
   type: bool
 #if defined(MOZ_WIDGET_ANDROID)
   value: false
-#elif defined(XP_WIN) || defined(MOZ_WIDGET_GTK)
-  value: true
 #else
-  value: @IS_EARLY_BETA_OR_EARLIER@
+  value: true
 #endif
   mirror: once
 
@@ -5008,18 +5028,14 @@
   # Whether or not to fallback from WebRender to Software WebRender + D3D11.
 -   name: gfx.webrender.fallback.software-d3d11
     type: bool
-    value: @IS_NIGHTLY_BUILD@
+    value: true
     mirror: once
 #endif
 
 # Whether or not fallback to Software WebRender requires the GPU process.
 - name: gfx.webrender.fallback.software.requires-gpu-process
   type: bool
-#if defined(XP_WIN)
-  value: @IS_NOT_EARLY_BETA_OR_EARLIER@
-#else
   value: false
-#endif
   mirror: once
 
 - name: gfx.webrender.program-binary-disk
@@ -5469,6 +5485,12 @@
   value: -1
   mirror: once
 
+# Whether we record SVG images as blobs or not.
+- name: image.svg.blob-image
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
+
 # Whether we attempt to decode WebP images or not.
 - name: image.webp.enabled
   type: RelaxedAtomicBool
@@ -5483,6 +5505,16 @@
 #else
   value: false
 #endif
+  mirror: always
+
+# How strict we are in accepting/rejecting AVIF inputs according to whether they
+# conform to the specification
+# 0 = Permissive: accept whatever we can simply, unambiguously interpret
+# 1 = Normal: reject violations of "shall" specification directives
+# 2 = Strict: reject violations of "should" specification directives
+- name: image.avif.compliance_strictness
+  type: RelaxedAtomicInt32
+  value: 1
   mirror: always
 
 # Whether we use dav1d (true) or libaom (false) to decode AVIF image
@@ -5504,7 +5536,7 @@
 # Whether the new encoding detector is enabled for the .jp TLD.
 - name: intl.charset.detector.ng.jp.enabled
   type: bool
-  value: false
+  value: true
   mirror: always
 
 # Whether the new encoding detector is enabled for the .in TLD.
@@ -5555,6 +5587,20 @@
   type: bool
   value: false
   mirror: always
+
+#if defined(XP_MACOSX) || defined(MOZ_WIDGET_GTK)
+# Whether text input without keyboard press nor IME composition should cause a
+# set of composition events or not.  E.g., when you use Emoji picker on macOS,
+# it inserts an Emoji character directly.  If set to true, `compositionstart`,
+# `compositionupdate` and `compositionend` events will be fired, and the
+# correspnding `beforeinput` events are not cancelable.  Otherwise, if set to
+# false, any user input events are not exposed to web apps but only
+# `beforeinput` event is fired as "insert text" as a cancelable event.
+- name: intl.ime.use_composition_events_for_insert_text
+  type: bool
+  value: false
+  mirror: always
+#endif
 
 #---------------------------------------------------------------------------
 # Prefs starting with "javascript."
@@ -5710,7 +5756,7 @@
   # Experimental support for the ergonomic brand check proposal.
 - name: javascript.options.experimental.ergonomic_brand_checks
   type: bool
-  value: false
+  value: true
   mirror: always
 
   # Experimental support for Top-level Await in JavaScript.
@@ -8567,16 +8613,17 @@
 # effect and determine the timing to stop controlling media.
 - name: media.mediacontrol.stopcontrol.timer
   type: bool
-  value: false
+  value: true
   mirror: always
 
 # If media is being paused after a certain period, then we would think that
 # media doesn't need to be controlled anymore. Therefore, that media would stop
 # listening to the media control key events. The value of this pref is how long
-# media would stop listening to the event after it's paused.
+# media would stop listening to the event after it's paused. The default value
+# is set to 24 hrs (24*60*60*1000)
 - name: media.mediacontrol.stopcontrol.timer.ms
   type: RelaxedAtomicUint32
-  value: 60000
+  value: 86400000
   mirror: always
 
 # If this pref is on, we would stop controlling media after it reaches to the
@@ -8700,7 +8747,7 @@
   value: false
   mirror: always
 
-- name: mousewheel.system_scroll_override_on_root_content.enabled
+- name: mousewheel.system_scroll_override.enabled
   type: RelaxedAtomicBool
 #ifdef XP_WIN
   value: true
@@ -8711,18 +8758,18 @@
 
 # Prefs for overriding the system mouse wheel scrolling speed on
 # content of the web pages.  When
-# "mousewheel.system_scroll_override_on_root_content.enabled" is true and the
+# "mousewheel.system_scroll_override.enabled" is true and the
 # system scrolling speed isn't customized by the user, the content scrolling
 # speed is multiplied by the following factors.  The value will be used as
 # 1/100.  E.g., 200 means 2.00.
-# NOTE: Even if "mousewheel.system_scroll_override_on_root_content.enabled" is
+# NOTE: Even if "mousewheel.system_scroll_override.enabled" is
 # true, when Gecko detects the user customized the system scrolling speed
 # settings, the override isn't executed.
-- name: mousewheel.system_scroll_override_on_root_content.horizontal.factor
+- name: mousewheel.system_scroll_override.horizontal.factor
   type: RelaxedAtomicInt32
   value: 200
   mirror: always
-- name: mousewheel.system_scroll_override_on_root_content.vertical.factor
+- name: mousewheel.system_scroll_override.vertical.factor
   type: RelaxedAtomicInt32
   value: 200
   mirror: always
@@ -9792,8 +9839,20 @@
   value: true
   mirror: always
 
+# Print via the parent process. This is only used when e10s is enabled.
+- name: print.print_via_parent
+  type: RelaxedAtomicBool
+  value: @IS_NOT_ANDROID@
+  mirror: always
+
 # Whether we allow the print progress dialog to show up.
 - name: print.show_print_progress
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
+
+# Whether we attempt to generate links in Save As PDF output.
+- name: print.save_as_pdf.links.enabled
   type: RelaxedAtomicBool
   value: true
   mirror: always
@@ -10173,6 +10232,26 @@
 - name: privacy.partition.network_state.connection_with_proxy
   type: bool
   value: false
+  mirror: always
+
+# The global switch to control the URL query sting stripping which strips query
+# parameters from loading URIs to prevent bounce (redirect) tracking.
+- name: privacy.query_stripping.enabled
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
+# The list which contains query parameters that are needed to be stripped from
+# URIs. The query parameters are separated by a space.
+- name: privacy.query_stripping.strip_list
+  type: String
+  value: ""
+  mirror: never
+
+# This controls if we will do the query string stripping for redirects.
+- name: privacy.query_stripping.redirect
+  type: bool
+  value: true
   mirror: always
 
 #---------------------------------------------------------------------------
@@ -10576,6 +10655,12 @@
 #---------------------------------------------------------------------------
 
 - name: threads.medium_high_event_queue.enabled
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
+
+# If control tasks aren't enabled, they get medium high priority.
+- name: threads.control_event_queue.enabled
   type: RelaxedAtomicBool
   value: true
   mirror: always

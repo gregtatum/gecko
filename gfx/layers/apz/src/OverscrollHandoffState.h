@@ -75,6 +75,14 @@ class OverscrollHandoffChain {
   // |aStart| onwards, if any.
   void SnapBackOverscrolledApzc(const AsyncPanZoomController* aStart) const;
 
+  // Similar to above SnapbackOverscrolledApzc but for pan gestures with
+  // momentum events, this function doesn't end up calling each APZC's
+  // ScrollSnap.
+  // |aVelocity| is the initial velocity of |aStart|.
+  void SnapBackOverscrolledApzcForMomentum(
+      const AsyncPanZoomController* aStart,
+      const ParentLayerPoint& aVelocity) const;
+
   // Determine whether the given APZC, or any APZC further in the chain,
   // has room to be panned.
   bool CanBePanned(const AsyncPanZoomController* aApzc) const;
@@ -117,6 +125,13 @@ class OverscrollHandoffChain {
   typedef bool (AsyncPanZoomController::*APZCPredicate)() const;
   void ForEachApzc(APZCMethod aMethod) const;
   bool AnyApzc(APZCPredicate aPredicate) const;
+
+  // Return whether we allow handoff from |aChild| to |aRoot| with the given
+  // |aInput| event.
+  // |aChild| should be a child of |aRoot| in the handoff chain.
+  static bool AllowHandoffToRoot(const AsyncPanZoomController* aChild,
+                                 const AsyncPanZoomController* aRoot,
+                                 const InputData& aInput);
 };
 
 /**

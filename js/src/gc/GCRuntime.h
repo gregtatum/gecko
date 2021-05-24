@@ -12,8 +12,6 @@
 #include "mozilla/Maybe.h"
 #include "mozilla/TimeStamp.h"
 
-#include "jsfriendapi.h"  // For PerformanceHint
-
 #include "gc/ArenaList.h"
 #include "gc/AtomMarking.h"
 #include "gc/GCMarker.h"
@@ -22,6 +20,7 @@
 #include "gc/Scheduling.h"
 #include "gc/Statistics.h"
 #include "gc/StoreBuffer.h"
+#include "js/friend/PerformanceHint.h"
 #include "js/GCAnnotations.h"
 #include "js/UniquePtr.h"
 #include "vm/AtomsTable.h"
@@ -583,9 +582,6 @@ class GCRuntime {
   // Public here for ReleaseArenaLists and FinalizeTypedArenas.
   void releaseArena(Arena* arena, const AutoLockGC& lock);
 
-  void releaseHeldRelocatedArenas();
-  void releaseHeldRelocatedArenasWithoutUnlocking(const AutoLockGC& lock);
-
   // Allocator
   template <AllowGC allowGC>
   [[nodiscard]] bool checkAllocatorState(JSContext* cx, AllocKind kind);
@@ -825,8 +821,6 @@ class GCRuntime {
   void updateAllCellPointers(MovingTracer* trc, Zone* zone);
   void updateZonePointersToRelocatedCells(Zone* zone);
   void updateRuntimePointersToRelocatedCells(AutoGCSession& session);
-  void protectAndHoldArenas(Arena* arenaList);
-  void unprotectHeldRelocatedArenas();
   void clearRelocatedArenas(Arena* arenaList, JS::GCReason reason);
   void clearRelocatedArenasWithoutUnlocking(Arena* arenaList,
                                             JS::GCReason reason,
@@ -834,6 +828,13 @@ class GCRuntime {
   void releaseRelocatedArenas(Arena* arenaList);
   void releaseRelocatedArenasWithoutUnlocking(Arena* arenaList,
                                               const AutoLockGC& lock);
+#ifdef DEBUG
+  void protectOrReleaseRelocatedArenas(Arena* arenaList, JS::GCReason reason);
+  void protectAndHoldArenas(Arena* arenaList);
+  void unprotectHeldRelocatedArenas(const AutoLockGC& lock);
+  void releaseHeldRelocatedArenas();
+  void releaseHeldRelocatedArenasWithoutUnlocking(const AutoLockGC& lock);
+#endif
 
   /*
    * Whether to immediately trigger a slice after a background task
@@ -1112,8 +1113,10 @@ class GCRuntime {
    */
   MainThreadData<bool> startedCompacting;
   MainThreadData<ZoneList> zonesToMaybeCompact;
-  MainThreadData<Arena*> relocatedArenasToRelease;
   MainThreadData<size_t> zonesCompacted;
+#ifdef DEBUG
+  GCLockData<Arena*> relocatedArenasToRelease;
+#endif
 
 #ifdef JS_GC_ZEAL
   MainThreadData<MarkingValidator*> markingValidator;

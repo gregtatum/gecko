@@ -56,6 +56,7 @@
   --in-content-table-background: #f8f8fa;
   --in-content-table-border-dark-color: #d1d1d1;
   --in-content-table-header-background: #0a84ff;
+  --in-content-table-header-color: #ffffff;
   --in-content-dialog-header-background: #f1f1f1;
   --in-content-sidebar-width: 240px;
 
@@ -173,6 +174,7 @@
     --in-content-table-background: rgb(35, 34, 43);
     --in-content-table-border-dark-color: rgba(249,249,250,0.2);
     --in-content-table-header-background: rgb(5, 64, 150);
+    --in-content-table-header-color: var(--in-content-page-color);
     --in-content-dialog-header-background: rgba(249,249,250,0.05);
 
     --in-content-accent-color: var(--in-content-primary-button-background);
@@ -286,6 +288,7 @@
     --in-content-table-border-dark-color: ThreeDDarkShadow;
     --in-content-table-background: -moz-Dialog;
     --in-content-table-header-background: -moz-Dialog;
+    --in-content-table-header-color: -moz-DialogText;
     --in-content-dialog-header-background: -moz-Dialog;
 
     --dialog-warning-text-color: -moz-FieldText;
@@ -1233,6 +1236,7 @@ xul|richlistbox:not(#categories) > xul|richlistitem[selected] {
   --in-content-button-background: color-mix(in srgb, currentColor 20%, transparent);
   --in-content-button-background-hover: color-mix(in srgb, currentColor 40%, transparent);
   --in-content-button-background-active: color-mix(in srgb, currentColor 60%, transparent);
+  --in-content-button-text-color-hover: var(--in-content-item-selected-text);
 }
 
 /* Use a 2px border so that selected row highlight is still visible behind
@@ -1528,9 +1532,6 @@ xul|*.help-icon {
 
 xul|*.addons-icon {
   list-style-image: url("chrome://mozapps/skin/extensions/extension.svg");
-  /* The add-ons icon doesn't have much (any?) margin, so make it a bit smaller. */
-  scale: 87.5%;
-  translate: 6.25%;
 }
 
 /* Back button */

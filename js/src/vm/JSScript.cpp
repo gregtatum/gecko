@@ -946,7 +946,7 @@ ImmutableScriptData::ImmutableScriptData(uint32_t codeLength,
 
 template <XDRMode mode>
 XDRResult js::XDRImmutableScriptData(XDRState<mode>* xdr,
-                                     UniquePtr<ImmutableScriptData>& isd) {
+                                     SharedImmutableScriptData& sisd) {
   static_assert(frontend::CanCopyDataToDisk<ImmutableScriptData>::value,
                 "ImmutableScriptData cannot be bulk-copied to disk");
   static_assert(frontend::CanCopyDataToDisk<jsbytecode>::value,
@@ -960,36 +960,48 @@ XDRResult js::XDRImmutableScriptData(XDRState<mode>* xdr,
 
   uint32_t size;
   if (mode == XDR_ENCODE) {
-    size = isd->immutableData().size();
+    size = sisd.immutableDataLength();
   }
   MOZ_TRY(xdr->codeUint32(&size));
 
-  uint8_t* data;
+  MOZ_TRY(xdr->align32());
+  static_assert(alignof(ImmutableScriptData) <= alignof(uint32_t));
+
   if (mode == XDR_ENCODE) {
-    data = const_cast<uint8_t*>(isd->immutableData().data());
-    MOZ_ASSERT(data == reinterpret_cast<const uint8_t*>(isd.get()),
+    uint8_t* data = const_cast<uint8_t*>(sisd.get()->immutableData().data());
+    MOZ_ASSERT(data == reinterpret_cast<const uint8_t*>(sisd.get()),
                "Decode below relies on the data placement");
+    MOZ_TRY(xdr->codeBytes(data, size));
   } else {
-    isd = ImmutableScriptData::new_(xdr->cx(), size);
-    if (!isd) {
-      return xdr->fail(JS::TranscodeResult::Throw);
+    MOZ_ASSERT(!sisd.get());
+
+    if (xdr->hasOptions() && xdr->options().usePinnedBytecode) {
+      ImmutableScriptData* isd;
+      MOZ_TRY(xdr->borrowedData(&isd, size));
+      sisd.setExternal(isd);
+    } else {
+      auto isd = ImmutableScriptData::new_(xdr->cx(), size);
+      if (!isd) {
+        return xdr->fail(JS::TranscodeResult::Throw);
+      }
+      uint8_t* data = reinterpret_cast<uint8_t*>(isd.get());
+      MOZ_TRY(xdr->codeBytes(data, size));
+      sisd.setOwn(std::move(isd));
     }
-    data = reinterpret_cast<uint8_t*>(isd.get());
-  }
-  MOZ_TRY(xdr->codeBytes(data, size));
-  if (mode == XDR_DECODE) {
-#ifdef DEBUG
-    isd->validate(size);
-#endif
+
+    if (size != sisd.get()->computedSize()) {
+      MOZ_ASSERT(false, "Bad ImmutableScriptData");
+      return xdr->fail(JS::TranscodeResult::Failure_BadDecode);
+    }
   }
 
   return Ok();
 }
 
-template XDRResult js::XDRImmutableScriptData(
-    XDRState<XDR_ENCODE>* xdr, UniquePtr<ImmutableScriptData>& isd);
-template XDRResult js::XDRImmutableScriptData(
-    XDRState<XDR_DECODE>* xdr, UniquePtr<ImmutableScriptData>& isd);
+template XDRResult js::XDRImmutableScriptData(XDRState<XDR_ENCODE>* xdr,
+                                              SharedImmutableScriptData& sisd);
+template XDRResult js::XDRImmutableScriptData(XDRState<XDR_DECODE>* xdr,
+                                              SharedImmutableScriptData& sisd);
 
 template <XDRMode mode>
 XDRResult js::XDRSourceExtent(XDRState<mode>* xdr, SourceExtent* extent) {
@@ -2257,10 +2269,10 @@ template <typename Unit>
 
   if (retrievable == SourceRetrievable::Yes) {
     data = SourceType(
-        Uncompressed<Unit, SourceRetrievable::Yes>(std::move(*deduped)));
+        Uncompressed<Unit, SourceRetrievable::Yes>(std::move(deduped)));
   } else {
     data = SourceType(
-        Uncompressed<Unit, SourceRetrievable::No>(std::move(*deduped)));
+        Uncompressed<Unit, SourceRetrievable::No>(std::move(deduped)));
   }
   return true;
 }
@@ -2372,7 +2384,7 @@ template <typename Unit>
              "are pinned -- that only makes sense with a ScriptSource actively "
              "being inspected");
 
-  data = SourceType(Compressed<Unit, SourceRetrievable::No>(std::move(*deduped),
+  data = SourceType(Compressed<Unit, SourceRetrievable::No>(std::move(deduped),
                                                             sourceLength));
 
   return true;
@@ -2407,8 +2419,8 @@ bool ScriptSource::assignSource(JSContext* cx,
     return false;
   }
 
-  data = SourceType(
-      Uncompressed<Unit, SourceRetrievable::No>(std::move(*deduped)));
+  data =
+      SourceType(Uncompressed<Unit, SourceRetrievable::No>(std::move(deduped)));
   return true;
 }
 
@@ -2584,9 +2596,8 @@ void ScriptSource::triggerConvertToCompressedSourceFromTask(
 }
 
 void SourceCompressionTask::complete() {
-  if (!shouldCancel() && resultString_.isSome()) {
-    source_->triggerConvertToCompressedSourceFromTask(
-        std::move(*resultString_));
+  if (!shouldCancel() && resultString_) {
+    source_->triggerConvertToCompressedSourceFromTask(std::move(resultString_));
   }
 }
 
@@ -3237,8 +3248,8 @@ bool ScriptSource::initFromOptions(JSContext* cx,
 // Use the SharedImmutableString map to deduplicate input string. The input
 // string must be null-terminated.
 template <typename SharedT, typename CharT>
-static Maybe<SharedT> GetOrCreateStringZ(
-    JSContext* cx, UniquePtr<CharT[], JS::FreePolicy>&& str) {
+static SharedT GetOrCreateStringZ(JSContext* cx,
+                                  UniquePtr<CharT[], JS::FreePolicy>&& str) {
   JSRuntime* rt = cx->runtime();
   size_t lengthWithNull = std::char_traits<CharT>::length(str.get()) + 1;
   auto res =
@@ -3249,12 +3260,12 @@ static Maybe<SharedT> GetOrCreateStringZ(
   return res;
 }
 
-Maybe<SharedImmutableString> ScriptSource::getOrCreateStringZ(
-    JSContext* cx, UniqueChars&& str) {
+SharedImmutableString ScriptSource::getOrCreateStringZ(JSContext* cx,
+                                                       UniqueChars&& str) {
   return GetOrCreateStringZ<SharedImmutableString>(cx, std::move(str));
 }
 
-Maybe<SharedImmutableTwoByteString> ScriptSource::getOrCreateStringZ(
+SharedImmutableTwoByteString ScriptSource::getOrCreateStringZ(
     JSContext* cx, UniqueTwoByteChars&& str) {
   return GetOrCreateStringZ<SharedImmutableTwoByteString>(cx, std::move(str));
 }
@@ -3270,7 +3281,7 @@ bool ScriptSource::setFilename(JSContext* cx, const char* filename) {
 bool ScriptSource::setFilename(JSContext* cx, UniqueChars&& filename) {
   MOZ_ASSERT(!filename_);
   filename_ = getOrCreateStringZ(cx, std::move(filename));
-  return filename_.isSome();
+  return bool(filename_);
 }
 
 bool ScriptSource::setIntroducerFilename(JSContext* cx, const char* filename) {
@@ -3285,7 +3296,7 @@ bool ScriptSource::setIntroducerFilename(JSContext* cx,
                                          UniqueChars&& filename) {
   MOZ_ASSERT(!introducerFilename_);
   introducerFilename_ = getOrCreateStringZ(cx, std::move(filename));
-  return introducerFilename_.isSome();
+  return bool(introducerFilename_);
 }
 
 bool ScriptSource::setDisplayURL(JSContext* cx, const char16_t* url) {
@@ -3312,7 +3323,7 @@ bool ScriptSource::setDisplayURL(JSContext* cx, UniqueTwoByteChars&& url) {
   }
 
   displayURL_ = getOrCreateStringZ(cx, std::move(url));
-  return displayURL_.isSome();
+  return bool(displayURL_);
 }
 
 bool ScriptSource::setSourceMapURL(JSContext* cx, const char16_t* url) {
@@ -3330,7 +3341,7 @@ bool ScriptSource::setSourceMapURL(JSContext* cx, UniqueTwoByteChars&& url) {
   }
 
   sourceMapURL_ = getOrCreateStringZ(cx, std::move(url));
-  return sourceMapURL_.isSome();
+  return bool(sourceMapURL_);
 }
 
 /* static */ mozilla::Atomic<uint32_t, mozilla::SequentiallyConsistent>
@@ -3412,14 +3423,12 @@ js::UniquePtr<ImmutableScriptData> js::ImmutableScriptData::new_(
   return result;
 }
 
-#ifdef DEBUG
-void js::ImmutableScriptData::validate(uint32_t totalSize) {
+uint32_t js::ImmutableScriptData::computedSize() {
   auto size = sizeFor(codeLength(), noteLength(), resumeOffsets().size(),
                       scopeNotes().size(), tryNotes().size());
   MOZ_ASSERT(size.isValid());
-  MOZ_ASSERT(size.value() == totalSize);
+  return size.value();
 }
-#endif
 
 /* static */
 SharedImmutableScriptData* SharedImmutableScriptData::create(JSContext* cx) {
@@ -3435,7 +3444,7 @@ SharedImmutableScriptData* SharedImmutableScriptData::createWith(
     return nullptr;
   }
 
-  sisd->isd_ = std::move(isd);
+  sisd->setOwn(std::move(isd));
   return sisd;
 }
 
@@ -4190,22 +4199,14 @@ static JSObject* CloneInnerInterpretedFunction(
     return nullptr;
   }
 
-  gc::AllocKind allocKind = srcFun->getAllocKind();
-  FunctionFlags flags = srcFun->flags();
-  if (srcFun->isSelfHostedBuiltin()) {
-    // Functions in the self-hosting compartment are only extended in
-    // debug mode. For top-level functions, FUNCTION_EXTENDED gets used by
-    // the cloning algorithm. Do the same for inner functions here.
-    allocKind = gc::AllocKind::FUNCTION_EXTENDED;
-    flags.setIsExtended();
-  }
   RootedAtom atom(cx, srcFun->displayAtom());
   if (atom) {
     cx->markAtom(atom);
   }
   RootedFunction clone(
-      cx, NewFunctionWithProto(cx, nullptr, srcFun->nargs(), flags, nullptr,
-                               atom, cloneProto, allocKind, TenuredObject));
+      cx, NewFunctionWithProto(cx, nullptr, srcFun->nargs(), srcFun->flags(),
+                               nullptr, atom, cloneProto,
+                               srcFun->getAllocKind(), TenuredObject));
   if (!clone) {
     return nullptr;
   }

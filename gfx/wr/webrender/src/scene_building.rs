@@ -49,7 +49,8 @@ use api::units::*;
 use crate::image_tiling::simplify_repeated_primitive;
 use crate::clip::{ClipChainId, ClipRegion, ClipItemKey, ClipStore, ClipItemKeyKind};
 use crate::clip::{ClipInternData, ClipNodeKind, ClipInstance, SceneClipInstance};
-use crate::spatial_tree::{ROOT_SPATIAL_NODE_INDEX, SpatialTree, SpatialNodeIndex};
+use crate::clip::{PolygonDataHandle};
+use crate::spatial_tree::{ROOT_SPATIAL_NODE_INDEX, SpatialTree, SpatialNodeIndex, StaticCoordinateSystemId};
 use crate::frame_builder::{ChasePrimitive, FrameBuilderConfig};
 use crate::glyph_rasterizer::FontInstance;
 use crate::hit_test::HitTestingScene;
@@ -60,6 +61,7 @@ use crate::picture::{BlitReason, OrderedPictureChild, PrimitiveList};
 use crate::prim_store::{PrimitiveInstance, register_prim_chase_id};
 use crate::prim_store::{PrimitiveInstanceKind, NinePatchDescriptor, PrimitiveStore};
 use crate::prim_store::{InternablePrimitive, SegmentInstanceIndex, PictureIndex};
+use crate::prim_store::PolygonKey;
 use crate::prim_store::backdrop::Backdrop;
 use crate::prim_store::borders::{ImageBorder, NormalBorderPrim};
 use crate::prim_store::gradient::{
@@ -1340,7 +1342,7 @@ impl<'a> SceneBuilder<'a> {
                     }
                 );
 
-                // TODO: create_radial_gradient_prim already calls 
+                // TODO: create_radial_gradient_prim already calls
                 // this, but it leaves the info variable that is
                 // passed to add_nonshadowable_primitive unmodified
                 // which can cause issues.
@@ -1520,7 +1522,8 @@ impl<'a> SceneBuilder<'a> {
 
                 for clip_item in item.clip_chain_items() {
                     let template = self.clip_store.get_template(clip_item);
-                    clips.extend_from_slice(&template.clips);
+                    let instances = &self.clip_store.instances[template.clips.start as usize .. template.clips.end as usize];
+                    clips.extend_from_slice(instances);
                 }
 
                 self.clip_store.register_clip_template(
@@ -1702,6 +1705,7 @@ impl<'a> SceneBuilder<'a> {
             spatial_node_index,
             clip_id,
             &self.clip_store,
+            self.interners,
         );
     }
 
@@ -2083,7 +2087,7 @@ impl<'a> SceneBuilder<'a> {
         if stacking_context.flags.contains(StackingContextFlags::IS_BLEND_CONTAINER) &&
            self.sc_stack.is_empty() &&
            self.tile_cache_builder.can_add_container_tile_cache() &&
-           self.spatial_tree.is_definitely_in_root_coord_system(stacking_context.spatial_node_index)
+           self.spatial_tree.get_static_coordinate_system_id(stacking_context.spatial_node_index) == StaticCoordinateSystemId::ROOT
         {
             self.tile_cache_builder.add_tile_cache(
                 stacking_context.prim_list,
@@ -2425,9 +2429,22 @@ impl<'a> SceneBuilder<'a> {
             &image_mask.rect,
             spatial_node_index,
         );
-        let points = points_range.iter().collect();
+        let points: Vec<LayoutPoint> = points_range.iter().collect();
+
+        // If any points are provided, then intern a polygon with the points and fill rule.
+        let mut polygon_handle: Option<PolygonDataHandle> = None;
+        if points.len() > 0 {
+            let item = PolygonKey::new(&points, fill_rule);
+
+            let handle = self
+                .interners
+                .polygon
+                .intern(&item, || item);
+            polygon_handle = Some(handle);
+        }
+
         let item = ClipItemKey {
-            kind: ClipItemKeyKind::image_mask(image_mask, snapped_mask_rect, points, fill_rule),
+            kind: ClipItemKeyKind::image_mask(image_mask, snapped_mask_rect, polygon_handle),
         };
 
         let handle = self

@@ -1449,7 +1449,7 @@ NS_IMETHODIMP nsExternalAppHandler::GetContentLength(int64_t* aContentLength) {
 
 NS_IMETHODIMP nsExternalAppHandler::GetBrowsingContextId(
     uint64_t* aBrowsingContextId) {
-  *aBrowsingContextId = mBrowsingContext->Id();
+  *aBrowsingContextId = mBrowsingContext ? mBrowsingContext->Id() : 0;
   return NS_OK;
 }
 
@@ -1862,7 +1862,13 @@ NS_IMETHODIMP nsExternalAppHandler::OnStartRequest(nsIRequest* request) {
     alwaysAsk = false;
     action = nsIMIMEInfo::saveToDisk;
   }
-
+  // Additionally, if we are asked by the OS to open a local file,
+  // automatically downloading it to create a second copy of that file doesn't
+  // really make sense. We should ask the user what they want to do.
+  if (mSourceUrl->SchemeIs("file") && !alwaysAsk &&
+      action == nsIMIMEInfo::saveToDisk) {
+    alwaysAsk = true;
+  }
   if (alwaysAsk) {
     // Display the dialog
     mDialog = do_CreateInstance(NS_HELPERAPPLAUNCHERDLG_CONTRACTID, &rv);

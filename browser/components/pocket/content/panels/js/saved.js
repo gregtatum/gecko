@@ -1,4 +1,4 @@
-/* global $:false, Handlebars:false, thePKT_PANEL:false */
+/* global Handlebars:false, thePKT_PANEL:false */
 /* import-globals-from messages.js */
 
 /*
@@ -15,24 +15,10 @@ var PKT_PANEL_OVERLAY = function(options) {
   this.savedItemId = 0;
   this.savedUrl = "";
   this.premiumStatus = false;
-  this.preventCloseTimerCancel = false;
-  this.closeValid = true;
-  this.mouseInside = false;
-  this.autocloseTimer = null;
   this.dictJSON = {};
-  this.autocloseTimerEnabled = false;
-  this.autocloseTiming = 4500;
-  this.autocloseTimingFinalState = 2000;
-  this.mouseInside = false;
   this.userTags = [];
   this.tagsDropdownOpen = false;
-  this.cxt_suggested_available = 0;
-  this.cxt_entered = 0;
-  this.cxt_suggested = 0;
-  this.cxt_removed = 0;
-  this.justaddedsuggested = false;
   this.fxasignedin = false;
-  this.premiumDetailsAdded = false;
 
   this.parseHTML = function(htmlString) {
     const parser = new DOMParser();
@@ -48,7 +34,6 @@ var PKT_PANEL_OVERLAY = function(options) {
         `<li class="${tagclass}"><a href="#" class="token_tag">${tags[i]}</a></li>`
       );
       container.append(newtag);
-      this.cxt_suggested_available++;
     }
   };
   this.fillUserTags = function() {
@@ -62,7 +47,6 @@ var PKT_PANEL_OVERLAY = function(options) {
   this.fillSuggestedTags = function() {
     if (!document.querySelector(`.pkt_ext_suggestedtag_detail`)) {
       myself.suggestedTagsLoaded = true;
-      myself.startCloseTimer();
       return;
     }
 
@@ -84,9 +68,6 @@ var PKT_PANEL_OVERLAY = function(options) {
             newtags.push(data.value.suggestedTags[i].tag);
           }
           myself.suggestedTagsLoaded = true;
-          if (!myself.mouseInside) {
-            myself.startCloseTimer();
-          }
           myself.fillTagContainer(
             newtags,
             document.querySelector(`.pkt_ext_suggestedtag_detail ul`),
@@ -98,65 +79,11 @@ var PKT_PANEL_OVERLAY = function(options) {
           );
           document.querySelector(`.pkt_ext_suggestedtag_detail`).append(elMsg);
           this.suggestedTagsLoaded = true;
-          if (!myself.mouseInside) {
-            myself.startCloseTimer();
-          }
         }
       }
     );
   };
-  this.initAutoCloseEvents = function() {
-    document
-      .querySelector(`.pkt_ext_containersaved`)
-      .addEventListener(`mouseenter`, () => {
-        myself.mouseInside = true;
-        myself.stopCloseTimer();
-      });
-
-    document
-      .querySelector(`.pkt_ext_containersaved`)
-      .addEventListener(`mouseleave`, () => {
-        myself.mouseInside = false;
-        myself.startCloseTimer();
-      });
-
-    document
-      .querySelector(`.pkt_ext_containersaved`)
-      .addEventListener(`click`, () => {
-        myself.closeValid = false;
-      });
-
-    document.querySelector(`body`).addEventListener(`keydown`, e => {
-      if (e.key === `Tab`) {
-        myself.mouseInside = true;
-        myself.stopCloseTimer();
-      }
-    });
-  };
-  this.startCloseTimer = function(manualtime) {
-    if (!myself.autocloseTimerEnabled) {
-      return;
-    }
-
-    var settime = manualtime ? manualtime : myself.autocloseTiming;
-    if (typeof myself.autocloseTimer == "number") {
-      clearTimeout(myself.autocloseTimer);
-    }
-    myself.autocloseTimer = setTimeout(function() {
-      if (myself.closeValid || myself.preventCloseTimerCancel) {
-        myself.preventCloseTimerCancel = false;
-        myself.closePopup();
-      }
-    }, settime);
-  };
-  this.stopCloseTimer = function() {
-    if (myself.preventCloseTimerCancel) {
-      return;
-    }
-    clearTimeout(myself.autocloseTimer);
-  };
   this.closePopup = function() {
-    myself.stopCloseTimer();
     thePKT_PANEL.sendMessage("PKT_close");
   };
   this.checkValidTagSubmit = function() {
@@ -224,7 +151,8 @@ var PKT_PANEL_OVERLAY = function(options) {
       elTokenInput.style.width = `200px`;
     }
   };
-  // TODO: Remove jQuery from this method once tokenInput is re-written as a React component
+  // TODO: Remove jQuery and re-enable eslint for this method once tokenInput is re-written as a React component
+  /* eslint-disable no-undef */
   this.initTagInput = function() {
     var inputwrapper = $(".pkt_ext_tag_input_wrapper");
     inputwrapper.find(".pkt_ext_tag_input").tokenInput([], {
@@ -254,7 +182,8 @@ var PKT_PANEL_OVERLAY = function(options) {
         }
         cb(returnlist);
       },
-      textToData(text) {
+      validateItem(item) {
+        const text = item.name;
         if ($.trim(text).length > 25 || !$.trim(text).length) {
           if (text.length > 25) {
             myself.showTagsError(myself.dictJSON.maxtaglength);
@@ -265,9 +194,13 @@ var PKT_PANEL_OVERLAY = function(options) {
                 .focus();
             }, 10);
           }
-          return null;
+          return false;
         }
+
         myself.hideTagsError();
+        return true;
+      },
+      textToData(text) {
         return { name: myself.sanitizeText(text.toLowerCase()) };
       },
       onReady() {
@@ -287,7 +220,6 @@ var PKT_PANEL_OVERLAY = function(options) {
               ) {
                 return;
               }
-              myself.justaddedsuggested = true;
               inputwrapper.find(".pkt_ext_tag_input").tokenInput("add", {
                 id: inputwrapper.find(".token-input-token").length,
                 name: tag.text(),
@@ -362,6 +294,7 @@ var PKT_PANEL_OVERLAY = function(options) {
       }
     });
   };
+  /* eslint-enable no-undef */
   this.disableInput = function() {
     document
       .querySelector(`.pkt_ext_containersaved .pkt_ext_item_actions`)
@@ -589,9 +522,7 @@ var PKT_PANEL_OVERLAY = function(options) {
 
     myself.fillUserTags();
 
-    if (myself.suggestedTagsLoaded) {
-      myself.startCloseTimer();
-    } else {
+    if (!myself.suggestedTagsLoaded) {
       myself.fillSuggestedTags();
     }
   };
@@ -675,8 +606,6 @@ var PKT_PANEL_OVERLAY = function(options) {
       .addEventListener(
         `transitionend`,
         () => {
-          myself.preventCloseTimerCancel = true;
-          myself.startCloseTimer(myself.autocloseTimingFinalState);
           document.querySelector(
             `.pkt_ext_containersaved .pkt_ext_detail h2`
           ).textContent = msg;
@@ -706,9 +635,6 @@ var PKT_PANEL_OVERLAY = function(options) {
         `pkt_ext_container_finalstate`,
         `pkt_ext_container_finalerrorstate`
       );
-
-    this.preventCloseTimerCancel = true;
-    this.startCloseTimer(myself.autocloseTimingFinalState);
   };
   this.getTranslations = function() {
     this.dictJSON = window.pocketStrings;
@@ -770,8 +696,6 @@ PKT_PANEL_OVERLAY.prototype = {
       this.premiumStatus &&
       !document.querySelector(`.pkt_ext_suggestedtag_detail`)
     ) {
-      this.premiumDetailsAdded = true;
-
       let elSubshell = document.querySelector(`body .pkt_ext_subshell`);
 
       let elPremiumShell = parser.parseFromString(
@@ -787,7 +711,6 @@ PKT_PANEL_OVERLAY.prototype = {
     this.initAddTagInput();
     this.initRemovePageInput();
     this.initOpenListInput();
-    this.initAutoCloseEvents();
 
     // wait confirmation of save before flipping to final saved state
     thePKT_PANEL.addMessageListener("PKT_saveLink", function(resp) {

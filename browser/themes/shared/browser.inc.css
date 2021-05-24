@@ -384,9 +384,9 @@ menupopup::part(drop-indicator) {
 /* Override theme colors since the picker uses extra colors that
    themes cannot set */
 #DateTimePickerPanel {
-  --arrowpanel-background: var(--default-arrowpanel-background);
-  --arrowpanel-color: var(--default-arrowpanel-color);
-  --arrowpanel-border-color: var(--default-arrowpanel-border-color);
+  --arrowpanel-background: Field;
+  --arrowpanel-color: FieldText;
+  --arrowpanel-border-color: ThreeDShadow;
 }
 
 #DateTimePickerPanel[side="top"],
@@ -493,10 +493,13 @@ menupopup::part(drop-indicator) {
   float: inline-end;
   background-color: transparent;
   flex-direction: row-reverse;
+  /* Override proton-doorhanger default styles that increase the size of the button */
+  margin: 0;
 }
 
 #contextual-feature-recommendation-notification[data-notification-bucket="CFR_MILESTONE_MESSAGE"] .popup-notification-button.popup-notification-primary-button {
   background-color: rgba(216, 216, 216, 0.2);
+  color: white;
   border: none;
   border-radius: 2px;
   margin: 4px;

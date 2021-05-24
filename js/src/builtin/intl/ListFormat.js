@@ -5,12 +5,12 @@
 /**
  * ListFormat internal properties.
  */
+function listFormatLocaleData() {
+    // ListFormat don't support any extension keys.
+    return {};
+}
 var listFormatInternalProperties = {
-    localeData: function() // eslint-disable-line object-shorthand
-    {
-        // ListFormat don't support any extension keys.
-        return {};
-    },
+    localeData: listFormatLocaleData,
     relevantExtensionKeys: []
 };
 

@@ -174,7 +174,10 @@ bool js::SetPropertyIgnoringNamedGetter(
     }
 
     // Step 4.d.
-    ownDesc.setDataDescriptor(UndefinedHandleValue, JSPROP_ENUMERATE);
+    ownDesc.set(PropertyDescriptor::Data(
+        UndefinedValue(),
+        {JS::PropertyAttribute::Configurable, JS::PropertyAttribute::Enumerable,
+         JS::PropertyAttribute::Writable}));
   } else {
     ownDesc.set(*ownDesc_);
   }
@@ -210,12 +213,16 @@ bool js::SetPropertyIgnoringNamedGetter(
     }
 
     // Steps 5.e.iii-iv. and 5.f.i.
-    unsigned attrs = existingDescriptor.isSome()
-                         ? JSPROP_IGNORE_ENUMERATE | JSPROP_IGNORE_READONLY |
-                               JSPROP_IGNORE_PERMANENT
-                         : JSPROP_ENUMERATE;
-
-    return DefineDataProperty(cx, receiverObj, id, v, attrs, result);
+    Rooted<PropertyDescriptor> desc(cx);
+    if (existingDescriptor.isSome()) {
+      desc = PropertyDescriptor::Empty();
+      desc.setValue(v);
+    } else {
+      desc = PropertyDescriptor::Data(v, {JS::PropertyAttribute::Configurable,
+                                          JS::PropertyAttribute::Enumerable,
+                                          JS::PropertyAttribute::Writable});
+    }
+    return DefineProperty(cx, receiverObj, id, desc, result);
   }
 
   // Step 6.

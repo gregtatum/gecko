@@ -24,6 +24,7 @@
 #include "nsIFrame.h"
 #include "nsLayoutUtils.h"
 #include "nsStyleStructInlines.h"
+#include "mozilla/StaticPrefs_image.h"
 #include "mozilla/ISVGDisplayableFrame.h"
 #include "mozilla/SVGIntegrationUtils.h"
 #include "mozilla/SVGPaintServerFrame.h"
@@ -580,6 +581,11 @@ ImgDrawResult nsImageRenderer::BuildWebRenderDisplayItems(
     }
     case StyleImage::Tag::Rect:
     case StyleImage::Tag::Url: {
+      ExtendMode extendMode = mExtendMode;
+      if (aDest.Contains(aFill)) {
+        extendMode = ExtendMode::CLAMP;
+      }
+
       uint32_t containerFlags = imgIContainer::FLAG_ASYNC_NOTIFY;
       if (mFlags & (nsImageRenderer::FLAG_PAINTING_TO_WINDOW |
                     nsImageRenderer::FLAG_HIGH_QUALITY_SCALING)) {
@@ -588,6 +594,11 @@ ImgDrawResult nsImageRenderer::BuildWebRenderDisplayItems(
       if (mFlags & nsImageRenderer::FLAG_SYNC_DECODE_IMAGES) {
         containerFlags |= imgIContainer::FLAG_SYNC_DECODE;
       }
+      if (extendMode == ExtendMode::CLAMP &&
+          StaticPrefs::image_svg_blob_image() &&
+          mImageContainer->GetType() == imgIContainer::TYPE_VECTOR) {
+        containerFlags |= imgIContainer::FLAG_RECORD_BLOB;
+      }
 
       CSSIntSize destCSSSize{
           nsPresContext::AppUnitsToIntCSSPixels(aDest.width),
@@ -595,24 +606,38 @@ ImgDrawResult nsImageRenderer::BuildWebRenderDisplayItems(
 
       Maybe<SVGImageContext> svgContext(
           Some(SVGImageContext(Some(destCSSSize))));
+      Maybe<ImageIntRegion> region;
 
       const int32_t appUnitsPerDevPixel =
           mForFrame->PresContext()->AppUnitsPerDevPixel();
       LayoutDeviceRect destRect =
           LayoutDeviceRect::FromAppUnits(aDest, appUnitsPerDevPixel);
+      LayoutDeviceRect clipRect =
+          LayoutDeviceRect::FromAppUnits(aFill, appUnitsPerDevPixel);
       auto stretchSize = wr::ToLayoutSize(destRect.Size());
 
       gfx::IntSize decodeSize =
           nsLayoutUtils::ComputeImageContainerDrawingParameters(
-              mImageContainer, mForFrame, destRect, aSc, containerFlags,
-              svgContext);
+              mImageContainer, mForFrame, destRect, clipRect, aSc,
+              containerFlags, svgContext, region);
+
+      if (extendMode != ExtendMode::CLAMP) {
+        region = Nothing();
+      }
 
       RefPtr<layers::ImageContainer> container;
       drawResult = mImageContainer->GetImageContainerAtSize(
-          aManager->LayerManager(), decodeSize, svgContext, containerFlags,
-          getter_AddRefs(container));
+          aManager->LayerManager(), decodeSize, svgContext, region,
+          containerFlags, getter_AddRefs(container));
       if (!container) {
         NS_WARNING("Failed to get image container");
+        break;
+      }
+
+      if (containerFlags & imgIContainer::FLAG_RECORD_BLOB) {
+        MOZ_ASSERT(extendMode == ExtendMode::CLAMP);
+        aManager->CommandBuilder().PushBlobImage(
+            aItem, container, aBuilder, aResources, clipRect, clipRect);
         break;
       }
 
@@ -628,14 +653,13 @@ ImgDrawResult nsImageRenderer::BuildWebRenderDisplayItems(
       }
 
       wr::LayoutRect dest = wr::ToLayoutRect(destRect);
+      wr::LayoutRect clip = wr::ToLayoutRect(clipRect);
 
-      wr::LayoutRect clip = wr::ToLayoutRect(
-          LayoutDeviceRect::FromAppUnits(aFill, appUnitsPerDevPixel));
-
-      if (mExtendMode == ExtendMode::CLAMP) {
+      if (extendMode == ExtendMode::CLAMP) {
         // The image is not repeating. Just push as a regular image.
         aBuilder.PushImage(dest, clip, !aItem->BackfaceIsHidden(), rendering,
-                           key.value());
+                           key.value(), true,
+                           wr::ColorF{1.0f, 1.0f, 1.0f, aOpacity});
       } else {
         nsPoint firstTilePos = nsLayoutUtils::GetBackgroundFirstTilePos(
             aDest.TopLeft(), aFill.TopLeft(), aRepeatSize);
@@ -646,7 +670,7 @@ ImgDrawResult nsImageRenderer::BuildWebRenderDisplayItems(
             appUnitsPerDevPixel);
         wr::LayoutRect fill = wr::ToLayoutRect(fillRect);
 
-        switch (mExtendMode) {
+        switch (extendMode) {
           case ExtendMode::REPEAT_Y:
             fill.origin.x = dest.origin.x;
             fill.size.width = dest.size.width;
@@ -666,7 +690,8 @@ ImgDrawResult nsImageRenderer::BuildWebRenderDisplayItems(
 
         aBuilder.PushRepeatingImage(fill, clip, !aItem->BackfaceIsHidden(),
                                     stretchSize, wr::ToLayoutSize(gapSize),
-                                    rendering, key.value());
+                                    rendering, key.value(), true,
+                                    wr::ColorF{1.0f, 1.0f, 1.0f, aOpacity});
       }
       break;
     }

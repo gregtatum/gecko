@@ -82,6 +82,7 @@ class nsISupports;
 namespace mozilla {
 
 using namespace dom;
+using LeafNodeType = HTMLEditUtils::LeafNodeType;
 
 #define kInsertCookie "_moz_Insert Here_moz_"
 
@@ -339,12 +340,7 @@ HTMLEditor::HTMLWithContextInserter::GetInvisibleBRElementAtPoint(
     const EditorDOMPoint& aPointToInsert) const {
   WSRunScanner wsRunScannerAtInsertionPoint(mHTMLEditor.GetActiveEditingHost(),
                                             aPointToInsert);
-  if (wsRunScannerAtInsertionPoint.GetEndReasonContent() &&
-      wsRunScannerAtInsertionPoint.GetEndReasonContent()->IsHTMLElement(
-          nsGkAtoms::br) &&
-      !HTMLEditUtils::IsVisibleBRElement(
-          *wsRunScannerAtInsertionPoint.EndReasonBRElementPtr(),
-          wsRunScannerAtInsertionPoint.GetEditingHost())) {
+  if (wsRunScannerAtInsertionPoint.EndsByInvisibleBRElement()) {
     return wsRunScannerAtInsertionPoint.EndReasonBRElementPtr();
   }
   return nullptr;
@@ -358,8 +354,9 @@ HTMLEditor::HTMLWithContextInserter::GetNewCaretPointAfterInsertingHTML(
   // but don't cross tables
   nsIContent* containerContent = nullptr;
   if (!HTMLEditUtils::IsTable(aLastInsertedPoint.GetChild())) {
-    containerContent =
-        mHTMLEditor.GetLastEditableLeaf(*aLastInsertedPoint.GetChild());
+    containerContent = HTMLEditUtils::GetLastLeafContent(
+        *aLastInsertedPoint.GetChild(), {LeafNodeType::OnlyEditableLeafNode},
+        aLastInsertedPoint.GetChild()->GetAsElementOrParentElement());
     if (containerContent) {
       Element* mostDistantInclusiveAncestorTableElement = nullptr;
       for (Element* maybeTableElement =
@@ -405,9 +402,7 @@ HTMLEditor::HTMLWithContextInserter::GetNewCaretPointAfterInsertingHTML(
   WSRunScanner wsRunScannerAtCaret(editingHost, pointToPutCaret);
   if (wsRunScannerAtCaret
           .ScanPreviousVisibleNodeOrBlockBoundaryFrom(pointToPutCaret)
-          .ReachedBRElement() &&
-      !HTMLEditUtils::IsVisibleBRElement(
-          *wsRunScannerAtCaret.GetStartReasonContent(), editingHost)) {
+          .ReachedInvisibleBRElement()) {
     WSRunScanner wsRunScannerAtStartReason(
         editingHost,
         EditorDOMPoint(wsRunScannerAtCaret.GetStartReasonContent()));
@@ -638,10 +633,23 @@ nsresult HTMLEditor::HTMLWithContextInserter::Run(
     }
   }
 
+  Element* editingHost = mHTMLEditor.GetActiveEditingHost();
+  if (NS_WARN_IF(!editingHost)) {
+    // In theory, we should return NS_ERROR_FAILURE here, but we've not
+    // thrown exception in this case.  Therefore, we should allow to use
+    // the root element instead for now.
+    // XXX test_bug795418-2.html depends on this behavior
+    editingHost = mHTMLEditor.GetRoot();
+    if (NS_WARN_IF(!editingHost)) {
+      return NS_ERROR_FAILURE;
+    }
+  }
+
   // Adjust position based on the first node we are going to insert.
-  EditorDOMPoint pointToInsert = mHTMLEditor.GetBetterInsertionPointFor(
-      arrayOfTopMostChildContents[0],
-      EditorBase::GetStartPoint(mHTMLEditor.SelectionRef()));
+  EditorDOMPoint pointToInsert =
+      HTMLEditUtils::GetBetterInsertionPointFor<EditorDOMPoint>(
+          arrayOfTopMostChildContents[0],
+          EditorBase::GetStartPoint(mHTMLEditor.SelectionRef()), *editingHost);
   if (!pointToInsert.IsSet()) {
     NS_WARNING("HTMLEditor::GetBetterInsertionPointFor() failed");
     return NS_ERROR_FAILURE;

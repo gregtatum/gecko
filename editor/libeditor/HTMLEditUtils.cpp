@@ -80,6 +80,19 @@ template EditorRawDOMPoint HTMLEditUtils::GetNextEditablePoint(
     InvisibleWhiteSpaces aInvisibleWhiteSpaces,
     TableBoundary aHowToTreatTableBoundary);
 
+template EditorDOMPoint HTMLEditUtils::GetBetterInsertionPointFor(
+    const nsIContent& aContentToInsert, const EditorDOMPoint& aPointToInsert,
+    const Element& aEditingHost);
+template EditorRawDOMPoint HTMLEditUtils::GetBetterInsertionPointFor(
+    const nsIContent& aContentToInsert, const EditorRawDOMPoint& aPointToInsert,
+    const Element& aEditingHost);
+template EditorDOMPoint HTMLEditUtils::GetBetterInsertionPointFor(
+    const nsIContent& aContentToInsert, const EditorRawDOMPoint& aPointToInsert,
+    const Element& aEditingHost);
+template EditorRawDOMPoint HTMLEditUtils::GetBetterInsertionPointFor(
+    const nsIContent& aContentToInsert, const EditorDOMPoint& aPointToInsert,
+    const Element& aEditingHost);
+
 bool HTMLEditUtils::CanContentsBeJoined(const nsIContent& aLeftContent,
                                         const nsIContent& aRightContent,
                                         StyleDifference aStyleDifference) {
@@ -204,7 +217,7 @@ bool HTMLEditUtils::IsHeader(nsINode& aNode) {
 /**
  * IsListItem() returns true if aNode is an html list item.
  */
-bool HTMLEditUtils::IsListItem(nsINode* aNode) {
+bool HTMLEditUtils::IsListItem(const nsINode* aNode) {
   MOZ_ASSERT(aNode);
   return aNode->IsAnyOfHTMLElements(nsGkAtoms::li, nsGkAtoms::dd,
                                     nsGkAtoms::dt);
@@ -248,7 +261,7 @@ bool HTMLEditUtils::IsTableRow(nsINode* aNode) {
 /**
  * IsTableCell() returns true if aNode is an html td or th.
  */
-bool HTMLEditUtils::IsTableCell(nsINode* aNode) {
+bool HTMLEditUtils::IsTableCell(const nsINode* aNode) {
   MOZ_ASSERT(aNode);
   return aNode->IsAnyOfHTMLElements(nsGkAtoms::td, nsGkAtoms::th);
 }
@@ -302,7 +315,7 @@ bool HTMLEditUtils::IsLink(nsINode* aNode) {
   return !tmpText.IsEmpty();
 }
 
-bool HTMLEditUtils::IsNamedAnchor(nsINode* aNode) {
+bool HTMLEditUtils::IsNamedAnchor(const nsINode* aNode) {
   MOZ_ASSERT(aNode);
   if (!aNode->IsHTMLElement(nsGkAtoms::a)) {
     return false;
@@ -350,7 +363,7 @@ bool HTMLEditUtils::IsMailCite(nsINode* aNode) {
 /**
  * IsFormWidget() returns true if aNode is a form widget of some kind.
  */
-bool HTMLEditUtils::IsFormWidget(nsINode* aNode) {
+bool HTMLEditUtils::IsFormWidget(const nsINode* aNode) {
   MOZ_ASSERT(aNode);
   return aNode->IsAnyOfHTMLElements(nsGkAtoms::textarea, nsGkAtoms::select,
                                     nsGkAtoms::button, nsGkAtoms::output,
@@ -366,13 +379,13 @@ bool HTMLEditUtils::SupportsAlignAttr(nsINode& aNode) {
       nsGkAtoms::h4, nsGkAtoms::h5, nsGkAtoms::h6);
 }
 
-bool HTMLEditUtils::IsVisibleTextNode(Text& aText,
-                                      Element* aEditingHost /* = nullptr */) {
+bool HTMLEditUtils::IsVisibleTextNode(
+    const Text& aText, const Element* aEditingHost /* = nullptr */) {
   if (!aText.TextDataLength()) {
     return false;
   }
 
-  if (!aText.TextIsOnlyWhitespace()) {
+  if (!const_cast<Text&>(aText).TextIsOnlyWhitespace()) {
     return true;
   }
 
@@ -388,7 +401,7 @@ bool HTMLEditUtils::IsVisibleTextNode(Text& aText,
 }
 
 bool HTMLEditUtils::IsInVisibleTextFrames(nsPresContext* aPresContext,
-                                          Text& aText) {
+                                          const Text& aText) {
   MOZ_ASSERT(aPresContext);
 
   nsIFrame* frame = aText.GetPrimaryFrame();
@@ -417,7 +430,7 @@ bool HTMLEditUtils::IsInVisibleTextFrames(nsPresContext* aPresContext,
   // bug 46209.)
   bool isVisible = false;
   rv = selectionController->CheckVisibilityContent(
-      &aText, 0, aText.TextDataLength(), &isVisible);
+      const_cast<Text*>(&aText), 0, aText.TextDataLength(), &isVisible);
   NS_WARNING_ASSERTION(
       NS_SUCCEEDED(rv),
       "nsISelectionController::CheckVisibilityContent() failed");
@@ -489,7 +502,8 @@ bool HTMLEditUtils::IsVisibleBRElement(
               .ReachedBlockBoundary();
 }
 
-bool HTMLEditUtils::IsEmptyNode(nsPresContext* aPresContext, nsINode& aNode,
+bool HTMLEditUtils::IsEmptyNode(nsPresContext* aPresContext,
+                                const nsINode& aNode,
                                 const EmptyCheckOptions& aOptions /* = {} */,
                                 bool* aSeenBR /* = nullptr */) {
   MOZ_ASSERT_IF(aOptions.contains(EmptyCheckOption::SafeToAskLayout),
@@ -506,7 +520,7 @@ bool HTMLEditUtils::IsEmptyNode(nsPresContext* aPresContext, nsINode& aNode,
                 *aNode.AsContent())
           : nullptr;
 
-  if (Text* text = Text::FromNode(&aNode)) {
+  if (const Text* text = Text::FromNode(&aNode)) {
     return aOptions.contains(EmptyCheckOption::SafeToAskLayout)
                ? !IsInVisibleTextFrames(aPresContext, *text)
                : !IsVisibleTextNode(*text, maybeParentBlockElement);
@@ -987,7 +1001,7 @@ nsIContent* HTMLEditUtils::GetPreviousContent(
 
   // unless there isn't one, in which case we are at the end of the node
   // and want the deep-right child.
-  nsIContent* lastLeafContent = HTMLEditUtils::GetLastLeafChild(
+  nsIContent* lastLeafContent = HTMLEditUtils::GetLastLeafContent(
       *aPoint.GetContainer(),
       {aOptions.contains(WalkTreeOption::StopAtBlockBoundary)
            ? LeafNodeType::LeafNodeOrChildBlock
@@ -996,10 +1010,7 @@ nsIContent* HTMLEditUtils::GetPreviousContent(
     return nullptr;
   }
 
-  if ((!aOptions.contains(WalkTreeOption::IgnoreNonEditableNode) ||
-       EditorUtils::IsEditableContent(*lastLeafContent, EditorType::HTML)) &&
-      (!aOptions.contains(WalkTreeOption::IgnoreDataNodeExceptText) ||
-       EditorUtils::IsElementOrText(*lastLeafContent))) {
+  if (!HTMLEditUtils::IsContentIgnored(*lastLeafContent, aOptions)) {
     return lastLeafContent;
   }
 
@@ -1035,7 +1046,7 @@ nsIContent* HTMLEditUtils::GetNextContent(
       return point.GetChild();
     }
 
-    nsIContent* firstLeafContent = HTMLEditUtils::GetFirstLeafChild(
+    nsIContent* firstLeafContent = HTMLEditUtils::GetFirstLeafContent(
         *point.GetChild(),
         {aOptions.contains(WalkTreeOption::StopAtBlockBoundary)
              ? LeafNodeType::LeafNodeOrChildBlock
@@ -1052,10 +1063,7 @@ nsIContent* HTMLEditUtils::GetNextContent(
       return nullptr;
     }
 
-    if ((!aOptions.contains(WalkTreeOption::IgnoreNonEditableNode) ||
-         EditorUtils::IsEditableContent(*firstLeafContent, EditorType::HTML)) &&
-        (!aOptions.contains(WalkTreeOption::IgnoreDataNodeExceptText) ||
-         EditorUtils::IsElementOrText(*firstLeafContent))) {
+    if (!HTMLEditUtils::IsContentIgnored(*firstLeafContent, aOptions)) {
       return firstLeafContent;
     }
 
@@ -1106,8 +1114,8 @@ nsIContent* HTMLEditUtils::GetAdjacentLeafContent(
               : LeafNodeType::OnlyLeafNode};
       nsIContent* leafContent =
           aWalkTreeDirection == WalkTreeDirection::Forward
-              ? HTMLEditUtils::GetFirstLeafChild(*sibling, leafNodeTypes)
-              : HTMLEditUtils::GetLastLeafChild(*sibling, leafNodeTypes);
+              ? HTMLEditUtils::GetFirstLeafContent(*sibling, leafNodeTypes)
+              : HTMLEditUtils::GetLastLeafContent(*sibling, leafNodeTypes);
       return leafContent ? leafContent : sibling;
     }
 
@@ -1147,10 +1155,7 @@ nsIContent* HTMLEditUtils::GetAdjacentContent(
     return nullptr;
   }
 
-  if ((!aOptions.contains(WalkTreeOption::IgnoreNonEditableNode) ||
-       EditorUtils::IsEditableContent(*leafContent, EditorType::HTML)) &&
-      (!aOptions.contains(WalkTreeOption::IgnoreDataNodeExceptText) ||
-       EditorUtils::IsElementOrText(*leafContent))) {
+  if (!HTMLEditUtils::IsContentIgnored(*leafContent, aOptions)) {
     return leafContent;
   }
 
@@ -1514,6 +1519,67 @@ EditAction HTMLEditUtils::GetEditActionForAlignment(
     return EditAction::eJustify;
   }
   return EditAction::eSetAlignment;
+}
+
+template <typename EditorDOMPointType, typename EditorDOMPointTypeInput>
+EditorDOMPointType HTMLEditUtils::GetBetterInsertionPointFor(
+    const nsIContent& aContentToInsert,
+    const EditorDOMPointTypeInput& aPointToInsert,
+    const Element& aEditingHost) {
+  if (NS_WARN_IF(!aPointToInsert.IsSet())) {
+    return EditorDOMPointType();
+  }
+
+  EditorDOMPointType pointToInsert(
+      aPointToInsert.GetNonAnonymousSubtreePoint());
+  if (NS_WARN_IF(!pointToInsert.IsSet()) ||
+      NS_WARN_IF(!pointToInsert.GetContainer()->IsInclusiveDescendantOf(
+          &aEditingHost))) {
+    // Cannot insert aContentToInsert into this DOM tree.
+    return EditorDOMPointType();
+  }
+
+  // If the node to insert is not a block level element, we can insert it
+  // at any point.
+  if (!HTMLEditUtils::IsBlockElement(aContentToInsert)) {
+    return pointToInsert;
+  }
+
+  WSRunScanner wsScannerForPointToInsert(const_cast<Element*>(&aEditingHost),
+                                         pointToInsert);
+
+  // If the insertion position is after the last visible item in a line,
+  // i.e., the insertion position is just before a visible line break <br>,
+  // we want to skip to the position just after the line break (see bug 68767).
+  WSScanResult forwardScanFromPointToInsertResult =
+      wsScannerForPointToInsert.ScanNextVisibleNodeOrBlockBoundaryFrom(
+          pointToInsert);
+  // So, if the next visible node isn't a <br> element, we can insert the block
+  // level element to the point.
+  if (!forwardScanFromPointToInsertResult.GetContent() ||
+      !forwardScanFromPointToInsertResult.ReachedBRElement()) {
+    return pointToInsert;
+  }
+
+  // However, we must not skip next <br> element when the caret appears to be
+  // positioned at the beginning of a block, in that case skipping the <br>
+  // would not insert the <br> at the caret position, but after the current
+  // empty line.
+  WSScanResult backwardScanFromPointToInsertResult =
+      wsScannerForPointToInsert.ScanPreviousVisibleNodeOrBlockBoundaryFrom(
+          pointToInsert);
+  // So, if there is no previous visible node,
+  // or, if both nodes of the insertion point is <br> elements,
+  // or, if the previous visible node is different block,
+  // we need to skip the following <br>.  So, otherwise, we can insert the
+  // block at the insertion point.
+  if (!backwardScanFromPointToInsertResult.GetContent() ||
+      backwardScanFromPointToInsertResult.ReachedBRElement() ||
+      backwardScanFromPointToInsertResult.ReachedCurrentBlockBoundary()) {
+    return pointToInsert;
+  }
+
+  return forwardScanFromPointToInsertResult.RawPointAfterContent();
 }
 
 }  // namespace mozilla

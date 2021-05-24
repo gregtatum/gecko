@@ -2198,7 +2198,7 @@ var gBrowserInit = {
       // property set to true, if yes remove focus from urlbar for about:welcome
       const aboutWelcomeSkipUrlBarFocus =
         uriToLoad == "about:welcome" &&
-        NimbusFeatures.aboutwelcome.getValue()?.skipFocus;
+        NimbusFeatures.aboutwelcome.getVariable("skipFocus");
 
       if (
         (isBlankPageURL(uriToLoad) && !aboutWelcomeSkipUrlBarFocus) ||
@@ -8221,15 +8221,34 @@ const gRemoteControl = {
 
   updateVisualCue() {
     const mainWindow = document.documentElement;
-    if (
-      DevToolsSocketStatus.opened ||
-      Marionette.running ||
-      RemoteAgent.listening
-    ) {
+    const remoteControlComponent = this.getRemoteControlComponent();
+    if (remoteControlComponent) {
       mainWindow.setAttribute("remotecontrol", "true");
+      const remoteControlIcon = document.getElementById("remote-control-icon");
+      document.l10n.setAttributes(
+        remoteControlIcon,
+        "urlbar-remote-control-notification-anchor2",
+        { component: remoteControlComponent }
+      );
     } else {
       mainWindow.removeAttribute("remotecontrol");
     }
+  },
+
+  getRemoteControlComponent() {
+    if (DevToolsSocketStatus.opened) {
+      return "DevTools";
+    }
+
+    if (Marionette.running) {
+      return "Marionette";
+    }
+
+    if (RemoteAgent.listening) {
+      return "RemoteAgent";
+    }
+
+    return null;
   },
 };
 
@@ -9432,6 +9451,7 @@ TabModalPromptBox.prototype = {
 // tab-modal prompts.
 var gDialogBox = {
   _dialog: null,
+  _nextOpenJumpsQueue: false,
   _queued: [],
 
   // Used to wait for a `close` event from the HTML
@@ -9452,14 +9472,34 @@ var gDialogBox = {
     return !!this._dialog;
   },
 
+  replaceDialogIfOpen() {
+    this._dialog?.close();
+    this._nextOpenJumpsQueue = true;
+  },
+
   async open(uri, args) {
+    // If we need to queue, some callers indicate they should go first.
+    const queueMethod = this._nextOpenJumpsQueue ? "unshift" : "push";
+    this._nextOpenJumpsQueue = false;
+
     // If we already have a dialog opened and are trying to open another,
     // queue the next one to be opened later.
     if (this.isOpen) {
       return new Promise((resolve, reject) => {
-        this._queued.push({ resolve, reject, uri, args });
+        this._queued[queueMethod]({ resolve, reject, uri, args });
       });
     }
+
+    // We're not open. If we're in a modal state though, we can't
+    // show the dialog effectively. To avoid hanging by deadlock,
+    // just return immediately for sync prompts:
+    if (window.windowUtils.isInModalState() && !args.getProperty("async")) {
+      throw Components.Exception(
+        "Prompt could not be shown.",
+        Cr.NS_ERROR_NOT_AVAILABLE
+      );
+    }
+
     // Indicate if we should wait for the dialog to close.
     this._didOpenHTMLDialog = false;
     let haveClosedPromise = new Promise(resolve => {

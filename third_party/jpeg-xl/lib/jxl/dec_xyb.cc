@@ -222,12 +222,17 @@ ImageF UpsampleV2(const ImageF& src, ThreadPool* pool) {
  *  output:
  *   |o1 e1 o2 e2 o3 e3 o4 e4| =: (o, e)
  */
-ImageF UpsampleH2(const ImageF& src, ThreadPool* pool) {
+ImageF UpsampleH2(const ImageF& src, size_t output_xsize, ThreadPool* pool) {
   const size_t xsize = src.xsize();
   const size_t ysize = src.ysize();
   JXL_ASSERT(xsize != 0);
   JXL_ASSERT(ysize != 0);
-  ImageF dst(xsize * 2, ysize);
+  JXL_ASSERT(DivCeil(output_xsize, 2) == xsize);
+  // Extra pixel in output might cause the whole extra vector overhead; thus
+  // we request specific output size. Should be safe, because the last 2 values
+  // are processed in non-vectorized form, and the "Plane" row padding concerns
+  // only about the case when unaligned vector store is applied at last pixel.
+  ImageF dst(output_xsize, ysize);
 
   constexpr size_t kGroupArea = kGroupDim * kGroupDim;
   const size_t lines_per_group = DivCeil(kGroupArea, xsize);
@@ -306,8 +311,8 @@ ImageF UpsampleV2(const ImageF& src, ThreadPool* pool) {
 }
 
 HWY_EXPORT(UpsampleH2);
-ImageF UpsampleH2(const ImageF& src, ThreadPool* pool) {
-  return HWY_DYNAMIC_DISPATCH(UpsampleH2)(src, pool);
+ImageF UpsampleH2(const ImageF& src, size_t output_xsize, ThreadPool* pool) {
+  return HWY_DYNAMIC_DISPATCH(UpsampleH2)(src, output_xsize, pool);
 }
 
 HWY_EXPORT(HasFastXYBTosRGB8);
@@ -315,10 +320,13 @@ bool HasFastXYBTosRGB8() { return HWY_DYNAMIC_DISPATCH(HasFastXYBTosRGB8)(); }
 
 HWY_EXPORT(FastXYBTosRGB8);
 void FastXYBTosRGB8(const Image3F& input, const Rect& input_rect,
-                    const Rect& output_buf_rect,
-                    uint8_t* JXL_RESTRICT output_buf, size_t xsize) {
+                    const Rect& output_buf_rect, const ImageF* alpha,
+                    const Rect& alpha_rect, bool is_rgba,
+                    uint8_t* JXL_RESTRICT output_buf, size_t xsize,
+                    size_t output_stride) {
   return HWY_DYNAMIC_DISPATCH(FastXYBTosRGB8)(
-      input, input_rect, output_buf_rect, output_buf, xsize);
+      input, input_rect, output_buf_rect, alpha, alpha_rect, is_rgba,
+      output_buf, xsize, output_stride);
 }
 
 void OpsinParams::Init(float intensity_target) {
@@ -384,7 +392,7 @@ Status OutputEncodingInfo::Set(const ImageMetadata& metadata) {
             orig_color_encoding.GetPrimaries().b.y,
             orig_color_encoding.GetWhitePoint().x,
             orig_color_encoding.GetWhitePoint().y, xyzd50_to_original));
-        Inv3x3Matrix(xyzd50_to_original);
+        JXL_RETURN_IF_ERROR(Inv3x3Matrix(xyzd50_to_original));
         float srgb_to_original[9];
         MatMul(xyzd50_to_original, srgb_to_xyzd50, 3, 3, 3, srgb_to_original);
         MatMul(srgb_to_original, im.inverse_matrix, 3, 3, 3, inverse_matrix);

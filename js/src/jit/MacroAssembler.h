@@ -1070,6 +1070,8 @@ class MacroAssembler : public MacroAssemblerSpecific {
       DEFINED_ON(x86, x64, arm, mips32, mips64);
   inline void mul64(const Register64& src, const Register64& dest,
                     const Register temp) PER_ARCH;
+  inline void mul64(const Register64& src1, const Register64& src2,
+                    const Register64& dest) DEFINED_ON(arm64);
 
   inline void mulBy3(Register src, Register dest) PER_ARCH;
 
@@ -2264,15 +2266,17 @@ class MacroAssembler : public MacroAssemblerSpecific {
   inline void permuteInt8x16(const uint8_t lanes[16], FloatRegister src,
                              FloatRegister dest) DEFINED_ON(x86_shared, arm64);
 
+  // lane values 0..7
+  inline void permuteInt16x8(const uint16_t lanes[8], FloatRegister src,
+                             FloatRegister dest) DEFINED_ON(arm64);
+
   // lane values 0..3 [sic].
   inline void permuteHighInt16x8(const uint16_t lanes[4], FloatRegister src,
-                                 FloatRegister dest)
-      DEFINED_ON(x86_shared, arm64);
+                                 FloatRegister dest) DEFINED_ON(x86_shared);
 
   // lane values 0..3.
   inline void permuteLowInt16x8(const uint16_t lanes[4], FloatRegister src,
-                                FloatRegister dest)
-      DEFINED_ON(x86_shared, arm64);
+                                FloatRegister dest) DEFINED_ON(x86_shared);
 
   // lane values 0..3
   inline void permuteInt32x4(const uint32_t lanes[4], FloatRegister src,

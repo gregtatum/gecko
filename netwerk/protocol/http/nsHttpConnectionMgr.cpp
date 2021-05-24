@@ -718,6 +718,11 @@ static void BuildOriginFrameHashKey(nsACString& newKey,
   } else {
     newKey.AppendLiteral("~.:");
   }
+  if (ci->GetFallbackConnection()) {
+    newKey.AppendLiteral("~F:");
+  } else {
+    newKey.AppendLiteral("~.:");
+  }
   newKey.AppendInt(port);
   newKey.AppendLiteral("/[");
   nsAutoCString suffix;
@@ -1232,15 +1237,15 @@ nsresult nsHttpConnectionMgr::MakeNewConnection(
   if (AtActiveConnectionLimit(ent, trans->Caps()))
     return NS_ERROR_NOT_AVAILABLE;
 
-  nsresult rv = ent->CreateDnsAndConnectSocket(
-      trans, trans->Caps(), false, false,
-      trans->ClassOfService() & nsIClassOfService::UrgentStart, true,
-      pendingTransInfo);
+  nsresult rv =
+      CreateTransport(ent, trans, trans->Caps(), false, false,
+                      trans->ClassOfService() & nsIClassOfService::UrgentStart,
+                      true, pendingTransInfo);
   if (NS_FAILED(rv)) {
     /* hard failure */
     LOG(
         ("nsHttpConnectionMgr::MakeNewConnection [ci = %s trans = %p] "
-         "CreateDnsAndConnectSocket() hard failure.\n",
+         "CreateTransport() hard failure.\n",
          ent->mConnInfo->HashKey().get(), trans));
     trans->Close(rv);
     if (rv == NS_ERROR_NOT_AVAILABLE) rv = NS_ERROR_FAILURE;
@@ -1736,6 +1741,36 @@ void nsHttpConnectionMgr::RecvdConnect() {
   }
 
   ConditionallyStopTimeoutTick();
+}
+
+nsresult nsHttpConnectionMgr::CreateTransport(
+    ConnectionEntry* ent, nsAHttpTransaction* trans, uint32_t caps,
+    bool speculative, bool isFromPredictor, bool urgentStart, bool allow1918,
+    PendingTransactionInfo* pendingTransInfo) {
+  MOZ_ASSERT(OnSocketThread(), "not on socket thread");
+  MOZ_ASSERT((speculative && !pendingTransInfo) ||
+             (!speculative && pendingTransInfo));
+
+  RefPtr<DnsAndConnectSocket> sock = new DnsAndConnectSocket(
+      ent, trans, caps, speculative, isFromPredictor, urgentStart);
+
+  if (speculative) {
+    sock->SetAllow1918(allow1918);
+  }
+  // The socket stream holds the reference to the half open
+  // socket - so if the stream fails to init the half open
+  // will go away.
+  nsresult rv = sock->Init();
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (pendingTransInfo) {
+    DebugOnly<bool> claimed =
+        pendingTransInfo->TryClaimingDnsAndConnectSocket(sock);
+    MOZ_ASSERT(claimed);
+  }
+
+  ent->InsertIntoDnsAndConnectSockets(sock);
+  return NS_OK;
 }
 
 void nsHttpConnectionMgr::DispatchSpdyPendingQ(
@@ -3187,10 +3222,16 @@ void nsHttpConnectionMgr::TimeoutTick() {
 
 ConnectionEntry* nsHttpConnectionMgr::GetOrCreateConnectionEntry(
     nsHttpConnectionInfo* specificCI, bool prohibitWildCard, bool aNoHttp2,
-    bool aNoHttp3) {
+    bool aNoHttp3, bool* aAvailableForDispatchNow) {
+  if (aAvailableForDispatchNow) {
+    *aAvailableForDispatchNow = false;
+  }
   // step 1
   ConnectionEntry* specificEnt = mCT.GetWeak(specificCI->HashKey());
   if (specificEnt && specificEnt->AvailableForDispatchNow()) {
+    if (aAvailableForDispatchNow) {
+      *aAvailableForDispatchNow = true;
+    }
     return specificEnt;
   }
 
@@ -3226,6 +3267,9 @@ ConnectionEntry* nsHttpConnectionMgr::GetOrCreateConnectionEntry(
     MOZ_ASSERT(NS_SUCCEEDED(rv));
     ConnectionEntry* wildCardEnt = mCT.GetWeak(wildCardProxyCI->HashKey());
     if (wildCardEnt && wildCardEnt->AvailableForDispatchNow()) {
+      if (aAvailableForDispatchNow) {
+        *aAvailableForDispatchNow = true;
+      }
       return wildCardEnt;
     }
   }
@@ -3247,6 +3291,14 @@ void nsHttpConnectionMgr::DoSpeculativeConnection(
   ConnectionEntry* ent = GetOrCreateConnectionEntry(
       aTrans->ConnectionInfo(), false, aTrans->Caps() & NS_HTTP_DISALLOW_SPDY,
       aTrans->Caps() & NS_HTTP_DISALLOW_HTTP3);
+  DoSpeculativeConnectionInternal(ent, aTrans, aFetchHTTPSRR);
+}
+
+void nsHttpConnectionMgr::DoSpeculativeConnectionInternal(
+    ConnectionEntry* aEnt, SpeculativeTransaction* aTrans, bool aFetchHTTPSRR) {
+  MOZ_ASSERT(OnSocketThread(), "not on socket thread");
+  MOZ_ASSERT(aTrans);
+  MOZ_ASSERT(aEnt);
 
   uint32_t parallelSpeculativeConnectLimit =
       aTrans->ParallelSpeculativeConnectLimit()
@@ -3260,23 +3312,47 @@ void nsHttpConnectionMgr::DoSpeculativeConnection(
   bool keepAlive = aTrans->Caps() & NS_HTTP_ALLOW_KEEPALIVE;
   if (mNumDnsAndConnectSockets < parallelSpeculativeConnectLimit &&
       ((ignoreIdle &&
-        (ent->IdleConnectionsLength() < parallelSpeculativeConnectLimit)) ||
-       !ent->IdleConnectionsLength()) &&
-      !(keepAlive && ent->RestrictConnections()) &&
-      !AtActiveConnectionLimit(ent, aTrans->Caps())) {
+        (aEnt->IdleConnectionsLength() < parallelSpeculativeConnectLimit)) ||
+       !aEnt->IdleConnectionsLength()) &&
+      !(keepAlive && aEnt->RestrictConnections()) &&
+      !AtActiveConnectionLimit(aEnt, aTrans->Caps())) {
     if (aFetchHTTPSRR) {
       Unused << aTrans->FetchHTTPSRR();
     }
-    DebugOnly<nsresult> rv = ent->CreateDnsAndConnectSocket(
-        aTrans, aTrans->Caps(), true, isFromPredictor, false, allow1918,
-        nullptr);
+    DebugOnly<nsresult> rv =
+        CreateTransport(aEnt, aTrans, aTrans->Caps(), true, isFromPredictor,
+                        false, allow1918, nullptr);
     MOZ_ASSERT(NS_SUCCEEDED(rv));
   } else {
     LOG(
-        ("OnMsgSpeculativeConnect Transport "
+        ("DoSpeculativeConnectionInternal Transport "
          "not created due to existing connection count:%d",
          parallelSpeculativeConnectLimit));
   }
+}
+
+void nsHttpConnectionMgr::DoFallbackConnection(SpeculativeTransaction* aTrans,
+                                               bool aFetchHTTPSRR) {
+  MOZ_ASSERT(OnSocketThread(), "not on socket thread");
+  MOZ_ASSERT(aTrans);
+
+  LOG(("nsHttpConnectionMgr::DoFallbackConnection"));
+
+  bool availableForDispatchNow = false;
+  ConnectionEntry* ent = GetOrCreateConnectionEntry(
+      aTrans->ConnectionInfo(), false, aTrans->Caps() & NS_HTTP_DISALLOW_SPDY,
+      aTrans->Caps() & NS_HTTP_DISALLOW_HTTP3, &availableForDispatchNow);
+
+  if (availableForDispatchNow) {
+    LOG(
+        ("nsHttpConnectionMgr::DoFallbackConnection fallback connection is "
+         "ready for dispatching ent=%p",
+         ent));
+    aTrans->InvokeCallback();
+    return;
+  }
+
+  DoSpeculativeConnectionInternal(ent, aTrans, aFetchHTTPSRR);
 }
 
 void nsHttpConnectionMgr::OnMsgSpeculativeConnect(int32_t, ARefBase* param) {
@@ -3474,11 +3550,6 @@ nsHttpConnectionMgr::FindTransactionHelper(bool removeWhenFound,
     }
   }
   return info.forget();
-}
-
-already_AddRefed<ConnectionEntry> nsHttpConnectionMgr::FindConnectionEntry(
-    const nsHttpConnectionInfo* ci) {
-  return mCT.Get(ci->HashKey());
 }
 
 nsHttpConnectionMgr* nsHttpConnectionMgr::AsHttpConnectionMgr() { return this; }

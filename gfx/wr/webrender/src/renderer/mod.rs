@@ -312,7 +312,7 @@ pub enum ShaderColorMode {
     SubpixelWithBgColorPass1 = 4,
     SubpixelWithBgColorPass2 = 5,
     SubpixelDualSource = 6,
-    Bitmap = 7,
+    BitmapShadow = 7,
     ColorBitmap = 8,
     Image = 9,
     MultiplyDualSource = 10,
@@ -321,11 +321,12 @@ pub enum ShaderColorMode {
 impl From<GlyphFormat> for ShaderColorMode {
     fn from(format: GlyphFormat) -> ShaderColorMode {
         match format {
-            GlyphFormat::Alpha | GlyphFormat::TransformedAlpha => ShaderColorMode::Alpha,
+            GlyphFormat::Alpha |
+            GlyphFormat::TransformedAlpha |
+            GlyphFormat::Bitmap => ShaderColorMode::Alpha,
             GlyphFormat::Subpixel | GlyphFormat::TransformedSubpixel => {
                 panic!("Subpixel glyph formats must be handled separately.");
             }
-            GlyphFormat::Bitmap => ShaderColorMode::Bitmap,
             GlyphFormat::ColorBitmap => ShaderColorMode::ColorBitmap,
         }
     }
@@ -959,6 +960,9 @@ impl Renderer {
             max_internal_texture_size = max_internal_texture_size.min(internal_limit);
         }
 
+        let image_tiling_threshold = options.image_tiling_threshold
+            .min(max_internal_texture_size);
+
         device.begin_frame();
 
         let shaders = match shaders {
@@ -1230,6 +1234,7 @@ impl Renderer {
 
             let texture_cache = TextureCache::new(
                 max_internal_texture_size,
+                image_tiling_threshold,
                 picture_tile_size,
                 color_cache_formats,
                 swizzle_settings,
@@ -1930,7 +1935,7 @@ impl Renderer {
                 // Profile marker for the number of invalidated picture cache
                 if thread_is_being_profiled() {
                     let duration = Duration::new(0,0);
-                    if let Some(n) = self.profiler.get(profiler::RENDERED_PICTURE_TILES) {
+                    if let Some(n) = self.profile.get(profiler::RENDERED_PICTURE_TILES) {
                         let message = (n as usize).to_string();
                         add_text_marker(cstr!("NumPictureCacheInvalidated"), &message, duration);
                     }
@@ -4925,7 +4930,7 @@ impl Renderer {
         let fb_height = device_size.height;
         let surface_origin_is_top_left = draw_target.surface_origin_is_top_left();
 
-        let num_textures = textures.len() as i32;
+        let num_textures = textures.iter().filter(|t| t.flags().contains(TextureFlags::IS_SHARED_TEXTURE_CACHE)).count() as i32;
 
         if num_textures * (size + spacing) > fb_width {
             let factor = fb_width as f32 / (num_textures * (size + spacing)) as f32;
@@ -4948,6 +4953,9 @@ impl Renderer {
 
         let mut i = 0;
         for texture in textures.iter() {
+            if !texture.flags().contains(TextureFlags::IS_SHARED_TEXTURE_CACHE) {
+                continue;
+            }
             let dimensions = texture.get_dimensions();
             let src_rect = FramebufferIntRect::new(
                 FramebufferIntPoint::zero(),
@@ -5316,6 +5324,7 @@ pub struct RendererOptions {
     pub clear_color: Option<ColorF>,
     pub enable_clear_scissor: bool,
     pub max_internal_texture_size: Option<i32>,
+    pub image_tiling_threshold: i32,
     pub upload_method: UploadMethod,
     /// The default size in bytes for PBOs used to upload texture data.
     pub upload_pbo_default_size: usize,
@@ -5400,6 +5409,7 @@ impl Default for RendererOptions {
             clear_color: Some(ColorF::new(1.0, 1.0, 1.0, 1.0)),
             enable_clear_scissor: true,
             max_internal_texture_size: None,
+            image_tiling_threshold: 4096,
             // This is best as `Immediate` on Angle, or `Pixelbuffer(Dynamic)` on GL,
             // but we are unable to make this decision here, so picking the reasonable medium.
             upload_method: UploadMethod::PixelBuffer(ONE_TIME_USAGE_HINT),

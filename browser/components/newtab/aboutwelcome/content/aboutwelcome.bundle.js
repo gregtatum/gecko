@@ -219,10 +219,10 @@ function ComputeTelemetryInfo(welcomeContent, experimentId, branchId) {
 }
 
 async function retrieveRenderContent() {
-  // Feature config includes:
+  // Feature config includes RTAMO attribution data if exists
+  // else below data in order specified
   // user prefs
   // experiment data
-  // attribution data
   // defaults
   let featureConfig = await window.AWGetFeatureConfig();
   let {
@@ -338,7 +338,12 @@ const MultiStageAboutWelcome = props => {
   }, [transition]); // Transition to next screen, opening about:home on last screen button CTA
 
   const handleTransition = () => {
-    // Start transitioning things "out" immediately when moving forwards.
+    // Only handle transitioning out from a screen once.
+    if (transition === "out") {
+      return;
+    } // Start transitioning things "out" immediately when moving forwards.
+
+
     setTransition(props.transitions ? "out" : ""); // Actually move forwards after all transitions finish.
 
     setTimeout(() => {

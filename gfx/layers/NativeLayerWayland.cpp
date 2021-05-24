@@ -16,11 +16,6 @@
 
 namespace mozilla::layers {
 
-using gfx::IntPoint;
-using gfx::IntRect;
-using gfx::IntRegion;
-using gfx::IntSize;
-using gfx::Matrix4x4;
 using gfx::Point;
 using gfx::Rect;
 using gfx::Size;
@@ -40,41 +35,17 @@ NativeLayerRootWayland::NativeLayerRootWayland(MozContainer* aContainer)
 void NativeLayerRootWayland::EnsureSurfaceInitialized() {
   MutexAutoLock lock(mMutex);
 
-  if (mInitialized) {
+  if (mShmBuffer) {
     return;
   }
 
-  mEGLWindow = moz_container_wayland_get_egl_window(mContainer, 1);
-  if (!mEGLWindow) {
-    return;
-  }
+  mShmBuffer = widget::WaylandShmBuffer::Create(widget::WaylandDisplayGet(),
+                                                LayoutDeviceIntSize(1, 1));
+  mShmBuffer->Clear();
 
-  moz_container_wayland_egl_window_set_size(mContainer, 1, 1);
-  wp_viewport* viewporter = moz_container_wayland_get_viewport(mContainer);
-  wp_viewport_set_source(viewporter, wl_fixed_from_int(0), wl_fixed_from_int(0),
-                         wl_fixed_from_int(1), wl_fixed_from_int(1));
-  wp_viewport_set_destination(viewporter, 1, 1);
-
-  // TODO: use shm-buffer instead of GL
-  GLContextEGL* gl = GLContextEGL::Cast(wr::RenderThread::Get()->SingletonGL());
-  auto egl = gl->mEgl;
-
-  mEGLSurface = egl->fCreateWindowSurface(gl->mConfig, mEGLWindow, nullptr);
-  MOZ_ASSERT(mEGLSurface != EGL_NO_SURFACE);
-
-  gl->SetEGLSurfaceOverride(mEGLSurface);
-  gl->MakeCurrent();
-
-  gl->fClearColor(0.f, 0.f, 0.f, 0.f);
-  gl->fClear(LOCAL_GL_COLOR_BUFFER_BIT);
-
-  egl->fSwapInterval(0);
-  egl->fSwapBuffers(mEGLSurface);
-
-  gl->SetEGLSurfaceOverride(nullptr);
-  gl->MakeCurrent();
-
-  mInitialized = true;
+  wl_surface* wlSurface = moz_container_wayland_surface_lock(mContainer);
+  mShmBuffer->AttachAndCommit(wlSurface);
+  moz_container_wayland_surface_unlock(mContainer, &wlSurface);
 }
 
 already_AddRefed<NativeLayer> NativeLayerRootWayland::CreateLayer(
@@ -320,9 +291,7 @@ bool NativeLayerRootWayland::CommitToScreen() {
       }
     }
 
-    if (mInitialized) {
-      wl_surface_commit(wlSurface);
-    }
+    wl_surface_commit(wlSurface);
     moz_container_wayland_surface_unlock(mContainer, &wlSurface);
   }
 
@@ -337,12 +306,7 @@ void NativeLayerRootWayland::PauseCompositor() {
     UnmapLayer(layer);
   }
 
-  GLContextEGL* gl = GLContextEGL::Cast(wr::RenderThread::Get()->SingletonGL());
-  auto egl = gl->mEgl;
-  egl->fDestroySurface(mEGLSurface);
-  mEGLSurface = nullptr;
-  mEGLWindow = nullptr;
-  mInitialized = false;
+  mShmBuffer = nullptr;
 }
 
 bool NativeLayerRootWayland::ResumeCompositor() { return true; }
@@ -424,8 +388,7 @@ void NativeLayerWayland::SetTransform(const Matrix4x4& aTransform) {
   }
 }
 
-void NativeLayerWayland::SetSamplingFilter(
-    gfx::SamplingFilter aSamplingFilter) {
+void NativeLayerWayland::SetSamplingFilter(SamplingFilter aSamplingFilter) {
   MutexAutoLock lock(mMutex);
 
   if (aSamplingFilter != mSamplingFilter) {
@@ -456,7 +419,7 @@ bool NativeLayerWayland::IsOpaque() {
   return mIsOpaque;
 }
 
-void NativeLayerWayland::SetClipRect(const Maybe<gfx::IntRect>& aClipRect) {
+void NativeLayerWayland::SetClipRect(const Maybe<IntRect>& aClipRect) {
   MutexAutoLock lock(mMutex);
 
   if (aClipRect != mClipRect) {
@@ -464,19 +427,19 @@ void NativeLayerWayland::SetClipRect(const Maybe<gfx::IntRect>& aClipRect) {
   }
 }
 
-Maybe<gfx::IntRect> NativeLayerWayland::ClipRect() {
+Maybe<IntRect> NativeLayerWayland::ClipRect() {
   MutexAutoLock lock(mMutex);
   return mClipRect;
 }
 
-gfx::IntRect NativeLayerWayland::CurrentSurfaceDisplayRect() {
+IntRect NativeLayerWayland::CurrentSurfaceDisplayRect() {
   MutexAutoLock lock(mMutex);
   return mDisplayRect;
 }
 
-RefPtr<gfx::DrawTarget> NativeLayerWayland::NextSurfaceAsDrawTarget(
+RefPtr<DrawTarget> NativeLayerWayland::NextSurfaceAsDrawTarget(
     const IntRect& aDisplayRect, const IntRegion& aUpdateRegion,
-    gfx::BackendType aBackendType) {
+    BackendType aBackendType) {
   MOZ_ASSERT(false);
   return nullptr;
 }
@@ -489,7 +452,6 @@ Maybe<GLuint> NativeLayerWayland::NextSurfaceAsFramebuffer(
   mValidRect = IntRect(aDisplayRect);
   mDirtyRegion = IntRegion(aUpdateRegion);
 
-  MOZ_ASSERT(!mSize.IsEmpty());
   if (!mNativeSurface) {
     mNativeSurface = mSurfacePoolHandle->ObtainSurfaceFromPool(mSize);
   }

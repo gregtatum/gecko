@@ -602,7 +602,7 @@ void nsHttpTransaction::OnActivated() {
 
   if (mConnection && mRequestHead &&
       mConnection->Version() >= HttpVersion::v2_0) {
-    // So this is fun. On http/2, we want to send TE: Trailers, to be
+    // So this is fun. On http/2, we want to send TE: trailers, to be
     // spec-compliant. So we add it to the request head here. The fun part
     // is that adding a header to the request head at this point has no
     // effect on what we send on the wire, as the headers are already
@@ -610,7 +610,7 @@ void nsHttpTransaction::OnActivated() {
     // of the header happens in the h2 compression code. We still have to
     // add the header to the request head here, though, so that devtools can
     // show that we sent the header. FUN!
-    Unused << mRequestHead->SetHeader(nsHttp::TE, "Trailers"_ns);
+    Unused << mRequestHead->SetHeader(nsHttp::TE, "trailers"_ns);
   }
 
   mActivated = true;
@@ -2230,6 +2230,8 @@ nsresult nsHttpTransaction::HandleContentStart() {
       }
     }
 
+    CollectTelemetryForUploads();
+
     // Report telemetry
     if (mSupportsHTTP3) {
       Accumulate(Telemetry::TRANSACTION_WAIT_TIME_HTTP2_SUP_HTTP3,
@@ -2842,7 +2844,7 @@ nsHttpTransaction::Release() {
 }
 
 NS_IMPL_QUERY_INTERFACE(nsHttpTransaction, nsIInputStreamCallback,
-                        nsIOutputStreamCallback)
+                        nsIOutputStreamCallback, nsITimerCallback)
 
 //-----------------------------------------------------------------------------
 // nsHttpTransaction::nsIInputStreamCallback
@@ -3264,6 +3266,7 @@ void nsHttpTransaction::OnBackupConnectionReady(bool aTriggeredByHTTPSRR) {
 static void CreateBackupConnection(
     nsHttpConnectionInfo* aBackupConnInfo, nsIInterfaceRequestor* aCallbacks,
     uint32_t aCaps, std::function<void(bool)>&& aResultCallback) {
+  aBackupConnInfo->SetFallbackConnection(true);
   RefPtr<SpeculativeTransaction> trans = new SpeculativeTransaction(
       aBackupConnInfo, aCallbacks, aCaps | NS_HTTP_DISALLOW_HTTP3,
       std::move(aResultCallback));
@@ -3273,7 +3276,7 @@ static void CreateBackupConnection(
     trans->SetParallelSpeculativeConnectLimit(limit);
     trans->SetIgnoreIdle(true);
   }
-  gHttpHandler->ConnMgr()->DoSpeculativeConnection(trans, false);
+  gHttpHandler->ConnMgr()->DoFallbackConnection(trans, false);
 }
 
 void nsHttpTransaction::OnHttp3BackupTimer() {
@@ -3382,6 +3385,33 @@ nsHttpTransaction::Notify(nsITimer* aTimer) {
 }
 
 bool nsHttpTransaction::GetSupportsHTTP3() { return mSupportsHTTP3; }
+
+const int64_t TELEMETRY_REQUEST_SIZE_10M = (int64_t)10 * (int64_t)(1 << 20);
+const int64_t TELEMETRY_REQUEST_SIZE_50M = (int64_t)50 * (int64_t)(1 << 20);
+const int64_t TELEMETRY_REQUEST_SIZE_100M = (int64_t)100 * (int64_t)(1 << 20);
+
+void nsHttpTransaction::CollectTelemetryForUploads() {
+  if ((mHttpVersion != HttpVersion::v3_0) && !mSupportsHTTP3) {
+    return;
+  }
+  if ((mRequestSize < TELEMETRY_REQUEST_SIZE_10M) ||
+      mTimings.requestStart.IsNull() || mTimings.responseStart.IsNull()) {
+    return;
+  }
+
+  nsCString key = (mHttpVersion == HttpVersion::v3_0) ? "uses_http3"_ns
+                                                      : "supports_http3"_ns;
+  if (mRequestSize <= TELEMETRY_REQUEST_SIZE_50M) {
+    key.Append("_10_50"_ns);
+  } else if (mRequestSize <= TELEMETRY_REQUEST_SIZE_100M) {
+    key.Append("_50_100"_ns);
+  } else {
+    key.Append("_gt_100"_ns);
+  }
+
+  Telemetry::AccumulateTimeDelta(Telemetry::HTTP3_UPLOAD_TIME, key,
+                                 mTimings.responseStart, mTimings.requestStart);
+}
 
 }  // namespace net
 }  // namespace mozilla

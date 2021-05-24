@@ -244,7 +244,7 @@ template <XDRMode mode>
 XDRResult StencilXDR::codeSharedData(XDRState<mode>* xdr,
                                      RefPtr<SharedImmutableScriptData>& sisd) {
   if (mode == XDR_ENCODE) {
-    MOZ_TRY(XDRImmutableScriptData<mode>(xdr, sisd->isd_));
+    MOZ_TRY(XDRImmutableScriptData<mode>(xdr, *sisd));
   } else {
     JSContext* cx = xdr->cx();
     UniquePtr<SharedImmutableScriptData> data(
@@ -252,7 +252,7 @@ XDRResult StencilXDR::codeSharedData(XDRState<mode>* xdr,
     if (!data) {
       return xdr->fail(JS::TranscodeResult::Throw);
     }
-    MOZ_TRY(XDRImmutableScriptData<mode>(xdr, data->isd_));
+    MOZ_TRY(XDRImmutableScriptData<mode>(xdr, *data));
     sisd = data.release();
 
     if (!SharedImmutableScriptData::shareScriptData(cx, sisd)) {
@@ -598,6 +598,7 @@ enum class SectionMarker : uint32_t {
   ScriptData = 0x840458FF,
   ScriptExtra = 0xA90E489D,
   ModuleMetadata = 0x94FDCE6D,
+  End = 0x16DDA135,
 };
 
 template <XDRMode mode>
@@ -696,6 +697,8 @@ template <XDRMode mode>
     MOZ_TRY(CodeMarker(xdr, SectionMarker::ModuleMetadata));
     MOZ_TRY(codeModuleMetadata(xdr, *stencil.moduleMetadata));
   }
+
+  MOZ_TRY(CodeMarker(xdr, SectionMarker::End));
 
   return Ok();
 }

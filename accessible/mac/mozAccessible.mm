@@ -336,8 +336,8 @@ static const uint64_t kCacheInitialized = ((uint64_t)0x1) << 63;
 - (NSArray*)moxChildren {
   MOZ_ASSERT(!mGeckoAccessible.IsNull());
 
-  NSMutableArray* children =
-      [[NSMutableArray alloc] initWithCapacity:mGeckoAccessible.ChildCount()];
+  NSMutableArray* children = [[[NSMutableArray alloc]
+      initWithCapacity:mGeckoAccessible.ChildCount()] autorelease];
 
   for (uint32_t childIdx = 0; childIdx < mGeckoAccessible.ChildCount();
        childIdx++) {
@@ -875,7 +875,8 @@ struct RoleDescrComparator {
   // reference to the web area to use as a start element if one is not
   // specified.
   MOXSearchInfo* search =
-      [[MOXSearchInfo alloc] initWithParameters:searchPredicate andRoot:self];
+      [[[MOXSearchInfo alloc] initWithParameters:searchPredicate
+                                         andRoot:self] autorelease];
 
   return [search performSearch];
 }
@@ -972,7 +973,8 @@ struct RoleDescrComparator {
 
 - (NSArray<mozAccessible*>*)getRelationsByType:(RelationType)relationType {
   if (LocalAccessible* acc = mGeckoAccessible.AsAccessible()) {
-    NSMutableArray<mozAccessible*>* relations = [[NSMutableArray alloc] init];
+    NSMutableArray<mozAccessible*>* relations =
+        [[[NSMutableArray alloc] init] autorelease];
     Relation rel = acc->RelationByType(relationType);
     while (LocalAccessible* relAcc = rel.Next()) {
       if (mozAccessible* relNative = GetNativeFromGeckoAccessible(relAcc)) {
@@ -1023,7 +1025,7 @@ struct RoleDescrComparator {
       MOXTextMarkerDelegate* delegate =
           static_cast<MOXTextMarkerDelegate*>([self moxTextMarkerDelegate]);
       NSMutableDictionary* userInfo =
-          [[delegate selectionChangeInfo] mutableCopy];
+          [[[delegate selectionChangeInfo] mutableCopy] autorelease];
       userInfo[@"AXTextChangeElement"] = self;
 
       mozAccessible* webArea = [self topWebArea];

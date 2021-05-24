@@ -608,6 +608,8 @@ class BrowserParent final : public PBrowserParent,
 
   bool HandleQueryContentEvent(mozilla::WidgetQueryContentEvent& aEvent);
 
+  bool SendInsertText(const nsString& aStringToInsert);
+
   bool SendPasteTransferable(const IPCDataTransfer& aDataTransfer,
                              const bool& aIsPrivateData,
                              nsIPrincipal* aRequestingPrincipal,
@@ -723,10 +725,6 @@ class BrowserParent final : public PBrowserParent,
   bool ReceiveMessage(
       const nsString& aMessage, bool aSync, ipc::StructuredCloneData* aData,
       nsTArray<ipc::StructuredCloneData>* aJSONRetVal = nullptr);
-
-  mozilla::ipc::IPCResult RecvAsyncAuthPrompt(const nsCString& aUri,
-                                              const nsString& aRealm,
-                                              const uint64_t& aCallbackId);
 
   virtual mozilla::ipc::IPCResult Recv__delete__() override;
 

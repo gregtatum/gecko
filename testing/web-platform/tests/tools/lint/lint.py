@@ -24,7 +24,6 @@ from ..wpt import testfiles
 from ..manifest.vcs import walk
 
 from ..manifest.sourcefile import SourceFile, js_meta_re, python_meta_re, space_chars, get_any_variants
-from six import ensure_binary, ensure_text
 
 MYPY = False
 if MYPY:
@@ -104,7 +103,7 @@ you could add the following line to the lint.ignore file.
 def all_filesystem_paths(repo_root, subdir=None):
     # type: (Text, Optional[Text]) -> Iterable[Text]
     path_filter = PathFilter(repo_root.encode("utf8"),
-                             extras=[ensure_binary(".git/")])
+                             extras=[b".git/"])
     if subdir:
         expanded_path = subdir.encode("utf8")
         subdir_str = expanded_path
@@ -116,7 +115,7 @@ def all_filesystem_paths(repo_root, subdir=None):
             if subdir:
                 path = os.path.join(subdir_str, path)
             assert not os.path.isabs(path), path
-            yield ensure_text(path)
+            yield path.decode("utf8")
 
 
 def _all_files_equal(paths):
@@ -958,25 +957,24 @@ def create_parser():
                         help="Output machine-readable JSON format")
     parser.add_argument("--markdown", action="store_true",
                         help="Output markdown")
-    parser.add_argument("--repo-root", type=ensure_text,
+    parser.add_argument("--repo-root", type=str,
                         help="The WPT directory. Use this "
                         "option if the lint script exists outside the repository")
-    parser.add_argument("--ignore-glob", type=ensure_text, action="append",
+    parser.add_argument("--ignore-glob", type=str, action="append",
                         help="Additional file glob to ignore (repeat to add more). "
                         "Globs are matched against paths relative to REPO_ROOT "
                         "using fnmatch, except that path separators are normalized.")
     parser.add_argument("--all", action="store_true", help="If no paths are passed, try to lint the whole "
                         "working directory, not just files that changed")
-    parser.add_argument("--github-checks-text-file", type=ensure_text,
+    parser.add_argument("--github-checks-text-file", type=str,
                         help="Path to GitHub checks output file for Taskcluster runs")
     parser.add_argument("-j", "--jobs", type=int, default=0,
                         help="Level to parallelism to use (defaults to 0, which detects the number of CPUs)")
     return parser
 
 
-def main(**kwargs_str):
+def main(**kwargs):
     # type: (**Any) -> int
-    kwargs = {ensure_text(key): value for key, value in kwargs_str.items()}
 
     assert logger is not None
     if kwargs.get("json") and kwargs.get("markdown"):

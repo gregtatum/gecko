@@ -1,18 +1,17 @@
 
-5 Added functions:
+3 Added functions:
 
-  'function SECOidTag HASH_GetHMACOidTagByHashOidTag(SECOidTag)'    {HASH_GetHMACOidTagByHashOidTag@@NSS_3.65}
-  'function PK11Context* PK11_CreateContextByPrivKey(CK_MECHANISM_TYPE, CK_ATTRIBUTE_TYPE, SECKEYPrivateKey*, const SECItem*)'    {PK11_CreateContextByPrivKey@@NSS_3.65}
-  'function PK11Context* PK11_CreateContextByPubKey(CK_MECHANISM_TYPE, CK_ATTRIBUTE_TYPE, SECKEYPublicKey*, const SECItem*, void*)'    {PK11_CreateContextByPubKey@@NSS_3.65}
-  'function SECKEYEncryptedPrivateKeyInfo* PK11_ExportEncryptedPrivKeyInfoV2(PK11SlotInfo*, SECOidTag, SECOidTag, SECOidTag, SECItem*, SECKEYPrivateKey*, int, void*)'    {PK11_ExportEncryptedPrivKeyInfoV2@@NSS_3.65}
-  'function SECKEYEncryptedPrivateKeyInfo* PK11_ExportEncryptedPrivateKeyInfoV2(PK11SlotInfo*, SECOidTag, SECOidTag, SECOidTag, SECItem*, CERTCertificate*, int, void*)'    {PK11_ExportEncryptedPrivateKeyInfoV2@@NSS_3.65}
+  'function PRBool PK11_ContextGetFIPSStatus(PK11Context*)'    {PK11_ContextGetFIPSStatus@@NSS_3.66}
+  'function PRBool PK11_ObjectGetFIPSStatus(PK11ObjectType, void*)'    {PK11_ObjectGetFIPSStatus@@NSS_3.66}
+  'function PRBool PK11_SlotGetLastFIPSStatus(PK11SlotInfo*)'    {PK11_SlotGetLastFIPSStatus@@NSS_3.66}
 
 1 function with some indirect sub-type change:
 
-  [C]'function PK11Context* PK11_CreateContextBySymKey(CK_MECHANISM_TYPE, CK_ATTRIBUTE_TYPE, PK11SymKey*, SECItem*)' at pk11cxt.c:493:1 has some indirect sub-type changes:
-    parameter 4 of type 'SECItem*' changed:
-      in pointed to type 'typedef SECItem':
-        entity changed from 'typedef SECItem' to 'const SECItem'
-        type size hasn't changed
-
-
+  [C]'function SECStatus PK11_GetModInfo(SECMODModule*, CK_INFO*)' at pk11util.c:613:1 has some indirect sub-type changes:
+    parameter 1 of type 'SECMODModule*' has sub-type changes:
+      in pointed to type 'typedef SECMODModule' at secmodt.h:29:1:
+        underlying type 'struct SECMODModuleStr' at secmodt.h:44:1 changed:
+          type size changed from 1664 to 1728 bits
+          1 data member insertion:
+            'CK_NSS_GetFIPSStatus SECMODModuleStr::fipsIndicator', at offset 1664 (in bits) at secmodt.h:79:1
+          no data member changes (2 filtered);

@@ -1,8 +1,10 @@
 const load = {
   _cache_bust_value: Math.random().toString().substr(2),
+
   cache_bust: path => {
     let url = new URL(path, location.origin);
-    url.hash += `cache_bust=${load._cache_bust_value++}`;
+    url.href += (url.href.includes("?")) ? '&' : '?';
+    url.href += "unique=" + load._cache_bust_value++
     return url.href;
   },
 
@@ -54,7 +56,7 @@ const load = {
 
   // Returns a promise that settles once the given path has been fetched as an
   // iframe.
-  iframe: async path => {
+  iframe: async (path, validator) => {
     const frame = document.createElement("iframe");
     const loaded = new Promise(resolve => {
       frame.onload = frame.onerror = resolve;
@@ -62,6 +64,9 @@ const load = {
     frame.src = load.cache_bust(path);
     document.body.appendChild(frame);
     await loaded;
+    if (validator instanceof Function) {
+      validator(frame);
+    }
     document.body.removeChild(frame);
   },
 

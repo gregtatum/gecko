@@ -8,9 +8,6 @@
 
 #include <string.h>
 
-#include "jsapi.h"
-#include "jsfriendapi.h"
-
 #include "gc/PublicIterators.h"
 #include "js/Wrapper.h"
 #include "vm/GlobalObject.h"

@@ -39,12 +39,10 @@ FEATURE_CHECK_NEEDED = {
 }
 RELEASE_OR_BETA = set(
     [
-        "Intl.DateTimeFormat-dayPeriod",
         "Intl.DateTimeFormat-formatRange",
     ]
 )
 SHELL_OPTIONS = {
-    "class-fields-private-in": "--enable-ergonomic-brand-checks",
     "top-level-await": "--enable-top-level-await",
 }
 

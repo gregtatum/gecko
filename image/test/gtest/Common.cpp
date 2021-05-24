@@ -47,9 +47,11 @@ AutoInitializeImageLib::AutoInitializeImageLib() {
   rv = Preferences::SetBool("image.avif.enabled", true);
   EXPECT_TRUE(rv == NS_OK);
 
+#ifdef MOZ_JXL
   // Ensure JXL is enabled to run decoder tests.
   rv = Preferences::SetBool("image.jxl.enabled", true);
   EXPECT_TRUE(rv == NS_OK);
+#endif
 
   // Ensure that ImageLib services are initialized.
   nsCOMPtr<imgITools> imgTools =
@@ -442,10 +444,6 @@ ImageTestCase GreenAVIFTestCase() {
       .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
 }
 
-ImageTestCase GreenJXLTestCase() {
-  return ImageTestCase("green.jxl", "image/jxl", IntSize(100, 100));
-}
-
 // Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
 // See bug 1634741
 ImageTestCase Transparent10bit420AVIFTestCase() {
@@ -519,7 +517,8 @@ ImageTestCase Transparent8bit420AVIFTestCase() {
       ImageTestCase("transparent-green-50pct-8bit-yuv420.avif", "image/avif",
                     IntSize(100, 100), TEST_CASE_IS_TRANSPARENT)
           .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
-  testCase.mColor = BGRAColor(0x00, 0xFF, 0x00, 0x80);
+  // Small error is expected
+  testCase.mColor = BGRAColor(0x02, 0xFF, 0x00, 0x80);
   return testCase;
 }
 
@@ -530,7 +529,8 @@ ImageTestCase Transparent8bit422AVIFTestCase() {
       ImageTestCase("transparent-green-50pct-8bit-yuv422.avif", "image/avif",
                     IntSize(100, 100), TEST_CASE_IS_TRANSPARENT)
           .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
-  testCase.mColor = BGRAColor(0x00, 0xFF, 0x00, 0x80);
+  // Small error is expected
+  testCase.mColor = BGRAColor(0x02, 0xFF, 0x00, 0x80);
   return testCase;
 }
 
@@ -541,7 +541,256 @@ ImageTestCase Transparent8bit444AVIFTestCase() {
       ImageTestCase("transparent-green-50pct-8bit-yuv444.avif", "image/avif",
                     IntSize(100, 100), TEST_CASE_IS_TRANSPARENT)
           .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
-  testCase.mColor = BGRAColor(0x00, 0xFF, 0x00, 0x80);
+  // Small error is expected
+  testCase.mColor = BGRAColor(0x02, 0xFF, 0x00, 0x80);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray8bitLimitedRangeBT601AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-8bit-limited-range-bt601.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray8bitLimitedRangeBT709AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-8bit-limited-range-bt709.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray8bitLimitedRangeBT2020AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-8bit-limited-range-bt2020.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray8bitFullRangeBT601AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-8bit-full-range-bt601.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray8bitFullRangeBT709AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-8bit-full-range-bt709.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray8bitFullRangeBT2020AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-8bit-full-range-bt2020.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray10bitLimitedRangeBT601AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-10bit-limited-range-bt601.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  // Small error is expected
+  testCase.mColor = BGRAColor(0xEA, 0xEA, 0xEA, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray10bitLimitedRangeBT709AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-10bit-limited-range-bt709.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  // Small error is expected
+  testCase.mColor = BGRAColor(0xEA, 0xEA, 0xEA, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray10bitLimitedRangeBT2020AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-10bit-limited-range-bt2020.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  // Small error is expected
+  testCase.mColor = BGRAColor(0xEA, 0xEA, 0xEA, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray10bitFullRangeBT601AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-10bit-full-range-bt601.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray10bitFullRangeBT709AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-10bit-full-range-bt709.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray10bitFullRangeBT2020AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-10bit-full-range-bt2020.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray12bitLimitedRangeBT601AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-12bit-limited-range-bt601.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  // Small error is expected
+  testCase.mColor = BGRAColor(0xEA, 0xEA, 0xEA, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray12bitLimitedRangeBT709AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-12bit-limited-range-bt709.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  // Small error is expected
+  testCase.mColor = BGRAColor(0xEA, 0xEA, 0xEA, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray12bitLimitedRangeBT2020AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-12bit-limited-range-bt2020.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  // Small error is expected
+  testCase.mColor = BGRAColor(0xEA, 0xEA, 0xEA, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray12bitFullRangeBT601AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-12bit-full-range-bt601.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray12bitFullRangeBT709AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-12bit-full-range-bt709.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray12bitFullRangeBT2020AVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-12bit-full-range-bt2020.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray8bitLimitedRangeGrayscaleAVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-8bit-limited-range-grayscale.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray8bitFullRangeGrayscaleAVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-8bit-full-range-grayscale.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray10bitLimitedRangeGrayscaleAVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-10bit-limited-range-grayscale.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  // Small error is expected
+  testCase.mColor = BGRAColor(0xEA, 0xEA, 0xEA, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray10bitFullRangeGrayscaleAVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-10bit-full-range-grayscale.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray12bitLimitedRangeGrayscaleAVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-12bit-limited-range-grayscale.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  // Small error is expected
+  testCase.mColor = BGRAColor(0xEA, 0xEA, 0xEA, 0xFF);
+  return testCase;
+}
+
+// Forcing sRGB is required until nsAVIFDecoder supports ICC profiles
+// See bug 1634741
+ImageTestCase Gray12bitFullRangeGrayscaleAVIFTestCase() {
+  auto testCase = ImageTestCase("gray-235-12bit-full-range-grayscale.avif",
+                                "image/avif", IntSize(100, 100))
+                      .WithSurfaceFlags(SurfaceFlags::TO_SRGB_COLORSPACE);
+  testCase.mColor = BGRAColor(0xEB, 0xEB, 0xEB, 0xFF);
   return testCase;
 }
 
@@ -570,11 +819,6 @@ ImageTestCase LargeWebPTestCase() {
 
 ImageTestCase LargeAVIFTestCase() {
   return ImageTestCase("large.avif", "image/avif", IntSize(1200, 660),
-                       TEST_CASE_IGNORE_OUTPUT);
-}
-
-ImageTestCase LargeJXLTestCase() {
-  return ImageTestCase("large.jxl", "image/jxl", IntSize(1200, 660),
                        TEST_CASE_IGNORE_OUTPUT);
 }
 
@@ -674,11 +918,6 @@ ImageTestCase TransparentWebPTestCase() {
   return test;
 }
 
-ImageTestCase TransparentJXLTestCase() {
-  return ImageTestCase("transparent.jxl", "image/jxl", IntSize(1200, 1200),
-                       TEST_CASE_IS_TRANSPARENT);
-}
-
 ImageTestCase TransparentNoAlphaHeaderWebPTestCase() {
   ImageTestCase test("transparent-no-alpha-header.webp", "image/webp",
                      IntSize(100, 100), TEST_CASE_IS_FUZZY);
@@ -768,11 +1007,6 @@ ImageTestCase DownscaledAVIFTestCase() {
                        IntSize(20, 20));
 }
 
-ImageTestCase DownscaledJXLTestCase() {
-  return ImageTestCase("downscaled.jxl", "image/jxl", IntSize(100, 100),
-                       IntSize(20, 20));
-}
-
 ImageTestCase DownscaledTransparentICOWithANDMaskTestCase() {
   // This test case is an ICO with AND mask transparency. We want to ensure that
   // we can downscale it without crashing or triggering ASAN failures, but its
@@ -854,6 +1088,27 @@ ImageTestCase PerfRgbAlphaLossyWebPTestCase() {
 ImageTestCase PerfRgbGIFTestCase() {
   return ImageTestCase("perf_srgb.gif", "image/gif", IntSize(1000, 1000));
 }
+
+#ifdef MOZ_JXL
+ImageTestCase GreenJXLTestCase() {
+  return ImageTestCase("green.jxl", "image/jxl", IntSize(100, 100));
+}
+
+ImageTestCase DownscaledJXLTestCase() {
+  return ImageTestCase("downscaled.jxl", "image/jxl", IntSize(100, 100),
+                       IntSize(20, 20));
+}
+
+ImageTestCase LargeJXLTestCase() {
+  return ImageTestCase("large.jxl", "image/jxl", IntSize(1200, 660),
+                       TEST_CASE_IGNORE_OUTPUT);
+}
+
+ImageTestCase TransparentJXLTestCase() {
+  return ImageTestCase("transparent.jxl", "image/jxl", IntSize(1200, 1200),
+                       TEST_CASE_IS_TRANSPARENT);
+}
+#endif
 
 ImageTestCase ExifResolutionTestCase() {
   return ImageTestCase("exif_resolution.jpg", "image/jpeg", IntSize(100, 50));

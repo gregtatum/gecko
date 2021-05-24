@@ -47,6 +47,7 @@
 #include "mozilla/StaticPrefs_fission.h"
 #include "mozilla/StartupTimeline.h"
 #include "mozilla/StorageAccess.h"
+#include "mozilla/StoragePrincipalHelper.h"
 #include "mozilla/Telemetry.h"
 #include "mozilla/Tuple.h"
 #include "mozilla/Unused.h"
@@ -88,6 +89,7 @@
 #include "mozilla/dom/JSWindowActorChild.h"
 #include "mozilla/ipc/ProtocolUtils.h"
 #include "mozilla/net/DocumentChannel.h"
+#include "mozilla/net/DocumentChannelChild.h"
 #include "mozilla/net/ParentChannelWrapper.h"
 #include "mozilla/net/UrlClassifierFeatureFactory.h"
 #include "ReferrerInfo.h"
@@ -383,6 +385,7 @@ nsDocShell::nsDocShell(BrowsingContext* aBrowsingContext,
       mFailedLoadType(0),
       mJSRunToCompletionDepth(0),
       mMetaViewportOverride(nsIDocShell::META_VIEWPORT_OVERRIDE_NONE),
+      mChannelToDisconnectOnPageHide(0),
       mCreatingDocument(false),
 #ifdef DEBUG
       mInEnsureScriptEnv(false),
@@ -3698,13 +3701,20 @@ nsDocShell::DisplayLoadError(nsresult aError, nsIURI* aURI,
           UsePrivateBrowsing() ? nsISocketProvider::NO_PERMANENT_STORAGE : 0;
       bool isStsHost = false;
       bool isPinnedHost = false;
+      OriginAttributes attrsForHSTS;
+      if (aFailedChannel) {
+        StoragePrincipalHelper::GetOriginAttributesForHSTS(aFailedChannel,
+                                                           attrsForHSTS);
+      } else {
+        attrsForHSTS = GetOriginAttributes();
+      }
+
       if (XRE_IsParentProcess()) {
         nsCOMPtr<nsISiteSecurityService> sss =
             do_GetService(NS_SSSERVICE_CONTRACTID, &rv);
         NS_ENSURE_SUCCESS(rv, rv);
         rv = sss->IsSecureURI(nsISiteSecurityService::HEADER_HSTS, aURI, flags,
-                              GetOriginAttributes(), nullptr, nullptr,
-                              &isStsHost);
+                              attrsForHSTS, nullptr, nullptr, &isStsHost);
         NS_ENSURE_SUCCESS(rv, rv);
         rv = sss->IsSecureURI(nsISiteSecurityService::STATIC_PINNING, aURI,
                               flags, GetOriginAttributes(), nullptr, nullptr,
@@ -3714,7 +3724,7 @@ nsDocShell::DisplayLoadError(nsresult aError, nsIURI* aURI,
         mozilla::dom::ContentChild* cc =
             mozilla::dom::ContentChild::GetSingleton();
         cc->SendIsSecureURI(nsISiteSecurityService::HEADER_HSTS, aURI, flags,
-                            GetOriginAttributes(), &isStsHost);
+                            attrsForHSTS, &isStsHost);
         cc->SendIsSecureURI(nsISiteSecurityService::STATIC_PINNING, aURI, flags,
                             GetOriginAttributes(), &isPinnedHost);
       }
@@ -4369,6 +4379,11 @@ nsDocShell::Stop(uint32_t aStopFlags) {
     // just call Stop() on us as an nsIDocumentLoader... We need fewer
     // redundant apis!
     Stop();
+
+    // Clear out mChannelToDisconnectOnPageHide. This page won't go in the
+    // BFCache now, and the Stop above will have removed the DocumentChannel
+    // from the loadgroup.
+    mChannelToDisconnectOnPageHide = 0;
   }
 
   for (auto* child : mChildList.ForwardRange()) {
@@ -6547,6 +6562,7 @@ nsresult nsDocShell::EndPageLoad(nsIWebProgress* aProgress,
   // Test whether this is the top frame or a subframe
   bool isTopFrame = mBrowsingContext->IsTop();
 
+  bool hadErrorStatus = false;
   // If status code indicates an error it means that DocumentChannel already
   // tried to fixup the uri and failed. Throw an error dialog box here.
   if (NS_FAILED(aStatus)) {
@@ -6567,6 +6583,7 @@ nsresult nsDocShell::EndPageLoad(nsIWebProgress* aProgress,
                                        mBrowsingContext->GetUseErrorPages(),
                                        isInitialDocument,
                                        &skippedUnknownProtocolNavigation);
+    hadErrorStatus = true;
     if (NS_FAILED(aStatus)) {
       if (!mIsBeingDestroyed) {
         DisplayLoadError(aStatus, url, nullptr, aChannel);
@@ -6588,6 +6605,12 @@ nsresult nsDocShell::EndPageLoad(nsIWebProgress* aProgress,
     PredictorLearnRedirect(url, aChannel, loadInfo->GetOriginAttributes());
   }
 
+  if (hadErrorStatus) {
+    // Don't send session store updates if the reason EndPageLoad was called is
+    // because we are process switching. Sometimes the update takes too long and
+    // incorrectly overrides session store data from the following load.
+    return NS_OK;
+  }
   if constexpr (SessionStoreUtils::NATIVE_LISTENER) {
     if (Document* document = GetDocument()) {
       if (WindowGlobalChild* windowChild = document->GetWindowGlobalChild()) {
@@ -10424,6 +10447,9 @@ nsresult nsDocShell::DoURILoad(nsDocShellLoadState* aLoadState,
   nsLoadFlags loadFlags = aLoadState->CalculateChannelLoadFlags(
       mBrowsingContext, Some(uriModified), Some(isXFOError));
 
+  // Strip the target query parameters before creating the channel.
+  aLoadState->MaybeStripTrackerQueryStrings(mBrowsingContext);
+
   nsCOMPtr<nsIChannel> channel;
   if (DocumentChannel::CanUseDocumentChannel(aLoadState->URI())) {
     channel = DocumentChannel::CreateForDocument(aLoadState, loadInfo,
@@ -13624,4 +13650,21 @@ nsDocShell::OnStopRequest(nsIRequest* aRequest, nsresult aStatusCode) {
   }
   RecordSingleChannelId();
   return nsDocLoader::OnStopRequest(aRequest, aStatusCode);
+}
+
+void nsDocShell::MaybeDisconnectChildListenersOnPageHide() {
+  MOZ_RELEASE_ASSERT(XRE_IsContentProcess());
+
+  if (mChannelToDisconnectOnPageHide != 0 && mLoadGroup) {
+    nsCOMPtr<nsISimpleEnumerator> requests;
+    mLoadGroup->GetRequests(getter_AddRefs(requests));
+    for (const auto& request : SimpleEnumerator<nsIRequest>(requests)) {
+      RefPtr<DocumentChannel> channel = do_QueryObject(request);
+      if (channel && channel->ChannelId() == mChannelToDisconnectOnPageHide) {
+        static_cast<DocumentChannelChild*>(channel.get())
+            ->DisconnectChildListeners(NS_BINDING_ABORTED, NS_BINDING_ABORTED);
+      }
+    }
+    mChannelToDisconnectOnPageHide = 0;
+  }
 }
