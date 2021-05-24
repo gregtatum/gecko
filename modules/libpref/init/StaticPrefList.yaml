@@ -3938,7 +3938,7 @@
 # if fission is enabled by default.
 - name: fission.autostart
   type: bool
-  value: false
+  value: true
   mirror: never
 
 # Prefs used by normandy to orchestrate the fission experiment. For more
