@@ -135,6 +135,9 @@ document.getElementById("inbox-link").addEventListener("click", function() {
 */
 
 export async function getUnreadCountAtom() {
+  if (Cu.isInAutomation) {
+    return 0;
+  }
   let response = await fetch("https://mail.google.com/mail/u/0/feed/atom");
 
   if (!response.ok) {
