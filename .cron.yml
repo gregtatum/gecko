@@ -126,6 +126,7 @@ jobs:
           - mozilla-beta
           - mozilla-release
           - mozilla-esr78
+          - pine
       when:
           by-project:
               # We want to run at both of the times the nightly runs.
@@ -145,6 +146,7 @@ jobs:
               mozilla-beta: [{hour: 10, minute: 0}]
               mozilla-release: [{hour: 10, minute: 0}]
               mozilla-esr78: [{hour: 10, minute: 0}]
+              pine: [{hour: 10, minute: 0}]
 
     - name: coverity-tree-analysis
       job:
