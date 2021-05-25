@@ -57,6 +57,9 @@ export class PocketList extends HTMLElement {
   }
 
   async connectedCallback() {
+    if (Cu.isInAutomation) {
+      return;
+    }
     let key = Services.prefs.getCharPref("extensions.pocket.oAuthConsumerKey");
 
     let target = new URL(
