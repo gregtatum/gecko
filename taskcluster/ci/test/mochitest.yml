@@ -267,6 +267,26 @@ mochitest-chrome:
             linux.*64-tsan/opt: xlarge  # runs out of memory on default/m3.large
             default: default
 
+mochitest-browser-chrome-companion:
+    description: "Mochitest browser chrome companion run"
+    treeherder-symbol: M-co(bc)
+    suite:
+        name: mochitest-browser-chrome-companion
+    schedules-component: mochitest-browser-chrome
+    variants: []
+    run-on-projects:
+        by-test-platform:
+            windows.*-32(?:-shippable)(?:-qr)?/opt: ['pine']
+            windows10-64(?:-shippable)(?:-qr)?/opt: ['pine']
+            linux1804-64-(?:shippable)(?:-qr)?/opt: ['pine']
+            macosx.*64-shippable?/opt: ['pine']
+            default: []
+    max-run-time: 3600
+    chunks: 1
+    mozharness:
+        mochitest-flavor: chrome
+    allow-software-gl-layers: false
+
 mochitest-devtools-chrome:
     description: "Mochitest devtools-chrome run"
     suite:
