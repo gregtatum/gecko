@@ -509,6 +509,7 @@ button.conference:hover:active, .btn:hover:active {
   display: flex;
   z-index: 2;
   box-shadow: 2px 2px 10px 1px rgba(0,0,0,0.18);
+  margin: 0 10px 10px 10px;
 }
 
 .media button {
@@ -595,19 +596,19 @@ button.conference:hover:active, .btn:hover:active {
 }
 
 .play-pause button[data-state=playing] {
-  background-image: url("chrome://activity-stream/content/data/content/assets/glyph-pause-12.svg");
+  background-image: url("pause.svg");
 }
 
 .play-pause button[data-state=paused] {
-  background-image: url("chrome://activity-stream/content/data/content/assets/glyph-play-12.svg");
+  background-image: url("play.svg");
 }
 
 .media .mute {
-  background-image: url("chrome://browser/skin/tabbrowser/tab-audio-playing.svg");
+  background-image: url("mute.svg");
 }
 
 .media .unmute {
-  background-image: url("chrome://browser/skin/tabbrowser/tab-audio-muted.svg");
+  background-image: url("muted.svg");
 }
 
 .media .prev {
