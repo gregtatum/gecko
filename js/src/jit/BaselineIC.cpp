@@ -11,7 +11,6 @@
 #include "mozilla/IntegerPrintfMacros.h"
 #include "mozilla/Sprintf.h"
 #include "mozilla/TemplateLib.h"
-#include "mozilla/Unused.h"
 
 #include "jsfriendapi.h"
 #include "jslibmath.h"
@@ -341,6 +340,8 @@ class MOZ_STATIC_CLASS OpToFallbackKindTable {
   }
 };
 
+static constexpr OpToFallbackKindTable FallbackKindTable;
+
 void ICScript::initICEntries(JSContext* cx, JSScript* script) {
   MOZ_ASSERT(cx->realm()->jitRealm());
   MOZ_ASSERT(jit::IsBaselineInterpreterEnabled());
@@ -349,8 +350,6 @@ void ICScript::initICEntries(JSContext* cx, JSScript* script) {
 
   // Index of the next ICEntry to initialize.
   uint32_t icEntryIndex = 0;
-
-  static constexpr OpToFallbackKindTable opTable;
 
   const BaselineICFallbackCode& fallbackCode =
       cx->runtime()->jitRuntime()->baselineICFallbackCode();
@@ -362,7 +361,7 @@ void ICScript::initICEntries(JSContext* cx, JSScript* script) {
     // Assert the frontend stored the correct IC index in jump target ops.
     MOZ_ASSERT_IF(BytecodeIsJumpTarget(op), loc.icIndex() == icEntryIndex);
 
-    uint8_t tableValue = opTable.lookup(op);
+    uint8_t tableValue = FallbackKindTable.lookup(op);
 
     if (tableValue == OpToFallbackKindTable::NoICValue) {
       MOZ_ASSERT(!BytecodeOpHasIC(op),
@@ -387,6 +386,18 @@ void ICScript::initICEntries(JSContext* cx, JSScript* script) {
 
   // Assert all ICEntries have been initialized.
   MOZ_ASSERT(icEntryIndex == numICEntries());
+}
+
+bool ICSupportsPolymorphicTypeData(JSOp op) {
+  MOZ_ASSERT(BytecodeOpHasIC(op));
+  BaselineICFallbackKind kind =
+      BaselineICFallbackKind(FallbackKindTable.lookup(op));
+  switch (kind) {
+    case BaselineICFallbackKind::TypeOf:
+      return true;
+    default:
+      return false;
+  }
 }
 
 bool ICCacheIRStub::makesGCCalls() const { return stubInfo()->makesGCCalls(); }

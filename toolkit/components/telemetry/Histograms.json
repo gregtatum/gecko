@@ -2234,18 +2234,32 @@
     "keyed": true,
     "description": "The time between navigationStart and the first contentful paint of a foreground http or https root content document, in milliseconds. The contentful paint timestamp is taken during display list building and does not include rasterization or compositing of that paint. This is collected only on page load where the main document uses or suppports HTTP3"
   },
-  "HTTP3_UPLOAD_TIME": {
+  "HTTP3_UPLOAD_TIME_10M_100M": {
     "alert_emails": ["necko@mozilla.com", "ddamjanovic@mozilla.com"],
     "record_in_processes": ["main", "content"],
     "products": ["firefox", "fennec"],
-    "bug_numbers": [1675496],
+    "bug_numbers": [1675496, 1712441],
     "expires_in_version": "96",
     "kind": "exponential",
-    "high": 30000,
-    "n_buckets": 50,
+    "high": 120000,
+    "n_buckets": 100,
     "releaseChannelCollection": "opt-out",
     "keyed": true,
-    "description": "HTTP transaction upload time (ms) (keys: uses_http3_10_50 (load size 10M to 50M), uses_http3_50_100 (load size 50M to 100M), uses_http3_gt_100 (load size > 100M), supports_http3_10_50, supports_http3_50_100, supports_http3_gt_100"
+    "description": "HTTP transaction upload time (ms) (keys: uses_http3_10_50 (load size 10M to 50M), uses_http3_50_100 (load size 50M to 100M), supports_http3_10_50, supports_http3_50_100)"
+  },
+  "HTTP3_UPLOAD_TIME_GT_100M": {
+    "alert_emails": ["necko@mozilla.com", "ddamjanovic@mozilla.com"],
+    "record_in_processes": ["main", "content"],
+    "products": ["firefox", "fennec"],
+    "bug_numbers": [1712441],
+    "expires_in_version": "96",
+    "kind": "exponential",
+    "low": 30000,
+    "high": 240000,
+    "n_buckets": 100,
+    "releaseChannelCollection": "opt-out",
+    "keyed": true,
+    "description": "HTTP transaction upload time for resources larger than 100M (ms) (keys: uses_http3, supports_http3)"
   },
   "HTTPS_RR_OPEN_TO_FIRST_SENT": {
     "alert_emails": ["necko@mozilla.com", "kershaw@mozilla.com"],
@@ -13909,16 +13923,6 @@
     "releaseChannelCollection": "opt-out",
     "description": "Graphics Crash Reason (...)"
   },
-  "SCROLL_INPUT_METHODS": {
-    "record_in_processes": ["main", "content", "gpu"],
-    "products": ["firefox"],
-    "alert_emails": ["botond@mozilla.com"],
-    "bug_numbers": [1670003, 1672576],
-    "expires_in_version": "89",
-    "kind": "enumerated",
-    "n_values": 64,
-    "description": "Count of scroll actions triggered by different input methods. See gfx/layers/apz/util/ScrollInputMethods.h for a list of possible values and their meanings."
-  },
   "WEBFONT_DOWNLOAD_TIME": {
     "record_in_processes": ["main", "content"],
     "products": ["firefox", "fennec"],
@@ -16651,6 +16655,28 @@
     "bug_numbers": [1689987],
     "alert_emails": ["necko@mozilla.com", "kershaw@mozilla.com"],
     "description": "HTTP subitem channel: ODoH lookup time (ms)"
+  },
+  "HTTP_PRELOAD_IMAGE_STARTREQUEST_DELAY": {
+    "record_in_processes": ["content"],
+    "products": ["firefox"],
+    "expires_in_version": "96",
+    "kind": "exponential",
+    "high": 5000,
+    "n_buckets": 50,
+    "bug_numbers": [1713489],
+    "alert_emails": ["necko@mozilla.com", "mwoodrow@mozilla.com"],
+    "description": "Time spent waiting on the main-thread to be available to process OnStartRequest, for image preload requests"
+  },
+  "DOCUMENT_PRELOAD_IMAGE_ASYNCOPEN_DELAY": {
+    "record_in_processes": ["content"],
+    "products": ["firefox"],
+    "expires_in_version": "96",
+    "kind": "exponential",
+    "high": 5000,
+    "n_buckets": 50,
+    "bug_numbers": [1713489],
+    "alert_emails": ["necko@mozilla.com", "mwoodrow@mozilla.com"],
+    "description": "Time spent waiting on the main-thread to be available to run AsyncOpen, for image preload requests"
   },
   "OPAQUE_RESPONSE_BLOCKING_TIME_MS" : {
     "record_in_processes": ["main"],

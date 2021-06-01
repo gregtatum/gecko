@@ -383,6 +383,33 @@ class ResourceCommand {
         )
       );
     }
+
+    // @backward-compat { version 91 } DOCUMENT_EVENT's will-navigate start being notified,
+    //                                 to replace target actor's will-navigate event
+    // In the meantime fake a DOCUMENT_EVENT's will-navigate out of target actor's will-navigate.
+    // We should keep this code until we support the watcher actor for all descriptors (bug 1675763).
+    if (
+      !this.targetCommand.hasTargetWatcherSupport(
+        "supportsDocumentEventWillNavigate"
+      )
+    ) {
+      const offWillNavigate2 = targetFront.on(
+        "will-navigate",
+        ({ url, isFrameSwitching }) => {
+          targetFront.emit("resource-available-form", [
+            {
+              resourceType: this.TYPES.DOCUMENT_EVENT,
+              name: "will-navigate",
+              time: Date.now(), // will-navigate was not passing any timestamp
+              shouldBeIgnoredAsRedundantWithTargetAvailable: false,
+              isFrameSwitching,
+              newURI: url,
+            },
+          ]);
+        }
+      );
+      this._offTargetFrontListeners.push(offWillNavigate2);
+    }
   }
 
   _shouldRestartListenerOnTargetSwitching(resourceType) {
@@ -427,6 +454,7 @@ class ResourceCommand {
    *        which describes the resource.
    */
   async _onResourceAvailable({ targetFront, watcherFront }, resources) {
+    let includesDocumentEventWillNavigate = false;
     for (let resource of resources) {
       const { resourceType } = resource;
 
@@ -455,11 +483,25 @@ class ResourceCommand {
         });
       }
 
+      if (
+        resourceType == ResourceCommand.TYPES.DOCUMENT_EVENT &&
+        resource.name == "will-navigate"
+      ) {
+        includesDocumentEventWillNavigate = true;
+      }
+
       this._queueResourceEvent("available", resourceType, resource);
 
       this._cache.push(resource);
     }
-    this._throttledNotifyWatchers();
+    // If we receive the DOCUMENT_EVENT for will-navigate,
+    // flush immediately the resources in order to notify about the navigation sooner than later.
+    // (this is especially useful for tests, even if they should probably avoid depending on this...)
+    if (includesDocumentEventWillNavigate) {
+      this._notifyWatchers();
+    } else {
+      this._throttledNotifyWatchers();
+    }
   }
 
   /**

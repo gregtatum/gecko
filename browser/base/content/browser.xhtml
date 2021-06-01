@@ -242,6 +242,7 @@
     <panel is="search-autocomplete-richlistbox-popup"
            type="autocomplete-richlistbox"
            id="PopupSearchAutoComplete"
+           orient="vertical"
            role="group"
            noautofocus="true"
            hidden="true" />
@@ -554,7 +555,7 @@
 
 #include ../../components/places/content/placesContextMenu.inc.xhtml
 
-    <panel id="ctrlTab-panel" hidden="true" norestorefocus="true" level="top">
+    <panel id="ctrlTab-panel" hidden="true" norestorefocus="true" level="top" orient="vertical">
       <hbox id="ctrlTab-previews"/>
       <hbox id="ctrlTab-showAll-container" pack="center"/>
     </panel>
@@ -613,7 +614,8 @@
 
     <tooltip id="tabbrowser-tab-tooltip"
              class="places-tooltip"
-             onpopupshowing="gBrowser.createTooltip(event);">
+             onpopupshowing="gBrowser.createTooltip(event);"
+             onpopuphiding="this.removeAttribute('position')">
       <vbox class="places-tooltip-box" flex="1">
         <description class="tooltip-label places-tooltip-title"/>
         <hbox>
@@ -2059,13 +2061,13 @@
                       hidden="true"
                       tooltip="dynamic-shortcut-tooltip"
                       onclick="AboutReaderParent.buttonClick(event);">
-                  <image class="urlbar-icon"/>
+                  <image id="reader-mode-button-icon"
+                         class="urlbar-icon"/>
                 </hbox>
                 <toolbarbutton id="urlbar-zoom-button"
                        onclick="FullZoom.reset(); FullZoom.resetScalingZoom();"
                        tooltip="dynamic-shortcut-tooltip"
                        hidden="true"/>
-                <box id="pageActionSeparator" class="urlbar-page-action"/>
                 <hbox id="pageActionButton"
                       class="urlbar-page-action urlbar-icon-wrapper"
                       role="button"
@@ -2179,7 +2181,7 @@
 
         <toolbarbutton id="close-button"
                        data-l10n-id="browser-window-close-button"
-                       oncommand="BrowserTryToCloseWindow();"/>
+                       oncommand="BrowserTryToCloseWindow(event);"/>
       </hbox>
       <hbox id="companion-window-controls" pack="end" skipintoolbarset="true"
             style="-moz-box-ordinal-group: 1000;">

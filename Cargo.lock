@@ -571,7 +571,7 @@ checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 [[package]]
 name = "chardetng"
 version = "0.1.9"
-source = "git+https://github.com/hsivonen/chardetng?rev=39f95e2f7cd6e632a379cdeee62c68e8cedd7810#39f95e2f7cd6e632a379cdeee62c68e8cedd7810"
+source = "git+https://github.com/hsivonen/chardetng?rev=302c995f91f44cf26e77dc4758ad56c3ff0153ad#302c995f91f44cf26e77dc4758ad56c3ff0153ad"
 dependencies = [
  "encoding_rs",
  "memchr",
@@ -777,42 +777,40 @@ dependencies = [
 
 [[package]]
 name = "cranelift-bforest"
-version = "0.73.0"
-source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
+version = "0.74.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=824fa69756523f2b6d49029fe25de94130b1f144#824fa69756523f2b6d49029fe25de94130b1f144"
 dependencies = [
- "cranelift-entity 0.73.0",
+ "cranelift-entity 0.74.0",
 ]
 
 [[package]]
 name = "cranelift-codegen"
-version = "0.73.0"
-source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
+version = "0.74.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=824fa69756523f2b6d49029fe25de94130b1f144#824fa69756523f2b6d49029fe25de94130b1f144"
 dependencies = [
- "byteorder",
  "cranelift-bforest",
  "cranelift-codegen-meta",
  "cranelift-codegen-shared",
- "cranelift-entity 0.73.0",
+ "cranelift-entity 0.74.0",
  "log",
  "regalloc",
  "smallvec",
  "target-lexicon 0.12.0",
- "thiserror",
 ]
 
 [[package]]
 name = "cranelift-codegen-meta"
-version = "0.73.0"
-source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
+version = "0.74.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=824fa69756523f2b6d49029fe25de94130b1f144#824fa69756523f2b6d49029fe25de94130b1f144"
 dependencies = [
  "cranelift-codegen-shared",
- "cranelift-entity 0.73.0",
+ "cranelift-entity 0.74.0",
 ]
 
 [[package]]
 name = "cranelift-codegen-shared"
-version = "0.73.0"
-source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
+version = "0.74.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=824fa69756523f2b6d49029fe25de94130b1f144#824fa69756523f2b6d49029fe25de94130b1f144"
 
 [[package]]
 name = "cranelift-entity"
@@ -821,13 +819,13 @@ source = "git+https://github.com/PLSysSec/lucet_sandbox_compiler?rev=cd07861d1c9
 
 [[package]]
 name = "cranelift-entity"
-version = "0.73.0"
-source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
+version = "0.74.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=824fa69756523f2b6d49029fe25de94130b1f144#824fa69756523f2b6d49029fe25de94130b1f144"
 
 [[package]]
 name = "cranelift-frontend"
-version = "0.73.0"
-source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
+version = "0.74.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=824fa69756523f2b6d49029fe25de94130b1f144#824fa69756523f2b6d49029fe25de94130b1f144"
 dependencies = [
  "cranelift-codegen",
  "log",
@@ -837,11 +835,11 @@ dependencies = [
 
 [[package]]
 name = "cranelift-wasm"
-version = "0.73.0"
-source = "git+https://github.com/bytecodealliance/wasmtime?rev=6b77786a6e758e91da9484a1c80b6fa5f88e1b3d#6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
+version = "0.74.0"
+source = "git+https://github.com/bytecodealliance/wasmtime?rev=824fa69756523f2b6d49029fe25de94130b1f144#824fa69756523f2b6d49029fe25de94130b1f144"
 dependencies = [
  "cranelift-codegen",
- "cranelift-entity 0.73.0",
+ "cranelift-entity 0.74.0",
  "cranelift-frontend",
  "itertools 0.10.0",
  "log",
@@ -3319,8 +3317,8 @@ dependencies = [
 
 [[package]]
 name = "neqo-common"
-version = "0.4.24"
-source = "git+https://github.com/mozilla/neqo?tag=v0.4.24#9ac8581e2df27f2e5b03abeba923dad1a7b9f6c4"
+version = "0.4.25"
+source = "git+https://github.com/mozilla/neqo?tag=v0.4.25#13b5a13022419babba7183f768a974edfe2bd58b"
 dependencies = [
  "chrono",
  "env_logger",
@@ -3332,8 +3330,8 @@ dependencies = [
 
 [[package]]
 name = "neqo-crypto"
-version = "0.4.24"
-source = "git+https://github.com/mozilla/neqo?tag=v0.4.24#9ac8581e2df27f2e5b03abeba923dad1a7b9f6c4"
+version = "0.4.25"
+source = "git+https://github.com/mozilla/neqo?tag=v0.4.25#13b5a13022419babba7183f768a974edfe2bd58b"
 dependencies = [
  "bindgen",
  "log",
@@ -3345,8 +3343,8 @@ dependencies = [
 
 [[package]]
 name = "neqo-http3"
-version = "0.4.24"
-source = "git+https://github.com/mozilla/neqo?tag=v0.4.24#9ac8581e2df27f2e5b03abeba923dad1a7b9f6c4"
+version = "0.4.25"
+source = "git+https://github.com/mozilla/neqo?tag=v0.4.25#13b5a13022419babba7183f768a974edfe2bd58b"
 dependencies = [
  "log",
  "neqo-common",
@@ -3359,8 +3357,8 @@ dependencies = [
 
 [[package]]
 name = "neqo-qpack"
-version = "0.4.24"
-source = "git+https://github.com/mozilla/neqo?tag=v0.4.24#9ac8581e2df27f2e5b03abeba923dad1a7b9f6c4"
+version = "0.4.25"
+source = "git+https://github.com/mozilla/neqo?tag=v0.4.25#13b5a13022419babba7183f768a974edfe2bd58b"
 dependencies = [
  "lazy_static",
  "log",
@@ -3373,8 +3371,8 @@ dependencies = [
 
 [[package]]
 name = "neqo-transport"
-version = "0.4.24"
-source = "git+https://github.com/mozilla/neqo?tag=v0.4.24#9ac8581e2df27f2e5b03abeba923dad1a7b9f6c4"
+version = "0.4.25"
+source = "git+https://github.com/mozilla/neqo?tag=v0.4.25#13b5a13022419babba7183f768a974edfe2bd58b"
 dependencies = [
  "indexmap",
  "lazy_static",
@@ -5628,9 +5626,9 @@ checksum = "cccddf32554fecc6acb585f82a32a72e28b48f8c4c1883ddfeeeaa96f7d8e519"
 
 [[package]]
 name = "wasmparser"
-version = "0.77.0"
+version = "0.78.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b35c86d22e720a07d954ebbed772d01180501afe7d03d464f413bb5f8914a8d6"
+checksum = "52144d4c78e5cf8b055ceab8e5fa22814ce4315d6002ad32cfd914f37c12fd65"
 
 [[package]]
 name = "wast"

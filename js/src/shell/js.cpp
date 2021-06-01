@@ -18,7 +18,6 @@
 #include "mozilla/Sprintf.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/UniquePtrExtensions.h"  // UniqueFreePtr
-#include "mozilla/Unused.h"
 #include "mozilla/Utf8.h"
 #include "mozilla/Variant.h"
 
@@ -625,6 +624,7 @@ bool shell::enablePrivateClassMethods = false;
 bool shell::enableTopLevelAwait = true;
 bool shell::enableErgonomicBrandChecks = true;
 bool shell::useOffThreadParseGlobal = true;
+bool shell::enableClassStaticBlocks = false;
 #ifdef JS_GC_ZEAL
 uint32_t shell::gZealBits = 0;
 uint32_t shell::gZealFrequency = 0;
@@ -1124,8 +1124,8 @@ static bool MaybeRunFinalizationRegistryCleanupTasks(JSContext* cx) {
     {
       AutoReportException are(cx);
       RootedValue unused(cx);
-      mozilla::Unused << JS_CallFunction(cx, nullptr, callback,
-                                         HandleValueArray::empty(), &unused);
+      (void)JS_CallFunction(cx, nullptr, callback, HandleValueArray::empty(),
+                            &unused);
     }
 
     ranTasks = true;
@@ -1586,8 +1586,8 @@ static bool AddIntlExtras(JSContext* cx, unsigned argc, Value* vp) {
     {
       // Report exceptions but keep going.
       AutoReportException are(cx);
-      mozilla::Unused << EvalUtf8AndPrint(cx, buffer.begin(), buffer.length(),
-                                          startline, compileOnly);
+      (void)EvalUtf8AndPrint(cx, buffer.begin(), buffer.length(), startline,
+                             compileOnly);
     }
 
     // If a let or const fail to initialize they will remain in an unusable
@@ -2549,11 +2549,6 @@ static bool Evaluate(JSContext* cx, unsigned argc, Value* vp) {
         // The CompileOption should discard source as well.
         if (globalOptions.discardSource && !options.discardSource) {
           JS_ReportErrorASCII(cx, "discardSource option mismatch");
-          return false;
-        }
-        if (globalOptions.instrumentationKinds !=
-            options.instrumentationKinds) {
-          JS_ReportErrorASCII(cx, "instrumentationKinds mismatch");
           return false;
         }
       }
@@ -6554,7 +6549,7 @@ class AutoCStringVector {
     }
 
     // Now owned by this vector.
-    mozilla::Unused << arg.release();
+    (void)arg.release();
     return true;
   }
   char* const* get() const { return argv_.begin(); }
@@ -11034,6 +11029,7 @@ static bool SetContextOptions(JSContext* cx, const OptionParser& op) {
   enableErgonomicBrandChecks =
       !op.getBoolOption("disable-ergonomic-brand-checks");
   enableTopLevelAwait = op.getBoolOption("enable-top-level-await");
+  enableClassStaticBlocks = op.getBoolOption("enable-class-static-blocks");
   useOffThreadParseGlobal = op.getBoolOption("off-thread-parse-global");
 
   JS::ContextOptionsRef(cx)
@@ -11064,7 +11060,8 @@ static bool SetContextOptions(JSContext* cx, const OptionParser& op) {
       .setPrivateClassFields(enablePrivateClassFields)
       .setPrivateClassMethods(enablePrivateClassMethods)
       .setErgnomicBrandChecks(enableErgonomicBrandChecks)
-      .setTopLevelAwait(enableTopLevelAwait);
+      .setTopLevelAwait(enableTopLevelAwait)
+      .setClassStaticBlocks(enableClassStaticBlocks);
 
   JS::SetUseOffThreadParseGlobal(useOffThreadParseGlobal);
 
@@ -11365,10 +11362,6 @@ static bool SetContextOptions(JSContext* cx, const OptionParser& op) {
 
   if (op.getBoolOption("disable-bailout-loop-check")) {
     jit::JitOptions.disableBailoutLoopCheck = true;
-  }
-
-  if (op.getBoolOption("scalar-replace-arguments")) {
-    jit::JitOptions.scalarReplaceArguments = true;
   }
 
 #if defined(JS_CODEGEN_ARM)
@@ -12019,6 +12012,8 @@ int main(int argc, char** argv) {
           "Disable ergonomic brand checks for private class fields") ||
       !op.addBoolOption('\0', "enable-top-level-await",
                         "Enable top-level await") ||
+      !op.addBoolOption('\0', "enable-class-static-blocks",
+                        "Enable class static blocks") ||
       !op.addBoolOption('\0', "off-thread-parse-global",
                         "Use parseGlobal in all off-thread compilation") ||
       !op.addBoolOption('\0', "no-large-arraybuffers",

@@ -53,21 +53,18 @@ static bool IsCompatiblePropertyDescriptor(
   }
 
   // Step 3.
-  if (!desc.hasValue() && !desc.hasWritable() && !desc.hasGetterObject() &&
-      !desc.hasSetterObject() && !desc.hasEnumerable() &&
-      !desc.hasConfigurable()) {
+  if (!desc.hasValue() && !desc.hasWritable() && !desc.hasGetter() &&
+      !desc.hasSetter() && !desc.hasEnumerable() && !desc.hasConfigurable()) {
     return true;
   }
 
   // Step 4.
-  JSObject* currentGetter =
-      current->hasGetterObject() ? current->getterObject() : nullptr;
-  JSObject* currentSetter =
-      current->hasSetterObject() ? current->setterObject() : nullptr;
+  JSObject* currentGetter = current->hasGetter() ? current->getter() : nullptr;
+  JSObject* currentSetter = current->hasSetter() ? current->setter() : nullptr;
   if ((!desc.hasWritable() ||
        (current->hasWritable() && desc.writable() == current->writable())) &&
-      (!desc.hasGetterObject() || desc.getterObject() == currentGetter) &&
-      (!desc.hasSetterObject() || desc.setterObject() == currentSetter) &&
+      (!desc.hasGetter() || desc.getter() == currentGetter) &&
+      (!desc.hasSetter() || desc.setter() == currentSetter) &&
       (!desc.hasEnumerable() || desc.enumerable() == current->enumerable()) &&
       (!desc.hasConfigurable() ||
        desc.configurable() == current->configurable())) {
@@ -162,12 +159,12 @@ static bool IsCompatiblePropertyDescriptor(
   if (current->configurable()) {
     return true;
   }
-  if (desc.hasSetterObject() && desc.setterObject() != currentSetter) {
+  if (desc.hasSetter() && desc.setter() != currentSetter) {
     static const char DETAILS_SETTERS_DIFFERENT[] =
         "proxy can't report different setters for a currently non-configurable "
         "property";
     *errorDetails = DETAILS_SETTERS_DIFFERENT;
-  } else if (desc.hasGetterObject() && desc.getterObject() != currentGetter) {
+  } else if (desc.hasGetter() && desc.getter() != currentGetter) {
     static const char DETAILS_GETTERS_DIFFERENT[] =
         "proxy can't report different getters for a currently non-configurable "
         "property";
@@ -1187,7 +1184,7 @@ bool ScriptedProxyHandler::get(JSContext* cx, HandleObject proxy,
 
     // Step 10b.
     if (desc->isAccessorDescriptor() && !desc->configurable() &&
-        (desc->getterObject() == nullptr) && !trapResult.isUndefined()) {
+        (desc->getter() == nullptr) && !trapResult.isUndefined()) {
       return js::Throw(cx, id, JSMSG_MUST_REPORT_UNDEFINED);
     }
   }
@@ -1274,7 +1271,7 @@ bool ScriptedProxyHandler::set(JSContext* cx, HandleObject proxy, HandleId id,
 
     // Step 11b.
     if (desc->isAccessorDescriptor() && !desc->configurable() &&
-        desc->setterObject() == nullptr) {
+        desc->setter() == nullptr) {
       return js::Throw(cx, id, JSMSG_CANT_SET_WO_SETTER);
     }
   }

@@ -3406,10 +3406,11 @@ gfx.canvas.remote:
     bug_numbers:
       - 1641722
       - 1672582
+      - 1706844
     description: >
       Number of times remote canvas 2D has been activated.
     kind: uint
-    expires: "91"
+    expires: "97"
     notification_emails:
       - gfx-telemetry-alerts@mozilla.com
       - bowen@mozilla.com
@@ -3423,10 +3424,11 @@ gfx.canvas.remote:
     bug_numbers:
       - 1641722
       - 1672582
+      - 1706844
     description: >
       Number of times remote canvas 2D has been deactivated due to device creation failure.
     kind: uint
-    expires: "91"
+    expires: "97"
     notification_emails:
       - gfx-telemetry-alerts@mozilla.com
       - bowen@mozilla.com
@@ -3440,10 +3442,11 @@ gfx.canvas.remote:
     bug_numbers:
       - 1641722
       - 1672582
+      - 1706844
     description: >
       Number of times remote canvas 2D has been deactivated due to a stream read failure.
     kind: uint
-    expires: "91"
+    expires: "97"
     notification_emails:
       - gfx-telemetry-alerts@mozilla.com
       - bowen@mozilla.com
@@ -3751,23 +3754,6 @@ gfx:
       - 'firefox'
     record_in_processes:
       - 'main'
-    release_channel_collection: opt-out
-apz:
-  scrollwheel_overshoot:
-    bug_numbers:
-      - 1670003
-      - 1672576
-    description: >
-      Count of overshoot events, where the user reverses scrollwheel direction soon after the last scrollwheel input.
-    expires: "89"
-    kind: uint
-    notification_emails:
-      - botond@mozilla.com
-    products:
-      - 'firefox'
-    record_in_processes:
-      - 'main'
-      - 'gpu'
     release_channel_collection: opt-out
 
 # The following section contains the form autofill related scalars.
@@ -5959,6 +5945,32 @@ blocklist:
       - addons-dev-internal@mozilla.com
       - lgreco@mozilla.com
       - awagner@mozilla.com
+      - rwu@mozilla.com
+    products:
+      - 'firefox'
+    record_in_processes:
+      - main
+
+  mlbf_source:
+    bug_numbers:
+      - 1662857
+    description: >
+      The source of the RemoteSettings attachment that holds the bloom filter.
+      Possible values are "dump_match", "cache_match", "remote_match", "dump_fallback", "cache_fallback", "unknown".
+      "dump_match", "cache_match" and "remote_match" are expected known-good values, and means that the loaded
+      bloomfilter matches the blocklist record in the RemoteSettings collection. The prefix denotes the immediate
+      source of the loaded data: "dump" means packaged with the application, "remote" means a freshly downloaded
+      bloomfilter, "cache" means a previously downloaded bloomfilter.
+      "dump_fallback" and "cache_fallback" means that the last known bloomfilter was used, despite it not matching
+      the latest record in the RemoteSettings collection. In this case the outdated bloomfilter is used as a fallback
+      (e.g. because the latest version cannot be downloaded).
+      "unknown" means that the bloomfilter cannot be loaded at all. This can happen if the blocklist is disabled
+      via preferences or enterprise policies.
+    expires: "95"
+    kind: string
+    release_channel_collection: opt-out
+    notification_emails:
+      - addons-dev-internal@mozilla.com
       - rwu@mozilla.com
     products:
       - 'firefox'

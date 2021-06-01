@@ -3749,7 +3749,7 @@ bool BaselineCompilerCodeGen::emit_GetImport() {
 
   jsid id = NameToId(script->getName(handler.pc()));
   ModuleEnvironmentObject* targetEnv;
-  Maybe<ShapeProperty> prop;
+  Maybe<PropertyInfo> prop;
   MOZ_ALWAYS_TRUE(env->lookupImport(id, &targetEnv, &prop));
 
   frame.syncStack(0);
@@ -6332,82 +6332,6 @@ bool BaselineCodeGen<Handler>::emit_DynamicImport() {
   }
 
   masm.tagValue(JSVAL_TYPE_OBJECT, ReturnReg, R0);
-  frame.push(R0);
-  return true;
-}
-
-template <>
-bool BaselineCompilerCodeGen::emit_InstrumentationActive() {
-  frame.syncStack(0);
-
-  // RealmInstrumentation cannot be removed from a global without destroying the
-  // entire realm, so its active address can be embedded into jitcode.
-  const int32_t* address = RealmInstrumentation::addressOfActive(cx->global());
-
-  Register scratch = R0.scratchReg();
-  masm.load32(AbsoluteAddress(address), scratch);
-  masm.tagValue(JSVAL_TYPE_BOOLEAN, scratch, R0);
-  frame.push(R0, JSVAL_TYPE_BOOLEAN);
-
-  return true;
-}
-
-template <>
-bool BaselineInterpreterCodeGen::emit_InstrumentationActive() {
-  prepareVMCall();
-
-  using Fn = bool (*)(JSContext*, MutableHandleValue);
-  if (!callVM<Fn, InstrumentationActiveOperation>()) {
-    return false;
-  }
-
-  frame.push(R0);
-  return true;
-}
-
-template <>
-bool BaselineCompilerCodeGen::emit_InstrumentationCallback() {
-  JSObject* obj = RealmInstrumentation::getCallback(cx->global());
-  MOZ_ASSERT(obj);
-  frame.push(ObjectValue(*obj));
-  return true;
-}
-
-template <>
-bool BaselineInterpreterCodeGen::emit_InstrumentationCallback() {
-  prepareVMCall();
-
-  using Fn = JSObject* (*)(JSContext*);
-  if (!callVM<Fn, InstrumentationCallbackOperation>()) {
-    return false;
-  }
-
-  masm.tagValue(JSVAL_TYPE_OBJECT, ReturnReg, R0);
-  frame.push(R0);
-  return true;
-}
-
-template <>
-bool BaselineCompilerCodeGen::emit_InstrumentationScriptId() {
-  int32_t scriptId;
-  RootedScript script(cx, handler.script());
-  if (!RealmInstrumentation::getScriptId(cx, cx->global(), script, &scriptId)) {
-    return false;
-  }
-  frame.push(Int32Value(scriptId));
-  return true;
-}
-
-template <>
-bool BaselineInterpreterCodeGen::emit_InstrumentationScriptId() {
-  prepareVMCall();
-  pushScriptArg();
-
-  using Fn = bool (*)(JSContext*, HandleScript, MutableHandleValue);
-  if (!callVM<Fn, InstrumentationScriptIdOperation>()) {
-    return false;
-  }
-
   frame.push(R0);
   return true;
 }

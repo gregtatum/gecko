@@ -20,7 +20,7 @@ rev = "5cea1c9a3d8ed3ed2d7bdd5be3285e7821400b7f"
 [source."https://github.com/mozilla/neqo"]
 git = "https://github.com/mozilla/neqo"
 replace-with = "vendored-sources"
-tag = "v0.4.24"
+tag = "v0.4.25"
 
 [source."https://github.com/mozilla/mp4parse-rust"]
 git = "https://github.com/mozilla/mp4parse-rust"
@@ -90,7 +90,7 @@ rev = "ed8a4c6f900a90d4dbc1d64b856e61490a1c3570"
 [source."https://github.com/hsivonen/chardetng"]
 git = "https://github.com/hsivonen/chardetng"
 replace-with = "vendored-sources"
-rev = "39f95e2f7cd6e632a379cdeee62c68e8cedd7810"
+rev = "302c995f91f44cf26e77dc4758ad56c3ff0153ad"
 
 [source."https://github.com/gfx-rs/naga"]
 git = "https://github.com/gfx-rs/naga"
@@ -115,7 +115,7 @@ rev = "be19a243b86e0bafb9937d661fc8eabb3e42b44e"
 [source."https://github.com/bytecodealliance/wasmtime"]
 git = "https://github.com/bytecodealliance/wasmtime"
 replace-with = "vendored-sources"
-rev = "6b77786a6e758e91da9484a1c80b6fa5f88e1b3d"
+rev = "824fa69756523f2b6d49029fe25de94130b1f144"
 
 [source."https://github.com/PLSysSec/rlbox_lucet_sandbox/"]
 git = "https://github.com/PLSysSec/rlbox_lucet_sandbox/"

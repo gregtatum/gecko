@@ -135,10 +135,7 @@ void MacroAssembler::andPtr(Imm32 imm, Register dest) {
 }
 
 void MacroAssembler::and64(Imm64 imm, Register64 dest) {
-  vixl::UseScratchRegisterScope temps(this);
-  const Register scratch = temps.AcquireX().asUnsized();
-  mov(ImmWord(imm.value), scratch);
-  andPtr(scratch, dest.reg);
+  And(ARMRegister(dest.reg, 64), ARMRegister(dest.reg, 64), Operand(imm.value));
 }
 
 void MacroAssembler::and64(Register64 src, Register64 dest) {
@@ -147,17 +144,7 @@ void MacroAssembler::and64(Register64 src, Register64 dest) {
 }
 
 void MacroAssembler::or64(Imm64 imm, Register64 dest) {
-  vixl::UseScratchRegisterScope temps(this);
-  const Register scratch = temps.AcquireX().asUnsized();
-  mov(ImmWord(imm.value), scratch);
-  orPtr(scratch, dest.reg);
-}
-
-void MacroAssembler::xor64(Imm64 imm, Register64 dest) {
-  vixl::UseScratchRegisterScope temps(this);
-  const Register scratch = temps.AcquireX().asUnsized();
-  mov(ImmWord(imm.value), scratch);
-  xorPtr(scratch, dest.reg);
+  Orr(ARMRegister(dest.reg, 64), ARMRegister(dest.reg, 64), Operand(imm.value));
 }
 
 void MacroAssembler::or32(Imm32 imm, Register dest) {
@@ -228,6 +215,10 @@ void MacroAssembler::xorPtr(Register src, Register dest) {
 
 void MacroAssembler::xorPtr(Imm32 imm, Register dest) {
   Eor(ARMRegister(dest, 64), ARMRegister(dest, 64), Operand(imm.value));
+}
+
+void MacroAssembler::xor64(Imm64 imm, Register64 dest) {
+  Eor(ARMRegister(dest.reg, 64), ARMRegister(dest.reg, 64), Operand(imm.value));
 }
 
 // ===============================================================
@@ -464,6 +455,15 @@ void MacroAssembler::mul64(const Register64& src1, const Register64& src2,
                            const Register64& dest) {
   Mul(ARMRegister(dest.reg, 64), ARMRegister(src1.reg, 64),
       ARMRegister(src2.reg, 64));
+}
+
+void MacroAssembler::mul64(Imm64 src1, const Register64& src2,
+                           const Register64& dest) {
+  vixl::UseScratchRegisterScope temps(this);
+  const ARMRegister scratch64 = temps.AcquireX();
+  MOZ_ASSERT(dest.reg != scratch64.asUnsized());
+  mov(ImmWord(src1.value), scratch64.asUnsized());
+  Mul(ARMRegister(dest.reg, 64), ARMRegister(src2.reg, 64), scratch64);
 }
 
 void MacroAssembler::mulBy3(Register src, Register dest) {
@@ -2149,24 +2149,10 @@ void MacroAssembler::replaceLaneInt8x16(unsigned lane, Register rhs,
   Mov(Simd16B(lhsDest), lane, ARMRegister(rhs, 32));
 }
 
-void MacroAssembler::replaceLaneInt8x16(unsigned lane, FloatRegister lhs,
-                                        Register rhs, FloatRegister dest) {
-  MOZ_ASSERT(lane < 16);
-  moveSimd128(lhs, dest);
-  Mov(Simd16B(dest), lane, ARMRegister(rhs, 32));
-}
-
 void MacroAssembler::replaceLaneInt16x8(unsigned lane, Register rhs,
                                         FloatRegister lhsDest) {
   MOZ_ASSERT(lane < 8);
   Mov(Simd8H(lhsDest), lane, ARMRegister(rhs, 32));
-}
-
-void MacroAssembler::replaceLaneInt16x8(unsigned lane, FloatRegister lhs,
-                                        Register rhs, FloatRegister dest) {
-  MOZ_ASSERT(lane < 8);
-  moveSimd128(lhs, dest);
-  Mov(Simd8H(dest), lane, ARMRegister(rhs, 32));
 }
 
 void MacroAssembler::replaceLaneInt32x4(unsigned lane, Register rhs,
@@ -2175,24 +2161,10 @@ void MacroAssembler::replaceLaneInt32x4(unsigned lane, Register rhs,
   Mov(Simd4S(lhsDest), lane, ARMRegister(rhs, 32));
 }
 
-void MacroAssembler::replaceLaneInt32x4(unsigned lane, FloatRegister lhs,
-                                        Register rhs, FloatRegister dest) {
-  MOZ_ASSERT(lane < 4);
-  moveSimd128(lhs, dest);
-  Mov(Simd4S(dest), lane, ARMRegister(rhs, 32));
-}
-
 void MacroAssembler::replaceLaneInt64x2(unsigned lane, Register64 rhs,
                                         FloatRegister lhsDest) {
   MOZ_ASSERT(lane < 2);
   Mov(Simd2D(lhsDest), lane, ARMRegister(rhs.reg, 64));
-}
-
-void MacroAssembler::replaceLaneInt64x2(unsigned lane, FloatRegister lhs,
-                                        Register64 rhs, FloatRegister dest) {
-  MOZ_ASSERT(lane < 2);
-  moveSimd128(lhs, dest);
-  Mov(Simd2D(dest), lane, ARMRegister(rhs.reg, 64));
 }
 
 void MacroAssembler::replaceLaneFloat32x4(unsigned lane, FloatRegister rhs,
@@ -2201,26 +2173,10 @@ void MacroAssembler::replaceLaneFloat32x4(unsigned lane, FloatRegister rhs,
   Mov(Simd4S(lhsDest), lane, ARMFPRegister(rhs).V4S(), 0);
 }
 
-void MacroAssembler::replaceLaneFloat32x4(unsigned lane, FloatRegister lhs,
-                                          FloatRegister rhs,
-                                          FloatRegister dest) {
-  MOZ_ASSERT(lane < 4);
-  moveSimd128(lhs, dest);
-  Mov(Simd4S(dest), lane, ARMFPRegister(rhs).V4S(), 0);
-}
-
 void MacroAssembler::replaceLaneFloat64x2(unsigned lane, FloatRegister rhs,
                                           FloatRegister lhsDest) {
   MOZ_ASSERT(lane < 2);
   Mov(Simd2D(lhsDest), lane, ARMFPRegister(rhs).V2D(), 0);
-}
-
-void MacroAssembler::replaceLaneFloat64x2(unsigned lane, FloatRegister lhs,
-                                          FloatRegister rhs,
-                                          FloatRegister dest) {
-  MOZ_ASSERT(lane < 2);
-  moveSimd128(lhs, dest);
-  Mov(Simd2D(dest), lane, ARMFPRegister(rhs).V2D(), 0);
 }
 
 // Shuffle - blend and permute with immediate indices, and its many

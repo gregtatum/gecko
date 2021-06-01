@@ -87,7 +87,6 @@
 #include "vm/ErrorObject.h"
 #include "vm/ErrorReporting.h"
 #include "vm/HelperThreads.h"
-#include "vm/Instrumentation.h"
 #include "vm/Interpreter.h"
 #include "vm/Iteration.h"
 #include "vm/JSAtom.h"
@@ -256,6 +255,10 @@ JS_PUBLIC_API bool JS::ObjectOpResult::failCantDefineWindowElement() {
 
 JS_PUBLIC_API bool JS::ObjectOpResult::failCantDeleteWindowElement() {
   return fail(JSMSG_CANT_DELETE_WINDOW_ELEMENT);
+}
+
+JS_PUBLIC_API bool JS::ObjectOpResult::failCantDefineWindowNamedProperty() {
+  return fail(JSMSG_CANT_DEFINE_WINDOW_NAMED_PROPERTY);
 }
 
 JS_PUBLIC_API bool JS::ObjectOpResult::failCantDeleteWindowNamedProperty() {
@@ -2046,16 +2049,11 @@ JS_PUBLIC_API bool JS_DefinePropertyById(JSContext* cx, HandleObject obj,
 static bool DefineAccessorPropertyById(JSContext* cx, HandleObject obj,
                                        HandleId id, HandleObject getter,
                                        HandleObject setter, unsigned attrs) {
-  MOZ_ASSERT_IF(getter, attrs & JSPROP_GETTER);
-  MOZ_ASSERT_IF(setter, attrs & JSPROP_SETTER);
-
   // JSPROP_READONLY has no meaning when accessors are involved. Ideally we'd
   // throw if this happens, but we've accepted it for long enough that it's
   // not worth trying to make callers change their ways. Just flip it off on
   // its way through the API layer so that we can enforce this internally.
-  if (attrs & (JSPROP_GETTER | JSPROP_SETTER)) {
-    attrs &= ~JSPROP_READONLY;
-  }
+  attrs &= ~JSPROP_READONLY;
 
   AssertHeapIsIdle();
   CHECK_THREAD(cx);
@@ -2069,8 +2067,6 @@ static bool DefineAccessorPropertyById(JSContext* cx, HandleObject obj,
                                        const JSNativeWrapper& set,
                                        unsigned attrs) {
   // Getter/setter are both possibly-null JSNatives. Wrap them in JSFunctions.
-
-  MOZ_ASSERT(!(attrs & (JSPROP_GETTER | JSPROP_SETTER)));
 
   RootedFunction getter(cx);
   if (get.op) {
@@ -2086,8 +2082,6 @@ static bool DefineAccessorPropertyById(JSContext* cx, HandleObject obj,
     if (get.info) {
       getter->setJitInfo(get.info);
     }
-
-    attrs |= JSPROP_GETTER;
   }
 
   RootedFunction setter(cx);
@@ -2104,8 +2098,6 @@ static bool DefineAccessorPropertyById(JSContext* cx, HandleObject obj,
     if (set.info) {
       setter->setJitInfo(set.info);
     }
-
-    attrs |= JSPROP_SETTER;
   }
 
   return DefineAccessorPropertyById(cx, obj, id, getter, setter, attrs);
@@ -2113,8 +2105,6 @@ static bool DefineAccessorPropertyById(JSContext* cx, HandleObject obj,
 
 static bool DefineDataPropertyById(JSContext* cx, HandleObject obj, HandleId id,
                                    HandleValue value, unsigned attrs) {
-  MOZ_ASSERT(!(attrs & (JSPROP_GETTER | JSPROP_SETTER)));
-
   AssertHeapIsIdle();
   CHECK_THREAD(cx);
   cx->check(obj, id, value);
@@ -3434,6 +3424,7 @@ void JS::TransitiveCompileOptions::copyPODTransitiveOptions(
   privateClassFields = rhs.privateClassFields;
   privateClassMethods = rhs.privateClassMethods;
   topLevelAwait = rhs.topLevelAwait;
+  classStaticBlocks = rhs.classStaticBlocks;
   useStencilXDR = rhs.useStencilXDR;
   useOffThreadParseGlobal = rhs.useOffThreadParseGlobal;
 };
@@ -3503,13 +3494,12 @@ bool JS::OwningCompileOptions::copy(JSContext* cx,
 }
 
 JS::CompileOptions::CompileOptions(JSContext* cx) : ReadOnlyCompileOptions() {
-  discardSource = cx->realm()->behaviors().discardSource();
   if (!js::IsAsmJSCompilationAvailable(cx)) {
     // Distinguishing the cases is just for error reporting.
     asmJSOption = !cx->options().asmJS()
                       ? AsmJSOption::DisabledByAsmJSPref
                       : AsmJSOption::DisabledByNoWasmCompiler;
-  } else if (cx->realm()->debuggerObservesAsmJS()) {
+  } else if (cx->realm() && cx->realm()->debuggerObservesAsmJS()) {
     asmJSOption = AsmJSOption::DisabledByDebugger;
   } else {
     asmJSOption = AsmJSOption::Enabled;
@@ -3519,6 +3509,8 @@ JS::CompileOptions::CompileOptions(JSContext* cx) : ReadOnlyCompileOptions() {
   privateClassFields = cx->options().privateClassFields();
   privateClassMethods = cx->options().privateClassMethods();
   topLevelAwait = cx->options().topLevelAwait();
+
+  classStaticBlocks = cx->options().classStaticBlocks();
 
   useStencilXDR = !UseOffThreadParseGlobal();
   useOffThreadParseGlobal = UseOffThreadParseGlobal();
@@ -3531,10 +3523,11 @@ JS::CompileOptions::CompileOptions(JSContext* cx) : ReadOnlyCompileOptions() {
   // Certain modes of operation disallow syntax parsing in general.
   forceFullParse_ = coverage::IsLCovEnabled();
 
-  // If instrumentation is enabled in the realm, the compiler should insert the
-  // requested kinds of instrumentation into all scripts.
-  instrumentationKinds =
-      RealmInstrumentation::getInstrumentationKinds(cx->global());
+  // Note: If we parse outside of a specific realm, we do not inherit any realm
+  // behaviours. These can still be set manually on the options though.
+  if (cx->realm()) {
+    discardSource = cx->realm()->behaviors().discardSource();
+  }
 }
 
 CompileOptions& CompileOptions::setIntroductionInfoToCaller(

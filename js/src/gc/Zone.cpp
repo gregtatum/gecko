@@ -173,9 +173,7 @@ JS::Zone::Zone(JSRuntime* rt, Kind kind)
       atomCache_(this),
       externalStringCache_(this),
       functionToStringCache_(this),
-      propertyTree_(this, this),
-      baseShapes_(this, this),
-      initialShapes_(this, this),
+      shapeZone_(this, this),
       finalizationRegistries_(this, this),
       finalizationRecordMap_(this, this),
       jitZone_(this, nullptr),
@@ -588,14 +586,10 @@ Zone* Zone::nextZone() const {
 void Zone::clearTables() {
   MOZ_ASSERT(regExps().empty());
 
-  baseShapes().clear();
-  initialShapes().clear();
+  shapeZone().clearTables();
 }
 
-void Zone::fixupAfterMovingGC() {
-  ZoneAllocator::fixupAfterMovingGC();
-  fixupInitialShapeTable();
-}
+void Zone::fixupAfterMovingGC() { ZoneAllocator::fixupAfterMovingGC(); }
 
 bool Zone::addRttValueObject(JSContext* cx, HandleObject obj) {
   // Type descriptor objects are always tenured so we don't need post barriers
@@ -659,8 +653,7 @@ void Zone::addSizeOfIncludingThis(
                                      baselineStubsOptimized);
   }
   *uniqueIdMap += uniqueIds().shallowSizeOfExcludingThis(mallocSizeOf);
-  *shapeCaches += baseShapes().sizeOfExcludingThis(mallocSizeOf) +
-                  initialShapes().sizeOfExcludingThis(mallocSizeOf);
+  *shapeCaches += shapeZone().sizeOfExcludingThis(mallocSizeOf);
   *atomsMarkBitmaps += markedAtoms().sizeOfExcludingThis(mallocSizeOf);
   *crossCompartmentWrappersTables +=
       crossZoneStringWrappers().sizeOfExcludingThis(mallocSizeOf);

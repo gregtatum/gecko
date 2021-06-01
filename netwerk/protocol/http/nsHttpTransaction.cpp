@@ -2216,19 +2216,7 @@ nsresult nsHttpTransaction::HandleContentStart() {
     }
 
     // Remember whether HTTP3 is supported
-    if ((mHttpVersion >= HttpVersion::v2_0) &&
-        (mResponseHead->Status() < 500) && (mResponseHead->Status() != 421)) {
-      nsAutoCString altSvc;
-      Unused << mResponseHead->GetHeader(nsHttp::Alternate_Service, altSvc);
-      if (!altSvc.IsEmpty() || nsHttp::IsReasonableHeaderValue(altSvc)) {
-        for (uint32_t i = 0; i < kHttp3VersionCount; i++) {
-          if (PL_strstr(altSvc.get(), kHttp3Versions[i].get())) {
-            mSupportsHTTP3 = true;
-            break;
-          }
-        }
-      }
-    }
+    mSupportsHTTP3 = nsHttpHandler::IsHttp3SupportedByServer(mResponseHead);
 
     CollectTelemetryForUploads();
 
@@ -3401,16 +3389,17 @@ void nsHttpTransaction::CollectTelemetryForUploads() {
 
   nsCString key = (mHttpVersion == HttpVersion::v3_0) ? "uses_http3"_ns
                                                       : "supports_http3"_ns;
+  auto hist = Telemetry::HTTP3_UPLOAD_TIME_10M_100M;
   if (mRequestSize <= TELEMETRY_REQUEST_SIZE_50M) {
     key.Append("_10_50"_ns);
   } else if (mRequestSize <= TELEMETRY_REQUEST_SIZE_100M) {
     key.Append("_50_100"_ns);
   } else {
-    key.Append("_gt_100"_ns);
+    hist = Telemetry::HTTP3_UPLOAD_TIME_GT_100M;
   }
 
-  Telemetry::AccumulateTimeDelta(Telemetry::HTTP3_UPLOAD_TIME, key,
-                                 mTimings.responseStart, mTimings.requestStart);
+  Telemetry::AccumulateTimeDelta(hist, key, mTimings.requestStart,
+                                 mTimings.responseStart);
 }
 
 }  // namespace net

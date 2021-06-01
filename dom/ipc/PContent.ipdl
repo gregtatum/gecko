@@ -582,9 +582,14 @@ child:
                          OverrideMapping[] overrides, nsCString locale, bool reset);
     async RegisterChromeItem(ChromeRegistryItem item);
 
+    async ClearImageCacheFromPrincipal(nsIPrincipal aPrincipal);
+
+    async ClearImageCacheFromBaseDomain(nsCString aBaseDomain);
+
     async ClearImageCache(bool privateLoader, bool chrome);
 
-    async ClearStyleSheetCache(nsIPrincipal? aForPrincipal);
+    async ClearStyleSheetCache(nsIPrincipal? aForPrincipal,
+                               nsCString? aBaseDomain);
 
     async SetOffline(bool offline);
     async SetConnectivity(bool connectivity);
@@ -898,6 +903,14 @@ child:
     // Begin subscribing to a new BrowsingContextGroup, sending down the current
     // value for every individual BrowsingContext.
     async RegisterBrowsingContextGroup(uint64_t aGroupId, SyncedContextInitializer[] aInits);
+
+    // The BrowsingContextGroup has been destroyed in the parent process. The
+    // content process won't destroy the group until it receives this message or
+    // during shutdown.
+    //
+    // When the content process receives this message, all contexts in the group
+    // should have already been destroyed.
+    async DestroyBrowsingContextGroup(uint64_t aGroupId);
 
 #if defined(MOZ_SANDBOX) && defined(MOZ_DEBUG) && defined(ENABLE_TESTS)
     // Initialize top-level actor for testing content process sandbox.

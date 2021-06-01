@@ -399,8 +399,8 @@ this.AppConstants = Object.freeze({
     false,
 #endif
 
-  ENABLE_REMOTE_AGENT:
-#ifdef ENABLE_REMOTE_AGENT
+  ENABLE_WEBDRIVER:
+#ifdef ENABLE_WEBDRIVER
     true,
 #else
     false,

@@ -1483,7 +1483,6 @@ pub extern "C" fn wr_window_new(
     document_id: u32,
     compositor: *mut c_void,
     use_native_compositor: bool,
-    max_update_rects: usize,
     use_partial_present: bool,
     max_partial_present_rects: usize,
     draw_previous_partial_present_regions: bool,
@@ -1552,7 +1551,6 @@ pub extern "C" fn wr_window_new(
 
     let compositor_config = if software {
         CompositorConfig::Native {
-            max_update_rects: 1,
             compositor: Box::new(SwCompositor::new(
                 sw_gl.unwrap(),
                 Box::new(WrCompositor(compositor)),
@@ -1561,7 +1559,6 @@ pub extern "C" fn wr_window_new(
         }
     } else if use_native_compositor {
         CompositorConfig::Native {
-            max_update_rects,
             compositor: Box::new(WrCompositor(compositor)),
         }
     } else {
@@ -1862,7 +1859,7 @@ pub extern "C" fn wr_transaction_set_display_list(
 
 #[no_mangle]
 pub extern "C" fn wr_transaction_set_document_view(txn: &mut Transaction, doc_rect: &DeviceIntRect) {
-    txn.set_document_view(*doc_rect, 1.0);
+    txn.set_document_view(*doc_rect);
 }
 
 #[no_mangle]
@@ -1950,11 +1947,6 @@ pub extern "C" fn wr_transaction_scroll_layer(
 ) {
     let scroll_id = ExternalScrollId(scroll_id, pipeline_id);
     txn.scroll_node_with_id(new_scroll_origin, scroll_id, ScrollClamping::NoClamping);
-}
-
-#[no_mangle]
-pub extern "C" fn wr_transaction_pinch_zoom(txn: &mut Transaction, pinch_zoom: f32) {
-    txn.set_pinch_zoom(ZoomFactor::new(pinch_zoom));
 }
 
 #[no_mangle]

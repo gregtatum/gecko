@@ -1072,6 +1072,14 @@ pref("places.frecency.defaultVisitBonus", 0);
 pref("places.frecency.unvisitedBookmarkBonus", 140);
 pref("places.frecency.unvisitedTypedBonus", 200);
 
+#ifdef NIGHTLY_BUILD
+  // Clear data by base domain (including partitioned storage) when the user
+  // selects "Forget About This Site".
+  pref("places.forgetThisSite.clearByBaseDomain", true);
+#else
+  pref("places.forgetThisSite.clearByBaseDomain", false);
+#endif
+
 // Controls behavior of the "Add Exception" dialog launched from SSL error pages
 // 0 - don't pre-populate anything
 // 1 - pre-populate site URL, but don't fetch certificate
@@ -1514,6 +1522,7 @@ pref("browser.newtabpage.activity-stream.logowordmark.alwaysVisible", true);
 pref("trailhead.firstrun.newtab.triplets", "");
 // Separate about welcome
 pref("browser.aboutwelcome.enabled", true);
+pref("browser.aboutwelcome.protonDesign", true);
 // Used to set multistage welcome UX
 pref("browser.aboutwelcome.screens", "");
 pref("browser.aboutwelcome.skipFocus", true);
@@ -2583,6 +2592,11 @@ pref("first-startup.timeout", 30000);
 // are expected to go away once a standardized alternative becomes
 // available.
 pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox.com,profile.stage.mozaws.net");
+
+// Preference that allows individual users to disable Firefox Translations.
+#ifdef NIGHTLY_BUILD
+  pref("extensions.translations.disabled", true);
+#endif
 
 // MR2
 pref("startup.homepage_welcome_url", "", locked);
