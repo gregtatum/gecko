@@ -321,6 +321,10 @@
   fill-opacity: .6;
 }
 
+#urlbar-input {
+  padding-inline-start: var(--urlbarView-item-inline-padding);
+}
+
 @keyframes urlbar-grow {
   0% {
     transform: scaleX(.99) scaleY(.95);
