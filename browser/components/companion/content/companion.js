@@ -72,7 +72,7 @@ onLoad(() => {
     )
   );
   content.appendChild(new KeyframeDbList("Current Session", today));
-  content.appendChild(new GlobalHistoryDebugging("Debugging"));
+  content.appendChild(new GlobalHistoryDebugging());
   content.appendChild(new PocketList());
 });
 

@@ -30,7 +30,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   CharsetMenu: "resource://gre/modules/CharsetMenu.jsm",
   Color: "resource://gre/modules/Color.jsm",
   CompanionService: "resource:///modules/CompanionService.jsm",
-  CompanionGlobalHistory: "resource:///modules/CompanionGlobalHistory.jsm",
+  GlobalHistory: "resource:///modules/GlobalHistory.jsm",
   ContextualIdentityService:
     "resource://gre/modules/ContextualIdentityService.jsm",
   CustomizableUI: "resource:///modules/CustomizableUI.jsm",
@@ -339,6 +339,10 @@ XPCOMUtils.defineLazyGetter(this, "gCustomizeMode", () => {
 
 XPCOMUtils.defineLazyGetter(this, "gNavToolbox", () => {
   return document.getElementById("navigator-toolbox");
+});
+
+XPCOMUtils.defineLazyGetter(this, "gGlobalHistory", () => {
+  return new GlobalHistory(window);
 });
 
 XPCOMUtils.defineLazyGetter(this, "gURLBar", () => {
@@ -763,7 +767,7 @@ function UpdateBackForwardCommands(aWebNavigation) {
   var backDisabled = backCommand.hasAttribute("disabled");
   var forwardDisabled = forwardCommand.hasAttribute("disabled");
   let canGoBack = AppConstants.PROCLIENT_ENABLED
-    ? CompanionGlobalHistory.canGoBack(window)
+    ? gGlobalHistory.canGoBack
     : aWebNavigation.canGoBack;
   if (backDisabled == canGoBack) {
     if (backDisabled) {
@@ -774,7 +778,7 @@ function UpdateBackForwardCommands(aWebNavigation) {
   }
 
   let canGoForward = AppConstants.PROCLIENT_ENABLED
-    ? CompanionGlobalHistory.canGoForward(window)
+    ? gGlobalHistory.canGoForward
     : aWebNavigation.canGoForward;
   if (forwardDisabled == canGoForward) {
     if (forwardDisabled) {
@@ -1730,11 +1734,10 @@ var gBrowserInit = {
 
     if (AppConstants.PROCLIENT_ENABLED) {
       CompanionService.addBrowserWindow(window);
-      CompanionGlobalHistory.addBrowserWindow(window);
-      CompanionGlobalHistory.addEventListener(
-        "CompanionGlobalHistoryChange",
-        UpdateBackForwardCommands
-      );
+      gGlobalHistory.addEventListener("ViewChanged", UpdateBackForwardCommands);
+      gGlobalHistory.addEventListener("ViewAdded", UpdateBackForwardCommands);
+      gGlobalHistory.addEventListener("ViewRemoved", UpdateBackForwardCommands);
+      gGlobalHistory.addEventListener("ViewMoved", UpdateBackForwardCommands);
     }
 
     BrowserWindowTracker.track(window);
@@ -2541,13 +2544,6 @@ var gBrowserInit = {
 
     BrowserSearch.uninit();
 
-    if (AppConstants.PROCLIENT_ENABLED) {
-      CompanionGlobalHistory.removeBrowserWindow(window);
-      CompanionGlobalHistory.removeEventListener(
-        "CompanionGlobalHistoryChange",
-        UpdateBackForwardCommands
-      );
-    }
     NewTabPagePreloading.removePreloadedBrowser(window);
 
     // Now either cancel delayedStartup, or clean up the services initialized from
@@ -2709,12 +2705,9 @@ function gotoHistoryIndex(aEvent) {
 }
 
 function BrowserForward(aEvent) {
-  // browserForward returns true if it handled the request.
+  // goForward returns true if it handled the request.
   // otherwise, let the current code do its thing.
-  if (
-    AppConstants.PROCLIENT_ENABLED &&
-    CompanionGlobalHistory.browserForward(window)
-  ) {
+  if (AppConstants.PROCLIENT_ENABLED && gGlobalHistory.goForward()) {
     return;
   }
   let where = whereToOpenLink(aEvent, false, true);
@@ -2729,12 +2722,9 @@ function BrowserForward(aEvent) {
 }
 
 function BrowserBack(aEvent) {
-  // browserBack returns true if it handled the request.
+  // goBack returns true if it handled the request.
   // otherwise, let the current code do its thing.
-  if (
-    AppConstants.PROCLIENT_ENABLED &&
-    CompanionGlobalHistory.browserBack(window)
-  ) {
+  if (AppConstants.PROCLIENT_ENABLED && gGlobalHistory.goBack()) {
     return;
   }
   let where = whereToOpenLink(aEvent, false, true);

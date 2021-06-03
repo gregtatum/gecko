@@ -752,3 +752,21 @@ button.conference:hover:active, .btn:hover:active {
   opacity: 0.75;
   font-size: smaller;
 }
+
+.history-entry {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-entry.pruned {
+  color: rgba(100, 100, 100);
+}
+
+.history-entry.open {
+  color: rgb(131, 30, 30);
+}
+
+.history-entry.visible {
+  font-weight: bold;
+}

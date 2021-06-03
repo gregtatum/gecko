@@ -5,46 +5,41 @@
 // These come from utilityOverlay.js
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
-const { CompanionGlobalHistory } = ChromeUtils.import(
-  "resource:///modules/CompanionGlobalHistory.jsm"
-);
-
 export class GlobalHistoryDebugging extends HTMLElement {
-  constructor(title) {
+  constructor() {
     super();
     this.render = this.render.bind(this);
-    this.title = title;
     this.innerHTML = `
-      <h2 class="list-title"></h2>
-      <div class="debug-container">
-      </div>
+      <h2 class="list-title">Global History</h2>
+      <ul class="history-list">
+      </ul>
     `;
-    this.querySelector(".list-title").textContent = title;
   }
+
   connectedCallback() {
     this.render();
     document.addEventListener("CompanionObservedPrefChanged", this.render);
-    CompanionGlobalHistory.addEventListener(
-      "CompanionGlobalHistoryChange",
-      this.render
+
+    window.top.gGlobalHistory.addEventListener("ViewChanged", () =>
+      this.render()
     );
-  }
-  disconnectedCallback() {
-    document.removeEventListener("CompanionObservedPrefChanged", this.render);
-    CompanionGlobalHistory.removeEventListener(
-      "CompanionGlobalHistoryChange",
-      this.render
+    window.top.gGlobalHistory.addEventListener("ViewMoved", () =>
+      this.render()
     );
   }
 
-  get container() {
-    return this.querySelector(".debug-container");
+  disconnectedCallback() {
+    document.removeEventListener("CompanionObservedPrefChanged", this.render);
   }
 
   get enabled() {
     return Services.prefs.getBoolPref(
       "browser.companion.globalhistorydebugging"
     );
+  }
+
+  get list() {
+    return this.querySelector(".history-list");
   }
 
   render() {
@@ -54,16 +49,27 @@ export class GlobalHistoryDebugging extends HTMLElement {
     }
 
     this.hidden = false;
-    let globalhistory = CompanionGlobalHistory.historyForWindow(window.top);
+    let history = window.top.gGlobalHistory;
+    let { views, currentView } = history;
+    let elements = [];
+    views.forEach(view => {
+      let item = document.createElement("li");
+      item.textContent = view.url;
+      item.className = "history-entry";
 
-    console.debug(`CompanionGlobalHistoryDebug: render`, globalhistory);
-    this.container.textContent = globalhistory._history
-      .map((h, i) => {
-        let selected =
-          globalhistory._history.length - globalhistory._historyDepth - 1 == i;
-        return `${selected ? "->" : ""}${h.plainURI} - ${h.tab?.linkedPanel}`;
-      })
-      .join("\n");
+      item.classList.add(view.state);
+      if (view === currentView) {
+        item.classList.add("visible");
+      }
+
+      elements.push(item);
+
+      item.addEventListener("click", () =>
+        window.top.gGlobalHistory.setView(view)
+      );
+    });
+
+    this.list.replaceChildren(...elements);
   }
 }
 

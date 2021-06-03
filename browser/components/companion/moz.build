@@ -7,9 +7,9 @@
 JAR_MANIFESTS += ["jar.mn"]
 
 EXTRA_JS_MODULES += [
-    "CompanionGlobalHistory.jsm",
     "CompanionService.jsm",
     "Engagement.jsm",
+    "GlobalHistory.jsm",
     "Keyframes.jsm",
     "OAuth2.jsm",
     "OnlineServices.jsm",

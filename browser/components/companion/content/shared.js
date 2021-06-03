@@ -59,7 +59,10 @@ export class Keyframe extends HidableElement {
     let win = BrowserWindowTracker.getTopWindow({
       allowPopups: false,
     });
-    this.toggleAttribute("current", win.gBrowser.currentURI.spec == this.data.url);
+    this.toggleAttribute(
+      "current",
+      win.gBrowser.currentURI.spec == this.data.url
+    );
 
     let score = target.querySelector(".score");
     score.textContent = this.data.score.toFixed(1);
@@ -198,7 +201,7 @@ function timeSince(date) {
     return days + " days ago";
   }
 
-  return weeks + " week" + ((weeks == 1) ? "" : "s") + " ago";
+  return weeks + " week" + (weeks == 1 ? "" : "s") + " ago";
 }
 
 async function getPreviewImageURL(url) {
@@ -249,6 +252,7 @@ export async function getPlacesData(url) {
     // Expire the cache to make sure the UI gets updated as titles change
     // Ideally this will become more selective and happen more immediately when pages change
     if (
+      entry &&
       entry.timeStamp != undefined &&
       Date.now() - entry.timeStamp < CACHE_ITEM_DURATION
     ) {
