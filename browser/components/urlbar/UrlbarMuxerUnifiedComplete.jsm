@@ -8,7 +8,7 @@
  * This module exports a component used to sort results in a UrlbarQueryContext.
  */
 
-var EXPORTED_SYMBOLS = ["UrlbarMuxerUnifiedComplete", "MuxerUnifiedComplete"];
+var EXPORTED_SYMBOLS = ["UrlbarMuxerUnifiedComplete"];
 
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"

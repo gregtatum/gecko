@@ -10,7 +10,6 @@ import { TopSites } from "./topsites.js";
 import { PocketList } from "./pocket.js";
 import { onLoad, onUnload, yesterday, today } from "./shared.js";
 import { KeyframeDbList } from "./keyframes.js";
-import { AwesomeBar } from "./awesomebar.js";
 import { MediaList } from "./media.js";
 import { WindowList } from "./appbar.js";
 import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
@@ -43,13 +42,6 @@ onLoad(() => {
     });
     prefCheck.checked = Services.prefs.getBoolPref(prefName);
   }
-
-  // on macOS gURLBar is a lazy getter for the real awesomebar from browser.js
-  Object.defineProperty(window, "gURLBar", {
-    value: new AwesomeBar(),
-    configurable: true,
-    enumerable: true,
-  });
 
   document.addEventListener("keydown", e => {
     if (e.key == "e" && e.metaKey) {

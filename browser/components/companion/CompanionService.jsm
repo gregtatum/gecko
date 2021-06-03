@@ -9,33 +9,11 @@ const { XPCOMUtils } = ChromeUtils.import(
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   Services: "resource://gre/modules/Services.jsm",
-  MuxerUnifiedComplete: "resource:///modules/UrlbarMuxerUnifiedComplete.jsm",
-  UrlbarProvidersManager: "resource:///modules/UrlbarProvidersManager.jsm",
-  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
 });
 
 const COMPANION_DOCKED_PREF = "companion.docked";
 const COMPANION_OPEN_PREF = "companion.open";
 const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-
-class CompanionWindowMuxer extends MuxerUnifiedComplete {
-  get name() {
-    return "companion";
-  }
-
-  sort(queryContext) {
-    super.sort(queryContext);
-
-    let switchEntry = queryContext.results.findIndex(
-      entry => entry.type == UrlbarUtils.RESULT_TYPE.TAB_SWITCH
-    );
-
-    if (switchEntry >= 0) {
-      let [entry] = queryContext.results.splice(switchEntry, 1);
-      queryContext.results.unshift(entry);
-    }
-  }
-}
 
 class BrowserWindowHandler {
   constructor(window) {
@@ -144,8 +122,6 @@ const CompanionService = {
       return;
     }
     this.inited = true;
-
-    UrlbarProvidersManager.registerMuxer(new CompanionWindowMuxer());
 
     this._windows = new Set();
 

@@ -6,7 +6,6 @@
 <?xml-stylesheet href="chrome://global/skin/global.css"?>
 
 <?xml-stylesheet href="chrome://global/skin/in-content/common.css"?>
-<?xml-stylesheet href="chrome://browser/content/companion/awesomebar.css"?>
 <?xml-stylesheet href="chrome://browser/skin/searchbar.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/skin/browser.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/content/companion/companion.css"?>
@@ -224,56 +223,6 @@
       </hbox>
     </hbox>
   </hbox>
-
-  <toolbar id="awesomebar">
-    <toolbaritem id="urlbar-container" flex="1">
-      <hbox id="urlbar" flex="1"
-                context=""
-                focused="true"
-                pageproxystate="invalid">
-        <hbox id="urlbar-background"/>
-        <hbox id="urlbar-input-container"
-                  flex="1"
-                  pageproxystate="invalid">
-          <box id="urlbar-search-button"
-                class="chromeclass-toolbar-additional"/>
-          <box id="urlbar-icon-container" orient="vertical" align="center" pack="center">
-            <image id="urlbar-icon"/>
-          </box>
-          <box id="urlbar-label-box" align="center">
-            <label id="urlbar-label-switchtab" class="urlbar-label" data-l10n-id="urlbar-switch-to-tab"/>
-            <label id="urlbar-label-extension" class="urlbar-label" data-l10n-id="urlbar-extension"/>
-            <label id="urlbar-label-search-mode" class="urlbar-label"/>
-          </box>
-          <div xmlns="http://www.w3.org/1999/xhtml" id="urlbar-search-mode-indicator">
-            <span id="urlbar-search-mode-indicator-title"/>
-            <div id="urlbar-search-mode-indicator-close"
-                class="close-button"
-                role="button"/>
-          </div>
-          <moz-input-box tooltip="aHTMLTooltip"
-                        class="urlbar-input-box"
-                        flex="1"
-                        role="combobox"
-                        aria-owns="urlbar-results">
-            <html:input id="urlbar-scheme"
-                  required="required"/>
-            <html:input id="urlbar-input"
-                  anonid="input"
-                  aria-controls="urlbar-results"
-                  aria-autocomplete="both"
-                  inputmode="mozAwesomebar"
-                  data-l10n-id="urlbar-placeholder"
-                  data-l10n-attrs="placeholder"/>
-          </moz-input-box>
-          <image id="urlbar-go-button"
-                    class="urlbar-icon"
-                    onclick="gURLBar.handleCommand(event);"
-                    data-l10n-id="urlbar-go-button"/>
-        </hbox>
-      </hbox>
-    </toolbaritem>
-  </toolbar>
 
   <div xmlns="http://www.w3.org/1999/xhtml" id="scroll">
     <div id="top-sites-placeholder"></div>

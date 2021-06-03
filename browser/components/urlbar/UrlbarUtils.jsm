@@ -1449,8 +1449,6 @@ class UrlbarQueryContext {
    *   Defaults to true.
    * @param {string} [options.formHistoryName]
    *   The name under which the local form history is registered.
-   * @param {string} [options.muxer]
-   *   The name of a muxer to use otherwise the default muxer is used.
    */
   constructor(options = {}) {
     this._checkRequiredOptions(options, [
@@ -1474,7 +1472,6 @@ class UrlbarQueryContext {
       ["providers", v => Array.isArray(v) && v.length],
       ["searchMode", v => v && typeof v == "object"],
       ["sources", v => Array.isArray(v) && v.length],
-      ["muxer", v => UrlbarProvidersManager.hasMuxer(v)],
     ]) {
       if (prop in options) {
         if (!checkFn(options[prop])) {

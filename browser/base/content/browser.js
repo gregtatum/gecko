@@ -345,7 +345,6 @@ XPCOMUtils.defineLazyGetter(this, "gURLBar", () => {
   let urlbar = new UrlbarInput({
     textbox: document.getElementById("urlbar"),
     eventTelemetryCategory: "urlbar",
-    isInitialPage,
   });
 
   let beforeFocusOrSelect = event => {

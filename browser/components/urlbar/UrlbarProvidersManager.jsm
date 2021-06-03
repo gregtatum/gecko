@@ -37,7 +37,6 @@ var localProviderModules = {
     "resource:///modules/UrlbarProviderUnifiedComplete.jsm",
   UrlbarProviderAutofill: "resource:///modules/UrlbarProviderAutofill.jsm",
   UrlbarProviderCalculator: "resource:///modules/UrlbarProviderCalculator.jsm",
-  UrlbarProviderCommands: "resource:///modules/UrlbarProviderCommands.jsm",
   UrlbarProviderHeuristicFallback:
     "resource:///modules/UrlbarProviderHeuristicFallback.jsm",
   UrlbarProviderInterventions:
@@ -147,15 +146,6 @@ class ProvidersManager {
    */
   getProvider(name) {
     return this.providers.find(p => p.name == name);
-  }
-
-  /**
-   * Verifies that a named muxer exists.
-   * @param {string} name the name of a muxer.
-   * @returns {boolean}
-   */
-  hasMuxer(name) {
-    return this.muxers.has(name);
   }
 
   /**

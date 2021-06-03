@@ -14,7 +14,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   AppConstants: "resource://gre/modules/AppConstants.jsm",
   BrowserSearchTelemetry: "resource:///modules/BrowserSearchTelemetry.jsm",
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.jsm",
-  BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   CONTEXTUAL_SERVICES_PING_TYPES:
     "resource:///modules/PartnerLinkAttribution.jsm",
   ExtensionSearchHandler: "resource://gre/modules/ExtensionSearchHandler.jsm",
@@ -56,314 +55,6 @@ let getBoundsWithoutFlushing = element =>
 let px = number => number.toFixed(2) + "px";
 
 /**
- * Represents a specific browser instance.
- *
- * The default instance is just a no-op.
- */
-class Browser {
-  constructor(options) {
-    this.manager = options.manager;
-
-    this._userTypedValue = null;
-    this._currentURI = Services.io.newURI("about:blank");
-  }
-
-  get window() {
-    return this.manager.window;
-  }
-
-  get userContextId() {
-    return "";
-  }
-
-  get userTypedValue() {
-    return this._userTypedValue;
-  }
-
-  set userTypedValue(val) {
-    this._userTypedValue = val;
-  }
-
-  get initialPageLoadedFromUserAction() {
-    return undefined;
-  }
-
-  set initialPageLoadedFromUserAction(val) {
-    // no-op
-  }
-
-  get contentTitle() {
-    return "";
-  }
-
-  get currentURI() {
-    return this._currentURI;
-  }
-
-  get lastLocationChange() {
-    return undefined;
-  }
-
-  get securityUIState() {
-    return 0;
-  }
-
-  deleteAuthPromptAbuseCounter() {
-    // no-op
-  }
-
-  clearTemporaryPermissions() {
-    // no-op
-  }
-
-  focus() {
-    // no-op
-  }
-
-  openTrustedUILink(url, openUILinkWhere, params) {
-    if (openUILinkWhere == "current") {
-      openUILinkWhere = "tab";
-    }
-
-    this.window.openTrustedLinkIn(url, openUILinkWhere, params);
-
-    this.manager.input.handleRevert();
-  }
-
-  checkEmptyPageOrigin(uri = this.currentURI) {
-    return true;
-  }
-
-  checkURIFixup(fixupInfo) {
-    // no-op
-  }
-
-  recordSearchTelemetry(engine, source, details = {}) {
-    // no-op
-  }
-
-  get isEmpty() {
-    return false;
-  }
-}
-
-const BROWSER_RO_FIELDS = ["currentURI", "lastLocationChange", "contentTitle"];
-
-const BROWSER_RW_FIELDS = ["userTypedValue", "initialPageLoadedFromUserAction"];
-
-/**
- * A `Browser` that wraps a real browser element.
- */
-class BrowserElement extends Browser {
-  constructor(options) {
-    super(options);
-    this.browserElement = options.element;
-    this.tabElement = this.manager.gBrowser.getTabForBrowser(
-      this.browserElement
-    );
-
-    Object.defineProperties(
-      this,
-      Object.fromEntries([
-        ...BROWSER_RW_FIELDS.map(field => {
-          return [
-            field,
-            {
-              enumerable: true,
-              get: () => this.browserElement[field],
-              set: val => {
-                this.browserElement[field] = val;
-              },
-            },
-          ];
-        }),
-
-        ...BROWSER_RO_FIELDS.map(field => {
-          return [
-            field,
-            {
-              enumerable: true,
-              get: () => this.browserElement[field],
-            },
-          ];
-        }),
-      ])
-    );
-  }
-
-  get userContextId() {
-    return this.browserElement.getAttribute("usercontextid");
-  }
-
-  get securityUIState() {
-    return this.browserElement.securityUI.state;
-  }
-
-  deleteAuthPromptAbuseCounter() {
-    delete this.browserElement.authPromptAbuseCounter;
-  }
-
-  clearTemporaryPermissions() {
-    this.window.SitePermissions.clearTemporaryBlockPermissions(
-      this.browserElement
-    );
-  }
-
-  focus() {
-    this.browserElement.focus();
-  }
-
-  openTrustedUILink(url, openUILinkWhere, params) {
-    this.window.openTrustedLinkIn(url, openUILinkWhere, {
-      ...params,
-      targetBrowser: this.browserElement,
-    });
-  }
-
-  checkEmptyPageOrigin(uri = this.currentURI) {
-    return BrowserUIUtils.checkEmptyPageOrigin(this.browserElement, uri);
-  }
-
-  checkURIFixup(fixupInfo) {
-    this.window.gKeywordURIFixup.check(this.browserElement, fixupInfo);
-  }
-
-  recordSearchTelemetry(engine, source, details = {}) {
-    BrowserSearchTelemetry.recordSearch(
-      this.browserElement,
-      engine,
-      source,
-      details
-    );
-  }
-
-  get isEmpty() {
-    return this.tabElement.isEmpty;
-  }
-}
-
-const FORWARDED_RO_FIELDS = ["currentURI", "contentTitle"];
-const FORWARDED_RW_FIELDS = ["userTypedValue"];
-
-/**
- * Handles any interactions the urlbar has to make with controlled browsers.
- *
- * The default instance assumes no browser elements are present and so works for
- * a window with no browsers.
- */
-class BrowserManager {
-  constructor(options) {
-    this.input = options.input;
-
-    this._browser = new Browser({
-      manager: this,
-    });
-
-    Object.defineProperties(
-      this,
-      Object.fromEntries([
-        ...FORWARDED_RW_FIELDS.map(field => {
-          return [
-            field,
-            {
-              enumerable: true,
-              get: () => this.selectedBrowser[field],
-              set: val => {
-                this.selectedBrowser[field] = val;
-              },
-            },
-          ];
-        }),
-
-        ...FORWARDED_RO_FIELDS.map(field => {
-          return [
-            field,
-            {
-              enumerable: true,
-              get: () => this.selectedBrowser[field],
-            },
-          ];
-        }),
-      ])
-    );
-  }
-
-  get window() {
-    return this.input.window;
-  }
-
-  get selectedBrowser() {
-    return this._browser;
-  }
-
-  get delayedStartupFinished() {
-    return true;
-  }
-
-  switchToTabHavingURI(aURI, aOpenNew, aOpenParams = {}) {
-    let window = BrowserWindowTracker.getTopWindow({
-      allowPopups: aOpenParams.allowPopups,
-    });
-
-    if (window) {
-      window.switchToTabHavingURI(aURI, aOpenNew, aOpenParams);
-      return;
-    }
-
-    if (!aOpenNew) {
-      return;
-    }
-
-    this.window.openTrustedLinkIn(aURI, "window", aOpenParams);
-  }
-
-  removeBrowser(browser) {
-    // no-op
-  }
-}
-
-/**
- * A `BrowserManager` that controls a tabbrowser.
- */
-class TabBrowserManager extends BrowserManager {
-  constructor(options) {
-    super(options);
-
-    this.gBrowser.tabContainer.addEventListener("TabSelect", this.input);
-    this.browsers = new WeakMap();
-  }
-
-  get gBrowser() {
-    return this.window.gBrowser;
-  }
-
-  get delayedStartupFinished() {
-    return this.window.gBrowserInit.delayedStartupFinished;
-  }
-
-  getBrowserForElement(element) {
-    let browser = this.browsers.get(element);
-    if (!browser) {
-      browser = new BrowserElement({
-        manager: this,
-        element,
-      });
-      this.browsers.set(element, browser);
-    }
-
-    return browser;
-  }
-
-  get selectedBrowser() {
-    return this.getBrowserForElement(this.gBrowser.selectedBrowser);
-  }
-
-  removeBrowser(browser) {
-    this.gBrowser.removeTab(browser.tabElement);
-  }
-}
-
-/**
  * Implements the text input part of the address bar UI.
  */
 class UrlbarInput {
@@ -375,22 +66,10 @@ class UrlbarInput {
    */
   constructor(options = {}) {
     this.textbox = options.textbox;
-    this.muxer = options.muxer;
 
     this.window = this.textbox.ownerGlobal;
-    if ("gBrowser" in this.window && this.window.gBrowser) {
-      this.browserManager = new TabBrowserManager({
-        input: this,
-      });
-    } else {
-      this.browserManager = new BrowserManager({
-        input: this,
-      });
-    }
-
     this.isPrivate = PrivateBrowsingUtils.isWindowPrivate(this.window);
     this.document = this.window.document;
-    this.isInitialPage = options.isInitialPage ?? (() => false);
 
     // Create the panel to contain results.
     this.textbox.appendChild(
@@ -505,8 +184,7 @@ class UrlbarInput {
 
     this.inputField = this.querySelector("#urlbar-input");
     this._inputContainer = this.querySelector("#urlbar-input-container");
-    // Needed for MR2 since the identity-box is no longer a child of the URL bar
-    this._identityBox = this.window.document.querySelector("#identity-box");
+    this._identityBox = this.querySelector("#identity-box");
     this._searchModeIndicator = this.querySelector(
       "#urlbar-search-mode-indicator"
     );
@@ -577,6 +255,8 @@ class UrlbarInput {
     // recording abandonment events when the command causes a blur event.
     this.view.panel.addEventListener("command", this, true);
 
+    this.window.gBrowser.tabContainer.addEventListener("TabSelect", this);
+
     this.window.addEventListener("customizationstarting", this);
     this.window.addEventListener("aftercustomization", this);
 
@@ -643,14 +323,14 @@ class UrlbarInput {
    *        otherwise.
    */
   setURI(uri = null, dueToTabSwitch = false) {
-    let value = this.browserManager.userTypedValue;
+    let value = this.window.gBrowser.userTypedValue;
     let valid = false;
 
     // Explicitly check for nulled out value. We don't want to reset the URL
     // bar if the user has deleted the URL and we'd just put the same URL
     // back. See bug 304198.
     if (value === null) {
-      uri = uri || this.browserManager.currentURI;
+      uri = uri || this.window.gBrowser.currentURI;
       // Strip off usernames and passwords for the location bar
       try {
         uri = Services.io.createExposableURI(uri);
@@ -659,8 +339,11 @@ class UrlbarInput {
       // Replace initial page URIs with an empty string
       // only if there's no opener (bug 370555).
       if (
-        this.isInitialPage(uri) &&
-        this.browserManager.selectedBrowser.checkEmptyPageOrigin(uri)
+        this.window.isInitialPage(uri) &&
+        BrowserUIUtils.checkEmptyPageOrigin(
+          this.window.gBrowser.selectedBrowser,
+          uri
+        )
       ) {
         value = "";
       } else {
@@ -675,16 +358,15 @@ class UrlbarInput {
       valid =
         !this.window.isBlankPageURL(uri.spec) || uri.schemeIs("moz-extension");
     } else if (
-      this.isInitialPage(value) &&
-      this.browserManager.selectedBrowser.checkEmptyPageOrigin()
+      this.window.isInitialPage(value) &&
+      BrowserUIUtils.checkEmptyPageOrigin(this.window.gBrowser.selectedBrowser)
     ) {
       value = "";
       valid = true;
     }
 
     let isDifferentValidValue = valid && value != this.untrimmedValue;
-    // Prevent newly-loaded URLs from being shown in the urlbar. FFX2021OV-106
-    this.value = "";
+    this.value = value;
     this.valueIsTyped = !valid;
     this.removeAttribute("usertyping");
     if (isDifferentValidValue) {
@@ -926,8 +608,8 @@ class UrlbarInput {
     // docshell wouldn't know about our engine restriction.
     // Also remember to invoke this._recordSearch, after replacing url with
     // the appropriate engine submission url.
-    let browser = this.browserManager.selectedBrowser;
-    let lastLocationChange = this.browser.lastLocationChange;
+    let browser = this.window.gBrowser.selectedBrowser;
+    let lastLocationChange = browser.lastLocationChange;
     UrlbarUtils.getHeuristicResultFor(url)
       .then(newResult => {
         // Because this happens asynchronously, we must verify that the browser
@@ -969,7 +651,7 @@ class UrlbarInput {
   }
 
   handleRevert() {
-    this.browserManager.userTypedValue = null;
+    this.window.gBrowser.userTypedValue = null;
     // Nullify search mode before setURI so it won't try to restore it.
     this.searchMode = null;
     this.setURI(null, true);
@@ -1004,7 +686,7 @@ class UrlbarInput {
     result,
     event,
     element = null,
-    browser = this.browserManager.selectedBrowser
+    browser = this.window.gBrowser.selectedBrowser
   ) {
     // When a one-off is selected, we restyle heuristic results to look like
     // search results. In the unlikely event that they are clicked, instead of
@@ -1109,7 +791,7 @@ class UrlbarInput {
         }
 
         this.handleRevert();
-        let prevBrowser = this.browserManager.selectedBrowser;
+        let prevTab = this.window.gBrowser.selectedTab;
         let loadOpts = {
           adoptIntoActiveWindow: UrlbarPrefs.get(
             "switchTabs.adoptIntoActiveWindow"
@@ -1123,13 +805,13 @@ class UrlbarInput {
           provider: result.providerName,
         });
 
-        let switched = this.browserManager.switchToTabHavingURI(
+        let switched = this.window.switchToTabHavingURI(
           Services.io.newURI(url),
           false,
           loadOpts
         );
-        if (switched && prevBrowser.isEmpty) {
-          this.browserManager.removeBrowser(prevBrowser);
+        if (switched && prevTab.isEmpty) {
+          this.window.gBrowser.removeTab(prevTab);
         }
         return;
       }
@@ -1163,7 +845,10 @@ class UrlbarInput {
           // See also URIFixupChild.jsm and keyword-uri-fixup.
           let fixupInfo = this._getURIFixupInfo(originalUntrimmedValue.trim());
           if (fixupInfo) {
-            this.browserManager.selectedBrowser.checkURIFixup(fixupInfo);
+            this.window.gKeywordURIFixup.check(
+              this.window.gBrowser.selectedBrowser,
+              fixupInfo
+            );
           }
         }
 
@@ -1548,7 +1233,7 @@ class UrlbarInput {
       // Avoid clobbering added spaces (for token aliases, for example).
       !this.value.endsWith(" ")
     ) {
-      this._setValue(this.browserManager.userTypedValue, false);
+      this._setValue(this.window.gBrowser.userTypedValue, false);
     }
 
     return false;
@@ -1611,8 +1296,10 @@ class UrlbarInput {
       isPrivate: this.isPrivate,
       maxResults: UrlbarPrefs.get("maxRichResults"),
       searchString,
-      userContextId: this.browserManager.selectedBrowser.userContextId,
-      currentPage: this.browserManager.currentURI.spec,
+      userContextId: this.window.gBrowser.selectedBrowser.getAttribute(
+        "usercontextid"
+      ),
+      currentPage: this.window.gBrowser.currentURI.spec,
       formHistoryName: this.formHistoryName,
       allowSearchSuggestions:
         !event ||
@@ -1620,10 +1307,6 @@ class UrlbarInput {
         !event.data ||
         event.data.length <= UrlbarPrefs.get("maxCharsForSearchSuggestions"),
     };
-
-    if (this.muxer) {
-      options.muxer = this.muxer;
-    }
 
     if (this.searchMode) {
       this.confirmSearchMode();
@@ -1858,12 +1541,12 @@ class UrlbarInput {
     }
 
     // Enter search mode if the browser is selected.
-    if (browser == this.browserManager.selectedBrowser) {
+    if (browser == this.window.gBrowser.selectedBrowser) {
       this._updateSearchModeUI(searchMode);
       if (searchMode) {
         // Set userTypedValue to the query string so that it's properly restored
         // when switching back to the current tab and across sessions.
-        this.browserManager.userTypedValue = this.untrimmedValue;
+        this.window.gBrowser.userTypedValue = this.untrimmedValue;
         this.valueIsTyped = true;
         if (!searchMode.isPreview && !areSearchModesSame) {
           try {
@@ -1881,7 +1564,7 @@ class UrlbarInput {
    */
   restoreSearchModeState() {
     let modes = this._searchModesByBrowser.get(
-      this.browserManager.selectedBrowser
+      this.window.gBrowser.selectedBrowser
     );
     this.searchMode = modes?.confirmed;
   }
@@ -1949,11 +1632,11 @@ class UrlbarInput {
   }
 
   get searchMode() {
-    return this.getSearchMode(this.browserManager.selectedBrowser);
+    return this.getSearchMode(this.window.gBrowser.selectedBrowser);
   }
 
   set searchMode(searchMode) {
-    this.setSearchMode(searchMode, this.browserManager.selectedBrowser);
+    this.setSearchMode(searchMode, this.window.gBrowser.selectedBrowser);
   }
 
   async updateLayoutBreakout() {
@@ -2421,7 +2104,7 @@ class UrlbarInput {
 
     let uri;
     if (this.getAttribute("pageproxystate") == "valid") {
-      uri = this.browserManager.currentURI;
+      uri = this.window.gBrowser.currentURI;
     } else {
       // The value could be:
       // 1. a trimmed url, set by selecting a result
@@ -2519,7 +2202,8 @@ class UrlbarInput {
   _recordSearch(engine, event, searchActionDetails = {}) {
     const isOneOff = this.view.oneOffSearchButtons.eventTargetIsAOneOff(event);
 
-    this.browserManager.selectedBrowser.recordSearchTelemetry(
+    BrowserSearchTelemetry.recordSearch(
+      this.window.gBrowser.selectedBrowser,
       engine,
       // Without checking !isOneOff, we might record the string
       // oneoff_urlbar-searchmode in the SEARCH_COUNTS probe (in addition to
@@ -2647,7 +2331,7 @@ class UrlbarInput {
    *   Details of the result type, if any.
    * @param {UrlbarUtils.RESULT_SOURCE} [result.source]
    *   Details of the result source, if any.
-   * @param {object} browser [optional] the `Browser` to use for the load.
+   * @param {object} browser [optional] the browser to use for the load.
    */
   _loadURL(
     url,
@@ -2655,7 +2339,7 @@ class UrlbarInput {
     openUILinkWhere,
     params,
     resultDetails = null,
-    browser = this.browserManager.selectedBrowser
+    browser = this.window.gBrowser.selectedBrowser
   ) {
     // No point in setting these because we'll handleRevert() a few rows below.
     if (openUILinkWhere == "current") {
@@ -2664,7 +2348,10 @@ class UrlbarInput {
     }
 
     // No point in setting this if we are loading in a new window.
-    if (openUILinkWhere != "window" && this.isInitialPage(url)) {
+    if (
+      openUILinkWhere != "window" &&
+      this.window.gInitialPages.includes(url)
+    ) {
       browser.initialPageLoadedFromUserAction = url;
     }
 
@@ -2683,7 +2370,7 @@ class UrlbarInput {
       params.triggeringPrincipal.isSystemPrincipal
     ) {
       // Reset DOS mitigations for the basic auth prompt.
-      browser.deleteAuthPromptAbuseCounter();
+      delete browser.authPromptAbuseCounter;
 
       // Reset temporary permissions on the current tab if the user reloads
       // the tab via the urlbar.
@@ -2692,13 +2379,14 @@ class UrlbarInput {
         browser.currentURI &&
         url === browser.currentURI.spec
       ) {
-        browser.clearTemporaryPermissions();
+        this.window.SitePermissions.clearTemporaryBlockPermissions(browser);
       }
     }
 
     params.allowThirdPartyFixup = true;
 
     if (openUILinkWhere == "current") {
+      params.targetBrowser = browser;
       params.indicateErrorPageLoad = true;
       params.allowPinnedTabHostChange = true;
       params.allowPopups = url.startsWith("javascript:");
@@ -2730,9 +2418,8 @@ class UrlbarInput {
     this._notifyStartNavigation(resultDetails);
 
     try {
-      browser.openTrustedUILink(url, openUILinkWhere, params);
+      this.window.openTrustedLinkIn(url, openUILinkWhere, params);
     } catch (ex) {
-      console.error(ex);
       // This load can throw an exception in certain cases, which means
       // we'll want to replace the URL with the loaded URL:
       if (ex.result != Cr.NS_ERROR_LOAD_SHOWED_ERRORPAGE) {
@@ -2784,7 +2471,7 @@ class UrlbarInput {
     if (
       where == "tab" &&
       reuseEmpty &&
-      this.browserManager.selectedBrowser.isEmpty
+      this.window.gBrowser.selectedTab.isEmpty
     ) {
       where = "current";
     }
@@ -2974,8 +2661,8 @@ class UrlbarInput {
 
     this.toggleAttribute("searchmode", true);
     // Clear autofill.
-    if (this._autofillPlaceholder && this.browserManager.userTypedValue) {
-      this.value = this.browserManager.userTypedValue;
+    if (this._autofillPlaceholder && this.window.gBrowser.userTypedValue) {
+      this.value = this.window.gBrowser.userTypedValue;
     }
     // Search mode should only be active when pageproxystate is invalid.
     if (this.getAttribute("pageproxystate") == "valid") {
@@ -3028,10 +2715,10 @@ class UrlbarInput {
 
     this.removeAttribute("focused");
 
-    if (this._autofillPlaceholder && this.browserManager.userTypedValue) {
+    if (this._autofillPlaceholder && this.window.gBrowser.userTypedValue) {
       // If we were autofilling, remove the autofilled portion, by restoring
       // the value to the last typed one.
-      this.value = this.browserManager.userTypedValue;
+      this.value = this.window.gBrowser.userTypedValue;
     } else if (this.value == this._focusUntrimmedValue) {
       // If the value was untrimmed by _on_focus and didn't change, trim it.
       this.value = this._focusUntrimmedValue;
@@ -3239,7 +2926,7 @@ class UrlbarInput {
     this._untrimmedValue = value;
     this._resultForCurrentValue = null;
 
-    this.browserManager.userTypedValue = value;
+    this.window.gBrowser.userTypedValue = value;
     // Unset userSelectionBehavior because the user is modifying the search
     // string, thus there's no valid selection. This is also used by the view
     // to set "aria-activedescendant", thus it should never get stale.
@@ -3479,7 +3166,7 @@ class UrlbarInput {
       try {
         const loadingBrowser = await this._keyDownEnterDeferred.promise;
         // Ensure the selected browser didn't change in the meanwhile.
-        if (this.browserManager.selectedBrowser === loadingBrowser) {
+        if (this.window.gBrowser.selectedBrowser === loadingBrowser) {
           loadingBrowser.focus();
           // Make sure the domain name stays visible for spoof protection and usability.
           this.selectionStart = this.selectionEnd = 0;
@@ -3519,7 +3206,7 @@ class UrlbarInput {
         // This can happen for example if we entered search mode typing a
         // a partial engine domain and selecting a tab-to-search result.
         if (!this.value) {
-          this.browserManager.userTypedValue = null;
+          this.window.gBrowser.userTypedValue = null;
         }
         this.confirmSearchMode();
       }
@@ -3575,8 +3262,8 @@ class UrlbarInput {
       return;
     }
 
-    let href = this.browserManager.currentURI.displaySpec;
-    let title = this.browserManager.contentTitle || href;
+    let href = this.window.gBrowser.currentURI.displaySpec;
+    let title = this.window.gBrowser.contentTitle || href;
 
     event.dataTransfer.setData("text/x-moz-url", `${href}\n${title}`);
     event.dataTransfer.setData("text/unicode", href);
@@ -3595,7 +3282,7 @@ class UrlbarInput {
     let droppedItem = getDroppableData(event);
     let droppedURL =
       droppedItem instanceof URL ? droppedItem.href : droppedItem;
-    if (droppedURL && droppedURL !== this.browserManager.currentURI.spec) {
+    if (droppedURL && droppedURL !== this.window.gBrowser.currentURI.spec) {
       let principal = Services.droppedLinkHandler.getTriggeringPrincipal(event);
       this.value = droppedURL;
       this.setPageProxyState("invalid");
@@ -3608,7 +3295,7 @@ class UrlbarInput {
       // the the dropped value, instead we want to keep showing the current page
       // url until an onLocationChange happens.
       // See the handling in `setURI` for further details.
-      this.browserManager.userTypedValue = null;
+      this.window.gBrowser.userTypedValue = null;
       this.setURI(null, true);
     }
   }

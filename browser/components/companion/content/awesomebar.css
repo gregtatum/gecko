@@ -4,22 +4,7 @@
 
 %filter substitution
 %define themeTransition background-color 0.1s cubic-bezier(.17,.67,.83,.67)
-%define urlbarBreakoutExtend 2px
-
-%include ../../../themes/shared/urlbar-searchbar.inc.css
-%include ../../../themes/shared/urlbarView.inc.css
-%include ../../../base/content/urlbar.inc.css
 %include ../../../themes/shared/browser-custom-colors.inc.css
-
-@import url("chrome://browser/content/urlbar.css");
-
-:root {
-  --identity-box-margin-inline: 4px;
-  --identity-box-label-opacity: .8;
-
-  --urlbar-min-height: 32px;
-  --urlbar-icon-padding: 6px; /* (32px - 2px border - 2px padding - 16px icon) / 2 */
-}
 
 @supports not -moz-bool-pref("browser.proton.enabled") {
   :root {
@@ -43,12 +28,6 @@
 
   :root:-moz-lwtheme-brighttext {
     --focus-outline-color: #00DDFF;
-  }
-}
-
-@media (prefers-contrast) {
-  :root {
-    --urlbar-box-unfocused-bg-overlay: var(--urlbar-box-bg-overlay)
   }
 }
 

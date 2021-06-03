@@ -65,6 +65,15 @@ class UrlbarController {
     if (!options.input) {
       throw new Error("Missing options: input");
     }
+    if (!options.input.window) {
+      throw new Error("input is missing 'window' property.");
+    }
+    if (
+      !options.input.window.location ||
+      options.input.window.location.href != AppConstants.BROWSER_CHROME_URL
+    ) {
+      throw new Error("input.window should be an actual browser window.");
+    }
     if (!("isPrivate" in options.input)) {
       throw new Error("input.isPrivate must be set.");
     }
@@ -428,12 +437,7 @@ class UrlbarController {
    */
   speculativeConnect(result, context, reason) {
     // Never speculative connect in private contexts.
-    if (
-      !this.input ||
-      !this.browserWindow ||
-      context.isPrivate ||
-      !context.results.length
-    ) {
+    if (!this.input || context.isPrivate || !context.results.length) {
       return;
     }
     let { url } = UrlbarUtils.getUrlFromResult(result);
