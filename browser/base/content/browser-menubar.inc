@@ -152,13 +152,14 @@
                               command="cmd_CustomizeToolbars" data-l10n-id="menu-view-customize-toolbar2"/>
                   </menupopup>
                 </menu>
-                <menu id="viewSidebarMenuMenu" data-l10n-id="menu-view-sidebar" hidden="true">
                   <menupopup id="viewSidebarMenu">
                     <menuitem id="menu_bookmarksSidebar"
                               type="checkbox"
+                              key="viewBookmarksSidebarKb"
                               oncommand="SidebarUI.toggle('viewBookmarksSidebar');" data-l10n-id="menu-view-bookmarks"/>
                     <menuitem id="menu_historySidebar"
                               type="checkbox"
+                              key="key_gotoHistory"
                               oncommand="SidebarUI.toggle('viewHistorySidebar');" data-l10n-id="menu-view-history-button"/>
                     <menuitem id="menu_tabsSidebar"
                               type="checkbox"
@@ -379,9 +380,7 @@
               <menuitem id="menu_openDownloads"
                         key="key_openDownloads"
                         command="Tools:Downloads" data-l10n-id="menu-tools-downloads"/>
-<!--              <menuitem id="menu_openAddons"
                         key="key_openAddons"
-                        command="Tools:Addons" data-l10n-id="menu-tools-addons-and-themes"/> -->
 
               <!-- only one of sync-setup, sync-enable, sync-unverifieditem, sync-syncnowitem or sync-reauthitem will be showing at once -->
               <menuitem id="sync-setup"
