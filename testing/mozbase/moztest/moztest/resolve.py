@@ -104,17 +104,6 @@ TEST_SUITES = {
             "test-verify($|.*(-1|[^0-9])$)",
         ],
     },
-    "mochitest-browser-chrome-companion": {
-        "aliases": ("co", "companion"),
-        "build_flavor": "browser-chrome",
-        "mach_command": "mochitest",
-        "kwargs": {
-            "flavor": "browser-chrome",
-            "subsuite": "companion",
-            "test_paths": None,
-        },
-        "task_regex": ["mochitest-browser-chrome-companion($|.*(-1|[^0-9])$)"],
-    },
     "mochitest-browser-chrome-screenshots": {
         "aliases": ("ss", "screenshots-chrome"),
         "build_flavor": "browser-chrome",
@@ -374,7 +363,6 @@ _test_flavors = {
 }
 
 _test_subsuites = {
-    ("browser-chrome", "companion"): "mochitest-browser-chrome-companion",
     ("browser-chrome", "devtools"): "mochitest-devtools-chrome",
     ("browser-chrome", "remote"): "mochitest-remote",
     ("browser-chrome", "screenshots"): "mochitest-browser-chrome-screenshots",
