@@ -119,7 +119,58 @@
            overflowpanel="widget-overflow"
            context="toolbar-context-menu">
 
+#ifdef PROCLIENT_WINDOW
+    <hbox id="companion-titlebar">
+      <vbox pack="start">
+        <hbox>
+          <hbox id="companion-mac-buttonbox"/>
+          <toolbarbutton
+            id="companion-sidebar-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
+            oncommand="CompanionService.dockAndToggle()"
+            onclick="checkForMiddleClick(this, event);"/>
+        </hbox>
+      </vbox>
+      <hbox flex="1" pack="end" id="companion-titlebar-inner">
+        <toolbarbutton
+          id="companion-undock-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
+          oncommand="CompanionService.undockCompanion()"
+          onclick="checkForMiddleClick(this, event);"/>
+      </hbox>
+    </hbox>
+
     <toolbartabstop/>
+    <hbox id="companion-toolbar" flex="1">
+      <toolbarbutton id="companion-back-button" class="toolbarbutton-1"
+                     data-l10n-id="toolbar-button-back-2"
+                     command="Browser:BackOrBackDuplicate"
+                     onclick="checkForMiddleClick(this, event);"
+                     tooltip="back-button-tooltip"
+                     context="backForwardMenu"/>
+      <toolbarbutton id="companion-forward-button" class="toolbarbutton-1"
+                     data-l10n-id="toolbar-button-back-2"
+                     command="Browser:ForwardOrForwardDuplicate"
+                     onclick="checkForMiddleClick(this, event);"
+                     tooltip="forward-button-tooltip"
+                     context="backForwardMenu"/>
+      <vbox id="companion-view-manager" pack="center" context="companion-view-manager-contextmenu">
+        <label id="companion-page-title" crop="end"/>
+        <hbox>
+        <box id="companion-identity-box"/>
+        <label id="companion-page-domain"/>
+      </hbox>
+      </vbox>
+      <toolbarbutton id="companion-reload-button" class="toolbarbutton-1"
+                     data-l10n-id="toolbar-button-reload"
+                     command="Browser:ReloadOrDuplicate"
+                     onclick="checkForMiddleClick(this, event);"
+                     tooltip="dynamic-shortcut-tooltip"/>
+      <toolbarbutton id="companion-copy-button" class="toolbarbutton-1"
+                     data-l10n-id="page-action-copy-url-urlbar"
+                     onclick="CompanionService.copy(this, gBrowser.currentURI.spec);"/>
+    </hbox>
+#else
+    <toolbartabstop/>
+#endif
 
     <hbox id="nav-bar-customization-target" flex="1">
       <toolbarbutton id="back-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
@@ -472,6 +523,12 @@
                      data-l10n-id="browser-window-close-button"
                      oncommand="BrowserTryToCloseWindow(event);"/>
     </hbox>
+#ifdef PROCLIENT_WINDOW
+    <hbox id="companion-window-controls" pack="end" skipintoolbarset="true"
+          style="-moz-box-ordinal-group: 1000;">
+#include titlebar-items.inc.xhtml
+    </hbox>
+#endif
   </toolbar>
 
   <toolbar id="PersonalToolbar"

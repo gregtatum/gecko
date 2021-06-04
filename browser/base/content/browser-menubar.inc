@@ -152,6 +152,8 @@
                               command="cmd_CustomizeToolbars" data-l10n-id="menu-view-customize-toolbar2"/>
                   </menupopup>
                 </menu>
+#ifndef PROCLIENT_WINDOW
+                <menu id="viewSidebarMenuMenu" data-l10n-id="menu-view-sidebar">
                   <menupopup id="viewSidebarMenu">
                     <menuitem id="menu_bookmarksSidebar"
                               type="checkbox"
@@ -167,6 +169,7 @@
                               oncommand="SidebarUI.toggle('viewTabsSidebar');" data-l10n-id="menu-view-synced-tabs-sidebar"/>
                   </menupopup>
                 </menu>
+#endif
                 <menuseparator/>
                 <menu id="viewFullZoomMenu"
                       onpopupshowing="FullZoom.updateMenu();" data-l10n-id="menu-view-full-zoom">
@@ -380,7 +383,11 @@
               <menuitem id="menu_openDownloads"
                         key="key_openDownloads"
                         command="Tools:Downloads" data-l10n-id="menu-tools-downloads"/>
+#ifndef PROCLIENT_WINDOW
+              <menuitem id="menu_openAddons"
                         key="key_openAddons"
+                        command="Tools:Addons" data-l10n-id="menu-tools-addons-and-themes"/>
+#endif
 
               <!-- only one of sync-setup, sync-enable, sync-unverifieditem, sync-syncnowitem or sync-reauthitem will be showing at once -->
               <menuitem id="sync-setup"

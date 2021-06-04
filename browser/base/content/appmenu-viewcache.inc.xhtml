@@ -125,12 +125,14 @@
                      label="&logins.label;"
                      oncommand="LoginHelper.openPasswordManager(window, { entryPoint: 'mainmenu' })"
                      />
+#ifndef PROCLIENT_WINDOW
       <toolbarbutton id="appMenu-addons-button"
                      class="subviewbutton subviewbutton-iconic"
                      data-l10n-id="appmenuitem-addons-and-themes"
                      key="key_openAddons"
                      command="Tools:Addons"
                      />
+#endif
       <toolbarbutton id="appMenu-preferences-button"
                      class="subviewbutton subviewbutton-iconic"
 #ifdef XP_WIN
@@ -277,12 +279,14 @@
                      data-l10n-id="appmenuitem-passwords"
                      oncommand="LoginHelper.openPasswordManager(window, { entryPoint: 'mainmenu' })"
                      />
+#ifndef PROCLIENT_WINDOW
       <toolbarbutton id="appMenu-extensions-themes-button"
                      class="subviewbutton"
                      data-l10n-id="appmenuitem-addons-and-themes"
                      key="key_openAddons"
                      command="Tools:Addons"
                      />
+#endif
       <toolbarseparator/>
       <toolbarbutton id="appMenu-print-button2"
                      class="subviewbutton"
@@ -337,6 +341,12 @@
                      key="key_preferencesCmdMac"
 #endif
                      oncommand="openPreferences()"/>
+#ifdef PROCLIENT_WINDOW
+      <toolbarbutton id="companion-settings-button"
+                     label="Companion Settings"
+                     class="subviewbutton"
+                     oncommand="ToggleCompanionSettings()"/>
+#endif
       <toolbarbutton id="appMenu-more-button2"
                      class="subviewbutton subviewbutton-nav"
                      data-l10n-id="appmenuitem-more-tools"

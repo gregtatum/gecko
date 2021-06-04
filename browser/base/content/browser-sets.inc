@@ -124,8 +124,13 @@
          data-l10n-id="window-new-shortcut"
          command="cmd_newNavigator"
          modifiers="accel" reserved="true"/>
+#ifdef PROCLIENT_WINDOW
     <key id="key_newNavigatorTab" data-l10n-id="tab-new-shortcut" modifiers="accel"
          command="Browser:OpenLocation" reserved="true"/>
+#else
+    <key id="key_newNavigatorTab" data-l10n-id="tab-new-shortcut" modifiers="accel"
+         command="cmd_newNavigatorTabNoEvent" reserved="true"/>
+#endif
     <key id="focusURLBar" data-l10n-id="location-open-shortcut" command="Browser:OpenLocation"
          modifiers="accel"/>
 #ifndef XP_MACOSX
@@ -264,6 +269,12 @@
          oncommand="PlacesUIUtils.showBookmarkPagesDialog(PlacesCommandHook.uniqueCurrentPages);"
          modifiers="accel,shift"/>
     <key id="manBookmarkKb" data-l10n-id="bookmark-show-library-shortcut" command="Browser:ShowAllBookmarks" modifiers="accel,shift"/>
+#ifndef PROCLIENT_WINDOW
+    <key id="viewBookmarksSidebarKb"
+         data-l10n-id="bookmark-show-sidebar-shortcut"
+         modifiers="accel"
+         oncommand="SidebarUI.toggle('viewBookmarksSidebar');"/>
+#endif
     <key id="viewBookmarksToolbarKb"
          data-l10n-id="bookmark-show-toolbar-shortcut"
          oncommand="BookmarkingUI.toggleBookmarksToolbar('shortcut');"
@@ -273,6 +284,17 @@
 
 #ifdef XP_MACOSX
     <key id="key_stop_mac" modifiers="accel" data-l10n-id="nav-stop-shortcut" command="Browser:Stop"/>
+#endif
+
+#ifndef PROCLIENT_WINDOW
+    <key id="key_gotoHistory"
+         data-l10n-id="history-sidebar-shortcut"
+#ifdef XP_MACOSX
+         modifiers="accel,shift"
+#else
+         modifiers="accel"
+#endif
+         oncommand="SidebarUI.toggle('viewHistorySidebar');"/>
 #endif
 
     <key id="key_fullZoomReduce" data-l10n-id="full-zoom-reduce-shortcut" command="cmd_fullZoomReduce"  modifiers="accel"/>

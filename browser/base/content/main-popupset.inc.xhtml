@@ -284,12 +284,16 @@
     <toolbarbutton id="sidebar-switcher-bookmarks"
                    data-l10n-id="sidebar-menu-bookmarks"
                    class="subviewbutton"
+#ifndef PROCLIENT_WINDOW
                    key="viewBookmarksSidebarKb"
+#endif
                    oncommand="SidebarUI.show('viewBookmarksSidebar');"/>
     <toolbarbutton id="sidebar-switcher-history"
                    data-l10n-id="sidebar-menu-history"
                    class="subviewbutton"
+#ifndef PROCLIENT_WINDOW
                    key="key_gotoHistory"
+#endif
                    oncommand="SidebarUI.show('viewHistorySidebar');"/>
     <toolbarbutton id="sidebar-switcher-tabs"
                    data-l10n-id="sidebar-menu-synced-tabs"
