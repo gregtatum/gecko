@@ -22,6 +22,7 @@
 <?xml-stylesheet href="chrome://browser/content/downloads/downloads.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/content/places/places.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/content/usercontext/usercontext.css" type="text/css"?>
+<?xml-stylesheet href="chrome://browser/content/companion/browser.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/skin/" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/skin/controlcenter/panel.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/skin/customizableui/panelUI.css" type="text/css"?>
@@ -241,7 +242,6 @@
     <panel is="search-autocomplete-richlistbox-popup"
            type="autocomplete-richlistbox"
            id="PopupSearchAutoComplete"
-           orient="vertical"
            role="group"
            noautofocus="true"
            hidden="true" />
@@ -409,12 +409,10 @@
       <toolbarbutton id="sidebar-switcher-bookmarks"
                      data-l10n-id="sidebar-menu-bookmarks"
                      class="subviewbutton"
-                     key="viewBookmarksSidebarKb"
                      oncommand="SidebarUI.show('viewBookmarksSidebar');"/>
       <toolbarbutton id="sidebar-switcher-history"
                      data-l10n-id="sidebar-menu-history"
                      class="subviewbutton"
-                     key="key_gotoHistory"
                      oncommand="SidebarUI.show('viewHistorySidebar');"/>
       <toolbarbutton id="sidebar-switcher-tabs"
                      data-l10n-id="sidebar-menu-synced-tabs"
@@ -556,7 +554,7 @@
 
 #include ../../components/places/content/placesContextMenu.inc.xhtml
 
-    <panel id="ctrlTab-panel" hidden="true" norestorefocus="true" level="top" orient="vertical">
+    <panel id="ctrlTab-panel" hidden="true" norestorefocus="true" level="top">
       <hbox id="ctrlTab-previews"/>
       <hbox id="ctrlTab-showAll-container" pack="center"/>
     </panel>
@@ -615,8 +613,7 @@
 
     <tooltip id="tabbrowser-tab-tooltip"
              class="places-tooltip"
-             onpopupshowing="gBrowser.createTooltip(event);"
-             onpopuphiding="this.removeAttribute('position')">
+             onpopupshowing="gBrowser.createTooltip(event);">
       <vbox class="places-tooltip-box" flex="1">
         <description class="tooltip-label places-tooltip-title"/>
         <hbox>
@@ -861,12 +858,14 @@
                        label="&logins.label;"
                        oncommand="LoginHelper.openPasswordManager(window, { entryPoint: 'mainmenu' })"
                        />
+<!-- MR2
         <toolbarbutton id="appMenu-addons-button"
                        class="subviewbutton subviewbutton-iconic"
                        data-l10n-id="appmenuitem-addons-and-themes"
                        key="key_openAddons"
                        command="Tools:Addons"
                        />
+-->
         <toolbarbutton id="appMenu-preferences-button"
                        class="subviewbutton subviewbutton-iconic"
 #ifdef XP_WIN
@@ -1013,12 +1012,14 @@
                        data-l10n-id="appmenuitem-passwords"
                        oncommand="LoginHelper.openPasswordManager(window, { entryPoint: 'mainmenu' })"
                        />
+<!-- MR2
         <toolbarbutton id="appMenu-extensions-themes-button"
                        class="subviewbutton"
                        data-l10n-id="appmenuitem-addons-and-themes"
                        key="key_openAddons"
                        command="Tools:Addons"
                        />
+-->
         <toolbarseparator/>
         <toolbarbutton id="appMenu-print-button2"
                        class="subviewbutton"
@@ -1073,6 +1074,10 @@
                        key="key_preferencesCmdMac"
 #endif
                        oncommand="openPreferences()"/>
+        <toolbarbutton id="companion-settings-button"
+                       label="Companion Settings"
+                       class="subviewbutton"
+                       oncommand="ToggleCompanionSettings()"/>
         <toolbarbutton id="appMenu-more-button2"
                        class="subviewbutton subviewbutton-nav"
                        data-l10n-id="appmenuitem-more-tools"
@@ -1776,7 +1781,55 @@
              overflowpanel="widget-overflow"
              context="toolbar-context-menu">
 
+      <hbox id="companion-titlebar">
+        <vbox pack="start">
+          <hbox>
+            <hbox id="companion-mac-buttonbox"/>
+            <toolbarbutton
+              id="companion-sidebar-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
+              oncommand="CompanionService.dockAndToggle()"
+              onclick="checkForMiddleClick(this, event);"/>
+          </hbox>
+        </vbox>
+        <hbox flex="1" pack="end" id="companion-titlebar-inner">
+          <toolbarbutton
+            id="companion-undock-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
+            oncommand="CompanionService.undockCompanion()"
+            onclick="checkForMiddleClick(this, event);"/>
+        </hbox>
+      </hbox>
+
       <toolbartabstop/>
+      <hbox id="companion-toolbar" flex="1">
+        <toolbarbutton id="companion-back-button" class="toolbarbutton-1"
+                       data-l10n-id="toolbar-button-back-2"
+                       command="Browser:BackOrBackDuplicate"
+                       onclick="checkForMiddleClick(this, event);"
+                       tooltip="back-button-tooltip"
+                       context="backForwardMenu"/>
+        <toolbarbutton id="companion-forward-button" class="toolbarbutton-1"
+                       data-l10n-id="toolbar-button-back-2"
+                       command="Browser:ForwardOrForwardDuplicate"
+                       onclick="checkForMiddleClick(this, event);"
+                       tooltip="forward-button-tooltip"
+                       context="backForwardMenu"/>
+        <vbox id="companion-view-manager" pack="center" context="companion-view-manager-contextmenu">
+          <label id="companion-page-title" crop="end"/>
+          <hbox>
+          <box id="companion-identity-box"/>
+          <label id="companion-page-domain"/>
+        </hbox>
+        </vbox>
+        <toolbarbutton id="companion-reload-button" class="toolbarbutton-1"
+                       data-l10n-id="toolbar-button-reload"
+                       command="Browser:ReloadOrDuplicate"
+                       onclick="checkForMiddleClick(this, event);"
+                       tooltip="dynamic-shortcut-tooltip"/>
+        <toolbarbutton id="companion-copy-button" class="toolbarbutton-1"
+                       data-l10n-id="page-action-copy-url-urlbar"
+                       onclick="CompanionService.copy(this, gBrowser.currentURI.spec);"/>
+      </hbox>
+
       <hbox id="nav-bar-customization-target" flex="1">
         <toolbarbutton id="back-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
                        data-l10n-id="toolbar-button-back-2"
@@ -1828,11 +1881,6 @@
             <hbox id="urlbar-input-container"
                   flex="1"
                   pageproxystate="invalid">
-              <box id="remote-control-box"
-                   align="center"
-                   collapsed="true">
-                  <image id="remote-control-icon"/>
-              </box>
               <box id="urlbar-search-button"
                    class="chromeclass-toolbar-additional"/>
               <!-- Use onclick instead of normal popup= syntax since the popup
@@ -1862,6 +1910,8 @@
                      onclick="gIdentityHandler.handleIdentityButtonEvent(event); PageProxyClickHandler(event);"
                      onkeypress="gIdentityHandler.handleIdentityButtonEvent(event);">
                   <image id="identity-icon"/>
+                  <image id="remote-control-icon"
+                       data-l10n-id="urlbar-remote-control-notification-anchor"/>
                   <label id="identity-icon-label" class="plain" crop="center" flex="1"/>
                 </box>
                 <box id="identity-permission-box"
@@ -1990,44 +2040,38 @@
                   <hbox id="cfr-label-container">
                     <label id="cfr-label"/>
                   </hbox>
-                  <hbox id="cfr-button"
-                        role="presentation"
-                        class="urlbar-page-action urlbar-icon-wrapper">
-                    <image class="urlbar-icon"/>
-                  </hbox>
+                  <image id="cfr-button"
+                         class="urlbar-icon urlbar-page-action"
+                         role="presentation"/>
                 </hbox>
                 <hbox id="userContext-icons" hidden="true">
                   <label id="userContext-label"/>
                   <image id="userContext-indicator"/>
                 </hbox>
-                <hbox id="reader-mode-button"
-                      class="urlbar-page-action urlbar-icon-wrapper"
-                      role="button"
-                      hidden="true"
-                      tooltip="dynamic-shortcut-tooltip"
-                      onclick="AboutReaderParent.buttonClick(event);">
-                  <image id="reader-mode-button-icon"
-                         class="urlbar-icon"/>
-                </hbox>
+                <image id="reader-mode-button"
+                       class="urlbar-icon urlbar-page-action"
+                       tooltip="dynamic-shortcut-tooltip"
+                       role="button"
+                       hidden="true"
+                       onclick="AboutReaderParent.buttonClick(event);"/>
                 <toolbarbutton id="urlbar-zoom-button"
                        onclick="FullZoom.reset(); FullZoom.resetScalingZoom();"
                        tooltip="dynamic-shortcut-tooltip"
                        hidden="true"/>
-                <hbox id="pageActionButton"
-                      class="urlbar-page-action urlbar-icon-wrapper"
-                      role="button"
-                      data-l10n-id="urlbar-page-action-button"
-                      onmousedown="BrowserPageActions.mainButtonClicked(event);"
-                      onkeypress="BrowserPageActions.mainButtonClicked(event);">
-                  <image class="urlbar-icon"/>
-                </hbox>
+                <box id="pageActionSeparator" class="urlbar-page-action"/>
+                <image id="pageActionButton"
+                       class="urlbar-icon urlbar-page-action"
+                       role="button"
+                       data-l10n-id="urlbar-page-action-button"
+                       onmousedown="BrowserPageActions.mainButtonClicked(event);"
+                       onkeypress="BrowserPageActions.mainButtonClicked(event);"/>
                 <hbox id="star-button-box"
                       hidden="true"
-                      role="button"
-                      class="urlbar-page-action urlbar-icon-wrapper"
+                      class="urlbar-icon-wrapper urlbar-page-action"
                       onclick="BrowserPageActions.doCommandForAction(PageActions.actionForID('bookmark'), event, this);">
                   <image id="star-button"
-                         class="urlbar-icon"/>
+                         class="urlbar-icon"
+                         role="button"/>
                 </hbox>
               </hbox>
             </hbox>
@@ -2126,7 +2170,11 @@
 
         <toolbarbutton id="close-button"
                        data-l10n-id="browser-window-close-button"
-                       oncommand="BrowserTryToCloseWindow(event);"/>
+                       oncommand="BrowserTryToCloseWindow();"/>
+      </hbox>
+      <hbox id="companion-window-controls" pack="end" skipintoolbarset="true"
+            style="-moz-box-ordinal-group: 1000;">
+#include titlebar-items.inc.xhtml
       </hbox>
     </toolbar>
 
@@ -2362,6 +2410,10 @@
   </toolbox>
   </box>
 
+  <hbox flex="1">
+  <vbox id="companion-box"/>
+
+  <vbox flex="1">
   <hbox flex="1" id="browser">
     <vbox id="sidebar-box" hidden="true" class="chromeclass-extrachrome">
       <box id="sidebar-header" align="center">
@@ -2434,5 +2486,8 @@
 
   <!-- Put it at the very end to make sure it's not covered by anything. -->
   <html:div id="fullscr-toggler" hidden="hidden"/>
+
+  </vbox>
+  </hbox>
 </html:body>
 </html>

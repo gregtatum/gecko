@@ -19,6 +19,8 @@
   #endif
 #endif
 
+pref("browser.proclient.enabled", true);
+
 pref("browser.hiddenWindowChromeURL", "chrome://browser/content/hiddenWindowMac.xhtml");
 
 // Enables some extra Extension System Logging (can reduce performance)
