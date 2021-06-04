@@ -701,7 +701,6 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
         ]:
             return False
 
-
         if task.attributes.get("kind") not in [
             "test",
             "source-test",
@@ -717,10 +716,7 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
                     return False
 
         if "unittest_suite" in task.attributes:
-            if task.attributes["unittest_suite"] not in [
-                # "xpcshell",
-                "mochitest-browser-chrome",
-            ]:
+            if not task.attributes["unittest_suite"].endswith("-companion"):
                 return False
 
             if task.attributes.get("unittest_variant", "") != "":

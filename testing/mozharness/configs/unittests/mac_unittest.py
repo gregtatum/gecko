@@ -129,6 +129,11 @@ config = {
         "mochitest-chrome": ["--flavor=chrome", "--chunk-by-dir=4", "--disable-e10s"],
         "mochitest-chrome-gpu": ["--flavor=chrome", "--subsuite=gpu", "--disable-e10s"],
         "mochitest-browser-chrome": ["--flavor=browser", "--chunk-by-runtime"],
+        "mochitest-browser-chrome-companion": [
+            "--flavor=browser",
+            "--subsuite=companion",
+            "--chunk-by-runtime",
+        ],
         "mochitest-browser-chrome-screenshots": [
             "--flavor=browser",
             "--subsuite=screenshots",
