@@ -9,6 +9,16 @@ var { XPCOMUtils } = ChromeUtils.import(
 
 ChromeUtils.import("resource://gre/modules/NotificationDB.jsm");
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
+if (!AppConstants.PROCLIENT_ENABLED) {
+  throw new Error(
+    "We should not be importing the CompanionService if procient is not enabled."
+  );
+}
+
 XPCOMUtils.defineLazyModuleGetters(this, {
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
 });

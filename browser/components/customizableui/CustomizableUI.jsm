@@ -266,7 +266,7 @@ var CustomizableUIInternal = {
       "downloads-button",
       gProtonToolbarEnabled ? null : "library-button",
       AppConstants.MOZ_DEV_EDITION ? "developer-button" : null,
-      AppConstants.COMPANION_UI_ENABLED ? null : "sidebar-button",
+      AppConstants.PROCLIENT_ENABLED ? null : "sidebar-button",
       "fxa-toolbar-menu-button",
     ].filter(name => name);
 

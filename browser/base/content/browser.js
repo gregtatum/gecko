@@ -762,7 +762,10 @@ function UpdateBackForwardCommands(aWebNavigation) {
 
   var backDisabled = backCommand.hasAttribute("disabled");
   var forwardDisabled = forwardCommand.hasAttribute("disabled");
-  if (backDisabled == CompanionGlobalHistory.canGoBack(window)) {
+  let canGoBack = AppConstants.PROCLIENT_ENABLED
+    ? CompanionGlobalHistory.canGoBack(window)
+    : aWebNavigation.canGoBack;
+  if (backDisabled == canGoBack) {
     if (backDisabled) {
       backCommand.removeAttribute("disabled");
     } else {
@@ -770,7 +773,10 @@ function UpdateBackForwardCommands(aWebNavigation) {
     }
   }
 
-  if (forwardDisabled == CompanionGlobalHistory.canGoForward(window)) {
+  let canGoForward = AppConstants.PROCLIENT_ENABLED
+    ? CompanionGlobalHistory.canGoForward(window)
+    : aWebNavigation.canGoForward;
+  if (forwardDisabled == canGoForward) {
     if (forwardDisabled) {
       forwardCommand.removeAttribute("disabled");
     } else {
@@ -1722,12 +1728,14 @@ var gBrowserInit = {
     delete window._gBrowser;
     gBrowser.init();
 
-    CompanionService.addBrowserWindow(window);
-    CompanionGlobalHistory.addBrowserWindow(window);
-    CompanionGlobalHistory.addEventListener(
-      "CompanionGlobalHistoryChange",
-      UpdateBackForwardCommands
-    );
+    if (AppConstants.PROCLIENT_ENABLED) {
+      CompanionService.addBrowserWindow(window);
+      CompanionGlobalHistory.addBrowserWindow(window);
+      CompanionGlobalHistory.addEventListener(
+        "CompanionGlobalHistoryChange",
+        UpdateBackForwardCommands
+      );
+    }
 
     BrowserWindowTracker.track(window);
 
@@ -2533,11 +2541,13 @@ var gBrowserInit = {
 
     BrowserSearch.uninit();
 
-    CompanionGlobalHistory.removeBrowserWindow(window);
-    CompanionGlobalHistory.removeEventListener(
-      "CompanionGlobalHistoryChange",
-      UpdateBackForwardCommands
-    );
+    if (AppConstants.PROCLIENT_ENABLED) {
+      CompanionGlobalHistory.removeBrowserWindow(window);
+      CompanionGlobalHistory.removeEventListener(
+        "CompanionGlobalHistoryChange",
+        UpdateBackForwardCommands
+      );
+    }
     NewTabPagePreloading.removePreloadedBrowser(window);
 
     // Now either cancel delayedStartup, or clean up the services initialized from
@@ -2701,7 +2711,10 @@ function gotoHistoryIndex(aEvent) {
 function BrowserForward(aEvent) {
   // browserForward returns true if it handled the request.
   // otherwise, let the current code do its thing.
-  if (CompanionGlobalHistory.browserForward(window)) {
+  if (
+    AppConstants.PROCLIENT_ENABLED &&
+    CompanionGlobalHistory.browserForward(window)
+  ) {
     return;
   }
   let where = whereToOpenLink(aEvent, false, true);
@@ -2718,7 +2731,10 @@ function BrowserForward(aEvent) {
 function BrowserBack(aEvent) {
   // browserBack returns true if it handled the request.
   // otherwise, let the current code do its thing.
-  if (CompanionGlobalHistory.browserBack(window)) {
+  if (
+    AppConstants.PROCLIENT_ENABLED &&
+    CompanionGlobalHistory.browserBack(window)
+  ) {
     return;
   }
   let where = whereToOpenLink(aEvent, false, true);

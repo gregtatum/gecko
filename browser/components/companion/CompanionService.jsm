@@ -6,6 +6,15 @@ const EXPORTED_SYMBOLS = ["CompanionService"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
+if (!AppConstants.PROCLIENT_ENABLED) {
+  throw new Error(
+    "We should not be importing the CompanionService if procient is not enabled."
+  );
+}
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   Services: "resource://gre/modules/Services.jsm",

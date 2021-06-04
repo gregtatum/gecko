@@ -493,22 +493,6 @@ let JSWINDOWACTORS = {
     allFrames: true,
   },
 
-  Engagement: {
-    parent: {
-      moduleURI: "resource:///actors/EngagementParent.jsm",
-    },
-    child: {
-      moduleURI: "resource:///actors/EngagementChild.jsm",
-      group: "browsers",
-      events: {
-        DOMContentLoaded: {},
-        pageshow: { mozSystemGroup: true },
-        pagehide: { mozSystemGroup: true },
-        load: { mozSystemGroup: true },
-      },
-    },
-  },
-
   FormValidation: {
     parent: {
       moduleURI: "resource:///actors/FormValidationParent.jsm",
@@ -764,6 +748,24 @@ let JSWINDOWACTORS = {
     allFrames: true,
   },
 };
+
+if (AppConstants.PROCLIENT_ENABLED) {
+  JSWINDOWACTORS.Engagement = {
+    parent: {
+      moduleURI: "resource:///actors/EngagementParent.jsm",
+    },
+    child: {
+      moduleURI: "resource:///actors/EngagementChild.jsm",
+      group: "browsers",
+      events: {
+        DOMContentLoaded: {},
+        pageshow: { mozSystemGroup: true },
+        pagehide: { mozSystemGroup: true },
+        load: { mozSystemGroup: true },
+      },
+    },
+  };
+}
 
 (function earlyBlankFirstPaint() {
   let startTime = Cu.now();
@@ -1951,7 +1953,9 @@ BrowserGlue.prototype = {
     }
 
     BrowserUsageTelemetry.uninit();
-    Engagement.uninit();
+    if (AppConstants.PROCLIENT_ENABLED) {
+      Engagement.uninit();
+    }
     SearchSERPTelemetry.uninit();
     PageThumbs.uninit();
     NewTabUtils.uninit();
@@ -2155,7 +2159,9 @@ BrowserGlue.prototype = {
     this._windowsWereRestored = true;
 
     BrowserUsageTelemetry.init();
-    Engagement.init();
+    if (AppConstants.PROCLIENT_ENABLED) {
+      Engagement.init();
+    }
     SearchSERPTelemetry.init();
 
     Interactions.init();

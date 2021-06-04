@@ -49,6 +49,9 @@ ChromeUtils.defineModuleGetter(
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 const TOGGLE_ENABLED_PREF =
   "media.videocontrols.picture-in-picture.video-toggle.enabled";
@@ -578,7 +581,12 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
     });
     this.addMouseButtonListeners();
     state.isTrackingVideos = true;
-    this.sendAsyncMessage("PictureInPicture:StartTrackingMouseOverVideos", {});
+    if (AppConstants.PROCLIENT_ENABLED) {
+      this.sendAsyncMessage(
+        "PictureInPicture:StartTrackingMouseOverVideos",
+        {}
+      );
+    }
   }
 
   /**
@@ -614,7 +622,9 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
       this.onMouseLeaveVideo(oldOverVideo);
     }
     state.isTrackingVideos = false;
-    this.sendAsyncMessage("PictureInPicture:StopTrackingMouseOverVideos", {});
+    if (AppConstants.PROCLIENT_ENABLED) {
+      this.sendAsyncMessage("PictureInPicture:StopTrackingMouseOverVideos", {});
+    }
   }
 
   /**
