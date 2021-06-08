@@ -5,7 +5,7 @@
 // These come from utilityOverlay.js
 /* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
 
-import { openUrl, timeFormat } from "./shared.js";
+import { openUrl, timeFormat, getPlacesData } from "./shared.js";
 
 const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
@@ -23,7 +23,6 @@ class Event extends HTMLElement {
     super();
     this.service = service;
     this.data = data;
-
     this.className = "event card";
 
     let template = document.getElementById("template-event");
@@ -36,10 +35,13 @@ class Event extends HTMLElement {
     fragment.querySelector(".date").textContent = date;
     fragment.querySelector(".summary").textContent = this.data.summary;
 
-    fragment
-      .querySelector(".event-info")
-      .addEventListener("click", () => this.openCalendar());
-
+    fragment.querySelector(".event-info").addEventListener("click", event => {
+      if (event.target.nodeName == "a") {
+        openUrl(event.target.href);
+      } else {
+        this.openCalendar();
+      }
+    });
     let conferenceIcon = fragment.querySelector(".conference-icon");
     if (this.data.conference && this.data.conference.icon) {
       conferenceIcon.src = this.data.conference.icon;
@@ -50,7 +52,6 @@ class Event extends HTMLElement {
     } else {
       conferenceIcon.style.display = "none";
     }
-
     this.appendChild(fragment);
 
     /*
@@ -79,6 +80,26 @@ class Event extends HTMLElement {
         rtf.format(daysApart, "day") + " " + formattedEventDate;
     }
 */
+  }
+
+  async connectedCallback() {
+    let formattedLinks = await Promise.all(
+      this.data.links.map(async link => {
+        return {
+          url: link.url,
+          text: link.text || (await getPlacesData(link.url))?.title || link.url,
+        };
+      })
+    );
+
+    for (let link of formattedLinks) {
+      let div = document.createElement("div");
+      let a = document.createElement("a");
+      a.textContent = link.text;
+      a.setAttribute("href", link.url);
+      div.appendChild(a);
+      this.querySelector(".links").appendChild(div);
+    }
   }
 
   openCalendar() {

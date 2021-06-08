@@ -18,6 +18,39 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 
 const PREF_LOGLEVEL = "browser.companion.loglevel";
 
+const conferencingInfo = [
+  {
+    name: "Zoom Meeting",
+    domain: ".zoom.us",
+    icon: "chrome://browser/content/companion/zoom.png",
+  },
+  {
+    name: "Microsoft Teams",
+    domain: "teams.microsoft.com",
+    icon: "chrome://browser/content/companion/teams.png",
+  },
+  {
+    name: "Google Meet",
+    domain: "meet.google.com",
+    icon: "chrome://browser/content/companion/meet.png",
+  },
+  {
+    name: "Jitsi",
+    domain: "meet.jit.si",
+    icon: "chrome://browser/content/companion/jitsi.png",
+  },
+  {
+    name: "GoToMeeting",
+    domain: ".gotomeeting.com",
+    icon: "chrome://browser/content/companion/gotomeeting.png",
+  },
+  {
+    name: "WebEx",
+    domain: ".webex.com",
+    icon: "chrome://browser/content/companion/webex.png",
+  },
+];
+
 XPCOMUtils.defineLazyGetter(this, "log", () => {
   let { ConsoleAPI } = ChromeUtils.import("resource://gre/modules/Console.jsm");
   return new ConsoleAPI({
@@ -30,6 +63,26 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 });
 
 Cu.importGlobalProperties(["fetch"]);
+
+function getConferencingDetails(url) {
+  url = new URL(url);
+  let domainInfo = conferencingInfo.find(info =>
+    url.host.endsWith(info.domain)
+  );
+  if (domainInfo) {
+    return {
+      icon: domainInfo.icon,
+      name: domainInfo.name,
+      url,
+    };
+  }
+  return null;
+}
+
+function isConferencingURL(url) {
+  url = new URL(url);
+  return conferencingInfo.find(info => url.host.endsWith(info.domain));
+}
 
 function getConferenceInfo(result) {
   if (result.conferenceData?.conferenceSolution) {
@@ -46,30 +99,70 @@ function getConferenceInfo(result) {
         };
       }
     }
-  } else if (result.location) {
+  }
+  if (result.location) {
     try {
       let locationURL = new URL(result.location);
-      if (locationURL.hostname.endsWith(".zoom.us")) {
-        return {
-          icon: "chrome://browser/content/companion/zoom.png",
-          name: "Zoom Meeting",
-          url: result.location,
-        };
+      return getConferencingDetails(locationURL);
+    } catch (e) {}
+  }
+  if (result.description) {
+    let parser = new DOMParser();
+    let doc = parser.parseFromString(result.description, "text/html");
+    let anchors = doc.getElementsByTagName("a");
+    if (anchors.length) {
+      for (let anchor of anchors) {
+        let conferencingDetails = getConferencingDetails(anchor.href);
+        if (conferencingDetails) {
+          return conferencingDetails;
+        }
       }
-    } catch (e) {
-      // Location was not a URL, just ignore
     }
   }
   return null;
 }
 
+async function getLinkInfo(result, service) {
+  let links = [];
+  let parser = new DOMParser();
+  let doc = parser.parseFromString(result.description, "text/html");
+  let anchors = doc.getElementsByTagName("a");
+  if (anchors.length) {
+    for (let anchor of anchors) {
+      if (isConferencingURL(anchor.href)) {
+        continue;
+      }
+      let link = {};
+      link.url = anchor.href;
+      if (anchor.href == anchor.textContent) {
+        if (anchor.href.startsWith("https://docs.google.com")) {
+          if (service.name == "Google") {
+            let documentName = await service.getDocumentTitle(anchor.href);
+            if (documentName) {
+              link.text = documentName;
+            }
+          }
+        }
+      } else {
+        link.text = anchor.textContent;
+      }
+      links.push(link);
+    }
+  } else {
+    // Do something with no HTML
+  }
+  return links;
+}
+
 class GoogleService {
   constructor(config) {
+    this.name = "Google";
     this.app = config.type;
 
     let scopes = [
       "https://www.googleapis.com/auth/gmail.readonly",
       "https://www.googleapis.com/auth/calendar.events.readonly",
+      "https://www.googleapis.com/auth/documents.readonly",
     ];
 
     this.auth = new OAuth2(
@@ -197,12 +290,15 @@ class GoogleService {
     let results = await response.json();
     log.debug(JSON.stringify(results));
 
-    let events = results.items.map(result => ({
-      summary: result.summary,
-      start: new Date(result.start.dateTime),
-      end: new Date(result.end.dateTime),
-      conference: getConferenceInfo(result),
-    }));
+    let events = await Promise.all(
+      results.items.map(async result => ({
+        summary: result.summary,
+        start: new Date(result.start.dateTime),
+        end: new Date(result.end.dateTime),
+        conference: getConferenceInfo(result),
+        links: await getLinkInfo(result, this),
+      }))
+    );
 
     events.sort((a, b) => a.start - b.start);
 
@@ -329,6 +425,29 @@ class GoogleService {
     return messages;
   }
 
+  async getDocumentTitle(url) {
+    url = new URL(url);
+    if (!url.hostname.endsWith(".google.com")) {
+      return null;
+    }
+    let documentId = url.href.split("/")[5];
+    let apiTarget = new URL(
+      `https://docs.googleapis.com/v1/documents/${documentId}`
+    );
+
+    let token = await this.auth.getToken();
+    let headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    let response = await fetch(apiTarget, {
+      headers,
+    });
+
+    let results = await response.json();
+    return results.title;
+  }
+
   toJSON() {
     return {
       type: this.app,
@@ -339,6 +458,7 @@ class GoogleService {
 
 class MicrosoftService {
   constructor(config) {
+    this.name = "Microsoft";
     this.app = config.type;
 
     let scopes = ["https://graph.microsoft.com/Calendars.Read"];
