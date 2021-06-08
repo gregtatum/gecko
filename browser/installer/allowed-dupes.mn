@@ -186,6 +186,17 @@ browser/chrome/browser/content/browser/companion/muted.svg
 chrome/toolkit/skin/classic/global/media/audio-muted.svg
 
 # Temporarily working on moving companion sidebar to content process - copied files over
+browser/chrome/browser/content/browser/companion/dock.svg
+browser/chrome/browser/content/browser/companion/next.svg
+browser/chrome/browser/content/browser/companion/pause.svg
+browser/chrome/browser/content/browser/companion/keyframe-list.css
+browser/chrome/browser/content/browser/companion/pip.svg
+browser/chrome/browser/content/browser/companion/link.svg
+browser/chrome/browser/content/browser/companion/browser.css
+browser/chrome/browser/content/browser/companion/awesomebar.css
+browser/chrome/browser/content/browser/companion/zoom.png
+browser/chrome/browser/content/browser/companion/event.svg
+browser/chrome/browser/content/browser/companion/email.svg
 browser/chrome/browser/content/browser/companionremote/dock.svg
 browser/chrome/browser/content/browser/companionremote/play.svg
 browser/chrome/browser/content/browser/companionremote/next.svg
