@@ -1,0 +1,27 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+window.addEventListener(
+  "load",
+  () => {
+    if (window.top === window) {
+      if (!document.documentElement.hasAttribute("width")) {
+        const TARGET_WIDTH = 1280;
+        const TARGET_HEIGHT = 1040;
+        let width = Math.min(screen.availWidth * 0.9, TARGET_WIDTH);
+        let height = Math.min(screen.availHeight * 0.9, TARGET_HEIGHT);
+
+        document.documentElement.setAttribute("width", width);
+        document.documentElement.setAttribute("height", height);
+
+        if (width < TARGET_WIDTH && height < TARGET_HEIGHT) {
+          document.documentElement.setAttribute("sizemode", "maximized");
+        }
+      }
+    } else {
+      document.documentElement.setAttribute("docked", "true");
+    }
+  },
+  { once: true }
+);

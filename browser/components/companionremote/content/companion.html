@@ -1,0 +1,215 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!DOCTYPE html>
+
+<html id="companion">
+<head>
+  <title>Firefox Companion</title>
+  <script type="module" src="companion.js"></script>
+
+  <link rel="stylesheet" type="text/css" href="chrome://global/skin/in-content/common.css"?>
+  <link rel="stylesheet" type="text/css" href="chrome://browser/skin/browser.css">
+  <link rel="stylesheet" type="text/css" href="chrome://browser/content/companion/companion.css">
+  <link rel="localization" href="browser/browser.ftl"/>
+</head>
+<body>
+  <template id="template-range">
+    <label>
+      <span class="range-label"></span>
+      <input class="range-slider" type="range"/>
+    </label>
+    <p class="range-value"></p>
+  </template>
+
+  <template id="template-keyframe-list">
+    <link rel="stylesheet" href="keyframe-list.css"/>
+    <h2 class="list-title"></h2>
+    <div class="keyframe-list">
+      <slot></slot>
+    </div>
+  </template>
+
+  <template id="template-keyframe">
+    <img class="favicon"/>
+    <p class="title"></p>
+    <p class="category debug"></p>
+    <p class="score debug"></p>
+    <p class="last-access"></p>
+  </template>
+
+  <template id="template-media-list">
+    <link rel="stylesheet" href="chrome://global/skin/in-content/common.css"/>
+    <style>
+      :host {
+        grid-template-columns: 1fr auto;
+        display: grid;
+        grid-template-areas:
+                  "title buttons"
+                  "list list";
+      }
+      .list-title {
+        grid-area: title;
+      }
+      h2 {
+        font-size: 1em;
+        margin-left: 10px;
+      }
+      .mute-all {
+        grid-area: buttons;
+        align-self: center;
+        margin-right: 10px;
+      }
+      .media-list {
+        grid-area: list;
+      }
+    </style>
+    <h2 class="list-title"></h2>
+    <button class="mute-all">Mute all</button>
+    <div class="media-list">
+      <slot></slot>
+    </div>
+  </template>
+
+  <template id="template-window-list">
+    <link rel="stylesheet" href="chrome://global/skin/in-content/common.css"/>
+    <style>
+      :host {
+        grid-template-columns: 1fr auto;
+        display: grid;
+        grid-template-areas:
+                  "title buttons"
+                  "list list";
+      }
+      .list-title {
+        grid-area: title;
+      }
+      .add-pinned-tab {
+        grid-area: buttons;
+        align-self: center;
+      }
+      .window-list {
+        grid-area: list;
+      }
+    </style>
+    <h2 class="list-title"></h2>
+    <button class="add-pinned-tab">Add</button>
+    <div class="window-list">
+      <slot></slot>
+    </div>
+  </template>
+
+  <template id="template-window">
+    <div class="label"></div>
+    <slot></slot>
+  </template>
+
+  <template id="template-app">
+    <div class="app card">
+      <div class="app-overview">
+        <img class="favicon"/>
+        <p class="title"></p>
+        <button class="switch-to-app">View</button>
+      </div>
+      <details hidden="true"><summary></summary><div class="extra-details-content"></div></details>
+    </div>
+  </template>
+
+  <template id="template-media">
+    <div class="artwork-background"></div>
+    <div class="play-pause artwork"><button class="playing"></button></div>
+    <button class="mute"></button>
+    <button class="unmute"></button>
+    <div class="metadata">
+      <span class="title"></span>
+      <span class="artist"></span>
+    </div>
+    <button class="prev"></button>
+    <button class="next"></button>
+    <button class="pip"></button>
+  </template>
+
+  <template id="template-event">
+    <div class="event-info">
+      <div class="event-content">
+        <div class="date"></div>
+        <div class="summary"></div>
+      </div>
+    </div>
+    <img class="conference-icon"/>
+  </template>
+
+  <template id="template-email">
+    <div class="from-date">
+      <div class="from"></div>
+      <div class="date"></div>
+    </div>
+    <div class="subject"></div>
+    <div class="snippet"></div>
+  </template>
+
+  <template id="template-topsite">
+    <div class="topsite-favicon"><div class="badge" hidden="true"></div><img /></div>
+    <p class="title"></p>
+  </template>
+
+  <template id="template-pocket-list">
+    <link rel="stylesheet" href="keyframe-list.css"/>
+    <h2 class="list-title"></h2>
+    <h3 class="list-subtitle"></h3>
+    <div class="pocket-list">
+      <slot></slot>
+    </div>
+  </template>
+
+  <template id="template-pocket-story">
+    <img class="preview"/>
+    <div class="pocket-content">
+      <p class="title"></p>
+      <p class="excerpt"></p>
+      <p class="domain"></p>
+    </div>
+  </template>
+
+  <div id="scroll">
+    <div id="top-sites-placeholder"></div>
+
+    <div id="calendar" hidden="true">
+      <h2 class="calendar-title">Upcoming Events</h2>
+      <div id="calendar-panel"></div>
+    </div>
+
+    <div id="email" hidden="true">
+      <div class="email-header">
+        <h2 class="email-title">New Mail</h2>
+        <div>
+           <div id="inbox-link">Go to Inbox &#8594;</div>
+        </div>
+      </div>
+      <div id="email-panel"></div>
+    </div>
+    <div id="content">
+    </div>
+
+  </div>
+
+  <div xmlns="http://www.w3.org/1999/xhtml" id="settings" hidden="true">
+    <div id="service-login">
+        <button xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" type="menu" id="service-signin" class="btn" label="Sign in">
+            <menupopup>
+                <menuitem id="google" label="Google"/>
+                <menuitem id="google-mozilla" label="Google (Mozilla)"/>
+                <menuitem id="google-mozilla-test" label="Google (Mozilla Test)"/>
+                <!-- <menuitem id="microsoft" label="Microsoft"/> -->
+            </menupopup>
+            </button>
+        <button id="service-signout" class="btn">Sign out of Google</button>
+    </div>
+    <div id="sliders"></div>
+    <label><input type="checkbox" id="setting-appbar" data-pref="browser.companion.appbar" /> Enable App Bar</label><br />
+    <label><input type="checkbox" id="setting-appbar" data-pref="browser.companion.globalhistorydebugging" /> (Developer) Enable Debugging</label>
+  </div>
+
+</body>
+</html>

@@ -9,6 +9,9 @@ const { XPCOMUtils } = ChromeUtils.import(
 const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
+const { E10SUtils } = ChromeUtils.import(
+  "resource://gre/modules/E10SUtils.jsm"
+);
 
 if (!AppConstants.PROCLIENT_ENABLED) {
   throw new Error(
@@ -97,15 +100,38 @@ class BrowserWindowHandler {
       }
 
       browser = this.window.document.createElementNS(XUL_NS, "browser");
-      browser.setAttribute(
-        "src",
-        "chrome://browser/content/companion/companion.xhtml"
-      );
-      browser.setAttribute("id", "companion-browser");
-      browser.setAttribute("disablehistory", "true");
-      browser.setAttribute("autoscroll", "false");
-      browser.setAttribute("disablefullscreen", "true");
-      browser.setAttribute("flex", "1");
+
+      if (
+        Services.prefs.getBoolPref("browser.proclient.remoteCompanion", false)
+      ) {
+        browser.setAttribute(
+          "src",
+          "chrome://browser/content/companionremote/companion.html"
+        );
+        browser.setAttribute("id", "companion-browser");
+        browser.setAttribute("disablehistory", "true");
+        browser.setAttribute("autoscroll", "false");
+        browser.setAttribute("disablefullscreen", "true");
+        browser.setAttribute("flex", "1");
+        browser.setAttribute(
+          "remoteType",
+          E10SUtils.PRIVILEGEDABOUT_REMOTE_TYPE
+        );
+        browser.setAttribute("remote", "true");
+        browser.setAttribute("message", "true");
+        browser.setAttribute("messagemanagergroup", "browsers");
+        browser.setAttribute("type", "content");
+      } else {
+        browser.setAttribute(
+          "src",
+          "chrome://browser/content/companion/companion.xhtml"
+        );
+        browser.setAttribute("id", "companion-browser");
+        browser.setAttribute("disablehistory", "true");
+        browser.setAttribute("autoscroll", "false");
+        browser.setAttribute("disablefullscreen", "true");
+        browser.setAttribute("flex", "1");
+      }
 
       this.window.document.getElementById("companion-box").appendChild(browser);
     } else {

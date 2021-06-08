@@ -394,6 +394,19 @@ let JSWINDOWACTORS = {
     allFrames: true,
   },
 
+  Companion: {
+    parent: {
+      moduleURI: "resource:///actors/CompanionParent.jsm",
+    },
+    child: {
+      moduleURI: "resource:///actors/CompanionChild.jsm",
+      events: {
+        CompanionInit: { wantUntrusted: true },
+      },
+    },
+    matches: ["chrome://browser/content/companion/companion.html"],
+  },
+
   // Collects description and icon information from meta tags.
   ContentMeta: {
     parent: {
