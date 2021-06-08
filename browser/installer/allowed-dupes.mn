@@ -184,3 +184,19 @@ browser/chrome/browser/content/browser/companion/mute.svg
 chrome/toolkit/skin/classic/global/media/audio.svg
 browser/chrome/browser/content/browser/companion/muted.svg
 chrome/toolkit/skin/classic/global/media/audio-muted.svg
+
+# Temporarily working on moving companion sidebar to content process - copied files over
+browser/chrome/browser/content/browser/companionremote/dock.svg
+browser/chrome/browser/content/browser/companionremote/play.svg
+browser/chrome/browser/content/browser/companionremote/next.svg
+browser/chrome/browser/content/browser/companionremote/pause.svg
+browser/chrome/browser/content/browser/companionremote/keyframe-list.css
+browser/chrome/browser/content/browser/companionremote/mute.svg
+browser/chrome/browser/content/browser/companionremote/muted.svg
+browser/chrome/browser/content/browser/companionremote/pip.svg
+browser/chrome/browser/content/browser/companionremote/link.svg
+browser/chrome/browser/content/browser/companionremote/browser.css
+browser/chrome/browser/content/browser/companionremote/awesomebar.css
+browser/chrome/browser/content/browser/companionremote/zoom.png
+browser/chrome/browser/content/browser/companionremote/event.svg
+browser/chrome/browser/content/browser/companionremote/email.svg
