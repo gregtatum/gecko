@@ -147,7 +147,7 @@ class GlobalHistoryEvent extends Event {
   #view;
 
   /**
-   * @param {"ViewChanged" | "ViewAdded" | "ViewMoved" | "ViewRemoved"} type
+   * @param {"ViewChanged" | "ViewAdded" | "ViewMoved" | "ViewRemoved" | "ViewUpdated"} type
    *   The event type.
    * @param {View}
    *   The related view.
@@ -184,6 +184,13 @@ class BrowserListener {
   constructor(globalHistory, browser) {
     this.#globalHistory = globalHistory;
     this.#browser = browser;
+
+    this.#browser.addEventListener("pagetitlechanged", this);
+  }
+
+  handleEvent() {
+    // Title changed.
+    this.#globalHistory._onNewTitle(this.#browser);
   }
 
   /**
@@ -253,6 +260,8 @@ class BrowserListener {
  * `ViewChanged` - The current view has changed. The new view will be included in the event detail.
  * `ViewAdded` - A new view has been added to the top of the stack.
  * `ViewMoved` - An existing view has been moved to the top of the stack.
+ * `ViewRemoved` - An existing view has been removed.
+ * `ViewUpdated` - An existing view has changed in some way.
  *    The view will be included in the event detail
  */
 class GlobalHistory extends EventTarget {
@@ -355,6 +364,22 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
+   * Called when the document in a browser has changed title.
+   */
+  _onNewTitle(browser) {
+    let entry = currentEntry(browser);
+    let internalView = this.#historyViews.get(entry.ID);
+    if (!internalView) {
+      return;
+    }
+
+    internalView.title = entry.title;
+    this.dispatchEvent(
+      new GlobalHistoryEvent("ViewUpdated", internalView.view)
+    );
+  }
+
+  /**
    * Called when a browser loads a view.
    *
    * @param {Browser} browser
@@ -429,7 +454,7 @@ class GlobalHistory extends EventTarget {
   #activateCurrentView() {
     this.#activationTimer = null;
     if (
-      !this.#currentIndex ||
+      this.#currentIndex === null ||
       this.#currentIndex == this.#viewStack.length - 1
     ) {
       return;

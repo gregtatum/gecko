@@ -20,12 +20,15 @@ export class GlobalHistoryDebugging extends HTMLElement {
     this.render();
     document.addEventListener("CompanionObservedPrefChanged", this.render);
 
-    window.top.gGlobalHistory.addEventListener("ViewChanged", () =>
-      this.render()
-    );
-    window.top.gGlobalHistory.addEventListener("ViewMoved", () =>
-      this.render()
-    );
+    for (let event of [
+      "ViewChanged",
+      "ViewAdded",
+      "ViewRemoved",
+      "ViewUpdated",
+      "ViewMoved",
+    ]) {
+      window.top.gGlobalHistory.addEventListener(event, () => this.render());
+    }
   }
 
   disconnectedCallback() {
@@ -54,7 +57,7 @@ export class GlobalHistoryDebugging extends HTMLElement {
     let elements = [];
     views.forEach(view => {
       let item = document.createElement("li");
-      item.textContent = view.url;
+      item.textContent = view.title;
       item.className = "history-entry";
 
       item.classList.add(view.state);

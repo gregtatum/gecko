@@ -753,6 +753,15 @@ button.conference:hover:active, .btn:hover:active {
   font-size: smaller;
 }
 
+e-global-nav-debugging h2 {
+  margin: 10px;
+  font-weight: bold;
+}
+
+.history-list {
+  padding-left: 20px;
+}
+
 .history-entry {
   overflow: hidden;
   text-overflow: ellipsis;
