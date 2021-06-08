@@ -97,11 +97,15 @@ class InternalView {
    * @param {nsISHEntry} historyEntry
    */
   constructor(window, browser, historyEntry) {
-    this.browserId = browser.browsingContext.id;
-    this.historyId = historyEntry.ID;
     this.#window = window;
     this.#view = new View(this);
     InternalView.viewMap.set(this.#view, this);
+    this.update(browser, historyEntry);
+  }
+
+  update(browser, historyEntry) {
+    this.browserId = browser.browsingContext.id;
+    this.historyId = historyEntry.ID;
 
     this.url = historyEntry.URI.spec;
     this.title = historyEntry.title;
@@ -301,6 +305,12 @@ class GlobalHistory extends EventTarget {
   #activationTimer = null;
 
   /**
+   * A vew that is being reloaded;
+   * @type {InternalView}
+   */
+  #pendingView = null;
+
+  /**
    * @param {DOMWindow} window
    *   The top level window to track history for.
    */
@@ -403,6 +413,14 @@ class GlobalHistory extends EventTarget {
     }
 
     let internalView = this.#historyViews.get(newEntry.ID);
+
+    if (!internalView && this.#pendingView?.url == newEntry.URI.spec) {
+      internalView = this.#pendingView;
+      this.#historyViews.delete(internalView.historyId);
+      internalView.update(browser, newEntry);
+      this.#historyViews.set(internalView.historyId, internalView);
+      this.#pendingView = null;
+    }
 
     if (!internalView) {
       // This is a new view.
@@ -593,27 +611,13 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
-    // Either the browser is gone or the history entry is gone. Either way we can recreate the
-    // history entry and load in the current tab.
-
-    let uri = Services.io.newURI(internalView.url);
-
-    let { browsingContext } = this.#window.gBrowser.selectedBrowser;
-    let sHistory = browsingContext.sessionHistory;
-
-    // Unclear what is needed here. Look at what session storage does.
-    // https://searchfox.org/mozilla-central/rev/bf8d5de8528036c09590009720bc172882845b80/toolkit/modules/sessionstore/SessionHistory.jsm#176
-    let historyEntry = sHistory.createEntry();
-    internalView.browserId = browsingContext.id;
-    internalView.historyId = historyEntry.ID;
-    historyEntry.URI = uri;
-    historyEntry.originalURI = uri;
-    historyEntry.loadReplace = false;
-    historyEntry.title = internalView.title;
-    historyEntry.name = browsingContext;
-
-    this.#historyViews.set(historyEntry.ID, internalView);
-    sHistory.addEntry(historyEntry);
+    // Either the browser is gone or the history entry is gone. In the future we could re-create
+    // this, maybe re-using session store. For now just load the url fresh and hackily update the
+    // view accordingly.
+    this.#pendingView = internalView;
+    this.#window.gBrowser.selectedTab = this.#window.gBrowser.addWebTab(
+      internalView.url
+    );
   }
 
   /**
