@@ -51,6 +51,8 @@ const conferencingInfo = [
   },
 ];
 
+const URL_REGEX = /([\w+]+\:\/\/)?([\w\d-]+\.)*[\w-]+[\.\:]\w+([\/\?\=\&\#\.]?[\w-]+)*\/?/gm;
+
 XPCOMUtils.defineLazyGetter(this, "log", () => {
   let { ConsoleAPI } = ChromeUtils.import("resource://gre/modules/Console.jsm");
   return new ConsoleAPI({
@@ -65,7 +67,12 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 Cu.importGlobalProperties(["fetch"]);
 
 function getConferencingDetails(url) {
-  url = new URL(url);
+  try {
+    url = new URL(url);
+  } catch (e) {
+    url = new URL(`https://${url}`);
+  }
+
   let domainInfo = conferencingInfo.find(info =>
     url.host.endsWith(info.domain)
   );
@@ -77,11 +84,6 @@ function getConferencingDetails(url) {
     };
   }
   return null;
-}
-
-function isConferencingURL(url) {
-  url = new URL(url);
-  return conferencingInfo.find(info => url.host.endsWith(info.domain));
 }
 
 function getConferenceInfo(result) {
@@ -106,6 +108,8 @@ function getConferenceInfo(result) {
       return getConferencingDetails(locationURL);
     } catch (e) {}
   }
+  // We are parsing the description twice, once for conferencing
+  // and once for links. We can probably do better.
   if (result.description) {
     let parser = new DOMParser();
     let doc = parser.parseFromString(result.description, "text/html");
@@ -117,39 +121,74 @@ function getConferenceInfo(result) {
           return conferencingDetails;
         }
       }
+    } else {
+      let descriptionLinks = result.description.match(URL_REGEX);
+      if (descriptionLinks?.length) {
+        for (let descriptionLink of descriptionLinks) {
+          let conferencingDetails = getConferencingDetails(descriptionLink);
+          if (conferencingDetails) {
+            return conferencingDetails;
+          }
+        }
+      }
     }
   }
   return null;
 }
 
-async function getLinkInfo(result, service) {
+async function processLink(url, text) {
+  try {
+    url = new URL(url);
+  } catch (e) {
+    // We might have URLS without protocols.
+    // Just add http://
+    url = new URL(`http://${url}`);
+  }
+  // We already handled conferencing URLs separately
+  if (conferencingInfo.find(info => url.host.endsWith(info.domain))) {
+    return null;
+  }
+  let link = {};
+  link.url = url.href;
+  if (!text || url.href == text) {
+    if (url.host === "docs.google.com") {
+      for (let service of ServiceInstances) {
+        if (service.app.startsWith("google")) {
+          let documentName = await service.getDocumentTitle(url.href);
+          if (documentName) {
+            link.text = documentName;
+          }
+        }
+      }
+    }
+  } else {
+    link.text = text;
+  }
+  return link;
+}
+
+async function getLinkInfo(result) {
   let links = [];
   let parser = new DOMParser();
   let doc = parser.parseFromString(result.description, "text/html");
   let anchors = doc.getElementsByTagName("a");
   if (anchors.length) {
     for (let anchor of anchors) {
-      if (isConferencingURL(anchor.href)) {
-        continue;
+      let link = await processLink(anchor.href, anchor.textContent);
+      if (link) {
+        links.push(link);
       }
-      let link = {};
-      link.url = anchor.href;
-      if (anchor.href == anchor.textContent) {
-        if (anchor.href.startsWith("https://docs.google.com")) {
-          if (service.name == "Google") {
-            let documentName = await service.getDocumentTitle(anchor.href);
-            if (documentName) {
-              link.text = documentName;
-            }
-          }
-        }
-      } else {
-        link.text = anchor.textContent;
-      }
-      links.push(link);
     }
   } else {
-    // Do something with no HTML
+    let descriptionLinks = result.description.match(URL_REGEX);
+    if (descriptionLinks?.length) {
+      for (let descriptionLink of descriptionLinks) {
+        let link = await processLink(descriptionLink);
+        if (link) {
+          links.push(link);
+        }
+      }
+    }
   }
   return links;
 }
@@ -296,7 +335,7 @@ class GoogleService {
         start: new Date(result.start.dateTime),
         end: new Date(result.end.dateTime),
         conference: getConferenceInfo(result),
-        links: await getLinkInfo(result, this),
+        links: await getLinkInfo(result),
       }))
     );
 
