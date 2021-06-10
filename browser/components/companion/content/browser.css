@@ -37,6 +37,10 @@
   width: var(--companion-width);
 }
 
+:root[companion] #companion-box {
+  border-inline-end: 1px solid var(--chrome-content-separator-color);
+}
+
 #companion-mac-buttonbox                {
   position: relative;
   appearance: auto;
