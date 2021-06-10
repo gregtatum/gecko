@@ -44,6 +44,8 @@ var localProviderModules = {
   UrlbarProviderOmnibox: "resource:///modules/UrlbarProviderOmnibox.jsm",
   UrlbarProviderPrivateSearch:
     "resource:///modules/UrlbarProviderPrivateSearch.jsm",
+  UrlbarProviderQuickActions:
+    "resource:///modules/UrlbarProviderQuickActions.jsm",
   UrlbarProviderQuickSuggest:
     "resource:///modules/UrlbarProviderQuickSuggest.jsm",
   UrlbarProviderSearchTips: "resource:///modules/UrlbarProviderSearchTips.jsm",

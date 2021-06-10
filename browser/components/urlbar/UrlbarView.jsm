@@ -1699,6 +1699,10 @@ class UrlbarView {
   }
 
   _rowLabel(row, currentLabel) {
+    // Only show the Quick Actions label for now.
+    if (!currentLabel && row.result.providerName == "quickActions") {
+      return "Quick Actions";
+    }
     // We only show Firefox Suggest-related labels if the feature is enabled and
     // we're not showing top sites.
     if (

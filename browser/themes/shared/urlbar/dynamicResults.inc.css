@@ -143,3 +143,46 @@
 .urlbarView-row[dynamicType=unitConversion] > .urlbarView-row-inner[selected] .urlbarView-dynamic-unitConversion-action {
   color: var(--autocomplete-popup-highlight-color);
 }
+
+/*
+ * This section is for urlbar quick actions, these are floated to take up less vertical space.
+ */
+.urlbarView-row {
+  clear: left;
+}
+
+.urlbarView-row[dynamicType=quickActions] {
+  float: left;
+  clear: unset;
+}
+
+.urlbarView-row[dynamicType=quickActions] > .urlbarView-row-inner {
+  background-color: var(--autocomplete-popup-hover-background);
+  margin-inline-end: 1em;
+  font-size: small;
+}
+
+.urlbarView-row[dynamicType=quickActions] > .urlbarView-row-inner[selected] {
+  background-color: var(--autocomplete-popup-highlight-background);
+  color: var(--autocomplete-popup-highlight-color);
+}
+
+ /*
+  * Since the rows are floated we need to change the way row labels are displayed
+  * to apply a hardcoded end margin to the row before a label is shown.
+  */
+.urlbarView-row:first-child:not([label]) {
+  margin-block-end: 1.46em;
+}
+
+.urlbarView-row:nth-child(2):not([label]):not([dynamicType]) {
+  margin-block-start: -1.46em;
+}
+
+#urlbar-results .urlbarView-row[label] {
+  margin-block-start: unset;
+}
+
+#urlbar-results .urlbarView-row[label]::before {
+  top: -1.66em;
+}

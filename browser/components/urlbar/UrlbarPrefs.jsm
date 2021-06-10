@@ -169,6 +169,9 @@ const PREF_URLBAR_DEFAULTS = new Map([
   // Whether results will include a calculator.
   ["suggest.calculator", false],
 
+  // Whether results will include QuickActions.
+  ["suggest.quickactions", true],
+
   // Whether results will include QuickSuggest suggestions.
   ["suggest.quicksuggest", true],
 
