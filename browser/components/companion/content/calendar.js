@@ -97,6 +97,7 @@ class Event extends HTMLElement {
       let a = document.createElement("a");
       a.textContent = link.text;
       a.setAttribute("href", link.url);
+      a.setAttribute("title", link.url);
       div.appendChild(a);
       this.querySelector(".links").appendChild(div);
     }
@@ -119,6 +120,11 @@ async function updateEvents() {
   let now = new Date();
   let showCalendar = false;
   for (let event of events) {
+    if (document.body.classList.contains("debugUI")) {
+      event.hidden = false;
+      showCalendar = true;
+      continue;
+    }
     if (event.data.end < now) {
       // Never show meetings that have happened
       event.hidden = true;

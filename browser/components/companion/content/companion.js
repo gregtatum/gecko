@@ -40,7 +40,7 @@ onLoad(() => {
     prefCheck.addEventListener("click", () => {
       Services.prefs.setBoolPref(prefName, prefCheck.checked);
     });
-    prefCheck.checked = Services.prefs.getBoolPref(prefName);
+    prefCheck.checked = Services.prefs.getBoolPref(prefName, false);
   }
 
   document.addEventListener("keydown", e => {
@@ -114,7 +114,7 @@ window.addEventListener(
 
 // Add the ability to show elements with class="debug" that help development
 // behind the "companion.debugUI" pref.
-let DEBUG_PREF = "companion.debugUI";
+let DEBUG_PREF = "browser.companion.debugUI";
 let toggleDebug = () =>
   document.body.classList.toggle(
     "debugUI",

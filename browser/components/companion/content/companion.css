@@ -779,3 +779,10 @@ e-global-nav-debugging h2 {
 .history-entry.visible {
   font-weight: bold;
 }
+
+.links div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}

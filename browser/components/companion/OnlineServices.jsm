@@ -121,7 +121,7 @@ function getConferenceInfo(result) {
           return conferencingDetails;
         }
       }
-    } else {
+    } else if (result.description) {
       let descriptionLinks = result.description.match(URL_REGEX);
       if (descriptionLinks?.length) {
         for (let descriptionLink of descriptionLinks) {
@@ -179,7 +179,7 @@ async function getLinkInfo(result) {
         links.push(link);
       }
     }
-  } else {
+  } else if (result.description) {
     let descriptionLinks = result.description.match(URL_REGEX);
     if (descriptionLinks?.length) {
       for (let descriptionLink of descriptionLinks) {
@@ -297,20 +297,8 @@ class GoogleService {
     OnlineServices.persist();
 
     let apiTarget = new URL(
-      "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+      "https://www.googleapis.com/calendar/v3/users/me/calendarList"
     );
-
-    apiTarget.searchParams.set("maxResults", 5);
-    apiTarget.searchParams.set("orderBy", "startTime");
-    apiTarget.searchParams.set("singleEvents", "true");
-    let oneHourAgo = new Date();
-    oneHourAgo.setHours(oneHourAgo.getHours() - 1);
-    apiTarget.searchParams.set("timeMin", oneHourAgo.toISOString());
-    // If we want to reduce the window, we can just make
-    // timeMax an hour from now.
-    let midnight = new Date();
-    midnight.setHours(24, 0, 0, 0);
-    apiTarget.searchParams.set("timeMax", midnight.toISOString());
 
     let headers = {
       Authorization: `Bearer ${token}`,
@@ -320,28 +308,84 @@ class GoogleService {
       headers,
     });
 
-    log.debug(response);
+    let calendarList = [];
 
     if (!response.ok) {
-      throw new Error(response.statusText);
+      calendarList.push({
+        id: "primary",
+      });
+    } else {
+      let results = await response.json();
+      for (let result of results.items) {
+        if (result.hidden || !result.selected) {
+          continue;
+        }
+        let calendar = {};
+        calendar.id = result.primary ? "primary" : result.id;
+        calendar.backgroundColor = result.backgroundColor;
+        calendar.foregroundColor = result.foregroundColor;
+        calendarList.push(calendar);
+      }
     }
 
-    let results = await response.json();
-    log.debug(JSON.stringify(results));
+    let allEvents = new Map();
+    for (let calendar of calendarList) {
+      apiTarget = new URL(
+        `https://www.googleapis.com/calendar/v3/calendars/${calendar.id}/events`
+      );
 
-    let events = await Promise.all(
-      results.items.map(async result => ({
-        summary: result.summary,
-        start: new Date(result.start.dateTime),
-        end: new Date(result.end.dateTime),
-        conference: getConferenceInfo(result),
-        links: await getLinkInfo(result),
-      }))
-    );
+      apiTarget.searchParams.set("maxResults", 10);
+      apiTarget.searchParams.set("orderBy", "startTime");
+      apiTarget.searchParams.set("singleEvents", "true");
+      let dayStart = new Date();
+      dayStart.setHours(0, 0, 0, 0);
+      apiTarget.searchParams.set("timeMin", dayStart.toISOString());
+      // If we want to reduce the window, we can just make
+      // timeMax an hour from now.
+      let midnight = new Date();
+      midnight.setHours(24, 0, 0, 0);
+      apiTarget.searchParams.set("timeMax", midnight.toISOString());
 
-    events.sort((a, b) => a.start - b.start);
+      headers = {
+        Authorization: `Bearer ${token}`,
+      };
 
-    return events;
+      response = await fetch(apiTarget, {
+        headers,
+      });
+
+      if (!response.ok) {
+        log.debug(response.statusText);
+        continue;
+      }
+
+      let results = await response.json();
+
+      for (let result of results.items) {
+        // Ignore all day events
+        if (!result.start?.dateTime || !result.end?.dateTime) {
+          continue;
+        }
+        let event = {};
+        event.summary = result.summary;
+        event.start = new Date(result.start.dateTime);
+        event.end = new Date(result.end.dateTime);
+        event.conference = getConferenceInfo(result);
+        event.links = await getLinkInfo(result);
+        event.calendar = {};
+        event.calendar.id = calendar.id;
+        if (allEvents.has(result.id)) {
+          // If an event is duplicated, use
+          // the primary calendar
+          if (calendar.id == "primary") {
+            allEvents.set(result.id, event);
+          }
+        } else {
+          allEvents.set(result.id, event);
+        }
+      }
+    }
+    return Array.from(allEvents.values()).sort((a, b) => a.start - b.start);
   }
 
   openEmail(messageData) {
