@@ -27,19 +27,15 @@ function currentEntry(browser) {
 }
 
 function getBrowserHistoryForView(window, view) {
-  let targetTab = window.gBrowser.tabs.find(
-    tab => tab.linkedBrowser.browsingContext.id == view.browserId
-  );
-
-  if (!targetTab) {
+  let browser = BrowsingContext.get(view.browserId)?.embedderElement;
+  if (!browser || !window.document.contains(browser)) {
     return {
       browser: null,
       historyIndex: null,
     };
   }
 
-  let browser = targetTab.linkedBrowser;
-  let sHistory = targetTab.linkedBrowser.browsingContext.sessionHistory;
+  let sHistory = browser.browsingContext.sessionHistory;
 
   for (let i = 0; i < sHistory.count; i++) {
     let historyEntry = sHistory.getEntryAtIndex(i);
