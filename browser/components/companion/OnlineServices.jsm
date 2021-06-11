@@ -366,6 +366,14 @@ class GoogleService {
         if (!result.start?.dateTime || !result.end?.dateTime) {
           continue;
         }
+        if (
+          !result.attendees.filter(
+            attendee =>
+              attendee.self === true && attendee.responseStatus === "accepted"
+          ).length
+        ) {
+          continue;
+        }
         let event = {};
         event.summary = result.summary;
         event.start = new Date(result.start.dateTime);
