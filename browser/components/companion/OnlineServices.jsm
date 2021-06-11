@@ -367,6 +367,7 @@ class GoogleService {
           continue;
         }
         if (
+          calendar.id == "primary" &&
           !result.attendees.filter(
             attendee =>
               attendee.self === true && attendee.responseStatus === "accepted"
