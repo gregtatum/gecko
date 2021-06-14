@@ -4,7 +4,10 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["UrlbarProviderQuickActions"];
+var EXPORTED_SYMBOLS = [
+  "UrlbarProviderQuickActionsFilter",
+  "UrlbarProviderQuickActionsEmpty",
+];
 
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
@@ -27,11 +30,13 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 const ENABLED_PREF = "suggest.quickactions";
 const DYNAMIC_TYPE_NAME = "quickActions";
 
+const MAX_RESULTS = 4;
+
 const COMMANDS = {
   screenshot: {
     commands: ["screenshot"],
     icon: "chrome://browser/skin/screenshot.svg",
-    label: "Take Screenshot",
+    label: "Take a Screenshot",
     callback: () => {
       Services.obs.notifyObservers(null, "menuitem-screenshot", true);
     },
@@ -152,7 +157,7 @@ function restartBrowser() {
  * A provider that returns a suggested url to the user based on what
  * they have currently typed so they can navigate directly.
  */
-class ProviderQuickActions extends UrlbarProvider {
+class ProviderQuickActionsBase extends UrlbarProvider {
   // A tree that maps keywords to a result.
   _tree = new KeywordTree();
 
@@ -190,7 +195,7 @@ class ProviderQuickActions extends UrlbarProvider {
 
     for (const key in COMMANDS) {
       for (const command of COMMANDS[key].commands) {
-        for (let i = 0; i < command.length; i++) {
+        for (let i = 0; i <= command.length; i++) {
           let prefix = command.substring(0, command.length - i);
           let result = this._tree.get(prefix);
           if (result) {
@@ -231,15 +236,6 @@ class ProviderQuickActions extends UrlbarProvider {
   }
 
   /**
-   * Gets the provider's priority.
-   * @param {UrlbarQueryContext} queryContext The query context object
-   * @returns {number} The provider's priority for the given query.
-   */
-  getPriority(queryContext) {
-    return 1;
-  }
-
-  /**
    * Starts querying.
    * @param {UrlbarQueryContext} queryContext The query context object
    * @param {function} addCallback Callback invoked by the provider to add a new
@@ -248,12 +244,12 @@ class ProviderQuickActions extends UrlbarProvider {
    *       is done searching AND returning results.
    */
   async startQuery(queryContext, addCallback) {
-    let results = queryContext.searchString
-      ? this._tree.get(queryContext.searchString)
-      : ["screenshot", "createdoc", "createsheet", "createmeeting"];
+    let results = this._tree.get(queryContext.searchString);
     if (!results) {
       return;
     }
+    results.length =
+      results.length > MAX_RESULTS ? MAX_RESULTS : results.length;
     for (let key of results) {
       let res = COMMANDS[key];
       const result = new UrlbarResult(
@@ -298,4 +294,24 @@ class ProviderQuickActions extends UrlbarProvider {
   }
 }
 
-var UrlbarProviderQuickActions = new ProviderQuickActions();
+/**
+ * The urlbar provider mechanism requires seperate providers for the
+ * case when the urlbar is empty (priority 1) vs when a search term
+ * has been entered.
+ */
+class ProviderQuickActionsEmpty extends ProviderQuickActionsBase {
+  getPriority() {
+    return 1;
+  }
+  isActive(queryContext) {
+    return UrlbarPrefs.get(ENABLED_PREF) && !queryContext.searchString;
+  }
+}
+
+/**
+ * Handles results when a term has been entered.
+ */
+class ProviderQuickActionsFilter extends ProviderQuickActionsBase {}
+
+var UrlbarProviderQuickActionsFilter = new ProviderQuickActionsFilter();
+var UrlbarProviderQuickActionsEmpty = new ProviderQuickActionsEmpty();

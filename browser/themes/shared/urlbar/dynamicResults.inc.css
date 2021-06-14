@@ -162,6 +162,10 @@
   font-size: small;
 }
 
+.urlbarView-row[dynamicType=quickActions] > .urlbarView-row-inner > .urlbarView-no-wrap {
+  padding-inline-end: 5px;
+}
+
 .urlbarView-row[dynamicType=quickActions] > .urlbarView-row-inner[selected] {
   background-color: var(--autocomplete-popup-highlight-background);
   color: var(--autocomplete-popup-highlight-color);
