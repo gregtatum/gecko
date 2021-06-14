@@ -317,6 +317,7 @@ class GoogleService {
       });
     } else {
       let results = await response.json();
+      log.debug(JSON.stringify(results));
       for (let result of results.items) {
         if (result.hidden || !result.selected) {
           continue;
@@ -361,7 +362,7 @@ class GoogleService {
       }
 
       let results = await response.json();
-
+      log.debug(JSON.stringify(results));
       for (let result of results.items) {
         // Ignore all day events
         if (!result.start?.dateTime || !result.end?.dateTime) {
