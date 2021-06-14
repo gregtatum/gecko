@@ -402,6 +402,7 @@ task-priority:
         'mozilla-esr.*': 'very-high'
         'mozilla-beta': 'high'
         'mozilla-central': 'medium'
+        'pine': 'medium'
         'autoland': 'low'
         'mozilla-inbound': 'low'
         'default': 'very-low'
