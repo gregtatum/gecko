@@ -404,15 +404,25 @@ XPCOMUtils.defineLazyGetter(this, "gHighPriorityNotificationBox", () => {
     element.toggleAttribute("prepend-notifications", gProton);
     if (gProton) {
       // With Proton enabled all notification boxes are at the top, built into the browser chrome.
-      let tabNotifications = document.getElementById("tab-notification-deck");
-      // With Proton enabled, notification messages use the CSS box model. When using
-      // negative margins on those notification messages to animate them in or out,
-      // if the ancestry of that node is all using the XUL box model, strange glitches
-      // arise. We sidestep this by containing the global notification box within a
-      // <div> that has CSS block layout.
-      let outer = document.createElement("div");
-      outer.appendChild(element);
-      gNavToolbox.insertBefore(outer, tabNotifications);
+      if (!AppConstants.PROCLIENT_ENABLED) {
+        let tabNotifications = document.getElementById("tab-notification-deck");
+        // With Proton enabled, notification messages use the CSS box model. When using
+        // negative margins on those notification messages to animate them in or out,
+        // if the ancestry of that node is all using the XUL box model, strange glitches
+        // arise. We sidestep this by containing the global notification box within a
+        // <div> that has CSS block layout.
+        let outer = document.createElement("div");
+        outer.appendChild(element);
+        gNavToolbox.insertBefore(outer, tabNotifications);
+      } else {
+        // Don't allow notifications to be drawn above the Pro Client's persistent sidebar.
+        // Instead, draw them above the web content only. (See MR2-184.)
+        // The simplest way to accomplish this is to insert before the browser element.
+        let browser = document.getElementById("browser");
+        let outer = document.createElement("div");
+        outer.appendChild(element);
+        browser.parentNode.insertBefore(outer, browser);
+      }
     } else {
       document.getElementById("appcontent").prepend(element);
     }
