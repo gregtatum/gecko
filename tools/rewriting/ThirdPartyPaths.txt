@@ -1,3 +1,4 @@
+browser/components/companion/services/workshop/src/vendor/
 browser/components/newtab/vendor/
 browser/components/pocket/content/panels/js/vendor/
 browser/components/translation/cld2/

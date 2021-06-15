@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "*": ["vendored/*", "*"],
+      "gelam/*": ["*"],
+      "logic": ["shared/logic"],
+      "bleach": ["vendored/bleach/bleach"],
+      "equal": ["vendored/equal"],
+      "imap-formal-syntax": ["vendored/imap-handler/src/imap-formal-syntax"],
+      "smtpclient-response-parser": ["vendored/smtpclient/src/smtpclient-response-parser"]
+    }
+  },
+  "exclude": ["node_modules"]
+}

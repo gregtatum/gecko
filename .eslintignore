@@ -48,6 +48,12 @@ browser/components/newtab/aboutwelcome/content/aboutwelcome.bundle.js
 browser/components/newtab/data/
 browser/components/newtab/logs/
 
+# Ignore Companion Services Workshop built files
+browser/components/companion/services/workshop/build/
+# Ignore Companion Services Workshop files until the migration from an external
+# repo is complete and the linter issues are addressed.
+browser/components/companion/services/workshop/src/
+
 # The only file in browser/locales/ is pre-processed.
 browser/locales/
 # Generated data files
