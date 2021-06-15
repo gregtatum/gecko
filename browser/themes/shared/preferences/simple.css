@@ -1,0 +1,80 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+:root {
+  --simple-spacing: 16px;
+}
+
+:root.simple .main-content {
+  background: #f9f9fb;
+  padding-top: 40px;
+  -moz-box-align: center;
+}
+
+:root.simple .pane-container {
+  width: 680px;
+}
+
+:root:not(.simple) #viewAllSettingsContainer,
+:root.simple .navigation,
+:root.simple .sticky-container {
+  display: none;
+}
+
+:root.simple groupbox.simple {
+  background: var(--in-content-box-background);
+  border-radius: 4px;
+  box-shadow: var(--card-shadow);
+  padding: var(--simple-spacing);
+}
+
+h1.simple {
+  font-weight: 600;
+}
+
+h2.simple {
+  margin-block: var(--simple-spacing);
+}
+
+.simple > vbox > label > h3 {
+  margin-block: 0;
+  font-size: 1em;
+}
+
+:root.simple .face-smile,
+:root.simple .face-sad {
+  display: none;
+}
+
+#isNotDefaultPane,
+#isDefaultPane {
+  margin-inline-start: 0 !important;
+}
+
+#defaultEngineSimple::part(icon) {
+  height: 16px;
+  width: 16px;
+}
+
+#pinAppPane,
+.suggest-container {
+  margin-top: var(--simple-spacing);
+}
+
+.suggest-container {
+  -moz-box-pack: end;
+  -moz-box-align: start;
+}
+
+.suggest-text-labels {
+  -moz-box-flex: 1;
+}
+
+.subtext {
+  color: var(--in-content-deemphasized-text);
+}
+
+#viewAllSettingsContainer {
+  -moz-box-pack: center;
+}

@@ -1,0 +1,95 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+<!-- Simple panel -->
+
+<script src="chrome://browser/content/preferences/simple.js"/>
+
+<html:template id="template-paneSimple">
+<hbox id="simpleCategory"
+      class="subcategory"
+      hidden="true"
+      data-category="paneSimple">
+  <html:h1 class="simple" data-l10n-id="preferences-pane-simple-title"/>
+</hbox>
+
+<html:h2 data-category="paneSimple"
+         class="simple"
+         hidden="true"
+         data-l10n-id="preferences-quick-setup-header"/>
+
+<!-- Quick set-up -->
+<groupbox id="quickSetupGroup"
+          data-category="paneSimple"
+          class="simple"
+          hidden="true">
+  <vbox class="simpleGroupboxBody">
+#ifdef HAVE_SHELL_SERVICE
+    <label><html:h3 data-l10n-id="preferences-primary-browser-header"/></label>
+    <stack id="setDefaultPane">
+      <hbox id="isNotDefaultPane" align="center" class="indent">
+        <image class="face-sad"/>
+        <label id="isNotDefaultLabel" flex="1" data-l10n-id="preferences-simple-is-not-default"/>
+        <button id="setDefaultButton"
+                is="highlightable-button"
+                class="accessory-button primary"
+                data-l10n-id="preferences-simple-set-as-default"
+                preference="pref.general.disable_button.default_browser"/>
+      </hbox>
+      <hbox id="isDefaultPane" align="center" class="indent">
+        <image class="face-smile"/>
+        <label id="isDefaultLabel" flex="1" data-l10n-id="preferences-simple-is-default"/>
+      </hbox>
+    </stack>
+    <hbox id="pinAppPane">
+      <label id="pinToTaskbar" flex="1" data-l10n-id="preferences-pin-to-taskbar-label"/>
+      <button id="pinToTaskbarBtn"
+              is="highlightable-button"
+              class="accessory-button"
+              data-l10n-id="preferences-pin-to-taskbar-button"/>
+    </hbox>
+#endif
+
+  </vbox>
+</groupbox>
+
+<html:h2 data-category="paneSimple"
+         class="simple"
+         hidden="true"
+         data-l10n-id="preferences-simple-search-header"/>
+
+<!-- Search -->
+<groupbox id="searchGroup"
+          class="simple"
+          data-category="paneSimple"
+          hidden="true">
+  <vbox class="simpleGroupboxBody">
+    <hbox>
+      <label data-l10n-id="preferences-default-search-engine-label" flex="1"/>
+      <!-- Please don't remove the wrapping hbox/vbox/box for these elements. It's used to properly compute the search tooltip position. -->
+      <hbox>
+        <menulist id="defaultEngineSimple">
+          <menupopup/>
+        </menulist>
+      </hbox>
+    </hbox>
+
+    <hbox class="suggest-container">
+      <vbox class="suggest-text-labels">
+        <description data-l10n-id="preferences-simple-suggests-label"/>
+        <description data-l10n-id="preferences-simple-suggests-subtext"
+                     class="subtext"/>
+      </vbox>
+
+      <checkbox id="suggestionsInSearchFieldsCheckbox"
+                data-l10n-id="preferences-simple-search-suggestions-option"
+                preference="browser.search.suggest.enabled"/>
+    </hbox>
+  </vbox>
+</groupbox>
+<hbox id="viewAllSettingsContainer" data-category="paneSimple">
+  <button id="viewAllSettings"
+          data-l10n-id="preferences-simple-view-all-settings"/>
+</hbox>
+</html:template>

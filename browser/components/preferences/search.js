@@ -297,6 +297,12 @@ var gSearchPane = {
       false
     );
 
+    await this._buildEngineDropDown(
+      document.getElementById("defaultEngineSimple"),
+      (await Services.search.getDefault()).name,
+      false
+    );
+
     if (this._separatePrivateDefaultEnabledPref.value) {
       await this._buildEngineDropDown(
         document.getElementById("defaultPrivateEngine"),
@@ -385,7 +391,10 @@ var gSearchPane = {
               aEvent.target.parentNode &&
               aEvent.target.parentNode.parentNode
             ) {
-              if (aEvent.target.parentNode.parentNode.id == "defaultEngine") {
+              if (
+                aEvent.target.parentNode.parentNode.id == "defaultEngine" ||
+                aEvent.target.parentNode.parentNode.id == "defaultEngineSimple"
+              ) {
                 gSearchPane.setDefaultEngine();
               } else if (
                 aEvent.target.parentNode.parentNode.id == "defaultPrivateEngine"
@@ -456,8 +465,11 @@ var gSearchPane = {
           // If the user is going through the drop down using up/down keys, the
           // dropdown may still be open (eg. on Windows) when engine-default is
           // fired, so rebuilding the list unconditionally would get in the way.
-          let selectedEngine = document.getElementById("defaultEngine")
-            .selectedItem.engine;
+          let engineDropDownList = document.getElementById("defaultEngine");
+          if (document.documentElement.classList.contains("simple")) {
+            engineDropDownList = document.getElementById("defaultEngineSimple");
+          }
+          let selectedEngine = engineDropDownList.selectedItem.engine;
           if (selectedEngine.name != engine.name) {
             gSearchPane.buildDefaultEngineDropDowns();
           }
@@ -623,9 +635,11 @@ var gSearchPane = {
   },
 
   async setDefaultEngine() {
-    await Services.search.setDefault(
-      document.getElementById("defaultEngine").selectedItem.engine
-    );
+    let engineDropDownList = document.getElementById("defaultEngine");
+    if (document.documentElement.classList.contains("simple")) {
+      engineDropDownList = document.getElementById("defaultEngineSimple");
+    }
+    await Services.search.setDefault(engineDropDownList.selectedItem.engine);
     if (ExtensionSettingsStore.getSetting(SEARCH_TYPE, SEARCH_KEY) !== null) {
       ExtensionSettingsStore.select(
         ExtensionSettingsStore.SETTING_USER_SET,

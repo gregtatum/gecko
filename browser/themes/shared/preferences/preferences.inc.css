@@ -46,6 +46,7 @@
 
 .main-content {
   padding-top: 0;
+  -moz-box-align: start;
 }
 
 .pane-container {

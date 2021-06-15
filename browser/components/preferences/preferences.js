@@ -6,6 +6,7 @@
 /* import-globals-from main.js */
 /* import-globals-from home.js */
 /* import-globals-from search.js */
+/* import-globals-from simple.js */
 /* import-globals-from containers.js */
 /* import-globals-from privacy.js */
 /* import-globals-from sync.js */
@@ -116,6 +117,7 @@ function init_all() {
   register_module("paneGeneral", gMainPane);
   register_module("paneHome", gHomePane);
   register_module("paneSearch", gSearchPane);
+  register_module("paneSimple", gSimplePane);
   register_module("panePrivacy", gPrivacyPane);
   register_module("paneContainers", gContainersPane);
   if (Services.prefs.getBoolPref("browser.preferences.experimental")) {
@@ -196,6 +198,7 @@ function telemetryBucketForCategory(category) {
     case "home":
     case "privacy":
     case "search":
+    case "simple":
     case "sync":
     case "searchresults":
       return category;
@@ -210,8 +213,8 @@ function onHashChange() {
 
 async function gotoPref(aCategory) {
   let categories = document.getElementById("categories");
-  const kDefaultCategoryInternalName = "paneGeneral";
-  const kDefaultCategory = "general";
+  const kDefaultCategoryInternalName = "paneSimple";
+  const kDefaultCategory = "simple";
   let hash = document.location.hash;
 
   let category = aCategory || hash.substr(1) || kDefaultCategoryInternalName;
@@ -223,6 +226,7 @@ async function gotoPref(aCategory) {
     category = category.substring(0, breakIndex);
   }
   category = friendlyPrefCategoryNameToInternalName(category);
+  document.documentElement.classList.toggle("simple", category == "paneSimple");
   if (category != "paneSearchResults") {
     gSearchResultsPane.query = null;
     gSearchResultsPane.searchInput.value = "";

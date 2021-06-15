@@ -139,6 +139,25 @@ set-as-my-default-browser =
     .label = Make Default…
     .accesskey = D
 
+preferences-pane-simple-title = Settings
+preferences-quick-setup-header = Quick set-up
+preferences-primary-browser-header = Primary browser
+preferences-simple-is-not-default = { -brand-short-name } is not your primary browser
+preferences-simple-is-default = { -brand-short-name } is your primary browser
+preferences-simple-set-as-default =
+    .label = Set as primary browser
+preferences-pin-to-taskbar-label = Pin { -brand-short-name } to system taskbar
+preferences-pin-to-taskbar-button =
+    .label = Pin to taskbar
+preferences-simple-search-header = Search
+preferences-default-search-engine-label = Default search engine
+preferences-simple-suggests-label = { -brand-short-name } Suggests
+preferences-simple-suggests-subtext = { -brand-short-name } Suggests connects you to bookmarks, URL, and cloud data
+preferences-simple-search-suggestions-option =
+    .aria-label = Enable { -brand-short-name } Suggests
+preferences-simple-view-all-settings =
+    .label = View all settings
+
 startup-restore-previous-session =
     .label = Restore previous session
     .accesskey = s
