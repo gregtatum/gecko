@@ -106,7 +106,7 @@ class BrowserWindowHandler {
       ) {
         browser.setAttribute(
           "src",
-          "chrome://browser/content/companionremote/companion.html"
+          "chrome://browser/content/companionremote/companion.xhtml"
         );
         browser.setAttribute("id", "companion-browser");
         browser.setAttribute("disablehistory", "true");

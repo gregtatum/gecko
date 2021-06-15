@@ -7,7 +7,7 @@ browser.jar:
 *   content/browser/companionremote/browser.css (content/browser.css)
     content/browser/companionremote/companion.css (content/companion.css)
     content/browser/companionremote/companion.js (content/companion.js)
-    content/browser/companionremote/companion.html (content/companion.html)
+*   content/browser/companionremote/companion.xhtml (content/companion.xhtml)
     content/browser/companionremote/email.svg (content/email.svg)
     content/browser/companionremote/event.svg (content/event.svg)
     content/browser/companionremote/keyframe-list.css (content/keyframe-list.css)

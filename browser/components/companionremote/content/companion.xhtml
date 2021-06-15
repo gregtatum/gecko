@@ -1,45 +1,69 @@
+<?xml version="1.0"?>
 <!-- This Source Code Form is subject to the terms of the Mozilla Public
-   - License, v. 2.0. If a copy of the MPL was not distributed with this
-   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+   - License, v. 2.0. If a copy of the MPL was not distributed with this file,
+   - You can obtain one at http://mozilla.org/MPL/2.0/. -->
 
-<!DOCTYPE html>
+<?xml-stylesheet href="chrome://global/skin/global.css"?>
 
-<html id="companion">
+<?xml-stylesheet href="chrome://global/skin/in-content/common.css"?>
+<?xml-stylesheet href="chrome://browser/skin/searchbar.css" type="text/css"?>
+<?xml-stylesheet href="chrome://browser/skin/browser.css" type="text/css"?>
+<?xml-stylesheet href="chrome://browser/content/companion/companion.css"?>
+
+<!DOCTYPE html [
+#ifdef XP_MACOSX
+#include ../../../base/content/browser-doctype.inc
+#endif
+]>
+
+<html
+  id="companion"
+  xmlns="http://www.w3.org/1999/xhtml"
+  xmlns:html="http://www.w3.org/1999/xhtml"
+  xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  forcedarkmode="true"
+  chromemargin="0,-1,-1,-1"
+  windowtype="Firefox:Companion"
+  persist="screenX screenY width height sizemode"
+>
 <head>
   <title>Firefox Companion</title>
-  <script type="module" src="companion.js"></script>
-
-  <link rel="stylesheet" type="text/css" href="chrome://global/skin/in-content/common.css"?>
-  <link rel="stylesheet" type="text/css" href="chrome://browser/skin/browser.css">
-  <link rel="stylesheet" type="text/css" href="chrome://browser/content/companion/companion.css">
+  <script type="module" src="companion.js"/>
   <link rel="localization" href="browser/browser.ftl"/>
 </head>
-<body>
-  <template id="template-range">
+<html:body xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+#ifdef XP_MACOSX
+#include ../../../base/content/macWindow.inc.xhtml
+#else
+  <script src="chrome://browser/content/utilityOverlay.js"/>
+#endif
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-range">
     <label>
-      <span class="range-label"></span>
+      <span class="range-label"/>
       <input class="range-slider" type="range"/>
     </label>
-    <p class="range-value"></p>
+    <p class="range-value"/>
   </template>
 
-  <template id="template-keyframe-list">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-keyframe-list">
     <link rel="stylesheet" href="keyframe-list.css"/>
-    <h2 class="list-title"></h2>
+    <h2 class="list-title"/>
     <div class="keyframe-list">
-      <slot></slot>
+      <slot/>
     </div>
   </template>
 
-  <template id="template-keyframe">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-keyframe">
     <img class="favicon"/>
-    <p class="title"></p>
-    <p class="category debug"></p>
-    <p class="score debug"></p>
-    <p class="last-access"></p>
+    <p class="title"/>
+    <p class="category debug"/>
+    <p class="score debug"/>
+    <p class="last-access"/>
   </template>
 
-  <template id="template-media-list">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-media-list">
     <link rel="stylesheet" href="chrome://global/skin/in-content/common.css"/>
     <style>
       :host {
@@ -65,14 +89,14 @@
         grid-area: list;
       }
     </style>
-    <h2 class="list-title"></h2>
+    <h2 class="list-title"/>
     <button class="mute-all">Mute all</button>
     <div class="media-list">
-      <slot></slot>
+      <slot/>
     </div>
   </template>
 
-  <template id="template-window-list">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-window-list">
     <link rel="stylesheet" href="chrome://global/skin/in-content/common.css"/>
     <style>
       :host {
@@ -93,30 +117,30 @@
         grid-area: list;
       }
     </style>
-    <h2 class="list-title"></h2>
+    <h2 class="list-title"/>
     <button class="add-pinned-tab">Add</button>
     <div class="window-list">
-      <slot></slot>
+      <slot/>
     </div>
   </template>
 
-  <template id="template-window">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-window">
     <div class="label"></div>
-    <slot></slot>
+    <slot />
   </template>
 
-  <template id="template-app">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-app">
     <div class="app card">
       <div class="app-overview">
         <img class="favicon"/>
-        <p class="title"></p>
+        <p class="title"/>
         <button class="switch-to-app">View</button>
       </div>
       <details hidden="true"><summary></summary><div class="extra-details-content"></div></details>
     </div>
   </template>
 
-  <template id="template-media">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-media">
     <div class="artwork-background"></div>
     <div class="play-pause artwork"><button class="playing"></button></div>
     <button class="mute"></button>
@@ -130,54 +154,82 @@
     <button class="pip"></button>
   </template>
 
-  <template id="template-event">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-event">
     <div class="event-info">
       <div class="event-content">
-        <div class="date"></div>
-        <div class="summary"></div>
+        <div class="date"/>
+        <div class="summary"/>
       </div>
     </div>
     <img class="conference-icon"/>
   </template>
 
-  <template id="template-email">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-email">
     <div class="from-date">
-      <div class="from"></div>
-      <div class="date"></div>
+      <div class="from"/>
+      <div class="date"/>
     </div>
-    <div class="subject"></div>
-    <div class="snippet"></div>
+    <div class="subject"/>
+    <div class="snippet"/>
   </template>
 
-  <template id="template-topsite">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-topsite">
     <div class="topsite-favicon"><div class="badge" hidden="true"></div><img /></div>
-    <p class="title"></p>
+    <p class="title"/>
   </template>
 
-  <template id="template-pocket-list">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-pocket-list">
     <link rel="stylesheet" href="keyframe-list.css"/>
-    <h2 class="list-title"></h2>
-    <h3 class="list-subtitle"></h3>
+    <h2 class="list-title"/>
+    <h3 class="list-subtitle"/>
     <div class="pocket-list">
-      <slot></slot>
+      <slot/>
     </div>
   </template>
 
-  <template id="template-pocket-story">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-pocket-story">
     <img class="preview"/>
     <div class="pocket-content">
-      <p class="title"></p>
-      <p class="excerpt"></p>
-      <p class="domain"></p>
+      <p class="title"/>
+      <p class="excerpt"/>
+      <p class="domain"/>
     </div>
   </template>
 
-  <div id="scroll">
+  <hbox id="titlebar">
+    <hbox id="mac-buttonbox"/>
+    <hbox flex="1" pack="end">
+      <toolbarbutton id="settings-button"/>
+      <toolbarbutton id="dock-button"/>
+    </hbox>
+    <hbox id="win-buttonbox" class="titlebar-buttonbox-container">
+      <hbox class="titlebar-buttonbox titlebar-color">
+        <toolbarbutton class="titlebar-button titlebar-min"
+                           oncommand="window.minimize();"
+                           data-l10n-id="browser-window-minimize-button"
+                           />
+        <toolbarbutton class="titlebar-button titlebar-max"
+                           oncommand="window.maximize();"
+                           data-l10n-id="browser-window-maximize-button"
+                           />
+        <toolbarbutton class="titlebar-button titlebar-restore"
+                           oncommand="window.restore();"
+                           data-l10n-id="browser-window-restore-down-button"
+                           />
+        <toolbarbutton class="titlebar-button titlebar-close"
+                           oncommand="window.close();"
+                           data-l10n-id="browser-window-close-button"
+                           />
+      </hbox>
+    </hbox>
+  </hbox>
+
+  <div xmlns="http://www.w3.org/1999/xhtml" id="scroll">
     <div id="top-sites-placeholder"></div>
 
     <div id="calendar" hidden="true">
       <h2 class="calendar-title">Upcoming Events</h2>
-      <div id="calendar-panel"></div>
+      <div id="calendar-panel"/>
     </div>
 
     <div id="email" hidden="true">
@@ -187,7 +239,7 @@
            <div id="inbox-link">Go to Inbox &#8594;</div>
         </div>
       </div>
-      <div id="email-panel"></div>
+      <div id="email-panel"/>
     </div>
     <div id="content">
     </div>
@@ -211,5 +263,5 @@
     <label><input type="checkbox" id="setting-appbar" data-pref="browser.companion.globalhistorydebugging" /> (Developer) Enable Debugging</label>
   </div>
 
-</body>
+</html:body>
 </html>

@@ -404,7 +404,7 @@ let JSWINDOWACTORS = {
         CompanionInit: { wantUntrusted: true },
       },
     },
-    matches: ["chrome://browser/content/companionremote/companion.html"],
+    matches: ["chrome://browser/content/companionremote/companion.xhtml"],
   },
 
   // Collects description and icon information from meta tags.
