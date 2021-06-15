@@ -20,11 +20,12 @@ class CompanionChild extends JSWindowActorChild {
           tabs() {
             return this._tabs.values();
           },
-
+          history: [],
           sendAsyncMessage(name, detail) {
             self.sendAsyncMessage(name, detail);
           },
         };
+
         waivedContent.CompanionUtils = Cu.cloneInto(
           CompanionUtils,
           waivedContent,
@@ -45,12 +46,14 @@ class CompanionChild extends JSWindowActorChild {
   receiveMessage(message) {
     switch (message.name) {
       case "Companion:Setup": {
-        let { tabs } = message.data;
+        let { tabs, history } = message.data;
+
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
         waivedContent.CompanionUtils._tabs.clear();
         for (let tab of tabs) {
           waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
         }
+        waivedContent.CompanionUtils.history = history;
         break;
       }
       case "Companion:TabAdded": {

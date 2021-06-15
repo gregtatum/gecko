@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { TopSites } from "./topsites.js";
 import { MediaList } from "./media.js";
 
 window.addEventListener(
@@ -25,6 +26,9 @@ window.addEventListener(
       document.documentElement.setAttribute("docked", "true");
     }
 
+    document
+      .getElementById("top-sites-placeholder")
+      .appendChild(new TopSites());
     let content = document.getElementById("content");
     content.appendChild(new MediaList("Media"));
   },

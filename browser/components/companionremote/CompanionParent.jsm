@@ -12,11 +12,20 @@ const { BrowserWindowTracker } = ChromeUtils.import(
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
+const { PlacesUtils } = ChromeUtils.import(
+  "resource://gre/modules/PlacesUtils.jsm"
+);
+
+const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
+  Ci.nsINavHistoryService
+);
+
 class CompanionParent extends JSWindowActorParent {
   constructor() {
     super();
     this._mediaControllerIdsToTabs = new Map();
     this._browserIdsToTabs = new Map();
+    this._navHistoryURLs = new Set();
 
     this._observer = this.observe.bind(this);
     this._handleMediaEvent = this.handleMediaEvent.bind(this);
@@ -206,6 +215,68 @@ class CompanionParent extends JSWindowActorParent {
     tabs.removeEventListener("TabAttrModified", this._handleTabEvent);
   }
 
+  getFavicon(page, width = 0) {
+    return new Promise(resolve => {
+      let service = Cc["@mozilla.org/browser/favicon-service;1"].getService(
+        Ci.nsIFaviconService
+      );
+      service.getFaviconDataForPage(
+        Services.io.newURI(page),
+        (uri, dataLength, data) => {
+          if (uri) {
+            resolve(uri.spec);
+          } else {
+            resolve(null);
+          }
+        },
+        width
+      );
+    });
+  }
+
+  async getNavHistory() {
+    let query = NavHistory.getNewQuery();
+    // Two days of history
+    query.beginTime = PlacesUtils.toPRTime(
+      Date.now() - 2 * 24 * 60 * 60 * 1000
+    );
+    query.endTime == null;
+
+    let queryOptions = NavHistory.getNewQueryOptions();
+    queryOptions.resultType = Ci.nsINavHistoryQueryOptions.RESULTS_AS_URI;
+    queryOptions.sortingMode =
+      Ci.nsINavHistoryQueryOptions.SORT_BY_VISITCOUNT_DESCENDING;
+    queryOptions.queryType = Ci.nsINavHistoryQueryOptions.QUERY_TYPE_HISTORY;
+
+    let results = NavHistory.executeQuery(query, queryOptions);
+    results.root.containerOpen = true;
+
+    try {
+      let history = new Array(results.root.childCount);
+      for (let i = 0; i < results.root.childCount; ++i) {
+        let childNode = results.root.getChild(i);
+        if (!this._navHistoryURLs.has(childNode.uri)) {
+          let newURI = Services.io.newURI(childNode.uri);
+          let site = {
+            title: childNode.title,
+            type: childNode.type,
+            RESULT_TYPE_URI: childNode.RESULT_TYPE_URI,
+            uri: childNode.uri,
+            uriHost: newURI.host,
+            uriSpec: newURI.spec,
+            icon: await this.getFavicon(childNode.uri, 16),
+          };
+
+          history[i] = site;
+          this._navHistoryURLs.add(childNode.uri);
+        }
+      }
+      return history;
+    } finally {
+      results.root.containerOpen = false;
+    }
+  }
+
   observe(subj, topic, data) {
     switch (topic) {
       case "browser-window-tracker-add-window": {
@@ -273,6 +344,7 @@ class CompanionParent extends JSWindowActorParent {
           tabs: BrowserWindowTracker.orderedWindows.flatMap(w =>
             w.gBrowser.tabs.map(t => this.getTabData(t))
           ),
+          history: await this.getNavHistory(),
         });
         break;
       }
@@ -328,6 +400,13 @@ class CompanionParent extends JSWindowActorParent {
           "PictureInPictureLauncher"
         );
         actor?.sendAsyncMessage("PictureInPicture:CompanionToggle");
+        break;
+      }
+      case "Companion:OpenURL": {
+        let { url } = message.data;
+        this.browsingContext.topChromeWindow.switchToTabHavingURI(url, true, {
+          ignoreFragment: true,
+        });
         break;
       }
     }
