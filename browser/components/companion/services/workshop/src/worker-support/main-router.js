@@ -1,6 +1,7 @@
-var listeners = {};
-var modules = [];
-var worker = null;
+let listeners = {};
+let modules = [];
+let worker = null;
+let workerPort = null;
 
 export function register(module) {
   var action,
@@ -26,7 +27,7 @@ export function register(module) {
   //dump('\x1b[34mM => w: send: ' + name + ' ' + uid + ' ' + cmd + '\x1b[0m\n');
     //debug('onmessage: ' + name + ": " + uid + " - " + cmd);
     try {
-      worker.postMessage({
+      workerPort.postMessage({
         type: name,
         uid: uid,
         cmd: cmd,
@@ -53,9 +54,15 @@ export function shutdown() {
 
 export function useWorker(_worker) {
   worker = _worker;
-  worker.onmessage = function dispatchToListener(evt) {
+  // Currently we're assuming SharedWorker, but try and also handle being run
+  // under a Worker as well.
+  if (worker.port) {
+    workerPort = worker.port;
+  } else {
+    workerPort = worker;
+  }
+  workerPort.onmessage = function dispatchToListener(evt) {
     var data = evt.data;
-//dump('\x1b[37mM <= w: recv: '+data.type+' '+data.uid+' '+data.cmd+'\x1b[0m\n');
     var listener = listeners[data.type];
     if (listener) {
       listener(data);

@@ -13,13 +13,15 @@ import appExtensions from 'app_logic/worker_extensions';
 const routerBridgeMaker = $router.registerInstanceType('bridge');
 
 let bridgeUniqueIdentifier = 0;
-function createBridgePair(universe) {
+function createBridgePair(universe, usePort) {
   var uid = bridgeUniqueIdentifier++;
 
   var TMB = new MailBridge(universe, universe.db, uid);
-  var routerInfo = routerBridgeMaker.register(function(data) {
-    TMB.__receiveMessage(data.msg);
-  });
+  var routerInfo = routerBridgeMaker.register(
+    function(data) {
+      TMB.__receiveMessage(data.msg);
+    },
+    usePort);
   var sendMessage = routerInfo.sendMessage;
 
   TMB.__sendMessage = function(msg) {
@@ -36,22 +38,23 @@ function createBridgePair(universe) {
 }
 
 let universe = null;
+let universePromise = null;
 
-function onUniverse() {
-  createBridgePair(universe);
-  console.log('Mail universe/bridge created and notified!');
-}
-
-var sendControl = $router.registerSimple('control', function(data) {
+var sendControl = $router.registerSimple('control', async function(data, source) {
   var args = data.args;
   switch (data.cmd) {
-    case 'hello':
-      universe = new MailUniverse({
-        online: args[0],
-        appExtensions
-      });
-      universe.init().then(onUniverse);
-      break;
+    case 'hello': {
+        if (!universe) {
+          universe = new MailUniverse({
+            online: args[0],
+            appExtensions
+          });
+          universePromise = universe.init();
+        }
+        await universePromise;
+        createBridgePair(universe, source);
+        break;
+      }
     case 'online':
     case 'offline':
       universe._onConnectionChange(args[0]);

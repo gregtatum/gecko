@@ -3,14 +3,30 @@ var listeners = {};
 
 export function receiveMessage(evt) {
   var data = evt.data;
-//dump('\x1b[37mw <= M: recv: '+data.type+' '+data.uid+' '+data.cmd +'\x1b[0m\n');
   var listener = listeners[data.type];
   if (listener) {
-    listener(data);
+    listener(data, evt.source);
   }
 }
 
-globalThis.addEventListener('message', receiveMessage);
+function receiveConnect(evt) {
+  const port = evt.ports[0];
+  if (!defaultPort) {
+    defaultPort = port;
+  }
+
+  port.onmessage = receiveMessage;
+}
+
+const inSharedWorker = 'onconnect' in globalThis;
+
+let defaultPort;
+if (!inSharedWorker) {
+  defaultPort = globalThis;
+  globalThis.addEventListener('message', receiveMessage);
+} else {
+  globalThis.addEventListener('connect', receiveConnect);
+}
 
 
 export function unregister(type) {
@@ -21,7 +37,6 @@ export function registerSimple(type, callback) {
   listeners[type] = callback;
 
   return function sendSimpleMessage(cmd, args) {
-    //dump('\x1b[34mw => M: send: ' + type + ' null ' + cmd + '\x1b[0m\n');
     globalThis.postMessage({ type: type, uid: null, cmd: cmd, args: args });
   };
 }
@@ -52,7 +67,6 @@ export function registerCallbackType(type) {
     return new Promise((resolve) => {
       callbacks[uid] = resolve;
 
-      //dump('\x1b[34mw => M: send: ' + type + ' ' + uid + ' ' + cmd + '\x1b[0m\n');
       globalThis.postMessage({ type: type, uid: uid++, cmd: cmd, args: args });
     });
   };
@@ -77,16 +91,16 @@ export function registerInstanceType(type) {
   };
 
   return {
-    register: function(instanceListener) {
+    register: function(instanceListener, explicitPort) {
+      const usePort = explicitPort || defaultPort;
       var thisUid = uid++;
       instanceMap[thisUid] = instanceListener;
 
       return {
         sendMessage: function sendInstanceMessage(cmd, args, transferArgs) {
-//dump('\x1b[34mw => M: send: ' + type + ' ' + thisUid + ' ' + cmd + '\x1b[0m\n');
-          globalThis.postMessage({ type: type, uid: thisUid,
+          usePort.postMessage({ type: type, uid: thisUid,
                                cmd: cmd, args: args },
-                             transferArgs);
+                               transferArgs);
         },
         unregister: function unregisterInstance() {
           delete instanceMap[thisUid];
