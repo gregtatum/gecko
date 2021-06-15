@@ -27,6 +27,8 @@ const DEBUG = false;
 // Variables
 var _lastTopBrowsingContextID = 0;
 var _trackedWindows = [];
+var _lastBrowserWindowId = 0;
+var _browserWindowIds = new WeakMap();
 
 // Global methods
 function debug(s) {
@@ -71,6 +73,10 @@ function _handleEvent(event) {
       ) {
         _updateCurrentBrowsingContextID(event.target.linkedBrowser);
       }
+      Services.obs.notifyObservers(
+        event.target,
+        "browser-window-tracker-tab-added"
+      );
       break;
     case "TabSelect":
       _updateCurrentBrowsingContextID(event.target.linkedBrowser);
@@ -80,6 +86,10 @@ function _handleEvent(event) {
       break;
     case "unload":
       WindowHelper.removeWindow(event.currentTarget);
+      Services.obs.notifyObservers(
+        event.currentTarget,
+        "browser-window-tracker-tab-removed"
+      );
       break;
   }
 }
@@ -108,6 +118,7 @@ function _untrackWindowOrder(window) {
 // Methods that impact a window. Put into single object for organization.
 var WindowHelper = {
   addWindow(window) {
+    _browserWindowIds.set(window, ++_lastBrowserWindowId);
     // Add event listeners
     TAB_EVENTS.forEach(function(event) {
       window.gBrowser.tabContainer.addEventListener(event, _handleEvent);
@@ -120,7 +131,7 @@ var WindowHelper = {
 
     // Update the selected tab's content outer window ID.
     _updateCurrentBrowsingContextID(window.gBrowser.selectedBrowser);
-    Services.obs.notifyObservers(null, "browser-window-tracker-change");
+    Services.obs.notifyObservers(window, "browser-window-tracker-add-window");
   },
 
   removeWindow(window) {
@@ -133,7 +144,11 @@ var WindowHelper = {
     WINDOW_EVENTS.forEach(function(event) {
       window.removeEventListener(event, _handleEvent);
     });
-    Services.obs.notifyObservers(null, "browser-window-tracker-change");
+    Services.obs.notifyObservers(
+      window,
+      "browser-window-tracker-remove-window"
+    );
+    _browserWindowIds.delete(window);
   },
 
   onActivate(window) {
@@ -175,7 +190,6 @@ this.BrowserWindowTracker = {
   },
 
   windowCreated(browser) {
-    Services.obs.notifyObservers(null, "browser-window-tracker-new-tab");
     if (browser === browser.ownerGlobal.gBrowser.selectedBrowser) {
       _updateCurrentBrowsingContextID(browser);
     }
@@ -214,5 +228,9 @@ this.BrowserWindowTracker = {
 
   track(window) {
     return WindowHelper.addWindow(window);
+  },
+
+  getBrowserWindowId(window) {
+    return _browserWindowIds.get(window);
   },
 };

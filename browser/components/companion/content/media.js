@@ -46,21 +46,29 @@ export class MediaList extends HTMLElement {
     this.render();
     Services.obs.addObserver(
       this.windowListener,
-      "browser-window-tracker-change"
+      "browser-window-tracker-add-window"
     );
     Services.obs.addObserver(
       this.windowListener,
-      "browser-window-tracker-new-tab"
+      "browser-window-tracker-remove-window"
+    );
+    Services.obs.addObserver(
+      this.windowListener,
+      "browser-window-tracker-tab-added"
     );
   }
   disconnectedCallback() {
-    Services.obs.addObserver(
+    Services.obs.removeObserver(
       this.windowListener,
-      "browser-window-tracker-change"
+      "browser-window-tracker-add-window"
     );
     Services.obs.removeObserver(
       this.windowListener,
-      "browser-window-tracker-new-tab"
+      "browser-window-tracker-remove-window"
+    );
+    Services.obs.removeObserver(
+      this.windowListener,
+      "browser-window-tracker-tab-added"
     );
   }
   get allBrowsers() {

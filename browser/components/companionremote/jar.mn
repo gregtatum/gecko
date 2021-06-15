@@ -12,6 +12,7 @@ browser.jar:
     content/browser/companionremote/event.svg (content/event.svg)
     content/browser/companionremote/keyframe-list.css (content/keyframe-list.css)
     content/browser/companionremote/link.svg (content/link.svg)
+    content/browser/companionremote/media.js (content/media.js)
     content/browser/companionremote/mute.svg (content/mute.svg)
     content/browser/companionremote/muted.svg (content/muted.svg)
     content/browser/companionremote/pip.svg (content/pip.svg)

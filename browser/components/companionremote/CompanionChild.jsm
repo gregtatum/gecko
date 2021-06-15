@@ -11,11 +11,60 @@ class CompanionChild extends JSWindowActorChild {
     switch (event.type) {
       case "CompanionInit": {
         this.sendAsyncMessage("Companion:Subscribe");
+
+        let win = this.browsingContext.window;
+        let waivedContent = Cu.waiveXrays(win);
+        let self = this;
+        let CompanionUtils = {
+          _tabs: new Map(),
+          tabs() {
+            return this._tabs.values();
+          },
+
+          sendAsyncMessage(name, detail) {
+            self.sendAsyncMessage(name, detail);
+          },
+        };
+        waivedContent.CompanionUtils = Cu.cloneInto(
+          CompanionUtils,
+          waivedContent,
+          {
+            cloneFunctions: true,
+          }
+        );
+        break;
       }
     }
   }
 
+  updateTab(tab) {
+    let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+    waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
+  }
+
   receiveMessage(message) {
+    switch (message.name) {
+      case "Companion:Setup": {
+        let { tabs } = message.data;
+        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+        waivedContent.CompanionUtils._tabs.clear();
+        for (let tab of tabs) {
+          waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
+        }
+        break;
+      }
+      case "Companion:TabAdded": {
+        this.updateTab(message.data);
+        break;
+      }
+      case "Companion:MediaEvent":
+      case "Companion:TabAttrModified":
+      case "Companion:TabPipToggleChanged": {
+        this.updateTab(message.data.tab);
+        break;
+      }
+    }
+
     this.passMessageDataToContent(message);
   }
 
@@ -25,9 +74,8 @@ class CompanionChild extends JSWindowActorChild {
 
   sendToContent(messageType, detail) {
     let win = this.document.defaultView;
-    let message = Object.assign({ messageType }, { value: detail });
-    let event = new win.CustomEvent("CompanionChromeToContent", {
-      detail: Cu.cloneInto(message, win),
+    let event = new win.CustomEvent(messageType, {
+      detail: Cu.cloneInto(detail, win),
     });
     win.dispatchEvent(event);
   }

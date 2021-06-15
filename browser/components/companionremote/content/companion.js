@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { MediaList } from "./media.js";
+
 window.addEventListener(
   "load",
   () => {
@@ -22,6 +24,11 @@ window.addEventListener(
     } else {
       document.documentElement.setAttribute("docked", "true");
     }
+
+    let content = document.getElementById("content");
+    content.appendChild(new MediaList("Media"));
   },
   { once: true }
 );
+
+document.dispatchEvent(new CustomEvent("CompanionInit", { bubbles: true }));
