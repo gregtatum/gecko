@@ -5,6 +5,16 @@
 import { TopSites } from "./topsites.js";
 import { MediaList } from "./media.js";
 
+function toggleSettings() {
+  let settings = document.getElementById("settings");
+  if (settings.hasAttribute("hidden")) {
+    settings.removeAttribute("hidden");
+  } else {
+    settings.setAttribute("hidden", "true");
+  }
+}
+window.addEventListener("Companion:ToggleSettings", toggleSettings);
+
 window.addEventListener(
   "load",
   () => {

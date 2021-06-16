@@ -3519,7 +3519,12 @@ function BrowserFullScreen() {
 function ToggleCompanionSettings() {
   const browserWindow = Services.wm.getMostRecentBrowserWindow();
   const companion = browserWindow.document.getElementById("companion-browser");
-  companion.contentWindow.toggleSettings();
+
+  if (Services.prefs.getBoolPref("browser.proclient.remoteCompanion", false)) {
+    companion.sendMessageToActor("Companion:ToggleSettings", {}, "Companion");
+  } else {
+    companion.contentWindow.toggleSettings();
+  }
 }
 
 function BrowserReloadWithFlags(reloadFlags) {
