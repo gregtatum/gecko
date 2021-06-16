@@ -411,8 +411,12 @@
                         hidden="true"
                         oncommand="gSync.openSignInAgainPage('menubar');" data-l10n-id="menu-tools-fxa-re-auth"/>
               <menuseparator id="devToolsSeparator"/>
-#ifndef PROCLIENT_WINDOW
-              <menu id="webDeveloperMenu" data-l10n-id="menu-tools-browser-tools">
+              <menu id="webDeveloperMenu"
+                    data-l10n-id="menu-tools-browser-tools"
+#ifdef PROCLIENT_WINDOW
+                    hidden="true"
+#endif
+              >
                 <menupopup id="menuWebDeveloperPopup">
                   <menuitem id="menu_taskManager"
                             oncommand="switchToTabHavingURI('about:performance', true)"
@@ -422,7 +426,6 @@
                             command="View:PageSource" data-l10n-id="menu-tools-page-source"/>
                 </menupopup>
               </menu>
-#endif
               <menuitem id="menu_pageInfo"
                         key="key_viewInfo"
                         command="View:PageInfo" data-l10n-id="menu-tools-page-info"/>
