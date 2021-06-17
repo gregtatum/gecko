@@ -61,19 +61,8 @@
  *   that's way down the road.
  **/
 
-define(
-  [
-    'shared/date',
-    'logic',
-    'module',
-    'exports'
-  ],
-  function(
-    $date,
-    logic,
-    $module,
-    exports
-  ) {
+import { NOW } from 'shared/date';
+import logic from 'logic';
 
 var BACKOFF_DURATIONS = exports.BACKOFF_DURATIONS = [
   { fixedMS: 0,    randomMS: 0 },
@@ -89,7 +78,7 @@ var BAD_RESOURCE_RETRY_DELAYS_MS = [
 
 var setTimeoutFunc = globalThis.setTimeout.bind(globalThis);
 
-exports.TEST_useTimeoutFunc = function(func) {
+export function TEST_useTimeoutFunc(func) {
   setTimeoutFunc = func;
   for (var i = 0; i < BACKOFF_DURATIONS.length; i++) {
     BACKOFF_DURATIONS[i].randomMS = 0;
@@ -213,7 +202,7 @@ BackoffEndpoint.prototype = {
   },
 
   noteBadResource: function(resourceId) {
-    var now = $date.NOW();
+    var now = NOW();
     if (!this._badResources.hasOwnProperty(resourceId)) {
       this._badResources[resourceId] = { count: 1, last: now };
     }
@@ -227,7 +216,7 @@ BackoffEndpoint.prototype = {
   resourceIsOkayToUse: function(resourceId) {
     if (!this._badResources.hasOwnProperty(resourceId))
       return true;
-    var info = this._badResources[resourceId], now = $date.NOW();
+    var info = this._badResources[resourceId], now = NOW();
   },
 
   shutdown: function() {
@@ -235,8 +224,6 @@ BackoffEndpoint.prototype = {
   },
 };
 
-exports.createEndpoint = function(name, listener) {
+export function createEndpoint(name, listener) {
   return new BackoffEndpoint(name, listener);
 };
-
-}); // end define

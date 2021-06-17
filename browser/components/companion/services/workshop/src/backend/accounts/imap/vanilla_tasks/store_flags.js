@@ -15,12 +15,13 @@
  */
 
 import TaskDefiner from '../../../task_infra/task_definer';
+import MixStoreFlagsMixin from '../../../task_mixins/mix_store_flags';
 
 /**
  * @see MixStoreFlagsMixin
  */
 export default TaskDefiner.defineComplexTask([
-  require('../../../task_mixins/mix_store_flags'),
+  MixStoreFlagsMixin,
   {
     name: 'store_flags',
     // We don't care about the fetch return, so don't bother.

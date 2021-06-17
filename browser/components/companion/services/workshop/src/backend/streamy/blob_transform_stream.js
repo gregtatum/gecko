@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
-
-const { TransformStream } = require('streams');
+import { TransformStream } from 'streams';
 
 /**
  * A stream that transforms a stream by chunking its input and returning Blobs.
  */
-return function BlobTransformStream({ saveChunkSize, mimeType }) {
+export default function BlobTransformStream({ saveChunkSize, mimeType }) {
   var arrays = [];
   var size = 0;
   return new TransformStream({
@@ -46,4 +43,4 @@ return function BlobTransformStream({ saveChunkSize, mimeType }) {
     }
   });
 };
-});
+

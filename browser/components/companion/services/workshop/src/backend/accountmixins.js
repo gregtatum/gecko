@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-define(function(require, exports) {
-'use strict';
-
 /**
  * @module
  **/
@@ -25,7 +22,7 @@ define(function(require, exports) {
  * Return the folder metadata for the first folder with the given type, or null
  * if no such folder exists.
  */
-exports.getFirstFolderWithType = function(type) {
+export function getFirstFolderWithType(type) {
   var folders = this.folders;
   if (!folders) {
     try {
@@ -43,7 +40,7 @@ exports.getFirstFolderWithType = function(type) {
   }
  return null;
 };
-exports.getFolderByPath = function(folderPath) {
+export function getFolderByPath(folderPath) {
   var folders = this.folders;
   for (var iFolder = 0; iFolder < folders.length; iFolder++) {
     if (folders[iFolder].path === folderPath) {
@@ -52,7 +49,7 @@ exports.getFolderByPath = function(folderPath) {
   }
   return null;
 };
-exports.getFolderById = function(id) {
+export function getFolderById(id) {
   return this.foldersTOC.foldersById.get(id);
 };
 
@@ -70,7 +67,7 @@ exports.getFolderById = function(id) {
  * triggers only when the underlying logic changed something and idempotently
  * ensures the paths of the folders.
  */
-exports.normalizeFolderHierarchy = function() {
+export function normalizeFolderHierarchy() {
   // Find a folder for which we'd like to become a sibling.
   var sibling =
         this.getFirstFolderWithType('drafts') ||
@@ -125,6 +122,3 @@ exports.normalizeFolderHierarchy = function() {
   }, this);
 
 };
-
-
-}); // end define

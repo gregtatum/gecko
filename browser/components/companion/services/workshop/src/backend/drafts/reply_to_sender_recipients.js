@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
-
-
-const { addressMatches, cloneRecipients } = require('./address_helpers');
+import { addressMatches, cloneRecipients } from './address_helpers';
 
 /**
  * Given the original recipients of a message, and the author who wants to reply
@@ -27,7 +23,7 @@ const { addressMatches, cloneRecipients } = require('./address_helpers');
  * we want to reuse the original to list (ignoring cc/bcc) rather than creating
  * a message to send to ourselves.  This usually happens in the sent folder.
  */
-return function replyToSenderRecipients(sourceRecipients, sourceAuthor,
+export default function replyToSenderRecipients(sourceRecipients, sourceAuthor,
                                         replyAuthor) {
   if (addressMatches(sourceAuthor, replyAuthor)) {
     return cloneRecipients(sourceRecipients);
@@ -39,4 +35,4 @@ return function replyToSenderRecipients(sourceRecipients, sourceAuthor,
     };
   }
 };
-});
+

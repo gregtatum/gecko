@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
-
-const searchPatternFromArgs = require('../search_pattern_from_args');
-const matchVerbatimHighlight = require('../../match_verbatim_highlight');
+import searchPatternFromArgs from '../search_pattern_from_args';
+import matchVerbatimHighlight from '../../match_verbatim_highlight';
 
 /**
  * Like the per-message Author filter but we check the ConversationInfo authors
@@ -29,7 +26,7 @@ const matchVerbatimHighlight = require('../../match_verbatim_highlight');
  * back to author filter and have it hide the per-message one in the
  * conversation case.
  */
-function ParticipantsFilter(params, args) {
+export default function ParticipantsFilter(params, args) {
   this.searchPattern = searchPatternFromArgs(args);
 }
 ParticipantsFilter.prototype = {
@@ -73,5 +70,3 @@ ParticipantsFilter.prototype = {
   },
 
 };
-return ParticipantsFilter;
-});

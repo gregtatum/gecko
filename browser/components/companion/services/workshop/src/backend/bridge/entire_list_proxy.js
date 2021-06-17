@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
-
-const logic = require('logic');
+import logic from 'logic';
 
 /**
  * Backs an `EntireListView`, see its docs for more context.
@@ -28,7 +25,7 @@ const logic = require('logic');
  *   they __release us.
  * @param {NamedContext} ctx
  */
-function EntireListProxy(toc, ctx) {
+export default function EntireListProxy(toc, ctx) {
   logic.defineScope(this, 'EntireListProxy', { tocType: toc.type });
 
   this.toc = toc;
@@ -188,6 +185,3 @@ EntireListProxy.prototype = {
     };
   }
 };
-
-return EntireListProxy;
-});

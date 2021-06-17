@@ -14,22 +14,17 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
+import { addressPairFromIdentity, replyToFromIdentity } from './address_helpers';
 
-const { addressPairFromIdentity, replyToFromIdentity } =
-  require('./address_helpers');
+import { generateBaseComposeParts } from '../bodies/mailchew';
 
-const { generateBaseComposeParts } =
-  require('../bodies/mailchew');
-
-const { makeMessageInfo, makeDraftInfo } = require('../db/mail_rep');
+import { makeMessageInfo, makeDraftInfo } from '../db/mail_rep';
 
 /**
  * Create a blank message, noting that because of signatures this might not
  * actually be fully blank.
  */
-return function deriveBlankDraft({ identity, messageId, umid, guid, date,
+export default function deriveBlankDraft({ identity, messageId, umid, guid, date,
                                    folderIds }) {
   // -- Build the body
   let bodyReps = generateBaseComposeParts(identity);
@@ -66,4 +61,4 @@ return function deriveBlankDraft({ identity, messageId, umid, guid, date,
     draftInfo
   });
 };
-});
+

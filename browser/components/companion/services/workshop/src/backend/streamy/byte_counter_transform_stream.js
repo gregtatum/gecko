@@ -14,18 +14,15 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
-
-const streams = require('streams');
+import { TransformStream } from 'streams';
 
 /**
  * A simple transform stream that counts the bytes passing through it,
  * exposing the count as `totalBytesRead`.
  */
-return function ByteCounterTransformStream() {
+export default function ByteCounterTransformStream() {
   var self = this;
-  var ts = new streams.TransformStream({
+  var ts = new TransformStream({
     transform(chunk, enqueue, done) {
       self.totalBytesRead += chunk.byteLength;
       enqueue(chunk);
@@ -39,4 +36,3 @@ return function ByteCounterTransformStream() {
   /** @member {number} */
   this.totalBytesRead = 0;
 };
-});

@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-define(function() {
-'use strict';
-
-return function readAllChunks(readableStream) {
+export default function readAllChunks(readableStream) {
   var reader = readableStream.getReader();
   var chunks = [];
 
@@ -34,4 +31,3 @@ return function readAllChunks(readableStream) {
     });
   }
 };
-});

@@ -14,17 +14,14 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
-
-const streams = require('streams');
-const util = require('util');
+ import { ReadableStream, WritableStream } from 'streams';
+ import { concatBuffers } from 'shared/util';
 
 /**
  * A stream that transforms a byte-chunk stream into a stream that emits lines.
  * Partial lines (e.g. if the stream is closed) will not be returned.
  */
-return function LineTransformStream() {
+export default function LineTransformStream() {
   var c; // the readable controller
 
   var CR = 13;
@@ -34,10 +31,10 @@ return function LineTransformStream() {
   var partialLineBuffer = null;
 
   // Data comes in as chunks of bytes, so we buffer it...
-  this.writable = new streams.WritableStream({
+  this.writable = new WritableStream({
     write(chunk) {
       if (partialLineBuffer) {
-        chunk = util.concatBuffers(partialLineBuffer, chunk);
+        chunk = concatBuffers(partialLineBuffer, chunk);
         partialLineBuffer = null;
       }
       var lastEndIndex = 0;
@@ -61,10 +58,10 @@ return function LineTransformStream() {
   });
 
   // Data goes out as lines from here.
-  this.readable = new streams.ReadableStream({
+  this.readable = new ReadableStream({
     start(controller) {
       c = controller;
     }
   });
 };
-});
+

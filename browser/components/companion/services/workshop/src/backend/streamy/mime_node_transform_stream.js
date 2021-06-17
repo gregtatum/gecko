@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
+import { ReadableStream, WritableStream } from 'streams';
+import mimefuncs from 'mimefuncs';
 
-const { ReadableStream, WritableStream } = require('streams');
-const mimefuncs = require('mimefuncs');
-
-const jsmime = require('jsmime');
-const MimeHeaderInfo = require('../mime/mime_header_info');
-const BlobTransformStream = require('./blob_transform_stream');
+import jsmime from 'jsmime';
+import MimeHeaderInfo from '../mime/mime_header_info';
+import BlobTransformStream from './blob_transform_stream';
 
 /**
  * MimeNodeTransformStream: A stream that receives lines of MIME data, and emits
@@ -36,7 +33,7 @@ const BlobTransformStream = require('./blob_transform_stream');
  *
  * - `bodyStream` is a stream of partial blobs for this node.
  */
-function MimeNodeTransformStream({ saveChunkSize, mimeType }) {
+export default function MimeNodeTransformStream({ saveChunkSize, mimeType }) {
   var partToStreamControllerMap = new Map();
   var partToContentTypeMap = new Map();
 
@@ -124,6 +121,3 @@ function MimeNodeTransformStream({ saveChunkSize, mimeType }) {
 }
 
 MimeNodeTransformStream.TEST_ONLY_DIE_DURING_MIME_PROCESSING = false;
-
-return MimeNodeTransformStream;
-});

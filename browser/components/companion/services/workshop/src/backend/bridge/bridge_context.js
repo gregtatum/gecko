@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
-
-let logic = require('logic');
+import logic from 'logic';
 
 function NamedContext(name, type, bridgeContext) {
   logic.defineScope(this, type,
@@ -112,7 +109,7 @@ NamedContext.prototype = {
  * Things that end up using this:
  * - View proxies (EntireListProxy, WindowedListProxy)
  */
-function BridgeContext({ bridge, batchManager, dataOverlayManager }) {
+export default function BridgeContext({ bridge, batchManager, dataOverlayManager }) {
   logic.defineScope(this, 'BridgeContext', { name: bridge.name });
   this.bridge = bridge;
   this.batchManager = batchManager;
@@ -183,6 +180,3 @@ BridgeContext.prototype = {
     this._namedContexts.clear();
   }
 };
-
-return BridgeContext;
-});

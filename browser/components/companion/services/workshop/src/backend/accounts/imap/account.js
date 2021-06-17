@@ -15,7 +15,7 @@
  */
 
 import logic from 'logic';
-import $errbackoff from '../../errbackoff';
+import { createEndpoint } from '../../errbackoff';
 import { KILL_CONNECTIONS_WHEN_JOBLESS, STALE_CONNECTION_TIMEOUT_MS } from '../../syncbase';
 import { CompositeIncomingAccount } from '../composite/incoming';
 import * as $imapclient from './client';
@@ -74,7 +74,7 @@ export function ImapAccount(universe, compositeAccount, accountId, credentials,
    * }
    */
   this._demandedConns = [];
-  this._backoffEndpoint = $errbackoff.createEndpoint('imap:' + this.id, this);
+  this._backoffEndpoint = createEndpoint('imap:' + this.id, this);
 
   this.pimap = new ParallelImap(this);
 

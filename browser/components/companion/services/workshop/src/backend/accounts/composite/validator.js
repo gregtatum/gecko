@@ -14,18 +14,16 @@
  * limitations under the License.
  */
 
-function gimmeProbers(isImap) {
+async function gimmeProbers(isImap) {
   return new Promise(function(resolve) {
     if (isImap) {
-      require(['../imap/probe', '../smtp/probe'],
-              function(receiveMod, sendMod) {
-                resolve([receiveMod, sendMod]);
-              });
+      const receiveMod = await import('../imap/probe');
+      const sendMod = await import('../smtp/probe');
+      return [receiveMod.default, sendMod.default];
     } else {
-      require(['../pop3/probe', '../smtp/probe'],
-              function(receiveMod, sendMod) {
-                resolve([receiveMod, sendMod]);
-              });
+      const receiveMod = await import('../pop3/probe');
+      const sendMod = await import('../smtp/probe');
+      return [receiveMod.default, sendMod.default];
     }
   });
 }

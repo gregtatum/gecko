@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
+import { encodeInt as encodeA64 } from 'shared/a64';
 
-const { encodeInt: encodeA64 } = require('shared/a64');
-
-const mailRep = require('../db/mail_rep');
+import { makeAttachmentPart, makeBodyPart } from '../db/mail_rep';
 
 /**
  * PartBuilder assists in populating the attachments/relatedParts/bodyReps of
@@ -160,7 +157,7 @@ PartBuilder.prototype = {
   },
 
   _makePart: function(partNum, headers, partType) {
-    return mailRep.makeAttachmentPart({
+    return makeAttachmentPart({
       relId: partType + encodeA64(this.nextRelId++),
       name: headers.filename || 'unnamed-' + (++this.unnamedPartCounter),
       contentId: headers.contentId,
@@ -176,7 +173,7 @@ PartBuilder.prototype = {
   },
 
   _makeBodyPart: function(partNum, headers) {
-    return mailRep.makeBodyPart({
+    return makeBodyPart({
       type: headers.subtype,
       part: partNum,
       sizeEstimate: 0,
@@ -187,5 +184,4 @@ PartBuilder.prototype = {
   }
 };
 
-return PartBuilder;
-});
+export default PartBuilder;

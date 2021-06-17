@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
-
-const jsmime = require('jsmime');
-const dateMod = require('shared/date');
-const util = require('shared/util');
-const { generateMessageIdHeaderValue } = require('../bodies/mailchew');
+import jsmime from 'jsmime';
+import { NOW } from 'shared/date';
+import { stripArrows } from 'shared/util';
+import { generateMessageIdHeaderValue } from '../bodies/mailchew';
 
 /**
  * Given a message extract and normalize the references header into a list of
@@ -97,14 +94,14 @@ function MimeHeaderInfo(rawHeaders, opts) {
   this.contentType = this.getParameterHeader('content-type') ||
       'application/octet-stream';
   [this.mediatype, this.subtype] = this.contentType.split('/');
-  this.contentId = util.stripArrows(this.getStringHeader('content-id'));
+  this.contentId = stripArrows(this.getStringHeader('content-id'));
   this.filename = (this.getParameterHeader('content-type', 'name') ||
                    this.getParameterHeader('content-disposition', 'filename'));
   this.charset = this.getParameterHeader('content-type', 'charset');
   this.format = this.getParameterHeader('content-type', 'format');
   this.delsp = this.getParameterHeader('content-type', 'delsp');
   this.encoding = this.getStringHeader('content-transfer-encoding', 'binary');
-  this.guid = util.stripArrows(this.getStringHeader('message-id'));
+  this.guid = stripArrows(this.getStringHeader('message-id'));
 
   // If we did not have a message-id header (as is the case with Outlook's
   // welcome message), generate a dummy value. Without a guid, we can't track
@@ -240,7 +237,7 @@ MimeHeaderInfo.prototype = {
    * We don't use the 'date' header verbatim; we perform normalization.
    */
   _computeDate() {
-    var now = dateMod.NOW();
+    var now = NOW();
     var dateString = this.getStringHeader('date');
     if (!dateString) {
       return now;
@@ -262,5 +259,4 @@ MimeHeaderInfo.prototype = {
 
 };
 
-return MimeHeaderInfo;
-});
+export default MimeHeaderInfo;

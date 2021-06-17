@@ -46,7 +46,7 @@ const scope = logic.scope('MailChew');
  * @param  {MailSenderIdentity} identity The current composer identity
  * @return {String} The text to be inserted into the body
  */
-export function generateBagenerateBaseComposePartsseComposeBody(identity) {
+export function generateBaseComposeParts(identity) {
   let textMsg;
   if (identity.signatureEnabled &&
       identity.signature &&

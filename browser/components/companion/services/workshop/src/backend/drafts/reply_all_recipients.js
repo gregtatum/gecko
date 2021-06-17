@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
-
-const { checkIfAddressListContainsAddress, filterOutIdentity } =
-  require('./address_helpers');
+import { checkIfAddressListContainsAddress, filterOutIdentity } from './address_helpers';
 
 /**
  * Given the recipients of a message, the (effective after reply-to ingestion)
@@ -33,7 +29,7 @@ const { checkIfAddressListContainsAddress, filterOutIdentity } =
  *   happening if someone with a less-clever client does reply-all to this new
  *   reply.
  */
-return function replyAllRecipients(sourceRecipients, sourceAuthor,
+export default function replyAllRecipients(sourceRecipients, sourceAuthor,
                                    replyAuthor) {
   let rTo;
   // No need to change the lists if the author is already on the
@@ -77,4 +73,4 @@ return function replyAllRecipients(sourceRecipients, sourceAuthor,
     bcc: sourceRecipients.bcc
   };
 };
-});
+

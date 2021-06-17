@@ -14,12 +14,6 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
-
-const co = require('co');
-const mix = require('mix');
-
 /**
  * A simple reference-counted resource implementation to be mixed in to
  * implementations that need to be reference counted for resource management
@@ -73,7 +67,6 @@ RefedResource.prototype = {
   }
 };
 
-// TODO more rigorous mixin magic
 RefedResource.mix = function(obj) {
   Object.keys(RefedResource.prototype).forEach(function(prop) {
     if (obj.hasOwnProperty(prop)) {
@@ -84,5 +77,4 @@ RefedResource.mix = function(obj) {
   return obj;
 };
 
-return RefedResource;
-});
+export default RefedResource;

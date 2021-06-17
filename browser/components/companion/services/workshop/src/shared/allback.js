@@ -20,9 +20,6 @@
  * @module
  **/
 
-define(['exports'], function(exports) {
-'use strict';
-
 /**
  * Create multiple named callbacks whose results are aggregated and a single
  * callback invoked once all the callbacks have returned their result.  This
@@ -43,7 +40,7 @@ define(['exports'], function(exports) {
  * an anti-foot-shooting measure.  Timeout logic and other protection against
  * potential memory leaks is not currently provided, but could be.
  */
-exports.allbackMaker = function allbackMaker(names, allDoneCallback) {
+export function allbackMaker(names, allDoneCallback) {
   var aggrData = Object.create(null), callbacks = {},
       waitingFor = names.concat();
 
@@ -110,7 +107,7 @@ exports.allbackMaker = function allbackMaker(names, allDoneCallback) {
  * actually fire the completion function (when they have all
  * completed).
  */
-exports.latch = function() {
+export function latch() {
   var ready = false;
   var deferred = {};
   // Avoid Object.prototype and any for-enumerations getting tripped up
@@ -174,7 +171,7 @@ exports.latch = function() {
  *   of the first callback that fired with an error value, but you probably
  *   do not want to be depending on this too much.
  */
-exports.extractErrFromCallbackArgs = function(results) {
+export function extractErrFromCallbackArgs(results) {
   // If there are any errors, find and propagate.
   var anyErr = null;
   for (var key in results) {
@@ -188,7 +185,7 @@ exports.extractErrFromCallbackArgs = function(results) {
   return anyErr;
 };
 
-exports.latchedWithRejections = function(namedPromises) {
+export function latchedWithRejections(namedPromises) {
   return new Promise(function(resolve) {
     // Avoid Object.prototype
     var results = Object.create(null);
@@ -216,4 +213,3 @@ exports.latchedWithRejections = function(namedPromises) {
     }
   });
 };
-}); // end define

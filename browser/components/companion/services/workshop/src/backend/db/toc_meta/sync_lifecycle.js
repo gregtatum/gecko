@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-define(function() {
-'use strict';
-
 /**
  * Listens to sync_refresh/sync_grow task lifecycles and toc change events.
  * The provided events and tocMeta fields are described for consumer perspective
@@ -52,7 +49,7 @@ define(function() {
  * - syncStatus {String}
  * - syncBlocked {String}
  */
-function SyncLifecycle({ folderId, syncStampSource, dataOverlayManager }) {
+export default function SyncLifecycle({ folderId, syncStampSource, dataOverlayManager }) {
   this.folderId = folderId;
   this.syncStampSource = syncStampSource;
   /**
@@ -183,6 +180,3 @@ SyncLifecycle.prototype = {
     this.syncActive = newSyncActive;
   }
 };
-
-return SyncLifecycle;
-});

@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-define(function() {
-'use strict';
-
 /**
  * A filter that adapts message filters to be run against conversations by
  * requesting the messages for the conversation be loaded and then running the
  * filter on each of the returned messages.  The gather structure is likewise
  * dynamically computed.
  */
-function MessageSpreadFilter({ wrappedFilterDef }, args) {
+export default function MessageSpreadFilter({ wrappedFilterDef }, args) {
   this.wrappedFilter =
     new wrappedFilterDef.constructor(wrappedFilterDef.params, args);
 
@@ -53,5 +50,3 @@ MessageSpreadFilter.prototype = {
   },
 
 };
-return MessageSpreadFilter;
-});

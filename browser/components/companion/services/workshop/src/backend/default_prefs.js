@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-define(function() {
-'use strict';
-return {
+const DEFAULT_PREFS = {
   syncRange: 'auto',
   syncInterval: 0,
   notifyOnNew: true,
   playSoundOnSend: true
 };
-});
+
+export default DEFAULT_PREFS;

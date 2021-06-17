@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-const { ReadableStream } = require('streams');
+import { ReadableStream } from 'streams';
 
-const chunkedDownloadMimeStream = require('./chunked_download_mime_stream');
+import chunkedDownloadMimeStream from './chunked_download_mime_stream';
 
 /**
  * Given a message and a list of parts to fetch, this will produce a stream of

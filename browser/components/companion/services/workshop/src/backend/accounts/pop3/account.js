@@ -15,7 +15,7 @@
  */
 
 import logic from 'logic';
-import errbackoff from '../../errbackoff';
+import { createEndpoint } from '../../errbackoff';
 import { CompositeIncomingAccount } from '../composite/incoming';
 import errorutils from '../../errorutils';
 import DisasterRecovery from '../../disaster-recovery';
@@ -39,7 +39,7 @@ function Pop3Account(universe, compositeAccount, accountId, credentials,
   // to access a mailbox at a given time, so there's no connection pool.
   this._conn = null;
   this._pendingConnectionRequests = [];
-  this._backoffEndpoint = errbackoff.createEndpoint('pop3:' + this.id, this);
+  this._backoffEndpoint = createEndpoint('pop3:' + this.id, this);
 
   // If we have an existing connection from setting up the account, we
   // can reuse that during the first sync.

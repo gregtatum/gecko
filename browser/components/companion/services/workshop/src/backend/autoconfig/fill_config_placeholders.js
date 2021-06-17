@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-define(function() {
-'use strict';
-
-return function fillConfigPlaceholders(userDetails, sourceConfigInfo) {
+export default function fillConfigPlaceholders(userDetails, sourceConfigInfo) {
   // Return a mutated copy, don't mutate the original.
   var configInfo = JSON.parse(JSON.stringify(sourceConfigInfo));
 
@@ -54,4 +51,4 @@ return function fillConfigPlaceholders(userDetails, sourceConfigInfo) {
 
   return configInfo;
 };
-});
+

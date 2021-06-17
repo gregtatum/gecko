@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
-
-let logic = require('logic');
+import logic from 'logic';
 
 /**
  * As EntireListProxy and WindowedListProxy have things to tell their MailAPI
@@ -59,7 +56,7 @@ let logic = require('logic');
 8:23 PM <asuth> but by tying it to the rootCauseId I can handle cascades too
  *
  */
-function BatchManager(db) {
+export default function BatchManager(db) {
   logic.defineScope(this, 'BatchManager');
 
   this._db = db;
@@ -153,6 +150,3 @@ BatchManager.prototype = {
     }
   }
 };
-
-return BatchManager;
-});

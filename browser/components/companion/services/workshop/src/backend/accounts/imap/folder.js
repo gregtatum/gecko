@@ -281,14 +281,12 @@ ImapFolderConn.prototype = {
       });
   },
 
-  syncDateRange: function() {
-    var args = Array.slice(arguments);
-    var self = this;
+  // Attempt to
+  async syncDateRange(...args) {
+    const $imapsync = await import('imap/protocol/sync');
 
-    require(['imap/protocol/sync'], function(_sync) {
-      $imapsync = _sync;
-      (self.syncDateRange = self._lazySyncDateRange).apply(self, args);
-    });
+    this.syncDateRange = this._lazySyncDateRange;
+    this.syncDateRange(...args);
   },
 
   /**
@@ -880,82 +878,81 @@ ImapFolderConn.prototype = {
     (self.downloadBodies = self._lazyDownloadBodies).apply(self, args);
   },
 
-  downloadMessageAttachments: function(uid, partInfos, callback/*, progress*/) {
-    require(['mimeparser'], function(MimeParser) {
-      var conn = this._conn;
+  async downloadMessageAttachments(uid, partInfos, callback/*, progress*/) {
+    const MimeParser = await import('mimeparser');
+    var conn = this._conn;
 
-      var latch = $allback.latch();
-      var anyError = null;
-      var bodies = [];
+    var latch = $allback.latch();
+    var anyError = null;
+    var bodies = [];
 
-      partInfos.forEach(function(partInfo, index) {
-        var partKey = 'body.peek[' + partInfo.part + ']';
-        var partDone = latch.defer(partInfo.part);
-        conn.listMessages(
-          uid,
-          [partKey],
-          { byUid: true },
-          function(err, messages) {
-            if (err) {
-              anyError = err;
-              console.error('attachments:download-error', {
-                error: err,
-                part: partInfo.part,
-                type: partInfo.type
-              });
-              partDone();
-              return;
-            }
-
-            // We only receive one message per each listMessages call.
-            var msg = messages[0];
-
-            // Find the proper response key of the message. Since this
-            // response object is a lightweight wrapper around the
-            // response returned from the IRC server and it's possible
-            // there are poorly-behaved servers out there, best to err
-            // on the side of safety.
-            var bodyPart;
-            for (var key in msg) {
-              if (/body\[/.test(key)) {
-                bodyPart = msg[key];
-                break;
-              }
-            }
-
-            if (!bodyPart) {
-              console.error('attachments:download-error', {
-                error: 'no body part?',
-                requestedPart: partKey,
-                responseKeys: Object.keys(msg)
-              });
-              partDone();
-              return;
-            }
-
-            // TODO: stream attachments, bug 1047032
-            var parser = new MimeParser();
-            // TODO: escape partInfo.type/encoding
-            parser.write('Content-Type: ' + partInfo.type + '\r\n');
-            parser.write('Content-Transfer-Encoding: ' + partInfo.encoding + '\r\n');
-            parser.write('\r\n');
-            parser.write(bodyPart);
-            parser.end(); // Parsing is actually synchronous.
-
-            var node = parser.node;
-
-            bodies[index] = new Blob([node.content], {
-              type: node.contentType.value
+    partInfos.forEach(function(partInfo, index) {
+      var partKey = 'body.peek[' + partInfo.part + ']';
+      var partDone = latch.defer(partInfo.part);
+      conn.listMessages(
+        uid,
+        [partKey],
+        { byUid: true },
+        function(err, messages) {
+          if (err) {
+            anyError = err;
+            console.error('attachments:download-error', {
+              error: err,
+              part: partInfo.part,
+              type: partInfo.type
             });
-
             partDone();
-          });
-      });
+            return;
+          }
 
-      latch.then(function(/*results*/) {
-        callback(anyError, bodies);
-      });
-    }.bind(this));
+          // We only receive one message per each listMessages call.
+          var msg = messages[0];
+
+          // Find the proper response key of the message. Since this
+          // response object is a lightweight wrapper around the
+          // response returned from the IRC server and it's possible
+          // there are poorly-behaved servers out there, best to err
+          // on the side of safety.
+          var bodyPart;
+          for (var key in msg) {
+            if (/body\[/.test(key)) {
+              bodyPart = msg[key];
+              break;
+            }
+          }
+
+          if (!bodyPart) {
+            console.error('attachments:download-error', {
+              error: 'no body part?',
+              requestedPart: partKey,
+              responseKeys: Object.keys(msg)
+            });
+            partDone();
+            return;
+          }
+
+          // TODO: stream attachments, bug 1047032
+          var parser = new MimeParser();
+          // TODO: escape partInfo.type/encoding
+          parser.write('Content-Type: ' + partInfo.type + '\r\n');
+          parser.write('Content-Transfer-Encoding: ' + partInfo.encoding + '\r\n');
+          parser.write('\r\n');
+          parser.write(bodyPart);
+          parser.end(); // Parsing is actually synchronous.
+
+          var node = parser.node;
+
+          bodies[index] = new Blob([node.content], {
+            type: node.contentType.value
+          });
+
+          partDone();
+        });
+    });
+
+    latch.then(function(/*results*/) {
+      callback(anyError, bodies);
+    });
   },
 
   shutdown: function() {

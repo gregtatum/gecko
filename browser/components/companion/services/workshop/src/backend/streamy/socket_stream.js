@@ -14,18 +14,15 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
-
-const streams = require('streams');
-const util = require('util');
+import { makeEventTarget } from 'shared/util';
+import { ReadableStream, WritableStream } from 'streams';
 
 /**
  * A Stream built from a mozTCPSocket. Data arrives in chunks to the readable
  * side of the stream; to send data, write to the writable side.
  */
-return function SocketStream(socket) {
-  socket = util.makeEventTarget(socket);
+function SocketStream(socket) {
+  socket = makeEventTarget(socket);
 
   function maybeCloseSocket() {
     if (socket.readyState !== 'closing' && socket.readyState !== 'closed') {
@@ -33,7 +30,7 @@ return function SocketStream(socket) {
     }
   }
 
-  this.readable = new streams.ReadableStream({
+  this.readable = new ReadableStream({
     start: function(c) {
       socket.addEventListener('data', (evt) => {
         c.enqueue(new Uint8Array(evt.data));
@@ -52,7 +49,7 @@ return function SocketStream(socket) {
     }
   });
 
-  this.writable = new streams.WritableStream({
+  this.writable = new WritableStream({
     start: function(error) {
       socket.addEventListener('error', (evt) => error(evt.data || evt));
     },
@@ -65,4 +62,5 @@ return function SocketStream(socket) {
     }
   });
 };
-});
+
+export default SocketStream;

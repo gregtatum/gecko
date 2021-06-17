@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-define(function(require) {
-'use strict';
+import logic from 'logic';
+import { latchedWithRejections } from 'shared/allback';
 
-const logic = require('logic');
-const { latchedWithRejections } = require('shared/allback');
+import { AUTOCONFIG_TIMEOUT_MS, ISPDB_AUTOCONFIG_ROOT } from '../syncbase';
 
-const { AUTOCONFIG_TIMEOUT_MS, ISPDB_AUTOCONFIG_ROOT } = require('../syncbase');
-
-const testingHacks = require('./testing_hacks');
-const fillConfigPlaceholders = require('./fill_config_placeholders');
+import testingHacks from './testing_hacks';
+import fillConfigPlaceholders from './fill_config_placeholders';
 
 /**
  * Autoconfiguration logic, implemented as a class for historical reasons and
@@ -635,10 +632,10 @@ Autoconfigurator.prototype = {
 };
 
 /**
- * Run autoconfiguration against th
+ * Run autoconfiguration against the provided details.
  */
-return function autoconfigLookup(details) {
+export default function autoconfigLookup(details) {
   let autoconfigurator = new Autoconfigurator();
   return autoconfigurator.learnAboutAccount(details);
 };
-});
+
