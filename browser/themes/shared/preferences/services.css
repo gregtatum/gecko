@@ -6,6 +6,7 @@
   display: grid;
   grid-template-columns: 300px auto auto;
   grid-column-gap: 64px;
+  align-items: center;
 }
 
 .service-info-container {
@@ -26,6 +27,14 @@
 
 .service-status {
   justify-self: center;
+}
+
+.status-connected,
+.status-disconnected,
+.service-labels,
+.status-text {
+  color: var(--in-content-deemphasized-text);
+  font-size: 85%;
 }
 
 .service-wrapper[type=firefox-account] > button {

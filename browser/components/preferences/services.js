@@ -66,13 +66,13 @@ class ServiceRow extends HTMLElement {
         </div>
         <div class="service-status">
           <div class="status-text" data-l10n-id="preferences-services-status"></div>
-          <div ref="status-connected" data-l10n-id="preferences-services-connected-status" hidden></div>
-          <div ref="status-disconnected" data-l10n-id="preferences-services-disconnected-status" hidden></div>
+          <div class="status-connected" data-l10n-id="preferences-services-connected-status" hidden></div>
+          <div class="status-disconnected" data-l10n-id="preferences-services-disconnected-status" hidden></div>
         </div>
-        <button ref="button-disconnect"
+        <button class="button-disconnect"
                 data-l10n-id="preferences-services-disconnect-button"
                 hidden></button>
-        <button ref="button-connect"
+        <button class="button-connect"
                 data-l10n-id="preferences-services-connect-button"
                 hidden></button>
       </div>
@@ -107,19 +107,13 @@ class ServiceRow extends HTMLElement {
     connected = connected == "true";
 
     let statusContainer = this.shadowRoot.querySelector(".service-status");
-    let connectedStatus = this.shadowRoot.querySelector(
-      "div[ref=status-connected]"
-    );
+    let connectedStatus = this.shadowRoot.querySelector(".status-connected");
     let disconnectedStatus = this.shadowRoot.querySelector(
-      "div[ref=status-disconnected]"
+      ".status-disconnected"
     );
 
-    let disconnectButton = this.shadowRoot.querySelector(
-      "button[ref=button-disconnect]"
-    );
-    let connectButton = this.shadowRoot.querySelector(
-      "button[ref=button-connect]"
-    );
+    let disconnectButton = this.shadowRoot.querySelector(".button-disconnect");
+    let connectButton = this.shadowRoot.querySelector(".button-connect");
 
     statusContainer.toggleAttribute(
       "hidden",
@@ -195,12 +189,8 @@ class ServiceRow extends HTMLElement {
     document.l10n.setAttributes(name, this.data.nameId);
     document.l10n.setAttributes(labels, this.data.labelsId);
 
-    let disconnectButton = this.shadowRoot.querySelector(
-      "button[ref=button-disconnect]"
-    );
-    let connectButton = this.shadowRoot.querySelector(
-      "button[ref=button-connect]"
-    );
+    let disconnectButton = this.shadowRoot.querySelector(".button-disconnect");
+    let connectButton = this.shadowRoot.querySelector(".button-connect");
     disconnectButton.addEventListener("click", this);
     connectButton.addEventListener("click", this);
 

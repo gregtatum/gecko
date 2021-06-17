@@ -161,8 +161,9 @@ preferences-services-header = Your accounts
 preferences-extra-services-header = Extra Services
 preferences-services-disconnect-button = Disconnect
 preferences-services-connect-button = Connect
-preferences-services-status = Status
-preferences-services-disconnected-status = Disconnected
+# The service status string should be in ALL CAPS for style purposes, if your locale allows it
+preferences-services-status = STATUS
+preferences-services-disconnected-status = Not connected
 preferences-services-connected-status = Connected
 preferences-services-google-account = Google Services
 preferences-services-microsoft-account = Microsft 365
