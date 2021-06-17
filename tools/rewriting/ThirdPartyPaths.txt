@@ -1,3 +1,5 @@
+browser/components/companion/services/workshop/build/
+browser/components/companion/services/workshop/node_modules/
 browser/components/companion/services/workshop/src/vendor/
 browser/components/newtab/vendor/
 browser/components/pocket/content/panels/js/vendor/

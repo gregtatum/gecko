@@ -52,7 +52,7 @@ const DEFAULT_STYLE_TAG =
  * process is inherently asynchronous because we utilize the src mechanism.
  * This (hopefully) allows the document parsing to occur on a background
  * thread.  Note that this also means your CSP policy (if 1.1/2 or later) MUST
- * whitelist "blob" for child-src.  Probably.  I'm guessing.  I don't know.
+ * allow-list "blob" for child-src.  Probably.  I'm guessing.  I don't know.
  * Maybe "self" also works in some versions?  Somebody test and update this
  * documentation.  Or just file a bug when it breaks for you.  Yeah, that's
  * the ticket.

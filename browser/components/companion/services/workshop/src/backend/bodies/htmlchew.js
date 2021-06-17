@@ -34,8 +34,8 @@ import $bleach from "bleach";
 import { DESIRED_SNIPPET_LENGTH } from "../syncbase";
 
 /**
- * Whitelisted HTML tags list. Currently from nsTreeSanitizer.cpp which credits
- * Mark Pilgrim and Sam Ruby for its own initial whitelist.
+ * Allow-listed HTML tags list. Currently from nsTreeSanitizer.cpp which credits
+ * Mark Pilgrim and Sam Ruby for its own initial allow-list.
  *
  * IMPORTANT THUNDERBIRD NOTE: Thunderbird only engages its sanitization logic
  * when processing mailto URIs, when the non-default
@@ -156,7 +156,7 @@ var LEGAL_TAGS = [
   /* http://www.w3.org/TR/ruby/ is a pronounciation markup that is not directly
    * supported by gecko at this time (although there is a Firefox extension).
    * All of 'rp', 'rt', and 'ruby' are ruby tags.  The spec also defines 'rb'
-   * and 'rbc' tags that nsTreeSanitizer does not whitelist, however.
+   * and 'rbc' tags that nsTreeSanitizer does not allow-list, however.
    */
   "rp",
   "rt",
@@ -285,7 +285,7 @@ var LEGAL_ATTR_MAP = {
     "hspace", // (pres)
     // dangerous: 'http-equiv' (meta refresh, maybe other trickiness)
     // interactive-ui: 'icon',
-    "id", // (pres; white-listed for style targets)
+    "id", // (pres; allow-listed for style targets)
     // specific: 'ismap', (area image map)
     // microformat: 'itemid', 'itemprop', 'itemref', 'itemscope', 'itemtype',
     // annoying: 'kind', (media)
