@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import WindowedListView from './windowed_list_view';
-import MailMessage from './mail_message';
+import WindowedListView from "./windowed_list_view";
+import MailMessage from "./mail_message";
 
 export default function MessagesListView(api, handle) {
   WindowedListView.call(this, api, MailMessage, handle);
@@ -33,7 +33,7 @@ MessagesListView.prototype = Object.create(WindowedListView.prototype);
  * TODO: generalize to have message-centric sync_body-style logic
  */
 MessagesListView.prototype.ensureSnippets = function() {
-  let snippetsNeeded = this.items.some((message) => {
+  let snippetsNeeded = this.items.some(message => {
     return message && message.snippet === null;
   });
 
@@ -50,8 +50,8 @@ MessagesListView.prototype.ensureSnippets = function() {
     // NB: We intentionally do not use a handle as there's no reason this needs
     // to be statefully associated with a list view.
     this._api.__bridgeSend({
-      type: 'fetchSnippets',
-      convIds: [this.conversationId]
+      type: "fetchSnippets",
+      convIds: [this.conversationId],
     });
   }
 };

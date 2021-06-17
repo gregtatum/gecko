@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { addressMatches, cloneRecipients } from './address_helpers';
+import { addressMatches, cloneRecipients } from "./address_helpers";
 
 /**
  * Given the original recipients of a message, and the author who wants to reply
@@ -23,16 +23,17 @@ import { addressMatches, cloneRecipients } from './address_helpers';
  * we want to reuse the original to list (ignoring cc/bcc) rather than creating
  * a message to send to ourselves.  This usually happens in the sent folder.
  */
-export default function replyToSenderRecipients(sourceRecipients, sourceAuthor,
-                                        replyAuthor) {
+export default function replyToSenderRecipients(
+  sourceRecipients,
+  sourceAuthor,
+  replyAuthor
+) {
   if (addressMatches(sourceAuthor, replyAuthor)) {
     return cloneRecipients(sourceRecipients);
-  } else {
-    return {
-      to: [sourceAuthor],
-      cc: [],
-      bcc: []
-    };
   }
-};
-
+  return {
+    to: [sourceAuthor],
+    cc: [],
+    bcc: [],
+  };
+}

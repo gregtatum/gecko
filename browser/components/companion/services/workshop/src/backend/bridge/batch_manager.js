@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
 /**
  * As EntireListProxy and WindowedListProxy have things to tell their MailAPI
@@ -57,7 +57,7 @@ import logic from 'logic';
  *
  */
 export default function BatchManager(db) {
-  logic.defineScope(this, 'BatchManager');
+  logic.defineScope(this, "BatchManager");
 
   this._db = db;
   this._pendingProxies = new Set();
@@ -73,33 +73,31 @@ export default function BatchManager(db) {
 
   this.flushDelayMillis = 100;
 
-  this._db.on('cacheDrop', this._bound_dbFlush);
+  this._db.on("cacheDrop", this._bound_dbFlush);
 }
 BatchManager.prototype = {
-  __cleanup: function() {
-    this._db.removeListener('cacheDrop', this._bound_dbFlush);
+  __cleanup() {
+    this._db.removeListener("cacheDrop", this._bound_dbFlush);
   },
 
-  _flushPending: function(timerFired) {
+  _flushPending(timerFired) {
     if (!timerFired) {
       globalThis.clearTimeout(this._timer);
     }
     this._timer = null;
 
-    logic(
-      this, 'flushing',
-      {
-        proxyCount: this._pendingProxies.size,
-        // TODO: this is arguably expensive; investigate logic on-demand funcs
-        tocTypes: Array.from(this._pendingProxies).map((proxy) => {
-          return proxy.toc.type;
-        }),
-        timerFired
-      });
+    logic(this, "flushing", {
+      proxyCount: this._pendingProxies.size,
+      // TODO: this is arguably expensive; investigate logic on-demand funcs
+      tocTypes: Array.from(this._pendingProxies).map(proxy => {
+        return proxy.toc.type;
+      }),
+      timerFired,
+    });
     for (let proxy of this._pendingProxies) {
       let payload = proxy.flush();
       if (payload) {
-        proxy.ctx.sendMessage('update', payload);
+        proxy.ctx.sendMessage("update", payload);
       }
     }
     this._pendingProxies.clear();
@@ -119,34 +117,37 @@ BatchManager.prototype = {
    *   but the final answer will take at least a user-perceptible amount of
    *   time.
    */
-  registerDirtyView: function(proxy, flushMode) {
-    logic(
-      this, 'dirtying',
-      {
-        tocType: proxy.toc.type,
-        ctxName: proxy.ctx.name,
-        flushMode,
-        alreadyDirty: this._pendingProxies.has(proxy)
-      });
+  registerDirtyView(proxy, flushMode) {
+    logic(this, "dirtying", {
+      tocType: proxy.toc.type,
+      ctxName: proxy.ctx.name,
+      flushMode,
+      alreadyDirty: this._pendingProxies.has(proxy),
+    });
 
     this._pendingProxies.add(proxy);
 
     if (flushMode) {
-      if (flushMode === 'immediate') {
+      if (flushMode === "immediate") {
         this._flushPending(false);
-      } else if (this._timer !== true) { // therefore: flushMode === 'soon'
+      } else if (this._timer !== true) {
+        // therefore: flushMode === 'soon'
         // Our conditioanl means we're only in here if a promise isn't already
         // scheduled.
         if (this._timer) {
           // which means this is a timer we need to clear if truthy.
           globalThis.clearTimeout(this._timer);
         }
-        Promise.resolve().then(() => { this._flushPending(false); });
+        Promise.resolve().then(() => {
+          this._flushPending(false);
+        });
         this._timer = true;
       }
     } else if (!this._timer) {
-      this._timer = globalThis.setTimeout(this._bound_timerFired,
-                                          this.flushDelayMillis);
+      this._timer = globalThis.setTimeout(
+        this._bound_timerFired,
+        this.flushDelayMillis
+      );
     }
-  }
+  },
 };

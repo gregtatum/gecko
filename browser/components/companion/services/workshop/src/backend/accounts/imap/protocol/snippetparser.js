@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { TextParser } from './textparser';
+import { TextParser } from "./textparser";
 
 function arrayAppend(array1, array2) {
   var tmp = new Uint8Array(array1.byteLength + array2.byteLength);
@@ -44,10 +44,9 @@ SnippetParser.prototype = {
   },
 
   complete() {
-    var content =
-      TextParser.prototype.complete.apply(this, arguments);
+    var content = TextParser.prototype.complete.apply(this, arguments);
 
     content.buffer = this._array.buffer;
     return content;
-  }
+  },
 };

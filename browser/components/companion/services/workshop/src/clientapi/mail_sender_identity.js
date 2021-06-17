@@ -37,14 +37,14 @@ export default function MailSenderIdentity(api, wireRep) {
   this.signatureEnabled = wireRep.signatureEnabled;
 }
 MailSenderIdentity.prototype = {
-  toString: function() {
-    return '[MailSenderIdentity: ' + this.type + ' ' + this.id + ']';
+  toString() {
+    return "[MailSenderIdentity: " + this.type + " " + this.id + "]";
   },
-  toJSON: function() {
-    return { type: 'MailSenderIdentity' };
+  toJSON() {
+    return { type: "MailSenderIdentity" };
   },
 
-  __update: function(wireRep) {
+  __update(wireRep) {
     this.id = wireRep.id;
     this.name = wireRep.name;
     this.address = wireRep.address;
@@ -62,20 +62,20 @@ MailSenderIdentity.prototype = {
    *   A promise that will be resolved when the back-end has applied the changes
    *   to the identity and the changes have been propagated.
    */
-  modifyIdentity: function(mods) {
+  modifyIdentity(mods) {
     // These update signature data immediately, so that the UI
     // reflects the changes properly before the backend properly
     // updates the data
-    if (typeof mods.signature !== 'undefined') {
+    if (typeof mods.signature !== "undefined") {
       this.signature = mods.signature;
     }
-    if (typeof mods.signatureEnabled !== 'undefined') {
+    if (typeof mods.signatureEnabled !== "undefined") {
       this.signatureEnabled = mods.signatureEnabled;
     }
     return this._api._modifyIdentity(this, mods);
   },
 
-  release: function() {
+  release() {
     // nothing to clean up currently
   },
 };

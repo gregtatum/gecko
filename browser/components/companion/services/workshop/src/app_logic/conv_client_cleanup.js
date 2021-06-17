@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import ContactCache from 'gelam/clientapi/contact_cache';
+import ContactCache from "gelam/clientapi/contact_cache";
 
 /**
  * Clean up after what we did in "conv_client_decorator.js".

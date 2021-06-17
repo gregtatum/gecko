@@ -14,19 +14,21 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { shallowClone } from 'shared/util';
-import { NOW } from 'shared/date';
+import { shallowClone } from "shared/util";
+import { NOW } from "shared/date";
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import SyncStateHelper from '../sync_state_helper';
+import SyncStateHelper from "../sync_state_helper";
 
-import { accountIdFromFolderId } from 'shared/id_conversions';
+import { accountIdFromFolderId } from "shared/id_conversions";
 
-import { syncNormalOverlay, syncPrefixOverlay } from
-  '../../../task_helpers/sync_overlay_helpers';
+import {
+  syncNormalOverlay,
+  syncPrefixOverlay,
+} from "../../../task_helpers/sync_overlay_helpers";
 
 /**
  * Sync a folder for the first time and steady-state.  See `../sync.md` for some
@@ -40,8 +42,8 @@ import { syncNormalOverlay, syncPrefixOverlay } from
  */
 export default TaskDefiner.defineAtMostOnceTask([
   {
-    name: 'sync_refresh',
-    binByArg: 'accountId',
+    name: "sync_refresh",
+    binByArg: "accountId",
 
     helped_overlay_accounts: syncNormalOverlay,
 
@@ -52,60 +54,61 @@ export default TaskDefiner.defineAtMostOnceTask([
      * 'accountCascadeToFolders' which causes the folders_toc to generate the
      * overlay pushes for all impacted folders.
      */
-    helped_prefix_overlay_folders: [
-      accountIdFromFolderId,
-      syncPrefixOverlay
-    ],
+    helped_prefix_overlay_folders: [accountIdFromFolderId, syncPrefixOverlay],
 
-    helped_invalidate_overlays: function(accountId, dataOverlayManager) {
+    helped_invalidate_overlays(accountId, dataOverlayManager) {
+      dataOverlayManager.announceUpdatedOverlayData("accounts", accountId);
       dataOverlayManager.announceUpdatedOverlayData(
-        'accounts', accountId);
-      dataOverlayManager.announceUpdatedOverlayData(
-        'accountCascadeToFolders', accountId);
+        "accountCascadeToFolders",
+        accountId
+      );
     },
 
-    helped_already_planned: function(ctx, rawTask) {
+    helped_already_planned(ctx, rawTask) {
       // The group should already exist; opt into its membership to get a
       // Promise
       return Promise.resolve({
-        result: ctx.trackMeInTaskGroup('sync_refresh:' + rawTask.accountId)
+        result: ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.accountId),
       });
     },
 
-    helped_plan: function(ctx, rawTask) {
+    helped_plan(ctx, rawTask) {
       // - Plan!
       let plannedTask = shallowClone(rawTask);
       plannedTask.resources = [
-        'online',
+        "online",
         `credentials!${rawTask.accountId}`,
-        `happy!${rawTask.accountId}`
+        `happy!${rawTask.accountId}`,
       ];
       // Let our triggering folder's viewing give us a priority boost, Although
       // perhaps this should just be account granularity?
-      plannedTask.priorityTags = [
-        `view:folder:${rawTask.folderId}`
-      ];
+      plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
 
       // Create a task group that follows this task and all its offspring.  This
       // will define the lifetime of our overlay as well.
-      let groupPromise =
-        ctx.trackMeInTaskGroup('sync_refresh:' + rawTask.accountId);
+      let groupPromise = ctx.trackMeInTaskGroup(
+        "sync_refresh:" + rawTask.accountId
+      );
       return Promise.resolve({
         taskState: plannedTask,
         remainInProgressUntil: groupPromise,
-        result: groupPromise
+        result: groupPromise,
       });
     },
 
     async helped_execute(ctx, req) {
       // -- Exclusively acquire the sync state for the account
       let fromDb = await ctx.beginMutate({
-        syncStates: new Map([[req.accountId, null]])
+        syncStates: new Map([[req.accountId, null]]),
       });
       let rawSyncState = fromDb.syncStates.get(req.accountId);
 
-      let syncState = new SyncStateHelper(ctx, rawSyncState, req.accountId,
-                                          'refresh');
+      let syncState = new SyncStateHelper(
+        ctx,
+        rawSyncState,
+        req.accountId,
+        "refresh"
+      );
 
       let account = await ctx.universe.acquireAccount(ctx, req.accountId);
 
@@ -113,10 +116,10 @@ export default TaskDefiner.defineAtMostOnceTask([
       const userPhid = account.accountDef.engineData.userPhid;
 
       let syncDate = NOW();
-      logic(ctx, 'syncStart', { syncDate, modifiedStart, userPhid });
+      logic(ctx, "syncStart", { syncDate, modifiedStart, userPhid });
 
       let results = await account.client.apiCall(
-        'differential.revision.search',
+        "differential.revision.search",
         {
           constraints: {
             modifiedStart,
@@ -137,7 +140,7 @@ export default TaskDefiner.defineAtMostOnceTask([
           // be to decrement the highestDateModified in situations where paging
           // is occurring.  (And in cases when we think that date stamp is too
           // close to now, allowing for future records to share that same date.)
-          order: 'outdated',
+          order: "outdated",
         }
       );
 
@@ -164,14 +167,14 @@ export default TaskDefiner.defineAtMostOnceTask([
         syncState.rawSyncState.lastDateModifiedEpochSecs = highestDateModified;
       }
 
-      logic(ctx, 'syncEnd', { highestDateModified });
+      logic(ctx, "syncEnd", { highestDateModified });
 
       return {
         mutations: {
           syncStates: new Map([[req.accountId, syncState.rawSyncState]]),
         },
         newData: {
-          tasks: syncState.tasksToSchedule
+          tasks: syncState.tasksToSchedule,
         },
         atomicClobbers: {
           accounts: new Map([
@@ -181,12 +184,13 @@ export default TaskDefiner.defineAtMostOnceTask([
                 syncInfo: {
                   lastSuccessfulSyncAt: syncDate,
                   lastAttemptedSyncAt: syncDate,
-                  failedSyncsSinceLastSuccessfulSync: 0
-                }
-              }
-            ]])
-        }
+                  failedSyncsSinceLastSuccessfulSync: 0,
+                },
+              },
+            ],
+          ]),
+        },
       };
-    }
-  }
+    },
+  },
 ]);

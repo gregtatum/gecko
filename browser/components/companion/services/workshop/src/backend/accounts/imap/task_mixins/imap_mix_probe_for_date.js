@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { makeDaysBefore, quantizeDate, DAY_MILLIS, NOW } from 'shared/date';
-import { parseImapDateTime } from '../imapchew';
+import { makeDaysBefore, quantizeDate, DAY_MILLIS, NOW } from "shared/date";
+import { parseImapDateTime } from "../imapchew";
 
-import { INITIAL_SYNC_GROWTH_DAYS, GROWTH_MESSAGE_COUNT_TARGET }
-  from '../../../syncbase';
+import {
+  INITIAL_SYNC_GROWTH_DAYS,
+  GROWTH_MESSAGE_COUNT_TARGET,
+} from "../../../syncbase";
 
 export default {
   /**
@@ -50,7 +52,12 @@ export default {
    * UID, it's not a viable option.
    */
   async _probeForDateUsingSequenceNumbers({
-      ctx, account, folderInfo, startSeq, curDate }) {
+    ctx,
+    account,
+    folderInfo,
+    startSeq,
+    curDate,
+  }) {
     let probeStep = Math.ceil(GROWTH_MESSAGE_COUNT_TARGET / 4);
     // Scale factor for the step size after each step.  This must be an
     // integer or we need to add rounding logic in the loop.
@@ -58,9 +65,11 @@ export default {
 
     // - Generate the list of message sequences to probe.
     let seqs = [];
-    for (let curSeq = startSeq;
-         curSeq >= 1;
-         curSeq -= probeStep, probeStep *= PROBE_STEP_SCALE) {
+    for (
+      let curSeq = startSeq;
+      curSeq >= 1;
+      curSeq -= probeStep, probeStep *= PROBE_STEP_SCALE
+    ) {
       seqs.push(curSeq);
     }
 
@@ -68,16 +77,14 @@ export default {
       ctx,
       folderInfo,
       seqs,
-      [
-        'INTERNALDATE',
-      ],
+      ["INTERNALDATE"],
       {}
     );
 
     // sort the messages by descending sequence number so our iteration path
     // should be backwards into time.
     messages.sort((a, b) => {
-      return b['#'] - a['#'];
+      return b["#"] - a["#"];
     });
 
     // In our loop we ratchet the checkDate past-wards as we find older
@@ -101,13 +108,12 @@ export default {
       }
     }
 
-
     // 100% arbitrary.  But obviously if the folder is 10,000 messages all
     // from the same week, we're screwed no matter what.
     if (violationsDelta > 7 * DAY_MILLIS) {
-      logic(
-        ctx, 'dateProbeBail',
-        { violationDays: Math.floor(violationsDelta / DAY_MILLIS) });
+      logic(ctx, "dateProbeBail", {
+        violationDays: Math.floor(violationsDelta / DAY_MILLIS),
+      });
 
       // The folder's no good!  We can't do any better than just a fixed
       // time adjustment.
@@ -115,16 +121,14 @@ export default {
     }
 
     let useDate = quantizeDate(
-      parseImapDateTime(
-        messages[Math.min(messages.length - 1, 2)].internaldate));
+      parseImapDateTime(messages[Math.min(messages.length - 1, 2)].internaldate)
+    );
 
-    logic(
-      ctx, 'dateProbeSuccess',
-      {
-        useDate,
-        daysAgo: Math.floor((useDate - NOW()) / DAY_MILLIS),
-        violationDays: Math.floor(violationsDelta / DAY_MILLIS)
-      });
+    logic(ctx, "dateProbeSuccess", {
+      useDate,
+      daysAgo: Math.floor((useDate - NOW()) / DAY_MILLIS),
+      violationDays: Math.floor(violationsDelta / DAY_MILLIS),
+    });
 
     // Woo, the folder is consistent with our assumptions and highly dubious
     // tests!

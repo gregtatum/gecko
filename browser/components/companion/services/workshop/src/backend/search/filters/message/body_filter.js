@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import matchExcerptHighlight from '../../match_excerpt_highlight';
-import searchPatternFromArgs from '../search_pattern_from_args';
+import matchExcerptHighlight from "../../match_excerpt_highlight";
+import searchPatternFromArgs from "../search_pattern_from_args";
 
 const CT_AUTHORED_CONTENT = 0x1;
 
@@ -25,7 +25,7 @@ export default function BodyFilter(params, args) {
   this.searchPattern = searchPatternFromArgs(args);
   this.gather = {
     // message is implicit
-    bodyContents: { includeQuotes: this.includeQuotes }
+    bodyContents: { includeQuotes: this.includeQuotes },
   };
 }
 BodyFilter.prototype = {
@@ -45,19 +45,24 @@ BodyFilter.prototype = {
   /*
    * Gathered will have the form { message, bodyContents, ... }
    */
-  test: function(gathered) {
+  test(gathered) {
     let { searchPattern, excerptSettings, includeQuotes } = this;
     for (let bodyContent of gathered.bodyContents) {
-      if (bodyContent.type === 'html') {
+      if (bodyContent.type === "html") {
         let match = matchExcerptHighlight(
-          searchPattern, bodyContent.textBody, null, excerptSettings);
+          searchPattern,
+          bodyContent.textBody,
+          null,
+          excerptSettings
+        );
         if (match) {
           return match;
         }
-      } else if (bodyContent.type === 'plain') {
+      } else if (bodyContent.type === "plain") {
         let bodyRep = bodyContent.rep;
         for (var iRep = 0; iRep < bodyRep.length; iRep += 2) {
-          var etype = bodyRep[iRep]&0xf, block = bodyRep[iRep + 1];
+          var etype = bodyRep[iRep] & 0xf,
+            block = bodyRep[iRep + 1];
 
           // Ignore blocks that are not message-author authored unless we are
           // told to match quotes.
@@ -66,7 +71,11 @@ BodyFilter.prototype = {
           }
 
           let match = matchExcerptHighlight(
-            searchPattern, block, null, excerptSettings);
+            searchPattern,
+            block,
+            null,
+            excerptSettings
+          );
           if (match) {
             return match;
           }
@@ -76,5 +85,4 @@ BodyFilter.prototype = {
 
     return null;
   },
-
 };

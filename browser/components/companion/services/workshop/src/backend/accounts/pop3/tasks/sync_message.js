@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import { shallowClone } from 'shared/util';
-import { prioritizeNewer } from '../../../date_priority_adjuster';
+import { shallowClone } from "shared/util";
+import { prioritizeNewer } from "../../../date_priority_adjuster";
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import { resolveConversationTaskHelper } from '../../../task_mixins/conv_resolver';
+import { resolveConversationTaskHelper } from "../../../task_mixins/conv_resolver";
 
-import { conversationMessageComparator } from '../../../db/comparators';
+import { conversationMessageComparator } from "../../../db/comparators";
 
-import churnConversation from '../../../churn_drivers/conv_churn_driver';
+import churnConversation from "../../../churn_drivers/conv_churn_driver";
 
 /**
  * Fetch the envelope and snippet for a POP3 message and create and thread the
@@ -31,17 +31,15 @@ import churnConversation from '../../../churn_drivers/conv_churn_driver';
  */
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'sync_message',
+    name: "sync_message",
 
     async plan(ctx, rawTask) {
       let plannedTask = shallowClone(rawTask);
 
       // We don't have any a priori name-able exclusive resources.
-      plannedTask.exclusiveResources = [
-      ];
+      plannedTask.exclusiveResources = [];
 
-      plannedTask.priorityTags = [
-      ];
+      plannedTask.priorityTags = [];
 
       // Prioritize the message based on how new it is.
       if (rawTask.dateTS) {
@@ -49,7 +47,7 @@ export default TaskDefiner.defineSimpleTask([
       }
 
       await ctx.finishTask({
-        taskState: plannedTask
+        taskState: plannedTask,
       });
     },
 
@@ -77,16 +75,26 @@ export default TaskDefiner.defineSimpleTask([
 
       let messageNumber = conn.uidlToId[req.uidl];
 
-      let messageInfo =
-        await conn.downloadPartialMessageByNumber(messageNumber);
+      let messageInfo = await conn.downloadPartialMessageByNumber(
+        messageNumber
+      );
 
       // -- Resolve the conversation this goes in.
-      let { convId, existingConv, messageId, headerIdWrites, extraTasks } =
-        await resolveConversationTaskHelper(
-          ctx, messageInfo, req.accountId, req.umid);
+      let {
+        convId,
+        existingConv,
+        messageId,
+        headerIdWrites,
+        extraTasks,
+      } = await resolveConversationTaskHelper(
+        ctx,
+        messageInfo,
+        req.accountId,
+        req.umid
+      );
 
       // Perform fixups to make the messageInfo valid.
-      let inboxInfo = account.getFirstFolderWithType('inbox');
+      let inboxInfo = account.getFirstFolderWithType("inbox");
       messageInfo.id = messageId;
       messageInfo.umid = req.umid;
       messageInfo.folderIds = new Set([inboxInfo.id]);
@@ -98,7 +106,7 @@ export default TaskDefiner.defineSimpleTask([
       if (existingConv) {
         let fromDb = await ctx.beginMutate({
           conversations: new Map([[convId, null]]),
-          messagesByConversation: new Map([[convId, null]])
+          messagesByConversation: new Map([[convId, null]]),
         });
 
         oldConvInfo = fromDb.conversations.get(convId);
@@ -122,14 +130,14 @@ export default TaskDefiner.defineSimpleTask([
         mutations: {
           conversations: modifiedConversations,
           headerIdMaps: headerIdWrites,
-          umidNames: new Map([[req.umid, messageId]])
+          umidNames: new Map([[req.umid, messageId]]),
         },
         newData: {
           conversations: newConversations,
           messages: [messageInfo],
-          tasks: extraTasks
-        }
+          tasks: extraTasks,
+        },
       });
     },
-  }
+  },
 ]);

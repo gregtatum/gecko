@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import MimeNode from 'mailbuild';
+import MimeNode from "mailbuild";
 
-import { mergeUserTextWithHTML } from '../bodies/mailchew';
+import { mergeUserTextWithHTML } from "../bodies/mailchew";
 
-import { formatAddresses } from 'shared/util';
+import { formatAddresses } from "shared/util";
 
 // MimeNode doesn't have a `removeHeader` method, but it's so helpful.
 // Upstream this when possible.
@@ -44,7 +44,7 @@ function normalizeNewlines(body) {
   // transform on \r\n but that's the only way to find an \n not preceded by
   // an \r.  We don't really need the lone \r but if we're normalizing why
   // not normalize 100%?
-  return body.replace(/\r?\n|\r/g, '\r\n');
+  return body.replace(/\r?\n|\r/g, "\r\n");
 }
 
 /**
@@ -96,7 +96,6 @@ export function Composer(messageInfo, account, reportHeartbeat) {
   this.superBlob = null;
 }
 Composer.prototype = {
-
   /**
    * Return the currently-built envelope, in a format compatible with
    * the SMTP library.
@@ -104,7 +103,7 @@ Composer.prototype = {
    * @return {Object}
    *   { from: "me@example.com", to: [] }
    */
-  getEnvelope: function() {
+  getEnvelope() {
     return this._rootNode.getEnvelope();
   },
 
@@ -129,22 +128,24 @@ Composer.prototype = {
     // messages in text form, but if we're sending an HTML message, we want them
     // unified into a text representation.  The better solution is for all
     // composition in the mixed scenario to be done directly in/as HTML.
-    let quoteChewedRep = JSON.parse(await messageInfo.bodyReps[0].contentBlob.text());
+    let quoteChewedRep = JSON.parse(
+      await messageInfo.bodyReps[0].contentBlob.text()
+    );
     let textContent = quoteChewedRep[1];
     if (messageInfo.bodyReps.length === 2) {
       let htmlContent = await messageInfo.bodyReps[1].contentBlob.text();
-      messageNode = new MimeNode('text/html');
+      messageNode = new MimeNode("text/html");
       messageNode.setContent(
-        normalizeNewlines(
-          mergeUserTextWithHTML(textContent, htmlContent)));
+        normalizeNewlines(mergeUserTextWithHTML(textContent, htmlContent))
+      );
     } else {
-      messageNode = new MimeNode('text/plain');
+      messageNode = new MimeNode("text/plain");
       messageNode.setContent(normalizeNewlines(textContent));
     }
 
     var root;
     if (messageInfo.attachments.length) {
-      root = this._rootNode = new MimeNode('multipart/mixed');
+      root = this._rootNode = new MimeNode("multipart/mixed");
       root.appendChild(messageNode);
     } else {
       root = this._rootNode = messageNode;
@@ -161,63 +162,61 @@ Composer.prototype = {
     // mailchew to generate our forward/reply strings, so this usage here helps
     // that logic get extra test coverage.  But it is dumb and we should ideally
     // unify that code to use the same logic mailbuild uses.
-    root.setHeader('From', formatAddresses([messageInfo.author]));
-    root.setHeader('Subject', messageInfo.subject);
+    root.setHeader("From", formatAddresses([messageInfo.author]));
+    root.setHeader("Subject", messageInfo.subject);
 
     if (messageInfo.replyTo) {
-      root.setHeader('Reply-To', formatAddresses[messageInfo.replyTo]);
+      root.setHeader("Reply-To", formatAddresses[messageInfo.replyTo]);
     }
     if (messageInfo.to && messageInfo.to.length) {
-      root.setHeader('To', formatAddresses(messageInfo.to));
+      root.setHeader("To", formatAddresses(messageInfo.to));
     }
     if (messageInfo.cc && messageInfo.cc.length) {
-      root.setHeader('Cc', formatAddresses(messageInfo.cc));
+      root.setHeader("Cc", formatAddresses(messageInfo.cc));
     }
     // Note: We include the BCC header here, even though we also do some
     // BCC trickery below, so that the getEnvelope() function includes
     // the proper "to" addresses in the envelope.
     if (messageInfo.bcc && messageInfo.bcc.length) {
-      root.setHeader('Bcc', formatAddresses(messageInfo.bcc));
+      root.setHeader("Bcc", formatAddresses(messageInfo.bcc));
     }
 
-    root.setHeader('User-Agent', 'GaiaMail/0.2');
-    root.setHeader('Date', this.sentDate.toUTCString());
+    root.setHeader("User-Agent", "GaiaMail/0.2");
+    root.setHeader("Date", this.sentDate.toUTCString());
     // mailbuild handles <> quoting of message-id
-    root.setHeader('Message-Id', messageInfo.guid);
+    root.setHeader("Message-Id", messageInfo.guid);
     // mailbuild performs list-aware <> quoting and joining.
     if (messageInfo.references && messageInfo.references.length) {
-      root.setHeader('References', messageInfo.references);
+      root.setHeader("References", messageInfo.references);
     }
 
     // Set the transfer-encoding to quoted-printable so that mailbuild
     // doesn't attempt to insert linebreaks in HTML mail.
-    root.setHeader('Content-Transfer-Encoding', 'quoted-printable');
+    root.setHeader("Content-Transfer-Encoding", "quoted-printable");
 
     // Mailbuild doesn't currently support blobs. As a workaround,
     // insert a unique placeholder separator, which we will replace with
     // the real contents of the blobs during the sending process.
     this._blobReplacements = [];
-    this._uniqueBlobBoundary = '{{blob!' + Math.random() + Date.now() + '}}';
+    this._uniqueBlobBoundary = "{{blob!" + Math.random() + Date.now() + "}}";
 
-    messageInfo.attachments.forEach((attachment) => {
+    messageInfo.attachments.forEach(attachment => {
       try {
-        var attachmentNode = new MimeNode(
-          attachment.type,
-          {
-            // This implies Content-Disposition: attachment
-            filename: attachment.name
-          });
+        var attachmentNode = new MimeNode(attachment.type, {
+          // This implies Content-Disposition: attachment
+          filename: attachment.name,
+        });
         // Explicitly indicate that the attachment is base64 encoded.  mailbuild
         // only picks base64 for non-text/* MIME parts, but our attachment logic
         // encodes *all* attachments in base64, so base64 is the only correct
         // answer.  (Also, failure to base64 encode our _uniqueBlobBoundary breaks
         // the replace logic in withMessageBlob.  So base64 all the things!)
-        attachmentNode.setHeader('Content-Transfer-Encoding', 'base64');
+        attachmentNode.setHeader("Content-Transfer-Encoding", "base64");
         attachmentNode.setContent(this._uniqueBlobBoundary);
         root.appendChild(attachmentNode);
         this._blobReplacements.push(new Blob(attachment.file));
       } catch (ex) {
-        console.error('Problem attaching attachment:', ex, '\n', ex.stack);
+        console.error("Problem attaching attachment:", ex, "\n", ex.stack);
       }
     });
 
@@ -228,11 +227,11 @@ Composer.prototype = {
     // final output. Alternately, we could maintain a forked version
     // of mailbuild, but we would need to be very careful not to
     // inadvertently clobber our changes during updates.
-    var TEMP_BCC = 'Bcc-Temp';
+    var TEMP_BCC = "Bcc-Temp";
     var TEMP_BCC_REGEX = /^Bcc-Temp: /m;
 
-    var hasBcc = opts.includeBcc && this.messageInfo.bcc &&
-                   this.messageInfo.bcc.length;
+    var hasBcc =
+      opts.includeBcc && this.messageInfo.bcc && this.messageInfo.bcc.length;
     if (hasBcc) {
       this._rootNode.setHeader(TEMP_BCC, formatAddresses(this.messageInfo.bcc));
     } else {
@@ -243,35 +242,35 @@ Composer.prototype = {
     // smtpclient knows how to do dot-stuffing, but we bypass its dot-stuffing
     // logic because smtpclient doesn't understand Blobs.
     if (opts.smtp) {
-      str = str.replace(/\n\./g, '\n..');
+      str = str.replace(/\n\./g, "\n..");
     }
 
     if (hasBcc) {
-      str = str.replace(TEMP_BCC_REGEX, 'Bcc: ');
+      str = str.replace(TEMP_BCC_REGEX, "Bcc: ");
     }
 
     // Ensure that the message always ends with a trailing CRLF for
     // SMTP transmission (currently, our SMTP sending logic assumes
     // that this will always be the case):
-    if (str.slice(-2) !== '\r\n') {
-      str += '\r\n';
+    if (str.slice(-2) !== "\r\n") {
+      str += "\r\n";
     }
 
     // Split the message into an array, delimited by our unique blob
     // boundary, interleaving the attachment blobs. Note that we must
     // search for the base64-encoded blob boundary, as at this point
     // it has been encoded for transport.
-    var splits = str.split(btoa(this._uniqueBlobBoundary) + '\r\n');
+    var splits = str.split(btoa(this._uniqueBlobBoundary) + "\r\n");
     this._blobReplacements.forEach(function(blob, i) {
       // blob 0 => index 1
       // blob 1 => index 3
       // blob 2 => index 5 ...
-      splits.splice((i * 2) + 1, 0, blob);
+      splits.splice(i * 2 + 1, 0, blob);
     });
 
     // Build a super-blob from any subparts.
     this.superBlob = new Blob(splits, {
-      type: this._rootNode.getHeader('content-type')
+      type: this._rootNode.getHeader("content-type"),
     });
   },
 
@@ -280,10 +279,9 @@ Composer.prototype = {
    *
    * @param {String} reason
    */
-  heartbeat: function(reason) {
+  heartbeat(reason) {
     if (this._heartbeat) {
       this._heartbeat(reason);
     }
-  }
+  },
 };
-

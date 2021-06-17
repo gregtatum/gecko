@@ -22,7 +22,7 @@
  */
 
 function regExpEscape(str) {
-  return str.replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
+  return str.replace(/[\\^$*+?.()|[\]{}]/g, "\\$&");
 }
 
 /**
@@ -43,23 +43,20 @@ export default function searchPatternFromArgs(args, opts) {
   if (!opts) {
     opts = {};
   }
-  if ((typeof(args) === 'string') || (args instanceof RegExp)) {
+  if (typeof args === "string" || args instanceof RegExp) {
     phrase = args;
-  }
-  else if (args && args.phrase) {
+  } else if (args && args.phrase) {
     phrase = args.phrase;
-  }
-  else {
-    throw new Error('unable to figure out a search pattern from the args');
+  } else {
+    throw new Error("unable to figure out a search pattern from the args");
   }
 
-  if (typeof(phrase) === 'string') {
+  if (typeof phrase === "string") {
     let pattern = regExpEscape(phrase);
     if (opts.exact) {
-      pattern = '^' + pattern + '$';
+      pattern = "^" + pattern + "$";
     }
-    return new RegExp(pattern, 'i');
-  } else {
-    return phrase;
+    return new RegExp(pattern, "i");
   }
-};
+  return phrase;
+}

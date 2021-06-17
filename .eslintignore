@@ -52,7 +52,7 @@ browser/components/newtab/logs/
 browser/components/companion/services/workshop/build/
 # Ignore Companion Services Workshop files until the migration from an external
 # repo is complete and the linter issues are addressed.
-browser/components/companion/services/workshop/src/
+####browser/components/companion/services/workshop/src/
 
 # The only file in browser/locales/ is pre-processed.
 browser/locales/

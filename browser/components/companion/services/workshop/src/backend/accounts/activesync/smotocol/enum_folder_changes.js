@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import $wbxml from 'wbxml';
-import { Tags as $as, Enums as asEnum } from 'activesync/codepages/AirSync';
+import $wbxml from "wbxml";
+import { Tags as $as, Enums as asEnum } from "activesync/codepages/AirSync";
 
-import parseFullMessage from './parse_full_message';
-import parseChangedMessage from './parse_changed_message';
+import parseFullMessage from "./parse_full_message";
+import parseChangedMessage from "./parse_changed_message";
 
 /**
  * High-level synchronization of the contents of a folder.  This routine
@@ -56,46 +56,49 @@ import parseChangedMessage from './parse_changed_message';
  * @return {{ invalidSyncKey, syncKey, moreToSync }}
  */
 export default async function enumerateFolderChanges(
-  conn, { folderSyncKey, folderServerId, filterType, issueIds, emitter }) {
-  let w = new $wbxml.Writer('1.3', 1, 'UTF-8');
+  conn,
+  { folderSyncKey, folderServerId, filterType, issueIds, emitter }
+) {
+  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
   w.stag($as.Sync)
-     .stag($as.Collections)
-       .stag($as.Collection);
+    .stag($as.Collections)
+    .stag($as.Collection);
 
-  if (conn.currentVersion.lt('12.1')) {
-        w.tag($as.Class, 'Email');
+  if (conn.currentVersion.lt("12.1")) {
+    w.tag($as.Class, "Email");
   }
 
-        w.tag($as.SyncKey, folderSyncKey)
-         .tag($as.CollectionId, folderServerId)
-         .tag($as.GetChanges)
-         .stag($as.Options)
-           .tag($as.FilterType, filterType);
+  w.tag($as.SyncKey, folderSyncKey)
+    .tag($as.CollectionId, folderServerId)
+    .tag($as.GetChanges)
+    .stag($as.Options)
+    .tag($as.FilterType, filterType);
 
   // Older versions of ActiveSync give us the body by default. Ensure they
   // omit it.
-  if (conn.currentVersion.lte('12.0')) {
-          w.tag($as.MIMESupport, asEnum.MIMESupport.Never)
-           .tag($as.Truncation, asEnum.MIMETruncation.TruncateAll);
+  if (conn.currentVersion.lte("12.0")) {
+    w.tag($as.MIMESupport, asEnum.MIMESupport.Never).tag(
+      $as.Truncation,
+      asEnum.MIMETruncation.TruncateAll
+    );
   }
 
-        w.etag()
-       .etag()
-     .etag()
-   .etag();
-
+  w.etag()
+    .etag()
+    .etag()
+    .etag();
 
   let response = await conn.postCommand(w);
 
   // Blank responses are the server's way of telling us nothing has changed.
   // So just fast-path out and leave the syncState the same.
   if (!response) {
-    logic(conn, 'syncComplete', { emptyResponse: true });
+    logic(conn, "syncComplete", { emptyResponse: true });
     return {
       invalidSyncKey: false,
       syncKey: folderSyncKey,
       moreAvailable: false,
-      noChanges: true
+      noChanges: true,
     };
   }
 
@@ -105,7 +108,9 @@ export default async function enumerateFolderChanges(
   let status;
   let newSyncKey;
   let moreAvailable = false;
-  let addCount = 0, changeCount = 0, removeCount = 0;
+  let addCount = 0,
+    changeCount = 0,
+    removeCount = 0;
 
   e.addEventListener(base.concat($as.SyncKey), function(node) {
     newSyncKey = node.children[0].textContent;
@@ -119,8 +124,7 @@ export default async function enumerateFolderChanges(
     moreAvailable = true;
   });
 
-  e.addEventListener(base.concat($as.Commands, $as.Add),
-                     function(node) {
+  e.addEventListener(base.concat($as.Commands, $as.Add), function(node) {
     let messageServerId, nodeToParse;
 
     for (let child of node.children) {
@@ -140,18 +144,15 @@ export default async function enumerateFolderChanges(
       try {
         let message = parseFullMessage(nodeToParse, issueIds());
         addCount++;
-        emitter.emit('add', messageServerId, message);
-      }
-      catch (ex) {
+        emitter.emit("add", messageServerId, message);
+      } catch (ex) {
         // If we get an error, just log it and skip this message.
-        console.error('Failed to parse a full message:', ex, '\n', ex.stack);
-        return;
+        console.error("Failed to parse a full message:", ex, "\n", ex.stack);
       }
     }
   });
 
-  e.addEventListener(base.concat($as.Commands, $as.Change),
-                     function(node) {
+  e.addEventListener(base.concat($as.Commands, $as.Change), function(node) {
     let messageServerId, changes;
 
     for (let child of node.children) {
@@ -162,10 +163,9 @@ export default async function enumerateFolderChanges(
         case $as.ApplicationData:
           try {
             changes = parseChangedMessage(child);
-          }
-          catch (ex) {
+          } catch (ex) {
             // If we get an error, just log it and skip this message.
-            console.error('Failed to parse a change:', ex, '\n', ex.stack);
+            console.error("Failed to parse a change:", ex, "\n", ex.stack);
             return;
           }
           break;
@@ -176,51 +176,51 @@ export default async function enumerateFolderChanges(
 
     if (messageServerId && changes) {
       changeCount++;
-      emitter.emit('change', messageServerId, changes);
+      emitter.emit("change", messageServerId, changes);
     }
   });
 
+  e.addEventListener(
+    base.concat($as.Commands, [[$as.Delete, $as.SoftDelete]]),
+    function(node) {
+      let messageServerId;
 
-  e.addEventListener(base.concat($as.Commands, [[$as.Delete, $as.SoftDelete]]),
-                     function(node) {
-    let messageServerId;
+      for (let child of node.children) {
+        switch (child.tag) {
+          case $as.ServerId:
+            messageServerId = child.children[0].textContent;
+            break;
+          default:
+            break;
+        }
+      }
 
-    for (let child of node.children) {
-      switch (child.tag) {
-        case $as.ServerId:
-          messageServerId = child.children[0].textContent;
-          break;
-        default:
-          break;
+      if (messageServerId) {
+        removeCount++;
+        emitter.emit("remove", messageServerId);
       }
     }
-
-    if (messageServerId) {
-      removeCount++;
-      emitter.emit('remove', messageServerId);
-    }
-  });
+  );
 
   try {
     e.run(response);
-  }
-  catch (ex) {
-    console.error('Error parsing Sync response:', ex, '\n',
-                  ex.stack);
-    throw 'unknown';
+  } catch (ex) {
+    console.error("Error parsing Sync response:", ex, "\n", ex.stack);
+    throw new Error("unknown");
   }
 
   if (status === asEnum.Status.Success) {
-    logic(conn, 'syncComplete',
-          { added: addCount, changed: changeCount, removed: removeCount });
+    logic(conn, "syncComplete", {
+      added: addCount,
+      changed: changeCount,
+      removed: removeCount,
+    });
 
     return { invalidSyncKey: false, syncKey: newSyncKey, moreAvailable };
+  } else if (status === asEnum.Status.InvalidSyncKey) {
+    return { invalidSyncKey: true, syncKey: "0", moreAvailable };
   }
-  else if (status === asEnum.Status.InvalidSyncKey) {
-    return { invalidSyncKey: true, syncKey: '0', moreAvailable };
-  }
-  else {
-    logic(conn, 'syncError', { status });
-    throw 'unknown';
-  }
+
+  logic(conn, "syncError", { status });
+  throw new Error("unknown");
 }

@@ -61,19 +61,13 @@
  *   that's way down the road.
  **/
 
-import { NOW } from 'shared/date';
-import logic from 'logic';
+import { NOW } from "shared/date";
+import logic from "logic";
 
-var BACKOFF_DURATIONS = exports.BACKOFF_DURATIONS = [
-  { fixedMS: 0,    randomMS: 0 },
-  { fixedMS: 800,  randomMS: 400 },
+export let BACKOFF_DURATIONS = [
+  { fixedMS: 0, randomMS: 0 },
+  { fixedMS: 800, randomMS: 400 },
   { fixedMS: 4500, randomMS: 1000 },
-];
-
-var BAD_RESOURCE_RETRY_DELAYS_MS = [
-  1000,
-  60 * 1000,
-  2 * 60 * 1000,
 ];
 
 var setTimeoutFunc = globalThis.setTimeout.bind(globalThis);
@@ -83,7 +77,7 @@ export function TEST_useTimeoutFunc(func) {
   for (var i = 0; i < BACKOFF_DURATIONS.length; i++) {
     BACKOFF_DURATIONS[i].randomMS = 0;
   }
-};
+}
 
 /**
  * @args[
@@ -105,29 +99,31 @@ function BackoffEndpoint(name, listener) {
    *    }
    *  ]
    */
-  this.state = 'healthy';
+  this.state = "healthy";
   this._iNextBackoff = 0;
 
-  logic.defineScope(this, 'BackoffEndpoint', { name: name });
+  logic.defineScope(this, "BackoffEndpoint", { name });
 
-  logic(this, 'state', { state: this.state });
+  logic(this, "state", { state: this.state });
 
   this._badResources = {};
 
   this.listener = listener;
 }
 BackoffEndpoint.prototype = {
-  _setState: function(newState) {
-    if (this.state === newState)
+  _setState(newState) {
+    if (this.state === newState) {
       return;
+    }
     this.state = newState;
-    logic(this, 'state', { state: newState });
-    if (this.listener)
+    logic(this, "state", { state: newState });
+    if (this.listener) {
       this.listener.onEndpointStateChange(newState);
+    }
   },
 
-  noteConnectSuccess: function() {
-    this._setState('healthy');
+  noteConnectSuccess() {
+    this._setState("healthy");
     this._iNextBackoff = 0;
   },
 
@@ -146,24 +142,27 @@ BackoffEndpoint.prototype = {
    *   should give up.
    * }
    */
-  noteConnectFailureMaybeRetry: function(reachable) {
-    logic(this, 'connectFailure', { reachable: reachable });
-    if (this.state === 'shutdown')
-      return false;
-
-    if (reachable) {
-      this._setState('broken');
+  noteConnectFailureMaybeRetry(reachable) {
+    logic(this, "connectFailure", { reachable });
+    if (this.state === "shutdown") {
       return false;
     }
 
-    if (this._iNextBackoff > 0)
-      this._setState(reachable ? 'broken' : 'unreachable');
+    if (reachable) {
+      this._setState("broken");
+      return false;
+    }
+
+    if (this._iNextBackoff > 0) {
+      this._setState(reachable ? "broken" : "unreachable");
+    }
 
     // (Once this saturates, we never perform retries until the connection is
     // healthy again.  We do attempt re-connections when triggered by user
     // activity or synchronization logic; they just won't get retries.)
-    if (this._iNextBackoff >= BACKOFF_DURATIONS.length)
+    if (this._iNextBackoff >= BACKOFF_DURATIONS.length) {
       return false;
+    }
 
     return true;
   },
@@ -176,16 +175,17 @@ BackoffEndpoint.prototype = {
    * servers can lock people out if they make repeated bad authentication
    * requests.
    */
-  noteBrokenConnection: function() {
-    logic(this, 'connectFailure', { reachable: true });
-    this._setState('broken');
+  noteBrokenConnection() {
+    logic(this, "connectFailure", { reachable: true });
+    this._setState("broken");
 
     this._iNextBackoff = BACKOFF_DURATIONS.length;
   },
 
-  scheduleConnectAttempt: function(connectFunc) {
-    if (this.state === 'shutdown')
+  scheduleConnectAttempt(connectFunc) {
+    if (this.state === "shutdown") {
       return;
+    }
 
     // If we have already saturated our retries then there won't be any
     // automatic retries and this request is assumed to want us to try and
@@ -196,34 +196,40 @@ BackoffEndpoint.prototype = {
     }
 
     var backoff = BACKOFF_DURATIONS[this._iNextBackoff++],
-        delay = backoff.fixedMS +
-                Math.floor(Math.random() * backoff.randomMS);
+      delay = backoff.fixedMS + Math.floor(Math.random() * backoff.randomMS);
     setTimeoutFunc(connectFunc, delay);
   },
 
-  noteBadResource: function(resourceId) {
+  noteBadResource(resourceId) {
     var now = NOW();
     if (!this._badResources.hasOwnProperty(resourceId)) {
       this._badResources[resourceId] = { count: 1, last: now };
-    }
-    else {
+    } else {
       var info = this._badResources[resourceId];
       info.count++;
       info.last = now;
     }
   },
 
-  resourceIsOkayToUse: function(resourceId) {
-    if (!this._badResources.hasOwnProperty(resourceId))
+  resourceIsOkayToUse(resourceId) {
+    if (!this._badResources.hasOwnProperty(resourceId)) {
       return true;
-    var info = this._badResources[resourceId], now = NOW();
+    }
+    // TODO: investigate whether this code is used and needs to be finalized.
+    //
+    // There seemed to have been some WIP code here that presumably was going to
+    // see if enough time had elapsed that it was now okay to use the resource.
+    // This path here effectively returned false, which was probably right for
+    // existing uses, but an opportunistic "is it now okay" check does seem
+    // reasonable that need not be timer driven.
+    return false;
   },
 
-  shutdown: function() {
-    this._setState('shutdown');
+  shutdown() {
+    this._setState("shutdown");
   },
 };
 
 export function createEndpoint(name, listener) {
   return new BackoffEndpoint(name, listener);
-};
+}

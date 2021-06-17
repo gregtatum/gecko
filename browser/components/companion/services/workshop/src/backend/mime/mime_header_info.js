@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import jsmime from 'jsmime';
-import { NOW } from 'shared/date';
-import { stripArrows } from 'shared/util';
-import { generateMessageIdHeaderValue } from '../bodies/mailchew';
+import jsmime from "jsmime";
+import { NOW } from "shared/date";
+import { stripArrows } from "shared/util";
+import { generateMessageIdHeaderValue } from "../bodies/mailchew";
 
 /**
  * Given a message extract and normalize the references header into a list of
@@ -44,12 +44,12 @@ function extractReferences(referencesStr, messageId) {
   let references = [];
 
   while (idx < len) {
-    idx = referencesStr.indexOf('<', idx);
+    idx = referencesStr.indexOf("<", idx);
     if (idx === -1) {
       break;
     }
 
-    let closeArrow = referencesStr.indexOf('>', idx + 1);
+    let closeArrow = referencesStr.indexOf(">", idx + 1);
     if (closeArrow === -1) {
       break;
     }
@@ -91,17 +91,18 @@ function MimeHeaderInfo(rawHeaders, opts) {
   this.rawHeaders = rawHeaders;
 
   this.parentContentType = parentContentType;
-  this.contentType = this.getParameterHeader('content-type') ||
-      'application/octet-stream';
-  [this.mediatype, this.subtype] = this.contentType.split('/');
-  this.contentId = stripArrows(this.getStringHeader('content-id'));
-  this.filename = (this.getParameterHeader('content-type', 'name') ||
-                   this.getParameterHeader('content-disposition', 'filename'));
-  this.charset = this.getParameterHeader('content-type', 'charset');
-  this.format = this.getParameterHeader('content-type', 'format');
-  this.delsp = this.getParameterHeader('content-type', 'delsp');
-  this.encoding = this.getStringHeader('content-transfer-encoding', 'binary');
-  this.guid = stripArrows(this.getStringHeader('message-id'));
+  this.contentType =
+    this.getParameterHeader("content-type") || "application/octet-stream";
+  [this.mediatype, this.subtype] = this.contentType.split("/");
+  this.contentId = stripArrows(this.getStringHeader("content-id"));
+  this.filename =
+    this.getParameterHeader("content-type", "name") ||
+    this.getParameterHeader("content-disposition", "filename");
+  this.charset = this.getParameterHeader("content-type", "charset");
+  this.format = this.getParameterHeader("content-type", "format");
+  this.delsp = this.getParameterHeader("content-type", "delsp");
+  this.encoding = this.getStringHeader("content-transfer-encoding", "binary");
+  this.guid = stripArrows(this.getStringHeader("message-id"));
 
   // If we did not have a message-id header (as is the case with Outlook's
   // welcome message), generate a dummy value. Without a guid, we can't track
@@ -111,11 +112,15 @@ function MimeHeaderInfo(rawHeaders, opts) {
     this.guid = generateMessageIdHeaderValue();
   }
 
-  this.references =
-    extractReferences(this.getStringHeader('references'), this.guid);
+  this.references = extractReferences(
+    this.getStringHeader("references"),
+    this.guid
+  );
 
-  this.author = this.getAddressHeader('from', [])[0] ||
-    { name: 'Missing Author', address: 'missing@example.com' };
+  this.author = this.getAddressHeader("from", [])[0] || {
+    name: "Missing Author",
+    address: "missing@example.com",
+  };
 
   this.disposition = this._computePracticalDisposition();
   this.date = this._computeDate();
@@ -154,7 +159,9 @@ MimeHeaderInfo.prototype = {
     if (value) {
       var params = jsmime.headerparser.parseParameterHeader(
         jsmime.headerparser.decodeRFC2047Words(value),
-        /* doRFC2047: */ false, /* doRFC2231 */ true);
+        /* doRFC2047: */ false,
+        /* doRFC2231 */ true
+      );
 
       if (paramName) {
         if (params.has(paramName)) {
@@ -164,6 +171,7 @@ MimeHeaderInfo.prototype = {
         return params.preSemi;
       }
     }
+    return null;
   },
 
   /**
@@ -171,23 +179,25 @@ MimeHeaderInfo.prototype = {
    * If no addresses are found, return defaultValue (which is otherwise null).
    */
   getAddressHeader(headerName, defaultValue) {
-    var allResults =
-      (this.rawHeaders[headerName] || []).reduce((results, header) => {
+    var allResults = (this.rawHeaders[headerName] || []).reduce(
+      (results, header) => {
         return results.concat(
-          jsmime.headerparser.parseAddressingHeader(
-            header, /* doRFC2047: */ true).map((addr) => {
+          jsmime.headerparser
+            .parseAddressingHeader(header, /* doRFC2047: */ true)
+            .map(addr => {
               if (addr.group) {
                 return { group: addr.group, name: addr.name };
-              } else {
-                return { address: addr.email, name: addr.name };
               }
-            }));
-      }, []);
-    if (allResults.length > 0) {
+              return { address: addr.email, name: addr.name };
+            })
+        );
+      },
+      []
+    );
+    if (allResults.length) {
       return allResults;
-    } else {
-      return defaultValue || null;
     }
+    return defaultValue || null;
   },
 
   /**
@@ -195,7 +205,7 @@ MimeHeaderInfo.prototype = {
    * constraints that dictate whether or not we treat a MIME part as inline.
    */
   _computePracticalDisposition() {
-    var disposition = this.getParameterHeader('content-disposition');
+    var disposition = this.getParameterHeader("content-disposition");
 
     // First, check whether an explict disposition exists.
     if (disposition) {
@@ -203,31 +213,35 @@ MimeHeaderInfo.prototype = {
       // without a content-id. (Displaying text/* inline is not a problem for
       // us, but we need a content id for other embedded content. Currently only
       // images are supported, but that is enforced in a subsequent check.)
-      if (disposition.toLowerCase() === 'inline' &&
-          this.mediatype !== 'text' &&
-          !this.contentId) {
-        disposition = 'attachment';
+      if (
+        disposition.toLowerCase() === "inline" &&
+        this.mediatype !== "text" &&
+        !this.contentId
+      ) {
+        disposition = "attachment";
       }
     }
     // If not, guess. TODO: Ensure 100% correctness in the future by fixing up
     // mis-guesses during sanitization as part of <https://bugzil.la/1024685>.
-    else if (this.parentContentType === 'multipart/related' &&
-             this.contentId &&
-             this.mediatype === 'image') {
+    else if (
+      this.parentContentType === "multipart/related" &&
+      this.contentId &&
+      this.mediatype === "image"
+    ) {
       // Inline image attachments that belong to a multipart/related may lack a
       // disposition but have a content-id.
-      disposition = 'inline';
-    } else if (this.filename || this.mediatype !== 'text') {
-      disposition = 'attachment';
+      disposition = "inline";
+    } else if (this.filename || this.mediatype !== "text") {
+      disposition = "attachment";
     } else {
-      disposition = 'inline';
+      disposition = "inline";
     }
 
     // Some clients want us to display things inline that we can't display
     // (historically and currently, PDF) or that our usage profile does not want
     // to automatically download (in the future, PDF, because they can get big).
-    if (this.mediatype !== 'text' && this.mediatype !== 'image') {
-      disposition = 'attachment';
+    if (this.mediatype !== "text" && this.mediatype !== "image") {
+      disposition = "attachment";
     }
 
     return disposition;
@@ -238,7 +252,7 @@ MimeHeaderInfo.prototype = {
    */
   _computeDate() {
     var now = NOW();
-    var dateString = this.getStringHeader('date');
+    var dateString = this.getStringHeader("date");
     if (!dateString) {
       return now;
     }
@@ -256,7 +270,6 @@ MimeHeaderInfo.prototype = {
     }
     return Math.min(dateTS, now);
   },
-
 };
 
 export default MimeHeaderInfo;

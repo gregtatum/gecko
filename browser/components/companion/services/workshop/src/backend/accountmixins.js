@@ -27,10 +27,9 @@ export function getFirstFolderWithType(type) {
   if (!folders) {
     try {
       throw new Error();
-    }
-    catch (ex) {
-      console.log('getFirstFolderWithType explosion!', ex.stack);
-      dump('EXPLOSION folders:\n' + ex.stack + '\n');
+    } catch (ex) {
+      console.log("getFirstFolderWithType explosion!", ex.stack);
+      dump("EXPLOSION folders:\n" + ex.stack + "\n");
     }
   }
   for (var iFolder = 0; iFolder < folders.length; iFolder++) {
@@ -38,8 +37,8 @@ export function getFirstFolderWithType(type) {
       return folders[iFolder];
     }
   }
- return null;
-};
+  return null;
+}
 export function getFolderByPath(folderPath) {
   var folders = this.folders;
   for (var iFolder = 0; iFolder < folders.length; iFolder++) {
@@ -48,10 +47,10 @@ export function getFolderByPath(folderPath) {
     }
   }
   return null;
-};
+}
 export function getFolderById(id) {
   return this.foldersTOC.foldersById.get(id);
-};
+}
 
 /**
  * Ensure that local-only folders live in a reasonable place in the
@@ -70,8 +69,8 @@ export function getFolderById(id) {
 export function normalizeFolderHierarchy() {
   // Find a folder for which we'd like to become a sibling.
   var sibling =
-        this.getFirstFolderWithType('drafts') ||
-        this.getFirstFolderWithType('sent');
+    this.getFirstFolderWithType("drafts") ||
+    this.getFirstFolderWithType("sent");
 
   // If for some reason we can't find those folders yet, that's
   // okay, we will try this again after the next folder sync.
@@ -82,8 +81,10 @@ export function normalizeFolderHierarchy() {
   var parent = this.getFolderById(sibling.parentId);
 
   // NOTE: `parent` may be null if `sibling` is a top-level folder.
-  var foldersToMove = [this.getFirstFolderWithType('localdrafts'),
-                       this.getFirstFolderWithType('outbox')];
+  var foldersToMove = [
+    this.getFirstFolderWithType("localdrafts"),
+    this.getFirstFolderWithType("outbox"),
+  ];
 
   foldersToMove.forEach(function(folder) {
     // These folders should always exist, but we double-check here
@@ -93,9 +94,12 @@ export function normalizeFolderHierarchy() {
       return;
     }
 
-    console.log('Moving folder', folder.name,
-                'underneath', parent && parent.name || '(root)');
-
+    console.log(
+      "Moving folder",
+      folder.name,
+      "underneath",
+      (parent && parent.name) || "(root)"
+    );
 
     this.universe.__notifyRemovedFolder(this, folder);
 
@@ -106,19 +110,17 @@ export function normalizeFolderHierarchy() {
     // another. In the case where our folder doesn't specify a
     // delimiter, fall back to the standard-ish '/'.
     if (parent) {
-      folder.path = parent.path + (parent.delim || '/') + folder.name;
-      folder.delim = parent.delim || '/';
+      folder.path = parent.path + (parent.delim || "/") + folder.name;
+      folder.delim = parent.delim || "/";
       folder.parentId = parent.id;
       folder.depth = parent.depth + 1;
     } else {
       folder.path = folder.name;
-      folder.delim = '/';
+      folder.delim = "/";
       folder.parentId = null;
       folder.depth = 0;
     }
 
     this.universe.__notifyAddedFolder(this, folder);
-
   }, this);
-
-};
+}

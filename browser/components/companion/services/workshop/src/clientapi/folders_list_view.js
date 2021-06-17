@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import EntireListView from './entire_list_view';
-import MailFolder from './mail_folder';
+import EntireListView from "./entire_list_view";
+import MailFolder from "./mail_folder";
 
 export default function FoldersViewSlice(api, handle) {
   EntireListView.call(this, api, MailFolder, handle);
@@ -25,14 +25,14 @@ export default function FoldersViewSlice(api, handle) {
   // is a secret implementation right now, please do consider your risk profile
   // as you read this code and uncover its dark secrets.
   this.inbox = null;
-  var inboxListener = (mailFolder) => {
-    if (mailFolder.type === 'inbox') {
+  var inboxListener = mailFolder => {
+    if (mailFolder.type === "inbox") {
       this.inbox = mailFolder;
-      this.removeListener('add', inboxListener);
-      this.emit('inbox', mailFolder);
+      this.removeListener("add", inboxListener);
+      this.emit("inbox", mailFolder);
     }
   };
-  this.on('add', inboxListener);
+  this.on("add", inboxListener);
 }
 FoldersViewSlice.prototype = Object.create(EntireListView.prototype);
 
@@ -56,34 +56,36 @@ FoldersViewSlice.prototype.getFolderById = function(id) {
  * Promise-returning folder resolution.
  */
 FoldersViewSlice.prototype.eventuallyGetFolderById = function(id) {
-  return new Promise(function(resolve, reject) {
-    const existingFolder = this.getFolderById(id);
-    if (existingFolder) {
-      resolve(existingFolder);
-      return;
-    }
-    // If already completed, immediately reject.
-    if (this.complete) {
-      reject('already complete');
-      return;
-    }
-
-    // Otherwise we're still loading and we'll either find victory in an add or
-    // inferred defeat when we get the completion notificaiton.
-    var addListener = function(folder) {
-      if (folder.id === id) {
-        this.removeListener('add', addListener);
-        resolve(folder);
+  return new Promise(
+    function(resolve, reject) {
+      const existingFolder = this.getFolderById(id);
+      if (existingFolder) {
+        resolve(existingFolder);
+        return;
       }
-    }.bind(this);
-    var completeListener = function() {
-      this.removeListener('add', addListener);
-      this.removeListener('complete', completeListener);
-      reject('async complete');
-    }.bind(this);
-    this.on('add', addListener);
-    this.on('complete', completeListener);
-  }.bind(this));
+      // If already completed, immediately reject.
+      if (this.complete) {
+        reject("already complete");
+        return;
+      }
+
+      // Otherwise we're still loading and we'll either find victory in an add or
+      // inferred defeat when we get the completion notificaiton.
+      var addListener = function(folder) {
+        if (folder.id === id) {
+          this.removeListener("add", addListener);
+          resolve(folder);
+        }
+      }.bind(this);
+      var completeListener = function() {
+        this.removeListener("add", addListener);
+        this.removeListener("complete", completeListener);
+        reject("async complete");
+      }.bind(this);
+      this.on("add", addListener);
+      this.on("complete", completeListener);
+    }.bind(this)
+  );
 };
 
 FoldersViewSlice.prototype.getFirstFolderWithType = function(type, items) {

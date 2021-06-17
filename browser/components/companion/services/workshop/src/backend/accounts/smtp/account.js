@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
-import * as client from './client';
-import DisasterRecovery from '../../disaster-recovery';
+import logic from "logic";
+import * as client from "./client";
+import DisasterRecovery from "../../disaster-recovery";
 
-function SmtpAccount(universe, compositeAccount, accountId, credentials,
-                     connInfo) {
+function SmtpAccount(
+  universe,
+  compositeAccount,
+  accountId,
+  credentials,
+  connInfo
+) {
   this.universe = universe;
-  logic.defineScope(this, 'Account', { accountId: accountId,
-                                       accountType: 'smtp' });
+  logic.defineScope(this, "Account", {
+    accountId,
+    accountType: "smtp",
+  });
   this.compositeAccount = compositeAccount;
   this.accountId = accountId;
   this.credentials = credentials;
@@ -31,20 +38,20 @@ function SmtpAccount(universe, compositeAccount, accountId, credentials,
 }
 
 SmtpAccount.prototype = {
-  type: 'smtp',
-  toString: function() {
-    return '[SmtpAccount: ' + this.id + ']';
+  type: "smtp",
+  toString() {
+    return "[SmtpAccount: " + this.id + "]";
   },
 
   get numActiveConns() {
     return this._activeConnections.length;
   },
 
-  shutdown: function() {
+  shutdown() {
     // Nothing to do.
   },
 
-  accountDeleted: function() {
+  accountDeleted() {
     this.shutdown();
   },
 
@@ -83,8 +90,8 @@ SmtpAccount.prototype = {
    *   generating extra garbage.
    * @return {Promise<({err, badAddresses}>}
    */
-  sendMessage: function(composer) {
-    return new Promise((resolve) => {
+  sendMessage(composer) {
+    return new Promise(resolve => {
       this.establishConnection({
         /**
          * Send the envelope.
@@ -92,9 +99,9 @@ SmtpAccount.prototype = {
          * @param {function()} bail Abort the connection. Used for when
          * we must gracefully cancel without sending a message.
          */
-        sendEnvelope: (conn) => {
+        sendEnvelope: conn => {
           var envelope = composer.getEnvelope();
-          logic(this, 'sendEnvelope', { _envelope: envelope });
+          logic(this, "sendEnvelope", { _envelope: envelope });
           conn.useEnvelope(envelope);
         },
 
@@ -103,16 +110,16 @@ SmtpAccount.prototype = {
         onProgress: () => {
           // Keep the wake lock open as long as it looks like we're
           // still communicating with the server.
-          composer.heartbeat('SMTP Progress');
+          composer.heartbeat("SMTP Progress");
         },
         /**
          * Send the message body.
          */
-        sendMessage: (conn) => {
+        sendMessage: conn => {
           var blob = composer.superBlob;
 
           // Then send the actual message if everything was cool
-          logic(this, 'sending-blob', { size: blob.size });
+          logic(this, "sending-blob", { size: blob.size });
           // simplesmtp's SMTPClient does not understand Blobs, so we
           // issue the write directly. All that it cares about is
           // knowing whether our data payload included a trailing
@@ -124,7 +131,7 @@ SmtpAccount.prototype = {
           // to this end and writes the \r\n if they aren't the last bytes
           // written.  Since we know that mailcomposer always ends the buffer
           // with \r\n we just set that state directly ourselves.
-          conn._lastDataBytes = '\r\n';
+          conn._lastDataBytes = "\r\n";
 
           // this does not actually terminate the connection; just tells the
           // client to flush stuff, etc.
@@ -135,20 +142,19 @@ SmtpAccount.prototype = {
          * The send succeeded.
          */
         onSendComplete: (/* conn */) => {
-          logic(this, 'smtp:sent');
+          logic(this, "smtp:sent");
           resolve({ error: null });
         },
         /**
          * The send failed.
          */
         onError: (error, badAddresses) => {
-          logic(this, 'smtp:error',
-                {
-                  error,
-                  badAddresses
-                });
+          logic(this, "smtp:error", {
+            error,
+            badAddresses,
+          });
           resolve({ error, badAddresses });
-        }
+        },
       });
     });
   },
@@ -160,8 +166,8 @@ SmtpAccount.prototype = {
    *
    * @return {Promise<ErrorString>}
    */
-  checkAccount: function() {
-    return new Promise((resolve) => {
+  checkAccount() {
+    return new Promise(resolve => {
       this.establishConnection({
         sendEnvelope: (conn, bail) => {
           // If we get here, we've successfully connected. Sorry, SMTP
@@ -185,12 +191,15 @@ SmtpAccount.prototype = {
           // transient server connection errors don't matter; and we're
           // not trying to send a message.
           // XXX the consumer should handle error logging.
-          if (err === 'bad-user-or-pass') {
+          if (err === "bad-user-or-pass") {
             this.universe.__reportAccountProblem(
-              this.compositeAccount, err, 'outgoing');
+              this.compositeAccount,
+              err,
+              "outgoing"
+            );
           }
           resolve(err);
-        }
+        },
       });
     });
   },
@@ -207,98 +216,92 @@ SmtpAccount.prototype = {
    * onSendComplete(conn) -- the message was successfully sent
    * onError(err, badAddresses) -- send failed (or connection error)
    */
-  establishConnection: function(callbacks) {
+  establishConnection(callbacks) {
     var conn;
     var sendingMessage = false;
-    client.createSmtpConnection(
-      this.credentials,
-      this.connInfo,
-      () => {
-        return new Promise((resolve) => {
+    client
+      .createSmtpConnection(this.credentials, this.connInfo, () => {
+        return new Promise(resolve => {
           // Note: Since we update the credentials object in-place,
           // there's no need to explicitly assign the changes here;
           // just save the account information.
           this.universe.saveAccountDef(
             this.compositeAccount.accountDef,
             /* folderInfo: */ null,
-            /* callback: */ resolve);
+            /* callback: */ resolve
+          );
         });
-      }
-    ).then((newConn) => {
-      conn = newConn;
-      DisasterRecovery.associateSocketWithAccount(conn.socket, this);
-      this._activeConnections.push(conn);
+      })
+      .then(newConn => {
+        conn = newConn;
+        DisasterRecovery.associateSocketWithAccount(conn.socket, this);
+        this._activeConnections.push(conn);
 
-      // Intercept the 'ondrain' event, which is as close as we can
-      // get to knowing that we are still sending data to the
-      // server. We use this to hold a wakelock open.
-      var oldOnDrain = conn.socket.ondrain;
-      conn.socket.ondrain = () => {
-        oldOnDrain && oldOnDrain.call(conn.socket);
-        callbacks.onProgress && callbacks.onProgress();
-      };
+        // Intercept the 'ondrain' event, which is as close as we can
+        // get to knowing that we are still sending data to the
+        // server. We use this to hold a wakelock open.
+        var oldOnDrain = conn.socket.ondrain;
+        conn.socket.ondrain = () => {
+          oldOnDrain && oldOnDrain.call(conn.socket);
+          callbacks.onProgress && callbacks.onProgress();
+        };
 
-      callbacks.sendEnvelope(conn, conn.close.bind(conn));
+        callbacks.sendEnvelope(conn, conn.close.bind(conn));
 
-      // We sent the envelope; see if we can now send the message.
-      conn.onready = (badRecipients) => {
-        logic(this, 'onready');
+        // We sent the envelope; see if we can now send the message.
+        conn.onready = badRecipients => {
+          logic(this, "onready");
 
-        if (badRecipients.length) {
+          if (badRecipients.length) {
+            conn.close();
+            logic(this, "bad-recipients", { badRecipients });
+            callbacks.onError("bad-recipient", badRecipients);
+          } else {
+            sendingMessage = true;
+            callbacks.sendMessage(conn);
+          }
+        };
+
+        // Done sending the message, ideally successfully.
+        conn.ondone = success => {
           conn.close();
-          logic(this, 'bad-recipients', { badRecipients: badRecipients });
-          callbacks.onError('bad-recipient', badRecipients);
-        } else {
-          sendingMessage = true;
-          callbacks.sendMessage(conn);
-        }
-      };
 
-      // Done sending the message, ideally successfully.
-      conn.ondone = (success) => {
-        conn.close();
+          if (success) {
+            logic(this, "sent");
+            callbacks.onSendComplete(conn);
+          } else {
+            logic(this, "send-failed");
+            // We don't have an error to reference here, but we stored
+            // the most recent SMTP error, which should tell us why the
+            // server rejected the message.
+            var err = client.analyzeSmtpError(conn, null, sendingMessage);
+            callbacks.onError(err, /* badAddresses: */ null);
+          }
+        };
 
-        if (success) {
-          logic(this, 'sent');
-          callbacks.onSendComplete(conn);
-        } else {
-          logic(this, 'send-failed');
-          // We don't have an error to reference here, but we stored
-          // the most recent SMTP error, which should tell us why the
-          // server rejected the message.
-          var err = client.analyzeSmtpError(conn, null, sendingMessage);
+        conn.onerror = err => {
+          // Some sort of error occurred; analyze and report.
+          conn.close();
+          err = client.analyzeSmtpError(conn, err, sendingMessage);
           callbacks.onError(err, /* badAddresses: */ null);
-        }
-      };
+        };
 
-      conn.onerror = (err) => {
-        // Some sort of error occurred; analyze and report.
-        conn.close();
-        err = client.analyzeSmtpError(conn, err, sendingMessage);
-        callbacks.onError(err, /* badAddresses: */ null);
-      };
+        conn.onclose = () => {
+          logic(this, "onclose");
 
-      conn.onclose = () => {
-        logic(this, 'onclose');
-
-        var idx = this._activeConnections.indexOf(conn);
-        if (idx !== -1) {
-          this._activeConnections.splice(idx, 1);
-        } else {
-          logic(this, 'dead-unknown-connection');
-        }
-      };
-    })
-      .catch((err) => {
+          var idx = this._activeConnections.indexOf(conn);
+          if (idx !== -1) {
+            this._activeConnections.splice(idx, 1);
+          } else {
+            logic(this, "dead-unknown-connection");
+          }
+        };
+      })
+      .catch(err => {
         err = client.analyzeSmtpError(conn, err, sendingMessage);
         callbacks.onError(err);
       });
-  }
-
+  },
 };
 
-export {
-  SmtpAccount,
-  SmtpAccount as Account,
-};
-
+export { SmtpAccount, SmtpAccount as Account };

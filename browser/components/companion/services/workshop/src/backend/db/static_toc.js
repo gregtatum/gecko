@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import BaseTOC from './base_toc';
+import BaseTOC from "./base_toc";
 
 /**
  * Wraps an unchanging array of items to be used by a WindowedListProxy.
@@ -26,14 +26,14 @@ import BaseTOC from './base_toc';
 export default function StaticTOC({ items }) {
   BaseTOC.apply(this, arguments);
 
-  logic.defineScope(this, 'StaticTOC');
+  logic.defineScope(this, "StaticTOC");
 
   this.items = items;
 
   this.__deactivate(true);
 }
 StaticTOC.prototype = BaseTOC.mix({
-  type: 'StaticTOC',
+  type: "StaticTOC",
   overlayNamespace: null,
   heightAware: false,
 
@@ -41,8 +41,7 @@ StaticTOC.prototype = BaseTOC.mix({
     return Promise.resolve(this);
   },
 
-  __deactivateTOC(/*firstTime*/) {
-  },
+  __deactivateTOC(/*firstTime*/) {},
 
   get length() {
     return this.items.length;
@@ -73,8 +72,11 @@ StaticTOC.prototype = BaseTOC.mix({
     return key;
   },
 
-  getDataForSliceRange(beginInclusive, endExclusive,
-      alreadyKnownData/*, alreadyKnownOverlays*/) {
+  getDataForSliceRange(
+    beginInclusive,
+    endExclusive,
+    alreadyKnownData /*, alreadyKnownOverlays*/
+  ) {
     beginInclusive = Math.max(0, beginInclusive);
     endExclusive = Math.min(endExclusive, this.items.length);
 
@@ -100,13 +102,7 @@ StaticTOC.prototype = BaseTOC.mix({
       }
 
       newKnownSet.add(id);
-      sendState.set(
-        id,
-        [
-          items[i],
-          null,
-          null
-        ]);
+      sendState.set(id, [items[i], null, null]);
     }
 
     return {
@@ -114,7 +110,7 @@ StaticTOC.prototype = BaseTOC.mix({
       state: sendState,
       pendingReads: null,
       readPromise: null,
-      newValidDataSet: newKnownSet
+      newValidDataSet: newKnownSet,
     };
-  }
+  },
 });

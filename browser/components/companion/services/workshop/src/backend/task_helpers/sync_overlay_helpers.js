@@ -23,9 +23,9 @@
 export function syncNormalOverlay(id, marker, inProgress, blockedBy) {
   let status;
   if (inProgress) {
-    status = 'active';
+    status = "active";
   } else if (marker) {
-    status = 'pending';
+    status = "pending";
   } else {
     return null;
   }
@@ -34,14 +34,14 @@ export function syncNormalOverlay(id, marker, inProgress, blockedBy) {
   if (blockedBy) {
     // yuck
     switch (blockedBy[blockedBy.length - 1][0]) {
-      case 'o': // online
-        blocked = 'offline';
+      case "o": // online
+        blocked = "offline";
         break;
-      case 'c': // credentials!*
-        blocked = 'bad-auth';
+      case "c": // credentials!*
+        blocked = "bad-auth";
         break;
-      case 'h': // happy!*
-        blocked = 'unknown';
+      case "h": // happy!*
+        blocked = "unknown";
         break;
       default:
         break;
@@ -54,6 +54,12 @@ export function syncNormalOverlay(id, marker, inProgress, blockedBy) {
 /**
  * Like syncNormalOverlay but for prefix overlays.
  */
-export function syncPrefixOverlay(fullId, binId, marker, inProgress, blockedBy) {
+export function syncPrefixOverlay(
+  fullId,
+  binId,
+  marker,
+  inProgress,
+  blockedBy
+) {
   return syncNormalOverlay(binId, marker, inProgress, blockedBy);
 }

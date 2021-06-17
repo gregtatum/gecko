@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import streams from 'streams';
-import util from 'util';
+import streams from "streams";
+import util from "util";
 
 /**
  * ActiveSync allows us to download attachments in one of two ways: either
@@ -34,7 +34,6 @@ import util from 'util';
 export default function MultipartStream() {
   var self = this;
   var out;
-  var offset = 0;
   var buffer = new Uint8Array(0);
 
   var partCount = null;
@@ -68,35 +67,41 @@ export default function MultipartStream() {
             break; // Not enough data yet.
           }
 
-          metadata = new DataView(buffer.buffer.slice(0, bytesNeededForMetadata));
+          metadata = new DataView(
+            buffer.buffer.slice(0, bytesNeededForMetadata)
+          );
           buffer = buffer.slice(bytesNeededForMetadata);
         }
         // Now we can read parts.
         else {
           if (!currentPartStreamController) {
-            currentPartLengthRemaining =
-              metadata.getUint32(currentPartIndex * 8 + 4, true);
+            currentPartLengthRemaining = metadata.getUint32(
+              currentPartIndex * 8 + 4,
+              true
+            );
 
             out.enqueue({
               partIndex: currentPartIndex,
               partStream: new streams.ReadableStream({
                 start(c) {
                   currentPartStreamController = c;
-                }
-              })
+                },
+              }),
             });
           }
 
-          var bytesToGrab = Math.min(currentPartLengthRemaining,
-                                     buffer.byteLength);
+          var bytesToGrab = Math.min(
+            currentPartLengthRemaining,
+            buffer.byteLength
+          );
 
           currentPartStreamController.enqueue(buffer.slice(0, bytesToGrab));
           currentPartLengthRemaining -= bytesToGrab;
           buffer = buffer.slice(bytesToGrab);
-          console.log('grabbed', bytesToGrab, buffer.length);
+          console.log("grabbed", bytesToGrab, buffer.length);
 
           if (currentPartLengthRemaining === 0) {
-            console.log('done with part');
+            console.log("done with part");
             // We're done with this part.
             currentPartStreamController.close();
             currentPartStreamController = null;
@@ -107,15 +112,13 @@ export default function MultipartStream() {
     },
     close() {
       out.close();
-    }
+    },
   });
 
   this.readable = new streams.ReadableStream({
     start(c) {
       out = c;
     },
-    cancel() {
-
-    }
+    cancel() {},
   });
 }

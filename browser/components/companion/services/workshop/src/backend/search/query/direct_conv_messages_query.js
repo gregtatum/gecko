@@ -19,7 +19,10 @@
  * Basically just normalizes the pre-query implementation so we don't need
  * multiple TOC variants, etc.
  */
-export default function DirectConversationMessagesQuery({ db, conversationId }) {
+export default function DirectConversationMessagesQuery({
+  db,
+  conversationId,
+}) {
   this._db = db;
   this.conversationId = conversationId;
   this._tocEventId = null;
@@ -37,9 +40,14 @@ DirectConversationMessagesQuery.prototype = {
    */
   async execute() {
     let idsWithDates;
-    ({ idsWithDates, drainEvents: this._drainEvents,
-         tocEventId: this._tocEventId, convEventId: this._convEventId } =
-      await this._db.loadConversationMessageIdsAndListen(this.conversationId));
+    ({
+      idsWithDates,
+      drainEvents: this._drainEvents,
+      tocEventId: this._tocEventId,
+      convEventId: this._convEventId,
+    } = await this._db.loadConversationMessageIdsAndListen(
+      this.conversationId
+    ));
 
     return idsWithDates;
   },
@@ -64,5 +72,5 @@ DirectConversationMessagesQuery.prototype = {
   destroy() {
     this._db.removeListener(this._tocEventId, this._boundTOCListener);
     this._db.removeListener(this._convEventId, this._boundConvListener);
-  }
+  },
 };

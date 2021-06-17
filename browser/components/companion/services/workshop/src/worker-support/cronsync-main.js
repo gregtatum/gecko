@@ -15,28 +15,28 @@
  */
 
 /* eslint-disable no-prototype-builtins */
-import logic from 'logic';
-import wakelocks from './wakelocks-main';
+import logic from "logic";
+import wakelocks from "./wakelocks-main";
 const requestWakeLock = wakelocks.requestWakeLock;
 
 function makeData(accountIds, interval, date) {
   return {
-    type: 'sync',
-    accountIds: accountIds,
-    interval: interval,
-    timestamp: date.getTime()
+    type: "sync",
+    accountIds,
+    interval,
+    timestamp: date.getTime(),
   };
 }
 
 // Creates a string key from an array of string IDs. Uses a space
 // separator since that cannot show up in an ID.
 function makeAccountKey(accountIds) {
-  return 'id' + accountIds.join(' ');
+  return "id" + accountIds.join(" ");
 }
 
 // Converts 'interval' + intervalInMillis to just a intervalInMillis
 // Number.
-var prefixLength = 'interval'.length;
+var prefixLength = "interval".length;
 function toInterval(intervalKey) {
   return parseInt(intervalKey.substring(prefixLength), 10);
 }
@@ -68,23 +68,26 @@ function hasSameValues(ary1, ary2) {
  * accounts we are
  */
 function getAccountsWithOutstandingSyncNotifications() {
-  if (typeof Notification !== 'function' || !Notification.get) {
+  if (typeof Notification !== "function" || !Notification.get) {
     return Promise.resolve([]);
   }
 
-  return Notification.get().then(function(notifications) {
-    var result = [];
-    notifications.forEach(function(notification) {
-      var data = notification.data;
+  return Notification.get().then(
+    function(notifications) {
+      var result = [];
+      notifications.forEach(function(notification) {
+        var data = notification.data;
 
-      if (data.v && data.ntype === 'sync') {
-        result.push(data.accountId);
-      }
-    });
-    return result;
-  }, function() {
-    return [];
-  });
+        if (data.v && data.ntype === "sync") {
+          result.push(data.accountId);
+        }
+      });
+      return result;
+    },
+    function() {
+      return [];
+    }
+  );
 }
 
 // This weird circular registration is because of how the router works and
@@ -97,7 +100,7 @@ var routeRegistration;
 var dispatcher = {
   _routeReady: false,
   _routeQueue: [],
-  _sendMessage: function(type, args) {
+  _sendMessage(type, args) {
     if (this._routeReady) {
       // sendMessage is added to routeRegistration by the main-router module.
       routeRegistration.sendMessage(null, type, args);
@@ -109,14 +112,16 @@ var dispatcher = {
   /**
    * Called by worker side to indicate it can now receive messages.
    */
-  hello: function() {
+  hello() {
     this._routeReady = true;
     if (this._routeQueue.length) {
       var queue = this._routeQueue;
       this._routeQueue = [];
-      queue.forEach(function(args) {
-        this._sendMessage(args[0], args[1]);
-      }.bind(this));
+      queue.forEach(
+        function(args) {
+          this._sendMessage(args[0], args[1]);
+        }.bind(this)
+      );
     }
   },
 
@@ -124,7 +129,7 @@ var dispatcher = {
    * Clears all sync-based alarms. Normally not called, except perhaps for
    * tests or debugging.
    */
-  clearAll: function() {
+  clearAll() {
     var mozAlarms = navigator.mozAlarms;
     if (!mozAlarms) {
       return;
@@ -139,15 +144,14 @@ var dispatcher = {
       }
 
       alarms.forEach(function(alarm) {
-        if (alarm.data && alarm.data.type === 'sync') {
+        if (alarm.data && alarm.data.type === "sync") {
           mozAlarms.remove(alarm.id);
         }
       });
-    }.bind(this);
+    };
     r.onerror = function(err) {
-      console.error('cronsync-main clearAll mozAlarms.getAll: error: ' +
-                    err);
-    }.bind(this);
+      console.error("cronsync-main clearAll mozAlarms.getAll: error: " + err);
+    };
   },
 
   /**
@@ -157,19 +161,19 @@ var dispatcher = {
     * intervalInMilliseconds, and values are arrays of account IDs that should
     * be synced at that interval.
     */
-  ensureSync: function (syncData) {
+  ensureSync(syncData) {
     var mozAlarms = navigator.mozAlarms;
     if (!mozAlarms) {
-      console.warn('no mozAlarms support!');
+      console.warn("no mozAlarms support!");
       return;
     }
 
-    logic(this, 'ensureSync:begin');
+    logic(this, "ensureSync:begin");
 
     var request = mozAlarms.getAll();
 
-    request.onsuccess = (event) => {
-      logic(this, 'ensureSync:gotAlarms');
+    request.onsuccess = event => {
+      logic(this, "ensureSync:gotAlarms");
 
       var alarms = event.target.result;
       // If there are no alarms a falsey value may be returned.  We want
@@ -181,64 +185,69 @@ var dispatcher = {
 
       // Find all IDs being tracked by alarms
       var expiredAlarmIds = [],
-          okAlarmIntervals = {},
-          uniqueAlarms = {};
+        okAlarmIntervals = {},
+        uniqueAlarms = {};
 
-      alarms.forEach((alarm) => {
+      alarms.forEach(alarm => {
         // Only care about sync alarms.
-        if (!alarm.data || !alarm.data.type || alarm.data.type !== 'sync') {
+        if (!alarm.data || !alarm.data.type || alarm.data.type !== "sync") {
           return;
         }
 
-        var intervalKey = 'interval' + alarm.data.interval,
-            wantedAccountIds = syncData[intervalKey];
+        var intervalKey = "interval" + alarm.data.interval,
+          wantedAccountIds = syncData[intervalKey];
 
-        if (!wantedAccountIds || !hasSameValues(wantedAccountIds,
-                                                alarm.data.accountIds)) {
-          logic(
-            this,
-            'ensureSyncAccountMismatch',
-            {
-              alarmId: alarm.id,
-              alarmAccountIds: alarm.data.accountIds,
-              wantedAccountIds
-            });
+        if (
+          !wantedAccountIds ||
+          !hasSameValues(wantedAccountIds, alarm.data.accountIds)
+        ) {
+          logic(this, "ensureSyncAccountMismatch", {
+            alarmId: alarm.id,
+            alarmAccountIds: alarm.data.accountIds,
+            wantedAccountIds,
+          });
           expiredAlarmIds.push(alarm.id);
         } else {
           // Confirm the existing alarm is still good.
           var interval = toInterval(intervalKey),
-              now = Date.now(),
-              alarmTime = alarm.data.timestamp,
-              accountKey = makeAccountKey(wantedAccountIds);
+            now = Date.now(),
+            alarmTime = alarm.data.timestamp,
+            accountKey = makeAccountKey(wantedAccountIds);
 
           // If the interval is nonzero, and there is no other alarm found
           // for that account combo, and if it is not in the past and if it
           // is not too far in the future, it is OK to keep.
-          if (interval && !uniqueAlarms.hasOwnProperty(accountKey) &&
-              alarmTime > now && alarmTime < now + interval) {
-            logic(
-              this,
-              'ensureSyncAlarmOK',
-              { alarmId: alarm.id, accountKey, intervalKey });
+          if (
+            interval &&
+            !uniqueAlarms.hasOwnProperty(accountKey) &&
+            alarmTime > now &&
+            alarmTime < now + interval
+          ) {
+            logic(this, "ensureSyncAlarmOK", {
+              alarmId: alarm.id,
+              accountKey,
+              intervalKey,
+            });
             uniqueAlarms[accountKey] = true;
             okAlarmIntervals[intervalKey] = true;
           } else {
-            logic(
-              this,
-              'ensureSyncAlarmOutOfRange',
-              { alarmId: alarm.id, accountKey, intervalKey });
+            logic(this, "ensureSyncAlarmOutOfRange", {
+              alarmId: alarm.id,
+              accountKey,
+              intervalKey,
+            });
             expiredAlarmIds.push(alarm.id);
           }
         }
       });
 
-      expiredAlarmIds.forEach((alarmId) => {
+      expiredAlarmIds.forEach(alarmId => {
         mozAlarms.remove(alarmId);
       });
 
       var alarmMax = 0,
-          alarmCount = 0,
-          self = this;
+        alarmCount = 0,
+        self = this;
 
       // Called when alarms are confirmed to be set.
       var done = () => {
@@ -247,22 +256,22 @@ var dispatcher = {
           return;
         }
 
-        logic(this, 'ensureSync:end');
+        logic(this, "ensureSync:end");
         // Indicate ensureSync has completed because the
         // back end is waiting to hear alarm was set before
         // triggering sync complete.
-        self._sendMessage('syncEnsured');
+        self._sendMessage("syncEnsured");
       };
 
-      Object.keys(syncData).forEach((intervalKey) => {
+      Object.keys(syncData).forEach(intervalKey => {
         // Skip if the existing alarm is already good.
         if (okAlarmIntervals.hasOwnProperty(intervalKey)) {
           return;
         }
 
         var interval = toInterval(intervalKey),
-            accountIds = syncData[intervalKey],
-            date = new Date(Date.now() + interval);
+          accountIds = syncData[intervalKey],
+          date = new Date(Date.now() + interval);
 
         // Do not set an timer for a 0 interval, bad things happen.
         if (!interval) {
@@ -271,22 +280,19 @@ var dispatcher = {
 
         alarmMax += 1;
 
-        var alarmRequest = mozAlarms.add(date, 'ignoreTimezone',
-                                      makeData(accountIds, interval, date));
+        var alarmRequest = mozAlarms.add(
+          date,
+          "ignoreTimezone",
+          makeData(accountIds, interval, date)
+        );
 
         alarmRequest.onsuccess = () => {
-          logic(
-            this,
-            'ensureSyncAlarmAdded',
-            { accountIds, interval });
+          logic(this, "ensureSyncAlarmAdded", { accountIds, interval });
           done();
         };
 
-        alarmRequest.onerror = (err) => {
-          logic(
-            this,
-            'ensureSyncAlarmAddError',
-            { accountIds, interval, err });
+        alarmRequest.onerror = err => {
+          logic(this, "ensureSyncAlarmAddError", { accountIds, interval, err });
           done();
         };
       });
@@ -297,16 +303,16 @@ var dispatcher = {
       }
     };
 
-    request.onerror = (err) => {
-      logic(this, 'ensureSyncGetAlarmsError', { err });
+    request.onerror = err => {
+      logic(this, "ensureSyncGetAlarmsError", { err });
     };
-  }
+  },
 };
-logic.defineScope(dispatcher, 'CronsyncMain');
+logic.defineScope(dispatcher, "CronsyncMain");
 
 if (navigator.mozSetMessageHandler) {
-  navigator.mozSetMessageHandler('alarm', (alarm) => {
-    logic(dispatcher, 'alarmFired');
+  navigator.mozSetMessageHandler("alarm", alarm => {
+    logic(dispatcher, "alarmFired");
 
     // !! Coordinate with the gaia mail app frontend logic !!
     // html_cache_restore.js has some logic that tries to cleverly close the
@@ -321,15 +327,15 @@ if (navigator.mozSetMessageHandler) {
     // even though it's a little paranoid because once this message handler
     // fires, the system message/alarm will have been eaten and so it would
     // super-suck to race front-end logic somehow.
-    if (window.hasOwnProperty('appShouldStayAlive')) {
-      window.appShouldStayAlive = 'alarmFired';
+    if (window.hasOwnProperty("appShouldStayAlive")) {
+      window.appShouldStayAlive = "alarmFired";
     }
 
     // If this is not a notification displaying cronsync results, ignore it.
     // The other known message types at this time are:
     // - message_reader: Used for background send error notifications.
     var data = alarm.data;
-    if (!data || data.type !== 'sync') {
+    if (!data || data.type !== "sync") {
       return;
     }
 
@@ -346,24 +352,27 @@ if (navigator.mozSetMessageHandler) {
     // that was done for hacky stop-gap reasons and because GELAM did not have
     // explicit wakelock support itself.)
 
-    var wakelockId = requestWakeLock('cpu');
+    var wakelockId = requestWakeLock("cpu");
 
     getAccountsWithOutstandingSyncNotifications().then(
-      (accountIdsWithNotifications) => {
-        logic(dispatcher, 'alarmDispatch');
+      accountIdsWithNotifications => {
+        logic(dispatcher, "alarmDispatch");
 
-        dispatcher._sendMessage(
-          'alarm',
-          [data.accountIds, data.interval, wakelockId,
-            accountIdsWithNotifications]);
-      });
+        dispatcher._sendMessage("alarm", [
+          data.accountIds,
+          data.interval,
+          wakelockId,
+          accountIdsWithNotifications,
+        ]);
+      }
+    );
   });
 }
 
 routeRegistration = {
-  name: 'cronsync',
+  name: "cronsync",
   sendMessage: null,
-  dispatch: dispatcher
+  dispatch: dispatcher,
 };
 
 export default routeRegistration;

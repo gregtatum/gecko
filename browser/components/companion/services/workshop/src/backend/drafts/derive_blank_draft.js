@@ -14,26 +14,35 @@
  * limitations under the License.
  */
 
-import { addressPairFromIdentity, replyToFromIdentity } from './address_helpers';
+import {
+  addressPairFromIdentity,
+  replyToFromIdentity,
+} from "./address_helpers";
 
-import { generateBaseComposeParts } from '../bodies/mailchew';
+import { generateBaseComposeParts } from "../bodies/mailchew";
 
-import { makeMessageInfo, makeDraftInfo } from '../db/mail_rep';
+import { makeMessageInfo, makeDraftInfo } from "../db/mail_rep";
 
 /**
  * Create a blank message, noting that because of signatures this might not
  * actually be fully blank.
  */
-export default function deriveBlankDraft({ identity, messageId, umid, guid, date,
-                                   folderIds }) {
+export default function deriveBlankDraft({
+  identity,
+  messageId,
+  umid,
+  guid,
+  date,
+  folderIds,
+}) {
   // -- Build the body
   let bodyReps = generateBaseComposeParts(identity);
 
   let draftInfo = makeDraftInfo({
-    draftType: 'blank',
+    draftType: "blank",
     mode: null,
     refMessageId: null,
-    refMessageDate: null
+    refMessageDate: null,
   });
 
   return makeMessageInfo({
@@ -50,15 +59,14 @@ export default function deriveBlankDraft({ identity, messageId, umid, guid, date
     flags: [],
     folderIds,
     hasAttachments: false,
-    subject: '',
+    subject: "",
     // There is no user-authored content at this point, so the snippet is empty
     // by definition.  draft_save will update this.
-    snippet: '',
+    snippet: "",
     attachments: [],
     relatedParts: [],
     references: [],
     bodyReps,
-    draftInfo
+    draftInfo,
   });
-};
-
+}

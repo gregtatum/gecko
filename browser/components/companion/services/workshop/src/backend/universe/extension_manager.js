@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
 /**
  * Tracks the set of activated extensions and registers them with the
@@ -37,15 +37,15 @@ import logic from 'logic';
  * We're not doing the
  */
 export default function ExtensionManager({ derivedViewManager, tocManager }) {
-  logic.defineScope(this, 'ExtensionManager');
+  logic.defineScope(this, "ExtensionManager");
   this._extensionDefs = [];
 
   this._derivedViewManager = derivedViewManager;
   this._tocManager = tocManager;
 }
 ExtensionManager.prototype = {
-  registerExtension: function(extDef, source) {
-    logic(this, 'registerExtension', { name: extDef.name, source });
+  registerExtension(extDef, source) {
+    logic(this, "registerExtension", { name: extDef.name, source });
     this._extensionDefs.push(extDef);
 
     // TODO: make this stuff actually lazy when merited.
@@ -56,45 +56,45 @@ ExtensionManager.prototype = {
     if (extDef.derivedViews) {
       for (let namespace of Object.keys(extDef.derivedViews)) {
         extDef.derivedViews[namespace]().then(
-          (provider) => {
+          provider => {
             this._derivedViewManager.registerDerivedViewProvider(
-              namespace, provider);
+              namespace,
+              provider
+            );
           },
-          (ex) => {
-            logic(
-              this, 'extensionRequireError',
-              {
-                name: extDef.name,
-                entryPoint: 'derivedView',
-                ex,
-                stack: ex.stack
-              });
-          });
+          ex => {
+            logic(this, "extensionRequireError", {
+              name: extDef.name,
+              entryPoint: "derivedView",
+              ex,
+              stack: ex.stack,
+            });
+          }
+        );
       }
     }
 
     if (extDef.tocs) {
       for (let namespace of Object.keys(extDef.tocs)) {
         extDef.tocs[namespace]().then(
-          (provider) => {
+          provider => {
             this._tocManager.registerNamespaceProvider(namespace, provider);
           },
-          (ex) => {
-            logic(
-              this, 'extensionRequireError',
-              {
-                name: extDef.name,
-                entryPoint: 'tocs',
-                ex,
-                stack: ex.stack
-              });
-          });
+          ex => {
+            logic(this, "extensionRequireError", {
+              name: extDef.name,
+              entryPoint: "tocs",
+              ex,
+              stack: ex.stack,
+            });
+          }
+        );
       }
     }
   },
 
-  registerExtensions: function(extensionDefs, source) {
-    logic(this, 'registerExtensions', { source });
+  registerExtensions(extensionDefs, source) {
+    logic(this, "registerExtensions", { source });
     for (let extDef of extensionDefs) {
       this.registerExtension(extDef, source);
     }

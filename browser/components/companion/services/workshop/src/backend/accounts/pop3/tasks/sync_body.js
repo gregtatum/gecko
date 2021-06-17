@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import churnConversation from '../../../churn_drivers/conv_churn_driver';
+import churnConversation from "../../../churn_drivers/conv_churn_driver";
 
-import MixinSyncBody from '../../../task_mixins/mix_sync_body';
+import MixinSyncBody from "../../../task_mixins/mix_sync_body";
 
 /**
  * A custom execute() implementation building on top of Vanilla IMAP's sync_body
@@ -57,7 +57,7 @@ export default TaskDefiner.defineComplexTask([
       // -- Retrieve the conversation and its messages for mutation
       let fromDb = await ctx.beginMutate({
         conversations: new Map([[req.convId, null]]),
-        messagesByConversation: new Map([[req.convId, null]])
+        messagesByConversation: new Map([[req.convId, null]]),
       });
 
       let oldConvInfo = fromDb.conversations.get(req.convId);
@@ -72,7 +72,7 @@ export default TaskDefiner.defineComplexTask([
 
       // We need to look up all the umidLocations.
       await ctx.read({
-        umidLocations
+        umidLocations,
       });
 
       // -- Make sure the UIDL mapping is active
@@ -81,16 +81,17 @@ export default TaskDefiner.defineComplexTask([
       // -- For each message...
       for (let message of loadedMessages) {
         // If this message isn't explicitly opted-in, skip it.
-        if ((!req.fullBodyMessageIds ||
-             !req.fullBodyMessageIds.has(message.id))) {
+        if (
+          !req.fullBodyMessageIds ||
+          !req.fullBodyMessageIds.has(message.id)
+        ) {
           continue;
         }
 
         let uidl = umidLocations.get(message.umid);
         let messageNumber = conn.uidlToId[uidl];
 
-        let newMessageInfo =
-          await conn.downloadMessageByNumber(messageNumber);
+        let newMessageInfo = await conn.downloadMessageByNumber(messageNumber);
 
         // Propagate the things that can change across.  Which is all to do with
         // body parts and things derived from body parts.
@@ -115,10 +116,9 @@ export default TaskDefiner.defineComplexTask([
       await ctx.finishTask({
         mutations: {
           conversations: new Map([[req.convId, convInfo]]),
-          messages: modifiedMessagesMap
+          messages: modifiedMessagesMap,
         },
       });
-    }
-  }
+    },
+  },
 ]);
-

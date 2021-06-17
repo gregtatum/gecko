@@ -43,7 +43,8 @@ export function normalizeAndApplyChanges(values, toAdd, toRemove) {
     }
   }
   if (toRemove) {
-    for (let subtrahend of toRemove) { // (wiktionary consulted...)
+    for (let subtrahend of toRemove) {
+      // (wiktionary consulted...)
       let index = values.indexOf(subtrahend);
       if (index !== -1) {
         if (!actuallyRemoved) {
@@ -78,7 +79,8 @@ export function normalizeAndApplyChangesToSet(values, toAdd, toRemove) {
     }
   }
   if (toRemove) {
-    for (let subtrahend of toRemove) { // (wiktionary consulted...)
+    for (let subtrahend of toRemove) {
+      // (wiktionary consulted...)
       if (values.has(subtrahend)) {
         if (!actuallyRemoved) {
           actuallyRemoved = [];
@@ -91,18 +93,18 @@ export function normalizeAndApplyChangesToSet(values, toAdd, toRemove) {
   return { add: actuallyAdded, remove: actuallyRemoved };
 }
 
-
 /**
  * Apply the { add, remove } changes in `changes` to `value` by mutating
  * `value`.
  */
 export function applyChanges(value, changes) {
   if (!Array.isArray(value)) {
-    return applyChangesToSet(value, changes);
+    applyChangesToSet(value, changes);
+    return;
   }
   if (changes.add) {
     for (let addend of changes.add) {
-      if (value.indexOf(addend) === -1) {
+      if (!value.includes(addend)) {
         value.push(addend);
       }
     }
@@ -138,17 +140,14 @@ export function applyChangesToSet(value, changes) {
   }
 }
 
-
 function concatLists(a, b) {
   if (a && b) {
     return a.concat(b);
   } else if (a) {
     return a;
-  } else {
-    return b;
   }
+  return b;
 }
-
 
 /**
  * Merge an additional set of changes into an existing set of changes.  This is
@@ -161,8 +160,10 @@ export function mergeChanges(existingChanges, newChanges) {
   let derivedRemove;
 
   // We have to look for cancellation if there are any live add/remove pairs.
-  if ((existingChanges.add && newChanges.remove) ||
-      (existingChanges.remove && newChanges.add)) {
+  if (
+    (existingChanges.add && newChanges.remove) ||
+    (existingChanges.remove && newChanges.add)
+  ) {
     // newChanges.remove and existingChanges.add cancel each other out
     derivedAdd = [];
     let pendingRemove = new Set(newChanges.remove);
@@ -207,6 +208,6 @@ export function mergeChanges(existingChanges, newChanges) {
 
   return {
     add: derivedAdd,
-    remove: derivedRemove
+    remove: derivedRemove,
   };
 }

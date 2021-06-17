@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
-import { encodeInt } from 'shared/a64';
+import logic from "logic";
+import { encodeInt } from "shared/a64";
 
 /**
  * POP3 sync state.
@@ -32,19 +32,19 @@ import { encodeInt } from 'shared/a64';
  */
 function SyncStateHelper(ctx, rawSyncState, accountId, mode, maxNewMessages) {
   if (!rawSyncState) {
-    logic(ctx, 'creatingDefaultSyncState', {});
+    logic(ctx, "creatingDefaultSyncState", {});
     rawSyncState = {
       nextUmidSuffix: 1,
       uidlToUmid: new Map(),
       deletedUidls: new Set(),
-      overflowUidlsToSize: new Map()
+      overflowUidlsToSize: new Map(),
     };
   }
 
   this._ctx = ctx;
   this._accountId = accountId;
   this.rawSyncState = rawSyncState;
-  this._growMode = mode === 'grow';
+  this._growMode = mode === "grow";
 
   this._uidlToUmid = rawSyncState.uidlToUmid;
   this._deletedUidls = rawSyncState.deletedUidls;
@@ -82,9 +82,10 @@ SyncStateHelper.prototype = {
     this.rawSyncState.sinceDate = val;
   },
 
-  issueUniqueMessageId: function() {
-    return (this._accountId + '.' +
-            encodeInt(this.rawSyncState.nextUmidSuffix++));
+  issueUniqueMessageId() {
+    return (
+      this._accountId + "." + encodeInt(this.rawSyncState.nextUmidSuffix++)
+    );
   },
 
   /**
@@ -98,7 +99,7 @@ SyncStateHelper.prototype = {
    * JIT is going to have less risk of trouble with this one consolidated
    * function.  Do consider splitting out as needed.)
    */
-  deltaCheckUidls: function(allMessages) {
+  deltaCheckUidls(allMessages) {
     let uidlToUmid = this._uidlToUmid;
     let deletedUidls = this._deletedUidls;
     let overflowUidlsToSize = this._overflowUidlsToSize;
@@ -113,7 +114,8 @@ SyncStateHelper.prototype = {
 
     let newMessageBudget = this.maxNewMessages;
 
-    for (let { uidl, size } of allMessages) { // uidl, size, number
+    for (let { uidl, size } of allMessages) {
+      // uidl, size, number
       if (uidlToUmid.has(uidl)) {
         // already known/synchronized message, nothing to do.
         unseenSynced.delete(uidl);
@@ -157,7 +159,7 @@ SyncStateHelper.prototype = {
    * sync structures and generate a sync_message task to actually synchronize
    * it.
    */
-  newMessageToSync: function(uidl, size) {
+  newMessageToSync(uidl, size) {
     let umid = this.issueUniqueMessageId();
     this.umidLocationWrites.set(umid, uidl);
     this._makeMessageTask(uidl, umid, size);
@@ -167,7 +169,7 @@ SyncStateHelper.prototype = {
   /**
    * Track a message as living in overflow for future synchronizing.
    */
-  newOverflowMessage: function(uidl, size) {
+  newOverflowMessage(uidl, size) {
     this._overflowUidlsToSize.set(uidl, size);
   },
 
@@ -176,7 +178,7 @@ SyncStateHelper.prototype = {
    * no longer exist on the server, clean up our awareness of the UIDL and our
    * umid mappings which cease to have a purpose.
    */
-  cleanupUnseenSyncedMessages: function(unseenSynced) {
+  cleanupUnseenSyncedMessages(unseenSynced) {
     for (let uidl of unseenSynced) {
       let umid = this._uidlToUmid.get(uidl);
       this._uidlToUmid.delete(uidl);
@@ -191,9 +193,11 @@ SyncStateHelper.prototype = {
    *
    * TODO: recency awareness heuristic.
    */
-  syncOverflowMessages: function(count) {
-    let uidlsToSync =
-      Array.from(this._overflowUidlsToSize.keys()).slice(0, count);
+  syncOverflowMessages(count) {
+    let uidlsToSync = Array.from(this._overflowUidlsToSize.keys()).slice(
+      0,
+      count
+    );
     for (let uidl of uidlsToSync) {
       this._overflowUidlsToSize.delete(uidl);
       this.newMessageToSync(uidl);
@@ -207,11 +211,11 @@ SyncStateHelper.prototype = {
    * perspective and if anyone ever tries to improve our POP3 implementation,
    * it is a helpful nuance.
    */
-  deletingMessage: function(uidl) {
+  deletingMessage(uidl) {
     // XXX implement when we implement deletion.
   },
 
-  getUmidForUidl: function(uidl) {
+  getUmidForUidl(uidl) {
     return this._uidlToUmid.get(uidl);
   },
 
@@ -220,14 +224,18 @@ SyncStateHelper.prototype = {
    * UIDs, if any, disappeared, and make a note for a umid-lookup pass so we
    * can subsequently generate aggregate tasks for sync_conv.
    */
-  inferDeletionFromExistingUids: function(newUids) {
+  inferDeletionFromExistingUids(newUids) {
     let uidsNotFound = new Set(this._uidInfo.keys());
     for (let uid of newUids) {
       uidsNotFound.delete(uid);
     }
 
-    let { _uidInfo: uidInfo, umidDeletions, umidNameReads,
-          umidLocationWrites } = this;
+    let {
+      _uidInfo: uidInfo,
+      umidDeletions,
+      umidNameReads,
+      umidLocationWrites,
+    } = this;
     for (let uid of uidsNotFound) {
       let { umid } = uidInfo.get(uid);
       uidInfo.delete(uid);
@@ -243,17 +251,17 @@ SyncStateHelper.prototype = {
   /**
    * Create a sync_message task for a newly added message.
    */
-  _makeMessageTask: function(uidl, umid, size) {
+  _makeMessageTask(uidl, umid, size) {
     let task = {
-      type: 'sync_message',
+      type: "sync_message",
       accountId: this._accountId,
       uidl,
       umid,
-      size
+      size,
     };
     this.tasksToSchedule.push(task);
     return task;
-  }
+  },
 };
 
 export default SyncStateHelper;

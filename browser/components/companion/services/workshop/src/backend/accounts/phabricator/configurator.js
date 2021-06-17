@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export default function configuratePhabricator(userDetails/*, domainInfo*/) {
+export default function configuratePhabricator(userDetails /*, domainInfo*/) {
   return {
     // Pass the user details through because the validator will want to mutate
     // `displayName` and `address` into place (for now, until things get
@@ -23,8 +23,7 @@ export default function configuratePhabricator(userDetails/*, domainInfo*/) {
     credentials: {
       apiKey: userDetails.phabApiKey,
     },
-    typeFields: {
-    },
+    typeFields: {},
     connInfoFields: {
       serverUrl: userDetails.phabServerUrl,
     },

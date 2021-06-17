@@ -21,9 +21,5 @@
  * changes in this range and do not care about changes outside this range.
  * This also then allows us TODO: COMPLETE THIS COMMENT.
  */
-export default function QueryRange() {
-
-}
-QueryRange.prototype = {
-
-};
+export default function QueryRange() {}
+QueryRange.prototype = {};

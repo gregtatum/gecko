@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { TransformStream } from 'streams';
+import { TransformStream } from "streams";
 
 /**
  * A stream that transforms a stream by chunking its input and returning Blobs.
@@ -40,7 +40,6 @@ export default function BlobTransformStream({ saveChunkSize, mimeType }) {
         size = 0;
       }
       done();
-    }
+    },
   });
-};
-
+}

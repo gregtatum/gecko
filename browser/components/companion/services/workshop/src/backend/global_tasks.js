@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import AccountAutoconfig from './tasks/account_autoconfig';
-import AccountCreate from './tasks/account_create';
-import AccountDelete from './tasks/account_delete';
-import AccountMigrate from './tasks/account_migrate';
-import DraftCreate from './tasks/draft_create';
-import NewFlush from './tasks/new_flush';
+import AccountAutoconfig from "./tasks/account_autoconfig";
+import AccountCreate from "./tasks/account_create";
+import AccountDelete from "./tasks/account_delete";
+import AccountMigrate from "./tasks/account_migrate";
+import DraftCreate from "./tasks/draft_create";
+import NewFlush from "./tasks/new_flush";
 
 /**
  * Global tasks which aren't associated with a specific account type.
@@ -40,4 +40,3 @@ export default [
   // - Aggregate state stuff
   NewFlush,
 ];
-

@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-import { numericUidFromMessageId } from 'shared/id_conversions';
+import { numericUidFromMessageId } from "shared/id_conversions";
 
-import { normalizeAndApplyChanges, applyChanges, mergeChanges } from
-  '../../../delta_algebra';
-import { selectMessages } from '../../../message_selector';
+import {
+  normalizeAndApplyChanges,
+  applyChanges,
+  mergeChanges,
+} from "../../../delta_algebra";
+import { selectMessages } from "../../../message_selector";
 
-import churnConversation from '../../../churn_drivers/conv_churn_driver';
+import churnConversation from "../../../churn_drivers/conv_churn_driver";
 
 /**
  * @typedef {} MixStorePersistentState
@@ -64,7 +67,6 @@ import churnConversation from '../../../churn_drivers/conv_churn_driver';
  * Maps tracked SUIDs to their current aggregation string so we can easily
  * find what we want to do with them when unifying or mooting.
  */
-
 
 /**
  * @typedef {Object} MixStoreRequest
@@ -189,7 +191,7 @@ const GmailStoreTaskMixin = {
   initPersistentState() {
     return {
       nextId: 1,
-      aggrChanges: new Map()
+      aggrChanges: new Map(),
     };
   },
 
@@ -204,18 +206,18 @@ const GmailStoreTaskMixin = {
       markers.push({
         type: this.name,
         id: change.id,
-        accountId: accountId,
-        aggrString: aggrString,
+        accountId,
+        aggrString,
         priorityTags: [],
-        exclusiveResources: []
+        exclusiveResources: [],
       });
     }
 
     return {
       memoryState: {
-        idToAggrString
+        idToAggrString,
       },
-      markers
+      markers,
     };
   },
 
@@ -236,17 +238,17 @@ const GmailStoreTaskMixin = {
    * @return {FlagStoreAggrString}
    */
   _deriveMixStoreAggrString(add, remove) {
-    var s = '';
+    var s = "";
     if (add && add.length) {
       add.sort();
-      s += add.map(x => '+' + JSON.stringify(x)).join(' ');
+      s += add.map(x => "+" + JSON.stringify(x)).join(" ");
     }
     if (remove && remove.length) {
       // add delimiting whitespace for sanity if we have both types
       if (add && add.length) {
-        s += ' ';
+        s += " ";
       }
-      s += remove.map(x => 'x' + JSON.stringify(x)).join(' ');
+      s += remove.map(x => "x" + JSON.stringify(x)).join(" ");
     }
     return s;
   },
@@ -256,13 +258,12 @@ const GmailStoreTaskMixin = {
     let { idToAggrString } = memoryState;
 
     // (only needed in the labels case currently, but )
-    let normalizeHelper =
-      await this.prepNormalizationLogic(ctx, req.accountId);
+    let normalizeHelper = await this.prepNormalizationLogic(ctx, req.accountId);
 
     // -- Load the conversation and messages
     let fromDb = await ctx.beginMutate({
       conversations: new Map([[req.convId, null]]),
-      messagesByConversation: new Map([[req.convId, null]])
+      messagesByConversation: new Map([[req.convId, null]]),
     });
 
     let loadedMessages = fromDb.messagesByConversation.get(req.convId);
@@ -272,14 +273,19 @@ const GmailStoreTaskMixin = {
 
     // - Apply the message selector if applicable
     let filteredMessages = selectMessages(
-      loadedMessages, req.onlyMessages, req.messageSelector);
+      loadedMessages,
+      req.onlyMessages,
+      req.messageSelector
+    );
 
     const attrName = this.attrName;
     let undoTasks = [];
     // -- Per message, compute the changes required and issue/update markers
     for (let message of filteredMessages) {
-      let { add: actuallyAdded, remove: actuallyRemoved } =
-        normalizeAndApplyChanges(message[attrName], req.add, req.remove);
+      let {
+        add: actuallyAdded,
+        remove: actuallyRemoved,
+      } = normalizeAndApplyChanges(message[attrName], req.add, req.remove);
 
       if (actuallyAdded || actuallyRemoved) {
         // - Generate (non-minimal) undo tasks
@@ -292,16 +298,20 @@ const GmailStoreTaskMixin = {
           messageSelector: null,
           // invert the manipulation that was actually performed
           add: actuallyRemoved && actuallyRemoved.concat(),
-          remove: actuallyAdded && actuallyAdded.concat()
+          remove: actuallyAdded && actuallyAdded.concat(),
         });
 
         // Normalize to server-name space from our local name-space.  AKA
         // convert folder id's to gmail labels in the label case and do nothing
         // in the flags case.
-        actuallyAdded =
-          this.normalizeLocalToServer(normalizeHelper, actuallyAdded);
-        actuallyRemoved =
-          this.normalizeLocalToServer(normalizeHelper, actuallyRemoved);
+        actuallyAdded = this.normalizeLocalToServer(
+          normalizeHelper,
+          actuallyAdded
+        );
+        actuallyRemoved = this.normalizeLocalToServer(
+          normalizeHelper,
+          actuallyRemoved
+        );
 
         modifiedMessagesMap.set(message.id, message);
         anyMessageChanged = true;
@@ -315,9 +325,13 @@ const GmailStoreTaskMixin = {
           let pendingAggrString = idToAggrString.get(uid);
           let pendingChanges = aggrChanges.get(pendingAggrString);
 
-          ({ add: actuallyAdded, remove: actuallyRemoved} =
-            mergeChanges(pendingChanges,
-                         { add: actuallyAdded, remove: actuallyRemoved }));
+          ({ add: actuallyAdded, remove: actuallyRemoved } = mergeChanges(
+            pendingChanges,
+            {
+              add: actuallyAdded,
+              remove: actuallyRemoved,
+            }
+          ));
 
           // remove from pending changes (possibly wiping the entry)
           pendingChanges.uids.splice(pendingChanges.uids.indexOf(uid));
@@ -333,32 +347,31 @@ const GmailStoreTaskMixin = {
         // actually need to modify anything on the server.)
         if (actuallyAdded || actuallyRemoved) {
           let newAggrString = this._deriveMixStoreAggrString(
-            actuallyAdded, actuallyRemoved);
+            actuallyAdded,
+            actuallyRemoved
+          );
           let newChanges;
           if (aggrChanges.has(newAggrString)) {
             newChanges = aggrChanges.get(newAggrString);
             newChanges.uids.push(uid);
-          }
-          else {
+          } else {
             newChanges = {
-              id: this.name + ':' + req.accountId + persistentState.nextId++,
+              id: this.name + ":" + req.accountId + persistentState.nextId++,
               add: actuallyAdded,
               remove: actuallyRemoved,
-              uids: [uid]
+              uids: [uid],
             };
             aggrChanges.set(newAggrString, newChanges);
           }
           idToAggrString.set(uid, newAggrString);
-          modifyTaskMarkers.set(
-            newChanges.id,
-            {
-              type: this.name,
-              id: newChanges.id,
-              accountId: req.accountId,
-              aggrString: newAggrString,
-              priorityTags: [],
-              exclusiveResources: []
-            });
+          modifyTaskMarkers.set(newChanges.id, {
+            type: this.name,
+            id: newChanges.id,
+            accountId: req.accountId,
+            aggrString: newAggrString,
+            priorityTags: [],
+            exclusiveResources: [],
+          });
         }
       }
     } // (end per-message loop)
@@ -366,8 +379,7 @@ const GmailStoreTaskMixin = {
     let conversationsMap = null;
     if (anyMessageChanged) {
       let oldConvInfo = fromDb.conversations.get(req.convId);
-      let convInfo = churnConversation(
-        req.convId, oldConvInfo, loadedMessages);
+      let convInfo = churnConversation(req.convId, oldConvInfo, loadedMessages);
       conversationsMap = new Map([[convInfo.id, convInfo]]);
     }
 
@@ -379,11 +391,11 @@ const GmailStoreTaskMixin = {
     await ctx.finishTask({
       mutations: {
         conversations: conversationsMap,
-        messages: modifiedMessagesMap
+        messages: modifiedMessagesMap,
       },
       taskMarkers: modifyTaskMarkers,
       complexTaskState: persistentState,
-      undoTasks: undoTasks
+      undoTasks,
     });
   },
 
@@ -414,7 +426,7 @@ const GmailStoreTaskMixin = {
     let account = await ctx.universe.acquireAccount(ctx, marker.accountId);
     // TODO: spam and trash folder handling would demand that we perform
     // further normalization of the UIDs and pick the appropriate folder here.
-    let allMailFolderInfo = account.getFirstFolderWithType('all');
+    let allMailFolderInfo = account.getFirstFolderWithType("all");
     let uidSet = changes.uids;
 
     // -- Issue the manipulations to the server
@@ -423,18 +435,20 @@ const GmailStoreTaskMixin = {
         ctx,
         allMailFolderInfo,
         uidSet,
-        '+' + this.imapDataName,
+        "+" + this.imapDataName,
         changes.add,
-        { byUid: true });
+        { byUid: true }
+      );
     }
     if (changes.remove && changes.remove.length) {
       await account.pimap.store(
         ctx,
         allMailFolderInfo,
         uidSet,
-        '-' + this.imapDataName,
+        "-" + this.imapDataName,
         changes.remove,
-        { byUid: true });
+        { byUid: true }
+      );
     }
 
     // - Success, clean up state.
@@ -445,9 +459,9 @@ const GmailStoreTaskMixin = {
 
     // - Return / finalize
     await ctx.finishTask({
-      complexTaskState: persistentState
+      complexTaskState: persistentState,
     });
-  }
+  },
 };
 
 export default GmailStoreTaskMixin;

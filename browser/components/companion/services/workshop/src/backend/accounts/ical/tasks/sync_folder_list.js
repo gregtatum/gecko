@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import MixinSyncFolderList from '../../../task_mixins/mix_sync_folder_list';
+import MixinSyncFolderList from "../../../task_mixins/mix_sync_folder_list";
 
 /**
  *
@@ -26,8 +26,8 @@ export default TaskDefiner.defineSimpleTask([
   {
     essentialOfflineFolders: [
       {
-        type: 'inbox',
-        displayName: 'Events'
+        type: "inbox",
+        displayName: "Events",
       },
     ],
 
@@ -41,6 +41,6 @@ export default TaskDefiner.defineSimpleTask([
         modifiedFolders: undefined,
         modifiedSyncStates: undefined,
       };
-    }
-  }
+    },
+  },
 ]);

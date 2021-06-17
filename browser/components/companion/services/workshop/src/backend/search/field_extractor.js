@@ -19,9 +19,9 @@
  * potentially accumulating a map of aggregate values.
  */
 export default function FieldExtractor({ extract, aggregate }) {
-  const extractOps = this._extractOps = [];
-  const aggrOps = this._aggregateOps = [];
-  const aggregated = this.aggregated = {};
+  const extractOps = (this._extractOps = []);
+  const aggrOps = (this._aggregateOps = []);
+  const aggregated = (this.aggregated = {});
 
   for (let key of Object.keys(extract)) {
     // This is where we would do any static sanitizing to ensure crazy things
@@ -31,7 +31,7 @@ export default function FieldExtractor({ extract, aggregate }) {
     // invoke methods and only methods can do destructive stuff.
     extractOps.push({
       key,
-      traversal: extract[key]
+      traversal: extract[key],
     });
   }
 
@@ -41,25 +41,25 @@ export default function FieldExtractor({ extract, aggregate }) {
       const { op: aggrOp, field: traversal, initial } = aggregate[key];
       aggregated[key] = initial;
       switch (aggrOp) {
-        case 'max': {
+        case "max": {
           aggrOps.push({
-            merger: (val) => {
+            merger: val => {
               aggregated[key] = Math.max(aggregated[key], val);
             },
-            traversal
+            traversal,
           });
           break;
         }
 
         default: {
-          throw new Error('bad aggregate op: ' + aggrOp);
+          throw new Error("bad aggregate op: " + aggrOp);
         }
       }
     }
   }
 }
 FieldExtractor.prototype = {
-  _traverse(rootObj, traversal ) {
+  _traverse(rootObj, traversal) {
     let curObj = rootObj;
     try {
       for (let attr of traversal) {
@@ -73,7 +73,7 @@ FieldExtractor.prototype = {
 
   extract(gathered, idName, idValue) {
     const extracted = {
-      [idName]: idValue
+      [idName]: idValue,
     };
     for (let { key, traversal } of this._extractOps) {
       extracted[key] = this._traverse(gathered, traversal);
@@ -84,5 +84,5 @@ FieldExtractor.prototype = {
     }
 
     return extracted;
-  }
+  },
 };

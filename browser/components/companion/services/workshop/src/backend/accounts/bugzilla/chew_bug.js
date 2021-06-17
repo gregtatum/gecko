@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-import * as mailRep from '../../db/mail_rep';
-import { processMessageContent, processAttributeContent } from '../../bodies/mailchew';
+import * as mailRep from "../../db/mail_rep";
+import {
+  processMessageContent,
+  processAttributeContent,
+} from "../../bodies/mailchew";
 
 /**
  * Merges bug comments and history back together into a unified representation
@@ -29,7 +32,14 @@ import { processMessageContent, processAttributeContent } from '../../bodies/mai
  * and metadata.)
  */
 export class BugChewer {
-  constructor({ userChewer, convId, oldConvInfo, oldMessages, foldersTOC, bugInfo }) {
+  constructor({
+    userChewer,
+    convId,
+    oldConvInfo,
+    oldMessages,
+    foldersTOC,
+    bugInfo,
+  }) {
     this.userChewer = userChewer;
     this.convId = convId;
     this.oldConvInfo = oldConvInfo;
@@ -37,10 +47,10 @@ export class BugChewer {
     this.foldersTOC = foldersTOC;
     this.bugInfo = bugInfo;
 
-    this.inboxFolder = foldersTOC.getCanonicalFolderByType('inbox');
+    this.inboxFolder = foldersTOC.getCanonicalFolderByType("inbox");
 
     // This is a mapping from the message id we synthesize.
-    const oldById = this.oldById = new Map();
+    const oldById = (this.oldById = new Map());
     for (const old of oldMessages) {
       oldById.set(old.id, old);
     }
@@ -66,8 +76,10 @@ export class BugChewer {
     let iHistory = 0;
     let iComment = 0;
 
-    while (iHistory < bugInfo.history.length ||
-           iComment < bugInfo.comments.length) {
+    while (
+      iHistory < bugInfo.history.length ||
+      iComment < bugInfo.comments.length
+    ) {
       // We currently leverage these ending up undefined past the end.
       const nextHistory = bugInfo.history[iHistory];
       const nextComment = bugInfo.comments[iComment];
@@ -82,8 +94,10 @@ export class BugChewer {
         unified.push({ history: nextHistory, comment: null });
         iHistory++;
         continue;
-      } else if (nextHistory.when === nextComment.creation_time &&
-                 nextHistory.who === nextComment.author) {
+      } else if (
+        nextHistory.when === nextComment.creation_time &&
+        nextHistory.who === nextComment.author
+      ) {
         // ## They're the same event, unify!
         unified.push({
           history: nextHistory,
@@ -106,7 +120,7 @@ export class BugChewer {
       const histDate = new Date(nextHistory.when);
       const commentDate = new Date(nextComment.creation_time);
       if (histDate < commentDate) {
-        unified.push({ history: nextHistory, comment: null});
+        unified.push({ history: nextHistory, comment: null });
         iHistory++;
         continue;
       } else {
@@ -140,12 +154,15 @@ export class BugChewer {
       // to both with using crypto.subtle for this yet, plus there may actually
       // be some way to get the REST API to tell us when comments have been
       // edited.
-      const plainBody = oldMsg.bodyReps.find((rep) => rep.type === 'plain');
+      const plainBody = oldMsg.bodyReps.find(rep => rep.type === "plain");
       // If there's no comment or we didn't have a plain body part, or the size
       // of that plain part is the same as the size of the currently reported
       // comment, then there's no need to re-process.
-      if (!comment || !plainBody ||
-           plainBody.authoredBodySize === comment.raw_text.length) {
+      if (
+        !comment ||
+        !plainBody ||
+        plainBody.authoredBodySize === comment.raw_text.length
+      ) {
         return;
       }
       // This means that the contents of the message did change.  For simplicity
@@ -164,28 +181,31 @@ export class BugChewer {
       // XXX for now, assume all attribute changes are notable, but this wants
       // a lookup table like Phabricator.
       this.notableChanges++;
-      const attrs = history.changes.map((change) => {
+      const attrs = history.changes.map(change => {
         return {
           name: change.field_name,
-          type: 'string',
+          type: "string",
           // there's a semantic mismatch here, but we can fix that when we
           // improve the attribute reps.
           old: change.removed,
           new: change.added,
         };
       });
-      ({ contentBlob, snippet, authoredBodySize } =
-        processAttributeContent(attrs));
-      bodyReps.push(mailRep.makeBodyPart({
-        type: 'attr',
-        part: null,
-        sizeEstimate: contentBlob.size,
-        amountDownloaded: contentBlob.size,
-        isDownloaded: true,
-        _partInfo: null,
-        contentBlob,
-        authoredBodySize,
-      }));
+      ({ contentBlob, snippet, authoredBodySize } = processAttributeContent(
+        attrs
+      ));
+      bodyReps.push(
+        mailRep.makeBodyPart({
+          type: "attr",
+          part: null,
+          sizeEstimate: contentBlob.size,
+          amountDownloaded: contentBlob.size,
+          isDownloaded: true,
+          _partInfo: null,
+          contentBlob,
+          authoredBodySize,
+        })
+      );
     }
     if (comment && comment.raw_text) {
       // Comments are notable!
@@ -194,21 +214,23 @@ export class BugChewer {
       const commentText = comment.raw_text;
       ({ contentBlob, snippet, authoredBodySize } = processMessageContent(
         commentText,
-        'plain',
+        "plain",
         true, // isDownloaded
         true // generateSnippet
       ));
 
-      bodyReps.push(mailRep.makeBodyPart({
-        type: 'plain',
-        part: null,
-        sizeEstimate: commentText.length,
-        amountDownloaded: commentText.length,
-        isDownloaded: true,
-        _partInfo: null,
-        contentBlob,
-        authoredBodySize,
-      }));
+      bodyReps.push(
+        mailRep.makeBodyPart({
+          type: "plain",
+          part: null,
+          sizeEstimate: commentText.length,
+          amountDownloaded: commentText.length,
+          isDownloaded: true,
+          _partInfo: null,
+          contentBlob,
+          authoredBodySize,
+        })
+      );
     }
 
     const authorLogin = comment ? comment.creator : history.who;

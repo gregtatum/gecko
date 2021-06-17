@@ -22,25 +22,25 @@ export default function NestedGatherer(rootKey, rootGatherer) {
 NestedGatherer.prototype = {
   nested: true,
 
-  hasGatherer: function(key) {
+  hasGatherer(key) {
     return this.gatherers.has(key) || key === this.rootKey;
   },
 
-  getGatherer: function(key) {
+  getGatherer(key) {
     return this.gatherers.get(key);
   },
 
-  addGatherer: function(key, gatherer) {
+  addGatherer(key, gatherer) {
     this.gatherers.set(key, gatherer);
   },
 
-  makeNestedGatherer: function(key, rootKey, rootGatherer) {
+  makeNestedGatherer(key, rootKey, rootGatherer) {
     let nestedGatherer = new NestedGatherer(rootKey, rootGatherer);
     this.gatherers.set(key, nestedGatherer);
     return nestedGatherer;
   },
 
-  _gatherChildren: function(gatherInto) {
+  _gatherChildren(gatherInto) {
     let allPromises = [];
     for (let [ukey, ugatherer] of this.gatherers.entries()) {
       // gr, latching bugs still exist in SpiderMonkey apparently, so manually
@@ -55,16 +55,18 @@ NestedGatherer.prototype = {
         continue;
       }
       let promise = gatherer.gather(gatherInto);
-      allPromises.push(promise.then((value) => {
-        gatherInto[key] = value;
-      }));
+      allPromises.push(
+        promise.then(value => {
+          gatherInto[key] = value;
+        })
+      );
     }
     return Promise.all(allPromises).then(() => {
       return gatherInto;
     });
   },
 
-  gather: function(gathered) {
+  gather(gathered) {
     if (this.rootGatherer) {
       let rootGather;
       // Allow bypassing the gatherer if the thing is already
@@ -73,14 +75,14 @@ NestedGatherer.prototype = {
       } else {
         rootGather = this.rootGatherer.gather(gathered);
       }
-      return rootGather.then((rootResult) => {
+      return rootGather.then(rootResult => {
         if (this.rootGatherer.plural) {
           // Plural, so the result is an array and we want to create a context
           // for each item and then run a gather on each of those items.
           let childPromises = [];
-          let pluralGathers = rootResult.map((item) => {
+          let pluralGathers = rootResult.map(item => {
             let childGather = {
-              [this.rootKey]: item
+              [this.rootKey]: item,
             };
             childPromises.push(this._gatherChildren(childGather));
             return childGather;
@@ -91,17 +93,15 @@ NestedGatherer.prototype = {
           return Promise.all(childPromises).then(() => {
             return pluralGathers;
           });
-        } else {
-          // Non-plural, so give the nested value its own context which gets
-          // populated with the root key and then gather into that.
-          let subGather = {
-            [this.rootKey]: rootResult
-          };
-          return this._gatherChildren(subGather);
         }
+        // Non-plural, so give the nested value its own context which gets
+        // populated with the root key and then gather into that.
+        let subGather = {
+          [this.rootKey]: rootResult,
+        };
+        return this._gatherChildren(subGather);
       });
-    } else {
-      return this._gatherChildren(gathered);
     }
-  }
+    return this._gatherChildren(gathered);
+  },
 };

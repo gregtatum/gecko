@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
-import { secondsToMillisecs } from 'shared/date';
+import { secondsToMillisecs } from "shared/date";
 
-import * as mailRep from '../../db/mail_rep';
-import { processMessageContent, processAttributeContent } from '../../bodies/mailchew';
+import * as mailRep from "../../db/mail_rep";
+import {
+  processMessageContent,
+  processAttributeContent,
+} from "../../bodies/mailchew";
 
 /**
  * Maps from the "type" of a transaction to information on how to process it.
@@ -62,31 +65,23 @@ const TRANSACTION_HANDLERS = new Map([
    * UI.  It usually seems to happen as part of a batch so it could be some
    * artifact of a multi-phase commit or something.
    */
-  [
-    null,
-    {
-    }
-  ],
+  [null, {}],
   /**
    * create: Seems to be the first transaction and be boring.
    */
-  [
-    'create',
-    {
-    }
-  ],
+  ["create", {}],
   /**
    * title: string field with old/new, seems to be the second transaction and is
    * not boring.
    */
   [
-    'title',
+    "title",
     {
       deriveAttrs(tx) {
         return [
           {
-            name: 'title',
-            type: 'string',
+            name: "title",
+            type: "string",
             old: tx.fields.old,
             new: tx.fields.new,
           },
@@ -94,8 +89,8 @@ const TRANSACTION_HANDLERS = new Map([
       },
       notable() {
         return true;
-      }
-    }
+      },
+    },
   ],
   /**
    * summary: string field with old/new, This ends up being the commit message
@@ -108,13 +103,13 @@ const TRANSACTION_HANDLERS = new Map([
    * TODO: Explicitly handle stack changes as first-class elsewhere.
    */
   [
-    'summary',
+    "summary",
     {
       deriveAttrs(tx) {
         return [
           {
-            name: 'summary',
-            type: 'string',
+            name: "summary",
+            type: "string",
             old: tx.fields.old,
             new: tx.fields.new,
           },
@@ -122,8 +117,8 @@ const TRANSACTION_HANDLERS = new Map([
       },
       notable() {
         return true;
-      }
-    }
+      },
+    },
   ],
   /**
    * reviewers: complex list field, "fields" contains "operations".  PHIDs can
@@ -138,29 +133,29 @@ const TRANSACTION_HANDLERS = new Map([
           }
    */
   [
-    'reviewers',
+    "reviewers",
     {
       deriveAttrs(tx, userLookup) {
-        return tx.fields.operations.map((txOp) => {
+        return tx.fields.operations.map(txOp => {
           return {
-            name: 'reviewers',
-            type: 'set',
-            setType: 'identity',
+            name: "reviewers",
+            type: "set",
+            setType: "identity",
             op: txOp.operation,
             value: userLookup(txOp.phid),
             meta: [
               {
-                key: 'blocking',
-                value: txOp.isBlocking
-              }
-            ]
+                key: "blocking",
+                value: txOp.isBlocking,
+              },
+            ],
           };
         });
       },
       notable() {
         return true;
-      }
-    }
+      },
+    },
   ],
   /**
    * update: string field with old/new whose value is a PHID-DIFF.
@@ -171,15 +166,15 @@ const TRANSACTION_HANDLERS = new Map([
    * of interdiff summary here.
    */
   [
-    'update',
+    "update",
     {
       deriveAttrs(tx) {
         return [
           {
             // We are changing the name here because 'update' is generic and
             // confusing and we are going to be attaching additional semantics.
-            name: 'patch-changed',
-            type: 'string',
+            name: "patch-changed",
+            type: "string",
             old: tx.fields.old,
             new: tx.fields.new,
           },
@@ -187,8 +182,8 @@ const TRANSACTION_HANDLERS = new Map([
       },
       notable() {
         return true;
-      }
-    }
+      },
+    },
   ],
   /**
    * projects: simple list field, "fields" contains "operations", example for
@@ -204,14 +199,14 @@ const TRANSACTION_HANDLERS = new Map([
           }
    */
   [
-    'projects',
+    "projects",
     {
       deriveAttrs(tx, userLookup) {
-        return tx.fields.operations.map((txOp) => {
+        return tx.fields.operations.map(txOp => {
           return {
-            name: 'projects',
-            type: 'set',
-            setType: 'identity',
+            name: "projects",
+            type: "set",
+            setType: "identity",
             op: txOp.operation,
             value: userLookup(txOp.phid),
           };
@@ -219,8 +214,8 @@ const TRANSACTION_HANDLERS = new Map([
       },
       notable() {
         return true;
-      }
-    }
+      },
+    },
   ],
   /**
    * subscribers: simple list field like "projects"
@@ -231,14 +226,14 @@ const TRANSACTION_HANDLERS = new Map([
    * notable.
    */
   [
-    'subscribers',
+    "subscribers",
     {
       deriveAttrs(tx, userLookup) {
-        return tx.fields.operations.map((txOp) => {
+        return tx.fields.operations.map(txOp => {
           return {
-            name: 'subscribers',
-            type: 'set',
-            setType: 'identity',
+            name: "subscribers",
+            type: "set",
+            setType: "identity",
             op: txOp.operation,
             value: userLookup(txOp.phid),
           };
@@ -246,8 +241,8 @@ const TRANSACTION_HANDLERS = new Map([
       },
       notable() {
         return false;
-      }
-    }
+      },
+    },
   ],
   /**
    * status: string field that may be changed as part of a batch by other
@@ -261,13 +256,13 @@ const TRANSACTION_HANDLERS = new Map([
    * aggregate state.
    */
   [
-    'status',
+    "status",
     {
       deriveAttrs(tx) {
         return [
           {
-            name: 'status',
-            type: 'string',
+            name: "status",
+            type: "string",
             old: tx.fields.old,
             new: tx.fields.new,
           },
@@ -275,8 +270,8 @@ const TRANSACTION_HANDLERS = new Map([
       },
       notable() {
         return true;
-      }
-    }
+      },
+    },
   ],
   /**
    * request-review: weird global state change that should result in a "status"
@@ -284,60 +279,60 @@ const TRANSACTION_HANDLERS = new Map([
    * "status" should have a "new" "fields" of "needs-review".
    */
   [
-    'request-review',
+    "request-review",
     {
       deriveAttrs() {
         return [
           {
-            name: 'request-review',
-            type: 'action',
+            name: "request-review",
+            type: "action",
           },
         ];
       },
       notable() {
         return true;
-      }
-    }
+      },
+    },
   ],
   /**
    * request-changes: weird global state change that should result in a "status"
    * transaction that should have a "new" "fields" of "needs-revision".
    */
   [
-    'request-changes',
+    "request-changes",
     {
       deriveAttrs() {
         return [
           {
-            name: 'request-changes',
-            type: 'action',
+            name: "request-changes",
+            type: "action",
           },
         ];
       },
       notable() {
         return true;
-      }
-    }
+      },
+    },
   ],
   /**
    * accept: weird global state change that should result in a "status"
    * transaction that should have a "new" "fields" of "accepted".
    */
   [
-    'accept',
+    "accept",
     {
       deriveAttrs() {
         return [
           {
-            name: 'accept',
-            type: 'action',
+            name: "accept",
+            type: "action",
           },
         ];
       },
       notable() {
         return true;
-      }
-    }
+      },
+    },
   ],
   /**
    * close: no "status" expected, may have a "CommitPHIDs" "fields" that is just
@@ -348,20 +343,20 @@ const TRANSACTION_HANDLERS = new Map([
    * what release / nightly the changes went into, etc.
    */
   [
-    'close',
+    "close",
     {
       deriveAttrs() {
         return [
           {
-            name: 'close',
-            type: 'action',
+            name: "close",
+            type: "action",
           },
         ];
       },
       notable() {
         return true;
-      }
-    }
+      },
+    },
   ],
 ]);
 
@@ -385,7 +380,15 @@ const TRANSACTION_HANDLERS = new Map([
  * `PatchChewer`.
  */
 export class TransactionChewer {
-  constructor({ taskContext, userChewer, convId, oldConvInfo, oldMessages, foldersTOC, revInfo }) {
+  constructor({
+    taskContext,
+    userChewer,
+    convId,
+    oldConvInfo,
+    oldMessages,
+    foldersTOC,
+    revInfo,
+  }) {
     this.taskCtx = taskContext;
     this.userChewer = userChewer;
     this.userLookup = userChewer.mapPhid.bind(userChewer);
@@ -395,10 +398,10 @@ export class TransactionChewer {
     this.foldersTOC = foldersTOC;
     this.revInfo = revInfo;
 
-    this.inboxFolder = foldersTOC.getCanonicalFolderByType('inbox');
+    this.inboxFolder = foldersTOC.getCanonicalFolderByType("inbox");
 
     // This is a mapping from the message id we synthesize.
-    const oldById = this.oldById = new Map();
+    const oldById = (this.oldById = new Map());
     for (const old of oldMessages) {
       oldById.set(old.id, old);
     }
@@ -457,21 +460,23 @@ export class TransactionChewer {
       const commentText = tx.comments[0].content.raw;
       ({ contentBlob, snippet, authoredBodySize } = processMessageContent(
         commentText,
-        'plain',
+        "plain",
         true, // isDownloaded
         true // generateSnippet
       ));
 
-      bodyReps.push(mailRep.makeBodyPart({
-        type: 'plain',
-        part: null,
-        sizeEstimate: commentText.length,
-        amountDownloaded: commentText.length,
-        isDownloaded: true,
-        _partInfo: null,
-        contentBlob,
-        authoredBodySize,
-      }));
+      bodyReps.push(
+        mailRep.makeBodyPart({
+          type: "plain",
+          part: null,
+          sizeEstimate: commentText.length,
+          amountDownloaded: commentText.length,
+          isDownloaded: true,
+          _partInfo: null,
+          contentBlob,
+          authoredBodySize,
+        })
+      );
     } else {
       const handler = TRANSACTION_HANDLERS.get(tx.type);
       if (handler) {
@@ -482,18 +487,23 @@ export class TransactionChewer {
         if (handler.deriveAttrs) {
           const attrs = handler.deriveAttrs(tx, this.userLookup);
           if (attrs) {
-            ({ contentBlob, snippet, authoredBodySize } =
-              processAttributeContent(attrs));
-            bodyReps.push(mailRep.makeBodyPart({
-              type: 'attr',
-              part: null,
-              sizeEstimate: contentBlob.size,
-              amountDownloaded: contentBlob.size,
-              isDownloaded: true,
-              _partInfo: null,
+            ({
               contentBlob,
+              snippet,
               authoredBodySize,
-            }));
+            } = processAttributeContent(attrs));
+            bodyReps.push(
+              mailRep.makeBodyPart({
+                type: "attr",
+                part: null,
+                sizeEstimate: contentBlob.size,
+                amountDownloaded: contentBlob.size,
+                isDownloaded: true,
+                _partInfo: null,
+                contentBlob,
+                authoredBodySize,
+              })
+            );
           }
         }
       }

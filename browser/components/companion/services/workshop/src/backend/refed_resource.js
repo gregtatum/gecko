@@ -30,8 +30,8 @@ RefedResource.prototype = {
    * Asynchronously acquire the resource, to be owned by the given context.
    */
   async __acquire(ctx) {
-    if (this._activeConsumers.indexOf(ctx) !== -1) {
-      throw new Error('context already refs this resource!');
+    if (this._activeConsumers.includes(ctx)) {
+      throw new Error("context already refs this resource!");
     }
     this._activeConsumers.push(ctx);
     if (!this._valid && this._activeConsumers.length === 1) {
@@ -47,10 +47,10 @@ RefedResource.prototype = {
     return this;
   },
 
-  __release: function(ctx) {
+  __release(ctx) {
     let idx = this._activeConsumers.indexOf(ctx);
     if (idx === -1) {
-      throw new Error('context does not ref this resource!');
+      throw new Error("context does not ref this resource!");
     }
     this._activeConsumers.splice(idx, 1);
 
@@ -64,7 +64,7 @@ RefedResource.prototype = {
     }
 
     return Promise.resolve();
-  }
+  },
 };
 
 RefedResource.mix = function(obj) {

@@ -61,8 +61,7 @@
 //                       encodeURI does not escape plus the result of escaping
 //                       (so also '%')
 // )
-var RE_URL =
-  /(^|[\s(,;])((?:https?:\/\/|www\d{0,3}[.][-a-z0-9.]{2,249}|[-a-z0-9.]{2,250}[.][a-z]{2,4}\/)[-\w.!~*'();,/?:@&=+$#%]*)/im;
+var RE_URL = /(^|[\s(,;])((?:https?:\/\/|www\d{0,3}[.][-a-z0-9.]{2,249}|[-a-z0-9.]{2,250}[.][a-z]{2,4}\/)[-\w.!~*'();,/?:@&=+$#%]*)/im;
 // Set of terminators that are likely to have been part of the context rather
 // than part of the URL and so should be uneaten.  This is the same as our
 // mirror lead-in set (so '(', ',', ';') plus question end-ing punctuation and
@@ -85,8 +84,7 @@ var RE_HTTP = /^https?:/i;
 //                       giving us a high probability of an e-mail address.
 //                       Otherwise we use the same base regexp from our URL
 //                       logic.
-var RE_MAIL =
-  /(^|[\s(,;<>])([^(,;<>@\s]+@[-a-z0-9.]{2,250}[.][-a-z0-9]{2,32})/im;
+var RE_MAIL = /(^|[\s(,;<>])([^(,;<>@\s]+@[-a-z0-9.]{2,250}[.][-a-z0-9]{2,32})/im;
 var RE_MAILTO = /^mailto:/i;
 
 /**
@@ -100,8 +98,7 @@ export function linkifyPlain(body, doc) {
     var email = RE_MAIL.exec(body);
     var link, text;
     // Pick the regexp with the earlier content; index will always be zero.
-    if (url &&
-        (!email || url.index < email.index)) {
+    if (url && (!email || url.index < email.index)) {
       contentStart = url.index + url[1].length;
       if (contentStart > 0) {
         nodes.push(doc.createTextNode(body.substring(0, contentStart)));
@@ -116,45 +113,43 @@ export function linkifyPlain(body, doc) {
         useUrl = useUrl.substring(0, uneat.index);
       }
 
-      link = doc.createElement('a');
-      link.className = 'moz-external-link';
+      link = doc.createElement("a");
+      link.className = "moz-external-link";
       // the browser app needs us to put a protocol on the front
       if (RE_HTTP.test(url[2])) {
-        link.setAttribute('ext-href', useUrl);
+        link.setAttribute("ext-href", useUrl);
       } else {
-        link.setAttribute('ext-href', 'http://' + useUrl);
+        link.setAttribute("ext-href", "http://" + useUrl);
       }
       text = doc.createTextNode(useUrl);
       link.appendChild(text);
       nodes.push(link);
 
       body = body.substring(url.index + url[1].length + useUrl.length);
-    }
-    else if (email) {
+    } else if (email) {
       contentStart = email.index + email[1].length;
       if (contentStart > 0) {
         nodes.push(doc.createTextNode(body.substring(0, contentStart)));
       }
 
-      link = doc.createElement('a');
-      link.className = 'moz-external-link';
+      link = doc.createElement("a");
+      link.className = "moz-external-link";
       if (RE_MAILTO.test(email[2])) {
-        link.setAttribute('ext-href', email[2]);
+        link.setAttribute("ext-href", email[2]);
       } else {
-        link.setAttribute('ext-href', 'mailto:' + email[2]);
+        link.setAttribute("ext-href", "mailto:" + email[2]);
       }
       text = doc.createTextNode(email[2]);
       link.appendChild(text);
       nodes.push(link);
 
       body = body.substring(email.index + email[0].length);
-    }
-    else {
+    } else {
       break;
     }
   }
 
-  if (body.length > 0) {
+  if (body.length) {
     nodes.push(doc.createTextNode(body));
   }
 
@@ -166,20 +161,19 @@ export function linkifyPlain(body, doc) {
  * HTML document.  'A' tags and their descendants are not linkified, nor
  * are the attributes of HTML nodes.
  */
-export function linkifyHTML (doc) {
+export function linkifyHTML(doc) {
   function linkElem(elem) {
     var children = elem.childNodes;
     for (var i in children) {
       var sub = children[i];
-      if (sub.nodeName === '#text') {
+      if (sub.nodeName === "#text") {
         var nodes = linkifyPlain(sub.nodeValue, doc);
 
-        elem.replaceChild(nodes[nodes.length-1], sub);
-        for (var iNode = nodes.length-2; iNode >= 0; --iNode) {
-          elem.insertBefore(nodes[iNode], nodes[iNode+1]);
+        elem.replaceChild(nodes[nodes.length - 1], sub);
+        for (var iNode = nodes.length - 2; iNode >= 0; --iNode) {
+          elem.insertBefore(nodes[iNode], nodes[iNode + 1]);
         }
-      }
-      else if (sub.nodeName !== 'A') {
+      } else if (sub.nodeName !== "A") {
         linkElem(sub);
       }
     }

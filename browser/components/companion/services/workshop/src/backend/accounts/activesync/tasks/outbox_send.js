@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import sendMail from '../smotocol/send_mail';
-import sendMail12x from '../smotocol/send_mail_12x';
+import sendMail from "../smotocol/send_mail";
+import sendMail12x from "../smotocol/send_mail_12x";
 
-import MixOutboxSend from '../../../task_mixins/mix_outbox_send';
+import MixOutboxSend from "../../../task_mixins/mix_outbox_send";
 
 /**
  * ActiveSync outbox sending:
@@ -29,7 +29,7 @@ import MixOutboxSend from '../../../task_mixins/mix_outbox_send';
 export default TaskDefiner.defineComplexTask([
   MixOutboxSend,
   {
-    shouldIncludeBcc: function(/* account */) {
+    shouldIncludeBcc(/* account */) {
       // ActiveSync auto-appends.
       return true;
     },
@@ -46,11 +46,11 @@ export default TaskDefiner.defineComplexTask([
 
       let mimeBlob = composer.superBlob;
       let progress = (/*loaded, total*/) => {
-        composer.heartbeat('ActiveSync sendMessage');
+        composer.heartbeat("ActiveSync sendMessage");
       };
 
       try {
-        if (conn.currentVersion.gte('14.0')) {
+        if (conn.currentVersion.gte("14.0")) {
           await sendMail(conn, { mimeBlob, progress });
         } else {
           await sendMail12x(conn, { mimeBlob, progress });
@@ -61,5 +61,5 @@ export default TaskDefiner.defineComplexTask([
 
       return { error: null };
     },
-  }
+  },
 ]);

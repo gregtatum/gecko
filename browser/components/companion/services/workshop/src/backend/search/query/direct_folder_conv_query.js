@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /**
  * Query that directly exposes the entirety of a conversation folder index.
  * Basically just normalizes the pre-query implementation so we don't need
@@ -36,10 +35,11 @@ DirectFolderConversationsQuery.prototype = {
    */
   async execute() {
     let idsWithDates;
-    ({ idsWithDates,
+    ({
+      idsWithDates,
       drainEvents: this._drainEvents,
-      eventId: this._eventId } =
-        await this._db.loadFolderConversationIdsAndListen(this.folderId));
+      eventId: this._eventId,
+    } = await this._db.loadFolderConversationIdsAndListen(this.folderId));
 
     return idsWithDates;
   },
@@ -50,7 +50,9 @@ DirectFolderConversationsQuery.prototype = {
    * and now.
    */
   bind(listenerObj, listenerMethod) {
-    let boundListener = this._boundListener = listenerMethod.bind(listenerObj);
+    let boundListener = (this._boundListener = listenerMethod.bind(
+      listenerObj
+    ));
     this._db.on(this._eventId, boundListener);
     this._drainEvents(boundListener);
     this._drainEvents = null;
@@ -61,5 +63,5 @@ DirectFolderConversationsQuery.prototype = {
    */
   destroy() {
     this._db.removeListener(this._eventId, this._boundListener);
-  }
+  },
 };

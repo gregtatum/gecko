@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
-import { createEndpoint } from '../../errbackoff';
-import { KILL_CONNECTIONS_WHEN_JOBLESS, STALE_CONNECTION_TIMEOUT_MS } from '../../syncbase';
-import { CompositeIncomingAccount } from '../composite/incoming';
-import * as $imapclient from './client';
-import ParallelImap from './protocol/parallel_imap';
-import errorutils from '../../errorutils';
-import DisasterRecovery from '../../disaster-recovery';
-
+import logic from "logic";
+import { createEndpoint } from "../../errbackoff";
+import {
+  KILL_CONNECTIONS_WHEN_JOBLESS,
+  STALE_CONNECTION_TIMEOUT_MS,
+} from "../../syncbase";
+import { CompositeIncomingAccount } from "../composite/incoming";
+import * as $imapclient from "./client";
+import ParallelImap from "./protocol/parallel_imap";
+import errorutils from "../../errorutils";
+import DisasterRecovery from "../../disaster-recovery";
 
 /**
  * Account object, root of all interaction with servers.
@@ -32,11 +34,17 @@ import DisasterRecovery from '../../disaster-recovery';
  * API in such a way that we never know the API.  Se a vida e.
  *
  */
-export function ImapAccount(universe, compositeAccount, accountId, credentials,
-                     connInfo, foldersTOC,
-                     dbConn, existingProtoConn) {
-  logic.defineScope(this, 'Account',
-                    { accountId, accountType: 'imap' });
+export function ImapAccount(
+  universe,
+  compositeAccount,
+  accountId,
+  credentials,
+  connInfo,
+  foldersTOC,
+  dbConn,
+  existingProtoConn
+) {
+  logic.defineScope(this, "Account", { accountId, accountType: "imap" });
   CompositeIncomingAccount.apply(this, arguments);
 
   /**
@@ -74,7 +82,7 @@ export function ImapAccount(universe, compositeAccount, accountId, credentials,
    * }
    */
   this._demandedConns = [];
-  this._backoffEndpoint = createEndpoint('imap:' + this.id, this);
+  this._backoffEndpoint = createEndpoint("imap:" + this.id, this);
 
   this.pimap = new ParallelImap(this);
 
@@ -91,10 +99,10 @@ export function ImapAccount(universe, compositeAccount, accountId, credentials,
 export { ImapAccount as Account };
 ImapAccount.prototype = Object.create(CompositeIncomingAccount.prototype);
 var properties = {
-  type: 'imap',
+  type: "imap",
   supportsServerFolders: true,
-  toString: function() {
-    return '[ImapAccount: ' + this.id + ']';
+  toString() {
+    return "[ImapAccount: " + this.id + "]";
   },
 
   get capability() {
@@ -113,7 +121,7 @@ var properties = {
    * https://developers.google.com/gmail/imap_extensions
    */
   get isGmail() {
-    return this.capability.indexOf('X-GM-EXT-1') !== -1;
+    return this.capability.includes("X-GM-EXT-1");
   },
 
   /**
@@ -123,7 +131,7 @@ var properties = {
    * X-CM-EXT-1 capability.
    */
   get isCoreMailServer() {
-    return this.capability.indexOf('X-CM-EXT-1') !== -1;
+    return this.capability.includes("X-CM-EXT-1");
   },
 
   /**
@@ -182,8 +190,13 @@ var properties = {
    *   }
    * ]
    */
-  __folderDemandsConnection: function(folderId, label, callback, deathback,
-                                      dieOnConnectFailure) {
+  __folderDemandsConnection(
+    folderId,
+    label,
+    callback,
+    deathback,
+    dieOnConnectFailure
+  ) {
     // If we are offline, invoke the deathback soon and don't bother trying to
     // get a connection.
     if (dieOnConnectFailure && !this.universe.online) {
@@ -192,11 +205,11 @@ var properties = {
     }
 
     var demand = {
-      folderId: folderId,
-      label: label,
-      callback: callback,
-      deathback: deathback,
-      dieOnConnectFailure: Boolean(dieOnConnectFailure)
+      folderId,
+      label,
+      callback,
+      deathback,
+      dieOnConnectFailure: Boolean(dieOnConnectFailure),
     };
     this._demandedConns.push(demand);
 
@@ -212,15 +225,13 @@ var properties = {
 
     // - we need to wait for a new conn or one to free up
     this._makeConnectionIfPossible();
-
-    return;
   },
 
   /**
    * Trigger the deathbacks for all connection demands where dieOnConnectFailure
    * is true.
    */
-  _killDieOnConnectFailureDemands: function() {
+  _killDieOnConnectFailureDemands() {
     for (var i = 0; i < this._demandedConns.length; i++) {
       var demand = this._demandedConns[i];
       if (demand.dieOnConnectFailure) {
@@ -238,7 +249,7 @@ var properties = {
    *   True if we allocated a demand to a conncetion, false if we did not.
    * }
    */
-  _allocateExistingConnection: function() {
+  _allocateExistingConnection() {
     if (!this._demandedConns.length) {
       return false;
     }
@@ -248,7 +259,7 @@ var properties = {
       var connInfo = this._ownedConns[i];
       // It's concerning if the folder already has a connection...
       if (demandInfo.folderId && connInfo.folderId === demandInfo.folderId) {
-        logic(this, 'folderAlreadyHasConn', { folderId: demandInfo.folderId });
+        logic(this, "folderAlreadyHasConn", { folderId: demandInfo.folderId });
       }
 
       if (connInfo.inUseBy) {
@@ -257,8 +268,10 @@ var properties = {
 
       connInfo.inUseBy = demandInfo;
       this._demandedConns.shift();
-      logic(this, 'reuseConnection',
-            { folderId: demandInfo.folderId, label: demandInfo.label });
+      logic(this, "reuseConnection", {
+        folderId: demandInfo.folderId,
+        label: demandInfo.label,
+      });
       demandInfo.callback(connInfo.conn);
       return true;
     }
@@ -270,23 +283,25 @@ var properties = {
    * All our operations completed; let's think about closing any connections
    * they may have established that we don't need anymore.
    */
-  allOperationsCompleted: function() {
+  allOperationsCompleted() {
     this.maybeCloseUnusedConnections();
   },
 
   /**
    * Using great wisdom, potentially close some/all connections.
    */
-  maybeCloseUnusedConnections: function() {
+  maybeCloseUnusedConnections() {
     // XXX: We are closing unused connections in an effort to stem
     // problems associated with unreliable cell connections; they
     // tend to be dropped unceremoniously when left idle for a
     // long time, particularly on cell networks. NB: This will
     // close the connection we just used, unless someone else is
     // waiting for a connection.
-    if (KILL_CONNECTIONS_WHEN_JOBLESS &&
-        !this._demandedConns.length &&
-        !this.universe.areServerJobsWaiting(this)) {
+    if (
+      KILL_CONNECTIONS_WHEN_JOBLESS &&
+      !this._demandedConns.length &&
+      !this.universe.areServerJobsWaiting(this)
+    ) {
       this.closeUnusedConnections();
     }
   },
@@ -294,23 +309,23 @@ var properties = {
   /**
    * Close all connections that aren't currently in use.
    */
-  closeUnusedConnections: function() {
+  closeUnusedConnections() {
     for (var i = this._ownedConns.length - 1; i >= 0; i--) {
       var connInfo = this._ownedConns[i];
       if (connInfo.inUseBy) {
         continue;
       }
-      console.log('Killing unused IMAP connection.');
+      console.log("Killing unused IMAP connection.");
       // this eats all future notifications, so we need to splice...
       this._ownedConns.splice(i, 1);
       connInfo.conn.client.close();
-      logic(this, 'deadConnection', { reason: 'unused' });
+      logic(this, "deadConnection", { reason: "unused" });
     }
   },
 
-  _makeConnectionIfPossible: function() {
+  _makeConnectionIfPossible() {
     if (this._ownedConns.length >= this._maxConnsAllowed) {
-      logic(this, 'maximumConnsNoNew');
+      logic(this, "maximumConnsNoNew");
       return;
     }
     if (this._pendingConn) {
@@ -322,98 +337,113 @@ var properties = {
     this._backoffEndpoint.scheduleConnectAttempt(boundMakeConnection);
   },
 
-  _makeConnection: function(callback, whyFolderId, whyLabel) {
+  _makeConnection(callback, whyFolderId, whyLabel) {
     // Mark a pending connection synchronously; the require call will not return
     // until at least the next turn of the event loop.
     this._pendingConn = true;
-    logic(this, 'createConnection', {
+    logic(this, "createConnection", {
       folderId: whyFolderId,
-      label: whyLabel
+      label: whyLabel,
     });
 
-    $imapclient.createImapConnection(
-      this._credentials,
-      this._connInfo,
-      function onCredentialsUpdated() {
-        return new Promise(function(resolve) {
-          // Note: Since we update the credentials object in-place,
-          // there's no need to explicitly assign the changes here;
-          // just save the account information.
-          this.universe.saveAccountDef(
-            this.compositeAccount.accountDef,
-            /* folderDbState: */ null,
-            /* callback: */ resolve);
-        }.bind(this));
-      }.bind(this)
-    ).then(function(conn) {
-        DisasterRecovery.associateSocketWithAccount(conn.client.socket, this);
+    $imapclient
+      .createImapConnection(
+        this._credentials,
+        this._connInfo,
+        function onCredentialsUpdated() {
+          return new Promise(
+            function(resolve) {
+              // Note: Since we update the credentials object in-place,
+              // there's no need to explicitly assign the changes here;
+              // just save the account information.
+              this.universe.saveAccountDef(
+                this.compositeAccount.accountDef,
+                /* folderDbState: */ null,
+                /* callback: */ resolve
+              );
+            }.bind(this)
+          );
+        }.bind(this)
+      )
+      .then(
+        function(conn) {
+          DisasterRecovery.associateSocketWithAccount(conn.client.socket, this);
 
-        this._pendingConn = null;
-        this._bindConnectionDeathHandlers(conn);
-        this._backoffEndpoint.noteConnectSuccess();
-        this._ownedConns.push({
-          conn: conn,
-          inUseBy: null
-        });
-        this._allocateExistingConnection();
+          this._pendingConn = null;
+          this._bindConnectionDeathHandlers(conn);
+          this._backoffEndpoint.noteConnectSuccess();
+          this._ownedConns.push({
+            conn,
+            inUseBy: null,
+          });
+          this._allocateExistingConnection();
 
-        // If more connections are needed, keep connecting.
-        if (this._demandedConns.length) {
-          this._makeConnectionIfPossible();
-        }
-
-        callback && callback(null);
-      }.bind(this))
-    .catch(function(err) {
-        logic(this, 'deadConnection', {
-          reason: 'connect-error',
-          folderId: whyFolderId
-        });
-
-        if (errorutils.shouldReportProblem(err)) {
-          this.universe.__reportAccountProblem(
-            this.compositeAccount,
-            err,
-            'incoming');
-        }
-
-        this._pendingConn = null;
-        callback && callback(err);
-
-        // Track this failure for backoff purposes.
-        if (errorutils.shouldRetry(err)) {
-          if (this._backoffEndpoint.noteConnectFailureMaybeRetry(
-            errorutils.wasErrorFromReachableState(err))) {
+          // If more connections are needed, keep connecting.
+          if (this._demandedConns.length) {
             this._makeConnectionIfPossible();
+          }
+
+          callback && callback(null);
+        }.bind(this)
+      )
+      .catch(
+        function(err) {
+          logic(this, "deadConnection", {
+            reason: "connect-error",
+            folderId: whyFolderId,
+          });
+
+          if (errorutils.shouldReportProblem(err)) {
+            this.universe.__reportAccountProblem(
+              this.compositeAccount,
+              err,
+              "incoming"
+            );
+          }
+
+          this._pendingConn = null;
+          callback && callback(err);
+
+          // Track this failure for backoff purposes.
+          if (errorutils.shouldRetry(err)) {
+            if (
+              this._backoffEndpoint.noteConnectFailureMaybeRetry(
+                errorutils.wasErrorFromReachableState(err)
+              )
+            ) {
+              this._makeConnectionIfPossible();
+            } else {
+              this._killDieOnConnectFailureDemands();
+            }
           } else {
+            this._backoffEndpoint.noteBrokenConnection();
             this._killDieOnConnectFailureDemands();
           }
-        } else {
-          this._backoffEndpoint.noteBrokenConnection();
-          this._killDieOnConnectFailureDemands();
-        }
-    }.bind(this));
+        }.bind(this)
+      );
   },
 
   /**
    * Treat a connection that came from the IMAP prober as a connection we
    * created ourselves.
    */
-  _reuseConnection: function(existingProtoConn) {
+  _reuseConnection(existingProtoConn) {
     DisasterRecovery.associateSocketWithAccount(
-      existingProtoConn.client.socket, this);
+      existingProtoConn.client.socket,
+      this
+    );
     this._ownedConns.push({
       conn: existingProtoConn,
-      inUseBy: null
+      inUseBy: null,
     });
     this._bindConnectionDeathHandlers(existingProtoConn);
   },
 
-  _bindConnectionDeathHandlers: function(conn) {
+  _bindConnectionDeathHandlers(conn) {
     conn.breakIdle(function() {
       conn.client.TIMEOUT_ENTER_IDLE = STALE_CONNECTION_TIMEOUT_MS;
       conn.client.onidle = function() {
-        console.warn('Killing stale IMAP connection.');
+        console.warn("Killing stale IMAP connection.");
         conn.client.close();
       };
 
@@ -425,13 +455,12 @@ var properties = {
     });
 
     conn.onclose = function() {
-       for (var i = 0; i < this._ownedConns.length; i++) {
+      for (var i = 0; i < this._ownedConns.length; i++) {
         var connInfo = this._ownedConns[i];
         if (connInfo.conn === conn) {
-          logic(this, 'deadConnection', {
-            reason: 'closed',
-            folderId: connInfo.inUseBy &&
-              connInfo.inUseBy.folderId
+          logic(this, "deadConnection", {
+            reason: "closed",
+            folderId: connInfo.inUseBy && connInfo.inUseBy.folderId,
           });
           if (connInfo.inUseBy && connInfo.inUseBy.deathback) {
             connInfo.inUseBy.deathback(conn);
@@ -445,37 +474,40 @@ var properties = {
 
     conn.onerror = function(err) {
       err = $imapclient.normalizeImapError(conn, err);
-      logic(this, 'connectionError', { error: err });
-      console.error('imap:onerror', JSON.stringify({
-        error: err,
-        host: this._connInfo.hostname,
-        port: this._connInfo.port
-      }));
+      logic(this, "connectionError", { error: err });
+      console.error(
+        "imap:onerror",
+        JSON.stringify({
+          error: err,
+          host: this._connInfo.hostname,
+          port: this._connInfo.port,
+        })
+      );
     }.bind(this);
   },
 
-  __folderDoneWithConnection: function(conn, closeFolder, resourceProblem) {
+  __folderDoneWithConnection(conn, closeFolder, resourceProblem) {
     for (var i = 0; i < this._ownedConns.length; i++) {
       var connInfo = this._ownedConns[i];
       if (connInfo.conn === conn) {
         if (resourceProblem) {
           this._backoffEndpoint(connInfo.inUseBy.folderId);
         }
-        logic(this, 'releaseConnection', {
+        logic(this, "releaseConnection", {
           folderId: connInfo.inUseBy.folderId,
-          label: connInfo.inUseBy.label
+          label: connInfo.inUseBy.label,
         });
         connInfo.inUseBy = null;
 
-         // We just freed up a connection, it may be appropriate to close it.
+        // We just freed up a connection, it may be appropriate to close it.
         this.maybeCloseUnusedConnections();
         return;
       }
     }
-    logic(this, 'connectionMismatch');
+    logic(this, "connectionMismatch");
   },
 
-  shutdown: function(callback) {
+  shutdown(callback) {
     this._backoffEndpoint.shutdown();
 
     // - close all connections
@@ -491,12 +523,10 @@ var properties = {
         connInfo.inUseBy = { deathback: connDead };
         try {
           connInfo.conn.client.close();
-        }
-        catch (ex) {
+        } catch (ex) {
           liveConns--;
         }
-      }
-      else {
+      } else {
         connInfo.conn.client.close();
       }
     }
@@ -506,20 +536,26 @@ var properties = {
     }
   },
 
-  checkAccount: function(listener) {
-    logic(this, 'checkAccount_begin');
-    this._makeConnection(function(err) {
-      logic(this, 'checkAccount_end', { error: err });
-      listener(err);
-    }.bind(this), null, 'check');
+  checkAccount(listener) {
+    logic(this, "checkAccount_begin");
+    this._makeConnection(
+      function(err) {
+        logic(this, "checkAccount_end", { error: err });
+        listener(err);
+      }.bind(this),
+      null,
+      "check"
+    );
   },
 
   //////////////////////////////////////////////////////////////////////////////
-
 };
 
 // XXX: Use mix.js when it lands in the streaming patch.
 for (var k in properties) {
-  Object.defineProperty(ImapAccount.prototype, k,
-                        Object.getOwnPropertyDescriptor(properties, k));
+  Object.defineProperty(
+    ImapAccount.prototype,
+    k,
+    Object.getOwnPropertyDescriptor(properties, k)
+  );
 }

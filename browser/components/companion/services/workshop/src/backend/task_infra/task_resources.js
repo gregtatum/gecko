@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
 /**
  * Helper class for use by TaskManager that is in charge of tracking the
@@ -24,7 +24,7 @@ import logic from 'logic';
  * TODO: Implement exclusive resource support or remove all traces of that.
  */
 export default function TaskResources(priorities) {
-  logic.defineScope(this, 'TaskResources');
+  logic.defineScope(this, "TaskResources");
 
   this._priorities = priorities;
 
@@ -74,11 +74,11 @@ TaskResources.prototype = {
   resourceAvailable(resourceId) {
     // bail if the resource is already available; no changes.
     if (this._availableResources.has(resourceId)) {
-      logic(this, 'resourceAlreadyAvailable', { resourceId });
+      logic(this, "resourceAlreadyAvailable", { resourceId });
       return 0;
     }
 
-    logic(this, 'resourceAvailable', { resourceId });
+    logic(this, "resourceAvailable", { resourceId });
     this._availableResources.add(resourceId);
 
     this._clearResourceTimeouts(resourceId);
@@ -123,20 +123,20 @@ TaskResources.prototype = {
     }
 
     if (removedCount === 0) {
-      logic(this, 'resourcesAlreadyUnavailable', { removedResourceIds });
+      logic(this, "resourcesAlreadyUnavailable", { removedResourceIds });
       return;
     }
 
-    logic(this, 'resourcesNoLongerAvailable', { removedResourceIds });
+    logic(this, "resourcesNoLongerAvailable", { removedResourceIds });
 
     // - Remove already-prioritized tasks that depend on these resources
     const nowBlocked = [];
-    this._priorities.removeTasksUsingFilter((taskThing) => {
+    this._priorities.removeTasksUsingFilter(taskThing => {
       // If the thing has resources at all and one of those resources is one we
       // just removed, then tell priorities to stop tracking it.
       if (taskThing.resources) {
         for (let resourceId of taskThing.resources) {
-          if (removedResourceIds.indexOf(resourceId) !== -1) {
+          if (removedResourceIds.includes(resourceId)) {
             nowBlocked.push(taskThing);
             return true; // (do remove)
           }
@@ -174,8 +174,9 @@ TaskResources.prototype = {
    */
   restoreResourceAfterTimeout(resourceId, timeoutMillis) {
     this._clearResourceTimeouts();
-    let timeoutId = setTimeout(
-      () => { this.resourceAvailable(resourceId); }, timeoutMillis);
+    let timeoutId = setTimeout(() => {
+      this.resourceAvailable(resourceId);
+    }, timeoutMillis);
     this._resourceTimeouts.set(resourceId, timeoutId);
   },
 
@@ -228,8 +229,10 @@ TaskResources.prototype = {
           // efficiently update in place.)
           this._priorities.removeTaskThing(taskThing.id);
 
-          logic(this, 'taskBlockedOnResource',
-                { taskId: taskThing.id, resourceId });
+          logic(this, "taskBlockedOnResource", {
+            taskId: taskThing.id,
+            resourceId,
+          });
           this._blockedTasksById.set(taskThing.id, taskThing);
           if (this._blockedTasksByResource.has(resourceId)) {
             this._blockedTasksByResource.get(resourceId).push(taskThing);
@@ -268,4 +271,3 @@ TaskResources.prototype = {
     }
   },
 };
-

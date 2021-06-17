@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import MixinSyncFolderList from '../../../task_mixins/mix_sync_folder_list';
+import MixinSyncFolderList from "../../../task_mixins/mix_sync_folder_list";
 
 /**
  * Sync the folder list for an ActiveSync account.  We leverage IMAP's mix-in
@@ -27,19 +27,19 @@ export default TaskDefiner.defineSimpleTask([
   {
     essentialOfflineFolders: [
       {
-        type: 'inbox',
-        displayName: 'Inbox'
+        type: "inbox",
+        displayName: "Inbox",
       },
       // Eventually we presumably could support modifications, so just leave
       // this around so nothing freaks out.
       {
-        type: 'outbox',
-        displayName: 'outbox'
+        type: "outbox",
+        displayName: "outbox",
       },
       // And this goes hand-in-hand with that.
       {
-        type: 'localdrafts',
-        displayName: 'localdrafts'
+        type: "localdrafts",
+        displayName: "localdrafts",
       },
     ],
 
@@ -53,6 +53,6 @@ export default TaskDefiner.defineSimpleTask([
         modifiedFolders: undefined,
         modifiedSyncStates: undefined,
       };
-    }
-  }
+    },
+  },
 ]);

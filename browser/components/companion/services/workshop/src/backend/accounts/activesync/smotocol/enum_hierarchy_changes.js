@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import $wbxml from 'wbxml';
-import { Tags as fh } from 'activesync/codepages/FolderHierarchy';
+import $wbxml from "wbxml";
+import { Tags as fh } from "activesync/codepages/FolderHierarchy";
 
 /**
  * High-level synchronization of the contents of a folder.  This routine
@@ -36,11 +36,13 @@ import { Tags as fh } from 'activesync/codepages/FolderHierarchy';
  * @return {{ invalidSyncKey, moreToSync }}
  */
 export default async function enumerateHierarchyChanges(
-  conn, { hierarchySyncKey, emitter }) {
-  let w = new $wbxml.Writer('1.3', 1, 'UTF-8');
+  conn,
+  { hierarchySyncKey, emitter }
+) {
+  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
   w.stag(fh.FolderSync)
-     .tag(fh.SyncKey, hierarchySyncKey)
-   .etag();
+    .tag(fh.SyncKey, hierarchySyncKey)
+    .etag();
 
   let response = await conn.postCommand(w);
 
@@ -51,27 +53,26 @@ export default async function enumerateHierarchyChanges(
     newSyncKey = node.children[0].textContent;
   });
 
-  e.addEventListener([fh.FolderSync, fh.Changes, [fh.Add, fh.Delete]],
-                     function(node) {
+  e.addEventListener([fh.FolderSync, fh.Changes, [fh.Add, fh.Delete]], function(
+    node
+  ) {
     let folderArgs = {};
     for (let child of node.children) {
       folderArgs[child.localTagName] = child.children[0].textContent;
     }
 
     if (node.tag === fh.Add) {
-      emitter.emit('add', folderArgs);
+      emitter.emit("add", folderArgs);
     } else {
-      emitter.emit('remove', folderArgs.ServerId);
+      emitter.emit("remove", folderArgs.ServerId);
     }
   });
 
   try {
     e.run(response);
-  }
-  catch (ex) {
-    console.error('Error parsing FolderSync response:', ex, '\n',
-                  ex.stack);
-    throw 'unknown';
+  } catch (ex) {
+    console.error("Error parsing FolderSync response:", ex, "\n", ex.stack);
+    throw new Error("unknown");
   }
 
   // TODO: it seems like it must be possible for this to indicate an invalid

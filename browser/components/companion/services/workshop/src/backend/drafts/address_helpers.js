@@ -25,7 +25,7 @@ export function cloneRecipients(recipients) {
   return {
     to: recipients.to ? recipients.to.slice() : null,
     cc: recipients.cc ? recipients.cc.slice() : null,
-    bcc: recipients.bcc ? recipients.bcc.slice : null
+    bcc: recipients.bcc ? recipients.bcc.slice : null,
   };
 }
 
@@ -34,11 +34,15 @@ export function cloneRecipients(recipients) {
  * replyTo address-pair, compute the effective author of the message for reply
  * purposes.
  */
-export function effectiveAuthorGivenReplyTo(fromAddressPair, replyToAddressPair) {
+export function effectiveAuthorGivenReplyTo(
+  fromAddressPair,
+  replyToAddressPair
+) {
   return {
     name: fromAddressPair.name,
-    address: (replyToAddressPair && replyToAddressPair.address) ||
-             fromAddressPair.address
+    address:
+      (replyToAddressPair && replyToAddressPair.address) ||
+      fromAddressPair.address,
   };
 }
 
@@ -75,7 +79,7 @@ export function filterOutIdentity(list, identity) {
 export function addressPairFromIdentity(identity) {
   return {
     name: identity.name,
-    address: identity.address
+    address: identity.address,
   };
 }
 

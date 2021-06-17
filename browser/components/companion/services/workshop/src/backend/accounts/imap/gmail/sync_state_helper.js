@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
 /**
  * Gmail helper logic for sync tasks to handle interpreting the sync state,
@@ -25,22 +25,22 @@ import logic from 'logic';
  * read.
  */
 function SyncStateHelper(ctx, rawSyncState, accountId, mode) {
-  logic.defineScope(this, 'GmailSyncState', { ctxId: ctx.id });
+  logic.defineScope(this, "GmailSyncState", { ctxId: ctx.id });
 
   if (!rawSyncState) {
-    logic(ctx, 'creatingDefaultSyncState', {});
+    logic(ctx, "creatingDefaultSyncState", {});
     rawSyncState = {
       yayUids: new Map(),
       mehUids: new Map(),
       labelSinceDates: new Map(),
       lastHighUid: 0,
-      modseq: ''
+      modseq: "",
     };
   }
 
   this._accountId = accountId;
   this.rawSyncState = rawSyncState;
-  this._growMode = mode === 'grow';
+  this._growMode = mode === "grow";
 
   /**
    * A mapping folder FolderId to the SINCE dateTS that characterizes our
@@ -89,20 +89,20 @@ SyncStateHelper.prototype = {
     this.rawSyncState.modseq = val;
   },
 
-  _deriveRawConvIdToConvStash: function() {
+  _deriveRawConvIdToConvStash() {
     let rawConvIdToConvStash = this.rawConvIdToConvStash;
     for (let [yayUid, rawConvId] of this.yayUids) {
       let stash = rawConvIdToConvStash.get(rawConvId);
       if (!stash) {
         stash = {
-          rawConvId: rawConvId,
+          rawConvId,
           yayUids: [yayUid],
           mehUids: [],
           // The most recent message for the conversation we're aware of in this
           // sync batch.  We only care about this for task prioritization
           // reasons, which is why this isn't persisted as part of our state.
           mostRecent: 0,
-          task: null
+          task: null,
         };
         rawConvIdToConvStash.set(rawConvId, stash);
       } else {
@@ -113,22 +113,23 @@ SyncStateHelper.prototype = {
       let stash = rawConvIdToConvStash.get(rawConvId);
       if (!stash) {
         // This should not be happening...
-        logic(this, 'mehWithoutYay',
-              { mehUid: mehUid, rawConvId: rawConvId });
+        logic(this, "mehWithoutYay", { mehUid, rawConvId });
       } else {
         stash.yayUids.push(mehUid);
       }
     }
-    logic(this, 'derivedData',
-          { numYay: this.yayUids.size, numMeh: this.mehUids.size,
-            numConvs: rawConvIdToConvStash.size });
+    logic(this, "derivedData", {
+      numYay: this.yayUids.size,
+      numMeh: this.mehUids.size,
+      numConvs: rawConvIdToConvStash.size,
+    });
   },
 
-  getFolderIdSinceDate: function(folderId) {
+  getFolderIdSinceDate(folderId) {
     return this._labelSinceDates.get(folderId);
   },
 
-  setFolderIdSinceDate: function(folderId, sinceDate) {
+  setFolderIdSinceDate(folderId, sinceDate) {
     this._labelSinceDates.set(folderId, sinceDate);
   },
 
@@ -137,7 +138,7 @@ SyncStateHelper.prototype = {
    * we're interested in and a date that satisfies the SINCE criteria we are
    * using for that label?
    */
-  messageMeetsSyncCriteria: function(date, folderIds) {
+  messageMeetsSyncCriteria(date, folderIds) {
     let labelSinceDates = this._labelSinceDates;
     for (let folderId of folderIds) {
       let sinceDate = labelSinceDates.get(folderId);
@@ -152,11 +153,10 @@ SyncStateHelper.prototype = {
     return false;
   },
 
-
-  _makeConvTask: function(rawConvId) {
-    let convId = this._accountId + '.' + rawConvId;
+  _makeConvTask(rawConvId) {
+    let convId = this._accountId + "." + rawConvId;
     let task = {
-      type: 'sync_conv',
+      type: "sync_conv",
       accountId: this._accountId,
       convId,
       newConv: false,
@@ -164,13 +164,13 @@ SyncStateHelper.prototype = {
       newUids: null, // set
       modifiedUids: null, // map ( uid => newStateObj )
       removedUids: null,
-      mostRecent: 0
+      mostRecent: 0,
     };
     this.tasksToSchedule.push(task);
     return task;
   },
 
-  _updateTaskWithNewUid: function(stash, uid, rawConvId, dateTS) {
+  _updateTaskWithNewUid(stash, uid, rawConvId, dateTS) {
     // If we're in grow mode, we don't need to update state for the UIDs and so
     // we don't need to generate a task.
     if (this._growMode) {
@@ -180,7 +180,8 @@ SyncStateHelper.prototype = {
       stash.task = this._makeConvTask(rawConvId);
     }
     let task = stash.task;
-    if (!task.newConv) { // (don't specify uid's if it's a new conversation)
+    if (!task.newConv) {
+      // (don't specify uid's if it's a new conversation)
       if (!task.newUids) {
         task.newUids = new Set();
       }
@@ -192,12 +193,13 @@ SyncStateHelper.prototype = {
     }
   },
 
-  _updateTaskWithModifiedUid: function(stash, uid, rawConvId, newState) {
+  _updateTaskWithModifiedUid(stash, uid, rawConvId, newState) {
     if (!stash.task) {
       stash.task = this._makeConvTask(rawConvId);
     }
     let task = stash.task;
-    if (!task.newConv) { // (don't specify uid's if it's a new conversation)
+    if (!task.newConv) {
+      // (don't specify uid's if it's a new conversation)
       if (!task.modifiedUids) {
         task.modifiedUids = new Map();
       }
@@ -205,12 +207,13 @@ SyncStateHelper.prototype = {
     }
   },
 
-  _updateTaskWithRemovedUid: function(stash, uid, rawConvId/*, dateTS*/) {
+  _updateTaskWithRemovedUid(stash, uid, rawConvId /*, dateTS*/) {
     if (!stash.task) {
       stash.task = this._makeConvTask(rawConvId);
     }
     let task = stash.task;
-    if (!task.newConv) { // (don't specify uid's if it's a new conversation)
+    if (!task.newConv) {
+      // (don't specify uid's if it's a new conversation)
       if (!task.removedUids) {
         task.removedUids = new Set();
       }
@@ -218,7 +221,7 @@ SyncStateHelper.prototype = {
     }
   },
 
-  _updateForRemoval: function(stash) {
+  _updateForRemoval(stash) {
     stash.task.removeConv = true;
     // note: it's impossible for newConv to be true at this point since we
     // should only hear about each message once and newConv being true means
@@ -227,12 +230,12 @@ SyncStateHelper.prototype = {
     this._stashesPendingForRemoval.add(stash);
   },
 
-  _updateSavedFromRemoval: function(stash) {
+  _updateSavedFromRemoval(stash) {
     stash.task.removeConv = false;
     this._stashesPendingForRemoval.delete(stash);
   },
 
-  isKnownRawConvId: function(rawConvId) {
+  isKnownRawConvId(rawConvId) {
     return this.rawConvIdToConvStash.has(rawConvId);
   },
 
@@ -240,16 +243,16 @@ SyncStateHelper.prototype = {
    * It's a new message that meets our sync criteria and it's the first message
    * we've heard of in this conversation, so it's a new conversation!
    */
-  newYayMessageInNewConv: function(uid, rawConvId, dateTS) {
-    logic(this, 'newYayMessageInNewConv', { uid, rawConvId });
+  newYayMessageInNewConv(uid, rawConvId, dateTS) {
+    logic(this, "newYayMessageInNewConv", { uid, rawConvId });
     this.metricUseful++;
     this.yayUids.set(uid, rawConvId);
     let stash = {
-      rawConvId: rawConvId,
+      rawConvId,
       yayUids: [uid],
       mehUids: [],
       mostRecent: dateTS,
-      task: this._makeConvTask(rawConvId)
+      task: this._makeConvTask(rawConvId),
     };
     this.rawConvIdToConvStash.set(rawConvId, stash);
 
@@ -257,8 +260,8 @@ SyncStateHelper.prototype = {
     stash.task.mostRecent = dateTS;
   },
 
-  newYayMessageInExistingConv: function(uid, rawConvId, dateTS) {
-    logic(this, 'newYayMessageInExistingConv', { uid, rawConvId });
+  newYayMessageInExistingConv(uid, rawConvId, dateTS) {
+    logic(this, "newYayMessageInExistingConv", { uid, rawConvId });
     this.metricUseful++;
     this.yayUids.set(uid, rawConvId);
     let stash = this.rawConvIdToConvStash.get(rawConvId);
@@ -266,8 +269,8 @@ SyncStateHelper.prototype = {
     this._updateTaskWithNewUid(stash, uid, rawConvId, dateTS);
   },
 
-  newMehMessageInExistingConv: function(uid, rawConvId, dateTS) {
-    logic(this, 'newMehMessageInExistingConv', { uid, rawConvId });
+  newMehMessageInExistingConv(uid, rawConvId, dateTS) {
+    logic(this, "newMehMessageInExistingConv", { uid, rawConvId });
     this.metricUseful++;
     this.mehUids.set(uid, rawConvId);
     let stash = this.rawConvIdToConvStash.get(rawConvId);
@@ -279,12 +282,12 @@ SyncStateHelper.prototype = {
     }
   },
 
-  newMootMessage: function(/*uid*/) {
+  newMootMessage(/*uid*/) {
     this.metricWaste++;
   },
 
-  existingIgnoredMessageIsNowYay: function(uid, rawConvId, dateTS) {
-    logic(this, 'existingIgnoredMessageIsNowYay', { uid, rawConvId });
+  existingIgnoredMessageIsNowYay(uid, rawConvId, dateTS) {
+    logic(this, "existingIgnoredMessageIsNowYay", { uid, rawConvId });
     if (this.isKnownRawConvId(rawConvId)) {
       this.newYayMessageInExistingConv(uid, rawConvId, dateTS);
     } else {
@@ -297,8 +300,8 @@ SyncStateHelper.prototype = {
    * no longer care about the message and should purge the conversation from
    * disk.
    */
-  existingYayMessageIsNowMeh: function(uid, rawConvId, dateTS, newState) {
-    logic(this, 'existingYayMessageIsNowMeh', { uid, rawConvId });
+  existingYayMessageIsNowMeh(uid, rawConvId, dateTS, newState) {
+    logic(this, "existingYayMessageIsNowMeh", { uid, rawConvId });
     this.metricUseful++;
     this.yayUids.delete(uid);
     this.mehUids.set(uid, rawConvId);
@@ -320,8 +323,8 @@ SyncStateHelper.prototype = {
    * ran out of yay messages during this sync "round" and now we need to rescue
    * it from doom.
    */
-  existingMehMessageIsNowYay: function(uid, rawConvId, dateTS, newState) {
-    logic(this, 'existingMehMessageIsNowYay', { uid, rawConvId });
+  existingMehMessageIsNowYay(uid, rawConvId, dateTS, newState) {
+    logic(this, "existingMehMessageIsNowYay", { uid, rawConvId });
     this.metricUseful++;
     this.mehUids.delete(uid);
     this.yayUids.set(uid, rawConvId);
@@ -335,15 +338,15 @@ SyncStateHelper.prototype = {
     }
   },
 
-  existingMessageUpdated: function(uid, rawConvId, dateTS, newState) {
-    logic(this, 'existingMessageUpdated', { uid, rawConvId });
+  existingMessageUpdated(uid, rawConvId, dateTS, newState) {
+    logic(this, "existingMessageUpdated", { uid, rawConvId });
     this.metricUseful++;
     let stash = this.rawConvIdToConvStash.get(rawConvId);
     this._updateTaskWithModifiedUid(stash, uid, rawConvId, newState);
   },
 
-  yayMessageDeleted: function(uid) {
-    logic(this, 'yayMessageDeleted', { uid });
+  yayMessageDeleted(uid) {
+    logic(this, "yayMessageDeleted", { uid });
     let rawConvId = this.yayUids.get(uid);
     this.yayUids.delete(uid);
     let stash = this.rawConvIdToConvStash.get(rawConvId);
@@ -356,8 +359,8 @@ SyncStateHelper.prototype = {
     }
   },
 
-  mehMessageDeleted: function(uid) {
-    logic(this, 'mehMessageDeleted', { uid });
+  mehMessageDeleted(uid) {
+    logic(this, "mehMessageDeleted", { uid });
     let rawConvId = this.mehUids.get(uid);
     this.mehUids.delete(uid);
     let stash = this.rawConvIdToConvStash.get(rawConvId);
@@ -365,7 +368,7 @@ SyncStateHelper.prototype = {
     this._updateTaskWithRemovedUid(stash, uid);
   },
 
-  existingMootMessage: function(/*uid*/) {
+  existingMootMessage(/*uid*/) {
     this.metricWaste++;
   },
 
@@ -374,7 +377,7 @@ SyncStateHelper.prototype = {
    * all sync manipulations have occurred and prior to issuing a database write
    * with our raw state.
    */
-  finalizePendingRemovals: function() {
+  finalizePendingRemovals() {
     for (let stash of this._stashesPendingForRemoval) {
       for (let uid of stash.mehUids) {
         this.mehUids.delete(uid);
@@ -382,7 +385,7 @@ SyncStateHelper.prototype = {
       this.rawConvIdToConvStash.delete(stash.rawConvId);
     }
     this._stashesPendingForRemoval.clear();
-  }
+  },
 };
 
 export default SyncStateHelper;

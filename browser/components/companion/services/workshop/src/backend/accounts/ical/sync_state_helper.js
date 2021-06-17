@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
-import { encodeInt } from 'shared/a64';
+import logic from "logic";
+import { encodeInt } from "shared/a64";
 
-import { makeDaysAgo, makeDaysBefore } from 'shared/date';
+import { makeDaysAgo } from "shared/date";
 
 /**
  * See `README.md`.
  */
 export default class ICalSyncStateHelper {
   constructor(ctx, rawSyncState, accountId, why) {
-    logic.defineScope(this, 'ICalSyncState', { ctxId: ctx.id, why });
+    logic.defineScope(this, "ICalSyncState", { ctxId: ctx.id, why });
 
     if (!rawSyncState) {
-      logic(ctx, 'creatingDefaultSyncState', {});
+      logic(ctx, "creatingDefaultSyncState", {});
       rawSyncState = {
         nextConvId: 1,
         rangeOldestTS: makeDaysAgo(30),
@@ -51,9 +51,16 @@ export default class ICalSyncStateHelper {
     this.convMutations = null;
   }
 
-  _makeUidConvTask({ convId, uid, lastModifiedTS, jcalEvents, rangeOldestTS, rangeNewestTS }) {
+  _makeUidConvTask({
+    convId,
+    uid,
+    lastModifiedTS,
+    jcalEvents,
+    rangeOldestTS,
+    rangeNewestTS,
+  }) {
     let task = {
-      type: 'sync_uid',
+      type: "sync_uid",
       accountId: this._accountId,
       convId,
       uid,
@@ -67,8 +74,7 @@ export default class ICalSyncStateHelper {
   }
 
   _issueUniqueConvId() {
-    return (this._accountId + '.' +
-            encodeInt(this.rawSyncState.nextConvId++));
+    return this._accountId + "." + encodeInt(this.rawSyncState.nextConvId++);
   }
 
   /**
@@ -79,7 +85,7 @@ export default class ICalSyncStateHelper {
    * it eliminates an extra case to handle.
    */
   ingestEvent(event) {
-    const uid = event.getFirstPropertyValue('uid');
+    const uid = event.getFirstPropertyValue("uid");
     let eventArray = this.eventsByUid.get(uid);
     if (!eventArray) {
       eventArray = [];
@@ -99,7 +105,7 @@ export default class ICalSyncStateHelper {
       const event = eventArray[0];
 
       // This will be a VCardTime...
-      const lastModifiedDateTime = event.getFirstPropertyValue('last-modified');
+      const lastModifiedDateTime = event.getFirstPropertyValue("last-modified");
       // ...which we want as a normal JS Timestamp for comparison purposes.
       const lastModifiedTS = lastModifiedDateTime.toJSDate().valueOf();
 
@@ -125,8 +131,8 @@ export default class ICalSyncStateHelper {
         // Sort the recurring event proper to be the first of the events.
         eventArray.sort((cA, cB) => {
           // 0 if no recurrence id, 1 if recurrence-id, then sort ascending.
-          const aVal = cA.hasProperty('recurrence-id') ? 1 : 0;
-          const bVal = cB.hasProperty('recurrence-id') ? 1 : 0;
+          const aVal = cA.hasProperty("recurrence-id") ? 1 : 0;
+          const bVal = cB.hasProperty("recurrence-id") ? 1 : 0;
           return bVal - aVal;
         });
         const jcalEvents = eventArray.map(cEvent => cEvent.toJSON());

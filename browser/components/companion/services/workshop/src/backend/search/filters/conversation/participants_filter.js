@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import searchPatternFromArgs from '../search_pattern_from_args';
-import matchVerbatimHighlight from '../../match_verbatim_highlight';
+import searchPatternFromArgs from "../search_pattern_from_args";
+import matchVerbatimHighlight from "../../match_verbatim_highlight";
 
 /**
  * Like the per-message Author filter but we check the ConversationInfo authors
@@ -36,7 +36,7 @@ ParticipantsFilter.prototype = {
    * anything additional.
    */
   gather: {
-    conversation: true
+    conversation: true,
   },
 
   /**
@@ -49,7 +49,7 @@ ParticipantsFilter.prototype = {
    */
   alwaysRun: true,
 
-  test: function(gathered) {
+  test(gathered) {
     let searchPattern = this.searchPattern;
 
     for (let author of gathered.conversation.authors) {
@@ -68,5 +68,4 @@ ParticipantsFilter.prototype = {
 
     return null;
   },
-
 };

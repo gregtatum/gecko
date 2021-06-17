@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { bsearchMaybeExists, bsearchForInsert } from 'shared/util';
+import { bsearchMaybeExists, bsearchForInsert } from "shared/util";
 
-import { folderConversationComparator } from './comparators';
+import { folderConversationComparator } from "./comparators";
 
-import BaseTOC from './base_toc';
+import BaseTOC from "./base_toc";
 
 /**
  * Backs view-slices listing the conversations in a folder.
@@ -37,10 +37,14 @@ import BaseTOC from './base_toc';
  * perspective, if a conversation gets updated, it is no longer the same and
  * we instead treat the position where the { date, id } would be inserted now.
  */
-export default function FolderConversationsTOC({ db, query, dataOverlayManager }) {
+export default function FolderConversationsTOC({
+  db,
+  query,
+  dataOverlayManager,
+}) {
   BaseTOC.apply(this, arguments);
 
-  logic.defineScope(this, 'FolderConversationsTOC');
+  logic.defineScope(this, "FolderConversationsTOC");
 
   this._db = db;
   this.query = query;
@@ -49,15 +53,17 @@ export default function FolderConversationsTOC({ db, query, dataOverlayManager }
   // Our getDataForSliceRange performs the resolving, but we depend on the proxy
   // to be listening for overlay updates and to perform appropriate dirtying.
   this._overlayResolver = dataOverlayManager.makeBoundResolver(
-    this.overlayNamespace, null);
+    this.overlayNamespace,
+    null
+  );
 
   this._bound_onTOCChange = this.onTOCChange.bind(this);
 
   this.__deactivate(true);
 }
 FolderConversationsTOC.prototype = BaseTOC.mix({
-  type: 'FolderConversationsTOC',
-  overlayNamespace: 'conversations',
+  type: "FolderConversationsTOC",
+  overlayNamespace: "conversations",
   heightAware: true,
 
   async __activateTOC() {
@@ -109,8 +115,11 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
       let oldIndex = -1;
       if (change.removeDate) {
         let oldKey = { date: change.removeDate, id: change.id };
-        oldIndex = bsearchMaybeExists(this.idsWithDates, oldKey,
-                                      folderConversationComparator);
+        oldIndex = bsearchMaybeExists(
+          this.idsWithDates,
+          oldKey,
+          folderConversationComparator
+        );
         if (oldIndex !== -1) {
           // NB: if we computed the newIndex before splicing out, we could avoid
           // potentially redundant operations, but it's not worth the complexity
@@ -118,20 +127,27 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
           this.totalHeight -= change.oldHeight;
           this.idsWithDates.splice(oldIndex, 1);
         } else {
-          throw new Error('freakout! item should exist');
+          throw new Error("freakout! item should exist");
         }
       }
       let newIndex = -1;
       if (change.addDate) {
-        let newKey = { date: change.addDate, id: change.id,
-                       height: change.height, matchInfo: change.matchInfo };
-        newIndex = bsearchForInsert(this.idsWithDates, newKey,
-                                    folderConversationComparator);
+        let newKey = {
+          date: change.addDate,
+          id: change.id,
+          height: change.height,
+          matchInfo: change.matchInfo,
+        };
+        newIndex = bsearchForInsert(
+          this.idsWithDates,
+          newKey,
+          folderConversationComparator
+        );
         this.totalHeight += change.height;
         this.idsWithDates.splice(newIndex, 0, newKey);
       }
 
-      this.emit('_indexChange', oldIndex, newIndex);
+      this.emit("_indexChange", oldIndex, newIndex);
 
       // If we did end up keeping the conversation in place, then it was just
       // a data change as far as our consumers know/care.
@@ -146,7 +162,7 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
     // don't expose it yet.  If we end up with a fancier consumer (maybe a neat
     // debug visualization?), it could make sense to expose the indices being
     // impacted.
-    this.emit('change', change.id, dataOnly);
+    this.emit("change", change.id, dataOnly);
   },
 
   /**
@@ -180,14 +196,17 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
   getTopOrderingKey() {
     return {
       date: new Date(2200, 0),
-      id: '',
-      height: 0
+      id: "",
+      height: 0,
     };
   },
 
   findIndexForOrderingKey(key) {
-    let index = bsearchForInsert(this.idsWithDates, key,
-                                 folderConversationComparator);
+    let index = bsearchForInsert(
+      this.idsWithDates,
+      key,
+      folderConversationComparator
+    );
     return index;
   },
 
@@ -236,7 +255,7 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
     return {
       orderingKey: meta,
       offset: actualOffset,
-      cumulativeHeight: actualOffset + meta.height
+      cumulativeHeight: actualOffset + meta.height,
     };
   },
 
@@ -269,7 +288,7 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
   _walkToCoverHeight(startIndex, delta, heightToConsume) {
     let index = startIndex;
     let idsWithDates = this.idsWithDates;
-    let info = (index < idsWithDates.length) && idsWithDates[index];
+    let info = index < idsWithDates.length && idsWithDates[index];
     let tooHigh = idsWithDates.length - 1;
 
     while (heightToConsume > 0 && index < tooHigh && index + delta >= 0) {
@@ -279,7 +298,7 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
     }
     return {
       index,
-      overconsumed: Math.abs(heightToConsume)
+      overconsumed: Math.abs(heightToConsume),
     };
   },
 
@@ -300,30 +319,42 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
       focusIndex--;
     }
 
-    let { index: beginVisibleInclusive, overconsumed: beforeOverconsumed } =
-      this._walkToCoverHeight(focusIndex, -1, req.visibleAbove);
-    let { index: beginBufferedInclusive } =
-      this._walkToCoverHeight(beginVisibleInclusive, -1,
-                              req.bufferAbove - beforeOverconsumed);
+    let {
+      index: beginVisibleInclusive,
+      overconsumed: beforeOverconsumed,
+    } = this._walkToCoverHeight(focusIndex, -1, req.visibleAbove);
+    let { index: beginBufferedInclusive } = this._walkToCoverHeight(
+      beginVisibleInclusive,
+      -1,
+      req.bufferAbove - beforeOverconsumed
+    );
 
-    let { index: endVisibleInclusive, overconsumed: afterOverconsumed } =
-      this._walkToCoverHeight(focusIndex, 1, req.visibleBelow);
-    let { index: endBufferedInclusive } =
-      this._walkToCoverHeight(endVisibleInclusive, 1,
-                              req.bufferBelow - afterOverconsumed);
+    let {
+      index: endVisibleInclusive,
+      overconsumed: afterOverconsumed,
+    } = this._walkToCoverHeight(focusIndex, 1, req.visibleBelow);
+    let { index: endBufferedInclusive } = this._walkToCoverHeight(
+      endVisibleInclusive,
+      1,
+      req.bufferBelow - afterOverconsumed
+    );
 
     let rval = {
       beginBufferedInclusive,
       beginVisibleInclusive,
       endVisibleExclusive: endVisibleInclusive + 1,
       endBufferedExclusive: endBufferedInclusive + 1,
-      heightOffset: this.getHeightOffsetForIndex(beginBufferedInclusive)
+      heightOffset: this.getHeightOffsetForIndex(beginBufferedInclusive),
     };
     return rval;
   },
 
-  getDataForSliceRange(beginInclusive, endExclusive,
-      alreadyKnownData, alreadyKnownOverlays) {
+  getDataForSliceRange(
+    beginInclusive,
+    endExclusive,
+    alreadyKnownData,
+    alreadyKnownOverlays
+  ) {
     beginInclusive = Math.max(0, beginInclusive);
     endExclusive = Math.min(endExclusive, this.idsWithDates.length);
 
@@ -363,8 +394,11 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
         sendState.set(id, [null, overlayResolver(id)], null);
       } else if (convCache.has(id)) {
         newKnownSet.add(id);
-        sendState.set(id, [convCache.get(id), overlayResolver(id),
-                           idsWithDates[i].matchInfo]);
+        sendState.set(id, [
+          convCache.get(id),
+          overlayResolver(id),
+          idsWithDates[i].matchInfo,
+        ]);
       } else {
         needData.set(id, null);
       }
@@ -373,18 +407,18 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
     let readPromise = null;
     if (needData.size) {
       readPromise = this._db.read(this, {
-        conversations: needData
+        conversations: needData,
       });
     } else {
       needData = null;
     }
 
     return {
-      ids: ids,
+      ids,
       state: sendState,
       pendingReads: needData,
       readPromise,
-      newValidDataSet: newKnownSet
+      newValidDataSet: newKnownSet,
     };
-  }
+  },
 });

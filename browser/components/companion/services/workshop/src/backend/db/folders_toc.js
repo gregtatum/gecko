@@ -14,35 +14,35 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { bsearchForInsert } from 'shared/util';
+import { bsearchForInsert } from "shared/util";
 
-import evt from 'evt';
+import evt from "evt";
 
-import { encodeInt as encodeA64Int } from 'shared/a64';
-import { decodeSpecificFolderIdFromFolderId } from 'shared/id_conversions';
+import { encodeInt as encodeA64Int } from "shared/a64";
+import { decodeSpecificFolderIdFromFolderId } from "shared/id_conversions";
 
-import { engineFrontEndFolderMeta, engineHacks } from '../engine_glue';
-import { makeFolderMeta } from './folder_info_rep';
+import { engineFrontEndFolderMeta, engineHacks } from "../engine_glue";
+import { makeFolderMeta } from "./folder_info_rep";
 
 let FOLDER_TYPE_TO_SORT_PRIORITY = {
-  account: 'a',
-  inbox: 'c',
-  starred: 'e',
-  important: 'f',
-  drafts: 'g',
-  localdrafts: 'h',
-  outbox: 'i',
-  queue: 'j',
-  sent: 'k',
-  junk: 'l',
-  trash: 'n',
-  archive: 'p',
-  normal: 'z',
+  account: "a",
+  inbox: "c",
+  starred: "e",
+  important: "f",
+  drafts: "g",
+  localdrafts: "h",
+  outbox: "i",
+  queue: "j",
+  sent: "k",
+  junk: "l",
+  trash: "n",
+  archive: "p",
+  normal: "z",
   // nomail folders are annoying since they are basically just hierarchy,
   //  but they are also rare and should only happen amongst normal folders.
-  nomail: 'z',
+  nomail: "z",
 };
 
 function strcmp(a, b) {
@@ -50,9 +50,8 @@ function strcmp(a, b) {
     return -1;
   } else if (a > b) {
     return 1;
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 /**
@@ -69,9 +68,14 @@ function strcmp(a, b) {
  * ordered things by our crazy sort priority.  Now we use the sort priority here
  * in the back-end and expose that to the front-end too.
  */
-export default function FoldersTOC({ db, accountDef, folders, dataOverlayManager }) {
+export default function FoldersTOC({
+  db,
+  accountDef,
+  folders,
+  dataOverlayManager,
+}) {
   evt.Emitter.call(this);
-  logic.defineScope(this, 'FoldersTOC');
+  logic.defineScope(this, "FoldersTOC");
 
   this.accountDef = accountDef;
   this.engineFolderMeta = engineFrontEndFolderMeta.get(accountDef.engine);
@@ -136,10 +140,10 @@ export default function FoldersTOC({ db, accountDef, folders, dataOverlayManager
   let nextFolderNum = 0;
   for (let folderInfo of folders) {
     this._addFolder(folderInfo);
-    nextFolderNum =
-      Math.max(
-        nextFolderNum,
-        decodeSpecificFolderIdFromFolderId(folderInfo.id) + 1);
+    nextFolderNum = Math.max(
+      nextFolderNum,
+      decodeSpecificFolderIdFromFolderId(folderInfo.id) + 1
+    );
   }
 
   // See `issueFolderId` for the sordid details.
@@ -150,14 +154,18 @@ export default function FoldersTOC({ db, accountDef, folders, dataOverlayManager
   // a relatively rare operation.
   db.on(`acct!${accountDef.id}!change`, this._onAccountChange.bind(this));
   db.on(
-    `acct!${accountDef.id}!folders!tocChange`, this._onTOCChange.bind(this));
+    `acct!${accountDef.id}!folders!tocChange`,
+    this._onTOCChange.bind(this)
+  );
 
   dataOverlayManager.on(
-    'accountCascadeToFolders', this._onAccountOverlayCascade.bind(this));
+    "accountCascadeToFolders",
+    this._onAccountOverlayCascade.bind(this)
+  );
 }
 FoldersTOC.prototype = evt.mix({
-  type: 'FoldersTOC',
-  overlayNamespace: 'folders',
+  type: "FoldersTOC",
+  overlayNamespace: "folders",
 
   // We don't care about who references us because we have the lifetime of the
   // universe.  (At least, unless our owning account gets deleted.)
@@ -216,7 +224,7 @@ FoldersTOC.prototype = evt.mix({
    * regret.
    */
   issueFolderId() {
-    return this.accountId + '.' + encodeA64Int(this._nextFolderNum++);
+    return this.accountId + "." + encodeA64Int(this._nextFolderNum++);
   },
 
   /**
@@ -263,12 +271,16 @@ FoldersTOC.prototype = evt.mix({
     // There wasn't a folder with that path, so we know that by the time we
     // leave this method, we're going to be tracking a pending folder for this
     // task, so idempotently ensure we're all hooked up.
-    let taskPendingPaths =
-      this._pendingTaskContextIdsToPendingPaths.get(taskContext.id);
+    let taskPendingPaths = this._pendingTaskContextIdsToPendingPaths.get(
+      taskContext.id
+    );
     if (!taskPendingPaths) {
       taskPendingPaths = new Set();
       taskContext.__decorateFinish(this._onTaskFinishing.bind(this));
-      this._pendingTaskContextIdsToPendingPaths.set(taskContext.id, taskPendingPaths);
+      this._pendingTaskContextIdsToPendingPaths.set(
+        taskContext.id,
+        taskPendingPaths
+      );
     }
 
     // It's a set, so it's fine if this path already exists.
@@ -279,7 +291,7 @@ FoldersTOC.prototype = evt.mix({
       return folderInfo;
     }
 
-    const pathParts = folderPath.split('/');
+    const pathParts = folderPath.split("/");
 
     // The folder needs to be freshly created as pending!
     folderInfo = makeFolderMeta({
@@ -287,15 +299,15 @@ FoldersTOC.prototype = evt.mix({
       serverId: null,
       name: folderPath,
       // XXX maybe we should introduce a specific virtual / label type?
-      type: 'normal',
+      type: "normal",
       path: folderPath,
       serverPath: null,
-      delim: '/',
+      delim: "/",
       depth: pathParts.length,
       // XXX This is potentially misleading as this is a virtual folder and is
       // therefore dependent on the state of other folders.  But for now we are
       // only enabling this for account-centric accounts anyways.
-      syncGranularity: 'local-only',
+      syncGranularity: "local-only",
     });
 
     this._pendingFoldersByPath.set(folderPath, folderInfo);
@@ -309,8 +321,7 @@ FoldersTOC.prototype = evt.mix({
    * currently finishing (AKA the task on the current stack).
    */
   _isFolderPathPending(folderPath) {
-    for (const taskPendingPaths of
-         this._pendingTaskContextIdsToPendingPaths.values()) {
+    for (const taskPendingPaths of this._pendingTaskContextIdsToPendingPaths.values()) {
       if (taskPendingPaths.has(folderPath)) {
         return true;
       }
@@ -325,8 +336,9 @@ FoldersTOC.prototype = evt.mix({
    * cases.
    */
   _onTaskFinishing(taskCtx, success, finishData) {
-    const taskPendingPaths =
-      this._pendingTaskContextIdsToPendingPaths.get(taskCtx.id);
+    const taskPendingPaths = this._pendingTaskContextIdsToPendingPaths.get(
+      taskCtx.id
+    );
     this._pendingTaskContextIdsToPendingPaths.delete(taskCtx.id);
 
     for (const folderPath of taskPendingPaths) {
@@ -380,7 +392,7 @@ FoldersTOC.prototype = evt.mix({
   },
 
   getItemIndexById(id) {
-    return this.items.findIndex((item) => {
+    return this.items.findIndex(item => {
       return item.id === id;
     });
   },
@@ -396,13 +408,17 @@ FoldersTOC.prototype = evt.mix({
    */
   _makeFolderSortString(folderInfo) {
     if (!folderInfo) {
-      return '';
+      return "";
     }
 
     var parentFolderInfo = this.foldersById.get(folderInfo.parentId);
-    return this._makeFolderSortString(parentFolderInfo) + '!' +
-           FOLDER_TYPE_TO_SORT_PRIORITY[folderInfo.type] + '!' +
-           folderInfo.name.toLocaleLowerCase();
+    return (
+      this._makeFolderSortString(parentFolderInfo) +
+      "!" +
+      FOLDER_TYPE_TO_SORT_PRIORITY[folderInfo.type] +
+      "!" +
+      folderInfo.name.toLocaleLowerCase()
+    );
   },
 
   /**
@@ -416,7 +432,9 @@ FoldersTOC.prototype = evt.mix({
       for (let i = 0; i < this.items.length; i++) {
         let folder = this.items[i];
         this._dataOverlayManager.announceUpdatedOverlayData(
-          this.overlayNamespace, folder.id);
+          this.overlayNamespace,
+          folder.id
+        );
       }
     }
   },
@@ -441,7 +459,7 @@ FoldersTOC.prototype = evt.mix({
     for (let i = 0; i < this.items.length; i++) {
       let folder = this.items[i];
       if (!filterFunc || filterFunc(folder)) {
-        this.emit('change', this.folderInfoToWireRep(folder), i);
+        this.emit("change", this.folderInfoToWireRep(folder), i);
       }
     }
   },
@@ -454,9 +472,10 @@ FoldersTOC.prototype = evt.mix({
       // - change
       // object identity ensures folderInfo is already present.
       this.emit(
-        'change',
+        "change",
         this.folderInfoToWireRep(folderInfo),
-        this.items.indexOf(folderInfo));
+        this.items.indexOf(folderInfo)
+      );
     } else {
       // - remove
       this._removeFolderById(folderId);
@@ -467,27 +486,30 @@ FoldersTOC.prototype = evt.mix({
     let sortString = this._makeFolderSortString(folderInfo);
     let idx = bsearchForInsert(this.folderSortStrings, sortString, strcmp);
     this.items.splice(idx, 0, folderInfo);
-    logic(this, 'addFolder',
-          { id: folderInfo.id, index: idx, _folderInfo: folderInfo });
+    logic(this, "addFolder", {
+      id: folderInfo.id,
+      index: idx,
+      _folderInfo: folderInfo,
+    });
     this.folderSortStrings.splice(idx, 0, sortString);
     this.foldersById.set(folderInfo.id, folderInfo);
     this.foldersByPath.set(folderInfo.path, folderInfo);
 
-    this.emit('add', this.folderInfoToWireRep(folderInfo), idx);
+    this.emit("add", this.folderInfoToWireRep(folderInfo), idx);
   },
 
   _removeFolderById(id) {
     let folderInfo = this.foldersById.get(id);
     let idx = this.items.indexOf(folderInfo);
-    logic(this, 'removeFolderById', { id: id, index: idx });
+    logic(this, "removeFolderById", { id, index: idx });
     if (!folderInfo || idx === -1) {
-      throw new Error('the folder did not exist?');
+      throw new Error("the folder did not exist?");
     }
     this.foldersById.delete(id);
     this.foldersByPath.delete(folderInfo.path);
     this.items.splice(idx, 1);
     this.folderSortStrings.splice(idx, 1);
-    this.emit('remove', id, idx);
+    this.emit("remove", id, idx);
   },
 
   /**
@@ -513,14 +535,16 @@ FoldersTOC.prototype = evt.mix({
     let mixFromAccount;
     // If this account syncs on a per-account basis, spread the sync information
     // that sync_refresh stashed on the account.
-    if (this.engineFolderMeta.syncGranularity === 'account' &&
-        this.accountDef.syncInfo) {
+    if (
+      this.engineFolderMeta.syncGranularity === "account" &&
+      this.accountDef.syncInfo
+    ) {
       let syncInfo = this.accountDef.syncInfo;
       mixFromAccount = {
         lastSuccessfulSyncAt: syncInfo.lastSuccessfulSyncAt,
         lastAttemptedSyncAt: syncInfo.lastAttemptedSyncAt,
         failedSyncsSinceLastSuccessfulSync:
-          syncInfo.failedSyncsSinceLastSuccessfulSync
+          syncInfo.failedSyncsSinceLastSuccessfulSync,
       };
     }
 
@@ -530,11 +554,11 @@ FoldersTOC.prototype = evt.mix({
       this.engineFolderMeta,
       // engine hack contributions.
       {
-        engineSaysUnselectable:
-          this.engineHacks.unselectableFolderTypes.has(folder.type)
+        engineSaysUnselectable: this.engineHacks.unselectableFolderTypes.has(
+          folder.type
+        ),
       },
       mixFromAccount
     );
-  }
+  },
 });
-

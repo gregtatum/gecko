@@ -14,39 +14,38 @@
  * limitations under the License.
  */
 
-import { shallowClone } from 'shared/util';
+import { shallowClone } from "shared/util";
 
-import { NOW } from 'shared/date';
+import { NOW } from "shared/date";
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import FolderSyncStateHelper from '../vanilla/folder_sync_state_helper';
+import FolderSyncStateHelper from "../vanilla/folder_sync_state_helper";
 
-import * as imapchew from '../imapchew';
+import * as imapchew from "../imapchew";
 const parseImapDateTime = imapchew.parseImapDateTime;
 
-import { syncNormalOverlay } from
-  '../../../task_helpers/sync_overlay_helpers';
+import { syncNormalOverlay } from "../../../task_helpers/sync_overlay_helpers";
 
 /**
  * Steady state vanilla IMAP folder sync.
  */
 export default TaskDefiner.defineAtMostOnceTask([
   {
-    name: 'sync_refresh',
-    binByArg: 'folderId',
+    name: "sync_refresh",
+    binByArg: "folderId",
 
     helped_overlay_folders: syncNormalOverlay,
 
     helped_invalidate_overlays(folderId, dataOverlayManager) {
-      dataOverlayManager.announceUpdatedOverlayData('folders', folderId);
+      dataOverlayManager.announceUpdatedOverlayData("folders", folderId);
     },
 
     helped_already_planned(ctx, rawTask) {
       // The group should already exist; opt into its membership to get a
       // Promise
       return Promise.resolve({
-        result: ctx.trackMeInTaskGroup('sync_refresh:' + rawTask.folderId)
+        result: ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.folderId),
       });
     },
 
@@ -56,8 +55,10 @@ export default TaskDefiner.defineAtMostOnceTask([
      */
     async helped_plan(ctx, rawTask) {
       // Get the folder
-      let foldersTOC =
-        await ctx.universe.acquireAccountFoldersTOC(ctx, ctx.accountId);
+      let foldersTOC = await ctx.universe.acquireAccountFoldersTOC(
+        ctx,
+        ctx.accountId
+      );
       let folderInfo = foldersTOC.foldersById.get(rawTask.folderId);
 
       // - Only plan if the folder is real AKA it has a path.
@@ -69,38 +70,36 @@ export default TaskDefiner.defineAtMostOnceTask([
       if (!folderInfo.serverPath) {
         return {
           taskState: null,
-          result: Promise.resolve()
+          result: Promise.resolve(),
         };
       }
 
       // - Plan!
       let plannedTask = shallowClone(rawTask);
       plannedTask.resources = [
-        'online',
+        "online",
         `credentials!${rawTask.accountId}`,
-        `happy!${rawTask.accountId}`
+        `happy!${rawTask.accountId}`,
       ];
-      plannedTask.priorityTags = [
-        `view:folder:${rawTask.folderId}`
-      ];
+      plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
 
       // Create a task group that follows this task and all its offspring.  This
       // will define the lifetime of our overlay as well.
-      let groupPromise =
-        ctx.trackMeInTaskGroup('sync_refresh:' + rawTask.folderId);
+      let groupPromise = ctx.trackMeInTaskGroup(
+        "sync_refresh:" + rawTask.folderId
+      );
       return {
         taskState: plannedTask,
         remainInProgressUntil: groupPromise,
-        result: groupPromise
+        result: groupPromise,
       };
     },
 
     async helped_execute(ctx, req) {
       // -- Exclusively acquire the sync state for the folder
       let fromDb = await ctx.beginMutate({
-        syncStates: new Map([[req.folderId, null]])
+        syncStates: new Map([[req.folderId, null]]),
       });
-
 
       let rawSyncState = fromDb.syncStates.get(req.folderId);
 
@@ -114,17 +113,22 @@ export default TaskDefiner.defineAtMostOnceTask([
           newData: {
             tasks: [
               {
-                type: 'sync_grow',
+                type: "sync_grow",
                 accountId: req.accountId,
-                folderId: req.folderId
-              }
-            ]
-          }
+                folderId: req.folderId,
+              },
+            ],
+          },
         };
       }
 
       let syncState = new FolderSyncStateHelper(
-        ctx, rawSyncState, req.accountId, req.folderId, 'refresh');
+        ctx,
+        rawSyncState,
+        req.accountId,
+        req.folderId,
+        "refresh"
+      );
 
       // -- Parallel 1/2: Issue find new messages
       let account = await ctx.universe.acquireAccount(ctx, req.accountId);
@@ -141,15 +145,11 @@ export default TaskDefiner.defineAtMostOnceTask([
       let parallelNewMessages = account.pimap.listMessages(
         ctx,
         folderInfo,
-        (syncState.lastHighUid + 1) + ':*',
-        [
-          'UID',
-          'INTERNALDATE',
-          'FLAGS'
-        ],
+        syncState.lastHighUid + 1 + ":*",
+        ["UID", "INTERNALDATE", "FLAGS"],
         {
           byUid: true,
-          changedSince: syncState.modseq
+          changedSince: syncState.modseq,
         }
       );
 
@@ -177,10 +177,14 @@ export default TaskDefiner.defineAtMostOnceTask([
         // matters more for CONDSTORE/QRESYNC where we only get info on-change
         // versus this dumb implementation where we infer that ourselves.)
         // XXX have range-generation logic
-        uid: syncState.getAllUids().join(',')
+        uid: syncState.getAllUids().join(","),
       };
       let { result: searchedUids } = await account.pimap.search(
-        ctx, folderInfo, searchSpec, { byUid: true });
+        ctx,
+        folderInfo,
+        searchSpec,
+        { byUid: true }
+      );
       syncState.inferDeletionFromExistingUids(searchedUids);
 
       // - Do envelope fetches on the non-deleted messages
@@ -188,11 +192,8 @@ export default TaskDefiner.defineAtMostOnceTask([
       let { result: currentFlagMessages } = await account.pimap.listMessages(
         ctx,
         folderInfo,
-        searchedUids.join(','),
-        [
-          'UID',
-          'FLAGS'
-        ],
+        searchedUids.join(","),
+        ["UID", "FLAGS"],
         {
           byUid: true,
         }
@@ -207,8 +208,9 @@ export default TaskDefiner.defineAtMostOnceTask([
         // changes.
         if (umid) {
           ctx.synchronouslyConsultOtherTask(
-            { name: 'store_flags', accountId: req.accountId },
-            { uid: msg.uid, value: flags });
+            { name: "store_flags", accountId: req.accountId },
+            { uid: msg.uid, value: flags }
+          );
         }
         syncState.checkFlagChanges(msg.uid, msg.flags);
       }
@@ -238,7 +240,7 @@ export default TaskDefiner.defineAtMostOnceTask([
       // -- Issue name reads if needed.
       if (syncState.umidNameReads.size) {
         await ctx.read({
-          umidNames: syncState.umidNameReads // mutated as a side-effect.
+          umidNames: syncState.umidNameReads, // mutated as a side-effect.
         });
         syncState.generateSyncConvTasks();
       }
@@ -248,10 +250,10 @@ export default TaskDefiner.defineAtMostOnceTask([
       return {
         mutations: {
           syncStates: new Map([[req.folderId, syncState.rawSyncState]]),
-          umidLocations: syncState.umidLocationWrites
+          umidLocations: syncState.umidLocationWrites,
         },
         newData: {
-          tasks: syncState.tasksToSchedule
+          tasks: syncState.tasksToSchedule,
         },
         atomicClobbers: {
           folders: new Map([
@@ -260,11 +262,12 @@ export default TaskDefiner.defineAtMostOnceTask([
               {
                 lastSuccessfulSyncAt: syncDate,
                 lastAttemptedSyncAt: syncDate,
-                failedSyncsSinceLastSuccessfulSync: 0
-              }
-            ]])
-        }
+                failedSyncsSinceLastSuccessfulSync: 0,
+              },
+            ],
+          ]),
+        },
       };
-    }
-  }
+    },
+  },
 ]);

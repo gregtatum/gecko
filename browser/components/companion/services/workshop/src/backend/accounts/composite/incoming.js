@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import $acctmixins from '../../accountmixins';
+import $acctmixins from "../../accountmixins";
 
 /**
  * A base class for IMAP and POP accounts.
@@ -31,8 +31,14 @@ import $acctmixins from '../../accountmixins';
  * ImapAccount.
  */
 export function CompositeIncomingAccount(
-      universe, compositeAccount, accountId, credentials,
-      connInfo, foldersTOC, dbConn/*, existingProtoConn */) {
+  universe,
+  compositeAccount,
+  accountId,
+  credentials,
+  connInfo,
+  foldersTOC,
+  dbConn /*, existingProtoConn */
+) {
   // our logic scope is defined by our subclass
 
   this.universe = universe;
@@ -62,8 +68,8 @@ CompositeIncomingAccount.prototype = {
   /**
    * We receive this notification from our _backoffEndpoint.
    */
-  onEndpointStateChange: function(state) {
-    console.log('endpoint state change:', state);
+  onEndpointStateChange(state) {
+    console.log("endpoint state change:", state);
     /*
     switch (state) {
       case 'healthy':

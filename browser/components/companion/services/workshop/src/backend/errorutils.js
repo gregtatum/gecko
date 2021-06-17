@@ -24,32 +24,30 @@
  */
 
 var ALL_ERRORS = {
-
   // Transient Errors
-  'offline': { reachable: false, retry: true, report: false },
-  'server-maintenance': { reachable: true, retry: true, report: false },
-  'unresponsive-server': { reachable: false, retry: true, report: false },
-  'port-not-listening': { reachable: false, retry: true, report: false },
+  offline: { reachable: false, retry: true, report: false },
+  "server-maintenance": { reachable: true, retry: true, report: false },
+  "unresponsive-server": { reachable: false, retry: true, report: false },
+  "port-not-listening": { reachable: false, retry: true, report: false },
 
   // Permanent Account Errors (user intervention required)
-  'bad-user-or-pass': { reachable: true, retry: false, report: true },
-  'needs-oauth-reauth': { reachable: true, retry: false, report: true },
-  'imap-disabled': { reachable: true, retry: false, report: true },
-  'pop3-disabled': { reachable: true, retry: false, report: true },
-  'not-authorized': { reachable: true, retry: false, report: true },
+  "bad-user-or-pass": { reachable: true, retry: false, report: true },
+  "needs-oauth-reauth": { reachable: true, retry: false, report: true },
+  "imap-disabled": { reachable: true, retry: false, report: true },
+  "pop3-disabled": { reachable: true, retry: false, report: true },
+  "not-authorized": { reachable: true, retry: false, report: true },
 
   // Account Configuration Errors
-  'bad-security': { reachable: true, retry: false, report: true },
-  'no-config-info': { reachable: false, retry: false, report: false },
-  'user-account-exists': { reachable: false, retry: false, report: false },
-  'pop-server-not-great': { reachable: true, retry: false, report: false },
-  'no-dns-entry': { reachable: false, retry: false, report: false },
+  "bad-security": { reachable: true, retry: false, report: true },
+  "no-config-info": { reachable: false, retry: false, report: false },
+  "user-account-exists": { reachable: false, retry: false, report: false },
+  "pop-server-not-great": { reachable: true, retry: false, report: false },
+  "no-dns-entry": { reachable: false, retry: false, report: false },
 
   // Action-Specific Errors
-  'bad-address': { reachable: true, retry: false, report: false },
-  'server-problem': { reachable: true, retry: false, report: false },
-  'unknown': { reachable: false, retry: false, report: false }
-
+  "bad-address": { reachable: true, retry: false, report: false },
+  "server-problem": { reachable: true, retry: false, report: false },
+  unknown: { reachable: false, retry: false, report: false },
 };
 
 /**
@@ -62,8 +60,8 @@ var ALL_ERRORS = {
  * @return {Boolean}
  */
 export function shouldReportProblem(err) {
-  return (ALL_ERRORS[err] || ALL_ERRORS['unknown']).report;
-};
+  return (ALL_ERRORS[err] || ALL_ERRORS.unknown).report;
+}
 
 /**
  * Should we retry the operation using backoff? Only for errors that
@@ -75,15 +73,15 @@ export function shouldReportProblem(err) {
  * @return {Boolean}
  */
 export function shouldRetry(err) {
-  return (ALL_ERRORS[err] || ALL_ERRORS['unknown']).retry;
-};
+  return (ALL_ERRORS[err] || ALL_ERRORS.unknown).retry;
+}
 
 /**
  * Did this error occur when the server was reachable?
  */
 export function wasErrorFromReachableState(err) {
-  return (ALL_ERRORS[err] || ALL_ERRORS['unknown']).reachable;
-};
+  return (ALL_ERRORS[err] || ALL_ERRORS.unknown).reachable;
+}
 
 /**
  * Analyze an error object (specifically, an exception or an
@@ -99,11 +97,11 @@ export function analyzeException(err) {
   // XXX: Fault-injecting-socket returns the string "Connection
   // refused" for certian socket errors. (Does mozTCPSocket raise
   // that error verbatim?) Convert that to an Error-like object.
-  if (err === 'Connection refused') {
-    err = { name: 'ConnectionRefusedError' };
+  if (err === "Connection refused") {
+    err = { name: "ConnectionRefusedError" };
   }
   // Otherwise, assume a plain-old string is already normalized.
-  else if (typeof err === 'string') {
+  else if (typeof err === "string") {
     return err;
   }
 
@@ -112,12 +110,10 @@ export function analyzeException(err) {
   }
 
   if (/^Security/.test(err.name)) {
-    return 'bad-security';
+    return "bad-security";
+  } else if (/^ConnectionRefused/i.test(err.name)) {
+    return "unresponsive-server";
   }
-  else if (/^ConnectionRefused/i.test(err.name)) {
-    return 'unresponsive-server';
-  }
-  else {
-    return null;
-  }
+
+  return null;
 }

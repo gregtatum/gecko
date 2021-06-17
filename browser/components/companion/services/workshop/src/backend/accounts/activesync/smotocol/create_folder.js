@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import $wbxml from 'wbxml';
-import ASCP from 'activesync/codepages';
+import $wbxml from "wbxml";
+import ASCP from "activesync/codepages";
 
 /**
  * ORPHANED COMMENT FROM ActiveSyncAccount.  Repurpose when hooking this up.
@@ -78,13 +78,13 @@ export default async function createFolder(conn, args) {
   const fhStatus = ASCP.FolderHierarchy.Enums.Status;
   const folderType = ASCP.FolderHierarchy.Enums.Type.Mail;
 
-  let w = new $wbxml.Writer('1.3', 1, 'UTF-8');
+  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
   w.stag(fh.FolderCreate)
-     .tag(fh.SyncKey, args.folderSyncKey)
-     .tag(fh.ParentId, args.parentFolderServerId)
-     .tag(fh.DisplayName, args.folderName)
-     .tag(fh.Type, folderType)
-   .etag();
+    .tag(fh.SyncKey, args.folderSyncKey)
+    .tag(fh.ParentId, args.parentFolderServerId)
+    .tag(fh.DisplayName, args.folderName)
+    .tag(fh.Type, folderType)
+    .etag();
 
   let response = await conn.postCommand(w);
 
@@ -103,20 +103,16 @@ export default async function createFolder(conn, args) {
 
   try {
     e.run(response);
-  }
-  catch (ex) {
-    console.error('Error parsing FolderCreate response:', ex, '\n',
-                  ex.stack);
-    throw 'unknown';
+  } catch (ex) {
+    console.error("Error parsing FolderCreate response:", ex, "\n", ex.stack);
+    throw new Error("unknown");
   }
 
   if (status === fhStatus.Success) {
     return { serverId, folderSyncKey: newFolderSyncKey };
-  }
-  else if (status === fhStatus.FolderExists) {
-    throw 'already-exists';
-  }
-  else {
-    throw 'unknown';
+  } else if (status === fhStatus.FolderExists) {
+    throw new Error("already-exists");
+  } else {
+    throw new Error("unknown");
   }
 }

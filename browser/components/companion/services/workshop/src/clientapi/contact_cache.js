@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import MailPeep from './mail_peep';
+import MailPeep from "./mail_peep";
 
 /**
  * Caches contact lookups, both hits and misses, as well as updating the
@@ -72,7 +72,7 @@ var ContactCache = {
 
   callbacks: [],
 
-  init: function() {
+  init() {
     var contactsAPI = navigator.mozContacts;
     if (!contactsAPI) {
       return;
@@ -81,13 +81,13 @@ var ContactCache = {
     contactsAPI.oncontactchange = this._onContactChange.bind(this);
   },
 
-  _resetCache: function() {
+  _resetCache() {
     this._contactCache.clear();
     this._cacheHitEntries = 0;
     this._cacheEmptyEntries = 0;
   },
 
-  shutdown: function() {
+  shutdown() {
     var contactsAPI = navigator.mozContacts;
     if (!contactsAPI) {
       return;
@@ -111,14 +111,12 @@ var ContactCache = {
    *   life-cycle management burden associated with this.  Or maybe we will
    *   return an `EntireListView` instance.
    */
-  shoddyAutocomplete: function(phrase) {
+  shoddyAutocomplete(phrase) {
     // string-for-regexp escaping logic from searchfilter.js that I worry about
     // a little:
     // TODO: use a proper factored-out/supported regexp-from-string module
     if (!(phrase instanceof RegExp)) {
-      phrase = new RegExp(phrase.replace(/[-[\]/{}()*+?.\\^$|]/g,
-                                         '\\$&'),
-                          'i');
+      phrase = new RegExp(phrase.replace(/[-[\]/{}()*+?.\\^$|]/g, "\\$&"), "i");
     }
 
     let matches = [];
@@ -168,18 +166,18 @@ var ContactCache = {
    * For info on the events/triggers, see:
    * https://developer.mozilla.org/en-US/docs/DOM/ContactManager.oncontactchange
    */
-  _onContactChange: function(event) {
+  _onContactChange(event) {
     function cleanOutPeeps(livePeeps) {
       for (var iPeep = 0; iPeep < livePeeps.length; iPeep++) {
         var peep = livePeeps[iPeep];
         peep.contactId = null;
-        peep.emit('change', peep);
+        peep.emit("change", peep);
       }
     }
 
     var contactsAPI = navigator.mozContacts;
     var livePeepsById = this._livePeepsById,
-        livePeepsByEmail = this._livePeepsByEmail;
+      livePeepsByEmail = this._livePeepsByEmail;
 
     // clear the cache if it has anything in it (per the above doc block)
     if (this._cacheHitEntries || this._cacheEmptyEntries) {
@@ -187,7 +185,7 @@ var ContactCache = {
     }
 
     // -- Contact removed OR all contacts removed!
-    if (event.reason === 'remove') {
+    if (event.reason === "remove") {
       // - all contacts removed! (clear() called)
       if (!event.contactID) {
         for (let livePeeps of livePeepsById.values()) {
@@ -207,9 +205,9 @@ var ContactCache = {
     // -- Created or updated; we need to fetch the contact to investigate
     else {
       var req = contactsAPI.find({
-        filterBy: ['id'],
-        filterOp: 'equals',
-        filterValue: event.contactID
+        filterBy: ["id"],
+        filterOp: "equals",
+        filterValue: event.contactID,
       });
       req.onsuccess = function() {
         // If the contact disappeared we will hear a 'remove' event and so don't
@@ -217,24 +215,28 @@ var ContactCache = {
         if (!req.result.length) {
           return;
         }
-        var contact = req.result[0], iPeep, peep;
+        var contact = req.result[0],
+          iPeep,
+          peep;
 
         // - process update with apparent e-mail address removal
-        if (event.reason === 'update') {
+        if (event.reason === "update") {
           let livePeeps = livePeepsById.get(contact.id);
           if (livePeeps) {
-            var contactEmails = contact.email ?
-                  contact.email.map(function(e) { return e.value; }) :
-                [];
+            var contactEmails = contact.email
+              ? contact.email.map(function(e) {
+                  return e.value;
+                })
+              : [];
             for (iPeep = 0; iPeep < livePeeps.length; iPeep++) {
               peep = livePeeps[iPeep];
-              if (contactEmails.indexOf(peep.address) === -1) {
+              if (!contactEmails.includes(peep.address)) {
                 // Need to fix-up iPeep because of the splice; reverse iteration
                 // reorders our notifications and we don't want that, hence
                 // this.
                 livePeeps.splice(iPeep--, 1);
                 peep.contactId = null;
-                peep.emit('change', peep);
+                peep.emit("change", peep);
               }
             }
             if (livePeeps.length === 0) {
@@ -278,7 +280,7 @@ var ContactCache = {
             if (contact.name && contact.name.length) {
               peep.name = contact.name[0];
             }
-            peep.emit('change', peep);
+            peep.emit("change", peep);
           }
         }
       };
@@ -287,7 +289,7 @@ var ContactCache = {
     }
   },
 
-  resolvePeeps: function(addressPairs) {
+  resolvePeeps(addressPairs) {
     if (addressPairs == null) {
       return null;
     }
@@ -312,7 +314,7 @@ var ContactCache = {
    * e-mail addresses are also likely to come in batches so there's no need to
    * generate N callbacks when 1 will do.
    */
-  resolvePeep: function(addressPair) {
+  resolvePeep(addressPair) {
     var emailAddress = addressPair.address;
     var entry = this._contactCache.get(emailAddress);
     var peep;
@@ -320,14 +322,14 @@ var ContactCache = {
     // known miss; create miss peep
     // no contacts API, always a miss, skip out before extra logic happens
     if (entry === null || !contactsAPI) {
-      peep = new MailPeep(addressPair.name || '', emailAddress, null, null);
+      peep = new MailPeep(addressPair.name || "", emailAddress, null, null);
       if (!contactsAPI) {
         return peep;
       }
     }
     // known contact; unpack contact info
     else if (entry !== undefined) {
-      var name = addressPair.name || '';
+      var name = addressPair.name || "";
       if (entry.name && entry.name.length) {
         name = entry.name[0];
       }
@@ -335,12 +337,12 @@ var ContactCache = {
         name,
         emailAddress,
         entry.id,
-        (entry.photo && entry.photo.length) ? entry.photo[0] : null);
+        entry.photo && entry.photo.length ? entry.photo[0] : null
+      );
     }
     // not yet looked-up; assume it's a miss and we'll fix-up if it's a hit
     else {
-      peep = new MailPeep(addressPair.name || '',
-                          emailAddress, null, null);
+      peep = new MailPeep(addressPair.name || "", emailAddress, null, null);
 
       // Place a speculative miss in the contact cache so that additional
       // requests take that path.  They will get fixed up when our lookup
@@ -362,72 +364,74 @@ var ContactCache = {
       // being returned. Potentially all contacts. However passing empty string
       // gives back no results, even if there is a contact with no email address
       // assigned to it.
-      var filterValue = emailAddress ? emailAddress.toLowerCase() : '';
+      var filterValue = emailAddress ? emailAddress.toLowerCase() : "";
       var req = contactsAPI.find({
-                  filterBy: ['email'],
-                  filterOp: 'equals',
-                  filterValue: filterValue
-                });
-      var self = this, handleResult = function() {
-        if (req.result && req.result.length) {
-          // CONSIDER TODO SOMEDAY: since the search is done witha a
-          // toLowerCase() call, it is conceivable that we could get multiple
-          // results with slightly different casing. It might be nice to try
-          // to find the best casing match, but the payoff for that is likely
-          // small, and the common case will be that the first one is good to
-          // use.
-          var contact = req.result[0];
+        filterBy: ["email"],
+        filterOp: "equals",
+        filterValue,
+      });
+      var self = this,
+        handleResult = function() {
+          if (req.result && req.result.length) {
+            // CONSIDER TODO SOMEDAY: since the search is done witha a
+            // toLowerCase() call, it is conceivable that we could get multiple
+            // results with slightly different casing. It might be nice to try
+            // to find the best casing match, but the payoff for that is likely
+            // small, and the common case will be that the first one is good to
+            // use.
+            var contact = req.result[0];
 
-          ContactCache._contactCache.set(emailAddress, contact);
-          if (++ContactCache._cacheHitEntries > ContactCache.MAX_CACHE_HITS) {
-            self._resetCache();
-          }
+            ContactCache._contactCache.set(emailAddress, contact);
+            if (++ContactCache._cacheHitEntries > ContactCache.MAX_CACHE_HITS) {
+              self._resetCache();
+            }
 
-          var peepsToFixup = self._livePeepsByEmail.get(emailAddress);
-          // there might no longer be any MailPeeps alive to care; leave
-          if (!peepsToFixup) {
-            return;
-          }
-          for (let i = 0; i < peepsToFixup.length; i++) {
-            let fixupPeep = peepsToFixup[i];
-            if (!fixupPeep.contactId) {
-              fixupPeep.contactId = contact.id;
-              let livePeeps = self._livePeepsById.get(fixupPeep.contactId);
-              if (livePeeps === undefined) {
-                livePeeps = [];
-                self._livePeepsById.set(fixupPeep.contactId, livePeeps);
+            var peepsToFixup = self._livePeepsByEmail.get(emailAddress);
+            // there might no longer be any MailPeeps alive to care; leave
+            if (!peepsToFixup) {
+              return;
+            }
+            for (let i = 0; i < peepsToFixup.length; i++) {
+              let fixupPeep = peepsToFixup[i];
+              if (!fixupPeep.contactId) {
+                fixupPeep.contactId = contact.id;
+                let livePeeps = self._livePeepsById.get(fixupPeep.contactId);
+                if (livePeeps === undefined) {
+                  livePeeps = [];
+                  self._livePeepsById.set(fixupPeep.contactId, livePeeps);
+                }
+                livePeeps.push(fixupPeep);
               }
-              livePeeps.push(fixupPeep);
-            }
 
-            if (contact.name && contact.name.length) {
-              fixupPeep.name = contact.name[0];
-            }
-            if (contact.photo && contact.photo.length) {
-              fixupPeep._thumbnailBlob = contact.photo[0];
-            }
+              if (contact.name && contact.name.length) {
+                fixupPeep.name = contact.name[0];
+              }
+              if (contact.photo && contact.photo.length) {
+                fixupPeep._thumbnailBlob = contact.photo[0];
+              }
 
-            // If no one is waiting for our/any request to complete, generate a
-            // change notification.
-            if (!self.callbacks.length) {
-              fixupPeep.emit('change', fixupPeep);
+              // If no one is waiting for our/any request to complete, generate a
+              // change notification.
+              if (!self.callbacks.length) {
+                fixupPeep.emit("change", fixupPeep);
+              }
+            }
+          } else {
+            ContactCache._contactCache.set(emailAddress, null);
+            if (
+              ++ContactCache._cacheEmptyEntries > ContactCache.MAX_CACHE_EMPTY
+            ) {
+              self._resetCache();
             }
           }
-        }
-        else {
-          ContactCache._contactCache.set(emailAddress, null);
-          if (++ContactCache._cacheEmptyEntries > ContactCache.MAX_CACHE_EMPTY){
-            self._resetCache();
+          // Only notify callbacks if all outstanding lookups have completed
+          if (--self.pendingLookupCount === 0) {
+            for (let i = 0; i < ContactCache.callbacks.length; i++) {
+              ContactCache.callbacks[i]();
+            }
+            ContactCache.callbacks.splice(0, ContactCache.callbacks.length);
           }
-        }
-        // Only notify callbacks if all outstanding lookups have completed
-        if (--self.pendingLookupCount === 0) {
-          for (let i = 0; i < ContactCache.callbacks.length; i++) {
-            ContactCache.callbacks[i]();
-          }
-          ContactCache.callbacks.splice(0, ContactCache.callbacks.length);
-        }
-      };
+        };
       req.onsuccess = handleResult;
       req.onerror = handleResult;
     }
@@ -453,16 +457,18 @@ var ContactCache = {
     return peep;
   },
 
-  forgetPeepInstances: function() {
+  forgetPeepInstances() {
     var livePeepsById = this._livePeepsById,
-        livePeepsByEmail = this._livePeepsByEmail;
+      livePeepsByEmail = this._livePeepsByEmail;
     for (var iArg = 0; iArg < arguments.length; iArg++) {
       var peeps = arguments[iArg];
       if (!peeps) {
         continue;
       }
       for (var iPeep = 0; iPeep < peeps.length; iPeep++) {
-        var peep = peeps[iPeep], livePeeps, idx;
+        var peep = peeps[iPeep],
+          livePeeps,
+          idx;
         if (peep.contactId) {
           livePeeps = livePeepsById.get(peep.contactId);
           if (livePeeps) {

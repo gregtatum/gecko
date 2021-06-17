@@ -16,7 +16,7 @@
 
 export function revokeImageSrc() {
   // see showBlobInImg below for the rationale for useWin.
-  var useWin = this.ownerDocument.defaultView || window;
+  var useWin = this.ownerGlobal || window;
   useWin.URL.revokeObjectURL(this.src);
 }
 export function showBlobInImg(imgNode, blob) {
@@ -26,10 +26,10 @@ export function showBlobInImg(imgNode, blob) {
   //
   // the "|| window" is for our shimmed testing environment and should not
   // happen in production.
-  var useWin = imgNode.ownerDocument.defaultView || window;
+  var useWin = imgNode.ownerGlobal || window;
   imgNode.src = useWin.URL.createObjectURL(blob);
   // We can revoke the URL after we are 100% sure the image has resolved the URL
   // to get at the underlying blob.  Once autorevoke URLs are supported, we can
   // stop doing this.
-  imgNode.addEventListener('load', revokeImageSrc);
+  imgNode.addEventListener("load", revokeImageSrc);
 }

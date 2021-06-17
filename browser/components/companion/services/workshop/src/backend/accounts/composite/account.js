@@ -19,17 +19,17 @@
  * Configurator for fake
  **/
 
-import logic from 'logic';
-import $acctmixins from '../../accountmixins';
-import * as $imapacct from '../imap/account';
-import * as $pop3acct from '../pop3/account';
-import * as $smtpacct from '../smtp/account';
-import allback from 'shared/allback';
+import logic from "logic";
+import $acctmixins from "../../accountmixins";
+import * as $imapacct from "../imap/account";
+import * as $pop3acct from "../pop3/account";
+import * as $smtpacct from "../smtp/account";
+import allback from "shared/allback";
 
 var PIECE_ACCOUNT_TYPE_TO_CLASS = {
-  'imap': $imapacct.ImapAccount,
-  'pop3': $pop3acct.Pop3Account,
-  'smtp': $smtpacct.SmtpAccount,
+  imap: $imapacct.ImapAccount,
+  pop3: $pop3acct.Pop3Account,
+  smtp: $smtpacct.SmtpAccount,
 };
 
 /**
@@ -38,12 +38,17 @@ var PIECE_ACCOUNT_TYPE_TO_CLASS = {
  * intended to be a very thin layer that shields consuming code from the
  * fact that IMAP and SMTP are not actually bundled tightly together.
  */
-export default function CompositeAccount(universe, accountDef, foldersTOC, dbConn,
-                                         receiveProtoConn) {
+export default function CompositeAccount(
+  universe,
+  accountDef,
+  foldersTOC,
+  dbConn,
+  receiveProtoConn
+) {
   this.universe = universe;
   this.id = accountDef.id;
   this.accountDef = accountDef;
-  logic.defineScope(this, 'Account', { accountId: this.id });
+  logic.defineScope(this, "Account", { accountId: this.id });
 
   // Currently we don't persist the disabled state of an account because it's
   // easier for the UI to be edge-triggered right now and ensure that the
@@ -63,22 +68,30 @@ export default function CompositeAccount(universe, accountDef, foldersTOC, dbCon
   this.identities = accountDef.identities;
 
   if (!PIECE_ACCOUNT_TYPE_TO_CLASS.hasOwnProperty(accountDef.receiveType)) {
-    logic(this, 'badAccountType', { type: accountDef.receiveType });
+    logic(this, "badAccountType", { type: accountDef.receiveType });
   }
   if (!PIECE_ACCOUNT_TYPE_TO_CLASS.hasOwnProperty(accountDef.sendType)) {
-    logic(this, 'badAccountType', { type: accountDef.sendType });
+    logic(this, "badAccountType", { type: accountDef.sendType });
   }
 
-  this._receivePiece =
-    new PIECE_ACCOUNT_TYPE_TO_CLASS[accountDef.receiveType](
-      universe, this,
-      accountDef.id, accountDef.credentials, accountDef.receiveConnInfo,
-      foldersTOC, dbConn, receiveProtoConn);
-  this._sendPiece =
-    new PIECE_ACCOUNT_TYPE_TO_CLASS[accountDef.sendType](
-      universe, this,
-      accountDef.id, accountDef.credentials,
-      accountDef.sendConnInfo, dbConn);
+  this._receivePiece = new PIECE_ACCOUNT_TYPE_TO_CLASS[accountDef.receiveType](
+    universe,
+    this,
+    accountDef.id,
+    accountDef.credentials,
+    accountDef.receiveConnInfo,
+    foldersTOC,
+    dbConn,
+    receiveProtoConn
+  );
+  this._sendPiece = new PIECE_ACCOUNT_TYPE_TO_CLASS[accountDef.sendType](
+    universe,
+    this,
+    accountDef.id,
+    accountDef.credentials,
+    accountDef.sendConnInfo,
+    dbConn
+  );
 
   // XXX this hiding and all that just ended up confusing.  FIX IT.
   // XXX and now I'm making this worse since both can't be true.
@@ -90,29 +103,28 @@ export default function CompositeAccount(universe, accountDef, foldersTOC, dbCon
   this.folders = this._receivePiece.folders;
 }
 CompositeAccount.prototype = {
-  toString: function() {
-    return '[CompositeAccount: ' + this.id + ']';
+  toString() {
+    return "[CompositeAccount: " + this.id + "]";
   },
   get supportsServerFolders() {
     return this._receivePiece.supportsServerFolders;
   },
-  toBridgeFolder: function() {
+  toBridgeFolder() {
     return {
       id: this.accountDef.id,
       name: this.accountDef.name,
       path: this.accountDef.name,
-      type: 'account',
+      type: "account",
     };
   },
 
   // TODO: evaluate whether the account actually wants to be a RefedResource
   // with some kind of reaping if all references die and no one re-acquires it
   // within some timeout horizon.
-  __acquire: function() {
+  __acquire() {
     return Promise.resolve(this);
   },
-  __release: function() {
-  },
+  __release() {},
 
   get enabled() {
     return this._enabled;
@@ -129,7 +141,7 @@ CompositeAccount.prototype = {
     return this._receivePiece.pimap;
   },
 
-  saveAccountState: function(reuseTrans, callback, reason) {
+  saveAccountState(reuseTrans, callback, reason) {
     return this._receivePiece.saveAccountState(reuseTrans, callback, reason);
   },
 
@@ -137,15 +149,14 @@ CompositeAccount.prototype = {
     return this.__saveAccountIsImminent;
   },
   set _saveAccountIsImminent(val) {
-    this.___saveAccountIsImminent =
-    this._receivePiece._saveAccountIsImminent = val;
+    this.___saveAccountIsImminent = this._receivePiece._saveAccountIsImminent = val;
   },
 
-  runAfterSaves: function(callback) {
+  runAfterSaves(callback) {
     return this._receivePiece.runAfterSaves(callback);
   },
 
-  allOperationsCompleted: function() {
+  allOperationsCompleted() {
     if (this._receivePiece.allOperationsCompleted) {
       this._receivePiece.allOperationsCompleted();
     }
@@ -161,10 +172,10 @@ CompositeAccount.prototype = {
    * If you don't want to check both pieces, you should just call
    * checkAccount on the receivePiece or sendPiece as appropriate.
    */
-  checkAccount: function(callback) {
+  checkAccount(callback) {
     var latch = allback.latch();
-    this._receivePiece.checkAccount(latch.defer('incoming'));
-    this._sendPiece.checkAccount(latch.defer('outgoing'));
+    this._receivePiece.checkAccount(latch.defer("incoming"));
+    this._sendPiece.checkAccount(latch.defer("outgoing"));
     latch.then(function(results) {
       callback(results.incoming[0], results.outgoing[0]);
     });
@@ -173,34 +184,38 @@ CompositeAccount.prototype = {
   /**
    * Shutdown the account; see `MailUniverse.shutdown` for semantics.
    */
-  shutdown: function(callback) {
+  shutdown(callback) {
     this._sendPiece.shutdown();
     this._receivePiece.shutdown(callback);
   },
 
-  accountDeleted: function() {
+  accountDeleted() {
     this._sendPiece.accountDeleted();
     this._receivePiece.accountDeleted();
   },
 
-  deleteFolder: function(folderId, callback) {
+  deleteFolder(folderId, callback) {
     return this._receivePiece.deleteFolder(folderId, callback);
   },
 
-  sliceFolderMessages: function(folderId, bridgeProxy) {
+  sliceFolderMessages(folderId, bridgeProxy) {
     return this._receivePiece.sliceFolderMessages(folderId, bridgeProxy);
   },
 
-  searchFolderMessages: function(folderId, bridgeHandle, phrase, whatToSearch) {
+  searchFolderMessages(folderId, bridgeHandle, phrase, whatToSearch) {
     return this._receivePiece.searchFolderMessages(
-      folderId, bridgeHandle, phrase, whatToSearch);
+      folderId,
+      bridgeHandle,
+      phrase,
+      whatToSearch
+    );
   },
 
-  syncFolderList: function(callback) {
+  syncFolderList(callback) {
     return this._receivePiece.syncFolderList(callback);
   },
 
-  sendMessage: function(composer, callback) {
+  sendMessage(composer, callback) {
     return this._sendPiece.sendMessage(
       composer,
       function(err, errDetails) {
@@ -209,10 +224,11 @@ CompositeAccount.prototype = {
           this._receivePiece.saveSentMessage(composer);
         }
         callback(err, errDetails, null);
-      }.bind(this));
+      }.bind(this)
+    );
   },
 
-  runOp: function(op, mode, callback) {
+  runOp(op, mode, callback) {
     return this._receivePiece.runOp(op, mode, callback);
   },
 
@@ -223,11 +239,11 @@ CompositeAccount.prototype = {
    * @param {function} callback
    *   Called when all jobs have run.
    */
-  ensureEssentialOnlineFolders: function(callback) {
+  ensureEssentialOnlineFolders(callback) {
     return this._receivePiece.ensureEssentialOnlineFolders(callback);
   },
 
-  ensureEssentialOfflineFolders: function(callback) {
+  ensureEssentialOfflineFolders(callback) {
     return this._receivePiece.ensureEssentialOfflineFolders(callback);
   },
 
@@ -235,10 +251,10 @@ CompositeAccount.prototype = {
 
   getFolderById: $acctmixins.getFolderById,
 
-  upgradeFolderStoragesIfNeeded: function() {
+  upgradeFolderStoragesIfNeeded() {
     for (var key in this._receivePiece._folderStorages) {
       var storage = this._receivePiece._folderStorages[key];
       storage.upgradeIfNeeded();
     }
-  }
+  },
 };

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
+import evt from "evt";
 
 export default function RawItem(api, wireRep, overlays, matchInfo) {
   evt.Emitter.call(this);
@@ -29,12 +29,12 @@ export default function RawItem(api, wireRep, overlays, matchInfo) {
   this.matchInfo = matchInfo;
 }
 RawItem.prototype = evt.mix({
-  toString: function() {
-    return '[RawItem]';
+  toString() {
+    return "[RawItem]";
   },
-  toJSON: function() {
+  toJSON() {
     return {
-      data: this.data
+      data: this.data,
     };
   },
 
@@ -44,14 +44,13 @@ RawItem.prototype = evt.mix({
    * stored within the FolderStorage object for this folder. Thus, it only
    * accounts for messages which the user has loaded from the server.
    */
-  __update: function(wireRep) {
+  __update(wireRep) {
     this.data = wireRep;
   },
 
-  __updateOverlays: function(/*overlays*/) {
-  },
+  __updateOverlays(/*overlays*/) {},
 
-  release: function() {
+  release() {
     // currently nothing to clean up
-  }
+  },
 });

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { encodeInt } from 'shared/a64';
+import { encodeInt } from "shared/a64";
 
 /**
  * Account global sync state.  Which is really just the FolderSync syncKey
@@ -44,11 +44,11 @@ import { encodeInt } from 'shared/a64';
  */
 export default function AccountSyncStateHelper(ctx, rawSyncState, accountId) {
   if (!rawSyncState) {
-    logic(ctx, 'creatingDefaultSyncState', {});
+    logic(ctx, "creatingDefaultSyncState", {});
     rawSyncState = {
-      hierarchySyncKey: '0',
+      hierarchySyncKey: "0",
       nextFolderNum: 0,
-      serverIdToFolderId: new Map()
+      serverIdToFolderId: new Map(),
     };
   }
 
@@ -66,16 +66,15 @@ AccountSyncStateHelper.prototype = {
     this.rawSyncState.hierarchySyncKey = val;
   },
 
-  issueFolderId: function() {
-    return (
-      this._accountId + '.' + encodeInt(this.rawSyncState.nextFolderNum++));
+  issueFolderId() {
+    return this._accountId + "." + encodeInt(this.rawSyncState.nextFolderNum++);
   },
 
-  addedFolder: function(serverId, folderInfo) {
+  addedFolder(serverId, folderInfo) {
     this.serverIdToFolderId.set(serverId, folderInfo);
   },
 
-  removedFolder: function(serverId) {
+  removedFolder(serverId) {
     this.serverIdToFolderId.delete(serverId);
-  }
+  },
 };

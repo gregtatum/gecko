@@ -14,27 +14,29 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import GmailLabelMapper from '../gmail/gmail_label_mapper';
+import GmailLabelMapper from "../gmail/gmail_label_mapper";
 
-import MixinStore from './mix_store';
+import MixinStore from "./mix_store";
 
 export default TaskDefiner.defineComplexTask([
   MixinStore,
   {
-    name: 'store_labels',
-    attrName: 'folderIds',
+    name: "store_labels",
+    attrName: "folderIds",
     // Note that we don't care about the read-back value.  Need to check if
     // this understands and honors a .SILENT suffix. TODO: check suffix.
-    imapDataName: 'X-GM-LABELS',
+    imapDataName: "X-GM-LABELS",
 
     /**
      * Acquire a GmailLabelMapper for `normalizeLocalToServer`.
      */
     async prepNormalizationLogic(ctx, accountId) {
-      let foldersTOC =
-        await ctx.universe.acquireAccountFoldersTOC(ctx, accountId);
+      let foldersTOC = await ctx.universe.acquireAccountFoldersTOC(
+        ctx,
+        accountId
+      );
       return new GmailLabelMapper(ctx, foldersTOC);
     },
 
@@ -50,6 +52,6 @@ export default TaskDefiner.defineComplexTask([
         return folderIds;
       }
       return labelMapper.folderIdsToLabels(folderIds);
-    }
-  }
+    },
+  },
 ]);

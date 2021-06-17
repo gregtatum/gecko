@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
-import mimefuncs from 'mimefuncs';
+import logic from "logic";
+import mimefuncs from "mimefuncs";
 
 /**
  * Helper that just ensures we have a connection and then calls the underlying
@@ -23,10 +23,10 @@ import mimefuncs from 'mimefuncs';
  */
 export function simpleWithConn(methodName) {
   return function(taskCtx, ...bbArgs) {
-    return this._gimmeConnection().then((conn) => {
-      logic(this, methodName + ':begin', { ctxId: taskCtx.id });
-      return conn[methodName].apply(conn, bbArgs).then((value) => {
-        logic(this, methodName + ':end', { ctxId: taskCtx.id, _result: value });
+    return this._gimmeConnection().then(conn => {
+      logic(this, methodName + ":begin", { ctxId: taskCtx.id });
+      return conn[methodName].apply(conn, bbArgs).then(value => {
+        logic(this, methodName + ":end", { ctxId: taskCtx.id, _result: value });
         // NB: if we were going to return the connection, this is where we would
         // do it.
         return value;
@@ -46,31 +46,30 @@ export function simpleWithConn(methodName) {
  */
 export function inFolderWithConn(methodName, optsArgIndexPerCaller) {
   return function(taskCtx, folderInfo, ...bbArgs) {
-    return this._gimmeConnection().then((conn) => {
+    return this._gimmeConnection().then(conn => {
       let opts = bbArgs[optsArgIndexPerCaller];
       if (!opts) {
-        throw new Error('provide the options dictionary so we can mutate it.');
+        throw new Error("provide the options dictionary so we can mutate it.");
       }
       opts.precheck = function(ctx, next) {
         // Only select the folder if we're not already inside it.
         if (folderInfo.path !== conn.selectedMailboxPath) {
-          conn.selectMailbox(folderInfo.path, { ctx: ctx }, next);
+          conn.selectMailbox(folderInfo.path, { ctx }, next);
         } else {
           next();
         }
       };
-      logic(
-        this, methodName + ':begin',
-        { ctxId: taskCtx.id, folderId: folderInfo.id });
-      return conn[methodName].apply(conn, bbArgs).then((value) => {
-        logic(
-          this, methodName + ':end',
-          { ctxId: taskCtx.id, _result: value });
+      logic(this, methodName + ":begin", {
+        ctxId: taskCtx.id,
+        folderId: folderInfo.id,
+      });
+      return conn[methodName].apply(conn, bbArgs).then(value => {
+        logic(this, methodName + ":end", { ctxId: taskCtx.id, _result: value });
         // NB: if we were going to return the connection, this is where we would
         // do it.
         return {
           mailboxInfo: conn.selectedMailboxInfo,
-          result: value
+          result: value,
         };
       });
     });
@@ -87,30 +86,31 @@ export function inFolderWithConn(methodName, optsArgIndexPerCaller) {
 export function customFuncInFolderWithConn(implFunc) {
   return function(taskCtx, folderInfo, ...bbArgs) {
     let methodName = implFunc.name;
-    return this._gimmeConnection().then((conn) => {
+    return this._gimmeConnection().then(conn => {
       let precheck = function(ctx, next) {
         // Only select the folder if we're not already inside it.
         if (folderInfo.path !== conn.selectedMailboxPath) {
-          conn.selectMailbox(folderInfo.path, { ctx: ctx }, next);
+          conn.selectMailbox(folderInfo.path, { ctx }, next);
         } else {
           next();
         }
       };
-      logic(
-        this, methodName + ':begin',
-        { ctxId: taskCtx.id, folderId: folderInfo.id });
-      return implFunc.apply(
-        this,
-        [conn, precheck].concat(bbArgs)
-      ).then((value) => {
-        logic(
-          this, methodName + ':end',
-          { ctxId: taskCtx.id, _result: value });
-        return {
-          mailboxInfo: conn.selectedMailboxInfo,
-          result: value
-        };
+      logic(this, methodName + ":begin", {
+        ctxId: taskCtx.id,
+        folderId: folderInfo.id,
       });
+      return implFunc
+        .apply(this, [conn, precheck].concat(bbArgs))
+        .then(value => {
+          logic(this, methodName + ":end", {
+            ctxId: taskCtx.id,
+            _result: value,
+          });
+          return {
+            mailboxInfo: conn.selectedMailboxInfo,
+            result: value,
+          };
+        });
     });
   };
 }
@@ -147,7 +147,7 @@ export function customFuncInFolderWithConn(implFunc) {
  * probably want to see how this turns out first, though.
  */
 export default function ParallelIMAP(imapAccount) {
-  logic.defineScope(this, 'ParallelIMAP', { accountId: imapAccount.id });
+  logic.defineScope(this, "ParallelIMAP", { accountId: imapAccount.id });
   this._imapAccount = imapAccount;
 
   this._conn = null;
@@ -155,7 +155,7 @@ export default function ParallelIMAP(imapAccount) {
 }
 ParallelIMAP.prototype = {
   // XXX the interaction of this and simpleWithConn are pretty ugly.
-  _gimmeConnection: function() {
+  _gimmeConnection() {
     if (this._conn) {
       // (keeping the promise around forever can make devtools sad and result in
       // effective memory leaks, at least allegedly per co.  makes sense, tho.)
@@ -165,36 +165,37 @@ ParallelIMAP.prototype = {
       return this._connPromise;
     }
 
-    logic(this, 'demandConnection');
+    logic(this, "demandConnection");
     this._connPromise = new Promise((resolve, reject) => {
       this._imapAccount.__folderDemandsConnection(
         null,
-        'pimap',
-        (conn) => {
-          logic(this, 'gotConnection');
+        "pimap",
+        conn => {
+          logic(this, "gotConnection");
           this._conn = conn;
           this._connPromise = null;
           resolve(conn);
         },
         () => {
-          logic(this, 'deadConnection');
+          logic(this, "deadConnection");
           this._conn = null;
           this._connPromise = null;
           reject();
-        });
+        }
+      );
     });
     return this._connPromise;
   },
 
-  listMailboxes: simpleWithConn('listMailboxes'),
-  listMessages: inFolderWithConn('listMessages', 2),
-  listNamespaces: simpleWithConn('listNamespaces'),
-  search: inFolderWithConn('search', 1),
+  listMailboxes: simpleWithConn("listMailboxes"),
+  listMessages: inFolderWithConn("listMessages", 2),
+  listNamespaces: simpleWithConn("listNamespaces"),
+  search: inFolderWithConn("search", 1),
 
   // Select the mailbox returning the mailboxInfo directly (not nested in an
   // object).  If the mailbox is already selected, just return it.
-  selectMailbox: function(taskCtx, folderInfo) {
-    return this._gimmeConnection().then((conn) => {
+  selectMailbox(taskCtx, folderInfo) {
+    return this._gimmeConnection().then(conn => {
       if (folderInfo.path === conn.selectedMailboxPath) {
         return Promise.resolve(conn.selectedMailboxInfo);
       }
@@ -204,11 +205,11 @@ ParallelIMAP.prototype = {
     });
   },
 
-  store: inFolderWithConn('store', 3),
+  store: inFolderWithConn("store", 3),
 
   // APPEND does not require being in a folder, it just wants the path, so the
   // caller does need to manually specify it.
-  upload: simpleWithConn('upload'),
+  upload: simpleWithConn("upload"),
 
   /**
    * Fetch the full or partial contents of a message part, returning a
@@ -223,21 +224,26 @@ ParallelIMAP.prototype = {
     let precheck = function(ctx, next) {
       // Only select the folder if we're not already inside it.
       if (folderInfo.path !== conn.selectedMailboxPath) {
-        conn.selectMailbox(folderInfo.path, { ctx: ctx }, next);
+        conn.selectMailbox(folderInfo.path, { ctx }, next);
       } else {
         next();
       }
     };
 
-    logic(this, 'fetchBody:begin', { ctxId: taskCtx.id });
+    logic(this, "fetchBody:begin", { ctxId: taskCtx.id });
     let messages = await conn.listMessages(
       request.uid,
-       [
-        'BODY.PEEK[' + (request.part || '1') + ']' +
-          (request.byteRange ?
-           ('<' + request.byteRange.offset + '.' +
-            request.byteRange.bytesToFetch + '>') :
-           '')
+      [
+        "BODY.PEEK[" +
+          (request.part || "1") +
+          "]" +
+          (request.byteRange
+            ? "<" +
+              request.byteRange.offset +
+              "." +
+              request.byteRange.bytesToFetch +
+              ">"
+            : ""),
       ],
       { byUid: true, precheck }
     );
@@ -250,13 +256,14 @@ ParallelIMAP.prototype = {
       }
     }
     if (!body) {
-      throw new Error('no body returned!');
+      throw new Error("no body returned!");
     }
-    logic(
-      this, 'fetchBody:end',
-      { ctxId: taskCtx.id, bodyLength: body.length });
+    logic(this, "fetchBody:end", {
+      ctxId: taskCtx.id,
+      bodyLength: body.length,
+    });
     // browserbox traffics in 'binary' strings; convert this back to a
     // TypedArray.
     return mimefuncs.toTypedArray(body);
-  }
+  },
 };

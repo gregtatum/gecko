@@ -18,57 +18,57 @@
  * Standard IMAP.
  **/
 
- import VanillaSyncFolderList from './vanilla_tasks/sync_folder_list';
+import VanillaSyncFolderList from "./vanilla_tasks/sync_folder_list";
 
- import VanillaSyncGrow from './vanilla_tasks/sync_grow';
- import VanillaSyncRefresh from './vanilla_tasks/sync_refresh';
- import VanillaSyncMessage from './vanilla_tasks/sync_message';
- import VanillaSyncConv from './vanilla_tasks/sync_conv';
- import VanillaSyncBody from './vanilla_tasks/sync_body';
+import VanillaSyncGrow from "./vanilla_tasks/sync_grow";
+import VanillaSyncRefresh from "./vanilla_tasks/sync_refresh";
+import VanillaSyncMessage from "./vanilla_tasks/sync_message";
+import VanillaSyncConv from "./vanilla_tasks/sync_conv";
+import VanillaSyncBody from "./vanilla_tasks/sync_body";
 
- import VanillaDownload from './vanilla_tasks/download';
+import VanillaDownload from "./vanilla_tasks/download";
 
- import VanillaStoreFlags from './vanilla_tasks/store_flags';
+import VanillaStoreFlags from "./vanilla_tasks/store_flags";
 
- import CommonDraftSave from '../../tasks/draft_save';
- import CommonDraftAttach from '../../tasks/draft_attach';
- import CommonDraftDetach from '../../tasks/draft_detach';
- import CommonDraftDelete from '../../tasks/draft_delete';
+import CommonDraftSave from "../../tasks/draft_save";
+import CommonDraftAttach from "../../tasks/draft_attach";
+import CommonDraftDetach from "../../tasks/draft_detach";
+import CommonDraftDelete from "../../tasks/draft_delete";
 
- import VanillaOutboxSend from './vanilla_tasks/outbox_send';
+import VanillaOutboxSend from "./vanilla_tasks/outbox_send";
 
- import VanillaAppendMessage from './vanilla_tasks/append_message';
+import VanillaAppendMessage from "./vanilla_tasks/append_message";
 
- import CommonAccountModify from '../../tasks/account_modify';
- import CommonIdentityModify from '../../tasks/identity_modify';
+import CommonAccountModify from "../../tasks/account_modify";
+import CommonIdentityModify from "../../tasks/identity_modify";
 
- import CommonNewTracking from '../../tasks/new_tracking';
+import CommonNewTracking from "../../tasks/new_tracking";
 
- export default [
-   VanillaSyncFolderList,
+export default [
+  VanillaSyncFolderList,
 
-   VanillaSyncGrow,
-   VanillaSyncRefresh,
-   VanillaSyncMessage,
-   VanillaSyncConv,
-   VanillaSyncBody,
-   // TODO: merge_conversations
+  VanillaSyncGrow,
+  VanillaSyncRefresh,
+  VanillaSyncMessage,
+  VanillaSyncConv,
+  VanillaSyncBody,
+  // TODO: merge_conversations
 
-   VanillaStoreFlags,
+  VanillaStoreFlags,
 
-   VanillaDownload,
+  VanillaDownload,
 
-   CommonDraftSave,
-   CommonDraftAttach,
-   CommonDraftDetach,
-   CommonDraftDelete,
+  CommonDraftSave,
+  CommonDraftAttach,
+  CommonDraftDetach,
+  CommonDraftDelete,
 
-   VanillaOutboxSend,
+  VanillaOutboxSend,
 
-   VanillaAppendMessage,
+  VanillaAppendMessage,
 
-   CommonAccountModify,
-   CommonIdentityModify,
- 
-   CommonNewTracking,
- ];
+  CommonAccountModify,
+  CommonIdentityModify,
+
+  CommonNewTracking,
+];

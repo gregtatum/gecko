@@ -18,19 +18,21 @@ export default function fillConfigPlaceholders(userDetails, sourceConfigInfo) {
   // Return a mutated copy, don't mutate the original.
   var configInfo = JSON.parse(JSON.stringify(sourceConfigInfo));
 
-  var details = userDetails.emailAddress.split('@');
-  var emailLocalPart = details[0], emailDomainPart = details[1];
+  var details = userDetails.emailAddress.split("@");
+  var emailLocalPart = details[0],
+    emailDomainPart = details[1];
 
   var placeholderFields = {
-    incoming: ['username', 'hostname', 'server'],
-    outgoing: ['username', 'hostname'],
+    incoming: ["username", "hostname", "server"],
+    outgoing: ["username", "hostname"],
   };
 
   function fillPlaceholder(value) {
-    return value.replace('%EMAILADDRESS%', userDetails.emailAddress)
-                .replace('%EMAILLOCALPART%', emailLocalPart)
-                .replace('%EMAILDOMAIN%', emailDomainPart)
-                .replace('%REALNAME%', userDetails.displayName);
+    return value
+      .replace("%EMAILADDRESS%", userDetails.emailAddress)
+      .replace("%EMAILLOCALPART%", emailLocalPart)
+      .replace("%EMAILDOMAIN%", emailDomainPart)
+      .replace("%REALNAME%", userDetails.displayName);
   }
 
   for (var serverType in placeholderFields) {
@@ -50,5 +52,4 @@ export default function fillConfigPlaceholders(userDetails, sourceConfigInfo) {
   }
 
   return configInfo;
-};
-
+}

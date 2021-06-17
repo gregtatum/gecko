@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../task_infra/task_definer';
+import TaskDefiner from "../task_infra/task_definer";
 
-import churnAllNewMessages from 'app_logic/new_batch_churn';
+import churnAllNewMessages from "app_logic/new_batch_churn";
 
 /**
  * This task gathers up the new_tracking data from all accounts, feeds it to the
@@ -30,11 +30,11 @@ import churnAllNewMessages from 'app_logic/new_batch_churn';
  */
 export default TaskDefiner.defineAtMostOnceTask([
   {
-    name: 'new_flush',
+    name: "new_flush",
     // This will cause us to use the bin 'only' at all times.
     binByArg: null,
 
-    async helped_plan(ctx/*, rawTask*/) {
+    async helped_plan(ctx /*, rawTask*/) {
       // -- Get the list of all accounts
       // grab the TOC and use getAllItems to get the bridge wire-protocol rep
       // because we expose the account info objects to the app logic and it's
@@ -46,14 +46,13 @@ export default TaskDefiner.defineAtMostOnceTask([
       // -- For each account, consult the new_tracking task to get the data
       const newSetsWithAccount = [];
       for (let accountInfo of accountInfos) {
-        let newByConv = ctx.synchronouslyConsultOtherTask(
-          {
-            name: 'new_tracking',
-            accountId: accountInfo.id
-          });
+        let newByConv = ctx.synchronouslyConsultOtherTask({
+          name: "new_tracking",
+          accountId: accountInfo.id,
+        });
         newSetsWithAccount.push({
           accountInfo,
-          newByConv
+          newByConv,
         });
       }
 
@@ -61,12 +60,12 @@ export default TaskDefiner.defineAtMostOnceTask([
       let churned = await churnAllNewMessages(ctx, newSetsWithAccount);
 
       // -- Send the result over the bridge.
-      ctx.broadcastOverBridges('newMessagesUpdate', churned);
+      ctx.broadcastOverBridges("newMessagesUpdate", churned);
 
       // -- All done
       return {
-        taskState: null
+        taskState: null,
       };
     },
-  }
+  },
 ]);

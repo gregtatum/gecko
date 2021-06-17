@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
+import evt from "evt";
 
 /**
  * A view of the entirety of a list view that's stored in the backend.  As the
@@ -51,28 +51,33 @@ export default function EntireListView(api, itemConstructor, handle) {
   this.complete = false;
 }
 EntireListView.prototype = evt.mix({
-  toString: function() {
-    return '[EntireListView: ' + this._ns + ' ' + this.handle + ']';
+  toString() {
+    return "[EntireListView: " + this._ns + " " + this.handle + "]";
   },
-  toJSON: function() {
+  toJSON() {
     return {
-      type: 'EntireListView',
+      type: "EntireListView",
       namespace: this._ns,
-      handle: this.handle
+      handle: this.handle,
     };
   },
 
-  __update: function(details) {
+  __update(details) {
     let newSerial = ++this.serial;
 
     for (let change of details.changes) {
-      if (change.type === 'add') {
+      if (change.type === "add") {
         let obj = new this._itemConstructor(
-          this._api, change.state, change.overlays, change.matchInfo, this);
+          this._api,
+          change.state,
+          change.overlays,
+          change.matchInfo,
+          this
+        );
         obj.serial = newSerial;
         this.items.splice(change.index, 0, obj);
-        this.emit('add', obj, change.index);
-      } else if (change.type === 'change') {
+        this.emit("add", obj, change.index);
+      } else if (change.type === "change") {
         let obj = this.items[change.index];
         obj.serial = newSerial;
         if (change.state) {
@@ -81,25 +86,30 @@ EntireListView.prototype = evt.mix({
         if (change.overlays) {
           obj.__updateOverlays(change.overlays);
         }
-        this.emit('change', obj, change.index, !!change.state,
-                  !!change.overlays);
-        obj.emit('change', !!change.state, !!change.overlays);
-      } else if (change.type === 'remove') {
+        this.emit(
+          "change",
+          obj,
+          change.index,
+          !!change.state,
+          !!change.overlays
+        );
+        obj.emit("change", !!change.state, !!change.overlays);
+      } else if (change.type === "remove") {
         let obj = this.items[change.index];
         this.items.splice(change.index, 1);
-        this.emit('remove', obj, change.index);
+        this.emit("remove", obj, change.index);
       }
     }
 
     this.complete = true;
-    this.emit('complete', this);
+    this.emit("complete", this);
   },
 
-  release: function() {
+  release() {
     this._api.__bridgeSend({
-        type: 'cleanupContext',
-        handle: this.handle
-      });
+      type: "cleanupContext",
+      handle: this.handle,
+    });
 
     for (var i = 0; i < this.items.length; i++) {
       var item = this.items[i];

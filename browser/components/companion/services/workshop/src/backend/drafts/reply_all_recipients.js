@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-import { checkIfAddressListContainsAddress, filterOutIdentity } from './address_helpers';
+import {
+  checkIfAddressListContainsAddress,
+  filterOutIdentity,
+} from "./address_helpers";
 
 /**
  * Given the recipients of a message, the (effective after reply-to ingestion)
@@ -29,8 +32,11 @@ import { checkIfAddressListContainsAddress, filterOutIdentity } from './address_
  *   happening if someone with a less-clever client does reply-all to this new
  *   reply.
  */
-export default function replyAllRecipients(sourceRecipients, sourceAuthor,
-                                   replyAuthor) {
+export default function replyAllRecipients(
+  sourceRecipients,
+  sourceAuthor,
+  replyAuthor
+) {
   let rTo;
   // No need to change the lists if the author is already on the
   // reply lists.
@@ -39,38 +45,37 @@ export default function replyAllRecipients(sourceRecipients, sourceAuthor,
   // nsMsgCompose.cpp does a lot of checking that we should
   // audit, although much of it could just be related to its
   // much more extensive identity support.
-  if (checkIfAddressListContainsAddress(sourceRecipients.to,
-                                        sourceAuthor) ||
-      checkIfAddressListContainsAddress(sourceRecipients.cc,
-                                        sourceAuthor)) {
+  if (
+    checkIfAddressListContainsAddress(sourceRecipients.to, sourceAuthor) ||
+    checkIfAddressListContainsAddress(sourceRecipients.cc, sourceAuthor)
+  ) {
     rTo = sourceRecipients.to;
   }
   // add the author as the first 'to' person
-  else {
-    if (sourceRecipients.to && sourceRecipients.to.length) {
-      rTo = [sourceAuthor].concat(sourceRecipients.to);
-    } else {
-      rTo = [sourceAuthor];
-    }
+  else if (sourceRecipients.to && sourceRecipients.to.length) {
+    rTo = [sourceAuthor].concat(sourceRecipients.to);
+  } else {
+    rTo = [sourceAuthor];
   }
 
   // Special-case a reply-to-self email where the only recipient was the
   // message's own author.  In that case, we do not want to perform the
   // filtering below.
-  if (rTo.length === 1 &&
-      (!sourceRecipients.cc || sourceRecipients.cc.length === 0) &&
-      checkIfAddressListContainsAddress(rTo, replyAuthor)) {
+  if (
+    rTo.length === 1 &&
+    (!sourceRecipients.cc || sourceRecipients.cc.length === 0) &&
+    checkIfAddressListContainsAddress(rTo, replyAuthor)
+  ) {
     return {
       to: rTo,
       cc: [],
-      bcc: sourceRecipients.bcc
+      bcc: sourceRecipients.bcc,
     };
   }
 
   return {
     to: filterOutIdentity(rTo, replyAuthor),
     cc: filterOutIdentity(sourceRecipients.cc || [], replyAuthor),
-    bcc: sourceRecipients.bcc
+    bcc: sourceRecipients.bcc,
   };
-};
-
+}

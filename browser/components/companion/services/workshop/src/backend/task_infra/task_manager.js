@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
-import logic from 'logic';
+import evt from "evt";
+import logic from "logic";
 
-import TaskContext from './task_context';
+import TaskContext from "./task_context";
 
-import { SmartWakeLock } from '../wakelocks';
+import { SmartWakeLock } from "../wakelocks";
 
 /**
  * The public API and ultimate coordinator of all tasks.  Tracks and prioritizes
@@ -40,10 +40,16 @@ import { SmartWakeLock } from '../wakelocks';
  * `__restoreFromDB` method and we have fully initialized all complex tasks.
  * (Complex task initialization can be async.)
  */
-export default function TaskManager({ universe, db, taskRegistry, taskResources,
-                                      taskPriorities, accountManager }) {
+export default function TaskManager({
+  universe,
+  db,
+  taskRegistry,
+  taskResources,
+  taskPriorities,
+  accountManager,
+}) {
   evt.Emitter.call(this);
-  logic.defineScope(this, 'TaskManager');
+  logic.defineScope(this, "TaskManager");
   this._universe = universe;
   this._db = db;
   this._registry = taskRegistry;
@@ -59,9 +65,9 @@ export default function TaskManager({ universe, db, taskRegistry, taskResources,
   // strategy to avoid colliding keys, probably.  We use Date.now and then
   // assume that we won't generate tasks at a sustainted rate of more than 100
   // tasks per millisecond (on average).
-  let idBase = (Date.now() - 1400000000000);
+  let idBase = Date.now() - 1400000000000;
   if (idBase < 0) {
-    throw new Error('clock is bad, correctness compromised, giving up.');
+    throw new Error("clock is bad, correctness compromised, giving up.");
   }
   this._nextId = idBase * 100;
 
@@ -106,16 +112,15 @@ export default function TaskManager({ universe, db, taskRegistry, taskResources,
 }
 TaskManager.prototype = evt.mix({
   async __restoreFromDB() {
-    let { wrappedTasks, complexTaskStates } =
-      await this._db.loadTasks();
-    logic(this, 'restoreFromDB', { count: wrappedTasks.length });
+    let { wrappedTasks, complexTaskStates } = await this._db.loadTasks();
+    logic(this, "restoreFromDB", { count: wrappedTasks.length });
 
     // -- Restore wrapped tasks
     for (let wrappedTask of wrappedTasks) {
       if (wrappedTask.state === null) {
         this._tasksToPlan.push(wrappedTask);
       } else {
-        this.__queueTasksOrMarkers([wrappedTask], 'restored:simple', true);
+        this.__queueTasksOrMarkers([wrappedTask], "restored:simple", true);
       }
     }
 
@@ -124,31 +129,44 @@ TaskManager.prototype = evt.mix({
     this._registry.initializeFromDatabaseState(complexTaskStates);
     // Initialize the global tasks.
     pendingInitPromises.push(
-      this._registry.initGlobalTasks()
-      .then((markers) => {
-        this.__queueTasksOrMarkers(markers, 'restored:complex', true);
-      }));
+      this._registry.initGlobalTasks().then(markers => {
+        this.__queueTasksOrMarkers(markers, "restored:complex", true);
+      })
+    );
 
-    this._accountsTOC.getAllItems().forEach((accountInfo) => {
-      let foldersTOC =
-        this._accountManager.accountFoldersTOCs.get(accountInfo.id);
+    this._accountsTOC.getAllItems().forEach(accountInfo => {
+      let foldersTOC = this._accountManager.accountFoldersTOCs.get(
+        accountInfo.id
+      );
       pendingInitPromises.push(
-        this._registry.accountExistsInitTasks(
-          accountInfo.id, accountInfo.engine, accountInfo, foldersTOC)
-        .then((markers) => {
-          this.__queueTasksOrMarkers(markers, 'restored:complex', true);
-        }));
+        this._registry
+          .accountExistsInitTasks(
+            accountInfo.id,
+            accountInfo.engine,
+            accountInfo,
+            foldersTOC
+          )
+          .then(markers => {
+            this.__queueTasksOrMarkers(markers, "restored:complex", true);
+          })
+      );
     });
-    this._accountsTOC.on('add', (accountInfo) => {
-      let foldersTOC =
-        this._accountManager.accountFoldersTOCs.get(accountInfo.id);
-      this._registry.accountExistsInitTasks(
-        accountInfo.id, accountInfo.engine, accountInfo, foldersTOC)
-      .then((markers) => {
-        this.__queueTasksOrMarkers(markers, 'restored:complex', true);
-      });
+    this._accountsTOC.on("add", accountInfo => {
+      let foldersTOC = this._accountManager.accountFoldersTOCs.get(
+        accountInfo.id
+      );
+      this._registry
+        .accountExistsInitTasks(
+          accountInfo.id,
+          accountInfo.engine,
+          accountInfo,
+          foldersTOC
+        )
+        .then(markers => {
+          this.__queueTasksOrMarkers(markers, "restored:complex", true);
+        });
     });
-    this._accountsTOC.on('remove', (accountInfo) => {
+    this._accountsTOC.on("remove", accountInfo => {
       this._registry.accountRemoved(accountInfo.id);
       // TODO: we need to reap the markers
     });
@@ -156,12 +174,10 @@ TaskManager.prototype = evt.mix({
     // -- Trigger processing when all initialization has completed.
     Promise.all(pendingInitPromises).then(() => {
       this._activePromise = null;
-      logic(
-        this, 'starting',
-        {
-          numTasksToPlan: this._tasksToPlan.length,
-          numPrioritizedTasks: this._priorities.numTasksToExecute
-        });
+      logic(this, "starting", {
+        numTasksToPlan: this._tasksToPlan.length,
+        numPrioritizedTasks: this._priorities.numTasksToExecute,
+      });
       this._maybeDoStuff();
     });
   },
@@ -173,18 +189,18 @@ TaskManager.prototype = evt.mix({
    */
   _ensureWakeLock(why) {
     if (!this._activeWakeLock) {
-      logic(this, 'ensureWakeLock', { why });
-      this._activeWakeLock = new SmartWakeLock({ locks: ['cpu'] });
+      logic(this, "ensureWakeLock", { why });
+      this._activeWakeLock = new SmartWakeLock({ locks: ["cpu"] });
     } else {
-      this._activeWakeLock.renew('TaskManager:ensure');
+      this._activeWakeLock.renew("TaskManager:ensure");
     }
   },
 
   __renewWakeLock() {
     if (this._activeWakeLock) {
-      this._activeWakeLock.renew('TaskManager:explicit');
+      this._activeWakeLock.renew("TaskManager:explicit");
     } else {
-      logic.fail('explicit renew propagated without a wakelock?');
+      logic.fail("explicit renew propagated without a wakelock?");
     }
   },
 
@@ -195,7 +211,7 @@ TaskManager.prototype = evt.mix({
    */
   _releaseWakeLock() {
     if (this._activeWakeLock) {
-      this._activeWakeLock.unlock('TaskManager:release');
+      this._activeWakeLock.unlock("TaskManager:release");
       this._activeWakeLock = null;
     }
   },
@@ -227,7 +243,7 @@ TaskManager.prototype = evt.mix({
     this._ensureWakeLock(why);
     let wrappedTasks = this.__wrapTasks(rawTasks);
 
-    logic(this, 'schedulePersistent', { why: why, tasks: wrappedTasks });
+    logic(this, "schedulePersistent", { why, tasks: wrappedTasks });
 
     this._pendingPlanWrites++;
     return this._db.addTasks(wrappedTasks).then(() => {
@@ -244,11 +260,13 @@ TaskManager.prototype = evt.mix({
    * if they return no result, `undefined` will be returned.
    */
   waitForTasksToBePlanned(taskIds) {
-    return Promise.all(taskIds.map((taskId) => {
-      return new Promise((resolve) => {
-        this.once('planned:' + taskId, resolve);
-      });
-    }));
+    return Promise.all(
+      taskIds.map(taskId => {
+        return new Promise(resolve => {
+          this.once("planned:" + taskId, resolve);
+        });
+      })
+    );
   },
 
   /**
@@ -257,11 +275,12 @@ TaskManager.prototype = evt.mix({
    */
   scheduleTaskAndWaitForPlannedResult(rawTask, why) {
     return this.scheduleTasks([rawTask], why)
-    .then((taskIds) => {
-      return this.waitForTasksToBePlanned(taskIds);
-    }).then((results) => {
-      return results[0];
-    });
+      .then(taskIds => {
+        return this.waitForTasksToBePlanned(taskIds);
+      })
+      .then(results => {
+        return results[0];
+      });
   },
 
   /**
@@ -271,16 +290,15 @@ TaskManager.prototype = evt.mix({
    * tasks is treated as if an empty list had been generated.
    */
   scheduleTaskAndWaitForPlannedUndoTasks(rawTask, why) {
-    return this.scheduleTasks([rawTask], why)
-    .then(([taskId]) => {
-      return new Promise((resolve) => {
+    return this.scheduleTasks([rawTask], why).then(([taskId]) => {
+      return new Promise(resolve => {
         // We can't guarantee that the undo event will be generated, so we need
         // to infer no undo tasks were generated if we saw planned.  Also,
         // since we can only use removeListener on once()-bound listeners if
         // there was an associated object, we add the undo listener just using
         // `on` and explicitly remove it in our (guaranteed-to-fire) `once`
         // planned handler.
-        let undoHandler = (undoTasks) => {
+        let undoHandler = undoTasks => {
           resolve(undoTasks);
         };
         let ensureCleanup = () => {
@@ -300,11 +318,12 @@ TaskManager.prototype = evt.mix({
    */
   scheduleTaskAndWaitForExecutedResult(rawTask, why) {
     return this.scheduleTasks([rawTask], why)
-    .then((taskIds) => {
-      return this.waitForTasksToBeExecuted(taskIds);
-    }).then((results) => {
-      return results[0];
-    });
+      .then(taskIds => {
+        return this.waitForTasksToBeExecuted(taskIds);
+      })
+      .then(results => {
+        return results[0];
+      });
   },
 
   /**
@@ -314,11 +333,13 @@ TaskManager.prototype = evt.mix({
    * if they return no result, `undefined` will be returned.
    */
   waitForTasksToBeExecuted(taskIds) {
-    return Promise.all(taskIds.map((taskId) => {
-      return new Promise((resolve) => {
-        this.once('executed:' + taskId, resolve);
-      });
-    }));
+    return Promise.all(
+      taskIds.map(taskId => {
+        return new Promise(resolve => {
+          this.once("executed:" + taskId, resolve);
+        });
+      })
+    );
   },
 
   /**
@@ -333,9 +354,9 @@ TaskManager.prototype = evt.mix({
   scheduleNonPersistentTasks(rawTasks, why) {
     this._ensureWakeLock(why);
     let wrappedTasks = this.__wrapTasks(rawTasks);
-    logic(this, 'scheduleNonPersistent', { why: why, tasks: wrappedTasks });
+    logic(this, "scheduleNonPersistent", { why, tasks: wrappedTasks });
 
-    wrappedTasks.forEach((wrapped) => {
+    wrappedTasks.forEach(wrapped => {
       wrapped.nonpersistent = true;
     });
     this.__enqueuePersistedTasksForPlanning(wrappedTasks);
@@ -356,11 +377,12 @@ TaskManager.prototype = evt.mix({
    */
   scheduleNonPersistentTaskAndWaitForPlannedResult(rawTask, why) {
     return this.scheduleNonPersistentTasks([rawTask], why)
-    .then((taskIds) => {
-      return this.waitForTasksToBePlanned(taskIds);
-    }).then((results) => {
-      return results[0];
-    });
+      .then(taskIds => {
+        return this.waitForTasksToBePlanned(taskIds);
+      })
+      .then(results => {
+        return results[0];
+      });
   },
 
   /**
@@ -377,24 +399,24 @@ TaskManager.prototype = evt.mix({
    */
   scheduleNonPersistentTaskAndWaitForExecutedResult(rawTask, why) {
     return this.scheduleNonPersistentTasks([rawTask], why)
-    .then((taskIds) => {
-      return this.waitForTasksToBeExecuted(taskIds);
-    }).then((results) => {
-      return results[0];
-    });
+      .then(taskIds => {
+        return this.waitForTasksToBeExecuted(taskIds);
+      })
+      .then(results => {
+        return results[0];
+      });
   },
-
 
   /**
    * Wrap raw tasks and issue them an id, suitable for persisting to the
    * database.
    */
   __wrapTasks(rawTasks) {
-    return rawTasks.map((rawTask) => {
+    return rawTasks.map(rawTask => {
       return {
         id: this._nextId++,
         rawTask,
-        state: null // => planned => (deleted)
+        state: null, // => planned => (deleted)
       };
     });
   },
@@ -406,7 +428,7 @@ TaskManager.prototype = evt.mix({
   __enqueuePersistedTasksForPlanning(wrappedTasks, sourceId) {
     this._ensureWakeLock();
     for (let wrappedTask of wrappedTasks) {
-      this.emit('willPlan', wrappedTask, sourceId);
+      this.emit("willPlan", wrappedTask, sourceId);
     }
     this._tasksToPlan.splice(this._tasksToPlan.length, 0, ...wrappedTasks);
     this._maybeDoStuff();
@@ -426,8 +448,8 @@ TaskManager.prototype = evt.mix({
     // and there's no new work to do.
     let prioritized = 0;
     for (let taskThing of taskThings) {
-      logic(this, 'queueing', { taskThing, sourceId });
-      this.emit('willExecute', taskThing, sourceId);
+      logic(this, "queueing", { taskThing, sourceId });
+      this.emit("willExecute", taskThing, sourceId);
       if (this._resources.ownOrRelayTaskThing(taskThing)) {
         prioritized++;
       }
@@ -453,7 +475,7 @@ TaskManager.prototype = evt.mix({
    * requested by complex tasks.
    */
   __removeTaskOrMarker(taskId) {
-    logic(this, 'removing', { taskId });
+    logic(this, "removing", { taskId });
     this._resources.removeTaskThing(taskId);
   },
 
@@ -473,7 +495,7 @@ TaskManager.prototype = evt.mix({
     } else if (!this._priorities.hasTasksToExecute()) {
       this._activePromise = this._executeNextTask();
     } else {
-      logic(this, 'nothingToDo');
+      logic(this, "nothingToDo");
       // Indicate the queue is empty if we're here and there aren't tasks that
       // will imminently be placed in the plan queue.  This primarily matters
       // for task groups with tasks to schedule when the group completes.  In
@@ -481,7 +503,7 @@ TaskManager.prototype = evt.mix({
       // reached, but the writes will almost certainly not complete until after
       // this code has been reached.
       if (this._pendingPlanWrites === 0) {
-        this.emit('taskQueueEmpty');
+        this.emit("taskQueueEmpty");
       }
       this._releaseWakeLock();
       // bail, intentionally doing nothing.
@@ -499,19 +521,24 @@ TaskManager.prototype = evt.mix({
       // this.  Right now we're effectively being really paranoid to make sure
       // we clear the stack.
       if (this._tasksToPlan.length || !this._priorities.hasTasksToExecute()) {
-        setTimeout(() => { this._maybeDoStuff(); }, 0);
+        setTimeout(() => {
+          this._maybeDoStuff();
+        }, 0);
       }
       return;
     }
 
-    this._activePromise.then(() => {
-      this._activePromise = null;
-      this._maybeDoStuff();
-    }, (error) => {
-      this._activePromise = null;
-      logic(this, 'taskError', { error, stack: error.stack });
-      this._maybeDoStuff();
-    });
+    this._activePromise.then(
+      () => {
+        this._activePromise = null;
+        this._maybeDoStuff();
+      },
+      error => {
+        this._activePromise = null;
+        logic(this, "taskError", { error, stack: error.stack });
+        this._maybeDoStuff();
+      }
+    );
   },
 
   /**
@@ -521,57 +548,63 @@ TaskManager.prototype = evt.mix({
    */
   _planNextTask() {
     let wrappedTask = this._tasksToPlan.shift();
-    logic(this, 'planning:begin', { task: wrappedTask });
+    logic(this, "planning:begin", { task: wrappedTask });
     let ctx = new TaskContext(wrappedTask, this._universe);
     let planResult = this._registry.planTask(ctx, wrappedTask);
     if (planResult) {
       planResult.then(
-        (maybeResult) => {
-          let result = maybeResult && maybeResult.wrappedResult || undefined;
-          logic(this, 'planning:end', { success: true, task: wrappedTask });
-          this.emit('planned:' + wrappedTask.id, result);
-          this.emit('planned', wrappedTask.id, result);
+        maybeResult => {
+          let result = (maybeResult && maybeResult.wrappedResult) || undefined;
+          logic(this, "planning:end", { success: true, task: wrappedTask });
+          this.emit("planned:" + wrappedTask.id, result);
+          this.emit("planned", wrappedTask.id, result);
         },
-        (err) => {
-          logic(
-            this, 'planning:end',
-            { success: false, err, task: wrappedTask });
-          this.emit('planned:' + wrappedTask.id, null);
-          this.emit('planned', wrappedTask.id, null);
-        });
+        err => {
+          logic(this, "planning:end", {
+            success: false,
+            err,
+            task: wrappedTask,
+          });
+          this.emit("planned:" + wrappedTask.id, null);
+          this.emit("planned", wrappedTask.id, null);
+        }
+      );
     } else {
-      logic(this, 'planning:end', { moot: true, task: wrappedTask });
-      this.emit('planned:' + wrappedTask.id, undefined);
-      this.emit('planned', wrappedTask.id, undefined);
+      logic(this, "planning:end", { moot: true, task: wrappedTask });
+      this.emit("planned:" + wrappedTask.id, undefined);
+      this.emit("planned", wrappedTask.id, undefined);
     }
     return planResult;
   },
 
   _executeNextTask() {
     let taskThing = this._priorities.popNextAvailableTask();
-    logic(this, 'executing:begin', { task: taskThing });
+    logic(this, "executing:begin", { task: taskThing });
 
     let ctx = new TaskContext(taskThing, this._universe);
     let execResult = this._registry.executeTask(ctx, taskThing);
     if (execResult) {
       execResult.then(
-        (maybeResult) => {
-          let result = maybeResult && maybeResult.wrappedResult || undefined;
-          logic(this, 'executing:end', { success: true, task: taskThing });
-          this.emit('executed:' + taskThing.id, result);
-          this.emit('executed', taskThing.id, result);
+        maybeResult => {
+          let result = (maybeResult && maybeResult.wrappedResult) || undefined;
+          logic(this, "executing:end", { success: true, task: taskThing });
+          this.emit("executed:" + taskThing.id, result);
+          this.emit("executed", taskThing.id, result);
         },
-        (err) => {
-          logic(
-            this, 'executing:end',
-            { success: false, err, task: taskThing });
-          this.emit('executed:' + taskThing.id, null);
-          this.emit('executed', taskThing.id, null);
-        });
+        err => {
+          logic(this, "executing:end", {
+            success: false,
+            err,
+            task: taskThing,
+          });
+          this.emit("executed:" + taskThing.id, null);
+          this.emit("executed", taskThing.id, null);
+        }
+      );
     } else {
-      logic(this, 'executing:end', { moot: true, task: taskThing });
-      this.emit('executed:' + taskThing.id, undefined);
-      this.emit('executed', taskThing.id, undefined);
+      logic(this, "executing:end", { moot: true, task: taskThing });
+      this.emit("executed:" + taskThing.id, undefined);
+      this.emit("executed", taskThing.id, undefined);
     }
     return execResult;
   },
@@ -600,13 +633,16 @@ TaskManager.prototype = evt.mix({
    * @param Object [subtaskArg]
    */
   __trackAndWrapSubtask(ctx, subctx, subtaskFunc, subtaskArg) {
-    logic(this, 'subtask:begin', { taskId: ctx.id, subtaskId: subctx.id });
-    let subtaskResult =
-      subtaskFunc.call(subctx.__taskInstance, subctx, subtaskArg);
+    logic(this, "subtask:begin", { taskId: ctx.id, subtaskId: subctx.id });
+    let subtaskResult = subtaskFunc.call(
+      subctx.__taskInstance,
+      subctx,
+      subtaskArg
+    );
     // (we want our logging to definitely happen before any result is returned)
-    return subtaskResult.then((result) => {
-      logic(this, 'subtask:end', { taskId: ctx.id, subtaskId: subctx.id });
+    return subtaskResult.then(result => {
+      logic(this, "subtask:end", { taskId: ctx.id, subtaskId: subctx.id });
       return result;
     });
-  }
+  },
 });

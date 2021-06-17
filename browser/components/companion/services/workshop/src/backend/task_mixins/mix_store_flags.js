@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-import { normalizeAndApplyChanges, applyChanges, mergeChanges } from
-  '../delta_algebra';
-import { selectMessages } from '../message_selector';
+import {
+  normalizeAndApplyChanges,
+  applyChanges,
+  mergeChanges,
+} from "../delta_algebra";
+import { selectMessages } from "../message_selector";
 
-import churnConversation from '../churn_drivers/conv_churn_driver';
+import churnConversation from "../churn_drivers/conv_churn_driver";
 
 /**
  * Not-particularly-clever flag-storing complex task.  All requests/local
@@ -59,7 +62,7 @@ const MixStoreFlagsMixin = {
    */
   initPersistentState() {
     return {
-      umidChanges: new Map()
+      umidChanges: new Map(),
     };
   },
 
@@ -69,20 +72,19 @@ const MixStoreFlagsMixin = {
     for (let umid of persistentState.umidChanges.keys()) {
       markers.push({
         type: this.name,
-        id: this.name + ':' + umid,
-        accountId: accountId,
-        umid: umid,
+        id: this.name + ":" + umid,
+        accountId,
+        umid,
         priorityTags: [],
-        exclusiveResources: []
+        exclusiveResources: [],
       });
     }
 
     return {
       memoryState: {},
-      markers
+      markers,
     };
   },
-
 
   async plan(ctx, persistentState, memoryState, req) {
     let { umidChanges } = persistentState;
@@ -90,7 +92,7 @@ const MixStoreFlagsMixin = {
     // -- Load the conversation and messages
     let fromDb = await ctx.beginMutate({
       conversations: new Map([[req.convId, null]]),
-      messagesByConversation: new Map([[req.convId, null]])
+      messagesByConversation: new Map([[req.convId, null]]),
     });
 
     let loadedMessages = fromDb.messagesByConversation.get(req.convId);
@@ -100,13 +102,19 @@ const MixStoreFlagsMixin = {
 
     // - Apply the message selector if applicable
     let filteredMessages = selectMessages(
-      loadedMessages, req.onlyMessages, req.messageSelector);
+      loadedMessages,
+      req.onlyMessages,
+      req.messageSelector
+    );
 
     // -- Per message, compute the changes required and issue/update markers
     let undoTasks = [];
     for (let message of filteredMessages) {
-      let actualChanges =
-        normalizeAndApplyChanges(message.flags, req.add, req.remove);
+      let actualChanges = normalizeAndApplyChanges(
+        message.flags,
+        req.add,
+        req.remove
+      );
       let { add: actuallyAdded, remove: actuallyRemoved } = actualChanges;
 
       if (actuallyAdded || actuallyRemoved) {
@@ -120,26 +128,27 @@ const MixStoreFlagsMixin = {
           messageSelector: null,
           // invert the manipulation that was actually performed
           add: actuallyRemoved && actuallyRemoved.concat(),
-          remove: actuallyAdded && actuallyAdded.concat()
+          remove: actuallyAdded && actuallyAdded.concat(),
         });
 
         modifiedMessagesMap.set(message.id, message);
         anyMessageChanged = true;
 
         let umid = message.umid;
-        let markerId = this.name + ':' + umid;
+        let markerId = this.name + ":" + umid;
         // - Unify with any outstanding request for this message
         if (umidChanges.has(umid)) {
-          let mergedChanges =
-            mergeChanges(umidChanges.get(umid), actualChanges);
+          let mergedChanges = mergeChanges(
+            umidChanges.get(umid),
+            actualChanges
+          );
           // It's possible that we now have nothing to tell the server to do.
           if (mergedChanges.add || mergedChanges.remove) {
             umidChanges.set(umid, mergedChanges);
             // we already have a marker for this one and there's no need to
             // change it, so we can just continue
             continue;
-          }
-          else {
+          } else {
             umidChanges.delete(umid);
             modifyTaskMarkers.set(markerId, null);
             continue;
@@ -151,16 +160,14 @@ const MixStoreFlagsMixin = {
         // because umidChanges never gets any state put in it.)
         if (this.execute) {
           umidChanges.set(umid, actualChanges);
-          modifyTaskMarkers.set(
-            markerId,
-            {
-              type: this.name,
-              id: markerId,
-              accountId: req.accountId,
-              umid,
-              priorityTags: [],
-              exclusiveResources: []
-            });
+          modifyTaskMarkers.set(markerId, {
+            type: this.name,
+            id: markerId,
+            accountId: req.accountId,
+            umid,
+            priorityTags: [],
+            exclusiveResources: [],
+          });
         }
       }
     } // (end per-message loop)
@@ -168,8 +175,7 @@ const MixStoreFlagsMixin = {
     let conversationsMap = null;
     if (anyMessageChanged) {
       let oldConvInfo = fromDb.conversations.get(req.convId);
-      let convInfo = churnConversation(
-        req.convId, oldConvInfo, loadedMessages);
+      let convInfo = churnConversation(req.convId, oldConvInfo, loadedMessages);
       conversationsMap = new Map([[convInfo.id, convInfo]]);
     }
 
@@ -181,11 +187,11 @@ const MixStoreFlagsMixin = {
     await ctx.finishTask({
       mutations: {
         conversations: conversationsMap,
-        messages: modifiedMessagesMap
+        messages: modifiedMessagesMap,
       },
       taskMarkers: modifyTaskMarkers,
       complexTaskState: persistentState,
-      undoTasks
+      undoTasks,
     });
   },
 

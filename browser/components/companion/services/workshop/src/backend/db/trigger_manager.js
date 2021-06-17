@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
 /**
  * Simple mechanism for triggers to specify modifications to make that are bound
@@ -56,7 +56,7 @@ TriggerContext.prototype = {
    */
   modify(dict) {
     return this._triggerManager.__triggerMutate(this.name, dict);
-  }
+  },
 };
 
 /**
@@ -73,7 +73,7 @@ TriggerContext.prototype = {
  * TODO: either expose logging in here or in MailDB.
  */
 export default function TriggerManager({ db, triggers }) {
-  logic.defineScope(this, 'TriggerManager');
+  logic.defineScope(this, "TriggerManager");
   this.db = db;
   db.triggerManager = this;
 
@@ -113,7 +113,7 @@ TriggerManager.prototype = {
   },
 
   __triggerMutate(triggerName, dict) {
-    logic(this, 'triggerMutate', { triggerName, dict });
+    logic(this, "triggerMutate", { triggerName, dict });
     if (this.derivedMutations) {
       this.derivedMutations.push(dict);
     }
@@ -132,13 +132,15 @@ TriggerManager.prototype = {
     for (let key of Object.keys(triggerDef)) {
       switch (key) {
         // Ignore special metadata fields.
-        case 'name':
+        case "name":
           break;
         // Everything else is something to bind.
         default: {
           let handlerFunc = triggerDef[key];
           if (!handlerFunc || !handlerFunc.bind) {
-            throw new Error(`${triggerName} has broken handler '${key}: ${handlerFunc}`);
+            throw new Error(
+              `${triggerName} has broken handler '${key}: ${handlerFunc}`
+            );
           }
           let boundHandler = handlerFunc.bind(null, triggerContext);
           this.db.on(key, boundHandler);
@@ -155,5 +157,5 @@ TriggerManager.prototype = {
     let triggerContext = new TriggerContext(this, triggerName);
     let boundHandler = handlerFunc.bind(null, triggerContext);
     this.db.on(eventName, boundHandler);
-  }
+  },
 };

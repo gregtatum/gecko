@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
-import mimetypes from 'mimetypes';
-import { parse as parseAddresses } from 'addressparser';
+import mimetypes from "mimetypes";
+import { parse as parseAddresses } from "addressparser";
 
-import { encodeInt as encodeA64 } from 'shared/a64';
+import { encodeInt as encodeA64 } from "shared/a64";
 
-import * as mailRep from '../../../db/mail_rep';
+import * as mailRep from "../../../db/mail_rep";
 
-import { Tags as asb, Enums as asbEnum }
-  from 'activesync/codepages/AirSyncBase';
-import { Tags as em } from 'activesync/codepages/Email';
+import {
+  Tags as asb,
+  Enums as asbEnum,
+} from "activesync/codepages/AirSyncBase";
+import { Tags as em } from "activesync/codepages/Email";
 
 /**
  * Parse the given WBXML server representation of a message into a GELAM backend
@@ -44,7 +46,7 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
     umid,
     // ActiveSync does not/cannot tell us the Message-ID header unless we
     // fetch the entire MIME body
-    guid: '',
+    guid: "",
     author: null,
     to: null,
     cc: null,
@@ -59,14 +61,15 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
     attachments: [],
     relatedParts: [],
     references: [],
-    bodyReps: null
+    bodyReps: null,
   };
 
   let bodyType, bodySize;
 
   for (let child of node.children) {
-    let childText = child.children.length ? child.children[0].textContent :
-                                            null;
+    let childText = child.children.length
+      ? child.children[0].textContent
+      : null;
 
     switch (child.tag) {
       case em.Subject:
@@ -88,15 +91,17 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
         scratchMsg.date = new Date(childText).valueOf();
         break;
       case em.Read:
-        if (childText === '1') {
-          scratchMsg.flags.push('\\Seen');
+        if (childText === "1") {
+          scratchMsg.flags.push("\\Seen");
         }
         break;
       case em.Flag:
         for (let grandchild of child.children) {
-          if (grandchild.tag === em.Status &&
-              grandchild.children[0].textContent !== '0') {
-            scratchMsg.flags.push('\\Flagged');
+          if (
+            grandchild.tag === em.Status &&
+            grandchild.children[0].textContent !== "0"
+          ) {
+            scratchMsg.flags.push("\\Flagged");
           }
         }
         break;
@@ -106,15 +111,15 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
             case asb.Type:
               var type = grandchild.children[0].textContent;
               if (type === asbEnum.Type.HTML) {
-                bodyType = 'html';
+                bodyType = "html";
               } else {
                 // I've seen a handful of extra-weird messages with body types
                 // that aren't plain or html. Let's assume they're plain,
                 // though.
                 if (type !== asbEnum.Type.PlainText) {
-                  console.warn('A message had a strange body type:', type);
+                  console.warn("A message had a strange body type:", type);
                 }
-                bodyType = 'plain';
+                bodyType = "plain";
               }
               break;
             case asb.EstimatedDataSize:
@@ -127,14 +132,16 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
         }
         break;
       case em.BodySize: // pre-ActiveSync 12.0
-        bodyType = 'plain';
+        bodyType = "plain";
         bodySize = childText;
         break;
       case asb.Attachments: // ActiveSync 12.0+
-      case em.Attachments:  // pre-ActiveSync 12.0
+      case em.Attachments: // pre-ActiveSync 12.0
         for (let attachmentNode of child.children) {
-          if (attachmentNode.tag !== asb.Attachment &&
-              attachmentNode.tag !== em.Attachment) {
+          if (
+            attachmentNode.tag !== asb.Attachment &&
+            attachmentNode.tag !== em.Attachment
+          ) {
             continue;
           }
 
@@ -153,8 +160,9 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
           let isInline = false;
           for (let attachData of attachmentNode.children) {
             let dot, ext;
-            let attachDataText = attachData.children.length ?
-                                 attachData.children[0].textContent : null;
+            let attachDataText = attachData.children.length
+              ? attachData.children[0].textContent
+              : null;
 
             switch (attachData.tag) {
               case asb.DisplayName:
@@ -163,10 +171,11 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
 
                 // Get the file's extension to look up a mimetype, but ignore it
                 // if the filename is of the form '.bashrc'.
-                dot = attachment.name.lastIndexOf('.');
-                ext = dot > 0 ?
-                        attachment.name.substring(dot + 1).toLowerCase() :
-                        '';
+                dot = attachment.name.lastIndexOf(".");
+                ext =
+                  dot > 0
+                    ? attachment.name.substring(dot + 1).toLowerCase()
+                    : "";
                 attachment.type = mimetypes.detectMimeType(ext);
                 break;
               case asb.FileReference:
@@ -182,7 +191,7 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
                 attachment.contentId = attachDataText;
                 break;
               case asb.IsInline:
-                isInline = (attachDataText === '1');
+                isInline = attachDataText === "1";
                 break;
               default:
                 // Ignore other tag types.
@@ -192,12 +201,13 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
 
           if (isInline) {
             scratchMsg.relatedParts.push(
-              mailRep.makeAttachmentPart(attachment));
+              mailRep.makeAttachmentPart(attachment)
+            );
           } else {
             scratchMsg.attachments.push(mailRep.makeAttachmentPart(attachment));
           }
         }
-        scratchMsg.hasAttachments = scratchMsg.attachments.length > 0;
+        scratchMsg.hasAttachments = !!scratchMsg.attachments.length;
         break;
       default:
         // Ignore other tag types.
@@ -210,8 +220,8 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
       type: bodyType,
       sizeEstimate: bodySize,
       amountDownloaded: 0,
-      isDownloaded: false
-    })
+      isDownloaded: false,
+    }),
   ];
 
   return mailRep.makeMessageInfo(scratchMsg);

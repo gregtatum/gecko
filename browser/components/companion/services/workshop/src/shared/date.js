@@ -74,7 +74,6 @@
 // STRICTLY_AFTER that does not check equivalence to round out all possibilities
 // while still being rather explicit.
 
-
 /**
  * IMAP-consistent date comparison; read this as "Is `testDate` BEFORE
  * `comparisonDate`"?
@@ -122,12 +121,11 @@ export let PASTWARDS = 1; // FUTUREWARDS = -1
 export function TIME_DIR_AT_OR_BEYOND(dir, testDate, comparisonDate) {
   if (dir === PASTWARDS) {
     return testDate <= comparisonDate;
-  // we use null as a sentinel value for 'the future'/'now'
+    // we use null as a sentinel value for 'the future'/'now'
   } else if (comparisonDate === null) {
     return testDate >= NOW();
-  } else { // FUTUREWARDS
-    return testDate >= comparisonDate;
-  }
+  } // FUTUREWARDS
+  return testDate >= comparisonDate;
 }
 
 /**
@@ -138,9 +136,8 @@ export function TIME_DIR_AT_OR_BEYOND(dir, testDate, comparisonDate) {
 export function TIME_DIR_DELTA(dir, testDate, comparisonDate) {
   if (dir === PASTWARDS) {
     return testDate - comparisonDate;
-  } else { // FUTUREWARDS
-    return comparisonDate - testDate;
-  }
+  } // FUTUREWARDS
+  return comparisonDate - testDate;
 }
 
 /**
@@ -150,9 +147,8 @@ export function TIME_DIR_DELTA(dir, testDate, comparisonDate) {
 export function TIME_DIR_ADD(dir, baseDate, time) {
   if (dir === PASTWARDS) {
     return baseDate + time;
-  } else { // FUTUREWARDS
-    return baseDate - time;
-  }
+  } // FUTUREWARDS
+  return baseDate - time;
 }
 
 //function DATE_RANGES_OVERLAP(A_startTS, A_endTS, B_startTS, B_endTS) {
@@ -175,7 +171,7 @@ export function TEST_LetsDoTheTimewarpAgain(fakeNow) {
     TIME_WARPED_NOW = null;
     return;
   }
-  if (typeof(fakeNow) !== 'number') {
+  if (typeof fakeNow !== "number") {
     fakeNow = fakeNow.valueOf();
   }
   TIME_WARPED_NOW = fakeNow;
@@ -195,7 +191,7 @@ export function NOW() {
  * values are in milliseconds, if performance.now() is used, can have a decimal
  * value indicating up to one thousandth of a millisecond.
  */
-var perfObj = typeof performance !== 'undefined' ? performance : Date;
+var perfObj = typeof performance !== "undefined" ? performance : Date;
 export function PERFNOW() {
   return TIME_WARPED_NOW || perfObj.now();
 }
@@ -206,8 +202,7 @@ export function PERFNOW() {
  * ask for 2 days ago, you really get 2.5 days worth of time.
  */
 export function makeDaysAgo(numDays) {
-  var past = quantizeDate(TIME_WARPED_NOW || Date.now()) -
-               numDays * DAY_MILLIS;
+  var past = quantizeDate(TIME_WARPED_NOW || Date.now()) - numDays * DAY_MILLIS;
   return past;
 }
 
@@ -226,7 +221,7 @@ export function quantizeDate(date) {
   if (date === null) {
     return null;
   }
-  if (typeof(date) === 'number') {
+  if (typeof date === "number") {
     date = new Date(date);
   }
   return date.setUTCHours(0, 0, 0, 0).valueOf();
@@ -237,11 +232,11 @@ export function quantizeDate(date) {
  * otherwise round up to the midnight of the next day.
  */
 export function quantizeDateUp(date) {
-  if (typeof(date) === 'number') {
+  if (typeof date === "number") {
     date = new Date(date);
   }
   var truncated = date.setUTCHours(0, 0, 0, 0).valueOf();
-  if (date.valueOf()  === truncated) {
+  if (date.valueOf() === truncated) {
     return truncated;
   }
   return truncated + DAY_MILLIS;

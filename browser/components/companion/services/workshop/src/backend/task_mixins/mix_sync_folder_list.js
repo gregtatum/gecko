@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { makeFolderMeta } from '../db/folder_info_rep';
+import { makeFolderMeta } from "../db/folder_info_rep";
 
-import { shallowClone } from 'shared/util';
+import { shallowClone } from "shared/util";
 
 /**
  * Mix-in for folder list synchronization and ensuring that an account has all
@@ -50,8 +50,8 @@ import { shallowClone } from 'shared/util';
  * location.
  */
 const MixinSyncFolderList = {
-  name: 'sync_folder_list',
-  args: ['accountId'],
+  name: "sync_folder_list",
+  args: ["accountId"],
 
   // XXX these are IMAP-specific; these should stay here in an IMAP sub-mix-in
   // (these work for gmail too), while most everything else wants to go into a
@@ -63,48 +63,50 @@ const MixinSyncFolderList = {
     // the normalizeFolder function and our online step have to be clever to
     // fix-up this speculative folder to be a real folder.
     {
-      type: 'inbox',
+      type: "inbox",
       // A previous comment indicated the title-case is intentional, although
       // I think our l10n hacks don't care nor does our fixup logic.
-      displayName: 'Inbox',
+      displayName: "Inbox",
       // IMAP wants this to be at INBOX.  And the other account types don't
       // care.
-      path: 'INBOX',
+      path: "INBOX",
       // The IMAP inbox is an online folder that must exist by definition.
-      serverPath: 'INBOX'
+      serverPath: "INBOX",
     },
     {
-      type: 'outbox',
-      displayName: 'outbox'
+      type: "outbox",
+      displayName: "outbox",
     },
     {
-      type: 'localdrafts',
-      displayName: 'localdrafts'
-    }
+      type: "localdrafts",
+      displayName: "localdrafts",
+    },
   ],
 
-  ensureEssentialOfflineFolders: function(ctx, account) {
+  ensureEssentialOfflineFolders(ctx, account) {
     let foldersTOC = account.foldersTOC;
     let newFolders = [];
 
     for (let desired of this.essentialOfflineFolders) {
       if (foldersTOC.getCanonicalFolderByType(desired.type) === null) {
-        newFolders.push(makeFolderMeta({
-          id: foldersTOC.issueFolderId(),
-          serverId: null,
-          name: desired.displayName,
-          type: desired.type,
-          path: desired.path || desired.displayName,
-          serverPath: desired.serverPath || null,
-          parentId: null,
-          depth: 0,
-          lastSyncedAt: 0
-        }));
+        newFolders.push(
+          makeFolderMeta({
+            id: foldersTOC.issueFolderId(),
+            serverId: null,
+            name: desired.displayName,
+            type: desired.type,
+            path: desired.path || desired.displayName,
+            serverPath: desired.serverPath || null,
+            parentId: null,
+            depth: 0,
+            lastSyncedAt: 0,
+          })
+        );
       }
     }
 
     return Promise.resolve({
-      newFolders
+      newFolders,
     });
   },
 
@@ -118,32 +120,36 @@ const MixinSyncFolderList = {
       // Nothing else that touches folder info is allowed in here.
       `folderInfo:${rawTask.accountId}`,
     ];
-    decoratedTask.priorityTags = [
-      'view:folders'
-    ];
+    decoratedTask.priorityTags = ["view:folders"];
 
     let account = await ctx.universe.acquireAccount(ctx, rawTask.accountId);
 
-    let { newFolders, modifiedFolders } =
-      await this.ensureEssentialOfflineFolders(ctx, account);
+    let {
+      newFolders,
+      modifiedFolders,
+    } = await this.ensureEssentialOfflineFolders(ctx, account);
 
     await ctx.finishTask({
       mutations: {
-        folders: modifiedFolders
+        folders: modifiedFolders,
       },
       newData: {
-        folders: newFolders
+        folders: newFolders,
       },
       // If we don't have an execute method, we're all done already. (POP3)
-      taskState: this.execute ? decoratedTask : null
+      taskState: this.execute ? decoratedTask : null,
     });
   },
 
   async execute(ctx, planned) {
     let account = await ctx.universe.acquireAccount(ctx, planned.accountId);
 
-    let { modifiedFolders, newFolders, newTasks, modifiedSyncStates } =
-      await this.syncFolders(ctx, account);
+    let {
+      modifiedFolders,
+      newFolders,
+      newTasks,
+      modifiedSyncStates,
+    } = await this.syncFolders(ctx, account);
 
     // XXX migrate ensureEssentialOnlineFolders to be something the actual
     // instance provides and that we convert into a list of create_folder tasks.
@@ -154,20 +160,19 @@ const MixinSyncFolderList = {
     //
     // account.ensureEssentialOnlineFolders();
 
-
     await ctx.finishTask({
       mutations: {
         folders: modifiedFolders,
-        syncStates: modifiedSyncStates
+        syncStates: modifiedSyncStates,
       },
       newData: {
         folders: newFolders,
-        tasks: newTasks
+        tasks: newTasks,
       },
       // all done!
-      taskState: null
+      taskState: null,
     });
-  }
+  },
 };
 
 export default MixinSyncFolderList;

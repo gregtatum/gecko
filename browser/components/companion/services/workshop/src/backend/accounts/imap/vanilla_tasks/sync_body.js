@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import MixinSyncBody from '../../../task_mixins/mix_sync_body';
-import MixinImapSyncBody from '../task_mixins/imap_mix_sync_body';
+import MixinSyncBody from "../../../task_mixins/mix_sync_body";
+import MixinImapSyncBody from "../task_mixins/imap_mix_sync_body";
 
 export default TaskDefiner.defineComplexTask([
   MixinSyncBody,
@@ -31,7 +31,7 @@ export default TaskDefiner.defineComplexTask([
 
       // We need to look up all the umidLocations.
       await ctx.read({
-        umidLocations
+        umidLocations,
       });
 
       return umidLocations;
@@ -41,9 +41,8 @@ export default TaskDefiner.defineComplexTask([
       let [folderId, uid] = umidLocations.get(message.umid);
       return {
         folderInfo: account.getFolderById(folderId),
-        uid
+        uid,
       };
-    }
-  }
+    },
+  },
 ]);
-

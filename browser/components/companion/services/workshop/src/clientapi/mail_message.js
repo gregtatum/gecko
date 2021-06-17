@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
+import evt from "evt";
 
-import ContactCache from './contact_cache';
-import MailAttachment from './mail_attachment';
+import ContactCache from "./contact_cache";
+import MailAttachment from "./mail_attachment";
 
-import keyedListHelper from './keyed_list_helper';
+import keyedListHelper from "./keyed_list_helper";
 
-import { showBlobInImg } from './blob_helpers';
+import { showBlobInImg } from "./blob_helpers";
 
 function filterOutBuiltinFlags(flags) {
   // so, we could mutate in-place if we were sure the wire rep actually came
@@ -29,7 +29,7 @@ function filterOutBuiltinFlags(flags) {
   // mutate and screw ourselves over.
   var outFlags = [];
   for (var i = flags.length - 1; i >= 0; i--) {
-    if (flags[i][0] !== '\\') {
+    if (flags[i][0] !== "\\") {
       outFlags.push(flags[i]);
     }
   }
@@ -115,17 +115,17 @@ export default function MailMessage(api, wireRep, overlays, matchInfo, slice) {
   this.matchInfo = matchInfo;
 }
 MailMessage.prototype = evt.mix({
-  toString: function() {
-    return '[MailHeader: ' + this.id + ']';
+  toString() {
+    return "[MailHeader: " + this.id + "]";
   },
-  toJSON: function() {
+  toJSON() {
     return {
-      type: 'MailHeader',
-      id: this.id
+      type: "MailHeader",
+      id: this.id,
     };
   },
 
-  __update: function(wireRep) {
+  __update(wireRep) {
     this._wireRep = wireRep;
     if (wireRep.snippet !== null) {
       this.snippet = wireRep.snippet;
@@ -133,14 +133,14 @@ MailMessage.prototype = evt.mix({
 
     this.date = new Date(wireRep.date);
 
-    this.isRead = wireRep.flags.indexOf('\\Seen') !== -1;
-    this.isStarred = wireRep.flags.indexOf('\\Flagged') !== -1;
-    this.isRepliedTo = wireRep.flags.indexOf('\\Answered') !== -1;
-    this.isForwarded = wireRep.flags.indexOf('$Forwarded') !== -1;
-    this.isJunk = wireRep.flags.indexOf('$Junk') !== -1;
+    this.isRead = wireRep.flags.includes("\\Seen");
+    this.isStarred = wireRep.flags.includes("\\Flagged");
+    this.isRepliedTo = wireRep.flags.includes("\\Answered");
+    this.isForwarded = wireRep.flags.includes("$Forwarded");
+    this.isJunk = wireRep.flags.includes("$Junk");
     // NB:
     this.isDraft = wireRep.draftInfo !== null;
-    this.isServerDraft = wireRep.flags.indexOf('\\Draft') !== -1;
+    this.isServerDraft = wireRep.flags.includes("\\Draft");
     // TODO: this really wants a first-class mapping along the lines of how
     // labels works.
     this.tags = filterOutBuiltinFlags(wireRep.flags);
@@ -166,14 +166,14 @@ MailMessage.prototype = evt.mix({
       existingRichReps: this.attachments,
       constructor: MailAttachment,
       owner: this,
-      idKey: 'relId',
-      addEvent: 'attachment:add',
-      changeEvent: 'attachment:change',
-      removeEvent: 'attachment:remove'
+      idKey: "relId",
+      addEvent: "attachment:add",
+      changeEvent: "attachment:change",
+      removeEvent: "attachment:remove",
     });
   },
 
-  __updateOverlays: function(overlays) {
+  __updateOverlays(overlays) {
     let downloadMap = overlays.download;
     // Loop over all attachments even if there isn't a download map; when the
     // map gets retracted, that's still a notable change that we need to update
@@ -181,13 +181,13 @@ MailMessage.prototype = evt.mix({
     for (let attachment of this.attachments) {
       let downloadOverlay = downloadMap && downloadMap.get(attachment.relId);
       attachment.__updateDownloadOverlay(downloadOverlay);
-      attachment.emit('change');
+      attachment.emit("change");
     }
 
     this.isDownloadingEmbeddedImages = false;
     if (downloadMap) {
       for (let relId of downloadMap.keys()) {
-        if (relId[0] === 'r') {
+        if (relId[0] === "r") {
           this.isDownloadingEmbeddedImages = true;
           break;
         }
@@ -199,7 +199,7 @@ MailMessage.prototype = evt.mix({
    * Release subscriptions associated with the header; currently this just means
    * tell the ContactCache we no longer care about the `MailPeep` instances.
    */
-  release: function() {
+  release() {
     ContactCache.forgetPeepInstances([this.author], this.to, this.cc, this.bcc);
   },
 
@@ -211,11 +211,11 @@ MailMessage.prototype = evt.mix({
    * @return {UndoableOperation|null}
    *   An undoable operation is returned is anything is done, null otherwise.
    */
-  archiveFromInbox: function() {
+  archiveFromInbox() {
     // Filter things down to only inbox folders.  (This lets us avoid an inbox
     // lookup and a potentially redundant/spurious remove in one swoop.  Not
     // that the back-end really cares.  It's SMRT.)
-    let curInboxFolders = this.labels.filter(folder => folder.type === 'inbox');
+    let curInboxFolders = this.labels.filter(folder => folder.type === "inbox");
     if (curInboxFolders.length) {
       return this.modifyLabels({ removeLabels: curInboxFolders });
     }
@@ -227,7 +227,7 @@ MailMessage.prototype = evt.mix({
    * currently in the trash folder.  Permanent deletion is triggered if the
    * message is already in the trash folder.
    */
-  trash: function() {
+  trash() {
     return this._api.trash([this]);
   },
 
@@ -244,29 +244,29 @@ MailMessage.prototype = evt.mix({
    * Move this message to another folder.  This should *not* be used on gmail,
    * instead modifyLabels should be used.
    */
-  move: function(targetFolder) {
+  move(targetFolder) {
     return this._api.move([this], targetFolder);
   },
 
   /**
    * Set or clear the read status of this message.
    */
-  setRead: function(beRead) {
+  setRead(beRead) {
     return this._api.markRead([this], beRead);
   },
 
-  toggleRead: function() {
+  toggleRead() {
     return this.setRead(!this.isRead);
   },
 
   /**
    * Set or clear the starred/flagged status of this message.
    */
-  setStarred: function(beStarred) {
+  setStarred(beStarred) {
     return this._api.markStarred([this], beStarred);
   },
 
-  toggleStarred: function() {
+  toggleStarred() {
     return this.setStarred(!this.isStarred);
   },
 
@@ -276,7 +276,7 @@ MailMessage.prototype = evt.mix({
    * @param {String[]} [args.addTags]
    * @param {String[]} [args.removeTags]
    */
-  modifyTags: function(args) {
+  modifyTags(args) {
     return this._api.modifyTags([this], args);
   },
 
@@ -287,7 +287,7 @@ MailMessage.prototype = evt.mix({
    * @param {MailFolder[]} [args.addLabels]
    * @param {MailFolder[]} [args.removeLabels]
    */
-  modifyLabels: function(args) {
+  modifyLabels(args) {
     return this._api.modifyLabels([this], args);
   },
 
@@ -308,9 +308,9 @@ MailMessage.prototype = evt.mix({
    * Assume this is a draft message and return a Promise that will be resolved
    * with a populated `MessageComposition` instance.
    */
-  editAsDraft: function() {
+  editAsDraft() {
     if (!this.isDraft) {
-      throw new Error('Nice try, but I am not a magical localdraft.');
+      throw new Error("Nice try, but I am not a magical localdraft.");
     }
     return this._api.resumeMessageComposition(this);
   },
@@ -328,14 +328,12 @@ MailMessage.prototype = evt.mix({
    *   object.
    * @return {Promise<MessageComposition>}
    */
-  replyToMessage: function(replyMode, options) {
-    return this._slice._api.beginMessageComposition(
-      this, null,
-      {
-        command: 'reply',
-        mode: replyMode,
-        noComposer: options && options.noComposer
-      });
+  replyToMessage(replyMode, options) {
+    return this._slice._api.beginMessageComposition(this, null, {
+      command: "reply",
+      mode: replyMode,
+      noComposer: options && options.noComposer,
+    });
   },
 
   /**
@@ -351,14 +349,12 @@ MailMessage.prototype = evt.mix({
    *   object.
    * @return {Promise<MessageComposition>}
    */
-  forwardMessage: function(forwardMode, options) {
-    return this._slice._api.beginMessageComposition(
-      this, null,
-      {
-        command: 'forward',
-        mode: forwardMode,
-        noComposer: options && options.noComposer
-      });
+  forwardMessage(forwardMode, options) {
+    return this._slice._api.beginMessageComposition(this, null, {
+      command: "forward",
+      mode: forwardMode,
+      noComposer: options && options.noComposer,
+    });
   },
 
   /**
@@ -379,7 +375,7 @@ MailMessage.prototype = evt.mix({
    * probably add something like `bodyDownloadPending` to help you convey that
    * something's happening.
    */
-  downloadBodyReps: function() {
+  downloadBodyReps() {
     this._api._downloadBodyReps(this.id, this.date.valueOf());
   },
 
@@ -416,7 +412,7 @@ MailMessage.prototype = evt.mix({
    * Returns a promise that is resolved when the parts have been downloaded and
    * are available to showEmbeddedImages().
    */
-  downloadEmbeddedImages: function() {
+  downloadEmbeddedImages() {
     var relatedPartRelIds = [];
     for (var i = 0; i < this._relatedParts.length; i++) {
       var relatedPart = this._relatedParts[i];
@@ -432,7 +428,7 @@ MailMessage.prototype = evt.mix({
       messageId: this.id,
       messageDate: this.date.valueOf(),
       relatedPartRelIds,
-      attachmentRelIds: null
+      attachmentRelIds: null,
     });
   },
 
@@ -442,8 +438,9 @@ MailMessage.prototype = evt.mix({
    * The loadCallback allows iframe resizing logic to fire once the size of the
    * image is known since Gecko still doesn't have seamless iframes.
    */
-  showEmbeddedImages: function(htmlNode, loadCallback) {
-    var i, cidToBlob = {};
+  showEmbeddedImages(htmlNode, loadCallback) {
+    var i,
+      cidToBlob = {};
     // - Generate object URLs for the attachments
     for (i = 0; i < this._relatedParts.length; i++) {
       var relPart = this._relatedParts[i];
@@ -454,10 +451,10 @@ MailMessage.prototype = evt.mix({
     }
 
     // - Transform the links
-    var nodes = htmlNode.querySelectorAll('.moz-embedded-image');
+    var nodes = htmlNode.querySelectorAll(".moz-embedded-image");
     for (i = 0; i < nodes.length; i++) {
       var node = nodes[i],
-          cid = node.getAttribute('cid-src');
+        cid = node.getAttribute("cid-src");
 
       // eslint-disable-next-line no-prototype-builtins
       if (!cidToBlob.hasOwnProperty(cid)) {
@@ -465,11 +462,11 @@ MailMessage.prototype = evt.mix({
       }
       showBlobInImg(node, cidToBlob[cid]);
       if (loadCallback) {
-        node.addEventListener('load', loadCallback, false);
+        node.addEventListener("load", loadCallback);
       }
 
-      node.removeAttribute('cid-src');
-      node.classList.remove('moz-embedded-image');
+      node.removeAttribute("cid-src");
+      node.classList.remove("moz-embedded-image");
     }
   },
 
@@ -481,8 +478,8 @@ MailMessage.prototype = evt.mix({
    *   stable, so don't do this yourself.
    * }
    */
-  checkForExternalImages: function(htmlNode) {
-    var someNode = htmlNode.querySelector('.moz-external-image');
+  checkForExternalImages(htmlNode) {
+    var someNode = htmlNode.querySelector(".moz-external-image");
     return someNode !== null;
   },
 
@@ -492,18 +489,18 @@ MailMessage.prototype = evt.mix({
    * using implementation-specific details subject to change, so don't do this
    * yourself.
    */
-  showExternalImages: function(htmlNode, loadCallback) {
+  showExternalImages(htmlNode, loadCallback) {
     // querySelectorAll is not live, whereas getElementsByClassName is; we
     // don't need/want live, especially with our manipulations.
-    var nodes = htmlNode.querySelectorAll('.moz-external-image');
+    var nodes = htmlNode.querySelectorAll(".moz-external-image");
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
       if (loadCallback) {
-        node.addEventListener('load', loadCallback, false);
+        node.addEventListener("load", loadCallback);
       }
-      node.setAttribute('src', node.getAttribute('ext-src'));
-      node.removeAttribute('ext-src');
-      node.classList.remove('moz-external-image');
+      node.setAttribute("src", node.getAttribute("ext-src"));
+      node.removeAttribute("ext-src");
+      node.classList.remove("moz-external-image");
     }
   },
 });

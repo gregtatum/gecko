@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
-import WindowedListProxy from '../bridge/windowed_list_proxy';
+import logic from "logic";
+import WindowedListProxy from "../bridge/windowed_list_proxy";
 
 export default function DerivedViewManager() {
-  logic.defineScope(this, 'DerivedViewManager');
+  logic.defineScope(this, "DerivedViewManager");
   this._providersByName = new Map();
 }
 DerivedViewManager.prototype = {
@@ -36,8 +36,8 @@ DerivedViewManager.prototype = {
    * view, but we can add it.  Alternately, it can be the TOC's problem to
    * clean things up.
    */
-  registerDerivedViewProvider: function(name, provider) {
-    logic(this, 'registerDerivedViewProvider', { name });
+  registerDerivedViewProvider(name, provider) {
+    logic(this, "registerDerivedViewProvider", { name });
     this._providersByName.set(name, provider);
   },
 
@@ -50,11 +50,15 @@ DerivedViewManager.prototype = {
    * Returns a Promise that will be resolved with the derivedView when things
    * are all hooked up.
    */
-  createDerivedView: function({ viewDef, ctx }) {
+  createDerivedView({ viewDef, ctx }) {
     const viewMaker = this._providersByName.get(viewDef.provider);
     if (!viewMaker) {
       // XXX this should really be using `logic`
-      console.warn('ViewMaker requested for', viewDef.provider, 'but not found');
+      console.warn(
+        "ViewMaker requested for",
+        viewDef.provider,
+        "but not found"
+      );
       return null;
     }
 
@@ -65,9 +69,9 @@ DerivedViewManager.prototype = {
     // NB: This process is defined to be async, but no one actually needs to
     // wait around for it to happen, although we do need to shunt any errors to
     // logging.
-    ctx.acquire(ctx.proxy).catch((err) => {
-      logic(this, 'derivedViewAcquireError', { name: viewDef.provider, err });
+    ctx.acquire(ctx.proxy).catch(err => {
+      logic(this, "derivedViewAcquireError", { name: viewDef.provider, err });
     });
     return derivedView;
-  }
+  },
 };

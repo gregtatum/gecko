@@ -21,8 +21,14 @@
  * get a list of recently performed actions, the goal is to make it feasible
  * in the future.
  */
-export default function UndoableOperation({ api, id, operation, affectedCount, affectedType,
-                             undoableTasksPromise }) {
+export default function UndoableOperation({
+  api,
+  id,
+  operation,
+  affectedCount,
+  affectedType,
+  undoableTasksPromise,
+}) {
   this._api = api;
   /**
    * A locally unique id to the owning API instance.  Currently it is the handle
@@ -74,22 +80,22 @@ export default function UndoableOperation({ api, id, operation, affectedCount, a
   this._undoRequested = false;
 }
 UndoableOperation.prototype = {
-  toString: function() {
-    return '[UndoableOperation]';
+  toString() {
+    return "[UndoableOperation]";
   },
-  toJSON: function() {
+  toJSON() {
     return {
-      type: 'UndoableOperation',
+      type: "UndoableOperation",
       affectedType: this.affectedType,
-      affectedCount: this.affectedCount
+      affectedCount: this.affectedCount,
     };
   },
 
-  undo: function() {
+  undo() {
     if (!this._undoableTasksPromise) {
       return;
     }
-    this._undoableTasksPromise.then((undoTasks) => {
+    this._undoableTasksPromise.then(undoTasks => {
       this._api.__scheduleUndoTasks(this, undoTasks);
     });
     this._undoableTasksPromise = null;
@@ -97,7 +103,6 @@ UndoableOperation.prototype = {
     // it to be processed when we do.
     if (!this._longtermIds) {
       this._undoRequested = true;
-      return;
     }
   },
 };

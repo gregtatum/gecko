@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
 function NamedContext(name, type, bridgeContext) {
-  logic.defineScope(this, type,
-                    { name: name, bridge: bridgeContext.bridge.name });
+  logic.defineScope(this, type, {
+    name,
+    bridge: bridgeContext.bridge.name,
+  });
   this.name = name;
   this._bridgeContext = bridgeContext;
   this._active = true;
@@ -50,9 +52,9 @@ NamedContext.prototype = {
    * when the task completes or is terminated we can automatically release all
    * acquired resources.
    */
-  acquire: function(acquireable) {
+  acquire(acquireable) {
     if (!this._active) {
-      throw new Error('we have already cleaned up!');
+      throw new Error("we have already cleaned up!");
     }
 
     this._stuffToRelease.push(acquireable);
@@ -63,38 +65,40 @@ NamedContext.prototype = {
    * Helper to send a message with the given `data` to the associated bridge
    * using the handle that names us.
    */
-  sendMessage: function(type, data) {
+  sendMessage(type, data) {
     this._bridgeContext.bridge.__sendMessage({
-      type: type,
+      type,
       handle: this.name,
-      data: data
+      data,
     });
   },
 
   /**
    * Schedule a function to be run at cleanup-time.
    */
-  runAtCleanup: function(func) {
+  runAtCleanup(func) {
     // Currently we normalize to a fakae acquireable instance, but if we start
     // doing more useful stuff with _stuffToRelease,
     this._stuffToRelease.push({
-      __release: func
+      __release: func,
     });
   },
 
   /**
    * Run through the list of acquired stuff to release and release it all.
    */
-  cleanup: function() {
+  cleanup() {
     this._active = false;
 
     for (let acquireable of this._stuffToRelease) {
       try {
         acquireable.__release(this);
       } catch (ex) {
-        logic(
-          this, 'problemReleasing',
-          { what: acquireable, ex, stack: ex && ex.stack });
+        logic(this, "problemReleasing", {
+          what: acquireable,
+          ex,
+          stack: ex && ex.stack,
+        });
       }
     }
   },
@@ -109,8 +113,12 @@ NamedContext.prototype = {
  * Things that end up using this:
  * - View proxies (EntireListProxy, WindowedListProxy)
  */
-export default function BridgeContext({ bridge, batchManager, dataOverlayManager }) {
-  logic.defineScope(this, 'BridgeContext', { name: bridge.name });
+export default function BridgeContext({
+  bridge,
+  batchManager,
+  dataOverlayManager,
+}) {
+  logic.defineScope(this, "BridgeContext", { name: bridge.name });
   this.bridge = bridge;
   this.batchManager = batchManager;
   this.dataOverlayManager = dataOverlayManager;
@@ -139,7 +147,7 @@ BridgeContext.prototype = {
    *   NamedContexts because from a life-cycle perspective we want these child
    *   contexts all created up at the same time with the parent.
    */
-  createNamedContext: function(name, type, parentContext) {
+  createNamedContext(name, type, parentContext) {
     let ctx = new NamedContext(name, type, this);
     this._namedContexts.set(name, ctx);
     if (parentContext) {
@@ -148,19 +156,19 @@ BridgeContext.prototype = {
     return ctx;
   },
 
-  getNamedContextOrThrow: function(name) {
+  getNamedContextOrThrow(name) {
     if (this._namedContexts.has(name)) {
       return this._namedContexts.get(name);
     }
 
-    throw new Error('no such namedContext: ' + name);
+    throw new Error("no such namedContext: " + name);
   },
 
-  maybeGetNamedContext: function(name) {
+  maybeGetNamedContext(name) {
     return this._namedContexts.get(name);
   },
 
-  cleanupNamedContext: function(name) {
+  cleanupNamedContext(name) {
     if (!this._namedContexts.has(name)) {
       return;
     }
@@ -173,10 +181,10 @@ BridgeContext.prototype = {
     ctx.cleanup();
   },
 
-  cleanupAll: function() {
+  cleanupAll() {
     for (let namedContext of this._namedContext.values()) {
       namedContext.cleanup();
     }
     this._namedContexts.clear();
-  }
+  },
 };

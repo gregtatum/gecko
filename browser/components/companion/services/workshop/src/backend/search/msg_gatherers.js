@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import GatherMessage from './gatherers/message';
-import GatherMessageBodies from './gatherers/message/message_bodies';
-import AuthorDomain from './gatherers/message/author_domain';
-import DaysAgo from './gatherers/message/days_ago';
+import GatherMessage from "./gatherers/message";
+import GatherMessageBodies from "./gatherers/message/message_bodies";
+import AuthorDomain from "./gatherers/message/author_domain";
+import DaysAgo from "./gatherers/message/days_ago";
 
 export default {
   /**
@@ -38,12 +38,12 @@ export default {
   message: {
     constructor: GatherMessage,
     params: null,
-    nested: null
+    nested: null,
   },
   bodyContents: {
     constructor: GatherMessageBodies,
     params: null,
-    nested: null
+    nested: null,
   },
 
   //////////////////////////////////////////////////////////////////////////////
@@ -53,11 +53,11 @@ export default {
   authorDomain: {
     constructor: AuthorDomain,
     params: null,
-    nested: null
+    nested: null,
   },
   daysAgo: {
     constructor: DaysAgo,
     params: null,
-    nested: null
-  }
+    nested: null,
+  },
 };

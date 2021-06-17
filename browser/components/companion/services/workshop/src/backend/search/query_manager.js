@@ -14,42 +14,44 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import DirectFolderConversationsQuery from './query/direct_folder_conv_query';
-import FilteringFolderQuery from './query/filtering_folder_query';
+import DirectFolderConversationsQuery from "./query/direct_folder_conv_query";
+import FilteringFolderQuery from "./query/filtering_folder_query";
 
-import DirectFolderMessagesQuery from './query/direct_folder_messages_query';
+import DirectFolderMessagesQuery from "./query/direct_folder_messages_query";
 
-import DirectConversationMessagesQuery from './query/direct_conv_messages_query';
-import FilteringConversationMessagesQuery from './query/filtering_conv_query';
+import DirectConversationMessagesQuery from "./query/direct_conv_messages_query";
+import FilteringConversationMessagesQuery from "./query/filtering_conv_query";
 
-import FilterRunner from './filter_runner';
-import NestedGatherer from './nested_gatherer';
+import FilterRunner from "./filter_runner";
+import NestedGatherer from "./nested_gatherer";
 
-import conversationFilters from './conv_filters';
-import conversationGatherers from './conv_gatherers';
-import messageFilters from './msg_filters';
-import messageGatherers from './msg_gatherers';
+import conversationFilters from "./conv_filters";
+import conversationGatherers from "./conv_gatherers";
+import messageFilters from "./msg_filters";
+import messageGatherers from "./msg_gatherers";
 
 /**
  * Abstraction for all persistent database queries.  Read "search.md" for the
  * deets.
  */
 export default function QueryManager({ db, derivedViewManager }) {
-  logic.defineScope(this, 'QueryManager');
+  logic.defineScope(this, "QueryManager");
   this._db = db;
   this._derivedViewManager = derivedViewManager;
 }
 QueryManager.prototype = {
-  _buildFilters: function(filterSpec, filterers) {
+  _buildFilters(filterSpec, filterers) {
     let filters = [];
     if (filterSpec) {
       for (let key of Object.keys(filterSpec)) {
         let filterDef = filterers[key];
         if (filterDef) {
-          let filter =
-            new filterDef.constructor(filterDef.params, filterSpec[key]);
+          let filter = new filterDef.constructor(
+            filterDef.params,
+            filterSpec[key]
+          );
           filter.resultKey = key;
           filters.push(filter);
         }
@@ -94,8 +96,7 @@ QueryManager.prototype = {
    *   a rootGather() function that understands the context difference and
    *   mixes the results when the returned value is not the passed-in value.
    */
-  _buildGatherHierarchy: function({ consumers, rootGatherDefs, dbCtx,
-                                    bootstrapKey }) {
+  _buildGatherHierarchy({ consumers, rootGatherDefs, dbCtx, bootstrapKey }) {
     let traverse = (curGatherer, reqObj, gatherDefs) => {
       for (let key of Object.keys(reqObj)) {
         let gatherDef = gatherDefs[key];
@@ -104,7 +105,8 @@ QueryManager.prototype = {
           if (!curGatherer.hasGatherer(key)) {
             curGatherer.addGatherer(
               key,
-              new gatherDef.constructor(dbCtx, gatherDef.params));
+              new gatherDef.constructor(dbCtx, gatherDef.params)
+            );
           }
         } else {
           let childGatherer;
@@ -112,7 +114,8 @@ QueryManager.prototype = {
             childGatherer = curGatherer.makeNestedGatherer(
               key,
               gatherDef.nestedRootKey,
-              new gatherDef.constructor(dbCtx, gatherDef.params));
+              new gatherDef.constructor(dbCtx, gatherDef.params)
+            );
           } else {
             childGatherer = curGatherer.getGatherer(key);
           }
@@ -124,8 +127,10 @@ QueryManager.prototype = {
     let bootstrapGatherer = null;
     if (bootstrapKey) {
       let bootstrapDef = rootGatherDefs[bootstrapKey];
-      bootstrapGatherer =
-        new bootstrapDef.constructor(dbCtx, bootstrapDef.params);
+      bootstrapGatherer = new bootstrapDef.constructor(
+        dbCtx,
+        bootstrapDef.params
+      );
     }
 
     let rootGatherer = new NestedGatherer(bootstrapKey, bootstrapGatherer);
@@ -136,11 +141,11 @@ QueryManager.prototype = {
     return rootGatherer;
   },
 
-  _buildDerivedViews: function(viewDefsWithContexts) {
+  _buildDerivedViews(viewDefsWithContexts) {
     if (!viewDefsWithContexts) {
       return [];
     }
-    const derivedViews = viewDefsWithContexts.map((viewDefWithContext) => {
+    const derivedViews = viewDefsWithContexts.map(viewDefWithContext => {
       return this._derivedViewManager.createDerivedView(viewDefWithContext);
     });
 
@@ -150,12 +155,12 @@ QueryManager.prototype = {
   /**
    * Find conversations that match a filter spec.
    */
-  queryConversations: function(ctx, spec) {
+  queryConversations(ctx, spec) {
     // -- Direct folder queries fast-path out.
     if (spec.folderId && !spec.filter) {
       return new DirectFolderConversationsQuery({
         db: this._db,
-        folderId: spec.folderId
+        folderId: spec.folderId,
       });
     }
 
@@ -164,7 +169,7 @@ QueryManager.prototype = {
 
     const dbCtx = {
       db: this._db,
-      ctx
+      ctx,
     };
 
     const preDerivers = this._buildDerivedViews(spec.viewDefsWithContexts);
@@ -173,7 +178,7 @@ QueryManager.prototype = {
     const rootGatherer = this._buildGatherHierarchy({
       consumers: [].concat(filters, preDerivers, postDerivers),
       rootGatherDefs: conversationGatherers,
-      dbCtx
+      dbCtx,
     });
     return new FilteringFolderQuery({
       ctx,
@@ -182,36 +187,36 @@ QueryManager.prototype = {
       filterRunner: new FilterRunner({ filters }),
       rootGatherer,
       preDerivers,
-      postDerivers
+      postDerivers,
     });
   },
 
   /**
    * Find messages independent of conversations.
    */
-  queryMessages: function(ctx, spec) {
+  queryMessages(ctx, spec) {
     // -- Direct folder queries fast-path out.
     if (spec.folderId && !spec.filter) {
       return new DirectFolderMessagesQuery({
         db: this._db,
-        folderId: spec.folderId
+        folderId: spec.folderId,
       });
     }
 
     // TODO: Starting with just the direct load for now to make sure that works
     // sufficiently/at all.
-    throw new Error('No messages filtering yet!');
+    throw new Error("No messages filtering yet!");
   },
 
   /**
    * Find messages in a specific conversation that match a filter spec.
    */
-  queryConversationMessages: function(ctx, spec) {
+  queryConversationMessages(ctx, spec) {
     // -- Direct conversation queries fast-path out
     if (spec.conversationId && !spec.filter) {
       return new DirectConversationMessagesQuery({
         db: this._db,
-        conversationId: spec.conversationId
+        conversationId: spec.conversationId,
       });
     }
 
@@ -220,21 +225,21 @@ QueryManager.prototype = {
 
     let dbCtx = {
       db: this._db,
-      ctx
+      ctx,
     };
     // The messages case
     let rootGatherer = this._buildGatherHierarchy({
       consumers: filters,
       rootGatherDefs: messageGatherers,
-      bootstrapKey: 'message',
-      dbCtx
+      bootstrapKey: "message",
+      dbCtx,
     });
     return new FilteringConversationMessagesQuery({
       ctx,
       db: this._db,
       conversationId: spec.conversationId,
       filterRunner: new FilterRunner({ filters }),
-      rootGatherer
+      rootGatherer,
     });
-  }
+  },
 };

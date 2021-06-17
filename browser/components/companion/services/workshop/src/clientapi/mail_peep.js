@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
+import evt from "evt";
 
-import { showBlobInImg } from './blob_helpers';
-
+import { showBlobInImg } from "./blob_helpers";
 
 /**
  * See `identities.md`.
@@ -38,20 +37,20 @@ MailPeep.prototype = evt.mix({
     return this.contactId !== null;
   },
 
-  toString: function() {
-    return '[MailPeep: ' + this.address + ']';
+  toString() {
+    return "[MailPeep: " + this.address + "]";
   },
-  toJSON: function() {
+  toJSON() {
     return {
       name: this.name,
       address: this.address,
-      contactId: this.contactId
+      contactId: this.contactId,
     };
   },
-  toWireRep: function() {
+  toWireRep() {
     return {
       name: this.name,
-      address: this.address
+      address: this.address,
     };
   },
 
@@ -62,7 +61,7 @@ MailPeep.prototype = evt.mix({
    * Display the contact's thumbnail on the given image node, abstracting away
    * the issue of Blob URL life-cycle management.
    */
-  displayPictureInImageTag: function(imgNode) {
+  displayPictureInImageTag(imgNode) {
     if (this._thumbnailBlob) {
       showBlobInImg(imgNode, this._thumbnailBlob);
     }

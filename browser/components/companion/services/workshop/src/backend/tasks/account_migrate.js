@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../task_infra/task_definer';
+import TaskDefiner from "../task_infra/task_definer";
 
 /**
  * Account migration via account re-creation during the planning phase.
@@ -28,18 +28,18 @@ import TaskDefiner from '../task_infra/task_definer';
  */
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'account_migrate',
+    name: "account_migrate",
 
     async plan(ctx, raw) {
       let { accountDef } = raw;
 
       await ctx.finishTask({
         newData: {
-          accounts: [accountDef]
-        }
+          accounts: [accountDef],
+        },
       });
     },
 
-    execute: null
-  }
+    execute: null,
+  },
 ]);

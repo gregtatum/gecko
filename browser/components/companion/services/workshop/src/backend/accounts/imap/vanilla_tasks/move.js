@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../../task_infra/task_definer';
+import TaskDefiner from "../../task_infra/task_definer";
 
-import { normalizeAndApplyChanges, applyChanges, mergeChanges } from
-  '../delta_algebra';
-import { selectMessages } from '../message_selector';
+import {
+  normalizeAndApplyChanges,
+  applyChanges,
+  mergeChanges,
+} from "../delta_algebra";
+import { selectMessages } from "../message_selector";
 
-import churnConversation from '../churn_drivers/conv_churn_driver';
+import churnConversation from "../churn_drivers/conv_churn_driver";
 
 /**
  * Vanilla IMAP MOVE implementation.  Derived from mix_store_flag.js but
@@ -67,12 +70,12 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
  *   gmail's write latency has been comparatively high and if manipulations
  *   aren't pipelined, this can result in poor throughput.)
  */
- /**
-  * @see MixStoreFlagsMixin
-  */
- export default TaskDefiner.defineComplexTask([
-   {
-     name: 'move',
+/**
+ * @see MixStoreFlagsMixin
+ */
+export default TaskDefiner.defineComplexTask([
+  {
+    name: "move",
 
     /**
      * @return {StoreFlagState}
@@ -80,7 +83,7 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
      */
     initPersistentState() {
       return {
-        umidChanges: new Map()
+        umidChanges: new Map(),
       };
     },
 
@@ -90,17 +93,17 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
       for (let umid of persistentState.umidChanges.keys()) {
         markers.push({
           type: this.name,
-          id: this.name + ':' + umid,
-          accountId: accountId,
-          umid: umid,
+          id: this.name + ":" + umid,
+          accountId,
+          umid,
           priorityTags: [],
-          exclusiveResources: []
+          exclusiveResources: [],
         });
       }
 
       return {
         memoryState: {},
-        markers
+        markers,
       };
     },
 
@@ -110,7 +113,7 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
       // -- Load the conversation and messages
       let fromDb = await ctx.beginMutate({
         conversations: new Map([[req.convId, null]]),
-        messagesByConversation: new Map([[req.convId, null]])
+        messagesByConversation: new Map([[req.convId, null]]),
       });
 
       let loadedMessages = fromDb.messagesByConversation.get(req.convId);
@@ -120,13 +123,19 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
 
       // - Apply the message selector if applicable
       let filteredMessages = selectMessages(
-        loadedMessages, req.onlyMessages, req.messageSelector);
+        loadedMessages,
+        req.onlyMessages,
+        req.messageSelector
+      );
 
       // -- Per message, compute the changes required and issue/update markers
       let undoTasks = [];
       for (let message of filteredMessages) {
-        let actualChanges =
-          normalizeAndApplyChanges(message.flags, req.add, req.remove);
+        let actualChanges = normalizeAndApplyChanges(
+          message.flags,
+          req.add,
+          req.remove
+        );
         let { add: actuallyAdded, remove: actuallyRemoved } = actualChanges;
 
         if (actuallyAdded || actuallyRemoved) {
@@ -140,26 +149,27 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
             messageSelector: null,
             // invert the manipulation that was actually performed
             add: actuallyRemoved && actuallyRemoved.concat(),
-            remove: actuallyAdded && actuallyAdded.concat()
+            remove: actuallyAdded && actuallyAdded.concat(),
           });
 
           modifiedMessagesMap.set(message.id, message);
           anyMessageChanged = true;
 
           let umid = message.umid;
-          let markerId = this.name + ':' + umid;
+          let markerId = this.name + ":" + umid;
           // - Unify with any outstanding request for this message
           if (umidChanges.has(umid)) {
-            let mergedChanges =
-              mergeChanges(umidChanges.get(umid), actualChanges);
+            let mergedChanges = mergeChanges(
+              umidChanges.get(umid),
+              actualChanges
+            );
             // It's possible that we now have nothing to tell the server to do.
             if (mergedChanges.add || mergedChanges.remove) {
               umidChanges.set(umid, mergedChanges);
               // we already have a marker for this one and there's no need to
               // change it, so we can just continue
               continue;
-            }
-            else {
+            } else {
               umidChanges.delete(umid);
               modifyTaskMarkers.set(markerId, null);
               continue;
@@ -171,16 +181,14 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
           // because umidChanges never gets any state put in it.)
           if (this.execute) {
             umidChanges.set(umid, actualChanges);
-            modifyTaskMarkers.set(
-              markerId,
-              {
-                type: this.name,
-                id: markerId,
-                accountId: req.accountId,
-                umid,
-                priorityTags: [],
-                exclusiveResources: []
-              });
+            modifyTaskMarkers.set(markerId, {
+              type: this.name,
+              id: markerId,
+              accountId: req.accountId,
+              umid,
+              priorityTags: [],
+              exclusiveResources: [],
+            });
           }
         }
       } // (end per-message loop)
@@ -189,7 +197,10 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
       if (anyMessageChanged) {
         let oldConvInfo = fromDb.conversations.get(req.convId);
         let convInfo = churnConversation(
-          req.convId, oldConvInfo, loadedMessages);
+          req.convId,
+          oldConvInfo,
+          loadedMessages
+        );
         conversationsMap = new Map([[convInfo.id, convInfo]]);
       }
 
@@ -201,10 +212,10 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
       await ctx.finishTask({
         mutations: {
           conversations: conversationsMap,
-          messages: modifiedMessagesMap
+          messages: modifiedMessagesMap,
         },
         taskMarkers: modifyTaskMarkers,
-        complexTaskState: persistentState
+        complexTaskState: persistentState,
       });
     },
 
@@ -232,10 +243,10 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
 
       // -- Read the umidLocation
       let fromDb = await ctx.beginMutate({
-        umidLocations: new Map([[marker.umid, null]])
+        umidLocations: new Map([[marker.umid, null]]),
       });
 
-      let [ folderId, uid ] = fromDb.umidLocations.get(marker.umid);
+      let [folderId, uid] = fromDb.umidLocations.get(marker.umid);
       let folderInfo = account.getFolderById(folderId);
 
       // -- Issue the manipulations to the server
@@ -244,18 +255,20 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
           ctx,
           folderInfo,
           [uid],
-          '+' + this.imapDataName,
+          "+" + this.imapDataName,
           changes.add,
-          { byUid: true });
+          { byUid: true }
+        );
       }
       if (changes.remove && changes.remove.length) {
         await account.pimap.store(
           ctx,
           folderInfo,
           [uid],
-          '-' + this.imapDataName,
+          "-" + this.imapDataName,
           changes.remove,
-          { byUid: true });
+          { byUid: true }
+        );
       }
 
       // - Success, clean up state.
@@ -263,9 +276,8 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
 
       // - Return / finalize
       await ctx.finishTask({
-        complexTaskState: persistentState
+        complexTaskState: persistentState,
       });
     },
-  }
+  },
 ]);
-

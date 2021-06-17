@@ -24,16 +24,15 @@ export default function GatherMessage({ db, ctx }) {
 }
 GatherMessage.prototype = {
   plural: false,
-  gather: function(gathered) {
+  gather(gathered) {
     // In the event the message isn't in the cache, its date is required.
     let messageKey = [gathered.messageId, gathered.date];
-    return this._db.read(
-      this._ctx,
-      {
-        messages: new Map([[messageKey, null]])
+    return this._db
+      .read(this._ctx, {
+        messages: new Map([[messageKey, null]]),
       })
-    .then(({ messages }) => {
-      return messages.get(gathered.messageId);
-    });
-  }
+      .then(({ messages }) => {
+        return messages.get(gathered.messageId);
+      });
+  },
 };

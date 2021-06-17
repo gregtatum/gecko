@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { DAY_MILLIS } from 'shared/date';
+import { DAY_MILLIS } from "shared/date";
 
 ////////////////////////////////////////////////////////////////////////////////
 // Autoconfig stuff
@@ -32,11 +32,10 @@ export let AUTOCONFIG_TIMEOUT_MS = 30 * 1000;
  * tests, but should generally never be changed.
  */
 export let ISPDB_AUTOCONFIG_ROOT =
-  'https://live.mozillamessaging.com/autoconfig/v1.1/';
+  "https://live.mozillamessaging.com/autoconfig/v1.1/";
 
 ////////////////////////////////////////////////////////////////////////////////
 // IMAP time constants
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // POP3 Sync Constants
@@ -162,7 +161,7 @@ export let BYTES_PER_IMAP_FETCH_CHUNK_REQUEST = 1024 * 1024;
  * devicestorage implementation does use disparate places unless in testing
  * mode.)
  */
-export let DEVICE_STORAGE_NAME = 'sdcard';
+export let DEVICE_STORAGE_NAME = "sdcard";
 
 ////////////////////////////////////////////////////////////////////////////////
 // General defaults
@@ -172,13 +171,13 @@ export let DEVICE_STORAGE_NAME = 'sdcard';
  * is complex and we don't have/use a helper library for this.
  */
 export let CHECK_INTERVALS_ENUMS_TO_MS = {
-  'manual': 0, // 0 disables; no infinite checking!
-  '3min': 3 * 60 * 1000,
-  '5min': 5 * 60 * 1000,
-  '10min': 10 * 60 * 1000,
-  '15min': 15 * 60 * 1000,
-  '30min': 30 * 60 * 1000,
-  '60min': 60 * 60 * 1000,
+  manual: 0, // 0 disables; no infinite checking!
+  "3min": 3 * 60 * 1000,
+  "5min": 5 * 60 * 1000,
+  "10min": 10 * 60 * 1000,
+  "15min": 15 * 60 * 1000,
+  "30min": 30 * 60 * 1000,
+  "60min": 60 * 60 * 1000,
 };
 
 /**
@@ -186,7 +185,7 @@ export let CHECK_INTERVALS_ENUMS_TO_MS = {
  * degrading the phone experience until we are more confident about our resource
  * usage, etc.
  */
-export let DEFAULT_CHECK_INTERVAL_ENUM = 'manual';
+export let DEFAULT_CHECK_INTERVAL_ENUM = "manual";
 
 /**
  * How many milliseconds should we wait before giving up on the
@@ -230,13 +229,13 @@ export let KILL_CONNECTIONS_WHEN_JOBLESS = true;
  */
 export let SYNC_RANGE_ENUMS_TO_MS = {
   // This choice is being made for IMAP.
-  'auto': 30 * DAY_MILLIS,
-    '1d': 1 * DAY_MILLIS,
-    '3d': 3 * DAY_MILLIS,
-    '1w': 7 * DAY_MILLIS,
-    '2w': 14 * DAY_MILLIS,
-    '1m': 30 * DAY_MILLIS,
-   'all': 30 * 365 * DAY_MILLIS,
+  auto: 30 * DAY_MILLIS,
+  "1d": 1 * DAY_MILLIS,
+  "3d": 3 * DAY_MILLIS,
+  "1w": 7 * DAY_MILLIS,
+  "2w": 14 * DAY_MILLIS,
+  "1m": 30 * DAY_MILLIS,
+  all: 30 * 365 * DAY_MILLIS,
 };
 
 /**
@@ -252,7 +251,7 @@ export let DESIRED_SNIPPET_LENGTH = 160;
  */
 export let DEFAULT_SEARCH_EXCERPT_SETTINGS = {
   charsBefore: 16,
-  charsAfter: 40
+  charsAfter: 40,
 };
 
 /**

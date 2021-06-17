@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
-import logic from 'logic';
+import evt from "evt";
+import logic from "logic";
 
-import { engineFrontEndAccountMeta } from '../engine_glue';
+import { engineFrontEndAccountMeta } from "../engine_glue";
 
-import { bsearchForInsert } from 'shared/util';
+import { bsearchForInsert } from "shared/util";
 
 /**
  * Ordering accounts by their name, why not.  (It used to just be creation / id
@@ -53,14 +53,14 @@ function accountDefComparator(a, b) {
  */
 export default function AccountsTOC() {
   evt.Emitter.call(this);
-  logic.defineScope(this, 'AccountsTOC');
+  logic.defineScope(this, "AccountsTOC");
 
   this.accountDefs = this.items = [];
   this.accountDefsById = this.itemsById = new Map();
 }
 AccountsTOC.prototype = evt.mix({
-  type: 'AccountsTOC',
-  overlayNamespace: 'accounts',
+  type: "AccountsTOC",
+  overlayNamespace: "accounts",
 
   // We don't care about who references us because we have the lifetime of the
   // universe.
@@ -91,14 +91,17 @@ AccountsTOC.prototype = evt.mix({
    * have no useful return value, so why not do something ugly?)
    */
   __addAccount(accountDef) {
-    let idx = bsearchForInsert(this.accountDefs, accountDef,
-                               accountDefComparator);
+    let idx = bsearchForInsert(
+      this.accountDefs,
+      accountDef,
+      accountDefComparator
+    );
     this.accountDefs.splice(idx, 0, accountDef);
     this.accountDefsById.set(accountDef.id, accountDef);
-    logic(this, 'addAccount', { accountId: accountDef.id, index: idx });
+    logic(this, "addAccount", { accountId: accountDef.id, index: idx });
 
     let wireRep = this.accountDefToWireRep(accountDef);
-    this.emit('add', wireRep, idx);
+    this.emit("add", wireRep, idx);
   },
 
   __accountModified(accountDef) {
@@ -106,20 +109,20 @@ AccountsTOC.prototype = evt.mix({
     // smallish, so just use indexOf.)
     let idx = this.accountDefs.indexOf(accountDef);
     if (idx === -1) {
-      throw new Error('how do you have a different object?');
+      throw new Error("how do you have a different object?");
     }
-    this.emit('change', this.accountDefToWireRep(accountDef), idx);
+    this.emit("change", this.accountDefToWireRep(accountDef), idx);
   },
 
   __removeAccountById(accountId) {
     let accountDef = this.accountDefsById.get(accountId);
     let idx = this.accountDefs.indexOf(accountDef);
-    logic(this, 'removeAccountById', { accountId: accountId, index: idx });
+    logic(this, "removeAccountById", { accountId, index: idx });
 
     this.accountDefsById.delete(accountId);
     this.accountDefs.splice(idx, 1);
 
-    this.emit('remove', accountId, idx);
+    this.emit("remove", accountId, idx);
   },
 
   accountDefToWireRep(accountDef) {
@@ -149,7 +152,7 @@ AccountsTOC.prototype = evt.mix({
           outgoingUsername: accountDef.credentials.outgoingUsername,
           // no need to send the password to the UI.
           // send all the oauth2 stuff we've got, though.
-          oauth2: accountDef.credentials.oauth2
+          oauth2: accountDef.credentials.oauth2,
         },
 
         servers: [
@@ -162,7 +165,7 @@ AccountsTOC.prototype = evt.mix({
             type: accountDef.sendType,
             connInfo: accountDef.sendConnInfo,
             activeConns: 0, // XXX overlay info but we have never used this
-          }
+          },
         ],
       },
       // Information about the engine is exposed from here.  This is what gives
@@ -170,5 +173,4 @@ AccountsTOC.prototype = evt.mix({
       engineFrontEndAccountMeta.get(accountDef.engine)
     );
   },
-
 });

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
+import evt from "evt";
 
 /**
  * Header info comparator that orders messages in order of numerically
@@ -29,7 +29,7 @@ export function cmpHeaderYoungToOld(a, b) {
   }
   // favor larger UIDs because they are newer-ish.
   return b.id - a.id;
-};
+}
 
 /**
  * Perform a binary search on an array to find the correct insertion point
@@ -45,8 +45,10 @@ export function bsearchForInsert(list, seekVal, cmpfunc) {
   if (!list.length) {
     return 0;
   }
-  var low  = 0, high = list.length - 1,
-      mid, cmpval;
+  var low = 0,
+    high = list.length - 1,
+    mid,
+    cmpval;
   while (low <= high) {
     mid = low + Math.floor((high - low) / 2);
     cmpval = cmpfunc(seekVal, list[mid]);
@@ -62,15 +64,15 @@ export function bsearchForInsert(list, seekVal, cmpfunc) {
     return mid; // insertion is displacing, so use mid outright.
   } else if (cmpval > 0) {
     return mid + 1;
-  } else {
-    return mid;
   }
-};
+  return mid;
+}
 
 export function bsearchMaybeExists(list, seekVal, cmpfunc, aLow, aHigh) {
-  var low  = ((aLow === undefined)  ? 0                 : aLow),
-      high = ((aHigh === undefined) ? (list.length - 1) : aHigh),
-      mid, cmpval;
+  var low = aLow === undefined ? 0 : aLow,
+    high = aHigh === undefined ? list.length - 1 : aHigh,
+    mid,
+    cmpval;
   while (low <= high) {
     mid = low + Math.floor((high - low) / 2);
     cmpval = cmpfunc(seekVal, list[mid]);
@@ -83,7 +85,7 @@ export function bsearchMaybeExists(list, seekVal, cmpfunc, aLow, aHigh) {
     }
   }
   return null;
-};
+}
 
 export function formatAddresses(nameAddrPairs) {
   var addrstrings = [];
@@ -91,21 +93,19 @@ export function formatAddresses(nameAddrPairs) {
     var pair = nameAddrPairs[i];
     // support lazy people providing only an e-mail... or very careful
     // people who are sure they formatted things correctly.
-    if (typeof(pair) === 'string') {
+    if (typeof pair === "string") {
       addrstrings.push(pair);
-    }
-    else if (!pair.name) {
+    } else if (!pair.name) {
       addrstrings.push(pair.address);
-    }
-    else {
+    } else {
       addrstrings.push(
-        '"' + pair.name.replace(/["']/g, '') + '" <' +
-          pair.address + '>');
+        '"' + pair.name.replace(/["']/g, "") + '" <' + pair.address + ">"
+      );
     }
   }
 
-  return addrstrings.join(', ');
-};
+  return addrstrings.join(", ");
+}
 
 /**
  * Monkeypatch the given object to add a pseudo-EventTarget interface,
@@ -117,10 +117,10 @@ export function makeEventTarget(obj) {
   if (!obj.addEventListener) {
     var emitter = new evt.Emitter();
     obj.addEventListener = (type, fn) => {
-      var onType = 'on' + type;
+      var onType = "on" + type;
       if (!obj[onType]) {
-        obj[onType] = (evt) => {
-          emitter.emit(type, evt);
+        obj[onType] = event => {
+          emitter.emit(type, event);
         };
       }
       emitter.on(type, fn);
@@ -137,17 +137,16 @@ export function makeEventTarget(obj) {
  */
 export function concatBuffers() {
   var totalLength = 0;
-  for (var i = 0; i < arguments.length; i++) {
+  for (let i = 0; i < arguments.length; i++) {
     totalLength += arguments[i].byteLength;
   }
   var buffer = new Uint8Array(totalLength);
-  for (var i = 0, offset = 0; i < arguments.length; i++) {
+  for (let i = 0, offset = 0; i < arguments.length; i++) {
     buffer.set(arguments[i], offset);
     offset += arguments[i].byteLength;
   }
   return buffer;
 }
-
 
 /**
  * Strip surrounding angle brackets from the given string/array.
@@ -155,12 +154,11 @@ export function concatBuffers() {
  */
 export function stripArrows(s) {
   if (Array.isArray(s)) {
-    return s.map(exports.stripArrows);
-  } else if (s && s[0] === '<') {
+    return s.map(stripArrows);
+  } else if (s && s[0] === "<") {
     return s.slice(1, -1);
-  } else {
-    return s;
   }
+  return s;
 }
 
 /**
@@ -174,4 +172,4 @@ export function shallowClone(sourceObj) {
     destObj[key] = sourceObj[key];
   }
   return destObj;
-};
+}

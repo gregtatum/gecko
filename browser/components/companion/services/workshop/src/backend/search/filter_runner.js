@@ -47,8 +47,7 @@ FilterRunner.prototype = {
     }
     if (matched) {
       return matchInfo;
-    } else {
-      return null;
     }
-  }
+    return null;
+  },
 };

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import churnConversation from '../churn_drivers/conv_churn_driver';
+import churnConversation from "../churn_drivers/conv_churn_driver";
 
 /**
  * Planning-only task mix-in that applies modifications to a conversation based
@@ -28,7 +28,7 @@ export default {
   async plan(ctx, req) {
     let fromDb = await ctx.beginMutate({
       conversations: new Map([[req.convId, null]]),
-      messagesByConversation: new Map([[req.convId, null]])
+      messagesByConversation: new Map([[req.convId, null]]),
     });
 
     let loadedMessages = fromDb.messagesByConversation.get(req.convId);
@@ -89,10 +89,10 @@ export default {
       mutations: {
         conversations: new Map([[req.convId, convInfo]]),
         messages: modifiedMessagesMap,
-        umidNames: umidNameWrites
-      }
+        umidNames: umidNameWrites,
+      },
     });
   },
 
-  execute: null
+  execute: null,
 };

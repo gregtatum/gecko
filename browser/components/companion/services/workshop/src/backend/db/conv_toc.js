@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { bsearchMaybeExists, bsearchForInsert } from 'shared/util';
+import { bsearchMaybeExists, bsearchForInsert } from "shared/util";
 
-import BaseTOC from './base_toc';
+import BaseTOC from "./base_toc";
 
-import { conversationMessageComparator } from './comparators';
+import { conversationMessageComparator } from "./comparators";
 
 /**
  * The Conversation Table-of-Contents is in charge of backing view slices
@@ -42,7 +42,7 @@ import { conversationMessageComparator } from './comparators';
 export default function ConversationTOC({ db, query, dataOverlayManager }) {
   BaseTOC.apply(this, arguments);
 
-  logic.defineScope(this, 'ConversationTOC');
+  logic.defineScope(this, "ConversationTOC");
 
   this._db = db;
   this.query = query;
@@ -51,13 +51,15 @@ export default function ConversationTOC({ db, query, dataOverlayManager }) {
   // Our getDataForSliceRange performs the resolving, but we depend on the proxy
   // to be listening for overlay updates and to perform appropriate dirtying.
   this._overlayResolver = dataOverlayManager.makeBoundResolver(
-    this.overlayNamespace, null);
+    this.overlayNamespace,
+    null
+  );
 
   this.__deactivate(true);
 }
 ConversationTOC.prototype = BaseTOC.mix({
-  type: 'ConversationTOC',
-  overlayNamespace: 'messages',
+  type: "ConversationTOC",
+  overlayNamespace: "messages",
   heightAware: false,
 
   async __activateTOC() {
@@ -112,32 +114,44 @@ ConversationTOC.prototype = BaseTOC.mix({
     if (freshlyAdded) {
       // - Added!
       let newKey = { date: postDate, id, matchInfo };
-      let newIndex = bsearchForInsert(this.idsWithDates, newKey,
-                                      conversationMessageComparator);
+      let newIndex = bsearchForInsert(
+        this.idsWithDates,
+        newKey,
+        conversationMessageComparator
+      );
       this.idsWithDates.splice(newIndex, 0, newKey);
     } else if (!item) {
       // - Deleted!
       let oldKey = { date: preDate, id };
-      let oldIndex = bsearchMaybeExists(this.idsWithDates, oldKey,
-                                        conversationMessageComparator);
+      let oldIndex = bsearchMaybeExists(
+        this.idsWithDates,
+        oldKey,
+        conversationMessageComparator
+      );
       this.idsWithDates.splice(oldIndex, 1);
     } else if (preDate !== postDate) {
       // - Message date changed (this should only happen for drafts)
       let oldKey = { date: preDate, id };
-      let oldIndex = bsearchMaybeExists(this.idsWithDates, oldKey,
-                                        conversationMessageComparator);
+      let oldIndex = bsearchMaybeExists(
+        this.idsWithDates,
+        oldKey,
+        conversationMessageComparator
+      );
       this.idsWithDates.splice(oldIndex, 1);
 
       let newKey = { date: postDate, id, matchInfo };
-      let newIndex = bsearchForInsert(this.idsWithDates, newKey,
-                                      conversationMessageComparator);
+      let newIndex = bsearchForInsert(
+        this.idsWithDates,
+        newKey,
+        conversationMessageComparator
+      );
       this.idsWithDates.splice(newIndex, 0, newKey);
 
       // We're changing the ordering.
       metadataOnly = false;
     }
 
-    this.emit('change', id, metadataOnly);
+    this.emit("change", id, metadataOnly);
   },
 
   /**
@@ -149,7 +163,7 @@ ConversationTOC.prototype = BaseTOC.mix({
       // Our conversation was deleted and no longer exists.  Clean everything
       // out.
       this.idsWithDates.splice(0, this.idsWithDates.length);
-      this.emit('change', null);
+      this.emit("change", null);
     }
   },
 
@@ -173,7 +187,7 @@ ConversationTOC.prototype = BaseTOC.mix({
   getTopOrderingKey() {
     return {
       date: new Date(2200, 0),
-      id: ''
+      id: "",
     };
   },
 
@@ -189,13 +203,20 @@ ConversationTOC.prototype = BaseTOC.mix({
   },
 
   findIndexForOrderingKey(key) {
-    let index = bsearchForInsert(this.idsWithDates, key,
-                                 conversationMessageComparator);
+    let index = bsearchForInsert(
+      this.idsWithDates,
+      key,
+      conversationMessageComparator
+    );
     return index;
   },
 
-  getDataForSliceRange(beginInclusive, endExclusive,
-      alreadyKnownData, alreadyKnownOverlays) {
+  getDataForSliceRange(
+    beginInclusive,
+    endExclusive,
+    alreadyKnownData,
+    alreadyKnownOverlays
+  ) {
     beginInclusive = Math.max(0, beginInclusive);
     endExclusive = Math.min(endExclusive, this.idsWithDates.length);
 
@@ -235,13 +256,11 @@ ConversationTOC.prototype = BaseTOC.mix({
         sendState.set(id, [null, overlayResolver(id)]);
       } else if (messageCache.has(id)) {
         newKnownSet.add(id);
-        sendState.set(
-          id,
-          [
-            messageCache.get(id),
-            overlayResolver(id),
-            idsWithDates[i].matchInfo
-          ]);
+        sendState.set(id, [
+          messageCache.get(id),
+          overlayResolver(id),
+          idsWithDates[i].matchInfo,
+        ]);
       } else {
         let date = idsWithDates[i].date;
         needData.set([id, date], null);
@@ -251,18 +270,18 @@ ConversationTOC.prototype = BaseTOC.mix({
     let readPromise = null;
     if (needData.size) {
       readPromise = this._db.read(this, {
-        messages: needData
+        messages: needData,
       });
     } else {
       needData = null;
     }
 
     return {
-      ids: ids,
+      ids,
       state: sendState,
       pendingReads: needData,
       readPromise,
-      newValidDataSet: newKnownSet
+      newValidDataSet: newKnownSet,
     };
-  }
+  },
 });

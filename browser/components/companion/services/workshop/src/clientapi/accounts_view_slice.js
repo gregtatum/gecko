@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import EntireListView from './entire_list_view';
-import MailAccount from './mail_account';
+import EntireListView from "./entire_list_view";
+import MailAccount from "./mail_account";
 
 export default function AccountsViewSlice(api, handle, opts) {
   EntireListView.call(this, api, MailAccount, handle);
 
-  this._autoViewFolders = opts && opts.autoViewFolders || false;
+  this._autoViewFolders = (opts && opts.autoViewFolders) || false;
 }
 AccountsViewSlice.prototype = Object.create(EntireListView.prototype);
 
@@ -52,28 +52,30 @@ AccountsViewSlice.prototype.eventuallyGetAccountById = function(id) {
       return;
     }
 
-    let addListener = (account) => {
+    let addListener = account => {
       if (account.id === id) {
-        this.removeListener('add', addListener);
+        this.removeListener("add", addListener);
         resolve(account);
       }
     };
-    this.on('add', addListener);
+    this.on("add", addListener);
   });
 };
 
-Object.defineProperty(AccountsViewSlice.prototype, 'defaultAccount', {
-  get: function () {
+Object.defineProperty(AccountsViewSlice.prototype, "defaultAccount", {
+  get() {
     var defaultAccount = this.items[0];
     for (var i = 1; i < this.items.length; i++) {
       // For UI upgrades, the defaultPriority may not be set, so default to
       // zero for comparisons
-      if ((this.items[i]._wireRep.defaultPriority || 0) >
-          (defaultAccount._wireRep.defaultPriority || 0)) {
+      if (
+        (this.items[i]._wireRep.defaultPriority || 0) >
+        (defaultAccount._wireRep.defaultPriority || 0)
+      ) {
         defaultAccount = this.items[i];
       }
     }
 
     return defaultAccount;
-  }
+  },
 });

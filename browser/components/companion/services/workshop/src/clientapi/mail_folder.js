@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
+import evt from "evt";
 
 export default function MailFolder(api, wireRep, overlays, matchInfo) {
   evt.Emitter.call(this);
@@ -25,13 +25,13 @@ export default function MailFolder(api, wireRep, overlays, matchInfo) {
   this.matchInfo = matchInfo;
 }
 MailFolder.prototype = evt.mix({
-  toString: function() {
-    return '[MailFolder: ' + this.path + ']';
+  toString() {
+    return "[MailFolder: " + this.path + "]";
   },
-  toJSON: function() {
+  toJSON() {
     return {
       type: this.type,
-      path: this.path
+      path: this.path,
     };
   },
   /**
@@ -40,14 +40,14 @@ MailFolder.prototype = evt.mix({
    * stored within the FolderStorage object for this folder. Thus, it only
    * accounts for messages which the user has loaded from the server.
    */
-  __update: function(wireRep) {
+  __update(wireRep) {
     // Hold on to wireRep for caching
     this._wireRep = wireRep;
 
     this.localUnreadConversations = wireRep.localUnreadConversations;
     this.localMessageCount = wireRep.localMessageCount;
 
-    let datify = (maybeDate) => (maybeDate ? new Date(maybeDate) : null);
+    let datify = maybeDate => (maybeDate ? new Date(maybeDate) : null);
 
     this.lastSuccessfulSyncAt = datify(wireRep.lastSuccessfulSyncAt);
     this.lastAttemptedSyncAt = datify(wireRep.lastAttemptedSyncAt);
@@ -101,8 +101,7 @@ MailFolder.prototype = evt.mix({
     // Exchange folder name with the localized version if available
     this.name = this._api.l10n_folder_name(this.name, this.type);
 
-    let hierarchyOnly = ((wireRep.type === 'account') ||
-                         (wireRep.type === 'nomail'));
+    let hierarchyOnly = wireRep.type === "account" || wireRep.type === "nomail";
     this.selectable = !hierarchyOnly && !wireRep.engineSaysUnselectable;
 
     this.neededForHierarchy = hierarchyOnly;
@@ -114,10 +113,10 @@ MailFolder.prototype = evt.mix({
      *  place for messages to be moved into.
      */
     switch (this.type) {
-      case 'localdrafts':
-      case 'outbox':
-      case 'account':
-      case 'nomail':
+      case "localdrafts":
+      case "outbox":
+      case "account":
+      case "nomail":
         this.isValidMoveTarget = false;
         break;
       default:
@@ -128,7 +127,7 @@ MailFolder.prototype = evt.mix({
     this.syncGranularity = wireRep.syncGranularity;
   },
 
-  __updateOverlays: function(overlays) {
+  __updateOverlays(overlays) {
     let syncOverlay = overlays.sync_refresh || overlays.sync_grow || {};
 
     /**
@@ -176,7 +175,7 @@ MailFolder.prototype = evt.mix({
     this.syncBlocked = syncOverlay.blocked || null;
   },
 
-  release: function() {
+  release() {
     // currently nothing to clean up
-  }
+  },
 });

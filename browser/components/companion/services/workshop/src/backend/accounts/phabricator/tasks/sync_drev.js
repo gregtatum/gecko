@@ -14,35 +14,27 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import { shallowClone } from "shared/util";
 
-import { shallowClone } from 'shared/util';
+import { prioritizeNewer } from "../../../date_priority_adjuster";
 
-import { prioritizeNewer } from '../../../date_priority_adjuster';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-
-import TaskDefiner from '../../../task_infra/task_definer';
-
-import churnConversation from '../../../churn_drivers/conv_churn_driver';
-import { TransactionChewer } from '../chew_xact';
-import { UserChewer } from '../chew_users';
-import { PatchChewer } from '../chew_patch';
-
+import churnConversation from "../../../churn_drivers/conv_churn_driver";
+import { TransactionChewer } from "../chew_xact";
+import { UserChewer } from "../chew_users";
+import { PatchChewer } from "../chew_patch";
 
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'sync_drev',
+    name: "sync_drev",
 
     async plan(ctx, rawTask) {
       let plannedTask = shallowClone(rawTask);
 
-      plannedTask.exclusiveResources = [
-        `conv:${rawTask.convId}`
-      ];
+      plannedTask.exclusiveResources = [`conv:${rawTask.convId}`];
 
-      plannedTask.priorityTags = [
-        `view:conv:${rawTask.convId}`
-      ];
+      plannedTask.priorityTags = [`view:conv:${rawTask.convId}`];
 
       // Prioritize syncing the conversation by how new it is.
       if (rawTask.mostRecent) {
@@ -50,7 +42,7 @@ export default TaskDefiner.defineSimpleTask([
       }
 
       await ctx.finishTask({
-        taskState: plannedTask
+        taskState: plannedTask,
       });
     },
 
@@ -60,12 +52,14 @@ export default TaskDefiner.defineSimpleTask([
      */
     async execute(ctx, req) {
       let account = await ctx.universe.acquireAccount(ctx, req.accountId);
-      let foldersTOC =
-        await ctx.universe.acquireAccountFoldersTOC(ctx, ctx.accountId);
+      let foldersTOC = await ctx.universe.acquireAccountFoldersTOC(
+        ctx,
+        ctx.accountId
+      );
 
       // ## Fetch the current revision details and its transactions in parallel.
       const revDetailsProm = account.client.apiCall(
-        'differential.revision.search',
+        "differential.revision.search",
         {
           constraints: {
             phids: [req.drevPhid],
@@ -74,16 +68,13 @@ export default TaskDefiner.defineSimpleTask([
             reviewers: true,
             subscribers: true,
             projects: true,
-            'reviewers-extra': true,
-          }
+            "reviewers-extra": true,
+          },
         }
       );
-      const revTransactionsProm = account.client.apiCall(
-        'transaction.search',
-        {
-          objectIdentifier: req.drevPhid,
-        }
-      );
+      const revTransactionsProm = account.client.apiCall("transaction.search", {
+        objectIdentifier: req.drevPhid,
+      });
 
       const revDetails = await revDetailsProm;
       const revTransactions = await revTransactionsProm;
@@ -105,7 +96,7 @@ export default TaskDefiner.defineSimpleTask([
         // case we'll get `undefined` back when we do the map lookup.  We do
         // need to be aware of this and make sure we use `newData` in that case.
         conversations: new Map([[req.convId, null]]),
-        messagesByConversation: new Map([[req.convId, null]])
+        messagesByConversation: new Map([[req.convId, null]]),
       });
 
       const revInfo = revDetails.data[0];
@@ -116,28 +107,30 @@ export default TaskDefiner.defineSimpleTask([
       let patchInfo;
 
       // ## If we don't have the current version of the patch, then fetch it.
-      if (!oldConvInfo || !oldConvInfo.app ||
-          !oldConvInfo.app.patchInfo ||
-          oldConvInfo.app.patchInfo.diffPHID !== revInfo.fields.diffPHID) {
+      if (
+        !oldConvInfo ||
+        !oldConvInfo.app ||
+        !oldConvInfo.app.patchInfo ||
+        oldConvInfo.app.patchInfo.diffPHID !== revInfo.fields.diffPHID
+      ) {
         const diffPHID = revInfo.fields.diffPHID;
 
         // The raw diff lookup needs the numeric id from the diffInfo based on
         // my preliminary investigations, so we need to do a diff search to get
         // that info from the diffPHID.
-        const diffInfo = (await account.client.apiCall(
-          'differential.diff.search',
-          {
+        const diffInfo = (
+          await account.client.apiCall("differential.diff.search", {
             constraints: {
-              phids: [diffPHID]
+              phids: [diffPHID],
             },
             attachments: {
-              commits: true
+              commits: true,
             },
-          }
-        )).data[0];
+          })
+        ).data[0];
 
         const rawDiff = await account.client.apiCall(
-          'differential.getrawdiff',
+          "differential.getrawdiff",
           {
             diffID: diffInfo.id,
           }
@@ -150,7 +143,9 @@ export default TaskDefiner.defineSimpleTask([
         const dirInfos = [];
         for (const [dirName, dirInfo] of dirStats.entries()) {
           const virtFolderInfo = foldersTOC.ensureLocalVirtualFolder(
-            ctx, `patch-paths/${dirName}`);
+            ctx,
+            `patch-paths/${dirName}`
+          );
           virtFolderIds.push(virtFolderInfo.id);
           dirInfos.push(dirInfo);
         }
@@ -189,7 +184,12 @@ export default TaskDefiner.defineSimpleTask([
       };
 
       let convInfo = churnConversation(
-        req.convId, oldConvInfo, txChewer.allMessages, 'phab-drev', convMeta);
+        req.convId,
+        oldConvInfo,
+        txChewer.allMessages,
+        "phab-drev",
+        convMeta
+      );
 
       // ## Finish the task
       // Properly mark the conversation as new or modified based on whether we
@@ -204,13 +204,13 @@ export default TaskDefiner.defineSimpleTask([
       await ctx.finishTask({
         mutations: {
           conversations: modifiedConversations,
-          messages: txChewer.modifiedMessageMap
+          messages: txChewer.modifiedMessageMap,
         },
         newData: {
           conversations: newConversations,
-          messages: txChewer.newMessages
-        }
+          messages: txChewer.newMessages,
+        },
       });
     },
-  }
+  },
 ]);

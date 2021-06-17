@@ -19,9 +19,9 @@
  * local unread conversation count for all folders.
  */
 export default {
-  name: 'unread_count',
+  name: "unread_count",
 
-  'conv!*!add': function(triggerCtx, convInfo) {
+  "conv!*!add": function(triggerCtx, convInfo) {
     // Nothing to do if this conversation is already fully read.
     if (!convInfo.hasUnread) {
       return;
@@ -30,16 +30,14 @@ export default {
     // Every folderId it belongs to gets an atomicDelta of 1.
     let folderDeltas = new Map();
     for (let folderId of convInfo.folderIds) {
-      folderDeltas.set(
-        folderId,
-        {
-          localUnreadConversations: 1
-        });
+      folderDeltas.set(folderId, {
+        localUnreadConversations: 1,
+      });
     }
     triggerCtx.modify({
       atomicDeltas: {
-        folders: folderDeltas
-      }
+        folders: folderDeltas,
+      },
     });
   },
 
@@ -48,8 +46,15 @@ export default {
    * does us a solid and has pre-computed changes to the folderId's by providing
    * added/kept/removed and these are correct even in the face of deletion.
    */
-  'conv!*!change': function(triggerCtx, convId, preInfo, convInfo, added,
-                            kept, removed) {
+  "conv!*!change": function(
+    triggerCtx,
+    convId,
+    preInfo,
+    convInfo,
+    added,
+    kept,
+    removed
+  ) {
     let hasUnread = convInfo ? convInfo.hasUnread : false;
 
     // If the conversation was read before and is still read, then there are
@@ -64,11 +69,9 @@ export default {
       for (let folderId of folderIds) {
         // We will see a given folderId at most once so we don't have to do any
         // math ourselves.
-        folderDeltas.set(
-          folderId,
-          {
-            localUnreadConversations: delta
-          });
+        folderDeltas.set(folderId, {
+          localUnreadConversations: delta,
+        });
       }
     };
 
@@ -84,7 +87,8 @@ export default {
         applyDelta(added, 1);
         applyDelta(removed, -1);
       }
-    } else { // (preInfo.hasUnread, because of the bail above.)
+    } else {
+      // (preInfo.hasUnread, because of the bail above.)
       // - The conversation is newly read.
       // We need to -1 all the previous folderId's.  We could get this off of
       // kept and removed, but it's more straightforward to just use the
@@ -95,9 +99,9 @@ export default {
     if (folderDeltas.size) {
       triggerCtx.modify({
         atomicDeltas: {
-          folders: folderDeltas
-        }
+          folders: folderDeltas,
+        },
       });
     }
-  }
+  },
 };

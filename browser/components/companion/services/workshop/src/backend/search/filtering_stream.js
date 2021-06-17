@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { TransformStream, WritableStream, CountQueuingStrategy } from 'streams';
-import { shallowClone } from 'shared/util';
+import { TransformStream, WritableStream, CountQueuingStrategy } from "streams";
+import { shallowClone } from "shared/util";
 
 /**
  * The filtering stream is fed TOC change events consisting of
@@ -49,10 +49,18 @@ import { shallowClone } from 'shared/util';
  *
  * @param {}
  */
-export default function FilteringStream({ ctx, filterRunner, rootGatherer,
-    preDerivers, postDerivers,
-    isDeletion, inputToGatherInto, mutateChangeToResembleAdd,
-    mutateChangeToResembleDeletion, onFilteredUpdate }) {
+export default function FilteringStream({
+  ctx,
+  filterRunner,
+  rootGatherer,
+  preDerivers,
+  postDerivers,
+  isDeletion,
+  inputToGatherInto,
+  mutateChangeToResembleAdd,
+  mutateChangeToResembleDeletion,
+  onFilteredUpdate,
+}) {
   // Implementation-wise this ends up slightly weird.  Our gathering transform
   // stream returns Promises that will be resolved with the actual gathered
   // object representation.  This is necessary because the current transform
@@ -106,18 +114,17 @@ export default function FilteringStream({ ctx, filterRunner, rootGatherer,
     transform(change, enqueue, done) {
       if (isDeletion(change)) {
         enqueue({ change, gather: null });
-      } else {
-        // (avoid gathering data for already-removed items)
-        if (queuedSet.has(change.id)) {
-          logic(ctx, 'gathering', { id: change.id });
-          let gatherInto = inputToGatherInto(change);
-          enqueue({ change, gather: rootGatherer.gather(gatherInto) });
-        }
+      } else if (queuedSet.has(change.id)) {
+        logic(ctx, "gathering", { id: change.id });
+        let gatherInto = inputToGatherInto(change);
+        enqueue({ change, gather: rootGatherer.gather(gatherInto) });
       }
+      // (avoid gathering data for already-removed items)
+
       done();
     },
     writableStrategy: new CountQueuingStrategy({ highWaterMark: 1 }),
-    readableStrategy: new CountQueuingStrategy({ highWaterMark: 1 })
+    readableStrategy: new CountQueuingStrategy({ highWaterMark: 1 }),
   });
 
   const filterStream = new TransformStream({
@@ -134,22 +141,22 @@ export default function FilteringStream({ ctx, filterRunner, rootGatherer,
         }
         done();
       } else {
-        logic(ctx, 'gatherWait', { id: change.id });
-        gather.then((gathered) => {
-          logic(ctx, 'gathered', { id: change.id });
+        logic(ctx, "gatherWait", { id: change.id });
+        gather.then(gathered => {
+          logic(ctx, "gathered", { id: change.id });
           // It's possible the item got removed after we kicked off the gather.
           // Don't report the item in that case.  (Note that explicit deletion
           // of things already reported triggered the first branch of this if,
           // so we don't need to be worrying about that here.)
           if (!queuedSet.has(change.id)) {
-            logic(ctx, 'notInQueuedSet');
+            logic(ctx, "notInQueuedSet");
             done();
             return;
           }
           queuedSet.delete(change.id);
           notifyAdded(preDerivers, gathered);
           let matchInfo = filterRunner.filter(gathered);
-          logic(ctx, 'maybeMatch', { matched: !!matchInfo });
+          logic(ctx, "maybeMatch", { matched: !!matchInfo });
           if (matchInfo) {
             // - Match!
             // We need to much with the change from here on out, so we need to
@@ -166,45 +173,46 @@ export default function FilteringStream({ ctx, filterRunner, rootGatherer,
             // And this is how the matchInfo actually gets into the TOC...
             change.matchInfo = matchInfo;
             enqueue(change);
-          } else {
-            // - No Match!
-            // We may need to issue a retraction... delete and check RV.
-            if (knownFilteredSet.delete(change.id)) {
-              change = shallowClone(change);
-              mutateChangeToResembleDeletion(change);
-              enqueue(change);
-              notifyRemoved(postDerivers, change.id);
-            }
+          } else if (knownFilteredSet.delete(change.id)) {
+            // We need to issue a retraction... delete and check RV.
+            change = shallowClone(change);
+            mutateChangeToResembleDeletion(change);
+            enqueue(change);
+            notifyRemoved(postDerivers, change.id);
           }
           done();
         });
       }
     },
     writableStrategy: new CountQueuingStrategy({ highWaterMark: 1 }),
-    readableStrategy: new CountQueuingStrategy({ highWaterMark: 1 })
+    readableStrategy: new CountQueuingStrategy({ highWaterMark: 1 }),
   });
 
   //bufferingStream.readable.pipeTo(gatherStream.writable);
-  gatherStream.readable.pipeThrough(filterStream).pipeTo(new WritableStream({
-    start() {
-    },
-    write(change) {
-      onFilteredUpdate(change);
-    },
-    close() {
-      // I don't think anything actually cares?  Unless we should be propagating
-      // through to the moot callback?
-    },
-    abort(ex) {
-      logic(ctx, 'filteringStreamAbortError', { ex, stack: ex.stack });
-    }
-  }, new CountQueuingStrategy({ highWaterMark: 1 })));
+  gatherStream.readable.pipeThrough(filterStream).pipeTo(
+    new WritableStream(
+      {
+        start() {},
+        write(change) {
+          onFilteredUpdate(change);
+        },
+        close() {
+          // I don't think anything actually cares?  Unless we should be propagating
+          // through to the moot callback?
+        },
+        abort(ex) {
+          logic(ctx, "filteringStreamAbortError", { ex, stack: ex.stack });
+        },
+      },
+      new CountQueuingStrategy({ highWaterMark: 1 })
+    )
+  );
 
   return {
     /**
      * This is how we are fed data/changes from the database.
      */
-    consider: (change) => {
+    consider: change => {
       if (!isDeletion(change)) {
         // - add/change, process for filtering
         queuedSet.add(change.id);
@@ -225,6 +233,6 @@ export default function FilteringStream({ ctx, filterRunner, rootGatherer,
     },
     destroy: () => {
       gatherStream.writable.close();
-    }
+    },
   };
 }

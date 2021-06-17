@@ -14,13 +14,18 @@
  * limitations under the License.
  */
 
-import FilteringStream from '../filtering_stream';
+import FilteringStream from "../filtering_stream";
 
 /**
  * Filter conversation messages.
  */
-export default function FilteringConversationMessagesQuery(
-    { ctx, db,  conversationId, filterRunner, rootGatherer }) {
+export default function FilteringConversationMessagesQuery({
+  ctx,
+  db,
+  conversationId,
+  filterRunner,
+  rootGatherer,
+}) {
   this._db = db;
   this.conversationId = conversationId;
   this._tocEventId = null;
@@ -30,27 +35,29 @@ export default function FilteringConversationMessagesQuery(
   this._boundConvListener = null;
 
   this._filteringStream = new FilteringStream({
-    ctx, filterRunner, rootGatherer,
-    isDeletion: (change) => {
-      return (!change.postDate);
+    ctx,
+    filterRunner,
+    rootGatherer,
+    isDeletion: change => {
+      return !change.postDate;
     },
-    inputToGatherInto: (change) => {
+    inputToGatherInto: change => {
       return {
         messageId: change.id,
-        date: change.postDate
+        date: change.postDate,
       };
     },
-    mutateChangeToResembleAdd: (change) => {
+    mutateChangeToResembleAdd: change => {
       change.preDate = null;
       change.freshlyAdded = true;
     },
-    mutateChangeToResembleDeletion: (change) => {
+    mutateChangeToResembleDeletion: change => {
       change.item = null;
       change.postDate = null;
     },
-    onFilteredUpdate: (change) => {
+    onFilteredUpdate: change => {
       this._boundTOCListener(change);
-    }
+    },
   });
 
   this._bound_filteringTOCChange = this._filteringTOCChange.bind(this);
@@ -65,12 +72,14 @@ FilteringConversationMessagesQuery.prototype = {
    */
   async execute() {
     let idsWithDates;
-    ({ idsWithDates,
-       drainEvents: this._drainEvents,
-       tocEventId: this._tocEventId,
-       convEventId: this._convEventId } =
-        await this._db.loadConversationMessageIdsAndListen(
-          this.conversationId));
+    ({
+      idsWithDates,
+      drainEvents: this._drainEvents,
+      tocEventId: this._tocEventId,
+      convEventId: this._convEventId,
+    } = await this._db.loadConversationMessageIdsAndListen(
+      this.conversationId
+    ));
 
     for (let idWithDate of idsWithDates) {
       this._filteringStream.consider({
@@ -79,7 +88,7 @@ FilteringConversationMessagesQuery.prototype = {
         postDate: idWithDate.date,
         item: null,
         freshlyAdded: true,
-        matchInfo: null
+        matchInfo: null,
       });
     }
 
@@ -118,5 +127,5 @@ FilteringConversationMessagesQuery.prototype = {
     this._db.removeListener(this._tocEventId, this._bound_filteringTOCChange);
     this._db.removeListener(this._convEventId, this._boundConvListener);
     this._filteringStream.destroy();
-  }
+  },
 };

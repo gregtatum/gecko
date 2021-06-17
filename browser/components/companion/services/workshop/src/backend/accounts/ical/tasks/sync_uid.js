@@ -14,33 +14,25 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import { shallowClone } from "shared/util";
 
-import { shallowClone } from 'shared/util';
+import { prioritizeNewer } from "../../../date_priority_adjuster";
 
-import { prioritizeNewer } from '../../../date_priority_adjuster';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-
-import TaskDefiner from '../../../task_infra/task_definer';
-
-import churnConversation from '../../../churn_drivers/conv_churn_driver';
-import { RecurringEventBundleChewer } from '../chew_event_bundle';
-
+import churnConversation from "../../../churn_drivers/conv_churn_driver";
+import { RecurringEventBundleChewer } from "../chew_event_bundle";
 
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'sync_uid',
+    name: "sync_uid",
 
     async plan(ctx, rawTask) {
       let plannedTask = shallowClone(rawTask);
 
-      plannedTask.exclusiveResources = [
-        `conv:${rawTask.convId}`
-      ];
+      plannedTask.exclusiveResources = [`conv:${rawTask.convId}`];
 
-      plannedTask.priorityTags = [
-        `view:conv:${rawTask.convId}`
-      ];
+      plannedTask.priorityTags = [`view:conv:${rawTask.convId}`];
 
       // Prioritize syncing the conversation by how new it is.
       if (rawTask.mostRecent) {
@@ -48,7 +40,7 @@ export default TaskDefiner.defineSimpleTask([
       }
 
       await ctx.finishTask({
-        taskState: plannedTask
+        taskState: plannedTask,
       });
     },
 
@@ -58,8 +50,10 @@ export default TaskDefiner.defineSimpleTask([
      */
     async execute(ctx, req) {
       let account = await ctx.universe.acquireAccount(ctx, req.accountId);
-      let foldersTOC =
-        await ctx.universe.acquireAccountFoldersTOC(ctx, ctx.accountId);
+      let foldersTOC = await ctx.universe.acquireAccountFoldersTOC(
+        ctx,
+        account.id
+      );
 
       // ## Begin Mutation
       let fromDb = await ctx.beginMutate({
@@ -67,7 +61,7 @@ export default TaskDefiner.defineSimpleTask([
         // case we'll get `undefined` back when we do the map lookup.  We do
         // need to be aware of this and make sure we use `newData` in that case.
         conversations: new Map([[req.convId, null]]),
-        messagesByConversation: new Map([[req.convId, null]])
+        messagesByConversation: new Map([[req.convId, null]]),
       });
 
       const oldMessages = fromDb.messagesByConversation.get(req.convId);
@@ -89,7 +83,11 @@ export default TaskDefiner.defineSimpleTask([
       // It's possible we don't want a conversation (anymore) if there are no
       // messages.
       if (eventChewer.allMessages.length) {
-        convInfo = churnConversation(req.convId, oldConvInfo, eventChewer.allMessages);
+        convInfo = churnConversation(
+          req.convId,
+          oldConvInfo,
+          eventChewer.allMessages
+        );
       } else {
         convInfo = null;
       }
@@ -107,13 +105,13 @@ export default TaskDefiner.defineSimpleTask([
       await ctx.finishTask({
         mutations: {
           conversations: modifiedConversations,
-          messages: eventChewer.modifiedMessageMap
+          messages: eventChewer.modifiedMessageMap,
         },
         newData: {
           conversations: newConversations,
-          messages: eventChewer.newMessages
-        }
+          messages: eventChewer.newMessages,
+        },
       });
     },
-  }
+  },
 ]);

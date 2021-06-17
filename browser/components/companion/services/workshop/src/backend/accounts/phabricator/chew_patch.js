@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import parseGitPatch from 'parse-git-patch';
+import parseGitPatch from "parse-git-patch";
 
 /**
  * Helper class that consumes a diff/patch to provide summary information
@@ -78,10 +78,10 @@ export class PatchChewer {
 
     for (const pfile of parsed.files) {
       const fileName = pfile.deleted ? pfile.beforeName : pfile.afterName;
-      const idxLastSlash = fileName.lastIndexOf('/');
+      const idxLastSlash = fileName.lastIndexOf("/");
       const dirName = fileName.substring(0, idxLastSlash);
       if (!dirName) {
-        console.warn('Got empty dirname from', fileName, 'from', pfile);
+        console.warn("Got empty dirname from", fileName, "from", pfile);
       }
 
       let dirInfo = dirStats.get(dirName);
@@ -95,7 +95,8 @@ export class PatchChewer {
         dirStats.set(dirName, dirInfo);
       }
 
-      let added = 0, deleted = 0;
+      let added = 0,
+        deleted = 0;
       for (const lineParsed of pfile.modifiedLines) {
         if (lineParsed.added) {
           added++;

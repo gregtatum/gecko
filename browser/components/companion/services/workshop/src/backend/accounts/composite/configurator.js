@@ -18,14 +18,14 @@
  * Configurator for imap+smtp and pop3+smtp.
  **/
 
-import { PERFNOW } from 'shared/date';
+import { PERFNOW } from "shared/date";
 
 /**
  * Consuming userDetails and domainInfo, create the account-specific account
  * definition fragments.
  */
 export default function(userDetails, domainInfo) {
-  let incomingType = (domainInfo.type === 'imap+smtp' ? 'imap' : 'pop3');
+  let incomingType = domainInfo.type === "imap+smtp" ? "imap" : "pop3";
   let password = null;
   // If the account has an outgoingPassword, use that; otherwise
   // use the main password. We must take care to treat null values
@@ -62,38 +62,40 @@ export default function(userDetails, domainInfo) {
       // generally expect the XOAUTH2 case should go through without
       // failure, in the event something is wrong, immediately re-fetching
       // a new accessToken is not going to be useful for us.
-      _transientLastRenew: PERFNOW()
+      _transientLastRenew: PERFNOW(),
     };
   }
   let incomingInfo = {
     hostname: domainInfo.incoming.hostname,
     port: domainInfo.incoming.port,
-    crypto: (typeof domainInfo.incoming.socketType === 'string' ?
-             domainInfo.incoming.socketType.toLowerCase() :
-             domainInfo.incoming.socketType),
+    crypto:
+      typeof domainInfo.incoming.socketType === "string"
+        ? domainInfo.incoming.socketType.toLowerCase()
+        : domainInfo.incoming.socketType,
   };
 
-  if (incomingType === 'pop3') {
+  if (incomingType === "pop3") {
     incomingInfo.preferredAuthMethod = null;
   }
   let smtpConnInfo = {
     emailAddress: userDetails.emailAddress, // used for probing
     hostname: domainInfo.outgoing.hostname,
     port: domainInfo.outgoing.port,
-    crypto: (typeof domainInfo.outgoing.socketType === 'string' ?
-             domainInfo.outgoing.socketType.toLowerCase() :
-             domainInfo.outgoing.socketType),
+    crypto:
+      typeof domainInfo.outgoing.socketType === "string"
+        ? domainInfo.outgoing.socketType.toLowerCase()
+        : domainInfo.outgoing.socketType,
   };
 
   return {
     credentials,
     typeFields: {
       receiveType: incomingType,
-      sendType: 'smtp'
+      sendType: "smtp",
     },
     connInfoFields: {
       receiveConnInfo: incomingInfo,
-      sendConnInfo: smtpConnInfo
-    }
+      sendConnInfo: smtpConnInfo,
+    },
   };
 }

@@ -34,16 +34,15 @@ function receiveConnect(evt) {
   port.onmessage = receiveMessage;
 }
 
-const inSharedWorker = 'onconnect' in globalThis;
+const inSharedWorker = "onconnect" in globalThis;
 
 let defaultPort;
 if (!inSharedWorker) {
   defaultPort = globalThis;
-  globalThis.addEventListener('message', receiveMessage);
+  globalThis.addEventListener("message", receiveMessage);
 } else {
-  globalThis.addEventListener('connect', receiveConnect);
+  globalThis.addEventListener("connect", receiveConnect);
 }
-
 
 export function unregister(type) {
   delete listeners[type];
@@ -53,7 +52,7 @@ export function registerSimple(type, callback) {
   listeners[type] = callback;
 
   return function sendSimpleMessage(cmd, args) {
-    globalThis.postMessage({ type: type, uid: null, cmd: cmd, args: args });
+    globalThis.postMessage({ type, uid: null, cmd, args });
   };
 }
 
@@ -80,10 +79,10 @@ export function registerCallbackType(type) {
   };
 
   var sender = function sendCallbackMessage(cmd, args) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       callbacks[uid] = resolve;
 
-      globalThis.postMessage({ type: type, uid: uid++, cmd: cmd, args: args });
+      globalThis.postMessage({ type, uid: uid++, cmd, args });
     });
   };
   callbackSenders[type] = sender;
@@ -107,27 +106,25 @@ export function registerInstanceType(type) {
   };
 
   return {
-    register: function(instanceListener, explicitPort) {
+    register(instanceListener, explicitPort) {
       const usePort = explicitPort || defaultPort;
       var thisUid = uid++;
       instanceMap[thisUid] = instanceListener;
 
       return {
         sendMessage: function sendInstanceMessage(cmd, args, transferArgs) {
-          usePort.postMessage({ type: type, uid: thisUid,
-                               cmd: cmd, args: args },
-                               transferArgs);
+          usePort.postMessage({ type, uid: thisUid, cmd, args }, transferArgs);
         },
         unregister: function unregisterInstance() {
           delete instanceMap[thisUid];
-        }
+        },
       };
     },
   };
 }
 
 export function shutdown() {
-  globalThis.removeEventListener('message', receiveMessage);
+  globalThis.removeEventListener("message", receiveMessage);
   listeners = {};
   callbackSenders = {};
 }

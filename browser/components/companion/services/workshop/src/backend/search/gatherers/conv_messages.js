@@ -31,14 +31,13 @@ GatherConversationMessages.prototype = {
    * own gather contexts.
    */
   plural: true,
-  gather: function(gathered) {
-    return this._db.read(
-      this._ctx,
-      {
-        messagesByConversation: new Map([[gathered.convId, null]])
+  gather(gathered) {
+    return this._db
+      .read(this._ctx, {
+        messagesByConversation: new Map([[gathered.convId, null]]),
       })
-    .then(({ messagesByConversation }) => {
-      return messagesByConversation.get(gathered.convId);
-    });
-  }
+      .then(({ messagesByConversation }) => {
+        return messagesByConversation.get(gathered.convId);
+      });
+  },
 };

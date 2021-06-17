@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../task_infra/task_definer';
+import TaskDefiner from "../task_infra/task_definer";
 
-import messageSummarize from 'app_logic/new_message_summarizer';
+import messageSummarize from "app_logic/new_message_summarizer";
 
-import { convIdFromMessageId } from 'shared/id_conversions';
+import { convIdFromMessageId } from "shared/id_conversions";
 
 /**
  * Per-account tracking of "new" messages and the conversations they belong to.
@@ -115,11 +115,11 @@ import { convIdFromMessageId } from 'shared/id_conversions';
  */
 export default TaskDefiner.defineComplexTask([
   {
-    name: 'new_tracking',
+    name: "new_tracking",
 
     /**
      */
-    initPersistentState: function() {
+    initPersistentState() {
       return {
         /**
          * The DateMS to use to test for new messages.  If null, we haven't
@@ -137,13 +137,17 @@ export default TaskDefiner.defineComplexTask([
          * The set of known new messages stored as per-conversation lists (keyed
          * by the conversation )
          */
-        newByConv: new Map()
+        newByConv: new Map(),
       };
     },
 
-    deriveMemoryStateFromPersistentState: function(persistentState, accountId,
-        accountInfo, foldersTOC) {
-      let inboxFolder = foldersTOC.getCanonicalFolderByType('inbox');
+    deriveMemoryStateFromPersistentState(
+      persistentState,
+      accountId,
+      accountInfo,
+      foldersTOC
+    ) {
+      let inboxFolder = foldersTOC.getCanonicalFolderByType("inbox");
       return {
         memoryState: {
           // Try and get the folder already; this could fail if the account was
@@ -158,20 +162,15 @@ export default TaskDefiner.defineComplexTask([
           // create a new map every time.  However, it's also the case that
           // the map itself will have the same structure every time.  So we
           // just create the map once and reuse it forever.
-          complexStateMap: new Map([
-            [
-              [accountId, this.name],
-              persistentState
-            ]
-          ]),
+          complexStateMap: new Map([[[accountId, this.name], persistentState]]),
           // Same rationale re: object identity.  The group tracker uses a set
           // and so by only ever using a single object we avoid having N
           // equivalent tasks planned
           newFlushTaskReq: {
-            type: 'new_flush'
-          }
+            type: "new_flush",
+          },
         },
-        markers: []
+        markers: [],
       };
     },
 
@@ -186,13 +185,13 @@ export default TaskDefiner.defineComplexTask([
       }
 
       let newTasks = [];
-      if (req.op === 'clear') {
+      if (req.op === "clear") {
         // This state may already be reflected in the UI, in which case a silent
         // clear may be requested.  In this case, we should not schedule a
         // flush.
         if (!req.silent) {
           newTasks.push({
-            type: 'new_flush'
+            type: "new_flush",
           });
         }
         persistentState.newByConv.clear();
@@ -200,7 +199,7 @@ export default TaskDefiner.defineComplexTask([
 
       await ctx.finishTask({
         newData: { tasks: newTasks },
-        complexTaskState: persistentState
+        complexTaskState: persistentState,
       });
     },
 
@@ -213,11 +212,16 @@ export default TaskDefiner.defineComplexTask([
       return persistentState.newByConv;
     },
 
-    'trigger_msg!*!add': function(persistentState, memoryState, triggerCtx,
-                                  message) {
+    "trigger_msg!*!add": function(
+      persistentState,
+      memoryState,
+      triggerCtx,
+      message
+    ) {
       if (!memoryState.inboxFolderId) {
-        let inboxFolder =
-          memoryState.foldersTOC.getCanonicalFolderByType('inbox');
+        let inboxFolder = memoryState.foldersTOC.getCanonicalFolderByType(
+          "inbox"
+        );
         memoryState.inboxFolderId = inboxFolder && inboxFolder.id;
         // this is crazy non-sensical, but whatever.
         if (!memoryState.inboxFolderId) {
@@ -229,7 +233,7 @@ export default TaskDefiner.defineComplexTask([
         return;
       }
       // bail if the message has already been read.
-      if (message.flags.indexOf('\\Seen') !== -1) {
+      if (message.flags.includes("\\Seen")) {
         return;
       }
 
@@ -246,8 +250,10 @@ export default TaskDefiner.defineComplexTask([
       // - is this message newer?
       if (message.date >= persistentState.pendingDate) {
         dirty = true;
-        persistentState.pendingDate = Math.max(persistentState.pendingDate,
-          message.date);
+        persistentState.pendingDate = Math.max(
+          persistentState.pendingDate,
+          message.date
+        );
 
         let convId = convIdFromMessageId(message.id);
         let summary = messageSummarize(message);
@@ -265,7 +271,7 @@ export default TaskDefiner.defineComplexTask([
         triggerCtx.modify({
           complexTaskStates: memoryState.complexStateMap,
           // XXX IMPLEMENT THIS RIGHT HERE!!!!! XXX XXX
-          rootGroupDeferredTask: memoryState.newFlushTaskReq
+          rootGroupDeferredTask: memoryState.newFlushTaskReq,
         });
       }
     },
@@ -275,13 +281,23 @@ export default TaskDefiner.defineComplexTask([
      * (making them count as no longer new) and remove them from our tracked
      * set.
      */
-    'trigger_msg!*!change': function(persistentState, memoryState, triggerCtx,
-                                     messageId, preInfo, message, added, kept,
-                                     removed) {
+    "trigger_msg!*!change": function(
+      persistentState,
+      memoryState,
+      triggerCtx,
+      messageId,
+      preInfo,
+      message,
+      added,
+      kept,
+      removed
+    ) {
       // (removed handles deletion as well as the message simply losing its
       // label)
-      if (removed.has(memoryState.inboxFolderId) ||
-          (message && (message.flags.indexOf('\\Seen') !== -1))) {
+      if (
+        removed.has(memoryState.inboxFolderId) ||
+        (message && message.flags.includes("\\Seen"))
+      ) {
         let convId = convIdFromMessageId(messageId);
         let messageMap = persistentState.newByConv.get(convId);
         if (!messageMap) {
@@ -297,11 +313,10 @@ export default TaskDefiner.defineComplexTask([
 
           triggerCtx.modify({
             complexTaskStates: memoryState.complexStateMap,
-            rootGroupDeferredTask: memoryState.newFlushTaskReq
+            rootGroupDeferredTask: memoryState.newFlushTaskReq,
           });
         }
       }
-    }
-  }
+    },
+  },
 ]);
-

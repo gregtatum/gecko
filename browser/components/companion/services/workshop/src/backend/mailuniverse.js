@@ -14,37 +14,40 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
-import MailDB from './maildb';
+import logic from "logic";
+import MailDB from "./maildb";
 
+import AccountManager from "./universe/account_manager";
+import CronSyncSupport from "./universe/cronsync_support";
+import ExtensionManager from "./universe/extension_manager";
+import TOCManager from "./universe/toc_manager";
+import DerivedViewManager from "./universe/derived_view_manager";
 
-import AccountManager from './universe/account_manager';
-import CronSyncSupport from './universe/cronsync_support';
-import ExtensionManager from './universe/extension_manager';
-import TOCManager from './universe/toc_manager';
-import DerivedViewManager from './universe/derived_view_manager';
+import DataOverlayManager from "./db/data_overlay_manager";
+import FolderConversationsTOC from "./db/folder_convs_toc";
+import ConversationTOC from "./db/conv_toc";
 
-import DataOverlayManager from './db/data_overlay_manager';
-import FolderConversationsTOC from './db/folder_convs_toc';
-import ConversationTOC from './db/conv_toc';
+import SyncLifecycleMetaHelper from "./db/toc_meta/sync_lifecycle";
 
-import SyncLifecycleMetaHelper from './db/toc_meta/sync_lifecycle';
+import TaskManager from "./task_infra/task_manager";
+import TaskRegistry from "./task_infra/task_registry";
+import TaskPriorities from "./task_infra/task_priorities";
+import TaskResources from "./task_infra/task_resources";
+import TaskGroupTracker from "./task_infra/task_group_tracker";
 
-import TaskManager from './task_infra/task_manager';
-import TaskRegistry from './task_infra/task_registry';
-import TaskPriorities from './task_infra/task_priorities';
-import TaskResources from './task_infra/task_resources';
-import TaskGroupTracker from './task_infra/task_group_tracker';
+import QueryManager from "./search/query_manager";
+import TriggerManager from "./db/trigger_manager";
+import dbTriggerDefs from "./db_triggers/all";
 
-import QueryManager from './search/query_manager';
-import TriggerManager from './db/trigger_manager';
-import dbTriggerDefs from './db_triggers/all';
+import globalTasks from "./global_tasks";
 
-import globalTasks from './global_tasks';
-
-import { accountIdFromFolderId, accountIdFromMessageId, accountIdFromConvId,
-        convIdFromMessageId, accountIdFromIdentityId } from
-  'shared/id_conversions';
+import {
+  accountIdFromFolderId,
+  accountIdFromMessageId,
+  accountIdFromConvId,
+  convIdFromMessageId,
+  accountIdFromIdentityId,
+} from "shared/id_conversions";
 
 /**
  * The root of the backend, coordinating/holding everything together.  It is the
@@ -57,7 +60,7 @@ import { accountIdFromFolderId, accountIdFromMessageId, accountIdFromConvId,
  * @memberof module:mailuniverse
  */
 export default function MailUniverse({ online, testOptions, appExtensions }) {
-  logic.defineScope(this, 'Universe');
+  logic.defineScope(this, "Universe");
   this._initialized = false;
   this._appExtensions = appExtensions;
 
@@ -65,25 +68,24 @@ export default function MailUniverse({ online, testOptions, appExtensions }) {
   // We use locals here with the same name as instance variables in order to get
   // eslint to immediately tell us if we're being dumb with ordering when
   // passing arguments.  (Otherwise things could be undefined.)
-  const db = this.db = new MailDB({
+  const db = (this.db = new MailDB({
     universe: this,
-    testOptions
-  });
+    testOptions,
+  }));
 
-  const tocManager = this.tocManager = new TOCManager();
-  const derivedViewManager = this.derivedViewManager = new DerivedViewManager();
+  const tocManager = (this.tocManager = new TOCManager());
+  const derivedViewManager = (this.derivedViewManager = new DerivedViewManager());
 
   this.queryManager = new QueryManager({
     db,
-    derivedViewManager
+    derivedViewManager,
   });
-  const triggerManager = this.triggerManager = new TriggerManager({
+  const triggerManager = (this.triggerManager = new TriggerManager({
     db,
-    triggers: dbTriggerDefs
-  });
+    triggers: dbTriggerDefs,
+  }));
 
   this._bridges = [];
-
 
   /** @type{Map<FolderId, FolderConversationsTOC>} */
   this._folderConvsTOCs = new Map();
@@ -94,31 +96,32 @@ export default function MailUniverse({ online, testOptions, appExtensions }) {
   /** @type{Map<ConversationId, ConversationTOC>} */
   this._conversationTOCs = new Map();
 
-  const dataOverlayManager = this.dataOverlayManager = new DataOverlayManager();
+  const dataOverlayManager = (this.dataOverlayManager = new DataOverlayManager());
 
-  const taskPriorities = this.taskPriorities = new TaskPriorities();
-  const taskResources = this.taskResources =
-    new TaskResources(this.taskPriorities);
-  const taskRegistry = this.taskRegistry = new TaskRegistry({
+  const taskPriorities = (this.taskPriorities = new TaskPriorities());
+  const taskResources = (this.taskResources = new TaskResources(
+    this.taskPriorities
+  ));
+  const taskRegistry = (this.taskRegistry = new TaskRegistry({
     dataOverlayManager,
     triggerManager,
     taskResources,
-  });
+  }));
 
-  const accountManager = this.accountManager = new AccountManager({
+  const accountManager = (this.accountManager = new AccountManager({
     db,
     universe: this,
     taskRegistry,
-    taskResources
-  });
-  const taskManager = this.taskManager = new TaskManager({
+    taskResources,
+  }));
+  const taskManager = (this.taskManager = new TaskManager({
     universe: this,
     db,
     taskRegistry,
     taskResources,
     taskPriorities,
-    accountManager
-  });
+    accountManager,
+  }));
   this.taskGroupTracker = new TaskGroupTracker(taskManager);
 
   this.taskRegistry.registerGlobalTasks(globalTasks);
@@ -129,17 +132,17 @@ export default function MailUniverse({ online, testOptions, appExtensions }) {
   this.cronSyncSupport = new CronSyncSupport({
     universe: this,
     db,
-    accountManager
+    accountManager,
   });
 
   this.extensionManager = new ExtensionManager({
     derivedViewManager,
-    tocManager
+    tocManager,
   });
 
   /** Fake navigator to use for navigator.onLine checks */
-  this._testModeFakeNavigator = (testOptions && testOptions.fakeNavigator) ||
-                                null;
+  this._testModeFakeNavigator =
+    (testOptions && testOptions.fakeNavigator) || null;
 
   // We used to try and use navigator.connection, but it's not supported on B2G,
   // so we have to use navigator.onLine like suckers.
@@ -164,7 +167,7 @@ export default function MailUniverse({ online, testOptions, appExtensions }) {
    * we care about this again in the future and it would be silly to remove it
    * just to add it back.
    */
-  this._mode = 'cron';
+  this._mode = "cron";
 
   this.config = null;
   this._logReaper = null;
@@ -180,11 +183,11 @@ MailUniverse.prototype = {
   _initLogging(config) {
     // Delimit different runs of the universe from each other in the cheapest
     // way possible.
-    console.log('======================');
+    console.log("======================");
     // XXX proper logging configuration again once things start working
     // XXX XXX XXX XXX XXX XXX XXX
     logic.realtimeLogEverything = true;
-    logic.bc = new BroadcastChannel('logic');
+    logic.bc = new BroadcastChannel("logic");
 
     // XXX hack to skip the next logic without the linter.
     config = null;
@@ -193,18 +196,20 @@ MailUniverse.prototype = {
       return;
     }
     if (config.debugLogging) {
-      if (config.debugLogging === 'realtime-dangerous' ||
-          config.debugLogging === 'dangerous') {
-        console.warn('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-        console.warn('DANGEROUS USER-DATA ENTRAINING LOGGING ENABLED !!!');
-        console.warn('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-        console.warn('This means contents of e-mails and passwords if you');
-        console.warn('set up a new account.  (The IMAP protocol sanitizes');
-        console.warn('passwords, but the bridge logger may not.)');
-        console.warn('');
-        console.warn('If you forget how to turn us off, see:');
-        console.warn('https://wiki.mozilla.org/Gaia/Email/SecretDebugMode');
-        console.warn('...................................................');
+      if (
+        config.debugLogging === "realtime-dangerous" ||
+        config.debugLogging === "dangerous"
+      ) {
+        console.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.warn("DANGEROUS USER-DATA ENTRAINING LOGGING ENABLED !!!");
+        console.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.warn("This means contents of e-mails and passwords if you");
+        console.warn("set up a new account.  (The IMAP protocol sanitizes");
+        console.warn("passwords, but the bridge logger may not.)");
+        console.warn("");
+        console.warn("If you forget how to turn us off, see:");
+        console.warn("https://wiki.mozilla.org/Gaia/Email/SecretDebugMode");
+        console.warn("...................................................");
         logic.realtimeLogEverything = true;
       }
     }
@@ -220,45 +225,44 @@ MailUniverse.prototype = {
    * the future.  Or we grow a separate more sophisticated mechanism.
    */
   _generateMigrationTasks({ accountDefs }) {
-    return accountDefs.map((accountDef) => {
+    return accountDefs.map(accountDef => {
       return {
-        type: 'account_migrate',
-        accountDef
+        type: "account_migrate",
+        accountDef,
       };
     });
   },
 
   init() {
     if (this._initialized !== false) {
-      throw new Error('misuse');
+      throw new Error("misuse");
     }
-    this._initialized = 'initializing';
+    this._initialized = "initializing";
     return this.db.getConfig().then(({ config, accountDefs, carryover }) => {
       if (config) {
         return this._initFromConfig({ config, accountDefs });
       }
-      else {
-        let freshConfig = {
-          // (We store accounts and the config in the same table and we only
-          // fetch values, not keys, so the config has to self-identify even if
-          // it seems silly.)
-          id: 'config',
-          nextAccountNum: carryover ? carryover.config.nextAccountNum : 0,
-          debugLogging: carryover ? carryover.config.debugLogging : false
-        };
-        let migrationTasks;
-        if (carryover) {
-          migrationTasks = this._generateMigrationTasks(carryover);
-        }
-        // (it returns a Promise for consistency, but we don't care.)
-        this.db.saveConfig(freshConfig);
 
-        return this._initFromConfig({
-          config: freshConfig,
-          accountDefs: [],
-          tasksToPlan: migrationTasks
-        });
+      let freshConfig = {
+        // (We store accounts and the config in the same table and we only
+        // fetch values, not keys, so the config has to self-identify even if
+        // it seems silly.)
+        id: "config",
+        nextAccountNum: carryover ? carryover.config.nextAccountNum : 0,
+        debugLogging: carryover ? carryover.config.debugLogging : false,
+      };
+      let migrationTasks;
+      if (carryover) {
+        migrationTasks = this._generateMigrationTasks(carryover);
       }
+      // (it returns a Promise for consistency, but we don't care.)
+      this.db.saveConfig(freshConfig);
+
+      return this._initFromConfig({
+        config: freshConfig,
+        accountDefs: [],
+        tasksToPlan: migrationTasks,
+      });
     });
   },
 
@@ -272,26 +276,27 @@ MailUniverse.prototype = {
     this._initialized = true;
     this.config = config;
     this._initLogging(config);
-    logic(this, 'START_OF_LOG');
-    logic(this, 'configLoaded', { config });
+    logic(this, "START_OF_LOG");
+    logic(this, "configLoaded", { config });
 
     this._bindStandardBroadcasts();
 
     // register app extensions first
-    this.extensionManager.registerExtensions(this._appExtensions, 'app');
+    this.extensionManager.registerExtensions(this._appExtensions, "app");
     // user-defined/installed extensions would get registered here.
 
     // For reasons of sanity, we bring up the account manager (which is
     // responsible for registering tasks with the task registry as needed) in
     // its entirety before we initialize the TaskManager so it can assume all
     // task-type definitions are already loaded.
-    let initPromise = this.accountManager.initFromDB(accountDefs)
+    let initPromise = this.accountManager
+      .initFromDB(accountDefs)
       .then(() => {
         return this.taskManager.__restoreFromDB();
       })
       .then(() => {
         if (tasksToPlan) {
-          this.taskManager.scheduleTasks(tasksToPlan, 'initFromConfig');
+          this.taskManager.scheduleTasks(tasksToPlan, "initFromConfig");
         }
         this.cronSyncSupport.systemReady();
         return this;
@@ -299,7 +304,7 @@ MailUniverse.prototype = {
 
     // Now that we've told the account manager the accountDefs we can kick off
     // an ensureSync.
-    this.cronSyncSupport.ensureSync('universe-init');
+    this.cronSyncSupport.ensureSync("universe-init");
 
     // The official init process does want to wait on the task subsystems coming
     // up, however.
@@ -307,7 +312,7 @@ MailUniverse.prototype = {
   },
 
   setInteractive() {
-    this._mode = 'interactive';
+    this._mode = "interactive";
   },
 
   //////////////////////////////////////////////////////////////////////////////
@@ -318,17 +323,22 @@ MailUniverse.prototype = {
      * This should ideally be false behind a captive portal.  This might also
      * end up temporarily false if we move to a 2-phase startup process.
      */
-    this.online = this._testModeFakeNavigator ?
-                    this._testModeFakeNavigator.onLine : isOnline;
+    this.online = this._testModeFakeNavigator
+      ? this._testModeFakeNavigator.onLine
+      : isOnline;
     // Knowing when the app thinks it is online/offline is going to be very
     // useful for our console.log debug spew.
-    console.log('Email knows that it is:', this.online ? 'online' : 'offline',
-                'and previously was:', wasOnline ? 'online' : 'offline');
+    console.log(
+      "Email knows that it is:",
+      this.online ? "online" : "offline",
+      "and previously was:",
+      wasOnline ? "online" : "offline"
+    );
 
     if (this.online) {
-      this.taskResources.resourceAvailable('online');
+      this.taskResources.resourceAvailable("online");
     } else {
-      this.taskResources.resourcesNoLongerAvailable(['online']);
+      this.taskResources.resourcesNoLongerAvailable(["online"]);
     }
   },
 
@@ -349,7 +359,7 @@ MailUniverse.prototype = {
   exposeConfigForClient() {
     const config = this.config;
     return {
-      debugLogging: config.debugLogging
+      debugLogging: config.debugLogging,
     };
   },
 
@@ -367,10 +377,8 @@ MailUniverse.prototype = {
     // - config: send a sanitized version
     // While our threat model at the current time trusts the front-end, there's
     // no need to send it implementation details that it does not care about.
-    this.db.on('config', () => {
-      this.broadcastOverBridges(
-        'config',
-        this.exposeConfigForClient());
+    this.db.on("config", () => {
+      this.broadcastOverBridges("config", this.exposeConfigForClient());
     });
   },
 
@@ -460,10 +468,11 @@ MailUniverse.prototype = {
       // on the sync granularity; if it's account-based then the sync stamps
       // will be on the account, otherwise on the folder.
       let accountId = accountIdFromFolderId(folderId);
-      let engineFacts =
-        this.accountManager.getAccountEngineBackEndFacts(accountId);
+      let engineFacts = this.accountManager.getAccountEngineBackEndFacts(
+        accountId
+      );
       let syncStampSource;
-      if (engineFacts.syncGranularity === 'account') {
+      if (engineFacts.syncGranularity === "account") {
         syncStampSource = this.accountManager.getAccountDefById(accountId);
       } else {
         syncStampSource = this.accountManager.getFolderById(folderId);
@@ -476,12 +485,12 @@ MailUniverse.prototype = {
           new SyncLifecycleMetaHelper({
             folderId,
             syncStampSource,
-            dataOverlayManager: this.dataOverlayManager
+            dataOverlayManager: this.dataOverlayManager,
           }),
         ],
         onForgotten: () => {
           this._folderConvsTOCs.delete(folderId);
-        }
+        },
       });
       this._folderConvsTOCs.set(folderId, toc);
     }
@@ -494,10 +503,11 @@ MailUniverse.prototype = {
     // on the sync granularity; if it's account-based then the sync stamps
     // will be on the account, otherwise on the folder.
     let accountId = accountIdFromFolderId(folderId);
-    let engineFacts =
-      this.accountManager.getAccountEngineBackEndFacts(accountId);
+    let engineFacts = this.accountManager.getAccountEngineBackEndFacts(
+      accountId
+    );
     let syncStampSource;
-    if (engineFacts.syncGranularity === 'account') {
+    if (engineFacts.syncGranularity === "account") {
       syncStampSource = this.accountManager.getAccountDefById(accountId);
     } else {
       syncStampSource = this.accountManager.getFolderById(folderId);
@@ -510,11 +520,10 @@ MailUniverse.prototype = {
         new SyncLifecycleMetaHelper({
           folderId,
           syncStampSource,
-          dataOverlayManager: this.dataOverlayManager
+          dataOverlayManager: this.dataOverlayManager,
         }),
       ],
-      onForgotten: () => {
-      }
+      onForgotten: () => {},
     });
     return ctx.acquire(toc);
   },
@@ -528,10 +537,11 @@ MailUniverse.prototype = {
       // on the sync granularity; if it's account-based then the sync stamps
       // will be on the account, otherwise on the folder.
       let accountId = accountIdFromFolderId(folderId);
-      let engineFacts =
-        this.accountManager.getAccountEngineBackEndFacts(accountId);
+      let engineFacts = this.accountManager.getAccountEngineBackEndFacts(
+        accountId
+      );
       let syncStampSource;
-      if (engineFacts.syncGranularity === 'account') {
+      if (engineFacts.syncGranularity === "account") {
         syncStampSource = this.accountManager.getAccountDefById(accountId);
       } else {
         syncStampSource = this.accountManager.getFolderById(folderId);
@@ -544,12 +554,12 @@ MailUniverse.prototype = {
           new SyncLifecycleMetaHelper({
             folderId,
             syncStampSource,
-            dataOverlayManager: this.dataOverlayManager
+            dataOverlayManager: this.dataOverlayManager,
           }),
         ],
         onForgotten: () => {
           this._folderMessagesTOCs.delete(folderId);
-        }
+        },
       });
       this._folderMessagesTOCs.set(folderId, toc);
     }
@@ -563,12 +573,13 @@ MailUniverse.prototype = {
     } else {
       toc = new ConversationTOC({
         db: this.db,
-        query:
-          this.queryManager.queryConversationMessages(ctx, { conversationId }),
+        query: this.queryManager.queryConversationMessages(ctx, {
+          conversationId,
+        }),
         dataOverlayManager: this.dataOverlayManager,
         onForgotten: () => {
           this._conversationTOCs.delete(conversationId);
-        }
+        },
       });
       this._conversationTOCs.set(conversationId, toc);
     }
@@ -580,22 +591,21 @@ MailUniverse.prototype = {
       db: this.db,
       query: this.queryManager.queryConversationMessages(ctx, spec),
       dataOverlayManager: this.dataOverlayManager,
-      onForgotten: () => {
-      }
+      onForgotten: () => {},
     });
     return ctx.acquire(toc);
   },
-
 
   //////////////////////////////////////////////////////////////////////////////
 
   learnAboutAccount(userDetails, why) {
     return this.taskManager.scheduleNonPersistentTaskAndWaitForExecutedResult(
       {
-        type: 'account_autoconfig',
-        userDetails
+        type: "account_autoconfig",
+        userDetails,
       },
-      why);
+      why
+    );
   },
 
   /**
@@ -605,7 +615,7 @@ MailUniverse.prototype = {
    */
   tryToCreateAccount(userDetails, domainInfo, why) {
     if (!this.online) {
-      return Promise.resolve({ error: 'offline' });
+      return Promise.resolve({ error: "offline" });
     }
     // TODO: put back in detecting and refusing to create duplicate accounts.
 
@@ -613,50 +623,56 @@ MailUniverse.prototype = {
       // -- Explicit creation
       return this.taskManager.scheduleNonPersistentTaskAndWaitForExecutedResult(
         {
-          type: 'account_create',
+          type: "account_create",
           userDetails,
-          domainInfo
+          domainInfo,
         },
-        why);
-    } else {
-      // -- Attempt autoconfig then chain into creation
-      return this.taskManager.scheduleNonPersistentTaskAndWaitForExecutedResult(
+        why
+      );
+    }
+    // -- Attempt autoconfig then chain into creation
+    return this.taskManager
+      .scheduleNonPersistentTaskAndWaitForExecutedResult(
         {
-          type: 'account_autoconfig',
-          userDetails
+          type: "account_autoconfig",
+          userDetails,
         },
-        why)
-      .then((result) => {
+        why
+      )
+      .then(result => {
         // - If we got anything other than a need-password result, we failed.
         // Convert the "result" to an error.
-        if (result.result !== 'need-password') {
+        if (result.result !== "need-password") {
           return {
             error: result.result,
-            errorDetails: null
+            errorDetails: null,
           };
         }
         // - Okay, try the account creation then.
         return this.taskManager.scheduleNonPersistentTaskAndWaitForExecutedResult(
           {
-            type: 'account_create',
+            type: "account_create",
             userDetails,
-            domainInfo: result.configInfo
+            domainInfo: result.configInfo,
           },
-          why);
+          why
+        );
       });
-    }
   },
 
   /**
    * Shutdown the account, forget about it, nuke associated database entries.
    */
   deleteAccount(accountId, why) {
-    this.taskManager.scheduleTasks([
-      {
-        type: 'account_delete',
-        accountId
-      }
-    ], why);
+    this.taskManager.scheduleTasks(
+      [
+        {
+          type: "account_delete",
+          accountId,
+        },
+      ],
+      why
+    );
   },
 
   recreateAccount(accountId, why) {
@@ -668,17 +684,25 @@ MailUniverse.prototype = {
     // Because of how the migration logic works (verbatim reuse of the account
     // id), make sure we don't schedule the migration task until the deletion
     // task has been executed.
-    this.taskManager.scheduleTaskAndWaitForExecutedResult({
-      type: 'account_delete',
-      accountId
-    }, why).then(() => {
-      this.taskManager.scheduleTasks([
+    this.taskManager
+      .scheduleTaskAndWaitForExecutedResult(
         {
-          type: 'account_migrate',
-          accountDef
-        }
-      ], why);
-    });
+          type: "account_delete",
+          accountId,
+        },
+        why
+      )
+      .then(() => {
+        this.taskManager.scheduleTasks(
+          [
+            {
+              type: "account_migrate",
+              accountDef,
+            },
+          ],
+          why
+        );
+      });
   },
 
   /**
@@ -702,13 +726,13 @@ MailUniverse.prototype = {
         return this._loadAccount(
           accountDef,
           this.accountFoldersTOCs.get(accountDef.id),
-          protoConn)
-        .then(() => {
+          protoConn
+        ).then(() => {
           return {
             error: null,
             errorDetails: null,
             accountId: accountDef.id,
-            accountWireRep: accountWireRep
+            accountWireRep,
           };
         });
       }
@@ -721,35 +745,35 @@ MailUniverse.prototype = {
   modifyConfig(accountId, mods, why) {
     return this.taskManager.scheduleTaskAndWaitForPlannedResult(
       {
-        type: 'config_modify',
-        mods
+        type: "config_modify",
+        mods,
       },
-      why);
+      why
+    );
   },
-
 
   modifyAccount(accountId, mods, why) {
     return this.taskManager.scheduleTaskAndWaitForPlannedResult(
       {
-        type: 'account_modify',
+        type: "account_modify",
         accountId,
-        mods
+        mods,
       },
-      why);
+      why
+    );
   },
 
   modifyIdentity(identityId, mods, why) {
     const accountId = accountIdFromIdentityId(identityId);
     return this.taskManager.scheduleTaskAndWaitForPlannedResult(
       {
-        type: 'identity_modify',
+        type: "identity_modify",
         accountId,
-        mods
+        mods,
       },
-      why);
+      why
+    );
   },
-
-
 
   //////////////////////////////////////////////////////////////////////////////
   // Lifetime Stuff
@@ -790,12 +814,15 @@ MailUniverse.prototype = {
   },
 
   syncFolderList(accountId, why) {
-    return this.taskManager.scheduleTasks([
-      {
-        type: 'sync_folder_list',
-        accountId
-      }
-    ], why);
+    return this.taskManager.scheduleTasks(
+      [
+        {
+          type: "sync_folder_list",
+          accountId,
+        },
+      ],
+      why
+    );
   },
 
   /**
@@ -803,14 +830,16 @@ MailUniverse.prototype = {
    * resolved when the task group associated with the request completes.
    */
   syncGrowFolder(folderId, why) {
-    console.log('in syncGrowFolder', folderId);
+    console.log("in syncGrowFolder", folderId);
     const accountId = accountIdFromFolderId(folderId);
     return this.taskManager.scheduleTaskAndWaitForPlannedResult(
       {
-        type: 'sync_grow',
+        type: "sync_grow",
         accountId,
-        folderId
-      }, why);
+        folderId,
+      },
+      why
+    );
   },
 
   /**
@@ -821,59 +850,73 @@ MailUniverse.prototype = {
     const accountId = accountIdFromFolderId(folderId);
     return this.taskManager.scheduleTaskAndWaitForPlannedResult(
       {
-        type: 'sync_refresh',
-        accountId: accountId,
-        folderId: folderId
+        type: "sync_refresh",
+        accountId,
+        folderId,
       },
-      why);
+      why
+    );
   },
 
   fetchConversationSnippets(convIds, why) {
-    let tasks = convIds.map((convId) => {
+    let tasks = convIds.map(convId => {
       return {
-        type: 'sync_body',
+        type: "sync_body",
         accountId: accountIdFromConvId(convId),
-        convId: convId,
-        amount: 'snippet',
+        convId,
+        amount: "snippet",
       };
     });
     return this.taskManager.scheduleTasks(tasks, why);
   },
 
   fetchMessageBody(messageId, messageDate, why) {
-    return this.taskManager.scheduleTasks([
-      {
-        type: 'sync_body',
-        accountId: accountIdFromMessageId(messageId),
-        convId: convIdFromMessageId(messageId),
-        fullBodyMessageIds: new Set([messageId])
-      }
-    ], why);
+    return this.taskManager.scheduleTasks(
+      [
+        {
+          type: "sync_body",
+          accountId: accountIdFromMessageId(messageId),
+          convId: convIdFromMessageId(messageId),
+          fullBodyMessageIds: new Set([messageId]),
+        },
+      ],
+      why
+    );
   },
 
-  storeLabels(conversationId, messageIds, messageSelector, addLabels,
-              removeLabels) {
+  storeLabels(
+    conversationId,
+    messageIds,
+    messageSelector,
+    addLabels,
+    removeLabels
+  ) {
     return this.taskManager.scheduleTaskAndWaitForPlannedUndoTasks({
-      type: 'store_labels',
+      type: "store_labels",
       accountId: accountIdFromConvId(conversationId),
       convId: conversationId,
       onlyMessages: messageIds || null,
       messageSelector: messageSelector || null,
       add: addLabels,
-      remove: removeLabels
+      remove: removeLabels,
     });
   },
 
-  storeFlags(conversationId, messageIds, messageSelector, addFlags,
-             removeFlags) {
+  storeFlags(
+    conversationId,
+    messageIds,
+    messageSelector,
+    addFlags,
+    removeFlags
+  ) {
     return this.taskManager.scheduleTaskAndWaitForPlannedUndoTasks({
-      type: 'store_flags',
+      type: "store_flags",
       accountId: accountIdFromConvId(conversationId),
       convId: conversationId,
       onlyMessages: messageIds || null,
       messageSelector: messageSelector || null,
       add: addFlags,
-      remove: removeFlags
+      remove: removeFlags,
     });
   },
 
@@ -902,39 +945,52 @@ MailUniverse.prototype = {
    * composing.  And if they do, they might not do so via our created draft, so
    * it's best to avoid creating the draft on app restart.  For now at least.
    */
-  createDraft({ draftType, mode, refMessageId, refMessageDate,
-                          folderId }, why) {
+  createDraft(
+    { draftType, mode, refMessageId, refMessageDate, folderId },
+    why
+  ) {
     return this.taskManager.scheduleNonPersistentTaskAndWaitForPlannedResult(
       {
-        type: 'draft_create',
+        type: "draft_create",
         draftType,
         mode,
         refMessageId,
         refMessageDate,
-        folderId
+        folderId,
       },
-      why);
+      why
+    );
   },
 
   attachBlobToDraft(messageId, attachmentDef, why) {
     // non-persistent because this is a local-only op and we don't want the
     // original stored in our database (at this time)
-    return this.taskManager.scheduleNonPersistentTasks([{
-      type: 'draft_attach',
-      accountId: accountIdFromMessageId(messageId),
-      messageId,
-      attachmentDef
-    }], why);
+    return this.taskManager.scheduleNonPersistentTasks(
+      [
+        {
+          type: "draft_attach",
+          accountId: accountIdFromMessageId(messageId),
+          messageId,
+          attachmentDef,
+        },
+      ],
+      why
+    );
   },
 
   detachAttachmentFromDraft(messageId, attachmentRelId, why) {
     // non-persistent for now because it would be awkward
-    return this.taskManager.scheduleNonPersistentTasks([{
-      type: 'draft_detach',
-      accountId: accountIdFromMessageId(messageId),
-      messageId,
-      attachmentRelId
-    }], why);
+    return this.taskManager.scheduleNonPersistentTasks(
+      [
+        {
+          type: "draft_detach",
+          accountId: accountIdFromMessageId(messageId),
+          messageId,
+          attachmentRelId,
+        },
+      ],
+      why
+    );
   },
 
   /**
@@ -950,12 +1006,17 @@ MailUniverse.prototype = {
    *   reference-counted backing Blob.  So there's no harm.
    */
   saveDraft(messageId, draftFields, why) {
-    return this.taskManager.scheduleTasks([{
-      type: 'draft_save',
-      accountId: accountIdFromMessageId(messageId),
-      messageId,
-      draftFields
-    }], why);
+    return this.taskManager.scheduleTasks(
+      [
+        {
+          type: "draft_save",
+          accountId: accountIdFromMessageId(messageId),
+          messageId,
+          draftFields,
+        },
+      ],
+      why
+    );
   },
 
   /**
@@ -964,25 +1025,32 @@ MailUniverse.prototype = {
    * its own custom API call and task.
    */
   deleteDraft(messageId, why) {
-    return this.taskManager.scheduleTasks([{
-      type: 'draft_delete',
-      accountId: accountIdFromMessageId(messageId),
-      messageId
-    }], why);
+    return this.taskManager.scheduleTasks(
+      [
+        {
+          type: "draft_delete",
+          accountId: accountIdFromMessageId(messageId),
+          messageId,
+        },
+      ],
+      why
+    );
   },
-
 
   /**
    * Move a message from being a draft to being in the outbox, potentially
    * initiating the send if we're online.
    */
   outboxSendDraft(messageId, why) {
-    return this.taskManager.scheduleTaskAndWaitForPlannedResult({
-      type: 'outbox_send',
-      command: 'send',
-      accountId: accountIdFromMessageId(messageId),
-      messageId
-    }, why);
+    return this.taskManager.scheduleTaskAndWaitForPlannedResult(
+      {
+        type: "outbox_send",
+        command: "send",
+        accountId: accountIdFromMessageId(messageId),
+        messageId,
+      },
+      why
+    );
   },
 
   /**
@@ -990,12 +1058,14 @@ MailUniverse.prototype = {
    * to be a draft.
    */
   outboxAbortSend(messageId) {
-    return this.taskManager.scheduleTasks([{
-      type: 'outbox_send',
-      command: 'abort',
-      accountId: accountIdFromMessageId(messageId),
-      messageId
-    }]);
+    return this.taskManager.scheduleTasks([
+      {
+        type: "outbox_send",
+        command: "abort",
+        accountId: accountIdFromMessageId(messageId),
+        messageId,
+      },
+    ]);
   },
 
   /**
@@ -1005,14 +1075,15 @@ MailUniverse.prototype = {
    * stop a message from getting sent, we want to give them a fighting chance.)
    */
   outboxSetPaused(accountId, bePaused) {
-    return this.taskManager.scheduleTasks([{
-      type: 'outbox_send',
-      command: 'setPaused',
-      accountId: accountId,
-      pause: bePaused
-    }]);
+    return this.taskManager.scheduleTasks([
+      {
+        type: "outbox_send",
+        command: "setPaused",
+        accountId,
+        pause: bePaused,
+      },
+    ]);
   },
-
 
   /**
    * Download one or more related-part or attachments from a message.
@@ -1028,24 +1099,25 @@ MailUniverse.prototype = {
    * @param {DateMS} messageDate
    * @param {Map<AttachmentRelId, AttachmentSaveTarget>} parts
    */
-  downloadMessageAttachments({
-    messageId, messageDate, parts }) {
+  downloadMessageAttachments({ messageId, messageDate, parts }) {
     return this.taskManager.scheduleTaskAndWaitForPlannedResult({
-      type: 'download',
+      type: "download",
       accountId: accountIdFromMessageId(messageId),
       messageId,
       messageDate,
-      parts
+      parts,
     });
   },
 
   clearNewTrackingForAccount({ accountId, silent }) {
-    this.taskManager.scheduleTasks([{
-      type: 'new_tracking',
-      accountId,
-      op: 'clear',
-      silent
-    }]);
+    this.taskManager.scheduleTasks([
+      {
+        type: "new_tracking",
+        accountId,
+        op: "clear",
+        silent,
+      },
+    ]);
   },
 
   /**
@@ -1055,9 +1127,11 @@ MailUniverse.prototype = {
    * to be able to access this data on command, something needs to be rethought.
    */
   flushNewAggregates() {
-    this.taskManager.scheduleTasks([{
-      type: 'new_flush'
-    }]);
+    this.taskManager.scheduleTasks([
+      {
+        type: "new_flush",
+      },
+    ]);
   },
 
   /**
@@ -1067,7 +1141,7 @@ MailUniverse.prototype = {
   notifyOutboxSyncDone(account) {
     this.__notifyBackgroundSendStatus({
       accountId: account.id,
-      state: 'syncDone'
+      state: "syncDone",
     });
   },
 
@@ -1096,9 +1170,7 @@ MailUniverse.prototype = {
   createFolder(/*accountId, parentFolderId, folderName, folderType,
                  containOtherFolders*/) {
     // XXX implement!
-    return;
   },
 
   //////////////////////////////////////////////////////////////////////////////
 };
-

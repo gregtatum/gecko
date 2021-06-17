@@ -34,18 +34,18 @@
  * resources we can.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
 var socketToAccountMap = new WeakMap();
 var accountToOperationMap = new WeakMap();
 
-var scope = logic.scope('DisasterRecovery');
+var scope = logic.scope("DisasterRecovery");
 
 export default class DisasterRecovery {
   setCurrentAccountOp(account, op, jobCompletedCallback) {
     accountToOperationMap.set(account, {
-      op: op,
-      callback: jobCompletedCallback
+      op,
+      callback: jobCompletedCallback,
     });
   }
 
@@ -66,7 +66,7 @@ export default class DisasterRecovery {
   catchSocketExceptions(socket, fn) {
     try {
       fn();
-    } catch(e) {
+    } catch (e) {
       var account = socketToAccountMap.get(socket);
 
       // Attempt to close the socket so that we're less likely to
@@ -74,8 +74,8 @@ export default class DisasterRecovery {
       // bogus data or barfing on further received data.
       try {
         socket.close();
-      } catch(socketEx) {
-        console.error('Error attempting to close socket:', socketEx);
+      } catch (socketEx) {
+        console.error("Error attempting to close socket:", socketEx);
       }
 
       this.handleDisastrousError(e, account);
@@ -102,31 +102,32 @@ export default class DisasterRecovery {
       }
     }
 
-    logic(scope, 'exception', {
+    logic(scope, "exception", {
       accountId: account && account.id,
-      op: op,
+      op,
       error: e,
       errorName: e && e.name,
       errorMessage: e && e.message,
-      stack: e.stack
+      stack: e.stack,
     });
 
-    console.error('*** Disastrous Error for email accountId',
-                  account && account.id,
-                  '-- attempting to recover...');
-
+    console.error(
+      "*** Disastrous Error for email accountId",
+      account && account.id,
+      "-- attempting to recover..."
+    );
 
     // See if we can recover in any way.
     if (account) {
       if (op) {
-        logic(scope, 'finished-job', { error: e });
-        console.warn('Force-completing in-progress op:', op);
-        jobDoneCallback('disastrous-error');
+        logic(scope, "finished-job", { error: e });
+        console.warn("Force-completing in-progress op:", op);
+        jobDoneCallback("disastrous-error");
       } else {
-        console.warn('No job operation was currently running.');
+        console.warn("No job operation was currently running.");
       }
     } else {
-      console.warn('No account associated with this error; nothing to abort.');
+      console.warn("No account associated with this error; nothing to abort.");
     }
   }
-};
+}

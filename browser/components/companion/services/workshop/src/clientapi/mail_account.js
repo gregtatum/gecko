@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
-import MailSenderIdentity from './mail_sender_identity';
+import evt from "evt";
+import MailSenderIdentity from "./mail_sender_identity";
 
 /**
  *
  */
-export default function MailAccount(api, wireRep, overlays, matchInfo, acctsSlice) {
+export default function MailAccount(
+  api,
+  wireRep,
+  overlays,
+  matchInfo,
+  acctsSlice
+) {
   evt.Emitter.call(this);
 
   this._api = api;
@@ -74,35 +80,36 @@ export default function MailAccount(api, wireRep, overlays, matchInfo, acctsSlic
 
   this.identities = [];
   for (var iIdent = 0; iIdent < wireRep.identities.length; iIdent++) {
-    this.identities.push(new MailSenderIdentity(this._api,
-                                                wireRep.identities[iIdent]));
+    this.identities.push(
+      new MailSenderIdentity(this._api, wireRep.identities[iIdent])
+    );
   }
 
   this.username = wireRep.credentials.username;
   this.servers = wireRep.servers;
 
-  this.authMechanism = wireRep.credentials.oauth2 ? 'oauth2' : 'password';
+  this.authMechanism = wireRep.credentials.oauth2 ? "oauth2" : "password";
 
   this.folders = null;
   if (acctsSlice && acctsSlice._autoViewFolders) {
-    this.folders = api.viewFolders('account', this.id);
+    this.folders = api.viewFolders("account", this.id);
   }
 
   this.__updateOverlays(overlays);
 }
 MailAccount.prototype = evt.mix({
-  toString: function() {
-    return '[MailAccount: ' + this.type + ' ' + this.id + ']';
+  toString() {
+    return "[MailAccount: " + this.type + " " + this.id + "]";
   },
-  toJSON: function() {
+  toJSON() {
     return {
-      type: 'MailAccount',
+      type: "MailAccount",
       accountType: this.type,
       id: this.id,
     };
   },
 
-  __update: function(wireRep) {
+  __update(wireRep) {
     this._wireRep = wireRep;
     this.enabled = wireRep.enabled;
     this.problems = wireRep.problems;
@@ -115,17 +122,18 @@ MailAccount.prototype = evt.mix({
       if (this.identities[i]) {
         this.identities[i].__update(wireRep.identities[i]);
       } else {
-        this.identities.push(new MailSenderIdentity(this._api,
-                                        wireRep.identities[i]));
+        this.identities.push(
+          new MailSenderIdentity(this._api, wireRep.identities[i])
+        );
       }
     }
   },
 
-  __updateOverlays: function(overlays) {
+  __updateOverlays(overlays) {
     this.syncStatus = overlays.sync_refresh ? overlays.sync_refresh : null;
   },
 
-  release: function() {
+  release() {
     // currently, nothing to clean up
   },
 
@@ -133,7 +141,7 @@ MailAccount.prototype = evt.mix({
    * Tell the back-end to clear the list of problems with the account, re-enable
    * it, and try and connect.
    */
-  clearProblems: function(callback) {
+  clearProblems(callback) {
     this._api._clearAccountProblems(this, callback);
   },
 
@@ -177,7 +185,7 @@ MailAccount.prototype = evt.mix({
    *   A promise that is resolved when the back-end has applied the changes to
    *   the account and propagated them.
    */
-  modifyAccount: function(mods) {
+  modifyAccount(mods) {
     return this._api._modifyAccount(this, mods);
   },
 
@@ -187,7 +195,7 @@ MailAccount.prototype = evt.mix({
    * development scenarios where one wants to use the same account but start
    * from scratch without typing things all over again.
    */
-  recreateAccount: function() {
+  recreateAccount() {
     this._api._recreateAccount(this);
   },
 
@@ -196,14 +204,14 @@ MailAccount.prototype = evt.mix({
    * provided; we just delete the data from the database, so it's up to the
    * (IndexedDB) database's guarantees on that.
    */
-  deleteAccount: function() {
+  deleteAccount() {
     this._api._deleteAccount(this);
   },
 
-  syncFolderList: function() {
+  syncFolderList() {
     this._api.__bridgeSend({
-      type: 'syncFolderList',
-      accountId: this.id
+      type: "syncFolderList",
+      accountId: this.id,
     });
   },
 
@@ -211,10 +219,10 @@ MailAccount.prototype = evt.mix({
    * Clear the new-tracking state for this account.  Also accessible as
    * `MailAPI.clearNewTrackingForAccount`.
    */
-  clearNewTracking: function(opts) {
+  clearNewTracking(opts) {
     this._api.clearNewTrackingForAccount({
       accountId: this.id,
-      silent: opts && opts.silent || false
+      silent: (opts && opts.silent) || false,
     });
   },
 
@@ -224,7 +232,7 @@ MailAccount.prototype = evt.mix({
    */
   get isDefault() {
     if (!this.acctsSlice) {
-      throw new Error('No account slice available');
+      throw new Error("No account slice available");
     }
 
     return this.acctsSlice.defaultAccount === this;

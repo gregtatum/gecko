@@ -103,53 +103,54 @@ export default function WindowedListProxy(toc, ctx) {
 }
 WindowedListProxy.prototype = {
   __acquire() {
-    this.toc.on('change', this._bound_onChange);
-    this.toc.on('tocMetaChange', this._bound_onTOCMetaChange);
-    this.toc.on('broadcastEvent', this._bound_onBroadcastEvent);
+    this.toc.on("change", this._bound_onChange);
+    this.toc.on("tocMetaChange", this._bound_onTOCMetaChange);
+    this.toc.on("broadcastEvent", this._bound_onBroadcastEvent);
 
     this.ctx.dataOverlayManager.on(
-      this.toc.overlayNamespace, this._bound_onOverlayPush);
+      this.toc.overlayNamespace,
+      this._bound_onOverlayPush
+    );
 
     return Promise.resolve(this);
   },
 
   __release() {
-    this.toc.removeListener('change', this._bound_onChange);
-    this.toc.removeListener('tocMetaChange', this._bound_onTOCMetaChange);
-    this.toc.removeListener('broadcastEvent', this._bound_onBroadcastEvent);
+    this.toc.removeListener("change", this._bound_onChange);
+    this.toc.removeListener("tocMetaChange", this._bound_onTOCMetaChange);
+    this.toc.removeListener("broadcastEvent", this._bound_onBroadcastEvent);
 
     this.ctx.dataOverlayManager.removeListener(
-      this.toc.overlayNamespace, this._bound_onOverlayPush);
+      this.toc.overlayNamespace,
+      this._bound_onOverlayPush
+    );
   },
 
   seek(req) {
     // -- Index-based modes
-    if (req.mode === 'top') {
+    if (req.mode === "top") {
       this.mode = req.mode;
       this.focusKey = null;
       this.bufferAbove = 0;
       this.visibleAbove = 0;
       this.visibleBelow = req.visibleDesired;
       this.bufferBelow = req.bufferDesired;
-    }
-    else if (req.mode === 'bottom') {
+    } else if (req.mode === "bottom") {
       this.mode = req.mode;
       this.focusKey = null;
       this.bufferAbove = req.bufferDesired;
       this.visibleAbove = req.visibleDesired;
       this.visibleBelow = 0;
       this.bufferBelow = 0;
-    }
-    else if (req.mode === 'focus') {
+    } else if (req.mode === "focus") {
       this.mode = req.mode;
       this.focusKey = req.focusKey;
       this.bufferAbove = req.bufferAbove;
       this.visibleAbove = req.visibleAbove;
       this.visibleBelow = req.visibleBelow;
       this.bufferBelow = req.bufferBelow;
-    }
-    else if (req.mode === 'focusIndex') {
-      this.mode = 'focus';
+    } else if (req.mode === "focusIndex") {
+      this.mode = "focus";
       this.focusKey = this.toc.getOrderingKeyForIndex(req.index);
       this.bufferAbove = req.bufferAbove;
       this.visibleAbove = req.visibleAbove;
@@ -157,7 +158,7 @@ WindowedListProxy.prototype = {
       this.bufferBelow = req.bufferBelow;
     }
     // -- Height-aware modes
-    else if (req.mode === 'coordinates') {
+    else if (req.mode === "coordinates") {
       if (this.toc.heightAware) {
         this.mode = req.mode;
         // In this case we want to anchor on the first visible item, so we take
@@ -174,20 +175,19 @@ WindowedListProxy.prototype = {
       // if the TOC isn't height-aware we can just convert to focus mode with
       // an assumption of uniform height.
       else {
-        this.mode = 'focus';
+        this.mode = "focus";
         this.focusKey = this.toc.getOrderingKeyForIndex(req.offset);
         this.bufferAbove = req.before;
         this.visibleAbove = 0;
         this.visibleBelow = req.visible;
         this.bufferBelow = req.after;
       }
-    }
-    else {
-      throw new Error('bogus seek mode: ' + req.mode);
+    } else {
+      throw new Error("bogus seek mode: " + req.mode);
     }
 
     this.dirty = true;
-    this.batchManager.registerDirtyView(this, 'immediate');
+    this.batchManager.registerDirtyView(this, "immediate");
   },
 
   /**
@@ -211,8 +211,7 @@ WindowedListProxy.prototype = {
   onChange(id, dataOnly) {
     if (id === true) {
       this.validDataSet.clear();
-    }
-    else if (id !== null) {
+    } else if (id !== null) {
       // If we haven't told the view about the data, there's no need for us to
       // do anything.  Note that this also covers the case where we have an
       // async read in flight.
@@ -262,7 +261,7 @@ WindowedListProxy.prototype = {
     this.pendingBroadcastEvents.push({ name: eventName, data: eventData });
 
     this.dirty = true;
-    this.batchManager.registerDirtyView(this, 'soon');
+    this.batchManager.registerDirtyView(this, "soon");
   },
 
   /**
@@ -286,43 +285,59 @@ WindowedListProxy.prototype = {
       this.toc.flush();
     }
 
-    let beginBufferedInclusive, beginVisibleInclusive, endVisibleExclusive,
-        endBufferedExclusive, heightOffset;
-    if (this.mode === 'top') {
+    let beginBufferedInclusive,
+      beginVisibleInclusive,
+      endVisibleExclusive,
+      endBufferedExclusive,
+      heightOffset;
+    if (this.mode === "top") {
       beginBufferedInclusive = beginVisibleInclusive = 0;
       endVisibleExclusive = Math.min(this.toc.length, this.visibleBelow + 1);
-      endBufferedExclusive =
-        Math.min(this.toc.length, endVisibleExclusive + this.bufferBelow);
-    }
-    else if (this.mode === 'bottom') {
+      endBufferedExclusive = Math.min(
+        this.toc.length,
+        endVisibleExclusive + this.bufferBelow
+      );
+    } else if (this.mode === "bottom") {
       endBufferedExclusive = endVisibleExclusive = this.toc.length;
-      beginVisibleInclusive =
-        Math.max(0, endVisibleExclusive - this.visibleAbove);
-      beginBufferedInclusive =
-        Math.max(0, beginVisibleInclusive - this.bufferedAbove);
-    }
-    else if (this.mode === 'focus') {
+      beginVisibleInclusive = Math.max(
+        0,
+        endVisibleExclusive - this.visibleAbove
+      );
+      beginBufferedInclusive = Math.max(
+        0,
+        beginVisibleInclusive - this.bufferedAbove
+      );
+    } else if (this.mode === "focus") {
       let focusIndex = this.toc.findIndexForOrderingKey(this.focusKey);
       beginVisibleInclusive = Math.max(0, focusIndex - this.visibleAbove);
-      beginBufferedInclusive =
-        Math.max(0, beginVisibleInclusive - this.bufferAbove);
+      beginBufferedInclusive = Math.max(
+        0,
+        beginVisibleInclusive - this.bufferAbove
+      );
       // we add 1 because the above/below stuff does not include the item itself
-      endVisibleExclusive =
-        Math.min(this.toc.length, focusIndex + this.visibleBelow + 1);
-      endBufferedExclusive =
-        Math.min(this.toc.length, endVisibleExclusive + this.bufferBelow);
-    }
-    else if (this.mode === 'coordinates') {
+      endVisibleExclusive = Math.min(
+        this.toc.length,
+        focusIndex + this.visibleBelow + 1
+      );
+      endBufferedExclusive = Math.min(
+        this.toc.length,
+        endVisibleExclusive + this.bufferBelow
+      );
+    } else if (this.mode === "coordinates") {
       // This is valid. JSHint bug: https://github.com/jshint/jshint/issues/2269
-      ({ beginBufferedInclusive, beginVisibleInclusive, endVisibleExclusive,
-         endBufferedExclusive, heightOffset } =
-        this.toc.findIndicesFromCoordinateSoup({
-          orderingKey: this.focusKey,
-          bufferAbove: this.bufferAbove,
-          visibleAbove: this.visibleAbove,
-          visibleBelow: this.visibleBelow,
-          bufferBelow: this.bufferBelow
-        }));
+      ({
+        beginBufferedInclusive,
+        beginVisibleInclusive,
+        endVisibleExclusive,
+        endBufferedExclusive,
+        heightOffset,
+      } = this.toc.findIndicesFromCoordinateSoup({
+        orderingKey: this.focusKey,
+        bufferAbove: this.bufferAbove,
+        visibleAbove: this.visibleAbove,
+        visibleBelow: this.visibleBelow,
+        bufferBelow: this.bufferBelow,
+      }));
     }
 
     this.dirty = false;
@@ -330,10 +345,17 @@ WindowedListProxy.prototype = {
     // XXX prioritization hints should be generated as a result of the visible
     // range!
 
-    let { ids, state, readPromise, newValidDataSet } =
-      this.toc.getDataForSliceRange(
-        beginBufferedInclusive, endBufferedExclusive, this.validDataSet,
-        this.validOverlaySet);
+    let {
+      ids,
+      state,
+      readPromise,
+      newValidDataSet,
+    } = this.toc.getDataForSliceRange(
+      beginBufferedInclusive,
+      endBufferedExclusive,
+      this.validDataSet,
+      this.validOverlaySet
+    );
 
     this.validDataSet = newValidDataSet;
     // We will have generated valid overlay information for all valid data
@@ -343,7 +365,7 @@ WindowedListProxy.prototype = {
     if (readPromise) {
       readPromise.then(() => {
         // Trigger an immediate dirtying/flush.
-        this.batchManager.registerDirtyView(this, 'immediate');
+        this.batchManager.registerDirtyView(this, "immediate");
       });
     }
 
@@ -364,9 +386,9 @@ WindowedListProxy.prototype = {
       totalCount: this.toc.length,
       totalHeight: this.toc.totalHeight,
       tocMeta: sendMeta,
-      ids: ids,
+      ids,
       values: state,
-      events: sendEvents
+      events: sendEvents,
     };
-  }
+  },
 };

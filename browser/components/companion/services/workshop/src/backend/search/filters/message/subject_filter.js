@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import searchPatternFromArgs from '../search_pattern_from_args';
-import matchExcerptHighlight from '../../match_excerpt_highlight';
+import searchPatternFromArgs from "../search_pattern_from_args";
+import matchExcerptHighlight from "../../match_excerpt_highlight";
 
 export default function SubjectFilter(params, args) {
   this.excerptSettings = params.excerptSettings;
@@ -39,9 +39,12 @@ SubjectFilter.prototype = {
    */
   alwaysRun: true,
 
-  test: function(gathered) {
+  test(gathered) {
     return matchExcerptHighlight(
-      this.searchPattern, gathered.message.subject, null, this.excerptSettings);
+      this.searchPattern,
+      gathered.message.subject,
+      null,
+      this.excerptSettings
+    );
   },
-
 };

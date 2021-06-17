@@ -59,9 +59,9 @@ function open(uid, host, port, options) {
   var socket = navigator.mozTCPSocket;
   var sock = socket.open(host, port, options);
 
-  var sockInfo = sockInfoByUID[uid] = {
-    uid: uid,
-    sock: sock,
+  var sockInfo = (sockInfoByUID[uid] = {
+    uid,
+    sock,
     // Are we in the process of sending a blob?  The blob if so.
     activeBlob: null,
     // Current offset into the blob, if any
@@ -70,31 +70,30 @@ function open(uid, host, port, options) {
     // Queued write() calls that are ordering dependent on the Blob being
     // fully sent first.
     backlog: [],
-  };
+  });
 
   sock.onopen = function(/*evt*/) {
-    me.sendMessage(uid, 'onopen');
+    me.sendMessage(uid, "onopen");
   };
 
   sock.onerror = function(evt) {
     var err = evt.data;
     var wrappedErr;
-    if (err && typeof(err) === 'object') {
+    if (err && typeof err === "object") {
       wrappedErr = {
         name: err.name,
         type: err.type,
-        message: err.message
+        message: err.message,
       };
-    }
-    else {
+    } else {
       wrappedErr = err;
     }
-    me.sendMessage(uid, 'onerror', wrappedErr);
+    me.sendMessage(uid, "onerror", wrappedErr);
   };
 
   sock.ondata = function(evt) {
     var buf = evt.data;
-    me.sendMessage(uid, 'ondata', buf, [buf]);
+    me.sendMessage(uid, "ondata", buf, [buf]);
   };
 
   sock.ondrain = function(/*evt*/) {
@@ -102,26 +101,29 @@ function open(uid, host, port, options) {
     // If we have an activeBlob but no data, then fetchNextBlobChunk has
     // an outstanding chunk fetch and it will issue the write directly.
     if (sockInfo.activeBlob && sockInfo.queuedData) {
-      console.log('net-main(' + sockInfo.uid + '): Socket drained, sending.');
+      console.log("net-main(" + sockInfo.uid + "): Socket drained, sending.");
       sock.send(sockInfo.queuedData, 0, sockInfo.queuedData.byteLength);
       sockInfo.queuedData = null;
       // fetch the next chunk or close out the blob; this method does both
       fetchNextBlobChunk(sockInfo);
     } else {
       // Only forward the drain event if we aren't still taking over.
-      me.sendMessage(uid, 'ondrain');
+      me.sendMessage(uid, "ondrain");
     }
   };
 
   sock.onclose = function(/*evt*/) {
-    me.sendMessage(uid, 'onclose');
+    me.sendMessage(uid, "onclose");
     delete sockInfoByUID[uid];
   };
 }
 
 function beginBlobSend(sockInfo, blob) {
-  console.log('net-main(' + sockInfo.uid + '): Blob send of', blob.size,
-              'bytes');
+  console.log(
+    "net-main(" + sockInfo.uid + "): Blob send of",
+    blob.size,
+    "bytes"
+  );
   sockInfo.activeBlob = blob;
   sockInfo.blobOffset = 0;
   sockInfo.queuedData = null;
@@ -142,8 +144,11 @@ function beginBlobSend(sockInfo, blob) {
 function fetchNextBlobChunk(sockInfo) {
   // We are all done if the next fetch would be beyond the end of the blob
   if (sockInfo.blobOffset >= sockInfo.activeBlob.size) {
-    console.log('net-main(' + sockInfo.uid + '): Blob send completed.',
-                'backlog length:', sockInfo.backlog.length);
+    console.log(
+      "net-main(" + sockInfo.uid + "): Blob send completed.",
+      "backlog length:",
+      sockInfo.backlog.length
+    );
     sockInfo.activeBlob = null;
 
     // Drain as much of the backlog as possible.
@@ -161,24 +166,28 @@ function fetchNextBlobChunk(sockInfo) {
     return;
   }
 
-  var nextOffset =
-        Math.min(sockInfo.blobOffset + me.BLOB_BLOCK_READ_SIZE,
-                 sockInfo.activeBlob.size);
-  console.log('net-main(' + sockInfo.uid + '): Fetching bytes',
-              sockInfo.blobOffset, 'through', nextOffset, 'of',
-              sockInfo.activeBlob.size);
-  var blobSlice = sockInfo.activeBlob.slice(
-                    sockInfo.blobOffset,
-                    nextOffset);
+  var nextOffset = Math.min(
+    sockInfo.blobOffset + me.BLOB_BLOCK_READ_SIZE,
+    sockInfo.activeBlob.size
+  );
+  console.log(
+    "net-main(" + sockInfo.uid + "): Fetching bytes",
+    sockInfo.blobOffset,
+    "through",
+    nextOffset,
+    "of",
+    sockInfo.activeBlob.size
+  );
+  var blobSlice = sockInfo.activeBlob.slice(sockInfo.blobOffset, nextOffset);
   sockInfo.blobOffset = nextOffset;
 
-  let gotChunk = (arraybuffer) => {
-    console.log('net-main(' + sockInfo.uid + '): Retrieved chunk');
+  let gotChunk = arraybuffer => {
+    console.log("net-main(" + sockInfo.uid + "): Retrieved chunk");
 
     // If the socket has already drained its buffer, then just send the data
     // right away and re-schedule ourselves.
     if (sockInfo.sock.bufferedAmount === 0) {
-      console.log('net-main(' + sockInfo.uid + '): Sending chunk immediately.');
+      console.log("net-main(" + sockInfo.uid + "): Sending chunk immediately.");
       sockInfo.sock.send(arraybuffer, 0, arraybuffer.byteLength);
       fetchNextBlobChunk(sockInfo);
       return;
@@ -186,13 +195,11 @@ function fetchNextBlobChunk(sockInfo) {
 
     sockInfo.queuedData = arraybuffer;
   };
-  blobSlice.arrayBuffer().then(
-    gotChunk,
-    (/*err*/) => {
-      // I/O errors are fatal to the connection; our abstraction does not let us
-      // bubble the error.  The good news is that errors are highly unlikely.
-      sockInfo.sock.close();
-    });
+  blobSlice.arrayBuffer().then(gotChunk, (/*err*/) => {
+    // I/O errors are fatal to the connection; our abstraction does not let us
+    // bubble the error.  The good news is that errors are highly unlikely.
+    sockInfo.sock.close();
+  });
 }
 
 function close(uid) {
@@ -207,7 +214,7 @@ function close(uid) {
   sock.ondata = null;
   sock.ondrain = null;
   sock.onclose = null;
-  me.sendMessage(uid, 'onclose');
+  me.sendMessage(uid, "onclose");
   delete sockInfoByUID[uid];
 }
 
@@ -226,16 +233,14 @@ function write(uid, data, offset, length) {
 
   // Fake an onprogress event so that we can delay wakelock expiration
   // as long as data still flows to the server.
-  me.sendMessage(uid, 'onprogress', []);
+  me.sendMessage(uid, "onprogress", []);
 
   if (data instanceof Blob) {
     beginBlobSend(sockInfo, data);
-  }
-  else {
+  } else {
     sockInfo.sock.send(data, offset, length);
   }
 }
-
 
 function upgradeToSecure(uid) {
   var sockInfo = sockInfoByUID[uid];
@@ -245,9 +250,8 @@ function upgradeToSecure(uid) {
   sockInfo.sock.upgradeToSecure();
 }
 
-
 var me = {
-  name: 'netsocket',
+  name: "netsocket",
   sendMessage: null,
 
   /**
@@ -256,26 +260,25 @@ var me = {
    */
   BLOB_BLOCK_READ_SIZE: 96 * 1024,
 
-  process: function(uid, cmd, args) {
+  process(uid, cmd, args) {
     switch (cmd) {
-      case 'open':
+      case "open":
         open(uid, args[0], args[1], args[2]);
         break;
-      case 'close':
+      case "close":
         close(uid);
         break;
-      case 'write':
+      case "write":
         write(uid, args[0], args[1], args[2]);
         break;
-      case 'upgradeToSecure':
+      case "upgradeToSecure":
         upgradeToSecure(uid);
         break;
       default:
-        console.error('Unhandled net-main command:', cmd);
+        console.error("Unhandled net-main command:", cmd);
         break;
     }
-  }
+  },
 };
 
 export default me;
-

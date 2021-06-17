@@ -65,7 +65,7 @@
  *   side-effects go away on restart.
  */
 export default {
-  name: 'sync_body',
+  name: "sync_body",
 
   /**
    * @return {SyncBodyPersistentState}
@@ -79,7 +79,7 @@ export default {
   deriveMemoryStateFromPersistentState(/*persistentState*/) {
     return {
       memoryState: new Map(),
-      markers: []
+      markers: [],
     };
   },
 
@@ -94,8 +94,7 @@ export default {
       // an expected use case.  It avoids converting a number to a 'snippet'
       // which does cover the potential bounded-small-message-download logic
       // we might support.)
-      if (rawTask.amount &&
-          (!planned.amount || planned.amount === 'snippet')) {
+      if (rawTask.amount && (!planned.amount || planned.amount === "snippet")) {
         planned.amount = rawTask.amount;
       }
       if (rawTask.fullBodyMessageIds) {
@@ -113,17 +112,15 @@ export default {
       planned = {
         // Uniqueify with our task name/prefix and the sufficiently unique
         // conversation id.
-        markerId: 'sync_body:' + rawTask.convId,
+        markerId: "sync_body:" + rawTask.convId,
         convId: rawTask.convId,
         amount: rawTask.amount,
-        fullBodyMessageIds: rawTask.fullBodyMessageIds
+        fullBodyMessageIds: rawTask.fullBodyMessageIds,
       };
       memoryState.set(planned.convId, planned);
     }
 
-    let priorityTags = [
-      `view:conv:${planned.convId}`
-    ];
+    let priorityTags = [`view:conv:${planned.convId}`];
 
     if (planned.fullBodyMessageIds) {
       for (let messageId of planned.fullBodyMessageIds) {
@@ -139,18 +136,15 @@ export default {
           id: planned.markerId,
           accountId: rawTask.accountId,
           convId: planned.convId,
-          priorityTags: priorityTags,
-          exclusiveResources: [
-            `conv:${planned.convId}`
-          ]
-        }
-      ]
+          priorityTags,
+          exclusiveResources: [`conv:${planned.convId}`],
+        },
+      ],
     ]);
 
     await ctx.finishTask({
       taskState: null,
-      taskMarkers: modifyTaskMarkers
+      taskMarkers: modifyTaskMarkers,
     });
   },
 };
-

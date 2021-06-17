@@ -13,21 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+"use strict";
 
-export default function readAllChunks(readableStream) {
-  var reader = readableStream.getReader();
-  var chunks = [];
-
-  return pump();
-
-  function pump() {
-    return reader.read().then(({ value, done }) => {
-      if (done) {
-        return chunks;
-      }
-
-      chunks.push(value);
-      return pump();
-    });
-  }
-}
+module.exports = {
+  env: {
+    worker: true,
+  },
+};

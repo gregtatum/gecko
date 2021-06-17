@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
-import logic from 'logic';
+import evt from "evt";
+import logic from "logic";
 
 /**
  * Data overlays are bonus data that may change with a high frequency that we
@@ -87,21 +87,22 @@ import logic from 'logic';
  */
 export default function DataOverlayManager() {
   evt.Emitter.call(this);
-  logic.defineScope(this, 'DataOverlayManager');
+  logic.defineScope(this, "DataOverlayManager");
 
   this.registeredProvidersByNamespace = new Map([
-    ['accounts', new Map()],
-    ['folders', new Map()],
-    ['conversations', new Map()],
-    ['messages', new Map()]
+    ["accounts", new Map()],
+    ["folders", new Map()],
+    ["conversations", new Map()],
+    ["messages", new Map()],
   ]);
 }
 DataOverlayManager.prototype = evt.mix({
-  registerProvider: function(namespace, name, func) {
-    let providersForNamespace =
-      this.registeredProvidersByNamespace.get(namespace);
+  registerProvider(namespace, name, func) {
+    let providersForNamespace = this.registeredProvidersByNamespace.get(
+      namespace
+    );
     if (!providersForNamespace) {
-      logic(this, 'badNamespace', { namespace });
+      logic(this, "badNamespace", { namespace });
     }
     let funcs = providersForNamespace.get(name);
     if (!funcs) {
@@ -115,18 +116,19 @@ DataOverlayManager.prototype = evt.mix({
    * Announce that there is new overlay data available for the given id in the
    * given namespace.  If anyone/anything cares, the data will be pulled out.
    */
-  announceUpdatedOverlayData: function(namespace, id) {
-    logic(this, 'announceUpdatedOverlayData', { namespace, id });
+  announceUpdatedOverlayData(namespace, id) {
+    logic(this, "announceUpdatedOverlayData", { namespace, id });
     this.emit(namespace, id);
   },
 
-  makeBoundResolver: function(namespace/*, ctx*/) {
+  makeBoundResolver(namespace /*, ctx*/) {
     return this._resolveOverlays.bind(
       this,
-      this.registeredProvidersByNamespace.get(namespace));
+      this.registeredProvidersByNamespace.get(namespace)
+    );
   },
 
-  _resolveOverlays: function(providersForNamespace, itemId) {
+  _resolveOverlays(providersForNamespace, itemId) {
     let overlays = {};
     for (let [name, funcs] of providersForNamespace) {
       // The first func to return something short-circuits our search.  Each id
@@ -142,5 +144,5 @@ DataOverlayManager.prototype = evt.mix({
       }
     }
     return overlays;
-  }
+  },
 });

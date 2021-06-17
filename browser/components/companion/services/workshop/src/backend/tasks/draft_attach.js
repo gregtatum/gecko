@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import { BLOB_BASE64_BATCH_CONVERT_SIZE } from '../syncbase';
+import { BLOB_BASE64_BATCH_CONVERT_SIZE } from "../syncbase";
 
-import TaskDefiner from '../task_infra/task_definer';
-import churnConversation from '../churn_drivers/conv_churn_driver';
+import TaskDefiner from "../task_infra/task_definer";
+import churnConversation from "../churn_drivers/conv_churn_driver";
 
-import { makeAttachmentPart } from '../db/mail_rep';
-import { mimeStyleBase64Encode } from 'safe-base64';
+import { makeAttachmentPart } from "../db/mail_rep";
+import { mimeStyleBase64Encode } from "safe-base64";
 
-import { convIdFromMessageId } from 'shared/id_conversions';
+import { convIdFromMessageId } from "shared/id_conversions";
 
 /**
  * Per-account task to incrementally convert an attachment into its base64
@@ -54,14 +54,14 @@ import { convIdFromMessageId } from 'shared/id_conversions';
  */
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'draft_attach',
+    name: "draft_attach",
 
     async plan(ctx, req) {
       let { messageId } = req;
       let convId = convIdFromMessageId(messageId);
       let fromDb = await ctx.beginMutate({
         conversations: new Map([[convId, null]]),
-        messagesByConversation: new Map([[convId, null]])
+        messagesByConversation: new Map([[convId, null]]),
       });
 
       let messages = fromDb.messagesByConversation.get(convId);
@@ -69,7 +69,7 @@ export default TaskDefiner.defineSimpleTask([
 
       let messageInfo = messages.find(msg => msg.id === messageId);
       if (messageInfo === null) {
-        throw new Error('moot');
+        throw new Error("moot");
       }
       let messageKey = [messageInfo.id, messageInfo.date];
 
@@ -83,18 +83,25 @@ export default TaskDefiner.defineSimpleTask([
         sizeEstimate: wholeBlob.size,
         // Tell everyone this is a encoded draft attachment and not appropriate
         // for anyone to try and use other than draft logic.
-        downloadState: 'draft',
+        downloadState: "draft",
         // this is where we put the Blob segments...
         file: [],
       });
       // -- Encode loop.
       let blobOffset = 0;
       while (blobOffset < wholeBlob.size) {
-        let nextOffset =
-          Math.min(wholeBlob.size,
-                   blobOffset + BLOB_BASE64_BATCH_CONVERT_SIZE);
-        console.log('attachBlobToDraft: fetching', blobOffset, 'to',
-                    nextOffset, 'of', wholeBlob.size);
+        let nextOffset = Math.min(
+          wholeBlob.size,
+          blobOffset + BLOB_BASE64_BATCH_CONVERT_SIZE
+        );
+        console.log(
+          "attachBlobToDraft: fetching",
+          blobOffset,
+          "to",
+          nextOffset,
+          "of",
+          wholeBlob.size
+        );
 
         let slicedBlob = wholeBlob.slice(blobOffset, nextOffset);
         blobOffset = nextOffset;
@@ -102,21 +109,22 @@ export default TaskDefiner.defineSimpleTask([
         let arraybuffer = await slicedBlob.arrayBuffer();
         let binaryDataU8 = new Uint8Array(arraybuffer);
         let encodedU8 = mimeStyleBase64Encode(binaryDataU8);
-        messageInfo.attaching.file.push(new Blob([encodedU8],
-                                                 { type: wholeBlob.type }));
+        messageInfo.attaching.file.push(
+          new Blob([encodedU8], { type: wholeBlob.type })
+        );
         // (in the v1.x job-op we'd do the finalization and transition from
         // attaching to attachments in this final pass here, but since we need
         // to issue an additional write anyways, we do that outside the loop.)
 
         // - Issue the incremental write
         await ctx.dangerousIncrementalWrite({
-          messages: new Map([[messageId, messageInfo]])
+          messages: new Map([[messageId, messageInfo]]),
         });
 
         // - Read back the Blob for memory usage reasons.
         let flushedReads = await ctx.mutateMore({
           flushedMessageReads: true,
-          messages: new Map([[messageKey, null]])
+          messages: new Map([[messageKey, null]]),
         });
 
         messageInfo = flushedReads.messages.get(messageId);
@@ -137,11 +145,11 @@ export default TaskDefiner.defineSimpleTask([
       await ctx.finishTask({
         mutations: {
           conversations: new Map([[convId, convInfo]]),
-          messages: modifiedMessagesMap
-        }
+          messages: modifiedMessagesMap,
+        },
       });
     },
 
-    execute: null
-  }
+    execute: null,
+  },
 ]);

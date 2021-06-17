@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
-import ICAL from 'ical.js';
+import ICAL from "ical.js";
 
-import * as mailRep from '../../db/mail_rep';
-import { processMessageContent, processAttributeContent } from '../../bodies/mailchew';
+import * as mailRep from "../../db/mail_rep";
+import {
+  processMessageContent,
+  processAttributeContent,
+} from "../../bodies/mailchew";
 
 /**
  * Process a bundle of events with the same UID so that there's a single message
@@ -29,7 +32,16 @@ import { processMessageContent, processAttributeContent } from '../../bodies/mai
  * extrapolated events.)
  */
 export class RecurringEventBundleChewer {
-  constructor({ convId, uid, rangeOldestTS, rangeNewestTS, jcalEvents, oldConvInfo, oldMessages, foldersTOC }) {
+  constructor({
+    convId,
+    uid,
+    rangeOldestTS,
+    rangeNewestTS,
+    jcalEvents,
+    oldConvInfo,
+    oldMessages,
+    foldersTOC,
+  }) {
     this.convId = convId;
     this.uid = uid;
     this.rangeOldestTS = rangeOldestTS;
@@ -40,10 +52,10 @@ export class RecurringEventBundleChewer {
     this.oldMessages = oldMessages;
     this.foldersTOC = foldersTOC;
 
-    this.inboxFolder = foldersTOC.getCanonicalFolderByType('inbox');
+    this.inboxFolder = foldersTOC.getCanonicalFolderByType("inbox");
 
     // This is a mapping from the message id we synthesize.
-    const oldById = this.oldById = new Map();
+    const oldById = (this.oldById = new Map());
     for (const old of oldMessages) {
       oldById.set(old.id, old);
     }
@@ -68,11 +80,7 @@ export class RecurringEventBundleChewer {
     }
 
     // Hydrate the root component.
-    this.rootComponent = new ICAL.Component([
-      'vcalendar',
-      [],
-      this.jcalEvents,
-    ]);
+    this.rootComponent = new ICAL.Component(["vcalendar", [], this.jcalEvents]);
 
     // We sorted the events so the recurring event proper is the 0th
     // subcomponent.  The `ICAL.Event` constructor handles this by trying to
@@ -84,8 +92,10 @@ export class RecurringEventBundleChewer {
     // # Non-Recurring
     if (!rootEvent.isRecurring()) {
       // Don't bother emitting this event if it's outside our sync range.
-      if (rootEvent.endDate.toJSDate().valueOf() < this.rangeOldestTS ||
-          rootEvent.startDate.toJSDate().valueOf() > this.rangeNewestTS) {
+      if (
+        rootEvent.endDate.toJSDate().valueOf() < this.rangeOldestTS ||
+        rootEvent.startDate.toJSDate().valueOf() > this.rangeNewestTS
+      ) {
         return;
       }
 
@@ -112,11 +122,13 @@ export class RecurringEventBundleChewer {
       // have a backstop.
       let stepCount = 0;
 
-      for (calIter.next();
-           (calIter.complete === false) &&
-             (stepCount < 1024) &&
-             (calIter.last.toJSDate().valueOf() <= this.rangeNewestTS);
-           calIter.next(), stepCount++) {
+      for (
+        calIter.next();
+        calIter.complete === false &&
+        stepCount < 1024 &&
+        calIter.last.toJSDate().valueOf() <= this.rangeNewestTS;
+        calIter.next(), stepCount++
+      ) {
         const curOccur = calIter.last;
         const occurInfo = rootEvent.getOccurrenceDetails(curOccur);
 
@@ -125,8 +137,10 @@ export class RecurringEventBundleChewer {
         // (Although we are bounds-checking before/after here, we're doing it
         // for consistency.  The loop logic above should stop the loop once we
         // iterate beyond the end of rangeNewestTS.)
-        if (occurInfo.endDate.toJSDate().valueOf() < this.rangeOldestTS ||
-            occurInfo.startDate.toJSDate().valueOf() > this.rangeNewestTS) {
+        if (
+          occurInfo.endDate.toJSDate().valueOf() < this.rangeOldestTS ||
+          occurInfo.startDate.toJSDate().valueOf() > this.rangeNewestTS
+        ) {
           continue;
         }
         this._chewOccurrence(occurInfo);
@@ -143,14 +157,14 @@ export class RecurringEventBundleChewer {
   _chewCalAddress(calAddress) {
     if (!calAddress) {
       return {
-        name: 'Omitted',
-        address: '',
+        name: "Omitted",
+        address: "",
         nick: null,
       };
     }
 
-    const cn = calAddress.getParameter('cn');
-    const mailto = calAddress.getFirstValue().replace(/^mailto:/g, '');
+    const cn = calAddress.getParameter("cn");
+    const mailto = calAddress.getFirstValue().replace(/^mailto:/g, "");
 
     return {
       name: cn,
@@ -181,60 +195,69 @@ export class RecurringEventBundleChewer {
     {
       const attrs = [
         {
-          name: 'Event',
-          type: 'date-range',
+          name: "Event",
+          type: "date-range",
           startDate,
           endDate,
         },
       ];
-      if (component.hasProperty('location')) {
+      if (component.hasProperty("location")) {
         attrs.push({
-          name: 'Location',
-          type: 'string-value',
-          value: component.getFirstPropertyValue('location'),
+          name: "Location",
+          type: "string-value",
+          value: component.getFirstPropertyValue("location"),
         });
       }
-      ({ contentBlob, snippet, authoredBodySize } =
-        processAttributeContent(attrs));
-      bodyReps.push(mailRep.makeBodyPart({
-        type: 'attr',
-        part: null,
-        sizeEstimate: contentBlob.size,
-        amountDownloaded: contentBlob.size,
-        isDownloaded: true,
-        _partInfo: null,
-        contentBlob,
-        authoredBodySize,
-      }));
+      ({ contentBlob, snippet, authoredBodySize } = processAttributeContent(
+        attrs
+      ));
+      bodyReps.push(
+        mailRep.makeBodyPart({
+          type: "attr",
+          part: null,
+          sizeEstimate: contentBlob.size,
+          amountDownloaded: contentBlob.size,
+          isDownloaded: true,
+          _partInfo: null,
+          contentBlob,
+          authoredBodySize,
+        })
+      );
     }
 
     // ## Generate an HTML body part for the description
-    let description = component.getFirstPropertyValue('description');
+    let description = component.getFirstPropertyValue("description");
     if (description) {
       // At least as retrieved as a value, newlines are escaped.
-      description = description.replace(/\\n/g, '\n');
+      description = description.replace(/\\n/g, "\n");
       ({ contentBlob, snippet, authoredBodySize } = processMessageContent(
         description,
-        'html',
+        "html",
         true, // isDownloaded
         true // generateSnippet
       ));
 
-      bodyReps.push(mailRep.makeBodyPart({
-        type: 'html',
-        part: null,
-        sizeEstimate: description.length,
-        amountDownloaded: description.length,
-        isDownloaded: true,
-        _partInfo: null,
-        contentBlob,
-        authoredBodySize,
-      }));
+      bodyReps.push(
+        mailRep.makeBodyPart({
+          type: "html",
+          part: null,
+          sizeEstimate: description.length,
+          amountDownloaded: description.length,
+          isDownloaded: true,
+          _partInfo: null,
+          contentBlob,
+          authoredBodySize,
+        })
+      );
     }
 
-    const summary = component.getFirstPropertyValue('summary');
-    const organizer = this._chewCalAddress(component.getFirstProperty('organizer'));
-    const attendees = component.getAllProperties('attendee').map(who => this._chewCalAddress(who));
+    const summary = component.getFirstPropertyValue("summary");
+    const organizer = this._chewCalAddress(
+      component.getFirstProperty("organizer")
+    );
+    const attendees = component
+      .getAllProperties("attendee")
+      .map(who => this._chewCalAddress(who));
 
     const msgInfo = mailRep.makeMessageInfo({
       id: msgId,

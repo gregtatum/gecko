@@ -20,13 +20,13 @@
  * imap/probe.js.
  */
 
-import BrowserBox from 'browserbox';
-import ImapClient from 'browserbox-imap';
-import imapHandler from 'imap-handler';
-import logic from 'logic';
-import { CONNECT_TIMEOUT_MS } from '../../syncbase';
-import errorutils from '../../errorutils';
-import oauth from '../../oauth';
+import BrowserBox from "browserbox";
+import ImapClient from "browserbox-imap";
+import imapHandler from "imap-handler";
+import logic from "logic";
+import { CONNECT_TIMEOUT_MS } from "../../syncbase";
+import errorutils from "../../errorutils";
+import oauth from "../../oauth";
 
 let setTimeout = window.setTimeout;
 let clearTimeout = window.clearTimeout;
@@ -40,9 +40,9 @@ function noop() {
   // nothing
 }
 
-var scope = logic.scope('ImapClient');
+var scope = logic.scope("ImapClient");
 
-  /**
+/**
  * Open a connection to an IMAP server.
  *
  * @param {object} credentials
@@ -58,89 +58,96 @@ var scope = logic.scope('ImapClient');
  *   reject => {String} normalized String error
  */
 
-export function createImapConnection (credentials, connInfo,
-                                      credsUpdatedCallback) {
+export function createImapConnection(
+  credentials,
+  connInfo,
+  credsUpdatedCallback
+) {
   var conn;
 
-  return oauth.ensureUpdatedCredentials(credentials, credsUpdatedCallback)
-  .then(function() {
-    return new Promise(function(resolve, reject) {
-      conn = new BrowserBox(
-        connInfo.hostname,
-        connInfo.port, {
+  return oauth
+    .ensureUpdatedCredentials(credentials, credsUpdatedCallback)
+    .then(function() {
+      return new Promise(function(resolve, reject) {
+        conn = new BrowserBox(connInfo.hostname, connInfo.port, {
           auth: {
             user: credentials.username,
             pass: credentials.password,
-            xoauth2: credentials.oauth2 ?
-                        credentials.oauth2.accessToken : null
+            xoauth2: credentials.oauth2 ? credentials.oauth2.accessToken : null,
           },
           id: {
-            vendor: 'Mozilla',
-            name: 'GaiaMail',
-            version: '1.0alpha',
-            'support-url': 'http://mzl.la/file-gaia-email-bug'
+            vendor: "Mozilla",
+            name: "GaiaMail",
+            version: "1.0alpha",
+            "support-url": "http://mzl.la/file-gaia-email-bug",
           },
-          useSecureTransport: (connInfo.crypto === 'ssl' ||
-                                connInfo.crypto === true),
-          requireTLS: connInfo.crypto === 'starttls',
+          useSecureTransport:
+            connInfo.crypto === "ssl" || connInfo.crypto === true,
+          requireTLS: connInfo.crypto === "starttls",
           // In the case no encryption is explicitly requested (either for
           // testing or because a user regrettably chose to disable it via
           // manual config), we want to avoid opportunistic encryption
           // since in the latter case the user may have done this because
           // the server's certificates are invalid.
-          ignoreTLS: connInfo.crypto === 'plain'
+          ignoreTLS: connInfo.crypto === "plain",
         });
 
-      var connectTimeout = setTimeout(function() {
-        conn.onerror('unresponsive-server');
-        conn.close();
-      }, CONNECT_TIMEOUT_MS);
+        var connectTimeout = setTimeout(function() {
+          conn.onerror("unresponsive-server");
+          conn.close();
+        }, CONNECT_TIMEOUT_MS);
 
-      conn.onauth = function() {
-        clearTimeout(connectTimeout);
-        logic(scope, 'connected', { connInfo: connInfo });
-        conn.onauth = conn.onerror = noop;
-        resolve(conn);
-      };
-      conn.onerror = function(err) {
-        clearTimeout(connectTimeout);
-        // XXX: if error is just expired access token, try to refresh one time
-        reject(err);
-      };
-      // Save the mailboxInfo off so we can use the precheck idiom.
-      conn.onselectmailbox = function(path, mailboxInfo) {
-        this.selectedMailboxPath = path;
-        this.selectedMailboxInfo = mailboxInfo;
-      };
-      conn.onclosemailbox = function() {
-        this.selectedMailboxPath = null;
-        this.selectedMailboxInfo = null;
-      };
+        conn.onauth = function() {
+          clearTimeout(connectTimeout);
+          logic(scope, "connected", { connInfo });
+          conn.onauth = conn.onerror = noop;
+          resolve(conn);
+        };
+        conn.onerror = function(err) {
+          clearTimeout(connectTimeout);
+          // XXX: if error is just expired access token, try to refresh one time
+          reject(err);
+        };
+        // Save the mailboxInfo off so we can use the precheck idiom.
+        conn.onselectmailbox = function(path, mailboxInfo) {
+          this.selectedMailboxPath = path;
+          this.selectedMailboxInfo = mailboxInfo;
+        };
+        conn.onclosemailbox = function() {
+          this.selectedMailboxPath = null;
+          this.selectedMailboxInfo = null;
+        };
 
-      conn.connect();
-    });
-  }).catch(function(errorObject) {
-    var errorString = normalizeImapError(conn, errorObject);
-    if (conn) {
-      conn.close();
-    }
-
-    // Could hit an oauth reauth case due to date skews, so give a token
-    // review a shot before really bailing.
-    if (errorString === 'needs-oauth-reauth' &&
-        oauth.isRenewPossible(credentials)) {
-      return oauth.ensureUpdatedCredentials(credentials,
-                                            credsUpdatedCallback, true)
-      .then(function() {
-        return createImapConnection(credentials, connInfo, credsUpdatedCallback);
+        conn.connect();
       });
-    } else {
-      logic(scope, 'connect-error', {
-        error: errorString
+    })
+    .catch(function(errorObject) {
+      var errorString = normalizeImapError(conn, errorObject);
+      if (conn) {
+        conn.close();
+      }
+
+      // Could hit an oauth reauth case due to date skews, so give a token
+      // review a shot before really bailing.
+      if (
+        errorString === "needs-oauth-reauth" &&
+        oauth.isRenewPossible(credentials)
+      ) {
+        return oauth
+          .ensureUpdatedCredentials(credentials, credsUpdatedCallback, true)
+          .then(function() {
+            return createImapConnection(
+              credentials,
+              connInfo,
+              credsUpdatedCallback
+            );
+          });
+      }
+      logic(scope, "connect-error", {
+        error: errorString,
       });
       throw errorString;
-    }
-  });
+    });
 }
 
 //****************************************************************
@@ -159,16 +166,20 @@ var processResponse = ImapClient.prototype._processResponse;
 ImapClient.prototype._processResponse = function(response) {
   processResponse.apply(this, arguments);
 
-  var cmd = (response && response.command || '').toString()
-        .toUpperCase().trim();
+  var cmd = ((response && response.command) || "")
+    .toString()
+    .toUpperCase()
+    .trim();
 
-  if (['NO', 'BAD'].indexOf(cmd) !== -1) {
-    logic(scope, 'protocol-error', {
+  if (["NO", "BAD"].includes(cmd)) {
+    logic(scope, "protocol-error", {
       humanReadable: response.humanReadable,
       responseCode: response.code,
       // Include the command structure
-      commandData: this._currentCommand && this._currentCommand.request &&
-                    imapHandler.compiler(this._currentCommand.request)
+      commandData:
+        this._currentCommand &&
+        this._currentCommand.request &&
+        imapHandler.compiler(this._currentCommand.request),
     });
     this._lastImapError = {
       // To most accurately report STARTTLS issues, latch the active command
@@ -176,7 +187,7 @@ ImapClient.prototype._processResponse = function(response) {
       // attacker could say "NO SUCKER" instead of "NO STARTTLS" or
       // something.)
       command: this._currentCommand,
-      response: response
+      response,
     };
   }
 };
@@ -186,14 +197,15 @@ ImapClient.prototype._processResponse = function(response) {
 // rather than the actual error object with details. This is just a
 // copy of that function, with the `new Error` constructor stripped
 // out so that the error details pass through to onerror.
-  ImapClient.prototype._onError = function(evt) {
+ImapClient.prototype._onError = function(evt) {
   if (this.isError(evt)) {
     this.onerror(evt);
   } else if (evt && this.isError(evt.data)) {
     this.onerror(evt.data);
   } else {
-    this.onerror(evt && evt.data && evt.data.message ||
-                  evt.data || evt || 'Error');
+    this.onerror(
+      (evt && evt.data && evt.data.message) || evt.data || evt || "Error"
+    );
   }
 
   this.close();
@@ -212,9 +224,12 @@ function analyzeLastImapError(lastErrInfo, conn) {
 
   // If the most recent command was to initiate STARTTLS, then this is a
   // security error.
-  if (lastErrInfo.command && lastErrInfo.command.request &&
-      lastErrInfo.command.request.command === 'STARTTLS') {
-    return 'bad-security';
+  if (
+    lastErrInfo.command &&
+    lastErrInfo.command.request &&
+    lastErrInfo.command.request.command === "STARTTLS"
+  ) {
+    return "bad-security";
   }
 
   var wasOauth = conn && !!conn.options.auth.xoauth2;
@@ -237,32 +252,35 @@ function analyzeLastImapError(lastErrInfo, conn) {
   //     NO [AUTHENTICATIONFAILED] Incorrect username or password.
 
   var err = lastErrInfo.response;
-  var str = (err.code || '') + (err.humanReadable || '');
+  var str = (err.code || "") + (err.humanReadable || "");
 
-  if (/Your account is not enabled for IMAP use/.test(str) ||
-              /IMAP access is disabled for your domain/.test(str)) {
-    return 'imap-disabled';
+  if (
+    /Your account is not enabled for IMAP use/.test(str) ||
+    /IMAP access is disabled for your domain/.test(str)
+  ) {
+    return "imap-disabled";
   } else if (/UNAVAILABLE/.test(str)) {
-    return 'server-maintenance';
-  // If login failed and LOGINDISABLED was claimed, then it's
-  // server-maintenance.  We used to be more aggressive about
-  // LOGINDISABLED and would just give up if we saw it, but we had a
-  // bad regression, so the balance has tipped here.  Additionally, it
-  // makes a lot of sense to only report the error if we actually failed
-  // to login!
-  } else if (conn.capability.indexOf('LOGINDISABLED') !== -1 &&
-              !conn.authenticated) {
-    return 'server-maintenance';
-  // The invalid-credentials case goes last, because we
-  // optimistically assume that any other not-authenticated failure
-  // is caused by the user's invalid credentials.
-  } else if (/AUTHENTICATIONFAILED/.test(str) ||
-              /Invalid credentials/i.test(str) || // Gmail bad access token
-              /login failed/i.test(str) ||
-              /password/.test(str) ||
-              // We can't trust state since it gets updated on close, but
-              // authenticated latches to true and stays that way.
-              !conn.authenticated) {
+    return "server-maintenance";
+    // If login failed and LOGINDISABLED was claimed, then it's
+    // server-maintenance.  We used to be more aggressive about
+    // LOGINDISABLED and would just give up if we saw it, but we had a
+    // bad regression, so the balance has tipped here.  Additionally, it
+    // makes a lot of sense to only report the error if we actually failed
+    // to login!
+  } else if (conn.capability.includes("LOGINDISABLED") && !conn.authenticated) {
+    return "server-maintenance";
+    // The invalid-credentials case goes last, because we
+    // optimistically assume that any other not-authenticated failure
+    // is caused by the user's invalid credentials.
+  } else if (
+    /AUTHENTICATIONFAILED/.test(str) ||
+    /Invalid credentials/i.test(str) || // Gmail bad access token
+    /login failed/i.test(str) ||
+    /password/.test(str) ||
+    // We can't trust state since it gets updated on close, but
+    // authenticated latches to true and stays that way.
+    !conn.authenticated
+  ) {
     // If we got a protocol-level error but we weren't authenticated
     // yet, it's likely an authentication problem, as authenticating
     // is the first thing we do. Any other socket-level connection
@@ -272,13 +290,11 @@ function analyzeLastImapError(lastErrInfo, conn) {
     if (wasOauth) {
       // Gmail returns "NO [ALERT] Invalid credentials (Failure)" in
       // the case of a failed OAUTH password.
-      return 'needs-oauth-reauth';
-    } else {
-      return 'bad-user-or-pass';
+      return "needs-oauth-reauth";
     }
-  } else {
-    return null;
+    return "bad-user-or-pass";
   }
+  return null;
 }
 
 /**
@@ -299,22 +315,19 @@ function analyzeLastImapError(lastErrInfo, conn) {
 export function normalizeImapError(conn, err) {
   var socketLevelError = errorutils.analyzeException(err);
   var protocolLevelError =
-        conn && analyzeLastImapError(conn.client._lastImapError, conn);
+    conn && analyzeLastImapError(conn.client._lastImapError, conn);
 
-  var reportAs = (socketLevelError ||
-                  protocolLevelError ||
-                  'unknown');
+  var reportAs = socketLevelError || protocolLevelError || "unknown";
 
-  logic(scope, 'normalized-error', {
+  logic(scope, "normalized-error", {
     error: err,
     errorName: err && err.name,
     errorMessage: err && err.message,
     errorStack: err && err.stack,
-    socketLevelError: socketLevelError,
-    protocolLevelError: protocolLevelError,
-    reportAs: reportAs
+    socketLevelError,
+    protocolLevelError,
+    reportAs,
   });
 
   return reportAs;
 }
-

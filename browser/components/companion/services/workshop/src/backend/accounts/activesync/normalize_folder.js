@@ -14,21 +14,20 @@
  * limitations under the License.
  */
 
-import { makeFolderMeta } from '../../db/folder_info_rep';
+import { makeFolderMeta } from "../../db/folder_info_rep";
 
-import { Enums as fhEnum } from 'activesync/codepages/FolderHierarchy';
+import { Enums as fhEnum } from "activesync/codepages/FolderHierarchy";
 var $FolderTypes = fhEnum.Type;
-
 
 // Map folder type numbers from ActiveSync to GELAM's types
 const folderTypes = {
-   1: 'normal', // Generic
-   2: 'inbox',  // DefaultInbox
-   3: 'drafts', // DefaultDrafts
-   4: 'trash',  // DefaultDeleted
-   5: 'sent',   // DefaultSent
-   6: 'normal', // DefaultOutbox
-  12: 'normal', // Mail
+  1: "normal", // Generic
+  2: "inbox", // DefaultInbox
+  3: "drafts", // DefaultDrafts
+  4: "trash", // DefaultDeleted
+  5: "sent", // DefaultSent
+  6: "normal", // DefaultOutbox
+  12: "normal", // Mail
 };
 
 /**
@@ -37,14 +36,33 @@ const folderTypes = {
  * no enumerated type representing junk folders.
  */
 const junkFolderNames = [
-  'bulk mail', 'correo no deseado', 'courrier indésirable', 'istenmeyen',
-  'istenmeyen e-posta', 'junk', 'levélszemét', 'nevyžiadaná pošta',
-  'nevyžádaná pošta', 'no deseado', 'posta indesiderata', 'pourriel',
-  'roskaposti', 'skräppost', 'spam', 'spamowanie', 'søppelpost',
-  'thư rác', 'спам', 'דואר זבל', 'الرسائل العشوائية', 'هرزنامه', 'สแปม',
-  '垃圾郵件', '垃圾邮件', '垃圾電郵'
+  "bulk mail",
+  "correo no deseado",
+  "courrier indésirable",
+  "istenmeyen",
+  "istenmeyen e-posta",
+  "junk",
+  "levélszemét",
+  "nevyžiadaná pošta",
+  "nevyžádaná pošta",
+  "no deseado",
+  "posta indesiderata",
+  "pourriel",
+  "roskaposti",
+  "skräppost",
+  "spam",
+  "spamowanie",
+  "søppelpost",
+  "thư rác",
+  "спам",
+  "דואר זבל",
+  "الرسائل العشوائية",
+  "هرزنامه",
+  "สแปม",
+  "垃圾郵件",
+  "垃圾邮件",
+  "垃圾電郵",
 ];
-
 
 function getFirstFolderWithType(folderIdToFolderInfo, type) {
   for (let folderInfo of folderIdToFolderInfo.values()) {
@@ -76,7 +94,8 @@ function getFirstFolderWithType(folderIdToFolderInfo, type) {
  */
 export default function normalizeFolder(
   { idMaker, serverIdToFolderId, folderIdToFolderInfo },
-  { serverId, parentServerId, displayName, typeNum, forceType }) {
+  { serverId, parentServerId, displayName, typeNum, forceType }
+) {
   if (!forceType && !(typeNum in folderTypes)) {
     return true; // Not a folder type we care about.
   }
@@ -84,14 +103,14 @@ export default function normalizeFolder(
   let path = displayName;
   let parentFolderId = null;
   let depth = 0;
-  if (parentServerId !== '0') {
+  if (parentServerId !== "0") {
     parentFolderId = serverIdToFolderId.get(parentServerId);
     let parentInfo = folderIdToFolderInfo.get(parentFolderId);
     // No parent yet?  Return null and the add will get deferred.
     if (!parent) {
       return null;
     }
-    path = parentInfo.path + '/' + path;
+    path = parentInfo.path + "/" + path;
     depth = parentInfo.depth + 1;
   }
 
@@ -107,8 +126,8 @@ export default function normalizeFolder(
   // at the top-level or is only nested one level deep.
   if (depth < 2) {
     var normalizedName = displayName.toLowerCase();
-    if (junkFolderNames.indexOf(normalizedName) !== -1) {
-      useFolderType = 'junk';
+    if (junkFolderNames.includes(normalizedName)) {
+      useFolderType = "junk";
     }
   }
   if (forceType) {
@@ -117,8 +136,10 @@ export default function normalizeFolder(
 
   // Handle sentinel Inbox.
   if (typeNum === $FolderTypes.DefaultInbox) {
-    let existingInboxMeta =
-      getFirstFolderWithType(folderIdToFolderInfo, 'inbox');
+    let existingInboxMeta = getFirstFolderWithType(
+      folderIdToFolderInfo,
+      "inbox"
+    );
     if (existingInboxMeta) {
       // Update everything about the folder meta.
       existingInboxMeta.serverId = serverId;
@@ -132,13 +153,13 @@ export default function normalizeFolder(
   var folderId = idMaker();
   var folderInfo = makeFolderMeta({
     id: folderId,
-    serverId: serverId,
+    serverId,
     name: displayName,
     type: useFolderType,
-    path: path,
+    path,
     parentId: parentFolderId,
-    depth: depth,
-    lastSyncedAt: 0
+    depth,
+    lastSyncedAt: 0,
   });
 
   return folderInfo;

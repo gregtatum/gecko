@@ -15,7 +15,7 @@
  */
 
 export default {
-  name: 'vis_facet',
+  name: "vis_facet",
 
   derivedViews: {
     /*
@@ -33,5 +33,5 @@ export default {
       return mod.default;
     }
     */
-  }
+  },
 };

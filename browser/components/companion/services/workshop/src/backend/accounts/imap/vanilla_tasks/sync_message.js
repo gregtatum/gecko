@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-import { shallowClone } from 'shared/util';
-import { prioritizeNewer } from '../../../date_priority_adjuster';
+import { shallowClone } from "shared/util";
+import { prioritizeNewer } from "../../../date_priority_adjuster";
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import { resolveConversationTaskHelper } from
-  '../../../task_mixins/conv_resolver';
+import { resolveConversationTaskHelper } from "../../../task_mixins/conv_resolver";
 
-import { browserboxMessageToMimeHeaders, chewMessageStructure } from
-  '../imapchew';
+import {
+  browserboxMessageToMimeHeaders,
+  chewMessageStructure,
+} from "../imapchew";
 
-import { conversationMessageComparator } from '../../../db/comparators';
+import { conversationMessageComparator } from "../../../db/comparators";
 
-import churnConversation from '../../../churn_drivers/conv_churn_driver';
+import churnConversation from "../../../churn_drivers/conv_churn_driver";
 
 /**
  * What to fetch.  Note that we currently re-fetch the flags even though they're
@@ -36,13 +37,13 @@ import churnConversation from '../../../churn_drivers/conv_churn_driver';
  * smarter CONDSTORE/QRESYNC cases.
  */
 const INITIAL_FETCH_PARAMS = [
-  'uid',
-  'internaldate',
-  'bodystructure',
-  'flags',
-  'BODY.PEEK[' +
-    'HEADER.FIELDS ' +
-    '(FROM TO CC BCC SUBJECT REPLY-TO MESSAGE-ID REFERENCES IN-REPLY-TO)]'
+  "uid",
+  "internaldate",
+  "bodystructure",
+  "flags",
+  "BODY.PEEK[" +
+    "HEADER.FIELDS " +
+    "(FROM TO CC BCC SUBJECT REPLY-TO MESSAGE-ID REFERENCES IN-REPLY-TO)]",
 ];
 
 /**
@@ -62,7 +63,7 @@ const INITIAL_FETCH_PARAMS = [
  */
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'sync_message',
+    name: "sync_message",
 
     async plan(ctx, rawTask) {
       let plannedTask = shallowClone(rawTask);
@@ -70,11 +71,9 @@ export default TaskDefiner.defineSimpleTask([
       // We don't have any a priori name-able exclusive resources.  Our records
       // are either orthogonal or will only be dynamically discovered while
       // we're running.
-      plannedTask.exclusiveResources = [
-      ];
+      plannedTask.exclusiveResources = [];
 
-      plannedTask.priorityTags = [
-      ];
+      plannedTask.priorityTags = [];
 
       // Prioritize the message based on how new it is.
       if (rawTask.dateTS) {
@@ -82,7 +81,7 @@ export default TaskDefiner.defineSimpleTask([
       }
 
       await ctx.finishTask({
-        taskState: plannedTask
+        taskState: plannedTask,
       });
     },
 
@@ -103,9 +102,18 @@ export default TaskDefiner.defineSimpleTask([
       let headers = browserboxMessageToMimeHeaders(msg);
 
       // -- Resolve the conversation this goes in.
-      let { convId, existingConv, messageId, headerIdWrites, extraTasks } =
-        await resolveConversationTaskHelper(
-          ctx, headers, req.accountId, req.umid);
+      let {
+        convId,
+        existingConv,
+        messageId,
+        headerIdWrites,
+        extraTasks,
+      } = await resolveConversationTaskHelper(
+        ctx,
+        headers,
+        req.accountId,
+        req.umid
+      );
 
       let messageInfo = chewMessageStructure(
         msg,
@@ -117,7 +125,6 @@ export default TaskDefiner.defineSimpleTask([
         messageId
       );
 
-
       // -- If the conversation existed, load it for re-churning
       let oldConvInfo;
       let allMessages;
@@ -125,7 +132,7 @@ export default TaskDefiner.defineSimpleTask([
       if (existingConv) {
         let fromDb = await ctx.beginMutate({
           conversations: new Map([[convId, null]]),
-          messagesByConversation: new Map([[convId, null]])
+          messagesByConversation: new Map([[convId, null]]),
         });
 
         oldConvInfo = fromDb.conversations.get(convId);
@@ -149,14 +156,14 @@ export default TaskDefiner.defineSimpleTask([
         mutations: {
           conversations: modifiedConversations,
           headerIdMaps: headerIdWrites,
-          umidNames: new Map([[req.umid, messageId]])
+          umidNames: new Map([[req.umid, messageId]]),
         },
         newData: {
           conversations: newConversations,
           messages: [messageInfo],
-          tasks: extraTasks
-        }
+          tasks: extraTasks,
+        },
       });
     },
-  }
+  },
 ]);

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
 /**
  * Tracks groups of one or more tasks and their spinoff tasks to provide higher
@@ -38,7 +38,7 @@ import logic from 'logic';
  * accomplish this by having groups be aware of their parent groups
  */
 export default function TaskGroupTracker(taskManager) {
-  logic.defineScope(this, 'TaskGroupTracker');
+  logic.defineScope(this, "TaskGroupTracker");
 
   this.taskManager = taskManager;
 
@@ -64,10 +64,10 @@ export default function TaskGroupTracker(taskManager) {
 }
 TaskGroupTracker.prototype = {
   __registerListeners(emitter) {
-    emitter.on('willPlan', this, this._onWillPlan);
-    emitter.on('willExecute', this, this._onWillExecute);
-    emitter.on('planned', this, this._onPlanned);
-    emitter.on('executed', this, this._onExecuted);
+    emitter.on("willPlan", this, this._onWillPlan);
+    emitter.on("willExecute", this, this._onWillExecute);
+    emitter.on("planned", this, this._onPlanned);
+    emitter.on("executed", this, this._onExecuted);
   },
 
   // Internal heart of ensureNamedTaskGroup that exposes internal rep for reuse
@@ -76,9 +76,9 @@ TaskGroupTracker.prototype = {
     let group = this._groupsByName.get(groupName);
     if (!group) {
       group = this._makeTaskGroup(groupName);
-      logic(this, 'createGroup', { groupName, taskId });
+      logic(this, "createGroup", { groupName, taskId });
     } else {
-      logic(this, 'reuseGroup', { groupName, taskId });
+      logic(this, "reuseGroup", { groupName, taskId });
     }
 
     // (normalize to null from undefined)
@@ -100,10 +100,10 @@ TaskGroupTracker.prototype = {
    * Ensure that a task group exists with the given name, and return a Promise
    * that will be resolved when the last task in the group completes.
    */
-   ensureNamedTaskGroup(groupName, taskId) {
-     let group = this._ensureNamedTaskGroup(groupName, taskId);
-     return group.promise;
-   },
+  ensureNamedTaskGroup(groupName, taskId) {
+    let group = this._ensureNamedTaskGroup(groupName, taskId);
+    return group.promise;
+  },
 
   /**
    * Return the root ancestor task group.  See TaskContext.rootTaskGroupId for
@@ -124,8 +124,10 @@ TaskGroupTracker.prototype = {
     let rootTaskGroup = this.getRootTaskGroupForTask(taskId);
     if (!rootTaskGroup) {
       // Create a group for the task if one didn't exist.
-      rootTaskGroup =
-        this._ensureNamedTaskGroup('ensured:' + this._nextGroupId, taskId);
+      rootTaskGroup = this._ensureNamedTaskGroup(
+        "ensured:" + this._nextGroupId,
+        taskId
+      );
     }
     if (!rootTaskGroup.tasksToScheduleOnCompletion) {
       rootTaskGroup.tasksToScheduleOnCompletion = new Set();
@@ -148,7 +150,7 @@ TaskGroupTracker.prototype = {
       resolve: null,
       tasksToScheduleOnCompletion: null,
     };
-    group.promise = new Promise((resolve) => {
+    group.promise = new Promise(resolve => {
       group.resolve = resolve;
     });
     this._groupsByName.set(groupName, group);
@@ -203,18 +205,17 @@ TaskGroupTracker.prototype = {
 
   _decrementGroupPendingCount(group) {
     if (--group.pendingCount === 0) {
-      logic(
-        this, 'resolveGroup',
-        {
-          groupName: group.groupName,
-          totalCount: group.totalCount
-        });
+      logic(this, "resolveGroup", {
+        groupName: group.groupName,
+        totalCount: group.totalCount,
+      });
       group.resolve();
       this._groupsByName.delete(group.groupName);
       if (group.tasksToScheduleOnCompletion) {
         this.taskManager.scheduleTasks(
           Array.from(group.tasksToScheduleOnCompletion),
-          'deferred-group:' + group.groupName);
+          "deferred-group:" + group.groupName
+        );
       }
       if (group.parentGroup) {
         this._decrementGroupPendingCount(group.parentGroup);
@@ -243,5 +244,5 @@ TaskGroupTracker.prototype = {
       this._taskIdsToGroups.delete(taskId);
       this._decrementGroupPendingCount(group);
     }
-  }
+  },
 };

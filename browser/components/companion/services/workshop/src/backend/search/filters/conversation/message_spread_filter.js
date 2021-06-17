@@ -21,11 +21,13 @@
  * dynamically computed.
  */
 export default function MessageSpreadFilter({ wrappedFilterDef }, args) {
-  this.wrappedFilter =
-    new wrappedFilterDef.constructor(wrappedFilterDef.params, args);
+  this.wrappedFilter = new wrappedFilterDef.constructor(
+    wrappedFilterDef.params,
+    args
+  );
 
   this.gather = {
-    messages: this.wrappedFilter.gather
+    messages: this.wrappedFilter.gather,
   };
   // Although this is about the filtering cost, not the gathering cost, it
   // arguably is more expensive to do something N times than 1 time.
@@ -34,7 +36,7 @@ export default function MessageSpreadFilter({ wrappedFilterDef }, args) {
   this.alwaysRun = this.wrappedFilter.alwaysRun;
 }
 MessageSpreadFilter.prototype = {
-  test: function(gathered) {
+  test(gathered) {
     let wrappedFilter = this.wrappedFilter;
     // messages will be an array whose items look like { message, bodyContents }
     // and the like.  The gatherers create siblings to the root item in each
@@ -48,5 +50,4 @@ MessageSpreadFilter.prototype = {
 
     return null;
   },
-
 };

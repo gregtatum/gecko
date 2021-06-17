@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { shallowClone } from 'shared/util';
+import { shallowClone } from "shared/util";
 
-import AtMostOnceBase from './task_bases/at_most_once';
+import AtMostOnceBase from "./task_bases/at_most_once";
 
 const SimpleTaskBase = {
   isSimple: true,
@@ -34,7 +34,7 @@ const SimpleTaskBase = {
       decoratedTask.priorityTags = this.priorityTags(rawTask);
     }
     await ctx.finishTask({
-      taskState: decoratedTask
+      taskState: decoratedTask,
     });
   },
   execute: null,
@@ -73,8 +73,7 @@ function mixInvokingBaseHooks(baseImpl, mixparts) {
  * Note that this doesn't want to be directly exported; we export a singleton
  * instance of this class.
  */
-function TaskDefiner() {
-}
+function TaskDefiner() {}
 TaskDefiner.prototype = {
   /**
    * Define a task that's fully characterized by its name an arguments and along
@@ -149,7 +148,7 @@ TaskDefiner.prototype = {
    */
   defineComplexTask(mixparts) {
     return mixInvokingBaseHooks(ComplexTaskBase, mixparts);
-  }
+  },
 };
 
 export default new TaskDefiner();

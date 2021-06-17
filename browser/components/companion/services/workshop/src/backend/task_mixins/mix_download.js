@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { convIdFromMessageId } from 'shared/id_conversions';
-import { pickPartFromMessageByRelId } from '../db/mail_rep';
+import { convIdFromMessageId } from "shared/id_conversions";
+import { pickPartFromMessageByRelId } from "../db/mail_rep";
 
-import { NOW } from 'shared/date';
+import { NOW } from "shared/date";
 
-import churnConversation from '../churn_drivers/conv_churn_driver';
+import churnConversation from "../churn_drivers/conv_churn_driver";
 
 // (DeviceStorage is not available here on the worker so we need to remote.)
-import * as router from '../worker-router';
-const sendStorageMessage = router.registerCallbackType('devicestorage');
+import * as router from "../worker-router";
+const sendStorageMessage = router.registerCallbackType("devicestorage");
 
-import { DEVICE_STORAGE_NAME } from '../syncbase';
+import { DEVICE_STORAGE_NAME } from "../syncbase";
 
 /**
  * Save a file to DeviceStorage, retrying with a different name if it seems like
@@ -39,8 +39,12 @@ async function uniqueifyingSaveHelper(ctx, blob, filename) {
   /* always register with the download manager */
   const register = true;
 
-  let result = await sendStorageMessage(
-    'save', [DEVICE_STORAGE_NAME, blob, filename, register]);
+  let result = await sendStorageMessage("save", [
+    DEVICE_STORAGE_NAME,
+    blob,
+    filename,
+    register,
+  ]);
 
   let [initialSucesss] = result;
   if (initialSucesss) {
@@ -49,16 +53,22 @@ async function uniqueifyingSaveHelper(ctx, blob, filename) {
 
   // Retry by appending a super huge timestamp to the file before its
   // extension.
-  let idxLastPeriod = filename.lastIndexOf('.');
+  let idxLastPeriod = filename.lastIndexOf(".");
   if (idxLastPeriod === -1) {
     idxLastPeriod = filename.length;
   }
   const retryFilename =
-    filename.substring(0, idxLastPeriod) + '-' + NOW() +
+    filename.substring(0, idxLastPeriod) +
+    "-" +
+    NOW() +
     filename.substring(idxLastPeriod);
 
-  result = await sendStorageMessage(
-    'save', [DEVICE_STORAGE_NAME, blob, retryFilename, register]);
+  result = await sendStorageMessage("save", [
+    DEVICE_STORAGE_NAME,
+    blob,
+    retryFilename,
+    register,
+  ]);
 
   return result;
 }
@@ -178,7 +188,7 @@ async function uniqueifyingSaveHelper(ctx, blob, filename) {
  * May override:
  */
 export default {
-  name: 'download',
+  name: "download",
 
   // See the block comment above.
   initPersistentState() {
@@ -188,9 +198,9 @@ export default {
   _makeMarkerForMessage(accountId, messageId) {
     return {
       type: this.name,
-      id: 'download:' + messageId,
+      id: "download:" + messageId,
       accountId,
-      messageId
+      messageId,
     };
   },
 
@@ -202,9 +212,9 @@ export default {
 
     return {
       memoryState: {
-        activeDownloadsByMessageId: new Map()
+        activeDownloadsByMessageId: new Map(),
       },
-      markers
+      markers,
     };
   },
 
@@ -218,22 +228,19 @@ export default {
     let overlay = new Map();
     for (let [relId, { blobs }] of pending.partDownloads.entries()) {
       let isActive = active && active.has(relId);
-      let bytesDownloaded =
-        blobs ? blobs.reduce((sum, blob) => sum + blob.size, 0) : 0;
+      let bytesDownloaded = blobs
+        ? blobs.reduce((sum, blob) => sum + blob.size, 0)
+        : 0;
       if (!isActive) {
-        overlay.set(
-          relId,
-          {
-            status: 'pending',
-            bytesDownloaded
-          });
+        overlay.set(relId, {
+          status: "pending",
+          bytesDownloaded,
+        });
       } else {
-        overlay.set(
-          relId,
-          {
-            status: 'active',
-            bytesDownloaded
-          });
+        overlay.set(relId, {
+          status: "active",
+          bytesDownloaded,
+        });
       }
     }
     return overlay;
@@ -241,23 +248,28 @@ export default {
 
   async plan(ctx, persistentState, memoryState, rawTask) {
     const { messageId, messageDate, parts: requestedParts } = rawTask;
-    const groupPromise = ctx.trackMeInTaskGroup('download:' + messageId);
+    const groupPromise = ctx.trackMeInTaskGroup("download:" + messageId);
 
     // NB: We could arguably just depend on the persistentState here and just
     // acquire the write-lock without the read.
     const messageTaskKey = [ctx.accountId, this.name, messageId];
-    let messageReq =
-      await ctx.mutateSingle('complexTaskStates', messageTaskKey);
+    let messageReq = await ctx.mutateSingle(
+      "complexTaskStates",
+      messageTaskKey
+    );
     if (!messageReq) {
       messageReq = {
         messageDate,
-        partDownloads: new Map()
+        partDownloads: new Map(),
       };
     }
     let newlyRequestedCount = 0;
 
-    const messageInfo =
-      await ctx.readSingle('messages', [messageId, messageDate], messageId);
+    const messageInfo = await ctx.readSingle(
+      "messages",
+      [messageId, messageDate],
+      messageId
+    );
 
     for (let [relId, target] of requestedParts.entries()) {
       // Ignore if already tracked.
@@ -270,12 +282,10 @@ export default {
       // don't need to do anything.
       if (part.downloadState === null) {
         newlyRequestedCount++;
-        messageReq.partDownloads.set(
-          relId,
-          {
-            target,
-            blobs: null
-          });
+        messageReq.partDownloads.set(relId, {
+          target,
+          blobs: null,
+        });
       }
     }
 
@@ -291,7 +301,7 @@ export default {
         mutations: {
           complexTaskStates: new Map([[messageTaskKey, messageReq]]),
         },
-        taskMarkers: new Map([[marker.id, marker]])
+        taskMarkers: new Map([[marker.id, marker]]),
       });
     }
 
@@ -337,7 +347,10 @@ export default {
     // per-part AttachmentInfo to provide with the request.  (The parts will
     // not disappear unless this is a draft, and we don't service drafts.)
     let messageInfo = await ctx.readSingle(
-      'messages', [messageId, messageDate], messageId);
+      "messages",
+      [messageId, messageDate],
+      messageId
+    );
 
     // (it's safe to latch the parts/messageInfo for the duration of the task
     // because they will only ever contain disk-backed Blobs.)
@@ -355,8 +368,12 @@ export default {
     }
 
     // --- Issue the batch request
-    const chunkedPartStream =
-      await this.downloadParts(ctx, account, messageInfo, parts);
+    const chunkedPartStream = await this.downloadParts(
+      ctx,
+      account,
+      messageInfo,
+      parts
+    );
     const chunkedPartReader = chunkedPartStream.getReader();
 
     messageInfo = null;
@@ -364,7 +381,7 @@ export default {
 
     // -- Consume the stream of part chunks.
     const messageTaskKey = [ctx.accountId, this.name, messageId];
-    for(;;) {
+    for (;;) {
       let { value, done: streamDone } = await chunkedPartReader.read();
       if (streamDone) {
         break;
@@ -374,8 +391,8 @@ export default {
       if (!done) {
         // - Not done, do the append dance.
         await ctx.spawnSimpleMutationSubtask(
-          { namespace: 'complexTaskStates', id: messageTaskKey },
-          (messageReq) => {
+          { namespace: "complexTaskStates", id: messageTaskKey },
+          messageReq => {
             // If this is the first blob for the download, clobber-initialize so
             // that we clear out any partially completed downloads.  (We're not
             // clever enough yet to resume.)
@@ -396,14 +413,15 @@ export default {
         // We only need to consolidate if there was more than one blob.
         if (blobCount > 1) {
           await ctx.spawnSimpleMutationSubtask(
-            { namespace: 'complexTaskStates', id: messageTaskKey },
-            (messageReq) => {
+            { namespace: "complexTaskStates", id: messageTaskKey },
+            messageReq => {
               const partReq = messageReq.partDownloads.get(relId);
               // NB: We consolidate into a single element array for consistency
               // with the single-element case.
               const multiBlobs = partReq.blobs;
-              const singleBlob =
-                new Blob(multiBlobs, { type: multiBlobs[0].type });
+              const singleBlob = new Blob(multiBlobs, {
+                type: multiBlobs[0].type,
+              });
               partReq.blobs = [singleBlob];
               persistentState.set(messageId, messageReq);
               return messageReq;
@@ -414,10 +432,10 @@ export default {
         // - Move the single Blob into the MessageInfo and update our messageReq
         // This needs to be a full-blown subtask since we need to acquire two
         // things: the MessageInfo and our fully-laundered messageReq.
-        await ctx.spawnSubtask(async (subctx) => {
+        await ctx.spawnSubtask(async subctx => {
           const fromDb = await subctx.beginMutate({
             messages: new Map([[[messageId, messageDate], null]]),
-            complexTaskStates: new Map([[messageTaskKey, null]])
+            complexTaskStates: new Map([[messageTaskKey, null]]),
           });
           const messageReq = fromDb.complexTaskStates.get(messageTaskKey);
           const partReq = messageReq.partDownloads.get(relId);
@@ -427,29 +445,37 @@ export default {
 
           // Update the part's state to be a cached download.
           const part = pickPartFromMessageByRelId(mutateMessageInfo, relId);
-          if (partReq.target === 'cache') {
-            part.downloadState = 'cached';
+          if (partReq.target === "cache") {
+            part.downloadState = "cached";
             part.file = singleBlob;
-          } else { // must be 'save'
+          } else {
+            // must be 'save'
             // NB: We could have avoided the single blob consolidation above
             // (if it occurred in this target case), but massively erring on the
             // side of simpler control flow for now.
             // Use our save helper to avoid name collisions.
-            let [saveSuccess, saveError, savedFilename, registered] =
-              await uniqueifyingSaveHelper(ctx, singleBlob, part.name);
+            let [
+              saveSuccess,
+              saveError,
+              savedFilename,
+              registered,
+            ] = await uniqueifyingSaveHelper(ctx, singleBlob, part.name);
             if (saveSuccess) {
-              part.downloadState = 'saved';
+              part.downloadState = "saved";
               part.file = [DEVICE_STORAGE_NAME, savedFilename];
               console.log(
-                'saved attachment to', savedFilename, 'type:', singleBlob.type,
-                'registered:', registered);
-              logic(
-                ctx, 'savedAttachment',
-                {
-                  savedFilename,
-                  type: singleBlob.type,
-                  size: singleBlob.size
-                });
+                "saved attachment to",
+                savedFilename,
+                "type:",
+                singleBlob.type,
+                "registered:",
+                registered
+              );
+              logic(ctx, "savedAttachment", {
+                savedFilename,
+                type: singleBlob.type,
+                size: singleBlob.size,
+              });
             } else {
               // A save failure sucks, but there's not much we can do at this
               // time other than complete the request without saving.  The only
@@ -458,17 +484,17 @@ export default {
               // TODO: Explicit UX consideration of "disk full" from an email
               // perspective.
               console.warn(
-                'failed to save attachment to', part.name, 'type:',
-                singleBlob.type);
-              logic(
-                ctx,
-                'saveFailure',
-                {
-                  type: singleBlob.type,
-                  size: singleBlob.size,
-                  saveError,
-                  filename: savedFilename
-                });
+                "failed to save attachment to",
+                part.name,
+                "type:",
+                singleBlob.type
+              );
+              logic(ctx, "saveFailure", {
+                type: singleBlob.type,
+                size: singleBlob.size,
+                saveError,
+                filename: savedFilename,
+              });
             }
           }
 
@@ -481,8 +507,8 @@ export default {
           await subctx.finishTask({
             mutations: {
               complexTaskStates: new Map([[messageTaskKey, messageReq]]),
-              messages: new Map([[messageId, mutateMessageInfo]])
-            }
+              messages: new Map([[messageId, mutateMessageInfo]]),
+            },
           });
         });
       }
@@ -493,7 +519,7 @@ export default {
     const fromDb = await ctx.beginMutate({
       conversations: new Map([[convId, null]]),
       messagesByConversation: new Map([[convId, null]]),
-      complexTaskStates: new Map([[messageTaskKey, null]])
+      complexTaskStates: new Map([[messageTaskKey, null]]),
     });
 
     // - Churn the conversation
@@ -521,9 +547,9 @@ export default {
     await ctx.finishTask({
       mutations: {
         conversations: new Map([[convId, convInfo]]),
-        complexTaskStates: modifyComplexTaskStates
+        complexTaskStates: modifyComplexTaskStates,
       },
-      taskMarkers: modifyTaskMarkers
+      taskMarkers: modifyTaskMarkers,
     });
   },
 };

@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
-import TaskDefiner from '../../../task_infra/task_definer';
+import evt from "evt";
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import normalizeFolder from '../normalize_folder';
-import AccountSyncStateHelper from '../account_sync_state_helper';
+import normalizeFolder from "../normalize_folder";
+import AccountSyncStateHelper from "../account_sync_state_helper";
 
-import enumerateHierarchyChanges from '../smotocol/enum_hierarchy_changes';
+import enumerateHierarchyChanges from "../smotocol/enum_hierarchy_changes";
 
-import MixinSyncFolderList from '../../../task_mixins/mix_sync_folder_list';
+import MixinSyncFolderList from "../../../task_mixins/mix_sync_folder_list";
 
 /**
  * Sync the folder list for an ActiveSync account.  We leverage IMAP's mix-in
@@ -37,16 +37,16 @@ export default TaskDefiner.defineSimpleTask([
       // leave it starting out as offline.  (For Microsoft servers, I believe
       // the inbox does have a consistent guid, but we can't assume Microsoft.)
       {
-        type: 'inbox',
-        displayName: 'Inbox'
+        type: "inbox",
+        displayName: "Inbox",
       },
       {
-        type: 'outbox',
-        displayName: 'outbox'
+        type: "outbox",
+        displayName: "outbox",
       },
       {
-        type: 'localdrafts',
-        displayName: 'localdrafts'
+        type: "localdrafts",
+        displayName: "localdrafts",
       },
     ],
 
@@ -57,12 +57,11 @@ export default TaskDefiner.defineSimpleTask([
       let modifiedFolders = new Map();
 
       let fromDb = await ctx.beginMutate({
-        syncStates: new Map([[account.id, null]])
+        syncStates: new Map([[account.id, null]]),
       });
 
       let rawSyncState = fromDb.syncStates.get(account.id);
-      let syncState = new AccountSyncStateHelper(
-        ctx, rawSyncState, account.id);
+      let syncState = new AccountSyncStateHelper(ctx, rawSyncState, account.id);
 
       let emitter = new evt.Emitter();
       let deferredFolders = [];
@@ -72,13 +71,13 @@ export default TaskDefiner.defineSimpleTask([
           {
             idMaker: foldersTOC.issueFolderId.bind(syncState),
             serverIdToFolderId: syncState.serverIdToFolderId,
-            folderIdToFolderInfo: foldersTOC.foldersById
+            folderIdToFolderInfo: foldersTOC.foldersById,
           },
           {
             serverId: folderArgs.ServerId,
             parentServerId: folderArgs.ParentId,
             displayName: folderArgs.DisplayName,
-            typeNum: folderArgs.Type
+            typeNum: folderArgs.Type,
           }
         );
         if (maybeFolderInfo === null) {
@@ -97,19 +96,21 @@ export default TaskDefiner.defineSimpleTask([
         }
       }
 
-      emitter.on('add', (folderArgs) => {
+      emitter.on("add", folderArgs => {
         tryAndAddFolder(folderArgs);
       });
-      emitter.on('remove', (serverId) => {
+      emitter.on("remove", serverId => {
         syncState.removedFolder(serverId);
         let folderId = syncState.serverIdToFolderId.get(serverId);
         modifiedFolders.set(folderId, null);
       });
 
-      syncState.hierarchySyncKey = (await enumerateHierarchyChanges(
-        conn,
-        { hierarchySyncKey: syncState.hierarchySyncKey, emitter }
-      )).hierarchySyncKey;
+      syncState.hierarchySyncKey = (
+        await enumerateHierarchyChanges(conn, {
+          hierarchySyncKey: syncState.hierarchySyncKey,
+          emitter,
+        })
+      ).hierarchySyncKey;
 
       // It's possible we got some folders in an inconvenient order (i.e. child
       // folders before their parents). Keep trying to add folders until we're
@@ -121,15 +122,15 @@ export default TaskDefiner.defineSimpleTask([
           tryAndAddFolder(folder);
         }
         if (processFolders.length === deferredFolders.length) {
-          throw new Error('got some orphaned folders');
+          throw new Error("got some orphaned folders");
         }
       }
 
       return {
         newFolders,
         modifiedFolders,
-        modifiedSyncStates: new Map([[account.id, syncState.rawSyncState]])
+        modifiedSyncStates: new Map([[account.id, syncState.rawSyncState]]),
       };
-    }
-  }
+    },
+  },
 ]);

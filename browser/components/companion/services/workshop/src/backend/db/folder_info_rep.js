@@ -127,8 +127,8 @@ export function makeFolderMeta(raw) {
  *   The type of the folderStorage, e.g. 'inbox' or 'localdrafts'.
  */
 export function isTypeLocalOnly(type) {
-  if (typeof type !== 'string') {
-    throw new Error('isTypeLocalOnly() expects a string, not ' + type);
+  if (typeof type !== "string") {
+    throw new Error("isTypeLocalOnly() expects a string, not " + type);
   }
-  return (type === 'outbox' || type === 'localdrafts');
+  return type === "outbox" || type === "localdrafts";
 }

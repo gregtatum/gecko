@@ -15,11 +15,11 @@
  */
 
 /* eslint-disable no-fallthrough */
-import churnConversation from '../churn_drivers/conv_churn_driver';
+import churnConversation from "../churn_drivers/conv_churn_driver";
 
-import { Composer }from '../drafts/composer';
+import { Composer } from "../drafts/composer";
 
-import { convIdFromMessageId } from 'shared/id_conversions';
+import { convIdFromMessageId } from "shared/id_conversions";
 
 /**
  * Outbox sending logic.  It's a mix-in because how we handle the sent folder is
@@ -62,7 +62,7 @@ import { convIdFromMessageId } from 'shared/id_conversions';
  *   information.
  */
 export default {
-  name: 'outbox_send',
+  name: "outbox_send",
 
   /**
    * @return {}
@@ -87,12 +87,12 @@ export default {
        * empty because we don't need/want this to be usable as a counter for
        * how many messages have been sent from this account.
        */
-       sendOrderingCounter: 0,
+      sendOrderingCounter: 0,
     };
   },
 
   _markerIdForMessage(accountId, messageId) {
-    return this.name + ':' + messageId;
+    return this.name + ":" + messageId;
   },
 
   _makeMarkerForMessage(accountId, messageId, order) {
@@ -106,7 +106,7 @@ export default {
       resources: [],
       exclusiveResources: [],
       relPriority: -order,
-      messageId
+      messageId,
     };
   },
 
@@ -115,10 +115,8 @@ export default {
    */
   deriveMemoryStateFromPersistentState(persistentState, accountId) {
     let markers = [];
-    for (let [messageId, { order }] of
-         persistentState.messageIdsToSend) {
-      markers.push(
-        this._makeMarkerForMessage(accountId, messageId, order));
+    for (let [messageId, { order }] of persistentState.messageIdsToSend) {
+      markers.push(this._makeMarkerForMessage(accountId, messageId, order));
     }
 
     return {
@@ -135,9 +133,9 @@ export default {
          * to indicate the set of messages that can no longer be aborted and
          * to provide additional overlay details.
          */
-        activelySending: new Map()
+        activelySending: new Map(),
       },
-      markers
+      markers,
     };
   },
 
@@ -151,21 +149,23 @@ export default {
     let convId = convIdFromMessageId(messageId);
     let fromDb = await ctx.beginMutate({
       conversations: new Map([[convId, null]]),
-      messagesByConversation: new Map([[convId, null]])
+      messagesByConversation: new Map([[convId, null]]),
     });
     let oldConvInfo = fromDb.conversations.get(convId);
     let messages = fromDb.messagesByConversation.get(convId);
     let messageInfo = messages.find(msg => msg.id === messageId);
 
-    let foldersToc =
-      await ctx.universe.acquireAccountFoldersTOC(ctx, ctx.accountId);
-    let outboxFolder = foldersToc.getCanonicalFolderByType('outbox');
+    let foldersToc = await ctx.universe.acquireAccountFoldersTOC(
+      ctx,
+      ctx.accountId
+    );
+    let outboxFolder = foldersToc.getCanonicalFolderByType("outbox");
     messageInfo.folderIds = new Set([outboxFolder.id]);
     // Reset the sending problems; we'll assume the user fixed things.
     messageInfo.draftInfo.sendProblems = {
       error: null,
       badAddresses: null,
-      sendFailures: 0
+      sendFailures: 0,
     };
 
     let convInfo = churnConversation(convId, oldConvInfo, messages);
@@ -173,7 +173,7 @@ export default {
     // -- Track that we want to send the message
     let sendInfo = {
       date: messageInfo.date,
-      order: persistentState.sendOrderingCounter++
+      order: persistentState.sendOrderingCounter++,
     };
     persistentState.messageIdsToSend.set(messageId, sendInfo);
 
@@ -183,18 +183,21 @@ export default {
     // issued when we unpause.
     if (!memoryState.paused) {
       let marker = this._makeMarkerForMessage(
-        rawTask.accountId, messageId, sendInfo.order);
+        rawTask.accountId,
+        messageId,
+        sendInfo.order
+      );
       modifyTaskMarkers.set(marker.id, marker);
     }
 
     // Provide a result to the caller that lets them know
     let reportProblem;
     if (memoryState.paused) {
-      reportProblem = 'outbox-paused';
+      reportProblem = "outbox-paused";
     } else if (ctx.accountProblem) {
-      reportProblem = 'account-problem';
+      reportProblem = "account-problem";
     } else if (!ctx.online) {
-      reportProblem = 'offline';
+      reportProblem = "offline";
     } else {
       reportProblem = null;
     }
@@ -202,14 +205,13 @@ export default {
     await ctx.finishTask({
       mutations: {
         conversations: new Map([[convId, convInfo]]),
-        messages: new Map([[messageId, messageInfo]])
+        messages: new Map([[messageId, messageInfo]]),
       },
       taskMarkers: modifyTaskMarkers,
-      complexTaskState: persistentState
+      complexTaskState: persistentState,
     });
     return ctx.returnValue(reportProblem);
   },
-
 
   /**
    * Move the message back into drafts and clear the marker.
@@ -218,7 +220,7 @@ export default {
     const { messageId } = rawTask;
     // -- We're moot if we've already sent the message
     if (!persistentState.messageIdsToSend.has(messageId)) {
-      throw new Error('moot');
+      throw new Error("moot");
     }
 
     // -- If we're actively sending...
@@ -230,22 +232,24 @@ export default {
     // TODO: address aborting.  pointless right now since we're not parallel
     // yet and this really wants thorough unit tests for sanity.
     if (memoryState.activelySending.has(messageId)) {
-      throw new Error('moot');
+      throw new Error("moot");
     }
 
     // -- Move it back to drafts and re-churn
     let convId = convIdFromMessageId(messageId);
     let fromDb = await ctx.beginMutate({
       conversations: new Map([[convId, null]]),
-      messagesByConversation: new Map([[convId, null]])
+      messagesByConversation: new Map([[convId, null]]),
     });
     let oldConvInfo = fromDb.conversations.get(convId);
     let messages = fromDb.messagesByConversation.get(convId);
     let messageInfo = messages.find(msg => msg.id === messageId);
 
-    let foldersToc =
-      await ctx.universe.acquireAccountFoldersTOC(ctx, ctx.accountId);
-    let draftsFolder = foldersToc.getCanonicalFolderByType('localdrafts');
+    let foldersToc = await ctx.universe.acquireAccountFoldersTOC(
+      ctx,
+      ctx.accountId
+    );
+    let draftsFolder = foldersToc.getCanonicalFolderByType("localdrafts");
     messageInfo.folderIds = new Set([draftsFolder.id]);
     // Note that we do not zero out the sendProblems because anything in there
     // is still going to be accurate.  Triggering the abort is just moving
@@ -262,18 +266,17 @@ export default {
     await ctx.finishTask({
       mutations: {
         conversations: new Map([[convId, convInfo]]),
-        messages: new Map([[messageId, messageInfo]])
+        messages: new Map([[messageId, messageInfo]]),
       },
       taskMarkers: new Map([[markerId, null]]),
-      complexTaskState: persistentState
+      complexTaskState: persistentState,
     });
   },
 
   async _planSetPaused(ctx, persistentState, memoryState, rawTask) {
     // If we're already in the desired state, we can just bail.
     if (rawTask.paused === memoryState.paused) {
-      await ctx.finishTask({
-      });
+      await ctx.finishTask({});
       return;
     }
 
@@ -281,7 +284,7 @@ export default {
     // Our persistent state messageIdsToSend always accurately reflects the
     // set of messages we want to send and the set of markers we have issued
     // if we are not paused.
-    let bePaused = memoryState.paused = rawTask.paused;
+    let bePaused = (memoryState.paused = rawTask.paused);
     let modifyTaskMarkers = new Map();
     if (bePaused) {
       // - Clear all our existing markers.
@@ -295,8 +298,7 @@ export default {
     } else {
       // - Reissue markers for the to-sends from our persistent state.
       let accountId = ctx.accountId;
-      for (let [messageId, { order }] of
-           persistentState.messageIdsToSend) {
+      for (let [messageId, { order }] of persistentState.messageIdsToSend) {
         let marker = this._makeMarkerForMessage(accountId, messageId, order);
         modifyTaskMarkers.set(marker.id, marker);
       }
@@ -304,24 +306,23 @@ export default {
 
     await ctx.finishTask({
       taskMarkers: modifyTaskMarkers,
-      complexTaskState: persistentState
+      complexTaskState: persistentState,
     });
   },
 
   plan(ctx, persistentState, memoryState, rawTask) {
     switch (rawTask.command) {
-      case 'send': {
+      case "send": {
         return this._planSend(ctx, persistentState, memoryState, rawTask);
       }
-      case 'abort': {
+      case "abort": {
         return this._planAbort(ctx, persistentState, memoryState, rawTask);
       }
-      case 'setPaused': {
-        return this._planSetPaused(ctx, persistentState, memoryState,
-                                   rawTask);
+      case "setPaused": {
+        return this._planSetPaused(ctx, persistentState, memoryState, rawTask);
       }
       default:
-        throw new Error('bug');
+        throw new Error("bug");
     }
   },
 
@@ -347,7 +348,7 @@ export default {
 
     // -- Claim the message as sending
     const activeSendStatus = {
-      progress: 'building'
+      progress: "building",
     };
     memoryState.activelySending.set(messageId, activeSendStatus);
 
@@ -356,9 +357,11 @@ export default {
 
     // -- Retrieve the message (not for mutation)
     let messageKey = [messageId, date];
-    let messageInfo = (await ctx.read({
-      messages: new Map([[messageKey, null]])
-    })).messages.get(messageId);
+    let messageInfo = (
+      await ctx.read({
+        messages: new Map([[messageKey, null]]),
+      })
+    ).messages.get(messageId);
 
     // -- Create the composer.
     const renewWakeLock = ctx.heartbeat.bind(ctx);
@@ -371,18 +374,21 @@ export default {
     // So we just get this out of the way here.  There is nothing clever about
     // this and revisiting is absolutely appropriate as needed.
     await composer.buildMessage({
-      includeBcc: this.shouldIncludeBcc(account)
+      includeBcc: this.shouldIncludeBcc(account),
     });
 
     // -- Perform the send.
-    let { error: sendError, badAddresses } =
-      await this.sendMessage(ctx, account, composer);
+    let { error: sendError, badAddresses } = await this.sendMessage(
+      ctx,
+      account,
+      composer
+    );
 
     // -- Acquire the message and conversation for exclusive mutation.
     let convId = convIdFromMessageId(messageId);
     let fromDb = await ctx.beginMutate({
       conversations: new Map([[convId, null]]),
-      messagesByConversation: new Map([[convId, null]])
+      messagesByConversation: new Map([[convId, null]]),
     });
     let messages = fromDb.messagesByConversation.get(convId);
     let oldConvInfo = fromDb.conversations.get(convId);
@@ -398,38 +404,37 @@ export default {
       // -- On error, update draftInfo and re-churn.
       switch (sendError) {
         // Bad messages and bad addresses are persistent failures.
-        case 'bad-message':
-        case 'bad-address':
+        case "bad-message":
+        case "bad-address":
           break;
 
         // An account problem should be retried once the account is fixed.
         // We can convey this just with a marker dependency.
-        case 'bad-user-or-pass':
+        case "bad-user-or-pass":
           // XXX
           break;
 
         // Transient problems that may resolve themselves if we try again
         // later.  (Note that for bad security we're assuming the least-bad
         // scenario of a captival portal messing with us by doing this.)
-        case 'bad-security':
-        case 'server-maybe-offline':
-        case 'unresponsive-server':
+        case "bad-security":
+        case "server-maybe-offline":
+        case "unresponsive-server":
         // Let's also treat unknown as a transient failure.
-        case 'unknown':
+        case "unknown":
         default:
           // XXX
           break;
       }
 
       messageInfo.draftInfo.sendProblems = {
-        state: 'error',
+        state: "error",
         error: sendError,
         badAddresses,
       };
     } else {
       // -- Success, decide how we're putting something in sent.
-      this.saveSentMessage(
-        { ctx, newTasks, messages, messageInfo, account });
+      this.saveSentMessage({ ctx, newTasks, messages, messageInfo, account });
 
       // -- Re-churn or delete the conversation as appropriate.
       // We have a weird contract with saveSentMessage:
@@ -438,7 +443,7 @@ export default {
       // * As a side-effect of that, if there are no longer any messages in the
       //   conversation, we reap the conversation.
       if (messages.length) {
-        if (messages.indexOf(messageInfo) !== -1) {
+        if (messages.includes(messageInfo)) {
           // - The message is still in there
           // (There is no case where we don't modify the message if we're
           // keeping it around.)
@@ -463,12 +468,12 @@ export default {
     await ctx.finishTask({
       mutations: {
         conversations: modifyConversations,
-        messages: modifyMessages
+        messages: modifyMessages,
       },
       newData: {
-        tasks: newTasks
+        tasks: newTasks,
       },
-      complexTaskState: persistentState
+      complexTaskState: persistentState,
     });
   },
 
@@ -490,5 +495,5 @@ export default {
    */
   saveSentMessage({ messages, messageInfo }) {
     messages.splice(messages.indexOf(messageInfo), 1);
-  }
+  },
 };

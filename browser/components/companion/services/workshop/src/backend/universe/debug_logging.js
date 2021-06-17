@@ -22,9 +22,5 @@
  * At startup the MailUniverse tells us the config directly.  The MailUniverse
  * also binds us to "config" updates from the MailDB.
  */
-export default function DebugLogging() {
-
-}
-DebugLogging.prototype = {
-
-};
+export default function DebugLogging() {}
+DebugLogging.prototype = {};

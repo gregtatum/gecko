@@ -14,13 +14,20 @@
  * limitations under the License.
  */
 
-import FilteringStream from '../filtering_stream';
+import FilteringStream from "../filtering_stream";
 
 /**
  * Query that filters a folder conversations index.
  */
-export default function FilteringFolderQuery({ ctx, db, folderId, filterRunner,
-                                rootGatherer, preDerivers, postDerivers }) {
+export default function FilteringFolderQuery({
+  ctx,
+  db,
+  folderId,
+  filterRunner,
+  rootGatherer,
+  preDerivers,
+  postDerivers,
+}) {
   this._db = db;
   this.folderId = folderId;
   this._eventId = null;
@@ -28,27 +35,30 @@ export default function FilteringFolderQuery({ ctx, db, folderId, filterRunner,
   this._boundListener = null;
 
   this._filteringStream = new FilteringStream({
-    ctx, filterRunner, rootGatherer,
-    preDerivers, postDerivers,
-    isDeletion: (change) => {
-      return (!change.addDate);
+    ctx,
+    filterRunner,
+    rootGatherer,
+    preDerivers,
+    postDerivers,
+    isDeletion: change => {
+      return !change.addDate;
     },
-    inputToGatherInto: (change) => {
+    inputToGatherInto: change => {
       return {
-        convId: change.id
+        convId: change.id,
       };
     },
-    mutateChangeToResembleAdd: (change) => {
+    mutateChangeToResembleAdd: change => {
       change.removeDate = null;
     },
-    mutateChangeToResembleDeletion: (change) => {
+    mutateChangeToResembleDeletion: change => {
       change.item = null;
       change.addDate = null;
       change.height = 0;
     },
-    onFilteredUpdate: (change) => {
+    onFilteredUpdate: change => {
       this._boundListener(change);
-    }
+    },
   });
 
   this._bound_filteringTOCChange = this._filteringTOCChange.bind(this);
@@ -63,10 +73,11 @@ FilteringFolderQuery.prototype = {
    */
   async execute() {
     let idsWithDates;
-    ({ idsWithDates,
+    ({
+      idsWithDates,
       drainEvents: this._drainEvents,
-      eventId: this._eventId } =
-        await this._db.loadFolderConversationIdsAndListen(this.folderId));
+      eventId: this._eventId,
+    } = await this._db.loadFolderConversationIdsAndListen(this.folderId));
 
     for (let idWithDate of idsWithDates) {
       this._filteringStream.consider({
@@ -76,7 +87,7 @@ FilteringFolderQuery.prototype = {
         addDate: idWithDate.date,
         height: idWithDate.height,
         oldHeight: 0,
-        matchInfo: null
+        matchInfo: null,
       });
     }
 
@@ -109,5 +120,5 @@ FilteringFolderQuery.prototype = {
   destroy() {
     this._db.removeListener(this._eventId, this._bound_filteringTOCChange);
     this._filteringStream.destroy();
-  }
+  },
 };

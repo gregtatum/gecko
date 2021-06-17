@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../task_infra/task_definer';
+import TaskDefiner from "../task_infra/task_definer";
 
-import autoconfigLookup from '../autoconfig/autoconfig_lookup';
+import autoconfigLookup from "../autoconfig/autoconfig_lookup";
 
 /**
  * This is a thin shim around autoconfigLookup to run it under the task
@@ -26,16 +26,14 @@ import autoconfigLookup from '../autoconfig/autoconfig_lookup';
  */
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'account_autoconfig',
+    name: "account_autoconfig",
 
-    exclusiveResources: function() {
-      return [
-      ];
+    exclusiveResources() {
+      return [];
     },
 
-    priorityTags: function() {
-      return [
-      ];
+    priorityTags() {
+      return [];
     },
 
     async execute(ctx, planned) {
@@ -46,5 +44,5 @@ export default TaskDefiner.defineSimpleTask([
       // Return the autoconfig result.
       return ctx.returnValue(result);
     },
-  }
+  },
 ]);

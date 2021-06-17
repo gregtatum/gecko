@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { makeEventTarget } from 'shared/util';
-import { ReadableStream, WritableStream } from 'streams';
+import { makeEventTarget } from "shared/util";
+import { ReadableStream, WritableStream } from "streams";
 
 /**
  * A Stream built from a mozTCPSocket. Data arrives in chunks to the readable
@@ -25,42 +25,42 @@ function SocketStream(socket) {
   socket = makeEventTarget(socket);
 
   function maybeCloseSocket() {
-    if (socket.readyState !== 'closing' && socket.readyState !== 'closed') {
+    if (socket.readyState !== "closing" && socket.readyState !== "closed") {
       socket.close();
     }
   }
 
   this.readable = new ReadableStream({
-    start: function(c) {
-      socket.addEventListener('data', (evt) => {
+    start(c) {
+      socket.addEventListener("data", evt => {
         c.enqueue(new Uint8Array(evt.data));
       });
-      socket.addEventListener('close', () => {
+      socket.addEventListener("close", () => {
         try {
           c.close();
-        } catch(e) {
+        } catch (e) {
           // The stream has already been closed.
         }
       });
-      socket.addEventListener('error', (evt) => c.error(evt.data || evt));
+      socket.addEventListener("error", evt => c.error(evt.data || evt));
     },
-    cancel: function() {
+    cancel() {
       maybeCloseSocket();
-    }
+    },
   });
 
   this.writable = new WritableStream({
-    start: function(error) {
-      socket.addEventListener('error', (evt) => error(evt.data || evt));
+    start(error) {
+      socket.addEventListener("error", evt => error(evt.data || evt));
     },
-    write: function(chunk) {
+    write(chunk) {
       socket.send(chunk);
       // We don't know when send completes, so this is synchronous.
     },
-    close: function() {
+    close() {
       maybeCloseSocket();
-    }
+    },
   });
-};
+}
 
 export default SocketStream;

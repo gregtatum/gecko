@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-import BugzillaClient from './bugzilla_client';
-
+import BugzillaClient from "./bugzilla_client";
 
 export default class BugzillaAccount {
-  constructor(universe, accountDef, foldersTOC, dbConn/*, receiveProtoConn*/) {
+  constructor(universe, accountDef, foldersTOC, dbConn /*, receiveProtoConn*/) {
     this.universe = universe;
     this.id = accountDef.id;
     this.accountDef = accountDef;
@@ -49,8 +48,7 @@ export default class BugzillaAccount {
   __acquire() {
     return Promise.resolve(this);
   }
-  __release() {
-  }
+  __release() {}
 
   // TODO: Other account types use a callback argument, they will need to be
   // adapted.
@@ -63,5 +61,5 @@ export default class BugzillaAccount {
   }
 }
 
-BugzillaAccount.type = 'Bugzilla';
+BugzillaAccount.type = "Bugzilla";
 BugzillaAccount.supportsServerFolders = false;

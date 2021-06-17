@@ -31,19 +31,76 @@
  * not be completely confused/misled.
  */
 var ORDERED_ARBITRARY_BASE64_CHARS = [
-  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
-  'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-  'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
-  'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
-  'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
-  'y', 'z', '{', '}'
+  "0",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "H",
+  "I",
+  "J",
+  "K",
+  "L",
+  "M",
+  "N",
+  "O",
+  "P",
+  "Q",
+  "R",
+  "S",
+  "T",
+  "U",
+  "V",
+  "W",
+  "X",
+  "Y",
+  "Z",
+  "a",
+  "b",
+  "c",
+  "d",
+  "e",
+  "f",
+  "g",
+  "h",
+  "i",
+  "j",
+  "k",
+  "l",
+  "m",
+  "n",
+  "o",
+  "p",
+  "q",
+  "r",
+  "s",
+  "t",
+  "u",
+  "v",
+  "w",
+  "x",
+  "y",
+  "z",
+  "{",
+  "}",
 ];
 /**
  * Zero padding to get us up to the maximum encoding length of a 64-bit value in
  * our encoding (11) or for decimal re-conversion (16).
  */
-var ZERO_PADDING = '0000000000000000';
+var ZERO_PADDING = "0000000000000000";
 
 /**
  * Encode a JS int in our base64 encoding.  This differs from parseUI64 by
@@ -60,7 +117,7 @@ export function encodeInt(v, padTo) {
     v = Math.floor(v / 64);
   } while (v > 0);
   sbits.reverse();
-  var estr = sbits.join('');
+  var estr = sbits.join("");
   if (padTo && estr.length < padTo) {
     return ZERO_PADDING.substring(0, padTo - estr.length) + estr;
   }
@@ -72,19 +129,17 @@ export function encodeInt(v, padTo) {
  * particularly optimized; we just use decodeUI64 and call parseInt on that.
  */
 export function decodeA64Int(es) {
-  return parseInt(exports.decodeUI64(es), 10);
-};
+  return parseInt(decodeUI64(es), 10);
+}
 
 /**
  * 10^14 >> 14 so that its 'lowest' binary 1 ends up in the one's place.  It
  * is encoded in 33 bits itself.
  */
 var E10_14_RSH_14 = Math.pow(10, 14) / Math.pow(2, 14),
-      P2_14 = Math.pow(2, 14),
-      P2_22 = Math.pow(2, 22),
-      P2_32 = Math.pow(2, 32),
-      P2_36 = Math.pow(2, 36),
-      MASK32 = 0xffffffff;
+  P2_14 = Math.pow(2, 14),
+  P2_22 = Math.pow(2, 22),
+  P2_36 = Math.pow(2, 36);
 
 /**
  * Convert a decimal uint64 string to a compact string representation that can
@@ -110,9 +165,9 @@ export function parseUI64(s, padTo) {
   }
 
   var lowParse = parseInt(s.substring(s.length - 14), 10),
-      highParse = parseInt(s.substring(0, s.length - 14), 10),
-      // multiply the high parse by our scaled power of 10
-      rawHighBits = highParse * E10_14_RSH_14;
+    highParse = parseInt(s.substring(0, s.length - 14), 10),
+    // multiply the high parse by our scaled power of 10
+    rawHighBits = highParse * E10_14_RSH_14;
 
   // Now lowParse's low 14 bits are valid, but everything above that needs to
   // be mixed (by addition) with rawHighBits.  We'll mix in 22 bits from
@@ -120,22 +175,22 @@ export function parseUI64(s, padTo) {
   // the higher bits in rawHighBits that we don't want so they don't go float.
   // We do want the 37rd bit if there was addition overflow to carry to the
   // upper calculation.
-  var lowBitsAdded = (((rawHighBits % P2_36) * P2_14) % P2_36 +
-                      lowParse % P2_36),
-      lowBits = lowBitsAdded % P2_36,
-      overflow = Math.floor(lowBitsAdded / P2_36) % 2;
+  var lowBitsAdded =
+      (((rawHighBits % P2_36) * P2_14) % P2_36) + (lowParse % P2_36),
+    lowBits = lowBitsAdded % P2_36,
+    overflow = Math.floor(lowBitsAdded / P2_36) % 2;
 
   // We can lop off the low 22-bits of the high bits (since lowBits is taking
   // care of that) and combine that with the bits of low above 36.
-  var highBits = Math.floor(rawHighBits / P2_22) +
-                 Math.floor(lowParse / P2_36) + overflow;
+  var highBits =
+    Math.floor(rawHighBits / P2_22) + Math.floor(lowParse / P2_36) + overflow;
 
   var outStr = encodeInt(highBits) + encodeInt(lowBits, 6);
   if (padTo && outStr.length < padTo) {
     return ZERO_PADDING.substring(0, padTo - outStr.length) + outStr;
   }
   return outStr;
-};
+}
 
 /**
  * Compare a64-encoded values.
@@ -149,23 +204,21 @@ export function cmpUI64(a, b) {
 
   if (a < b) {
     return -1;
-  }
-  else if (a > b) {
+  } else if (a > b) {
     return 1;
   }
   return 0;
-};
+}
 
 /**
  * Return the max of the two provided a64-encoded values.
  */
 export function maxUI64(a, b) {
-  if (exports.cmpUI64(a, b) === 1) {
+  if (cmpUI64(a, b) === 1) {
     return a;
-  } else {
-    return b;
   }
-};
+  return b;
+}
 
 /**
  * Return a cmp-style (-1, 0, 1) return value indicating the comparison of the
@@ -190,7 +243,7 @@ export { maxUI64 as maxDecimal64Strings };
  */
 export function decodeUI64(es) {
   var iNonZero = 0;
-  for (;es.charCodeAt(iNonZero) === 48; iNonZero++) {
+  for (; es.charCodeAt(iNonZero) === 48; iNonZero++) {
     // intentionally clever/footgunny loop
   }
   if (iNonZero) {
@@ -209,8 +262,10 @@ export function decodeUI64(es) {
 
   // upper-string gets 28 bits (that could hold 30), lower-string gets 36 bits.
   // This is how we did things in encoding is why.
-  var ues = es.substring(0, es.length - 6), uv = 0,
-      les = es.substring(es.length - 6), lv = 0;
+  var ues = es.substring(0, es.length - 6),
+    uv = 0,
+    les = es.substring(es.length - 6),
+    lv = 0;
 
   for (i = 0; i < ues.length; i++) {
     uv = uv * 64 + ORDERED_ARBITRARY_BASE64_CHARS.indexOf(ues[i]);
@@ -223,13 +278,13 @@ export function decodeUI64(es) {
   // number.)  Then subtract that whole number off our effective number, leaving
   // us dealing with <53 bits so we can just hand it off to the JS engine.
 
-  var rsh14val = (uv * P2_22 + Math.floor(lv / P2_14)),
-      uraw = rsh14val / E10_14_RSH_14,
-      udv = Math.floor(uraw),
-      uds = udv.toString();
+  var rsh14val = uv * P2_22 + Math.floor(lv / P2_14),
+    uraw = rsh14val / E10_14_RSH_14,
+    udv = Math.floor(uraw),
+    uds = udv.toString();
 
   var rsh14Leftover = rsh14val - udv * E10_14_RSH_14,
-      lowBitsRemoved = rsh14Leftover * P2_14 + lv % P2_14;
+    lowBitsRemoved = rsh14Leftover * P2_14 + (lv % P2_14);
 
   var lds = lowBitsRemoved.toString();
   if (lds.length < 14) {
@@ -237,5 +292,4 @@ export function decodeUI64(es) {
   }
 
   return uds + lds;
-};
-
+}

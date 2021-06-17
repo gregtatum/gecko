@@ -14,32 +14,42 @@
  * limitations under the License.
  */
 
-import { addressPairFromIdentity, replyToFromIdentity } from
-  './address_helpers';
+import {
+  addressPairFromIdentity,
+  replyToFromIdentity,
+} from "./address_helpers";
 
-import { generateForwardSubject, generateForwardParts } from
-  '../bodies/mailchew';
+import {
+  generateForwardSubject,
+  generateForwardParts,
+} from "../bodies/mailchew";
 
-import { makeMessageInfo, makeDraftInfo } from '../db/mail_rep';
-
+import { makeMessageInfo, makeDraftInfo } from "../db/mail_rep";
 
 /**
  * Given a populated MessageInfo, derive a new MessageInfo that is an inline
  * forward of that message.  This is an inherently asynchronous process.
  */
-export default async function deriveInlineForward({ sourceMessage, identity, messageId, umid,
-                                       guid, date, folderIds }) {
+export default async function deriveInlineForward({
+  sourceMessage,
+  identity,
+  messageId,
+  umid,
+  guid,
+  date,
+  folderIds,
+}) {
   // -- Subject
   let subject = generateForwardSubject(sourceMessage.subject);
 
   // -- Build the body
-  let bodyReps = await generateForwardParts( sourceMessage, identity);
+  let bodyReps = await generateForwardParts(sourceMessage, identity);
 
   let draftInfo = makeDraftInfo({
-    draftType: 'forward',
+    draftType: "forward",
     mode: null,
     refMessageId: sourceMessage.id,
-    refMessageDate: sourceMessage.date
+    refMessageDate: sourceMessage.date,
   });
 
   return makeMessageInfo({
@@ -59,7 +69,7 @@ export default async function deriveInlineForward({ sourceMessage, identity, mes
     subject,
     // There is no user-authored content at this point, so the snippet is empty
     // by definition.  draft_save will update this.
-    snippet: '',
+    snippet: "",
     attachments: [],
     relatedParts: [],
     // TODO: in Thunderbird I added a header that indicates the message-id of
@@ -68,7 +78,6 @@ export default async function deriveInlineForward({ sourceMessage, identity, mes
     // an extra/custom-headers stashing place.
     references: [],
     bodyReps,
-    draftInfo
+    draftInfo,
   });
 }
-

@@ -14,13 +14,21 @@
  * limitations under the License.
  */
 
-import { convIdFromMessageId, messageIdComponentFromUmid } from 'shared/id_conversions';
+import {
+  convIdFromMessageId,
+  messageIdComponentFromUmid,
+} from "shared/id_conversions";
 
 /**
  * Task helper to assist in establishing the conversation relationship for
  * a message given a BrowserBox-style raw message rep.
  */
-export async function resolveConversationTaskHelper(ctx, msgOrHeaders, accountId, umid) {
+export async function resolveConversationTaskHelper(
+  ctx,
+  msgOrHeaders,
+  accountId,
+  umid
+) {
   // -- Perform message-id header lookups
   let msgIdHeader = msgOrHeaders.guid;
   let references = msgOrHeaders.references;
@@ -32,7 +40,7 @@ export async function resolveConversationTaskHelper(ctx, msgOrHeaders, accountId
   headerIdLookupRequests.set([accountId, msgIdHeader], null);
 
   let fromDb = await ctx.read({
-    headerIdMaps: headerIdLookupRequests
+    headerIdMaps: headerIdLookupRequests,
   });
 
   // -- Check our results
@@ -59,8 +67,7 @@ export async function resolveConversationTaskHelper(ctx, msgOrHeaders, accountId
     // If it's an array then it's an array of MessageIds
     if (Array.isArray(result)) {
       conversationIds.add(convIdFromMessageId(result[0]));
-    }
-    else if (typeof(result) === 'string') {
+    } else if (typeof result === "string") {
       conversationIds.add(result);
     }
   }
@@ -70,7 +77,7 @@ export async function resolveConversationTaskHelper(ctx, msgOrHeaders, accountId
 
   // If there isn't a conversation already, derive an id from our umid.
   if (conversationIds.size === 0) {
-    convId = accountId + '.' + messageIdComponentFromUmid(umid);
+    convId = accountId + "." + messageIdComponentFromUmid(umid);
     existingConv = false;
   }
   // If there's just one, then use it.
@@ -87,7 +94,7 @@ export async function resolveConversationTaskHelper(ctx, msgOrHeaders, accountId
 
   // -- Generate our headerIdMaps writes
   // - Generate our full messageId.
-  let messageId = convId + '.' + messageIdComponentFromUmid(umid);
+  let messageId = convId + "." + messageIdComponentFromUmid(umid);
 
   let headerIdWrites = new Map();
   // For the entries missing things, they just get the conversation id.
@@ -102,8 +109,11 @@ export async function resolveConversationTaskHelper(ctx, msgOrHeaders, accountId
   }
 
   return {
-    convId, existingConv, messageId, headerIdWrites,
+    convId,
+    existingConv,
+    messageId,
+    headerIdWrites,
     // when merging happens, this may end up being a list with that task in it:
-    extraTasks: null
+    extraTasks: null,
   };
 }

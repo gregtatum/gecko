@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Tags as em } from 'activesync/codepages/Email';
+import { Tags as em } from "activesync/codepages/Email";
 
 /**
  * Parse the given WBXML server representation of a changed message into a
@@ -25,7 +25,7 @@ import { Tags as em } from 'activesync/codepages/Email';
 export default function parseChangedMessage(node) {
   let flagChanges = {
     add: null,
-    remove: null
+    remove: null,
   };
 
   function setFlagState(flag, beSet) {
@@ -43,18 +43,21 @@ export default function parseChangedMessage(node) {
   }
 
   for (let child of node.children) {
-    let childText = child.children.length ? child.children[0].textContent :
-                                            null;
+    let childText = child.children.length
+      ? child.children[0].textContent
+      : null;
 
     switch (child.tag) {
       case em.Read:
-        setFlagState('\\Seen', childText === '1');
+        setFlagState("\\Seen", childText === "1");
         break;
       case em.Flag:
         for (let grandchild of child.children) {
           if (grandchild.tag === em.Status) {
-            setFlagState('\\Flagged',
-                         grandchild.children[0].textContent !== '0');
+            setFlagState(
+              "\\Flagged",
+              grandchild.children[0].textContent !== "0"
+            );
           }
         }
         break;

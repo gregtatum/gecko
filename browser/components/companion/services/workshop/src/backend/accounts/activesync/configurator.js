@@ -26,7 +26,9 @@
  *   A multi-character ASCII alphanumeric sequence.  (Probably 10 or 11 digits.)
  */
 function makeUniqueDeviceId() {
-  return Math.random().toString(36).substr(2);
+  return Math.random()
+    .toString(36)
+    .substr(2);
 }
 
 /**
@@ -46,29 +48,28 @@ export default function(userDetails, domainInfo) {
   if (domainInfo.incoming.autodiscoverEndpoint) {
     credentials = {
       emailAddress: userDetails.emailAddress,
-      password: userDetails.password
+      password: userDetails.password,
     };
     connInfo = {
       autodiscoverEndpoint: domainInfo.incoming.autodiscoverEndpoint,
-      deviceId
+      deviceId,
     };
   } else {
     credentials = {
       username: domainInfo.incoming.username,
-      password: userDetails.password
+      password: userDetails.password,
     };
     connInfo = {
       server: domainInfo.incoming.server,
-      deviceId
+      deviceId,
     };
   }
 
   return {
     credentials,
-    typeFields: {
-    },
+    typeFields: {},
     connInfoFields: {
-      connInfo
-    }
+      connInfo,
+    },
   };
 }

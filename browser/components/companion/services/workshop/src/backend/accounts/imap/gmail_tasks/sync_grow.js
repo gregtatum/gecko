@@ -14,29 +14,31 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { shallowClone } from 'shared/util';
+import { shallowClone } from "shared/util";
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import { quantizeDate, NOW } from 'shared/date';
+import { quantizeDate, NOW } from "shared/date";
 
-import * as imapchew from '../imapchew';
+import * as imapchew from "../imapchew";
 const parseImapDateTime = imapchew.parseImapDateTime;
 
-import { parseUI64 as parseGmailConvId } from 'shared/a64';
+import { parseUI64 as parseGmailConvId } from "shared/a64";
 
-import GmailLabelMapper from '../gmail/gmail_label_mapper';
-import SyncStateHelper from '../gmail/sync_state_helper';
+import GmailLabelMapper from "../gmail/gmail_label_mapper";
+import SyncStateHelper from "../gmail/sync_state_helper";
 
-import { OLDEST_SYNC_DATE, SYNC_WHOLE_FOLDER_AT_N_MESSAGES,
-        GROWTH_MESSAGE_COUNT_TARGET } from '../../../syncbase';
+import {
+  OLDEST_SYNC_DATE,
+  SYNC_WHOLE_FOLDER_AT_N_MESSAGES,
+  GROWTH_MESSAGE_COUNT_TARGET,
+} from "../../../syncbase";
 
-import { syncNormalOverlay } from
-  '../../../task_helpers/sync_overlay_helpers';
+import { syncNormalOverlay } from "../../../task_helpers/sync_overlay_helpers";
 
-import MixinImapProbeForDate from '../task_mixins/imap_mix_probe_for_date';
+import MixinImapProbeForDate from "../task_mixins/imap_mix_probe_for_date";
 
 /**
  * Expand the date-range of known messages for the given folder/label.
@@ -45,58 +47,63 @@ import MixinImapProbeForDate from '../task_mixins/imap_mix_probe_for_date';
 export default TaskDefiner.defineAtMostOnceTask([
   MixinImapProbeForDate,
   {
-    name: 'sync_grow',
+    name: "sync_grow",
     // Note that we are tracking grow status on folders while we track refresh
     // status on the account as a whole.
-    binByArg: 'folderId',
+    binByArg: "folderId",
 
     helped_overlay_folders: syncNormalOverlay,
 
     helped_invalidate_overlays(folderId, dataOverlayManager) {
-      dataOverlayManager.announceUpdatedOverlayData('folders', folderId);
+      dataOverlayManager.announceUpdatedOverlayData("folders", folderId);
     },
 
     helped_already_planned(ctx, rawTask) {
       // The group should already exist; opt into its membership to get a
       // Promise
       return Promise.resolve({
-        result: ctx.trackMeInTaskGroup('sync_grow:' + rawTask.folderId)
+        result: ctx.trackMeInTaskGroup("sync_grow:" + rawTask.folderId),
       });
     },
 
     helped_plan(ctx, rawTask) {
       let plannedTask = shallowClone(rawTask);
       plannedTask.resources = [
-        'online',
+        "online",
         `credentials!${rawTask.accountId}`,
-        `happy!${rawTask.accountId}`
+        `happy!${rawTask.accountId}`,
       ];
-      plannedTask.priorityTags = [
-        `view:folder:${rawTask.folderId}`
-      ];
+      plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
 
       // Create a task group that follows this task and all its offspring.  This
       // will define the lifetime of our overlay as well.
-      let groupPromise =
-        ctx.trackMeInTaskGroup('sync_grow:' + rawTask.folderId);
+      let groupPromise = ctx.trackMeInTaskGroup(
+        "sync_grow:" + rawTask.folderId
+      );
       return Promise.resolve({
         taskState: plannedTask,
         remainInProgressUntil: groupPromise,
-        result: groupPromise
+        result: groupPromise,
       });
     },
 
     async helped_execute(ctx, req) {
       // -- Exclusively acquire the sync state for the account
       let fromDb = await ctx.beginMutate({
-        syncStates: new Map([[req.accountId, null]])
+        syncStates: new Map([[req.accountId, null]]),
       });
 
       let syncState = new SyncStateHelper(
-        ctx, fromDb.syncStates.get(req.accountId), req.accountId, 'grow');
+        ctx,
+        fromDb.syncStates.get(req.accountId),
+        req.accountId,
+        "grow"
+      );
 
-      let foldersTOC =
-        await ctx.universe.acquireAccountFoldersTOC(ctx, req.accountId);
+      let foldersTOC = await ctx.universe.acquireAccountFoldersTOC(
+        ctx,
+        req.accountId
+      );
       let labelMapper = new GmailLabelMapper(ctx, foldersTOC);
 
       // - sync_folder_list dependency-failsafe
@@ -104,7 +111,7 @@ export default TaskDefiner.defineAtMostOnceTask([
         // Sync won't work right if we have no folders.  This should ideally be
         // handled by priorities and other bootstrap logic, but for now, just
         // make sure we avoid going into this sync in a broken way.
-        throw new Error('moot');
+        throw new Error("moot");
       }
 
       // -- Enter the label's folder for estimate and heuristic purposes
@@ -136,56 +143,60 @@ export default TaskDefiner.defineAtMostOnceTask([
       // an annoying possibility.
       let searchSpec = { not: { deleted: true } };
 
-      searchSpec['X-GM-LABELS'] = labelMapper.folderIdToLabel(req.folderId);
+      searchSpec["X-GM-LABELS"] = labelMapper.folderIdToLabel(req.folderId);
 
       let existingSinceDate = syncState.getFolderIdSinceDate(req.folderId);
       let newSinceDate;
-      let firstInboxSync = !existingSinceDate && folderInfo.type === 'inbox';
+      let firstInboxSync = !existingSinceDate && folderInfo.type === "inbox";
 
       // If there are fewer messages left to sync than our constant for this
       // purpose, then just set the date range to our oldest sync date.
-      if (!isNaN(estimatedUnsyncedMessages) &&
-          estimatedUnsyncedMessages < Math.max(SYNC_WHOLE_FOLDER_AT_N_MESSAGES,
-                                             GROWTH_MESSAGE_COUNT_TARGET)) {
+      if (
+        !isNaN(estimatedUnsyncedMessages) &&
+        estimatedUnsyncedMessages <
+          Math.max(SYNC_WHOLE_FOLDER_AT_N_MESSAGES, GROWTH_MESSAGE_COUNT_TARGET)
+      ) {
         newSinceDate = OLDEST_SYNC_DATE;
       } else {
         newSinceDate = await this._probeForDateUsingSequenceNumbers({
-          ctx, account, folderInfo,
+          ctx,
+          account,
+          folderInfo,
           startSeq: labelMailboxInfo.exists - folderInfo.localMessageCount,
-          curDate: existingSinceDate || quantizeDate(NOW())
+          curDate: existingSinceDate || quantizeDate(NOW()),
         });
       }
 
       if (existingSinceDate) {
-       searchSpec.before = new Date(quantizeDate(existingSinceDate));
+        searchSpec.before = new Date(quantizeDate(existingSinceDate));
       }
       searchSpec.since = new Date(newSinceDate);
 
       let syncDate = NOW();
 
-      logic(ctx, 'searching', { searchSpec: searchSpec });
-      let allMailFolderInfo = account.getFirstFolderWithType('all');
+      logic(ctx, "searching", { searchSpec });
+      let allMailFolderInfo = account.getFirstFolderWithType("all");
       // Find out new UIDs covering the range in question.
       let { mailboxInfo, result: uids } = await account.pimap.search(
-        ctx, allMailFolderInfo, searchSpec, { byUid: true });
+        ctx,
+        allMailFolderInfo,
+        searchSpec,
+        { byUid: true }
+      );
 
       if (uids.length) {
         let { result: messages } = await account.pimap.listMessages(
           ctx,
           allMailFolderInfo,
           uids,
-          [
-            'UID',
-            'INTERNALDATE',
-            'X-GM-THRID',
-          ],
+          ["UID", "INTERNALDATE", "X-GM-THRID"],
           { byUid: true }
         );
 
         for (let msg of messages) {
           let uid = msg.uid; // already parsed into a number by browserbox
           let dateTS = parseImapDateTime(msg.internaldate);
-          let rawConvId = parseGmailConvId(msg['x-gm-thrid']);
+          let rawConvId = parseGmailConvId(msg["x-gm-thrid"]);
 
           if (syncState.yayUids.has(uid)) {
             // Nothing to do if the message already met our criteria.  (And we
@@ -197,20 +208,24 @@ export default TaskDefiner.defineAtMostOnceTask([
           } else {
             // Inductively, this is a newly yay message and potentially the
             // start of a new yay conversation.
-            syncState.existingIgnoredMessageIsNowYay(
-              uid, rawConvId, dateTS);
+            syncState.existingIgnoredMessageIsNowYay(uid, rawConvId, dateTS);
           }
         }
       }
 
       syncState.setFolderIdSinceDate(req.folderId, newSinceDate.valueOf());
-      logic(ctx, 'mailboxInfo', { existingModseq: syncState.modseq,
-        newModseq: mailboxInfo.highestModseq, _mailboxInfo: mailboxInfo });
+      logic(ctx, "mailboxInfo", {
+        existingModseq: syncState.modseq,
+        newModseq: mailboxInfo.highestModseq,
+        _mailboxInfo: mailboxInfo,
+      });
       if (!syncState.modseq) {
         syncState.modseq = mailboxInfo.highestModseq;
         syncState.lastHighUid = mailboxInfo.uidNext - 1;
-        logic(ctx, 'updatingModSeq', { modseqNow: syncState.modseq,
-         from: mailboxInfo.highestModseq});
+        logic(ctx, "updatingModSeq", {
+          modseqNow: syncState.modseq,
+          from: mailboxInfo.highestModseq,
+        });
       }
       syncState.finalizePendingRemovals();
 
@@ -226,10 +241,11 @@ export default TaskDefiner.defineAtMostOnceTask([
                 syncInfo: {
                   lastSuccessfulSyncAt: syncDate,
                   lastAttemptedSyncAt: syncDate,
-                  failedSyncsSinceLastSuccessfulSync: 0
-                }
-              }
-            ]])
+                  failedSyncsSinceLastSuccessfulSync: 0,
+                },
+              },
+            ],
+          ]),
         };
       }
 
@@ -239,9 +255,9 @@ export default TaskDefiner.defineAtMostOnceTask([
           {
             fullySynced: newSinceDate.valueOf() === OLDEST_SYNC_DATE.valueOf(),
             estimatedUnsyncedMessages,
-            syncedThrough: newSinceDate.valueOf()
-          }
-        ]
+            syncedThrough: newSinceDate.valueOf(),
+          },
+        ],
       ]);
 
       return {
@@ -249,10 +265,10 @@ export default TaskDefiner.defineAtMostOnceTask([
           syncStates: new Map([[req.accountId, syncState.rawSyncState]]),
         },
         newData: {
-          tasks: syncState.tasksToSchedule
+          tasks: syncState.tasksToSchedule,
         },
-        atomicClobbers
+        atomicClobbers,
       };
-    }
-  }
+    },
+  },
 ]);

@@ -38,7 +38,7 @@ export default function matchRegexpOrString(phrase, input, fromIndex) {
     return null;
   }
 
-  var ret = [ phrase ];
+  var ret = [phrase];
   ret.index = idx - fromIndex;
   return ret;
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-(function () {
+(function() {
   // Like setTimeout, but only takes a function argument.  There's
   // no time argument (always zero) and no arguments (you have to
   // use a closure).
@@ -24,4 +24,4 @@
 
   // Add the one thing we want added to the window object.
   window.setZeroTimeout = setZeroTimeout;
-}());
+})();

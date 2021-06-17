@@ -14,65 +14,70 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import probe from './probe';
+import probe from "./probe";
 
-import { AUTOCONFIG_TIMEOUT_MS } from '../../syncbase';
+import { AUTOCONFIG_TIMEOUT_MS } from "../../syncbase";
 
-import { raw_autodiscover, HttpError, AutodiscoverDomainError }
-  from 'activesync/protocol';
+import {
+  raw_autodiscover,
+  HttpError,
+  AutodiscoverDomainError,
+} from "activesync/protocol";
 
-const scope = logic.scope('ActivesyncConfigurator');
+const scope = logic.scope("ActivesyncConfigurator");
 
 function getFullDetailsFromAutodiscover(userDetails, url) {
-  return new Promise((resolve) => {
-    logic(scope, 'autodiscover:begin', { url });
+  return new Promise(resolve => {
+    logic(scope, "autodiscover:begin", { url });
     raw_autodiscover(
-      url, userDetails.emailAddress, userDetails.password,
+      url,
+      userDetails.emailAddress,
+      userDetails.password,
       AUTOCONFIG_TIMEOUT_MS,
       /* redirects are okay */ false,
       function(error, config) {
         if (error) {
-          var failureType = 'no-config-info',
-              failureDetails = {};
+          var failureType = "no-config-info",
+            failureDetails = {};
 
           if (error instanceof HttpError) {
             if (error.status === 401) {
-              failureType = 'bad-user-or-pass';
-            }
-            else if (error.status === 403) {
-              failureType = 'not-authorized';
-            }
-            else {
+              failureType = "bad-user-or-pass";
+            } else if (error.status === 403) {
+              failureType = "not-authorized";
+            } else {
               failureDetails.status = error.status;
             }
+          } else if (error instanceof AutodiscoverDomainError) {
+            logic(scope, "autodiscover.error", { message: error.message });
           }
-          else if (error instanceof AutodiscoverDomainError) {
-            logic(scope, 'autodiscover.error', { message: error.message });
-          }
-          logic(scope, 'autodiscover:end', { url: url, error: failureType });
+          logic(scope, "autodiscover:end", { url, error: failureType });
           resolve({
             error: failureType,
-            errorDetails: failureDetails
+            errorDetails: failureDetails,
           });
           return;
         }
-        logic(scope, 'autodiscover:end',
-              { url, server: config.mobileSyncServer.url });
+        logic(scope, "autodiscover:end", {
+          url,
+          server: config.mobileSyncServer.url,
+        });
 
         var autoconfig = {
-          type: 'activesync',
+          type: "activesync",
           displayName: config.user.name,
           incoming: {
             server: config.mobileSyncServer.url,
-            username: config.user.email
+            username: config.user.email,
           },
         };
         resolve({
-          fullConfigInfo: autoconfig
+          fullConfigInfo: autoconfig,
         });
-      });
+      }
+    );
   });
 }
 
@@ -99,9 +104,14 @@ export default async function(fragments) {
   let { credentials, connInfoFields } = fragments;
   // - Need to run an autodiscover?
   if (connInfoFields.connInfo.autodiscoverEndpoint) {
-    let { error, errorDetails, fullConfigInfo } =
-      await getFullDetailsFromAutodiscover(
-        credentials, connInfoFields.connInfo.autodiscoverEndpoint);
+    let {
+      error,
+      errorDetails,
+      fullConfigInfo,
+    } = await getFullDetailsFromAutodiscover(
+      credentials,
+      connInfoFields.connInfo.autodiscoverEndpoint
+    );
 
     if (error) {
       return { error, errorDetails };
@@ -109,19 +119,19 @@ export default async function(fragments) {
 
     fragments.credentials = credentials = {
       username: fullConfigInfo.incoming.username,
-      password: credentials.password
+      password: credentials.password,
     };
     connInfoFields.connInfo = {
       server: fullConfigInfo.incoming.server,
-      deviceId: connInfoFields.connInfo.deviceId
+      deviceId: connInfoFields.connInfo.deviceId,
     };
   }
   // (now it's as if we were a fully specified direct creation)
 
   // - Run the probe!
   let { conn, error, errorDetails } = await probe({
-     connInfo: connInfoFields.connInfo,
-     credentials
+    connInfo: connInfoFields.connInfo,
+    credentials,
   });
 
   if (error) {
@@ -130,9 +140,9 @@ export default async function(fragments) {
 
   return {
     engineFields: {
-      engine: 'activesync',
-      engineData: {}
+      engine: "activesync",
+      engineData: {},
     },
-    receiveProtoConn: conn
+    receiveProtoConn: conn,
   };
 }

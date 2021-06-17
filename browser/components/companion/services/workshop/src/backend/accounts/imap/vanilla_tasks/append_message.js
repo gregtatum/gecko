@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
+import { shallowClone } from "shared/util";
 
-import { shallowClone } from 'shared/util';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import  TaskDefiner from '../../../task_infra/task_definer';
-
-import { Composer } from '../../../drafts/composer';
+import { Composer } from "../../../drafts/composer";
 
 /**
  * Perform an IMAP APPEND of the provided message to a folder on the server.
@@ -31,7 +30,7 @@ import { Composer } from '../../../drafts/composer';
  */
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'append_message',
+    name: "append_message",
 
     async plan(ctx, rawTask) {
       let plannedTask = shallowClone(rawTask);
@@ -42,17 +41,15 @@ export default TaskDefiner.defineSimpleTask([
       // We don't have any a priori name-able exclusive resources.  Our records
       // are either orthogonal or will only be dynamically discovered while
       // we're running.
-      plannedTask.exclusiveResources = [
-      ];
+      plannedTask.exclusiveResources = [];
 
-      plannedTask.priorityTags = [
-      ];
+      plannedTask.priorityTags = [];
 
       // TODO: have relPriority prioritize older messages so they more or less
       // go out in FIFO order.
 
       await ctx.finishTask({
-        taskState: plannedTask
+        taskState: plannedTask,
       });
     },
 
@@ -64,7 +61,7 @@ export default TaskDefiner.defineSimpleTask([
       const composer = new Composer(req.messageInfo, account);
 
       await composer.buildMessage({
-        includeBcc: true
+        includeBcc: true,
       });
 
       // -- Generate the blob
@@ -72,21 +69,18 @@ export default TaskDefiner.defineSimpleTask([
       // XXX and now, unfortunately, because browserbox does not support Blobs,
       // we need to have the entire message as a string.  This is a problem, of
       // course.
-      const composedString =
-        new FileReaderSync().readAsBinaryString(composedBlob);
+      const composedString = new FileReaderSync().readAsBinaryString(
+        composedBlob
+      );
 
       // TODO: implement heartbeat/renewWakeLock support.  Ideally this happens
       // naturally as part of the fix for the blob deficiency above, but if not,
       // we can do the same monkeypatch/hack that SMTP uses to get this.
-      await account.pimap.upload(
-        ctx,
-        folderInfo.path,
-        composedString,
-        { flags: ['\\Seen'] }
-      );
-
-      await ctx.finishTask({
+      await account.pimap.upload(ctx, folderInfo.path, composedString, {
+        flags: ["\\Seen"],
       });
+
+      await ctx.finishTask({});
     },
-  }
+  },
 ]);

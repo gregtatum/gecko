@@ -22,6 +22,6 @@ export default function extractRelevantMessageInfoForChurning(message) {
     authorNameish: message.author.name || message.author.address,
     // Extract the subject so we can display the subject if there's only
     // one message/conversation.
-    subject: message.subject
+    subject: message.subject,
   };
 }

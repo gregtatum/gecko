@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { convIdFromMessageId } from 'shared/id_conversions';
-import { shallowClone } from 'shared/util';
+import { convIdFromMessageId } from "shared/id_conversions";
+import { shallowClone } from "shared/util";
 
-import { encodeInt } from 'shared/a64';
+import { encodeInt } from "shared/a64";
 
 /**
  * ActiveSync helper logic for folder sync state manipulation.
@@ -40,12 +40,12 @@ import { encodeInt } from 'shared/a64';
  */
 function FolderSyncStateHelper(ctx, rawSyncState, accountId, folderId) {
   if (!rawSyncState) {
-    logic(ctx, 'creatingDefaultSyncState', {});
+    logic(ctx, "creatingDefaultSyncState", {});
     rawSyncState = {
       nextUmidSuffix: 1,
-      syncKey: '0',
+      syncKey: "0",
       filterType: null,
-      serverIdInfo: new Map()
+      serverIdInfo: new Map(),
     };
   }
 
@@ -86,12 +86,11 @@ FolderSyncStateHelper.prototype = {
     this.rawSyncState.filterType = val;
   },
 
-  issueUniqueMessageId: function() {
-    return (this._folderId + '.' +
-            encodeInt(this.rawSyncState.nextUmidSuffix++));
+  issueUniqueMessageId() {
+    return this._folderId + "." + encodeInt(this.rawSyncState.nextUmidSuffix++);
   },
 
-  getUmidForServerId: function(serverId) {
+  getUmidForServerId(serverId) {
     return this._serverIdInfo.get(serverId);
   },
 
@@ -100,7 +99,7 @@ FolderSyncStateHelper.prototype = {
    * the legwork has to have already been done by the caller.  (All the message
    * processing is way too much for us to do in here.)
    */
-  newMessage: function(serverId, message) {
+  newMessage(serverId, message) {
     let umid = message.umid;
     this.umidNameWrites.set(umid, message.id);
     this.umidLocationWrites.set(umid, [this._folderId, serverId]);
@@ -111,7 +110,7 @@ FolderSyncStateHelper.prototype = {
    * Process changes by tracking the flag changes by umid and noting the umid
    * for a name-read so that we can cluster sync_conv requests later on.
    */
-  messageChanged: function(serverId, changes) {
+  messageChanged(serverId, changes) {
     let umid = this._serverIdInfo.get(serverId);
     this.umidFlagChanges.set(umid, changes.flagChanges);
     this.umidNameReads.set(umid, null);
@@ -121,10 +120,10 @@ FolderSyncStateHelper.prototype = {
    * The message got deleted; make a note of it so that we can put it in a
    * sync_conv later on.
    */
-  messageDeleted: function(serverId) {
+  messageDeleted(serverId) {
     let umid = this._serverIdInfo.get(serverId);
     if (!umid) {
-      logic.fail('heard about a deletion for an unknown message');
+      logic.fail("heard about a deletion for an unknown message");
       return;
     }
     this._serverIdInfo.delete(serverId);
@@ -140,8 +139,8 @@ FolderSyncStateHelper.prototype = {
    * The sync key was no good, so delete all the messages.  Also, invalidate the
    * syncKey.  Couldn't fit that second sentence in the function name, sorry!
    */
-  syncKeyInvalidatedSoDeleteAllMessages: function() {
-    this.syncKey = '0';
+  syncKeyInvalidatedSoDeleteAllMessages() {
+    this.syncKey = "0";
     for (let serverId of this._serverIdInfo.keys()) {
       this.messageDeleted(serverId);
     }
@@ -151,7 +150,7 @@ FolderSyncStateHelper.prototype = {
    * Now that the umidNameReads should have been satisfied, group all flag
    * changes and deletions by conversation
    */
-  generateSyncConvTasks: function() {
+  generateSyncConvTasks() {
     let umidNameReads = this.umidNameReads;
     for (let [umid, flags] of this.umidFlagChanges) {
       let messageId = umidNameReads.get(umid);
@@ -167,7 +166,7 @@ FolderSyncStateHelper.prototype = {
     }
   },
 
-  _ensureTaskWithUmidFlags: function(messageId, umid, flags) {
+  _ensureTaskWithUmidFlags(messageId, umid, flags) {
     let convId = convIdFromMessageId(messageId);
     let task = this._ensureConvTask(convId);
     if (!task.modifiedUmids) {
@@ -176,7 +175,7 @@ FolderSyncStateHelper.prototype = {
     task.modifiedUmids.set(umid, flags);
   },
 
-  _ensureTaskWithRemovedUmid: function(messageId, umid) {
+  _ensureTaskWithRemovedUmid(messageId, umid) {
     let convId = convIdFromMessageId(messageId);
     let task = this._ensureConvTask(convId);
     if (!task.removedUmids) {
@@ -185,17 +184,17 @@ FolderSyncStateHelper.prototype = {
     task.removedUmids.add(umid);
   },
 
-  _ensureConvTask: function(convId) {
+  _ensureConvTask(convId) {
     if (this._tasksByConvId.has(convId)) {
       return this._tasksByConvId(convId);
     }
 
     let task = {
-      type: 'sync_conv',
+      type: "sync_conv",
       accountId: this._accountId,
       convId,
       modifiedUmids: null, // Map<UniqueMessageId, FlagChanges>
-      removedUmids: null // Set<UniqueMessageId>
+      removedUmids: null, // Set<UniqueMessageId>
     };
     this.tasksToSchedule.push(task);
     this._tasksByConvId.set(convId, task);
@@ -206,12 +205,12 @@ FolderSyncStateHelper.prototype = {
    * Just clone the task that triggered us and nuke the stuff that raw tasks
    * aren't supposed to have.  NB: This is probably not the best idea.
    */
-  scheduleAnotherRefreshLikeThisOne: function(req) {
+  scheduleAnotherRefreshLikeThisOne(req) {
     let rawTask = shallowClone(req);
     delete rawTask.exclusiveResources;
     delete rawTask.priorityTags;
     this.tasksToSchedule.push(rawTask);
-  }
+  },
 };
 
 export default FolderSyncStateHelper;

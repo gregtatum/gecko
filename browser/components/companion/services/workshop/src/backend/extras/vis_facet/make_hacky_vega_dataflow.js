@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import vega from 'vega';
+// XXX this bit-rotted and these are not really things now, but it makes the
+// linter happy.
+import { parse, Model } from "vega";
 
 /**
  * ### TODO: de-bitrot vega
@@ -68,7 +70,7 @@ export default function makeHackyVegaDataflow({ backendDef, idKey }) {
   model.defs({
     // No useful callbakc is required because our data is all empty and
     // therefore synchronously available.
-    data: parse.data(model, backendDef.vegaData, () => {})
+    data: parse.data(model, backendDef.vegaData, () => {}),
   });
 
   const inputSource = model.data(backendDef.inputDataSource);
@@ -82,26 +84,25 @@ export default function makeHackyVegaDataflow({ backendDef, idKey }) {
     /**
      *
      */
-    addItem: function(item) {
+    addItem(item) {
       inputSource.insert([item]);
     },
 
-    removeItem: function(id) {
+    removeItem(id) {
       // TODO: more an upstream issue, but O(n) removal is arguably silly.
-      inputSource.remove((existing) => {
+      inputSource.remove(existing => {
         return existing[idKey] === id;
       });
     },
 
-    flush: function() {
+    flush() {
       inputSource.fire();
     },
 
-    getValues: function() {
+    getValues() {
       return outputSource.values();
-    }
+    },
   };
 
   return exposeApi;
-};
-
+}

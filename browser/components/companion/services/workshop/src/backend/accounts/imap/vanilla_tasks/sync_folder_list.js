@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import { makeFolderMeta } from '../../../db/folder_info_rep';
+import { makeFolderMeta } from "../../../db/folder_info_rep";
 
-import normalizeFolderType from '../normalize_folder_type';
+import normalizeFolderType from "../normalize_folder_type";
 
-import MixinSyncFolderList from '../../../task_mixins/mix_sync_folder_list';
+import MixinSyncFolderList from "../../../task_mixins/mix_sync_folder_list";
 
 /**
  * Common IMAP folder list syncing logic.
@@ -38,8 +38,8 @@ export default TaskDefiner.defineSimpleTask([
 
       if (!namespaces) {
         namespaces = {
-          personal: { prefix: '', delimiter: '/' },
-          provisional: true
+          personal: { prefix: "", delimiter: "/" },
+          provisional: true,
         };
       }
 
@@ -54,8 +54,8 @@ export default TaskDefiner.defineSimpleTask([
 
       // - walk the boxes
       let walkBoxes = (boxLevel, pathDepth, parentId) => {
-        boxLevel.forEach((box) => {
-          let delim = box.delimiter || '/';
+        boxLevel.forEach(box => {
+          let delim = box.delimiter || "/";
 
           if (box.path.indexOf(delim) === 0) {
             box.path = box.path.slice(delim.length);
@@ -68,8 +68,8 @@ export default TaskDefiner.defineSimpleTask([
 
           // gmail finds it amusing to give us the localized name/path of its
           // inbox, but still expects us to ask for it as INBOX.
-          if (type === 'inbox') {
-            path = 'INBOX';
+          if (type === "inbox") {
+            path = "INBOX";
           }
 
           // - already known folder
@@ -79,17 +79,19 @@ export default TaskDefiner.defineSimpleTask([
             // and delimiter may be incorrect and need to be updated.
             folderInfoRep = folderInfoRepsByPath.get(path);
 
-            if (folderInfoRep.name !== box.name ||
-                folderInfoRep.delim !== delim) {
+            if (
+              folderInfoRep.name !== box.name ||
+              folderInfoRep.delim !== delim
+            ) {
               folderInfoRep.name = box.name;
               folderInfoRep.delim = delim;
               modifiedFolders.set(folderInfoRep.id, folderInfoRep);
             }
-            logic(ctx, 'folder-sync:existing', {
+            logic(ctx, "folder-sync:existing", {
               type,
               name: box.name,
               path,
-              delim
+              delim,
             });
 
             // mark it with true to show that we've seen it.
@@ -97,11 +99,11 @@ export default TaskDefiner.defineSimpleTask([
           }
           // - new to us!
           else {
-            logic(ctx, 'folder-sync:add', {
+            logic(ctx, "folder-sync:add", {
               type,
               name: box.name,
               path,
-              delim
+              delim,
             });
             folderInfoRep = makeFolderMeta({
               id: foldersTOC.issueFolderId(),
@@ -113,7 +115,7 @@ export default TaskDefiner.defineSimpleTask([
               parentId,
               delim,
               depth: pathDepth,
-              lastSyncedAt: 0
+              lastSyncedAt: 0,
             });
             newFolders.push(folderInfoRep);
           }
@@ -137,10 +139,10 @@ export default TaskDefiner.defineSimpleTask([
         if (!folderInfoRep.serverPath) {
           continue;
         }
-        logic(ctx, 'delete-dead-folder', {
+        logic(ctx, "delete-dead-folder", {
           folderType: folderInfoRep.type,
           folderId: folderInfoRep.id,
-          _folderPath: folderInfoRep.path
+          _folderPath: folderInfoRep.path,
         });
         // It must have gotten deleted!
         modifiedFolders.set(folderInfoRep.id, null);
@@ -154,8 +156,8 @@ export default TaskDefiner.defineSimpleTask([
 
       return {
         newFolders,
-        modifiedFolders
+        modifiedFolders,
       };
-    }
-  }
+    },
+  },
 ]);

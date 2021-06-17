@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
 // (this is broken out into a helper for clarity and to avoid temporary gecko
 // "let" issues.)
@@ -26,7 +26,8 @@ const makeWrappedOverlayFunc = function(helpedOverlayFunc) {
       persistentState.binToMarker.get(id),
       memoryState.inProgressBins.has(id) ||
         memoryState.remainInProgressBins.has(id),
-      blockedTaskChecker(this.name + ':' + id));
+      blockedTaskChecker(this.name + ":" + id)
+    );
   };
 };
 
@@ -41,10 +42,10 @@ const makeWrappedPrefixOverlayFunc = function([extractor, helpedOverlayFunc]) {
       persistentState.binToMarker.get(binId),
       memoryState.inProgressBins.has(binId) ||
         memoryState.remainInProgressBins.has(binId),
-      blockedTaskChecker(this.name + ':' + binId));
+      blockedTaskChecker(this.name + ":" + binId)
+    );
   };
 };
-
 
 /**
  * See `TaskDefiner.defineAtMostOnceTask` for a consumer view and high-level
@@ -68,16 +69,18 @@ export default {
       if (overlayMatch) {
         let overlayType = overlayMatch[1];
 
-        this['overlay_' + overlayType] =
-          makeWrappedOverlayFunc(mixedSource[key]);
+        this["overlay_" + overlayType] = makeWrappedOverlayFunc(
+          mixedSource[key]
+        );
       }
 
       let prefixedOverlayMatch = /^helped_prefix_overlay_(.+)$/.exec(key);
       if (prefixedOverlayMatch) {
         let overlayType = prefixedOverlayMatch[1];
 
-        this['overlay_' + overlayType] =
-          makeWrappedPrefixOverlayFunc(mixedSource[key]);
+        this["overlay_" + overlayType] = makeWrappedPrefixOverlayFunc(
+          mixedSource[key]
+        );
       }
     }
   },
@@ -88,7 +91,7 @@ export default {
    */
   initPersistentState() {
     return {
-      binToMarker: new Map()
+      binToMarker: new Map(),
     };
   },
 
@@ -101,9 +104,9 @@ export default {
       memoryState: {
         accountId,
         inProgressBins: new Set(),
-        remainInProgressBins: new Set()
+        remainInProgressBins: new Set(),
       },
-      markers: persistentState.binToMarker.values()
+      markers: persistentState.binToMarker.values(),
     };
   },
 
@@ -114,13 +117,13 @@ export default {
    * on the helped_plan implementation to generate.
    */
   async plan(ctx, persistentState, memoryState, req) {
-    let binId = this.binByArg ? req[this.binByArg] : 'only';
+    let binId = this.binByArg ? req[this.binByArg] : "only";
 
     // - Fast-path out if the bin is already planned.
     if (persistentState.binToMarker.has(binId)) {
       let rval;
       if (this.helped_already_planned) {
-        logic(ctx, 'alreadyPlanned');
+        logic(ctx, "alreadyPlanned");
         rval = await this.helped_already_planned(ctx, req);
       } else {
         rval = {};
@@ -134,14 +137,11 @@ export default {
     if (rval.taskState) {
       // Derive the mark from the taskState, but clobbering our stuff on top to
       // avoid worst-case breakage.
-      let marker = Object.assign(
-        {},
-        rval.taskState,
-        {
-          type: this.name,
-          id: this.name + ':' + binId,
-          accountId: memoryState.accountId,
-        });
+      let marker = Object.assign({}, rval.taskState, {
+        type: this.name,
+        id: this.name + ":" + binId,
+        accountId: memoryState.accountId,
+      });
       rval.taskMarkers = new Map([[marker.id, marker]]);
       persistentState.binToMarker.set(binId, marker);
       rval.complexTaskState = persistentState;
@@ -152,8 +152,7 @@ export default {
       rval.taskState = null;
     }
 
-    if (rval.remainInProgressUntil &&
-        this.helped_invalidate_overlays) {
+    if (rval.remainInProgressUntil && this.helped_invalidate_overlays) {
       memoryState.remainInProgressBins.add(binId);
       let dataOverlayManager = ctx.universe.dataOverlayManager;
       rval.remainInProgressUntil.then(() => {
@@ -181,7 +180,7 @@ export default {
   },
 
   async execute(ctx, persistentState, memoryState, marker) {
-    let binId = this.binByArg ? marker[this.binByArg] : 'only';
+    let binId = this.binByArg ? marker[this.binByArg] : "only";
     memoryState.inProgressBins.add(binId);
 
     if (this.helped_invalidate_overlays) {

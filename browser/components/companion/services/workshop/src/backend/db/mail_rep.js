@@ -122,16 +122,16 @@ export function makeMessageInfo(raw) {
   // All messages absolutely need the following; the caller needs to make up
   // values if they're missing.
   if (!raw.author) {
-    throw new Error('No author?!');
+    throw new Error("No author?!");
   }
   if (!raw.date) {
-    throw new Error('No date?!');
+    throw new Error("No date?!");
   }
   if (!raw.attachments || !raw.bodyReps) {
-    throw new Error('No attachments / bodyReps?!');
+    throw new Error("No attachments / bodyReps?!");
   }
   if (Array.isArray(raw.folderIds)) {
-    throw new Error('raw.folderIds must be a Set, not an Array');
+    throw new Error("raw.folderIds must be a Set, not an Array");
   }
 
   // We also want/require a valid id, but we check that at persistence time
@@ -153,14 +153,14 @@ export function makeMessageInfo(raw) {
     folderIds: raw.folderIds || new Set(),
     hasAttachments: raw.hasAttachments || false,
     // These can be empty strings which are falsey, so no ||
-    subject: (raw.subject != null) ? raw.subject : null,
-    snippet: (raw.snippet != null) ? raw.snippet : null,
+    subject: raw.subject != null ? raw.subject : null,
+    snippet: raw.snippet != null ? raw.snippet : null,
     attachments: raw.attachments,
     relatedParts: raw.relatedParts || null,
     references: raw.references || null,
     bodyReps: raw.bodyReps,
     authoredBodySize: raw.authoredBodySize || 0,
-    draftInfo: raw.draftInfo || null
+    draftInfo: raw.draftInfo || null,
   };
 }
 
@@ -210,59 +210,57 @@ export function makeDraftInfo(raw) {
     mode: raw.mode || null,
     refMessageId: raw.refMessageId || null,
     refMessageDate: raw.refMessageDate || null,
-    sendProblems: raw.sendProblems || null
+    sendProblems: raw.sendProblems || null,
   };
 }
 
- /**
-  * @typedef {Object} BodyPartInfo
-  * @prop {'plain'|'html'|'attr'} type
-  *   The type/kind/variety of body-part.  This is not a MIME type or really
-  *   even sub-type.  We have specific representations for plain and HTML types,
-  *   this is saying which is which in a self-describing way.
-  * @prop {String} part
-  *   IMAP part number.  This comes from the server's BODYSTRUCTURE and should
-  *   be thought of as an opaque value.
-  * @prop {Number} sizeEstimate
-  *   The exact size of the body part as reported by the server to us.  But the
-  *   server itself may be estimating so care must be taken when specifying
-  *   exact byte ranges since the body part may end up being longer.  Note that
-  *   this differs from the AttachmentInfo's sizeEstimate which is a guess at
-  *   the size of the file after decoding.
-  * @prop {Number} amountDownloaded
-  *   How many bytes have we downloaded so far?  This happens when we do snippet
-  *   fetching.  In this case, this value should exactly match the size of the
-  *   `_partInfo.pendingBuffer` Blob.  As such, this value can probably be
-  *   discarded.  TODO: nuke this value.
-  * @prop {Boolean} isDownloaded
-  *   Has this part been fully downloaded?  Because sizeEstimate can be a lie,
-  *   it's possible for us to have downloaded sizeEstimate bytes but still not
-  *   have fully downloaded the body part.  So this value should stick around
-  *   forever.
-  * @prop {RawImapPartInfo} _partInfo
-  *   Raw info on the part from browserbox PLUS we annotated `pendingBuffer` on
-  *   to the object when doing snippet fetching (and therefore amountDownloaded
-  *   > 0 and !isDownloaded).  TODO: clean this up further, even if it's just
-  *   renaming this to rawImapPartInfo.
-  * @prop {Blob} contentBlob
-  *   A Blob either containing a JSON-serialized quotechew.js representation,
-  *   an htmlchew.js sanitized HTML representation, or the 'attr' JSON rep,
-  *   depending on our `type`.  See the relevant files for more detail.
-  * @prop {Number} authoredBodySize
-  *   See comment for `MessageInfo.authoredBodySize`.  But, in short, the
-  *   best-effort length of the newly authored content in this body part, as
-  *   far as our quoting/boilerplate detection can figure at this time.
-  */
+/**
+ * @typedef {Object} BodyPartInfo
+ * @prop {'plain'|'html'|'attr'} type
+ *   The type/kind/variety of body-part.  This is not a MIME type or really
+ *   even sub-type.  We have specific representations for plain and HTML types,
+ *   this is saying which is which in a self-describing way.
+ * @prop {String} part
+ *   IMAP part number.  This comes from the server's BODYSTRUCTURE and should
+ *   be thought of as an opaque value.
+ * @prop {Number} sizeEstimate
+ *   The exact size of the body part as reported by the server to us.  But the
+ *   server itself may be estimating so care must be taken when specifying
+ *   exact byte ranges since the body part may end up being longer.  Note that
+ *   this differs from the AttachmentInfo's sizeEstimate which is a guess at
+ *   the size of the file after decoding.
+ * @prop {Number} amountDownloaded
+ *   How many bytes have we downloaded so far?  This happens when we do snippet
+ *   fetching.  In this case, this value should exactly match the size of the
+ *   `_partInfo.pendingBuffer` Blob.  As such, this value can probably be
+ *   discarded.  TODO: nuke this value.
+ * @prop {Boolean} isDownloaded
+ *   Has this part been fully downloaded?  Because sizeEstimate can be a lie,
+ *   it's possible for us to have downloaded sizeEstimate bytes but still not
+ *   have fully downloaded the body part.  So this value should stick around
+ *   forever.
+ * @prop {RawImapPartInfo} _partInfo
+ *   Raw info on the part from browserbox PLUS we annotated `pendingBuffer` on
+ *   to the object when doing snippet fetching (and therefore amountDownloaded
+ *   > 0 and !isDownloaded).  TODO: clean this up further, even if it's just
+ *   renaming this to rawImapPartInfo.
+ * @prop {Blob} contentBlob
+ *   A Blob either containing a JSON-serialized quotechew.js representation,
+ *   an htmlchew.js sanitized HTML representation, or the 'attr' JSON rep,
+ *   depending on our `type`.  See the relevant files for more detail.
+ * @prop {Number} authoredBodySize
+ *   See comment for `MessageInfo.authoredBodySize`.  But, in short, the
+ *   best-effort length of the newly authored content in this body part, as
+ *   far as our quoting/boilerplate detection can figure at this time.
+ */
 export function makeBodyPart(raw) {
   // We don't persist body types to our representation that we don't understand.
-  if (raw.type !== 'plain' &&
-      raw.type !== 'html' &&
-      raw.type !== 'attr') {
-    throw new Error('Bad body type: ' + raw.type);
+  if (raw.type !== "plain" && raw.type !== "html" && raw.type !== "attr") {
+    throw new Error("Bad body type: " + raw.type);
   }
   // 0 is an okay body size, but not giving us a guess is not!
   if (raw.sizeEstimate === undefined) {
-    throw new Error('Need size estimate!');
+    throw new Error("Need size estimate!");
   }
 
   return {
@@ -276,7 +274,6 @@ export function makeBodyPart(raw) {
     authoredBodySize: raw.authoredBodySize || 0,
   };
 }
-
 
 /**
  * @typedef {Object} AttachmentInfo
@@ -350,10 +347,10 @@ export function makeBodyPart(raw) {
 export function makeAttachmentPart(raw) {
   // Something is very wrong if there is no size estimate.
   if (raw.sizeEstimate === undefined) {
-    throw new Error('Need size estimate!');
+    throw new Error("Need size estimate!");
   }
   if (raw.relId === undefined) {
-    throw new Error('attachments need relIds');
+    throw new Error("attachments need relIds");
   }
 
   return {
@@ -361,16 +358,16 @@ export function makeAttachmentPart(raw) {
     // XXX ActiveSync may leave this null, although it's conceivable the
     // server might do normalization to save us.  This needs a better treatment.
     // IMAP generates a made-up name for us if there isn't one.
-    name: (raw.name != null) ? raw.name : null,
+    name: raw.name != null ? raw.name : null,
     contentId: raw.contentId || null,
-    type: raw.type || 'application/octet-stream',
+    type: raw.type || "application/octet-stream",
     part: raw.part || null,
     encoding: raw.encoding || null,
     sizeEstimate: raw.sizeEstimate,
     downloadState: raw.downloadState || null,
     file: raw.file || null,
     charset: raw.charset || null,
-    textFormat: raw.textFormat || null
+    textFormat: raw.textFormat || null,
   };
 }
 
@@ -395,9 +392,9 @@ export function pickPartFromMessageByRelId(messageInfo, relId) {
   // specific reason.  Using charCodeAt here would be a little more
   // efficient, but arguably uglier.
   switch (relId[0]) {
-    case 'a':
+    case "a":
       return pickPartByRelId(messageInfo.attachments, relId);
-    case 'r':
+    case "r":
       return pickPartByRelId(messageInfo.relatedParts, relId);
     default:
       return null;

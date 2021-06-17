@@ -22,14 +22,13 @@ export default function GatherConversation({ db, ctx }) {
   this._ctx = ctx;
 }
 GatherConversation.prototype = {
-  gather: function(gathered) {
-    return this._db.read(
-      this._ctx,
-      {
-        conversations: new Map([[gathered.convId, null]])
+  gather(gathered) {
+    return this._db
+      .read(this._ctx, {
+        conversations: new Map([[gathered.convId, null]]),
       })
-    .then(({ conversations }) => {
-      return conversations.get(gathered.convId);
-    });
-  }
+      .then(({ conversations }) => {
+        return conversations.get(gathered.convId);
+      });
+  },
 };

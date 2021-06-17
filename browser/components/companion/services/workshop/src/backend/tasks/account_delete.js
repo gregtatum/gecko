@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../task_infra/task_definer';
+import TaskDefiner from "../task_infra/task_definer";
 
 /**
  * Delete an account.
@@ -54,31 +54,28 @@ import TaskDefiner from '../task_infra/task_definer';
  */
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'account_delete',
-    args: ['accountId'],
+    name: "account_delete",
+    args: ["accountId"],
 
-    exclusiveResources: function(args) {
-      return [
-        `account:${args.accountId}`
-      ];
+    exclusiveResources(args) {
+      return [`account:${args.accountId}`];
     },
 
-    priorityTags: function() {
-      return [
-      ];
+    priorityTags() {
+      return [];
     },
 
     async execute(ctx, planned) {
       // Acquire a write-lock on the account so we can delete it.
       await ctx.beginMutate({
-        accounts: new Map([[planned.accountId, null]])
+        accounts: new Map([[planned.accountId, null]]),
       });
 
       await ctx.finishTask({
         mutations: {
-          accounts: new Map([[planned.accountId, null]])
-        }
+          accounts: new Map([[planned.accountId, null]]),
+        },
       });
-    }
-  }
+    },
+  },
 ]);

@@ -41,8 +41,9 @@
  * potential memory leaks is not currently provided, but could be.
  */
 export function allbackMaker(names, allDoneCallback) {
-  var aggrData = Object.create(null), callbacks = {},
-      waitingFor = names.concat();
+  var aggrData = Object.create(null),
+    callbacks = {},
+    waitingFor = names.concat();
 
   names.forEach(function(name) {
     // (build a consistent shape for aggrData regardless of callback ordering)
@@ -66,8 +67,7 @@ export function allbackMaker(names, allDoneCallback) {
   });
 
   return callbacks;
-};
-
+}
 
 /**
  * A lightweight deferred 'run-all'-like construct for waiting for
@@ -124,10 +124,10 @@ export function latch() {
     var resolved = false;
     return function resolve() {
       if (resolved) {
-        var err = new Error('You have already resolved this deferred!');
+        var err = new Error("You have already resolved this deferred!");
         // Exceptions aren't always readily visible, but this is a
         // serious error and needs to be addressed.
-        console.error(err + '\n' + err.stack);
+        console.error(err + "\n" + err.stack);
         throw err;
       }
       resolved = true;
@@ -146,17 +146,17 @@ export function latch() {
   }
   var unlatch = defer();
   return {
-    defer: defer,
-    then: function () {
+    defer,
+    then() {
       var ret = deferred.promise.then.apply(deferred.promise, arguments);
       if (!ready) {
         ready = true;
         unlatch();
       }
       return ret;
-    }
+    },
   };
-};
+}
 
 /**
  * Given the results object from an allback.latch() where named callbacks were
@@ -183,7 +183,7 @@ export function extractErrFromCallbackArgs(results) {
     }
   }
   return anyErr;
-};
+}
 
 export function latchedWithRejections(namedPromises) {
   return new Promise(function(resolve) {
@@ -205,11 +205,12 @@ export function latchedWithRejections(namedPromises) {
           if (--pending === 0) {
             resolve(results);
           }
-        });
+        }
+      );
     });
     // If we didn't end up scheduling anything
     if (!pending) {
       resolve(results);
     }
   });
-};
+}

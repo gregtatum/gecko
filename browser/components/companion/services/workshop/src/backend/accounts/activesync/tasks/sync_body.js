@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import FolderSyncStateHelper from '../folder_sync_state_helper';
+import FolderSyncStateHelper from "../folder_sync_state_helper";
 
-import churnConversation from '../../../churn_drivers/conv_churn_driver';
+import churnConversation from "../../../churn_drivers/conv_churn_driver";
 
-import { processMessageContent } from '../../../bodies/mailchew';
+import { processMessageContent } from "../../../bodies/mailchew";
 
-import downloadBody from '../smotocol/download_body';
-import downloadBody25 from '../smotocol/download_body_25';
+import downloadBody from "../smotocol/download_body";
+import downloadBody25 from "../smotocol/download_body_25";
 
-import { Enums as asbEnum } from 'activesync/codepages/AirSyncBase';
+import { Enums as asbEnum } from "activesync/codepages/AirSyncBase";
 
+import { DESIRED_SNIPPET_LENGTH } from "../../../syncbase";
 
-import { DESIRED_SNIPPET_LENGTH } from '../../../syncbase';
-
-import MixinSyncBody from '../../../task_mixins/mix_sync_body';
+import MixinSyncBody from "../../../task_mixins/mix_sync_body";
 
 /**
  * The desired number of bytes to fetch when downloading bodies, but the body's
@@ -62,12 +61,12 @@ export default TaskDefiner.defineComplexTask([
       // the folder sync state or not.
       let account = await ctx.universe.acquireAccount(ctx, marker.accountId);
       let conn = await account.ensureConnection();
-      let use25 = conn.currentVersion.lt('12.0');
+      let use25 = conn.currentVersion.lt("12.0");
 
       // -- Retrieve the conversation and its messages for mutation
       let fromDb = await ctx.beginMutate({
         conversations: new Map([[req.convId, null]]),
-        messagesByConversation: new Map([[req.convId, null]])
+        messagesByConversation: new Map([[req.convId, null]]),
       });
 
       let oldConvInfo = fromDb.conversations.get(req.convId);
@@ -82,7 +81,7 @@ export default TaskDefiner.defineComplexTask([
 
       // We need to look up all the umidLocations.
       await ctx.read({
-        umidLocations
+        umidLocations,
       });
 
       // -- Get the folder sync states
@@ -94,21 +93,26 @@ export default TaskDefiner.defineComplexTask([
         rawSyncStateReads.set(folderId, null);
       }
       await ctx.mutateMore({
-        syncStates: rawSyncStateReads
+        syncStates: rawSyncStateReads,
       });
 
       let syncStates = new Map();
       for (let [folderId, rawSyncState] of rawSyncStateReads) {
         syncStates.set(
           folderId,
-          new FolderSyncStateHelper(ctx, rawSyncState, marker.accountId,
-                                    folderId));
+          new FolderSyncStateHelper(
+            ctx,
+            rawSyncState,
+            marker.accountId,
+            folderId
+          )
+        );
       }
 
       // Determine our byte budget for each message.  If omitted, we fetch the
       // whole thing.
       let truncationSize = 0;
-      if (req.amount === 'snippet') {
+      if (req.amount === "snippet") {
         truncationSize = DESIRED_SNIPPET_LENGTH;
       } else if (req.amount) {
         truncationSize = req.amount;
@@ -133,16 +137,15 @@ export default TaskDefiner.defineComplexTask([
         // this for consistency with pre-convoy, but since this refactor is
         // straightening out the control flow, this might not be needed.
         let snippetOnly = false;
-        if (truncationSize &&
-            truncationSize < bodyRep.sizeEstimate) {
+        if (truncationSize && truncationSize < bodyRep.sizeEstimate) {
           snippetOnly = true;
           if (!use25) {
-            bodyType = 'plain';
+            bodyType = "plain";
             truncationSize = DESIRED_TEXT_SNIPPET_BYTES;
           }
         }
-        let asBodyType = bodyType === 'html' ? asbEnum.Type.HTML
-                                             : asbEnum.Type.PlainText;
+        let asBodyType =
+          bodyType === "html" ? asbEnum.Type.HTML : asbEnum.Type.PlainText;
 
         // - Issue the fetch
         let bodyContent;
@@ -150,31 +153,29 @@ export default TaskDefiner.defineComplexTask([
           // the destructuring assignment expression into existing variables
           // really annoys jshint (known bug), so I'm doing things manually for
           // now.
-          let result = await downloadBody25(
-            conn,
-            {
-              folderSyncKey: syncState.syncKey,
-              folderServerId,
-              messageServerId,
-              bodyType: asBodyType
-            });
+          let result = await downloadBody25(conn, {
+            folderSyncKey: syncState.syncKey,
+            folderServerId,
+            messageServerId,
+            bodyType: asBodyType,
+          });
           bodyContent = result.bodyContent;
           syncState.syncKey = result.syncKey;
         } else {
-          bodyContent = (await downloadBody(
-            conn,
-            {
+          bodyContent = (
+            await downloadBody(conn, {
               folderServerId,
               messageServerId,
               bodyType: asBodyType,
-              truncationSize
-            })).bodyContent;
+              truncationSize,
+            })
+          ).bodyContent;
         }
 
         // - Update the message
         // We neither need to store or want to deal with \r in the processing of
         // the body. XXX this changes with mcav's streaming fixes.
-        bodyContent = bodyContent.replace(/\r/g, '');
+        bodyContent = bodyContent.replace(/\r/g, "");
 
         let { contentBlob, snippet } = processMessageContent(
           bodyContent,
@@ -207,9 +208,9 @@ export default TaskDefiner.defineComplexTask([
           // We don't actually want new sync states created if they don't
           // exist, so just giving back what we've mutated in-place is fine, if
           // bad hygiene.
-          syncStates: rawSyncStateReads
+          syncStates: rawSyncStateReads,
         },
       });
-    }
-  }
+    },
+  },
 ]);

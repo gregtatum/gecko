@@ -14,24 +14,25 @@
  * limitations under the License.
  */
 
-import ICAL from 'ical.js';
+import ICAL from "ical.js";
 
 /**
  * Validate a bearer calendar URL by verifying it parses fine and then
  * extracting metadata to help name the calendar.
  */
-export default async function validateICal({ userDetails, credentials, connInfoFields }) {
+export default async function validateICal({
+  userDetails,
+  credentials,
+  connInfoFields,
+}) {
   const calendarUrl = connInfoFields.calendarUrl;
 
   try {
-    const icalReq = new Request(
-      calendarUrl,
-      {
-      });
+    const icalReq = new Request(calendarUrl, {});
     const icalResp = await fetch(icalReq);
     if (icalResp.status >= 400) {
       return {
-        error: 'unknown',
+        error: "unknown",
         errorDetails: {
           status: icalResp.status,
           calendarUrl,
@@ -43,16 +44,17 @@ export default async function validateICal({ userDetails, credentials, connInfoF
     const parsed = ICAL.parse(icalText);
     const root = new ICAL.Component(parsed);
 
-    const calName = root.getFirstPropertyValue('x-wr-calname') || 'Unnamed Calendar';
+    const calName =
+      root.getFirstPropertyValue("x-wr-calname") || "Unnamed Calendar";
 
     userDetails.displayName = calName;
     // XXX This is not strictly correct but also doesn't matter.  We should
     // normalize how the `account_create` task chooses the account name to not
     // draw directly from this.
     userDetails.emailAddress = calName;
-  } catch(ex) {
+  } catch (ex) {
     return {
-      error: 'unknown',
+      error: "unknown",
       errorDetails: {
         message: ex.toString(),
       },
@@ -61,9 +63,8 @@ export default async function validateICal({ userDetails, credentials, connInfoF
 
   return {
     engineFields: {
-      engine: 'ical',
-      engineData: {
-      },
+      engine: "ical",
+      engineData: {},
       receiveProtoConn: null,
     },
   };

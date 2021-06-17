@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
-
+import logic from "logic";
 
 /**
  * Builds and maintains a bidirectional mapping between FolderId and Gmail label
@@ -30,7 +29,7 @@ import logic from 'logic';
  * - "[Gmail]/Sent Mail" is \Sent
  */
 function GmailLabelMapper(ctx, foldersTOC) {
-  logic.defineScope(this, 'GmailLabelMapper', { ctxId: ctx.id });
+  logic.defineScope(this, "GmailLabelMapper", { ctxId: ctx.id });
 
   this._labelToFolderId = new Map();
   this._folderIdToLabel = new Map();
@@ -38,7 +37,7 @@ function GmailLabelMapper(ctx, foldersTOC) {
   this._buildLabelMap(foldersTOC);
 }
 GmailLabelMapper.prototype = {
-  _buildLabelMap: function(foldersTOC) {
+  _buildLabelMap(foldersTOC) {
     for (let folderInfo of foldersTOC.getAllItems()) {
       let label;
       // This is effectively an inverse of our folder inference mapping.
@@ -47,32 +46,32 @@ GmailLabelMapper.prototype = {
       // explicit label name and just use that.
       switch (folderInfo.type) {
         // [Gmail] doesn't exist as far as we're concerned.
-        case 'nomail':
+        case "nomail":
           continue;
-        case 'inbox':
-          label = '\\Inbox';
+        case "inbox":
+          label = "\\Inbox";
           break;
-        case 'drafts':
-          label = '\\Drafts';
+        case "drafts":
+          label = "\\Drafts";
           break;
-        case 'all':
-        case 'archive':
-          label = '\\All';
+        case "all":
+        case "archive":
+          label = "\\All";
           break;
-        case 'important':
-          label = '\\Important';
+        case "important":
+          label = "\\Important";
           break;
-        case 'sent':
-          label = '\\Sent';
+        case "sent":
+          label = "\\Sent";
           break;
-        case 'starred':
-          label = '\\Flagged';
+        case "starred":
+          label = "\\Flagged";
           break;
-        case 'trash':
-          label = '\\Trash';
+        case "trash":
+          label = "\\Trash";
           break;
-        case 'junk':
-          label = '\\Junk';
+        case "junk":
+          label = "\\Junk";
           break;
         default:
           label = folderInfo.path;
@@ -85,7 +84,7 @@ GmailLabelMapper.prototype = {
     }
     // Labels may be user-authored with privacy implications, so use an
     // underscore to indicate the data is private.
-    logic(this, 'mapEstablished', { _labelToFolderId: this._labelToFolderId });
+    logic(this, "mapEstablished", { _labelToFolderId: this._labelToFolderId });
   },
 
   /**
@@ -96,7 +95,7 @@ GmailLabelMapper.prototype = {
    *
    * @return {FolderId[]}
    */
-  labelsToFolderIds: function(gmailLabels) {
+  labelsToFolderIds(gmailLabels) {
     let folderIds = new Set();
     for (let gmailLabel of gmailLabels) {
       let folderId = this._labelToFolderId.get(gmailLabel);
@@ -104,15 +103,16 @@ GmailLabelMapper.prototype = {
         // This is a serious invariant violation, so do report the specific
         // missing label as non-private, but keep the others private unless
         // they also fail.
-        logic(this, 'missingLabelMapping',
-              { label: gmailLabel, _allLabels: gmailLabels });
+        logic(this, "missingLabelMapping", {
+          label: gmailLabel,
+          _allLabels: gmailLabels,
+        });
       } else {
         folderIds.add(folderId);
       }
     }
     return folderIds;
   },
-
 
   /**
    * Given a `FolderId`, return the "label" that X-GM-LABELS understands.  This
@@ -121,7 +121,7 @@ GmailLabelMapper.prototype = {
    * @param {FolderId}
    * @return {String}
    */
-  folderIdToLabel: function(folderId) {
+  folderIdToLabel(folderId) {
     return this._folderIdToLabel.get(folderId);
   },
 
@@ -136,11 +136,11 @@ GmailLabelMapper.prototype = {
    * @param {Set<FolderId>} folderIds
    * @return {String[]}
    */
-  folderIdsToLabels: function(folderIds) {
-    return folderIds.map((folderId) => {
+  folderIdsToLabels(folderIds) {
+    return folderIds.map(folderId => {
       return this._folderIdToLabel.get(folderId);
     });
-  }
+  },
 };
 
 export default GmailLabelMapper;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
 /**
  * Backs an `EntireListView`, see its docs for more context.
@@ -26,13 +26,15 @@ import logic from 'logic';
  * @param {NamedContext} ctx
  */
 export default function EntireListProxy(toc, ctx) {
-  logic.defineScope(this, 'EntireListProxy', { tocType: toc.type });
+  logic.defineScope(this, "EntireListProxy", { tocType: toc.type });
 
   this.toc = toc;
   this.ctx = ctx;
   this.batchManager = ctx.batchManager;
   this.overlayResolver = ctx.dataOverlayManager.makeBoundResolver(
-    toc.overlayNamespace, ctx);
+    toc.overlayNamespace,
+    ctx
+  );
 
   this._bound_onAdd = this.onAdd.bind(this);
   this._bound_onChange = this.onChange.bind(this);
@@ -51,45 +53,49 @@ EntireListProxy.prototype = {
    * initialization.  This is required to be explicitly called to make things
    * slightly less magic and give the caller some additional control.
    */
-  populateFromList: function() {
+  populateFromList() {
     let items = this.toc.getAllItems();
     for (let i = 0; i < items.length; i++) {
       this.onAdd(items[i], i);
     }
 
-    this.batchManager.registerDirtyView(this, 'immediate');
+    this.batchManager.registerDirtyView(this, "immediate");
 
-    this.toc.on('add', this._bound_onAdd);
-    this.toc.on('change', this._bound_onChange);
-    this.toc.on('remove', this._bound_onRemove);
+    this.toc.on("add", this._bound_onAdd);
+    this.toc.on("change", this._bound_onChange);
+    this.toc.on("remove", this._bound_onRemove);
 
     this.ctx.dataOverlayManager.on(
-      this.toc.overlayNamespace, this._bound_onOverlayPush);
+      this.toc.overlayNamespace,
+      this._bound_onOverlayPush
+    );
   },
 
   /**
    * Dummy acquire implementation; we only allow a single owner.  We could make
    * this call populateFromList, but for now we don't for clarity.
    */
-  __acquire: function() {
+  __acquire() {
     return Promise.resolve(this);
   },
 
-  __release: function() {
+  __release() {
     if (!this._active) {
       return;
     }
     this._active = false;
 
-    this.toc.removeListener('add', this._bound_onAdd);
-    this.toc.removeListener('change', this._bound_onChange);
-    this.toc.removeListener('remove', this._bound_onRemove);
+    this.toc.removeListener("add", this._bound_onAdd);
+    this.toc.removeListener("change", this._bound_onChange);
+    this.toc.removeListener("remove", this._bound_onRemove);
 
     this.ctx.dataOverlayManager.removeListener(
-      this.toc.overlayNamespace, this._bound_onOverlayPush);
+      this.toc.overlayNamespace,
+      this._bound_onOverlayPush
+    );
   },
 
-  _dirty: function() {
+  _dirty() {
     if (this.dirty) {
       return;
     }
@@ -98,20 +104,20 @@ EntireListProxy.prototype = {
     this.batchManager.registerDirtyView(this);
   },
 
-  onAdd: function(item, index) {
+  onAdd(item, index) {
     this._dirty();
 
     this._idToChangeIndex.set(item.id, this._pendingChanges.length);
     this._pendingChanges.push({
-      type: 'add',
+      type: "add",
       index,
       state: item,
       // since we're adding the item, we need to pull the overlay data.
-      overlays: this.overlayResolver(item.id)
+      overlays: this.overlayResolver(item.id),
     });
   },
 
-  onChange: function(item, index) {
+  onChange(item, index) {
     // Update the existing add/change to have the updated state rather than
     // adding a change that clobbers the previous state
     if (this._idToChangeIndex.has(item.id)) {
@@ -124,16 +130,16 @@ EntireListProxy.prototype = {
     this._dirty();
     this._idToChangeIndex.set(item.id, this._pendingChanges.length);
     this._pendingChanges.push({
-      type: 'change',
+      type: "change",
       index,
       state: item,
       // we don't need to pull the overlay data because it will not have changed
       // unless we get a push.
-      overlays: null
+      overlays: null,
     });
   },
 
-  onOverlayPush: function(itemId) {
+  onOverlayPush(itemId) {
     // If the TOC does't know about the item, then there's nothing to report.
     if (!this.toc.itemsById.has(itemId)) {
       return;
@@ -155,33 +161,33 @@ EntireListProxy.prototype = {
     this._dirty();
     this._idToChangeIndex.set(itemId, this._pendingChanges.length);
     this._pendingChanges.push({
-      type: 'change',
+      type: "change",
       // This is absolutely essential; it's not freebie meta-data, it's how the
       // EntireListView currently retrieves the object from its list.
       index: this.toc.getItemIndexById(itemId),
       state: null,
-      overlays
+      overlays,
     });
   },
 
-  onRemove: function(id, index) {
+  onRemove(id, index) {
     this._dirty();
 
     this._pendingChanges.push({
-      type: 'remove',
-      index
+      type: "remove",
+      index,
     });
     this._idToChangeIndex.delete(id);
   },
 
-  flush: function() {
+  flush() {
     let changes = this._pendingChanges;
     this._pendingChanges = [];
     this._idToChangeIndex.clear();
     this.dirty = false;
 
     return {
-      changes: changes
+      changes,
     };
-  }
+  },
 };

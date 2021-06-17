@@ -171,8 +171,8 @@
  *
  * See test_disaster_recovery.js for an example test using these primitives.
  */
-import evt from 'evt';
-import equal from 'equal';
+import evt from "evt";
+import equal from "equal";
 
 /**
  * The `logic` module is callable, as a shorthand for `logic.event()`.
@@ -190,7 +190,7 @@ evt.mix(logic);
  * @param {object|null} defaultDetails
  */
 logic.scope = function(namespace, defaultDetails) {
-    return new Scope(namespace, defaultDetails);
+  return new Scope(namespace, defaultDetails);
 };
 
 var objectToScope = new WeakMap();
@@ -199,10 +199,13 @@ function toScope(scope) {
   if (!(scope instanceof Scope)) {
     scope = objectToScope.get(scope);
     if (!scope) {
-      throw new Error('Invalid scope ' + scope +
-                      ' passed to logic.event(); ' +
-                      'did you remember to call logic.defineScope()? ' +
-                      new Error().stack);
+      throw new Error(
+        "Invalid scope " +
+          scope +
+          " passed to logic.event(); " +
+          "did you remember to call logic.defineScope()? " +
+          new Error().stack
+      );
     }
   }
   return scope;
@@ -241,8 +244,10 @@ logic.defineScope = function(obj, namespace, defaultDetails) {
  */
 logic.subscope = function(scope, defaultDetails) {
   scope = toScope(scope);
-  return new Scope(scope.namespace, into(shallowClone(scope.defaultDetails),
-                                          shallowClone(defaultDetails)));
+  return new Scope(
+    scope.namespace,
+    into(shallowClone(scope.defaultDetails), shallowClone(defaultDetails))
+  );
 };
 
 /**
@@ -265,15 +270,15 @@ logic.event = function(scope, type, details) {
   // JSON object work.
   var isDefaultPrevented = false;
   var preprocessEvent = {
-    scope: scope,
+    scope,
     namespace: scope.namespace,
-    type: type,
-    details: details,
-    preventDefault: function() {
+    type,
+    details,
+    preventDefault() {
       isDefaultPrevented = true;
-    }
+    },
   };
-  logic.emit('preprocessEvent', preprocessEvent);
+  logic.emit("preprocessEvent", preprocessEvent);
 
   if (isDefaultPrevented) {
     return { id: 0 }; // async/await require a return object regardless.
@@ -282,15 +287,18 @@ logic.event = function(scope, type, details) {
   type = preprocessEvent.type;
   details = preprocessEvent.details;
 
-  if (typeof type !== 'string') {
-    throw new Error('Invalid "type" passed to logic.event(); ' +
-                    'expected a string, got "' + type + '"');
+  if (typeof type !== "string") {
+    throw new Error(
+      'Invalid "type" passed to logic.event(); ' +
+        'expected a string, got "' +
+        type +
+        '"'
+    );
   }
 
   if (scope.defaultDetails) {
-    if(isPlainObject(details)) {
-      details = into(shallowClone(scope.defaultDetails),
-                      shallowClone(details));
+    if (isPlainObject(details)) {
+      details = into(shallowClone(scope.defaultDetails), shallowClone(details));
     } else {
       details = shallowClone(scope.defaultDetails);
     }
@@ -299,21 +307,20 @@ logic.event = function(scope, type, details) {
   }
 
   var event = new LogicEvent(scope, type, details);
-  logic.emit('censorEvent', event);
-  logic.emit('event', event);
+  logic.emit("censorEvent", event);
+  logic.emit("event", event);
   // If we have an associated BroadcastChannel, broadcast the event.
   if (logic.bc) {
-    logic.bc.postMessage({ mode: 'append', event: event.jsonRepresentation });
+    logic.bc.postMessage({ mode: "append", event: event.jsonRepresentation });
   }
 
   if (logic.realtimeLogEverything) {
     //dump('logic: ' + event.toString() + '\n');
-    dump('logic: ' + JSON.stringify(event) + '\n');
+    dump("logic: " + JSON.stringify(event) + "\n");
   }
 
   return event;
 };
-
 
 // True when being run within a test.
 logic.underTest = false;
@@ -335,10 +342,9 @@ logic.fail = function(ex) {
       throw ex;
     }
   } else {
-    console.error('Logic fail:', ex);
+    console.error("Logic fail:", ex);
   }
 };
-
 
 var nextId = 1;
 
@@ -363,9 +369,8 @@ var interceptions = {};
 logic.interceptable = function(type, fn) {
   if (interceptions[type]) {
     return interceptions[type]();
-  } else {
-    return fn();
   }
+  return fn();
 };
 
 /**
@@ -397,9 +402,9 @@ logic.interceptOnce = function(type, replacementFn) {
  */
 logic.match = function(ns, type, detailPredicate) {
   return new LogicMatcher(
-    LogicMatcher.normalizeMatchArgs(ns, type, detailPredicate));
+    LogicMatcher.normalizeMatchArgs(ns, type, detailPredicate)
+  );
 };
-
 
 function MismatchError(matcher, event) {
   this.matcher = matcher;
@@ -408,17 +413,27 @@ function MismatchError(matcher, event) {
 
 MismatchError.prototype = Object.create(Error.prototype, {
   constructor: { value: MismatchError },
-  toString: { value: function() {
-    if (this.matcher.not) {
-      return 'MismatchError: expected ' + this.event +
-        ' to not occur (failIfMatched ' + this.matcher + ').';
-    } else {
-      return 'MismatchError: expected ' + this.event +
-        ' to match ' + JSON.stringify(this.matcher.detailPredicate) + '.';
-    }
-  }}
+  toString: {
+    value() {
+      if (this.matcher.not) {
+        return (
+          "MismatchError: expected " +
+          this.event +
+          " to not occur (failIfMatched " +
+          this.matcher +
+          ")."
+        );
+      }
+      return (
+        "MismatchError: expected " +
+        this.event +
+        " to match " +
+        JSON.stringify(this.matcher.detailPredicate) +
+        "."
+      );
+    },
+  },
 });
-
 
 /**
  * This is the object returned from `logic.match`. It acts as a Promise that
@@ -443,7 +458,7 @@ function LogicMatcher(opts) {
     opts.prevMatcher.anotherMatcherNeedsMyLogs = true;
   }
 
-  logic.defineScope(this, 'LogicMatcher');
+  logic.defineScope(this, "LogicMatcher");
 
   var hasPrevPromise = !!opts.prevPromise;
   var normalizedPrevPromise = opts.prevPromise || Promise.resolve();
@@ -451,9 +466,11 @@ function LogicMatcher(opts) {
   if (this.not) {
     // XXX this should probably bind instantly like the next case.
     this.promise = normalizedPrevPromise.then(() => {
-      this.capturedLogs.some((event) => {
-        if ((!this.ns || event.namespace === this.ns) &&
-            event.matches(this.type, this.detailPredicate)) {
+      this.capturedLogs.some(event => {
+        if (
+          (!this.ns || event.namespace === this.ns) &&
+          event.matches(this.type, this.detailPredicate)
+        ) {
           throw new MismatchError(this, event);
         }
       });
@@ -464,14 +481,13 @@ function LogicMatcher(opts) {
       // subscribe to a following match.
       var subscribeToNextMatch = () => {
         var timeoutId = setTimeout(() => {
-          logic(this, 'failedMatch',
-                {
-                  ns: this.ns,
-                  type: this.type,
-                  detailPredicate: this.detailPredicate,
-                  capturedLogs: this.capturedLogs
-                });
-          reject(new Error('LogicMatcherTimeout: ' + this));
+          logic(this, "failedMatch", {
+            ns: this.ns,
+            type: this.type,
+            detailPredicate: this.detailPredicate,
+            capturedLogs: this.capturedLogs,
+          });
+          reject(new Error("LogicMatcherTimeout: " + this));
         }, this.timeoutMS);
 
         // Promise chains have "dead spots" in between resolution
@@ -483,7 +499,7 @@ function LogicMatcher(opts) {
         // up a new listener for each LogicMatcher. Instead, since
         // every matcher has a pointer to its prevMatcher, we can
         // just grab the missing logs from there.
-        var resolveThisMatcher = (event) => {
+        var resolveThisMatcher = event => {
           this.resolved = true;
           this.capturedLogs = []; // Extra events will go here.
           if (!this.anotherMatcherNeedsMyLogs) {
@@ -491,42 +507,44 @@ function LogicMatcher(opts) {
           }
         };
 
-        var matchFn = (event) => {
+        var matchFn = event => {
           this.capturedLogs.push(event);
           if (this.resolved) {
             return true;
           }
 
-          if (this.ns && event.namespace !== this.ns ||
-              event.type !== this.type) {
+          if (
+            (this.ns && event.namespace !== this.ns) ||
+            event.type !== this.type
+          ) {
             return false; // did not match
           }
           if (event.matches(this.type, this.detailPredicate)) {
             resolveThisMatcher(event);
             this.matchedLogs.push(event);
             clearTimeout(timeoutId);
-            logic(this, 'match', { ns: this.ns,
-                                    type: this.type,
-                                    event: event });
+            logic(this, "match", {
+              ns: this.ns,
+              type: this.type,
+              event,
+            });
             resolve(event);
             return true;
-          } else {
-            if (this.failOnMismatchedDetails) {
-              resolveThisMatcher(event);
-              reject(new MismatchError(this, event));
-              return true; // matched
-            } else {
-              // Ignore mismatched events; maybe we'll match later.
-            }
+          } else if (this.failOnMismatchedDetails) {
+            resolveThisMatcher(event);
+            reject(new MismatchError(this, event));
+            return true; // matched
           }
+          // Ignore mismatched events; maybe we'll match later.
+
           return false; // not done yet, didn't find a match
         };
 
         this.removeMatchListener = () => {
-          logic.removeListener('event', matchFn);
+          logic.removeListener("event", matchFn);
         };
 
-        logic.on('event', matchFn);
+        logic.on("event", matchFn);
 
         if (opts.prevMatcher) {
           var prevLogs = opts.prevMatcher.capturedLogs;
@@ -541,14 +559,14 @@ function LogicMatcher(opts) {
           // listen to events any more.
           opts.prevMatcher.removeMatchListener();
         }
-      }
+      };
 
       if (hasPrevPromise) {
-        normalizedPrevPromise.then(subscribeToNextMatch, (e) => reject(e) );
+        normalizedPrevPromise.then(subscribeToNextMatch, e => reject(e));
       } else {
         try {
           subscribeToNextMatch();
-        } catch(e) {
+        } catch (e) {
           reject(e);
         }
       }
@@ -562,16 +580,15 @@ function LogicMatcher(opts) {
 
 LogicMatcher.normalizeMatchArgs = function(ns, type, details) {
   // 'ns' is optional
-  if (typeof type === 'object') {
+  if (typeof type === "object") {
     details = type;
     type = ns;
     ns = null;
   }
-  return { ns: ns, type: type, detailPredicate: details };
-}
+  return { ns, type, detailPredicate: details };
+};
 
 LogicMatcher.prototype = {
-
   /**
    * Same as `logic.match`.
    */
@@ -603,27 +620,33 @@ LogicMatcher.prototype = {
         var ret = fn(this.matchedLogs.slice());
         if (ret instanceof Promise) {
           ret = new LogicMatcher({
-            prevPromise: ret
+            prevPromise: ret,
           });
         }
         return ret;
-      }, catchFn)
+      }, catchFn),
     });
   },
 
   toString() {
-    return '<LogicMatcher ' + (this.ns ? this.ns + '/' : '') +
-      this.type + ' ' + new ObjectSimplifier().simplify(this.detailPredicate)
-      + '>';
-  }
-}
+    return (
+      "<LogicMatcher " +
+      (this.ns ? this.ns + "/" : "") +
+      this.type +
+      " " +
+      new ObjectSimplifier().simplify(this.detailPredicate) +
+      ">"
+    );
+  },
+};
 
 function Scope(namespace, defaultDetails) {
   this.namespace = namespace;
 
   if (defaultDetails && !isPlainObject(defaultDetails)) {
-    throw new Error('Invalid defaultDetails; expected a plain-old object: ' +
-                    defaultDetails);
+    throw new Error(
+      "Invalid defaultDetails; expected a plain-old object: " + defaultDetails
+    );
   }
   this.defaultDetails = defaultDetails;
 }
@@ -637,68 +660,78 @@ function ObjectSimplifier(opts) {
 }
 
 ObjectSimplifier.prototype = {
-  simplify: function(x) {
+  simplify(x) {
     return this._simplify(x, 0, new WeakSet());
   },
 
-  _simplify: function(x, depth, cacheSet) {
+  _simplify(x, depth, cacheSet) {
     if (cacheSet.has(x)) {
-      return '(cycle)';
+      return "(cycle)";
     }
-    if (typeof x === 'number') {
+    if (typeof x === "number") {
       return x;
-    } else if (typeof x === 'string') {
+    } else if (typeof x === "string") {
       return x.slice(0, this.maxStringLength);
     } else if (x && x.BYTES_PER_ELEMENT) {
       // TypedArray
       return x.slice(0, this.maxArrayLength);
     } else if (Array.isArray(x)) {
       if (depth < this.maxDepth) {
-        return x.slice(0, this.maxArrayLength)
-          .map((element) => this._simplify(element, depth + 1, cacheSet));
-      } else {
-        return '[Array length=' + x.length + ']';
+        return x
+          .slice(0, this.maxArrayLength)
+          .map(element => this._simplify(element, depth + 1, cacheSet));
       }
-    } else if (x && typeof x === 'object') {
+      return "[Array length=" + x.length + "]";
+    } else if (x && typeof x === "object") {
       cacheSet.add(x);
       if (!isPlainObject(x)) {
         if (x.toJSON) {
           return this._simplify(x.toJSON(), depth, cacheSet);
         } else if (x.toString) {
           return this._simplify(x.toString(), depth, cacheSet);
-        } else {
-          return '(?)';
+        } else if (x instanceof Map) {
+          return this._simplify(
+            [...Map.prototype.entries.call(x)].toJSON(),
+            depth,
+            cacheSet
+          );
+        } else if (x instanceof Set) {
+          return this._simplify(
+            [...Set.prototype.entries.call(x)].toJSON(),
+            depth,
+            cacheSet
+          );
         }
-      } else {
-        if (depth < this.maxDepth) {
-          var retObj = {};
-          var idx = 0;
-          for (var key in x) {
-            if (idx > this.maxObjectLength) {
-              break;
-            }
-            retObj[key] = this._simplify(x[key], depth + 1, cacheSet);
-            idx++;
-          }
-          return retObj;
-        } else if (x.toString) {
-          return this._simplify(x.toString(), depth, cacheSet);
-        } else {
-          return '(object?)';
-        }
+        return "(?)";
       }
-    } else if (typeof x === 'function') {
-      return '(function)';
-    } else {
-      return x;
+      if (depth < this.maxDepth) {
+        var retObj = {};
+        var idx = 0;
+        for (var key in x) {
+          if (idx > this.maxObjectLength) {
+            break;
+          }
+          retObj[key] = this._simplify(x[key], depth + 1, cacheSet);
+          idx++;
+        }
+        return retObj;
+      } else if (x.toString) {
+        return this._simplify(x.toString(), depth, cacheSet);
+      }
+      return "(object?)";
+    } else if (typeof x === "function") {
+      return "(function)";
     }
-  }
+    return x;
+  },
 };
 
 function LogicEvent(scope, type, details) {
   if (!(scope instanceof Scope)) {
-    throw new Error('Invalid "scope" passed to LogicEvent(); ' +
-                    'did you remember to call logic.defineScope()?');
+    throw new Error(
+      'Invalid "scope" passed to LogicEvent(); ' +
+        "did you remember to call logic.defineScope()?"
+    );
   }
 
   this.scope = scope;
@@ -711,34 +744,42 @@ function LogicEvent(scope, type, details) {
     type: this.type,
     details: new ObjectSimplifier().simplify(this.details),
     time: this.time,
-    id: this.id
+    id: this.id,
   };
 }
 
 LogicEvent.fromJSON = function(data) {
-  var event = new LogicEvent(new Scope(data.namespace),
-                              data.type,
-                              data.details);
+  var event = new LogicEvent(
+    new Scope(data.namespace),
+    data.type,
+    data.details
+  );
   event.time = data.time;
   event.id = data.id;
   return event;
-}
+};
 
 LogicEvent.prototype = {
   get namespace() {
     return this.scope.namespace;
   },
 
-  toJSON: function() {
+  toJSON() {
     return this.jsonRepresentation;
   },
 
-  toString: function() {
+  toString() {
     // XXX handle coloring more responsibly.  (not all toString invocations
     // want color codes... but the ones we hvae do do :)
-    return '<LogicEvent \x1b[34m' + this.namespace + '\x1b[0m/\x1b[36m' +
-      this.type + '\x1b[0m\n\x1b[37m' +
-      JSON.stringify(this.jsonRepresentation.details, null, 2) + '\x1b[0m>';
+    return (
+      "<LogicEvent \x1b[34m" +
+      this.namespace +
+      "\x1b[0m/\x1b[36m" +
+      this.type +
+      "\x1b[0m\n\x1b[37m" +
+      JSON.stringify(this.jsonRepresentation.details, null, 2) +
+      "\x1b[0m>"
+    );
   },
 
   /**
@@ -748,12 +789,12 @@ LogicEvent.prototype = {
    * @param {string} type
    * @param {object|function|null} detailPredicate
    */
-  matches: function(type, detailPredicate) {
+  matches(type, detailPredicate) {
     if (this.type !== type) {
       return false;
     }
 
-    if (typeof detailPredicate === 'function') {
+    if (typeof detailPredicate === "function") {
       return !!detailPredicate(this.details);
     } else if (isPlainObject(detailPredicate)) {
       for (var key in detailPredicate) {
@@ -765,30 +806,28 @@ LogicEvent.prototype = {
 
         if (expected === undefined) {
           continue; // We don't care about these.
-        } else if (!this.details ||
-                    !equal(expected, actual)) {
+        } else if (!this.details || !equal(expected, actual)) {
           return false;
         }
       }
       return true;
     } else if (detailPredicate != null) {
       return equal(this.details, detailPredicate);
-    } else {
-      return true;
     }
-  }
+    return true;
+  },
 };
 
 function isPlainObject(obj) {
-  if (!obj || typeof obj !== 'object') {
+  if (!obj || typeof obj !== "object") {
     return false;
   }
   // Object.create(null) has no .toString().
-  if (obj.toString && (obj.toString() !== '[object Object]')) {
+  if (obj.toString && obj.toString() !== "[object Object]") {
     return false;
   }
   for (var k in obj) {
-    if (typeof k === 'function') {
+    if (typeof k === "function") {
       return false;
     }
   }
@@ -819,10 +858,10 @@ logic.startAsync = function(scope, type, details) {
     reject = _reject;
   });
   return {
-    resolve: resolve,
-    reject: reject
+    resolve,
+    reject,
   };
-}
+};
 
 /**
  * A tracked version of `new Promise()`, where `fn` here is your promise
@@ -830,7 +869,7 @@ logic.startAsync = function(scope, type, details) {
  * is required. Events will be logged to track the promise's resolution.
  */
 logic.async = function(scope, type, details, fn) {
-  if (!fn && typeof details === 'function') {
+  if (!fn && typeof details === "function") {
     fn = details;
     details = null;
   }
@@ -839,26 +878,35 @@ logic.async = function(scope, type, details, fn) {
 
   var startEvent;
   var promise = new Promise((resolve, reject) => {
-    startEvent = logic(scope, 'begin ' + type, {
+    startEvent = logic(scope, "begin " + type, {
       asyncStatus: 0, // 'pending', as per Promise's private 'status' property.
-      asyncName: type
+      asyncName: type,
     });
 
-    fn((result) => {
-      promiseToResultEventMap.set(promise, logic(scope, type, {
-        asyncStatus: 1, // 'resolved'
-        sourceEventIds: [startEvent.id],
-        result: result
-      }));
-      resolve(result);
-    }, (error) => {
-      promiseToResultEventMap.set(promise, logic(scope, type, {
-        asyncStatus: 2, // 'rejected'
-        sourceEventIds: [startEvent.id],
-        error: error
-      }));
-      reject(error);
-    });
+    fn(
+      result => {
+        promiseToResultEventMap.set(
+          promise,
+          logic(scope, type, {
+            asyncStatus: 1, // 'resolved'
+            sourceEventIds: [startEvent.id],
+            result,
+          })
+        );
+        resolve(result);
+      },
+      error => {
+        promiseToResultEventMap.set(
+          promise,
+          logic(scope, type, {
+            asyncStatus: 2, // 'rejected'
+            sourceEventIds: [startEvent.id],
+            error,
+          })
+        );
+        reject(error);
+      }
+    );
   });
 
   promiseToStartEventMap.set(promise, startEvent);
@@ -879,34 +927,37 @@ logic.await = function(scope, type, details, promise) {
   scope = logic.subscope(scope, details);
 
   var startEvent = promiseToStartEventMap.get(promise);
-  var awaitEvent = logic.event(scope, 'await ' + type, {
+  var awaitEvent = logic.event(scope, "await " + type, {
     awaitStatus: 0, // 'pending', as per Promise's private 'status' property.
     sourceEventIds: startEvent ? [startEvent.id] : null,
-    awaitName: type
+    awaitName: type,
   });
 
-  return promise.then((result) => {
-    var resultEvent = promiseToResultEventMap.get(promise);
-    logic(scope, type, {
-      awaitStatus: 1, // 'resolved'
-      result: result,
-      sourceEventIds: (resultEvent
-                        ? [resultEvent.id, awaitEvent.id]
-                        : [awaitEvent.id])
-    });
-    return result;
-  }, (error) => {
-    var resultEvent = promiseToResultEventMap.get(promise);
-    logic(scope, type, {
-      awaitStatus: 2, // 'rejected'
-      error: error,
-      stack: error && error.stack,
-      sourceEventIds: (resultEvent
-                        ? [resultEvent.id, awaitEvent.id]
-                        : [awaitEvent.id])
-    });
-    throw error;
-  });
+  return promise.then(
+    result => {
+      var resultEvent = promiseToResultEventMap.get(promise);
+      logic(scope, type, {
+        awaitStatus: 1, // 'resolved'
+        result,
+        sourceEventIds: resultEvent
+          ? [resultEvent.id, awaitEvent.id]
+          : [awaitEvent.id],
+      });
+      return result;
+    },
+    error => {
+      var resultEvent = promiseToResultEventMap.get(promise);
+      logic(scope, type, {
+        awaitStatus: 2, // 'rejected'
+        error,
+        stack: error && error.stack,
+        sourceEventIds: resultEvent
+          ? [resultEvent.id, awaitEvent.id]
+          : [awaitEvent.id],
+      });
+      throw error;
+    }
+  );
 };
 
 function shallowClone(x) {
@@ -916,9 +967,8 @@ function shallowClone(x) {
       ret[key] = x[key];
     }
     return ret;
-  } else {
-    return x;
   }
+  return x;
 }
 
 /**

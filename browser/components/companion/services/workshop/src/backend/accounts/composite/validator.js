@@ -15,17 +15,14 @@
  */
 
 async function gimmeProbers(isImap) {
-  return new Promise(function(resolve) {
-    if (isImap) {
-      const receiveMod = await import('../imap/probe');
-      const sendMod = await import('../smtp/probe');
-      return [receiveMod.default, sendMod.default];
-    } else {
-      const receiveMod = await import('../pop3/probe');
-      const sendMod = await import('../smtp/probe');
-      return [receiveMod.default, sendMod.default];
-    }
-  });
+  if (isImap) {
+    const receiveMod = await import("../imap/probe");
+    const sendMod = await import("../smtp/probe");
+    return [receiveMod.default, sendMod.default];
+  }
+  const receiveMod = await import("../pop3/probe");
+  const sendMod = await import("../smtp/probe");
+  return [receiveMod.default, sendMod.default];
 }
 
 /**
@@ -41,7 +38,7 @@ async function gimmeProbers(isImap) {
  * errorDetails } on failure.
  */
 export default async function({ credentials, typeFields, connInfoFields }) {
-  let isImap = (typeFields.receiveType === 'imap');
+  let isImap = typeFields.receiveType === "imap";
 
   // - Dynamically load the required modules.
   // But in a statically traceable way.
@@ -51,10 +48,14 @@ export default async function({ credentials, typeFields, connInfoFields }) {
   // Note: For OAUTH accounts, the credentials may be updated
   // in-place if a new access token was required.  Our callers are required to
   // be cool with this.
-  let receivePromise =
-    receiveProber.probeAccount(credentials, connInfoFields.receiveConnInfo);
-  let sendPromise =
-    sendProber.probeAccount(credentials, connInfoFields.sendConnInfo);
+  let receivePromise = receiveProber.probeAccount(
+    credentials,
+    connInfoFields.receiveConnInfo
+  );
+  let sendPromise = sendProber.probeAccount(
+    credentials,
+    connInfoFields.sendConnInfo
+  );
   // ... but we don't have to process them in that order.
 
   // - Process the receive probe results
@@ -69,21 +70,21 @@ export default async function({ credentials, typeFields, connInfoFields }) {
       engineFields = {
         engine: receiveResults.engine,
         engineData: {
-          capability: protoConn.capability
-        }
+          capability: protoConn.capability,
+        },
       };
     } else {
       engineFields = {
-        engine: 'pop3',
+        engine: "pop3",
         engineData: {
-          preferredAuthMethod: protoConn.authMethod
-        }
+          preferredAuthMethod: protoConn.authMethod,
+        },
       };
     }
   } catch (error) {
     return {
       error,
-      errorDetails: { server: connInfoFields.receiveConnInfo.hostname }
+      errorDetails: { server: connInfoFields.receiveConnInfo.hostname },
     };
   }
 
@@ -98,12 +99,12 @@ export default async function({ credentials, typeFields, connInfoFields }) {
     }
     return {
       error,
-      errorDetails: { server: connInfoFields.sendConnInfo.hostname }
+      errorDetails: { server: connInfoFields.sendConnInfo.hostname },
     };
   }
 
   return {
     engineFields,
-    receiveProtoConn: protoConn
+    receiveProtoConn: protoConn,
   };
 }

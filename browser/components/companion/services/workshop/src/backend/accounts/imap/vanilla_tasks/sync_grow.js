@@ -14,25 +14,28 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { shallowClone } from 'shared/util';
+import { shallowClone } from "shared/util";
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import { quantizeDate, NOW } from 'shared/date';
+import { quantizeDate, NOW } from "shared/date";
 
-import * as imapchew from '../imapchew';
+import * as imapchew from "../imapchew";
 const parseImapDateTime = imapchew.parseImapDateTime;
 
-import FolderSyncStateHelper from '../vanilla/folder_sync_state_helper';
+import FolderSyncStateHelper from "../vanilla/folder_sync_state_helper";
 
-import { OLDEST_SYNC_DATE, SYNC_WHOLE_FOLDER_AT_N_MESSAGES,
-        GROWTH_MESSAGE_COUNT_TARGET } from '../../../syncbase';
+import {
+  OLDEST_SYNC_DATE,
+  SYNC_WHOLE_FOLDER_AT_N_MESSAGES,
+  GROWTH_MESSAGE_COUNT_TARGET,
+} from "../../../syncbase";
 
-import { syncNormalOverlay } from '../../../task_helpers/sync_overlay_helpers';
+import { syncNormalOverlay } from "../../../task_helpers/sync_overlay_helpers";
 
-import MixinImapProbeForDate from '../task_mixins/imap_mix_probe_for_date';
+import MixinImapProbeForDate from "../task_mixins/imap_mix_probe_for_date";
 
 /**
  * Expand the date-range of known messages for the given folder.
@@ -51,54 +54,57 @@ import MixinImapProbeForDate from '../task_mixins/imap_mix_probe_for_date';
 export default TaskDefiner.defineAtMostOnceTask([
   MixinImapProbeForDate,
   {
-    name: 'sync_grow',
-    binByArg: 'folderId',
+    name: "sync_grow",
+    binByArg: "folderId",
 
     helped_overlay_folders: syncNormalOverlay,
 
     helped_invalidate_overlays(folderId, dataOverlayManager) {
-      dataOverlayManager.announceUpdatedOverlayData('folders', folderId);
+      dataOverlayManager.announceUpdatedOverlayData("folders", folderId);
     },
 
     helped_already_planned(ctx, rawTask) {
       // The group should already exist; opt into its membership to get a
       // Promise
       return Promise.resolve({
-        result: ctx.trackMeInTaskGroup('sync_grow:' + rawTask.folderId)
+        result: ctx.trackMeInTaskGroup("sync_grow:" + rawTask.folderId),
       });
     },
 
     helped_plan(ctx, rawTask) {
       let plannedTask = shallowClone(rawTask);
       plannedTask.resources = [
-        'online',
+        "online",
         `credentials!${rawTask.accountId}`,
-        `happy!${rawTask.accountId}`
+        `happy!${rawTask.accountId}`,
       ];
-      plannedTask.priorityTags = [
-        `view:folder:${rawTask.folderId}`
-      ];
+      plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
 
       // Create a task group that follows this task and all its offspring.  This
       // will define the lifetime of our overlay as well.
-      let groupPromise =
-        ctx.trackMeInTaskGroup('sync_grow:' + rawTask.folderId);
+      let groupPromise = ctx.trackMeInTaskGroup(
+        "sync_grow:" + rawTask.folderId
+      );
       return Promise.resolve({
         taskState: plannedTask,
         remainInProgressUntil: groupPromise,
-        result: groupPromise
+        result: groupPromise,
       });
     },
 
     async helped_execute(ctx, req) {
       // -- Exclusively acquire the sync state for the folder
       let fromDb = await ctx.beginMutate({
-        syncStates: new Map([[req.folderId, null]])
+        syncStates: new Map([[req.folderId, null]]),
       });
 
       let syncState = new FolderSyncStateHelper(
-        ctx, fromDb.syncStates.get(req.folderId), req.accountId,
-        req.folderId, 'grow');
+        ctx,
+        fromDb.syncStates.get(req.folderId),
+        req.accountId,
+        req.folderId,
+        "grow"
+      );
 
       // -- Enter the folder to get an estimate of the number of messages
       let account = await ctx.universe.acquireAccount(ctx, req.accountId);
@@ -118,29 +124,37 @@ export default TaskDefiner.defineAtMostOnceTask([
 
       // If there are fewer messages left to sync than our constant for this
       // purpose, then just set the date range to our oldest sync date.
-      if (!isNaN(estimatedUnsyncedMessages) &&
-          estimatedUnsyncedMessages < Math.max(SYNC_WHOLE_FOLDER_AT_N_MESSAGES,
-                                               GROWTH_MESSAGE_COUNT_TARGET)) {
+      if (
+        !isNaN(estimatedUnsyncedMessages) &&
+        estimatedUnsyncedMessages <
+          Math.max(SYNC_WHOLE_FOLDER_AT_N_MESSAGES, GROWTH_MESSAGE_COUNT_TARGET)
+      ) {
         newSinceDate = OLDEST_SYNC_DATE;
       } else {
         newSinceDate = await this._probeForDateUsingSequenceNumbers({
-          ctx, account, folderInfo,
+          ctx,
+          account,
+          folderInfo,
           startSeq: mailboxInfo.exists - syncState.knownMessageCount,
-          curDate: existingSinceDate || quantizeDate(NOW())
+          curDate: existingSinceDate || quantizeDate(NOW()),
         });
       }
 
-       if (existingSinceDate) {
+      if (existingSinceDate) {
         searchSpec.before = new Date(quantizeDate(existingSinceDate));
       }
       searchSpec.since = new Date(newSinceDate);
 
       let syncDate = NOW();
 
-      logic(ctx, 'searching', { searchSpec: searchSpec });
+      logic(ctx, "searching", { searchSpec });
       // Find out new UIDs covering the range in question.
       let { result: uids } = await account.pimap.search(
-        ctx, folderInfo, searchSpec, { byUid: true });
+        ctx,
+        folderInfo,
+        searchSpec,
+        { byUid: true }
+      );
 
       // -- Fetch flags and the dates for the new messages
       // We want the date so we can prioritize the synchronization of the
@@ -153,11 +167,7 @@ export default TaskDefiner.defineAtMostOnceTask([
           ctx,
           folderInfo,
           newUids,
-          [
-            'UID',
-            'INTERNALDATE',
-            'FLAGS'
-          ],
+          ["UID", "INTERNALDATE", "FLAGS"],
           { byUid: true }
         );
 
@@ -193,10 +203,10 @@ export default TaskDefiner.defineAtMostOnceTask([
       return {
         mutations: {
           syncStates: new Map([[req.folderId, syncState.rawSyncState]]),
-          umidLocations: syncState.umidLocationWrites
+          umidLocations: syncState.umidLocationWrites,
         },
         newData: {
-          tasks: syncState.tasksToSchedule
+          tasks: syncState.tasksToSchedule,
         },
         atomicClobbers: {
           folders: new Map([
@@ -209,11 +219,11 @@ export default TaskDefiner.defineAtMostOnceTask([
                 lastSuccessfulSyncAt: syncDate,
                 lastAttemptedSyncAt: syncDate,
                 failedSyncsSinceLastSuccessfulSync: 0,
-              }
-            ]])
-        }
+              },
+            ],
+          ]),
+        },
       };
-    }
-  }
+    },
+  },
 ]);
-

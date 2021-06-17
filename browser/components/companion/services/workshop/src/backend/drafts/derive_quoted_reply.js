@@ -14,46 +14,66 @@
  * limitations under the License.
  */
 
-import { effectiveAuthorGivenReplyTo, addressPairFromIdentity,
-        replyToFromIdentity } from './address_helpers';
+import {
+  effectiveAuthorGivenReplyTo,
+  addressPairFromIdentity,
+  replyToFromIdentity,
+} from "./address_helpers";
 
-import { generateReplySubject, generateReplyParts } from '../bodies/mailchew';
+import { generateReplySubject, generateReplyParts } from "../bodies/mailchew";
 
-import replyAllRecipients from './reply_all_recipients';
-import replyToSenderRecipients from './reply_to_sender_recipients';
+import replyAllRecipients from "./reply_all_recipients";
+import replyToSenderRecipients from "./reply_to_sender_recipients";
 
-import { makeMessageInfo, makeDraftInfo } from '../db/mail_rep';
+import { makeMessageInfo, makeDraftInfo } from "../db/mail_rep";
 
 /**
  * Given a populated MessageInfo, derive a new MessageInfo that is a reply to
  * that message.  This is an inherently asynchronous process.
  */
-export default async function deriveQuotedReply({ sourceMessage, replyMode, identity,
-                                     messageId, umid, guid, date, folderIds }) {
+export default async function deriveQuotedReply({
+  sourceMessage,
+  replyMode,
+  identity,
+  messageId,
+  umid,
+  guid,
+  date,
+  folderIds,
+}) {
   // -- Figure out the recipients
   let sourceRecipients = {
     to: sourceMessage.to,
     cc: sourceMessage.cc,
-    bcc: sourceMessage.bcc
+    bcc: sourceMessage.bcc,
   };
-  let sourceEffectiveAuthor =
-    effectiveAuthorGivenReplyTo(sourceMessage.author, sourceMessage.replyTo);
-  let replyEffectiveAuthor =
-    effectiveAuthorGivenReplyTo(
-      identity, identity.replyTo && { address: identity.replyTo });
+  let sourceEffectiveAuthor = effectiveAuthorGivenReplyTo(
+    sourceMessage.author,
+    sourceMessage.replyTo
+  );
+  let replyEffectiveAuthor = effectiveAuthorGivenReplyTo(
+    identity,
+    identity.replyTo && { address: identity.replyTo }
+  );
 
   let recipients;
   switch (replyMode) {
-    case 'sender':
+    case "sender":
       recipients = replyToSenderRecipients(
-        sourceRecipients, sourceEffectiveAuthor, replyEffectiveAuthor);
+        sourceRecipients,
+        sourceEffectiveAuthor,
+        replyEffectiveAuthor
+      );
       break;
-    case 'all':
+    case "all":
       recipients = replyAllRecipients(
-        sourceRecipients, sourceEffectiveAuthor, replyEffectiveAuthor);
+        sourceRecipients,
+        sourceEffectiveAuthor,
+        replyEffectiveAuthor
+      );
       break;
     default:
-      throw new Error('bad reply mode: ' + replyMode);
+      throw new Error("bad reply mode: " + replyMode);
   }
 
   // -- Build the references
@@ -80,10 +100,10 @@ export default async function deriveQuotedReply({ sourceMessage, replyMode, iden
   );
 
   let draftInfo = makeDraftInfo({
-    draftType: 'reply',
+    draftType: "reply",
     mode: replyMode,
     refMessageId: sourceMessage.id,
-    refMessageDate: sourceMessage.date
+    refMessageDate: sourceMessage.date,
   });
 
   return makeMessageInfo({
@@ -102,11 +122,11 @@ export default async function deriveQuotedReply({ sourceMessage, replyMode, iden
     subject,
     // There is no user-authored content at this point, so the snippet is empty
     // by definition.  draft_save will update this.
-    snippet: '',
+    snippet: "",
     attachments: [],
     relatedParts: [],
     references,
     bodyReps,
-    draftInfo
+    draftInfo,
   });
 }

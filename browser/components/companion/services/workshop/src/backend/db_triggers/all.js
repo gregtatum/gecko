@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-import TriggerUnreadCount from './unread_count';
-import TriggerMessageCount from './message_count';
+import TriggerUnreadCount from "./unread_count";
+import TriggerMessageCount from "./message_count";
 
-export default [
-  TriggerUnreadCount,
-  TriggerMessageCount,
-];
+export default [TriggerUnreadCount, TriggerMessageCount];

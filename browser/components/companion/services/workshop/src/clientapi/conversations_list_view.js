@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import WindowedListView from './windowed_list_view';
-import MailConversation from './mail_conversation';
+import WindowedListView from "./windowed_list_view";
+import MailConversation from "./mail_conversation";
 
 /**
  * ## tocMeta fields ##
@@ -60,7 +60,7 @@ export default function ConversationsListView(api, handle) {
   // Get at the front of the syncComplete line so we can clobber data onto it.
   // We get our own structured clone copy, so this mutation is safe since the
   // only instance it affects is ours, and we only want the post-mutation state.
-  this.on('syncComplete', (data) => {
+  this.on("syncComplete", data => {
     data.thisViewTriggered = this.syncRequested;
     this.syncRequested = false;
   });
@@ -70,24 +70,24 @@ ConversationsListView.prototype = Object.create(WindowedListView.prototype);
 ConversationsListView.prototype._makeOrderingKeyFromItem = function(item) {
   return {
     date: item.mostRecentMessageDate.valueOf(),
-    id: item.id
+    id: item.id,
   };
 };
 
 ConversationsListView.prototype.refresh = function() {
   this.syncRequested = true;
   this._api.__bridgeSend({
-      type: 'refreshView',
-      handle: this.handle
-    });
+    type: "refreshView",
+    handle: this.handle,
+  });
 };
 
 ConversationsListView.prototype.grow = function() {
   this.syncRequested = true;
   this._api.__bridgeSend({
-      type: 'growView',
-      handle: this.handle
-    });
+    type: "growView",
+    handle: this.handle,
+  });
 };
 
 /**
@@ -130,8 +130,8 @@ ConversationsListView.prototype.ensureSnippets = function(idxStart, idxEnd) {
   // NB: We intentionally do not use a handle as there's no reason this needs to
   // be statefully associated with a list view.
   this._api.__bridgeSend({
-    type: 'fetchSnippets',
-    convIds: convIds
+    type: "fetchSnippets",
+    convIds,
   });
   return true;
 };

@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-import PhabricatorClient from './phabricator_client';
-
+import PhabricatorClient from "./phabricator_client";
 
 export default class PhabricatorAccount {
-  constructor(universe, accountDef, foldersTOC, dbConn/*, receiveProtoConn*/) {
+  constructor(universe, accountDef, foldersTOC, dbConn /*, receiveProtoConn*/) {
     this.universe = universe;
     this.id = accountDef.id;
     this.accountDef = accountDef;
@@ -49,8 +48,7 @@ export default class PhabricatorAccount {
   __acquire() {
     return Promise.resolve(this);
   }
-  __release() {
-  }
+  __release() {}
 
   // TODO: Other account types use a callback argument, they will need to be
   // adapted.
@@ -63,5 +61,5 @@ export default class PhabricatorAccount {
   }
 }
 
-PhabricatorAccount.type = 'phabricator';
+PhabricatorAccount.type = "phabricator";
 PhabricatorAccount.supportsServerFolders = false;

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import WindowedListView from './windowed_list_view';
-import RawItem from './raw_item';
+import WindowedListView from "./windowed_list_view";
+import RawItem from "./raw_item";
 
 /**
  * Windowed list view that contains `RawItem` instances that expose their wire

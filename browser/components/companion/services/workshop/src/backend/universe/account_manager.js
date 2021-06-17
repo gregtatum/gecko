@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { accountIdFromFolderId } from 'shared/id_conversions';
+import { accountIdFromFolderId } from "shared/id_conversions";
 
-import { accountModules, engineTaskMappings, engineBackEndFacts } from
-  '../engine_glue';
+import {
+  accountModules,
+  engineTaskMappings,
+  engineBackEndFacts,
+} from "../engine_glue";
 
-import AccountsTOC from '../db/accounts_toc';
-import FoldersTOC from '../db/folders_toc';
+import AccountsTOC from "../db/accounts_toc";
+import FoldersTOC from "../db/folders_toc";
 
 /**
  * Helper function that takes a function(id) {} and causes it to return any
@@ -46,7 +49,7 @@ function prereqify(mapPropName, func, forgetOnResolve) {
   return function(id) {
     let map = this[mapPropName];
     let promise = map.get(id);
-    if (promise)  {
+    if (promise) {
       return promise;
     }
 
@@ -69,8 +72,13 @@ function prereqify(mapPropName, func, forgetOnResolve) {
  * Manages account instance life-cycles, and the TOC of accounts and the
  * per-account folder TOC's.
  */
-export default function AccountManager({ db, universe, taskRegistry, taskResources }) {
-  logic.defineScope(this, 'AccountManager');
+export default function AccountManager({
+  db,
+  universe,
+  taskRegistry,
+  taskResources,
+}) {
+  logic.defineScope(this, "AccountManager");
 
   this.db = db;
   // We need to tell the DB about us so that it can synchronously lookup
@@ -116,7 +124,7 @@ export default function AccountManager({ db, universe, taskRegistry, taskResourc
    */
   this.accounts = new Map();
 
-  this.db.on('accounts!tocChange', this._onTOCChange.bind(this));
+  this.db.on("accounts!tocChange", this._onTOCChange.bind(this));
 }
 AccountManager.prototype = {
   /**
@@ -133,7 +141,7 @@ AccountManager.prototype = {
    *   stored in a single aggregate object per account and were loaded by the
    *   universe, but we aspire to normalize and decentralize.)
    */
-  initFromDB: function(accountDefs) {
+  initFromDB(accountDefs) {
     let waitFor = [];
 
     for (let accountDef of accountDefs) {
@@ -142,7 +150,7 @@ AccountManager.prototype = {
     return Promise.all(waitFor);
   },
 
-  stashAccountConnection: function(accountId, conn) {
+  stashAccountConnection(accountId, conn) {
     this._stashedConnectionsByAccountId.set(accountId, conn);
   },
 
@@ -151,77 +159,95 @@ AccountManager.prototype = {
    * this might become the tasks being 'registered' in the case we can cause
    * some of the tasks to only be loaded when they are actually needed.
    */
-  _ensureTasksLoaded: prereqify('_taskTypeLoads', function (engineId) {
-    return engineTaskMappings.get(engineId)().then((tasks) => {
-      this.taskRegistry.registerPerAccountTypeTasks(engineId, tasks);
-      return true;
-    });
+  _ensureTasksLoaded: prereqify("_taskTypeLoads", function(engineId) {
+    return engineTaskMappings
+      .get(engineId)()
+      .then(tasks => {
+        this.taskRegistry.registerPerAccountTypeTasks(engineId, tasks);
+        return true;
+      });
   }),
 
   /**
    * Ensure the folders for the given account have been loaded from disk and the
    * FoldersTOC accordingly initialized.
    */
-  _ensureAccountFoldersTOC: prereqify('_accountFoldersTOCLoads',
-                                     function(accountId) {
-    return this.db.loadFoldersByAccount(accountId).then((folders) => {
-      // The FoldersTOC wants this so it can mix in per-account data to the
-      // folders so they can stand alone without needing to have references and
-      // weird cascades in the front-end.
-      let accountDef = this.getAccountDefById(accountId);
-      let foldersTOC = new FoldersTOC({
-        db: this.db,
-        accountDef,
-        folders,
-        dataOverlayManager: this.universe.dataOverlayManager
+  _ensureAccountFoldersTOC: prereqify(
+    "_accountFoldersTOCLoads",
+    function(accountId) {
+      return this.db.loadFoldersByAccount(accountId).then(folders => {
+        // The FoldersTOC wants this so it can mix in per-account data to the
+        // folders so they can stand alone without needing to have references and
+        // weird cascades in the front-end.
+        let accountDef = this.getAccountDefById(accountId);
+        let foldersTOC = new FoldersTOC({
+          db: this.db,
+          accountDef,
+          folders,
+          dataOverlayManager: this.universe.dataOverlayManager,
+        });
+        this.accountFoldersTOCs.set(accountId, foldersTOC);
+        return foldersTOC;
       });
-      this.accountFoldersTOCs.set(accountId, foldersTOC);
-      return foldersTOC;
-    });
-  }, true),
+    },
+    true
+  ),
 
   /**
    * Ensure the given account has been loaded.
    */
-  _ensureAccount: prereqify('_accountLoads', function(accountId) {
-    return this._ensureAccountFoldersTOC(accountId).then((foldersTOC) => {
-      let accountDef = this.getAccountDefById(accountId);
-      return accountModules.get(accountDef.type)().then((accountConstructor) => {
-        let stashedConn = this._stashedConnectionsByAccountId.get(accountId);
-        this._stashedConnectionsByAccountId.delete(accountId);
+  _ensureAccount: prereqify(
+    "_accountLoads",
+    function(accountId) {
+      return this._ensureAccountFoldersTOC(accountId).then(foldersTOC => {
+        let accountDef = this.getAccountDefById(accountId);
+        return accountModules
+          .get(accountDef.type)()
+          .then(accountConstructor => {
+            let stashedConn = this._stashedConnectionsByAccountId.get(
+              accountId
+            );
+            this._stashedConnectionsByAccountId.delete(accountId);
 
-        let account = new accountConstructor(
-          this.universe, accountDef, foldersTOC, this.db, stashedConn);
-        this.accounts.set(accountId, account);
-        // If we're online, issue a syncFolderList task.
-        if (this.universe.online) {
-          this.universe.syncFolderList(accountId, 'loadAccount');
-        }
-        return account;
+            let account = new accountConstructor(
+              this.universe,
+              accountDef,
+              foldersTOC,
+              this.db,
+              stashedConn
+            );
+            this.accounts.set(accountId, account);
+            // If we're online, issue a syncFolderList task.
+            if (this.universe.online) {
+              this.universe.syncFolderList(accountId, "loadAccount");
+            }
+            return account;
+          });
       });
-    });
-  }, true),
+    },
+    true
+  ),
 
-  acquireAccountsTOC: function(ctx) {
+  acquireAccountsTOC(ctx) {
     return ctx.acquire(this.accountsTOC);
   },
 
-  acquireAccount: function(ctx, accountId) {
+  acquireAccount(ctx, accountId) {
     let account = this.accounts.get(accountId);
     if (account) {
       return ctx.acquire(account);
     }
-    return this._ensureAccount(accountId).then((_account) => {
+    return this._ensureAccount(accountId).then(_account => {
       return ctx.acquire(_account);
     });
   },
 
-  acquireAccountFoldersTOC: function(ctx, accountId) {
+  acquireAccountFoldersTOC(ctx, accountId) {
     let foldersTOC = this.accountFoldersTOCs.get(accountId);
     if (foldersTOC) {
       return ctx.acquire(foldersTOC);
     }
-    return this._ensureAccountFoldersTOC(accountId).then((_foldersTOC) => {
+    return this._ensureAccountFoldersTOC(accountId).then(_foldersTOC => {
       return ctx.acquire(_foldersTOC);
     });
   },
@@ -230,7 +256,7 @@ AccountManager.prototype = {
    * Return the AccountDef for the given AccountId.  This will return accounts
    * we have not acknowledged the existence of to the AccountsTOC yet.
    */
-  getAccountDefById: function(accountId) {
+  getAccountDefById(accountId) {
     return this._immediateAccountDefsById.get(accountId);
   },
 
@@ -257,7 +283,7 @@ AccountManager.prototype = {
    *
    * @return {Iterator}
    */
-  getAllAccountDefs: function() {
+  getAllAccountDefs() {
     return this._immediateAccountDefsById.values();
   },
 
@@ -265,7 +291,7 @@ AccountManager.prototype = {
    * Return the FolderInfo for the given FolderId.  This is only safe to call
    * after the universe has fully loaded.
    */
-  getFolderById: function(folderId) {
+  getFolderById(folderId) {
     let accountId = accountIdFromFolderId(folderId);
     let foldersTOC = this.accountFoldersTOCs.get(accountId);
     return foldersTOC.foldersById.get(folderId);
@@ -274,22 +300,20 @@ AccountManager.prototype = {
   /**
    * Our MailDB.on('accounts!tocChange') listener.
    */
-  _onTOCChange: function(accountId, accountDef, isNew) {
+  _onTOCChange(accountId, accountDef, isNew) {
     if (isNew) {
       // - Added
       this._accountAdded(accountDef);
     } else if (!accountDef) {
       // - Removed
       this._accountRemoved(accountId);
-    } else {
+    } else if (this.accountFoldersTOCs.has(accountId)) {
       // - Changed
       // Skip if we haven't reported the account to the TOC yet.  We can tell
       // by the presence of the foldersTOC.  We don't defer the notification
       // because our object identity rules mean that when the accountDef is
       // reported it will be the most up-to-date representation available.
-      if (this.accountFoldersTOCs.has(accountId)) {
-        this.accountsTOC.__accountModified(accountDef);
-      }
+      this.accountsTOC.__accountModified(accountDef);
     }
   },
 
@@ -303,8 +327,8 @@ AccountManager.prototype = {
    *   A promise that's resolved onced our pre-reqs have completed loading and
    *   we have announced the existence of the account via the AccountsTOC.
    */
-  _accountAdded: function(accountDef) {
-    logic(this, 'accountExists', { accountId: accountDef.id });
+  _accountAdded(accountDef) {
+    logic(this, "accountExists", { accountId: accountDef.id });
 
     // XXX put these resources into place that we don't actually properly
     // control yet.
@@ -315,7 +339,7 @@ AccountManager.prototype = {
 
     let waitFor = [
       this._ensureTasksLoaded(accountDef.engine),
-      this._ensureAccountFoldersTOC(accountDef.id)
+      this._ensureAccountFoldersTOC(accountDef.id),
     ];
 
     return Promise.all(waitFor).then(() => {
@@ -343,7 +367,7 @@ AccountManager.prototype = {
    * a call to the AccountsTOC to notify it and clean-up the associated
    * FoldersTOC instance.
    */
-  _accountRemoved: function(accountId) {
+  _accountRemoved(accountId) {
     this._immediateAccountDefsById.delete(accountId);
 
     // - Account cleanup

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import $wbxml from 'wbxml';
-import ASCP from 'activesync/codepages';
+import $wbxml from "wbxml";
+import ASCP from "activesync/codepages";
 
 /**
  * Delete a folder.
@@ -35,11 +35,11 @@ export default async function deleteFolder(conn, args) {
   const fh = ASCP.FolderHierarchy.Tags;
   const fhStatus = ASCP.FolderHierarchy.Enums.Status;
 
-  let w = new $wbxml.Writer('1.3', 1, 'UTF-8');
+  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
   w.stag(fh.FolderDelete)
-     .tag(fh.SyncKey, args.folderSyncKey)
-     .tag(fh.ServerId, args.serverId)
-   .etag();
+    .tag(fh.SyncKey, args.folderSyncKey)
+    .tag(fh.ServerId, args.serverId)
+    .etag();
 
   let response = await conn.postCommand(w);
 
@@ -55,17 +55,14 @@ export default async function deleteFolder(conn, args) {
 
   try {
     e.run(response);
-  }
-  catch (ex) {
-    console.error('Error parsing FolderDelete response:', ex, '\n',
-                  ex.stack);
-    throw 'unknown';
+  } catch (ex) {
+    console.error("Error parsing FolderDelete response:", ex, "\n", ex.stack);
+    throw new Error("unknown");
   }
 
   if (status === fhStatus.Success) {
     return { serverId, folderSyncKey: newFolderSyncKey };
   }
-  else {
-    throw 'unknown';
-  }
+
+  throw new Error("unknown");
 }

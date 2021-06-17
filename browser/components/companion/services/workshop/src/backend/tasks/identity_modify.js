@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
-import TaskDefiner from '../task_infra/task_definer';
+import logic from "logic";
+import TaskDefiner from "../task_infra/task_definer";
 
 /**
  * Manipulate identity settings.  Right now we only support one identity per
@@ -23,7 +23,7 @@ import TaskDefiner from '../task_infra/task_definer';
  */
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'identity_modify',
+    name: "identity_modify",
 
     async plan(ctx, rawTask) {
       // Access the account for read-only consultation.  Because we don't need
@@ -37,48 +37,43 @@ export default TaskDefiner.defineSimpleTask([
 
       // for now there's still only one identity.
       const identIndex = 0;
-      const identPath = ['identities', identIndex];
+      const identPath = ["identities", identIndex];
 
       for (let key in rawTask.mods) {
         const val = rawTask.mods[key];
 
         switch (key) {
-          case 'name':
-            accountClobbers.set(identPath.concat('name'), val);
+          case "name":
+            accountClobbers.set(identPath.concat("name"), val);
             break;
 
-          case 'address':
-            accountClobbers.set(identPath.concat('address'), val);
+          case "address":
+            accountClobbers.set(identPath.concat("address"), val);
             break;
 
-          case 'replyTo':
-            accountClobbers.set(identPath.concat('replyTo'), val);
+          case "replyTo":
+            accountClobbers.set(identPath.concat("replyTo"), val);
             break;
 
-          case 'signature':
-            accountClobbers.set(identPath.concat('signature'), val);
+          case "signature":
+            accountClobbers.set(identPath.concat("signature"), val);
             break;
 
-          case 'signatureEnabled':
-            accountClobbers.set(identPath.concat('signatureEnabled'), val);
+          case "signatureEnabled":
+            accountClobbers.set(identPath.concat("signatureEnabled"), val);
             break;
 
           default:
-            logic(ctx, 'badModifyIdentityKey', { key });
+            logic(ctx, "badModifyIdentityKey", { key });
             break;
         }
       }
 
       await ctx.finishTask({
         atomicClobbers: {
-          accounts: new Map([
-            [
-              rawTask.accountId,
-              accountClobbers
-            ]
-          ])
-        }
+          accounts: new Map([[rawTask.accountId, accountClobbers]]),
+        },
       });
-    }
-  }
+    },
+  },
 ]);

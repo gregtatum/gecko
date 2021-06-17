@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../task_infra/task_definer';
-import churnConversation from '../churn_drivers/conv_churn_driver';
+import TaskDefiner from "../task_infra/task_definer";
+import churnConversation from "../churn_drivers/conv_churn_driver";
 
-import { convIdFromMessageId } from 'shared/id_conversions';
+import { convIdFromMessageId } from "shared/id_conversions";
 
 /**
  * Per-account task to delete the draft without any type of undo mechanism.
@@ -28,14 +28,14 @@ import { convIdFromMessageId } from 'shared/id_conversions';
  */
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'draft_delete',
+    name: "draft_delete",
 
     async plan(ctx, req) {
       let { messageId } = req;
       let convId = convIdFromMessageId(messageId);
       let fromDb = await ctx.beginMutate({
         conversations: new Map([[convId, null]]),
-        messagesByConversation: new Map([[convId, null]])
+        messagesByConversation: new Map([[convId, null]]),
       });
 
       let messages = fromDb.messagesByConversation.get(convId);
@@ -43,7 +43,7 @@ export default TaskDefiner.defineSimpleTask([
 
       let draftIndex = messages.findIndex(msg => msg.id === messageId);
       if (draftIndex === -1) {
-        throw new Error('moot');
+        throw new Error("moot");
       }
       messages.splice(draftIndex, 1);
 
@@ -62,11 +62,11 @@ export default TaskDefiner.defineSimpleTask([
       await ctx.finishTask({
         mutations: {
           conversations: modifiedConversations,
-          messages: modifiedMessagesMap
-        }
+          messages: modifiedMessagesMap,
+        },
       });
     },
 
-    execute: null
-  }
+    execute: null,
+  },
 ]);

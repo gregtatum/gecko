@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../../../task_infra/task_definer';
-import MixStoreFlagsMixin from '../../../task_mixins/mix_store_flags';
+import TaskDefiner from "../../../task_infra/task_definer";
+import MixStoreFlagsMixin from "../../../task_mixins/mix_store_flags";
 
 /**
  * @see MixStoreFlagsMixin
@@ -23,9 +23,9 @@ import MixStoreFlagsMixin from '../../../task_mixins/mix_store_flags';
 export default TaskDefiner.defineComplexTask([
   MixStoreFlagsMixin,
   {
-    name: 'store_flags',
+    name: "store_flags",
     // We don't care about the fetch return, so don't bother.
-    imapDataName: 'FLAGS.SILENT',
+    imapDataName: "FLAGS.SILENT",
 
     async execute(ctx, persistentState, memoryState, marker) {
       let { umidChanges } = persistentState;
@@ -36,10 +36,10 @@ export default TaskDefiner.defineComplexTask([
 
       // -- Read the umidLocation
       let fromDb = await ctx.beginMutate({
-        umidLocations: new Map([[marker.umid, null]])
+        umidLocations: new Map([[marker.umid, null]]),
       });
 
-      let [ folderId, uid ] = fromDb.umidLocations.get(marker.umid);
+      let [folderId, uid] = fromDb.umidLocations.get(marker.umid);
       let folderInfo = account.getFolderById(folderId);
 
       // -- Issue the manipulations to the server
@@ -48,18 +48,20 @@ export default TaskDefiner.defineComplexTask([
           ctx,
           folderInfo,
           [uid],
-          '+' + this.imapDataName,
+          "+" + this.imapDataName,
           changes.add,
-          { byUid: true });
+          { byUid: true }
+        );
       }
       if (changes.remove && changes.remove.length) {
         await account.pimap.store(
           ctx,
           folderInfo,
           [uid],
-          '-' + this.imapDataName,
+          "-" + this.imapDataName,
           changes.remove,
-          { byUid: true });
+          { byUid: true }
+        );
       }
 
       // - Success, clean up state.
@@ -67,8 +69,8 @@ export default TaskDefiner.defineComplexTask([
 
       // - Return / finalize
       await ctx.finishTask({
-        complexTaskState: persistentState
+        complexTaskState: persistentState,
       });
-    }
-  }
+    },
+  },
 ]);

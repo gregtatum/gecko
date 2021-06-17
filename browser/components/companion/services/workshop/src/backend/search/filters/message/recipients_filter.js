@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import searchPatternFromArgs from '../search_pattern_from_args';
-import matchVerbatimHighlight from '../../match_verbatim_highlight';
+import searchPatternFromArgs from "../search_pattern_from_args";
+import matchVerbatimHighlight from "../../match_verbatim_highlight";
 
 export default function RecipientsFilter(params, args) {
   this.searchPattern = searchPatternFromArgs(args);
@@ -39,7 +39,7 @@ RecipientsFilter.prototype = {
    */
   alwaysRun: true,
 
-  test: function(gathered) {
+  test(gathered) {
     let searchPattern = this.searchPattern;
 
     function checkList(recipients) {
@@ -54,7 +54,10 @@ RecipientsFilter.prototype = {
           }
         }
 
-        let matchInfo = matchVerbatimHighlight(searchPattern, recipient.address);
+        let matchInfo = matchVerbatimHighlight(
+          searchPattern,
+          recipient.address
+        );
         if (matchInfo) {
           return matchInfo;
         }
@@ -63,8 +66,8 @@ RecipientsFilter.prototype = {
     }
 
     let message = gathered.message;
-    return checkList(message.to) ||
-           checkList(message.cc) ||
-           checkList(message.bcc);
+    return (
+      checkList(message.to) || checkList(message.cc) || checkList(message.bcc)
+    );
   },
 };

@@ -34,9 +34,8 @@ export function folderConversationComparator(a, b) {
     return 1;
   } else if (aId > bId) {
     return -1;
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 /**
@@ -60,9 +59,8 @@ export function conversationMessageComparator(a, b) {
     return 1;
   } else if (aId > bId) {
     return -1;
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 export function oldToNewConversationMessageComparator(a, b) {
@@ -80,7 +78,6 @@ export function oldToNewConversationMessageComparator(a, b) {
     return 1;
   } else if (aId > bId) {
     return -1;
-  } else {
-    return 0;
   }
+  return 0;
 }

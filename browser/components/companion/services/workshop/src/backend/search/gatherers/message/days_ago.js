@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { NOW, DAY_MILLIS } from 'shared/date';
+import { NOW, DAY_MILLIS } from "shared/date";
 
 /**
  * Compute the age of message in local-timezone-relative days in a hacky
@@ -46,15 +46,16 @@ export default function DaysAgo(/* params, args */) {
   this.tomorrowMidnight = dateScratch.valueOf() + DAY_MILLIS;
 }
 DaysAgo.prototype = {
-  gather: function(gathered) {
+  gather(gathered) {
     const { message } = gathered;
 
-    let daysAgo =
-      Math.floor((this.tomorrowMidnight - message.date) / DAY_MILLIS);
+    let daysAgo = Math.floor(
+      (this.tomorrowMidnight - message.date) / DAY_MILLIS
+    );
     if (daysAgo < 0) {
       daysAgo = 0;
     }
 
     return Promise.resolve(daysAgo);
-  }
+  },
 };

@@ -48,35 +48,19 @@ export default function BrowseContext({ api }) {
   this._api = api;
 }
 BrowseContext.prototype = {
-  selectAccount: function(account) {
+  selectAccount(account) {},
 
-  },
+  selectAccountId(accountId) {},
 
-  selectAccountId: function(accountId) {
+  selectFolder(folder) {},
 
-  },
+  selectFolderId(folderId) {},
 
-  selectFolder: function(folder) {
+  selectConversation(conversation) {},
 
-  },
+  selectConversationId(conversationId) {},
 
-  selectFolderId: function(folderId) {
+  selectMessage(message) {},
 
-  },
-
-  selectConversation: function(conversation) {
-
-  },
-
-  selectConversationId: function(conversationId) {
-
-  },
-
-  selectMessage: function(message) {
-
-  },
-
-  selectMessageId: function(messageId) {
-
-  }
+  selectMessageId(messageId) {},
 };

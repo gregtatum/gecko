@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { decodeA64Int } from 'shared/a64';
+import { decodeA64Int } from "shared/a64";
 
 // From Identity Id's
 export function accountIdFromIdentityId(identityId) {
@@ -33,7 +33,7 @@ export function accountIdFromFolderId(folderId) {
  * and decode it back to a Number.
  */
 export function decodeSpecificFolderIdFromFolderId(folderId) {
-  let idxFirst = folderId.indexOf('.');
+  let idxFirst = folderId.indexOf(".");
   return decodeA64Int(folderId.substring(idxFirst + 1));
 }
 
@@ -44,12 +44,12 @@ export function accountIdFromConvId(convId) {
 }
 
 export function encodedGmailConvIdFromConvId(convId) {
-  let idxFirst = convId.indexOf('.');
+  let idxFirst = convId.indexOf(".");
   return convId.substring(idxFirst + 1);
 }
 
 export function convSpecificIdFromConvId(convId) {
-  let idxFirst = convId.indexOf('.');
+  let idxFirst = convId.indexOf(".");
   return convId.substring(idxFirst + 1);
 }
 
@@ -71,8 +71,8 @@ export function accountIdFromMessageId(messageId) {
  *   "account id.encoded gmail conversation id".
  */
 export function convIdFromMessageId(messageId) {
-  let idxFirst = messageId.indexOf('.');
-  let idxSecond = messageId.indexOf('.', idxFirst + 1);
+  let idxFirst = messageId.indexOf(".");
+  let idxSecond = messageId.indexOf(".", idxFirst + 1);
   return messageId.substring(0, idxSecond);
 }
 
@@ -110,7 +110,6 @@ export function numericUidFromMessageId(messageId) {
  * the predictable transform may be nice for debugging.)
  */
 export function messageIdComponentFromUmid(umid) {
-  let idxFirst = umid.indexOf('.');
-  return umid.substring(idxFirst + 1).replace(/\./g, '_');
+  let idxFirst = umid.indexOf(".");
+  return umid.substring(idxFirst + 1).replace(/\./g, "_");
 }
-

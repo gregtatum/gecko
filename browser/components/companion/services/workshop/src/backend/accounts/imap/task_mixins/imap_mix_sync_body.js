@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import * as imapchew from '../imapchew';
+import * as imapchew from "../imapchew";
 
-import churnConversation from '../../../churn_drivers/conv_churn_driver';
+import churnConversation from "../../../churn_drivers/conv_churn_driver";
 
-import { SnippetParser } from '../protocol/snippetparser';
-import { TextParser } from '../protocol/textparser';
+import { SnippetParser } from "../protocol/snippetparser";
+import { TextParser } from "../protocol/textparser";
 
-import { DESIRED_SNIPPET_LENGTH } from '../../../syncbase';
+import { DESIRED_SNIPPET_LENGTH } from "../../../syncbase";
 
 /**
  * Maximum bytes to request from server in a fetch request (max uint32)
  */
-const MAX_FETCH_BYTES = (Math.pow(2, 32) - 1);
+const MAX_FETCH_BYTES = Math.pow(2, 32) - 1;
 
 export default {
   async execute(ctx, persistentState, memoryState, marker) {
@@ -35,7 +35,7 @@ export default {
     // -- Retrieve the conversation and its messages for mutation
     let fromDb = await ctx.beginMutate({
       conversations: new Map([[req.convId, null]]),
-      messagesByConversation: new Map([[req.convId, null]])
+      messagesByConversation: new Map([[req.convId, null]]),
     });
 
     let loadedMessages = fromDb.messagesByConversation.get(req.convId);
@@ -49,7 +49,7 @@ export default {
     // for fullBodyMessageIds-listed messages we will download them in their
     // entirety and do nothing else for the other messages.
     let maxBytesPerMessage = 0;
-    if (req.amount === 'snippet') {
+    if (req.amount === "snippet") {
       maxBytesPerMessage = DESIRED_SNIPPET_LENGTH;
     } else if (req.amount) {
       maxBytesPerMessage = req.amount;
@@ -60,15 +60,16 @@ export default {
       let remainingByteBudget = maxBytesPerMessage;
       // If this message isn't explicitly opted-in and we have no snippety
       // budget, then skip this message.
-      if (!remainingByteBudget &&
-          (!req.fullBodyMessageIds ||
-           !req.fullBodyMessageIds.has(message.id))) {
+      if (
+        !remainingByteBudget &&
+        (!req.fullBodyMessageIds || !req.fullBodyMessageIds.has(message.id))
+      ) {
         continue;
       }
       let bodyRepIndex = imapchew.selectSnippetBodyRep(message);
 
       // -- For each body part...
-      for (let iBodyRep=0; iBodyRep < message.bodyReps.length; iBodyRep++) {
+      for (let iBodyRep = 0; iBodyRep < message.bodyReps.length; iBodyRep++) {
         let rep = message.bodyReps[iBodyRep];
         // - Figure out what work, if any, to do.
         if (rep.isDownloaded) {
@@ -115,7 +116,7 @@ export default {
         if (maxBytesPerMessage || rep.amountDownloaded) {
           byteRange = {
             offset: rep.amountDownloaded,
-            bytesToFetch
+            bytesToFetch,
           };
         }
 
@@ -123,21 +124,23 @@ export default {
         // It is stored out-of-line as a Blob, so must be (asynchronously)
         // fetched.
         if (partDef.pendingBuffer) {
-          let loadedBuffer = new Uint8Array(await partDef.pendingBuffer.arrayBuffer());
+          let loadedBuffer = new Uint8Array(
+            await partDef.pendingBuffer.arrayBuffer()
+          );
           bodyParser.parse(loadedBuffer);
         }
 
         // - Issue the fetch
         let { folderInfo, uid } = this.getFolderAndUidForMesssage(
-          prepared, account, message);
-        let rawBody = await account.pimap.fetchBody(
-          ctx,
-          folderInfo,
-          {
-            uid,
-            part: rep.part,
-            byteRange
-          });
+          prepared,
+          account,
+          message
+        );
+        let rawBody = await account.pimap.fetchBody(ctx, folderInfo, {
+          uid,
+          part: rep.part,
+          byteRange,
+        });
 
         bodyParser.parse(rawBody);
         let bodyResult = bodyParser.complete();
@@ -148,7 +151,7 @@ export default {
           {
             bodyRepIndex: iBodyRep,
             createSnippet: iBodyRep === bodyRepIndex,
-            byteRange
+            byteRange,
           },
           bodyResult
         );
@@ -171,8 +174,8 @@ export default {
     await ctx.finishTask({
       mutations: {
         conversations: new Map([[req.convId, convInfo]]),
-        messages: modifiedMessagesMap
+        messages: modifiedMessagesMap,
       },
     });
-  }
+  },
 };

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
-import TaskDefiner from '../task_infra/task_definer';
+import logic from "logic";
+import TaskDefiner from "../task_infra/task_definer";
 
 /**
  * Manipulate identity settings.  Right now we only support one identity per
@@ -23,7 +23,7 @@ import TaskDefiner from '../task_infra/task_definer';
  */
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'config_modify',
+    name: "config_modify",
 
     async plan(ctx, rawTask) {
       // Access the account for read-only consultation.  Because we don't need
@@ -39,26 +39,21 @@ export default TaskDefiner.defineSimpleTask([
         const val = rawTask.mods[key];
 
         switch (key) {
-          case 'debugLogging':
-            accountClobbers.set(['debugLogging'], val);
+          case "debugLogging":
+            accountClobbers.set(["debugLogging"], val);
             break;
 
           default:
-            logic(ctx, 'badModifyConfigKey', { key });
+            logic(ctx, "badModifyConfigKey", { key });
             break;
         }
       }
 
       await ctx.finishTask({
         atomicClobbers: {
-          config: new Map([
-            [
-              rawTask.accountId,
-              accountClobbers
-            ]
-          ])
-        }
+          config: new Map([[rawTask.accountId, accountClobbers]]),
+        },
       });
-    }
-  }
+    },
+  },
 ]);

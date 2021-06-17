@@ -27,12 +27,10 @@
  *   that we're still alive and doing things.
  */
 export default async function sendMail(conn, { mimeBlob, progress }) {
-  await conn.postData(
-    'SendMail', 'message/rfc822', mimeBlob,
-    {
-      extraParams: {
-        SaveInSent: 'T'
-      },
-      uploadProgress: progress,
-    });
+  await conn.postData("SendMail", "message/rfc822", mimeBlob, {
+    extraParams: {
+      SaveInSent: "T",
+    },
+    uploadProgress: progress,
+  });
 }

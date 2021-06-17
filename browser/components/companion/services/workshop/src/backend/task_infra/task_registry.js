@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
 /**
  * Tracks the set of known tasks, both global and per-account-type, and manages
@@ -26,8 +26,12 @@ import logic from 'logic';
  *   primarily happens on the basis of accountId if the task type was not in
  *   the global registry.
  */
-export default function TaskRegistry({ dataOverlayManager, triggerManager, taskResources }) {
-  logic.defineScope(this, 'TaskRegistry');
+export default function TaskRegistry({
+  dataOverlayManager,
+  triggerManager,
+  taskResources,
+}) {
+  logic.defineScope(this, "TaskRegistry");
 
   this._dataOverlayManager = dataOverlayManager;
   this._triggerManager = triggerManager;
@@ -78,7 +82,7 @@ TaskRegistry.prototype = {
    */
   initializeFromDatabaseState([stateKeys, stateValues]) {
     if (stateKeys.length !== stateValues.length) {
-      throw new Error('impossible complex state inconsistency issue');
+      throw new Error("impossible complex state inconsistency issue");
     }
     for (let i = 0; i < stateKeys.length; i++) {
       let [accountId, taskType, taskKey] = stateKeys[i];
@@ -124,21 +128,20 @@ TaskRegistry.prototype = {
   _registerComplexTaskImplWithEventSources(accountId, meta) {
     let taskImpl = meta.impl;
 
-    let blockedTaskChecker =
-      this._taskResources.whatIsTaskBlockedBy.bind(this._taskResources);
+    let blockedTaskChecker = this._taskResources.whatIsTaskBlockedBy.bind(
+      this._taskResources
+    );
 
     // (Tasks are strictly mix-in based and do not use the prototype chain.
     // Obviously, if this changes, this traversal needs to change.)
     for (let key of Object.keys(taskImpl)) {
       let overlayMatch = /^overlay_(.+)$/.exec(key);
       if (overlayMatch) {
-        logic(
-          this, 'registerOverlayProvider',
-          {
-            accountId,
-            taskName: taskImpl.name,
-            overlayType: overlayMatch[1]
-          });
+        logic(this, "registerOverlayProvider", {
+          accountId,
+          taskName: taskImpl.name,
+          overlayType: overlayMatch[1],
+        });
         this._dataOverlayManager.registerProvider(
           overlayMatch[1],
           taskImpl.name,
@@ -146,26 +149,22 @@ TaskRegistry.prototype = {
             taskImpl,
             meta.persistentState,
             meta.memoryState,
-            blockedTaskChecker)
+            blockedTaskChecker
+          )
         );
       }
 
       let triggerMatch = /^trigger_(.+$)$/.exec(key);
       if (triggerMatch) {
-        logic(
-          this, 'registerTriggerHandler',
-          {
-            accountId,
-            taskName: taskImpl.name,
-            trigger: triggerMatch[1]
-          });
+        logic(this, "registerTriggerHandler", {
+          accountId,
+          taskName: taskImpl.name,
+          trigger: triggerMatch[1],
+        });
         this._triggerManager.registerTriggerFunc(
           triggerMatch[1],
           taskImpl.name,
-          taskImpl[key].bind(
-            taskImpl,
-            meta.persistentState,
-            meta.memoryState)
+          taskImpl[key].bind(taskImpl, meta.persistentState, meta.memoryState)
         );
       }
     }
@@ -187,11 +186,11 @@ TaskRegistry.prototype = {
    * this method is async.
    */
   accountExistsInitTasks(accountId, accountType, accountInfo, foldersTOC) {
-    logic(this, 'accountExistsInitTasks:begin', { accountId, accountType });
+    logic(this, "accountExistsInitTasks:begin", { accountId, accountType });
     // Get the implementations known for this account type
     let taskImpls = this._perAccountTypeTasks.get(accountType);
     if (!taskImpls) {
-      logic(this, 'noPerAccountTypeTasks', { accountId, accountType });
+      logic(this, "noPerAccountTypeTasks", { accountId, accountType });
     }
 
     let accountMarkers = [];
@@ -219,22 +218,27 @@ TaskRegistry.prototype = {
       let meta = {
         impl: taskImpl,
         persistentState: dataByTaskType.get(taskType),
-        memoryState: null
+        memoryState: null,
       };
       if (taskImpl.isComplex) {
         complexCount++;
-        logic(
-          this, 'initializingComplexTask',
-          { accountId, taskType, hasPersistentState: !!meta.persistentState });
+        logic(this, "initializingComplexTask", {
+          accountId,
+          taskType,
+          hasPersistentState: !!meta.persistentState,
+        });
         if (!meta.persistentState) {
           meta.persistentState = taskImpl.initPersistentState();
         }
         // Invoke the complex task's real init logic that may need to do some
         // async db stuff if its state isn't in the persistent state we
         // helpfully loaded.
-        let maybePromise =
-          taskImpl.deriveMemoryStateFromPersistentState(
-            meta.persistentState, accountId, accountInfo, foldersTOC);
+        let maybePromise = taskImpl.deriveMemoryStateFromPersistentState(
+          meta.persistentState,
+          accountId,
+          accountInfo,
+          foldersTOC
+        );
         let saveOffMemoryState = ({ memoryState, markers }) => {
           meta.memoryState = memoryState;
           if (markers) {
@@ -258,15 +262,13 @@ TaskRegistry.prototype = {
     }
 
     return Promise.all(pendingPromises).then(() => {
-      logic(
-        this, 'accountExistsInitTasks:end',
-        {
-          accountId,
-          accountType,
-          simpleCount,
-          complexCount,
-          markerCount: accountMarkers.length
-        });
+      logic(this, "accountExistsInitTasks:end", {
+        accountId,
+        accountType,
+        simpleCount,
+        complexCount,
+        markerCount: accountMarkers.length,
+      });
       return accountMarkers;
     });
   },
@@ -284,7 +286,9 @@ TaskRegistry.prototype = {
     // We need to force tasks to finalize if they don't do so themselves.  This
     // is true for both rejections and returns without finalization.
     if (maybePromiseResult.then) {
-      let doFinalize = () => { ctx.__failsafeFinalize(); };
+      let doFinalize = () => {
+        ctx.__failsafeFinalize();
+      };
       // I'm intentionally not forcing the return to wait on the failsafe
       // finalization to happen out of paranoia.  It might be a good idea,
       // though.
@@ -309,12 +313,12 @@ TaskRegistry.prototype = {
       let perAccountTasks = this._perAccountIdTaskRegistry.get(accountId);
       if (!perAccountTasks) {
         // This means the account is no longer known to us.  Return immediately,
-        logic(this, 'noSuchAccount', { taskType, accountId });
+        logic(this, "noSuchAccount", { taskType, accountId });
         return null;
       }
       taskMeta = perAccountTasks.get(taskType);
       if (!taskMeta) {
-        logic(this, 'noSuchTaskProvider', { taskType, accountId });
+        logic(this, "noSuchTaskProvider", { taskType, accountId });
         return null;
       }
     }
@@ -324,7 +328,11 @@ TaskRegistry.prototype = {
     try {
       if (taskMeta.impl.isComplex) {
         maybePromiseResult = taskMeta.impl.plan(
-          ctx, taskMeta.persistentState, taskMeta.memoryState, rawTask);
+          ctx,
+          taskMeta.persistentState,
+          taskMeta.memoryState,
+          rawTask
+        );
       } else {
         // All tasks have a plan stage.  Even if it's only the default one that
         // just chucks it in the priority bucket.
@@ -345,8 +353,9 @@ TaskRegistry.prototype = {
     if (this._globalTaskRegistry.has(taskType)) {
       taskMeta = this._globalTaskRegistry.get(taskType);
     } else {
-      let accountId = isMarker ? taskThing.accountId
-                               : taskThing.plannedTask.accountId;
+      let accountId = isMarker
+        ? taskThing.accountId
+        : taskThing.plannedTask.accountId;
       taskMeta = this._perAccountIdTaskRegistry.get(accountId).get(taskType);
     }
 
@@ -355,15 +364,23 @@ TaskRegistry.prototype = {
     }
 
     if (isMarker !== taskMeta.impl.isComplex) {
-      throw new Error('Trying to exec ' + taskType + ' but isComplex:' +
-                       taskMeta.impl.isComplex);
+      throw new Error(
+        "Trying to exec " +
+          taskType +
+          " but isComplex:" +
+          taskMeta.impl.isComplex
+      );
     }
 
     ctx.__taskInstance = taskMeta.impl;
     let maybePromiseResult;
     if (isMarker) {
       maybePromiseResult = taskMeta.impl.execute(
-        ctx, taskMeta.persistentState, taskMeta.memoryState, taskThing);
+        ctx,
+        taskMeta.persistentState,
+        taskMeta.memoryState,
+        taskThing
+      );
     } else {
       maybePromiseResult = taskMeta.impl.execute(ctx, taskThing.plannedTask);
     }
@@ -382,10 +399,14 @@ TaskRegistry.prototype = {
     }
 
     if (!taskMeta.impl.consult) {
-      throw new Error('implementation has no consult method');
+      throw new Error("implementation has no consult method");
     }
 
     return taskMeta.impl.consult(
-      ctx, taskMeta.persistentState, taskMeta.memoryState, argDict);
+      ctx,
+      taskMeta.persistentState,
+      taskMeta.memoryState,
+      argDict
+    );
   },
 };

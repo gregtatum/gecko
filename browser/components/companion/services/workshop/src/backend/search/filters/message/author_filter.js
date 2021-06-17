@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import searchPatternFromArgs from '../search_pattern_from_args';
-import matchVerbatimHighlight from '../../match_verbatim_highlight';
+import searchPatternFromArgs from "../search_pattern_from_args";
+import matchVerbatimHighlight from "../../match_verbatim_highlight";
 
 /**
  * Author filter that checks the actual message (compare with the optimized
@@ -44,7 +44,7 @@ AuthorFilter.prototype = {
    */
   alwaysRun: true,
 
-  test: function(gathered) {
+  test(gathered) {
     let searchPattern = this.searchPattern;
 
     function checkList(addressPairs) {
@@ -53,13 +53,19 @@ AuthorFilter.prototype = {
       }
       for (let addressPair of addressPairs) {
         if (addressPair.name) {
-          let matchInfo = matchVerbatimHighlight(searchPattern, addressPair.name);
+          let matchInfo = matchVerbatimHighlight(
+            searchPattern,
+            addressPair.name
+          );
           if (matchInfo) {
             return matchInfo;
           }
         }
 
-        let matchInfo = matchVerbatimHighlight(searchPattern, addressPair.address);
+        let matchInfo = matchVerbatimHighlight(
+          searchPattern,
+          addressPair.address
+        );
         if (matchInfo) {
           return matchInfo;
         }
@@ -68,7 +74,6 @@ AuthorFilter.prototype = {
     }
 
     let message = gathered.message;
-    return checkList([message.author]) ||
-           checkList(message.replyTo);
+    return checkList([message.author]) || checkList(message.replyTo);
   },
 };

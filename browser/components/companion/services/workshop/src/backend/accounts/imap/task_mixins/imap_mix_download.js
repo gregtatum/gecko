@@ -14,15 +14,21 @@
  * limitations under the License.
  */
 
-import messageChunkedPartStream from '../protocol/message_chunked_part_stream';
+import messageChunkedPartStream from "../protocol/message_chunked_part_stream";
 
-import { BYTES_PER_IMAP_FETCH_CHUNK_REQUEST, BYTES_PER_BLOB_CHUNK } from '../../../syncbase';
+import {
+  BYTES_PER_IMAP_FETCH_CHUNK_REQUEST,
+  BYTES_PER_BLOB_CHUNK,
+} from "../../../syncbase";
 
 export default {
   async downloadParts(ctx, account, messageInfo, parts) {
     // - Get the folder and UID
-    let { folderInfo, uid } =
-      await this.getFolderAndUidForMesssage(ctx, account, messageInfo);
+    let { folderInfo, uid } = await this.getFolderAndUidForMesssage(
+      ctx,
+      account,
+      messageInfo
+    );
 
     // - Create and return the stream.
     return messageChunkedPartStream({
@@ -32,7 +38,7 @@ export default {
       uid,
       parts,
       downloadChunkSize: BYTES_PER_IMAP_FETCH_CHUNK_REQUEST,
-      saveChunkSize: BYTES_PER_BLOB_CHUNK
+      saveChunkSize: BYTES_PER_BLOB_CHUNK,
     });
   },
 };

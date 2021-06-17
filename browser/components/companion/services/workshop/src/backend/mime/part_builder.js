@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { encodeInt as encodeA64 } from 'shared/a64';
+import { encodeInt as encodeA64 } from "shared/a64";
 
-import { makeAttachmentPart, makeBodyPart } from '../db/mail_rep';
+import { makeAttachmentPart, makeBodyPart } from "../db/mail_rep";
 
 /**
  * PartBuilder assists in populating the attachments/relatedParts/bodyReps of
@@ -46,20 +46,19 @@ function PartBuilder(headers) {
   this.alternativePartNumbers = [];
 }
 PartBuilder.prototype = {
-
   /**
    * Return the header and body MailRep representation.
    */
-  finalize: function() {
+  finalize() {
     // Since we only now know that we've seen all the parts, it's time to make
     // a decision for multipart/alternative parts: which body parts should we
     // keep, and which ones should we discard? We've generated bodyReps for
     // each compatible part, so we just need to remove the ones we don't want.
-    this.alternativePartNumbers.forEach((altPart) => {
+    this.alternativePartNumbers.forEach(altPart => {
       var foundSuitableBody = false;
       var altCheck;
       if (altPart) {
-        altCheck = new RegExp('^' + altPart + '.' );
+        altCheck = new RegExp("^" + altPart + ".");
       } else {
         // A multipart/alternative root may have a part that was undefined,
         // in which case our check should pass for all body parts.  Previously,
@@ -89,7 +88,7 @@ PartBuilder.prototype = {
       attachments: this.attachments,
       relatedParts: this.relatedParts,
       bodyReps: this.bodyReps,
-      rootHeaders: this.rootHeaders
+      rootHeaders: this.rootHeaders,
     };
   },
 
@@ -109,57 +108,57 @@ PartBuilder.prototype = {
    * @param {MimeHeaderInfo} headers
    * @return {object}
    */
-  addNode: function(partNum, headers) {
-    if (headers.parentContentType === 'message/rfc822') {
-      return { type: 'ignore' };
+  addNode(partNum, headers) {
+    if (headers.parentContentType === "message/rfc822") {
+      return { type: "ignore" };
     }
-    if (headers.mediatype === 'multipart') {
-      if (headers.subtype === 'alternative') {
+    if (headers.mediatype === "multipart") {
+      if (headers.subtype === "alternative") {
         this.alternativePartNumbers.push(partNum);
       }
-      return { type: 'ignore' };
-    } else {
-      // Ignore signatures.
-      if ((headers.mediatype === 'application') &&
-          (headers.subtype === 'pgp-signature' ||
-           headers.subtype === 'pkcs7-signature')) {
-        return { type: 'ignore' };
-      }
-
-      var rep;
-      if (headers.disposition === 'attachment') {
-        rep = this._makePart(partNum, headers, 'a');
-        this.attachments.push(rep);
-        return {
-          type: 'attachment',
-          rep,
-          index: this.attachments.length - 1
-        };
-      }
-      else if (headers.mediatype === 'image') {
-        rep = this._makePart(partNum, headers, 'r');
-        this.relatedParts.push(rep);
-        return {
-          type: 'related',
-          rep,
-          index: this.relatedParts.length - 1
-        };
-      }
-      else if (headers.mediatype === 'text' &&
-               (headers.subtype === 'plain' || headers.subtype === 'html')) {
-        rep = this._makeBodyPart(partNum, headers);
-        this.bodyReps.push(rep);
-        return { type: 'body', rep: rep };
-      } else {
-        return { type: 'ignore' };
-      }
+      return { type: "ignore" };
     }
+    // Ignore signatures.
+    if (
+      headers.mediatype === "application" &&
+      (headers.subtype === "pgp-signature" ||
+        headers.subtype === "pkcs7-signature")
+    ) {
+      return { type: "ignore" };
+    }
+
+    var rep;
+    if (headers.disposition === "attachment") {
+      rep = this._makePart(partNum, headers, "a");
+      this.attachments.push(rep);
+      return {
+        type: "attachment",
+        rep,
+        index: this.attachments.length - 1,
+      };
+    } else if (headers.mediatype === "image") {
+      rep = this._makePart(partNum, headers, "r");
+      this.relatedParts.push(rep);
+      return {
+        type: "related",
+        rep,
+        index: this.relatedParts.length - 1,
+      };
+    } else if (
+      headers.mediatype === "text" &&
+      (headers.subtype === "plain" || headers.subtype === "html")
+    ) {
+      rep = this._makeBodyPart(partNum, headers);
+      this.bodyReps.push(rep);
+      return { type: "body", rep };
+    }
+    return { type: "ignore" };
   },
 
-  _makePart: function(partNum, headers, partType) {
+  _makePart(partNum, headers, partType) {
     return makeAttachmentPart({
       relId: partType + encodeA64(this.nextRelId++),
-      name: headers.filename || 'unnamed-' + (++this.unnamedPartCounter),
+      name: headers.filename || "unnamed-" + ++this.unnamedPartCounter,
       contentId: headers.contentId,
       type: headers.contentType.toLowerCase(),
       part: partNum,
@@ -168,20 +167,20 @@ PartBuilder.prototype = {
       downloadState: null,
       file: null,
       charset: headers.charset,
-      textFormat: headers.format
+      textFormat: headers.format,
     });
   },
 
-  _makeBodyPart: function(partNum, headers) {
+  _makeBodyPart(partNum, headers) {
     return makeBodyPart({
       type: headers.subtype,
       part: partNum,
       sizeEstimate: 0,
       amountDownloaded: 0,
       isDownloaded: false,
-      contentBlob: null
+      contentBlob: null,
     });
-  }
+  },
 };
 
 export default PartBuilder;

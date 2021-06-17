@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
- import { ReadableStream, WritableStream } from 'streams';
- import { concatBuffers } from 'shared/util';
+import { ReadableStream, WritableStream } from "streams";
+import { concatBuffers } from "shared/util";
 
 /**
  * A stream that transforms a byte-chunk stream into a stream that emits lines.
@@ -52,16 +52,15 @@ export default function LineTransformStream() {
     },
 
     close() {
-      console.log('CLOSE writable linestream');
+      console.log("CLOSE writable linestream");
       c.close();
-    }
+    },
   });
 
   // Data goes out as lines from here.
   this.readable = new ReadableStream({
     start(controller) {
       c = controller;
-    }
+    },
   });
-};
-
+}

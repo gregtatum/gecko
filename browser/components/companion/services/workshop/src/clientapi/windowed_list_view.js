@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
+import evt from "evt";
 
 /**
  * @typedef {Object} SeekChangeInfo
@@ -92,24 +92,28 @@ export default function WindowedListView(api, itemConstructor, handle) {
   this.complete = false;
 }
 WindowedListView.prototype = evt.mix({
-  toString: function() {
-    return '[WindowedListView: ' + this._itemConstructor.name + ' ' +
-           this.handle + ']';
+  toString() {
+    return (
+      "[WindowedListView: " +
+      this._itemConstructor.name +
+      " " +
+      this.handle +
+      "]"
+    );
   },
-  toJSON: function() {
+  toJSON() {
     return {
-      type: 'WindowedListView',
+      type: "WindowedListView",
       namespace: this._ns,
-      handle: this.handle
+      handle: this.handle,
     };
   },
 
-  __update: function(details) {
+  __update(details) {
     let newSerial = ++this.serial;
 
     let existingSet = this._itemsById;
     let newSet = new Map();
-
 
     let newIds = details.ids;
     let newStates = details.values;
@@ -138,7 +142,7 @@ WindowedListView.prototype = evt.mix({
           if (newOverlays) {
             obj.__updateOverlays(newOverlays);
           }
-          obj.emit('change', !!newState, !!newOverlays);
+          obj.emit("change", !!newState, !!newOverlays);
         }
         // Remove it from the existingSet so we can infer objects no longer in
         // the set.
@@ -148,7 +152,12 @@ WindowedListView.prototype = evt.mix({
         itemSetChanged = true;
         let [newState, newOverlays, matchInfo] = newStates.get(id);
         obj = new this._itemConstructor(
-          this._api, newState, newOverlays, matchInfo, this);
+          this._api,
+          newState,
+          newOverlays,
+          matchInfo,
+          this
+        );
         obj.serial = newSerial;
         newSet.set(id, obj);
       } else {
@@ -168,7 +177,7 @@ WindowedListView.prototype = evt.mix({
       offset: details.offset !== this.offset,
       totalCount: details.totalCount !== this.totalCount,
       itemSet: itemSetChanged,
-      itemContents: contentsChanged
+      itemContents: contentsChanged,
     };
     this.offset = details.offset;
     this.heightOffset = details.heightOffset;
@@ -180,10 +189,10 @@ WindowedListView.prototype = evt.mix({
     if (details.tocMeta) {
       this.tocMeta = details.tocMeta;
       this.tocMetaSerial++;
-      this.emit('metaChange', this.tocMeta);
+      this.emit("metaChange", this.tocMeta);
     }
 
-    this.emit('seeked', whatChanged);
+    this.emit("seeked", whatChanged);
 
     if (details.events) {
       for (let { name, data } of details.events) {
@@ -211,10 +220,9 @@ WindowedListView.prototype = evt.mix({
    * based on an understanding of the visible item range and the buffering you
    * want.
    */
-  getItemByAbsoluteIndex: function(absIndex) {
+  getItemByAbsoluteIndex(absIndex) {
     let relIndex = absIndex - this.offset;
-    if (relIndex < 0 ||
-        relIndex >= this.items.length) {
+    if (relIndex < 0 || relIndex >= this.items.length) {
       return null;
     }
     return this.items[relIndex];
@@ -224,13 +232,13 @@ WindowedListView.prototype = evt.mix({
    * Seek to the top of the list and latch there so that our slice will always
    * include the first `numDesired` items in the list.
    */
-  seekToTop: function(visibleDesired, bufferDesired) {
+  seekToTop(visibleDesired, bufferDesired) {
     this._api.__bridgeSend({
-      type: 'seekProxy',
+      type: "seekProxy",
       handle: this.handle,
-      mode: 'top',
-      visibleDesired: visibleDesired,
-      bufferDesired: bufferDesired
+      mode: "top",
+      visibleDesired,
+      bufferDesired,
     });
   },
 
@@ -243,21 +251,26 @@ WindowedListView.prototype = evt.mix({
    *   The item to focus on.  This must be a current item in `items` or
    *   we will throw.
    */
-  seekFocusedOnItem: function(item, bufferAbove, visibleAbove, visibleBelow,
-                              bufferBelow) {
+  seekFocusedOnItem(
+    item,
+    bufferAbove,
+    visibleAbove,
+    visibleBelow,
+    bufferBelow
+  ) {
     let idx = this.items.indexOf(item);
     if (idx === -1) {
-      throw new Error('item is not in list');
+      throw new Error("item is not in list");
     }
     this._api.__bridgeSend({
-      type: 'seekProxy',
+      type: "seekProxy",
       handle: this.handle,
-      mode: 'focus',
+      mode: "focus",
       focusKey: this._makeOrderingKeyFromItem(item),
-      bufferAbove: bufferAbove,
-      visibleAbove: visibleAbove,
-      visibleBelow: visibleBelow,
-      bufferBelow: bufferBelow
+      bufferAbove,
+      visibleAbove,
+      visibleBelow,
+      bufferBelow,
     });
   },
 
@@ -267,17 +280,22 @@ WindowedListView.prototype = evt.mix({
    * the index correspond to the first visible message in your list or the
    * central one.
    */
-  seekFocusedOnAbsoluteIndex: function(index, bufferAbove, visibleAbove,
-                                       visibleBelow, bufferBelow) {
+  seekFocusedOnAbsoluteIndex(
+    index,
+    bufferAbove,
+    visibleAbove,
+    visibleBelow,
+    bufferBelow
+  ) {
     this._api.__bridgeSend({
-      type: 'seekProxy',
+      type: "seekProxy",
       handle: this.handle,
-      mode: 'focusIndex',
-      index: index,
-      bufferAbove: bufferAbove,
-      visibleAbove: visibleAbove,
-      visibleBelow: visibleBelow,
-      bufferBelow: bufferBelow
+      mode: "focusIndex",
+      index,
+      bufferAbove,
+      visibleAbove,
+      visibleBelow,
+      bufferBelow,
     });
   },
 
@@ -285,13 +303,13 @@ WindowedListView.prototype = evt.mix({
    * Seek to the bottom of the list and latch there so that our slice will
    * always include the last `numDesired` items in the list.
    */
-  seekToBottom: function(visibleDesired, bufferDesired) {
+  seekToBottom(visibleDesired, bufferDesired) {
     this._api.__bridgeSend({
-      type: 'seekProxy',
+      type: "seekProxy",
       handle: this.handle,
-      mode: 'bottom',
-      visibleDesired: visibleDesired,
-      bufferDesired: bufferDesired
+      mode: "bottom",
+      visibleDesired,
+      bufferDesired,
     });
   },
 
@@ -311,28 +329,28 @@ WindowedListView.prototype = evt.mix({
    * This mode of seeking assumes a virtual list widget with some concept of
    * the visible region and a buffer before it and after it.
    */
-  seekInCoordinateSpace: function(offset, before, visible, after) {
+  seekInCoordinateSpace(offset, before, visible, after) {
     this._api.__bridgeSend({
-      type: 'seekProxy',
+      type: "seekProxy",
       handle: this.handle,
-      mode: 'coordinates',
-      offset: offset,
-      before: before,
-      visible: visible,
-      after: after
+      mode: "coordinates",
+      offset,
+      before,
+      visible,
+      after,
     });
   },
 
-  release: function() {
+  release() {
     if (this.released) {
       return;
     }
     this.released = true;
 
     this._api.__bridgeSend({
-        type: 'cleanupContext',
-        handle: this.handle
-      });
+      type: "cleanupContext",
+      handle: this.handle,
+    });
 
     for (let i = 0; i < this.items.length; i++) {
       let item = this.items[i];

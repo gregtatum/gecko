@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { NOW } from 'shared/date';
+import { NOW } from "shared/date";
 
 /**
  * Create an account definition out of its source pieces.  For historical
@@ -78,8 +78,15 @@ import { NOW } from 'shared/date';
  *   fundamental nature of the account.  For example, domain hostnames, port
  *   numbers, etc.
  */
-export function makeAccountDef({ infra, credentials, prefFields, typeFields,
-                          engineFields, connInfoFields, identities }) {
+export function makeAccountDef({
+  infra,
+  credentials,
+  prefFields,
+  typeFields,
+  engineFields,
+  connInfoFields,
+  identities,
+}) {
   let def = {
     id: infra.id,
     name: infra.name,
@@ -93,7 +100,7 @@ export function makeAccountDef({ infra, credentials, prefFields, typeFields,
     credentials,
     // connInfo/receiveConnInfo/sendConnInfo come from connInfoFields
 
-    identities
+    identities,
   };
 
   for (let key of Object.keys(prefFields)) {
@@ -118,6 +125,6 @@ export function makeIdentity(raw) {
     address: raw.address,
     replyTo: raw.replyTo,
     signature: raw.signature,
-    signatureEnabled: raw.signatureEnabled
+    signatureEnabled: raw.signatureEnabled,
   };
 }

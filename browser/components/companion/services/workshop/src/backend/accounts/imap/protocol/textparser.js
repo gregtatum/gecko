@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import MimeParser from 'mimeparser';
-import mimefuncs from 'mimefuncs';
+import MimeParser from "mimeparser";
+import mimefuncs from "mimefuncs";
 
 /**
  * Simple wrapper around mimeparser hacks allows us to reuse data from the
@@ -38,11 +38,12 @@ import mimefuncs from 'mimefuncs';
  */
 export function TextParser(partDef) {
   this._partDef = partDef;
-  var parser = this._parser = new MimeParser();
+  var parser = (this._parser = new MimeParser());
   this._totalBytes = 0;
 
   // TODO: escape?
-  var charsetPart = '', formatPart = '';
+  var charsetPart = "",
+    formatPart = "";
   if (partDef.params && partDef.params.charset) {
     charsetPart = '; charset="' + partDef.params.charset.toLowerCase() + '"';
   }
@@ -50,39 +51,45 @@ export function TextParser(partDef) {
   if (partDef.params && partDef.params.format) {
     formatPart = '; format="' + partDef.params.format.toLowerCase() + '"';
   }
-  parser.write('Content-Type: ' + partDef.type.toLowerCase() +
-               '/' + partDef.subtype.toLowerCase() + charsetPart +
-               formatPart + '\r\n');
+  parser.write(
+    "Content-Type: " +
+      partDef.type.toLowerCase() +
+      "/" +
+      partDef.subtype.toLowerCase() +
+      charsetPart +
+      formatPart +
+      "\r\n"
+  );
 
   if (partDef.encoding) {
-    parser.write('Content-Transfer-Encoding: ' + partDef.encoding + '\r\n');
+    parser.write("Content-Transfer-Encoding: " + partDef.encoding + "\r\n");
   }
 
-  parser.write('\r\n'); // Finish headers.
+  parser.write("\r\n"); // Finish headers.
 }
 
 TextParser.prototype = {
-  parse: function(buffer) {
+  parse(buffer) {
     this._totalBytes += buffer.length;
     this._parser.write(buffer);
   },
 
-  complete: function() {
+  complete() {
     this._parser.end();
 
     // If this part was empty, we won't have any data in `this._parser`.
     if (this._totalBytes === 0) {
       return {
         bytesFetched: 0,
-        text: ''
+        text: "",
       };
     }
 
-    var str = mimefuncs.charset.decode(this._parser.node.content, 'utf-8');
+    var str = mimefuncs.charset.decode(this._parser.node.content, "utf-8");
 
     return {
       bytesFetched: this._totalBytes,
-      text: str
+      text: str,
     };
-  }
+  },
 };

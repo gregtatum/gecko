@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import PhabricatorClient from './phabricator_client';
+import PhabricatorClient from "./phabricator_client";
 
 /**
  * The Phabricator validator validates the server/API key information while
@@ -22,7 +22,11 @@ import PhabricatorClient from './phabricator_client';
  * belong to.
  *
  */
-export default async function validatePhabricator({ userDetails, credentials, connInfoFields }) {
+export default async function validatePhabricator({
+  userDetails,
+  credentials,
+  connInfoFields,
+}) {
   const client = new PhabricatorClient({
     serverUrl: connInfoFields.serverUrl,
     apiToken: credentials.apiKey,
@@ -32,10 +36,7 @@ export default async function validatePhabricator({ userDetails, credentials, co
   let groups;
 
   try {
-    const whoami = await client.apiCall(
-      'user.whoami',
-      {}
-    );
+    const whoami = await client.apiCall("user.whoami", {});
 
     userDetails.displayName = whoami.realName;
     // This isn't actually an email address.  We do have one available as
@@ -43,11 +44,11 @@ export default async function validatePhabricator({ userDetails, credentials, co
     userDetails.emailAddress = whoami.userName;
 
     userPhid = whoami.phid;
-  } catch(ex) {
+  } catch (ex) {
     // XXX this should be a `logic` error
-    console.error('Problem running whoami', ex);
+    console.error("Problem running whoami", ex);
     return {
-      error: 'unknown',
+      error: "unknown",
       errorDetails: {
         server: connInfoFields.serverUrl,
       },
@@ -55,19 +56,16 @@ export default async function validatePhabricator({ userDetails, credentials, co
   }
 
   try {
-    const projects = await client.apiCall(
-      'project.search',
-      {
-        constraints: {
-          members: [userPhid]
-        }
-      }
-    );
+    const projects = await client.apiCall("project.search", {
+      constraints: {
+        members: [userPhid],
+      },
+    });
 
     groups = [];
     for (const info of projects.data) {
       // Bugzilla security groups are boring, so we want to ignore them.
-      if (!info.fields.name.startsWith('bmo-')) {
+      if (!info.fields.name.startsWith("bmo-")) {
         groups.push({
           id: info.id,
           phid: info.phid,
@@ -76,21 +74,20 @@ export default async function validatePhabricator({ userDetails, credentials, co
         });
       }
     }
-  } catch(ex) {
+  } catch (ex) {
     // XXX this should be a `logic` error
-    console.error('Problem running projects search', ex);
+    console.error("Problem running projects search", ex);
     return {
-      error: 'unknown',
+      error: "unknown",
       errorDetails: {
         server: connInfoFields.serverUrl,
       },
     };
   }
 
-
   return {
     engineFields: {
-      engine: 'phabricator',
+      engine: "phabricator",
       engineData: {
         userPhid,
         groups,

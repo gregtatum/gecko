@@ -21,7 +21,7 @@ let workerPort = null;
 
 export function register(module) {
   var action,
-      name = module.name;
+    name = module.name;
 
   modules.push(module);
 
@@ -40,24 +40,31 @@ export function register(module) {
   listeners[name] = action;
 
   module.sendMessage = function(uid, cmd, args, transferArgs) {
-  //dump('\x1b[34mM => w: send: ' + name + ' ' + uid + ' ' + cmd + '\x1b[0m\n');
+    //dump('\x1b[34mM => w: send: ' + name + ' ' + uid + ' ' + cmd + '\x1b[0m\n');
     //debug('onmessage: ' + name + ": " + uid + " - " + cmd);
     try {
-      workerPort.postMessage({
-        type: name,
-        uid: uid,
-        cmd: cmd,
-        args: args
-      }, transferArgs);
+      workerPort.postMessage(
+        {
+          type: name,
+          uid,
+          cmd,
+          args,
+        },
+        transferArgs
+      );
     } catch (ex) {
-      console.error('Presumed DataCloneError on:', args, 'with transfer args',
-                    transferArgs);
+      console.error(
+        "Presumed DataCloneError on:",
+        args,
+        "with transfer args",
+        transferArgs
+      );
     }
   };
 }
 
 export function unregister(module) {
-  delete listeners['on' + module.name];
+  delete listeners["on" + module.name];
 }
 
 export function shutdown() {

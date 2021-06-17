@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { millisecsToSeconds, makeDaysAgo } from 'shared/date';
+import { makeDaysAgo } from "shared/date";
 
 /**
  * See `sync.md`.
  */
 export default class BugzillaSyncStateHelper {
   constructor(ctx, rawSyncState, accountId, why) {
-    logic.defineScope(this, 'BugzillaSyncState', { ctxId: ctx.id, why });
+    logic.defineScope(this, "BugzillaSyncState", { ctxId: ctx.id, why });
 
     if (!rawSyncState) {
-      logic(ctx, 'creatingDefaultSyncState', {});
+      logic(ctx, "creatingDefaultSyncState", {});
       // During initial development we're using a week as the horizon, but once
       // this seems sufficiently stable, this should probably be at least a
       // month and probably actually much longer.
@@ -54,9 +54,9 @@ export default class BugzillaSyncStateHelper {
   }
 
   _makeBugConvTask({ bugId, lastChangeDatestamp }) {
-    let convId = this._accountId + '.' + bugId;
+    let convId = this._accountId + "." + bugId;
     let task = {
-      type: 'sync_bug',
+      type: "sync_bug",
       accountId: this._accountId,
       convId,
       bugId,

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../../../task_infra/task_definer';
+import TaskDefiner from "../../../task_infra/task_definer";
 
-import MixinStoreFlags from '../../../task_mixins/mix_store_flags';
+import MixinStoreFlags from "../../../task_mixins/mix_store_flags";
 
 /**
  * We use the vanilla IMAP store flags implementation without any execute stage
@@ -29,8 +29,8 @@ import MixinStoreFlags from '../../../task_mixins/mix_store_flags';
 export default TaskDefiner.defineComplexTask([
   MixinStoreFlags,
   {
-    name: 'store_flags',
+    name: "store_flags",
 
-    execute: null
-  }
+    execute: null,
+  },
 ]);

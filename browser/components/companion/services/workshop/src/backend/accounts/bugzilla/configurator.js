@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export default function configurateBugzilla(userDetails/*, domainInfo*/) {
+export default function configurateBugzilla(userDetails /*, domainInfo*/) {
   return {
     // Pass the user details through because the validator will want to mutate
     // `displayName` and `address` into place (for now, until things get
@@ -23,8 +23,7 @@ export default function configurateBugzilla(userDetails/*, domainInfo*/) {
     credentials: {
       apiKey: userDetails.bugzillaApiKey,
     },
-    typeFields: {
-    },
+    typeFields: {},
     connInfoFields: {
       serverUrl: userDetails.bugzillaServerUrl,
     },

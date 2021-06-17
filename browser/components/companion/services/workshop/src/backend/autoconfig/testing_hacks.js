@@ -21,4 +21,3 @@
  * we don't actually need anything in here.
  */
 export default new Map();
-

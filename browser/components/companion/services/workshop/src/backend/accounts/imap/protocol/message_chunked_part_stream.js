@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { ReadableStream } from 'streams';
+import { ReadableStream } from "streams";
 
-import chunkedDownloadMimeStream from './chunked_download_mime_stream';
+import chunkedDownloadMimeStream from "./chunked_download_mime_stream";
 
 /**
  * Given a message and a list of parts to fetch, this will produce a stream of
@@ -36,7 +36,14 @@ import chunkedDownloadMimeStream from './chunked_download_mime_stream';
  *   is split over multiple chunks.
  */
 export default function messageChunkedPartStream({
-    ctx, pimap, folderInfo, uid, parts, downloadChunkSize, saveChunkSize }) {
+  ctx,
+  pimap,
+  folderInfo,
+  uid,
+  parts,
+  downloadChunkSize,
+  saveChunkSize,
+}) {
   // Pull the parts off as we go.
   let remainingPartsToFetch = parts.slice();
 
@@ -44,8 +51,7 @@ export default function messageChunkedPartStream({
   // the generator will enqueue once for each blob and once to close out the
   // part.
   return new ReadableStream({
-    start() {
-    },
+    start() {},
 
     async pull(out) {
       if (!remainingPartsToFetch.length) {
@@ -62,13 +68,15 @@ export default function messageChunkedPartStream({
         uid,
         partInfo,
         downloadChunkSize,
-        saveChunkSize
+        saveChunkSize,
       });
       let mimeReader = mimeStream.getReader();
 
       // (We do not need the headers since it's information sourced from the
       // partInfo and already known to our caller.)
-      let { value: { bodyStream } } = await mimeReader.read();
+      let {
+        value: { bodyStream },
+      } = await mimeReader.read();
       let bodyReader = bodyStream.getReader();
 
       for (;;) {
@@ -78,14 +86,14 @@ export default function messageChunkedPartStream({
             relId: partInfo.relId,
             blobCount: blobIndex++,
             blob,
-            done
+            done,
           });
         } else {
           out.enqueue({
             relId: partInfo.relId,
             blobCount: blobIndex,
             blob: null,
-            done
+            done,
           });
           break;
         }
@@ -93,6 +101,6 @@ export default function messageChunkedPartStream({
 
       bodyReader.cancel();
       mimeReader.cancel();
-    }
+    },
   });
 }

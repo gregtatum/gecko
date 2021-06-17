@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import BugzillaClient from './bugzilla_client';
+import BugzillaClient from "./bugzilla_client";
 
 /**
  * The Bugzilla validator validates the server/API key information while
@@ -22,17 +22,18 @@ import BugzillaClient from './bugzilla_client';
  * belong to.
  *
  */
-export default async function validateBugzilla({ userDetails, credentials, connInfoFields }) {
+export default async function validateBugzilla({
+  userDetails,
+  credentials,
+  connInfoFields,
+}) {
   const client = new BugzillaClient({
     serverUrl: connInfoFields.serverUrl,
     apiToken: credentials.apiKey,
   });
 
   try {
-    const whoami = await client.restCall(
-      'whoami',
-      null
-    );
+    const whoami = await client.restCall("whoami", null);
 
     // Note that only displayName and emailAddress will actually end up getting
     // propagated by the `account_create` task.  We're just propagating the
@@ -45,11 +46,11 @@ export default async function validateBugzilla({ userDetails, credentials, connI
     userDetails.displayName = whoami.real_name;
     userDetails.emailAddress = whoami.name;
     userDetails.nick = whoami.nick;
-  } catch(ex) {
+  } catch (ex) {
     // XXX this should be a `logic` error
-    console.error('Problem running whoami', ex);
+    console.error("Problem running whoami", ex);
     return {
-      error: 'unknown',
+      error: "unknown",
       errorDetails: {
         server: connInfoFields.serverUrl,
       },
@@ -61,7 +62,7 @@ export default async function validateBugzilla({ userDetails, credentials, connI
 
   return {
     engineFields: {
-      engine: 'bugzilla',
+      engine: "bugzilla",
       engineData: {
         // The userEmail ends up as part of the identity, but the others don't
         // get propagated through and these are interesting at the very least.

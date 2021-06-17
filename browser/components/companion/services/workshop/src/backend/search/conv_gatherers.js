@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import GatherConversation from './gatherers/conv';
-import GatherConversationMessages from './gatherers/conv_messages';
-import MessageGatherers from './msg_gatherers';
+import GatherConversation from "./gatherers/conv";
+import GatherConversationMessages from "./gatherers/conv_messages";
+import MessageGatherers from "./msg_gatherers";
 
 export default {
   conversation: {
     constructor: GatherConversation,
     params: null,
-    nested: null
+    nested: null,
   },
   messages: {
     constructor: GatherConversationMessages,
     params: null,
-    nestedRootKey: 'message',
+    nestedRootKey: "message",
     nested: MessageGatherers,
   },
 };

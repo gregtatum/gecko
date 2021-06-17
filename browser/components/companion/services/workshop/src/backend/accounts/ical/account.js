@@ -15,7 +15,7 @@
  */
 
 export default class ICalAccount {
-  constructor(universe, accountDef, foldersTOC, dbConn/*, receiveProtoConn*/) {
+  constructor(universe, accountDef, foldersTOC, dbConn /*, receiveProtoConn*/) {
     this.universe = universe;
     this.id = accountDef.id;
     this.accountDef = accountDef;
@@ -43,8 +43,7 @@ export default class ICalAccount {
   __acquire() {
     return Promise.resolve(this);
   }
-  __release() {
-  }
+  __release() {}
 
   // TODO: Other account types use a callback argument, they will need to be
   // adapted.
@@ -57,5 +56,5 @@ export default class ICalAccount {
   }
 }
 
-ICalAccount.type = 'iCal';
+ICalAccount.type = "iCal";
 ICalAccount.supportsServerFolders = false;

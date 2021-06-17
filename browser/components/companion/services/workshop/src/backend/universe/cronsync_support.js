@@ -15,12 +15,12 @@
  */
 
 /* eslint-disable no-prototype-builtins */
-import logic from 'logic';
-import * as router from '../worker-router';
-import { CRONSYNC_MAX_DURATION_MS } from '../syncbase';
+import logic from "logic";
+import * as router from "../worker-router";
+import { CRONSYNC_MAX_DURATION_MS } from "../syncbase";
 
-import { wrapMainThreadAcquiredWakelock } from '../wakelocks';
-import { NOW } from 'shared/date';
+import { wrapMainThreadAcquiredWakelock } from "../wakelocks";
+import { NOW } from "shared/date";
 
 /**
  * Support logic for cronsync/periodic sync to deal with the fact that the
@@ -60,7 +60,7 @@ export default function CronSyncSupport({ universe, db, accountManager }) {
   // Needed so we can get at the current accountDefs
   this._accountManager = accountManager;
 
-  logic.defineScope(this, 'CronSync');
+  logic.defineScope(this, "CronSync");
 
   // Slots used by ensureSync to ensure there is only one outstanding ensureSync
   // request at a time.  See its docs for more details.
@@ -76,14 +76,14 @@ export default function CronSyncSupport({ universe, db, accountManager }) {
    */
   this._activelyCronSyncingAccounts = new Set();
 
-  this.sendCronSync = router.registerSimple('cronsync', (data) => {
+  this.sendCronSync = router.registerSimple("cronsync", data => {
     var args = data.args;
-    logic(this, 'message', { cmd: data.cmd });
+    logic(this, "message", { cmd: data.cmd });
     switch (data.cmd) {
-      case 'alarm':
+      case "alarm":
         this.onAlarm.apply(this, args);
         break;
-      case 'syncEnsured':
+      case "syncEnsured":
         this.onSyncEnsured.apply(this, args);
         break;
       default:
@@ -103,8 +103,8 @@ CronSyncSupport.prototype = {
    * 1: This was not a modern reference when this code was written[2].
    * 2: Nor was it a modern reference when I first learned about it.
    */
-  systemReady: function() {
-    this.sendCronSync('hello');
+  systemReady() {
+    this.sendCronSync("hello");
   },
 
   /**
@@ -147,13 +147,13 @@ CronSyncSupport.prototype = {
     // to async timing of mozAlarm setting, could end up with two sync tasks for
     // the same ID.
     if (this._ensureSyncPromise) {
-      logic(this, 'ensureSyncConsolidated', { why });
+      logic(this, "ensureSyncConsolidated", { why });
       return this._ensureSyncPromise;
     }
 
-    logic(this, 'ensureSync:begin', { why });
+    logic(this, "ensureSync:begin", { why });
 
-    this._ensureSyncPromise = new Promise((resolve) => {
+    this._ensureSyncPromise = new Promise(resolve => {
       // No error pathway for the bridge hop, so just tracking resolve.
       this._ensureSyncResolve = resolve;
     });
@@ -164,7 +164,7 @@ CronSyncSupport.prototype = {
       // Store data by interval, use a more obvious string key instead of just
       // stringifying a number, which could be confused with an array construct.
       let interval = accountDef.syncInterval,
-      intervalKey = 'interval' + interval;
+        intervalKey = "interval" + interval;
 
       if (!syncData.hasOwnProperty(intervalKey)) {
         syncData[intervalKey] = [];
@@ -172,7 +172,7 @@ CronSyncSupport.prototype = {
       syncData[intervalKey].push(accountDef.id);
     }
 
-    this.sendCronSync('ensureSync', [syncData]);
+    this.sendCronSync("ensureSync", [syncData]);
     return null;
   },
 
@@ -181,8 +181,8 @@ CronSyncSupport.prototype = {
    * wait for it before signaling sync is done because otherwise the app could
    * get closed down before the alarm additions succeed.
    */
-  onSyncEnsured: function() {
-    logic(this, 'ensureSync:end');
+  onSyncEnsured() {
+    logic(this, "ensureSync:end");
     this._ensureSyncResolve();
     this._ensureSyncPromise = null;
     this._ensureSyncResolve = null;
@@ -205,20 +205,22 @@ CronSyncSupport.prototype = {
    * We otherwise do not give any feedback to the core cronsync driver logic.
    * It knows a cronsync has completed when the task
    */
-  cronsyncAccount: function({ accountId, logTimestamp }) {
+  cronsyncAccount({ accountId, logTimestamp }) {
     let cronsyncLogEntry = {
       accountId,
       startTS: null,
       endTS: null,
-      status: null
+      status: null,
     };
     let cronsyncLogWrapped = {
-      type: 'cronsync', timestamp: logTimestamp, id: accountId,
-      entry: cronsyncLogEntry
+      type: "cronsync",
+      timestamp: logTimestamp,
+      id: accountId,
+      entry: cronsyncLogEntry,
     };
 
     if (this._activelyCronSyncingAccounts.has(accountId)) {
-      cronsyncLogEntry.status = 'already-active';
+      cronsyncLogEntry.status = "already-active";
       this._db.addBoundedLogs([cronsyncLogWrapped]);
       return false;
     }
@@ -228,12 +230,12 @@ CronSyncSupport.prototype = {
       // The only way this happens if we're racing account removal.  But if
       // that happens, it is indeed best for us to skip over the account at
       // this point.  Our state will quickly converge.
-      cronsyncLogEntry.status = 'account-dead';
+      cronsyncLogEntry.status = "account-dead";
       this._db.addBoundedLogs([cronsyncLogWrapped]);
       return false;
     }
-    let inboxFolderId = foldersTOC.getCanonicalFolderByType('inbox').id;
-    this._universe.syncRefreshFolder(inboxFolderId, 'cronsync').then(() => {
+    let inboxFolderId = foldersTOC.getCanonicalFolderByType("inbox").id;
+    this._universe.syncRefreshFolder(inboxFolderId, "cronsync").then(() => {
       this._activelyCronSyncingAccounts.delete(accountId);
       cronsyncLogEntry.endTS = NOW();
       // XXX this needs to use some combination of syncBlocked and the
@@ -241,14 +243,14 @@ CronSyncSupport.prototype = {
       // in order to figure out whether we actually did the sync or not.  For
       // now we'll just be inferring from the online status of the containing
       // cronsync log.
-      cronsyncLogEntry.status = 'completed...somehow';
+      cronsyncLogEntry.status = "completed...somehow";
       this._db.updateBoundedLogs([cronsyncLogWrapped]);
     });
 
     this._activelyCronSyncingAccounts.add(accountId);
 
     cronsyncLogEntry.startTS = logTimestamp;
-    cronsyncLogEntry.status = 'issued';
+    cronsyncLogEntry.status = "issued";
     this._db.addBoundedLogs([cronsyncLogWrapped]);
 
     return true;
@@ -271,16 +273,15 @@ CronSyncSupport.prototype = {
    * Our contract with the front-end is that we will tell it when all
    * outstanding cronsyncs have completed.
    */
-  onAlarm: function(syncAccountIds, interval, wakelockId,
-                    accountIdsWithNotifications) {
-    logic(this, 'alarmFired', { syncAccountIds, interval, wakelockId });
+  onAlarm(syncAccountIds, interval, wakelockId, accountIdsWithNotifications) {
+    logic(this, "alarmFired", { syncAccountIds, interval, wakelockId });
 
     // This is the timestamp we'll use with our log entry.
     let logTimestamp = NOW();
 
     let wakelock = wrapMainThreadAcquiredWakelock({
       wakelockId,
-      timeout: CRONSYNC_MAX_DURATION_MS
+      timeout: CRONSYNC_MAX_DURATION_MS,
     });
 
     // - Build and log the initial bounded log entry (before doing anything)
@@ -290,11 +291,13 @@ CronSyncSupport.prototype = {
       accountIds: syncAccountIds,
       endTS: null,
       endOnline: null,
-      result: null
+      result: null,
     };
     let cronsyncLogWrapped = {
-      type: 'cronsync', timestamp: logTimestamp, id: 'cronsync',
-      entry: cronsyncLogEntry
+      type: "cronsync",
+      timestamp: logTimestamp,
+      id: "cronsync",
+      entry: cronsyncLogEntry,
     };
     this._db.addBoundedLogs([cronsyncLogWrapped]);
 
@@ -312,7 +315,7 @@ CronSyncSupport.prototype = {
     // this one because of our consolidation of multiple alarm requests.  We'd
     // end up generating a whole bunch of complicated promise chains and guards
     // when that is not our goal.
-    this.ensureSync('alarm');
+    this.ensureSync("alarm");
 
     // -- Infer new_tracking to be cleared based on no outstanding notifications
     //
@@ -335,7 +338,7 @@ CronSyncSupport.prototype = {
     // currently support we might generate a single super-notification, and in
     // that case it would suck to have )
     for (let accountDef of this._accountManager.getAllAccountDefs()) {
-      if (accountIdsWithNotifications.indexOf(accountDef.id) === -1) {
+      if (accountIdsWithNotifications(accountDef.id)) {
         this._universe.clearNewTrackingForAccount({
           accountId: accountDef.id,
           // We're making the new_tracking reflect the actual (and desired) UI
@@ -344,7 +347,7 @@ CronSyncSupport.prototype = {
           // message arrived and was reported by us after the clear was issued,
           // this way the user will still see that notification until they clear
           // it too or some other change causes us to do a new_flush.
-          silent: true
+          silent: true,
         });
       }
     }
@@ -361,7 +364,7 @@ CronSyncSupport.prototype = {
       }
     }
 
-    let logConclusion = (result) => {
+    let logConclusion = result => {
       cronsyncLogEntry.endTS = NOW();
       cronsyncLogEntry.endOnline = this._universe.online;
       cronsyncLogEntry.result = result;
@@ -373,36 +376,36 @@ CronSyncSupport.prototype = {
       // - Already an active cronsync
       // (yes, one of us is still active)
       if (cronsyncsIssued) {
-        logic(this, 'cronSync:handoff');
+        logic(this, "cronSync:handoff");
         // We actually did something, so rollover to the new wakelock.
         this._activeWakeLock.unlock();
         this._activeWakeLock = wakelock;
-        this._activeWakeLock.imminentDoomHandler =
-          this._bound_cronsyncImminentDoom;
+        this._activeWakeLock.imminentDoomHandler = this._bound_cronsyncImminentDoom;
         // likewise, have the old log closed out in the favor of this new one.
-        this._activeCronSyncLogConclusion('superseded');
+        this._activeCronSyncLogConclusion("superseded");
         this._activeCronSyncLogConclusion = logConclusion;
       } else {
-        logic(this, 'cronSync:no-sync-no-handoff');
+        logic(this, "cronSync:no-sync-no-handoff");
         // We did not schedule anything new, leave the current wakelock active
         // with its existing timeout.
         wakelock.unlock();
         // likewise indicate for our new/current log entry that we ended up
         // not going with this one.
-        logConclusion('ignored-ineffective');
+        logConclusion("ignored-ineffective");
       }
     } else {
-      logic(this, 'cronSync:begin');
+      logic(this, "cronSync:begin");
       // - No pre-existing cronsync
       this._activeWakeLock = wakelock;
-      this._activeWakeLock.imminentDoomHandler =
-        this._bound_cronsyncImminentDoom;
+      this._activeWakeLock.imminentDoomHandler = this._bound_cronsyncImminentDoom;
       this._activeCronSyncLogConclusion = logConclusion;
 
       // We can declare victory when the ensure sync has completed and the task
       // queue is empty.  This covers syncs, the new_tracking flush and others.
       this._universe.taskManager.once(
-        'taskQueueEmpty', this._bound_cronsyncSuccess);
+        "taskQueueEmpty",
+        this._bound_cronsyncSuccess
+      );
     }
     // at this point the following things are true, inductively:
     // * we have a this._activeWakeLock and it's counting down. tick tock!
@@ -419,7 +422,7 @@ CronSyncSupport.prototype = {
    * Notify the front-end that the cronsync completed and they can maybe shut
    * the process down.
    */
-  _cronsyncVictoriousCompletion: function() {
+  _cronsyncVictoriousCompletion() {
     // (see inside realCompletion for rationale on these)
     let wakelockOnEntry = this._activeWakeLock;
     let logConclusionOnEntry = this._activeCronSyncLogConclusion;
@@ -444,14 +447,14 @@ CronSyncSupport.prototype = {
       // tasks must have completed ergo not broken and removed from the
       // _activelyCronSyncingAccounts suppression set.
       if (this._activeWakeLock) {
-        logic(this, 'cronSync:last-minute-handoff');
-        logConclusionOnEntry('success-left-open');
+        logic(this, "cronSync:last-minute-handoff");
+        logConclusionOnEntry("success-left-open");
         wakelockOnEntry.unlock();
         return;
       }
-      logic(this, 'cronSync:end');
-      this._universe.broadcastOverBridges('cronSyncComplete', {});
-      logConclusionOnEntry('success');
+      logic(this, "cronSync:end");
+      this._universe.broadcastOverBridges("cronSyncComplete", {});
+      logConclusionOnEntry("success");
       wakelockOnEntry.unlock();
     };
     if (this._ensureSyncPromise) {
@@ -469,14 +472,14 @@ CronSyncSupport.prototype = {
    * notification and invokes window.close() immediately, it will get the
    * benefit of the wakelock and can even re-acquire its wakelock.
    */
-  _cronsyncImminentDoom: function() {
-    logic(this, 'cronSyncEpicFail');
-    this._universe.broadcastOverBridges(
-      'cronSyncEpicFail',
-      { epicnessLevel: 'so epic'});
+  _cronsyncImminentDoom() {
+    logic(this, "cronSyncEpicFail");
+    this._universe.broadcastOverBridges("cronSyncEpicFail", {
+      epicnessLevel: "so epic",
+    });
   },
 
-  shutdown: function() {
-    router.unregister('cronsync');
-  }
+  shutdown() {
+    router.unregister("cronsync");
+  },
 };

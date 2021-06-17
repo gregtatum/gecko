@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
+import evt from "evt";
 
-import ContactCache from './contact_cache';
+import ContactCache from "./contact_cache";
 
-import { accountIdFromConvId } from 'shared/id_conversions';
+import { accountIdFromConvId } from "shared/id_conversions";
 
-import decorateConversation from 'app_logic/conv_client_decorator';
-import cleanupConversation from 'app_logic/conv_client_cleanup';
+import decorateConversation from "app_logic/conv_client_decorator";
+import cleanupConversation from "app_logic/conv_client_cleanup";
 
 /**
  * @typedef {Object} ConvMsgTidbit
@@ -80,7 +80,14 @@ import cleanupConversation from 'app_logic/conv_client_cleanup';
  * @property {Boolean} hasDraft
  * @property {Boolean} hasAttachments
  */
-export default function MailConversation(api, wireRep, overlays, matchInfo, slice, handle) {
+export default function MailConversation(
+  api,
+  wireRep,
+  overlays,
+  matchInfo,
+  slice,
+  handle
+) {
   evt.Emitter.call(this);
   this._api = api;
   this._slice = slice;
@@ -95,17 +102,17 @@ export default function MailConversation(api, wireRep, overlays, matchInfo, slic
   this.matchInfo = matchInfo;
 }
 MailConversation.prototype = evt.mix({
-  toString: function() {
-    return '[MailConversation: ' + this.id + ']';
+  toString() {
+    return "[MailConversation: " + this.id + "]";
   },
-  toJSON: function() {
+  toJSON() {
     return {
-      type: 'MailConversation',
-      id: this.id
+      type: "MailConversation",
+      id: this.id,
     };
   },
 
-  viewMessages: function() {
+  viewMessages() {
     return this._api.viewConversationMessages(this);
   },
 
@@ -122,7 +129,7 @@ MailConversation.prototype = evt.mix({
    *   A shallow copy of the list of folders.  The items will update, but the
    *  contents of the list won't change.
    */
-  getKnownLabels: function() {
+  getKnownLabels() {
     let accountId = accountIdFromConvId(this.id);
     let account = this._api.accounts.getAccountById(accountId);
     return account.folders.items.concat();
@@ -135,10 +142,10 @@ MailConversation.prototype = evt.mix({
    *   Thunderbird does and create one or more archive folders (possibly
    *   segmented by date) and trigger a move to that folder.
    */
-  archive: function() {
+  archive() {
     let accountId = accountIdFromConvId(this.id);
     let account = this._api.accounts.getAccountById(accountId);
-    let inboxFolder = account.foldes.getFirstFolderWithType('inbox');
+    let inboxFolder = account.foldes.getFirstFolderWithType("inbox");
     return this.removeLabels([inboxFolder]);
   },
 
@@ -148,19 +155,19 @@ MailConversation.prototype = evt.mix({
    * Under the hood, this is implemented by us applying the label to all the
    * messages in the conversation at the time the task is planned.
    */
-  addLabels: function(folders) {
+  addLabels(folders) {
     return this._api.modifyLabels([this], { addLabels: folders });
   },
 
-  removeLabels: function(folders) {
+  removeLabels(folders) {
     return this._api.modifyLabels([this], { removeLabels: folders });
   },
 
-  modifyLabels: function(args) {
+  modifyLabels(args) {
     return this._api.modifyLabels([this], args);
   },
 
-  modifyTags: function(args) {
+  modifyTags(args) {
     return this._api.modifyTags([this], args);
   },
 
@@ -179,11 +186,11 @@ MailConversation.prototype = evt.mix({
    *   If `false` then all messages in the converastion have their starred
    *   state cleared.
    */
-  setStarred: function(beStarred) {
+  setStarred(beStarred) {
     return this._api.markStarred([this], beStarred);
   },
 
-  toggleStarred: function() {
+  toggleStarred() {
     this.setStarred(!this.hasStarred);
   },
 
@@ -196,15 +203,15 @@ MailConversation.prototype = evt.mix({
    * Mark the conversation as read or unread.  This will modify the state of all
    * messages in the conversation uniformly.
    */
-  setRead: function(beRead) {
+  setRead(beRead) {
     return this._api.markRead([this], beRead);
   },
 
-  toggleRead: function() {
+  toggleRead() {
     this.setRead(!this.isRead);
   },
 
-  __update: function(wireRep, firstTime) {
+  __update(wireRep, firstTime) {
     this._wireRep = wireRep;
 
     this.height = wireRep.height;
@@ -224,14 +231,14 @@ MailConversation.prototype = evt.mix({
     this.hasAttachments = wireRep.hasAttachments;
   },
 
-  __updateOverlays: function(/*overlays*/) {
+  __updateOverlays(/*overlays*/) {
     // XXX currently no overlays for conversations
   },
 
   /**
    * Cleanup.
    */
-  release: function() {
+  release() {
     ContactCache.forgetPeepInstances(this.authors);
     cleanupConversation(this);
     if (this._handle) {
@@ -239,5 +246,4 @@ MailConversation.prototype = evt.mix({
       this._handle = null;
     }
   },
-
 });

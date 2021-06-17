@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { TransformStream } from 'streams';
+import { TransformStream } from "streams";
 
 /**
  * A simple transform stream that counts the bytes passing through it,
@@ -27,7 +27,7 @@ export default function ByteCounterTransformStream() {
       self.totalBytesRead += chunk.byteLength;
       enqueue(chunk);
       done();
-    }
+    },
   });
 
   this.writable = ts.writable;
@@ -35,4 +35,4 @@ export default function ByteCounterTransformStream() {
 
   /** @member {number} */
   this.totalBytesRead = 0;
-};
+}

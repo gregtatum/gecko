@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../task_infra/task_definer';
+import TaskDefiner from "../task_infra/task_definer";
 
-import { accountIdFromFolderId, accountIdFromMessageId, convIdFromMessageId }
-  from 'shared/id_conversions';
+import {
+  accountIdFromFolderId,
+  accountIdFromMessageId,
+  convIdFromMessageId,
+} from "shared/id_conversions";
 
-import { NOW } from 'shared/date';
+import { NOW } from "shared/date";
 
-import { generateMessageIdHeaderValue } from '../bodies/mailchew';
+import { generateMessageIdHeaderValue } from "../bodies/mailchew";
 
-import deriveBlankDraft from '../drafts/derive_blank_draft';
-import deriveInlineForward from '../drafts/derive_inline_forward';
-import deriveQuotedReply from '../drafts/derive_quoted_reply';
+import deriveBlankDraft from "../drafts/derive_blank_draft";
+import deriveInlineForward from "../drafts/derive_inline_forward";
+import deriveQuotedReply from "../drafts/derive_quoted_reply";
 
-import churnConversation from '../churn_drivers/conv_churn_driver';
+import churnConversation from "../churn_drivers/conv_churn_driver";
 
 /**
  * Global task to create a new message (either a blank one, a reply, or a
@@ -41,7 +44,7 @@ import churnConversation from '../churn_drivers/conv_churn_driver';
  */
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'draft_create',
+    name: "draft_create",
 
     async plan(ctx, req) {
       // -- Determine Account
@@ -57,7 +60,7 @@ export default TaskDefiner.defineSimpleTask([
       }
 
       let account = await ctx.universe.acquireAccount(ctx, accountId);
-      let draftFolderInfo = account.getFirstFolderWithType('localdrafts');
+      let draftFolderInfo = account.getFirstFolderWithType("localdrafts");
 
       // -- Determine identity
       // This one is currently easy since we only support a single identity, but
@@ -72,17 +75,17 @@ export default TaskDefiner.defineSimpleTask([
       // use "~" which is not used by our a64 encoding as a prefix in
       // conjunction with another identifier that's unique within this space.
       // For the current sake of simplicity, we just use the task id.
-      let messageIdPiece = '~' + ctx.id;
-      let umid = accountId + '.' + messageIdPiece;
-      if (req.draftType === 'blank' || req.draftType === 'forward') {
+      let messageIdPiece = "~" + ctx.id;
+      let umid = accountId + "." + messageIdPiece;
+      if (req.draftType === "blank" || req.draftType === "forward") {
         // Fresh compose contexts and forwards mean new conversations.
-        convId = accountId + '.' + messageIdPiece;
-        messageId = convId + '.' + messageIdPiece;
-      } else if (req.draftType === 'reply') {
+        convId = accountId + "." + messageIdPiece;
+        messageId = convId + "." + messageIdPiece;
+      } else if (req.draftType === "reply") {
         convId = convIdFromMessageId(req.refMessageId);
-        messageId = convId + '.' + messageIdPiece;
+        messageId = convId + "." + messageIdPiece;
       } else {
-        throw new Error('invalid draft type: ' + req.draftType);
+        throw new Error("invalid draft type: " + req.draftType);
       }
 
       // -- Metadata that gets updated every draft save
@@ -95,7 +98,7 @@ export default TaskDefiner.defineSimpleTask([
       let messageInfo;
       let folderIds = new Set([draftFolderInfo.id]);
       // - Blank Compose
-      if (req.draftType === 'blank') {
+      if (req.draftType === "blank") {
         // No need for a body, just generate it up.
         messageInfo = deriveBlankDraft({
           identity,
@@ -103,24 +106,25 @@ export default TaskDefiner.defineSimpleTask([
           umid,
           guid,
           date,
-          folderIds
+          folderIds,
         });
 
         allMessages = [messageInfo];
       }
       // - Reply
-      else if (req.draftType === 'reply') {
+      else if (req.draftType === "reply") {
         // Load the conversation and its messages, acquiring a lock.
         let fromDb = await ctx.beginMutate({
           conversations: new Map([[convId, null]]),
-          messagesByConversation: new Map([[convId, null]])
+          messagesByConversation: new Map([[convId, null]]),
         });
 
         oldConvInfo = fromDb.conversations.get(convId);
         let loadedMessages = fromDb.messagesByConversation.get(convId);
 
-        let sourceMessage =
-          loadedMessages.find(msg => msg.id === req.refMessageId);
+        let sourceMessage = loadedMessages.find(
+          msg => msg.id === req.refMessageId
+        );
 
         messageInfo = await deriveQuotedReply({
           sourceMessage,
@@ -130,7 +134,7 @@ export default TaskDefiner.defineSimpleTask([
           umid,
           guid,
           date,
-          folderIds
+          folderIds,
         });
 
         allMessages = loadedMessages.concat([messageInfo]);
@@ -141,7 +145,7 @@ export default TaskDefiner.defineSimpleTask([
         // conversation.)
         let sourceMessageKey = [req.refMessageId, req.refMessageDate];
         let fromDb = await ctx.beginMutate({
-          messages: new Map([[sourceMessageKey, null]])
+          messages: new Map([[sourceMessageKey, null]]),
         });
         let sourceMessage = fromDb.messages.get(req.refMessageId);
 
@@ -152,7 +156,7 @@ export default TaskDefiner.defineSimpleTask([
           umid,
           guid,
           date,
-          folderIds
+          folderIds,
         });
 
         allMessages = [messageInfo];
@@ -166,15 +170,15 @@ export default TaskDefiner.defineSimpleTask([
             conversations: new Map([[convId, convInfo]]),
           },
           newData: {
-            messages: [messageInfo]
-          }
+            messages: [messageInfo],
+          },
         });
       } else {
         await ctx.finishTask({
           newData: {
             conversations: [convInfo],
-            messages: [messageInfo]
-          }
+            messages: [messageInfo],
+          },
         });
       }
 
@@ -185,6 +189,6 @@ export default TaskDefiner.defineSimpleTask([
       return ctx.returnValue({ messageId, messageDate: date });
     },
 
-    execute: null
-  }
+    execute: null,
+  },
 ]);

@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { millisecsToSeconds, makeDaysAgo } from 'shared/date';
+import { millisecsToSeconds, makeDaysAgo } from "shared/date";
 
 /**
  * See `sync.md`.
  */
 export default class PhabricatorSyncStateHelper {
   constructor(ctx, rawSyncState, accountId, why) {
-    logic.defineScope(this, 'PhabricatorSyncState', { ctxId: ctx.id, why });
+    logic.defineScope(this, "PhabricatorSyncState", { ctxId: ctx.id, why });
 
     if (!rawSyncState) {
-      logic(ctx, 'creatingDefaultSyncState', {});
+      logic(ctx, "creatingDefaultSyncState", {});
       const startSyncFrom_millis = makeDaysAgo(7);
       const startSyncFrom_secs = millisecsToSeconds(startSyncFrom_millis);
 
@@ -44,9 +44,9 @@ export default class PhabricatorSyncStateHelper {
   }
 
   _makeDrevConvTask({ drevId, drevPhid, modifiedStamp }) {
-    let convId = this._accountId + '.' + drevId;
+    let convId = this._accountId + "." + drevId;
     let task = {
-      type: 'sync_drev',
+      type: "sync_drev",
       accountId: this._accountId,
       convId,
       drevPhid,

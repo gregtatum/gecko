@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
-import * as pop3 from './pop3';
-import { CONNECT_TIMEOUT_MS } from '../../syncbase';
-import errorutils from '../../errorutils';
+import logic from "logic";
+import * as pop3 from "./pop3";
+import { CONNECT_TIMEOUT_MS } from "../../syncbase";
+import errorutils from "../../errorutils";
 
-const scope = logic.scope('Pop3Prober');
+const scope = logic.scope("Pop3Prober");
 
 /**
  * Validate connection information for an account and verify that the
@@ -36,10 +36,10 @@ export function probeAccount(credentials, connInfo) {
     crypto: connInfo.crypto,
     username: credentials.username,
     password: credentials.password,
-    connTimeout: CONNECT_TIMEOUT_MS
+    connTimeout: CONNECT_TIMEOUT_MS,
   };
 
-  logic(scope, 'connecting', { connInfo: connInfo });
+  logic(scope, "connecting", { connInfo });
 
   var resolve, reject;
   var promise = new Promise(function(_resolve, _reject) {
@@ -54,53 +54,62 @@ export function probeAccount(credentials, connInfo) {
   // that works. If so, great. If it errors out in any other path, the
   // server doesn't have the support we need and we must give up.
   var conn = new pop3.Pop3Client(opts, function(err) {
-    if (err) { reject(err); return; }
-    conn.sendRequest('UIDL', ['1'], false)
-      .then(() => {
-        conn.sendRequest('TOP', ['1', '0'], true)
-          .then(() => {
+    if (err) {
+      reject(err);
+      return;
+    }
+    conn.sendRequest("UIDL", ["1"], false).then(
+      () => {
+        conn.sendRequest("TOP", ["1", "0"], true).then(
+          () => {
             // both UIDL and TOP work. Awesome!
             resolve(conn);
-          }, (err) => {
-            if (err.statusLine[0] === '-') {
+          },
+          err2 => {
+            if (err2.statusLine[0] === "-") {
               // Uh, this server must not support TOP. That sucks.
-              logic(scope, 'server-not-great', { why: 'no TOP' });
-              reject('pop-server-not-great');
+              logic(scope, "server-not-great", { why: "no TOP" });
+              reject("pop-server-not-great");
             } else {
               // if the error was socket-level or something, let it pass
               // through untouched
-              reject(err);
+              reject(err2);
             }
-          });
-      }, (err) => {
+          }
+        );
+      },
+      err2 => {
         // Either their inbox is empty or they don't support UIDL.
-        conn.sendRequest('UIDL', [], true)
-          .then(() => {
+        conn.sendRequest("UIDL", [], true).then(
+          () => {
             // It looks like they support UIDL, so let's go for it.
             resolve(conn);
-          }, (err) => {
-            if (err.statusLine[0] === '-') {
+          },
+          err3 => {
+            if (err3.statusLine[0] === "-") {
               // They must not support UIDL. Not good enough.
-              logic(scope, 'server-not-great', { why: 'no UIDL' });
-              reject('pop-server-not-great');
+              logic(scope, "server-not-great", { why: "no UIDL" });
+              reject("pop-server-not-great");
             } else {
-              reject(err);
+              reject(err3);
             }
-          });
-      });
+          }
+        );
+      }
+    );
   });
 
   return promise
-    .then(function(conn) {
-      logic(scope, 'success');
+    .then(function(conn2) {
+      logic(scope, "success");
       return {
-        conn: conn,
-        timezoneOffset: null
+        conn: conn2,
+        timezoneOffset: null,
       };
     })
     .catch(function(err) {
       err = normalizePop3Error(err);
-      logic(scope, 'error', { error: err });
+      logic(scope, "error", { error: err });
       if (conn) {
         conn.close();
       }
@@ -110,9 +119,7 @@ export function probeAccount(credentials, connInfo) {
 
 // These strings were taken verbatim from failed Gmail POP connection logs:
 var GMAIL_POP_DISABLED_RE = /\[SYS\/PERM\] Your account is not enabled for POP/;
-var GMAIL_DOMAIN_DISABLED_RE =
-      /\[SYS\/PERM\] POP access is disabled for your domain\./;
-
+var GMAIL_DOMAIN_DISABLED_RE = /\[SYS\/PERM\] POP access is disabled for your domain\./;
 
 function analyzePop3LibraryError(err) {
   if (!err || !err.name) {
@@ -128,41 +135,52 @@ function analyzePop3LibraryError(err) {
   //      exception: (A socket error, if available),
   //    };
 
-  if (err.name === 'bad-user-or-pass' &&
-      err.message && GMAIL_POP_DISABLED_RE.test(err.message)) {
-    return 'pop3-disabled';
-  }
-  else if (err.name === 'bad-user-or-pass' &&
-             err.message && GMAIL_DOMAIN_DISABLED_RE.test(err.message)) {
-    return 'pop3-disabled';
+  if (
+    err.name === "bad-user-or-pass" &&
+    err.message &&
+    GMAIL_POP_DISABLED_RE.test(err.message)
+  ) {
+    return "pop3-disabled";
+  } else if (
+    err.name === "bad-user-or-pass" &&
+    err.message &&
+    GMAIL_DOMAIN_DISABLED_RE.test(err.message)
+  ) {
+    return "pop3-disabled";
   }
   // If there was a socket exception and the exception looks like
   // a security exception, note that it was a security-related
   // problem rather than just a bad server connection.
-  else if (err.name === 'unresponsive-server' && err.exception &&
-      err.exception.name && /security/i.test(err.exception.name)) {
-    return 'bad-security';
+  else if (
+    err.name === "unresponsive-server" &&
+    err.exception &&
+    err.exception.name &&
+    /security/i.test(err.exception.name)
+  ) {
+    return "bad-security";
   }
   // In two cases (bad auth, and unresponsive server), we might get
   // a more detailed status message from the server that saysa that
   // our account (or the entire server) is temporarily unavailble.
   // Per RFC 3206, these statuses indicate that the server is
   // unavailable right now but will be later.
-  else if ((err.name === 'unresponsive-server' ||
-            err.name === 'bad-user-or-pass') &&
-           err.message && /\[(LOGIN-DELAY|SYS|IN-USE)/i.test(err.message)) {
-    return 'server-maintenance';
-  } else {
-    return err.name;
+  else if (
+    (err.name === "unresponsive-server" || err.name === "bad-user-or-pass") &&
+    err.message &&
+    /\[(LOGIN-DELAY|SYS|IN-USE)/i.test(err.message)
+  ) {
+    return "server-maintenance";
   }
+  return err.name;
 }
 
 export function normalizePop3Error(err) {
-  var reportAs = (analyzePop3LibraryError(err) ||
-                  errorutils.analyzeException(err) ||
-                  'unknown');
+  var reportAs =
+    analyzePop3LibraryError(err) ||
+    errorutils.analyzeException(err) ||
+    "unknown";
 
-  logic(scope, 'normalized-error', { error: err, reportAs: reportAs });
+  logic(scope, "normalized-error", { error: err, reportAs });
   return reportAs;
 }
 

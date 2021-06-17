@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
 /**
  * Provides helpers and standard arguments/context for tasks.
@@ -34,7 +34,7 @@ export default function TaskContext(taskThing, universe) {
   // non-markers as input to their planning phase.
   this.isMarker = !!taskThing.type;
   // If it's a marker, we're executing, otherwise it depends on the state.
-  this.isPlanning = this.isMarker ? false : (taskThing.state === null);
+  this.isPlanning = this.isMarker ? false : taskThing.state === null;
   this.universe = universe;
 
   // We define the scope after the init above because we want to be able to
@@ -47,12 +47,14 @@ export default function TaskContext(taskThing, universe) {
     // significance.  This is somewhat arbitrary and roundabout, but it seems
     // desirable to have our logging namespaces have a strong static correlation
     // to what is instantiating them.
-    this, 'Task',
+    this,
+    "Task",
     {
       id: taskThing.id,
       taskType: this.taskType,
-      accountId: this.accountId
-    });
+      accountId: this.accountId,
+    }
+  );
 
   this._stuffToRelease = [];
   this._preMutateStates = null;
@@ -63,15 +65,14 @@ export default function TaskContext(taskThing, universe) {
   /**
    * @type {'prep'|'mutate'|'finishing'}
    */
-   this.state = 'prep';
+  this.state = "prep";
 }
 TaskContext.prototype = {
   get taskMode() {
     if (this.isPlannning) {
-      return 'planning';
-    } else {
-      return 'executing';
+      return "planning";
     }
+    return "executing";
   },
 
   /**
@@ -83,9 +84,8 @@ TaskContext.prototype = {
     }
     if (this.isPlanning) {
       return this._taskThing.rawTask.type;
-    } else {
-      return this._taskThing.plannedTask.type;
     }
+    return this._taskThing.plannedTask.type;
   },
 
   /**
@@ -98,9 +98,8 @@ TaskContext.prototype = {
     }
     if (this.isPlanning) {
       return this._taskThing.rawTask.accountId || null;
-    } else {
-      return this._taskThing.plannedTask.accountId || null;
     }
+    return this._taskThing.plannedTask.accountId || null;
   },
 
   /**
@@ -154,9 +153,11 @@ TaskContext.prototype = {
       try {
         acquireable.__release(this);
       } catch (ex) {
-        logic(
-          this, 'problemReleasing',
-          { what: acquireable, ex, stack: ex && ex.stack });
+        logic(this, "problemReleasing", {
+          what: acquireable,
+          ex,
+          stack: ex && ex.stack,
+        });
       }
     }
   },
@@ -187,7 +188,10 @@ TaskContext.prototype = {
    */
   synchronouslyConsultOtherTask(consultWhat, argDict) {
     return this._taskRegistry.__synchronouslyConsultOtherTask(
-      this, consultWhat, argDict);
+      this,
+      consultWhat,
+      argDict
+    );
   },
 
   /**
@@ -223,9 +227,8 @@ TaskContext.prototype = {
     let rootTaskGroup = this._taskGroupTracker.getRootTaskGroupForTask(this.id);
     if (rootTaskGroup) {
       return rootTaskGroup.groupId;
-    } else {
-      return null;
     }
+    return null;
   },
 
   /**
@@ -268,8 +271,7 @@ TaskContext.prototype = {
    * silly and if we're needing to do that we should just break the task up
    * into distinct sub-tasks.
    */
-  setFailureTasks(/*tasks*/) {
-  },
+  setFailureTasks(/*tasks*/) {},
 
   /**
    * Called by a task to indicate that it's still alive.
@@ -345,10 +347,10 @@ TaskContext.prototype = {
     let readMap = new Map();
     readMap.set(reqId, null);
     let req = {
-      [namespace]: readMap
+      [namespace]: readMap,
     };
 
-    return this.universe.db.read(this, req).then((results) => {
+    return this.universe.db.read(this, req).then(results => {
       return results[namespace].get(readbackId || reqId);
     });
   },
@@ -361,10 +363,10 @@ TaskContext.prototype = {
     let readMap = new Map();
     readMap.set(reqId, null);
     let req = {
-      [namespace]: readMap
+      [namespace]: readMap,
     };
 
-    return this.universe.db.beginMutate(this, req).then((results) => {
+    return this.universe.db.beginMutate(this, req).then(results => {
       return results[namespace].get(readbackId || reqId);
     });
   },
@@ -387,11 +389,12 @@ TaskContext.prototype = {
    * timely fashion.  See `spawnSubtask` and `spawnSimpleMutationSubtask`.
    */
   beginMutate(what) {
-    if (this.state !== 'prep') {
+    if (this.state !== "prep") {
       throw new Error(
-        'Cannot switch to mutate state from state: ' + this.state);
+        "Cannot switch to mutate state from state: " + this.state
+      );
     }
-    this.state = 'mutate';
+    this.state = "mutate";
     return this.universe.db.beginMutate(this, what);
   },
 
@@ -424,14 +427,18 @@ TaskContext.prototype = {
    * @return {Promise}
    */
   spawnSubtask(subtaskFunc, argObj) {
-    let subId = 'sub:' + this.id + ':' + this._subtaskCounter++;
+    let subId = "sub:" + this.id + ":" + this._subtaskCounter++;
     let subThing = {
       id: subId,
-      type: 'subtask'
+      type: "subtask",
     };
     let subContext = new TaskContext(subThing, this.universe);
     return this._taskManager.__trackAndWrapSubtask(
-      this, subContext, subtaskFunc, argObj);
+      this,
+      subContext,
+      subtaskFunc,
+      argObj
+    );
   },
 
   /**
@@ -450,9 +457,12 @@ TaskContext.prototype = {
    * to re-acquire a write-lock.  Luckily mix_download does some expensive stuff
    * with that.
    */
-  spawnSimpleMutationSubtask({ namespace, id }, mutateFunc ) {
-    return this.spawnSubtask(
-      this._simpleMutationSubtask, { mutateFunc, namespace, id });
+  spawnSimpleMutationSubtask({ namespace, id }, mutateFunc) {
+    return this.spawnSubtask(this._simpleMutationSubtask, {
+      mutateFunc,
+      namespace,
+      id,
+    });
   },
 
   async _simpleMutationSubtask(subctx, { mutateFunc, namespace, id }) {
@@ -463,8 +473,8 @@ TaskContext.prototype = {
 
     await subctx.finishTask({
       mutations: {
-        [namespace]: new Map([[id, writeObj]])
-      }
+        [namespace]: new Map([[id, writeObj]]),
+      },
     });
 
     // NB: this is where we'd do a flushed read-back if we wanted to.
@@ -504,9 +514,10 @@ TaskContext.prototype = {
    *   disk-backed Blobs.
    */
   mutateMore(what) {
-    if (this.state !== 'mutate') {
+    if (this.state !== "mutate") {
       throw new Error(
-        'You should already be mutating, not in state: ' + this.state);
+        "You should already be mutating, not in state: " + this.state
+      );
     }
     return this.universe.db.beginMutate(this, what);
   },
@@ -549,10 +560,10 @@ TaskContext.prototype = {
    *   `newData.tasks` because these are not directly pesisted.
    */
   finishTask(finishData) {
-    if (this.state === 'finishing') {
-      throw new Error('already finishing! did you put finishTask in a loop?');
+    if (this.state === "finishing") {
+      throw new Error("already finishing! did you put finishTask in a loop?");
     }
-    this.state = 'finishing';
+    this.state = "finishing";
 
     const taskManager = this.universe.taskManager;
     let revisedTaskInfo;
@@ -562,18 +573,17 @@ TaskContext.prototype = {
       if (finishData.taskState) {
         // (Either this was the planning stage or an execution stage that didn't
         // actually complete; we're still planned either way.)
-        this._taskThing.state = 'planned';
+        this._taskThing.state = "planned";
         this._taskThing.plannedTask = finishData.taskState;
         revisedTaskInfo = {
           id: this.id,
-          value: this._taskThing
+          value: this._taskThing,
         };
-        taskManager.__queueTasksOrMarkers(
-          [this._taskThing], this.id, true);
+        taskManager.__queueTasksOrMarkers([this._taskThing], this.id, true);
       } else {
         revisedTaskInfo = {
           id: this.id,
-          value: null
+          value: null,
         };
       }
       // If this task is nonpersistent, then clobber revisedTaskInfo to be
@@ -592,9 +602,9 @@ TaskContext.prototype = {
       if (!finishData.mutations) {
         finishData.mutations = {};
       }
-      finishData.mutations.complexTaskStates =
-        new Map([[[this.accountId, this.taskType],
-                  finishData.complexTaskState]]);
+      finishData.mutations.complexTaskStates = new Map([
+        [[this.accountId, this.taskType], finishData.complexTaskState],
+      ]);
     }
 
     // (Complex) task markers can be immediately prioritized.
@@ -602,8 +612,7 @@ TaskContext.prototype = {
       for (let [markerId, taskMarker] of finishData.taskMarkers) {
         // create / update marker
         if (taskMarker) {
-          taskManager.__queueTasksOrMarkers(
-            [taskMarker], this.id, true);
+          taskManager.__queueTasksOrMarkers([taskMarker], this.id, true);
         }
         // nuke the marker
         else {
@@ -615,8 +624,7 @@ TaskContext.prototype = {
     // Normalize any tasks that should be byproducts of this task.
     let wrappedTasks = null;
     if (finishData.newData && finishData.newData.tasks) {
-      wrappedTasks =
-        taskManager.__wrapTasks(finishData.newData.tasks);
+      wrappedTasks = taskManager.__wrapTasks(finishData.newData.tasks);
     }
 
     if (finishData.undoTasks) {
@@ -629,22 +637,20 @@ TaskContext.prototype = {
       decoratorCallback(this, true, finishData);
     }
 
-    return this.universe.db.finishMutate(
-      this,
-      finishData,
-      {
-        revisedTaskInfo: revisedTaskInfo,
-        wrappedTasks: wrappedTasks
+    return this.universe.db
+      .finishMutate(this, finishData, {
+        revisedTaskInfo,
+        wrappedTasks,
       })
-    .then(() => {
-      if (wrappedTasks) {
-        // (Even though we currently know the task id prior to this transaction
-        // running, the idea is that IndexedDB should really be assigning the
-        // id's as part of the transaction, so we will only have assigned id's
-        // at this point.  See the __wrapTasks documentation for more context.)
-        taskManager.__enqueuePersistedTasksForPlanning(wrappedTasks, this.id);
-      }
-    });
+      .then(() => {
+        if (wrappedTasks) {
+          // (Even though we currently know the task id prior to this transaction
+          // running, the idea is that IndexedDB should really be assigning the
+          // id's as part of the transaction, so we will only have assigned id's
+          // at this point.  See the __wrapTasks documentation for more context.)
+          taskManager.__enqueuePersistedTasksForPlanning(wrappedTasks, this.id);
+        }
+      });
   },
 
   /**
@@ -659,18 +665,18 @@ TaskContext.prototype = {
 
   __failsafeFinalize() {
     // things are good if we finished automatically.
-    if (this.state === 'finishing') {
+    if (this.state === "finishing") {
       return;
     }
 
-    logic(this, 'failsafeFinalize');
+    logic(this, "failsafeFinalize");
 
     // notify decorator callbacks of failure
     for (const decoratorCallback of this._decoratorCallbacks) {
       try {
         decoratorCallback(this, false, null);
       } catch (ex) {
-        logic(this, 'decoratorFailsafeFail', { ex });
+        logic(this, "decoratorFailsafeFail", { ex });
       }
     }
     this._decoratorCallbacks = [];
@@ -687,5 +693,5 @@ TaskContext.prototype = {
    */
   __decorateFinish(callback) {
     this._decoratorCallbacks.push(callback);
-  }
+  },
 };

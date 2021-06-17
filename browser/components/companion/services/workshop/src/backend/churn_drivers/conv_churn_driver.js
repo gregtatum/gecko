@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import appChurnConversation from 'app_logic/conv_churn';
+import appChurnConversation from "app_logic/conv_churn";
 
 const scope = {};
-logic.defineScope(scope, 'churnConversationDriver');
+logic.defineScope(scope, "churnConversationDriver");
 
 /**
  * Produces the wire representation for a conversation from the list of messages
@@ -48,11 +48,17 @@ logic.defineScope(scope, 'churnConversationDriver');
  *   entities with attributes that exist independent of what we've mapped into
  *   messages.
  */
-export default function churnConversationDriver(convId, oldConvInfo, messages, convType='mail', convMeta) {
+export default function churnConversationDriver(
+  convId,
+  oldConvInfo,
+  messages,
+  convType = "mail",
+  convMeta
+) {
   // By default, for email, we want to unique-ify based on email address.
-  let userCanonicalField = 'address';
-  if (convType === 'phab-drev') {
-    userCanonicalField = 'nick';
+  let userCanonicalField = "address";
+  if (convType === "phab-drev") {
+    userCanonicalField = "nick";
   }
 
   let authorsById = new Map();
@@ -69,8 +75,8 @@ export default function churnConversationDriver(convId, oldConvInfo, messages, c
   let effectiveDate = 0;
   let fallbackDate = 0;
   for (let message of messages) {
-    let isRead = message.flags.indexOf('\\Seen') !== -1;
-    let isStarred = message.flags.indexOf('\\Flagged') !== -1;
+    let isRead = message.flags.includes("\\Seen");
+    let isStarred = message.flags.includes("\\Flagged");
     let isDraft = message.draftInfo !== null;
 
     fallbackDate = Math.max(fallbackDate, message.date);
@@ -117,14 +123,14 @@ export default function churnConversationDriver(convId, oldConvInfo, messages, c
     height: 1,
     subject: messages[0].subject,
     messageCount: messages.length,
-    snippetCount: snippetCount,
+    snippetCount,
     authors: Array.from(authorsById.values()),
-    tidbits: tidbits,
+    tidbits,
     hasUnread: convHasUnread,
     hasStarred: convHasStarred,
     hasDrafts: convHasDrafts,
     hasAttachments: convHasAttachments,
-    app: {}
+    app: {},
   };
 
   // TODO: Probably extensions should get a chance to do some digesting here?
@@ -134,7 +140,7 @@ export default function churnConversationDriver(convId, oldConvInfo, messages, c
   try {
     appChurnConversation(convInfo, messages, oldConvInfo, convType, convMeta);
   } catch (ex) {
-    logic(scope, 'appChurnEx', { ex });
+    logic(scope, "appChurnEx", { ex });
   }
 
   return convInfo;

@@ -70,10 +70,10 @@ export class UserChewer {
     const genericPhidMap = new Map();
 
     for (const [phid, info] of this._phidToInfo.entries()) {
-      if (phid.startsWith('PHID-USER')) {
+      if (phid.startsWith("PHID-USER")) {
         userPhids.push(phid);
         userPhidMap.set(phid, info);
-      } else if (phid.startsWith('PHID-PROJ')) {
+      } else if (phid.startsWith("PHID-PROJ")) {
         projPhids.push(phid);
         projPhidMap.set(phid, info);
       } else {
@@ -86,39 +86,30 @@ export class UserChewer {
     let projSearchPromise;
     let genericSearchPromise;
 
-    if (userPhids.length > 0) {
-      userSearchPromise = client.apiCall(
-        'user.search',
-        {
-          constraints: {
-            phids: userPhids,
-          }
-        }
-      );
+    if (userPhids.length) {
+      userSearchPromise = client.apiCall("user.search", {
+        constraints: {
+          phids: userPhids,
+        },
+      });
     } else {
       userSearchPromise = Promise.resolve({ data: [] });
     }
 
-    if (projPhids.length > 0) {
-      projSearchPromise = client.apiCall(
-        'project.search',
-        {
-          constraints: {
-            phids: projPhids,
-          },
-        }
-      );
+    if (projPhids.length) {
+      projSearchPromise = client.apiCall("project.search", {
+        constraints: {
+          phids: projPhids,
+        },
+      });
     } else {
       projSearchPromise = Promise.resolve({ data: [] });
     }
 
-    if (genericPhids.length > 0) {
-      genericSearchPromise = client.apiCall(
-        'phid.query',
-        {
-          phids: genericPhids,
-        }
-      );
+    if (genericPhids.length) {
+      genericSearchPromise = client.apiCall("phid.query", {
+        phids: genericPhids,
+      });
     } else {
       genericSearchPromise = Promise.resolve({});
     }
@@ -154,13 +145,13 @@ export class UserChewer {
     }
 
     if (userPhidMap.size !== 0) {
-      console.warn('Some user lookups did not resolve:', userPhidMap);
+      console.warn("Some user lookups did not resolve:", userPhidMap);
     }
     if (projPhidMap.size !== 0) {
-      console.warn('Some project lookups did not resolve:', projPhidMap);
+      console.warn("Some project lookups did not resolve:", projPhidMap);
     }
     if (genericPhidMap.size !== 0) {
-      console.warn('Some generic/app lookups did not resolve:', genericPhidMap);
+      console.warn("Some generic/app lookups did not resolve:", genericPhidMap);
     }
   }
 }

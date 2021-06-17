@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { bsearchMaybeExists, bsearchForInsert } from 'shared/util';
+import { bsearchMaybeExists, bsearchForInsert } from "shared/util";
 
-import { conversationMessageComparator } from './comparators';
+import { conversationMessageComparator } from "./comparators";
 
-import BaseTOC from './base_toc';
+import BaseTOC from "./base_toc";
 
 /**
  * Represent ordered lists of data that are always memory resident and may
@@ -28,10 +28,15 @@ import BaseTOC from './base_toc';
  * derived views, but could envolve as use-cases arise.  Or more TOC
  * implementations should be created.
  */
-export default function DynamicFullTOC({ comparator, idKey, topOrderingKey, onFlush }) {
+export default function DynamicFullTOC({
+  comparator,
+  idKey,
+  topOrderingKey,
+  onFlush,
+}) {
   BaseTOC.apply(this, arguments);
 
-  logic.defineScope(this, 'DynamicFullTOC');
+  logic.defineScope(this, "DynamicFullTOC");
 
   this.items = [];
   this._comparator = comparator;
@@ -44,16 +49,15 @@ export default function DynamicFullTOC({ comparator, idKey, topOrderingKey, onFl
   this.__deactivate(true);
 }
 DynamicFullTOC.prototype = BaseTOC.mix({
-  type: 'DynamicFullTOC',
+  type: "DynamicFullTOC",
   overlayNamespace: null,
   heightAware: false,
 
-  __activateTOC: function() {
+  __activateTOC() {
     return Promise.resolve();
   },
 
-  __deactivateTOC: function(/*firstTime*/) {
-  },
+  __deactivateTOC(/*firstTime*/) {},
 
   get length() {
     return this.items.length;
@@ -63,24 +67,21 @@ DynamicFullTOC.prototype = BaseTOC.mix({
     return this.items.length;
   },
 
-  addItem: function(item) {
-    let newIndex = bsearchForInsert(this.items, item,
-                                    this._comparator);
+  addItem(item) {
+    let newIndex = bsearchForInsert(this.items, item, this._comparator);
     this.items.splice(newIndex, 0, item);
   },
 
-  updateItem: function(/*item*/) {
-  },
+  updateItem(/*item*/) {},
 
-  removeItem: function(/*id*/) {
-  },
+  removeItem(/*id*/) {},
 
-  setItems: function(items) {
+  setItems(items) {
     this.items = items.concat();
     // XXX true is currently a temporary hack for us to indicate that we should
     // treat all data as invalidated.
     this.items.sort(this._comparator);
-    this.emit('change', true);
+    this.emit("change", true);
   },
 
   /**
@@ -88,15 +89,15 @@ DynamicFullTOC.prototype = BaseTOC.mix({
    * an `onFlush` handler.  You do not need to call this if you keep us
    * up-to-date at all times using addItem/updateItem/removeItem.
    */
-  reportDirty: function() {
-    this.emit('change', null);
+  reportDirty() {
+    this.emit("change", null);
   },
 
   /**
    * Invoked by `WindowedListProxy.flush` as the first thing it does if we
    * reported ourselves as dirty since the last flush.
    */
-  flush: function() {
+  flush() {
     if (this._onFlush) {
       this._onFlush();
     }
@@ -119,45 +120,56 @@ DynamicFullTOC.prototype = BaseTOC.mix({
    * @param {MessageInfo} item
    * @param {Boolean} freshlyAdded
    */
-  onTOCChange: function({ id, preDate, postDate, item, freshlyAdded,
-                          matchInfo }) {
+  onTOCChange({ id, preDate, postDate, item, freshlyAdded, matchInfo }) {
     let metadataOnly = item && !freshlyAdded;
 
     if (freshlyAdded) {
       // - Added!
       let newKey = { date: postDate, id, matchInfo };
-      let newIndex = bsearchForInsert(this.items, newKey,
-                                      conversationMessageComparator);
+      let newIndex = bsearchForInsert(
+        this.items,
+        newKey,
+        conversationMessageComparator
+      );
       this.idsWithDates.splice(newIndex, 0, newKey);
     } else if (!item) {
       // - Deleted!
       let oldKey = { date: preDate, id };
-      let oldIndex = bsearchMaybeExists(this.idsWithDates, oldKey,
-                                        conversationMessageComparator);
+      let oldIndex = bsearchMaybeExists(
+        this.idsWithDates,
+        oldKey,
+        conversationMessageComparator
+      );
       this.idsWithDates.splice(oldIndex, 1);
     } else if (preDate !== postDate) {
       // - Message date changed (this should only happen for drafts)
       let oldKey = { date: preDate, id };
-      let oldIndex = bsearchMaybeExists(this.idsWithDates, oldKey,
-                                        conversationMessageComparator);
+      let oldIndex = bsearchMaybeExists(
+        this.idsWithDates,
+        oldKey,
+        conversationMessageComparator
+      );
       this.idsWithDates.splice(oldIndex, 1);
 
       let newKey = { date: postDate, id, matchInfo };
-      let newIndex = bsearchForInsert(this.idsWithDates, newKey,
-                                      conversationMessageComparator);
+      let newIndex = bsearchForInsert(
+        this.idsWithDates,
+        newKey,
+        conversationMessageComparator
+      );
       this.idsWithDates.splice(newIndex, 0, newKey);
 
       // We're changing the ordering.
       metadataOnly = false;
     }
 
-    this.emit('change', id, metadataOnly);
+    this.emit("change", id, metadataOnly);
   },
 
   /**
    * Return an array of the conversation id's occupying the given indices.
    */
-  sliceIds: function(begin, end) {
+  sliceIds(begin, end) {
     const idKey = this._idKey;
     let ids = [];
     const items = this.items;
@@ -172,11 +184,11 @@ DynamicFullTOC.prototype = BaseTOC.mix({
    * latching us to the top.  We use this for the coordinate-space case where
    * there is nothing loaded yet.
    */
-  getTopOrderingKey: function() {
+  getTopOrderingKey() {
     return this._topOrderingKey;
   },
 
-  getOrderingKeyForIndex: function(index) {
+  getOrderingKeyForIndex(index) {
     if (this.items.length === 0) {
       return this.getTopOrderingKey();
     } else if (index < 0) {
@@ -187,14 +199,17 @@ DynamicFullTOC.prototype = BaseTOC.mix({
     return this.items[index];
   },
 
-  findIndexForOrderingKey: function(key) {
-    let index = bsearchForInsert(this.items, key,
-                                 this._comparator);
+  findIndexForOrderingKey(key) {
+    let index = bsearchForInsert(this.items, key, this._comparator);
     return index;
   },
 
-  getDataForSliceRange: function(beginInclusive, endExclusive,
-      alreadyKnownData, alreadyKnownOverlays) {
+  getDataForSliceRange(
+    beginInclusive,
+    endExclusive,
+    alreadyKnownData,
+    alreadyKnownOverlays
+  ) {
     beginInclusive = Math.max(0, beginInclusive);
     endExclusive = Math.min(endExclusive, this.items.length);
 
@@ -228,21 +243,16 @@ DynamicFullTOC.prototype = BaseTOC.mix({
         sendState.set(id, [null, overlayResolver(id)]);
       } else {
         newKnownSet.add(id);
-        sendState.set(
-          id,
-          [
-            items[i],
-            overlayResolver(id)
-          ]);
+        sendState.set(id, [items[i], overlayResolver(id)]);
       }
     }
 
     return {
-      ids: ids,
+      ids,
       state: sendState,
       pendingReads: null,
       readPromise: null,
-      newValidDataSet: newKnownSet
+      newValidDataSet: newKnownSet,
     };
-  }
+  },
 });

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import evt from 'evt';
+import evt from "evt";
 
-import { encodeInt as encodeA64 } from 'shared/a64';
+import { encodeInt as encodeA64 } from "shared/a64";
 
 /**
  * We want to allocate a concise attachment id that does not conflict with any
@@ -130,20 +130,20 @@ export default function MessageComposition(api) {
   this.attachments = null;
 }
 MessageComposition.prototype = evt.mix({
-  toString: function() {
-    return '[MessageComposition: ' + this._handle + ']';
+  toString() {
+    return "[MessageComposition: " + this._handle + "]";
   },
-  toJSON: function() {
+  toJSON() {
     return {
-      type: 'MessageComposition',
-      handle: this._handle
+      type: "MessageComposition",
+      handle: this._handle,
     };
   },
 
   async __asyncInitFromMessage(message) {
     this._message = message;
-    message.on('change', this._onMessageChange.bind(this));
-    message.on('remove', this._onMessageRemove.bind(this));
+    message.on("change", this._onMessageChange.bind(this));
+    message.on("remove", this._onMessageRemove.bind(this));
     let wireRep = message._wireRep;
     this.serial++;
 
@@ -158,20 +158,17 @@ MessageComposition.prototype = evt.mix({
     this.sendProblems = wireRep.draftInfo.sendProblems;
 
     // HTML is optional, but if present, should satisfy our guard
-    if (wireRep.bodyReps.length === 2 &&
-        wireRep.bodyReps[1].type === 'html') {
+    if (wireRep.bodyReps.length === 2 && wireRep.bodyReps[1].type === "html") {
       this.htmlBlob = wireRep.bodyReps[1].contentBlob;
     } else {
       this.htmlBlob = null;
     }
 
     const textRep = JSON.parse(await wireRep.bodyReps[0].contentBlob.text());
-    if (Array.isArray(textRep) &&
-        textRep.length === 2 &&
-        textRep[0] === 0x1) {
+    if (Array.isArray(textRep) && textRep.length === 2 && textRep[0] === 0x1) {
       this.textBody = textRep[1];
     } else {
-      this.textBody = '';
+      this.textBody = "";
     }
     return this;
   },
@@ -191,29 +188,29 @@ MessageComposition.prototype = evt.mix({
    *   expose the Blob for viewing and also detach it.  In the meantime, our
    *   local manipulations as we issue commands is sufficient.
    */
-  _onMessageChange: function() {
+  _onMessageChange() {
     let wireRep = this._message._wireRep;
     this.sendStatus = wireRep.draftInfo.sendStatus;
-    this.emit('change');
+    this.emit("change");
   },
 
   /**
    * Propagate the remove event.
    */
-  _onMessageRemove: function() {
-    this.emit('remove');
+  _onMessageRemove() {
+    this.emit("remove");
   },
 
-  release: function() {
+  release() {
     if (this._message) {
       this._message.release();
       this._message = null;
     }
   },
 
-  _mutated: function() {
+  _mutated() {
     this.serial++;
-    this.emit('change');
+    this.emit("change");
   },
 
   /**
@@ -244,21 +241,19 @@ MessageComposition.prototype = evt.mix({
    *   ]]
    * ]
    */
-  addAttachment: function(attachmentDef) {
+  addAttachment(attachmentDef) {
     let relId = bruteForceAttachmentId(this.attachments);
-    this.api._composeAttach(
-      this.id,
-      {
-        relId,
-        name: attachmentDef.name,
-        blob: attachmentDef.blob
-      });
+    this.api._composeAttach(this.id, {
+      relId,
+      name: attachmentDef.name,
+      blob: attachmentDef.blob,
+    });
 
     var placeholderAttachment = {
       relId,
       name: attachmentDef.name,
       type: attachmentDef.blob.type,
-      sizeEstimate: attachmentDef.blob.size
+      sizeEstimate: attachmentDef.blob.size,
     };
     this.attachments.push(placeholderAttachment);
     this._mutated();
@@ -273,7 +268,7 @@ MessageComposition.prototype = evt.mix({
    *   This must be one of the instances from our `attachments` list.  A
    *   logically equivalent object is no good.
    */
-  removeAttachment: function(attachmentThing) {
+  removeAttachment(attachmentThing) {
     var idx = this.attachments.indexOf(attachmentThing);
     if (idx !== -1) {
       this.attachments.splice(idx, 1);
@@ -286,7 +281,7 @@ MessageComposition.prototype = evt.mix({
    * Optional helper function for to/cc/bcc list manipulation if you like the
    * 'change' events for managing UI state.
    */
-  addRecipient: function(bin, addressPair) {
+  addRecipient(bin, addressPair) {
     this[bin].push(addressPair);
     this._mutated();
   },
@@ -295,7 +290,7 @@ MessageComposition.prototype = evt.mix({
    * Optional helper function for to/cc/bcc list manipulation if you like the
    * 'change' events for managing UI state.
    */
-  removeRecipient: function(bin, addressPair) {
+  removeRecipient(bin, addressPair) {
     let recipList = this[bin];
     let idx = recipList.indexOf(addressPair);
     if (idx !== -1) {
@@ -309,7 +304,7 @@ MessageComposition.prototype = evt.mix({
    * 'change' events for managing UI state.  Removes the last recipient in this
    * bin if there is one.
    */
-  removeLastRecipient: function(bin) {
+  removeLastRecipient(bin) {
     let recipList = this[bin];
     if (recipList.length) {
       recipList.pop();
@@ -317,7 +312,7 @@ MessageComposition.prototype = evt.mix({
     }
   },
 
-  setSubject: function(subject) {
+  setSubject(subject) {
     this.subject = subject;
     this._mutated();
   },
@@ -325,7 +320,7 @@ MessageComposition.prototype = evt.mix({
   /**
    * Populate our state to send over the wire to the back-end.
    */
-  _buildWireRep: function() {
+  _buildWireRep() {
     return {
       // snapshot the timestamp of this state.
       date: Date.now(),
@@ -333,7 +328,7 @@ MessageComposition.prototype = evt.mix({
       cc: this.cc,
       bcc: this.bcc,
       subject: this.subject,
-      textBody: this.textBody
+      textBody: this.textBody,
     };
   },
 
@@ -352,15 +347,15 @@ MessageComposition.prototype = evt.mix({
    * - 'outbox-paused': The outbox is paused by the UI for UX reasons.  When the
    *   outbox is unpaused, we fully expect to send the message.
    */
-  finishCompositionSendMessage: function() {
-    return this.api._composeDone(this.id, 'send', this._buildWireRep());
+  finishCompositionSendMessage() {
+    return this.api._composeDone(this.id, "send", this._buildWireRep());
   },
 
   /**
    * Save the state of this composition.
    */
-  saveDraft: function() {
-    return this.api._composeDone(this.id, 'save', this._buildWireRep());
+  saveDraft() {
+    return this.api._composeDone(this.id, "save", this._buildWireRep());
   },
 
   /**
@@ -371,8 +366,7 @@ MessageComposition.prototype = evt.mix({
    * functionality, possibly on the UI side of the house.  This is not a secure
    * delete.
    */
-  abortCompositionDeleteDraft: function() {
-    return this.api._composeDone(this.id, 'delete', null);
+  abortCompositionDeleteDraft() {
+    return this.api._composeDone(this.id, "delete", null);
   },
-
 });

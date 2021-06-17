@@ -28,18 +28,18 @@
  * message with any text/html parts, we generate an HTML block for all parts.
  **/
 
-import logic from 'logic';
+import logic from "logic";
 
-import { formatAddresses } from 'shared/util';
-import * as $mailchewStrings from './mailchew_strings';
-import * as $quotechew from './quotechew';
-import * as $htmlchew from './htmlchew';
+import { formatAddresses } from "shared/util";
+import * as $mailchewStrings from "./mailchew_strings";
+import * as $quotechew from "./quotechew";
+import * as $htmlchew from "./htmlchew";
 
-import { DESIRED_SNIPPET_LENGTH } from '../syncbase';
+import { DESIRED_SNIPPET_LENGTH } from "../syncbase";
 
-import { makeBodyPart } from '../db/mail_rep';
+import { makeBodyPart } from "../db/mail_rep";
 
-const scope = logic.scope('MailChew');
+const scope = logic.scope("MailChew");
 
 /**
  * Generate the default compose body for a new e-mail
@@ -48,17 +48,18 @@ const scope = logic.scope('MailChew');
  */
 export function generateBaseComposeParts(identity) {
   let textMsg;
-  if (identity.signatureEnabled &&
-      identity.signature &&
-      identity.signature.length > 0) {
-    textMsg = '\n\n--\n' + identity.signature;
+  if (
+    identity.signatureEnabled &&
+    identity.signature &&
+    identity.signature.length
+  ) {
+    textMsg = "\n\n--\n" + identity.signature;
   } else {
-    textMsg = '';
+    textMsg = "";
   }
 
   return makeBodyPartsFromTextAndHTML(textMsg, null);
 }
-
 
 var RE_RE = /^[Rr][Ee]:/;
 
@@ -85,7 +86,7 @@ var RE_RE = /^[Rr][Ee]:/;
  * http://mxr.mozilla.org/comm-central/ident?i=NS_MsgStripRE for more details.
  */
 export function generateReplySubject(origSubject) {
-  var re = 'Re: ';
+  var re = "Re: ";
   if (origSubject) {
     if (RE_RE.test(origSubject)) {
       return origSubject;
@@ -104,7 +105,7 @@ var RE_FWD = /^[Ff][Ww][Dd]:/;
  * "Fwd:" equivalent.
  */
 export function generateForwardSubject(origSubject) {
-  var fwd = 'Fwd: ';
+  var fwd = "Fwd: ";
   if (origSubject) {
     if (RE_FWD.test(origSubject)) {
       return origSubject;
@@ -129,12 +130,19 @@ export function generateMessageIdHeaderValue() {
   // do anyways on each draft update since we know GMail has somewhat aggressive
   // anti-duplication heuristics and it would be horrible for the drafts to not
   // reliably update.  But why take any risks with privacy?)
-  return Math.random().toString(16).substr(2) +
-         Math.random().toString(16).substr(1) + '@mozgaia';
+  return (
+    Math.random()
+      .toString(16)
+      .substr(2) +
+    Math.random()
+      .toString(16)
+      .substr(1) +
+    "@mozgaia"
+  );
 }
 
-var l10n_wroteString = '{name} wrote',
-    l10n_originalMessageString = 'Original Message';
+var l10n_wroteString = "{name} wrote",
+  l10n_originalMessageString = "Original Message";
 
 /*
  * L10n strings for forward headers.  In Thunderbird, these come from
@@ -152,12 +160,12 @@ var l10n_wroteString = '{name} wrote',
  * function.  (See the mailchew-strings module too.)
  */
 var l10n_forward_header_labels = {
-  subject: 'Subject',
-  date: 'Date',
-  from: 'From',
-  replyTo: 'Reply-To',
-  to: 'To',
-  cc: 'CC'
+  subject: "Subject",
+  date: "Date",
+  from: "From",
+  replyTo: "Reply-To",
+  to: "To",
+  cc: "CC",
 };
 
 export function setLocalizedStrings(strings) {
@@ -172,7 +180,7 @@ export function setLocalizedStrings(strings) {
 if ($mailchewStrings.strings) {
   setLocalizedStrings($mailchewStrings.strings);
 }
-$mailchewStrings.events.on('strings', function(strings) {
+$mailchewStrings.events.on("strings", function(strings) {
   setLocalizedStrings(strings);
 });
 
@@ -180,28 +188,33 @@ function makeBodyPartsFromTextAndHTML(textMsg, htmlMsg) {
   let bodyReps = [];
 
   // - Text part
-  bodyReps.push(makeBodyPart({
-    type: 'plain',
-    part: null,
-    sizeEstimate: textMsg.length,
-    amountDownloaded: textMsg.length,
-    isDownloaded: true,
-    _partInfo: {},
-    contentBlob: new Blob([JSON.stringify([0x1, textMsg])],
-                           { type: 'application/json' })
-  }));
+  bodyReps.push(
+    makeBodyPart({
+      type: "plain",
+      part: null,
+      sizeEstimate: textMsg.length,
+      amountDownloaded: textMsg.length,
+      isDownloaded: true,
+      _partInfo: {},
+      contentBlob: new Blob([JSON.stringify([0x1, textMsg])], {
+        type: "application/json",
+      }),
+    })
+  );
 
   // - HTML Party (maybe)
   if (htmlMsg) {
-    bodyReps.push(makeBodyPart({
-      type: 'html',
-      part: null,
-      sizeEstimate: htmlMsg.length,
-      amountDownloaded: htmlMsg.length,
-      isDownloaded: true,
-      _partInfo: {},
-      contentBlob: new Blob([htmlMsg], { type: 'text/html' })
-    }));
+    bodyReps.push(
+      makeBodyPart({
+        type: "html",
+        part: null,
+        sizeEstimate: htmlMsg.length,
+        amountDownloaded: htmlMsg.length,
+        isDownloaded: true,
+        _partInfo: {},
+        contentBlob: new Blob([htmlMsg], { type: "text/html" }),
+      })
+    );
   }
 
   return bodyReps;
@@ -220,40 +233,43 @@ function makeBodyPartsFromTextAndHTML(textMsg, htmlMsg) {
  * This does not include potentially required work such as propagating embedded
  * attachments or de-sanitizing links/embedded images/external images.
  */
-export async function generateReplyParts(reps, authorPair, msgDate, identity,
-                                        refGuid) {
+export async function generateReplyParts(
+  reps,
+  authorPair,
+  msgDate,
+  identity,
+  refGuid
+) {
   var useName = authorPair.name ? authorPair.name.trim() : authorPair.address;
 
   // TODO: clean up the l10n manipulation here; this manipulation is okay
   // (except potentially for the colon?), but we want to use the l20n lib or
   // some other normalized helper.
-  var textMsg = '\n\n' +
-                l10n_wroteString.replace('{name}', useName) + ':\n',
-      htmlMsg = null;
+  var textMsg = "\n\n" + l10n_wroteString.replace("{name}", useName) + ":\n",
+    htmlMsg = null;
 
   for (let i = 0; i < reps.length; i++) {
     let repType = reps[i].type;
     let repBlob = reps[i].contentBlob;
 
     let rep;
-    if (repType === 'plain') {
+    if (repType === "plain") {
       rep = JSON.parse(await repBlob.text());
       var replyText = $quotechew.generateReplyText(rep);
       // If we've gone HTML, this needs to get concatenated onto the HTML.
       if (htmlMsg) {
-        htmlMsg += $htmlchew.wrapTextIntoSafeHTMLString(replyText) + '\n';
+        htmlMsg += $htmlchew.wrapTextIntoSafeHTMLString(replyText) + "\n";
       }
       // We haven't gone HTML yet, so this can all still be text.
       else {
         textMsg += replyText;
       }
-    }
-    else if (repType === 'html') {
+    } else if (repType === "html") {
       rep = await repBlob.text();
       if (!htmlMsg) {
-        htmlMsg = '';
+        htmlMsg = "";
         // slice off the trailing newline of textMsg
-        if (textMsg.slice(-1) === '\n') {
+        if (textMsg.slice(-1) === "\n") {
           textMsg = textMsg.slice(0, -1);
         }
       }
@@ -262,11 +278,11 @@ export async function generateReplyParts(reps, authorPair, msgDate, identity,
       // HTML creation.  The message-id of the message never got sanitized,
       // however, so it needs to be escaped.  Also, in some cases (Activesync),
       // we won't have the message-id so we can't cite it.
-      htmlMsg += '<blockquote ';
+      htmlMsg += "<blockquote ";
       if (refGuid) {
         htmlMsg += 'cite="mid:' + $htmlchew.escapeAttrValue(refGuid) + '" ';
       }
-      htmlMsg += 'type="cite">' + rep + '</blockquote>';
+      htmlMsg += 'type="cite">' + rep + "</blockquote>";
     }
   }
 
@@ -277,10 +293,13 @@ export async function generateReplyParts(reps, authorPair, msgDate, identity,
     // <pre class="moz-signature" cols="72"> construct and so we do too.
     if (htmlMsg) {
       htmlMsg += $htmlchew.wrapTextIntoSafeHTMLString(
-                   identity.signature, 'pre', false,
-                   ['class', 'moz-signature', 'cols', '72']);
+        identity.signature,
+        "pre",
+        false,
+        ["class", "moz-signature", "cols", "72"]
+      );
     } else {
-      textMsg += '\n\n-- \n' + identity.signature;
+      textMsg += "\n\n-- \n" + identity.signature;
     }
   }
 
@@ -294,12 +313,13 @@ export async function generateReplyParts(reps, authorPair, msgDate, identity,
  * See https://bugzilla.mozilla.org/show_bug.cgi?id=1177350
  */
 export async function generateForwardParts(sourceMessage, identity) {
-  var textMsg = '\n\n', htmlMsg = null;
+  var textMsg = "\n\n",
+    htmlMsg = null;
 
   if (identity.signature && identity.signatureEnabled) {
-    textMsg += '-- \n' + identity.signature + '\n\n';
+    textMsg += "-- \n" + identity.signature + "\n\n";
   }
-  textMsg += '-------- ' + l10n_originalMessageString + ' --------\n';
+  textMsg += "-------- " + l10n_originalMessageString + " --------\n";
   // XXX l10n! l10n! l10n!
 
   // Add the headers in the same order libmime adds them in
@@ -308,8 +328,8 @@ export async function generateForwardParts(sourceMessage, identity) {
   // localized.)
 
   // : subject
-  textMsg += l10n_forward_header_labels['subject'] + ': ' +
-               sourceMessage.subject + '\n';
+  textMsg +=
+    l10n_forward_header_labels.subject + ": " + sourceMessage.subject + "\n";
 
   // We do not track or remotely care about the 'resent' headers
   // : resent-comments
@@ -318,33 +338,48 @@ export async function generateForwardParts(sourceMessage, identity) {
   // : resent-to
   // : resent-cc
   // : date
-  textMsg += l10n_forward_header_labels['date'] + ': ' +
-    new Date(sourceMessage.date) + '\n';
+  textMsg +=
+    l10n_forward_header_labels.date +
+    ": " +
+    new Date(sourceMessage.date) +
+    "\n";
   // : from
-  textMsg += l10n_forward_header_labels['from'] + ': ' +
-               formatAddresses([sourceMessage.author]) + '\n';
+  textMsg +=
+    l10n_forward_header_labels.from +
+    ": " +
+    formatAddresses([sourceMessage.author]) +
+    "\n";
   // : reply-to
   if (sourceMessage.replyTo) {
-    textMsg += l10n_forward_header_labels['replyTo'] + ': ' +
-                 formatAddresses([sourceMessage.replyTo]) + '\n';
+    textMsg +=
+      l10n_forward_header_labels.replyTo +
+      ": " +
+      formatAddresses([sourceMessage.replyTo]) +
+      "\n";
   }
   // : organization
   // : to
   if (sourceMessage.to && sourceMessage.to.length) {
-    textMsg += l10n_forward_header_labels['to'] + ': ' +
-                 formatAddresses(sourceMessage.to) + '\n';
+    textMsg +=
+      l10n_forward_header_labels.to +
+      ": " +
+      formatAddresses(sourceMessage.to) +
+      "\n";
   }
   // : cc
   if (sourceMessage.cc && sourceMessage.cc.length) {
-    textMsg += l10n_forward_header_labels['cc'] + ': ' +
-                 formatAddresses(sourceMessage.cc) + '\n';
+    textMsg +=
+      l10n_forward_header_labels.cc +
+      ": " +
+      formatAddresses(sourceMessage.cc) +
+      "\n";
   }
   // (bcc should never be forwarded)
   // : newsgroups
   // : followup-to
   // : references (only for newsgroups)
 
-  textMsg += '\n';
+  textMsg += "\n";
 
   let reps = sourceMessage.bodyReps;
   for (let i = 0; i < reps.length; i++) {
@@ -352,23 +387,23 @@ export async function generateForwardParts(sourceMessage, identity) {
     let repBlob = reps[i].contentBlob;
 
     let rep;
-    if (repType === 'plain') {
+    if (repType === "plain") {
       rep = JSON.parse(await repBlob.text());
       let forwardText = $quotechew.generateForwardBodyText(rep);
       // If we've gone HTML, this needs to get concatenated onto the HTML.
       if (htmlMsg) {
-        htmlMsg += $htmlchew.wrapTextIntoSafeHTMLString(forwardText) + '\n';
+        htmlMsg += $htmlchew.wrapTextIntoSafeHTMLString(forwardText) + "\n";
       }
       // We haven't gone HTML yet, so this can all still be text.
       else {
         textMsg += forwardText;
       }
-    } else if (repType === 'html') {
+    } else if (repType === "html") {
       rep = await repBlob.text();
       if (!htmlMsg) {
-        htmlMsg = '';
+        htmlMsg = "";
         // slice off the trailing newline of textMsg
-        if (textMsg.slice(-1) === '\n') {
+        if (textMsg.slice(-1) === "\n") {
           textMsg = textMsg.slice(0, -1);
         }
       }
@@ -379,20 +414,20 @@ export async function generateForwardParts(sourceMessage, identity) {
   return makeBodyPartsFromTextAndHTML(textMsg, htmlMsg);
 }
 
-var HTML_WRAP_TOP =
-  '<html><body><body bgcolor="#FFFFFF" text="#000000">';
-var HTML_WRAP_BOTTOM =
-  '</body></html>';
+var HTML_WRAP_TOP = '<html><body><body bgcolor="#FFFFFF" text="#000000">';
+var HTML_WRAP_BOTTOM = "</body></html>";
 
 /**
  * Combine the user's plaintext composition with the read-only HTML we provided
  * them into a final HTML representation.
  */
 export function mergeUserTextWithHTML(text, html) {
-  return HTML_WRAP_TOP +
-         $htmlchew.wrapTextIntoSafeHTMLString(text, 'div') +
-         html +
-         HTML_WRAP_BOTTOM;
+  return (
+    HTML_WRAP_TOP +
+    $htmlchew.wrapTextIntoSafeHTMLString(text, "div") +
+    html +
+    HTML_WRAP_BOTTOM
+  );
 }
 
 /**
@@ -419,22 +454,25 @@ export function mergeUserTextWithHTML(text, html) {
  * @return {{ contentBlob, snippet, authoredBodySize }}
  */
 export function processMessageContent(
-    content, type, isDownloaded, generateSnippet) {
+  content,
+  type,
+  isDownloaded,
+  generateSnippet
+) {
   // Strip any trailing newline.
-  if (content.slice(-1) === '\n') {
+  if (content.slice(-1) === "\n") {
     content = content.slice(0, -1);
   }
 
   let parsedContent, contentBlob, snippet;
   let authoredBodySize = 0;
   switch (type) {
-    case 'plain':
+    case "plain":
       try {
         parsedContent = $quotechew.quoteProcessTextBody(content);
         authoredBodySize = $quotechew.estimateAuthoredBodySize(parsedContent);
-      }
-      catch (ex) {
-        logic(scope, 'textChewError', { ex: ex });
+      } catch (ex) {
+        logic(scope, "textChewError", { ex });
         // An empty content rep is better than nothing.
         parsedContent = [];
       }
@@ -442,25 +480,25 @@ export function processMessageContent(
       if (generateSnippet) {
         try {
           snippet = $quotechew.generateSnippet(
-            parsedContent, DESIRED_SNIPPET_LENGTH
+            parsedContent,
+            DESIRED_SNIPPET_LENGTH
           );
-        }
-        catch (ex) {
-          logic(scope, 'textSnippetError', { ex: ex });
-          snippet = '';
+        } catch (ex) {
+          logic(scope, "textSnippetError", { ex });
+          snippet = "";
         }
       }
-      contentBlob = new Blob([JSON.stringify(parsedContent)],
-                             { type: 'application/json' });
+      contentBlob = new Blob([JSON.stringify(parsedContent)], {
+        type: "application/json",
+      });
       break;
-    case 'html':
+    case "html":
       if (generateSnippet) {
         try {
           snippet = $htmlchew.generateSnippet(content);
-        }
-        catch (ex) {
-          logic(scope, 'htmlSnippetError', { ex: ex });
-          snippet = '';
+        } catch (ex) {
+          logic(scope, "htmlSnippetError", { ex });
+          snippet = "";
         }
       }
       if (isDownloaded) {
@@ -468,22 +506,22 @@ export function processMessageContent(
           parsedContent = $htmlchew.sanitizeAndNormalizeHtml(content);
           // TODO: Should we use a MIME type to convey this is sanitized HTML?
           // (Possibly also including our sanitizer version as a parameter?)
-          contentBlob = new Blob([parsedContent], { type: 'text/html' });
+          contentBlob = new Blob([parsedContent], { type: "text/html" });
           // bleach.js explicitly normalizes whitespace as part of its chars()
           // method, although
-          authoredBodySize =
-            $htmlchew.generateSearchableTextVersion(
-              parsedContent, /* include quotes */ false).length;
-        }
-        catch (ex) {
-          logic(scope, 'htmlParseError', { ex: ex });
-          parsedContent = '';
+          authoredBodySize = $htmlchew.generateSearchableTextVersion(
+            parsedContent,
+            /* include quotes */ false
+          ).length;
+        } catch (ex) {
+          logic(scope, "htmlParseError", { ex });
+          parsedContent = "";
         }
       }
       break;
 
     default: {
-      throw new Error('unpossible!');
+      throw new Error("unpossible!");
     }
   }
 
@@ -502,11 +540,12 @@ export function processMessageContent(
  *
  */
 export function processAttributeContent(attrData) {
-  const contentBlob = new Blob([JSON.stringify(attrData)],
-                               { type: 'application/json' });
+  const contentBlob = new Blob([JSON.stringify(attrData)], {
+    type: "application/json",
+  });
   return {
     contentBlob,
-    snippet: '',
+    snippet: "",
     authoredBodySize: contentBlob.size,
   };
 }

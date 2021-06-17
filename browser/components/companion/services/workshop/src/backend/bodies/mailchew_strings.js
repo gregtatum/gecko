@@ -19,7 +19,7 @@
  * async as needed.
  **/
 
-import evt from 'evt';
+import evt from "evt";
 
 export const events = new evt.Emitter();
 
@@ -30,6 +30,5 @@ export let strings = null;
 
 export function set(_strings) {
   strings = _strings;
-  events.emit('strings', strings);
+  events.emit("strings", strings);
 }
-

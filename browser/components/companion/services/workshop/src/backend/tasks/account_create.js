@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import TaskDefiner from '../task_infra/task_definer';
+import TaskDefiner from "../task_infra/task_definer";
 
-import { encodeInt } from 'shared/a64';
-import { makeAccountDef, makeIdentity } from '../db/account_def_rep';
+import { encodeInt } from "shared/a64";
+import { makeAccountDef, makeIdentity } from "../db/account_def_rep";
 
-import { configuratorModules, validatorModules } from '../engine_glue';
+import { configuratorModules, validatorModules } from "../engine_glue";
 
-import defaultPrefs from '../default_prefs';
+import defaultPrefs from "../default_prefs";
 
 /**
  * Create an account using previously retrieved autoconfig data or using
@@ -54,16 +54,14 @@ import defaultPrefs from '../default_prefs';
  */
 export default TaskDefiner.defineSimpleTask([
   {
-    name: 'account_create',
+    name: "account_create",
 
-    exclusiveResources: function() {
-      return [
-      ];
+    exclusiveResources() {
+      return [];
     },
 
-    priorityTags: function() {
-      return [
-      ];
+    priorityTags() {
+      return [];
     },
 
     async execute(ctx, planned) {
@@ -72,7 +70,7 @@ export default TaskDefiner.defineSimpleTask([
 
       let [configurator, validator] = await Promise.all([
         configuratorModules.get(accountType)(),
-        validatorModules.get(accountType)()
+        validatorModules.get(accountType)(),
       ]);
 
       let fragments = configurator(userDetails, domainInfo);
@@ -90,16 +88,18 @@ export default TaskDefiner.defineSimpleTask([
       // Hand-off the connection if one was returned.
       if (validationResult.receiveProtoConn) {
         ctx.universe.accountManager.stashAccountConnection(
-          accountId, validationResult.receiveProtoConn);
+          accountId,
+          validationResult.receiveProtoConn
+        );
       }
 
       let identity = makeIdentity({
-        id: accountId + '.' + encodeInt(0),
+        id: accountId + "." + encodeInt(0),
         name: userDetails.displayName,
         address: userDetails.emailAddress,
         replyTo: null,
         signature: null,
-        signatureEnabled: false
+        signatureEnabled: false,
       });
 
       let accountDef = makeAccountDef({
@@ -113,27 +113,25 @@ export default TaskDefiner.defineSimpleTask([
         typeFields: fragments.typeFields,
         engineFields: validationResult.engineFields,
         connInfoFields: fragments.connInfoFields,
-        identities: [
-          identity
-        ]
+        identities: [identity],
       });
 
       await ctx.finishTask({
         newData: {
-          accounts: [accountDef]
+          accounts: [accountDef],
         },
         atomicClobbers: {
           config: {
-            nextAccountNum: accountNum + 1
-          }
-        }
+            nextAccountNum: accountNum + 1,
+          },
+        },
       });
 
       return ctx.returnValue({
         accountId,
         error: null,
-        errorDetails: null
+        errorDetails: null,
       });
     },
-  }
+  },
 ]);

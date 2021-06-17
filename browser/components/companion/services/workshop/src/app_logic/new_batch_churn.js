@@ -86,7 +86,7 @@ function churnPerAccount(multipleAccounts, accountInfo, newByConv) {
       newMessageCount: 1,
       fromAddress: message.authorNameish,
       subject: message.subject,
-      maybeAccountName
+      maybeAccountName,
     };
   }
 
@@ -95,7 +95,7 @@ function churnPerAccount(multipleAccounts, accountInfo, newByConv) {
 
   for (let message of messages) {
     let candidateAddress = message.authorNameish;
-    if (uniqueAddresses.indexOf(candidateAddress) === -1) {
+    if (!uniqueAddresses.includes(candidateAddress)) {
       uniqueAddresses.push(candidateAddress);
       if (uniqueAddresses.length >= maxCount) {
         break;
@@ -106,7 +106,7 @@ function churnPerAccount(multipleAccounts, accountInfo, newByConv) {
   return {
     newMessageCount: messages.length,
     topFromAddresses: uniqueAddresses,
-    maybeAccountName
+    maybeAccountName,
   };
 }
 
@@ -135,9 +135,9 @@ export default function churnAllNewMessages(ctx, newSetsWithAccount) {
   for (let { accountInfo, newByConv } of newSetsWithAccount) {
     perAccountResults.set(
       accountInfo.id,
-      churnPerAccount(!!newSetsWithAccount.length, accountInfo, newByConv));
+      churnPerAccount(!!newSetsWithAccount.length, accountInfo, newByConv)
+    );
   }
 
   return Promise.resolve(perAccountResults);
 }
-

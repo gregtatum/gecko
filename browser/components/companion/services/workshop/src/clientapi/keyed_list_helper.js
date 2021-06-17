@@ -28,8 +28,15 @@
  *   on divergence), we can do that.
  */
 export default function keyedListHelper({
-    wireReps, existingRichReps, constructor, owner, idKey, addEvent,
-    changeEvent, removeEvent }) {
+  wireReps,
+  existingRichReps,
+  constructor,
+  owner,
+  idKey,
+  addEvent,
+  changeEvent,
+  removeEvent,
+}) {
   // Map of existing rich reps that we haven't processed yet.  By removing them
   // as we go we can use it to infer deletion.
   let pendingRichMap = new Map();
@@ -43,7 +50,7 @@ export default function keyedListHelper({
     if (richRep) {
       richRep.__update(wireRep);
       pendingRichMap.delete(wireRep[idKey]);
-      richRep.emit('change', richRep);
+      richRep.emit("change", richRep);
       if (changeEvent) {
         owner.emit(changeEvent, richRep);
       }
@@ -57,7 +64,7 @@ export default function keyedListHelper({
   }
 
   for (let richRep of existingRichReps) {
-    richRep.emit('remove', richRep);
+    richRep.emit("remove", richRep);
     if (removeEvent) {
       owner.emit(removeEvent, richRep);
     }
@@ -65,4 +72,3 @@ export default function keyedListHelper({
 
   return updatedList;
 }
-

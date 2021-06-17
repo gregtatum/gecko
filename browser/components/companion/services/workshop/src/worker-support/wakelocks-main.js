@@ -34,15 +34,15 @@ function requestWakeLock(type) {
 }
 
 var me = {
-  name: 'wakelocks',
+  name: "wakelocks",
   sendMessage: null,
-  process: function(uid, cmd, args) {
+  process(uid, cmd, args) {
     switch (cmd) {
-      case 'requestWakeLock':
+      case "requestWakeLock":
         var type = args[0];
         me.sendMessage(uid, cmd, [requestWakeLock(type)]);
         break;
-      case 'unlock':
+      case "unlock":
         var id = args[0];
         var lock = locks.get(id);
         if (lock) {
@@ -58,7 +58,7 @@ var me = {
 
   // Expose the request method locally so that cronsync-main can acquire a
   // wake-lock to hand off to the back-end.
-  requestWakeLock
+  requestWakeLock,
 };
 
 export default me;

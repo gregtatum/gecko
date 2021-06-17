@@ -23,10 +23,10 @@
  * wants to be deleted.
  **/
 
-import logic from 'logic';
-import $allback from 'shared/allback';
-import { DAY_MILLIS, NOW, SINCE, quantizeDate } from 'shared/date';
-import $sync from '../syncbase';
+import logic from "logic";
+import $allback from "shared/allback";
+import { DAY_MILLIS, NOW, SINCE, quantizeDate } from "shared/date";
+import $sync from "../syncbase";
 
 /**
  * Lazily evaluated modules
@@ -40,7 +40,7 @@ var $imapsync = null;
 /**
  * Maximum bytes to request from server in a fetch request (max uint32)
  */
-var MAX_FETCH_BYTES = (Math.pow(2, 32) - 1);
+var MAX_FETCH_BYTES = Math.pow(2, 32) - 1;
 
 /**
  * Folder connections do the actual synchronization logic.  They are associated
@@ -79,9 +79,9 @@ function ImapFolderConn(account, storage) {
   this._account = account;
   this._storage = storage;
 
-  logic.defineScope(this, 'ImapFolderConn', {
+  logic.defineScope(this, "ImapFolderConn", {
     accountId: account.id,
-    folderId: storage.folderId
+    folderId: storage.folderId,
   });
 
   this._conn = null;
@@ -113,25 +113,28 @@ ImapFolderConn.prototype = {
    *   }
    * ]
    */
-  acquireConn: function(callback, deathback, label, dieOnConnectFailure) {
+  acquireConn(callback, deathback, label, dieOnConnectFailure) {
     var self = this;
     this._deathback = deathback;
     this._account.__folderDemandsConnection(
-      this._storage.folderId, label,
+      this._storage.folderId,
+      label,
       function gotconn(conn) {
         self._conn = conn;
         // Now we have a connection, but it's not in the folder.
         // (If we were doing fancier sync like QRESYNC, we would not enter
         // in such a blase fashion.)
-        self._conn.selectMailbox(self._storage.folderMeta.path,
-                           function openedBox(err, box) {
+        self._conn.selectMailbox(
+          self._storage.folderMeta.path,
+          function openedBox(err, box) {
             if (err) {
-              console.error('Problem entering folder',
-                            self._storage.folderMeta.path);
+              console.error(
+                "Problem entering folder",
+                self._storage.folderMeta.path
+              );
               self._conn = null;
               // hand the connection back, noting a resource problem
-              self._account.__folderDoneWithConnection(
-                self._conn, false, true);
+              self._account.__folderDoneWithConnection(self._conn, false, true);
               if (self._deathback) {
                 let local_deathback = self._deathback;
                 self.clearErrorHandler();
@@ -141,7 +144,8 @@ ImapFolderConn.prototype = {
             }
             self.box = box;
             callback(self, self._storage);
-          });
+          }
+        );
       },
       function deadconn() {
         self._conn = null;
@@ -151,10 +155,11 @@ ImapFolderConn.prototype = {
           local_deathback();
         }
       },
-      dieOnConnectFailure);
+      dieOnConnectFailure
+    );
   },
 
-  relinquishConn: function() {
+  relinquishConn() {
     if (!this._conn) {
       return;
     }
@@ -170,11 +175,16 @@ ImapFolderConn.prototype = {
    *
    * See `acquireConn` for argument docs.
    */
-  withConnection: function (callback, deathback, label, dieOnConnectFailure) {
+  withConnection(callback, deathback, label, dieOnConnectFailure) {
     if (!this._conn) {
-      this.acquireConn(function () {
-        this.withConnection(callback, deathback, label);
-      }.bind(this), deathback, label, dieOnConnectFailure);
+      this.acquireConn(
+        function() {
+          this.withConnection(callback, deathback, label);
+        }.bind(this),
+        deathback,
+        label,
+        dieOnConnectFailure
+      );
       return;
     }
 
@@ -186,11 +196,11 @@ ImapFolderConn.prototype = {
    * Resets error handling that may be triggered during
    * loss of connection.
    */
-  clearErrorHandler: function () {
+  clearErrorHandler() {
     this._deathback = null;
   },
 
-  reselectBox: function(callback) {
+  reselectBox(callback) {
     this._conn.selectMailbox(this._storage.folderMeta.path, callback);
   },
 
@@ -203,8 +213,13 @@ ImapFolderConn.prototype = {
    *
    * Track an isRetry flag to ensure we don't fall into an infinite retry loop.
    */
-  _timelySyncSearch: function(searchOptions, searchedCallback,
-                              abortedCallback, progressCallback, isRetry) {
+  _timelySyncSearch(
+    searchOptions,
+    searchedCallback,
+    abortedCallback,
+    progressCallback,
+    isRetry
+  ) {
     var gotSearchResponse = false;
 
     // If we don't have a connection, get one, then re-call.
@@ -216,11 +231,18 @@ ImapFolderConn.prototype = {
       // causes us to not release the connection back to the account).  We
       // should tie this to the mutex or something else transactional.
       this.acquireConn(
-        this._timelySyncSearch.bind(this,
-                                    searchOptions, searchedCallback,
-                                    abortedCallback, progressCallback,
-                                    /* isRetry: */ isRetry),
-        abortedCallback, 'sync', true);
+        this._timelySyncSearch.bind(
+          this,
+          searchOptions,
+          searchedCallback,
+          abortedCallback,
+          progressCallback,
+          /* isRetry: */ isRetry
+        ),
+        abortedCallback,
+        "sync",
+        true
+      );
       return;
     }
     // We do have a connection. Hopefully the connection is still
@@ -229,31 +251,34 @@ ImapFolderConn.prototype = {
     // connection reset notification. In other words, if the
     // connection has gone stale, we want to grab a new connection and
     // retry before aborting.
-    else {
-      if (!isRetry) {
-        var origAbortedCallback = abortedCallback;
-        abortedCallback = (function() {
-          // Here, we've acquired an already-connected socket. If we
-          // were already connected, but failed to receive a response
-          // from the server, this socket is effectively dead. In that
-          // case, retry the SEARCH once again with a fresh connection,
-          // if we haven't already retried the request.
-          if (!gotSearchResponse) {
-            console.warn('Broken connection for SEARCH. Retrying.');
-            this._timelySyncSearch(searchOptions, searchedCallback,
-                                   origAbortedCallback, progressCallback,
-                                   /* isRetry: */ true);
-          }
-          // Otherwise, we received an error from this._conn.search
-          // below (i.e. there was a legitimate server problem), or we
-          // already retried, so we should actually give up.
-          else {
-            origAbortedCallback();
-          }
-        }.bind(this));
-      }
-      this._deathback = abortedCallback;
+
+    if (!isRetry) {
+      var origAbortedCallback = abortedCallback;
+      abortedCallback = function() {
+        // Here, we've acquired an already-connected socket. If we
+        // were already connected, but failed to receive a response
+        // from the server, this socket is effectively dead. In that
+        // case, retry the SEARCH once again with a fresh connection,
+        // if we haven't already retried the request.
+        if (!gotSearchResponse) {
+          console.warn("Broken connection for SEARCH. Retrying.");
+          this._timelySyncSearch(
+            searchOptions,
+            searchedCallback,
+            origAbortedCallback,
+            progressCallback,
+            /* isRetry: */ true
+          );
+        }
+        // Otherwise, we received an error from this._conn.search
+        // below (i.e. there was a legitimate server problem), or we
+        // already retried, so we should actually give up.
+        else {
+          origAbortedCallback();
+        }
+      }.bind(this);
     }
+    this._deathback = abortedCallback;
 
     // Having a connection is 10% of the battle
     if (progressCallback) {
@@ -267,23 +292,23 @@ ImapFolderConn.prototype = {
     // been received. Other IMAP servers don't need this as far as we know.
     // See <https://bugzilla.mozilla.org/show_bug.cgi?id=933079>.
     if (this._account.isGmail) {
-      this._conn.exec('NOOP');
+      this._conn.exec("NOOP");
     }
 
     this._conn.search(searchOptions, { byUid: true }, function(err, uids) {
-        gotSearchResponse = true;
-        if (err) {
-          console.error('Search error on', searchOptions, 'err:', err);
-          abortedCallback();
-          return;
-        }
-        searchedCallback(uids);
-      });
+      gotSearchResponse = true;
+      if (err) {
+        console.error("Search error on", searchOptions, "err:", err);
+        abortedCallback();
+        return;
+      }
+      searchedCallback(uids);
+    });
   },
 
   // Attempt to
   async syncDateRange(...args) {
-    const $imapsync = await import('imap/protocol/sync');
+    $imapsync = await import("imap/protocol/sync");
 
     this.syncDateRange = this._lazySyncDateRange;
     this.syncDateRange(...args);
@@ -363,13 +388,18 @@ ImapFolderConn.prototype = {
    *   }
    * ]
    */
-  _lazySyncDateRange: function(startTS, endTS, accuracyStamp,
-                          doneCallback, progressCallback) {
-    var scope = logic.subscope(this, { startTS: startTS, endTS: endTS });
+  _lazySyncDateRange(
+    startTS,
+    endTS,
+    accuracyStamp,
+    doneCallback,
+    progressCallback
+  ) {
+    var scope = logic.subscope(this, { startTS, endTS });
 
     if (startTS && endTS && SINCE(startTS, endTS)) {
-      logic(scope, 'illegalSync');
-      doneCallback('invariant');
+      logic(scope, "illegalSync");
+      doneCallback("invariant");
       return;
     }
 
@@ -377,8 +407,8 @@ ImapFolderConn.prototype = {
     var storage = self._storage;
     var completed = false;
 
-    console.log('syncDateRange:', startTS, endTS);
-    logic(scope, 'syncDateRange_begin');
+    console.log("syncDateRange:", startTS, endTS);
+    logic(scope, "syncDateRange_begin");
 
     // IMAP Search
 
@@ -395,35 +425,40 @@ ImapFolderConn.prototype = {
       searchOptions.before = new Date(endTS);
     }
 
-    var imapSearchPromise = new Promise(function(resolve) {
-      this._timelySyncSearch(
-        searchOptions,
-        resolve,
-        function abortedSearch() {
-          if (completed) {
-            return;
-          }
-          completed = true;
-          this._LOG.syncDateRange_end(0, 0, 0, startTS, endTS);
-          logic(scope, 'syncDateRange_end', {
-                  full: 0, flags: 0, deleted: 0
-                });
-          doneCallback('aborted');
-        }.bind(this),
-        progressCallback,
-        /* isRetry: */ false);
-    }.bind(this));
+    var imapSearchPromise = new Promise(
+      function(resolve) {
+        this._timelySyncSearch(
+          searchOptions,
+          resolve,
+          function abortedSearch() {
+            if (completed) {
+              return;
+            }
+            completed = true;
+            this._LOG.syncDateRange_end(0, 0, 0, startTS, endTS);
+            logic(scope, "syncDateRange_end", {
+              full: 0,
+              flags: 0,
+              deleted: 0,
+            });
+            doneCallback("aborted");
+          }.bind(this),
+          progressCallback,
+          /* isRetry: */ false
+        );
+      }.bind(this)
+    );
 
     // Database Fetch
 
     // Fetch messages from the database, extending the search by a day
     // on either side to prevent timezone-related problems (bug 886534).
 
-    var dbStartTS = (startTS ? startTS - $sync.IMAP_SEARCH_AMBIGUITY_MS : null);
-    var dbEndTS = (endTS ? endTS + $sync.IMAP_SEARCH_AMBIGUITY_MS : null);
-    logic(scope, 'database-lookup', {
-      dbStartTS: dbStartTS,
-      dbEndTS: dbEndTS
+    var dbStartTS = startTS ? startTS - $sync.IMAP_SEARCH_AMBIGUITY_MS : null;
+    var dbEndTS = endTS ? endTS + $sync.IMAP_SEARCH_AMBIGUITY_MS : null;
+    logic(scope, "database-lookup", {
+      dbStartTS,
+      dbEndTS,
     });
     var databaseFetchPromise = new Promise(function(resolve) {
       storage.getAllMessagesInImapDateRange(dbStartTS, dbEndTS, resolve);
@@ -431,10 +466,9 @@ ImapFolderConn.prototype = {
 
     // Combine the results:
 
-    Promise.all([
-      imapSearchPromise,
-      databaseFetchPromise
-    ]).then(function(results) {
+    Promise.all([imapSearchPromise, databaseFetchPromise]).then(function(
+      results
+    ) {
       var serverUIDs = results[0];
       var dbHeaders = results[1];
       var effectiveEndTS = endTS || quantizeDate(NOW() + DAY_MILLIS);
@@ -445,38 +479,43 @@ ImapFolderConn.prototype = {
       // process and we're searching more than one day, we can shrink
       // our search.
 
-      var shouldBisect = (serverUIDs.length > $sync.BISECT_DATE_AT_N_MESSAGES &&
-                          curDaysDelta > 1);
+      var shouldBisect =
+        serverUIDs.length > $sync.BISECT_DATE_AT_N_MESSAGES && curDaysDelta > 1;
 
       console.log(
-        '[syncDateRange]',
-        'Should bisect?', shouldBisect ? '***YES, BISECT!***' : 'no.',
-        'curDaysDelta =', curDaysDelta,
-        'serverUIDs.length =', serverUIDs.length);
+        "[syncDateRange]",
+        "Should bisect?",
+        shouldBisect ? "***YES, BISECT!***" : "no.",
+        "curDaysDelta =",
+        curDaysDelta,
+        "serverUIDs.length =",
+        serverUIDs.length
+      );
 
       if (shouldBisect) {
         // mark the bisection abort...
-        logic(scope, 'syncDateRange_end');
+        logic(scope, "syncDateRange_end");
         var bisectInfo = {
           oldStartTS: startTS,
           oldEndTS: endTS,
           numHeaders: serverUIDs.length,
-          curDaysDelta: curDaysDelta,
+          curDaysDelta,
           newStartTS: startTS,
           newEndTS: endTS,
         };
         // If we were being used for a refresh, they may want us to stop
         // and change their sync strategy.
-        if (doneCallback('bisect', bisectInfo, null) === 'abort') {
+        if (doneCallback("bisect", bisectInfo, null) === "abort") {
           self.clearErrorHandler();
-          doneCallback('bisect-aborted', null);
+          doneCallback("bisect-aborted", null);
         } else {
           self.syncDateRange(
             bisectInfo.newStartTS,
             bisectInfo.newEndTS,
             accuracyStamp,
             doneCallback,
-            progressCallback);
+            progressCallback
+          );
         }
         return;
       }
@@ -512,10 +551,10 @@ ImapFolderConn.prototype = {
 
       var imapSyncOptions = {
         connection: self._conn,
-        storage: storage,
+        storage,
         newUIDs: [],
         knownUIDs: [],
-        knownHeaders: []
+        knownHeaders: [],
       };
 
       var numDeleted = 0;
@@ -529,7 +568,7 @@ ImapFolderConn.prototype = {
         // New
         if (!localHeader && hasServer) {
           imapSyncOptions.newUIDs.push(uid);
-          logic(scope, 'new-uid', { uid: uid });
+          logic(scope, "new-uid", { uid });
         }
         // Updated
         else if (localHeader && hasServer) {
@@ -538,13 +577,19 @@ ImapFolderConn.prototype = {
 
           if (localHeader.imapMissingInSyncRange) {
             localHeader.imapMissingInSyncRange = null;
-            logic(scope, 'found-missing-uid', { uid: uid });
+            logic(scope, "found-missing-uid", { uid });
             storage.updateMessageHeader(
-              localHeader.date, localHeader.id, true, localHeader,
-              /* body hint */ null, latch.defer(), { silent: true });
+              localHeader.date,
+              localHeader.id,
+              true,
+              localHeader,
+              /* body hint */ null,
+              latch.defer(),
+              { silent: true }
+            );
           }
 
-          logic(scope, 'updated-uid', { uid: uid });
+          logic(scope, "updated-uid", { uid });
         }
         // Deleted or Ambiguously Deleted
         else if (localHeader && !hasServer) {
@@ -566,26 +611,35 @@ ImapFolderConn.prototype = {
           //    "old" side because we'll get that coverage again soon.
           // 3) It overlaps the current range and we can take their union.
           var missingRange;
-          if (!localHeader.imapMissingInSyncRange || // (#1)
-              ((localHeader.imapMissingInSyncRange.endTS < startTS) || // (#2)
-               (localHeader.imapMissingInSyncRange.startTS > endTS))) {
+          if (
+            !localHeader.imapMissingInSyncRange || // (#1)
+            localHeader.imapMissingInSyncRange.endTS < startTS || // (#2)
+            localHeader.imapMissingInSyncRange.startTS > endTS
+          ) {
             // adopt/clobber!
             // (Note that "Infinity" JSON stringifies to null, so be aware when
             // looking at logs involving this code.  But the values are
             // structured cloned for bridge and database purposes and so remain
             // intact.)
-            missingRange = localHeader.imapMissingInSyncRange =
-              { startTS: startTS || 0, endTS: endTS || Infinity };
-          } else { // (#3, union!)
+            missingRange = localHeader.imapMissingInSyncRange = {
+              startTS: startTS || 0,
+              endTS: endTS || Infinity,
+            };
+          } else {
+            // (#3, union!)
             missingRange = localHeader.imapMissingInSyncRange;
             // Make sure to treat 'null' startTS and endTS correctly.
             // (This is a union range.  We can state that we have not found the
             // message in the time range SINCE missingRange.startTS and BEFORE
             // missingRange.endTS.)
-            missingRange.startTS = Math.min(startTS || 0,
-                                            missingRange.startTS || 0);
-            missingRange.endTS = Math.max(endTS || Infinity,
-                                          missingRange.endTS || Infinity);
+            missingRange.startTS = Math.min(
+              startTS || 0,
+              missingRange.startTS || 0
+            );
+            missingRange.endTS = Math.max(
+              endTS || Infinity,
+              missingRange.endTS || Infinity
+            );
           }
 
           // Have we looked all around where the message is supposed
@@ -594,24 +648,36 @@ ImapFolderConn.prototype = {
           // completely contains the date +/- fuzz range.  We use an inclusive
           // comparison in both cases because we are comparing two ranges, not
           // a single date and a range.)
-          if (missingRange.startTS <= date - fuzz &&
-              missingRange.endTS >= date + fuzz) {
-            logic(scope, 'unambiguously-deleted-uid',
-                  { uid: uid, missingRange: missingRange });
+          if (
+            missingRange.startTS <= date - fuzz &&
+            missingRange.endTS >= date + fuzz
+          ) {
+            logic(scope, "unambiguously-deleted-uid", {
+              uid,
+              missingRange,
+            });
             storage.deleteMessageHeaderAndBodyUsingHeader(localHeader);
             numDeleted++;
           }
           // Or we haven't looked far enough... maybe it will show up
           // later. We've already marked the updated "missing" range above.
           else {
-            logic(scope, 'ambiguously-missing-uid',
-                  { uid: uid, missingRange: missingRange,
-                    rangeToDelete: { startTS: date - fuzz, endTS: date + fuzz },
-                    syncRange: { startTS: startTS, endTS: endTS }});
+            logic(scope, "ambiguously-missing-uid", {
+              uid,
+              missingRange,
+              rangeToDelete: { startTS: date - fuzz, endTS: date + fuzz },
+              syncRange: { startTS, endTS },
+            });
 
             storage.updateMessageHeader(
-              localHeader.date, localHeader.id, true, localHeader,
-              /* body hint */ null, latch.defer(), { silent: true });
+              localHeader.date,
+              localHeader.id,
+              true,
+              localHeader,
+              /* body hint */ null,
+              latch.defer(),
+              { silent: true }
+            );
           }
         }
       });
@@ -623,15 +689,15 @@ ImapFolderConn.prototype = {
         var uidSync = new $imapsync.Sync(imapSyncOptions);
         uidSync.onprogress = progressCallback;
         uidSync.oncomplete = function(newCount, knownCount) {
-          logic(scope, 'syncDateRange_end', {
+          logic(scope, "syncDateRange_end", {
             full: newCount,
             flags: knownCount,
-            deleted: numDeleted
+            deleted: numDeleted,
           });
 
           // BrowserBox returns an integer modseq, but it's opaque and
           // we already deal with strings, so cast it here.
-          var modseq = (self.box.highestModseq || '') + '';
+          var modseq = (self.box.highestModseq || "") + "";
           storage.markSyncRange(startTS, endTS, modseq, accuracyStamp);
 
           if (!completed) {
@@ -641,8 +707,8 @@ ImapFolderConn.prototype = {
           }
         };
       });
-    }.bind(this));
- },
+    });
+  },
 
   /**
    * Downloads all the body representations for a given message.
@@ -662,10 +728,10 @@ ImapFolderConn.prototype = {
     var args = Array.slice(arguments);
     var self = this;
 
-    $imapchew = await import('./imapchew');
-    $imapbodyfetcher = await import('./protocol/bodyfetcher');
-    $imaptextparser = await import('./protocol/textparser');
-    $imapsnippetparser = await import('./protocol/snippetparser');
+    $imapchew = await import("./imapchew");
+    $imapbodyfetcher = await import("./protocol/bodyfetcher");
+    $imaptextparser = await import("./protocol/textparser");
+    $imapsnippetparser = await import("./protocol/snippetparser");
 
     (self.downloadBodyReps = self._lazyDownloadBodyReps).apply(self, args);
   },
@@ -674,8 +740,8 @@ ImapFolderConn.prototype = {
    * Initiates a request to download all body reps for a single message. If a
    * snippet has not yet been generated this will also generate the snippet...
    */
-  _lazyDownloadBodyReps: function(header, options, callback) {
-    if (typeof(options) === 'function') {
+  _lazyDownloadBodyReps(header, options, callback) {
+    if (typeof options === "function") {
       callback = options;
       options = null;
     }
@@ -747,16 +813,15 @@ ImapFolderConn.prototype = {
           partInfo: rep._partInfo,
           bodyRepIndex: idx,
           createSnippet: idx === bodyRepIdx,
-          headerUpdatedCallback: latch.defer(header.srvid + '-' + rep._partInfo)
+          headerUpdatedCallback: latch.defer(
+            header.srvid + "-" + rep._partInfo
+          ),
         };
 
         // we may only need a subset of the total number of bytes.
         if (overallMaximumBytes !== undefined || rep.amountDownloaded) {
           // request the remainder
-          request.bytes = [
-            rep.amountDownloaded,
-            bytesToFetch
-          ];
+          request.bytes = [rep.amountDownloaded, bytesToFetch];
         }
 
         requests.push(request);
@@ -774,7 +839,7 @@ ImapFolderConn.prototype = {
         requests
       );
 
-      self._handleBodyFetcher(fetch, header, bodyInfo, latch.defer('body'));
+      self._handleBodyFetcher(fetch, header, bodyInfo, latch.defer("body"));
       latch.then(function(results) {
         callback($allback.extractErrFromCallbackArgs(results), bodyInfo);
       });
@@ -786,11 +851,11 @@ ImapFolderConn.prototype = {
   /**
    * Wrapper around common bodyRep updates...
    */
-  _handleBodyFetcher: function(fetcher, header, body, bodyUpdatedCallback) {
+  _handleBodyFetcher(fetcher, header, body, bodyUpdatedCallback) {
     var event = {
       changeDetails: {
-        bodyReps: []
-      }
+        bodyReps: [],
+      },
     };
 
     // This will be invoked once per body part that is successfully downloaded
@@ -803,8 +868,9 @@ ImapFolderConn.prototype = {
 
       $imapchew.updateMessageWithFetch(header, body, req, resp);
 
-      header.bytesToDownloadForBodyDisplay =
-        $imapchew.calculateBytesToDownloadForImapBodyDisplay(body);
+      header.bytesToDownloadForBodyDisplay = $imapchew.calculateBytesToDownloadForImapBodyDisplay(
+        body
+      );
 
       // Always update the header so that we can save
       // bytesToDownloadForBodyDisplay, which will tell the UI whether
@@ -839,7 +905,7 @@ ImapFolderConn.prototype = {
    * The actual work of downloadBodies, lazily replaces downloadBodies once
    * module deps are loaded.
    */
-  _lazyDownloadBodies: function(headers, options, callback) {
+  _lazyDownloadBodies(headers, options, callback) {
     var downloadsNeeded = 0;
     var latch = $allback.latch();
     for (var i = 0; i < headers.length; i++) {
@@ -871,15 +937,15 @@ ImapFolderConn.prototype = {
     var args = Array.slice(arguments);
     var self = this;
 
-    $imapchew = await import('./imapchew');
-    $imapbodyfetcher = await import('./protocol/bodyfetcher');
-    $imapsnippetparser = await import('./protocol/snippetparser');
+    $imapchew = await import("./imapchew");
+    $imapbodyfetcher = await import("./protocol/bodyfetcher");
+    $imapsnippetparser = await import("./protocol/snippetparser");
 
     (self.downloadBodies = self._lazyDownloadBodies).apply(self, args);
   },
 
-  async downloadMessageAttachments(uid, partInfos, callback/*, progress*/) {
-    const MimeParser = await import('mimeparser');
+  async downloadMessageAttachments(uid, partInfos, callback /*, progress*/) {
+    const MimeParser = await import("mimeparser");
     var conn = this._conn;
 
     var latch = $allback.latch();
@@ -887,67 +953,68 @@ ImapFolderConn.prototype = {
     var bodies = [];
 
     partInfos.forEach(function(partInfo, index) {
-      var partKey = 'body.peek[' + partInfo.part + ']';
+      var partKey = "body.peek[" + partInfo.part + "]";
       var partDone = latch.defer(partInfo.part);
-      conn.listMessages(
-        uid,
-        [partKey],
-        { byUid: true },
-        function(err, messages) {
-          if (err) {
-            anyError = err;
-            console.error('attachments:download-error', {
-              error: err,
-              part: partInfo.part,
-              type: partInfo.type
-            });
-            partDone();
-            return;
-          }
-
-          // We only receive one message per each listMessages call.
-          var msg = messages[0];
-
-          // Find the proper response key of the message. Since this
-          // response object is a lightweight wrapper around the
-          // response returned from the IRC server and it's possible
-          // there are poorly-behaved servers out there, best to err
-          // on the side of safety.
-          var bodyPart;
-          for (var key in msg) {
-            if (/body\[/.test(key)) {
-              bodyPart = msg[key];
-              break;
-            }
-          }
-
-          if (!bodyPart) {
-            console.error('attachments:download-error', {
-              error: 'no body part?',
-              requestedPart: partKey,
-              responseKeys: Object.keys(msg)
-            });
-            partDone();
-            return;
-          }
-
-          // TODO: stream attachments, bug 1047032
-          var parser = new MimeParser();
-          // TODO: escape partInfo.type/encoding
-          parser.write('Content-Type: ' + partInfo.type + '\r\n');
-          parser.write('Content-Transfer-Encoding: ' + partInfo.encoding + '\r\n');
-          parser.write('\r\n');
-          parser.write(bodyPart);
-          parser.end(); // Parsing is actually synchronous.
-
-          var node = parser.node;
-
-          bodies[index] = new Blob([node.content], {
-            type: node.contentType.value
+      conn.listMessages(uid, [partKey], { byUid: true }, function(
+        err,
+        messages
+      ) {
+        if (err) {
+          anyError = err;
+          console.error("attachments:download-error", {
+            error: err,
+            part: partInfo.part,
+            type: partInfo.type,
           });
-
           partDone();
+          return;
+        }
+
+        // We only receive one message per each listMessages call.
+        var msg = messages[0];
+
+        // Find the proper response key of the message. Since this
+        // response object is a lightweight wrapper around the
+        // response returned from the IRC server and it's possible
+        // there are poorly-behaved servers out there, best to err
+        // on the side of safety.
+        var bodyPart;
+        for (var key in msg) {
+          if (/body\[/.test(key)) {
+            bodyPart = msg[key];
+            break;
+          }
+        }
+
+        if (!bodyPart) {
+          console.error("attachments:download-error", {
+            error: "no body part?",
+            requestedPart: partKey,
+            responseKeys: Object.keys(msg),
+          });
+          partDone();
+          return;
+        }
+
+        // TODO: stream attachments, bug 1047032
+        var parser = new MimeParser();
+        // TODO: escape partInfo.type/encoding
+        parser.write("Content-Type: " + partInfo.type + "\r\n");
+        parser.write(
+          "Content-Transfer-Encoding: " + partInfo.encoding + "\r\n"
+        );
+        parser.write("\r\n");
+        parser.write(bodyPart);
+        parser.end(); // Parsing is actually synchronous.
+
+        var node = parser.node;
+
+        bodies[index] = new Blob([node.content], {
+          type: node.contentType.value,
         });
+
+        partDone();
+      });
     });
 
     latch.then(function(/*results*/) {
@@ -955,19 +1022,17 @@ ImapFolderConn.prototype = {
     });
   },
 
-  shutdown: function() {
-  },
+  shutdown() {},
 };
 
 export function ImapFolderSyncer(account, folderStorage) {
   this._account = account;
   this.folderStorage = folderStorage;
 
-  logic.defineScope(this, 'ImapFolderSyncer', {
+  logic.defineScope(this, "ImapFolderSyncer", {
     accountId: account.id,
-    folderId: folderStorage.folderId
+    folderId: folderStorage.folderId,
   });
-
 
   this.folderConn = new ImapFolderConn(account, folderStorage);
 }
@@ -991,11 +1056,11 @@ ImapFolderSyncer.prototype = {
    * Invoked when there are no longer any live slices on the folder and no more
    * active/enqueued mutex ops.
    */
-  allConsumersDead: function() {
+  allConsumersDead() {
     this.folderConn.relinquishConn();
   },
 
-  shutdown: function() {
+  shutdown() {
     this.folderConn.shutdown();
   },
 };

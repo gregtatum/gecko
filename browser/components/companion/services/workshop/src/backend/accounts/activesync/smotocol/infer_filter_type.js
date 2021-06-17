@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import $AirSync from 'activesync/codepages/AirSync';
+import $AirSync from "activesync/codepages/AirSync";
 
-import getFolderSyncKey from './get_folder_sync_key';
-import getItemEstimate from './get_item_estimate';
+import getFolderSyncKey from "./get_folder_sync_key";
+import getItemEstimate from "./get_item_estimate";
 
 /**
  * Compound protocol logic to guesstimate the best filter choice that will
@@ -41,17 +41,23 @@ import getItemEstimate from './get_item_estimate';
  */
 export default async function inferFilterType(
   conn,
-  { folderServerId, desiredMessageCount }) {
+  { folderServerId, desiredMessageCount }
+) {
   const Type = $AirSync.Enums.FilterType;
 
   // -- Get a 2-week syncKey
   let filterType = Type.TwoWeeksBack;
-  let { syncKey } = await getFolderSyncKey(
-    conn, { folderServerId, filterType });
+  let { syncKey } = await getFolderSyncKey(conn, {
+    folderServerId,
+    filterType,
+  });
 
   // -- Get the item estimate for that 2-week syncKey
-  let { estimate } = await getItemEstimate(
-    conn, { folderSyncKey: syncKey, folderServerId, filterType });
+  let { estimate } = await getItemEstimate(conn, {
+    folderSyncKey: syncKey,
+    folderServerId,
+    filterType,
+  });
 
   // -- Math!
   let messagesPerDay = estimate / 14; // Two weeks. Twoooo weeeeeeks.
@@ -75,25 +81,29 @@ export default async function inferFilterType(
     // if the messages are not homogeneously distributed, like if this is an
     // archive folder that only contains messages older than a month.
     filterType = Type.NoFilter;
-    syncKey = (await getFolderSyncKey(
-      conn, { folderServerId, filterType })).syncKey;
-    estimate = (await getItemEstimate(
-      conn, { folderSyncKey: syncKey, folderServerId, filterType })).estimate;
+    syncKey = (await getFolderSyncKey(conn, { folderServerId, filterType }))
+      .syncKey;
+    estimate = (
+      await getItemEstimate(conn, {
+        folderSyncKey: syncKey,
+        folderServerId,
+        filterType,
+      })
+    ).estimate;
 
     if (estimate > desiredMessageCount) {
       desiredFilterType = Type.OneMonthBack;
-    }
-    else {
+    } else {
       desiredFilterType = Type.NoFilter;
     }
   }
 
   if (filterType !== desiredFilterType) {
     filterType = desiredFilterType;
-    syncKey = (await getFolderSyncKey(
-      conn, { folderServerId, filterType })).syncKey;
+    syncKey = (await getFolderSyncKey(conn, { folderServerId, filterType }))
+      .syncKey;
   }
 
-  logic(conn, 'inferFilterType', { filterType });
+  logic(conn, "inferFilterType", { filterType });
   return { filterType, syncKey };
 }

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import { convIdFromMessageId } from 'shared/id_conversions';
+import { convIdFromMessageId } from "shared/id_conversions";
 
-import { encodeInt } from 'shared/a64';
+import { encodeInt } from "shared/a64";
 
 /**
  * Vanilla IMAP helper logic for folder sync state manipulation.
@@ -42,16 +42,22 @@ import { encodeInt } from 'shared/a64';
  *   messages using that flag-set.
  * - uidInfo: A map from message UID to the { umid, flagSlot }.
  */
-export default function FolderSyncStateHelper(ctx, rawSyncState, accountId, folderId, mode) {
+export default function FolderSyncStateHelper(
+  ctx,
+  rawSyncState,
+  accountId,
+  folderId,
+  mode
+) {
   if (!rawSyncState) {
-    logic(ctx, 'creatingDefaultSyncState', {});
+    logic(ctx, "creatingDefaultSyncState", {});
     rawSyncState = {
       nextUmidSuffix: 1,
       sinceDate: 0,
       lastHighUid: 0,
       flagSets: [],
       flagSetCounts: [],
-      uidInfo: new Map()
+      uidInfo: new Map(),
     };
   }
 
@@ -59,7 +65,7 @@ export default function FolderSyncStateHelper(ctx, rawSyncState, accountId, fold
   this._accountId = accountId;
   this._folderId = folderId;
   this.rawSyncState = rawSyncState;
-  this._growMode = mode === 'grow';
+  this._growMode = mode === "grow";
 
   this._flagSets = this.rawSyncState.flagSets;
   this._flagSetCounts = this.rawSyncState.flagSetCounts;
@@ -98,9 +104,8 @@ FolderSyncStateHelper.prototype = {
     return this._uidInfo.size;
   },
 
-  issueUniqueMessageId: function() {
-    return (this._folderId + '.' +
-            encodeInt(this.rawSyncState.nextUmidSuffix++));
+  issueUniqueMessageId() {
+    return this._folderId + "." + encodeInt(this.rawSyncState.nextUmidSuffix++);
   },
 
   /**
@@ -108,7 +113,7 @@ FolderSyncStateHelper.prototype = {
    * to.  This will allocate a flag slot if one does not already exist.  In no
    * event will we manipulate _flagSetCounts.  You do that!
    */
-  _findFlagSlot: function(flags) {
+  _findFlagSlot(flags) {
     flags.sort();
     let normStr = JSON.stringify(flags);
     let idx = this._flagSets.indexOf(normStr);
@@ -122,7 +127,7 @@ FolderSyncStateHelper.prototype = {
    * Allocate a flag slot for the given normalized flag string.  Helper for use
    * by _findFlagSlot only.
    */
-  _allocateFlagSlot: function(normStr) {
+  _allocateFlagSlot(normStr) {
     let idx = this._flagSets.indexOf(null);
     if (idx === -1) {
       idx = this._flagSets.length;
@@ -132,29 +137,29 @@ FolderSyncStateHelper.prototype = {
     return idx;
   },
 
-  _incrFlagSlot: function(slot) {
+  _incrFlagSlot(slot) {
     this._flagSetCounts[slot]++;
   },
 
-  _decrFlagSlot: function(slot) {
+  _decrFlagSlot(slot) {
     let newVal = --this._flagSetCounts[slot];
     if (newVal === 0) {
       this._flagSets[slot] = null;
     }
     if (newVal < 0) {
-      logic.fail('flag slot reference count variant violation');
+      logic.fail("flag slot reference count variant violation");
     }
   },
 
-  isKnownUid: function(uid) {
+  isKnownUid(uid) {
     return this._uidInfo.has(uid);
   },
 
   /**
    * Given a list of uids, filter out the UIDs we already know about.
    */
-  filterOutKnownUids: function(uids) {
-    return uids.filter((uid) => {
+  filterOutKnownUids(uids) {
+    return uids.filter(uid => {
       return !this._uidInfo.has(uid);
     });
   },
@@ -162,23 +167,22 @@ FolderSyncStateHelper.prototype = {
   /**
    * Return a list of all UIDs known to us.
    */
-  getAllUids: function() {
+  getAllUids() {
     return Array.from(this._uidInfo.keys());
   },
 
-  getUmidForUid: function(uid) {
+  getUmidForUid(uid) {
     let info = this._uidInfo.get(uid);
     if (info) {
       return info.umid;
-    } else {
-      return null;
     }
+    return null;
   },
 
   /**
    * Does this message meet our date sync criteria?
    */
-  messageMeetsSyncCriteria: function(date) {
+  messageMeetsSyncCriteria(date) {
     return date >= this.sinceDate;
   },
 
@@ -187,14 +191,18 @@ FolderSyncStateHelper.prototype = {
    * UIDs, if any, disappeared, and make a note for a umid-lookup pass so we
    * can subsequently generate aggregate tasks for sync_conv.
    */
-  inferDeletionFromExistingUids: function(newUids) {
+  inferDeletionFromExistingUids(newUids) {
     let uidsNotFound = new Set(this._uidInfo.keys());
     for (let uid of newUids) {
       uidsNotFound.delete(uid);
     }
 
-    let { _uidInfo: uidInfo, umidDeletions, umidNameReads,
-          umidLocationWrites } = this;
+    let {
+      _uidInfo: uidInfo,
+      umidDeletions,
+      umidNameReads,
+      umidLocationWrites,
+    } = this;
     for (let uid of uidsNotFound) {
       let { umid } = uidInfo.get(uid);
       uidInfo.delete(uid);
@@ -212,7 +220,7 @@ FolderSyncStateHelper.prototype = {
    * before deciding to fetch the flags, so it's a sure thing that we want to
    * track this message and it's not already known.
    */
-  yayMessageFoundByDate: function(uid, dateTS, flags) {
+  yayMessageFoundByDate(uid, dateTS, flags) {
     let flagSlot = this._findFlagSlot(flags);
     this._incrFlagSlot(flagSlot);
 
@@ -227,7 +235,7 @@ FolderSyncStateHelper.prototype = {
    * the flags and make a note of the umid so we can later resolve it to its
    * conversation and enqueue a sync_conv task.
    */
-  checkFlagChanges: function(uid, flags) {
+  checkFlagChanges(uid, flags) {
     let info = this._uidInfo.get(uid);
     let oldFlagSlot = info.flagSlot;
     let newFlagSlot = this._findFlagSlot(flags);
@@ -244,7 +252,7 @@ FolderSyncStateHelper.prototype = {
    * Now that the umidNameReads should have been satisfied, group all flag
    * changes and deletions by conversation
    */
-  generateSyncConvTasks: function() {
+  generateSyncConvTasks() {
     let umidNameReads = this.umidNameReads;
     for (let [umid, flags] of this.umidFlagChanges) {
       let messageId = umidNameReads.get(umid);
@@ -260,7 +268,7 @@ FolderSyncStateHelper.prototype = {
     }
   },
 
-  _ensureTaskWithUmidFlags: function(messageId, umid, flags) {
+  _ensureTaskWithUmidFlags(messageId, umid, flags) {
     let convId = convIdFromMessageId(messageId);
     let task = this._ensureConvTask(convId);
     if (!task.modifiedUmids) {
@@ -269,7 +277,7 @@ FolderSyncStateHelper.prototype = {
     task.modifiedUmids.set(umid, flags);
   },
 
-  _ensureTaskWithRemovedUmid: function(messageId, umid) {
+  _ensureTaskWithRemovedUmid(messageId, umid) {
     let convId = convIdFromMessageId(messageId);
     let task = this._ensureConvTask(convId);
     if (!task.removedUmids) {
@@ -281,34 +289,34 @@ FolderSyncStateHelper.prototype = {
   /**
    * Create a sync_message task for a newly added message.
    */
-  _makeMessageTask: function(uid, umid, dateTS, flags) {
+  _makeMessageTask(uid, umid, dateTS, flags) {
     let task = {
-      type: 'sync_message',
+      type: "sync_message",
       accountId: this._accountId,
       folderId: this._folderId,
       uid,
       umid,
       dateTS,
-      flags
+      flags,
     };
     this.tasksToSchedule.push(task);
     return task;
   },
 
-  _ensureConvTask: function(convId) {
+  _ensureConvTask(convId) {
     if (this._tasksByConvId.has(convId)) {
       return this._tasksByConvId.get(convId);
     }
 
     let task = {
-      type: 'sync_conv',
+      type: "sync_conv",
       accountId: this._accountId,
       convId,
       modifiedUmids: null, // Map<UniqueMessageId, Flags>
-      removedUmids: null // Set<UniqueMessageId>
+      removedUmids: null, // Set<UniqueMessageId>
     };
     this.tasksToSchedule.push(task);
     this._tasksByConvId.set(convId, task);
     return task;
-  }
+  },
 };

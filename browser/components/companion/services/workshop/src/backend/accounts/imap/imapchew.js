@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import { parseUI64 as parseGmailMsgId } from 'shared/a64';
+import { parseUI64 as parseGmailMsgId } from "shared/a64";
 
-import mimefuncs from 'mimefuncs';
-import * as mailRep from '../../db/mail_rep';
-import * as $mailchew from '../../bodies/mailchew';
-import jsmime from 'jsmime';
+import mimefuncs from "mimefuncs";
+import * as mailRep from "../../db/mail_rep";
+import * as $mailchew from "../../bodies/mailchew";
+import jsmime from "jsmime";
 
-import MimeHeaderInfo from '../../mime/mime_header_info';
-import PartBuilder from '../../mime/part_builder';
+import MimeHeaderInfo from "../../mime/mime_header_info";
+import PartBuilder from "../../mime/part_builder";
 
 // parseImapDateTime and formatImapDateTime functions from node-imap;
 // MIT licensed, (c) Brian White.
@@ -34,51 +34,62 @@ import PartBuilder from '../../mime/part_builder';
 // The timezone can, as unfortunately demonstrated by net-c.com/netc.fr, be
 // omitted.  So we allow it to be optional and assume its value was zero if
 // omitted.
-var reDateTime =
-      /^( ?\d|\d{2})-(.{3})-(\d{4}) (\d{2}):(\d{2}):(\d{2})(?: ([+-]\d{4}))?$/;
+var reDateTime = /^( ?\d|\d{2})-(.{3})-(\d{4}) (\d{2}):(\d{2}):(\d{2})(?: ([+-]\d{4}))?$/;
 var HOUR_MILLIS = 60 * 60 * 1000;
 var MINUTE_MILLIS = 60 * 1000;
-var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-              'Oct', 'Nov', 'Dec'];
+var MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 /**
-* Parses IMAP "date-time" instances into UTC timestamps whose quotes have
-* already been stripped.
-*
-* http://tools.ietf.org/html/rfc3501#page-84
-*
-* date-day = 1*2DIGIT
-* ; Day of month
-* date-day-fixed = (SP DIGIT) / 2DIGIT
-* ; Fixed-format version of date-day
-* date-month = "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" /
-* "Jul" / "Aug" / "Sep" / "Oct" / "Nov" / "Dec"
-* date-year = 4DIGIT
-* time = 2DIGIT ":" 2DIGIT ":" 2DIGIT
-* ; Hours minutes seconds
-* zone = ("+" / "-") 4DIGIT
-* date-time = DQUOTE date-day-fixed "-" date-month "-" date-year
-* SP time SP zone DQUOTE
-*/
+ * Parses IMAP "date-time" instances into UTC timestamps whose quotes have
+ * already been stripped.
+ *
+ * http://tools.ietf.org/html/rfc3501#page-84
+ *
+ * date-day = 1*2DIGIT
+ * ; Day of month
+ * date-day-fixed = (SP DIGIT) / 2DIGIT
+ * ; Fixed-format version of date-day
+ * date-month = "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" /
+ * "Jul" / "Aug" / "Sep" / "Oct" / "Nov" / "Dec"
+ * date-year = 4DIGIT
+ * time = 2DIGIT ":" 2DIGIT ":" 2DIGIT
+ * ; Hours minutes seconds
+ * zone = ("+" / "-") 4DIGIT
+ * date-time = DQUOTE date-day-fixed "-" date-month "-" date-year
+ * SP time SP zone DQUOTE
+ */
 export function parseImapDateTime(dstr) {
   var match = reDateTime.exec(dstr);
   if (!match) {
-    throw new Error('Not a good IMAP date-time: ' + dstr);
+    throw new Error("Not a good IMAP date-time: " + dstr);
   }
   var day = parseInt(match[1], 10),
-      zeroMonth = MONTHS.indexOf(match[2]),
-      year = parseInt(match[3], 10),
-      hours = parseInt(match[4], 10),
-      minutes = parseInt(match[5], 10),
-      seconds = parseInt(match[6], 10),
-      // figure the timestamp before the zone stuff. We don't
-      timestamp = Date.UTC(year, zeroMonth, day, hours, minutes, seconds),
-      // to reduce string garbage creation, we use one string. (we have to
-      // play math games no matter what, anyways.)
-      zoneDelta = match[7] ? parseInt(match[7], 10) : 0,
-      zoneHourDelta = Math.floor(zoneDelta / 100),
-      // (the negative sign sticks around through the mod operation)
-      zoneMinuteDelta = zoneDelta % 100;
+    zeroMonth = MONTHS.indexOf(match[2]),
+    year = parseInt(match[3], 10),
+    hours = parseInt(match[4], 10),
+    minutes = parseInt(match[5], 10),
+    seconds = parseInt(match[6], 10),
+    // figure the timestamp before the zone stuff. We don't
+    timestamp = Date.UTC(year, zeroMonth, day, hours, minutes, seconds),
+    // to reduce string garbage creation, we use one string. (we have to
+    // play math games no matter what, anyways.)
+    zoneDelta = match[7] ? parseInt(match[7], 10) : 0,
+    zoneHourDelta = Math.floor(zoneDelta / 100),
+    // (the negative sign sticks around through the mod operation)
+    zoneMinuteDelta = zoneDelta % 100;
 
   // ex: GMT-0700 means 7 hours behind, so we need to add 7 hours, aka
   // subtract negative 7 hours.
@@ -98,21 +109,19 @@ export function parseImapDateTime(dstr) {
 export function valuesOnly(item) {
   if (Array.isArray(item)) {
     return item.map(valuesOnly);
-  } else if (item && typeof item === 'object') {
-    if ('value' in item) {
+  } else if (item && typeof item === "object") {
+    if ("value" in item) {
       return item.value;
-    } else {
-      var result = {};
-      for (var key in item) {
-        result[key] = valuesOnly(item[key]);
-      }
-      return result;
     }
+    var result = {};
+    for (var key in item) {
+      result[key] = valuesOnly(item[key]);
+    }
+    return result;
   } else if (item !== undefined) {
     return item;
-  } else {
-    return null;
   }
+  return null;
 }
 
 /**
@@ -130,18 +139,21 @@ export function browserboxMessageToMimeHeaders(browserboxMessage) {
     // regex.
     if (/header\.fields/.test(key)) {
       // (the stuff in here runs exactly once; not multiple times!)
-      var headerParser = new jsmime.MimeParser({
-        startPart(jsmimePartNum, jsmimeHeaders) {
-          headers = MimeHeaderInfo.fromJSMime(jsmimeHeaders);
+      var headerParser = new jsmime.MimeParser(
+        {
+          startPart(jsmimePartNum, jsmimeHeaders) {
+            headers = MimeHeaderInfo.fromJSMime(jsmimeHeaders);
+          },
+        },
+        {
+          bodyformat: "decode", // Decode base64/quoted-printable for us.
+          strformat: "typedarray",
+          onerror: e => {
+            console.error("Browserbox->JSMIME Parser Error:", e, "\n", e.stack);
+          },
         }
-      }, {
-        bodyformat: 'decode', // Decode base64/quoted-printable for us.
-        strformat: 'typedarray',
-        onerror: (e) => {
-          console.error('Browserbox->JSMIME Parser Error:', e, '\n', e.stack);
-        }
-      });
-      headerParser.deliverData(browserboxMessage[key] + '\r\n');
+      );
+      headerParser.deliverData(browserboxMessage[key] + "\r\n");
       headerParser.deliverEOF();
       break;
     }
@@ -158,26 +170,24 @@ export function browserboxMessageToMimeHeaders(browserboxMessage) {
 function encodeHeaderValueWithParams(header, params) {
   var value = header;
   for (var key in params) {
-    value += '; ' + key + '="' +
-      mimefuncs.mimeWordEncode(params[key]) + '"';
+    value += "; " + key + '="' + mimefuncs.mimeWordEncode(params[key]) + '"';
   }
   return value;
 }
-
 
 /**
  * Return the estimated size of the encoded string.
  */
 function estimatePartSizeInBytes(encoding, size) {
   switch (encoding.toLowerCase()) {
-    case 'base64':
+    case "base64":
       // Base64 encodes 3 bytes in 4 characters with padding that always causes
       // the encoding to take 4 characters. The max encoded line length
       // (ignoring CRLF) is 76 bytes, with 72 bytes also fairly common. As such,
       // a 78=19*4+2 character line encodes 57=19*3 payload bytes and we can use
       // that as a rough estimate.
-      return Math.floor(size * 57 / 78);
-    case 'quoted-printable':
+      return Math.floor((size * 57) / 78);
+    case "quoted-printable":
       // Quoted printable is hard to predict since only certain things need to
       // be encoded. It could be perfectly efficient if the source text has a
       // bunch of newlines built-in. Let's just provide an upper-bound of
@@ -186,30 +196,44 @@ function estimatePartSizeInBytes(encoding, size) {
     default:
       // No clue; upper bound.
       return size;
-   }
+  }
 }
-
 
 /**
  * Convert a BODYSTRUCTURE response containing MIME metadata into a format
  * suitable for a MailRep (`{ header, body }`).
  */
-export function chewMessageStructure(msg, headers, folderIds, flags, convId,
-                                        maybeUmid, explicitMessageId) {
+export function chewMessageStructure(
+  msg,
+  headers,
+  folderIds,
+  flags,
+  convId,
+  maybeUmid,
+  explicitMessageId
+) {
   if (!headers) {
     headers = browserboxMessageToMimeHeaders(msg);
   }
 
   var partBuilder = new PartBuilder(headers);
   function chewStructureNode(snode, parentContentType) {
-    var nodeHeaders = new MimeHeaderInfo({
-      'content-id': snode.id ? [snode.id] : null,
-      'content-transfer-encoding': snode.encoding ? [snode.encoding] : null,
-      'content-disposition': [encodeHeaderValueWithParams(
-        snode.disposition, snode.dispositionParameters)],
-      'content-type':
-        [encodeHeaderValueWithParams(snode.type, snode.parameters)],
-    }, { parentContentType });
+    var nodeHeaders = new MimeHeaderInfo(
+      {
+        "content-id": snode.id ? [snode.id] : null,
+        "content-transfer-encoding": snode.encoding ? [snode.encoding] : null,
+        "content-disposition": [
+          encodeHeaderValueWithParams(
+            snode.disposition,
+            snode.dispositionParameters
+          ),
+        ],
+        "content-type": [
+          encodeHeaderValueWithParams(snode.type, snode.parameters),
+        ],
+      },
+      { parentContentType }
+    );
 
     var { rep } = partBuilder.addNode(snode.part, nodeHeaders);
 
@@ -222,7 +246,7 @@ export function chewMessageStructure(msg, headers, folderIds, flags, convId,
         type: nodeHeaders.mediatype,
         subtype: nodeHeaders.subtype,
         params: snode.parameters,
-        encoding: snode.encoding && snode.encoding.toLowerCase()
+        encoding: snode.encoding && snode.encoding.toLowerCase(),
       };
     }
 
@@ -237,18 +261,18 @@ export function chewMessageStructure(msg, headers, folderIds, flags, convId,
 
   let { attachments, relatedParts, bodyReps } = partBuilder.finalize();
 
-   let messageId;
-   let umid = null;
-   // non-gmail, umid-case.
-   if (maybeUmid) {
-     umid = maybeUmid;
-     messageId = explicitMessageId;
-   }
-   // gmail case
-   else {
-     let gmailMsgId = parseGmailMsgId(msg['x-gm-msgid']);
-     messageId = convId + '.' + gmailMsgId + '.' + msg.uid;
-   }
+  let messageId;
+  let umid = null;
+  // non-gmail, umid-case.
+  if (maybeUmid) {
+    umid = maybeUmid;
+    messageId = explicitMessageId;
+  }
+  // gmail case
+  else {
+    let gmailMsgId = parseGmailMsgId(msg["x-gm-msgid"]);
+    messageId = convId + "." + gmailMsgId + "." + msg.uid;
+  }
 
   return mailRep.makeMessageInfo({
     id: messageId,
@@ -258,21 +282,21 @@ export function chewMessageStructure(msg, headers, folderIds, flags, convId,
     guid: headers.guid,
     date: msg.internaldate ? parseImapDateTime(msg.internaldate) : headers.date,
     author: headers.author,
-    to: headers.getAddressHeader('to', null),
-    cc: headers.getAddressHeader('cc', null),
-    bcc: headers.getAddressHeader('bcc', null),
-    replyTo: headers.getAddressHeader('reply-to', null),
+    to: headers.getAddressHeader("to", null),
+    cc: headers.getAddressHeader("cc", null),
+    bcc: headers.getAddressHeader("bcc", null),
+    replyTo: headers.getAddressHeader("reply-to", null),
     flags: msg.flags,
     folderIds,
-    hasAttachments: attachments.length > 0,
-    subject: headers.getStringHeader('subject'),
+    hasAttachments: !!attachments.length,
+    subject: headers.getStringHeader("subject"),
 
     // we lazily fetch the snippet later on
     snippet: null,
     attachments,
     relatedParts,
     references: headers.references,
-    bodyReps
+    bodyReps,
   });
 }
 
@@ -324,9 +348,16 @@ export function updateMessageWithFetch(message, req, res) {
 
   bodyRep.amountDownloaded += res.bytesFetched;
 
-  var { contentBlob, snippet, authoredBodySize } =
-    $mailchew.processMessageContent(
-      res.text, bodyRep.type, bodyRep.isDownloaded, req.createSnippet);
+  var {
+    contentBlob,
+    snippet,
+    authoredBodySize,
+  } = $mailchew.processMessageContent(
+    res.text,
+    bodyRep.type,
+    bodyRep.isDownloaded,
+    req.createSnippet
+  );
 
   if (req.createSnippet) {
     message.snippet = snippet;
@@ -373,11 +404,7 @@ export function selectSnippetBodyRep(message) {
  *
  */
 export function canBodyRepFillSnippet(bodyRep) {
-  return (
-    bodyRep &&
-    bodyRep.type === 'plain' ||
-    bodyRep.type === 'html'
-  );
+  return (bodyRep && bodyRep.type === "plain") || bodyRep.type === "html";
 }
 
 /**

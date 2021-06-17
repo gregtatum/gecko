@@ -63,9 +63,9 @@
  *
  */
 export default {
-  name: 'Conversation Threading',
-  provider: 'vis_facet',
-  type: 'conversation-summary',
+  name: "Conversation Threading",
+  provider: "vis_facet",
+  type: "conversation-summary",
 
   backend: {
     gather: {
@@ -73,146 +73,144 @@ export default {
         daysAgo: true,
       },
     },
-    inputDataSource: 'messages',
-    outputDataSource: 'topAuthors',
-    extractFrom: 'messages',
+    inputDataSource: "messages",
+    outputDataSource: "topAuthors",
+    extractFrom: "messages",
     extract: {
-      msgId: ['message', 'id'],
-      emailAddress: ['message', 'author', 'address'],
-      daysAgo: ['daysAgo']
+      msgId: ["message", "id"],
+      emailAddress: ["message", "author", "address"],
+      daysAgo: ["daysAgo"],
     },
     aggregate: {
       maxDaysAgo: {
-        op: 'max',
-        field: ['daysAgo'],
-        initial: 0
-      }
+        op: "max",
+        field: ["daysAgo"],
+        initial: 0,
+      },
     },
-    orderingKey: 'emailAddress',
+    orderingKey: "emailAddress",
     vegaData: [
       {
-        name: 'messages'
+        name: "messages",
       },
       {
-        name: 'binnedMessages',
-        source: 'messages',
+        name: "binnedMessages",
+        source: "messages",
         transform: [
           {
-            type: 'bin',
-            field: 'daysAgo',
+            type: "bin",
+            field: "daysAgo",
             min: 0,
-            maxbins: 60
-          }
-        ]
+            maxbins: 60,
+          },
+        ],
       },
       {
-        name: 'allAuthors',
-        source: 'binnedMessages',
+        name: "allAuthors",
+        source: "binnedMessages",
         transform: [
           {
-            type: 'facet',
-            groupby: ['emailAddress'],
+            type: "facet",
+            groupby: ["emailAddress"],
             summarize: {
               // TODO: ensure that this is summarizing the pre-transform counts,
               // otherwise, move to sum the post-transform counts.
-              '*': 'count'
+              "*": "count",
             },
             transform: [
               {
-                type: 'aggregate',
+                type: "aggregate",
                 // the binning will be consistent so we can group both, which allows
                 // both values to pass through.
-                groupby: ['bin_start', 'bin_end'],
-                summarize: { '*': 'count'}
-              }
-            ]
-          }
-        ]
+                groupby: ["bin_start", "bin_end"],
+                summarize: { "*": "count" },
+              },
+            ],
+          },
+        ],
       },
       {
-        name: 'topAuthors',
-        source: 'allAuthors',
+        name: "topAuthors",
+        source: "allAuthors",
         transform: [
           {
-            type: 'sort',
-            by: '-count'
+            type: "sort",
+            by: "-count",
           },
           {
-            type: 'rank'
+            type: "rank",
           },
           {
-            type: 'filter',
-            test: 'datum.rank < 20'
-          }
-        ]
-      }
-    ]
+            type: "filter",
+            test: "datum.rank < 20",
+          },
+        ],
+      },
+    ],
   },
   frontend: {
-    dataFrom: 'messageTidbits',
-    extractFrom: 'messages',
+    dataFrom: "messageTidbits",
+    extractFrom: "messages",
     extract: {
-      msgId: ['message', 'id'],
-      emailAddress: ['message', 'author', 'address'],
-      daysAgo: ['daysAgo']
+      msgId: ["message", "id"],
+      emailAddress: ["message", "author", "address"],
+      daysAgo: ["daysAgo"],
     },
-    injectDataInto: 'messageTidbits',
+    injectDataInto: "messageTidbits",
     spec: {
       width: 300,
       height: 40,
       padding: 0,
       data: [
         {
-          name: 'messageTidbits',
-          values: []
+          name: "messageTidbits",
+          values: [],
         },
         {
-          name: 'nodes',
-          source: 'messageTidbits',
+          name: "nodes",
+          source: "messageTidbits",
           transform: [
             {
-              type: 'treeify',
-
+              type: "treeify",
             },
             {
-              type: 'hierarchy',
-              mode: 'cluster',
-
-            }
-          ]
-        }
+              type: "hierarchy",
+              mode: "cluster",
+            },
+          ],
+        },
       ],
       // we might need to let the backend calculate scales and propagate them
       // through as tocMeta.
       scales: [
         {
-          name: 'x',
-          type: 'linear',
-          domain: { data: 'scale-hack', field: 'x' },
-          range: [180, 0]
+          name: "x",
+          type: "linear",
+          domain: { data: "scale-hack", field: "x" },
+          range: [180, 0],
         },
         {
-          name: 'y',
-          type: 'linear',
+          name: "y",
+          type: "linear",
           domain: [0, 20],
-          range: 'height'
-        }
+          range: "height",
+        },
       ],
       marks: [
         {
-          type: 'symbol',
-          from: { data: 'nodes' },
+          type: "symbol",
+          from: { data: "nodes" },
           properties: {
             update: {
-              x: { scale: 'x', field: 'bin_start' },
-              x2: { scale: 'x', field: 'bin_end' },
-              y: { scale: 'y', field: 'count' },
-              y2: { scale: 'y', value: 0 },
-              fill: { value: 'steelblue' }
-            }
-          }
-        }
-      ]
-    }
-  }
+              x: { scale: "x", field: "bin_start" },
+              x2: { scale: "x", field: "bin_end" },
+              y: { scale: "y", field: "count" },
+              y2: { scale: "y", value: 0 },
+              fill: { value: "steelblue" },
+            },
+          },
+        },
+      ],
+    },
+  },
 };

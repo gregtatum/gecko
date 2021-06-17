@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import $wbxml from 'wbxml';
-import { Enums as ioEnum } from 'activesync/codepages/ItemOperations';
-import { Tags as $as, Enums as asEnum } from 'activesync/codepages/AirSync';
-import { Tags as em } from 'activesync/codepages/Email';
+import $wbxml from "wbxml";
+import { Enums as ioEnum } from "activesync/codepages/ItemOperations";
+import { Tags as $as, Enums as asEnum } from "activesync/codepages/AirSync";
+import { Tags as em } from "activesync/codepages/Email";
 
 /**
  * Download a the entire message body for protocol 2.5 servers; there is no
@@ -35,25 +35,26 @@ import { Tags as em } from 'activesync/codepages/Email';
  */
 export default async function downloadBody(
   conn,
-  { folderSyncKey, folderServerId, messageServerId, bodyType }) {
-  let w = new $wbxml.Writer('1.3', 1, 'UTF-8');
+  { folderSyncKey, folderServerId, messageServerId, bodyType }
+) {
+  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
   w.stag($as.Sync)
-     .stag($as.Collections)
-       .stag($as.Collection)
-         .tag($as.Class, 'Email')
-         .tag($as.SyncKey, folderSyncKey) // XXX ugh, can we remove this?
-         .tag($as.CollectionId, folderServerId)
-         .stag($as.Options)
-           .tag($as.MIMESupport, asEnum.MIMESupport.Never)
-         .etag()
-         .stag($as.Commands)
-           .stag($as.Fetch)
-             .tag($as.ServerId, messageServerId)
-           .etag()
-         .etag()
-       .etag()
-     .etag()
-   .etag();
+    .stag($as.Collections)
+    .stag($as.Collection)
+    .tag($as.Class, "Email")
+    .tag($as.SyncKey, folderSyncKey) // XXX ugh, can we remove this?
+    .tag($as.CollectionId, folderServerId)
+    .stag($as.Options)
+    .tag($as.MIMESupport, asEnum.MIMESupport.Never)
+    .etag()
+    .stag($as.Commands)
+    .stag($as.Fetch)
+    .tag($as.ServerId, messageServerId)
+    .etag()
+    .etag()
+    .etag()
+    .etag()
+    .etag();
 
   let response = await conn.postCommand(w);
 
@@ -67,23 +68,22 @@ export default async function downloadBody(
   e.addEventListener(base.concat($as.Status), function(node) {
     status = node.children[0].textContent;
   });
-  e.addEventListener(base.concat($as.Responses, $as.Fetch,
-                                 $as.ApplicationData, em.Body),
-                     function(node) {
-    bodyContent = node.children[0].textContent;
-  });
+  e.addEventListener(
+    base.concat($as.Responses, $as.Fetch, $as.ApplicationData, em.Body),
+    function(node) {
+      bodyContent = node.children[0].textContent;
+    }
+  );
 
   try {
     e.run(response);
-  }
-  catch (ex) {
-    console.error('Error parsing FolderSync response:', ex, '\n',
-                  ex.stack);
-    throw 'unknown';
+  } catch (ex) {
+    console.error("Error parsing FolderSync response:", ex, "\n", ex.stack);
+    throw new Error("unknown");
   }
 
   if (status !== ioEnum.Status.Success) {
-    throw 'unknown';
+    throw new Error("unknown");
   }
 
   return { syncKey: newSyncKey, bodyContent };

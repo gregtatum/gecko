@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import logic from 'logic';
+import logic from "logic";
 
-import FibonacciHeap from 'fibonacci-heap';
+import FibonacciHeap from "fibonacci-heap";
 
 /**
  * Helper class for use by TaskManager that is in charge of maintaining the
@@ -26,7 +26,7 @@ import FibonacciHeap from 'fibonacci-heap';
  * TODO: Implement exclusive resource support or give up.
  */
 export default function TaskPriorities() {
-  logic.defineScope(this, 'TaskPriorities');
+  logic.defineScope(this, "TaskPriorities");
 
   /**
    * Heap tracking our prioritized tasks/markers by priority.  This only
@@ -74,7 +74,7 @@ TaskPriorities.prototype = {
    * Do we have any tasks that are ready to execute?  AKA, will
    * `popNextAvailableTask` return something other than null?
    */
-  hasTasksToExecute: function() {
+  hasTasksToExecute() {
     return this._prioritizedTasks.isEmpty();
   },
 
@@ -87,7 +87,7 @@ TaskPriorities.prototype = {
    * `TaskPriorities` at all; error handling logic at higher levels is
    * responsible for rescheduling the task if appropriate.
    */
-  popNextAvailableTask: function() {
+  popNextAvailableTask() {
     let priorityNode = this._prioritizedTasks.extractMinimum();
     if (!priorityNode) {
       return null;
@@ -104,12 +104,12 @@ TaskPriorities.prototype = {
    * caller is responsible for applying any specific relative priority
    * adjustment itself.
    */
-  _computePriorityForTags: function(priorityTags) {
+  _computePriorityForTags(priorityTags) {
     let summedPriorityTags = this._summedPriorityTags;
     let priority = 0;
     if (priorityTags) {
       for (let priorityTag of priorityTags) {
-        priority += (summedPriorityTags.get(priorityTag) || 0);
+        priority += summedPriorityTags.get(priorityTag) || 0;
       }
     }
     return priority;
@@ -193,7 +193,6 @@ TaskPriorities.prototype = {
     }
   },
 
-
   /**
    * Helper to decide whether to use decreaseKey for a node or remove it and
    * re-add it.  Centralized because this seems easy to screw up.  All values
@@ -217,14 +216,16 @@ TaskPriorities.prototype = {
    *
    * @param {WrappedTask|TaskMarker} taskThing
    */
-  prioritizeTaskThing(taskThing/*, sourceId */) {
+  prioritizeTaskThing(taskThing /*, sourceId */) {
     // WrappedTasks store the type on the plannedTask; TaskMarkers store it on
     // the root (they're simple/flat).
     let isMarker = !!taskThing.type;
-    let priorityTags = isMarker ? taskThing.priorityTags
-                                : taskThing.plannedTask.priorityTags;
-    let relPriority = (isMarker ? taskThing.relPriority
-                                : taskThing.plannedTask.relPriority) || 0;
+    let priorityTags = isMarker
+      ? taskThing.priorityTags
+      : taskThing.plannedTask.priorityTags;
+    let relPriority =
+      (isMarker ? taskThing.relPriority : taskThing.plannedTask.relPriority) ||
+      0;
     let priority = relPriority + this._computePriorityForTags(priorityTags);
     // it's a minheap, we negate keys
     let nodeKey = -priority;
@@ -252,8 +253,9 @@ TaskPriorities.prototype = {
    */
   _setupTaskPriorityTracking(taskThing, priorityNode) {
     let isTask = !taskThing.type;
-    let priorityTags = isTask ? taskThing.plannedTask.priorityTags
-                              : taskThing.priorityTags;
+    let priorityTags = isTask
+      ? taskThing.plannedTask.priorityTags
+      : taskThing.priorityTags;
     let priorityTagToHeapNodes = this._priorityTagToHeapNodes;
     if (priorityTags) {
       for (let priorityTag of priorityTags) {
@@ -273,8 +275,9 @@ TaskPriorities.prototype = {
    */
   _cleanupTaskPriorityTracking(taskThing, priorityNode) {
     let isTask = !taskThing.type;
-    let priorityTags = isTask ? taskThing.plannedTask.priorityTags
-                              : taskThing.priorityTags;
+    let priorityTags = isTask
+      ? taskThing.plannedTask.priorityTags
+      : taskThing.priorityTags;
 
     let priorityTagToHeapNodes = this._priorityTagToHeapNodes;
     if (priorityTags) {
@@ -332,6 +335,5 @@ TaskPriorities.prototype = {
         this.removeTaskThing(taskThing.id, priorityNode);
       }
     }
-  }
+  },
 };
-

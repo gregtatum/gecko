@@ -30,18 +30,18 @@
 export function selectMessages(messages, onlyMessages, selector) {
   let filtered = messages;
   if (onlyMessages) {
-    filtered = filtered.filter((message) => {
-      return (onlyMessages.indexOf(message.id) !== -1);
+    filtered = filtered.filter(message => {
+      return onlyMessages.includes(message.id);
     });
   }
 
   if (selector) {
     switch (selector) {
-      case 'last':
+      case "last":
         filtered = filtered.slice(-1);
         break;
       default:
-        throw new Error('unsupported message selector:' + selector);
+        throw new Error("unsupported message selector:" + selector);
     }
   }
 

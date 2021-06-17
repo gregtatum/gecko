@@ -49,7 +49,11 @@
  * - syncStatus {String}
  * - syncBlocked {String}
  */
-export default function SyncLifecycle({ folderId, syncStampSource, dataOverlayManager }) {
+export default function SyncLifecycle({
+  folderId,
+  syncStampSource,
+  dataOverlayManager,
+}) {
   this.folderId = folderId;
   this.syncStampSource = syncStampSource;
   /**
@@ -76,18 +80,18 @@ export default function SyncLifecycle({ folderId, syncStampSource, dataOverlayMa
   this.syncActive = false;
 
   this.dataOverlayManager = dataOverlayManager;
-  this.resolveFolderOverlay = dataOverlayManager.makeBoundResolver('folders');
+  this.resolveFolderOverlay = dataOverlayManager.makeBoundResolver("folders");
 
   this._bound_onIndexChange = this.onIndexChange.bind(this);
   this._bound_onOverlayChange = this.onOverlayChange.bind(this);
 }
 SyncLifecycle.prototype = {
   constructor: SyncLifecycle,
-  activate: function(toc) {
+  activate(toc) {
     this.toc = toc;
     this.newIndex = 0;
-    this.toc.on('_indexChange', this._bound_onIndexChange);
-    this.dataOverlayManager.on('folders', this._bound_onOverlayChange);
+    this.toc.on("_indexChange", this._bound_onIndexChange);
+    this.dataOverlayManager.on("folders", this._bound_onOverlayChange);
 
     // Force the toc meta to update immediately.  also ensure a falling edge
     // is impossible by flagging sync as previously not active.
@@ -96,13 +100,15 @@ SyncLifecycle.prototype = {
     this.onOverlayChange(this.folderId);
   },
 
-  deactivate: function() {
-    this.toc.removeListener('_indexChange', this._bound_onIndexChange);
+  deactivate() {
+    this.toc.removeListener("_indexChange", this._bound_onIndexChange);
     this.dataOverlayManager.removeListener(
-      'folders', this._bound_onOverlayChange);
+      "folders",
+      this._bound_onOverlayChange
+    );
   },
 
-  onIndexChange: function(oldIndex, newIndex) {
+  onIndexChange(oldIndex, newIndex) {
     if (newIndex === -1) {
       // This was a deletion, we may need to decrease the newishIndex.
       // (oldIndex can't be -1 too.)
@@ -110,31 +116,30 @@ SyncLifecycle.prototype = {
         this.newishIndexExclusive--;
       }
       // else: we don't care.  it was outside the newish range.
-    } else {
-      if (newIndex <= this.newishIndexExclusive) {
-        // It may be new!  It's in the range!  It's newish if:
-        // * there was no old index
-        // * the old index was not already in the range.  (Yes, we're testing
-        //   for equality on both sides because insertion is displacing and the
-        //   newIndex is post-displacement, so it's effectively dealing with
-        //   newishIndexInclusive!)
-        if (oldIndex === -1 || oldIndex >= this.newishIndexExclusive) {
-          this.newishIndexExclusive++;
-        }
-        // else: it was already newish!
+    } else if (newIndex <= this.newishIndexExclusive) {
+      // It may be new!  It's in the range!  It's newish if:
+      // * there was no old index
+      // * the old index was not already in the range.  (Yes, we're testing
+      //   for equality on both sides because insertion is displacing and the
+      //   newIndex is post-displacement, so it's effectively dealing with
+      //   newishIndexInclusive!)
+      if (oldIndex === -1 || oldIndex >= this.newishIndexExclusive) {
+        this.newishIndexExclusive++;
       }
+      // else: it was already newish!
     }
   },
 
-  onOverlayChange: function(changedFolderId) {
+  onOverlayChange(changedFolderId) {
     // we get a namespace firehose right now, so we must filter down to our id.
     if (changedFolderId !== this.folderId) {
       return;
     }
 
     let overlays = this.resolveFolderOverlay(changedFolderId);
-    let syncOverlay =
-      overlays ? (overlays.sync_refresh || overlays.sync_grow || {}) : {};
+    let syncOverlay = overlays
+      ? overlays.sync_refresh || overlays.sync_grow || {}
+      : {};
 
     // We don't need to do diffing to avoid being too chatty;
     // applyTOCMetaChanges does that for us.
@@ -154,22 +159,19 @@ SyncLifecycle.prototype = {
       // The account has a syncInfo object clobbered onto it in its entirety,
       // so we can't just have syncStampSource directly point at syncInfo when
       // we are initialized.
-      const syncStampSource = this.syncStampSource.syncInfo ||
-                              this.syncStampSource;
+      const syncStampSource =
+        this.syncStampSource.syncInfo || this.syncStampSource;
       reviseMeta.lastSuccessfulSyncAt = syncStampSource.lastSuccessfulSyncAt;
       reviseMeta.lastAttemptedSyncAt = syncStampSource.lastAttemptedSyncAt;
 
       this.toc.applyTOCMetaChanges(reviseMeta);
       if (syncFinished) {
-        this.toc.broadcastEvent(
-          'syncComplete',
-          {
-            // It just so happens that an exclusive index value like this is
-            // also a count!  (Using "count" seemed more ambiguous/confusing to
-            // me.)
-            newishCount: this.newishIndexExclusive
-          }
-        );
+        this.toc.broadcastEvent("syncComplete", {
+          // It just so happens that an exclusive index value like this is
+          // also a count!  (Using "count" seemed more ambiguous/confusing to
+          // me.)
+          newishCount: this.newishIndexExclusive,
+        });
         this.newishIndexExclusive = 0;
       }
     } else {
@@ -178,5 +180,5 @@ SyncLifecycle.prototype = {
       this.toc.applyTOCMetaChanges(reviseMeta);
     }
     this.syncActive = newSyncActive;
-  }
+  },
 };

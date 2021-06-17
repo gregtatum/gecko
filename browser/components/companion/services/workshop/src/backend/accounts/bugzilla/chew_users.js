@@ -56,10 +56,10 @@ export class UserChewer {
     const loginToInfo = this._loginToInfo;
     const params = new URLSearchParams();
     for (const login of loginToInfo.keys()) {
-      params.append('names', login);
+      params.append("names", login);
     }
 
-    const results = await client.restCall('user', params);
+    const results = await client.restCall("user", params);
     for (const user of results.users) {
       const info = loginToInfo.get(user.name);
       info.name = user.real_name;
@@ -67,7 +67,10 @@ export class UserChewer {
     }
 
     if (results.users.length !== loginToInfo.size) {
-      console.warn(`${ loginToInfo.size - results.users.length} ser lookups did not resolve.`);
+      console.warn(
+        `${loginToInfo.size -
+          results.users.length} ser lookups did not resolve.`
+      );
     }
   }
 }

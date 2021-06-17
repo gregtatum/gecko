@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import matchRegexpOrString from './match_regexp_or_string';
+import matchRegexpOrString from "./match_regexp_or_string";
 
 /**
  * Use matchRegexpOrString under the hood and if we get a match, wrap it into
@@ -31,7 +31,6 @@ export default function matchVerbatimHighlight(searchPattern, value, path) {
     text: value,
     offset: 0,
     matchRuns: [{ start: match.index, length: match[0].length }],
-    path: path || null
+    path: path || null,
   };
 }
-

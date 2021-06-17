@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import DynamicFullTOC from 'gelam/db/dynamic_full_toc';
-import FieldExtractor from 'gelam/search/field_extractor';
+import DynamicFullTOC from "gelam/db/dynamic_full_toc";
+import FieldExtractor from "gelam/search/field_extractor";
 
-import makeHackyVegaDataflow from './make_hacky_vega_dataflow';
+import makeHackyVegaDataflow from "./make_hacky_vega_dataflow";
 
 /**
  * Our derived view is the connective tissue between calls to `deriveStuff` from
@@ -30,11 +30,11 @@ function VegaDerivedView({ gather, extractor, toc, vegaHack }) {
   this._vegaHack = vegaHack;
 }
 VegaDerivedView.prototype = {
-  itemAdded: function(gathered) {
+  itemAdded(gathered) {
     // XXX: currently we assume extractFrom === messages.
     for (let message of gathered.messages) {
       // XXX and accordingly hardcode the convId bits.
-      const item = this._extractor.extract(message, 'convId', gathered.convId);
+      const item = this._extractor.extract(message, "convId", gathered.convId);
       // lazy manipulation, will not propagate until we flush...
       this._vegaHack.addItem(item);
       // ...which we ensure happens by having the TOC announce it's dirty.
@@ -43,22 +43,22 @@ VegaDerivedView.prototype = {
   },
 
   // XXX this being explicitly understood as a convId is wrong/bad.
-  itemRemoved: function(convId) {
+  itemRemoved(convId) {
     // lazy manipulation, will not propagate until we flush...
     this._vegaHack.removeItem(convId);
     // ...which we ensure happens by having the TOC announce it's dirty.
     this._toc.reportDirty();
-  }
+  },
 };
 
 function makeView(viewDef) {
   const vegaHack = makeHackyVegaDataflow({
     backendDef: viewDef.backend,
     // XXX this is part of the convId/plurality hardcoding dumbness.
-    idKey: 'convId'
+    idKey: "convId",
   });
-  const orderingKey = (viewDef.type === 'facet') ? viewDef.backend.orderingKey
-    : 'id';
+  const orderingKey =
+    viewDef.type === "facet" ? viewDef.backend.orderingKey : "id";
 
   /**
    *
@@ -75,13 +75,13 @@ function makeView(viewDef) {
 
   const extractor = new FieldExtractor({
     extract: viewDef.backend.extract,
-    aggregate: viewDef.backend.aggregate
+    aggregate: viewDef.backend.aggregate,
   });
 
   // vegaHack.flush
   const toc = new DynamicFullTOC({
     comparator,
-    idKey: '_id',
+    idKey: "_id",
     topOrderingKey: null,
     onFlush: () => {
       vegaHack.flush();
@@ -92,7 +92,7 @@ function makeView(viewDef) {
       // just tunnel all of the resulting items across the wire inside a single
       // item.  This overview approach is probably excessively limiting and
       // is horrible in terms of minimizing deltas on the front-end.
-      if (viewDef.type === 'facet') {
+      if (viewDef.type === "facet") {
         // TODO: be able to better determine when facets have changed.
         // Hacky debug investigation reveals that the _id is stable
         // for the facets across multiple calls, so we can't rely on them changing
@@ -116,27 +116,25 @@ function makeView(viewDef) {
         // would probably be needless complexity/overkill in most cases, there
         // is an argument for making it the normal case that most logic simply
         // does not use/trigger.
-        toc.setItems([{ id: 'single', values }]);
+        toc.setItems([{ id: "single", values }]);
       }
       toc.applyTOCMetaChanges(extractor.aggregated);
-    }
+    },
   });
-
 
   const derivedView = new VegaDerivedView({
     gather: viewDef.backend.gather,
     extractor,
     toc,
-    vegaHack
+    vegaHack,
   });
 
   return { toc, derivedView };
 }
 
 export default function makeVisFacetDerivedView(viewDef) {
-  if (viewDef.type === 'facet' ||
-      viewDef.type === 'overview') {
+  if (viewDef.type === "facet" || viewDef.type === "overview") {
     return makeView(viewDef);
   }
-  throw new Error('NoneSuch');
+  throw new Error("NoneSuch");
 }

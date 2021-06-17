@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { ReadableStream, WritableStream } from 'streams';
-import mimefuncs from 'mimefuncs';
+import { ReadableStream, WritableStream } from "streams";
+import mimefuncs from "mimefuncs";
 
-import jsmime from 'jsmime';
-import MimeHeaderInfo from '../mime/mime_header_info';
-import BlobTransformStream from './blob_transform_stream';
+import jsmime from "jsmime";
+import MimeHeaderInfo from "../mime/mime_header_info";
+import BlobTransformStream from "./blob_transform_stream";
 
 /**
  * MimeNodeTransformStream: A stream that receives lines of MIME data, and emits
@@ -38,65 +38,68 @@ export default function MimeNodeTransformStream({ saveChunkSize, mimeType }) {
   var partToContentTypeMap = new Map();
 
   var out;
-  var parser = new jsmime.MimeParser({
-    endMessage() {
-      out.close();
-    },
-    startPart(jsmimePartNum, jsmimeHeaders) {
-      var partNum = (jsmimePartNum === '' ? '1' : '1.' + jsmimePartNum);
-      var headers = MimeHeaderInfo.fromJSMime(jsmimeHeaders, {
-        parentContentType:
-          partNum.indexOf('.') !== -1
+  var parser = new jsmime.MimeParser(
+    {
+      endMessage() {
+        out.close();
+      },
+      startPart(jsmimePartNum, jsmimeHeaders) {
+        var partNum = jsmimePartNum === "" ? "1" : "1." + jsmimePartNum;
+        var headers = MimeHeaderInfo.fromJSMime(jsmimeHeaders, {
+          parentContentType: partNum.includes(".")
             ? partToContentTypeMap.get(
-                partNum.slice(0, partNum.lastIndexOf('.')))
-            : null
-      });
+                partNum.slice(0, partNum.lastIndexOf("."))
+              )
+            : null,
+        });
 
-      partToContentTypeMap.set(partNum, headers.contentType);
+        partToContentTypeMap.set(partNum, headers.contentType);
 
-      var bodyStream = null;
-      if (headers.mediatype !== 'multipart') {
-        bodyStream = new ReadableStream({
-          start(controller) {
-            partToStreamControllerMap.set(partNum, controller);
-          }
-        }).pipeThrough(new BlobTransformStream({ saveChunkSize, mimeType }));
-      }
+        var bodyStream = null;
+        if (headers.mediatype !== "multipart") {
+          bodyStream = new ReadableStream({
+            start(controller) {
+              partToStreamControllerMap.set(partNum, controller);
+            },
+          }).pipeThrough(new BlobTransformStream({ saveChunkSize, mimeType }));
+        }
 
-      out.enqueue({
-        partNum: partNum,
-        headers: headers,
-        bodyStream: bodyStream
-      });
+        out.enqueue({
+          partNum,
+          headers,
+          bodyStream,
+        });
+      },
+      endPart(jsmimePartNum) {
+        var partNum = jsmimePartNum === "" ? "1" : "1." + jsmimePartNum;
+        var partOut = partToStreamControllerMap.get(partNum);
+        if (partOut) {
+          partOut.close();
+        }
+      },
+      deliverPartData(jsmimePartNum, data) {
+        var partNum = jsmimePartNum === "" ? "1" : "1." + jsmimePartNum;
+        var partOut = partToStreamControllerMap.get(partNum);
+        if (partOut) {
+          partOut.enqueue(data);
+        }
+        // TODO: Use some type of explicit logic.js-supported fault injection?
+        if (MimeNodeTransformStream.TEST_ONLY_DIE_DURING_MIME_PROCESSING) {
+          console.warn("*** Throwing exception in mime parsing for a test!");
+          MimeNodeTransformStream.TEST_ONLY_DIE_DURING_MIME_PROCESSING = false;
+          throw new Error("TEST_ONLY_DIE_DURING_MIME_PROCESSING");
+        }
+      },
     },
-    endPart(jsmimePartNum) {
-      var partNum = (jsmimePartNum === '' ? '1' : '1.' + jsmimePartNum);
-      var partOut = partToStreamControllerMap.get(partNum);
-      if (partOut) {
-        partOut.close();
-      }
-    },
-    deliverPartData(jsmimePartNum, data) {
-      var partNum = (jsmimePartNum === '' ? '1' : '1.' + jsmimePartNum);
-      var partOut = partToStreamControllerMap.get(partNum);
-      if (partOut) {
-        partOut.enqueue(data);
-      }
-      // TODO: Use some type of explicit logic.js-supported fault injection?
-      if (MimeNodeTransformStream.TEST_ONLY_DIE_DURING_MIME_PROCESSING) {
-        console.warn('*** Throwing exception in mime parsing for a test!');
-        MimeNodeTransformStream.TEST_ONLY_DIE_DURING_MIME_PROCESSING = false;
-        throw new Error('TEST_ONLY_DIE_DURING_MIME_PROCESSING');
-      }
+    {
+      bodyformat: "decode", // Decode base64/quoted-printable for us.
+      strformat: "typedarray",
+      onerror: e => {
+        console.error("JSMIME Parser Error:", e, "\n", e.stack);
+        out.error(e);
+      },
     }
-  }, {
-    bodyformat: 'decode', // Decode base64/quoted-printable for us.
-    strformat: 'typedarray',
-    onerror: (e) => {
-      console.error('JSMIME Parser Error:', e, '\n', e.stack);
-      out.error(e);
-    }
-  });
+  );
 
   // We receive data here...
   this.writable = new WritableStream({
@@ -109,7 +112,7 @@ export default function MimeNodeTransformStream({ saveChunkSize, mimeType }) {
     },
     close() {
       parser.deliverEOF();
-    }
+    },
   });
 
   // We emit data here.

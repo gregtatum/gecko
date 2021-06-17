@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-import mimefuncs from 'mimefuncs';
-import { ReadableStream, WritableStream } from 'streams';
-import SocketStream from '../../streamy/socket_stream';
-import LineTransformStream from '../../streamy/line_transform_stream';
-import readAllChunks from '../../streamy/read_all_chunks';
+import mimefuncs from "mimefuncs";
+import { ReadableStream, WritableStream } from "streams";
+import SocketStream from "../../streamy/socket_stream";
+import LineTransformStream from "../../streamy/line_transform_stream";
+import readAllChunks from "../../streamy/read_all_chunks";
 
-var CR = '\r'.charCodeAt(0);
-var LF = '\n'.charCodeAt(0);
-var PERIOD = '.'.charCodeAt(0);
-var PLUS = '+'.charCodeAt(0);
-var MINUS = '-'.charCodeAt(0);
-var SPACE = ' '.charCodeAt(0);
+var CR = "\r".charCodeAt(0);
+var LF = "\n".charCodeAt(0);
+var PERIOD = ".".charCodeAt(0);
+var PLUS = "+".charCodeAt(0);
 
-var textEncoder = new TextEncoder('utf-8', { fatal: false });
+var textEncoder = new TextEncoder("utf-8", { fatal: false });
 
 export function Pop3RequestStream(socket, greetingRequest) {
   var { readable, writable } = new SocketStream(socket);
@@ -35,9 +33,9 @@ export function Pop3RequestStream(socket, greetingRequest) {
   var requestsAwaitingResponse = [greetingRequest];
 
   var writableRequestStream = new WritableStream({
-    write: function(request) {
-      if (socket.readyState === 'closed') {
-        request._respondWithError('(connection closed before send)');
+    write(request) {
+      if (socket.readyState === "closed") {
+        request._respondWithError("(connection closed before send)");
         return;
       }
       requestsAwaitingResponse.push(request);
@@ -47,17 +45,16 @@ export function Pop3RequestStream(socket, greetingRequest) {
         writable.write(request.toByteArray());
       }
     },
-    close: function() {
+    close() {
       for (var request; (request = requestsAwaitingResponse.shift()); ) {
-        request._respondWithError('(connection closed, no response)');
+        request._respondWithError("(connection closed, no response)");
       }
-    }
+    },
   });
 
-  readable
-    .pipeThrough(new LineTransformStream())
-    .pipeTo(new WritableStream({
-      write: function(line) {
+  readable.pipeThrough(new LineTransformStream()).pipeTo(
+    new WritableStream({
+      write(line) {
         var currentRequest = requestsAwaitingResponse[0];
         if (!currentRequest) {
           return;
@@ -68,18 +65,18 @@ export function Pop3RequestStream(socket, greetingRequest) {
         if (isResponseComplete) {
           requestsAwaitingResponse.shift();
           // If more requests are pending, send the next one over the socket.
-          if (requestsAwaitingResponse.length > 0) {
+          if (requestsAwaitingResponse.length) {
             var nextRequest = requestsAwaitingResponse[0];
             writable.write(nextRequest.toByteArray());
           }
         }
       },
-      close: function() {
+      close() {
         // Close the request stream when we lose the socket.
         writableRequestStream.close();
-      }
-    }));
-
+      },
+    })
+  );
 
   return writableRequestStream;
 }
@@ -92,9 +89,9 @@ export function Request(command, args, expectMultiline) {
   this.statusLine = null;
   this._dataLineStreamController = null;
   this.dataLineStream = new ReadableStream({
-    start: (controller) => {
+    start: controller => {
       this._dataLineStreamController = controller;
-    }
+    },
   });
 }
 
@@ -103,13 +100,15 @@ Request.prototype = {
    * Encode the request into a byte array suitable for transport over
    * a socket.
    */
-  toByteArray: function() {
+  toByteArray() {
     return textEncoder.encode(
       this.command +
-      (this.args.length ? ' ' + this.args.join(' ') : '') + '\r\n');
+        (this.args.length ? " " + this.args.join(" ") : "") +
+        "\r\n"
+    );
   },
 
-  processResponseLine: function(line) {
+  processResponseLine(line) {
     if (!this.statusLine) {
       this.statusLine = line;
       // Negative responses are never multiline.
@@ -120,7 +119,7 @@ Request.prototype = {
         if (this._dataLineStreamController) {
           if (line[0] !== PLUS) {
             this._dataLineStreamController.error({
-              statusLine: mimefuncs.fromTypedArray(line)
+              statusLine: mimefuncs.fromTypedArray(line),
             });
           } else {
             this._dataLineStreamController.close();
@@ -131,45 +130,46 @@ Request.prototype = {
     }
     // Otherwise, this is a data continuation line.
     else {
-      if (line.byteLength === 3 &&
-          line[0] === PERIOD && line[1] === CR && line[2] === LF) {
+      if (
+        line.byteLength === 3 &&
+        line[0] === PERIOD &&
+        line[1] === CR &&
+        line[2] === LF
+      ) {
         if (this._dataLineStreamController) {
           this._dataLineStreamController.close();
         }
         return true;
-      } else {
-        if (line[0] === PERIOD) {
-          line = line.subarray(1); // Un-period-stuff this line.
-        }
-        // If anyone is listening (which they should be),
-        // push this line onto the data stream.
-        if (this._dataLineStreamController) {
-          this._dataLineStreamController.enqueue(line);
-        }
+      }
+      if (line[0] === PERIOD) {
+        line = line.subarray(1); // Un-period-stuff this line.
+      }
+      // If anyone is listening (which they should be),
+      // push this line onto the data stream.
+      if (this._dataLineStreamController) {
+        this._dataLineStreamController.enqueue(line);
       }
     }
 
     return false;
   },
 
-  _respondWithError: function(desc) {
-    this.processResponseLine(
-      textEncoder.encode('-ERR ' + desc + '\r\n'));
+  _respondWithError(desc) {
+    this.processResponseLine(textEncoder.encode("-ERR " + desc + "\r\n"));
   },
 
-  then: function(thenFn, catchFn) {
-    return readAllChunks(this.dataLineStream)
-      .then(thenFn, catchFn);
+  then(thenFn, catchFn) {
+    return readAllChunks(this.dataLineStream).then(thenFn, catchFn);
   },
 
   /**
    * Return the status line as a string.
    */
-  getStatusLine: function() {
+  getStatusLine() {
     return mimefuncs.fromTypedArray(this.statusLine);
   },
 
-  toString: function() {
-    return this.command + ' => ' + this.getStatusLine();
+  toString() {
+    return this.command + " => " + this.getStatusLine();
   },
 };

@@ -83,11 +83,11 @@ export const configuratorModules = new Map([
   ],
   */
   [
-    'ical',
+    "ical",
     async function() {
-      const mod = await import('./accounts/ical/configurator');
+      const mod = await import("./accounts/ical/configurator");
       return mod.default;
-    }
+    },
   ],
 ]);
 
@@ -134,11 +134,11 @@ export const validatorModules = new Map([
   ],
   */
   [
-    'ical',
+    "ical",
     async function() {
-      const mod = await import('./accounts/ical/validator');
+      const mod = await import("./accounts/ical/validator");
       return mod.default;
-    }
+    },
   ],
 ]);
 
@@ -185,11 +185,11 @@ export const accountModules = new Map([
   ],
   */
   [
-    'ical',
+    "ical",
     async function() {
-      const mod = await import('./accounts/ical/account');
+      const mod = await import("./accounts/ical/account");
       return mod.default;
-    }
+    },
   ],
 ]);
 
@@ -243,11 +243,11 @@ export const engineTaskMappings = new Map([
   ],
   */
   [
-    'ical',
+    "ical",
     async function() {
-      const mod = await import('./accounts/ical/ical_tasks');
+      const mod = await import("./accounts/ical/ical_tasks");
       return mod.default;
-    }
+    },
   ],
 ]);
 
@@ -305,10 +305,10 @@ export const engineHacks = new Map([
   ],
   */
   [
-    'ical',
+    "ical",
     {
       unselectableFolderTypes: new Set(),
-    }
+    },
   ],
 ]);
 
@@ -362,10 +362,10 @@ export const engineBackEndFacts = new Map([
   ],
   */
   [
-    'ical',
+    "ical",
     {
-      syncGranularity: 'account',
-    }
+      syncGranularity: "account",
+    },
   ],
 ]);
 
@@ -443,13 +443,13 @@ export const engineFrontEndAccountMeta = new Map([
   ],
   */
   [
-    'ical',
+    "ical",
     {
       engineFacts: {
-        syncGranularity: 'account',
+        syncGranularity: "account",
       },
-      usesArchiveMetaphor: false
-    }
+      usesArchiveMetaphor: false,
+    },
   ],
 ]);
 
@@ -503,10 +503,9 @@ export const engineFrontEndFolderMeta = new Map([
   ],
   */
   [
-    'ical',
+    "ical",
     {
-      syncGranularity: 'account',
-    }
+      syncGranularity: "account",
+    },
   ],
 ]);
-
