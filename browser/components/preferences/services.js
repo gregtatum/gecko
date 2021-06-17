@@ -148,10 +148,9 @@ class ServiceRow extends HTMLElement {
   handleEvent(e) {
     switch (e.type) {
       case "click":
-        let ref = e.target.getAttribute("ref");
-        if (ref === "button-disconnect") {
+        if (e.target.classList.contains("button-disconnect")) {
           this.signout();
-        } else if (ref === "button-connect") {
+        } else if (e.target.classList.contains("button-connect")) {
           this.signin();
         }
     }

@@ -41,7 +41,7 @@
   grid-column: 3;
 }
 
-div[ref=status-connected]::before {
+.status-connected::before {
   display: inline-block;
   content: "";
   padding: 2px;
