@@ -23,7 +23,7 @@ logic.bc.postMessage({ mode: 'clear' });
 
 // Use a relative link so that consumers do not need to create
 // special config to use main-frame-setup.
-import addressparser from 'vendored/addressparser';
+import addressparser from 'addressparser';
 import evt from 'evt';
 
 import MailFolder from './mail_folder';

@@ -2,13 +2,13 @@
   "compilerOptions": {
     "baseUrl": "./src",
     "paths": {
-      "*": ["vendored/*", "*"],
+      "*": ["vendor/*", "*"],
       "gelam/*": ["*"],
       "logic": ["shared/logic"],
-      "bleach": ["vendored/bleach/bleach"],
-      "equal": ["vendored/equal"],
-      "imap-formal-syntax": ["vendored/imap-handler/src/imap-formal-syntax"],
-      "smtpclient-response-parser": ["vendored/smtpclient/src/smtpclient-response-parser"]
+      "bleach": ["vendor/bleach/bleach"],
+      "equal": ["vendor/equal"],
+      "imap-formal-syntax": ["vendor/imap-handler/src/imap-formal-syntax"],
+      "smtpclient-response-parser": ["vendor/smtpclient/src/smtpclient-response-parser"]
     }
   },
   "exclude": ["node_modules"]

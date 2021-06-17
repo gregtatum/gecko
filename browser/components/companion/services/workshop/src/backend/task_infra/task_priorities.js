@@ -16,7 +16,7 @@
 
 import logic from 'logic';
 
-import FibonacciHeap from 'vendored/fibonacci-heap';
+import FibonacciHeap from 'fibonacci-heap';
 
 /**
  * Helper class for use by TaskManager that is in charge of maintaining the
