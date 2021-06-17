@@ -615,7 +615,7 @@ class MicrosoftService {
       "https://graph.microsoft.com/v1.0/me/calendar/events"
     );
 
-    apiTarget.searchParams.set("maxResults", 5);
+    //    apiTarget.searchParams.set("maxResults", 5);
     apiTarget.searchParams.set("orderBy", "startTime");
     apiTarget.searchParams.set("singleEvents", "true");
     let oneHourAgo = new Date();
