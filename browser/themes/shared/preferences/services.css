@@ -1,0 +1,44 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.service-wrapper {
+  display: grid;
+  grid-template-columns: 300px auto auto;
+  grid-column-gap: 64px;
+}
+
+.service-info-container {
+  display: flex;
+}
+
+.service-info-container > .service-icon {
+  height: 32px;
+  width: 32px;
+  margin-inline-end: 16px;
+  align-self: center;
+}
+
+.service-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.service-status {
+  justify-self: center;
+}
+
+.service-wrapper[type=firefox-account] > button {
+  grid-column: 3;
+}
+
+div[ref=status-connected]::before {
+  display: inline-block;
+  content: "";
+  padding: 2px;
+  margin-inline-end: 4px;
+  border-radius: 100%;
+  background-color: #2ac3a2;
+  height: 4px;
+  width: 4px;
+}

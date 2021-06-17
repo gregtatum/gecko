@@ -78,3 +78,17 @@ h2.simple {
 #viewAllSettingsContainer {
   -moz-box-pack: center;
 }
+
+#firefox-account-container {
+  display: grid;
+}
+
+#firefox-account-container > #fxaGroup {
+  margin-bottom: var(--simple-spacing);
+}
+
+#extra-services-container {
+  display: grid;
+  grid-row-gap: var(--simple-spacing);
+  margin-top: var(--simple-spacing);
+}

@@ -4,6 +4,7 @@
 
 <!-- Simple panel -->
 
+<script src="chrome://browser/content/preferences/services.js"/>
 <script src="chrome://browser/content/preferences/simple.js"/>
 
 <html:template id="template-paneSimple">
@@ -14,12 +15,29 @@
   <html:h1 class="simple" data-l10n-id="preferences-pane-simple-title"/>
 </hbox>
 
+<!-- Services -->
+<html:h2 data-category="paneSimple"
+         class="simple"
+         hidden="true"
+         data-l10n-id="preferences-services-header"/>
+
+<groupbox id="servicesGroup"
+          data-category="paneSimple"
+          class="simple"
+          hidden="true">
+    <vbox class="simpleGroupboxBody">
+      <hbox id="firefox-account-container"></hbox>
+      <label><html:h3 data-l10n-id="preferences-extra-services-header"/></label>
+      <hbox id="extra-services-container"></hbox>
+    </vbox>
+</groupbox>
+
+<!-- Quick set-up -->
 <html:h2 data-category="paneSimple"
          class="simple"
          hidden="true"
          data-l10n-id="preferences-quick-setup-header"/>
 
-<!-- Quick set-up -->
 <groupbox id="quickSetupGroup"
           data-category="paneSimple"
           class="simple"
@@ -54,12 +72,12 @@
   </vbox>
 </groupbox>
 
+<!-- Search -->
 <html:h2 data-category="paneSimple"
          class="simple"
          hidden="true"
          data-l10n-id="preferences-simple-search-header"/>
 
-<!-- Search -->
 <groupbox id="searchGroup"
           class="simple"
           data-category="paneSimple"

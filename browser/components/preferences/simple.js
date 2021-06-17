@@ -3,6 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /* import-globals-from preferences.js */
+/* import-globals-from services.js */
 
 let gSimplePane = {
   async init() {
@@ -13,6 +14,11 @@ let gSimplePane = {
     const shellService = window.getShellService();
     const needPin = await shellService.doesAppNeedPin();
     document.getElementById("pinAppPane").hidden = !needPin;
+
+    Services.obs.addObserver(() => {
+      buildFirefoxAccount();
+    }, "sync-pane-loaded");
+    buildExtraServiceRows();
   },
 
   async handleEvent(event) {

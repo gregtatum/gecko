@@ -222,6 +222,28 @@ class GoogleService {
     return token;
   }
 
+  async disconnect() {
+    let token = await this.auth.getToken();
+    OnlineServices.persist();
+
+    // revoke access for the current stoken stored
+    let apiTarget = new URL(
+      `https://oauth2.googleapis.com/revoke?token=${token}`
+    );
+    let headers = {
+      "Content-type": "application/x-www-form-urlencoded",
+    };
+
+    let response = await fetch(apiTarget, {
+      method: "POST",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(response.statusText);
+    }
+  }
+
   async getAccountAddress() {
     let token = await this.auth.getToken();
     OnlineServices.persist();
@@ -575,6 +597,8 @@ class MicrosoftService {
     return token;
   }
 
+  disconnect() {}
+
   openCalendar(year, month, day) {
     this.openLink(
       new URL(
@@ -702,7 +726,8 @@ const OnlineServices = {
     this.persist();
   },
 
-  deleteService(service) {
+  async deleteService(service) {
+    await service.disconnect();
     ServiceInstances.delete(service);
     this.persist();
   },

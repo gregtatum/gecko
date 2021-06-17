@@ -7,6 +7,7 @@
 /* import-globals-from home.js */
 /* import-globals-from search.js */
 /* import-globals-from simple.js */
+/* import-globals-from services.js */
 /* import-globals-from containers.js */
 /* import-globals-from privacy.js */
 /* import-globals-from sync.js */

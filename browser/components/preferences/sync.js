@@ -552,7 +552,7 @@ var gSyncPane = {
 
   // Disconnect the account, including everything linked.
   unlinkFirefoxAccount(confirm) {
-    window.browsingContext.topChromeWindow.gSync.disconnect({
+    return window.browsingContext.topChromeWindow.gSync.disconnect({
       confirm,
     });
   },
