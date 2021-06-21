@@ -5,6 +5,7 @@
 import { TopSites } from "./topsites.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
+import { KeyframeDbList } from "./keyframes.js";
 
 function toggleSettings() {
   let settings = document.getElementById("settings");
@@ -42,6 +43,12 @@ window.addEventListener(
       .appendChild(new TopSites());
     let content = document.getElementById("content");
     content.appendChild(new MediaList("Media"));
+    content.appendChild(
+      new KeyframeDbList("Currently Working On", "workingOn")
+    );
+    content.appendChild(
+      new KeyframeDbList("Current Session", "currentSession")
+    );
     content.appendChild(new PocketList());
   },
   { once: true }

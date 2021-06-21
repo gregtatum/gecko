@@ -119,7 +119,11 @@ export class TopSites extends HTMLElement {
   }
 
   connectedCallback() {
-    window.addEventListener("Companion:Setup", this);
+    if (window.CompanionUtils.history.length) {
+      this.appendTopSites(window.CompanionUtils.history);
+    } else {
+      window.addEventListener("Companion:Setup", this);
+    }
   }
 
   disconnectedCallback() {

@@ -8,6 +8,23 @@ var EXPORTED_SYMBOLS = ["CompanionChild"];
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 class CompanionChild extends JSWindowActorChild {
+  constructor() {
+    super();
+    this._cachedPlacesData = new Map();
+  }
+
+  updatePlacesCache(newPlacesCacheEntries) {
+    for (let entry of newPlacesCacheEntries) {
+      this._cachedPlacesData.set(entry.url, entry);
+    }
+  }
+
+  evictPlacesCacheEntries(evictions) {
+    for (let url of evictions) {
+      this._cachedPlacesData.delete(url);
+    }
+  }
+
   handleEvent(event) {
     switch (event.type) {
       case "CompanionInit": {
@@ -24,6 +41,13 @@ class CompanionChild extends JSWindowActorChild {
             return this._tabs.values();
           },
           history: [],
+          keyframes: {
+            currentSession: [],
+            workingOn: [],
+          },
+          getPlacesData(url) {
+            return self._cachedPlacesData.get(url);
+          },
           sendAsyncMessage(name, detail) {
             self.sendAsyncMessage(name, detail);
           },
@@ -35,6 +59,15 @@ class CompanionChild extends JSWindowActorChild {
           },
           getIntPref(name, defaultValue) {
             return Services.prefs.getIntPref(name, defaultValue);
+          },
+          setCharPref(name, value) {
+            this.sendAsyncMessage("Companion:setCharPref", { name, value });
+          },
+          setBoolPref(name, value) {
+            this.sendAsyncMessage("Companion:setBoolPref", { name, value });
+          },
+          setIntPref(name, value) {
+            this.sendAsyncMessage("Companion:setIntPref", { name, value });
           },
         };
 
@@ -58,7 +91,13 @@ class CompanionChild extends JSWindowActorChild {
   receiveMessage(message) {
     switch (message.name) {
       case "Companion:Setup": {
-        let { tabs, history } = message.data;
+        let {
+          tabs,
+          history,
+          keyframes,
+          newPlacesCacheEntries,
+          currentURI,
+        } = message.data;
 
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
         waivedContent.CompanionUtils._tabs.clear();
@@ -66,10 +105,29 @@ class CompanionChild extends JSWindowActorChild {
           waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
         }
         waivedContent.CompanionUtils.history = history;
+        waivedContent.CompanionUtils.keyframes = keyframes;
+        waivedContent.CompanionUtils.currentURI = currentURI;
+
+        this.updatePlacesCache(newPlacesCacheEntries);
+        break;
+      }
+      case "Companion:EvictPlacesData": {
+        let evictions = message.data;
+        this.evictPlacesCacheEntries(evictions);
         break;
       }
       case "Companion:TabAdded": {
         this.updateTab(message.data);
+        break;
+      }
+      case "Companion:KeyframesChanged": {
+        let { keyframes, newPlacesCacheEntries, currentURI } = message.data;
+
+        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+        waivedContent.CompanionUtils.keyframes = keyframes;
+        waivedContent.CompanionUtils.currentURI = currentURI;
+
+        this.updatePlacesCache(newPlacesCacheEntries);
         break;
       }
       case "Companion:MediaEvent":

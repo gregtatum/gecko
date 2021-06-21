@@ -11,24 +11,49 @@ const { BrowserWindowTracker } = ChromeUtils.import(
 );
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-
 const { PlacesUtils } = ChromeUtils.import(
   "resource://gre/modules/PlacesUtils.jsm"
+);
+const { Keyframes } = ChromeUtils.import("resource:///modules/Keyframes.jsm");
+const { Sqlite } = ChromeUtils.import("resource://gre/modules/Sqlite.jsm");
+const { _LastSession } = ChromeUtils.import(
+  "resource:///modules/sessionstore/SessionStore.jsm"
+);
+const { clearTimeout, setTimeout, requestIdleCallback } = ChromeUtils.import(
+  "resource://gre/modules/Timer.jsm"
 );
 
 const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
   Ci.nsINavHistoryService
 );
 
+const { FileUtils } = ChromeUtils.import(
+  "resource://gre/modules/FileUtils.jsm"
+);
+
+let sessionStart = new Date();
+let lastSessionEnd = _LastSession.getState()?.session?.lastUpdate;
+
+const PLACES_CACHE_EVICT_AFTER = 60 * 6 * 1000; // 6 minutes
+// Give ourselves a little bit of a buffer when calling setTimeout to evict
+// things from the places cache, otherwise we might end up scheduling
+// setTimeouts more often than we would like.
+const PLACES_EVICTION_TIMEOUT = PLACES_CACHE_EVICT_AFTER * 1.5;
+
 class CompanionParent extends JSWindowActorParent {
   constructor() {
     super();
     this._mediaControllerIdsToTabs = new Map();
     this._browserIdsToTabs = new Map();
+    this._cachedPlacesURLs = new Map();
+    this._cachedPlacesDataToSend = [];
 
     this._observer = this.observe.bind(this);
     this._handleMediaEvent = this.handleMediaEvent.bind(this);
     this._handleTabEvent = this.handleTabEvent.bind(this);
+
+    this._cacheCleanupTimeout = null;
+    this._cleanupCaches = this.cleanupCaches.bind(this);
 
     Services.obs.addObserver(
       this._observer,
@@ -46,6 +71,7 @@ class CompanionParent extends JSWindowActorParent {
       this._observer,
       "browser-window-tracker-tab-removed"
     );
+    Services.obs.addObserver(this._observer, "keyframe-update");
 
     for (let win of BrowserWindowTracker.orderedWindows) {
       for (let tab of win.gBrowser.tabs) {
@@ -57,6 +83,10 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   didDestroy() {
+    if (this._cacheCleanupTimeout) {
+      clearTimeout(this._cacheCleanupTimeout);
+      this._cacheCleanupTimeout = null;
+    }
     Services.obs.removeObserver(
       this._observer,
       "browser-window-tracker-add-window"
@@ -73,6 +103,7 @@ class CompanionParent extends JSWindowActorParent {
       this._observer,
       "browser-window-tracker-tab-removed"
     );
+    Services.obs.removeObserver(this._observer, "keyframe-update");
 
     for (let win of BrowserWindowTracker.orderedWindows) {
       for (let tab of win.gBrowser.tabs) {
@@ -81,6 +112,52 @@ class CompanionParent extends JSWindowActorParent {
 
       this.unregisterWindow(win);
     }
+  }
+
+  ensureCacheCleanupRunning() {
+    if (!this._cacheCleanupTimeout) {
+      this._cacheCleanupTimeout = setTimeout(
+        this._cleanupCaches,
+        PLACES_EVICTION_TIMEOUT
+      );
+    }
+  }
+
+  cleanupCaches() {
+    // This isn't very expensive, but we do want to make sure that A) we're not
+    // doing this during critical work, and B) we're not running if there's
+    // nothing even in the cache. This lets us prevent waking up the thread
+    // intermittently when we would otherwise just be able to sleep.
+    requestIdleCallback(() => {
+      let nextExpiration = null;
+      let now = Date.now();
+      try {
+        let entries = [...this._cachedPlacesURLs.entries()];
+        let evictions = [];
+        for (let [url, expires] of entries) {
+          if (expires <= now) {
+            evictions.push(url);
+            this._cachedPlacesURLs.delete(url);
+          } else if (!nextExpiration || expires < nextExpiration) {
+            nextExpiration = expires;
+          }
+        }
+        this.sendAsyncMessage("Companion:EvictPlacesData", evictions);
+      } finally {
+        // Even in the event of a weird error we don't break this loop:
+        // Either we schedule cleanup again to run at the next expiration, or
+        // we clear out _cacheCleanupTimeout so that cleanup can be scheduled
+        // the next time something is added to the cache.
+        if (nextExpiration) {
+          this._cacheCleanupTimeout = setTimeout(
+            this._cleanupCaches,
+            nextExpiration - now
+          );
+        } else {
+          this._cacheCleanupTimeout = null;
+        }
+      }
+    });
   }
 
   getWindowData(window) {
@@ -233,6 +310,118 @@ class CompanionParent extends JSWindowActorParent {
     });
   }
 
+  async getPreviewImageURL(url) {
+    let placesDbPath = FileUtils.getFile("ProfD", ["places.sqlite"]).path;
+    let previewImage;
+    let db = await Sqlite.openConnection({ path: placesDbPath });
+    try {
+      let sql = "SELECT * FROM moz_places WHERE url = :url;";
+      let rows = await db.executeCached(sql, { url });
+      if (rows.length) {
+        for (let row of rows) {
+          previewImage = row.getResultByName("preview_image_url");
+          if (previewImage) {
+            break;
+          }
+        }
+      }
+    } finally {
+      await db.close();
+    }
+
+    return previewImage;
+  }
+
+  async getPlacesData(url) {
+    let query = NavHistory.getNewQuery();
+    query.uri = Services.io.newURI(url);
+
+    let queryOptions = NavHistory.getNewQueryOptions();
+    queryOptions.resultType = Ci.nsINavHistoryQueryOptions.RESULTS_AS_URI;
+    queryOptions.maxResults = 1;
+
+    let results = NavHistory.executeQuery(query, queryOptions);
+    results.root.containerOpen = true;
+    try {
+      if (results.root.childCount < 1) {
+        return null;
+      }
+
+      let result = results.root.getChild(0);
+      let favicon = await this.getFavicon(url, 16);
+
+      let data = {
+        url,
+        title: result.title,
+        icon: favicon,
+        richIcon: await this.getFavicon(url),
+        previewImage: await this.getPreviewImageURL(url),
+      };
+      return data;
+    } finally {
+      results.root.containerOpen = false;
+    }
+  }
+
+  async ensurePlacesDataCached(url) {
+    let cached = this._cachedPlacesURLs.has(url);
+    if (!cached) {
+      let data = await this.getPlacesData(url);
+      if (data) {
+        this._cachedPlacesDataToSend.push(data);
+      }
+    }
+
+    this._cachedPlacesURLs.set(url, Date.now() + PLACES_CACHE_EVICT_AFTER);
+    this.ensureCacheCleanupRunning();
+  }
+
+  today() {
+    let today = new Date();
+    today.setHours(0);
+    today.setMinutes(0);
+    today.setSeconds(0);
+    today.setMilliseconds(0);
+    return today;
+  }
+
+  yesterday() {
+    let yesterday = new Date(this.today() - 24 * 60 * 60 * 1000);
+    // If yesterday is before the start of the session then push back by the time since the end of the
+    // the last session
+    if (yesterday < sessionStart && lastSessionEnd) {
+      yesterday = new Date(yesterday - (sessionStart - lastSessionEnd));
+    }
+    return yesterday;
+  }
+
+  async getKeyframeData() {
+    let currentSession = await Keyframes.query(this.today().getTime());
+    let workingOn = await Keyframes.getTopKeypresses(
+      this.yesterday().getTime()
+    );
+    for (let entry of currentSession) {
+      await this.ensurePlacesDataCached(entry.url);
+    }
+    for (let entry of workingOn) {
+      await this.ensurePlacesDataCached(entry.url);
+    }
+    return {
+      currentSession,
+      workingOn,
+    };
+  }
+
+  consumeCachedPlacesDataToSend() {
+    let result = this._cachedPlacesDataToSend;
+    this._cachedPlacesDataToSend = [];
+    return result;
+  }
+
+  getCurrentURI() {
+    return this.browsingContext.topChromeWindow.gBrowser.currentURI.spec;
+  }
+
   async getNavHistory() {
     let query = NavHistory.getNewQuery();
     // Two days of history
@@ -273,7 +462,7 @@ class CompanionParent extends JSWindowActorParent {
     }
   }
 
-  observe(subj, topic, data) {
+  async observe(subj, topic, data) {
     switch (topic) {
       case "browser-window-tracker-add-window": {
         this.registerWindow(subj);
@@ -299,6 +488,17 @@ class CompanionParent extends JSWindowActorParent {
       case "browser-window-tracker-tab-removed": {
         this.unregisterTab(subj);
         this.sendAsyncMessage("Companion:TabRemoved", this.getTabData(subj));
+        break;
+      }
+      case "keyframe-update": {
+        let keyframes = await this.getKeyframeData();
+        let newPlacesCacheEntries = this.consumeCachedPlacesDataToSend();
+        let currentURI = this.getCurrentURI();
+        this.sendAsyncMessage("Companion:KeyframesChanged", {
+          keyframes,
+          newPlacesCacheEntries,
+          currentURI,
+        });
         break;
       }
     }
@@ -336,11 +536,19 @@ class CompanionParent extends JSWindowActorParent {
   async receiveMessage(message) {
     switch (message.name) {
       case "Companion:Subscribe": {
+        let tabs = BrowserWindowTracker.orderedWindows.flatMap(w =>
+          w.gBrowser.tabs.map(t => this.getTabData(t))
+        );
+        let history = await this.getNavHistory();
+        let keyframes = await this.getKeyframeData();
+        let newPlacesCacheEntries = this.consumeCachedPlacesDataToSend();
+        let currentURI = this.getCurrentURI();
         this.sendAsyncMessage("Companion:Setup", {
-          tabs: BrowserWindowTracker.orderedWindows.flatMap(w =>
-            w.gBrowser.tabs.map(t => this.getTabData(t))
-          ),
-          history: await this.getNavHistory(),
+          tabs,
+          history,
+          keyframes,
+          newPlacesCacheEntries,
+          currentURI,
         });
         break;
       }
@@ -403,6 +611,39 @@ class CompanionParent extends JSWindowActorParent {
         this.browsingContext.topChromeWindow.switchToTabHavingURI(url, true, {
           ignoreFragment: true,
         });
+        break;
+      }
+      case "Companion:setCharPref": {
+        let { name, value } = message.data;
+        if (!name.startsWith("companion")) {
+          Cu.reportError(
+            "Prefs set through Compaion messages must be prefixed by 'companion'"
+          );
+          return;
+        }
+        Services.prefs.setCharPref(name, value);
+        break;
+      }
+      case "Companion:setBoolPref": {
+        let { name, value } = message.data;
+        if (!name.startsWith("companion")) {
+          Cu.reportError(
+            "Prefs set through Compaion messages must be prefixed by 'companion'"
+          );
+          return;
+        }
+        Services.prefs.setBoolPref(name, value);
+        break;
+      }
+      case "Companion:setIntPref": {
+        let { name, value } = message.data;
+        if (!name.startsWith("companion")) {
+          Cu.reportError(
+            "Prefs set through Compaion messages must be prefixed by 'companion'"
+          );
+          return;
+        }
+        Services.prefs.setIntPref(name, value);
         break;
       }
     }
