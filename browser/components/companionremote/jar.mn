@@ -19,6 +19,7 @@ browser.jar:
     content/browser/companionremote/pip.svg (content/pip.svg)
     content/browser/companionremote/play.svg (content/play.svg)
     content/browser/companionremote/pause.svg (content/pause.svg)
+    content/browser/companionremote/pocket.js (content/pocket.js)
     content/browser/companionremote/next.svg (content/next.svg)
     content/browser/companionremote/topsites.js (content/topsites.js)
     content/browser/companionremote/dock.svg (content/dock.svg)

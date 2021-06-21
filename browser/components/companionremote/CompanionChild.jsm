@@ -5,6 +5,7 @@
 "use strict";
 
 var EXPORTED_SYMBOLS = ["CompanionChild"];
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 class CompanionChild extends JSWindowActorChild {
   handleEvent(event) {
@@ -17,12 +18,23 @@ class CompanionChild extends JSWindowActorChild {
         let self = this;
         let CompanionUtils = {
           _tabs: new Map(),
+
+          isInAutomation: Cu.isInAutomation,
           tabs() {
             return this._tabs.values();
           },
           history: [],
           sendAsyncMessage(name, detail) {
             self.sendAsyncMessage(name, detail);
+          },
+          getCharPref(name, defaultValue) {
+            return Services.prefs.getCharPref(name, defaultValue);
+          },
+          getBoolPref(name, defaultValue) {
+            return Services.prefs.getBoolPref(name, defaultValue);
+          },
+          getIntPref(name, defaultValue) {
+            return Services.prefs.getIntPref(name, defaultValue);
           },
         };
 
