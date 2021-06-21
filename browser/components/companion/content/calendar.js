@@ -7,9 +7,9 @@
 
 import { openUrl, timeFormat, getPlacesData } from "./shared.js";
 
-//const { OnlineServices } = ChromeUtils.import(
-//  "resource:///modules/OnlineServices.jsm"
-//);
+const { OnlineServices } = ChromeUtils.import(
+  "resource:///modules/OnlineServices.jsm"
+);
 
 // Query new events every fifteen minutes
 const CALENDAR_CHECK_TIME = 15 * 60 * 1000; // 15 minutes
@@ -160,7 +160,7 @@ async function buildEvents(services) {
       meetings = await service.getNextMeetings();
     } catch (e) {
       console.error(e);
-      //      OnlineServices.deleteService(service);
+      OnlineServices.deleteService(service);
       continue;
     }
 
