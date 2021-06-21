@@ -25,7 +25,6 @@ class CompanionParent extends JSWindowActorParent {
     super();
     this._mediaControllerIdsToTabs = new Map();
     this._browserIdsToTabs = new Map();
-    this._navHistoryURLs = new Set();
 
     this._observer = this.observe.bind(this);
     this._handleMediaEvent = this.handleMediaEvent.bind(this);
@@ -255,21 +254,18 @@ class CompanionParent extends JSWindowActorParent {
       let history = new Array(results.root.childCount);
       for (let i = 0; i < results.root.childCount; ++i) {
         let childNode = results.root.getChild(i);
-        if (!this._navHistoryURLs.has(childNode.uri)) {
-          let newURI = Services.io.newURI(childNode.uri);
-          let site = {
-            title: childNode.title,
-            type: childNode.type,
-            RESULT_TYPE_URI: childNode.RESULT_TYPE_URI,
-            uri: childNode.uri,
-            uriHost: newURI.host,
-            uriSpec: newURI.spec,
-            icon: await this.getFavicon(childNode.uri, 16),
-          };
+        let newURI = Services.io.newURI(childNode.uri);
+        let site = {
+          title: childNode.title,
+          type: childNode.type,
+          RESULT_TYPE_URI: childNode.RESULT_TYPE_URI,
+          uri: childNode.uri,
+          uriHost: newURI.host,
+          uriSpec: newURI.spec,
+          icon: await this.getFavicon(childNode.uri, 16),
+        };
 
-          history[i] = site;
-          this._navHistoryURLs.add(childNode.uri);
-        }
+        history[i] = site;
       }
       return history;
     } finally {
