@@ -33,8 +33,9 @@ jobs:
               # Please update the `searchfox-index` job `mozilla-central` `when`
               # times as well if updating the times here.
               mozilla-central: [{hour: 10, minute: 0}, {hour: 22, minute: 0}]
-              # Test on a hook initially
-              pine: []
+              # 10pm PDT, after Pacific, before Europe.
+              # Also triggerable via hook.
+              pine: [{hour: 5, minute: 0}]
               # No default
 
     - name: nightly-desktop-linux
