@@ -959,9 +959,10 @@ def target_tasks_daily_releases(full_task_graph, parameters, graph_config):
 def target_tasks_nightly_desktop(full_task_graph, parameters, graph_config):
     """Select the set of tasks required for a nightly build of linux, mac,
     windows."""
-    index_path = (f"gecko.v2.{parameters['project']}.revision."
-                  f"{parameters['head_rev']}.taskgraph/decision-nightly-desktop"
-                  )
+    index_path = (
+        f"gecko.v2.{parameters['project']}.revision."
+        f"{parameters['head_rev']}.taskgraph.decision-nightly-desktop"
+    )
     if retry(index_exists, args=(index_path,)):
         return []
 
