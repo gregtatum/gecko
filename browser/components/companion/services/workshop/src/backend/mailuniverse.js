@@ -181,12 +181,6 @@ MailUniverse.prototype = {
    * Initialize and configure logging.
    */
   _initLogging(config) {
-    // Delimit different runs of the universe from each other in the cheapest
-    // way possible.
-    console.log("======================");
-    // XXX proper logging configuration again once things start working
-    // XXX XXX XXX XXX XXX XXX XXX
-    logic.realtimeLogEverything = true;
     logic.bc = new BroadcastChannel("logic");
 
     // XXX hack to skip the next logic without the linter.
@@ -326,14 +320,8 @@ MailUniverse.prototype = {
     this.online = this._testModeFakeNavigator
       ? this._testModeFakeNavigator.onLine
       : isOnline;
-    // Knowing when the app thinks it is online/offline is going to be very
-    // useful for our console.log debug spew.
-    console.log(
-      "Email knows that it is:",
-      this.online ? "online" : "offline",
-      "and previously was:",
-      wasOnline ? "online" : "offline"
-    );
+
+    logic(this, "connectionChange", { online: this.online, wasOnline });
 
     if (this.online) {
       this.taskResources.resourceAvailable("online");

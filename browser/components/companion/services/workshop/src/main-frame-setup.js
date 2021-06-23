@@ -70,7 +70,8 @@ const control = {
 };
 
 const MailAPI = new $mailapi.MailAPI();
-var worker;
+let worker;
+let workerPort;
 
 const bridge = {
   name: "bridge",
@@ -82,13 +83,13 @@ const bridge = {
       delete MailAPI._fake;
       MailAPI.__bridgeSend = function(sendMsg) {
         try {
-          worker.postMessage({
+          workerPort.postMessage({
             uid,
             type: "bridge",
             msg: sendMsg,
           });
         } catch (ex) {
-          console.error("Presumed DataCloneError on:", sendMsg);
+          console.error("Presumed DataCloneError on:", sendMsg, "ex:", ex);
         }
       };
 
@@ -112,6 +113,7 @@ const bridge = {
 
  */
 worker = makeWorker();
+workerPort = worker.port || worker;
 logic.defineScope(worker, "Worker");
 worker.onerror = event => {
   logic(worker, "workerError", {

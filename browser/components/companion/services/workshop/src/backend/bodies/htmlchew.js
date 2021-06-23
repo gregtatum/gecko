@@ -30,7 +30,12 @@
  * that's a tall order to get right, so it's mightily postponed.
  **/
 
-import $bleach from "bleach";
+import {
+  clean,
+  escapePlaintextIntoElementContext,
+  escapePlaintextIntoAttribute,
+  unescapeHTMLEntities,
+} from "bleach";
 import { DESIRED_SNIPPET_LENGTH } from "../syncbase";
 
 /**
@@ -606,7 +611,7 @@ var BLEACH_SNIPPET_SETTINGS = {
  * }
  */
 export function sanitizeAndNormalizeHtml(htmlString) {
-  return $bleach.clean(htmlString, BLEACH_SETTINGS);
+  return clean(htmlString, BLEACH_SETTINGS);
 }
 
 /**
@@ -615,9 +620,7 @@ export function sanitizeAndNormalizeHtml(htmlString) {
  * in textContent cases.
  */
 export function generateSnippet(htmlString) {
-  return $bleach.unescapeHTMLEntities(
-    $bleach.clean(htmlString, BLEACH_SNIPPET_SETTINGS)
-  );
+  return unescapeHTMLEntities(clean(htmlString, BLEACH_SNIPPET_SETTINGS));
 }
 
 /**
@@ -695,8 +698,8 @@ export function generateSearchableTextVersion(htmlString, includeQuotes) {
   } else {
     settings = BLEACH_SEARCHABLE_TEXT_WITHOUT_QUOTES_SETTINGS;
   }
-  var cleaned = $bleach.clean(htmlString, settings);
-  return $bleach.unescapeHTMLEntities(cleaned);
+  var cleaned = clean(htmlString, settings);
+  return unescapeHTMLEntities(cleaned);
 }
 
 /**
@@ -721,7 +724,7 @@ export function wrapTextIntoSafeHTMLString(
 
   wrapTag = wrapTag || "div";
 
-  text = $bleach.escapePlaintextIntoElementContext(text);
+  text = escapePlaintextIntoElementContext(text);
   text = transformNewlines ? text.replace(/\n/g, "<br/>") : text;
 
   var attributes = "";
@@ -732,7 +735,7 @@ export function wrapTextIntoSafeHTMLString(
         " " +
         attrs[i] +
         '="' +
-        $bleach.escapePlaintextIntoAttribute(attrs[i + 1]) +
+        escapePlaintextIntoAttribute(attrs[i + 1]) +
         '"';
     }
   }

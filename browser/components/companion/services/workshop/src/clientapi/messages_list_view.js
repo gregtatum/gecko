@@ -55,3 +55,11 @@ MessagesListView.prototype.ensureSnippets = function() {
     });
   }
 };
+
+// XXX The conversations list view has extra mechanics around this.
+MessagesListView.prototype.refresh = function() {
+  this._api.__bridgeSend({
+    type: "refreshView",
+    handle: this.handle,
+  });
+};

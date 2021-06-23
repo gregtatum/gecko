@@ -164,7 +164,7 @@ var dispatcher = {
   ensureSync(syncData) {
     var mozAlarms = navigator.mozAlarms;
     if (!mozAlarms) {
-      console.warn("no mozAlarms support!");
+      logic(this, "unavailable", { mozAlarms: false });
       return;
     }
 

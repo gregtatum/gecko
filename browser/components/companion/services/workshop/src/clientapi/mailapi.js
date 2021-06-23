@@ -15,9 +15,6 @@
  */
 
 import logic from "logic";
-// XXX proper logging configuration for the front-end too once things start
-// working happily.
-logic.realtimeLogEverything = true;
 logic.bc = new BroadcastChannel("logic");
 logic.bc.postMessage({ mode: "clear" });
 
@@ -1109,7 +1106,7 @@ MailAPI.prototype = evt.mix(
     },
 
     /**
-     * View the conversations in a folder.
+     * View the messages in a folder.
      */
     viewFolderMessages(folder) {
       var handle = this._nextHandle++,

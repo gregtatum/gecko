@@ -18,7 +18,7 @@ import evt from "evt";
 
 export default function MailFolder(api, wireRep, overlays, matchInfo) {
   evt.Emitter.call(this);
-  this._api = api;
+  this.api = api;
 
   this.__update(wireRep);
   this.__updateOverlays(overlays);
@@ -99,7 +99,7 @@ MailFolder.prototype = evt.mix({
     this.type = wireRep.type;
 
     // Exchange folder name with the localized version if available
-    this.name = this._api.l10n_folder_name(this.name, this.type);
+    this.name = this.api.l10n_folder_name(this.name, this.type);
 
     let hierarchyOnly = wireRep.type === "account" || wireRep.type === "nomail";
     this.selectable = !hierarchyOnly && !wireRep.engineSaysUnselectable;

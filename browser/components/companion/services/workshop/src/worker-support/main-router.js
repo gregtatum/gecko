@@ -57,7 +57,9 @@ export function register(module) {
         "Presumed DataCloneError on:",
         args,
         "with transfer args",
-        transferArgs
+        transferArgs,
+        "ex:",
+        ex
       );
     }
   };

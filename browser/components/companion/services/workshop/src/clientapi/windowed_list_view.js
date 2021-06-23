@@ -92,6 +92,7 @@ export default function WindowedListView(api, itemConstructor, handle) {
   this.complete = false;
 }
 WindowedListView.prototype = evt.mix({
+  viewKind: "windowed",
   toString() {
     return (
       "[WindowedListView: " +

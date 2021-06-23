@@ -7,10 +7,13 @@ with new development happening here in the tree.
 
 The general setup is:
 - There's an API that gets loaded into the front-end window.  This is a client
-  to the back-end.  This code is loaded from `build/workshop-api-built.js` and
-  contributes the `WorkshopAPI` global.
+  to the back-end.  This code is loaded from `build/workshop-api-built.js` as an
+  ES Module import from the URL
+  `chrome://browser/content/companion/workshop-api-built.js`.
 - The back-end runs in a SharedWorker, which is where all the heavy lifting
-  happens.  The code is loaded from `build/workshop-worker-built.js`.
+  happens.  The code is loaded from `build/workshop-worker-built.js` using the
+  URL `chrome://browser/content/companion/workshop-worker-built.js` which gets
+  baked into `workshop-api-built.js`.
 
 ### Development
 
@@ -36,7 +39,8 @@ errors.
 
 #### Setting up to Build Things
 
-
+On Linux and OS X, you should run the following from the root of your tree to
+install the necessary build dependencies (currently only esbuild).
 
 ```
 ./mach npm install --prefix=browser/components/companion/services/workshop

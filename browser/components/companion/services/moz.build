@@ -5,21 +5,5 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 DIRS += [
-    "services",
-]
-
-JAR_MANIFESTS += ["jar.mn"]
-
-EXTRA_JS_MODULES += [
-    "CompanionService.jsm",
-    "Engagement.jsm",
-    "GlobalHistory.jsm",
-    "Keyframes.jsm",
-    "OAuth2.jsm",
-    "OnlineServices.jsm",
-]
-
-FINAL_TARGET_FILES.actors += [
-    "EngagementChild.jsm",
-    "EngagementParent.jsm",
+    "about-workshop-internals",
 ]

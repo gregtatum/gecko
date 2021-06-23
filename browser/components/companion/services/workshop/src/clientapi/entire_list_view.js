@@ -51,6 +51,7 @@ export default function EntireListView(api, itemConstructor, handle) {
   this.complete = false;
 }
 EntireListView.prototype = evt.mix({
+  viewKind: "entire",
   toString() {
     return "[EntireListView: " + this._ns + " " + this.handle + "]";
   },

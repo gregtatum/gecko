@@ -1,0 +1,71 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src chrome:; object-src 'none'">
+    <title>Companion Services Workshop Internals</title>
+    <link rel="stylesheet" href="chrome://browser/content/about-workshop-internals/about-workshop-internals.css">
+    <script type="module" src="chrome://browser/content/about-workshop-internals/about-workshop-internals.js"></script>
+  </head>
+  <body>
+    <template id="template-account-list-item">
+      <div class="account-header-row">
+        <h3 class="account-name"></h3>
+      </div>
+      <div class="account-details-row">
+        <span class="account-type"></span>
+      </div>
+      <div class="account-actions-row">
+        <button class="account-show-folders" type="button">Show Folders</button>
+        <button class="account-sync-folders" type="button">Sync Folders</button>
+        <button class="account-re-create" type="button">Re-create account</button>
+        <button class="account-delete" type="button">Delete</button>
+      </div>
+    </template>
+    <template id="template-folder-list-item">
+      <div class="folder-header-row">
+        <h4 class="folder-name"></h4>
+      </div>
+      <div class="folder-details-row">
+        <span class="folder-type"></span>
+      </div>
+      <div class="folder-actions-row">
+        <button class="folder-show-messages" type="button">Show Messages</button>
+        <button class="folder-show-conversations" type="button">Show Conversations</button>
+      </div>
+    </template>
+    <template id="template-message-list-item">
+      <div class="message-header-row">
+        <h4 class="message-subject"></h4>
+      </div>
+      <div class="message-body-parts"></div>
+    </template>
+
+    <div id="pages">
+      <div id="page-home" class="page">
+        <div id="home-account-list-container"></div>
+        <h3>Add iCalendar via ICS URL</h3>
+        <div id="home-add-ics-error"></div>
+        <form>
+          <label>URL: </label>
+          <input id="ad" type="text"
+              placeholder="https://example.org/example.ics"
+              />
+          <hr>
+          <button id="home-add-ics-button" type="button">Add</button>
+        </form>
+      </div>
+      <div id="page-account-folder-list" class="page">
+
+      </div>
+      <div id="page-account-folder-message-contents" class="page">
+
+      </div>
+    </div>
+  </body>
+</html>

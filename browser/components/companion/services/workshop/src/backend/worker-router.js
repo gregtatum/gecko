@@ -29,6 +29,7 @@ function receiveConnect(evt) {
   const port = evt.ports[0];
   if (!defaultPort) {
     defaultPort = port;
+    resolveDefaultPort(defaultPort);
   }
 
   port.onmessage = receiveMessage;
@@ -37,11 +38,22 @@ function receiveConnect(evt) {
 const inSharedWorker = "onconnect" in globalThis;
 
 let defaultPort;
+let defaultPortPromise;
+let resolveDefaultPort = null;
 if (!inSharedWorker) {
   defaultPort = globalThis;
+  defaultPortPromise = Promise.resolve(defaultPort);
   globalThis.addEventListener("message", receiveMessage);
 } else {
   globalThis.addEventListener("connect", receiveConnect);
+  defaultPortPromise = new Promise(resolve => {
+    resolveDefaultPort = resolve;
+  });
+}
+
+async function eventuallySendToDefault(message) {
+  await defaultPortPromise;
+  defaultPort.postMessage(message);
 }
 
 export function unregister(type) {
@@ -52,7 +64,7 @@ export function registerSimple(type, callback) {
   listeners[type] = callback;
 
   return function sendSimpleMessage(cmd, args) {
-    globalThis.postMessage({ type, uid: null, cmd, args });
+    eventuallySendToDefault({ type, uid: null, cmd, args });
   };
 }
 
@@ -82,7 +94,7 @@ export function registerCallbackType(type) {
     return new Promise(resolve => {
       callbacks[uid] = resolve;
 
-      globalThis.postMessage({ type, uid: uid++, cmd, args });
+      eventuallySendToDefault({ type, uid: uid++, cmd, args });
     });
   };
   callbackSenders[type] = sender;

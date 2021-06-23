@@ -576,14 +576,13 @@ function MailDB({ universe, testOptions }) {
    * have been set by the time the promise is resolved.
    */
   this._dbPromise = new Promise((resolve, reject) => {
-    let openRequest = indexedDB.open("b2g-email", dbVersion);
+    let openRequest = indexedDB.open("companion-workshop", dbVersion);
     openRequest.onsuccess = () => {
       this._db = openRequest.result;
 
       resolve();
     };
     openRequest.onupgradeneeded = event => {
-      console.log("MailDB in onupgradeneeded");
       logic(this, "upgradeNeeded", {
         oldVersion: event.oldVersion,
         curVersion: dbVersion,

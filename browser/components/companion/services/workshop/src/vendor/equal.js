@@ -45,76 +45,71 @@
  *   equal(a, b) -> boolean
  *
  */
-define(function(require) {
 
-  /**
-   * Maximum comparison depth for argument equivalence in expectation checking.
-   *  This value gets bumped every time I throw something at it that fails that
-   *  still seems reasonable to me.
-   */
-  var COMPARE_DEPTH = 6;
+/**
+ * Maximum comparison depth for argument equivalence in expectation checking.
+ *  This value gets bumped every time I throw something at it that fails that
+ *  still seems reasonable to me.
+ */
+var COMPARE_DEPTH = 6;
 
-  function boundedCmpObjs(a, b, depthLeft) {
-    var aAttrCount = 0, bAttrCount = 0, key, nextDepth = depthLeft - 1;
+function boundedCmpObjs(a, b, depthLeft) {
+  var aAttrCount = 0, bAttrCount = 0, key, nextDepth = depthLeft - 1;
 
-    if ('toJSON' in a)
-      a = a.toJSON();
-    if ('toJSON' in b)
-      b = b.toJSON();
+  if ('toJSON' in a)
+    a = a.toJSON();
+  if ('toJSON' in b)
+    b = b.toJSON();
 
-    for (key in a) {
-      aAttrCount++;
-      if (!(key in b))
-        return false;
-
-      if (depthLeft) {
-        if (!equal(a[key], b[key], nextDepth))
-          return false;
-      }
-      else {
-        if (a[key] !== b[key])
-          return false;
-      }
-    }
-    // the theory is that if every key in a is in b and its value is equal, and
-    //  there are the same number of keys in b, then they must be equal.
-    for (key in b) {
-      bAttrCount++;
-    }
-    if (aAttrCount !== bAttrCount)
+  for (key in a) {
+    aAttrCount++;
+    if (!(key in b))
       return false;
+
+    if (depthLeft) {
+      if (!equal(a[key], b[key], nextDepth))
+        return false;
+    }
+    else {
+      if (a[key] !== b[key])
+        return false;
+    }
+  }
+  // the theory is that if every key in a is in b and its value is equal, and
+  //  there are the same number of keys in b, then they must be equal.
+  for (key in b) {
+    bAttrCount++;
+  }
+  if (aAttrCount !== bAttrCount)
+    return false;
+  return true;
+}
+
+/**
+ * @return[Boolean]{
+ *   True when equivalent, false when not equivalent.
+ * }
+ */
+export default function equal(a, b, depthLeft) {
+  if (depthLeft === undefined) {
+    depthLeft = COMPARE_DEPTH;
+  }
+  var ta = typeof(a), tb = typeof(b);
+  if (ta !== 'object' || (tb !== ta) || (a == null) || (b == null))
+    return a === b;
+  // fast-path for identical objects
+  if (a === b)
+    return true;
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b))
+      return false;
+    if (a.length !== b.length)
+      return false;
+    for (var iArr = 0; iArr < a.length; iArr++) {
+      if (!equal(a[iArr], b[iArr], depthLeft - 1))
+        return false;
+    }
     return true;
   }
-
-  /**
-   * @return[Boolean]{
-   *   True when equivalent, false when not equivalent.
-   * }
-   */
-  function equal(a, b, depthLeft) {
-    if (depthLeft === undefined) {
-      depthLeft = COMPARE_DEPTH;
-    }
-    var ta = typeof(a), tb = typeof(b);
-    if (ta !== 'object' || (tb !== ta) || (a == null) || (b == null))
-      return a === b;
-    // fast-path for identical objects
-    if (a === b)
-      return true;
-    if (Array.isArray(a)) {
-      if (!Array.isArray(b))
-        return false;
-      if (a.length !== b.length)
-        return false;
-      for (var iArr = 0; iArr < a.length; iArr++) {
-        if (!equal(a[iArr], b[iArr], depthLeft - 1))
-          return false;
-      }
-      return true;
-    }
-    return boundedCmpObjs(a, b, depthLeft);
-  }
-
-  return equal;
-
-}); // end define
+  return boundedCmpObjs(a, b, depthLeft);
+}

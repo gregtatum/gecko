@@ -1,0 +1,17 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+browser.jar:
+    content/browser/about-workshop-internals/about-workshop-internals.css
+    content/browser/about-workshop-internals/about-workshop-internals.html
+    content/browser/about-workshop-internals/about-workshop-internals.js
+    content/browser/about-workshop-internals/elements/account_list_item.js (elements/account_list_item.js)
+    content/browser/about-workshop-internals/elements/folder_list_item.js (elements/folder_list_item.js)
+    content/browser/about-workshop-internals/elements/list_view.js (elements/list_view.js)
+    content/browser/about-workshop-internals/elements/message_list_item.js (elements/message_list_item.js)
+    content/browser/about-workshop-internals/pages/account_folder_list.js (pages/account_folder_list.js)
+    content/browser/about-workshop-internals/pages/account_folder_message_contents.js (pages/account_folder_message_contents.js)
+    content/browser/about-workshop-internals/pages/home.js (pages/home.js)
+    content/browser/about-workshop-internals/page.js
+    content/browser/about-workshop-internals/router.js

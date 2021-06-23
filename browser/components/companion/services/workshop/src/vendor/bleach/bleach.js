@@ -1,12 +1,5 @@
-if (typeof exports === 'object' && typeof define !== 'function') {
-    define = function (factory) {
-        factory(require, exports, module);
-    };
-}
-
-define(function (require, exports, module) {
-var tokenizer = require('./bleach/css-parser/tokenizer');
-var parser = require('./bleach/css-parser/parser');
+import tokenizer from './bleach/css-parser/tokenizer';
+import parser from './bleach/css-parser/parser';
 
 var ALLOWED_TAGS = [
     'a',
@@ -56,7 +49,7 @@ var DEFAULTS = {
 /**
  * Clean a string.
  */
-exports.clean = function (html, opts) {
+export function clean(html, opts) {
   if (!html) return '';
 
   // This is poor's man doctype/meta cleanup. I wish DOMParser works in a
@@ -69,13 +62,13 @@ exports.clean = function (html, opts) {
   // now
   html = html.replace(/<!DOCTYPE\s+[^>]*>/gi, '');
 
-  return exports.cleanNode(html, opts);
+  return cleanNode(html, opts);
 };
 
 
 /**
  */
-exports.cleanNode = function(html, opts) {
+export function cleanNode(html, opts) {
 try {
   function debug(str) {
     console.log("Bleach: " + str + "\n");
@@ -978,7 +971,7 @@ function escapeHTMLTextKeepingExistingEntities(text) {
   });
 }
 
-exports.unescapeHTMLEntities = function unescapeHTMLEntities(text) {
+export function unescapeHTMLEntities(text) {
   return text.replace(entityRegExp, function (match, ref) {
     var converted = '';
     if (ref.charAt(0) === '#') {
@@ -1007,7 +1000,7 @@ exports.unescapeHTMLEntities = function unescapeHTMLEntities(text) {
  * Renders text content safe for injecting into HTML by
  * replacing all characters which could be used to create HTML elements.
  */
-exports.escapePlaintextIntoElementContext = function (text) {
+export function escapePlaintextIntoElementContext(text) {
   return text.replace(/[&<>"'\/]/g, function(c) {
     var code = c.charCodeAt(0);
     return '&' + (entities[code] || '#' + code) + ';';
@@ -1019,12 +1012,9 @@ exports.escapePlaintextIntoElementContext = function (text) {
  * alphanumeric characters, with the &#xHH; format to prevent
  * switching out of the attribute.
  */
-exports.escapePlaintextIntoAttribute = function (text) {
+export function escapePlaintextIntoAttribute(text) {
   return text.replace(/[\u0000-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u0100]/g, function(c) {
     var code = c.charCodeAt(0);
     return '&' + (entities[code] || '#' + code) + ';';
   });
 }
-
-
-}); // end define

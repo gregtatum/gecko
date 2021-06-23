@@ -39,4 +39,6 @@ browser.jar:
     content/browser/companion/meet.png (content/meet.png)
     content/browser/companion/teams.png (content/teams.png)
     content/browser/companion/webex.png (content/webex.png)
+    content/browser/companion/workshop-api-built.js (services/workshop/build/workshop-api-built.js)
+    content/browser/companion/workshop-worker-built.js (services/workshop/build/workshop-worker-built.js)
     content/browser/companion/zoom.png (content/zoom.png)

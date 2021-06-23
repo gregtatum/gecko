@@ -15,5 +15,7 @@
  */
 
 export default function makeWorker() {
-  return new SharedWorker("workshop-worker-built.js");
+  // The worker path is a build define.
+  // eslint-disable-next-line no-undef
+  return new SharedWorker(WORKER_PATH);
 }
