@@ -25,7 +25,7 @@ export default class AccountFolderListPage extends Page {
   }
 
   cleanup(pageElem) {
-    pageElem.replaceChildren([]);
+    pageElem.replaceChildren();
     // Note that we don't need to / shouldn't release the account's folder list
     // because it's supposed to always be there, but for other list views which
     // we ourselves created, we would want to call `release()` at the end.

@@ -25,3 +25,106 @@ awi-message-list-item {
 .account-name {
   margin: 0;
 }
+
+/* pretty data structure tables */
+.pd {
+  display: block;
+  border: 1px solid gray;
+  margin: 2px;
+  margin-left: 0.5em;
+  padding: 2px;
+}
+.pda-container {
+  display: inline-block;
+  border: 1px solid #888;
+  background-color: #eee;
+  margin: 0 4px;
+}
+.pda-focus {
+  margin: 0 4px;
+  font-style: italic;
+}
+.pda-nightmare-data {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  border-bottom: 1px solid white;
+}
+.pda-data-key-depth-0 {
+  background-color: #eee;
+}
+.pda-data-key-depth-1 {
+  background-color: #ddd;
+}
+.pda-data-key-depth-2 {
+  background-color: #ccc;
+}
+.pda-data-key-depth-3 {
+  background-color: #bbb;
+}
+.pda-data-key-depth-4 {
+  background-color: #aaa;
+}
+.pda-data-key-depth-5 {
+  background-color: #999;
+}
+.pda-data-key-depth-6,
+.pda-data-key-depth-7,
+.pda-data-key-depth-8 {
+  background-color: #888;
+}
+.pda-data-value {
+  background-color: #fff;
+}
+.pda-kv-pair {
+  margin: 0 4px;
+}
+
+
+.pd-tag {
+  font-size: 80%;
+  border: 1px solid #ccc;
+  margin-right: 2px;
+  vertical-align: top;
+  font-family: sans-serif;
+}
+
+.pd-str {
+  border: 1px dashed gray;
+}
+
+.pd0 {
+  background-color: #eff;
+}
+.pd1 {
+  background-color: #fef;
+}
+.pd2 {
+  background-color: #ffe;
+}
+.pd3 {
+  background-color: #eef;
+}
+.pd4 {
+  background-color: #efe;
+}
+.pd5 {
+  background-color: #fee;
+}
+.pd6 {
+  background-color: #dff;
+}
+.pd7 {
+  background-color: #fdf;
+}
+.pd8 {
+  background-color: #ffd;
+}
+.pd9 {
+  background-color: #ddf;
+}
+.pd10 {
+  background-color: #dfd;
+}
+.pd11 {
+  background-color: #fdd;
+}

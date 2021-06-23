@@ -66,7 +66,7 @@ export default class HomePage extends Page {
   cleanup() {
     this.icsButton.removeEventListener("click", this.icsAddHandler);
 
-    this.accountListContainer.replaceChildren([]);
+    this.accountListContainer.replaceChildren();
     // Note that we don't need to / shouldn't release `workshopAPI.accounts`
     // because it's supposed to always be there, but for other list views which
     // we ourselves created, we would want to call `release()` at the end.

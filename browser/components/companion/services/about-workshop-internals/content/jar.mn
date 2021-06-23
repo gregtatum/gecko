@@ -10,6 +10,7 @@ browser.jar:
     content/browser/about-workshop-internals/elements/folder_list_item.js (elements/folder_list_item.js)
     content/browser/about-workshop-internals/elements/list_view.js (elements/list_view.js)
     content/browser/about-workshop-internals/elements/message_list_item.js (elements/message_list_item.js)
+    content/browser/about-workshop-internals/elements/pretty_table.js (elements/pretty_table.js)
     content/browser/about-workshop-internals/pages/account_folder_list.js (pages/account_folder_list.js)
     content/browser/about-workshop-internals/pages/account_folder_message_contents.js (pages/account_folder_message_contents.js)
     content/browser/about-workshop-internals/pages/home.js (pages/home.js)

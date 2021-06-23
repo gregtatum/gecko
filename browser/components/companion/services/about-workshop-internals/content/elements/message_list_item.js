@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { PrettyTable } from "./pretty_table.js";
+
 export class MessageListItem extends HTMLElement {
   constructor(item) {
     super();
@@ -17,6 +19,10 @@ export class MessageListItem extends HTMLElement {
     const message = this.item;
 
     this.querySelector(".message-subject").textContent = message.subject;
+
+    const wireContainer = this.querySelector(".message-wire-rep");
+    const wireTable = new PrettyTable(message._wireRep);
+    wireContainer.replaceChildren(wireTable);
 
     // ## Aside: Calendar Events as Messages
     //
@@ -38,16 +44,25 @@ export class MessageListItem extends HTMLElement {
     // React setup did, for example).
     const bodyContainer = this.querySelector(".message-body-parts");
 
+    console.log("message bodyReps", message.bodyReps);
     const bodyNodes = [];
     for (const bodyRep of message.bodyReps) {
-      const elem = document.createElement("div");
+      const card = document.createElement("div");
+      card.classList.add("card");
       const blobContents = await bodyRep.contentBlob.text();
-      elem.textContent = blobContents;
 
-      bodyNodes.append(elem);
+      if (bodyRep.type === "html") {
+        card.textContent = blobContents;
+      } else {
+        // This is "text" or "attr"
+        const table = new PrettyTable(JSON.parse(blobContents));
+        card.appendChild(table);
+      }
+
+      bodyNodes.push(card);
     }
 
-    bodyContainer.replaceChildren(bodyNodes);
+    bodyContainer.replaceChildren(...bodyNodes);
   }
 
   onShowMessages() {

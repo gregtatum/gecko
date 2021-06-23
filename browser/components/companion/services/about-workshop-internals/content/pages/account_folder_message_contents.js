@@ -29,7 +29,7 @@ export default class AccountFolderMessageContentsPage extends Page {
   }
 
   cleanup(pageElem) {
-    pageElem.replaceChildren([]);
+    pageElem.replaceChildren();
     this.listView.release();
     this.listView = null;
   }

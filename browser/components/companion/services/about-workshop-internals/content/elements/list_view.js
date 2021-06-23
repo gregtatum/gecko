@@ -63,6 +63,11 @@ export class ListView extends HTMLElement {
     // when we're at the end of the list.
     let curDomElem = this.firstElementChild;
     for (const item of this.listView.items) {
+      // XXX We are seeing some null objects?  Are we intentionally creating
+      // placeholders or is this an upstream failure?
+      if (!item) {
+        continue;
+      }
       unseen.delete(item);
       let info = this.itemToInfo.get(item);
       if (!info) {
@@ -84,12 +89,13 @@ export class ListView extends HTMLElement {
 
         // Re-render the item if its state has changed.
         if (info.serial < item.serial) {
-          item.elem.update();
+          info.elem.update();
+          info.serial = item.serial;
         }
         // If the element isn't already our current element, then move it here.
         if (curDomElem !== info.elem) {
-          this.insertBefore(item.elem, curDomElem);
-          curDomElem = item.elem;
+          this.insertBefore(info.elem, curDomElem);
+          curDomElem = info.elem;
         }
       }
 
