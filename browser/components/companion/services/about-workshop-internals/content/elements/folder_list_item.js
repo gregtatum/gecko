@@ -7,9 +7,8 @@ export class FolderListItem extends HTMLElement {
     super();
     this.item = item;
 
-    const frag = document
-      .getElementById("template-folder-list-item")
-      .content.cloneNode(true);
+    const template = document.getElementById("template-folder-list-item");
+    const frag = template.content.cloneNode(true);
     frag
       .querySelector(".folder-show-messages")
       .addEventListener("click", this.onShowMessages.bind(this));
@@ -17,6 +16,7 @@ export class FolderListItem extends HTMLElement {
       .querySelector(".folder-show-conversations")
       .addEventListener("click", this.onShowConversations.bind(this));
     this.appendChild(frag);
+    this.setAttribute("class", template.getAttribute("class"));
   }
 
   update() {

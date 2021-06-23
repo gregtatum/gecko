@@ -9,6 +9,7 @@ import { Page } from "../page.js";
 export default class AccountFolderMessageContentsPage extends Page {
   constructor(opts, { folderId }) {
     super(opts, {
+      title: "Messages",
       pageId: "page-account-folder-message-contents",
     });
 

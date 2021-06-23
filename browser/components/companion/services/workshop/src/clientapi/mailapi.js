@@ -120,7 +120,7 @@ export function MailAPI() {
    *   This should be treated as read-only.
    * }
    */
-  this.config = {};
+  this.config = null;
 
   /**
    * Has the MailUniverse come up and reported in to us and provided us with the
@@ -1661,6 +1661,7 @@ MailAPI.prototype = evt.mix(
 
     _recv_config(msg) {
       this.config = msg.config;
+      logic.realtimeLogEverything = this.config.debugLogging === "realtime";
     },
 
     //////////////////////////////////////////////////////////////////////////////
@@ -1701,23 +1702,6 @@ MailAPI.prototype = evt.mix(
       var req = this._pendingRequests[msg.handle];
       delete this._pendingRequests[msg.handle];
       req.callback();
-    },
-
-    /**
-     * Legacy means of setting the debug logging level.  Probably wants to go away
-     * in favor of just using modifyConfig directly.  Other debugging-y stuff
-     * probably will operate similarly or get its own explicit API calls.
-     */
-    debugSupport(command, argument) {
-      if (command === "setLogging") {
-        this.config.debugLogging = argument;
-        return this.modifyConfig({
-          debugLogging: argument,
-        });
-      } else if (command === "dumpLog") {
-        throw new Error("XXX circular logging currently not implemented");
-      }
-      throw new Error(`unsupported debug command: ${command}`);
     },
 
     /**

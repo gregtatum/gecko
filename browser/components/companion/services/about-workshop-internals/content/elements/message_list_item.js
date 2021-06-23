@@ -7,10 +7,10 @@ export class MessageListItem extends HTMLElement {
     super();
     this.item = item;
 
-    const frag = document
-      .getElementById("template-message-list-item")
-      .content.cloneNode(true);
+    const template = document.getElementById("template-message-list-item");
+    const frag = template.content.cloneNode(true);
     this.appendChild(frag);
+    this.setAttribute("class", template.getAttribute("class"));
   }
 
   async update() {

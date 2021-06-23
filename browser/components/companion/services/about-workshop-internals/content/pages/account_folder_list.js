@@ -10,6 +10,7 @@ import { FolderListItem } from "../elements/folder_list_item.js";
 export default class AccountFolderListPage extends Page {
   constructor(opts, { accountId }) {
     super(opts, {
+      title: "Folders",
       pageId: "page-account-folder-list",
     });
     this.accountId = accountId;

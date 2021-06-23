@@ -13,5 +13,6 @@ browser.jar:
     content/browser/about-workshop-internals/pages/account_folder_list.js (pages/account_folder_list.js)
     content/browser/about-workshop-internals/pages/account_folder_message_contents.js (pages/account_folder_message_contents.js)
     content/browser/about-workshop-internals/pages/home.js (pages/home.js)
+    content/browser/about-workshop-internals/pages/settings.js (pages/settings.js)
     content/browser/about-workshop-internals/page.js
     content/browser/about-workshop-internals/router.js

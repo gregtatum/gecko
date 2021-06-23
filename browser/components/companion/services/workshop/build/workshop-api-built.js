@@ -2880,7 +2880,7 @@ function MailAPI() {
   this._storedSends = [];
   this._processingMessage = null;
   this._deferredMessages = [];
-  this.config = {};
+  this.config = null;
   this.configLoaded = false;
   this.accountsLoaded = false;
   contact_cache_default.init();
@@ -3559,6 +3559,7 @@ MailAPI.prototype = import_evt12.default.mix({
   },
   _recv_config(msg) {
     this.config = msg.config;
+    logic.realtimeLogEverything = this.config.debugLogging === "realtime";
   },
   ping(callback) {
     var handle = this._nextHandle++;
@@ -3577,17 +3578,6 @@ MailAPI.prototype = import_evt12.default.mix({
     var req = this._pendingRequests[msg.handle];
     delete this._pendingRequests[msg.handle];
     req.callback();
-  },
-  debugSupport(command, argument) {
-    if (command === "setLogging") {
-      this.config.debugLogging = argument;
-      return this.modifyConfig({
-        debugLogging: argument
-      });
-    } else if (command === "dumpLog") {
-      throw new Error("XXX circular logging currently not implemented");
-    }
-    throw new Error(`unsupported debug command: ${command}`);
   },
   clearNewTrackingForAccount({ account, accountId, silent }) {
     if (account && !accountId) {

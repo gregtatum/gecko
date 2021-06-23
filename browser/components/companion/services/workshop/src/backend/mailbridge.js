@@ -252,6 +252,16 @@ MailBridge.prototype = {
     });
   },
 
+  _cmd_modifyConfig(msg) {
+    this.universe.modifyConfig(msg.mods, "bridge").then(() => {
+      this.__sendMessage({
+        type: "promisedResult",
+        handle: msg.handle,
+        data: null,
+      });
+    });
+  },
+
   _cmd_modifyAccount(msg) {
     this.universe.modifyAccount(msg.accountId, msg.mods, "bridge").then(() => {
       this.__sendMessage({

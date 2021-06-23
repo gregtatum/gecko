@@ -7,6 +7,7 @@ import workshopAPI from "chrome://browser/content/companion/workshop-api-built.j
 import HomePage from "./pages/home.js";
 import AccountFolderListPage from "./pages/account_folder_list.js";
 import AccountFolderMessageContentsPage from "./pages/account_folder_message_contents.js";
+import SettingsPage from "./pages/settings.js";
 
 import { HackyHashRouter } from "./router.js";
 
@@ -28,6 +29,9 @@ window.ROUTER = new HackyHashRouter({
             valueParser: parseId,
           },
         },
+      },
+      settings: {
+        pageConstructor: SettingsPage,
       },
     },
   },

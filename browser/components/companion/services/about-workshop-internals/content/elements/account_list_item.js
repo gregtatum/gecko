@@ -7,9 +7,8 @@ export class AccountListItem extends HTMLElement {
     super();
     this.item = item;
 
-    const frag = document
-      .getElementById("template-account-list-item")
-      .content.cloneNode(true);
+    const template = document.getElementById("template-account-list-item");
+    const frag = template.content.cloneNode(true);
     frag
       .querySelector(".account-show-folders")
       .addEventListener("click", this.onShowFolders.bind(this));
@@ -23,6 +22,7 @@ export class AccountListItem extends HTMLElement {
       .querySelector(".account-delete")
       .addEventListener("click", this.onDelete.bind(this));
     this.appendChild(frag);
+    this.setAttribute("class", template.getAttribute("class"));
   }
 
   update() {

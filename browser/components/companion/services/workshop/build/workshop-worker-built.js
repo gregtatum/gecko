@@ -13217,6 +13217,15 @@ var WorkshopBackend = (() => {
         handle: msg.handle
       });
     },
+    _cmd_modifyConfig(msg) {
+      this.universe.modifyConfig(msg.mods, "bridge").then(() => {
+        this.__sendMessage({
+          type: "promisedResult",
+          handle: msg.handle,
+          data: null
+        });
+      });
+    },
     _cmd_modifyAccount(msg) {
       this.universe.modifyAccount(msg.accountId, msg.mods, "bridge").then(() => {
         this.__sendMessage({
@@ -19317,6 +19326,35 @@ var WorkshopBackend = (() => {
     }
   ]);
 
+  // src/backend/tasks/config_modify.js
+  init_logic();
+  init_task_definer();
+  var config_modify_default = task_definer_default.defineSimpleTask([
+    {
+      name: "config_modify",
+      async plan(ctx, rawTask) {
+        const globalClobbers = new Map();
+        for (let key in rawTask.mods) {
+          const val = rawTask.mods[key];
+          switch (key) {
+            case "debugLogging":
+              globalClobbers.set(["debugLogging"], val);
+              logic.realtimeLogEverything = val === "realtime";
+              break;
+            default:
+              logic(ctx, "badModifyConfigKey", { key });
+              break;
+          }
+        }
+        await ctx.finishTask({
+          atomicClobbers: {
+            config: globalClobbers
+          }
+        });
+      }
+    }
+  ]);
+
   // src/backend/tasks/draft_create.js
   init_task_definer();
   init_id_conversions();
@@ -19741,6 +19779,7 @@ var WorkshopBackend = (() => {
 
   // src/backend/global_tasks.js
   var global_tasks_default = [
+    config_modify_default,
     account_autoconfig_default,
     account_create_default,
     account_delete_default,
@@ -19818,24 +19857,8 @@ var WorkshopBackend = (() => {
   MailUniverse.prototype = {
     _initLogging(config) {
       logic.bc = new BroadcastChannel("logic");
-      config = null;
-      if (!config) {
-        return;
-      }
-      if (config.debugLogging) {
-        if (config.debugLogging === "realtime-dangerous" || config.debugLogging === "dangerous") {
-          console.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-          console.warn("DANGEROUS USER-DATA ENTRAINING LOGGING ENABLED !!!");
-          console.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-          console.warn("This means contents of e-mails and passwords if you");
-          console.warn("set up a new account.  (The IMAP protocol sanitizes");
-          console.warn("passwords, but the bridge logger may not.)");
-          console.warn("");
-          console.warn("If you forget how to turn us off, see:");
-          console.warn("https://wiki.mozilla.org/Gaia/Email/SecretDebugMode");
-          console.warn("...................................................");
-          logic.realtimeLogEverything = true;
-        }
+      if (config.debugLogging === "realtime") {
+        logic.realtimeLogEverything = true;
       }
     },
     _generateMigrationTasks({ accountDefs }) {
@@ -20136,7 +20159,7 @@ var WorkshopBackend = (() => {
       }
       return null;
     },
-    modifyConfig(accountId, mods, why) {
+    modifyConfig(mods, why) {
       return this.taskManager.scheduleTaskAndWaitForPlannedResult({
         type: "config_modify",
         mods

@@ -89,6 +89,18 @@ export class HackyHashRouter {
     );
     const nextPageElem = document.getElementById(this.curPage.pageId);
     nextPageElem.classList.add("selected");
+    // Set the title which the page may update dynamically via `pageHasNewTitle`
+    // in render (or after, if async).
+    document.title = this.curPage.title;
     this.curPage.render(nextPageElem);
+  }
+
+  pageHasNewTitle(page, title) {
+    // This could be happening async and be moot.
+    if (page === this.curPage) {
+      // For now this is just for the document.title, but in the short term this
+      // could be used for a built-in bread-crumbs style setup.
+      document.title = title;
+    }
   }
 }

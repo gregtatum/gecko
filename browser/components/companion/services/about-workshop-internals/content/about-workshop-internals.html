@@ -9,11 +9,12 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Security-Policy" content="default-src chrome:; object-src 'none'">
     <title>Companion Services Workshop Internals</title>
+    <link rel="stylesheet" href="chrome://global/skin/in-content/common.css">
     <link rel="stylesheet" href="chrome://browser/content/about-workshop-internals/about-workshop-internals.css">
     <script type="module" src="chrome://browser/content/about-workshop-internals/about-workshop-internals.js"></script>
   </head>
-  <body>
-    <template id="template-account-list-item">
+  <body class="main-content">
+    <template id="template-account-list-item" class="card">
       <div class="account-header-row">
         <h3 class="account-name"></h3>
       </div>
@@ -27,7 +28,7 @@
         <button class="account-delete" type="button">Delete</button>
       </div>
     </template>
-    <template id="template-folder-list-item">
+    <template id="template-folder-list-item" class="card">
       <div class="folder-header-row">
         <h4 class="folder-name"></h4>
       </div>
@@ -39,7 +40,7 @@
         <button class="folder-show-conversations" type="button">Show Conversations</button>
       </div>
     </template>
-    <template id="template-message-list-item">
+    <template id="template-message-list-item" class="card">
       <div class="message-header-row">
         <h4 class="message-subject"></h4>
       </div>
@@ -48,16 +49,33 @@
 
     <div id="pages">
       <div id="page-home" class="page">
-        <div id="home-account-list-container"></div>
-        <h3>Add iCalendar via ICS URL</h3>
-        <div id="home-add-ics-error"></div>
-        <form>
-          <label>URL: </label>
-          <input id="home-add-ics-input" type="text"
-              placeholder="https://example.org/example.ics"
-              />
+        <section class="card">
+          <h2>Accounts</h2>
+          <div id="home-account-list-container"></div>
           <hr>
-          <button id="home-add-ics-button" type="button">Add</button>
+          <h4>Add Accounts</h4>
+          <section class="card">
+            <h5>Add iCalendar via ICS URL</h5>
+            <div id="home-add-ics-error"></div>
+            <form>
+              <label>URL: </label>
+              <input id="home-add-ics-input" type="text"
+                  placeholder="https://example.org/example.ics"
+                  />
+              <hr>
+              <button id="home-add-ics-button" type="button">Add</button>
+            </form>
+          </section>
+        </section>
+        <section class="card">
+          <button id="home-show-settings" type="button">Settings</button>
+        </section>
+      </div>
+      <div id="page-settings" class="page">
+        <form>
+          <label>Realtime Logging to stdout: </label>
+          <input id="settings-realtime-logging-enable" type="checkbox"
+              />
         </form>
       </div>
       <div id="page-account-folder-list" class="page">

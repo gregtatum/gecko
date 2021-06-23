@@ -178,34 +178,15 @@ export default function MailUniverse({ online, testOptions, appExtensions }) {
 }
 MailUniverse.prototype = {
   /**
-   * Initialize and configure logging.
+   * Initialize and configure logging.  Changes to these settings at runtime are
+   * handled by the `config_modify` task currently, but it could make sense to
+   * unify the logic if it becomes more complicated.
    */
   _initLogging(config) {
     logic.bc = new BroadcastChannel("logic");
 
-    // XXX hack to skip the next logic without the linter.
-    config = null;
-
-    if (!config) {
-      return;
-    }
-    if (config.debugLogging) {
-      if (
-        config.debugLogging === "realtime-dangerous" ||
-        config.debugLogging === "dangerous"
-      ) {
-        console.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.warn("DANGEROUS USER-DATA ENTRAINING LOGGING ENABLED !!!");
-        console.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.warn("This means contents of e-mails and passwords if you");
-        console.warn("set up a new account.  (The IMAP protocol sanitizes");
-        console.warn("passwords, but the bridge logger may not.)");
-        console.warn("");
-        console.warn("If you forget how to turn us off, see:");
-        console.warn("https://wiki.mozilla.org/Gaia/Email/SecretDebugMode");
-        console.warn("...................................................");
-        logic.realtimeLogEverything = true;
-      }
+    if (config.debugLogging === "realtime") {
+      logic.realtimeLogEverything = true;
     }
   },
 
@@ -730,7 +711,7 @@ MailUniverse.prototype = {
     return null;
   },
 
-  modifyConfig(accountId, mods, why) {
+  modifyConfig(mods, why) {
     return this.taskManager.scheduleTaskAndWaitForPlannedResult(
       {
         type: "config_modify",

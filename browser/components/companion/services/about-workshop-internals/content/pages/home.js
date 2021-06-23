@@ -10,11 +10,13 @@ import { AccountListItem } from "../elements/account_list_item.js";
 export default class HomePage extends Page {
   constructor(opts) {
     super(opts, {
+      title: "Workshop Internals Home",
       pageId: "page-home",
     });
   }
 
   render(pageElem) {
+    // ## Add ICS Account
     this.icsErrorArea = pageElem.querySelector("#home-add-ics-error");
     this.icsInput = pageElem.querySelector("#home-add-ics-input");
     this.icsButton = pageElem.querySelector("#home-add-ics-button");
@@ -43,6 +45,7 @@ export default class HomePage extends Page {
     };
     this.icsButton.addEventListener("click", this.icsAddHandler);
 
+    // ## List Accounts
     this.accountListContainer = pageElem.querySelector(
       "#home-account-list-container"
     );
@@ -51,6 +54,13 @@ export default class HomePage extends Page {
       AccountListItem
     );
     this.accountListContainer.appendChild(this.accountListElem);
+
+    // ## Random Navigation Buttons
+    this.settingsButton = pageElem.querySelector("#home-show-settings");
+    this.settingsHandler = () => {
+      this.router.navigateTo(["settings"]);
+    };
+    this.settingsButton.addEventListener("click", this.settingsHandler);
   }
 
   cleanup() {
@@ -60,5 +70,7 @@ export default class HomePage extends Page {
     // Note that we don't need to / shouldn't release `workshopAPI.accounts`
     // because it's supposed to always be there, but for other list views which
     // we ourselves created, we would want to call `release()` at the end.
+
+    this.settingsButton.removeEventListener("click", this.settingsHandler);
   }
 }

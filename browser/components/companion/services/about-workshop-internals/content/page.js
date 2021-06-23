@@ -6,8 +6,9 @@
  * Common page stuff.
  */
 export class Page {
-  constructor({ workshopAPI, router }, { pageId }) {
+  constructor({ workshopAPI, router }, { title, pageId }) {
     this.router = router;
+    this.title = title;
     this.pageId = pageId;
 
     // In the future this might allow some level of currying/tracking of
@@ -15,6 +16,11 @@ export class Page {
     // have the global available without creating a bunch of extra imports of
     // a really ugly URL.
     this.workshopAPI = workshopAPI;
+  }
+
+  setTitle(title) {
+    this.title = title;
+    this.router.pageHasNewTitle(this, title);
   }
 
   render(pageElem) {
