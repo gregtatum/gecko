@@ -454,8 +454,8 @@ class CompanionParent extends JSWindowActorParent {
           uri: childNode.uri,
           uriHost: newURI.host,
           uriSpec: newURI.spec,
-          icon: await this.getFavicon(childNode.uri, 16),
         };
+        await this.ensurePlacesDataCached(childNode.uri);
 
         history[i] = site;
       }

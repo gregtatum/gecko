@@ -2,11 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// These come from utilityOverlay.js
-/* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
-
-import { getUnreadCountAtom } from "./email.js";
-
 const { shortURL } = ChromeUtils.import(
   "resource://activity-stream/lib/ShortURL.jsm"
 );
@@ -89,7 +84,8 @@ export class TopSites extends HTMLElement {
         if (domains.has(site.uriHost)) {
           continue;
         }
-        if (!site.icon) {
+        let placesData = window.CompanionUtils.getPlacesData(site.uri);
+        if (!placesData) {
           continue;
         }
         domains.add(site.uriHost);
@@ -97,7 +93,7 @@ export class TopSites extends HTMLElement {
           new TopSite({
             url: site.uri,
             title: formatName(site.uriSpec),
-            icon: site.icon,
+            icon: placesData.icon,
           })
         );
       }
@@ -112,10 +108,28 @@ export class TopSites extends HTMLElement {
         url: "https://mail.google.com",
         title: "gmail",
         icon: "chrome://browser/content/companion/email.svg",
-        badge: await getUnreadCountAtom(),
+        badge: await this.getUnreadCountAtom(),
         id: "gmail",
       })
     );
+  }
+
+  async getUnreadCountAtom() {
+    if (window.CompanionUtils.isInAutomation) {
+      return 0;
+    }
+    let response = await fetch("https://mail.google.com/mail/u/0/feed/atom");
+
+    if (!response.ok) {
+      // If we don't have an atom feed, click will just login
+      return 0;
+    }
+
+    let results = await response.text();
+
+    let doc = new DOMParser().parseFromString(results, "text/xml");
+
+    return parseInt(doc.querySelector("fullcount").textContent);
   }
 
   connectedCallback() {
