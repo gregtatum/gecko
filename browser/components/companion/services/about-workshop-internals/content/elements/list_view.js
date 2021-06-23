@@ -31,6 +31,12 @@ export class ListView extends HTMLElement {
     if (this.listView.viewKind === "entire") {
       this.listView.on("complete", this, this.update);
     } else {
+      // Ask for a thousand of whatever there is.  The goal here is to act like
+      // we're dealing with an EntireListView because we're expecting a number
+      // of results that's less than a thousand.  In the event we're wrong,
+      // a thousand is still sufficiently overwhelming for humans without
+      // being completely overwhelming to the browser.
+      this.listView.seekToTop(10, 990);
       this.listView.on("seeked", this, this.update);
     }
 
