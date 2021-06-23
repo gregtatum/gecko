@@ -48,6 +48,8 @@ class CompanionChild extends JSWindowActorChild {
           getPlacesData(url) {
             return self._cachedPlacesData.get(url);
           },
+          services: [],
+          events: [],
           sendAsyncMessage(name, detail) {
             self.sendAsyncMessage(name, detail);
           },
@@ -97,6 +99,7 @@ class CompanionChild extends JSWindowActorChild {
           keyframes,
           newPlacesCacheEntries,
           currentURI,
+          servicesConnected,
         } = message.data;
 
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
@@ -105,8 +108,18 @@ class CompanionChild extends JSWindowActorChild {
           waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
         }
         waivedContent.CompanionUtils.history = history;
+        waivedContent.CompanionUtils.servicesConnected = servicesConnected;
         waivedContent.CompanionUtils.keyframes = keyframes;
         waivedContent.CompanionUtils.currentURI = currentURI;
+
+        this.updatePlacesCache(newPlacesCacheEntries);
+
+        break;
+      }
+      case "Companion:RegisterEvents": {
+        let { events, newPlacesCacheEntries } = message.data;
+        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+        waivedContent.CompanionUtils.events = events;
 
         this.updatePlacesCache(newPlacesCacheEntries);
         break;

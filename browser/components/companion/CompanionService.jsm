@@ -104,6 +104,7 @@ class BrowserWindowHandler {
         browser.setAttribute("id", "companion-browser");
         browser.setAttribute("disablehistory", "true");
         browser.setAttribute("autoscroll", "false");
+        browser.setAttribute("selectmenulist", "ContentSelectDropdown");
         browser.setAttribute("disablefullscreen", "true");
         browser.setAttribute("flex", "1");
         browser.setAttribute(

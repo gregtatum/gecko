@@ -22,7 +22,9 @@ const { _LastSession } = ChromeUtils.import(
 const { clearTimeout, setTimeout, requestIdleCallback } = ChromeUtils.import(
   "resource://gre/modules/Timer.jsm"
 );
-
+const { OnlineServices } = ChromeUtils.import(
+  "resource:///modules/OnlineServices.jsm"
+);
 const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
   Ci.nsINavHistoryService
 );
@@ -47,6 +49,7 @@ class CompanionParent extends JSWindowActorParent {
     this._browserIdsToTabs = new Map();
     this._cachedPlacesURLs = new Map();
     this._cachedPlacesDataToSend = [];
+    this._services = new Map();
 
     this._observer = this.observe.bind(this);
     this._handleMediaEvent = this.handleMediaEvent.bind(this);
@@ -462,6 +465,25 @@ class CompanionParent extends JSWindowActorParent {
     }
   }
 
+  async getEvents() {
+    let meetingResults = new Array(this._services.size);
+    let i = 0;
+    for (let service of this._services.values()) {
+      meetingResults[i] = service.getNextMeetings();
+      i++;
+    }
+    let eventResults = await Promise.allSettled(meetingResults);
+    let events = eventResults.flatMap(r => r.value || []);
+    let rejections = eventResults
+      .filter(r => r.status != "fulfilled")
+      .map(r => r.reason);
+    for (let rejection of rejections) {
+      console.error(rejection);
+    }
+
+    return events;
+  }
+
   async observe(subj, topic, data) {
     switch (topic) {
       case "browser-window-tracker-add-window": {
@@ -543,12 +565,32 @@ class CompanionParent extends JSWindowActorParent {
         let keyframes = await this.getKeyframeData();
         let newPlacesCacheEntries = this.consumeCachedPlacesDataToSend();
         let currentURI = this.getCurrentURI();
+        let services = OnlineServices.getServices();
+        services.forEach(service => {
+          this._services.set(service.id, service);
+        });
+        let servicesConnected = !!services.length;
+
         this.sendAsyncMessage("Companion:Setup", {
           tabs,
           history,
+          servicesConnected,
           keyframes,
           newPlacesCacheEntries,
           currentURI,
+        });
+
+        // To avoid a significant delay in initializing other parts of the UI,
+        // we register the events separately.
+        let events = await this.getEvents();
+        for (let event of events) {
+          for (let link of event.links) {
+            await this.ensurePlacesDataCached(link.url);
+          }
+        }
+        this.sendAsyncMessage("Companion:RegisterEvents", {
+          events,
+          newPlacesCacheEntries: this.consumeCachedPlacesDataToSend(),
         });
         break;
       }
@@ -644,6 +686,60 @@ class CompanionParent extends JSWindowActorParent {
           return;
         }
         Services.prefs.setIntPref(name, value);
+        break;
+      }
+      case "Companion:OpenCalendar": {
+        let { start, serviceId } = message.data;
+        this._services
+          .get(serviceId)
+          .openCalendar(
+            start.getFullYear(),
+            start.getMonth() + 1,
+            start.getDate()
+          );
+        break;
+      }
+      case "Companion:GetEvents": {
+        let events = await this.getEvents();
+        for (let event of events) {
+          for (let link of event.links) {
+            await this.ensurePlacesDataCached(link.url);
+          }
+        }
+        this.sendAsyncMessage("Companion:RegisterEvents", {
+          events,
+          newPlacesCacheEntries: this.consumeCachedPlacesDataToSend(),
+        });
+        break;
+      }
+      case "Companion:SignOut": {
+        let removeResults = new Array(this._services.size);
+        let i = 0;
+        for (let service of this._services.values()) {
+          removeResults[i] = OnlineServices.deleteService(service);
+          i++;
+        }
+        await Promise.allSettled(removeResults);
+        this._services.clear();
+        break;
+      }
+      case "Companion:SignIn": {
+        let { service } = message.data;
+        let newService = await OnlineServices.createService(service);
+        this._services.set(newService.id, newService);
+
+        let events = await this.getEvents();
+        for (let event of events) {
+          for (let link of event.links) {
+            await this.ensurePlacesDataCached(link.url);
+          }
+        }
+
+        this.sendAsyncMessage("Companion:SignedIn");
+        this.sendAsyncMessage("Companion:RegisterEvents", {
+          events,
+          newPlacesCacheEntries: this.consumeCachedPlacesDataToSend(),
+        });
         break;
       }
     }

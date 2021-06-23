@@ -2,11 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// These come from utilityOverlay.js
-/* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
-
 import { initCalendarServices, uninitCalendarServices } from "./calendar.js";
-//import { initEmailServices } from "./email.js";
 
 const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
@@ -17,8 +13,6 @@ async function signin(event) {
   document.getElementById("service-login").className = "connected";
   let services = OnlineServices.getServices();
   initCalendarServices(services);
-  //initEmailServices(services);
-  window.focus();
 }
 
 async function signout() {

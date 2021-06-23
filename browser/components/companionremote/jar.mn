@@ -5,6 +5,7 @@
 browser.jar:
 *   content/browser/companionremote/awesomebar.css (content/awesomebar.css)
 *   content/browser/companionremote/browser.css (content/browser.css)
+    content/browser/companionremote/calendar.js (content/calendar.js)
     content/browser/companionremote/companion.css (content/companion.css)
     content/browser/companionremote/companion.js (content/companion.js)
 *   content/browser/companionremote/companion.xhtml (content/companion.xhtml)
@@ -23,6 +24,7 @@ browser.jar:
     content/browser/companionremote/pocket.js (content/pocket.js)
     content/browser/companionremote/next.svg (content/next.svg)
     content/browser/companionremote/range.js (content/range.js)
+    content/browser/companionremote/services.js (content/services.js)
     content/browser/companionremote/topsites.js (content/topsites.js)
     content/browser/companionremote/dock.svg (content/dock.svg)
     content/browser/companionremote/undock.svg (content/undock.svg)

@@ -192,11 +192,13 @@ async function getLinkInfo(result) {
   }
   return links;
 }
+var nextServiceId = 0;
 
 class GoogleService {
   constructor(config) {
     this.name = "Google";
     this.app = config.type;
+    this.id = ++nextServiceId;
 
     let scopes = [
       "https://www.googleapis.com/auth/gmail.readonly",
@@ -577,6 +579,7 @@ class MicrosoftService {
   constructor(config) {
     this.name = "Microsoft";
     this.app = config.type;
+    this.id = ++nextServiceId;
 
     let scopes = ["https://graph.microsoft.com/Calendars.Read"];
 
@@ -724,6 +727,7 @@ const OnlineServices = {
     await service.connect();
 
     this.persist();
+    return service;
   },
 
   async deleteService(service) {

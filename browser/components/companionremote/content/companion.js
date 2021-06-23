@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { Services } from "./services.js";
 import { TopSites } from "./topsites.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
@@ -50,6 +51,7 @@ window.addEventListener(
       new KeyframeDbList("Current Session", "currentSession")
     );
     content.appendChild(new PocketList());
+    document.getElementById("service-login").appendChild(new Services());
   },
   { once: true }
 );
