@@ -11,6 +11,7 @@ browser.jar:
 *   content/browser/companionremote/companion.xhtml (content/companion.xhtml)
     content/browser/companionremote/email.svg (content/email.svg)
     content/browser/companionremote/event.svg (content/event.svg)
+    content/browser/companionremote/globalhistorydebugging.js (content/globalhistorydebugging.js)
     content/browser/companionremote/keyframe-list.css (content/keyframe-list.css)
     content/browser/companionremote/keyframes.js (content/keyframes.js)
     content/browser/companionremote/link.svg (content/link.svg)

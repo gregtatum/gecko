@@ -7,6 +7,7 @@ import { TopSites } from "./topsites.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
 import { KeyframeDbList } from "./keyframes.js";
+import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
 
 function toggleSettings() {
   let settings = document.getElementById("settings");
@@ -33,6 +34,7 @@ window.addEventListener(
     content.appendChild(
       new KeyframeDbList("Current Session", "currentSession")
     );
+    content.appendChild(new GlobalHistoryDebugging());
     content.appendChild(new PocketList());
     document.getElementById("service-login").appendChild(new Services());
   },

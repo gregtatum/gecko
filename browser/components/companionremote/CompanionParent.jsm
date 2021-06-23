@@ -54,6 +54,7 @@ class CompanionParent extends JSWindowActorParent {
     this._observer = this.observe.bind(this);
     this._handleMediaEvent = this.handleMediaEvent.bind(this);
     this._handleTabEvent = this.handleTabEvent.bind(this);
+    this._handleGlobalHistoryEvent = this.handleGlobalHistoryEvent.bind(this);
 
     this._cacheCleanupTimeout = null;
     this._cleanupCaches = this.cleanupCaches.bind(this);
@@ -76,12 +77,53 @@ class CompanionParent extends JSWindowActorParent {
     );
     Services.obs.addObserver(this._observer, "keyframe-update");
 
+    Services.prefs.addObserver(
+      "browser.companion.globalhistorydebugging",
+      this.setUpGlobalHistoryDebuggingObservers.bind(this)
+    );
+
     for (let win of BrowserWindowTracker.orderedWindows) {
       for (let tab of win.gBrowser.tabs) {
         this.registerTab(tab);
       }
 
       this.registerWindow(win);
+    }
+  }
+
+  actorCreated() {
+    this.setUpGlobalHistoryDebuggingObservers();
+  }
+
+  setUpGlobalHistoryDebuggingObservers() {
+    if (
+      Services.prefs.getBoolPref("browser.companion.globalhistorydebugging")
+    ) {
+      let hist = this.browsingContext.topChromeWindow.gGlobalHistory;
+      for (let event of [
+        "ViewChanged",
+        "ViewAdded",
+        "ViewRemoved",
+        "ViewUpdated",
+        "ViewMoved",
+      ]) {
+        hist.addEventListener(event, this._handleGlobalHistoryEvent);
+      }
+    } else {
+      this.removeGlobalHistoryDebuggingObservers();
+    }
+  }
+
+  removeGlobalHistoryDebuggingObservers() {
+    let hist = this.browsingContext.topChromeWindow.gGlobalHistory;
+    for (let event of [
+      "ViewChanged",
+      "ViewAdded",
+      "ViewRemoved",
+      "ViewUpdated",
+      "ViewMoved",
+    ]) {
+      hist.removeEventListener(event, this._handleGlobalHistoryEvent);
     }
   }
 
@@ -107,6 +149,7 @@ class CompanionParent extends JSWindowActorParent {
       "browser-window-tracker-tab-removed"
     );
     Services.obs.removeObserver(this._observer, "keyframe-update");
+    this.removeGlobalHistoryDebuggingObservers();
 
     for (let win of BrowserWindowTracker.orderedWindows) {
       for (let tab of win.gBrowser.tabs) {
@@ -526,6 +569,13 @@ class CompanionParent extends JSWindowActorParent {
     }
   }
 
+  handleGlobalHistoryEvent(event) {
+    let globalHistory = this.maybeGetGlobalHistory();
+    this.sendAsyncMessage("Companion:GlobalHistoryEvent", {
+      globalHistory,
+    });
+  }
+
   handleMediaEvent(event) {
     let tab = this._mediaControllerIdsToTabs.get(event.target.id);
     if (!tab) {
@@ -566,6 +616,28 @@ class CompanionParent extends JSWindowActorParent {
     return result;
   }
 
+  maybeGetGlobalHistory() {
+    if (
+      !Services.prefs.getBoolPref(
+        "browser.companion.globalhistorydebugging",
+        false
+      )
+    ) {
+      return null;
+    }
+
+    let {
+      views,
+      currentView,
+    } = this.browsingContext.topChromeWindow.gGlobalHistory;
+    return views.map((v, i) => ({
+      title: v.title,
+      state: v.state,
+      isCurrent: v === currentView,
+      index: i,
+    }));
+  }
+
   async receiveMessage(message) {
     switch (message.name) {
       case "Companion:Subscribe": {
@@ -581,7 +653,7 @@ class CompanionParent extends JSWindowActorParent {
           this._services.set(service.id, service);
         });
         let servicesConnected = !!services.length;
-
+        let globalHistory = this.maybeGetGlobalHistory();
         this.sendAsyncMessage("Companion:Setup", {
           tabs,
           history,
@@ -589,6 +661,7 @@ class CompanionParent extends JSWindowActorParent {
           keyframes,
           newPlacesCacheEntries,
           currentURI,
+          globalHistory,
         });
 
         // To avoid a significant delay in initializing other parts of the UI,
@@ -742,6 +815,12 @@ class CompanionParent extends JSWindowActorParent {
           events,
           newPlacesCacheEntries: this.consumeCachedPlacesDataToSend(),
         });
+        break;
+      }
+      case "Companion:SetGlobalHistoryViewIndex": {
+        let { index } = message.data;
+        let hist = this.browsingContext.topChromeWindow.gGlobalHistory;
+        hist.setView(hist.views[index]);
         break;
       }
     }

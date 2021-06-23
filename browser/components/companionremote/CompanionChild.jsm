@@ -107,6 +107,7 @@ class CompanionChild extends JSWindowActorChild {
           newPlacesCacheEntries,
           currentURI,
           servicesConnected,
+          globalHistory,
         } = message.data;
 
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
@@ -118,6 +119,7 @@ class CompanionChild extends JSWindowActorChild {
         waivedContent.CompanionUtils.servicesConnected = servicesConnected;
         waivedContent.CompanionUtils.keyframes = keyframes;
         waivedContent.CompanionUtils.currentURI = currentURI;
+        waivedContent.CompanionUtils.globalHistory = globalHistory;
 
         this.updatePlacesCache(newPlacesCacheEntries);
 
@@ -154,6 +156,12 @@ class CompanionChild extends JSWindowActorChild {
       case "Companion:TabAttrModified":
       case "Companion:TabPipToggleChanged": {
         this.updateTab(message.data.tab);
+        break;
+      }
+      case "Companion:GlobalHistoryEvent": {
+        let { globalHistory } = message.data;
+        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+        waivedContent.CompanionUtils.globalHistory = globalHistory;
         break;
       }
     }
