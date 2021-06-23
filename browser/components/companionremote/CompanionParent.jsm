@@ -555,6 +555,17 @@ class CompanionParent extends JSWindowActorParent {
     }
   }
 
+  validateCompanionPref(name) {
+    let result =
+      name.startsWith("companion") || name.startsWith("browser.companion");
+    if (!result) {
+      Cu.reportError(
+        "Prefs set through Compaion messages must be prefixed by 'companion'"
+      );
+    }
+    return result;
+  }
+
   async receiveMessage(message) {
     switch (message.name) {
       case "Companion:Subscribe": {
@@ -657,10 +668,7 @@ class CompanionParent extends JSWindowActorParent {
       }
       case "Companion:setCharPref": {
         let { name, value } = message.data;
-        if (!name.startsWith("companion")) {
-          Cu.reportError(
-            "Prefs set through Compaion messages must be prefixed by 'companion'"
-          );
+        if (!this.validateCompanionPref(name)) {
           return;
         }
         Services.prefs.setCharPref(name, value);
@@ -668,10 +676,7 @@ class CompanionParent extends JSWindowActorParent {
       }
       case "Companion:setBoolPref": {
         let { name, value } = message.data;
-        if (!name.startsWith("companion")) {
-          Cu.reportError(
-            "Prefs set through Compaion messages must be prefixed by 'companion'"
-          );
+        if (!this.validateCompanionPref(name)) {
           return;
         }
         Services.prefs.setBoolPref(name, value);
@@ -679,10 +684,7 @@ class CompanionParent extends JSWindowActorParent {
       }
       case "Companion:setIntPref": {
         let { name, value } = message.data;
-        if (!name.startsWith("companion")) {
-          Cu.reportError(
-            "Prefs set through Compaion messages must be prefixed by 'companion'"
-          );
+        if (!this.validateCompanionPref(name)) {
           return;
         }
         Services.prefs.setIntPref(name, value);

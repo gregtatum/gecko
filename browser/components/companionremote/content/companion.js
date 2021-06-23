@@ -21,24 +21,7 @@ window.addEventListener("Companion:ToggleSettings", toggleSettings);
 window.addEventListener(
   "load",
   () => {
-    if (window.top === window) {
-      if (!document.documentElement.hasAttribute("width")) {
-        const TARGET_WIDTH = 1280;
-        const TARGET_HEIGHT = 1040;
-        let width = Math.min(screen.availWidth * 0.9, TARGET_WIDTH);
-        let height = Math.min(screen.availHeight * 0.9, TARGET_HEIGHT);
-
-        document.documentElement.setAttribute("width", width);
-        document.documentElement.setAttribute("height", height);
-
-        if (width < TARGET_WIDTH && height < TARGET_HEIGHT) {
-          document.documentElement.setAttribute("sizemode", "maximized");
-        }
-      }
-    } else {
-      document.documentElement.setAttribute("docked", "true");
-    }
-
+    document.documentElement.setAttribute("docked", "true");
     document
       .getElementById("top-sites-placeholder")
       .appendChild(new TopSites());
@@ -55,5 +38,50 @@ window.addEventListener(
   },
   { once: true }
 );
+
+let OBSERVED_PREFS = new Map();
+window.addEventListener(
+  "Companion:Setup",
+  () => {
+    // Cheesy approximation of preferences for the demo settings. Add a checkbox with
+    // data-pref attribute and the state will get synced & toggled automatically.
+    // Components that care about it can listen to CompanionObservedPrefChanged to rerender.
+    let settings = document.getElementById("settings");
+    for (let prefCheck of settings.querySelectorAll("[data-pref]")) {
+      let prefName = prefCheck.getAttribute("data-pref");
+      let handler = (subject, topic, data) => {
+        prefCheck.checked = window.CompanionUtils.getBoolPref(prefName);
+        document.dispatchEvent(
+          new CustomEvent("CompanionObservedPrefChanged", { bubbles: true })
+        );
+      };
+      window.CompanionUtils.addPrefObserver(prefName, handler);
+      OBSERVED_PREFS.set(prefName, handler);
+      prefCheck.addEventListener("click", () => {
+        window.CompanionUtils.setBoolPref(prefName, prefCheck.checked);
+      });
+      prefCheck.checked = window.CompanionUtils.getBoolPref(prefName, false);
+    }
+
+    // Add the ability to show elements with class="debug" that help development
+    // behind the "companion.debugUI" pref.
+    let DEBUG_PREF = "browser.companion.debugUI";
+    let toggleDebug = () =>
+      document.body.classList.toggle(
+        "debugUI",
+        window.CompanionUtils.getBoolPref(DEBUG_PREF, false)
+      );
+
+    window.CompanionUtils.addPrefObserver(DEBUG_PREF, toggleDebug);
+    toggleDebug();
+  },
+  { once: true }
+);
+
+window.addEventListener("unload", () => {
+  for (let [prefName, cb] of OBSERVED_PREFS) {
+    window.CompanionUtils.removePrefObserver(prefName, cb);
+  }
+});
 
 document.dispatchEvent(new CustomEvent("CompanionInit", { bubbles: true }));

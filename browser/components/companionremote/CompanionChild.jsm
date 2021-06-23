@@ -35,6 +35,7 @@ class CompanionChild extends JSWindowActorChild {
         let self = this;
         let CompanionUtils = {
           _tabs: new Map(),
+          _observedPrefs: new Map(),
 
           isInAutomation: Cu.isInAutomation,
           tabs() {
@@ -70,6 +71,12 @@ class CompanionChild extends JSWindowActorChild {
           },
           setIntPref(name, value) {
             this.sendAsyncMessage("Companion:setIntPref", { name, value });
+          },
+          addPrefObserver(name, observer) {
+            Services.prefs.addObserver(name, observer);
+          },
+          removePrefObserver(name, observer) {
+            Services.prefs.removeObserver(name, observer);
           },
         };
 
