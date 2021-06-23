@@ -120,6 +120,20 @@
            context="toolbar-context-menu">
 
 #ifdef PROCLIENT_WINDOW
+  <html:template id="template-view" xmlns="http://www.w3.org/1999/xhtml">
+    <div class="view-el">
+      <div class="view-title">
+      </div>
+      <div class="view-domain">
+      </div>
+    </div>
+  </html:template>
+
+  <html:template id="template-active-view-manager" xmlns="http://www.w3.org/1999/xhtml">
+    <div id="active-view-manager">
+    </div>
+  </html:template>
+
     <hbox id="companion-titlebar">
       <vbox pack="start">
         <hbox>
@@ -152,13 +166,6 @@
                      onclick="checkForMiddleClick(this, event);"
                      tooltip="forward-button-tooltip"
                      context="backForwardMenu"/>
-      <vbox id="companion-view-manager" pack="center" context="companion-view-manager-contextmenu">
-        <label id="companion-page-title" crop="end"/>
-        <hbox>
-        <box id="companion-identity-box"/>
-        <label id="companion-page-domain"/>
-      </hbox>
-      </vbox>
       <toolbarbutton id="companion-reload-button" class="toolbarbutton-1"
                      data-l10n-id="toolbar-button-reload"
                      command="Browser:ReloadOrDuplicate"

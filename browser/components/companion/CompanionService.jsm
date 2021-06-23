@@ -32,11 +32,19 @@ class BrowserWindowHandler {
     this.window = window;
     this.selectedTab = window.gBrowser.selectedTab;
 
-    let lock = this.window.document.getElementById("identity-box");
-    let companionIdentityBox = this.window.document.getElementById(
-      "companion-identity-box"
+    let companionToolbar = this.window.document.getElementById(
+      "companion-toolbar"
     );
-    companionIdentityBox.appendChild(lock);
+    let activeViewManager = this.window.document.createElement(
+      "active-view-manager"
+    );
+    companionToolbar.appendChild(activeViewManager);
+
+    //    let lock = this.window.document.getElementById("identity-box");
+    //    let companionIdentityBox = this.window.document.getElementById(
+    //    "companion-identity-box"
+    //  );
+    //  companionIdentityBox.appendChild(lock);
 
     Services.prefs.addObserver(COMPANION_OPEN_PREF, this);
     Services.prefs.addObserver(COMPANION_DOCKED_PREF, this);
@@ -65,21 +73,6 @@ class BrowserWindowHandler {
         this.updateTab();
       });
     }
-
-    let title = this.selectedTab.getAttribute("label");
-    this.window.document.getElementById("companion-page-title").value = title;
-    this.window.document.getElementById(
-      "companion-page-title"
-    ).tooltipText = title;
-
-    let domain = "";
-
-    try {
-      domain = this.window.gBrowser.currentURI.host;
-    } catch (e) {
-      // about page.
-    }
-    this.window.document.getElementById("companion-page-domain").value = domain;
   }
 
   destroy() {

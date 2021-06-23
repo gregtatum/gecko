@@ -1,0 +1,43 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.view-el {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: gray;
+  display: inline-block;
+  padding: 5px;
+}
+
+.active {
+  animation-name: activate;
+  animation-duration: 0.5s;  
+  animation-fill-mode: forwards;
+}
+
+@keyframes activate {
+  from {width: 40px; border-radius: 50%;}
+  to {width: 200px; border-radius: 10px;}
+}
+
+.view-domain {
+  font-size: 1rem;
+}
+
+.view-title {
+  font-size: 1.25rem;
+}
+
+.view-domain,
+.view-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  visibility: hidden;
+}
+
+.view-el.active > .view-domain,
+.view-el.active > .view-title {
+  visibility: visible;
+}

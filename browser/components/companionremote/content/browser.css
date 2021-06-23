@@ -25,7 +25,7 @@
 }
 
 #urlbar-container {
-  min-width: 576px;
+  min-width: 300px;
 }
 
 #navigator-toolbox {
@@ -91,14 +91,6 @@
 #companion-view-manager {
   min-width: 50px;
   -moz-box-flex: 1;
-}
-
-#companion-page-title {
-  font-size: 1.25rem;
-}
-
-#companion-page-domain {
-  font-size: 0.7rem;
 }
 
 %ifdef MOZ_WIDGET_COCOA
