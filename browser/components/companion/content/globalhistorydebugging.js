@@ -9,11 +9,15 @@ export class GlobalHistoryDebugging extends HTMLElement {
   constructor() {
     super();
     this.render = this.render.bind(this);
-    this.innerHTML = `
-      <h2 class="list-title">Global History</h2>
-      <ul class="history-list">
-      </ul>
-    `;
+    let listTitle = document.createElement("h2");
+    listTitle.setAttribute("class", "list-title");
+    listTitle.textContent = "Global History";
+
+    let historyList = document.createElement("ul");
+    historyList.setAttribute("class", "history-list");
+
+    this.appendChild(listTitle);
+    this.appendChild(historyList);
   }
 
   connectedCallback() {
