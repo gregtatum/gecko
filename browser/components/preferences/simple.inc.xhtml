@@ -68,7 +68,18 @@
               data-l10n-id="preferences-pin-to-taskbar-button"/>
     </hbox>
 #endif
-
+  <label><html:h3 data-l10n-id="preferences-theme-header"/></label>
+  <radiogroup id="themeChoice">
+    <radio id="theme-os"
+           data-l10n-id="preferences-theme-os"
+           value="default-theme@mozilla.org"/>
+    <radio id="theme-light"
+           data-l10n-id="preferences-theme-light"
+           value="firefox-compact-light@mozilla.org"/>
+    <radio id="theme-dark"
+           data-l10n-id="preferences-theme-dark"
+           value="firefox-compact-dark@mozilla.org"/>
+  </radiogroup>
   </vbox>
 </groupbox>
 

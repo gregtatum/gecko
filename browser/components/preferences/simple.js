@@ -4,11 +4,28 @@
 
 /* import-globals-from preferences.js */
 /* import-globals-from services.js */
+ChromeUtils.defineModuleGetter(
+  this,
+  "AddonManager",
+  "resource://gre/modules/AddonManager.jsm"
+);
 
 let gSimplePane = {
   async init() {
-    for (let id of ["viewAllSettings", "pinToTaskbarBtn"]) {
+    for (let id of ["viewAllSettings", "pinToTaskbarBtn", "themeChoice"]) {
       document.getElementById(id).addEventListener("click", this);
+    }
+
+    let themes = await AddonManager.getAddonsByTypes(["theme"]);
+    let currentTheme = themes.find(theme => theme.isActive);
+    for (let radioButton of document.getElementById("themeChoice").children) {
+      let theme = themes.find(t => t.id == radioButton.value);
+      if (radioButton.value == currentTheme.id) {
+        radioButton.setAttribute("selected", true);
+      } else {
+        radioButton.removeAttribute("selected");
+      }
+      radioButton.theme = theme;
     }
 
     const shellService = window.getShellService();
@@ -29,6 +46,8 @@ let gSimplePane = {
       event.target.disabled = true;
       const shellService = window.getShellService();
       await shellService.pinToTaskbar();
+    } else if (event.target?.id.startsWith("theme-")) {
+      await event.target?.theme.enable();
     }
   },
 };
