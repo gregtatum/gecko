@@ -33,28 +33,24 @@ export class Services extends HTMLElement {
   }
 
   connectedCallback() {
-    window.addEventListener("Companion:Setup", this);
     window.addEventListener("Companion:RegisterEvents", this);
     window.addEventListener("Companion:SignedIn", this.signInListener);
+
+    if (window.CompanionUtils.servicesConnected) {
+      document.getElementById("service-login").className = "connected";
+      this._hasServices = true;
+    } else {
+      document.getElementById("service-login").className = "disconnected";
+    }
   }
 
   disconnectedCallback() {
-    window.removeEventListener("Companion:Setup", this);
     window.removeEventListener("Companion:RegisterEvents", this);
     window.removeEventListener("Companion:SignedIn", this.signInListener);
   }
 
   handleEvent(event) {
     switch (event.type) {
-      case "Companion:Setup": {
-        if (window.CompanionUtils.servicesConnected) {
-          document.getElementById("service-login").className = "connected";
-          this._hasServices = true;
-        } else {
-          document.getElementById("service-login").className = "disconnected";
-        }
-        break;
-      }
       case "Companion:RegisterEvents": {
         let events = window.CompanionUtils.events;
         if (this._hasServices && !this._initialized) {

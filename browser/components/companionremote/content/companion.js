@@ -6,7 +6,7 @@ import { Services } from "./services.js";
 import { TopSites } from "./topsites.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
-import { KeyframeDbList } from "./keyframes.js";
+import { KeyframeDbList, setUpKeyframeRanges } from "./keyframes.js";
 import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
 
 function toggleSettings() {
@@ -19,24 +19,30 @@ function toggleSettings() {
 }
 window.addEventListener("Companion:ToggleSettings", toggleSettings);
 
+let loadObserved = false;
+let companionSetupObserved = false;
+function maybeInitializeUI() {
+  if (!loadObserved || !companionSetupObserved) {
+    return;
+  }
+
+  setUpKeyframeRanges();
+  document.getElementById("top-sites-placeholder").appendChild(new TopSites());
+  let content = document.getElementById("content");
+  content.appendChild(new MediaList("Media"));
+  content.appendChild(new KeyframeDbList("Currently Working On", "workingOn"));
+  content.appendChild(new KeyframeDbList("Current Session", "currentSession"));
+  content.appendChild(new GlobalHistoryDebugging());
+  content.appendChild(new PocketList());
+  document.getElementById("service-login").appendChild(new Services());
+}
+
 window.addEventListener(
   "load",
   () => {
+    loadObserved = true;
     document.documentElement.setAttribute("docked", "true");
-    document
-      .getElementById("top-sites-placeholder")
-      .appendChild(new TopSites());
-    let content = document.getElementById("content");
-    content.appendChild(new MediaList("Media"));
-    content.appendChild(
-      new KeyframeDbList("Currently Working On", "workingOn")
-    );
-    content.appendChild(
-      new KeyframeDbList("Current Session", "currentSession")
-    );
-    content.appendChild(new GlobalHistoryDebugging());
-    content.appendChild(new PocketList());
-    document.getElementById("service-login").appendChild(new Services());
+    maybeInitializeUI();
   },
   { once: true }
 );
@@ -45,6 +51,7 @@ let OBSERVED_PREFS = new Map();
 window.addEventListener(
   "Companion:Setup",
   () => {
+    companionSetupObserved = true;
     // Cheesy approximation of preferences for the demo settings. Add a checkbox with
     // data-pref attribute and the state will get synced & toggled automatically.
     // Components that care about it can listen to CompanionObservedPrefChanged to rerender.
@@ -76,6 +83,7 @@ window.addEventListener(
 
     window.CompanionUtils.addPrefObserver(DEBUG_PREF, toggleDebug);
     toggleDebug();
+    maybeInitializeUI();
   },
   { once: true }
 );

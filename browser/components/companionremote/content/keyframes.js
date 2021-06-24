@@ -197,16 +197,13 @@ export class KeyframeDbList extends KeyframeList {
   }
 
   async connectedCallback() {
-    this.updateFrames();
-
-    window.addEventListener("Companion:Setup", this.dbListener);
     window.addEventListener("Companion:KeyframesChanged", this.dbListener);
     onFilterChange(this.filterListener);
+    this.updateFrames();
   }
 
   disconnectedCallback() {
     offFilterChange(this.filterListener);
-    window.removeEventListener("Companion:Setup", this.dbListener);
     window.removeEventListener("Companion:KeyframesChanged", this.dbListener);
   }
 
@@ -322,21 +319,21 @@ let scorers = [
 let ranges = new Map();
 let threshold;
 
-function addRange(scorer) {
-  let range = new Range(
-    scorer.id,
-    scorer.label,
-    scorer.min,
-    scorer.max,
-    scorer.step,
-    scorer.value
-  );
-  ranges.set(range, scorer.apply);
-  range.addEventListener("input", notifyFilterListeners);
-  document.getElementById("sliders").appendChild(range);
-}
+export function setUpKeyframeRanges() {
+  function addRange(scorer) {
+    let range = new Range(
+      scorer.id,
+      scorer.label,
+      scorer.min,
+      scorer.max,
+      scorer.step,
+      scorer.value
+    );
+    ranges.set(range, scorer.apply);
+    range.addEventListener("input", notifyFilterListeners);
+    document.getElementById("sliders").appendChild(range);
+  }
 
-window.addEventListener("Companion:Setup", () => {
   threshold = new Range("threshold", "Threshold", 0, 100, 1, 100);
   for (let scorer of scorers) {
     addRange(scorer);
@@ -345,4 +342,4 @@ window.addEventListener("Companion:Setup", () => {
   document.getElementById("sliders").appendChild(threshold);
   threshold.addEventListener("input", notifyFilterListeners);
   notifyFilterListeners();
-});
+}

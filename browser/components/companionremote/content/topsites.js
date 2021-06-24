@@ -71,10 +71,6 @@ export class TopSites extends HTMLElement {
     this.className = "topsites";
   }
 
-  handleEvent() {
-    this.appendTopSites(window.CompanionUtils.history);
-  }
-
   async appendTopSites(history) {
     let domains = new Set();
 
@@ -133,15 +129,7 @@ export class TopSites extends HTMLElement {
   }
 
   connectedCallback() {
-    if (window.CompanionUtils.history.length) {
-      this.appendTopSites(window.CompanionUtils.history);
-    } else {
-      window.addEventListener("Companion:Setup", this);
-    }
-  }
-
-  disconnectedCallback() {
-    window.removeEventListener("Companion:Setup", this);
+    this.appendTopSites(window.CompanionUtils.history);
   }
 }
 
