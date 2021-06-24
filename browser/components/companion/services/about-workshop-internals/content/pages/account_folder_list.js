@@ -20,6 +20,8 @@ export default class AccountFolderListPage extends Page {
     const account = await this.workshopAPI.accounts.eventuallyGetAccountById(
       this.accountId
     );
+    account.syncFolderList();
+
     const listElem = new ListView(account.folders, FolderListItem);
     pageElem.appendChild(listElem);
   }

@@ -44,7 +44,6 @@ export class MessageListItem extends HTMLElement {
     // React setup did, for example).
     const bodyContainer = this.querySelector(".message-body-parts");
 
-    console.log("message bodyReps", message.bodyReps);
     const bodyNodes = [];
     for (const bodyRep of message.bodyReps) {
       const card = document.createElement("div");
