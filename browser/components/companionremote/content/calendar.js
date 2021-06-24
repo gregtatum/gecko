@@ -20,8 +20,6 @@ class Event extends HTMLElement {
     this.data = data;
     this.className = "event card";
 
-    this._hasFormattedLinks = false;
-
     let template = document.getElementById("template-event");
     let fragment = template.content.cloneNode(true);
 
@@ -89,22 +87,14 @@ class Event extends HTMLElement {
 */
   }
 
-  async formatLinks() {
-    if (this._hasFormattedLinks) {
-      return;
-    }
-
-    let formattedLinks = await Promise.all(
-      this.data.links.map(async link => {
-        return {
-          url: link.url,
-          text:
-            link.text ||
-            window.CompanionUtils.getPlacesData(link.url)?.title ||
-            link.url,
-        };
-      })
-    );
+  connectedCallback() {
+    let formattedLinks = this.data.links.map(link => ({
+      url: link.url,
+      text:
+        link.text ||
+        window.CompanionUtils.getPlacesData(link.url)?.title ||
+        link.url,
+    }));
 
     for (let link of formattedLinks) {
       let div = document.createElement("div");
@@ -115,7 +105,6 @@ class Event extends HTMLElement {
       div.appendChild(a);
       this.querySelector(".links").appendChild(div);
     }
-    this._hasFormattedLinks = true;
   }
 }
 

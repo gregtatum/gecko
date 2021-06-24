@@ -12,7 +12,7 @@ export class Services extends HTMLElement {
   constructor() {
     super();
     this.className = "services";
-    this._hasServices = this._initialized = false;
+    this._initialized = false;
 
     let template = document.getElementById("template-service-buttons");
     let fragment = template.content.cloneNode(true);
@@ -34,33 +34,42 @@ export class Services extends HTMLElement {
 
   connectedCallback() {
     window.addEventListener("Companion:RegisterEvents", this);
+    window.addEventListener("Companion:ServiceDisconnected", this);
     window.addEventListener("Companion:SignedIn", this.signInListener);
 
-    if (window.CompanionUtils.servicesConnected) {
-      document.getElementById("service-login").className = "connected";
-      this._hasServices = true;
-    } else {
-      document.getElementById("service-login").className = "disconnected";
-    }
+    this.setConnectedState();
   }
 
   disconnectedCallback() {
     window.removeEventListener("Companion:RegisterEvents", this);
+    window.removeEventListener("Companion:ServiceDisconnected", this);
     window.removeEventListener("Companion:SignedIn", this.signInListener);
   }
 
   handleEvent(event) {
     switch (event.type) {
+      case "Companion:ServiceDisconnected": {
+        this.setConnectedState();
+        break;
+      }
       case "Companion:RegisterEvents": {
         let events = window.CompanionUtils.events;
-        if (this._hasServices && !this._initialized) {
+        if (!this._initialized) {
           initCalendarServices(events);
           this._initialized = true;
-        } else if (this._hasServices) {
+        } else {
           buildEvents(events);
         }
         break;
       }
+    }
+  }
+
+  setConnectedState() {
+    if (window.CompanionUtils.servicesConnected) {
+      document.getElementById("service-login").className = "connected";
+    } else {
+      document.getElementById("service-login").className = "disconnected";
     }
   }
 
@@ -75,6 +84,7 @@ export class Services extends HTMLElement {
   signout() {
     window.CompanionUtils.sendAsyncMessage("Companion:SignOut", {});
     uninitCalendarServices();
+    this._initialized = false;
     document.getElementById("service-login").className = "disconnected";
   }
 }

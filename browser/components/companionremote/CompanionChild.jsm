@@ -138,6 +138,13 @@ class CompanionChild extends JSWindowActorChild {
         this.evictPlacesCacheEntries(evictions);
         break;
       }
+      case "Companion:ServiceDisconnected": {
+        let { servicesConnected } = message.data;
+
+        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+        waivedContent.CompanionUtils.servicesConnected = servicesConnected;
+        break;
+      }
       case "Companion:TabAdded": {
         this.updateTab(message.data);
         break;

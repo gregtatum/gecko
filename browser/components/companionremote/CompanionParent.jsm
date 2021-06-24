@@ -517,11 +517,25 @@ class CompanionParent extends JSWindowActorParent {
     }
     let eventResults = await Promise.allSettled(meetingResults);
     let events = eventResults.flatMap(r => r.value || []);
-    let rejections = eventResults
-      .filter(r => r.status != "fulfilled")
-      .map(r => r.reason);
-    for (let rejection of rejections) {
-      console.error(rejection);
+
+    // Remove the service on failure
+    let idsToRemove = [];
+    i = 0;
+    for (let [id, service] of this._services.entries()) {
+      if (eventResults[i].status != "fulfilled") {
+        console.error(eventResults[i].reason);
+        await OnlineServices.deleteService(service);
+        idsToRemove.push(id);
+      }
+      i++;
+    }
+    for (let id of idsToRemove) {
+      this._services.delete(id);
+    }
+    if (!this._services.size) {
+      this.sendAsyncMessage("Companion:ServiceDisconnected", {
+        servicesConnected: false,
+      });
     }
 
     return events;
