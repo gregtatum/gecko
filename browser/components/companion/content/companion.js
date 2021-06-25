@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Services } from "./services.js";
 import { TopSites } from "./topsites.js";
+import { EventList } from "./calendar.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
 import { KeyframeDbList, setUpKeyframeRanges } from "./keyframes.js";
@@ -28,13 +28,13 @@ function maybeInitializeUI() {
 
   setUpKeyframeRanges();
   document.getElementById("top-sites-placeholder").appendChild(new TopSites());
+  document.getElementById("events-placeholder").appendChild(new EventList());
   let content = document.getElementById("content");
   content.appendChild(new MediaList("Media"));
   content.appendChild(new KeyframeDbList("Currently Working On", "workingOn"));
   content.appendChild(new KeyframeDbList("Current Session", "currentSession"));
   content.appendChild(new GlobalHistoryDebugging());
   content.appendChild(new PocketList());
-  document.getElementById("service-login").appendChild(new Services());
 }
 
 window.addEventListener(

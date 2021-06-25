@@ -160,19 +160,22 @@ class ServiceRow extends HTMLElement {
     if (this.data.type == "firefox-account") {
       await gSyncPane.signIn();
     } else {
-      await OnlineServices.createService(this.data.type);
-      // TODO: initialize calendar and email services
-      this.service = OnlineServices.getServices().find(
-        ({ app }) => app === this.data.type
+      this.service = await OnlineServices.createService(this.data.type);
+      if (!this.service) {
+        return;
+      }
+      Services.obs.notifyObservers(
+        this.service,
+        "companion-signin",
+        this.service.id
       );
     }
-
     this.setAttribute("connected", true);
   }
 
   async signout() {
+    Services.obs.notifyObservers(null, "companion-signout", this.service.id);
     await OnlineServices.deleteService(this.service);
-    // TODO: uninitialize calendar and email services
     this.service = null;
     this.setAttribute("connected", false);
   }

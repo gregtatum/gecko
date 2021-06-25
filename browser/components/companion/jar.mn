@@ -26,7 +26,6 @@ browser.jar:
     content/browser/companion/pause.svg (content/pause.svg)
     content/browser/companion/pocket.js (content/pocket.js)
     content/browser/companion/range.js (content/range.js)
-    content/browser/companion/services.js (content/services.js)
     content/browser/companion/topsites.js (content/topsites.js)
     content/browser/companion/next.svg (content/next.svg)
     content/browser/companion/dock.svg (content/dock.svg)

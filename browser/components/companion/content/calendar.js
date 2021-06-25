@@ -13,10 +13,38 @@ const CALENDAR_UPDATE_TIME = 60 * 1000; // 1 minute
 // Number of minutes after start that an event is hidden
 const MEETING_HIDE_DELAY = 10;
 
-class Event extends HTMLElement {
-  constructor(service, data) {
+export class EventList extends HTMLElement {
+  constructor(title) {
     super();
-    this.service = service;
+
+    this.title = title;
+    this.className = "event-list";
+    let template = document.getElementById("template-event-list");
+    let fragment = template.content.cloneNode(true);
+
+    this.appendChild(fragment);
+
+    this.windowListener = () => this.render();
+  }
+
+  connectedCallback() {
+    window.addEventListener("Companion:RegisterEvents", this.windowListener);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("Companion:RegisterEvents", this.windowListener);
+  }
+
+  render() {
+    let events = window.CompanionUtils.events;
+    buildEvents(events);
+  }
+}
+
+class Event extends HTMLElement {
+  constructor(serviceId, data) {
+    super();
+    this.serviceId = serviceId;
     this.data = data;
     this.className = "event card";
 
@@ -41,7 +69,7 @@ class Event extends HTMLElement {
       } else {
         window.CompanionUtils.sendAsyncMessage("Companion:OpenCalendar", {
           start: this.data.start,
-          serviceId: this.service,
+          serviceId: this.serviceId,
         });
       }
     });
@@ -109,6 +137,7 @@ class Event extends HTMLElement {
 }
 
 customElements.define("e-event", Event);
+customElements.define("e-event-list", EventList);
 
 async function updateEvents() {
   let visibleEventStart;
@@ -157,29 +186,11 @@ export async function buildEvents(events) {
   updateEvents();
 }
 
-let calendarCheckTimer;
-let calendarUpdateTimer;
+setInterval(function() {
+  window.CompanionUtils.sendAsyncMessage("Companion:GetEvents", {});
+}, CALENDAR_CHECK_TIME);
 
-export function initCalendarServices(events) {
-  buildEvents(events);
-  calendarCheckTimer = setInterval(function() {
-    window.CompanionUtils.sendAsyncMessage("Companion:GetEvents", {});
-  }, CALENDAR_CHECK_TIME);
-  calendarUpdateTimer = setInterval(function() {
-    updateEvents();
-  }, CALENDAR_UPDATE_TIME);
-}
-
-export function uninitCalendarServices(services) {
-  if (calendarCheckTimer) {
-    clearInterval(calendarCheckTimer);
-    calendarCheckTimer = 0;
-  }
-  if (calendarUpdateTimer) {
-    clearInterval(calendarUpdateTimer);
-    calendarUpdateTimer = 0;
-  }
-  let panel = document.getElementById("calendar-panel");
-  panel.replaceChildren([]);
-  document.querySelector("#calendar").hidden = true;
-}
+// This should live in a more central location
+setInterval(function() {
+  updateEvents();
+}, CALENDAR_UPDATE_TIME);

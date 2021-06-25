@@ -240,9 +240,12 @@ class OAuth2 {
       this.accessToken = null;
       this.refreshToken = null;
 
-      throw new Error(
+      console.error(
         `The authorization server returned an error response: ${resultStr}`
       );
+
+      // We return instead of throw here so we can handle it as a null token.
+      return null;
     }
 
     // RFC 6749 section 5.1. Successful Response

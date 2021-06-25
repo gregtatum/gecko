@@ -217,16 +217,14 @@ class GoogleService {
     );
   }
 
-  connect() {
+  async connect() {
     // This will force login if not already logged in.
-    let token = this.auth.getToken();
-    OnlineServices.persist();
+    let token = await this.getToken();
     return token;
   }
 
   async disconnect() {
-    let token = await this.auth.getToken();
-    OnlineServices.persist();
+    let token = await this.getToken();
 
     // revoke access for the current stoken stored
     let apiTarget = new URL(
@@ -246,9 +244,16 @@ class GoogleService {
     }
   }
 
-  async getAccountAddress() {
+  async getToken() {
     let token = await this.auth.getToken();
-    OnlineServices.persist();
+    if (token) {
+      OnlineServices.persist();
+    }
+    return token;
+  }
+
+  async getAccountAddress() {
+    let token = await this.getToken();
 
     let apiTarget = new URL(
       "https://gmail.googleapis.com/gmail/v1/users/me/profile"
@@ -318,8 +323,7 @@ class GoogleService {
   }
 
   async getNextMeetings() {
-    let token = await this.auth.getToken();
-    OnlineServices.persist();
+    let token = await this.getToken();
 
     let apiTarget = new URL(
       "https://www.googleapis.com/calendar/v3/users/me/calendarList"
@@ -360,7 +364,6 @@ class GoogleService {
         `https://www.googleapis.com/calendar/v3/calendars/${calendar.id}/events`
       );
 
-      apiTarget.searchParams.set("maxResults", 10);
       apiTarget.searchParams.set("orderBy", "startTime");
       apiTarget.searchParams.set("singleEvents", "true");
       let dayStart = new Date();
@@ -419,6 +422,7 @@ class GoogleService {
         } else {
           allEvents.set(result.id, event);
         }
+        event.serviceId = this.id;
       }
     }
     return Array.from(allEvents.values()).sort((a, b) => a.start - b.start);
@@ -435,8 +439,7 @@ class GoogleService {
   }
 
   async getEmailInfo(messageId) {
-    let token = await this.auth.getToken();
-    OnlineServices.persist();
+    let token = await this.getToken();
 
     let apiTarget = new URL(
       `https://www.googleapis.com/gmail/v1/users/me/messages/${messageId}`
@@ -471,7 +474,7 @@ class GoogleService {
   }
 
   async getUnreadEmail() {
-    let token = await this.auth.getToken();
+    let token = await this.getToken();
 
     let apiTarget = new URL(
       "https://www.googleapis.com/gmail/v1/users/me/messages"
@@ -554,7 +557,7 @@ class GoogleService {
       `https://docs.googleapis.com/v1/documents/${documentId}`
     );
 
-    let token = await this.auth.getToken();
+    let token = await this.getToken();
     let headers = {
       Authorization: `Bearer ${token}`,
     };
@@ -611,8 +614,7 @@ class MicrosoftService {
   }
 
   async getNextMeetings() {
-    let token = await this.auth.getToken();
-    OnlineServices.persist();
+    let token = await this.getToken();
 
     let apiTarget = new URL(
       "https://graph.microsoft.com/v1.0/me/calendar/events"
@@ -679,7 +681,15 @@ function load() {
   let config = JSON.parse(Services.prefs.getCharPref(PREF_STORE, "[]"));
 
   for (let service of config) {
-    ServiceInstances.add(new GoogleService(service));
+    // In the past, services could have null auth due to a bug.
+    if (!service.auth) {
+      continue;
+    }
+    if (service.type.startsWith("google")) {
+      ServiceInstances.add(new GoogleService(service));
+    } else if (service.type.startsWith("microsoft")) {
+      ServiceInstances.add(new MicrosoftService(service));
+    }
   }
 }
 
@@ -723,11 +733,22 @@ const OnlineServices = {
     } else if (type.startsWith("microsoft")) {
       service = new MicrosoftService({ type });
     }
+    let token = await service.connect();
+    if (!token) {
+      return null;
+    }
     ServiceInstances.add(service);
-    await service.connect();
-
     this.persist();
     return service;
+  },
+
+  findServiceById(id) {
+    for (let service of ServiceInstances) {
+      if (service.id == id) {
+        return service;
+      }
+    }
+    return null;
   },
 
   async deleteService(service) {
