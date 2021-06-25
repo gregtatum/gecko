@@ -8,21 +8,30 @@ class ViewElement extends HTMLElement {
   }
 
   connectedCallback() {
-    let template = document.getElementById("template-view");
-    let fragment = template.content.cloneNode(true);
-    this.appendChild(fragment);
+    if (!this.built) {
+      let template = document.getElementById("template-view");
+      let fragment = template.content.cloneNode(true);
+      this.appendChild(fragment);
+      this.built = true;
+    }
 
-    let title = window.gBrowser?.selectedTab.getAttribute("label") || "Newtab";
+    this.update();
+  }
+
+  update(view) {
+    if (view) {
+      this.view = view;
+    }
+
+    let title = this.view?.title ?? "Newtab";
     let titleEl = this.querySelector(".view-title");
     titleEl.textContent = title;
     titleEl.tooltipText = title;
 
     let domain = "";
     try {
-      domain = window.gBrowser.currentURI.host;
-    } catch (e) {
-      domain = "about:page";
-    }
+      domain = this.view?.url.host ?? "";
+    } catch (e) {}
     let domainEl = this.querySelector(".view-domain");
     domainEl.textContent = domain;
   }

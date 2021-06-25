@@ -3,16 +3,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 class ActiveViewManager extends HTMLElement {
-  constructor() {
-    super();
-
-    this.handleEvent = this.handleEvent.bind(this);
-    this.updateActiveView = this.updateActiveView.bind(this);
-    this.viewAdded = this.viewAdded.bind(this);
-    this.viewChanged = this.viewChanged.bind(this);
-    this.viewMoved = this.viewMoved.bind(this);
-    this.viewRemoved = this.viewRemoved.bind(this);
-  }
+  static EVENTS = [
+    "ViewChanged",
+    "ViewAdded",
+    "ViewRemoved",
+    "ViewMoved",
+    "ViewUpdated",
+  ];
 
   connectedCallback() {
     // Set up the active view manager UI.
@@ -32,26 +29,15 @@ class ActiveViewManager extends HTMLElement {
     this.views = new Map();
 
     // Add listeners for events coming from GlobalHistory.
-    for (let event of [
-      "ViewChanged",
-      "ViewAdded",
-      "ViewRemoved",
-      "ViewMoved",
-    ]) {
-      window.top.gGlobalHistory.addEventListener(event, e =>
-        this.handleEvent(e)
-      );
+    for (let event of ActiveViewManager.EVENTS) {
+      window.top.gGlobalHistory.addEventListener(event, this);
     }
   }
 
   disconnectedCallback() {
-    window.top.gGlobalHistory.removeEventListener(
-      "ViewAdded",
-      this.handleEvent
-    );
-    window.gGlobalHistory.removeEventListener("ViewMoved", this.handleEvent);
-    window.gGlobalHistory.removeEventListener("ViewRemoved", this.handleEvent);
-    window.gGlobalHistory.removeEventListener("ViewChanged", this.handleEvent);
+    for (let event of ActiveViewManager.EVENTS) {
+      window.top.gGlobalHistory.removeEventListener(event, this);
+    }
   }
 
   updateActiveView(viewElToActivate) {
@@ -81,6 +67,9 @@ class ActiveViewManager extends HTMLElement {
     // TODO: Handle the edge case where a view is already present for the newly added
     // URL in our views map. We might have to move that view to the front of the river
     // and display it. Global History probably makes sure to not add duplicate views.
+    if (this.views.has(view)) {
+      console.warn("Saw ViewAdded for an existing view.");
+    }
 
     // Add the new view to the map and append the view element to the active view manager.
     // Note: If this is the first view being added to the map, we should edit the existing
@@ -88,12 +77,14 @@ class ActiveViewManager extends HTMLElement {
     if (!this.views.size && this.viewManager.children.length === 1) {
       let initialViewEl = this.viewManager.children[0];
       this.views.set(view, initialViewEl);
+      initialViewEl.update(view);
 
       this.updateActiveView(initialViewEl);
     } else {
       let viewEl = document.createElement("view-el");
       this.views.set(view, viewEl);
       this.viewManager.appendChild(viewEl);
+      viewEl.update(view);
 
       this.updateActiveView(viewEl);
     }
@@ -103,6 +94,11 @@ class ActiveViewManager extends HTMLElement {
     // TODO: Handle edge case where a view might not be present in the map.
 
     let viewElToActivate = this.views.get(view);
+    if (!viewElToActivate) {
+      console.warn("Saw ViewChanged for an unknown view.");
+      return;
+    }
+
     this.updateActiveView(viewElToActivate);
   }
 
@@ -114,6 +110,7 @@ class ActiveViewManager extends HTMLElement {
 
     let viewElToMove = this.views.get(view);
     if (!viewElToMove) {
+      console.warn("Saw ViewMoved for an unknown view.");
       return;
     }
 
@@ -126,8 +123,24 @@ class ActiveViewManager extends HTMLElement {
     // TODO: Ask mossop if we're supporting users removing specific views like closing a tab.
 
     let viewElToRemove = this.views.get(view);
+    if (!viewElToRemove) {
+      console.warn("Saw ViewRemoved for an unknown view.");
+      return;
+    }
+
     this.viewManager.removeChild(viewElToRemove);
     this.updateActiveView();
+    this.views.delete(view);
+  }
+
+  viewUpdated(view) {
+    let viewElToUpdate = this.views.get(view);
+    if (!viewElToUpdate) {
+      console.warn("Saw ViewUpdated for an unknown view.");
+      return;
+    }
+
+    viewElToUpdate.update(view);
   }
 
   handleEvent(event) {
@@ -143,6 +156,9 @@ class ActiveViewManager extends HTMLElement {
         break;
       case "ViewRemoved":
         this.viewRemoved(event.view);
+        break;
+      case "ViewUpdated":
+        this.viewUpdated(event.view);
         break;
     }
   }

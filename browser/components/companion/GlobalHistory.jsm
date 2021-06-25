@@ -105,7 +105,7 @@ class InternalView {
     this.browserId = browser.browsingContext.id;
     this.historyId = historyEntry.ID;
 
-    this.url = historyEntry.URI.spec;
+    this.url = historyEntry.URI;
     this.title = historyEntry.title;
   }
 
@@ -144,6 +144,7 @@ class InternalView {
  * `ViewAdded` - A new view has been added to the top of the stack.
  * `ViewRemoved` - A view has been removed from the bottom of the stack.
  * `ViewMoved` - An existing view has been moved to the top of the stack.
+ * `ViewUpdated` - An existing view has been moved to the top of the stack.
  */
 class GlobalHistoryEvent extends Event {
   #view;
@@ -157,6 +158,9 @@ class GlobalHistoryEvent extends Event {
   constructor(type, view) {
     super(type);
     this.#view = view;
+    if (view && !(view instanceof View)) {
+      console.error("Emitting a global history event with a non-view", view);
+    }
   }
 
   /**
@@ -482,10 +486,10 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
-    let [view] = this.#viewStack.splice(this.#currentIndex, 1);
-    this.#viewStack.push(view);
+    let [internalView] = this.#viewStack.splice(this.#currentIndex, 1);
+    this.#viewStack.push(internalView);
     this.#currentIndex = this.#viewStack.length - 1;
-    this.dispatchEvent(new GlobalHistoryEvent("ViewMoved", view));
+    this.dispatchEvent(new GlobalHistoryEvent("ViewMoved", internalView.view));
   }
 
   /**
@@ -517,29 +521,20 @@ class GlobalHistory extends EventTarget {
           );
 
           if (this.#currentIndex === null) {
-            this.dispatchEvent(
-              new GlobalHistoryEvent("ViewChanged", newView.view)
-            );
+            this.dispatchEvent(new GlobalHistoryEvent("ViewChanged", null));
           }
 
           return;
         }
 
+        previousView.update(browser, newEntry);
         let newView = new InternalView(this.#window, browser, newEntry);
         this.#viewStack[pos] = newView;
         this.#historyViews.set(newEntry.ID, newView);
 
         this.dispatchEvent(
-          new GlobalHistoryEvent("ViewRemoved", previousView.view)
+          new GlobalHistoryEvent("ViewUpdated", previousView.view)
         );
-        this.dispatchEvent(new GlobalHistoryEvent("ViewAdded", newView.view));
-
-        if (pos == this.#currentIndex) {
-          this.dispatchEvent(
-            new GlobalHistoryEvent("ViewChanged", newView.view)
-          );
-          this.#startActivationTimer();
-        }
         return;
       }
     }
