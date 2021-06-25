@@ -22,8 +22,11 @@ add_task(async function test_settings_shown() {
   let companionBrowser = document
     .getElementById("companion-box")
     .querySelector("#companion-browser");
-  Assert.ok(
-    companionBrowser.contentDocument.getElementById("service-signin"),
-    "Service sign in button is available"
-  );
+
+  await SpecialPowers.spawn(companionBrowser, [], async () => {
+    ok(
+      content.document.getElementById("service-signin"),
+      "Service sign in button is available"
+    );
+  });
 });
