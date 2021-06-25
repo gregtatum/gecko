@@ -7,7 +7,9 @@ const EXPORTED_SYMBOLS = ["GlobalHistory"];
  * This component tracks the views that a user visits. Instances of GlobalHistory track the views
  * for a single top-level window
  */
-
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
+);
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 function requestedIndex(sessionHistory) {
@@ -460,9 +462,15 @@ class GlobalHistory extends EventTarget {
     if (this.#activationTimer) {
       this.#window.clearTimeout(this.#activationTimer);
     }
+
+    let timeout = GlobalHistory.activationTimeout;
+    if (timeout == 0) {
+      return;
+    }
+
     this.#activationTimer = this.#window.setTimeout(() => {
       this.#activateCurrentView();
-    }, 2000);
+    }, timeout);
   }
 
   #activateCurrentView() {
@@ -658,3 +666,10 @@ class GlobalHistory extends EventTarget {
     return true;
   }
 }
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  GlobalHistory,
+  "activationTimeout",
+  "browser.river.activationTimeout",
+  5000
+);
