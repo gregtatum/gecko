@@ -31,7 +31,6 @@ DIRS += [
     "aboutlogins",
     "attribution",
     "companion",
-    "companionremote",
     "contextualidentity",
     "customizableui",
     "doh",

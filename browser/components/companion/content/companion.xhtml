@@ -188,6 +188,17 @@
     </div>
   </template>
 
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-service-buttons">
+    <select id="service-signin">
+      <option id="sign-in-option" value="" selected="true">Sign In</option>
+      <option value="google">Google</option>
+      <option value="google-mozilla">Google (Mozilla)</option>
+      <option value="google-mozilla-test">Google (Mozilla Test)</option>
+<!--       <option value="microsoft">Microsoft</option> -->
+    </select>
+    <button id="service-signout" class="btn">Sign out of Google</button>
+  </template>
+
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-pocket-story">
     <img class="preview"/>
     <div class="pocket-content">
@@ -248,19 +259,8 @@
   </div>
 
   <div xmlns="http://www.w3.org/1999/xhtml" id="settings" hidden="true">
-    <div id="service-login">
-        <button xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" type="menu" id="service-signin" class="btn" label="Sign in">
-            <menupopup>
-                <menuitem id="google" label="Google"/>
-                <menuitem id="google-mozilla" label="Google (Mozilla)"/>
-                <menuitem id="google-mozilla-test" label="Google (Mozilla Test)"/>
-                <!-- <menuitem id="microsoft" label="Microsoft"/> -->
-            </menupopup>
-            </button>
-        <button id="service-signout" class="btn">Sign out of Google</button>
-    </div>
+    <div id="service-login"></div>
     <div id="sliders"></div>
-    <label><input type="checkbox" data-pref="browser.companion.appbar" /> Enable App Bar</label><br />
     <label><input type="checkbox" data-pref="browser.companion.globalhistorydebugging" /> (Developer) Debug Global History</label>
     <label><input type="checkbox" data-pref="browser.companion.debugUI" /> (Developer) Debug User Interface</label>
   </div>

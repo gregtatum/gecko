@@ -2,13 +2,174 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// These come from utilityOverlay.js
-/* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
-
-import { KeyframeList, onLoad, getPlacesData } from "./shared.js";
 import { Range } from "./range.js";
 
-const { Keyframes } = ChromeUtils.import("resource:///modules/Keyframes.jsm");
+const NUM_KEYFRAMES = 20;
+
+class HidableElement extends HTMLElement {
+  get hidden() {
+    return this.hasAttribute("hidden");
+  }
+
+  set hidden(val) {
+    if (val) {
+      this.setAttribute("hidden", "true");
+    } else {
+      this.removeAttribute("hidden");
+    }
+  }
+}
+
+export class Keyframe extends HidableElement {
+  constructor(data) {
+    super();
+    this.data = data;
+
+    this.className = "keyframe card";
+
+    let template = document.getElementById("template-keyframe");
+    let fragment = template.content.cloneNode(true);
+    this.updateDOM(fragment);
+
+    this.appendChild(fragment);
+    this.addEventListener("click", this);
+  }
+
+  updateDOM(target) {
+    target.querySelector(".favicon").src = this.data.icon;
+    target.querySelector(".title").textContent = this.data.title;
+    target.querySelector(".title").setAttribute("title", this.data.title);
+    target.querySelector(".category").textContent = this.data.category;
+
+    this.toggleAttribute(
+      "current",
+      window.CompanionUtils.currentURI == this.data.url
+    );
+
+    let score = target.querySelector(".score");
+    score.textContent = this.data.score.toFixed(1);
+    score.setAttribute(
+      "title",
+      `Engagement: ${(this.data.totalEngagement / 1000).toFixed(1)}s
+Typing time: ${(this.data.typingTime / 1000).toFixed(1)}s
+Keypresses: ${this.data.keypresses}
+
+Typing ratio: ${Math.round(
+        (100 * this.data.typingTime) / this.data.totalEngagement
+      )}%
+Characters per second: ${
+        this.data.keypresses == 0
+          ? 0
+          : Math.round(this.data.keypresses / (this.data.typingTime / 1000))
+      }`
+    );
+
+    if (this.data.lastVisit) {
+      target.querySelector(".last-access").textContent = timeSince(
+        this.data.lastVisit
+      );
+    }
+  }
+
+  update(data) {
+    this.data = data;
+    this.updateDOM(this);
+  }
+
+  handleEvent() {
+    window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
+      url: this.data.url,
+    });
+  }
+}
+
+customElements.define("e-keyframe", Keyframe);
+
+export class KeyframeList extends HidableElement {
+  constructor(title) {
+    super();
+
+    this.title = title;
+    let shadow = this.attachShadow({ mode: "open" });
+    let template = document.getElementById("template-keyframe-list");
+    let fragment = template.content.cloneNode(true);
+    fragment.querySelector(".list-title").textContent = this.title;
+
+    shadow.appendChild(fragment);
+  }
+
+  displayFrames(frames) {
+    let elements = frames.map(frame => {
+      let element = this.querySelector(
+        `.keyframe[url="${CSS.escape(frame.url)}"`
+      );
+      if (element) {
+        element.update(frame);
+        return element;
+      }
+
+      return new Keyframe(frame);
+    });
+    this.replaceChildren(...elements.slice(0, NUM_KEYFRAMES));
+
+    this.hidden = !elements.length;
+  }
+}
+
+customElements.define("e-keyframelist", KeyframeList);
+
+export const timeFormat = new Intl.DateTimeFormat([], {
+  timeStyle: "short",
+});
+
+export const dateFormat = new Intl.DateTimeFormat([], {
+  dateStyle: "short",
+});
+
+function timeSince(date) {
+  let DAY_IN_MS = 1000 * 60 * 60 * 24;
+  let seconds = Math.floor((new Date() - date) / 1000);
+  let minutes = Math.floor(seconds / 60);
+
+  if (minutes <= 0) {
+    return "now";
+  }
+  let hours = Math.floor(minutes / 60);
+  if (hours <= 0) {
+    return minutes + "m ago";
+  }
+
+  let today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Take the day into account when we handle hours, if
+  // something happened 6 hours ago but its 3AM, it happened
+  // yesterday. This doesnt happen with minutes.
+  if (hours < 24 && date > today) {
+    return hours + "hr ago";
+  }
+
+  let midnight = new Date(date);
+  midnight.setHours(0, 0, 0, 0);
+
+  // Once we are measuring days we only care about what day it
+  // is not the time that it occured (2 days ago is the whole
+  // of the day)
+  let daysDiff = today - midnight;
+  let days = Math.floor(daysDiff / DAY_IN_MS);
+
+  if (days == 1) {
+    return "yesterday";
+  }
+
+  let weeks = Math.floor(days / 7);
+
+  if (weeks <= 0) {
+    return days + " days ago";
+  }
+
+  return weeks + " week" + (weeks == 1 ? "" : "s") + " ago";
+}
 
 let filterListeners = new Set();
 function onFilterChange(cb) {
@@ -26,28 +187,24 @@ function notifyFilterListeners() {
 }
 
 export class KeyframeDbList extends KeyframeList {
-  constructor(title, minTime, maxTime, type, query = "query") {
+  constructor(title, keyframeListName) {
     super(title);
-    this.minTime = minTime;
-    this.maxTime = maxTime;
-    this.type = type;
+    this.keyframeListName = keyframeListName;
     this.frames = [];
-    this.query = query;
 
     this.dbListener = () => this.updateFrames();
     this.filterListener = () => this.filterFrames();
   }
 
   async connectedCallback() {
-    this.updateFrames();
-
-    Services.obs.addObserver(this.dbListener, "keyframe-update");
+    window.addEventListener("Companion:KeyframesChanged", this.dbListener);
     onFilterChange(this.filterListener);
+    this.updateFrames();
   }
 
   disconnectedCallback() {
     offFilterChange(this.filterListener);
-    Services.obs.removeObserver(this.dbListener, "keyframe-update");
+    window.removeEventListener("Companion:KeyframesChanged", this.dbListener);
   }
 
   filterFrames() {
@@ -79,12 +236,12 @@ export class KeyframeDbList extends KeyframeList {
   }
 
   async updateFrames() {
-    let dbFrames = await this.listFrames();
+    let dbFrames = this.listFrames();
 
     let frames = [];
 
     for (let dbFrame of dbFrames) {
-      let data = await getPlacesData(dbFrame.url);
+      let data = window.CompanionUtils.getPlacesData(dbFrame.url);
       if (!data) {
         continue;
       }
@@ -103,11 +260,7 @@ export class KeyframeDbList extends KeyframeList {
   }
 
   listFrames() {
-    return Keyframes[this.query](
-      this.minTime.getTime(),
-      this.maxTime?.getTime(),
-      this.type
-    );
+    return window.CompanionUtils.keyframes[this.keyframeListName];
   }
 }
 
@@ -164,29 +317,29 @@ let scorers = [
 ];
 
 let ranges = new Map();
-let threshold = new Range("threshold", "Threshold", 0, 100, 1, 100);
+let threshold;
 
-function addRange(scorer) {
-  let range = new Range(
-    scorer.id,
-    scorer.label,
-    scorer.min,
-    scorer.max,
-    scorer.step,
-    scorer.value
-  );
-  ranges.set(range, scorer.apply);
-  range.addEventListener("input", notifyFilterListeners);
-  document.getElementById("sliders").appendChild(range);
-}
+export function setUpKeyframeRanges() {
+  function addRange(scorer) {
+    let range = new Range(
+      scorer.id,
+      scorer.label,
+      scorer.min,
+      scorer.max,
+      scorer.step,
+      scorer.value
+    );
+    ranges.set(range, scorer.apply);
+    range.addEventListener("input", notifyFilterListeners);
+    document.getElementById("sliders").appendChild(range);
+  }
 
-onLoad(() => {
+  threshold = new Range("threshold", "Threshold", 0, 100, 1, 100);
   for (let scorer of scorers) {
     addRange(scorer);
   }
+
   document.getElementById("sliders").appendChild(threshold);
-
   threshold.addEventListener("input", notifyFilterListeners);
-
   notifyFilterListeners();
-});
+}

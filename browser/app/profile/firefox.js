@@ -445,9 +445,7 @@ pref("browser.urlbar.experimental.firefoxSuggestLabels.enabled", false);
 
 pref("browser.altClickSave", false);
 
-pref("browser.companion.appbar", false);
 pref("browser.companion.globalhistorydebugging", false);
-pref("browser.companion.allow-undock", false);
 
 // Enable logging downloads operations to the Console.
 pref("browser.download.loglevel", "Error");

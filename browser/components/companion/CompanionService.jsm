@@ -23,7 +23,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   Services: "resource://gre/modules/Services.jsm",
 });
 
-const COMPANION_DOCKED_PREF = "companion.docked";
 const COMPANION_OPEN_PREF = "companion.open";
 const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
@@ -47,7 +46,6 @@ class BrowserWindowHandler {
     //  companionIdentityBox.appendChild(lock);
 
     Services.prefs.addObserver(COMPANION_OPEN_PREF, this);
-    Services.prefs.addObserver(COMPANION_DOCKED_PREF, this);
 
     window.addEventListener("unload", () => this.destroy(), { once: true });
     this.observe();
@@ -77,61 +75,35 @@ class BrowserWindowHandler {
 
   destroy() {
     Services.prefs.removeObserver(COMPANION_OPEN_PREF, this);
-    Services.prefs.removeObserver(COMPANION_DOCKED_PREF, this);
 
     CompanionService.removeWindow(this);
   }
 
   observe() {
-    let docked = CompanionService.isDocked && CompanionService.isOpen;
-
-    if (docked) {
-      this.window.document.documentElement.setAttribute("companion", "true");
-      let browser = this.window.document.getElementById("companion-browser");
-      if (browser) {
-        return;
-      }
-
-      browser = this.window.document.createElementNS(XUL_NS, "browser");
-
-      if (
-        Services.prefs.getBoolPref("browser.proclient.remoteCompanion", false)
-      ) {
-        browser.setAttribute(
-          "src",
-          "chrome://browser/content/companionremote/companion.xhtml"
-        );
-        browser.setAttribute("id", "companion-browser");
-        browser.setAttribute("disablehistory", "true");
-        browser.setAttribute("autoscroll", "false");
-        browser.setAttribute("selectmenulist", "ContentSelectDropdown");
-        browser.setAttribute("disablefullscreen", "true");
-        browser.setAttribute("flex", "1");
-        browser.setAttribute(
-          "remoteType",
-          E10SUtils.PRIVILEGEDABOUT_REMOTE_TYPE
-        );
-        browser.setAttribute("remote", "true");
-        browser.setAttribute("message", "true");
-        browser.setAttribute("messagemanagergroup", "browsers");
-        browser.setAttribute("type", "content");
-      } else {
-        browser.setAttribute(
-          "src",
-          "chrome://browser/content/companion/companion.xhtml"
-        );
-        browser.setAttribute("id", "companion-browser");
-        browser.setAttribute("disablehistory", "true");
-        browser.setAttribute("autoscroll", "false");
-        browser.setAttribute("disablefullscreen", "true");
-        browser.setAttribute("flex", "1");
-      }
-
-      this.window.document.getElementById("companion-box").appendChild(browser);
-    } else {
-      this.window.document.documentElement.removeAttribute("companion");
-      this.window.document.getElementById("companion-browser")?.remove();
+    this.window.document.documentElement.setAttribute("companion", "true");
+    let browser = this.window.document.getElementById("companion-browser");
+    if (browser) {
+      return;
     }
+
+    browser = this.window.document.createElementNS(XUL_NS, "browser");
+    browser.setAttribute(
+      "src",
+      "chrome://browser/content/companion/companion.xhtml"
+    );
+    browser.setAttribute("id", "companion-browser");
+    browser.setAttribute("disablehistory", "true");
+    browser.setAttribute("autoscroll", "false");
+    browser.setAttribute("selectmenulist", "ContentSelectDropdown");
+    browser.setAttribute("disablefullscreen", "true");
+    browser.setAttribute("flex", "1");
+    browser.setAttribute("remoteType", E10SUtils.PRIVILEGEDABOUT_REMOTE_TYPE);
+    browser.setAttribute("remote", "true");
+    browser.setAttribute("message", "true");
+    browser.setAttribute("messagemanagergroup", "browsers");
+    browser.setAttribute("type", "content");
+
+    this.window.document.getElementById("companion-box").appendChild(browser);
   }
 
   onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags, aIsSimulated) {
@@ -163,14 +135,6 @@ const CompanionService = {
 
   removeWindow(browserWindow) {
     this._windows.delete(browserWindow);
-
-    if (this._windows.size == 0) {
-      this.closeCompanionWindow();
-    }
-  },
-
-  get isDocked() {
-    return Services.prefs.getBoolPref(COMPANION_DOCKED_PREF, true);
   },
 
   get isOpen() {
@@ -185,84 +149,12 @@ const CompanionService = {
     }
   },
 
-  toggleDocked() {
-    if (this.isDocked) {
-      this.undockCompanion();
-    } else {
-      this.dockCompanion();
-    }
-  },
-
   openCompanion() {
-    if (!this.isDocked) {
-      this.openCompanionWindow();
-    }
-
     Services.prefs.setBoolPref(COMPANION_OPEN_PREF, true);
   },
 
   closeCompanion() {
-    if (!this.isDocked) {
-      this.closeCompanionWindow();
-    }
-
     Services.prefs.setBoolPref(COMPANION_OPEN_PREF, false);
-  },
-
-  dockCompanion() {
-    this.closeCompanionWindow();
-
-    Services.prefs.setBoolPref(COMPANION_DOCKED_PREF, true);
-
-    this.openCompanion();
-  },
-
-  undockCompanion() {
-    Services.prefs.setBoolPref(COMPANION_DOCKED_PREF, false);
-
-    this.openCompanion();
-  },
-
-  openCompanionWindow() {
-    let companion = Services.wm.getMostRecentWindow("Firefox:Companion");
-
-    if (companion && !companion.closed) {
-      companion.focus();
-      return;
-    }
-
-    let win = Services.ww.openWindow(
-      null,
-      "chrome://browser/content/companion/companion.xhtml",
-      "_blank",
-      "chrome,all,dialog=no,resizable=yes,toolbar=yes",
-      null
-    );
-
-    win.addEventListener(
-      "unload",
-      () => {
-        if (!this.isDocked && this._windows.size > 0) {
-          Services.prefs.setBoolPref(COMPANION_OPEN_PREF, false);
-        }
-      },
-      { once: true }
-    );
-  },
-
-  closeCompanionWindow() {
-    let companion = Services.wm.getMostRecentWindow("Firefox:Companion");
-    if (companion && !companion.closed) {
-      companion.close();
-    }
-  },
-
-  dockAndToggle() {
-    if (this.isOpen) {
-      this.closeCompanion();
-    } else {
-      this.dockCompanion();
-    }
   },
 
   copy(anchor, string) {

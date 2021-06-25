@@ -2,11 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// These come from utilityOverlay.js
-/* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
-
-import { openUrl } from "./shared.js";
-
 const NUM_POCKET_STORIES = 3;
 
 const POCKET_IMG_URL =
@@ -38,7 +33,9 @@ export class PocketStory extends HTMLElement {
   }
 
   handleEvent() {
-    openUrl(this.data.url);
+    window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
+      url: this.data.url,
+    });
   }
 }
 
@@ -57,10 +54,12 @@ export class PocketList extends HTMLElement {
   }
 
   async connectedCallback() {
-    if (Cu.isInAutomation) {
+    if (window.CompanionUtils.isInAutomation) {
       return;
     }
-    let key = Services.prefs.getCharPref("extensions.pocket.oAuthConsumerKey");
+    let key = window.CompanionUtils.getCharPref(
+      "extensions.pocket.oAuthConsumerKey"
+    );
 
     let target = new URL(
       `https://getpocket.cdn.mozilla.net/v3/firefox/global-recs?version=3&consumer_key=${key}`

@@ -2,14 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// These come from utilityOverlay.js
-/* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
-
-function tabForBrowser(browser) {
-  let gBrowser = browser.ownerGlobal.gBrowser;
-  return gBrowser.getTabForBrowser(browser);
-}
-
 export class MediaList extends HTMLElement {
   constructor(title) {
     super();
@@ -28,13 +20,7 @@ export class MediaList extends HTMLElement {
       if (this.muteAll.hasAttribute("disabled")) {
         return;
       }
-      for (let media of this.allActiveMediaChildren) {
-        let tab = media.tab;
-        if (tab.soundPlaying && !tab.muted) {
-          tab.toggleMuteAudio();
-        }
-      }
-      this.render();
+      window.CompanionUtils.sendAsyncMessage("Companion:MuteAllTabs", null);
     });
     shadow.appendChild(fragment);
 
@@ -42,43 +28,33 @@ export class MediaList extends HTMLElement {
     this.trackedTabs = new WeakSet();
     this.windowListener = () => this.render();
   }
+
   connectedCallback() {
+    window.addEventListener("Companion:TabAdded", this.windowListener);
+    window.addEventListener("Companion:MediaEvent", this.windowListener);
+    window.addEventListener("Companion:TabAttrModified", this.windowListener);
+    window.addEventListener(
+      "Companion:TabPipToggleChanged",
+      this.windowListener
+    );
     this.render();
-    Services.obs.addObserver(
-      this.windowListener,
-      "browser-window-tracker-add-window"
-    );
-    Services.obs.addObserver(
-      this.windowListener,
-      "browser-window-tracker-remove-window"
-    );
-    Services.obs.addObserver(
-      this.windowListener,
-      "browser-window-tracker-tab-added"
-    );
   }
+
   disconnectedCallback() {
-    Services.obs.removeObserver(
-      this.windowListener,
-      "browser-window-tracker-add-window"
+    window.removeEventListener("Companion:TabAdded", this.windowListener);
+    window.removeEventListener("Companion:MediaEvent", this.windowListener);
+    window.removeEventListener(
+      "Companion:TabAttrModified",
+      this.windowListener
     );
-    Services.obs.removeObserver(
-      this.windowListener,
-      "browser-window-tracker-remove-window"
-    );
-    Services.obs.removeObserver(
-      this.windowListener,
-      "browser-window-tracker-tab-added"
+    window.removeEventListener(
+      "Companion:TabPipToggleChanged",
+      this.windowListener
     );
   }
-  get allBrowsers() {
-    let browsers = [];
-    for (let win of BrowserWindowTracker.orderedWindows) {
-      for (let browser of win.gBrowser.browsers) {
-        browsers.push(browser);
-      }
-    }
-    return browsers;
+
+  get tabs() {
+    return window.CompanionUtils.tabs();
   }
 
   get allActiveMediaChildren() {
@@ -87,25 +63,18 @@ export class MediaList extends HTMLElement {
 
   render() {
     this.innerHTML = "";
-    for (let browser of this.allBrowsers) {
-      if (!browser.browsingContext) {
+    for (let tab of this.tabs) {
+      if (!tab.media) {
         continue;
       }
-      // TODO: This only handles the browsingContext for the top-level
-      // document and not subdocs (like a youtube embed). We may want to
-      // recurse into children to find a media session if the top-level
-      // doc doesn't have one. Should we try to handle the case where we
-      // have multiple within a tab?
-      this.connectMediaController(browser.browsingContext);
-      this.connectTab(tabForBrowser(browser));
-      this.append(new Media(browser));
+      this.append(new Media(tab));
     }
 
     if (this.allActiveMediaChildren.length) {
       this.removeAttribute("hidden");
       let anyNoisy = false;
       for (let media of this.allActiveMediaChildren) {
-        if (media.tab.soundPlaying && !media.tab.muted) {
+        if (media.tab.soundPlaying && !media.tab.audioMuted) {
           anyNoisy = true;
         }
         if (anyNoisy) {
@@ -117,36 +86,6 @@ export class MediaList extends HTMLElement {
     } else {
       this.setAttribute("hidden", "true");
     }
-  }
-
-  connectMediaController(browsingContext) {
-    let controller = browsingContext?.mediaController;
-    if (!controller || this.trackedControllers.has(controller)) {
-      return;
-    }
-    this.trackedControllers.add(controller);
-
-    const options = {
-      mozSystemGroup: true,
-      capture: false,
-    };
-
-    controller.addEventListener("activated", this, options);
-    controller.addEventListener("deactivated", this, options);
-    controller.addEventListener("supportedkeyschange", this, options);
-    controller.addEventListener("positionstatechange", this, options);
-    controller.addEventListener("metadatachange", this, options);
-    controller.addEventListener("playbackstatechange", this, options);
-  }
-
-  connectTab(tab) {
-    if (!tab || this.trackedTabs.has(tab)) {
-      return;
-    }
-    this.trackedTabs.add(tab);
-
-    tab.addEventListener("TabAttrModified", this);
-    tab.addEventListener("TabPipToggleChanged", this);
   }
 
   handleEvent(aEvent) {
@@ -178,9 +117,9 @@ export class MediaList extends HTMLElement {
 }
 
 export class Media extends HTMLElement {
-  constructor(browser) {
+  constructor(tab) {
     super();
-    this.browser = browser;
+    this.tab = tab;
 
     this.className = "media card";
     let template = document.getElementById("template-media");
@@ -188,64 +127,35 @@ export class Media extends HTMLElement {
 
     this.appendChild(fragment);
     this.render();
-    this.playPause.addEventListener("click", event => {
-      if (event.button != 0) {
-        return;
-      }
-      event.stopPropagation();
 
-      if (this.mediaController.isPlaying) {
-        this.mediaController.pause();
-      } else {
-        this.mediaController.play();
-      }
-      this.render();
-    });
-    this.mute.addEventListener("click", event => {
-      if (event.button != 0) {
-        return;
-      }
-      event.stopPropagation();
+    let mediaControlHandler = command => {
+      return event => {
+        if (event.button != 0) {
+          return;
+        }
+        event.stopPropagation();
 
-      this.tab.toggleMuteAudio();
-      this.render();
-    });
-    this.unmute.addEventListener("click", event => {
-      if (event.button != 0) {
-        return;
-      }
-      event.stopPropagation();
+        window.CompanionUtils.sendAsyncMessage("Companion:MediaControl", {
+          browserId: this.tab.browserId,
+          command,
+        });
+      };
+    };
 
-      this.tab.toggleMuteAudio();
-      this.render();
-    });
+    this.playPause.addEventListener("click", mediaControlHandler("togglePlay"));
+    this.mute.addEventListener("click", mediaControlHandler("toggleMute"));
+    this.unmute.addEventListener("click", mediaControlHandler("toggleMute"));
+    this.next.addEventListener("click", mediaControlHandler("nextTrack"));
+    this.prev.addEventListener("click", mediaControlHandler("prevTrack"));
+
     this.addEventListener("click", event => {
       if (event.button != 0) {
         return;
       }
 
-      // i'm sure there's a better way to do this
-      this.browser.ownerGlobal.gBrowser.selectedTab = this.tab;
-      this.browser.ownerGlobal.focus();
-      this.render();
-    });
-    this.next.addEventListener("click", event => {
-      if (event.button != 0) {
-        return;
-      }
-      event.stopPropagation();
-
-      this.mediaController.nextTrack();
-      this.render();
-    });
-    this.prev.addEventListener("click", event => {
-      if (event.button != 0) {
-        return;
-      }
-      event.stopPropagation();
-
-      this.mediaController.prevTrack();
-      this.render();
+      window.CompanionUtils.sendAsyncMessage("Companion:FocusBrowser", {
+        browserId: this.tab.browserId,
+      });
     });
     this.pip.addEventListener("click", event => {
       if (event.button != 0) {
@@ -253,38 +163,12 @@ export class Media extends HTMLElement {
       }
       event.stopPropagation();
 
-      let actor = this.browser.browsingContext.currentWindowGlobal.getActor(
-        "PictureInPictureLauncher"
-      );
-      actor.sendAsyncMessage("PictureInPicture:CompanionToggle");
-      this.render();
+      window.CompanionUtils.sendAsyncMessage("Companion:LaunchPip", {
+        browserId: this.tab.browserId,
+      });
     });
   }
 
-  get tab() {
-    return tabForBrowser(this.browser);
-  }
-  get mediaController() {
-    return this.browser?.browsingContext?.mediaController;
-  }
-  get pipToggleParent() {
-    return this.browser?.browsingContext?.currentWindowGlobal?.getActor(
-      "PictureInPictureToggle"
-    );
-  }
-  get canTogglePip() {
-    return this.pipToggleParent && this.pipToggleParent.trackingMouseOverVideos;
-  }
-  get metadata() {
-    let metadata = null;
-    try {
-      metadata = this.mediaController.getMetadata();
-    } catch (e) {}
-    return metadata;
-  }
-  get documentTitle() {
-    return this.browser?.browsingContext?.currentWindowGlobal?.documentTitle;
-  }
   get artwork() {
     return this.querySelector(".artwork");
   }
@@ -319,8 +203,8 @@ export class Media extends HTMLElement {
   render() {
     // TODO: Check supportedkeys to dynamically add / remove buttons
     let hasMedia =
-      (this.canTogglePip || this.tab.soundPlaying) && this.documentTitle;
-    let metadata = this.metadata;
+      (this.tab.canTogglePip || this.tab.soundPlaying) && this.tab.title;
+    let metadata = this.tab.media.metadata;
 
     if (!metadata || !hasMedia) {
       this.hidden = true;
@@ -330,12 +214,12 @@ export class Media extends HTMLElement {
     let artwork = metadata?.artwork[0]
       ? "url(" + metadata.artwork[0].src + ")"
       : "";
-    this.title.textContent = this.metadata.title ?? this.documentTitle;
-    this.artist.textContent = this.metadata.artist ?? "";
+    this.title.textContent = metadata.title ?? this.tab.title;
+    this.artist.textContent = metadata.artist ?? "";
     this.artwork.style.backgroundImage = artwork;
     this.artworkBackground.style.backgroundImage = artwork;
 
-    let supportedKeys = this.mediaController.supportedKeys;
+    let supportedKeys = this.tab.media.supportedKeys;
     if (
       !supportedKeys.includes("play") ||
       !supportedKeys.includes("pause") ||
@@ -345,18 +229,18 @@ export class Media extends HTMLElement {
       // options.
       this.playPause.hidden = true;
     } else {
-      this.playPause.dataset.state = this.mediaController.isPlaying
+      this.playPause.dataset.state = this.tab.media.isPlaying
         ? "playing"
         : "paused";
     }
 
-    this.mute.hidden = this.browser.audioMuted;
-    this.unmute.hidden = !this.browser.audioMuted;
+    this.mute.hidden = this.tab.audioMuted;
+    this.unmute.hidden = !this.tab.audioMuted;
 
     this.prev.hidden = !supportedKeys.includes("previoustrack");
     this.next.hidden = !supportedKeys.includes("nexttrack");
 
-    this.pip.hidden = !this.canTogglePip;
+    this.pip.hidden = !this.tab.canTogglePip;
   }
 }
 

@@ -115,6 +115,9 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   removeGlobalHistoryDebuggingObservers() {
+    if (!this.browsingContext.topChromeWindow) {
+      return;
+    }
     let hist = this.browsingContext.topChromeWindow.gGlobalHistory;
     for (let event of [
       "ViewChanged",
@@ -395,6 +398,10 @@ class CompanionParent extends JSWindowActorParent {
 
       let result = results.root.getChild(0);
       let favicon = await this.getFavicon(url, 16);
+
+      if (!favicon) {
+        return null;
+      }
 
       let data = {
         url,

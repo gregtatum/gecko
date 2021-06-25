@@ -2,14 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// These come from utilityOverlay.js
-/* global openTrustedLinkIn, XPCOMUtils, BrowserWindowTracker, Services */
-
-import { openUrl, timeFormat, getPlacesData } from "./shared.js";
-
-const { OnlineServices } = ChromeUtils.import(
-  "resource:///modules/OnlineServices.jsm"
-);
+export const timeFormat = new Intl.DateTimeFormat([], {
+  timeStyle: "short",
+});
 
 // Query new events every fifteen minutes
 const CALENDAR_CHECK_TIME = 15 * 60 * 1000; // 15 minutes
@@ -28,6 +23,9 @@ class Event extends HTMLElement {
     let template = document.getElementById("template-event");
     let fragment = template.content.cloneNode(true);
 
+    this.data.start = new Date(Date.parse(this.data.start));
+    this.data.end = new Date(Date.parse(this.data.end));
+
     let date = `${timeFormat.format(this.data.start)} - ${timeFormat.format(
       this.data.end
     )}`;
@@ -37,9 +35,14 @@ class Event extends HTMLElement {
 
     fragment.querySelector(".event-info").addEventListener("click", event => {
       if (event.target.nodeName == "a") {
-        openUrl(event.target.href);
+        window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
+          url: event.target.getAttribute("link"),
+        });
       } else {
-        this.openCalendar();
+        window.CompanionUtils.sendAsyncMessage("Companion:OpenCalendar", {
+          start: this.data.start,
+          serviceId: this.service,
+        });
       }
     });
     let conferenceIcon = fragment.querySelector(".conference-icon");
@@ -47,7 +50,9 @@ class Event extends HTMLElement {
       conferenceIcon.src = this.data.conference.icon;
       conferenceIcon.title = this.data.conference.name;
       conferenceIcon.addEventListener("click", () =>
-        openUrl(this.data.conference.url)
+        window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
+          url: this.data.conference.url,
+        })
       );
     } else {
       conferenceIcon.style.display = "none";
@@ -82,33 +87,24 @@ class Event extends HTMLElement {
 */
   }
 
-  async connectedCallback() {
-    let formattedLinks = await Promise.all(
-      this.data.links.map(async link => {
-        return {
-          url: link.url,
-          text: link.text || (await getPlacesData(link.url))?.title || link.url,
-        };
-      })
-    );
+  connectedCallback() {
+    let formattedLinks = this.data.links.map(link => ({
+      url: link.url,
+      text:
+        link.text ||
+        window.CompanionUtils.getPlacesData(link.url)?.title ||
+        link.url,
+    }));
 
     for (let link of formattedLinks) {
       let div = document.createElement("div");
       let a = document.createElement("a");
       a.textContent = link.text;
-      a.setAttribute("href", link.url);
+      a.setAttribute("link", link.url);
       a.setAttribute("title", link.url);
       div.appendChild(a);
       this.querySelector(".links").appendChild(div);
     }
-  }
-
-  openCalendar() {
-    this.service.openCalendar(
-      this.data.start.getFullYear(),
-      this.data.start.getMonth() + 1,
-      this.data.start.getDate()
-    );
   }
 }
 
@@ -150,21 +146,11 @@ async function updateEvents() {
   document.querySelector("#calendar").hidden = !showCalendar;
 }
 
-async function buildEvents(services) {
+export async function buildEvents(events) {
   let panel = document.getElementById("calendar-panel");
   let nodes = [];
-
-  for (let service of services) {
-    let meetings;
-    try {
-      meetings = await service.getNextMeetings();
-    } catch (e) {
-      console.error(e);
-      OnlineServices.deleteService(service);
-      continue;
-    }
-
-    nodes = nodes.concat(meetings.map(event => new Event(service, event)));
+  for (let event of events) {
+    nodes = nodes.concat(new Event(event.serviceId, event));
   }
 
   panel.replaceChildren(...nodes);
@@ -174,13 +160,13 @@ async function buildEvents(services) {
 let calendarCheckTimer;
 let calendarUpdateTimer;
 
-export function initCalendarServices(services) {
-  buildEvents(services);
+export function initCalendarServices(events) {
+  buildEvents(events);
   calendarCheckTimer = setInterval(function() {
-    buildEvents(services);
+    window.CompanionUtils.sendAsyncMessage("Companion:GetEvents", {});
   }, CALENDAR_CHECK_TIME);
   calendarUpdateTimer = setInterval(function() {
-    updateEvents(services);
+    updateEvents();
   }, CALENDAR_UPDATE_TIME);
 }
 
