@@ -8,6 +8,13 @@ const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "FXA_ROOT_URL",
+  "identity.fxaccounts.remote.root"
+);
+const FXA_SIGNUP_URL = new URL("/signup", FXA_ROOT_URL).href;
+
 const extraServices = [
   {
     type: "google-mozilla",
@@ -28,17 +35,17 @@ class ServiceRow extends HTMLElement {
    * Creates a <service-row> element for displaying service management data.
    *
    * @param {Object|null} service
-   *        A connected service object managed by OnlineServices. If null, then the user
+   *        A connected service object. If null, then the user
    *        is not connected to one.
    * @param {Object}  data
    *        The data associated with the service the user wants to
    *        connect to / disconnect from.
    * @param {string}  data.type
    *        The type of service to display information for.
-   * @param {string}  data.title
-   *        The name of the service.
-   * @param {Array}   data.apps
-   *        The list of apps the service integrates with.
+   * @param {string}  data.nameId
+   *        Localization string for displaying the name of the service
+   * @param {string}   data.labelsId
+   *        Localization string for displaying a label for the service
    * @param {string}  data.icon
    *        The service icon
    */
@@ -49,7 +56,7 @@ class ServiceRow extends HTMLElement {
   }
 
   static get observedAttributes() {
-    return ["connected"];
+    return ["status"];
   }
 
   static get templateString() {
@@ -96,41 +103,34 @@ class ServiceRow extends HTMLElement {
     return this._template;
   }
 
+  _getElement(selector) {
+    return this.shadowRoot.querySelector(selector);
+  }
+
   attributeChangedCallback(name, oldValue, newValue) {
     switch (name) {
-      case "connected":
+      case "status":
         this.updateStatus(newValue);
     }
   }
 
-  updateStatus(connected) {
-    connected = connected == "true";
+  updateStatus(status) {
+    let connected = status == "connected";
 
-    let statusContainer = this.shadowRoot.querySelector(".service-status");
-    let connectedStatus = this.shadowRoot.querySelector(".status-connected");
-    let disconnectedStatus = this.shadowRoot.querySelector(
-      ".status-disconnected"
-    );
+    let connectedStatus = this._getElement(".status-connected");
+    let disconnectedStatus = this._getElement(".status-disconnected");
 
-    let disconnectButton = this.shadowRoot.querySelector(".button-disconnect");
-    let connectButton = this.shadowRoot.querySelector(".button-connect");
+    let disconnectButton = this._getElement(".button-disconnect");
+    let connectButton = this._getElement(".button-connect");
 
-    statusContainer.toggleAttribute(
-      "hidden",
-      this.data.type == "firefox-account"
-    );
-    connectedStatus.toggleAttribute("hidden", !connected);
-    disconnectButton.toggleAttribute("hidden", !connected);
-    disconnectedStatus.toggleAttribute("hidden", connected);
-    connectButton.toggleAttribute("hidden", connected);
+    connectedStatus?.toggleAttribute("hidden", !connected);
+    disconnectButton?.toggleAttribute("hidden", !connected);
+    disconnectedStatus?.toggleAttribute("hidden", connected);
+    connectButton?.toggleAttribute("hidden", connected);
   }
 
-  getIsServiceConnected() {
-    if (this.data.type == "firefox-account") {
-      return !!this.service;
-    }
-
-    return !!this.service?.auth?.accessToken;
+  getServiceStatus() {
+    return this.service?.auth?.accessToken ? "connected" : "disconnected";
   }
 
   connectedCallback() {
@@ -157,50 +157,150 @@ class ServiceRow extends HTMLElement {
   }
 
   async signin() {
-    if (this.data.type == "firefox-account") {
-      await gSyncPane.signIn();
-    } else {
-      this.service = await OnlineServices.createService(this.data.type);
-      if (!this.service) {
-        return;
-      }
-      Services.obs.notifyObservers(
-        this.service,
-        "companion-signin",
-        this.service.id
-      );
+    this.service = await OnlineServices.createService(this.data.type);
+    if (!this.service) {
+      return;
     }
-    this.setAttribute("connected", true);
+    Services.obs.notifyObservers(
+      this.service,
+      "companion-signin",
+      this.service.id
+    );
+    this.setAttribute("status", "connected");
   }
 
   async signout() {
     Services.obs.notifyObservers(null, "companion-signout", this.service.id);
     await OnlineServices.deleteService(this.service);
     this.service = null;
-    this.setAttribute("connected", false);
+    this.setAttribute("status", "disconnected");
   }
 
   render() {
-    let wrapper = this.shadowRoot.querySelector(".service-wrapper");
-    let icon = this.shadowRoot.querySelector(".service-icon");
-    let name = this.shadowRoot.querySelector(".service-name");
-    let labels = this.shadowRoot.querySelector(".service-labels");
+    let wrapper = this._getElement(".service-wrapper");
+    let icon = this._getElement(".service-icon");
+    let name = this._getElement(".service-name");
+    let labels = this._getElement(".service-labels");
 
     wrapper.setAttribute("type", this.data.type);
     icon.src = this.data.icon;
     document.l10n.setAttributes(name, this.data.nameId);
     document.l10n.setAttributes(labels, this.data.labelsId);
 
-    let disconnectButton = this.shadowRoot.querySelector(".button-disconnect");
-    let connectButton = this.shadowRoot.querySelector(".button-connect");
+    let disconnectButton = this._getElement(".button-disconnect");
+    let connectButton = this._getElement(".button-connect");
     disconnectButton.addEventListener("click", this);
     connectButton.addEventListener("click", this);
 
-    this.setAttribute("connected", this.getIsServiceConnected());
+    this.setAttribute("status", this.getServiceStatus());
   }
 }
 
 customElements.define("service-row", ServiceRow);
+
+class FxaServiceRow extends ServiceRow {
+  constructor(service, data) {
+    super(service, data);
+  }
+
+  getServiceStatus() {
+    return this.service ? "connected" : "disconnected";
+  }
+
+  async signin() {
+    // This will cause a location change to the FxA sign-in page. So there's no need
+    // to trigger an attributeChanged callback here.
+    gSyncPane.signIn();
+  }
+
+  async signout() {
+    let confirmed = await gSyncPane.unlinkFirefoxAccount(true);
+    if (confirmed) {
+      this.service = null;
+      this.setAttribute("status", "disconnected");
+    }
+  }
+
+  updateStatus(status) {
+    super.updateStatus(status);
+
+    let createAccountLink = this._getElement(".service-create-fxa-account");
+    createAccountLink?.toggleAttribute("hidden", status === "connected");
+
+    if (status === "connected") {
+      this.displayAccountData();
+    } else {
+      this.displaySignIn();
+    }
+  }
+
+  async displayAccountData() {
+    let name = this._getElement(".service-name");
+    let labels = this._getElement(".service-labels");
+    let icon = this._getElement(".service-icon");
+    let signOutButton = this._getElement(".button-disconnect");
+
+    name.removeAttribute("data-l10n-id");
+    labels.removeAttribute("data-l10n-id");
+
+    icon.src = this.service.avatar;
+    name.textContent = this.service.displayName;
+
+    await fxAccounts.device.refreshDeviceList();
+    document.l10n.setAttributes(labels, "preferences-services-devices-label", {
+      deviceCount: fxAccounts.device.recentDeviceList.length,
+    });
+    document.l10n.setAttributes(
+      signOutButton,
+      "preferences-services-fxa-sign-out"
+    );
+  }
+
+  displaySignIn() {
+    let signInButton = this._getElement(".button-connect");
+
+    let name = this._getElement(".service-name");
+    let labels = this._getElement(".service-labels");
+    let icon = this._getElement(".service-icon");
+    icon.src = this.data.icon;
+
+    document.l10n.setAttributes(name, this.data.nameId);
+    document.l10n.setAttributes(labels, this.data.labelsId);
+    document.l10n.setAttributes(
+      signInButton,
+      "preferences-services-fxa-sign-in"
+    );
+  }
+
+  createAccountLink() {
+    let wrapper = this._getElement(".service-wrapper");
+    let statusContainer = this._getElement(".service-status");
+    let link = document.createElement("a");
+
+    link.classList.add("service-create-fxa-account", "button-link");
+    link.hidden = this.getServiceStatus() === "connected";
+    link.href = FXA_SIGNUP_URL;
+
+    wrapper.replaceChild(link, statusContainer);
+    document.l10n.setAttributes(
+      link,
+      "preferences-services-create-account-link"
+    );
+  }
+
+  render() {
+    super.render();
+    this.createAccountLink();
+
+    if (this.getServiceStatus() === "connected") {
+      this.displayAccountData();
+    } else {
+      this.displaySignIn();
+    }
+  }
+}
+
+customElements.define("fxa-service-row", FxaServiceRow);
 
 function buildExtraServiceRows() {
   let extraServicesContainer = document.getElementById(
@@ -224,19 +324,10 @@ function buildExtraServiceRows() {
 
 async function buildFirefoxAccount() {
   let account = await fxAccounts.getSignedInUser();
-
-  if (account) {
-    showConnectedFxaAccount(account);
-  } else {
-    showDisconnectedFxaAccount();
-  }
-}
-
-function showDisconnectedFxaAccount() {
   let firefoxAccountContainer = document.getElementById(
     "firefox-account-container"
   );
-  let node = new ServiceRow(null, {
+  let node = new FxaServiceRow(account, {
     type: "firefox-account",
     nameId: "preferences-services-firefox-account",
     labelsId: "preferences-services-firefox-account-labels",
@@ -244,24 +335,4 @@ function showDisconnectedFxaAccount() {
   });
 
   firefoxAccountContainer.replaceChildren(node);
-}
-
-function showConnectedFxaAccount(account) {
-  let firefoxAccountContainer = document.getElementById(
-    "firefox-account-container"
-  );
-  let fxaGroup = document.getElementById("fxaGroup");
-  let clone = fxaGroup.cloneNode(true);
-  firefoxAccountContainer.appendChild(clone);
-
-  let signoutButton = firefoxAccountContainer.querySelector("#fxaUnlinkButton");
-  signoutButton.addEventListener("command", e => {
-    gSyncPane.unlinkFirefoxAccount(true).then(confirmed => {
-      if (confirmed) {
-        showDisconnectedFxaAccount();
-      }
-    });
-  });
-
-  firefoxAccountContainer.replaceChildren(clone);
 }

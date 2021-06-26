@@ -521,7 +521,8 @@ xul|menulist[disabled="true"] {
 html|button[autofocus],
 html|button[type="submit"],
 xul|button[default],
-button.primary {
+button.primary,
+a.button-link {
   background-color: var(--in-content-primary-button-background);
   color: var(--in-content-primary-button-text-color);
 }
@@ -530,7 +531,8 @@ html|button[autofocus]:enabled:hover,
 html|button[type="submit"]:enabled:hover,
 html|button.primary:enabled:hover,
 xul|button[default]:not([disabled="true"]):hover,
-xul|button.primary:not([disabled="true"]):hover {
+xul|button.primary:not([disabled="true"]):hover,
+a.button-link:hover {
   background-color: var(--in-content-primary-button-background-hover);
   color: var(--in-content-primary-button-text-color-hover);
 }
@@ -539,7 +541,8 @@ html|button[autofocus]:enabled:hover:active,
 html|button[type="submit"]:enabled:hover:active,
 html|button.primary:enabled:hover:active,
 xul|button[default]:not([disabled="true"]):hover:active,
-xul|button.primary:not([disabled="true"]):hover:active {
+xul|button.primary:not([disabled="true"]):hover:active,
+a.button-link:active {
   background-color: var(--in-content-primary-button-background-active);
 }
 
@@ -559,7 +562,8 @@ xul|button.primary:not([disabled="true"]):hover:active {
   html|button[autofocus]:focus,
   html|button[type="submit"]:focus,
   xul|button[default]:focus,
-  button.primary:focus {
+  button.primary:focus,
+  a.button-link:focus {
     color: var(--in-content-primary-button-text-color);
   }
 }
@@ -1585,4 +1589,19 @@ xul|*.addons-icon {
   margin: 0 4px;
   min-width: auto;
 }
+}
+
+a.button-link {
+  border-radius: var(--in-content-button-border-radius);
+  border: 1px solid transparent;
+  padding: var(--in-content-button-vertical-padding) var(--in-content-button-horizontal-padding);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: default;
+  font-weight: 600;
+}
+
+a.button-link,
+a.button-link:active {
+  color: var(--in-content-primary-button-text-color);
 }

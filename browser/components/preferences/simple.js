@@ -32,9 +32,7 @@ let gSimplePane = {
     const needPin = await shellService.doesAppNeedPin();
     document.getElementById("pinAppPane").hidden = !needPin;
 
-    Services.obs.addObserver(() => {
-      buildFirefoxAccount();
-    }, "sync-pane-loaded");
+    buildFirefoxAccount();
     buildExtraServiceRows();
   },
 
