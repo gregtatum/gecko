@@ -32,12 +32,15 @@ class ActiveViewManager extends HTMLElement {
     for (let event of ActiveViewManager.EVENTS) {
       window.top.gGlobalHistory.addEventListener(event, this);
     }
+
+    this.addEventListener("UserAction:ViewSelected", this);
   }
 
   disconnectedCallback() {
     for (let event of ActiveViewManager.EVENTS) {
       window.top.gGlobalHistory.removeEventListener(event, this);
     }
+    this.removeEventListener("UserAction:ViewSelected", this);
   }
 
   updateActiveView(viewElToActivate) {
@@ -159,6 +162,12 @@ class ActiveViewManager extends HTMLElement {
         break;
       case "ViewUpdated":
         this.viewUpdated(event.view);
+        break;
+      case "UserAction:ViewSelected":
+        let view = event.detail.clickedView;
+        let viewEl = this.views.get(view);
+        this.updateActiveView(viewEl);
+        window.top.gGlobalHistory.setView(view);
         break;
     }
   }

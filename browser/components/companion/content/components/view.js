@@ -3,10 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 class ViewElement extends HTMLElement {
-  constructor() {
-    super();
-  }
-
   connectedCallback() {
     if (!this.built) {
       let template = document.getElementById("template-view");
@@ -16,6 +12,11 @@ class ViewElement extends HTMLElement {
     }
 
     this.update();
+    this.addEventListener("click", this);
+  }
+
+  disconnectedCallback() {
+    this.removeEventListener("click", this);
   }
 
   update(view) {
@@ -34,6 +35,18 @@ class ViewElement extends HTMLElement {
     } catch (e) {}
     let domainEl = this.querySelector(".view-domain");
     domainEl.textContent = domain;
+  }
+
+  handleEvent(event) {
+    if (event.type != "click") {
+      return;
+    }
+
+    let e = new CustomEvent("UserAction:ViewSelected", {
+      bubbles: true,
+      detail: { clickedView: this.view },
+    });
+    this.dispatchEvent(e);
   }
 }
 customElements.define("view-el", ViewElement);
