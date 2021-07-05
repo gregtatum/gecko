@@ -19,8 +19,9 @@
   #endif
 #endif
 
-pref("browser.proclient.enabled", true);
+#ifdef PROCLIENT_ENABLED
 pref("browser.places.interactions.enabled", true);
+#endif
 
 pref("browser.hiddenWindowChromeURL", "chrome://browser/content/hiddenWindowMac.xhtml");
 

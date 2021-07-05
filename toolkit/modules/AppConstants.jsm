@@ -12,11 +12,14 @@ ChromeUtils.defineModuleGetter(this, "AddonManager", "resource://gre/modules/Add
 
 this.EXPORTED_SYMBOLS = ["AppConstants"];
 
-const proclientEnabled = Services.prefs.getBoolPref("browser.proclient.enabled", false);
-
 // Immutable for export.
 this.AppConstants = Object.freeze({
-  PROCLIENT_ENABLED: proclientEnabled,
+  PROCLIENT_ENABLED:
+#ifdef PROCLIENT_ENABLED
+  true,
+#else
+  false,
+#endif
 
   // See this wiki page for more details about channel specific build
   // defines: https://wiki.mozilla.org/Platform/Channel-specific_build_defines
@@ -359,7 +362,7 @@ this.AppConstants = Object.freeze({
   MOZ_GOOGLE_SAFEBROWSING_API_KEY: "@MOZ_GOOGLE_SAFEBROWSING_API_KEY@",
   MOZ_MOZILLA_API_KEY: "@MOZ_MOZILLA_API_KEY@",
 
-  BROWSER_CHROME_URL: proclientEnabled ? "@BROWSER_PROCLIENT_URL@" : "@BROWSER_CHROME_URL@",
+  BROWSER_CHROME_URL: "@BROWSER_CHROME_URL@",
 
   OMNIJAR_NAME: "@OMNIJAR_NAME@",
 

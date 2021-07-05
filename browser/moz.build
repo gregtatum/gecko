@@ -53,6 +53,9 @@ if CONFIG["MOZ_BACKGROUNDTASKS"]:
 if CONFIG["MOZ_UPDATE_AGENT"]:
     DEFINES["MOZ_UPDATE_AGENT"] = True
 
+if CONFIG["PROCLIENT_ENABLED"]:
+    DEFINES["PROCLIENT_ENABLED"] = True
+
 # These files are specified in this moz.build to pick up DIST_SUBDIR as set in
 # this directory, which is un-set in browser/app.
 JS_PREFERENCE_PP_FILES += [

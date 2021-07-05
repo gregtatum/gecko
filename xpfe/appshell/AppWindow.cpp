@@ -2304,11 +2304,7 @@ NS_IMETHODIMP AppWindow::CreateNewContentWindow(
 
   nsCOMPtr<nsIURI> uri;
   nsAutoCString urlStr;
-  if (Preferences::GetBool("browser.proclient.enabled", false)) {
-    urlStr.AssignLiteral(BROWSER_PROCLIENT_URL_QUOTED);
-  } else {
-    urlStr.AssignLiteral(BROWSER_CHROME_URL_QUOTED);
-  }
+  urlStr.AssignLiteral(BROWSER_CHROME_URL_QUOTED);
 
   nsCOMPtr<nsIIOService> service(do_GetService(NS_IOSERVICE_CONTRACTID));
   if (service) {

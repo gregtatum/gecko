@@ -4,3 +4,5 @@
 
 MOZ_APP_DISPLAYNAME="Pro Client"
 MOZ_MACBUNDLE_ID=mr2demo
+BROWSER_CHROME_URL=chrome://browser/content/browser-proclient.xhtml
+PROCLIENT_ENABLED=1
