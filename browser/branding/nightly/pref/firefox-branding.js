@@ -4,8 +4,8 @@
 
 // This file contains branding-specific prefs.
 
-pref("startup.homepage_override_url", "");
-pref("startup.homepage_welcome_url", "");
+pref("startup.homepage_override_url", "https://www.mozilla.org/projects/firefox/%VERSION%/whatsnew/?oldversion=%OLD_VERSION%");
+pref("startup.homepage_welcome_url", "https://www.mozilla.org/projects/firefox/%VERSION%/firstrun/");
 pref("startup.homepage_welcome_url.additional", "");
 // The time interval between checks for a new version (in seconds)
 pref("app.update.interval", 7200); // 2 hours
@@ -33,6 +33,3 @@ pref("app.update.badgeWaitTime", 0);
 // Number of usages of the web console.
 // If this is less than 5, then pasting code into the web console is disabled
 pref("devtools.selfxss.count", 5);
-
-// Temporary overrides for CSS in demo
-pref("browser.companion.styleoverrides", true);
