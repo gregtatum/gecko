@@ -10,6 +10,8 @@
 #
 # The common expected usage is for try builds with nondefault options.
 
+ac_add_options --with-branding=browser/branding/nightly-pine
+
 if test -n "$USE_ARTIFACT"; then
 . "$topsrcdir/build/mozconfig.artifact"
 fi
