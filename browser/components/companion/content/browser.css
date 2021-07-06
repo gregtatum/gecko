@@ -11,8 +11,6 @@
   display: none;
 }
 
-#titlebar,
-#TabsToolbar,
 #PersonalToolbar,
 #nav-bar-overflow-button,
 #page-action-buttons,
@@ -21,6 +19,12 @@
 #nav-bar-customization-target > *:not(#urlbar-container) {
   display: none;
   -moz-box-flex: 1;
+}
+
+@supports not -moz-bool-pref("browser.companion.tabdebugging") {
+  #titlebar {
+    display: none;
+  }
 }
 
 #urlbar-container {
