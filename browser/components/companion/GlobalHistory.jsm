@@ -433,7 +433,7 @@ class GlobalHistory extends EventTarget {
 
     let internalView = this.#historyViews.get(newEntry.ID);
 
-    if (!internalView && this.#pendingView?.url == newEntry.URI.spec) {
+    if (!internalView && this.#pendingView?.url.spec == newEntry.URI.spec) {
       internalView = this.#pendingView;
       this.#historyViews.delete(internalView.historyId);
       internalView.update(browser, newEntry);
