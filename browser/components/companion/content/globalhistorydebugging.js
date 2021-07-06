@@ -57,6 +57,13 @@ export class GlobalHistoryDebugging extends HTMLElement {
         item.classList.add("visible");
       }
 
+      let tooltip =
+        `URI: ${view.urlSpec}\n` +
+        `Index: ${view.index}\n` +
+        `${JSON.stringify(view.historyState, null, "\n")}`;
+
+      item.title = tooltip;
+
       elements.push(item);
 
       item.addEventListener("click", () =>

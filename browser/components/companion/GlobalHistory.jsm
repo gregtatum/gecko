@@ -107,6 +107,23 @@ class InternalView {
 
     this.url = historyEntry.URI;
     this.title = historyEntry.title;
+
+    if (
+      Services.prefs.getBoolPref(
+        "browser.companion.globalhistorydebugging",
+        false
+      )
+    ) {
+      this.historyState = {
+        historyId: historyEntry.ID,
+        originalURISpec: historyEntry.originalURI?.spec,
+        loadReplace: historyEntry.loadReplace,
+        hasUserInteraction: historyEntry.hasUserInteraction,
+        hasUserActivation: historyEntry.hasUserActivation,
+        URIWasModified: historyEntry.URIWasModified,
+        persist: historyEntry.persist,
+      };
+    }
   }
 
   /** @type {View} */
@@ -549,6 +566,28 @@ class GlobalHistory extends EventTarget {
    */
   get views() {
     return this.#viewStack.map(internalView => internalView.view);
+  }
+
+  /**
+   * Returns a snapshot of the current stack of InternalViews. This is
+   * an encapsulation violation and only returns a non-null value when
+   * running with browser.companion.globalhistorydebugging set to `true`.
+   *
+   * Do not use this for production code.
+   *
+   * @type {InternalView[]}
+   */
+  get internalViewsDebuggingOnly() {
+    if (
+      !Services.prefs.getBoolPref(
+        "browser.companion.globalhistorydebugging",
+        false
+      )
+    ) {
+      return null;
+    }
+
+    return [...this.#viewStack];
   }
 
   /**

@@ -646,14 +646,16 @@ class CompanionParent extends JSWindowActorParent {
     }
 
     let {
-      views,
+      internalViewsDebuggingOnly,
       currentView,
     } = this.browsingContext.topChromeWindow.gGlobalHistory;
-    return views.map((v, i) => ({
+    return internalViewsDebuggingOnly.map((v, i) => ({
       title: v.title,
+      urlSpec: v.url.spec,
       state: v.state,
-      isCurrent: v === currentView,
+      isCurrent: v.view === currentView,
       index: i,
+      historyState: v.historyState,
     }));
   }
 
