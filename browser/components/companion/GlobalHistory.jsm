@@ -654,7 +654,7 @@ class GlobalHistory extends EventTarget {
     // view accordingly.
     this.#pendingView = internalView;
     this.#window.gBrowser.selectedTab = this.#window.gBrowser.addWebTab(
-      internalView.url
+      internalView.url.spec
     );
   }
 
