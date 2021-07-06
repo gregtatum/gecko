@@ -545,9 +545,7 @@ class GlobalHistory extends EventTarget {
         }
 
         previousView.update(browser, newEntry);
-        let newView = new InternalView(this.#window, browser, newEntry);
-        this.#viewStack[pos] = newView;
-        this.#historyViews.set(newEntry.ID, newView);
+        this.#historyViews.set(newEntry.ID, previousView);
 
         this.dispatchEvent(
           new GlobalHistoryEvent("ViewUpdated", previousView.view)
