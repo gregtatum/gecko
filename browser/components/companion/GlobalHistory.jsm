@@ -81,6 +81,10 @@ class View {
   get state() {
     return this.#internalView.state;
   }
+
+  get iconURL() {
+    return this.#internalView.iconURL;
+  }
 }
 
 class InternalView {
@@ -355,6 +359,11 @@ class GlobalHistory extends EventTarget {
       this.#tabOpened(event.target)
     );
 
+    this.#window.gBrowser.tabContainer.addEventListener(
+      "TabAttrModified",
+      event => this.#tabAttrModified(event.target, event.detail.changed)
+    );
+
     this._onBrowserNavigate(this.#window.gBrowser.selectedBrowser);
   }
 
@@ -393,6 +402,17 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
+   * @param {Tab} tab
+   * @param {Array} changed
+   */
+  #tabAttrModified(tab, changed) {
+    if (changed.includes("image")) {
+      let browser = tab.linkedBrowser;
+      this._onNewIcon(browser);
+    }
+  }
+
+  /**
    * Called when the document in a browser has changed title.
    */
   _onNewTitle(browser) {
@@ -403,6 +423,22 @@ class GlobalHistory extends EventTarget {
     }
 
     internalView.title = entry.title;
+    this.dispatchEvent(
+      new GlobalHistoryEvent("ViewUpdated", internalView.view)
+    );
+  }
+
+  /**
+   * Called when the document in a browser has changed its favicon.
+   */
+  _onNewIcon(browser) {
+    let entry = currentEntry(browser);
+    let internalView = this.#historyViews.get(entry.ID);
+    if (!internalView) {
+      return;
+    }
+
+    internalView.iconURL = browser.mIconURL;
     this.dispatchEvent(
       new GlobalHistoryEvent("ViewUpdated", internalView.view)
     );
