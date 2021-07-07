@@ -20,6 +20,7 @@
 #endif
 
 pref("browser.proclient.enabled", true);
+pref("browser.places.interactions.enabled", true);
 
 pref("browser.hiddenWindowChromeURL", "chrome://browser/content/hiddenWindowMac.xhtml");
 
