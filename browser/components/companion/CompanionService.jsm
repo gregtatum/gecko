@@ -30,6 +30,7 @@ class BrowserWindowHandler {
   constructor(window) {
     this.window = window;
     this.selectedTab = window.gBrowser.selectedTab;
+    this._companionBox = this.window.document.getElementById("companion-box");
 
     let companionToolbar = this.window.document.getElementById(
       "companion-toolbar"
@@ -75,6 +76,8 @@ class BrowserWindowHandler {
 
   destroy() {
     Services.prefs.removeObserver(COMPANION_OPEN_PREF, this);
+    let xulStore = Services.xulStore;
+    xulStore.persist(this._companionBox, "width");
 
     CompanionService.removeWindow(this);
   }

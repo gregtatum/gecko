@@ -3,7 +3,11 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 :root {
-  --companion-width: 300px;
+  /* XXX: should these (and all the other companion stuff for that matter) be
+  expressed in em / some other unit? */
+  --companion-width: 340px;
+  --companion-min-width: 300px;
+  --companion-max-width: 600px;
   --companion-background: var(--in-content-page-background);;
 }
 
@@ -38,6 +42,8 @@
 :root[companion] #companion-box,
 :root[companion] #companion-titlebar {
   width: var(--companion-width);
+  min-width: var(--companion-min-width);
+  max-width: var(--companion-max-width);
 }
 
 :root[companion] #companion-box {

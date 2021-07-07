@@ -5,6 +5,9 @@
 var EXPORTED_SYMBOLS = ["ThemeVariableMap", "ThemeContentPropertyList"];
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 const ThemeVariableMap = [
   [
@@ -178,7 +181,9 @@ const ThemeVariableMap = [
     "--sidebar-border-color",
     {
       lwtProperty: "sidebar_border",
-      optionalElementID: "browser",
+      optionalElementID: AppConstants.PROCLIENT_ENABLED
+        ? "browser-outer"
+        : "browser",
     },
   ],
 ];

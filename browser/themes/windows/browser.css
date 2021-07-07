@@ -593,7 +593,8 @@ menuitem.bookmark-item {
 
 %include ../shared/sidebar.inc.css
 
-#browser {
+#browser,
+#browser-outer {
   --sidebar-border-color: ThreeDLightShadow;
 }
 
