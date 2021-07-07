@@ -19,11 +19,13 @@
         <vbox id="widget-overflow-fixed-list" class="widget-overflow-list" hidden="true" />
       </vbox>
       <toolbarseparator />
+#ifndef PROCLIENT_WINDOW
       <toolbarbutton command="cmd_CustomizeToolbars"
                       id="overflowMenu-customize-button"
                       class="subviewbutton panel-subview-footer-button"
                       accesskey="&overflowCustomizeToolbar.accesskey;"
                       label="&overflowCustomizeToolbar.label;"/>
+#endif
     </panelview>
   </panelmultiview>
   <!-- This menu is here because not having it in the menu in which it's used flickers
@@ -59,10 +61,12 @@
               closemenu="single"
               class="customize-context-removeFromPanel"
               data-lazy-l10n-id="toolbar-context-menu-remove-from-toolbar"/>
+#ifndef PROCLIENT_WINDOW
     <menuseparator/>
     <menuitem command="cmd_CustomizeToolbars"
               class="viewCustomizeToolbar"
               data-lazy-l10n-id="toolbar-context-menu-view-customize-toolbar"/>
+#endif
   </menupopup>
 </panel>
 
@@ -203,12 +207,13 @@
               accesskey="&customizeMenu.addToOverflowMenu.accesskey;"
               label="&customizeMenu.addToOverflowMenu.label;"/>
   </menupopup>
-
+#ifndef PROCLIENT_WINDOW
   <menupopup id="customizationPanelContextMenu">
     <menuitem command="cmd_CustomizeToolbars"
               accesskey="&customizeMenu.addMoreItems.accesskey;"
               label="&customizeMenu.addMoreItems.label;"/>
   </menupopup>
+#endif
   <panel id="downloads-button-autohide-panel"
          role="group"
          type="arrow"

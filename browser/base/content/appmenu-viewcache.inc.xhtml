@@ -145,11 +145,13 @@
 #endif
                      oncommand="openPreferences()"
                      />
+#ifndef PROCLIENT_WINDOW
       <toolbarbutton id="appMenu-customize-button"
                      class="subviewbutton subviewbutton-iconic"
                      data-l10n-id="appmenu-customizetoolbar"
                      command="cmd_CustomizeToolbars"
                      />
+#endif
       <toolbarseparator/>
       <toolbarbutton id="appMenu-open-file-button"
                      class="subviewbutton"
@@ -620,11 +622,13 @@
 
   <panelview id="appmenu-moreTools" class="PanelUI-subView">
     <vbox class="panel-subview-body">
+#ifndef PROCLIENT_WINDOW
       <toolbarbutton id="appmenu-moreTools-button"
                      class="subviewbutton"
                      data-l10n-id="appmenu-customizetoolbar"
                      command="cmd_CustomizeToolbars"/>
       <toolbarseparator/>
+#endif
       <html:h2 id="appmenu-developer-tools"
           data-l10n-id="appmenu-developer-tools-subheader"
           class="subview-subheader"/>

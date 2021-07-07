@@ -147,9 +147,11 @@
                          onpopupshowing="updateCharacterEncodingMenuState();">
                 <menu id="viewToolbarsMenu" data-l10n-id="menu-view-toolbars-menu">
                   <menupopup id="view-menu-popup" onpopupshowing="onViewToolbarsPopupShowing(event);">
+#ifndef PROCLIENT_WINDOW
                     <menuseparator/>
                     <menuitem id="menu_customizeToolbars"
                               command="cmd_CustomizeToolbars" data-l10n-id="menu-view-customize-toolbar2"/>
+#endif
                   </menupopup>
                 </menu>
 #ifndef PROCLIENT_WINDOW
