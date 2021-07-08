@@ -20,7 +20,7 @@
 #page-action-buttons,
 #tracking-protection-icon-container,
 :root[companion] #companion-sidebar-button-win,
-#nav-bar-customization-target > *:not(#urlbar-container) {
+#nav-bar-customization-target > *:not(#urlbar-container, #profiler-button) {
   display: none;
   -moz-box-flex: 1;
 }
