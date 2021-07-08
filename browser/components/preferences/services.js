@@ -227,9 +227,7 @@ class FxaServiceRow extends ServiceRow {
     let createAccountLink = this._getElement(".service-create-fxa-account");
     createAccountLink?.toggleAttribute("hidden", status === "connected");
 
-    if (status === "connected") {
-      this.displayAccountData();
-    } else {
+    if (status !== "connected") {
       this.displaySignIn();
     }
   }
@@ -244,7 +242,14 @@ class FxaServiceRow extends ServiceRow {
     labels.removeAttribute("data-l10n-id");
 
     icon.src = this.service.avatar;
-    name.textContent = this.service.displayName;
+    let primaryLabel = document.createElement("strong");
+    primaryLabel.textContent = this.service.displayName
+      ? this.service.displayName
+      : this.service.email;
+    name.append(primaryLabel);
+    if (this.service.displayName) {
+      name.append(new Text(" "), new Text(this.service.email));
+    }
 
     await fxAccounts.device.refreshDeviceList();
     document.l10n.setAttributes(labels, "preferences-services-devices-label", {
