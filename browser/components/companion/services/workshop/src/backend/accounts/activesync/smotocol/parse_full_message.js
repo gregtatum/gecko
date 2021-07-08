@@ -21,11 +21,8 @@ import { encodeInt as encodeA64 } from "shared/a64";
 
 import * as mailRep from "../../../db/mail_rep";
 
-import {
-  Tags as asb,
-  Enums as asbEnum,
-} from "activesync/codepages/AirSyncBase";
-import { Tags as em } from "activesync/codepages/Email";
+import asb from "activesync/codepages/AirSyncBase";
+import em from "activesync/codepages/Email";
 
 /**
  * Parse the given WBXML server representation of a message into a GELAM backend
@@ -72,57 +69,57 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
       : null;
 
     switch (child.tag) {
-      case em.Subject:
+      case em.Tags.Subject:
         scratchMsg.subject = childText;
         break;
-      case em.From:
+      case em.Tags.From:
         scratchMsg.author = parseAddresses(childText)[0] || null;
         break;
-      case em.To:
+      case em.Tags.To:
         scratchMsg.to = parseAddresses(childText);
         break;
-      case em.Cc:
+      case em.Tags.Cc:
         scratchMsg.cc = parseAddresses(childText);
         break;
-      case em.ReplyTo:
+      case em.Tags.ReplyTo:
         scratchMsg.replyTo = parseAddresses(childText);
         break;
-      case em.DateReceived:
+      case em.Tags.DateReceived:
         scratchMsg.date = new Date(childText).valueOf();
         break;
-      case em.Read:
+      case em.Tags.Read:
         if (childText === "1") {
           scratchMsg.flags.push("\\Seen");
         }
         break;
-      case em.Flag:
+      case em.Tags.Flag:
         for (let grandchild of child.children) {
           if (
-            grandchild.tag === em.Status &&
+            grandchild.tag === em.Tags.Status &&
             grandchild.children[0].textContent !== "0"
           ) {
             scratchMsg.flags.push("\\Flagged");
           }
         }
         break;
-      case asb.Body: // ActiveSync 12.0+
+      case asb.Tags.Body: // ActiveSync 12.0+
         for (let grandchild of child.children) {
           switch (grandchild.tag) {
-            case asb.Type:
+            case asb.Tags.Type:
               var type = grandchild.children[0].textContent;
-              if (type === asbEnum.Type.HTML) {
+              if (type === asb.Enums.Type.HTML) {
                 bodyType = "html";
               } else {
                 // I've seen a handful of extra-weird messages with body types
                 // that aren't plain or html. Let's assume they're plain,
                 // though.
-                if (type !== asbEnum.Type.PlainText) {
+                if (type !== asb.Enums.Type.PlainText) {
                   console.warn("A message had a strange body type:", type);
                 }
                 bodyType = "plain";
               }
               break;
-            case asb.EstimatedDataSize:
+            case asb.Tags.EstimatedDataSize:
               bodySize = grandchild.children[0].textContent;
               break;
             default:
@@ -131,16 +128,16 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
           }
         }
         break;
-      case em.BodySize: // pre-ActiveSync 12.0
+      case em.Tags.BodySize: // pre-ActiveSync 12.0
         bodyType = "plain";
         bodySize = childText;
         break;
-      case asb.Attachments: // ActiveSync 12.0+
-      case em.Attachments: // pre-ActiveSync 12.0
+      case asb.Tags.Attachments: // ActiveSync 12.0+
+      case em.Tags.Attachments: // pre-ActiveSync 12.0
         for (let attachmentNode of child.children) {
           if (
-            attachmentNode.tag !== asb.Attachment &&
-            attachmentNode.tag !== em.Attachment
+            attachmentNode.tag !== asb.Tags.Attachment &&
+            attachmentNode.tag !== em.Tags.Attachment
           ) {
             continue;
           }
@@ -165,8 +162,8 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
               : null;
 
             switch (attachData.tag) {
-              case asb.DisplayName:
-              case em.DisplayName:
+              case asb.Tags.DisplayName:
+              case em.Tags.DisplayName:
                 attachment.name = attachDataText;
 
                 // Get the file's extension to look up a mimetype, but ignore it
@@ -178,19 +175,19 @@ export default function parseFullMessage(node, { messageId, umid, folderId }) {
                     : "";
                 attachment.type = mimetypes.detectMimeType(ext);
                 break;
-              case asb.FileReference:
-              case em.AttName:
-              case em.Att0Id:
+              case asb.Tags.FileReference:
+              case em.Tags.AttName:
+              case em.Tags.Att0Id:
                 attachment.part = attachDataText;
                 break;
-              case asb.EstimatedDataSize:
-              case em.AttSize:
+              case asb.Tags.EstimatedDataSize:
+              case em.Tags.AttSize:
                 attachment.sizeEstimate = parseInt(attachDataText, 10);
                 break;
-              case asb.ContentId:
+              case asb.Tags.ContentId:
                 attachment.contentId = attachDataText;
                 break;
-              case asb.IsInline:
+              case asb.Tags.IsInline:
                 isInline = attachDataText === "1";
                 break;
               default:

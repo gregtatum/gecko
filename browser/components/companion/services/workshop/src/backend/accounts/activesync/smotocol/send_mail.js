@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import $wbxml from "wbxml";
-import { Tags as cm } from "activesync/codepages/ComposeMail";
+import { Writer } from "wbxml";
+import cm from "activesync/codepages/ComposeMail";
 
 /**
  * Send a mail message for 14.0 and higher ActiveSync servers.
@@ -30,14 +30,14 @@ import { Tags as cm } from "activesync/codepages/ComposeMail";
  *   that we're still alive and doing things.
  */
 export default async function sendMail(conn, { mimeBlob, progress }) {
-  let w = new $wbxml.Writer("1.3", 1, "UTF-8", null, "blob");
-  w.stag(cm.SendMail)
+  let w = new Writer("1.3", 1, "UTF-8", null, "blob");
+  w.stag(cm.Tags.SendMail)
     // The ClientId is defined to be for duplicate messages suppression
     // and does not need to have any uniqueness constraints apart from
     // not being similar to (recently sent) messages by this client.
-    .tag(cm.ClientId, Date.now().toString() + "@mozgaia")
-    .tag(cm.SaveInSentItems)
-    .stag(cm.Mime)
+    .tag(cm.Tags.ClientId, Date.now().toString() + "@mozgaia")
+    .tag(cm.Tags.SaveInSentItems)
+    .stag(cm.Tags.Mime)
     .opaque(mimeBlob)
     .etag()
     .etag();

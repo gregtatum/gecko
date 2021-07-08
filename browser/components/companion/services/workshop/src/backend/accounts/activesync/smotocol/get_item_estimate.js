@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import $wbxml from "wbxml";
-import { Tags as $as } from "activesync/codepages/AirSync";
-import { Tags as ie, Enums as ieEnum } from "activesync/codepages/ItemEstimate";
+import { EventParser, Writer } from "wbxml";
+import $as from "activesync/codepages/AirSync";
+import ie from "activesync/codepages/ItemEstimate";
 
 /**
  * Get an estimate of the number of messages to be synced.
@@ -33,44 +33,47 @@ export default async function getItemEstimate(
   conn,
   { folderSyncKey, folderServerId, filterType }
 ) {
-  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
-  w.stag(ie.GetItemEstimate)
-    .stag(ie.Collections)
-    .stag(ie.Collection);
+  let w = new Writer("1.3", 1, "UTF-8");
+  w.stag(ie.Tags.GetItemEstimate)
+    .stag(ie.Tags.Collections)
+    .stag(ie.Tags.Collection);
 
   if (conn.currentVersion.gte("14.0")) {
-    w.tag($as.SyncKey, folderSyncKey)
-      .tag(ie.CollectionId, folderServerId)
-      .stag($as.Options)
-      .tag($as.FilterType, filterType)
+    w.tag($as.Tags.SyncKey, folderSyncKey)
+      .tag(ie.Tags.CollectionId, folderServerId)
+      .stag($as.Tags.Options)
+      .tag($as.Tags.FilterType, filterType)
       .etag();
   } else if (conn.currentVersion.gte("12.0")) {
-    w.tag(ie.CollectionId, folderServerId)
-      .tag($as.FilterType, filterType)
-      .tag($as.SyncKey, folderSyncKey);
+    w.tag(ie.Tags.CollectionId, folderServerId)
+      .tag($as.Tags.FilterType, filterType)
+      .tag($as.Tags.SyncKey, folderSyncKey);
   } else {
-    w.tag(ie.Class, "Email")
-      .tag($as.SyncKey, folderSyncKey)
-      .tag(ie.CollectionId, folderServerId)
-      .tag($as.FilterType, filterType);
+    w.tag(ie.Tags.Class, "Email")
+      .tag($as.Tags.SyncKey, folderSyncKey)
+      .tag(ie.Tags.CollectionId, folderServerId)
+      .tag($as.Tags.FilterType, filterType);
   }
 
-  w.etag(ie.Collection)
-    .etag(ie.Collections)
-    .etag(ie.GetItemEstimate);
+  w.etag(ie.Tags.Collection)
+    .etag(ie.Tags.Collections)
+    .etag(ie.Tags.GetItemEstimate);
 
   let response = await conn.postCommand(w);
 
-  let e = new $wbxml.EventParser();
-  let base = [ie.GetItemEstimate, ie.Response];
+  let e = new EventParser();
+  let base = [ie.Tags.GetItemEstimate, ie.Tags.Response];
 
   let status, estimate;
-  e.addEventListener(base.concat(ie.Status), function(node) {
+  e.addEventListener(base.concat(ie.Tags.Status), function(node) {
     status = node.children[0].textContent;
   });
-  e.addEventListener(base.concat(ie.Collection, ie.Estimate), function(node) {
-    estimate = parseInt(node.children[0].textContent, 10);
-  });
+  e.addEventListener(
+    base.concat(ie.Tags.Collection, ie.Tags.Estimate),
+    function(node) {
+      estimate = parseInt(node.children[0].textContent, 10);
+    }
+  );
 
   try {
     e.run(response);
@@ -79,7 +82,7 @@ export default async function getItemEstimate(
     throw new Error("unknown");
   }
 
-  if (status !== ieEnum.Status.Success) {
+  if (status !== ie.Enums.Status.Success) {
     throw new Error("unknown");
   } else {
     return { estimate };

@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-import $wbxml from "wbxml";
-import {
-  Tags as io,
-  Enums as ioEnum,
-} from "activesync/codepages/ItemOperations";
-import { Tags as $as } from "activesync/codepages/AirSync";
-import { Tags as $asb } from "activesync/codepages/AirSyncBase";
+import { EventParser, Writer } from "wbxml";
+import io from "activesync/codepages/ItemOperations";
+import $as from "activesync/codepages/AirSync";
+import $asb from "activesync/codepages/AirSyncBase";
 
 /**
  * Download a possibly truncated message body for 12.0 and higher servers.
@@ -37,22 +34,22 @@ export default async function downloadBody(
   conn,
   { folderServerId, messageServerId, bodyType, truncationSize }
 ) {
-  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
-  w.stag(io.ItemOperations)
-    .stag(io.Fetch)
-    .tag(io.Store, "Mailbox")
-    .tag($as.CollectionId, folderServerId)
-    .tag($as.ServerId, messageServerId)
-    .stag(io.Options)
+  let w = new Writer("1.3", 1, "UTF-8");
+  w.stag(io.Tags.Tags.ItemOperations)
+    .stag(io.Tags.Fetch)
+    .tag(io.Tags.Store, "Mailbox")
+    .tag($as.Tags.CollectionId, folderServerId)
+    .tag($as.Tags.ServerId, messageServerId)
+    .stag(io.Tags.Options)
     // Only get the AirSyncBase:Body element to minimize bandwidth.
-    .stag(io.Schema)
-    .tag($asb.Body)
+    .stag(io.Tags.Schema)
+    .tag($asb.Tags.Body)
     .etag()
-    .stag($asb.BodyPreference)
-    .tag($asb.Type, bodyType);
+    .stag($asb.Tags.BodyPreference)
+    .tag($asb.Tags.Type, bodyType);
 
   if (truncationSize) {
-    w.tag($asb.TruncationSize, truncationSize);
+    w.tag($asb.Tags.TruncationSize, truncationSize);
   }
 
   w.etag()
@@ -62,19 +59,19 @@ export default async function downloadBody(
 
   let response = await conn.postCommand(w);
 
-  let e = new $wbxml.EventParser();
+  let e = new EventParser();
   let status, bodyContent;
-  e.addEventListener([io.ItemOperations, io.Status], function(node) {
+  e.addEventListener([io.Tags.ItemOperations, io.Tags.Status], function(node) {
     status = node.children[0].textContent;
   });
   e.addEventListener(
     [
-      io.ItemOperations,
-      io.Response,
-      io.Fetch,
-      io.Properties,
-      $asb.Body,
-      $asb.Data,
+      io.Tags.ItemOperations,
+      io.Tags.Response,
+      io.Tags.Fetch,
+      io.Tags.Properties,
+      $asb.Tags.Body,
+      $asb.Tags.Data,
     ],
     function(node) {
       bodyContent = node.children[0].textContent;
@@ -88,7 +85,7 @@ export default async function downloadBody(
     throw new Error("unknown");
   }
 
-  if (status !== ioEnum.Status.Success) {
+  if (status !== io.Enums.Status.Success) {
     throw new Error("unknown");
   }
 

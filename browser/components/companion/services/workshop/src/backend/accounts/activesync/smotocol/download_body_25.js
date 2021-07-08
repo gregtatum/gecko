@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import $wbxml from "wbxml";
-import { Enums as ioEnum } from "activesync/codepages/ItemOperations";
-import { Tags as $as, Enums as asEnum } from "activesync/codepages/AirSync";
-import { Tags as em } from "activesync/codepages/Email";
+import { EventParser, Writer } from "wbxml";
+import io from "activesync/codepages/ItemOperations";
+import $as from "activesync/codepages/AirSync";
+import em from "activesync/codepages/Email";
 
 /**
  * Download a the entire message body for protocol 2.5 servers; there is no
@@ -37,19 +37,19 @@ export default async function downloadBody(
   conn,
   { folderSyncKey, folderServerId, messageServerId, bodyType }
 ) {
-  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
-  w.stag($as.Sync)
-    .stag($as.Collections)
-    .stag($as.Collection)
-    .tag($as.Class, "Email")
-    .tag($as.SyncKey, folderSyncKey) // XXX ugh, can we remove this?
-    .tag($as.CollectionId, folderServerId)
-    .stag($as.Options)
-    .tag($as.MIMESupport, asEnum.MIMESupport.Never)
+  let w = new Writer("1.3", 1, "UTF-8");
+  w.stag($as.Tags.Sync)
+    .stag($as.Tags.Collections)
+    .stag($as.Tags.Collection)
+    .tag($as.Tags.Class, "Email")
+    .tag($as.Tags.SyncKey, folderSyncKey) // XXX ugh, can we remove this?
+    .tag($as.Tags.CollectionId, folderServerId)
+    .stag($as.Tags.Options)
+    .tag($as.Tags.MIMESupport, $as.Tags.Enums.MIMESupport.Never)
     .etag()
-    .stag($as.Commands)
-    .stag($as.Fetch)
-    .tag($as.ServerId, messageServerId)
+    .stag($as.Tags.Commands)
+    .stag($as.Tags.Fetch)
+    .tag($as.Tags.ServerId, messageServerId)
     .etag()
     .etag()
     .etag()
@@ -58,18 +58,23 @@ export default async function downloadBody(
 
   let response = await conn.postCommand(w);
 
-  let e = new $wbxml.EventParser();
-  let base = [$as.Sync, $as.Collections, $as.Collection];
+  let e = new EventParser();
+  let base = [$as.Tags.Sync, $as.Tags.Collections, $as.Tags.Collection];
   let newSyncKey, status, bodyContent;
 
-  e.addEventListener(base.concat($as.SyncKey), function(node) {
+  e.addEventListener(base.concat($as.Tags.SyncKey), function(node) {
     newSyncKey = node.children[0].textContent;
   });
-  e.addEventListener(base.concat($as.Status), function(node) {
+  e.addEventListener(base.concat($as.Tags.Status), function(node) {
     status = node.children[0].textContent;
   });
   e.addEventListener(
-    base.concat($as.Responses, $as.Fetch, $as.ApplicationData, em.Body),
+    base.concat(
+      $as.Tags.Responses,
+      $as.Tags.Fetch,
+      $as.Tags.ApplicationData,
+      em.Tags.Body
+    ),
     function(node) {
       bodyContent = node.children[0].textContent;
     }
@@ -82,7 +87,7 @@ export default async function downloadBody(
     throw new Error("unknown");
   }
 
-  if (status !== ioEnum.Status.Success) {
+  if (status !== io.Enums.Status.Success) {
     throw new Error("unknown");
   }
 

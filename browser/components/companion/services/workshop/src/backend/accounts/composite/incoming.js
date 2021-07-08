@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import $acctmixins from "../../accountmixins";
+import * as $acctmixins from "../../accountmixins";
 
 /**
  * A base class for IMAP and POP accounts.
@@ -62,8 +62,6 @@ CompositeIncomingAccount.prototype = {
   runOp: $acctmixins.runOp,
   getFirstFolderWithType: $acctmixins.getFirstFolderWithType,
   getFolderByPath: $acctmixins.getFolderByPath,
-  saveAccountState: $acctmixins.saveAccountState,
-  runAfterSaves: $acctmixins.runAfterSaves,
 
   /**
    * We receive this notification from our _backoffEndpoint.

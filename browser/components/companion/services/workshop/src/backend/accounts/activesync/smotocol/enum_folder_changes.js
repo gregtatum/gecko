@@ -16,8 +16,8 @@
 
 import logic from "logic";
 
-import $wbxml from "wbxml";
-import { Tags as $as, Enums as asEnum } from "activesync/codepages/AirSync";
+import { EventParser, Writer } from "wbxml";
+import $as from "activesync/codepages/AirSync";
 
 import parseFullMessage from "./parse_full_message";
 import parseChangedMessage from "./parse_changed_message";
@@ -59,27 +59,27 @@ export default async function enumerateFolderChanges(
   conn,
   { folderSyncKey, folderServerId, filterType, issueIds, emitter }
 ) {
-  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
-  w.stag($as.Sync)
-    .stag($as.Collections)
-    .stag($as.Collection);
+  let w = new Writer("1.3", 1, "UTF-8");
+  w.stag($as.Tags.Sync)
+    .stag($as.Tags.Collections)
+    .stag($as.Tags.Collection);
 
   if (conn.currentVersion.lt("12.1")) {
-    w.tag($as.Class, "Email");
+    w.tag($as.Tags.Class, "Email");
   }
 
-  w.tag($as.SyncKey, folderSyncKey)
-    .tag($as.CollectionId, folderServerId)
-    .tag($as.GetChanges)
-    .stag($as.Options)
-    .tag($as.FilterType, filterType);
+  w.tag($as.Tags.SyncKey, folderSyncKey)
+    .tag($as.Tags.CollectionId, folderServerId)
+    .tag($as.Tags.GetChanges)
+    .stag($as.Tags.Options)
+    .tag($as.Tags.FilterType, filterType);
 
   // Older versions of ActiveSync give us the body by default. Ensure they
   // omit it.
   if (conn.currentVersion.lte("12.0")) {
-    w.tag($as.MIMESupport, asEnum.MIMESupport.Never).tag(
-      $as.Truncation,
-      asEnum.MIMETruncation.TruncateAll
+    w.tag($as.Tags.MIMESupport, $as.Enums.MIMESupport.Never).tag(
+      $as.Tags.Truncation,
+      $as.Enums.MIMETruncation.TruncateAll
     );
   }
 
@@ -102,8 +102,8 @@ export default async function enumerateFolderChanges(
     };
   }
 
-  let e = new $wbxml.EventParser();
-  let base = [$as.Sync, $as.Collections, $as.Collection];
+  let e = new EventParser();
+  let base = [$as.Tags.Sync, $as.Tags.Collections, $as.Tags.Collection];
 
   let status;
   let newSyncKey;
@@ -112,27 +112,29 @@ export default async function enumerateFolderChanges(
     changeCount = 0,
     removeCount = 0;
 
-  e.addEventListener(base.concat($as.SyncKey), function(node) {
+  e.addEventListener(base.concat($as.Tags.SyncKey), function(node) {
     newSyncKey = node.children[0].textContent;
   });
 
-  e.addEventListener(base.concat($as.Status), function(node) {
+  e.addEventListener(base.concat($as.Tags.Status), function(node) {
     status = node.children[0].textContent;
   });
 
-  e.addEventListener(base.concat($as.MoreAvailable), function(node) {
+  e.addEventListener(base.concat($as.Tags.MoreAvailable), function(node) {
     moreAvailable = true;
   });
 
-  e.addEventListener(base.concat($as.Commands, $as.Add), function(node) {
+  e.addEventListener(base.concat($as.Tags.Commands, $as.Tags.Add), function(
+    node
+  ) {
     let messageServerId, nodeToParse;
 
     for (let child of node.children) {
       switch (child.tag) {
-        case $as.ServerId:
+        case $as.Tags.ServerId:
           messageServerId = child.children[0].textContent;
           break;
-        case $as.ApplicationData:
+        case $as.Tags.ApplicationData:
           nodeToParse = child;
           break;
         default:
@@ -152,15 +154,17 @@ export default async function enumerateFolderChanges(
     }
   });
 
-  e.addEventListener(base.concat($as.Commands, $as.Change), function(node) {
+  e.addEventListener(base.concat($as.Tags.Commands, $as.Tags.Change), function(
+    node
+  ) {
     let messageServerId, changes;
 
     for (let child of node.children) {
       switch (child.tag) {
-        case $as.ServerId:
+        case $as.Tags.ServerId:
           messageServerId = child.children[0].textContent;
           break;
-        case $as.ApplicationData:
+        case $as.Tags.ApplicationData:
           try {
             changes = parseChangedMessage(child);
           } catch (ex) {
@@ -181,13 +185,13 @@ export default async function enumerateFolderChanges(
   });
 
   e.addEventListener(
-    base.concat($as.Commands, [[$as.Delete, $as.SoftDelete]]),
+    base.concat($as.Tags.Commands, [[$as.Tags.Delete, $as.Tags.SoftDelete]]),
     function(node) {
       let messageServerId;
 
       for (let child of node.children) {
         switch (child.tag) {
-          case $as.ServerId:
+          case $as.Tags.ServerId:
             messageServerId = child.children[0].textContent;
             break;
           default:
@@ -209,7 +213,7 @@ export default async function enumerateFolderChanges(
     throw new Error("unknown");
   }
 
-  if (status === asEnum.Status.Success) {
+  if (status === $as.Enums.Status.Success) {
     logic(conn, "syncComplete", {
       added: addCount,
       changed: changeCount,
@@ -217,7 +221,7 @@ export default async function enumerateFolderChanges(
     });
 
     return { invalidSyncKey: false, syncKey: newSyncKey, moreAvailable };
-  } else if (status === asEnum.Status.InvalidSyncKey) {
+  } else if (status === $as.Enums.Status.InvalidSyncKey) {
     return { invalidSyncKey: true, syncKey: "0", moreAvailable };
   }
 

@@ -13,69 +13,62 @@
  * limitations under the License.
  */
 
-define([
-      'wbxml',
-      './codepages/Common',
-      './codepages/AirSync',
-      './codepages/Contacts',
-      './codepages/Email',
-      './codepages/Calendar',
-      './codepages/Move',
-      './codepages/ItemEstimate',
-      './codepages/FolderHierarchy',
-      './codepages/MeetingResponse',
-      './codepages/Tasks',
-      './codepages/ResolveRecipients',
-      './codepages/ValidateCert',
-      './codepages/Contacts2',
-      './codepages/Ping',
-      './codepages/Provision',
-      './codepages/Search',
-      './codepages/GAL',
-      './codepages/AirSyncBase',
-      './codepages/Settings',
-      './codepages/DocumentLibrary',
-      './codepages/ItemOperations',
-      './codepages/ComposeMail',
-      './codepages/Email2',
-      './codepages/Notes',
-      './codepages/RightsManagement'
-    ], function(WBXML, Common, AirSync, Contacts, Email, Calendar, Move,
-                 ItemEstimate, FolderHierarchy, MeetingResponse, Tasks,
-                 ResolveRecipients, ValidateCert, Contacts2, Ping, Provision,
-                 Search, GAL, AirSyncBase, Settings, DocumentLibrary,
-                 ItemOperations, ComposeMail, Email2, Notes, RightsManagement) {
-  'use strict';
+import { CompileCodepages } from "wbxml";
 
-  var codepages = {
-    Common: Common,
-    AirSync: AirSync,
-    Contacts: Contacts,
-    Email: Email,
-    Calendar: Calendar,
-    Move: Move,
-    ItemEstimate: ItemEstimate,
-    FolderHierarchy: FolderHierarchy,
-    MeetingResponse: MeetingResponse,
-    Tasks: Tasks,
-    ResolveRecipients: ResolveRecipients,
-    ValidateCert: ValidateCert,
-    Contacts2: Contacts2,
-    Ping: Ping,
-    Provision: Provision,
-    Search: Search,
-    GAL: GAL,
-    AirSyncBase: AirSyncBase,
-    Settings: Settings,
-    DocumentLibrary: DocumentLibrary,
-    ItemOperations: ItemOperations,
-    ComposeMail: ComposeMail,
-    Email2: Email2,
-    Notes: Notes,
-    RightsManagement: RightsManagement
-  };
 
-  WBXML.CompileCodepages(codepages);
+import Common from './codepages/Common';
+import AirSync from  './codepages/AirSync';
+import Contacts from  './codepages/Contacts';
+import Email from './codepages/Email';
+import Calendar from './codepages/Calendar';
+import Move from './codepages/Move';
+import ItemEstimate from "./codepages/ItemEstimate";
+import FolderHierarchy from "./codepages/FolderHierarchy";
+import MeetingResponse from "./codepages/MeetingResponse";
+import Tasks from "./codepages/Tasks";
+import ResolveRecipients from "./codepages/ResolveRecipients";
+import ValidateCert from "./codepages/ValidateCert";
+import Contacts2 from "./codepages/Contacts2";
+import Ping from "./codepages/Ping";
+import Provision from "./codepages/Provision";
+import Search from "./codepages/Search";
+import GAL from "./codepages/GAL";
+import AirSyncBase from "./codepages/AirSyncBase";
+import Settings from "./codepages/Settings";
+import DocumentLibrary from "./codepages/DocumentLibrary";
+import ItemOperations from "./codepages/ItemOperations";
+import ComposeMail from "./codepages/ComposeMail";
+import Email2 from "./codepages/Email2";
+import Notes from "./codepages/Notes";
+import RightsManagement from "./codepages/RightsManagement";
 
-  return codepages;
-});
+const codepages = {
+  Common,
+  AirSync,
+  Contacts,
+  Email,
+  Calendar,
+  Move,
+  ItemEstimate,
+  FolderHierarchy,
+  MeetingResponse,
+  Tasks,
+  ResolveRecipients,
+  ValidateCert,
+  Contacts2,
+  Ping,
+  Provision,
+  Search,
+  GAL,
+  AirSyncBase,
+  Settings,
+  DocumentLibrary,
+  ItemOperations,
+  ComposeMail,
+  Email2,
+  Notes,
+  RightsManagement,
+};
+
+CompileCodepages(codepages);
+export default codepages;

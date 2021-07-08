@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import $wbxml from "wbxml";
+import { EventParser, Writer } from "wbxml";
 import ASCP from "activesync/codepages";
 
 /**
@@ -78,7 +78,7 @@ export default async function createFolder(conn, args) {
   const fhStatus = ASCP.FolderHierarchy.Enums.Status;
   const folderType = ASCP.FolderHierarchy.Enums.Type.Mail;
 
-  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
+  let w = new Writer("1.3", 1, "UTF-8");
   w.stag(fh.FolderCreate)
     .tag(fh.SyncKey, args.folderSyncKey)
     .tag(fh.ParentId, args.parentFolderServerId)
@@ -88,7 +88,7 @@ export default async function createFolder(conn, args) {
 
   let response = await conn.postCommand(w);
 
-  let e = new $wbxml.EventParser();
+  let e = new EventParser();
   let status, serverId, newFolderSyncKey;
 
   e.addEventListener([fh.FolderCreate, fh.Status], function(node) {

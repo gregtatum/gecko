@@ -25,7 +25,7 @@ import { processMessageContent } from "../../../bodies/mailchew";
 import downloadBody from "../smotocol/download_body";
 import downloadBody25 from "../smotocol/download_body_25";
 
-import { Enums as asbEnum } from "activesync/codepages/AirSyncBase";
+import asb from "activesync/codepages/AirSyncBase";
 
 import { DESIRED_SNIPPET_LENGTH } from "../../../syncbase";
 
@@ -145,7 +145,7 @@ export default TaskDefiner.defineComplexTask([
           }
         }
         let asBodyType =
-          bodyType === "html" ? asbEnum.Type.HTML : asbEnum.Type.PlainText;
+          bodyType === "html" ? asb.Enums.Type.HTML : asb.Enums.Type.PlainText;
 
         // - Issue the fetch
         let bodyContent;

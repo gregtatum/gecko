@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import $wbxml from "wbxml";
+import { EventParser, Writer } from "wbxml";
 import ASCP from "activesync/codepages";
 
 /**
@@ -35,7 +35,7 @@ export default async function deleteFolder(conn, args) {
   const fh = ASCP.FolderHierarchy.Tags;
   const fhStatus = ASCP.FolderHierarchy.Enums.Status;
 
-  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
+  let w = new Writer("1.3", 1, "UTF-8");
   w.stag(fh.FolderDelete)
     .tag(fh.SyncKey, args.folderSyncKey)
     .tag(fh.ServerId, args.serverId)
@@ -43,7 +43,7 @@ export default async function deleteFolder(conn, args) {
 
   let response = await conn.postCommand(w);
 
-  let e = new $wbxml.EventParser();
+  let e = new EventParser();
   let status, serverId, newFolderSyncKey;
 
   e.addEventListener([fh.FolderDelete, fh.Status], function(node) {

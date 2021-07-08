@@ -59,12 +59,27 @@
             <h5>Add iCalendar via ICS URL</h5>
             <div id="home-add-ics-error"></div>
             <form>
-              <label>URL: </label>
+              <label for="home-add-ics-input">URL: </label>
               <input id="home-add-ics-input" type="text"
                   placeholder="https://example.org/example.ics"
                   />
               <hr>
               <button id="home-add-ics-button" type="button">Add</button>
+            </form>
+          </section>
+          <section class="card">
+            <h5>Add MS ActiveSync Account</h5>
+            <div id="home-add-activesync-error"></div>
+            <form>
+              <label>email:
+                <input id="home-add-activesync-email-input" type="text"
+                  placeholder="user@example.com" />
+              </label>
+              <label>password
+                <input id="home-add-activesync-password-input" type="password" />
+              </label>
+              <hr>
+              <button id="home-add-activesync-button" type="button">Add</button>
             </form>
           </section>
         </section>
