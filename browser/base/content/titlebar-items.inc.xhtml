@@ -6,7 +6,7 @@
 #if defined(XP_WIN) && defined(PROCLIENT_WINDOW)
   <toolbarbutton
     id="companion-sidebar-button-win" class="toolbarbutton-1 chromeclass-toolbar-additional"
-    oncommand="CompanionService.dockAndToggle()"
+    oncommand="CompanionService.toggleCompanion()"
     onclick="checkForMiddleClick(this, event);"/>
 #endif
   <hbox class="titlebar-buttonbox titlebar-color">
@@ -30,7 +30,7 @@
 #if defined(XP_MACOSX) && defined(PROCLIENT_WINDOW)
   <toolbarbutton
     id="companion-sidebar-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
-    oncommand="CompanionService.dockAndToggle()"
+    oncommand="CompanionService.toggleCompanion()"
     onclick="checkForMiddleClick(this, event);"/>
 #endif
 </hbox>

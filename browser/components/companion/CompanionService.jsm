@@ -83,30 +83,35 @@ class BrowserWindowHandler {
   }
 
   observe() {
-    this.window.document.documentElement.setAttribute("companion", "true");
-    let browser = this.window.document.getElementById("companion-browser");
-    if (browser) {
-      return;
+    if (CompanionService.isOpen) {
+      this.window.document.documentElement.setAttribute("companion", "true");
+      let browser = this.window.document.getElementById("companion-browser");
+      if (browser) {
+        return;
+      }
+
+      browser = this.window.document.createElementNS(XUL_NS, "browser");
+      browser.setAttribute(
+        "src",
+        "chrome://browser/content/companion/companion.xhtml"
+      );
+      browser.setAttribute("id", "companion-browser");
+      browser.setAttribute("disablehistory", "true");
+      browser.setAttribute("autoscroll", "false");
+      browser.setAttribute("selectmenulist", "ContentSelectDropdown");
+      browser.setAttribute("disablefullscreen", "true");
+      browser.setAttribute("flex", "1");
+      browser.setAttribute("remoteType", E10SUtils.PRIVILEGEDABOUT_REMOTE_TYPE);
+      browser.setAttribute("remote", "true");
+      browser.setAttribute("message", "true");
+      browser.setAttribute("messagemanagergroup", "browsers");
+      browser.setAttribute("type", "content");
+
+      this.window.document.getElementById("companion-box").appendChild(browser);
+    } else {
+      this.window.document.documentElement.removeAttribute("companion");
+      this.window.document.getElementById("companion-browser")?.remove();
     }
-
-    browser = this.window.document.createElementNS(XUL_NS, "browser");
-    browser.setAttribute(
-      "src",
-      "chrome://browser/content/companion/companion.xhtml"
-    );
-    browser.setAttribute("id", "companion-browser");
-    browser.setAttribute("disablehistory", "true");
-    browser.setAttribute("autoscroll", "false");
-    browser.setAttribute("selectmenulist", "ContentSelectDropdown");
-    browser.setAttribute("disablefullscreen", "true");
-    browser.setAttribute("flex", "1");
-    browser.setAttribute("remoteType", E10SUtils.PRIVILEGEDABOUT_REMOTE_TYPE);
-    browser.setAttribute("remote", "true");
-    browser.setAttribute("message", "true");
-    browser.setAttribute("messagemanagergroup", "browsers");
-    browser.setAttribute("type", "content");
-
-    this.window.document.getElementById("companion-box").appendChild(browser);
   }
 
   onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags, aIsSimulated) {
