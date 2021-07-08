@@ -18,6 +18,12 @@ const FXA_SIGNUP_URL = new URL("/signup", FXA_ROOT_URL).href;
 const extraServices = [
   {
     type: "google-mozilla",
+    nameId: "preferences-services-google-mozilla-account",
+    labelsId: "preferences-services-google-labels",
+    icon: "chrome://browser/content/companion/mozsocial.png",
+  },
+  {
+    type: "google",
     nameId: "preferences-services-google-account",
     labelsId: "preferences-services-google-labels",
     icon: "chrome://browser/content/companion/googleAccount.png",
@@ -317,9 +323,7 @@ function buildExtraServiceRows() {
   for (let serviceData of extraServices) {
     // Check if there is a connected account for a service.
     // TODO: This assumes a user only has 1 account of every service...
-    let connectedService = services.find(s =>
-      s.app.startsWith(serviceData.type)
-    );
+    let connectedService = services.find(s => s.app === serviceData.type);
 
     nodes.push(new ServiceRow(connectedService, serviceData));
   }
