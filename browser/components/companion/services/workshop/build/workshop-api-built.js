@@ -2499,7 +2499,9 @@ WindowedListView.prototype = import_evt9.default.mix({
     });
     for (let i = 0; i < this.items.length; i++) {
       let item = this.items[i];
-      item.release();
+      if (item) {
+        item.release();
+      }
     }
   }
 });

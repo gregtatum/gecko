@@ -49,7 +49,7 @@ var WorkshopBackend = (() => {
         }
       })(exports, function() {
         "use strict";
-        var evt10, slice = Array.prototype.slice, props = [
+        var evt12, slice = Array.prototype.slice, props = [
           "_events",
           "_pendingEvents",
           "on",
@@ -93,8 +93,8 @@ var WorkshopBackend = (() => {
           }
         }
         function emitError(err) {
-          if (evt10._events.hasOwnProperty("error")) {
-            evt10.emit("error", err);
+          if (evt12._events.hasOwnProperty("error")) {
+            evt12.emit("error", err);
           } else {
             console.error(err, err.stack);
           }
@@ -201,9 +201,9 @@ var WorkshopBackend = (() => {
             }
           }
         };
-        evt10 = new Emitter();
-        evt10.Emitter = Emitter;
-        evt10.mix = function(obj) {
+        evt12 = new Emitter();
+        evt12.Emitter = Emitter;
+        evt12.mix = function(obj) {
           var e = new Emitter();
           props.forEach(function(prop) {
             if (obj.hasOwnProperty(prop)) {
@@ -213,7 +213,7 @@ var WorkshopBackend = (() => {
           });
           return obj;
         };
-        return evt10;
+        return evt12;
       });
     }
   });
@@ -277,14 +277,14 @@ var WorkshopBackend = (() => {
   function logic() {
     return logic.event.apply(logic, arguments);
   }
-  function toScope(scope3) {
-    if (!(scope3 instanceof Scope)) {
-      scope3 = objectToScope.get(scope3);
-      if (!scope3) {
-        throw new Error("Invalid scope " + scope3 + " passed to logic.event(); did you remember to call logic.defineScope()? " + new Error().stack);
+  function toScope(scope4) {
+    if (!(scope4 instanceof Scope)) {
+      scope4 = objectToScope.get(scope4);
+      if (!scope4) {
+        throw new Error("Invalid scope " + scope4 + " passed to logic.event(); did you remember to call logic.defineScope()? " + new Error().stack);
       }
     }
-    return scope3;
+    return scope4;
   }
   function MismatchError(matcher, event) {
     this.matcher = matcher;
@@ -401,11 +401,11 @@ var WorkshopBackend = (() => {
     this.maxArrayLength = opts.maxArrayLength || 1e3;
     this.maxObjectLength = opts.maxObjectLength || 100;
   }
-  function LogicEvent(scope3, type, details) {
-    if (!(scope3 instanceof Scope)) {
+  function LogicEvent(scope4, type, details) {
+    if (!(scope4 instanceof Scope)) {
       throw new Error('Invalid "scope" passed to LogicEvent(); did you remember to call logic.defineScope()?');
     }
-    this.scope = scope3;
+    this.scope = scope4;
     this.type = type;
     this.details = details;
     this.time = Date.now();
@@ -465,20 +465,20 @@ var WorkshopBackend = (() => {
         if (!namespace && obj && obj.constructor && obj.constructor.name) {
           namespace = obj.constructor.name;
         }
-        var scope3 = new Scope(namespace, defaultDetails);
-        objectToScope.set(obj, scope3);
-        return scope3;
+        var scope4 = new Scope(namespace, defaultDetails);
+        objectToScope.set(obj, scope4);
+        return scope4;
       };
-      logic.subscope = function(scope3, defaultDetails) {
-        scope3 = toScope(scope3);
-        return new Scope(scope3.namespace, into(shallowClone(scope3.defaultDetails), shallowClone(defaultDetails)));
+      logic.subscope = function(scope4, defaultDetails) {
+        scope4 = toScope(scope4);
+        return new Scope(scope4.namespace, into(shallowClone(scope4.defaultDetails), shallowClone(defaultDetails)));
       };
-      logic.event = function(scope3, type, details) {
-        scope3 = toScope(scope3);
+      logic.event = function(scope4, type, details) {
+        scope4 = toScope(scope4);
         var isDefaultPrevented = false;
         var preprocessEvent = {
-          scope: scope3,
-          namespace: scope3.namespace,
+          scope: scope4,
+          namespace: scope4.namespace,
           type,
           details,
           preventDefault() {
@@ -494,16 +494,16 @@ var WorkshopBackend = (() => {
         if (typeof type !== "string") {
           throw new Error('Invalid "type" passed to logic.event(); expected a string, got "' + type + '"');
         }
-        if (scope3.defaultDetails) {
+        if (scope4.defaultDetails) {
           if (isPlainObject(details)) {
-            details = into(shallowClone(scope3.defaultDetails), shallowClone(details));
+            details = into(shallowClone(scope4.defaultDetails), shallowClone(details));
           } else {
-            details = shallowClone(scope3.defaultDetails);
+            details = shallowClone(scope4.defaultDetails);
           }
         } else {
           details = shallowClone(details);
         }
-        var event = new LogicEvent(scope3, type, details);
+        var event = new LogicEvent(scope4, type, details);
         logic.emit("censorEvent", event);
         logic.emit("event", event);
         if (logic.bc) {
@@ -700,9 +700,9 @@ var WorkshopBackend = (() => {
       logic.isPlainObject = isPlainObject;
       promiseToStartEventMap = new WeakMap();
       promiseToResultEventMap = new WeakMap();
-      logic.startAsync = function(scope3, type, details) {
+      logic.startAsync = function(scope4, type, details) {
         var resolve, reject;
-        logic.async(scope3, type, details, (_resolve, _reject) => {
+        logic.async(scope4, type, details, (_resolve, _reject) => {
           resolve = _resolve;
           reject = _reject;
         });
@@ -711,27 +711,27 @@ var WorkshopBackend = (() => {
           reject
         };
       };
-      logic.async = function(scope3, type, details, fn) {
+      logic.async = function(scope4, type, details, fn) {
         if (!fn && typeof details === "function") {
           fn = details;
           details = null;
         }
-        scope3 = logic.subscope(scope3, details);
+        scope4 = logic.subscope(scope4, details);
         var startEvent;
         var promise = new Promise((resolve, reject) => {
-          startEvent = logic(scope3, "begin " + type, {
+          startEvent = logic(scope4, "begin " + type, {
             asyncStatus: 0,
             asyncName: type
           });
           fn((result) => {
-            promiseToResultEventMap.set(promise, logic(scope3, type, {
+            promiseToResultEventMap.set(promise, logic(scope4, type, {
               asyncStatus: 1,
               sourceEventIds: [startEvent.id],
               result
             }));
             resolve(result);
           }, (error) => {
-            promiseToResultEventMap.set(promise, logic(scope3, type, {
+            promiseToResultEventMap.set(promise, logic(scope4, type, {
               asyncStatus: 2,
               sourceEventIds: [startEvent.id],
               error
@@ -742,21 +742,21 @@ var WorkshopBackend = (() => {
         promiseToStartEventMap.set(promise, startEvent);
         return promise;
       };
-      logic.await = function(scope3, type, details, promise) {
+      logic.await = function(scope4, type, details, promise) {
         if (!promise && details.then) {
           promise = details;
           details = null;
         }
-        scope3 = logic.subscope(scope3, details);
+        scope4 = logic.subscope(scope4, details);
         var startEvent = promiseToStartEventMap.get(promise);
-        var awaitEvent = logic.event(scope3, "await " + type, {
+        var awaitEvent = logic.event(scope4, "await " + type, {
           awaitStatus: 0,
           sourceEventIds: startEvent ? [startEvent.id] : null,
           awaitName: type
         });
         return promise.then((result) => {
           var resultEvent = promiseToResultEventMap.get(promise);
-          logic(scope3, type, {
+          logic(scope4, type, {
             awaitStatus: 1,
             result,
             sourceEventIds: resultEvent ? [resultEvent.id, awaitEvent.id] : [awaitEvent.id]
@@ -764,7 +764,7 @@ var WorkshopBackend = (() => {
           return result;
         }, (error) => {
           var resultEvent = promiseToResultEventMap.get(promise);
-          logic(scope3, type, {
+          logic(scope4, type, {
             awaitStatus: 2,
             error,
             stack: error && error.stack,
@@ -939,15 +939,63 @@ var WorkshopBackend = (() => {
   function messageSpecificIdFromMessageId(messageId) {
     return messageId.split(/\./g, 3)[2];
   }
+  function messageIdComponentFromUmid(umid) {
+    let idxFirst = umid.indexOf(".");
+    return umid.substring(idxFirst + 1).replace(/\./g, "_");
+  }
   var init_id_conversions = __esm({
     "src/shared/id_conversions.js"() {
       init_a64();
     }
   });
 
-  // src/backend/accounts/ical/configurator.js
+  // src/backend/accounts/activesync/configurator.js
   var configurator_exports = {};
   __export(configurator_exports, {
+    default: () => configurator_default
+  });
+  function makeUniqueDeviceId() {
+    return Math.random().toString(36).substr(2);
+  }
+  function configurator_default(userDetails, domainInfo) {
+    let deviceId = makeUniqueDeviceId();
+    let credentials;
+    let connInfo;
+    if (domainInfo.incoming.autodiscoverEndpoint) {
+      credentials = {
+        emailAddress: userDetails.emailAddress,
+        password: userDetails.password
+      };
+      connInfo = {
+        autodiscoverEndpoint: domainInfo.incoming.autodiscoverEndpoint,
+        deviceId
+      };
+    } else {
+      credentials = {
+        username: domainInfo.incoming.username,
+        password: userDetails.password
+      };
+      connInfo = {
+        server: domainInfo.incoming.server,
+        deviceId
+      };
+    }
+    return {
+      credentials,
+      typeFields: {},
+      connInfoFields: {
+        connInfo
+      }
+    };
+  }
+  var init_configurator = __esm({
+    "src/backend/accounts/activesync/configurator.js"() {
+    }
+  });
+
+  // src/backend/accounts/ical/configurator.js
+  var configurator_exports2 = {};
+  __export(configurator_exports2, {
     default: () => configurateICal
   });
   function configurateICal(userDetails) {
@@ -960,8 +1008,2818 @@ var WorkshopBackend = (() => {
       }
     };
   }
-  var init_configurator = __esm({
+  var init_configurator2 = __esm({
     "src/backend/accounts/ical/configurator.js"() {
+    }
+  });
+
+  // src/shared/date.js
+  function NOW() {
+    return TIME_WARPED_NOW || Date.now();
+  }
+  function makeDaysAgo(numDays) {
+    var past = quantizeDate(TIME_WARPED_NOW || Date.now()) - numDays * DAY_MILLIS;
+    return past;
+  }
+  function quantizeDate(date) {
+    if (date === null) {
+      return null;
+    }
+    if (typeof date === "number") {
+      date = new Date(date);
+    }
+    return date.setUTCHours(0, 0, 0, 0).valueOf();
+  }
+  var HOUR_MILLIS, DAY_MILLIS, TIME_WARPED_NOW;
+  var init_date = __esm({
+    "src/shared/date.js"() {
+      HOUR_MILLIS = 60 * 60 * 1e3;
+      DAY_MILLIS = 24 * 60 * 60 * 1e3;
+      TIME_WARPED_NOW = null;
+    }
+  });
+
+  // src/backend/syncbase.js
+  var AUTOCONFIG_TIMEOUT_MS, ISPDB_AUTOCONFIG_ROOT, POP3_INFER_ATTACHMENTS_SIZE, POP3_SNIPPET_SIZE_GOAL, OLDEST_SYNC_DATE, SYNC_WHOLE_FOLDER_AT_N_MESSAGES, BYTES_PER_BLOB_CHUNK, BYTES_PER_IMAP_FETCH_CHUNK_REQUEST, CHECK_INTERVALS_ENUMS_TO_MS, SYNC_RANGE_ENUMS_TO_MS, DESIRED_SNIPPET_LENGTH, DEFAULT_SEARCH_EXCERPT_SETTINGS, BLOB_BASE64_BATCH_CONVERT_SIZE, CRONSYNC_MAX_DURATION_MS;
+  var init_syncbase = __esm({
+    "src/backend/syncbase.js"() {
+      init_date();
+      AUTOCONFIG_TIMEOUT_MS = 30 * 1e3;
+      ISPDB_AUTOCONFIG_ROOT = "https://live.mozillamessaging.com/autoconfig/v1.1/";
+      POP3_INFER_ATTACHMENTS_SIZE = 512 * 1024;
+      POP3_SNIPPET_SIZE_GOAL = 4 * 1024;
+      OLDEST_SYNC_DATE = Date.UTC(1990, 0, 1);
+      SYNC_WHOLE_FOLDER_AT_N_MESSAGES = 40;
+      BYTES_PER_BLOB_CHUNK = 1024 * 1024;
+      BYTES_PER_IMAP_FETCH_CHUNK_REQUEST = 1024 * 1024;
+      CHECK_INTERVALS_ENUMS_TO_MS = {
+        manual: 0,
+        "3min": 3 * 60 * 1e3,
+        "5min": 5 * 60 * 1e3,
+        "10min": 10 * 60 * 1e3,
+        "15min": 15 * 60 * 1e3,
+        "30min": 30 * 60 * 1e3,
+        "60min": 60 * 60 * 1e3
+      };
+      SYNC_RANGE_ENUMS_TO_MS = {
+        auto: 30 * DAY_MILLIS,
+        "1d": 1 * DAY_MILLIS,
+        "3d": 3 * DAY_MILLIS,
+        "1w": 7 * DAY_MILLIS,
+        "2w": 14 * DAY_MILLIS,
+        "1m": 30 * DAY_MILLIS,
+        all: 30 * 365 * DAY_MILLIS
+      };
+      DESIRED_SNIPPET_LENGTH = 160;
+      DEFAULT_SEARCH_EXCERPT_SETTINGS = {
+        charsBefore: 16,
+        charsAfter: 40
+      };
+      BLOB_BASE64_BATCH_CONVERT_SIZE = 9198 * 57;
+      CRONSYNC_MAX_DURATION_MS = 60 * 1e3;
+    }
+  });
+
+  // src/vendor/wbxml.js
+  function makeError(name, parent2, extraArgs) {
+    function CustomError() {
+      var self2 = this instanceof CustomError ? this : Object.create(CustomError.prototype);
+      var tmp = Error();
+      var offset = 1;
+      self2.stack = tmp.stack.substring(tmp.stack.indexOf("\n") + 1);
+      self2.message = arguments[0] || tmp.message;
+      if (extraArgs) {
+        offset += extraArgs.length;
+        for (var i = 0; i < extraArgs.length; i++)
+          self2[extraArgs[i]] = arguments[i + 1];
+      }
+      var m = /@(.+):(.+)/.exec(self2.stack);
+      self2.fileName = arguments[offset] || m && m[1] || "";
+      self2.lineNumber = arguments[offset + 1] || m && m[2] || 0;
+      return self2;
+    }
+    CustomError.prototype = Object.create((parent2 || Error).prototype);
+    CustomError.prototype.name = name;
+    CustomError.prototype.constructor = CustomError;
+    return CustomError;
+  }
+  function StringTable(data, decoder) {
+    this.strings = [];
+    this.offsets = {};
+    var start = 0;
+    for (var i = 0; i < data.length; i++) {
+      if (data[i] === 0) {
+        this.offsets[start] = this.strings.length;
+        this.strings.push(decoder.decode(data.subarray(start, i)));
+        start = i + 1;
+      }
+    }
+  }
+  function CompileCodepages(codepages2) {
+    codepages2.__nsnames__ = {};
+    codepages2.__tagnames__ = {};
+    codepages2.__attrdata__ = {};
+    for (var name in codepages2) {
+      var page = codepages2[name];
+      if (name.match(/^__/))
+        continue;
+      if (page.Tags) {
+        var tagName, tagValue;
+        for (tagName in page.Tags) {
+          tagValue = page.Tags[tagName];
+          codepages2.__nsnames__[tagValue >> 8] = name;
+          break;
+        }
+        for (tagName in page.Tags) {
+          tagValue = page.Tags[tagName];
+          codepages2.__tagnames__[tagValue] = tagName;
+        }
+      }
+      if (page.Attrs) {
+        for (var attrName in page.Attrs) {
+          var attrData = page.Attrs[attrName];
+          if (!("name" in attrData))
+            attrData.name = attrName;
+          codepages2.__attrdata__[attrData.value] = attrData;
+          page.Attrs[attrName] = attrData.value;
+        }
+      }
+    }
+  }
+  function Element(ownerDocument, type, tag) {
+    this.ownerDocument = ownerDocument;
+    this.type = type;
+    this._attrs = {};
+    if (typeof tag === "string") {
+      var pieces = tag.split(":");
+      if (pieces.length === 1) {
+        this.localTagName = pieces[0];
+      } else {
+        this.namespaceName = pieces[0];
+        this.localTagName = pieces[1];
+      }
+    } else {
+      this.tag = tag;
+      Object.defineProperties(this, {
+        "namespace": { get: function() {
+          return this.tag >> 8;
+        } },
+        "localTag": { get: function() {
+          return this.tag & 255;
+        } },
+        "namespaceName": { get: function() {
+          return this.ownerDocument._codepages.__nsnames__[this.namespace];
+        } },
+        "localTagName": { get: function() {
+          return this.ownerDocument._codepages.__tagnames__[this.tag];
+        } }
+      });
+    }
+  }
+  function EndTag(ownerDocument) {
+    this.ownerDocument = ownerDocument;
+  }
+  function Text(ownerDocument, textContent) {
+    this.ownerDocument = ownerDocument;
+    this.textContent = textContent;
+  }
+  function Extension(ownerDocument, subtype, index, value) {
+    this.ownerDocument = ownerDocument;
+    this.subtype = subtype;
+    this.index = index;
+    this.value = value;
+  }
+  function ProcessingInstruction(ownerDocument) {
+    this.ownerDocument = ownerDocument;
+  }
+  function Opaque(ownerDocument, data) {
+    this.ownerDocument = ownerDocument;
+    this.data = data;
+  }
+  function Reader(data, codepages2) {
+    this._data = data instanceof Writer ? data.bytes : data;
+    this._codepages = codepages2;
+    this.rewind();
+  }
+  function Writer(version, pid, charset, strings2, dataType) {
+    if (dataType === "blob")
+      this._blobs = [];
+    else
+      this._blobs = null;
+    this.dataType = dataType || "arraybuffer";
+    this._rawbuf = new ArrayBuffer(1024);
+    this._buffer = new Uint8Array(this._rawbuf);
+    this._pos = 0;
+    this._codepage = 0;
+    this._tagStack = [];
+    this._rootTagValue = null;
+    var infos = version.split(".").map(function(x) {
+      return parseInt(x);
+    });
+    var major = infos[0], minor = infos[1];
+    var v = (major - 1 << 4) + minor;
+    var charsetNum = charset;
+    if (typeof charset === "string") {
+      charsetNum = str2mib[charset];
+      if (charsetNum === void 0)
+        throw new Error("unknown charset " + charset);
+    }
+    var encoder = this._encoder = new TextEncoder(charset);
+    this._write(v);
+    this._write(pid);
+    this._write(charsetNum);
+    if (strings2) {
+      var bytes = strings2.map(function(s) {
+        return encoder.encode(s);
+      });
+      var len = bytes.reduce(function(x, y) {
+        return x + y.length + 1;
+      }, 0);
+      this._write_mb_uint32(len);
+      for (var i = 0; i < bytes.length; i++) {
+        var b = bytes[i];
+        this._write_bytes(b);
+        this._write(0);
+      }
+    } else {
+      this._write(0);
+    }
+  }
+  function EventParser() {
+    this.listeners = [];
+    this.onerror = function(e) {
+      throw e;
+    };
+  }
+  var Tokens, EndOfData, ParseError, mib2str, str2mib, mibStr;
+  var init_wbxml = __esm({
+    "src/vendor/wbxml.js"() {
+      Tokens = {
+        SWITCH_PAGE: 0,
+        END: 1,
+        ENTITY: 2,
+        STR_I: 3,
+        LITERAL: 4,
+        EXT_I_0: 64,
+        EXT_I_1: 65,
+        EXT_I_2: 66,
+        PI: 67,
+        LITERAL_C: 68,
+        EXT_T_0: 128,
+        EXT_T_1: 129,
+        EXT_T_2: 130,
+        STR_T: 131,
+        LITERAL_A: 132,
+        EXT_0: 192,
+        EXT_1: 193,
+        EXT_2: 194,
+        OPAQUE: 195,
+        LITERAL_AC: 196
+      };
+      EndOfData = {
+        message: "THIS IS AN INTERNAL CONTROL FLOW HACK THAT YOU SHOULD NOT SEE"
+      };
+      ParseError = makeError("WBXML.ParseError");
+      StringTable.prototype = {
+        get: function(offset) {
+          if (offset in this.offsets)
+            return this.strings[this.offsets[offset]];
+          else {
+            if (offset < 0)
+              throw new ParseError("offset must be >= 0");
+            var curr = 0;
+            for (var i = 0; i < this.strings.length; i++) {
+              if (offset < curr + this.strings[i].length + 1)
+                return this.strings[i].slice(offset - curr);
+              curr += this.strings[i].length + 1;
+            }
+          }
+          throw new ParseError("invalid offset");
+        }
+      };
+      mib2str = {
+        3: "US-ASCII",
+        4: "ISO-8859-1",
+        5: "ISO-8859-2",
+        6: "ISO-8859-3",
+        7: "ISO-8859-4",
+        8: "ISO-8859-5",
+        9: "ISO-8859-6",
+        10: "ISO-8859-7",
+        11: "ISO-8859-8",
+        12: "ISO-8859-9",
+        13: "ISO-8859-10",
+        106: "UTF-8"
+      };
+      str2mib = {};
+      for (var mibId in mib2str) {
+        mibStr = mib2str[mibId];
+        str2mib[mibStr] = mibId;
+      }
+      Element.prototype = {
+        get tagName() {
+          var ns = this.namespaceName;
+          ns = ns ? ns + ":" : "";
+          return ns + this.localTagName;
+        },
+        getAttributes: function() {
+          var attributes = [];
+          for (var name in this._attrs) {
+            var pieces = this._attrs[name];
+            var data = name.split(":");
+            attributes.push({
+              name,
+              namespace: data[0],
+              localName: data[1],
+              value: this._getAttribute(pieces)
+            });
+          }
+          return attributes;
+        },
+        getAttribute: function(attr) {
+          if (typeof attr === "number")
+            attr = this.ownerDocument._codepages.__attrdata__[attr].name;
+          else if (!(attr in this._attrs) && this.namespace !== null && attr.indexOf(":") === -1)
+            attr = this.namespaceName + ":" + attr;
+          return this._getAttribute(this._attrs[attr]);
+        },
+        _getAttribute: function(pieces) {
+          var strValue = "";
+          var array = [];
+          for (var i = 0; i < pieces.length; i++) {
+            var hunk = pieces[i];
+            if (hunk instanceof Extension) {
+              if (strValue) {
+                array.push(strValue);
+                strValue = "";
+              }
+              array.push(hunk);
+            } else if (typeof hunk === "number") {
+              strValue += this.ownerDocument._codepages.__attrdata__[hunk].data || "";
+            } else {
+              strValue += hunk;
+            }
+          }
+          if (strValue)
+            array.push(strValue);
+          return array.length === 1 ? array[0] : array;
+        },
+        _addAttribute: function(attr) {
+          if (typeof attr === "string") {
+            if (attr in this._attrs)
+              throw new ParseError("attribute " + attr + " is repeated");
+            return this._attrs[attr] = [];
+          } else {
+            var namespace = attr >> 8;
+            var localAttr = attr & 255;
+            var localName = this.ownerDocument._codepages.__attrdata__[localAttr].name;
+            var nsName = this.ownerDocument._codepages.__nsnames__[namespace];
+            var name = nsName + ":" + localName;
+            if (name in this._attrs)
+              throw new ParseError("attribute " + name + " is repeated");
+            return this._attrs[name] = [attr];
+          }
+        }
+      };
+      EndTag.prototype = {
+        get type() {
+          return "ETAG";
+        }
+      };
+      Text.prototype = {
+        get type() {
+          return "TEXT";
+        }
+      };
+      Extension.prototype = {
+        get type() {
+          return "EXT";
+        }
+      };
+      ProcessingInstruction.prototype = {
+        get type() {
+          return "PI";
+        },
+        get target() {
+          if (typeof this.targetID === "string")
+            return this.targetID;
+          else
+            return this.ownerDocument._codepages.__attrdata__[this.targetID].name;
+        },
+        _setTarget: function(target) {
+          this.targetID = target;
+          if (typeof target === "string")
+            return this._data = [];
+          else
+            return this._data = [target];
+        },
+        _getAttribute: Element.prototype._getAttribute,
+        get data() {
+          return this._getAttribute(this._data);
+        }
+      };
+      Opaque.prototype = {
+        get type() {
+          return "OPAQUE";
+        }
+      };
+      Reader.prototype = {
+        _get_uint8: function() {
+          if (this._index === this._data.length)
+            throw EndOfData;
+          return this._data[this._index++];
+        },
+        _get_mb_uint32: function() {
+          var b;
+          var result = 0;
+          do {
+            b = this._get_uint8();
+            result = result * 128 + (b & 127);
+          } while (b & 128);
+          return result;
+        },
+        _get_slice: function(length) {
+          var start = this._index;
+          this._index += length;
+          return this._data.subarray(start, this._index);
+        },
+        _get_c_string: function() {
+          var start = this._index;
+          while (this._get_uint8())
+            ;
+          return this._data.subarray(start, this._index - 1);
+        },
+        rewind: function() {
+          this._index = 0;
+          var v = this._get_uint8();
+          this.version = ((v & 240) + 1).toString() + "." + (v & 15).toString();
+          this.pid = this._get_mb_uint32();
+          this.charset = mib2str[this._get_mb_uint32()] || "unknown";
+          this._decoder = new TextDecoder(this.charset);
+          var tbl_len = this._get_mb_uint32();
+          this.strings = new StringTable(this._get_slice(tbl_len), this._decoder);
+          this.document = this._getDocument();
+        },
+        _getDocument: function() {
+          var States = {
+            BODY: 0,
+            ATTRIBUTES: 1,
+            ATTRIBUTE_PI: 2
+          };
+          var state = States.BODY;
+          var currentNode;
+          var currentAttr;
+          var codepage = 0;
+          var depth = 0;
+          var foundRoot = false;
+          var doc = [];
+          var appendString = function(s) {
+            if (state === States.BODY) {
+              if (!currentNode)
+                currentNode = new Text(this, s);
+              else
+                currentNode.textContent += s;
+            } else {
+              currentAttr.push(s);
+            }
+          }.bind(this);
+          try {
+            while (true) {
+              var tok = this._get_uint8();
+              if (tok === Tokens.SWITCH_PAGE) {
+                codepage = this._get_uint8();
+                if (!(codepage in this._codepages.__nsnames__))
+                  throw new ParseError("unknown codepage " + codepage);
+              } else if (tok === Tokens.END) {
+                if (state === States.BODY && depth-- > 0) {
+                  if (currentNode) {
+                    doc.push(currentNode);
+                    currentNode = null;
+                  }
+                  doc.push(new EndTag(this));
+                } else if (state === States.ATTRIBUTES || state === States.ATTRIBUTE_PI) {
+                  state = States.BODY;
+                  doc.push(currentNode);
+                  currentNode = null;
+                  currentAttr = null;
+                } else {
+                  throw new ParseError("unexpected END token");
+                }
+              } else if (tok === Tokens.ENTITY) {
+                if (state === States.BODY && depth === 0)
+                  throw new ParseError("unexpected ENTITY token");
+                var e = this._get_mb_uint32();
+                appendString("&#" + e + ";");
+              } else if (tok === Tokens.STR_I) {
+                if (state === States.BODY && depth === 0)
+                  throw new ParseError("unexpected STR_I token");
+                appendString(this._decoder.decode(this._get_c_string()));
+              } else if (tok === Tokens.PI) {
+                if (state !== States.BODY)
+                  throw new ParseError("unexpected PI token");
+                state = States.ATTRIBUTE_PI;
+                if (currentNode)
+                  doc.push(currentNode);
+                currentNode = new ProcessingInstruction(this);
+              } else if (tok === Tokens.STR_T) {
+                if (state === States.BODY && depth === 0)
+                  throw new ParseError("unexpected STR_T token");
+                var r = this._get_mb_uint32();
+                appendString(this.strings.get(r));
+              } else if (tok === Tokens.OPAQUE) {
+                if (state !== States.BODY)
+                  throw new ParseError("unexpected OPAQUE token");
+                var len = this._get_mb_uint32();
+                var data = this._get_slice(len);
+                if (currentNode) {
+                  doc.push(currentNode);
+                  currentNode = null;
+                }
+                doc.push(new Opaque(this, data));
+              } else if ((tok & 64 || tok & 128) && (tok & 63) < 3) {
+                var hi = tok & 192;
+                var lo = tok & 63;
+                var subtype;
+                var value;
+                if (hi === Tokens.EXT_I_0) {
+                  subtype = "string";
+                  value = this._decoder.decode(this._get_c_string());
+                } else if (hi === Tokens.EXT_T_0) {
+                  subtype = "integer";
+                  value = this._get_mb_uint32();
+                } else {
+                  subtype = "byte";
+                  value = null;
+                }
+                var ext = new Extension(this, subtype, lo, value);
+                if (state === States.BODY) {
+                  if (currentNode) {
+                    doc.push(currentNode);
+                    currentNode = null;
+                  }
+                  doc.push(ext);
+                } else {
+                  currentAttr.push(ext);
+                }
+              } else if (state === States.BODY) {
+                if (depth === 0) {
+                  if (foundRoot)
+                    throw new ParseError("multiple root nodes found");
+                  foundRoot = true;
+                }
+                var tag = (codepage << 8) + (tok & 63);
+                if ((tok & 63) === Tokens.LITERAL) {
+                  var r = this._get_mb_uint32();
+                  tag = this.strings.get(r);
+                }
+                if (currentNode)
+                  doc.push(currentNode);
+                currentNode = new Element(this, tok & 64 ? "STAG" : "TAG", tag);
+                if (tok & 64)
+                  depth++;
+                if (tok & 128) {
+                  state = States.ATTRIBUTES;
+                } else {
+                  state = States.BODY;
+                  doc.push(currentNode);
+                  currentNode = null;
+                }
+              } else {
+                var attr = (codepage << 8) + tok;
+                if (!(tok & 128)) {
+                  if (tok === Tokens.LITERAL) {
+                    var r = this._get_mb_uint32();
+                    attr = this.strings.get(r);
+                  }
+                  if (state === States.ATTRIBUTE_PI) {
+                    if (currentAttr)
+                      throw new ParseError("unexpected attribute in PI");
+                    currentAttr = currentNode._setTarget(attr);
+                  } else {
+                    currentAttr = currentNode._addAttribute(attr);
+                  }
+                } else {
+                  currentAttr.push(attr);
+                }
+              }
+            }
+          } catch (e2) {
+            if (e2 !== EndOfData)
+              throw e2;
+          }
+          return doc;
+        },
+        dump: function(indentation, header) {
+          var result = "";
+          if (indentation === void 0)
+            indentation = 2;
+          var indent = function(level) {
+            return new Array(level * indentation + 1).join(" ");
+          };
+          var tagstack = [];
+          if (header) {
+            result += "Version: " + this.version + "\n";
+            result += "Public ID: " + this.pid + "\n";
+            result += "Charset: " + this.charset + "\n";
+            result += 'String table:\n  "' + this.strings.strings.join('"\n  "') + '"\n\n';
+          }
+          var newline = false;
+          var doc = this.document;
+          var doclen = doc.length;
+          for (var iNode = 0; iNode < doclen; iNode++) {
+            var node = doc[iNode];
+            if (node.type === "TAG" || node.type === "STAG") {
+              result += indent(tagstack.length) + "<" + node.tagName;
+              var attributes = node.getAttributes();
+              for (var i = 0; i < attributes.length; i++) {
+                var attr = attributes[i];
+                result += " " + attr.name + '="' + attr.value + '"';
+              }
+              if (node.type === "STAG") {
+                tagstack.push(node.tagName);
+                result += ">\n";
+              } else
+                result += "/>\n";
+            } else if (node.type === "ETAG") {
+              var tag = tagstack.pop();
+              result += indent(tagstack.length) + "</" + tag + ">\n";
+            } else if (node.type === "TEXT") {
+              result += indent(tagstack.length) + node.textContent + "\n";
+            } else if (node.type === "PI") {
+              result += indent(tagstack.length) + "<?" + node.target;
+              if (node.data)
+                result += " " + node.data;
+              result += "?>\n";
+            } else if (node.type === "OPAQUE") {
+              result += indent(tagstack.length) + "<![CDATA[" + node.data + "]]>\n";
+            } else {
+              throw new Error('Unknown node type "' + node.type + '"');
+            }
+          }
+          return result;
+        }
+      };
+      Writer.Attribute = function(name, value) {
+        this.isValue = typeof name === "number" && name & 128;
+        if (this.isValue && value !== void 0)
+          throw new Error("Can't specify a value for attribute value constants");
+        this.name = name;
+        this.value = value;
+      };
+      Writer.StringTableRef = function(index) {
+        this.index = index;
+      };
+      Writer.Entity = function(code) {
+        this.code = code;
+      };
+      Writer.Extension = function(subtype, index, data) {
+        var validTypes = {
+          "string": {
+            value: Tokens.EXT_I_0,
+            validator: function(data2) {
+              return typeof data2 === "string";
+            }
+          },
+          "integer": {
+            value: Tokens.EXT_T_0,
+            validator: function(data2) {
+              return typeof data2 === "number";
+            }
+          },
+          "byte": {
+            value: Tokens.EXT_0,
+            validator: function(data2) {
+              return data2 === null || data2 === void 0;
+            }
+          }
+        };
+        var info = validTypes[subtype];
+        if (!info)
+          throw new Error("Invalid WBXML Extension type");
+        if (!info.validator(data))
+          throw new Error("Data for WBXML Extension does not match type");
+        if (index !== 0 && index !== 1 && index !== 2)
+          throw new Error("Invalid WBXML Extension index");
+        this.subtype = info.value;
+        this.index = index;
+        this.data = data;
+      };
+      Writer.a = function(name, val) {
+        return new Writer.Attribute(name, val);
+      };
+      Writer.str_t = function(index) {
+        return new Writer.StringTableRef(index);
+      };
+      Writer.ent = function(code) {
+        return new Writer.Entity(code);
+      };
+      Writer.ext = function(subtype, index, data) {
+        return new Writer.Extension(subtype, index, data);
+      };
+      Writer.prototype = {
+        _write: function(tok) {
+          if (this._pos === this._buffer.length - 1) {
+            this._rawbuf = new ArrayBuffer(this._rawbuf.byteLength * 2);
+            var buffer = new Uint8Array(this._rawbuf);
+            for (var i = 0; i < this._buffer.length; i++)
+              buffer[i] = this._buffer[i];
+            this._buffer = buffer;
+          }
+          this._buffer[this._pos++] = tok;
+        },
+        _write_mb_uint32: function(value) {
+          var bytes = [];
+          bytes.push(value % 128);
+          while (value >= 128) {
+            value >>= 7;
+            bytes.push(128 + value % 128);
+          }
+          for (var i = bytes.length - 1; i >= 0; i--)
+            this._write(bytes[i]);
+        },
+        _write_bytes: function(bytes) {
+          for (var i = 0; i < bytes.length; i++)
+            this._write(bytes[i]);
+        },
+        _write_str: function(str) {
+          this._write_bytes(this._encoder.encode(str));
+        },
+        _setCodepage: function(codepage) {
+          if (this._codepage !== codepage) {
+            this._write(Tokens.SWITCH_PAGE);
+            this._write(codepage);
+            this._codepage = codepage;
+          }
+        },
+        _writeTag: function(tag, stag, attrs) {
+          if (tag === void 0)
+            throw new Error("unknown tag");
+          var flags = 0;
+          if (stag)
+            flags += 64;
+          if (attrs.length)
+            flags += 128;
+          if (tag instanceof Writer.StringTableRef) {
+            this._write(Tokens.LITERAL + flags);
+            this._write_mb_uint32(tag.index);
+          } else {
+            this._setCodepage(tag >> 8);
+            this._write((tag & 255) + flags);
+            if (!this._rootTagValue)
+              this._rootTagValue = tag;
+          }
+          if (attrs.length) {
+            for (var i = 0; i < attrs.length; i++) {
+              var attr = attrs[i];
+              this._writeAttr(attr);
+            }
+            this._write(Tokens.END);
+          }
+        },
+        _writeAttr: function(attr) {
+          if (!(attr instanceof Writer.Attribute))
+            throw new Error("Expected an Attribute object, not: " + attr);
+          if (attr.isValue)
+            throw new Error("Can't use attribute value constants here");
+          if (attr.name instanceof Writer.StringTableRef) {
+            this._write(Tokens.LITERAL);
+            this._write(attr.name.index);
+          } else {
+            this._setCodepage(attr.name >> 8);
+            this._write(attr.name & 255);
+          }
+          this._writeText(attr.value, true);
+        },
+        _writeText: function(value, inAttr) {
+          if (Array.isArray(value)) {
+            for (var i = 0; i < value.length; i++) {
+              var piece = value[i];
+              this._writeText(piece, inAttr);
+            }
+          } else if (value instanceof Writer.StringTableRef) {
+            this._write(Tokens.STR_T);
+            this._write_mb_uint32(value.index);
+          } else if (value instanceof Writer.Entity) {
+            this._write(Tokens.ENTITY);
+            this._write_mb_uint32(value.code);
+          } else if (value instanceof Writer.Extension) {
+            this._write(value.subtype + value.index);
+            if (value.subtype === Tokens.EXT_I_0) {
+              this._write_str(value.data);
+              this._write(0);
+            } else if (value.subtype === Tokens.EXT_T_0) {
+              this._write_mb_uint32(value.data);
+            }
+          } else if (value instanceof Writer.Attribute) {
+            if (!value.isValue)
+              throw new Error("Unexpected Attribute object");
+            if (!inAttr)
+              throw new Error("Can't use attribute value constants outside of attributes");
+            this._setCodepage(value.name >> 8);
+            this._write(value.name & 255);
+          } else if (value !== null && value !== void 0) {
+            this._write(Tokens.STR_I);
+            this._write_str(value.toString());
+            this._write(0);
+          }
+        },
+        tag: function(tag) {
+          var tail = arguments.length > 1 ? arguments[arguments.length - 1] : null;
+          if (tail === null || tail instanceof Writer.Attribute) {
+            var rest = Array.prototype.slice.call(arguments, 1);
+            this._writeTag(tag, false, rest);
+            return this;
+          } else {
+            var head = Array.prototype.slice.call(arguments, 0, -1);
+            return this.stag.apply(this, head).text(tail).etag();
+          }
+        },
+        stag: function(tag) {
+          var rest = Array.prototype.slice.call(arguments, 1);
+          this._writeTag(tag, true, rest);
+          this._tagStack.push(tag);
+          return this;
+        },
+        etag: function(tag) {
+          if (this._tagStack.length === 0)
+            throw new Error("Spurious etag() call!");
+          var expectedTag = this._tagStack.pop();
+          if (tag !== void 0 && tag !== expectedTag)
+            throw new Error("Closed the wrong tag");
+          this._write(Tokens.END);
+          return this;
+        },
+        text: function(value) {
+          this._writeText(value);
+          return this;
+        },
+        pi: function(target, data) {
+          this._write(Tokens.PI);
+          this._writeAttr(Writer.a(target, data));
+          this._write(Tokens.END);
+          return this;
+        },
+        ext: function(subtype, index, data) {
+          return this.text(Writer.ext(subtype, index, data));
+        },
+        opaque: function(data) {
+          this._write(Tokens.OPAQUE);
+          if (data instanceof Blob) {
+            if (!this._blobs)
+              throw new Error("Writer not opened in blob mode");
+            this._write_mb_uint32(data.size);
+            this._blobs.push(this.bytes);
+            this._blobs.push(data);
+            this._rawbuf = new ArrayBuffer(1024);
+            this._buffer = new Uint8Array(this._rawbuf);
+            this._pos = 0;
+          } else if (typeof data === "string") {
+            this._write_mb_uint32(data.length);
+            this._write_str(data);
+          } else {
+            this._write_mb_uint32(data.length);
+            for (var i = 0; i < data.length; i++)
+              this._write(data[i]);
+          }
+          return this;
+        },
+        get buffer() {
+          return this._rawbuf.slice(0, this._pos);
+        },
+        get bytes() {
+          return new Uint8Array(this._rawbuf, 0, this._pos);
+        },
+        get blob() {
+          if (!this._blobs)
+            throw new Error("No blobs!");
+          var useBlobs = this._blobs;
+          if (this._pos)
+            useBlobs = useBlobs.concat([this.bytes]);
+          var superBlob = new Blob(useBlobs);
+          return superBlob;
+        },
+        get rootTag() {
+          return this._rootTagValue;
+        }
+      };
+      EventParser.prototype = {
+        addEventListener: function(path, callback) {
+          this.listeners.push({ path, callback });
+        },
+        _pathMatches: function(a, b) {
+          return a.length === b.length && a.every(function(val, i) {
+            if (b[i] === "*")
+              return true;
+            else if (Array.isArray(b[i])) {
+              return b[i].indexOf(val) !== -1;
+            } else
+              return val === b[i];
+          });
+        },
+        run: function(reader) {
+          var fullPath = [];
+          var recPath = [];
+          var recording = 0;
+          var doc = reader.document;
+          var doclen = doc.length;
+          var listeners2 = this.listeners, iListener, listener;
+          for (var iNode = 0; iNode < doclen; iNode++) {
+            var node = doc[iNode];
+            if (node.type === "TAG") {
+              fullPath.push(node.tag);
+              for (iListener = 0; iListener < listeners2.length; iListener++) {
+                listener = listeners2[iListener];
+                if (this._pathMatches(fullPath, listener.path)) {
+                  node.children = [];
+                  try {
+                    listener.callback(node);
+                  } catch (e) {
+                    if (this.onerror)
+                      this.onerror(e);
+                  }
+                }
+              }
+              fullPath.pop();
+            } else if (node.type === "STAG") {
+              fullPath.push(node.tag);
+              for (iListener = 0; iListener < listeners2.length; iListener++) {
+                listener = listeners2[iListener];
+                if (this._pathMatches(fullPath, listener.path)) {
+                  recording++;
+                }
+              }
+            } else if (node.type === "ETAG") {
+              for (iListener = 0; iListener < listeners2.length; iListener++) {
+                listener = listeners2[iListener];
+                if (this._pathMatches(fullPath, listener.path)) {
+                  recording--;
+                  try {
+                    listener.callback(recPath[recPath.length - 1]);
+                  } catch (e) {
+                    if (this.onerror)
+                      this.onerror(e);
+                  }
+                }
+              }
+              fullPath.pop();
+            }
+            if (recording) {
+              if (node.type === "STAG") {
+                node.type = "TAG";
+                node.children = [];
+                if (recPath.length)
+                  recPath[recPath.length - 1].children.push(node);
+                recPath.push(node);
+              } else if (node.type === "ETAG") {
+                recPath.pop();
+              } else {
+                node.children = [];
+                recPath[recPath.length - 1].children.push(node);
+              }
+            }
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Common.js
+  var Common_default;
+  var init_Common = __esm({
+    "src/vendor/activesync/codepages/Common.js"() {
+      Common_default = {
+        Enums: {
+          Status: {
+            InvalidContent: "101",
+            InvalidWBXML: "102",
+            InvalidXML: "103",
+            InvalidDateTime: "104",
+            InvalidCombinationOfIDs: "105",
+            InvalidIDs: "106",
+            InvalidMIME: "107",
+            DeviceIdMissingOrInvalid: "108",
+            DeviceTypeMissingOrInvalid: "109",
+            ServerError: "110",
+            ServerErrorRetryLater: "111",
+            ActiveDirectoryAccessDenied: "112",
+            MailboxQuotaExceeded: "113",
+            MailboxServerOffline: "114",
+            SendQuotaExceeded: "115",
+            MessageRecipientUnresolved: "116",
+            MessageReplyNotAllowed: "117",
+            MessagePreviouslySent: "118",
+            MessageHasNoRecipient: "119",
+            MailSubmissionFailed: "120",
+            MessageReplyFailed: "121",
+            AttachmentIsTooLarge: "122",
+            UserHasNoMailbox: "123",
+            UserCannotBeAnonymous: "124",
+            UserPrincipalCouldNotBeFound: "125",
+            UserDisabledForSync: "126",
+            UserOnNewMailboxCannotSync: "127",
+            UserOnLegacyMailboxCannotSync: "128",
+            DeviceIsBlockedForThisUser: "129",
+            AccessDenied: "130",
+            AccountDisabled: "131",
+            SyncStateNotFound: "132",
+            SyncStateLocked: "133",
+            SyncStateCorrupt: "134",
+            SyncStateAlreadyExists: "135",
+            SyncStateVersionInvalid: "136",
+            CommandNotSupported: "137",
+            VersionNotSupported: "138",
+            DeviceNotFullyProvisionable: "139",
+            RemoteWipeRequested: "140",
+            LegacyDeviceOnStrictPolicy: "141",
+            DeviceNotProvisioned: "142",
+            PolicyRefresh: "143",
+            InvalidPolicyKey: "144",
+            ExternallyManagedDevicesNotAllowed: "145",
+            NoRecurrenceInCalendar: "146",
+            UnexpectedItemClass: "147",
+            RemoteServerHasNoSSL: "148",
+            InvalidStoredRequest: "149",
+            ItemNotFound: "150",
+            TooManyFolders: "151",
+            NoFoldersFounds: "152",
+            ItemsLostAfterMove: "153",
+            FailureInMoveOperation: "154",
+            MoveCommandDisallowedForNonPersistentMoveAction: "155",
+            MoveCommandInvalidDestinationFolder: "156",
+            AvailabilityTooManyRecipients: "160",
+            AvailabilityDLLimitReached: "161",
+            AvailabilityTransientFailure: "162",
+            AvailabilityFailure: "163",
+            BodyPartPreferenceTypeNotSupported: "164",
+            DeviceInformationRequired: "165",
+            InvalidAccountId: "166",
+            AccountSendDisabled: "167",
+            IRM_FeatureDisabled: "168",
+            IRM_TransientError: "169",
+            IRM_PermanentError: "170",
+            IRM_InvalidTemplateID: "171",
+            IRM_OperationNotPermitted: "172",
+            NoPicture: "173",
+            PictureTooLarge: "174",
+            PictureLimitReached: "175",
+            BodyPart_ConversationTooLarge: "176",
+            MaximumDevicesReached: "177"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/AirSync.js
+  var AirSync_default;
+  var init_AirSync = __esm({
+    "src/vendor/activesync/codepages/AirSync.js"() {
+      AirSync_default = {
+        Tags: {
+          Sync: 5,
+          Responses: 6,
+          Add: 7,
+          Change: 8,
+          Delete: 9,
+          Fetch: 10,
+          SyncKey: 11,
+          ClientId: 12,
+          ServerId: 13,
+          Status: 14,
+          Collection: 15,
+          Class: 16,
+          Version: 17,
+          CollectionId: 18,
+          GetChanges: 19,
+          MoreAvailable: 20,
+          WindowSize: 21,
+          Commands: 22,
+          Options: 23,
+          FilterType: 24,
+          Truncation: 25,
+          RtfTruncation: 26,
+          Conflict: 27,
+          Collections: 28,
+          ApplicationData: 29,
+          DeletesAsMoves: 30,
+          NotifyGUID: 31,
+          Supported: 32,
+          SoftDelete: 33,
+          MIMESupport: 34,
+          MIMETruncation: 35,
+          Wait: 36,
+          Limit: 37,
+          Partial: 38,
+          ConversationMode: 39,
+          MaxItems: 40,
+          HeartbeatInterval: 41
+        },
+        Enums: {
+          Status: {
+            Success: "1",
+            InvalidSyncKey: "3",
+            ProtocolError: "4",
+            ServerError: "5",
+            ConversionError: "6",
+            MatchingConflict: "7",
+            ObjectNotFound: "8",
+            OutOfSpace: "9",
+            HierarchyChanged: "12",
+            IncompleteRequest: "13",
+            InvalidInterval: "14",
+            InvalidRequest: "15",
+            Retry: "16"
+          },
+          FilterType: {
+            NoFilter: "0",
+            OneDayBack: "1",
+            ThreeDaysBack: "2",
+            OneWeekBack: "3",
+            TwoWeeksBack: "4",
+            OneMonthBack: "5",
+            ThreeMonthsBack: "6",
+            SixMonthsBack: "7",
+            IncompleteTasks: "8"
+          },
+          Conflict: {
+            ClientReplacesServer: "0",
+            ServerReplacesClient: "1"
+          },
+          MIMESupport: {
+            Never: "0",
+            SMIMEOnly: "1",
+            Always: "2"
+          },
+          MIMETruncation: {
+            TruncateAll: "0",
+            Truncate4K: "1",
+            Truncate5K: "2",
+            Truncate7K: "3",
+            Truncate10K: "4",
+            Truncate20K: "5",
+            Truncate50K: "6",
+            Truncate100K: "7",
+            NoTruncate: "8"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Contacts.js
+  var Contacts_default;
+  var init_Contacts = __esm({
+    "src/vendor/activesync/codepages/Contacts.js"() {
+      Contacts_default = {
+        Tags: {
+          Anniversary: 261,
+          AssistantName: 262,
+          AssistantPhoneNumber: 263,
+          Birthday: 264,
+          Body: 265,
+          BodySize: 266,
+          BodyTruncated: 267,
+          Business2PhoneNumber: 268,
+          BusinessAddressCity: 269,
+          BusinessAddressCountry: 270,
+          BusinessAddressPostalCode: 271,
+          BusinessAddressState: 272,
+          BusinessAddressStreet: 273,
+          BusinessFaxNumber: 274,
+          BusinessPhoneNumber: 275,
+          CarPhoneNumber: 276,
+          Categories: 277,
+          Category: 278,
+          Children: 279,
+          Child: 280,
+          CompanyName: 281,
+          Department: 282,
+          Email1Address: 283,
+          Email2Address: 284,
+          Email3Address: 285,
+          FileAs: 286,
+          FirstName: 287,
+          Home2PhoneNumber: 288,
+          HomeAddressCity: 289,
+          HomeAddressCountry: 290,
+          HomeAddressPostalCode: 291,
+          HomeAddressState: 292,
+          HomeAddressStreet: 293,
+          HomeFaxNumber: 294,
+          HomePhoneNumber: 295,
+          JobTitle: 296,
+          LastName: 297,
+          MiddleName: 298,
+          MobilePhoneNumber: 299,
+          OfficeLocation: 300,
+          OtherAddressCity: 301,
+          OtherAddressCountry: 302,
+          OtherAddressPostalCode: 303,
+          OtherAddressState: 304,
+          OtherAddressStreet: 305,
+          PagerNumber: 306,
+          RadioPhoneNumber: 307,
+          Spouse: 308,
+          Suffix: 309,
+          Title: 310,
+          WebPage: 311,
+          YomiCompanyName: 312,
+          YomiFirstName: 313,
+          YomiLastName: 314,
+          CompressedRTF: 315,
+          Picture: 316,
+          Alias: 317,
+          WeightedRank: 318
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Email.js
+  var Email_default;
+  var init_Email = __esm({
+    "src/vendor/activesync/codepages/Email.js"() {
+      Email_default = {
+        Tags: {
+          Attachment: 517,
+          Attachments: 518,
+          AttName: 519,
+          AttSize: 520,
+          Att0Id: 521,
+          AttMethod: 522,
+          AttRemoved: 523,
+          Body: 524,
+          BodySize: 525,
+          BodyTruncated: 526,
+          DateReceived: 527,
+          DisplayName: 528,
+          DisplayTo: 529,
+          Importance: 530,
+          MessageClass: 531,
+          Subject: 532,
+          Read: 533,
+          To: 534,
+          Cc: 535,
+          From: 536,
+          ReplyTo: 537,
+          AllDayEvent: 538,
+          Categories: 539,
+          Category: 540,
+          DTStamp: 541,
+          EndTime: 542,
+          InstanceType: 543,
+          BusyStatus: 544,
+          Location: 545,
+          MeetingRequest: 546,
+          Organizer: 547,
+          RecurrenceId: 548,
+          Reminder: 549,
+          ResponseRequested: 550,
+          Recurrences: 551,
+          Recurrence: 552,
+          Recurrence_Type: 553,
+          Recurrence_Until: 554,
+          Recurrence_Occurrences: 555,
+          Recurrence_Interval: 556,
+          Recurrence_DayOfWeek: 557,
+          Recurrence_DayOfMonth: 558,
+          Recurrence_WeekOfMonth: 559,
+          Recurrence_MonthOfYear: 560,
+          StartTime: 561,
+          Sensitivity: 562,
+          TimeZone: 563,
+          GlobalObjId: 564,
+          ThreadTopic: 565,
+          MIMEData: 566,
+          MIMETruncated: 567,
+          MIMESize: 568,
+          InternetCPID: 569,
+          Flag: 570,
+          Status: 571,
+          ContentClass: 572,
+          FlagType: 573,
+          CompleteTime: 574,
+          DisallowNewTimeProposal: 575
+        },
+        Enums: {
+          Importance: {
+            Low: "0",
+            Normal: "1",
+            High: "2"
+          },
+          InstanceType: {
+            Single: "0",
+            RecurringMaster: "1",
+            RecurringInstance: "2",
+            RecurringException: "3"
+          },
+          BusyStatus: {
+            Free: "0",
+            Tentative: "1",
+            Busy: "2",
+            Oof: "3"
+          },
+          Recurrence_Type: {
+            Daily: "0",
+            Weekly: "1",
+            MonthlyNthDay: "2",
+            Monthly: "3",
+            YearlyNthDay: "5",
+            YearlyNthDayOfWeek: "6"
+          },
+          Sensitivity: {
+            Normal: "0",
+            Personal: "1",
+            Private: "2",
+            Confidential: "3"
+          },
+          Status: {
+            Cleared: "0",
+            Complete: "1",
+            Active: "2"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Calendar.js
+  var Calendar_default;
+  var init_Calendar = __esm({
+    "src/vendor/activesync/codepages/Calendar.js"() {
+      Calendar_default = {
+        Tags: {
+          TimeZone: 1029,
+          AllDayEvent: 1030,
+          Attendees: 1031,
+          Attendee: 1032,
+          Email: 1033,
+          Name: 1034,
+          Body: 1035,
+          BodyTruncated: 1036,
+          BusyStatus: 1037,
+          Categories: 1038,
+          Category: 1039,
+          CompressedRTF: 1040,
+          DtStamp: 1041,
+          EndTime: 1042,
+          Exception: 1043,
+          Exceptions: 1044,
+          Deleted: 1045,
+          ExceptionStartTime: 1046,
+          Location: 1047,
+          MeetingStatus: 1048,
+          OrganizerEmail: 1049,
+          OrganizerName: 1050,
+          Recurrence: 1051,
+          Type: 1052,
+          Until: 1053,
+          Occurrences: 1054,
+          Interval: 1055,
+          DayOfWeek: 1056,
+          DayOfMonth: 1057,
+          WeekOfMonth: 1058,
+          MonthOfYear: 1059,
+          Reminder: 1060,
+          Sensitivity: 1061,
+          Subject: 1062,
+          StartTime: 1063,
+          UID: 1064,
+          AttendeeStatus: 1065,
+          AttendeeType: 1066,
+          Attachment: 1067,
+          Attachments: 1068,
+          AttName: 1069,
+          AttSize: 1070,
+          AttOid: 1071,
+          AttMethod: 1072,
+          AttRemoved: 1073,
+          DisplayName: 1074,
+          DisallowNewTimeProposal: 1075,
+          ResponseRequested: 1076,
+          AppointmentReplyTime: 1077,
+          ResponseType: 1078,
+          CalendarType: 1079,
+          IsLeapMonth: 1080,
+          FirstDayOfWeek: 1081,
+          OnlineMeetingConfLink: 1082,
+          OnlineMeetingExternalLink: 1083
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Move.js
+  var Move_default;
+  var init_Move = __esm({
+    "src/vendor/activesync/codepages/Move.js"() {
+      Move_default = {
+        Tags: {
+          MoveItems: 1285,
+          Move: 1286,
+          SrcMsgId: 1287,
+          SrcFldId: 1288,
+          DstFldId: 1289,
+          Response: 1290,
+          Status: 1291,
+          DstMsgId: 1292
+        },
+        Enums: {
+          Status: {
+            InvalidSourceID: "1",
+            InvalidDestID: "2",
+            Success: "3",
+            SourceIsDest: "4",
+            MoveFailure: "5",
+            ItemLocked: "7"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/ItemEstimate.js
+  var ItemEstimate_default;
+  var init_ItemEstimate = __esm({
+    "src/vendor/activesync/codepages/ItemEstimate.js"() {
+      ItemEstimate_default = {
+        Tags: {
+          GetItemEstimate: 1541,
+          Version: 1542,
+          Collections: 1543,
+          Collection: 1544,
+          Class: 1545,
+          CollectionId: 1546,
+          DateTime: 1547,
+          Estimate: 1548,
+          Response: 1549,
+          Status: 1550
+        },
+        Enums: {
+          Status: {
+            Success: "1",
+            InvalidCollection: "2",
+            NoSyncState: "3",
+            InvalidSyncKey: "4"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/FolderHierarchy.js
+  var FolderHierarchy_default;
+  var init_FolderHierarchy = __esm({
+    "src/vendor/activesync/codepages/FolderHierarchy.js"() {
+      FolderHierarchy_default = {
+        Tags: {
+          Folders: 1797,
+          Folder: 1798,
+          DisplayName: 1799,
+          ServerId: 1800,
+          ParentId: 1801,
+          Type: 1802,
+          Response: 1803,
+          Status: 1804,
+          ContentClass: 1805,
+          Changes: 1806,
+          Add: 1807,
+          Delete: 1808,
+          Update: 1809,
+          SyncKey: 1810,
+          FolderCreate: 1811,
+          FolderDelete: 1812,
+          FolderUpdate: 1813,
+          FolderSync: 1814,
+          Count: 1815
+        },
+        Enums: {
+          Type: {
+            Generic: "1",
+            DefaultInbox: "2",
+            DefaultDrafts: "3",
+            DefaultDeleted: "4",
+            DefaultSent: "5",
+            DefaultOutbox: "6",
+            DefaultTasks: "7",
+            DefaultCalendar: "8",
+            DefaultContacts: "9",
+            DefaultNotes: "10",
+            DefaultJournal: "11",
+            Mail: "12",
+            Calendar: "13",
+            Contacts: "14",
+            Tasks: "15",
+            Journal: "16",
+            Notes: "17",
+            Unknown: "18",
+            RecipientCache: "19"
+          },
+          Status: {
+            Success: "1",
+            FolderExists: "2",
+            SystemFolder: "3",
+            FolderNotFound: "4",
+            ParentFolderNotFound: "5",
+            ServerError: "6",
+            InvalidSyncKey: "9",
+            MalformedRequest: "10",
+            UnknownError: "11",
+            CodeUnknown: "12"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/MeetingResponse.js
+  var MeetingResponse_default;
+  var init_MeetingResponse = __esm({
+    "src/vendor/activesync/codepages/MeetingResponse.js"() {
+      MeetingResponse_default = {
+        Tags: {
+          CalendarId: 2053,
+          CollectionId: 2054,
+          MeetingResponse: 2055,
+          RequestId: 2056,
+          Request: 2057,
+          Result: 2058,
+          Status: 2059,
+          UserResponse: 2060,
+          InstanceId: 2062
+        },
+        Enums: {
+          Status: {
+            Success: "1",
+            InvalidRequest: "2",
+            MailboxError: "3",
+            ServerError: "4"
+          },
+          UserResponse: {
+            Accepted: "1",
+            Tentative: "2",
+            Declined: "3"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Tasks.js
+  var Tasks_default;
+  var init_Tasks = __esm({
+    "src/vendor/activesync/codepages/Tasks.js"() {
+      Tasks_default = {
+        Tags: {
+          Body: 2309,
+          BodySize: 2310,
+          BodyTruncated: 2311,
+          Categories: 2312,
+          Category: 2313,
+          Complete: 2314,
+          DateCompleted: 2315,
+          DueDate: 2316,
+          UtcDueDate: 2317,
+          Importance: 2318,
+          Recurrence: 2319,
+          Recurrence_Type: 2320,
+          Recurrence_Start: 2321,
+          Recurrence_Until: 2322,
+          Recurrence_Occurrences: 2323,
+          Recurrence_Interval: 2324,
+          Recurrence_DayOfMonth: 2325,
+          Recurrence_DayOfWeek: 2326,
+          Recurrence_WeekOfMonth: 2327,
+          Recurrence_MonthOfYear: 2328,
+          Recurrence_Regenerate: 2329,
+          Recurrence_DeadOccur: 2330,
+          ReminderSet: 2331,
+          ReminderTime: 2332,
+          Sensitivity: 2333,
+          StartDate: 2334,
+          UtcStartDate: 2335,
+          Subject: 2336,
+          CompressedRTF: 2337,
+          OrdinalDate: 2338,
+          SubOrdinalDate: 2339,
+          CalendarType: 2340,
+          IsLeapMonth: 2341,
+          FirstDayOfWeek: 2342
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/ResolveRecipients.js
+  var ResolveRecipients_default;
+  var init_ResolveRecipients = __esm({
+    "src/vendor/activesync/codepages/ResolveRecipients.js"() {
+      ResolveRecipients_default = {
+        Tags: {
+          ResolveRecipients: 2565,
+          Response: 2566,
+          Status: 2567,
+          Type: 2568,
+          Recipient: 2569,
+          DisplayName: 2570,
+          EmailAddress: 2571,
+          Certificates: 2572,
+          Certificate: 2573,
+          MiniCertificate: 2574,
+          Options: 2575,
+          To: 2576,
+          CertificateRetrieval: 2577,
+          RecipientCount: 2578,
+          MaxCertificates: 2579,
+          MaxAmbiguousRecipients: 2580,
+          CertificateCount: 2581,
+          Availability: 2582,
+          StartTime: 2583,
+          EndTime: 2584,
+          MergedFreeBusy: 2585,
+          Picture: 2586,
+          MaxSize: 2587,
+          Data: 2588,
+          MaxPictures: 2589
+        },
+        Enums: {
+          Status: {
+            Success: "1",
+            AmbiguousRecipientFull: "2",
+            AmbiguousRecipientPartial: "3",
+            RecipientNotFound: "4",
+            ProtocolError: "5",
+            ServerError: "6",
+            InvalidSMIMECert: "7",
+            CertLimitReached: "8"
+          },
+          CertificateRetrieval: {
+            None: "1",
+            Full: "2",
+            Mini: "3"
+          },
+          MergedFreeBusy: {
+            Free: "0",
+            Tentative: "1",
+            Busy: "2",
+            Oof: "3",
+            NoData: "4"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/ValidateCert.js
+  var ValidateCert_default;
+  var init_ValidateCert = __esm({
+    "src/vendor/activesync/codepages/ValidateCert.js"() {
+      ValidateCert_default = {
+        Tags: {
+          ValidateCert: 2821,
+          Certificates: 2822,
+          Certificate: 2823,
+          CertificateChain: 2824,
+          CheckCRL: 2825,
+          Status: 2826
+        },
+        Enums: {
+          Status: {
+            Success: "1",
+            ProtocolError: "2",
+            InvalidSignature: "3",
+            UntrustedSource: "4",
+            InvalidChain: "5",
+            NotForEmail: "6",
+            Expired: "7",
+            InconsistentTimes: "8",
+            IdMisused: "9",
+            MissingInformation: "10",
+            CAEndMismatch: "11",
+            EmailAddressMismatch: "12",
+            Revoked: "13",
+            ServerOffline: "14",
+            ChainRevoked: "15",
+            RevocationUnknown: "16",
+            UnknownError: "17"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Contacts2.js
+  var Contacts2_default;
+  var init_Contacts2 = __esm({
+    "src/vendor/activesync/codepages/Contacts2.js"() {
+      Contacts2_default = {
+        Tags: {
+          CustomerId: 3077,
+          GovernmentId: 3078,
+          IMAddress: 3079,
+          IMAddress2: 3080,
+          IMAddress3: 3081,
+          ManagerName: 3082,
+          CompanyMainPhone: 3083,
+          AccountName: 3084,
+          NickName: 3085,
+          MMS: 3086
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Ping.js
+  var Ping_default;
+  var init_Ping = __esm({
+    "src/vendor/activesync/codepages/Ping.js"() {
+      Ping_default = {
+        Tags: {
+          Ping: 3333,
+          AutdState: 3334,
+          Status: 3335,
+          HeartbeatInterval: 3336,
+          Folders: 3337,
+          Folder: 3338,
+          Id: 3339,
+          Class: 3340,
+          MaxFolders: 3341
+        },
+        Enums: {
+          Status: {
+            Expired: "1",
+            Changed: "2",
+            MissingParameters: "3",
+            SyntaxError: "4",
+            InvalidInterval: "5",
+            TooManyFolders: "6",
+            SyncFolders: "7",
+            ServerError: "8"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Provision.js
+  var Provision_default;
+  var init_Provision = __esm({
+    "src/vendor/activesync/codepages/Provision.js"() {
+      Provision_default = {
+        Tags: {
+          Provision: 3589,
+          Policies: 3590,
+          Policy: 3591,
+          PolicyType: 3592,
+          PolicyKey: 3593,
+          Data: 3594,
+          Status: 3595,
+          RemoteWipe: 3596,
+          EASProvisionDoc: 3597,
+          DevicePasswordEnabled: 3598,
+          AlphanumericDevicePasswordRequired: 3599,
+          DeviceEncryptionEnabled: 3600,
+          RequireStorageCardEncryption: 3600,
+          PasswordRecoveryEnabled: 3601,
+          AttachmentsEnabled: 3603,
+          MinDevicePasswordLength: 3604,
+          MaxInactivityTimeDeviceLock: 3605,
+          MaxDevicePasswordFailedAttempts: 3606,
+          MaxAttachmentSize: 3607,
+          AllowSimpleDevicePassword: 3608,
+          DevicePasswordExpiration: 3609,
+          DevicePasswordHistory: 3610,
+          AllowStorageCard: 3611,
+          AllowCamera: 3612,
+          RequireDeviceEncryption: 3613,
+          AllowUnsignedApplications: 3614,
+          AllowUnsignedInstallationPackages: 3615,
+          MinDevicePasswordComplexCharacters: 3616,
+          AllowWiFi: 3617,
+          AllowTextMessaging: 3618,
+          AllowPOPIMAPEmail: 3619,
+          AllowBluetooth: 3620,
+          AllowIrDA: 3621,
+          RequireManualSyncWhenRoaming: 3622,
+          AllowDesktopSync: 3623,
+          MaxCalendarAgeFilter: 3624,
+          AllowHTMLEmail: 3625,
+          MaxEmailAgeFilter: 3626,
+          MaxEmailBodyTruncationSize: 3627,
+          MaxEmailHTMLBodyTruncationSize: 3628,
+          RequireSignedSMIMEMessages: 3629,
+          RequireEncryptedSMIMEMessages: 3630,
+          RequireSignedSMIMEAlgorithm: 3631,
+          RequireEncryptionSMIMEAlgorithm: 3632,
+          AllowSMIMEEncryptionAlgorithmNegotiation: 3633,
+          AllowSMIMESoftCerts: 3634,
+          AllowBrowser: 3635,
+          AllowConsumerEmail: 3636,
+          AllowRemoteDesktop: 3637,
+          AllowInternetSharing: 3638,
+          UnapprovedInROMApplicationList: 3639,
+          ApplicationName: 3640,
+          ApprovedApplicationList: 3641,
+          Hash: 3642
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Search.js
+  var Search_default;
+  var init_Search = __esm({
+    "src/vendor/activesync/codepages/Search.js"() {
+      Search_default = {
+        Tags: {
+          Search: 3845,
+          Stores: 3846,
+          Store: 3847,
+          Name: 3848,
+          Query: 3849,
+          Options: 3850,
+          Range: 3851,
+          Status: 3852,
+          Response: 3853,
+          Result: 3854,
+          Properties: 3855,
+          Total: 3856,
+          EqualTo: 3857,
+          Value: 3858,
+          And: 3859,
+          Or: 3860,
+          FreeText: 3861,
+          DeepTraversal: 3863,
+          LongId: 3864,
+          RebuildResults: 3865,
+          LessThan: 3866,
+          GreaterThan: 3867,
+          Schema: 3868,
+          Supported: 3869,
+          UserName: 3870,
+          Password: 3871,
+          ConversationId: 3872,
+          Picture: 3873,
+          MaxSize: 3874,
+          MaxPictures: 3875
+        },
+        Enums: {
+          Status: {
+            Success: "1",
+            InvalidRequest: "2",
+            ServerError: "3",
+            BadLink: "4",
+            AccessDenied: "5",
+            NotFound: "6",
+            ConnectionFailure: "7",
+            TooComplex: "8",
+            Timeout: "10",
+            SyncFolders: "11",
+            EndOfRange: "12",
+            AccessBlocked: "13",
+            CredentialsRequired: "14"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/GAL.js
+  var GAL_default;
+  var init_GAL = __esm({
+    "src/vendor/activesync/codepages/GAL.js"() {
+      GAL_default = {
+        Tags: {
+          DisplayName: 4101,
+          Phone: 4102,
+          Office: 4103,
+          Title: 4104,
+          Company: 4105,
+          Alias: 4106,
+          FirstName: 4107,
+          LastName: 4108,
+          HomePhone: 4109,
+          MobilePhone: 4110,
+          EmailAddress: 4111,
+          Picture: 4112,
+          Status: 4113,
+          Data: 4114
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/AirSyncBase.js
+  var AirSyncBase_default;
+  var init_AirSyncBase = __esm({
+    "src/vendor/activesync/codepages/AirSyncBase.js"() {
+      AirSyncBase_default = {
+        Tags: {
+          BodyPreference: 4357,
+          Type: 4358,
+          TruncationSize: 4359,
+          AllOrNone: 4360,
+          Reserved: 4361,
+          Body: 4362,
+          Data: 4363,
+          EstimatedDataSize: 4364,
+          Truncated: 4365,
+          Attachments: 4366,
+          Attachment: 4367,
+          DisplayName: 4368,
+          FileReference: 4369,
+          Method: 4370,
+          ContentId: 4371,
+          ContentLocation: 4372,
+          IsInline: 4373,
+          NativeBodyType: 4374,
+          ContentType: 4375,
+          Preview: 4376,
+          BodyPartPreference: 4377,
+          BodyPart: 4378,
+          Status: 4379
+        },
+        Enums: {
+          Type: {
+            PlainText: "1",
+            HTML: "2",
+            RTF: "3",
+            MIME: "4"
+          },
+          Method: {
+            Normal: "1",
+            EmbeddedMessage: "5",
+            AttachOLE: "6"
+          },
+          NativeBodyType: {
+            PlainText: "1",
+            HTML: "2",
+            RTF: "3"
+          },
+          Status: {
+            Success: "1"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Settings.js
+  var Settings_default;
+  var init_Settings = __esm({
+    "src/vendor/activesync/codepages/Settings.js"() {
+      Settings_default = {
+        Tags: {
+          Settings: 4613,
+          Status: 4614,
+          Get: 4615,
+          Set: 4616,
+          Oof: 4617,
+          OofState: 4618,
+          StartTime: 4619,
+          EndTime: 4620,
+          OofMessage: 4621,
+          AppliesToInternal: 4622,
+          AppliesToExternalKnown: 4623,
+          AppliesToExternalUnknown: 4624,
+          Enabled: 4625,
+          ReplyMessage: 4626,
+          BodyType: 4627,
+          DevicePassword: 4628,
+          Password: 4629,
+          DeviceInformation: 4630,
+          Model: 4631,
+          IMEI: 4632,
+          FriendlyName: 4633,
+          OS: 4634,
+          OSLanguage: 4635,
+          PhoneNumber: 4636,
+          UserInformation: 4637,
+          EmailAddresses: 4638,
+          SmtpAddress: 4639,
+          UserAgent: 4640,
+          EnableOutboundSMS: 4641,
+          MobileOperator: 4642,
+          PrimarySmtpAddress: 4643,
+          Accounts: 4644,
+          Account: 4645,
+          AccountId: 4646,
+          AccountName: 4647,
+          UserDisplayName: 4648,
+          SendDisabled: 4649,
+          RightsManagementInformation: 4651
+        },
+        Enums: {
+          Status: {
+            Success: "1",
+            ProtocolError: "2",
+            AccessDenied: "3",
+            ServerError: "4",
+            InvalidArguments: "5",
+            ConflictingArguments: "6",
+            DeniedByPolicy: "7"
+          },
+          OofState: {
+            Disabled: "0",
+            Global: "1",
+            TimeBased: "2"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/DocumentLibrary.js
+  var DocumentLibrary_default;
+  var init_DocumentLibrary = __esm({
+    "src/vendor/activesync/codepages/DocumentLibrary.js"() {
+      DocumentLibrary_default = {
+        Tags: {
+          LinkId: 4869,
+          DisplayName: 4870,
+          IsFolder: 4871,
+          CreationDate: 4872,
+          LastModifiedDate: 4873,
+          IsHidden: 4874,
+          ContentLength: 4875,
+          ContentType: 4876
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/ItemOperations.js
+  var ItemOperations_default;
+  var init_ItemOperations = __esm({
+    "src/vendor/activesync/codepages/ItemOperations.js"() {
+      ItemOperations_default = {
+        Tags: {
+          ItemOperations: 5125,
+          Fetch: 5126,
+          Store: 5127,
+          Options: 5128,
+          Range: 5129,
+          Total: 5130,
+          Properties: 5131,
+          Data: 5132,
+          Status: 5133,
+          Response: 5134,
+          Version: 5135,
+          Schema: 5136,
+          Part: 5137,
+          EmptyFolderContents: 5138,
+          DeleteSubFolders: 5139,
+          UserName: 5140,
+          Password: 5141,
+          Move: 5142,
+          DstFldId: 5143,
+          ConversationId: 5144,
+          MoveAlways: 5145
+        },
+        Enums: {
+          Status: {
+            Success: "1",
+            ProtocolError: "2",
+            ServerError: "3",
+            BadURI: "4",
+            AccessDenied: "5",
+            ObjectNotFound: "6",
+            ConnectionFailure: "7",
+            InvalidByteRange: "8",
+            UnknownStore: "9",
+            EmptyFile: "10",
+            DataTooLarge: "11",
+            IOFailure: "12",
+            ConversionFailure: "14",
+            InvalidAttachment: "15",
+            ResourceAccessDenied: "16"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/ComposeMail.js
+  var ComposeMail_default;
+  var init_ComposeMail = __esm({
+    "src/vendor/activesync/codepages/ComposeMail.js"() {
+      ComposeMail_default = {
+        Tags: {
+          SendMail: 5381,
+          SmartForward: 5382,
+          SmartReply: 5383,
+          SaveInSentItems: 5384,
+          ReplaceMime: 5385,
+          Source: 5387,
+          FolderId: 5388,
+          ItemId: 5389,
+          LongId: 5390,
+          InstanceId: 5391,
+          Mime: 5392,
+          ClientId: 5393,
+          Status: 5394,
+          AccountId: 5395
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Email2.js
+  var Email2_default;
+  var init_Email2 = __esm({
+    "src/vendor/activesync/codepages/Email2.js"() {
+      Email2_default = {
+        Tags: {
+          UmCallerID: 5637,
+          UmUserNotes: 5638,
+          UmAttDuration: 5639,
+          UmAttOrder: 5640,
+          ConversationId: 5641,
+          ConversationIndex: 5642,
+          LastVerbExecuted: 5643,
+          LastVerbExecutionTime: 5644,
+          ReceivedAsBcc: 5645,
+          Sender: 5646,
+          CalendarType: 5647,
+          IsLeapMonth: 5648,
+          AccountId: 5649,
+          FirstDayOfWeek: 5650,
+          MeetingMessageType: 5651
+        },
+        Enums: {
+          LastVerbExecuted: {
+            Unknown: "0",
+            ReplyToSender: "1",
+            ReplyToAll: "2",
+            Forward: "3"
+          },
+          CalendarType: {
+            Default: "0",
+            Gregorian: "1",
+            GregorianUS: "2",
+            Japan: "3",
+            Taiwan: "4",
+            Korea: "5",
+            Hijri: "6",
+            Thai: "7",
+            Hebrew: "8",
+            GregorianMeFrench: "9",
+            GregorianArabic: "10",
+            GregorianTranslatedEnglish: "11",
+            GregorianTranslatedFrench: "12",
+            JapaneseLunar: "14",
+            ChineseLunar: "15",
+            KoreanLunar: "20"
+          },
+          FirstDayOfWeek: {
+            Sunday: "0",
+            Monday: "1",
+            Tuesday: "2",
+            Wednesday: "3",
+            Thursday: "4",
+            Friday: "5",
+            Saturday: "6"
+          },
+          MeetingMessageType: {
+            Unspecified: "0",
+            InitialRequest: "1",
+            FullUpdate: "2",
+            InformationalUpdate: "3",
+            Outdated: "4",
+            DelegatorsCopy: "5",
+            Delegated: "6"
+          }
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/Notes.js
+  var Notes_default;
+  var init_Notes = __esm({
+    "src/vendor/activesync/codepages/Notes.js"() {
+      Notes_default = {
+        Tags: {
+          Subject: 5893,
+          MessageClass: 5894,
+          LastModifiedDate: 5895,
+          Categories: 5896,
+          Category: 5897
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages/RightsManagement.js
+  var RightsManagement_default;
+  var init_RightsManagement = __esm({
+    "src/vendor/activesync/codepages/RightsManagement.js"() {
+      RightsManagement_default = {
+        Tags: {
+          RightsManagementSupport: 6149,
+          RightsManagementTemplates: 6150,
+          RightsManagementTemplate: 6151,
+          RightsManagementLicense: 6152,
+          EditAllowed: 6153,
+          ReplyAllowed: 6154,
+          ReplyAllAllowed: 6155,
+          ForwardAllowed: 6156,
+          ModifyRecipientsAllowed: 6157,
+          ExtractAllowed: 6158,
+          PrintAllowed: 6159,
+          ExportAllowed: 6160,
+          ProgrammaticAccessAllowed: 6161,
+          Owner: 6162,
+          ContentExpiryDate: 6163,
+          TemplateID: 6164,
+          TemplateName: 6165,
+          TemplateDescription: 6166,
+          ContentOwner: 6167,
+          RemoveRightsManagementDistribution: 6168
+        }
+      };
+    }
+  });
+
+  // src/vendor/activesync/codepages.js
+  var codepages, codepages_default;
+  var init_codepages = __esm({
+    "src/vendor/activesync/codepages.js"() {
+      init_wbxml();
+      init_Common();
+      init_AirSync();
+      init_Contacts();
+      init_Email();
+      init_Calendar();
+      init_Move();
+      init_ItemEstimate();
+      init_FolderHierarchy();
+      init_MeetingResponse();
+      init_Tasks();
+      init_ResolveRecipients();
+      init_ValidateCert();
+      init_Contacts2();
+      init_Ping();
+      init_Provision();
+      init_Search();
+      init_GAL();
+      init_AirSyncBase();
+      init_Settings();
+      init_DocumentLibrary();
+      init_ItemOperations();
+      init_ComposeMail();
+      init_Email2();
+      init_Notes();
+      init_RightsManagement();
+      codepages = {
+        Common: Common_default,
+        AirSync: AirSync_default,
+        Contacts: Contacts_default,
+        Email: Email_default,
+        Calendar: Calendar_default,
+        Move: Move_default,
+        ItemEstimate: ItemEstimate_default,
+        FolderHierarchy: FolderHierarchy_default,
+        MeetingResponse: MeetingResponse_default,
+        Tasks: Tasks_default,
+        ResolveRecipients: ResolveRecipients_default,
+        ValidateCert: ValidateCert_default,
+        Contacts2: Contacts2_default,
+        Ping: Ping_default,
+        Provision: Provision_default,
+        Search: Search_default,
+        GAL: GAL_default,
+        AirSyncBase: AirSyncBase_default,
+        Settings: Settings_default,
+        DocumentLibrary: DocumentLibrary_default,
+        ItemOperations: ItemOperations_default,
+        ComposeMail: ComposeMail_default,
+        Email2: Email2_default,
+        Notes: Notes_default,
+        RightsManagement: RightsManagement_default
+      };
+      CompileCodepages(codepages);
+      codepages_default = codepages;
+    }
+  });
+
+  // src/vendor/activesync/protocol.js
+  function nullCallback() {
+  }
+  function makeError2(name, parent2, extraArgs) {
+    function CustomError() {
+      var self2 = this instanceof CustomError ? this : Object.create(CustomError.prototype);
+      var tmp = Error();
+      var offset = 1;
+      self2.stack = tmp.stack.substring(tmp.stack.indexOf("\n") + 1);
+      self2.message = arguments[0] || tmp.message;
+      if (extraArgs) {
+        offset += extraArgs.length;
+        for (var i = 0; i < extraArgs.length; i++)
+          self2[extraArgs[i]] = arguments[i + 1];
+      }
+      var m = /@(.+):(.+)/.exec(self2.stack);
+      self2.fileName = arguments[offset] || m && m[1] || "";
+      self2.lineNumber = arguments[offset + 1] || m && m[2] || 0;
+      return self2;
+    }
+    CustomError.prototype = Object.create((parent2 || Error).prototype);
+    CustomError.prototype.name = name;
+    CustomError.prototype.constructor = CustomError;
+    return CustomError;
+  }
+  function nsResolver(prefix) {
+    var baseUrl = "http://schemas.microsoft.com/exchange/autodiscover/";
+    var ns = {
+      rq: baseUrl + "mobilesync/requestschema/2006",
+      ad: baseUrl + "responseschema/2006",
+      ms: baseUrl + "mobilesync/responseschema/2006"
+    };
+    return ns[prefix] || null;
+  }
+  function Version(str) {
+    var details = str.split(".").map(function(x) {
+      return parseInt(x);
+    });
+    this.major = details[0], this.minor = details[1];
+  }
+  function setAuthHeader(xhr, username, password) {
+    var authorization = "Basic " + btoa(username + ":" + password);
+    xhr.setRequestHeader("Authorization", authorization);
+  }
+  function autodiscover(aEmailAddress, aPassword, aTimeout, aCallback, aNoRedirect) {
+    if (!aCallback)
+      aCallback = nullCallback;
+    var domain = aEmailAddress.substring(aEmailAddress.indexOf("@") + 1);
+    do_autodiscover(domain, aEmailAddress, aPassword, aTimeout, aNoRedirect, function(aError, aConfig) {
+      if (aError instanceof AutodiscoverDomainError || aError instanceof HttpError)
+        do_autodiscover("autodiscover." + domain, aEmailAddress, aPassword, aTimeout, aNoRedirect, aCallback);
+      else
+        aCallback(aError, aConfig);
+    });
+  }
+  function do_autodiscover(aHost, aEmailAddress, aPassword, aTimeout, aNoRedirect, aCallback) {
+    var url = "https://" + aHost + "/autodiscover/autodiscover.xml";
+    return raw_autodiscover(url, aEmailAddress, aPassword, aTimeout, aNoRedirect, aCallback);
+  }
+  function raw_autodiscover(aUrl, aEmailAddress, aPassword, aTimeout, aNoRedirect, aCallback) {
+    var xhr = new XMLHttpRequest({ mozSystem: true, mozAnon: true });
+    xhr.open("POST", aUrl, true);
+    setAuthHeader(xhr, aEmailAddress, aPassword);
+    xhr.setRequestHeader("Content-Type", "text/xml");
+    xhr.setRequestHeader("User-Agent", USER_AGENT);
+    xhr.timeout = aTimeout;
+    xhr.upload.onprogress = xhr.upload.onload = function() {
+      xhr.timeout = 0;
+    };
+    xhr.onload = function() {
+      if (xhr.status < 200 || xhr.status >= 300)
+        return aCallback(new HttpError(xhr.statusText, xhr.status));
+      var uid = Math.random();
+      self.postMessage({
+        uid,
+        type: "configparser",
+        cmd: "accountactivesync",
+        args: [xhr.responseText, aNoRedirect]
+      });
+      self.addEventListener("message", function onworkerresponse(evt12) {
+        var data = evt12.data;
+        if (data.type != "configparser" || data.cmd != "accountactivesync" || data.uid != uid) {
+          return;
+        }
+        self.removeEventListener(evt12.type, onworkerresponse);
+        var args = data.args;
+        var config = args[0], error = args[1], redirectedEmail = args[2];
+        if (error) {
+          aCallback(new AutodiscoverDomainError(error), config);
+        } else if (redirectedEmail) {
+          autodiscover(redirectedEmail, aPassword, aTimeout, aCallback, true);
+        } else {
+          aCallback(null, config);
+        }
+      });
+    };
+    xhr.ontimeout = xhr.onerror = function() {
+      aCallback(new HttpError("Error getting Autodiscover URL", null));
+    };
+    var postdata = '<?xml version="1.0" encoding="utf-8"?>\n<Autodiscover xmlns="' + nsResolver("rq") + '">\n  <Request>\n    <EMailAddress>' + aEmailAddress + "</EMailAddress>\n    <AcceptableResponseSchema>" + nsResolver("ms") + "</AcceptableResponseSchema>\n  </Request>\n</Autodiscover>";
+    xhr.send(postdata);
+  }
+  function Connection(aDeviceId, aDeviceType) {
+    this._deviceId = aDeviceId || "v140Device";
+    this._deviceType = aDeviceType || "SmartPhone";
+    this.timeout = 0;
+    this._connected = false;
+    this._waitingForConnection = false;
+    this._connectionError = null;
+    this._connectionCallbacks = [];
+    this.baseUrl = null;
+    this._username = null;
+    this._password = null;
+    this.versions = [];
+    this.supportedCommands = [];
+    this.currentVersion = null;
+    this.onmessage = null;
+  }
+  var USER_AGENT, AutodiscoverError, AutodiscoverDomainError, HttpError;
+  var init_protocol = __esm({
+    "src/vendor/activesync/protocol.js"() {
+      init_wbxml();
+      init_codepages();
+      USER_AGENT = "JavaScript ActiveSync (jsas) Client";
+      AutodiscoverError = makeError2("ActiveSync.AutodiscoverError");
+      AutodiscoverDomainError = makeError2("ActiveSync.AutodiscoverDomainError", AutodiscoverError);
+      HttpError = makeError2("ActiveSync.HttpError", null, ["status"]);
+      Version.prototype = {
+        eq: function(other) {
+          if (!(other instanceof Version))
+            other = new Version(other);
+          return this.major === other.major && this.minor === other.minor;
+        },
+        ne: function(other) {
+          return !this.eq(other);
+        },
+        gt: function(other) {
+          if (!(other instanceof Version))
+            other = new Version(other);
+          return this.major > other.major || this.major === other.major && this.minor > other.minor;
+        },
+        gte: function(other) {
+          if (!(other instanceof Version))
+            other = new Version(other);
+          return this.major >= other.major || this.major === other.major && this.minor >= other.minor;
+        },
+        lt: function(other) {
+          return !this.gte(other);
+        },
+        lte: function(other) {
+          return !this.gt(other);
+        },
+        toString: function() {
+          return this.major + "." + this.minor;
+        }
+      };
+      Connection.prototype = {
+        _notifyConnected: function(aError) {
+          if (aError)
+            this.disconnect();
+          for (const callback of this._connectionCallbacks) {
+            callback.apply(callback, arguments);
+          }
+          this._connectionCallbacks = [];
+        },
+        get connected() {
+          return this._connected;
+        },
+        open: function(aURL, aUsername, aPassword) {
+          var servicePath = "/Microsoft-Server-ActiveSync";
+          this.baseUrl = aURL;
+          if (!this.baseUrl.endsWith(servicePath))
+            this.baseUrl += servicePath;
+          this._username = aUsername;
+          this._password = aPassword;
+        },
+        connect: function(aCallback) {
+          if (this.connected) {
+            if (aCallback)
+              aCallback(null);
+            return;
+          }
+          if (aCallback)
+            this._connectionCallbacks.push(aCallback);
+          if (this._waitingForConnection)
+            return;
+          this._waitingForConnection = true;
+          this._connectionError = null;
+          this.getOptions(function(aError, aOptions) {
+            this._waitingForConnection = false;
+            this._connectionError = aError;
+            if (aError) {
+              console.error("Error connecting to ActiveSync:", aError);
+              return this._notifyConnected(aError, aOptions);
+            }
+            this._connected = true;
+            this.versions = aOptions.versions;
+            this.supportedCommands = aOptions.commands;
+            this.currentVersion = new Version(aOptions.versions.slice(-1)[0]);
+            return this._notifyConnected(null, aOptions);
+          }.bind(this));
+        },
+        disconnect: function() {
+          if (this._waitingForConnection)
+            throw new Error("Can't disconnect while waiting for server response");
+          this._connected = false;
+          this.versions = [];
+          this.supportedCommands = [];
+          this.currentVersion = null;
+        },
+        provision: function() {
+          var pv = codepages_default.Provision.Tags;
+          var w = new Writer("1.3", 1, "UTF-8");
+          w.stag(pv.Provision).etag();
+          return this.postCommand(w);
+        },
+        getOptions: function(aCallback) {
+          if (!aCallback)
+            aCallback = nullCallback;
+          var conn = this;
+          var xhr = new XMLHttpRequest({ mozSystem: true, mozAnon: true });
+          xhr.open("OPTIONS", this.baseUrl, true);
+          setAuthHeader(xhr, this._username, this._password);
+          xhr.setRequestHeader("User-Agent", USER_AGENT);
+          xhr.timeout = this.timeout;
+          xhr.upload.onprogress = xhr.upload.onload = function() {
+            xhr.timeout = 0;
+          };
+          xhr.onload = function() {
+            if (xhr.status < 200 || xhr.status >= 300) {
+              console.error("ActiveSync options request failed with response " + xhr.status);
+              if (conn.onmessage)
+                conn.onmessage("options", "error", xhr, null, null, null, null);
+              aCallback(new HttpError(xhr.statusText, xhr.status));
+              return;
+            }
+            var result = {
+              versions: xhr.getResponseHeader("MS-ASProtocolVersions").split(/\s*,\s*/),
+              commands: xhr.getResponseHeader("MS-ASProtocolCommands").split(/\s*,\s*/)
+            };
+            if (conn.onmessage)
+              conn.onmessage("options", "ok", xhr, null, null, null, result);
+            aCallback(null, result);
+          };
+          xhr.ontimeout = xhr.onerror = function() {
+            var error = new Error("Error getting OPTIONS URL");
+            console.error(error);
+            if (conn.onmessage)
+              conn.onmessage("options", "timeout", xhr, null, null, null, null);
+            aCallback(error);
+          };
+          xhr.responseType = "text";
+          xhr.send();
+        },
+        supportsCommand: function(aCommand) {
+          if (!this.connected)
+            throw new Error("Connection required to get command");
+          if (typeof aCommand === "number")
+            aCommand = codepages_default.__tagnames__[aCommand];
+          return this.supportedCommands.indexOf(aCommand) !== -1;
+        },
+        postCommand: function(aCommand, aOpts) {
+          var contentType = "application/vnd.ms-sync.wbxml";
+          if (typeof aCommand === "string" || typeof aCommand === "number") {
+            return this.postData(aCommand, contentType, null, aOpts);
+          } else {
+            var commandName = codepages_default.__tagnames__[aCommand.rootTag];
+            return this.postData(commandName, contentType, aCommand.dataType === "blob" ? aCommand.blob : aCommand.buffer, aOpts);
+          }
+        },
+        postData: function(aCommand, aContentType, aData, aOpts) {
+          var parentArgs = arguments;
+          return new Promise((resolve, reject) => {
+            if (typeof aCommand === "number") {
+              aCommand = codepages_default.__tagnames__[aCommand];
+            }
+            if (!this.supportsCommand(aCommand)) {
+              var error = new Error("This server doesn't support the command " + aCommand);
+              console.error(error);
+              reject(error);
+              return;
+            }
+            var isMultipart = aOpts && aOpts.extraHeaders && aOpts.extraHeaders["MS-ASAcceptMultiPart"] === "T";
+            var params = [
+              ["Cmd", aCommand],
+              ["User", this._username],
+              ["DeviceId", this._deviceId],
+              ["DeviceType", this._deviceType]
+            ];
+            if (aOpts && aOpts.extraParams) {
+              for (let [paramName] of params) {
+                if (paramName in aOpts.extraParams) {
+                  throw new TypeError("reserved URL parameter found");
+                }
+              }
+              for (let paramName in aOpts.extraParams) {
+                params.push([paramName, aOpts.extraParams[paramName]]);
+              }
+            }
+            var paramsStr = params.map(function(i) {
+              return encodeURIComponent(i[0]) + "=" + encodeURIComponent(i[1]);
+            }).join("&");
+            var xhr = new XMLHttpRequest({ mozSystem: true, mozAnon: true });
+            xhr.open("POST", this.baseUrl + "?" + paramsStr, true);
+            setAuthHeader(xhr, this._username, this._password);
+            xhr.setRequestHeader("MS-ASProtocolVersion", this.currentVersion);
+            xhr.setRequestHeader("Content-Type", aContentType);
+            xhr.setRequestHeader("User-Agent", USER_AGENT);
+            if (aOpts && aOpts.extraHeaders) {
+              for (let key in aOpts.extraHeaders) {
+                let value = aOpts.extraHeaders[key];
+                xhr.setRequestHeader(key, value);
+              }
+            }
+            xhr.timeout = this.timeout;
+            var downloadProgress = aOpts && aOpts.downloadProgress;
+            var uploadProgress = aOpts && aOpts.uploadProgerss;
+            xhr.upload.onprogress = function(event) {
+              xhr.timeout = 0;
+              if (uploadProgress) {
+                uploadProgress(event.loaded, event.total);
+              }
+            };
+            xhr.upload.onload = function() {
+              xhr.timeout = 0;
+            };
+            xhr.onprogress = function(event) {
+              if (downloadProgress) {
+                downloadProgress(event.loaded, event.total);
+              }
+            };
+            var conn = this;
+            xhr.onload = function() {
+              if (xhr.status === 451) {
+                conn.baseUrl = xhr.getResponseHeader("X-MS-Location");
+                if (conn.onmessage) {
+                  conn.onmessage(aCommand, "redirect", xhr, params, aOpts && aOpts.extraHeaders, aData, null);
+                }
+                resolve(conn.postData.apply(conn, parentArgs));
+                return;
+              }
+              if (xhr.status < 200 || xhr.status >= 300) {
+                console.error("ActiveSync command " + aCommand + " failed with response " + xhr.status);
+                if (conn.onmessage) {
+                  conn.onmessage(aCommand, "error", xhr, params, aOpts && aOpts.extraHeaders, aData, null);
+                }
+                reject(new HttpError(xhr.statusText, xhr.status));
+                return;
+              }
+              if (isMultipart) {
+                resolve(null);
+              } else {
+                var response = null;
+                if (xhr.response.byteLength > 0) {
+                  response = new Reader(new Uint8Array(xhr.response), codepages_default);
+                }
+                if (conn.onmessage) {
+                  conn.onmessage(aCommand, "ok", xhr, params, aOpts && aOpts.extraHeaders, aData, response);
+                }
+                resolve(response);
+              }
+            };
+            xhr.ontimeout = xhr.onerror = function(evt12) {
+              var errObj = new Error("Command URL " + evt12.type + " for command " + aCommand + " at baseUrl " + this.baseUrl);
+              console.error(errObj);
+              if (conn.onmessage) {
+                conn.onmessage(aCommand, evt12.type, xhr, params, aOpts && aOpts.extraHeaders, aData, null);
+              }
+              reject(errObj);
+            }.bind(this);
+            xhr.responseType = isMultipart ? "moz-chunked-arraybuffer" : "arraybuffer";
+            xhr.send(aData);
+          });
+        }
+      };
+    }
+  });
+
+  // src/backend/accounts/activesync/probe.js
+  function checkServerCertificate(url) {
+    return new Promise((resolve) => {
+      resolve(null);
+    });
+  }
+  function probe({ connInfo, credentials }) {
+    return new Promise((resolve) => {
+      var conn = new Connection(connInfo.deviceId);
+      conn.open(connInfo.server, credentials.username, credentials.password);
+      conn.timeout = AUTOCONFIG_TIMEOUT_MS;
+      conn.connect((error) => {
+        if (error) {
+          var failureType, failureDetails = { server: connInfo.server };
+          if (error instanceof HttpError) {
+            if (error.status === 401) {
+              failureType = "bad-user-or-pass";
+            } else if (error.status === 403) {
+              failureType = "not-authorized";
+            } else {
+              failureType = "server-problem";
+              failureDetails.status = error.status;
+            }
+          } else {
+            resolve(checkServerCertificate(connInfo.server).then((securityError) => {
+              return {
+                error: securityError ? "bad-security" : "unresponsive-server",
+                errorDetails: failureDetails
+              };
+            }));
+            return;
+          }
+          resolve({
+            error: failureType,
+            errorDetails: failureDetails
+          });
+          return;
+        }
+        resolve({ conn, error: null, errorDetails: null });
+      });
+    });
+  }
+  var init_probe = __esm({
+    "src/backend/accounts/activesync/probe.js"() {
+      init_syncbase();
+      init_protocol();
+    }
+  });
+
+  // src/backend/accounts/activesync/validator.js
+  var validator_exports = {};
+  __export(validator_exports, {
+    default: () => validator_default
+  });
+  function getFullDetailsFromAutodiscover(userDetails, url) {
+    return new Promise((resolve) => {
+      logic(scope, "autodiscover:begin", { url });
+      raw_autodiscover(url, userDetails.emailAddress, userDetails.password, AUTOCONFIG_TIMEOUT_MS, false, function(error, config) {
+        if (error) {
+          var failureType = "no-config-info", failureDetails = {};
+          if (error instanceof HttpError) {
+            if (error.status === 401) {
+              failureType = "bad-user-or-pass";
+            } else if (error.status === 403) {
+              failureType = "not-authorized";
+            } else {
+              failureDetails.status = error.status;
+            }
+          } else if (error instanceof AutodiscoverDomainError) {
+            logic(scope, "autodiscover.error", { message: error.message });
+          }
+          logic(scope, "autodiscover:end", { url, error: failureType });
+          resolve({
+            error: failureType,
+            errorDetails: failureDetails
+          });
+          return;
+        }
+        logic(scope, "autodiscover:end", {
+          url,
+          server: config.mobileSyncServer.url
+        });
+        var autoconfig = {
+          type: "activesync",
+          displayName: config.user.name,
+          incoming: {
+            server: config.mobileSyncServer.url,
+            username: config.user.email
+          }
+        };
+        resolve({
+          fullConfigInfo: autoconfig
+        });
+      });
+    });
+  }
+  async function validator_default(fragments) {
+    let { credentials, connInfoFields } = fragments;
+    if (connInfoFields.connInfo.autodiscoverEndpoint) {
+      let {
+        error: error2,
+        errorDetails: errorDetails2,
+        fullConfigInfo
+      } = await getFullDetailsFromAutodiscover(credentials, connInfoFields.connInfo.autodiscoverEndpoint);
+      if (error2) {
+        return { error: error2, errorDetails: errorDetails2 };
+      }
+      fragments.credentials = credentials = {
+        username: fullConfigInfo.incoming.username,
+        password: credentials.password
+      };
+      connInfoFields.connInfo = {
+        server: fullConfigInfo.incoming.server,
+        deviceId: connInfoFields.connInfo.deviceId
+      };
+    }
+    let { conn, error, errorDetails } = await probe({
+      connInfo: connInfoFields.connInfo,
+      credentials
+    });
+    if (error) {
+      return { error, errorDetails };
+    }
+    return {
+      engineFields: {
+        engine: "activesync",
+        engineData: {}
+      },
+      receiveProtoConn: conn
+    };
+  }
+  var scope;
+  var init_validator = __esm({
+    "src/backend/accounts/activesync/validator.js"() {
+      init_logic();
+      init_probe();
+      init_syncbase();
+      init_protocol();
+      scope = logic.scope("ActivesyncConfigurator");
     }
   });
 
@@ -2383,12 +5241,12 @@ var WorkshopBackend = (() => {
         var PROPERTY_INDEX = 1;
         var COMPONENT_INDEX = 2;
         var NAME_INDEX = 0;
-        function Component(jCal, parent) {
+        function Component(jCal, parent2) {
           if (typeof jCal === "string") {
             jCal = [jCal, [], []];
           }
           this.jCal = jCal;
-          this.parent = parent || null;
+          this.parent = parent2 || null;
         }
         Component.prototype = {
           _hydratedPropertyCount: 0,
@@ -2652,8 +5510,8 @@ var WorkshopBackend = (() => {
         var TYPE_INDEX = 2;
         var VALUE_INDEX = 3;
         var design = ICAL.design;
-        function Property(jCal, parent) {
-          this._parent = parent || null;
+        function Property(jCal, parent2) {
+          this._parent = parent2 || null;
           if (typeof jCal === "string") {
             this.jCal = [jCal, {}, design.defaultType];
             this.jCal[TYPE_INDEX] = this.getDefaultType();
@@ -6078,8 +8936,8 @@ var WorkshopBackend = (() => {
   });
 
   // src/backend/accounts/ical/validator.js
-  var validator_exports = {};
-  __export(validator_exports, {
+  var validator_exports2 = {};
+  __export(validator_exports2, {
     default: () => validateICal
   });
   async function validateICal({
@@ -6123,19 +8981,289 @@ var WorkshopBackend = (() => {
     };
   }
   var import_ical;
-  var init_validator = __esm({
+  var init_validator2 = __esm({
     "src/backend/accounts/ical/validator.js"() {
       import_ical = __toModule(require_ical());
     }
   });
 
-  // src/backend/accounts/ical/account.js
+  // src/backend/accountmixins.js
+  function getFirstFolderWithType(type) {
+    var folders = this.folders;
+    if (!folders) {
+      try {
+        throw new Error();
+      } catch (ex) {
+        console.log("getFirstFolderWithType explosion!", ex.stack);
+        dump("EXPLOSION folders:\n" + ex.stack + "\n");
+      }
+    }
+    for (var iFolder = 0; iFolder < folders.length; iFolder++) {
+      if (folders[iFolder].type === type) {
+        return folders[iFolder];
+      }
+    }
+    return null;
+  }
+  function getFolderByPath(folderPath) {
+    var folders = this.folders;
+    for (var iFolder = 0; iFolder < folders.length; iFolder++) {
+      if (folders[iFolder].path === folderPath) {
+        return folders[iFolder];
+      }
+    }
+    return null;
+  }
+  function getFolderById(id) {
+    return this.foldersTOC.foldersById.get(id);
+  }
+  function normalizeFolderHierarchy() {
+    var sibling = this.getFirstFolderWithType("drafts") || this.getFirstFolderWithType("sent");
+    if (!sibling) {
+      return;
+    }
+    var parent2 = this.getFolderById(sibling.parentId);
+    var foldersToMove = [
+      this.getFirstFolderWithType("localdrafts"),
+      this.getFirstFolderWithType("outbox")
+    ];
+    foldersToMove.forEach(function(folder) {
+      if (!folder || folder.parentId === sibling.parentId) {
+        return;
+      }
+      console.log("Moving folder", folder.name, "underneath", parent2 && parent2.name || "(root)");
+      this.universe.__notifyRemovedFolder(this, folder);
+      if (parent2) {
+        folder.path = parent2.path + (parent2.delim || "/") + folder.name;
+        folder.delim = parent2.delim || "/";
+        folder.parentId = parent2.id;
+        folder.depth = parent2.depth + 1;
+      } else {
+        folder.path = folder.name;
+        folder.delim = "/";
+        folder.parentId = null;
+        folder.depth = 0;
+      }
+      this.universe.__notifyAddedFolder(this, folder);
+    }, this);
+  }
+  var init_accountmixins = __esm({
+    "src/backend/accountmixins.js"() {
+    }
+  });
+
+  // src/backend/accounts/activesync/account.js
   var account_exports = {};
   __export(account_exports, {
+    default: () => account_default
+  });
+  function ActiveSyncAccount(universe2, accountDef, foldersTOC, dbConn, receiveProtoConn) {
+    this.universe = universe2;
+    this.id = accountDef.id;
+    this.accountDef = accountDef;
+    this._db = dbConn;
+    logic.defineScope(this, "Account", {
+      accountId: this.id,
+      accountType: "activesync"
+    });
+    if (receiveProtoConn) {
+      this.conn = receiveProtoConn;
+      this._attachLoggerToConnection(this.conn);
+    } else {
+      this.conn = null;
+    }
+    this.enabled = true;
+    this.problems = [];
+    this._alive = true;
+    this.identities = accountDef.identities;
+    this.foldersTOC = foldersTOC;
+    this.folders = this.foldersTOC.items;
+    this.meta = foldersTOC.meta;
+    this._syncsInProgress = 0;
+    this._lastSyncKey = null;
+    this._lastSyncResponseWasEmpty = false;
+  }
+  var DEFAULT_TIMEOUT_MS, account_default;
+  var init_account = __esm({
+    "src/backend/accounts/activesync/account.js"() {
+      init_logic();
+      init_accountmixins();
+      init_wbxml();
+      init_protocol();
+      init_codepages();
+      DEFAULT_TIMEOUT_MS = 30 * 1e3;
+      ActiveSyncAccount.prototype = {
+        type: "activesync",
+        supportsServerFolders: true,
+        toString: function asa_toString() {
+          return "[ActiveSyncAccount: " + this.id + "]";
+        },
+        __acquire() {
+          return Promise.resolve(this);
+        },
+        __release() {
+        },
+        withConnection(errback, callback, failString) {
+          if (!this.conn) {
+            var accountDef = this.accountDef;
+            this.conn = new Connection(accountDef.connInfo.deviceId);
+            this._attachLoggerToConnection(this.conn);
+            this.conn.open(accountDef.connInfo.server, accountDef.credentials.username, accountDef.credentials.password);
+            this.conn.timeout = DEFAULT_TIMEOUT_MS;
+          }
+          if (!this.conn.connected) {
+            logic(this, "connecting");
+            this.conn.connect(function(error) {
+              if (error) {
+                this._reportErrorIfNecessary(error);
+                if (this._isBadUserOrPassError(error) && !failString) {
+                  failString = "bad-user-or-pass";
+                }
+                errback(failString || "unknown");
+                return;
+              }
+              logic(this, "connected", { connected: this.conn.connected });
+              callback();
+            }.bind(this));
+          } else {
+            callback();
+          }
+        },
+        ensureConnection() {
+          if (this.conn && this.conn.connected) {
+            return Promise.resolve(this.conn);
+          }
+          return new Promise((resolve, reject) => {
+            this.withConnection(reject, () => {
+              resolve(this.conn);
+            });
+          });
+        },
+        _isBadUserOrPassError(error) {
+          return error && error instanceof HttpError && error.status === 401;
+        },
+        _reportErrorIfNecessary(error) {
+          if (!error) {
+            return;
+          }
+          logic(this, "reportErrorIfNecessary", { error });
+          if (this._isBadUserOrPassError(error)) {
+            this.universe.__reportAccountProblem(this, "bad-user-or-pass", "incoming");
+          }
+        },
+        _attachLoggerToConnection(conn) {
+          logic.defineScope(conn, "ActiveSyncConnection", {
+            connectionId: logic.uniqueId()
+          });
+          if (!logic.isCensored) {
+            conn.onmessage = this._onmessage_dangerous.bind(this, conn);
+          } else {
+            conn.onmessage = this._onmessage_safe.bind(this, conn);
+          }
+        },
+        _onmessage_safe: function onmessage(conn, type, special, xhr, params, extraHeaders, sentData, response) {
+          if (type === "options") {
+            logic(conn, "options", {
+              special,
+              status: xhr.status,
+              response
+            });
+          } else {
+            logic(conn, "command", {
+              type,
+              special,
+              status: xhr.status
+            });
+          }
+        },
+        _onmessage_dangerous: function onmessage2(conn, type, special, xhr, params, extraHeaders, sentData, response) {
+          if (type === "options") {
+            logic(conn, "options", {
+              special,
+              status: xhr.status,
+              response
+            });
+          } else {
+            var sentXML, receivedXML;
+            if (sentData) {
+              try {
+                var sentReader = new Reader(new Uint8Array(sentData), codepages_default);
+                sentXML = sentReader.dump();
+              } catch (ex) {
+                sentXML = "parse problem";
+              }
+            }
+            if (response) {
+              try {
+                receivedXML = response.dump();
+                response.rewind();
+              } catch (ex) {
+                receivedXML = "parse problem";
+              }
+            }
+            logic(conn, "command", {
+              type,
+              special,
+              status: xhr.status,
+              params,
+              extraHeaders,
+              sentXML,
+              receivedXML
+            });
+          }
+        },
+        get numActiveConns() {
+          return 0;
+        },
+        checkAccount(callback) {
+          if (this.conn != null) {
+            if (this.conn.connected) {
+              this.conn.disconnect();
+            }
+            this.conn = null;
+          }
+          this.withConnection(function(err) {
+            callback(err);
+          }, function() {
+            callback();
+          });
+        },
+        shutdown(callback) {
+          if (callback) {
+            callback();
+          }
+        },
+        accountDeleted() {
+          this._alive = false;
+          this.shutdown();
+        },
+        normalizeFolderHierarchy,
+        getFirstFolderWithType,
+        getFolderByPath,
+        getFolderById,
+        getFolderByServerId(serverId) {
+          var folders = this.folders;
+          for (var iFolder = 0; iFolder < folders.length; iFolder++) {
+            if (folders[iFolder].serverId === serverId) {
+              return folders[iFolder];
+            }
+          }
+          return null;
+        },
+        allOperationsCompleted() {
+        }
+      };
+      account_default = ActiveSyncAccount;
+    }
+  });
+
+  // src/backend/accounts/ical/account.js
+  var account_exports2 = {};
+  __export(account_exports2, {
     default: () => ICalAccount
   });
   var ICalAccount;
-  var init_account = __esm({
+  var init_account2 = __esm({
     "src/backend/accounts/ical/account.js"() {
       ICalAccount = class {
         constructor(universe2, accountDef, foldersTOC, dbConn) {
@@ -6440,6 +9568,185 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/backend/accounts/activesync/normalize_folder.js
+  function getFirstFolderWithType2(folderIdToFolderInfo, type) {
+    for (let folderInfo of folderIdToFolderInfo.values()) {
+      if (folderInfo.type === type) {
+        return folderInfo;
+      }
+    }
+    return null;
+  }
+  function normalizeFolder({ idMaker, serverIdToFolderId, folderIdToFolderInfo }, { serverId, parentServerId, displayName, typeNum, forceType }) {
+    if (!forceType && !(typeNum in folderTypes)) {
+      return true;
+    }
+    let path = displayName;
+    let parentFolderId = null;
+    let depth = 0;
+    if (parentServerId !== "0") {
+      parentFolderId = serverIdToFolderId.get(parentServerId);
+      let parentInfo = folderIdToFolderInfo.get(parentFolderId);
+      if (!parent) {
+        return null;
+      }
+      path = parentInfo.path + "/" + path;
+      depth = parentInfo.depth + 1;
+    }
+    let useFolderType = folderTypes[typeNum];
+    if (depth < 2) {
+      var normalizedName = displayName.toLowerCase();
+      if (junkFolderNames.includes(normalizedName)) {
+        useFolderType = "junk";
+      }
+    }
+    if (forceType) {
+      useFolderType = forceType;
+    }
+    if (typeNum === $FolderTypes.DefaultInbox) {
+      let existingInboxMeta = getFirstFolderWithType2(folderIdToFolderInfo, "inbox");
+      if (existingInboxMeta) {
+        existingInboxMeta.serverId = serverId;
+        existingInboxMeta.name = displayName;
+        existingInboxMeta.path = path;
+        existingInboxMeta.depth = depth;
+        return true;
+      }
+    }
+    var folderId = idMaker();
+    var folderInfo = makeFolderMeta({
+      id: folderId,
+      serverId,
+      name: displayName,
+      type: useFolderType,
+      path,
+      parentId: parentFolderId,
+      depth,
+      lastSyncedAt: 0
+    });
+    return folderInfo;
+  }
+  var $FolderTypes, folderTypes, junkFolderNames;
+  var init_normalize_folder = __esm({
+    "src/backend/accounts/activesync/normalize_folder.js"() {
+      init_folder_info_rep();
+      init_FolderHierarchy();
+      $FolderTypes = FolderHierarchy_default.Enums.Type;
+      folderTypes = {
+        1: "normal",
+        2: "inbox",
+        3: "drafts",
+        4: "trash",
+        5: "sent",
+        6: "normal",
+        12: "normal"
+      };
+      junkFolderNames = [
+        "bulk mail",
+        "correo no deseado",
+        "courrier ind\xE9sirable",
+        "istenmeyen",
+        "istenmeyen e-posta",
+        "junk",
+        "lev\xE9lszem\xE9t",
+        "nevy\u017Eiadan\xE1 po\u0161ta",
+        "nevy\u017E\xE1dan\xE1 po\u0161ta",
+        "no deseado",
+        "posta indesiderata",
+        "pourriel",
+        "roskaposti",
+        "skr\xE4ppost",
+        "spam",
+        "spamowanie",
+        "s\xF8ppelpost",
+        "th\u01B0 r\xE1c",
+        "\u0441\u043F\u0430\u043C",
+        "\u05D3\u05D5\u05D0\u05E8 \u05D6\u05D1\u05DC",
+        "\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0639\u0634\u0648\u0627\u0626\u064A\u0629",
+        "\u0647\u0631\u0632\u0646\u0627\u0645\u0647",
+        "\u0E2A\u0E41\u0E1B\u0E21",
+        "\u5783\u573E\u90F5\u4EF6",
+        "\u5783\u573E\u90AE\u4EF6",
+        "\u5783\u573E\u96FB\u90F5"
+      ];
+    }
+  });
+
+  // src/backend/accounts/activesync/account_sync_state_helper.js
+  function AccountSyncStateHelper(ctx, rawSyncState, accountId) {
+    if (!rawSyncState) {
+      logic(ctx, "creatingDefaultSyncState", {});
+      rawSyncState = {
+        hierarchySyncKey: "0",
+        nextFolderNum: 0,
+        serverIdToFolderId: new Map()
+      };
+    }
+    this._ctx = ctx;
+    this._accountId = accountId;
+    this.rawSyncState = rawSyncState;
+    this.serverIdToFolderId = rawSyncState.serverIdToFolderId;
+  }
+  var init_account_sync_state_helper = __esm({
+    "src/backend/accounts/activesync/account_sync_state_helper.js"() {
+      init_logic();
+      init_a64();
+      AccountSyncStateHelper.prototype = {
+        get hierarchySyncKey() {
+          return this.rawSyncState.hierarchySyncKey;
+        },
+        set hierarchySyncKey(val) {
+          this.rawSyncState.hierarchySyncKey = val;
+        },
+        issueFolderId() {
+          return this._accountId + "." + encodeInt(this.rawSyncState.nextFolderNum++);
+        },
+        addedFolder(serverId, folderInfo) {
+          this.serverIdToFolderId.set(serverId, folderInfo);
+        },
+        removedFolder(serverId) {
+          this.serverIdToFolderId.delete(serverId);
+        }
+      };
+    }
+  });
+
+  // src/backend/accounts/activesync/smotocol/enum_hierarchy_changes.js
+  async function enumerateHierarchyChanges(conn, { hierarchySyncKey, emitter }) {
+    let w = new Writer("1.3", 1, "UTF-8");
+    w.stag(FolderHierarchy_default.Tags.FolderSync).tag(FolderHierarchy_default.Tags.SyncKey, hierarchySyncKey).etag();
+    let response = await conn.postCommand(w);
+    let e = new EventParser();
+    let newSyncKey;
+    e.addEventListener([FolderHierarchy_default.Tags.FolderSync, FolderHierarchy_default.Tags.SyncKey], function(node) {
+      newSyncKey = node.children[0].textContent;
+    });
+    e.addEventListener([FolderHierarchy_default.Tags.FolderSync, FolderHierarchy_default.Tags.Changes, [FolderHierarchy_default.Tags.Add, FolderHierarchy_default.Tags.Delete]], function(node) {
+      let folderArgs = {};
+      for (let child of node.children) {
+        folderArgs[child.localTagName] = child.children[0].textContent;
+      }
+      if (node.tag === FolderHierarchy_default.Tags.Add) {
+        emitter.emit("add", folderArgs);
+      } else {
+        emitter.emit("remove", folderArgs.ServerId);
+      }
+    });
+    try {
+      e.run(response);
+    } catch (ex) {
+      console.error("Error parsing FolderSync response:", ex, "\n", ex.stack);
+      throw new Error("unknown");
+    }
+    return { hierarchySyncKey: newSyncKey };
+  }
+  var init_enum_hierarchy_changes = __esm({
+    "src/backend/accounts/activesync/smotocol/enum_hierarchy_changes.js"() {
+      init_wbxml();
+      init_FolderHierarchy();
+    }
+  });
+
   // src/backend/task_mixins/mix_sync_folder_list.js
   var MixinSyncFolderList, mix_sync_folder_list_default;
   var init_mix_sync_folder_list = __esm({
@@ -6533,11 +9840,15 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/ical/tasks/sync_folder_list.js
-  var sync_folder_list_default;
+  // src/backend/accounts/activesync/tasks/sync_folder_list.js
+  var import_evt5, sync_folder_list_default;
   var init_sync_folder_list = __esm({
-    "src/backend/accounts/ical/tasks/sync_folder_list.js"() {
+    "src/backend/accounts/activesync/tasks/sync_folder_list.js"() {
+      import_evt5 = __toModule(require_evt());
       init_task_definer();
+      init_normalize_folder();
+      init_account_sync_state_helper();
+      init_enum_hierarchy_changes();
       init_mix_sync_folder_list();
       sync_folder_list_default = task_definer_default.defineSimpleTask([
         mix_sync_folder_list_default,
@@ -6545,15 +9856,76 @@ var WorkshopBackend = (() => {
           essentialOfflineFolders: [
             {
               type: "inbox",
-              displayName: "Events"
+              displayName: "Inbox"
+            },
+            {
+              type: "outbox",
+              displayName: "outbox"
+            },
+            {
+              type: "localdrafts",
+              displayName: "localdrafts"
             }
           ],
-          async syncFolders() {
+          async syncFolders(ctx, account) {
+            let foldersTOC = account.foldersTOC;
+            let conn = await account.ensureConnection();
+            let newFolders = [];
+            let modifiedFolders = new Map();
+            let fromDb = await ctx.beginMutate({
+              syncStates: new Map([[account.id, null]])
+            });
+            let rawSyncState = fromDb.syncStates.get(account.id);
+            let syncState = new AccountSyncStateHelper(ctx, rawSyncState, account.id);
+            let emitter = new import_evt5.default.Emitter();
+            let deferredFolders = [];
+            function tryAndAddFolder(folderArgs) {
+              let maybeFolderInfo = normalizeFolder({
+                idMaker: foldersTOC.issueFolderId.bind(syncState),
+                serverIdToFolderId: syncState.serverIdToFolderId,
+                folderIdToFolderInfo: foldersTOC.foldersById
+              }, {
+                serverId: folderArgs.ServerId,
+                parentServerId: folderArgs.ParentId,
+                displayName: folderArgs.DisplayName,
+                typeNum: folderArgs.Type
+              });
+              if (maybeFolderInfo === null) {
+                deferredFolders.push(folderArgs);
+              } else if (maybeFolderInfo === true) {
+                syncState.addedFolder(maybeFolderInfo);
+                modifiedFolders.set(maybeFolderInfo.id, maybeFolderInfo);
+              } else {
+                syncState.addedFolder(maybeFolderInfo);
+                newFolders.push(maybeFolderInfo);
+              }
+            }
+            emitter.on("add", (folderArgs) => {
+              tryAndAddFolder(folderArgs);
+            });
+            emitter.on("remove", (serverId) => {
+              syncState.removedFolder(serverId);
+              let folderId = syncState.serverIdToFolderId.get(serverId);
+              modifiedFolders.set(folderId, null);
+            });
+            syncState.hierarchySyncKey = (await enumerateHierarchyChanges(conn, {
+              hierarchySyncKey: syncState.hierarchySyncKey,
+              emitter
+            })).hierarchySyncKey;
+            while (deferredFolders.length) {
+              let processFolders = deferredFolders;
+              deferredFolders = [];
+              for (let folder of processFolders) {
+                tryAndAddFolder(folder);
+              }
+              if (processFolders.length === deferredFolders.length) {
+                throw new Error("got some orphaned folders");
+              }
+            }
             return {
-              newFolders: void 0,
-              newTasks: void 0,
-              modifiedFolders: void 0,
-              modifiedSyncStates: void 0
+              newFolders,
+              modifiedFolders,
+              modifiedSyncStates: new Map([[account.id, syncState.rawSyncState]])
             };
           }
         }
@@ -6561,42 +9933,2977 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/shared/date.js
-  function NOW() {
-    return TIME_WARPED_NOW || Date.now();
-  }
-  function makeDaysAgo(numDays) {
-    var past = quantizeDate(TIME_WARPED_NOW || Date.now()) - numDays * DAY_MILLIS;
-    return past;
-  }
-  function quantizeDate(date) {
-    if (date === null) {
-      return null;
+  // src/backend/accounts/activesync/folder_sync_state_helper.js
+  function FolderSyncStateHelper(ctx, rawSyncState, accountId, folderId) {
+    if (!rawSyncState) {
+      logic(ctx, "creatingDefaultSyncState", {});
+      rawSyncState = {
+        nextUmidSuffix: 1,
+        syncKey: "0",
+        filterType: null,
+        serverIdInfo: new Map()
+      };
     }
-    if (typeof date === "number") {
-      date = new Date(date);
-    }
-    return date.setUTCHours(0, 0, 0, 0).valueOf();
+    this._ctx = ctx;
+    this._accountId = accountId;
+    this._folderId = folderId;
+    this.rawSyncState = rawSyncState;
+    this._serverIdInfo = this.rawSyncState.serverIdInfo;
+    this.umidDeletions = new Set();
+    this.umidFlagChanges = new Map();
+    this.umidNameReads = new Map();
+    this._tasksByConvId = new Map();
+    this.tasksToSchedule = [];
+    this.umidNameWrites = new Map();
+    this.umidLocationWrites = new Map();
   }
-  var HOUR_MILLIS, DAY_MILLIS, TIME_WARPED_NOW;
-  var init_date = __esm({
-    "src/shared/date.js"() {
-      HOUR_MILLIS = 60 * 60 * 1e3;
-      DAY_MILLIS = 24 * 60 * 60 * 1e3;
-      TIME_WARPED_NOW = null;
+  var folder_sync_state_helper_default;
+  var init_folder_sync_state_helper = __esm({
+    "src/backend/accounts/activesync/folder_sync_state_helper.js"() {
+      init_logic();
+      init_id_conversions();
+      init_util();
+      init_a64();
+      FolderSyncStateHelper.prototype = {
+        get syncKey() {
+          return this.rawSyncState.syncKey;
+        },
+        set syncKey(val) {
+          this.rawSyncState.syncKey = val;
+        },
+        get filterType() {
+          return this.rawSyncState.filterType;
+        },
+        set filterType(val) {
+          this.rawSyncState.filterType = val;
+        },
+        issueUniqueMessageId() {
+          return this._folderId + "." + encodeInt(this.rawSyncState.nextUmidSuffix++);
+        },
+        getUmidForServerId(serverId) {
+          return this._serverIdInfo.get(serverId);
+        },
+        newMessage(serverId, message) {
+          let umid = message.umid;
+          this.umidNameWrites.set(umid, message.id);
+          this.umidLocationWrites.set(umid, [this._folderId, serverId]);
+          this._serverIdInfo.set(serverId, umid);
+        },
+        messageChanged(serverId, changes) {
+          let umid = this._serverIdInfo.get(serverId);
+          this.umidFlagChanges.set(umid, changes.flagChanges);
+          this.umidNameReads.set(umid, null);
+        },
+        messageDeleted(serverId) {
+          let umid = this._serverIdInfo.get(serverId);
+          if (!umid) {
+            logic.fail("heard about a deletion for an unknown message");
+            return;
+          }
+          this._serverIdInfo.delete(serverId);
+          this.umidDeletions.add(umid);
+          this.umidNameReads.set(umid, null);
+          this.umidLocationWrites.set(umid, null);
+        },
+        syncKeyInvalidatedSoDeleteAllMessages() {
+          this.syncKey = "0";
+          for (let serverId of this._serverIdInfo.keys()) {
+            this.messageDeleted(serverId);
+          }
+        },
+        generateSyncConvTasks() {
+          let umidNameReads = this.umidNameReads;
+          for (let [umid, flags] of this.umidFlagChanges) {
+            let messageId = umidNameReads.get(umid);
+            if (messageId) {
+              this._ensureTaskWithUmidFlags(messageId, umid, flags);
+            }
+          }
+          for (let umid of this.umidDeletions) {
+            let messageId = umidNameReads.get(umid);
+            if (messageId) {
+              this._ensureTaskWithRemovedUmid(messageId, umid);
+            }
+          }
+        },
+        _ensureTaskWithUmidFlags(messageId, umid, flags) {
+          let convId = convIdFromMessageId(messageId);
+          let task = this._ensureConvTask(convId);
+          if (!task.modifiedUmids) {
+            task.modifiedUmids = new Map();
+          }
+          task.modifiedUmids.set(umid, flags);
+        },
+        _ensureTaskWithRemovedUmid(messageId, umid) {
+          let convId = convIdFromMessageId(messageId);
+          let task = this._ensureConvTask(convId);
+          if (!task.removedUmids) {
+            task.removedUmids = new Set();
+          }
+          task.removedUmids.add(umid);
+        },
+        _ensureConvTask(convId) {
+          if (this._tasksByConvId.has(convId)) {
+            return this._tasksByConvId(convId);
+          }
+          let task = {
+            type: "sync_conv",
+            accountId: this._accountId,
+            convId,
+            modifiedUmids: null,
+            removedUmids: null
+          };
+          this.tasksToSchedule.push(task);
+          this._tasksByConvId.set(convId, task);
+          return task;
+        },
+        scheduleAnotherRefreshLikeThisOne(req) {
+          let rawTask = shallowClone2(req);
+          delete rawTask.exclusiveResources;
+          delete rawTask.priorityTags;
+          this.tasksToSchedule.push(rawTask);
+        }
+      };
+      folder_sync_state_helper_default = FolderSyncStateHelper;
     }
   });
 
-  // src/backend/date_priority_adjuster.js
-  function prioritizeNewer(dateTS) {
-    return Math.max(-MAX_PRIORITY_BOOST, MAX_PRIORITY_BOOST - (NOW() - dateTS) / ONE_HOUR_IN_MSECS);
+  // src/backend/accounts/activesync/smotocol/get_folder_sync_key.js
+  async function getFolderSyncKey(conn, { folderServerId, filterType }) {
+    let w = new Writer("1.3", 1, "UTF-8");
+    w.stag(AirSync_default.Tags.Sync).stag(AirSync_default.Tags.Collections).stag(AirSync_default.Tags.Collection);
+    if (conn.currentVersion.lt("12.1")) {
+      w.tag(AirSync_default.Tags.Cl$ass, "Email");
+    }
+    w.tag(AirSync_default.Tags.SyncKey, "0").tag(AirSync_default.Tags.CollectionId, folderServerId).stag(AirSync_default.Tags.Options).tag(AirSync_default.Tags.FilterType, filterType).etag().etag().etag().etag();
+    let response = await conn.postCommand(w);
+    let e = new EventParser();
+    let newSyncKey = "0";
+    e.addEventListener([
+      AirSync_default.Tags.Sync,
+      AirSync_default.Tags.Collections,
+      AirSync_default.Tags.Collection,
+      AirSync_default.Tags.SyncKey
+    ], function(node) {
+      newSyncKey = node.children[0].textContent;
+    });
+    try {
+      e.run(response);
+    } catch (ex) {
+      console.error("Error parsing FolderCreate response:", ex, "\n", ex.stack);
+      throw new Error("unknown");
+    }
+    if (newSyncKey === "0") {
+      console.error("Unable to get sync key for folder");
+      throw new Error("unknown");
+    }
+    return { syncKey: newSyncKey };
   }
-  var MAX_PRIORITY_BOOST, ONE_HOUR_IN_MSECS;
-  var init_date_priority_adjuster = __esm({
-    "src/backend/date_priority_adjuster.js"() {
-      init_date();
-      MAX_PRIORITY_BOOST = 99999;
-      ONE_HOUR_IN_MSECS = 60 * 60 * 1e3;
+  var init_get_folder_sync_key = __esm({
+    "src/backend/accounts/activesync/smotocol/get_folder_sync_key.js"() {
+      init_wbxml();
+      init_AirSync();
+    }
+  });
+
+  // src/backend/accounts/activesync/smotocol/get_item_estimate.js
+  async function getItemEstimate(conn, { folderSyncKey, folderServerId, filterType }) {
+    let w = new Writer("1.3", 1, "UTF-8");
+    w.stag(ItemEstimate_default.Tags.GetItemEstimate).stag(ItemEstimate_default.Tags.Collections).stag(ItemEstimate_default.Tags.Collection);
+    if (conn.currentVersion.gte("14.0")) {
+      w.tag(AirSync_default.Tags.SyncKey, folderSyncKey).tag(ItemEstimate_default.Tags.CollectionId, folderServerId).stag(AirSync_default.Tags.Options).tag(AirSync_default.Tags.FilterType, filterType).etag();
+    } else if (conn.currentVersion.gte("12.0")) {
+      w.tag(ItemEstimate_default.Tags.CollectionId, folderServerId).tag(AirSync_default.Tags.FilterType, filterType).tag(AirSync_default.Tags.SyncKey, folderSyncKey);
+    } else {
+      w.tag(ItemEstimate_default.Tags.Class, "Email").tag(AirSync_default.Tags.SyncKey, folderSyncKey).tag(ItemEstimate_default.Tags.CollectionId, folderServerId).tag(AirSync_default.Tags.FilterType, filterType);
+    }
+    w.etag(ItemEstimate_default.Tags.Collection).etag(ItemEstimate_default.Tags.Collections).etag(ItemEstimate_default.Tags.GetItemEstimate);
+    let response = await conn.postCommand(w);
+    let e = new EventParser();
+    let base = [ItemEstimate_default.Tags.GetItemEstimate, ItemEstimate_default.Tags.Response];
+    let status, estimate;
+    e.addEventListener(base.concat(ItemEstimate_default.Tags.Status), function(node) {
+      status = node.children[0].textContent;
+    });
+    e.addEventListener(base.concat(ItemEstimate_default.Tags.Collection, ItemEstimate_default.Tags.Estimate), function(node) {
+      estimate = parseInt(node.children[0].textContent, 10);
+    });
+    try {
+      e.run(response);
+    } catch (ex) {
+      console.error("Error parsing FolderCreate response:", ex, "\n", ex.stack);
+      throw new Error("unknown");
+    }
+    if (status !== ItemEstimate_default.Enums.Status.Success) {
+      throw new Error("unknown");
+    } else {
+      return { estimate };
+    }
+  }
+  var init_get_item_estimate = __esm({
+    "src/backend/accounts/activesync/smotocol/get_item_estimate.js"() {
+      init_wbxml();
+      init_AirSync();
+      init_ItemEstimate();
+    }
+  });
+
+  // src/backend/accounts/activesync/smotocol/infer_filter_type.js
+  async function inferFilterType(conn, { folderServerId, desiredMessageCount }) {
+    const Type = AirSync_default.Enums.FilterType;
+    let filterType = Type.TwoWeeksBack;
+    let { syncKey } = await getFolderSyncKey(conn, {
+      folderServerId,
+      filterType
+    });
+    let { estimate } = await getItemEstimate(conn, {
+      folderSyncKey: syncKey,
+      folderServerId,
+      filterType
+    });
+    let messagesPerDay = estimate / 14;
+    let desiredFilterType;
+    if (estimate < 0) {
+      desiredFilterType = Type.ThreeDaysBack;
+    } else if (messagesPerDay >= desiredMessageCount) {
+      desiredFilterType = Type.OneDayBack;
+    } else if (messagesPerDay * 3 >= desiredMessageCount) {
+      desiredFilterType = Type.ThreeDaysBack;
+    } else if (messagesPerDay * 7 >= desiredMessageCount) {
+      desiredFilterType = Type.OneWeekBack;
+    } else if (messagesPerDay * 14 >= desiredMessageCount) {
+      desiredFilterType = Type.TwoWeeksBack;
+    } else if (messagesPerDay * 30 >= desiredMessageCount) {
+      desiredFilterType = Type.OneMonthBack;
+    } else {
+      filterType = Type.NoFilter;
+      syncKey = (await getFolderSyncKey(conn, { folderServerId, filterType })).syncKey;
+      estimate = (await getItemEstimate(conn, {
+        folderSyncKey: syncKey,
+        folderServerId,
+        filterType
+      })).estimate;
+      if (estimate > desiredMessageCount) {
+        desiredFilterType = Type.OneMonthBack;
+      } else {
+        desiredFilterType = Type.NoFilter;
+      }
+    }
+    if (filterType !== desiredFilterType) {
+      filterType = desiredFilterType;
+      syncKey = (await getFolderSyncKey(conn, { folderServerId, filterType })).syncKey;
+    }
+    logic(conn, "inferFilterType", { filterType });
+    return { filterType, syncKey };
+  }
+  var init_infer_filter_type = __esm({
+    "src/backend/accounts/activesync/smotocol/infer_filter_type.js"() {
+      init_logic();
+      init_AirSync();
+      init_get_folder_sync_key();
+      init_get_item_estimate();
+    }
+  });
+
+  // src/vendor/mimetypes.js
+  var require_mimetypes = __commonJS({
+    "src/vendor/mimetypes.js"(exports, module) {
+      (function(root, factory) {
+        "use strict";
+        if (typeof define === "function" && define.amd) {
+          define(factory);
+        } else if (typeof exports === "object") {
+          module.exports = factory();
+        } else {
+          root.mimetypes = factory();
+        }
+      })(exports, function() {
+        "use strict";
+        function detectExtension(mimeType) {
+          mimeType = (mimeType || "").toString().toLowerCase().replace(/\s/g, "");
+          if (!(mimeType in mimetypesList)) {
+            return "bin";
+          }
+          if (typeof mimetypesList[mimeType] === "string") {
+            return mimetypesList[mimeType];
+          }
+          var mimeParts = mimeType.split("/");
+          for (var i = 0, len = mimetypesList[mimeType].length; i < len; i++) {
+            if (mimeParts[1] === mimetypesList[mimeType][i]) {
+              return mimetypesList[mimeType][i];
+            }
+          }
+          return mimetypesList[mimeType][0];
+        }
+        function detectMimeType(extension) {
+          extension = (extension || "").toString().toLowerCase().replace(/\s/g, "").replace(/^\./g, "");
+          if (!(extension in mimetypesExtensions)) {
+            return "application/octet-stream";
+          }
+          if (typeof mimetypesExtensions[extension] === "string") {
+            return mimetypesExtensions[extension];
+          }
+          var mimeParts;
+          for (var i = 0, len = mimetypesExtensions[extension].length; i < len; i++) {
+            mimeParts = mimetypesExtensions[extension][i].split("/");
+            if (mimeParts[1] === extension) {
+              return mimetypesExtensions[extension][i];
+            }
+          }
+          return mimetypesExtensions[extension][0];
+        }
+        var mimetypesList = {
+          "application/acad": "dwg",
+          "application/andrew-inset": "",
+          "application/applixware": "aw",
+          "application/arj": "arj",
+          "application/atom+xml": "xml",
+          "application/atomcat+xml": "atomcat",
+          "application/atomsvc+xml": "atomsvc",
+          "application/base64": ["mm", "mme"],
+          "application/binhex": "hqx",
+          "application/binhex4": "hqx",
+          "application/book": ["boo", "book"],
+          "application/ccxml+xml,": "ccxml",
+          "application/cdf": "cdf",
+          "application/cdmi-capability": "cdmia",
+          "application/cdmi-container": "cdmic",
+          "application/cdmi-domain": "cdmid",
+          "application/cdmi-object": "cdmio",
+          "application/cdmi-queue": "cdmiq",
+          "application/clariscad": "ccad",
+          "application/commonground": "dp",
+          "application/cu-seeme": "cu",
+          "application/davmount+xml": "davmount",
+          "application/drafting": "drw",
+          "application/dsptype": "tsp",
+          "application/dssc+der": "dssc",
+          "application/dssc+xml": "xdssc",
+          "application/dxf": "dxf",
+          "application/ecmascript": ["js", "es"],
+          "application/emma+xml": "emma",
+          "application/envoy": "evy",
+          "application/epub+zip": "epub",
+          "application/excel": ["xl", "xla", "xlb", "xlc", "xld", "xlk", "xll", "xlm", "xls", "xlt", "xlv", "xlw"],
+          "application/exi": "exi",
+          "application/font-tdpfr": "pfr",
+          "application/fractals": "fif",
+          "application/freeloader": "frl",
+          "application/futuresplash": "spl",
+          "application/gnutar": "tgz",
+          "application/groupwise": "vew",
+          "application/hlp": "hlp",
+          "application/hta": "hta",
+          "application/hyperstudio": "stk",
+          "application/i-deas": "unv",
+          "application/iges": ["iges", "igs"],
+          "application/inf": "inf",
+          "application/internet-property-stream": "acx",
+          "application/ipfix": "ipfix",
+          "application/java": "class",
+          "application/java-archive": "jar",
+          "application/java-byte-code": "class",
+          "application/java-serialized-object": "ser",
+          "application/java-vm": "class",
+          "application/javascript": "js",
+          "application/json": "json",
+          "application/lha": "lha",
+          "application/lzx": "lzx",
+          "application/mac-binary": "bin",
+          "application/mac-binhex": "hqx",
+          "application/mac-binhex40": "hqx",
+          "application/mac-compactpro": "cpt",
+          "application/macbinary": "bin",
+          "application/mads+xml": "mads",
+          "application/marc": "mrc",
+          "application/marcxml+xml": "mrcx",
+          "application/mathematica": "ma",
+          "application/mathml+xml": "mathml",
+          "application/mbedlet": "mbd",
+          "application/mbox": "mbox",
+          "application/mcad": "mcd",
+          "application/mediaservercontrol+xml": "mscml",
+          "application/metalink4+xml": "meta4",
+          "application/mets+xml": "mets",
+          "application/mime": "aps",
+          "application/mods+xml": "mods",
+          "application/mp21": "m21",
+          "application/mp4": "mp4",
+          "application/mspowerpoint": ["pot", "pps", "ppt", "ppz"],
+          "application/msword": ["doc", "dot", "w6w", "wiz", "word"],
+          "application/mswrite": "wri",
+          "application/mxf": "mxf",
+          "application/netmc": "mcp",
+          "application/octet-stream": ["*"],
+          "application/oda": "oda",
+          "application/oebps-package+xml": "opf",
+          "application/ogg": "ogx",
+          "application/olescript": "axs",
+          "application/onenote": "onetoc",
+          "application/patch-ops-error+xml": "xer",
+          "application/pdf": "pdf",
+          "application/pgp-encrypted": "",
+          "application/pgp-signature": "pgp",
+          "application/pics-rules": "prf",
+          "application/pkcs-12": "p12",
+          "application/pkcs-crl": "crl",
+          "application/pkcs10": "p10",
+          "application/pkcs7-mime": ["p7c", "p7m"],
+          "application/pkcs7-signature": "p7s",
+          "application/pkcs8": "p8",
+          "application/pkix-attr-cert": "ac",
+          "application/pkix-cert": ["cer", "crt"],
+          "application/pkix-crl": "crl",
+          "application/pkix-pkipath": "pkipath",
+          "application/pkixcmp": "pki",
+          "application/plain": "text",
+          "application/pls+xml": "pls",
+          "application/postscript": ["ai", "eps", "ps"],
+          "application/powerpoint": "ppt",
+          "application/pro_eng": ["part", "prt"],
+          "application/prs.cww": "cww",
+          "application/pskc+xml": "pskcxml",
+          "application/rdf+xml": "rdf",
+          "application/reginfo+xml": "rif",
+          "application/relax-ng-compact-syntax": "rnc",
+          "application/resource-lists+xml": "rl",
+          "application/resource-lists-diff+xml": "rld",
+          "application/ringing-tones": "rng",
+          "application/rls-services+xml": "rs",
+          "application/rsd+xml": "rsd",
+          "application/rss+xml": "xml",
+          "application/rtf": ["rtf", "rtx"],
+          "application/sbml+xml": "sbml",
+          "application/scvp-cv-request": "scq",
+          "application/scvp-cv-response": "scs",
+          "application/scvp-vp-request": "spq",
+          "application/scvp-vp-response": "spp",
+          "application/sdp": "sdp",
+          "application/sea": "sea",
+          "application/set": "set",
+          "application/set-payment-initiation": "setpay",
+          "application/set-registration-initiation": "setreg",
+          "application/shf+xml": "shf",
+          "application/sla": "stl",
+          "application/smil": ["smi", "smil"],
+          "application/smil+xml": "smi",
+          "application/solids": "sol",
+          "application/sounder": "sdr",
+          "application/sparql-query": "rq",
+          "application/sparql-results+xml": "srx",
+          "application/srgs": "gram",
+          "application/srgs+xml": "grxml",
+          "application/sru+xml": "sru",
+          "application/ssml+xml": "ssml",
+          "application/step": ["step", "stp"],
+          "application/streamingmedia": "ssm",
+          "application/tei+xml": "tei",
+          "application/thraud+xml": "tfi",
+          "application/timestamped-data": "tsd",
+          "application/toolbook": "tbk",
+          "application/vda": "vda",
+          "application/vnd.3gpp.pic-bw-large": "plb",
+          "application/vnd.3gpp.pic-bw-small": "psb",
+          "application/vnd.3gpp.pic-bw-var": "pvb",
+          "application/vnd.3gpp2.tcap": "tcap",
+          "application/vnd.3m.post-it-notes": "pwn",
+          "application/vnd.accpac.simply.aso": "aso",
+          "application/vnd.accpac.simply.imp": "imp",
+          "application/vnd.acucobol": "acu",
+          "application/vnd.acucorp": "atc",
+          "application/vnd.adobe.air-application-installer-package+zip": "air",
+          "application/vnd.adobe.fxp": "fxp",
+          "application/vnd.adobe.xdp+xml": "xdp",
+          "application/vnd.adobe.xfdf": "xfdf",
+          "application/vnd.ahead.space": "ahead",
+          "application/vnd.airzip.filesecure.azf": "azf",
+          "application/vnd.airzip.filesecure.azs": "azs",
+          "application/vnd.amazon.ebook": "azw",
+          "application/vnd.americandynamics.acc": "acc",
+          "application/vnd.amiga.ami": "ami",
+          "application/vnd.android.package-archive": "apk",
+          "application/vnd.anser-web-certificate-issue-initiation": "cii",
+          "application/vnd.anser-web-funds-transfer-initiation": "fti",
+          "application/vnd.antix.game-component": "atx",
+          "application/vnd.apple.installer+xml": "mpkg",
+          "application/vnd.apple.mpegurl": "m3u8",
+          "application/vnd.aristanetworks.swi": "swi",
+          "application/vnd.audiograph": "aep",
+          "application/vnd.blueice.multipass": "mpm",
+          "application/vnd.bmi": "bmi",
+          "application/vnd.businessobjects": "rep",
+          "application/vnd.chemdraw+xml": "cdxml",
+          "application/vnd.chipnuts.karaoke-mmd": "mmd",
+          "application/vnd.cinderella": "cdy",
+          "application/vnd.claymore": "cla",
+          "application/vnd.cloanto.rp9": "rp9",
+          "application/vnd.clonk.c4group": "c4g",
+          "application/vnd.cluetrust.cartomobile-config": "c11amc",
+          "application/vnd.cluetrust.cartomobile-config-pkg": "c11amz",
+          "application/vnd.commonspace": "csp",
+          "application/vnd.contact.cmsg": "cdbcmsg",
+          "application/vnd.cosmocaller": "cmc",
+          "application/vnd.crick.clicker": "clkx",
+          "application/vnd.crick.clicker.keyboard": "clkk",
+          "application/vnd.crick.clicker.palette": "clkp",
+          "application/vnd.crick.clicker.template": "clkt",
+          "application/vnd.crick.clicker.wordbank": "clkw",
+          "application/vnd.criticaltools.wbs+xml": "wbs",
+          "application/vnd.ctc-posml": "pml",
+          "application/vnd.cups-ppd": "ppd",
+          "application/vnd.curl.car": "car",
+          "application/vnd.curl.pcurl": "pcurl",
+          "application/vnd.data-vision.rdz": "rdz",
+          "application/vnd.denovo.fcselayout-link": "fe_launch",
+          "application/vnd.dna": "dna",
+          "application/vnd.dolby.mlp": "mlp",
+          "application/vnd.dpgraph": "dpg",
+          "application/vnd.dreamfactory": "dfac",
+          "application/vnd.dvb.ait": "ait",
+          "application/vnd.dvb.service": "svc",
+          "application/vnd.dynageo": "geo",
+          "application/vnd.ecowin.chart": "mag",
+          "application/vnd.enliven": "nml",
+          "application/vnd.epson.esf": "esf",
+          "application/vnd.epson.msf": "msf",
+          "application/vnd.epson.quickanime": "qam",
+          "application/vnd.epson.salt": "slt",
+          "application/vnd.epson.ssf": "ssf",
+          "application/vnd.eszigno3+xml": "es3",
+          "application/vnd.ezpix-album": "ez2",
+          "application/vnd.ezpix-package": "ez3",
+          "application/vnd.fdf": "fdf",
+          "application/vnd.fdsn.seed": "seed",
+          "application/vnd.flographit": "gph",
+          "application/vnd.fluxtime.clip": "ftc",
+          "application/vnd.framemaker": "fm",
+          "application/vnd.frogans.fnc": "fnc",
+          "application/vnd.frogans.ltf": "ltf",
+          "application/vnd.fsc.weblaunch": "fsc",
+          "application/vnd.fujitsu.oasys": "oas",
+          "application/vnd.fujitsu.oasys2": "oa2",
+          "application/vnd.fujitsu.oasys3": "oa3",
+          "application/vnd.fujitsu.oasysgp": "fg5",
+          "application/vnd.fujitsu.oasysprs": "bh2",
+          "application/vnd.fujixerox.ddd": "ddd",
+          "application/vnd.fujixerox.docuworks": "xdw",
+          "application/vnd.fujixerox.docuworks.binder": "xbd",
+          "application/vnd.fuzzysheet": "fzs",
+          "application/vnd.genomatix.tuxedo": "txd",
+          "application/vnd.geogebra.file": "ggb",
+          "application/vnd.geogebra.tool": "ggt",
+          "application/vnd.geometry-explorer": "gex",
+          "application/vnd.geonext": "gxt",
+          "application/vnd.geoplan": "g2w",
+          "application/vnd.geospace": "g3w",
+          "application/vnd.gmx": "gmx",
+          "application/vnd.google-earth.kml+xml": "kml",
+          "application/vnd.google-earth.kmz": "kmz",
+          "application/vnd.grafeq": "gqf",
+          "application/vnd.groove-account": "gac",
+          "application/vnd.groove-help": "ghf",
+          "application/vnd.groove-identity-message": "gim",
+          "application/vnd.groove-injector": "grv",
+          "application/vnd.groove-tool-message": "gtm",
+          "application/vnd.groove-tool-template": "tpl",
+          "application/vnd.groove-vcard": "vcg",
+          "application/vnd.hal+xml": "hal",
+          "application/vnd.handheld-entertainment+xml": "zmm",
+          "application/vnd.hbci": "hbci",
+          "application/vnd.hhe.lesson-player": "les",
+          "application/vnd.hp-hpgl": ["hgl", "hpg", "hpgl"],
+          "application/vnd.hp-hpid": "hpid",
+          "application/vnd.hp-hps": "hps",
+          "application/vnd.hp-jlyt": "jlt",
+          "application/vnd.hp-pcl": "pcl",
+          "application/vnd.hp-pclxl": "pclxl",
+          "application/vnd.hydrostatix.sof-data": "sfd-hdstx",
+          "application/vnd.hzn-3d-crossword": "x3d",
+          "application/vnd.ibm.minipay": "mpy",
+          "application/vnd.ibm.modcap": "afp",
+          "application/vnd.ibm.rights-management": "irm",
+          "application/vnd.ibm.secure-container": "sc",
+          "application/vnd.iccprofile": "icc",
+          "application/vnd.igloader": "igl",
+          "application/vnd.immervision-ivp": "ivp",
+          "application/vnd.immervision-ivu": "ivu",
+          "application/vnd.insors.igm": "igm",
+          "application/vnd.intercon.formnet": "xpw",
+          "application/vnd.intergeo": "i2g",
+          "application/vnd.intu.qbo": "qbo",
+          "application/vnd.intu.qfx": "qfx",
+          "application/vnd.ipunplugged.rcprofile": "rcprofile",
+          "application/vnd.irepository.package+xml": "irp",
+          "application/vnd.is-xpr": "xpr",
+          "application/vnd.isac.fcs": "fcs",
+          "application/vnd.jam": "jam",
+          "application/vnd.jcp.javame.midlet-rms": "rms",
+          "application/vnd.jisp": "jisp",
+          "application/vnd.joost.joda-archive": "joda",
+          "application/vnd.kahootz": "ktz",
+          "application/vnd.kde.karbon": "karbon",
+          "application/vnd.kde.kchart": "chrt",
+          "application/vnd.kde.kformula": "kfo",
+          "application/vnd.kde.kivio": "flw",
+          "application/vnd.kde.kontour": "kon",
+          "application/vnd.kde.kpresenter": "kpr",
+          "application/vnd.kde.kspread": "ksp",
+          "application/vnd.kde.kword": "kwd",
+          "application/vnd.kenameaapp": "htke",
+          "application/vnd.kidspiration": "kia",
+          "application/vnd.kinar": "kne",
+          "application/vnd.koan": "skp",
+          "application/vnd.kodak-descriptor": "sse",
+          "application/vnd.las.las+xml": "lasxml",
+          "application/vnd.llamagraphics.life-balance.desktop": "lbd",
+          "application/vnd.llamagraphics.life-balance.exchange+xml": "lbe",
+          "application/vnd.lotus-1-2-3": "123",
+          "application/vnd.lotus-approach": "apr",
+          "application/vnd.lotus-freelance": "pre",
+          "application/vnd.lotus-notes": "nsf",
+          "application/vnd.lotus-organizer": "org",
+          "application/vnd.lotus-screencam": "scm",
+          "application/vnd.lotus-wordpro": "lwp",
+          "application/vnd.macports.portpkg": "portpkg",
+          "application/vnd.mcd": "mcd",
+          "application/vnd.medcalcdata": "mc1",
+          "application/vnd.mediastation.cdkey": "cdkey",
+          "application/vnd.mfer": "mwf",
+          "application/vnd.mfmp": "mfm",
+          "application/vnd.micrografx.flo": "flo",
+          "application/vnd.micrografx.igx": "igx",
+          "application/vnd.mif": "mif",
+          "application/vnd.mobius.daf": "daf",
+          "application/vnd.mobius.dis": "dis",
+          "application/vnd.mobius.mbk": "mbk",
+          "application/vnd.mobius.mqy": "mqy",
+          "application/vnd.mobius.msl": "msl",
+          "application/vnd.mobius.plc": "plc",
+          "application/vnd.mobius.txf": "txf",
+          "application/vnd.mophun.application": "mpn",
+          "application/vnd.mophun.certificate": "mpc",
+          "application/vnd.mozilla.xul+xml": "xul",
+          "application/vnd.ms-artgalry": "cil",
+          "application/vnd.ms-cab-compressed": "cab",
+          "application/vnd.ms-excel": ["xla", "xlc", "xlm", "xls", "xlt", "xlw", "xlb", "xll"],
+          "application/vnd.ms-excel.addin.macroenabled.12": "xlam",
+          "application/vnd.ms-excel.sheet.binary.macroenabled.12": "xlsb",
+          "application/vnd.ms-excel.sheet.macroenabled.12": "xlsm",
+          "application/vnd.ms-excel.template.macroenabled.12": "xltm",
+          "application/vnd.ms-fontobject": "eot",
+          "application/vnd.ms-htmlhelp": "chm",
+          "application/vnd.ms-ims": "ims",
+          "application/vnd.ms-lrm": "lrm",
+          "application/vnd.ms-officetheme": "thmx",
+          "application/vnd.ms-outlook": "msg",
+          "application/vnd.ms-pki.certstore": "sst",
+          "application/vnd.ms-pki.pko": "pko",
+          "application/vnd.ms-pki.seccat": "cat",
+          "application/vnd.ms-pki.stl": "stl",
+          "application/vnd.ms-pkicertstore": "sst",
+          "application/vnd.ms-pkiseccat": "cat",
+          "application/vnd.ms-pkistl": "stl",
+          "application/vnd.ms-powerpoint": ["pot", "pps", "ppt", "ppa", "pwz"],
+          "application/vnd.ms-powerpoint.addin.macroenabled.12": "ppam",
+          "application/vnd.ms-powerpoint.presentation.macroenabled.12": "pptm",
+          "application/vnd.ms-powerpoint.slide.macroenabled.12": "sldm",
+          "application/vnd.ms-powerpoint.slideshow.macroenabled.12": "ppsm",
+          "application/vnd.ms-powerpoint.template.macroenabled.12": "potm",
+          "application/vnd.ms-project": "mpp",
+          "application/vnd.ms-word.document.macroenabled.12": "docm",
+          "application/vnd.ms-word.template.macroenabled.12": "dotm",
+          "application/vnd.ms-works": ["wcm", "wdb", "wks", "wps"],
+          "application/vnd.ms-wpl": "wpl",
+          "application/vnd.ms-xpsdocument": "xps",
+          "application/vnd.mseq": "mseq",
+          "application/vnd.musician": "mus",
+          "application/vnd.muvee.style": "msty",
+          "application/vnd.neurolanguage.nlu": "nlu",
+          "application/vnd.noblenet-directory": "nnd",
+          "application/vnd.noblenet-sealer": "nns",
+          "application/vnd.noblenet-web": "nnw",
+          "application/vnd.nokia.configuration-message": "ncm",
+          "application/vnd.nokia.n-gage.data": "ngdat",
+          "application/vnd.nokia.n-gage.symbian.install": "n-gage",
+          "application/vnd.nokia.radio-preset": "rpst",
+          "application/vnd.nokia.radio-presets": "rpss",
+          "application/vnd.nokia.ringing-tone": "rng",
+          "application/vnd.novadigm.edm": "edm",
+          "application/vnd.novadigm.edx": "edx",
+          "application/vnd.novadigm.ext": "ext",
+          "application/vnd.oasis.opendocument.chart": "odc",
+          "application/vnd.oasis.opendocument.chart-template": "otc",
+          "application/vnd.oasis.opendocument.database": "odb",
+          "application/vnd.oasis.opendocument.formula": "odf",
+          "application/vnd.oasis.opendocument.formula-template": "odft",
+          "application/vnd.oasis.opendocument.graphics": "odg",
+          "application/vnd.oasis.opendocument.graphics-template": "otg",
+          "application/vnd.oasis.opendocument.image": "odi",
+          "application/vnd.oasis.opendocument.image-template": "oti",
+          "application/vnd.oasis.opendocument.presentation": "odp",
+          "application/vnd.oasis.opendocument.presentation-template": "otp",
+          "application/vnd.oasis.opendocument.spreadsheet": "ods",
+          "application/vnd.oasis.opendocument.spreadsheet-template": "ots",
+          "application/vnd.oasis.opendocument.text": "odt",
+          "application/vnd.oasis.opendocument.text-master": "odm",
+          "application/vnd.oasis.opendocument.text-template": "ott",
+          "application/vnd.oasis.opendocument.text-web": "oth",
+          "application/vnd.olpc-sugar": "xo",
+          "application/vnd.oma.dd2+xml": "dd2",
+          "application/vnd.openofficeorg.extension": "oxt",
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+          "application/vnd.openxmlformats-officedocument.presentationml.slide": "sldx",
+          "application/vnd.openxmlformats-officedocument.presentationml.slideshow": "ppsx",
+          "application/vnd.openxmlformats-officedocument.presentationml.template": "potx",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.template": "xltx",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.template": "dotx",
+          "application/vnd.osgeo.mapguide.package": "mgp",
+          "application/vnd.osgi.dp": "dp",
+          "application/vnd.palm": "pdb",
+          "application/vnd.pawaafile": "paw",
+          "application/vnd.pg.format": "str",
+          "application/vnd.pg.osasli": "ei6",
+          "application/vnd.picsel": "efif",
+          "application/vnd.pmi.widget": "wg",
+          "application/vnd.pocketlearn": "plf",
+          "application/vnd.powerbuilder6": "pbd",
+          "application/vnd.previewsystems.box": "box",
+          "application/vnd.proteus.magazine": "mgz",
+          "application/vnd.publishare-delta-tree": "qps",
+          "application/vnd.pvi.ptid1": "ptid",
+          "application/vnd.quark.quarkxpress": "qxd",
+          "application/vnd.realvnc.bed": "bed",
+          "application/vnd.recordare.musicxml": "mxl",
+          "application/vnd.recordare.musicxml+xml": "musicxml",
+          "application/vnd.rig.cryptonote": "cryptonote",
+          "application/vnd.rim.cod": "cod",
+          "application/vnd.rn-realmedia": "rm",
+          "application/vnd.rn-realplayer": "rnx",
+          "application/vnd.route66.link66+xml": "link66",
+          "application/vnd.sailingtracker.track": "st",
+          "application/vnd.seemail": "see",
+          "application/vnd.sema": "sema",
+          "application/vnd.semd": "semd",
+          "application/vnd.semf": "semf",
+          "application/vnd.shana.informed.formdata": "ifm",
+          "application/vnd.shana.informed.formtemplate": "itp",
+          "application/vnd.shana.informed.interchange": "iif",
+          "application/vnd.shana.informed.package": "ipk",
+          "application/vnd.simtech-mindmapper": "twd",
+          "application/vnd.smaf": "mmf",
+          "application/vnd.smart.teacher": "teacher",
+          "application/vnd.solent.sdkm+xml": "sdkm",
+          "application/vnd.spotfire.dxp": "dxp",
+          "application/vnd.spotfire.sfs": "sfs",
+          "application/vnd.stardivision.calc": "sdc",
+          "application/vnd.stardivision.draw": "sda",
+          "application/vnd.stardivision.impress": "sdd",
+          "application/vnd.stardivision.math": "smf",
+          "application/vnd.stardivision.writer": "sdw",
+          "application/vnd.stardivision.writer-global": "sgl",
+          "application/vnd.stepmania.stepchart": "sm",
+          "application/vnd.sun.xml.calc": "sxc",
+          "application/vnd.sun.xml.calc.template": "stc",
+          "application/vnd.sun.xml.draw": "sxd",
+          "application/vnd.sun.xml.draw.template": "std",
+          "application/vnd.sun.xml.impress": "sxi",
+          "application/vnd.sun.xml.impress.template": "sti",
+          "application/vnd.sun.xml.math": "sxm",
+          "application/vnd.sun.xml.writer": "sxw",
+          "application/vnd.sun.xml.writer.global": "sxg",
+          "application/vnd.sun.xml.writer.template": "stw",
+          "application/vnd.sus-calendar": "sus",
+          "application/vnd.svd": "svd",
+          "application/vnd.symbian.install": "sis",
+          "application/vnd.syncml+xml": "xsm",
+          "application/vnd.syncml.dm+wbxml": "bdm",
+          "application/vnd.syncml.dm+xml": "xdm",
+          "application/vnd.tao.intent-module-archive": "tao",
+          "application/vnd.tmobile-livetv": "tmo",
+          "application/vnd.trid.tpt": "tpt",
+          "application/vnd.triscape.mxs": "mxs",
+          "application/vnd.trueapp": "tra",
+          "application/vnd.ufdl": "ufd",
+          "application/vnd.uiq.theme": "utz",
+          "application/vnd.umajin": "umj",
+          "application/vnd.unity": "unityweb",
+          "application/vnd.uoml+xml": "uoml",
+          "application/vnd.vcx": "vcx",
+          "application/vnd.visio": "vsd",
+          "application/vnd.visionary": "vis",
+          "application/vnd.vsf": "vsf",
+          "application/vnd.wap.wbxml": "wbxml",
+          "application/vnd.wap.wmlc": "wmlc",
+          "application/vnd.wap.wmlscriptc": "wmlsc",
+          "application/vnd.webturbo": "wtb",
+          "application/vnd.wolfram.player": "nbp",
+          "application/vnd.wordperfect": "wpd",
+          "application/vnd.wqd": "wqd",
+          "application/vnd.wt.stf": "stf",
+          "application/vnd.xara": ["web", "xar"],
+          "application/vnd.xfdl": "xfdl",
+          "application/vnd.yamaha.hv-dic": "hvd",
+          "application/vnd.yamaha.hv-script": "hvs",
+          "application/vnd.yamaha.hv-voice": "hvp",
+          "application/vnd.yamaha.openscoreformat": "osf",
+          "application/vnd.yamaha.openscoreformat.osfpvg+xml": "osfpvg",
+          "application/vnd.yamaha.smaf-audio": "saf",
+          "application/vnd.yamaha.smaf-phrase": "spf",
+          "application/vnd.yellowriver-custom-menu": "cmp",
+          "application/vnd.zul": "zir",
+          "application/vnd.zzazz.deck+xml": "zaz",
+          "application/vocaltec-media-desc": "vmd",
+          "application/vocaltec-media-file": "vmf",
+          "application/voicexml+xml": "vxml",
+          "application/widget": "wgt",
+          "application/winhlp": "hlp",
+          "application/wordperfect": ["wp", "wp5", "wp6", "wpd"],
+          "application/wordperfect6.0": ["w60", "wp5"],
+          "application/wordperfect6.1": "w61",
+          "application/wsdl+xml": "wsdl",
+          "application/wspolicy+xml": "wspolicy",
+          "application/x-123": "wk1",
+          "application/x-7z-compressed": "7z",
+          "application/x-abiword": "abw",
+          "application/x-ace-compressed": "ace",
+          "application/x-aim": "aim",
+          "application/x-authorware-bin": "aab",
+          "application/x-authorware-map": "aam",
+          "application/x-authorware-seg": "aas",
+          "application/x-bcpio": "bcpio",
+          "application/x-binary": "bin",
+          "application/x-binhex40": "hqx",
+          "application/x-bittorrent": "torrent",
+          "application/x-bsh": ["bsh", "sh", "shar"],
+          "application/x-bytecode.elisp": "elc",
+          "applicaiton/x-bytecode.python": "pyc",
+          "application/x-bzip": "bz",
+          "application/x-bzip2": ["boz", "bz2"],
+          "application/x-cdf": "cdf",
+          "application/x-cdlink": "vcd",
+          "application/x-chat": ["cha", "chat"],
+          "application/x-chess-pgn": "pgn",
+          "application/x-cmu-raster": "ras",
+          "application/x-cocoa": "cco",
+          "application/x-compactpro": "cpt",
+          "application/x-compress": "z",
+          "application/x-compressed": ["tgz", "gz", "z", "zip"],
+          "application/x-conference": "nsc",
+          "application/x-cpio": "cpio",
+          "application/x-cpt": "cpt",
+          "application/x-csh": "csh",
+          "application/x-debian-package": "deb",
+          "application/x-deepv": "deepv",
+          "application/x-director": ["dcr", "dir", "dxr"],
+          "application/x-doom": "wad",
+          "application/x-dtbncx+xml": "ncx",
+          "application/x-dtbook+xml": "dtb",
+          "application/x-dtbresource+xml": "res",
+          "application/x-dvi": "dvi",
+          "application/x-elc": "elc",
+          "application/x-envoy": ["env", "evy"],
+          "application/x-esrehber": "es",
+          "application/x-excel": ["xla", "xlb", "xlc", "xld", "xlk", "xll", "xlm", "xls", "xlt", "xlv", "xlw"],
+          "application/x-font-bdf": "bdf",
+          "application/x-font-ghostscript": "gsf",
+          "application/x-font-linux-psf": "psf",
+          "application/x-font-otf": "otf",
+          "application/x-font-pcf": "pcf",
+          "application/x-font-snf": "snf",
+          "application/x-font-ttf": "ttf",
+          "application/x-font-type1": "pfa",
+          "application/x-font-woff": "woff",
+          "application/x-frame": "mif",
+          "application/x-freelance": "pre",
+          "application/x-futuresplash": "spl",
+          "application/x-gnumeric": "gnumeric",
+          "application/x-gsp": "gsp",
+          "application/x-gss": "gss",
+          "application/x-gtar": "gtar",
+          "application/x-gzip": ["gz", "gzip"],
+          "application/x-hdf": "hdf",
+          "application/x-helpfile": ["help", "hlp"],
+          "application/x-httpd-imap": "imap",
+          "application/x-ima": "ima",
+          "application/x-internet-signup": ["ins", "isp"],
+          "application/x-internett-signup": "ins",
+          "application/x-inventor": "iv",
+          "application/x-ip2": "ip",
+          "application/x-iphone": "iii",
+          "application/x-java-class": "class",
+          "application/x-java-commerce": "jcm",
+          "application/x-java-jnlp-file": "jnlp",
+          "application/x-javascript": "js",
+          "application/x-koan": ["skd", "skm", "skp", "skt"],
+          "application/x-ksh": "ksh",
+          "application/x-latex": ["latex", "ltx"],
+          "application/x-lha": "lha",
+          "application/x-lisp": "lsp",
+          "application/x-livescreen": "ivy",
+          "application/x-lotus": "wq1",
+          "application/x-lotusscreencam": "scm",
+          "application/x-lzh": "lzh",
+          "application/x-lzx": "lzx",
+          "application/x-mac-binhex40": "hqx",
+          "application/x-macbinary": "bin",
+          "application/x-magic-cap-package-1.0": "mc$",
+          "application/x-mathcad": "mcd",
+          "application/x-meme": "mm",
+          "application/x-midi": ["mid", "midi"],
+          "application/x-mif": "mif",
+          "application/x-mix-transfer": "nix",
+          "application/x-mobipocket-ebook": "prc",
+          "application/x-mplayer2": "asx",
+          "application/x-ms-application": "application",
+          "application/x-ms-wmd": "wmd",
+          "application/x-ms-wmz": "wmz",
+          "application/x-ms-xbap": "xbap",
+          "application/x-msaccess": "mdb",
+          "application/x-msbinder": "obd",
+          "application/x-mscardfile": "crd",
+          "application/x-msclip": "clp",
+          "application/x-msdownload": ["dll", "exe"],
+          "application/x-msexcel": ["xla", "xls", "xlw"],
+          "application/x-msmediaview": ["m13", "m14", "mvb"],
+          "application/x-msmetafile": "wmf",
+          "application/x-msmoney": "mny",
+          "application/x-mspowerpoint": "ppt",
+          "application/x-mspublisher": "pub",
+          "application/x-msschedule": "scd",
+          "application/x-msterminal": "trm",
+          "application/x-mswrite": "wri",
+          "application/x-navi-animation": "ani",
+          "application/x-navidoc": "nvd",
+          "application/x-navimap": "map",
+          "application/x-navistyle": "stl",
+          "application/x-netcdf": ["cdf", "nc"],
+          "application/x-newton-compatible-pkg": "pkg",
+          "application/x-nokia-9000-communicator-add-on-software": "aos",
+          "application/x-omc": "omc",
+          "application/x-omcdatamaker": "omcd",
+          "application/x-omcregerator": "omcr",
+          "application/x-pagemaker": ["pm4", "pm5"],
+          "application/x-pcl": "pcl",
+          "application/x-perfmon": ["pma", "pmc", "pml", "pmr", "pmw"],
+          "application/x-pixclscript": "plx",
+          "application/x-pkcs10": "p10",
+          "application/x-pkcs12": ["p12", "pfx"],
+          "application/x-pkcs7-certificates": ["p7b", "spc"],
+          "application/x-pkcs7-certreqresp": "p7r",
+          "application/x-pkcs7-mime": ["p7c", "p7m"],
+          "application/x-pkcs7-signature": ["p7s", "p7a"],
+          "application/x-pointplus": "css",
+          "application/x-portable-anymap": "pnm",
+          "application/x-project": ["mpc", "mpt", "mpv", "mpx"],
+          "application/x-qpro": "wb1",
+          "application/x-rar-compressed": "rar",
+          "application/x-rtf": "rtf",
+          "application/x-sdp": "sdp",
+          "application/x-sea": "sea",
+          "application/x-seelogo": "sl",
+          "application/x-sh": "sh",
+          "application/x-shar": ["shar", "sh"],
+          "application/x-shockwave-flash": "swf",
+          "application/x-silverlight-app": "xap",
+          "application/x-sit": "sit",
+          "application/x-sprite": ["spr", "sprite"],
+          "application/x-stuffit": "sit",
+          "application/x-stuffitx": "sitx",
+          "application/x-sv4cpio": "sv4cpio",
+          "application/x-sv4crc": "sv4crc",
+          "application/x-tar": "tar",
+          "application/x-tbook": ["sbk", "tbk"],
+          "application/x-tcl": "tcl",
+          "application/x-tex": "tex",
+          "application/x-tex-tfm": "tfm",
+          "application/x-texinfo": ["texi", "texinfo"],
+          "application/x-troff": ["roff", "t", "tr"],
+          "application/x-troff-man": "man",
+          "application/x-troff-me": "me",
+          "application/x-troff-ms": "ms",
+          "application/x-troff-msvideo": "avi",
+          "application/x-ustar": "ustar",
+          "application/x-visio": ["vsd", "vst", "vsw"],
+          "application/x-vnd.audioexplosion.mzz": "mzz",
+          "application/x-vnd.ls-xpix": "xpix",
+          "application/x-vrml": "vrml",
+          "application/x-wais-source": ["src", "wsrc"],
+          "application/x-winhelp": "hlp",
+          "application/x-wintalk": "wtk",
+          "application/x-world": ["svr", "wrl"],
+          "application/x-wpwin": "wpd",
+          "application/x-wri": "wri",
+          "application/x-x509-ca-cert": ["cer", "crt", "der"],
+          "application/x-x509-user-cert": "crt",
+          "application/x-xfig": "fig",
+          "application/x-xpinstall": "xpi",
+          "application/x-zip-compressed": "zip",
+          "application/xcap-diff+xml": "xdf",
+          "application/xenc+xml": "xenc",
+          "application/xhtml+xml": "xhtml",
+          "application/xml": "xml",
+          "application/xml-dtd": "dtd",
+          "application/xop+xml": "xop",
+          "application/xslt+xml": "xslt",
+          "application/xspf+xml": "xspf",
+          "application/xv+xml": "mxml",
+          "application/yang": "yang",
+          "application/yin+xml": "yin",
+          "application/ynd.ms-pkipko": "pko",
+          "application/zip": "zip",
+          "audio/adpcm": "adp",
+          "audio/aiff": ["aif", "aifc", "aiff"],
+          "audio/basic": ["au", "snd"],
+          "audio/it": "it",
+          "audio/make": ["funk", "my", "pfunk"],
+          "audio/make.my.funk": "pfunk",
+          "audio/mid": ["mid", "rmi"],
+          "audio/midi": ["kar", "mid", "midi"],
+          "audio/mod": "mod",
+          "audio/mp4": "mp4a",
+          "audio/mpeg": ["mp3", "m2a", "mp2", "mpa", "mpg", "mpga"],
+          "audio/mpeg3": "mp3",
+          "audio/nspaudio": ["la", "lma"],
+          "audio/ogg": "oga",
+          "audio/s3m": "s3m",
+          "audio/tsp-audio": "tsi",
+          "audio/tsplayer": "tsp",
+          "audio/vnd.dece.audio": "uva",
+          "audio/vnd.digital-winds": "eol",
+          "audio/vnd.dra": "dra",
+          "audio/vnd.dts": "dts",
+          "audio/vnd.dts.hd": "dtshd",
+          "audio/vnd.lucent.voice": "lvp",
+          "audio/vnd.ms-playready.media.pya": "pya",
+          "audio/vnd.nuera.ecelp4800": "ecelp4800",
+          "audio/vnd.nuera.ecelp7470": "ecelp7470",
+          "audio/vnd.nuera.ecelp9600": "ecelp9600",
+          "audio/vnd.qcelp": "qcp",
+          "audio/vnd.rip": "rip",
+          "audio/voc": "voc",
+          "audio/voxware": "vox",
+          "audio/wav": "wav",
+          "audio/webm": "weba",
+          "audio/x-aac": "aac",
+          "audio/x-adpcm": "snd",
+          "audio/x-aiff": ["aif", "aifc", "aiff"],
+          "audio/x-au": "au",
+          "audio/x-gsm": ["gsd", "gsm"],
+          "audio/x-jam": "jam",
+          "audio/x-liveaudio": "lam",
+          "audio/x-mid": ["mid", "midi"],
+          "audio/x-midi": ["mid", "midi"],
+          "audio/x-mod": "mod",
+          "audio/x-mpeg": "mp2",
+          "audio/x-mpeg-3": "mp3",
+          "audio/x-mpegurl": "m3u",
+          "audio/x-mpequrl": "m3u",
+          "audio/x-ms-wax": "wax",
+          "audio/x-ms-wma": "wma",
+          "audio/x-nspaudio": ["la", "lma"],
+          "audio/x-pn-realaudio": ["ra", "ram", "rm", "rmm", "rmp"],
+          "audio/x-pn-realaudio-plugin": ["ra", "rmp", "rpm"],
+          "audio/x-psid": "sid",
+          "audio/x-realaudio": "ra",
+          "audio/x-twinvq": "vqf",
+          "audio/x-twinvq-plugin": ["vqe", "vql"],
+          "audio/x-vnd.audioexplosion.mjuicemediafile": "mjf",
+          "audio/x-voc": "voc",
+          "audio/x-wav": "wav",
+          "audio/xm": "xm",
+          "chemical/x-cdx": "cdx",
+          "chemical/x-cif": "cif",
+          "chemical/x-cmdf": "cmdf",
+          "chemical/x-cml": "cml",
+          "chemical/x-csml": "csml",
+          "chemical/x-pdb": ["pdb", "xyz"],
+          "chemical/x-xyz": "xyz",
+          "drawing/x-dwf": "dwf",
+          "i-world/i-vrml": "ivr",
+          "image/bmp": ["bmp", "bm"],
+          "image/cgm": "cgm",
+          "image/cis-cod": "cod",
+          "image/cmu-raster": ["ras", "rast"],
+          "image/fif": "fif",
+          "image/florian": ["flo", "turbot"],
+          "image/g3fax": "g3",
+          "image/gif": "gif",
+          "image/ief": ["ief", "iefs"],
+          "image/jpeg": ["jpe", "jpeg", "jpg", "jfif", "jfif-tbnl"],
+          "image/jutvision": "jut",
+          "image/ktx": "ktx",
+          "image/naplps": ["nap", "naplps"],
+          "image/pict": ["pic", "pict"],
+          "image/pipeg": "jfif",
+          "image/pjpeg": ["jfif", "jpe", "jpeg", "jpg"],
+          "image/png": ["png", "x-png"],
+          "image/prs.btif": "btif",
+          "image/svg+xml": "svg",
+          "image/tiff": ["tif", "tiff"],
+          "image/vasa": "mcf",
+          "image/vnd.adobe.photoshop": "psd",
+          "image/vnd.dece.graphic": "uvi",
+          "image/vnd.djvu": "djvu",
+          "image/vnd.dvb.subtitle": "sub",
+          "image/vnd.dwg": ["dwg", "dxf", "svf"],
+          "image/vnd.dxf": "dxf",
+          "image/vnd.fastbidsheet": "fbs",
+          "image/vnd.fpx": "fpx",
+          "image/vnd.fst": "fst",
+          "image/vnd.fujixerox.edmics-mmr": "mmr",
+          "image/vnd.fujixerox.edmics-rlc": "rlc",
+          "image/vnd.ms-modi": "mdi",
+          "image/vnd.net-fpx": ["fpx", "npx"],
+          "image/vnd.rn-realflash": "rf",
+          "image/vnd.rn-realpix": "rp",
+          "image/vnd.wap.wbmp": "wbmp",
+          "image/vnd.xiff": "xif",
+          "image/webp": "webp",
+          "image/x-cmu-raster": "ras",
+          "image/x-cmx": "cmx",
+          "image/x-dwg": ["dwg", "dxf", "svf"],
+          "image/x-freehand": "fh",
+          "image/x-icon": "ico",
+          "image/x-jg": "art",
+          "image/x-jps": "jps",
+          "image/x-niff": ["nif", "niff"],
+          "image/x-pcx": "pcx",
+          "image/x-pict": ["pct", "pic"],
+          "image/x-portable-anymap": "pnm",
+          "image/x-portable-bitmap": "pbm",
+          "image/x-portable-graymap": "pgm",
+          "image/x-portable-greymap": "pgm",
+          "image/x-portable-pixmap": "ppm",
+          "image/x-quicktime": ["qif", "qti", "qtif"],
+          "image/x-rgb": "rgb",
+          "image/x-tiff": ["tif", "tiff"],
+          "image/x-windows-bmp": "bmp",
+          "image/x-xbitmap": "xbm",
+          "image/x-xbm": "xbm",
+          "image/x-xpixmap": ["xpm", "pm"],
+          "image/x-xwd": "xwd",
+          "image/x-xwindowdump": "xwd",
+          "image/xbm": "xbm",
+          "image/xpm": "xpm",
+          "message/rfc822": ["mht", "mhtml", "nws", "mime", "eml"],
+          "model/iges": ["iges", "igs"],
+          "model/mesh": "msh",
+          "model/vnd.collada+xml": "dae",
+          "model/vnd.dwf": "dwf",
+          "model/vnd.gdl": "gdl",
+          "model/vnd.gtw": "gtw",
+          "model/vnd.mts": "mts",
+          "model/vnd.vtu": "vtu",
+          "model/vrml": ["vrml", "wrl", "wrz"],
+          "model/x-pov": "pov",
+          "multipart/x-gzip": "gzip",
+          "multipart/x-ustar": "ustar",
+          "multipart/x-zip": "zip",
+          "music/crescendo": ["mid", "midi"],
+          "music/x-karaoke": "kar",
+          "paleovu/x-pv": "pvu",
+          "text/asp": "asp",
+          "text/calendar": "ics",
+          "text/css": "css",
+          "text/csv": "csv",
+          "text/ecmascript": "js",
+          "text/h323": "323",
+          "text/html": ["htm", "html", "stm", "acgi", "htmls", "htx", "shtml"],
+          "text/iuls": "uls",
+          "text/javascript": "js",
+          "text/mcf": "mcf",
+          "text/n3": "n3",
+          "text/pascal": "pas",
+          "text/plain": ["bas", "c", "h", "txt", "c++", "cc", "com", "conf", "cxx", "def", "f", "f90", "for", "g", "hh", "idc", "jav", "java", "list", "log", "lst", "m", "mar", "pl", "sdml", "text"],
+          "text/plain-bas": "par",
+          "text/prs.lines.tag": "dsc",
+          "text/richtext": ["rtx", "rt", "rtf"],
+          "text/scriplet": "wsc",
+          "text/scriptlet": "sct",
+          "text/sgml": ["sgm", "sgml"],
+          "text/tab-separated-values": "tsv",
+          "text/troff": "t",
+          "text/turtle": "ttl",
+          "text/uri-list": ["uni", "unis", "uri", "uris"],
+          "text/vnd.abc": "abc",
+          "text/vnd.curl": "curl",
+          "text/vnd.curl.dcurl": "dcurl",
+          "text/vnd.curl.mcurl": "mcurl",
+          "text/vnd.curl.scurl": "scurl",
+          "text/vnd.fly": "fly",
+          "text/vnd.fmi.flexstor": "flx",
+          "text/vnd.graphviz": "gv",
+          "text/vnd.in3d.3dml": "3dml",
+          "text/vnd.in3d.spot": "spot",
+          "text/vnd.rn-realtext": "rt",
+          "text/vnd.sun.j2me.app-descriptor": "jad",
+          "text/vnd.wap.wml": "wml",
+          "text/vnd.wap.wmlscript": "wmls",
+          "text/webviewhtml": "htt",
+          "text/x-asm": ["asm", "s"],
+          "text/x-audiosoft-intra": "aip",
+          "text/x-c": ["c", "cc", "cpp"],
+          "text/x-component": "htc",
+          "text/x-fortran": ["f", "f77", "f90", "for"],
+          "text/x-h": ["h", "hh"],
+          "text/x-java-source": ["jav", "java"],
+          "text/x-java-source,java": "java",
+          "text/x-la-asf": "lsx",
+          "text/x-m": "m",
+          "text/x-pascal": "p",
+          "text/x-script": "hlb",
+          "text/x-script.csh": "csh",
+          "text/x-script.elisp": "el",
+          "text/x-script.guile": "scm",
+          "text/x-script.ksh": "ksh",
+          "text/x-script.lisp": "lsp",
+          "text/x-script.perl": "pl",
+          "text/x-script.perl-module": "pm",
+          "text/x-script.phyton": "py",
+          "text/x-script.rexx": "rexx",
+          "text/x-script.scheme": "scm",
+          "text/x-script.sh": "sh",
+          "text/x-script.tcl": "tcl",
+          "text/x-script.tcsh": "tcsh",
+          "text/x-script.zsh": "zsh",
+          "text/x-server-parsed-html": ["shtml", "ssi"],
+          "text/x-setext": "etx",
+          "text/x-sgml": ["sgm", "sgml"],
+          "text/x-speech": ["spc", "talk"],
+          "text/x-uil": "uil",
+          "text/x-uuencode": ["uu", "uue"],
+          "text/x-vcalendar": "vcs",
+          "text/x-vcard": "vcf",
+          "text/xml": "xml",
+          "video/3gpp": "3gp",
+          "video/3gpp2": "3g2",
+          "video/animaflex": "afl",
+          "video/avi": "avi",
+          "video/avs-video": "avs",
+          "video/dl": "dl",
+          "video/fli": "fli",
+          "video/gl": "gl",
+          "video/h261": "h261",
+          "video/h263": "h263",
+          "video/h264": "h264",
+          "video/jpeg": "jpgv",
+          "video/jpm": "jpm",
+          "video/mj2": "mj2",
+          "video/mp4": "mp4",
+          "video/mpeg": ["mp2", "mpa", "mpe", "mpeg", "mpg", "mpv2", "m1v", "m2v", "mp3"],
+          "video/msvideo": "avi",
+          "video/ogg": "ogv",
+          "video/quicktime": ["mov", "qt", "moov"],
+          "video/vdo": "vdo",
+          "video/vivo": ["viv", "vivo"],
+          "video/vnd.dece.hd": "uvh",
+          "video/vnd.dece.mobile": "uvm",
+          "video/vnd.dece.pd": "uvp",
+          "video/vnd.dece.sd": "uvs",
+          "video/vnd.dece.video": "uvv",
+          "video/vnd.fvt": "fvt",
+          "video/vnd.mpegurl": "mxu",
+          "video/vnd.ms-playready.media.pyv": "pyv",
+          "video/vnd.rn-realvideo": "rv",
+          "video/vnd.uvvu.mp4": "uvu",
+          "video/vnd.vivo": ["viv", "vivo"],
+          "video/vosaic": "vos",
+          "video/webm": "webm",
+          "video/x-amt-demorun": "xdr",
+          "video/x-amt-showrun": "xsr",
+          "video/x-atomic3d-feature": "fmf",
+          "video/x-dl": "dl",
+          "video/x-dv": ["dif", "dv"],
+          "video/x-f4v": "f4v",
+          "video/x-fli": "fli",
+          "video/x-flv": "flv",
+          "video/x-gl": "gl",
+          "video/x-isvideo": "isu",
+          "video/x-la-asf": ["lsf", "lsx"],
+          "video/x-m4v": "m4v",
+          "video/x-motion-jpeg": "mjpg",
+          "video/x-mpeg": ["mp2", "mp3"],
+          "video/x-mpeq2a": "mp2",
+          "video/x-ms-asf": ["asf", "asr", "asx"],
+          "video/x-ms-asf-plugin": "asx",
+          "video/x-ms-wm": "wm",
+          "video/x-ms-wmv": "wmv",
+          "video/x-ms-wmx": "wmx",
+          "video/x-ms-wvx": "wvx",
+          "video/x-msvideo": "avi",
+          "video/x-qtc": "qtc",
+          "video/x-scm": "scm",
+          "video/x-sgi-movie": ["movie", "mv"],
+          "windows/metafile": "wmf",
+          "www/mime": "mime",
+          "x-conference/x-cooltalk": "ice",
+          "x-music/x-midi": ["mid", "midi"],
+          "x-world/x-3dmf": ["3dm", "3dmf", "qd3", "qd3d"],
+          "x-world/x-svr": "svr",
+          "x-world/x-vrml": ["flr", "vrml", "wrl", "wrz", "xaf", "xof"],
+          "x-world/x-vrt": "vrt",
+          "xgl/drawing": "xgz",
+          "xgl/movie": "xmz"
+        };
+        var mimetypesExtensions = {
+          "": ["application/andrew-inset", "application/pgp-encrypted"],
+          "*": "application/octet-stream",
+          "123": "application/vnd.lotus-1-2-3",
+          "323": "text/h323",
+          "3dm": "x-world/x-3dmf",
+          "3dmf": "x-world/x-3dmf",
+          "3dml": "text/vnd.in3d.3dml",
+          "3g2": "video/3gpp2",
+          "3gp": "video/3gpp",
+          "7z": "application/x-7z-compressed",
+          "a": "application/octet-stream",
+          "aab": "application/x-authorware-bin",
+          "aac": "audio/x-aac",
+          "aam": "application/x-authorware-map",
+          "aas": "application/x-authorware-seg",
+          "abc": "text/vnd.abc",
+          "abw": "application/x-abiword",
+          "ac": "application/pkix-attr-cert",
+          "acc": "application/vnd.americandynamics.acc",
+          "ace": "application/x-ace-compressed",
+          "acgi": "text/html",
+          "acu": "application/vnd.acucobol",
+          "acx": "application/internet-property-stream",
+          "adp": "audio/adpcm",
+          "aep": "application/vnd.audiograph",
+          "afl": "video/animaflex",
+          "afp": "application/vnd.ibm.modcap",
+          "ahead": "application/vnd.ahead.space",
+          "ai": "application/postscript",
+          "aif": ["audio/aiff", "audio/x-aiff"],
+          "aifc": ["audio/aiff", "audio/x-aiff"],
+          "aiff": ["audio/aiff", "audio/x-aiff"],
+          "aim": "application/x-aim",
+          "aip": "text/x-audiosoft-intra",
+          "air": "application/vnd.adobe.air-application-installer-package+zip",
+          "ait": "application/vnd.dvb.ait",
+          "ami": "application/vnd.amiga.ami",
+          "ani": "application/x-navi-animation",
+          "aos": "application/x-nokia-9000-communicator-add-on-software",
+          "apk": "application/vnd.android.package-archive",
+          "application": "application/x-ms-application",
+          "apr": "application/vnd.lotus-approach",
+          "aps": "application/mime",
+          "arc": "application/octet-stream",
+          "arj": ["application/arj", "application/octet-stream"],
+          "art": "image/x-jg",
+          "asf": "video/x-ms-asf",
+          "asm": "text/x-asm",
+          "aso": "application/vnd.accpac.simply.aso",
+          "asp": "text/asp",
+          "asr": "video/x-ms-asf",
+          "asx": ["video/x-ms-asf", "application/x-mplayer2", "video/x-ms-asf-plugin"],
+          "atc": "application/vnd.acucorp",
+          "atomcat": "application/atomcat+xml",
+          "atomsvc": "application/atomsvc+xml",
+          "atx": "application/vnd.antix.game-component",
+          "au": ["audio/basic", "audio/x-au"],
+          "avi": ["video/avi", "video/msvideo", "application/x-troff-msvideo", "video/x-msvideo"],
+          "avs": "video/avs-video",
+          "aw": "application/applixware",
+          "axs": "application/olescript",
+          "azf": "application/vnd.airzip.filesecure.azf",
+          "azs": "application/vnd.airzip.filesecure.azs",
+          "azw": "application/vnd.amazon.ebook",
+          "bas": "text/plain",
+          "bcpio": "application/x-bcpio",
+          "bdf": "application/x-font-bdf",
+          "bdm": "application/vnd.syncml.dm+wbxml",
+          "bed": "application/vnd.realvnc.bed",
+          "bh2": "application/vnd.fujitsu.oasysprs",
+          "bin": ["application/octet-stream", "application/mac-binary", "application/macbinary", "application/x-macbinary", "application/x-binary"],
+          "bm": "image/bmp",
+          "bmi": "application/vnd.bmi",
+          "bmp": ["image/bmp", "image/x-windows-bmp"],
+          "boo": "application/book",
+          "book": "application/book",
+          "box": "application/vnd.previewsystems.box",
+          "boz": "application/x-bzip2",
+          "bsh": "application/x-bsh",
+          "btif": "image/prs.btif",
+          "bz": "application/x-bzip",
+          "bz2": "application/x-bzip2",
+          "c": ["text/plain", "text/x-c"],
+          "c++": "text/plain",
+          "c11amc": "application/vnd.cluetrust.cartomobile-config",
+          "c11amz": "application/vnd.cluetrust.cartomobile-config-pkg",
+          "c4g": "application/vnd.clonk.c4group",
+          "cab": "application/vnd.ms-cab-compressed",
+          "car": "application/vnd.curl.car",
+          "cat": ["application/vnd.ms-pkiseccat", "application/vnd.ms-pki.seccat"],
+          "cc": ["text/plain", "text/x-c"],
+          "ccad": "application/clariscad",
+          "cco": "application/x-cocoa",
+          "ccxml": "application/ccxml+xml,",
+          "cdbcmsg": "application/vnd.contact.cmsg",
+          "cdf": ["application/cdf", "application/x-cdf", "application/x-netcdf"],
+          "cdkey": "application/vnd.mediastation.cdkey",
+          "cdmia": "application/cdmi-capability",
+          "cdmic": "application/cdmi-container",
+          "cdmid": "application/cdmi-domain",
+          "cdmio": "application/cdmi-object",
+          "cdmiq": "application/cdmi-queue",
+          "cdx": "chemical/x-cdx",
+          "cdxml": "application/vnd.chemdraw+xml",
+          "cdy": "application/vnd.cinderella",
+          "cer": ["application/pkix-cert", "application/x-x509-ca-cert"],
+          "cgm": "image/cgm",
+          "cha": "application/x-chat",
+          "chat": "application/x-chat",
+          "chm": "application/vnd.ms-htmlhelp",
+          "chrt": "application/vnd.kde.kchart",
+          "cif": "chemical/x-cif",
+          "cii": "application/vnd.anser-web-certificate-issue-initiation",
+          "cil": "application/vnd.ms-artgalry",
+          "cla": "application/vnd.claymore",
+          "class": ["application/octet-stream", "application/java", "application/java-byte-code", "application/java-vm", "application/x-java-class"],
+          "clkk": "application/vnd.crick.clicker.keyboard",
+          "clkp": "application/vnd.crick.clicker.palette",
+          "clkt": "application/vnd.crick.clicker.template",
+          "clkw": "application/vnd.crick.clicker.wordbank",
+          "clkx": "application/vnd.crick.clicker",
+          "clp": "application/x-msclip",
+          "cmc": "application/vnd.cosmocaller",
+          "cmdf": "chemical/x-cmdf",
+          "cml": "chemical/x-cml",
+          "cmp": "application/vnd.yellowriver-custom-menu",
+          "cmx": "image/x-cmx",
+          "cod": ["image/cis-cod", "application/vnd.rim.cod"],
+          "com": ["application/octet-stream", "text/plain"],
+          "conf": "text/plain",
+          "cpio": "application/x-cpio",
+          "cpp": "text/x-c",
+          "cpt": ["application/mac-compactpro", "application/x-compactpro", "application/x-cpt"],
+          "crd": "application/x-mscardfile",
+          "crl": ["application/pkix-crl", "application/pkcs-crl"],
+          "crt": ["application/pkix-cert", "application/x-x509-user-cert", "application/x-x509-ca-cert"],
+          "cryptonote": "application/vnd.rig.cryptonote",
+          "csh": ["text/x-script.csh", "application/x-csh"],
+          "csml": "chemical/x-csml",
+          "csp": "application/vnd.commonspace",
+          "css": ["text/css", "application/x-pointplus"],
+          "csv": "text/csv",
+          "cu": "application/cu-seeme",
+          "curl": "text/vnd.curl",
+          "cww": "application/prs.cww",
+          "cxx": "text/plain",
+          "dae": "model/vnd.collada+xml",
+          "daf": "application/vnd.mobius.daf",
+          "davmount": "application/davmount+xml",
+          "dcr": "application/x-director",
+          "dcurl": "text/vnd.curl.dcurl",
+          "dd2": "application/vnd.oma.dd2+xml",
+          "ddd": "application/vnd.fujixerox.ddd",
+          "deb": "application/x-debian-package",
+          "deepv": "application/x-deepv",
+          "def": "text/plain",
+          "der": "application/x-x509-ca-cert",
+          "dfac": "application/vnd.dreamfactory",
+          "dif": "video/x-dv",
+          "dir": "application/x-director",
+          "dis": "application/vnd.mobius.dis",
+          "djvu": "image/vnd.djvu",
+          "dl": ["video/dl", "video/x-dl"],
+          "dll": "application/x-msdownload",
+          "dms": "application/octet-stream",
+          "dna": "application/vnd.dna",
+          "doc": "application/msword",
+          "docm": "application/vnd.ms-word.document.macroenabled.12",
+          "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "dot": "application/msword",
+          "dotm": "application/vnd.ms-word.template.macroenabled.12",
+          "dotx": "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
+          "dp": ["application/commonground", "application/vnd.osgi.dp"],
+          "dpg": "application/vnd.dpgraph",
+          "dra": "audio/vnd.dra",
+          "drw": "application/drafting",
+          "dsc": "text/prs.lines.tag",
+          "dssc": "application/dssc+der",
+          "dtb": "application/x-dtbook+xml",
+          "dtd": "application/xml-dtd",
+          "dts": "audio/vnd.dts",
+          "dtshd": "audio/vnd.dts.hd",
+          "dump": "application/octet-stream",
+          "dv": "video/x-dv",
+          "dvi": "application/x-dvi",
+          "dwf": ["model/vnd.dwf", "drawing/x-dwf"],
+          "dwg": ["application/acad", "image/vnd.dwg", "image/x-dwg"],
+          "dxf": ["application/dxf", "image/vnd.dwg", "image/vnd.dxf", "image/x-dwg"],
+          "dxp": "application/vnd.spotfire.dxp",
+          "dxr": "application/x-director",
+          "ecelp4800": "audio/vnd.nuera.ecelp4800",
+          "ecelp7470": "audio/vnd.nuera.ecelp7470",
+          "ecelp9600": "audio/vnd.nuera.ecelp9600",
+          "edm": "application/vnd.novadigm.edm",
+          "edx": "application/vnd.novadigm.edx",
+          "efif": "application/vnd.picsel",
+          "ei6": "application/vnd.pg.osasli",
+          "el": "text/x-script.elisp",
+          "elc": ["application/x-elc", "application/x-bytecode.elisp"],
+          "eml": "message/rfc822",
+          "emma": "application/emma+xml",
+          "env": "application/x-envoy",
+          "eol": "audio/vnd.digital-winds",
+          "eot": "application/vnd.ms-fontobject",
+          "eps": "application/postscript",
+          "epub": "application/epub+zip",
+          "es": ["application/ecmascript", "application/x-esrehber"],
+          "es3": "application/vnd.eszigno3+xml",
+          "esf": "application/vnd.epson.esf",
+          "etx": "text/x-setext",
+          "evy": ["application/envoy", "application/x-envoy"],
+          "exe": ["application/octet-stream", "application/x-msdownload"],
+          "exi": "application/exi",
+          "ext": "application/vnd.novadigm.ext",
+          "ez2": "application/vnd.ezpix-album",
+          "ez3": "application/vnd.ezpix-package",
+          "f": ["text/plain", "text/x-fortran"],
+          "f4v": "video/x-f4v",
+          "f77": "text/x-fortran",
+          "f90": ["text/plain", "text/x-fortran"],
+          "fbs": "image/vnd.fastbidsheet",
+          "fcs": "application/vnd.isac.fcs",
+          "fdf": "application/vnd.fdf",
+          "fe_launch": "application/vnd.denovo.fcselayout-link",
+          "fg5": "application/vnd.fujitsu.oasysgp",
+          "fh": "image/x-freehand",
+          "fif": ["application/fractals", "image/fif"],
+          "fig": "application/x-xfig",
+          "fli": ["video/fli", "video/x-fli"],
+          "flo": ["image/florian", "application/vnd.micrografx.flo"],
+          "flr": "x-world/x-vrml",
+          "flv": "video/x-flv",
+          "flw": "application/vnd.kde.kivio",
+          "flx": "text/vnd.fmi.flexstor",
+          "fly": "text/vnd.fly",
+          "fm": "application/vnd.framemaker",
+          "fmf": "video/x-atomic3d-feature",
+          "fnc": "application/vnd.frogans.fnc",
+          "for": ["text/plain", "text/x-fortran"],
+          "fpx": ["image/vnd.fpx", "image/vnd.net-fpx"],
+          "frl": "application/freeloader",
+          "fsc": "application/vnd.fsc.weblaunch",
+          "fst": "image/vnd.fst",
+          "ftc": "application/vnd.fluxtime.clip",
+          "fti": "application/vnd.anser-web-funds-transfer-initiation",
+          "funk": "audio/make",
+          "fvt": "video/vnd.fvt",
+          "fxp": "application/vnd.adobe.fxp",
+          "fzs": "application/vnd.fuzzysheet",
+          "g": "text/plain",
+          "g2w": "application/vnd.geoplan",
+          "g3": "image/g3fax",
+          "g3w": "application/vnd.geospace",
+          "gac": "application/vnd.groove-account",
+          "gdl": "model/vnd.gdl",
+          "geo": "application/vnd.dynageo",
+          "gex": "application/vnd.geometry-explorer",
+          "ggb": "application/vnd.geogebra.file",
+          "ggt": "application/vnd.geogebra.tool",
+          "ghf": "application/vnd.groove-help",
+          "gif": "image/gif",
+          "gim": "application/vnd.groove-identity-message",
+          "gl": ["video/gl", "video/x-gl"],
+          "gmx": "application/vnd.gmx",
+          "gnumeric": "application/x-gnumeric",
+          "gph": "application/vnd.flographit",
+          "gqf": "application/vnd.grafeq",
+          "gram": "application/srgs",
+          "grv": "application/vnd.groove-injector",
+          "grxml": "application/srgs+xml",
+          "gsd": "audio/x-gsm",
+          "gsf": "application/x-font-ghostscript",
+          "gsm": "audio/x-gsm",
+          "gsp": "application/x-gsp",
+          "gss": "application/x-gss",
+          "gtar": "application/x-gtar",
+          "gtm": "application/vnd.groove-tool-message",
+          "gtw": "model/vnd.gtw",
+          "gv": "text/vnd.graphviz",
+          "gxt": "application/vnd.geonext",
+          "gz": ["application/x-gzip", "application/x-compressed"],
+          "gzip": ["multipart/x-gzip", "application/x-gzip"],
+          "h": ["text/plain", "text/x-h"],
+          "h261": "video/h261",
+          "h263": "video/h263",
+          "h264": "video/h264",
+          "hal": "application/vnd.hal+xml",
+          "hbci": "application/vnd.hbci",
+          "hdf": "application/x-hdf",
+          "help": "application/x-helpfile",
+          "hgl": "application/vnd.hp-hpgl",
+          "hh": ["text/plain", "text/x-h"],
+          "hlb": "text/x-script",
+          "hlp": ["application/winhlp", "application/hlp", "application/x-helpfile", "application/x-winhelp"],
+          "hpg": "application/vnd.hp-hpgl",
+          "hpgl": "application/vnd.hp-hpgl",
+          "hpid": "application/vnd.hp-hpid",
+          "hps": "application/vnd.hp-hps",
+          "hqx": ["application/mac-binhex40", "application/binhex", "application/binhex4", "application/mac-binhex", "application/x-binhex40", "application/x-mac-binhex40"],
+          "hta": "application/hta",
+          "htc": "text/x-component",
+          "htke": "application/vnd.kenameaapp",
+          "htm": "text/html",
+          "html": "text/html",
+          "htmls": "text/html",
+          "htt": "text/webviewhtml",
+          "htx": "text/html",
+          "hvd": "application/vnd.yamaha.hv-dic",
+          "hvp": "application/vnd.yamaha.hv-voice",
+          "hvs": "application/vnd.yamaha.hv-script",
+          "i2g": "application/vnd.intergeo",
+          "icc": "application/vnd.iccprofile",
+          "ice": "x-conference/x-cooltalk",
+          "ico": "image/x-icon",
+          "ics": "text/calendar",
+          "idc": "text/plain",
+          "ief": "image/ief",
+          "iefs": "image/ief",
+          "ifm": "application/vnd.shana.informed.formdata",
+          "iges": ["application/iges", "model/iges"],
+          "igl": "application/vnd.igloader",
+          "igm": "application/vnd.insors.igm",
+          "igs": ["application/iges", "model/iges"],
+          "igx": "application/vnd.micrografx.igx",
+          "iif": "application/vnd.shana.informed.interchange",
+          "iii": "application/x-iphone",
+          "ima": "application/x-ima",
+          "imap": "application/x-httpd-imap",
+          "imp": "application/vnd.accpac.simply.imp",
+          "ims": "application/vnd.ms-ims",
+          "inf": "application/inf",
+          "ins": ["application/x-internet-signup", "application/x-internett-signup"],
+          "ip": "application/x-ip2",
+          "ipfix": "application/ipfix",
+          "ipk": "application/vnd.shana.informed.package",
+          "irm": "application/vnd.ibm.rights-management",
+          "irp": "application/vnd.irepository.package+xml",
+          "isp": "application/x-internet-signup",
+          "isu": "video/x-isvideo",
+          "it": "audio/it",
+          "itp": "application/vnd.shana.informed.formtemplate",
+          "iv": "application/x-inventor",
+          "ivp": "application/vnd.immervision-ivp",
+          "ivr": "i-world/i-vrml",
+          "ivu": "application/vnd.immervision-ivu",
+          "ivy": "application/x-livescreen",
+          "jad": "text/vnd.sun.j2me.app-descriptor",
+          "jam": ["application/vnd.jam", "audio/x-jam"],
+          "jar": "application/java-archive",
+          "jav": ["text/plain", "text/x-java-source"],
+          "java": ["text/plain", "text/x-java-source,java", "text/x-java-source"],
+          "jcm": "application/x-java-commerce",
+          "jfif": ["image/pipeg", "image/jpeg", "image/pjpeg"],
+          "jfif-tbnl": "image/jpeg",
+          "jisp": "application/vnd.jisp",
+          "jlt": "application/vnd.hp-jlyt",
+          "jnlp": "application/x-java-jnlp-file",
+          "joda": "application/vnd.joost.joda-archive",
+          "jpe": ["image/jpeg", "image/pjpeg"],
+          "jpeg": ["image/jpeg", "image/pjpeg"],
+          "jpg": ["image/jpeg", "image/pjpeg"],
+          "jpgv": "video/jpeg",
+          "jpm": "video/jpm",
+          "jps": "image/x-jps",
+          "js": ["application/javascript", "application/ecmascript", "text/javascript", "text/ecmascript", "application/x-javascript"],
+          "json": "application/json",
+          "jut": "image/jutvision",
+          "kar": ["audio/midi", "music/x-karaoke"],
+          "karbon": "application/vnd.kde.karbon",
+          "kfo": "application/vnd.kde.kformula",
+          "kia": "application/vnd.kidspiration",
+          "kml": "application/vnd.google-earth.kml+xml",
+          "kmz": "application/vnd.google-earth.kmz",
+          "kne": "application/vnd.kinar",
+          "kon": "application/vnd.kde.kontour",
+          "kpr": "application/vnd.kde.kpresenter",
+          "ksh": ["application/x-ksh", "text/x-script.ksh"],
+          "ksp": "application/vnd.kde.kspread",
+          "ktx": "image/ktx",
+          "ktz": "application/vnd.kahootz",
+          "kwd": "application/vnd.kde.kword",
+          "la": ["audio/nspaudio", "audio/x-nspaudio"],
+          "lam": "audio/x-liveaudio",
+          "lasxml": "application/vnd.las.las+xml",
+          "latex": "application/x-latex",
+          "lbd": "application/vnd.llamagraphics.life-balance.desktop",
+          "lbe": "application/vnd.llamagraphics.life-balance.exchange+xml",
+          "les": "application/vnd.hhe.lesson-player",
+          "lha": ["application/octet-stream", "application/lha", "application/x-lha"],
+          "lhx": "application/octet-stream",
+          "link66": "application/vnd.route66.link66+xml",
+          "list": "text/plain",
+          "lma": ["audio/nspaudio", "audio/x-nspaudio"],
+          "log": "text/plain",
+          "lrm": "application/vnd.ms-lrm",
+          "lsf": "video/x-la-asf",
+          "lsp": ["application/x-lisp", "text/x-script.lisp"],
+          "lst": "text/plain",
+          "lsx": ["video/x-la-asf", "text/x-la-asf"],
+          "ltf": "application/vnd.frogans.ltf",
+          "ltx": "application/x-latex",
+          "lvp": "audio/vnd.lucent.voice",
+          "lwp": "application/vnd.lotus-wordpro",
+          "lzh": ["application/octet-stream", "application/x-lzh"],
+          "lzx": ["application/lzx", "application/octet-stream", "application/x-lzx"],
+          "m": ["text/plain", "text/x-m"],
+          "m13": "application/x-msmediaview",
+          "m14": "application/x-msmediaview",
+          "m1v": "video/mpeg",
+          "m21": "application/mp21",
+          "m2a": "audio/mpeg",
+          "m2v": "video/mpeg",
+          "m3u": ["audio/x-mpegurl", "audio/x-mpequrl"],
+          "m3u8": "application/vnd.apple.mpegurl",
+          "m4v": "video/x-m4v",
+          "ma": "application/mathematica",
+          "mads": "application/mads+xml",
+          "mag": "application/vnd.ecowin.chart",
+          "man": "application/x-troff-man",
+          "map": "application/x-navimap",
+          "mar": "text/plain",
+          "mathml": "application/mathml+xml",
+          "mbd": "application/mbedlet",
+          "mbk": "application/vnd.mobius.mbk",
+          "mbox": "application/mbox",
+          "mc$": "application/x-magic-cap-package-1.0",
+          "mc1": "application/vnd.medcalcdata",
+          "mcd": ["application/mcad", "application/vnd.mcd", "application/x-mathcad"],
+          "mcf": ["image/vasa", "text/mcf"],
+          "mcp": "application/netmc",
+          "mcurl": "text/vnd.curl.mcurl",
+          "mdb": "application/x-msaccess",
+          "mdi": "image/vnd.ms-modi",
+          "me": "application/x-troff-me",
+          "meta4": "application/metalink4+xml",
+          "mets": "application/mets+xml",
+          "mfm": "application/vnd.mfmp",
+          "mgp": "application/vnd.osgeo.mapguide.package",
+          "mgz": "application/vnd.proteus.magazine",
+          "mht": "message/rfc822",
+          "mhtml": "message/rfc822",
+          "mid": ["audio/mid", "audio/midi", "music/crescendo", "x-music/x-midi", "audio/x-midi", "application/x-midi", "audio/x-mid"],
+          "midi": ["audio/midi", "music/crescendo", "x-music/x-midi", "audio/x-midi", "application/x-midi", "audio/x-mid"],
+          "mif": ["application/vnd.mif", "application/x-mif", "application/x-frame"],
+          "mime": ["message/rfc822", "www/mime"],
+          "mj2": "video/mj2",
+          "mjf": "audio/x-vnd.audioexplosion.mjuicemediafile",
+          "mjpg": "video/x-motion-jpeg",
+          "mlp": "application/vnd.dolby.mlp",
+          "mm": ["application/base64", "application/x-meme"],
+          "mmd": "application/vnd.chipnuts.karaoke-mmd",
+          "mme": "application/base64",
+          "mmf": "application/vnd.smaf",
+          "mmr": "image/vnd.fujixerox.edmics-mmr",
+          "mny": "application/x-msmoney",
+          "mod": ["audio/mod", "audio/x-mod"],
+          "mods": "application/mods+xml",
+          "moov": "video/quicktime",
+          "mov": "video/quicktime",
+          "movie": "video/x-sgi-movie",
+          "mp2": ["video/mpeg", "audio/mpeg", "video/x-mpeg", "audio/x-mpeg", "video/x-mpeq2a"],
+          "mp3": ["audio/mpeg", "audio/mpeg3", "video/mpeg", "audio/x-mpeg-3", "video/x-mpeg"],
+          "mp4": ["video/mp4", "application/mp4"],
+          "mp4a": "audio/mp4",
+          "mpa": ["video/mpeg", "audio/mpeg"],
+          "mpc": ["application/vnd.mophun.certificate", "application/x-project"],
+          "mpe": "video/mpeg",
+          "mpeg": "video/mpeg",
+          "mpg": ["video/mpeg", "audio/mpeg"],
+          "mpga": "audio/mpeg",
+          "mpkg": "application/vnd.apple.installer+xml",
+          "mpm": "application/vnd.blueice.multipass",
+          "mpn": "application/vnd.mophun.application",
+          "mpp": "application/vnd.ms-project",
+          "mpt": "application/x-project",
+          "mpv": "application/x-project",
+          "mpv2": "video/mpeg",
+          "mpx": "application/x-project",
+          "mpy": "application/vnd.ibm.minipay",
+          "mqy": "application/vnd.mobius.mqy",
+          "mrc": "application/marc",
+          "mrcx": "application/marcxml+xml",
+          "ms": "application/x-troff-ms",
+          "mscml": "application/mediaservercontrol+xml",
+          "mseq": "application/vnd.mseq",
+          "msf": "application/vnd.epson.msf",
+          "msg": "application/vnd.ms-outlook",
+          "msh": "model/mesh",
+          "msl": "application/vnd.mobius.msl",
+          "msty": "application/vnd.muvee.style",
+          "mts": "model/vnd.mts",
+          "mus": "application/vnd.musician",
+          "musicxml": "application/vnd.recordare.musicxml+xml",
+          "mv": "video/x-sgi-movie",
+          "mvb": "application/x-msmediaview",
+          "mwf": "application/vnd.mfer",
+          "mxf": "application/mxf",
+          "mxl": "application/vnd.recordare.musicxml",
+          "mxml": "application/xv+xml",
+          "mxs": "application/vnd.triscape.mxs",
+          "mxu": "video/vnd.mpegurl",
+          "my": "audio/make",
+          "mzz": "application/x-vnd.audioexplosion.mzz",
+          "n-gage": "application/vnd.nokia.n-gage.symbian.install",
+          "n3": "text/n3",
+          "nap": "image/naplps",
+          "naplps": "image/naplps",
+          "nbp": "application/vnd.wolfram.player",
+          "nc": "application/x-netcdf",
+          "ncm": "application/vnd.nokia.configuration-message",
+          "ncx": "application/x-dtbncx+xml",
+          "ngdat": "application/vnd.nokia.n-gage.data",
+          "nif": "image/x-niff",
+          "niff": "image/x-niff",
+          "nix": "application/x-mix-transfer",
+          "nlu": "application/vnd.neurolanguage.nlu",
+          "nml": "application/vnd.enliven",
+          "nnd": "application/vnd.noblenet-directory",
+          "nns": "application/vnd.noblenet-sealer",
+          "nnw": "application/vnd.noblenet-web",
+          "npx": "image/vnd.net-fpx",
+          "nsc": "application/x-conference",
+          "nsf": "application/vnd.lotus-notes",
+          "nvd": "application/x-navidoc",
+          "nws": "message/rfc822",
+          "o": "application/octet-stream",
+          "oa2": "application/vnd.fujitsu.oasys2",
+          "oa3": "application/vnd.fujitsu.oasys3",
+          "oas": "application/vnd.fujitsu.oasys",
+          "obd": "application/x-msbinder",
+          "oda": "application/oda",
+          "odb": "application/vnd.oasis.opendocument.database",
+          "odc": "application/vnd.oasis.opendocument.chart",
+          "odf": "application/vnd.oasis.opendocument.formula",
+          "odft": "application/vnd.oasis.opendocument.formula-template",
+          "odg": "application/vnd.oasis.opendocument.graphics",
+          "odi": "application/vnd.oasis.opendocument.image",
+          "odm": "application/vnd.oasis.opendocument.text-master",
+          "odp": "application/vnd.oasis.opendocument.presentation",
+          "ods": "application/vnd.oasis.opendocument.spreadsheet",
+          "odt": "application/vnd.oasis.opendocument.text",
+          "oga": "audio/ogg",
+          "ogv": "video/ogg",
+          "ogx": "application/ogg",
+          "omc": "application/x-omc",
+          "omcd": "application/x-omcdatamaker",
+          "omcr": "application/x-omcregerator",
+          "onetoc": "application/onenote",
+          "opf": "application/oebps-package+xml",
+          "org": "application/vnd.lotus-organizer",
+          "osf": "application/vnd.yamaha.openscoreformat",
+          "osfpvg": "application/vnd.yamaha.openscoreformat.osfpvg+xml",
+          "otc": "application/vnd.oasis.opendocument.chart-template",
+          "otf": "application/x-font-otf",
+          "otg": "application/vnd.oasis.opendocument.graphics-template",
+          "oth": "application/vnd.oasis.opendocument.text-web",
+          "oti": "application/vnd.oasis.opendocument.image-template",
+          "otp": "application/vnd.oasis.opendocument.presentation-template",
+          "ots": "application/vnd.oasis.opendocument.spreadsheet-template",
+          "ott": "application/vnd.oasis.opendocument.text-template",
+          "oxt": "application/vnd.openofficeorg.extension",
+          "p": "text/x-pascal",
+          "p10": ["application/pkcs10", "application/x-pkcs10"],
+          "p12": ["application/pkcs-12", "application/x-pkcs12"],
+          "p7a": "application/x-pkcs7-signature",
+          "p7b": "application/x-pkcs7-certificates",
+          "p7c": ["application/pkcs7-mime", "application/x-pkcs7-mime"],
+          "p7m": ["application/pkcs7-mime", "application/x-pkcs7-mime"],
+          "p7r": "application/x-pkcs7-certreqresp",
+          "p7s": ["application/pkcs7-signature", "application/x-pkcs7-signature"],
+          "p8": "application/pkcs8",
+          "par": "text/plain-bas",
+          "part": "application/pro_eng",
+          "pas": "text/pascal",
+          "paw": "application/vnd.pawaafile",
+          "pbd": "application/vnd.powerbuilder6",
+          "pbm": "image/x-portable-bitmap",
+          "pcf": "application/x-font-pcf",
+          "pcl": ["application/vnd.hp-pcl", "application/x-pcl"],
+          "pclxl": "application/vnd.hp-pclxl",
+          "pct": "image/x-pict",
+          "pcurl": "application/vnd.curl.pcurl",
+          "pcx": "image/x-pcx",
+          "pdb": ["application/vnd.palm", "chemical/x-pdb"],
+          "pdf": "application/pdf",
+          "pfa": "application/x-font-type1",
+          "pfr": "application/font-tdpfr",
+          "pfunk": ["audio/make", "audio/make.my.funk"],
+          "pfx": "application/x-pkcs12",
+          "pgm": ["image/x-portable-graymap", "image/x-portable-greymap"],
+          "pgn": "application/x-chess-pgn",
+          "pgp": "application/pgp-signature",
+          "pic": ["image/pict", "image/x-pict"],
+          "pict": "image/pict",
+          "pkg": "application/x-newton-compatible-pkg",
+          "pki": "application/pkixcmp",
+          "pkipath": "application/pkix-pkipath",
+          "pko": ["application/ynd.ms-pkipko", "application/vnd.ms-pki.pko"],
+          "pl": ["text/plain", "text/x-script.perl"],
+          "plb": "application/vnd.3gpp.pic-bw-large",
+          "plc": "application/vnd.mobius.plc",
+          "plf": "application/vnd.pocketlearn",
+          "pls": "application/pls+xml",
+          "plx": "application/x-pixclscript",
+          "pm": ["text/x-script.perl-module", "image/x-xpixmap"],
+          "pm4": "application/x-pagemaker",
+          "pm5": "application/x-pagemaker",
+          "pma": "application/x-perfmon",
+          "pmc": "application/x-perfmon",
+          "pml": ["application/vnd.ctc-posml", "application/x-perfmon"],
+          "pmr": "application/x-perfmon",
+          "pmw": "application/x-perfmon",
+          "png": "image/png",
+          "pnm": ["application/x-portable-anymap", "image/x-portable-anymap"],
+          "portpkg": "application/vnd.macports.portpkg",
+          "pot": ["application/vnd.ms-powerpoint", "application/mspowerpoint"],
+          "potm": "application/vnd.ms-powerpoint.template.macroenabled.12",
+          "potx": "application/vnd.openxmlformats-officedocument.presentationml.template",
+          "pov": "model/x-pov",
+          "ppa": "application/vnd.ms-powerpoint",
+          "ppam": "application/vnd.ms-powerpoint.addin.macroenabled.12",
+          "ppd": "application/vnd.cups-ppd",
+          "ppm": "image/x-portable-pixmap",
+          "pps": ["application/vnd.ms-powerpoint", "application/mspowerpoint"],
+          "ppsm": "application/vnd.ms-powerpoint.slideshow.macroenabled.12",
+          "ppsx": "application/vnd.openxmlformats-officedocument.presentationml.slideshow",
+          "ppt": ["application/vnd.ms-powerpoint", "application/mspowerpoint", "application/powerpoint", "application/x-mspowerpoint"],
+          "pptm": "application/vnd.ms-powerpoint.presentation.macroenabled.12",
+          "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          "ppz": "application/mspowerpoint",
+          "prc": "application/x-mobipocket-ebook",
+          "pre": ["application/vnd.lotus-freelance", "application/x-freelance"],
+          "prf": "application/pics-rules",
+          "prt": "application/pro_eng",
+          "ps": "application/postscript",
+          "psb": "application/vnd.3gpp.pic-bw-small",
+          "psd": ["application/octet-stream", "image/vnd.adobe.photoshop"],
+          "psf": "application/x-font-linux-psf",
+          "pskcxml": "application/pskc+xml",
+          "ptid": "application/vnd.pvi.ptid1",
+          "pub": "application/x-mspublisher",
+          "pvb": "application/vnd.3gpp.pic-bw-var",
+          "pvu": "paleovu/x-pv",
+          "pwn": "application/vnd.3m.post-it-notes",
+          "pwz": "application/vnd.ms-powerpoint",
+          "py": "text/x-script.phyton",
+          "pya": "audio/vnd.ms-playready.media.pya",
+          "pyc": "applicaiton/x-bytecode.python",
+          "pyv": "video/vnd.ms-playready.media.pyv",
+          "qam": "application/vnd.epson.quickanime",
+          "qbo": "application/vnd.intu.qbo",
+          "qcp": "audio/vnd.qcelp",
+          "qd3": "x-world/x-3dmf",
+          "qd3d": "x-world/x-3dmf",
+          "qfx": "application/vnd.intu.qfx",
+          "qif": "image/x-quicktime",
+          "qps": "application/vnd.publishare-delta-tree",
+          "qt": "video/quicktime",
+          "qtc": "video/x-qtc",
+          "qti": "image/x-quicktime",
+          "qtif": "image/x-quicktime",
+          "qxd": "application/vnd.quark.quarkxpress",
+          "ra": ["audio/x-realaudio", "audio/x-pn-realaudio", "audio/x-pn-realaudio-plugin"],
+          "ram": "audio/x-pn-realaudio",
+          "rar": "application/x-rar-compressed",
+          "ras": ["image/cmu-raster", "application/x-cmu-raster", "image/x-cmu-raster"],
+          "rast": "image/cmu-raster",
+          "rcprofile": "application/vnd.ipunplugged.rcprofile",
+          "rdf": "application/rdf+xml",
+          "rdz": "application/vnd.data-vision.rdz",
+          "rep": "application/vnd.businessobjects",
+          "res": "application/x-dtbresource+xml",
+          "rexx": "text/x-script.rexx",
+          "rf": "image/vnd.rn-realflash",
+          "rgb": "image/x-rgb",
+          "rif": "application/reginfo+xml",
+          "rip": "audio/vnd.rip",
+          "rl": "application/resource-lists+xml",
+          "rlc": "image/vnd.fujixerox.edmics-rlc",
+          "rld": "application/resource-lists-diff+xml",
+          "rm": ["application/vnd.rn-realmedia", "audio/x-pn-realaudio"],
+          "rmi": "audio/mid",
+          "rmm": "audio/x-pn-realaudio",
+          "rmp": ["audio/x-pn-realaudio-plugin", "audio/x-pn-realaudio"],
+          "rms": "application/vnd.jcp.javame.midlet-rms",
+          "rnc": "application/relax-ng-compact-syntax",
+          "rng": ["application/ringing-tones", "application/vnd.nokia.ringing-tone"],
+          "rnx": "application/vnd.rn-realplayer",
+          "roff": "application/x-troff",
+          "rp": "image/vnd.rn-realpix",
+          "rp9": "application/vnd.cloanto.rp9",
+          "rpm": "audio/x-pn-realaudio-plugin",
+          "rpss": "application/vnd.nokia.radio-presets",
+          "rpst": "application/vnd.nokia.radio-preset",
+          "rq": "application/sparql-query",
+          "rs": "application/rls-services+xml",
+          "rsd": "application/rsd+xml",
+          "rt": ["text/richtext", "text/vnd.rn-realtext"],
+          "rtf": ["application/rtf", "text/richtext", "application/x-rtf"],
+          "rtx": ["text/richtext", "application/rtf"],
+          "rv": "video/vnd.rn-realvideo",
+          "s": "text/x-asm",
+          "s3m": "audio/s3m",
+          "saf": "application/vnd.yamaha.smaf-audio",
+          "saveme": "application/octet-stream",
+          "sbk": "application/x-tbook",
+          "sbml": "application/sbml+xml",
+          "sc": "application/vnd.ibm.secure-container",
+          "scd": "application/x-msschedule",
+          "scm": ["application/vnd.lotus-screencam", "video/x-scm", "text/x-script.guile", "application/x-lotusscreencam", "text/x-script.scheme"],
+          "scq": "application/scvp-cv-request",
+          "scs": "application/scvp-cv-response",
+          "sct": "text/scriptlet",
+          "scurl": "text/vnd.curl.scurl",
+          "sda": "application/vnd.stardivision.draw",
+          "sdc": "application/vnd.stardivision.calc",
+          "sdd": "application/vnd.stardivision.impress",
+          "sdkm": "application/vnd.solent.sdkm+xml",
+          "sdml": "text/plain",
+          "sdp": ["application/sdp", "application/x-sdp"],
+          "sdr": "application/sounder",
+          "sdw": "application/vnd.stardivision.writer",
+          "sea": ["application/sea", "application/x-sea"],
+          "see": "application/vnd.seemail",
+          "seed": "application/vnd.fdsn.seed",
+          "sema": "application/vnd.sema",
+          "semd": "application/vnd.semd",
+          "semf": "application/vnd.semf",
+          "ser": "application/java-serialized-object",
+          "set": "application/set",
+          "setpay": "application/set-payment-initiation",
+          "setreg": "application/set-registration-initiation",
+          "sfd-hdstx": "application/vnd.hydrostatix.sof-data",
+          "sfs": "application/vnd.spotfire.sfs",
+          "sgl": "application/vnd.stardivision.writer-global",
+          "sgm": ["text/sgml", "text/x-sgml"],
+          "sgml": ["text/sgml", "text/x-sgml"],
+          "sh": ["application/x-shar", "application/x-bsh", "application/x-sh", "text/x-script.sh"],
+          "shar": ["application/x-bsh", "application/x-shar"],
+          "shf": "application/shf+xml",
+          "shtml": ["text/html", "text/x-server-parsed-html"],
+          "sid": "audio/x-psid",
+          "sis": "application/vnd.symbian.install",
+          "sit": ["application/x-stuffit", "application/x-sit"],
+          "sitx": "application/x-stuffitx",
+          "skd": "application/x-koan",
+          "skm": "application/x-koan",
+          "skp": ["application/vnd.koan", "application/x-koan"],
+          "skt": "application/x-koan",
+          "sl": "application/x-seelogo",
+          "sldm": "application/vnd.ms-powerpoint.slide.macroenabled.12",
+          "sldx": "application/vnd.openxmlformats-officedocument.presentationml.slide",
+          "slt": "application/vnd.epson.salt",
+          "sm": "application/vnd.stepmania.stepchart",
+          "smf": "application/vnd.stardivision.math",
+          "smi": ["application/smil", "application/smil+xml"],
+          "smil": "application/smil",
+          "snd": ["audio/basic", "audio/x-adpcm"],
+          "snf": "application/x-font-snf",
+          "sol": "application/solids",
+          "spc": ["text/x-speech", "application/x-pkcs7-certificates"],
+          "spf": "application/vnd.yamaha.smaf-phrase",
+          "spl": ["application/futuresplash", "application/x-futuresplash"],
+          "spot": "text/vnd.in3d.spot",
+          "spp": "application/scvp-vp-response",
+          "spq": "application/scvp-vp-request",
+          "spr": "application/x-sprite",
+          "sprite": "application/x-sprite",
+          "src": "application/x-wais-source",
+          "sru": "application/sru+xml",
+          "srx": "application/sparql-results+xml",
+          "sse": "application/vnd.kodak-descriptor",
+          "ssf": "application/vnd.epson.ssf",
+          "ssi": "text/x-server-parsed-html",
+          "ssm": "application/streamingmedia",
+          "ssml": "application/ssml+xml",
+          "sst": ["application/vnd.ms-pkicertstore", "application/vnd.ms-pki.certstore"],
+          "st": "application/vnd.sailingtracker.track",
+          "stc": "application/vnd.sun.xml.calc.template",
+          "std": "application/vnd.sun.xml.draw.template",
+          "step": "application/step",
+          "stf": "application/vnd.wt.stf",
+          "sti": "application/vnd.sun.xml.impress.template",
+          "stk": "application/hyperstudio",
+          "stl": ["application/vnd.ms-pkistl", "application/sla", "application/vnd.ms-pki.stl", "application/x-navistyle"],
+          "stm": "text/html",
+          "stp": "application/step",
+          "str": "application/vnd.pg.format",
+          "stw": "application/vnd.sun.xml.writer.template",
+          "sub": "image/vnd.dvb.subtitle",
+          "sus": "application/vnd.sus-calendar",
+          "sv4cpio": "application/x-sv4cpio",
+          "sv4crc": "application/x-sv4crc",
+          "svc": "application/vnd.dvb.service",
+          "svd": "application/vnd.svd",
+          "svf": ["image/vnd.dwg", "image/x-dwg"],
+          "svg": "image/svg+xml",
+          "svr": ["x-world/x-svr", "application/x-world"],
+          "swf": "application/x-shockwave-flash",
+          "swi": "application/vnd.aristanetworks.swi",
+          "sxc": "application/vnd.sun.xml.calc",
+          "sxd": "application/vnd.sun.xml.draw",
+          "sxg": "application/vnd.sun.xml.writer.global",
+          "sxi": "application/vnd.sun.xml.impress",
+          "sxm": "application/vnd.sun.xml.math",
+          "sxw": "application/vnd.sun.xml.writer",
+          "t": ["text/troff", "application/x-troff"],
+          "talk": "text/x-speech",
+          "tao": "application/vnd.tao.intent-module-archive",
+          "tar": "application/x-tar",
+          "tbk": ["application/toolbook", "application/x-tbook"],
+          "tcap": "application/vnd.3gpp2.tcap",
+          "tcl": ["text/x-script.tcl", "application/x-tcl"],
+          "tcsh": "text/x-script.tcsh",
+          "teacher": "application/vnd.smart.teacher",
+          "tei": "application/tei+xml",
+          "tex": "application/x-tex",
+          "texi": "application/x-texinfo",
+          "texinfo": "application/x-texinfo",
+          "text": ["application/plain", "text/plain"],
+          "tfi": "application/thraud+xml",
+          "tfm": "application/x-tex-tfm",
+          "tgz": ["application/gnutar", "application/x-compressed"],
+          "thmx": "application/vnd.ms-officetheme",
+          "tif": ["image/tiff", "image/x-tiff"],
+          "tiff": ["image/tiff", "image/x-tiff"],
+          "tmo": "application/vnd.tmobile-livetv",
+          "torrent": "application/x-bittorrent",
+          "tpl": "application/vnd.groove-tool-template",
+          "tpt": "application/vnd.trid.tpt",
+          "tr": "application/x-troff",
+          "tra": "application/vnd.trueapp",
+          "trm": "application/x-msterminal",
+          "tsd": "application/timestamped-data",
+          "tsi": "audio/tsp-audio",
+          "tsp": ["application/dsptype", "audio/tsplayer"],
+          "tsv": "text/tab-separated-values",
+          "ttf": "application/x-font-ttf",
+          "ttl": "text/turtle",
+          "turbot": "image/florian",
+          "twd": "application/vnd.simtech-mindmapper",
+          "txd": "application/vnd.genomatix.tuxedo",
+          "txf": "application/vnd.mobius.txf",
+          "txt": "text/plain",
+          "ufd": "application/vnd.ufdl",
+          "uil": "text/x-uil",
+          "uls": "text/iuls",
+          "umj": "application/vnd.umajin",
+          "uni": "text/uri-list",
+          "unis": "text/uri-list",
+          "unityweb": "application/vnd.unity",
+          "unv": "application/i-deas",
+          "uoml": "application/vnd.uoml+xml",
+          "uri": "text/uri-list",
+          "uris": "text/uri-list",
+          "ustar": ["application/x-ustar", "multipart/x-ustar"],
+          "utz": "application/vnd.uiq.theme",
+          "uu": ["application/octet-stream", "text/x-uuencode"],
+          "uue": "text/x-uuencode",
+          "uva": "audio/vnd.dece.audio",
+          "uvh": "video/vnd.dece.hd",
+          "uvi": "image/vnd.dece.graphic",
+          "uvm": "video/vnd.dece.mobile",
+          "uvp": "video/vnd.dece.pd",
+          "uvs": "video/vnd.dece.sd",
+          "uvu": "video/vnd.uvvu.mp4",
+          "uvv": "video/vnd.dece.video",
+          "vcd": "application/x-cdlink",
+          "vcf": "text/x-vcard",
+          "vcg": "application/vnd.groove-vcard",
+          "vcs": "text/x-vcalendar",
+          "vcx": "application/vnd.vcx",
+          "vda": "application/vda",
+          "vdo": "video/vdo",
+          "vew": "application/groupwise",
+          "vis": "application/vnd.visionary",
+          "viv": ["video/vivo", "video/vnd.vivo"],
+          "vivo": ["video/vivo", "video/vnd.vivo"],
+          "vmd": "application/vocaltec-media-desc",
+          "vmf": "application/vocaltec-media-file",
+          "voc": ["audio/voc", "audio/x-voc"],
+          "vos": "video/vosaic",
+          "vox": "audio/voxware",
+          "vqe": "audio/x-twinvq-plugin",
+          "vqf": "audio/x-twinvq",
+          "vql": "audio/x-twinvq-plugin",
+          "vrml": ["model/vrml", "x-world/x-vrml", "application/x-vrml"],
+          "vrt": "x-world/x-vrt",
+          "vsd": ["application/vnd.visio", "application/x-visio"],
+          "vsf": "application/vnd.vsf",
+          "vst": "application/x-visio",
+          "vsw": "application/x-visio",
+          "vtu": "model/vnd.vtu",
+          "vxml": "application/voicexml+xml",
+          "w60": "application/wordperfect6.0",
+          "w61": "application/wordperfect6.1",
+          "w6w": "application/msword",
+          "wad": "application/x-doom",
+          "wav": ["audio/wav", "audio/x-wav"],
+          "wax": "audio/x-ms-wax",
+          "wb1": "application/x-qpro",
+          "wbmp": "image/vnd.wap.wbmp",
+          "wbs": "application/vnd.criticaltools.wbs+xml",
+          "wbxml": "application/vnd.wap.wbxml",
+          "wcm": "application/vnd.ms-works",
+          "wdb": "application/vnd.ms-works",
+          "web": "application/vnd.xara",
+          "weba": "audio/webm",
+          "webm": "video/webm",
+          "webp": "image/webp",
+          "wg": "application/vnd.pmi.widget",
+          "wgt": "application/widget",
+          "wiz": "application/msword",
+          "wk1": "application/x-123",
+          "wks": "application/vnd.ms-works",
+          "wm": "video/x-ms-wm",
+          "wma": "audio/x-ms-wma",
+          "wmd": "application/x-ms-wmd",
+          "wmf": ["windows/metafile", "application/x-msmetafile"],
+          "wml": "text/vnd.wap.wml",
+          "wmlc": "application/vnd.wap.wmlc",
+          "wmls": "text/vnd.wap.wmlscript",
+          "wmlsc": "application/vnd.wap.wmlscriptc",
+          "wmv": "video/x-ms-wmv",
+          "wmx": "video/x-ms-wmx",
+          "wmz": "application/x-ms-wmz",
+          "woff": "application/x-font-woff",
+          "word": "application/msword",
+          "wp": "application/wordperfect",
+          "wp5": ["application/wordperfect", "application/wordperfect6.0"],
+          "wp6": "application/wordperfect",
+          "wpd": ["application/wordperfect", "application/vnd.wordperfect", "application/x-wpwin"],
+          "wpl": "application/vnd.ms-wpl",
+          "wps": "application/vnd.ms-works",
+          "wq1": "application/x-lotus",
+          "wqd": "application/vnd.wqd",
+          "wri": ["application/mswrite", "application/x-wri", "application/x-mswrite"],
+          "wrl": ["model/vrml", "x-world/x-vrml", "application/x-world"],
+          "wrz": ["model/vrml", "x-world/x-vrml"],
+          "wsc": "text/scriplet",
+          "wsdl": "application/wsdl+xml",
+          "wspolicy": "application/wspolicy+xml",
+          "wsrc": "application/x-wais-source",
+          "wtb": "application/vnd.webturbo",
+          "wtk": "application/x-wintalk",
+          "wvx": "video/x-ms-wvx",
+          "x-png": "image/png",
+          "x3d": "application/vnd.hzn-3d-crossword",
+          "xaf": "x-world/x-vrml",
+          "xap": "application/x-silverlight-app",
+          "xar": "application/vnd.xara",
+          "xbap": "application/x-ms-xbap",
+          "xbd": "application/vnd.fujixerox.docuworks.binder",
+          "xbm": ["image/xbm", "image/x-xbm", "image/x-xbitmap"],
+          "xdf": "application/xcap-diff+xml",
+          "xdm": "application/vnd.syncml.dm+xml",
+          "xdp": "application/vnd.adobe.xdp+xml",
+          "xdr": "video/x-amt-demorun",
+          "xdssc": "application/dssc+xml",
+          "xdw": "application/vnd.fujixerox.docuworks",
+          "xenc": "application/xenc+xml",
+          "xer": "application/patch-ops-error+xml",
+          "xfdf": "application/vnd.adobe.xfdf",
+          "xfdl": "application/vnd.xfdl",
+          "xgz": "xgl/drawing",
+          "xhtml": "application/xhtml+xml",
+          "xif": "image/vnd.xiff",
+          "xl": "application/excel",
+          "xla": ["application/vnd.ms-excel", "application/excel", "application/x-msexcel", "application/x-excel"],
+          "xlam": "application/vnd.ms-excel.addin.macroenabled.12",
+          "xlb": ["application/excel", "application/vnd.ms-excel", "application/x-excel"],
+          "xlc": ["application/vnd.ms-excel", "application/excel", "application/x-excel"],
+          "xld": ["application/excel", "application/x-excel"],
+          "xlk": ["application/excel", "application/x-excel"],
+          "xll": ["application/excel", "application/vnd.ms-excel", "application/x-excel"],
+          "xlm": ["application/vnd.ms-excel", "application/excel", "application/x-excel"],
+          "xls": ["application/vnd.ms-excel", "application/excel", "application/x-msexcel", "application/x-excel"],
+          "xlsb": "application/vnd.ms-excel.sheet.binary.macroenabled.12",
+          "xlsm": "application/vnd.ms-excel.sheet.macroenabled.12",
+          "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "xlt": ["application/vnd.ms-excel", "application/excel", "application/x-excel"],
+          "xltm": "application/vnd.ms-excel.template.macroenabled.12",
+          "xltx": "application/vnd.openxmlformats-officedocument.spreadsheetml.template",
+          "xlv": ["application/excel", "application/x-excel"],
+          "xlw": ["application/vnd.ms-excel", "application/excel", "application/x-msexcel", "application/x-excel"],
+          "xm": "audio/xm",
+          "xml": ["application/xml", "text/xml", "application/atom+xml", "application/rss+xml"],
+          "xmz": "xgl/movie",
+          "xo": "application/vnd.olpc-sugar",
+          "xof": "x-world/x-vrml",
+          "xop": "application/xop+xml",
+          "xpi": "application/x-xpinstall",
+          "xpix": "application/x-vnd.ls-xpix",
+          "xpm": ["image/xpm", "image/x-xpixmap"],
+          "xpr": "application/vnd.is-xpr",
+          "xps": "application/vnd.ms-xpsdocument",
+          "xpw": "application/vnd.intercon.formnet",
+          "xslt": "application/xslt+xml",
+          "xsm": "application/vnd.syncml+xml",
+          "xspf": "application/xspf+xml",
+          "xsr": "video/x-amt-showrun",
+          "xul": "application/vnd.mozilla.xul+xml",
+          "xwd": ["image/x-xwd", "image/x-xwindowdump"],
+          "xyz": ["chemical/x-xyz", "chemical/x-pdb"],
+          "yang": "application/yang",
+          "yin": "application/yin+xml",
+          "z": ["application/x-compressed", "application/x-compress"],
+          "zaz": "application/vnd.zzazz.deck+xml",
+          "zip": ["application/zip", "multipart/x-zip", "application/x-zip-compressed", "application/x-compressed"],
+          "zir": "application/vnd.zul",
+          "zmm": "application/vnd.handheld-entertainment+xml",
+          "zoo": "application/octet-stream",
+          "zsh": "text/x-script.zsh"
+        };
+        return {
+          detectExtension,
+          detectMimeType
+        };
+      });
+    }
+  });
+
+  // src/vendor/addressparser.js
+  var require_addressparser = __commonJS({
+    "src/vendor/addressparser.js"(exports, module) {
+      (function(root, factory) {
+        "use strict";
+        if (typeof define === "function" && define.amd) {
+          define(factory);
+        } else if (typeof exports === "object") {
+          module.exports = factory();
+        } else {
+          root.addressparser = factory();
+        }
+      })(exports, function() {
+        "use strict";
+        var addressparser2 = {};
+        addressparser2.parse = function(str) {
+          var tokenizer2 = new addressparser2.Tokenizer(str), tokens = tokenizer2.tokenize();
+          var addresses = [], address = [], parsedAddresses = [];
+          tokens.forEach(function(token) {
+            if (token.type === "operator" && (token.value === "," || token.value === ";")) {
+              if (address.length) {
+                addresses.push(address);
+              }
+              address = [];
+            } else {
+              address.push(token);
+            }
+          });
+          if (address.length) {
+            addresses.push(address);
+          }
+          addresses.forEach(function(address2) {
+            address2 = addressparser2._handleAddress(address2);
+            if (address2.length) {
+              parsedAddresses = parsedAddresses.concat(address2);
+            }
+          });
+          return parsedAddresses;
+        };
+        addressparser2._handleAddress = function(tokens) {
+          var token, isGroup = false, state = "text", address, addresses = [], data = {
+            address: [],
+            comment: [],
+            group: [],
+            text: []
+          }, i, len;
+          for (i = 0, len = tokens.length; i < len; i++) {
+            token = tokens[i];
+            if (token.type === "operator") {
+              switch (token.value) {
+                case "<":
+                  state = "address";
+                  break;
+                case "(":
+                  state = "comment";
+                  break;
+                case ":":
+                  state = "group";
+                  isGroup = true;
+                  break;
+                default:
+                  state = "text";
+              }
+            } else {
+              if (token.value) {
+                data[state].push(token.value);
+              }
+            }
+          }
+          if (!data.text.length && data.comment.length) {
+            data.text = data.comment;
+            data.comment = [];
+          }
+          if (isGroup) {
+            data.text = data.text.join(" ");
+            addresses.push({
+              name: data.text || address && address.name,
+              group: data.group.length ? addressparser2.parse(data.group.join(",")) : []
+            });
+          } else {
+            if (!data.address.length && data.text.length) {
+              for (i = data.text.length - 1; i >= 0; i--) {
+                if (data.text[i].match(/^[^@\s]+@[^@\s]+$/)) {
+                  data.address = data.text.splice(i, 1);
+                  break;
+                }
+              }
+              var _regexHandler = function(address2) {
+                if (!data.address.length) {
+                  data.address = [address2.trim()];
+                  return " ";
+                } else {
+                  return address2;
+                }
+              };
+              if (!data.address.length) {
+                for (i = data.text.length - 1; i >= 0; i--) {
+                  data.text[i] = data.text[i].replace(/\s*\b[^@\s]+@[^@\s]+\b\s*/, _regexHandler).trim();
+                  if (data.address.length) {
+                    break;
+                  }
+                }
+              }
+            }
+            if (!data.text.length && data.comment.length) {
+              data.text = data.comment;
+              data.comment = [];
+            }
+            if (data.address.length > 1) {
+              data.text = data.text.concat(data.address.splice(1));
+            }
+            data.text = data.text.join(" ");
+            data.address = data.address.join(" ");
+            if (!data.address && isGroup) {
+              return [];
+            } else {
+              address = {
+                address: data.address || data.text || "",
+                name: data.text || data.address || ""
+              };
+              if (address.address === address.name) {
+                if ((address.address || "").match(/@/)) {
+                  address.name = "";
+                } else {
+                  address.address = "";
+                }
+              }
+              addresses.push(address);
+            }
+          }
+          return addresses;
+        };
+        addressparser2.Tokenizer = function(str) {
+          this.str = (str || "").toString();
+          this.operatorCurrent = "";
+          this.operatorExpecting = "";
+          this.node = null;
+          this.escaped = false;
+          this.list = [];
+        };
+        addressparser2.Tokenizer.prototype.operators = {
+          '"': '"',
+          "(": ")",
+          "<": ">",
+          ",": "",
+          ":": ";",
+          ";": ""
+        };
+        addressparser2.Tokenizer.prototype.tokenize = function() {
+          var chr, list = [];
+          for (var i = 0, len = this.str.length; i < len; i++) {
+            chr = this.str.charAt(i);
+            this.checkChar(chr);
+          }
+          this.list.forEach(function(node) {
+            node.value = (node.value || "").toString().trim();
+            if (node.value) {
+              list.push(node);
+            }
+          });
+          return list;
+        };
+        addressparser2.Tokenizer.prototype.checkChar = function(chr) {
+          if ((chr in this.operators || chr === "\\") && this.escaped) {
+            this.escaped = false;
+          } else if (this.operatorExpecting && chr === this.operatorExpecting) {
+            this.node = {
+              type: "operator",
+              value: chr
+            };
+            this.list.push(this.node);
+            this.node = null;
+            this.operatorExpecting = "";
+            this.escaped = false;
+            return;
+          } else if (!this.operatorExpecting && chr in this.operators) {
+            this.node = {
+              type: "operator",
+              value: chr
+            };
+            this.list.push(this.node);
+            this.node = null;
+            this.operatorExpecting = this.operators[chr];
+            this.escaped = false;
+            return;
+          }
+          if (!this.escaped && chr === "\\") {
+            this.escaped = true;
+            return;
+          }
+          if (!this.node) {
+            this.node = {
+              type: "text",
+              value: ""
+            };
+            this.list.push(this.node);
+          }
+          if (this.escaped && chr !== "\\") {
+            this.node.value += "\\";
+          }
+          this.node.value += chr;
+          this.escaped = false;
+        };
+        return addressparser2;
+      });
+    }
+  });
+
+  // src/backend/db/mail_rep.js
+  function makeMessageInfo(raw) {
+    if (!raw.author) {
+      throw new Error("No author?!");
+    }
+    if (!raw.date) {
+      throw new Error("No date?!");
+    }
+    if (!raw.attachments || !raw.bodyReps) {
+      throw new Error("No attachments / bodyReps?!");
+    }
+    if (Array.isArray(raw.folderIds)) {
+      throw new Error("raw.folderIds must be a Set, not an Array");
+    }
+    return {
+      id: raw.id,
+      umid: raw.umid || null,
+      guid: raw.guid || null,
+      date: raw.date,
+      dateModified: raw.dateModified || raw.date,
+      author: raw.author,
+      to: raw.to || null,
+      cc: raw.cc || null,
+      bcc: raw.bcc || null,
+      replyTo: raw.replyTo || null,
+      flags: raw.flags || [],
+      folderIds: raw.folderIds || new Set(),
+      hasAttachments: raw.hasAttachments || false,
+      subject: raw.subject != null ? raw.subject : null,
+      snippet: raw.snippet != null ? raw.snippet : null,
+      attachments: raw.attachments,
+      relatedParts: raw.relatedParts || null,
+      references: raw.references || null,
+      bodyReps: raw.bodyReps,
+      authoredBodySize: raw.authoredBodySize || 0,
+      draftInfo: raw.draftInfo || null
+    };
+  }
+  function makeDraftInfo(raw) {
+    return {
+      draftType: raw.draftType,
+      mode: raw.mode || null,
+      refMessageId: raw.refMessageId || null,
+      refMessageDate: raw.refMessageDate || null,
+      sendProblems: raw.sendProblems || null
+    };
+  }
+  function makeBodyPart(raw) {
+    if (raw.type !== "plain" && raw.type !== "html" && raw.type !== "attr") {
+      throw new Error("Bad body type: " + raw.type);
+    }
+    if (raw.sizeEstimate === void 0) {
+      throw new Error("Need size estimate!");
+    }
+    return {
+      type: raw.type,
+      part: raw.part || null,
+      sizeEstimate: raw.sizeEstimate,
+      amountDownloaded: raw.amountDownloaded || 0,
+      isDownloaded: raw.isDownloaded || false,
+      _partInfo: raw._partInfo || null,
+      contentBlob: raw.contentBlob || null,
+      authoredBodySize: raw.authoredBodySize || 0
+    };
+  }
+  function makeAttachmentPart(raw) {
+    if (raw.sizeEstimate === void 0) {
+      throw new Error("Need size estimate!");
+    }
+    if (raw.relId === void 0) {
+      throw new Error("attachments need relIds");
+    }
+    return {
+      relId: raw.relId,
+      name: raw.name != null ? raw.name : null,
+      contentId: raw.contentId || null,
+      type: raw.type || "application/octet-stream",
+      part: raw.part || null,
+      encoding: raw.encoding || null,
+      sizeEstimate: raw.sizeEstimate,
+      downloadState: raw.downloadState || null,
+      file: raw.file || null,
+      charset: raw.charset || null,
+      textFormat: raw.textFormat || null
+    };
+  }
+  var init_mail_rep = __esm({
+    "src/backend/db/mail_rep.js"() {
+    }
+  });
+
+  // src/backend/accounts/activesync/smotocol/parse_full_message.js
+  function parseFullMessage(node, { messageId, umid, folderId }) {
+    let scratchMsg = {
+      id: messageId,
+      umid,
+      guid: "",
+      author: null,
+      to: null,
+      cc: null,
+      bcc: null,
+      replyTo: null,
+      date: null,
+      flags: [],
+      folderIds: new Set([folderId]),
+      hasAttachments: false,
+      subject: null,
+      snippet: null,
+      attachments: [],
+      relatedParts: [],
+      references: [],
+      bodyReps: null
+    };
+    let bodyType, bodySize;
+    for (let child of node.children) {
+      let childText = child.children.length ? child.children[0].textContent : null;
+      switch (child.tag) {
+        case Email_default.Tags.Subject:
+          scratchMsg.subject = childText;
+          break;
+        case Email_default.Tags.From:
+          scratchMsg.author = (0, import_addressparser.parse)(childText)[0] || null;
+          break;
+        case Email_default.Tags.To:
+          scratchMsg.to = (0, import_addressparser.parse)(childText);
+          break;
+        case Email_default.Tags.Cc:
+          scratchMsg.cc = (0, import_addressparser.parse)(childText);
+          break;
+        case Email_default.Tags.ReplyTo:
+          scratchMsg.replyTo = (0, import_addressparser.parse)(childText);
+          break;
+        case Email_default.Tags.DateReceived:
+          scratchMsg.date = new Date(childText).valueOf();
+          break;
+        case Email_default.Tags.Read:
+          if (childText === "1") {
+            scratchMsg.flags.push("\\Seen");
+          }
+          break;
+        case Email_default.Tags.Flag:
+          for (let grandchild of child.children) {
+            if (grandchild.tag === Email_default.Tags.Status && grandchild.children[0].textContent !== "0") {
+              scratchMsg.flags.push("\\Flagged");
+            }
+          }
+          break;
+        case AirSyncBase_default.Tags.Body:
+          for (let grandchild of child.children) {
+            switch (grandchild.tag) {
+              case AirSyncBase_default.Tags.Type:
+                var type = grandchild.children[0].textContent;
+                if (type === AirSyncBase_default.Enums.Type.HTML) {
+                  bodyType = "html";
+                } else {
+                  if (type !== AirSyncBase_default.Enums.Type.PlainText) {
+                    console.warn("A message had a strange body type:", type);
+                  }
+                  bodyType = "plain";
+                }
+                break;
+              case AirSyncBase_default.Tags.EstimatedDataSize:
+                bodySize = grandchild.children[0].textContent;
+                break;
+              default:
+                break;
+            }
+          }
+          break;
+        case Email_default.Tags.BodySize:
+          bodyType = "plain";
+          bodySize = childText;
+          break;
+        case AirSyncBase_default.Tags.Attachments:
+        case Email_default.Tags.Attachments:
+          for (let attachmentNode of child.children) {
+            if (attachmentNode.tag !== AirSyncBase_default.Tags.Attachment && attachmentNode.tag !== Email_default.Tags.Attachment) {
+              continue;
+            }
+            let attachment = {
+              relId: encodeInt(scratchMsg.attachments.length),
+              name: null,
+              contentId: null,
+              type: null,
+              part: null,
+              encoding: null,
+              sizeEstimate: null,
+              downloadState: null,
+              file: null
+            };
+            let isInline = false;
+            for (let attachData of attachmentNode.children) {
+              let dot, ext;
+              let attachDataText = attachData.children.length ? attachData.children[0].textContent : null;
+              switch (attachData.tag) {
+                case AirSyncBase_default.Tags.DisplayName:
+                case Email_default.Tags.DisplayName:
+                  attachment.name = attachDataText;
+                  dot = attachment.name.lastIndexOf(".");
+                  ext = dot > 0 ? attachment.name.substring(dot + 1).toLowerCase() : "";
+                  attachment.type = import_mimetypes.default.detectMimeType(ext);
+                  break;
+                case AirSyncBase_default.Tags.FileReference:
+                case Email_default.Tags.AttName:
+                case Email_default.Tags.Att0Id:
+                  attachment.part = attachDataText;
+                  break;
+                case AirSyncBase_default.Tags.EstimatedDataSize:
+                case Email_default.Tags.AttSize:
+                  attachment.sizeEstimate = parseInt(attachDataText, 10);
+                  break;
+                case AirSyncBase_default.Tags.ContentId:
+                  attachment.contentId = attachDataText;
+                  break;
+                case AirSyncBase_default.Tags.IsInline:
+                  isInline = attachDataText === "1";
+                  break;
+                default:
+                  break;
+              }
+            }
+            if (isInline) {
+              scratchMsg.relatedParts.push(makeAttachmentPart(attachment));
+            } else {
+              scratchMsg.attachments.push(makeAttachmentPart(attachment));
+            }
+          }
+          scratchMsg.hasAttachments = !!scratchMsg.attachments.length;
+          break;
+        default:
+          break;
+      }
+    }
+    scratchMsg.bodyReps = [
+      makeBodyPart({
+        type: bodyType,
+        sizeEstimate: bodySize,
+        amountDownloaded: 0,
+        isDownloaded: false
+      })
+    ];
+    return makeMessageInfo(scratchMsg);
+  }
+  var import_mimetypes, import_addressparser;
+  var init_parse_full_message = __esm({
+    "src/backend/accounts/activesync/smotocol/parse_full_message.js"() {
+      import_mimetypes = __toModule(require_mimetypes());
+      import_addressparser = __toModule(require_addressparser());
+      init_a64();
+      init_mail_rep();
+      init_AirSyncBase();
+      init_Email();
+    }
+  });
+
+  // src/backend/accounts/activesync/smotocol/parse_changed_message.js
+  function parseChangedMessage(node) {
+    let flagChanges = {
+      add: null,
+      remove: null
+    };
+    function setFlagState(flag, beSet) {
+      if (beSet) {
+        if (!flagChanges.add) {
+          flagChanges.add = [];
+        }
+        flagChanges.add.push(flag);
+      } else {
+        if (!flagChanges.remove) {
+          flagChanges.remove = [];
+        }
+        flagChanges.remove.push(flag);
+      }
+    }
+    for (let child of node.children) {
+      let childText = child.children.length ? child.children[0].textContent : null;
+      switch (child.tag) {
+        case Email_default.Tags.Read:
+          setFlagState("\\Seen", childText === "1");
+          break;
+        case Email_default.Tags.Flag:
+          for (let grandchild of child.children) {
+            if (grandchild.tag === Email_default.Tags.Status) {
+              setFlagState("\\Flagged", grandchild.children[0].textContent !== "0");
+            }
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    return { flagChanges };
+  }
+  var init_parse_changed_message = __esm({
+    "src/backend/accounts/activesync/smotocol/parse_changed_message.js"() {
+      init_Email();
+    }
+  });
+
+  // src/backend/accounts/activesync/smotocol/enum_folder_changes.js
+  async function enumerateFolderChanges(conn, { folderSyncKey, folderServerId, filterType, issueIds, emitter }) {
+    let w = new Writer("1.3", 1, "UTF-8");
+    w.stag(AirSync_default.Tags.Sync).stag(AirSync_default.Tags.Collections).stag(AirSync_default.Tags.Collection);
+    if (conn.currentVersion.lt("12.1")) {
+      w.tag(AirSync_default.Tags.Class, "Email");
+    }
+    w.tag(AirSync_default.Tags.SyncKey, folderSyncKey).tag(AirSync_default.Tags.CollectionId, folderServerId).tag(AirSync_default.Tags.GetChanges).stag(AirSync_default.Tags.Options).tag(AirSync_default.Tags.FilterType, filterType);
+    if (conn.currentVersion.lte("12.0")) {
+      w.tag(AirSync_default.Tags.MIMESupport, AirSync_default.Enums.MIMESupport.Never).tag(AirSync_default.Tags.Truncation, AirSync_default.Enums.MIMETruncation.TruncateAll);
+    }
+    w.etag().etag().etag().etag();
+    let response = await conn.postCommand(w);
+    if (!response) {
+      logic(conn, "syncComplete", { emptyResponse: true });
+      return {
+        invalidSyncKey: false,
+        syncKey: folderSyncKey,
+        moreAvailable: false,
+        noChanges: true
+      };
+    }
+    let e = new EventParser();
+    let base = [AirSync_default.Tags.Sync, AirSync_default.Tags.Collections, AirSync_default.Tags.Collection];
+    let status;
+    let newSyncKey;
+    let moreAvailable = false;
+    let addCount = 0, changeCount = 0, removeCount = 0;
+    e.addEventListener(base.concat(AirSync_default.Tags.SyncKey), function(node) {
+      newSyncKey = node.children[0].textContent;
+    });
+    e.addEventListener(base.concat(AirSync_default.Tags.Status), function(node) {
+      status = node.children[0].textContent;
+    });
+    e.addEventListener(base.concat(AirSync_default.Tags.MoreAvailable), function(node) {
+      moreAvailable = true;
+    });
+    e.addEventListener(base.concat(AirSync_default.Tags.Commands, AirSync_default.Tags.Add), function(node) {
+      let messageServerId, nodeToParse;
+      for (let child of node.children) {
+        switch (child.tag) {
+          case AirSync_default.Tags.ServerId:
+            messageServerId = child.children[0].textContent;
+            break;
+          case AirSync_default.Tags.ApplicationData:
+            nodeToParse = child;
+            break;
+          default:
+            break;
+        }
+      }
+      if (nodeToParse && messageServerId) {
+        try {
+          let message = parseFullMessage(nodeToParse, issueIds());
+          addCount++;
+          emitter.emit("add", messageServerId, message);
+        } catch (ex) {
+          console.error("Failed to parse a full message:", ex, "\n", ex.stack);
+        }
+      }
+    });
+    e.addEventListener(base.concat(AirSync_default.Tags.Commands, AirSync_default.Tags.Change), function(node) {
+      let messageServerId, changes;
+      for (let child of node.children) {
+        switch (child.tag) {
+          case AirSync_default.Tags.ServerId:
+            messageServerId = child.children[0].textContent;
+            break;
+          case AirSync_default.Tags.ApplicationData:
+            try {
+              changes = parseChangedMessage(child);
+            } catch (ex) {
+              console.error("Failed to parse a change:", ex, "\n", ex.stack);
+              return;
+            }
+            break;
+          default:
+            break;
+        }
+      }
+      if (messageServerId && changes) {
+        changeCount++;
+        emitter.emit("change", messageServerId, changes);
+      }
+    });
+    e.addEventListener(base.concat(AirSync_default.Tags.Commands, [[AirSync_default.Tags.Delete, AirSync_default.Tags.SoftDelete]]), function(node) {
+      let messageServerId;
+      for (let child of node.children) {
+        switch (child.tag) {
+          case AirSync_default.Tags.ServerId:
+            messageServerId = child.children[0].textContent;
+            break;
+          default:
+            break;
+        }
+      }
+      if (messageServerId) {
+        removeCount++;
+        emitter.emit("remove", messageServerId);
+      }
+    });
+    try {
+      e.run(response);
+    } catch (ex) {
+      console.error("Error parsing Sync response:", ex, "\n", ex.stack);
+      throw new Error("unknown");
+    }
+    if (status === AirSync_default.Enums.Status.Success) {
+      logic(conn, "syncComplete", {
+        added: addCount,
+        changed: changeCount,
+        removed: removeCount
+      });
+      return { invalidSyncKey: false, syncKey: newSyncKey, moreAvailable };
+    } else if (status === AirSync_default.Enums.Status.InvalidSyncKey) {
+      return { invalidSyncKey: true, syncKey: "0", moreAvailable };
+    }
+    logic(conn, "syncError", { status });
+    throw new Error("unknown");
+  }
+  var init_enum_folder_changes = __esm({
+    "src/backend/accounts/activesync/smotocol/enum_folder_changes.js"() {
+      init_logic();
+      init_wbxml();
+      init_AirSync();
+      init_parse_full_message();
+      init_parse_changed_message();
     }
   });
 
@@ -6766,87 +13073,430 @@ var WorkshopBackend = (() => {
     try {
       churnConversation(convInfo, messages, oldConvInfo, convType, convMeta);
     } catch (ex) {
-      logic(scope, "appChurnEx", { ex });
+      logic(scope2, "appChurnEx", { ex });
     }
     return convInfo;
   }
-  var scope;
+  var scope2;
   var init_conv_churn_driver = __esm({
     "src/backend/churn_drivers/conv_churn_driver.js"() {
       init_logic();
       init_conv_churn();
-      scope = {};
-      logic.defineScope(scope, "churnConversationDriver");
+      scope2 = {};
+      logic.defineScope(scope2, "churnConversationDriver");
     }
   });
 
-  // src/backend/db/mail_rep.js
-  function makeMessageInfo(raw) {
-    if (!raw.author) {
-      throw new Error("No author?!");
+  // src/backend/task_helpers/sync_overlay_helpers.js
+  function syncNormalOverlay(id, marker, inProgress, blockedBy) {
+    let status;
+    if (inProgress) {
+      status = "active";
+    } else if (marker) {
+      status = "pending";
+    } else {
+      return null;
     }
-    if (!raw.date) {
-      throw new Error("No date?!");
+    let blocked = null;
+    if (blockedBy) {
+      switch (blockedBy[blockedBy.length - 1][0]) {
+        case "o":
+          blocked = "offline";
+          break;
+        case "c":
+          blocked = "bad-auth";
+          break;
+        case "h":
+          blocked = "unknown";
+          break;
+        default:
+          break;
+      }
     }
-    if (!raw.attachments || !raw.bodyReps) {
-      throw new Error("No attachments / bodyReps?!");
+    return { status, blocked };
+  }
+  function syncPrefixOverlay(fullId, binId, marker, inProgress, blockedBy) {
+    return syncNormalOverlay(binId, marker, inProgress, blockedBy);
+  }
+  var init_sync_overlay_helpers = __esm({
+    "src/backend/task_helpers/sync_overlay_helpers.js"() {
     }
-    if (Array.isArray(raw.folderIds)) {
-      throw new Error("raw.folderIds must be a Set, not an Array");
+  });
+
+  // src/backend/accounts/activesync/tasks/sync_refresh.js
+  var import_evt6, sync_refresh_default;
+  var init_sync_refresh = __esm({
+    "src/backend/accounts/activesync/tasks/sync_refresh.js"() {
+      import_evt6 = __toModule(require_evt());
+      init_logic();
+      init_util();
+      init_date();
+      init_task_definer();
+      init_folder_sync_state_helper();
+      init_get_folder_sync_key();
+      init_infer_filter_type();
+      init_enum_folder_changes();
+      init_id_conversions();
+      init_conv_churn_driver();
+      init_syncbase();
+      init_sync_overlay_helpers();
+      sync_refresh_default = task_definer_default.defineAtMostOnceTask([
+        {
+          name: "sync_refresh",
+          binByArg: "folderId",
+          helped_overlay_folders: syncNormalOverlay,
+          helped_invalidate_overlays(folderId, dataOverlayManager) {
+            dataOverlayManager.announceUpdatedOverlayData("folders", folderId);
+          },
+          helped_already_planned(ctx, rawTask) {
+            return Promise.resolve({
+              result: ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.folderId)
+            });
+          },
+          async helped_plan(ctx, rawTask) {
+            let foldersTOC = await ctx.universe.acquireAccountFoldersTOC(ctx, ctx.accountId);
+            let folderInfo = foldersTOC.foldersById.get(rawTask.folderId);
+            let plannedTask;
+            if (!folderInfo.serverId) {
+              plannedTask = null;
+            } else {
+              plannedTask = shallowClone2(rawTask);
+              plannedTask.resources = [
+                "online",
+                `credentials!${rawTask.accountId}`,
+                `happy!${rawTask.accountId}`
+              ];
+              plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
+            }
+            let groupPromise = ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.folderId);
+            return {
+              taskState: plannedTask,
+              remainInProgressUntil: groupPromise,
+              result: groupPromise
+            };
+          },
+          async helped_execute(ctx, req) {
+            let fromDb = await ctx.beginMutate({
+              syncStates: new Map([[req.folderId, null]])
+            });
+            let rawSyncState = fromDb.syncStates.get(req.folderId);
+            let syncState = new folder_sync_state_helper_default(ctx, rawSyncState, req.accountId, req.folderId, "refresh");
+            let account = await ctx.universe.acquireAccount(ctx, req.accountId);
+            let conn = await account.ensureConnection();
+            let folderInfo = account.getFolderById(req.folderId);
+            let emitter = new import_evt6.default.Emitter();
+            let newConversations = [];
+            let newMessages = [];
+            let issueIds = () => {
+              let umid = syncState.issueUniqueMessageId();
+              let convId = req.accountId + "." + messageIdComponentFromUmid(umid);
+              let messageId = convId + "." + messageIdComponentFromUmid(umid);
+              return { messageId, umid, folderId: req.folderId };
+            };
+            emitter.on("add", (serverMessageId, message) => {
+              syncState.newMessage(serverMessageId, message);
+              let convId = convIdFromMessageId(message.id);
+              newMessages.push(message);
+              let convInfo = churnConversationDriver(convId, null, [message]);
+              newConversations.push(convInfo);
+            });
+            emitter.on("change", (serverMessageId, changes) => {
+              syncState.messageChanged(serverMessageId, changes);
+            });
+            emitter.on("remove", (serverMessageId) => {
+              syncState.messageDeleted(serverMessageId);
+            });
+            let syncKeyTriesAllowed = 1;
+            let syncDate;
+            while (syncKeyTriesAllowed--) {
+              if (!syncState.filterType) {
+                logic(ctx, "inferringFilterType");
+                let results = await inferFilterType(conn, {
+                  folderServerId: folderInfo.serverId,
+                  desiredMessageCount: SYNC_WHOLE_FOLDER_AT_N_MESSAGES
+                });
+                syncState.syncKey = results.syncKey;
+                syncState.filterType = results.filterType;
+              }
+              if (!syncState.syncKey || syncState.syncKey === "0") {
+                syncState.syncKey = (await getFolderSyncKey(conn, {
+                  folderServerId: folderInfo.serverId,
+                  filterType: syncState.filterType
+                })).syncKey;
+              }
+              syncDate = NOW();
+              let {
+                invalidSyncKey,
+                syncKey,
+                moreToSync
+              } = await enumerateFolderChanges(conn, {
+                folderSyncKey: syncState.syncKey,
+                folderServerId: folderInfo.serverId,
+                filterType: syncState.filterType,
+                issueIds,
+                emitter
+              });
+              if (invalidSyncKey) {
+                syncKeyTriesAllowed++;
+                syncState.syncKey = "0";
+                continue;
+              }
+              syncState.syncKey = syncKey;
+              if (moreToSync) {
+                syncState.scheduleAnotherRefreshLikeThisOne(req);
+              }
+            }
+            if (syncState.umidNameReads.size) {
+              await ctx.read({
+                umidNames: syncState.umidNameReads
+              });
+              syncState.generateSyncConvTasks();
+            }
+            return {
+              mutations: {
+                syncStates: new Map([[req.folderId, syncState.rawSyncState]]),
+                umidNames: syncState.umidNameWrites,
+                umidLocations: syncState.umidLocationWrites
+              },
+              newData: {
+                conversations: newConversations,
+                messages: newMessages,
+                tasks: syncState.tasksToSchedule
+              },
+              atomicClobbers: {
+                folders: new Map([
+                  [
+                    req.folderId,
+                    {
+                      lastSuccessfulSyncAt: syncDate,
+                      lastAttemptedSyncAt: syncDate,
+                      failedSyncsSinceLastSuccessfulSync: 0
+                    }
+                  ]
+                ])
+              }
+            };
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/delta_algebra.js
+  function normalizeAndApplyChanges(values, toAdd, toRemove) {
+    if (!Array.isArray(values)) {
+      return normalizeAndApplyChangesToSet(values, toAdd, toRemove);
+    }
+    let actuallyAdded = null;
+    let actuallyRemoved = null;
+    if (toAdd) {
+      for (let addend of toAdd) {
+        if (values.indexOf(addend === -1)) {
+          if (!actuallyAdded) {
+            actuallyAdded = [];
+          }
+          values.push(addend);
+          actuallyAdded.push(addend);
+        }
+      }
+    }
+    if (toRemove) {
+      for (let subtrahend of toRemove) {
+        let index = values.indexOf(subtrahend);
+        if (index !== -1) {
+          if (!actuallyRemoved) {
+            actuallyRemoved = [];
+          }
+          values.splice(index, 1);
+          actuallyRemoved.push(subtrahend);
+        }
+      }
+    }
+    return { add: actuallyAdded, remove: actuallyRemoved };
+  }
+  function normalizeAndApplyChangesToSet(values, toAdd, toRemove) {
+    let actuallyAdded = null;
+    let actuallyRemoved = null;
+    if (toAdd) {
+      for (let addend of toAdd) {
+        if (!values.has(addend)) {
+          if (!actuallyAdded) {
+            actuallyAdded = [];
+          }
+          values.add(addend);
+          actuallyAdded.push(addend);
+        }
+      }
+    }
+    if (toRemove) {
+      for (let subtrahend of toRemove) {
+        if (values.has(subtrahend)) {
+          if (!actuallyRemoved) {
+            actuallyRemoved = [];
+          }
+          values.delete(subtrahend);
+          actuallyRemoved.push(subtrahend);
+        }
+      }
+    }
+    return { add: actuallyAdded, remove: actuallyRemoved };
+  }
+  function applyChanges(value, changes) {
+    if (!Array.isArray(value)) {
+      applyChangesToSet(value, changes);
+      return;
+    }
+    if (changes.add) {
+      for (let addend of changes.add) {
+        if (!value.includes(addend)) {
+          value.push(addend);
+        }
+      }
+    }
+    if (changes.remove) {
+      for (let subtrahend of changes.remove) {
+        let index = value.indexOf(subtrahend);
+        if (index !== -1) {
+          value.splice(subtrahend, 1);
+        }
+      }
+    }
+  }
+  function applyChangesToSet(value, changes) {
+    if (changes.add) {
+      for (let addend of changes.add) {
+        if (!value.has(addend)) {
+          value.push(addend);
+        }
+      }
+    }
+    if (changes.remove) {
+      for (let subtrahend of changes.remove) {
+        if (value.has(subtrahend)) {
+          value.delete(subtrahend);
+        }
+      }
+    }
+  }
+  function concatLists(a, b) {
+    if (a && b) {
+      return a.concat(b);
+    } else if (a) {
+      return a;
+    }
+    return b;
+  }
+  function mergeChanges(existingChanges, newChanges) {
+    let derivedAdd;
+    let derivedRemove;
+    if (existingChanges.add && newChanges.remove || existingChanges.remove && newChanges.add) {
+      derivedAdd = [];
+      let pendingRemove = new Set(newChanges.remove);
+      if (existingChanges.add) {
+        for (let item of existingChanges.add) {
+          if (pendingRemove.has(item)) {
+            pendingRemove.delete(item);
+          } else {
+            derivedAdd.push(item);
+          }
+        }
+      }
+      derivedRemove = [];
+      let pendingAdd = new Set(newChanges.add);
+      if (existingChanges.remove) {
+        for (let item of existingChanges.remove) {
+          if (pendingAdd.has(item)) {
+            pendingAdd.delete(item);
+          } else {
+            derivedRemove.push(item);
+          }
+        }
+      }
+      derivedAdd = concatLists(derivedAdd, Array.from(pendingAdd));
+      derivedRemove = concatLists(derivedRemove, Array.from(pendingRemove));
+    } else {
+      derivedAdd = concatLists(existingChanges.add, newChanges.add);
+      derivedRemove = concatLists(existingChanges.remove, newChanges.remove);
+    }
+    if (derivedAdd && !derivedAdd.length) {
+      derivedAdd = null;
+    }
+    if (derivedRemove && !derivedRemove.length) {
+      derivedRemove = null;
     }
     return {
-      id: raw.id,
-      umid: raw.umid || null,
-      guid: raw.guid || null,
-      date: raw.date,
-      dateModified: raw.dateModified || raw.date,
-      author: raw.author,
-      to: raw.to || null,
-      cc: raw.cc || null,
-      bcc: raw.bcc || null,
-      replyTo: raw.replyTo || null,
-      flags: raw.flags || [],
-      folderIds: raw.folderIds || new Set(),
-      hasAttachments: raw.hasAttachments || false,
-      subject: raw.subject != null ? raw.subject : null,
-      snippet: raw.snippet != null ? raw.snippet : null,
-      attachments: raw.attachments,
-      relatedParts: raw.relatedParts || null,
-      references: raw.references || null,
-      bodyReps: raw.bodyReps,
-      authoredBodySize: raw.authoredBodySize || 0,
-      draftInfo: raw.draftInfo || null
+      add: derivedAdd,
+      remove: derivedRemove
     };
   }
-  function makeDraftInfo(raw) {
-    return {
-      draftType: raw.draftType,
-      mode: raw.mode || null,
-      refMessageId: raw.refMessageId || null,
-      refMessageDate: raw.refMessageDate || null,
-      sendProblems: raw.sendProblems || null
-    };
-  }
-  function makeBodyPart(raw) {
-    if (raw.type !== "plain" && raw.type !== "html" && raw.type !== "attr") {
-      throw new Error("Bad body type: " + raw.type);
+  var init_delta_algebra = __esm({
+    "src/backend/delta_algebra.js"() {
     }
-    if (raw.sizeEstimate === void 0) {
-      throw new Error("Need size estimate!");
+  });
+
+  // src/backend/task_mixins/mix_sync_conv.js
+  var mix_sync_conv_default;
+  var init_mix_sync_conv = __esm({
+    "src/backend/task_mixins/mix_sync_conv.js"() {
+      init_conv_churn_driver();
+      mix_sync_conv_default = {
+        async plan(ctx, req) {
+          let fromDb = await ctx.beginMutate({
+            conversations: new Map([[req.convId, null]]),
+            messagesByConversation: new Map([[req.convId, null]])
+          });
+          let loadedMessages = fromDb.messagesByConversation.get(req.convId);
+          let modifiedMessagesMap = new Map();
+          let umidNameWrites = new Map();
+          let keptMessages = [];
+          for (let message of loadedMessages) {
+            if (req.removedUmids && req.removedUmids.has(message.umid)) {
+              modifiedMessagesMap.set(message.id, null);
+              umidNameWrites.set(message.umid, null);
+            } else {
+              keptMessages.push(message);
+              if (req.modifiedUmids && req.modifiedUmids.has(message.umid)) {
+                this.applyChanges(message, req.modifiedUmids.get(message.umid));
+                modifiedMessagesMap.set(message.id, message);
+              }
+            }
+          }
+          let convInfo;
+          if (keptMessages.length) {
+            let oldConvInfo = fromDb.conversations.get(req.convId);
+            convInfo = churnConversationDriver(req.convId, oldConvInfo, keptMessages);
+          } else {
+            convInfo = null;
+          }
+          await ctx.finishTask({
+            mutations: {
+              conversations: new Map([[req.convId, convInfo]]),
+              messages: modifiedMessagesMap,
+              umidNames: umidNameWrites
+            }
+          });
+        },
+        execute: null
+      };
     }
-    return {
-      type: raw.type,
-      part: raw.part || null,
-      sizeEstimate: raw.sizeEstimate,
-      amountDownloaded: raw.amountDownloaded || 0,
-      isDownloaded: raw.isDownloaded || false,
-      _partInfo: raw._partInfo || null,
-      contentBlob: raw.contentBlob || null,
-      authoredBodySize: raw.authoredBodySize || 0
-    };
-  }
-  var init_mail_rep = __esm({
-    "src/backend/db/mail_rep.js"() {
+  });
+
+  // src/backend/accounts/activesync/tasks/sync_conv.js
+  var sync_conv_default;
+  var init_sync_conv = __esm({
+    "src/backend/accounts/activesync/tasks/sync_conv.js"() {
+      init_task_definer();
+      init_delta_algebra();
+      init_mix_sync_conv();
+      sync_conv_default = task_definer_default.defineSimpleTask([
+        mix_sync_conv_default,
+        {
+          name: "sync_conv",
+          applyChanges(message, flagChanges) {
+            applyChanges(message.flags, flagChanges);
+          }
+        }
+      ]);
     }
   });
 
@@ -9082,14 +15732,14 @@ var WorkshopBackend = (() => {
           var oot = keepText.join("");
           return oot;
         },
-        _filterDeclarations: function(parent, decls, allowedStyles, fullText, textOut) {
+        _filterDeclarations: function(parent2, decls, allowedStyles, fullText, textOut) {
           for (var i = 0; i < decls.length; i++) {
             var decl = decls[i];
             if (decl.type !== "DECLARATION") {
               continue;
             }
             if (allowedStyles.indexOf(decl.name) !== -1) {
-              textOut.push(fullText.substring(decl.startTok.loc.start.idx, parent && parent.endTok === decl.endTok ? decl.endTok.loc.start.idx : decl.endTok.loc.end.idx + 1));
+              textOut.push(fullText.substring(decl.startTok.loc.start.idx, parent2 && parent2.endTok === decl.endTok ? decl.endTok.loc.start.idx : decl.endTok.loc.end.idx + 1));
             }
           }
         },
@@ -9372,46 +16022,6 @@ var WorkshopBackend = (() => {
         8364: "euro"
       };
       entityRegExp = /\&([#a-zA-Z0-9]+);/g;
-    }
-  });
-
-  // src/backend/syncbase.js
-  var AUTOCONFIG_TIMEOUT_MS, ISPDB_AUTOCONFIG_ROOT, POP3_INFER_ATTACHMENTS_SIZE, POP3_SNIPPET_SIZE_GOAL, OLDEST_SYNC_DATE, BYTES_PER_BLOB_CHUNK, BYTES_PER_IMAP_FETCH_CHUNK_REQUEST, CHECK_INTERVALS_ENUMS_TO_MS, SYNC_RANGE_ENUMS_TO_MS, DESIRED_SNIPPET_LENGTH, DEFAULT_SEARCH_EXCERPT_SETTINGS, BLOB_BASE64_BATCH_CONVERT_SIZE, CRONSYNC_MAX_DURATION_MS;
-  var init_syncbase = __esm({
-    "src/backend/syncbase.js"() {
-      init_date();
-      AUTOCONFIG_TIMEOUT_MS = 30 * 1e3;
-      ISPDB_AUTOCONFIG_ROOT = "https://live.mozillamessaging.com/autoconfig/v1.1/";
-      POP3_INFER_ATTACHMENTS_SIZE = 512 * 1024;
-      POP3_SNIPPET_SIZE_GOAL = 4 * 1024;
-      OLDEST_SYNC_DATE = Date.UTC(1990, 0, 1);
-      BYTES_PER_BLOB_CHUNK = 1024 * 1024;
-      BYTES_PER_IMAP_FETCH_CHUNK_REQUEST = 1024 * 1024;
-      CHECK_INTERVALS_ENUMS_TO_MS = {
-        manual: 0,
-        "3min": 3 * 60 * 1e3,
-        "5min": 5 * 60 * 1e3,
-        "10min": 10 * 60 * 1e3,
-        "15min": 15 * 60 * 1e3,
-        "30min": 30 * 60 * 1e3,
-        "60min": 60 * 60 * 1e3
-      };
-      SYNC_RANGE_ENUMS_TO_MS = {
-        auto: 30 * DAY_MILLIS,
-        "1d": 1 * DAY_MILLIS,
-        "3d": 3 * DAY_MILLIS,
-        "1w": 7 * DAY_MILLIS,
-        "2w": 14 * DAY_MILLIS,
-        "1m": 30 * DAY_MILLIS,
-        all: 30 * 365 * DAY_MILLIS
-      };
-      DESIRED_SNIPPET_LENGTH = 160;
-      DEFAULT_SEARCH_EXCERPT_SETTINGS = {
-        charsBefore: 16,
-        charsAfter: 40
-      };
-      BLOB_BASE64_BATCH_CONVERT_SIZE = 9198 * 57;
-      CRONSYNC_MAX_DURATION_MS = 60 * 1e3;
     }
   });
 
@@ -9965,6 +16575,9 @@ var WorkshopBackend = (() => {
     }
     return makeBodyPartsFromTextAndHTML(textMsg, htmlMsg);
   }
+  function mergeUserTextWithHTML(text, html) {
+    return HTML_WRAP_TOP + wrapTextIntoSafeHTMLString(text, "div") + html + HTML_WRAP_BOTTOM;
+  }
   function processMessageContent(content, type, isDownloaded, generateSnippet3) {
     if (content.slice(-1) === "\n") {
       content = content.slice(0, -1);
@@ -9977,14 +16590,14 @@ var WorkshopBackend = (() => {
           parsedContent = quoteProcessTextBody(content);
           authoredBodySize = estimateAuthoredBodySize(parsedContent);
         } catch (ex) {
-          logic(scope2, "textChewError", { ex });
+          logic(scope3, "textChewError", { ex });
           parsedContent = [];
         }
         if (generateSnippet3) {
           try {
             snippet = generateSnippet(parsedContent, DESIRED_SNIPPET_LENGTH);
           } catch (ex) {
-            logic(scope2, "textSnippetError", { ex });
+            logic(scope3, "textSnippetError", { ex });
             snippet = "";
           }
         }
@@ -9997,7 +16610,7 @@ var WorkshopBackend = (() => {
           try {
             snippet = generateSnippet2(content);
           } catch (ex) {
-            logic(scope2, "htmlSnippetError", { ex });
+            logic(scope3, "htmlSnippetError", { ex });
             snippet = "";
           }
         }
@@ -10007,7 +16620,7 @@ var WorkshopBackend = (() => {
             contentBlob = new Blob([parsedContent], { type: "text/html" });
             authoredBodySize = generateSearchableTextVersion(parsedContent, false).length;
           } catch (ex) {
-            logic(scope2, "htmlParseError", { ex });
+            logic(scope3, "htmlParseError", { ex });
             parsedContent = "";
           }
         }
@@ -10028,7 +16641,7 @@ var WorkshopBackend = (() => {
       authoredBodySize: contentBlob.size
     };
   }
-  var scope2, RE_RE, RE_FWD, l10n_wroteString, l10n_originalMessageString, l10n_forward_header_labels;
+  var scope3, RE_RE, RE_FWD, l10n_wroteString, l10n_originalMessageString, l10n_forward_header_labels, HTML_WRAP_TOP, HTML_WRAP_BOTTOM;
   var init_mailchew = __esm({
     "src/backend/bodies/mailchew.js"() {
       init_logic();
@@ -10038,7 +16651,7 @@ var WorkshopBackend = (() => {
       init_htmlchew();
       init_syncbase();
       init_mail_rep();
-      scope2 = logic.scope("MailChew");
+      scope3 = logic.scope("MailChew");
       RE_RE = /^[Rr][Ee]:/;
       RE_FWD = /^[Ff][Ww][Dd]:/;
       l10n_wroteString = "{name} wrote";
@@ -10057,6 +16670,2906 @@ var WorkshopBackend = (() => {
       events.on("strings", function(strings2) {
         setLocalizedStrings(strings2);
       });
+      HTML_WRAP_TOP = '<html><body><body bgcolor="#FFFFFF" text="#000000">';
+      HTML_WRAP_BOTTOM = "</body></html>";
+    }
+  });
+
+  // src/backend/accounts/activesync/smotocol/download_body.js
+  async function downloadBody(conn, { folderServerId, messageServerId, bodyType, truncationSize }) {
+    let w = new Writer("1.3", 1, "UTF-8");
+    w.stag(ItemOperations_default.Tags.Tags.ItemOperations).stag(ItemOperations_default.Tags.Fetch).tag(ItemOperations_default.Tags.Store, "Mailbox").tag(AirSync_default.Tags.CollectionId, folderServerId).tag(AirSync_default.Tags.ServerId, messageServerId).stag(ItemOperations_default.Tags.Options).stag(ItemOperations_default.Tags.Schema).tag(AirSyncBase_default.Tags.Body).etag().stag(AirSyncBase_default.Tags.BodyPreference).tag(AirSyncBase_default.Tags.Type, bodyType);
+    if (truncationSize) {
+      w.tag(AirSyncBase_default.Tags.TruncationSize, truncationSize);
+    }
+    w.etag().etag().etag().etag();
+    let response = await conn.postCommand(w);
+    let e = new EventParser();
+    let status, bodyContent;
+    e.addEventListener([ItemOperations_default.Tags.ItemOperations, ItemOperations_default.Tags.Status], function(node) {
+      status = node.children[0].textContent;
+    });
+    e.addEventListener([
+      ItemOperations_default.Tags.ItemOperations,
+      ItemOperations_default.Tags.Response,
+      ItemOperations_default.Tags.Fetch,
+      ItemOperations_default.Tags.Properties,
+      AirSyncBase_default.Tags.Body,
+      AirSyncBase_default.Tags.Data
+    ], function(node) {
+      bodyContent = node.children[0].textContent;
+    });
+    try {
+      e.run(response);
+    } catch (ex) {
+      console.error("Error parsing FolderSync response:", ex, "\n", ex.stack);
+      throw new Error("unknown");
+    }
+    if (status !== ItemOperations_default.Enums.Status.Success) {
+      throw new Error("unknown");
+    }
+    return { bodyContent };
+  }
+  var init_download_body = __esm({
+    "src/backend/accounts/activesync/smotocol/download_body.js"() {
+      init_wbxml();
+      init_ItemOperations();
+      init_AirSync();
+      init_AirSyncBase();
+    }
+  });
+
+  // src/backend/accounts/activesync/smotocol/download_body_25.js
+  async function downloadBody2(conn, { folderSyncKey, folderServerId, messageServerId, bodyType }) {
+    let w = new Writer("1.3", 1, "UTF-8");
+    w.stag(AirSync_default.Tags.Sync).stag(AirSync_default.Tags.Collections).stag(AirSync_default.Tags.Collection).tag(AirSync_default.Tags.Class, "Email").tag(AirSync_default.Tags.SyncKey, folderSyncKey).tag(AirSync_default.Tags.CollectionId, folderServerId).stag(AirSync_default.Tags.Options).tag(AirSync_default.Tags.MIMESupport, AirSync_default.Tags.Enums.MIMESupport.Never).etag().stag(AirSync_default.Tags.Commands).stag(AirSync_default.Tags.Fetch).tag(AirSync_default.Tags.ServerId, messageServerId).etag().etag().etag().etag().etag();
+    let response = await conn.postCommand(w);
+    let e = new EventParser();
+    let base = [AirSync_default.Tags.Sync, AirSync_default.Tags.Collections, AirSync_default.Tags.Collection];
+    let newSyncKey, status, bodyContent;
+    e.addEventListener(base.concat(AirSync_default.Tags.SyncKey), function(node) {
+      newSyncKey = node.children[0].textContent;
+    });
+    e.addEventListener(base.concat(AirSync_default.Tags.Status), function(node) {
+      status = node.children[0].textContent;
+    });
+    e.addEventListener(base.concat(AirSync_default.Tags.Responses, AirSync_default.Tags.Fetch, AirSync_default.Tags.ApplicationData, Email_default.Tags.Body), function(node) {
+      bodyContent = node.children[0].textContent;
+    });
+    try {
+      e.run(response);
+    } catch (ex) {
+      console.error("Error parsing FolderSync response:", ex, "\n", ex.stack);
+      throw new Error("unknown");
+    }
+    if (status !== ItemOperations_default.Enums.Status.Success) {
+      throw new Error("unknown");
+    }
+    return { syncKey: newSyncKey, bodyContent };
+  }
+  var init_download_body_25 = __esm({
+    "src/backend/accounts/activesync/smotocol/download_body_25.js"() {
+      init_wbxml();
+      init_ItemOperations();
+      init_AirSync();
+      init_Email();
+    }
+  });
+
+  // src/backend/task_mixins/mix_sync_body.js
+  var mix_sync_body_default;
+  var init_mix_sync_body = __esm({
+    "src/backend/task_mixins/mix_sync_body.js"() {
+      mix_sync_body_default = {
+        name: "sync_body",
+        initPersistentState() {
+          return null;
+        },
+        deriveMemoryStateFromPersistentState() {
+          return {
+            memoryState: new Map(),
+            markers: []
+          };
+        },
+        async plan(ctx, persistentState, memoryState, rawTask) {
+          let planned = memoryState.get(rawTask.convId);
+          if (planned) {
+            if (rawTask.amount && (!planned.amount || planned.amount === "snippet")) {
+              planned.amount = rawTask.amount;
+            }
+            if (rawTask.fullBodyMessageIds) {
+              if (planned.fullBodyMessageIds) {
+                planned.fullBodyMessageIds = new Set(planned.fullBodyMessageIds);
+                for (let messageId of rawTask.fullBodyMessageIds) {
+                  planned.fullBodyMessageIds.add(messageId);
+                }
+              } else {
+                planned.fullBodyMessageIds = rawTask.fullBodyMessageIds;
+              }
+            }
+          } else {
+            planned = {
+              markerId: "sync_body:" + rawTask.convId,
+              convId: rawTask.convId,
+              amount: rawTask.amount,
+              fullBodyMessageIds: rawTask.fullBodyMessageIds
+            };
+            memoryState.set(planned.convId, planned);
+          }
+          let priorityTags = [`view:conv:${planned.convId}`];
+          if (planned.fullBodyMessageIds) {
+            for (let messageId of planned.fullBodyMessageIds) {
+              priorityTags.push(`view:body:${messageId}`);
+            }
+          }
+          let modifyTaskMarkers = new Map([
+            [
+              planned.markerId,
+              {
+                type: this.name,
+                id: planned.markerId,
+                accountId: rawTask.accountId,
+                convId: planned.convId,
+                priorityTags,
+                exclusiveResources: [`conv:${planned.convId}`]
+              }
+            ]
+          ]);
+          await ctx.finishTask({
+            taskState: null,
+            taskMarkers: modifyTaskMarkers
+          });
+        }
+      };
+    }
+  });
+
+  // src/backend/accounts/activesync/tasks/sync_body.js
+  var DESIRED_TEXT_SNIPPET_BYTES, sync_body_default;
+  var init_sync_body = __esm({
+    "src/backend/accounts/activesync/tasks/sync_body.js"() {
+      init_task_definer();
+      init_folder_sync_state_helper();
+      init_conv_churn_driver();
+      init_mailchew();
+      init_download_body();
+      init_download_body_25();
+      init_AirSyncBase();
+      init_syncbase();
+      init_mix_sync_body();
+      DESIRED_TEXT_SNIPPET_BYTES = 512;
+      sync_body_default = task_definer_default.defineComplexTask([
+        mix_sync_body_default,
+        {
+          async execute(ctx, persistentState, memoryState, marker) {
+            let req = memoryState.get(marker.convId);
+            let account = await ctx.universe.acquireAccount(ctx, marker.accountId);
+            let conn = await account.ensureConnection();
+            let use25 = conn.currentVersion.lt("12.0");
+            let fromDb = await ctx.beginMutate({
+              conversations: new Map([[req.convId, null]]),
+              messagesByConversation: new Map([[req.convId, null]])
+            });
+            let oldConvInfo = fromDb.conversations.get(req.convId);
+            let loadedMessages = fromDb.messagesByConversation.get(req.convId);
+            let modifiedMessagesMap = new Map();
+            let umidLocations = new Map();
+            for (let message of loadedMessages) {
+              umidLocations.set(message.umid, null);
+            }
+            await ctx.read({
+              umidLocations
+            });
+            let rawSyncStateReads = new Map();
+            for (let [folderId] of umidLocations.values()) {
+              rawSyncStateReads.set(folderId, null);
+            }
+            await ctx.mutateMore({
+              syncStates: rawSyncStateReads
+            });
+            let syncStates = new Map();
+            for (let [folderId, rawSyncState] of rawSyncStateReads) {
+              syncStates.set(folderId, new folder_sync_state_helper_default(ctx, rawSyncState, marker.accountId, folderId));
+            }
+            let truncationSize = 0;
+            if (req.amount === "snippet") {
+              truncationSize = DESIRED_SNIPPET_LENGTH;
+            } else if (req.amount) {
+              truncationSize = req.amount;
+            }
+            for (let message of loadedMessages) {
+              let [folderId, messageServerId] = umidLocations.get(message.umid);
+              let folderInfo = account.getFolderById(folderId);
+              let folderServerId = folderInfo.serverId;
+              let syncState = syncStates.get(folderId);
+              let bodyRep = message.bodyReps[0];
+              let bodyType = bodyRep.type;
+              let snippetOnly = false;
+              if (truncationSize && truncationSize < bodyRep.sizeEstimate) {
+                snippetOnly = true;
+                if (!use25) {
+                  bodyType = "plain";
+                  truncationSize = DESIRED_TEXT_SNIPPET_BYTES;
+                }
+              }
+              let asBodyType = bodyType === "html" ? AirSyncBase_default.Enums.Type.HTML : AirSyncBase_default.Enums.Type.PlainText;
+              let bodyContent;
+              if (use25) {
+                let result = await downloadBody2(conn, {
+                  folderSyncKey: syncState.syncKey,
+                  folderServerId,
+                  messageServerId,
+                  bodyType: asBodyType
+                });
+                bodyContent = result.bodyContent;
+                syncState.syncKey = result.syncKey;
+              } else {
+                bodyContent = (await downloadBody(conn, {
+                  folderServerId,
+                  messageServerId,
+                  bodyType: asBodyType,
+                  truncationSize
+                })).bodyContent;
+              }
+              bodyContent = bodyContent.replace(/\r/g, "");
+              let { contentBlob, snippet } = processMessageContent(bodyContent, bodyType, !snippetOnly, true);
+              message.snippet = snippet;
+              if (!snippetOnly) {
+                bodyRep.contentBlob = contentBlob;
+                bodyRep.isDownloaded = true;
+              }
+              modifiedMessagesMap.set(message.id, message);
+            }
+            let convInfo = churnConversationDriver(req.convId, oldConvInfo, loadedMessages);
+            memoryState.delete(req.convId);
+            await ctx.finishTask({
+              mutations: {
+                conversations: new Map([[req.convId, convInfo]]),
+                messages: modifiedMessagesMap,
+                syncStates: rawSyncStateReads
+              }
+            });
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/accounts/activesync/smotocol/modify_folder_messages.js
+  async function modifyFolderMessages(conn, args) {
+    let { folderServerId, folderSyncKey, permanentDeletion } = args;
+    let readMap = args.read || new Map();
+    let flagMap = args.flag || new Map();
+    let deleteSet = args.delete || new Set();
+    let w = new Writer("1.3", 1, "UTF-8");
+    w.stag(AirSync_default.Tags.Sync).stag(AirSync_default.Tags.Collections).stag(AirSync_default.Tags.Collection);
+    if (conn.currentVersion.lt("12.1")) {
+      w.tag(AirSync_default.Tags.Class, "Email");
+    }
+    w.tag(AirSync_default.Tags.SyncKey, folderSyncKey).tag(AirSync_default.Tags.CollectionId, folderServerId).tag(AirSync_default.Tags.DeletesAsMoves, permanentDeletion ? "0" : 1).tag(AirSync_default.Tags.GetChanges, "0").stag(AirSync_default.Tags.Commands);
+    for (let [serverId, beRead] of readMap) {
+      w.stag(AirSync_default.Tags.Change).tag(AirSync_default.Tags.ServerId, serverId).stag(AirSync_default.Tags.ApplicationData).tag(Email_default.Tags.Read, beRead ? "1" : "0").etag(AirSync_default.Tags.ApplicationData).etag(AirSync_default.Tags.Change);
+    }
+    for (let [serverId, beFlagged] of flagMap) {
+      w.stag(AirSync_default.Tags.Change).tag(AirSync_default.Tags.ServerId, serverId).stag(AirSync_default.Tags.ApplicationData).stag(Email_default.Tags.Flag).tag(Email_default.Tags.Status, beFlagged ? "2" : "0").etag().etag(AirSync_default.Tags.ApplicationData).etag(AirSync_default.Tags.Change);
+    }
+    for (let serverId of deleteSet) {
+      w.stag(AirSync_default.Tags.Delete).tag(AirSync_default.Tags.ServerId, serverId).etag(AirSync_default.Tags.Delete);
+    }
+    w.etag(AirSync_default.Tags.Commands).etag(AirSync_default.Tags.Collection).etag(AirSync_default.Tags.Collections).etag(AirSync_default.Tags.Sync);
+    let response = await conn.postCommand(w);
+    let e = new EventParser();
+    let newSyncKey, status;
+    let base = [AirSync_default.Tags.Sync, AirSync_default.Tags.Collections, AirSync_default.Tags.Collection];
+    e.addEventListener(base.concat(AirSync_default.Tags.SyncKey), function(node) {
+      newSyncKey = node.children[0].textContent;
+    });
+    e.addEventListener(base.concat(AirSync_default.Tags.Status), function(node) {
+      status = node.children[0].textContent;
+    });
+    try {
+      e.run(response);
+    } catch (ex) {
+      console.error("Error parsing Sync mutation response:", ex, "\n", ex.stack);
+      throw new Error("unknown");
+    }
+    if (status === AirSync_default.Enums.Status.Success) {
+      return { syncKey: newSyncKey };
+    }
+    console.error("Something went wrong during ActiveSync syncing and we got a status of " + status);
+    throw new Error("unknown");
+  }
+  var init_modify_folder_messages = __esm({
+    "src/backend/accounts/activesync/smotocol/modify_folder_messages.js"() {
+      init_wbxml();
+      init_AirSync();
+      init_Email();
+    }
+  });
+
+  // src/backend/message_selector.js
+  function selectMessages(messages, onlyMessages, selector) {
+    let filtered = messages;
+    if (onlyMessages) {
+      filtered = filtered.filter((message) => {
+        return onlyMessages.includes(message.id);
+      });
+    }
+    if (selector) {
+      switch (selector) {
+        case "last":
+          filtered = filtered.slice(-1);
+          break;
+        default:
+          throw new Error("unsupported message selector:" + selector);
+      }
+    }
+    return filtered;
+  }
+  var init_message_selector = __esm({
+    "src/backend/message_selector.js"() {
+    }
+  });
+
+  // src/backend/task_mixins/mix_store_flags.js
+  var MixStoreFlagsMixin, mix_store_flags_default;
+  var init_mix_store_flags = __esm({
+    "src/backend/task_mixins/mix_store_flags.js"() {
+      init_delta_algebra();
+      init_message_selector();
+      init_conv_churn_driver();
+      MixStoreFlagsMixin = {
+        initPersistentState() {
+          return {
+            umidChanges: new Map()
+          };
+        },
+        deriveMemoryStateFromPersistentState(persistentState, accountId) {
+          let markers = [];
+          for (let umid of persistentState.umidChanges.keys()) {
+            markers.push({
+              type: this.name,
+              id: this.name + ":" + umid,
+              accountId,
+              umid,
+              priorityTags: [],
+              exclusiveResources: []
+            });
+          }
+          return {
+            memoryState: {},
+            markers
+          };
+        },
+        async plan(ctx, persistentState, memoryState, req) {
+          let { umidChanges } = persistentState;
+          let fromDb = await ctx.beginMutate({
+            conversations: new Map([[req.convId, null]]),
+            messagesByConversation: new Map([[req.convId, null]])
+          });
+          let loadedMessages = fromDb.messagesByConversation.get(req.convId);
+          let modifiedMessagesMap = new Map();
+          let modifyTaskMarkers = new Map();
+          let anyMessageChanged = false;
+          let filteredMessages = selectMessages(loadedMessages, req.onlyMessages, req.messageSelector);
+          let undoTasks = [];
+          for (let message of filteredMessages) {
+            let actualChanges = normalizeAndApplyChanges(message.flags, req.add, req.remove);
+            let { add: actuallyAdded, remove: actuallyRemoved } = actualChanges;
+            if (actuallyAdded || actuallyRemoved) {
+              undoTasks.push({
+                type: this.name,
+                accountId: req.accountId,
+                convId: req.convId,
+                onlyMessages: [message.id],
+                messageSelector: null,
+                add: actuallyRemoved && actuallyRemoved.concat(),
+                remove: actuallyAdded && actuallyAdded.concat()
+              });
+              modifiedMessagesMap.set(message.id, message);
+              anyMessageChanged = true;
+              let umid = message.umid;
+              let markerId = this.name + ":" + umid;
+              if (umidChanges.has(umid)) {
+                let mergedChanges = mergeChanges(umidChanges.get(umid), actualChanges);
+                if (mergedChanges.add || mergedChanges.remove) {
+                  umidChanges.set(umid, mergedChanges);
+                  continue;
+                } else {
+                  umidChanges.delete(umid);
+                  modifyTaskMarkers.set(markerId, null);
+                  continue;
+                }
+              }
+              if (this.execute) {
+                umidChanges.set(umid, actualChanges);
+                modifyTaskMarkers.set(markerId, {
+                  type: this.name,
+                  id: markerId,
+                  accountId: req.accountId,
+                  umid,
+                  priorityTags: [],
+                  exclusiveResources: []
+                });
+              }
+            }
+          }
+          let conversationsMap = null;
+          if (anyMessageChanged) {
+            let oldConvInfo = fromDb.conversations.get(req.convId);
+            let convInfo = churnConversationDriver(req.convId, oldConvInfo, loadedMessages);
+            conversationsMap = new Map([[convInfo.id, convInfo]]);
+          }
+          await ctx.finishTask({
+            mutations: {
+              conversations: conversationsMap,
+              messages: modifiedMessagesMap
+            },
+            taskMarkers: modifyTaskMarkers,
+            complexTaskState: persistentState,
+            undoTasks
+          });
+        },
+        consult(askingCtx, persistentState, memoryState, argDict) {
+          let { umid, value } = argDict;
+          let { umidChanges } = persistentState;
+          if (umidChanges.has(umid)) {
+            let changes = umidChanges.get(umid);
+            applyChanges(value, changes);
+          }
+        },
+        execute: null
+      };
+      mix_store_flags_default = MixStoreFlagsMixin;
+    }
+  });
+
+  // src/backend/accounts/activesync/tasks/store_flags.js
+  var store_flags_default;
+  var init_store_flags = __esm({
+    "src/backend/accounts/activesync/tasks/store_flags.js"() {
+      init_task_definer();
+      init_folder_sync_state_helper();
+      init_modify_folder_messages();
+      init_mix_store_flags();
+      store_flags_default = task_definer_default.defineComplexTask([
+        mix_store_flags_default,
+        {
+          name: "store_flags",
+          async execute(ctx, persistentState, memoryState, marker) {
+            let { umidChanges } = persistentState;
+            let changes = umidChanges.get(marker.umid);
+            let account = await ctx.universe.acquireAccount(ctx, marker.accountId);
+            let fromDb = await ctx.read({
+              umidLocations: new Map([[marker.umid, null]])
+            });
+            let [folderId, messageServerId] = fromDb.umidLocations.get(marker.umid);
+            fromDb = await ctx.beginMutate({
+              syncStates: new Map([[folderId, null]])
+            });
+            let rawSyncState = fromDb.syncStates.get(folderId);
+            let syncState = new folder_sync_state_helper_default(ctx, rawSyncState, marker.accountId, folderId);
+            let folderInfo = account.getFolderById(folderId);
+            let conn = await account.ensureConnection();
+            let readMap = new Map();
+            let flagMap = new Map();
+            if (changes.add) {
+              if (changes.add.includes("\\Seen")) {
+                readMap.set(messageServerId, true);
+              }
+              if (changes.add.includes("\\Flagged")) {
+                flagMap.set(messageServerId, true);
+              }
+            }
+            if (changes.remove) {
+              if (changes.remove.includes("\\Seen")) {
+                readMap.set(messageServerId, false);
+              }
+              if (changes.remove.includes("\\Flagged")) {
+                flagMap.set(messageServerId, false);
+              }
+            }
+            syncState.syncKey = (await modifyFolderMessages(conn, {
+              folderServerId: folderInfo.serverId,
+              folderSyncKey: syncState.syncKey,
+              read: readMap,
+              flag: flagMap
+            })).syncKey;
+            umidChanges.delete(marker.umid);
+            await ctx.finishTask({
+              syncStates: new Map([[folderId, syncState.rawSyncState]]),
+              complexTaskState: persistentState
+            });
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/tasks/draft_save.js
+  var draft_save_default;
+  var init_draft_save = __esm({
+    "src/backend/tasks/draft_save.js"() {
+      init_logic();
+      init_task_definer();
+      init_conv_churn_driver();
+      init_id_conversions();
+      init_syncbase();
+      init_quotechew();
+      draft_save_default = task_definer_default.defineSimpleTask([
+        {
+          name: "draft_save",
+          async plan(ctx, req) {
+            let { messageId } = req;
+            let convId = convIdFromMessageId(messageId);
+            let fromDb = await ctx.beginMutate({
+              conversations: new Map([[convId, null]]),
+              messagesByConversation: new Map([[convId, null]])
+            });
+            let messages = fromDb.messagesByConversation.get(convId);
+            let modifiedMessagesMap = new Map();
+            let messageInfo = messages.find((msg) => msg.id === messageId);
+            if (messageInfo === null) {
+              throw new Error("moot");
+            }
+            let draftFields = req.draftFields;
+            messageInfo.date = draftFields.date;
+            messageInfo.to = draftFields.to;
+            messageInfo.cc = draftFields.cc;
+            messageInfo.bcc = draftFields.bcc;
+            messageInfo.subject = draftFields.subject;
+            let textRep = messageInfo.bodyReps.find((rep) => {
+              return rep.type === "plain";
+            });
+            textRep.contentBlob = new Blob([JSON.stringify([1, draftFields.textBody])], { type: "application/json" });
+            try {
+              let parsedContent = quoteProcessTextBody(draftFields.textBody);
+              messageInfo.snippet = generateSnippet(parsedContent, DESIRED_SNIPPET_LENGTH);
+            } catch (ex) {
+              logic.fail(ex);
+            }
+            modifiedMessagesMap.set(messageId, messageInfo);
+            let oldConvInfo = fromDb.conversations.get(req.convId);
+            let convInfo = churnConversationDriver(convId, oldConvInfo, messages);
+            await ctx.finishTask({
+              mutations: {
+                conversations: new Map([[convId, convInfo]]),
+                messages: modifiedMessagesMap
+              }
+            });
+          },
+          execute: null
+        }
+      ]);
+    }
+  });
+
+  // src/vendor/safe-base64.js
+  function mimeStyleBase64Encode(data) {
+    var wholeLines = Math.floor(data.length / 57);
+    var partialBytes = data.length - wholeLines * 57;
+    var encodedLength = wholeLines * 78;
+    if (partialBytes) {
+      encodedLength += Math.ceil(partialBytes / 3) * 4 + 2;
+    }
+    var encoded = new Uint8Array(encodedLength);
+    function encode6Bits(nibbly) {
+      if (nibbly <= 25) {
+        encoded[iWrite++] = 65 + nibbly;
+      } else if (nibbly <= 51) {
+        encoded[iWrite++] = 97 - 26 + nibbly;
+      } else if (nibbly <= 61) {
+        encoded[iWrite++] = 48 - 52 + nibbly;
+      } else if (nibbly === 62) {
+        encoded[iWrite++] = 43;
+      } else {
+        encoded[iWrite++] = 47;
+      }
+    }
+    var iRead = 0, iWrite = 0, bytesToRead;
+    for (bytesToRead = data.length; bytesToRead >= 3; bytesToRead -= 3) {
+      var b1 = data[iRead++], b2 = data[iRead++], b3 = data[iRead++];
+      encode6Bits(b1 >> 2);
+      encode6Bits((b1 & 3) << 4 | b2 >> 4);
+      encode6Bits((b2 & 15) << 2 | b3 >> 6);
+      encode6Bits(b3 & 63);
+      if (iRead % 57 === 0 || bytesToRead === 3) {
+        encoded[iWrite++] = 13;
+        encoded[iWrite++] = 10;
+      }
+    }
+    switch (bytesToRead) {
+      case 2:
+        b1 = data[iRead++];
+        b2 = data[iRead++];
+        encode6Bits(b1 >> 2);
+        encode6Bits((b1 & 3) << 4 | b2 >> 4);
+        encode6Bits((b2 & 15) << 2 | 0);
+        encoded[iWrite++] = 61;
+        encoded[iWrite++] = 13;
+        encoded[iWrite++] = 10;
+        break;
+      case 1:
+        b1 = data[iRead++];
+        encode6Bits(b1 >> 2);
+        encode6Bits((b1 & 3) << 4 | 0);
+        encoded[iWrite++] = 61;
+        encoded[iWrite++] = 61;
+        encoded[iWrite++] = 13;
+        encoded[iWrite++] = 10;
+        break;
+    }
+    return encoded;
+  }
+  var init_safe_base64 = __esm({
+    "src/vendor/safe-base64.js"() {
+    }
+  });
+
+  // src/backend/tasks/draft_attach.js
+  var draft_attach_default;
+  var init_draft_attach = __esm({
+    "src/backend/tasks/draft_attach.js"() {
+      init_syncbase();
+      init_task_definer();
+      init_conv_churn_driver();
+      init_mail_rep();
+      init_safe_base64();
+      init_id_conversions();
+      draft_attach_default = task_definer_default.defineSimpleTask([
+        {
+          name: "draft_attach",
+          async plan(ctx, req) {
+            let { messageId } = req;
+            let convId = convIdFromMessageId(messageId);
+            let fromDb = await ctx.beginMutate({
+              conversations: new Map([[convId, null]]),
+              messagesByConversation: new Map([[convId, null]])
+            });
+            let messages = fromDb.messagesByConversation.get(convId);
+            let modifiedMessagesMap = new Map();
+            let messageInfo = messages.find((msg) => msg.id === messageId);
+            if (messageInfo === null) {
+              throw new Error("moot");
+            }
+            let messageKey = [messageInfo.id, messageInfo.date];
+            const attachmentDef = req.attachmentDef;
+            const wholeBlob = attachmentDef.blob;
+            messageInfo.attaching = makeAttachmentPart({
+              relId: attachmentDef.relId,
+              name: attachmentDef.name,
+              type: wholeBlob.type,
+              sizeEstimate: wholeBlob.size,
+              downloadState: "draft",
+              file: []
+            });
+            let blobOffset = 0;
+            while (blobOffset < wholeBlob.size) {
+              let nextOffset = Math.min(wholeBlob.size, blobOffset + BLOB_BASE64_BATCH_CONVERT_SIZE);
+              console.log("attachBlobToDraft: fetching", blobOffset, "to", nextOffset, "of", wholeBlob.size);
+              let slicedBlob = wholeBlob.slice(blobOffset, nextOffset);
+              blobOffset = nextOffset;
+              let arraybuffer = await slicedBlob.arrayBuffer();
+              let binaryDataU8 = new Uint8Array(arraybuffer);
+              let encodedU8 = mimeStyleBase64Encode(binaryDataU8);
+              messageInfo.attaching.file.push(new Blob([encodedU8], { type: wholeBlob.type }));
+              await ctx.dangerousIncrementalWrite({
+                messages: new Map([[messageId, messageInfo]])
+              });
+              let flushedReads = await ctx.mutateMore({
+                flushedMessageReads: true,
+                messages: new Map([[messageKey, null]])
+              });
+              messageInfo = flushedReads.messages.get(messageId);
+            }
+            messageInfo.hasAttachments = true;
+            messageInfo.attachments.push(messageInfo.attaching);
+            delete messageInfo.attaching;
+            modifiedMessagesMap.set(messageId, messageInfo);
+            let oldConvInfo = fromDb.conversations.get(req.convId);
+            let convInfo = churnConversationDriver(convId, oldConvInfo, messages);
+            await ctx.finishTask({
+              mutations: {
+                conversations: new Map([[convId, convInfo]]),
+                messages: modifiedMessagesMap
+              }
+            });
+          },
+          execute: null
+        }
+      ]);
+    }
+  });
+
+  // src/backend/tasks/draft_detach.js
+  var draft_detach_default;
+  var init_draft_detach = __esm({
+    "src/backend/tasks/draft_detach.js"() {
+      init_task_definer();
+      init_conv_churn_driver();
+      init_id_conversions();
+      draft_detach_default = task_definer_default.defineSimpleTask([
+        {
+          name: "draft_detach",
+          async plan(ctx, req) {
+            let { messageId } = req;
+            let convId = convIdFromMessageId(messageId);
+            let fromDb = await ctx.beginMutate({
+              conversations: new Map([[convId, null]]),
+              messagesByConversation: new Map([[convId, null]])
+            });
+            let messages = fromDb.messagesByConversation.get(convId);
+            let modifiedMessagesMap = new Map();
+            let messageInfo = messages.find((msg) => msg.id === messageId);
+            if (messageInfo === null) {
+              throw new Error("moot");
+            }
+            let attachmentIndex = messageInfo.attachments.findIndex((att) => att.relId === req.attachmentRelId);
+            if (attachmentIndex === -1) {
+              throw new Error("moot");
+            }
+            messageInfo.attachments.splice(attachmentIndex, 1);
+            messageInfo.hasAttachments = !!messageInfo.attachments.length;
+            modifiedMessagesMap.set(messageId, messageInfo);
+            let oldConvInfo = fromDb.conversations.get(req.convId);
+            let convInfo = churnConversationDriver(convId, oldConvInfo, messages);
+            await ctx.finishTask({
+              mutations: {
+                conversations: new Map([[convId, convInfo]]),
+                messages: modifiedMessagesMap
+              }
+            });
+          },
+          execute: null
+        }
+      ]);
+    }
+  });
+
+  // src/backend/tasks/draft_delete.js
+  var draft_delete_default;
+  var init_draft_delete = __esm({
+    "src/backend/tasks/draft_delete.js"() {
+      init_task_definer();
+      init_conv_churn_driver();
+      init_id_conversions();
+      draft_delete_default = task_definer_default.defineSimpleTask([
+        {
+          name: "draft_delete",
+          async plan(ctx, req) {
+            let { messageId } = req;
+            let convId = convIdFromMessageId(messageId);
+            let fromDb = await ctx.beginMutate({
+              conversations: new Map([[convId, null]]),
+              messagesByConversation: new Map([[convId, null]])
+            });
+            let messages = fromDb.messagesByConversation.get(convId);
+            let modifiedMessagesMap = new Map();
+            let draftIndex = messages.findIndex((msg) => msg.id === messageId);
+            if (draftIndex === -1) {
+              throw new Error("moot");
+            }
+            messages.splice(draftIndex, 1);
+            modifiedMessagesMap.set(messageId, null);
+            let modifiedConversations = new Map();
+            if (messages.length) {
+              let oldConvInfo = fromDb.conversations.get(req.convId);
+              let convInfo = churnConversationDriver(convId, oldConvInfo, messages);
+              modifiedConversations.set(convId, convInfo);
+            } else {
+              modifiedConversations.set(convId, null);
+            }
+            await ctx.finishTask({
+              mutations: {
+                conversations: modifiedConversations,
+                messages: modifiedMessagesMap
+              }
+            });
+          },
+          execute: null
+        }
+      ]);
+    }
+  });
+
+  // src/backend/accounts/activesync/smotocol/send_mail.js
+  async function sendMail(conn, { mimeBlob, progress }) {
+    let w = new Writer("1.3", 1, "UTF-8", null, "blob");
+    w.stag(ComposeMail_default.Tags.SendMail).tag(ComposeMail_default.Tags.ClientId, Date.now().toString() + "@mozgaia").tag(ComposeMail_default.Tags.SaveInSentItems).stag(ComposeMail_default.Tags.Mime).opaque(mimeBlob).etag().etag();
+    let response = await conn.postCommand(w, {
+      uploadProgress: progress
+    });
+    if (response === null) {
+      return;
+    }
+    throw new Error("unknown");
+  }
+  var init_send_mail = __esm({
+    "src/backend/accounts/activesync/smotocol/send_mail.js"() {
+      init_wbxml();
+      init_ComposeMail();
+    }
+  });
+
+  // src/backend/accounts/activesync/smotocol/send_mail_12x.js
+  async function sendMail2(conn, { mimeBlob, progress }) {
+    await conn.postData("SendMail", "message/rfc822", mimeBlob, {
+      extraParams: {
+        SaveInSent: "T"
+      },
+      uploadProgress: progress
+    });
+  }
+  var init_send_mail_12x = __esm({
+    "src/backend/accounts/activesync/smotocol/send_mail_12x.js"() {
+    }
+  });
+
+  // src/vendor/stringencoding.js
+  var require_stringencoding = __commonJS({
+    "src/vendor/stringencoding.js"() {
+      "use strict";
+      define(function(require2) {
+        var utf7 = require2("utf7");
+        return {
+          TextEncoder: function(encoding) {
+            var encoder = new globalThis.TextEncoder(encoding);
+            this.encode = encoder.encode.bind(encoder);
+          },
+          TextDecoder: function(encoding) {
+            encoding = encoding && encoding.toLowerCase();
+            if (encoding === "utf-7" || encoding === "utf7") {
+              this.decode = function(buf) {
+                var mimefuncs2 = require2("mimefuncs");
+                return utf7.decode(mimefuncs2.fromTypedArray(buf));
+              };
+            } else {
+              var decoder = new globalThis.TextDecoder(encoding);
+              this.decode = decoder.decode.bind(decoder);
+            }
+          }
+        };
+      });
+    }
+  });
+
+  // src/vendor/mimefuncs.js
+  var require_mimefuncs = __commonJS({
+    "src/vendor/mimefuncs.js"(exports, module) {
+      (function(root, factory) {
+        "use strict";
+        var encoding;
+        if (typeof define === "function" && define.amd) {
+          define(["stringencoding"], function(encoding2) {
+            return factory(encoding2.TextEncoder, encoding2.TextDecoder, root.btoa);
+          });
+        } else if (typeof exports === "object") {
+          encoding = require_stringencoding();
+          module.exports = factory(encoding.TextEncoder, encoding.TextDecoder, root.btoa);
+        } else {
+          root.mimefuncs = factory(root.TextEncoder, root.TextDecoder, root.btoa);
+        }
+      })(exports, function(TextEncoder2, TextDecoder2, btoa2) {
+        "use strict";
+        btoa2 = btoa2 || base64Encode;
+        var mimefuncs2 = {
+          mimeEncode: function(data, fromCharset) {
+            fromCharset = fromCharset || "UTF-8";
+            var buffer = mimefuncs2.charset.convert(data || "", fromCharset), ranges = [
+              [9],
+              [10],
+              [13],
+              [32],
+              [33],
+              [35, 60],
+              [62],
+              [64, 94],
+              [96, 126]
+            ], result = "", ord;
+            for (var i = 0, len = buffer.length; i < len; i++) {
+              ord = buffer[i];
+              if (mimefuncs2._checkRanges(ord, ranges) && !((ord === 32 || ord === 9) && (i === len - 1 || buffer[i + 1] === 10 || buffer[i + 1] === 13))) {
+                result += String.fromCharCode(ord);
+                continue;
+              }
+              result += "=" + (ord < 16 ? "0" : "") + ord.toString(16).toUpperCase();
+            }
+            return result;
+          },
+          mimeDecode: function(str, fromCharset) {
+            str = (str || "").toString();
+            fromCharset = fromCharset || "UTF-8";
+            var encodedBytesCount = (str.match(/\=[\da-fA-F]{2}/g) || []).length, bufferLength = str.length - encodedBytesCount * 2, chr, hex, buffer = new Uint8Array(bufferLength), bufferPos = 0;
+            for (var i = 0, len = str.length; i < len; i++) {
+              chr = str.charAt(i);
+              if (chr === "=" && (hex = str.substr(i + 1, 2)) && /[\da-fA-F]{2}/.test(hex)) {
+                buffer[bufferPos++] = parseInt(hex, 16);
+                i += 2;
+                continue;
+              }
+              buffer[bufferPos++] = chr.charCodeAt(0);
+            }
+            return mimefuncs2.charset.decode(buffer, fromCharset);
+          },
+          base64Encode: function(data, fromCharset) {
+            var buf, b64;
+            if (fromCharset !== "binary" && typeof data !== "string") {
+              buf = mimefuncs2.charset.convert(data || "", fromCharset);
+            } else {
+              buf = data;
+            }
+            b64 = mimefuncs2.base64.encode(buf);
+            return mimefuncs2._addSoftLinebreaks(b64, "base64");
+          },
+          base64Decode: function(str, fromCharset) {
+            var buf = mimefuncs2.base64.decode(str || "", "buffer");
+            return mimefuncs2.charset.decode(buf, fromCharset);
+          },
+          quotedPrintableEncode: function(data, fromCharset) {
+            var mimeEncodedStr = mimefuncs2.mimeEncode(data, fromCharset);
+            mimeEncodedStr = mimeEncodedStr.replace(/\r?\n|\r/g, "\r\n").replace(/[\t ]+$/gm, function(spaces) {
+              return spaces.replace(/ /g, "=20").replace(/\t/g, "=09");
+            });
+            return mimefuncs2._addSoftLinebreaks(mimeEncodedStr, "qp");
+          },
+          quotedPrintableDecode: function(str, fromCharset) {
+            str = (str || "").toString();
+            str = str.replace(/[\t ]+$/gm, "").replace(/\=(?:\r?\n|$)/g, "");
+            return mimefuncs2.mimeDecode(str, fromCharset);
+          },
+          mimeWordEncode: function(data, mimeWordEncoding, maxLength, fromCharset) {
+            mimeWordEncoding = (mimeWordEncoding || "Q").toString().toUpperCase().trim().charAt(0);
+            if (!fromCharset && typeof maxLength === "string" && !maxLength.match(/^[0-9]+$/)) {
+              fromCharset = maxLength;
+              maxLength = void 0;
+            }
+            maxLength = maxLength || 0;
+            var encodedStr, toCharset = "UTF-8", i, len, parts;
+            if (maxLength && maxLength > 7 + toCharset.length) {
+              maxLength -= 7 + toCharset.length;
+            }
+            if (mimeWordEncoding === "Q") {
+              encodedStr = mimefuncs2.mimeEncode(data, fromCharset);
+              encodedStr = encodedStr.replace(/[\r\n\t_]/g, function(chr) {
+                var code = chr.charCodeAt(0);
+                return "=" + (code < 16 ? "0" : "") + code.toString(16).toUpperCase();
+              }).replace(/\s/g, "_");
+            } else if (mimeWordEncoding === "B") {
+              encodedStr = typeof data === "string" ? data : mimefuncs2.decode(data, fromCharset);
+              maxLength = Math.max(3, (maxLength - maxLength % 4) / 4 * 3);
+            }
+            if (maxLength && encodedStr.length > maxLength) {
+              if (mimeWordEncoding === "Q") {
+                encodedStr = mimefuncs2._splitMimeEncodedString(encodedStr, maxLength).join("?= =?" + toCharset + "?" + mimeWordEncoding + "?");
+              } else {
+                parts = [];
+                for (i = 0, len = encodedStr.length; i < len; i += maxLength) {
+                  parts.push(mimefuncs2.base64.encode(encodedStr.substr(i, maxLength)));
+                }
+                if (parts.length > 1) {
+                  return "=?" + toCharset + "?" + mimeWordEncoding + "?" + parts.join("?= =?" + toCharset + "?" + mimeWordEncoding + "?") + "?=";
+                } else {
+                  encodedStr = parts.join("");
+                }
+              }
+            } else if (mimeWordEncoding === "B") {
+              encodedStr = mimefuncs2.base64.encode(encodedStr);
+            }
+            return "=?" + toCharset + "?" + mimeWordEncoding + "?" + encodedStr + (encodedStr.substr(-2) === "?=" ? "" : "?=");
+          },
+          mimeWordsEncode: function(data, mimeWordEncoding, maxLength, fromCharset) {
+            if (!fromCharset && typeof maxLength === "string" && !maxLength.match(/^[0-9]+$/)) {
+              fromCharset = maxLength;
+              maxLength = void 0;
+            }
+            maxLength = maxLength || 0;
+            var decodedValue = mimefuncs2.charset.decode(mimefuncs2.charset.convert(data || "", fromCharset)), encodedValue;
+            encodedValue = decodedValue.replace(/([^\s\u0080-\uFFFF]*[\u0080-\uFFFF]+[^\s\u0080-\uFFFF]*(?:\s+[^\s\u0080-\uFFFF]*[\u0080-\uFFFF]+[^\s\u0080-\uFFFF]*\s*)?)+/g, function(match) {
+              return match.length ? mimefuncs2.mimeWordEncode(match, mimeWordEncoding || "Q", maxLength) : "";
+            });
+            return encodedValue;
+          },
+          mimeWordDecode: function(str) {
+            str = (str || "").toString().trim();
+            var fromCharset, encoding, match;
+            match = str.match(/^\=\?([\w_\-\*]+)\?([QqBb])\?([^\?]+)\?\=$/i);
+            if (!match) {
+              return str;
+            }
+            fromCharset = match[1].split("*").shift();
+            encoding = (match[2] || "Q").toString().toUpperCase();
+            str = (match[3] || "").replace(/_/g, " ");
+            if (encoding === "B") {
+              return mimefuncs2.base64Decode(str, fromCharset);
+            } else if (encoding === "Q") {
+              return mimefuncs2.mimeDecode(str, fromCharset);
+            } else {
+              return str;
+            }
+          },
+          mimeWordsDecode: function(str) {
+            str = (str || "").toString();
+            str = str.replace(/(=\?[^?]+\?[QqBb]\?[^?]+\?=)\s+(?==\?[^?]+\?[QqBb]\?[^?]+\?=)/g, "$1").replace(/\=\?([\w_\-\*]+)\?([QqBb])\?[^\?]+\?\=/g, function(mimeWord) {
+              return mimefuncs2.mimeWordDecode(mimeWord);
+            });
+            return str;
+          },
+          foldLines: function(str, lineLengthMax, afterSpace) {
+            str = (str || "").toString();
+            lineLengthMax = lineLengthMax || 76;
+            var pos = 0, len = str.length, result = "", line, match;
+            while (pos < len) {
+              line = str.substr(pos, lineLengthMax);
+              if (line.length < lineLengthMax) {
+                result += line;
+                break;
+              }
+              if (match = line.match(/^[^\n\r]*(\r?\n|\r)/)) {
+                line = match[0];
+                result += line;
+                pos += line.length;
+                continue;
+              } else if ((match = line.match(/(\s+)[^\s]*$/)) && match[0].length - (afterSpace ? (match[1] || "").length : 0) < line.length) {
+                line = line.substr(0, line.length - (match[0].length - (afterSpace ? (match[1] || "").length : 0)));
+              } else if (match = str.substr(pos + line.length).match(/^[^\s]+(\s*)/)) {
+                line = line + match[0].substr(0, match[0].length - (!afterSpace ? (match[1] || "").length : 0));
+              }
+              result += line;
+              pos += line.length;
+              if (pos < len) {
+                result += "\r\n";
+              }
+            }
+            return result;
+          },
+          headerLineEncode: function(key, value, fromCharset) {
+            var encodedValue = mimefuncs2.mimeWordsEncode(value, "Q", 52, fromCharset);
+            return mimefuncs2.foldLines(key + ": " + encodedValue, 76);
+          },
+          headerLineDecode: function(headerLine) {
+            var line = (headerLine || "").toString().replace(/(?:\r?\n|\r)[ \t]*/g, " ").trim(), match = line.match(/^\s*([^:]+):(.*)$/), key = (match && match[1] || "").trim(), value = (match && match[2] || "").trim();
+            return {
+              key,
+              value
+            };
+          },
+          headerLinesDecode: function(headers) {
+            var lines = headers.split(/\r?\n|\r/), headersObj = {}, key, value, header, i, len;
+            for (i = lines.length - 1; i >= 0; i--) {
+              if (i && lines[i].match(/^\s/)) {
+                lines[i - 1] += "\r\n" + lines[i];
+                lines.splice(i, 1);
+              }
+            }
+            for (i = 0, len = lines.length; i < len; i++) {
+              header = mimefuncs2.headerLineDecode(lines[i]);
+              key = (header.key || "").toString().toLowerCase().trim();
+              value = header.value || "";
+              if (!headersObj[key]) {
+                headersObj[key] = value;
+              } else {
+                headersObj[key] = [].concat(headersObj[key], value);
+              }
+            }
+            return headersObj;
+          },
+          toTypedArray: function(binaryString) {
+            var buf = new Uint8Array(binaryString.length);
+            for (var i = 0, len = binaryString.length; i < len; i++) {
+              buf[i] = binaryString.charCodeAt(i);
+            }
+            return buf;
+          },
+          fromTypedArray: function(buf) {
+            var i, l;
+            if (!buf.buffer) {
+              buf = new Uint8Array(buf);
+            }
+            var sbits = new Array(buf.length);
+            for (i = 0, l = buf.length; i < l; i++) {
+              sbits[i] = String.fromCharCode(buf[i]);
+            }
+            return sbits.join("");
+          },
+          parseHeaderValue: function(str) {
+            var response = {
+              value: false,
+              params: {}
+            }, key = false, value = "", type = "value", quote = false, escaped = false, chr;
+            for (var i = 0, len = str.length; i < len; i++) {
+              chr = str.charAt(i);
+              if (type === "key") {
+                if (chr === "=") {
+                  key = value.trim().toLowerCase();
+                  type = "value";
+                  value = "";
+                  continue;
+                }
+                value += chr;
+              } else {
+                if (escaped) {
+                  value += chr;
+                } else if (chr === "\\") {
+                  escaped = true;
+                  continue;
+                } else if (quote && chr === quote) {
+                  quote = false;
+                } else if (!quote && chr === '"') {
+                  quote = chr;
+                } else if (!quote && chr === ";") {
+                  if (key === false) {
+                    response.value = value.trim();
+                  } else {
+                    response.params[key] = value.trim();
+                  }
+                  type = "key";
+                  value = "";
+                } else {
+                  value += chr;
+                }
+                escaped = false;
+              }
+            }
+            if (type === "value") {
+              if (key === false) {
+                response.value = value.trim();
+              } else {
+                response.params[key] = value.trim();
+              }
+            } else if (value.trim()) {
+              response.params[value.trim().toLowerCase()] = "";
+            }
+            Object.keys(response.params).forEach(function(key2) {
+              var actualKey, nr, match, value2;
+              if (match = key2.match(/(\*(\d+)|\*(\d+)\*|\*)$/)) {
+                actualKey = key2.substr(0, match.index);
+                nr = Number(match[2] || match[3]) || 0;
+                if (!response.params[actualKey] || typeof response.params[actualKey] !== "object") {
+                  response.params[actualKey] = {
+                    charset: false,
+                    values: []
+                  };
+                }
+                value2 = response.params[key2];
+                if (nr === 0 && match[0].substr(-1) === "*" && (match = value2.match(/^([^']*)'[^']*'(.*)$/))) {
+                  response.params[actualKey].charset = match[1] || "iso-8859-1";
+                  value2 = match[2];
+                }
+                response.params[actualKey].values[nr] = value2;
+                delete response.params[key2];
+              }
+            });
+            Object.keys(response.params).forEach(function(key2) {
+              var value2;
+              if (response.params[key2] && Array.isArray(response.params[key2].values)) {
+                value2 = response.params[key2].values.map(function(val) {
+                  return val || "";
+                }).join("");
+                if (response.params[key2].charset) {
+                  response.params[key2] = "=?" + response.params[key2].charset + "?Q?" + value2.replace(/[=\?_\s]/g, function(s) {
+                    var c = s.charCodeAt(0).toString(16);
+                    if (s === " ") {
+                      return "_";
+                    } else {
+                      return "%" + (c.length < 2 ? "0" : "") + c;
+                    }
+                  }).replace(/%/g, "=") + "?=";
+                } else {
+                  response.params[key2] = value2;
+                }
+              }
+            }.bind(this));
+            return response;
+          },
+          continuationEncode: function(key, data, maxLength, fromCharset) {
+            var list = [];
+            var encodedStr = typeof data === "string" ? data : mimefuncs2.decode(data, fromCharset);
+            var chr;
+            var line;
+            var startPos = 0;
+            var isEncoded = false;
+            maxLength = maxLength || 50;
+            if (/^[\w.\- ]*$/.test(data)) {
+              if (encodedStr.length <= maxLength) {
+                return [{
+                  key,
+                  value: /[\s";=]/.test(encodedStr) ? '"' + encodedStr + '"' : encodedStr
+                }];
+              }
+              encodedStr = encodedStr.replace(new RegExp(".{" + maxLength + "}", "g"), function(str) {
+                list.push({
+                  line: str
+                });
+                return "";
+              });
+              if (encodedStr) {
+                list.push({
+                  line: encodedStr
+                });
+              }
+            } else {
+              line = "utf-8''";
+              isEncoded = true;
+              startPos = 0;
+              for (var i = 0, len = encodedStr.length; i < len; i++) {
+                chr = encodedStr[i];
+                if (isEncoded) {
+                  chr = encodeURIComponent(chr);
+                } else {
+                  chr = chr === " " ? chr : encodeURIComponent(chr);
+                  if (chr !== encodedStr[i]) {
+                    if ((encodeURIComponent(line) + chr).length >= maxLength) {
+                      list.push({
+                        line,
+                        encoded: isEncoded
+                      });
+                      line = "";
+                      startPos = i - 1;
+                    } else {
+                      isEncoded = true;
+                      i = startPos;
+                      line = "";
+                      continue;
+                    }
+                  }
+                }
+                if ((line + chr).length >= maxLength) {
+                  list.push({
+                    line,
+                    encoded: isEncoded
+                  });
+                  line = chr = encodedStr[i] === " " ? " " : encodeURIComponent(encodedStr[i]);
+                  if (chr === encodedStr[i]) {
+                    isEncoded = false;
+                    startPos = i - 1;
+                  } else {
+                    isEncoded = true;
+                  }
+                } else {
+                  line += chr;
+                }
+              }
+              if (line) {
+                list.push({
+                  line,
+                  encoded: isEncoded
+                });
+              }
+            }
+            return list.map(function(item, i2) {
+              return {
+                key: key + "*" + i2 + (item.encoded ? "*" : ""),
+                value: /[\s";=]/.test(item.line) ? '"' + item.line + '"' : item.line
+              };
+            });
+          },
+          _splitMimeEncodedString: function(str, maxlen) {
+            var curLine, match, chr, done, lines = [];
+            maxlen = Math.max(maxlen || 0, 12);
+            while (str.length) {
+              curLine = str.substr(0, maxlen);
+              if (match = curLine.match(/\=[0-9A-F]?$/i)) {
+                curLine = curLine.substr(0, match.index);
+              }
+              done = false;
+              while (!done) {
+                done = true;
+                if (match = str.substr(curLine.length).match(/^\=([0-9A-F]{2})/i)) {
+                  chr = parseInt(match[1], 16);
+                  if (chr < 194 && chr > 127) {
+                    curLine = curLine.substr(0, curLine.length - 3);
+                    done = false;
+                  }
+                }
+              }
+              if (curLine.length) {
+                lines.push(curLine);
+              }
+              str = str.substr(curLine.length);
+            }
+            return lines;
+          },
+          _addSoftLinebreaks: function(str, encoding) {
+            var lineLengthMax = 76;
+            encoding = (encoding || "base64").toString().toLowerCase().trim();
+            if (encoding === "qp") {
+              return mimefuncs2._addQPSoftLinebreaks(str, lineLengthMax);
+            } else {
+              return mimefuncs2._addBase64SoftLinebreaks(str, lineLengthMax);
+            }
+          },
+          _addBase64SoftLinebreaks: function(base64EncodedStr, lineLengthMax) {
+            base64EncodedStr = (base64EncodedStr || "").toString().trim();
+            return base64EncodedStr.replace(new RegExp(".{" + lineLengthMax + "}", "g"), "$&\r\n").trim();
+          },
+          _addQPSoftLinebreaks: function(qpEncodedStr, lineLengthMax) {
+            qpEncodedStr = (qpEncodedStr || "").toString();
+            lineLengthMax = lineLengthMax || 76;
+            var pos = 0, len = qpEncodedStr.length, match, code, line, lineMargin = Math.floor(lineLengthMax / 3), result = "";
+            while (pos < len) {
+              line = qpEncodedStr.substr(pos, lineLengthMax);
+              if (match = line.match(/\r\n/)) {
+                line = line.substr(0, match.index + match[0].length);
+                result += line;
+                pos += line.length;
+                continue;
+              }
+              if (line.substr(-1) === "\n") {
+                result += line;
+                pos += line.length;
+                continue;
+              } else if (match = line.substr(-lineMargin).match(/\n.*?$/)) {
+                line = line.substr(0, line.length - (match[0].length - 1));
+                result += line;
+                pos += line.length;
+                continue;
+              } else if (line.length > lineLengthMax - lineMargin && (match = line.substr(-lineMargin).match(/[ \t\.,!\?][^ \t\.,!\?]*$/))) {
+                line = line.substr(0, line.length - (match[0].length - 1));
+              } else if (line.substr(-1) === "\r") {
+                line = line.substr(0, line.length - 1);
+              } else {
+                if (line.match(/\=[\da-f]{0,2}$/i)) {
+                  if (match = line.match(/\=[\da-f]{0,1}$/i)) {
+                    line = line.substr(0, line.length - match[0].length);
+                  }
+                  while (line.length > 3 && line.length < len - pos && !line.match(/^(?:=[\da-f]{2}){1,4}$/i) && (match = line.match(/\=[\da-f]{2}$/ig))) {
+                    code = parseInt(match[0].substr(1, 2), 16);
+                    if (code < 128) {
+                      break;
+                    }
+                    line = line.substr(0, line.length - 3);
+                    if (code >= 192) {
+                      break;
+                    }
+                  }
+                }
+              }
+              if (pos + line.length < len && line.substr(-1) !== "\n") {
+                if (line.length === lineLengthMax && line.match(/\=[\da-f]{2}$/i)) {
+                  line = line.substr(0, line.length - 3);
+                } else if (line.length === lineLengthMax) {
+                  line = line.substr(0, line.length - 1);
+                }
+                pos += line.length;
+                line += "=\r\n";
+              } else {
+                pos += line.length;
+              }
+              result += line;
+            }
+            return result;
+          },
+          _checkRanges: function(nr, ranges) {
+            for (var i = ranges.length - 1; i >= 0; i--) {
+              if (!ranges[i].length) {
+                continue;
+              }
+              if (ranges[i].length === 1 && nr === ranges[i][0]) {
+                return true;
+              }
+              if (ranges[i].length === 2 && nr >= ranges[i][0] && nr <= ranges[i][1]) {
+                return true;
+              }
+            }
+            return false;
+          }
+        };
+        mimefuncs2.charset = {
+          encode: function(str) {
+            return new TextEncoder2("UTF-8").encode(str);
+          },
+          decode: function(buf, fromCharset) {
+            fromCharset = mimefuncs2.charset.normalizeCharset(fromCharset || "UTF-8");
+            if (!buf) {
+              console.error(new Error().stack);
+            }
+            if (!buf.buffer) {
+              buf = new Uint8Array(buf);
+            }
+            try {
+              return new TextDecoder2(fromCharset).decode(buf);
+            } catch (E) {
+              try {
+                return new TextDecoder2("utf-8", {
+                  fatal: true
+                }).decode(buf);
+              } catch (E2) {
+                try {
+                  return new TextDecoder2("iso-8859-15").decode(buf);
+                } catch (E3) {
+                  return mimefuncs2.fromTypedArray(buf);
+                }
+              }
+            }
+          },
+          convert: function(data, fromCharset) {
+            fromCharset = mimefuncs2.charset.normalizeCharset(fromCharset || "UTF-8");
+            var bufString;
+            if (typeof data !== "string") {
+              if (fromCharset.match(/^utf[\-_]?8$/)) {
+                return data;
+              }
+              bufString = mimefuncs2.charset.decode(data, fromCharset);
+              return mimefuncs2.charset.encode(bufString);
+            }
+            return mimefuncs2.charset.encode(data);
+          },
+          normalizeCharset: function(charset) {
+            var match;
+            if (match = charset.match(/^utf[\-_]?(\d+)$/i)) {
+              return "UTF-" + match[1];
+            }
+            if (match = charset.match(/^win[\-_]?(\d+)$/i)) {
+              return "WINDOWS-" + match[1];
+            }
+            if (match = charset.match(/^latin[\-_]?(\d+)$/i)) {
+              return "ISO-8859-" + match[1];
+            }
+            return charset;
+          }
+        };
+        mimefuncs2.base64 = {
+          encode: function(data) {
+            if (!data) {
+              return "";
+            }
+            if (typeof data === "string") {
+              return btoa2(unescape(encodeURIComponent(data)));
+            }
+            var len = data.byteLength, binStr = "";
+            if (!data.buffer) {
+              data.buffer = new Uint8Array(data);
+            }
+            for (var i = 0; i < len; i++) {
+              binStr += String.fromCharCode(data[i]);
+            }
+            return btoa2(binStr);
+          },
+          decode: function(data, outputEncoding) {
+            outputEncoding = (outputEncoding || "buffer").toLowerCase().trim();
+            var buf = mimefuncs2.base64.toTypedArray(data);
+            if (outputEncoding === "string") {
+              return mimefuncs2.charset.decode(buf);
+            } else {
+              return buf;
+            }
+          },
+          toTypedArray: function(base64Str) {
+            var bitsSoFar = 0;
+            var validBits = 0;
+            var iOut = 0;
+            var arr = new Uint8Array(Math.ceil(base64Str.length * 3 / 4));
+            var c;
+            var bits;
+            for (var i = 0, len = base64Str.length; i < len; i++) {
+              c = base64Str.charCodeAt(i);
+              if (c >= 65 && c <= 90) {
+                bits = c - 65;
+              } else if (c >= 97 && c <= 122) {
+                bits = c - 97 + 26;
+              } else if (c >= 48 && c <= 57) {
+                bits = c - 48 + 52;
+              } else if (c === 43) {
+                bits = 62;
+              } else if (c === 47) {
+                bits = 63;
+              } else if (c === 61) {
+                validBits = 0;
+                continue;
+              } else {
+                continue;
+              }
+              bitsSoFar = bitsSoFar << 6 | bits;
+              validBits += 6;
+              if (validBits >= 8) {
+                validBits -= 8;
+                arr[iOut++] = bitsSoFar >> validBits;
+                if (validBits === 2) {
+                  bitsSoFar &= 3;
+                } else if (validBits === 4) {
+                  bitsSoFar &= 15;
+                }
+              }
+            }
+            if (iOut < arr.length) {
+              return arr.subarray(0, iOut);
+            }
+            return arr;
+          }
+        };
+        function base64Encode(input) {
+          var str = String(input);
+          var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+          for (var block, charCode, idx = 0, map = chars, output = ""; str.charAt(idx | 0) || (map = "=", idx % 1); output += map.charAt(63 & block >> 8 - idx % 1 * 8)) {
+            charCode = str.charCodeAt(idx += 3 / 4);
+            if (charCode > 255) {
+              throw new Error("'btoa' failed: The string to be encoded contains characters outside of the Latin1 range.");
+            }
+            block = block << 8 | charCode;
+          }
+          return output;
+        }
+        return mimefuncs2;
+      });
+    }
+  });
+
+  // src/vendor/punycode.js
+  var require_punycode = __commonJS({
+    "src/vendor/punycode.js"(exports, module) {
+      (function(root) {
+        var freeExports = typeof exports == "object" && exports;
+        var freeModule = typeof module == "object" && module && module.exports == freeExports && module;
+        var freeGlobal = typeof global == "object" && global;
+        if (freeGlobal.global === freeGlobal || freeGlobal.window === freeGlobal) {
+          root = freeGlobal;
+        }
+        var punycode2, maxInt = 2147483647, base = 36, tMin = 1, tMax = 26, skew = 38, damp = 700, initialBias = 72, initialN = 128, delimiter = "-", regexPunycode = /^xn--/, regexNonASCII = /[^ -~]/, regexSeparators = /\x2E|\u3002|\uFF0E|\uFF61/g, errors = {
+          "overflow": "Overflow: input needs wider integers to process",
+          "not-basic": "Illegal input >= 0x80 (not a basic code point)",
+          "invalid-input": "Invalid input"
+        }, baseMinusTMin = base - tMin, floor = Math.floor, stringFromCharCode = String.fromCharCode, key;
+        function error(type) {
+          throw RangeError(errors[type]);
+        }
+        function map(array, fn) {
+          var length = array.length;
+          while (length--) {
+            array[length] = fn(array[length]);
+          }
+          return array;
+        }
+        function mapDomain(string, fn) {
+          return map(string.split(regexSeparators), fn).join(".");
+        }
+        function ucs2decode(string) {
+          var output = [], counter = 0, length = string.length, value, extra;
+          while (counter < length) {
+            value = string.charCodeAt(counter++);
+            if (value >= 55296 && value <= 56319 && counter < length) {
+              extra = string.charCodeAt(counter++);
+              if ((extra & 64512) == 56320) {
+                output.push(((value & 1023) << 10) + (extra & 1023) + 65536);
+              } else {
+                output.push(value);
+                counter--;
+              }
+            } else {
+              output.push(value);
+            }
+          }
+          return output;
+        }
+        function ucs2encode(array) {
+          return map(array, function(value) {
+            var output = "";
+            if (value > 65535) {
+              value -= 65536;
+              output += stringFromCharCode(value >>> 10 & 1023 | 55296);
+              value = 56320 | value & 1023;
+            }
+            output += stringFromCharCode(value);
+            return output;
+          }).join("");
+        }
+        function basicToDigit(codePoint) {
+          if (codePoint - 48 < 10) {
+            return codePoint - 22;
+          }
+          if (codePoint - 65 < 26) {
+            return codePoint - 65;
+          }
+          if (codePoint - 97 < 26) {
+            return codePoint - 97;
+          }
+          return base;
+        }
+        function digitToBasic(digit, flag) {
+          return digit + 22 + 75 * (digit < 26) - ((flag != 0) << 5);
+        }
+        function adapt(delta, numPoints, firstTime) {
+          var k = 0;
+          delta = firstTime ? floor(delta / damp) : delta >> 1;
+          delta += floor(delta / numPoints);
+          for (; delta > baseMinusTMin * tMax >> 1; k += base) {
+            delta = floor(delta / baseMinusTMin);
+          }
+          return floor(k + (baseMinusTMin + 1) * delta / (delta + skew));
+        }
+        function decode(input) {
+          var output = [], inputLength = input.length, out, i = 0, n = initialN, bias = initialBias, basic, j, index, oldi, w, k, digit, t, baseMinusT;
+          basic = input.lastIndexOf(delimiter);
+          if (basic < 0) {
+            basic = 0;
+          }
+          for (j = 0; j < basic; ++j) {
+            if (input.charCodeAt(j) >= 128) {
+              error("not-basic");
+            }
+            output.push(input.charCodeAt(j));
+          }
+          for (index = basic > 0 ? basic + 1 : 0; index < inputLength; ) {
+            for (oldi = i, w = 1, k = base; ; k += base) {
+              if (index >= inputLength) {
+                error("invalid-input");
+              }
+              digit = basicToDigit(input.charCodeAt(index++));
+              if (digit >= base || digit > floor((maxInt - i) / w)) {
+                error("overflow");
+              }
+              i += digit * w;
+              t = k <= bias ? tMin : k >= bias + tMax ? tMax : k - bias;
+              if (digit < t) {
+                break;
+              }
+              baseMinusT = base - t;
+              if (w > floor(maxInt / baseMinusT)) {
+                error("overflow");
+              }
+              w *= baseMinusT;
+            }
+            out = output.length + 1;
+            bias = adapt(i - oldi, out, oldi == 0);
+            if (floor(i / out) > maxInt - n) {
+              error("overflow");
+            }
+            n += floor(i / out);
+            i %= out;
+            output.splice(i++, 0, n);
+          }
+          return ucs2encode(output);
+        }
+        function encode(input) {
+          var n, delta, handledCPCount, basicLength, bias, j, m, q, k, t, currentValue, output = [], inputLength, handledCPCountPlusOne, baseMinusT, qMinusT;
+          input = ucs2decode(input);
+          inputLength = input.length;
+          n = initialN;
+          delta = 0;
+          bias = initialBias;
+          for (j = 0; j < inputLength; ++j) {
+            currentValue = input[j];
+            if (currentValue < 128) {
+              output.push(stringFromCharCode(currentValue));
+            }
+          }
+          handledCPCount = basicLength = output.length;
+          if (basicLength) {
+            output.push(delimiter);
+          }
+          while (handledCPCount < inputLength) {
+            for (m = maxInt, j = 0; j < inputLength; ++j) {
+              currentValue = input[j];
+              if (currentValue >= n && currentValue < m) {
+                m = currentValue;
+              }
+            }
+            handledCPCountPlusOne = handledCPCount + 1;
+            if (m - n > floor((maxInt - delta) / handledCPCountPlusOne)) {
+              error("overflow");
+            }
+            delta += (m - n) * handledCPCountPlusOne;
+            n = m;
+            for (j = 0; j < inputLength; ++j) {
+              currentValue = input[j];
+              if (currentValue < n && ++delta > maxInt) {
+                error("overflow");
+              }
+              if (currentValue == n) {
+                for (q = delta, k = base; ; k += base) {
+                  t = k <= bias ? tMin : k >= bias + tMax ? tMax : k - bias;
+                  if (q < t) {
+                    break;
+                  }
+                  qMinusT = q - t;
+                  baseMinusT = base - t;
+                  output.push(stringFromCharCode(digitToBasic(t + qMinusT % baseMinusT, 0)));
+                  q = floor(qMinusT / baseMinusT);
+                }
+                output.push(stringFromCharCode(digitToBasic(q, 0)));
+                bias = adapt(delta, handledCPCountPlusOne, handledCPCount == basicLength);
+                delta = 0;
+                ++handledCPCount;
+              }
+            }
+            ++delta;
+            ++n;
+          }
+          return output.join("");
+        }
+        function toUnicode(domain) {
+          return mapDomain(domain, function(string) {
+            return regexPunycode.test(string) ? decode(string.slice(4).toLowerCase()) : string;
+          });
+        }
+        function toASCII(domain) {
+          return mapDomain(domain, function(string) {
+            return regexNonASCII.test(string) ? "xn--" + encode(string) : string;
+          });
+        }
+        punycode2 = {
+          "version": "1.2.4",
+          "ucs2": {
+            "decode": ucs2decode,
+            "encode": ucs2encode
+          },
+          "decode": decode,
+          "encode": encode,
+          "toASCII": toASCII,
+          "toUnicode": toUnicode
+        };
+        if (typeof define == "function" && typeof define.amd == "object" && define.amd) {
+          define("punycode", function() {
+            return punycode2;
+          });
+        } else if (freeExports && !freeExports.nodeType) {
+          if (freeModule) {
+            freeModule.exports = punycode2;
+          } else {
+            for (key in punycode2) {
+              punycode2.hasOwnProperty(key) && (freeExports[key] = punycode2[key]);
+            }
+          }
+        } else {
+          root.punycode = punycode2;
+        }
+      })(exports);
+    }
+  });
+
+  // src/vendor/mailbuild.js
+  var require_mailbuild = __commonJS({
+    "src/vendor/mailbuild.js"(exports, module) {
+      (function(root, factory) {
+        "use strict";
+        if (typeof define === "function" && define.amd) {
+          define(["mimefuncs", "mimetypes", "punycode", "addressparser"], factory);
+        } else if (typeof exports === "object") {
+          module.exports = factory(require_mimefuncs(), require_mimetypes(), require_punycode(), require_addressparser());
+        } else {
+          root.mailbuild = factory(mimefuncs, mimetypes, punycode, addressparser);
+        }
+      })(exports, function(mimefuncs2, mimetypes3, punycode2, addressparser2) {
+        "use strict";
+        function MimeNode2(contentType, options) {
+          this.nodeCounter = 0;
+          options = options || {};
+          this.baseBoundary = options.baseBoundary || Date.now().toString() + Math.random();
+          this.date = new Date();
+          this.rootNode = options.rootNode || this;
+          if (options.filename) {
+            this.filename = options.filename;
+            if (!contentType) {
+              contentType = mimetypes3.detectMimeType(this.filename.split(".").pop());
+            }
+          }
+          this.parentNode = options.parentNode;
+          this._nodeId = ++this.rootNode.nodeCounter;
+          this._childNodes = [];
+          this._headers = [];
+          if (contentType) {
+            this.setHeader("content-type", contentType);
+          }
+        }
+        MimeNode2.prototype.createChild = function(contentType, options) {
+          if (!options && typeof contentType === "object") {
+            options = contentType;
+            contentType = void 0;
+          }
+          var node = new MimeNode2(contentType, options);
+          this.appendChild(node);
+          return node;
+        };
+        MimeNode2.prototype.appendChild = function(childNode) {
+          if (childNode.rootNode !== this.rootNode) {
+            childNode.rootNode = this.rootNode;
+            childNode._nodeId = ++this.rootNode.nodeCounter;
+          }
+          childNode.parentNode = this;
+          this._childNodes.push(childNode);
+          return childNode;
+        };
+        MimeNode2.prototype.replace = function(node) {
+          if (node === this) {
+            return this;
+          }
+          this.parentNode._childNodes.forEach(function(childNode, i) {
+            if (childNode === this) {
+              node.rootNode = this.rootNode;
+              node.parentNode = this.parentNode;
+              node._nodeId = this._nodeId;
+              this.rootNode = this;
+              this.parentNode = void 0;
+              node.parentNode._childNodes[i] = node;
+            }
+          }.bind(this));
+          return node;
+        };
+        MimeNode2.prototype.remove = function() {
+          if (!this.parentNode) {
+            return this;
+          }
+          for (var i = this.parentNode._childNodes.length - 1; i >= 0; i--) {
+            if (this.parentNode._childNodes[i] === this) {
+              this.parentNode._childNodes.splice(i, 1);
+              this.parentNode = void 0;
+              this.rootNode = this;
+              return this;
+            }
+          }
+        };
+        MimeNode2.prototype.setHeader = function(key, value) {
+          var added = false, headerValue;
+          if (!value && key && typeof key === "object") {
+            if (key.key && key.value) {
+              this.setHeader(key.key, key.value);
+            } else if (Array.isArray(key)) {
+              key.forEach(function(i2) {
+                this.setHeader(i2.key, i2.value);
+              }.bind(this));
+            } else {
+              Object.keys(key).forEach(function(i2) {
+                this.setHeader(i2, key[i2]);
+              }.bind(this));
+            }
+            return this;
+          }
+          key = this._normalizeHeaderKey(key);
+          headerValue = {
+            key,
+            value
+          };
+          for (var i = 0, len = this._headers.length; i < len; i++) {
+            if (this._headers[i].key === key) {
+              if (!added) {
+                this._headers[i] = headerValue;
+                added = true;
+              } else {
+                this._headers.splice(i, 1);
+                i--;
+                len--;
+              }
+            }
+          }
+          if (!added) {
+            this._headers.push(headerValue);
+          }
+          return this;
+        };
+        MimeNode2.prototype.addHeader = function(key, value) {
+          if (!value && key && typeof key === "object") {
+            if (key.key && key.value) {
+              this.addHeader(key.key, key.value);
+            } else if (Array.isArray(key)) {
+              key.forEach(function(i) {
+                this.addHeader(i.key, i.value);
+              }.bind(this));
+            } else {
+              Object.keys(key).forEach(function(i) {
+                this.addHeader(i, key[i]);
+              }.bind(this));
+            }
+            return this;
+          }
+          this._headers.push({
+            key: this._normalizeHeaderKey(key),
+            value
+          });
+          return this;
+        };
+        MimeNode2.prototype.getHeader = function(key) {
+          key = this._normalizeHeaderKey(key);
+          for (var i = 0, len = this._headers.length; i < len; i++) {
+            if (this._headers[i].key === key) {
+              return this._headers[i].value;
+            }
+          }
+        };
+        MimeNode2.prototype.setContent = function(content) {
+          this.content = content;
+          return this;
+        };
+        MimeNode2.prototype.build = function() {
+          var lines = [], contentType = (this.getHeader("Content-Type") || "").toString().toLowerCase().trim(), transferEncoding, flowed;
+          if (this.content) {
+            transferEncoding = (this.getHeader("Content-Transfer-Encoding") || "").toString().toLowerCase().trim();
+            if (!transferEncoding || ["base64", "quoted-printable"].indexOf(transferEncoding) < 0) {
+              if (/^text\//i.test(contentType)) {
+                if (this._isPlainText(this.content)) {
+                  if (/^.{77,}/m.test(this.content)) {
+                    flowed = true;
+                  }
+                  transferEncoding = "7bit";
+                } else {
+                  transferEncoding = "quoted-printable";
+                }
+              } else if (!/^multipart\//i.test(contentType)) {
+                transferEncoding = transferEncoding || "base64";
+              }
+            }
+            if (transferEncoding) {
+              this.setHeader("Content-Transfer-Encoding", transferEncoding);
+            }
+          }
+          if (this.filename && !this.getHeader("Content-Disposition")) {
+            this.setHeader("Content-Disposition", "attachment");
+          }
+          this._headers.forEach(function(header) {
+            var key = header.key, value = header.value, structured;
+            switch (header.key) {
+              case "Content-Disposition":
+                structured = mimefuncs2.parseHeaderValue(value);
+                if (this.filename) {
+                  structured.params.filename = this.filename;
+                }
+                value = this._buildHeaderValue(structured);
+                break;
+              case "Content-Type":
+                structured = mimefuncs2.parseHeaderValue(value);
+                this._handleContentType(structured);
+                if (flowed) {
+                  structured.params.format = "flowed";
+                }
+                if (String(structured.params.format).toLowerCase().trim() === "flowed") {
+                  flowed = true;
+                }
+                if (structured.value.match(/^text\//) && typeof this.content === "string" && /[\u0080-\uFFFF]/.test(this.content)) {
+                  structured.params.charset = "utf-8";
+                }
+                value = this._buildHeaderValue(structured);
+                break;
+              case "Bcc":
+                return;
+            }
+            value = this._encodeHeaderValue(key, value);
+            if (!(value || "").toString().trim()) {
+              return;
+            }
+            lines.push(mimefuncs2.foldLines(key + ": " + value, 76));
+          }.bind(this));
+          if (this.rootNode === this) {
+            if (!this.getHeader("Date")) {
+              lines.push("Date: " + this.date.toUTCString().replace(/GMT/, "+0000"));
+            }
+            if (!this.getHeader("Message-Id")) {
+              lines.push("Message-Id: <" + [0, 0, 0].reduce(function(prev) {
+                return prev + "-" + Math.floor((1 + Math.random()) * 4294967296).toString(16).substring(1);
+              }, Date.now()) + "@" + (this.getEnvelope().from || "localhost").split("@").pop() + ">");
+            }
+            if (!this.getHeader("MIME-Version")) {
+              lines.push("MIME-Version: 1.0");
+            }
+          }
+          lines.push("");
+          if (this.content) {
+            switch (transferEncoding) {
+              case "quoted-printable":
+                lines.push(mimefuncs2.quotedPrintableEncode(this.content));
+                break;
+              case "base64":
+                lines.push(mimefuncs2.base64Encode(this.content, typeof this.content === "object" && "binary" || false));
+                break;
+              default:
+                if (flowed) {
+                  lines.push(mimefuncs2.foldLines(this.content.replace(/\r?\n/g, "\r\n").replace(/^( |From|>)/igm, " $1"), 76, true));
+                } else {
+                  lines.push(this.content.replace(/\r?\n/g, "\r\n"));
+                }
+            }
+            if (this.multipart) {
+              lines.push("");
+            }
+          }
+          if (this.multipart) {
+            this._childNodes.forEach(function(node) {
+              lines.push("--" + this.boundary);
+              lines.push(node.build());
+            }.bind(this));
+            lines.push("--" + this.boundary + "--");
+            lines.push("");
+          }
+          return lines.join("\r\n");
+        };
+        MimeNode2.prototype.getEnvelope = function() {
+          var envelope = {
+            from: false,
+            to: []
+          };
+          this._headers.forEach(function(header) {
+            var list = [];
+            if (header.key === "From" || !envelope.from && ["Reply-To", "Sender"].indexOf(header.key) >= 0) {
+              this._convertAddresses(this._parseAddresses(header.value), list);
+              if (list.length && list[0]) {
+                envelope.from = list[0];
+              }
+            } else if (["To", "Cc", "Bcc"].indexOf(header.key) >= 0) {
+              this._convertAddresses(this._parseAddresses(header.value), envelope.to);
+            }
+          }.bind(this));
+          return envelope;
+        };
+        MimeNode2.prototype._parseAddresses = function(addresses) {
+          return [].concat.apply([], [].concat(addresses).map(function(address) {
+            if (address && address.address) {
+              address = this._convertAddresses(address);
+            }
+            return addressparser2.parse(address);
+          }.bind(this)));
+        };
+        MimeNode2.prototype._normalizeHeaderKey = function(key) {
+          return (key || "").toString().replace(/\r?\n|\r/g, " ").trim().toLowerCase().replace(/^MIME\b|^[a-z]|\-[a-z]/ig, function(c) {
+            return c.toUpperCase();
+          });
+        };
+        MimeNode2.prototype._buildHeaderValue = function(structured) {
+          var paramsArray = [];
+          Object.keys(structured.params || {}).forEach(function(param) {
+            if (param === "filename") {
+              mimefuncs2.continuationEncode(param, structured.params[param], 50).forEach(function(encodedParam) {
+                paramsArray.push(encodedParam.key + "=" + encodedParam.value);
+              });
+            } else {
+              paramsArray.push(param + "=" + this._escapeHeaderArgument(structured.params[param]));
+            }
+          }.bind(this));
+          return structured.value + (paramsArray.length ? "; " + paramsArray.join("; ") : "");
+        };
+        MimeNode2.prototype._escapeHeaderArgument = function(value) {
+          if (value.match(/[\s'"\\;\/=]|^\-/g)) {
+            return '"' + value.replace(/(["\\])/g, "\\$1") + '"';
+          } else {
+            return value;
+          }
+        };
+        MimeNode2.prototype._handleContentType = function(structured) {
+          this.contentType = structured.value.trim().toLowerCase();
+          this.multipart = this.contentType.split("/").reduce(function(prev, value) {
+            return prev === "multipart" ? value : false;
+          });
+          if (this.multipart) {
+            this.boundary = structured.params.boundary = structured.params.boundary || this.boundary || this._generateBoundary();
+          } else {
+            this.boundary = false;
+          }
+        };
+        MimeNode2.prototype._generateBoundary = function() {
+          return "----sinikael-?=_" + this._nodeId + "-" + this.rootNode.baseBoundary;
+        };
+        MimeNode2.prototype._encodeHeaderValue = function(key, value) {
+          key = this._normalizeHeaderKey(key);
+          switch (key) {
+            case "From":
+            case "Sender":
+            case "To":
+            case "Cc":
+            case "Bcc":
+            case "Reply-To":
+              return this._convertAddresses(this._parseAddresses(value));
+            case "Message-Id":
+            case "In-Reply-To":
+            case "Content-Id":
+              value = (value || "").toString().replace(/\r?\n|\r/g, " ");
+              if (value.charAt(0) !== "<") {
+                value = "<" + value;
+              }
+              if (value.charAt(value.length - 1) !== ">") {
+                value = value + ">";
+              }
+              return value;
+            case "References":
+              value = [].concat.apply([], [].concat(value || "").map(function(elm) {
+                elm = (elm || "").toString().replace(/\r?\n|\r/g, " ").trim();
+                return elm.replace(/<[^>]*>/g, function(str) {
+                  return str.replace(/\s/g, "");
+                }).split(/\s+/);
+              })).map(function(elm) {
+                if (elm.charAt(0) !== "<") {
+                  elm = "<" + elm;
+                }
+                if (elm.charAt(elm.length - 1) !== ">") {
+                  elm = elm + ">";
+                }
+                return elm;
+              });
+              return value.join(" ").trim();
+            default:
+              value = (value || "").toString().replace(/\r?\n|\r/g, " ");
+              return mimefuncs2.mimeWordsEncode(value, "Q", 52);
+          }
+        };
+        MimeNode2.prototype._convertAddresses = function(addresses, uniqueList) {
+          var values = [];
+          uniqueList = uniqueList || [];
+          [].concat(addresses || []).forEach(function(address) {
+            if (address.address) {
+              address.address = address.address.replace(/^.*?(?=\@)/, function(user) {
+                return mimefuncs2.mimeWordsEncode(user, "Q", 52);
+              }).replace(/@.+$/, function(domain) {
+                return "@" + punycode2.toASCII(domain.substr(1));
+              });
+              if (!address.name) {
+                values.push(address.address);
+              } else if (address.name) {
+                values.push(this._encodeAddressName(address.name) + " <" + address.address + ">");
+              }
+              if (uniqueList.indexOf(address.address) < 0) {
+                uniqueList.push(address.address);
+              }
+            } else if (address.group) {
+              values.push(this._encodeAddressName(address.name) + ":" + (address.group.length ? this._convertAddresses(address.group, uniqueList) : "").trim() + ";");
+            }
+          }.bind(this));
+          return values.join(", ");
+        };
+        MimeNode2.prototype._encodeAddressName = function(name) {
+          if (!/^[\w ']*$/.test(name)) {
+            if (/^[\x20-\x7e]*$/.test(name)) {
+              return '"' + name.replace(/([\\"])/g, "\\$1") + '"';
+            } else {
+              return mimefuncs2.mimeWordEncode(name, "Q", 52);
+            }
+          }
+          return name;
+        };
+        MimeNode2.prototype._isPlainText = function(value) {
+          if (typeof value !== "string" || /[\x00-\x08\x0b\x0c\x0e-\x1f\u0080-\uFFFF]/.test(value)) {
+            return false;
+          } else {
+            return true;
+          }
+        };
+        return MimeNode2;
+      });
+    }
+  });
+
+  // src/backend/drafts/composer.js
+  function normalizeNewlines(body) {
+    return body.replace(/\r?\n|\r/g, "\r\n");
+  }
+  function Composer(messageInfo, account, reportHeartbeat) {
+    this.messageInfo = messageInfo;
+    this.account = account;
+    this.sentDate = new Date(messageInfo.date);
+    this._heartbeat = reportHeartbeat;
+    this.superBlob = null;
+  }
+  var import_mailbuild;
+  var init_composer = __esm({
+    "src/backend/drafts/composer.js"() {
+      import_mailbuild = __toModule(require_mailbuild());
+      init_mailchew();
+      init_util();
+      import_mailbuild.default.prototype.removeHeader = function(key) {
+        for (var i = 0, len = this._headers.length; i < len; i++) {
+          if (this._headers[i].key === key) {
+            this._headers.splice(i, 1);
+            break;
+          }
+        }
+      };
+      Composer.prototype = {
+        getEnvelope() {
+          return this._rootNode.getEnvelope();
+        },
+        async buildMessage(opts) {
+          let messageInfo = this.messageInfo;
+          let messageNode;
+          let quoteChewedRep = JSON.parse(await messageInfo.bodyReps[0].contentBlob.text());
+          let textContent = quoteChewedRep[1];
+          if (messageInfo.bodyReps.length === 2) {
+            let htmlContent = await messageInfo.bodyReps[1].contentBlob.text();
+            messageNode = new import_mailbuild.default("text/html");
+            messageNode.setContent(normalizeNewlines(mergeUserTextWithHTML(textContent, htmlContent)));
+          } else {
+            messageNode = new import_mailbuild.default("text/plain");
+            messageNode.setContent(normalizeNewlines(textContent));
+          }
+          var root;
+          if (messageInfo.attachments.length) {
+            root = this._rootNode = new import_mailbuild.default("multipart/mixed");
+            root.appendChild(messageNode);
+          } else {
+            root = this._rootNode = messageNode;
+          }
+          root.setHeader("From", formatAddresses([messageInfo.author]));
+          root.setHeader("Subject", messageInfo.subject);
+          if (messageInfo.replyTo) {
+            root.setHeader("Reply-To", formatAddresses[messageInfo.replyTo]);
+          }
+          if (messageInfo.to && messageInfo.to.length) {
+            root.setHeader("To", formatAddresses(messageInfo.to));
+          }
+          if (messageInfo.cc && messageInfo.cc.length) {
+            root.setHeader("Cc", formatAddresses(messageInfo.cc));
+          }
+          if (messageInfo.bcc && messageInfo.bcc.length) {
+            root.setHeader("Bcc", formatAddresses(messageInfo.bcc));
+          }
+          root.setHeader("User-Agent", "GaiaMail/0.2");
+          root.setHeader("Date", this.sentDate.toUTCString());
+          root.setHeader("Message-Id", messageInfo.guid);
+          if (messageInfo.references && messageInfo.references.length) {
+            root.setHeader("References", messageInfo.references);
+          }
+          root.setHeader("Content-Transfer-Encoding", "quoted-printable");
+          this._blobReplacements = [];
+          this._uniqueBlobBoundary = "{{blob!" + Math.random() + Date.now() + "}}";
+          messageInfo.attachments.forEach((attachment) => {
+            try {
+              var attachmentNode = new import_mailbuild.default(attachment.type, {
+                filename: attachment.name
+              });
+              attachmentNode.setHeader("Content-Transfer-Encoding", "base64");
+              attachmentNode.setContent(this._uniqueBlobBoundary);
+              root.appendChild(attachmentNode);
+              this._blobReplacements.push(new Blob(attachment.file));
+            } catch (ex) {
+              console.error("Problem attaching attachment:", ex, "\n", ex.stack);
+            }
+          });
+          var TEMP_BCC = "Bcc-Temp";
+          var TEMP_BCC_REGEX = /^Bcc-Temp: /m;
+          var hasBcc = opts.includeBcc && this.messageInfo.bcc && this.messageInfo.bcc.length;
+          if (hasBcc) {
+            this._rootNode.setHeader(TEMP_BCC, formatAddresses(this.messageInfo.bcc));
+          } else {
+            this._rootNode.removeHeader(TEMP_BCC);
+          }
+          var str = this._rootNode.build();
+          if (opts.smtp) {
+            str = str.replace(/\n\./g, "\n..");
+          }
+          if (hasBcc) {
+            str = str.replace(TEMP_BCC_REGEX, "Bcc: ");
+          }
+          if (str.slice(-2) !== "\r\n") {
+            str += "\r\n";
+          }
+          var splits = str.split(btoa(this._uniqueBlobBoundary) + "\r\n");
+          this._blobReplacements.forEach(function(blob, i) {
+            splits.splice(i * 2 + 1, 0, blob);
+          });
+          this.superBlob = new Blob(splits, {
+            type: this._rootNode.getHeader("content-type")
+          });
+        },
+        heartbeat(reason) {
+          if (this._heartbeat) {
+            this._heartbeat(reason);
+          }
+        }
+      };
+    }
+  });
+
+  // src/backend/task_mixins/mix_outbox_send.js
+  var mix_outbox_send_default;
+  var init_mix_outbox_send = __esm({
+    "src/backend/task_mixins/mix_outbox_send.js"() {
+      init_conv_churn_driver();
+      init_composer();
+      init_id_conversions();
+      mix_outbox_send_default = {
+        name: "outbox_send",
+        initPersistentState() {
+          return {
+            messageIdsToSend: new Map(),
+            sendOrderingCounter: 0
+          };
+        },
+        _markerIdForMessage(accountId, messageId) {
+          return this.name + ":" + messageId;
+        },
+        _makeMarkerForMessage(accountId, messageId, order) {
+          return {
+            type: this.name,
+            id: this._markerIdForMessage(accountId, messageId),
+            accountId,
+            onlineOnly: true,
+            priorityTags: [],
+            resources: [],
+            exclusiveResources: [],
+            relPriority: -order,
+            messageId
+          };
+        },
+        deriveMemoryStateFromPersistentState(persistentState, accountId) {
+          let markers = [];
+          for (let [messageId, { order }] of persistentState.messageIdsToSend) {
+            markers.push(this._makeMarkerForMessage(accountId, messageId, order));
+          }
+          return {
+            memoryState: {
+              paused: false,
+              activelySending: new Map()
+            },
+            markers
+          };
+        },
+        async _planSend(ctx, persistentState, memoryState, rawTask) {
+          const { messageId } = rawTask;
+          let convId = convIdFromMessageId(messageId);
+          let fromDb = await ctx.beginMutate({
+            conversations: new Map([[convId, null]]),
+            messagesByConversation: new Map([[convId, null]])
+          });
+          let oldConvInfo = fromDb.conversations.get(convId);
+          let messages = fromDb.messagesByConversation.get(convId);
+          let messageInfo = messages.find((msg) => msg.id === messageId);
+          let foldersToc = await ctx.universe.acquireAccountFoldersTOC(ctx, ctx.accountId);
+          let outboxFolder = foldersToc.getCanonicalFolderByType("outbox");
+          messageInfo.folderIds = new Set([outboxFolder.id]);
+          messageInfo.draftInfo.sendProblems = {
+            error: null,
+            badAddresses: null,
+            sendFailures: 0
+          };
+          let convInfo = churnConversationDriver(convId, oldConvInfo, messages);
+          let sendInfo = {
+            date: messageInfo.date,
+            order: persistentState.sendOrderingCounter++
+          };
+          persistentState.messageIdsToSend.set(messageId, sendInfo);
+          let modifyTaskMarkers = new Map();
+          if (!memoryState.paused) {
+            let marker = this._makeMarkerForMessage(rawTask.accountId, messageId, sendInfo.order);
+            modifyTaskMarkers.set(marker.id, marker);
+          }
+          let reportProblem;
+          if (memoryState.paused) {
+            reportProblem = "outbox-paused";
+          } else if (ctx.accountProblem) {
+            reportProblem = "account-problem";
+          } else if (!ctx.online) {
+            reportProblem = "offline";
+          } else {
+            reportProblem = null;
+          }
+          await ctx.finishTask({
+            mutations: {
+              conversations: new Map([[convId, convInfo]]),
+              messages: new Map([[messageId, messageInfo]])
+            },
+            taskMarkers: modifyTaskMarkers,
+            complexTaskState: persistentState
+          });
+          return ctx.returnValue(reportProblem);
+        },
+        async _planAbort(ctx, persistentState, memoryState, rawTask) {
+          const { messageId } = rawTask;
+          if (!persistentState.messageIdsToSend.has(messageId)) {
+            throw new Error("moot");
+          }
+          if (memoryState.activelySending.has(messageId)) {
+            throw new Error("moot");
+          }
+          let convId = convIdFromMessageId(messageId);
+          let fromDb = await ctx.beginMutate({
+            conversations: new Map([[convId, null]]),
+            messagesByConversation: new Map([[convId, null]])
+          });
+          let oldConvInfo = fromDb.conversations.get(convId);
+          let messages = fromDb.messagesByConversation.get(convId);
+          let messageInfo = messages.find((msg) => msg.id === messageId);
+          let foldersToc = await ctx.universe.acquireAccountFoldersTOC(ctx, ctx.accountId);
+          let draftsFolder = foldersToc.getCanonicalFolderByType("localdrafts");
+          messageInfo.folderIds = new Set([draftsFolder.id]);
+          let convInfo = churnConversationDriver(convId, oldConvInfo, messages);
+          let markerId = this._markerIdForMessage(messageId);
+          persistentState.messageIdsToSend.delete(messageId);
+          await ctx.finishTask({
+            mutations: {
+              conversations: new Map([[convId, convInfo]]),
+              messages: new Map([[messageId, messageInfo]])
+            },
+            taskMarkers: new Map([[markerId, null]]),
+            complexTaskState: persistentState
+          });
+        },
+        async _planSetPaused(ctx, persistentState, memoryState, rawTask) {
+          if (rawTask.paused === memoryState.paused) {
+            await ctx.finishTask({});
+            return;
+          }
+          let bePaused = memoryState.paused = rawTask.paused;
+          let modifyTaskMarkers = new Map();
+          if (bePaused) {
+            for (let messageId of persistentState.messageIdsToSend.keys()) {
+              modifyTaskMarkers.set(this._markerIdForMessage(messageId), null);
+            }
+          } else {
+            let accountId = ctx.accountId;
+            for (let [messageId, { order }] of persistentState.messageIdsToSend) {
+              let marker = this._makeMarkerForMessage(accountId, messageId, order);
+              modifyTaskMarkers.set(marker.id, marker);
+            }
+          }
+          await ctx.finishTask({
+            taskMarkers: modifyTaskMarkers,
+            complexTaskState: persistentState
+          });
+        },
+        plan(ctx, persistentState, memoryState, rawTask) {
+          switch (rawTask.command) {
+            case "send": {
+              return this._planSend(ctx, persistentState, memoryState, rawTask);
+            }
+            case "abort": {
+              return this._planAbort(ctx, persistentState, memoryState, rawTask);
+            }
+            case "setPaused": {
+              return this._planSetPaused(ctx, persistentState, memoryState, rawTask);
+            }
+            default:
+              throw new Error("bug");
+          }
+        },
+        async execute(ctx, persistentState, memoryState, marker) {
+          const { messageId } = marker;
+          const { date } = persistentState.messageIdsToSend.get(messageId);
+          const activeSendStatus = {
+            progress: "building"
+          };
+          memoryState.activelySending.set(messageId, activeSendStatus);
+          const account = await ctx.universe.acquireAccount(ctx, ctx.accountId);
+          let messageKey = [messageId, date];
+          let messageInfo = (await ctx.read({
+            messages: new Map([[messageKey, null]])
+          })).messages.get(messageId);
+          const renewWakeLock = ctx.heartbeat.bind(ctx);
+          const composer = new Composer(messageInfo, account, renewWakeLock);
+          await composer.buildMessage({
+            includeBcc: this.shouldIncludeBcc(account)
+          });
+          let { error: sendError, badAddresses } = await this.sendMessage(ctx, account, composer);
+          let convId = convIdFromMessageId(messageId);
+          let fromDb = await ctx.beginMutate({
+            conversations: new Map([[convId, null]]),
+            messagesByConversation: new Map([[convId, null]])
+          });
+          let messages = fromDb.messagesByConversation.get(convId);
+          let oldConvInfo = fromDb.conversations.get(convId);
+          messageInfo = messages.find((msg) => msg.id === messageId);
+          let newTasks = [];
+          let modifyMessages = new Map();
+          let modifyConversations = new Map();
+          if (sendError) {
+            switch (sendError) {
+              case "bad-message":
+              case "bad-address":
+                break;
+              case "bad-user-or-pass":
+                break;
+              case "bad-security":
+              case "server-maybe-offline":
+              case "unresponsive-server":
+              case "unknown":
+              default:
+                break;
+            }
+            messageInfo.draftInfo.sendProblems = {
+              state: "error",
+              error: sendError,
+              badAddresses
+            };
+          } else {
+            this.saveSentMessage({ ctx, newTasks, messages, messageInfo, account });
+            if (messages.length) {
+              if (messages.includes(messageInfo)) {
+                modifyMessages.set(messageId, messageInfo);
+              } else {
+                modifyMessages.set(messageId, null);
+              }
+              let convInfo = churnConversationDriver(convId, oldConvInfo, messages);
+              modifyConversations.set(convId, convInfo);
+            } else {
+              modifyConversations.set(convId, null);
+            }
+          }
+          persistentState.messageIdsToSend.delete(messageId);
+          memoryState.activelySending.delete(messageId);
+          await ctx.finishTask({
+            mutations: {
+              conversations: modifyConversations,
+              messages: modifyMessages
+            },
+            newData: {
+              tasks: newTasks
+            },
+            complexTaskState: persistentState
+          });
+        },
+        sendMessage(ctx, account, composer) {
+          return account.sendMessage(composer);
+        },
+        saveSentMessage({ messages, messageInfo }) {
+          messages.splice(messages.indexOf(messageInfo), 1);
+        }
+      };
+    }
+  });
+
+  // src/backend/accounts/activesync/tasks/outbox_send.js
+  var outbox_send_default;
+  var init_outbox_send = __esm({
+    "src/backend/accounts/activesync/tasks/outbox_send.js"() {
+      init_task_definer();
+      init_send_mail();
+      init_send_mail_12x();
+      init_mix_outbox_send();
+      outbox_send_default = task_definer_default.defineComplexTask([
+        mix_outbox_send_default,
+        {
+          shouldIncludeBcc() {
+            return true;
+          },
+          async sendMessage(ctx, account, composer) {
+            let conn;
+            try {
+              conn = await account.ensureConnection();
+            } catch (ex) {
+              return { error: ex.message };
+            }
+            let mimeBlob = composer.superBlob;
+            let progress = () => {
+              composer.heartbeat("ActiveSync sendMessage");
+            };
+            try {
+              if (conn.currentVersion.gte("14.0")) {
+                await sendMail(conn, { mimeBlob, progress });
+              } else {
+                await sendMail2(conn, { mimeBlob, progress });
+              }
+            } catch (ex) {
+              return { error: ex.message };
+            }
+            return { error: null };
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/tasks/account_modify.js
+  var account_modify_default;
+  var init_account_modify = __esm({
+    "src/backend/tasks/account_modify.js"() {
+      init_logic();
+      init_task_definer();
+      init_date();
+      account_modify_default = task_definer_default.defineSimpleTask([
+        {
+          name: "account_modify",
+          async plan(ctx, rawTask) {
+            const accountDef = ctx.readSingle("accounts", rawTask.accountId);
+            const accountClobbers = new Map();
+            for (let key in rawTask.mods) {
+              const val = rawTask.mods[key];
+              switch (key) {
+                case "name":
+                  accountClobbers.set(["map"], val);
+                  break;
+                case "username":
+                  if (accountDef.credentials.outgoingUsername === accountDef.credentials.username) {
+                    accountClobbers.set(["credentials", "outgoingUsername"], val);
+                  }
+                  accountClobbers.set(["credentials", "username"], val);
+                  break;
+                case "incomingUsername":
+                  accountClobbers.set(["credentials", "username"], val);
+                  break;
+                case "outgoingUsername":
+                  accountClobbers.set(["credentials", "outgoingUsername"], val);
+                  break;
+                case "password":
+                  if (accountDef.credentials.outgoingPassword === accountDef.credentials.password) {
+                    accountClobbers.set(["credentials", "outgoingPassword"], val);
+                  }
+                  accountClobbers.set(["credentials", "password"], val);
+                  break;
+                case "incomingPassword":
+                  accountClobbers.set(["credentials", "password"], val);
+                  break;
+                case "outgoingPassword":
+                  accountClobbers.set(["credentials", "outgoingPassword"], val);
+                  break;
+                case "oauthTokens":
+                  accountClobbers.set(["credentials", "oauth2", "accessToken"], val.accessToken);
+                  accountClobbers.set(["credentials", "oauth2", "refreshToken"], val.refreshToken);
+                  accountClobbers.set(["credentials", "oauth2", "expireTimeMS"], val.expireTimeMS);
+                  break;
+                case "identities":
+                  break;
+                case "servers":
+                  break;
+                case "syncRange":
+                  accountClobbers.set(["syncRange"], val);
+                  break;
+                case "syncInterval":
+                  accountClobbers.set(["syncInterval"], val);
+                  break;
+                case "notifyOnNew":
+                  accountClobbers.set(["notifyOnNew"], val);
+                  break;
+                case "playSoundOnSend":
+                  accountClobbers.set(["playSoundOnSend"], val);
+                  break;
+                case "setAsDefault":
+                  if (val) {
+                    accountClobbers.set(["defaultPriority"], NOW());
+                  }
+                  break;
+                default:
+                  logic(ctx, "badModifyAccountKey", { key });
+                  break;
+              }
+            }
+            await ctx.finishTask({
+              atomicClobbers: {
+                accounts: new Map([[rawTask.accountId, accountClobbers]])
+              }
+            });
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/tasks/identity_modify.js
+  var identity_modify_default;
+  var init_identity_modify = __esm({
+    "src/backend/tasks/identity_modify.js"() {
+      init_logic();
+      init_task_definer();
+      identity_modify_default = task_definer_default.defineSimpleTask([
+        {
+          name: "identity_modify",
+          async plan(ctx, rawTask) {
+            const accountClobbers = new Map();
+            const identIndex = 0;
+            const identPath = ["identities", identIndex];
+            for (let key in rawTask.mods) {
+              const val = rawTask.mods[key];
+              switch (key) {
+                case "name":
+                  accountClobbers.set(identPath.concat("name"), val);
+                  break;
+                case "address":
+                  accountClobbers.set(identPath.concat("address"), val);
+                  break;
+                case "replyTo":
+                  accountClobbers.set(identPath.concat("replyTo"), val);
+                  break;
+                case "signature":
+                  accountClobbers.set(identPath.concat("signature"), val);
+                  break;
+                case "signatureEnabled":
+                  accountClobbers.set(identPath.concat("signatureEnabled"), val);
+                  break;
+                default:
+                  logic(ctx, "badModifyIdentityKey", { key });
+                  break;
+              }
+            }
+            await ctx.finishTask({
+              atomicClobbers: {
+                accounts: new Map([[rawTask.accountId, accountClobbers]])
+              }
+            });
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/app_logic/new_message_summarizer.js
+  function extractRelevantMessageInfoForChurning(message) {
+    return {
+      date: message.date,
+      authorNameish: message.author.name || message.author.address,
+      subject: message.subject
+    };
+  }
+  var init_new_message_summarizer = __esm({
+    "src/app_logic/new_message_summarizer.js"() {
+    }
+  });
+
+  // src/backend/tasks/new_tracking.js
+  var new_tracking_default;
+  var init_new_tracking = __esm({
+    "src/backend/tasks/new_tracking.js"() {
+      init_task_definer();
+      init_new_message_summarizer();
+      init_id_conversions();
+      new_tracking_default = task_definer_default.defineComplexTask([
+        {
+          name: "new_tracking",
+          initPersistentState() {
+            return {
+              compareDate: null,
+              pendingDate: 0,
+              newByConv: new Map()
+            };
+          },
+          deriveMemoryStateFromPersistentState(persistentState, accountId, accountInfo, foldersTOC) {
+            let inboxFolder = foldersTOC.getCanonicalFolderByType("inbox");
+            return {
+              memoryState: {
+                inboxFolderId: inboxFolder && inboxFolder.id,
+                foldersTOC,
+                pendingTaskGroupId: null,
+                complexStateMap: new Map([[[accountId, this.name], persistentState]]),
+                newFlushTaskReq: {
+                  type: "new_flush"
+                }
+              },
+              markers: []
+            };
+          },
+          async plan(ctx, persistentState, memoryState, req) {
+            if (!persistentState.newByConv.size) {
+              await ctx.finishTask({});
+              return;
+            }
+            let newTasks = [];
+            if (req.op === "clear") {
+              if (!req.silent) {
+                newTasks.push({
+                  type: "new_flush"
+                });
+              }
+              persistentState.newByConv.clear();
+            }
+            await ctx.finishTask({
+              newData: { tasks: newTasks },
+              complexTaskState: persistentState
+            });
+          },
+          execute: null,
+          consult(askingCtx, persistentState) {
+            return persistentState.newByConv;
+          },
+          "trigger_msg!*!add": function(persistentState, memoryState, triggerCtx, message) {
+            if (!memoryState.inboxFolderId) {
+              let inboxFolder = memoryState.foldersTOC.getCanonicalFolderByType("inbox");
+              memoryState.inboxFolderId = inboxFolder && inboxFolder.id;
+              if (!memoryState.inboxFolderId) {
+                return;
+              }
+            }
+            if (!message.folderIds.has(memoryState.inboxFolderId)) {
+              return;
+            }
+            if (message.flags.includes("\\Seen")) {
+              return;
+            }
+            let curTaskGroupId = triggerCtx.rootTaskGroupId;
+            let dirty = false;
+            if (curTaskGroupId !== memoryState.pendingTaskGroupId) {
+              persistentState.compareDate = persistentState.pendingDate;
+              memoryState.pendingTaskGroupId = curTaskGroupId;
+              dirty = true;
+            }
+            if (message.date >= persistentState.pendingDate) {
+              dirty = true;
+              persistentState.pendingDate = Math.max(persistentState.pendingDate, message.date);
+              let convId = convIdFromMessageId(message.id);
+              let summary = extractRelevantMessageInfoForChurning(message);
+              let messageMap = persistentState.newByConv.get(convId);
+              if (!messageMap) {
+                messageMap = new Map();
+                persistentState.newByConv.set(convId, messageMap);
+              }
+              messageMap.set(message.id, summary);
+            }
+            if (dirty) {
+              triggerCtx.modify({
+                complexTaskStates: memoryState.complexStateMap,
+                rootGroupDeferredTask: memoryState.newFlushTaskReq
+              });
+            }
+          },
+          "trigger_msg!*!change": function(persistentState, memoryState, triggerCtx, messageId, preInfo, message, added, kept, removed) {
+            if (removed.has(memoryState.inboxFolderId) || message && message.flags.includes("\\Seen")) {
+              let convId = convIdFromMessageId(messageId);
+              let messageMap = persistentState.newByConv.get(convId);
+              if (!messageMap) {
+                return;
+              }
+              if (messageMap.delete(messageId)) {
+                if (messageMap.size === 0) {
+                  persistentState.newByConv.delete(convId);
+                }
+                triggerCtx.modify({
+                  complexTaskStates: memoryState.complexStateMap,
+                  rootGroupDeferredTask: memoryState.newFlushTaskReq
+                });
+              }
+            }
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/accounts/activesync/activesync_tasks.js
+  var activesync_tasks_exports = {};
+  __export(activesync_tasks_exports, {
+    default: () => activesync_tasks_default
+  });
+  var activesync_tasks_default;
+  var init_activesync_tasks = __esm({
+    "src/backend/accounts/activesync/activesync_tasks.js"() {
+      init_sync_folder_list();
+      init_sync_refresh();
+      init_sync_conv();
+      init_sync_body();
+      init_store_flags();
+      init_draft_save();
+      init_draft_attach();
+      init_draft_detach();
+      init_draft_delete();
+      init_outbox_send();
+      init_account_modify();
+      init_identity_modify();
+      init_new_tracking();
+      activesync_tasks_default = [
+        sync_folder_list_default,
+        sync_refresh_default,
+        sync_conv_default,
+        sync_body_default,
+        store_flags_default,
+        draft_save_default,
+        draft_attach_default,
+        draft_detach_default,
+        draft_delete_default,
+        outbox_send_default,
+        account_modify_default,
+        identity_modify_default,
+        new_tracking_default
+      ];
+    }
+  });
+
+  // src/backend/accounts/ical/tasks/sync_folder_list.js
+  var sync_folder_list_default2;
+  var init_sync_folder_list2 = __esm({
+    "src/backend/accounts/ical/tasks/sync_folder_list.js"() {
+      init_task_definer();
+      init_mix_sync_folder_list();
+      sync_folder_list_default2 = task_definer_default.defineSimpleTask([
+        mix_sync_folder_list_default,
+        {
+          essentialOfflineFolders: [
+            {
+              type: "inbox",
+              displayName: "Events"
+            }
+          ],
+          async syncFolders() {
+            return {
+              newFolders: void 0,
+              newTasks: void 0,
+              modifiedFolders: void 0,
+              modifiedSyncStates: void 0
+            };
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/date_priority_adjuster.js
+  function prioritizeNewer(dateTS) {
+    return Math.max(-MAX_PRIORITY_BOOST, MAX_PRIORITY_BOOST - (NOW() - dateTS) / ONE_HOUR_IN_MSECS);
+  }
+  var MAX_PRIORITY_BOOST, ONE_HOUR_IN_MSECS;
+  var init_date_priority_adjuster = __esm({
+    "src/backend/date_priority_adjuster.js"() {
+      init_date();
+      MAX_PRIORITY_BOOST = 99999;
+      ONE_HOUR_IN_MSECS = 60 * 60 * 1e3;
     }
   });
 
@@ -10416,45 +19929,9 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/task_helpers/sync_overlay_helpers.js
-  function syncNormalOverlay(id, marker, inProgress, blockedBy) {
-    let status;
-    if (inProgress) {
-      status = "active";
-    } else if (marker) {
-      status = "pending";
-    } else {
-      return null;
-    }
-    let blocked = null;
-    if (blockedBy) {
-      switch (blockedBy[blockedBy.length - 1][0]) {
-        case "o":
-          blocked = "offline";
-          break;
-        case "c":
-          blocked = "bad-auth";
-          break;
-        case "h":
-          blocked = "unknown";
-          break;
-        default:
-          break;
-      }
-    }
-    return { status, blocked };
-  }
-  function syncPrefixOverlay(fullId, binId, marker, inProgress, blockedBy) {
-    return syncNormalOverlay(binId, marker, inProgress, blockedBy);
-  }
-  var init_sync_overlay_helpers = __esm({
-    "src/backend/task_helpers/sync_overlay_helpers.js"() {
-    }
-  });
-
   // src/backend/accounts/ical/tasks/sync_refresh.js
-  var import_ical3, sync_refresh_default;
-  var init_sync_refresh = __esm({
+  var import_ical3, sync_refresh_default2;
+  var init_sync_refresh2 = __esm({
     "src/backend/accounts/ical/tasks/sync_refresh.js"() {
       init_logic();
       import_ical3 = __toModule(require_ical());
@@ -10464,7 +19941,7 @@ var WorkshopBackend = (() => {
       init_sync_state_helper();
       init_id_conversions();
       init_sync_overlay_helpers();
-      sync_refresh_default = task_definer_default.defineAtMostOnceTask([
+      sync_refresh_default2 = task_definer_default.defineAtMostOnceTask([
         {
           name: "sync_refresh",
           binByArg: "accountId",
@@ -10540,269 +20017,6 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/tasks/account_modify.js
-  var account_modify_default;
-  var init_account_modify = __esm({
-    "src/backend/tasks/account_modify.js"() {
-      init_logic();
-      init_task_definer();
-      init_date();
-      account_modify_default = task_definer_default.defineSimpleTask([
-        {
-          name: "account_modify",
-          async plan(ctx, rawTask) {
-            const accountDef = ctx.readSingle("accounts", rawTask.accountId);
-            const accountClobbers = new Map();
-            for (let key in rawTask.mods) {
-              const val = rawTask.mods[key];
-              switch (key) {
-                case "name":
-                  accountClobbers.set(["map"], val);
-                  break;
-                case "username":
-                  if (accountDef.credentials.outgoingUsername === accountDef.credentials.username) {
-                    accountClobbers.set(["credentials", "outgoingUsername"], val);
-                  }
-                  accountClobbers.set(["credentials", "username"], val);
-                  break;
-                case "incomingUsername":
-                  accountClobbers.set(["credentials", "username"], val);
-                  break;
-                case "outgoingUsername":
-                  accountClobbers.set(["credentials", "outgoingUsername"], val);
-                  break;
-                case "password":
-                  if (accountDef.credentials.outgoingPassword === accountDef.credentials.password) {
-                    accountClobbers.set(["credentials", "outgoingPassword"], val);
-                  }
-                  accountClobbers.set(["credentials", "password"], val);
-                  break;
-                case "incomingPassword":
-                  accountClobbers.set(["credentials", "password"], val);
-                  break;
-                case "outgoingPassword":
-                  accountClobbers.set(["credentials", "outgoingPassword"], val);
-                  break;
-                case "oauthTokens":
-                  accountClobbers.set(["credentials", "oauth2", "accessToken"], val.accessToken);
-                  accountClobbers.set(["credentials", "oauth2", "refreshToken"], val.refreshToken);
-                  accountClobbers.set(["credentials", "oauth2", "expireTimeMS"], val.expireTimeMS);
-                  break;
-                case "identities":
-                  break;
-                case "servers":
-                  break;
-                case "syncRange":
-                  accountClobbers.set(["syncRange"], val);
-                  break;
-                case "syncInterval":
-                  accountClobbers.set(["syncInterval"], val);
-                  break;
-                case "notifyOnNew":
-                  accountClobbers.set(["notifyOnNew"], val);
-                  break;
-                case "playSoundOnSend":
-                  accountClobbers.set(["playSoundOnSend"], val);
-                  break;
-                case "setAsDefault":
-                  if (val) {
-                    accountClobbers.set(["defaultPriority"], NOW());
-                  }
-                  break;
-                default:
-                  logic(ctx, "badModifyAccountKey", { key });
-                  break;
-              }
-            }
-            await ctx.finishTask({
-              atomicClobbers: {
-                accounts: new Map([[rawTask.accountId, accountClobbers]])
-              }
-            });
-          }
-        }
-      ]);
-    }
-  });
-
-  // src/backend/tasks/identity_modify.js
-  var identity_modify_default;
-  var init_identity_modify = __esm({
-    "src/backend/tasks/identity_modify.js"() {
-      init_logic();
-      init_task_definer();
-      identity_modify_default = task_definer_default.defineSimpleTask([
-        {
-          name: "identity_modify",
-          async plan(ctx, rawTask) {
-            const accountClobbers = new Map();
-            const identIndex = 0;
-            const identPath = ["identities", identIndex];
-            for (let key in rawTask.mods) {
-              const val = rawTask.mods[key];
-              switch (key) {
-                case "name":
-                  accountClobbers.set(identPath.concat("name"), val);
-                  break;
-                case "address":
-                  accountClobbers.set(identPath.concat("address"), val);
-                  break;
-                case "replyTo":
-                  accountClobbers.set(identPath.concat("replyTo"), val);
-                  break;
-                case "signature":
-                  accountClobbers.set(identPath.concat("signature"), val);
-                  break;
-                case "signatureEnabled":
-                  accountClobbers.set(identPath.concat("signatureEnabled"), val);
-                  break;
-                default:
-                  logic(ctx, "badModifyIdentityKey", { key });
-                  break;
-              }
-            }
-            await ctx.finishTask({
-              atomicClobbers: {
-                accounts: new Map([[rawTask.accountId, accountClobbers]])
-              }
-            });
-          }
-        }
-      ]);
-    }
-  });
-
-  // src/app_logic/new_message_summarizer.js
-  function extractRelevantMessageInfoForChurning(message) {
-    return {
-      date: message.date,
-      authorNameish: message.author.name || message.author.address,
-      subject: message.subject
-    };
-  }
-  var init_new_message_summarizer = __esm({
-    "src/app_logic/new_message_summarizer.js"() {
-    }
-  });
-
-  // src/backend/tasks/new_tracking.js
-  var new_tracking_default;
-  var init_new_tracking = __esm({
-    "src/backend/tasks/new_tracking.js"() {
-      init_task_definer();
-      init_new_message_summarizer();
-      init_id_conversions();
-      new_tracking_default = task_definer_default.defineComplexTask([
-        {
-          name: "new_tracking",
-          initPersistentState() {
-            return {
-              compareDate: null,
-              pendingDate: 0,
-              newByConv: new Map()
-            };
-          },
-          deriveMemoryStateFromPersistentState(persistentState, accountId, accountInfo, foldersTOC) {
-            let inboxFolder = foldersTOC.getCanonicalFolderByType("inbox");
-            return {
-              memoryState: {
-                inboxFolderId: inboxFolder && inboxFolder.id,
-                foldersTOC,
-                pendingTaskGroupId: null,
-                complexStateMap: new Map([[[accountId, this.name], persistentState]]),
-                newFlushTaskReq: {
-                  type: "new_flush"
-                }
-              },
-              markers: []
-            };
-          },
-          async plan(ctx, persistentState, memoryState, req) {
-            if (!persistentState.newByConv.size) {
-              await ctx.finishTask({});
-              return;
-            }
-            let newTasks = [];
-            if (req.op === "clear") {
-              if (!req.silent) {
-                newTasks.push({
-                  type: "new_flush"
-                });
-              }
-              persistentState.newByConv.clear();
-            }
-            await ctx.finishTask({
-              newData: { tasks: newTasks },
-              complexTaskState: persistentState
-            });
-          },
-          execute: null,
-          consult(askingCtx, persistentState) {
-            return persistentState.newByConv;
-          },
-          "trigger_msg!*!add": function(persistentState, memoryState, triggerCtx, message) {
-            if (!memoryState.inboxFolderId) {
-              let inboxFolder = memoryState.foldersTOC.getCanonicalFolderByType("inbox");
-              memoryState.inboxFolderId = inboxFolder && inboxFolder.id;
-              if (!memoryState.inboxFolderId) {
-                return;
-              }
-            }
-            if (!message.folderIds.has(memoryState.inboxFolderId)) {
-              return;
-            }
-            if (message.flags.includes("\\Seen")) {
-              return;
-            }
-            let curTaskGroupId = triggerCtx.rootTaskGroupId;
-            let dirty = false;
-            if (curTaskGroupId !== memoryState.pendingTaskGroupId) {
-              persistentState.compareDate = persistentState.pendingDate;
-              memoryState.pendingTaskGroupId = curTaskGroupId;
-              dirty = true;
-            }
-            if (message.date >= persistentState.pendingDate) {
-              dirty = true;
-              persistentState.pendingDate = Math.max(persistentState.pendingDate, message.date);
-              let convId = convIdFromMessageId(message.id);
-              let summary = extractRelevantMessageInfoForChurning(message);
-              let messageMap = persistentState.newByConv.get(convId);
-              if (!messageMap) {
-                messageMap = new Map();
-                persistentState.newByConv.set(convId, messageMap);
-              }
-              messageMap.set(message.id, summary);
-            }
-            if (dirty) {
-              triggerCtx.modify({
-                complexTaskStates: memoryState.complexStateMap,
-                rootGroupDeferredTask: memoryState.newFlushTaskReq
-              });
-            }
-          },
-          "trigger_msg!*!change": function(persistentState, memoryState, triggerCtx, messageId, preInfo, message, added, kept, removed) {
-            if (removed.has(memoryState.inboxFolderId) || message && message.flags.includes("\\Seen")) {
-              let convId = convIdFromMessageId(messageId);
-              let messageMap = persistentState.newByConv.get(convId);
-              if (!messageMap) {
-                return;
-              }
-              if (messageMap.delete(messageId)) {
-                if (messageMap.size === 0) {
-                  persistentState.newByConv.delete(convId);
-                }
-                triggerCtx.modify({
-                  complexTaskStates: memoryState.complexStateMap,
-                  rootGroupDeferredTask: memoryState.newFlushTaskReq
-                });
-              }
-            }
-          }
-        }
-      ]);
-    }
-  });
-
   // src/backend/accounts/ical/ical_tasks.js
   var ical_tasks_exports = {};
   __export(ical_tasks_exports, {
@@ -10811,16 +20025,16 @@ var WorkshopBackend = (() => {
   var ical_tasks_default;
   var init_ical_tasks = __esm({
     "src/backend/accounts/ical/ical_tasks.js"() {
-      init_sync_folder_list();
+      init_sync_folder_list2();
       init_sync_uid();
-      init_sync_refresh();
+      init_sync_refresh2();
       init_account_modify();
       init_identity_modify();
       init_new_tracking();
       ical_tasks_default = [
-        sync_folder_list_default,
+        sync_folder_list_default2,
         sync_uid_default,
-        sync_refresh_default,
+        sync_refresh_default2,
         account_modify_default,
         identity_modify_default,
         new_tracking_default
@@ -10863,10 +20077,10 @@ var WorkshopBackend = (() => {
             throw "New key is larger than old key";
           }
           node.key = newKey;
-          var parent = node.parent;
-          if (parent && this.compare(node, parent) < 0) {
-            cut(node, parent, this.minNode, this.compare);
-            cascadingCut(parent, this.minNode, this.compare);
+          var parent2 = node.parent;
+          if (parent2 && this.compare(node, parent2) < 0) {
+            cut(node, parent2, this.minNode, this.compare);
+            cascadingCut(parent2, this.minNode, this.compare);
           }
           if (this.compare(node, this.minNode) < 0) {
             this.minNode = node;
@@ -10874,10 +20088,10 @@ var WorkshopBackend = (() => {
         };
         FibonacciHeap2.prototype.delete = function(node) {
           node.isMinimum = true;
-          var parent = node.parent;
-          if (parent) {
-            cut(node, parent, this.minNode, this.compare);
-            cascadingCut(parent, this.minNode, this.compare);
+          var parent2 = node.parent;
+          if (parent2) {
+            cut(node, parent2, this.minNode, this.compare);
+            cascadingCut(parent2, this.minNode, this.compare);
           }
           this.minNode = node;
           this.extractMinimum();
@@ -10937,24 +20151,24 @@ var WorkshopBackend = (() => {
           }
           return 0;
         };
-        function cut(node, parent, minNode, compare) {
+        function cut(node, parent2, minNode, compare) {
           removeNodeFromList(node);
-          parent.degree--;
+          parent2.degree--;
           if (node.next === node) {
-            parent.child = void 0;
+            parent2.child = void 0;
           } else {
-            parent.child = node.next;
+            parent2.child = node.next;
           }
           minNode = mergeLists(minNode, node, compare);
           node.isMarked = false;
           return minNode;
         }
         function cascadingCut(node, minNode, compare) {
-          var parent = node.parent;
-          if (parent) {
+          var parent2 = node.parent;
+          if (parent2) {
             if (node.isMarked) {
-              minNode = cut(node, parent, minNode, compare);
-              minNode = cascadingCut(parent, minNode, compare);
+              minNode = cut(node, parent2, minNode, compare);
+              minNode = cascadingCut(parent2, minNode, compare);
             } else {
               node.isMarked = true;
             }
@@ -12491,15 +21705,15 @@ var WorkshopBackend = (() => {
 
   // src/backend/worker-router.js
   var listeners = {};
-  function receiveMessage(evt10) {
-    var data = evt10.data;
+  function receiveMessage(evt12) {
+    var data = evt12.data;
     var listener = listeners[data.type];
     if (listener) {
-      listener(data, evt10.source);
+      listener(data, evt12.source);
     }
   }
-  function receiveConnect(evt10) {
-    const port = evt10.ports[0];
+  function receiveConnect(evt12) {
+    const port = evt12.ports[0];
     if (!defaultPort) {
       defaultPort = port;
       resolveDefaultPort(defaultPort);
@@ -14620,32 +23834,60 @@ var WorkshopBackend = (() => {
   // src/backend/engine_glue.js
   var configuratorModules = new Map([
     [
-      "ical",
+      "activesync",
       async function() {
         const mod = await Promise.resolve().then(() => (init_configurator(), configurator_exports));
+        return mod.default;
+      }
+    ],
+    [
+      "ical",
+      async function() {
+        const mod = await Promise.resolve().then(() => (init_configurator2(), configurator_exports2));
         return mod.default;
       }
     ]
   ]);
   var validatorModules = new Map([
     [
-      "ical",
+      "activesync",
       async function() {
         const mod = await Promise.resolve().then(() => (init_validator(), validator_exports));
+        return mod.default;
+      }
+    ],
+    [
+      "ical",
+      async function() {
+        const mod = await Promise.resolve().then(() => (init_validator2(), validator_exports2));
         return mod.default;
       }
     ]
   ]);
   var accountModules = new Map([
     [
-      "ical",
+      "activesync",
       async function() {
         const mod = await Promise.resolve().then(() => (init_account(), account_exports));
+        return mod.default;
+      }
+    ],
+    [
+      "ical",
+      async function() {
+        const mod = await Promise.resolve().then(() => (init_account2(), account_exports2));
         return mod.default;
       }
     ]
   ]);
   var engineTaskMappings = new Map([
+    [
+      "activesync",
+      async function() {
+        const mod = await Promise.resolve().then(() => (init_activesync_tasks(), activesync_tasks_exports));
+        return mod.default;
+      }
+    ],
     [
       "ical",
       async function() {
@@ -14656,6 +23898,12 @@ var WorkshopBackend = (() => {
   ]);
   var engineHacks = new Map([
     [
+      "activesync",
+      {
+        unselectableFolderTypes: new Set()
+      }
+    ],
+    [
       "ical",
       {
         unselectableFolderTypes: new Set()
@@ -14664,6 +23912,12 @@ var WorkshopBackend = (() => {
   ]);
   var engineBackEndFacts = new Map([
     [
+      "activesync",
+      {
+        syncGranularity: "folder"
+      }
+    ],
+    [
       "ical",
       {
         syncGranularity: "account"
@@ -14671,6 +23925,15 @@ var WorkshopBackend = (() => {
     ]
   ]);
   var engineFrontEndAccountMeta = new Map([
+    [
+      "activesync",
+      {
+        engineFacts: {
+          syncGranularity: "folder"
+        },
+        usesArchiveMetaphor: false
+      }
+    ],
     [
       "ical",
       {
@@ -14683,6 +23946,12 @@ var WorkshopBackend = (() => {
   ]);
   var engineFrontEndFolderMeta = new Map([
     [
+      "activesync",
+      {
+        syncGranularity: "folder"
+      }
+    ],
+    [
       "ical",
       {
         syncGranularity: "account"
@@ -14691,7 +23960,7 @@ var WorkshopBackend = (() => {
   ]);
 
   // src/backend/db/accounts_toc.js
-  var import_evt5 = __toModule(require_evt());
+  var import_evt7 = __toModule(require_evt());
   init_logic();
   init_util();
   function accountDefComparator(a, b) {
@@ -14703,12 +23972,12 @@ var WorkshopBackend = (() => {
     return a.name.localeCompare(b.name);
   }
   function AccountsTOC() {
-    import_evt5.default.Emitter.call(this);
+    import_evt7.default.Emitter.call(this);
     logic.defineScope(this, "AccountsTOC");
     this.accountDefs = this.items = [];
     this.accountDefsById = this.itemsById = new Map();
   }
-  AccountsTOC.prototype = import_evt5.default.mix({
+  AccountsTOC.prototype = import_evt7.default.mix({
     type: "AccountsTOC",
     overlayNamespace: "accounts",
     __acquire() {
@@ -14787,7 +24056,7 @@ var WorkshopBackend = (() => {
   // src/backend/db/folders_toc.js
   init_logic();
   init_util();
-  var import_evt6 = __toModule(require_evt());
+  var import_evt8 = __toModule(require_evt());
   init_a64();
   init_id_conversions();
   init_folder_info_rep();
@@ -14821,7 +24090,7 @@ var WorkshopBackend = (() => {
     folders,
     dataOverlayManager
   }) {
-    import_evt6.default.Emitter.call(this);
+    import_evt8.default.Emitter.call(this);
     logic.defineScope(this, "FoldersTOC");
     this.accountDef = accountDef;
     this.engineFolderMeta = engineFrontEndFolderMeta.get(accountDef.engine);
@@ -14844,7 +24113,7 @@ var WorkshopBackend = (() => {
     db.on(`acct!${accountDef.id}!folders!tocChange`, this._onTOCChange.bind(this));
     dataOverlayManager.on("accountCascadeToFolders", this._onAccountOverlayCascade.bind(this));
   }
-  FoldersTOC.prototype = import_evt6.default.mix({
+  FoldersTOC.prototype = import_evt8.default.mix({
     type: "FoldersTOC",
     overlayNamespace: "folders",
     __acquire() {
@@ -15525,7 +24794,7 @@ var WorkshopBackend = (() => {
   init_logic();
 
   // src/backend/db/base_toc.js
-  var import_evt7 = __toModule(require_evt());
+  var import_evt9 = __toModule(require_evt());
   init_logic();
 
   // src/backend/refed_resource.js
@@ -15581,12 +24850,12 @@ var WorkshopBackend = (() => {
   // src/backend/db/base_toc.js
   function BaseTOC({ metaHelpers }) {
     refed_resource_default.apply(this, arguments);
-    import_evt7.default.Emitter.call(this);
+    import_evt9.default.Emitter.call(this);
     this._metaHelpers = metaHelpers || [];
     this.tocMeta = {};
     this._everActivated = false;
   }
-  BaseTOC.prototype = import_evt7.default.mix(refed_resource_default.mix({
+  BaseTOC.prototype = import_evt9.default.mix(refed_resource_default.mix({
     __activate() {
       this._everActivated = true;
       for (let metaHelper of this._metaHelpers) {
@@ -15776,10 +25045,10 @@ var WorkshopBackend = (() => {
   };
 
   // src/backend/db/data_overlay_manager.js
-  var import_evt8 = __toModule(require_evt());
+  var import_evt10 = __toModule(require_evt());
   init_logic();
   function DataOverlayManager() {
-    import_evt8.default.Emitter.call(this);
+    import_evt10.default.Emitter.call(this);
     logic.defineScope(this, "DataOverlayManager");
     this.registeredProvidersByNamespace = new Map([
       ["accounts", new Map()],
@@ -15788,7 +25057,7 @@ var WorkshopBackend = (() => {
       ["messages", new Map()]
     ]);
   }
-  DataOverlayManager.prototype = import_evt8.default.mix({
+  DataOverlayManager.prototype = import_evt10.default.mix({
     registerProvider(namespace, name, func) {
       let providersForNamespace = this.registeredProvidersByNamespace.get(namespace);
       if (!providersForNamespace) {
@@ -16261,7 +25530,7 @@ var WorkshopBackend = (() => {
   };
 
   // src/backend/task_infra/task_manager.js
-  var import_evt9 = __toModule(require_evt());
+  var import_evt11 = __toModule(require_evt());
   init_logic();
 
   // src/backend/task_infra/task_context.js
@@ -16533,7 +25802,7 @@ var WorkshopBackend = (() => {
     taskPriorities,
     accountManager
   }) {
-    import_evt9.default.Emitter.call(this);
+    import_evt11.default.Emitter.call(this);
     logic.defineScope(this, "TaskManager");
     this._universe = universe2;
     this._db = db;
@@ -16552,7 +25821,7 @@ var WorkshopBackend = (() => {
     this._activePromise = Promise.resolve(null);
     this._activeWakeLock = null;
   }
-  TaskManager.prototype = import_evt9.default.mix({
+  TaskManager.prototype = import_evt11.default.mix({
     async __restoreFromDB() {
       let { wrappedTasks, complexTaskStates } = await this._db.loadTasks();
       logic(this, "restoreFromDB", { count: wrappedTasks.length });
@@ -18848,13 +28117,13 @@ var WorkshopBackend = (() => {
     },
     _getXmlConfig: function getXmlConfig(url) {
       return new Promise((resolve, reject) => {
-        var scope3 = logic.subscope(this, { method: "GET", url });
-        logic(scope3, "xhr:start");
+        var scope4 = logic.subscope(this, { method: "GET", url });
+        logic(scope4, "xhr:start");
         var xhr = new XMLHttpRequest({ mozSystem: true });
         xhr.open("GET", url, true);
         xhr.timeout = this.timeout;
         xhr.onload = function() {
-          logic(scope3, "xhr:end", { status: xhr.status });
+          logic(scope4, "xhr:end", { status: xhr.status });
           if (xhr.status < 200 || xhr.status >= 300) {
             reject("status" + xhr.status);
             return;
@@ -18865,29 +28134,29 @@ var WorkshopBackend = (() => {
             cmd: "accountcommon",
             args: [xhr.responseText]
           });
-          self.addEventListener("message", function onworkerresponse(evt10) {
-            var data = evt10.data;
+          self.addEventListener("message", function onworkerresponse(evt12) {
+            var data = evt12.data;
             if (data.type !== "configparser" || data.cmd !== "accountcommon") {
               return;
             }
-            self.removeEventListener(evt10.type, onworkerresponse);
+            self.removeEventListener(evt12.type, onworkerresponse);
             var args = data.args;
             var config = args[0];
             resolve(config);
           });
         };
         xhr.ontimeout = function() {
-          logic(scope3, "xhr:end", { status: "timeout" });
+          logic(scope4, "xhr:end", { status: "timeout" });
           reject("timeout");
         };
         xhr.onerror = function() {
-          logic(scope3, "xhr:end", { status: "error" });
+          logic(scope4, "xhr:end", { status: "error" });
           reject("error");
         };
         try {
           xhr.send();
         } catch (e) {
-          logic(scope3, "xhr:end", { status: "sync-error" });
+          logic(scope4, "xhr:end", { status: "sync-error" });
           reject("status404");
         }
       });
@@ -18897,8 +28166,8 @@ var WorkshopBackend = (() => {
     },
     _checkAutodiscoverUrl(url) {
       return new Promise((resolve, reject) => {
-        var scope3 = logic.subscope(this, { method: "POST", url });
-        logic(scope3, "autodiscoverProbe:start");
+        var scope4 = logic.subscope(this, { method: "POST", url });
+        logic(scope4, "autodiscoverProbe:start");
         var xhr = new XMLHttpRequest({ mozSystem: true });
         xhr.open("POST", url, true);
         xhr.timeout = this.timeout;
@@ -18911,7 +28180,7 @@ var WorkshopBackend = (() => {
           });
         };
         xhr.onload = function() {
-          logic(scope3, "autodiscoverProbe:end", { status: xhr.status });
+          logic(scope4, "autodiscoverProbe:end", { status: xhr.status });
           if (xhr.status === 401) {
             victory();
             return;
@@ -18919,17 +28188,17 @@ var WorkshopBackend = (() => {
           reject("status" + xhr.status);
         };
         xhr.ontimeout = function() {
-          logic(scope3, "autodiscoverProbe:end", { status: "timeout" });
+          logic(scope4, "autodiscoverProbe:end", { status: "timeout" });
           reject("timeout");
         };
         xhr.onerror = function() {
-          logic(scope3, "autodiscoverProbe:end", { status: "error" });
+          logic(scope4, "autodiscoverProbe:end", { status: "error" });
           reject("error");
         };
         try {
           xhr.send(null);
         } catch (e) {
-          logic(scope3, "autodiscoverProbe:end", { status: "sync-error" });
+          logic(scope4, "autodiscoverProbe:end", { status: "sync-error" });
           reject("status404");
         }
       });
@@ -18955,8 +28224,8 @@ var WorkshopBackend = (() => {
     },
     _getMX: function getMX(domain) {
       return new Promise((resolve, reject) => {
-        var scope3 = logic.subscope(this, { domain });
-        logic(scope3, "mxLookup:begin");
+        var scope4 = logic.subscope(this, { domain });
+        logic(scope4, "mxLookup:begin");
         var xhr = new XMLHttpRequest({ mozSystem: true });
         xhr.open("GET", "https://live.mozillamessaging.com/dns/mx/" + encodeURIComponent(domain), true);
         xhr.timeout = this.timeout;
@@ -18972,7 +28241,7 @@ var WorkshopBackend = (() => {
               }
             }
           }
-          logic(scope3, "mxLookup:end", {
+          logic(scope4, "mxLookup:end", {
             raw: normStr,
             normalized: mxDomain,
             reporting: reportDomain
@@ -18980,11 +28249,11 @@ var WorkshopBackend = (() => {
           resolve(reportDomain);
         };
         xhr.ontimeout = function() {
-          logic(scope3, "mxLookup:end", { status: "timeout" });
+          logic(scope4, "mxLookup:end", { status: "timeout" });
           reject("timeout");
         };
         xhr.onerror = function() {
-          logic(scope3, "mxLookup:end", { status: "error" });
+          logic(scope4, "mxLookup:end", { status: "error" });
           reject("error");
         };
         xhr.send();
@@ -19057,8 +28326,8 @@ var WorkshopBackend = (() => {
         var emailParts = emailAddress.split("@");
         var emailDomainPart = emailParts[1];
         var domain = emailDomainPart.toLowerCase();
-        var scope3 = logic.subscope(this, { domain });
-        logic(scope3, "autoconfig:begin");
+        var scope4 = logic.subscope(this, { domain });
+        logic(scope4, "autoconfig:begin");
         var selfHostedAndISPDBHandler, mxLocalHandler, autodiscoverHandler, mxISPDBHandler;
         var victory = (sourceConfigInfo, source) => {
           var configInfo = null, result;
@@ -19072,7 +28341,7 @@ var WorkshopBackend = (() => {
           } else {
             result = "no-config-info";
           }
-          logic(scope3, "autoconfig:end", {
+          logic(scope4, "autoconfig:end", {
             result,
             source,
             configInfo
@@ -19089,7 +28358,7 @@ var WorkshopBackend = (() => {
           resolve({ result: "no-config-info", configInfo: null });
         };
         var coerceRejectionToNull = (error) => {
-          logic(scope3, "autoconfig:coerceRejection", { error });
+          logic(scope4, "autoconfig:coerceRejection", { error });
           return null;
         };
         var hardcodedConfig = this._checkGelamConfig(domain);
@@ -20432,3 +29701,4 @@ var WorkshopBackend = (() => {
   });
   sendControl("hello");
 })();
+/*! http://mths.be/punycode v1.2.4 by @mathias */
