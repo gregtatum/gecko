@@ -317,18 +317,16 @@ nsJSEnvironmentObserver::Observe(nsISupports* aSubject, const char* aTopic,
         // slow and it likely won't help us anyway.
         return NS_OK;
       }
+      if (data.EqualsLiteral("heap-minimize")) {
+        // heap-minimize notifiers expect this to run synchronously
+        nsJSContext::DoLowMemoryGC();
+        return NS_OK;
+      }
       if (data.EqualsLiteral("low-memory")) {
         nsJSContext::SetLowMemoryState(true);
       }
-      nsJSContext::GarbageCollectNow(JS::GCReason::MEM_PRESSURE,
-                                     nsJSContext::NonIncrementalGC,
-                                     nsJSContext::ShrinkingGC);
-      nsJSContext::CycleCollectNow();
-      if (sScheduler.NeedsGCAfterCC()) {
-        nsJSContext::GarbageCollectNow(JS::GCReason::MEM_PRESSURE,
-                                       nsJSContext::NonIncrementalGC,
-                                       nsJSContext::ShrinkingGC);
-      }
+      // Asynchronously GC.
+      nsJSContext::LowMemoryGC();
     }
   } else if (!nsCRT::strcmp(aTopic, "memory-pressure-stop")) {
     nsJSContext::SetLowMemoryState(false);
@@ -1798,34 +1796,21 @@ void nsJSContext::RunNextCollectorTimer(JS::GCReason aReason,
     return;
   }
 
-  RefPtr<IdleTaskRunner> runnable;
-  if (sGCRunner) {
-    // To maintain pre-bug 1692308 GCReason handling: RunNextCollectorTimer
-    // should override the PokeGC reason, but only if the first slice has not
-    // happened yet. If there was no PokeGC reason (ie, this is an
-    // internally-generated GC), then do not override the reason (which will be
-    // INTER_SLICE_GC).
-    if (!sScheduler.InIncrementalGC() &&
-        sScheduler.mMajorGCReason != JS::GCReason::INTER_SLICE_GC) {
-      sScheduler.SetWantMajorGC(aReason);
-    }
-    sGCRunner->SetIdleDeadline(aDeadline);
-    runnable = sGCRunner;
-  } else {
-    // Check the CC timers after the GC timers, because the CC timers won't do
-    // anything if a GC is in progress.
-    MOZ_ASSERT(
-        !sScheduler.InIncrementalGC(),
-        "Don't check the CC timers if the CC is locked out during an iGC.");
+  // When we're in an incremental GC, we should always have an sGCRunner, so do
+  // not check CC timers. The CC timers won't do anything during a GC.
+  MOZ_ASSERT_IF(sScheduler.InIncrementalGC(), sGCRunner);
 
-    if (sCCRunner) {
-      sCCRunner->SetIdleDeadline(aDeadline);
-      runnable = sCCRunner;
-    }
+  RefPtr<IdleTaskRunner> runner;
+  if (sGCRunner) {
+    sScheduler.SetWantMajorGC(aReason);
+    runner = sGCRunner;
+  } else if (sCCRunner) {
+    runner = sCCRunner;
   }
 
-  if (runnable) {
-    runnable->Run();
+  if (runner) {
+    runner->SetIdleDeadline(aDeadline);
+    runner->Run();
   }
 }
 
@@ -1944,6 +1929,36 @@ void nsJSContext::PokeShrinkingGC() {
       &sShrinkingGCTimer, ShrinkingGCTimerFired, nullptr,
       StaticPrefs::javascript_options_compact_on_user_inactive_delay(),
       nsITimer::TYPE_ONE_SHOT_LOW_PRIORITY, "ShrinkingGCTimerFired");
+}
+
+// static
+void nsJSContext::DoLowMemoryGC() {
+  if (sShuttingDown) {
+    return;
+  }
+  nsJSContext::GarbageCollectNow(JS::GCReason::MEM_PRESSURE,
+                                 nsJSContext::NonIncrementalGC,
+                                 nsJSContext::ShrinkingGC);
+  nsJSContext::CycleCollectNow();
+  if (sScheduler.NeedsGCAfterCC()) {
+    nsJSContext::GarbageCollectNow(JS::GCReason::MEM_PRESSURE,
+                                   nsJSContext::NonIncrementalGC,
+                                   nsJSContext::ShrinkingGC);
+  }
+}
+
+// static
+void nsJSContext::LowMemoryGC() {
+  RefPtr<MayGCPromise> mbPromise = MayGCNow(JS::GCReason::MEM_PRESSURE);
+  if (!mbPromise) {
+    // Normally when the promise is null it means that IPC failed, that probably
+    // means that something bad happened, don't bother with the GC.
+    return;
+  }
+  mbPromise->Then(
+      GetMainThreadSerialEventTarget(), __func__,
+      [](bool aIgnored) { DoLowMemoryGC(); },
+      [](mozilla::ipc::ResponseRejectReason r) {});
 }
 
 // static

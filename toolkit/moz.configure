@@ -971,35 +971,6 @@ def skia_pdf(value, skia, target, milestone):
 set_config("MOZ_ENABLE_SKIA_PDF", skia_pdf)
 set_define("MOZ_ENABLE_SKIA_PDF", skia_pdf)
 
-option("--enable-skia-pdf-sfntly", help="Enable SFNTLY font subsetting in Skia PDF")
-
-
-@depends("--enable-skia-pdf-sfntly", skia_pdf)
-def skia_pdf_sfntly(value, skia_pdf):
-    if value.origin == "default":
-        return skia_pdf
-    if value and not skia_pdf:
-        die("Cannot enable SFNTLY subsetting without enabling Skia PDF")
-    if skia_pdf and value:
-        return True
-
-
-set_config("MOZ_ENABLE_SKIA_PDF_SFNTLY", skia_pdf_sfntly)
-set_define("MOZ_ENABLE_SKIA_PDF_SFNTLY", skia_pdf_sfntly)
-
-
-@depends(skia_pdf_sfntly)
-def sfntly_includes(skia_pdf_sfntly):
-    includes = []
-    if skia_pdf_sfntly:
-        includes += [
-            "/gfx/sfntly/cpp/src",
-        ]
-    return includes
-
-
-set_config("SFNTLY_INCLUDES", sfntly_includes)
-
 
 @depends(skia)
 def skia_includes(skia):
@@ -1486,6 +1457,31 @@ def addon_sideload_allowed(value):
 
 set_config("MOZ_ALLOW_ADDON_SIDELOAD", addon_sideload_allowed)
 
+# WebExtensions API WebIDL bindings
+# ==============================================================
+
+
+@depends(milestone)
+def extensions_webidl_bindings_default(milestone):
+    # Only enable the webidl bindings for the WebExtensions APIs
+    # in Nightly.
+    return milestone.is_nightly
+
+
+option(
+    "--enable-extensions-webidl-bindings",
+    default=extensions_webidl_bindings_default,
+    help="{Enable|Disable} building experimental WebExtensions WebIDL bindings",
+)
+
+
+@depends("--enable-extensions-webidl-bindings")
+def extensions_webidl_enabled(value):
+    return bool(value)
+
+
+set_config("MOZ_WEBEXT_WEBIDL_ENABLED", extensions_webidl_enabled)
+
 # Launcher process (Windows only)
 # ==============================================================
 
@@ -1595,14 +1591,6 @@ set_define(
     "MOZ_BUNDLED_FONTS",
     depends_if("--enable-bundled-fonts", when=allow_bundled_fonts)(lambda _: True),
 )
-
-# TaskTracer
-# ==============================================================
-
-option("--enable-tasktracer", help="Enable TaskTracer")
-
-set_define("MOZ_TASK_TRACER", depends_if("--enable-tasktracer")(lambda _: True))
-set_config("MOZ_TASK_TRACER", depends_if("--enable-tasktracer")(lambda _: True))
 
 # Reflow counting
 # ==============================================================
@@ -2216,17 +2204,6 @@ with only_when(requires_wasm_sandboxing & compile_environment):
 
     set_config("WASM_CXXFLAGS", wasm_cxxflags)
 
-    option(
-        env="WASM_LDFLAGS", nargs=1, help="Options to pass when linking wasm modules"
-    )
-
-    @depends("WASM_LDFLAGS")
-    def wasm_ldflags(value):
-        if value:
-            return value
-
-    set_config("WASM_LDFLAGS", wasm_ldflags)
-
     # This function is returning "ldflags" that lucetc will use when invoking
     # the linker, but really lucetc is going to be invoking the compiler, since
     # the compiler handles lots of details for us (like finding the linker in
@@ -2326,20 +2303,6 @@ set_config("MOZ_GLEAN_ANDROID", True, when=glean_android)
 set_define("MOZ_GLEAN_ANDROID", True, when=glean_android)
 
 
-# New Firefox Accounts client implemented in Rust
-# ===============================================
-
-
-@depends(milestone, target)
-def rust_fxa_client(milestone, target):
-    if milestone.is_nightly and target.os != "Android":
-        return True
-
-
-set_config("MOZ_RUST_FXA_CLIENT", True, when=rust_fxa_client)
-set_define("MOZ_RUST_FXA_CLIENT", True, when=rust_fxa_client)
-
-
 # dump_syms
 # ==============================================================
 
@@ -2381,7 +2344,9 @@ check_prog(
 @depends(target, build_project)
 def forkserver_default(target, build_project):
     return build_project == "browser" and (
-        (target.os == "GNU" and target.kernel == "Linux") or target.os == "FreeBSD"
+        (target.os == "GNU" and target.kernel == "Linux")
+        or target.os == "FreeBSD"
+        or target.os == "OpenBSD"
     )
 
 
@@ -2399,6 +2364,7 @@ def forkserver_flag(value, target):
         target.os == "Android"
         or (target.os == "GNU" and target.kernel == "Linux")
         or target.os == "FreeBSD"
+        or target.os == "OpenBSD"
     ):
         return bool(value)
     pass

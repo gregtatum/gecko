@@ -11,6 +11,7 @@
 #include "jit/ABIFunctions.h"
 #include "jit/BaselineIC.h"
 #include "jit/BaselineJIT.h"
+#include "jit/CacheIRCompiler.h"
 #include "jit/CalleeToken.h"
 #include "jit/FixedList.h"
 #include "jit/IonAnalysis.h"
@@ -541,6 +542,58 @@ bool BaselineCodeGen<Handler>::emitOutOfLinePostBarrierSlot() {
   return true;
 }
 
+// Scan the a cache IR stub's fields and create an allocation site for any that
+// refer to the catch-all unknown allocation site. This will be the case for
+// stubs created when running in the interpreter. This happens on transition to
+// baseline.
+static bool CreateAllocSitesForCacheIRStub(JSScript* script,
+                                           ICCacheIRStub* stub) {
+  const CacheIRStubInfo* stubInfo = stub->stubInfo();
+  uint8_t* stubData = stub->stubDataStart();
+
+  uint32_t field = 0;
+  size_t offset = 0;
+  while (true) {
+    StubField::Type fieldType = stubInfo->fieldType(field);
+    if (fieldType == StubField::Type::Limit) {
+      break;
+    }
+
+    if (fieldType == StubField::Type::AllocSite) {
+      gc::AllocSite* site =
+          stubInfo->getPtrStubField<ICCacheIRStub, gc::AllocSite>(stub, offset);
+      if (site->kind() == gc::AllocSite::Kind::Unknown) {
+        gc::AllocSite* newSite = script->createAllocSite();
+        if (!newSite) {
+          return false;
+        }
+
+        stubInfo->replaceStubRawWord(stubData, offset, uintptr_t(site),
+                                     uintptr_t(newSite));
+      }
+    }
+
+    field++;
+    offset += StubField::sizeInBytes(fieldType);
+  }
+
+  return true;
+}
+
+static void CreateAllocSitesForICChain(JSScript* script, uint32_t entryIndex) {
+  JitScript* jitScript = script->jitScript();
+  ICStub* stub = jitScript->icEntry(entryIndex).firstStub();
+
+  while (!stub->isFallback()) {
+    if (!CreateAllocSitesForCacheIRStub(script, stub->toCacheIRStub())) {
+      // This is an optimization and safe to skip if we hit OOM or per-zone
+      // limit.
+      return;
+    }
+    stub = stub->toCacheIRStub()->next();
+  }
+}
+
 template <>
 bool BaselineCompilerCodeGen::emitNextIC() {
   // Emit a call to an IC stored in JitScript. Calls to this must match the
@@ -562,6 +615,10 @@ bool BaselineCompilerCodeGen::emitNextIC() {
 
   MOZ_ASSERT(stub->pcOffset() == pcOffset);
   MOZ_ASSERT(BytecodeOpHasIC(JSOp(*handler.pc())));
+
+  if (BytecodeOpCanHaveAllocSite(JSOp(*handler.pc()))) {
+    CreateAllocSitesForICChain(script, entryIndex);
+  }
 
   // Load stub pointer into ICStubReg.
   masm.loadPtr(frame.addressOfICScript(), ICStubReg);
@@ -2005,27 +2062,13 @@ bool BaselineCodeGen<Handler>::emit_Goto() {
 }
 
 template <typename Handler>
-bool BaselineCodeGen<Handler>::emitToBoolean() {
-  Label skipIC;
-  masm.branchTestBoolean(Assembler::Equal, R0, &skipIC);
-
-  // Call IC
-  if (!emitNextIC()) {
-    return false;
-  }
-
-  masm.bind(&skipIC);
-  return true;
-}
-
-template <typename Handler>
 bool BaselineCodeGen<Handler>::emitTest(bool branchIfTrue) {
   bool knownBoolean = frame.stackValueHasKnownType(-1, JSVAL_TYPE_BOOLEAN);
 
   // Keep top stack value in R0.
   frame.popRegsAndSync(1);
 
-  if (!knownBoolean && !emitToBoolean()) {
+  if (!knownBoolean && !emitNextIC()) {
     return false;
   }
 
@@ -2052,7 +2095,7 @@ bool BaselineCodeGen<Handler>::emitAndOr(bool branchIfTrue) {
   frame.syncStack(0);
 
   masm.loadValue(frame.addressOfStackValue(-1), R0);
-  if (!knownBoolean && !emitToBoolean()) {
+  if (!knownBoolean && !emitNextIC()) {
     return false;
   }
 
@@ -2095,7 +2138,7 @@ bool BaselineCodeGen<Handler>::emit_Not() {
   // Keep top stack value in R0.
   frame.popRegsAndSync(1);
 
-  if (!knownBoolean && !emitToBoolean()) {
+  if (!knownBoolean && !emitNextIC()) {
     return false;
   }
 
@@ -3556,6 +3599,32 @@ void BaselineInterpreterCodeGen::emitGetAliasedVar(ValueOperand dest) {
     masm.loadValue(BaseValueIndex(env, scratch, offset), dest);
   }
   masm.bind(&done);
+}
+
+template <typename Handler>
+bool BaselineCodeGen<Handler>::emitGetAliasedDebugVar(ValueOperand dest) {
+  frame.syncStack(0);
+  Register env = R0.scratchReg();
+  // Load the right environment object.
+  masm.loadPtr(frame.addressOfEnvironmentChain(), env);
+
+  prepareVMCall();
+  pushBytecodePCArg();
+  pushArg(env);
+
+  using Fn =
+      bool (*)(JSContext*, JSObject * env, jsbytecode*, MutableHandleValue);
+  return callVM<Fn, LoadAliasedDebugVar>();
+}
+
+template <typename Handler>
+bool BaselineCodeGen<Handler>::emit_GetAliasedDebugVar() {
+  if (!emitGetAliasedDebugVar(R0)) {
+    return false;
+  }
+
+  frame.push(R0);
+  return true;
 }
 
 template <typename Handler>

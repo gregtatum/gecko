@@ -143,8 +143,7 @@
             </menu>
 
             <menu id="view-menu" data-l10n-id="menu-view">
-              <menupopup id="menu_viewPopup"
-                         onpopupshowing="updateCharacterEncodingMenuState();">
+              <menupopup id="menu_viewPopup">
                 <menu id="viewToolbarsMenu" data-l10n-id="menu-view-toolbars-menu">
                   <menupopup id="view-menu-popup" onpopupshowing="onViewToolbarsPopupShowing(event);">
 #ifndef PROCLIENT_WINDOW
@@ -207,7 +206,7 @@
                 </menu>
                 <menuitem id="repair-text-encoding"
                           disabled="true"
-                          oncommand="BrowserSetForcedCharacterSet('_autodetect_all')"
+                          oncommand="BrowserForceEncodingDetection();"
                           data-l10n-id="menu-view-repair-text-encoding"/>
                 <menuseparator/>
 #ifdef XP_MACOSX
@@ -323,7 +322,7 @@
       <menuitem id="bookmarksShowAll"
                 command="Browser:ShowAllBookmarks"
                 key="manBookmarkKb"
-                data-l10n-id="menu-bookmarks-show-all"/>
+                data-l10n-id="menu-bookmarks-manage"/>
       <menuseparator id="organizeBookmarksSeparator"/>
       <menuitem id="menu_bookmarkThisPage"
                 command="Browser:AddBookmarkAs"

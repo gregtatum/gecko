@@ -7,9 +7,10 @@
 #include "ActorsParentCommon.h"
 
 // local includes
-#include "DatabaseFileInfoFwd.h"  // for DatabaseFileInfo
+#include "DatabaseFileInfo.h"
 #include "DatabaseFileManager.h"
 #include "IndexedDatabase.h"  // for StructuredCloneFile...
+#include "IndexedDatabaseInlines.h"
 #include "IndexedDatabaseManager.h"
 #include "IndexedDBCommon.h"
 #include "ReportInternalError.h"
@@ -40,6 +41,7 @@
 #include "mozilla/TelemetryScalarEnums.h"
 #include "mozilla/dom/quota/DecryptingInputStream_impl.h"
 #include "mozilla/dom/quota/QuotaCommon.h"
+#include "mozilla/dom/quota/ScopedLogExtraInfo.h"
 #include "mozilla/fallible.h"
 #include "mozilla/ipc/BackgroundParent.h"
 #include "mozilla/mozalloc.h"

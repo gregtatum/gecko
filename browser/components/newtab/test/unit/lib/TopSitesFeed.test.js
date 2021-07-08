@@ -29,6 +29,8 @@ const SEARCH_SHORTCUTS_HAVE_PINNED_PREF =
 const SHOWN_ON_NEWTAB_PREF = "feeds.topsites";
 const SHOW_SPONSORED_PREF = "showSponsoredTopSites";
 const CONTILE_ENABLED_PREF = "browser.topsites.contile.enabled";
+const TOP_SITES_BLOCKED_SPONSORS_PREF = "browser.topsites.blockedSponsors";
+const REMOTE_SETTING_DEFAULTS_PREF = "browser.topsites.useRemoteSetting";
 
 function FakeTippyTopProvider() {}
 FakeTippyTopProvider.prototype = {
@@ -2026,6 +2028,10 @@ describe("Top Sites Feed", () => {
         .stub(global.Services.prefs, "getBoolPref")
         .withArgs(CONTILE_ENABLED_PREF)
         .returns(true);
+      sandbox
+        .stub(global.Services.prefs, "getStringPref")
+        .withArgs(TOP_SITES_BLOCKED_SPONSORS_PREF)
+        .returns(`["foo","bar"]`);
     });
     afterEach(() => {
       sandbox.restore();
@@ -2060,6 +2066,46 @@ describe("Top Sites Feed", () => {
 
       assert.ok(fetched);
       assert.equal(feed._contile.sites.length, 2);
+    });
+
+    it("should filter the blocked sponsors", async () => {
+      fetchStub.resolves({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            tiles: [
+              {
+                url: "https://www.test.com",
+                image_url: "images/test-com.png",
+                click_url: "https://www.test-click.com",
+                impression_url: "https://www.test-impression.com",
+                name: "test",
+              },
+              {
+                url: "https://foo.com",
+                image_url: "images/foo-com.png",
+                click_url: "https://www.foo-click.com",
+                impression_url: "https://www.foo-impression.com",
+                name: "foo",
+              },
+              {
+                url: "https://bar.com",
+                image_url: "images/bar-com.png",
+                click_url: "https://www.bar-click.com",
+                impression_url: "https://www.bar-impression.com",
+                name: "bar",
+              },
+            ],
+          }),
+      });
+
+      const fetched = await feed._contile._fetchSites();
+
+      assert.ok(fetched);
+      // Both "foo" and "bar" should be filtered
+      assert.equal(feed._contile.sites.length, 1);
+      assert.equal(feed._contile.sites[0].url, "https://www.test.com");
     });
 
     it("should handle errors properly from Contile", async () => {
@@ -2097,6 +2143,74 @@ describe("Top Sites Feed", () => {
 
       assert.ok(!fetched);
       assert.ok(!feed._contile.sites.length);
+    });
+  });
+
+  describe("#_readDefaults", () => {
+    beforeEach(() => {
+      // Turn on sponsored TopSites for testing
+      feed.store.state.Prefs.values[SHOW_SPONSORED_PREF] = true;
+      fetchStub = sandbox.stub();
+      globals.set("fetch", fetchStub);
+      fetchStub.resolves({ ok: true, status: 204 });
+      sandbox
+        .stub(global.Services.prefs, "getBoolPref")
+        .withArgs(REMOTE_SETTING_DEFAULTS_PREF)
+        .returns(true);
+
+      sandbox
+        .stub(global.Services.prefs, "getStringPref")
+        .withArgs(TOP_SITES_BLOCKED_SPONSORS_PREF)
+        .returns(`["foo","bar"]`);
+      sandbox.stub(global.Services.prefs, "prefIsLocked").returns(false);
+    });
+    afterEach(() => {
+      sandbox.restore();
+    });
+
+    it("should filter all blocked sponsored tiles from RemoteSettings when Contile is disabled", async () => {
+      sandbox.stub(feed, "_getRemoteConfig").resolves([
+        { url: "https://foo.com", title: "foo", sponsored_position: 1 },
+        { url: "https://bar.com", title: "bar", sponsored_position: 2 },
+        { url: "https://test.com", title: "test", sponsored_position: 3 },
+      ]);
+      global.Services.prefs.getStringPref
+        .withArgs(CONTILE_ENABLED_PREF)
+        .returns(false);
+
+      await feed._readDefaults();
+
+      assert.equal(DEFAULT_TOP_SITES.length, 1);
+      assert.equal(DEFAULT_TOP_SITES[0].label, "test");
+    });
+
+    it("should also filter all blocked sponsored tiles from RemoteSettings when Contile is enabled", async () => {
+      sandbox.stub(feed, "_getRemoteConfig").resolves([
+        { url: "https://foo.com", title: "foo", sponsored_position: 1 },
+        { url: "https://bar.com", title: "bar", sponsored_position: 2 },
+        { url: "https://test.com", title: "test", sponsored_position: 3 },
+      ]);
+      global.Services.prefs.getStringPref
+        .withArgs(CONTILE_ENABLED_PREF)
+        .returns(true);
+
+      await feed._readDefaults();
+
+      assert.equal(DEFAULT_TOP_SITES.length, 1);
+      assert.equal(DEFAULT_TOP_SITES[0].label, "test");
+    });
+
+    it("should not filter non-sponsored tiles from RemoteSettings", async () => {
+      sandbox.stub(feed, "_getRemoteConfig").resolves([
+        { url: "https://foo.com", title: "foo", sponsored_position: 1 },
+        { url: "https://bar.com", title: "bar", sponsored_position: 2 },
+        { url: "https://foo.com", title: "foo" },
+      ]);
+
+      await feed._readDefaults();
+
+      assert.equal(DEFAULT_TOP_SITES.length, 1);
+      assert.equal(DEFAULT_TOP_SITES[0].label, "foo");
     });
   });
 });

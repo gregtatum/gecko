@@ -7,6 +7,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
+import os
 import re
 
 import six
@@ -32,7 +33,7 @@ UNCOMMON_TRY_TASK_LABELS = [
     r"android-hw",
     # Windows tasks
     r"windows10-64-ref-hw",
-    r"windows10-aarch64",
+    r"windows10-aarch64-qr",
     # Linux tasks
     r"linux-",  # hide all linux32 tasks by default - bug 1599197
     r"linux1804-32",  # hide linux32 tests - bug 1599197
@@ -59,8 +60,8 @@ def get_method(method):
     return _target_task_methods[method]
 
 
-def index_exists(index_path):
-    print(f"Looking for existing index {index_path} ...")
+def index_exists(index_path, reason=""):
+    print(f"Looking for existing index {index_path} {reason}...")
     try:
         task_id = find_task_id(index_path)
         print(f"Index {index_path} exists: taskId {task_id}")
@@ -348,42 +349,34 @@ def target_tasks_try(full_task_graph, parameters, graph_config):
 
 @_target_task("try_select_tasks")
 def target_tasks_try_select(full_task_graph, parameters, graph_config):
-    tasks = set()
-    for project in ("autoland", "mozilla-central"):
-        params = dict(parameters)
-        params["project"] = project
-        parameters = Parameters(**params)
-        tasks.update(
-            [
-                l
-                for l, t in six.iteritems(full_task_graph.tasks)
-                if standard_filter(t, parameters)
-                and filter_out_shipping_phase(t, parameters)
-                and filter_out_devedition(t, parameters)
-            ]
-        )
-
+    tasks = target_tasks_try_select_uncommon(full_task_graph, parameters, graph_config)
     return [l for l in tasks if filter_by_uncommon_try_tasks(l)]
 
 
 @_target_task("try_select_tasks_uncommon")
 def target_tasks_try_select_uncommon(full_task_graph, parameters, graph_config):
+    from taskgraph.decision import PER_PROJECT_PARAMETERS
+
+    projects = ("autoland", "mozilla-central")
+    if parameters["project"] not in projects:
+        projects = (parameters["project"],)
+
     tasks = set()
-    for project in ("autoland", "mozilla-central"):
+    for project in projects:
         params = dict(parameters)
         params["project"] = project
         parameters = Parameters(**params)
+
+        try:
+            target_tasks_method = PER_PROJECT_PARAMETERS[project]["target_tasks_method"]
+        except KeyError:
+            target_tasks_method = "default"
+
         tasks.update(
-            [
-                l
-                for l, t in six.iteritems(full_task_graph.tasks)
-                if standard_filter(t, parameters)
-                and filter_out_shipping_phase(t, parameters)
-                and filter_out_devedition(t, parameters)
-            ]
+            get_method(target_tasks_method)(full_task_graph, parameters, graph_config)
         )
 
-    return [l for l in tasks]
+    return sorted(tasks)
 
 
 @_target_task("try_auto")
@@ -960,10 +953,16 @@ def target_tasks_nightly_desktop(full_task_graph, parameters, graph_config):
     """Select the set of tasks required for a nightly build of linux, mac,
     windows."""
     index_path = (
-        f"gecko.v2.{parameters['project']}.revision."
+        f"{graph_config['trust-domain']}.v2.{parameters['project']}.revision."
         f"{parameters['head_rev']}.taskgraph.decision-nightly-desktop"
     )
-    if retry(index_exists, args=(index_path,)):
+    if os.environ.get("MOZ_AUTOMATION") and retry(
+        index_exists,
+        args=(index_path,),
+        kwargs={
+            "reason": "to avoid triggering multiple nightlies off the same revision",
+        },
+    ):
         return []
 
     # Tasks that aren't platform specific
@@ -1025,11 +1024,20 @@ def target_tasks_coverity_full(full_task_graph, parameters, graph_config):
     return ["source-test-coverity-coverity-full-analysis"]
 
 
-# Run build linux64-plain-clang-trunk/opt on mozilla-central/release
-@_target_task("linux64_bp_clang_trunk")
-def target_tasks_build_linux64_clang_trunk(full_task_graph, parameters, graph_config):
-    """Select tasks required to run the build of linux64 build plain with clang trunk"""
-    return ["build-linux64-plain-clang-trunk/opt"]
+# Run build linux64-plain-clang-trunk/opt on mozilla-central/beta with perf tests
+@_target_task("linux64_clang_trunk_perf")
+def target_tasks_build_linux64_clang_trunk_perf(
+    full_task_graph, parameters, graph_config
+):
+    """Select tasks required to run perf test on linux64 build with clang trunk"""
+
+    # Only keep tasks generated from platform `linux1804-64-clang-trunk/opt`
+    def filter(task_label):
+        if "linux1804-64-clang-trunk/opt" in task_label:
+            return True
+        return False
+
+    return [l for l, t in six.iteritems(full_task_graph.tasks) if filter(t.label)]
 
 
 # Run Updatebot's cron job 4 times daily.
@@ -1270,3 +1278,13 @@ def target_tasks_perftest_autoland(full_task_graph, parameters, graph_config):
             test_name in name for test_name in ["view"]
         ):
             yield name
+
+
+@_target_task("l10n-cross-channel")
+def target_tasks_l10n_cross_channel(full_task_graph, parameters, graph_config):
+    """Select the set of tasks required to run l10n cross-channel."""
+
+    def filter(task):
+        return task.kind in ["l10n-cross-channel"]
+
+    return [l for l, t in six.iteritems(full_task_graph.tasks) if filter(t)]

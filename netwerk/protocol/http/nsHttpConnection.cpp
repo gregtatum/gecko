@@ -56,53 +56,7 @@ enum TlsHandshakeResult : uint32_t {
 // nsHttpConnection <public>
 //-----------------------------------------------------------------------------
 
-nsHttpConnection::nsHttpConnection()
-    : mSocketInCondition(NS_ERROR_NOT_INITIALIZED),
-      mSocketOutCondition(NS_ERROR_NOT_INITIALIZED),
-      mHttpHandler(gHttpHandler),
-      mLastReadTime(0),
-      mLastWriteTime(0),
-      mMaxHangTime(0),
-      mConsiderReusedAfterInterval(0),
-      mConsiderReusedAfterEpoch(0),
-      mCurrentBytesRead(0),
-      mMaxBytesRead(0),
-      mTotalBytesRead(0),
-      mContentBytesWritten(0),
-      mUrgentStartPreferred(false),
-      mUrgentStartPreferredKnown(false),
-      mConnectedTransport(false),
-      mKeepAlive(true)  // assume to keep-alive by default
-      ,
-      mKeepAliveMask(true),
-      mDontReuse(false),
-      mIsReused(false),
-      mCompletedProxyConnect(false),
-      mLastTransactionExpectedNoContent(false),
-      mIdleMonitoring(false),
-      mProxyConnectInProgress(false),
-      mInSpdyTunnel(false),
-      mForcePlainText(false),
-      mTrafficCount(0),
-      mTrafficStamp(false),
-      mHttp1xTransactionCount(0),
-      mRemainingConnectionUses(0xffffffff),
-      mNPNComplete(false),
-      mSetupSSLCalled(false),
-      mUsingSpdyVersion(SpdyVersion::NONE),
-      mPriority(nsISupportsPriority::PRIORITY_NORMAL),
-      mReportedSpdy(false),
-      mEverUsedSpdy(false),
-      mLastHttpResponseVersion(HttpVersion::v1_1),
-      mDefaultTimeoutFactor(1),
-      mResponseTimeoutEnabled(false),
-      mTCPKeepaliveConfig(kTCPKeepaliveDisabled),
-      mForceSendPending(false),
-      m0RTTChecked(false),
-      mWaitingFor0RTTResponse(false),
-      mContentBytesWritten0RTT(0),
-      mEarlyDataNegotiated(false),
-      mDid0RTTSpdy(false) {
+nsHttpConnection::nsHttpConnection() : mHttpHandler(gHttpHandler) {
   LOG(("Creating nsHttpConnection @%p\n", this));
 
   // the default timeout is for when this connection has not yet processed a
@@ -171,8 +125,9 @@ nsresult nsHttpConnection::Init(
     nsHttpConnectionInfo* info, uint16_t maxHangTime,
     nsISocketTransport* transport, nsIAsyncInputStream* instream,
     nsIAsyncOutputStream* outstream, bool connectedTransport, nsresult status,
-    nsIInterfaceRequestor* callbacks, PRIntervalTime rtt) {
-  LOG1(("nsHttpConnection::Init this=%p sockettransport=%p", this, transport));
+    nsIInterfaceRequestor* callbacks, PRIntervalTime rtt, bool forWebSocket) {
+  LOG1(("nsHttpConnection::Init this=%p sockettransport=%p forWebSocket=%d",
+        this, transport, forWebSocket));
   NS_ENSURE_ARG_POINTER(info);
   NS_ENSURE_TRUE(!mConnInfo, NS_ERROR_ALREADY_INITIALIZED);
   MOZ_ASSERT(NS_SUCCEEDED(status) || !connectedTransport);
@@ -188,6 +143,7 @@ nsresult nsHttpConnection::Init(
   mSocketTransport = transport;
   mSocketIn = instream;
   mSocketOut = outstream;
+  mForWebSocket = forWebSocket;
 
   // See explanation for non-strictness of this operation in
   // SetSecurityCallbacks.
@@ -851,8 +807,9 @@ void nsHttpConnection::SetupSSL() {
   LOG1(("nsHttpConnection::SetupSSL %p caps=0x%X %s\n", this, mTransactionCaps,
         mConnInfo->HashKey().get()));
 
-  if (mSetupSSLCalled)  // do only once
+  if (mSetupSSLCalled) {  // do only once
     return;
+  }
   mSetupSSLCalled = true;
 
   if (mNPNComplete) return;
@@ -867,7 +824,7 @@ void nsHttpConnection::SetupSSL() {
 
   // if we are connected to the proxy with TLS, start the TLS
   // flow immediately without waiting for a CONNECT sequence.
-  DebugOnly<nsresult> rv;
+  DebugOnly<nsresult> rv{};
   if (mInSpdyTunnel) {
     rv = InitSSLParams(false, true);
   } else {
@@ -1231,10 +1188,11 @@ nsresult nsHttpConnection::OnHeadersAvailable(nsAHttpTransaction* trans,
   bool explicitClose =
       responseHead->HasHeaderValue(nsHttp::Connection, "close") ||
       responseHead->HasHeaderValue(nsHttp::Proxy_Connection, "close");
-  if (!explicitClose)
+  if (!explicitClose) {
     explicitKeepAlive =
         responseHead->HasHeaderValue(nsHttp::Connection, "keep-alive") ||
         responseHead->HasHeaderValue(nsHttp::Proxy_Connection, "keep-alive");
+  }
 
   // deal with 408 Server Timeouts
   uint16_t responseStatus = responseHead->Status();
@@ -1260,10 +1218,7 @@ nsresult nsHttpConnection::OnHeadersAvailable(nsAHttpTransaction* trans,
   if ((responseHead->Version() < HttpVersion::v1_1) ||
       (requestHead->Version() < HttpVersion::v1_1)) {
     // HTTP/1.0 connections are by default NOT persistent
-    if (explicitKeepAlive)
-      mKeepAlive = true;
-    else
-      mKeepAlive = false;
+    mKeepAlive = explicitKeepAlive;
   } else {
     // HTTP/1.1 connections are by default persistent
     mKeepAlive = !explicitClose;
@@ -1284,10 +1239,11 @@ nsresult nsHttpConnection::OnHeadersAvailable(nsAHttpTransaction* trans,
 
     if (mUsingSpdyVersion == SpdyVersion::NONE) {
       const char* cp = nsCRT::strcasestr(keepAlive.get(), "timeout=");
-      if (cp)
+      if (cp) {
         mIdleTimeout = PR_SecondsToInterval((uint32_t)atoi(cp + 8));
-      else
+      } else {
         mIdleTimeout = gHttpHandler->IdleTimeout() * mDefaultTimeoutFactor;
+      }
 
       cp = nsCRT::strcasestr(keepAlive.get(), "max=");
       if (cp) {
@@ -1420,8 +1376,9 @@ nsresult nsHttpConnection::TakeTransport(nsISocketTransport** aTransport,
                                          nsIAsyncOutputStream** aOutputStream) {
   if (mUsingSpdyVersion != SpdyVersion::NONE) return NS_ERROR_FAILURE;
   if (mTransaction && !mTransaction->IsDone()) return NS_ERROR_IN_PROGRESS;
-  if (!(mSocketTransport && mSocketIn && mSocketOut))
+  if (!(mSocketTransport && mSocketIn && mSocketOut)) {
     return NS_ERROR_NOT_INITIALIZED;
+  }
 
   if (mInputOverflow) mSocketIn = mInputOverflow.forget();
 
@@ -1863,11 +1820,11 @@ nsresult nsHttpConnection::OnReadSegment(const char* buf, uint32_t count,
   }
 
   nsresult rv = mSocketOut->Write(buf, count, countRead);
-  if (NS_FAILED(rv))
+  if (NS_FAILED(rv)) {
     mSocketOutCondition = rv;
-  else if (*countRead == 0)
+  } else if (*countRead == 0) {
     mSocketOutCondition = NS_BASE_STREAM_CLOSED;
-  else {
+  } else {
     mLastWriteTime = PR_IntervalNow();
     mSocketOutCondition = NS_OK;  // reset condition
     if (!mProxyConnectInProgress) mTotalBytesWritten += *countRead;
@@ -2041,12 +1998,13 @@ nsresult nsHttpConnection::OnWriteSegment(char* buf, uint32_t count,
   }
 
   nsresult rv = mSocketIn->Read(buf, count, countWritten);
-  if (NS_FAILED(rv))
+  if (NS_FAILED(rv)) {
     mSocketInCondition = rv;
-  else if (*countWritten == 0)
+  } else if (*countWritten == 0) {
     mSocketInCondition = NS_BASE_STREAM_CLOSED;
-  else
+  } else {
     mSocketInCondition = NS_OK;  // reset condition
+  }
 
   return mSocketInCondition;
 }
@@ -2182,7 +2140,7 @@ nsresult nsHttpConnection::MakeConnectString(nsAHttpTransaction* trans,
     return NS_ERROR_NOT_INITIALIZED;
   }
 
-  DebugOnly<nsresult> rv;
+  DebugOnly<nsresult> rv{};
 
   rv = nsHttpHandler::GenerateHostPort(
       nsDependentCString(trans->ConnectionInfo()->Origin()),

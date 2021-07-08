@@ -2,8 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "FileInfoTImpl.h"
-#include "FileManagerBase.h"
+#include "FileInfo.h"
+#include "FileInfoImpl.h"
+#include "FileInfoManager.h"
 
 #include "gtest/gtest.h"
 
@@ -18,7 +19,7 @@ using namespace mozilla::dom::indexedDB;
 
 class SimpleFileManager;
 
-using SimpleFileInfo = FileInfoT<SimpleFileManager>;
+using SimpleFileInfo = FileInfo<SimpleFileManager>;
 
 struct SimpleFileManagerStats final {
   // XXX We don't keep track of the specific aFileId parameters here, should we?
@@ -27,10 +28,10 @@ struct SimpleFileManagerStats final {
   size_t mSyncDeleteFileCalls = 0;
 };
 
-class SimpleFileManager final : public FileManagerBase<SimpleFileManager>,
+class SimpleFileManager final : public FileInfoManager<SimpleFileManager>,
                                 public AtomicSafeRefCounted<SimpleFileManager> {
  public:
-  using FileManagerBase<SimpleFileManager>::MutexType;
+  using FileInfoManager<SimpleFileManager>::MutexType;
 
   MOZ_DECLARE_REFCOUNTED_TYPENAME(SimpleFileManager)
 
@@ -64,9 +65,9 @@ class SimpleFileManager final : public FileManagerBase<SimpleFileManager>,
       // Copied from within DatabaseFileManager::Init.
 
       mFileInfos.InsertOrUpdate(
-          id,
-          MakeNotNull<SimpleFileInfo*>(FileManagerGuard{}, SafeRefPtrFromThis(),
-                                       id, static_cast<nsrefcnt>(1)));
+          id, MakeNotNull<SimpleFileInfo*>(FileInfoManagerGuard{},
+                                           SafeRefPtrFromThis(), id,
+                                           static_cast<nsrefcnt>(1)));
 
       mLastFileId = std::max(id, mLastFileId);
     }

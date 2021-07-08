@@ -280,18 +280,23 @@ def virtualenv_python3(env_python, build_env, mozconfig, help):
     if topobjdir.endswith("/js/src"):
         topobjdir = topobjdir[:-7]
 
-    virtualenvs_root = os.path.join(topobjdir, "_virtualenvs")
-    with LineIO(lambda l: log.info(l), "replace") as out:
-        manager = VirtualenvManager(
-            topsrcdir,
-            os.path.join(virtualenvs_root, "common"),
-            out,
-            os.path.join(topsrcdir, "build", "build_virtualenv_packages.txt"),
+    test_python = os.environ.get("MOZ_TEST_PYTHON")
+    if test_python:
+        manager = namespace(
+            up_to_date=lambda python: True,
+            python_path=test_python,
         )
+    else:
+        with LineIO(lambda l: log.info(l), "replace") as out:
+            manager = VirtualenvManager(
+                topsrcdir,
+                os.path.join(topobjdir, "_virtualenvs", "common"),
+                out,
+                os.path.join(topsrcdir, "build", "build_virtualenv_packages.txt"),
+            )
 
     # Update the path to include some necessary modules for find_program.
     sys.path.insert(0, os.path.join(topsrcdir, "testing", "mozbase", "mozfile"))
-    sys.path.insert(0, os.path.join(topsrcdir, "third_party", "python", "backports"))
 
     # If we know the Python executable the caller is asking for then verify its
     # version. If the caller did not ask for a specific executable then find
@@ -343,7 +348,7 @@ def virtualenv_python3(env_python, build_env, mozconfig, help):
 
     python = normsep(manager.python_path)
 
-    if not normsep(sys.executable).startswith(normsep(virtualenvs_root)):
+    if python != normsep(sys.executable):
         log.debug(
             "python3: executing as %s, should be running as %s"
             % (sys.executable, manager.python_path)
@@ -351,10 +356,6 @@ def virtualenv_python3(env_python, build_env, mozconfig, help):
         log.info("Re-executing in the virtualenv")
         if env_python:
             del os.environ["PYTHON3"]
-        # Homebrew on macOS will change Python's sys.executable to a custom
-        # value which messes with mach's virtualenv handling code. Override
-        # Homebrew's changes with the correct sys.executable value.
-        os.environ["PYTHONEXECUTABLE"] = python
         # Another quirk on macOS, with the system python, the virtualenv is
         # not fully operational (missing entries in sys.path) if
         # __PYVENV_LAUNCHER__ is set.
@@ -366,11 +367,6 @@ def virtualenv_python3(env_python, build_env, mozconfig, help):
     # We are now in the virtualenv
     if not distutils.sysconfig.get_python_lib():
         die("Could not determine python site packages directory")
-
-    # We may have set PYTHONEXECUTABLE above, and that affects python
-    # subprocesses we may invoke as part of configure (e.g. hg), so
-    # unset it.
-    os.environ.pop("PYTHONEXECUTABLE", None)
 
     str_version = ".".join(str(v) for v in version)
 

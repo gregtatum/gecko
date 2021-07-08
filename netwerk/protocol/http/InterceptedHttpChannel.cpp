@@ -41,6 +41,7 @@ InterceptedHttpChannel::InterceptedHttpChannel(
   // any time spent processing the channel.
   mChannelCreationTime = aCreationTime;
   mChannelCreationTimestamp = aCreationTimestamp;
+  mInterceptedChannelCreationTimestamp = TimeStamp::Now();
   mAsyncOpenTime = aAsyncOpenTimestamp;
 }
 
@@ -523,6 +524,21 @@ InterceptedHttpChannel::AsyncOpen(nsIStreamListener* aListener) {
     return mStatus;
   }
 
+#ifdef MOZ_GECKO_PROFILER
+  // This is outside of the if block in case we enable the profiler after
+  // AsyncOpen().
+  mLastStatusReported = TimeStamp::Now();
+  if (profiler_can_accept_markers()) {
+    nsAutoCString requestMethod;
+    GetRequestMethod(requestMethod);
+
+    profiler_add_network_marker(
+        mURI, requestMethod, mPriority, mChannelId, NetworkLoadType::LOAD_START,
+        mChannelCreationTimestamp, mLastStatusReported, 0, kCacheUnknown,
+        mLoadInfo->GetInnerWindowID());
+  }
+#endif
+
   // After this point we should try to return NS_OK and notify the listener
   // of the result.
   mListener = aListener;
@@ -602,6 +618,19 @@ InterceptedHttpChannel::ResetInterception(void) {
     return mStatus;
   }
 
+  uint32_t flags = nsIChannelEventSink::REDIRECT_INTERNAL;
+
+  nsCOMPtr<nsIChannel> newChannel;
+  nsCOMPtr<nsILoadInfo> redirectLoadInfo =
+      CloneLoadInfoForRedirect(mURI, flags);
+  nsresult rv =
+      NS_NewChannelInternal(getter_AddRefs(newChannel), mURI, redirectLoadInfo,
+                            nullptr,  // PerformanceStorage
+                            nullptr,  // aLoadGroup
+                            nullptr,  // aCallbacks
+                            mLoadFlags);
+  NS_ENSURE_SUCCESS(rv, rv);
+
 #ifdef MOZ_GECKO_PROFILER
   if (profiler_can_accept_markers()) {
     nsAutoCString requestMethod;
@@ -618,26 +647,18 @@ InterceptedHttpChannel::ResetInterception(void) {
       mResponseHead->ContentType(contentType);
     }
 
-    profiler_add_network_marker(
-        mURI, requestMethod, priority, mChannelId,
-        NetworkLoadType::LOAD_REDIRECT, mAsyncOpenTime, TimeStamp::Now(), size,
-        kCacheUnknown, mLoadInfo->GetInnerWindowID(), &mTransactionTimings,
-        mURI, std::move(mSource), Some(nsDependentCString(contentType.get())));
+    RefPtr<HttpBaseChannel> newBaseChannel = do_QueryObject(newChannel);
+    MOZ_ASSERT(newBaseChannel,
+               "The redirect channel should be a base channel.");
+    profiler_add_network_marker(mURI, requestMethod, priority, mChannelId,
+                                NetworkLoadType::LOAD_REDIRECT,
+                                mLastStatusReported, TimeStamp::Now(), size,
+                                kCacheUnknown, mLoadInfo->GetInnerWindowID(),
+                                &mTransactionTimings, std::move(mSource),
+                                Some(nsDependentCString(contentType.get())),
+                                mURI, flags, newBaseChannel->ChannelId());
   }
 #endif
-
-  uint32_t flags = nsIChannelEventSink::REDIRECT_INTERNAL;
-
-  nsCOMPtr<nsIChannel> newChannel;
-  nsCOMPtr<nsILoadInfo> redirectLoadInfo =
-      CloneLoadInfoForRedirect(mURI, flags);
-  nsresult rv =
-      NS_NewChannelInternal(getter_AddRefs(newChannel), mURI, redirectLoadInfo,
-                            nullptr,  // PerformanceStorage
-                            nullptr,  // aLoadGroup
-                            nullptr,  // aCallbacks
-                            mLoadFlags);
-  NS_ENSURE_SUCCESS(rv, rv);
 
   rv = SetupReplacementChannel(mURI, newChannel, true, flags);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -1120,9 +1141,9 @@ InterceptedHttpChannel::OnStopRequest(nsIRequest* aRequest, nsresult aStatus) {
     }
     profiler_add_network_marker(
         mURI, requestMethod, priority, mChannelId, NetworkLoadType::LOAD_STOP,
-        mAsyncOpenTime, TimeStamp::Now(), size, kCacheUnknown,
-        mLoadInfo->GetInnerWindowID(), &mTransactionTimings, nullptr,
-        std::move(mSource), Some(nsDependentCString(contentType.get())));
+        mLastStatusReported, TimeStamp::Now(), size, kCacheUnknown,
+        mLoadInfo->GetInnerWindowID(), &mTransactionTimings, std::move(mSource),
+        Some(nsDependentCString(contentType.get())));
   }
 #endif
 

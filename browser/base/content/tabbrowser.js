@@ -820,18 +820,13 @@
       if (!browser._notificationBox) {
         browser._notificationBox = new MozElements.NotificationBox(element => {
           element.setAttribute("notificationside", "top");
-          if (gProton) {
-            element.setAttribute(
-              "name",
-              `tab-notification-box-${this._nextNotificationBoxId++}`
-            );
-            // With Proton enabled all notification boxes are at the top, built into the browser chrome.
-            this.getTabNotificationDeck().append(element);
-            if (browser == this.selectedBrowser) {
-              this._updateVisibleNotificationBox(browser);
-            }
-          } else {
-            this.getBrowserContainer(browser).prepend(element);
+          element.setAttribute(
+            "name",
+            `tab-notification-box-${this._nextNotificationBoxId++}`
+          );
+          this.getTabNotificationDeck().append(element);
+          if (browser == this.selectedBrowser) {
+            this._updateVisibleNotificationBox(browser);
           }
         });
       }
@@ -1106,9 +1101,7 @@
 
       this._appendStatusPanel();
 
-      if (gProton) {
-        this._updateVisibleNotificationBox(newBrowser);
-      }
+      this._updateVisibleNotificationBox(newBrowser);
 
       let oldBrowserPopupsBlocked = oldBrowser.popupBlocker.getBlockedPopupCount();
       let newBrowserPopupsBlocked = newBrowser.popupBlocker.getBlockedPopupCount();
@@ -2799,7 +2792,8 @@
             // a switch-to-tab candidate in autocomplete.
             this.UrlbarProviderOpenTabs.registerOpenTab(
               lazyBrowserURI.spec,
-              userContextId
+              userContextId || 0,
+              PrivateBrowsingUtils.isWindowPrivate(window)
             );
             b.registeredOpenURI = lazyBrowserURI;
           }
@@ -3864,7 +3858,8 @@
         let userContextId = browser.getAttribute("usercontextid") || 0;
         this.UrlbarProviderOpenTabs.unregisterOpenTab(
           browser.registeredOpenURI.spec,
-          userContextId
+          userContextId,
+          PrivateBrowsingUtils.isWindowPrivate(window)
         );
         delete browser.registeredOpenURI;
       }
@@ -4240,7 +4235,8 @@
         let userContextId = otherBrowser.getAttribute("usercontextid") || 0;
         this.UrlbarProviderOpenTabs.unregisterOpenTab(
           otherBrowser.registeredOpenURI.spec,
-          userContextId
+          userContextId,
+          PrivateBrowsingUtils.isWindowPrivate(window)
         );
         delete otherBrowser.registeredOpenURI;
       }
@@ -5567,7 +5563,8 @@
           let userContextId = browser.getAttribute("usercontextid") || 0;
           this.UrlbarProviderOpenTabs.unregisterOpenTab(
             browser.registeredOpenURI.spec,
-            userContextId
+            userContextId,
+            PrivateBrowsingUtils.isWindowPrivate(window)
           );
           delete browser.registeredOpenURI;
         }
@@ -6557,20 +6554,16 @@
           let uri = this.mBrowser.registeredOpenURI;
           gBrowser.UrlbarProviderOpenTabs.unregisterOpenTab(
             uri.spec,
-            userContextId
+            userContextId,
+            PrivateBrowsingUtils.isWindowPrivate(window)
           );
           delete this.mBrowser.registeredOpenURI;
         }
-        // Tabs in private windows aren't registered as "Open" so
-        // that they don't appear as switch-to-tab candidates.
-        if (
-          !isBlankPageURL(aLocation.spec) &&
-          (!PrivateBrowsingUtils.isWindowPrivate(window) ||
-            PrivateBrowsingUtils.permanentPrivateBrowsing)
-        ) {
+        if (!isBlankPageURL(aLocation.spec)) {
           gBrowser.UrlbarProviderOpenTabs.registerOpenTab(
             aLocation.spec,
-            userContextId
+            userContextId,
+            PrivateBrowsingUtils.isWindowPrivate(window)
           );
           this.mBrowser.registeredOpenURI = aLocation;
         }
@@ -7172,11 +7165,8 @@ var TabContextMenu = {
   updateShareURLMenuItem() {
     // We only support "share URL" on macOS and on Windows 10:
     if (
-      !gProton ||
-      !(
-        AppConstants.platform == "macosx" ||
-        AppConstants.isPlatformAndVersionAtLeast("win", "6.4")
-      )
+      AppConstants.platform != "macosx" &&
+      !AppConstants.isPlatformAndVersionAtLeast("win", "6.4")
     ) {
       return;
     }

@@ -6,8 +6,8 @@
 
 const EXPORTED_SYMBOLS = [
   "ExperimentAPI",
-  "ExperimentFeature",
   "NimbusFeatures",
+  "_ExperimentFeature",
 ];
 
 // Note: Feature manifest has moved to toolkit/components/nimbus/FeatureManifest.js
@@ -283,7 +283,7 @@ const ExperimentAPI = {
 };
 
 /**
- * Singleton that holds lazy references to ExperimentFeature instances
+ * Singleton that holds lazy references to _ExperimentFeature instances
  * defined by the FeatureManifest
  */
 const NimbusFeatures = {};
@@ -291,11 +291,11 @@ for (let feature in FeatureManifest) {
   XPCOMUtils.defineLazyGetter(
     NimbusFeatures,
     feature,
-    () => new ExperimentFeature(feature)
+    () => new _ExperimentFeature(feature)
   );
 }
 
-class ExperimentFeature {
+class _ExperimentFeature {
   constructor(featureId, manifest) {
     this.featureId = featureId;
     this.prefGetters = {};
@@ -394,12 +394,16 @@ class ExperimentFeature {
   async ready(timeout) {
     const REMOTE_DEFAULTS_TIMEOUT_MS = 15 * 1000; // 15 seconds
     await ExperimentAPI.ready();
-    let remoteTimeoutId = setTimeout(
-      this._onRemoteReady,
-      timeout || REMOTE_DEFAULTS_TIMEOUT_MS
-    );
-    await this._waitForRemote;
-    clearTimeout(remoteTimeoutId);
+    if (ExperimentAPI._store.hasRemoteDefaultsReady()) {
+      this._onRemoteReady();
+    } else {
+      let remoteTimeoutId = setTimeout(
+        this._onRemoteReady,
+        timeout || REMOTE_DEFAULTS_TIMEOUT_MS
+      );
+      await this._waitForRemote;
+      clearTimeout(remoteTimeoutId);
+    }
   }
 
   /**

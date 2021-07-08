@@ -7,7 +7,6 @@
 include("../templates.mozbuild")
 
 DIRS += [
-    "acorn",
     "css",
     "commands",
     "compatibility",
@@ -71,7 +70,6 @@ DevToolsModules(
     "plural-form.js",
     "protocol.js",
     "system.js",
-    "task.js",
     "ThreadSafeDevToolsUtils.js",
     "throttle.js",
 )

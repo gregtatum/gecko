@@ -717,8 +717,8 @@ struct DIGroup {
   void PushImage(wr::DisplayListBuilder& aBuilder,
                  const LayoutDeviceRect& bounds) {
     wr::LayoutRect dest = wr::ToLayoutRect(bounds);
-    GP("PushImage: %f %f %f %f\n", dest.origin.x, dest.origin.y,
-       dest.size.width, dest.size.height);
+    GP("PushImage: %f %f %f %f\n", dest.min.x, dest.min.y, dest.max.x,
+       dest.max.y);
     gfx::SamplingFilter sampleFilter = gfx::SamplingFilter::
         LINEAR;  // nsLayoutUtils::GetSamplingFilterForFrame(aItem->Frame());
     bool backfaceHidden = false;
@@ -2428,7 +2428,7 @@ Maybe<wr::ImageMask> WebRenderCommandBuilder::BuildWrMaskImage(
       LayerIntRect::FromUnknownRect(
           aMaskItem->GetBuildingRect().ScaleToOutsidePixels(
               scale.width, scale.height, appUnitsPerDevPixel))
-          .Intersect(itemRect);
+          .SafeIntersect(itemRect);
 
   if (visibleRect.IsEmpty()) {
     return Nothing();
@@ -2448,6 +2448,10 @@ Maybe<wr::ImageMask> WebRenderCommandBuilder::BuildWrMaskImage(
       maskOffset != maskData->mMaskOffset || !sameScale ||
       aMaskItem->ShouldHandleOpacity() != maskData->mShouldHandleOpacity) {
     IntSize size = itemRect.Size().ToUnknownSize();
+
+    if (!Factory::AllowedSurfaceSize(size)) {
+      return Nothing();
+    }
 
     std::vector<RefPtr<ScaledFont>> fonts;
     bool validFonts = true;

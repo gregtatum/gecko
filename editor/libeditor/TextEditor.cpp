@@ -71,11 +71,7 @@ using namespace dom;
 using LeafNodeType = HTMLEditUtils::LeafNodeType;
 using LeafNodeTypes = HTMLEditUtils::LeafNodeTypes;
 
-TextEditor::TextEditor()
-    : mMaxTextLength(-1),
-      mUnmaskedStart(UINT32_MAX),
-      mUnmaskedLength(0),
-      mIsMaskingPassword(true) {
+TextEditor::TextEditor() {
   // printf("Size of TextEditor: %zu\n", sizeof(TextEditor));
   static_assert(
       sizeof(TextEditor) <= 512,
@@ -91,14 +87,16 @@ TextEditor::~TextEditor() {
 NS_IMPL_CYCLE_COLLECTION_CLASS(TextEditor)
 
 NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(TextEditor, EditorBase)
-  if (tmp->mMaskTimer) {
-    tmp->mMaskTimer->Cancel();
+  if (tmp->mPasswordMaskData) {
+    tmp->mPasswordMaskData->CancelTimer(PasswordMaskData::ReleaseTimer::No);
+    NS_IMPL_CYCLE_COLLECTION_UNLINK(mPasswordMaskData->mTimer)
   }
-  NS_IMPL_CYCLE_COLLECTION_UNLINK(mMaskTimer)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN_INHERITED(TextEditor, EditorBase)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mMaskTimer)
+  if (tmp->mPasswordMaskData) {
+    NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mPasswordMaskData->mTimer)
+  }
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
 NS_IMPL_ADDREF_INHERITED(TextEditor, EditorBase)
@@ -109,17 +107,20 @@ NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(TextEditor)
   NS_INTERFACE_MAP_ENTRY(nsINamed)
 NS_INTERFACE_MAP_END_INHERITING(EditorBase)
 
-nsresult TextEditor::Init(Document& aDoc, Element* aRoot,
-                          nsISelectionController* aSelCon, uint32_t aFlags,
-                          const nsAString& aInitialValue) {
-  MOZ_ASSERT(!AsHTMLEditor());
+nsresult TextEditor::Init(Document& aDocument, Element& aAnonymousDivElement,
+                          nsISelectionController& aSelectionController,
+                          uint32_t aFlags,
+                          UniquePtr<PasswordMaskData>&& aPasswordMaskData) {
   MOZ_ASSERT(!mInitSucceeded,
              "TextEditor::Init() called again without calling PreDestroy()?");
+  MOZ_ASSERT(!(aFlags & nsIEditor::eEditorPasswordMask) == !aPasswordMaskData);
+  mPasswordMaskData = std::move(aPasswordMaskData);
 
   // Init the base editor
-  nsresult rv = EditorBase::Init(aDoc, aRoot, aSelCon, aFlags, aInitialValue);
+  nsresult rv = InitInternal(aDocument, &aAnonymousDivElement,
+                             aSelectionController, aFlags);
   if (NS_FAILED(rv)) {
-    NS_WARNING("EditorBase::Init() failed");
+    NS_WARNING("EditorBase::InitInternal() failed");
     return rv;
   }
 
@@ -136,8 +137,8 @@ nsresult TextEditor::Init(Document& aDoc, Element* aRoot,
 
   rv = InitEditorContentAndSelection();
   if (NS_FAILED(rv)) {
-    NS_WARNING("TextEditor::InitEditorContentAndSelection() failed");
-    // XXX Sholdn't we expose `NS_ERROR_EDITOR_DESTROYED` even though this
+    NS_WARNING("EditorBase::InitEditorContentAndSelection() failed");
+    // XXX Shouldn't we expose `NS_ERROR_EDITOR_DESTROYED` even though this
     //     is a public method?
     mInitSucceeded = false;
     return EditorBase::ToGenericNSResult(rv);
@@ -150,6 +151,47 @@ nsresult TextEditor::Init(Document& aDoc, Element* aRoot,
   return NS_OK;
 }
 
+nsresult TextEditor::PostCreate() {
+  AutoEditActionDataSetter editActionData(*this, EditAction::eNotEditing);
+  if (NS_WARN_IF(!editActionData.CanHandle())) {
+    return NS_ERROR_NOT_INITIALIZED;
+  }
+
+  nsresult rv = PostCreateInternal();
+
+  // Restore unmasked range if there is.
+  if (IsPasswordEditor() && !IsAllMasked()) {
+    DebugOnly<nsresult> rvIgnored =
+        SetUnmaskRangeAndNotify(UnmaskedStart(), UnmaskedLength());
+    NS_WARNING_ASSERTION(NS_SUCCEEDED(rvIgnored),
+                         "TextEditor::SetUnmaskRangeAndNotify() failed to "
+                         "restore unmasked range, but ignored");
+  }
+  NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
+                       "EditorBase::PostCreateInternal() failed");
+  return rv;
+}
+
+UniquePtr<PasswordMaskData> TextEditor::PreDestroy() {
+  if (mDidPreDestroy) {
+    return nullptr;
+  }
+
+  UniquePtr<PasswordMaskData> passwordMaskData = std::move(mPasswordMaskData);
+  if (passwordMaskData) {
+    // Disable auto-masking timer since nobody can catch the notification
+    // from the timer and canceling the unmasking.
+    passwordMaskData->CancelTimer(PasswordMaskData::ReleaseTimer::Yes);
+    // Similary, keeping preventing echoing password temporarily across
+    // TextEditor instances is hard.  So, we should forget it.
+    passwordMaskData->mEchoingPasswordPrevented = false;
+  }
+
+  PreDestroyInternal();
+
+  return passwordMaskData;
+}
+
 nsresult TextEditor::HandleKeyPressEvent(WidgetKeyboardEvent* aKeyboardEvent) {
   // NOTE: When you change this method, you should also change:
   //   * editor/libeditor/tests/test_texteditor_keyevent_handling.html
@@ -158,14 +200,15 @@ nsresult TextEditor::HandleKeyPressEvent(WidgetKeyboardEvent* aKeyboardEvent) {
   // And also when you add new key handling, you need to change the subclass's
   // HandleKeyPressEvent()'s switch statement.
 
-  if (IsReadonly()) {
-    // When we're not editable, the events handled on EditorBase.
-    return EditorBase::HandleKeyPressEvent(aKeyboardEvent);
-  }
-
   if (NS_WARN_IF(!aKeyboardEvent)) {
     return NS_ERROR_UNEXPECTED;
   }
+
+  if (IsReadonly()) {
+    HandleKeyPressEventInReadOnlyMode(*aKeyboardEvent);
+    return NS_OK;
+  }
+
   MOZ_ASSERT(aKeyboardEvent->mMessage == eKeyPress,
              "HandleKeyPressEvent gets non-keypress event");
 
@@ -175,54 +218,17 @@ nsresult TextEditor::HandleKeyPressEvent(WidgetKeyboardEvent* aKeyboardEvent) {
     case NS_VK_SHIFT:
     case NS_VK_CONTROL:
     case NS_VK_ALT:
-      // These keys are handled on EditorBase
-      return EditorBase::HandleKeyPressEvent(aKeyboardEvent);
-    case NS_VK_BACK: {
-      if (aKeyboardEvent->IsControl() || aKeyboardEvent->IsAlt() ||
-          aKeyboardEvent->IsMeta() || aKeyboardEvent->IsOS()) {
-        return NS_OK;
-      }
-      DebugOnly<nsresult> rvIgnored =
-          DeleteSelectionAsAction(nsIEditor::ePrevious, nsIEditor::eStrip);
+      // FYI: This shouldn't occur since modifier key shouldn't cause eKeyPress
+      //      event.
       aKeyboardEvent->PreventDefault();
-      NS_WARNING_ASSERTION(
-          NS_SUCCEEDED(rvIgnored),
-          "EditorBase::DeleteSelectionAsAction() failed, but ignored");
       return NS_OK;
-    }
-    case NS_VK_DELETE: {
-      // on certain platforms (such as windows) the shift key
-      // modifies what delete does (cmd_cut in this case).
-      // bailing here to allow the keybindings to do the cut.
-      if (aKeyboardEvent->IsShift() || aKeyboardEvent->IsControl() ||
-          aKeyboardEvent->IsAlt() || aKeyboardEvent->IsMeta() ||
-          aKeyboardEvent->IsOS()) {
-        return NS_OK;
-      }
-      DebugOnly<nsresult> rvIgnored =
-          DeleteSelectionAsAction(nsIEditor::eNext, nsIEditor::eStrip);
-      aKeyboardEvent->PreventDefault();
-      NS_WARNING_ASSERTION(
-          NS_SUCCEEDED(rvIgnored),
-          "EditorBase::DeleteSelectionAsAction() failed, but ignored");
-      return NS_OK;
-    }
+
+    case NS_VK_BACK:
+    case NS_VK_DELETE:
     case NS_VK_TAB: {
-      if (IsTabbable()) {
-        return NS_OK;  // let it be used for focus switching
-      }
-
-      if (aKeyboardEvent->IsShift() || aKeyboardEvent->IsControl() ||
-          aKeyboardEvent->IsAlt() || aKeyboardEvent->IsMeta() ||
-          aKeyboardEvent->IsOS()) {
-        return NS_OK;
-      }
-
-      // else we insert the tab straight through
-      aKeyboardEvent->PreventDefault();
-      nsresult rv = OnInputText(u"\t"_ns);
+      nsresult rv = EditorBase::HandleKeyPressEvent(aKeyboardEvent);
       NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
-                           "EditorBase::OnInputText(\\t) failed");
+                           "EditorBase::HandleKeyPressEvent() failed");
       return rv;
     }
     case NS_VK_RETURN: {
@@ -291,7 +297,6 @@ nsresult TextEditor::SetTextAsAction(
     AllowBeforeInputEventCancelable aAllowBeforeInputEventCancelable,
     nsIPrincipal* aPrincipal) {
   MOZ_ASSERT(aString.FindChar(nsCRT::CR) == kNotFound);
-  MOZ_ASSERT(!AsHTMLEditor());
 
   AutoEditActionDataSetter editActionData(*this, EditAction::eSetText,
                                           aPrincipal);
@@ -331,7 +336,7 @@ nsresult TextEditor::SetTextAsSubAction(const nsAString& aString) {
       !ignoredError.Failed(),
       "TextEditor::OnStartToHandleTopLevelEditSubAction() failed, but ignored");
 
-  if (IsPlaintextEditor() && !IsIMEComposing() && !IsUndoRedoEnabled() &&
+  if (!IsIMEComposing() && !IsUndoRedoEnabled() &&
       GetEditAction() != EditAction::eReplaceText && mMaxTextLength < 0) {
     EditActionResult result = SetTextWithoutTransaction(aString);
     if (result.Failed() || result.Canceled() || result.Handled()) {
@@ -347,34 +352,9 @@ nsresult TextEditor::SetTextAsSubAction(const nsAString& aString) {
     // shouldn't receive such selectionchange before the first mutation.
     AutoUpdateViewBatch preventSelectionChangeEvent(*this);
 
-    RefPtr<Element> rootElement = GetRoot();
-    if (NS_WARN_IF(!rootElement)) {
-      return NS_ERROR_FAILURE;
-    }
-
-    // We want to select trailing `<br>` element to remove all nodes to replace
-    // all, but TextEditor::SelectEntireDocument() doesn't select such `<br>`
-    // elements.
     // XXX We should make ReplaceSelectionAsSubAction() take range.  Then,
     //     we can saving the expensive cost of modifying `Selection` here.
-    nsresult rv;
-    if (IsEmpty()) {
-      rv = SelectionRef().CollapseInLimiter(rootElement, 0);
-      NS_WARNING_ASSERTION(
-          NS_SUCCEEDED(rv),
-          "Selection::CollapseInLimiter() failed, but ignored");
-    } else {
-      // XXX Oh, we shouldn't select padding `<br>` element for empty last
-      //     line here since we will need to recreate it in multiline
-      //     text editor.
-      ErrorResult error;
-      SelectionRef().SelectAllChildren(*rootElement, error);
-      NS_WARNING_ASSERTION(
-          !error.Failed(),
-          "Selection::SelectAllChildren() failed, but ignored");
-      rv = error.StealNSResult();
-    }
-    if (NS_SUCCEEDED(rv)) {
+    if (NS_SUCCEEDED(SelectEntireDocument())) {
       DebugOnly<nsresult> rvIgnored = ReplaceSelectionAsSubAction(aString);
       NS_WARNING_ASSERTION(
           NS_SUCCEEDED(rvIgnored),
@@ -392,10 +372,6 @@ already_AddRefed<Element> TextEditor::GetInputEventTargetElement() const {
 }
 
 bool TextEditor::IsEmpty() const {
-  if (mPaddingBRElementForEmptyEditor) {
-    return true;
-  }
-
   // Even if there is no padding <br> element for empty editor, we should be
   // detected as empty editor if all the children are text nodes and these
   // have no content.
@@ -404,13 +380,14 @@ bool TextEditor::IsEmpty() const {
     return true;  // Don't warn it, this is possible, e.g., 997805.html
   }
 
+  MOZ_ASSERT(anonymousDivElement->GetFirstChild() &&
+             anonymousDivElement->GetFirstChild()->IsText());
+
   // Only when there is non-empty text node, we are not empty.
-  return !anonymousDivElement->GetFirstChild() ||
-         !anonymousDivElement->GetFirstChild()->IsText() ||
-         !anonymousDivElement->GetFirstChild()->Length();
+  return !anonymousDivElement->GetFirstChild()->Length();
 }
 
-NS_IMETHODIMP TextEditor::GetTextLength(int32_t* aCount) {
+NS_IMETHODIMP TextEditor::GetTextLength(uint32_t* aCount) {
   MOZ_ASSERT(aCount);
 
   // initialize out params
@@ -454,13 +431,14 @@ bool TextEditor::IsCopyToClipboardAllowedInternal() const {
     return false;
   }
 
-  if (!IsSingleLineEditor() || !IsPasswordEditor()) {
+  if (!IsSingleLineEditor() || !IsPasswordEditor() ||
+      NS_WARN_IF(!mPasswordMaskData)) {
     return true;
   }
 
   // If we're a password editor, we should allow selected text to be copied
   // to the clipboard only when selection range is in unmasked range.
-  if (IsAllMasked() || IsMaskingPassword() || mUnmaskedLength == 0) {
+  if (IsAllMasked() || IsMaskingPassword() || !UnmaskedLength()) {
     return false;
   }
 
@@ -474,24 +452,7 @@ bool TextEditor::IsCopyToClipboardAllowedInternal() const {
   uint32_t selectionStart = 0, selectionEnd = 0;
   nsContentUtils::GetSelectionInTextControl(&SelectionRef(), mRootElement,
                                             selectionStart, selectionEnd);
-  return mUnmaskedStart <= selectionStart && UnmaskedEnd() >= selectionEnd;
-}
-
-NS_IMETHODIMP TextEditor::OutputToString(const nsAString& aFormatType,
-                                         uint32_t aDocumentEncoderFlags,
-                                         nsAString& aOutputString) {
-  AutoEditActionDataSetter editActionData(*this, EditAction::eNotEditing);
-  if (NS_WARN_IF(!editActionData.CanHandle())) {
-    return NS_ERROR_NOT_INITIALIZED;
-  }
-
-  nsresult rv =
-      ComputeValueInternal(aFormatType, aDocumentEncoderFlags, aOutputString);
-  NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
-                       "EditorBase::ComputeValueInternal() failed");
-  // This is low level API for XUL application.  So, we should return raw
-  // error code here.
-  return rv;
+  return UnmaskedStart() <= selectionStart && UnmaskedEnd() >= selectionEnd;
 }
 
 nsresult TextEditor::PasteAsQuotationAsAction(int32_t aClipboardType,
@@ -505,6 +466,7 @@ nsresult TextEditor::PasteAsQuotationAsAction(int32_t aClipboardType,
   if (NS_WARN_IF(!editActionData.CanHandle())) {
     return NS_ERROR_NOT_INITIALIZED;
   }
+  MOZ_ASSERT(GetDocument());
 
   // Get Clipboard Service
   nsresult rv;
@@ -518,13 +480,17 @@ nsresult TextEditor::PasteAsQuotationAsAction(int32_t aClipboardType,
   // XXX Why don't we dispatch ePaste event here?
 
   // Get the nsITransferable interface for getting the data from the clipboard
-  nsCOMPtr<nsITransferable> trans;
-  rv = PrepareTransferable(getter_AddRefs(trans));
-  if (NS_FAILED(rv)) {
-    NS_WARNING("TextEditor::PrepareTransferable() failed");
-    return EditorBase::ToGenericNSResult(rv);
+  Result<nsCOMPtr<nsITransferable>, nsresult> maybeTransferable =
+      EditorUtils::CreateTransferableForPlainText(*GetDocument());
+  if (maybeTransferable.isErr()) {
+    NS_WARNING("EditorUtils::CreateTransferableForPlainText() failed");
+    return EditorBase::ToGenericNSResult(maybeTransferable.unwrapErr());
   }
+  nsCOMPtr<nsITransferable> trans(maybeTransferable.unwrap());
   if (!trans) {
+    NS_WARNING(
+        "EditorUtils::CreateTransferableForPlainText() returned nullptr, but "
+        "ignored");
     return NS_OK;
   }
 
@@ -617,12 +583,6 @@ nsresult TextEditor::InsertWithQuotationsAsSubAction(
   //     also in single line editor)?
   MaybeDoAutoPasswordMasking();
 
-  rv = EnsureNoPaddingBRElementForEmptyEditor();
-  if (NS_FAILED(rv)) {
-    NS_WARNING("EditorBase::EnsureNoPaddingBRElementForEmptyEditor() failed");
-    return rv;
-  }
-
   rv = InsertTextAsSubAction(quotedStuff);
   NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
                        "EditorBase::InsertTextAsSubAction() failed");
@@ -631,7 +591,6 @@ nsresult TextEditor::InsertWithQuotationsAsSubAction(
 
 nsresult TextEditor::SelectEntireDocument() {
   MOZ_ASSERT(IsEditActionDataAvailable());
-  MOZ_ASSERT(!AsHTMLEditor());
 
   if (NS_WARN_IF(!mInitSucceeded)) {
     return NS_ERROR_NOT_INITIALIZED;
@@ -642,46 +601,15 @@ nsresult TextEditor::SelectEntireDocument() {
     return NS_ERROR_NOT_INITIALIZED;
   }
 
-  // If we're empty, don't select all children because that would select the
-  // padding <br> element for empty editor.
-  if (IsEmpty()) {
-    nsresult rv = SelectionRef().CollapseInLimiter(anonymousDivElement, 0);
-    NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
-                         "Selection::CollapseInLimiter() failed");
-    return rv;
-  }
+  RefPtr<Text> text =
+      Text::FromNodeOrNull(anonymousDivElement->GetFirstChild());
+  MOZ_ASSERT(text);
 
-  // XXX We just need to select all of first text node (if there is).
-  //     Why do we do this kind of complicated things?
+  MOZ_TRY(SelectionRef().SetStartAndEndInLimiter(
+      *text, 0, *text, text->TextDataLength(), eDirNext,
+      nsISelectionListener::SELECTALL_REASON));
 
-  // Don't select the trailing BR node if we have one
-  nsCOMPtr<nsIContent> childNode;
-  nsresult rv =
-      EditorBase::GetEndChildNode(SelectionRef(), getter_AddRefs(childNode));
-  if (NS_FAILED(rv)) {
-    NS_WARNING("EditorBase::GetEndChildNode() failed");
-    return rv;
-  }
-  if (childNode) {
-    childNode = childNode->GetPreviousSibling();
-  }
-
-  if (childNode &&
-      EditorUtils::IsPaddingBRElementForEmptyLastLine(*childNode)) {
-    ErrorResult error;
-    SelectionRef().SetStartAndEndInLimiter(
-        RawRangeBoundary(anonymousDivElement, 0u), EditorRawDOMPoint(childNode),
-        error);
-    NS_WARNING_ASSERTION(!error.Failed(),
-                         "Selection::SetStartAndEndInLimiter() failed");
-    return error.StealNSResult();
-  }
-
-  ErrorResult error;
-  SelectionRef().SelectAllChildren(*anonymousDivElement, error);
-  NS_WARNING_ASSERTION(!error.Failed(),
-                       "Selection::SelectAllChildren() failed");
-  return error.StealNSResult();
+  return NS_OK;
 }
 
 EventTarget* TextEditor::GetDOMEventTarget() const { return mEventTarget; }
@@ -729,79 +657,24 @@ nsresult TextEditor::RemoveAttributeOrEquivalent(Element* aElement,
   return EditorBase::ToGenericNSResult(rv);
 }
 
-nsresult TextEditor::EnsurePaddingBRElementForEmptyEditor() {
-  MOZ_ASSERT(IsEditActionDataAvailable());
-  MOZ_ASSERT(!AsHTMLEditor());
-
-  // If there is padding <br> element for empty editor, we have no work to do.
-  if (mPaddingBRElementForEmptyEditor) {
-    return NS_OK;
-  }
-
-  // Likewise, nothing to be done if we could never have inserted a trailing
-  // <br> element.
-  // XXX Why don't we use same path for <textarea> and <input>?
-  if (IsSingleLineEditor()) {
-    nsresult rv = MaybeCreatePaddingBRElementForEmptyEditor();
-    NS_WARNING_ASSERTION(
-        NS_SUCCEEDED(rv),
-        "EditorBase::MaybeCreatePaddingBRElementForEmptyEditor() failed");
-    return rv;
-  }
-
-  if (NS_WARN_IF(!mRootElement)) {
-    return NS_ERROR_FAILURE;
-  }
-
-  uint32_t childCount = mRootElement->GetChildCount();
-  if (childCount == 0) {
-    nsresult rv = MaybeCreatePaddingBRElementForEmptyEditor();
-    NS_WARNING_ASSERTION(
-        NS_SUCCEEDED(rv),
-        "EditorBase::MaybeCreatePaddingBRElementForEmptyEditor() failed");
-    return rv;
-  }
-
-  if (childCount > 1) {
-    return NS_OK;
-  }
-
-  RefPtr<HTMLBRElement> brElement =
-      HTMLBRElement::FromNodeOrNull(mRootElement->GetFirstChild());
-  if (!brElement ||
-      !EditorUtils::IsPaddingBRElementForEmptyLastLine(*brElement)) {
-    return NS_OK;
-  }
-
-  // Rather than deleting this node from the DOM tree we should instead
-  // morph this <br> element into the padding <br> element for editor.
-  mPaddingBRElementForEmptyEditor = std::move(brElement);
-  mPaddingBRElementForEmptyEditor->UnsetFlags(NS_PADDING_FOR_EMPTY_LAST_LINE);
-  mPaddingBRElementForEmptyEditor->SetFlags(NS_PADDING_FOR_EMPTY_EDITOR);
-
-  return NS_OK;
-}
-
 nsresult TextEditor::SetUnmaskRangeInternal(uint32_t aStart, uint32_t aLength,
                                             uint32_t aTimeout, bool aNotify,
                                             bool aForceStartMasking) {
-  mIsMaskingPassword = aForceStartMasking || aTimeout != 0;
+  if (mPasswordMaskData) {
+    mPasswordMaskData->mIsMaskingPassword = aForceStartMasking || aTimeout != 0;
 
-  // We cannot manage multiple unmasked ranges so that shrink the previous
-  // range first.
-  if (!IsAllMasked()) {
-    mUnmaskedLength = 0;
-    if (mMaskTimer) {
-      mMaskTimer->Cancel();
+    // We cannot manage multiple unmasked ranges so that shrink the previous
+    // range first.
+    if (!IsAllMasked()) {
+      mPasswordMaskData->mUnmaskedLength = 0;
+      mPasswordMaskData->CancelTimer(PasswordMaskData::ReleaseTimer::No);
     }
   }
 
   // If we're not a password editor, return error since this call does not
   // make sense.
-  if (!IsPasswordEditor()) {
-    if (mMaskTimer) {
-      mMaskTimer = nullptr;
-    }
+  if (!IsPasswordEditor() || NS_WARN_IF(!mPasswordMaskData)) {
+    mPasswordMaskData->CancelTimer(PasswordMaskData::ReleaseTimer::Yes);
     return NS_ERROR_NOT_AVAILABLE;
   }
 
@@ -810,7 +683,7 @@ nsresult TextEditor::SetUnmaskRangeInternal(uint32_t aStart, uint32_t aLength,
     return NS_ERROR_NOT_INITIALIZED;
   }
   Text* text = Text::FromNodeOrNull(rootElement->GetFirstChild());
-  if (!text) {
+  if (!text || !text->Length()) {
     // There is no anonymous text node in the editor.
     return aStart > 0 && aStart != UINT32_MAX ? NS_ERROR_INVALID_ARG : NS_OK;
   }
@@ -825,33 +698,33 @@ nsresult TextEditor::SetUnmaskRangeInternal(uint32_t aStart, uint32_t aLength,
     // character before the character at `aStart + 1`.
     const nsTextFragment* textFragment = text->GetText();
     if (textFragment->IsLowSurrogateFollowingHighSurrogateAt(aStart)) {
-      mUnmaskedStart = aStart - 1;
+      mPasswordMaskData->mUnmaskedStart = aStart - 1;
       // If caller collapses the range, keep it.  Otherwise, expand the length.
       if (aLength > 0) {
         ++aLength;
       }
     } else {
-      mUnmaskedStart = aStart;
+      mPasswordMaskData->mUnmaskedStart = aStart;
     }
-    mUnmaskedLength = std::min(valueLength - mUnmaskedStart, aLength);
+    mPasswordMaskData->mUnmaskedLength =
+        std::min(valueLength - UnmaskedStart(), aLength);
     // If unmasked end is middle of a surrogate pair, expand it to include
     // the following low surrogate because the caller may want to show a
     // character after the character at `aStart + aLength`.
     if (UnmaskedEnd() < valueLength &&
         textFragment->IsLowSurrogateFollowingHighSurrogateAt(UnmaskedEnd())) {
-      ++mUnmaskedLength;
+      mPasswordMaskData->mUnmaskedLength++;
     }
     // If it's first time to mask the unmasking characters with timer, create
     // the timer now.  Then, we'll keep using it for saving the creation cost.
-    if (!mMaskTimer && aLength && aTimeout && mUnmaskedLength) {
-      mMaskTimer = NS_NewTimer();
+    if (!HasAutoMaskingTimer() && aLength && aTimeout && UnmaskedLength()) {
+      mPasswordMaskData->mTimer = NS_NewTimer();
     }
   } else {
     if (NS_WARN_IF(aLength != 0)) {
       return NS_ERROR_INVALID_ARG;
     }
-    mUnmaskedStart = UINT32_MAX;
-    mUnmaskedLength = 0;
+    mPasswordMaskData->MaskAll();
   }
 
   // Notify nsTextFrame of this update if the caller wants this to do it.
@@ -883,9 +756,9 @@ nsresult TextEditor::SetUnmaskRangeInternal(uint32_t aStart, uint32_t aLength,
 
   if (!IsAllMasked() && aTimeout != 0) {
     // Initialize the timer to mask the range automatically.
-    MOZ_ASSERT(mMaskTimer);
-    DebugOnly<nsresult> rvIgnored =
-        mMaskTimer->InitWithCallback(this, aTimeout, nsITimer::TYPE_ONE_SHOT);
+    MOZ_ASSERT(HasAutoMaskingTimer());
+    DebugOnly<nsresult> rvIgnored = mPasswordMaskData->mTimer->InitWithCallback(
+        this, aTimeout, nsITimer::TYPE_ONE_SHOT);
     NS_WARNING_ASSERTION(NS_SUCCEEDED(rvIgnored),
                          "nsITimer::InitWithCallback() failed, but ignored");
   }
@@ -905,7 +778,7 @@ char16_t TextEditor::PasswordMask() {
 MOZ_CAN_RUN_SCRIPT_BOUNDARY NS_IMETHODIMP TextEditor::Notify(nsITimer* aTimer) {
   // Check whether our text editor's password flag was changed before this
   // "hide password character" timer actually fires.
-  if (!IsPasswordEditor()) {
+  if (!IsPasswordEditor() || NS_WARN_IF(!mPasswordMaskData)) {
     return NS_OK;
   }
 
@@ -948,7 +821,7 @@ void TextEditor::WillDeleteText(uint32_t aCurrentLength,
                                 uint32_t aRemoveLength) {
   MOZ_ASSERT(IsEditActionDataAvailable());
 
-  if (!IsPasswordEditor() || IsAllMasked()) {
+  if (!IsPasswordEditor() || NS_WARN_IF(!mPasswordMaskData) || IsAllMasked()) {
     return;
   }
 
@@ -956,18 +829,18 @@ void TextEditor::WillDeleteText(uint32_t aCurrentLength,
   // layout referring the range in old text.
 
   // If we need to mask automatically, mask all now.
-  if (mIsMaskingPassword) {
+  if (IsMaskingPassword()) {
     DebugOnly<nsresult> rvIgnored = MaskAllCharacters();
     NS_WARNING_ASSERTION(NS_SUCCEEDED(rvIgnored),
                          "TextEditor::MaskAllCharacters() failed, but ignored");
     return;
   }
 
-  if (aRemoveStartOffset < mUnmaskedStart) {
+  if (aRemoveStartOffset < UnmaskedStart()) {
     // If removing range is before the unmasked range, move it.
-    if (aRemoveStartOffset + aRemoveLength <= mUnmaskedStart) {
+    if (aRemoveStartOffset + aRemoveLength <= UnmaskedStart()) {
       DebugOnly<nsresult> rvIgnored =
-          SetUnmaskRange(mUnmaskedStart - aRemoveLength, mUnmaskedLength);
+          SetUnmaskRange(UnmaskedStart() - aRemoveLength, UnmaskedLength());
       NS_WARNING_ASSERTION(NS_SUCCEEDED(rvIgnored),
                            "TextEditor::SetUnmaskRange() failed, but ignored");
       return;
@@ -977,9 +850,9 @@ void TextEditor::WillDeleteText(uint32_t aCurrentLength,
     // range, move and shrink the range.
     if (aRemoveStartOffset + aRemoveLength < UnmaskedEnd()) {
       uint32_t unmaskedLengthInRemovingRange =
-          aRemoveStartOffset + aRemoveLength - mUnmaskedStart;
+          aRemoveStartOffset + aRemoveLength - UnmaskedStart();
       DebugOnly<nsresult> rvIgnored = SetUnmaskRange(
-          aRemoveStartOffset, mUnmaskedLength - unmaskedLengthInRemovingRange);
+          aRemoveStartOffset, UnmaskedLength() - unmaskedLengthInRemovingRange);
       NS_WARNING_ASSERTION(NS_SUCCEEDED(rvIgnored),
                            "TextEditor::SetUnmaskRange() failed, but ignored");
       return;
@@ -997,7 +870,7 @@ void TextEditor::WillDeleteText(uint32_t aCurrentLength,
     // If removing range is in unmasked range, shrink the range.
     if (aRemoveStartOffset + aRemoveLength <= UnmaskedEnd()) {
       DebugOnly<nsresult> rvIgnored =
-          SetUnmaskRange(mUnmaskedStart, mUnmaskedLength - aRemoveLength);
+          SetUnmaskRange(UnmaskedStart(), UnmaskedLength() - aRemoveLength);
       NS_WARNING_ASSERTION(NS_SUCCEEDED(rvIgnored),
                            "TextEditor::SetUnmaskRange() failed, but ignored");
       return;
@@ -1006,7 +879,7 @@ void TextEditor::WillDeleteText(uint32_t aCurrentLength,
     // If removing range starts from unmasked range, and ends after it,
     // shrink it.
     DebugOnly<nsresult> rvIgnored =
-        SetUnmaskRange(mUnmaskedStart, aRemoveStartOffset - mUnmaskedStart);
+        SetUnmaskRange(UnmaskedStart(), aRemoveStartOffset - UnmaskedStart());
     NS_WARNING_ASSERTION(NS_SUCCEEDED(rvIgnored),
                          "TextEditor::SetUnmaskRange() failed, but ignored");
     return;
@@ -1020,11 +893,11 @@ nsresult TextEditor::DidInsertText(uint32_t aNewLength,
                                    uint32_t aInsertedLength) {
   MOZ_ASSERT(IsEditActionDataAvailable());
 
-  if (!IsPasswordEditor() || IsAllMasked()) {
+  if (!IsPasswordEditor() || NS_WARN_IF(!mPasswordMaskData) || IsAllMasked()) {
     return NS_OK;
   }
 
-  if (mIsMaskingPassword) {
+  if (IsMaskingPassword()) {
     // If we need to mask password, mask all right now.
     nsresult rv = MaskAllCharactersAndNotify();
     NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
@@ -1032,7 +905,7 @@ nsresult TextEditor::DidInsertText(uint32_t aNewLength,
     return rv;
   }
 
-  if (aInsertedOffset < mUnmaskedStart) {
+  if (aInsertedOffset < UnmaskedStart()) {
     // If insertion point is before unmasked range, expand the unmasked range
     // to include the new text.
     nsresult rv = SetUnmaskRangeAndNotify(
@@ -1044,8 +917,8 @@ nsresult TextEditor::DidInsertText(uint32_t aNewLength,
 
   if (aInsertedOffset <= UnmaskedEnd()) {
     // If insertion point is in unmasked range, unmask new text.
-    nsresult rv = SetUnmaskRangeAndNotify(mUnmaskedStart,
-                                          mUnmaskedLength + aInsertedLength);
+    nsresult rv = SetUnmaskRangeAndNotify(UnmaskedStart(),
+                                          UnmaskedLength() + aInsertedLength);
     NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
                          "TextEditor::SetUnmaskRangeAndNotify() failed");
     return rv;
@@ -1054,7 +927,7 @@ nsresult TextEditor::DidInsertText(uint32_t aNewLength,
   // If insertion point is after unmasked range, extend the unmask range to
   // include the new text.
   nsresult rv = SetUnmaskRangeAndNotify(
-      mUnmaskedStart, aInsertedOffset + aInsertedLength - mUnmaskedStart);
+      UnmaskedStart(), aInsertedOffset + aInsertedLength - UnmaskedStart());
   NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
                        "TextEditor::SetUnmaskRangeAndNotify() failed");
   return rv;

@@ -39,10 +39,13 @@ add_task(async function() {
 
   let failed = false;
   for (const [key, packet] of generatedStubs) {
-    const packetStr = getSerializedPacket(packet, { sortKeys: true });
+    const packetStr = getSerializedPacket(packet, {
+      sortKeys: true,
+      replaceActorIds: true,
+    });
     const existingPacketStr = getSerializedPacket(
       existingStubs.rawPackets.get(key),
-      { sortKeys: true }
+      { sortKeys: true, replaceActorIds: true }
     );
     is(packetStr, existingPacketStr, `"${key}" packet has expected value`);
     failed = failed || packetStr !== existingPacketStr;
@@ -60,9 +63,8 @@ add_task(async function() {
 async function generateEvaluationResultStubs() {
   const stubs = new Map();
   const toolbox = await openNewTabAndToolbox(TEST_URI, "webconsole");
-  const webConsoleFront = await toolbox.target.getFront("console");
   for (const [key, code] of getCommands()) {
-    const packet = await webConsoleFront.evaluateJSAsync(code);
+    const packet = await toolbox.commands.scriptCommand.execute(code);
     stubs.set(key, getCleanedPacket(key, packet));
   }
 

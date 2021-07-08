@@ -187,6 +187,7 @@ struct nsFont;
 namespace mozilla {
 class AbstractThread;
 class StyleSheet;
+class EditorBase;
 class EditorCommand;
 class Encoding;
 class ErrorResult;
@@ -204,7 +205,6 @@ class SMILAnimationController;
 enum class StyleCursorKind : uint8_t;
 enum class StylePrefersColorScheme : uint8_t;
 enum class StyleRuleChangeKind : uint32_t;
-class TextEditor;
 template <typename>
 class OwningNonNull;
 struct URLExtraData;
@@ -302,6 +302,7 @@ enum BFCacheStatus {
   CONTAINS_REMOTE_SUBFRAMES = 1 << 11,   // Status 11
   NOT_ONLY_TOPLEVEL_IN_BCG = 1 << 12,    // Status 12
   ABOUT_PAGE = 1 << 13,                  // Status 13
+  RESTORING = 1 << 14,                   // Status 14
 };
 
 }  // namespace dom
@@ -732,8 +733,8 @@ class Document : public nsINode,
 
   // nsINode
   bool IsNodeOfType(uint32_t aFlags) const final;
-  nsresult InsertChildBefore(nsIContent* aKid, nsIContent* aBeforeThis,
-                             bool aNotify) override;
+  void InsertChildBefore(nsIContent* aKid, nsIContent* aBeforeThis,
+                         bool aNotify, ErrorResult& aRv) override;
   void RemoveChildNode(nsIContent* aKid, bool aNotify) final;
   nsresult Clone(dom::NodeInfo* aNodeInfo, nsINode** aResult) const override {
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -1514,6 +1515,8 @@ class Document : public nsINode,
   void AddMediaElementWithMSE();
   void RemoveMediaElementWithMSE();
 
+  void DoNotifyPossibleTitleChange();
+
  protected:
   friend class nsUnblockOnloadEvent;
 
@@ -1545,7 +1548,6 @@ class Document : public nsINode,
   void DestroyElementMaps();
 
   Element* GetRootElementInternal() const;
-  void DoNotifyPossibleTitleChange();
 
   void SetPageUnloadingEventTimeStamp() {
     MOZ_ASSERT(!mPageUnloadingEventTimeStamp);
@@ -2870,11 +2872,12 @@ class Document : public nsINode,
    * @param aContentViewer The viewer for the clone document. Must be the viewer
    *                       of aCloneContainer, but callers must have a reference
    *                       to it already and ensure it's not null.
+   * @param aPrintSettings The print settings for this clone.
    * @param aOutHasInProcessPrintCallbacks Self-descriptive.
    */
   already_AddRefed<Document> CreateStaticClone(
       nsIDocShell* aCloneContainer, nsIContentViewer* aContentViewer,
-      bool* aOutHasInProcessPrintCallbacks);
+      nsIPrintSettings* aPrintSettings, bool* aOutHasInProcessPrintCallbacks);
 
   /**
    * If this document is a static clone, this returns the original
@@ -4022,6 +4025,8 @@ class Document : public nsINode,
 
   bool ShouldAvoidNativeTheme() const;
 
+  static bool IsValidDomain(nsIURI* aOrigHost, nsIURI* aNewURI);
+
  protected:
   // Returns the WindowContext for the document that we will contribute
   // page use counters to.
@@ -4192,9 +4197,9 @@ class Document : public nsINode,
 
    private:
     // The returned editor's life is guaranteed while this instance is alive.
-    TextEditor* GetTargetEditor() const;
+    EditorBase* GetTargetEditor() const;
 
-    RefPtr<TextEditor> mActiveEditor;
+    RefPtr<EditorBase> mActiveEditor;
     RefPtr<HTMLEditor> mHTMLEditor;
     RefPtr<EditorCommand> mEditorCommand;
     const InternalCommandData& mCommandData;

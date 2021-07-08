@@ -78,6 +78,16 @@ const FeatureManifest = {
       },
     },
   },
+  abouthomecache: {
+    description: "The startup about:home cache.",
+    isEarlyStartup: true,
+    variables: {
+      enabled: {
+        type: "boolean",
+        fallbackPref: "browser.startup.homepage.abouthome_cache.enabled",
+      },
+    },
+  },
   newtab: {
     description: "The about:newtab page",
     isEarlyStartup: true,
@@ -102,6 +112,19 @@ const FeatureManifest = {
     variables: {
       directMigrateSingleProfile: {
         type: "boolean",
+      },
+    },
+  },
+  shellService: {
+    description: "Interface with OS, e.g., pinning and set default",
+    isEarlyStartup: true,
+    variables: {
+      disablePin: {
+        type: "boolean",
+      },
+      setDefaultBrowserUserChoice: {
+        type: "boolean",
+        fallbackPref: "browser.shell.setDefaultBrowserUserChoice",
       },
     },
   },
@@ -130,6 +153,10 @@ const FeatureManifest = {
         type: "string",
         fallbackPref: "browser.privatebrowsing.infoTitle",
       },
+      infoTitleEnabled: {
+        type: "boolean",
+        fallbackPref: "browser.privatebrowsing.infoTitleEnabled",
+      },
       infoBody: {
         type: "string",
         fallbackPref: "browser.privatebrowsing.infoBody",
@@ -146,17 +173,36 @@ const FeatureManifest = {
         type: "boolean",
         fallbackPref: "browser.privatebrowsing.promoEnabled",
       },
+      promoSectionStyle: {
+        type: "string",
+      },
       promoTitle: {
         type: "string",
         fallbackPref: "browser.privatebrowsing.promoTitle",
+      },
+      promoTitleEnabled: {
+        type: "boolean",
+        fallbackPref: "browser.privatebrowsing.promoTitleEnabled",
       },
       promoLinkText: {
         type: "string",
         fallbackPref: "browser.privatebrowsing.promoLinkText",
       },
+      promoHeader: {
+        type: "string",
+      },
       promoLinkUrl: {
         type: "string",
         fallbackPref: "browser.privatebrowsing.promoLinkUrl",
+      },
+      promoLinkType: {
+        type: "string",
+      },
+      promoImageLarge: {
+        type: "string",
+      },
+      promoImageSmall: {
+        type: "string",
       },
     },
   },

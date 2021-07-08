@@ -435,7 +435,7 @@ void nsSubDocumentFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
   bool constructZoomItem = subdocRootFrame && parentAPD != subdocAPD;
   bool needsOwnLayer = false;
   if (constructZoomItem || presContext->IsRootContentDocument() ||
-      (sf && sf->IsScrollingActive(aBuilder))) {
+      (sf && sf->IsScrollingActive())) {
     needsOwnLayer = true;
   }
 
@@ -895,6 +895,7 @@ static nsView* BeginSwapDocShellsForViews(nsView* aSibling);
 
 void nsSubDocumentFrame::DestroyFrom(nsIFrame* aDestructRoot,
                                      PostDestroyData& aPostDestroyData) {
+  PropagateIsUnderHiddenEmbedderElementToSubView(true);
   if (mPostedReflowCallback) {
     PresShell()->CancelReflowCallback(this);
     mPostedReflowCallback = false;

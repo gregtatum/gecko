@@ -229,10 +229,8 @@ NS_IMPL_ISUPPORTS(Predictor, nsINetworkPredictor, nsIObserver,
                   nsICacheEntryMetaDataVisitor, nsINetworkPredictorVerifier)
 
 Predictor::Predictor()
-    : mInitialized(false),
-      mStartupTime(0),
-      mLastStartupTime(0),
-      mStartupCount(1) {
+
+{
   MOZ_ASSERT(!sSelf, "multiple Predictor instances!");
   sSelf = this;
 }
@@ -571,7 +569,7 @@ Predictor::PredictNative(nsIURI* targetURI, nsIURI* sourceURI,
       return NS_ERROR_INVALID_ARG;
   }
 
-  Predictor::Reason argReason;
+  Predictor::Reason argReason{};
   argReason.mPredict = reason;
 
   // First we open the regular cache entry, to ensure we don't gum up the works
@@ -727,7 +725,7 @@ bool Predictor::PredictForPageload(nsICacheEntry* entry, nsIURI* targetURI,
   if (WouldRedirect(entry, loadCount, lastLoad, globalDegradation,
                     getter_AddRefs(redirectURI))) {
     mPreconnects.AppendElement(redirectURI);
-    Predictor::Reason reason;
+    Predictor::Reason reason{};
     reason.mPredict = nsINetworkPredictor::PREDICT_LOAD;
     RefPtr<Predictor::Action> redirectAction = new Predictor::Action(
         Predictor::Action::IS_FULL_URI, Predictor::Action::DO_PREDICT, reason,
@@ -1328,7 +1326,7 @@ Predictor::LearnNative(nsIURI* targetURI, nsIURI* sourceURI,
   Telemetry::AutoCounter<Telemetry::PREDICTOR_LEARN_ATTEMPTS> learnAttempts;
   ++learnAttempts;
 
-  Predictor::Reason argReason;
+  Predictor::Reason argReason{};
   argReason.mLearn = reason;
 
   // We always open the full uri (general cache) entry first, so we don't gum up
@@ -1888,11 +1886,18 @@ Predictor::Resetter::OnCacheEntryVisitCompleted() {
     NS_ENSURE_SUCCESS(rv, rv);
 
     urisToVisit[i]->GetAsciiSpec(u);
-    cacheDiskStorage->AsyncOpenURI(urisToVisit[i], ""_ns,
-                                   nsICacheStorage::OPEN_READONLY |
-                                       nsICacheStorage::OPEN_SECRETLY |
-                                       nsICacheStorage::CHECK_MULTITHREADED,
-                                   this);
+    rv = cacheDiskStorage->AsyncOpenURI(
+        urisToVisit[i], ""_ns,
+        nsICacheStorage::OPEN_READONLY | nsICacheStorage::OPEN_SECRETLY |
+            nsICacheStorage::CHECK_MULTITHREADED,
+        this);
+    if (NS_FAILED(rv)) {
+      mEntriesToVisit--;
+      if (!mEntriesToVisit) {
+        Complete();
+        return NS_OK;
+      }
+    }
   }
 
   return NS_OK;

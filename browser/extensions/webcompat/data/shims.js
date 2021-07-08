@@ -110,7 +110,11 @@ const AVAILABLE_SHIMS = [
     ],
     needsShimHelpers: ["optIn"],
     onlyIfBlockedByETP: true,
-    unblocksOnOptIn: ["*://pubads.g.doubleclick.net/gampad/ads*"],
+    unblocksOnOptIn: [
+      "*://pubads.g.doubleclick.net/gampad/ads*",
+      "*://cdn.adsafeprotected.com/iasPET.1.js",
+      "*://static.adsafeprotected.com/vans-adapter-google-ima.js",
+    ],
   },
   {
     id: "AdsByGoogle",
@@ -128,6 +132,47 @@ const AVAILABLE_SHIMS = [
     bug: "1486337",
     file: "bmauth.js",
     matches: ["*://auth.9c9media.ca/auth/main.js"],
+    onlyIfBlockedByETP: true,
+  },
+  {
+    id: "Doubleclick",
+    platform: "all",
+    name: "Doubleclick",
+    bug: "1713693",
+    matches: [
+      {
+        patterns: [
+          "*://securepubads.g.doubleclick.net/gampad/*ad-blk*",
+          "*://pubads.g.doubleclick.net/gampad/*ad-blk*",
+        ],
+        target: "empty-shim.txt",
+        types: ["image", "imageset", "xmlhttprequest"],
+      },
+      {
+        patterns: [
+          "*://securepubads.g.doubleclick.net/gampad/*xml_vmap1*",
+          "*://pubads.g.doubleclick.net/gampad/*xml_vmap1*",
+        ],
+        target: "vmad.xml",
+        types: ["image", "imageset", "xmlhttprequest"],
+      },
+      {
+        patterns: [
+          "*://securepubads.g.doubleclick.net/gampad/*xml_vmap2*",
+          "*://pubads.g.doubleclick.net/gampad/*xml_vmap2*",
+        ],
+        target: "vast2.xml",
+        types: ["image", "imageset", "xmlhttprequest"],
+      },
+      {
+        patterns: [
+          "*://securepubads.g.doubleclick.net/gampad/*ad*",
+          "*://pubads.g.doubleclick.net/gampad/*ad*",
+        ],
+        target: "vast3.xml",
+        types: ["image", "imageset", "xmlhttprequest"],
+      },
+    ],
     onlyIfBlockedByETP: true,
   },
   {
@@ -159,6 +204,8 @@ const AVAILABLE_SHIMS = [
     needsShimHelpers: ["optIn", "getOptions"],
     onlyIfBlockedByETP: true,
     unblocksOnOptIn: [
+      "*://connect.facebook.net/*/sdk.js*",
+      "*://connect.facebook.net/*/all.js*",
       "*://*.xx.fbcdn.net/*", // covers:
       // "*://scontent-.*-\d.xx.fbcdn.net/*",
       // "*://static.xx.fbcdn.net/rsrc.php/*",
@@ -177,12 +224,16 @@ const AVAILABLE_SHIMS = [
     ],
   },
   {
-    id: "GoogleAnalytics",
+    id: "GoogleAnalyticsAndTagManager",
     platform: "all",
-    name: "Google Analytics",
-    bug: "1493602",
-    file: "google-analytics.js",
-    matches: ["*://www.google-analytics.com/analytics.js"],
+    name: "Google Analytics and Tag Manager",
+    bug: "1713687",
+    file: "google-analytics-and-tag-manager.js",
+    matches: [
+      "*://www.google-analytics.com/analytics.js*",
+      "*://www.google-analytics.com/gtm/js*",
+      "*://www.googletagmanager.com/gtm.js*",
+    ],
     onlyIfBlockedByETP: true,
   },
   {
@@ -192,18 +243,6 @@ const AVAILABLE_SHIMS = [
     bug: "1620533",
     file: "google-analytics-ecommerce-plugin.js",
     matches: ["*://www.google-analytics.com/plugins/ua/ec.js"],
-    onlyIfBlockedByETP: true,
-  },
-  {
-    id: "GoogleAnalyticsTagManager",
-    platform: "all",
-    name: "Google Analytics Tag Manager",
-    bug: "1478593",
-    file: "google-analytics-tag-manager.js",
-    matches: [
-      "*://www.google-analytics.com/gtm/js",
-      "*://www.googletagmanager.com/gtm.js",
-    ],
     onlyIfBlockedByETP: true,
   },
   {
@@ -219,7 +258,7 @@ const AVAILABLE_SHIMS = [
     id: "GooglePublisherTags",
     platform: "all",
     name: "Google Publisher Tags",
-    bug: "1600538",
+    bug: "1713685",
     file: "google-publisher-tags.js",
     matches: [
       "*://www.googletagservices.com/tag/js/gpt.js",
@@ -227,7 +266,6 @@ const AVAILABLE_SHIMS = [
       "*://securepubads.g.doubleclick.net/gpt/pubads_impl_*.js",
     ],
     onlyIfBlockedByETP: true,
-    unblocksOnOptIn: ["*://pubads.g.doubleclick.net/ssai/event/*/streams"],
   },
   {
     id: "IMA3",
@@ -255,7 +293,7 @@ const AVAILABLE_SHIMS = [
     id: "RichRelevance",
     platform: "all",
     name: "Rich Relevance",
-    bug: "1449347",
+    bug: "1713725",
     file: "rich-relevance.js",
     matches: ["*://media.richrelevance.com/rrserver/js/1.2/p13n.js"],
     onlyIfBlockedByETP: true,

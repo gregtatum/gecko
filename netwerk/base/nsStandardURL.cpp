@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "IPCMessageUtils.h"
+#include "ipc/IPCMessageUtils.h"
 
 #include "nsASCIIMask.h"
 #include "nsStandardURL.h"
@@ -205,10 +205,7 @@ static LinkedList<nsStandardURL> gAllURLs;
 #endif
 
 nsStandardURL::nsStandardURL(bool aSupportsFileURL, bool aTrackURL)
-    : mDefaultPort(-1),
-      mPort(-1),
-      mDisplayHost(nullptr),
-      mURLType(URLTYPE_STANDARD),
+    : mURLType(URLTYPE_STANDARD),
       mSupportsFileURL(aSupportsFileURL),
       mCheckedIfHostA(false) {
   LOG(("Creating nsStandardURL @%p\n", this));
@@ -229,29 +226,64 @@ nsStandardURL::nsStandardURL(bool aSupportsFileURL, bool aTrackURL)
 #endif
 }
 
-static void CheckSegment(const nsStandardURL::URLSegment& aSeg,
-                         const nsCString& aSpec) {
-  MOZ_RELEASE_ASSERT(aSeg.mLen >= -1);
-  if (aSeg.mLen < 0) {
-    return;
+bool nsStandardURL::IsValid() {
+  auto checkSegment = [&](const nsStandardURL::URLSegment& aSeg) {
+    // Bad value
+    if (NS_WARN_IF(aSeg.mLen < -1)) {
+      return false;
+    }
+    if (aSeg.mLen == -1) {
+      return true;
+    }
+
+    // Points out of string
+    if (NS_WARN_IF(aSeg.mPos + aSeg.mLen > mSpec.Length())) {
+      return false;
+    }
+
+    // Overflow
+    if (NS_WARN_IF(aSeg.mPos + aSeg.mLen < aSeg.mPos)) {
+      return false;
+    }
+
+    return true;
+  };
+
+  bool allSegmentsValid = checkSegment(mScheme) && checkSegment(mAuthority) &&
+                          checkSegment(mUsername) && checkSegment(mPassword) &&
+                          checkSegment(mHost) && checkSegment(mPath) &&
+                          checkSegment(mFilepath) && checkSegment(mDirectory) &&
+                          checkSegment(mBasename) && checkSegment(mExtension) &&
+                          checkSegment(mQuery) && checkSegment(mRef);
+  if (!allSegmentsValid) {
+    return false;
   }
-  MOZ_RELEASE_ASSERT(aSeg.mPos + aSeg.mLen <= aSpec.Length());
-  MOZ_RELEASE_ASSERT(aSeg.mPos + aSeg.mLen >= aSeg.mPos);
+
+  if (mScheme.mPos != 0) {
+    return false;
+  }
+
+  return true;
 }
 
 void nsStandardURL::SanityCheck() {
-  CheckSegment(mScheme, mSpec);
-  CheckSegment(mAuthority, mSpec);
-  CheckSegment(mUsername, mSpec);
-  CheckSegment(mPassword, mSpec);
-  CheckSegment(mHost, mSpec);
-  CheckSegment(mPath, mSpec);
-  CheckSegment(mFilepath, mSpec);
-  CheckSegment(mDirectory, mSpec);
-  CheckSegment(mBasename, mSpec);
-  CheckSegment(mExtension, mSpec);
-  CheckSegment(mQuery, mSpec);
-  CheckSegment(mRef, mSpec);
+  if (!IsValid()) {
+    nsPrintfCString msg(
+        "mLen:%X, mScheme (%X,%X), mAuthority (%X,%X), mUsername (%X,%X), "
+        "mPassword (%X,%X), mHost (%X,%X), mPath (%X,%X), mFilepath (%X,%X), "
+        "mDirectory (%X,%X), mBasename (%X,%X), mExtension (%X,%X), mQuery "
+        "(%X,%X), mRef (%X,%X)",
+        mSpec.Length(), mScheme.mPos, mScheme.mLen, mAuthority.mPos,
+        mAuthority.mLen, mUsername.mPos, mUsername.mLen, mPassword.mPos,
+        mPassword.mLen, mHost.mPos, mHost.mLen, mPath.mPos, mPath.mLen,
+        mFilepath.mPos, mFilepath.mLen, mDirectory.mPos, mDirectory.mLen,
+        mBasename.mPos, mBasename.mLen, mExtension.mPos, mExtension.mLen,
+        mQuery.mPos, mQuery.mLen, mRef.mPos, mRef.mLen);
+    CrashReporter::AnnotateCrashReport(CrashReporter::Annotation::URLSegments,
+                                       msg);
+
+    MOZ_CRASH("nsStandardURL::SanityCheck failed");
+  }
 }
 
 nsStandardURL::~nsStandardURL() {
@@ -3321,6 +3353,10 @@ nsStandardURL::Read(nsIObjectInputStream* stream) {
 nsresult nsStandardURL::ReadPrivate(nsIObjectInputStream* stream) {
   MOZ_ASSERT(mDisplayHost.IsEmpty(), "Shouldn't have cached unicode host");
 
+  // If we exit early, make sure to clear the URL so we don't fail the sanity
+  // check in the destructor
+  auto clearOnExit = MakeScopeExit([&] { Clear(); });
+
   nsresult rv;
 
   uint32_t urlType;
@@ -3462,6 +3498,12 @@ nsresult nsStandardURL::ReadPrivate(nsIObjectInputStream* stream) {
   if (NS_FAILED(rv)) {
     return rv;
   }
+
+  if (!IsValid()) {
+    return NS_ERROR_MALFORMED_URI;
+  }
+
+  clearOnExit.release();
 
   return NS_OK;
 }
@@ -3654,6 +3696,10 @@ bool nsStandardURL::Deserialize(const URIParams& aParams) {
     return false;
   }
 
+  // If we exit early, make sure to clear the URL so we don't fail the sanity
+  // check in the destructor
+  auto clearOnExit = MakeScopeExit([&] { Clear(); });
+
   const StandardURLParams& params = aParams.get_StandardURLParams();
 
   mURLType = params.urlType();
@@ -3714,6 +3760,12 @@ bool nsStandardURL::Deserialize(const URIParams& aParams) {
   NS_ENSURE_TRUE(
       mRef.mLen == -1 || (mRef.mPos > 0 && mSpec.CharAt(mRef.mPos - 1) == '#'),
       false);
+
+  if (!IsValid()) {
+    return false;
+  }
+
+  clearOnExit.release();
 
   return true;
 }

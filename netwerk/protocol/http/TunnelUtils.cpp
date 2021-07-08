@@ -883,7 +883,7 @@ class SocketOutWrapper : public nsIAsyncOutputStream,
   NS_IMETHOD Write(const char* aBuf, uint32_t aCount,
                    uint32_t* _retval) override;
   virtual nsresult OnReadSegment(const char* segment, uint32_t count,
-                                 uint32_t* countRead) override;
+                                 uint32_t* countWritten) override;
 
  private:
   virtual ~SocketOutWrapper() = default;
@@ -1183,7 +1183,8 @@ bool SpdyConnectTransaction::MapStreamToHttpConnection(
   DebugOnly<nsresult> rv = mTunneledConn->Init(
       aConnInfo, gHttpHandler->ConnMgr()->MaxRequestDelay(), mTunnelTransport,
       mTunnelStreamIn, mTunnelStreamOut, true, NS_OK, callbacks,
-      PR_MillisecondsToInterval(static_cast<uint32_t>(rtt.ToMilliseconds())));
+      PR_MillisecondsToInterval(static_cast<uint32_t>(rtt.ToMilliseconds())),
+      false);
   MOZ_ASSERT(NS_SUCCEEDED(rv));
   if (mForcePlainText) {
     mTunneledConn->ForcePlainText();

@@ -421,7 +421,7 @@ nsresult GfxInfo::GetFeatureStatusImpl(
   NS_ENSURE_ARG_POINTER(aStatus);
   aSuggestedDriverVersion.SetIsVoid(true);
   *aStatus = nsIGfxInfo::FEATURE_STATUS_UNKNOWN;
-  OperatingSystem os = mOS;
+  OperatingSystem os = OperatingSystem::Android;
   if (aOS) *aOS = os;
 
   if (sShutdownOccurred) {
@@ -595,48 +595,7 @@ nsresult GfxInfo::GetFeatureStatusImpl(
     }
 
     if (aFeature == FEATURE_WEBRENDER) {
-      bool isUnblocked = false;
-      const nsCString& gpu = mGLStrings->Renderer();
-      NS_LossyConvertUTF16toASCII model(mModel);
-
-      // Enable Webrender on all Adreno 3xx GPUs, excluding Android 9 and later
-      // due to reports of flashing black rectangles. See bug 1712148.
-      isUnblocked |= gpu.Find("Adreno (TM) 3", /*ignoreCase*/ true) >= 0 &&
-                     mSDKVersion < 28;
-
-      // Enable Webrender on all Adreno 4xx and 6xx GPUs
-      isUnblocked |= gpu.Find("Adreno (TM) 4", /*ignoreCase*/ true) >= 0 ||
-                     gpu.Find("Adreno (TM) 6", /*ignoreCase*/ true) >= 0;
-
-      // Enable Webrender on all Adreno 5xx GPUs...
-      isUnblocked |=
-          gpu.Find("Adreno (TM) 5", /*ignoreCase*/ true) >= 0 &&
-          // Excluding 505 and 506 on Android 9 due to crashes during
-          // shader compilation. See bug 1609191.
-          !((gpu.Find("Adreno (TM) 505", /*ignoreCase*/ true) >= 0 ||
-             gpu.Find("Adreno (TM) 506", /*ignoreCase*/ true) >= 0) &&
-            mSDKVersion == 28);
-
-      // Enable Webrender on all Mali-Txxx GPUs
-      isUnblocked |= gpu.Find("Mali-T", /*ignoreCase*/ true) >= 0;
-
-      // Enable Webrender on all Mali-Gxx GPUs...
-      isUnblocked |= gpu.Find("Mali-G", /*ignoreCase*/ true) >= 0 &&
-                     // Excluding G31 due to bug 1689947.
-                     gpu.Find("Mali-G31", /*ignoreCase*/ true) == kNotFound;
-
-      // Enable Webrender on all PowerVR Rogue GPUs
-      isUnblocked |= gpu.Find("PowerVR Rogue", /*ignoreCase*/ true) >= 0;
-
-      // Enable Webrender on all Intel GPUs with Mesa drivers (chromebooks)
-      isUnblocked |= gpu.Find("Mesa DRI Intel", /*ignoreCase*/ true) >= 0;
-
-      if (!isUnblocked) {
-        *aStatus = nsIGfxInfo::FEATURE_BLOCKED_DEVICE;
-        aFailureId = "FEATURE_FAILURE_WEBRENDER_BLOCKED_DEVICE";
-      } else {
-        *aStatus = nsIGfxInfo::FEATURE_ALLOW_QUALIFIED;
-      }
+      *aStatus = nsIGfxInfo::FEATURE_ALLOW_QUALIFIED;
       return NS_OK;
     }
 
@@ -688,19 +647,10 @@ nsresult GfxInfo::GetFeatureStatusImpl(
       return NS_OK;
     }
 
-#ifdef NIGHTLY_BUILD
     if (aFeature == FEATURE_WEBRENDER_SOFTWARE) {
-      const bool isMali4xx =
-          mGLStrings->Renderer().Find("Mali-4", /*ignoreCase*/ true) >= 0;
-      if (isMali4xx) {
-        *aStatus = nsIGfxInfo::FEATURE_ALLOW_ALWAYS;
-      } else {
-        *aStatus = nsIGfxInfo::FEATURE_BLOCKED_DEVICE;
-        aFailureId = "FEATURE_FAILURE_BUG_1703140";
-      }
+      *aStatus = nsIGfxInfo::FEATURE_ALLOW_ALWAYS;
       return NS_OK;
     }
-#endif
   }
 
   if (aFeature == FEATURE_GL_SWIZZLE) {

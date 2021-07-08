@@ -307,15 +307,12 @@ class BrowserParent final : public PBrowserParent,
 
   already_AddRefed<nsIBrowser> GetBrowser();
 
-  bool ReconstructWebProgressAndRequest(
-      const WebProgressData& aWebProgressData, const RequestData& aRequestData,
-      nsIWebProgress** aOutWebProgress, nsIRequest** aOutRequest,
-      CanonicalBrowsingContext** aOutBrowsingContext);
+  already_AddRefed<CanonicalBrowsingContext> BrowsingContextForWebProgress(
+      const WebProgressData& aWebProgressData);
 
   mozilla::ipc::IPCResult RecvSessionStoreUpdate(
       const Maybe<nsCString>& aDocShellCaps, const Maybe<bool>& aPrivatedMode,
-      const bool aNeedCollectSHistory, const bool& aIsFinal,
-      const uint32_t& aEpoch);
+      const bool aNeedCollectSHistory, const uint32_t& aEpoch);
 
   mozilla::ipc::IPCResult RecvIntrinsicSizeOrRatioChanged(
       const Maybe<IntrinsicSize>& aIntrinsicSize,
@@ -550,9 +547,6 @@ class BrowserParent final : public PBrowserParent,
 
   mozilla::ipc::IPCResult RecvUnlockNativePointer();
 
-  void SendMouseEvent(const nsAString& aType, float aX, float aY,
-                      int32_t aButton, int32_t aClickCount, int32_t aModifiers);
-
   /**
    * The following Send*Event() marks aEvent as posted to remote process if
    * it succeeded.  So, you can check the result with
@@ -749,7 +743,7 @@ class BrowserParent final : public PBrowserParent,
                                        const uint32_t& aFlags);
 
   mozilla::ipc::IPCResult RecvQueryVisitedState(
-      const nsTArray<RefPtr<nsIURI>>&& aURIs);
+      nsTArray<RefPtr<nsIURI>>&& aURIs);
 
   mozilla::ipc::IPCResult RecvMaybeFireEmbedderLoadEvents(
       EmbedderElementEventType aFireEventAtEmbeddingElement);
@@ -956,7 +950,7 @@ class BrowserParent final : public PBrowserParent,
 
   // If this flag is set, then the tab's layers will be preserved even when
   // the tab's docshell is inactive.
-  bool mPreserveLayers : 1;
+  bool mIsPreservingLayers : 1;
 
   // Holds the most recent value passed to the RenderLayers function. This
   // does not necessarily mean that the layers have finished rendering

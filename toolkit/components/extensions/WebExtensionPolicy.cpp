@@ -143,12 +143,24 @@ WebAccessibleResource::WebAccessibleResource(
     return;
   }
 
-  if (aInit.mMatches.WasPassed()) {
+  if (!aInit.mMatches.IsNull()) {
     MatchPatternOptions options;
     options.mRestrictSchemes = true;
     mMatches = ParseMatches(aGlobal, aInit.mMatches.Value(), options,
                             ErrorBehavior::CreateEmptyPattern, aRv);
   }
+
+  if (!aInit.mExtensions.IsNull()) {
+    mExtensions = new AtomSet(aInit.mExtensions.Value());
+  }
+}
+
+bool WebAccessibleResource::IsExtensionMatch(const URLInfo& aURI) {
+  if (!mExtensions) {
+    return false;
+  }
+  WebExtensionPolicy* policy = EPS().GetByHost(aURI.Host());
+  return policy && mExtensions->Contains(policy->Id());
 }
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(WebAccessibleResource)
@@ -174,10 +186,6 @@ WebExtensionPolicy::WebExtensionPolicy(GlobalObject& aGlobal,
       mLocalizeCallback(aInit.mLocalizeCallback),
       mIsPrivileged(aInit.mIsPrivileged),
       mPermissions(new AtomSet(aInit.mPermissions)) {
-  // We set this here to prevent this policy changing after creation.
-  mAllowPrivateBrowsingByDefault =
-      StaticPrefs::extensions_allowPrivateBrowsingByDefault();
-
   MatchPatternOptions options;
   options.mRestrictSchemes = !HasPermission(nsGkAtoms::mozillaAddons);
 
@@ -546,8 +554,7 @@ void WebExtensionPolicy::GetContentScripts(
 }
 
 bool WebExtensionPolicy::PrivateBrowsingAllowed() const {
-  return mAllowPrivateBrowsingByDefault ||
-         HasPermission(nsGkAtoms::privateBrowsingAllowedPermission);
+  return HasPermission(nsGkAtoms::privateBrowsingAllowedPermission);
 }
 
 bool WebExtensionPolicy::CanAccessContext(nsILoadContext* aContext) const {

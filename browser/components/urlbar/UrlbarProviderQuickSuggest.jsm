@@ -105,14 +105,13 @@ class ProviderQuickSuggest extends UrlbarProvider {
     return (
       queryContext.trimmedSearchString &&
       !queryContext.searchMode &&
+      !queryContext.isPrivate &&
       UrlbarPrefs.get("quickSuggestEnabled") &&
       (UrlbarPrefs.get("quicksuggest.showedOnboardingDialog") ||
         !UrlbarPrefs.get("quickSuggestShouldShowOnboardingDialog")) &&
       UrlbarPrefs.get(SUGGEST_PREF) &&
       UrlbarPrefs.get("suggest.searches") &&
-      UrlbarPrefs.get("browser.search.suggest.enabled") &&
-      (!queryContext.isPrivate ||
-        UrlbarPrefs.get("browser.search.suggest.enabled.private"))
+      UrlbarPrefs.get("browser.search.suggest.enabled")
     );
   }
 
@@ -297,12 +296,12 @@ class ProviderQuickSuggest extends UrlbarProvider {
   _updateExperimentState() {
     Services.telemetry.setEventRecordingEnabled(
       TELEMETRY_EVENT_CATEGORY,
-      NimbusFeatures.urlbar.getValue().quickSuggestEnabled
+      UrlbarPrefs.get("quickSuggestEnabled")
     );
     // QuickSuggest is only loaded by the UrlBar on it's first query, however
     // there is work it can preload when idle instead of starting it on user
     // input. Referencing it here will trigger its import and init.
-    if (NimbusFeatures.urlbar.getValue().quickSuggestEnabled) {
+    if (UrlbarPrefs.get("quickSuggestEnabled")) {
       UrlbarQuickSuggest; // eslint-disable-line no-unused-expressions
     }
   }

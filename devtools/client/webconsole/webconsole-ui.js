@@ -40,8 +40,6 @@ loader.lazyRequireGetter(
   "devtools/client/shared/redux/middleware/ignore",
   true
 );
-const ConsoleCommands = require("devtools/client/webconsole/commands.js");
-
 const ZoomKeys = require("devtools/client/shared/zoom-keys");
 
 const PREF_SIDEBAR_ENABLED = "devtools.webconsole.sidebarToggle";
@@ -64,9 +62,8 @@ class WebConsoleUI {
     this.isBrowserConsole = this.hud.isBrowserConsole;
 
     this.isBrowserToolboxConsole =
-      this.hud.currentTarget &&
-      this.hud.currentTarget.isParentProcess &&
-      !this.hud.currentTarget.isAddon;
+      this.hud.commands.descriptorFront.isParentProcessDescriptor &&
+      !this.isBrowserConsole;
     this.fissionSupport = Services.prefs.getBoolPref(
       constants.PREFS.FEATURES.BROWSER_TOOLBOX_FISSION
     );
@@ -161,10 +158,6 @@ class WebConsoleUI {
         // - `ConsoleCommands`, in order to set TargetCommand.targetFront which is wrapped by hud.currentTarget
         await this.hud.commands.targetCommand.startListening();
       }
-
-      this._consoleCommands = new ConsoleCommands({
-        commands: this.hud.commands,
-      });
 
       await this.wrapper.init();
 
@@ -353,19 +346,28 @@ class WebConsoleUI {
   async _attachTargets() {
     this.additionalProxies = new Map();
 
+    const { commands } = this.hud;
+    this.networkDataProvider = new FirefoxDataProvider({
+      commands,
+      actions: {
+        updateRequest: (id, data) =>
+          this.wrapper.batchedRequestUpdates({ id, data }),
+      },
+    });
+
     // Listen for all target types, including:
     // - frames, in order to get the parent process target
     // which is considered as a frame rather than a process.
     // - workers, for similar reason. When we open a toolbox
     // for just a worker, the top level target is a worker target.
     // - processes, as we want to spawn additional proxies for them.
-    await this.hud.commands.targetCommand.watchTargets(
-      this.hud.commands.targetCommand.ALL_TYPES,
+    await commands.targetCommand.watchTargets(
+      commands.targetCommand.ALL_TYPES,
       this._onTargetAvailable,
       this._onTargetDestroy
     );
 
-    const resourceCommand = this.hud.resourceCommand;
+    const resourceCommand = commands.resourceCommand;
     await resourceCommand.watchResources(
       [
         resourceCommand.TYPES.CONSOLE_MESSAGE,
@@ -383,6 +385,48 @@ class WebConsoleUI {
     );
   }
 
+  handleDocumentEvent(resource) {
+    // Only consider top level document, and ignore remote iframes top document
+    if (!resource.targetFront.isTopLevel) {
+      return;
+    }
+
+    if (resource.name == "will-navigate") {
+      this.handleWillNavigate({
+        timeStamp: resource.time,
+        url: resource.newURI,
+      });
+    } else if (resource.name == "dom-complete") {
+      this.handleNavigated({
+        hasNativeConsoleAPI: resource.hasNativeConsoleAPI,
+      });
+    }
+    // For now, ignore all other DOCUMENT_EVENT's.
+  }
+
+  /**
+   * Handler for when the page is done loading.
+   *
+   * @param Boolean hasNativeConsoleAPI
+   *        True if the `console` object is the native one and hasn't been overloaded by a custom
+   *        object by the page itself.
+   */
+  async handleNavigated({ hasNativeConsoleAPI }) {
+    // Wait for completion of any async dispatch before notifying that the console
+    // is fully updated after a page reload
+    await this.wrapper.waitAsyncDispatches();
+
+    if (!hasNativeConsoleAPI) {
+      this.logWarningAboutReplacedAPI();
+    }
+
+    this.emit("reloaded");
+  }
+
+  handleWillNavigate({ timeStamp, url }) {
+    this.wrapper.dispatchTabWillNavigate({ timeStamp, url });
+  }
+
   async watchCssMessages() {
     const { resourceCommand } = this.hud;
     await resourceCommand.watchResources([resourceCommand.TYPES.CSS_MESSAGE], {
@@ -398,13 +442,7 @@ class WebConsoleUI {
     for (const resource of resources) {
       const { TYPES } = this.hud.resourceCommand;
       if (resource.resourceType === TYPES.DOCUMENT_EVENT) {
-        if (resource.name == "will-navigate") {
-          this.handleWillNavigate({
-            timeStamp: resource.time,
-            url: resource.newURI,
-          });
-        }
-        // For now, ignore all other DOCUMENT_EVENT's.
+        this.handleDocumentEvent(resource);
         continue;
       }
       // Ignore messages forwarded from content processes if we're in fission browser toolbox.
@@ -480,16 +518,6 @@ class WebConsoleUI {
     // This is a top level target. It may update on process switches
     // when navigating to another domain.
     if (targetFront.isTopLevel) {
-      const webConsoleFront = await this.hud.currentTarget.getFront("console");
-      this.networkDataProvider = new FirefoxDataProvider({
-        actions: {
-          updateRequest: (id, data) =>
-            this.wrapper.batchedRequestUpdates({ id, data }),
-        },
-        webConsoleFront,
-        resourceCommand: this.hud.resourceCommand,
-      });
-
       this.proxy = new WebConsoleConnectionProxy(this, targetFront);
       await this.proxy.connect();
       dispatchTargetAvailable();
@@ -678,30 +706,6 @@ class WebConsoleUI {
 
   _onChangeSplitConsoleState() {
     this.wrapper.dispatchSplitConsoleCloseButtonToggle();
-  }
-
-  /**
-   * Handler for the tabNavigated notification.
-   *
-   * @param string event
-   *        Event name.
-   * @param object packet
-   *        Notification packet received from the server.
-   */
-  async handleTabNavigated(packet) {
-    // Wait for completion of any async dispatch before notifying that the console
-    // is fully updated after a page reload
-    await this.wrapper.waitAsyncDispatches();
-
-    if (!packet.nativeConsoleAPI) {
-      this.logWarningAboutReplacedAPI();
-    }
-
-    this.emit("reloaded");
-  }
-
-  handleWillNavigate({ timeStamp, url }) {
-    this.wrapper.dispatchTabWillNavigate({ timeStamp, url });
   }
 
   getInputCursor() {

@@ -529,7 +529,8 @@ static nsresult DoContentSecurityChecks(nsIChannel* aChannel,
       break;
     }
 
-    case ExtContentPolicy::TYPE_FONT: {
+    case ExtContentPolicy::TYPE_FONT:
+    case ExtContentPolicy::TYPE_UA_FONT: {
       mimeTypeGuess.Truncate();
       break;
     }
@@ -647,6 +648,39 @@ static nsresult DoContentSecurityChecks(nsIChannel* aChannel,
   }
 
   return NS_OK;
+}
+
+static void LogHTTPSOnlyInfo(nsILoadInfo* aLoadInfo) {
+  MOZ_LOG(sCSMLog, LogLevel::Verbose, ("  - https-only/https-first flags:"));
+  uint32_t httpsOnlyStatus = aLoadInfo->GetHttpsOnlyStatus();
+
+  if (httpsOnlyStatus & nsILoadInfo::HTTPS_ONLY_UNINITIALIZED) {
+    MOZ_LOG(sCSMLog, LogLevel::Verbose, ("    - HTTPS_ONLY_UNINITIALIZED"));
+  }
+  if (httpsOnlyStatus &
+      nsILoadInfo::HTTPS_ONLY_UPGRADED_LISTENER_NOT_REGISTERED) {
+    MOZ_LOG(sCSMLog, LogLevel::Verbose,
+            ("    - HTTPS_ONLY_UPGRADED_LISTENER_NOT_REGISTERED"));
+  }
+  if (httpsOnlyStatus & nsILoadInfo::HTTPS_ONLY_UPGRADED_LISTENER_REGISTERED) {
+    MOZ_LOG(sCSMLog, LogLevel::Verbose,
+            ("    - HTTPS_ONLY_UPGRADED_LISTENER_REGISTERED"));
+  }
+  if (httpsOnlyStatus & nsILoadInfo::HTTPS_ONLY_EXEMPT) {
+    MOZ_LOG(sCSMLog, LogLevel::Verbose, ("    - HTTPS_ONLY_EXEMPT"));
+  }
+  if (httpsOnlyStatus & nsILoadInfo::HTTPS_ONLY_TOP_LEVEL_LOAD_IN_PROGRESS) {
+    MOZ_LOG(sCSMLog, LogLevel::Verbose,
+            ("    - HTTPS_ONLY_TOP_LEVEL_LOAD_IN_PROGRESS"));
+  }
+  if (httpsOnlyStatus & nsILoadInfo::HTTPS_ONLY_DO_NOT_LOG_TO_CONSOLE) {
+    MOZ_LOG(sCSMLog, LogLevel::Verbose,
+            ("    - HTTPS_ONLY_DO_NOT_LOG_TO_CONSOLE"));
+  }
+  if (httpsOnlyStatus & nsILoadInfo::HTTPS_ONLY_UPGRADED_HTTPS_FIRST) {
+    MOZ_LOG(sCSMLog, LogLevel::Verbose,
+            ("    - HTTPS_ONLY_UPGRADED_HTTPS_FIRST"));
+  }
 }
 
 static void LogPrincipal(nsIPrincipal* aPrincipal,
@@ -824,6 +858,7 @@ static void DebugDoContentSecurityCheck(nsIChannel* aChannel,
     // Security Flags
     MOZ_LOG(sCSMLog, LogLevel::Verbose, ("  - securityFlags:"));
     LogSecurityFlags(aLoadInfo->GetSecurityFlags());
+    LogHTTPSOnlyInfo(aLoadInfo);
     MOZ_LOG(sCSMLog, LogLevel::Debug, ("\n#DebugDoContentSecurityCheck End\n"));
   }
 }
@@ -1045,7 +1080,7 @@ nsresult nsContentSecurityManager::CheckAllowLoadInSystemPrivilegedContext(
 }
 
 /*
- * Every protocol handler must set one of the five security flags
+ * Every protocol handler must set one of the six security flags
  * defined in nsIProtocolHandler - if not - deny the load.
  */
 nsresult nsContentSecurityManager::CheckChannelHasProtocolSecurityFlag(
@@ -1070,6 +1105,9 @@ nsresult nsContentSecurityManager::CheckChannelHasProtocolSecurityFlag(
   NS_ENSURE_SUCCESS(rv, rv);
 
   uint32_t securityFlagsSet = 0;
+  if (flags & nsIProtocolHandler::WEBEXT_URI_WEB_ACCESSIBLE) {
+    securityFlagsSet += 1;
+  }
   if (flags & nsIProtocolHandler::URI_LOADABLE_BY_ANYONE) {
     securityFlagsSet += 1;
   }

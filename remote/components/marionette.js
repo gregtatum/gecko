@@ -12,11 +12,11 @@ const { XPCOMUtils } = ChromeUtils.import(
 XPCOMUtils.defineLazyModuleGetters(this, {
   ComponentUtils: "resource://gre/modules/ComponentUtils.jsm",
 
-  EnvironmentPrefs: "chrome://marionette/content/prefs.js",
-  Log: "chrome://marionette/content/log.js",
-  MarionettePrefs: "chrome://marionette/content/prefs.js",
+  EnvironmentPrefs: "chrome://remote/content/marionette/prefs.js",
+  Log: "chrome://remote/content/marionette/log.js",
+  MarionettePrefs: "chrome://remote/content/marionette/prefs.js",
   Preferences: "resource://gre/modules/Preferences.jsm",
-  TCPListener: "chrome://marionette/content/server.js",
+  TCPListener: "chrome://remote/content/marionette/server.js",
 });
 
 XPCOMUtils.defineLazyGetter(this, "logger", () => Log.get());
@@ -377,7 +377,7 @@ class MarionetteParentProcess {
           Services.obs.removeObserver(this, topic);
           Services.obs.removeObserver(this, "toplevel-window-ready");
 
-          Services.obs.addObserver(this, "xpcom-will-shutdown");
+          Services.obs.addObserver(this, "quit-application");
 
           this.finalUIStartup = true;
           this.init();
@@ -430,7 +430,7 @@ class MarionetteParentProcess {
         } else {
           Services.obs.removeObserver(this, "toplevel-window-ready");
 
-          Services.obs.addObserver(this, "xpcom-will-shutdown");
+          Services.obs.addObserver(this, "quit-application");
 
           this.finalUIStartup = true;
           this.init();
@@ -438,8 +438,8 @@ class MarionetteParentProcess {
 
         break;
 
-      case "xpcom-will-shutdown":
-        Services.obs.removeObserver(this, "xpcom-will-shutdown");
+      case "quit-application":
+        Services.obs.removeObserver(this, "quit-application");
         this.uninit();
         break;
     }

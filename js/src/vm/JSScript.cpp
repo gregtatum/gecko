@@ -4057,7 +4057,7 @@ out:
   return script->offsetToPC(offset);
 }
 
-JS_FRIEND_API unsigned js::GetScriptLineExtent(JSScript* script) {
+JS_PUBLIC_API unsigned js::GetScriptLineExtent(JSScript* script) {
   unsigned lineno = script->lineno();
   unsigned maxLineNo = lineno;
   for (SrcNoteIterator iter(script->notes()); !iter.atEnd(); ++iter) {
@@ -4829,6 +4829,10 @@ void JSScript::resetWarmUpCounterToDelayIonCompilation() {
       warmUpData_.toJitScript()->resetWarmUpCount(newCount);
     }
   }
+}
+
+gc::AllocSite* JSScript::createAllocSite() {
+  return jitScript()->createAllocSite(this);
 }
 
 void JSScript::AutoDelazify::holdScript(JS::HandleFunction fun) {

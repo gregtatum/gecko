@@ -30,6 +30,7 @@
 #include "mozilla/FontPropertyTypes.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/gfx/Logging.h"
+#include "mozilla/gfx/XlibDisplay.h"
 #include "mozilla/Monitor.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/StaticPrefs_gfx.h"
@@ -339,6 +340,8 @@ static const char kFontDroidSansFallback[] = "Droid Sans Fallback";
 static const char kFontWenQuanYiMicroHei[] = "WenQuanYi Micro Hei";
 static const char kFontNanumGothic[] = "NanumGothic";
 static const char kFontSymbola[] = "Symbola";
+static const char kFontNotoSansSymbols[] = "Noto Sans Symbols";
+static const char kFontNotoSansSymbols2[] = "Noto Sans Symbols2";
 
 void gfxPlatformGtk::GetCommonFallbackFonts(uint32_t aCh, Script aRunScript,
                                             eFontPresentation aPresentation,
@@ -352,6 +355,8 @@ void gfxPlatformGtk::GetCommonFallbackFonts(uint32_t aCh, Script aRunScript,
   aFontList.AppendElement(kFontDejaVuSans);
   aFontList.AppendElement(kFontFreeSans);
   aFontList.AppendElement(kFontSymbola);
+  aFontList.AppendElement(kFontNotoSansSymbols);
+  aFontList.AppendElement(kFontNotoSansSymbols2);
 
   // add fonts for CJK ranges
   // xxx - this isn't really correct, should use the same CJK font ordering
@@ -682,8 +687,9 @@ class GtkVsyncSource final : public VsyncSource {
         return;
       }
 
-      mGLContext = gl::GLContextGLX::CreateGLContext({}, mXDisplay, root,
-                                                     config, false, nullptr);
+      mGLContext = gl::GLContextGLX::CreateGLContext(
+          {}, gfx::XlibDisplay::Borrow(mXDisplay), root, config, false,
+          nullptr);
 
       if (!mGLContext) {
         lock.NotifyAll();
@@ -827,7 +833,7 @@ already_AddRefed<gfx::VsyncSource> gfxPlatformGtk::CreateHardwareVsyncSource() {
   }
 #  endif
 
-  // Only use GLX vsync when the OpenGL compositor / WebRedner is being used.
+  // Only use GLX vsync when the OpenGL compositor / WebRender is being used.
   // The extra cost of initializing a GLX context while blocking the main
   // thread is not worth it when using basic composition.
   //
@@ -843,7 +849,7 @@ already_AddRefed<gfx::VsyncSource> gfxPlatformGtk::CreateHardwareVsyncSource() {
 
     // Nvidia doesn't support GLX at the same time as EGL but Mesa does.
     if (!gfxVars::UseEGL() || (adapterDriverVendor.Find("mesa") != -1)) {
-      useGlxVsync = gl::sGLXLibrary.SupportsVideoSync();
+      useGlxVsync = gl::sGLXLibrary.SupportsVideoSync(DefaultXDisplay());
     }
     if (useGlxVsync) {
       RefPtr<VsyncSource> vsyncSource = new GtkVsyncSource();

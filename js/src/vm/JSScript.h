@@ -63,6 +63,10 @@ namespace coverage {
 class LCovSource;
 }  // namespace coverage
 
+namespace gc {
+class AllocSite;
+}  // namespace gc
+
 namespace jit {
 class AutoKeepJitScripts;
 class BaselineScript;
@@ -2289,6 +2293,10 @@ class JSScript : public js::BaseScript {
   // invariants of debuggee compartments, scripts, and frames.
   inline bool isDebuggee() const;
 
+  // Create an allocation site associated with this script/JitScript to track
+  // nursery allocations.
+  js::gc::AllocSite* createAllocSite();
+
   // A helper class to prevent relazification of the given function's script
   // while it's holding on to it.  This class automatically roots the script.
   class AutoDelazify;
@@ -2360,7 +2368,7 @@ extern const js::SrcNote* GetSrcNote(JSContext* cx, JSScript* script,
 
 extern jsbytecode* LineNumberToPC(JSScript* script, unsigned lineno);
 
-extern JS_FRIEND_API unsigned GetScriptLineExtent(JSScript* script);
+extern JS_PUBLIC_API unsigned GetScriptLineExtent(JSScript* script);
 
 #ifdef JS_CACHEIR_SPEW
 void maybeUpdateWarmUpCount(JSScript* script);

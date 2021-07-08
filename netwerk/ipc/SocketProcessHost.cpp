@@ -5,9 +5,9 @@
 
 #include "SocketProcessHost.h"
 
-#include "ProcessUtils.h"
 #include "SocketProcessParent.h"
 #include "mozilla/ipc/FileDescriptor.h"
+#include "mozilla/ipc/ProcessUtils.h"
 #include "nsAppRunner.h"
 #include "nsIOService.h"
 #include "nsIObserverService.h"
@@ -143,7 +143,7 @@ void SocketProcessHost::InitAfterConnect(bool aSucceeded) {
 
   mSocketProcessParent = MakeUnique<SocketProcessParent>(this);
   DebugOnly<bool> rv = mSocketProcessParent->Open(
-      TakeChannel(), base::GetProcId(GetChildProcessHandle()));
+      TakeInitialPort(), base::GetProcId(GetChildProcessHandle()));
   MOZ_ASSERT(rv);
 
   SocketPorcessInitAttributes attributes;

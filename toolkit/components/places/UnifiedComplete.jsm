@@ -9,19 +9,12 @@
 
 // Constants
 
-const MS_PER_DAY = 86400000; // 24 * 60 * 60 * 1000
-
 // AutoComplete query type constants.
 // Describes the various types of queries that we can process rows for.
 const QUERYTYPE_FILTERED = 0;
-const QUERYTYPE_ADAPTIVE = 3;
 
 // The default frecency value used when inserting matches with unknown frecency.
 const FRECENCY_DEFAULT = 1000;
-
-// By default we add remote tabs that have been used less than this time ago.
-// Any remaining remote tabs are added in queue if no other results are found.
-const RECENT_REMOTE_TAB_THRESHOLD_MS = 259200000; // 72 hours.
 
 // Regex used to match userContextId.
 const REGEXP_USER_CONTEXT_ID = /(?:^| )user-context-id:(\d+)/;
@@ -109,28 +102,6 @@ const SQL_SWITCHTAB_QUERY = `SELECT :query_type, t.url, t.url, NULL, NULL, NULL,
    ORDER BY t.ROWID DESC
    LIMIT :maxResults`;
 
-const SQL_ADAPTIVE_QUERY = `/* do not warn (bug 487789) */
-   SELECT :query_type, h.url, h.title, ${SQL_BOOKMARK_TAGS_FRAGMENT},
-          h.visit_count, h.typed, h.id, t.open_count, h.frecency
-   FROM (
-     SELECT ROUND(MAX(use_count) * (1 + (input = :search_string)), 1) AS rank,
-            place_id
-     FROM moz_inputhistory
-     WHERE input BETWEEN :search_string AND :search_string || X'FFFF'
-     GROUP BY place_id
-   ) AS i
-   JOIN moz_places h ON h.id = i.place_id
-   LEFT JOIN moz_openpages_temp t
-          ON t.url = h.url
-         AND t.userContextId = :userContextId
-   WHERE AUTOCOMPLETE_MATCH(NULL, h.url,
-                            IFNULL(btitle, h.title), tags,
-                            h.visit_count, h.typed, bookmarked,
-                            t.open_count,
-                            :matchBehavior, :searchBehavior)
-   ORDER BY rank DESC, h.frecency DESC
-   LIMIT :maxResults`;
-
 // Getters
 
 const { XPCOMUtils } = ChromeUtils.import(
@@ -138,31 +109,19 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
-XPCOMUtils.defineLazyGlobalGetters(this, ["fetch"]);
-
 XPCOMUtils.defineLazyModuleGetters(this, {
-  AboutPagesUtils: "resource://gre/modules/AboutPagesUtils.jsm",
   KeywordUtils: "resource://gre/modules/KeywordUtils.jsm",
   ObjectUtils: "resource://gre/modules/ObjectUtils.jsm",
-  PlacesRemoteTabsAutocompleteProvider:
-    "resource://gre/modules/PlacesRemoteTabsAutocompleteProvider.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
-  PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
-  ProfileAge: "resource://gre/modules/ProfileAge.jsm",
   PromiseUtils: "resource://gre/modules/PromiseUtils.jsm",
   Sqlite: "resource://gre/modules/Sqlite.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
+  UrlbarProviderOpenTabs: "resource:///modules/UrlbarProviderOpenTabs.jsm",
   UrlbarProvidersManager: "resource:///modules/UrlbarProvidersManager.jsm",
   UrlbarSearchUtils: "resource:///modules/UrlbarSearchUtils.jsm",
   UrlbarTokenizer: "resource:///modules/UrlbarTokenizer.jsm",
   UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
 });
-
-XPCOMUtils.defineLazyPreferenceGetter(
-  this,
-  "syncUsernamePref",
-  "services.sync.username"
-);
 
 function setTimeout(callback, ms) {
   let timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
@@ -189,45 +148,6 @@ function iconHelper(url) {
   }
   return PlacesUtils.favicons.defaultFavicon.spec;
 }
-
-// Preloaded Sites related
-
-function PreloadedSite(url, title) {
-  this.uri = Services.io.newURI(url);
-  this.title = title;
-  this._matchTitle = title.toLowerCase();
-  this._hasWWW = this.uri.host.startsWith("www.");
-  this._hostWithoutWWW = this._hasWWW ? this.uri.host.slice(4) : this.uri.host;
-}
-
-/**
- * Storage object for Preloaded Sites.
- *   add(url, title): adds a site to storage
- *   populate(sites) : populates the  storage with array of [url,title]
- *   sites[]: resulting array of sites (PreloadedSite objects)
- */
-XPCOMUtils.defineLazyGetter(this, "PreloadedSiteStorage", () =>
-  Object.seal({
-    sites: [],
-
-    add(url, title) {
-      let site = new PreloadedSite(url, title);
-      this.sites.push(site);
-    },
-
-    populate(sites) {
-      this.sites = [];
-      for (let site of sites) {
-        this.add(site[0], site[1]);
-      }
-    },
-  })
-);
-
-XPCOMUtils.defineLazyGetter(this, "ProfileAgeCreatedPromise", async () => {
-  let times = await ProfileAge();
-  return times.created;
-});
 
 // Maps restriction character types to textual behaviors.
 XPCOMUtils.defineLazyGetter(this, "typeToBehaviorMap", () => {
@@ -437,9 +357,6 @@ const MATCH_TYPE = {
  *        parameters are supported:
  *        * enable-actions: Include "actions", such as switch-to-tab and search
  *          engine aliases, in the results.
- *        * disable-private-actions: The search is taking place in a private
- *          window outside of permanent private-browsing mode.  The search
- *          should exclude privacy-sensitive results as appropriate.
  *        * private-window: The search is taking place in a private window,
  *          possibly in permanent private-browsing mode.  The search
  *          should exclude privacy-sensitive results as appropriate.
@@ -477,8 +394,6 @@ function Search(
   if (queryContext) {
     this._enableActions = true;
     this._inPrivateWindow = queryContext.isPrivate;
-    this._disablePrivateActions =
-      this._inPrivateWindow && !PrivateBrowsingUtils.permanentPrivateBrowsing;
     this._prohibitAutoFill = !queryContext.allowAutofill;
     this._maxResults = queryContext.maxResults;
     this._userContextId = queryContext.userContextId;
@@ -493,7 +408,6 @@ function Search(
   } else {
     let params = new Set(searchParam.split(" "));
     this._enableActions = params.has("enable-actions");
-    this._disablePrivateActions = params.has("disable-private-actions");
     this._inPrivateWindow = params.has("private-window");
     this._prohibitAutoFill = params.has("prohibit-autofill");
     // Extract the max-results param.
@@ -507,6 +421,11 @@ function Search(
       ? parseInt(userContextId[1], 10)
       : Ci.nsIScriptSecurityManager.DEFAULT_USER_CONTEXT_ID;
   }
+
+  this._userContextId = UrlbarProviderOpenTabs.getUserContextIdForOpenPagesTable(
+    this._userContextId,
+    this._inPrivateWindow
+  );
 
   // Use the original string here, not the stripped one, so the tokenizer can
   // properly recognize token types.
@@ -561,10 +480,7 @@ function Search(
     // The heuristic token is the first filtered search token, but only when it's
     // actually the first thing in the search string.  If a prefix or restriction
     // character occurs first, then the heurstic token is null.  We use the
-    // heuristic token to help determine the heuristic result.  It may be a Places
-    // keyword, a search engine alias, or simply a URL or part of the search
-    // string the user has typed.  We won't know until we create the heuristic
-    // result.
+    // heuristic token to help determine the heuristic result.
     let firstToken = !!this._searchTokens.length && this._searchTokens[0].value;
     this._heuristicToken =
       firstToken && this._trimmedOriginalSearchString.startsWith(firstToken)
@@ -591,13 +507,6 @@ function Search(
   // Will be set later, if needed.
   result.setDefaultIndex(-1);
   this._result = result;
-
-  // Used to limit the number of adaptive results.
-  this._adaptiveCount = 0;
-  this._extraAdaptiveRows = [];
-
-  // Used to limit the number of remote tab results.
-  this._extraRemoteTabRows = [];
 
   // These are used to avoid adding duplicate entries to the results.
   this._usedURLs = [];
@@ -631,36 +540,7 @@ Search.prototype = {
    */
   hasBehavior(type) {
     let behavior = Ci.mozIPlacesAutoComplete["BEHAVIOR_" + type.toUpperCase()];
-
-    if (
-      this._disablePrivateActions &&
-      behavior == Ci.mozIPlacesAutoComplete.BEHAVIOR_OPENPAGE
-    ) {
-      return false;
-    }
-
     return this._behavior & behavior;
-  },
-
-  /**
-   * Used to delay the most complex queries, to save IO while the user is
-   * typing.
-   */
-  _sleepResolve: null,
-  _sleep(aTimeMs) {
-    // Reuse a single instance to try shaving off some usless work before
-    // the first query.
-    if (!this._sleepTimer) {
-      this._sleepTimer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
-    }
-    return new Promise(resolve => {
-      this._sleepResolve = resolve;
-      this._sleepTimer.initWithCallback(
-        resolve,
-        aTimeMs,
-        Ci.nsITimer.TYPE_ONE_SHOT
-      );
-    });
   },
 
   /**
@@ -720,13 +600,6 @@ Search.prototype = {
       this._notifyTimer.cancel();
     }
     this._notifyDelaysCount = 0;
-    if (this._sleepTimer) {
-      this._sleepTimer.cancel();
-    }
-    if (this._sleepResolve) {
-      this._sleepResolve();
-      this._sleepResolve = null;
-    }
     if (typeof this.interrupt == "function") {
       this.interrupt();
     }
@@ -757,28 +630,9 @@ Search.prototype = {
       }
     };
 
-    // For any given search, we run many queries/heuristics:
-    // 1) by alias (as defined in SearchService)
-    // 2) inline completion from search engine resultDomains
-    // 3) submission for the current search engine
-    // 4) Places keywords
-    // 5) adaptive learning (this._adaptiveQuery)
-    // 6) open pages not supported by history (this._switchToTabQuery)
-    // 7) query based on match behavior
-    //
-    // (4) only gets run if we get any filtered tokens, since if there are no
-    // tokens, there is nothing to match.
-    //
-    // (1) and (5) only get run if actions are enabled. When actions are
-    // enabled, the first result is always a special result (resulting from one
-    // of the queries between (1) and (4) inclusive). As such, the UI is
-    // expected to auto-select the first result when actions are enabled. If the
-    // first result is an inline completion result, that will also be the
-    // default result and therefore be autofilled (this also happens if actions
-    // are not enabled).
-
-    // Check for Preloaded Sites Expiry before Autofill
-    await this._checkPreloadedSitesExpiry();
+    // For any given search, we run these queries:
+    // 1) open pages not supported by history (this._switchToTabQuery)
+    // 2) query based on match behavior
 
     // If the query is simply "@" and we have tokenAliasEngines then return
     // early. UrlbarProviderTokenAliasEngines will add engine results.
@@ -788,32 +642,17 @@ Search.prototype = {
       return;
     }
 
-    // Add the first heuristic result, if any.  Set _addingHeuristicResult
-    // to true so that when the result is added, "heuristic" can be included in
-    // its style.
-    this._addingHeuristicResult = true;
-    await this._matchFirstHeuristicResult(conn);
-    this._addingHeuristicResult = false;
+    // Check if the first token is an action. If it is, we should set a flag
+    // so we don't include it in our searches.
+    this._firstTokenIsKeyword =
+      this._firstTokenIsKeyword || (await this._checkIfFirstTokenIsKeyword());
     if (!this.pending) {
       return;
     }
 
-    // We sleep a little between adding the heuristic result and matching
-    // any other searches so we aren't kicking off potentially expensive
-    // searches on every keystroke. We check trimmedOriginalSearchString instead
-    // of whether we have a heurisitic because several sources of heuristic
-    // results have been factored out of UnifiedComplete. See discussion in
-    // bug 1655034.
-    // If there's no string, we search immediately because the user wants
-    // the empty search results ASAP.
     if (this._trimmedOriginalSearchString) {
-      await this._sleep(UrlbarPrefs.get("delay"));
-      if (!this.pending) {
-        return;
-      }
-
-      // If the heuristic result is an engine from a token alias, the search
-      // restriction char, or we're in search-restriction mode, then we're done.
+      // If the user typed the search restriction char or we're in
+      // search-restriction mode, then we're done.
       // UrlbarProviderSearchSuggestions will handle suggestions, if any.
       let emptySearchRestriction =
         this._trimmedOriginalSearchString.length <= 3 &&
@@ -830,25 +669,7 @@ Search.prototype = {
       }
     }
 
-    // Run the adaptive query first.
-    await conn.executeCached(
-      this._adaptiveQuery[0],
-      this._adaptiveQuery[1],
-      this._onResultRow.bind(this)
-    );
-    if (!this.pending) {
-      return;
-    }
-
-    // Then fetch remote tabs.
-    if (this._enableActions && this.hasBehavior("openpage")) {
-      await this._matchRemoteTabs();
-      if (!this.pending) {
-        return;
-      }
-    }
-
-    // Finally run all the remaining queries.
+    // Run our standard Places query.
     let queries = [];
     // "openpage" behavior is supported by the default query.
     // _switchToTabQuery instead returns only pages not supported by history.
@@ -863,31 +684,12 @@ Search.prototype = {
       }
     }
 
-    // If we have some unused adaptive matches, add them now.
-    while (
-      this._extraAdaptiveRows.length &&
-      this._result.matchCount < this._maxResults
-    ) {
-      this._addFilteredQueryMatch(this._extraAdaptiveRows.shift());
-    }
-
-    // If we have some unused remote tab matches, add them now.
-    while (
-      this._extraRemoteTabRows.length &&
-      this._result.matchCount < this._maxResults
-    ) {
-      this._addMatch(this._extraRemoteTabRows.shift());
-    }
-
-    this._matchAboutPages();
-
     // If we do not have enough matches search again with MATCH_ANYWHERE, to
     // get more matches.
-    let count =
-      this._counts[MATCH_TYPE.GENERAL] + this._counts[MATCH_TYPE.HEURISTIC];
+    let count = this._counts[MATCH_TYPE.GENERAL];
     if (count < this._maxResults) {
       this._matchBehavior = Ci.mozIPlacesAutoComplete.MATCH_ANYWHERE;
-      let queries = [this._adaptiveQuery, this._searchQuery];
+      let queries = [this._searchQuery];
       if (this.hasBehavior("openpage")) {
         queries.unshift(this._switchToTabQuery);
       }
@@ -898,219 +700,32 @@ Search.prototype = {
         }
       }
     }
-
-    this._matchPreloadedSites();
   },
 
-  _shouldMatchAboutPages() {
-    // Only autocomplete input that starts with 'about:' and has at least 1 more
-    // character.
-    return this._strippedPrefix == "about:" && this._searchString;
-  },
-
-  _matchAboutPages() {
-    if (!this._shouldMatchAboutPages()) {
-      return;
-    }
-    for (const url of AboutPagesUtils.visibleAboutUrls) {
-      if (url.startsWith(`about:${this._searchString}`)) {
-        this._addMatch({
-          value: url,
-          comment: url,
-          frecency: FRECENCY_DEFAULT,
-        });
-      }
-    }
-  },
-
-  async _checkPreloadedSitesExpiry() {
-    if (!UrlbarPrefs.get("usepreloadedtopurls.enabled")) {
-      return;
-    }
-    let profileCreationDate = await ProfileAgeCreatedPromise;
-    let daysSinceProfileCreation =
-      (Date.now() - profileCreationDate) / MS_PER_DAY;
-    if (
-      daysSinceProfileCreation >
-      UrlbarPrefs.get("usepreloadedtopurls.expire_days")
-    ) {
-      Services.prefs.setBoolPref(
-        "browser.urlbar.usepreloadedtopurls.enabled",
-        false
-      );
-    }
-  },
-
-  _matchPreloadedSites() {
-    if (!UrlbarPrefs.get("usepreloadedtopurls.enabled")) {
-      return;
-    }
-
-    if (!this._searchString) {
-      // The user hasn't typed anything, or they've only typed a scheme.
-      return;
-    }
-
-    for (let site of PreloadedSiteStorage.sites) {
-      let url = site.uri.spec;
-      if (
-        (!this._strippedPrefix || url.startsWith(this._strippedPrefix)) &&
-        (site.uri.host.includes(this._searchString) ||
-          site._matchTitle.includes(this._searchString))
-      ) {
-        this._addMatch({
-          value: url,
-          comment: site.title,
-          style: "preloaded-top-site",
-          frecency: FRECENCY_DEFAULT - 1,
-        });
-      }
-    }
-  },
-
-  _matchPreloadedSiteForAutofill() {
-    if (!UrlbarPrefs.get("usepreloadedtopurls.enabled")) {
+  async _checkIfFirstTokenIsKeyword() {
+    if (!this._enableActions || !this._heuristicToken) {
       return false;
     }
 
-    let matchedSite = PreloadedSiteStorage.sites.find(site => {
-      return (
-        (!this._strippedPrefix ||
-          site.uri.spec.startsWith(this._strippedPrefix)) &&
-        (site.uri.host.startsWith(this._searchString) ||
-          site.uri.host.startsWith("www." + this._searchString))
-      );
-    });
-    if (!matchedSite) {
-      return false;
+    let aliasEngine = await UrlbarSearchUtils.engineForAlias(
+      this._heuristicToken,
+      this._originalSearchString
+    );
+
+    if (aliasEngine) {
+      return true;
     }
 
-    this._result.setDefaultIndex(0);
-
-    let url = matchedSite.uri.spec;
-    let value = stripAnyPrefix(url)[1];
-    value = value.substr(value.indexOf(this._searchString));
-
-    this._addAutofillMatch(value, url, Infinity, ["preloaded-top-site"]);
-    return true;
-  },
-
-  async _matchFirstHeuristicResult(conn) {
-    if (this._searchMode) {
-      // Use UrlbarProviderHeuristicFallback.
-      return false;
+    let { entry } = await KeywordUtils.getBindableKeyword(
+      this._heuristicToken,
+      this._originalSearchString
+    );
+    if (entry) {
+      this._filterOnHost = entry.url.host;
+      return true;
     }
 
-    // We always try to make the first result a special "heuristic" result.  The
-    // heuristics below determine what type of result it will be, if any.
-
-    if (this.pending && this._enableActions && this._heuristicToken) {
-      // It may be a search engine with an alias - which works like a keyword.
-      let matched = await this._matchSearchEngineAlias(this._heuristicToken);
-      if (matched) {
-        return true;
-      }
-    }
-
-    if (this.pending && this._heuristicToken) {
-      // It may be a Places keyword.
-      let matched = await this._matchPlacesKeyword(this._heuristicToken);
-      if (matched) {
-        return true;
-      }
-    }
-
-    let shouldAutofill = this._shouldAutofill;
-
-    if (this.pending && shouldAutofill) {
-      let matched = this._matchPreloadedSiteForAutofill();
-      if (matched) {
-        return true;
-      }
-    }
-
-    // Fall back to UrlbarProviderHeuristicFallback.
     return false;
-  },
-
-  async _matchPlacesKeyword(keyword) {
-    let entry = await PlacesUtils.keywords.fetch(keyword);
-    if (!entry) {
-      return false;
-    }
-
-    let searchString = UrlbarUtils.substringAfter(
-      this._originalSearchString,
-      keyword
-    ).trim();
-
-    let url = null;
-    let postData = null;
-    try {
-      [url, postData] = await KeywordUtils.parseUrlAndPostData(
-        entry.url.href,
-        entry.postData,
-        searchString
-      );
-    } catch (ex) {
-      // It's not possible to bind a param to this keyword.
-      return false;
-    }
-
-    let style = "keyword";
-    let value = url;
-    if (this._enableActions) {
-      style = "action " + style;
-      value = makeActionUrl("keyword", {
-        url,
-        keyword,
-        input: this._originalSearchString,
-        postData,
-      });
-    }
-
-    let match = {
-      value,
-      // Don't use the url with replaced strings, since the icon doesn't change
-      // but the string does, it may cause pointless icon flicker on typing.
-      icon: iconHelper(entry.url),
-      style,
-      frecency: Infinity,
-    };
-    // If there is a query string, the title will be "host: queryString".
-    if (this._searchTokens.length > 1) {
-      match.comment = entry.url.host;
-    }
-
-    this._firstTokenIsKeyword = true;
-    this._filterOnHost = entry.url.host;
-    this._addMatch(match);
-    return true;
-  },
-
-  async _matchSearchEngineAlias(alias) {
-    let engine = await UrlbarSearchUtils.engineForAlias(alias);
-    if (!engine) {
-      return false;
-    }
-
-    let query = UrlbarUtils.substringAfter(this._originalSearchString, alias);
-
-    // Match an alias only when it has a space after it.  If there's no trailing
-    // space, then continue to treat it as part of the search string.
-    if (!UrlbarTokenizer.REGEXP_SPACES_START.test(query)) {
-      return false;
-    }
-
-    this._searchEngineAliasMatch = {
-      engine,
-      alias,
-      query: query.trimStart(),
-    };
-    this._firstTokenIsKeyword = true;
-    this._filterOnHost = engine.getResultDomain();
-    this._addSearchEngineMatch(this._searchEngineAliasMatch);
-    return true;
   },
 
   /**
@@ -1162,70 +777,16 @@ Search.prototype = {
     this._addMatch(match);
   },
 
-  async _matchRemoteTabs() {
-    // Bail out early for non-sync users.
-    if (!syncUsernamePref) {
-      return;
-    }
-
-    let searchString = this._searchTokens.map(t => t.value).join(" ");
-    let matches = await PlacesRemoteTabsAutocompleteProvider.getMatches(
-      searchString,
-      this._maxResults
-    );
-    let remoteTabsAdded = 0;
-    for (let { url, title, icon, deviceName, lastUsed } of matches) {
-      // It's rare that Sync supplies the icon for the page (but if it does, it
-      // is a string URL)
-      if (!icon) {
-        icon = iconHelper(url);
-      } else {
-        icon = PlacesUtils.favicons.getFaviconLinkForIcon(
-          Services.io.newURI(icon)
-        ).spec;
-      }
-
-      let match = {
-        // We include the deviceName in the action URL so we can render it in
-        // the URLBar.
-        value: makeActionUrl("remotetab", { url, deviceName }),
-        comment: title || url,
-        style: "action remotetab",
-        // we want frecency > FRECENCY_DEFAULT so it doesn't get pushed out
-        // by "remote" matches.
-        frecency: FRECENCY_DEFAULT + 1,
-        icon,
-      };
-      // Mobile and desktop frecency scales are not compatible so we don't
-      // intermix open tabs with synced tabs. Instead, we limit the number of
-      // initial remote tabs to the floor of _maxResults / 2 so they do not
-      // overrun open tabs.
-      if (
-        remoteTabsAdded < this._maxResults / 2 &&
-        lastUsed > Date.now() - RECENT_REMOTE_TAB_THRESHOLD_MS
-      ) {
-        this._addMatch(match);
-        remoteTabsAdded++;
-      } else {
-        this._extraRemoteTabRows.push(match);
-      }
-    }
-  },
-
   _onResultRow(row, cancel) {
     let queryType = row.getResultByIndex(QUERYINDEX_QUERYTYPE);
     switch (queryType) {
-      case QUERYTYPE_ADAPTIVE:
-        this._addAdaptiveQueryMatch(row);
-        break;
       case QUERYTYPE_FILTERED:
         this._addFilteredQueryMatch(row);
         break;
     }
     // If the search has been canceled by the user or by _addMatch, or we
     // fetched enough results, we can stop the underlying Sqlite query.
-    let count =
-      this._counts[MATCH_TYPE.GENERAL] + this._counts[MATCH_TYPE.HEURISTIC];
+    let count = this._counts[MATCH_TYPE.GENERAL];
     if (!this.pending || count >= this._maxResults) {
       cancel();
     }
@@ -1304,9 +865,7 @@ Search.prototype = {
       throw new Error("Frecency not provided");
     }
 
-    if (this._addingHeuristicResult) {
-      match.type = MATCH_TYPE.HEURISTIC;
-    } else if (typeof match.type != "string") {
+    if (typeof match.type != "string") {
       match.type = MATCH_TYPE.GENERAL;
     }
 
@@ -1330,10 +889,6 @@ Search.prototype = {
       }
     }
 
-    if (this._addingHeuristicResult) {
-      match.style += " heuristic";
-    }
-
     match.icon = match.icon || "";
     match.finalCompleteValue = match.finalCompleteValue || "";
 
@@ -1355,7 +910,7 @@ Search.prototype = {
     );
     this._counts[match.type]++;
 
-    this.notifyResult(true, match.type == MATCH_TYPE.HEURISTIC);
+    this.notifyResult(true);
   },
 
   /**
@@ -1385,26 +940,9 @@ Search.prototype = {
         // The new entry is a switch/remote tab entry, look for the duplicate
         // among current matches.
         for (let i = 0; i < this._usedURLs.length; ++i) {
-          let {
-            key: matchKey,
-            action: matchAction,
-            type: matchType,
-          } = this._usedURLs[i];
+          let { key: matchKey, action: matchAction } = this._usedURLs[i];
           if (ObjectUtils.deepEqual(matchKey, urlMapKey)) {
             isDupe = true;
-            // Don't replace the match if the existing one is heuristic and the
-            // new one is a switchtab, instead also add the switchtab match.
-            if (
-              matchType == MATCH_TYPE.HEURISTIC &&
-              action.type == "switchtab"
-            ) {
-              isDupe = false;
-              // Since we allow to insert a dupe in this case, we must continue
-              // checking the next matches to be sure we won't insert more than
-              // one dupe. For this same reason we must reset isDupe = true for
-              // each found dupe.
-              continue;
-            }
             if (!matchAction || action.type == "switchtab") {
               this._usedURLs[i] = {
                 key: urlMapKey,
@@ -1420,8 +958,7 @@ Search.prototype = {
         }
       } else {
         // Dedupe with this flow:
-        // 1. If the two URLs are the same, dedupe whichever is not the
-        //    heuristic result.
+        // 1. If the two URLs are the same, dedupe the newer one.
         // 2. If they both contain www. or both do not contain it, prefer https.
         // 3. If they differ by www., send both results to the Muxer and allow
         //    it to decide based on results from other providers.
@@ -1432,44 +969,22 @@ Search.prototype = {
             continue;
           }
 
-          let {
-            key: existingKey,
-            prefix: existingPrefix,
-            type: existingType,
-          } = this._usedURLs[i];
+          let { key: existingKey, prefix: existingPrefix } = this._usedURLs[i];
 
           let existingPrefixRank = UrlbarUtils.getPrefixRank(existingPrefix);
           if (ObjectUtils.deepEqual(existingKey, urlMapKey)) {
             isDupe = true;
 
             if (prefix == existingPrefix) {
-              // The URLs are identical. Throw out the new result, unless it's
-              // the heuristic.
-              if (match.type != MATCH_TYPE.HEURISTIC) {
-                break; // Replace match.
-              } else {
-                this._usedURLs[i] = {
-                  key: urlMapKey,
-                  action,
-                  type: match.type,
-                  prefix,
-                  comment: match.comment,
-                };
-                return { index: i, replace: true };
-              }
+              // The URLs are identical. Throw out the new result.
+              break;
             }
 
             if (prefix.endsWith("www.") == existingPrefix.endsWith("www.")) {
               // The results differ only by protocol.
-
-              if (match.type == MATCH_TYPE.HEURISTIC) {
-                isDupe = false;
-                continue;
-              }
-
               if (prefixRank <= existingPrefixRank) {
                 break; // Replace match.
-              } else if (existingType != MATCH_TYPE.HEURISTIC) {
+              } else {
                 this._usedURLs[i] = {
                   key: urlMapKey,
                   action,
@@ -1478,9 +993,6 @@ Search.prototype = {
                   comment: match.comment,
                 };
                 return { index: i, replace: true };
-              } else {
-                isDupe = false;
-                continue;
               }
             } else {
               // We have two identical URLs that differ only by www. We need to
@@ -1513,7 +1025,7 @@ Search.prototype = {
     let index = 0;
     if (!this._buckets) {
       this._buckets = [];
-      this._makeBuckets(UrlbarPrefs.get("resultBuckets"), this._maxResults);
+      this._makeBuckets(UrlbarPrefs.get("resultGroups"), this._maxResults);
     }
 
     let replace = 0;
@@ -1591,12 +1103,15 @@ Search.prototype = {
       return;
     }
 
-    let childMaxResultCount = Math.min(
-      typeof resultBucket.maxResultCount == "number"
-        ? resultBucket.maxResultCount
-        : this._maxResults,
-      maxResultCount
-    );
+    let initialMaxResultCount;
+    if (typeof resultBucket.maxResultCount == "number") {
+      initialMaxResultCount = resultBucket.maxResultCount;
+    } else if (typeof resultBucket.availableSpan == "number") {
+      initialMaxResultCount = resultBucket.availableSpan;
+    } else {
+      initialMaxResultCount = this._maxResults;
+    }
+    let childMaxResultCount = Math.min(initialMaxResultCount, maxResultCount);
     for (let child of resultBucket.children) {
       this._makeBuckets(child, childMaxResultCount);
     }
@@ -1627,26 +1142,6 @@ Search.prototype = {
       style: ["autofill"].concat(extraStyles).join(" "),
       icon: iconHelper(finalCompleteValue),
     });
-  },
-
-  // This is the same as _addFilteredQueryMatch, but it only returns a few
-  // results, caching the others. If at the end we don't find other results, we
-  // can add these.
-  _addAdaptiveQueryMatch(row) {
-    // We should only show filtered results in search mode.
-    if (this._searchModeEngine) {
-      return;
-    }
-    // Allow one quarter of the results to be adaptive results.
-    // Note: ideally adaptive results should have their own provider and the
-    // results muxer should decide what to show.  But that's too complex to
-    // support in the current code, so that's left for a future refactoring.
-    if (this._adaptiveCount < Math.ceil(this._maxResults / 4)) {
-      this._addFilteredQueryMatch(row);
-    } else {
-      this._extraAdaptiveRows.push(row);
-    }
-    this._adaptiveCount++;
   },
 
   _addFilteredQueryMatch(row) {
@@ -1856,27 +1351,6 @@ Search.prototype = {
   },
 
   /**
-   * Obtains the query to search for adaptive results.
-   *
-   * @return an array consisting of the correctly optimized query to search the
-   *         database with and an object containing the params to bound.
-   */
-  get _adaptiveQuery() {
-    return [
-      SQL_ADAPTIVE_QUERY,
-      {
-        parent: PlacesUtils.tagsFolderId,
-        search_string: this._searchString,
-        query_type: QUERYTYPE_ADAPTIVE,
-        matchBehavior: this._matchBehavior,
-        searchBehavior: this._behavior,
-        userContextId: this._userContextId,
-        maxResults: this._maxResults,
-      },
-    ];
-  },
-
-  /**
    * Whether we should try to autoFill.
    */
   get _shouldAutofill() {
@@ -1927,11 +1401,9 @@ Search.prototype = {
    *
    * @param searchOngoing
    *        Indicates whether the search result should be marked as ongoing.
-   * @param skipDelay
-   *        Whether to notify immediately.
    */
   _notifyDelaysCount: 0,
-  notifyResult(searchOngoing, skipDelay = false) {
+  notifyResult(searchOngoing) {
     let notify = () => {
       if (!this.pending) {
         return;
@@ -1959,7 +1431,7 @@ Search.prototype = {
     // In the worst case, we may get evenly spaced matches that would end up
     // delaying the UI by N_MATCHES * NOTIFYRESULT_DELAY_MS. Thus, we clamp the
     // number of times we may delay matches.
-    if (skipDelay || this._notifyDelaysCount > 3) {
+    if (this._notifyDelaysCount > 3) {
       notify();
     } else {
       this._notifyDelaysCount++;
@@ -1971,19 +1443,7 @@ Search.prototype = {
 // UnifiedComplete class
 // component @mozilla.org/autocomplete/search;1?name=unifiedcomplete
 
-function UnifiedComplete() {
-  if (UrlbarPrefs.get("usepreloadedtopurls.enabled")) {
-    // force initializing the profile age check
-    // to ensure the off-main-thread-IO happens ASAP
-    // and we don't have to wait for it when doing an autocomplete lookup
-    ProfileAgeCreatedPromise;
-
-    fetch("chrome://global/content/unifiedcomplete-top-urls.json")
-      .then(response => response.json())
-      .then(sites => PreloadedSiteStorage.populate(sites))
-      .catch(ex => Cu.reportError(ex));
-  }
-}
+function UnifiedComplete() {}
 
 UnifiedComplete.prototype = {
   // Database handling
@@ -2021,12 +1481,6 @@ UnifiedComplete.prototype = {
       });
     }
     return this._promiseDatabase;
-  },
-
-  // mozIPlacesAutoComplete
-
-  populatePreloadedSiteStorage(json) {
-    PreloadedSiteStorage.populate(json);
   },
 
   /**

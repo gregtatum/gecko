@@ -119,7 +119,20 @@ if CONFIG["MOZ_GECKO_PROFILER"]:
     if CONFIG["ENABLE_TESTS"]:
         DIRS += ["tests/gtest"]
 
-    FINAL_LIBRARY = "xul"
+    if CONFIG["MOZ_VTUNE"]:
+        DEFINES["MOZ_VTUNE_INSTRUMENTATION"] = True
+        UNIFIED_SOURCES += [
+            "core/VTuneProfiler.cpp",
+        ]
+
+    XPCSHELL_TESTS_MANIFESTS += ["tests/xpcshell/xpcshell.ini"]
+    MOCHITEST_CHROME_MANIFESTS += ["tests/chrome/chrome.ini"]
+    BROWSER_CHROME_MANIFESTS += ["tests/browser/browser.ini"]
+
+UNIFIED_SOURCES += [
+    "core/MicroGeckoProfiler.cpp",
+    "core/ProfilerBindings.cpp",
+]
 
 IPDL_SOURCES += [
     "gecko/PProfiler.ipdl",
@@ -130,6 +143,7 @@ include("/ipc/chromium/chromium-config.mozbuild")
 
 EXPORTS += [
     "public/GeckoProfiler.h",
+    "public/ProfilerBindings.h",
 ]
 
 EXPORTS.mozilla += [
@@ -144,28 +158,7 @@ EXPORTS.mozilla += [
     "public/ProfilerState.h",
 ]
 
-if CONFIG["MOZ_VTUNE"]:
-    DEFINES["MOZ_VTUNE_INSTRUMENTATION"] = True
-    UNIFIED_SOURCES += [
-        "core/VTuneProfiler.cpp",
-    ]
-
-
-if CONFIG["MOZ_TASK_TRACER"]:
-    EXPORTS += [
-        "tasktracer/GeckoTaskTracer.h",
-        "tasktracer/GeckoTaskTracerImpl.h",
-        "tasktracer/SourceEventTypeMap.h",
-        "tasktracer/TracedTaskCommon.h",
-    ]
-    UNIFIED_SOURCES += [
-        "tasktracer/GeckoTaskTracer.cpp",
-        "tasktracer/TracedTaskCommon.cpp",
-    ]
-
-XPCSHELL_TESTS_MANIFESTS += ["tests/xpcshell/xpcshell.ini"]
-MOCHITEST_CHROME_MANIFESTS += ["tests/chrome/chrome.ini"]
-BROWSER_CHROME_MANIFESTS += ["tests/browser/browser.ini"]
+FINAL_LIBRARY = "xul"
 
 if CONFIG["CC_TYPE"] in ("clang", "gcc"):
     CXXFLAGS += [

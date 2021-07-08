@@ -273,6 +273,14 @@ class nsLayoutUtils {
    */
   static nsIFrame* GetMarkerFrame(const nsIContent* aContent);
 
+#ifdef ACCESSIBILITY
+  /**
+   * Set aText to the spoken text for the given ::marker content (aContent)
+   * if it has a frame, or the empty string otherwise.
+   */
+  static void GetMarkerSpokenText(const nsIContent* aContent, nsAString& aText);
+#endif
+
   /**
    * Given a frame, search up the frame tree until we find an
    * ancestor that (or the frame itself) is of type aFrameType, if any.
@@ -518,6 +526,11 @@ class nsLayoutUtils {
    *
    * Just like IsProperAncestorFrameCrossDoc, except that it returns true when
    * aFrame == aAncestorFrame.
+   *
+   * NOTE: This function doesn't return true even if |aAncestorFrame| and
+   * |aFrame| is in the same process but they are not directly connected, e.g.
+   * both |aAncestorFrame| and |aFrame| in A domain documents, but there's
+   * another an iframe document domain B, such as A1 -> B1 ->A2 document tree.
    */
   static bool IsAncestorFrameCrossDocInProcess(
       const nsIFrame* aAncestorFrame, const nsIFrame* aFrame,
@@ -2165,9 +2178,6 @@ class nsLayoutUtils {
     /* If image type is vector, the return surface size will same as
        element size, not image's intrinsic size. */
     SFE_USE_ELEMENT_SIZE_IF_VECTOR = 1 << 4,
-    /* Instead of converting the colorspace to the display's colorspace,
-       use sRGB. */
-    SFE_TO_SRGB_COLORSPACE = 1 << 5,
     /* Ensure that the returned surface has a size that matches the
      * SurfaceFromElementResult::mSize. This is mostly a convenience thing so
      * that callers who want this don't have to deal with it themselves.

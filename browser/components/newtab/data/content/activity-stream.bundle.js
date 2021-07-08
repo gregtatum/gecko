@@ -728,7 +728,6 @@ class BaseContent extends react__WEBPACK_IMPORTED_MODULE_8___default.a.PureCompo
     const enabledSections = {
       topSitesEnabled: prefs["feeds.topsites"],
       pocketEnabled: prefs["feeds.section.topstories"],
-      snippetsEnabled: prefs["feeds.snippets"],
       highlightsEnabled: prefs["feeds.section.highlights"],
       showSponsoredTopSitesEnabled: prefs.showSponsoredTopSites,
       showSponsoredPocketEnabled: prefs.showSponsored,
@@ -739,7 +738,7 @@ class BaseContent extends react__WEBPACK_IMPORTED_MODULE_8___default.a.PureCompo
       mayHaveSponsoredTopSites
     } = prefs;
     const outerClassName = ["outer-wrapper", isDiscoveryStream && pocketEnabled && "ds-outer-wrapper-search-alignment", isDiscoveryStream && "ds-outer-wrapper-breakpoint-override", prefs.showSearch && this.state.fixedSearch && !noSectionsEnabled && "fixed-search", prefs.showSearch && noSectionsEnabled && "only-search", prefs["logowordmark.alwaysVisible"] && "visible-logo", newNewtabExperienceEnabled && "newtab-experience"].filter(v => v).join(" ");
-    const hasSnippet = enabledSections.snippetsEnabled && this.props.adminContent && this.props.adminContent.message && this.props.adminContent.message.id;
+    const hasSnippet = prefs["feeds.snippets"] && this.props.adminContent && this.props.adminContent.message && this.props.adminContent.message.id;
     return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_8___default.a.createElement("div", null, canShowCustomizationMenu ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_8___default.a.createElement(content_src_components_CustomizeMenu_CustomizeMenu__WEBPACK_IMPORTED_MODULE_7__["CustomizeMenu"], {
       onClose: this.closeCustomizationMenu,
       onOpen: this.openCustomizationMenu,
@@ -4521,6 +4520,8 @@ const LinkMenuOptions = {
         url: site.original_url || site.open_url || site.url,
         // pocket_id is only for pocket stories being in highlights, and then dismissed.
         pocket_id: site.pocket_id,
+        // used by PlacesFeed and TopSitesFeed for sponsored top sites blocking.
+        isSponsoredTopSite: site.sponsored_position,
         ...(site.flight_id ? {
           flight_id: site.flight_id
         } : {})
@@ -14551,7 +14552,6 @@ class ContentSection_ContentSection extends external_React_default.a.PureCompone
       topSitesEnabled,
       pocketEnabled,
       highlightsEnabled,
-      snippetsEnabled,
       showSponsoredTopSitesEnabled,
       showSponsoredPocketEnabled,
       topSitesRowsCount
@@ -14704,33 +14704,6 @@ class ContentSection_ContentSection extends external_React_default.a.PureCompone
       id: "custom-recent-subtitle",
       className: "subtitle",
       "data-l10n-id": "newtab-custom-recent-subtitle"
-    }))), /*#__PURE__*/external_React_default.a.createElement("div", {
-      id: "snippets-section",
-      className: "section"
-    }, /*#__PURE__*/external_React_default.a.createElement("label", {
-      className: "switch"
-    }, /*#__PURE__*/external_React_default.a.createElement("input", {
-      id: "snippets-toggle",
-      checked: snippetsEnabled,
-      type: "checkbox",
-      onChange: this.onPreferenceSelect,
-      preference: "feeds.snippets",
-      "aria-labelledby": "custom-snippets-title",
-      "aria-describedby": "custom-snippets-subtitle",
-      eventSource: "SNIPPETS"
-    }), /*#__PURE__*/external_React_default.a.createElement("span", {
-      className: "slider",
-      role: "presentation"
-    })), /*#__PURE__*/external_React_default.a.createElement("div", null, /*#__PURE__*/external_React_default.a.createElement("h2", {
-      id: "custom-snippets-title",
-      className: "title"
-    }, /*#__PURE__*/external_React_default.a.createElement("label", {
-      htmlFor: "snippets-toggle",
-      "data-l10n-id": "newtab-custom-snippets-title"
-    })), /*#__PURE__*/external_React_default.a.createElement("p", {
-      id: "custom-snippets-subtitle",
-      className: "subtitle",
-      "data-l10n-id": "newtab-custom-snippets-subtitle"
     }))), /*#__PURE__*/external_React_default.a.createElement("span", {
       className: "divider",
       role: "separator"

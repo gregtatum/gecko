@@ -179,18 +179,22 @@ namespace jit {
   _(Lambda, js::Lambda)                                                        \
   _(LambdaArrow, js::LambdaArrow)                                              \
   _(LeaveWith, js::jit::LeaveWith)                                             \
+  _(LoadAliasedDebugVar, js::LoadAliasedDebugVar)                              \
   _(MutatePrototype, js::jit::MutatePrototype)                                 \
   _(NamedLambdaObjectCreateTemplateObject,                                     \
     js::NamedLambdaObject::createTemplateObject)                               \
   _(NativeGetElement, js::NativeGetElement)                                    \
   _(NewArgumentsObject, js::jit::NewArgumentsObject)                           \
   _(NewArrayIterator, js::NewArrayIterator)                                    \
+  _(NewArrayObjectBaselineFallback, js::NewArrayObjectBaselineFallback)        \
+  _(NewArrayObjectOptimzedFallback, js::NewArrayObjectOptimizedFallback)       \
   _(NewArrayOperation, js::NewArrayOperation)                                  \
   _(NewArrayWithShape, js::NewArrayWithShape)                                  \
   _(NewCallObject, js::jit::NewCallObject)                                     \
   _(NewObjectOperation, js::NewObjectOperation)                                \
   _(NewObjectOperationWithTemplate, js::NewObjectOperationWithTemplate)        \
-  _(NewPlainObject, js::NewPlainObject)                                        \
+  _(NewPlainObjectBaselineFallback, js::NewPlainObjectBaselineFallback)        \
+  _(NewPlainObjectOptimizedFallback, js::NewPlainObjectOptimizedFallback)      \
   _(NewRegExpStringIterator, js::NewRegExpStringIterator)                      \
   _(NewStringIterator, js::NewStringIterator)                                  \
   _(NewStringObject, js::jit::NewStringObject)                                 \

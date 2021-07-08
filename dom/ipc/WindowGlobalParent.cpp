@@ -22,7 +22,6 @@
 #include "mozilla/dom/BrowserHost.h"
 #include "mozilla/dom/BrowserParent.h"
 #include "mozilla/dom/MediaController.h"
-#include "mozilla/dom/RemoteWebProgress.h"
 #include "mozilla/dom/WindowGlobalChild.h"
 #include "mozilla/dom/ChromeUtils.h"
 #include "mozilla/dom/ipc/IdType.h"
@@ -572,14 +571,9 @@ void WindowGlobalParent::NotifyContentBlockingEvent(
 
   // Notify the OnContentBlockingEvent if necessary.
   if (event) {
-    if (!GetBrowsingContext()->GetWebProgress()) {
-      return;
+    if (auto* webProgress = GetBrowsingContext()->GetWebProgress()) {
+      webProgress->OnContentBlockingEvent(webProgress, aRequest, event.value());
     }
-
-    nsCOMPtr<nsIWebProgress> webProgress =
-        new RemoteWebProgress(0, false, BrowsingContext()->IsTopContent());
-    GetBrowsingContext()->Top()->GetWebProgress()->OnContentBlockingEvent(
-        webProgress, aRequest, event.value());
   }
 }
 
@@ -1164,33 +1158,6 @@ void WindowGlobalParent::FinishAccumulatingPageUseCounters() {
   mPageUseCounters = nullptr;
 }
 
-// Collect the path from aContext up to its parent. Returns true if any context
-// in the chain isn't a child of its parent
-static bool GetPath(BrowsingContext* aContext,
-                    FallibleTArray<uint32_t>& aPath) {
-  bool missingContext = false;
-
-  BrowsingContext* current = aContext;
-  while (current) {
-    BrowsingContext* parent = current->GetParent();
-    if (parent) {
-      auto children = parent->Children();
-      auto result = std::find(children.cbegin(), children.cend(), current);
-      if (result == children.cend()) {
-        missingContext = true;
-      }
-
-      if (!aPath.AppendElement(std::distance(children.cbegin(), result),
-                               fallible)) {
-        break;
-      }
-    }
-    current = parent;
-  }
-
-  return missingContext;
-}
-
 static void GetFormData(JSContext* aCx, const sessionstore::FormData& aFormData,
                         nsIURI* aDocumentURI, SessionStoreFormData& aUpdate) {
   if (!aFormData.hasData()) {
@@ -1253,8 +1220,8 @@ nsresult WindowGlobalParent::WriteFormDataAndScrollToSessionStore(
     return NS_OK;
   }
 
-  Element* frameElement = GetRootOwnerElement();
-  if (!frameElement) {
+  RefPtr<CanonicalBrowsingContext> context = BrowsingContext();
+  if (!context) {
     return NS_OK;
   }
 
@@ -1271,12 +1238,6 @@ nsresult WindowGlobalParent::WriteFormDataAndScrollToSessionStore(
   }
 
   RootedDictionary<SessionStoreWindowStateChange> windowState(jsapi.cx());
-
-  if (GetPath(GetBrowsingContext(), windowState.mPath)) {
-    // If a context in the parent chain from the current context is
-    // missing, do nothing.
-    return NS_OK;
-  }
 
   if (aFormData) {
     GetFormData(jsapi.cx(), *aFormData, mDocumentURI,
@@ -1290,21 +1251,28 @@ nsresult WindowGlobalParent::WriteFormDataAndScrollToSessionStore(
     }
   }
 
-  windowState.mHasChildren.Construct() =
-      !GetBrowsingContext()->Children().IsEmpty();
+  nsTArray<uint32_t> path;
+  if (!context->GetOffsetPath(path)) {
+    return NS_OK;
+  }
+
+  windowState.mPath = std::move(path);
+  windowState.mHasChildren.Construct() = !context->Children().IsEmpty();
 
   JS::RootedValue update(jsapi.cx());
   if (!ToJSValue(jsapi.cx(), windowState, &update)) {
     return NS_ERROR_FAILURE;
   }
 
-  return funcs->UpdateSessionStoreForWindow(frameElement, GetBrowsingContext(),
+  JS::RootedValue key(jsapi.cx(), context->Top()->PermanentKey());
+
+  return funcs->UpdateSessionStoreForWindow(GetRootOwnerElement(), context, key,
                                             aEpoch, update);
 }
 
 nsresult WindowGlobalParent::ResetSessionStore(uint32_t aEpoch) {
-  Element* frameElement = GetRootOwnerElement();
-  if (!frameElement) {
+  RefPtr<CanonicalBrowsingContext> context = BrowsingContext();
+  if (!context) {
     return NS_OK;
   }
 
@@ -1322,12 +1290,12 @@ nsresult WindowGlobalParent::ResetSessionStore(uint32_t aEpoch) {
 
   RootedDictionary<SessionStoreWindowStateChange> windowState(jsapi.cx());
 
-  if (GetPath(GetBrowsingContext(), windowState.mPath)) {
-    // If a context in the parent chain from the current context is
-    // missing, do nothing.
+  nsTArray<uint32_t> path;
+  if (!context->GetOffsetPath(path)) {
     return NS_OK;
   }
 
+  windowState.mPath = std::move(path);
   windowState.mHasChildren.Construct() = false;
   windowState.mFormdata.Construct();
   windowState.mScroll.Construct();
@@ -1337,8 +1305,22 @@ nsresult WindowGlobalParent::ResetSessionStore(uint32_t aEpoch) {
     return NS_ERROR_FAILURE;
   }
 
-  return funcs->UpdateSessionStoreForWindow(frameElement, GetBrowsingContext(),
+  JS::RootedValue key(jsapi.cx(), context->Top()->PermanentKey());
+
+  return funcs->UpdateSessionStoreForWindow(GetRootOwnerElement(), context, key,
                                             aEpoch, update);
+}
+
+void WindowGlobalParent::NotifySessionStoreUpdatesComplete(Element* aEmbedder) {
+  if (!aEmbedder) {
+    aEmbedder = GetRootOwnerElement();
+  }
+  if (aEmbedder) {
+    if (nsCOMPtr<nsIObserverService> obs = services::GetObserverService()) {
+      obs->NotifyWhenScriptSafe(ToSupports(aEmbedder),
+                                "browser-shutdown-tabstate-updated", nullptr);
+    }
+  }
 }
 
 mozilla::ipc::IPCResult WindowGlobalParent::RecvUpdateSessionStore(
@@ -1426,6 +1408,39 @@ mozilla::ipc::IPCResult WindowGlobalParent::RecvUpdateBFCacheStatus(
 mozilla::ipc::IPCResult WindowGlobalParent::RecvSetSingleChannelId(
     const Maybe<uint64_t>& aSingleChannelId) {
   mSingleChannelId = aSingleChannelId;
+  return IPC_OK();
+}
+
+mozilla::ipc::IPCResult WindowGlobalParent::RecvSetDocumentDomain(
+    nsIURI* aDomain) {
+  if (mSandboxFlags & SANDBOXED_DOMAIN) {
+    // We're sandboxed; disallow setting domain
+    return IPC_FAIL(this, "Sandbox disallows domain setting.");
+  }
+
+  // Might need to do a featurepolicy check here, like we currently do in the
+  // child process?
+
+  nsCOMPtr<nsIURI> uri;
+  mDocumentPrincipal->GetDomain(getter_AddRefs(uri));
+  if (!uri) {
+    uri = mDocumentPrincipal->GetURI();
+    if (!uri) {
+      return IPC_OK();
+    }
+  }
+
+  if (!Document::IsValidDomain(uri, aDomain)) {
+    // Error: illegal domain
+    return IPC_FAIL(
+        this, "Setting domain that's not a suffix of existing domain value.");
+  }
+
+  if (GetBrowsingContext()->CrossOriginIsolated()) {
+    return IPC_FAIL(this, "Setting domain in a cross-origin isolated BC.");
+  }
+
+  mDocumentPrincipal->SetDomain(aDomain);
   return IPC_OK();
 }
 

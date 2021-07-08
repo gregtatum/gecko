@@ -27,9 +27,6 @@ add_task(async function test_network_markers_service_worker_register() {
   // In this first step, we request an HTML page that will register a service
   // worker. We'll wait until the service worker is fully installed before
   // checking various things.
-  if (!AppConstants.MOZ_GECKO_PROFILER) {
-    return;
-  }
   Assert.ok(
     !Services.profiler.IsActive(),
     "The profiler is not currently active"
@@ -216,9 +213,6 @@ add_task(async function test_network_markers_service_worker_register() {
 add_task(async function test_network_markers_service_worker_use() {
   // In this test we request an HTML file that itself contains resources that
   // are redirected.
-  if (!AppConstants.MOZ_GECKO_PROFILER) {
-    return;
-  }
   Assert.ok(
     !Services.profiler.IsActive(),
     "The profiler is not currently active"
@@ -238,12 +232,27 @@ add_task(async function test_network_markers_service_worker_use() {
       contentPid
     );
 
-    const parentNetworkMarkers = getInflatedNetworkMarkers(parentThread);
+    // By logging a few information about the threads we make debugging easier.
+    logInformationForThread("parentThread information", parentThread);
+    logInformationForThread("contentThread information", contentThread);
+
+    const parentNetworkMarkers = getInflatedNetworkMarkers(parentThread)
+      // When we load a page, Firefox will check the service worker freshness
+      // after a few seconds. So when the test lasts a long time (with some test
+      // environments) we might see spurious markers about that that we're not
+      // interesting in in this part of the test. They're only present in the
+      // parent process.
+      .filter(marker => !marker.data.URI.includes(serviceWorkerFileName));
     const contentNetworkMarkers = getInflatedNetworkMarkers(contentThread);
 
     // Here are some logs to ease debugging.
-    info(JSON.stringify(parentNetworkMarkers, null, 2));
-    info(JSON.stringify(contentNetworkMarkers, null, 2));
+    info(
+      "Parent network markers: " + JSON.stringify(parentNetworkMarkers, null, 2)
+    );
+    info(
+      "Content network markers: " +
+        JSON.stringify(contentNetworkMarkers, null, 2)
+    );
 
     const parentPairs = getPairsOfNetworkMarkers(parentNetworkMarkers);
     const contentPairs = getPairsOfNetworkMarkers(contentNetworkMarkers);
@@ -274,15 +283,15 @@ add_task(async function test_network_markers_service_worker_use() {
     );
 
     // Let's look at all pairs and make sure we requested all expected files.
-    const parentStopMarkers = parentPairs.map(([_, stopMarker]) => stopMarker);
+    const parentEndMarkers = parentPairs.map(([_, endMarker]) => endMarker);
     const contentStopMarkers = contentPairs.map(
       ([_, stopMarker]) => stopMarker
     );
 
     Assert.equal(
-      parentStopMarkers.length,
-      expectedFiles.length,
-      "There should be as many stop markers in the parent process as requested files."
+      parentEndMarkers.length,
+      expectedFiles.length * 2, // one redirect + one stop
+      "There should be twice as many end markers in the parent process as requested files."
     );
     Assert.equal(
       contentStopMarkers.length,
@@ -294,7 +303,7 @@ add_task(async function test_network_markers_service_worker_use() {
       info(
         `Checking if "${expectedFile}" if present in the network markers in both processes.`
       );
-      const parentMarker = parentStopMarkers.find(
+      const [parentRedirectMarker, parentStopMarker] = parentEndMarkers.filter(
         marker => marker.data.URI === expectedFile
       );
       const contentMarker = contentStopMarkers.find(
@@ -303,7 +312,6 @@ add_task(async function test_network_markers_service_worker_use() {
 
       const commonDataProperties = {
         type: "Network",
-        status: "STATUS_STOP",
         URI: expectedFile,
         requestMethod: "GET",
         contentType: Expect.stringMatches(/^(text\/html|image\/svg\+xml)$/),
@@ -313,44 +321,67 @@ add_task(async function test_network_markers_service_worker_use() {
         pri: Expect.number(),
       };
 
-      const expectedPropertiesForTopLevelNavigation = {
+      const expectedProperties = {
         name: Expect.stringMatches(
           `Load \\d+:.*${escapeStringRegexp(expectedFile)}`
         ),
-        // Note: in the future we may have more properties. We're using the
-        // "Only" flavor of the matcher so that we don't forget to update this
-        // test when this changes.
-        data: Expect.objectContainsOnly(commonDataProperties),
       };
 
-      const expectedPropertiesForOtherRequests = {
-        name: Expect.stringMatches(
-          `Load \\d+:.*${escapeStringRegexp(expectedFile)}`
-        ),
-        // Note: in the future we may have more properties. We're using the
-        // "Only" flavor of the matcher so that we don't forget to update this
-        // test when this changes.
-        data: Expect.objectContainsOnly({
+      Assert.objectContains(parentRedirectMarker, expectedProperties);
+      Assert.objectContains(parentStopMarker, expectedProperties);
+      Assert.objectContains(contentMarker, expectedProperties);
+      if (i === 0) {
+        // This is the top level navigation, the HTML file.
+        Assert.objectContainsOnly(parentRedirectMarker.data, {
+          ...commonDataProperties,
+          status: "STATUS_REDIRECT",
+          contentType: null,
+          cache: "Unresolved",
+          RedirectURI: expectedFile,
+          redirectType: "Internal",
+          redirectId: parentStopMarker.data.id,
+          isHttpToHttpsRedirect: false,
+        });
+
+        Assert.objectContainsOnly(parentStopMarker.data, {
+          ...commonDataProperties,
+          status: "STATUS_STOP",
+        });
+
+        Assert.objectContainsOnly(contentMarker.data, {
+          ...commonDataProperties,
+          status: "STATUS_STOP",
+        });
+      } else {
+        Assert.objectContainsOnly(parentRedirectMarker.data, {
+          ...commonDataProperties,
+          status: "STATUS_REDIRECT",
+          contentType: null,
+          cache: "Unresolved",
+          innerWindowID: Expect.number(),
+          RedirectURI: expectedFile,
+          redirectType: "Internal",
+          redirectId: parentStopMarker.data.id,
+          isHttpToHttpsRedirect: false,
+        });
+
+        Assert.objectContainsOnly(
+          parentStopMarker.data,
+          // Note: in the future we may have more properties. We're using the
+          // "Only" flavor of the matcher so that we don't forget to update this
+          // test when this changes.
+          {
+            ...commonDataProperties,
+            innerWindowID: Expect.number(),
+            status: "STATUS_STOP",
+          }
+        );
+
+        Assert.objectContainsOnly(contentMarker.data, {
           ...commonDataProperties,
           innerWindowID: Expect.number(),
-        }),
-      };
-
-      if (i === 0) {
-        Assert.objectContains(
-          parentMarker,
-          expectedPropertiesForTopLevelNavigation
-        );
-        Assert.objectContains(
-          contentMarker,
-          expectedPropertiesForTopLevelNavigation
-        );
-      } else {
-        Assert.objectContains(parentMarker, expectedPropertiesForOtherRequests);
-        Assert.objectContains(
-          contentMarker,
-          expectedPropertiesForOtherRequests
-        );
+          status: "STATUS_STOP",
+        });
       }
     }
   });

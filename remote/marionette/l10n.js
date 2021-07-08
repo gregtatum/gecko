@@ -23,7 +23,7 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
-  error: "chrome://marionette/content/error.js",
+  error: "chrome://remote/content/shared/webdriver/Errors.jsm",
 });
 
 XPCOMUtils.defineLazyGlobalGetters(this, ["DOMParser"]);

@@ -357,6 +357,8 @@ class nsWindow final : public nsWindowBase {
   bool SynchronouslyRepaintOnResize() override;
   virtual void MaybeDispatchInitialFocusEvent() override;
 
+  virtual void LocalesChanged() override;
+
  protected:
   virtual ~nsWindow();
 
@@ -446,7 +448,7 @@ class nsWindow final : public nsWindowBase {
   TimeStamp GetMessageTimeStamp(LONG aEventTime) const;
   static void UpdateFirstEventTime(DWORD aEventTime);
   void FinishLiveResizing(ResizeState aNewState);
-  nsIntPoint GetTouchCoordinates(WPARAM wParam, LPARAM lParam);
+  LayoutDeviceIntPoint GetTouchCoordinates(WPARAM wParam, LPARAM lParam);
   mozilla::Maybe<mozilla::PanGestureInput> ConvertTouchToPanGesture(
       const mozilla::MultiTouchInput& aTouchInput, PTOUCHINPUT aOriginalEvent);
   void DispatchTouchOrPanGestureInput(mozilla::MultiTouchInput& aTouchInput,

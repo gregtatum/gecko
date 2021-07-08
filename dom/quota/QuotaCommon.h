@@ -7,15 +7,11 @@
 #ifndef mozilla_dom_quota_quotacommon_h__
 #define mozilla_dom_quota_quotacommon_h__
 
-// This must be included at the very beginning since it also contains
-// QM_ERROR_STACKS_ENABLED definition which is used below.
-// XXX Create a special file for this, like QuotaConfig.h
-#include "mozilla/dom/QMResult.h"
+#include "mozilla/dom/quota/Config.h"
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <map>
 #include <type_traits>
 #include <utility>
 #include "mozIStorageStatement.h"
@@ -27,11 +23,10 @@
 #include "mozilla/Maybe.h"
 #include "mozilla/Result.h"
 #include "mozilla/ResultExtensions.h"
-#include "mozilla/ThreadLocal.h"
-#if (defined(EARLY_BETA_OR_EARLIER) || defined(DEBUG)) && \
-    defined(QM_ERROR_STACKS_ENABLED)
+#if defined(QM_LOG_ERROR_ENABLED) && defined(QM_ERROR_STACKS_ENABLED)
 #  include "mozilla/Variant.h"
 #endif
+#include "mozilla/dom/QMResult.h"
 #include "mozilla/ipc/ProtocolUtils.h"
 #include "nsCOMPtr.h"
 #include "nsDebug.h"
@@ -45,7 +40,6 @@
 #include "nsString.h"
 #include "nsTArray.h"
 #include "nsTLiteralString.h"
-#include "nsXULAppAPI.h"
 
 namespace mozilla {
 template <typename T>
@@ -855,7 +849,7 @@ class NotNull;
 // QM_NOTEONLY_TRY_INSPECT doesn't make sense.
 
 // QM_OR_ELSE_REPORT macro is an implementation detail of
-// QM_OR_ELSE_WARN/QM_OR_ELSE_NOTE/QM_OR_ELSE_LOG and shouldn't be used
+// QM_OR_ELSE_WARN/QM_OR_ELSE_NOTE/QM_OR_ELSE_LOG_VERBOSE and shouldn't be used
 // directly.
 
 #define QM_OR_ELSE_REPORT(severity, expr, fallback)                \
@@ -884,7 +878,7 @@ class NotNull;
 #define QM_OR_ELSE_NOTE(...) QM_OR_ELSE_REPORT(Note, __VA_ARGS__)
 
 /**
- * QM_OR_ELSE_LOG is like QM_OR_ELSE_WARN. The only difference is that
+ * QM_OR_ELSE_LOG_VERBOSE is like QM_OR_ELSE_WARN. The only difference is that
  * failures are reported using the lowest severity which is currently ignored
  * in LogError, so nothing goes to the console, browser console and telemetry.
  * Since nothing goes to the telemetry, the macro can't signal the end of the
@@ -892,7 +886,7 @@ class NotNull;
  * telemetry. For that reason, the expression shouldn't contain nested QM_TRY
  * macro uses.
  */
-#define QM_OR_ELSE_LOG(...) QM_OR_ELSE_REPORT(Log, __VA_ARGS__)
+#define QM_OR_ELSE_LOG_VERBOSE(...) QM_OR_ELSE_REPORT(Log, __VA_ARGS__)
 
 namespace mozilla::dom::quota {
 
@@ -909,8 +903,8 @@ auto OrElseIf(Result<V, E>&& aResult, P&& aPred, F&& aFunc) -> Result<V, E> {
 }  // namespace mozilla::dom::quota
 
 // QM_OR_ELSE_REPORT_IF macro is an implementation detail of
-// QM_OR_ELSE_WARN_IF/QM_OR_ELSE_NOTE_IF/QM_OR_ELSE_LOG_IF and shouldn't be
-// used directly.
+// QM_OR_ELSE_WARN_IF/QM_OR_ELSE_NOTE_IF/QM_OR_ELSE_LOG_VERBOSE_IF and
+// shouldn't be used directly.
 
 #define QM_OR_ELSE_REPORT_IF(severity, expr, predicate, fallback) \
   mozilla::dom::quota::OrElseIf(                                  \
@@ -947,15 +941,16 @@ auto OrElseIf(Result<V, E>&& aResult, P&& aPred, F&& aFunc) -> Result<V, E> {
 #define QM_OR_ELSE_NOTE_IF(...) QM_OR_ELSE_REPORT_IF(Note, __VA_ARGS__)
 
 /**
- * QM_OR_ELSE_LOG_IF is like QM_OR_ELSE_WARN_IF. The only difference is that
- * failures are reported using the lowest severity which is currently ignored
- * in LogError, so nothing goes to the console, browser console and telemetry.
- * Since nothing goes to the telemetry, the macro can't signal the end of the
- * underlying error stack or change the type of the error stack in the
- * telemetry. For that reason, the expression shouldn't contain nested QM_TRY
- * macro uses.
+ * QM_OR_ELSE_LOG_VERBOSE_IF is like QM_OR_ELSE_WARN_IF. The only difference is
+ * that failures are reported using the lowest severity which is currently
+ * ignored in LogError, so nothing goes to the console, browser console and
+ * telemetry. Since nothing goes to the telemetry, the macro can't signal the
+ * end of the underlying error stack or change the type of the error stack in
+ * the telemetry. For that reason, the expression shouldn't contain nested
+ * QM_TRY macro uses.
  */
-#define QM_OR_ELSE_LOG_IF(...) QM_OR_ELSE_REPORT_IF(Log, __VA_ARGS__)
+#define QM_OR_ELSE_LOG_VERBOSE_IF(...) \
+  QM_OR_ELSE_REPORT_IF(Verbose, __VA_ARGS__)
 
 // Telemetry probes to collect number of failure during the initialization.
 #ifdef NIGHTLY_BUILD
@@ -1319,10 +1314,10 @@ enum class Severity {
   Error,
   Warning,
   Note,
-  Log,
+  Verbose,
 };
 
-#if defined(EARLY_BETA_OR_EARLIER) || defined(DEBUG)
+#ifdef QM_LOG_ERROR_ENABLED
 #  ifdef QM_ERROR_STACKS_ENABLED
 using ResultType = Variant<QMResult, nsresult, Nothing>;
 
@@ -1343,62 +1338,6 @@ Result<bool, nsresult> WarnIfFileIsUnknown(nsIFile& aFile,
                                            int32_t aSourceFileLine);
 #endif
 
-#if defined(EARLY_BETA_OR_EARLIER) || defined(DEBUG)
-#  define QM_ENABLE_SCOPED_LOG_EXTRA_INFO
-#endif
-
-struct MOZ_STACK_CLASS ScopedLogExtraInfo {
-  static constexpr const char kTagQuery[] = "query";
-  static constexpr const char kTagContext[] = "context";
-
-#ifdef QM_ENABLE_SCOPED_LOG_EXTRA_INFO
- private:
-  static auto FindSlot(const char* aTag);
-
- public:
-  template <size_t N>
-  ScopedLogExtraInfo(const char (&aTag)[N], const nsACString& aExtraInfo)
-      : mTag{aTag}, mCurrentValue{aExtraInfo} {
-    // Initialize is currently only called in the parent process, we could call
-    // it directly from nsLayoutStatics::Initialize in the content process to
-    // allow use of ScopedLogExtraInfo in that too. The check in GetExtraInfoMap
-    // must be removed then.
-    MOZ_ASSERT(XRE_IsParentProcess());
-
-    AddInfo();
-  }
-
-  ~ScopedLogExtraInfo();
-
-  ScopedLogExtraInfo(ScopedLogExtraInfo&& aOther);
-  ScopedLogExtraInfo& operator=(ScopedLogExtraInfo&& aOther) = delete;
-
-  ScopedLogExtraInfo(const ScopedLogExtraInfo&) = delete;
-  ScopedLogExtraInfo& operator=(const ScopedLogExtraInfo&) = delete;
-
-  using ScopedLogExtraInfoMap = std::map<const char*, const nsACString*>;
-  static ScopedLogExtraInfoMap GetExtraInfoMap();
-
-  static void Initialize();
-
- private:
-  const char* mTag;
-  const nsACString* mPreviousValue;
-  nsCString mCurrentValue;
-
-  static MOZ_THREAD_LOCAL(const nsACString*) sQueryValue;
-  static MOZ_THREAD_LOCAL(const nsACString*) sContextValue;
-
-  void AddInfo();
-#else
-  template <size_t N>
-  ScopedLogExtraInfo(const char (&aTag)[N], const nsACString& aExtraInfo) {}
-
-  // user-defined to silence unused variable warnings
-  ~ScopedLogExtraInfo() {}
-#endif
-};
-
 // As HandleError is a function that will only be called in error cases, it is
 // marked with MOZ_COLD to avoid bloating the code of calling functions, if it's
 // not empty.
@@ -1410,11 +1349,12 @@ struct MOZ_STACK_CLASS ScopedLogExtraInfo {
 //
 // This functions are not intended to be called
 // directly, they should only be called from the QM_* macros.
-#if defined(EARLY_BETA_OR_EARLIER) || defined(DEBUG)
+#ifdef QM_LOG_ERROR_ENABLED
 template <typename T>
-MOZ_COLD void HandleError(const char* aExpr, const T& aRv,
-                          const char* aSourceFilePath, int32_t aSourceFileLine,
-                          const Severity aSeverity) {
+MOZ_COLD MOZ_NEVER_INLINE void HandleError(const char* aExpr, const T& aRv,
+                                           const char* aSourceFilePath,
+                                           int32_t aSourceFileLine,
+                                           const Severity aSeverity) {
 #  ifdef QM_ERROR_STACKS_ENABLED
   if constexpr (std::is_same_v<T, QMResult> || std::is_same_v<T, nsresult>) {
     mozilla::dom::quota::LogError(nsDependentCString(aExpr), ResultType(aRv),

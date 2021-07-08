@@ -46,13 +46,13 @@ your exported symbols to the shared global `this`:
 When importing symbols in Marionette code, try to be specific about
 what you need:
 
-	const {TimedPromise} = Cu.import("chrome://marionette/content/sync.js", {});
+	const {TimedPromise} = Cu.import("chrome://remote/content/marionette/sync.js", {});
 
 The [linter] will complain if you import a named symbol that is
 not in use.  If however you _need_ to import every symbol, you can:
 
 	const wait = {};
-	Cu.import("chrome://marionette/content/sync.js", wait);
+	Cu.import("chrome://remote/content/marionette/sync.js", wait);
 
 	wait.sleep(42);
 	await wait.TimedPromise(…);
@@ -165,7 +165,7 @@ We very much welcome your help in doing version control archeology
 to make this happen!
 
 The practical details of working on the Marionette code is outlined
-in [CONTRIBUTING.md], but generally you do not have to re-build
+in [Contributing.md], but generally you do not have to re-build
 Firefox when changing code.  Any change to remote/marionette/*.js
 will be picked up on restarting Firefox.  The only notable exception
 is remote/components/marionette.js, which does require
@@ -178,7 +178,7 @@ a re-build.
 [copying header]: https://www.mozilla.org/en-US/MPL/headers/
 [public domain]: https://creativecommons.org/publicdomain/zero/1.0/
 [MPL]: https://www.mozilla.org/en-US/MPL/2.0/
-[CONTRIBUTING.md]: ../CONTRIBUTING.md
+[Contributing.md]: ./Contributing.md
 
 
 Python

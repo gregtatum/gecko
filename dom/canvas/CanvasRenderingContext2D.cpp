@@ -2185,8 +2185,7 @@ already_AddRefed<CanvasPattern> CanvasRenderingContext2D::CreatePattern(
   // The canvas spec says that createPattern should use the first frame
   // of animated images
   auto flags = nsLayoutUtils::SFE_WANT_FIRST_FRAME_IF_IMAGE |
-               nsLayoutUtils::SFE_EXACT_SIZE_SURFACE |
-               nsLayoutUtils::SFE_TO_SRGB_COLORSPACE;
+               nsLayoutUtils::SFE_EXACT_SIZE_SURFACE;
   SurfaceFromElementResult res =
       nsLayoutUtils::SurfaceFromElement(element, flags, mTarget);
 
@@ -4085,9 +4084,11 @@ gfxFontGroup* CanvasRenderingContext2D::GetCurrentFontStyle() {
       int32_t perDevPixel, perCSSPixel;
       GetAppUnitsValues(&perDevPixel, &perCSSPixel);
       gfxFloat devToCssSize = gfxFloat(perDevPixel) / gfxFloat(perCSSPixel);
+      const auto* sans =
+          Servo_FontFamily_Generic(StyleGenericFontFamily::SansSerif);
       fontGroup = gfxPlatform::GetPlatform()->CreateFontGroup(
-          FontFamilyList(StyleGenericFontFamily::SansSerif), &style, language,
-          explicitLanguage, tp, fontStats, nullptr, devToCssSize);
+          sans->families, &style, language, explicitLanguage, tp, fontStats,
+          nullptr, devToCssSize);
       if (fontGroup) {
         CurrentState().font = kDefaultFontStyle;
       } else {
@@ -4529,8 +4530,7 @@ void CanvasRenderingContext2D::DrawImage(const CanvasImageSource& aImage,
     // of animated images. We also don't want to rasterize vector images.
     uint32_t sfeFlags = nsLayoutUtils::SFE_WANT_FIRST_FRAME_IF_IMAGE |
                         nsLayoutUtils::SFE_NO_RASTERIZING_VECTORS |
-                        nsLayoutUtils::SFE_EXACT_SIZE_SURFACE |
-                        nsLayoutUtils::SFE_TO_SRGB_COLORSPACE;
+                        nsLayoutUtils::SFE_EXACT_SIZE_SURFACE;
 
     SurfaceFromElementResult res =
         CanvasRenderingContext2D::CachedSurfaceFromElement(element);
@@ -5173,13 +5173,9 @@ void CanvasRenderingContext2D::FillRuleChanged() {
 }
 
 void CanvasRenderingContext2D::PutImageData(ImageData& aImageData, int32_t aDx,
-                                            int32_t aDy, ErrorResult& aError) {
+                                            int32_t aDy, ErrorResult& aRv) {
   RootedSpiderMonkeyInterface<Uint8ClampedArray> arr(RootingCx());
-  DebugOnly<bool> inited = arr.Init(aImageData.GetDataObject());
-  MOZ_ASSERT(inited);
-
-  PutImageData_explicit(aDx, aDy, aImageData.Width(), aImageData.Height(), &arr,
-                        false, 0, 0, 0, 0, aError);
+  PutImageData_explicit(aDx, aDy, aImageData, false, 0, 0, 0, 0, aRv);
 }
 
 void CanvasRenderingContext2D::PutImageData(ImageData& aImageData, int32_t aDx,
@@ -5187,27 +5183,30 @@ void CanvasRenderingContext2D::PutImageData(ImageData& aImageData, int32_t aDx,
                                             int32_t aDirtyY,
                                             int32_t aDirtyWidth,
                                             int32_t aDirtyHeight,
-                                            ErrorResult& aError) {
-  RootedSpiderMonkeyInterface<Uint8ClampedArray> arr(RootingCx());
-  DebugOnly<bool> inited = arr.Init(aImageData.GetDataObject());
-  MOZ_ASSERT(inited);
-
-  PutImageData_explicit(aDx, aDy, aImageData.Width(), aImageData.Height(), &arr,
-                        true, aDirtyX, aDirtyY, aDirtyWidth, aDirtyHeight,
-                        aError);
+                                            ErrorResult& aRv) {
+  PutImageData_explicit(aDx, aDy, aImageData, true, aDirtyX, aDirtyY,
+                        aDirtyWidth, aDirtyHeight, aRv);
 }
 
 void CanvasRenderingContext2D::PutImageData_explicit(
-    int32_t aX, int32_t aY, uint32_t aW, uint32_t aH,
-    dom::Uint8ClampedArray* aArray, bool aHasDirtyRect, int32_t aDirtyX,
-    int32_t aDirtyY, int32_t aDirtyWidth, int32_t aDirtyHeight,
+    int32_t aX, int32_t aY, ImageData& aImageData, bool aHasDirtyRect,
+    int32_t aDirtyX, int32_t aDirtyY, int32_t aDirtyWidth, int32_t aDirtyHeight,
     ErrorResult& aRv) {
-  if (aW == 0 || aH == 0) {
+  RootedSpiderMonkeyInterface<Uint8ClampedArray> arr(RootingCx());
+  if (!arr.Init(aImageData.GetDataObject())) {
+    return aRv.ThrowInvalidStateError(
+        "Failed to extract Uint8ClampedArray from ImageData (security check "
+        "failed?)");
+  }
+
+  const uint32_t width = aImageData.Width();
+  const uint32_t height = aImageData.Height();
+  if (width == 0 || height == 0) {
     return aRv.ThrowInvalidStateError("Passed-in image is empty");
   }
 
   IntRect dirtyRect;
-  IntRect imageDataRect(0, 0, aW, aH);
+  IntRect imageDataRect(0, 0, width, height);
 
   if (aHasDirtyRect) {
     // fix up negative dimensions
@@ -5259,11 +5258,11 @@ void CanvasRenderingContext2D::PutImageData_explicit(
     return;
   }
 
-  aArray->ComputeState();
+  arr.ComputeState();
 
-  uint32_t dataLen = aArray->Length();
+  uint32_t dataLen = arr.Length();
 
-  uint32_t len = aW * aH * 4;
+  uint32_t len = width * height * 4;
   if (dataLen != len) {
     return aRv.ThrowInvalidStateError("Invalid width or height");
   }
@@ -5311,10 +5310,10 @@ void CanvasRenderingContext2D::PutImageData_explicit(
   }
 
   IntRect srcRect = dirtyRect - IntPoint(aX, aY);
-  uint8_t* srcData = aArray->Data() + srcRect.y * (aW * 4) + srcRect.x * 4;
+  uint8_t* srcData = arr.Data() + srcRect.y * (width * 4) + srcRect.x * 4;
 
   PremultiplyData(
-      srcData, aW * 4, SurfaceFormat::R8G8B8A8, dstData, dstStride,
+      srcData, width * 4, SurfaceFormat::R8G8B8A8, dstData, dstStride,
       mOpaque ? SurfaceFormat::X8R8G8B8_UINT32 : SurfaceFormat::A8R8G8B8_UINT32,
       dirtyRect.Size());
 
