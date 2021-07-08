@@ -489,7 +489,7 @@ button.conference:hover:active, .btn:hover:active {
   background-color: #0090ED;
   color: white;
   right: -5px;
-  top: -5px;
+  top: 0px;
   min-width: 10px;
   padding-left: 5px;
   padding-right: 5px;
