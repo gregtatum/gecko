@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { html, css, openLink, MozLitElement } from "./widget-utils.js";
+
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
 });
@@ -10,118 +12,199 @@ export const timeFormat = new Intl.DateTimeFormat([], {
 const CALENDAR_CHECK_TIME = 5 * 60 * 1000; // 5 minutes
 // Update display every minute
 const CALENDAR_UPDATE_TIME = 60 * 1000; // 1 minute
-// Number of minutes after start that an event is hidden
-const MEETING_HIDE_DELAY = 10;
 
-export class EventList extends HTMLElement {
-  constructor(title) {
+setInterval(function() {
+  window.CompanionUtils.sendAsyncMessage("Companion:GetEvents", {});
+}, CALENDAR_CHECK_TIME);
+
+function dispatchRefreshEventsEvent() {
+  // Just fire an event to tell the list to check the cached events again.
+  document.dispatchEvent(
+    new CustomEvent("refresh-events", {
+      detail: { events: window.CompanionUtils.events },
+    })
+  );
+}
+window.addEventListener("Companion:RegisterEvents", dispatchRefreshEventsEvent);
+setInterval(dispatchRefreshEventsEvent, CALENDAR_UPDATE_TIME);
+
+function debugEnabled() {
+  return document.body.classList.contains("debugUI");
+}
+
+export class CalendarEventList extends MozLitElement {
+  static get properties() {
+    return {
+      events: { type: Array },
+    };
+  }
+
+  static get styles() {
+    return css`
+      @import url("chrome://global/skin/in-content/common.css");
+      @import url("chrome://browser/content/companion/companion.css");
+
+      .calendar {
+        padding: 5px 10px;
+      }
+
+      #calendar-panel:empty {
+        display: none;
+      }
+    `;
+  }
+
+  constructor() {
     super();
-
-    this.title = title;
-    this.className = "event-list";
-    let template = document.getElementById("template-event-list");
-    let fragment = template.content.cloneNode(true);
-
-    this.appendChild(fragment);
-
-    this.windowListener = () => this.render();
+    this.events = [];
   }
 
   connectedCallback() {
-    window.addEventListener("Companion:RegisterEvents", this.windowListener);
+    document.addEventListener("refresh-events", this);
+    super.connectedCallback();
   }
 
   disconnectedCallback() {
-    window.removeEventListener("Companion:RegisterEvents", this.windowListener);
+    document.removeEventListener("refresh-events", this);
+    super.disconnectedCallback();
+  }
+
+  getRelevantEvents(events) {
+    if (debugEnabled()) {
+      return events;
+    }
+    // Return all meetings that start in the next hour or are currently in
+    // progress.
+    let now = new Date();
+    let oneHourFromNow = new Date();
+    oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
+    return events
+      .filter(event => {
+        let startDate = new Date(event.start);
+        let endDate = new Date(event.end);
+        return startDate <= oneHourFromNow && endDate >= now;
+      })
+      .sort((a, b) => new Date(a.start) - new Date(b.start));
+  }
+
+  handleEvent(e) {
+    if (e.type == "refresh-events") {
+      this.events = this.getRelevantEvents(e.detail.events);
+    }
+  }
+
+  calendarEventItemsTemplate() {
+    return this.events.map(
+      event =>
+        html`
+          <calendar-event .event=${event}></calendar-event>
+        `
+    );
   }
 
   render() {
-    let events = window.CompanionUtils.events;
-    buildEvents(events);
+    let eventItems = this.calendarEventItemsTemplate();
+    return html`
+      <div class="calendar" ?hidden=${!eventItems.length}>
+        <div id="calendar-panel">${eventItems}</div>
+      </div>
+    `;
   }
 }
+customElements.define("calendar-event-list", CalendarEventList);
 
-class Event extends HTMLElement {
-  constructor(serviceId, data) {
-    super();
-    this.serviceId = serviceId;
-    this.data = data;
-    this.className = "event card";
-
-    let template = document.getElementById("template-event");
-    let fragment = template.content.cloneNode(true);
-
-    this.data.start = new Date(Date.parse(this.data.start));
-    this.data.end = new Date(Date.parse(this.data.end));
-
-    let date = `${timeFormat.format(this.data.start)} - ${timeFormat.format(
-      this.data.end
-    )}`;
-
-    let dateEl = fragment.querySelector(".date");
-    dateEl.textContent = date;
-    dateEl.title = date;
-
-    let summaryEl = fragment.querySelector(".summary");
-    summaryEl.textContent = this.data.summary;
-    summaryEl.title = this.data.summary;
-
-    fragment.querySelector(".event-info").addEventListener("click", event => {
-      if (event.target.nodeName == "a") {
-        window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
-          url: event.target.getAttribute("link"),
-        });
-      } else {
-        window.CompanionUtils.sendAsyncMessage("Companion:OpenCalendar", {
-          start: this.data.start,
-          serviceId: this.serviceId,
-        });
-      }
-    });
-    let conferenceIcon = fragment.querySelector(".conference-icon");
-    if (this.data.conference && this.data.conference.icon) {
-      conferenceIcon.src = this.data.conference.icon;
-      conferenceIcon.title = this.data.conference.name;
-      conferenceIcon.addEventListener("click", () =>
-        window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
-          url: this.data.conference.url,
-        })
-      );
-    } else {
-      conferenceIcon.style.display = "none";
-    }
-    this.appendChild(fragment);
-
-    /*
-    // TODO!!!!!
-    // THIS WILL NOT WORK WITH MORE THAN ONE EVENT OR MORE THAN ONE PROVIDER!!!!
-    let rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-
-    let today = new Date();
-    let event = this.data.start;
-    let options = { year: "numeric", month: "long", day: "numeric" };
-    let formattedEventDate = event.toLocaleDateString("en-US", options);
-    if (
-      today.getDate() == event.getDate() &&
-      today.getMonth() == event.getMonth() &&
-      today.getFullYear == event.getFullYear()
-    ) {
-      document.querySelector(".calendar-title").textContent =
-        rtf.format(0, "day") + " " + formattedEventDate;
-    } else {
-      let midnight = new Date();
-      midnight.setHours(24, 0, 0, 0);
-      let daysApart = Math.ceil(
-        (event.getTime() - midnight.getTime()) / (1000 * 3600 * 24)
-      );
-      document.querySelector(".calendar-title").textContent =
-        rtf.format(daysApart, "day") + " " + formattedEventDate;
-    }
-*/
+class CalendarEvent extends MozLitElement {
+  static get properties() {
+    return {
+      event: { type: Object },
+    };
   }
 
-  connectedCallback() {
-    let formattedLinks = this.data.links.map(link => ({
+  static get styles() {
+    return css`
+      @import url("chrome://global/skin/in-content/common.css");
+
+      .event {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 4px 8px;
+        cursor: default;
+        box-shadow: none;
+        border: 1px solid var(--in-content-border-color);
+      }
+
+      .conference-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        font-weight: 600;
+        font-size: 11px;
+        color: var(--in-content-deemphasized-text);
+      }
+
+      .event-info {
+        flex: 1;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .event img {
+        width: 16px;
+        height: 16px;
+        object-fit: contain;
+        object-position: 50% 50%;
+      }
+
+      .summary {
+        font-weight: bold;
+      }
+
+      .date {
+        color: var(--in-content-deemphasized-text);
+        font-size: 11px;
+      }
+
+      .event-link {
+        /* This needs to be block-style for the ellipsis to work. */
+        /* Also they're currently one per line. */
+        display: block;
+      }
+
+      .summary,
+      .subject,
+      .title,
+      .event-link {
+        max-width: 125px;
+        text-overflow: ellipsis;
+      }
+
+      .summary {
+        /* Make some space for the link's focus outline */
+        padding: 3px;
+        margin-inline-start: -3px;
+        margin-block-start: -3px;
+      }
+
+      .summary > a {
+        text-decoration: none !important;
+        color: var(--in-content-page-color) !important;
+      }
+    `;
+  }
+
+  openCalendar(e) {
+    e.preventDefault();
+    window.CompanionUtils.sendAsyncMessage("Companion:OpenCalendar", {
+      start: new Date(this.event.start),
+      serviceId: this.event.serviceId,
+    });
+  }
+
+  eventLinksTemplate() {
+    let formattedLinks = this.event.links.map(link => ({
       url: link.url,
       text:
         link.text ||
@@ -129,73 +212,74 @@ class Event extends HTMLElement {
         link.url,
     }));
 
-    for (let link of formattedLinks) {
-      let div = document.createElement("div");
-      let a = document.createElement("a");
-      a.textContent = link.text;
-      a.setAttribute("link", link.url);
-      a.setAttribute("title", link.url);
-      div.appendChild(a);
-      this.querySelector(".links").appendChild(div);
-    }
-  }
-}
-
-customElements.define("e-event", Event);
-customElements.define("e-event-list", EventList);
-
-async function updateEvents() {
-  let visibleEventStart;
-  let events = document.querySelectorAll("e-event");
-  let now = new Date();
-  let showCalendar = false;
-  for (let event of events) {
-    if (document.body.classList.contains("debugUI")) {
-      event.hidden = false;
-      showCalendar = true;
-      continue;
-    }
-    if (event.data.end < now) {
-      // Never show meetings that have happened
-      event.hidden = true;
-    } else if (now >= event.data.start) {
-      // Show meetings that have started until MEETING_HIDE_DELAY
-      let startPlusXMinutes = new Date(event.data.start.getTime());
-      startPlusXMinutes.setMinutes(
-        startPlusXMinutes.getMinutes() + MEETING_HIDE_DELAY
-      );
-      event.hidden = now > startPlusXMinutes;
-    } else if (visibleEventStart) {
-      // Show the next upcoming meeting and any other
-      // meetings that start at the same time.
-      event.hidden = event.data.start > visibleEventStart;
-    } else {
-      visibleEventStart = event.data.start;
-      event.hidden = false;
-    }
-    if (event.hidden === false) {
-      showCalendar = true;
-    }
-  }
-  document.querySelector("#calendar").hidden = !showCalendar;
-}
-
-export async function buildEvents(events) {
-  let panel = document.getElementById("calendar-panel");
-  let nodes = [];
-  for (let event of events) {
-    nodes = nodes.concat(new Event(event.serviceId, event));
+    return formattedLinks.map(
+      link =>
+        html`
+          <a
+            class="event-link"
+            href=${link.url}
+            title=${link.url}
+            @click=${openLink}
+            >${link.text}</a
+          >
+        `
+    );
   }
 
-  panel.replaceChildren(...nodes);
-  updateEvents();
+  joinConferenceTemplate() {
+    let { conference } = this.event;
+    if (!conference) {
+      return "";
+    }
+    return html`
+      <a
+        class="button-link primary"
+        href=${conference.url}
+        data-l10n-id="companion-join-meeting"
+        @click=${openLink}
+      ></a>
+    `;
+  }
+
+  conferenceInfoTemplate() {
+    let { conference } = this.event;
+    if (!conference) {
+      return "";
+    }
+    return html`
+      <div class="conference-info">
+        <img src=${conference.icon} alt="" />
+        ${conference.name}
+      </div>
+    `;
+  }
+
+  render() {
+    let { start, end, summary } = this.event;
+
+    let startTime = new Date(Date.parse(start));
+    let endTime = new Date(Date.parse(end));
+    let dateString = `${timeFormat.format(startTime)} - ${timeFormat.format(
+      endTime
+    )}`;
+
+    return html`
+      <div class="event card card-no-hover">
+        ${this.conferenceInfoTemplate()}
+        <div class="event-info">
+          <div class="event-content">
+            <div class="summary" title=${summary}>
+              <a href="#" @click=${this.openCalendar}>
+                ${summary}
+              </a>
+            </div>
+            <div class="date">${dateString}</div>
+            <div class="links">${this.eventLinksTemplate()}</div>
+          </div>
+          ${this.joinConferenceTemplate()}
+        </div>
+      </div>
+    `;
+  }
 }
-
-setInterval(function() {
-  window.CompanionUtils.sendAsyncMessage("Companion:GetEvents", {});
-}, CALENDAR_CHECK_TIME);
-
-// This should live in a more central location
-setInterval(function() {
-  updateEvents();
-}, CALENDAR_UPDATE_TIME);
+customElements.define("calendar-event", CalendarEvent);

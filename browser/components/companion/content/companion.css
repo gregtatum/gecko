@@ -293,14 +293,6 @@ h2 {
   border-radius: 0px 4px 4px 0px;
 }
 
-#calendar {
-  padding: 5px 10px;
-}
-
-#calendar-panel:empty {
-  display: none;
-}
-
 #calendar-link {
   padding: 0 10px;
   display: block;
@@ -322,40 +314,6 @@ h2 {
   height: 16px;
   width: 16px;
   padding-left: 10px;
-}
-
-.event {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: start;
-  padding: 5px;
-  cursor: default;
-}
-
-.event-info {
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: start;
-}
-
-.event img {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-  object-position: 50% 50%;
-}
-
-.date {
-  font-weight: 600;
-  opacity: 0.5;
-  font-size: smaller;
-}
-
-.summary, .subject, .title {
-  text-overflow: ellipsis;
 }
 
 .conference {
@@ -678,11 +636,6 @@ button.conference:hover:active, .btn:hover:active {
 
 .pocket .domain {
   font-size: 0.625em;
-}
-
-.calendar-title {
-  font-weight: bold;
-  line-height: normal;
 }
 
 .event-content {

@@ -1,6 +1,7 @@
 browser/components/companion/services/workshop/build/
 browser/components/companion/services/workshop/node_modules/
 browser/components/companion/services/workshop/src/vendor/
+browser/components/companion/content/lit.all.js
 browser/components/newtab/vendor/
 browser/components/pocket/content/panels/js/vendor/
 browser/components/translation/cld2/
