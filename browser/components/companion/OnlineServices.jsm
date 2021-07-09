@@ -87,6 +87,7 @@ function getConferencingDetails(url) {
 }
 
 function getConferenceInfo(result) {
+  // conferenceData is a Google specific field
   if (result.conferenceData?.conferenceSolution) {
     let base = {
       icon: result.conferenceData.conferenceSolution.iconUri,
@@ -101,6 +102,11 @@ function getConferenceInfo(result) {
         };
       }
     }
+  }
+  // onlineMeeting is a Google specific field
+  if (result.onlineMeeting) {
+    let locationURL = new URL(result.onlineMeeting.joinUrl);
+    return getConferencingDetails(locationURL);
   }
   if (result.location) {
     try {
@@ -136,6 +142,8 @@ function getConferenceInfo(result) {
   return null;
 }
 
+let linksToIgnore = ["https://aka.ms/JoinTeamsMeeting"];
+
 async function processLink(url, text) {
   try {
     url = new URL(url);
@@ -146,6 +154,9 @@ async function processLink(url, text) {
   }
   // We already handled conferencing URLs separately
   if (conferencingInfo.find(info => url.host.endsWith(info.domain))) {
+    return null;
+  }
+  if (linksToIgnore.includes(url.href)) {
     return null;
   }
   let link = {};
@@ -168,9 +179,16 @@ async function processLink(url, text) {
 }
 
 async function getLinkInfo(result) {
+  let doc;
   let links = [];
   let parser = new DOMParser();
-  let doc = parser.parseFromString(result.description, "text/html");
+  if ("body" in result) {
+    // This is Microsoft specific
+    doc = parser.parseFromString(result.body.content, "text/html");
+  } else {
+    // This is Google specific
+    doc = parser.parseFromString(result.description, "text/html");
+  }
   let anchors = doc.getElementsByTagName("a");
   if (anchors.length) {
     for (let anchor of anchors) {
@@ -389,7 +407,9 @@ class GoogleService {
       }
 
       let results = await response.json();
+
       log.debug(JSON.stringify(results));
+
       for (let result of results.items) {
         // Ignore all day events
         if (!result.start?.dateTime || !result.end?.dateTime) {
@@ -458,6 +478,7 @@ class GoogleService {
     }
 
     let results = await response.json();
+
     log.debug(JSON.stringify(results));
 
     return {
@@ -584,7 +605,11 @@ class MicrosoftService {
     this.app = config.type;
     this.id = ++nextServiceId;
 
-    let scopes = ["https://graph.microsoft.com/Calendars.Read"];
+    let scopes = [
+      // This is required or we don't get a refreshToken
+      "offline_access",
+      "https://graph.microsoft.com/Calendars.Read",
+    ];
 
     this.auth = new OAuth2(
       services[this.app].endpoint,
@@ -592,18 +617,50 @@ class MicrosoftService {
       scopes.join(" "),
       services[this.app].clientId,
       services[this.app].clientSecret,
+      null,
       config?.auth
     );
   }
 
-  connect() {
+  async connect() {
     // This will force login if not already logged in.
-    let token = this.auth.getToken();
-    OnlineServices.persist();
+    let token = await this.getToken();
     return token;
   }
 
-  disconnect() {}
+  async disconnect() {
+    // Unfortunately none of the documented methods
+    // for revoking tokens are working with Microsoft,
+    // so I'm punting for now.
+    /*
+    let token = await this.getToken();
+
+    // revoke access for the current stoken stored
+    let apiTarget = new URL(
+      `https://graph.microsoft.com/v1.0/me/revokeSignInSessions`
+    );
+    let headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    let response = await fetch(apiTarget, {
+      method: "POST",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(response.statusText);
+    }
+    */
+  }
+
+  async getToken() {
+    let token = await this.auth.getToken();
+    if (token) {
+      OnlineServices.persist();
+    }
+    return token;
+  }
 
   openCalendar(year, month, day) {
     this.openLink(
@@ -616,21 +673,16 @@ class MicrosoftService {
   async getNextMeetings() {
     let token = await this.getToken();
 
-    let apiTarget = new URL(
-      "https://graph.microsoft.com/v1.0/me/calendar/events"
-    );
-
-    //    apiTarget.searchParams.set("maxResults", 5);
-    apiTarget.searchParams.set("orderBy", "startTime");
-    apiTarget.searchParams.set("singleEvents", "true");
-    let oneHourAgo = new Date();
-    oneHourAgo.setHours(oneHourAgo.getHours() - 1);
-    apiTarget.searchParams.set("timeMin", oneHourAgo.toISOString());
+    let dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
     // If we want to reduce the window, we can just make
     // timeMax an hour from now.
     let midnight = new Date();
     midnight.setHours(24, 0, 0, 0);
-    apiTarget.searchParams.set("timeMax", midnight.toISOString());
+
+    let apiTarget = new URL(
+      `https://graph.microsoft.com/v1.0/me/calendar/events?orderby=start/dateTime&$filter=start/dateTime ge '${dayStart.toISOString()}' AND start/dateTime le '${midnight.toISOString()}'`
+    );
 
     let headers = {
       Authorization: `Bearer ${token}`,
@@ -640,25 +692,33 @@ class MicrosoftService {
       headers,
     });
 
-    log.debug(response);
-
     if (!response.ok) {
       throw new Error(response.statusText);
     }
 
     let results = await response.json();
+
     log.debug(JSON.stringify(results));
 
-    let events = results.items.map(result => ({
-      summary: result.summary,
-      start: new Date(result.start.dateTime),
-      end: new Date(result.end.dateTime),
-      conference: getConferenceInfo(result),
-    }));
-
-    events.sort((a, b) => a.start - b.start);
-
-    return events;
+    let allEvents = new Map();
+    for (let result of results.value) {
+      // Ignore all day events
+      if (result.isAllDay) {
+        continue;
+      }
+      let event = {};
+      event.summary = result.subject;
+      event.start = new Date(result.start.dateTime + "Z");
+      event.end = new Date(result.end.dateTime + "Z");
+      event.links = [];
+      event.conference = getConferenceInfo(result);
+      event.links = await getLinkInfo(result);
+      //      event.calendar = {};
+      //      event.calendar.id = calendar.id;
+      allEvents.set(result.id, event);
+      //      event.serviceId = this.id;
+    }
+    return Array.from(allEvents.values()).sort((a, b) => a.start - b.start);
   }
 
   toJSON() {
