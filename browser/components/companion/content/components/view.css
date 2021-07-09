@@ -11,6 +11,11 @@
   padding: 5px;
 }
 
+.view-el:not(.active) {
+  align-items: center;
+  justify-content: center;
+}
+
 .active {
   animation-name: activate;
   animation-duration: 0.5s;  
@@ -28,8 +33,16 @@
   fill: currentColor;
 }
 
+.view-el.active .view-icon {
+  margin-inline-end: 5px;
+}
+
 .view-icon:not([src]) {
   visibility: hidden;
+}
+
+.view-el:not(.active) .view-label-container {
+  display: none;
 }
 
 /**
