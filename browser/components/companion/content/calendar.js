@@ -151,6 +151,18 @@ class CalendarEvent extends MozLitElement {
         justify-content: space-between;
       }
 
+      .event-actions {
+        display: flex;
+        align-self: start;
+        gap: 4px;
+        font-size: 11px;
+      }
+
+      .event-actions .button-link {
+        min-height: auto;
+        margin: 0;
+      }
+
       .event img {
         width: 16px;
         height: 16px;
@@ -179,6 +191,8 @@ class CalendarEvent extends MozLitElement {
       .event-link {
         max-width: 125px;
         text-overflow: ellipsis;
+        overflow-x: hidden;
+        white-space: nowrap;
       }
 
       .summary {
@@ -254,6 +268,23 @@ class CalendarEvent extends MozLitElement {
     `;
   }
 
+  emailGuestsTemplate() {
+    let { attendees, summary } = this.event;
+    if (!attendees?.length) {
+      return "";
+    }
+    let attendeeEmails = attendees.map(a => a.email).join(",");
+    // FIXME: (l10n) The subject should get localised.
+    return html`
+      <a
+        class="button-link"
+        href="mailto:${attendeeEmails}?subject=Running late to ${summary}"
+        data-l10n-id="companion-email-guests"
+        @click=${openLink}
+      ></a>
+    `;
+  }
+
   render() {
     let { start, end, summary } = this.event;
 
@@ -276,7 +307,9 @@ class CalendarEvent extends MozLitElement {
             <div class="date">${dateString}</div>
             <div class="links">${this.eventLinksTemplate()}</div>
           </div>
-          ${this.joinConferenceTemplate()}
+          <div class="event-actions">
+            ${this.emailGuestsTemplate()} ${this.joinConferenceTemplate()}
+          </div>
         </div>
       </div>
     `;

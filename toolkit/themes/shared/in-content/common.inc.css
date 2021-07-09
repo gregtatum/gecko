@@ -326,7 +326,8 @@ html|button {
 button,
 html|select,
 html|input[type="color"],
-xul|menulist {
+xul|menulist,
+a.button-link {
   appearance: none;
   min-height: 32px;
   color: var(--in-content-button-text-color, inherit);
@@ -373,7 +374,8 @@ xul|button > .button-box > .button-text {
 }
 
 xul|button,
-html|button {
+html|button,
+a.button-link {
   /* Use the same margin of other elements for the alignment */
   margin-inline: 4px;
 }
@@ -420,7 +422,9 @@ html|button:enabled:hover,
 html|select:not([size], [multiple]):enabled:hover,
 html|input[type="color"]:hover,
 xul|button:not([disabled="true"]):hover,
-xul|menulist:not([disabled="true"]):hover {
+xul|menulist:not([disabled="true"]):hover,
+a.button-link:hover,
+a.button-link:hover:active {
   background-color: var(--in-content-button-background-hover);
   color: var(--in-content-button-text-color-hover);
   border-color: transparent;
@@ -432,7 +436,8 @@ html|input[type="color"]:enabled:hover:active,
 xul|button:not([disabled="true"]):hover:active,
 xul|button[open],
 xul|button[open]:hover,
-xul|menulist[open="true"]:not([disabled="true"]) {
+xul|menulist[open="true"]:not([disabled="true"]),
+a.button-link:hover:active {
   background-color: var(--in-content-button-background-active);
 }
 
@@ -448,7 +453,8 @@ html|button[autofocus],
 html|button[type="submit"],
 xul|button[default],
 button.primary,
-a.button-link {
+a.button-link.primary,
+a.button-link.primary:active {
   background-color: var(--in-content-primary-button-background);
   color: var(--in-content-primary-button-text-color);
 }
@@ -458,7 +464,7 @@ html|button[type="submit"]:enabled:hover,
 html|button.primary:enabled:hover,
 xul|button[default]:not([disabled="true"]):hover,
 xul|button.primary:not([disabled="true"]):hover,
-a.button-link:hover {
+a.button-link.primary:hover {
   background-color: var(--in-content-primary-button-background-hover);
   color: var(--in-content-primary-button-text-color-hover);
 }
@@ -468,7 +474,7 @@ html|button[type="submit"]:enabled:hover:active,
 html|button.primary:enabled:hover:active,
 xul|button[default]:not([disabled="true"]):hover:active,
 xul|button.primary:not([disabled="true"]):hover:active,
-a.button-link:active {
+a.button-link.primary:active {
   background-color: var(--in-content-primary-button-background-active);
 }
 
@@ -489,7 +495,7 @@ a.button-link:active {
   html|button[type="submit"]:focus,
   xul|button[default]:focus,
   button.primary:focus,
-  a.button-link:focus {
+  a.button-link.primary:focus {
     color: var(--in-content-primary-button-text-color);
   }
 }
@@ -1376,16 +1382,9 @@ xul|*.addons-icon {
 }
 
 a.button-link {
-  border-radius: var(--in-content-button-border-radius);
-  border: 1px solid transparent;
-  padding: var(--in-content-button-vertical-padding) var(--in-content-button-horizontal-padding);
   text-decoration: none;
   white-space: nowrap;
   cursor: default;
+  min-height: auto;
   font-weight: 600;
-}
-
-a.button-link,
-a.button-link:active {
-  color: var(--in-content-primary-button-text-color);
 }

@@ -288,7 +288,7 @@ class FxaServiceRow extends ServiceRow {
     let statusContainer = this._getElement(".service-status");
     let link = document.createElement("a");
 
-    link.classList.add("service-create-fxa-account", "button-link");
+    link.classList.add("service-create-fxa-account", "button-link", "primary");
     link.hidden = this.getServiceStatus() === "connected";
     link.href = FXA_SIGNUP_URL;
 
