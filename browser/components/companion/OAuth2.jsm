@@ -67,6 +67,7 @@ const OAuthConnect = {
       params.set("scope", oauth.scope);
       params.set("access_type", "offline");
       params.set("state", id);
+      params.set("prompt", "select_account");
 
       let url = new URL(oauth.authorizationEndpoint + "?" + params);
       let tab = win.gBrowser.addTrustedTab(url.toString());
