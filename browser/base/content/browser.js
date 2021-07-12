@@ -5133,6 +5133,10 @@ var XULBrowserWindow = {
           browser.documentContentType &&
           BrowserUtils.mimeTypeIsTextBased(browser.documentContentType);
         for (let element of this._elementsForViewSource) {
+          // Some of these elements can not exist (in, say, the proclient window)
+          if (!element) {
+            continue;
+          }
           if (canViewSource && isText) {
             element.removeAttribute("disabled");
           } else {
@@ -5342,6 +5346,10 @@ var XULBrowserWindow = {
       browser.documentContentType &&
       BrowserUtils.mimeTypeIsTextBased(browser.documentContentType);
     for (let element of this._elementsForTextBasedTypes) {
+      // Some of these elements can not exist (in, say, the proclient window)
+      if (!element) {
+        continue;
+      }
       if (isText) {
         element.removeAttribute("disabled");
       } else {

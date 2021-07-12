@@ -628,13 +628,15 @@ class nsContextMenu {
   }
 
   initViewItems() {
-    // View source is always OK, unless in directory listing.
-    this.showItem(
-      "context-viewpartialsource-selection",
-      !this.inAboutDevtoolsToolbox &&
-        this.isContentSelected &&
-        this.selectionInfo.isDocumentLevelSelection
-    );
+    if (!AppConstants.PROCLIENT_ENABLED) {
+      // View source is always OK, unless in directory listing.
+      this.showItem(
+        "context-viewpartialsource-selection",
+        !this.inAboutDevtoolsToolbox &&
+          this.isContentSelected &&
+          this.selectionInfo.isDocumentLevelSelection
+      );
+    }
 
     this.showItem(
       "context-print-selection",
@@ -669,10 +671,12 @@ class nsContextMenu {
         // through normal use, and we've passed an ESR cycle (91).
         nsContextMenu.DevToolsShim.isDevToolsUser());
 
-    this.showItem("context-viewsource", shouldShow);
-    this.showItem("context-inspect", showInspect);
+    if (!AppConstants.PROCLIENT_ENABLED) {
+      this.showItem("context-viewsource", shouldShow);
+      this.showItem("context-inspect", showInspect);
 
-    this.showItem("context-inspect-a11y", showInspectA11Y);
+      this.showItem("context-inspect-a11y", showInspectA11Y);
+    }
 
     // View video depends on not having a standalone video.
     this.showItem(

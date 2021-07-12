@@ -387,6 +387,7 @@
       <menuitem hidden="true" id="context-bidi-page-direction-toggle"
                 data-l10n-id="main-context-menu-bidi-switch-page"
                 oncommand="gContextMenu.switchPageDirection();"/>
+#ifndef PROCLIENT_WINDOW
       <menuseparator id="inspect-separator" hidden="true"/>
       <menuitem id="context-viewpartialsource-selection"
                 data-l10n-id="main-context-menu-view-selection-source"
@@ -402,6 +403,7 @@
                 hidden="true"
                 data-l10n-id="main-context-menu-inspect"
                 oncommand="gContextMenu.inspectNode();"/>
+#endif
       <menuseparator id="context-media-eme-separator" hidden="true"/>
       <menuitem id="context-media-eme-learnmore"
                 class="menuitem-iconic"
