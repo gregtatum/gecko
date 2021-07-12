@@ -13,26 +13,16 @@
  * limitations under the License.
  */
 
-(function (root, factory) {
-  if (typeof exports === 'object')
-    module.exports = factory();
-  else if (typeof define === 'function' && define.amd)
-    define([], factory);
-  else
-    root.ASCPDocumentLibrary = factory();
-}(this, function() {
-  'use strict';
+export default {
+  Tags: {
+    LinkId:           0x1305,
+    DisplayName:      0x1306,
+    IsFolder:         0x1307,
+    CreationDate:     0x1308,
+    LastModifiedDate: 0x1309,
+    IsHidden:         0x130A,
+    ContentLength:    0x130B,
+    ContentType:      0x130C,
+  },
+};
 
-  return {
-    Tags: {
-      LinkId:           0x1305,
-      DisplayName:      0x1306,
-      IsFolder:         0x1307,
-      CreationDate:     0x1308,
-      LastModifiedDate: 0x1309,
-      IsHidden:         0x130A,
-      ContentLength:    0x130B,
-      ContentType:      0x130C,
-    },
-  };
-}));

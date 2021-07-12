@@ -18,6 +18,12 @@ const FXA_SIGNUP_URL = new URL("/signup", FXA_ROOT_URL).href;
 const extraServices = [
   {
     type: "google-mozilla",
+    nameId: "preferences-services-google-mozilla-account",
+    labelsId: "preferences-services-google-labels",
+    icon: "chrome://browser/content/companion/mozsocial.png",
+  },
+  {
+    type: "google",
     nameId: "preferences-services-google-account",
     labelsId: "preferences-services-google-labels",
     icon: "chrome://browser/content/companion/googleAccount.png",
@@ -227,9 +233,7 @@ class FxaServiceRow extends ServiceRow {
     let createAccountLink = this._getElement(".service-create-fxa-account");
     createAccountLink?.toggleAttribute("hidden", status === "connected");
 
-    if (status === "connected") {
-      this.displayAccountData();
-    } else {
+    if (status !== "connected") {
       this.displaySignIn();
     }
   }
@@ -244,7 +248,14 @@ class FxaServiceRow extends ServiceRow {
     labels.removeAttribute("data-l10n-id");
 
     icon.src = this.service.avatar;
-    name.textContent = this.service.displayName;
+    let primaryLabel = document.createElement("strong");
+    primaryLabel.textContent = this.service.displayName
+      ? this.service.displayName
+      : this.service.email;
+    name.append(primaryLabel);
+    if (this.service.displayName) {
+      name.append(new Text(" "), new Text(this.service.email));
+    }
 
     await fxAccounts.device.refreshDeviceList();
     document.l10n.setAttributes(labels, "preferences-services-devices-label", {
@@ -312,9 +323,7 @@ function buildExtraServiceRows() {
   for (let serviceData of extraServices) {
     // Check if there is a connected account for a service.
     // TODO: This assumes a user only has 1 account of every service...
-    let connectedService = services.find(s =>
-      s.app.startsWith(serviceData.type)
-    );
+    let connectedService = services.find(s => s.app === serviceData.type);
 
     nodes.push(new ServiceRow(connectedService, serviceData));
   }

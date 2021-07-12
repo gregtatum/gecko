@@ -16,8 +16,8 @@
 
 import { makeFolderMeta } from "../../db/folder_info_rep";
 
-import { Enums as fhEnum } from "activesync/codepages/FolderHierarchy";
-var $FolderTypes = fhEnum.Type;
+import fh from "activesync/codepages/FolderHierarchy";
+var $FolderTypes = fh.Enums.Type;
 
 // Map folder type numbers from ActiveSync to GELAM's types
 const folderTypes = {

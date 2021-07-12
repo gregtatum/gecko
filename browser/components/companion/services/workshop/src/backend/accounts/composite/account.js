@@ -141,21 +141,6 @@ CompositeAccount.prototype = {
     return this._receivePiece.pimap;
   },
 
-  saveAccountState(reuseTrans, callback, reason) {
-    return this._receivePiece.saveAccountState(reuseTrans, callback, reason);
-  },
-
-  get _saveAccountIsImminent() {
-    return this.__saveAccountIsImminent;
-  },
-  set _saveAccountIsImminent(val) {
-    this.___saveAccountIsImminent = this._receivePiece._saveAccountIsImminent = val;
-  },
-
-  runAfterSaves(callback) {
-    return this._receivePiece.runAfterSaves(callback);
-  },
-
   allOperationsCompleted() {
     if (this._receivePiece.allOperationsCompleted) {
       this._receivePiece.allOperationsCompleted();

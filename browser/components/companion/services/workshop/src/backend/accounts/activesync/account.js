@@ -19,9 +19,9 @@
  **/
 
 import logic from "logic";
-import $acctmixins from "../../accountmixins";
-import $wbxml from "wbxml";
-import $asproto from "activesync/protocol";
+import * as $acctmixins from "../../accountmixins";
+import { Reader } from "wbxml";
+import { Connection, HttpError } from "activesync/protocol";
 import ASCP from "activesync/codepages";
 
 // XXX pull out of syncbase instead
@@ -89,7 +89,7 @@ ActiveSyncAccount.prototype = {
   withConnection(errback, callback, failString) {
     if (!this.conn) {
       var accountDef = this.accountDef;
-      this.conn = new $asproto.Connection(accountDef.connInfo.deviceId);
+      this.conn = new Connection(accountDef.connInfo.deviceId);
       this._attachLoggerToConnection(this.conn);
       this.conn.open(
         accountDef.connInfo.server,
@@ -145,7 +145,7 @@ ActiveSyncAccount.prototype = {
   },
 
   _isBadUserOrPassError(error) {
-    return error && error instanceof $asproto.HttpError && error.status === 401;
+    return error && error instanceof HttpError && error.status === 401;
   },
 
   /**
@@ -233,7 +233,7 @@ ActiveSyncAccount.prototype = {
       var sentXML, receivedXML;
       if (sentData) {
         try {
-          var sentReader = new $wbxml.Reader(new Uint8Array(sentData), ASCP);
+          var sentReader = new Reader(new Uint8Array(sentData), ASCP);
           sentXML = sentReader.dump();
         } catch (ex) {
           sentXML = "parse problem";
@@ -320,8 +320,6 @@ ActiveSyncAccount.prototype = {
     }
     return null;
   },
-  saveAccountState: $acctmixins.saveAccountState,
-  runAfterSaves: $acctmixins.runAfterSaves,
 
   allOperationsCompleted() {},
 };

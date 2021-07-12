@@ -23,7 +23,30 @@ XPCOMUtils.defineLazyServiceGetter(
   "nsIUUIDGenerator"
 );
 
-Cu.importGlobalProperties(["fetch"]);
+XPCOMUtils.defineLazyGlobalGetters(this, ["XMLHttpRequest"]);
+
+function promiseXHR(data) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest({ mozAnon: true, mozSystem: true });
+    xhr.responseType = "json";
+
+    const method = data.method || "GET";
+    let url = data.url;
+    const body = data.body || null;
+
+    xhr.addEventListener(
+      "loadend",
+      function(event) {
+        resolve({ status: xhr.status, json: xhr.response });
+      },
+      { once: true }
+    );
+
+    xhr.open(method, url);
+
+    xhr.send(body);
+  });
+}
 
 const OAuthConnect = {
   connections: new Map(),
@@ -44,6 +67,7 @@ const OAuthConnect = {
       params.set("scope", oauth.scope);
       params.set("access_type", "offline");
       params.set("state", id);
+      params.set("prompt", "select_account");
 
       let url = new URL(oauth.authorizationEndpoint + "?" + params);
       let tab = win.gBrowser.addTrustedTab(url.toString());
@@ -221,14 +245,13 @@ class OAuth2 {
       data.append("redirect_uri", this.redirectionEndpoint);
     }
 
-    let response = await fetch(this.tokenEndpoint, {
+    let response = await promiseXHR({
+      url: this.tokenEndpoint,
       method: "POST",
-      cache: "no-cache",
       body: data,
     });
 
-    let result = await response.json();
-    let resultStr = JSON.stringify(result, null, 2);
+    let result = response.json;
 
     if ("error" in result) {
       // RFC 6749 section 5.2. Error Response
@@ -240,6 +263,7 @@ class OAuth2 {
       this.accessToken = null;
       this.refreshToken = null;
 
+      let resultStr = JSON.stringify(result, null, 2);
       console.error(
         `The authorization server returned an error response: ${resultStr}`
       );

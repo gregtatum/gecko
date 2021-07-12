@@ -18,6 +18,7 @@ browser.jar:
     content/browser/companion/link.svg (content/link.svg)
     content/browser/companion/media.js (content/media.js)
     content/browser/companion/microsoft365.ico (content/microsoft365.ico)
+    content/browser/companion/mozsocial.png (content/mozsocial.png)
     content/browser/companion/mute.svg (content/mute.svg)
     content/browser/companion/muted.svg (content/muted.svg)
     content/browser/companion/firefoxParentBrand.png (content/firefoxParentBrand.png)

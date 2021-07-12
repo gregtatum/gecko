@@ -13,33 +13,23 @@
  * limitations under the License.
  */
 
-(function (root, factory) {
-  if (typeof exports === 'object')
-    module.exports = factory();
-  else if (typeof define === 'function' && define.amd)
-    define([], factory);
-  else
-    root.ASCPComposeMail = factory();
-}(this, function() {
-  'use strict';
+export default {
+  Tags: {
+    SendMail:        0x1505,
+    SmartForward:    0x1506,
+    SmartReply:      0x1507,
+    SaveInSentItems: 0x1508,
+    ReplaceMime:     0x1509,
+    /* Missing tag value 0x150A */
+    Source:          0x150B,
+    FolderId:        0x150C,
+    ItemId:          0x150D,
+    LongId:          0x150E,
+    InstanceId:      0x150F,
+    Mime:            0x1510,
+    ClientId:        0x1511,
+    Status:          0x1512,
+    AccountId:       0x1513,
+  }
+};
 
-  return {
-    Tags: {
-      SendMail:        0x1505,
-      SmartForward:    0x1506,
-      SmartReply:      0x1507,
-      SaveInSentItems: 0x1508,
-      ReplaceMime:     0x1509,
-      /* Missing tag value 0x150A */
-      Source:          0x150B,
-      FolderId:        0x150C,
-      ItemId:          0x150D,
-      LongId:          0x150E,
-      InstanceId:      0x150F,
-      Mime:            0x1510,
-      ClientId:        0x1511,
-      Status:          0x1512,
-      AccountId:       0x1513,
-    }
-  };
-}));

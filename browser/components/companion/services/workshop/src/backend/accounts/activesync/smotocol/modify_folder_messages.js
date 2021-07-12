@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import $wbxml from "wbxml";
-import $AirSync, { Tags as $as } from "activesync/codepages/AirSync";
-import { Tags as em } from "activesync/codepages/Email";
+import { EventParser, Writer } from "wbxml";
+import $as from "activesync/codepages/AirSync";
+import em from "activesync/codepages/Email";
 
 /**
  * Modify one or messages in a folder by doing one or more of the following
@@ -41,62 +41,62 @@ export default async function modifyFolderMessages(conn, args) {
   let flagMap = args.flag || new Map();
   let deleteSet = args.delete || new Set();
 
-  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
-  w.stag($as.Sync)
-    .stag($as.Collections)
-    .stag($as.Collection);
+  let w = new Writer("1.3", 1, "UTF-8");
+  w.stag($as.Tags.Sync)
+    .stag($as.Tags.Collections)
+    .stag($as.Tags.Collection);
 
   if (conn.currentVersion.lt("12.1")) {
-    w.tag($as.Class, "Email");
+    w.tag($as.Tags.Class, "Email");
   }
 
-  w.tag($as.SyncKey, folderSyncKey)
-    .tag($as.CollectionId, folderServerId)
-    .tag($as.DeletesAsMoves, permanentDeletion ? "0" : 1)
+  w.tag($as.Tags.SyncKey, folderSyncKey)
+    .tag($as.Tags.CollectionId, folderServerId)
+    .tag($as.Tags.DeletesAsMoves, permanentDeletion ? "0" : 1)
     // GetChanges defaults to true, so we must explicitly disable it to
     // avoid hearing about changes.
-    .tag($as.GetChanges, "0")
-    .stag($as.Commands);
+    .tag($as.Tags.GetChanges, "0")
+    .stag($as.Tags.Commands);
 
   for (let [serverId, beRead] of readMap) {
-    w.stag($as.Change)
-      .tag($as.ServerId, serverId)
-      .stag($as.ApplicationData)
-      .tag(em.Read, beRead ? "1" : "0")
-      .etag($as.ApplicationData)
-      .etag($as.Change);
+    w.stag($as.Tags.Change)
+      .tag($as.Tags.ServerId, serverId)
+      .stag($as.Tags.ApplicationData)
+      .tag(em.Tags.Read, beRead ? "1" : "0")
+      .etag($as.Tags.ApplicationData)
+      .etag($as.Tags.Change);
   }
   for (let [serverId, beFlagged] of flagMap) {
-    w.stag($as.Change)
-      .tag($as.ServerId, serverId)
-      .stag($as.ApplicationData)
-      .stag(em.Flag)
-      .tag(em.Status, beFlagged ? "2" : "0")
+    w.stag($as.Tags.Change)
+      .tag($as.Tags.ServerId, serverId)
+      .stag($as.Tags.ApplicationData)
+      .stag(em.Tags.Flag)
+      .tag(em.Tags.Status, beFlagged ? "2" : "0")
       .etag()
-      .etag($as.ApplicationData)
-      .etag($as.Change);
+      .etag($as.Tags.ApplicationData)
+      .etag($as.Tags.Change);
   }
   for (let serverId of deleteSet) {
-    w.stag($as.Delete)
-      .tag($as.ServerId, serverId)
-      .etag($as.Delete);
+    w.stag($as.Tags.Delete)
+      .tag($as.Tags.ServerId, serverId)
+      .etag($as.Tags.Delete);
   }
 
-  w.etag($as.Commands)
-    .etag($as.Collection)
-    .etag($as.Collections)
-    .etag($as.Sync);
+  w.etag($as.Tags.Commands)
+    .etag($as.Tags.Collection)
+    .etag($as.Tags.Collections)
+    .etag($as.Tags.Sync);
 
   let response = await conn.postCommand(w);
 
-  let e = new $wbxml.EventParser();
+  let e = new EventParser();
   let newSyncKey, status;
 
-  let base = [$as.Sync, $as.Collections, $as.Collection];
-  e.addEventListener(base.concat($as.SyncKey), function(node) {
+  let base = [$as.Tags.Sync, $as.Tags.Collections, $as.Tags.Collection];
+  e.addEventListener(base.concat($as.Tags.SyncKey), function(node) {
     newSyncKey = node.children[0].textContent;
   });
-  e.addEventListener(base.concat($as.Status), function(node) {
+  e.addEventListener(base.concat($as.Tags.Status), function(node) {
     status = node.children[0].textContent;
   });
 
@@ -107,7 +107,7 @@ export default async function modifyFolderMessages(conn, args) {
     throw new Error("unknown");
   }
 
-  if (status === $AirSync.Enums.Status.Success) {
+  if (status === $as.Enums.Status.Success) {
     return { syncKey: newSyncKey };
   }
 

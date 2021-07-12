@@ -31,13 +31,6 @@
  *   - vanillaImap
  *   - activesync
  *   - pop3
- *
- * ## Note: Disabled Account Types
- * - ActiveSync is disabled because some UMD stuff in its codepages.js was
- *   breaking the build with `the request of a dependency is an expression` and
- *   the reality is that there is no situation where it will ever be a supported
- *   account type ever again unless magic funding appears with that string
- *   attached.
  **/
 
 /**
@@ -45,14 +38,14 @@
  * module requiring them is under ./tasks.
  */
 export const configuratorModules = new Map([
-  /*
   [
-    'activesync',
+    "activesync",
     async function() {
-      const mod = await import('./accounts/activesync/configurator');
+      const mod = await import("./accounts/activesync/configurator");
       return mod.default;
-    }
+    },
   ],
+  /*
   [
     'imap+smtp',
     async function() {
@@ -96,14 +89,14 @@ export const configuratorModules = new Map([
  * module requiring them is under ./tasks.
  */
 export const validatorModules = new Map([
-  /*
   [
-    'activesync',
+    "activesync",
     async function() {
-      const mod = await import('./accounts/activesync/validator');
+      const mod = await import("./accounts/activesync/validator");
       return mod.default;
-    }
+    },
   ],
+  /*
   [
     'imap+smtp',
     async function() {
@@ -147,14 +140,14 @@ export const validatorModules = new Map([
  * module requiring them is ./universe/account_manager.
  */
 export const accountModules = new Map([
-  /*
   [
-    'activesync',
+    "activesync",
     async function() {
-      const mod = await import('./accounts/activesync/account');
+      const mod = await import("./accounts/activesync/account");
       return mod.default;
-    }
+    },
   ],
+  /*
   [
     'imap+smtp',
     async function() {
@@ -213,13 +206,15 @@ export const engineTaskMappings = new Map([
       return mod.default;
     }
   ],
+  */
   [
-    'activesync',
+    "activesync",
     async function() {
-      const mod = await import('./accounts/activesync/activesync_tasks');
+      const mod = await import("./accounts/activesync/activesync_tasks");
       return mod.default;
-    }
+    },
   ],
+  /*
   [
     'pop3',
     async function() {
@@ -279,12 +274,14 @@ export const engineHacks = new Map([
       unselectableFolderTypes: new Set(),
     }
   ],
+  */
   [
-    'activesync',
+    "activesync",
     {
-      unselectableFolderTypes: new Set()
-    }
+      unselectableFolderTypes: new Set(),
+    },
   ],
+  /*
   [
     'pop3',
     {
@@ -336,12 +333,14 @@ export const engineBackEndFacts = new Map([
       syncGranularity: 'folder',
     }
   ],
+  */
   [
-    'activesync',
+    "activesync",
     {
-      syncGranularity: 'folder'
-    }
+      syncGranularity: "folder",
+    },
   ],
+  /*
   [
     'pop3',
     {
@@ -402,15 +401,17 @@ export const engineFrontEndAccountMeta = new Map([
       usesArchiveMetaphor: false
     }
   ],
+  */
   [
-    'activesync',
+    "activesync",
     {
       engineFacts: {
-        syncGranularity: 'folder'
+        syncGranularity: "folder",
       },
-      usesArchiveMetaphor: false
-    }
+      usesArchiveMetaphor: false,
+    },
   ],
+  /*
   [
     'pop3',
     {
@@ -477,12 +478,14 @@ export const engineFrontEndFolderMeta = new Map([
       syncGranularity: 'folder',
     }
   ],
+  */
   [
-    'activesync',
+    "activesync",
     {
-      syncGranularity: 'folder'
-    }
+      syncGranularity: "folder",
+    },
   ],
+  /*
   [
     'pop3',
     {

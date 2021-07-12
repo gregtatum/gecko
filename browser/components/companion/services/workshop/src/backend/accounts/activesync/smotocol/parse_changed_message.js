@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Tags as em } from "activesync/codepages/Email";
+import em from "activesync/codepages/Email";
 
 /**
  * Parse the given WBXML server representation of a changed message into a
@@ -48,12 +48,12 @@ export default function parseChangedMessage(node) {
       : null;
 
     switch (child.tag) {
-      case em.Read:
+      case em.Tags.Read:
         setFlagState("\\Seen", childText === "1");
         break;
-      case em.Flag:
+      case em.Tags.Flag:
         for (let grandchild of child.children) {
-          if (grandchild.tag === em.Status) {
+          if (grandchild.tag === em.Tags.Status) {
             setFlagState(
               "\\Flagged",
               grandchild.children[0].textContent !== "0"

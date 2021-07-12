@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import $wbxml from "wbxml";
-import { Tags as $as } from "activesync/codepages/AirSync";
+import { EventParser, Writer } from "wbxml";
+import $as from "activesync/codepages/AirSync";
 
 /**
  * $ask the server to issue a syncKey for the given folder with the given time
@@ -30,19 +30,19 @@ export default async function getFolderSyncKey(
   conn,
   { folderServerId, filterType }
 ) {
-  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
-  w.stag($as.Sync)
-    .stag($as.Collections)
-    .stag($as.Collection);
+  let w = new Writer("1.3", 1, "UTF-8");
+  w.stag($as.Tags.Sync)
+    .stag($as.Tags.Collections)
+    .stag($as.Tags.Collection);
 
   if (conn.currentVersion.lt("12.1")) {
-    w.tag($as.Cl$ass, "Email");
+    w.tag($as.Tags.Cl$ass, "Email");
   }
 
-  w.tag($as.SyncKey, "0")
-    .tag($as.CollectionId, folderServerId)
-    .stag($as.Options)
-    .tag($as.FilterType, filterType)
+  w.tag($as.Tags.SyncKey, "0")
+    .tag($as.Tags.CollectionId, folderServerId)
+    .stag($as.Tags.Options)
+    .tag($as.Tags.FilterType, filterType)
     .etag()
     .etag()
     .etag()
@@ -50,13 +50,18 @@ export default async function getFolderSyncKey(
 
   let response = await conn.postCommand(w);
 
-  let e = new $wbxml.EventParser();
+  let e = new EventParser();
   // Reset the SyncKey, just in c$ase we don't see a sync key in the
   // response.
   let newSyncKey = "0";
 
   e.addEventListener(
-    [$as.Sync, $as.Collections, $as.Collection, $as.SyncKey],
+    [
+      $as.Tags.Sync,
+      $as.Tags.Collections,
+      $as.Tags.Collection,
+      $as.Tags.SyncKey,
+    ],
     function(node) {
       newSyncKey = node.children[0].textContent;
     }

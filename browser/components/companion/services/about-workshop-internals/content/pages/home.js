@@ -45,6 +45,45 @@ export default class HomePage extends Page {
     };
     this.icsButton.addEventListener("click", this.icsAddHandler);
 
+    // ## Add ActiveSync Account
+    this.asErrorArea = pageElem.querySelector("#home-add-activesync-error");
+    this.asEmailInput = pageElem.querySelector(
+      "#home-add-activesync-email-input"
+    );
+    this.asPasswordInput = pageElem.querySelector(
+      "#home-add-activesync-password-input"
+    );
+    this.asButton = pageElem.querySelector("#home-add-activesync-button");
+    this.activesyncAddHandler = async () => {
+      this.asErrorArea.textContent = "Creating account...";
+      let {
+        error,
+        errorDetails,
+        account,
+      } = await this.workshopAPI.tryToCreateAccount(
+        {
+          displayName: this.asEmailInput.value,
+          emailAddress: this.asEmailInput.value,
+          password: this.asPasswordInput.value,
+        },
+        {
+          type: "activesync",
+          incoming: {
+            server: "https://m.hotmail.com",
+          },
+        }
+      );
+
+      if (error) {
+        const jsonDetails = JSON.stringify(errorDetails);
+        this.asErrorArea.textContent = `${error}: ${jsonDetails}`;
+      } else {
+        this.asErrorArea.textContent = "Account created!";
+        this.router.navigateTo(["account", account.id]);
+      }
+    };
+    this.asButton.addEventListener("click", this.activesyncAddHandler);
+
     // ## List Accounts
     this.accountListContainer = pageElem.querySelector(
       "#home-account-list-container"
@@ -65,6 +104,7 @@ export default class HomePage extends Page {
 
   cleanup() {
     this.icsButton.removeEventListener("click", this.icsAddHandler);
+    this.asButton.removeEventListener("click", this.activesyncAddHandler);
 
     this.accountListContainer.replaceChildren();
     // Note that we don't need to / shouldn't release `workshopAPI.accounts`

@@ -58,8 +58,13 @@ class Event extends HTMLElement {
       this.data.end
     )}`;
 
-    fragment.querySelector(".date").textContent = date;
-    fragment.querySelector(".summary").textContent = this.data.summary;
+    let dateEl = fragment.querySelector(".date");
+    dateEl.textContent = date;
+    dateEl.title = date;
+
+    let summaryEl = fragment.querySelector(".summary");
+    summaryEl.textContent = this.data.summary;
+    summaryEl.title = this.data.summary;
 
     fragment.querySelector(".event-info").addEventListener("click", event => {
       if (event.target.nodeName == "a") {

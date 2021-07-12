@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import $wbxml from "wbxml";
-import { Tags as fh } from "activesync/codepages/FolderHierarchy";
+import { EventParser, Writer } from "wbxml";
+import fh from "activesync/codepages/FolderHierarchy";
 
 /**
  * High-level synchronization of the contents of a folder.  This routine
@@ -39,34 +39,35 @@ export default async function enumerateHierarchyChanges(
   conn,
   { hierarchySyncKey, emitter }
 ) {
-  let w = new $wbxml.Writer("1.3", 1, "UTF-8");
-  w.stag(fh.FolderSync)
-    .tag(fh.SyncKey, hierarchySyncKey)
+  let w = new Writer("1.3", 1, "UTF-8");
+  w.stag(fh.Tags.FolderSync)
+    .tag(fh.Tags.SyncKey, hierarchySyncKey)
     .etag();
 
   let response = await conn.postCommand(w);
 
-  let e = new $wbxml.EventParser();
+  let e = new EventParser();
   let newSyncKey;
 
-  e.addEventListener([fh.FolderSync, fh.SyncKey], function(node) {
+  e.addEventListener([fh.Tags.FolderSync, fh.Tags.SyncKey], function(node) {
     newSyncKey = node.children[0].textContent;
   });
 
-  e.addEventListener([fh.FolderSync, fh.Changes, [fh.Add, fh.Delete]], function(
-    node
-  ) {
-    let folderArgs = {};
-    for (let child of node.children) {
-      folderArgs[child.localTagName] = child.children[0].textContent;
-    }
+  e.addEventListener(
+    [fh.Tags.FolderSync, fh.Tags.Changes, [fh.Tags.Add, fh.Tags.Delete]],
+    function(node) {
+      let folderArgs = {};
+      for (let child of node.children) {
+        folderArgs[child.localTagName] = child.children[0].textContent;
+      }
 
-    if (node.tag === fh.Add) {
-      emitter.emit("add", folderArgs);
-    } else {
-      emitter.emit("remove", folderArgs.ServerId);
+      if (node.tag === fh.Tags.Add) {
+        emitter.emit("add", folderArgs);
+      } else {
+        emitter.emit("remove", folderArgs.ServerId);
+      }
     }
-  });
+  );
 
   try {
     e.run(response);
