@@ -243,7 +243,7 @@ let JSWINDOWACTORS = {
       moduleURI: "resource:///actors/AboutPluginsChild.jsm",
 
       events: {
-        DOMWindowCreated: { capture: true },
+        DOMDocElementInserted: { capture: true },
       },
     },
 
@@ -258,7 +258,7 @@ let JSWINDOWACTORS = {
       moduleURI: "resource:///actors/AboutPocketChild.jsm",
 
       events: {
-        DOMWindowCreated: { capture: true },
+        DOMDocElementInserted: { capture: true },
       },
     },
 
@@ -277,7 +277,7 @@ let JSWINDOWACTORS = {
       moduleURI: "resource:///actors/AboutPrivateBrowsingChild.jsm",
 
       events: {
-        DOMWindowCreated: { capture: true },
+        DOMDocElementInserted: { capture: true },
       },
     },
 
@@ -292,7 +292,7 @@ let JSWINDOWACTORS = {
       moduleURI: "resource:///actors/AboutProtectionsChild.jsm",
 
       events: {
-        DOMWindowCreated: { capture: true },
+        DOMDocElementInserted: { capture: true },
       },
     },
 
@@ -322,7 +322,7 @@ let JSWINDOWACTORS = {
       moduleURI: "resource:///actors/AboutTabCrashedChild.jsm",
 
       events: {
-        DOMWindowCreated: { capture: true },
+        DOMDocElementInserted: { capture: true },
       },
     },
 
@@ -338,7 +338,7 @@ let JSWINDOWACTORS = {
       events: {
         // This is added so the actor instantiates immediately and makes
         // methods available to the page js on load.
-        DOMWindowCreated: {},
+        DOMDocElementInserted: {},
       },
     },
     matches: ["about:welcome"],
@@ -372,7 +372,7 @@ let JSWINDOWACTORS = {
       moduleURI: "resource:///actors/BrowserTabChild.jsm",
 
       events: {
-        DOMWindowCreated: {},
+        DOMDocElementInserted: {},
         MozAfterPaint: {},
       },
     },
@@ -572,7 +572,7 @@ let JSWINDOWACTORS = {
     child: {
       moduleURI: "resource:///actors/NetErrorChild.jsm",
       events: {
-        DOMWindowCreated: {},
+        DOMDocElementInserted: {},
         click: {},
       },
     },
@@ -708,7 +708,7 @@ let JSWINDOWACTORS = {
       events: {
         // This is added so the actor instantiates immediately and makes
         // methods available to the page js on load.
-        DOMWindowCreated: {},
+        DOMDocElementInserted: {},
       },
     },
     matches: ["about:home*", "about:newtab*", "about:welcome*"],
@@ -3244,7 +3244,7 @@ BrowserGlue.prototype = {
   _migrateUI: function BG__migrateUI() {
     // Use an increasing number to keep track of the current migration state.
     // Completely unrelated to the current Firefox release number.
-    const UI_VERSION = 115;
+    const UI_VERSION = 116;
     const BROWSER_DOCURL = AppConstants.BROWSER_CHROME_URL;
 
     if (!Services.prefs.prefHasUserValue("browser.migration.version")) {
@@ -3859,7 +3859,7 @@ BrowserGlue.prototype = {
       }
     }
 
-    if (currentUIVersion < 115) {
+    if (currentUIVersion < 116) {
       // Update urlbar result groups for the following changes:
       // 110 (bug 1662167): Add INPUT_HISTORY group
       // 111 (bug 1677126): Add REMOTE_TABS group
@@ -3867,6 +3867,7 @@ BrowserGlue.prototype = {
       // 113 (bug 1714409): Add HEURISTIC_ENGINE_ALIAS group
       // 114 (bug 1662172): Add HEURISTIC_BOOKMARK_KEYWORD group
       // 115 (bug 1713322): Move TAIL_SUGGESTION group and rename properties
+      // 116 (bug 1717509): Remove HEURISTIC_UNIFIED_COMPLETE group
       UrlbarPrefs.migrateResultBuckets();
     }
 

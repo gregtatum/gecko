@@ -35,7 +35,9 @@
 #navigator-toolbox {
   appearance: none;
 }
-
+#navigator-toolbox:not(:-moz-lwtheme) {
+  background-color: #f0f0f4;
+}
 /*
   This is a workaround for Bug 1482157
   -moz-default-appearance: toolbox; makes the macOS sheets attached to the
@@ -259,7 +261,7 @@ moz-input-box > menupopup .context-menu-add-engine > .menu-iconic-left {
   min-height: 24px;
   height: 24px;
   color: inherit;
-  list-style-image: url("chrome://global/skin/icons/add.svg");
+  list-style-image: url("chrome://global/skin/icons/plus.svg");
 }
 
 #editBMPanel_newFolderButton:hover {

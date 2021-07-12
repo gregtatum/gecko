@@ -3,7 +3,6 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 "use strict";
-/* global XPCNativeWrapper */
 
 const EXPORTED_SYMBOLS = ["GeckoDriver"];
 
@@ -32,7 +31,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
     "chrome://remote/content/marionette/actors/MarionetteCommandsParent.jsm",
   IdlePromise: "chrome://remote/content/marionette/sync.js",
   l10n: "chrome://remote/content/marionette/l10n.js",
-  Log: "chrome://remote/content/marionette/log.js",
+  Log: "chrome://remote/content/shared/Log.jsm",
   MarionettePrefs: "chrome://remote/content/marionette/prefs.js",
   modal: "chrome://remote/content/marionette/modal.js",
   navigate: "chrome://remote/content/marionette/navigate.js",
@@ -58,11 +57,13 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   WebDriverSession: "chrome://remote/content/shared/webdriver/Session.jsm",
   WebElement: "chrome://remote/content/marionette/element.js",
   WebElementEventTarget: "chrome://remote/content/marionette/dom.js",
-  windowManager: "chrome://remote/content/marionette/window-manager.js",
+  windowManager: "chrome://remote/content/shared/WindowManager.jsm",
   WindowState: "chrome://remote/content/marionette/browser.js",
 });
 
-XPCOMUtils.defineLazyGetter(this, "logger", () => Log.get());
+XPCOMUtils.defineLazyGetter(this, "logger", () =>
+  Log.get(Log.TYPES.MARIONETTE)
+);
 XPCOMUtils.defineLazyGlobalGetters(this, ["URL"]);
 
 const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
@@ -81,8 +82,6 @@ const SUPPORTED_STRATEGIES = new Set([
 // Timeout used to abort fullscreen, maximize, and minimize
 // commands if no window manager is present.
 const TIMEOUT_NO_WINDOW_MANAGER = 5000;
-
-const globalMessageManager = Services.mm;
 
 /**
  * The Marionette WebDriver services provides a standard conforming
