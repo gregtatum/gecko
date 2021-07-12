@@ -56,22 +56,15 @@ class ActiveViewManager extends HTMLElement {
       viewElToActivate = this.viewManager.querySelector("view-el:last-of-type");
     }
 
-    if (viewElToActivate == this.activeView) {
-      return;
+    let viewEl = viewElToActivate.querySelector(".view-el");
+
+    if (viewElToActivate != this.activeView) {
+      this.activeView?.querySelector(".view-el").classList.remove("active");
+      viewEl.classList.add("active");
+      this.activeView = viewElToActivate;
     }
 
-    this.activeView?.querySelector(".view-el").classList.remove("active");
-    let viewEl = viewElToActivate.querySelector(".view-el");
-    viewEl.classList.add("active");
-    this.activeView = viewElToActivate;
-
-    // Scroll to the active view.
-    // TODO: Figure out how to do this auto-scroll after the animation is complete.
-    // It doesn't scroll and focus very accurately.
-    let scrollToPos =
-      viewEl.getBoundingClientRect().x -
-      this.viewManager.getBoundingClientRect().x;
-    this.viewManager.scrollLeft = scrollToPos;
+    viewEl.scrollIntoView({ behavior: "smooth", inline: "start" });
   }
 
   viewAdded(view) {

@@ -18,13 +18,14 @@
 
 .active {
   animation-name: activate;
-  animation-duration: 0.5s;  
+  animation-duration: 0.5s;
   animation-fill-mode: forwards;
+  width: 200px;
 }
 
 @keyframes activate {
-  from {width: 40px; border-radius: 50%;}
-  to {width: 200px; border-radius: 10px;}
+  from { border-radius: 50%;}
+  to { border-radius: 10px;}
 }
 
 .view-icon {
