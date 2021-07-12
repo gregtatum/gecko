@@ -132,8 +132,12 @@
     </div>
   </html:template>
 
-  <html:template id="template-active-view-manager" xmlns="http://www.w3.org/1999/xhtml">
+  <html:template id="template-active-view-manager"
+                 xmlns="http://www.w3.org/1999/xhtml"
+                 xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
     <div id="active-view-manager">
+      <!-- view-el elements should go above this overflow button -->
+      <toolbarbutton class="subviewbutton overflow">+</toolbarbutton>
     </div>
   </html:template>
 

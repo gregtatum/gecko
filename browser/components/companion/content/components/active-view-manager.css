@@ -2,12 +2,45 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+:root {
+  counter-reset: hidden-sum;
+}
+
 #active-view-manager {
   display: flex;
   padding-block: 5px;
-  width: 300px;
+  width: 550px;
   overflow: scroll;
   scroll-behavior: smooth;
   white-space: nowrap;
   scrollbar-width: none;
+}
+
+#active-view-manager > .overflow {
+  display: none;
+  border-radius: 50%;
+  margin: 10px;
+  border: 0;
+  min-height: 0;
+}
+
+#active-view-manager > .overflow:after {
+  content: counter(hidden-sum);
+}
+
+/**
+ * The n + 7 here is because we're counting from the end of the
+ * #active-view-manager, and we currently want to have 1 "top active view"
+ * and 5 maximum items in the River. That's 6 visible items. That means we
+ * want collapse any view-el's from the 7th index-from-the-end to the
+ * start.
+ */
+#active-view-manager view-el:nth-last-of-type(n + 7) {
+  visibility: collapse;
+  counter-increment: hidden-sum;
+}
+
+#active-view-manager view-el:nth-last-of-type(n + 7) ~ .overflow {
+  display: unset;
+  order: -1;
 }

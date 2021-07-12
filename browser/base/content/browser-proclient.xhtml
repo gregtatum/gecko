@@ -136,6 +136,21 @@
 #include browser-sets.inc
 #include main-popupset.inc.xhtml
 
+  <popupset>
+    <html:template id="active-view-manager-overflow-panel-template">
+      <panel id="active-view-manager-overflow-panel"
+             type="arrow"
+             orient="vertical"
+             class="panel-no-padding"
+             consumeoutsideclicks="false"
+             aria-labelledby="active-view-manager-overflow-panel-title">
+        <!-- TODO: l10n! -->
+        <html:h1 id="active-view-manager-overflow-panel-title" class="subview-subheader">RECENT</html:h1>
+        <vbox id="active-view-manager-overflow-list" class="panel-subview-body"></vbox>
+      </panel>
+    </html:template>
+  </popupset>
+
 #include appmenu-viewcache.inc.xhtml
 
   <html:dialog id="window-modal-dialog" style="visibility: hidden; height: 0; width: 0"/>

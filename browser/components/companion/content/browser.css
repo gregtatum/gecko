@@ -138,3 +138,16 @@
 active-view-manager {
   display: inline-block;
 }
+
+#active-view-manager-overflow-panel {
+  width: 39ch;
+  font: menu;
+}
+
+#active-view-manager-overflow-panel > .subview-subheader {
+  padding-block-start: var(--arrowpanel-menuitem-padding-block);
+}
+
+#active-view-manager-overflow-panel > .panel-subview-body {
+  padding-block-end: var(--arrowpanel-menuitem-padding-block);
+}

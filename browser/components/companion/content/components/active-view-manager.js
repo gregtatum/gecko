@@ -3,6 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 class ActiveViewManager extends HTMLElement {
+  /** @type {<html:button>} */
+  #overflow;
+  /** @type {<xul:panel>} */
+  #overflowPanel;
+
   static EVENTS = [
     "ViewChanged",
     "ViewAdded",
@@ -19,8 +24,9 @@ class ActiveViewManager extends HTMLElement {
 
     // Set up an initial view element.
     this.viewManager = this.querySelector("#active-view-manager");
+    this.#overflow = this.querySelector(".overflow");
     let initialView = document.createElement("view-el");
-    this.viewManager.appendChild(initialView);
+    this.viewManager.insertBefore(initialView, this.#overflow);
     this.updateActiveView(initialView);
 
     // Setup a map to store all views shown to the user. Do not add the initial
@@ -34,6 +40,7 @@ class ActiveViewManager extends HTMLElement {
     }
 
     this.addEventListener("UserAction:ViewSelected", this);
+    this.#overflow.addEventListener("click", this);
   }
 
   disconnectedCallback() {
@@ -41,11 +48,12 @@ class ActiveViewManager extends HTMLElement {
       window.top.gGlobalHistory.removeEventListener(event, this);
     }
     this.removeEventListener("UserAction:ViewSelected", this);
+    this.#overflow.removeEventListener("click", this);
   }
 
   updateActiveView(viewElToActivate) {
     if (!viewElToActivate) {
-      viewElToActivate = this.viewManager.lastChild;
+      viewElToActivate = this.viewManager.querySelector("view-el:last-of-type");
     }
 
     if (viewElToActivate == this.activeView) {
@@ -77,8 +85,9 @@ class ActiveViewManager extends HTMLElement {
     // Add the new view to the map and append the view element to the active view manager.
     // Note: If this is the first view being added to the map, we should edit the existing
     // new-tab-like view element instead of appending a new view element to the active view manager.
-    if (!this.views.size && this.viewManager.children.length === 1) {
-      let initialViewEl = this.viewManager.children[0];
+    let viewEls = this.viewManager.querySelectorAll("view-el");
+    if (!this.views.size && viewEls.length === 1) {
+      let initialViewEl = viewEls[0];
       this.views.set(view, initialViewEl);
       initialViewEl.update(view);
 
@@ -86,7 +95,7 @@ class ActiveViewManager extends HTMLElement {
     } else {
       let viewEl = document.createElement("view-el");
       this.views.set(view, viewEl);
-      this.viewManager.appendChild(viewEl);
+      this.viewManager.insertBefore(viewEl, this.#overflow);
       viewEl.update(view);
 
       this.updateActiveView(viewEl);
@@ -117,8 +126,7 @@ class ActiveViewManager extends HTMLElement {
       return;
     }
 
-    this.viewManager.removeChild(viewElToMove);
-    this.viewManager.appendChild(viewElToMove);
+    this.viewManager.insertBefore(viewElToMove, this.#overflow);
     this.updateActiveView(viewElToMove);
   }
 
@@ -165,11 +173,92 @@ class ActiveViewManager extends HTMLElement {
         break;
       case "UserAction:ViewSelected":
         let view = event.detail.clickedView;
-        let viewEl = this.views.get(view);
-        this.updateActiveView(viewEl);
-        window.top.gGlobalHistory.setView(view);
+        this.#viewSelected(view);
+        break;
+      case "click":
+        if (event.target == this.#overflow) {
+          this.#overflowClicked(event);
+        } else if (event.currentTarget == this.#overflowPanel) {
+          this.#overflowPanelClicked(event);
+        }
+        break;
+      case "popupshowing":
+        if (event.currentTarget == this.#overflowPanel) {
+          this.#overflowPanelShowing(event);
+        }
         break;
     }
+  }
+
+  #viewSelected(view) {
+    let viewEl = this.views.get(view);
+    this.updateActiveView(viewEl);
+    window.top.gGlobalHistory.setView(view);
+  }
+
+  #overflowClicked(event) {
+    if (!this.#overflowPanel) {
+      this.#overflowPanel = this.#getOrCreateOverflowPanel();
+    }
+
+    this.#overflowPanel.openPopup(this.#overflow, {
+      position: "bottomcenter topleft",
+      triggerEvent: event,
+    });
+  }
+
+  #overflowPanelClicked(event) {
+    if (event.target.tagName != "toolbarbutton") {
+      return;
+    }
+
+    let view = event.target.view;
+    this.#viewSelected(view);
+    this.#overflowPanel.hidePopup();
+  }
+
+  #overflowPanelShowing(event) {
+    let list = this.#overflowPanel.querySelector(
+      "#active-view-manager-overflow-list"
+    );
+
+    while (list.lastChild) {
+      list.lastChild.remove();
+    }
+
+    let fragment = document.createDocumentFragment();
+    // See active-view-manager.css for an explanation for the n + 7 magic
+    // number.
+    let overflownViewEls = Array.from(
+      this.viewManager.querySelectorAll("view-el:nth-last-of-type(n + 7)")
+    ).reverse();
+
+    for (let overflownViewEl of overflownViewEls) {
+      let view = overflownViewEl.view;
+      let item = document.createXULElement("toolbarbutton");
+      item.classList.add("subviewbutton", "subviewbutton-iconic");
+      item.setAttribute("label", view.title);
+      item.setAttribute("image", `page-icon:${view.url.spec}`);
+      item.view = view;
+      fragment.appendChild(item);
+    }
+
+    list.appendChild(fragment);
+  }
+
+  #getOrCreateOverflowPanel() {
+    let panel = document.getElementById("active-view-manager-overflow-panel");
+    if (!panel) {
+      let template = document.getElementById(
+        "active-view-manager-overflow-panel-template"
+      );
+      template.replaceWith(template.content);
+      panel = document.getElementById("active-view-manager-overflow-panel");
+      panel.addEventListener("popupshowing", this);
+      panel.addEventListener("click", this);
+    }
+
+    return panel;
   }
 }
 customElements.define("active-view-manager", ActiveViewManager);

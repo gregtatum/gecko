@@ -2329,3 +2329,17 @@ description#PanelUI-profiler-locked {
   /* Make sure this description is wider than the header's */
   max-width: 310px;
 }
+
+/**
+ * TODO: Remove these next two rules after the next merge from
+ * mozilla-central, since they'll then be duplicated.
+ */
+
+.subviewbutton > .toolbarbutton-icon {
+  margin: 0;
+}
+
+.subviewbutton > .toolbarbutton-text {
+  text-align: start;
+  display: -moz-box;
+}
