@@ -1779,7 +1779,9 @@ var gBrowserInit = {
     gBrowser.addProgressListener(window.XULBrowserWindow);
     gBrowser.addTabsProgressListener(window.TabsProgressListener);
 
-    SidebarUI.init();
+    if (!AppConstants.PROCLIENT_ENABLED) {
+      SidebarUI.init();
+    }
 
     // We do this in onload because we want to ensure the button's state
     // doesn't flicker as the window is being shown.
@@ -2041,7 +2043,9 @@ var gBrowserInit = {
       // Enable the Restore Last Session command if needed
       RestoreLastSessionObserver.init();
 
-      SidebarUI.startDelayedLoad();
+      if (!AppConstants.PROCLIENT_ENABLED) {
+        SidebarUI.startDelayedLoad();
+      }
 
       PanicButtonNotifier.init();
     });
@@ -2506,7 +2510,9 @@ var gBrowserInit = {
 
     CaptivePortalWatcher.uninit();
 
-    SidebarUI.uninit();
+    if (!AppConstants.PROCLIENT_ENABLED) {
+      SidebarUI.uninit();
+    }
 
     DownloadsButton.uninit();
 
@@ -2615,6 +2621,7 @@ function HandleAppCommandEvent(evt) {
       BrowserSearch.webSearch();
       break;
     case "Bookmarks":
+      // TODO: ensure we don't get this
       SidebarUI.toggle("viewBookmarksSidebar");
       break;
     case "Home":
@@ -3698,9 +3705,11 @@ var PrintPreviewListener = {
   _hideChrome() {
     this._chromeState = {};
 
-    this._chromeState.sidebarOpen = SidebarUI.isOpen;
-    this._sidebarCommand = SidebarUI.currentID;
-    SidebarUI.hide();
+    if (!AppConstants.PROCLIENT_ENABLED) {
+      this._chromeState.sidebarOpen = SidebarUI.isOpen;
+      this._sidebarCommand = SidebarUI.currentID;
+      SidebarUI.hide();
+    }
 
     this._chromeState.findOpen = gFindBarInitialized && !gFindBar.hidden;
     if (gFindBarInitialized) {
@@ -6642,7 +6651,10 @@ var gUIDensity = {
     }
 
     let docs = [document.documentElement];
-    let shouldUpdateSidebar = SidebarUI.initialized && SidebarUI.isOpen;
+    let shouldUpdateSidebar =
+      !AppConstants.PROCLIENT_ENABLED &&
+      SidebarUI.initialized &&
+      SidebarUI.isOpen;
     if (shouldUpdateSidebar) {
       docs.push(SidebarUI.browser.contentDocument.documentElement);
     }

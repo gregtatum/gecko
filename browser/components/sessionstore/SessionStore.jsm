@@ -3738,12 +3738,14 @@ var SessionStoreInternal = {
       delete winData.hidden;
     }
 
-    let sidebarBox = aWindow.document.getElementById("sidebar-box");
-    let sidebar = sidebarBox.getAttribute("sidebarcommand");
-    if (sidebar && sidebarBox.getAttribute("checked") == "true") {
-      winData.sidebar = sidebar;
-    } else if (winData.sidebar) {
-      delete winData.sidebar;
+    if (!AppConstants.PROCLIENT_ENABLED) {
+      let sidebarBox = aWindow.document.getElementById("sidebar-box");
+      let sidebar = sidebarBox.getAttribute("sidebarcommand");
+      if (sidebar && sidebarBox.getAttribute("checked") == "true") {
+        winData.sidebar = sidebar;
+      } else if (winData.sidebar) {
+        delete winData.sidebar;
+      }
     }
     let workspaceID = aWindow.getWorkspaceID();
     if (workspaceID) {
@@ -4849,13 +4851,15 @@ var SessionStoreInternal = {
             break;
         }
       }
-      let sidebarBox = aWindow.document.getElementById("sidebar-box");
-      if (
-        aSidebar &&
-        (sidebarBox.getAttribute("sidebarcommand") != aSidebar ||
-          !sidebarBox.getAttribute("checked"))
-      ) {
-        aWindow.SidebarUI.showInitially(aSidebar);
+      if (!AppConstants.PROCLIENT_ENABLED) {
+        let sidebarBox = aWindow.document.getElementById("sidebar-box");
+        if (
+          aSidebar &&
+          (sidebarBox.getAttribute("sidebarcommand") != aSidebar ||
+            !sidebarBox.getAttribute("checked"))
+        ) {
+          aWindow.SidebarUI.showInitially(aSidebar);
+        }
       }
       // since resizing/moving a window brings it to the foreground,
       // we might want to re-focus the last focused window
