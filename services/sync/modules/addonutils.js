@@ -12,6 +12,9 @@ const { XPCOMUtils } = ChromeUtils.import(
 const { Log } = ChromeUtils.import("resource://gre/modules/Log.jsm");
 const { Svc } = ChromeUtils.import("resource://services-sync/util.js");
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 ChromeUtils.defineModuleGetter(
   this,
@@ -328,6 +331,9 @@ AddonUtilsInternal.prototype = {
    *        for the valid elements.
    */
   canInstallAddon(addon, options) {
+    if (AppConstants.PROCLIENT_ENABLED) {
+      return false;
+    }
     // sourceURI presence isn't enforced by AddonRepository. So, we skip
     // add-ons without a sourceURI.
     if (!addon.sourceURI) {
