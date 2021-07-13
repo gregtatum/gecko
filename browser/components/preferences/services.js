@@ -176,8 +176,8 @@ class ServiceRow extends HTMLElement {
   }
 
   async signout() {
-    Services.obs.notifyObservers(null, "companion-signout", this.service.id);
     await OnlineServices.deleteService(this.service);
+    Services.obs.notifyObservers(null, "companion-signout", this.service.id);
     this.service = null;
     this.setAttribute("status", "disconnected");
   }
