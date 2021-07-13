@@ -379,7 +379,9 @@ class GoogleService {
     let allEvents = new Map();
     for (let calendar of calendarList) {
       apiTarget = new URL(
-        `https://www.googleapis.com/calendar/v3/calendars/${calendar.id}/events`
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+          calendar.id
+        )}/events`
       );
 
       apiTarget.searchParams.set("orderBy", "startTime");
@@ -617,7 +619,6 @@ class MicrosoftService {
       scopes.join(" "),
       services[this.app].clientId,
       services[this.app].clientSecret,
-      null,
       config?.auth
     );
   }
