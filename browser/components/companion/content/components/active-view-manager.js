@@ -56,15 +56,13 @@ class ActiveViewManager extends HTMLElement {
       viewElToActivate = this.viewManager.querySelector("view-el:last-of-type");
     }
 
-    let viewEl = viewElToActivate.querySelector(".view-el");
-
     if (viewElToActivate != this.activeView) {
-      this.activeView?.querySelector(".view-el").classList.remove("active");
-      viewEl.classList.add("active");
+      this.activeView?.removeAttribute("active");
+      viewElToActivate.setAttribute("active", "true");
       this.activeView = viewElToActivate;
     }
 
-    viewEl.scrollIntoView({ behavior: "smooth", inline: "start" });
+    viewElToActivate.scrollIntoView({ behavior: "smooth", inline: "start" });
   }
 
   viewAdded(view) {

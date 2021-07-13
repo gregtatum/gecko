@@ -2,13 +2,22 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-class ViewElement extends HTMLElement {
+/* global MozHTMLElement */
+
+class ViewElement extends MozHTMLElement {
+  static get inheritedAttributes() {
+    return {
+      ".view-el": "active",
+    };
+  }
+
   connectedCallback() {
     if (!this.built) {
       let template = document.getElementById("template-view");
       let fragment = template.content.cloneNode(true);
       this.appendChild(fragment);
       this.built = true;
+      this.initializeAttributeInheritance();
     }
 
     this.update();

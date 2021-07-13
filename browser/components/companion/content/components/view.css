@@ -11,12 +11,12 @@
   padding: 5px;
 }
 
-.view-el:not(.active) {
+.view-el:not([active="true"]) {
   align-items: center;
   justify-content: center;
 }
 
-.active {
+.view-el[active="true"] {
   animation-name: activate;
   animation-duration: 0.5s;
   animation-fill-mode: forwards;
@@ -34,7 +34,7 @@
   fill: currentColor;
 }
 
-.view-el.active .view-icon {
+.view-el[active="true"] .view-icon {
   margin-inline-end: 5px;
 }
 
@@ -42,7 +42,7 @@
   visibility: hidden;
 }
 
-.view-el:not(.active) .view-label-container {
+.view-el:not([active]) .view-label-container {
   display: none;
 }
 
@@ -70,7 +70,7 @@
   visibility: hidden;
 }
 
-.view-el.active > .view-label-container > .view-domain,
-.view-el.active > .view-label-container > .view-title {
+.view-el[active="true"] > .view-label-container > .view-domain,
+.view-el[active="true"] > .view-label-container > .view-title {
   visibility: visible;
 }
