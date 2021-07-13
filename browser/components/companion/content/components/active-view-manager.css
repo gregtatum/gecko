@@ -44,3 +44,29 @@
   display: unset;
   order: -1;
 }
+
+#active-view-manager view-el {
+  margin-inline-start: 0;
+}
+
+#active-view-manager:hover view-el {
+  transition: margin-inline-start 160ms ease-out;
+}
+
+/**
+ * This next rule makes it so that if we're showing the overflow menu,
+ * that we should also try overlapping the non-active view-el's (with
+ * the exception of the first item after the overflow button, since we
+ * don't want it to overlap the overflow button.
+ */
+#active-view-manager:not(:hover) view-el:nth-last-of-type(n + 7) ~ view-el:not([active="true"]):not(:nth-last-of-type(6)) {
+  margin-inline-start: -30px;
+}
+
+/**
+ * A bit of hackery here to make it so that when an active view-el is
+ * in the middle of the River, any view-el's after it don't overlap it.
+ */
+#active-view-manager:not(:hover) view-el:nth-last-of-type(n + 7) ~ view-el[active="true"] + view-el {
+  margin-inline-start: 0px !important;
+}
