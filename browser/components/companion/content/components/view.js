@@ -25,9 +25,10 @@ class ViewElement extends HTMLElement {
     }
 
     let title = this.view?.title ?? "Newtab";
+    this.setAttribute("title", title);
+
     let titleEl = this.querySelector(".view-title");
     titleEl.textContent = title;
-    titleEl.tooltipText = title;
 
     if (this.view) {
       let iconEl = this.querySelector(".view-icon");
