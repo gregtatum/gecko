@@ -51,7 +51,7 @@ const conferencingInfo = [
   },
 ];
 
-const URL_REGEX = /(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])/gm;
+const URL_REGEX = /(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])/gim;
 
 XPCOMUtils.defineLazyGetter(this, "log", () => {
   let { ConsoleAPI } = ChromeUtils.import("resource://gre/modules/Console.jsm");
@@ -162,10 +162,10 @@ async function processLink(url, text) {
   let link = {};
   link.url = url.href;
   if (!text || url.href == text) {
-    if (url.host === "docs.google.com") {
+    if (url.host === "docs.google.com" || url.host === "drive.google.com") {
       for (let service of ServiceInstances) {
         if (service.app.startsWith("google")) {
-          let documentName = await service.getDocumentTitle(url.href);
+          let documentName = await service.getTitle(url.href);
           if (documentName) {
             link.text = documentName;
           }
@@ -222,7 +222,7 @@ class GoogleService {
       "https://www.googleapis.com/auth/gmail.readonly",
       "https://www.googleapis.com/auth/calendar.events.readonly",
       "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
-      "https://www.googleapis.com/auth/documents.readonly",
+      "https://www.googleapis.com/auth/drive.readonly",
     ];
 
     this.auth = new OAuth2(
@@ -570,15 +570,32 @@ class GoogleService {
     return messages;
   }
 
-  async getDocumentTitle(url) {
+  async getTitle(url) {
     url = new URL(url);
     if (!url.hostname.endsWith(".google.com")) {
       return null;
     }
-    let documentId = url.href.split("/")[5];
-    let apiTarget = new URL(
-      `https://docs.googleapis.com/v1/documents/${documentId}`
-    );
+    let id = url.href.split("/")[5];
+    let type = url.href.split("/")[3];
+    let apiTarget;
+    switch (type) {
+      case "document":
+        apiTarget = new URL(`https://docs.googleapis.com/v1/documents/${id}`);
+        break;
+      case "spreadsheets":
+        apiTarget = new URL(
+          `https://sheets.googleapis.com/v4/spreadsheets/${id}`
+        );
+        break;
+      case "presentation":
+        apiTarget = new URL(
+          `https://slides.googleapis.com/v1/presentations/${id}`
+        );
+        break;
+      case "file":
+        apiTarget = new URL(`https://www.googleapis.com/drive/v2/files/${id}`);
+        break;
+    }
 
     let token = await this.getToken();
     let headers = {
@@ -590,6 +607,11 @@ class GoogleService {
     });
 
     let results = await response.json();
+
+    if (type == "spreadsheets") {
+      return results.properties.title;
+    }
+
     return results.title;
   }
 
