@@ -6,8 +6,8 @@ export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
 });
 
-// Query new events every fifteen minutes
-const CALENDAR_CHECK_TIME = 15 * 60 * 1000; // 15 minutes
+// Query new events every five minutes
+const CALENDAR_CHECK_TIME = 5 * 60 * 1000; // 5 minutes
 // Update display every minute
 const CALENDAR_UPDATE_TIME = 60 * 1000; // 1 minute
 // Number of minutes after start that an event is hidden
