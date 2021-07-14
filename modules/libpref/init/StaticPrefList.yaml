@@ -10414,14 +10414,14 @@
 # parameters from loading URIs to prevent bounce (redirect) tracking.
 - name: privacy.query_stripping.enabled
   type: RelaxedAtomicBool
-  value: false
+  value: true
   mirror: always
 
 # The list which contains query parameters that are needed to be stripped from
 # URIs. The query parameters are separated by a space.
 - name: privacy.query_stripping.strip_list
   type: String
-  value: ""
+  value: "mc_eid oly_anon_id oly_enc_id __s vero_id _hsenc mkt_tok fbclid"
   mirror: never
 
 # This controls if we will do the query string stripping for redirects.
