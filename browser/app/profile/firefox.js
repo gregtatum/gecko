@@ -19,10 +19,6 @@
   #endif
 #endif
 
-#ifdef PROCLIENT_ENABLED
-pref("browser.places.interactions.enabled", true);
-#endif
-
 pref("browser.hiddenWindowChromeURL", "chrome://browser/content/hiddenWindowMac.xhtml");
 
 // Enables some extra Extension System Logging (can reduce performance)
@@ -2596,13 +2592,18 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
 #endif
 
 // MR2
-pref("startup.homepage_welcome_url", "", locked);
-pref("browser.aboutwelcome.enabled", false, locked);
-pref("startup.homepage_override_url", "", locked);
-pref("browser.startup.homepage", 1, locked);
-pref("browser.startup.homepage", "about:blank", locked);
-pref("pref.browser.homepage.disable_button.current_page", true, locked);
-pref("pref.browser.homepage.disable_button.bookmark_page", true, locked);
-pref("pref.browser.homepage.disable_button.restore_default", true, locked);
-pref("browser.newtabpage.enabled", false, locked);
-pref("xpinstall.enabled", false, locked);
+#ifdef PROCLIENT_ENABLED
+  pref("browser.places.interactions.enabled", true, locked);
+  pref("startup.homepage_welcome_url", "", locked);
+  pref("browser.aboutwelcome.enabled", false, locked);
+  pref("startup.homepage_override_url", "", locked);
+  pref("browser.startup.homepage", 1, locked);
+  pref("browser.startup.homepage", "about:blank", locked);
+  pref("pref.browser.homepage.disable_button.current_page", true, locked);
+  pref("pref.browser.homepage.disable_button.bookmark_page", true, locked);
+  pref("pref.browser.homepage.disable_button.restore_default", true, locked);
+  pref("browser.newtabpage.enabled", false, locked);
+  pref("xpinstall.enabled", false, locked);
+  pref("services.sync.engine.tabs", false, locked);
+  pref("browser.urlbar.suggest.openpage", false, locked);
+#endif
