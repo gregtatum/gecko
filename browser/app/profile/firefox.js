@@ -2597,7 +2597,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("startup.homepage_welcome_url", "", locked);
   pref("browser.aboutwelcome.enabled", false, locked);
   pref("startup.homepage_override_url", "", locked);
-  pref("browser.startup.homepage", 1, locked);
+  pref("browser.startup.page", 1, locked);
   pref("browser.startup.homepage", "about:blank", locked);
   pref("pref.browser.homepage.disable_button.current_page", true, locked);
   pref("pref.browser.homepage.disable_button.bookmark_page", true, locked);
@@ -2606,4 +2606,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("xpinstall.enabled", false, locked);
   pref("services.sync.engine.tabs", false, locked);
   pref("browser.urlbar.suggest.openpage", false, locked);
+  pref("browser.sessionstore.warnOnQuit", false, locked);
+  pref("browser.sessionstore.resume_session_once", false, locked);
+  pref("browser.sessionstore.resuming_after_os_restart", false, locked);
 #endif
