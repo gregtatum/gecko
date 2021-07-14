@@ -14,7 +14,6 @@
   scroll-behavior: smooth;
   white-space: nowrap;
   scrollbar-width: none;
-  -moz-window-dragging: no-drag;
 }
 
 #active-view-manager > .overflow {

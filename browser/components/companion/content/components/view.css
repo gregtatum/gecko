@@ -9,6 +9,7 @@
   background-color: gray;
   display: flex;
   padding: 5px;
+  -moz-window-dragging: no-drag;
 }
 
 .view-el:not([active="true"]) {
