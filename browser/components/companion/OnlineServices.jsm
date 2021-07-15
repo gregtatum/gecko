@@ -271,40 +271,14 @@ class GoogleService {
   }
 
   async getAccountAddress() {
-    let token = await this.getToken();
-
-    let apiTarget = new URL(
-      "https://gmail.googleapis.com/gmail/v1/users/me/profile"
-    );
-
-    let headers = {
-      Authorization: `Bearer ${token}`,
-    };
-
-    let response = await fetch(apiTarget, {
-      headers,
-    });
-
-    log.debug(response);
-
-    if (!response.ok) {
-      throw new Error(response.statusText);
-    }
-
-    let results = await response.json();
-    log.debug(JSON.stringify(results));
-    return results.emailAddress;
+    return this.emailAddress;
   }
 
-  async openLink(target) {
-    let account = await this.getAccountAddress();
-
-    let url = `https://accounts.google.com/AccountChooser?Email=${account}&continue=${target}`;
-
+  async openLink(url) {
     for (let window of BrowserWindowTracker.orderedWindows) {
       for (let browser of window.gBrowser.browsers) {
         try {
-          if (browser.currentURI.hostPort == target.host) {
+          if (browser.currentURI.hostPort == url.host) {
             window.gBrowser.selectedTab = window.gBrowser.getTabForBrowser(
               browser
             );
@@ -335,7 +309,7 @@ class GoogleService {
   openCalendar(year, month, day) {
     this.openLink(
       new URL(
-        `https://calendar.google.com/calendar/r/day/${year}/${month}/${day}`
+        `https://calendar.google.com/calendar/u/${this.emailAddress}/r/day/${year}/${month}/${day}`
       )
     );
   }
@@ -370,6 +344,12 @@ class GoogleService {
         }
         let calendar = {};
         calendar.id = result.primary ? "primary" : result.id;
+        // The ID of the primary calendar is the user's email
+        // address. By storing it here, we don't need extra
+        // auth scopes.
+        if (result.primary) {
+          this.emailAddress = result.id;
+        }
         calendar.backgroundColor = result.backgroundColor;
         calendar.foregroundColor = result.foregroundColor;
         calendarList.push(calendar);
