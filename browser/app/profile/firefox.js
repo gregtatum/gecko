@@ -264,7 +264,7 @@ pref("browser.touchmode.auto", true);
 pref("browser.compactmode.show", false);
 
 // At startup, check if we're the default browser and prompt user if not.
-pref("browser.shell.checkDefaultBrowser", false);
+pref("browser.shell.checkDefaultBrowser", true);
 pref("browser.shell.shortcutFavicons",true);
 pref("browser.shell.mostRecentDateSetAsDefault", "");
 pref("browser.shell.skipDefaultBrowserCheckOnFirstRun", true);
@@ -452,8 +452,6 @@ pref("browser.urlbar.experimental.firefoxSuggestLabels.enabled", false);
 
 pref("browser.altClickSave", false);
 
-pref("browser.companion.globalhistorydebugging", false);
-
 // Enable logging downloads operations to the Console.
 pref("browser.download.loglevel", "Error");
 
@@ -597,8 +595,12 @@ pref("browser.tabs.insertRelatedAfterCurrent", true);
 // for non-related links. Note that if this is set to true, it will trump
 // the value of browser.tabs.insertRelatedAfterCurrent.
 pref("browser.tabs.insertAfterCurrent", false);
-// MR2 don't warn on close
-pref("browser.tabs.warnOnClose", false);
+#ifdef PROCLIENT_ENABLED
+  // MR2 don't warn on close
+  pref("browser.tabs.warnOnClose", false);
+#else
+  pref("browser.tabs.warnOnClose", true);
+#endif
 pref("browser.tabs.warnOnCloseOtherTabs", true);
 pref("browser.tabs.warnOnOpen", true);
 pref("browser.tabs.maxOpenBeforeWarn", 15);
@@ -1755,10 +1757,6 @@ pref("browser.contentblocking.database.enabled", true);
 
 pref("dom.storage_access.enabled", true);
 
-pref("browser.contentblocking.category", "strict");
-pref("privacy.trackingprotection.enabled", true);
-pref("privacy.trackingprotection.socialtracking.enabled", true);
-
 pref("browser.contentblocking.cryptomining.preferences.ui.enabled", true);
 pref("browser.contentblocking.fingerprinting.preferences.ui.enabled", true);
 // Enable cookieBehavior = BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN as an option in the custom category ui
@@ -2593,6 +2591,9 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
 
 // MR2
 #ifdef PROCLIENT_ENABLED
+  pref("browser.contentblocking.category", "strict");
+  pref("privacy.trackingprotection.enabled", true);
+  pref("privacy.trackingprotection.socialtracking.enabled", true);
   pref("browser.places.interactions.enabled", true, locked);
   pref("startup.homepage_welcome_url", "", locked);
   pref("browser.aboutwelcome.enabled", false, locked);
@@ -2609,4 +2610,5 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.sessionstore.warnOnQuit", false, locked);
   pref("browser.sessionstore.resume_session_once", false, locked);
   pref("browser.sessionstore.resuming_after_os_restart", false, locked);
+  pref("browser.companion.globalhistorydebugging", false);
 #endif
