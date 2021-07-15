@@ -2611,4 +2611,5 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.sessionstore.resume_session_once", false, locked);
   pref("browser.sessionstore.resuming_after_os_restart", false, locked);
   pref("browser.companion.globalhistorydebugging", false);
+  pref("dom.security.https_first", true, locked);
 #endif
