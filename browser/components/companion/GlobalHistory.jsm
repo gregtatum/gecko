@@ -111,6 +111,7 @@ class InternalView {
 
     this.url = historyEntry.URI;
     this.title = historyEntry.title;
+    this.iconURL = browser.mIconURL;
 
     if (
       Services.prefs.getBoolPref(
