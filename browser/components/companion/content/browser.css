@@ -19,10 +19,26 @@
 #nav-bar-overflow-button,
 #page-action-buttons,
 #tracking-protection-icon-container,
+#identity-box,
 :root[companion] #companion-sidebar-button-win,
 #nav-bar-customization-target > *:not(#urlbar-container, #profiler-button) {
   display: none;
   -moz-box-flex: 1;
+}
+
+#urlbar:not(.searchButton) > #urlbar-input-container > #proclient-search-icon-box {
+  /* Ensure that when the user clicks on the contents of this box, it focuses the url bar */
+  pointer-events: none;
+  padding-inline: var(--urlbar-icon-padding);
+  border-radius: var(--urlbar-icon-border-radius);
+  fill: currentColor;
+  fill-opacity: var(--urlbar-icon-fill-opacity);
+  margin-inline-end: var(--identity-box-margin-inline);
+}
+
+#urlbar:not(.searchButton) > #urlbar-input-container > #proclient-search-icon-box #search-icon {
+  -moz-context-properties: fill, fill-opacity;
+  list-style-image: url(chrome://global/skin/icons/search-glass.svg);
 }
 
 @supports not -moz-bool-pref("browser.companion.tabdebugging") {

@@ -253,6 +253,11 @@
                 <description id="tracking-protection-icon-tooltip-label" class="tooltip-label"/>
               </tooltip>
             </box>
+#ifdef PROCLIENT_WINDOW
+            <box id="proclient-search-icon-box" align="center">
+              <image id="search-icon"/>
+            </box>
+#endif
             <box id="identity-box"
                  pageproxystate="invalid"
                  ondragstart="gIdentityHandler.onDragStart(event);">
