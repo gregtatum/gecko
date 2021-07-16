@@ -3,4 +3,4 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 companion-join-meeting = Join
-companion-email-guests = Email guests
+companion-email-late = Running late

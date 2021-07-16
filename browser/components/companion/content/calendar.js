@@ -267,18 +267,50 @@ class CalendarEvent extends MozLitElement {
     `;
   }
 
-  emailGuestsTemplate() {
-    let { attendees, summary } = this.event;
-    if (!attendees?.length) {
+  // Get the "host" of the meeting, or all attendees if the user is the host or
+  // the host doesn't appear to be attending.
+  _getRunningLateTargets() {
+    let { attendees, creator, organizer } = this.event;
+    let isNonSelfAttendee = user => {
+      return (
+        user &&
+        !user.self &&
+        // If there are no attendees treat all users as attending.
+        (!attendees?.length || attendees.some(a => a.email == user.email))
+      );
+    };
+    if (isNonSelfAttendee(organizer)) {
+      // Ideally, we'd use the organizer. In a shared calendar situation the
+      // organizer might actually be a generic calendar email, so confirm
+      // they're attending.
+      // This appears to break some events that are sent from outlook.com
+      // to mozilla.com, where the organizer is not on the attendee list...
+      return [organizer];
+    }
+    if (isNonSelfAttendee(creator)) {
+      // Try the creator, who might've put the event on a shared calendar.
+      // Likewise, confirm that isn't the user or an assistant who might
+      // not be attending.
+      return [creator];
+    }
+    // This is a self-hosted meeting, or the organizer and creator don't seem
+    // like good addresses to message.
+    return attendees;
+  }
+
+  runningLateTemplate() {
+    let { summary } = this.event;
+    let emailTargets = this._getRunningLateTargets();
+    if (!emailTargets.length) {
       return "";
     }
-    let attendeeEmails = attendees.map(a => a.email).join(",");
+    let emailTo = emailTargets.map(a => a.email).join(",");
     // FIXME: (l10n) The subject should get localised.
     return html`
       <a
         class="button-link"
-        href="mailto:${attendeeEmails}?subject=Running late to ${summary}"
-        data-l10n-id="companion-email-guests"
+        href="mailto:${emailTo}?subject=Running late to meeting ${summary}"
+        data-l10n-id="companion-email-late"
         @click=${openLink}
       ></a>
     `;
@@ -307,7 +339,7 @@ class CalendarEvent extends MozLitElement {
             <div class="links">${this.eventLinksTemplate()}</div>
           </div>
           <div class="event-actions">
-            ${this.emailGuestsTemplate()} ${this.joinConferenceTemplate()}
+            ${this.runningLateTemplate()} ${this.joinConferenceTemplate()}
           </div>
         </div>
       </div>

@@ -420,7 +420,9 @@ class GoogleService {
         event.links = await getLinkInfo(result);
         event.calendar = {};
         event.calendar.id = calendar.id;
-        event.attendees = result.attendees?.filter(a => !a.self);
+        event.attendees = result.attendees?.filter(a => !a.self) || [];
+        event.organizer = result.organizer;
+        event.creator = result.creator;
         if (allEvents.has(result.id)) {
           // If an event is duplicated, use
           // the primary calendar
