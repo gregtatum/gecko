@@ -212,8 +212,7 @@ class CalendarEvent extends MozLitElement {
   openCalendar(e) {
     e.preventDefault();
     window.CompanionUtils.sendAsyncMessage("Companion:OpenCalendar", {
-      start: new Date(this.event.start),
-      serviceId: this.event.serviceId,
+      event: this.event,
     });
   }
 

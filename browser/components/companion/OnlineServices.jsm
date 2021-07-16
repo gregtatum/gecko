@@ -210,6 +210,39 @@ async function getLinkInfo(result) {
   }
   return links;
 }
+
+async function openLink(url) {
+  for (let window of BrowserWindowTracker.orderedWindows) {
+    for (let browser of window.gBrowser.browsers) {
+      try {
+        if (browser.currentURI.hostPort == url.host) {
+          window.gBrowser.selectedTab = window.gBrowser.getTabForBrowser(
+            browser
+          );
+          browser.loadURI(url, {
+            triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+          });
+          return;
+        }
+      } catch (e) {
+        // Bad hostPort.
+      }
+    }
+  }
+
+  let win = BrowserWindowTracker.getTopWindow({
+    allowPopups: false,
+  });
+
+  if (win) {
+    win.switchToTabHavingURI(url, true, {
+      ignoreFragment: true,
+    });
+  }
+
+  UtilityOverlay.openTrustedLinkIn(url.href, "tab");
+}
+
 var nextServiceId = 0;
 
 class GoogleService {
@@ -274,42 +307,14 @@ class GoogleService {
     return this.emailAddress;
   }
 
-  async openLink(url) {
-    for (let window of BrowserWindowTracker.orderedWindows) {
-      for (let browser of window.gBrowser.browsers) {
-        try {
-          if (browser.currentURI.hostPort == url.host) {
-            window.gBrowser.selectedTab = window.gBrowser.getTabForBrowser(
-              browser
-            );
-            browser.loadURI(url, {
-              triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
-            });
-            return;
-          }
-        } catch (e) {
-          // Bad hostPort.
-        }
-      }
-    }
-
-    let win = BrowserWindowTracker.getTopWindow({
-      allowPopups: false,
-    });
-
-    if (win) {
-      win.switchToTabHavingURI(url, true, {
-        ignoreFragment: true,
-      });
-    }
-
-    UtilityOverlay.openTrustedLinkIn(url, "tab");
-  }
-
-  openCalendar(year, month, day) {
-    this.openLink(
+  openCalendar(event) {
+    let start = new Date(event.start);
+    openLink(
       new URL(
-        `https://calendar.google.com/calendar/u/${this.emailAddress}/r/day/${year}/${month}/${day}`
+        `https://calendar.google.com/calendar/u/${
+          this.emailAddress
+        }/r/day/${start.getFullYear()}/${start.getMonth() +
+          1}/${start.getDate()}`
       )
     );
   }
@@ -433,9 +438,9 @@ class GoogleService {
 
   openEmail(messageData) {
     if ("link" in messageData) {
-      this.openLink(new URL(messageData.link));
+      openLink(new URL(messageData.link));
     } else {
-      this.openLink(
+      openLink(
         new URL(`https://mail.google.com/mail/#inbox/${messageData.id}`)
       );
     }
@@ -666,12 +671,8 @@ class MicrosoftService {
     return token;
   }
 
-  openCalendar(year, month, day) {
-    this.openLink(
-      new URL(
-        `https://calendar.google.com/calendar/r/day/${year}/${month}/${day}`
-      )
-    );
+  openCalendar(event) {
+    openLink(new URL(event.url));
   }
 
   async getNextMeetings() {
@@ -720,7 +721,8 @@ class MicrosoftService {
       //      event.calendar = {};
       //      event.calendar.id = calendar.id;
       allEvents.set(result.id, event);
-      //      event.serviceId = this.id;
+      event.serviceId = this.id;
+      event.url = result.webLink;
     }
     return Array.from(allEvents.values()).sort((a, b) => a.start - b.start);
   }

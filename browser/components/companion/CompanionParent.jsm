@@ -794,12 +794,8 @@ class CompanionParent extends JSWindowActorParent {
         break;
       }
       case "Companion:OpenCalendar": {
-        let { start, serviceId } = message.data;
-        OnlineServices.findServiceById(serviceId).openCalendar(
-          start.getFullYear(),
-          start.getMonth() + 1,
-          start.getDate()
-        );
+        let { event } = message.data;
+        OnlineServices.findServiceById(event.serviceId).openCalendar(event);
         break;
       }
       case "Companion:GetEvents": {
