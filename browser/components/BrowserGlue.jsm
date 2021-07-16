@@ -3240,12 +3240,38 @@ BrowserGlue.prototype = {
     });
   },
 
+  _migrateProClientUI() {
+    const VERSION = 1;
+    const prefProClientVersion = "browser.companion.migration.version";
+    let currentVersion = Services.prefs.getIntPref(prefProClientVersion, 0);
+    if (currentVersion >= VERSION) {
+      return;
+    }
+
+    if (currentVersion < 1) {
+      // MR2-306: Force light theme until dark theme is supported
+      let themesPromise = AddonManager.getAddonsByTypes(["theme"]);
+      Promise.resolve(themesPromise).then(async themes => {
+        let theme = themes.find(
+          t => t.id == "firefox-compact-light@mozilla.org"
+        );
+        await theme.enable();
+      });
+    }
+
+    Services.prefs.setIntPref(prefProClientVersion, VERSION);
+  },
+
   // eslint-disable-next-line complexity
   _migrateUI: function BG__migrateUI() {
     // Use an increasing number to keep track of the current migration state.
     // Completely unrelated to the current Firefox release number.
     const UI_VERSION = 116;
     const BROWSER_DOCURL = AppConstants.BROWSER_CHROME_URL;
+
+    if (AppConstants.PROCLIENT_ENABLED) {
+      this._migrateProClientUI();
+    }
 
     if (!Services.prefs.prefHasUserValue("browser.migration.version")) {
       // This is a new profile, nothing to migrate.
