@@ -717,7 +717,6 @@ class MicrosoftService {
       event.summary = result.subject;
       event.start = new Date(result.start.dateTime + "Z");
       event.end = new Date(result.end.dateTime + "Z");
-      event.links = [];
       event.conference = getConferenceInfo(result);
       event.links = await getLinkInfo(result);
       //      event.calendar = {};
@@ -725,8 +724,22 @@ class MicrosoftService {
       allEvents.set(result.id, event);
       event.serviceId = this.id;
       event.url = result.webLink;
+
+      event.creator = null; // No creator seems to be available.
+      event.organizer = this._normalizeUser(result.organizer, {
+        self: result.isOrganizer,
+      });
+      event.attendees = result.attendees.map(a => this._normalizeUser(a));
     }
     return Array.from(allEvents.values()).sort((a, b) => a.start - b.start);
+  }
+
+  _normalizeUser(user, { self } = {}) {
+    return {
+      email: user.emailAddress.address,
+      name: user.emailAddress.name,
+      self: !!self,
+    };
   }
 
   toJSON() {

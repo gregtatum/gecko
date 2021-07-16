@@ -295,7 +295,7 @@ class CalendarEvent extends MozLitElement {
     }
     // This is a self-hosted meeting, or the organizer and creator don't seem
     // like good addresses to message.
-    return attendees | "";
+    return attendees;
   }
 
   runningLateTemplate() {
