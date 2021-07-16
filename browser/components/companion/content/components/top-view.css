@@ -2,14 +2,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-active-view-manager {
-  display: flex;
-  padding-block: 5px;
-  max-width: 450px; 
-  align-items: center;
+#top-view {
+  width: 250px;
+  height: 50px;
+  background-color: gray;
+  padding: 5px;
+  margin-inline: 5px;
+  border-radius: 2px;
 }
 
-#overflow {
-  border-radius: 50%;
-  min-height: 0;
+.top-view-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

@@ -48,7 +48,7 @@
 }
 
 #urlbar-container {
-  min-width: 300px;
+  min-width: 350px;
 }
 
 #navigator-toolbox {
@@ -149,10 +149,6 @@
 #companion-identity-box #identity-permission-box,
 #companion-identity-box #notification-popup-box {
  display: none;
-}
-
-active-view-manager {
-  display: inline-block;
 }
 
 #active-view-manager-overflow-panel {

@@ -45,3 +45,7 @@ browser.jar:
     content/browser/companion/components/active-view-manager.css (content/components/active-view-manager.css)
     content/browser/companion/components/view.js (content/components/view.js)
     content/browser/companion/components/view.css (content/components/view.css)
+    content/browser/companion/components/top-view.js (content/components/top-view.js)
+    content/browser/companion/components/top-view.css (content/components/top-view.css)
+    content/browser/companion/components/river.js   (content/components/river.js)
+    content/browser/companion/components/river.css  (content/components/river.css)

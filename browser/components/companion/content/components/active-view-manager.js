@@ -7,6 +7,8 @@ class ActiveViewManager extends HTMLElement {
   #overflow;
   /** @type {<xul:panel>} */
   #overflowPanel;
+  #river;
+  #topView;
 
   static EVENTS = [
     "ViewChanged",
@@ -17,24 +19,14 @@ class ActiveViewManager extends HTMLElement {
   ];
 
   connectedCallback() {
-    // Set up the active view manager UI.
     let template = document.getElementById("template-active-view-manager");
     let fragment = template.content.cloneNode(true);
     this.appendChild(fragment);
 
-    // Set up an initial view element.
-    this.viewManager = this.querySelector("#active-view-manager");
-    this.#overflow = this.querySelector(".overflow");
-    let initialView = document.createElement("view-el");
-    this.viewManager.insertBefore(initialView, this.#overflow);
-    this.updateActiveView(initialView);
+    this.#overflow = this.querySelector("#overflow");
+    this.#river = this.querySelector("river-el");
+    this.#topView = this.querySelector("top-view");
 
-    // Setup a map to store all views shown to the user. Do not add the initial
-    // view element to the map yet. We will add it when "ViewAdded" is fired i.e.
-    // when the user has visited a website for the first time.
-    this.views = new Map();
-
-    // Add listeners for events coming from GlobalHistory.
     for (let event of ActiveViewManager.EVENTS) {
       window.top.gGlobalHistory.addEventListener(event, this);
     }
@@ -51,104 +43,56 @@ class ActiveViewManager extends HTMLElement {
     this.#overflow.removeEventListener("click", this);
   }
 
-  updateActiveView(viewElToActivate) {
-    if (!viewElToActivate) {
-      viewElToActivate = this.viewManager.querySelector("view-el:last-of-type");
-    }
-
-    if (viewElToActivate != this.activeView) {
-      this.activeView?.removeAttribute("active");
-      viewElToActivate.setAttribute("active", "true");
-      this.activeView = viewElToActivate;
-    }
-
-    viewElToActivate.scrollIntoView({ behavior: "smooth", inline: "start" });
+  isTopView(view) {
+    return this.#topView.view == view;
   }
 
-  viewAdded(view) {
-    // TODO: Handle the edge case where a view is already present for the newly added
-    // URL in our views map. We might have to move that view to the front of the river
-    // and display it. Global History probably makes sure to not add duplicate views.
-    if (this.views.has(view)) {
-      console.warn("Saw ViewAdded for an existing view.");
-    }
-
-    // Add the new view to the map and append the view element to the active view manager.
-    // Note: If this is the first view being added to the map, we should edit the existing
-    // new-tab-like view element instead of appending a new view element to the active view manager.
-    let viewEls = this.viewManager.querySelectorAll("view-el");
-    if (!this.views.size && viewEls.length === 1) {
-      let initialViewEl = viewEls[0];
-      this.views.set(view, initialViewEl);
-      initialViewEl.update(view);
-
-      this.updateActiveView(initialViewEl);
-    } else {
-      let viewEl = document.createElement("view-el");
-      this.views.set(view, viewEl);
-      this.viewManager.insertBefore(viewEl, this.#overflow);
-      viewEl.update(view);
-
-      this.updateActiveView(viewEl);
-    }
+  isRiverView(view) {
+    return this.#river.views.has(view);
   }
 
   viewChanged(view) {
-    // TODO: Handle edge case where a view might not be present in the map.
-
-    let viewElToActivate = this.views.get(view);
-    if (!viewElToActivate) {
+    if (this.isTopView(view)) {
+      // Close any active views in the river.
+      this.#river.activatedView = null;
+    } else if (this.isRiverView(view)) {
+      this.#river.activatedView = view;
+    } else {
       console.warn("Saw ViewChanged for an unknown view.");
-      return;
     }
-
-    this.updateActiveView(viewElToActivate);
   }
 
   viewMoved(view) {
-    // TODO: Handle edge case where a view might not be present. We can
-    // probably trust Global History to take care of this.
-
     // TODO: Show a moving animation.
 
-    let viewElToMove = this.views.get(view);
-    if (!viewElToMove) {
+    // Nothing to do if "ViewMoved" was dispatched for a view that's already the top view.
+    if (this.isRiverView(view)) {
+      // Moved existing top view into the river.
+      let oldView = this.#topView.update(view);
+      this.#river.addView(oldView);
+      this.#river.activatedView = null;
+      this.#river.removeView(view);
+    } else if (!this.isTopView(view)) {
       console.warn("Saw ViewMoved for an unknown view.");
-      return;
     }
-
-    this.viewManager.insertBefore(viewElToMove, this.#overflow);
-    this.updateActiveView(viewElToMove);
-  }
-
-  viewRemoved(view) {
-    // TODO: Ask mossop if we're supporting users removing specific views like closing a tab.
-
-    let viewElToRemove = this.views.get(view);
-    if (!viewElToRemove) {
-      console.warn("Saw ViewRemoved for an unknown view.");
-      return;
-    }
-
-    this.viewManager.removeChild(viewElToRemove);
-    this.updateActiveView();
-    this.views.delete(view);
   }
 
   viewUpdated(view) {
-    let viewElToUpdate = this.views.get(view);
-    if (!viewElToUpdate) {
+    if (this.isTopView(view)) {
+      this.#topView.update(view);
+    } else if (this.isRiverView(view)) {
+      let viewEl = this.#river.views.get(view);
+      viewEl.update(view);
+    } else {
       console.warn("Saw ViewUpdated for an unknown view.");
-      return;
     }
-
-    viewElToUpdate.update(view);
   }
 
   handleEvent(event) {
     switch (event.type) {
       case "ViewAdded":
-        this.viewAdded(event.view);
+        let oldView = this.#topView.update(event.view);
+        this.#river.addView(oldView);
         break;
       case "ViewChanged":
         this.viewChanged(event.view);
@@ -157,7 +101,12 @@ class ActiveViewManager extends HTMLElement {
         this.viewMoved(event.view);
         break;
       case "ViewRemoved":
-        this.viewRemoved(event.view);
+        // TODO: Support users removing specific views like closing a tab.
+
+        // I'm assuming here that we'd never want to remove a view from GlobalHistory unless it
+        // is in the river or the overflow menu i.e. we don't ever want to remove a view that is
+        // user's the top view.
+        this.#river.removeView(event.view);
         break;
       case "ViewUpdated":
         this.viewUpdated(event.view);
@@ -182,8 +131,11 @@ class ActiveViewManager extends HTMLElement {
   }
 
   #viewSelected(view) {
-    let viewEl = this.views.get(view);
-    this.updateActiveView(viewEl);
+    if (this.isRiverView(view)) {
+      this.#river.activatedView = view;
+    } else if (this.isTopView(view)) {
+      this.#river.activatedView = null;
+    }
     window.top.gGlobalHistory.setView(view);
   }
 
@@ -218,10 +170,8 @@ class ActiveViewManager extends HTMLElement {
     }
 
     let fragment = document.createDocumentFragment();
-    // See active-view-manager.css for an explanation for the n + 7 magic
-    // number.
     let overflownViewEls = Array.from(
-      this.viewManager.querySelectorAll("view-el:nth-last-of-type(n + 7)")
+      this.#river.querySelectorAll("view-el:nth-last-of-type(n + 6)")
     ).reverse();
 
     for (let overflownViewEl of overflownViewEls) {

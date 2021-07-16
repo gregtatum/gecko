@@ -133,12 +133,17 @@
   </html:template>
 
   <html:template id="template-active-view-manager"
-                 xmlns="http://www.w3.org/1999/xhtml"
-                 xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-    <div id="active-view-manager">
-      <!-- view-el elements should go above this overflow button -->
-      <toolbarbutton class="subviewbutton overflow">+</toolbarbutton>
-    </div>
+    xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+    <toolbarbutton class="subviewbutton" id="overflow">+</toolbarbutton>
+    <river-el>
+      <div id="river"></div>
+    </river-el>
+    <top-view>
+      <div id="top-view">
+        <div class="top-view-title"></div>
+      </div>
+    </top-view>
   </html:template>
 
     <hbox id="companion-titlebar">

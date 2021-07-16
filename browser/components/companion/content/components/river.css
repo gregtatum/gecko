@@ -1,0 +1,41 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#river {
+  display: flex;
+  overflow: scroll;
+  scrollbar-width: none;
+  background-color: lightgray;
+  border-radius: 2px;
+  padding: 5px;
+}
+
+#river:empty {
+  display: none;
+}
+
+#river view-el:nth-last-of-type(n + 6) {
+  display: none;
+}
+
+#river view-el {
+  margin-inline-start: 0;
+}
+
+#river:hover view-el {
+  transition: margin-inline-start 160ms ease-out;
+}
+
+#river:not(:hover) view-el ~ view-el:not(:nth-last-of-type(5)) {
+  margin-inline-start: -30px;
+}
+
+/**
+ * A bit of hackery here to make it so that when an active view-el is
+ * in the River, any view-el's after it don't overlap it.
+ */
+view-el[active="true"] + view-el,
+view-el[active="true"] {
+  margin-inline-start: 0px !important;
+}
