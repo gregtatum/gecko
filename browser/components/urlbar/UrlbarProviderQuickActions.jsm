@@ -30,7 +30,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 const ENABLED_PREF = "suggest.quickactions";
 const DYNAMIC_TYPE_NAME = "quickActions";
 
-const MAX_RESULTS = 4;
+const MAX_RESULTS = 5;
 
 const COMMANDS = {
   createmeeting: {
@@ -66,7 +66,7 @@ const COMMANDS = {
     icon: "chrome://browser/skin/screenshot.svg",
     label: "Take a Screenshot",
     callback: () => {
-      Services.obs.notifyObservers(null, "menuitem-screenshot", true);
+      Services.obs.notifyObservers(null, "menuitem-screenshot-extension");
     },
   },
   preferences: {
@@ -164,33 +164,32 @@ class ProviderQuickActionsBase extends UrlbarProvider {
   constructor() {
     super();
     UrlbarResult.addDynamicResultType(DYNAMIC_TYPE_NAME);
-    UrlbarView.addDynamicViewTemplate(DYNAMIC_TYPE_NAME, {
-      attributes: {
-        role: "button",
-        class: "urlbarView-row-inner",
-      },
-      children: [
-        {
-          name: "content",
-          tag: "span",
-          attributes: { class: "urlbarView-no-wrap" },
-          children: [
-            {
-              name: "icon",
-              tag: "img",
-              attributes: { class: "urlbarView-favicon" },
-            },
-            {
-              name: "displayValue",
-              tag: "strong",
-            },
-            {
-              name: "outputAction",
-              tag: "span",
-            },
-          ],
+
+    let children = [...Array(MAX_RESULTS).keys()].map(i => {
+      return {
+        name: `button-${i}`,
+        tag: "span",
+        attributes: {
+          class: "urlbarView-quickaction-row",
+          role: "button",
         },
-      ],
+        children: [
+          {
+            name: `icon-${i}`,
+            tag: "img",
+            attributes: { class: "urlbarView-favicon" },
+          },
+          {
+            name: `label-${i}`,
+            tag: "span",
+            attributes: { class: "urlbarView-title" },
+          },
+        ],
+      };
+    });
+
+    UrlbarView.addDynamicViewTemplate(DYNAMIC_TYPE_NAME, {
+      children,
     });
 
     for (const key in COMMANDS) {
@@ -224,6 +223,10 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     return UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
+  getSuggestedIndex() {
+    return 0;
+  }
+
   /**
    * Whether this provider should be invoked for the given context.
    * If this method returns false, the providers manager won't start a query
@@ -250,47 +253,35 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     }
     results.length =
       results.length > MAX_RESULTS ? MAX_RESULTS : results.length;
-    for (let key of results) {
-      let res = COMMANDS[key];
-      const result = new UrlbarResult(
-        UrlbarUtils.RESULT_TYPE.DYNAMIC,
-        UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
-        {
-          value: key,
-          displayValue: res.label,
-          icon: res.icon,
-          dynamicType: DYNAMIC_TYPE_NAME,
-        }
-      );
-      result.suggestedIndex = 1;
-      addCallback(this, result);
-    }
+    const result = new UrlbarResult(
+      UrlbarUtils.RESULT_TYPE.DYNAMIC,
+      UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
+      {
+        results,
+        dynamicType: DYNAMIC_TYPE_NAME,
+      }
+    );
+    result.suggestedIndex = this.getSuggestedIndex();
+    addCallback(this, result);
   }
 
   getViewUpdate(result) {
-    const viewUpdate = {
-      icon: {
-        attributes: {
-          src: result.payload.icon,
-        },
-      },
-      displayValue: {
-        textContent: result.payload.displayValue,
-      },
-      outputAction: {
-        textContent: "",
-      },
-    };
-
+    let viewUpdate = {};
+    [...Array(MAX_RESULTS).keys()].forEach(i => {
+      let key = result.payload.results?.[i];
+      let data = COMMANDS?.[key] || { icon: "", label: " " };
+      viewUpdate[`button-${i}`] = { attributes: { "data-key": key } };
+      viewUpdate[`icon-${i}`] = { attributes: { src: data.icon } };
+      viewUpdate[`label-${i}`] = { textContent: data.label };
+      if (!result.payload.results?.[i]) {
+        viewUpdate[`button-${i}`] = { attributes: { hidden: true, role: "" } };
+      }
+    });
     return viewUpdate;
   }
 
-  async pickResult({ payload }) {
-    let value = payload.value;
-    // TODO: We probably want the UrlBar to do this?
-    let win = BrowserWindowTracker.getTopWindow();
-    win.gURLBar.blur();
-    COMMANDS[value].callback();
+  async pickResult(results, itemPicked) {
+    COMMANDS[itemPicked.dataset.key].callback();
   }
 }
 
@@ -300,6 +291,9 @@ class ProviderQuickActionsBase extends UrlbarProvider {
  * has been entered.
  */
 class ProviderQuickActionsEmpty extends ProviderQuickActionsBase {
+  getSuggestedIndex() {
+    return 1;
+  }
   getPriority() {
     return 1;
   }

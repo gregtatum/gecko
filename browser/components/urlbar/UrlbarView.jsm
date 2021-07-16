@@ -9,6 +9,10 @@ var EXPORTED_SYMBOLS = ["UrlbarView"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   Services: "resource://gre/modules/Services.jsm",
@@ -607,7 +611,7 @@ class UrlbarView {
     let openPanelInstance = (this._openPanelInstance = {});
     this.oneOffSearchButtons.willHide().then(willHide => {
       if (!willHide && openPanelInstance == this._openPanelInstance) {
-        this.oneOffSearchButtons.enable(true);
+        this.oneOffSearchButtons.enable(!AppConstants.PROCLIENT_ENABLED);
         this._openPanel();
       }
     });
@@ -637,8 +641,9 @@ class UrlbarView {
       //  * The search string starts with an `@` or a search restriction
       //    character
       this.oneOffSearchButtons.enable(
-        (firstResult.providerName != "UrlbarProviderSearchTips" ||
-          queryContext.trimmedSearchString) &&
+        !AppConstants.PROCLIENT_ENABLED &&
+          (firstResult.providerName != "UrlbarProviderSearchTips" ||
+            queryContext.trimmedSearchString) &&
           queryContext.trimmedSearchString[0] != "@" &&
           (queryContext.trimmedSearchString[0] !=
             UrlbarTokenizer.RESTRICT.SEARCH ||
@@ -922,6 +927,9 @@ class UrlbarView {
     ) {
       // Don't replace a suggestedIndex result with another suggestedIndex
       // result if the suggestedIndex values are different.
+      return false;
+    }
+    if (result.payload.dynamicType != row.result.payload.dynamicType) {
       return false;
     }
     if (

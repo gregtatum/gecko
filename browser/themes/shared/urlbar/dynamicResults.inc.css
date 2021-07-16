@@ -145,48 +145,81 @@
 }
 
 /*
- * This section is for urlbar quick actions, these are floated to take up less vertical space.
+ * This section is for urlbar quick actions.
  */
-.urlbarView-row {
-  clear: left;
-}
 
-.urlbarView-row[dynamicType=quickActions] {
-  float: left;
-  clear: unset;
+.urlbarView-row[dynamicType=quickActions]::before {
+  text-transform: uppercase;
 }
 
 .urlbarView-row[dynamicType=quickActions] > .urlbarView-row-inner {
-  background-color: var(--autocomplete-popup-hover-background);
+  display: flex;
+  flex-wrap: wrap;
+  overflow: hidden;
+  position: relative;
+  height: 30px;
+}
+
+.urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row {
+  background: rgba(255, 255, 255, .1);
+  border-radius: 8px;
   margin-inline-end: 1em;
+  margin-block-end: 1em;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+}
+
+.urlbarView-row[dynamicType=quickActions] .urlbarView-title {
+  font-weight: bold;
   font-size: small;
 }
 
-.urlbarView-row[dynamicType=quickActions] > .urlbarView-row-inner > .urlbarView-no-wrap {
-  padding-inline-end: 5px;
-}
-
-.urlbarView-row[dynamicType=quickActions] > .urlbarView-row-inner[selected] {
+.urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row[selected],
+.urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row[selected] {
   background-color: var(--autocomplete-popup-highlight-background);
   color: var(--autocomplete-popup-highlight-color);
 }
 
- /*
-  * Since the rows are floated we need to change the way row labels are displayed
-  * to apply a hardcoded end margin to the row before a label is shown.
-  */
-.urlbarView-row:first-child:not([label]) {
-  margin-block-end: 1.46em;
+.urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon {
+  width: 32px;
+  height: 32px;
+  padding: 8px;
+  background: rgba(255, 255, 255, .1);
+  margin-inline-end: 0;
+  border-radius: 8px;
+  margin-block-end: 5px;
 }
 
-.urlbarView-row:nth-child(2):not([label]):not([dynamicType]) {
-  margin-block-start: -1.46em;
+.urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row {
+  width: 64px;
+  height: 84px;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  overflow: hidden;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  margin-block-end: 10px;
 }
 
-#urlbar-results .urlbarView-row[label] {
-  margin-block-start: unset;
+.urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row[hidden],
+.urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row[hidden] {
+  display: none;
 }
 
-#urlbar-results .urlbarView-row[label]::before {
-  top: -1.66em;
+.urlbarView-row[dynamicType=topSitesButtons] > .urlbarView-row-inner {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  height: 100px;
+  overflow: hidden;
+}
+
+.urlbarView-row[dynamicType=topSitesButtons] .urlbarView-title {
+  width: 60px;
+  text-align: center;
+  font-size: small;
+  text-overflow: ellipsis;
 }

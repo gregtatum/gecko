@@ -14,6 +14,10 @@ var EXPORTED_SYMBOLS = ["UrlbarProvidersManager"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 XPCOMUtils.defineLazyModuleGetters(this, {
   ObjectUtils: "resource://gre/modules/ObjectUtils.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
@@ -66,10 +70,17 @@ var localProviderModules = {
     "resource:///modules/UrlbarProviderTabToSearch.jsm",
   UrlbarProviderTokenAliasEngines:
     "resource:///modules/UrlbarProviderTokenAliasEngines.jsm",
-  UrlbarProviderTopSites: "resource:///modules/UrlbarProviderTopSites.jsm",
   UrlbarProviderUnitConversion:
     "resource:///modules/UrlbarProviderUnitConversion.jsm",
 };
+
+if (AppConstants.PROCLIENT_ENABLED) {
+  localProviderModules.UrlbarProviderTopSitesButtons =
+    "resource:///modules/UrlbarProviderTopSitesButtons.jsm";
+} else {
+  localProviderModules.UrlbarProviderTopSites =
+    "resource:///modules/UrlbarProviderTopSites.jsm";
+}
 
 // List of available local muxers, each is implemented in its own jsm module.
 var localMuxerModules = {

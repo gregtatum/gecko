@@ -40,6 +40,7 @@ EXTRA_JS_MODULES += [
     "UrlbarProviderTabToSearch.jsm",
     "UrlbarProviderTokenAliasEngines.jsm",
     "UrlbarProviderTopSites.jsm",
+    "UrlbarProviderTopSitesButtons.jsm",
     "UrlbarProviderUnitConversion.jsm",
     "UrlbarQuickSuggest.jsm",
     "UrlbarResult.jsm",
