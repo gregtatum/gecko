@@ -754,3 +754,24 @@ e-global-nav-debugging h2 {
   white-space: nowrap;
   max-width: 200px;
 }
+
+.tab-button-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.tab-button {
+  /* Overwrite the generic button styles */
+  font-weight: bold;
+  background-color: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  -moz-outline-radius: 0;
+}
+
+.tab-button[selected] {
+  color: var(--in-content-primary-button-background);
+  border-color: var(--in-content-primary-button-background);
+}
+

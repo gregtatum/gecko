@@ -29,6 +29,7 @@
 <head>
   <title>Firefox Companion</title>
   <script type="module" src="companion.js"/>
+  <script src="chrome://global/content/elements/named-deck.js"/>
   <link rel="localization" href="browser/browser.ftl"/>
   <link rel="localization" href="browser/companion.ftl"/>
 </head>
@@ -234,23 +235,30 @@
     </hbox>
   </hbox>
 
-  <div xmlns="http://www.w3.org/1999/xhtml" id="scroll">
-    <div id="top-sites-placeholder"></div>
-    <div id="events-placeholder"></div>
-
-    <div id="email" hidden="true">
-      <div class="email-header">
-        <h2 class="email-title">New Mail</h2>
-        <div>
-           <div id="inbox-link">Go to Inbox &#8594;</div>
+  <html:button-group class="tab-button-group">
+    <html:button class="tab-button ghost-button" name="now" is="named-deck-button" deck="companion-deck">Now</html:button>
+    <html:button class="tab-button ghost-button" name="browse" is="named-deck-button" deck="companion-deck">Browse</html:button>
+  </html:button-group>
+  <html:named-deck id="companion-deck">
+    <div xmlns="http://www.w3.org/1999/xhtml" id="scroll" name="now">
+      <div id="top-sites-placeholder"></div>
+      <div id="events-placeholder"></div>
+      <div id="email" hidden="true">
+        <div class="email-header">
+          <h2 class="email-title">New Mail</h2>
+          <div>
+             <div id="inbox-link">Go to Inbox &#8594;</div>
+          </div>
         </div>
+        <div id="email-panel"/>
       </div>
-      <div id="email-panel"/>
+      <div id="content">
+      </div>
     </div>
-    <div id="content">
+    <div xmlns="http://www.w3.org/1999/xhtml" id="scroll-browse" name="browse">
+      <div class="content"></div>
     </div>
-
-  </div>
+  </html:named-deck>
 
   <div xmlns="http://www.w3.org/1999/xhtml" id="settings" hidden="true">
     <div id="sliders"></div>

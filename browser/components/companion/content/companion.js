@@ -38,7 +38,17 @@ function maybeInitializeUI() {
   content.appendChild(new KeyframeDbList("Current Session", "currentSession"));
   content.appendChild(new GlobalHistoryDebugging());
   content.appendChild(new SnapshotList());
-  content.appendChild(new PocketList());
+
+  // short-lived placeholder until the suggested snapshots UI is ready
+  const suggestedSnapshotsPlaceholder = document.createElement("div");
+  const placeholderTitle = document.createElement("h2");
+  placeholderTitle.setAttribute("class", "list-title");
+  placeholderTitle.textContent = "Suggested Snapshots";
+  suggestedSnapshotsPlaceholder.appendChild(placeholderTitle);
+  content.appendChild(suggestedSnapshotsPlaceholder);
+
+  let browseContent = document.querySelector("#scroll-browse .content");
+  browseContent.appendChild(new PocketList());
 }
 
 window.addEventListener(
