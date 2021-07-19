@@ -9,6 +9,7 @@ import { PocketList } from "./pocket.js";
 import { SnapshotList } from "./snapshots.js";
 import { KeyframeDbList, setUpKeyframeRanges } from "./keyframes.js";
 import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
+import { RefreshServicesButton } from "./refresh-services-button.js";
 
 function toggleSettings() {
   let settings = document.getElementById("settings");
@@ -31,7 +32,7 @@ function maybeInitializeUI() {
   document.getElementById("top-sites-placeholder").appendChild(new TopSites());
   document
     .getElementById("events-placeholder")
-    .appendChild(new CalendarEventList());
+    .append(new RefreshServicesButton(), new CalendarEventList());
   let content = document.getElementById("content");
   content.appendChild(new MediaList("Media"));
   content.appendChild(new KeyframeDbList("Currently Working On", "workingOn"));

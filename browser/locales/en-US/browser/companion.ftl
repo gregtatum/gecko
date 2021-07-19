@@ -4,3 +4,7 @@
 
 companion-join-meeting = Join
 companion-email-late = Running late
+companion-refresh-services-button =
+    .title=Refresh services
+companion-refresh-services-button-syncing =
+    .title=Syncing services

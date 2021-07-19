@@ -28,6 +28,7 @@ browser.jar:
     content/browser/companion/pause.svg (content/pause.svg)
     content/browser/companion/pocket.js (content/pocket.js)
     content/browser/companion/range.js (content/range.js)
+    content/browser/companion/refresh-services-button.js (content/refresh-services-button.js)
     content/browser/companion/snapshots-list.css (content/snapshots-list.css)
     content/browser/companion/snapshots.js (content/snapshots.js)
     content/browser/companion/topsites.js (content/topsites.js)
