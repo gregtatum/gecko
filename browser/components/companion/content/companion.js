@@ -6,6 +6,7 @@ import { TopSites } from "./topsites.js";
 import { CalendarEventList } from "./calendar.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
+import { SnapshotList } from "./snapshots.js";
 import { KeyframeDbList, setUpKeyframeRanges } from "./keyframes.js";
 import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
 
@@ -36,6 +37,7 @@ function maybeInitializeUI() {
   content.appendChild(new KeyframeDbList("Currently Working On", "workingOn"));
   content.appendChild(new KeyframeDbList("Current Session", "currentSession"));
   content.appendChild(new GlobalHistoryDebugging());
+  content.appendChild(new SnapshotList());
   content.appendChild(new PocketList());
 }
 

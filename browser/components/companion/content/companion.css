@@ -227,6 +227,20 @@ h2 {
   flex-shrink: 0;
 }
 
+.list-title {
+  font-size: 1em;
+  margin: 10px;
+  font-weight: bold;
+}
+
+.list-subtitle {
+  color: var(--in-content-deemphasized-text);
+  margin: -10px 0 10px 10px;
+  font-size: 0.625em;
+  padding: 0;
+  font-weight: normal;
+}
+
 .keyframe {
   font-size: smaller;
 }
@@ -239,7 +253,7 @@ h2 {
   opacity: .75;
 }
 
-.keyframe, .email, .pocket, .app-overview, .topsite {
+.keyframe, .snapshot, .email, .pocket, .app-overview, .topsite {
   display: flex;
   flex-direction: row;
   justify-content: start;
@@ -251,7 +265,7 @@ h2 {
   flex-direction: column;
 }
 
-.keyframe, .app-overview, .topsite {
+.keyframe, .snapshot, .app-overview, .topsite {
   align-items: center;
 }
 
@@ -262,7 +276,7 @@ h2 {
   object-position: 50% 50%;
 }
 
-.keyframe .title, .app-overview .title {
+.keyframe .title, .snapshot .snapshot-contents, .app-overview .title {
   flex: 1;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -422,7 +436,7 @@ button.conference:hover:active, .btn:hover:active {
   background-color: var(--in-content-button-background-hover);
 }
 
-.topsite-favicon img {
+.topsite-favicon img, .snapshot-favicon img {
   width: 20px;
   height: 20px;
   object-fit: contain;
@@ -683,6 +697,7 @@ button.conference:hover:active, .btn:hover:active {
   margin: 0 0 8px;
   transition: none;
   padding: 0 10px;
+  user-select: none;
 }
 
 .card:not(.card-no-hover):hover {

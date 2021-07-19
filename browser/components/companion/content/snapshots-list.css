@@ -1,0 +1,50 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.snapshots-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.snapshot:hover {
+  background-color: var(--button-hover-bgcolor);
+}
+
+.snapshot:active {
+  background-color: var(--button-active-bgcolor);
+}
+
+.snapshot .snapshot-contents {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: 4px;
+}
+
+.snapshot-favicon {
+  width: 36px;
+  height: 36px;
+  margin-inline-end: 8px;
+  border-radius: 4px;
+  background-color: var(--button-bgcolor);
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.snapshot .title {
+  opacity: .9;
+  overflow: hidden;
+}
+
+.snapshot .info {
+  display: flex;
+  flex-direction: row;
+  font-size: smaller;
+  opacity: .75;
+}
+
+.snapshot .snapshot-info-divider {
+  white-space: pre;
+}

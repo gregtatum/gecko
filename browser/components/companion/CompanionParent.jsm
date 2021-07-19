@@ -28,6 +28,7 @@ const { OnlineServices } = ChromeUtils.import(
 const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
   Ci.nsINavHistoryService
 );
+const { Snapshots } = ChromeUtils.import("resource:///modules/Snapshots.jsm");
 
 const { FileUtils } = ChromeUtils.import(
   "resource://gre/modules/FileUtils.jsm"
@@ -75,6 +76,8 @@ class CompanionParent extends JSWindowActorParent {
       "browser-window-tracker-tab-removed"
     );
     Services.obs.addObserver(this._observer, "keyframe-update");
+    Services.obs.addObserver(this._observer, "places-snapshot-added");
+    Services.obs.addObserver(this._observer, "places-snapshot-deleted");
 
     Services.obs.addObserver(this._observer, "companion-signin");
     Services.obs.addObserver(this._observer, "companion-signout");
@@ -154,6 +157,8 @@ class CompanionParent extends JSWindowActorParent {
       "browser-window-tracker-tab-removed"
     );
     Services.obs.removeObserver(this._observer, "keyframe-update");
+    Services.obs.removeObserver(this._observer, "places-snapshot-added");
+    Services.obs.removeObserver(this._observer, "places-snapshot-deleted");
 
     Services.obs.addObserver(this._observer, "companion-signin");
     Services.obs.addObserver(this._observer, "companion-signout");
@@ -542,6 +547,16 @@ class CompanionParent extends JSWindowActorParent {
     return events;
   }
 
+  /**
+   * Returns a list of the most relevant snapshots.
+   * TODO: Use more sophisticated heuristics here, possibly by sorting on a
+   * relevancy score stored in the Snapshots DB.
+   * @returns {array} A list of snapshots.
+   */
+  async getSnapshots() {
+    return Snapshots.query();
+  }
+
   async observe(subj, topic, data) {
     switch (topic) {
       case "browser-window-tracker-add-window": {
@@ -578,6 +593,14 @@ class CompanionParent extends JSWindowActorParent {
           keyframes,
           newPlacesCacheEntries,
           currentURI,
+        });
+        break;
+      }
+      case "places-snapshot-added":
+      case "places-snapshot-deleted": {
+        let snapshots = await this.getSnapshots();
+        this.sendAsyncMessage("Companion:SnapshotsChanged", {
+          snapshots,
         });
         break;
       }
@@ -680,6 +703,7 @@ class CompanionParent extends JSWindowActorParent {
         );
         let history = await this.getNavHistory();
         let keyframes = await this.getKeyframeData();
+        let snapshots = await this.getSnapshots();
         let newPlacesCacheEntries = this.consumeCachedPlacesDataToSend();
         let currentURI = this.getCurrentURI();
         let servicesConnected = !!OnlineServices.getServices().length;
@@ -689,6 +713,7 @@ class CompanionParent extends JSWindowActorParent {
           history,
           servicesConnected,
           keyframes,
+          snapshots,
           newPlacesCacheEntries,
           currentURI,
           globalHistory,

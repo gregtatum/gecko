@@ -46,6 +46,7 @@ class CompanionChild extends JSWindowActorChild {
             currentSession: [],
             workingOn: [],
           },
+          snapshots: [],
           getPlacesData(url) {
             return self._cachedPlacesData.get(url);
           },
@@ -104,6 +105,7 @@ class CompanionChild extends JSWindowActorChild {
           tabs,
           history,
           keyframes,
+          snapshots,
           newPlacesCacheEntries,
           currentURI,
           servicesConnected,
@@ -118,6 +120,7 @@ class CompanionChild extends JSWindowActorChild {
         waivedContent.CompanionUtils.history = history;
         waivedContent.CompanionUtils.servicesConnected = servicesConnected;
         waivedContent.CompanionUtils.keyframes = keyframes;
+        waivedContent.CompanionUtils.snapshots = snapshots;
         waivedContent.CompanionUtils.currentURI = currentURI;
         waivedContent.CompanionUtils.globalHistory = globalHistory;
 
@@ -157,6 +160,12 @@ class CompanionChild extends JSWindowActorChild {
         waivedContent.CompanionUtils.currentURI = currentURI;
 
         this.updatePlacesCache(newPlacesCacheEntries);
+        break;
+      }
+      case "Companion:SnapshotsChanged": {
+        let { snapshots } = message.data;
+        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+        waivedContent.CompanionUtils.snapshots = snapshots;
         break;
       }
       case "Companion:MediaEvent":
