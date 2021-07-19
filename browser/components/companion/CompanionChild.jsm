@@ -41,7 +41,6 @@ class CompanionChild extends JSWindowActorChild {
           tabs() {
             return this._tabs.values();
           },
-          history: [],
           keyframes: {
             currentSession: [],
             workingOn: [],
@@ -103,7 +102,6 @@ class CompanionChild extends JSWindowActorChild {
       case "Companion:Setup": {
         let {
           tabs,
-          history,
           keyframes,
           snapshots,
           newPlacesCacheEntries,
@@ -117,7 +115,6 @@ class CompanionChild extends JSWindowActorChild {
         for (let tab of tabs) {
           waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
         }
-        waivedContent.CompanionUtils.history = history;
         waivedContent.CompanionUtils.servicesConnected = servicesConnected;
         waivedContent.CompanionUtils.keyframes = keyframes;
         waivedContent.CompanionUtils.snapshots = snapshots;

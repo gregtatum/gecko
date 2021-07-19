@@ -263,7 +263,7 @@ h2 {
   opacity: .75;
 }
 
-.keyframe, .snapshot, .email, .pocket, .app-overview, .topsite {
+.keyframe, .snapshot, .email, .pocket, .app-overview {
   display: flex;
   flex-direction: row;
   justify-content: start;
@@ -275,7 +275,7 @@ h2 {
   flex-direction: column;
 }
 
-.keyframe, .snapshot, .app-overview, .topsite {
+.keyframe, .snapshot, .app-overview {
   align-items: center;
 }
 
@@ -418,68 +418,6 @@ button.conference:hover:active, .btn:hover:active {
   border-radius: 4px;
   margin-right: 5px;
   margin-left: 5px;
-}
-
-.topsites {
-  display: flex;
-  justify-content: space-between;
-}
-
-.topsite.card {
-  flex-direction: column;
-  overflow: hidden;
-  flex: 1 1 0;
-}
-
-.topsite-favicon {
-  width: 42px;
-  height: 42px;
-  border-radius: 8px;
-  background-color: rgba(255, 255, 255);
-  display: flex;
-  justify-content: center;
-  position: relative;
-  box-shadow: 0px 1px 4px 0px #3A39441A;
-}
-
-.topsite.card:hover .topsite-favicon {
-  background-color: var(--in-content-button-background-hover);
-}
-
-.topsite-favicon img, .snapshot-favicon img {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  object-position: 50% 50%;
-  align-self: center;
-}
-
-.topsites .title {
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  font-size: x-small;
-  width: 100%;
-  opacity: .5;
-  text-align: center;
-  margin-block-start: .5em;
-  margin-block-end: 0;
-}
-
-.topsite-favicon .badge {
-  position: absolute;
-  background-color: #0090ED;
-  color: white;
-  right: -5px;
-  top: 0px;
-  min-width: 10px;
-  padding-left: 5px;
-  padding-right: 5px;
-  height: 20px;
-  border-radius: 10px;
-  text-align: center;
-  font-size: smaller;
-  line-height: 20px;
 }
 
 .media.card {

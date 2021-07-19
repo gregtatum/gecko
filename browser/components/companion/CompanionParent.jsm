@@ -11,9 +11,6 @@ const { BrowserWindowTracker } = ChromeUtils.import(
 );
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-const { PlacesUtils } = ChromeUtils.import(
-  "resource://gre/modules/PlacesUtils.jsm"
-);
 const { Keyframes } = ChromeUtils.import("resource:///modules/Keyframes.jsm");
 const { Sqlite } = ChromeUtils.import("resource://gre/modules/Sqlite.jsm");
 const { _LastSession } = ChromeUtils.import(
@@ -486,46 +483,6 @@ class CompanionParent extends JSWindowActorParent {
     return this.browsingContext.topChromeWindow.gBrowser.currentURI.spec;
   }
 
-  async getNavHistory() {
-    let query = NavHistory.getNewQuery();
-    // Two days of history
-    query.beginTime = PlacesUtils.toPRTime(
-      Date.now() - 2 * 24 * 60 * 60 * 1000
-    );
-    query.endTime == null;
-
-    let queryOptions = NavHistory.getNewQueryOptions();
-    queryOptions.resultType = Ci.nsINavHistoryQueryOptions.RESULTS_AS_URI;
-    queryOptions.sortingMode =
-      Ci.nsINavHistoryQueryOptions.SORT_BY_VISITCOUNT_DESCENDING;
-    queryOptions.queryType = Ci.nsINavHistoryQueryOptions.QUERY_TYPE_HISTORY;
-
-    let results = NavHistory.executeQuery(query, queryOptions);
-    results.root.containerOpen = true;
-
-    try {
-      let history = new Array(results.root.childCount);
-      for (let i = 0; i < results.root.childCount; ++i) {
-        let childNode = results.root.getChild(i);
-        let newURI = Services.io.newURI(childNode.uri);
-        let site = {
-          title: childNode.title,
-          type: childNode.type,
-          RESULT_TYPE_URI: childNode.RESULT_TYPE_URI,
-          uri: childNode.uri,
-          uriHost: newURI.host,
-          uriSpec: newURI.spec,
-        };
-        await this.ensurePlacesDataCached(childNode.uri);
-
-        history[i] = site;
-      }
-      return history;
-    } finally {
-      results.root.containerOpen = false;
-    }
-  }
-
   async getEvents() {
     let services = OnlineServices.getServices();
     if (!services.length) {
@@ -701,7 +658,6 @@ class CompanionParent extends JSWindowActorParent {
         let tabs = BrowserWindowTracker.orderedWindows.flatMap(w =>
           w.gBrowser.tabs.map(t => this.getTabData(t))
         );
-        let history = await this.getNavHistory();
         let keyframes = await this.getKeyframeData();
         let snapshots = await this.getSnapshots();
         let newPlacesCacheEntries = this.consumeCachedPlacesDataToSend();
@@ -710,7 +666,6 @@ class CompanionParent extends JSWindowActorParent {
         let globalHistory = this.maybeGetGlobalHistory();
         this.sendAsyncMessage("Companion:Setup", {
           tabs,
-          history,
           servicesConnected,
           keyframes,
           snapshots,

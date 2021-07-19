@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { TopSites } from "./topsites.js";
 import { CalendarEventList } from "./calendar.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
@@ -29,7 +28,6 @@ function maybeInitializeUI() {
   }
 
   setUpKeyframeRanges();
-  document.getElementById("top-sites-placeholder").appendChild(new TopSites());
   document
     .getElementById("events-placeholder")
     .append(new RefreshServicesButton(), new CalendarEventList());
