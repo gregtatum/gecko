@@ -1791,10 +1791,12 @@ void nsGlobalWindowOuter::SetInitialPrincipalToSubject(
   // the new window finishes navigating and gets a real storage principal.
   nsDocShell::Cast(GetDocShell())
       ->CreateAboutBlankContentViewer(newWindowPrincipal, newWindowPrincipal,
-                                      aCSP, nullptr, aCOEP);
+                                      aCSP, nullptr,
+                                      /* aIsInitialDocument */ true, aCOEP);
 
   if (mDoc) {
-    mDoc->SetIsInitialDocument(true);
+    MOZ_ASSERT(mDoc->IsInitialDocument(),
+               "document should be initial document");
   }
 
   RefPtr<PresShell> presShell = GetDocShell()->GetPresShell();
@@ -5301,6 +5303,8 @@ Nullable<WindowProxyHolder> nsGlobalWindowOuter::Print(
     MOZ_DIAGNOSTIC_ASSERT(cv);
   } else {
     if (aDocShellToCloneInto) {
+      // Ensure the content viewer is created if needed.
+      Unused << aDocShellToCloneInto->GetDocument();
       bc = aDocShellToCloneInto->GetBrowsingContext();
     } else {
       AutoNoJSAPI nojsapi;

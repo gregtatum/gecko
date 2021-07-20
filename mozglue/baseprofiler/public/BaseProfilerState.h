@@ -32,6 +32,8 @@ namespace baseprofiler {
 
 inline int profiler_main_thread_id() { return 0; }
 
+inline bool profiler_is_active() { return false; }
+
 }  // namespace baseprofiler
 }  // namespace mozilla
 
@@ -77,7 +79,7 @@ class StaticBaseProfilerStats {
 
   void AddDurationFrom(TimeStamp aStart) {
     DurationNs duration = static_cast<DurationNs>(
-        (TimeStamp::NowUnfuzzed() - aStart).ToMicroseconds() * 1000 + 0.5);
+        (TimeStamp::Now() - aStart).ToMicroseconds() * 1000 + 0.5);
     mSumDurationsNs += duration;
     ++mNumberDurations;
     // Update mLongestDurationNs if this one is longer.
@@ -111,7 +113,7 @@ class StaticBaseProfilerStats {
 class MOZ_RAII AutoProfilerStats {
  public:
   explicit AutoProfilerStats(StaticBaseProfilerStats& aStats)
-      : mStats(aStats), mStart(TimeStamp::NowUnfuzzed()) {}
+      : mStats(aStats), mStart(TimeStamp::Now()) {}
 
   ~AutoProfilerStats() { mStats.AddDurationFrom(mStart); }
 

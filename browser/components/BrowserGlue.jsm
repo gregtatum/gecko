@@ -17,8 +17,6 @@ const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
 
-Cu.importGlobalProperties(["Glean"]);
-
 XPCOMUtils.defineLazyModuleGetters(this, {
   AboutNewTab: "resource:///modules/AboutNewTab.jsm",
   ActorManagerParent: "resource://gre/modules/ActorManagerParent.jsm",
@@ -80,6 +78,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   SafeBrowsing: "resource://gre/modules/SafeBrowsing.jsm",
   Sanitizer: "resource:///modules/Sanitizer.jsm",
   SaveToPocket: "chrome://pocket/content/SaveToPocket.jsm",
+  ScreenshotsUtils: "resource:///modules/ScreenshotsUtils.jsm",
   SearchSERPTelemetry: "resource:///modules/SearchSERPTelemetry.jsm",
   SessionStartup: "resource:///modules/sessionstore/SessionStartup.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
@@ -1093,7 +1092,6 @@ BrowserGlue.prototype = {
         }
         break;
       case "fxaccounts:commands:open-uri":
-      case "weave:engine:clients:display-uris":
         this._onDisplaySyncURIs(subject);
         break;
       case "session-save":
@@ -1249,7 +1247,6 @@ BrowserGlue.prototype = {
     os.addObserver(this, "fxaccounts:verify_login");
     os.addObserver(this, "fxaccounts:device_disconnected");
     os.addObserver(this, "fxaccounts:commands:open-uri");
-    os.addObserver(this, "weave:engine:clients:display-uris");
     os.addObserver(this, "session-save");
     os.addObserver(this, "places-init-complete");
     os.addObserver(this, "distribution-customization-complete");
@@ -1303,7 +1300,6 @@ BrowserGlue.prototype = {
     os.removeObserver(this, "fxaccounts:verify_login");
     os.removeObserver(this, "fxaccounts:device_disconnected");
     os.removeObserver(this, "fxaccounts:commands:open-uri");
-    os.removeObserver(this, "weave:engine:clients:display-uris");
     os.removeObserver(this, "session-save");
     if (this._bookmarksBackupIdleTime) {
       this._userIdleService.removeIdleObserver(
@@ -2017,6 +2013,16 @@ BrowserGlue.prototype = {
   _monitorTranslationsPref() {
     const PREF = "extensions.translations.disabled";
     const ID = "firefox-translations@mozilla.org";
+    const oldID = "firefox-infobar-ui-bergamot-browser-extension@browser.mt";
+
+    // First, try to uninstall the old extension, if exists.
+    (async () => {
+      let addon = await AddonManager.getAddonByID(oldID);
+      if (addon) {
+        addon.uninstall().catch(Cu.reportError);
+      }
+    })();
+
     const _checkTranslationsPref = async () => {
       let addon = await AddonManager.getAddonByID(ID);
       let disabled = Services.prefs.getBoolPref(PREF, false);
@@ -2440,6 +2446,16 @@ BrowserGlue.prototype = {
 
       {
         task: () => {
+          if (
+            Services.prefs.getBoolPref("screenshots.browser.component.enabled")
+          ) {
+            ScreenshotsUtils.initialize();
+          }
+        },
+      },
+
+      {
+        task: () => {
           UrlbarQuickSuggest.maybeShowOnboardingDialog();
         },
       },
@@ -2488,6 +2504,16 @@ BrowserGlue.prototype = {
       {
         task: () => {
           TabUnloader.init();
+        },
+      },
+
+      {
+        task: () => {
+          // Init the url query stripping list.
+          let urlQueryStrippingListService = Cc[
+            "@mozilla.org/query-stripping-list-service;1"
+          ].getService(Ci.nsIURLQueryStrippingListService);
+          urlQueryStrippingListService.init();
         },
       },
 
@@ -2587,12 +2613,6 @@ BrowserGlue.prototype = {
           if (!disabledForTesting) {
             BackgroundUpdate.maybeScheduleBackgroundUpdateTask();
           }
-        },
-      },
-
-      {
-        task: () => {
-          this._collectProtonTelemetry();
         },
       },
 
@@ -4307,14 +4327,6 @@ BrowserGlue.prototype = {
       badge.classList.remove("feature-callout");
       AppMenuNotifications.removeNotification("fxa-needs-authentication");
     }
-  },
-
-  _collectProtonTelemetry() {
-    let protonEnabled = Services.prefs.getBoolPref(
-      "browser.proton.enabled",
-      true
-    );
-    Glean.browserUi.protonEnabled.set(protonEnabled);
   },
 
   QueryInterface: ChromeUtils.generateQI([

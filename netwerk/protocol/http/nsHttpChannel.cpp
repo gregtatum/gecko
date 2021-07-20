@@ -53,7 +53,6 @@
 #include "nsAlgorithm.h"
 #include "nsQueryObject.h"
 #include "nsThreadUtils.h"
-#include "GeckoProfiler.h"
 #include "nsIConsoleService.h"
 #include "mozilla/AntiTrackingRedirectHeuristic.h"
 #include "mozilla/AntiTrackingUtils.h"
@@ -62,6 +61,7 @@
 #include "mozilla/ContentBlocking.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/Preferences.h"
+#include "mozilla/ProfilerLabels.h"
 #include "mozilla/Components.h"
 #include "mozilla/StaticPrefs_browser.h"
 #include "mozilla/StaticPrefs_fission.h"
@@ -95,6 +95,7 @@
 #include "mozilla/Telemetry.h"
 #include "AlternateServices.h"
 #include "InterceptedChannel.h"
+#include "NetworkMarker.h"
 #include "nsIHttpPushListener.h"
 #include "nsIX509Cert.h"
 #include "ScopedNSSTypes.h"
@@ -2646,7 +2647,25 @@ nsresult nsHttpChannel::ProxyFailover() {
   nsCOMPtr<nsIProxyInfo> pi;
   rv = pps->GetFailoverForProxy(mConnectionInfo->ProxyInfo(), mURI, mStatus,
                                 getter_AddRefs(pi));
-  if (NS_FAILED(rv)) return rv;
+#ifdef MOZ_PROXY_DIRECT_FAILOVER
+  if (NS_FAILED(rv)) {
+    if (!StaticPrefs::network_proxy_failover_direct()) {
+      return rv;
+    }
+    // If this request used a failed proxy and there is no failover available,
+    // fallback to DIRECT connections for system principal requests.
+    if (mLoadInfo->GetLoadingPrincipal() &&
+        mLoadInfo->GetLoadingPrincipal()->IsSystemPrincipal()) {
+      rv = pps->NewProxyInfo("direct"_ns, ""_ns, 0, ""_ns, ""_ns, 0, UINT32_MAX,
+                             nullptr, getter_AddRefs(pi));
+    }
+#endif
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+#ifdef MOZ_PROXY_DIRECT_FAILOVER
+  }
+#endif
 
   // XXXbz so where does this codepath remove us from the loadgroup,
   // exactly?
@@ -5126,7 +5145,6 @@ nsresult nsHttpChannel::ContinueProcessRedirectionAfterFallback(nsresult rv) {
                              nsIRequest::LOAD_NORMAL, ioService);
   NS_ENSURE_SUCCESS(rv, rv);
 
-#ifdef MOZ_GECKO_PROFILER
   if (profiler_can_accept_markers()) {
     nsAutoCString requestMethod;
     GetRequestMethod(requestMethod);
@@ -5157,7 +5175,6 @@ nsresult nsHttpChannel::ContinueProcessRedirectionAfterFallback(nsresult rv) {
         std::move(mSource), Some(nsDependentCString(contentType.get())),
         mRedirectURI, redirectFlags, newBaseChannel->ChannelId());
   }
-#endif
 
   rv = SetupReplacementChannel(mRedirectURI, newChannel, !rewriteToGET,
                                redirectFlags);
@@ -5667,7 +5684,6 @@ nsHttpChannel::AsyncOpen(nsIStreamListener* aListener) {
   LOG(("nsHttpChannel::AsyncOpen [this=%p]\n", this));
   LogCallingScriptLocation(this);
 
-#ifdef MOZ_GECKO_PROFILER
   mLastStatusReported =
       TimeStamp::Now();  // in case we enable the profiler after AsyncOpen()
   if (profiler_can_accept_markers()) {
@@ -5679,7 +5695,6 @@ nsHttpChannel::AsyncOpen(nsIStreamListener* aListener) {
         mChannelCreationTimestamp, mLastStatusReported, 0, mCacheDisposition,
         mLoadInfo->GetInnerWindowID());
   }
-#endif
 
   NS_CompareLoadInfoAndLoadContext(this);
 
@@ -5771,12 +5786,7 @@ nsHttpChannel::AsyncOpen(nsIStreamListener* aListener) {
     return NS_OK;
   }
 
-  // PauseTask/DelayHttpChannel queuing
-  if (!DelayHttpChannelQueue::AttemptQueueChannel(this)) {
-    // If fuzzyfox is disabled; or adding to the queue failed, the channel must
-    // continue.
-    AsyncOpenFinal(TimeStamp::Now());
-  }
+  AsyncOpenFinal(TimeStamp::Now());
 
   return NS_OK;
 }
@@ -7423,7 +7433,6 @@ nsresult nsHttpChannel::ContinueOnStopRequest(nsresult aStatus, bool aIsFromNet,
 
   MaybeFlushConsoleReports();
 
-#ifdef MOZ_GECKO_PROFILER
   if (profiler_can_accept_markers() && !mRedirectURI) {
     // Don't include this if we already redirected
     // These do allocations/frees/etc; avoid if not active
@@ -7446,7 +7455,6 @@ nsresult nsHttpChannel::ContinueOnStopRequest(nsresult aStatus, bool aIsFromNet,
         mLoadInfo->GetInnerWindowID(), &mTransactionTimings, std::move(mSource),
         Some(nsDependentCString(contentType.get())));
   }
-#endif
 
   if (mListener) {
     LOG(("nsHttpChannel %p calling OnStopRequest\n", this));

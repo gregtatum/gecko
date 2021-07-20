@@ -845,13 +845,11 @@ void ContentChild::SetProcessName(const nsACString& aName,
   }
 
   mProcessName = aName;
-#ifdef MOZ_GECKO_PROFILER
   if (aETLDplus1) {
     profiler_set_process_name(mProcessName, aETLDplus1);
   } else {
     profiler_set_process_name(mProcessName);
   }
-#endif
   mozilla::ipc::SetThisProcessName(PromiseFlatCString(mProcessName).get());
 }
 
@@ -1740,6 +1738,13 @@ mozilla::ipc::IPCResult ContentChild::RecvConstructBrowser(
       BrowsingContext::Get(aWindowInit.context().mBrowsingContextId);
   if (!browsingContext || browsingContext->IsDiscarded()) {
     return IPC_FAIL(this, "Null or discarded initial BrowsingContext");
+  }
+
+  if (!aWindowInit.isInitialDocument() ||
+      !NS_IsAboutBlank(aWindowInit.documentURI())) {
+    return IPC_FAIL(this,
+                    "Logic in CreateContentViewerForActor currently requires "
+                    "actors to be initial about:blank documents");
   }
 
   // We'll happily accept any kind of IPCTabContext here; we don't need to

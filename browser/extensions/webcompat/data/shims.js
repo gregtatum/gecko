@@ -117,12 +117,32 @@ const AVAILABLE_SHIMS = [
     onlyIfBlockedByETP: true,
   },
   {
+    id: "AmazonTAM",
+    platform: "all",
+    name: "Amazon Transparent Ad Marketplace",
+    bug: "1713698",
+    file: "apstag.js",
+    matches: ["*://c.amazon-adsystem.com/aax2/apstag.js"],
+  },
+  {
     id: "BmAuth",
     platform: "all",
     name: "BmAuth by 9c9media",
     bug: "1486337",
     file: "bmauth.js",
     matches: ["*://auth.9c9media.ca/auth/main.js"],
+    onlyIfBlockedByETP: true,
+  },
+  {
+    id: "Chartbeat",
+    platform: "all",
+    name: "Chartbeat",
+    bug: "1713699",
+    file: "chartbeat.js",
+    matches: [
+      "*://static.chartbeat.com/js/chartbeat.js",
+      "*://static.chartbeat.com/js/chartbeat_video.js",
+    ],
     onlyIfBlockedByETP: true,
   },
   {
@@ -267,6 +287,23 @@ const AVAILABLE_SHIMS = [
       "*://www.googletagservices.com/tag/js/gpt.js",
       "*://securepubads.g.doubleclick.net/tag/js/gpt.js",
       "*://securepubads.g.doubleclick.net/gpt/pubads_impl_*.js",
+    ],
+    onlyIfBlockedByETP: true,
+  },
+  {
+    id: "Google SafeFrame",
+    platform: "all",
+    name: "Google SafeFrame",
+    bug: "1713691",
+    matches: [
+      {
+        patterns: [
+          "*://tpc.googlesyndication.com/safeframe/*/html/container.html",
+          "*://*.safeframe.googlesyndication.com/safeframe/*/html/container.html",
+        ],
+        target: "google-safeframe.html",
+        types: ["sub_frame"],
+      },
     ],
     onlyIfBlockedByETP: true,
   },

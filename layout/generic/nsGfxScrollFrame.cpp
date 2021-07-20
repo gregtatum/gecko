@@ -36,6 +36,7 @@
 #include "nsStyleTransformMatrix.h"
 #include "mozilla/PresState.h"
 #include "nsContentUtils.h"
+#include "nsDisplayList.h"
 #include "nsHTMLDocument.h"
 #include "nsLayoutUtils.h"
 #include "nsBidiPresUtils.h"
@@ -3204,8 +3205,7 @@ void ScrollFrameHelper::ScrollToImpl(nsPoint aPt, const nsRect& aRange,
 static Maybe<int32_t> MaxZIndexInList(nsDisplayList* aList,
                                       nsDisplayListBuilder* aBuilder) {
   Maybe<int32_t> maxZIndex = Nothing();
-  for (nsDisplayItem* item = aList->GetBottom(); item;
-       item = item->GetAbove()) {
+  for (nsDisplayItem* item : *aList) {
     int32_t zIndex = item->ZIndex();
     if (zIndex < 0) {
       continue;
@@ -3480,7 +3480,7 @@ static void ClipItemsExceptCaret(
     const DisplayItemClipChain* aExtraClip,
     nsTHashMap<nsPtrHashKey<const DisplayItemClipChain>,
                const DisplayItemClipChain*>& aCache) {
-  for (nsDisplayItem* i = aList->GetBottom(); i; i = i->GetAbove()) {
+  for (nsDisplayItem* i : *aList) {
     if (!ShouldBeClippedByFrame(aClipFrame, i->Frame())) {
       continue;
     }
@@ -3575,8 +3575,7 @@ class MOZ_RAII AutoContainsBlendModeCapturer {
 static int32_t MaxZIndexInListOfItemsContainedInFrame(nsDisplayList* aList,
                                                       nsIFrame* aFrame) {
   int32_t maxZIndex = -1;
-  for (nsDisplayItem* item = aList->GetBottom(); item;
-       item = item->GetAbove()) {
+  for (nsDisplayItem* item : *aList) {
     nsIFrame* itemFrame = item->Frame();
     // Perspective items return the scroll frame as their Frame(), so consider
     // their TransformFrame() instead.
@@ -4120,7 +4119,7 @@ void ScrollFrameHelper::BuildDisplayList(nsDisplayListBuilder* aBuilder,
       int32_t zIndex = MaxZIndexInListOfItemsContainedInFrame(
           scrolledContent.PositionedDescendants(), mOuter);
       if (aBuilder->IsPartialUpdate()) {
-        for (nsDisplayItemBase* item : mScrolledFrame->DisplayItems()) {
+        for (nsDisplayItem* item : mScrolledFrame->DisplayItems()) {
           if (item->GetType() ==
               DisplayItemType::TYPE_COMPOSITOR_HITTEST_INFO) {
             auto* hitTestItem =

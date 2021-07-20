@@ -3135,6 +3135,16 @@
   value: false
   mirror: always
 
+# Whether ServiceWorkerManager should persist the service worker
+# registered by temporary installed extension (only meant to be used
+# for testing purpose, to make it easier to test some particular scenario
+# with a temporary installed addon, which doesn't need to be signed to be
+# installed on release channel builds).
+- name: dom.serviceWorkers.testing.persistTemporarilyInstalledAddons
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
 - name: dom.workers.serialized-sab-access
   type: RelaxedAtomicBool
   value: false
@@ -5047,11 +5057,7 @@
 
 - name: gfx.webrender.compositor.max_update_rects
   type: uint32_t
-#if defined(XP_WIN) || defined(XP_MACOSX)
   value: 1
-#else
-  value: 0
-#endif
   mirror: once
 
 - name: gfx.webrender.compositor.surface-pool-size
@@ -6009,6 +6015,13 @@
     value: false
     mirror: always
 #endif
+
+#if defined(ENABLE_WASM_MEMORY64)
+-   name: javascript.options.wasm_memory64
+    type: bool
+    value: true
+    mirror: always
+#endif  // defined(ENABLE_WASM_MEMORY64)
 
 # Support for ArrayBuffers larger than 2 GB on 64-bit systems
 - name: javascript.options.large_arraybuffers
@@ -7108,12 +7121,6 @@
 - name: layout.css.prefixes.box-sizing
   type: bool
   value: true
-  mirror: always
-
-# Is support for -moz-prefixed multi-column properties (including column-gap) enabled?
-- name: layout.css.prefixes.columns
-  type: bool
-  value: false
   mirror: always
 
 # Is support for -moz-prefixed font feature properties enabled?
@@ -9417,6 +9424,14 @@
   value: 4
   mirror: always
 
+# Whether to force failover to direct for system requests.
+#ifdef MOZ_PROXY_DIRECT_FAILOVER
+- name: network.proxy.failover_direct
+  type: bool
+  value: true
+  mirror: always
+#endif
+
 # Some requests during a page load are marked as "tail", mainly trackers, but not only.
 # This pref controls whether such requests are put to the tail, behind other requests
 # emerging during page loading process.
@@ -10602,32 +10617,29 @@
     value: true
     mirror: always
 
-  # Whether CET Shadow Stacks Strict mode is enabled for the content processes.
--   name: security.sandbox.content.shadow-stacks-strict
+  # Whether CET User Shadow Stack compatible modules only is enabled for the
+  # relevant process type.
+-   name: security.sandbox.content.shadow-stack.enabled
     type: RelaxedAtomicBool
     value: false
     mirror: always
 
-  # Whether CET Shadow Stacks Strict mode is enabled for the RDD processes.
--   name: security.sandbox.rdd.shadow-stacks-strict
+-   name: security.sandbox.rdd.shadow-stack.enabled
     type: RelaxedAtomicBool
     value: false
     mirror: always
 
-  # Whether CET Shadow Stacks Strict mode is enabled for the socket processes.
--   name: security.sandbox.socket.shadow-stacks-strict
+-   name: security.sandbox.socket.shadow-stack.enabled
     type: RelaxedAtomicBool
     value: false
     mirror: always
 
-  # Whether CET Shadow Stacks Strict mode is enabled for the GPU processes.
--   name: security.sandbox.gpu.shadow-stacks-strict
+-   name: security.sandbox.gpu.shadow-stack.enabled
     type: RelaxedAtomicBool
     value: false
     mirror: always
 
-  # Whether CET Shadow Stacks Strict mode is enabled for the GMP processes.
--   name: security.sandbox.gmp.shadow-stacks-strict
+-   name: security.sandbox.gmp.shadow-stack.enabled
     type: RelaxedAtomicBool
     value: false
     mirror: always
@@ -11563,7 +11575,7 @@
 
 - name: widget.macos.support-dark-appearance
   type: RelaxedAtomicBool
-  value: @IS_EARLY_BETA_OR_EARLIER@
+  value: true
   mirror: always
 #endif
 

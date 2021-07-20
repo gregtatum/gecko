@@ -16,7 +16,7 @@ job-defaults:
     fetches:
         toolchain:
             - linux64-binutils
-            - linux64-dump-syms
+            - linux64-dump_syms
             - linux64-hfsplus
             - linux64-libdmg
             - linux64-llvm-dsymutil
@@ -26,6 +26,7 @@ job-defaults:
             - linux64-nasm
             - linux64-node
             - linux64-lucetc
+            - sysroot-x86_64-linux-gnu
 
 macosx64/debug:
     description: "MacOS X x64 Cross-compile"

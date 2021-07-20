@@ -51,7 +51,7 @@
 #include "mozilla/AutoProfilerLabel.h"
 #include "mozilla/ExtensionPolicyService.h"
 #include "mozilla/extensions/WebExtensionPolicy.h"
-#include "mozilla/net/HttpBaseChannel.h"  // for net::TimingStruct
+#include "mozilla/Preferences.h"
 #include "mozilla/Printf.h"
 #include "mozilla/ProfileBufferChunkManagerSingle.h"
 #include "mozilla/ProfileBufferChunkManagerWithLocalLimit.h"
@@ -71,7 +71,6 @@
 #include "BaseProfiler.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsDirectoryServiceUtils.h"
-#include "nsIChannelEventSink.h"
 #include "nsIDocShell.h"
 #include "nsIHttpProtocolHandler.h"
 #include "nsIObserverService.h"
@@ -80,6 +79,7 @@
 #include "nsIXULRuntime.h"
 #include "nsJSPrincipals.h"
 #include "nsMemoryReporterManager.h"
+#include "nsPIDOMWindow.h"
 #include "nsProfilerStartParams.h"
 #include "nsScriptSecurityManager.h"
 #include "nsSystemInfo.h"
@@ -2726,7 +2726,7 @@ static void StreamMetaJSCustomObject(
   // The "startTime" field holds the number of milliseconds since midnight
   // January 1, 1970 GMT. This grotty code computes (Now - (Now -
   // ProcessStartTime)) to convert CorePS::ProcessStartTime() into that form.
-  TimeDuration delta = TimeStamp::NowUnfuzzed() - CorePS::ProcessStartTime();
+  TimeDuration delta = TimeStamp::Now() - CorePS::ProcessStartTime();
   aWriter.DoubleProperty(
       "startTime",
       static_cast<double>(PR_Now() / 1000.0 - delta.ToMilliseconds()));
@@ -3388,11 +3388,11 @@ RunningTimes GetRunningTimesWithTightTimestamp(
     constexpr int loops = 128;
     TimeDuration durations[loops];
     RunningTimes runningTimes;
-    TimeStamp before = TimeStamp::NowUnfuzzed();
+    TimeStamp before = TimeStamp::Now();
     for (int i = 0; i < loops; ++i) {
       AUTO_PROFILER_STATS(GetRunningTimes_MaxRunningTimesReadDuration);
       aGetCPURunningTimesFunction(runningTimes);
-      const TimeStamp after = TimeStamp::NowUnfuzzed();
+      const TimeStamp after = TimeStamp::Now();
       durations[i] = after - before;
       before = after;
     }
@@ -3408,15 +3408,15 @@ RunningTimes GetRunningTimesWithTightTimestamp(
 
   // Record CPU measurements between two timestamps.
   RunningTimes runningTimes;
-  TimeStamp before = TimeStamp::NowUnfuzzed();
+  TimeStamp before = TimeStamp::Now();
   aGetCPURunningTimesFunction(runningTimes);
-  TimeStamp after = TimeStamp::NowUnfuzzed();
+  TimeStamp after = TimeStamp::Now();
   // In most cases, the above should be quick enough. But if not, repeat:
   while (MOZ_UNLIKELY(after - before > scMaxRunningTimesReadDuration)) {
     AUTO_PROFILER_STATS(GetRunningTimes_REDO);
     before = after;
     aGetCPURunningTimesFunction(runningTimes);
-    after = TimeStamp::NowUnfuzzed();
+    after = TimeStamp::Now();
   }
   // Finally, record the closest timestamp just after the final measurement was
   // done. This must stay *after* the CPU measurements.
@@ -3599,10 +3599,10 @@ void SamplerThread::Run() {
   // This is the scheduled time at which each sampling loop should start.
   // It will determine the ideal next sampling start by adding the expected
   // interval, unless when sampling runs late -- See end of while() loop.
-  TimeStamp scheduledSampleStart = TimeStamp::NowUnfuzzed();
+  TimeStamp scheduledSampleStart = TimeStamp::Now();
 
   while (true) {
-    const TimeStamp sampleStart = TimeStamp::NowUnfuzzed();
+    const TimeStamp sampleStart = TimeStamp::Now();
 
     // This scope is for |lock|. It ends before we sleep below.
     {
@@ -3610,7 +3610,7 @@ void SamplerThread::Run() {
       MOZ_ASSERT(!postSamplingCallbacks);
 
       PSAutoLock lock;
-      TimeStamp lockAcquired = TimeStamp::NowUnfuzzed();
+      TimeStamp lockAcquired = TimeStamp::Now();
 
       // Move all the post-sampling callbacks locally, so that new ones cannot
       // sneak in between the end of the lock scope and the invocation after it.
@@ -3635,7 +3635,7 @@ void SamplerThread::Run() {
 
       ActivePS::ClearExpiredExitProfiles(lock);
 
-      TimeStamp expiredMarkersCleaned = TimeStamp::NowUnfuzzed();
+      TimeStamp expiredMarkersCleaned = TimeStamp::Now();
 
       if (!ActivePS::IsSamplingPaused(lock)) {
         double sampleStartDeltaMs =
@@ -3671,7 +3671,7 @@ void SamplerThread::Run() {
             buffer.AddEntry(ProfileBufferEntry::Number(number));
           }
         }
-        TimeStamp countersSampled = TimeStamp::NowUnfuzzed();
+        TimeStamp countersSampled = TimeStamp::Now();
 
         if (stackSampling || cpuUtilization) {
           samplingState = SamplingState::SamplingCompleted;
@@ -3688,7 +3688,7 @@ void SamplerThread::Run() {
             const RunningTimes runningTimesDiff = [&]() {
               if (!cpuUtilization) {
                 // If we don't need CPU measurements, we only need a timestamp.
-                return RunningTimes(TimeStamp::NowUnfuzzed());
+                return RunningTimes(TimeStamp::Now());
               }
               return GetThreadRunningTimesDiff(lock, *registeredThread);
             }();
@@ -4007,7 +4007,7 @@ void SamplerThread::Run() {
           lul->MaybeShowStats();
         }
 #endif
-        TimeStamp threadsSampled = TimeStamp::NowUnfuzzed();
+        TimeStamp threadsSampled = TimeStamp::Now();
 
         {
           AUTO_PROFILER_STATS(Sampler_FulfillChunkRequests);
@@ -4036,7 +4036,7 @@ void SamplerThread::Run() {
     scheduledSampleStart += sampleInterval;
 
     // Try to sleep until we reach that next scheduled time.
-    const TimeStamp beforeSleep = TimeStamp::NowUnfuzzed();
+    const TimeStamp beforeSleep = TimeStamp::Now();
     if (scheduledSampleStart >= beforeSleep) {
       // There is still time before the next scheduled sample time.
       const uint32_t sleepTimeUs = static_cast<uint32_t>(
@@ -4741,6 +4741,7 @@ void GetProfilerEnvVarsForChildProcess(
 }  // namespace mozilla
 
 void profiler_received_exit_profile(const nsCString& aExitProfile) {
+  MOZ_RELEASE_ASSERT(NS_IsMainThread());
   MOZ_RELEASE_ASSERT(CorePS::Exists());
   PSAutoLock lock;
   if (!ActivePS::Exists(lock)) {
@@ -5717,7 +5718,7 @@ void profiler_js_interrupt_callback() {
 double profiler_time() {
   MOZ_RELEASE_ASSERT(CorePS::Exists());
 
-  TimeDuration delta = TimeStamp::NowUnfuzzed() - CorePS::ProcessStartTime();
+  TimeDuration delta = TimeStamp::Now() - CorePS::ProcessStartTime();
   return delta.ToMilliseconds();
 }
 
@@ -5751,8 +5752,8 @@ bool profiler_capture_backtrace_into(ProfileChunkedBuffer& aChunkedBuffer,
   regs.Clear();
 #endif
 
-  DoSyncSample(lock, *registeredThread, TimeStamp::NowUnfuzzed(), regs,
-               profileBuffer, aCaptureOptions);
+  DoSyncSample(lock, *registeredThread, TimeStamp::Now(), regs, profileBuffer,
+               aCaptureOptions);
 
   return true;
 }
@@ -5793,63 +5794,6 @@ void ProfilerBacktraceDestructor::operator()(ProfilerBacktrace* aBacktrace) {
   delete aBacktrace;
 }
 
-// This is a simplified version of profiler_add_marker that can be easily passed
-// into the JS engine.
-void profiler_add_js_marker(const char* aMarkerName, const char* aMarkerText) {
-  PROFILER_MARKER_TEXT(
-      ProfilerString8View::WrapNullTerminatedString(aMarkerName), JS, {},
-      ProfilerString8View::WrapNullTerminatedString(aMarkerText));
-}
-
-void profiler_add_js_allocation_marker(JS::RecordAllocationInfo&& info) {
-  if (!profiler_can_accept_markers()) {
-    return;
-  }
-
-  struct JsAllocationMarker {
-    static constexpr mozilla::Span<const char> MarkerTypeName() {
-      return mozilla::MakeStringSpan("JS allocation");
-    }
-    static void StreamJSONMarkerData(
-        mozilla::baseprofiler::SpliceableJSONWriter& aWriter,
-        const mozilla::ProfilerString16View& aTypeName,
-        const mozilla::ProfilerString8View& aClassName,
-        const mozilla::ProfilerString16View& aDescriptiveTypeName,
-        const mozilla::ProfilerString8View& aCoarseType, uint64_t aSize,
-        bool aInNursery) {
-      if (aClassName.Length() != 0) {
-        aWriter.StringProperty("className", aClassName);
-      }
-      if (aTypeName.Length() != 0) {
-        aWriter.StringProperty(
-            "typeName",
-            NS_ConvertUTF16toUTF8(aTypeName.Data(), aTypeName.Length()));
-      }
-      if (aDescriptiveTypeName.Length() != 0) {
-        aWriter.StringProperty(
-            "descriptiveTypeName",
-            NS_ConvertUTF16toUTF8(aDescriptiveTypeName.Data(),
-                                  aDescriptiveTypeName.Length()));
-      }
-      aWriter.StringProperty("coarseType", aCoarseType);
-      aWriter.IntProperty("size", aSize);
-      aWriter.BoolProperty("inNursery", aInNursery);
-    }
-    static mozilla::MarkerSchema MarkerTypeDisplay() {
-      return mozilla::MarkerSchema::SpecialFrontendLocation{};
-    }
-  };
-
-  profiler_add_marker(
-      "JS allocation", geckoprofiler::category::JS, MarkerStack::Capture(),
-      JsAllocationMarker{},
-      ProfilerString16View::WrapNullTerminatedString(info.typeName),
-      ProfilerString8View::WrapNullTerminatedString(info.className),
-      ProfilerString16View::WrapNullTerminatedString(info.descriptiveTypeName),
-      ProfilerString8View::WrapNullTerminatedString(info.coarseType), info.size,
-      info.inNursery);
-}
-
 bool profiler_is_locked_on_current_thread() {
   // This function is used to help users avoid calling `profiler_...` functions
   // when the profiler may already have a lock in place, which would prevent a
@@ -5864,213 +5808,6 @@ bool profiler_is_locked_on_current_thread() {
          CorePS::CoreBuffer().IsThreadSafeAndLockedOnCurrentThread() ||
          ProfilerParent::IsLockedOnCurrentThread() ||
          ProfilerChild::IsLockedOnCurrentThread();
-}
-
-static constexpr net::TimingStruct scEmptyNetTimingStruct;
-
-void profiler_add_network_marker(
-    nsIURI* aURI, const nsACString& aRequestMethod, int32_t aPriority,
-    uint64_t aChannelId, NetworkLoadType aType, mozilla::TimeStamp aStart,
-    mozilla::TimeStamp aEnd, int64_t aCount,
-    mozilla::net::CacheDisposition aCacheDisposition, uint64_t aInnerWindowID,
-    const mozilla::net::TimingStruct* aTimings,
-    UniquePtr<ProfileChunkedBuffer> aSource,
-    const Maybe<nsDependentCString>& aContentType, nsIURI* aRedirectURI,
-    uint32_t aRedirectFlags, uint64_t aRedirectChannelId) {
-  if (!profiler_can_accept_markers()) {
-    return;
-  }
-
-  nsAutoCStringN<2048> name;
-  name.AppendASCII("Load ");
-  // top 32 bits are process id of the load
-  name.AppendInt(aChannelId & 0xFFFFFFFFu);
-
-  // These can do allocations/frees/etc; avoid if not active
-  nsAutoCStringN<2048> spec;
-  if (aURI) {
-    aURI->GetAsciiSpec(spec);
-    name.AppendASCII(": ");
-    name.Append(spec);
-  }
-
-  nsAutoCString redirect_spec;
-  if (aRedirectURI) {
-    aRedirectURI->GetAsciiSpec(redirect_spec);
-  }
-
-  struct NetworkMarker {
-    static constexpr Span<const char> MarkerTypeName() {
-      return MakeStringSpan("Network");
-    }
-    static void StreamJSONMarkerData(
-        baseprofiler::SpliceableJSONWriter& aWriter, mozilla::TimeStamp aStart,
-        mozilla::TimeStamp aEnd, int64_t aID, const ProfilerString8View& aURI,
-        const ProfilerString8View& aRequestMethod, NetworkLoadType aType,
-        int32_t aPri, int64_t aCount, net::CacheDisposition aCacheDisposition,
-        const net::TimingStruct& aTimings,
-        const ProfilerString8View& aRedirectURI,
-        const ProfilerString8View& aContentType, uint32_t aRedirectFlags,
-        int64_t aRedirectChannelId) {
-      // This payload still streams a startTime and endTime property because it
-      // made the migration to MarkerTiming on the front-end easier.
-      aWriter.TimeProperty("startTime", aStart);
-      aWriter.TimeProperty("endTime", aEnd);
-
-      aWriter.IntProperty("id", aID);
-      aWriter.StringProperty("status", GetNetworkState(aType));
-      if (Span<const char> cacheString = GetCacheState(aCacheDisposition);
-          !cacheString.IsEmpty()) {
-        aWriter.StringProperty("cache", cacheString);
-      }
-      aWriter.IntProperty("pri", aPri);
-      if (aCount > 0) {
-        aWriter.IntProperty("count", aCount);
-      }
-      if (aURI.Length() != 0) {
-        aWriter.StringProperty("URI", aURI);
-      }
-      if (aRedirectURI.Length() != 0) {
-        aWriter.StringProperty("RedirectURI", aRedirectURI);
-        aWriter.StringProperty("redirectType", getRedirectType(aRedirectFlags));
-        aWriter.BoolProperty(
-            "isHttpToHttpsRedirect",
-            aRedirectFlags & nsIChannelEventSink::REDIRECT_STS_UPGRADE);
-
-        MOZ_ASSERT(
-            aRedirectChannelId != 0,
-            "aRedirectChannelId should be non-zero for a redirected request");
-        aWriter.IntProperty("redirectId", aRedirectChannelId);
-      }
-
-      aWriter.StringProperty("requestMethod", aRequestMethod);
-
-      if (aContentType.Length() != 0) {
-        aWriter.StringProperty("contentType", aContentType);
-      } else {
-        aWriter.NullProperty("contentType");
-      }
-
-      if (aType != NetworkLoadType::LOAD_START) {
-        aWriter.TimeProperty("domainLookupStart", aTimings.domainLookupStart);
-        aWriter.TimeProperty("domainLookupEnd", aTimings.domainLookupEnd);
-        aWriter.TimeProperty("connectStart", aTimings.connectStart);
-        aWriter.TimeProperty("tcpConnectEnd", aTimings.tcpConnectEnd);
-        aWriter.TimeProperty("secureConnectionStart",
-                             aTimings.secureConnectionStart);
-        aWriter.TimeProperty("connectEnd", aTimings.connectEnd);
-        aWriter.TimeProperty("requestStart", aTimings.requestStart);
-        aWriter.TimeProperty("responseStart", aTimings.responseStart);
-        aWriter.TimeProperty("responseEnd", aTimings.responseEnd);
-      }
-    }
-    static MarkerSchema MarkerTypeDisplay() {
-      return MarkerSchema::SpecialFrontendLocation{};
-    }
-
-   private:
-    static Span<const char> GetNetworkState(NetworkLoadType aType) {
-      switch (aType) {
-        case NetworkLoadType::LOAD_START:
-          return MakeStringSpan("STATUS_START");
-        case NetworkLoadType::LOAD_STOP:
-          return MakeStringSpan("STATUS_STOP");
-        case NetworkLoadType::LOAD_REDIRECT:
-          return MakeStringSpan("STATUS_REDIRECT");
-        default:
-          MOZ_ASSERT(false, "Unexpected NetworkLoadType enum value.");
-          return MakeStringSpan("");
-      }
-    }
-
-    static Span<const char> GetCacheState(
-        net::CacheDisposition aCacheDisposition) {
-      switch (aCacheDisposition) {
-        case net::kCacheUnresolved:
-          return MakeStringSpan("Unresolved");
-        case net::kCacheHit:
-          return MakeStringSpan("Hit");
-        case net::kCacheHitViaReval:
-          return MakeStringSpan("HitViaReval");
-        case net::kCacheMissedViaReval:
-          return MakeStringSpan("MissedViaReval");
-        case net::kCacheMissed:
-          return MakeStringSpan("Missed");
-        case net::kCacheUnknown:
-          return MakeStringSpan("");
-        default:
-          MOZ_ASSERT(false, "Unexpected CacheDisposition enum value.");
-          return MakeStringSpan("");
-      }
-    }
-
-    static Span<const char> getRedirectType(uint32_t aRedirectFlags) {
-      MOZ_ASSERT(aRedirectFlags != 0, "aRedirectFlags should be non-zero");
-      if (aRedirectFlags & nsIChannelEventSink::REDIRECT_TEMPORARY) {
-        return MakeStringSpan("Temporary");
-      }
-      if (aRedirectFlags & nsIChannelEventSink::REDIRECT_PERMANENT) {
-        return MakeStringSpan("Permanent");
-      }
-      if (aRedirectFlags & nsIChannelEventSink::REDIRECT_INTERNAL) {
-        return MakeStringSpan("Internal");
-      }
-      MOZ_ASSERT(false, "Couldn't find a redirect type from aRedirectFlags");
-      return MakeStringSpan("");
-    }
-  };
-
-  profiler_add_marker(
-      name, geckoprofiler::category::NETWORK,
-      {MarkerTiming::Interval(aStart, aEnd),
-       MarkerStack::TakeBacktrace(std::move(aSource)),
-       MarkerInnerWindowId(aInnerWindowID)},
-      NetworkMarker{}, aStart, aEnd, static_cast<int64_t>(aChannelId), spec,
-      aRequestMethod, aType, aPriority, aCount, aCacheDisposition,
-      aTimings ? *aTimings : scEmptyNetTimingStruct, redirect_spec,
-      aContentType ? ProfilerString8View(*aContentType) : ProfilerString8View(),
-      aRedirectFlags, aRedirectChannelId);
-}
-
-bool profiler_add_native_allocation_marker(int64_t aSize,
-                                           uintptr_t aMemoryAddress) {
-  if (!profiler_can_accept_markers()) {
-    return false;
-  }
-
-  // Because native allocations may be intercepted anywhere, blocking while
-  // locking the profiler mutex here could end up causing a deadlock if another
-  // mutex is taken, which the profiler may indirectly need elsewhere.
-  // See bug 1642726 for such a scenario.
-  // So instead we bail out if the mutex is already locked. Native allocations
-  // are statistically sampled anyway, so missing a few because of this is
-  // acceptable.
-  if (PSAutoLock::IsLockedOnCurrentThread()) {
-    return false;
-  }
-
-  struct NativeAllocationMarker {
-    static constexpr mozilla::Span<const char> MarkerTypeName() {
-      return mozilla::MakeStringSpan("Native allocation");
-    }
-    static void StreamJSONMarkerData(
-        mozilla::baseprofiler::SpliceableJSONWriter& aWriter, int64_t aSize,
-        uintptr_t aMemoryAddress, int aThreadId) {
-      aWriter.IntProperty("size", aSize);
-      aWriter.IntProperty("memoryAddress",
-                          static_cast<int64_t>(aMemoryAddress));
-      aWriter.IntProperty("threadId", aThreadId);
-    }
-    static mozilla::MarkerSchema MarkerTypeDisplay() {
-      return mozilla::MarkerSchema::SpecialFrontendLocation{};
-    }
-  };
-
-  profiler_add_marker("Native allocation", geckoprofiler::category::OTHER,
-                      {MarkerThreadId::MainThread(), MarkerStack::Capture()},
-                      NativeAllocationMarker{}, aSize, aMemoryAddress,
-                      profiler_current_thread_id());
-  return true;
 }
 
 void profiler_set_js_context(JSContext* aCx) {

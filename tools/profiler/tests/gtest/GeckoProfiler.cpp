@@ -12,6 +12,7 @@
 #include "GeckoProfiler.h"
 #include "mozilla/ProfilerMarkerTypes.h"
 #include "mozilla/ProfilerMarkers.h"
+#include "NetworkMarker.h"
 #include "platform.h"
 #include "ProfileBuffer.h"
 
@@ -802,14 +803,14 @@ TEST(GeckoProfiler, Markers)
       ::geckoprofiler::markers::NoPayload{}));
 
   // Used in markers below.
-  TimeStamp ts1 = TimeStamp::NowUnfuzzed();
+  TimeStamp ts1 = TimeStamp::Now();
 
   // Sleep briefly to ensure a sample is taken and the pending markers are
   // processed.
   PR_Sleep(PR_MillisecondsToInterval(500));
 
   // Used in markers below.
-  TimeStamp ts2 = TimeStamp::NowUnfuzzed();
+  TimeStamp ts2 = TimeStamp::Now();
   // ts1 and ts2 should be different thanks to the sleep.
   EXPECT_NE(ts1, ts2);
 
@@ -925,7 +926,7 @@ TEST(GeckoProfiler, Markers)
       /* const nsACString& aRequestMethod */ "GET"_ns,
       /* int32_t aPriority */ 34,
       /* uint64_t aChannelId */ 1,
-      /* NetworkLoadType aType */ NetworkLoadType::LOAD_START,
+      /* NetworkLoadType aType */ net::NetworkLoadType::LOAD_START,
       /* mozilla::TimeStamp aStart */ ts1,
       /* mozilla::TimeStamp aEnd */ ts2,
       /* int64_t aCount */ 56,
@@ -946,7 +947,7 @@ TEST(GeckoProfiler, Markers)
       /* const nsACString& aRequestMethod */ "GET"_ns,
       /* int32_t aPriority */ 34,
       /* uint64_t aChannelId */ 2,
-      /* NetworkLoadType aType */ NetworkLoadType::LOAD_STOP,
+      /* NetworkLoadType aType */ net::NetworkLoadType::LOAD_STOP,
       /* mozilla::TimeStamp aStart */ ts1,
       /* mozilla::TimeStamp aEnd */ ts2,
       /* int64_t aCount */ 56,
@@ -971,7 +972,7 @@ TEST(GeckoProfiler, Markers)
       /* const nsACString& aRequestMethod */ "GET"_ns,
       /* int32_t aPriority */ 34,
       /* uint64_t aChannelId */ 3,
-      /* NetworkLoadType aType */ NetworkLoadType::LOAD_REDIRECT,
+      /* NetworkLoadType aType */ net::NetworkLoadType::LOAD_REDIRECT,
       /* mozilla::TimeStamp aStart */ ts1,
       /* mozilla::TimeStamp aEnd */ ts2,
       /* int64_t aCount */ 56,
@@ -995,7 +996,7 @@ TEST(GeckoProfiler, Markers)
       /* const nsACString& aRequestMethod */ "GET"_ns,
       /* int32_t aPriority */ 34,
       /* uint64_t aChannelId */ 4,
-      /* NetworkLoadType aType */ NetworkLoadType::LOAD_REDIRECT,
+      /* NetworkLoadType aType */ net::NetworkLoadType::LOAD_REDIRECT,
       /* mozilla::TimeStamp aStart */ ts1,
       /* mozilla::TimeStamp aEnd */ ts2,
       /* int64_t aCount */ 56,
@@ -1019,7 +1020,7 @@ TEST(GeckoProfiler, Markers)
       /* const nsACString& aRequestMethod */ "GET"_ns,
       /* int32_t aPriority */ 34,
       /* uint64_t aChannelId */ 5,
-      /* NetworkLoadType aType */ NetworkLoadType::LOAD_REDIRECT,
+      /* NetworkLoadType aType */ net::NetworkLoadType::LOAD_REDIRECT,
       /* mozilla::TimeStamp aStart */ ts1,
       /* mozilla::TimeStamp aEnd */ ts2,
       /* int64_t aCount */ 56,
@@ -1042,7 +1043,7 @@ TEST(GeckoProfiler, Markers)
       /* const nsACString& aRequestMethod */ "GET"_ns,
       /* int32_t aPriority */ 34,
       /* uint64_t aChannelId */ 6,
-      /* NetworkLoadType aType */ NetworkLoadType::LOAD_REDIRECT,
+      /* NetworkLoadType aType */ net::NetworkLoadType::LOAD_REDIRECT,
       /* mozilla::TimeStamp aStart */ ts1,
       /* mozilla::TimeStamp aEnd */ ts2,
       /* int64_t aCount */ 56,
