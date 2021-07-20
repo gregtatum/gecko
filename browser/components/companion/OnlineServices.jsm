@@ -565,6 +565,9 @@ class GoogleService {
     }
     let id = url.href.split("/")[5];
     let type = url.href.split("/")[3];
+    if (!id || !type) {
+      return null;
+    }
     let apiTarget;
     switch (type) {
       case "document":
@@ -580,11 +583,14 @@ class GoogleService {
           `https://slides.googleapis.com/v1/presentations/${id}`
         );
         break;
+      case "drive":
       case "file":
         apiTarget = new URL(`https://www.googleapis.com/drive/v2/files/${id}`);
         break;
+      default:
+        return null;
     }
-
+    Cu.reportError(url);
     let token = await this.getToken();
     let headers = {
       Authorization: `Bearer ${token}`,
@@ -595,6 +601,12 @@ class GoogleService {
     });
 
     let results = await response.json();
+
+    if (results.error) {
+      return null;
+    }
+
+    log.debug(JSON.stringify(results));
 
     if (type == "spreadsheets") {
       return results.properties.title;
