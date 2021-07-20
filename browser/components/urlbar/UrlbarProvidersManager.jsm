@@ -66,8 +66,6 @@ var localProviderModules = {
   UrlbarProviderSearchTips: "resource:///modules/UrlbarProviderSearchTips.jsm",
   UrlbarProviderSearchSuggestions:
     "resource:///modules/UrlbarProviderSearchSuggestions.jsm",
-  UrlbarProviderTabToSearch:
-    "resource:///modules/UrlbarProviderTabToSearch.jsm",
   UrlbarProviderTokenAliasEngines:
     "resource:///modules/UrlbarProviderTokenAliasEngines.jsm",
   UrlbarProviderUnitConversion:
@@ -80,6 +78,8 @@ if (AppConstants.PROCLIENT_ENABLED) {
 } else {
   localProviderModules.UrlbarProviderTopSites =
     "resource:///modules/UrlbarProviderTopSites.jsm";
+  localProviderModules.UrlbarProviderTabToSearch =
+    "resource:///modules/UrlbarProviderTabToSearch.jsm";
 }
 
 // List of available local muxers, each is implemented in its own jsm module.
