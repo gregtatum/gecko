@@ -308,15 +308,7 @@ class GoogleService {
   }
 
   openCalendar(event) {
-    let start = new Date(event.start);
-    openLink(
-      new URL(
-        `https://calendar.google.com/calendar/u/${
-          this.emailAddress
-        }/r/day/${start.getFullYear()}/${start.getMonth() +
-          1}/${start.getDate()}`
-      )
-    );
+    openLink(new URL(event.url));
   }
 
   async getNextMeetings() {
@@ -423,6 +415,8 @@ class GoogleService {
         event.attendees = result.attendees?.filter(a => !a.self) || [];
         event.organizer = result.organizer;
         event.creator = result.creator;
+        event.serviceId = this.id;
+        event.url = result.htmlLink;
         if (allEvents.has(result.id)) {
           // If an event is duplicated, use
           // the primary calendar
@@ -432,7 +426,6 @@ class GoogleService {
         } else {
           allEvents.set(result.id, event);
         }
-        event.serviceId = this.id;
       }
     }
     return Array.from(allEvents.values()).sort((a, b) => a.start - b.start);
