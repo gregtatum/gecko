@@ -148,16 +148,12 @@
  * This section is for urlbar quick actions.
  */
 
-.urlbarView-row[dynamicType=quickActions]::before {
-  text-transform: uppercase;
-}
-
 .urlbarView-row[dynamicType=quickActions] > .urlbarView-row-inner {
   display: flex;
   flex-wrap: wrap;
   overflow: hidden;
   position: relative;
-  height: 30px;
+  height: 42px;
 }
 
 .urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row {
@@ -168,17 +164,30 @@
   display: flex;
   align-items: center;
   padding: 8px;
+  border: 0.5px solid #CFCFD8;
+}
+
+.urlbarView-row[dynamicType=quickActions] .urlbarView-label {
+  font-size: 10px;
+  font-weight: normal;
+  color: #5B5B66;
 }
 
 .urlbarView-row[dynamicType=quickActions] .urlbarView-title {
-  font-weight: bold;
-  font-size: small;
+  font-weight: 500;
+  font-size: 0.8em;
 }
 
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row[selected],
 .urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row[selected] {
   background-color: var(--autocomplete-popup-highlight-background);
   color: var(--autocomplete-popup-highlight-color);
+}
+
+.urlbarView-row[dynamicType=quickActions] .urlbarView-favicon {
+  border: 1px solid #E0E0E6;
+  padding: 3px;
+  border-radius: 50%;
 }
 
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon {
@@ -222,4 +231,9 @@
   text-align: center;
   font-size: small;
   text-overflow: ellipsis;
+}
+
+.urlbarView-row[dynamicType=quickActions] .urlbarView-title,
+.urlbarView-row[dynamicType=quickActions] .urlbarView-label {
+  display: flex
 }
