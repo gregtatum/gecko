@@ -86,8 +86,7 @@ export class Snapshot extends HTMLElement {
 
     let url = new URL(this.data.url);
     let titleEl = fragment.querySelector(".title");
-    // TODO: Fetch the page title from the Snapshots DB and display it here.
-    titleEl.textContent = url.href;
+    titleEl.textContent = this.data.title || url.href;
 
     let siteTitleEl = fragment.querySelector(".snapshot-sitetitle");
     siteTitleEl.textContent = shortURL({ url });
@@ -95,7 +94,7 @@ export class Snapshot extends HTMLElement {
     let dateEl = fragment.querySelector(".snapshot-date");
     dateEl.textContent = timeSince(this.data.lastInteractionAt);
 
-    // TODO: Fetch site favicon from the Snapshots DB and display it in
+    // TODO: MR2-344: Fetch site image preview and display it in
     // .snapshot-favicon > img.
 
     this.appendChild(fragment);
