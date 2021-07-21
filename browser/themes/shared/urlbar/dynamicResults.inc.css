@@ -163,7 +163,7 @@
   margin-block-end: 1em;
   display: flex;
   align-items: center;
-  padding: 8px;
+  padding: 6px;
   border: 0.5px solid #CFCFD8;
 }
 
@@ -185,6 +185,8 @@
 }
 
 .urlbarView-row[dynamicType=quickActions] .urlbarView-favicon {
+  width: 24px;
+  height: 24px;
   border: 1px solid #E0E0E6;
   padding: 3px;
   border-radius: 50%;
@@ -198,6 +200,22 @@
   margin-inline-end: 0;
   border-radius: 8px;
   margin-block-end: 5px;
+}
+
+.urlbarView-row[dynamicType=quickActions] .urlbarView-badge {
+  overflow: hidden;
+  white-space: nowrap;
+  background-color: #FF0000;
+  font-size: 8px;
+  text-align: center;
+  color: #fff;
+  border-radius: 50px;
+  height: 12px;
+  width: 12px;
+  position: absolute;
+  margin-inline-start: 22px;
+  margin-top: -22px;
+  visibility: hidden; /*TODO: remove this when a class/state is added */
 }
 
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row {

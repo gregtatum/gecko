@@ -191,6 +191,11 @@ class ProviderQuickActionsBase extends UrlbarProvider {
             attributes: { class: "urlbarView-favicon" },
           },
           {
+            name: `badge-${i}`,
+            tag: "label",
+            attributes: { class: "urlbarView-badge" },
+          },
+          {
             name: `div-${i}`,
             tag: "div",
             attributes: { flex: "1" },
