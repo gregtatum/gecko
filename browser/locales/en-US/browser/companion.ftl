@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-companion-join-meeting = Join
+companion-join-meeting = Join meeting
 companion-email-late = Running late
 companion-refresh-services-button =
     .title=Refresh services

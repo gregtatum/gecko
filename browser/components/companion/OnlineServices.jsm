@@ -20,17 +20,17 @@ const PREF_LOGLEVEL = "browser.companion.loglevel";
 
 const conferencingInfo = [
   {
-    name: "Zoom Meeting",
+    name: "Zoom",
     domain: ".zoom.us",
     icon: "chrome://browser/content/companion/zoom.png",
   },
   {
-    name: "Microsoft Teams",
+    name: "Teams",
     domain: "teams.microsoft.com",
     icon: "chrome://browser/content/companion/teams.png",
   },
   {
-    name: "Google Meet",
+    name: "Meet",
     domain: "meet.google.com",
     icon: "chrome://browser/content/companion/meet.png",
   },

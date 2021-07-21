@@ -124,16 +124,6 @@ class CalendarEvent extends MozLitElement {
     return css`
       @import url("chrome://global/skin/in-content/common.css");
 
-      .event {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        padding: 4px 8px;
-        cursor: default;
-        box-shadow: none;
-        border: 1px solid var(--in-content-border-color);
-      }
-
       .conference-info {
         display: flex;
         align-items: center;
@@ -141,19 +131,20 @@ class CalendarEvent extends MozLitElement {
         font-weight: 600;
         font-size: 11px;
         color: var(--in-content-deemphasized-text);
+        margin-inline-end: 8px;
+        white-space: nowrap;
       }
 
       .event-info {
-        flex: 1;
         display: flex;
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
+        gap: 12px;
       }
 
       .event-actions {
         display: flex;
-        align-self: start;
         gap: 4px;
         font-size: 11px;
       }
@@ -163,9 +154,20 @@ class CalendarEvent extends MozLitElement {
         margin: 0;
       }
 
+      .event-sub-details {
+        display: flex;
+        align-items: center;
+      }
+
+      .event-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
       .event img {
-        width: 16px;
-        height: 16px;
+        width: 12px;
+        height: 12px;
         object-fit: contain;
         object-position: 50% 50%;
       }
@@ -179,32 +181,26 @@ class CalendarEvent extends MozLitElement {
         font-size: 11px;
       }
 
-      .event-link {
-        /* This needs to be block-style for the ellipsis to work. */
-        /* Also they're currently one per line. */
-        display: block;
-      }
-
-      .summary,
-      .subject,
-      .title,
-      .event-link {
-        max-width: 125px;
-        text-overflow: ellipsis;
-        overflow-x: hidden;
-        white-space: nowrap;
-      }
-
       .summary {
         /* Make some space for the link's focus outline */
         padding: 3px;
-        margin-inline-start: -3px;
-        margin-block-start: -3px;
+        margin: -3px;
       }
 
       .summary > a {
         text-decoration: none !important;
         color: var(--in-content-page-color) !important;
+      }
+
+      .line-clamp {
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .event-links {
+        margin-block-start: 20px;
       }
     `;
   }
@@ -229,7 +225,7 @@ class CalendarEvent extends MozLitElement {
       link =>
         html`
           <a
-            class="event-link"
+            class="event-link line-clamp"
             href=${link.url}
             title=${link.url}
             @click=${openLink}
@@ -260,10 +256,23 @@ class CalendarEvent extends MozLitElement {
       return "";
     }
     return html`
-      <div class="conference-info">
+      <span class="conference-info">
         <img src=${conference.icon} alt="" />
         ${conference.name}
-      </div>
+      </span>
+    `;
+  }
+
+  eventTimeTemplate() {
+    let { start, end } = this.event;
+    let startTime = new Date(Date.parse(start));
+    let endTime = new Date(Date.parse(end));
+    let dateString = `${timeFormat.format(startTime)} - ${timeFormat.format(
+      endTime
+    )}`;
+
+    return html`
+      <span class="date line-clamp">${dateString}</span>
     `;
   }
 
@@ -317,30 +326,27 @@ class CalendarEvent extends MozLitElement {
   }
 
   render() {
-    let { start, end, summary } = this.event;
-
-    let startTime = new Date(Date.parse(start));
-    let endTime = new Date(Date.parse(end));
-    let dateString = `${timeFormat.format(startTime)} - ${timeFormat.format(
-      endTime
-    )}`;
+    let { summary, links } = this.event;
 
     return html`
       <div class="event card card-no-hover">
-        ${this.conferenceInfoTemplate()}
         <div class="event-info">
           <div class="event-content">
-            <div class="summary" title=${summary}>
+            <div class="summary line-clamp" title=${summary}>
               <a href="#" @click=${this.openCalendar}>
                 ${summary}
               </a>
             </div>
-            <div class="date">${dateString}</div>
-            <div class="links">${this.eventLinksTemplate()}</div>
+            <div class="event-sub-details">
+              ${this.conferenceInfoTemplate()} ${this.eventTimeTemplate()}
+            </div>
           </div>
           <div class="event-actions">
             ${this.runningLateTemplate()} ${this.joinConferenceTemplate()}
           </div>
+        </div>
+        <div ?hidden=${!links.length} class="event-links">
+          ${this.eventLinksTemplate()}
         </div>
       </div>
     `;
