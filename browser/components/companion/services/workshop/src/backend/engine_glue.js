@@ -45,34 +45,41 @@ export const configuratorModules = new Map([
       return mod.default;
     },
   ],
+  [
+    "feed",
+    async function() {
+      const mod = await import("./accounts/feed/configurator");
+      return mod.default;
+    },
+  ],
   /*
   [
-    'imap+smtp',
+    "imap+smtp",
     async function() {
-      const mod = await import('./accounts/composite/configurator');
+      const mod = await import("./accounts/composite/configurator");
       return mod.default;
-    }
+    },
   ],
   [
-    'pop3+smtp',
+    "pop3+smtp",
     async function() {
-      const mod = await import('./accounts/composite/configurator');
+      const mod = await import("./accounts/composite/configurator");
       return mod.default;
-    }
+    },
   ],
   [
-    'phabricator',
+    "phabricator",
     async function() {
-      const mod = await import('./accounts/phabricator/configurator');
+      const mod = await import("./accounts/phabricator/configurator");
       return mod.default;
-    }
+    },
   ],
   [
-    'bugzilla',
+    "bugzilla",
     async function() {
-      const mod = await import('./accounts/bugzilla/configurator');
+      const mod = await import("./accounts/bugzilla/configurator");
       return mod.default;
-    }
+    },
   ],
   */
   [
@@ -96,34 +103,41 @@ export const validatorModules = new Map([
       return mod.default;
     },
   ],
+  [
+    "feed",
+    async function() {
+      const mod = await import("./accounts/feed/validator");
+      return mod.default;
+    },
+  ],
   /*
   [
-    'imap+smtp',
+    "imap+smtp",
     async function() {
-      const mod = await import('./accounts/composite/validator');
+      const mod = await import("./accounts/composite/validator");
       return mod.default;
-    }
+    },
   ],
   [
-    'pop3+smtp',
+    "pop3+smtp",
     async function() {
-      const mod = await import('./accounts/composite/validator');
+      const mod = await import("./accounts/composite/validator");
       return mod.default;
-    }
+    },
   ],
   [
-    'phabricator',
+    "phabricator",
     async function() {
-      const mod = await import('./accounts/phabricator/validator');
+      const mod = await import("./accounts/phabricator/validator");
       return mod.default;
-    }
+    },
   ],
   [
-    'bugzilla',
+    "bugzilla",
     async function() {
-      const mod = await import('./accounts/bugzilla/validator');
+      const mod = await import("./accounts/bugzilla/validator");
       return mod.default;
-    }
+    },
   ],
   */
   [
@@ -147,34 +161,41 @@ export const accountModules = new Map([
       return mod.default;
     },
   ],
+  [
+    "feed",
+    async function() {
+      const mod = await import("./accounts/feed/account");
+      return mod.default;
+    },
+  ],
   /*
   [
-    'imap+smtp',
+    "imap+smtp",
     async function() {
-      const mod = await import('./accounts/composite/account');
+      const mod = await import("./accounts/composite/account");
       return mod.default;
-    }
+    },
   ],
   [
-    'pop3+smtp',
+    "pop3+smtp",
     async function() {
-      const mod = await import('./accounts/composite/account');
+      const mod = await import("./accounts/composite/account");
       return mod.default;
-    }
+    },
   ],
   [
-    'phabricator',
+    "phabricator",
     async function() {
-      const mod = await import('./accounts/phabricator/account');
+      const mod = await import("./accounts/phabricator/account");
       return mod.default;
-    }
+    },
   ],
   [
-    'bugzilla',
+    "bugzilla",
     async function() {
-      const mod = await import('./accounts/bugzilla/account');
+      const mod = await import("./accounts/bugzilla/account");
       return mod.default;
-    }
+    },
   ],
   */
   [
@@ -214,27 +235,34 @@ export const engineTaskMappings = new Map([
       return mod.default;
     },
   ],
+  [
+    "feed",
+    async function() {
+      const mod = await import("./accounts/feed/feed_tasks");
+      return mod.default;
+    },
+  ],
   /*
   [
-    'pop3',
+    "pop3",
     async function() {
-      const mod = await import('./accounts/pop3/pop3_tasks');
+      const mod = await import("./accounts/pop3/pop3_tasks");
       return mod.default;
-    }
+    },
   ],
   [
-    'phabricator',
+    "phabricator",
     async function() {
-      const mod = await import('./accounts/phabricator/phabricator_tasks');
+      const mod = await import("./accounts/phabricator/phabricator_tasks");
       return mod.default;
-    }
+    },
   ],
   [
-    'bugzilla',
+    "bugzilla",
     async function() {
-      const mod = await import('./accounts/bugzilla/bugzilla_tasks');
+      const mod = await import("./accounts/bugzilla/bugzilla_tasks");
       return mod.default;
-    }
+    },
   ],
   */
   [
@@ -281,24 +309,30 @@ export const engineHacks = new Map([
       unselectableFolderTypes: new Set(),
     },
   ],
+  [
+    "feed",
+    {
+      unselectableFolderTypes: new Set(),
+    },
+  ],
   /*
   [
-    'pop3',
+    "pop3",
     {
       unselectableFolderTypes: new Set(),
-    }
+    },
   ],
   [
-    'phabricator',
+    "phabricator",
     {
       unselectableFolderTypes: new Set(),
-    }
+    },
   ],
   [
-    'bugzilla',
+    "bugzilla",
     {
       unselectableFolderTypes: new Set(),
-    }
+    },
   ],
   */
   [
@@ -340,24 +374,30 @@ export const engineBackEndFacts = new Map([
       syncGranularity: "folder",
     },
   ],
+  [
+    "feed",
+    {
+      syncGranularity: "account",
+    },
+  ],
   /*
   [
-    'pop3',
+    "pop3",
     {
-      syncGranularity: 'folder'
-    }
+      syncGranularity: "folder",
+    },
   ],
   [
-    'phabricator',
+    "phabricator",
     {
-      syncGranularity: 'account',
-    }
+      syncGranularity: "account",
+    },
   ],
   [
-    'bugzilla',
+    "bugzilla",
     {
-      syncGranularity: 'account',
-    }
+      syncGranularity: "account",
+    },
   ],
   */
   [
@@ -411,36 +451,45 @@ export const engineFrontEndAccountMeta = new Map([
       usesArchiveMetaphor: false,
     },
   ],
+  [
+    "feed",
+    {
+      engineFacts: {
+        syncGranularity: "account",
+      },
+      usesArchiveMetaphor: false,
+    },
+  ],
   /*
   [
-    'pop3',
+    "pop3",
     {
       engineFacts: {
         // This could arguably be 'account' too, but that would hinge on us
         // having some type of local folder stuff going on.  We can of course
         // revisit this as needed.
-        syncGranularity: 'folder'
+        syncGranularity: "folder",
       },
-      usesArchiveMetaphor: false
-    }
+      usesArchiveMetaphor: false,
+    },
   ],
   [
-    'phabricator',
+    "phabricator",
     {
       engineFacts: {
-        syncGranularity: 'account',
+        syncGranularity: "account",
       },
-      usesArchiveMetaphor: false
-    }
+      usesArchiveMetaphor: false,
+    },
   ],
   [
-    'bugzilla',
+    "bugzilla",
     {
       engineFacts: {
-        syncGranularity: 'account',
+        syncGranularity: "account",
       },
-      usesArchiveMetaphor: false
-    }
+      usesArchiveMetaphor: false,
+    },
   ],
   */
   [
@@ -485,24 +534,30 @@ export const engineFrontEndFolderMeta = new Map([
       syncGranularity: "folder",
     },
   ],
+  [
+    "feed",
+    {
+      syncGranularity: "account",
+    },
+  ],
   /*
   [
-    'pop3',
+    "pop3",
     {
-      syncGranularity: 'folder',
-    }
+      syncGranularity: "folder",
+    },
   ],
   [
-    'phabricator',
+    "phabricator",
     {
-      syncGranularity: 'account',
-    }
+      syncGranularity: "account",
+    },
   ],
   [
-    'bugzilla',
+    "bugzilla",
     {
-      syncGranularity: 'account',
-    }
+      syncGranularity: "account",
+    },
   ],
   */
   [

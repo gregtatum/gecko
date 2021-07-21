@@ -993,9 +993,29 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/ical/configurator.js
+  // src/backend/accounts/feed/configurator.js
   var configurator_exports2 = {};
   __export(configurator_exports2, {
+    default: () => configurateFeed
+  });
+  function configurateFeed(userDetails) {
+    return {
+      userDetails,
+      credentials: {},
+      typeFields: {},
+      connInfoFields: {
+        feedUrl: userDetails.feedUrl
+      }
+    };
+  }
+  var init_configurator2 = __esm({
+    "src/backend/accounts/feed/configurator.js"() {
+    }
+  });
+
+  // src/backend/accounts/ical/configurator.js
+  var configurator_exports3 = {};
+  __export(configurator_exports3, {
     default: () => configurateICal
   });
   function configurateICal(userDetails) {
@@ -1008,7 +1028,7 @@ var WorkshopBackend = (() => {
       }
     };
   }
-  var init_configurator2 = __esm({
+  var init_configurator3 = __esm({
     "src/backend/accounts/ical/configurator.js"() {
     }
   });
@@ -3820,6 +3840,1400 @@ var WorkshopBackend = (() => {
       init_syncbase();
       init_protocol();
       scope = logic.scope("ActivesyncConfigurator");
+    }
+  });
+
+  // src/backend/parsers/xml/namespaces.js
+  var NamespaceIds;
+  var init_namespaces = __esm({
+    "src/backend/parsers/xml/namespaces.js"() {
+      NamespaceIds = new Map([
+        [
+          "local",
+          {
+            id: 0,
+            check: (ns) => false
+          }
+        ],
+        [
+          "atom",
+          {
+            id: 1,
+            check: (ns) => ns === "http://www.w3.org/2005/Atom"
+          }
+        ],
+        [
+          "xhtml",
+          {
+            id: 2,
+            check: (ns) => ns === "http://www.w3.org/1999/xhtml"
+          }
+        ]
+      ]);
+    }
+  });
+
+  // src/backend/parsers/xml/utils.js
+  function validateString({ data, defaultValue, validate, convert = null }) {
+    if (!data) {
+      return defaultValue;
+    }
+    data = data.trim();
+    if (validate(data)) {
+      return convert ? convert(data) : data;
+    }
+    return defaultValue;
+  }
+  function encodeToXmlString(str) {
+    const buffer = [];
+    let start = 0;
+    for (let i = 0, ii = str.length; i < ii; i++) {
+      const char = str.codePointAt(i);
+      if (32 <= char && char <= 126) {
+        const entity = XMLEntities[char];
+        if (entity) {
+          if (start < i) {
+            buffer.push(str.substring(start, i));
+          }
+          buffer.push(entity);
+          start = i + 1;
+        }
+      } else {
+        if (start < i) {
+          buffer.push(str.substring(start, i));
+        }
+        buffer.push(`&#x${char.toString(16).toUpperCase()};`);
+        if (char > 55295 && (char < 57344 || char > 65533)) {
+          i++;
+        }
+        start = i + 1;
+      }
+    }
+    if (buffer.length === 0) {
+      return str;
+    }
+    if (start < str.length) {
+      buffer.push(str.substring(start, str.length));
+    }
+    return buffer.join("");
+  }
+  var XMLEntities;
+  var init_utils = __esm({
+    "src/backend/parsers/xml/utils.js"() {
+      XMLEntities = {
+        60: "&lt;",
+        62: "&gt;",
+        38: "&amp;",
+        34: "&quot;",
+        39: "&apos;"
+      };
+    }
+  });
+
+  // src/backend/parsers/xml/xml_object.js
+  var XMLObject, XMLObjectArray, StringObject, XmlNodeObject;
+  var init_xml_object = __esm({
+    "src/backend/parsers/xml/xml_object.js"() {
+      init_utils();
+      XMLObject = class {
+        constructor(nsId, name) {
+          this.$namespaceId = nsId;
+          this.$nodeName = name;
+        }
+        $onChild(child) {
+          if (!this.$onChildCheck(child)) {
+            return;
+          }
+          const name = child.$nodeName;
+          const node = this[name];
+          if (node instanceof XMLObjectArray) {
+            node.push(child);
+          } else {
+            this[name] = child;
+          }
+        }
+        $onChildCheck(child) {
+          return this.hasOwnProperty(child.$nodeName) && child.$namespaceId === this.$namespaceId;
+        }
+        $onText(_) {
+        }
+        $finalize() {
+        }
+        $clean(builder) {
+          if (this.$cleanup) {
+            builder.clean(this.$cleanup);
+            delete this.$cleanup;
+          }
+        }
+        $dump() {
+          const dumped = Object.create(null);
+          let empty = true;
+          for (const name of Object.getOwnPropertyNames(this)) {
+            if (name.startsWith("$")) {
+              continue;
+            }
+            const value = this[name];
+            const dumpedValue = value?.$dump?.() || value;
+            if (dumpedValue === null || dumpedValue === void 0 || dumpedValue === "" || Array.isArray(dumpedValue) && dumpedValue.length === 0) {
+              continue;
+            }
+            empty = false;
+            dumped[name] = dumpedValue;
+          }
+          if (!this.$content) {
+            return empty ? null : dumped;
+          }
+          const content = this.$content?.$dump?.() || this.$content;
+          if (empty) {
+            return content;
+          }
+          dumped["#content"] = content;
+          return dumped;
+        }
+      };
+      XMLObjectArray = class {
+        #max;
+        constructor(max = Infinity) {
+          this.#max = max;
+          this.children = [];
+        }
+        push(child) {
+          if (this.children.length <= this.#max) {
+            this.children.push(child);
+          }
+        }
+        isEmpty() {
+          return this.children.length === 0;
+        }
+        $dump() {
+          return this.children.map((v) => v.$dump());
+        }
+      };
+      StringObject = class extends XMLObject {
+        constructor(nsId, name) {
+          super(nsId, name);
+          this.$content = "";
+        }
+        $onChild(child) {
+        }
+        $onText(text) {
+          this.$content += text;
+        }
+      };
+      XmlNodeObject = class extends XMLObject {
+        constructor(nsId, name, attributes = {}) {
+          super(nsId, name);
+          this.$content = "";
+          if (name !== "#text") {
+            this.$attributes = attributes;
+          }
+          this.$children = [];
+        }
+        $serialize(buf) {
+          const tagName = this.$nodeName;
+          if (tagName === "#text") {
+            buf.push(encodeToXmlString(this.$content));
+            return;
+          }
+          buf.push(`<${tagName}`);
+          for (const [name, value] of this.$attributes) {
+            buf.push(` ${name}="${encodeToXmlString(value.$content)}"`);
+          }
+          if (!this.$content && this.$children.length === 0) {
+            buf.push("/>");
+            return;
+          }
+          buf.push(">");
+          if (this.$content) {
+            if (typeof this.$content === "string") {
+              buf.push(encodeToXmlString(this.$content));
+            } else {
+              this.$content.$serialize(buf);
+            }
+          } else {
+            for (const child of this.$children) {
+              child.$serialize(buf);
+            }
+          }
+          buf.push(`</${tagName}>`);
+        }
+        $onChild(child) {
+          if (this.$content) {
+            const node = new XmlNodeObject(this.$namespaceId, "#text");
+            this.$children.push(node);
+            node.$content = this.$content;
+            this.$content = "";
+          }
+          this.$children.push(child);
+        }
+        $onText(str) {
+          this.$content += str;
+        }
+        $finalize() {
+          if (this.$content && this.$children.length) {
+            const node = new XmlNodeObject(this.$namespaceId, "#text");
+            this.$children.push(node);
+            node.$content = this.$content;
+            delete this.$content;
+          }
+        }
+        $dump() {
+          return this.$serialize().join("");
+        }
+      };
+    }
+  });
+
+  // src/backend/parsers/xml/atom.js
+  var ATOM_NS_ID, XHTML_NS_ID, Atom, StringAtom, PlainTextConstruct, XHTMLTextConstruct, PersonConstruct, Name, Uri, Email, DateConstruct, Feed, Entry, InlineTextContent, InlineXHTMLContent, InlineOtherContent, OutOfLineContent, Author, Category, Contributor, Generator, Icon, Id, Link, Logo, Published, Source, Updated, AtomNamespace;
+  var init_atom = __esm({
+    "src/backend/parsers/xml/atom.js"() {
+      init_namespaces();
+      init_xml_object();
+      init_utils();
+      ATOM_NS_ID = NamespaceIds.get("atom").id;
+      XHTML_NS_ID = NamespaceIds.get("xhtml").id;
+      Atom = class extends XMLObject {
+        constructor(name, attributes) {
+          super(ATOM_NS_ID, name);
+          this.base = attributes.get("base") || "";
+          this.lang = validateString({
+            data: attributes.get("lang"),
+            defaultValue: "",
+            validate: (s) => s.match(/^[A-Za-z]{1,8}(-[A-Za-z0-9]{1,8})*$/)
+          });
+        }
+        $onChildCheck(child) {
+          return !child.$isInvalid && super.$onChildCheck(child);
+        }
+      };
+      StringAtom = class extends Atom {
+        constructor(name, attributes) {
+          super(name, attributes);
+          this.$content = "";
+        }
+        $onChild(child) {
+        }
+        $onText(text) {
+          this.$content += text;
+        }
+      };
+      PlainTextConstruct = class extends StringAtom {
+        constructor(name, attributes) {
+          super(name, attributes);
+          this.$content = "";
+          this.type = validateString({
+            data: attributes.get("type"),
+            defaultValue: "",
+            validate: (s) => s === "text" || s === "html"
+          });
+        }
+      };
+      XHTMLTextConstruct = class extends Atom {
+        constructor(name, attributes) {
+          super(name, attributes);
+          this.type = validateString({
+            data: attributes.get("type"),
+            defaultValue: "xhtml",
+            validate: (s) => false
+          });
+          this.div = null;
+        }
+        $onChild(child) {
+          if (child.$namespaceId === XHTML_NS_ID && child.$nodeName === "div") {
+            this.div = child;
+          }
+        }
+      };
+      PersonConstruct = class extends Atom {
+        constructor(name, attributes) {
+          super(name, attributes);
+          this.name = null;
+          this.uri = null;
+          this.email = null;
+        }
+        $finalize() {
+          for (const propr of ["name", "uri", "email"]) {
+            if (this[propr]) {
+              this[propr] = this[propr].$content;
+            }
+          }
+        }
+      };
+      Name = class extends StringObject {
+        constructor() {
+          super(ATOM_NS_ID, "name");
+        }
+      };
+      Uri = class extends StringObject {
+        constructor() {
+          super(ATOM_NS_ID, "uri");
+        }
+      };
+      Email = class extends StringObject {
+        constructor() {
+          super(ATOM_NS_ID, "email");
+        }
+        $finalize() {
+          if (!this.$content.match(/^.+@.+$/)) {
+            this.$content = "";
+          }
+        }
+      };
+      DateConstruct = class extends StringAtom {
+        $finalize() {
+          try {
+            this.$content = new Date(this.$content);
+          } catch {
+            this.$isInvalid = true;
+          }
+        }
+      };
+      Feed = class extends Atom {
+        constructor(attributes) {
+          super("feed", attributes);
+          this.author = new XMLObjectArray();
+          this.category = new XMLObjectArray();
+          this.contributor = new XMLObjectArray();
+          this.generator = null;
+          this.icon = null;
+          this.id = null;
+          this.link = new XMLObjectArray();
+          this.logo = null;
+          this.rights = null;
+          this.subtitle = null;
+          this.title = null;
+          this.updated = null;
+          this.entry = new XMLObjectArray();
+        }
+        $finalize() {
+          for (const propr of ["id", "title", "updated"]) {
+            if (this[propr] === null) {
+              console.warn(`Atom - Required field ${propr} is not present.`);
+            }
+          }
+          if (this.author.isEmpty() && this.entry.children.some((e) => e.author.isEmpty())) {
+            console.warn("An atom:feed must have an atom:author unless all of its atom:entry children have an atom:author.");
+          }
+        }
+      };
+      Entry = class extends Atom {
+        constructor(attributes) {
+          super("entry", attributes);
+          this.author = new XMLObjectArray();
+          this.category = new XMLObjectArray();
+          this.content = null;
+          this.contributor = new XMLObjectArray();
+          this.id = null;
+          this.link = new XMLObjectArray();
+          this.published = null;
+          this.rights = null;
+          this.source = null;
+          this.summary = null;
+          this.title = null;
+          this.updated = null;
+        }
+        $finalize() {
+          for (const propr of ["id", "title", "updated"]) {
+            if (this[propr] === null) {
+              console.warn(`Atom - Required field ${propr} is not present.`);
+            }
+          }
+          if (!this.link.children.some((e) => e.rel === "alternate") && this.content === null) {
+            console.warn("An atom:entry must have at least one atom:link element with a rel attribute of 'alternate' or an atom:content.");
+          }
+        }
+      };
+      InlineTextContent = class extends PlainTextConstruct {
+        constructor(attributes) {
+          super("content", attributes);
+        }
+      };
+      InlineXHTMLContent = class extends XHTMLTextConstruct {
+        constructor(attributes) {
+          super("content", attributes);
+        }
+      };
+      InlineOtherContent = class extends Atom {
+        constructor(attributes) {
+          super("content", attributes);
+          this.$content = "";
+          this.type = validateString({
+            data: attributes.get("type"),
+            defaultValue: "",
+            validate: (s) => s.match(/^.+\/.+$/)
+          });
+        }
+        $onText(text) {
+          if (typeof this.$content === "string") {
+            this.$content += text;
+          } else {
+            this.$content = text;
+          }
+        }
+        $onChild(child) {
+          this.$content = child;
+        }
+      };
+      OutOfLineContent = class extends Atom {
+        constructor(attributes) {
+          super("content", attributes);
+          this.type = validateString({
+            data: attributes.get("type"),
+            defaultValue: "",
+            validate: (s) => s.match(/^.+\/.+$/)
+          });
+          this.src = attributes.get("src") || "";
+        }
+      };
+      Author = class extends PersonConstruct {
+        constructor(attributes) {
+          super("author", attributes);
+        }
+      };
+      Category = class extends Atom {
+        constructor(attributes) {
+          super("category", attributes);
+          this.term = attributes.get("term") || "";
+          this.scheme = attributes.get("scheme") || "";
+          this.label = attributes.get("label") || "";
+        }
+        $onChild(child) {
+        }
+      };
+      Contributor = class extends PersonConstruct {
+        constructor(attributes) {
+          super("contributor", attributes);
+        }
+      };
+      Generator = class extends StringAtom {
+        constructor(attributes) {
+          super("generator", attributes);
+          this.uri = attributes.get("uri") || "";
+          this.version = attributes.get("version") || "";
+        }
+      };
+      Icon = class extends StringAtom {
+        constructor(attributes) {
+          super("icon", attributes);
+        }
+      };
+      Id = class extends StringAtom {
+        constructor(attributes) {
+          super("id", attributes);
+        }
+      };
+      Link = class extends Atom {
+        constructor(attributes) {
+          super("link", attributes);
+          this.href = attributes.get("href") || "";
+          this.rel = attributes.get("rel") || "";
+          this.type = attributes.get("type") || "";
+          this.title = attributes.get("title") || "";
+          this.length = attributes.get("length") || "";
+        }
+      };
+      Logo = class extends StringAtom {
+        constructor(attributes) {
+          super("logo", attributes);
+        }
+      };
+      Published = class extends DateConstruct {
+        constructor(attributes) {
+          super("published", attributes);
+        }
+      };
+      Source = class extends Atom {
+        constructor(attributes) {
+          super("source", attributes);
+          this.author = new XMLObjectArray();
+          this.category = new XMLObjectArray();
+          this.contributor = new XMLObjectArray();
+          this.generator = null;
+          this.icon = null;
+          this.link = new XMLObjectArray();
+          this.logo = null;
+          this.rights = null;
+          this.subtitle = null;
+          this.updated = null;
+        }
+      };
+      Updated = class extends DateConstruct {
+        constructor(attributes) {
+          super("updated", attributes);
+        }
+      };
+      AtomNamespace = class {
+        static $buildXMLObject(name, attributes) {
+          attributes = attributes.get("");
+          if (AtomNamespace.hasOwnProperty(name)) {
+            return AtomNamespace[name](attributes);
+          }
+          if (["rights", "subtitle", "summary", "title"].includes(name)) {
+            if (attributes.get("type") === "xhtml") {
+              return new XHTMLTextConstruct(name, attributes);
+            }
+            return new PlainTextConstruct(name, attributes);
+          }
+          return void 0;
+        }
+        static name(attributes) {
+          return new Name(attributes);
+        }
+        static uri(attributes) {
+          return new Uri(attributes);
+        }
+        static email(attributes) {
+          return new Email(attributes);
+        }
+        static feed(attributes) {
+          return new Feed(attributes);
+        }
+        static entry(attributes) {
+          return new Entry(attributes);
+        }
+        static content(attributes) {
+          switch (attributes.get("type")) {
+            case "text":
+            case "html":
+              return new InlineTextContent(attributes);
+            case "xhtml":
+              return new InlineXHTMLContent(attributes);
+          }
+          if (attributes.has("src")) {
+            return new OutOfLineContent(attributes);
+          }
+          return new InlineOtherContent(attributes);
+        }
+        static author(attributes) {
+          return new Author(attributes);
+        }
+        static category(attributes) {
+          return new Category(attributes);
+        }
+        static contributor(attributes) {
+          return new Contributor(attributes);
+        }
+        static generator(attributes) {
+          return new Generator(attributes);
+        }
+        static icon(attributes) {
+          return new Icon(attributes);
+        }
+        static id(attributes) {
+          return new Id(attributes);
+        }
+        static logo(attributes) {
+          return new Logo(attributes);
+        }
+        static link(attributes) {
+          return new Link(attributes);
+        }
+        static published(attributes) {
+          return new Published(attributes);
+        }
+        static source(attributes) {
+          return new Source(attributes);
+        }
+        static updated(attributes) {
+          return new Updated(attributes);
+        }
+      };
+    }
+  });
+
+  // src/backend/parsers/xml/node_builder.js
+  var Empty, NodeBuilder;
+  var init_node_builder = __esm({
+    "src/backend/parsers/xml/node_builder.js"() {
+      init_namespaces();
+      init_xml_object();
+      Empty = class extends XMLObject {
+        constructor() {
+          super(-1, "");
+        }
+        $onChild() {
+        }
+      };
+      NodeBuilder = class {
+        #namespaceStack;
+        #namespaceSetup;
+        #rootNode;
+        #currentNamespace;
+        #namespacePrefixes;
+        #namespaces;
+        constructor(namespaceSetup, rootNode, localNamespace = null) {
+          this.#namespaceStack = [];
+          this.#namespaceSetup = namespaceSetup;
+          this.#rootNode = rootNode;
+          this.#currentNamespace = localNamespace;
+          this.#namespacePrefixes = new Map();
+          this.#namespaces = new Map();
+        }
+        buildRoot() {
+          return this.#rootNode;
+        }
+        build({ nsPrefix, name, attributes }) {
+          const namespace = attributes.get("").get("xmlns");
+          const prefixes = attributes.get("xmlns");
+          if (namespace) {
+            this.#namespaceStack.push(this.#currentNamespace);
+            this.#currentNamespace = this.#searchNamespace(namespace);
+          }
+          if (prefixes) {
+            this.#addNamespacePrefix(prefixes);
+          }
+          const namespaceToUse = this.#getNamespaceToUse(nsPrefix);
+          const node = namespaceToUse?.$buildXMLObject(name, attributes) || new Empty();
+          if (namespace || prefixes) {
+            node.$cleanup = {
+              hasNamespace: !!namespace,
+              prefixes
+            };
+          }
+          return node;
+        }
+        #searchNamespace(nsName) {
+          let ns = this.#namespaces.get(nsName);
+          if (ns) {
+            return ns;
+          }
+          for (const [name, { check }] of NamespaceIds) {
+            if (!check(nsName)) {
+              continue;
+            }
+            ns = this.#namespaceSetup[name];
+            if (ns) {
+              this.#namespaces.set(nsName, ns);
+              return ns;
+            }
+            break;
+          }
+          return null;
+        }
+        #addNamespacePrefix(prefixes) {
+          for (const [prefix, value] of prefixes) {
+            const namespace = this.#searchNamespace(value);
+            let prefixStack = this.#namespacePrefixes.get(prefix);
+            if (!prefixStack) {
+              prefixStack = [];
+              this.#namespacePrefixes.set(prefix, prefixStack);
+            }
+            prefixStack.push(namespace);
+          }
+        }
+        #getNamespaceToUse(prefix) {
+          if (!prefix) {
+            return this.#currentNamespace;
+          }
+          const prefixStack = this.#namespacePrefixes.get(prefix);
+          if (prefixStack?.length) {
+            return prefixStack[prefixStack.length - 1];
+          }
+          return null;
+        }
+        clean(data) {
+          const { hasNamespace, prefixes } = data;
+          if (hasNamespace) {
+            this.#currentNamespace = this.#namespaceStack.pop();
+          }
+          if (prefixes) {
+            for (const prefix of prefixes.keys()) {
+              this.#namespacePrefixes.get(prefix).pop();
+            }
+          }
+        }
+      };
+    }
+  });
+
+  // src/backend/parsers/xml/rss.js
+  var RSS_NS_ID, DEFAULT_IMG_WIDTH, DEFAULT_IMG_HEIGHT, MAX_IMG_WIDTH, MAX_IMG_HEIGHT, Rss, Channel, PubDate, LastBuildDate, Category2, Cloud, Ttl, Image, Width, Height, TextInput, Item, Enclosure, Guid, Source2, RssNamespace;
+  var init_rss = __esm({
+    "src/backend/parsers/xml/rss.js"() {
+      init_namespaces();
+      init_xml_object();
+      RSS_NS_ID = NamespaceIds.get("local").id;
+      DEFAULT_IMG_WIDTH = 88;
+      DEFAULT_IMG_HEIGHT = 31;
+      MAX_IMG_WIDTH = 144;
+      MAX_IMG_HEIGHT = 400;
+      Rss = class extends XMLObject {
+        constructor(attributes) {
+          super(RSS_NS_ID, "rss");
+          this.version = attributes.get("version") || "";
+          this.channel = null;
+        }
+        $onChildCheck(child) {
+          return !child.$isInvalid && super.$onChildCheck(child);
+        }
+      };
+      Channel = class extends XMLObject {
+        constructor(attributges) {
+          super(RSS_NS_ID, "channel");
+          this.title = null;
+          this.link = null;
+          this.description = null;
+          this.language = null;
+          this.copyright = null;
+          this.managingEditor = null;
+          this.webMaster = null;
+          this.pubDate = null;
+          this.lastBuildDate = null;
+          this.category = null;
+          this.generator = null;
+          this.docs = null;
+          this.cloud = null;
+          this.ttl = null;
+          this.image = null;
+          this.textInput = null;
+          this.skipHours = null;
+          this.skipDays = null;
+          this.item = new XMLObjectArray();
+        }
+        $onChildCheck(child) {
+          return !child.$isInvalid && super.$onChildCheck(child);
+        }
+        $finalize() {
+          this.$isInvalid = !(this.title && this.link && this.description);
+        }
+      };
+      PubDate = class extends StringObject {
+        constructor() {
+          super(RSS_NS_ID, "pubDate");
+        }
+        $finalize() {
+          try {
+            this.$content = new Date(this.$content);
+          } catch {
+            this.$isInvalid = true;
+          }
+        }
+      };
+      LastBuildDate = class extends StringObject {
+        constructor() {
+          super(RSS_NS_ID, "lastBuildDate");
+        }
+        $finalize() {
+          try {
+            this.$content = new Date(this.$content);
+          } catch {
+            this.$isInvalid = true;
+          }
+        }
+      };
+      Category2 = class extends StringObject {
+        constructor(attributes) {
+          super(RSS_NS_ID, "category");
+          this.domain = attributes.get("domain") || "";
+        }
+      };
+      Cloud = class extends StringObject {
+        constructor(attributes) {
+          super(RSS_NS_ID, "cloud");
+          this.domain = attributes.get("domain") || "";
+          this.port = attributes.get("port") || "";
+          this.path = attributes.get("path") || "";
+          this.registerProcedure = attributes.get("registerProcedure") || "";
+          this.protocol = attributes.get("protocol") || "";
+        }
+        $onText(text) {
+        }
+      };
+      Ttl = class extends StringObject {
+        constructor(attributes) {
+          super(RSS_NS_ID, "ttl");
+        }
+        $finalize() {
+          this.$content = parseInt(this.$content);
+          if (isNaN(this.$content)) {
+            this.$isInvalid = true;
+          }
+        }
+      };
+      Image = class extends XMLObject {
+        constructor(attributes) {
+          super(RSS_NS_ID, "image");
+          this.url = null;
+          this.title = null;
+          this.link = null;
+          this.width = null;
+          this.height = null;
+          this.description = null;
+        }
+        $onChild(child) {
+          if (!this.$onChildCheck(child)) {
+            return;
+          }
+          switch (child.$nodeName) {
+            case "width":
+              this.width = child.$content || DEFAULT_IMG_WIDTH;
+              break;
+            case "height":
+              this.height = child.$content || DEFAULT_IMG_HEIGHT;
+              break;
+          }
+        }
+        $finalize() {
+          this.$isInvalid = !(this.url && this.title && this.link);
+        }
+      };
+      Width = class extends StringObject {
+        constructor() {
+          super(RSS_NS_ID, "width");
+        }
+        $finalize() {
+          this.$content = parseInt(this.$content);
+          this.$content = isNaN(this.$content) ? null : Math.min(MAX_IMG_WIDTH, Math.max(0, this.$content));
+        }
+      };
+      Height = class extends StringObject {
+        constructor() {
+          super(RSS_NS_ID, "height");
+        }
+        $finalize() {
+          this.$content = parseInt(this.$content);
+          this.$content = isNaN(this.$content) ? null : Math.min(MAX_IMG_HEIGHT, Math.max(0, this.$content));
+        }
+      };
+      TextInput = class extends XMLObject {
+        constructor(attributes) {
+          super(RSS_NS_ID, "textInput");
+          this.title = null;
+          this.description = null;
+          this.name = null;
+          this.link = null;
+        }
+      };
+      Item = class extends XMLObject {
+        constructor(attributes) {
+          super(RSS_NS_ID, "item");
+          this.title = null;
+          this.description = null;
+          this.link = null;
+          this.author = null;
+          this.category = new XMLObjectArray();
+          this.comments = null;
+          this.enclosure = null;
+          this.guid = null;
+          this.pubDate = null;
+          this.source = null;
+        }
+      };
+      Enclosure = class extends XMLObject {
+        constructor(attributes) {
+          super(RSS_NS_ID, "enclosure");
+          this.url = attributes.get("url") || "";
+          this.length = attributes.get("length") || "";
+          this.type = attributes.get("type") || "";
+        }
+      };
+      Guid = class extends StringObject {
+        constructor(attributes) {
+          super(RSS_NS_ID, "guid");
+          this.isPermaLink = attributes.get("isPermaLink") || "";
+        }
+      };
+      Source2 = class extends StringObject {
+        constructor(attributes) {
+          super(RSS_NS_ID, "source");
+          this.url = attributes.get("url") || "";
+        }
+      };
+      RssNamespace = class {
+        static $buildXMLObject(name, attributes) {
+          attributes = attributes.get("");
+          if (RssNamespace.hasOwnProperty(name)) {
+            return RssNamespace[name](attributes);
+          }
+          if ([
+            "title",
+            "link",
+            "description",
+            "name",
+            "language",
+            "copyright",
+            "webMaster",
+            "generator",
+            "docs",
+            "author",
+            "comments"
+          ].includes(name)) {
+            return new StringObject(RSS_NS_ID, name);
+          }
+          return void 0;
+        }
+        static rss(attributes) {
+          return new Rss(attributes);
+        }
+        static channel(attributes) {
+          return new Channel(attributes);
+        }
+        static pubDate(attributes) {
+          return new PubDate(attributes);
+        }
+        static lastBuildDate(attributes) {
+          return new LastBuildDate(attributes);
+        }
+        static category(attributes) {
+          return new Category2(attributes);
+        }
+        static cloud(attributes) {
+          return new Cloud(attributes);
+        }
+        static ttl(attributes) {
+          return new Ttl(attributes);
+        }
+        static image(attributes) {
+          return new Image(attributes);
+        }
+        static width(attributes) {
+          return new Width(attributes);
+        }
+        static height(attributes) {
+          return new Height(attributes);
+        }
+        static textInput(attributes) {
+          return new TextInput(attributes);
+        }
+        static item(attributes) {
+          return new Item(attributes);
+        }
+        static enclosure(attributes) {
+          return new Enclosure(attributes);
+        }
+        static guid(attributes) {
+          return new Guid(attributes);
+        }
+        static source(attributes) {
+          return new Source2(attributes);
+        }
+      };
+    }
+  });
+
+  // src/backend/parsers/xml/xhtml.js
+  var XHTML_NS_ID2, XhtmlNamespace;
+  var init_xhtml = __esm({
+    "src/backend/parsers/xml/xhtml.js"() {
+      init_xml_object();
+      init_namespaces();
+      XHTML_NS_ID2 = NamespaceIds.get("xhtml").id;
+      XhtmlNamespace = class {
+        static $buildXFAObject(name, attributes) {
+          return new XmlNodeObject(XHTML_NS_ID2, name, attributes);
+        }
+      };
+    }
+  });
+
+  // src/vendor/xml/basic_xml_parser.js
+  function isWhitespace(s, index) {
+    const ch = s[index];
+    return ch === " " || ch === "\n" || ch === "\r" || ch === "	";
+  }
+  var XMLParserErrorCode, XMLParserBase;
+  var init_basic_xml_parser = __esm({
+    "src/vendor/xml/basic_xml_parser.js"() {
+      XMLParserErrorCode = {
+        NoError: 0,
+        EndOfDocument: -1,
+        UnterminatedCdat: -2,
+        UnterminatedXmlDeclaration: -3,
+        UnterminatedDoctypeDeclaration: -4,
+        UnterminatedComment: -5,
+        MalformedElement: -6,
+        OutOfMemory: -7,
+        UnterminatedAttributeValue: -8,
+        UnterminatedElement: -9,
+        ElementNeverBegun: -10
+      };
+      XMLParserBase = class {
+        _resolveEntities(s) {
+          return s.replace(/&([^;]+);/g, (all, entity) => {
+            if (entity.substring(0, 2) === "#x") {
+              return String.fromCodePoint(parseInt(entity.substring(2), 16));
+            } else if (entity.substring(0, 1) === "#") {
+              return String.fromCodePoint(parseInt(entity.substring(1), 10));
+            }
+            switch (entity) {
+              case "lt":
+                return "<";
+              case "gt":
+                return ">";
+              case "amp":
+                return "&";
+              case "quot":
+                return '"';
+              case "apos":
+                return "'";
+            }
+            return this.onResolveEntity(entity);
+          });
+        }
+        _parseContent(s, start) {
+          const attributes = [];
+          let pos = start;
+          function skipWs() {
+            while (pos < s.length && isWhitespace(s, pos)) {
+              ++pos;
+            }
+          }
+          while (pos < s.length && !isWhitespace(s, pos) && s[pos] !== ">" && s[pos] !== "/") {
+            ++pos;
+          }
+          const name = s.substring(start, pos);
+          skipWs();
+          while (pos < s.length && s[pos] !== ">" && s[pos] !== "/" && s[pos] !== "?") {
+            skipWs();
+            let attrName = "", attrValue = "";
+            while (pos < s.length && !isWhitespace(s, pos) && s[pos] !== "=") {
+              attrName += s[pos];
+              ++pos;
+            }
+            skipWs();
+            if (s[pos] !== "=") {
+              return null;
+            }
+            ++pos;
+            skipWs();
+            const attrEndChar = s[pos];
+            if (attrEndChar !== '"' && attrEndChar !== "'") {
+              return null;
+            }
+            const attrEndIndex = s.indexOf(attrEndChar, ++pos);
+            if (attrEndIndex < 0) {
+              return null;
+            }
+            attrValue = s.substring(pos, attrEndIndex);
+            attributes.push({
+              name: attrName,
+              value: this._resolveEntities(attrValue)
+            });
+            pos = attrEndIndex + 1;
+            skipWs();
+          }
+          return {
+            name,
+            attributes,
+            parsed: pos - start
+          };
+        }
+        _parseProcessingInstruction(s, start) {
+          let pos = start;
+          function skipWs() {
+            while (pos < s.length && isWhitespace(s, pos)) {
+              ++pos;
+            }
+          }
+          while (pos < s.length && !isWhitespace(s, pos) && s[pos] !== ">" && s[pos] !== "?" && s[pos] !== "/") {
+            ++pos;
+          }
+          const name = s.substring(start, pos);
+          skipWs();
+          const attrStart = pos;
+          while (pos < s.length && (s[pos] !== "?" || s[pos + 1] !== ">")) {
+            ++pos;
+          }
+          const value = s.substring(attrStart, pos);
+          return {
+            name,
+            value,
+            parsed: pos - start
+          };
+        }
+        parseXml(s) {
+          let i = 0;
+          while (i < s.length) {
+            const ch = s[i];
+            let j = i;
+            if (ch === "<") {
+              ++j;
+              const ch2 = s[j];
+              let q;
+              switch (ch2) {
+                case "/":
+                  ++j;
+                  q = s.indexOf(">", j);
+                  if (q < 0) {
+                    this.onError(XMLParserErrorCode.UnterminatedElement);
+                    return;
+                  }
+                  this.onEndElement(s.substring(j, q));
+                  j = q + 1;
+                  break;
+                case "?":
+                  ++j;
+                  const pi = this._parseProcessingInstruction(s, j);
+                  if (s.substring(j + pi.parsed, j + pi.parsed + 2) !== "?>") {
+                    this.onError(XMLParserErrorCode.UnterminatedXmlDeclaration);
+                    return;
+                  }
+                  this.onPi(pi.name, pi.value);
+                  j += pi.parsed + 2;
+                  break;
+                case "!":
+                  if (s.substring(j + 1, j + 3) === "--") {
+                    q = s.indexOf("-->", j + 3);
+                    if (q < 0) {
+                      this.onError(XMLParserErrorCode.UnterminatedComment);
+                      return;
+                    }
+                    this.onComment(s.substring(j + 3, q));
+                    j = q + 3;
+                  } else if (s.substring(j + 1, j + 8) === "[CDATA[") {
+                    q = s.indexOf("]]>", j + 8);
+                    if (q < 0) {
+                      this.onError(XMLParserErrorCode.UnterminatedCdat);
+                      return;
+                    }
+                    this.onCdata(s.substring(j + 8, q));
+                    j = q + 3;
+                  } else if (s.substring(j + 1, j + 8) === "DOCTYPE") {
+                    const q2 = s.indexOf("[", j + 8);
+                    let complexDoctype = false;
+                    q = s.indexOf(">", j + 8);
+                    if (q < 0) {
+                      this.onError(XMLParserErrorCode.UnterminatedDoctypeDeclaration);
+                      return;
+                    }
+                    if (q2 > 0 && q > q2) {
+                      q = s.indexOf("]>", j + 8);
+                      if (q < 0) {
+                        this.onError(XMLParserErrorCode.UnterminatedDoctypeDeclaration);
+                        return;
+                      }
+                      complexDoctype = true;
+                    }
+                    const doctypeContent = s.substring(j + 8, q + (complexDoctype ? 1 : 0));
+                    this.onDoctype(doctypeContent);
+                    j = q + (complexDoctype ? 2 : 1);
+                  } else {
+                    this.onError(XMLParserErrorCode.MalformedElement);
+                    return;
+                  }
+                  break;
+                default:
+                  const content = this._parseContent(s, j);
+                  if (content === null) {
+                    this.onError(XMLParserErrorCode.MalformedElement);
+                    return;
+                  }
+                  let isClosed = false;
+                  if (s.substring(j + content.parsed, j + content.parsed + 2) === "/>") {
+                    isClosed = true;
+                  } else if (s.substring(j + content.parsed, j + content.parsed + 1) !== ">") {
+                    this.onError(XMLParserErrorCode.UnterminatedElement);
+                    return;
+                  }
+                  this.onBeginElement(content.name, content.attributes, isClosed);
+                  j += content.parsed + (isClosed ? 2 : 1);
+                  break;
+              }
+            } else {
+              while (j < s.length && s[j] !== "<") {
+                j++;
+              }
+              const text = s.substring(i, j);
+              this.onText(this._resolveEntities(text));
+            }
+            i = j;
+          }
+        }
+        onResolveEntity(name) {
+          return `&${name};`;
+        }
+        onPi(name, value) {
+        }
+        onComment(text) {
+        }
+        onCdata(text) {
+        }
+        onDoctype(doctypeContent) {
+        }
+        onText(text) {
+        }
+        onBeginElement(name, attributes, isEmpty) {
+        }
+        onEndElement(name) {
+        }
+        onError(code) {
+        }
+      };
+    }
+  });
+
+  // src/backend/parsers/xml/xml_parser.js
+  var XMLParser;
+  var init_xml_parser = __esm({
+    "src/backend/parsers/xml/xml_parser.js"() {
+      init_basic_xml_parser();
+      XMLParser = class extends XMLParserBase {
+        #builder;
+        #stack;
+        #current;
+        #errorCode;
+        constructor(builder) {
+          super();
+          this.#builder = builder;
+          this.#stack = [];
+          this.#current = this.#builder.buildRoot();
+          this.#errorCode = XMLParserErrorCode.NoError;
+        }
+        parse(data) {
+          this.parseXml(data);
+          if (this.#errorCode !== XMLParserErrorCode.NoError) {
+            return null;
+          }
+          this.#current.$finalize();
+          return this.#current.$dump();
+        }
+        onText(text) {
+          this.#current.$onText(text.trim());
+        }
+        onCdata(text) {
+          this.onText(text);
+        }
+        #getNameAndPrefix(name) {
+          const i = name.indexOf(":");
+          return [name.substring(i + 1), name.substring(0, i)];
+        }
+        #mkAttributes(attributes) {
+          const attributesMap = new Map();
+          attributesMap.set("", new Map());
+          for (const { name, value } of attributes) {
+            const [attribute, prefix] = this.#getNameAndPrefix(name);
+            let attrs = attributesMap.get(prefix);
+            if (!attrs) {
+              attrs = new Map();
+              attributesMap.set(prefix, attrs);
+            }
+            attrs.set(attribute, value);
+          }
+          return attributesMap;
+        }
+        onBeginElement(tagName, attributes, isEmpty) {
+          const attributesMap = this.#mkAttributes(attributes);
+          const [name, nsPrefix] = this.#getNameAndPrefix(tagName);
+          const node = this.#builder.build({
+            nsPrefix,
+            name,
+            attributes: attributesMap
+          });
+          if (isEmpty) {
+            node.$finalize();
+            this.#current.$onChild(node);
+            node.$clean(this.#builder);
+            return;
+          }
+          this.#stack.push(this.#current);
+          this.#current = node;
+        }
+        onEndElement(name) {
+          const node = this.#current;
+          node.$finalize();
+          this.#current = this.#stack.pop();
+          this.#current.$onChild(node);
+          node.$clean(this.#builder);
+        }
+        onError(code) {
+          this.#errorCode = code;
+        }
+      };
+    }
+  });
+
+  // src/backend/parsers/xml/feed_parser.js
+  function parseFeed(str) {
+    const nsSetUp = {
+      atom: AtomNamespace,
+      xhtml: XhtmlNamespace
+    };
+    const nodeBuilder = new NodeBuilder(nsSetUp, new Root(), RssNamespace);
+    const parser2 = new XMLParser(nodeBuilder);
+    return parser2.parse(str);
+  }
+  var Root;
+  var init_feed_parser = __esm({
+    "src/backend/parsers/xml/feed_parser.js"() {
+      init_atom();
+      init_namespaces();
+      init_node_builder();
+      init_rss();
+      init_xhtml();
+      init_xml_object();
+      init_xml_parser();
+      Root = class extends XMLObject {
+        constructor() {
+          super(-1, "root");
+        }
+        $onChild(child) {
+          const name = child.$nodeName;
+          switch (name) {
+            case "feed":
+            case "entry":
+              if (child.$namespaceId === NamespaceIds.get("atom").id && !this[name]) {
+                this[name] = child;
+              }
+              break;
+            case "rss":
+              if (child.$namespaceId === NamespaceIds.get("local").id) {
+                this.rss = child;
+              }
+              break;
+          }
+        }
+      };
+    }
+  });
+
+  // src/backend/accounts/feed/validator.js
+  var validator_exports2 = {};
+  __export(validator_exports2, {
+    default: () => validateFeed
+  });
+  async function validateFeed({
+    userDetails,
+    credentials,
+    connInfoFields
+  }) {
+    const { feedUrl } = connInfoFields;
+    try {
+      const feedReq = new Request(feedUrl, {});
+      const feedResp = await fetch(feedReq);
+      if (feedResp.status >= 400) {
+        return {
+          error: "unknown",
+          errorDetails: {
+            status: feedResp.status,
+            feedUrl
+          }
+        };
+      }
+      const feedText = await feedResp.text();
+      const parsed = parseFeed(feedText);
+      if (!parsed) {
+        throw new Error("Cannot parse the feed stream");
+      }
+    } catch (ex) {
+      return {
+        error: "unknown",
+        errorDetails: {
+          message: ex.toString()
+        }
+      };
+    }
+    return {
+      engineFields: {
+        engine: "feed",
+        engineData: {},
+        receiveProtoConn: null
+      }
+    };
+  }
+  var init_validator2 = __esm({
+    "src/backend/accounts/feed/validator.js"() {
+      init_feed_parser();
     }
   });
 
@@ -8936,8 +10350,8 @@ var WorkshopBackend = (() => {
   });
 
   // src/backend/accounts/ical/validator.js
-  var validator_exports2 = {};
-  __export(validator_exports2, {
+  var validator_exports3 = {};
+  __export(validator_exports3, {
     default: () => validateICal
   });
   async function validateICal({
@@ -8981,7 +10395,7 @@ var WorkshopBackend = (() => {
     };
   }
   var import_ical;
-  var init_validator2 = __esm({
+  var init_validator3 = __esm({
     "src/backend/accounts/ical/validator.js"() {
       import_ical = __toModule(require_ical());
     }
@@ -9257,13 +10671,53 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/ical/account.js
+  // src/backend/accounts/feed/account.js
   var account_exports2 = {};
   __export(account_exports2, {
+    default: () => FeedAccount
+  });
+  var FeedAccount;
+  var init_account2 = __esm({
+    "src/backend/accounts/feed/account.js"() {
+      FeedAccount = class {
+        constructor(universe2, accountDef, foldersTOC, dbConn) {
+          this.universe = universe2;
+          this.id = accountDef.id;
+          this.accountDef = accountDef;
+          this._db = dbConn;
+          this.enabled = true;
+          this.problems = [];
+          this.identities = accountDef.identities;
+          this.foldersTOC = foldersTOC;
+          this.folders = this.foldersTOC.items;
+          this.feedUrl = accountDef.feedUrl;
+        }
+        toString() {
+          return `[FeedAccount: ${this.id}]`;
+        }
+        __acquire() {
+          return Promise.resolve(this);
+        }
+        __release() {
+        }
+        async checkAccount() {
+          return null;
+        }
+        shutdown() {
+        }
+      };
+      FeedAccount.type = "Feed";
+      FeedAccount.supportsServerFolders = false;
+    }
+  });
+
+  // src/backend/accounts/ical/account.js
+  var account_exports3 = {};
+  __export(account_exports3, {
     default: () => ICalAccount
   });
   var ICalAccount;
-  var init_account2 = __esm({
+  var init_account3 = __esm({
     "src/backend/accounts/ical/account.js"() {
       ICalAccount = class {
         constructor(universe2, accountDef, foldersTOC, dbConn) {
@@ -19532,10 +20986,10 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/ical/tasks/sync_folder_list.js
+  // src/backend/accounts/feed/tasks/sync_folder_list.js
   var sync_folder_list_default2;
   var init_sync_folder_list2 = __esm({
-    "src/backend/accounts/ical/tasks/sync_folder_list.js"() {
+    "src/backend/accounts/feed/tasks/sync_folder_list.js"() {
       init_task_definer();
       init_mix_sync_folder_list();
       sync_folder_list_default2 = task_definer_default.defineSimpleTask([
@@ -19544,7 +20998,7 @@ var WorkshopBackend = (() => {
           essentialOfflineFolders: [
             {
               type: "inbox",
-              displayName: "Events"
+              displayName: "Feed"
             }
           ],
           async syncFolders() {
@@ -19570,6 +21024,339 @@ var WorkshopBackend = (() => {
       init_date();
       MAX_PRIORITY_BOOST = 99999;
       ONE_HOUR_IN_MSECS = 60 * 60 * 1e3;
+    }
+  });
+
+  // src/backend/accounts/feed/chew_item.js
+  var FeedItemChewer;
+  var init_chew_item = __esm({
+    "src/backend/accounts/feed/chew_item.js"() {
+      init_mail_rep();
+      init_mailchew();
+      FeedItemChewer = class {
+        constructor({ convId, item, foldersTOC }) {
+          this.convId = convId;
+          this.item = item;
+          this.foldersTOC = foldersTOC;
+          this.inboxFolder = foldersTOC.getCanonicalFolderByType("inbox");
+          this.allMessages = [];
+        }
+        chewItem() {
+          const item = this.item;
+          let contentBlob, snippet, authoredBodySize;
+          let bodyReps = [];
+          const msgId = this.convId;
+          if (item.description) {
+            const description = item.description;
+            ({ contentBlob, snippet, authoredBodySize } = processMessageContent(description, "html", true, true));
+            bodyReps.push(makeBodyPart({
+              type: "html",
+              part: null,
+              sizeEstimate: description.length,
+              amountDownloaded: description.length,
+              isDownloaded: true,
+              _partInfo: null,
+              contentBlob,
+              authoredBodySize
+            }));
+          }
+          const msgInfo = makeMessageInfo({
+            id: msgId,
+            umid: null,
+            guid: item.guid,
+            date: item.date,
+            dateModified: item.dateModified,
+            author: item.author,
+            flags: [],
+            folderIds: new Set([this.inboxFolder.id]),
+            subject: item.title,
+            snippet,
+            attachments: [],
+            relatedParts: null,
+            references: null,
+            bodyReps,
+            authoredBodySize,
+            draftInfo: null
+          });
+          this.allMessages.push(msgInfo);
+        }
+      };
+    }
+  });
+
+  // src/backend/accounts/feed/tasks/sync_item.js
+  var sync_item_default;
+  var init_sync_item = __esm({
+    "src/backend/accounts/feed/tasks/sync_item.js"() {
+      init_util();
+      init_date_priority_adjuster();
+      init_task_definer();
+      init_conv_churn_driver();
+      init_chew_item();
+      sync_item_default = task_definer_default.defineSimpleTask([
+        {
+          name: "sync_item",
+          async plan(ctx, rawTask) {
+            let plannedTask = shallowClone2(rawTask);
+            plannedTask.exclusiveResources = [`conv:${rawTask.convId}`];
+            plannedTask.priorityTags = [`view:conv:${rawTask.convId}`];
+            if (rawTask.mostRecent) {
+              plannedTask.relPriority = prioritizeNewer(rawTask.mostRecent);
+            }
+            await ctx.finishTask({
+              taskState: plannedTask
+            });
+          },
+          async execute(ctx, req) {
+            const account = await ctx.universe.acquireAccount(ctx, req.accountId);
+            const foldersTOC = await ctx.universe.acquireAccountFoldersTOC(ctx, account.id);
+            const fromDb = await ctx.beginMutate({
+              conversations: new Map([[req.convId, null]])
+            });
+            const oldConvInfo = fromDb.conversations.get(req.convId);
+            if (oldConvInfo) {
+              await ctx.finishTask({});
+              return;
+            }
+            const itemChewer = new FeedItemChewer({
+              convId: req.convId,
+              item: req.item,
+              foldersTOC
+            });
+            itemChewer.chewItem();
+            const convInfo = churnConversationDriver(req.convId, null, itemChewer.allMessages);
+            await ctx.finishTask({
+              newData: {
+                conversations: [convInfo],
+                messages: itemChewer.allMessages
+              }
+            });
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/accounts/feed/sync_state_helper.js
+  var FeedSyncStateHelper;
+  var init_sync_state_helper = __esm({
+    "src/backend/accounts/feed/sync_state_helper.js"() {
+      init_logic();
+      init_date();
+      FeedSyncStateHelper = class {
+        constructor(ctx, rawSyncState, accountId, why) {
+          logic.defineScope(this, "FeedSyncState", { ctxId: ctx.id, why });
+          if (!rawSyncState) {
+            logic(ctx, "creatingDefaultSyncState", {});
+            rawSyncState = {
+              lastChangeDatestamp: NOW()
+            };
+          }
+          this._accountId = accountId;
+          this.rawSyncState = rawSyncState;
+          this.tasksToSchedule = [];
+        }
+        _makeItemConvTask({ convId, item }) {
+          const task = {
+            type: "sync_item",
+            accountId: this._accountId,
+            convId,
+            item
+          };
+          this.tasksToSchedule.push(task);
+          return task;
+        }
+        _makeDefaultData() {
+          return {
+            author: "No author",
+            title: "No title",
+            description: ""
+          };
+        }
+        ingestItem(item) {
+          const data = this._makeDefaultData();
+          if (item.guid) {
+            data.guid = typeof item.guid === "string" ? item.guid : item.guid["#content"];
+          } else {
+            data.guid = item.title || item.description;
+          }
+          data.date = data.dateModified = (item.pubDate || NOW()).valueOf();
+          data.author = item.author || data.author;
+          data.title = item.title || data.title;
+          data.description = item.description || data.description;
+          const convId = `${this._accountId}.${data.guid}`;
+          this._makeItemConvTask({
+            convId,
+            item: data
+          });
+        }
+        ingestEntry(entry) {
+          const data = this._makeDefaultData();
+          data.guid = entry.id || entry.title || entry.description || NOW().valueOf().toString();
+          data.date = (entry.published || entry.updated || NOW()).valueOf();
+          data.dateModified = entry.updated?.valueOf() || data.date;
+          const author = entry.author?.[0];
+          if (author?.name && author?.email) {
+            data.author = `${author.name} (${author.email})`;
+          } else {
+            data.author = author?.name || author?.email || data.author;
+          }
+          data.title = entry.title || data.title;
+          data.description = entry.summary || data.description;
+          const convId = `${this._accountId}.${data.guid}`;
+          this._makeItemConvTask({
+            convId,
+            item: data
+          });
+        }
+      };
+    }
+  });
+
+  // src/backend/accounts/feed/tasks/sync_refresh.js
+  var sync_refresh_default2;
+  var init_sync_refresh2 = __esm({
+    "src/backend/accounts/feed/tasks/sync_refresh.js"() {
+      init_logic();
+      init_feed_parser();
+      init_util();
+      init_date();
+      init_task_definer();
+      init_sync_state_helper();
+      init_id_conversions();
+      init_sync_overlay_helpers();
+      sync_refresh_default2 = task_definer_default.defineAtMostOnceTask([
+        {
+          name: "sync_refresh",
+          binByArg: "accountId",
+          helped_overlay_accounts: syncNormalOverlay,
+          helped_prefix_overlay_folders: [accountIdFromFolderId, syncPrefixOverlay],
+          helped_invalidate_overlays(accountId, dataOverlayManager) {
+            dataOverlayManager.announceUpdatedOverlayData("accounts", accountId);
+            dataOverlayManager.announceUpdatedOverlayData("accountCascadeToFolders", accountId);
+          },
+          helped_already_planned(ctx, rawTask) {
+            return Promise.resolve({
+              result: ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.accountId)
+            });
+          },
+          helped_plan(ctx, rawTask) {
+            let plannedTask = shallowClone2(rawTask);
+            plannedTask.resources = [
+              "online",
+              `credentials!${rawTask.accountId}`,
+              `happy!${rawTask.accountId}`
+            ];
+            plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
+            let groupPromise = ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.accountId);
+            return Promise.resolve({
+              taskState: plannedTask,
+              remainInProgressUntil: groupPromise,
+              result: groupPromise
+            });
+          },
+          async helped_execute(ctx, req) {
+            let fromDb = await ctx.beginMutate({
+              syncStates: new Map([[req.accountId, null]])
+            });
+            let rawSyncState = fromDb.syncStates.get(req.accountId);
+            let syncState = new FeedSyncStateHelper(ctx, rawSyncState, req.accountId, "refresh");
+            let account = await ctx.universe.acquireAccount(ctx, req.accountId);
+            let syncDate = NOW();
+            logic(ctx, "syncStart", { syncDate });
+            const feedResp = await fetch(account.feedUrl);
+            const feedText = await feedResp.text();
+            const parsed = parseFeed(feedText);
+            if (parsed?.rss?.channel.item) {
+              for (const item of parsed.rss.channel.item) {
+                syncState.ingestItem(item);
+              }
+            } else if (parsed?.feed.entry) {
+              for (const entry of parsed.feed.entry) {
+                syncState.ingestEntry(entry);
+              }
+            } else if (parsed?.entry) {
+              syncState.ingestEntry(parsed.entry);
+            }
+            logic(ctx, "syncEnd", {});
+            return {
+              mutations: {
+                syncStates: new Map([[req.accountId, syncState.rawSyncState]])
+              },
+              newData: {
+                tasks: syncState.tasksToSchedule
+              },
+              atomicClobbers: {
+                accounts: new Map([
+                  [
+                    req.accountId,
+                    {
+                      syncInfo: {
+                        lastSuccessfulSyncAt: syncDate,
+                        lastAttemptedSyncAt: syncDate,
+                        failedSyncsSinceLastSuccessfulSync: 0
+                      }
+                    }
+                  ]
+                ])
+              }
+            };
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/accounts/feed/feed_tasks.js
+  var feed_tasks_exports = {};
+  __export(feed_tasks_exports, {
+    default: () => feed_tasks_default
+  });
+  var feed_tasks_default;
+  var init_feed_tasks = __esm({
+    "src/backend/accounts/feed/feed_tasks.js"() {
+      init_sync_folder_list2();
+      init_sync_item();
+      init_sync_refresh2();
+      init_account_modify();
+      init_identity_modify();
+      init_new_tracking();
+      feed_tasks_default = [
+        sync_folder_list_default2,
+        sync_item_default,
+        sync_refresh_default2,
+        account_modify_default,
+        identity_modify_default,
+        new_tracking_default
+      ];
+    }
+  });
+
+  // src/backend/accounts/ical/tasks/sync_folder_list.js
+  var sync_folder_list_default3;
+  var init_sync_folder_list3 = __esm({
+    "src/backend/accounts/ical/tasks/sync_folder_list.js"() {
+      init_task_definer();
+      init_mix_sync_folder_list();
+      sync_folder_list_default3 = task_definer_default.defineSimpleTask([
+        mix_sync_folder_list_default,
+        {
+          essentialOfflineFolders: [
+            {
+              type: "inbox",
+              displayName: "Events"
+            }
+          ],
+          async syncFolders() {
+            return {
+              newFolders: void 0,
+              newTasks: void 0,
+              modifiedFolders: void 0,
+              modifiedSyncStates: void 0
+            };
+          }
+        }
+      ]);
     }
   });
 
@@ -19814,7 +21601,7 @@ var WorkshopBackend = (() => {
 
   // src/backend/accounts/ical/sync_state_helper.js
   var ICalSyncStateHelper;
-  var init_sync_state_helper = __esm({
+  var init_sync_state_helper2 = __esm({
     "src/backend/accounts/ical/sync_state_helper.js"() {
       init_logic();
       init_a64();
@@ -19930,18 +21717,18 @@ var WorkshopBackend = (() => {
   });
 
   // src/backend/accounts/ical/tasks/sync_refresh.js
-  var import_ical3, sync_refresh_default2;
-  var init_sync_refresh2 = __esm({
+  var import_ical3, sync_refresh_default3;
+  var init_sync_refresh3 = __esm({
     "src/backend/accounts/ical/tasks/sync_refresh.js"() {
       init_logic();
       import_ical3 = __toModule(require_ical());
       init_util();
       init_date();
       init_task_definer();
-      init_sync_state_helper();
+      init_sync_state_helper2();
       init_id_conversions();
       init_sync_overlay_helpers();
-      sync_refresh_default2 = task_definer_default.defineAtMostOnceTask([
+      sync_refresh_default3 = task_definer_default.defineAtMostOnceTask([
         {
           name: "sync_refresh",
           binByArg: "accountId",
@@ -20025,16 +21812,16 @@ var WorkshopBackend = (() => {
   var ical_tasks_default;
   var init_ical_tasks = __esm({
     "src/backend/accounts/ical/ical_tasks.js"() {
-      init_sync_folder_list2();
+      init_sync_folder_list3();
       init_sync_uid();
-      init_sync_refresh2();
+      init_sync_refresh3();
       init_account_modify();
       init_identity_modify();
       init_new_tracking();
       ical_tasks_default = [
-        sync_folder_list_default2,
+        sync_folder_list_default3,
         sync_uid_default,
-        sync_refresh_default2,
+        sync_refresh_default3,
         account_modify_default,
         identity_modify_default,
         new_tracking_default
@@ -22570,10 +24357,10 @@ var WorkshopBackend = (() => {
       ctx.proxy = new WindowedListProxy(toc, ctx);
       await ctx.acquire(ctx.proxy);
     },
-    _cmd_refreshView(msg) {
+    async _cmd_refreshView(msg) {
       let ctx = this.bridgeContext.getNamedContextOrThrow(msg.handle);
       if (ctx.viewing.type === "folder") {
-        this.universe.syncRefreshFolder(ctx.viewing.folderId, "refreshView");
+        await this.universe.syncRefreshFolder(ctx.viewing.folderId, "refreshView");
       } else {
       }
     },
@@ -23841,9 +25628,16 @@ var WorkshopBackend = (() => {
       }
     ],
     [
-      "ical",
+      "feed",
       async function() {
         const mod = await Promise.resolve().then(() => (init_configurator2(), configurator_exports2));
+        return mod.default;
+      }
+    ],
+    [
+      "ical",
+      async function() {
+        const mod = await Promise.resolve().then(() => (init_configurator3(), configurator_exports3));
         return mod.default;
       }
     ]
@@ -23857,9 +25651,16 @@ var WorkshopBackend = (() => {
       }
     ],
     [
-      "ical",
+      "feed",
       async function() {
         const mod = await Promise.resolve().then(() => (init_validator2(), validator_exports2));
+        return mod.default;
+      }
+    ],
+    [
+      "ical",
+      async function() {
+        const mod = await Promise.resolve().then(() => (init_validator3(), validator_exports3));
         return mod.default;
       }
     ]
@@ -23873,9 +25674,16 @@ var WorkshopBackend = (() => {
       }
     ],
     [
-      "ical",
+      "feed",
       async function() {
         const mod = await Promise.resolve().then(() => (init_account2(), account_exports2));
+        return mod.default;
+      }
+    ],
+    [
+      "ical",
+      async function() {
+        const mod = await Promise.resolve().then(() => (init_account3(), account_exports3));
         return mod.default;
       }
     ]
@@ -23885,6 +25693,13 @@ var WorkshopBackend = (() => {
       "activesync",
       async function() {
         const mod = await Promise.resolve().then(() => (init_activesync_tasks(), activesync_tasks_exports));
+        return mod.default;
+      }
+    ],
+    [
+      "feed",
+      async function() {
+        const mod = await Promise.resolve().then(() => (init_feed_tasks(), feed_tasks_exports));
         return mod.default;
       }
     ],
@@ -23904,6 +25719,12 @@ var WorkshopBackend = (() => {
       }
     ],
     [
+      "feed",
+      {
+        unselectableFolderTypes: new Set()
+      }
+    ],
+    [
       "ical",
       {
         unselectableFolderTypes: new Set()
@@ -23915,6 +25736,12 @@ var WorkshopBackend = (() => {
       "activesync",
       {
         syncGranularity: "folder"
+      }
+    ],
+    [
+      "feed",
+      {
+        syncGranularity: "account"
       }
     ],
     [
@@ -23935,6 +25762,15 @@ var WorkshopBackend = (() => {
       }
     ],
     [
+      "feed",
+      {
+        engineFacts: {
+          syncGranularity: "account"
+        },
+        usesArchiveMetaphor: false
+      }
+    ],
+    [
       "ical",
       {
         engineFacts: {
@@ -23949,6 +25785,12 @@ var WorkshopBackend = (() => {
       "activesync",
       {
         syncGranularity: "folder"
+      }
+    ],
+    [
+      "feed",
+      {
+        syncGranularity: "account"
       }
     ],
     [

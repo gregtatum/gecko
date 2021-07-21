@@ -456,10 +456,13 @@ MailBridge.prototype = {
     await ctx.acquire(ctx.proxy);
   },
 
-  _cmd_refreshView(msg) {
+  async _cmd_refreshView(msg) {
     let ctx = this.bridgeContext.getNamedContextOrThrow(msg.handle);
     if (ctx.viewing.type === "folder") {
-      this.universe.syncRefreshFolder(ctx.viewing.folderId, "refreshView");
+      await this.universe.syncRefreshFolder(
+        ctx.viewing.folderId,
+        "refreshView"
+      );
     } else {
       // TODO: only for gmail is generic refreshing sufficient to refresh a
       // conversation in its entirety.  (Noting that this is tricky conceptually

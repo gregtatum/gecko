@@ -84,6 +84,35 @@ export default class HomePage extends Page {
     };
     this.asButton.addEventListener("click", this.activesyncAddHandler);
 
+    // ## Add RSS Account
+    this.rssErrorArea = pageElem.querySelector("#home-add-rss-error");
+    this.rssInput = pageElem.querySelector("#home-add-rss-input");
+    this.rssButton = pageElem.querySelector("#home-add-rss-button");
+    this.rssAddHandler = async () => {
+      this.rssErrorArea.textContent = "Creating account...";
+      let {
+        error,
+        errorDetails,
+        account,
+      } = await this.workshopAPI.tryToCreateAccount(
+        {
+          feedUrl: this.rssInput.value,
+        },
+        {
+          type: "feed",
+        }
+      );
+
+      if (error) {
+        const jsonDetails = JSON.stringify(errorDetails);
+        this.rssErrorArea.textContent = `${error}: ${jsonDetails}`;
+      } else {
+        this.rssErrorArea.textContent = "Account created!";
+        this.router.navigateTo(["account", account.id]);
+      }
+    };
+    this.rssButton.addEventListener("click", this.rssAddHandler);
+
     // ## List Accounts
     this.accountListContainer = pageElem.querySelector(
       "#home-account-list-container"
@@ -105,6 +134,7 @@ export default class HomePage extends Page {
   cleanup() {
     this.icsButton.removeEventListener("click", this.icsAddHandler);
     this.asButton.removeEventListener("click", this.activesyncAddHandler);
+    this.rssButton.removeEventListener("click", this.rssAddHandler);
 
     this.accountListContainer.replaceChildren();
     // Note that we don't need to / shouldn't release `workshopAPI.accounts`
