@@ -231,7 +231,7 @@
 }
 
 .titlebar-buttonbox-container {
-  -moz-box-align: stretch;
+  -moz-box-align: start;
 }
 
 @media (-moz-os-version: windows-win7),
