@@ -127,10 +127,14 @@
         appearance: none !important;
       }
 
+      :root {
+        --titlebar-button-hpadding: 17px;
+      }
+
       .titlebar-button {
         border: none;
         margin: 0 !important;
-        padding: 8px 17px;
+        padding: 8px var(--titlebar-button-hpadding);
         -moz-context-properties: stroke;
         stroke: currentColor;
       }
@@ -187,24 +191,34 @@
 
       /* 175% dpi should result in the same device pixel sizes as 150% dpi. */
       @media (min-resolution: 1.70dppx) and (max-resolution: 1.95dppx) {
+        :root {
+          --titlebar-button-hpadding: 14.1px;
+          --titlebar-button-icon-width: 10.8px;
+        }
+
         .titlebar-button {
-          padding-inline: 14.1px;
+          padding-inline: var(--titlebar-button-hpadding);
         }
 
         .titlebar-button > .toolbarbutton-icon {
-          width: 10.8px;
+          width: var(--titlebar-button-icon-width);
           height: 10.8px;
         }
       }
 
       /* 225% dpi should result in the same device pixel sizes as 200% dpi. */
       @media (min-resolution: 2.20dppx) and (max-resolution: 2.45dppx) {
+        :root {
+          --titlebar-button-hpadding: 15.3333px;
+          --titlebar-button-icon-width: 10.8px;
+        }
+
         .titlebar-button {
-          padding-inline: 15.3333px;
+          padding-inline: var(--titlebar-button-hpadding);
         }
 
         .titlebar-button > .toolbarbutton-icon {
-          width: 10.8px;
+          width: var(--titlebar-button-icon-width);
           height: 10.8px;
         }
       }

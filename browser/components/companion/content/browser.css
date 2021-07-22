@@ -15,6 +15,13 @@
   display: none;
 }
 
+:root[companion]:not([chromehidden~="toolbar"]) {
+  /* Make sure we have enough space for 4 buttons (sidebar, back,
+     reload, copy), the river at max-width including margins,
+     urlbar + horizontal margins, appmenu, and window controls. */
+  min-width: calc((4 * 36px) + 580px + (350px + 10px) + 42px + var(--window-controls-width, 0px));
+}
+
 #PersonalToolbar,
 #nav-bar-overflow-button,
 #page-action-buttons,
@@ -55,8 +62,7 @@
   border-bottom: 0px none;
 }
 
-:root[companion] #companion-box,
-:root[companion] #companion-titlebar {
+:root[companion] #companion-box {
   width: var(--companion-width);
   min-width: var(--companion-min-width);
   max-width: var(--companion-max-width);
@@ -71,7 +77,6 @@
   appearance: auto;
   -moz-default-appearance: -moz-window-button-box;
   margin-left: 12px;
-  height: 30px;
 }
 
 #companion-back-button {
@@ -116,7 +121,7 @@
   display: none;
 }
 %else
-#companion-titlebar #companion-mac-buttonbox {
+#companion-mac-buttonbox {
   display: none;
 }
 %endif

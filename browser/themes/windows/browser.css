@@ -309,6 +309,12 @@ menuitem.bookmark-item {
 
 /* Fullscreen window controls */
 
+:root {
+  --titlebar-button-hpadding: 12px;
+  --titlebar-button-icon-width: 12px;
+  --window-controls-width: calc(3 * ((var(--titlebar-button-hpadding) * 2) + var(--titlebar-button-icon-width)));
+}
+
 #minimize-button,
 #restore-button,
 #close-button {
