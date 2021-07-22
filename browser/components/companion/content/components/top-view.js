@@ -24,6 +24,27 @@ class TopView extends HTMLElement {
     titleEl.textContent = title;
     titleEl.tooltipText = title;
 
+    if (this.view) {
+      let iconEl = this.querySelector(".top-view-icon");
+
+      // If the View has an iconURL, this means the page has potentially set
+      // a favicon within its markup. If we don't have that, we fallback to
+      // using the page-icon protocol to try to fetch the right favicon from
+      // the Favicon service.
+      if (this.view.iconURL) {
+        iconEl.setAttribute("src", this.view.iconURL);
+      } else {
+        iconEl.setAttribute("src", `page-icon:${this.view?.url.spec}`);
+      }
+    }
+
+    let domain = "";
+    try {
+      domain = this.view?.url.host ?? "";
+    } catch (e) {}
+    let domainEl = this.querySelector(".top-view-domain");
+    domainEl.textContent = domain;
+
     return oldView;
   }
 

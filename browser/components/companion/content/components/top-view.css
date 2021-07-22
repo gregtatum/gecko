@@ -3,14 +3,43 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #top-view {
-  width: 250px;
+  min-width: 250px;
   height: 50px;
   background-color: gray;
   padding: 5px;
   margin-inline: 5px;
   border-radius: 2px;
+  align-items: center;
+  display: flex;
 }
 
+.top-view-icon {
+  width: 32px;
+  height: 32px;
+  fill: currentColor;
+}
+
+.top-view-icon:not([src]) {
+  visibility: hidden;
+}
+
+.top-view-label-container {
+  display: block;
+  margin: 5px;
+  line-height: 16px;
+  white-space: nowrap;
+  max-width: 240px;
+}
+
+.top-view-domain {
+  font-size: 1rem;
+}
+
+.top-view-title {
+  font-size: 1.25rem;
+}
+
+.top-view-domain,
 .top-view-title {
   overflow: hidden;
   text-overflow: ellipsis;
