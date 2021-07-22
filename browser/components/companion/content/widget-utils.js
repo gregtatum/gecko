@@ -2,8 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import * as lit from "chrome://browser/content/companion/lit.all.js";
-export const { html, css } = lit;
+import { LitElement } from "chrome://browser/content/companion/lit.all.js";
 
 export function openLink(e) {
   e.preventDefault();
@@ -12,7 +11,7 @@ export function openLink(e) {
   });
 }
 
-export class MozLitElement extends lit.LitElement {
+export class MozLitElement extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     if (!this._l10nRootConnected) {

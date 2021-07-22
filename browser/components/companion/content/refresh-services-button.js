@@ -2,7 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { html, css, MozLitElement } from "./widget-utils.js";
+import { MozLitElement } from "./widget-utils.js";
+import { css, html, classMap } from "./lit.all.js";
 
 export class RefreshServicesButton extends MozLitElement {
   static get properties() {
@@ -94,9 +95,11 @@ export class RefreshServicesButton extends MozLitElement {
         @click=${this.onClick}
         ?hidden=${!this.hasEvents}
         ?disabled=${this.isRefreshing}
-        class="ghost-button refresh-services-button ${this.isRefreshing
-          ? " syncing"
-          : ""}"
+        class=${classMap({
+          "ghost-button": true,
+          "refresh-services-button": true,
+          syncing: this.isRefreshing,
+        })}
         data-l10n-id=${this.isRefreshing
           ? "companion-refresh-services-button-syncing"
           : "companion-refresh-services-button"}
