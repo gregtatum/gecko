@@ -193,7 +193,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
           {
             name: `badge-${i}`,
             tag: "label",
-            attributes: { class: "urlbarView-badge" },
+            attributes: { class: "urlbarView-badge", hidden: "true" },
           },
           {
             name: `div-${i}`,
@@ -307,6 +307,18 @@ class ProviderQuickActionsBase extends UrlbarProvider {
       }
     });
     return viewUpdate;
+  }
+
+  setBadge(document, name, number) {
+    let index = 0;
+    for (let command in COMMANDS) {
+      if (command == name) {
+        let badge = document.querySelector(`label[name="badge-${index}"]`);
+        badge.textContent = number;
+        badge.hidden = number == 0;
+      }
+      index++;
+    }
   }
 
   async pickResult(results, itemPicked) {

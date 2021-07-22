@@ -215,7 +215,6 @@
   position: absolute;
   margin-inline-start: 22px;
   margin-top: -22px;
-  visibility: hidden; /*TODO: remove this when a class/state is added */
 }
 
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row {
