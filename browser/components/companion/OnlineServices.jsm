@@ -21,7 +21,7 @@ const PREF_LOGLEVEL = "browser.companion.loglevel";
 const conferencingInfo = [
   {
     name: "Zoom",
-    domain: ".zoom.us",
+    domain: "zoom.us",
     icon: "chrome://browser/content/companion/zoom.png",
   },
   {
@@ -86,7 +86,15 @@ function getConferencingDetails(url) {
   return null;
 }
 
-function getConferenceInfo(result) {
+/**
+ * Parses a providers calendar event to get conferencing information.
+ * Currently works with Google and Microsoft.
+ * Only looks at conferencing data and location.
+ * @param result Object Service specific response from server
+ * @param links Array Links parsed out of the description
+ * @returns { icon, name, url }
+ */
+function getConferenceInfo(result, links) {
   // conferenceData is a Google specific field
   if (result.conferenceData?.conferenceSolution) {
     let base = {
@@ -103,41 +111,32 @@ function getConferenceInfo(result) {
       }
     }
   }
-  // onlineMeeting is a Google specific field
+  // onlineMeeting is a Microsoft specific field
   if (result.onlineMeeting) {
     let locationURL = new URL(result.onlineMeeting.joinUrl);
     return getConferencingDetails(locationURL);
   }
+  // Check to see if location contains a conferencing URL
   if (result.location) {
     try {
-      let locationURL = new URL(result.location);
+      let locationURL;
+      if (result.location.displayName) {
+        // Microsoft
+        locationURL = new URL(result.location.displayName);
+      } else {
+        // Google
+        locationURL = new URL(result.location);
+      }
       return getConferencingDetails(locationURL);
-    } catch (e) {}
-  }
-  // We are parsing the description twice, once for conferencing
-  // and once for links. We can probably do better.
-  if (result.description) {
-    let parser = new DOMParser();
-    let doc = parser.parseFromString(result.description, "text/html");
-    let anchors = doc.getElementsByTagName("a");
-    if (anchors.length) {
-      for (let anchor of anchors) {
-        let conferencingDetails = getConferencingDetails(anchor.href);
-        if (conferencingDetails) {
-          return conferencingDetails;
-        }
-      }
-    } else if (result.description) {
-      let descriptionLinks = result.description.match(URL_REGEX);
-      if (descriptionLinks?.length) {
-        for (let descriptionLink of descriptionLinks) {
-          let conferencingDetails = getConferencingDetails(descriptionLink);
-          if (conferencingDetails) {
-            return conferencingDetails;
-          }
-        }
-      }
+    } catch (e) {
+      // Location didn't contain a URL
     }
+  }
+  // If we didn't get any conferencing data in servert response, see if there
+  // is a link in the document that has conferencing. We grab the first one.
+  let conferenceLink = links.find(link => link.type == "conferencing");
+  if (conferenceLink) {
+    return getConferencingDetails(conferenceLink.url);
   }
   return null;
 }
@@ -152,16 +151,19 @@ async function processLink(url, text) {
     // Just add http://
     url = new URL(`http://${url}`);
   }
-  // We already handled conferencing URLs separately
-  if (conferencingInfo.find(info => url.host.endsWith(info.domain))) {
-    return null;
-  }
   if (linksToIgnore.includes(url.href)) {
     return null;
   }
+  // Tag conferencing URLs in case we need them,but just return.
+  if (conferencingInfo.find(info => url.host.endsWith(info.domain))) {
+    return {
+      url: url.href,
+      type: "conferencing",
+    };
+  }
   let link = {};
   link.url = url.href;
-  if (!text || url.href == text) {
+  if ((!text && text != "") || url.href == text) {
     if (url.host === "docs.google.com" || url.host === "drive.google.com") {
       for (let service of ServiceInstances) {
         if (service.app.startsWith("google")) {
@@ -182,13 +184,18 @@ async function getLinkInfo(result) {
   let doc;
   let links = [];
   let parser = new DOMParser();
+  let description;
   if ("body" in result) {
     // This is Microsoft specific
-    doc = parser.parseFromString(result.body.content, "text/html");
+    description = result.body.content;
   } else {
-    // This is Google specific
-    doc = parser.parseFromString(result.description, "text/html");
+    description = result.description;
   }
+  // Descriptions from both providers use HTML entities in some URLs.
+  // The only one that truly affects us is &amp;
+  // We also remove wordbreak tags as Google inserts them in URLs.
+  description = description?.replace(/&amp;/g, "&").replace(/<wbr>/g, "");
+  doc = parser.parseFromString(description, "text/html");
   let anchors = doc.getElementsByTagName("a");
   if (anchors.length) {
     for (let anchor of anchors) {
@@ -197,18 +204,23 @@ async function getLinkInfo(result) {
         links.push(link);
       }
     }
-  } else if (result.description) {
-    let descriptionLinks = result.description.match(URL_REGEX);
-    if (descriptionLinks?.length) {
-      for (let descriptionLink of descriptionLinks) {
-        let link = await processLink(descriptionLink);
-        if (link) {
-          links.push(link);
-        }
+  }
+  let descriptionLinks = description?.match(URL_REGEX);
+  if (descriptionLinks?.length) {
+    for (let descriptionLink of descriptionLinks) {
+      // Need to normalize these URLs so they match
+      // the URLs from processLink
+      let descriptionURL = new URL(descriptionLink);
+      if (links.some(link => link.url == descriptionURL.href)) {
+        continue;
+      }
+      let link = await processLink(descriptionLink);
+      if (link) {
+        links.push(link);
       }
     }
   }
-  return links;
+  return links.filter(link => link.text !== "");
 }
 
 async function openLink(url) {
@@ -390,41 +402,46 @@ class GoogleService {
       log.debug(JSON.stringify(results));
 
       for (let result of results.items) {
-        // Ignore all day events
-        if (!result.start?.dateTime || !result.end?.dateTime) {
-          continue;
-        }
-        if (
-          calendar.id == "primary" &&
-          result.attendees &&
-          !result.attendees.filter(
-            attendee =>
-              attendee.self === true && attendee.responseStatus === "accepted"
-          ).length
-        ) {
-          continue;
-        }
-        let event = {};
-        event.summary = result.summary;
-        event.start = new Date(result.start.dateTime);
-        event.end = new Date(result.end.dateTime);
-        event.conference = getConferenceInfo(result);
-        event.links = await getLinkInfo(result);
-        event.calendar = {};
-        event.calendar.id = calendar.id;
-        event.attendees = result.attendees?.filter(a => !a.self) || [];
-        event.organizer = result.organizer;
-        event.creator = result.creator;
-        event.serviceId = this.id;
-        event.url = result.htmlLink;
-        if (allEvents.has(result.id)) {
-          // If an event is duplicated, use
-          // the primary calendar
-          if (calendar.id == "primary") {
+        try {
+          // Ignore all day events
+          if (!result.start?.dateTime || !result.end?.dateTime) {
+            continue;
+          }
+          if (
+            calendar.id == "primary" &&
+            result.attendees &&
+            !result.attendees.filter(
+              attendee =>
+                attendee.self === true && attendee.responseStatus === "accepted"
+            ).length
+          ) {
+            continue;
+          }
+          let event = {};
+          event.summary = result.summary;
+          event.start = new Date(result.start.dateTime);
+          event.end = new Date(result.end.dateTime);
+          let links = await getLinkInfo(result);
+          event.conference = getConferenceInfo(result, links);
+          event.links = links.filter(link => link.type != "conferencing");
+          event.calendar = {};
+          event.calendar.id = calendar.id;
+          event.attendees = result.attendees?.filter(a => !a.self) || [];
+          event.organizer = result.organizer;
+          event.creator = result.creator;
+          event.serviceId = this.id;
+          event.url = result.htmlLink;
+          if (allEvents.has(result.id)) {
+            // If an event is duplicated, use
+            // the primary calendar
+            if (calendar.id == "primary") {
+              allEvents.set(result.id, event);
+            }
+          } else {
             allEvents.set(result.id, event);
           }
-        } else {
-          allEvents.set(result.id, event);
+        } catch (e) {
+          log.error(e);
         }
       }
     }
@@ -583,7 +600,6 @@ class GoogleService {
       default:
         return null;
     }
-    Cu.reportError(url);
     let token = await this.getToken();
     let headers = {
       Authorization: `Bearer ${token}`,
@@ -738,27 +754,32 @@ class MicrosoftService {
       }
 
       for (let result of results.value) {
-        // Ignore all day events
-        if (result.isAllDay) {
-          continue;
-        }
-        let event = {};
-        event.summary = result.subject;
-        event.start = new Date(result.start.dateTime + "Z");
-        event.end = new Date(result.end.dateTime + "Z");
-        event.conference = getConferenceInfo(result);
-        event.links = await getLinkInfo(result);
-        event.calendar = {};
-        event.calendar.id = calendar.id;
-        event.serviceId = this.id;
-        event.url = result.webLink;
+        try {
+          // Ignore all day events
+          if (result.isAllDay) {
+            continue;
+          }
+          let event = {};
+          event.summary = result.subject;
+          event.start = new Date(result.start.dateTime + "Z");
+          event.end = new Date(result.end.dateTime + "Z");
+          let links = await getLinkInfo(result);
+          event.conference = getConferenceInfo(result, links);
+          event.links = links.filter(link => link.type != "conferencing");
+          event.calendar = {};
+          event.calendar.id = calendar.id;
+          event.serviceId = this.id;
+          event.url = result.webLink;
 
-        event.creator = null; // No creator seems to be available.
-        event.organizer = this._normalizeUser(result.organizer, {
-          self: result.isOrganizer,
-        });
-        event.attendees = result.attendees.map(a => this._normalizeUser(a));
-        allEvents.set(result.id, event);
+          event.creator = null; // No creator seems to be available.
+          event.organizer = this._normalizeUser(result.organizer, {
+            self: result.isOrganizer,
+          });
+          event.attendees = result.attendees.map(a => this._normalizeUser(a));
+          allEvents.set(result.id, event);
+        } catch (e) {
+          log.error(e);
+        }
       }
     }
     return Array.from(allEvents.values()).sort((a, b) => a.start - b.start);
