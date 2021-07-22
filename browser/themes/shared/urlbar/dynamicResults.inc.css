@@ -178,12 +178,6 @@
   font-size: 0.8em;
 }
 
-.urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row[selected],
-.urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row[selected] {
-  background-color: var(--autocomplete-popup-highlight-background);
-  color: var(--autocomplete-popup-highlight-color);
-}
-
 .urlbarView-row[dynamicType=quickActions] .urlbarView-favicon {
   width: 24px;
   height: 24px;
@@ -196,10 +190,22 @@
   width: 32px;
   height: 32px;
   padding: 8px;
-  background: rgba(255, 255, 255, .1);
+  background: var(--arrowpanel-background);
   margin-inline-end: 0;
-  border-radius: 8px;
+  border-radius: 50%;
   margin-block-end: 5px;
+  border: 0.5px solid #CFCFD8;
+}
+
+.urlbarView-row:not([dynamicType=topSitesButtons]) {
+  margin-inline: calc(5px + var(--urlbar-container-padding));
+}
+
+.urlbarView-row[dynamicType=topSitesButtons] {
+  background-color: var(--toolbar-bgcolor);
+  height: 100px;
+  overflow: hidden;
+  padding-block: 0;
 }
 
 .urlbarView-row[dynamicType=quickActions] .urlbarView-badge {
@@ -218,17 +224,23 @@
 }
 
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row {
-  width: 64px;
-  height: 84px;
+  width: 52px;
+  height: 70px;
   display: flex;
   flex-direction: column;
-  padding: 8px;
-  overflow: hidden;
-  justify-content: center;
-  align-items: center;
-  border-radius: 8px;
-  margin-block-end: 10px;
+  margin-bottom: 32.5px;
 }
+
+.urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row:hover,
+.urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon:hover {
+  outline: 1px solid #9F9FAD;
+}
+
+.urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row[selected] .urlbarView-favicon,
+.urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row[selected] {
+  background-color: var(--autocomplete-popup-highlight-background);
+}
+
 
 .urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row[hidden],
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row[hidden] {
@@ -239,14 +251,14 @@
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
-  height: 100px;
   overflow: hidden;
+  margin-inline: 20px;
+  padding-block-start: 16.5px;
 }
 
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-title {
-  width: 60px;
   text-align: center;
-  font-size: small;
+  font-size: 10px;
   text-overflow: ellipsis;
 }
 

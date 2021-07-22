@@ -56,17 +56,20 @@
   display: block;
   text-shadow: none;
   overflow: clip;
-  margin-inline: calc(5px + var(--urlbar-container-padding));
-  width: calc(100% - 2 * (5px + var(--urlbar-container-padding)));
   /* Match urlbar-background's border. */
   border-inline: 1px solid transparent;
+}
+
+.urlbarView:not(.urlbarView-proClient) {
+  margin-inline: calc(5px + var(--urlbar-container-padding));
+  width: calc(100% - 2 * (5px + var(--urlbar-container-padding)));
 }
 
 .urlbarView-body-inner {
   width: 100%;
 }
 
-#urlbar[open] > .urlbarView > .urlbarView-body-outer > .urlbarView-body-inner {
+#urlbar[open] > .urlbarView:not(.urlbarView-proClient) > .urlbarView-body-outer > .urlbarView-body-inner {
   border-top: 1px solid var(--autocomplete-popup-separator-color);
 }
 
@@ -626,7 +629,7 @@
   flex-wrap: wrap;
 }
 
-.urlbarView:not([noresults]) > .search-one-offs:not([hidden]) {
+.urlbarView:not(.urlbarView-proClient, [noresults]) > .search-one-offs:not([hidden]) {
   border-top: 1px solid var(--autocomplete-popup-separator-color);
 }
 

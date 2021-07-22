@@ -91,6 +91,9 @@ class UrlbarInput {
       `)
     );
     this.panel = this.textbox.querySelector(".urlbarView");
+    if (AppConstants.PROCLIENT_ENABLED) {
+      this.panel.classList.add("urlbarView-proClient");
+    }
 
     this.searchButton = UrlbarPrefs.get("experimental.searchButton");
     if (this.searchButton) {
