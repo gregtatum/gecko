@@ -28,7 +28,7 @@
 #tracking-protection-icon-container,
 #identity-box,
 :root[companion] #companion-sidebar-button-win,
-#nav-bar-customization-target > *:not(#urlbar-container, #profiler-button) {
+#nav-bar-customization-target > *:not(#urlbar-container, #profiler-button, toolbarspring:nth-of-type(1)) {
   display: none;
   -moz-box-flex: 1;
 }
@@ -56,6 +56,7 @@
 
 #urlbar-container {
   min-width: 350px;
+  max-width: 450px;
 }
 
 #navigator-toolbox {

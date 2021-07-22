@@ -4,13 +4,13 @@
 
 active-view-manager {
   display: flex;
-  padding-block: 5px;
-  max-width: 450px; 
+  max-width: 450px;
   align-items: center;
 }
 
 #overflow {
   border-radius: 50%;
   min-height: 0;
+  min-width: 16px;
   -moz-window-dragging: no-drag;
 }

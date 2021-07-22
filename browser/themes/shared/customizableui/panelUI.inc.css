@@ -577,8 +577,8 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
 
 #PanelUI-menu-button.toolbarbutton-1 > .toolbarbutton-badge-stack > .toolbarbutton-icon {
   border-radius: 50%;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
 }
 
 #PanelUI-menu-button > .toolbarbutton-badge-stack {

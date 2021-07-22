@@ -7,7 +7,7 @@
   overflow: scroll;
   scrollbar-width: none;
   background-color: lightgray;
-  border-radius: 2px;
+  border-radius: 100px;
   padding: 5px;
 }
 
@@ -28,7 +28,7 @@
 }
 
 #river:not(:hover) view-el ~ view-el:not(:nth-last-of-type(5)) {
-  margin-inline-start: -30px;
+  margin-inline-start: -16px;
 }
 
 /**

@@ -4,11 +4,8 @@
 
 #top-view {
   min-width: 250px;
-  height: 50px;
-  background-color: gray;
-  padding: 5px;
-  margin-inline: 5px;
-  border-radius: 2px;
+  height: 32px;
+  margin: 12.5px 8px;
   align-items: center;
   display: flex;
 }
@@ -17,6 +14,11 @@
   width: 32px;
   height: 32px;
   fill: currentColor;
+  border: 1px solid #5b5b66;
+  border-radius: 100px;
+  box-sizing: border-box;
+  padding: 4px;
+  background: #fff;
 }
 
 .top-view-icon:not([src]) {
