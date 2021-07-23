@@ -211,7 +211,12 @@ async function getLinkInfo(result) {
       // Need to normalize these URLs so they match
       // the URLs from processLink
       let descriptionURL = new URL(descriptionLink);
-      if (links.some(link => link.url == descriptionURL.href)) {
+      if (
+        links.some(
+          link =>
+            link.url == descriptionURL.href || link.text == descriptionLink
+        )
+      ) {
         continue;
       }
       let link = await processLink(descriptionLink);
