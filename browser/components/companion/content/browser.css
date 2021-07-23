@@ -96,7 +96,16 @@
 }
 
 #companion-reload-button {
-  list-style-image: url("chrome://browser/skin/reload.svg");
+  list-style-image: url("chrome://global/skin/icons/reload.svg");
+}
+
+#companion-stop-button {
+  list-style-image: url("chrome://global/skin/icons/close.svg");
+}
+
+#companion-reload-button[displaystop],
+#companion-reload-button:not([displaystop]) + #companion-stop-button {
+  display: none;
 }
 
 #companion-copy-button {

@@ -5590,6 +5590,12 @@ var CombinedStopReload = {
 
     let reload = document.getElementById("reload-button");
     let stop = document.getElementById("stop-button");
+
+    if (AppConstants.PROCLIENT_ENABLED) {
+      reload = document.getElementById("companion-reload-button");
+      stop = document.getElementById("companion-stop-button");
+    }
+
     // It's possible the stop/reload buttons have been moved to the palette.
     // They may be reinserted later, so we will retry initialization if/when
     // we get notified of document loads.
@@ -6716,6 +6722,12 @@ const nodeToTooltipMap = {
   "reader-mode-button-icon": "reader-mode-button.tooltip",
   "print-button": "printButton.tooltip",
 };
+
+if (AppConstants.PROCLIENT_ENABLED) {
+  nodeToTooltipMap["companion-reload-button"] = "reloadButton.tooltip";
+  nodeToTooltipMap["companion-stop-button"] = "stopButton.tooltip";
+}
+
 const nodeToShortcutMap = {
   "bookmarks-menu-button": "manBookmarkKb",
   "context-reload": "key_reload",
@@ -6742,6 +6754,11 @@ const nodeToShortcutMap = {
   "reader-mode-button-icon": "key_toggleReaderMode",
   "print-button": "printKb",
 };
+
+if (AppConstants.PROCLIENT_ENABLED) {
+  nodeToShortcutMap["companion-reload-button"] = "key_reload";
+  nodeToShortcutMap["companion-stop-button"] = "key_stop";
+}
 
 const gDynamicTooltipCache = new Map();
 function GetDynamicShortcutTooltipText(nodeId) {
