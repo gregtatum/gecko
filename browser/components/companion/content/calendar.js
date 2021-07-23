@@ -14,20 +14,41 @@ const CALENDAR_CHECK_TIME = 5 * 60 * 1000; // 5 minutes
 // Update display every minute
 const CALENDAR_UPDATE_TIME = 60 * 1000; // 1 minute
 
-setInterval(function() {
-  window.CompanionUtils.sendAsyncMessage("Companion:GetEvents", {});
-}, CALENDAR_CHECK_TIME);
+window.gCalendarEventListener = {
+  init() {
+    this.dispatchRefreshEventsEvent = this.dispatchRefreshEventsEvent.bind(
+      this
+    );
 
-function dispatchRefreshEventsEvent() {
-  // Just fire an event to tell the list to check the cached events again.
-  document.dispatchEvent(
-    new CustomEvent("refresh-events", {
-      detail: { events: window.CompanionUtils.events },
-    })
-  );
-}
-window.addEventListener("Companion:RegisterEvents", dispatchRefreshEventsEvent);
-setInterval(dispatchRefreshEventsEvent, CALENDAR_UPDATE_TIME);
+    this.initialized = new Promise(resolve => {
+      this._resolveHasInitialized = resolve;
+    });
+
+    setInterval(function() {
+      window.CompanionUtils.sendAsyncMessage("Companion:GetEvents", {});
+    }, CALENDAR_CHECK_TIME);
+
+    window.addEventListener(
+      "Companion:RegisterEvents",
+      this.dispatchRefreshEventsEvent
+    );
+    setInterval(this.dispatchRefreshEventsEvent, CALENDAR_UPDATE_TIME);
+  },
+
+  dispatchRefreshEventsEvent() {
+    // Just fire an event to tell the list to check the cached events again.
+    document.dispatchEvent(
+      new CustomEvent("refresh-events", {
+        detail: { events: window.CompanionUtils.events },
+      })
+    );
+    if (this._resolveHasInitialized) {
+      this._resolveHasInitialized();
+      this._resolveHasInitialized = null;
+    }
+  },
+};
+window.gCalendarEventListener.init();
 
 function debugEnabled() {
   return document.body.classList.contains("debugUI");

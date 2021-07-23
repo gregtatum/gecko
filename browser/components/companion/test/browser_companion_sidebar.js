@@ -2,7 +2,6 @@
  * http://creativecommons.org/publicdomain/zero/1.0/ */
 
 "use strict";
-/* eslint-disable no-undef */
 
 /* Ensures that the companion settings page is shown and
    the debug sliders are available.
