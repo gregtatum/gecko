@@ -27,6 +27,18 @@ h2 {
   margin-bottom: 10px;
 }
 
+.companion-main {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  width: 100vw;
+  height: 100vh;
+}
+
+#companion-deck {
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
 :root[docked] #main-menubar,
 :root[docked] #titlebar,
 :root[docked] #awesomebar {
@@ -216,16 +228,6 @@ h2 {
 :root:not([sizemode=maximized]) .titlebar-restore,
 :root[sizemode=maximized] .titlebar-max {
   display: none;
-}
-
-#scroll {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  align-items: stretch;
-  justify-content: start;
-  flex-direction: column;
-  margin-top: 20px;
 }
 
 #content {
