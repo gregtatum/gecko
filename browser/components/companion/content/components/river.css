@@ -11,31 +11,23 @@
   padding: 5px;
 }
 
-#river:empty {
+#river[hidden] {
   display: none;
 }
 
-#river view-el:nth-last-of-type(n + 6) {
-  display: none;
-}
-
-#river view-el {
-  margin-inline-start: 0;
-}
-
-#river:hover view-el {
+#river:hover > view-group {
   transition: margin-inline-start 160ms ease-out;
 }
 
-#river:not(:hover) view-el ~ view-el:not(:nth-last-of-type(5)) {
+#river:not(:hover) > view-group:not(:first-of-type) {
   margin-inline-start: -16px;
 }
 
 /**
  * A bit of hackery here to make it so that when an active view-el is
- * in the River, any view-el's after it don't overlap it.
+ * in the River, any view-group's after it don't overlap it.
  */
-view-el[active="true"] + view-el,
-view-el[active="true"] {
+view-group[active] + view-group,
+view-group[active] {
   margin-inline-start: 0px !important;
 }

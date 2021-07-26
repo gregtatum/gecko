@@ -32,10 +32,8 @@
 <?xml-stylesheet href="chrome://browser/skin/searchbar.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/skin/places/tree-icons.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/skin/places/editBookmark.css" type="text/css"?>
-<?xml-stylesheet href="chrome://browser/content/companion/components/view.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/content/companion/components/active-view-manager.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/content/companion/components/top-view.css" type="text/css"?>
-<?xml-stylesheet href="chrome://browser/content/companion/components/river.css" type="text/css"?>
 
 # All DTD information is stored in a separate file so that it can be shared by
 # hiddenWindowMac.xhtml.
@@ -112,9 +110,7 @@
   Services.scriptloader.loadSubScript("chrome://browser/content/search/autocomplete-popup.js", this);
   Services.scriptloader.loadSubScript("chrome://browser/content/search/searchbar.js", this);
   Services.scriptloader.loadSubScript("chrome://browser/content/companion/components/active-view-manager.js", this);
-  Services.scriptloader.loadSubScript("chrome://browser/content/companion/components/view.js", this);
   Services.scriptloader.loadSubScript("chrome://browser/content/companion/components/top-view.js", this);
-  Services.scriptloader.loadSubScript("chrome://browser/content/companion/components/river.js", this);
 
   window.onload = gBrowserInit.onLoad.bind(gBrowserInit);
   window.onunload = gBrowserInit.onUnload.bind(gBrowserInit);
@@ -130,6 +126,9 @@
   window.addEventListener("DOMContentLoaded",
     gBrowserInit.onDOMContentLoaded.bind(gBrowserInit), { once: true });
 </script>
+<script type="module" src="chrome://browser/content/companion/components/river.js"/>
+<script type="module" src="chrome://browser/content/companion/components/view-group.js"/>
+
 </head>
 <html:body xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 # All sets except for popupsets (commands, keys, and stringbundles)

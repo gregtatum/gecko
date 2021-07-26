@@ -33,6 +33,11 @@
   -moz-box-flex: 1;
 }
 
+#nav-bar:hover river-el::part(domain),
+#nav-bar:not(:hover) river-el::part(history) {
+  display: none;
+}
+
 #urlbar:not(.searchButton) > #urlbar-input-container > #proclient-search-icon-box {
   /* Ensure that when the user clicks on the contents of this box, it focuses the url bar */
   pointer-events: none;

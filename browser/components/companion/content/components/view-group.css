@@ -5,14 +5,11 @@
 .view-el {
   display: flex;
   -moz-window-dragging: no-drag;
-}
-
-.view-el {
   align-items: center;
-  justify-content: center;
+  justify-content: start;
 }
 
-.view-el[active="true"] {
+:host([active]) > .view-el {
   width: 200px;
 }
 
@@ -28,7 +25,7 @@
   border: 1px solid #f0f0f4;
 }
 
-.view-el[active="true"] .view-icon {
+:host([active]) .view-icon {
   margin-inline-end: 5px;
 }
 
@@ -36,7 +33,7 @@
   visibility: hidden;
 }
 
-.view-el:not([active]) .view-label-container {
+:host(:not([active])) .view-label-container {
   display: none;
 }
 
@@ -64,7 +61,36 @@
   white-space: nowrap;
 }
 
-.view-el:not([active="true"]) > .view-label-container > .view-domain,
-.view-el:not([active="true"]) > .view-label-container > .view-title {
+.view-domain,
+.view-history {
+  display: flex;
+  align-items: center;
+  height: 1rem;
+}
+
+.view-history > .history {
+  display: inline-block;
+  background-image: url("resource://usercontext-content/circle.svg");
+  background-size: 6px 6px;
+  width: 6px;
+  height: 6px;
+  -moz-context-properties: fill;
+  fill: #8F8F9D;
+  cursor: pointer;
+}
+
+.view-history > .history:not(:first-of-type) {
+  margin-inline-start: 4px;
+}
+
+.view-history > .active {
+  fill: var(--button-primary-bgcolor);
+  background-size: 8px 8px;
+  width: 8px;
+  height: 8px;
+}
+
+:host(:not([active])) > .view-el > .view-label-container > .view-domain,
+:host(:not([active])) > .view-el > .view-label-container > .view-title {
   display: none;
 }

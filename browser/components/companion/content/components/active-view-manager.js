@@ -23,7 +23,7 @@ class ActiveViewManager extends HTMLElement {
     let fragment = template.content.cloneNode(true);
     this.appendChild(fragment);
 
-    this.#overflow = this.querySelector("#overflow");
+    this.#overflow = this.querySelector("#river-overflow-button");
     this.#river = this.querySelector("river-el");
     this.#topView = this.querySelector("top-view");
 
@@ -32,6 +32,7 @@ class ActiveViewManager extends HTMLElement {
     }
 
     this.addEventListener("UserAction:ViewSelected", this);
+    this.#river.addEventListener("RiverRegrouped", this);
     this.#overflow.addEventListener("click", this);
   }
 
@@ -40,6 +41,7 @@ class ActiveViewManager extends HTMLElement {
       window.top.gGlobalHistory.removeEventListener(event, this);
     }
     this.removeEventListener("UserAction:ViewSelected", this);
+    this.#river.removeEventListener("RiverRegrouped", this);
     this.#overflow.removeEventListener("click", this);
   }
 
@@ -48,15 +50,15 @@ class ActiveViewManager extends HTMLElement {
   }
 
   isRiverView(view) {
-    return this.#river.views.has(view);
+    return this.#river.hasView(view);
   }
 
   viewChanged(view) {
     if (this.isTopView(view)) {
       // Close any active views in the river.
-      this.#river.activatedView = null;
+      this.#river.activeView = null;
     } else if (this.isRiverView(view)) {
-      this.#river.activatedView = view;
+      this.#river.activeView = view;
     } else {
       console.warn("Saw ViewChanged for an unknown view.");
     }
@@ -70,7 +72,8 @@ class ActiveViewManager extends HTMLElement {
       // Moved existing top view into the river.
       let oldView = this.#topView.update(view);
       this.#river.addView(oldView);
-      this.#river.activatedView = null;
+
+      this.#river.activeView = null;
       this.#river.removeView(view);
     } else if (!this.isTopView(view)) {
       console.warn("Saw ViewMoved for an unknown view.");
@@ -81,8 +84,7 @@ class ActiveViewManager extends HTMLElement {
     if (this.isTopView(view)) {
       this.#topView.update(view);
     } else if (this.isRiverView(view)) {
-      let viewEl = this.#river.views.get(view);
-      viewEl.update(view);
+      this.#river.requestUpdate();
     } else {
       console.warn("Saw ViewUpdated for an unknown view.");
     }
@@ -127,14 +129,19 @@ class ActiveViewManager extends HTMLElement {
           this.#overflowPanelShowing(event);
         }
         break;
+      case "RiverRegrouped": {
+        this.#overflow.textContent = `+${event.detail.overflowCount}`;
+        this.#overflow.hidden = event.detail.overflowCount == 0;
+        break;
+      }
     }
   }
 
   #viewSelected(view) {
     if (this.isRiverView(view)) {
-      this.#river.activatedView = view;
+      this.#river.activeView = view;
     } else if (this.isTopView(view)) {
-      this.#river.activatedView = null;
+      this.#river.activeView = null;
     }
     window.top.gGlobalHistory.setView(view);
   }
@@ -170,12 +177,9 @@ class ActiveViewManager extends HTMLElement {
     }
 
     let fragment = document.createDocumentFragment();
-    let overflownViewEls = Array.from(
-      this.#river.querySelectorAll("view-el:nth-last-of-type(n + 6)")
-    ).reverse();
+    let overflowedViews = this.#river.overflowedViews;
 
-    for (let overflownViewEl of overflownViewEls) {
-      let view = overflownViewEl.view;
+    for (let view of overflowedViews) {
       let item = document.createXULElement("toolbarbutton");
       item.classList.add("subviewbutton", "subviewbutton-iconic");
       item.setAttribute("label", view.title);
