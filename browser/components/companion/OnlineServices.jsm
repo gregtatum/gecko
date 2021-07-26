@@ -450,7 +450,12 @@ class GoogleService {
         }
       }
     }
-    return Array.from(allEvents.values()).sort((a, b) => a.start - b.start);
+    return Array.from(allEvents.values()).sort((a, b) => {
+      if (a.start.getTime() == b.start.getTime()) {
+        return a.end - a.start - (b.end - b.start);
+      }
+      return a.start - b.start;
+    });
   }
 
   openEmail(messageData) {
