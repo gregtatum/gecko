@@ -68,11 +68,6 @@ const FeatureManifest = {
         fallbackPref: "browser.aboutwelcome.screens",
         description: "Content to show in the onboarding flow",
       },
-      isProton: {
-        type: "boolean",
-        fallbackPref: "browser.aboutwelcome.protonDesign",
-        description: "Is it using the latest (proton) design",
-      },
       skipFocus: {
         type: "boolean",
         fallbackPref: "browser.aboutwelcome.skipFocus",
@@ -115,6 +110,18 @@ const FeatureManifest = {
       prefsButtonIcon: {
         type: "string",
         description: "Icon url to use for the preferences button",
+      },
+    },
+  },
+  pocketNewtab: {
+    description: "The Pocket section in newtab",
+    isEarlyStartup: true,
+    variables: {
+      spocPositions: {
+        type: "string",
+        fallbackPref:
+          "browser.newtabpage.activity-stream.discoverystream.spoc-positions",
+        description: "CSV string of spoc position indexes on newtab grid",
       },
     },
   },

@@ -3135,6 +3135,15 @@
   value: true
   mirror: always
 
+# Additional ServiceWorker navigation mitigation control to unregister the
+# ServiceWorker after multiple faults are encountered. The mitigation is
+# disabled when this is set to zero, otherwise this is the number of faults that
+# need to occur for a specific ServiceWorker before it will be unregistered.
+- name: dom.serviceWorkers.mitigations.navigation_fault_threshold
+  type: uint32_t
+  value: 3
+  mirror: always
+
 - name: dom.serviceWorkers.testing.enabled
   type: RelaxedAtomicBool
   value: false
@@ -5015,7 +5024,7 @@
 # Also expose a pref to allow users to force-disable WR. This is exposed
 # on all channels because WR can be enabled on qualified hardware on all
 # channels.
-- name: gfx.webrender.force-disabled
+- name: gfx.webrender.force-legacy-layers
   type: bool
   value: false
   mirror: once
@@ -5112,21 +5121,13 @@
 # Whether or not to fallback from WebRender/WebRender Software to Basic.
 - name: gfx.webrender.fallback.basic
   type: bool
-#if defined(MOZ_WIDGET_ANDROID)
-  value: true
-#else
-  value: @IS_NOT_EARLY_BETA_OR_EARLIER@
-#endif
+  value: false
   mirror: once
 
 # Whether or not to fallback from WebRender to Software WebRender.
 - name: gfx.webrender.fallback.software
   type: bool
-#if defined(MOZ_WIDGET_ANDROID)
-  value: false
-#else
   value: true
-#endif
   mirror: once
 
 #ifdef XP_WIN
@@ -6807,9 +6808,30 @@
 # Whether the `accent-color` css property is enabled.
 - name: layout.css.accent-color.enabled
   type: RelaxedAtomicBool
-  value: @IS_NIGHTLY_BUILD@
+  value: true
   mirror: always
   rust: true
+
+# The minimum contrast ratio between the accent color foreground and background
+# colors.
+#
+# We don't use this for text, so we need a contrast of at least AA (for user
+# interface components and graphical objects), which per WCAG is 3:1
+- name: layout.css.accent-color.min-contrast-ratio
+  type: float
+  value: 3.0
+  mirror: always
+
+# The target contrast ratio between the accent color foreground and background
+# colors when darkening.
+#
+# We aim a bit further than the minimum contrast ratio, which seems to provide
+# nice results in practice.
+- name: layout.css.accent-color.darkening-target-contrast-ratio
+  type: float
+  value: 6.0
+  mirror: always
+
 
 # Whether the `aspect-ratio` in css-sizing-4 is enabled.
 - name: layout.css.aspect-ratio.enabled
@@ -6823,13 +6845,6 @@
   type: bool
   value: true
   mirror: always
-
-# Is path() supported in clip-path?
-- name: layout.css.clip-path-path.enabled
-  type: RelaxedAtomicBool
-  value: true
-  mirror: always
-  rust: true
 
 # Is the image-set() function enabled?
 - name: layout.css.image-set.enabled
@@ -10434,6 +10449,12 @@
 - name: privacy.partition.network_state.connection_with_proxy
   type: bool
   value: false
+  mirror: always
+
+#  Partition the websocket pending connection queue by OriginAttributes.
+- name: privacy.partition.network_state.ws_connection_queue
+  type: RelaxedAtomicBool
+  value: true
   mirror: always
 
 # The global switch to control the URL query sting stripping which strips query

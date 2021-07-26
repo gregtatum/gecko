@@ -10,6 +10,8 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+const VERSION_PREF = "browser.places.snapshots.version";
+
 XPCOMUtils.defineLazyModuleGetters(this, {
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   Services: "resource://gre/modules/Services.jsm",
@@ -196,8 +198,8 @@ const Snapshots = new (class Snapshots {
 
     let rows = await db.executeCached(
       `
-      SELECT h.url AS url, created_at, removed_at, document_type,
-             first_interaction_at, last_interaction_at,
+      SELECT h.url AS url, h.title AS title, created_at, removed_at,
+             document_type, first_interaction_at, last_interaction_at,
              user_persisted FROM moz_places_metadata_snapshots s
       JOIN moz_places h ON h.id = s.place_id
       WHERE h.url_hash = hash(:url) AND h.url = :url
@@ -225,6 +227,7 @@ const Snapshots = new (class Snapshots {
    *   Returns snapshots in order of descending last interaction time.
    */
   async query({ limit = 100, includeTombstones = false } = {}) {
+    await this.#ensureVersionUpdates();
     let db = await PlacesUtils.promiseDBConnection();
 
     let whereStatement = "";
@@ -235,8 +238,8 @@ const Snapshots = new (class Snapshots {
 
     let rows = await db.executeCached(
       `
-      SELECT h.url AS url, created_at, removed_at, document_type,
-             first_interaction_at, last_interaction_at,
+      SELECT h.url AS url, h.title AS title, created_at, removed_at,
+             document_type, first_interaction_at, last_interaction_at,
              user_persisted FROM moz_places_metadata_snapshots s
       JOIN moz_places h ON h.id = s.place_id
       ${whereStatement}
@@ -250,6 +253,37 @@ const Snapshots = new (class Snapshots {
   }
 
   /**
+   * Ensures that the database is migrated to the latest version. Migrations
+   * should be exception-safe: don't throw an uncaught Error, or else we'll skip
+   * subsequent migrations.
+   */
+  async #ensureVersionUpdates() {
+    let dbVersion = Services.prefs.getIntPref(VERSION_PREF, 0);
+    try {
+      if (dbVersion < 1) {
+        try {
+          // Delete legacy keyframes.sqlite DB.
+          let profileDir = await PathUtils.getProfileDir();
+          let pathToKeyframes = PathUtils.join(profileDir, "keyframes.sqlite");
+          await IOUtils.remove(pathToKeyframes);
+        } catch (ex) {
+          console.warn(`Failed to delete keyframes.sqlite: ${ex}`);
+        }
+      }
+    } finally {
+      Services.prefs.setIntPref(VERSION_PREF, this.currentVersion);
+    }
+  }
+
+  /**
+   * Returns the database's most recent version number.
+   * @returns {number}
+   */
+  get currentVersion() {
+    return 1;
+  }
+
+  /**
    * Translates a database row to a Snapshot.
    *
    * @param {object} row
@@ -259,6 +293,7 @@ const Snapshots = new (class Snapshots {
   #translateRow(row) {
     return {
       url: row.getResultByName("url"),
+      title: row.getResultByName("title"),
       createdAt: this.#toDate(row.getResultByName("created_at")),
       removedAt: this.#toDate(row.getResultByName("removed_at")),
       firstInteractionAt: this.#toDate(

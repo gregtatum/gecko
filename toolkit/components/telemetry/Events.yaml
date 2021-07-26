@@ -476,9 +476,9 @@ creditcard:
       - "update"
       - "cancel"
       - "disable"
-    bug_numbers: [1653073, 1653083]
-    notification_emails: ["jmathies@mozilla.com", "chsiang@mozilla.com"]
-    expiry_version: "93"
+    bug_numbers: [1653073, 1653083, 1720608]
+    notification_emails: ["tgiles@mozilla.com", "dlee@mozilla.com"]
+    expiry_version: "103"
     products:
       - "firefox"
     record_in_processes: ["main"]
@@ -494,9 +494,9 @@ creditcard:
       - "delete"
       - "show_entry"
       - "edit"
-    bug_numbers: [1653073, 1654167]
-    notification_emails: ["jmathies@mozilla.com", "chsiang@mozilla.com"]
-    expiry_version: "93"
+    bug_numbers: [1653073, 1654167, 1720608]
+    notification_emails: ["tgiles@mozilla.com", "dlee@mozilla.com"]
+    expiry_version: "103"
     products:
       - "firefox"
     record_in_processes: ["main"]
@@ -512,9 +512,9 @@ creditcard:
       - "filled"
       - "filled_modified"
       - "submitted"
-    bug_numbers: [1653073, 1653162]
-    notification_emails: ["jmathies@mozilla.com", "chsiang@mozilla.com"]
-    expiry_version: "93"
+    bug_numbers: [1653073, 1653162, 1720608]
+    notification_emails: ["tgiles@mozilla.com", "dlee@mozilla.com"]
+    expiry_version: "103"
     products:
       - "firefox"
     record_in_processes: ["content"]
@@ -2894,3 +2894,20 @@ close_tab_warning:
       closing_wins: The number of windows being closed.
       closing_tabs: The number of tabs being closed.
       will_restore: Whether the session will be restored if closed now.
+
+memory_watcher:
+  on_high_memory:
+    description: >
+      This event is recorded when the memory situation is no longer low.
+      The "stats" object consists of three numbers comma-delimited:
+      1) how many times a tab was unloaded
+      2) how many memory-pressure events were dispatched
+      3) how long we were in the low-memory situation in seconds
+    objects: ["stats"]
+    release_channel_collection: opt-out
+    expiry_version: never
+    record_in_processes: ["main"]
+    products: ["firefox"]
+    bug_numbers: [1715858]
+    notification_emails:
+      - tkikuchi@mozilla.com
