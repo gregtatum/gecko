@@ -2,62 +2,98 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-class TopView extends HTMLElement {
-  connectedCallback() {
-    this.update();
-    this.addEventListener("click", this);
+import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
+import { html } from "chrome://browser/content/companion/lit.all.js";
+
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
+class TopView extends MozLitElement {
+  #principal;
+
+  static get properties() {
+    return {
+      _viewGroup: { type: Array, state: true },
+      activeView: { type: Object },
+    };
   }
 
-  disconnectedCallback() {
-    this.removeEventListener("click", this);
+  constructor() {
+    super();
+    this._viewGroup = [
+      {
+        url: Services.io.newURI("about:blank"),
+        title: "Newtab",
+        iconURL: "chrome://global/skin/icons/defaultFavicon.svg",
+      },
+    ];
+    this.#principal = Services.scriptSecurityManager.createNullPrincipal({});
   }
 
-  update(view) {
-    let oldView = this.view;
+  addView(view) {
+    this.activeView = null;
 
-    if (view) {
-      this.view = view;
-    }
-
-    let title = this.view?.title ?? "Newtab";
-    let titleEl = this.querySelector(".top-view-title");
-    titleEl.textContent = title;
-    titleEl.tooltipText = title;
-
-    if (this.view) {
-      let iconEl = this.querySelector(".top-view-icon");
-
-      // If the View has an iconURL, this means the page has potentially set
-      // a favicon within its markup. If we don't have that, we fallback to
-      // using the page-icon protocol to try to fetch the right favicon from
-      // the Favicon service.
-      if (this.view.iconURL) {
-        iconEl.setAttribute("src", this.view.iconURL);
-      } else {
-        iconEl.setAttribute("src", `page-icon:${this.view?.url.spec}`);
+    if (
+      !this.#principal.isSameOrigin(
+        view.url,
+        window.browsingContext.usePrivateBrowsing
+      )
+    ) {
+      if (!this.#principal.isNullPrincipal) {
+        let e = new CustomEvent("TopViewOverflow", {
+          bubbles: true,
+          composed: true,
+          detail: { views: [...this._viewGroup] },
+        });
+        this.dispatchEvent(e);
       }
+
+      this.#principal = Services.scriptSecurityManager.createContentPrincipal(
+        view.url,
+        {}
+      );
+
+      this._viewGroup = [view];
+    } else {
+      let index = this._viewGroup.indexOf(view);
+      if (index != -1) {
+        this._viewGroup.splice(index, 1);
+      }
+      this._viewGroup.push(view);
     }
 
-    let domain = "";
-    try {
-      domain = this.view?.url.host ?? "";
-    } catch (e) {}
-    let domainEl = this.querySelector(".top-view-domain");
-    domainEl.textContent = domain;
-
-    return oldView;
+    this.activeView = view;
+    this.viewUpdated();
   }
 
-  handleEvent(event) {
-    if (event.type != "click") {
-      return;
-    }
+  hasView(view) {
+    return this._viewGroup.includes(view);
+  }
 
-    let e = new CustomEvent("UserAction:ViewSelected", {
-      bubbles: true,
-      detail: { clickedView: this.view },
-    });
-    this.dispatchEvent(e);
+  /**
+   * For reasons that are unclear, if the _viewGroup Array has any of its
+   * entries updated, and then requestUpdate is called, the <view-group>
+   * won't reflect these changes. The workaround for now is to overwrite the
+   * _viewGroup state variable and then request an update.
+   */
+  viewUpdated() {
+    this._viewGroup = [...this._viewGroup];
+  }
+
+  render() {
+    return html`
+      <link
+        rel="stylesheet"
+        href="chrome://browser/content/companion/components/top-view.css"
+        type="text/css"
+      />
+      <view-group
+        top="true"
+        exportparts="domain, history"
+        ?active=${this._viewGroup.includes(this.activeView)}
+        .views=${this._viewGroup}
+        .activeView=${this.activeView}
+      ></view-group>
+    `;
   }
 }
 customElements.define("top-view", TopView);

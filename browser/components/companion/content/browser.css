@@ -34,7 +34,9 @@
 }
 
 #nav-bar:hover river-el::part(domain),
-#nav-bar:not(:hover) river-el::part(history) {
+#nav-bar:hover top-view::part(domain),
+#nav-bar:not(:hover) river-el::part(history),
+#nav-bar:not(:hover) top-view::part(history) {
   display: none;
 }
 

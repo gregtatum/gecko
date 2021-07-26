@@ -9,7 +9,7 @@
   justify-content: start;
 }
 
-:host([active]) > .view-el {
+:host(:not([top])[active]) > .view-el {
   width: 200px;
 }
 
@@ -25,7 +25,7 @@
   border: 1px solid #f0f0f4;
 }
 
-:host([active]) .view-icon {
+:host([top][active])) .view-icon {
   margin-inline-end: 5px;
 }
 
@@ -33,7 +33,7 @@
   visibility: hidden;
 }
 
-:host(:not([active])) .view-label-container {
+:host(:not(:is([top],[active]))) .view-label-container {
   display: none;
 }
 
@@ -43,6 +43,7 @@
  * See https://css-tricks.com/flexbox-truncated-text/.
  */
 .view-label-container {
+  margin-inline: 5px;
   min-width: 0;
 }
 
@@ -90,7 +91,7 @@
   height: 8px;
 }
 
-:host(:not([active])) > .view-el > .view-label-container > .view-domain,
-:host(:not([active])) > .view-el > .view-label-container > .view-title {
+:host(:not(:is([top],[active])) > .view-el > .view-label-container > .view-domain,
+:host(:not(:is([top],[active])) > .view-el > .view-label-container > .view-title {
   display: none;
 }

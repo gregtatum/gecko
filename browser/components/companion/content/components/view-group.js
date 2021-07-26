@@ -26,10 +26,6 @@ class ViewGroup extends MozLitElement {
   }
 
   #onClick(event) {
-    if (this.active) {
-      return;
-    }
-
     let e = new CustomEvent("UserAction:ViewSelected", {
       bubbles: true,
       composed: true,
@@ -46,13 +42,23 @@ class ViewGroup extends MozLitElement {
       detail: { clickedView: view },
     });
     this.dispatchEvent(e);
+    // We don't want this to get handled by the #onClick handler, since
+    // that will then switch to the last View in this group.
+    event.stopPropagation();
   }
 
   render() {
+    const DEFAULT_FAVICON = "chrome://global/skin/icons/defaultFavicon.svg";
+
+    let iconURL = DEFAULT_FAVICON;
     let view = this.active
       ? this.activeView
       : this.views[this.views.length - 1];
-    let iconURL = view.iconURL ?? `page-icon:${view.url.spec}`;
+
+    if (view.iconURL || view.url) {
+      iconURL = view.iconURL ?? `page-icon:${view.url.spec}`;
+    }
+
     let domain = "";
     try {
       domain = view.url.host ?? "";
@@ -91,9 +97,11 @@ class ViewGroup extends MozLitElement {
         type="text/css"
       />
       <div class="view-el" title=${ifDefined(rootTitle)}>
-        <img class="view-icon" src=${iconURL}></img>
-        <div class="view-label-container">
-          <div class="view-title" title=${view.title}>${view.title}</div>
+        <img class="view-icon" src=${iconURL} part="icon"></img>
+        <div class="view-label-container" part="label-container">
+          <div class="view-title"
+               part="title"
+               title=${view.title}>${view.title}</div>
           <div class="view-domain" part="domain">${domain}</div>
           <div class="view-history" part="history">${history}</div>
         </div>

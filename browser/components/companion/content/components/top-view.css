@@ -2,47 +2,21 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#top-view {
-  min-width: 250px;
-  height: 32px;
-  margin: 12.5px 8px;
-  align-items: center;
-  display: flex;
+:host {
+  margin-block: 12.5px;
+  margin-inline-start: 8px;
 }
 
-.top-view-icon {
-  width: 32px;
-  height: 32px;
-  fill: currentColor;
-  border: 1px solid #5b5b66;
-  border-radius: 100px;
-  box-sizing: border-box;
-  padding: 4px;
-  background: #fff;
+view-group::part(icon) {
+  border-color: #5b5b66;
 }
 
-.top-view-icon:not([src]) {
-  visibility: hidden;
-}
-
-.top-view-label-container {
-  display: block;
-  margin: 5px;
+view-group::part(label-container) {
   line-height: 16px;
   white-space: nowrap;
   max-width: 240px;
 }
 
-.top-view-domain {
-  font-size: 1rem;
-}
-
-.top-view-title {
+view-group::part(title) {
   font-size: 1.25rem;
-}
-
-.top-view-domain,
-.top-view-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
 }

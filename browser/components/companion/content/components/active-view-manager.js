@@ -33,6 +33,7 @@ class ActiveViewManager extends HTMLElement {
 
     this.addEventListener("UserAction:ViewSelected", this);
     this.#river.addEventListener("RiverRegrouped", this);
+    this.#topView.addEventListener("TopViewOverflow", this);
     this.#overflow.addEventListener("click", this);
   }
 
@@ -42,11 +43,12 @@ class ActiveViewManager extends HTMLElement {
     }
     this.removeEventListener("UserAction:ViewSelected", this);
     this.#river.removeEventListener("RiverRegrouped", this);
+    this.#topView.removeEventListener("TopViewOverflow", this);
     this.#overflow.removeEventListener("click", this);
   }
 
   isTopView(view) {
-    return this.#topView.view == view;
+    return this.#topView.hasView(view);
   }
 
   isRiverView(view) {
@@ -54,9 +56,11 @@ class ActiveViewManager extends HTMLElement {
   }
 
   viewChanged(view) {
+    this.#river.activeView = null;
+    this.#topView.activeView = null;
+
     if (this.isTopView(view)) {
-      // Close any active views in the river.
-      this.#river.activeView = null;
+      this.#topView.activeView = view;
     } else if (this.isRiverView(view)) {
       this.#river.activeView = view;
     } else {
@@ -69,20 +73,15 @@ class ActiveViewManager extends HTMLElement {
 
     // Nothing to do if "ViewMoved" was dispatched for a view that's already the top view.
     if (this.isRiverView(view)) {
-      // Moved existing top view into the river.
-      let oldView = this.#topView.update(view);
-      this.#river.addView(oldView);
-
       this.#river.activeView = null;
       this.#river.removeView(view);
-    } else if (!this.isTopView(view)) {
-      console.warn("Saw ViewMoved for an unknown view.");
     }
+    this.#topView.addView(view);
   }
 
   viewUpdated(view) {
     if (this.isTopView(view)) {
-      this.#topView.update(view);
+      this.#topView.viewUpdated();
     } else if (this.isRiverView(view)) {
       this.#river.requestUpdate();
     } else {
@@ -93,8 +92,7 @@ class ActiveViewManager extends HTMLElement {
   handleEvent(event) {
     switch (event.type) {
       case "ViewAdded":
-        let oldView = this.#topView.update(event.view);
-        this.#river.addView(oldView);
+        this.#topView.addView(event.view);
         break;
       case "ViewChanged":
         this.viewChanged(event.view);
@@ -134,14 +132,21 @@ class ActiveViewManager extends HTMLElement {
         this.#overflow.hidden = event.detail.overflowCount == 0;
         break;
       }
+      case "TopViewOverflow": {
+        this.#river.addViews(event.detail.views);
+        break;
+      }
     }
   }
 
   #viewSelected(view) {
+    this.#river.activeView = null;
+    this.#topView.activeView = null;
+
     if (this.isRiverView(view)) {
       this.#river.activeView = view;
     } else if (this.isTopView(view)) {
-      this.#river.activeView = null;
+      this.#topView.activeView = view;
     }
     window.top.gGlobalHistory.setView(view);
   }
