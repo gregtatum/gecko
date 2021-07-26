@@ -6,7 +6,7 @@
   display: flex;
   overflow: scroll;
   scrollbar-width: none;
-  background-color: lightgray;
+  background-color: #F0F0F4;
   border-radius: 100px;
   padding: 5px;
 }
