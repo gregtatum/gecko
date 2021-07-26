@@ -13,8 +13,6 @@ browser.jar:
     content/browser/companion/event.svg (content/event.svg)
     content/browser/companion/globalhistorydebugging.js (content/globalhistorydebugging.js)
     content/browser/companion/googleAccount.png (content/googleAccount.png)
-    content/browser/companion/keyframe-list.css (content/keyframe-list.css)
-    content/browser/companion/keyframes.js (content/keyframes.js)
     content/browser/companion/link.svg (content/link.svg)
     content/browser/companion/lit.all.js (content/lit.all.js)
     content/browser/companion/media.js (content/media.js)

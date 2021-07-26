@@ -44,7 +44,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   DownloadsViewableInternally:
     "resource:///modules/DownloadsViewableInternally.jsm",
   E10SUtils: "resource://gre/modules/E10SUtils.jsm",
-  Engagement: "resource:///modules/Engagement.jsm",
   ExtensionsUI: "resource:///modules/ExtensionsUI.jsm",
   FeatureGate: "resource://featuregates/FeatureGate.jsm",
   FxAccounts: "resource://gre/modules/FxAccounts.jsm",
@@ -761,24 +760,6 @@ let JSWINDOWACTORS = {
     allFrames: true,
   },
 };
-
-if (AppConstants.PROCLIENT_ENABLED) {
-  JSWINDOWACTORS.Engagement = {
-    parent: {
-      moduleURI: "resource:///actors/EngagementParent.jsm",
-    },
-    child: {
-      moduleURI: "resource:///actors/EngagementChild.jsm",
-      group: "browsers",
-      events: {
-        DOMContentLoaded: {},
-        pageshow: { mozSystemGroup: true },
-        pagehide: { mozSystemGroup: true },
-        load: { mozSystemGroup: true },
-      },
-    },
-  };
-}
 
 (function earlyBlankFirstPaint() {
   let startTime = Cu.now();
@@ -1963,9 +1944,6 @@ BrowserGlue.prototype = {
     }
 
     BrowserUsageTelemetry.uninit();
-    if (AppConstants.PROCLIENT_ENABLED) {
-      Engagement.uninit();
-    }
     SearchSERPTelemetry.uninit();
     Interactions.uninit();
     PageThumbs.uninit();
@@ -2180,9 +2158,6 @@ BrowserGlue.prototype = {
     this._windowsWereRestored = true;
 
     BrowserUsageTelemetry.init();
-    if (AppConstants.PROCLIENT_ENABLED) {
-      Engagement.init();
-    }
     SearchSERPTelemetry.init();
 
     Interactions.init();

@@ -41,10 +41,6 @@ class CompanionChild extends JSWindowActorChild {
           tabs() {
             return this._tabs.values();
           },
-          keyframes: {
-            currentSession: [],
-            workingOn: [],
-          },
           snapshots: [],
           getPlacesData(url) {
             return self._cachedPlacesData.get(url);
@@ -102,7 +98,6 @@ class CompanionChild extends JSWindowActorChild {
       case "Companion:Setup": {
         let {
           tabs,
-          keyframes,
           snapshots,
           newPlacesCacheEntries,
           currentURI,
@@ -116,7 +111,6 @@ class CompanionChild extends JSWindowActorChild {
           waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
         }
         waivedContent.CompanionUtils.servicesConnected = servicesConnected;
-        waivedContent.CompanionUtils.keyframes = keyframes;
         waivedContent.CompanionUtils.snapshots = snapshots;
         waivedContent.CompanionUtils.currentURI = currentURI;
         waivedContent.CompanionUtils.globalHistory = globalHistory;
@@ -147,16 +141,6 @@ class CompanionChild extends JSWindowActorChild {
       }
       case "Companion:TabAdded": {
         this.updateTab(message.data);
-        break;
-      }
-      case "Companion:KeyframesChanged": {
-        let { keyframes, newPlacesCacheEntries, currentURI } = message.data;
-
-        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
-        waivedContent.CompanionUtils.keyframes = keyframes;
-        waivedContent.CompanionUtils.currentURI = currentURI;
-
-        this.updatePlacesCache(newPlacesCacheEntries);
         break;
       }
       case "Companion:SnapshotsChanged": {

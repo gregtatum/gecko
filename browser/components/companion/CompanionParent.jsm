@@ -11,7 +11,6 @@ const { BrowserWindowTracker } = ChromeUtils.import(
 );
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-const { Keyframes } = ChromeUtils.import("resource:///modules/Keyframes.jsm");
 const { Sqlite } = ChromeUtils.import("resource://gre/modules/Sqlite.jsm");
 const { _LastSession } = ChromeUtils.import(
   "resource:///modules/sessionstore/SessionStore.jsm"
@@ -72,9 +71,8 @@ class CompanionParent extends JSWindowActorParent {
       this._observer,
       "browser-window-tracker-tab-removed"
     );
-    Services.obs.addObserver(this._observer, "keyframe-update");
-    Services.obs.addObserver(this._observer, "places-snapshots-added");
-    Services.obs.addObserver(this._observer, "places-snapshots-deleted");
+    Services.obs.addObserver(this._observer, "places-snapshot-added");
+    Services.obs.addObserver(this._observer, "places-snapshot-deleted");
 
     Services.obs.addObserver(this._observer, "companion-signin");
     Services.obs.addObserver(this._observer, "companion-signout");
@@ -153,9 +151,8 @@ class CompanionParent extends JSWindowActorParent {
       this._observer,
       "browser-window-tracker-tab-removed"
     );
-    Services.obs.removeObserver(this._observer, "keyframe-update");
-    Services.obs.removeObserver(this._observer, "places-snapshots-added");
-    Services.obs.removeObserver(this._observer, "places-snapshots-deleted");
+    Services.obs.removeObserver(this._observer, "places-snapshot-added");
+    Services.obs.removeObserver(this._observer, "places-snapshot-deleted");
 
     Services.obs.addObserver(this._observer, "companion-signin");
     Services.obs.addObserver(this._observer, "companion-signout");
@@ -456,23 +453,6 @@ class CompanionParent extends JSWindowActorParent {
     return yesterday;
   }
 
-  async getKeyframeData() {
-    let currentSession = await Keyframes.query(this.today().getTime());
-    let workingOn = await Keyframes.getTopKeypresses(
-      this.yesterday().getTime()
-    );
-    for (let entry of currentSession) {
-      await this.ensurePlacesDataCached(entry.url);
-    }
-    for (let entry of workingOn) {
-      await this.ensurePlacesDataCached(entry.url);
-    }
-    return {
-      currentSession,
-      workingOn,
-    };
-  }
-
   consumeCachedPlacesDataToSend() {
     let result = this._cachedPlacesDataToSend;
     this._cachedPlacesDataToSend = [];
@@ -542,19 +522,8 @@ class CompanionParent extends JSWindowActorParent {
         this.sendAsyncMessage("Companion:TabRemoved", this.getTabData(subj));
         break;
       }
-      case "keyframe-update": {
-        let keyframes = await this.getKeyframeData();
-        let newPlacesCacheEntries = this.consumeCachedPlacesDataToSend();
-        let currentURI = this.getCurrentURI();
-        this.sendAsyncMessage("Companion:KeyframesChanged", {
-          keyframes,
-          newPlacesCacheEntries,
-          currentURI,
-        });
-        break;
-      }
-      case "places-snapshots-added":
-      case "places-snapshots-deleted": {
+      case "places-snapshot-added":
+      case "places-snapshot-deleted": {
         let snapshots = await this.getSnapshots();
         this.sendAsyncMessage("Companion:SnapshotsChanged", {
           snapshots,
@@ -658,7 +627,6 @@ class CompanionParent extends JSWindowActorParent {
         let tabs = BrowserWindowTracker.orderedWindows.flatMap(w =>
           w.gBrowser.tabs.map(t => this.getTabData(t))
         );
-        let keyframes = await this.getKeyframeData();
         let snapshots = await this.getSnapshots();
         let newPlacesCacheEntries = this.consumeCachedPlacesDataToSend();
         let currentURI = this.getCurrentURI();
@@ -667,7 +635,6 @@ class CompanionParent extends JSWindowActorParent {
         this.sendAsyncMessage("Companion:Setup", {
           tabs,
           servicesConnected,
-          keyframes,
           snapshots,
           newPlacesCacheEntries,
           currentURI,

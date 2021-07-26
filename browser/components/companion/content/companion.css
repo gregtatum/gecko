@@ -253,19 +253,7 @@ h2 {
   font-weight: normal;
 }
 
-.keyframe {
-  font-size: smaller;
-}
-
-.keyframe .title {
-  opacity: .9;
-}
-
-.keyframe .last-access {
-  opacity: .75;
-}
-
-.keyframe, .snapshot, .email, .pocket, .app-overview {
+.snapshot, .email, .pocket, .app-overview {
   display: flex;
   flex-direction: row;
   justify-content: start;
@@ -277,18 +265,19 @@ h2 {
   flex-direction: column;
 }
 
-.keyframe, .snapshot, .app-overview {
+.snapshot, .app-overview {
   align-items: center;
 }
 
-.keyframe img, .app-overview img {
+.app-overview img {
   width: 20px;
   height: 20px;
   object-fit: contain;
   object-position: 50% 50%;
+  align-self: center;
 }
 
-.keyframe .title, .snapshot .snapshot-contents, .app-overview .title {
+.snapshot .snapshot-contents, .app-overview .title {
   flex: 1;
   white-space: nowrap;
   text-overflow: ellipsis;

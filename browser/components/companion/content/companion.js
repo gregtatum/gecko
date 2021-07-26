@@ -6,7 +6,6 @@ import { CalendarEventList } from "./calendar.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
 import { SnapshotList } from "./snapshots.js";
-import { setUpKeyframeRanges } from "./keyframes.js";
 import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
 import { RefreshServicesButton } from "./refresh-services-button.js";
 
@@ -27,7 +26,6 @@ function maybeInitializeUI() {
     return;
   }
 
-  setUpKeyframeRanges();
   document
     .getElementById("events-placeholder")
     .append(new RefreshServicesButton(), new CalendarEventList());
