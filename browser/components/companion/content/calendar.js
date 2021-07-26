@@ -174,6 +174,11 @@ class CalendarEvent extends MozLitElement {
       .event-actions .button-link {
         min-height: auto;
         margin: 0;
+        display: none;
+      }
+
+      .event:hover .button-link {
+        display: initial;
       }
 
       .event-sub-details {
