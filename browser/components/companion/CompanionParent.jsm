@@ -71,8 +71,8 @@ class CompanionParent extends JSWindowActorParent {
       this._observer,
       "browser-window-tracker-tab-removed"
     );
-    Services.obs.addObserver(this._observer, "places-snapshot-added");
-    Services.obs.addObserver(this._observer, "places-snapshot-deleted");
+    Services.obs.addObserver(this._observer, "places-snapshots-added");
+    Services.obs.addObserver(this._observer, "places-snapshots-deleted");
 
     Services.obs.addObserver(this._observer, "companion-signin");
     Services.obs.addObserver(this._observer, "companion-signout");
@@ -151,8 +151,8 @@ class CompanionParent extends JSWindowActorParent {
       this._observer,
       "browser-window-tracker-tab-removed"
     );
-    Services.obs.removeObserver(this._observer, "places-snapshot-added");
-    Services.obs.removeObserver(this._observer, "places-snapshot-deleted");
+    Services.obs.removeObserver(this._observer, "places-snapshots-added");
+    Services.obs.removeObserver(this._observer, "places-snapshots-deleted");
 
     Services.obs.addObserver(this._observer, "companion-signin");
     Services.obs.addObserver(this._observer, "companion-signout");
@@ -522,8 +522,8 @@ class CompanionParent extends JSWindowActorParent {
         this.sendAsyncMessage("Companion:TabRemoved", this.getTabData(subj));
         break;
       }
-      case "places-snapshot-added":
-      case "places-snapshot-deleted": {
+      case "places-snapshots-added":
+      case "places-snapshots-deleted": {
         let snapshots = await this.getSnapshots();
         this.sendAsyncMessage("Companion:SnapshotsChanged", {
           snapshots,
