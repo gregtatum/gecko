@@ -172,9 +172,8 @@ preferences-services-firefox-account = { -fxaccount-brand-name }
 preferences-services-google-labels = Gmail, Google Calendar, Google Meet
 preferences-services-microsoft-labels = Outlook, Microsoft Teams, OneDrive
 preferences-services-firefox-account-labels = Seamless experience across devices
-preferences-services-create-account-link = Create Account
-preferences-services-fxa-sign-in = Sign in
-preferences-services-fxa-sign-out = Sign out
+preferences-services-fxa-sign-in = Sign In
+preferences-services-fxa-sign-out = Sign Out
 preferences-services-devices-label =
 # Variables:
 #   $deviceCount (Number) - number of devices connected to FxA

@@ -51,19 +51,10 @@
 
 /* Fxa ServiceRow */
 
-.service-wrapper[type=firefox-account]:not([connected]) {
-  grid-template-columns: 1fr auto auto;
-  grid-column-gap: 0;
-}
-
-.service-wrapper[type=firefox-account] button {
-  grid-column: 3;
-}
-
 .service-wrapper[type=firefox-account] img {
   border-radius: 100%;
 }
 
-.service-create-fxa-account.button-link {
-  margin-inline-end: var(--simple-spacing);
+.service-wrapper[type=firefox-account] .service-status {
+  visibility: hidden;
 }

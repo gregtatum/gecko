@@ -231,9 +231,6 @@ class FxaServiceRow extends ServiceRow {
   updateStatus(status) {
     super.updateStatus(status);
 
-    let createAccountLink = this._getElement(".service-create-fxa-account");
-    createAccountLink?.toggleAttribute("hidden", status === "connected");
-
     if (status !== "connected") {
       this.displaySignIn();
     }
@@ -284,25 +281,8 @@ class FxaServiceRow extends ServiceRow {
     );
   }
 
-  createAccountLink() {
-    let wrapper = this._getElement(".service-wrapper");
-    let statusContainer = this._getElement(".service-status");
-    let link = document.createElement("a");
-
-    link.classList.add("service-create-fxa-account", "button-link", "primary");
-    link.hidden = this.getServiceStatus() === "connected";
-    link.href = FXA_SIGNUP_URL;
-
-    wrapper.replaceChild(link, statusContainer);
-    document.l10n.setAttributes(
-      link,
-      "preferences-services-create-account-link"
-    );
-  }
-
   render() {
     super.render();
-    this.createAccountLink();
 
     if (this.getServiceStatus() === "connected") {
       this.displayAccountData();
