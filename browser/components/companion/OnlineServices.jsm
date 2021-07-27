@@ -97,19 +97,23 @@ function getConferencingDetails(url) {
 function getConferenceInfo(result, links) {
   // conferenceData is a Google specific field
   if (result.conferenceData?.conferenceSolution) {
-    let base = {
-      icon: result.conferenceData.conferenceSolution.iconUri,
-      name: result.conferenceData.conferenceSolution.name,
-    };
+    let locationURL;
 
     for (let entry of result.conferenceData.entryPoints) {
       if (entry.uri.startsWith("https:")) {
-        return {
-          ...base,
-          url: entry.uri,
-        };
+        locationURL = new URL(entry.uri);
+        break;
       }
     }
+
+    let conferencingDetails = getConferencingDetails(locationURL);
+    return (
+      conferencingDetails || {
+        icon: result.conferenceData.conferenceSolution.iconUri,
+        name: result.conferenceData.conferenceSolution.name,
+        url: locationURL,
+      }
+    );
   }
   // onlineMeeting is a Microsoft specific field
   if (result.onlineMeeting) {
