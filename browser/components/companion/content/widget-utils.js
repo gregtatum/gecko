@@ -7,7 +7,7 @@ import { LitElement } from "chrome://browser/content/companion/lit.all.js";
 export function openLink(e) {
   e.preventDefault();
   window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
-    url: e.target.href,
+    url: e.currentTarget.href,
   });
 }
 

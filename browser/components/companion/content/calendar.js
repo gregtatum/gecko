@@ -177,8 +177,8 @@ class CalendarEvent extends MozLitElement {
         display: none;
       }
 
-      .event:hover .button-link,
-      .event:focus-within .button-link {
+      .event:hover .event-actions .button-link,
+      .event:focus-within .event-actions .button-link {
         display: initial;
       }
 
@@ -227,7 +227,31 @@ class CalendarEvent extends MozLitElement {
         overflow: hidden;
       }
 
-      .event-links {
+      .event-links > a.event-link {
+        display: flex;
+        font-size: 11px;
+        white-space: normal;
+        color: var(--in-content-deemphasized-text);
+        overflow: hidden;
+        padding: 4px;
+        border: 1px solid var(--in-content-border-color);
+        margin-inline: 0;
+      }
+
+      .event-link > img {
+        width: 16px;
+        height: 16px;
+      }
+
+      .event-link > span {
+        margin-inline-start: 4px;
+        align-self: center;
+      }
+
+      .event-links:not([hidden]) {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(auto, max-content));
+        column-gap: 8px;
         margin-block-start: 20px;
       }
     `;
@@ -241,24 +265,31 @@ class CalendarEvent extends MozLitElement {
   }
 
   eventLinksTemplate() {
-    let formattedLinks = this.event.links.map(link => ({
-      url: link.url,
-      text:
-        link.text ||
-        window.CompanionUtils.getPlacesData(link.url)?.title ||
-        link.url,
-    }));
+    let formattedLinks = this.event.links.map(link => {
+      let linkPlacesData = window.CompanionUtils.getPlacesData(link.url);
+      return {
+        url: link.url,
+        text: link.text || linkPlacesData?.title || link.url,
+        favicon:
+          linkPlacesData?.icon ||
+          "chrome://global/skin/icons/defaultFavicon.svg",
+      };
+    });
 
     return formattedLinks.map(
       link =>
         html`
           <a
-            class="event-link line-clamp"
+            class="event-link button-link"
             href=${link.url}
             title=${link.url}
             @click=${openLink}
-            >${link.text}</a
           >
+            <img src=${link.favicon} />
+            <span class="line-clamp">
+              ${link.text}
+            </span>
+          </a>
         `
     );
   }
