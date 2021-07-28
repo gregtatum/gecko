@@ -3,7 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { openLink, MozLitElement } from "./widget-utils.js";
-import { css, html } from "./lit.all.js";
+import { css, html, classMap } from "./lit.all.js";
 
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
@@ -139,6 +139,7 @@ class CalendarEvent extends MozLitElement {
   static get properties() {
     return {
       event: { type: Object },
+      linksCollapsed: { type: Boolean },
     };
   }
 
@@ -227,7 +228,7 @@ class CalendarEvent extends MozLitElement {
         overflow: hidden;
       }
 
-      .event-links > a.event-link {
+      .event-links > .event-link {
         display: flex;
         font-size: 11px;
         white-space: normal;
@@ -248,13 +249,31 @@ class CalendarEvent extends MozLitElement {
         align-self: center;
       }
 
-      .event-links:not([hidden]) {
+      .event-links {
         display: grid;
         grid-template-columns: repeat(2, minmax(auto, max-content));
         column-gap: 8px;
         margin-block-start: 20px;
       }
+
+      .event-links-collapsed {
+        grid-template-columns: repeat(2, minmax(auto, max-content)) auto;
+      }
+
+      .event-links > button.event-link {
+        margin: 0;
+        min-width: 0;
+        align-self: center;
+        justify-self: start;
+        min-height: 0;
+        padding: 5px;
+      }
     `;
+  }
+
+  constructor() {
+    super();
+    this.linksCollapsed = true;
   }
 
   openCalendar(e) {
@@ -264,34 +283,74 @@ class CalendarEvent extends MozLitElement {
     });
   }
 
-  eventLinksTemplate() {
-    let formattedLinks = this.event.links.map(link => {
-      let linkPlacesData = window.CompanionUtils.getPlacesData(link.url);
-      return {
-        url: link.url,
-        text: link.text || linkPlacesData?.title || link.url,
-        favicon:
-          linkPlacesData?.icon ||
-          "chrome://global/skin/icons/defaultFavicon.svg",
-      };
-    });
+  expandLinksSection(e) {
+    this.linksCollapsed = false;
+    if (
+      e.mozInputSource == MouseEvent.MOZ_SOURCE_KEYBOARD ||
+      e.mozInputSource == MouseEvent.MOZ_SOURCE_UNKNOWN
+    ) {
+      this.updateComplete.then(() => {
+        // If the links were expanded with the keyboard, restore focus.
+        this.shadowRoot.querySelector(".event-link:nth-child(3)").focus();
+      });
+    }
+  }
 
-    return formattedLinks.map(
-      link =>
-        html`
-          <a
-            class="event-link button-link"
-            href=${link.url}
-            title=${link.url}
-            @click=${openLink}
-          >
-            <img src=${link.favicon} />
-            <span class="line-clamp">
-              ${link.text}
-            </span>
-          </a>
-        `
-    );
+  eventLinkTemplate(link) {
+    let linkPlacesData = window.CompanionUtils.getPlacesData(link.url);
+    let url = link.url;
+    let text = link.text || linkPlacesData?.title || link.url;
+    let favicon =
+      linkPlacesData?.icon || "chrome://global/skin/icons/defaultFavicon.svg";
+
+    return html`
+      <a
+        class="event-link button-link"
+        href=${url}
+        title=${url}
+        @click=${openLink}
+      >
+        <img src=${favicon} />
+        <span class="line-clamp">
+          ${text}
+        </span>
+      </a>
+    `;
+  }
+
+  eventLinksTemplate() {
+    let { event, linksCollapsed } = this;
+    let { links } = event;
+
+    if (!links.length) {
+      return "";
+    }
+
+    let shouldCollapseLinks = links.length > 2 && linksCollapsed;
+    let linksToShow = shouldCollapseLinks ? links.slice(0, 2) : links;
+
+    return html`
+      <div
+        class=${classMap({
+          "event-links": true,
+          "event-links-collapsed": shouldCollapseLinks,
+        })}
+      >
+        ${linksToShow.map(link => this.eventLinkTemplate(link))}
+        ${shouldCollapseLinks
+          ? html`
+              <button
+                data-l10n-id="companion-expand-event-links-button"
+                data-l10n-args=${JSON.stringify({
+                  linkCount: this.event.links.length - 2,
+                })}
+                class="event-link"
+                @click=${this.expandLinksSection}
+              ></button>
+            `
+          : ""}
+      </div>
+    `;
   }
 
   joinConferenceTemplate() {
@@ -385,7 +444,7 @@ class CalendarEvent extends MozLitElement {
   }
 
   render() {
-    let { summary, links } = this.event;
+    let { summary } = this.event;
 
     return html`
       <div class="event card card-no-hover">
@@ -404,9 +463,7 @@ class CalendarEvent extends MozLitElement {
             ${this.runningLateTemplate()} ${this.joinConferenceTemplate()}
           </div>
         </div>
-        <div ?hidden=${!links.length} class="event-links">
-          ${this.eventLinksTemplate()}
-        </div>
+        ${this.eventLinksTemplate()}
       </div>
     `;
   }

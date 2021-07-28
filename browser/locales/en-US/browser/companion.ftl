@@ -5,6 +5,13 @@
 companion-join-meeting = Join meeting
 companion-email-late = Running late
 companion-refresh-services-button =
-    .title=Refresh services
+    .title = Refresh services
 companion-refresh-services-button-syncing =
-    .title=Syncing services
+    .title = Syncing services
+
+# This is a short label to show how many more links are available to be
+# shown for a calendar event in the companion.
+# Variables:
+#   $linkCount (Number) - number of links hidden for an event
+companion-expand-event-links-button = +{ $linkCount }
+    .title = Show all links
