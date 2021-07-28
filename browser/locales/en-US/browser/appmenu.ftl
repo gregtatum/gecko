@@ -32,6 +32,8 @@ appmenuitem-exit2 =
             [linux] Quit
            *[other] Exit
         }
+appmenuitem-close =
+    .label = Close
 appmenu-menu-button-closed2 =
     .tooltiptext = Open Application Menu
     .label = { -brand-short-name }
@@ -76,6 +78,8 @@ appmenu-fxa-show-more-tabs = Show More Tabs
 
 appmenuitem-save-page =
     .label = Save page as…
+appmenuitem-export-page =
+    .label = Export
 
 ## What's New panel in App menu.
 

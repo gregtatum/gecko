@@ -244,27 +244,32 @@
         </toolbarbutton>
       </toolbaritem>
       <toolbarseparator id="appMenu-fxa-separator" class="proton-zap"/>
+#ifndef PROCLIENT_WINDOW
       <toolbarbutton id="appMenu-new-tab-button2"
                      class="subviewbutton"
                      data-l10n-id="appmenuitem-new-tab"
                      key="key_newNavigatorTab"
                      command="cmd_newNavigatorTab"/>
+#endif
       <toolbarbutton id="appMenu-new-window-button2"
                      class="subviewbutton"
                      data-l10n-id="appmenuitem-new-window"
                      key="key_newNavigator"
                      command="cmd_newNavigator"/>
+#ifndef PROCLIENT_WINDOW
       <toolbarbutton id="appMenu-new-private-window-button2"
                      class="subviewbutton"
                      data-l10n-id="appmenuitem-new-private-window"
                      key="key_privatebrowsing"
                      command="Tools:PrivateBrowsing"/>
       <toolbarseparator/>
+#endif
       <toolbarbutton id="appMenu-bookmarks-button"
                      class="subviewbutton subviewbutton-nav"
                      data-l10n-id="library-bookmarks-menu"
                      closemenu="none"
                      oncommand="BookmarkingUI.showSubView(this);"/>
+#ifndef PROCLIENT_WINDOW
       <toolbarbutton id="appMenu-history-button"
                      class="subviewbutton subviewbutton-nav"
                      label="&historyMenu.label;"
@@ -280,15 +285,14 @@
                      data-l10n-id="appmenuitem-passwords"
                      oncommand="LoginHelper.openPasswordManager(window, { entryPoint: 'mainmenu' })"
                      />
-#ifndef PROCLIENT_WINDOW
       <toolbarbutton id="appMenu-extensions-themes-button"
                      class="subviewbutton"
                      data-l10n-id="appmenuitem-addons-and-themes"
                      key="key_openAddons"
                      command="Tools:Addons"
                      />
-#endif
       <toolbarseparator/>
+#endif
       <toolbarbutton id="appMenu-print-button2"
                      class="subviewbutton"
                      label="&printCmd.label;"
@@ -301,14 +305,20 @@
                      />
       <toolbarbutton id="appMenu-save-file-button2"
                      class="subviewbutton"
+#ifdef PROCLIENT_WINDOW
+                     data-l10n-id="appmenuitem-export-page"
+#else
                      data-l10n-id="appmenuitem-save-page"
+#endif
                      key="key_savePage"
                      command="Browser:SavePage"/>
+#ifndef PROCLIENT_WINDOW
       <toolbarbutton id="appMenu-find-button2"
                      class="subviewbutton"
                      data-l10n-id="appmenuitem-find-in-page"
                      key="key_find"
                      command="cmd_find"/>
+#endif
       <toolbaritem id="appMenu-zoom-controls2" class="subviewbutton toolbaritem-combined-buttons" closemenu="none">
         <label class="toolbarbutton-text" value="&fullZoom.label;"/>
         <toolbarbutton id="appMenu-zoomReduce-button2"
@@ -346,7 +356,8 @@
       <toolbarbutton id="companion-settings-button"
                      label="Companion Settings"
                      class="subviewbutton"
-                     oncommand="ToggleCompanionSettings()"/>
+                     oncommand="ToggleCompanionSettings()"
+                     hidden="true"/>
 #endif
 
 #ifndef PROCLIENT_WINDOW
@@ -363,10 +374,16 @@
                      closemenu="none"
                      oncommand="PanelUI.showSubView('PanelUI-helpView', this)"/>
 #ifndef XP_MACOSX
+#ifndef PROCLIENT_WINDOW
       <toolbarseparator/>
+#endif
       <toolbarbutton id="appMenu-quit-button2"
                      class="subviewbutton"
+#ifndef PROCLIENT_WINDOW
                      data-l10n-id="appmenuitem-exit2"
+#else
+                     data-l10n-id="appmenuitem-close"
+#endif
                      key="key_quitApplication"
                      command="cmd_quitApplication"/>
 #endif
