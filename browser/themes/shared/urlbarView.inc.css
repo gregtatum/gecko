@@ -98,6 +98,7 @@
 }
 
 .urlbarView-row-inner {
+  line-height: 1.2;
   display: flex;
   flex-wrap: nowrap;
   overflow: hidden;
