@@ -177,7 +177,8 @@ class CalendarEvent extends MozLitElement {
         display: none;
       }
 
-      .event:hover .button-link {
+      .event:hover .button-link,
+      .event:focus-within .button-link {
         display: initial;
       }
 
