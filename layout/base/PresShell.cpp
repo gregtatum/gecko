@@ -5273,6 +5273,7 @@ nscolor PresShell::GetDefaultBackgroundColorToDraw() {
     return backgroundColor;
   }
 
+#ifndef PROCLIENT_ENABLED
   // Use a dark background for top-level about:blank that is inaccessible to
   // content JS.
   Document* doc = GetDocument();
@@ -5285,6 +5286,7 @@ nscolor PresShell::GetDefaultBackgroundColorToDraw() {
     return StaticPrefs::browser_proton_enabled() ? NS_RGB(0x1C, 0x1B, 0x22)
                                                  : NS_RGB(0x2A, 0x2A, 0x2E);
   }
+#endif
 
   return backgroundColor;
 }

@@ -5,16 +5,18 @@
 var EXPORTED_SYMBOLS = ["LightweightThemeConsumer"];
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-
-const DEFAULT_THEME_ID = "default-theme@mozilla.org";
-const LIGHT_THEME_ID = "firefox-compact-light@mozilla.org";
-const DARK_THEME_ID = "firefox-compact-dark@mozilla.org";
-
 ChromeUtils.defineModuleGetter(
   this,
   "AppConstants",
   "resource://gre/modules/AppConstants.jsm"
 );
+
+const DEFAULT_THEME_ID = AppConstants.PROCLIENT_ENABLED
+  ? "firefox-compact-light@mozilla.org"
+  : "default-theme@mozilla.org";
+const LIGHT_THEME_ID = "firefox-compact-light@mozilla.org";
+const DARK_THEME_ID = "firefox-compact-dark@mozilla.org";
+
 // Get the theme variables from the app resource directory.
 // This allows per-app variables.
 ChromeUtils.defineModuleGetter(
@@ -267,15 +269,20 @@ LightweightThemeConsumer.prototype = {
     this._lastData = themeData;
 
     // In Linux, the default theme picks up the right colors from dark GTK themes.
-    const useDarkTheme =
-      themeData.darkTheme &&
-      this.darkThemeMediaQuery?.matches &&
-      (themeData.darkTheme.id != DEFAULT_THEME_ID ||
-        AppConstants.platform != "linux");
+    let useDarkTheme;
+    if (AppConstants.PROCLIENT_ENABLED) {
+      useDarkTheme = false;
+    } else {
+      useDarkTheme =
+        themeData.darkTheme &&
+        this.darkThemeMediaQuery?.matches &&
+        (themeData.darkTheme.id != DEFAULT_THEME_ID ||
+          AppConstants.platform != "linux");
+    }
 
     let theme = useDarkTheme ? themeData.darkTheme : themeData.theme;
-    if (!theme) {
-      theme = { id: DEFAULT_THEME_ID };
+    if (!theme || AppConstants.PROCLIENT_ENABLED) {
+      theme.id = DEFAULT_THEME_ID;
     }
 
     let active = (this._active = Object.keys(theme).length);
@@ -338,7 +345,7 @@ LightweightThemeConsumer.prototype = {
 
     this._lastExperimentData = {};
 
-    if (!active || !experiment) {
+    if (!active || !experiment || AppConstants.PROCLIENT_ENABLED) {
       return;
     }
 

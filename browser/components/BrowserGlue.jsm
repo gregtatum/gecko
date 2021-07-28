@@ -3250,7 +3250,9 @@ BrowserGlue.prototype = {
         let theme = themes.find(
           t => t.id == "firefox-compact-light@mozilla.org"
         );
-        await theme.enable();
+        if (theme) {
+          await theme.enable();
+        }
       });
     }
 
