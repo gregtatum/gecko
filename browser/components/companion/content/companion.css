@@ -714,3 +714,42 @@ e-global-nav-debugging h2 {
   border-color: var(--in-content-primary-button-background);
 }
 
+.browse {
+  display: flex;
+  flex-direction: column;
+  margin: 20px;
+}
+
+.browse button {
+  padding-left: 35px;
+  text-align: left;
+  background: center left 10px / 16px no-repeat url("chrome://global/skin/icons/defaultFavicon.svg");
+}
+
+.browse button:hover {
+  background-color: var(--in-content-button-background-hover);
+}
+
+.browse button:hover:active {
+  background-color: var(--in-content-button-background-active);
+}
+
+.browse button.groups {
+  background-image: url("chrome://global/skin/icons/defaultFavicon.svg");
+}
+
+.browse button.activities {
+  background-image: url("chrome://activity-stream/content/data/content/assets/glyph-topsites-16.svg");
+}
+
+.browse button.shopping {
+  background-image: url("resource://usercontext-content/cart.svg");
+}
+
+.browse button.downloads {
+  background-image: url("chrome://browser/skin/downloads/downloads.svg");
+}
+
+.browse button.notifications {
+  background-image: url("chrome://browser/skin/notification-icons/desktop-notification.svg");
+}

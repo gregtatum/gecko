@@ -3,6 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { CalendarEventList } from "./calendar.js";
+import { BrowseList } from "./browse.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
 import { SnapshotList } from "./snapshots.js";
@@ -35,6 +36,7 @@ function maybeInitializeUI() {
   content.appendChild(new SnapshotList());
 
   let browseContent = document.querySelector("#scroll-browse .content");
+  browseContent.appendChild(new BrowseList());
   browseContent.appendChild(new PocketList());
 }
 
