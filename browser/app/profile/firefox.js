@@ -1864,7 +1864,7 @@ pref("browser.contentblocking.cfr-milestone.milestones", "[1000, 5000, 10000, 25
 // Always enable newtab segregation using containers
 pref("privacy.usercontext.about_newtab_segregation.enabled", true);
 // Enable Contextual Identity Containers
-#ifdef NIGHTLY_BUILD
+#if defined(NIGHTLY_BUILD) && !defined(PROCLIENT_ENABLED)
   pref("privacy.userContext.enabled", true);
   pref("privacy.userContext.ui.enabled", true);
 #else

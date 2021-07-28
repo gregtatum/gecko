@@ -17,6 +17,9 @@
                          onpopupshowing="gFileMenu.onPopupShowing(event);">
                 <menuitem id="menu_newNavigatorTab"
                           command="cmd_newNavigatorTab"
+#ifdef PROCLIENT_WINDOW
+                          hidden="true"
+#endif
                           key="key_newNavigatorTab" data-l10n-id="menu-file-new-tab"/>
                 <menu id="menu_newUserContext"
                       hidden="true" data-l10n-id="menu-file-new-container-tab">
@@ -27,6 +30,9 @@
                           command="cmd_newNavigator" data-l10n-id="menu-file-new-window"/>
                 <menuitem id="menu_newPrivateWindow"
                           command="Tools:PrivateBrowsing"
+#ifdef PROCLIENT_WINDOW
+                          hidden="true"
+#endif
                           key="key_privatebrowsing" data-l10n-id="menu-file-new-private-window"/>
 #ifdef NIGHTLY_BUILD
                 <menuitem id="menu_newFissionWindow"
@@ -45,6 +51,9 @@
                           key="openFileKb" data-l10n-id="menu-file-open-file"/>
                 <menuitem id="menu_close"
                           class="show-only-for-keyboard"
+#ifdef PROCLIENT_WINDOW
+                          hidden="true"
+#endif
                           key="key_close"
                           command="cmd_close" data-l10n-id="menu-file-close"/>
                 <menuitem id="menu_closeWindow"
