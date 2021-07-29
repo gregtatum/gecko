@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { openLink, MozLitElement } from "./widget-utils.js";
+import { openLink, openMeeting, MozLitElement } from "./widget-utils.js";
 import { css, html, classMap } from "./lit.all.js";
 
 export const timeFormat = new Intl.DateTimeFormat([], {
@@ -357,7 +357,7 @@ class CalendarEvent extends MozLitElement {
         class="button-link primary"
         href=${conference.url}
         data-l10n-id="companion-join-meeting"
-        @click=${openLink}
+        @click=${openMeeting}
       ></a>
     `;
   }

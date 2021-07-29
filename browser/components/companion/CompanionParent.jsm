@@ -694,6 +694,16 @@ class CompanionParent extends JSWindowActorParent {
         }
         break;
       }
+      case "Companion:PauseAllMedia": {
+        for (let tab of this._browserIdsToTabs.values()) {
+          let mediaController =
+            tab.linkedBrowser?.browsingContext?.mediaController;
+          if (mediaController.isPlaying) {
+            mediaController.pause();
+          }
+        }
+        break;
+      }
       case "Companion:FocusBrowser": {
         let { browserId } = message.data;
         let tab = this._browserIdsToTabs.get(browserId);

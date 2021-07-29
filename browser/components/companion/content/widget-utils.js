@@ -4,6 +4,14 @@
 
 import { LitElement } from "chrome://browser/content/companion/lit.all.js";
 
+export function openMeeting(e) {
+  e.preventDefault();
+  window.CompanionUtils.sendAsyncMessage("Companion:PauseAllMedia");
+  window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
+    url: e.currentTarget.href,
+  });
+}
+
 export function openLink(e) {
   e.preventDefault();
   window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
