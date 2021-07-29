@@ -206,7 +206,7 @@ export class Media extends HTMLElement {
       (this.tab.canTogglePip || this.tab.soundPlaying) && this.tab.title;
     let metadata = this.tab.media.metadata;
 
-    if (!metadata || !hasMedia) {
+    if (!(metadata || hasMedia)) {
       this.hidden = true;
       return;
     }
