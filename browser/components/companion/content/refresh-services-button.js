@@ -3,13 +3,16 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { MozLitElement } from "./widget-utils.js";
-import { css, html, classMap } from "./lit.all.js";
+import { classMap, html, css } from "./lit.all.js";
+
+const { OnlineServices } = ChromeUtils.import(
+  "resource:///modules/OnlineServices.jsm"
+);
 
 export class RefreshServicesButton extends MozLitElement {
   static get properties() {
     return {
       isRefreshing: { type: Boolean },
-      hasEvents: { type: Array },
     };
   }
 
@@ -62,38 +65,22 @@ export class RefreshServicesButton extends MozLitElement {
   constructor() {
     super();
     this.isRefreshing = false;
-    // For now, only show this button if events are being shown in the sidepanel.
-    // Eventually, the visibility of this button will be in about:preferences (MR2-349).
-    this.hasEvents = false;
   }
 
-  connectedCallback() {
-    document.addEventListener("refresh-events", this);
-    super.connectedCallback();
-  }
-
-  disconnectedCallback() {
-    document.removeEventListener("refresh-events", this);
-    super.disconnectedCallback();
-  }
-
-  handleEvent(e) {
-    if (e.type === "refresh-events") {
-      this.isRefreshing = false;
-      this.hasEvents = !!(e.detail?.events || []).length;
-    }
-  }
-
-  onClick() {
-    window.CompanionUtils.sendAsyncMessage("Companion:GetEvents");
+  async onClick() {
     this.isRefreshing = true;
+
+    try {
+      await OnlineServices.refreshEvents();
+    } finally {
+      this.isRefreshing = false;
+    }
   }
 
   render() {
     return html`
       <button
         @click=${this.onClick}
-        ?hidden=${!this.hasEvents}
         ?disabled=${this.isRefreshing}
         class=${classMap({
           "ghost-button": true,

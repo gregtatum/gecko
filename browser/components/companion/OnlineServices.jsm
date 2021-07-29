@@ -6,6 +6,9 @@ const EXPORTED_SYMBOLS = ["OnlineServices"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
+const { DeferredTask } = ChromeUtils.import(
+  "resource://gre/modules/DeferredTask.jsm"
+);
 
 const PREF_STORE = "onlineservices.config";
 
@@ -870,6 +873,15 @@ let services = {
 };
 
 const OnlineServices = {
+  lastAccess: new Date("1999-12-31"),
+  data: null,
+  freshnessMs: 5 * 60 * 1000,
+
+  get isFresh() {
+    let now = new Date();
+    return now - this.lastAccess < this.freshnessMs;
+  },
+
   async createService(type) {
     load();
 
@@ -913,4 +925,75 @@ const OnlineServices = {
     let config = JSON.stringify(Array.from(ServiceInstances));
     Services.prefs.setCharPref(PREF_STORE, config);
   },
+
+  refreshEvents() {
+    if (!this._refreshCompletePromise) {
+      this._refreshCompletePromise = new Promise(resolve => {
+        this._promiseRefresh = resolve;
+        Services.obs.notifyObservers(null, "companion-services-refresh");
+      }).finally(() => {
+        this._refreshCompletePromise = null;
+      });
+    }
+    return this._refreshCompletePromise;
+  },
+
+  setCache(data) {
+    this.data = data;
+    this.lastAccess = new Date();
+  },
+
+  getCache() {
+    return this.data;
+  },
+
+  async getEvents() {
+    return this.isFresh ? this.getCache() : this.fetchEvents();
+  },
+
+  async fetchEvents() {
+    let servicesData = this.getServices();
+    if (!servicesData.length) {
+      if (this._promiseRefresh) {
+        this._promiseRefresh();
+        this._promiseRefresh = null;
+      }
+      return [];
+    }
+
+    let meetingResults = new Array(servicesData.length);
+    let i = 0;
+    for (let service of servicesData) {
+      meetingResults[i] = service.getNextMeetings();
+      i++;
+    }
+
+    let eventResults = await Promise.allSettled(meetingResults);
+    let events = eventResults.flatMap(r => r.value || []);
+
+    this.setCache(events);
+
+    if (this._promiseRefresh) {
+      this._promiseRefresh();
+      this._promiseRefresh = null;
+    }
+
+    // Reset the auto refresh task to its full refresh time. This will also
+    // queue the first auto-refresh if this is the first time we load events.
+    refreshEventsTask.disarm();
+    refreshEventsTask.arm();
+
+    return events;
+  },
 };
+
+// This task will be armed after the events are retrieved for the first time.
+const refreshEventsTask = new DeferredTask(async () => {
+  try {
+    await OnlineServices.refreshEvents();
+  } catch (e) {
+    Cu.reportError(e);
+  } finally {
+    // Just don't throw, fetchEvents() will have re-armed the task.
+  }
+}, OnlineServices.freshnessMs);

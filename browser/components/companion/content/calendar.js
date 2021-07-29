@@ -9,8 +9,6 @@ export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
 });
 
-// Query new events every five minutes
-const CALENDAR_CHECK_TIME = 5 * 60 * 1000; // 5 minutes
 // Update display every minute
 const CALENDAR_UPDATE_TIME = 60 * 1000; // 1 minute
 
@@ -23,10 +21,6 @@ window.gCalendarEventListener = {
     this.initialized = new Promise(resolve => {
       this._resolveHasInitialized = resolve;
     });
-
-    setInterval(function() {
-      window.CompanionUtils.sendAsyncMessage("Companion:GetEvents", {});
-    }, CALENDAR_CHECK_TIME);
 
     window.addEventListener(
       "Companion:RegisterEvents",

@@ -90,5 +90,14 @@ h2.simple {
 #extra-services-container {
   display: grid;
   grid-row-gap: var(--simple-spacing);
-  margin-top: var(--simple-spacing);
+}
+
+.extra-services-header-container {
+  display: flex;
+  justify-content: space-between;
+}
+
+.extra-services-header-container > refresh-services-button,
+.extra-services-header-container > h3 {
+  align-self: center;
 }

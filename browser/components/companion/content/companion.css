@@ -172,11 +172,6 @@ h2 {
   flex-direction: column;
 }
 
-#events-placeholder > refresh-services-button {
-  align-self: end;
-  padding-inline-end: 5px;
-}
-
 .titlebar-buttonbox,
 .titlebar-button {
   appearance: none !important;

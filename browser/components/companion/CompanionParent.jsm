@@ -76,6 +76,7 @@ class CompanionParent extends JSWindowActorParent {
 
     Services.obs.addObserver(this._observer, "companion-signin");
     Services.obs.addObserver(this._observer, "companion-signout");
+    Services.obs.addObserver(this._observer, "companion-services-refresh");
 
     Services.prefs.addObserver(
       "browser.companion.globalhistorydebugging",
@@ -469,19 +470,9 @@ class CompanionParent extends JSWindowActorParent {
       this.sendAsyncMessage("Companion:ServiceDisconnected", {
         servicesConnected: false,
       });
-      return [];
     }
 
-    let meetingResults = new Array(services.length);
-    let i = 0;
-    for (let service of services) {
-      meetingResults[i] = service.getNextMeetings();
-      i++;
-    }
-    let eventResults = await Promise.allSettled(meetingResults);
-    let events = eventResults.flatMap(r => r.value || []);
-
-    return events;
+    return OnlineServices.getEvents();
   }
 
   /**
@@ -532,7 +523,17 @@ class CompanionParent extends JSWindowActorParent {
       }
       case "companion-signin":
       case "companion-signout":
-        this.updateEvents();
+      case "companion-services-refresh":
+        let events = await OnlineServices.fetchEvents();
+        for (let event of events) {
+          for (let link of event.links) {
+            await this.ensurePlacesDataCached(link.url);
+          }
+        }
+        this.sendAsyncMessage("Companion:RegisterEvents", {
+          events,
+          newPlacesCacheEntries: this.consumeCachedPlacesDataToSend(),
+        });
         break;
     }
   }

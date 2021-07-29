@@ -8,7 +8,6 @@ import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
 import { SnapshotList } from "./snapshots.js";
 import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
-import { RefreshServicesButton } from "./refresh-services-button.js";
 
 function toggleSettings() {
   let settings = document.getElementById("settings");
@@ -29,7 +28,7 @@ function maybeInitializeUI() {
 
   document
     .getElementById("events-placeholder")
-    .append(new RefreshServicesButton(), new CalendarEventList());
+    .appendChild(new CalendarEventList());
   let content = document.getElementById("content");
   content.appendChild(new MediaList("Media"));
   content.appendChild(new GlobalHistoryDebugging());
