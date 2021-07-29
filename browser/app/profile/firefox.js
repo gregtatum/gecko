@@ -2571,6 +2571,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("privacy.trackingprotection.enabled", true);
   pref("privacy.trackingprotection.socialtracking.enabled", true);
   pref("browser.places.interactions.enabled", true, locked);
+  pref("browser.pagedata.enabled", true, locked);
   pref("startup.homepage_welcome_url", "", locked);
   pref("browser.aboutwelcome.enabled", false, locked);
   pref("startup.homepage_override_url", "", locked);
