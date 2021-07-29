@@ -17,6 +17,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   OAuth2: "resource:///modules/OAuth2.jsm",
   Services: "resource://gre/modules/Services.jsm",
   UtilityOverlay: "resource:///modules/UtilityOverlay.jsm",
+  setInterval: "resource://gre/modules/Timer.jsm",
 });
 
 const PREF_LOGLEVEL = "browser.companion.loglevel";
@@ -289,6 +290,11 @@ class GoogleService {
       services[this.app].clientId,
       services[this.app].clientSecret,
       config?.auth
+    );
+    this.getUnreadCountAtom();
+    this.mailCountTimer = setInterval(
+      this.getUnreadCountAtom.bind(this),
+      60 * 1000
     );
   }
 
@@ -583,6 +589,21 @@ class GoogleService {
     }
 
     return messages;
+  }
+
+  async getUnreadCountAtom() {
+    let response = await fetch("https://mail.google.com/mail/u/0/feed/atom");
+
+    if (!response.ok) {
+      this.mailCount = 0;
+      return;
+    }
+
+    let results = await response.text();
+
+    let doc = new DOMParser().parseFromString(results, "text/xml");
+
+    this.mailCount = parseInt(doc.querySelector("fullcount").textContent);
   }
 
   async getTitle(url) {
@@ -913,6 +934,16 @@ const OnlineServices = {
     await service.disconnect();
     ServiceInstances.delete(service);
     this.persist();
+  },
+
+  getMailCount(type) {
+    let mailCount = 0;
+    for (let service of ServiceInstances) {
+      if (service.app.startsWith(type)) {
+        mailCount += service.mailCount;
+      }
+    }
+    return mailCount;
   },
 
   getServices() {

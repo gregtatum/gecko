@@ -215,12 +215,13 @@
   font-size: 8px;
   text-align: center;
   color: #fff;
-  border-radius: 50px;
+  border-radius: 6px;
   height: 12px;
-  width: 12px;
+  min-width: 6px;
   position: absolute;
   margin-inline-start: 22px;
   margin-top: -22px;
+  padding-inline: 3px;
 }
 
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row {
@@ -240,7 +241,6 @@
 .urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row[selected] {
   background-color: var(--autocomplete-popup-highlight-background);
 }
-
 
 .urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row[hidden],
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row[hidden] {

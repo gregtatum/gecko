@@ -18,6 +18,7 @@ const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   DevToolsShim: "chrome://devtools-startup/content/DevToolsShim.jsm",
+  OnlineServices: "resource:///modules/OnlineServices.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
   UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
   UrlbarResult: "resource:///modules/UrlbarResult.jsm",
@@ -33,6 +34,20 @@ const DYNAMIC_TYPE_NAME = "quickActions";
 const MAX_RESULTS = 5;
 
 const COMMANDS = {
+  checkgmail: {
+    commands: ["check-gmail"],
+    icon:
+      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='52 42 88 66'%3E%3Cpath fill='%234285f4' d='M58 108h14V74L52 59v43c0 3.32 2.69 6 6 6'/%3E%3Cpath fill='%2334a853' d='M120 108h14c3.32 0 6-2.69 6-6V59l-20 15'/%3E%3Cpath fill='%23fbbc04' d='M120 48v26l20-15v-8c0-7.42-8.47-11.65-14.4-7.2'/%3E%3Cpath fill='%23ea4335' d='M72 74V48l24 18 24-18v26L96 92'/%3E%3Cpath fill='%23c5221f' d='M52 51v8l20 15V48l-5.6-4.2c-5.94-4.45-14.4-.22-14.4 7.2'/%3E%3C/svg%3E",
+    label: "Check Gmail",
+    callback: openUrl("https://gmail.com"),
+    title: "Gmail",
+    hide() {
+      return !OnlineServices.getMailCount("google");
+    },
+    showBadge() {
+      return !!OnlineServices.getMailCount("google");
+    },
+  },
   createmeeting: {
     commands: ["create-meeting"],
     icon:
@@ -298,12 +313,31 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     [...Array(MAX_RESULTS).keys()].forEach(i => {
       let key = result.payload.results?.[i];
       let data = COMMANDS?.[key] || { icon: "", label: " " };
-      viewUpdate[`button-${i}`] = { attributes: { "data-key": key } };
+      let buttonAttributes = { "data-key": key };
+      let hidden = !result.payload.results?.[i];
+      if (data.hasOwnProperty("hide")) {
+        hidden = data.hide();
+      }
+      buttonAttributes.hidden = hidden ? true : null;
+      buttonAttributes.role = hidden ? "" : "button";
+      viewUpdate[`button-${i}`] = { attributes: buttonAttributes };
       viewUpdate[`icon-${i}`] = { attributes: { src: data.icon } };
       viewUpdate[`label-${i}`] = { textContent: data.label };
       viewUpdate[`title-${i}`] = { textContent: data.title };
-      if (!result.payload.results?.[i]) {
-        viewUpdate[`button-${i}`] = { attributes: { hidden: true, role: "" } };
+      if (data.hasOwnProperty("showBadge")) {
+        let showBadge = data.showBadge();
+        if (showBadge) {
+          viewUpdate[`badge-${i}`] = {
+            attributes: { hidden: null },
+          };
+          if (data.hasOwnProperty("badgeValue")) {
+            viewUpdate[`badge-${i}`].textContent = data.badgeValue();
+          }
+        } else {
+          viewUpdate[`badge-${i}`] = {
+            attributes: { hidden: true },
+          };
+        }
       }
     });
     return viewUpdate;
