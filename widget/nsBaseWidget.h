@@ -43,6 +43,7 @@ class gfxContext;
 namespace mozilla {
 class CompositorVsyncDispatcher;
 class LiveResizeListener;
+class FallbackRenderer;
 
 #ifdef ACCESSIBILITY
 namespace a11y {
@@ -396,13 +397,13 @@ class nsBaseWidget : public nsIWidget, public nsSupportsWeakReference {
   class AutoLayerManagerSetup {
    public:
     AutoLayerManagerSetup(nsBaseWidget* aWidget, gfxContext* aTarget,
-                          BufferMode aDoubleBuffering,
-                          ScreenRotation aRotation = mozilla::ROTATION_0);
+                          BufferMode aDoubleBuffering);
     ~AutoLayerManagerSetup();
 
    private:
     nsBaseWidget* mWidget;
     RefPtr<BasicLayerManager> mLayerManager;
+    mozilla::FallbackRenderer* mRenderer = nullptr;
   };
   friend class AutoLayerManagerSetup;
 
@@ -574,7 +575,7 @@ class nsBaseWidget : public nsIWidget, public nsSupportsWeakReference {
     return nsIWidget::CreateChildWindow();
   }
 
-  LayerManager* CreateBasicLayerManager();
+  WindowRenderer* CreateBasicLayerManager();
 
   nsPopupType PopupType() const { return mPopupType; }
 
@@ -700,7 +701,7 @@ class nsBaseWidget : public nsIWidget, public nsSupportsWeakReference {
   nsIWidgetListener* mWidgetListener;
   nsIWidgetListener* mAttachedWidgetListener;
   nsIWidgetListener* mPreviouslyAttachedWidgetListener;
-  RefPtr<LayerManager> mLayerManager;
+  RefPtr<WindowRenderer> mWindowRenderer;
   RefPtr<CompositorSession> mCompositorSession;
   RefPtr<CompositorBridgeChild> mCompositorBridgeChild;
 

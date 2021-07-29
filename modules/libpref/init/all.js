@@ -337,9 +337,7 @@ pref("pdfjs.renderInteractiveForms", true);
 pref("pdfjs.enableScripting", true);
 
 // Enable XFA form support in the PDF viewer.
-#ifdef EARLY_BETA_OR_EARLIER
 pref("pdfjs.enableXfa", true);
-#endif
 
 // Disable support for MathML
 pref("mathml.disabled",    false);
@@ -4432,17 +4430,6 @@ pref("services.common.log.logger.tokenserverclient", "Debug");
   // Delay server startup until a modal dialogue has been clicked to allow time
   // for user to set breakpoints in the Browser Toolbox.
   pref("marionette.debugging.clicktostart", false);
-
-  // Verbosity of Marionette logger repository.
-  //
-  // Available levels are, in descending order of severity, "trace", "debug",
-  // "config", "info", "warn", "error", and "fatal". The value is treated
-  // case-insensitively.
-  pref("marionette.log.level", "Info");
-
-  // Certain log messages that are known to be long are truncated. This
-  // preference causes them to not be truncated.
-  pref("marionette.log.truncate", true);
 
   // Port to start Marionette server on.
   pref("marionette.port", 2828);

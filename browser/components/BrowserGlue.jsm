@@ -1565,11 +1565,11 @@ BrowserGlue.prototype = {
       },
     ];
 
-    win.gHighPriorityNotificationBox.appendNotification(
+    win.gNotificationBox.appendNotification(
       message,
       "unsigned-addons-disabled",
       "",
-      win.gHighPriorityNotificationBox.PRIORITY_WARNING_MEDIUM,
+      win.gNotificationBox.PRIORITY_WARNING_MEDIUM,
       buttons
     );
   },

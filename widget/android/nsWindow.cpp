@@ -1612,6 +1612,15 @@ auto GeckoViewSupport::OnLoadRequest(mozilla::jni::String::Param aUri,
                                aHasUserGesture, aIsTopLevel);
 }
 
+void GeckoViewSupport::OnShowDynamicToolbar() const {
+  GeckoSession::Window::LocalRef window(mGeckoViewWindow);
+  if (!window) {
+    return;
+  }
+
+  window->OnShowDynamicToolbar();
+}
+
 void GeckoViewSupport::OnReady(jni::Object::Param aQueue) {
   GeckoSession::Window::LocalRef window(mGeckoViewWindow);
   if (!window) {
@@ -2177,21 +2186,21 @@ nsresult nsWindow::MakeFullScreen(bool aFullScreen, nsIScreen*) {
 }
 
 mozilla::WindowRenderer* nsWindow::GetWindowRenderer() {
-  if (mLayerManager) {
-    return mLayerManager;
+  if (mWindowRenderer) {
+    return mWindowRenderer;
   }
 
   if (mIsDisablingWebRender) {
     CreateLayerManager();
     mIsDisablingWebRender = false;
-    return mLayerManager;
+    return mWindowRenderer;
   }
 
   return nullptr;
 }
 
 void nsWindow::CreateLayerManager() {
-  if (mLayerManager) {
+  if (mWindowRenderer) {
     return;
   }
 
@@ -2207,7 +2216,7 @@ void nsWindow::CreateLayerManager() {
   if (ShouldUseOffMainThreadCompositing()) {
     LayoutDeviceIntRect rect = GetBounds();
     CreateCompositor(rect.Width(), rect.Height());
-    if (mLayerManager) {
+    if (mWindowRenderer) {
       return;
     }
 
@@ -2217,13 +2226,22 @@ void nsWindow::CreateLayerManager() {
 
   if (!ComputeShouldAccelerate() || sFailedToCreateGLContext) {
     printf_stderr(" -- creating basic, not accelerated\n");
-    mLayerManager = CreateBasicLayerManager();
+    mWindowRenderer = CreateBasicLayerManager();
   }
 }
 
 void nsWindow::NotifyDisablingWebRender() {
   mIsDisablingWebRender = true;
   RedrawAll();
+}
+
+void nsWindow::ShowDynamicToolbar() {
+  auto acc(mGeckoViewSupport.Access());
+  if (!acc) {
+    return;
+  }
+
+  acc->OnShowDynamicToolbar();
 }
 
 void nsWindow::OnSizeChanged(const gfx::IntSize& aSize) {
