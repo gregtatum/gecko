@@ -214,8 +214,8 @@ export class Media extends HTMLElement {
     let artwork = metadata?.artwork[0]
       ? "url(" + metadata.artwork[0].src + ")"
       : "";
-    this.title.textContent = metadata.title ?? this.tab.title;
-    this.artist.textContent = metadata.artist ?? "";
+    this.title.textContent = metadata?.title ?? this.tab.title;
+    this.artist.textContent = metadata?.artist ?? "";
     this.artwork.style.backgroundImage = artwork;
     this.artworkBackground.style.backgroundImage = artwork;
 
