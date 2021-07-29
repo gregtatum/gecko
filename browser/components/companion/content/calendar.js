@@ -152,10 +152,23 @@ class CalendarEvent extends MozLitElement {
         white-space: nowrap;
       }
 
+      .event-options-button {
+        padding: 0;
+        margin: 0;
+        min-width: auto;
+        width: 24px;
+        min-height: auto;
+        height: 24px;
+        background-image: url("chrome://global/skin/icons/more.svg");
+        background-repeat: no-repeat;
+        background-position: center;
+        fill: currentColor;
+      }
+
       .event-info {
         display: flex;
         flex-direction: row;
-        align-items: center;
+        align-items: start;
         justify-content: space-between;
         gap: 12px;
       }
@@ -202,17 +215,6 @@ class CalendarEvent extends MozLitElement {
       .date {
         color: var(--in-content-deemphasized-text);
         font-size: 11px;
-      }
-
-      .summary {
-        /* Make some space for the link's focus outline */
-        padding: 3px;
-        margin: -3px;
-      }
-
-      .summary > a {
-        text-decoration: none !important;
-        color: var(--in-content-page-color) !important;
       }
 
       .line-clamp {
@@ -262,6 +264,16 @@ class CalendarEvent extends MozLitElement {
         min-height: 0;
         padding: 5px;
       }
+
+      .event-card-top {
+        display: flex;
+        justify-content: end;
+        margin-block-end: 8px;
+      }
+
+      .event-options-button {
+        min-width: auto;
+      }
     `;
   }
 
@@ -275,6 +287,28 @@ class CalendarEvent extends MozLitElement {
     window.CompanionUtils.sendAsyncMessage("Companion:OpenCalendar", {
       event: this.event,
     });
+  }
+
+  openRunningLate(e) {
+    let emailTargets = this._getRunningLateTargets();
+    if (!emailTargets.length) {
+      return;
+    }
+    let emailTo = emailTargets.map(a => a.email).join(",");
+    window.openUrl(
+      `mailto:${emailTo}?subject=Running late to meeting ${this.event.summary}`
+    );
+  }
+
+  openMenu(e) {
+    if (
+      e.type == "click" &&
+      e.mozInputSource != MouseEvent.MOZ_SOURCE_KEYBOARD
+    ) {
+      // Only open on click for keyboard events, mousedown will open for pointer events.
+      return;
+    }
+    this.shadowRoot.querySelector("panel-list").toggle(e);
   }
 
   expandLinksSection(e) {
@@ -419,45 +453,45 @@ class CalendarEvent extends MozLitElement {
     return attendees;
   }
 
-  runningLateTemplate() {
-    let { summary } = this.event;
-    let emailTargets = this._getRunningLateTargets();
-    if (!emailTargets.length) {
-      return "";
-    }
-    let emailTo = emailTargets.map(a => a.email).join(",");
-    // FIXME: (l10n) The subject should get localised.
-    return html`
-      <a
-        class="button-link"
-        href="mailto:${emailTo}?subject=Running late to meeting ${summary}"
-        data-l10n-id="companion-email-late"
-        @click=${openLink}
-      ></a>
-    `;
-  }
-
   render() {
     let { summary } = this.event;
 
     return html`
       <div class="event card card-no-hover">
+        <div class="event-card-top">
+          <button
+            class="ghost-button event-options-button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            @mousedown=${this.openMenu}
+            @click=${this.openMenu}
+            title="More options"
+          ></button>
+        </div>
         <div class="event-info">
           <div class="event-content">
-            <div class="summary line-clamp" title=${summary}>
-              <a href="#" @click=${this.openCalendar}>
-                ${summary}
-              </a>
-            </div>
+            <div class="summary line-clamp" title=${summary}>${summary}</div>
             <div class="event-sub-details">
               ${this.conferenceInfoTemplate()} ${this.eventTimeTemplate()}
             </div>
           </div>
           <div class="event-actions">
-            ${this.runningLateTemplate()} ${this.joinConferenceTemplate()}
+            ${this.joinConferenceTemplate()}
           </div>
         </div>
         ${this.eventLinksTemplate()}
+        <panel-list>
+          <panel-item
+            class="event-item-running-late-action"
+            data-l10n-id="companion-email-late"
+            @click=${this.openRunningLate}
+            ?hidden=${!this._getRunningLateTargets().length}
+          ></panel-item>
+          <panel-item
+            data-l10n-id="companion-open-calendar"
+            @click=${this.openCalendar}
+          ></panel-item>
+        </panel-list>
       </div>
     `;
   }

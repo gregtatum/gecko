@@ -19,6 +19,11 @@ function toggleSettings() {
 }
 window.addEventListener("Companion:ToggleSettings", toggleSettings);
 
+// Helper to open a URL in the main browser pane.
+window.openUrl = url => {
+  window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", { url });
+};
+
 let loadObserved = false;
 let companionSetupObserved = false;
 function maybeInitializeUI() {
