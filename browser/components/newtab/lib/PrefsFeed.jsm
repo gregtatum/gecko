@@ -66,7 +66,7 @@ this.PrefsFeed = class PrefsFeed {
    * Handler for when experiment data updates.
    */
   onExperimentUpdated(event, reason) {
-    const value = NimbusFeatures.newtab.getValue() || {};
+    const value = NimbusFeatures.newtab.getAllVariables() || {};
     this.store.dispatch(
       ac.BroadcastToContent({
         type: at.PREF_CHANGED,
@@ -172,11 +172,16 @@ this.PrefsFeed = class PrefsFeed {
     });
 
     // Add experiment values and default values
-    values.featureConfig = NimbusFeatures.newtab.getValue() || {};
+    values.featureConfig = NimbusFeatures.newtab.getAllVariables() || {};
     values.pocketConfig = NimbusFeatures.pocketNewtab.getAllVariables() || {};
     this._setBoolPref(values, "logowordmark.alwaysVisible", false);
     this._setBoolPref(values, "feeds.section.topstories", false);
     this._setBoolPref(values, "discoverystream.enabled", false);
+    this._setBoolPref(
+      values,
+      "discoverystream.sponsored-collections.enabled",
+      false
+    );
     this._setBoolPref(values, "discoverystream.isCollectionDismissible", false);
     this._setBoolPref(values, "discoverystream.hardcoded-basic-layout", false);
     this._setBoolPref(values, "discoverystream.recs.personalized", false);

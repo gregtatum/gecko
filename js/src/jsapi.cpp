@@ -63,7 +63,6 @@
 #include "js/JSON.h"
 #include "js/LocaleSensitive.h"
 #include "js/MemoryFunctions.h"
-#include "js/Object.h"                      // JS::SetPrivate
 #include "js/OffThreadScriptCompilation.h"  // js::UseOffThreadParseGlobal
 #include "js/PropertySpec.h"
 #include "js/Proxy.h"
@@ -207,8 +206,10 @@ bool JS::ObjectOpResult::reportError(JSContext* cx, HandleObject obj,
     }
 
     if (ErrorTakesObjectArgument(code_)) {
+      JSObject* unwrapped = js::CheckedUnwrapStatic(obj);
+      const char* name = unwrapped ? unwrapped->getClass()->name : "Object";
       JS_ReportErrorNumberUTF8(cx, GetErrorMessage, nullptr, code_,
-                               obj->getClass()->name, propName.get());
+                               name, propName.get());
       return false;
     }
 
@@ -1674,20 +1675,6 @@ JS_PUBLIC_API bool JS_HasInstance(JSContext* cx, HandleObject obj,
   return HasInstance(cx, obj, value, bp);
 }
 
-void JS::SetPrivate(JSObject* obj, void* data) {
-  /* This function can be called by a finalizer. */
-  obj->as<NativeObject>().setPrivate(data);
-}
-
-JS_PUBLIC_API void* JS_GetInstancePrivate(JSContext* cx, HandleObject obj,
-                                          const JSClass* clasp,
-                                          CallArgs* args) {
-  if (!JS_InstanceOf(cx, obj, clasp, args)) {
-    return nullptr;
-  }
-  return obj->as<NativeObject>().getPrivate();
-}
-
 JS_PUBLIC_API JSObject* JS_GetConstructor(JSContext* cx, HandleObject proto) {
   AssertHeapIsIdle();
   CHECK_THREAD(cx);
@@ -1735,13 +1722,6 @@ JS::RealmCreationOptions& JS::RealmCreationOptions::setExistingCompartment(
 
 JS::RealmCreationOptions& JS::RealmCreationOptions::setNewCompartmentAndZone() {
   compSpec_ = CompartmentSpecifier::NewCompartmentAndZone;
-  comp_ = nullptr;
-  return *this;
-}
-
-JS::RealmCreationOptions&
-JS::RealmCreationOptions::setNewCompartmentInSelfHostingZone() {
-  compSpec_ = CompartmentSpecifier::NewCompartmentInSelfHostingZone;
   comp_ = nullptr;
   return *this;
 }
@@ -2102,11 +2082,6 @@ JS_PUBLIC_API void JS_InitReservedSlot(JSObject* obj, uint32_t index, void* ptr,
                                        size_t nbytes, JS::MemoryUse use) {
   InitReservedSlot(&obj->as<NativeObject>(), index, ptr, nbytes,
                    js::MemoryUse(use));
-}
-
-JS_PUBLIC_API void JS_InitPrivate(JSObject* obj, void* data, size_t nbytes,
-                                  JS::MemoryUse use) {
-  InitObjectPrivate(&obj->as<NativeObject>(), data, nbytes, js::MemoryUse(use));
 }
 
 JS_PUBLIC_API bool JS::IsMapObject(JSContext* cx, JS::HandleObject obj,

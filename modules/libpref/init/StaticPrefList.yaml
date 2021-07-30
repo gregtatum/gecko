@@ -4782,11 +4782,6 @@
   value: true
   mirror: always
 
-- name: gfx.basic_layer_manager.force_enabled
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
 #  Whether to enable LayerScope tool and default listening port.
 - name: gfx.layerscope.enabled
   type: RelaxedAtomicBool
@@ -6830,7 +6825,7 @@
 # We don't use this for text, so we need a contrast of at least AA (for user
 # interface components and graphical objects), which per WCAG is 3:1
 - name: layout.css.accent-color.min-contrast-ratio
-  type: float
+  type: AtomicFloat
   value: 3.0
   mirror: always
 
@@ -6840,7 +6835,7 @@
 # We aim a bit further than the minimum contrast ratio, which seems to provide
 # nice results in practice.
 - name: layout.css.accent-color.darkening-target-contrast-ratio
-  type: float
+  type: AtomicFloat
   value: 6.0
   mirror: always
 
@@ -9202,6 +9197,14 @@
   value: 2
   mirror: always
 
+# Set to ignore referrer policies which is less restricted than the default for
+# cross-site requests, including 'unsafe-url', 'no-referrer-when-downgrade' and
+# 'origin-when-cross-origin'.
+- name: network.http.referer.disallowCrossSiteRelaxingDefault
+  type: bool
+  value: @IS_EARLY_BETA_OR_EARLIER@
+  mirror: always
+
 # Set the Private Browsing Default Referrer Policy applied to third-party
 # trackers when the default cookie policy is set to reject third-party
 # trackers, to be used unless overriden by the site.
@@ -11371,7 +11374,7 @@
 
 - name: webgl.enable-debug-renderer-info
   type: RelaxedAtomicBool
-  value: false
+  value: true
   mirror: always
 
 - name: webgl.enable-draft-extensions
@@ -11495,7 +11498,7 @@
 
 - name: webgl.sanitize-unmasked-renderer
   type: RelaxedAtomicBool
-  value: false
+  value: true
   mirror: always
 
 - name: webgl.allow-immediate-queries
