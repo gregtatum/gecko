@@ -731,6 +731,11 @@ class CompanionParent extends JSWindowActorParent {
         });
         break;
       }
+      case "Companion:DeleteSnapshot": {
+        let { url } = message.data;
+        await Snapshots.delete(url);
+        break;
+      }
       case "Companion:setCharPref": {
         let { name, value } = message.data;
         if (!this.validateCompanionPref(name)) {

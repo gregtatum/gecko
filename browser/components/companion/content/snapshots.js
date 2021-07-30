@@ -103,12 +103,36 @@ export class Snapshot extends HTMLElement {
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
+    this.addEventListener("mouseover", this);
+    this.addEventListener("mouseout", this);
   }
 
-  handleEvent() {
-    window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
-      url: this.data.url,
-    });
+  handleEvent(event) {
+    switch (event.type) {
+      case "mouseover": {
+        if (event.target.classList.contains("snapshot-delete")) {
+          this.toggleAttribute("removeIsHovered", true);
+        }
+        break;
+      }
+      case "mouseout": {
+        if (event.target.classList.contains("snapshot-delete")) {
+          this.removeAttribute("removeIsHovered");
+        }
+        break;
+      }
+      case "click": {
+        if (event.target.classList.contains("snapshot-delete")) {
+          window.CompanionUtils.sendAsyncMessage("Companion:DeleteSnapshot", {
+            url: this.data.url,
+          });
+          break;
+        }
+        window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
+          url: this.data.url,
+        });
+      }
+    }
   }
 }
 
