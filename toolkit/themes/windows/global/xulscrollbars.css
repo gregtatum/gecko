@@ -91,3 +91,79 @@ scrollbar[orient="vertical"] > scrollbarbutton[type="decrement"] {
   appearance: auto;
   -moz-default-appearance: scrollbarbutton-up;
 }
+
+/* Experimental scrollbar styling changes to support MR2, which do not work
+   in high contrast mode. */
+@supports -moz-bool-pref("browser.companion.styleoverrides") {
+  @media not (prefers-contrast) {
+    /* These styles are pulled directly from the devtools
+       floating-scrollbars-responsive-design stylesheet, except the selectors
+       are not constrained to the responsive preview window. */
+    scrollbar {
+      appearance: none !important;
+      position: relative;
+      background-color: transparent;
+      background-image: none;
+      padding: 2px;
+      border: none;
+    }
+
+    scrollbar[orient="vertical"] {
+      margin-left: -10px;
+      min-width: 10px;
+      max-width: 10px;
+    }
+
+    scrollbar[orient="horizontal"] {
+      margin-top: -10px;
+      min-height: 10px;
+      max-height: 10px;
+    }
+
+    scrollbar slider {
+      appearance: none !important;
+    }
+
+    scrollbar thumb {
+      appearance: none !important;
+      background-color: rgba(0, 0, 0, 0.2);
+      border-width: 0px !important;
+      border-radius: 3px !important;
+    }
+
+    scrollbar scrollbarbutton,
+    scrollbar gripper {
+      display: none;
+    }
+    /* End of responsive scrollbar styles */
+
+    /* Start of MR2 scrollbar styling, see MR2-178 for more */
+    scrollbar[orient="vertical"] {
+      margin-left: -16px;
+      min-width: 16px;
+      max-width: 16px;
+    }
+
+    scrollbar[orient="horizontal"] {
+      margin-top: -16px;
+      min-height: 16px;
+      max-height: 16px;
+    }
+
+    thumb[orient="vertical"] {
+      min-height: 16px !important;
+    }
+
+    thumb[orient="horizontal"] {
+      min-width: 16px !important;
+    }
+
+    scrollbar thumb {
+      opacity: 0.5 !important;
+      border: 1px solid white;
+      border-radius: 0 !important;
+      background-color: #7F7F7F !important;
+    }
+    /* End of MR2 scrollbar styling */
+  }
+}
