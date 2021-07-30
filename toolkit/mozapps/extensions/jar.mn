@@ -19,8 +19,6 @@ toolkit.jar:
   content/mozapps/extensions/firefox-compact-dark.svg           (content/firefox-compact-dark.svg)
   content/mozapps/extensions/firefox-compact-light.svg          (content/firefox-compact-light.svg)
   content/mozapps/extensions/firefox-alpenglow.svg              (content/firefox-alpenglow.svg)
-  content/mozapps/extensions/panel-list.css                     (content/panel-list.css)
-  content/mozapps/extensions/panel-item.css                     (content/panel-item.css)
   content/mozapps/extensions/rating-star.css                    (content/rating-star.css)
   content/mozapps/extensions/shortcuts.css                      (content/shortcuts.css)
   content/mozapps/extensions/shortcuts.js                       (content/shortcuts.js)
