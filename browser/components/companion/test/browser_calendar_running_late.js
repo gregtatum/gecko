@@ -3,37 +3,6 @@
 
 "use strict";
 
-const checkMailtoUrl = async (helper, index_, expected) => {
-  let openedUrl = helper.catchNextOpenedUrl();
-  await helper.runCompanionTask(
-    async index => {
-      let calendarEventList = content.document.querySelector(
-        "calendar-event-list"
-      );
-      let visibleEvents = calendarEventList.shadowRoot.querySelectorAll(
-        "calendar-event"
-      );
-      let event = visibleEvents[index];
-      let openMenuButton = event.shadowRoot.querySelector(
-        ".event-options-button"
-      );
-      let panelMenu = event.shadowRoot.querySelector("panel-list");
-      const EventUtils = ContentTaskUtils.getEventUtils(content);
-      EventUtils.synthesizeMouseAtCenter(openMenuButton, {}, content);
-      await ContentTaskUtils.waitForEvent(panelMenu, "shown");
-      let runningLateButton = event.shadowRoot.querySelector(
-        ".event-item-running-late-action"
-      );
-      ok(!runningLateButton.hidden, "Running late button is visible");
-      runningLateButton.click();
-    },
-    [index_]
-  );
-
-  let url = await openedUrl;
-  is(url, expected, "Expected URL was opened");
-};
-
 add_task(async function testRunningLate() {
   await CompanionHelper.withCalendarReady(async helper => {
     await helper.runCompanionTask(() => {
@@ -66,19 +35,25 @@ add_task(async function testRunningLate() {
         "calendar-event"
       );
       is(visibleEvents.length, 2, "There are now 2 events");
+
+      let event = visibleEvents[0];
+      let mailtoLink = event.shadowRoot.querySelector('[href^="mailto:"]');
+      ok(mailtoLink, "There's a link to mailto: the email");
+      is(
+        mailtoLink.href,
+        "mailto:attendee@example.com?subject=Running late to meeting My test event",
+        "The mailto link as organizer exists"
+      );
+
+      event = visibleEvents[1];
+      mailtoLink = event.shadowRoot.querySelector('[href^="mailto:"]');
+      ok(mailtoLink, "There's a link to mailto: the email");
+      is(
+        mailtoLink.href,
+        "mailto:organizer@example.com?subject=Running late to meeting Your test event",
+        "The mailto link for organizer exists"
+      );
     });
-
-    await checkMailtoUrl(
-      helper,
-      0,
-      "mailto:attendee@example.com?subject=Running late to meeting My test event"
-    );
-
-    await checkMailtoUrl(
-      helper,
-      1,
-      "mailto:organizer@example.com?subject=Running late to meeting Your test event"
-    );
   });
 });
 
@@ -100,13 +75,14 @@ add_task(async function testRunningLateXss() {
         "calendar-event"
       );
       is(visibleEvents.length, 1, "There's an event");
+      let event = visibleEvents[0];
+      let mailtoLink = event.shadowRoot.querySelector('[href^="mailto:"]');
+      ok(mailtoLink, "There's a link to mailto: the email");
+      ok(
+        mailtoLink.href.includes("onclick="),
+        "The onclick was added to the href, not on its own"
+      );
     });
-
-    await checkMailtoUrl(
-      helper,
-      0,
-      `mailto:uhoh@example.com?subject=Running late to meeting My XSS event" onclick="alert('hi')""`
-    );
   });
 });
 
@@ -129,10 +105,8 @@ add_task(async function testNoAttendees() {
       );
       is(visibleEvents.length, 1, "There's an event");
       let event = visibleEvents[0];
-      let runningLateButton = event.shadowRoot.querySelector(
-        ".event-item-running-late-action"
-      );
-      ok(runningLateButton.hidden, "The running late button is hidden");
+      let mailtoLink = event.shadowRoot.querySelector('[href^="mailto:"]');
+      ok(!mailtoLink, "There's no mailto: link");
     });
   });
 });

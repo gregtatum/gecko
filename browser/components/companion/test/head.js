@@ -51,22 +51,8 @@ class CompanionHelper {
     );
   }
 
-  runCompanionTask(taskFn, args = []) {
-    return SpecialPowers.spawn(this.browser, args, taskFn);
-  }
-
-  catchNextOpenedUrl() {
-    info("catchNextOpenedUrl");
-    return this.runCompanionTask(async () => {
-      let oldOpenUrl = content.window.openUrl;
-      try {
-        return await new Promise(resolve => {
-          content.window.openUrl = url => resolve(url);
-        });
-      } finally {
-        content.window.openUrl = oldOpenUrl;
-      }
-    });
+  async runCompanionTask(taskFn, args = []) {
+    await SpecialPowers.spawn(this.browser, args, taskFn);
   }
 
   get calendarReady() {
