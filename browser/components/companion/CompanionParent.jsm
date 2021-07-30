@@ -482,11 +482,7 @@ class CompanionParent extends JSWindowActorParent {
    * @returns {array} A list of snapshots.
    */
   async getSnapshots() {
-    let snapshots = await Snapshots.query();
-    for (let snapshot of snapshots) {
-      await this.ensurePlacesDataCached(snapshot.url);
-    }
-    return snapshots;
+    return Snapshots.query();
   }
 
   async observe(subj, topic, data) {
@@ -729,11 +725,6 @@ class CompanionParent extends JSWindowActorParent {
         this.browsingContext.topChromeWindow.switchToTabHavingURI(url, true, {
           ignoreFragment: true,
         });
-        break;
-      }
-      case "Companion:DeleteSnapshot": {
-        let { url } = message.data;
-        await Snapshots.delete(url);
         break;
       }
       case "Companion:setCharPref": {
