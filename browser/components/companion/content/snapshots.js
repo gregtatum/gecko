@@ -7,6 +7,7 @@ const { shortURL } = ChromeUtils.import(
 );
 
 const MAX_SNAPSHOTS = 5;
+const DEFAULT_FAVICON = "chrome://global/skin/icons/defaultFavicon.svg";
 
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
@@ -94,8 +95,11 @@ export class Snapshot extends HTMLElement {
     let dateEl = fragment.querySelector(".snapshot-date");
     dateEl.textContent = timeSince(this.data.lastInteractionAt);
 
-    // TODO: MR2-344: Fetch site image preview and display it in
-    // .snapshot-favicon > img.
+    // TODO: MR2-344: Fetch a richer image preview and display it along with the
+    // favicon.
+    let iconEl = fragment.querySelector(".snapshot-favicon > img");
+    iconEl.src =
+      window.CompanionUtils.getPlacesData(url.href)?.icon || DEFAULT_FAVICON;
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
