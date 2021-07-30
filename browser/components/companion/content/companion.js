@@ -49,6 +49,14 @@ window.addEventListener(
   { once: true }
 );
 
+const DEBUG_PREF = "browser.companion.debugUI";
+function toggleDebug() {
+  document.body.classList.toggle(
+    "debugUI",
+    window.CompanionUtils.getBoolPref(DEBUG_PREF, false)
+  );
+}
+
 let OBSERVED_PREFS = new Map();
 window.addEventListener(
   "Companion:Setup",
@@ -76,13 +84,6 @@ window.addEventListener(
 
     // Add the ability to show elements with class="debug" that help development
     // behind the "companion.debugUI" pref.
-    let DEBUG_PREF = "browser.companion.debugUI";
-    let toggleDebug = () =>
-      document.body.classList.toggle(
-        "debugUI",
-        window.CompanionUtils.getBoolPref(DEBUG_PREF, false)
-      );
-
     window.CompanionUtils.addPrefObserver(DEBUG_PREF, toggleDebug);
     toggleDebug();
     maybeInitializeUI();
@@ -94,6 +95,7 @@ window.addEventListener("unload", () => {
   for (let [prefName, cb] of OBSERVED_PREFS) {
     window.CompanionUtils.removePrefObserver(prefName, cb);
   }
+  window.CompanionUtils.removePrefObserver(DEBUG_PREF, toggleDebug);
 });
 
 document.dispatchEvent(new CustomEvent("CompanionInit", { bubbles: true }));
