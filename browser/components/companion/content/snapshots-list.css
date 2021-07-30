@@ -29,8 +29,14 @@
   border-radius: 4px;
   background-color: var(--button-bgcolor);
   display: flex;
+  align-items: center;
   justify-content: center;
   position: relative;
+}
+
+.snapshot-favicon > img {
+  width: 20px;
+  height: 20px;
 }
 
 .snapshot .title {

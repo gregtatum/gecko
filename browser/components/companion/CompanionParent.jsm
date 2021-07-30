@@ -482,7 +482,11 @@ class CompanionParent extends JSWindowActorParent {
    * @returns {array} A list of snapshots.
    */
   async getSnapshots() {
-    return Snapshots.query();
+    let snapshots = await Snapshots.query();
+    for (let snapshot of snapshots) {
+      await this.ensurePlacesDataCached(snapshot.url);
+    }
+    return snapshots;
   }
 
   async observe(subj, topic, data) {
