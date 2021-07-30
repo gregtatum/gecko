@@ -149,6 +149,46 @@
         <vbox id="active-view-manager-overflow-list" class="panel-subview-body"></vbox>
       </panel>
     </html:template>
+    <html:template id="template-page-action-menu">
+      <panel id="page-action-panel">
+        <panelmultiview id="page-action-panel-multiview" mainViewId="page-action-panel-mainview">
+          <panelview id="page-action-panel-mainview">
+          <vbox id="page-action-panel-sections">
+            <hbox id="page-actions-section">
+              <div>
+                <img />
+                <span>Pin</span>
+              </div>
+              <div>
+                <img />
+                <span>Copy</span>
+              </div>
+              <div>
+                <img />
+                <span>Mute</span>
+              </div>
+              <div>
+                <img />
+                <span>Picture-in-Picture</span>
+              </div>
+              <div>
+                <img />
+                <span>Reader Mode</span>
+              </div>
+              <div>
+                <img />
+                <span>More</span>
+              </div>
+            </hbox>
+            <hbox id="site-info-section">
+              <div id="site-info-title"></div>
+              <div id="site-info-url"></div>
+            </hbox>
+          </vbox>
+          </panelview>
+        </panelmultiview>
+      </panel>
+    </html:template>
   </popupset>
 
 #include appmenu-viewcache.inc.xhtml

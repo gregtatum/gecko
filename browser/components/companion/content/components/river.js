@@ -12,7 +12,6 @@ const { XPCOMUtils } = ChromeUtils.import(
 
 export default class River extends MozLitElement {
   #views;
-  #overflowButton;
 
   static get properties() {
     return {

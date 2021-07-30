@@ -185,3 +185,61 @@
 #active-view-manager-overflow-panel > .panel-subview-body {
   padding-block-end: var(--arrowpanel-menuitem-padding-block);
 }
+
+#page-action-panel,
+#page-action-panel-sections {
+  max-width: 428px;
+  height: 230px;
+}
+
+#page-action-panel-sections {
+  display: grid;
+  grid-template: 1fr 1fr / 1fr;
+  padding-inline: 8px;
+}
+
+#page-actions-section {
+  grid-template: 1fr / repeat(6, auto);
+  display: grid;
+  padding-bottom: 10px;
+  border-bottom: 1px lightgray solid;
+}
+
+#page-actions-section > div {
+  display: grid;
+  grid-template: 75% 25% / 1fr;
+  justify-items: center;
+  padding-block: 15px 5px;
+}
+
+#page-actions-section > div > img {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: #F9F9FB;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+#page-actions-section > div > span {
+  max-width: 70px;
+  display: block;
+  text-align: center;
+  font-size: 10px;
+}
+
+#site-info-section {
+  display: grid;
+  grid-template: 1fr 1fr / 1fr;
+  padding: 16px 8px;
+}
+
+#site-info-section > div {
+  padding: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radis: 4px;
+}
+
+#site-info-title {
+  font-size: 14px;
+}

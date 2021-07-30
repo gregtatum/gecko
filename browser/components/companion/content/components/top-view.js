@@ -6,9 +6,13 @@ import { MozLitElement } from "chrome://browser/content/companion/widget-utils.j
 import { html } from "chrome://browser/content/companion/lit.all.js";
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { PanelMultiView } = ChromeUtils.import(
+  "resource:///modules/PanelMultiView.jsm"
+);
 
 class TopView extends MozLitElement {
   #principal;
+  #pageActionPanel;
 
   static get properties() {
     return {
@@ -27,6 +31,49 @@ class TopView extends MozLitElement {
       },
     ];
     this.#principal = Services.scriptSecurityManager.createNullPrincipal({});
+  }
+
+  handleEvent(event) {
+    switch (event.type) {
+      case "popupshowing":
+        if (event.target == this.#pageActionPanel) {
+          this.pageActionPanelShowing();
+        }
+        break;
+      case "click":
+        if (event.currentTarget == this.#pageActionPanel) {
+          this.#pageActionPanel.hidePopup();
+        }
+        break;
+    }
+  }
+
+  pageActionPanelShowing() {
+    let pageActionTitleEl = document.getElementById("site-info-title");
+    pageActionTitleEl.textContent = this.activeView.title;
+
+    let pageActionUrlEl = document.getElementById("site-info-url");
+    pageActionUrlEl.textContent = this.activeView.url.spec;
+  }
+
+  getOrCreatePageActionPanel() {
+    let panel = document.getElementById("page-action-panel");
+    if (!panel) {
+      let template = document.getElementById("template-page-action-menu");
+      template.replaceWith(template.content);
+      panel = document.getElementById("page-action-panel");
+      panel.addEventListener("popupshowing", this);
+      panel.addEventListener("click", this);
+    }
+
+    return panel;
+  }
+
+  pageActionButtonClicked(event) {
+    this.#pageActionPanel = this.getOrCreatePageActionPanel();
+    PanelMultiView.openPopup(this.#pageActionPanel, event.target, {
+      position: "bottomcenter topright",
+    }).catch(Cu.reportError);
   }
 
   addView(view) {
@@ -93,7 +140,10 @@ class TopView extends MozLitElement {
         .views=${this._viewGroup}
         .activeView=${this.activeView}
       ></view-group>
-    `;
+      <img id="page-action-button"
+           src="chrome://global/skin/icons/arrow-down.svg"
+           @click="${this.pageActionButtonClicked}"
+      ></img>`;
   }
 }
 customElements.define("top-view", TopView);

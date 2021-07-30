@@ -20,3 +20,19 @@ view-group::part(label-container) {
 view-group::part(title) {
   font-size: 1.25rem;
 }
+
+#page-action-button {
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  padding: 4px;
+  margin-inline: 8px;
+}
+
+#page-action-button:hover {
+  background-color: #CFCFD8;
+}
+
+#page-action-button:active {
+  background-color: gray;
+}

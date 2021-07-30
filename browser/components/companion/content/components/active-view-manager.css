@@ -14,3 +14,7 @@ active-view-manager {
   min-width: 16px;
   -moz-window-dragging: no-drag;
 }
+
+top-view {
+  display: flex;
+}
