@@ -740,11 +740,6 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
         ]:
             return False
 
-        if task.optimization is not None:
-            if platform != "macosx64":
-                if "webrender" in task.optimization.get("test", []):
-                    return False
-
         if "unittest_suite" in task.attributes:
             if not task.attributes["unittest_suite"].endswith("-companion"):
                 return False
