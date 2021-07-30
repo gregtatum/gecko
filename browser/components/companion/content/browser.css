@@ -33,6 +33,10 @@
   -moz-box-flex: 1;
 }
 
+:root[companion][inDOMFullscreen] #companion-box {
+  visibility: collapse;
+}
+
 #nav-bar:hover river-el::part(domain),
 #nav-bar:hover top-view::part(domain),
 #nav-bar:not(:hover) river-el::part(history),
