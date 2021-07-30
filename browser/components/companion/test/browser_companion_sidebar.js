@@ -3,26 +3,26 @@
 
 "use strict";
 
-/* Ensures that the companion settings page is shown and
-   the debug sliders are available.
-*/
-add_task(async function test_settings_shown() {
-  let menuButton = document.getElementById("PanelUI-menu-button");
-  menuButton.click();
-  await BrowserTestUtils.waitForEvent(window.PanelUI.mainView, "ViewShown");
+/* Ensures that the companion can be opened. */
+add_task(async function test_open_companion() {
+  let helper = new CompanionHelper();
+  await helper.closeCompanion();
 
-  let companionSettings = document.getElementById("companion-settings-button");
-  companionSettings.click();
-
-  await BrowserTestUtils.waitForCondition(
-    () => document.getElementById("companion-box") != null
+  ok(
+    !document.getElementById("companion-browser"),
+    "There's no companion browser"
   );
 
-  let companionBrowser = document
-    .getElementById("companion-box")
-    .querySelector("#companion-browser");
+  await helper.openCompanion();
 
-  await SpecialPowers.spawn(companionBrowser, [], async () => {
-    ok(content.document.getElementById("sliders"), "Sliders are available");
+  ok(
+    document.getElementById("companion-browser"),
+    "The companion has been opened"
+  );
+  await helper.runCompanionTask(() => {
+    ok(
+      content.document.querySelector(".companion-main"),
+      "The companion content is available"
+    );
   });
 });
