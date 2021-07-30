@@ -12,6 +12,7 @@ const { AppConstants } = ChromeUtils.import(
 const { E10SUtils } = ChromeUtils.import(
   "resource://gre/modules/E10SUtils.jsm"
 );
+const { Snapshots } = ChromeUtils.import("resource:///modules/Snapshots.jsm");
 
 if (!AppConstants.PROCLIENT_ENABLED) {
   throw new Error(
@@ -171,6 +172,17 @@ const CompanionService = {
     );
     clipboard.copyString(string);
     anchor.ownerGlobal.ConfirmationHint.show(anchor, "copyURL");
+  },
+
+  /**
+   * Adds a specified URL as a Snapshot.
+   * @param {Node} anchor The element from which the pin was initiated.
+   * @param {string} The URL that will be added as a snapshot.
+   */
+  createSnapshot(anchor, url) {
+    Snapshots.add({ url, userPersisted: true }).then(() => {
+      anchor.ownerGlobal.ConfirmationHint.show(anchor, "pinTab");
+    });
   },
 };
 

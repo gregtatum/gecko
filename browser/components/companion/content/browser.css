@@ -119,6 +119,10 @@
   list-style-image: url("chrome://browser/content/companion/link.svg");
 }
 
+#companion-snapshot-button {
+  list-style-image: url("chrome://browser/content/companion/snapshot-temporary.svg");
+}
+
 #companion-sidebar-button {
   list-style-image: url("chrome://browser/skin/sidebars-right.svg");
 }
