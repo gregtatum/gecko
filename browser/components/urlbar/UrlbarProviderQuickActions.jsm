@@ -37,7 +37,7 @@ const COMMANDS = {
   checkgmail: {
     commands: ["check-gmail"],
     icon: "chrome://browser/content/urlbar/quickactions/gmail.svg",
-    label: "Check Gmail",
+    label: "Go to Inbox",
     callback: openUrl("https://gmail.com"),
     title: "Gmail",
     hide() {
@@ -45,6 +45,25 @@ const COMMANDS = {
     },
     showBadge() {
       return !!OnlineServices.getMailCount("google");
+    },
+  },
+  checkoutlook: {
+    commands: ["check-outlook"],
+    icon: "chrome://browser/content/urlbar/quickactions/outlook.svg",
+    label: "Go to Inbox",
+    callback: () => {
+      let inboxURL = OnlineServices.getInboxURL("microsoft");
+      openUrl(inboxURL)();
+    },
+    title: "Outlook",
+    hide() {
+      return (
+        !OnlineServices.getInboxURL("microsoft") ||
+        !OnlineServices.getMailCount("microsoft")
+      );
+    },
+    showBadge() {
+      return !!OnlineServices.getMailCount("microsoft");
     },
   },
   createmeeting: {

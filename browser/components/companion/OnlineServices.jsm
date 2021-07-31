@@ -680,6 +680,7 @@ class MicrosoftService {
       // This is required or we don't get a refreshToken
       "offline_access",
       "https://graph.microsoft.com/Calendars.Read",
+      "https://graph.microsoft.com/Mail.Read",
     ];
 
     this.auth = new OAuth2(
@@ -690,6 +691,12 @@ class MicrosoftService {
       services[this.app].clientSecret,
       config?.auth
     );
+    this.getUnreadCount();
+    this.mailCountTimer = setInterval(
+      this.getUnreadCount.bind(this),
+      60 * 1000
+    );
+    this.getInboxURL();
   }
 
   async connect() {
@@ -753,7 +760,7 @@ class MicrosoftService {
     log.debug(JSON.stringify(results));
 
     if (results.error) {
-      log.error(response.error.message);
+      log.error(results.error.message);
       return [];
     }
 
@@ -786,8 +793,8 @@ class MicrosoftService {
       results = await response.json();
       log.debug(JSON.stringify(results));
 
-      if (response.error) {
-        log.error(response.error.message);
+      if (results.error) {
+        log.error(results.error.message);
         continue;
       }
 
@@ -821,6 +828,65 @@ class MicrosoftService {
       }
     }
     return Array.from(allEvents.values()).sort((a, b) => a.start - b.start);
+  }
+
+  async getInboxURL() {
+    // Hacky, buy I can't find anyway to get the inbox URL
+    // without looking at an email.
+    if (!this.inboxURL) {
+      let token = await this.getToken();
+
+      let apiTarget = new URL(
+        "https://graph.microsoft.com/v1.0/me/messages?$top=1&$select=webLink"
+      );
+
+      let headers = {
+        Authorization: `Bearer ${token}`,
+      };
+
+      let response = await fetch(apiTarget, {
+        headers,
+      });
+
+      let results = await response.json();
+      log.debug(JSON.stringify(results));
+
+      if (results.error) {
+        log.error(results.error.message);
+      }
+      if (results.error || !results.value?.length) {
+        this.inboxURL = "https://outlook.com";
+      } else {
+        this.inboxURL = results.value[0].webLink.split("?")[0];
+      }
+    }
+  }
+
+  async getUnreadCount() {
+    let token = await this.getToken();
+
+    // By just selecting the ID, we're getting as little data as we need.
+    // I couldn't find a way to just get the count.
+    let apiTarget = new URL(
+      "https://graph.microsoft.com/v1.0/me/mailFolders/Inbox/messages?$filter=isRead ne true&$count=true&$select=id"
+    );
+
+    let headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    let response = await fetch(apiTarget, {
+      headers,
+    });
+
+    let results = await response.json();
+    log.debug(JSON.stringify(results));
+
+    if (results.error) {
+      log.error(results.error.message);
+      this.mailCount = 0;
+    }
+    this.mailCount = results["@odata.count"];
   }
 
   _normalizeUser(user, { self } = {}) {
@@ -944,6 +1010,15 @@ const OnlineServices = {
       }
     }
     return mailCount;
+  },
+
+  getInboxURL(type) {
+    for (let service of ServiceInstances) {
+      if (service.app.startsWith(type)) {
+        return service.inboxURL;
+      }
+    }
+    return null;
   },
 
   getServices() {
