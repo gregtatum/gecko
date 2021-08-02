@@ -137,32 +137,20 @@ export class Snapshot extends HTMLElement {
 }
 
 export class SnapshotList extends HidableElement {
-  constructor() {
+  constructor(snapshotTitle) {
     super();
     this.className = "snapshot-list";
 
     let template = document.getElementById("template-snapshot-list");
     let fragment = template.content.cloneNode(true);
 
-    fragment.querySelector(".list-title").textContent = "Suggested Snapshots";
+    fragment.querySelector(".list-title").textContent = snapshotTitle;
 
     this.appendChild(fragment);
-
-    this.dbListener = () => this.updateSnapshots();
   }
 
-  async connectedCallback() {
-    window.addEventListener("Companion:SnapshotsChanged", this.dbListener);
-    await this.updateSnapshots();
-  }
-
-  disconnectedCallback() {
-    window.removeEventListener("Companion:SnapshotsChanged", this.dbListener);
-  }
-
-  async updateSnapshots() {
-    let snapshots = window.CompanionUtils.snapshots.slice(0, MAX_SNAPSHOTS);
-    let panel = document.getElementById("snapshots-panel");
+  updateSnapshots(snapshots) {
+    let panel = this.querySelector(".snapshots-panel");
     let nodes = [];
     this.hidden = !snapshots.length;
     for (let snapshot of snapshots) {
@@ -173,5 +161,40 @@ export class SnapshotList extends HidableElement {
   }
 }
 
+export class SuggestedSnapshotList extends SnapshotList {
+  constructor(snapshotTitle) {
+    super(snapshotTitle);
+
+    this.dbListener = () =>
+      this.updateSnapshots(
+        window.CompanionUtils.snapshots.slice(0, MAX_SNAPSHOTS)
+      );
+  }
+
+  async connectedCallback() {
+    window.addEventListener("Companion:SnapshotsChanged", this.dbListener);
+    this.updateSnapshots(
+      window.CompanionUtils.snapshots.slice(0, MAX_SNAPSHOTS)
+    );
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("Companion:SnapshotsChanged", this.dbListener);
+  }
+}
+
+export class RecentlyClosedSnapshotList extends SnapshotList {
+  constructor(snapshotTitle) {
+    super(snapshotTitle);
+  }
+
+  async connectedCallback() {
+    // TODO: H&M to populate with recently closed river contents
+    let recentlyClosedSnapshots = [];
+    this.updateSnapshots(recentlyClosedSnapshots);
+  }
+}
+
 customElements.define("e-snapshot", Snapshot);
-customElements.define("e-snapshot-list", SnapshotList);
+customElements.define("e-suggested-snapshot-list", SuggestedSnapshotList);
+customElements.define("e-recent-snapshot-list", RecentlyClosedSnapshotList);

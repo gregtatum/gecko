@@ -6,7 +6,10 @@ import { CalendarEventList } from "./calendar.js";
 import { BrowseList } from "./browse.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
-import { SnapshotList } from "./snapshots.js";
+import {
+  SuggestedSnapshotList,
+  RecentlyClosedSnapshotList,
+} from "./snapshots.js";
 import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
 
 function toggleSettings() {
@@ -37,10 +40,11 @@ function maybeInitializeUI() {
   let content = document.getElementById("content");
   content.appendChild(new MediaList("Media"));
   content.appendChild(new GlobalHistoryDebugging());
-  content.appendChild(new SnapshotList());
+  content.appendChild(new SuggestedSnapshotList("Suggested Snapshots"));
 
   let browseContent = document.querySelector("#scroll-browse .content");
   browseContent.appendChild(new BrowseList());
+  browseContent.appendChild(new RecentlyClosedSnapshotList("Recently Closed"));
   browseContent.appendChild(new PocketList());
 }
 
