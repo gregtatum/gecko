@@ -2590,6 +2590,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("services.sync.prefs.sync.browser.sessionstore.resume_session_once", false);
   pref("services.sync.prefs.sync.browser.sessionstore.resuming_after_os_restart", false);
   pref("browser.companion.globalhistorydebugging", false);
+  pref("browser.companion.snapshots", false);
   pref("dom.security.https_first", true, locked);
   pref("services.sync.prefs.sync.extensions.activeThemeID", false);
 #endif
