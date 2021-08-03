@@ -58,14 +58,35 @@ export class CalendarEventList extends MozLitElement {
   static get styles() {
     return css`
       @import url("chrome://global/skin/in-content/common.css");
-      @import url("chrome://browser/content/companion/companion.css");
+
+      .card {
+        box-shadow: 0 2px 6px 0 rgba(58, 57, 68, 0.2);
+        padding: 0;
+        margin: 0;
+        border: none;
+        border-radius: 12px;
+      }
+
+      @media (prefers-contrast) {
+        .card {
+          border: 1px solid transparent;
+        }
+      }
 
       .calendar {
-        padding: 5px 10px;
+        margin: 16px;
       }
 
       #calendar-panel:empty {
         display: none;
+      }
+
+      .calendar-event {
+        border-bottom: 1px solid var(--in-content-border-color);
+      }
+
+      .calendar-event:last-of-type {
+        border: none;
       }
     `;
   }
@@ -113,7 +134,9 @@ export class CalendarEventList extends MozLitElement {
     return this.events.map(
       event =>
         html`
-          <calendar-event .event=${event}></calendar-event>
+          <div class="calendar-event">
+            <calendar-event .event=${event}></calendar-event>
+          </div>
         `
     );
   }
@@ -122,7 +145,7 @@ export class CalendarEventList extends MozLitElement {
     let eventItems = this.calendarEventItemsTemplate();
     return html`
       <div class="calendar" ?hidden=${!eventItems.length}>
-        <div id="calendar-panel">${eventItems}</div>
+        <div id="calendar-panel" class="card card-no-hover">${eventItems}</div>
       </div>
     `;
   }
@@ -140,6 +163,10 @@ class CalendarEvent extends MozLitElement {
   static get styles() {
     return css`
       @import url("chrome://global/skin/in-content/common.css");
+
+      .event {
+        padding: 16px;
+      }
 
       .conference-info {
         display: flex;
@@ -179,15 +206,15 @@ class CalendarEvent extends MozLitElement {
         font-size: 11px;
       }
 
-      .event-actions .button-link {
-        min-height: auto;
-        margin: 0;
-        display: none;
-      }
-
-      .event:hover .event-actions .button-link,
-      .event:focus-within .event-actions .button-link {
-        display: initial;
+      .event:where(:not(:hover, :focus-within)) .event-actions .button-link,
+      .event:where(:not(:hover, :focus-within)) .event-options-button {
+        display: inline-block;
+        width: 0;
+        height: 0;
+        margin: -1px;
+        overflow: hidden;
+        padding: 0;
+        border-width: 0;
       }
 
       .event-sub-details {
@@ -265,10 +292,11 @@ class CalendarEvent extends MozLitElement {
         padding: 5px;
       }
 
-      .event-card-top {
+      .event-top {
         display: flex;
         justify-content: end;
         margin-block-end: 8px;
+        height: 16px;
       }
 
       .event-options-button {
@@ -457,8 +485,8 @@ class CalendarEvent extends MozLitElement {
     let { summary } = this.event;
 
     return html`
-      <div class="event card card-no-hover">
-        <div class="event-card-top">
+      <div class="event">
+        <div class="event-top">
           <button
             class="ghost-button event-options-button"
             aria-haspopup="menu"
