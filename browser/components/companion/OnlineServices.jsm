@@ -171,18 +171,18 @@ async function processLink(url, text) {
   }
   let link = {};
   link.url = url.href;
-  if ((!text && text != "") || url.href == text) {
-    if (url.host === "docs.google.com" || url.host === "drive.google.com") {
-      for (let service of ServiceInstances) {
-        if (service.app.startsWith("google")) {
-          let documentName = await service.getTitle(url.href);
-          if (documentName) {
-            link.text = documentName;
-          }
+  if (url.host === "docs.google.com" || url.host === "drive.google.com") {
+    for (let service of ServiceInstances) {
+      if (service.app.startsWith("google")) {
+        let documentName = await service.getTitle(url.href);
+        if (documentName) {
+          link.text = documentName;
+          return link;
         }
       }
     }
-  } else {
+  }
+  if ((text || text == "") && url.href != text) {
     link.text = text;
   }
   return link;
@@ -218,7 +218,14 @@ async function getLinkInfo(result) {
     for (let descriptionLink of descriptionLinks) {
       // Need to normalize these URLs so they match
       // the URLs from processLink
-      let descriptionURL = new URL(descriptionLink);
+      let descriptionURL;
+      try {
+        descriptionURL = new URL(descriptionLink);
+      } catch (e) {
+        // We might have URLS without protocols.
+        // Just add http://
+        descriptionURL = new URL(`http://${descriptionLink}`);
+      }
       if (
         links.some(
           link =>
