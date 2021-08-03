@@ -240,7 +240,9 @@ async function getLinkInfo(result) {
       }
     }
   }
-  return links.filter(link => link.text !== "");
+  return [...new Map(links.map(item => [item.url, item])).values()].filter(
+    link => link.text !== ""
+  );
 }
 
 async function openLink(url) {
