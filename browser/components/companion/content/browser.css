@@ -257,3 +257,26 @@
 #site-info-title {
   font-size: 14px;
 }
+
+#urlbar[breakout][breakout-extend][page-overlay],
+#urlbar[breakout][breakout-extend-disabled][page-overlay][open] {
+  display: block;
+  position: fixed;
+  top: calc(var(--urlbar-toolbar-height) + 20px);
+  left: calc(var(--companion-width) + 100px);
+  right: 100px;
+  width: -moz-available;
+  box-shadow: 0px 4px 4px 0px #00000040;
+  border-radius: 8px;
+}
+
+#urlbar[breakout][breakout-extend][page-overlay] #urlbar-page-overlay,
+#urlbar[breakout][breakout-extend-disabled][page-overlay][open] #urlbar-page-overlay {
+  display: block;
+  position: fixed;
+  top: var(--urlbar-toolbar-height);
+  bottom: 0;
+  right: 0;
+  left: var(--companion-width);
+  background:rgba(0, 0, 0, 0.1);
+}

@@ -25,6 +25,8 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 });
 
 const COMPANION_OPEN_PREF = "companion.open";
+const URLBAR_PAGE_OVERLAY_PREF = "browser.companion.urlbar.overlay";
+
 const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
 class BrowserWindowHandler {
@@ -60,6 +62,20 @@ class BrowserWindowHandler {
     });
     window.gBrowser.addProgressListener(this);
     this.updateTab();
+
+    let updateOverlay = () =>
+      window.gURLBar.toggleAttribute(
+        "page-overlay",
+        Services.prefs.getBoolPref(URLBAR_PAGE_OVERLAY_PREF, false)
+      );
+    Services.prefs.addObserver(URLBAR_PAGE_OVERLAY_PREF, updateOverlay);
+    updateOverlay();
+
+    window.document
+      .getElementById("urlbar-page-overlay")
+      .addEventListener("click", () => {
+        window.gURLBar.view.close();
+      });
   }
 
   updateTab() {
@@ -108,7 +124,17 @@ class BrowserWindowHandler {
       browser.setAttribute("messagemanagergroup", "browsers");
       browser.setAttribute("type", "content");
 
-      this.window.document.getElementById("companion-box").appendChild(browser);
+      this._companionBox.appendChild(browser);
+
+      let resizeObserver = new this.window.ResizeObserver(entries => {
+        if (this._companionBox.width) {
+          this.window.document.documentElement.style.setProperty(
+            "--companion-width",
+            this._companionBox.width + "px"
+          );
+        }
+      });
+      resizeObserver.observe(this._companionBox);
     } else {
       this.window.document.documentElement.removeAttribute("companion");
       this.window.document.getElementById("companion-browser")?.remove();
