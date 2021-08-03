@@ -28,6 +28,9 @@ const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
   Ci.nsINavHistoryService
 );
 const { Snapshots } = ChromeUtils.import("resource:///modules/Snapshots.jsm");
+const { PageDataCollector } = ChromeUtils.import(
+  "resource:///modules/pagedata/PageDataCollector.jsm"
+);
 const { SnapshotSelector } = ChromeUtils.import(
   "resource:///modules/SnapshotSelector.jsm"
 );
@@ -55,6 +58,18 @@ const PLACES_CACHE_EVICT_AFTER = 60 * 6 * 1000; // 6 minutes
 // setTimeouts more often than we would like.
 const PLACES_EVICTION_TIMEOUT = PLACES_CACHE_EVICT_AFTER * 1.5;
 
+// Defines pages that we force to show a certain snapshot type. The regular
+// expresions are applied to the entire url.
+const DOMAIN_TYPES = {
+  [PageDataCollector.DATA_TYPE.PRODUCT]: [
+    /^https:\/\/www\.walmart\.com\//,
+    /^https:\/\/www\.target\.com\//,
+
+    // Too liberal really.
+    /^https:\/\/(smile|www)\.amazon\./,
+  ],
+};
+
 class CompanionParent extends JSWindowActorParent {
   constructor() {
     super();
@@ -62,6 +77,7 @@ class CompanionParent extends JSWindowActorParent {
     this._browserIdsToTabs = new Map();
     this._cachedPlacesURLs = new Map();
     this._cachedPlacesDataToSend = [];
+    this._pageType = null;
 
     this._observer = this.observe.bind(this);
     this._handleMediaEvent = this.handleMediaEvent.bind(this);
@@ -627,6 +643,7 @@ class CompanionParent extends JSWindowActorParent {
     let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
     if (
       selectByType &&
+      !this._pageType &&
       this.snapshotSelector &&
       pageData.url == gBrowser.currentURI.spec
     ) {
@@ -805,7 +822,7 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags, aIsSimulated) {
-    if (!aWebProgress.isTopLevel) {
+    if (!aWebProgress.isTopLevel || !this.snapshotSelector) {
       return;
     }
 
@@ -814,6 +831,23 @@ class CompanionParent extends JSWindowActorParent {
     }
 
     this.snapshotSelector.setUrl(aLocationURI.spec);
+
+    if (!selectByType) {
+      return;
+    }
+
+    for (let [type, list] of Object.entries(DOMAIN_TYPES)) {
+      for (let regex of list) {
+        if (regex.test(aLocationURI.spec)) {
+          this._pageType = type;
+          this.snapshotSelector.setType(type);
+
+          return;
+        }
+      }
+    }
+
+    this._pageType = null;
   }
 
   QueryInterface = ChromeUtils.generateQI([
