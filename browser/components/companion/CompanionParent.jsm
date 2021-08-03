@@ -25,6 +25,9 @@ const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
   Ci.nsINavHistoryService
 );
 const { Snapshots } = ChromeUtils.import("resource:///modules/Snapshots.jsm");
+const { SnapshotSelector } = ChromeUtils.import(
+  "resource:///modules/SnapshotSelector.jsm"
+);
 
 const { FileUtils } = ChromeUtils.import(
   "resource://gre/modules/FileUtils.jsm"
@@ -71,8 +74,6 @@ class CompanionParent extends JSWindowActorParent {
       this._observer,
       "browser-window-tracker-tab-removed"
     );
-    Services.obs.addObserver(this._observer, "places-snapshots-added");
-    Services.obs.addObserver(this._observer, "places-snapshots-deleted");
 
     Services.obs.addObserver(this._observer, "companion-signin");
     Services.obs.addObserver(this._observer, "companion-signout");
@@ -152,8 +153,6 @@ class CompanionParent extends JSWindowActorParent {
       this._observer,
       "browser-window-tracker-tab-removed"
     );
-    Services.obs.removeObserver(this._observer, "places-snapshots-added");
-    Services.obs.removeObserver(this._observer, "places-snapshots-deleted");
 
     Services.obs.addObserver(this._observer, "companion-signin");
     Services.obs.addObserver(this._observer, "companion-signout");
@@ -166,6 +165,10 @@ class CompanionParent extends JSWindowActorParent {
       }
 
       this.unregisterWindow(win);
+    }
+
+    if (this.snapshotSelector) {
+      this.snapshotSelector.destroy();
     }
   }
 
@@ -475,20 +478,6 @@ class CompanionParent extends JSWindowActorParent {
     return OnlineServices.getEvents();
   }
 
-  /**
-   * Returns a list of the most relevant snapshots.
-   * TODO: Use more sophisticated heuristics here, possibly by sorting on a
-   * relevancy score stored in the Snapshots DB.
-   * @returns {array} A list of snapshots.
-   */
-  async getSnapshots() {
-    let snapshots = await Snapshots.query();
-    for (let snapshot of snapshots) {
-      await this.ensurePlacesDataCached(snapshot.url);
-    }
-    return snapshots;
-  }
-
   async observe(subj, topic, data) {
     switch (topic) {
       case "browser-window-tracker-add-window": {
@@ -515,14 +504,6 @@ class CompanionParent extends JSWindowActorParent {
       case "browser-window-tracker-tab-removed": {
         this.unregisterTab(subj);
         this.sendAsyncMessage("Companion:TabRemoved", this.getTabData(subj));
-        break;
-      }
-      case "places-snapshots-added":
-      case "places-snapshots-deleted": {
-        let snapshots = await this.getSnapshots();
-        this.sendAsyncMessage("Companion:SnapshotsChanged", {
-          snapshots,
-        });
         break;
       }
       case "companion-signin":
@@ -632,7 +613,6 @@ class CompanionParent extends JSWindowActorParent {
         let tabs = BrowserWindowTracker.orderedWindows.flatMap(w =>
           w.gBrowser.tabs.map(t => this.getTabData(t))
         );
-        let snapshots = await this.getSnapshots();
         let newPlacesCacheEntries = this.consumeCachedPlacesDataToSend();
         let currentURI = this.getCurrentURI();
         let servicesConnected = !!OnlineServices.getServices().length;
@@ -640,10 +620,25 @@ class CompanionParent extends JSWindowActorParent {
         this.sendAsyncMessage("Companion:Setup", {
           tabs,
           servicesConnected,
-          snapshots,
           newPlacesCacheEntries,
           currentURI,
           globalHistory,
+        });
+
+        let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
+        this.snapshotSelector = new SnapshotSelector(5);
+        this.snapshotSelector.setUrl(gBrowser.currentURI.spec);
+
+        gBrowser.addProgressListener(this);
+
+        this.snapshotSelector.on("snapshots-updated", async (_, snapshots) => {
+          for (let snapshot of snapshots) {
+            await this.ensurePlacesDataCached(snapshot.url);
+          }
+
+          this.sendAsyncMessage("Companion:SnapshotsChanged", {
+            snapshots,
+          });
         });
 
         // To avoid a significant delay in initializing other parts of the UI,
@@ -777,4 +772,22 @@ class CompanionParent extends JSWindowActorParent {
       }
     }
   }
+
+  onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags, aIsSimulated) {
+    if (!aWebProgress.isTopLevel) {
+      return;
+    }
+
+    if (!aLocationURI.schemeIs("http") && !aLocationURI.schemeIs("https")) {
+      return;
+    }
+
+    this.snapshotSelector.setUrl(aLocationURI.spec);
+  }
+
+  QueryInterface = ChromeUtils.generateQI([
+    "nsIWebProgressListener",
+    "nsIWebProgressListener2",
+    "nsISupportsWeakReference",
+  ]);
 }

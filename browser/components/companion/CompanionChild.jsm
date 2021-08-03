@@ -98,7 +98,6 @@ class CompanionChild extends JSWindowActorChild {
       case "Companion:Setup": {
         let {
           tabs,
-          snapshots,
           newPlacesCacheEntries,
           currentURI,
           servicesConnected,
@@ -111,7 +110,6 @@ class CompanionChild extends JSWindowActorChild {
           waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
         }
         waivedContent.CompanionUtils.servicesConnected = servicesConnected;
-        waivedContent.CompanionUtils.snapshots = snapshots;
         waivedContent.CompanionUtils.currentURI = currentURI;
         waivedContent.CompanionUtils.globalHistory = globalHistory;
 
