@@ -142,9 +142,10 @@ class CompanionChild extends JSWindowActorChild {
         break;
       }
       case "Companion:SnapshotsChanged": {
-        let { snapshots } = message.data;
+        let { snapshots, newPlacesCacheEntries } = message.data;
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
         waivedContent.CompanionUtils.snapshots = snapshots;
+        this.updatePlacesCache(newPlacesCacheEntries);
         break;
       }
       case "Companion:MediaEvent":

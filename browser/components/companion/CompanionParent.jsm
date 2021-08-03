@@ -668,6 +668,7 @@ class CompanionParent extends JSWindowActorParent {
 
           this.sendAsyncMessage("Companion:SnapshotsChanged", {
             snapshots,
+            newPlacesCacheEntries: this.consumeCachedPlacesDataToSend(),
           });
         });
 
