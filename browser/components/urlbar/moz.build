@@ -33,6 +33,7 @@ EXTRA_JS_MODULES += [
     "UrlbarProviderPrivateSearch.jsm",
     "UrlbarProviderQuickActions.jsm",
     "UrlbarProviderQuickSuggest.jsm",
+    "UrlbarProviderRecentSearches.jsm",
     "UrlbarProviderRemoteTabs.jsm",
     "UrlbarProviderSearchSuggestions.jsm",
     "UrlbarProviderSearchTips.jsm",

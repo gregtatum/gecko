@@ -281,7 +281,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
   }
 
   getSuggestedIndex() {
-    return 0;
+    return 1;
   }
 
   /**
@@ -380,9 +380,6 @@ class ProviderQuickActionsBase extends UrlbarProvider {
  * has been entered.
  */
 class ProviderQuickActionsEmpty extends ProviderQuickActionsBase {
-  getSuggestedIndex() {
-    return 1;
-  }
   getPriority() {
     return 1;
   }

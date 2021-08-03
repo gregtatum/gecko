@@ -1058,7 +1058,7 @@ this.FormHistory = {
     return defaultHandlers;
   },
 
-  search(aSelectTerms, aSearchData, aRowFuncOrHandlers) {
+  search(aSelectTerms, aSearchData, aRowFuncOrHandlers, opts = {}) {
     // if no terms selected, select everything
     if (!aSelectTerms) {
       // Source is not a valid column in moz_formhistory.
@@ -1071,6 +1071,13 @@ this.FormHistory = {
     let { queryTerms, params } = makeQueryPredicates(aSearchData);
     if (queryTerms) {
       query += " WHERE " + queryTerms;
+    }
+
+    if (opts?.order) {
+      query += " ORDER BY " + opts.order;
+    }
+    if (opts?.limit) {
+      query += " LIMIT " + opts.limit;
     }
 
     let handlers;
