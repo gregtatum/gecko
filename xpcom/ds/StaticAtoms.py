@@ -480,6 +480,7 @@ STATIC_ATOMS = [
     Atom("graphicsObject", "graphics-object"),
     Atom("graphicsSymbol", "graphics-symbol"),
     Atom("grid", "grid"),
+    Atom("gripper", "gripper"),
     Atom("group", "group"),
     Atom("groups", "groups"),
     Atom("groupbox", "groupbox"),
