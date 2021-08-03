@@ -6,6 +6,9 @@
 
 var EXPORTED_SYMBOLS = ["CompanionParent", "gMediaControllers"];
 
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
+);
 const { BrowserWindowTracker } = ChromeUtils.import(
   "resource:///modules/BrowserWindowTracker.jsm"
 );
@@ -28,9 +31,19 @@ const { Snapshots } = ChromeUtils.import("resource:///modules/Snapshots.jsm");
 const { SnapshotSelector } = ChromeUtils.import(
   "resource:///modules/SnapshotSelector.jsm"
 );
+const { PageDataService } = ChromeUtils.import(
+  "resource:///modules/pagedata/PageDataService.jsm"
+);
 
 const { FileUtils } = ChromeUtils.import(
   "resource://gre/modules/FileUtils.jsm"
+);
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "selectByType",
+  "browser.companion.snapshots.selectByType",
+  false
 );
 
 let sessionStart = new Date();
@@ -54,6 +67,7 @@ class CompanionParent extends JSWindowActorParent {
     this._handleMediaEvent = this.handleMediaEvent.bind(this);
     this._handleTabEvent = this.handleTabEvent.bind(this);
     this._handleGlobalHistoryEvent = this.handleGlobalHistoryEvent.bind(this);
+    this._pageDataFound = this.pageDataFound.bind(this);
 
     this._cacheCleanupTimeout = null;
     this._cleanupCaches = this.cleanupCaches.bind(this);
@@ -169,6 +183,8 @@ class CompanionParent extends JSWindowActorParent {
 
     if (this.snapshotSelector) {
       this.snapshotSelector.destroy();
+      PageDataService.off("page-data", this._pageDataFound);
+      PageDataService.off("no-page-data", this._pageDataFound);
     }
   }
 
@@ -607,6 +623,17 @@ class CompanionParent extends JSWindowActorParent {
     });
   }
 
+  pageDataFound(event, pageData) {
+    let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
+    if (
+      selectByType &&
+      this.snapshotSelector &&
+      pageData.url == gBrowser.currentURI.spec
+    ) {
+      this.snapshotSelector.setType(pageData.data[0]?.type);
+    }
+  }
+
   async receiveMessage(message) {
     switch (message.name) {
       case "Companion:Subscribe": {
@@ -630,6 +657,9 @@ class CompanionParent extends JSWindowActorParent {
         this.snapshotSelector.setUrl(gBrowser.currentURI.spec);
 
         gBrowser.addProgressListener(this);
+
+        PageDataService.on("page-data", this._pageDataFound);
+        PageDataService.on("no-page-data", this._pageDataFound);
 
         this.snapshotSelector.on("snapshots-updated", async (_, snapshots) => {
           for (let snapshot of snapshots) {
