@@ -266,8 +266,6 @@ class FxaServiceRow extends ServiceRow {
   }
 
   displaySignIn() {
-    let signInButton = this._getElement(".button-connect");
-
     let name = this._getElement(".service-name");
     let labels = this._getElement(".service-labels");
     let icon = this._getElement(".service-icon");
@@ -275,13 +273,22 @@ class FxaServiceRow extends ServiceRow {
 
     document.l10n.setAttributes(name, this.data.nameId);
     document.l10n.setAttributes(labels, this.data.labelsId);
+  }
+
+  render() {
+    let signInButton = this._getElement(".button-connect");
+    let signOutButton = this._getElement(".button-disconnect");
+
+    document.l10n.setAttributes(
+      signOutButton,
+      "preferences-services-fxa-sign-out"
+    );
+
     document.l10n.setAttributes(
       signInButton,
       "preferences-services-fxa-sign-in"
     );
-  }
 
-  render() {
     super.render();
 
     if (this.getServiceStatus() === "connected") {
