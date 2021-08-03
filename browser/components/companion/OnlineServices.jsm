@@ -930,6 +930,12 @@ function load() {
     if (!service.auth) {
       continue;
     }
+    // For now, we don't allow more than one of the same service
+    if ([...ServiceInstances].filter(item => item.app == service.type).length) {
+      log.error(`Service ${service.type} already exists`);
+      continue;
+    }
+
     if (service.type.startsWith("google")) {
       ServiceInstances.add(new GoogleService(service));
     } else if (service.type.startsWith("microsoft")) {
@@ -980,6 +986,12 @@ const OnlineServices = {
 
   async createService(type) {
     load();
+
+    // For now, we don't allow more than one of the same service
+    if ([...ServiceInstances].filter(item => item.app == type).length) {
+      log.error(`Service ${type} already exists`);
+      return null;
+    }
 
     let service;
     if (type.startsWith("google")) {
