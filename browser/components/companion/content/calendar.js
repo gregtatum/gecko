@@ -260,6 +260,8 @@ class CalendarEvent extends MozLitElement {
         padding: 4px;
         border: 1px solid var(--in-content-border-color);
         margin-inline: 0;
+        max-width: -moz-fit-content;
+        min-width: 50%;
       }
 
       .event-link > img {
@@ -290,6 +292,7 @@ class CalendarEvent extends MozLitElement {
         justify-self: start;
         min-height: 0;
         padding: 5px;
+        max-width: initial;
       }
 
       .event-top {
