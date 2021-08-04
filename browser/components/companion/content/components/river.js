@@ -127,7 +127,7 @@ export default class River extends MozLitElement {
       // We bailed out because we reached our maximum number of groups.
       // Any remaining items in the Views from index 0 to index should
       // go into the overflow menu.
-      this.overflowedViews = [...this.#views.slice(0, index + 1)];
+      this.overflowedViews = [...this.#views.slice(0, index + 1)].reverse();
     } else {
       // We bailed out because we reached the end of the list. Whatever is
       // in currentGroup can get pushed into the displayed groups.
