@@ -769,9 +769,32 @@ class CompanionParent extends JSWindowActorParent {
       }
       case "Companion:OpenURL": {
         let { url } = message.data;
-        this.browsingContext.topChromeWindow.switchToTabHavingURI(url, true, {
-          ignoreFragment: true,
-        });
+        let uri = Services.io.newURI(url);
+        if (!uri.scheme.startsWith("http")) {
+          let extProtocolSvc = Cc[
+            "@mozilla.org/uriloader/external-protocol-service;1"
+          ].getService(Ci.nsIExternalProtocolService);
+          let handlerInfo = extProtocolSvc.getProtocolHandlerInfo(uri.scheme);
+          if (
+            !handlerInfo.alwaysAskBeforeHandling &&
+            handlerInfo.preferredAction == Ci.nsIHandlerInfo.useHelperApp
+          ) {
+            if (
+              handlerInfo.preferredApplicationHandler instanceof
+              Ci.nsILocalHandlerApp
+            ) {
+              handlerInfo.preferredApplicationHandler.launchWithURI(uri);
+              return;
+            }
+          }
+        }
+        this.browsingContext.topChromeWindow.switchToTabHavingURI(
+          uri.spec,
+          true,
+          {
+            ignoreFragment: true,
+          }
+        );
         break;
       }
       case "Companion:DeleteSnapshot": {
