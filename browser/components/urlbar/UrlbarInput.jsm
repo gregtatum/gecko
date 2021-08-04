@@ -371,7 +371,9 @@ class UrlbarInput {
     let isDifferentValidValue = valid && value != this.untrimmedValue;
     if (AppConstants.PROCLIENT_ENABLED) {
       // Prevent newly-loaded URLs from being shown in the urlbar. FFX2021OV-106
-      this.value = "";
+      this.value = this.window.gBrowser.userTypedValue
+        ? this.window.gBrowser.userTypedValue
+        : "";
     }
     this.valueIsTyped = !valid;
     this.removeAttribute("usertyping");
