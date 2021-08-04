@@ -49,10 +49,7 @@ class BrowserWindowHandler {
     //  );
     //  companionIdentityBox.appendChild(lock);
 
-    Services.prefs.addObserver(COMPANION_OPEN_PREF, this);
-
     window.addEventListener("unload", () => this.destroy(), { once: true });
-    this.observe();
 
     this.selectedTab.addEventListener("TabAttrModified", () => {
       this.updateTab();
@@ -63,13 +60,11 @@ class BrowserWindowHandler {
     window.gBrowser.addProgressListener(this);
     this.updateTab();
 
-    let updateOverlay = () =>
-      window.gURLBar.toggleAttribute(
-        "page-overlay",
-        Services.prefs.getBoolPref(URLBAR_PAGE_OVERLAY_PREF, false)
-      );
-    Services.prefs.addObserver(URLBAR_PAGE_OVERLAY_PREF, updateOverlay);
-    updateOverlay();
+    Services.prefs.addObserver(COMPANION_OPEN_PREF, this);
+    this.onCompanionPrefUpdated();
+
+    Services.prefs.addObserver(URLBAR_PAGE_OVERLAY_PREF, this);
+    this.onUrlbarOverlayPrefUpdated();
 
     window.document
       .getElementById("urlbar-page-overlay")
@@ -92,6 +87,7 @@ class BrowserWindowHandler {
   }
 
   destroy() {
+    Services.prefs.removeObserver(URLBAR_PAGE_OVERLAY_PREF, this);
     Services.prefs.removeObserver(COMPANION_OPEN_PREF, this);
     let xulStore = Services.xulStore;
     xulStore.persist(this._companionBox, "width");
@@ -99,7 +95,18 @@ class BrowserWindowHandler {
     CompanionService.removeWindow(this);
   }
 
-  observe() {
+  observe(subject, topic, data) {
+    switch (data) {
+      case COMPANION_OPEN_PREF:
+        this.onCompanionPrefUpdated();
+        break;
+      case URLBAR_PAGE_OVERLAY_PREF:
+        this.onUrlbarOverlayPrefUpdated();
+        break;
+    }
+  }
+
+  onCompanionPrefUpdated() {
     if (CompanionService.isOpen) {
       this.window.document.documentElement.setAttribute("companion", "true");
       let browser = this.window.document.getElementById("companion-browser");
@@ -139,6 +146,13 @@ class BrowserWindowHandler {
       this.window.document.documentElement.removeAttribute("companion");
       this.window.document.getElementById("companion-browser")?.remove();
     }
+  }
+
+  onUrlbarOverlayPrefUpdated() {
+    this.window.gURLBar.toggleAttribute(
+      "page-overlay",
+      Services.prefs.getBoolPref(URLBAR_PAGE_OVERLAY_PREF, false)
+    );
   }
 
   onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags, aIsSimulated) {
