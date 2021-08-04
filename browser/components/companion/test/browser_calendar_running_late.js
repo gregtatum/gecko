@@ -19,6 +19,13 @@ const checkMailtoUrl = async (helper, index_, expected) => {
       );
       let panelMenu = event.shadowRoot.querySelector("panel-list");
       const EventUtils = ContentTaskUtils.getEventUtils(content);
+      info("Simulate a hover over the openMenuButton for it to appear.");
+      EventUtils.synthesizeMouseAtCenter(
+        openMenuButton,
+        { type: "mousemove" },
+        content
+      );
+      info("Now click to open the menu.");
       EventUtils.synthesizeMouseAtCenter(openMenuButton, {}, content);
       await ContentTaskUtils.waitForEvent(panelMenu, "shown");
       let runningLateButton = event.shadowRoot.querySelector(
