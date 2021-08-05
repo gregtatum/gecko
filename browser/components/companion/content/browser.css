@@ -251,7 +251,7 @@
   padding: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
-  border-radis: 4px;
+  border-radius: 4px;
 }
 
 #site-info-title {
