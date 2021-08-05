@@ -2594,4 +2594,5 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("dom.security.https_first", true, locked);
   pref("services.sync.prefs.sync.extensions.activeThemeID", false);
   pref("services.sync.engine.addons", false);
+  pref("browser.tabs.unloadOnLowMemory", true);
 #endif
