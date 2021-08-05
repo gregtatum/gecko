@@ -207,6 +207,9 @@ async function getLinkInfo(result) {
   let anchors = doc.getElementsByTagName("a");
   if (anchors.length) {
     for (let anchor of anchors) {
+      if (!anchor.href) {
+        continue;
+      }
       let link = await processLink(anchor.href, anchor.textContent);
       if (link) {
         links.push(link);
