@@ -11,6 +11,7 @@ import {
   RecentlyClosedSnapshotList,
 } from "./snapshots.js";
 import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 function toggleSettings() {
   let settings = document.getElementById("settings");
@@ -46,6 +47,20 @@ function maybeInitializeUI() {
   browseContent.appendChild(new BrowseList());
   browseContent.appendChild(new RecentlyClosedSnapshotList("Recently Closed"));
   browseContent.appendChild(new PocketList());
+
+  if (
+    Services.prefs.getBoolPref("browser.companion.passwords.enabled", false)
+  ) {
+    document.querySelector(".passwords").hidden = document.querySelector(
+      "login-list"
+    ).hidden = false;
+
+    window.gLogins.initLogins();
+
+    // Temporarily insert some stubbed-out logins, so we can work on styling in
+    // parallel with wiring up communication. TODO remove as soon as possible.
+    window.gLogins.handleAllLogins(JSON.parse(window.gLogins.mockLogins));
+  }
 }
 
 window.addEventListener(

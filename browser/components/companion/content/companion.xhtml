@@ -32,6 +32,11 @@
   <script type="module" src="relative-time.js"/>
   <script src="chrome://global/content/elements/named-deck.js"/>
   <script src="chrome://global/content/elements/panel-list.js"/>
+  <script type="module" src="chrome://browser/content/aboutlogins/components/login-list.js"></script>
+  <script type="module" src="chrome://browser/content/aboutlogins/components/login-list-item.js"></script>
+  <script type="module" src="logins.js" />
+
+  <link rel="localization" href="browser/aboutLogins.ftl" />
   <link rel="localization" href="browser/browser.ftl"/>
   <link rel="localization" href="browser/companion.ftl"/>
 </head>
@@ -195,8 +200,58 @@
       <button class="shopping">Shopping</button>
       <button class="downloads">Downloads</button>
       <button class="notifications">Notifications</button>
+      <button class="passwords" hidden="true">Passwords</button>
     </div>
   </template>
+
+  <!-- TODO: these login templates are from aboutLogins.html.
+             These should be adapted for the pro client's purpose -->
+    <template xmlns="http://www.w3.org/1999/xhtml" id="login-list-template">
+      <link rel="stylesheet" href="chrome://global/skin/in-content/common.css"/>
+      <link rel="stylesheet" href="chrome://browser/content/aboutlogins/common.css"/>
+      <link rel="stylesheet" href="chrome://browser/content/aboutlogins/components/login-list.css"/>
+      <div class="meta">
+        <label for="login-sort">
+          <span data-l10n-id="login-list-sort-label-text"></span>
+          <select id="login-sort">
+            <option name="name" data-l10n-id="login-list-name-option" value="name"></option>
+            <option name="name-reverse" data-l10n-id="login-list-name-reverse-option" value="name-reverse"></option>
+            <option name="last-used" data-l10n-id="login-list-last-used-option" value="last-used"></option>
+            <option name="last-changed" data-l10n-id="login-list-last-changed-option" value="last-changed"></option>
+            <option name="alerts" data-l10n-id="about-logins-login-list-alerts-option" value="alerts" hidden="true"></option>
+          </select>
+        </label>
+        <span class="count" data-l10n-id="login-list-count" data-l10n-args='{"count": 0}'></span>
+      </div>
+      <!-- This container is to work around bug 1569292 -->
+      <div class="container">
+        <ol role="listbox" tabindex="0" data-l10n-id="login-list"></ol>
+        <div class="intro">
+          <p data-l10n-id="login-list-intro-title"></p>
+          <span data-l10n-id="login-list-intro-description"></span>
+        </div>
+        <div class="empty-search-message">
+          <p data-l10n-id="about-logins-login-list-empty-search-title"></p>
+          <span data-l10n-id="about-logins-login-list-empty-search-description"></span>
+        </div>
+      </div>
+      <div class="create-login-button-container">
+        <button class="create-login-button" data-l10n-id="create-login-button"></button>
+      </div>
+    </template>
+
+    <template xmlns="http://www.w3.org/1999/xhtml" id="login-list-item-template">
+      <li class="login-list-item" role="option">
+        <div class="favicon-wrapper">
+          <img class="favicon" src=""/>
+        </div>
+        <div class="labels">
+          <span class="title" dir="auto"></span>
+          <span class="username" dir="ltr"></span>
+        </div>
+        <img class="alert-icon" title="" src=""/>
+      </li>
+    </template>
 
   <hbox id="titlebar">
     <hbox id="mac-buttonbox"/>
@@ -249,6 +304,7 @@
       </div>
       <div xmlns="http://www.w3.org/1999/xhtml" id="scroll-browse" name="browse">
         <div class="content"></div>
+        <login-list hidden="true"></login-list>
       </div>
     </html:named-deck>
   </div>

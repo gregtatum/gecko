@@ -27,6 +27,12 @@ body {
   }
 }
 
+@supports -moz-bool-pref("browser.companion.passwords.enabled") {
+  body {
+    --sidebar-width: 0px;
+  }
+}
+
 header {
   display: flex;
   grid-area: header;
