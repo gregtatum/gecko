@@ -60,7 +60,7 @@
 }
 
 @supports not -moz-bool-pref("browser.companion.tabdebugging") {
-  #titlebar {
+  #TabsToolbar {
     display: none;
   }
 }

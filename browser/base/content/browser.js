@@ -6747,6 +6747,16 @@ function setToolbarVisibility(
     }
   }
 
+  // Normally, the titlebar is always visible since tabs are rendered
+  // in the titlebar. With ProClient, TabsToolbar is hidden and as such
+  // we only want to show the titlebar if the menubar is visible.
+  if (AppConstants.PROCLIENT_ENABLED && toolbar.id == "toolbar-menubar") {
+    let titlebar = document.getElementById("titlebar");
+    titlebar.hidden =
+      !isVisible &&
+      !Services.prefs.getBoolPref("browser.companion.tabdebugging");
+  }
+
   if (toolbar.getAttribute(hidingAttribute) == (!isVisible).toString()) {
     // If this call will not result in a visibility change, return early
     // since dispatching toolbarvisibilitychange will cause views to get rebuilt.
