@@ -173,7 +173,7 @@ class CalendarEvent extends MozLitElement {
         align-items: center;
         gap: 0.5em;
         font-weight: 600;
-        font-size: 11px;
+        font-size: 0.8125em;
         color: var(--in-content-deemphasized-text);
         margin-inline-end: 8px;
         white-space: nowrap;
@@ -203,7 +203,7 @@ class CalendarEvent extends MozLitElement {
       .event-actions {
         display: flex;
         gap: 4px;
-        font-size: 11px;
+        font-size: 0.8125em;
       }
 
       .event:where(:not(:hover, :focus-within)) .event-actions .button-link,
@@ -241,7 +241,7 @@ class CalendarEvent extends MozLitElement {
 
       .date {
         color: var(--in-content-deemphasized-text);
-        font-size: 11px;
+        font-size: 0.8125em;
       }
 
       .line-clamp {
@@ -253,7 +253,7 @@ class CalendarEvent extends MozLitElement {
 
       .event-links > .event-link {
         display: flex;
-        font-size: 11px;
+        font-size: 0.8125em;
         white-space: normal;
         color: var(--in-content-deemphasized-text);
         overflow: hidden;
@@ -291,13 +291,12 @@ class CalendarEvent extends MozLitElement {
         align-self: center;
         justify-self: start;
         min-height: 0;
-        padding: 5px;
         max-width: initial;
       }
 
       .event-top {
         display: flex;
-        justify-content: end;
+        justify-content: space-between;
         margin-block-end: 8px;
         height: 16px;
       }
@@ -485,11 +484,12 @@ class CalendarEvent extends MozLitElement {
   }
 
   render() {
-    let { summary } = this.event;
+    let { summary, start } = this.event;
 
     return html`
       <div class="event">
         <div class="event-top">
+          <relative-time .eventStart=${start}></relative-time>
           <button
             class="ghost-button event-options-button"
             aria-haspopup="menu"

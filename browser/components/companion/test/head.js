@@ -69,6 +69,19 @@ class CompanionHelper {
     });
   }
 
+  overrideRelativeTime(diff) {
+    return this.runCompanionTask(
+      async timeDiff => {
+        content.window.RelativeTime.getNow = () => {
+          return new Date(
+            new Date("2021-07-30T17:30:00.000Z").getTime() + timeDiff
+          );
+        };
+      },
+      [diff]
+    );
+  }
+
   get calendarReady() {
     return this.runCompanionTask(async () => {
       await content.window.gCalendarEventListener.initialized;

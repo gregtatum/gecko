@@ -16,3 +16,18 @@ companion-refresh-services-button-syncing =
 #   $linkCount (Number) - number of links hidden for an event
 companion-expand-event-links-button = +{ $linkCount }
     .title = Show all links
+
+# Variables:
+#   $minutes (Number) - Minutes until an event starts / has already started
+companion-minutes-after-event =
+    { $minutes ->
+        [0] Now
+        [one] { $minutes } min ago
+       *[other] { $minutes } mins ago
+    }
+companion-minutes-before-event =
+    { $minutes ->
+        [0] Now
+        [one] In { $minutes } min
+       *[other] In { $minutes } mins
+    }
