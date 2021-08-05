@@ -626,19 +626,6 @@ class CompanionParent extends JSWindowActorParent {
     }));
   }
 
-  async updateEvents() {
-    let events = await this.getEvents();
-    for (let event of events) {
-      for (let link of event.links) {
-        await this.ensurePlacesDataCached(link.url);
-      }
-    }
-    this.sendAsyncMessage("Companion:RegisterEvents", {
-      events,
-      newPlacesCacheEntries: this.consumeCachedPlacesDataToSend(),
-    });
-  }
-
   pageDataFound(event, pageData) {
     let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
     if (
@@ -829,10 +816,6 @@ class CompanionParent extends JSWindowActorParent {
       case "Companion:OpenCalendar": {
         let { event } = message.data;
         OnlineServices.findServiceById(event.serviceId).openCalendar(event);
-        break;
-      }
-      case "Companion:GetEvents": {
-        this.updateEvents();
         break;
       }
       case "Companion:SetGlobalHistoryViewIndex": {
