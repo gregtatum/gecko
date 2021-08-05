@@ -173,7 +173,7 @@
       <toolbarbutton id="companion-copy-button" class="toolbarbutton-1"
                      onclick="CompanionService.copy(this, gBrowser.currentURI.spec);"/>
       <toolbarbutton id="companion-snapshot-button" class="toolbarbutton-1"
-                     onclick="CompanionService.createSnapshot(this, gBrowser.currentURI.spec);"/>
+                     onclick="ProClientSaveSnapshot(gBrowser.currentURI.spec);"/>
     </hbox>
 #else
     <toolbartabstop/>

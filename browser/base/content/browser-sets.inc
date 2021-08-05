@@ -23,6 +23,7 @@
     <command id="cmd_newNavigatorTabNoEvent" oncommand="BrowserOpenTab();"/>
     <command id="Browser:OpenFile"  oncommand="BrowserOpenFileWindow();"/>
     <command id="Browser:SavePage" oncommand="saveBrowser(gBrowser.selectedBrowser);"/>
+    <command id="Browser:SaveSnapshot" oncommand="ProClientSaveSnapshot(gBrowser.currentURI.spec);"/>
 
     <command id="Browser:SendLink"
              oncommand="MailIntegration.sendLinkForBrowser(gBrowser.selectedBrowser);"/>
@@ -185,6 +186,9 @@
     <key id="key_undo"
          data-l10n-id="text-action-undo-shortcut"
          modifiers="accel"/>
+#ifdef PROCLIENT_WINDOW
+    <key id="key_saveSnapshot" data-l10n-id="bookmark-this-page-shortcut" command="Browser:SaveSnapshot" modifiers="accel"/>
+#endif
     <key id="key_redo"
 #ifdef XP_UNIX
          data-l10n-id="text-action-undo-shortcut"
@@ -265,13 +269,13 @@
     <key data-l10n-id="search-find-again-shortcut-alt" command="cmd_findAgain"/>
     <key data-l10n-id="search-find-again-shortcut-alt" command="cmd_findPrevious" modifiers="shift"/>
 
+    <key id="manBookmarkKb" data-l10n-id="bookmark-show-library-shortcut" command="Browser:ShowAllBookmarks" modifiers="accel,shift"/>
+#ifndef PROCLIENT_WINDOW
     <key id="addBookmarkAsKb" data-l10n-id="bookmark-this-page-shortcut" command="Browser:AddBookmarkAs" modifiers="accel"/>
     <key id="bookmarkAllTabsKb"
          data-l10n-id="bookmark-this-page-shortcut"
          oncommand="PlacesUIUtils.showBookmarkPagesDialog(PlacesCommandHook.uniqueCurrentPages);"
          modifiers="accel,shift"/>
-    <key id="manBookmarkKb" data-l10n-id="bookmark-show-library-shortcut" command="Browser:ShowAllBookmarks" modifiers="accel,shift"/>
-#ifndef PROCLIENT_WINDOW
     <key id="viewBookmarksSidebarKb"
          data-l10n-id="bookmark-show-sidebar-shortcut"
          modifiers="accel"

@@ -77,6 +77,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   SimpleServiceDiscovery: "resource://gre/modules/SimpleServiceDiscovery.jsm",
   SiteDataManager: "resource:///modules/SiteDataManager.jsm",
   SitePermissions: "resource:///modules/SitePermissions.jsm",
+  Snapshots: "resource:///modules/Snapshots.jsm",
   SubDialog: "resource://gre/modules/SubDialog.jsm",
   SubDialogManager: "resource://gre/modules/SubDialog.jsm",
   TabModalPrompt: "chrome://global/content/tabprompts.jsm",
@@ -3050,6 +3051,14 @@ function BrowserTryToCloseWindow(event) {
   if (WindowIsClosing(event)) {
     window.close();
   } // WindowIsClosing does all the necessary checks
+}
+
+/**
+ * Adds a specified URL as a Snapshot.
+ * @param {string} The URL that will be added as a snapshot.
+ */
+function ProClientSaveSnapshot(url) {
+  Snapshots.add({ url, userPersisted: true });
 }
 
 function loadURI(
