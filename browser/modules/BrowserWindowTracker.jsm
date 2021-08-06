@@ -20,7 +20,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 });
 
 // Constants
-const TAB_EVENTS = ["TabBrowserInserted", "TabSelect"];
+const TAB_EVENTS = ["TabBrowserInserted", "TabSelect", "TabClose"];
 const WINDOW_EVENTS = ["activate", "unload"];
 const DEBUG = false;
 
@@ -81,15 +81,17 @@ function _handleEvent(event) {
     case "TabSelect":
       _updateCurrentBrowsingContextID(event.target.linkedBrowser);
       break;
+    case "TabClose":
+      Services.obs.notifyObservers(
+        event.target,
+        "browser-window-tracker-tab-removed"
+      );
+      break;
     case "activate":
       WindowHelper.onActivate(event.target);
       break;
     case "unload":
       WindowHelper.removeWindow(event.currentTarget);
-      Services.obs.notifyObservers(
-        event.currentTarget,
-        "browser-window-tracker-tab-removed"
-      );
       break;
   }
 }
