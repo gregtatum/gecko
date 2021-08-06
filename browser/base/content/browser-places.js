@@ -1915,7 +1915,7 @@ var BookmarkingUI = {
     // Update the tooltip for elements that require it.
     let shortcut = document.getElementById(this.BOOKMARK_BUTTON_SHORTCUT);
     let l10nArgs = {
-      shortcut: ShortcutUtils.prettifyShortcut(shortcut),
+      shortcut: shortcut ? ShortcutUtils.prettifyShortcut(shortcut) : "",
     };
     document.l10n.setAttributes(
       this.starBox,
