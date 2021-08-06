@@ -202,11 +202,9 @@ export class Media extends HTMLElement {
 
   render() {
     // TODO: Check supportedkeys to dynamically add / remove buttons
-    let hasMedia =
-      (this.tab.canTogglePip || this.tab.soundPlaying) && this.tab.title;
     let metadata = this.tab.media.metadata;
 
-    if (!(metadata || hasMedia)) {
+    if (!metadata) {
       this.hidden = true;
       return;
     }
