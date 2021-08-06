@@ -4,7 +4,7 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["CompanionParent", "gMediaControllers"];
+var EXPORTED_SYMBOLS = ["CompanionParent"];
 
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
@@ -73,17 +73,18 @@ const DOMAIN_TYPES = {
 class CompanionParent extends JSWindowActorParent {
   constructor() {
     super();
-    this._mediaControllerIdsToTabs = new Map();
     this._browserIdsToTabs = new Map();
     this._cachedPlacesURLs = new Map();
     this._cachedPlacesDataToSend = [];
     this._pageType = null;
 
     this._observer = this.observe.bind(this);
-    this._handleMediaEvent = this.handleMediaEvent.bind(this);
     this._handleTabEvent = this.handleTabEvent.bind(this);
     this._handleGlobalHistoryEvent = this.handleGlobalHistoryEvent.bind(this);
     this._pageDataFound = this.pageDataFound.bind(this);
+    this._setupGlobalHistoryPrefObservers = this.setUpGlobalHistoryDebuggingObservers.bind(
+      this
+    );
 
     this._cacheCleanupTimeout = null;
     this._cleanupCaches = this.cleanupCaches.bind(this);
@@ -111,7 +112,7 @@ class CompanionParent extends JSWindowActorParent {
 
     Services.prefs.addObserver(
       "browser.companion.globalhistorydebugging",
-      this.setUpGlobalHistoryDebuggingObservers.bind(this)
+      this._setupGlobalHistoryPrefObservers
     );
 
     for (let win of BrowserWindowTracker.orderedWindows) {
@@ -184,8 +185,14 @@ class CompanionParent extends JSWindowActorParent {
       "browser-window-tracker-tab-removed"
     );
 
-    Services.obs.addObserver(this._observer, "companion-signin");
-    Services.obs.addObserver(this._observer, "companion-signout");
+    Services.obs.removeObserver(this._observer, "companion-signin");
+    Services.obs.removeObserver(this._observer, "companion-signout");
+    Services.obs.removeObserver(this._observer, "companion-services-refresh");
+
+    Services.prefs.removeObserver(
+      "browser.companion.globalhistorydebugging",
+      this._setupGlobalHistoryPrefObservers
+    );
 
     this.removeGlobalHistoryDebuggingObservers();
 
@@ -250,10 +257,6 @@ class CompanionParent extends JSWindowActorParent {
     });
   }
 
-  getWindowData(window) {
-    return { id: BrowserWindowTracker.getBrowserWindowId(window) };
-  }
-
   getMediaData(tab) {
     let controller = tab.linkedBrowser?.browsingContext?.mediaController;
     if (!controller) {
@@ -295,32 +298,6 @@ class CompanionParent extends JSWindowActorParent {
     }
 
     tab.removeEventListener("TabPipToggleChanged", this._handleTabEvent);
-
-    let mediaController = tab.linkedBrowser?.browsingContext?.mediaController;
-    if (mediaController) {
-      mediaController.removeEventListener("activated", this._handleMediaEvent);
-      mediaController.removeEventListener(
-        "deactivated",
-        this._handleMediaEvent
-      );
-      mediaController.removeEventListener(
-        "supportedkeyschange",
-        this._handleMediaEvent
-      );
-      mediaController.removeEventListener(
-        "positionstatechange",
-        this._handleMediaEvent
-      );
-      mediaController.removeEventListener(
-        "metadatachange",
-        this._handleMediaEvent
-      );
-      mediaController.removeEventListener(
-        "playbackstatechange",
-        this._handleMediaEvent
-      );
-      this._mediaControllerIdsToTabs.delete(mediaController.id);
-    }
   }
 
   registerTab(tab) {
@@ -329,46 +306,6 @@ class CompanionParent extends JSWindowActorParent {
     }
 
     tab.addEventListener("TabPipToggleChanged", this._handleTabEvent);
-
-    let mediaController = tab.linkedBrowser?.browsingContext?.mediaController;
-    if (mediaController) {
-      const options = {
-        mozSystemGroup: true,
-        capture: false,
-      };
-
-      mediaController.addEventListener(
-        "activated",
-        this._handleMediaEvent,
-        options
-      );
-      mediaController.addEventListener(
-        "deactivated",
-        this._handleMediaEvent,
-        options
-      );
-      mediaController.addEventListener(
-        "supportedkeyschange",
-        this._handleMediaEvent,
-        options
-      );
-      mediaController.addEventListener(
-        "positionstatechange",
-        this._handleMediaEvent,
-        options
-      );
-      mediaController.addEventListener(
-        "metadatachange",
-        this._handleMediaEvent,
-        options
-      );
-      mediaController.addEventListener(
-        "playbackstatechange",
-        this._handleMediaEvent,
-        options
-      );
-      this._mediaControllerIdsToTabs.set(mediaController.id, tab);
-    }
   }
 
   registerWindow(win) {
@@ -559,17 +496,6 @@ class CompanionParent extends JSWindowActorParent {
     let globalHistory = this.maybeGetGlobalHistory();
     this.sendAsyncMessage("Companion:GlobalHistoryEvent", {
       globalHistory,
-    });
-  }
-
-  handleMediaEvent(event) {
-    let tab = this._mediaControllerIdsToTabs.get(event.target.id);
-    if (!tab) {
-      return;
-    }
-    this.sendAsyncMessage("Companion:MediaEvent", {
-      tab: this.getTabData(tab),
-      eventType: event.type,
     });
   }
 

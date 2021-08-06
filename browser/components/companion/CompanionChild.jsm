@@ -148,7 +148,6 @@ class CompanionChild extends JSWindowActorChild {
         this.updatePlacesCache(newPlacesCacheEntries);
         break;
       }
-      case "Companion:MediaEvent":
       case "Companion:TabAttrModified":
       case "Companion:TabPipToggleChanged": {
         this.updateTab(message.data.tab);
