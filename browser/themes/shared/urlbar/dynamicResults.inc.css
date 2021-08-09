@@ -165,6 +165,7 @@
   align-items: center;
   padding: 6px;
   border: 0.5px solid #CFCFD8;
+  margin-top: 2px;
 }
 
 .urlbarView-row[dynamicType=quickActions] .urlbarView-label {
@@ -186,6 +187,10 @@
   border-radius: 50%;
 }
 
+.urlbarView-row[dynamicType=quickActions][label]::before {
+  top: -1em;
+}
+
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon {
   width: 32px;
   height: 32px;
@@ -194,7 +199,6 @@
   margin-inline-end: 0;
   border-radius: 50%;
   margin-block-end: 5px;
-  border: 0.5px solid #CFCFD8;
 }
 
 .urlbarView-row:not([dynamicType=topSitesButtons]) {
@@ -203,7 +207,7 @@
 
 .urlbarView-row[dynamicType=topSitesButtons] {
   background-color: var(--toolbar-bgcolor);
-  height: 100px;
+  height: 80px;
   overflow: hidden;
   padding-block: 0;
 }
@@ -229,12 +233,11 @@
   height: 70px;
   display: flex;
   flex-direction: column;
-  margin-bottom: 32.5px;
 }
 
 .urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row:hover,
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon:hover {
-  outline: 1px solid #9F9FAD;
+  outline: 1px solid #CFCFD8;
 }
 
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row[selected] .urlbarView-favicon,
@@ -253,7 +256,6 @@
   flex-wrap: wrap;
   overflow: hidden;
   margin-inline: 20px;
-  padding-block-start: 16.5px;
 }
 
 .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-title {
