@@ -584,7 +584,7 @@ class CompanionParent extends JSWindowActorParent {
 
         let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
         this.snapshotSelector = new SnapshotSelector(5);
-        this.snapshotSelector.setUrl(gBrowser.currentURI.spec);
+        this.snapshotSelector.setUrlAndRebuildNow(gBrowser.currentURI.spec);
 
         gBrowser.addProgressListener(this);
 
