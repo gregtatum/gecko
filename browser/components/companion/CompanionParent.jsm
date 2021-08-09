@@ -42,6 +42,10 @@ const { FileUtils } = ChromeUtils.import(
   "resource://gre/modules/FileUtils.jsm"
 );
 
+XPCOMUtils.defineLazyModuleGetters(this, {
+  PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
+});
+
 XPCOMUtils.defineLazyPreferenceGetter(
   this,
   "selectByType",
@@ -76,6 +80,7 @@ class CompanionParent extends JSWindowActorParent {
     this._browserIdsToTabs = new Map();
     this._cachedPlacesURLs = new Map();
     this._cachedPlacesDataToSend = [];
+    this._cachedPlacesTitles = new Map();
     this._pageType = null;
 
     this._observer = this.observe.bind(this);
@@ -359,6 +364,53 @@ class CompanionParent extends JSWindowActorParent {
     return previewImage;
   }
 
+  async getEventLinkTitles(urls) {
+    let resultMap = new Map();
+    try {
+      for (let url of urls) {
+        let cached = this._cachedPlacesTitles.get(url);
+        if (cached) {
+          resultMap.set(url, cached);
+        }
+      }
+
+      let filtered = urls.filter(u => !resultMap.has(u));
+      if (!filtered.length) {
+        return resultMap;
+      }
+
+      let db = await PlacesUtils.promiseDBConnection();
+      for (let chunk of PlacesUtils.chunkArray(filtered, db.variableLimit)) {
+        let rows = await db.executeCached(
+          `SELECT url, title FROM moz_places
+          WHERE url_hash IN (${Array(chunk.length)
+            .fill("hash(?)")
+            .join(",")})`,
+          chunk
+        );
+        for (let row of rows) {
+          let url = row.getResultByName("url");
+          let title = row.getResultByName("title");
+          this._cachedPlacesTitles.set(url, title);
+          resultMap.set(url, title);
+        }
+      }
+      return resultMap;
+    } finally {
+      // Pull out the keys into an array since we'll be deleting from the map
+      // as we go.
+      let keys = [...Object.keys(this._cachedPlacesTitles)];
+      for (let url of keys) {
+        // If it wasn't referenced this time around, just remove it. Because of
+        // the way getting events works, if we stop requesting a URL we probably
+        // don't need it anymore.
+        if (!resultMap.has(url)) {
+          this._cachedPlacesTitles.delete(url);
+        }
+      }
+    }
+  }
+
   async getPlacesData(url) {
     let query = NavHistory.getNewQuery();
     query.uri = Services.io.newURI(url);
@@ -436,6 +488,22 @@ class CompanionParent extends JSWindowActorParent {
     return this.browsingContext.topChromeWindow.gBrowser.currentURI.spec;
   }
 
+  async populateAdditionalEventData(events) {
+    // Calendar events can have links associated with them, like links to
+    // a shared document for a meeting. We want to have the option of
+    // populating the link's text in the meeting UI with the title of the
+    // page, assuming it's in the user's history.
+    let linkTitles = await this.getEventLinkTitles(
+      events.flatMap(e => e.links.filter(l => !!l.url).map(l => l.url))
+    );
+    for (let event of events) {
+      for (let link of event.links) {
+        await this.ensurePlacesDataCached(link.url);
+        link.title = linkTitles.get(link.url);
+      }
+    }
+  }
+
   async getEvents() {
     let services = OnlineServices.getServices();
     if (!services.length) {
@@ -444,7 +512,9 @@ class CompanionParent extends JSWindowActorParent {
       });
     }
 
-    return OnlineServices.getEvents();
+    let events = await OnlineServices.getEvents();
+    await this.populateAdditionalEventData(events);
+    return events;
   }
 
   async observe(subj, topic, data) {
@@ -479,11 +549,7 @@ class CompanionParent extends JSWindowActorParent {
       case "companion-signout":
       case "companion-services-refresh":
         let events = await OnlineServices.fetchEvents();
-        for (let event of events) {
-          for (let link of event.links) {
-            await this.ensurePlacesDataCached(link.url);
-          }
-        }
+        await this.populateAdditionalEventData(events);
         this.sendAsyncMessage("Companion:RegisterEvents", {
           events,
           newPlacesCacheEntries: this.consumeCachedPlacesDataToSend(),
@@ -605,11 +671,6 @@ class CompanionParent extends JSWindowActorParent {
         // To avoid a significant delay in initializing other parts of the UI,
         // we register the events separately.
         let events = await this.getEvents();
-        for (let event of events) {
-          for (let link of event.links) {
-            await this.ensurePlacesDataCached(link.url);
-          }
-        }
         this.sendAsyncMessage("Companion:RegisterEvents", {
           events,
           newPlacesCacheEntries: this.consumeCachedPlacesDataToSend(),

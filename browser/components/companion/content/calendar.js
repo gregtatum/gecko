@@ -357,7 +357,7 @@ class CalendarEvent extends MozLitElement {
   eventLinkTemplate(link) {
     let linkPlacesData = window.CompanionUtils.getPlacesData(link.url);
     let url = link.url;
-    let text = linkPlacesData?.title || link.text || link.url;
+    let text = link.title || link.text || link.url;
     let favicon =
       linkPlacesData?.icon || "chrome://global/skin/icons/defaultFavicon.svg";
 
