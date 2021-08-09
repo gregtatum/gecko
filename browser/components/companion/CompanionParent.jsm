@@ -330,12 +330,12 @@ class CompanionParent extends JSWindowActorParent {
             ].getService(Ci.nsIFaviconService);
             service.getFaviconDataForPage(
               Services.io.newURI(page),
-              (uri, dataLength, data) => {
-                if (uri) {
-                  resolve({ url: page, icon: uri.spec });
-                } else {
-                  resolve({ url: page, icon: null });
-                }
+              (uri, dataLength, data, mimeType) => {
+                resolve({
+                  url: page,
+                  data: data ? new Uint8Array(data) : null,
+                  mimeType,
+                });
               },
               width
             );

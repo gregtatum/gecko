@@ -15,7 +15,21 @@ class CompanionChild extends JSWindowActorChild {
 
   updateFaviconCache(newFavicons) {
     for (let entry of newFavicons) {
-      this._cachedFavicons.set(entry.url, entry);
+      if (entry.data) {
+        // NOTE: honestly this is awkward and inefficient. We build a string
+        // with String.fromCharCode and then btoa that. It's a Uint8Array
+        // under the hood, and we should probably just expose something in
+        // ChromeUtils to Base64 encode a Uint8Array directly, but this is
+        // fine for now.
+        let b64 = btoa(
+          entry.data.reduce(
+            (data, byte) => data + String.fromCharCode(byte),
+            ""
+          )
+        );
+        let dataUri = `data:${entry.mimeType};base64,${b64}`;
+        this._cachedFavicons.set(entry.url, dataUri);
+      }
     }
   }
 
@@ -43,7 +57,7 @@ class CompanionChild extends JSWindowActorChild {
           },
           snapshots: [],
           getFavicon(url) {
-            return self._cachedFavicons.get(url)?.icon;
+            return self._cachedFavicons.get(url);
           },
           services: [],
           events: [],
