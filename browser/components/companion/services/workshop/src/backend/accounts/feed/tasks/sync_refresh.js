@@ -17,6 +17,7 @@
 import logic from "logic";
 
 import { parseFeed } from "../../../parsers/xml/feed_parser";
+import { fetchCacheAware } from "../../../utils/network";
 
 import { shallowClone } from "shared/util";
 import { NOW } from "shared/date";
@@ -101,7 +102,6 @@ export default TaskDefiner.defineAtMostOnceTask([
         syncStates: new Map([[req.accountId, null]]),
       });
       let rawSyncState = fromDb.syncStates.get(req.accountId);
-
       let syncState = new SyncStateHelper(
         ctx,
         rawSyncState,
@@ -112,13 +112,24 @@ export default TaskDefiner.defineAtMostOnceTask([
       let account = await ctx.universe.acquireAccount(ctx, req.accountId);
 
       let syncDate = NOW();
+
       logic(ctx, "syncStart", { syncDate });
 
-      // ### Fetch the calendar.
-      const feedResp = await fetch(account.feedUrl);
-      const feedText = await feedResp.text();
+      // ### Fetch the feed.
+      const { response, requestCacheState } = await fetchCacheAware(
+        account.feedUrl,
+        syncState.rawSyncState.requestCacheState
+      );
+      syncState.rawSyncState.requestCacheState = requestCacheState;
 
+      if (!response) {
+        logic(ctx, "syncEnd", {});
+        return null;
+      }
+
+      const feedText = await response.text();
       const parsed = parseFeed(feedText);
+
       if (parsed?.rss?.channel.item) {
         for (const item of parsed.rss.channel.item) {
           syncState.ingestItem(item);

@@ -29,6 +29,7 @@ export default class FeedSyncStateHelper {
       logic(ctx, "creatingDefaultSyncState", {});
       rawSyncState = {
         lastChangeDatestamp: NOW(),
+        requestCacheState: null,
       };
     }
 

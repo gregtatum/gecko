@@ -21137,6 +21137,47 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/backend/utils/network.js
+  async function fetchCacheAware(request, state) {
+    if (typeof request === "string") {
+      request = new Request(request);
+    }
+    request.cache = "no-store";
+    if (!state) {
+      state = Object.create(null);
+    }
+    const result = {
+      response: null,
+      requestCacheState: state
+    };
+    const { etag, lastModified } = state;
+    const headers = request.headers;
+    if (etag) {
+      headers.set("If-None-Match", etag);
+    }
+    if (lastModified) {
+      headers.set("If-Modified-Since", lastModified);
+    }
+    const response = await fetch(request);
+    if (response.status === 304) {
+      return result;
+    }
+    const newEtag = response.headers.get("ETag");
+    if (newEtag) {
+      state.etag = newEtag;
+    }
+    const newLastModified = response.headers.get("Last-Modified");
+    if (newLastModified) {
+      state.lastModified = newLastModified;
+    }
+    result.response = response;
+    return result;
+  }
+  var init_network = __esm({
+    "src/backend/utils/network.js"() {
+    }
+  });
+
   // src/backend/accounts/feed/sync_state_helper.js
   var FeedSyncStateHelper;
   var init_sync_state_helper = __esm({
@@ -21149,7 +21190,8 @@ var WorkshopBackend = (() => {
           if (!rawSyncState) {
             logic(ctx, "creatingDefaultSyncState", {});
             rawSyncState = {
-              lastChangeDatestamp: NOW()
+              lastChangeDatestamp: NOW(),
+              requestCacheState: null
             };
           }
           this._accountId = accountId;
@@ -21219,6 +21261,7 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/feed/tasks/sync_refresh.js"() {
       init_logic();
       init_feed_parser();
+      init_network();
       init_util();
       init_date();
       init_task_definer();
@@ -21264,8 +21307,13 @@ var WorkshopBackend = (() => {
             let account = await ctx.universe.acquireAccount(ctx, req.accountId);
             let syncDate = NOW();
             logic(ctx, "syncStart", { syncDate });
-            const feedResp = await fetch(account.feedUrl);
-            const feedText = await feedResp.text();
+            const { response, requestCacheState } = await fetchCacheAware(account.feedUrl, syncState.rawSyncState.requestCacheState);
+            syncState.rawSyncState.requestCacheState = requestCacheState;
+            if (!response) {
+              logic(ctx, "syncEnd", {});
+              return null;
+            }
+            const feedText = await response.text();
             const parsed = parseFeed(feedText);
             if (parsed?.rss?.channel.item) {
               for (const item of parsed.rss.channel.item) {
