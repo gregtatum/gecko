@@ -44,16 +44,24 @@ function maybeInitializeUI() {
   content.appendChild(new SuggestedSnapshotList("Suggested Snapshots"));
 
   let browseContent = document.querySelector("#scroll-browse .content");
-  browseContent.appendChild(new BrowseList());
+  let browseList = new BrowseList();
+  browseContent.appendChild(browseList);
   browseContent.appendChild(new RecentlyClosedSnapshotList("Recently Closed"));
   browseContent.appendChild(new PocketList());
 
   if (
     Services.prefs.getBoolPref("browser.companion.passwords.enabled", false)
   ) {
-    document.querySelector(".passwords").hidden = document.querySelector(
-      "login-list"
-    ).hidden = false;
+    document.querySelector(".passwords").hidden = false;
+
+    browseList.querySelector(".passwords").addEventListener("click", () => {
+      togglePasswordPanel(false);
+      document
+        .querySelector(".subviewbutton-back")
+        .addEventListener("click", () => {
+          togglePasswordPanel(true);
+        });
+    });
 
     window.gLogins.initLogins();
 
@@ -61,6 +69,11 @@ function maybeInitializeUI() {
     // parallel with wiring up communication. TODO remove as soon as possible.
     window.gLogins.handleAllLogins(JSON.parse(window.gLogins.mockLogins));
   }
+}
+
+function togglePasswordPanel(hidePasswordPanel) {
+  document.querySelector("#scroll-browse .content").hidden = !hidePasswordPanel;
+  document.querySelector(".passwords-panel").hidden = hidePasswordPanel;
 }
 
 window.addEventListener(

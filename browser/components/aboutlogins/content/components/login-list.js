@@ -4,6 +4,9 @@
 
 import LoginListItemFactory from "./login-list-item.js";
 import { recordTelemetryEvent } from "../aboutLoginsUtils.js";
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 const collator = new Intl.Collator();
 const sortFnOptions = {
@@ -53,7 +56,11 @@ export default class LoginList extends HTMLElement {
     shadowRoot.appendChild(loginListTemplate.content.cloneNode(true));
 
     this._count = shadowRoot.querySelector(".count");
-    this._createLoginButton = shadowRoot.querySelector(".create-login-button");
+    if (!AppConstants.PROCLIENT_ENABLED) {
+      this._createLoginButton = shadowRoot.querySelector(
+        ".create-login-button"
+      );
+    }
     this._list = shadowRoot.querySelector("ol");
     this._list.appendChild(this._blankLoginListItem);
     this._sortSelect = shadowRoot.querySelector("#login-sort");
@@ -71,7 +78,9 @@ export default class LoginList extends HTMLElement {
     this._list.addEventListener("click", this);
     this.addEventListener("keydown", this);
     this.addEventListener("keyup", this);
-    this._createLoginButton.addEventListener("click", this);
+    if (!AppConstants.PROCLIENT_ENABLED) {
+      this._createLoginButton.addEventListener("click", this);
+    }
   }
 
   render() {
@@ -233,7 +242,9 @@ export default class LoginList extends HTMLElement {
         } else {
           // Clear the filter if all items have been filtered out.
           this.classList.remove("create-login-selected");
-          this._createLoginButton.disabled = false;
+          if (!AppConstants.PROCLIENT_ENABLED) {
+            this._createLoginButton.disabled = false;
+          }
           window.dispatchEvent(
             new CustomEvent("AboutLoginsFilterLogins", {
               detail: "",
@@ -724,7 +735,9 @@ export default class LoginList extends HTMLElement {
     }
     this.classList.toggle("create-login-selected", !listItem.dataset.guid);
     this._blankLoginListItem.hidden = !!listItem.dataset.guid;
-    this._createLoginButton.disabled = !listItem.dataset.guid;
+    if (!AppConstants.PROCLIENT_ENABLED) {
+      this._createLoginButton.disabled = !listItem.dataset.guid;
+    }
     listItem.classList.add("selected");
     listItem.setAttribute("aria-selected", "true");
     this._list.setAttribute("aria-activedescendant", listItem.id);

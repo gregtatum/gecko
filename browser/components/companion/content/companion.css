@@ -654,6 +654,7 @@ e-global-nav-debugging h2 {
 .tab-button-group {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  border: 1px solid #E0E0E6;
 }
 
 .tab-button {
@@ -711,4 +712,111 @@ e-global-nav-debugging h2 {
 
 .browse button.notifications {
   background-image: url("chrome://browser/skin/notification-icons/desktop-notification.svg");
+}
+
+.browse button.passwords {
+  background-image: url("chrome://browser/skin/login.svg");
+}
+
+/*** PASSWORD PANEL ***/
+/* Override about:logins styling */
+
+.panel-header {
+  align-items: center;
+  display: flex;
+  flex: 1 auto;
+  outline: 1px solid #F0F0F4;
+}
+
+.panel-header > .subviewbutton-back + h1 {
+  margin-inline-end: 32px;
+  margin-block: 23px 22px;
+}
+
+.panel-header > h1 {
+  display: inline;
+  flex: auto;
+  font-size: inherit;
+  font-weight: 600;
+  margin: 4px 0;
+  text-align: center;
+  line-height: 1.2;
+  color: var(--in-content-text-color);
+}
+
+.panel-header > h1 > span {
+  display: inline-block;
+  white-space: pre-wrap;
+}
+
+toolbarbutton.subviewbutton-back {
+  background-image: url(chrome://global/skin/icons/arrow-left.svg);
+  background-repeat: no-repeat;
+  margin: 0 4px;
+  padding: 8px;
+  margin-inline-start: 16px;
+}
+
+.meta > label {
+  display: flex;
+}
+
+.meta > label > span {
+  margin-block: 8px;
+}
+
+.meta {
+  border-bottom: 1px solid #F0F0F4;
+  margin-bottom: 12px;
+}
+
+#login-sort {
+  right: 0;
+  position: absolute;
+  margin-inline-end: 8px;
+}
+
+.favicon-wrapper {
+  background-color: #F0F0F4;
+  border-radius: 4px;
+  background-origin: content-box;
+  padding: 8px;
+}
+
+.favicon-wrapper .favicon[src=""] {
+  display: none;
+}
+
+.login-list-item.selected .title {
+    font-weight: normal;
+}
+
+.login-list-item + .login-list-item {
+  border: none;
+  padding-block: 4px;
+}
+
+.login-list-item {
+  padding-inline: 4px;
+  margin-inline: 12px;
+  border-radius: 4px;
+}
+
+.login-list-item:hover {
+  background-color: var(--in-content-button-background-hover);
+  color: var(--in-content-button-text-color-hover);
+}
+
+.create-login-button-container {
+  border-top: 1px solid #E0E0E6;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+}
+
+.create-login-button-companion {
+  margin-block: 23.5px 28px;
+  font-size: 11px;
+  width: 13em;
+  margin-inline: auto;
 }
