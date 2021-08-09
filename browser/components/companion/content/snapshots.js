@@ -98,8 +98,7 @@ export class Snapshot extends HTMLElement {
     // TODO: MR2-344: Fetch a richer image preview and display it along with the
     // favicon.
     let iconEl = fragment.querySelector(".snapshot-favicon > img");
-    iconEl.src =
-      window.CompanionUtils.getPlacesData(url.href)?.icon || DEFAULT_FAVICON;
+    iconEl.src = window.CompanionUtils.getFavicon(url.href) || DEFAULT_FAVICON;
 
     this.appendChild(fragment);
     this.addEventListener("click", this);

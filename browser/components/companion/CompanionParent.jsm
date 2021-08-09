@@ -24,9 +24,6 @@ const { clearTimeout, setTimeout, requestIdleCallback } = ChromeUtils.import(
 const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
 );
-const NavHistory = Cc["@mozilla.org/browser/nav-history-service;1"].getService(
-  Ci.nsINavHistoryService
-);
 const { Snapshots } = ChromeUtils.import("resource:///modules/Snapshots.jsm");
 const { PageDataCollector } = ChromeUtils.import(
   "resource:///modules/pagedata/PageDataCollector.jsm"
@@ -78,8 +75,8 @@ class CompanionParent extends JSWindowActorParent {
   constructor() {
     super();
     this._browserIdsToTabs = new Map();
-    this._cachedPlacesURLs = new Map();
-    this._cachedPlacesDataToSend = [];
+    this._cachedFaviconURLs = new Map();
+    this._cachedFavicons = [];
     this._cachedPlacesTitles = new Map();
     this._pageType = null;
 
@@ -234,17 +231,17 @@ class CompanionParent extends JSWindowActorParent {
       let nextExpiration = null;
       let now = Date.now();
       try {
-        let entries = [...this._cachedPlacesURLs.entries()];
+        let entries = [...this._cachedFaviconURLs.entries()];
         let evictions = [];
         for (let [url, expires] of entries) {
           if (expires <= now) {
             evictions.push(url);
-            this._cachedPlacesURLs.delete(url);
+            this._cachedFaviconURLs.delete(url);
           } else if (!nextExpiration || expires < nextExpiration) {
             nextExpiration = expires;
           }
         }
-        this.sendAsyncMessage("Companion:EvictPlacesData", evictions);
+        this.sendAsyncMessage("Companion:EvictFavicons", evictions);
       } finally {
         // Even in the event of a weird error we don't break this loop:
         // Either we schedule cleanup again to run at the next expiration, or
@@ -323,23 +320,28 @@ class CompanionParent extends JSWindowActorParent {
     tabs.removeEventListener("TabAttrModified", this._handleTabEvent);
   }
 
-  getFavicon(page, width = 0) {
-    return new Promise(resolve => {
-      let service = Cc["@mozilla.org/browser/favicon-service;1"].getService(
-        Ci.nsIFaviconService
-      );
-      service.getFaviconDataForPage(
-        Services.io.newURI(page),
-        (uri, dataLength, data) => {
-          if (uri) {
-            resolve(uri.spec);
-          } else {
-            resolve(null);
-          }
-        },
-        width
-      );
-    });
+  getFavicons(pages, width = 0) {
+    return Promise.all(
+      pages.map(
+        page =>
+          new Promise(resolve => {
+            let service = Cc[
+              "@mozilla.org/browser/favicon-service;1"
+            ].getService(Ci.nsIFaviconService);
+            service.getFaviconDataForPage(
+              Services.io.newURI(page),
+              (uri, dataLength, data) => {
+                if (uri) {
+                  resolve({ url: page, icon: uri.spec });
+                } else {
+                  resolve({ url: page, icon: null });
+                }
+              },
+              width
+            );
+          })
+      )
+    );
   }
 
   async getPreviewImageURL(url) {
@@ -411,51 +413,15 @@ class CompanionParent extends JSWindowActorParent {
     }
   }
 
-  async getPlacesData(url) {
-    let query = NavHistory.getNewQuery();
-    query.uri = Services.io.newURI(url);
+  async ensureFaviconsCached(urls) {
+    let uncachedUrls = urls.filter(u => !this._cachedFaviconURLs.has(u));
+    let favicons = await this.getFavicons(uncachedUrls, 16);
+    this._cachedFavicons.push(...favicons);
 
-    let queryOptions = NavHistory.getNewQueryOptions();
-    queryOptions.resultType = Ci.nsINavHistoryQueryOptions.RESULTS_AS_URI;
-    queryOptions.maxResults = 1;
-
-    let results = NavHistory.executeQuery(query, queryOptions);
-    results.root.containerOpen = true;
-    try {
-      if (results.root.childCount < 1) {
-        return null;
-      }
-
-      let result = results.root.getChild(0);
-      let favicon = await this.getFavicon(url, 16);
-
-      if (!favicon) {
-        return null;
-      }
-
-      let data = {
-        url,
-        title: result.title,
-        icon: favicon,
-        richIcon: await this.getFavicon(url),
-        previewImage: await this.getPreviewImageURL(url),
-      };
-      return data;
-    } finally {
-      results.root.containerOpen = false;
+    let evictionTime = Date.now() + PLACES_CACHE_EVICT_AFTER;
+    for (let url of urls) {
+      this._cachedFaviconURLs.set(url, evictionTime);
     }
-  }
-
-  async ensurePlacesDataCached(url) {
-    let cached = this._cachedPlacesURLs.has(url);
-    if (!cached) {
-      let data = await this.getPlacesData(url);
-      if (data) {
-        this._cachedPlacesDataToSend.push(data);
-      }
-    }
-
-    this._cachedPlacesURLs.set(url, Date.now() + PLACES_CACHE_EVICT_AFTER);
     this.ensureCacheCleanupRunning();
   }
 
@@ -478,9 +444,9 @@ class CompanionParent extends JSWindowActorParent {
     return yesterday;
   }
 
-  consumeCachedPlacesDataToSend() {
-    let result = this._cachedPlacesDataToSend;
-    this._cachedPlacesDataToSend = [];
+  consumeCachedFaviconsToSend() {
+    let result = this._cachedFavicons;
+    this._cachedFavicons = [];
     return result;
   }
 
@@ -489,16 +455,19 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   async populateAdditionalEventData(events) {
+    let linkUrls = events.flatMap(e =>
+      e.links.filter(l => !!l.url).map(l => l.url)
+    );
     // Calendar events can have links associated with them, like links to
     // a shared document for a meeting. We want to have the option of
     // populating the link's text in the meeting UI with the title of the
     // page, assuming it's in the user's history.
-    let linkTitles = await this.getEventLinkTitles(
-      events.flatMap(e => e.links.filter(l => !!l.url).map(l => l.url))
-    );
+    let [linkTitles] = await Promise.all([
+      this.getEventLinkTitles(linkUrls),
+      this.ensureFaviconsCached(linkUrls),
+    ]);
     for (let event of events) {
       for (let link of event.links) {
-        await this.ensurePlacesDataCached(link.url);
         link.title = linkTitles.get(link.url);
       }
     }
@@ -552,7 +521,7 @@ class CompanionParent extends JSWindowActorParent {
         await this.populateAdditionalEventData(events);
         this.sendAsyncMessage("Companion:RegisterEvents", {
           events,
-          newPlacesCacheEntries: this.consumeCachedPlacesDataToSend(),
+          newFavicons: this.consumeCachedFaviconsToSend(),
         });
         break;
     }
@@ -636,14 +605,14 @@ class CompanionParent extends JSWindowActorParent {
         let tabs = BrowserWindowTracker.orderedWindows.flatMap(w =>
           w.gBrowser.tabs.map(t => this.getTabData(t))
         );
-        let newPlacesCacheEntries = this.consumeCachedPlacesDataToSend();
+        let newFavicons = this.consumeCachedFaviconsToSend();
         let currentURI = this.getCurrentURI();
         let servicesConnected = !!OnlineServices.getServices().length;
         let globalHistory = this.maybeGetGlobalHistory();
         this.sendAsyncMessage("Companion:Setup", {
           tabs,
           servicesConnected,
-          newPlacesCacheEntries,
+          newFavicons,
           currentURI,
           globalHistory,
         });
@@ -658,13 +627,10 @@ class CompanionParent extends JSWindowActorParent {
         PageDataService.on("no-page-data", this._pageDataFound);
 
         this.snapshotSelector.on("snapshots-updated", async (_, snapshots) => {
-          for (let snapshot of snapshots) {
-            await this.ensurePlacesDataCached(snapshot.url);
-          }
-
+          await this.ensureFaviconsCached(snapshots.map(s => s.url));
           this.sendAsyncMessage("Companion:SnapshotsChanged", {
             snapshots,
-            newPlacesCacheEntries: this.consumeCachedPlacesDataToSend(),
+            newFavicons: this.consumeCachedFaviconsToSend(),
           });
         });
 
@@ -673,7 +639,7 @@ class CompanionParent extends JSWindowActorParent {
         let events = await this.getEvents();
         this.sendAsyncMessage("Companion:RegisterEvents", {
           events,
-          newPlacesCacheEntries: this.consumeCachedPlacesDataToSend(),
+          newFavicons: this.consumeCachedFaviconsToSend(),
         });
         break;
       }

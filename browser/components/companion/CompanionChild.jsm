@@ -10,18 +10,18 @@ const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 class CompanionChild extends JSWindowActorChild {
   constructor() {
     super();
-    this._cachedPlacesData = new Map();
+    this._cachedFavicons = new Map();
   }
 
-  updatePlacesCache(newPlacesCacheEntries) {
-    for (let entry of newPlacesCacheEntries) {
-      this._cachedPlacesData.set(entry.url, entry);
+  updateFaviconCache(newFavicons) {
+    for (let entry of newFavicons) {
+      this._cachedFavicons.set(entry.url, entry);
     }
   }
 
-  evictPlacesCacheEntries(evictions) {
+  evictFaviconEntries(evictions) {
     for (let url of evictions) {
-      this._cachedPlacesData.delete(url);
+      this._cachedFavicons.delete(url);
     }
   }
 
@@ -42,8 +42,8 @@ class CompanionChild extends JSWindowActorChild {
             return this._tabs.values();
           },
           snapshots: [],
-          getPlacesData(url) {
-            return self._cachedPlacesData.get(url);
+          getFavicon(url) {
+            return self._cachedFavicons.get(url)?.icon;
           },
           services: [],
           events: [],
@@ -98,7 +98,7 @@ class CompanionChild extends JSWindowActorChild {
       case "Companion:Setup": {
         let {
           tabs,
-          newPlacesCacheEntries,
+          newFavicons,
           currentURI,
           servicesConnected,
           globalHistory,
@@ -113,21 +113,21 @@ class CompanionChild extends JSWindowActorChild {
         waivedContent.CompanionUtils.currentURI = currentURI;
         waivedContent.CompanionUtils.globalHistory = globalHistory;
 
-        this.updatePlacesCache(newPlacesCacheEntries);
+        this.updateFaviconCache(newFavicons);
 
         break;
       }
       case "Companion:RegisterEvents": {
-        let { events, newPlacesCacheEntries } = message.data;
+        let { events, newFavicons } = message.data;
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
         waivedContent.CompanionUtils.events = events;
 
-        this.updatePlacesCache(newPlacesCacheEntries);
+        this.updateFaviconCache(newFavicons);
         break;
       }
-      case "Companion:EvictPlacesData": {
+      case "Companion:EvictFavicons": {
         let evictions = message.data;
-        this.evictPlacesCacheEntries(evictions);
+        this.evictFaviconEntries(evictions);
         break;
       }
       case "Companion:ServiceDisconnected": {
@@ -142,10 +142,10 @@ class CompanionChild extends JSWindowActorChild {
         break;
       }
       case "Companion:SnapshotsChanged": {
-        let { snapshots, newPlacesCacheEntries } = message.data;
+        let { snapshots, newFavicons } = message.data;
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
         waivedContent.CompanionUtils.snapshots = snapshots;
-        this.updatePlacesCache(newPlacesCacheEntries);
+        this.updateFaviconCache(newFavicons);
         break;
       }
       case "Companion:TabAttrModified":
