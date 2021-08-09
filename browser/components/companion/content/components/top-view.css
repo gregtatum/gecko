@@ -14,7 +14,7 @@ view-group::part(icon) {
 view-group::part(label-container) {
   line-height: 16px;
   white-space: nowrap;
-  max-width: 240px;
+  width: 200px;
 }
 
 view-group::part(title) {
