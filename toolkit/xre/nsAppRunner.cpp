@@ -48,6 +48,7 @@
 #  include "MacLaunchHelper.h"
 #  include "MacApplicationDelegate.h"
 #  include "MacAutoreleasePool.h"
+#  include "MacRunFromDmgUtils.h"
 // these are needed for sysctl
 #  include <sys/types.h>
 #  include <sys/sysctl.h>
@@ -266,6 +267,8 @@ static const char kPrefDefaultAgentEnabled[] = "default-browser-agent.enabled";
 static const char kPrefServicesSettingsServer[] = "services.settings.server";
 static const char kPrefSecurityContentSignatureRootHash[] =
     "security.content.signature.root_hash";
+static const char kPrefSetDefaultBrowserUserChoicePref[] =
+    "browser.shell.setDefaultBrowserUserChoice";
 #endif  // defined(MOZ_DEFAULT_BROWSER_AGENT)
 
 #if defined(XP_WIN)
@@ -2130,6 +2133,32 @@ static void OnDefaultAgentTelemetryPrefChanged(const char* aPref, void* aData) {
 
   // We're recording whether the pref is *disabled*, so invert the value.
   rv = regKey->WriteIntValue(valueName, prefVal ? 0 : 1);
+  NS_ENSURE_SUCCESS_VOID(rv);
+}
+
+static void OnSetDefaultBrowserUserChoicePrefChanged(const char* aPref,
+                                                     void* aData) {
+  nsresult rv;
+  if (strcmp(aPref, kPrefSetDefaultBrowserUserChoicePref) != 0) {
+    return;
+  }
+  nsAutoString valueName;
+  valueName.AssignLiteral("SetDefaultBrowserUserChoice");
+  rv = PrependRegistryValueName(valueName);
+  NS_ENSURE_SUCCESS_VOID(rv);
+
+  nsCOMPtr<nsIWindowsRegKey> regKey =
+      do_CreateInstance("@mozilla.org/windows-registry-key;1", &rv);
+  NS_ENSURE_SUCCESS_VOID(rv);
+
+  nsAutoString keyName;
+  keyName.AppendLiteral(DEFAULT_BROWSER_AGENT_KEY_NAME);
+  rv = regKey->Create(nsIWindowsRegKey::ROOT_KEY_CURRENT_USER, keyName,
+                      nsIWindowsRegKey::ACCESS_WRITE);
+
+  bool prefVal = Preferences::GetBool(aPref, true);
+
+  rv = regKey->WriteIntValue(valueName, prefVal);
   NS_ENSURE_SUCCESS_VOID(rv);
 }
 
@@ -5119,6 +5148,11 @@ nsresult XREMain::XRE_mainRun() {
         Preferences::RegisterCallbackAndCall(
             &OnDefaultAgentRemoteSettingsPrefChanged,
             kPrefSecurityContentSignatureRootHash);
+
+        Preferences::RegisterCallbackAndCall(
+            &OnSetDefaultBrowserUserChoicePrefChanged,
+            kPrefSetDefaultBrowserUserChoicePref);
+
         SetDefaultAgentLastRunTime();
       }
 #  endif  // defined(MOZ_DEFAULT_BROWSER_AGENT)
@@ -5441,6 +5475,13 @@ int XREMain::XRE_main(int argc, char* argv[], const BootstrapConfig& aConfig) {
 
   rv = mScopedXPCOM->Initialize(/* aInitJSContext = */ false);
   NS_ENSURE_SUCCESS(rv, 1);
+
+#ifdef XP_MACOSX
+  if (mProfileSvc->GetIsFirstRun()) {
+    Telemetry::ScalarSet(Telemetry::ScalarID::STARTUP_FIRST_RUN_IS_FROM_DMG,
+                         MacRunFromDmgUtils::IsAppRunningFromDmg());
+  }
+#endif
 
   // run!
   rv = XRE_mainRun();

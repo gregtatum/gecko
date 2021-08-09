@@ -1730,7 +1730,7 @@
 # Block Insecure downloads from Secure Origins
 - name: dom.block_download_insecure
   type: bool
-  value: @IS_NIGHTLY_BUILD@
+  value: @IS_EARLY_BETA_OR_EARLIER@
   mirror: always
 
 # Block all downloads in iframes with the sandboxed attribute
@@ -1928,6 +1928,11 @@
 - name: dom.event.default_to_passive_wheel_listeners
   type: bool
   value: true
+  mirror: always
+
+- name: dom.event.dragexit.enabled
+  type: bool
+  value: @IS_NOT_NIGHTLY_BUILD@
   mirror: always
 
 # Whether WheelEvent should return pixels instead of lines for
@@ -3689,6 +3694,12 @@
   value: false
   mirror: always
 
+# Is support for custom element disabledFeatures enabled?
+- name: dom.webcomponents.disabledFeatures.enabled
+  type: bool
+  value: true
+  mirror: always
+
 # Is support for form-associated custom element enabled?
 - name: dom.webcomponents.formAssociatedCustomElement.enabled
   type: bool
@@ -3858,7 +3869,11 @@
 # WebShare API - exposes navigator.share()
 - name: dom.webshare.enabled
   type: bool
+#ifdef XP_WIN
+  value: @IS_EARLY_BETA_OR_EARLIER@
+#else
   value: false
+#endif
   mirror: always
 
 # WebShare API - allows WebShare without user interaction (for tests only).
@@ -4782,6 +4797,11 @@
   value: true
   mirror: always
 
+- name: gfx.basic_layer_manager.force_enabled
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
 #  Whether to enable LayerScope tool and default listening port.
 - name: gfx.layerscope.enabled
   type: RelaxedAtomicBool
@@ -5618,7 +5638,7 @@
 - name: image.avif.enabled
   type: RelaxedAtomicBool
 #if defined(MOZ_AV1)
-  value: false
+  value: true
 #else
   value: false
 #endif
@@ -5988,6 +6008,13 @@
     value: false
     mirror: always
 #endif  // defined(ENABLE_WASM_RELAXED_SIMD)
+
+#if defined(ENABLE_WASM_MOZ_INTGEMM)
+-   name: javascript.options.wasm_moz_intgemm
+    type: bool
+    value: @IS_NIGHTLY_BUILD@
+    mirror: always
+#endif  // defined(ENABLE_WASM_MOZ_INTGEMM)
 
 #if defined(ENABLE_WASM_EXTENDED_CONST)
 -   name: javascript.options.wasm_extended_const
@@ -6853,6 +6880,16 @@
   value: true
   mirror: always
 
+# Whether we should throw on invalid pseudo-elements passed to
+# getComputedStyle() as per spec.
+#
+# Old behavior is a bit odd: returning an empty style if the string starts with
+# a double colon, and return the regular style otherwise.
+- name: layout.css.computed-style.throw-on-invalid-pseudo
+  type: bool
+  value: @IS_NIGHTLY_BUILD@
+  mirror: always
+
 # Are implicit tracks in computed grid templates serialized?
 - name: layout.css.serialize-grid-implicit-tracks
   type: RelaxedAtomicBool
@@ -6862,7 +6899,7 @@
 # Whether the system-ui generic family is enabled.
 - name: layout.css.system-ui.enabled
   type: RelaxedAtomicBool
-  value: false
+  value: true
   mirror: always
   rust: true
 
@@ -9228,6 +9265,13 @@
 - name: network.http.windows-sso.enabled
   type: RelaxedAtomicBool
   value: false
+  mirror: always
+
+# The factor by which to increase the keepalive timeout when the
+# NS_HTTP_LARGE_KEEPALIVE flag is used for a connection
+- name: network.http.largeKeepaliveFactor
+  type: RelaxedAtomicUint32
+  value: 10
   mirror: always
 
 # If set to true, IOService.offline depends on IOService.connectivity.
@@ -11767,6 +11811,20 @@
   type: bool
   value: true
   mirror: once
+#endif
+
+#ifdef XP_WIN
+# WindowsUIUtils::Share to wait for user action on Windows share dialog
+# `true` means the promise resolves when user completes or cancels the share
+# action. This can be unsafe since selecting copy action fires no DataPackage
+# event as of 21H1.
+# `false` means the promise resolves when the share data is passed to
+# DataPackage.
+# This affects the behavior of `navigator.share()`.
+- name: widget.windows.share.wait_action.enabled
+  type: bool
+  value: false
+  mirror: always
 #endif
 
 #---------------------------------------------------------------------------

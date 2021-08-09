@@ -1102,13 +1102,7 @@ def compiler(
         wrapper = list(compiler_wrapper or ())
         flags = list(sysroot_flags or ())
         if provided_compiler:
-            provided_wrapper = list(provided_compiler.wrapper)
-            # When doing a subconfigure, the compiler is set by old-configure
-            # and it contains the wrappers from --with-compiler-wrapper and
-            # --with-ccache.
-            if provided_wrapper[: len(wrapper)] == wrapper:
-                provided_wrapper = provided_wrapper[len(wrapper) :]
-            wrapper.extend(provided_wrapper)
+            wrapper.extend(provided_compiler.wrapper)
             flags.extend(provided_compiler.flags)
 
         info = check_compiler(wrapper + [compiler] + flags, language, host_or_target)
@@ -2340,6 +2334,7 @@ def as_with_flags(as_info, assembler, provided_assembler, c_compiler):
 
 add_old_configure_assignment("AS", as_with_flags)
 add_old_configure_assignment("ac_cv_prog_AS", as_with_flags)
+add_old_configure_assignment("ac_cv_path_AS", as_with_flags)
 
 
 @depends(assembler, c_compiler, extra_toolchain_flags)

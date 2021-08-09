@@ -84,7 +84,7 @@ using mozilla::layers::CompositorOptions from "mozilla/layers/CompositorOptions.
 using mozilla::CSSToScreenScale from "Units.h";
 using mozilla::CommandInt from "mozilla/EventForwards.h";
 using nsIWidget::TouchPointerState from "nsIWidget.h";
-using nsIWidget::TouchpadPinchPhase from "nsIWidget.h";
+using nsIWidget::TouchpadGesturePhase from "nsIWidget.h";
 using nsCursor from "nsIWidget.h";
 using struct LookAndFeelInt from "mozilla/widget/WidgetMessageUtils.h";
 using class mozilla::dom::MessagePort from "mozilla/dom/MessagePort.h";
@@ -223,7 +223,8 @@ parent:
      */
     sync DispatchFocusToTopLevelWindow();
 
-parent:
+    async DidUnsuppressPainting();
+
     /**
      * When child sends this message, parent should move focus to
      * the next or previous focusable element or document.
@@ -504,7 +505,7 @@ parent:
                                      double aPointerPressure,
                                      uint32_t aPointerOrientation,
                                      uint64_t aObserverId);
-    async SynthesizeNativeTouchPadPinch(TouchpadPinchPhase aEventPhase,
+    async SynthesizeNativeTouchPadPinch(TouchpadGesturePhase aEventPhase,
                                         float aScale,
                                         LayoutDeviceIntPoint aPoint,
                                         int32_t aModifierFlags);
@@ -522,6 +523,10 @@ parent:
                                    uint64_t aObserverId);
     async SynthesizeNativeTouchpadDoubleTap(LayoutDeviceIntPoint aPoint,
                                             uint32_t aModifierFlags);
+    async SynthesizeNativeTouchpadPan(TouchpadGesturePhase aEventPhase,
+                                      LayoutDeviceIntPoint aPoint,
+                                      double aDeltaX, double aDeltaY,
+                                      int32_t aModifierFlags);
 
     async LockNativePointer();
     async UnlockNativePointer();

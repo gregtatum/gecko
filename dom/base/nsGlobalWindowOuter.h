@@ -166,8 +166,8 @@ class nsGlobalWindowOuter final : public mozilla::dom::EventTarget,
                                   public nsIInterfaceRequestor,
                                   public PRCListStr {
  public:
-  typedef nsTHashMap<nsUint64HashKey, nsGlobalWindowOuter*>
-      OuterWindowByIdTable;
+  using OuterWindowByIdTable =
+      nsTHashMap<nsUint64HashKey, nsGlobalWindowOuter*>;
 
   using PrintPreviewResolver =
       std::function<void(const mozilla::dom::PrintPreviewResultInfo&)>;
@@ -921,7 +921,8 @@ class nsGlobalWindowOuter final : public mozilla::dom::EventTarget,
   // Helper for getComputedStyle and getDefaultComputedStyle
   already_AddRefed<nsICSSDeclaration> GetComputedStyleHelperOuter(
       mozilla::dom::Element& aElt, const nsAString& aPseudoElt,
-      bool aDefaultStylesOnly);
+      bool aDefaultStylesOnly,
+      mozilla::ErrorResult& aRv);
 
   // Outer windows only.
   void PreloadLocalStorage();

@@ -14,13 +14,6 @@ const FeatureManifest = {
   urlbar: {
     description: "The Address Bar",
     variables: {
-      firefoxSuggestLabelsEnabled: {
-        type: "boolean",
-        fallbackPref:
-          "browser.urlbar.experimental.firefoxSuggestLabels.enabled",
-        description:
-          "Whether to show the Firefox Suggest label above the general group in the urlbar view",
-      },
       quickSuggestEnabled: {
         type: "boolean",
         fallbackPref: "browser.urlbar.quicksuggest.enabled",
@@ -88,6 +81,16 @@ const FeatureManifest = {
         type: "boolean",
         fallbackPref: "browser.startup.homepage.abouthome_cache.enabled",
         description: "Is the feature enabled?",
+      },
+    },
+  },
+  firefox100: {
+    description: "Firefox User-Agent version",
+    isEarlyStartup: true,
+    variables: {
+      firefoxVersion: {
+        type: "int",
+        description: "Firefox version to spoof (or `0` to use default version)",
       },
     },
   },
@@ -247,6 +250,18 @@ const FeatureManifest = {
         type: "string",
         description:
           "URL for image used on the right side of the promo box, smaller, usually a logo. Default off.",
+      },
+    },
+  },
+  readerMode: {
+    description: "Firefox Reader Mode",
+    isEarlyStartup: true,
+    variables: {
+      pocketCTAVersion: {
+        type: "string",
+        fallbackPref: "reader.pocket.ctaVersion",
+        description:
+          "What version of Pocket CTA to show in Reader Mode (Empty string is no CTA)",
       },
     },
   },

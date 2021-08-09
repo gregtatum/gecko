@@ -300,9 +300,11 @@ const MultiStageAboutWelcome = props => {
   }, [index]);
   Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
     // Switch to the screen tracked in state (null for initial state)
+    // or last screen index if a user navigates by pressing back
+    // button from about:home
     const handler = ({
       state
-    }) => setScreenIndex(Number(state)); // Handle page load, e.g., going back to about:welcome from about:home
+    }) => setScreenIndex(Math.min(state, props.screens.length - 1)); // Handle page load, e.g., going back to about:welcome from about:home
 
 
     handler(window.history); // Watch for browser back/forward button navigation events
@@ -1007,7 +1009,7 @@ class ReturnToAMO extends react__WEBPACK_IMPORTED_MODULE_0___default.a.PureCompo
 
 
     return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
-      className: "outer-wrapper onboardingContainer"
+      className: "outer-wrapper onboardingContainer rtamo"
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("main", {
       className: "screen"
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {

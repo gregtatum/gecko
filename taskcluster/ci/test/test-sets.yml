@@ -35,9 +35,6 @@ mochitest-devtools-chrome:
 mochitest-webgpu:
     - mochitest-webgpu
 
-xpcshell:
-    - xpcshell
-
 talos:
     - talos-bcv
     - talos-chrome
@@ -243,13 +240,11 @@ windows-tests:
     - mochitest-browser-chrome-companion
     - mochitest-chrome
     - mochitest-devtools-chrome
-    - mochitest-media
     - mochitest-remote
     - telemetry-tests-client
     - test-verify
     - test-verify-gpu
     - test-verify-wpt
-    - xpcshell
 
 windows-ccov-tests:
     # jittest run on regular windows builds is redundant with SM(p), so we omit
@@ -262,12 +257,14 @@ windows10-tests:
 
 windows10-2004-tests:
     - mochitest-chrome-gpu
+    - mochitest-media
     - mochitest-plain
     - mochitest-plain-gpu
     - mochitest-webgl1-ext
     - mochitest-webgl2-core
     - mochitest-webgl2-ext
     - reftest
+    - xpcshell
 
 mingwclang-tests-debug:
     - cppunit
@@ -333,27 +330,27 @@ windows-talos:
 # macOS
 
 macosx1100-64-qr-failure-tests:
-    # - xpcshell-failures
+    - xpcshell-failures
     - mochitest-media-failures
-    # - mochitest-browser-chrome-failures
+    - mochitest-browser-chrome-failures
 
 macosx1100-64-jittests:
     - jittest
 
 macosx1100-64-qr-tests:
-    # - crashtest
+    - crashtest
     - jsreftest
-    # - mochitest-browser-chrome
-    # - mochitest-browser-chrome-companion
-    # - mochitest-chrome-gpu
-    # - mochitest-media
+    - mochitest-browser-chrome
+    - mochitest-browser-chrome-companion
+    - mochitest-chrome-gpu
+    - mochitest-media
     - mochitest-webgpu
     - mochitest-webgl1-core
     - mochitest-webgl1-ext
     - mochitest-webgl2-core
     - mochitest-webgl2-ext
-    # - reftest
-    # - xpcshell
+    - reftest
+    - xpcshell
 
 macosx1015-64-qr-failure-tests:
     - mochitest-media-failures

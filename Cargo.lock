@@ -877,9 +877,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-deque"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f02af974daeee82218205558e51ec8768b48cf524bd01d550abe5573a608285"
+checksum = "c20ff29ded3204c5106278a81a38f4b482636ed4fa1e6cfbeef193291beb29ed"
 dependencies = [
  "crossbeam-epoch",
  "crossbeam-utils 0.7.2",
@@ -1027,7 +1027,7 @@ dependencies = [
 [[package]]
 name = "cubeb-pulse"
 version = "0.3.0"
-source = "git+https://github.com/mozilla/cubeb-pulse-rs?rev=c87b50aebfa088c1ad30c74819d4e9829f88b2e3#c87b50aebfa088c1ad30c74819d4e9829f88b2e3"
+source = "git+https://github.com/mozilla/cubeb-pulse-rs?rev=3ad5978575f501ab10b1753626f176f1bba3f584#3ad5978575f501ab10b1753626f176f1bba3f584"
 dependencies = [
  "cubeb-backend",
  "pulse",
@@ -1429,9 +1429,9 @@ dependencies = [
 
 [[package]]
 name = "fluent"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc4d7142005e2066e4844caf9f271b93fc79836ee96ec85057b8c109687e629a"
+checksum = "61f69378194459db76abd2ce3952b790db103ceb003008d3d50d97c41ff847a7"
 dependencies = [
  "fluent-bundle",
  "fluent-pseudo",
@@ -1509,9 +1509,9 @@ dependencies = [
 
 [[package]]
 name = "fluent-pseudo"
-version = "0.2.3"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f028d6802c52903b3d8fa1cc37264ae5b8b630161e600eccfa68d4ee6ce5163a"
+checksum = "fded62f95114baa010b4fcd54aedc7b0762059cf6dfb0097f5b5c95fb56ed42f"
 dependencies = [
  "regex",
 ]
@@ -2013,6 +2013,7 @@ dependencies = [
  "l10nregistry",
  "l10nregistry-ffi",
  "lmdb-rkv-sys",
+ "localization-ffi",
  "log",
  "mapped_hyph",
  "mdns_service",
@@ -2647,7 +2648,7 @@ dependencies = [
 [[package]]
 name = "l10nregistry"
 version = "0.2.0"
-source = "git+https://github.com/zbraniecki/l10nregistry-rs?rev=92d8fbfbbbdffa2047ce01a935a389eb11031f69#92d8fbfbbbdffa2047ce01a935a389eb11031f69"
+source = "git+https://github.com/mozilla/l10nregistry-rs?rev=a69df9836b1ef536727195209013b9ad6b132618#a69df9836b1ef536727195209013b9ad6b132618"
 dependencies = [
  "async-trait",
  "fluent-bundle",
@@ -2807,6 +2808,27 @@ dependencies = [
  "cc",
  "libc",
  "pkg-config",
+]
+
+[[package]]
+name = "localization-ffi"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "cstr",
+ "fluent",
+ "fluent-fallback",
+ "fluent-ffi",
+ "futures 0.3.15",
+ "futures-channel",
+ "l10nregistry",
+ "l10nregistry-ffi",
+ "moz_task",
+ "nserror",
+ "nsstring",
+ "thin-vec",
+ "unic-langid",
+ "xpcom",
 ]
 
 [[package]]
@@ -3256,13 +3278,12 @@ dependencies = [
 [[package]]
 name = "mp4parse"
 version = "0.11.5"
-source = "git+https://github.com/mozilla/mp4parse-rust?rev=1bb484e96ae724309e3346968e8ffd4c25e61616#1bb484e96ae724309e3346968e8ffd4c25e61616"
+source = "git+https://github.com/mozilla/mp4parse-rust?rev=5326af6b54cec885cdb9e7be282a6db6e757b964#5326af6b54cec885cdb9e7be282a6db6e757b964"
 dependencies = [
  "bitreader",
  "byteorder",
  "env_logger",
  "fallible_collections",
- "hashbrown",
  "log",
  "num-traits",
  "static_assertions",
@@ -3275,7 +3296,7 @@ version = "0.1.0"
 [[package]]
 name = "mp4parse_capi"
 version = "0.11.5"
-source = "git+https://github.com/mozilla/mp4parse-rust?rev=1bb484e96ae724309e3346968e8ffd4c25e61616#1bb484e96ae724309e3346968e8ffd4c25e61616"
+source = "git+https://github.com/mozilla/mp4parse-rust?rev=5326af6b54cec885cdb9e7be282a6db6e757b964#5326af6b54cec885cdb9e7be282a6db6e757b964"
 dependencies = [
  "byteorder",
  "fallible_collections",
@@ -3595,6 +3616,7 @@ dependencies = [
  "mozilla-central-workspace-hack",
  "pkcs11",
  "rental",
+ "rsclientcerts",
  "sha2",
  "winapi",
 ]
@@ -3999,7 +4021,7 @@ dependencies = [
 [[package]]
 name = "pulse"
 version = "0.3.0"
-source = "git+https://github.com/mozilla/cubeb-pulse-rs?rev=c87b50aebfa088c1ad30c74819d4e9829f88b2e3#c87b50aebfa088c1ad30c74819d4e9829f88b2e3"
+source = "git+https://github.com/mozilla/cubeb-pulse-rs?rev=3ad5978575f501ab10b1753626f176f1bba3f584#3ad5978575f501ab10b1753626f176f1bba3f584"
 dependencies = [
  "bitflags",
  "pulse-ffi",
@@ -4008,7 +4030,7 @@ dependencies = [
 [[package]]
 name = "pulse-ffi"
 version = "0.1.0"
-source = "git+https://github.com/mozilla/cubeb-pulse-rs?rev=c87b50aebfa088c1ad30c74819d4e9829f88b2e3#c87b50aebfa088c1ad30c74819d4e9829f88b2e3"
+source = "git+https://github.com/mozilla/cubeb-pulse-rs?rev=3ad5978575f501ab10b1753626f176f1bba3f584#3ad5978575f501ab10b1753626f176f1bba3f584"
 dependencies = [
  "libc",
 ]
@@ -4298,6 +4320,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "284de9dae38774e2813aaabd7e947b4a6fe9b8c58c2309f754a487cdd50de1c2"
 dependencies = [
  "petgraph",
+]
+
+[[package]]
+name = "rsclientcerts"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "pkcs11",
 ]
 
 [[package]]
@@ -5336,9 +5366,9 @@ checksum = "879f6906492a7cd215bfa4cf595b600146ccfac0c79bcbd1f3000162af5e8b06"
 
 [[package]]
 name = "uluru"
-version = "0.4.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d7b39d0c32eba57d52d334e4bdd150df6e755264eefaa1ae2e7cd125f35e1ca"
+checksum = "b6ee6f45294ecb6e220e76b8afddb50a8b69d433f31ad9eb2d16fb44029ef5db"
 dependencies = [
  "arrayvec",
 ]

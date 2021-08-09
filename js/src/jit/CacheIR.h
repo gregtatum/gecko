@@ -1268,6 +1268,8 @@ class MOZ_RAII IRGenerator {
 
   OperandId emitNumericGuard(ValOperandId valId, Scalar::Type type);
 
+  StringOperandId emitToStringGuard(ValOperandId id, const Value& v);
+
   friend class CacheIRSpewer;
 
  public:

@@ -187,7 +187,7 @@ class TableViewer {
 const metadataHandler = new (class extends TableViewer {
   title = "Interactions";
   cssGridTemplateColumns =
-    "max-content fit-content(100%) repeat(4, max-content);";
+    "max-content fit-content(100%) repeat(5, max-content);";
 
   /**
    * @see TableViewer.columnMap
@@ -217,6 +217,7 @@ const metadataHandler = new (class extends TableViewer {
       },
     ],
     ["key_presses", { header: "Key Presses" }],
+    ["referrer", { header: "Referrer", includeTitle: true }],
   ]);
 
   /**
@@ -246,8 +247,10 @@ const metadataHandler = new (class extends TableViewer {
   async updateDisplay() {
     let rows = await this.#getRows(
       `SELECT m.id AS id, h.url AS url, updated_at, total_view_time,
-              typing_time, key_presses FROM moz_places_metadata m
+              typing_time, key_presses, h2.url as referrer
+       FROM moz_places_metadata m
        JOIN moz_places h ON h.id = m.place_id
+       LEFT JOIN moz_places h2 ON h2.id = m.referrer_place_id
        ORDER BY updated_at DESC
        LIMIT ${this.maxRows}`
     );
@@ -255,24 +258,48 @@ const metadataHandler = new (class extends TableViewer {
   }
 
   export() {
-    // Export all data. We only export url_hash and not url so users can share their exports
+    // Export all data. We only export place_id and not url so users can share their exports
     // without revealing the sites they have been visiting.
     return this.#getRows(
-      `SELECT m.id AS id, url_hash, updated_at, total_view_time, visit_count,
-            frecency, typing_time, key_presses, last_visit_date FROM moz_places_metadata m
-     JOIN moz_places h ON h.id = m.place_id
-     ORDER BY updated_at DESC
+      `SELECT
+      m.id,
+      m.place_id, 
+      m.referrer_place_id,
+      h.origin_id,
+      m.updated_at, 
+      m.total_view_time, 
+      h.visit_count,
+      h.frecency, 
+      m.typing_time, 
+      m.key_presses, 
+      vall.visit_dates, 
+      vall.visit_types
+  FROM moz_places_metadata m
+  JOIN moz_places h ON h.id = m.place_id
+  JOIN
+      (SELECT
+          place_id,
+          group_concat(visit_date, ',') AS visit_dates,
+          group_concat(visit_type, ',') AS visit_types
+      FROM moz_historyvisits
+      GROUP BY place_id
+      ORDER BY visit_date DESC
+      ) vall ON vall.place_id = m.place_id
+  ORDER BY m.place_id DESC
      `,
       [
         "id",
-        "url_hash",
-        "visit_count",
-        "frecency",
-        "last_visit_date",
+        "place_id",
+        "referrer_place_id",
+        "origin_id",
         "updated_at",
         "total_view_time",
+        "visit_count",
+        "frecency",
         "typing_time",
         "key_presses",
+        "visit_dates",
+        "visit_types",
       ]
     );
   }

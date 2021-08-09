@@ -197,6 +197,7 @@ void ScreenGetterGtk::RefreshScreens() {
   screenManager.Refresh(std::move(screenList));
 }
 
+#ifdef MOZ_WAYLAND
 static void output_handle_geometry(void* data, struct wl_output* wl_output,
                                    int x, int y, int physical_width,
                                    int physical_height, int subpixel,
@@ -392,6 +393,10 @@ int ScreenGetterWayland::GetMonitorForWindow(nsWindow* aWindow) {
 }
 
 RefPtr<nsIScreen> ScreenGetterWayland::GetScreenForWindow(nsWindow* aWindow) {
+  if (mScreenList.IsEmpty()) {
+    return nullptr;
+  }
+
   int monitor = GetMonitorForWindow(aWindow);
   if (monitor < 0) {
     return nullptr;
@@ -410,6 +415,7 @@ void ScreenGetterWayland::GetScreenRectForWindow(nsWindow* aWindow,
   aRect->width = mMonitors[monitor].width;
   aRect->height = mMonitors[monitor].height;
 }
+#endif
 
 RefPtr<nsIScreen> ScreenHelperGTK::GetScreenForWindow(nsWindow* aWindow) {
   return gScreenGetter->GetScreenForWindow(aWindow);
@@ -426,9 +432,12 @@ gint ScreenHelperGTK::GetGTKMonitorScaleFactor(gint aMonitorNum) {
 }
 
 ScreenHelperGTK::ScreenHelperGTK() {
+#ifdef MOZ_WAYLAND
   if (GdkIsWaylandDisplay()) {
     gScreenGetter = mozilla::MakeUnique<ScreenGetterWayland>();
-  } else {
+  }
+#endif
+  if (!gScreenGetter) {
     gScreenGetter = mozilla::MakeUnique<ScreenGetterGtk>();
   }
   gScreenGetter->Init();

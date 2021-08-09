@@ -364,6 +364,7 @@ class nsFlexContainerFrame::FlexItem final {
                "aContinuation should be in aItem's continuation chain!");
     FlexItem item(*this);
     item.mFrame = aContinuation;
+    item.mHadMeasuringReflow = false;
     return item;
   }
 
@@ -389,27 +390,38 @@ class nsFlexContainerFrame::FlexItem final {
   nscoord CrossSize() const { return mCrossSize; }
   nscoord CrossPosition() const { return mCrossPosn; }
 
+  // Lazy getter for mAscent.
   nscoord ResolvedAscent(bool aUseFirstBaseline) const {
-    if (mAscent == ReflowOutput::ASK_FOR_BASELINE) {
-      // XXXdholbert We should probably be using the *container's* writing-mode
-      // here, instead of the item's -- though it doesn't much matter right
-      // now, because all of the baseline-handling code here essentially
-      // assumes that the container & items have the same writing-mode. This
-      // will matter more (& can be expanded/tested) once we officially support
-      // logical directions & vertical writing-modes in flexbox, in bug 1079155
-      // or a dependency.
-      // Use GetFirstLineBaseline() or GetLastLineBaseline() as appropriate,
-      // or just GetLogicalBaseline() if that fails.
-      bool found =
-          aUseFirstBaseline
-              ? nsLayoutUtils::GetFirstLineBaseline(mWM, mFrame, &mAscent)
-              : nsLayoutUtils::GetLastLineBaseline(mWM, mFrame, &mAscent);
-
-      if (!found) {
-        mAscent = mFrame->SynthesizeBaselineBOffsetFromBorderBox(
-            mWM, BaselineSharingGroup::First);
-      }
+    // XXXdholbert Two concerns to follow up on here:
+    // (1) We probably should be checking and reacting to aUseFirstBaseline
+    // for all of the cases here (e.g. this first one). Maybe we need to store
+    // two versions of mAscent and choose the appropriate one based on
+    // aUseFirstBaseline? This is roughly bug 1480850, I think.
+    // (2) We should be using the *container's* writing-mode (mCBWM) here,
+    // instead of the item's (mWM). This is essentially bug 1155322.
+    if (mAscent != ReflowOutput::ASK_FOR_BASELINE) {
+      return mAscent;
     }
+
+    // Use GetFirstLineBaseline() or GetLastLineBaseline() as appropriate:
+    bool found =
+        aUseFirstBaseline
+            ? nsLayoutUtils::GetFirstLineBaseline(mWM, mFrame, &mAscent)
+            : nsLayoutUtils::GetLastLineBaseline(mWM, mFrame, &mAscent);
+    if (found) {
+      return mAscent;
+    }
+
+    // If the nsLayoutUtils getter fails, then ask the frame directly:
+    auto baselineGroup = aUseFirstBaseline ? BaselineSharingGroup::First
+                                           : BaselineSharingGroup::Last;
+    if (mFrame->GetNaturalBaselineBOffset(mWM, baselineGroup, &mAscent)) {
+      return mAscent;
+    }
+
+    // We couldn't determine a baseline, so we synthesize one from border box:
+    mAscent = mFrame->SynthesizeBaselineBOffsetFromBorderBox(
+        mWM, BaselineSharingGroup::First);
     return mAscent;
   }
 
@@ -1959,7 +1971,8 @@ nsFlexContainerFrame::MeasureAscentAndBSizeForFlexItem(
   auto* cachedData = aItem.Frame()->GetProperty(CachedFlexItemData::Prop());
 
   if (cachedData && cachedData->mBAxisMeasurement) {
-    if (cachedData->mBAxisMeasurement->IsValidFor(aChildReflowInput)) {
+    if (!aItem.Frame()->IsSubtreeDirty() &&
+        cachedData->mBAxisMeasurement->IsValidFor(aChildReflowInput)) {
       return *(cachedData->mBAxisMeasurement);
     }
     FLEX_LOG("[perf] MeasureAscentAndBSizeForFlexItem rejected cached value");

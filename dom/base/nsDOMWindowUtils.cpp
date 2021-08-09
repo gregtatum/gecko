@@ -409,9 +409,8 @@ nsDOMWindowUtils::UpdateLayerTree() {
     RefPtr<nsViewManager> vm = presShell->GetViewManager();
     if (nsView* view = vm->GetRootView()) {
       nsAutoScriptBlocker scriptBlocker;
-      presShell->Paint(
-          view, view->GetBounds(),
-          PaintFlags::PaintLayers | PaintFlags::PaintSyncDecodeImages);
+      presShell->Paint(view, view->GetBounds(),
+                       PaintFlags::PaintSyncDecodeImages);
       presShell->GetWindowRenderer()->WaitOnTransactionProcessed();
     }
   }
@@ -1143,11 +1142,11 @@ nsDOMWindowUtils::SendNativeTouchpadPinch(uint32_t aEventPhase, float aScale,
     return NS_ERROR_FAILURE;
   }
   NS_DispatchToMainThread(NativeInputRunnable::Create(
-      NewRunnableMethod<nsIWidget::TouchpadPinchPhase, float,
+      NewRunnableMethod<nsIWidget::TouchpadGesturePhase, float,
                         LayoutDeviceIntPoint, int32_t>(
           "nsIWidget::SynthesizeNativeTouchPadPinch", widget,
           &nsIWidget::SynthesizeNativeTouchPadPinch,
-          (nsIWidget::TouchpadPinchPhase)aEventPhase, aScale,
+          (nsIWidget::TouchpadGesturePhase)aEventPhase, aScale,
           LayoutDeviceIntPoint(aScreenX, aScreenY), aModifierFlags)));
   return NS_OK;
 }
@@ -1211,6 +1210,28 @@ nsDOMWindowUtils::SendNativeTouchpadDoubleTap(int32_t aScreenX,
           "nsIWidget::SynthesizeNativeTouchpadDoubleTap", widget,
           &nsIWidget::SynthesizeNativeTouchpadDoubleTap,
           LayoutDeviceIntPoint(aScreenX, aScreenY), aModifierFlags)));
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMWindowUtils::SendNativeTouchpadPan(uint32_t aEventPhase, int32_t aScreenX,
+                                        int32_t aScreenY, double aDeltaX,
+                                        double aDeltaY,
+                                        int32_t aModifierFlags) {
+  nsCOMPtr<nsIWidget> widget = GetWidget();
+  if (!widget) {
+    return NS_ERROR_FAILURE;
+  }
+
+  MOZ_ASSERT(aModifierFlags >= 0);
+  NS_DispatchToMainThread(NativeInputRunnable::Create(
+      NewRunnableMethod<nsIWidget::TouchpadGesturePhase, LayoutDeviceIntPoint,
+                        double, double, uint32_t>(
+          "nsIWidget::SynthesizeNativeTouchpadPan", widget,
+          &nsIWidget::SynthesizeNativeTouchpadPan,
+          (nsIWidget::TouchpadGesturePhase)aEventPhase,
+          LayoutDeviceIntPoint(aScreenX, aScreenY), aDeltaX, aDeltaY,
+          aModifierFlags)));
   return NS_OK;
 }
 
@@ -3154,9 +3175,13 @@ nsDOMWindowUtils::GetUnanimatedComputedStyle(Element* aElement,
     return NS_ERROR_FAILURE;
   }
 
-  RefPtr<nsAtom> pseudo = nsCSSPseudoElements::GetPseudoAtom(aPseudoElement);
+  Maybe<PseudoStyleType> pseudo =
+      nsCSSPseudoElements::GetPseudoType(aPseudoElement);
+  if (!pseudo) {
+    return NS_ERROR_FAILURE;
+  }
   RefPtr<ComputedStyle> computedStyle =
-      nsComputedDOMStyle::GetUnanimatedComputedStyleNoFlush(aElement, pseudo);
+      nsComputedDOMStyle::GetUnanimatedComputedStyleNoFlush(aElement, *pseudo);
   if (!computedStyle) {
     return NS_ERROR_FAILURE;
   }
@@ -4850,4 +4875,16 @@ nsDOMWindowUtils::ResetMobileViewportManager() {
   }
   // Unable to reset, so let's error out
   return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
+nsDOMWindowUtils::GetSuspendedByBrowsingContextGroup(bool* aResult) {
+  nsCOMPtr<nsPIDOMWindowOuter> window = do_QueryReferent(mWindow);
+  NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsPIDOMWindowInner> inner = window->GetCurrentInnerWindow();
+  NS_ENSURE_TRUE(inner, NS_ERROR_FAILURE);
+
+  *aResult = inner->GetWasSuspendedByGroup();
+  return NS_OK;
 }

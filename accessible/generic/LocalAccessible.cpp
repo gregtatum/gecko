@@ -29,6 +29,7 @@
 #include "TableAccessible.h"
 #include "TableCellAccessible.h"
 #include "TreeWalker.h"
+#include "HTMLElementAccessibles.h"
 
 #include "nsIDOMXULButtonElement.h"
 #include "nsIDOMXULSelectCntrlEl.h"
@@ -82,6 +83,7 @@
 #include "mozilla/dom/KeyboardEventBinding.h"
 #include "mozilla/dom/TreeWalker.h"
 #include "mozilla/dom/UserActivation.h"
+#include "mozilla/dom/MutationEventBinding.h"
 
 using namespace mozilla;
 using namespace mozilla::a11y;
@@ -1131,6 +1133,200 @@ already_AddRefed<AccAttributes> LocalAccessible::NativeAttributes() {
   return attributes.forget();
 }
 
+bool LocalAccessible::AttributeChangesState(nsAtom* aAttribute) {
+  return aAttribute == nsGkAtoms::aria_disabled ||
+         aAttribute == nsGkAtoms::disabled ||
+         aAttribute == nsGkAtoms::tabindex ||
+         aAttribute == nsGkAtoms::aria_required ||
+         aAttribute == nsGkAtoms::aria_invalid ||
+         aAttribute == nsGkAtoms::aria_expanded ||
+         aAttribute == nsGkAtoms::aria_checked ||
+         (aAttribute == nsGkAtoms::aria_pressed && IsButton()) ||
+         aAttribute == nsGkAtoms::aria_readonly ||
+         aAttribute == nsGkAtoms::aria_current ||
+         aAttribute == nsGkAtoms::aria_haspopup ||
+         aAttribute == nsGkAtoms::aria_busy ||
+         aAttribute == nsGkAtoms::aria_multiline ||
+         aAttribute == nsGkAtoms::contenteditable ||
+         (aAttribute == nsGkAtoms::href && IsHTMLLink());
+}
+
+void LocalAccessible::DOMAttributeChanged(int32_t aNameSpaceID,
+                                          nsAtom* aAttribute, int32_t aModType,
+                                          const nsAttrValue* aOldValue,
+                                          uint64_t aOldState) {
+  // Fire accessible event after short timer, because we need to wait for
+  // DOM attribute & resulting layout to actually change. Otherwise,
+  // assistive technology will retrieve the wrong state/value/selection info.
+
+  // XXX todo
+  // We still need to handle special HTML cases here
+  // For example, if an <img>'s usemap attribute is modified
+  // Otherwise it may just be a state change, for example an object changing
+  // its visibility
+  //
+  // XXX todo: report aria state changes for "undefined" literal value changes
+  // filed as bug 472142
+  //
+  // XXX todo:  invalidate accessible when aria state changes affect exposed
+  // role filed as bug 472143
+
+  if (AttributeChangesState(aAttribute)) {
+    uint64_t currState = State();
+    uint64_t diffState = currState ^ aOldState;
+    if (diffState) {
+      for (uint64_t state = 1; state <= states::LAST_ENTRY; state <<= 1) {
+        if (diffState & state) {
+          RefPtr<AccEvent> stateChangeEvent =
+              new AccStateChangeEvent(this, state, (currState & state));
+          mDoc->FireDelayedEvent(stateChangeEvent);
+        }
+      }
+    }
+  }
+
+  // When a details object has its open attribute changed
+  // we should fire a state-change event on the accessible of
+  // its main summary
+  if (aAttribute == nsGkAtoms::open) {
+    // FromDetails checks if the given accessible belongs to
+    // a details frame and also locates the accessible of its
+    // main summary.
+    if (HTMLSummaryAccessible* summaryAccessible =
+            HTMLSummaryAccessible::FromDetails(this)) {
+      RefPtr<AccEvent> expandedChangeEvent =
+          new AccStateChangeEvent(summaryAccessible, states::EXPANDED);
+      mDoc->FireDelayedEvent(expandedChangeEvent);
+      return;
+    }
+  }
+
+  // Check for namespaced ARIA attribute
+  if (aNameSpaceID == kNameSpaceID_None) {
+    // Check for hyphenated aria-foo property?
+    if (StringBeginsWith(nsDependentAtomString(aAttribute), u"aria-"_ns)) {
+      uint8_t attrFlags = aria::AttrCharacteristicsFor(aAttribute);
+      if (!(attrFlags & ATTR_BYPASSOBJ)) {
+        // For aria attributes like drag and drop changes we fire a generic
+        // attribute change event; at least until native API comes up with a
+        // more meaningful event.
+        RefPtr<AccEvent> event =
+            new AccObjectAttrChangedEvent(this, aAttribute);
+        mDoc->FireDelayedEvent(event);
+      }
+    }
+  }
+
+  dom::Element* elm = Elm();
+
+  // Fire text value change event whenever aria-valuetext is changed.
+  if (aAttribute == nsGkAtoms::aria_valuetext) {
+    mDoc->FireDelayedEvent(nsIAccessibleEvent::EVENT_TEXT_VALUE_CHANGE, this);
+    return;
+  }
+
+  // Fire numeric value change event when aria-valuenow is changed and
+  // aria-valuetext is empty
+  if (aAttribute == nsGkAtoms::aria_valuenow &&
+      (!elm->HasAttr(kNameSpaceID_None, nsGkAtoms::aria_valuetext) ||
+       elm->AttrValueIs(kNameSpaceID_None, nsGkAtoms::aria_valuetext,
+                        nsGkAtoms::_empty, eCaseMatters))) {
+    mDoc->FireDelayedEvent(nsIAccessibleEvent::EVENT_VALUE_CHANGE, this);
+    return;
+  }
+
+  if (aAttribute == nsGkAtoms::aria_owns) {
+    mDoc->Controller()->ScheduleRelocation(this);
+  }
+
+  // Fire name change and description change events.
+  if (aAttribute == nsGkAtoms::aria_label) {
+    // A valid aria-labelledby would take precedence so an aria-label change
+    // won't change the name.
+    IDRefsIterator iter(mDoc, elm, nsGkAtoms::aria_labelledby);
+    if (!iter.NextElem()) {
+      mDoc->FireDelayedEvent(nsIAccessibleEvent::EVENT_NAME_CHANGE, this);
+    }
+    return;
+  }
+
+  if (aAttribute == nsGkAtoms::aria_describedby) {
+    mDoc->FireDelayedEvent(nsIAccessibleEvent::EVENT_DESCRIPTION_CHANGE, this);
+    if (aModType == dom::MutationEvent_Binding::MODIFICATION ||
+        aModType == dom::MutationEvent_Binding::ADDITION) {
+      // The subtrees of the new aria-describedby targets might be used to
+      // compute the description for this. Therefore, we need to set
+      // the eHasDescriptionDependent flag on all Accessibles in these subtrees.
+      IDRefsIterator iter(mDoc, elm, nsGkAtoms::aria_describedby);
+      while (LocalAccessible* target = iter.Next()) {
+        target->ModifySubtreeContextFlags(eHasDescriptionDependent, true);
+      }
+    }
+    return;
+  }
+
+  if (aAttribute == nsGkAtoms::aria_labelledby) {
+    mDoc->FireDelayedEvent(nsIAccessibleEvent::EVENT_NAME_CHANGE, this);
+    if (aModType == dom::MutationEvent_Binding::MODIFICATION ||
+        aModType == dom::MutationEvent_Binding::ADDITION) {
+      // The subtrees of the new aria-labelledby targets might be used to
+      // compute the name for this. Therefore, we need to set
+      // the eHasNameDependent flag on all Accessibles in these subtrees.
+      IDRefsIterator iter(mDoc, elm, nsGkAtoms::aria_labelledby);
+      while (LocalAccessible* target = iter.Next()) {
+        target->ModifySubtreeContextFlags(eHasNameDependent, true);
+      }
+    }
+    return;
+  }
+
+  if (aAttribute == nsGkAtoms::alt &&
+      !elm->HasAttr(kNameSpaceID_None, nsGkAtoms::aria_label) &&
+      !elm->HasAttr(kNameSpaceID_None, nsGkAtoms::aria_labelledby)) {
+    mDoc->FireDelayedEvent(nsIAccessibleEvent::EVENT_NAME_CHANGE, this);
+    return;
+  }
+
+  if (aAttribute == nsGkAtoms::title) {
+    nsAutoString name;
+    ARIAName(name);
+    if (name.IsEmpty()) {
+      NativeName(name);
+      if (name.IsEmpty()) {
+        mDoc->FireDelayedEvent(nsIAccessibleEvent::EVENT_NAME_CHANGE, this);
+        return;
+      }
+    }
+
+    if (!elm->HasAttr(kNameSpaceID_None, nsGkAtoms::aria_describedby)) {
+      mDoc->FireDelayedEvent(nsIAccessibleEvent::EVENT_DESCRIPTION_CHANGE,
+                             this);
+    }
+
+    return;
+  }
+
+  // ARIA or XUL selection
+  if ((mContent->IsXULElement() && aAttribute == nsGkAtoms::selected) ||
+      aAttribute == nsGkAtoms::aria_selected) {
+    LocalAccessible* widget = nsAccUtils::GetSelectableContainer(this, State());
+    if (widget) {
+      AccSelChangeEvent::SelChangeType selChangeType =
+          elm->AttrValueIs(aNameSpaceID, aAttribute, nsGkAtoms::_true,
+                           eCaseMatters)
+              ? AccSelChangeEvent::eSelectionAdd
+              : AccSelChangeEvent::eSelectionRemove;
+
+      RefPtr<AccEvent> event =
+          new AccSelChangeEvent(widget, this, selChangeType);
+      mDoc->FireDelayedEvent(event);
+    }
+
+    return;
+  }
+
+}
+
 GroupPos LocalAccessible::GroupPosition() {
   GroupPos groupPos;
   if (!HasOwnContent()) return groupPos;
@@ -2163,7 +2359,8 @@ void LocalAccessible::BindToParent(LocalAccessible* aParent,
   mIndexInParent = aIndexInParent;
 
   if (mParent->HasNameDependent() || mParent->IsXULListItem() ||
-      RelationByType(RelationType::LABEL_FOR).Next()) {
+      RelationByType(RelationType::LABEL_FOR).Next() ||
+      nsTextEquivUtils::HasNameRule(mParent, eNameFromSubtreeRule)) {
     mContextFlags |= eHasNameDependent;
   } else {
     mContextFlags &= ~eHasNameDependent;
@@ -2173,6 +2370,23 @@ void LocalAccessible::BindToParent(LocalAccessible* aParent,
     mContextFlags |= eHasDescriptionDependent;
   } else {
     mContextFlags &= ~eHasDescriptionDependent;
+  }
+
+  // Add name/description dependent flags for dependent content once
+  // a name/description provider is added to doc.
+  Relation rel = RelationByType(RelationType::LABELLED_BY);
+  LocalAccessible* relTarget = nullptr;
+  while ((relTarget = rel.Next())) {
+    if (!relTarget->HasNameDependent()) {
+      relTarget->ModifySubtreeContextFlags(eHasNameDependent, true);
+    }
+  }
+
+  rel = RelationByType(RelationType::DESCRIBED_BY);
+  while ((relTarget = rel.Next())) {
+    if (!relTarget->HasDescriptionDependent()) {
+      relTarget->ModifySubtreeContextFlags(eHasDescriptionDependent, true);
+    }
   }
 
   mContextFlags |=
@@ -2677,6 +2891,21 @@ LocalAccessible* LocalAccessible::GetSiblingAtOffset(int32_t aOffset,
   if (aError && !child) *aError = NS_ERROR_UNEXPECTED;
 
   return child;
+}
+
+void LocalAccessible::ModifySubtreeContextFlags(uint32_t aContextFlags,
+                                                bool aAdd) {
+  Pivot pivot(this);
+  LocalAccInSameDocRule rule;
+  for (Accessible* anchor = this; anchor; anchor = pivot.Next(anchor, rule)) {
+    MOZ_ASSERT(anchor->IsLocal());
+    LocalAccessible* acc = anchor->AsLocal();
+    if (aAdd) {
+      acc->mContextFlags |= aContextFlags;
+    } else {
+      acc->mContextFlags &= ~aContextFlags;
+    }
+  }
 }
 
 double LocalAccessible::AttrNumericValue(nsAtom* aAttr) const {

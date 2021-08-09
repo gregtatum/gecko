@@ -446,8 +446,8 @@ pref("browser.urlbar.dnsResolveSingleWordsAfterSearch", 1);
 // for everyone.
 pref("browser.urlbar.keepPanelOpenDuringImeComposition", false);
 
-// Whether Firefox Suggest labels are shown in the urlbar view.
-pref("browser.urlbar.experimental.firefoxSuggestLabels.enabled", false);
+// Whether Firefox Suggest group labels are shown in the urlbar view.
+pref("browser.urlbar.groupLabels.enabled", true);
 
 pref("browser.altClickSave", false);
 
@@ -1927,6 +1927,9 @@ pref("reader.parse-node-limit", 0);
 // On desktop, we want the URLs to be included here for ease of debugging,
 // and because (normally) these errors are not persisted anywhere.
 pref("reader.errors.includeURLs", true);
+
+// What version of Pocket CTA to show in Reader Mode (Empty string is no CTA)
+pref("reader.pocket.ctaVersion", "");
 
 pref("view_source.tab", true);
 

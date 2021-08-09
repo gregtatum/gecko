@@ -132,6 +132,7 @@
 #include "nsISecureBrowserUI.h"
 #include "nsIXULRuntime.h"
 #include "VsyncSource.h"
+#include "nsSubDocumentFrame.h"
 
 #ifdef XP_WIN
 #  include "FxRWindowManager.h"
@@ -161,6 +162,8 @@ using namespace mozilla::gfx;
 
 using mozilla::LazyLogModule;
 using mozilla::Unused;
+
+extern mozilla::LazyLogModule gSHIPBFCacheLog;
 
 LazyLogModule gBrowserFocusLog("BrowserFocus");
 
@@ -232,7 +235,8 @@ BrowserParent::BrowserParent(ContentParent* aManager, const TabId& aTabId,
       mHasPresented(false),
       mIsReadyToHandleInputEvents(false),
       mIsMouseEnterIntoWidgetEventSuppressed(false),
-      mLockedNativePointer(false) {
+      mLockedNativePointer(false),
+      mShowingTooltip(false) {
   MOZ_ASSERT(aManager);
   // When the input event queue is disabled, we don't need to handle the case
   // that some input events are dispatched before PBrowserConstructor.
@@ -594,6 +598,10 @@ void BrowserParent::RemoveWindowListeners() {
 }
 
 void BrowserParent::Deactivated() {
+  if (mShowingTooltip) {
+    // Reuse the normal tooltip hiding method.
+    mozilla::Unused << RecvHideTooltip();
+  }
   UnlockNativePointer();
   UnsetTopLevelWebFocus(this);
   UnsetLastMouseRemoteTarget(this);
@@ -646,6 +654,18 @@ void BrowserParent::Destroy() {
   mMarkedDestroying = true;
 }
 
+mozilla::ipc::IPCResult BrowserParent::RecvDidUnsuppressPainting() {
+  if (!mFrameElement) {
+    return IPC_OK();
+  }
+  nsSubDocumentFrame* subdocFrame =
+      do_QueryFrame(mFrameElement->GetPrimaryFrame());
+  if (subdocFrame && subdocFrame->HasRetainedPaintData()) {
+    subdocFrame->ClearRetainedPaintData();
+  }
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult BrowserParent::RecvEnsureLayersConnected(
     CompositorOptions* aCompositorOptions) {
   if (mRemoteLayerTreeOwner.IsInitialized()) {
@@ -663,10 +683,19 @@ void BrowserParent::ActorDestroy(ActorDestroyReason why) {
   ContentProcessManager::GetSingleton()->UnregisterRemoteFrame(mTabId);
 
   if (mRemoteLayerTreeOwner.IsInitialized()) {
+    auto layersId = mRemoteLayerTreeOwner.GetLayersId();
+    if (mFrameElement) {
+      nsSubDocumentFrame* f = do_QueryFrame(mFrameElement->GetPrimaryFrame());
+      if (f && f->HasRetainedPaintData() &&
+          f->GetRemotePaintData().mLayersId == layersId) {
+        f->ClearRetainedPaintData();
+      }
+    }
+
     // It's important to unmap layers after the remote browser has been
     // destroyed, otherwise it may still send messages to the compositor which
     // will reject them, causing assertions.
-    RemoveBrowserParentFromTable(mRemoteLayerTreeOwner.GetLayersId());
+    RemoveBrowserParentFromTable(layersId);
     mRemoteLayerTreeOwner.Destroy();
   }
 
@@ -912,8 +941,8 @@ void BrowserParent::InitRendering() {
 #endif
 }
 
-bool BrowserParent::AttachLayerManager() {
-  return !!mRemoteLayerTreeOwner.AttachLayerManager();
+bool BrowserParent::AttachWindowRenderer() {
+  return mRemoteLayerTreeOwner.AttachWindowRenderer();
 }
 
 void BrowserParent::MaybeShowFrame() {
@@ -931,7 +960,7 @@ bool BrowserParent::Show(const OwnerShowInfo& aOwnerInfo) {
   }
 
   MOZ_ASSERT(mRemoteLayerTreeOwner.IsInitialized());
-  if (!mRemoteLayerTreeOwner.AttachLayerManager()) {
+  if (!mRemoteLayerTreeOwner.AttachWindowRenderer()) {
     return false;
   }
 
@@ -1881,7 +1910,7 @@ mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeTouchPoint(
 }
 
 mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeTouchPadPinch(
-    const TouchpadPinchPhase& aEventPhase, const float& aScale,
+    const TouchpadGesturePhase& aEventPhase, const float& aScale,
     const LayoutDeviceIntPoint& aPoint, const int32_t& aModifierFlags) {
   nsCOMPtr<nsIWidget> widget = GetWidget();
   if (widget) {
@@ -1932,6 +1961,18 @@ mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeTouchpadDoubleTap(
   nsCOMPtr<nsIWidget> widget = GetWidget();
   if (widget) {
     widget->SynthesizeNativeTouchpadDoubleTap(aPoint, aModifierFlags);
+  }
+  return IPC_OK();
+}
+
+mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeTouchpadPan(
+    const TouchpadGesturePhase& aEventPhase, const LayoutDeviceIntPoint& aPoint,
+    const double& aDeltaX, const double& aDeltaY,
+    const int32_t& aModifierFlags) {
+  nsCOMPtr<nsIWidget> widget = GetWidget();
+  if (widget) {
+    widget->SynthesizeNativeTouchpadPan(aEventPhase, aPoint, aDeltaX, aDeltaY,
+                                        aModifierFlags);
   }
   return IPC_OK();
 }
@@ -2272,11 +2313,16 @@ mozilla::ipc::IPCResult BrowserParent::RecvShowTooltip(
   nsCOMPtr<Element> el = do_QueryInterface(flo);
   if (!el) return IPC_OK();
 
-  xulBrowserWindow->ShowTooltip(aX, aY, aTooltip, aDirection, el);
+  if (NS_SUCCEEDED(
+          xulBrowserWindow->ShowTooltip(aX, aY, aTooltip, aDirection, el))) {
+    mShowingTooltip = true;
+  }
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult BrowserParent::RecvHideTooltip() {
+  mShowingTooltip = false;
+
   nsCOMPtr<nsIXULBrowserWindow> xulBrowserWindow = GetXULBrowserWindow();
   if (!xulBrowserWindow) {
     return IPC_OK();
@@ -3581,15 +3627,15 @@ void BrowserParent::LayerTreeUpdate(const LayersObserverEpoch& aEpoch,
     return;
   }
 
-  RefPtr<EventTarget> target = mFrameElement;
-  if (!target) {
+  RefPtr<Element> frameElement = mFrameElement;
+  if (!frameElement) {
     NS_WARNING("Could not locate target for layer tree message.");
     return;
   }
 
   mHasLayers = aActive;
 
-  RefPtr<Event> event = NS_NewDOMEvent(mFrameElement, nullptr, nullptr);
+  RefPtr<Event> event = NS_NewDOMEvent(frameElement, nullptr, nullptr);
   if (aActive) {
     mHasPresented = true;
     event->InitEvent(u"MozLayerTreeReady"_ns, true, false);
@@ -3598,7 +3644,7 @@ void BrowserParent::LayerTreeUpdate(const LayersObserverEpoch& aEpoch,
   }
   event->SetTrusted(true);
   event->WidgetEventPtr()->mFlags.mOnlyChromeDispatch = true;
-  mFrameElement->DispatchEvent(*event);
+  frameElement->DispatchEvent(*event);
 }
 
 mozilla::ipc::IPCResult BrowserParent::RecvPaintWhileInterruptingJSNoOp(

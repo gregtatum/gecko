@@ -2231,6 +2231,11 @@ nsresult CanonicalBrowsingContext::WriteSessionStorageToSessionStore(
 
 void CanonicalBrowsingContext::UpdateSessionStoreSessionStorage(
     const std::function<void()>& aDone) {
+  if constexpr (!SessionStoreUtils::NATIVE_LISTENER) {
+    aDone();
+    return;
+  }
+
   using DataPromise = BackgroundSessionStorageManager::DataPromise;
   BackgroundSessionStorageManager::GetData(
       this, StaticPrefs::browser_sessionstore_dom_storage_limit(),
@@ -2259,6 +2264,10 @@ void CanonicalBrowsingContext::UpdateSessionStoreForStorage(
 }
 
 void CanonicalBrowsingContext::MaybeScheduleSessionStoreUpdate() {
+  if constexpr (!SessionStoreUtils::NATIVE_LISTENER) {
+    return;
+  }
+
   if (!IsTop()) {
     Top()->MaybeScheduleSessionStoreUpdate();
     return;
@@ -2511,6 +2520,20 @@ bool CanonicalBrowsingContext::AllowedInBFCache(
 void CanonicalBrowsingContext::SetTouchEventsOverride(
     dom::TouchEventsOverride aOverride, ErrorResult& aRv) {
   SetTouchEventsOverrideInternal(aOverride, aRv);
+}
+
+void CanonicalBrowsingContext::AddPageAwakeRequest() {
+  MOZ_ASSERT(IsTop());
+  auto count = GetPageAwakeRequestCount();
+  MOZ_ASSERT(count < UINT32_MAX);
+  Unused << SetPageAwakeRequestCount(++count);
+}
+
+void CanonicalBrowsingContext::RemovePageAwakeRequest() {
+  MOZ_ASSERT(IsTop());
+  auto count = GetPageAwakeRequestCount();
+  MOZ_ASSERT(count > 0);
+  Unused << SetPageAwakeRequestCount(--count);
 }
 
 void CanonicalBrowsingContext::CloneDocumentTreeInto(

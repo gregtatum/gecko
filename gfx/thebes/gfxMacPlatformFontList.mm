@@ -825,7 +825,7 @@ static const nsLiteralCString kLangFontsDirs[] = {
 
 gfxMacPlatformFontList::gfxMacPlatformFontList()
     : gfxPlatformFontList(false), mDefaultFont(nullptr), mUseSizeSensitiveSystemFont(false) {
-  CheckFamilyList(kBaseFonts, ArrayLength(kBaseFonts));
+  CheckFamilyList(kBaseFonts);
 
   // cache this in a static variable so that MacOSFontFamily objects
   // don't have to repeatedly look it up
@@ -871,7 +871,7 @@ FontVisibility gfxMacPlatformFontList::GetVisibilityForFamily(const nsACString& 
   if (aName[0] == '.' || aName.LowerCaseEqualsLiteral("lastresort")) {
     return FontVisibility::Hidden;
   }
-  if (FamilyInList(aName, kBaseFonts, ArrayLength(kBaseFonts))) {
+  if (FamilyInList(aName, kBaseFonts)) {
     return FontVisibility::Base;
   }
   return FontVisibility::User;
@@ -1384,7 +1384,12 @@ gfxFontEntry* gfxMacPlatformFontList::PlatformGlobalFontFallback(const uint32_t 
             }
           }
         }
-      } else {
+      }
+
+      // The macOS system font does not appear in the shared font list, so if
+      // we didn't find the fallback font above, we should also check for an
+      // unshared fontFamily in the system list.
+      if (!fontEntry) {
         gfxFontFamily* family = FindSystemFontFamily(familyNameString);
         if (family) {
           fontEntry = family->FindFontForStyle(*aMatchStyle);

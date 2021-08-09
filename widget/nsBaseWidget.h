@@ -43,6 +43,7 @@ class gfxContext;
 namespace mozilla {
 class CompositorVsyncDispatcher;
 class LiveResizeListener;
+class FallbackRenderer;
 
 #ifdef ACCESSIBILITY
 namespace a11y {
@@ -398,13 +399,13 @@ class nsBaseWidget : public nsIWidget, public nsSupportsWeakReference {
   class AutoLayerManagerSetup {
    public:
     AutoLayerManagerSetup(nsBaseWidget* aWidget, gfxContext* aTarget,
-                          BufferMode aDoubleBuffering,
-                          ScreenRotation aRotation = mozilla::ROTATION_0);
+                          BufferMode aDoubleBuffering);
     ~AutoLayerManagerSetup();
 
    private:
     nsBaseWidget* mWidget;
     RefPtr<BasicLayerManager> mLayerManager;
+    mozilla::FallbackRenderer* mRenderer = nullptr;
   };
   friend class AutoLayerManagerSetup;
 
@@ -531,7 +532,7 @@ class nsBaseWidget : public nsIWidget, public nsSupportsWeakReference {
     return NS_ERROR_UNEXPECTED;
   }
 
-  nsresult SynthesizeNativeTouchPadPinch(TouchpadPinchPhase aEventPhase,
+  nsresult SynthesizeNativeTouchPadPinch(TouchpadGesturePhase aEventPhase,
                                          float aScale,
                                          LayoutDeviceIntPoint aPoint,
                                          int32_t aModifierFlags) override {
@@ -558,6 +559,15 @@ class nsBaseWidget : public nsIWidget, public nsSupportsWeakReference {
     return NS_ERROR_UNEXPECTED;
   }
 
+  nsresult SynthesizeNativeTouchpadPan(TouchpadGesturePhase aEventPhase,
+                                       LayoutDeviceIntPoint aPoint,
+                                       double aDeltaX, double aDeltaY,
+                                       int32_t aModifierFlags) override {
+    MOZ_RELEASE_ASSERT(
+        false, "This method is not implemented on the current platform");
+    return NS_ERROR_UNEXPECTED;
+  }
+
   /**
    * GetPseudoIMEContext() returns pseudo IME context when TextEventDispatcher
    * has non-native input transaction.  Otherwise, returns nullptr.
@@ -576,7 +586,7 @@ class nsBaseWidget : public nsIWidget, public nsSupportsWeakReference {
     return nsIWidget::CreateChildWindow();
   }
 
-  LayerManager* CreateBasicLayerManager();
+  WindowRenderer* CreateBasicLayerManager();
 
   nsPopupType PopupType() const { return mPopupType; }
 
@@ -702,7 +712,7 @@ class nsBaseWidget : public nsIWidget, public nsSupportsWeakReference {
   nsIWidgetListener* mWidgetListener;
   nsIWidgetListener* mAttachedWidgetListener;
   nsIWidgetListener* mPreviouslyAttachedWidgetListener;
-  RefPtr<LayerManager> mLayerManager;
+  RefPtr<WindowRenderer> mWindowRenderer;
   RefPtr<CompositorSession> mCompositorSession;
   RefPtr<CompositorBridgeChild> mCompositorBridgeChild;
 

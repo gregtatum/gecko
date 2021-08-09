@@ -29,7 +29,7 @@ impl<'a, B> L10nRegistryLocked<'a, B> {
 
         for (&source_idx, path) in source_order.iter().zip(res_ids.iter()) {
             let source = self.source_idx(source_idx);
-            if let Some(res) = source.fetch_file_sync(&locale, path, false) {
+            if let Some(res) = source.fetch_file_sync(&locale, path, /* overload */ true) {
                 if source.options.allow_override {
                     bundle.add_resource_overriding(res);
                 } else if let Err(err) = bundle.add_resource(res) {
@@ -145,7 +145,7 @@ impl<P, B> SyncTester for GenerateBundlesSync<P, B> {
         self.reg
             .lock()
             .source_idx(source_idx)
-            .fetch_file_sync(locale, res, false)
+            .fetch_file_sync(locale, res, /* overload */ true)
             .is_some()
     }
 }

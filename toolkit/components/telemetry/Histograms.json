@@ -7823,7 +7823,7 @@
     "products": ["firefox"],
     "bug_numbers": [731025, 1584261, 1643431, 1665442, 1678204],
     "alert_emails": ["gijs@mozilla.com", "mak@mozilla.com"],
-    "expires_in_version": "92",
+    "expires_in_version": "never",
     "kind": "enumerated",
     "n_values": 10,
     "releaseChannelCollection": "opt-out",
@@ -7834,7 +7834,7 @@
     "products": ["firefox"],
     "bug_numbers": [731025, 1523179, 1643431, 1678204],
     "alert_emails": ["gijs@mozilla.com", "mak@mozilla.com"],
-    "expires_in_version": "92",
+    "expires_in_version": "never",
     "kind": "enumerated",
     "n_values": 15,
     "releaseChannelCollection": "opt-out",
@@ -7845,7 +7845,7 @@
     "products": ["firefox"],
     "bug_numbers": [731025, 1584261, 1643431, 1678204],
     "alert_emails": ["gijs@mozilla.com", "mak@mozilla.com"],
-    "expires_in_version": "92",
+    "expires_in_version": "never",
     "kind": "enumerated",
     "keyed": true,
     "n_values": 12,
@@ -7857,7 +7857,7 @@
     "products": ["firefox"],
     "bug_numbers": [731025, 1584261, 1643431, 1678204],
     "alert_emails": ["gijs@mozilla.com", "mak@mozilla.com"],
-    "expires_in_version": "92",
+    "expires_in_version": "never",
     "kind": "enumerated",
     "keyed": true,
     "n_values": 12,
@@ -7971,7 +7971,7 @@
     "products": ["firefox"],
     "bug_numbers": [1279501, 1643431, 1678204],
     "alert_emails": ["gijs@mozilla.com", "mak@mozilla.com"],
-    "expires_in_version": "92",
+    "expires_in_version": "never",
     "kind": "exponential",
     "n_buckets": 20,
     "high": 1000,
@@ -7984,7 +7984,7 @@
     "products": ["firefox"],
     "bug_numbers": [1279501, 1643431, 1678204],
     "alert_emails": ["gijs@mozilla.com", "mak@mozilla.com"],
-    "expires_in_version": "92",
+    "expires_in_version": "never",
     "kind": "exponential",
     "n_buckets": 40,
     "high": 10000,
@@ -7997,7 +7997,7 @@
     "products": ["firefox"],
     "bug_numbers": [1279501, 1584261, 1643431, 1678204],
     "alert_emails": ["gijs@mozilla.com", "mak@mozilla.com", "passwords-dev@mozilla.org"],
-    "expires_in_version": "92",
+    "expires_in_version": "never",
     "kind": "exponential",
     "n_buckets": 20,
     "high": 1000,
@@ -15767,7 +15767,7 @@
     "products": ["geckoview_streaming"],
     "alert_emails": [
       "geckoview-team@mozilla.com",
-      "aklotz@mozilla.com"
+      "asferro@mozilla.com"
     ],
     "expires_in_version": "never",
     "kind": "exponential",
@@ -16194,6 +16194,17 @@
     "n_buckets": 56,
     "description": "How much time (in hours) passed between the current cookie purging activity and the one before that (cookie purging is run on 'daily idle')"
   },
+  "REFERRER_POLICY_COUNT" : {
+    "products": ["firefox"],
+    "record_in_processes": ["main"],
+    "alert_emails": ["tihuang@mozilla.com", "jhofmann@mozilla.com", "ckerschbaumer@mozilla.com", "seceng-telemetry@mozilla.com"],
+    "expires_in_version": "never",
+    "kind" : "enumerated",
+    "n_values": 18,
+    "bug_numbers": [1720869],
+    "description": "The counter of each referrer policy which has been computed for a referrer. The buckets (0-8) are for same-site requests and buckets (9-17) are for cross-site requests. Note that the index matches to the order in ReferrerPolicy.webidl",
+    "releaseChannelCollection": "opt-out"
+  },
   "APZ_ZOOM_ACTIVITY" : {
     "products": ["firefox"],
     "record_in_processes": ["content"],
@@ -16580,21 +16591,21 @@
   "OPAQUE_RESPONSE_BLOCKING_TIME_MS" : {
     "record_in_processes": ["main"],
     "products": ["firefox"],
-    "expires_in_version": "93",
+    "expires_in_version": "96",
     "kind": "exponential",
     "high": 60000,
     "n_buckets": 20,
     "keyed": false,
     "description": "The amount of time to process ORB.",
     "alert_emails": ["echuang@mozilla.com", "necko@mozilla.com"],
-    "bug_numbers": [1683131]
+    "bug_numbers": [1683131, 1720613]
   },
   "OPAQUE_RESPONSE_BLOCKING": {
     "record_in_processes": ["main"],
     "products": ["firefox"],
     "alert_emails": ["echuang@mozilla.com", "necko@mozilla.com"],
-    "bug_numbers": [1683131],
-    "expires_in_version": "93",
+    "bug_numbers": [1683131, 1720613],
+    "expires_in_version": "96",
     "kind": "categorical",
     "releaseChannelCollection": "opt-out",
     "description": "Find out how many opaque responses are allowed, or blocked by ORB per source.",
@@ -16633,18 +16644,5 @@
     "n_buckets": 100,
     "keyed": true,
     "description": "The time that a transaction is waiting for HTTPS RR"
-  },
-  "WINDOW_OPEN_TYPE": {
-    "record_in_processes": ["content"],
-    "products": ["firefox"],
-    "alert_emails": ["arai.unmht@gmail.com"],
-    "expires_in_version": "93",
-    "kind": "categorical",
-    "labels": ["NoPopup_Empty", "NoPopup_Other",
-               "Popup_Width", "Popup_Location",
-               "Popup_Menubar", "Popup_Resizable",
-               "Popup_Scrollbars", "Popup_Status"],
-    "bug_numbers": [1710010],
-    "description": "Whether and how window.open opens a new popup or a new tab"
   }
 }

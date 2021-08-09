@@ -1124,8 +1124,8 @@ void GCRuntime::releaseArena(Arena* arena, const AutoLockGC& lock) {
 
 GCRuntime::GCRuntime(JSRuntime* rt)
     : rt(rt),
-      systemZone(nullptr),
       atomsZone(nullptr),
+      systemZone(nullptr),
       heapState_(JS::HeapState::Idle),
       stats_(this),
       marker(rt),
@@ -1646,6 +1646,49 @@ void GCRuntime::finish() {
   stats().printTotalProfileTimes();
 }
 
+void GCRuntime::freezePermanentAtoms() {
+  // This is called just after the permanent atoms have been created. At this
+  // point all existing atoms are permanent. Move the arenas containing atoms
+  // out of atoms zone arena lists until shutdown. Since we won't sweep them, we
+  // don't need to mark them at the start of every GC.
+
+  MOZ_ASSERT(atomsZone);
+  MOZ_ASSERT(zones().empty());
+
+  atomsZone->arenas.clearFreeLists();
+  freezePermanentAtomsOfKind(AllocKind::ATOM, permanentAtoms.ref());
+  freezePermanentAtomsOfKind(AllocKind::FAT_INLINE_ATOM,
+                             permanentFatInlineAtoms.ref());
+}
+
+void GCRuntime::freezePermanentAtomsOfKind(AllocKind kind,
+                                           ArenaList& arenaList) {
+  for (auto atom = atomsZone->cellIterUnsafe<JSAtom>(kind); !atom.done();
+       atom.next()) {
+    MOZ_ASSERT(atom->isPermanentAtom());
+    atom->asTenured().markBlack();
+  }
+
+  arenaList = std::move(atomsZone->arenas.arenaList(kind));
+}
+
+void GCRuntime::restorePermanentAtoms() {
+  // Move the arenas containing permanent atoms that were removed by
+  // freezePermanentAtoms() back to the atoms zone arena lists so we can collect
+  // them.
+
+  MOZ_ASSERT(heapState() == JS::HeapState::MajorCollecting);
+
+  restorePermanentAtomsOfKind(AllocKind::ATOM, permanentAtoms.ref());
+  restorePermanentAtomsOfKind(AllocKind::FAT_INLINE_ATOM,
+                              permanentFatInlineAtoms.ref());
+}
+
+void GCRuntime::restorePermanentAtomsOfKind(AllocKind kind,
+                                            ArenaList& arenaList) {
+  atomsZone->arenas.arenaList(kind).insertListWithCursorAtEnd(arenaList);
+}
+
 bool GCRuntime::setParameter(JSGCParamKey key, uint32_t value) {
   MOZ_ASSERT(CurrentThreadCanAccessRuntime(rt));
   waitBackgroundSweepEnd();
@@ -1845,8 +1888,6 @@ uint32_t GCRuntime::getParameter(JSGCParamKey key, const AutoLockGC& lock) {
       return tunables.zoneAllocDelayBytes() / 1024;
     case JSGC_MALLOC_THRESHOLD_BASE:
       return tunables.mallocThresholdBase() / 1024 / 1024;
-    case JSGC_MALLOC_GROWTH_FACTOR:
-      return uint32_t(tunables.mallocGrowthFactor() * 100);
     case JSGC_CHUNK_BYTES:
       return ChunkSize;
     case JSGC_HELPER_THREAD_RATIO:
@@ -4414,6 +4455,10 @@ bool GCRuntime::beginPreparePhase(JS::GCReason reason, AutoGCSession& session) {
     session.maybeCheckAtomsAccess.emplace(rt);
   }
 
+  if (reason == JS::GCReason::DESTROY_RUNTIME) {
+    restorePermanentAtoms();
+  }
+
   /*
    * Start a parallel task to clear all mark state for the zones we are
    * collecting. This is linear in the size of the heap we are collecting and so
@@ -6047,7 +6092,7 @@ static bool SweepArenaList(JSFreeOp* fop, Arena** arenasToSweep,
     MOZ_ASSERT_IF(next, next->zone == arena->zone);
     *arenasToSweep = next;
 
-    AllocKind kind = MapTypeToFinalizeKind<T>::kind;
+    AllocKind kind = MapTypeToAllocKind<T>::kind;
     sliceBudget.step(Arena::thingsPerArena(kind));
     if (sliceBudget.isOverBudget()) {
       return false;

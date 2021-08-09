@@ -1315,13 +1315,6 @@ var gKeywordURIFixup = {
     let hostName = fixedURI.displayHost;
     // and the ascii-only host for the pref:
     let asciiHost = fixedURI.asciiHost;
-    // Normalize out a single trailing dot - NB: not using endsWith/lastIndexOf
-    // because we need to be sure this last dot is the *only* dot, too.
-    // More generally, this is used for the pref and should stay in sync with
-    // the code in URIFixup::KeywordURIFixup .
-    if (asciiHost.indexOf(".") == asciiHost.length - 1) {
-      asciiHost = asciiHost.slice(0, -1);
-    }
 
     let isIPv4Address = host => {
       let parts = host.split(".");
@@ -1387,7 +1380,15 @@ var gKeywordURIFixup = {
             callback() {
               // Do not set this preference while in private browsing.
               if (!PrivateBrowsingUtils.isWindowPrivate(window)) {
-                let pref = "browser.fixup.domainwhitelist." + asciiHost;
+                let prefHost = asciiHost;
+                // Normalize out a single trailing dot - NB: not using endsWith/lastIndexOf
+                // because we need to be sure this last dot is the *only* dot, too.
+                // More generally, this is used for the pref and should stay in sync with
+                // the code in URIFixup::KeywordURIFixup .
+                if (prefHost.indexOf(".") == prefHost.length - 1) {
+                  prefHost = prefHost.slice(0, -1);
+                }
+                let pref = "browser.fixup.domainwhitelist." + prefHost;
                 Services.prefs.setBoolPref(pref, true);
               }
               openTrustedLinkIn(fixedURI.spec, "current");
@@ -1405,9 +1406,19 @@ var gKeywordURIFixup = {
       },
     };
 
+    // For dotless hostnames, we want to ensure this ends with a '.' but don't
+    // want the . showing up in the UI if we end up notifying the user, so we
+    // use a separate variable.
+    let lookupName = hostName;
+    if (
+      UrlbarPrefs.get("dnsResolveFullyQualifiedNames") &&
+      !lookupName.includes(".")
+    ) {
+      lookupName += ".";
+    }
     try {
       gDNSService.asyncResolve(
-        hostName,
+        lookupName,
         Ci.nsIDNSService.RESOLVE_TYPE_DEFAULT,
         0,
         null,
@@ -3794,7 +3805,6 @@ var homeButtonObserver = {
     browserDragAndDrop.dragOver(aEvent);
     aEvent.dropEffect = "link";
   },
-  onDragExit(aEvent) {},
 };
 
 function openHomeDialog(aURL) {
@@ -3827,7 +3837,6 @@ var newTabButtonObserver = {
   onDragOver(aEvent) {
     browserDragAndDrop.dragOver(aEvent);
   },
-  onDragExit(aEvent) {},
   async onDrop(aEvent) {
     let links = browserDragAndDrop.dropLinks(aEvent);
     if (
@@ -3866,7 +3875,6 @@ var newWindowButtonObserver = {
   onDragOver(aEvent) {
     browserDragAndDrop.dragOver(aEvent);
   },
-  onDragExit(aEvent) {},
   async onDrop(aEvent) {
     let links = browserDragAndDrop.dropLinks(aEvent);
     if (
@@ -7789,7 +7797,6 @@ var IndexedDBPromptHelper = {
           Ci.nsIPermissionManager.ALLOW_ACTION
         );
       },
-      disableHighlight: true,
     };
 
     var secondaryActions = [
@@ -7888,7 +7895,6 @@ var CanvasPermissionPromptHelper = {
           state && state.checkboxChecked
         );
       },
-      disableHighlight: true,
     };
 
     let secondaryActions = [
@@ -8061,8 +8067,6 @@ var WebAuthnPromptHelper = {
         this._tid = 0;
       }
     };
-
-    mainAction.disableHighlight = true;
 
     this._tid = tid;
     this._current = PopupNotifications.show(

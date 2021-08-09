@@ -15,7 +15,6 @@ var isDevtools = SimpleTest.harnessParameters.subsuite == "devtools";
 // find any reference because the URIs are constructed programatically.
 // If you need to whitelist specific files, please use the 'whitelist' object.
 var gExceptionPaths = [
-  "chrome://browser/content/defaultthemes/",
   "resource://app/defaults/settings/blocklists/",
   "resource://app/defaults/settings/security-state/",
   "resource://app/defaults/settings/main/",
@@ -259,11 +258,7 @@ var whitelist = [
   // Bug 1721741:
   // (The references to these files are dynamically generated, so the test can't
   // find the references)
-  { file: "chrome://browser/content/screenshots/cancel.svg" },
   { file: "chrome://browser/content/screenshots/copied-notification.svg" },
-  { file: "chrome://browser/content/screenshots/copy.svg" },
-  { file: "chrome://browser/content/screenshots/download-white.svg" },
-  { file: "chrome://browser/content/screenshots/download.svg" },
   {
     file:
       "chrome://browser/content/screenshots/icon-welcome-face-without-eyes.svg",
@@ -726,6 +721,7 @@ function chromeFileExists(aURI) {
     let channel = NetUtil.newChannel({
       uri: aURI,
       loadUsingSystemPrincipal: true,
+      contentPolicyType: Ci.nsIContentPolicy.TYPE_FETCH,
     });
     let stream = channel.open();
     let sstream = Cc["@mozilla.org/scriptableinputstream;1"].createInstance(
