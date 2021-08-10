@@ -30,9 +30,6 @@ if CONFIG["MOZ_DEBUG"]:
         "nsAutoLayoutPhase.cpp",
     ]
 
-if CONFIG["PROCLIENT_ENABLED"]:
-    DEFINES["PROCLIENT_ENABLED"] = True
-
 XPIDL_MODULE = "layout_base"
 
 EXPORTS += [
