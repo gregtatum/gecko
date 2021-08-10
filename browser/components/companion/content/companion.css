@@ -97,7 +97,6 @@ h2 {
   -moz-context-properties: fill, fill-opacity;
   fill: currentColor;
   fill-opacity: .6;
-  list-style-image: url("chrome://browser/content/companion/companion-settings.svg")
 }
 
 #settings-button:hover {
