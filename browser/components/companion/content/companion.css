@@ -8,7 +8,7 @@ body {
   margin: 0;
   overflow: hidden;
   min-height: 500px;
-  min-width: 300px; // var(--companion-width) from browser.css
+  min-width: 300px; /* var(--companion-width) from browser.css */
 }
 
 body {
