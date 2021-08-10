@@ -79,6 +79,7 @@ class CompanionParent extends JSWindowActorParent {
     this._cachedFavicons = [];
     this._cachedPlacesTitles = new Map();
     this._pageType = null;
+    this._destroyed = true;
 
     this._observer = this.observe.bind(this);
     this._handleTabEvent = this.handleTabEvent.bind(this);
@@ -128,6 +129,7 @@ class CompanionParent extends JSWindowActorParent {
 
   actorCreated() {
     this.setUpGlobalHistoryDebuggingObservers();
+    this._destroyed = false;
   }
 
   setUpGlobalHistoryDebuggingObservers() {
@@ -166,6 +168,8 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   didDestroy() {
+    this._destroyed = true;
+
     if (this._cacheCleanupTimeout) {
       clearTimeout(this._cacheCleanupTimeout);
       this._cacheCleanupTimeout = null;
@@ -210,6 +214,7 @@ class CompanionParent extends JSWindowActorParent {
       this.snapshotSelector.destroy();
       PageDataService.off("page-data", this._pageDataFound);
       PageDataService.off("no-page-data", this._pageDataFound);
+      this.snapshotSelector = null;
     }
   }
 
@@ -628,10 +633,13 @@ class CompanionParent extends JSWindowActorParent {
 
         this.snapshotSelector.on("snapshots-updated", async (_, snapshots) => {
           await this.ensureFaviconsCached(snapshots.map(s => s.url));
-          this.sendAsyncMessage("Companion:SnapshotsChanged", {
-            snapshots,
-            newFavicons: this.consumeCachedFaviconsToSend(),
-          });
+
+          if (!this._destroyed) {
+            this.sendAsyncMessage("Companion:SnapshotsChanged", {
+              snapshots,
+              newFavicons: this.consumeCachedFaviconsToSend(),
+            });
+          }
         });
 
         // To avoid a significant delay in initializing other parts of the UI,
