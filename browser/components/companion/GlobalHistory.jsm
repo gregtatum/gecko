@@ -60,6 +60,7 @@ function getBrowserHistoryForView(window, view) {
  */
 class View {
   #internalView;
+  #userTitle;
 
   /**
    * @param {InternalView} internalView
@@ -74,8 +75,13 @@ class View {
   }
 
   /** @type {string} */
+  /** Always return user edited title if present **/
   get title() {
-    return this.#internalView.title;
+    return this.#userTitle || this.#internalView.title;
+  }
+
+  set userTitle(userTitle) {
+    this.#userTitle = userTitle;
   }
 
   get state() {

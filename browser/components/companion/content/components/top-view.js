@@ -41,7 +41,25 @@ class TopView extends MozLitElement {
         }
         break;
       case "click":
-        if (event.currentTarget == this.#pageActionPanel) {
+        let titleEl = document.getElementById("site-info-title");
+        let editImg = document.getElementById("site-info-edit-icon");
+        if (event.target == editImg) {
+          titleEl.focus();
+        } else if (event.target != titleEl) {
+          this.#pageActionPanel.hidePopup();
+        }
+        break;
+      case "keypress":
+        let siteInfoTitleEl = document.getElementById("site-info-title");
+        if (
+          event.target == siteInfoTitleEl &&
+          event.keyCode == KeyEvent.DOM_VK_RETURN
+        ) {
+          let userTitle = siteInfoTitleEl.value;
+          if (userTitle) {
+            this.activeView.userTitle = userTitle;
+            this.viewUpdated();
+          }
           this.#pageActionPanel.hidePopup();
         }
         break;
@@ -50,7 +68,8 @@ class TopView extends MozLitElement {
 
   pageActionPanelShowing() {
     let pageActionTitleEl = document.getElementById("site-info-title");
-    pageActionTitleEl.textContent = this.activeView.title;
+    pageActionTitleEl.value = this.activeView.title;
+    pageActionTitleEl.scrollLeft = 0;
 
     let pageActionUrlEl = document.getElementById("site-info-url");
     pageActionUrlEl.textContent = this.activeView.url.spec;
@@ -64,6 +83,7 @@ class TopView extends MozLitElement {
       panel = document.getElementById("page-action-panel");
       panel.addEventListener("popupshowing", this);
       panel.addEventListener("click", this);
+      panel.addEventListener("keypress", this);
     }
 
     return panel;

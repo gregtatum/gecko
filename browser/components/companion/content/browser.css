@@ -200,9 +200,11 @@
   padding-block-end: var(--arrowpanel-menuitem-padding-block);
 }
 
+/** Page Info Panel **/
+
 #page-action-panel,
 #page-action-panel-sections {
-  max-width: 428px;
+  width: 428px;
   height: 230px;
 }
 
@@ -248,15 +250,50 @@
 }
 
 #site-info-section > div {
-  padding: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  height: 32px;
+}
+
+#site-info-title-section {
+  display: grid;
+  grid-template: 1fr / 95% 5%;
+}
+
+#site-info-edit-icon {
+  background: url("chrome://global/skin/icons/edit.svg") no-repeat right;
+}
+
+#site-info-title:focus ~ #site-info-edit-icon,
+#site-info-title-section:not(:hover) #site-info-edit-icon {
+  background: none;
+}
+
+#site-info-title:focus-visible {
+  border: 1px solid #0060DF;
   border-radius: 4px;
+  background: #F0F0F4;
+  text-overflow: unset;
+  outline: none;
 }
 
 #site-info-title {
   font-size: 14px;
+  margin: 0;
+  border: none;
 }
+
+#site-info-title,
+#site-info-url {
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#site-info-url {
+  padding-block: 8px;
+  background: #F0F0F4;
+}
+
+/** END Page Info Panel **/
 
 #urlbar[breakout][breakout-extend][page-overlay],
 #urlbar[breakout][breakout-extend-disabled][page-overlay][open] {
