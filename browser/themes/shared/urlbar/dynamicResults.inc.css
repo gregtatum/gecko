@@ -206,7 +206,7 @@
 }
 
 .urlbarView-row[dynamicType=topSitesButtons] {
-  background-color: var(--toolbar-bgcolor);
+  background-color: var(--toolbar-field-background-color);
   height: 80px;
   overflow: hidden;
   padding-block: 0;

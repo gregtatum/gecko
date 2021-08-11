@@ -24,7 +24,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 });
 
 const COMPANION_OPEN_PREF = "companion.open";
-const URLBAR_PAGE_OVERLAY_PREF = "browser.companion.urlbar.overlay";
 
 const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
@@ -62,9 +61,6 @@ class BrowserWindowHandler {
     Services.prefs.addObserver(COMPANION_OPEN_PREF, this);
     this.onCompanionPrefUpdated();
 
-    Services.prefs.addObserver(URLBAR_PAGE_OVERLAY_PREF, this);
-    this.onUrlbarOverlayPrefUpdated();
-
     window.document
       .getElementById("urlbar-page-overlay")
       .addEventListener("click", () => {
@@ -86,7 +82,6 @@ class BrowserWindowHandler {
   }
 
   destroy() {
-    Services.prefs.removeObserver(URLBAR_PAGE_OVERLAY_PREF, this);
     Services.prefs.removeObserver(COMPANION_OPEN_PREF, this);
     let xulStore = Services.xulStore;
     xulStore.persist(this._companionBox, "width");
@@ -98,9 +93,6 @@ class BrowserWindowHandler {
     switch (data) {
       case COMPANION_OPEN_PREF:
         this.onCompanionPrefUpdated();
-        break;
-      case URLBAR_PAGE_OVERLAY_PREF:
-        this.onUrlbarOverlayPrefUpdated();
         break;
     }
   }
@@ -145,13 +137,6 @@ class BrowserWindowHandler {
       this.window.document.documentElement.removeAttribute("companion");
       this.window.document.getElementById("companion-browser")?.remove();
     }
-  }
-
-  onUrlbarOverlayPrefUpdated() {
-    this.window.gURLBar.toggleAttribute(
-      "page-overlay",
-      Services.prefs.getBoolPref(URLBAR_PAGE_OVERLAY_PREF, false)
-    );
   }
 
   onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags, aIsSimulated) {
