@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
- @supports -moz-bool-pref("browser.companion.styleoverrides") {
+ @supports -moz-bool-pref("browser.pinebuild.styleoverrides") {
   /* TODO: temporary change to hide the wordmark due to out of date assets */
   .logo-and-wordmark {
     display: none !important;

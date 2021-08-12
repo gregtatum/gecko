@@ -94,7 +94,7 @@ scrollbar[orient="vertical"] > scrollbarbutton[type="decrement"] {
 
 /* Experimental scrollbar styling changes to support pinebuild, which do not
    work in high contrast mode. */
-@supports -moz-bool-pref("browser.companion.styleoverrides") {
+@supports -moz-bool-pref("browser.pinebuild.styleoverrides") {
   @media not (prefers-contrast) {
     /* These styles are pulled directly from the devtools
        floating-scrollbars-responsive-design stylesheet, except the selectors

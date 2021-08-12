@@ -35,4 +35,4 @@ pref("app.update.badgeWaitTime", 0);
 pref("devtools.selfxss.count", 5);
 
 // Temporary overrides for CSS in demo
-pref("browser.companion.styleoverrides", true);
+pref("browser.pinebuild.styleoverrides", true);

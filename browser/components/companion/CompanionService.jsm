@@ -34,7 +34,7 @@ class BrowserWindowHandler {
     this._companionBox = this.window.document.getElementById("companion-box");
 
     let companionToolbar = this.window.document.getElementById(
-      "companion-toolbar"
+      "pinebuild-toolbar"
     );
     let activeViewManager = this.window.document.createElement(
       "active-view-manager"

@@ -128,38 +128,38 @@
     </html:template>
 
     <vbox pack="center">
-      <hbox id="companion-mac-buttonbox"/>
+      <hbox id="pinebuild-mac-buttonbox"/>
     </vbox>
 
     <toolbartabstop/>
-    <hbox id="companion-toolbar">
+    <hbox id="pinebuild-toolbar">
       <toolbarbutton id="companion-sidebar-button" class="toolbarbutton-1"
                      oncommand="CompanionService.toggleCompanion()"
                      onclick="checkForMiddleClick(this, event);"/>
-      <toolbarbutton id="companion-back-button" class="toolbarbutton-1"
+      <toolbarbutton id="pinebuild-back-button" class="toolbarbutton-1"
                      data-l10n-id="toolbar-button-back-2"
                      command="Browser:BackOrBackDuplicate"
                      onclick="checkForMiddleClick(this, event);"
                      tooltip="back-button-tooltip"
                      context="backForwardMenu"/>
-      <toolbarbutton id="companion-forward-button" class="toolbarbutton-1"
+      <toolbarbutton id="pinebuild-forward-button" class="toolbarbutton-1"
                      data-l10n-id="toolbar-button-back-2"
                      command="Browser:ForwardOrForwardDuplicate"
                      onclick="checkForMiddleClick(this, event);"
                      tooltip="forward-button-tooltip"
                      context="backForwardMenu"/>
-      <toolbarbutton id="companion-reload-button" class="toolbarbutton-1"
+      <toolbarbutton id="pinebuild-reload-button" class="toolbarbutton-1"
                      data-l10n-id="toolbar-button-reload"
                      command="Browser:ReloadOrDuplicate"
                      onclick="checkForMiddleClick(this, event);"
                      tooltip="dynamic-shortcut-tooltip"/>
-      <toolbarbutton id="companion-stop-button" class="toolbarbutton-1"
+      <toolbarbutton id="pinebuild-stop-button" class="toolbarbutton-1"
                      data-l10n-id="toolbar-button-stop"
                      command="Browser:Stop"
                      tooltip="dynamic-shortcut-tooltip"/>
-      <toolbarbutton id="companion-copy-button" class="toolbarbutton-1"
+      <toolbarbutton id="pinebuild-copy-button" class="toolbarbutton-1"
                      onclick="CompanionService.copy(this, gBrowser.currentURI.spec);"/>
-      <toolbarbutton id="companion-snapshot-button" class="toolbarbutton-1"
+      <toolbarbutton id="pinebuild-snapshot-button" class="toolbarbutton-1"
                      onclick="SaveSnapshot(gBrowser.currentURI.spec);"/>
     </hbox>
 #else
@@ -526,7 +526,7 @@
                      oncommand="BrowserTryToCloseWindow(event);"/>
     </hbox>
 #ifdef PINEBUILD
-    <hbox id="companion-window-controls" pack="end" skipintoolbarset="true"
+    <hbox id="pinebuild-window-controls" pack="end" skipintoolbarset="true"
           style="-moz-box-ordinal-group: 1000;">
 #include titlebar-items.inc.xhtml
     </hbox>

@@ -40,7 +40,7 @@ treeherder:
         'M': 'Mochitests'
         'M-1proc': 'Mochitests without e10s'
         'M-a11y-checks': 'Mochitests with accessibility checks enabled'
-        'M-co': 'Mochitests with companion UI'
+        'M-pi': 'Mochitests with pinebuild UI'
         'M-fis': 'Mochitests with fission enabled'
         'M-fis-xorig': 'Mochitests with cross-origin and fission enabled'
         'M-fis-gli': 'Mochitests with fission and WebGL IPC enabled'
