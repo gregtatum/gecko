@@ -1270,6 +1270,13 @@
   value: false
   mirror: always
 
+# Testing-only pref which makes data: URIs be loaded in a "web" content process
+# instead of within a process based on the URI's loader.
+- name: browser.tabs.remote.dataUriInDefaultWebProcess
+  type: bool
+  value: false
+  mirror: always
+
 - name: browser.tabs.remote.desktopbehavior
   type: bool
   value: false
@@ -1311,6 +1318,14 @@
 #else
   value: false
 #endif
+  mirror: always
+
+# Pref to control whether we use a separate privileged content process
+# for certain mozilla webpages (which are listed in the pref
+# browser.tabs.remote.separatedMozillaDomains).
+- name: browser.tabs.remote.separatePrivilegedMozillaWebContentProcess
+  type: bool
+  value: false
   mirror: always
 
 # When this pref is enabled, opaque response is only allowed to enter the
@@ -2476,6 +2491,12 @@
   value: true
   mirror: always
 
+# Enable/disable KeyboardEvent.initKeyEvent function
+- name: dom.keyboardevent.init_key_event.enabled
+  type: bool
+  value: false
+  mirror: always
+
 # If this is true, keypress events for non-printable keys are dispatched only
 # for event listeners of the system event group in web content.
 - name: dom.keyboardevent.keypress.dispatch_non_printable_keys_only_system_group_in_content
@@ -3248,13 +3269,10 @@
   mirror: always
 
 # Whether or not LSNG (Next Generation Local Storage) is enabled.
-# See bug 1517090 for enabling this on Nightly.
-# See bug 1534736 for changing it to EARLY_BETA_OR_EARLIER.
-# See bug 1539835 for enabling this unconditionally.
-# See bug 1619948 for changing it back to EARLY_BETA_OR_EARLIER.
+# See bug 1599979 for enabling this unconditionally (second attempt).
 - name: dom.storage.next_gen
   type: RelaxedAtomicBool
-  value: @IS_EARLY_BETA_OR_EARLIER@
+  value: true
   mirror: always
   do_not_use_directly: true
 
@@ -3696,6 +3714,12 @@
 
 # Is support for custom element disabledFeatures enabled?
 - name: dom.webcomponents.disabledFeatures.enabled
+  type: bool
+  value: true
+  mirror: always
+
+# Is support for custom element elementInternals enabled?
+- name: dom.webcomponents.elementInternals.enabled
   type: bool
   value: true
   mirror: always
@@ -7618,6 +7642,13 @@
   mirror: always
   rust: true
 
+# Is 'font-synthesis: small-caps' supported?
+- name: layout.css.font-synthesis-small-caps.enabled
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
+  rust: true
+
 # Whether frame visibility tracking is enabled globally.
 - name: layout.framevisibility.enabled
   type: bool
@@ -8014,6 +8045,12 @@
   mirror: always
 
 - name: media.clearkey.persistent-license.enabled
+  type: bool
+  value: false
+  mirror: always
+
+# Are test specific clearkey key systems enabled and exposed?
+- name: media.clearkey.test-key-systems.enabled
   type: bool
   value: false
   mirror: always

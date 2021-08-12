@@ -239,7 +239,6 @@ windows-tests:
     - mochitest-browser-chrome
     - mochitest-browser-chrome-companion
     - mochitest-chrome
-    - mochitest-devtools-chrome
     - mochitest-remote
     - telemetry-tests-client
     - test-verify
@@ -257,6 +256,7 @@ windows10-tests:
 
 windows10-2004-tests:
     - mochitest-chrome-gpu
+    - mochitest-devtools-chrome
     - mochitest-media
     - mochitest-plain
     - mochitest-plain-gpu
@@ -386,10 +386,6 @@ macosx1015-64-qr-tests:
     - test-verify-gpu
     - test-verify-wpt
     - xpcshell
-
-# debug only
-macosx1015-64-tests:
-    - web-platform-tests-reftest
 
 macosx64-talos:
     - talos-bcv

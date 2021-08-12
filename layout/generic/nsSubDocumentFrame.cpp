@@ -51,6 +51,7 @@
 #include "mozilla/layers/WebRenderUserData.h"
 #include "mozilla/layers/WebRenderScrollData.h"
 #include "mozilla/layers/RenderRootStateManager.h"
+#include "mozilla/layers/StackingContextHelper.h"  // for StackingContextHelper
 #include "mozilla/ProfilerLabels.h"
 
 using namespace mozilla;
@@ -1372,9 +1373,19 @@ void nsDisplayRemote::Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) {
     return;
   }
 
+  // Rendering the inner document will apply a scale to account for its
+  // app units per dev pixel ratio. We want to apply the inverse scaling
+  // using our app units per dev pixel ratio, so that no actual scaling
+  // will be applied if they match. For in-process rendering,
+  // nsSubDocumentFrame creates an nsDisplayZoom item if the app units
+  // per dev pixel ratio changes.
   int32_t appUnitsPerDevPixel = pc->AppUnitsPerDevPixel();
+  gfxFloat scale = gfxFloat(AppUnitsPerCSSPixel()) / appUnitsPerDevPixel;
+  gfxContextMatrixAutoSaveRestore saveMatrix(aCtx);
+  aCtx->Multiply(gfxMatrix::Scaling(scale, scale));
+
   Rect destRect =
-      NSRectToSnappedRect(GetContentRect(), appUnitsPerDevPixel, *target);
+      NSRectToSnappedRect(GetContentRect(), AppUnitsPerCSSPixel(), *target);
   target->DrawDependentSurface(mPaintData.mTabId, destRect);
 }
 
@@ -1411,9 +1422,10 @@ bool nsDisplayRemote::CreateWebRenderCommands(
     visibleRect -= contentRect.TopLeft();
 
     // Generate an effects update notifying the browser it is visible
-    // TODO - Gather scaling factors
+    gfx::Size scale = aSc.GetInheritedScale();
     aDisplayListBuilder->AddEffectUpdate(
-        remoteBrowser, EffectsInfo::VisibleWithinRect(visibleRect, 1.0f, 1.0f));
+        remoteBrowser,
+        EffectsInfo::VisibleWithinRect(visibleRect, scale.width, scale.height));
 
     // Create a WebRenderRemoteData to notify the RemoteBrowser when it is no
     // longer visible
