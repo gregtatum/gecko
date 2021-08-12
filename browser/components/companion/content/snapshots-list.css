@@ -22,11 +22,12 @@
   flex-direction: column;
   justify-content: center;
   padding-block: 4px;
+  line-height: 1.7;
 }
 
 .snapshot-favicon {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   margin-inline-end: 8px;
   border-radius: 4px;
   background-color: var(--button-bgcolor);
@@ -57,17 +58,20 @@
 }
 
 .snapshot .title {
-  opacity: .9;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .snapshot .info {
   display: flex;
   flex-direction: row;
   font-size: smaller;
-  opacity: .75;
+  opacity: .7;
 }
 
-.snapshot .snapshot-info-divider {
-  white-space: pre;
+.snapshot .snapshot-info-divider::after {
+  content: "\00B7";
+  font-size: 2.5em;
+  line-height: .5;
+  margin-inline: .1em;
 }
