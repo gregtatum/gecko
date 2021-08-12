@@ -19,6 +19,12 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/AddonManager.jsm"
 );
 
+ChromeUtils.defineModuleGetter(
+  this,
+  "CompanionService",
+  "resource:///modules/CompanionService.jsm"
+);
+
 const SIMPLETEST_OVERRIDES = [
   "ok",
   "record",
@@ -872,6 +878,10 @@ Tester.prototype = {
           if (window.gBrowser) {
             NewTabPagePreloading.removePreloadedBrowser(window);
           }
+        }
+
+        if (AppConstants.PROCLIENT_ENABLED) {
+          CompanionService.closeCompanion();
         }
 
         // Schedule GC and CC runs before finishing in order to detect
