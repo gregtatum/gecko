@@ -338,7 +338,7 @@ class CompanionParent extends JSWindowActorParent {
               (uri, dataLength, data, mimeType) => {
                 resolve({
                   url: page,
-                  data: data ? new Uint8Array(data) : null,
+                  data: dataLength ? data : null,
                   mimeType,
                 });
               },
