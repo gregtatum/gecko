@@ -11,7 +11,6 @@ browser.jar:
     content/browser/companion/companion.xhtml (content/companion.xhtml)
     content/browser/companion/globalhistorydebugging.js (content/globalhistorydebugging.js)
     content/browser/companion/googleAccount.png (content/googleAccount.png)
-    content/browser/companion/link.svg (content/link.svg)
     content/browser/companion/lit.all.js (content/lit.all.js)
     content/browser/companion/logins.js (content/logins.js)
     content/browser/companion/media.js (content/media.js)
