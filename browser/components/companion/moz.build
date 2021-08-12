@@ -20,4 +20,6 @@ EXTRA_JS_MODULES += [
 FINAL_TARGET_FILES.actors += [
     "CompanionChild.jsm",
     "CompanionParent.jsm",
+    "TopLevelNavigationDelegateChild.jsm",
+    "TopLevelNavigationDelegateParent.jsm",
 ]

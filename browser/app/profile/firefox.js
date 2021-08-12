@@ -2599,4 +2599,5 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("services.sync.engine.addons", false);
   pref("browser.tabs.unloadOnLowMemory", true);
   pref("browser.urlbar.openintab", true);
+  pref("browser.tabs.openNewTabForMostNavigations", false);
 #endif

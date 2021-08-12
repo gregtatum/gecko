@@ -12,6 +12,12 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
+ChromeUtils.defineModuleGetter(
+  this,
+  "ActorManagerParent",
+  "resource://gre/modules/ActorManagerParent.jsm"
+);
+
 function requestedIndex(sessionHistory) {
   return sessionHistory.requestedIndex == -1
     ? sessionHistory.index
@@ -352,6 +358,28 @@ class GlobalHistory extends EventTarget {
       throw new Error(
         "Cannot function unless session history is in the parent."
       );
+    }
+
+    const GlobalHistoryActors = {
+      TopLevelNavigationDelegate: {
+        parent: {
+          moduleURI: "resource:///actors/TopLevelNavigationDelegateParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/TopLevelNavigationDelegateChild.jsm",
+        },
+
+        messageManagerGroups: ["browsers"],
+      },
+    };
+
+    if (
+      Services.prefs.getBoolPref(
+        "browser.tabs.openNewTabForMostNavigations",
+        false
+      )
+    ) {
+      ActorManagerParent.addJSWindowActors(GlobalHistoryActors);
     }
 
     for (let { linkedBrowser: browser } of this.#window.gBrowser.tabs) {
