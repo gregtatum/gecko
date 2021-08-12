@@ -40,7 +40,7 @@ var require_evt = __commonJS({
       }
     })(exports, function() {
       "use strict";
-      var evt13, slice = Array.prototype.slice, props = [
+      var evt15, slice = Array.prototype.slice, props = [
         "_events",
         "_pendingEvents",
         "on",
@@ -84,8 +84,8 @@ var require_evt = __commonJS({
         }
       }
       function emitError(err) {
-        if (evt13._events.hasOwnProperty("error")) {
-          evt13.emit("error", err);
+        if (evt15._events.hasOwnProperty("error")) {
+          evt15.emit("error", err);
         } else {
           console.error(err, err.stack);
         }
@@ -192,9 +192,9 @@ var require_evt = __commonJS({
           }
         }
       };
-      evt13 = new Emitter();
-      evt13.Emitter = Emitter;
-      evt13.mix = function(obj) {
+      evt15 = new Emitter();
+      evt15.Emitter = Emitter;
+      evt15.mix = function(obj) {
         var e = new Emitter();
         props.forEach(function(prop) {
           if (obj.hasOwnProperty(prop)) {
@@ -204,7 +204,7 @@ var require_evt = __commonJS({
         });
         return obj;
       };
-      return evt13;
+      return evt15;
     });
   }
 });
@@ -534,7 +534,11 @@ logic.event = function(scope, type, details) {
   logic.emit("censorEvent", event);
   logic.emit("event", event);
   if (logic.bc) {
-    logic.bc.postMessage({ mode: "append", event: event.jsonRepresentation });
+    logic.bc.postMessage({
+      mode: "append",
+      tid: logic.tid,
+      event: event.jsonRepresentation
+    });
   }
   if (logic.realtimeLogEverything) {
     dump("logic: " + JSON.stringify(event) + "\n");
@@ -767,12 +771,12 @@ ObjectSimplifier.prototype = {
       if (!isPlainObject(x)) {
         if (x.toJSON) {
           return this._simplify(x.toJSON(), depth, cacheSet);
+        } else if (x instanceof Map) {
+          return this._simplify([...Map.prototype.entries.call(x)], depth + 1, cacheSet);
+        } else if (x instanceof Set) {
+          return this._simplify([...Set.prototype.entries.call(x)], depth + 1, cacheSet);
         } else if (x.toString) {
           return this._simplify(x.toString(), depth, cacheSet);
-        } else if (x instanceof Map) {
-          return this._simplify([...Map.prototype.entries.call(x)].toJSON(), depth, cacheSet);
-        } else if (x instanceof Set) {
-          return this._simplify([...Set.prototype.entries.call(x)].toJSON(), depth, cacheSet);
         }
         return "(?)";
       }
@@ -968,7 +972,7 @@ function into(target, source) {
 
 // src/clientapi/mailapi.js
 var import_addressparser = __toModule(require_addressparser());
-var import_evt12 = __toModule(require_evt());
+var import_evt14 = __toModule(require_evt());
 
 // src/clientapi/mail_folder.js
 var import_evt2 = __toModule(require_evt());
@@ -1752,12 +1756,13 @@ function MailMessage(api, wireRep, overlays, matchInfo, slice) {
   this.matchInfo = matchInfo;
 }
 MailMessage.prototype = import_evt6.default.mix({
+  type: "msg",
   toString() {
-    return "[MailHeader: " + this.id + "]";
+    return "[MailMessage: " + this.id + "]";
   },
   toJSON() {
     return {
-      type: "MailHeader",
+      type: "MailMessage",
       id: this.id
     };
   },
@@ -2779,6 +2784,22 @@ MessageComposition.prototype = import_evt11.default.mix({
   }
 });
 
+// src/client_specific/oauth_bindings.js
+var oauth_bindings_default = {
+  google: {
+    endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenEndpoint: "https://oauth2.googleapis.com/token",
+    clientId: "913967847322-m8ij544g2i23pssvchhru1hceg08irud.apps.googleusercontent.com",
+    clientSecret: "G7bg5a1bahnVWxd6GKQcO4Ro",
+    scopes: [
+      "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/calendar.events.readonly",
+      "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
+      "https://www.googleapis.com/auth/documents.readonly"
+    ]
+  }
+};
+
 // src/clientapi/bodies/linkify.js
 var linkify_exports = {};
 __export(linkify_exports, {
@@ -2862,9 +2883,136 @@ function linkifyHTML(doc) {
   linkElem(doc.body);
 }
 
+// src/clientapi/cal_event.js
+var import_evt13 = __toModule(require_evt());
+
+// src/clientapi/cal_attendee.js
+var import_evt12 = __toModule(require_evt());
+function CalAttendee(_event, wireRep) {
+  import_evt12.default.Emitter.call(this);
+  this._event = _event;
+  this.__update(wireRep);
+}
+CalAttendee.prototype = import_evt12.default.mix({
+  toString() {
+    return '[CalAttendee: "' + this.email + '"]';
+  },
+  toJSON() {
+    return {
+      type: "CalAttendee",
+      filename: this.filename
+    };
+  },
+  __update(wireRep) {
+    this.email = wireRep.email;
+    this.displayName = wireRep.displayName;
+    this.isSelf = wireRep.isSelf;
+    this.isOrganizer = wireRep.isOrganizer;
+    this.isResource = wireRep.isResource;
+    this.responseStatus = wireRep.responseStatus;
+    this.comment = wireRep.comment;
+    this.isOptional = wireRep.isOptional;
+  }
+});
+
+// src/clientapi/cal_event.js
+function filterOutBuiltinFlags2(flags) {
+  var outFlags = [];
+  for (var i = flags.length - 1; i >= 0; i--) {
+    if (flags[i][0] !== "\\") {
+      outFlags.push(flags[i]);
+    }
+  }
+  return outFlags;
+}
+function CalEvent(api, wireRep, overlays, matchInfo, slice) {
+  import_evt13.default.Emitter.call(this);
+  this._api = api;
+  this._slice = slice;
+  this._wireRep = wireRep;
+  this.id = wireRep.id;
+  this.attendees = [];
+  this.creator = wireRep.creator;
+  this.organizer = wireRep.organizer;
+  this.bodyReps = wireRep.bodyReps;
+  this.__update(wireRep);
+  this.__updateOverlays(overlays);
+  this.matchInfo = matchInfo;
+}
+CalEvent.prototype = import_evt13.default.mix({
+  type: "cal",
+  toString() {
+    return "[CalEvent: " + this.id + "]";
+  },
+  toJSON() {
+    return {
+      type: "CalEvent",
+      id: this.id
+    };
+  },
+  __update(wireRep) {
+    this._wireRep = wireRep;
+    if (wireRep.snippet !== null) {
+      this.snippet = wireRep.snippet;
+    }
+    this.date = new Date(wireRep.date);
+    this.startDate = new Date(wireRep.startDate);
+    this.endDate = new Date(wireRep.endDate);
+    this.isAllDay = wireRep.isAllDay;
+    this.summary = wireRep.subject;
+    this.snippet = wireRep.snippet;
+    this.tags = filterOutBuiltinFlags2(wireRep.flags);
+    this.labels = this._api._mapLabels(this.id, wireRep.folderIds);
+    this.bodyReps = wireRep.bodyReps;
+    this.attendees = keyedListHelper({
+      wireReps: wireRep.attendees,
+      existingRichReps: this.attendees,
+      constructor: CalAttendee,
+      owner: this,
+      idKey: "email",
+      addEvent: "attendee:add",
+      changeEvent: "attendee:change",
+      removeEvent: "attendee:remove"
+    });
+  },
+  __updateOverlays(overlays) {
+  },
+  release() {
+  },
+  modifyTags(args) {
+    return this._api.modifyTags([this], args);
+  }
+});
+
+// src/clientapi/cal_events_list_view.js
+function CalEventsListView(api, handle) {
+  WindowedListView.call(this, api, CalEvent, handle);
+  this._nextSnippetRequestValidAt = 0;
+}
+CalEventsListView.prototype = Object.create(WindowedListView.prototype);
+CalEventsListView.prototype.ensureSnippets = function() {
+  let snippetsNeeded = this.items.some((message) => {
+    return message && message.snippet === null;
+  });
+  if (snippetsNeeded) {
+    if (this._nextSnippetRequestValidAt > Date.now()) {
+      return;
+    }
+    this._nextSnippetRequestValidAt = Date.now() + 5e3;
+    this._api.__bridgeSend({
+      type: "fetchSnippets",
+      convIds: [this.conversationId]
+    });
+  }
+};
+CalEventsListView.prototype.refresh = function() {
+  this._api.__bridgeSend({
+    type: "refreshView",
+    handle: this.handle
+  });
+};
+
 // src/clientapi/mailapi.js
-logic.bc = new BroadcastChannel("logic");
-logic.bc.postMessage({ mode: "clear" });
 var normalizeFoldersToIds = (folders) => {
   if (!folders) {
     return folders;
@@ -2873,7 +3021,7 @@ var normalizeFoldersToIds = (folders) => {
 };
 var LEGAL_CONFIG_KEYS = ["debugLogging"];
 function MailAPI() {
-  import_evt12.default.Emitter.call(this);
+  import_evt14.default.Emitter.call(this);
   logic.defineScope(this, "MailAPI", {});
   this._nextHandle = 1;
   this._trackedItemHandles = new Map();
@@ -2888,13 +3036,14 @@ function MailAPI() {
   contact_cache_default.init();
   this.accounts = this.viewAccounts({ autoViewFolders: true });
 }
-MailAPI.prototype = import_evt12.default.mix({
+MailAPI.prototype = import_evt14.default.mix({
   toString() {
     return "[MailAPI]";
   },
   toJSON() {
     return { type: "MailAPI" };
   },
+  oauthBindings: oauth_bindings_default,
   __universeAvailable() {
     this.configLoaded = true;
     this.emit("configLoaded");
@@ -2938,6 +3087,7 @@ MailAPI.prototype = import_evt12.default.mix({
     });
   },
   __bridgeSend(msg) {
+    logic(this, "storingSend", { msg });
     this._storedSends.push(msg);
   },
   __bridgeReceive(msg) {
@@ -3134,6 +3284,8 @@ MailAPI.prototype = import_evt12.default.mix({
       let obj = details.obj;
       let data = msg.data;
       obj.__update(data);
+    } else {
+      logic(this, "unknownHandle", { msg });
     }
   },
   _recv_updateItem(msg) {
@@ -3153,6 +3305,8 @@ MailAPI.prototype = import_evt12.default.mix({
         obj.serial++;
         obj.emit("change", obj);
       }
+    } else {
+      logic(this, "unknownHandle", { msg });
     }
   },
   _cleanupContext(handle) {
@@ -3247,6 +3401,8 @@ MailAPI.prototype = import_evt12.default.mix({
       mods
     }).then(() => null);
   },
+  syncAllSubscribedCalendars() {
+  },
   viewAccounts(opts) {
     var handle = this._nextHandle++, view = new AccountsViewSlice(this, handle, opts);
     this._trackedItemHandles.set(handle, { obj: view });
@@ -3335,7 +3491,13 @@ MailAPI.prototype = import_evt12.default.mix({
     return result;
   },
   viewFolderMessages(folder) {
-    var handle = this._nextHandle++, view = new MessagesListView(this, handle);
+    const handle = this._nextHandle++;
+    let view;
+    if (folder.type === "calendar") {
+      view = new CalEventsListView(this, handle);
+    } else {
+      view = new MessagesListView(this, handle);
+    }
     view.folderId = folder.id;
     view.folder = this.getFolderById(view.folderId);
     this._trackedItemHandles.set(handle, { obj: view });
@@ -3660,8 +3822,8 @@ function useWorker(_worker) {
   } else {
     workerPort = worker;
   }
-  workerPort.onmessage = function dispatchToListener(evt13) {
-    var data = evt13.data;
+  workerPort.onmessage = function dispatchToListener(evt15) {
+    var data = evt15.data;
     var listener = listeners[data.type];
     if (listener) {
       listener(data);
@@ -4157,8 +4319,8 @@ function open(uid, host, port, options) {
   sock.onopen = function() {
     me4.sendMessage(uid, "onopen");
   };
-  sock.onerror = function(evt13) {
-    var err = evt13.data;
+  sock.onerror = function(evt15) {
+    var err = evt15.data;
     var wrappedErr;
     if (err && typeof err === "object") {
       wrappedErr = {
@@ -4171,8 +4333,8 @@ function open(uid, host, port, options) {
     }
     me4.sendMessage(uid, "onerror", wrappedErr);
   };
-  sock.ondata = function(evt13) {
-    var buf = evt13.data;
+  sock.ondata = function(evt15) {
+    var buf = evt15.data;
     me4.sendMessage(uid, "ondata", buf, [buf]);
   };
   sock.ondrain = function() {
@@ -4301,17 +4463,23 @@ function makeWorker() {
 }
 
 // src/main-frame-setup.js
+window.LOGIC = logic;
+logic.tid = "api?";
+logic.bc = new BroadcastChannel("logic");
+var SCOPE = {};
+logic.defineScope(SCOPE, "MainFrameSetup");
 var control = {
   name: "control",
   sendMessage: null,
   process(uid) {
     var online = navigator.onLine;
+    logic(SCOPE, "sendingHello");
     control.sendMessage(uid, "hello", [online]);
-    window.addEventListener("online", function(evt13) {
-      control.sendMessage(uid, evt13.type, [true]);
+    window.addEventListener("online", function(evt15) {
+      control.sendMessage(uid, evt15.type, [true]);
     });
-    window.addEventListener("offline", function(evt13) {
-      control.sendMessage(uid, evt13.type, [false]);
+    window.addEventListener("offline", function(evt15) {
+      control.sendMessage(uid, evt15.type, [false]);
     });
     unregister(control);
   }
@@ -4326,7 +4494,10 @@ var bridge = {
     var msg = args;
     if (msg.type === "hello") {
       delete MailAPI2._fake;
+      logic.tid = `api${uid}`;
+      logic(SCOPE, "gotHello", { uid, storedSends: MailAPI2._storedSends });
       MailAPI2.__bridgeSend = function(sendMsg) {
+        logic(this, "send", { msg: sendMsg });
         try {
           workerPort2.postMessage({
             uid,
@@ -4341,7 +4512,6 @@ var bridge = {
       MailAPI2._storedSends.forEach(function(storedMsg) {
         MailAPI2.__bridgeSend(storedMsg);
       });
-      MailAPI2._storedSends = [];
       MailAPI2.__universeAvailable();
     } else {
       MailAPI2.__bridgeReceive(msg);

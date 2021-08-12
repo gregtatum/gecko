@@ -63,7 +63,9 @@ const TBL_CONFIG = "config",
   CONFIG_KEYPREFIX_ACCOUNT_DEF = "accountDef:";
 
 /**
- * Synchronization states.  What this means is account-dependent.
+ * Synchronization states.  What this means is account-dependent, but each
+ * account must always use either their accountId or an id prefixed with the
+ * accountId followed by a `.` (period), such as a folderId.
  *
  * For Gmail IMAP, this currently means a single record keyed by the accountId.
  *
@@ -1098,7 +1100,11 @@ MailDB.prototype = evt.mix(
           // it would be nice if we could have avoided creating the transaction...
         } else {
           trans.oncomplete = () => {
-            logic(this, "read:end", { ctxId: ctx.id, dbReqCount });
+            logic(this, "read:end", {
+              ctxId: ctx.id,
+              dbReqCount,
+              _requests: requests,
+            });
             resolve(requests);
             this._considerCachePressure("read", ctx);
           };
@@ -1876,7 +1882,7 @@ MailDB.prototype = evt.mix(
     },
 
     finishMutate(ctx, data, taskData) {
-      logic(this, "finishMutate:begin", { ctxId: ctx.id });
+      logic(this, "finishMutate:begin", { ctxId: ctx.id, _data: data });
       let trans = this._db.transaction(TASK_MUTATION_STORES, "readwrite");
 
       // The TriggerManager needs context for the events we will be

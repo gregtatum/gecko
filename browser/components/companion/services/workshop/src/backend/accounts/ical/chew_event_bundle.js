@@ -17,10 +17,11 @@
 import ICAL from "ical.js";
 
 import * as mailRep from "../../db/mail_rep";
+import { processMessageContent } from "../../bodies/mailchew";
 import {
-  processMessageContent,
-  processAttributeContent,
-} from "../../bodies/mailchew";
+  makeAttendeeInfo,
+  makeCalendarEventInfo,
+} from "backend/db/cal_event_rep";
 
 /**
  * Process a bundle of events with the same UID so that there's a single message
@@ -39,7 +40,7 @@ export class RecurringEventBundleChewer {
     rangeNewestTS,
     jcalEvents,
     oldConvInfo,
-    oldMessages,
+    oldEvents,
     foldersTOC,
   }) {
     this.convId = convId;
@@ -49,14 +50,14 @@ export class RecurringEventBundleChewer {
     this.jcalEvents = jcalEvents;
 
     this.oldConvInfo = oldConvInfo;
-    this.oldMessages = oldMessages;
+    this.oldEvents = oldEvents;
     this.foldersTOC = foldersTOC;
 
-    this.inboxFolder = foldersTOC.getCanonicalFolderByType("inbox");
+    this.calendarFolder = foldersTOC.getCanonicalFolderByType("calendar");
 
     // This is a mapping from the message id we synthesize.
     const oldById = (this.oldById = new Map());
-    for (const old of oldMessages) {
+    for (const old of oldEvents) {
       oldById.set(old.id, old);
     }
 
@@ -67,9 +68,9 @@ export class RecurringEventBundleChewer {
     // (false).
     this.contentsChanged = true;
 
-    this.modifiedMessageMap = new Map();
-    this.newMessages = [];
-    this.allMessages = [];
+    this.modifiedEventMap = new Map();
+    this.newEvents = [];
+    this.allEvents = [];
   }
 
   chewEventBundle() {
@@ -154,23 +155,21 @@ export class RecurringEventBundleChewer {
    * on-class helper, but if we wanted to grab data from elsewhere, this would
    * want to be a chewer class of its own like bugzilla's `chew_users.js`.
    */
-  _chewCalAddress(calAddress) {
+  _chewCalIdentity(calAddress) {
     if (!calAddress) {
       return {
-        name: "Omitted",
-        address: "",
-        nick: null,
+        displayName: "Omitted",
+        email: "",
       };
     }
 
     const cn = calAddress.getParameter("cn");
     const mailto = calAddress.getFirstValue().replace(/^mailto:/g, "");
 
-    return {
-      name: cn,
-      address: mailto,
-      nick: null,
-    };
+    return makeAttendeeInfo({
+      displayName: cn,
+      email: mailto,
+    });
   }
 
   _chewOccurrence({ recurrenceId, item, startDate, endDate }) {
@@ -184,45 +183,16 @@ export class RecurringEventBundleChewer {
     // effectively no-op changes that generate busy-work.
     if (!this.contentsChanged && this.oldById.has(msgId)) {
       const oldInfo = this.oldById.get(msgId);
-      this.allMessages.push(oldInfo);
+      this.allEvents.push(oldInfo);
       return;
     }
 
     let contentBlob, snippet, authoredBodySize;
     let bodyReps = [];
 
-    // ## Generate an attr body part for the metadata
-    {
-      const attrs = [
-        {
-          name: "Event",
-          type: "date-range",
-          startDate,
-          endDate,
-        },
-      ];
-      if (component.hasProperty("location")) {
-        attrs.push({
-          name: "Location",
-          type: "string-value",
-          value: component.getFirstPropertyValue("location"),
-        });
-      }
-      ({ contentBlob, snippet, authoredBodySize } = processAttributeContent(
-        attrs
-      ));
-      bodyReps.push(
-        mailRep.makeBodyPart({
-          type: "attr",
-          part: null,
-          sizeEstimate: contentBlob.size,
-          amountDownloaded: contentBlob.size,
-          isDownloaded: true,
-          _partInfo: null,
-          contentBlob,
-          authoredBodySize,
-        })
-      );
+    let location = null;
+    if (component.hasProperty("location")) {
+      location = component.getFirstPropertyValue("location");
     }
 
     // ## Generate an HTML body part for the description
@@ -252,37 +222,37 @@ export class RecurringEventBundleChewer {
     }
 
     const summary = component.getFirstPropertyValue("summary");
-    const organizer = this._chewCalAddress(
+    const organizer = this._chewCalIdentity(
       component.getFirstProperty("organizer")
     );
     const attendees = component
       .getAllProperties("attendee")
-      .map(who => this._chewCalAddress(who));
+      .map(who => this._chewCalIdentity(who));
 
-    const msgInfo = mailRep.makeMessageInfo({
+    const eventInfo = makeCalendarEventInfo({
       id: msgId,
-      umid: null,
-      guid: null,
       date: startDate.toJSDate().valueOf(),
-      author: organizer,
-      to: attendees,
+      startDate: startDate.toJSDate().valueOf(),
+      endDate: endDate.toJSDate().valueOf(),
+      isAllDay: startDate.isDate,
+      // XXX need to look at more detailed iCal exports.
+      creator: organizer,
+      organizer,
+      attendees,
+      location,
       flags: [],
-      folderIds: new Set([this.inboxFolder.id]),
-      subject: summary,
+      folderIds: new Set([this.calendarFolder.id]),
+      summary,
       snippet,
-      attachments: [],
-      relatedParts: null,
-      references: null,
       bodyReps,
       authoredBodySize,
-      draftInfo: null,
     });
 
-    this.allMessages.push(msgInfo);
+    this.allEvents.push(eventInfo);
     if (this.oldById.has(msgId)) {
-      this.modifiedMessageMap.set(msgId, msgInfo);
+      this.modifiedEventMap.set(msgId, eventInfo);
     } else {
-      this.newMessages.push(msgInfo);
+      this.newEvents.push(eventInfo);
     }
   }
 }

@@ -140,6 +140,7 @@ export function makeMessageInfo(raw) {
 
   return {
     id: raw.id,
+    type: "msg",
     umid: raw.umid || null,
     guid: raw.guid || null,
     date: raw.date,

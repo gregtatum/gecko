@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { css, LitElement } from "../lit_glue.js";
+
 /**
  * Helper to flatten a hierarchical object structure to a single-depth table.
  * We know that the visual presentation will be one leaf node per row on the
@@ -128,12 +130,142 @@ function prettifyData(dataRoot) {
   return tableMaker.finalize();
 }
 
-export class PrettyTable extends HTMLElement {
-  constructor(data) {
-    super();
+/**
+ * Renders JSON-ish objects as a icicle-visualization styled table.  Pass
+ * immediately available JS objects for display via the `data` property or
+ * JSON-strings (that need to be parsed) in Blobs via `jsonBlob`.
+ */
+export class PrettyTable extends LitElement {
+  static get properties() {
+    return {
+      data: { type: Object },
+      jsonBlob: { type: Object },
+    };
+  }
 
-    const elem = prettifyData(data);
-    this.appendChild(elem);
+  static get styles() {
+    return css`
+      :host {
+        display: block;
+      }
+
+      .pd {
+        display: block;
+        border: 1px solid gray;
+        margin: 2px;
+        margin-left: 0.5em;
+        padding: 2px;
+      }
+      .pda-container {
+        display: inline-block;
+        border: 1px solid #888;
+        background-color: #eee;
+        margin: 0 4px;
+      }
+      .pda-focus {
+        margin: 0 4px;
+        font-style: italic;
+      }
+      .pda-nightmare-data {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        border-bottom: 1px solid white;
+      }
+      .pda-data-key-depth-0 {
+        background-color: #eeeeee;
+      }
+      .pda-data-key-depth-1 {
+        background-color: #e8e8e8;
+      }
+      .pda-data-key-depth-2 {
+        background-color: #dddddd;
+      }
+      .pda-data-key-depth-3 {
+        background-color: #d8d8d8;
+      }
+      .pda-data-key-depth-4 {
+        background-color: #cccccc;
+      }
+      .pda-data-key-depth-5 {
+        background-color: #c8c8c8;
+      }
+      .pda-data-key-depth-6,
+      .pda-data-key-depth-7,
+      .pda-data-key-depth-8 {
+        background-color: #bbbbbb;
+      }
+      .pda-data-value {
+        background-color: #fff;
+      }
+      .pda-kv-pair {
+        margin: 0 4px;
+      }
+
+      .pd-tag {
+        font-size: 80%;
+        border: 1px solid #ccc;
+        margin-right: 2px;
+        vertical-align: top;
+        font-family: sans-serif;
+      }
+
+      .pd-str {
+        border: 1px dashed gray;
+      }
+
+      /* pml color schemes, to potentially use for pml-style rendering */
+      .pd0 {
+        background-color: #eff;
+      }
+      .pd1 {
+        background-color: #fef;
+      }
+      .pd2 {
+        background-color: #ffe;
+      }
+      .pd3 {
+        background-color: #eef;
+      }
+      .pd4 {
+        background-color: #efe;
+      }
+      .pd5 {
+        background-color: #fee;
+      }
+      .pd6 {
+        background-color: #dff;
+      }
+      .pd7 {
+        background-color: #fdf;
+      }
+      .pd8 {
+        background-color: #ffd;
+      }
+      .pd9 {
+        background-color: #ddf;
+      }
+      .pd10 {
+        background-color: #dfd;
+      }
+      .pd11 {
+        background-color: #fdd;
+      }
+    `;
+  }
+
+  willUpdate(changedProperties) {
+    if (changedProperties.has("jsonBlob")) {
+      this.getBlobContents();
+    }
+  }
+
+  async getBlobContents() {
+    const jsonStr = await this.jsonBlob.text();
+    this.data = JSON.parse(jsonStr);
+  }
+
+  render() {
+    return prettifyData(this.data);
   }
 }
 customElements.define("awi-pretty-table", PrettyTable);

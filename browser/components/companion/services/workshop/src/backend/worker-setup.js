@@ -15,10 +15,15 @@
  */
 
 /**
- * This is the actual root module
+ * This is the actual root module for the worker.
  **/
 
 import logic from "logic";
+logic.tid = "worker";
+logic.bc = new BroadcastChannel("logic");
+
+const SCOPE = {};
+logic.defineScope(SCOPE, "WorkerSetup");
 
 import * as $router from "./worker-router";
 import MailBridge from "./mailbridge";
@@ -28,15 +33,13 @@ import appExtensions from "app_logic/worker_extensions";
 
 const routerBridgeMaker = $router.registerInstanceType("bridge");
 
-let bridgeUniqueIdentifier = 0;
-function createBridgePair(universe, usePort) {
-  var uid = bridgeUniqueIdentifier++;
-
-  var TMB = new MailBridge(universe, universe.db, uid);
-  var routerInfo = routerBridgeMaker.register(function(data) {
+let nextBridgeUid = 0;
+function createBridgePair(universe, usePort, uid) {
+  const TMB = new MailBridge(universe, universe.db, uid);
+  const routerInfo = routerBridgeMaker.register(function(data) {
     TMB.__receiveMessage(data.msg);
   }, usePort);
-  var sendMessage = routerInfo.sendMessage;
+  const sendMessage = routerInfo.sendMessage;
 
   TMB.__sendMessage = function(msg) {
     logic(TMB, "send", { type: msg.type, msg });
@@ -61,15 +64,20 @@ var sendControl = $router.registerSimple("control", async function(
   var args = data.args;
   switch (data.cmd) {
     case "hello": {
+      const bridgeUid = nextBridgeUid++;
+      logic(SCOPE, "gotHello", { bridgeUid });
       if (!universe) {
+        logic(SCOPE, "creatingUniverse");
         universe = new MailUniverse({
           online: args[0],
           appExtensions,
         });
         universePromise = universe.init();
       }
+      logic(SCOPE, "awaitingUniverse", { bridgeUid });
       await universePromise;
-      createBridgePair(universe, source);
+      logic(SCOPE, "gotUniverse", { bridgeUid });
+      createBridgePair(universe, source, bridgeUid);
       break;
     }
     case "online":
@@ -80,4 +88,6 @@ var sendControl = $router.registerSimple("control", async function(
       break;
   }
 });
-sendControl("hello");
+$router.runOnConnect(port => {
+  sendControl("worker-exists", undefined, port);
+});

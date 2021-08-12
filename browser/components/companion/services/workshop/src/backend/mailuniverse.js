@@ -183,8 +183,6 @@ MailUniverse.prototype = {
    * unify the logic if it becomes more complicated.
    */
   _initLogging(config) {
-    logic.bc = new BroadcastChannel("logic");
-
     if (config.debugLogging === "realtime") {
       logic.realtimeLogEverything = true;
     }

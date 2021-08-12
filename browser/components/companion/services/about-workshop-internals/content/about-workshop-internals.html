@@ -7,111 +7,12 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src chrome:; object-src 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src chrome:; object-src 'none'; style-src 'self' 'unsafe-inline';">
     <title>Companion Services Workshop Internals</title>
     <link rel="stylesheet" href="chrome://global/skin/in-content/common.css">
     <link rel="stylesheet" href="chrome://browser/content/about-workshop-internals/about-workshop-internals.css">
     <script type="module" src="chrome://browser/content/about-workshop-internals/about-workshop-internals.js"></script>
   </head>
-  <body class="main-content">
-    <template id="template-account-list-item" class="card">
-      <div class="account-header-row">
-        <h3 class="account-name"></h3>
-      </div>
-      <div class="account-details-row">
-        <span class="account-type"></span>
-      </div>
-      <div class="account-actions-row">
-        <button class="account-show-folders" type="button">Show Folders</button>
-        <button class="account-sync-folders" type="button">Sync Folders</button>
-        <button class="account-re-create" type="button">Re-create account</button>
-        <button class="account-delete" type="button">Delete</button>
-      </div>
-    </template>
-    <template id="template-folder-list-item" class="card">
-      <div class="folder-header-row">
-        <h4 class="folder-name"></h4>
-      </div>
-      <div class="folder-details-row">
-        <span class="folder-type"></span>
-      </div>
-      <div class="folder-actions-row">
-        <button class="folder-show-messages" type="button">Show Messages</button>
-        <button class="folder-show-conversations" type="button">Show Conversations</button>
-      </div>
-    </template>
-    <template id="template-message-list-item" class="card">
-      <div class="message-header-row">
-        <h4 class="message-subject"></h4>
-      </div>
-      <div class="message-wire-rep"></div>
-      <div class="message-body-parts"></div>
-    </template>
-
-    <div id="pages">
-      <div id="page-home" class="page">
-        <section class="card">
-          <h2>Accounts</h2>
-          <div id="home-account-list-container"></div>
-          <hr>
-          <h4>Add Accounts</h4>
-          <section class="card">
-            <h5>Add iCalendar via ICS URL</h5>
-            <div id="home-add-ics-error"></div>
-            <form>
-              <label for="home-add-ics-input">URL: </label>
-              <input id="home-add-ics-input" type="text"
-                  placeholder="https://example.org/example.ics"
-                  />
-              <hr>
-              <button id="home-add-ics-button" type="button">Add</button>
-            </form>
-          </section>
-          <section class="card">
-            <h5>Add MS ActiveSync Account</h5>
-            <div id="home-add-activesync-error"></div>
-            <form>
-              <label>email:
-                <input id="home-add-activesync-email-input" type="text"
-                  placeholder="user@example.com" />
-              </label>
-              <label>password
-                <input id="home-add-activesync-password-input" type="password" />
-              </label>
-              <hr>
-              <button id="home-add-activesync-button" type="button">Add</button>
-            </form>
-          </section>
-          <section class="card">
-            <h5>Add RSS Feed Account</h5>
-            <div id="home-add-rss-error"></div>
-            <form>
-              <label for="home-add-rss-input">URL: </label>
-              <input id="home-add-rss-input" type="text"
-                  placeholder="https://example.org/example.xml"
-                  />
-              <hr>
-              <button id="home-add-rss-button" type="button">Add</button>
-            </form>
-          </section>
-        </section>
-        <section class="card">
-          <button id="home-show-settings" type="button">Settings</button>
-        </section>
-      </div>
-      <div id="page-settings" class="page">
-        <form>
-          <label>Realtime Logging to stdout: </label>
-          <input id="settings-realtime-logging-enable" type="checkbox"
-              />
-        </form>
-      </div>
-      <div id="page-account-folder-list" class="page">
-
-      </div>
-      <div id="page-account-folder-message-contents" class="page">
-
-      </div>
-    </div>
+  <body>
   </body>
 </html>

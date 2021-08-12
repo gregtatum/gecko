@@ -43,6 +43,8 @@ let FOLDER_TYPE_TO_SORT_PRIORITY = {
   // nomail folders are annoying since they are basically just hierarchy,
   //  but they are also rare and should only happen amongst normal folders.
   nomail: "z",
+  // For now trreat calendars like normal folders for sorting purposes.
+  calendar: "z",
 };
 
 function strcmp(a, b) {

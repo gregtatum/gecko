@@ -7,13 +7,28 @@ browser.jar:
     content/browser/about-workshop-internals/about-workshop-internals.html
     content/browser/about-workshop-internals/about-workshop-internals.js
     content/browser/about-workshop-internals/elements/account_list_item.js (elements/account_list_item.js)
+    content/browser/about-workshop-internals/elements/body_reps.js (elements/body_reps.js)
+    content/browser/about-workshop-internals/elements/cal_event_list_item.js (elements/cal_event_list_item.js)
+    content/browser/about-workshop-internals/elements/data_inspector.js (elements/data_inspector.js)
     content/browser/about-workshop-internals/elements/folder_list_item.js (elements/folder_list_item.js)
     content/browser/about-workshop-internals/elements/list_view.js (elements/list_view.js)
+    content/browser/about-workshop-internals/elements/log_container.js (elements/log_container.js)
+    content/browser/about-workshop-internals/elements/log_event.js (elements/log_event.js)
     content/browser/about-workshop-internals/elements/message_list_item.js (elements/message_list_item.js)
     content/browser/about-workshop-internals/elements/pretty_table.js (elements/pretty_table.js)
+    content/browser/about-workshop-internals/log-model/collector.js (log-model/collector.js)
+    content/browser/about-workshop-internals/log-model/dicer.js (log-model/dicer.js)
     content/browser/about-workshop-internals/pages/account_folder_list.js (pages/account_folder_list.js)
     content/browser/about-workshop-internals/pages/account_folder_message_contents.js (pages/account_folder_message_contents.js)
+    content/browser/about-workshop-internals/pages/add_account.js (pages/add_account.js)
     content/browser/about-workshop-internals/pages/home.js (pages/home.js)
+    content/browser/about-workshop-internals/pages/logs.js (pages/logs.js)
     content/browser/about-workshop-internals/pages/settings.js (pages/settings.js)
+    content/browser/about-workshop-internals/shellements/breadcrumbs.js (shellements/breadcrumbs.js)
+    content/browser/about-workshop-internals/shellements/page_frame.js (shellements/page_frame.js)
+    content/browser/about-workshop-internals/shellements/splitter.js (shellements/splitter.js)
+    content/browser/about-workshop-internals/lit_glue.js
+    content/browser/about-workshop-internals/log_collected.js
     content/browser/about-workshop-internals/page.js
     content/browser/about-workshop-internals/router.js
+    content/browser/about-workshop-internals/workshop_glue.js

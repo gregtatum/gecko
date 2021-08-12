@@ -32,6 +32,7 @@ import { shallowClone } from "shared/util";
  *   newTasks }.  This method is responsible for generating deltas to the
  *   current set of folders to reflect the current server state.  If there are
  *   missing online folders, this function should provide tasks in newTasks
+ *   to create them.
  *
  * Consumers may provide, clobbering the default implementation:
  * - this.essentialOfflineFolders: A list of folder definitions for offline

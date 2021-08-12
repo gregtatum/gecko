@@ -64,7 +64,7 @@ export default TaskDefiner.defineSimpleTask([
         messagesByConversation: new Map([[req.convId, null]]),
       });
 
-      const oldMessages = fromDb.messagesByConversation.get(req.convId);
+      const oldEvents = fromDb.messagesByConversation.get(req.convId);
       const oldConvInfo = fromDb.conversations.get(req.convId);
 
       const eventChewer = new RecurringEventBundleChewer({
@@ -74,7 +74,7 @@ export default TaskDefiner.defineSimpleTask([
         rangeNewestTS: req.rangeNewestTS,
         jcalEvents: req.jcalEvents,
         oldConvInfo,
-        oldMessages,
+        oldEvents,
         foldersTOC,
       });
       eventChewer.chewEventBundle();
@@ -82,11 +82,11 @@ export default TaskDefiner.defineSimpleTask([
       let convInfo;
       // It's possible we don't want a conversation (anymore) if there are no
       // messages.
-      if (eventChewer.allMessages.length) {
+      if (eventChewer.allEvents.length) {
         convInfo = churnConversation(
           req.convId,
           oldConvInfo,
-          eventChewer.allMessages
+          eventChewer.allEvents
         );
       } else {
         convInfo = null;
@@ -105,11 +105,11 @@ export default TaskDefiner.defineSimpleTask([
       await ctx.finishTask({
         mutations: {
           conversations: modifiedConversations,
-          messages: eventChewer.modifiedMessageMap,
+          messages: eventChewer.modifiedEventMap,
         },
         newData: {
           conversations: newConversations,
-          messages: eventChewer.newMessages,
+          messages: eventChewer.newEvents,
         },
       });
     },

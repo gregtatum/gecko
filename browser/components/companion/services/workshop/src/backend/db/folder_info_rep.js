@@ -20,20 +20,22 @@
  *   ID assigned to the folder by the backend.  The first part of the name is
  *   the account this folder belongs to.
  * @property {String} [serverId]
- *   For ActiveSync folders, the server-issued id for the folder that we use to
- *   reference the folder.  This will be null for local-only folders.
+ *   The server-issued id for the folder that we use to reference the folder.
+ *   This will be null for local-only folders.
  * @property {String} name
  *   The human-readable name of the folder with all utf-7 decoding/etc
  *   performed. This is intended to be shown to the user, the path should not
  *   be. Folder names should be considered private/personal data and if logged
  *   should be marked to be sanitized unless the user has explicitly enabled
  *   super-verbose privacy-entraining logs.
+ * @property {String} [description]
+ *   Optional detailed description of the contents of the folder.
  * @property {String} type
  *   The type of the folder, i.e. 'inbox' or 'drafts'.
  *   Refer to mailapi.js for a list of acceptable values.
  * @property {String} path
  *   The fully qualified path of the folder.  For IMAP servers, this is the
- *   raw path including utf-7 encoded parts.  For ActiveSync and POP3 this is
+ *   raw path including utf-7 encoded parts.  For non-IMAP servers this is
  *   just for super-verbose private-data-entraining debugging and testing.
  *   This should be considered private/personal data like the folder name.
  * @property {String} [serverPath=null]
@@ -41,6 +43,12 @@
  *   server.  This will be null if the folder is local-only.  When we eventually
  *   support folder renames, this may potentially be different from the `path`
  *   until we replay the move against the server.
+ * @property {FolderId} [parentId]
+ *   FolderId of the parent of this folder.  Currently the folders are stored in
+ *   a flat list, so this is potentially only helpful to accounts that benefit
+ *   from this information for protocol reasons, but it would be nice to always
+ *   have this.  Note that we don't assume there's a single root node for trees
+ *   at this time.
  * @property {String} [delim]
  *   The delimiter to be used when constructing paths for child folders.
  * @property {number} depth
@@ -51,6 +59,14 @@
  *   Indicates the granularity at which this folder is synchronized with the
  *   server.  Some folders are not synchronized with a server, in which case
  *   the value 'local-only' is used.
+ * @property {Object} [calendarInfo]
+ *   A soup of meta-information about calendars.  Currently the provided object
+ *   is stored without any form of normalization.  Please document new
+ *   properties as you add them.
+ * @property {String} [calendarInfo.timeZone]
+ *   IANA Time Zone Database name.
+ * @property {String} [calendarInfo.color]
+ *   User specified (or assigned by default) #000000 style hex color encoding.
  * @property {Boolean} fullySynced
  *   Is this folder fully synchronized?
  * @property {Number|null} localMessageCount
@@ -94,6 +110,7 @@ export function makeFolderMeta(raw) {
     id: raw.id || null,
     serverId: raw.serverId || null,
     name: raw.name || null,
+    description: raw.description || null,
     type: raw.type || null,
     path: raw.path || null,
     serverPath: raw.serverPath || null,
@@ -101,6 +118,7 @@ export function makeFolderMeta(raw) {
     delim: raw.delim || null,
     depth: raw.depth || 0,
     syncGranularity: raw.syncGranularity || null,
+    calendarInfo: raw.calendarInfo || null,
     localMessageCount: 0,
     estimatedUnsyncedMessages: null,
     syncedThrough: null,

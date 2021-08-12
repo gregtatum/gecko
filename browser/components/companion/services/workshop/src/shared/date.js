@@ -110,6 +110,27 @@ export function IN_BS_DATE_RANGE(testDate, startTS, endTS) {
   return testDate >= startTS && testDate < endTS;
 }
 
+/**
+ * Given a `CalEventInfo` eventInfo struct with `startDate` and `endDate` and
+ * a sync-range-info-alike with `rangeOldestTS` and `rangeNewestTS`, return true
+ * if any part of the event falls inside the sync range.
+ */
+export function EVENT_IN_SYNC_RANGE(eventInfo, syncRangeInfo) {
+  return (
+    eventInfo.endDate < syncRangeInfo.rangeOldestTS ||
+    eventInfo.startDate > syncRangeInfo.rangeNewestTS
+  );
+}
+
+/**
+ * Given a `CalEventInfo` eventInfo struct with `startDate` and `endDate` and
+ * a sync-range-info-alike with `rangeOldestTS` and `rangeNewestTS`, return true
+ * if no part of the event falls inside the sync range.
+ */
+export function EVENT_OUTSIDE_SYNC_RANGE(eventInfo, syncRangeInfo) {
+  return !EVENT_IN_SYNC_RANGE(eventInfo, syncRangeInfo);
+}
+
 export let PASTWARDS = 1; // FUTUREWARDS = -1
 /**
  * Check if `testDate` is "beyond" the comparison date given the `dir`.  If

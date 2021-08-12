@@ -311,7 +311,11 @@ logic.event = function(scope, type, details) {
   logic.emit("event", event);
   // If we have an associated BroadcastChannel, broadcast the event.
   if (logic.bc) {
-    logic.bc.postMessage({ mode: "append", event: event.jsonRepresentation });
+    logic.bc.postMessage({
+      mode: "append",
+      tid: logic.tid,
+      event: event.jsonRepresentation,
+    });
   }
 
   if (logic.realtimeLogEverything) {
@@ -687,20 +691,20 @@ ObjectSimplifier.prototype = {
       if (!isPlainObject(x)) {
         if (x.toJSON) {
           return this._simplify(x.toJSON(), depth, cacheSet);
-        } else if (x.toString) {
-          return this._simplify(x.toString(), depth, cacheSet);
         } else if (x instanceof Map) {
           return this._simplify(
-            [...Map.prototype.entries.call(x)].toJSON(),
-            depth,
+            [...Map.prototype.entries.call(x)],
+            depth + 1,
             cacheSet
           );
         } else if (x instanceof Set) {
           return this._simplify(
-            [...Set.prototype.entries.call(x)].toJSON(),
-            depth,
+            [...Set.prototype.entries.call(x)],
+            depth + 1,
             cacheSet
           );
+        } else if (x.toString) {
+          return this._simplify(x.toString(), depth, cacheSet);
         }
         return "(?)";
       }

@@ -35,7 +35,7 @@ var RENEW_WINDOW_MS = 30 * 60 * 1000;
 // Extra timeout padding for oauth tokens.
 var TIMEOUT_MS = 30 * 1000;
 
-var scope = logic.scope("Oauth");
+var scope = logic.scope("OAuth");
 
 /**
  * Decides if a renew may be feasible to do. Does not allow renew within a

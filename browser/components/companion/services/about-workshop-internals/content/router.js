@@ -2,12 +2,24 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { html, render } from "./lit_glue.js";
+
+import "./elements/data_inspector.js";
+import "./shellements/page_frame.js";
+
 export class HackyHashRouter {
   constructor(config) {
     this.config = config;
     this.curPageParams = null;
     this.curPage = null;
     this.curSegments = null;
+    this.curCrumbs = null;
+
+    this.curInspectedWidget = html`
+      <p style="padding: 1em;">Nothing to inspect yet.</p>
+    `;
+
+    this.pagesContainer = document.getElementById("pages");
 
     window.addEventListener("hashchange", () => {
       this.updateFromHash();
@@ -30,7 +42,14 @@ export class HackyHashRouter {
     this.navigateTo(this.curSegments.concat(addSegments));
   }
 
-  updateFromHash() {
+  inspect(val) {
+    this.curInspectedWidget = html`
+      <awi-data-inspector .data=${val} />
+    `;
+    this.updateRender();
+  }
+
+  async updateFromHash() {
     const readHash = window.location.hash.substring(1);
     let hash = readHash;
     const pieces = hash.split("/");
@@ -38,8 +57,26 @@ export class HackyHashRouter {
 
     const nextPageParams = {};
     const nextSegments = [];
+    const nextCrumbPromises = [];
+
+    const pushSegmentCrumb = (page, parsedValue) => {
+      const snapshottedSegments = nextSegments.concat();
+      nextCrumbPromises.push(
+        (async () => {
+          const label = await page.makeLabel(parsedValue);
+          return {
+            label,
+            click: () => {
+              this.navigateTo(snapshottedSegments);
+            },
+          };
+        })()
+      );
+    };
 
     let nextPage = this.config.root;
+    pushSegmentCrumb(nextPage, undefined);
+
     // for loop so we can consume pieces in the loop for params.
     for (let iPiece = 0; iPiece < pieces.length; iPiece++) {
       const piece = pieces[iPiece];
@@ -55,7 +92,11 @@ export class HackyHashRouter {
           iPiece++;
           const rawValue = pieces[iPiece];
           nextSegments.push(rawValue);
-          nextPageParams[nextPage.valueName] = nextPage.valueParser(rawValue);
+          const parsedValue = nextPage.valueParser(rawValue);
+          nextPageParams[nextPage.valueName] = parsedValue;
+          pushSegmentCrumb(nextPage, parsedValue);
+        } else {
+          pushSegmentCrumb(nextPage, undefined);
         }
       }
     }
@@ -68,17 +109,10 @@ export class HackyHashRouter {
       // Nothing to do if that's what we're already displaying.
       console.log(
         "ROUTER: already on that page, not doing anything",
-        this.curPage?.constructor,
-        nextPage.pageConstructor
+        this.curPage?.constructor.name,
+        nextPage.pageConstructor.name
       );
       return;
-    }
-
-    // We're changing pages, cleanup the old page if relevant.
-    if (this.curPage) {
-      const oldPageElem = document.getElementById(this.curPage.pageId);
-      this.curPage.cleanup(oldPageElem);
-      oldPageElem.classList.remove("selected");
     }
 
     this.curSegments = nextSegments;
@@ -87,12 +121,35 @@ export class HackyHashRouter {
       { router: this, workshopAPI: this.config.workshopAPI },
       nextPageParams
     );
-    const nextPageElem = document.getElementById(this.curPage.pageId);
-    nextPageElem.classList.add("selected");
+    // Initially render without the crumbs present since there is a data
+    // dependency on the workshop API to provide pretty labels, and that could
+    // hang us below.  In the event this does end up hanging at all, we probably
+    // should populate the crumbs initially with just the raw values and then
+    // allow for the promises to provide a better experiences if they resolve
+    // in a timely fashion.
+    this.curCrumbs = [];
+    this.updateRender();
+
     // Set the title which the page may update dynamically via `pageHasNewTitle`
     // in render (or after, if async).
-    document.title = this.curPage.title;
-    this.curPage.render(nextPageElem);
+    document.title = this.curPage.pageTitle;
+
+    // Now wait for the crumbs to resolve.
+    this.curCrumbs = await Promise.all(nextCrumbPromises);
+    this.updateRender();
+  }
+
+  updateRender() {
+    render(
+      html`
+        <awi-page-frame
+          .crumbs=${this.curCrumbs}
+          .page=${this.curPage}
+          .inspected=${this.curInspectedWidget}
+        />
+      `,
+      document.body
+    );
   }
 
   pageHasNewTitle(page, title) {

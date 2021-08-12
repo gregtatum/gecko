@@ -33,6 +33,14 @@
  **/
 
 import logic from "logic";
+// This gets updated once we know a unique identifier issued to us by the
+// backend.
+window.LOGIC = logic;
+logic.tid = "api?";
+logic.bc = new BroadcastChannel("logic");
+
+const SCOPE = {};
+logic.defineScope(SCOPE, "MainFrameSetup");
 
 // Pretty much everything could be dynamically loaded after we kickoff the
 // worker thread.  We just would need to be sure to latch any received
@@ -55,7 +63,10 @@ const control = {
   name: "control",
   sendMessage: null,
   process(uid /*, cmd, args*/) {
+    // This logic gets called by the worker sending us a "control" message with
+    // command "worker-exists".
     var online = navigator.onLine;
+    logic(SCOPE, "sendingHello");
     control.sendMessage(uid, "hello", [online]);
 
     window.addEventListener("online", function(evt) {
@@ -81,7 +92,10 @@ const bridge = {
 
     if (msg.type === "hello") {
       delete MailAPI._fake;
+      logic.tid = `api${uid}`;
+      logic(SCOPE, "gotHello", { uid, storedSends: MailAPI._storedSends });
       MailAPI.__bridgeSend = function(sendMsg) {
+        logic(this, "send", { msg: sendMsg });
         try {
           workerPort.postMessage({
             uid,
@@ -99,7 +113,8 @@ const bridge = {
       MailAPI._storedSends.forEach(function(storedMsg) {
         MailAPI.__bridgeSend(storedMsg);
       });
-      MailAPI._storedSends = [];
+      // XXX
+      //MailAPI._storedSends = [];
 
       MailAPI.__universeAvailable();
     } else {

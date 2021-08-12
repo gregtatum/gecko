@@ -2,74 +2,43 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { PrettyTable } from "./pretty_table.js";
+import { html, LitElement } from "../lit_glue.js";
+import "./pretty_table.js";
 
-export class MessageListItem extends HTMLElement {
-  constructor(item) {
+export class MessageListItem extends LitElement {
+  static get properties() {
+    return {
+      message: { type: Object },
+      serial: { type: Number },
+    };
+  }
+
+  constructor() {
     super();
-    this.item = item;
-
-    const template = document.getElementById("template-message-list-item");
-    const frag = template.content.cloneNode(true);
-    this.appendChild(frag);
-    this.setAttribute("class", template.getAttribute("class"));
   }
 
-  async update() {
-    const message = this.item;
-
-    this.querySelector(".message-subject").textContent = message.subject;
-
-    const wireContainer = this.querySelector(".message-wire-rep");
-    const wireTable = new PrettyTable(message._wireRep);
-    wireContainer.replaceChildren(wireTable);
-
-    // ## Aside: Calendar Events as Messages
-    //
-    // Currently various calendar event metadata gets stored as attributes in a
-    // body part which was done as a hack derived from the Phabricator and
-    // Bugzilla accounts more appropriately storing their change histories as
-    // attributes.
-    //
-    // This should be rectified by promoting the calendar data to exist on the
-    // message (envelope), but for now be aware that the event data is oddly
-    // in the body Blob.
-    //
-    // ## Presentation Here as Internals
-    //
-    // We just want to show the raw underlying JSON rep or raw HTML, so we do.
-    //
-    // A hack/limitation here is that we are regenerating these nodes on every
-    // render call, but we can do better than this (and the glodastrophe
-    // React setup did, for example).
-    const bodyContainer = this.querySelector(".message-body-parts");
-
-    const bodyNodes = [];
-    for (const bodyRep of message.bodyReps) {
-      const card = document.createElement("div");
-      card.classList.add("card");
-      const blobContents = await bodyRep.contentBlob.text();
-
-      if (bodyRep.type === "html") {
-        card.textContent = blobContents;
-      } else {
-        // This is "text" or "attr"
-        const table = new PrettyTable(JSON.parse(blobContents));
-        card.appendChild(table);
-      }
-
-      bodyNodes.push(card);
-    }
-
-    bodyContainer.replaceChildren(...bodyNodes);
-  }
-
-  onShowMessages() {
-    this.item.syncFolderList();
-  }
-
-  onShowConversations() {
-    this.item.recreateAccount();
+  render() {
+    const message = this.message;
+    return html`
+      <div class="message-header-row">
+        <h4 class="message-subject">${message.subject}</h4>
+      </div>
+      <div class="message-wire-rep">
+        <awi-pretty-table .data=${message._wireRep} />
+      </div>
+      <div class="message-body-parts">
+        ${message.bodyReps.map(bodyRep => {
+          if (bodyRep.type === "html") {
+            return html`
+              <awi-raw-text-blob .blob=${bodyRep.contentBlob} />
+            `;
+          }
+          return html`
+            <awi-pretty-table .jsonBlob=${bodyRep.contentBlob} />
+          `;
+        })}
+      </div>
+    `;
   }
 }
 customElements.define("awi-message-list-item", MessageListItem);

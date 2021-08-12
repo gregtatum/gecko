@@ -208,6 +208,10 @@ MailAccount.prototype = evt.mix({
     this._api._deleteAccount(this);
   },
 
+  /**
+   * Synchronize the folder list for this account.  This currently doesn't
+   * return a promise letting you know when this completed, but it could.
+   */
   syncFolderList() {
     this._api.__bridgeSend({
       type: "syncFolderList",

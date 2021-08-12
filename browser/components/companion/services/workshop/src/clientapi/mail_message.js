@@ -115,12 +115,13 @@ export default function MailMessage(api, wireRep, overlays, matchInfo, slice) {
   this.matchInfo = matchInfo;
 }
 MailMessage.prototype = evt.mix({
+  type: "msg",
   toString() {
-    return "[MailHeader: " + this.id + "]";
+    return "[MailMessage: " + this.id + "]";
   },
   toJSON() {
     return {
-      type: "MailHeader",
+      type: "MailMessage",
       id: this.id,
     };
   },

@@ -2,34 +2,70 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { css, html } from "../lit_glue.js";
+
 import { Page } from "../page.js";
 
-import { ListView } from "../elements/list_view.js";
-import { FolderListItem } from "../elements/folder_list_item.js";
+import "../elements/list_view.js";
+import "../elements/folder_list_item.js";
 
 export default class AccountFolderListPage extends Page {
+  static get properties() {
+    return {
+      account: { state: true },
+    };
+  }
+
+  static get styles() {
+    return css`
+      :host {
+        display: block;
+        padding: 1em;
+      }
+
+      .card {
+        border: 1px solid black;
+        border-radius: 8px;
+        padding: 1em;
+      }
+    `;
+  }
+
   constructor(opts, { accountId }) {
     super(opts, {
       title: "Folders",
       pageId: "page-account-folder-list",
     });
+
     this.accountId = accountId;
+    this.account = null;
+
+    this.getAccount();
   }
 
-  async render(pageElem) {
-    const account = await this.workshopAPI.accounts.eventuallyGetAccountById(
+  async getAccount() {
+    this.account = await this.workshopAPI.accounts.eventuallyGetAccountById(
       this.accountId
     );
-    account.syncFolderList();
-
-    const listElem = new ListView(account.folders, FolderListItem);
-    pageElem.appendChild(listElem);
+    this.account.syncFolderList();
   }
 
-  cleanup(pageElem) {
-    pageElem.replaceChildren();
-    // Note that we don't need to / shouldn't release the account's folder list
-    // because it's supposed to always be there, but for other list views which
-    // we ourselves created, we would want to call `release()` at the end.
+  render(pageElem) {
+    if (!this.account) {
+      return html`
+        <div></div>
+      `;
+    }
+
+    return html`
+      <awi-list-view
+        .listView=${this.account.folders}
+        .factory=${folder =>
+          html`
+            <awi-folder-list-item .folder=${folder} .serial=${folder.serial} />
+          `}
+      />
+    `;
   }
 }
+customElements.define("awi-account-folder-list-page", AccountFolderListPage);

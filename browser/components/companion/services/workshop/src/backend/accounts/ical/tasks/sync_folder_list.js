@@ -26,7 +26,7 @@ export default TaskDefiner.defineSimpleTask([
   {
     essentialOfflineFolders: [
       {
-        type: "inbox",
+        type: "calendar",
         displayName: "Events",
       },
     ],

@@ -38,6 +38,7 @@
  * module requiring them is under ./tasks.
  */
 export const configuratorModules = new Map([
+  /*
   [
     "activesync",
     async function() {
@@ -45,10 +46,18 @@ export const configuratorModules = new Map([
       return mod.default;
     },
   ],
+  */
   [
     "feed",
     async function() {
       const mod = await import("./accounts/feed/configurator");
+      return mod.default;
+    },
+  ],
+  [
+    "gapi",
+    async function() {
+      const mod = await import("./accounts/gapi/configurator");
       return mod.default;
     },
   ],
@@ -96,6 +105,7 @@ export const configuratorModules = new Map([
  * module requiring them is under ./tasks.
  */
 export const validatorModules = new Map([
+  /*
   [
     "activesync",
     async function() {
@@ -103,10 +113,18 @@ export const validatorModules = new Map([
       return mod.default;
     },
   ],
+  */
   [
     "feed",
     async function() {
       const mod = await import("./accounts/feed/validator");
+      return mod.default;
+    },
+  ],
+  [
+    "gapi",
+    async function() {
+      const mod = await import("./accounts/gapi/validator");
       return mod.default;
     },
   ],
@@ -154,6 +172,7 @@ export const validatorModules = new Map([
  * module requiring them is ./universe/account_manager.
  */
 export const accountModules = new Map([
+  /*
   [
     "activesync",
     async function() {
@@ -161,10 +180,18 @@ export const accountModules = new Map([
       return mod.default;
     },
   ],
+  */
   [
     "feed",
     async function() {
       const mod = await import("./accounts/feed/account");
+      return mod.default;
+    },
+  ],
+  [
+    "gapi",
+    async function() {
+      const mod = await import("./accounts/gapi/account");
       return mod.default;
     },
   ],
@@ -227,7 +254,6 @@ export const engineTaskMappings = new Map([
       return mod.default;
     }
   ],
-  */
   [
     "activesync",
     async function() {
@@ -235,10 +261,18 @@ export const engineTaskMappings = new Map([
       return mod.default;
     },
   ],
+  */
   [
     "feed",
     async function() {
       const mod = await import("./accounts/feed/feed_tasks");
+      return mod.default;
+    },
+  ],
+  [
+    "gapi",
+    async function() {
+      const mod = await import("./accounts/gapi/gapi_tasks");
       return mod.default;
     },
   ],
@@ -302,15 +336,21 @@ export const engineHacks = new Map([
       unselectableFolderTypes: new Set(),
     }
   ],
-  */
   [
     "activesync",
     {
       unselectableFolderTypes: new Set(),
     },
   ],
+  */
   [
     "feed",
+    {
+      unselectableFolderTypes: new Set(),
+    },
+  ],
+  [
+    "gapi",
     {
       unselectableFolderTypes: new Set(),
     },
@@ -367,17 +407,23 @@ export const engineBackEndFacts = new Map([
       syncGranularity: 'folder',
     }
   ],
-  */
   [
     "activesync",
     {
       syncGranularity: "folder",
     },
   ],
+  */
   [
     "feed",
     {
       syncGranularity: "account",
+    },
+  ],
+  [
+    "gapi",
+    {
+      syncGranularity: "folder",
     },
   ],
   /*
@@ -441,7 +487,6 @@ export const engineFrontEndAccountMeta = new Map([
       usesArchiveMetaphor: false
     }
   ],
-  */
   [
     "activesync",
     {
@@ -451,6 +496,7 @@ export const engineFrontEndAccountMeta = new Map([
       usesArchiveMetaphor: false,
     },
   ],
+  */
   [
     "feed",
     {
@@ -458,6 +504,23 @@ export const engineFrontEndAccountMeta = new Map([
         syncGranularity: "account",
       },
       usesArchiveMetaphor: false,
+    },
+  ],
+  [
+    "gapi",
+    {
+      engineFacts: {
+        syncGranularity: "folder",
+        oauth: {
+          scopes: [
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/calendar.events.readonly",
+            "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
+            "https://www.googleapis.com/auth/documents.readonly",
+          ],
+        },
+      },
+      usesArchiveMetaphor: true,
     },
   ],
   /*
@@ -527,17 +590,23 @@ export const engineFrontEndFolderMeta = new Map([
       syncGranularity: 'folder',
     }
   ],
-  */
   [
     "activesync",
     {
       syncGranularity: "folder",
     },
   ],
+  */
   [
     "feed",
     {
       syncGranularity: "account",
+    },
+  ],
+  [
+    "gapi",
+    {
+      syncGranularity: "folder",
     },
   ],
   /*

@@ -57,8 +57,12 @@ export default function churnConversationDriver(
 ) {
   // By default, for email, we want to unique-ify based on email address.
   let userCanonicalField = "address";
+  let authorField = "author";
   if (convType === "phab-drev") {
     userCanonicalField = "nick";
+  } else if (convType === "event") {
+    authorField = "organizer";
+    userCanonicalField = "email";
   }
 
   let authorsById = new Map();
@@ -96,8 +100,9 @@ export default function churnConversationDriver(
       convHasAttachments = true;
     }
 
-    if (!authorsById.has(message.author[userCanonicalField])) {
-      authorsById.set(message.author[userCanonicalField], message.author);
+    const authorInfo = message[authorField];
+    if (authorInfo && !authorsById.has(authorInfo[userCanonicalField])) {
+      authorsById.set(authorInfo[userCanonicalField], authorInfo);
     }
 
     // union this messages's folderId's into the conversation's.

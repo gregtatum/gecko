@@ -2,36 +2,53 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-export class FolderListItem extends HTMLElement {
-  constructor(item) {
-    super();
-    this.item = item;
+import { css, html, LitElement } from "../lit_glue.js";
 
-    const template = document.getElementById("template-folder-list-item");
-    const frag = template.content.cloneNode(true);
-    frag
-      .querySelector(".folder-show-messages")
-      .addEventListener("click", this.onShowMessages.bind(this));
-    frag
-      .querySelector(".folder-show-conversations")
-      .addEventListener("click", this.onShowConversations.bind(this));
-    this.appendChild(frag);
-    this.setAttribute("class", template.getAttribute("class"));
+export class FolderListItem extends LitElement {
+  static get properties() {
+    return {
+      folder: { type: Object },
+      serial: { type: Number },
+    };
   }
 
-  update() {
-    const folder = this.item;
+  static get styles() {
+    return css`
+      :host {
+        display: block;
+        border: 1px solid black;
+        border-radius: 8px;
+        padding: 1em;
+        margin: 0.5em;
+      }
 
-    this.querySelector(".folder-name").textContent = folder.path;
-    this.querySelector(".folder-type").textContent = folder.type;
+      .folder-name {
+        margin: 0;
+      }
+    `;
   }
 
-  onShowMessages() {
-    window.ROUTER.navigateRelative(["folder", this.item.id]);
-  }
-
-  onShowConversations() {
-    console.log("Not yet!");
+  render() {
+    const folder = this.folder;
+    return html`
+      <div class="folder-header-row">
+        <h4 class="folder-name">${folder.name}</h4>
+      </div>
+      <div class="folder-details-row">
+        <span class="folder-type">${folder.type}</span>
+      </div>
+      <div class="folder-actions-row">
+        <button
+          class="folder-show-messages"
+          type="button"
+          @click=${() => {
+            window.ROUTER.navigateRelative(["folder", folder.id]);
+          }}
+        >
+          Show Messages
+        </button>
+      </div>
+    `;
   }
 }
 customElements.define("awi-folder-list-item", FolderListItem);

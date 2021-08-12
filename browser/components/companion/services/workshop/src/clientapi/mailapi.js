@@ -15,8 +15,6 @@
  */
 
 import logic from "logic";
-logic.bc = new BroadcastChannel("logic");
-logic.bc.postMessage({ mode: "clear" });
 
 // Use a relative link so that consumers do not need to create
 // special config to use main-frame-setup.
@@ -39,6 +37,8 @@ import RawListView from "./raw_list_view";
 
 import MessageComposition from "./message_composition";
 
+import oauthBindings from "client_specific/oauth_bindings";
+
 import {
   accountIdFromFolderId,
   accountIdFromConvId,
@@ -47,6 +47,7 @@ import {
 } from "shared/id_conversions";
 
 import * as Linkify from "./bodies/linkify";
+import CalEventsListView from "./cal_events_list_view";
 
 /**
  * Given a list of MailFolders (that may just be null and not a list), map those
@@ -168,6 +169,8 @@ MailAPI.prototype = evt.mix(
       return { type: "MailAPI" };
     },
 
+    oauthBindings,
+
     /**
      * Invoked by main-frame-setup when it's done poking things into us so that
      * we can set flags and emit events and such.  We can probably also move more
@@ -269,7 +272,7 @@ MailAPI.prototype = evt.mix(
     __bridgeSend(msg) {
       // This method gets clobbered eventually once back end worker is ready.
       // Until then, it will store calls to send to the back end.
-
+      logic(this, "storingSend", { msg });
       this._storedSends.push(msg);
     },
 
@@ -578,6 +581,8 @@ MailAPI.prototype = evt.mix(
 
         let data = msg.data;
         obj.__update(data);
+      } else {
+        logic(this, "unknownHandle", { msg });
       }
     },
 
@@ -604,6 +609,8 @@ MailAPI.prototype = evt.mix(
           obj.serial++;
           obj.emit("change", obj);
         }
+      } else {
+        logic(this, "unknownHandle", { msg });
       }
     },
 
@@ -918,6 +925,15 @@ MailAPI.prototype = evt.mix(
     },
 
     /**
+     * Synchronize all calendars that the user is currently subscribed to.
+     * (Accounts may also know about calendars that the user is not subscribed
+     * to.)
+     */
+    syncAllSubscribedCalendars() {
+      // GAPI-IMPL
+    },
+
+    /**
      * Get the list of accounts.  This can be used for the list of accounts in
      * setttings or for a folder tree where only one account's folders are visible
      * at a time.
@@ -1106,11 +1122,18 @@ MailAPI.prototype = evt.mix(
     },
 
     /**
-     * View the messages in a folder.
+     * View the messages/events in a folder.  If the folder is a `calendar`
+     * folder, than a `CalEventsListView` will be returned, otherwise a
+     * `MessagesListView` will be returned.
      */
     viewFolderMessages(folder) {
-      var handle = this._nextHandle++,
+      const handle = this._nextHandle++;
+      let view;
+      if (folder.type === "calendar") {
+        view = new CalEventsListView(this, handle);
+      } else {
         view = new MessagesListView(this, handle);
+      }
       view.folderId = folder.id;
       // Hackily save off the folder as a stop-gap measure to make it easier to
       // describe the contents of the view until we enhance the tocMeta to
@@ -1128,6 +1151,10 @@ MailAPI.prototype = evt.mix(
     },
 
     viewConversationMessages(convOrId) {
+      // XXX this needs to detect the conversation type to determine whether it
+      // should be a `CalEventsListView` instead.  Also some renaming of the
+      // method may be in order?
+      // XXX this also needs to happen for all other similar methods as well.
       var handle = this._nextHandle++,
         view = new MessagesListView(this, handle);
       view.conversationId =

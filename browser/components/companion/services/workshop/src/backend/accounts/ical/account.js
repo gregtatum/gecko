@@ -56,5 +56,5 @@ export default class ICalAccount {
   }
 }
 
-ICalAccount.type = "iCal";
+ICalAccount.type = "ical";
 ICalAccount.supportsServerFolders = false;

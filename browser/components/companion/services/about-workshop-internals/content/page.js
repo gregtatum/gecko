@@ -2,13 +2,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { LitElement } from "./lit_glue.js";
+
 /**
- * Common page stuff.
+ * Common page stuff.  This is being migrated from attaching to existing static
+ * DOM nodes to instead be using custom-elements via lit-element.  It's likely
+ * this could be made slightly more idiomatic.
  */
-export class Page {
+export class Page extends LitElement {
   constructor({ workshopAPI, router }, { title, pageId }) {
+    super();
+
     this.router = router;
-    this.title = title;
+    this.pageTitle = title;
     this.pageId = pageId;
 
     // In the future this might allow some level of currying/tracking of
@@ -19,15 +25,7 @@ export class Page {
   }
 
   setTitle(title) {
-    this.title = title;
+    this.pageTitle = title;
     this.router.pageHasNewTitle(this, title);
-  }
-
-  render(pageElem) {
-    // no-op
-  }
-
-  cleanup(pageElem) {
-    // no-op
   }
 }

@@ -17,11 +17,21 @@
 /* eslint-disable no-prototype-builtins */
 var listeners = {};
 
-export function receiveMessage(evt) {
+export function receiveMessage(port, evt) {
   var data = evt.data;
   var listener = listeners[data.type];
   if (listener) {
-    listener(data, evt.source);
+    listener(data, port);
+  }
+}
+
+const inSharedWorker = "onconnect" in globalThis;
+
+let onConnectHandler = null;
+export function runOnConnect(handler) {
+  onConnectHandler = handler;
+  if (!inSharedWorker) {
+    onConnectHandler(null);
   }
 }
 
@@ -32,10 +42,11 @@ function receiveConnect(evt) {
     resolveDefaultPort(defaultPort);
   }
 
-  port.onmessage = receiveMessage;
+  port.onmessage = receiveMessage.bind(null, port);
+  if (onConnectHandler) {
+    onConnectHandler(port);
+  }
 }
-
-const inSharedWorker = "onconnect" in globalThis;
 
 let defaultPort;
 let defaultPortPromise;
@@ -63,8 +74,13 @@ export function unregister(type) {
 export function registerSimple(type, callback) {
   listeners[type] = callback;
 
-  return function sendSimpleMessage(cmd, args) {
-    eventuallySendToDefault({ type, uid: null, cmd, args });
+  return function sendSimpleMessage(cmd, args, explicitPort) {
+    const msg = { type, uid: null, cmd, args };
+    if (explicitPort) {
+      explicitPort.postMessage(msg);
+    } else {
+      eventuallySendToDefault(msg);
+    }
   };
 }
 
