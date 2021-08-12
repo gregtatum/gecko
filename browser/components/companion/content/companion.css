@@ -38,12 +38,6 @@ h2 {
   scrollbar-width: thin;
 }
 
-:root[docked] #main-menubar,
-:root[docked] #titlebar,
-:root[docked] #awesomebar {
-  display: none;
-}
-
 :root {
   --light-bg-color: #F0F0F4;
 }
@@ -70,157 +64,9 @@ h2 {
   white-space: pre-line;
 }
 
-#titlebar {
-  appearance: auto;
-  -moz-default-appearance: -moz-mac-vibrant-titlebar-dark;
-  -moz-font-smoothing-background-color: -moz-mac-vibrant-titlebar-dark;
-  -moz-window-dragging: drag;
-  min-height: 33px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-@media (-moz-windows-default-theme) {
-  #titlebar {
-    flex-direction: row-reverse;
-  }
-}
-
-#awesomebar {
-  margin: 10px;
-  appearance: none;
-  -moz-box-align: center;
-}
-
-#settings-button {
-  -moz-context-properties: fill, fill-opacity;
-  fill: currentColor;
-  fill-opacity: .6;
-}
-
-#settings-button:hover {
-  fill-opacity: .8;
-}
-
-#settings-button image {
-  width: 16px;
-  height: 16px;
-}
-
-#dock-button {
-  -moz-context-properties: fill, fill-opacity;
-  fill: currentColor;
-  fill-opacity: .6;
-  list-style-image: url("chrome://browser/content/companion/dock.svg")
-}
-
-#dock-button:hover {
-  fill-opacity: .8;
-}
-
-#dock-button image {
-  width: 16px;
-  height: 16px;
-}
-
-#sidebar-button {
-  -moz-context-properties: fill, fill-opacity;
-  fill: currentColor;
-  fill-opacity: .6;
-  list-style-image: url("chrome://browser/skin/sidebars-right.svg")
-}
-
-#sidebar-button:hover {
-  fill-opacity: .8;
-}
-
-#sidebar-button image {
-  width: 16px;
-  height: 16px;
-}
-
-#urlbar-background {
-  border-radius: 4px;
-}
-
-#urlbar-icon-container {
-  padding-left: 6px;
-  padding-right: 8px;
-  fill: currentColor;
-  fill-opacity: .4;
-}
-
-.searchbar-engine-one-off-item {
-  background-color: transparent;
-}
-
-#urlbar-icon {
-  list-style-image: url(chrome://global/skin/icons/search-glass.svg);
-}
-
-#mac-buttonbox {
-  appearance: auto;
-  -moz-default-appearance: -moz-window-button-box;
-  margin-left: 12px;
-}
-
 #events-placeholder {
   display: flex;
   flex-direction: column;
-}
-
-.titlebar-buttonbox,
-.titlebar-button {
-  appearance: none !important;
-}
-
-.titlebar-button {
-  border: none;
-  margin: 0 !important;
-  padding: 8px 17px;
-  -moz-context-properties: stroke;
-  stroke: currentColor;
-}
-
-.titlebar-min {
-  list-style-image: url(chrome://browser/skin/window-controls/minimize.svg);
-}
-
-.titlebar-max {
-  list-style-image: url(chrome://browser/skin/window-controls/maximize.svg);
-}
-
-.titlebar-restore {
-  list-style-image: url(chrome://browser/skin/window-controls/restore.svg);
-}
-
-.titlebar-close {
-  list-style-image: url(chrome://browser/skin/window-controls/close.svg);
-}
-
-.titlebar-button:not(.titlebar-close):hover {
-  background-color: hsla(0,0%,100%,.22);
-}
-.titlebar-button:not(.titlebar-close):hover:active {
-  background-color: hsla(0,0%,100%,.32);
-}
-
-.titlebar-close:hover {
-  stroke: white;
-  background-color: hsl(355,86%,49%);
-}
-.titlebar-close:hover:active {
-  background-color: hsl(355,82%,69%);
-}
-
-.titlebar-button:not(:hover) > .toolbarbutton-icon:-moz-window-inactive {
-  opacity: 0.5;
-}
-
-:root:not([sizemode=maximized]) .titlebar-restore,
-:root[sizemode=maximized] .titlebar-max {
-  display: none;
 }
 
 #content {
@@ -331,22 +177,6 @@ h2 {
 
 #settings label input {
   vertical-align: middle;
-}
-
-.range {
-  grid-column-start: 1;
-  grid-column-end: 4;
-  display: grid;
-  grid-template-columns: subgrid;
-}
-
-.range label {
-  grid-column-start: 1;
-  grid-column-end: 3;
-  display: grid;
-  grid-template-columns: subgrid;
-  align-items: center;
-  text-align: right;
 }
 
 [hidden] {

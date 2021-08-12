@@ -10,12 +10,6 @@
 <?xml-stylesheet href="chrome://browser/skin/browser.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/content/companion/companion.css"?>
 
-<!DOCTYPE html [
-#ifdef XP_MACOSX
-#include ../../../base/content/browser-doctype.inc
-#endif
-]>
-
 <html
   id="companion"
   xmlns="http://www.w3.org/1999/xhtml"
@@ -42,19 +36,7 @@
 </head>
 <html:body xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-#ifdef XP_MACOSX
-#include ../../../base/content/macWindow.inc.xhtml
-#else
   <script src="chrome://browser/content/utilityOverlay.js"/>
-#endif
-
-  <template xmlns="http://www.w3.org/1999/xhtml" id="template-range">
-    <label>
-      <span class="range-label"/>
-      <input class="range-slider" type="range"/>
-    </label>
-    <p class="range-value"/>
-  </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-media-list">
     <link rel="stylesheet" href="chrome://global/skin/in-content/common.css"/>
@@ -242,34 +224,6 @@
       <img class="alert-icon" title="" src=""/>
     </li>
   </template>
-
-  <hbox id="titlebar">
-    <hbox id="mac-buttonbox"/>
-    <hbox flex="1" pack="end">
-      <toolbarbutton id="settings-button"/>
-      <toolbarbutton id="dock-button"/>
-    </hbox>
-    <hbox id="win-buttonbox" class="titlebar-buttonbox-container">
-      <hbox class="titlebar-buttonbox titlebar-color">
-        <toolbarbutton class="titlebar-button titlebar-min"
-                           oncommand="window.minimize();"
-                           data-l10n-id="browser-window-minimize-button"
-                           />
-        <toolbarbutton class="titlebar-button titlebar-max"
-                           oncommand="window.maximize();"
-                           data-l10n-id="browser-window-maximize-button"
-                           />
-        <toolbarbutton class="titlebar-button titlebar-restore"
-                           oncommand="window.restore();"
-                           data-l10n-id="browser-window-restore-down-button"
-                           />
-        <toolbarbutton class="titlebar-button titlebar-close"
-                           oncommand="window.close();"
-                           data-l10n-id="browser-window-close-button"
-                           />
-      </hbox>
-    </hbox>
-  </hbox>
 
   <div class="companion-main">
     <html:button-group class="tab-button-group">

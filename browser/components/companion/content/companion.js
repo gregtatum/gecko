@@ -80,7 +80,6 @@ window.addEventListener(
   "load",
   () => {
     loadObserved = true;
-    document.documentElement.setAttribute("docked", "true");
     maybeInitializeUI();
   },
   { once: true }
