@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 <hbox class="titlebar-buttonbox-container" skipintoolbarset="true">
-#if defined(XP_WIN) && defined(PROCLIENT_WINDOW)
+#if defined(XP_WIN) && defined(PINEBUILD)
   <toolbarbutton
     id="companion-sidebar-button-win" class="toolbarbutton-1 chromeclass-toolbar-additional"
     oncommand="CompanionService.toggleCompanion()"
@@ -27,7 +27,7 @@
                    data-l10n-id="browser-window-close-button"
                    />
   </hbox>
-#if defined(XP_MACOSX) && defined(PROCLIENT_WINDOW)
+#if defined(XP_MACOSX) && defined(PINEBUILD)
   <toolbarbutton
     id="companion-sidebar-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
     oncommand="CompanionService.toggleCompanion()"

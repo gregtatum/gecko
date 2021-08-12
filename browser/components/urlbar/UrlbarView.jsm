@@ -618,7 +618,7 @@ class UrlbarView {
     let openPanelInstance = (this._openPanelInstance = {});
     this.oneOffSearchButtons.willHide().then(willHide => {
       if (!willHide && openPanelInstance == this._openPanelInstance) {
-        this.oneOffSearchButtons.enable(!AppConstants.PROCLIENT_ENABLED);
+        this.oneOffSearchButtons.enable(!AppConstants.PINEBUILD);
         this._openPanel();
       }
     });
@@ -648,7 +648,7 @@ class UrlbarView {
       //  * The search string starts with an `@` or a search restriction
       //    character
       this.oneOffSearchButtons.enable(
-        !AppConstants.PROCLIENT_ENABLED &&
+        !AppConstants.PINEBUILD &&
           (firstResult.providerName != "UrlbarProviderSearchTips" ||
             queryContext.trimmedSearchString) &&
           queryContext.trimmedSearchString[0] != "@" &&

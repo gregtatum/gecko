@@ -91,8 +91,8 @@ class UrlbarInput {
       `)
     );
     this.panel = this.textbox.querySelector(".urlbarView");
-    if (AppConstants.PROCLIENT_ENABLED) {
-      this.panel.classList.add("urlbarView-proClient");
+    if (AppConstants.PINEBUILD) {
+      this.panel.classList.add("urlbarView-pinebuild");
     }
 
     this.searchButton = UrlbarPrefs.get("experimental.searchButton");
@@ -369,7 +369,7 @@ class UrlbarInput {
     }
 
     let isDifferentValidValue = valid && value != this.untrimmedValue;
-    if (AppConstants.PROCLIENT_ENABLED) {
+    if (AppConstants.PINEBUILD) {
       // Prevent newly-loaded URLs from being shown in the urlbar. FFX2021OV-106
       this.value = this.window.gBrowser.userTypedValue
         ? this.window.gBrowser.userTypedValue

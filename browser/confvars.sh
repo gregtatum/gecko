@@ -27,7 +27,7 @@ if test "$OS_ARCH" = "WINNT"; then
 fi
 
 BROWSER_CHROME_URL=chrome://browser/content/browser.xhtml
-BROWSER_PROCLIENT_URL=chrome://browser/content/browser-proclient.xhtml
+BROWSER_PINEBUILD_URL=chrome://browser/content/browser-pinebuild.xhtml
 
 # MOZ_APP_DISPLAYNAME will be set by branding/configure.sh
 # MOZ_BRANDING_DIRECTORY is the default branding directory used when none is

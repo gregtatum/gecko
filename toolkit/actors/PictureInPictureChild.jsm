@@ -581,7 +581,7 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
     });
     this.addMouseButtonListeners();
     state.isTrackingVideos = true;
-    if (AppConstants.PROCLIENT_ENABLED) {
+    if (AppConstants.PINEBUILD) {
       this.sendAsyncMessage(
         "PictureInPicture:StartTrackingMouseOverVideos",
         {}
@@ -622,7 +622,7 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
       this.onMouseLeaveVideo(oldOverVideo);
     }
     state.isTrackingVideos = false;
-    if (AppConstants.PROCLIENT_ENABLED) {
+    if (AppConstants.PINEBUILD) {
       this.sendAsyncMessage("PictureInPicture:StopTrackingMouseOverVideos", {});
     }
   }

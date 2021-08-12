@@ -120,7 +120,7 @@ chrome/toolkit/skin/classic/global/icons/lightbulb.svg
 browser/chrome/browser/builtin-addons/translations/wasm/cld-worker.js.mem
 browser/modules/translation/cld-worker.js.mem
 
-# Added media controls to proclient
+# Added media controls to pinebuild
 browser/chrome/browser/content/browser/companion/play.svg
 browser/chrome/browser/content/browser/companion/playing.svg
 browser/chrome/browser/content/browser/companion/mute.svg

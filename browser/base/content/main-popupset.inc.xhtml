@@ -269,7 +269,7 @@
     </stack>
   </html:template>
 
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
   <panel id="sidebarMenu-popup"
          class="cui-widget-panel"
          role="group"
@@ -370,7 +370,7 @@
                   seeing the command event pass by. The observes attribute is
                   here so that the menuitem is still disabled and re-enabled
                   correctly. -->
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
     <menuitem oncommand="gCustomizeMode.enter()"
               observes="cmd_CustomizeToolbars"
               class="viewCustomizeToolbar"

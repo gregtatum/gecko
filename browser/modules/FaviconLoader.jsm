@@ -55,7 +55,7 @@ const SIZES_TELEMETRY_ENUM = {
 
 const FAVICON_PARSING_TIMEOUT = 100;
 const FAVICON_RICH_ICON_MIN_WIDTH = 96;
-const PREFERRED_WIDTH = AppConstants.PROCLIENT_ENABLED ? 32 : 16;
+const PREFERRED_WIDTH = AppConstants.PINEBUILD ? 32 : 16;
 
 // URL schemes that we don't want to load and convert to data URLs.
 const LOCAL_FAVICON_SCHEMES = ["chrome", "about", "resource", "data"];
@@ -491,12 +491,12 @@ function selectIcons(iconInfos, preferredWidth) {
       ) {
         preferredIcon = icon;
       } else if (
-        // When the proclient is enabled, our tab icons are sized to 32px. At
+        // When the pinebuild is enabled, our tab icons are sized to 32px. At
         // higher device pixel ratios this means we're looking for 64x64 icons,
         // which often don't exist. If we prefer .ico files in this way over
         // something which actually is sized appropriately, then we end up with
         // a bunch of low res favicons.
-        !(AppConstants.PROCLIENT_ENABLED && preferredWidth >= 64) &&
+        !(AppConstants.PINEBUILD && preferredWidth >= 64) &&
         guessType(icon) == TYPE_ICO &&
         (!preferredIcon || guessType(preferredIcon) == TYPE_ICO)
       ) {

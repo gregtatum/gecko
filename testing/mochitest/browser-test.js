@@ -873,7 +873,7 @@ Tester.prototype = {
           }
         }
 
-        if (AppConstants.PROCLIENT_ENABLED) {
+        if (AppConstants.PINEBUILD) {
           CompanionService.closeCompanion();
         }
 

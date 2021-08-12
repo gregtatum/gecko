@@ -123,7 +123,7 @@ export default class LoginList extends HTMLElement {
     shadowRoot.appendChild(loginListTemplate.content.cloneNode(true));
 
     this._count = shadowRoot.querySelector(".count");
-    if (!AppConstants.PROCLIENT_ENABLED) {
+    if (!AppConstants.PINEBUILD) {
       this._createLoginButton = shadowRoot.querySelector(
         ".create-login-button"
       );
@@ -145,7 +145,7 @@ export default class LoginList extends HTMLElement {
     this._list.addEventListener("click", this);
     this.addEventListener("keydown", this);
     this.addEventListener("keyup", this);
-    if (!AppConstants.PROCLIENT_ENABLED) {
+    if (!AppConstants.PINEBUILD) {
       this._createLoginButton.addEventListener("click", this);
     }
   }
@@ -352,7 +352,7 @@ export default class LoginList extends HTMLElement {
         } else {
           // Clear the filter if all items have been filtered out.
           this.classList.remove("create-login-selected");
-          if (!AppConstants.PROCLIENT_ENABLED) {
+          if (!AppConstants.PINEBUILD) {
             this._createLoginButton.disabled = false;
           }
           window.dispatchEvent(
@@ -889,7 +889,7 @@ export default class LoginList extends HTMLElement {
     }
     this.classList.toggle("create-login-selected", !listItem.dataset.guid);
     this._blankLoginListItem.hidden = !!listItem.dataset.guid;
-    if (!AppConstants.PROCLIENT_ENABLED) {
+    if (!AppConstants.PINEBUILD) {
       this._createLoginButton.disabled = !listItem.dataset.guid;
     }
     listItem.classList.add("selected");

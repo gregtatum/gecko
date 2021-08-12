@@ -632,7 +632,7 @@ class nsContextMenu {
   }
 
   initViewItems() {
-    if (!AppConstants.PROCLIENT_ENABLED) {
+    if (!AppConstants.PINEBUILD) {
       // View source is always OK, unless in directory listing.
       this.showItem(
         "context-viewpartialsource-selection",
@@ -675,7 +675,7 @@ class nsContextMenu {
         // through normal use, and we've passed an ESR cycle (91).
         nsContextMenu.DevToolsShim.isDevToolsUser());
 
-    if (!AppConstants.PROCLIENT_ENABLED) {
+    if (!AppConstants.PINEBUILD) {
       this.showItem("context-viewsource", shouldShow);
       this.showItem("context-inspect", showInspect);
 

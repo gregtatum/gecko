@@ -17,7 +17,7 @@
                          onpopupshowing="gFileMenu.onPopupShowing(event);">
                 <menuitem id="menu_newNavigatorTab"
                           command="cmd_newNavigatorTab"
-#ifdef PROCLIENT_WINDOW
+#ifdef PINEBUILD
                           hidden="true"
 #endif
                           key="key_newNavigatorTab" data-l10n-id="menu-file-new-tab"/>
@@ -30,7 +30,7 @@
                           command="cmd_newNavigator" data-l10n-id="menu-file-new-window"/>
                 <menuitem id="menu_newPrivateWindow"
                           command="Tools:PrivateBrowsing"
-#ifdef PROCLIENT_WINDOW
+#ifdef PINEBUILD
                           hidden="true"
 #endif
                           key="key_privatebrowsing" data-l10n-id="menu-file-new-private-window"/>
@@ -51,7 +51,7 @@
                           key="openFileKb" data-l10n-id="menu-file-open-file"/>
                 <menuitem id="menu_close"
                           class="show-only-for-keyboard"
-#ifdef PROCLIENT_WINDOW
+#ifdef PINEBUILD
                           hidden="true"
 #endif
                           key="key_close"
@@ -155,14 +155,14 @@
               <menupopup id="menu_viewPopup">
                 <menu id="viewToolbarsMenu" data-l10n-id="menu-view-toolbars-menu">
                   <menupopup id="view-menu-popup" onpopupshowing="onViewToolbarsPopupShowing(event);">
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
                     <menuseparator/>
                     <menuitem id="menu_customizeToolbars"
                               command="cmd_CustomizeToolbars" data-l10n-id="menu-view-customize-toolbar2"/>
 #endif
                   </menupopup>
                 </menu>
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
                 <menu id="viewSidebarMenuMenu" data-l10n-id="menu-view-sidebar">
                   <menupopup id="viewSidebarMenu">
                     <menuitem id="menu_bookmarksSidebar"
@@ -393,7 +393,7 @@
               <menuitem id="menu_openDownloads"
                         key="key_openDownloads"
                         command="Tools:Downloads" data-l10n-id="menu-tools-downloads"/>
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
               <menuitem id="menu_openAddons"
                         key="key_openAddons"
                         command="Tools:Addons" data-l10n-id="menu-tools-addons-and-themes"/>
@@ -423,7 +423,7 @@
               <menuseparator id="devToolsSeparator"/>
               <menu id="webDeveloperMenu"
                     data-l10n-id="menu-tools-browser-tools"
-#ifdef PROCLIENT_WINDOW
+#ifdef PINEBUILD
                     hidden="true"
 #endif
               >

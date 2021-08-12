@@ -43,7 +43,7 @@
         </toolbarbutton>
       </toolbaritem>
       <toolbarseparator id="appMenu-fxa-separator" class="proton-zap"/>
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
       <toolbarbutton id="appMenu-new-tab-button2"
                      class="subviewbutton"
                      data-l10n-id="appmenuitem-new-tab"
@@ -55,7 +55,7 @@
                      data-l10n-id="appmenuitem-new-window"
                      key="key_newNavigator"
                      command="cmd_newNavigator"/>
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
       <toolbarbutton id="appMenu-new-private-window-button2"
                      class="subviewbutton"
                      data-l10n-id="appmenuitem-new-private-window"
@@ -68,7 +68,7 @@
                      data-l10n-id="library-bookmarks-menu"
                      closemenu="none"
                      oncommand="BookmarkingUI.showSubView(this);"/>
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
       <toolbarbutton id="appMenu-history-button"
                      class="subviewbutton subviewbutton-nav"
                      label="&historyMenu.label;"
@@ -104,14 +104,14 @@
                      />
       <toolbarbutton id="appMenu-save-file-button2"
                      class="subviewbutton"
-#ifdef PROCLIENT_WINDOW
+#ifdef PINEBUILD
                      data-l10n-id="appmenuitem-export-page"
 #else
                      data-l10n-id="appmenuitem-save-page"
 #endif
                      key="key_savePage"
                      command="Browser:SavePage"/>
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
       <toolbarbutton id="appMenu-find-button2"
                      class="subviewbutton"
                      data-l10n-id="appmenuitem-find-in-page"
@@ -151,7 +151,7 @@
                      key="key_preferencesCmdMac"
 #endif
                      oncommand="openPreferences()"/>
-#ifdef PROCLIENT_WINDOW
+#ifdef PINEBUILD
       <toolbarbutton id="companion-settings-button"
                      label="Companion Settings"
                      class="subviewbutton"
@@ -159,7 +159,7 @@
                      hidden="true"/>
 #endif
 
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
       <toolbarbutton id="appMenu-more-button2"
                      class="subviewbutton subviewbutton-nav"
                      data-l10n-id="appmenuitem-more-tools"
@@ -173,12 +173,12 @@
                      closemenu="none"
                      oncommand="PanelUI.showSubView('PanelUI-helpView', this)"/>
 #ifndef XP_MACOSX
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
       <toolbarseparator/>
 #endif
       <toolbarbutton id="appMenu-quit-button2"
                      class="subviewbutton"
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
                      data-l10n-id="appmenuitem-exit2"
 #else
                      data-l10n-id="appmenuitem-close"
@@ -408,7 +408,7 @@
 
   <panelview id="appmenu-moreTools" class="PanelUI-subView">
     <vbox class="panel-subview-body">
-#ifndef PROCLIENT_WINDOW
+#ifndef PINEBUILD
       <toolbarbutton id="appmenu-moreTools-button"
                      class="subviewbutton"
                      data-l10n-id="appmenu-customizetoolbar"

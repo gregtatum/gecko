@@ -3269,10 +3269,10 @@ BrowserGlue.prototype = {
     });
   },
 
-  _migrateProClientUI() {
+  _migratePineBuildUI() {
     const VERSION = 1;
-    const prefProClientVersion = "browser.companion.migration.version";
-    let currentVersion = Services.prefs.getIntPref(prefProClientVersion, 0);
+    const prefPineBuildUIVersion = "browser.companion.migration.version";
+    let currentVersion = Services.prefs.getIntPref(prefPineBuildUIVersion, 0);
     if (currentVersion >= VERSION) {
       return;
     }
@@ -3290,7 +3290,7 @@ BrowserGlue.prototype = {
       });
     }
 
-    Services.prefs.setIntPref(prefProClientVersion, VERSION);
+    Services.prefs.setIntPref(prefPineBuildUIVersion, VERSION);
   },
 
   // eslint-disable-next-line complexity
@@ -3300,8 +3300,8 @@ BrowserGlue.prototype = {
     const UI_VERSION = 117;
     const BROWSER_DOCURL = AppConstants.BROWSER_CHROME_URL;
 
-    if (AppConstants.PROCLIENT_ENABLED) {
-      this._migrateProClientUI();
+    if (AppConstants.PINEBUILD) {
+      this._migratePineBuildUI();
     }
 
     if (!Services.prefs.prefHasUserValue("browser.migration.version")) {

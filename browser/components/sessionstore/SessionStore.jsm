@@ -3786,7 +3786,7 @@ var SessionStoreInternal = {
       delete winData.hidden;
     }
 
-    if (!AppConstants.PROCLIENT_ENABLED) {
+    if (!AppConstants.PINEBUILD) {
       let sidebarBox = aWindow.document.getElementById("sidebar-box");
       let sidebar = sidebarBox.getAttribute("sidebarcommand");
       if (sidebar && sidebarBox.getAttribute("checked") == "true") {
@@ -4901,7 +4901,7 @@ var SessionStoreInternal = {
             break;
         }
       }
-      if (!AppConstants.PROCLIENT_ENABLED) {
+      if (!AppConstants.PINEBUILD) {
         let sidebarBox = aWindow.document.getElementById("sidebar-box");
         if (
           aSidebar &&
