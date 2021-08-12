@@ -174,7 +174,6 @@ preferences-services-microsoft-labels = Outlook, Microsoft Teams, OneDrive
 preferences-services-firefox-account-labels = Seamless experience across devices
 preferences-services-fxa-sign-in = Sign In
 preferences-services-fxa-sign-out = Sign Out
-preferences-services-devices-label =
 # Variables:
 #   $deviceCount (Number) - number of devices connected to FxA
 preferences-services-devices-label =
