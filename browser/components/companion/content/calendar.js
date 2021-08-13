@@ -271,6 +271,8 @@ class CalendarEvent extends MozLitElement {
       .event-link > img {
         width: 16px;
         height: 16px;
+        -moz-context-properties: fill;
+        fill: currentColor;
       }
 
       .event-link > span {
@@ -307,6 +309,8 @@ class CalendarEvent extends MozLitElement {
 
       .event-options-button {
         min-width: auto;
+        -moz-context-properties: fill;
+        fill: currentColor;
       }
     `;
   }
