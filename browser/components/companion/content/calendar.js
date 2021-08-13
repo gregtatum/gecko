@@ -492,12 +492,12 @@ class CalendarEvent extends MozLitElement {
   }
 
   render() {
-    let { summary, start } = this.event;
+    let { summary, start, end } = this.event;
 
     return html`
       <div class="event">
         <div class="event-top">
-          <relative-time .eventStart=${start}></relative-time>
+          <relative-time .eventStart=${start} .eventEnd=${end}></relative-time>
           <button
             class="ghost-button event-options-button"
             aria-haspopup="menu"

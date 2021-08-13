@@ -69,16 +69,14 @@ class CompanionHelper {
     });
   }
 
-  overrideRelativeTime(diff) {
+  overrideRelativeTime(start, diff) {
     return this.runCompanionTask(
-      async timeDiff => {
+      async (startTime, timeDiff) => {
         content.window.RelativeTime.getNow = () => {
-          return new Date(
-            new Date("2021-07-30T17:30:00.000Z").getTime() + timeDiff
-          );
+          return new Date(new Date(startTime).getTime() + timeDiff);
         };
       },
-      [diff]
+      [start, diff]
     );
   }
 

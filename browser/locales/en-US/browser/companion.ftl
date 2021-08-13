@@ -17,17 +17,77 @@ companion-refresh-services-button-syncing =
 companion-expand-event-links-button = +{ $linkCount }
     .title = Show all links
 
+# This is a short label to show when the start of an event is happening in less
+# than an hour (eg: In 10 mins).
 # Variables:
-#   $minutes (Number) - Minutes until an event starts / has already started
-companion-minutes-after-event =
-    { $minutes ->
-        [0] Now
-        [one] { $minutes } min ago
-       *[other] { $minutes } mins ago
-    }
-companion-minutes-before-event =
+#   $minutes (Number) - Minutes until the event starts.
+companion-until-event-minutes =
     { $minutes ->
         [0] Now
         [one] In { $minutes } min
        *[other] In { $minutes } mins
     }
+
+# This is a short label to show when the start of an event is happening in over
+# an hour (eg: In 1 hour and 10 mins).
+# Variables:
+#   $hours   (Number) - Hours until the event starts
+#   $minutes (Number) - Minutes until the event starts
+companion-until-event-both =
+    In { $hours ->
+        [one] { $hours } hour
+       *[other] { $hours } hours
+    } and { $minutes ->
+        [one] { $minutes } min
+       *[other] { $minutes } mins
+    }
+
+# This is a short label to show when the start of the event is happening in over
+# an hour, but there are no remaining minutes (eg: In 1 hour).
+# Variables:
+#   $hours   (Number) - Hours remaining until the event ends
+companion-until-event-hours =
+    { $hours ->
+        [0] Now
+        [one] In { $hours } hour
+       *[other] In { $hours } hours
+    }
+
+
+# This is a short label to show the remaining time left of an event ending in
+# over an hour. (eg: Now (1 hour and 20 mins left) ).
+# Variables:
+#   $hours   (Number) - Hours remaining until the event ends
+#   $minutes (Number) - Minutes remaining until the event ends
+companion-happening-now-both =
+    Now ({ $hours ->
+        [one] { $hours } hour
+       *[other] { $hours } hours
+    } and { $minutes ->
+        [one] { $minutes } min
+       *[other] { $minutes } mins
+    } left)
+
+# This is a short label to show the remaining time left of an event ending in
+# over an hour, but with no remaining minutes (eg: Now (1 hour left) ).
+# Variables:
+#   $hours   (Number) - Hours remaining until the event ends
+companion-happening-now-hours =
+    { $hours ->
+        [0] Now
+        [one] Now ({ $hours } hour left)
+       *[other] Now ({ $hours } hours left)
+    }
+
+# This is a short label to show the remaining time left of an event ending in
+# minutes (eg: Now (5 mins left) ).
+# Variables:
+#   $minutes (Number) - Minutes remaining until the event ends
+companion-happening-now-minutes =
+    { $minutes ->
+        [0] Now
+        [one] Now ({ $minutes } min left)
+       *[other] Now ({ $minutes } mins left)
+    }
+
+companion-event-finished = Finished

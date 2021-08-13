@@ -18,8 +18,10 @@ export class RelativeTime extends MozLitElement {
   static get properties() {
     return {
       eventStart: { type: Object },
-      timeStamp: { type: Object },
-      isLate: { type: Boolean },
+      eventEnd: { type: Object },
+      formattedTimeMessageId: { type: String },
+      formattedTimeMessageArgs: { type: Object },
+      isHappeningNow: { type: Boolean },
     };
   }
 
@@ -33,8 +35,8 @@ export class RelativeTime extends MozLitElement {
         color: var(--in-content-deemphasized-text);
       }
 
-      .event-is-late {
-        color: rgb(197, 0, 66); /* proton-red-70  */
+      .event-is-happening-now {
+        color: var(--in-content-accent-color);
       }
     `;
   }
@@ -55,23 +57,53 @@ export class RelativeTime extends MozLitElement {
   }
 
   updateTimeStamp() {
-    let eventTime = new Date(this.eventStart).getTime();
+    let eventStartTime = new Date(this.eventStart).getTime();
+    let eventEndTime = new Date(this.eventEnd).getTime();
     let now = this.constructor.getNow().getTime();
+    let isHappeningNow = now >= eventStartTime;
 
-    let distance = Math.abs(eventTime - now);
+    // This only happens on debug mode, but it would probably be good to handle this
+    // case as well.
+    if (now > eventEndTime) {
+      this.isHappeningNow = isHappeningNow;
+      this.formattedTimeMessageId = "companion-event-finished";
+      this.formattedTimeMessageArgs = {};
+      return;
+    }
+
+    let distance = isHappeningNow
+      ? Math.abs(eventEndTime - now)
+      : Math.abs(eventStartTime - now);
+
+    let hours = Math.trunc(
+      (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+    );
     let minutes = Math.trunc((distance / 1000 / 60) % 60);
 
-    this.isLate = now > eventTime;
-    this.timeStamp = this.getFormattedRelativeTime(minutes);
+    this.isHappeningNow = isHappeningNow;
+    let { id, args } = this.getFormattedRelativeTime(hours, minutes);
+    this.formattedTimeMessageId = id;
+    this.formattedTimeMessageArgs = args;
   }
 
-  getFormattedRelativeTime(minutes) {
-    let l10n = {};
+  getFormattedRelativeTime(hours, minutes) {
+    let l10n = { args: { hours, minutes } };
 
-    l10n.id = this.isLate
-      ? "companion-minutes-after-event"
-      : "companion-minutes-before-event";
-    l10n.args = { minutes };
+    if (!hours) {
+      l10n.id = this.isHappeningNow
+        ? "companion-happening-now-minutes"
+        : "companion-until-event-minutes";
+    } else if (hours && this.isHappeningNow) {
+      l10n.id =
+        minutes > 0
+          ? "companion-happening-now-both"
+          : "companion-happening-now-hours";
+    } else if (hours && !this.isHappeningNow) {
+      l10n.id =
+        minutes > 0
+          ? "companion-until-event-both"
+          : "companion-until-event-hours";
+    }
 
     return l10n;
   }
@@ -94,16 +126,14 @@ export class RelativeTime extends MozLitElement {
   }
 
   render() {
-    let { id, args } = this.timeStamp;
-
     return html`
       <span
         class=${classMap({
           "event-relative-time": true,
-          "event-is-late": this.isLate,
+          "event-is-happening-now": this.isHappeningNow,
         })}
-        data-l10n-id=${id}
-        data-l10n-args=${JSON.stringify(args)}
+        data-l10n-id=${this.formattedTimeMessageId}
+        data-l10n-args=${JSON.stringify(this.formattedTimeMessageArgs)}
       ></span>
     `;
   }
