@@ -206,6 +206,10 @@ class CalendarEvent extends MozLitElement {
         font-size: 0.8125em;
       }
 
+      .event-actions > a {
+        margin-inline: 0;
+      }
+
       .event:where(:not(:hover, :focus-within)) .event-actions .button-link,
       .event:where(:not(:hover, :focus-within)) .event-options-button {
         display: inline-block;
