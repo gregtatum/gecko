@@ -35,20 +35,23 @@ const MAX_RESULTS = 5;
 
 const COMMANDS = {
   checkgmail: {
-    commands: ["check-gmail"],
+    commands: ["inbox", "email", "gmail", "check gmail"],
     icon: "chrome://browser/content/urlbar/quickactions/gmail.svg",
     label: "Go to Inbox",
     callback: openUrl("https://gmail.com"),
     title: "Gmail",
-    hide() {
-      return !OnlineServices.getMailCount("google");
+    hide(isDefault) {
+      if (isDefault) {
+        return !OnlineServices.getMailCount("google");
+      }
+      return !OnlineServices.hasService("google");
     },
     showBadge() {
       return !!OnlineServices.getMailCount("google");
     },
   },
   checkoutlook: {
-    commands: ["check-outlook"],
+    commands: ["inbox", "email", "outlook", "check outlook"],
     icon: "chrome://browser/content/urlbar/quickactions/outlook.svg",
     label: "Go to Inbox",
     callback: () => {
@@ -56,11 +59,11 @@ const COMMANDS = {
       openUrl(inboxURL)();
     },
     title: "Outlook",
-    hide() {
-      return (
-        !OnlineServices.getInboxURL("microsoft") ||
-        !OnlineServices.getMailCount("microsoft")
-      );
+    hide(isDefault) {
+      if (isDefault) {
+        return !OnlineServices.getMailCount("microsoft");
+      }
+      return !OnlineServices.hasService("microsoft");
     },
     showBadge() {
       return !!OnlineServices.getMailCount("microsoft");
@@ -118,7 +121,7 @@ const COMMANDS = {
     title: "Pro Client",
   },
   privacy: {
-    commands: ["privacy"],
+    commands: ["privacy", "private"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "Open Preferences (Privacy & Security)",
     callback: openUrl("about:preferences#privacy"),
@@ -255,7 +258,9 @@ class ProviderQuickActionsBase extends UrlbarProvider {
           let prefix = command.substring(0, command.length - i);
           let result = this._tree.get(prefix);
           if (result) {
-            result.push(key);
+            if (!result.includes(key)) {
+              result.push(key);
+            }
           } else {
             result = [key];
           }
@@ -308,6 +313,13 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     if (!results) {
       return;
     }
+    results = results.filter(key => {
+      let data = COMMANDS?.[key];
+      if (data && data.hasOwnProperty("hide")) {
+        return !data.hide(!queryContext.searchString);
+      }
+      return true;
+    });
     results.length =
       results.length > MAX_RESULTS ? MAX_RESULTS : results.length;
     const result = new UrlbarResult(
@@ -319,6 +331,8 @@ class ProviderQuickActionsBase extends UrlbarProvider {
       }
     );
     result.suggestedIndex = this.getSuggestedIndex();
+    result.searchString = queryContext.searchString;
+
     addCallback(this, result);
   }
 
@@ -329,9 +343,6 @@ class ProviderQuickActionsBase extends UrlbarProvider {
       let data = COMMANDS?.[key] || { icon: "", label: " " };
       let buttonAttributes = { "data-key": key };
       let hidden = !result.payload.results?.[i];
-      if (data.hasOwnProperty("hide")) {
-        hidden = data.hide();
-      }
       buttonAttributes.hidden = hidden ? true : null;
       buttonAttributes.role = hidden ? "" : "button";
       viewUpdate[`button-${i}`] = { attributes: buttonAttributes };
