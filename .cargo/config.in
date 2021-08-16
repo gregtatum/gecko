@@ -40,7 +40,7 @@ rev = "8ae48c16b637d6d9a841cf4d01de06c16b1318b0"
 [source."https://github.com/mozilla/audioipc-2"]
 git = "https://github.com/mozilla/audioipc-2"
 replace-with = "vendored-sources"
-rev = "7537bfadad2e981577eb75e4f13662fc517e1a09"
+rev = "8bb1a227fbaa5677458bcd876162b65307df38c2"
 
 [source."https://github.com/mozilla/application-services"]
 git = "https://github.com/mozilla/application-services"
@@ -50,7 +50,7 @@ rev = "8a576fbe79199fa8664f64285524017f74ebcc5f"
 [source."https://github.com/mozilla-spidermonkey/jsparagus"]
 git = "https://github.com/mozilla-spidermonkey/jsparagus"
 replace-with = "vendored-sources"
-rev = "951b682789d6fbb070e9f40d05897b3f2d875db2"
+rev = "eb250ba0bda3551927a447db0335a309e3f296d3"
 
 [source."https://github.com/kvark/spirv_cross"]
 branch = "wgpu5"

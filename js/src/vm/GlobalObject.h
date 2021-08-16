@@ -54,7 +54,6 @@ class GlobalScope;
 class GlobalLexicalEnvironmentObject;
 class PlainObject;
 class RegExpStatics;
-class RegExpStaticsObject;
 
 // Data attached to a GlobalObject. This is freed when clearing the Realm's
 // global_ only because this way we don't need to add a finalizer to all
@@ -66,7 +65,16 @@ class GlobalObjectData {
   void operator=(const GlobalObjectData&) = delete;
 
  public:
-  GlobalObjectData() = default;
+  explicit GlobalObjectData(Zone* zone);
+
+  // The global environment record's [[VarNames]] list that contains all
+  // names declared using FunctionDeclaration, GeneratorDeclaration, and
+  // VariableDeclaration declarations in global code in this global's realm.
+  // Names are only removed from this list by a |delete IdentifierReference|
+  // that successfully removes that global property.
+  using VarNamesSet =
+      GCHashSet<HeapPtr<JSAtom*>, DefaultHasher<JSAtom*>, ZoneAllocPolicy>;
+  VarNamesSet varNames;
 
   // The original values for built-in constructors (with their prototype
   // objects) based on JSProtoKey.
@@ -119,9 +127,6 @@ class GlobalObjectData {
   // The WindowProxy associated with this global.
   HeapPtr<JSObject*> windowProxy;
 
-  // Global state for regular expressions.
-  HeapPtr<RegExpStaticsObject*> regExpStatics;
-
   // Functions and other top-level values for self-hosted code.
   HeapPtr<NativeObject*> intrinsicsHolder;
 
@@ -141,12 +146,17 @@ class GlobalObjectData {
   HeapPtr<JSFunction*> eval;
 
   // Cached shape for new arrays with Array.prototype as prototype.
-  HeapPtr<Shape*> arrayShape;
+  HeapPtr<Shape*> arrayShapeWithDefaultProto;
+
+  // Global state for regular expressions.
+  UniquePtr<RegExpStatics> regExpStatics;
 
   // Whether the |globalThis| property has been resolved on the global object.
   bool globalThisResolved = false;
 
   void trace(JSTracer* trc);
+  void addSizeOfIncludingThis(mozilla::MallocSizeOf mallocSizeOf,
+                              JS::ClassInfo* info) const;
 
   static constexpr size_t offsetOfLexicalEnvironment() {
     static_assert(sizeof(lexicalEnvironment) == sizeof(uintptr_t),
@@ -212,8 +222,11 @@ class GlobalObject : public NativeObject {
   void traceData(JSTracer* trc) { data().trace(trc); }
   void releaseData(JSFreeOp* fop);
 
-  size_t sizeOfData(mozilla::MallocSizeOf mallocSizeOf) const {
-    return mallocSizeOf(maybeData());
+  void addSizeOfData(mozilla::MallocSizeOf mallocSizeOf,
+                     JS::ClassInfo* info) const {
+    if (maybeData()) {
+      data().addSizeOfIncludingThis(mallocSizeOf, info);
+    }
   }
 
   void setOriginalEval(JSFunction* evalFun) {
@@ -887,6 +900,14 @@ class GlobalObject : public NativeObject {
   // global.
   bool valueIsEval(const Value& val);
 
+  void removeFromVarNames(JSAtom* name) { data().varNames.remove(name); }
+
+  // Whether the given name is in [[VarNames]].
+  bool isInVarNames(JSAtom* name) { return data().varNames.has(name); }
+
+  // Add a name to [[VarNames]].  Reports OOM on failure.
+  [[nodiscard]] bool addToVarNames(JSContext* cx, JS::Handle<JSAtom*> name);
+
   // Implemented in vm/Iteration.cpp.
   static bool initIteratorProto(JSContext* cx, Handle<GlobalObject*> global);
   template <ProtoKind Kind, const JSClass* ProtoClass,
@@ -940,11 +961,18 @@ class GlobalObject : public NativeObject {
     data().sourceURLsHolder.unbarrieredSet(nullptr);
   }
 
-  void setArrayShape(Shape* shape) {
-    MOZ_ASSERT(!data().arrayShape);
-    data().arrayShape.init(shape);
+  Shape* maybeArrayShapeWithDefaultProto() const {
+    return data().arrayShapeWithDefaultProto;
   }
-  Shape* maybeArrayShape() const { return data().arrayShape; }
+
+  static Shape* getArrayShapeWithDefaultProto(JSContext* cx) {
+    if (Shape* shape = cx->global()->data().arrayShapeWithDefaultProto;
+        MOZ_LIKELY(shape)) {
+      return shape;
+    }
+    return createArrayShapeWithDefaultProto(cx);
+  }
+  static Shape* createArrayShapeWithDefaultProto(JSContext* cx);
 
   // Returns an object that represents the realm, used by embedder.
   static JSObject* getOrCreateRealmKeyObject(JSContext* cx,

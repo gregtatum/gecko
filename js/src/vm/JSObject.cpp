@@ -62,7 +62,6 @@
 #include "vm/JSFunction.h"
 #include "vm/JSScript.h"
 #include "vm/ProxyObject.h"
-#include "vm/RegExpStaticsObject.h"
 #include "vm/Shape.h"
 #include "vm/TypedArrayObject.h"
 #include "vm/WellKnownAtom.h"  // js_*_str
@@ -778,9 +777,9 @@ void NewObjectCache::fillProto(EntryIndex entry, const JSClass* clasp,
   return fill(entry, clasp, proto.raw(), kind, obj);
 }
 
-bool js::NewObjectWithTaggedProtoIsCachable(JSContext* cx,
-                                            Handle<TaggedProto> proto,
-                                            NewObjectKind newKind) {
+static bool NewObjectWithTaggedProtoIsCachable(JSContext* cx,
+                                               Handle<TaggedProto> proto,
+                                               NewObjectKind newKind) {
   return !cx->isHelperThreadContext() && proto.isObject() &&
          newKind == GenericObject && !proto.toObject()->is<GlobalObject>();
 }
@@ -1099,7 +1098,7 @@ JSObject* js::DeepCloneObjectLiteral(JSContext* cx, HandleObject obj) {
     }
 
     return NewDenseCopiedArray(cx, values.length(), values.begin(),
-                               /* proto = */ nullptr, TenuredObject);
+                               TenuredObject);
   }
 
   Rooted<IdValueVector> properties(cx, IdValueVector(cx));
@@ -1226,7 +1225,7 @@ XDRResult js::XDRObjectLiteral(XDRState<mode>* xdr, MutableHandleObject obj) {
 
     if (mode == XDR_DECODE) {
       obj.set(NewDenseCopiedArray(cx, values.length(), values.begin(),
-                                  /* proto = */ nullptr, TenuredObject));
+                                  TenuredObject));
       if (!obj) {
         return xdr->fail(JS::TranscodeResult::Throw);
       }
@@ -3556,9 +3555,6 @@ void JSObject::addSizeOfExcludingThis(mozilla::MallocSizeOf mallocSizeOf,
     info->objectsMallocHeapMisc += as<MapObject>().sizeOfData(mallocSizeOf);
   } else if (is<SetObject>()) {
     info->objectsMallocHeapMisc += as<SetObject>().sizeOfData(mallocSizeOf);
-  } else if (is<RegExpStaticsObject>()) {
-    info->objectsMallocHeapMisc +=
-        as<RegExpStaticsObject>().sizeOfData(mallocSizeOf);
   } else if (is<PropertyIteratorObject>()) {
     info->objectsMallocHeapMisc +=
         as<PropertyIteratorObject>().sizeOfMisc(mallocSizeOf);
@@ -3567,8 +3563,7 @@ void JSObject::addSizeOfExcludingThis(mozilla::MallocSizeOf mallocSizeOf,
   } else if (is<SharedArrayBufferObject>()) {
     SharedArrayBufferObject::addSizeOfExcludingThis(this, mallocSizeOf, info);
   } else if (is<GlobalObject>()) {
-    info->objectsMallocHeapGlobalData +=
-        as<GlobalObject>().sizeOfData(mallocSizeOf);
+    as<GlobalObject>().addSizeOfData(mallocSizeOf, info);
   } else if (is<WeakCollectionObject>()) {
     info->objectsMallocHeapMisc +=
         as<WeakCollectionObject>().sizeOfExcludingThis(mallocSizeOf);
@@ -3769,11 +3764,15 @@ bool js::Unbox(JSContext* cx, HandleObject obj, MutableHandleValue vp) {
 void JSObject::debugCheckNewObject(Shape* shape, js::gc::AllocKind allocKind,
                                    js::gc::InitialHeap heap) {
   const JSClass* clasp = shape->getObjectClass();
-  MOZ_ASSERT(clasp != &ArrayObject::class_);
 
   if (!ClassCanHaveFixedData(clasp)) {
-    MOZ_ASSERT(shape);
-    MOZ_ASSERT(gc::GetGCKindSlots(allocKind, clasp) == shape->numFixedSlots());
+    if (clasp == &ArrayObject::class_) {
+      // Arrays can store the ObjectElements header inline.
+      MOZ_ASSERT(shape->numFixedSlots() == 0);
+    } else {
+      MOZ_ASSERT(gc::GetGCKindSlots(allocKind, clasp) ==
+                 shape->numFixedSlots());
+    }
   }
 
   // Assert background finalization is used when possible.

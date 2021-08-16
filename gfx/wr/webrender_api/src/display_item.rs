@@ -117,6 +117,15 @@ impl SpaceAndClipInfo {
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, PeekPoke)]
+pub enum SpatialTreeItem {
+    ScrollFrame(ScrollFrameDescriptor),
+    ReferenceFrame(ReferenceFrameDescriptor),
+    StickyFrame(StickyFrameDescriptor),
+    Invalid,
+}
+
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, PeekPoke)]
 pub enum DisplayItem {
     // These are the "real content" display items
     Rectangle(RectangleDisplayItem),
@@ -142,8 +151,6 @@ pub enum DisplayItem {
     ClipChain(ClipChainItem),
 
     // Spaces and Frames that content can be scoped under.
-    ScrollFrame(ScrollFrameDisplayItem),
-    StickyFrame(StickyFrameDisplayItem),
     Iframe(IframeDisplayItem),
     PushReferenceFrame(ReferenceFrameDisplayListItem),
     PushStackingContext(PushStackingContextDisplayItem),
@@ -192,8 +199,6 @@ pub enum DebugDisplayItem {
     RectClip(RectClipDisplayItem),
     ClipChain(ClipChainItem, Vec<ClipId>),
 
-    ScrollFrame(ScrollFrameDisplayItem),
-    StickyFrame(StickyFrameDisplayItem),
     Iframe(IframeDisplayItem),
     PushReferenceFrame(ReferenceFrameDisplayListItem),
     PushStackingContext(PushStackingContextDisplayItem),
@@ -260,7 +265,7 @@ impl StickyOffsetBounds {
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, PeekPoke)]
-pub struct StickyFrameDisplayItem {
+pub struct StickyFrameDescriptor {
     pub id: SpatialId,
     pub parent_spatial_id: SpatialId,
     pub bounds: LayoutRect,
@@ -297,7 +302,7 @@ pub enum ScrollSensitivity {
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, PeekPoke)]
-pub struct ScrollFrameDisplayItem {
+pub struct ScrollFrameDescriptor {
     /// The id of the space this scroll frame creates
     pub scroll_frame_id: SpatialId,
     /// The size of the contents this contains (so the backend knows how far it can scroll).
@@ -391,6 +396,7 @@ pub struct TextDisplayItem {
     pub font_key: font::FontInstanceKey,
     pub color: ColorF,
     pub glyph_options: Option<font::GlyphOptions>,
+    pub reference_frame_relative_offset: LayoutVector2D,
 } // IMPLICIT: glyphs: Vec<font::GlyphInstance>
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, MallocSizeOf, PartialEq, Serialize, PeekPoke)]
@@ -646,6 +652,9 @@ pub struct GradientDisplayItem {
     /// The space between tiles of the gradient (common case: 0)
     pub tile_spacing: LayoutSize,
     pub gradient: Gradient,
+    /// The unsnapped rect is used for calculating repeats, so is replicated here
+    /// to maintain existing behavior.
+    pub unsnapped_rect: LayoutRect,
 }
 
 #[repr(C)]
@@ -709,6 +718,9 @@ pub struct RadialGradientDisplayItem {
     pub gradient: RadialGradient,
     pub tile_size: LayoutSize,
     pub tile_spacing: LayoutSize,
+    /// The unsnapped rect is used for calculating repeats, so is replicated here
+    /// to maintain existing behavior.
+    pub unsnapped_rect: LayoutRect,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, PeekPoke)]
@@ -721,6 +733,9 @@ pub struct ConicGradientDisplayItem {
     pub gradient: ConicGradient,
     pub tile_size: LayoutSize,
     pub tile_spacing: LayoutSize,
+    /// The unsnapped rect is used for calculating repeats, so is replicated here
+    /// to maintain existing behavior.
+    pub unsnapped_rect: LayoutRect,
 }
 
 /// Renders a filtered region of its backdrop
@@ -732,6 +747,10 @@ pub struct BackdropFilterDisplayItem {
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, PeekPoke)]
 pub struct ReferenceFrameDisplayListItem {
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, PeekPoke)]
+pub struct ReferenceFrameDescriptor {
     pub origin: LayoutPoint,
     pub parent_spatial_id: SpatialId,
     pub reference_frame: ReferenceFrame,
@@ -1307,6 +1326,9 @@ pub struct RepeatingImageDisplayItem {
     pub alpha_type: AlphaType,
     /// A hack used by gecko to color a simple bitmap font used for tofu glyphs
     pub color: ColorF,
+    /// The unsnapped rect is used for calculating repeats, so is replicated here
+    /// to maintain existing behavior.
+    pub unsnapped_rect: LayoutRect,
 }
 
 #[repr(u8)]
@@ -1710,11 +1732,9 @@ impl DisplayItem {
             DisplayItem::SetPoints => "set_points",
             DisplayItem::RadialGradient(..) => "radial_gradient",
             DisplayItem::Rectangle(..) => "rectangle",
-            DisplayItem::ScrollFrame(..) => "scroll_frame",
             DisplayItem::SetGradientStops => "set_gradient_stops",
             DisplayItem::ReuseItems(..) => "reuse_item",
             DisplayItem::RetainedItems(..) => "retained_items",
-            DisplayItem::StickyFrame(..) => "sticky_frame",
             DisplayItem::Text(..) => "text",
             DisplayItem::YuvImage(..) => "yuv_image",
             DisplayItem::BackdropFilter(..) => "backdrop_filter",
