@@ -27,6 +27,15 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   KeywordTree: "resource:///modules/UrlbarQuickSuggest.jsm",
 });
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "extraActions",
+  "browser.companion.urlbar.extraactions",
+  false
+);
+
+const hideExtra = () => !extraActions;
+
 // These prefs are relative to the `browser.urlbar` branch.
 const ENABLED_PREF = "suggest.quickactions";
 const DYNAMIC_TYPE_NAME = "quickActions";
@@ -101,6 +110,7 @@ const COMMANDS = {
     commands: ["screenshot"],
     icon: "chrome://browser/skin/screenshot.svg",
     label: "Take a Screenshot",
+    hide: hideExtra,
     callback: () => {
       Services.obs.notifyObservers(null, "menuitem-screenshot-extension");
     },
@@ -110,6 +120,7 @@ const COMMANDS = {
     commands: ["preferences"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "Open Preferences",
+    hide: hideExtra,
     callback: openUrl("about:preferences"),
     title: "Pro Client",
   },
@@ -117,6 +128,7 @@ const COMMANDS = {
     commands: ["downloads"],
     icon: "chrome://browser/skin/downloads/downloads.svg",
     label: "Open Downloads",
+    hide: hideExtra,
     callback: openUrl("about:downloads"),
     title: "Pro Client",
   },
@@ -124,6 +136,7 @@ const COMMANDS = {
     commands: ["privacy", "private"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "Open Preferences (Privacy & Security)",
+    hide: hideExtra,
     callback: openUrl("about:preferences#privacy"),
     title: "Pro Client",
   },
@@ -131,6 +144,7 @@ const COMMANDS = {
     commands: ["view-source"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "View Source",
+    hide: hideExtra,
     callback: () => {
       let window = BrowserWindowTracker.getTopWindow();
       let spec = window.gBrowser.selectedTab.linkedBrowser.documentURI.spec;
@@ -142,6 +156,7 @@ const COMMANDS = {
     commands: ["inspector"],
     icon: "chrome://devtools/skin/images/tool-inspector.svg",
     label: "Open Inspector",
+    hide: hideExtra,
     callback: () => {
       // TODO: This is supposed to be called with an element to start inspecting.
       DevToolsShim.inspectNode(
@@ -157,6 +172,7 @@ const COMMANDS = {
     commands: ["restart"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "Restart Firefox",
+    hide: hideExtra,
     callback: restartBrowser,
     title: "Pro Client",
   },
