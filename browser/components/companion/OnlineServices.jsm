@@ -243,6 +243,7 @@ async function getLinkInfo(result) {
       }
     }
   }
+
   return [...new Map(links.map(item => [item.url, item])).values()].filter(
     link => link.text !== ""
   );
@@ -396,85 +397,88 @@ class GoogleService {
     }
 
     let allEvents = new Map();
-    for (let calendar of calendarList) {
-      apiTarget = new URL(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-          calendar.id
-        )}/events`
-      );
+    await Promise.allSettled(
+      calendarList.map(async calendar => {
+        apiTarget = new URL(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+            calendar.id
+          )}/events`
+        );
 
-      apiTarget.searchParams.set("orderBy", "startTime");
-      apiTarget.searchParams.set("singleEvents", "true");
-      let dayStart = new Date();
-      dayStart.setHours(0, 0, 0, 0);
-      apiTarget.searchParams.set("timeMin", dayStart.toISOString());
-      // If we want to reduce the window, we can just make
-      // timeMax an hour from now.
-      let midnight = new Date();
-      midnight.setHours(24, 0, 0, 0);
-      apiTarget.searchParams.set("timeMax", midnight.toISOString());
+        apiTarget.searchParams.set("orderBy", "startTime");
+        apiTarget.searchParams.set("singleEvents", "true");
+        let dayStart = new Date();
+        dayStart.setHours(0, 0, 0, 0);
+        apiTarget.searchParams.set("timeMin", dayStart.toISOString());
+        // If we want to reduce the window, we can just make
+        // timeMax an hour from now.
+        let midnight = new Date();
+        midnight.setHours(24, 0, 0, 0);
+        apiTarget.searchParams.set("timeMax", midnight.toISOString());
 
-      headers = {
-        Authorization: `Bearer ${token}`,
-      };
+        headers = {
+          Authorization: `Bearer ${token}`,
+        };
 
-      response = await fetch(apiTarget, {
-        headers,
-      });
+        response = await fetch(apiTarget, {
+          headers,
+        });
 
-      if (!response.ok) {
-        log.debug(response.statusText);
-        continue;
-      }
+        if (!response.ok) {
+          log.debug(response.statusText);
+          return;
+        }
 
-      let results = await response.json();
+        let results = await response.json();
 
-      log.debug(JSON.stringify(results));
+        log.debug(JSON.stringify(results));
 
-      for (let result of results.items) {
-        try {
-          // Ignore all day events
-          if (!result.start?.dateTime || !result.end?.dateTime) {
-            continue;
-          }
-          if (
-            calendar.id == "primary" &&
-            result.attendees &&
-            !result.attendees.filter(
-              attendee =>
-                attendee.self === true && attendee.responseStatus === "accepted"
-            ).length
-          ) {
-            continue;
-          }
-          let event = {};
-          event.summary = result.summary;
-          event.start = new Date(result.start.dateTime);
-          event.end = new Date(result.end.dateTime);
-          let links = await getLinkInfo(result);
-          event.conference = getConferenceInfo(result, links);
-          event.links = links.filter(link => link.type != "conferencing");
-          event.calendar = {};
-          event.calendar.id = calendar.id;
-          event.attendees = result.attendees?.filter(a => !a.self) || [];
-          event.organizer = result.organizer;
-          event.creator = result.creator;
-          event.serviceId = this.id;
-          event.url = result.htmlLink;
-          if (allEvents.has(result.id)) {
-            // If an event is duplicated, use
-            // the primary calendar
-            if (calendar.id == "primary") {
+        for (let result of results.items) {
+          try {
+            // Ignore all day events
+            if (!result.start?.dateTime || !result.end?.dateTime) {
+              continue;
+            }
+            if (
+              calendar.id == "primary" &&
+              result.attendees &&
+              !result.attendees.filter(
+                attendee =>
+                  attendee.self === true &&
+                  attendee.responseStatus === "accepted"
+              ).length
+            ) {
+              continue;
+            }
+            let event = {};
+            event.summary = result.summary;
+            event.start = new Date(result.start.dateTime);
+            event.end = new Date(result.end.dateTime);
+            let links = await getLinkInfo(result);
+            event.conference = getConferenceInfo(result, links);
+            event.links = links.filter(link => link.type != "conferencing");
+            event.calendar = {};
+            event.calendar.id = calendar.id;
+            event.attendees = result.attendees?.filter(a => !a.self) || [];
+            event.organizer = result.organizer;
+            event.creator = result.creator;
+            event.serviceId = this.id;
+            event.url = result.htmlLink;
+            if (allEvents.has(result.id)) {
+              // If an event is duplicated, use
+              // the primary calendar
+              if (calendar.id == "primary") {
+                allEvents.set(result.id, event);
+              }
+            } else {
               allEvents.set(result.id, event);
             }
-          } else {
-            allEvents.set(result.id, event);
+          } catch (e) {
+            log.error(e);
           }
-        } catch (e) {
-          log.error(e);
         }
-      }
-    }
+      })
+    );
     return Array.from(allEvents.values()).sort((a, b) => {
       if (a.start.getTime() == b.start.getTime()) {
         return a.end - a.start - (b.end - b.start);
@@ -791,54 +795,56 @@ class MicrosoftService {
     midnight.setHours(24, 0, 0, 0);
 
     let allEvents = new Map();
-    for (let calendar of calendarList) {
-      apiTarget = new URL(
-        `https://graph.microsoft.com/v1.0/me/calendars/${
-          calendar.id
-        }/events?orderby=start/dateTime&$filter=start/dateTime ge '${dayStart.toISOString()}' AND start/dateTime le '${midnight.toISOString()}'`
-      );
+    await Promise.allSettled(
+      calendarList.map(async calendar => {
+        apiTarget = new URL(
+          `https://graph.microsoft.com/v1.0/me/calendars/${
+            calendar.id
+          }/events?orderby=start/dateTime&$filter=start/dateTime ge '${dayStart.toISOString()}' AND start/dateTime le '${midnight.toISOString()}'`
+        );
 
-      response = await fetch(apiTarget, {
-        headers,
-      });
+        response = await fetch(apiTarget, {
+          headers,
+        });
 
-      results = await response.json();
-      log.debug(JSON.stringify(results));
+        results = await response.json();
+        log.debug(JSON.stringify(results));
 
-      if (results.error) {
-        log.error(results.error.message);
-        continue;
-      }
-
-      for (let result of results.value) {
-        try {
-          // Ignore all day events
-          if (result.isAllDay) {
-            continue;
-          }
-          let event = {};
-          event.summary = result.subject;
-          event.start = new Date(result.start.dateTime + "Z");
-          event.end = new Date(result.end.dateTime + "Z");
-          let links = await getLinkInfo(result);
-          event.conference = getConferenceInfo(result, links);
-          event.links = links.filter(link => link.type != "conferencing");
-          event.calendar = {};
-          event.calendar.id = calendar.id;
-          event.serviceId = this.id;
-          event.url = result.webLink;
-
-          event.creator = null; // No creator seems to be available.
-          event.organizer = this._normalizeUser(result.organizer, {
-            self: result.isOrganizer,
-          });
-          event.attendees = result.attendees.map(a => this._normalizeUser(a));
-          allEvents.set(result.id, event);
-        } catch (e) {
-          log.error(e);
+        if (results.error) {
+          log.error(results.error.message);
+          return;
         }
-      }
-    }
+
+        for (let result of results.value) {
+          try {
+            // Ignore all day events
+            if (result.isAllDay) {
+              continue;
+            }
+            let event = {};
+            event.summary = result.subject;
+            event.start = new Date(result.start.dateTime + "Z");
+            event.end = new Date(result.end.dateTime + "Z");
+            let links = await getLinkInfo(result);
+            event.conference = getConferenceInfo(result, links);
+            event.links = links.filter(link => link.type != "conferencing");
+            event.calendar = {};
+            event.calendar.id = calendar.id;
+            event.serviceId = this.id;
+            event.url = result.webLink;
+
+            event.creator = null; // No creator seems to be available.
+            event.organizer = this._normalizeUser(result.organizer, {
+              self: result.isOrganizer,
+            });
+            event.attendees = result.attendees.map(a => this._normalizeUser(a));
+            allEvents.set(result.id, event);
+          } catch (e) {
+            log.error(e);
+          }
+        }
+      })
+    );
     return Array.from(allEvents.values()).sort((a, b) => a.start - b.start);
   }
 
