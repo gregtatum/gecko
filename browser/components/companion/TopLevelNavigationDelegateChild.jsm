@@ -10,6 +10,7 @@ class TopLevelNavigationDelegateChild extends JSWindowActorChild {
   shouldNavigate(
     docShell,
     uri,
+    loadType,
     referrer,
     hasPostData,
     triggeringPrincipal,
@@ -19,7 +20,11 @@ class TopLevelNavigationDelegateChild extends JSWindowActorChild {
       return true;
     }
 
-    if (hasPostData) {
+    let isNormalLoad = !!(loadType & Ci.nsIDocShell.LOAD_CMD_NORMAL);
+
+    // For now, for simplicities sake, any POST requests or load types other
+    // than "normal" (see nsIDocShell::LoadCommand), we'll let through.
+    if (hasPostData || !isNormalLoad) {
       return true;
     }
 
