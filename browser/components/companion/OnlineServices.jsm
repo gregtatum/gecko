@@ -1032,6 +1032,15 @@ const OnlineServices = {
     this.persist();
   },
 
+  hasService(type) {
+    for (let service of ServiceInstances) {
+      if (service.app.startsWith(type)) {
+        return true;
+      }
+    }
+    return false;
+  },
+
   getMailCount(type) {
     let mailCount = 0;
     for (let service of ServiceInstances) {
