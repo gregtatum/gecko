@@ -106,6 +106,7 @@
   MACRO_(currency, currency, "currency")                                       \
   MACRO_(currencyDisplay, currencyDisplay, "currencyDisplay")                  \
   MACRO_(currencySign, currencySign, "currencySign")                           \
+  MACRO_(dateStyle, dateStyle, "dateStyle")                                    \
   MACRO_(day, day, "day")                                                      \
   MACRO_(dayPeriod, dayPeriod, "dayPeriod")                                    \
   MACRO_(debugger, debugger, "debugger")                                       \
@@ -178,8 +179,11 @@
   MACRO_(forceInterpreter, forceInterpreter, "forceInterpreter")               \
   MACRO_(forEach, forEach, "forEach")                                          \
   MACRO_(format, format, "format")                                             \
+  MACRO_(formatOpt, formatOpt, "formatOpt")                                    \
   MACRO_(fraction, fraction, "fraction")                                       \
   MACRO_(fractionalSecond, fractionalSecond, "fractionalSecond")               \
+  MACRO_(fractionalSecondDigits, fractionalSecondDigits,                       \
+         "fractionalSecondDigits")                                             \
   MACRO_(frame, frame, "frame")                                                \
   MACRO_(from, from, "from")                                                   \
   MACRO_(fulfilled, fulfilled, "fulfilled")                                    \
@@ -226,6 +230,7 @@
   MACRO_(hasOwnProperty, hasOwnProperty, "hasOwnProperty")                     \
   MACRO_(highWaterMark, highWaterMark, "highWaterMark")                        \
   MACRO_(hour, hour, "hour")                                                   \
+  MACRO_(hour12, hour12, "hour12")                                             \
   MACRO_(hourCycle, hourCycle, "hourCycle")                                    \
   MACRO2(if, if_, "if")                                                        \
   MACRO_(ignoreCase, ignoreCase, "ignoreCase")                                 \
@@ -460,6 +465,7 @@
   MACRO_(this, this_, "this")                                                  \
   MACRO_(throw, throw_, "throw")                                               \
   MACRO_(timestamp, timestamp, "timestamp")                                    \
+  MACRO_(timeStyle, timeStyle, "timeStyle")                                    \
   MACRO_(timeZone, timeZone, "timeZone")                                       \
   MACRO_(timeZoneName, timeZoneName, "timeZoneName")                           \
   MACRO_(trailingZeroDisplay, trailingZeroDisplay, "trailingZeroDisplay")      \
