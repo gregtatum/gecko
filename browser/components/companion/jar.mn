@@ -19,7 +19,6 @@ browser.jar:
     content/browser/companion/mute.svg (content/mute.svg)
     content/browser/companion/muted.svg (content/muted.svg)
     content/browser/companion/firefoxParentBrand.png (content/firefoxParentBrand.png)
-    content/browser/companion/pip.svg (content/pip.svg)
     content/browser/companion/play.svg (content/play.svg)
     content/browser/companion/pause.svg (content/pause.svg)
     content/browser/companion/pocket.js (content/pocket.js)

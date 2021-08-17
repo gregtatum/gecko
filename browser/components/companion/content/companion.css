@@ -318,7 +318,7 @@ h2 {
 }
 
 .media .pip {
-  background-image: url("pip.svg");
+  background-image: url("chrome://global/skin/media/picture-in-picture-open.svg");
 }
 
 .pocket-content {
