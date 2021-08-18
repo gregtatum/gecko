@@ -664,7 +664,7 @@ pref("security.allow_eval_in_parent_process", false);
 pref("security.allow_parent_unrestricted_js_loads", false);
 
 // Unload tabs when available memory is running low
-pref("browser.tabs.unloadOnLowMemory", false);
+pref("browser.tabs.unloadOnLowMemory", true);
 
 pref("browser.ctrlTab.sortByRecentlyUsed", false);
 
@@ -2148,7 +2148,7 @@ pref("devtools.browsertoolbox.fission", false);
 #endif
 
 // This preference will enable watching top-level targets from the server side.
-pref("devtools.target-switching.server.enabled", false);
+pref("devtools.target-switching.server.enabled", true);
 
 // Toolbox Button preferences
 pref("devtools.command-button-pick.enabled", true);

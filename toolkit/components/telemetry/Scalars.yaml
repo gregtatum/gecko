@@ -1776,11 +1776,12 @@ os.environment:
   launch_method:
     bug_numbers:
       - 1685213
+      - 1725298
     description: >
       Records how Firefox was started on Windows.
       Currently will be one of "Desktop", "StartMenu" (including pins),
       "Taskbar", "OtherShortcut", or "Other"
-    expires: "94"
+    expires: "100"
     kind: string
     notification_emails:
       - application-update-telemetry-alerts@mozilla.com
@@ -1814,8 +1815,9 @@ os.environment:
   is_taskbar_pinned:
     bug_numbers:
       - 1685213
+      - 1725298
     description: Whether this app was pinned to taskbar on startup
-    expires: "94"
+    expires: "100"
     kind: boolean
     notification_emails:
       - application-update-telemetry-alerts@mozilla.com
@@ -3193,103 +3195,6 @@ telemetry:
       - 'thunderbird'
     record_in_processes:
       - all
-
-  state_file_save_errors:
-    bug_numbers:
-      - 1689438
-      - 1700835
-      - 1703343
-    description: >
-      How many times we errored out trying to save state.json
-    expires: "94"
-    kind: uint
-    notification_emails:
-      - chutten@mozilla.com
-    products:
-      - 'firefox'
-    release_channel_collection: opt-out
-    record_in_processes:
-      - main
-
-  generated_new_client_id:
-    bug_numbers:
-      - 1689438
-      - 1700835
-      - 1703343
-    description: >
-      Whether we generated a new client id this subsession.
-    expires: "94"
-    kind: boolean
-    notification_emails:
-      - chutten@mozilla.com
-    products:
-      - 'firefox'
-    release_channel_collection: opt-out
-    record_in_processes:
-      - main
-
-  loaded_client_id_doesnt_match_pref:
-    bug_numbers:
-      - 1689438
-      - 1700835
-      - 1703343
-    description: >
-      How often we loaded a client_id from disk that doesn't match
-      what's cached in the pref.
-    expires: "94"
-    kind: uint
-    notification_emails:
-      - chutten@mozilla.com
-    products:
-      - 'firefox'
-    release_channel_collection: opt-out
-    record_in_processes:
-      - main
-
-  state_file_read_errors:
-    bug_numbers:
-      - 1700835
-    description: >
-      How many times we errored out trying to load state.json
-    expires: "94"
-    kind: uint
-    notification_emails:
-      - chutten@mozilla.com
-    products:
-      - 'firefox'
-    release_channel_collection: opt-out
-    record_in_processes:
-      - main
-
-  using_pref_client_id:
-    bug_numbers:
-      - 1700835
-    description: >
-      How often we loaded the client_id from prefs instead of state.json.
-    expires: "94"
-    kind: uint
-    notification_emails:
-      - chutten@mozilla.com
-    products:
-      - 'firefox'
-    release_channel_collection: opt-out
-    record_in_processes:
-      - main
-
-  removed_client_ids:
-    bug_numbers:
-      - 1700835
-    description: >
-      How many times we removed the client ids.
-    expires: "94"
-    kind: uint
-    notification_emails:
-      - chutten@mozilla.com
-    products:
-      - 'firefox'
-    release_channel_collection: opt-out
-    record_in_processes:
-      - main
 
 
 telemetry.discarded:
