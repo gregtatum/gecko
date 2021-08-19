@@ -6,6 +6,10 @@
 
 var EXPORTED_SYMBOLS = ["TopLevelNavigationDelegateChild"];
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
+const SHARED_DATA_KEY = "TopLevelNavigationDelegate:IgnoreList";
+
 class TopLevelNavigationDelegateChild extends JSWindowActorChild {
   shouldNavigate(
     docShell,
@@ -25,6 +29,13 @@ class TopLevelNavigationDelegateChild extends JSWindowActorChild {
     // For now, for simplicities sake, any POST requests or load types other
     // than "normal" (see nsIDocShell::LoadCommand), we'll let through.
     if (hasPostData || !isNormalLoad) {
+      return true;
+    }
+
+    let { sharedData } = Services.cpmm;
+
+    let ignoreList = sharedData.get(SHARED_DATA_KEY);
+    if (ignoreList && ignoreList.has(this.browsingContext.browserId)) {
       return true;
     }
 

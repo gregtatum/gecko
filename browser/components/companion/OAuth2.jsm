@@ -8,6 +8,8 @@
  */
 var EXPORTED_SYMBOLS = ["OAuth2"];
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
@@ -22,6 +24,9 @@ XPCOMUtils.defineLazyServiceGetter(
   "@mozilla.org/uuid-generator;1",
   "nsIUUIDGenerator"
 );
+
+const TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY =
+  "TopLevelNavigationDelegate:IgnoreList";
 
 XPCOMUtils.defineLazyGlobalGetters(this, ["XMLHttpRequest"]);
 
@@ -70,9 +75,37 @@ const OAuthConnect = {
       params.set("prompt", "select_account");
 
       let url = new URL(oauth.authorizationEndpoint + "?" + params);
-      let tab = win.gBrowser.addTrustedTab(url.toString());
+      let tab = win.gBrowser.addTrustedTab("about:blank");
       win.gBrowser.selectedTab = tab;
+
+      // If the TopLevelNavigationDelegateChild is being used, we need it
+      // to never convert a top-level navigation into a new tab. We do this
+      // with sharedData instead of sending a message to the
+      // TopLevelNavigationDelegateChild directly, because we need that
+      // configuration to survive potential cross-domain process flips.
+      let browserId = tab.linkedBrowser.browsingContext.browserId;
+
+      let { sharedData } = Services.ppmm;
+      if (!sharedData.has(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY)) {
+        sharedData.set(
+          TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY,
+          new Set([browserId])
+        );
+      } else {
+        sharedData.get(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY).add(browserId);
+      }
+
+      // SharedData is, by default, lazy, and will only flush the changes
+      // on idle. We don't want to run the risk of racing with that message,
+      // so we flush manually here to ensure that the sharedData shows up
+      // in the content process for this tab before it loads anything.
+      sharedData.flush();
+
       win.focus();
+
+      tab.linkedBrowser.loadURI(url.toString(), {
+        triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+      });
 
       this.connections.set(id, {
         tab,
@@ -111,8 +144,12 @@ const OAuthConnect = {
       }
 
       this.connections.delete(id);
+      let browserId = tab.linkedBrowser.browsingContext.browserId;
 
       tab.ownerGlobal.gBrowser.removeTab(tab);
+
+      let { sharedData } = Services.ppmm;
+      sharedData.get(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY).delete(browserId);
 
       let code = params.get("code");
       oauth.requestAccessToken(code).then(resolve, reject);
