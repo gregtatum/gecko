@@ -305,7 +305,7 @@ function buildExtraServiceRows() {
   let extraServicesContainer = document.getElementById(
     "extra-services-container"
   );
-  let services = OnlineServices.getServices();
+  let services = OnlineServices.getAllServices();
   let nodes = [];
 
   for (let serviceData of extraServices) {

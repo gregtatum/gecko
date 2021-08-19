@@ -479,7 +479,7 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   async getEvents() {
-    let services = OnlineServices.getServices();
+    let services = OnlineServices.getAllServices();
     if (!services.length) {
       this.sendAsyncMessage("Companion:ServiceDisconnected", {
         servicesConnected: false,
@@ -612,7 +612,7 @@ class CompanionParent extends JSWindowActorParent {
         );
         let newFavicons = this.consumeCachedFaviconsToSend();
         let currentURI = this.getCurrentURI();
-        let servicesConnected = !!OnlineServices.getServices().length;
+        let servicesConnected = !!OnlineServices.getAllServices().length;
         let globalHistory = this.maybeGetGlobalHistory();
         this.sendAsyncMessage("Companion:Setup", {
           tabs,
@@ -732,7 +732,7 @@ class CompanionParent extends JSWindowActorParent {
               Ci.nsILocalHandlerApp
             ) {
               handlerInfo.preferredApplicationHandler.launchWithURI(uri);
-              return;
+              return null;
             }
           }
         }
@@ -753,7 +753,7 @@ class CompanionParent extends JSWindowActorParent {
       case "Companion:setCharPref": {
         let { name, value } = message.data;
         if (!this.validateCompanionPref(name)) {
-          return;
+          return null;
         }
         Services.prefs.setCharPref(name, value);
         break;
@@ -761,7 +761,7 @@ class CompanionParent extends JSWindowActorParent {
       case "Companion:setBoolPref": {
         let { name, value } = message.data;
         if (!this.validateCompanionPref(name)) {
-          return;
+          return null;
         }
         Services.prefs.setBoolPref(name, value);
         break;
@@ -769,7 +769,7 @@ class CompanionParent extends JSWindowActorParent {
       case "Companion:setIntPref": {
         let { name, value } = message.data;
         if (!this.validateCompanionPref(name)) {
-          return;
+          return null;
         }
         Services.prefs.setIntPref(name, value);
         break;
@@ -785,7 +785,12 @@ class CompanionParent extends JSWindowActorParent {
         hist.setView(hist.views[index]);
         break;
       }
+      case "Companion:GetDocumentTitle": {
+        let { url } = message.data;
+        return OnlineServices.getDocumentTitle(url);
+      }
     }
+    return null;
   }
 
   onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags, aIsSimulated) {

@@ -64,6 +64,9 @@ class CompanionChild extends JSWindowActorChild {
           sendAsyncMessage(name, detail) {
             self.sendAsyncMessage(name, detail);
           },
+          sendQuery(name, detail) {
+            return self.sendQuery(name, detail);
+          },
           getCharPref(name, defaultValue) {
             return Services.prefs.getCharPref(name, defaultValue);
           },

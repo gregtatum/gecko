@@ -3,7 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { openLink, openMeeting, MozLitElement } from "./widget-utils.js";
-import { css, html, classMap } from "./lit.all.js";
+import { css, html, classMap, until } from "./lit.all.js";
 
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
@@ -362,6 +362,24 @@ class CalendarEvent extends MozLitElement {
     }
   }
 
+  _cachedDocumentTitles = new Map();
+
+  getCachedDocumentTitle(url, text) {
+    return this._cachedDocumentTitles.get(url) || text;
+  }
+
+  async getDocumentTitle(url) {
+    let title = await window.CompanionUtils.sendQuery(
+      "Companion:GetDocumentTitle",
+      { url }
+    );
+    if (title) {
+      this._cachedDocumentTitles.set(url, title);
+      return title;
+    }
+    throw new Error("Couldn't get a better document title");
+  }
+
   eventLinkTemplate(link) {
     let favicon =
       window.CompanionUtils.getFavicon(link.url) ||
@@ -378,7 +396,11 @@ class CalendarEvent extends MozLitElement {
       >
         <img src=${favicon} />
         <span class="line-clamp">
-          ${text}
+          ${until(
+            this.getDocumentTitle(link.url),
+            this.getCachedDocumentTitle(link.url, text),
+            text
+          )}
         </span>
       </a>
     `;

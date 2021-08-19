@@ -151,7 +151,7 @@ function getConferenceInfo(result, links) {
 
 let linksToIgnore = ["https://aka.ms/JoinTeamsMeeting"];
 
-async function processLink(url, text) {
+function processLink(url, text) {
   try {
     url = new URL(url);
   } catch (e) {
@@ -171,24 +171,14 @@ async function processLink(url, text) {
   }
   let link = {};
   link.url = url.href;
-  if (url.host === "docs.google.com" || url.host === "drive.google.com") {
-    for (let service of ServiceInstances) {
-      if (service.app.startsWith("google")) {
-        let documentName = await service.getTitle(url.href);
-        if (documentName) {
-          link.text = documentName;
-          return link;
-        }
-      }
-    }
-  }
-  if ((text || text == "") && url.href != text) {
+
+  if (text && url.href != text) {
     link.text = text;
   }
   return link;
 }
 
-async function getLinkInfo(result) {
+function getLinkInfo(result) {
   let doc;
   let links = [];
   let parser = new DOMParser();
@@ -200,17 +190,22 @@ async function getLinkInfo(result) {
     description = result.description;
   }
   // Descriptions from both providers use HTML entities in some URLs.
-  // The only one that truly affects us is &amp;
+  // The only ones that seem to affect us are &amp; and &nbsp;
   // We also remove wordbreak tags as Google inserts them in URLs.
-  description = description?.replace(/&amp;/g, "&").replace(/<wbr>/g, "");
+  description = description
+    ?.replace(/&amp;/g, "&")
+    .replace(/&nbsp;/g, " ")
+    .replace(/<wbr>/g, "");
   doc = parser.parseFromString(description, "text/html");
   let anchors = doc.getElementsByTagName("a");
   if (anchors.length) {
     for (let anchor of anchors) {
-      if (!anchor.href) {
+      // We explicitly ignore anchors with empty text content
+      // as they wouldn't show up in the calendar UI anyway.
+      if (!anchor.href || anchor.textContent === "") {
         continue;
       }
-      let link = await processLink(anchor.href, anchor.textContent);
+      let link = processLink(anchor.href, anchor.textContent);
       if (link) {
         links.push(link);
       }
@@ -237,7 +232,7 @@ async function getLinkInfo(result) {
       ) {
         continue;
       }
-      let link = await processLink(descriptionLink);
+      let link = processLink(descriptionLink);
       if (link) {
         links.push(link);
       }
@@ -454,7 +449,7 @@ class GoogleService {
             event.summary = result.summary;
             event.start = new Date(result.start.dateTime);
             event.end = new Date(result.end.dateTime);
-            let links = await getLinkInfo(result);
+            let links = getLinkInfo(result);
             event.conference = getConferenceInfo(result, links);
             event.links = links.filter(link => link.type != "conferencing");
             event.calendar = {};
@@ -622,7 +617,7 @@ class GoogleService {
     this.mailCount = parseInt(doc.querySelector("fullcount").textContent);
   }
 
-  async getTitle(url) {
+  async getDocumentTitle(url) {
     url = new URL(url);
     if (!url.hostname.endsWith(".google.com")) {
       return null;
@@ -825,7 +820,7 @@ class MicrosoftService {
             event.summary = result.subject;
             event.start = new Date(result.start.dateTime + "Z");
             event.end = new Date(result.end.dateTime + "Z");
-            let links = await getLinkInfo(result);
+            let links = getLinkInfo(result);
             event.conference = getConferenceInfo(result, links);
             event.links = links.filter(link => link.type != "conferencing");
             event.calendar = {};
@@ -1032,35 +1027,46 @@ const OnlineServices = {
     this.persist();
   },
 
+  getServices(type) {
+    return [...ServiceInstances].filter(service =>
+      service.app.startsWith(type)
+    );
+  },
+
   hasService(type) {
-    for (let service of ServiceInstances) {
-      if (service.app.startsWith(type)) {
-        return true;
-      }
-    }
-    return false;
+    return !!this.getServices(type).length;
+  },
+
+  getInboxURL(type) {
+    return this.getServices(type).find(service => service.inboxURL)?.inboxURL;
   },
 
   getMailCount(type) {
     let mailCount = 0;
-    for (let service of ServiceInstances) {
-      if (service.app.startsWith(type)) {
-        mailCount += service.mailCount;
-      }
+    for (let service of this.getServices(type)) {
+      mailCount += service.mailCount;
     }
     return mailCount;
   },
 
-  getInboxURL(type) {
-    for (let service of ServiceInstances) {
-      if (service.app.startsWith(type)) {
-        return service.inboxURL;
+  async getDocumentTitle(url) {
+    if (
+      url.startsWith("https://docs.google.com") ||
+      url.startsWith("https://drive.google.com")
+    ) {
+      let documentNamePromises = await Promise.allSettled(
+        this.getServices("google").map(service => service.getDocumentTitle(url))
+      );
+      for (let promise of documentNamePromises) {
+        if (promise.value) {
+          return promise.value;
+        }
       }
     }
     return null;
   },
 
-  getServices() {
+  getAllServices() {
     load();
 
     return [...ServiceInstances];
@@ -1097,7 +1103,7 @@ const OnlineServices = {
   },
 
   async fetchEvents() {
-    let servicesData = this.getServices();
+    let servicesData = this.getAllServices();
     if (!servicesData.length) {
       if (this._promiseRefresh) {
         this._promiseRefresh();
