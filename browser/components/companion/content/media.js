@@ -31,7 +31,7 @@ export class MediaList extends HTMLElement {
 
   connectedCallback() {
     window.addEventListener("Companion:TabAdded", this.windowListener);
-    window.addEventListener("Companion:MediaEvent", this.windowListener);
+    window.addEventListener("Companion:TabRemoved", this.windowListener);
     window.addEventListener("Companion:TabAttrModified", this.windowListener);
     window.addEventListener(
       "Companion:TabPipToggleChanged",
@@ -42,7 +42,7 @@ export class MediaList extends HTMLElement {
 
   disconnectedCallback() {
     window.removeEventListener("Companion:TabAdded", this.windowListener);
-    window.removeEventListener("Companion:MediaEvent", this.windowListener);
+    window.removeEventListener("Companion:TabRemoved", this.windowListener);
     window.removeEventListener(
       "Companion:TabAttrModified",
       this.windowListener

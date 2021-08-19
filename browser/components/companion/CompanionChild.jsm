@@ -155,6 +155,11 @@ class CompanionChild extends JSWindowActorChild {
         this.updateTab(message.data);
         break;
       }
+      case "Companion:TabRemoved": {
+        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+        waivedContent.CompanionUtils._tabs.delete(message.data.browserId);
+        break;
+      }
       case "Companion:SnapshotsChanged": {
         let { snapshots, newFavicons } = message.data;
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
