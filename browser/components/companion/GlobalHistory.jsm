@@ -90,10 +90,6 @@ class View {
     this.#userTitle = userTitle;
   }
 
-  get state() {
-    return this.#internalView.state;
-  }
-
   get iconURL() {
     return this.#internalView.iconURL;
   }
