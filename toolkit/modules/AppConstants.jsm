@@ -14,8 +14,8 @@ this.EXPORTED_SYMBOLS = ["AppConstants"];
 
 // Immutable for export.
 this.AppConstants = Object.freeze({
-  PINEBUILD:
-#ifdef PINEBUILD
+  PROCLIENT_ENABLED:
+#ifdef PROCLIENT_ENABLED
   true,
 #else
   false,

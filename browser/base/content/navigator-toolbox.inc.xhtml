@@ -118,7 +118,7 @@
            overflowpanel="widget-overflow"
            context="toolbar-context-menu">
 
-#ifdef PINEBUILD
+#ifdef PROCLIENT_WINDOW
     <html:template id="template-active-view-manager"
       xmlns="http://www.w3.org/1999/xhtml"
       xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
@@ -128,39 +128,39 @@
     </html:template>
 
     <vbox pack="center">
-      <hbox id="pinebuild-mac-buttonbox"/>
+      <hbox id="companion-mac-buttonbox"/>
     </vbox>
 
     <toolbartabstop/>
-    <hbox id="pinebuild-toolbar">
+    <hbox id="companion-toolbar">
       <toolbarbutton id="companion-sidebar-button" class="toolbarbutton-1"
                      oncommand="CompanionService.toggleCompanion()"
                      onclick="checkForMiddleClick(this, event);"/>
-      <toolbarbutton id="pinebuild-back-button" class="toolbarbutton-1"
+      <toolbarbutton id="companion-back-button" class="toolbarbutton-1"
                      data-l10n-id="toolbar-button-back-2"
                      command="Browser:BackOrBackDuplicate"
                      onclick="checkForMiddleClick(this, event);"
                      tooltip="back-button-tooltip"
                      context="backForwardMenu"/>
-      <toolbarbutton id="pinebuild-forward-button" class="toolbarbutton-1"
+      <toolbarbutton id="companion-forward-button" class="toolbarbutton-1"
                      data-l10n-id="toolbar-button-back-2"
                      command="Browser:ForwardOrForwardDuplicate"
                      onclick="checkForMiddleClick(this, event);"
                      tooltip="forward-button-tooltip"
                      context="backForwardMenu"/>
-      <toolbarbutton id="pinebuild-reload-button" class="toolbarbutton-1"
+      <toolbarbutton id="companion-reload-button" class="toolbarbutton-1"
                      data-l10n-id="toolbar-button-reload"
                      command="Browser:ReloadOrDuplicate"
                      onclick="checkForMiddleClick(this, event);"
                      tooltip="dynamic-shortcut-tooltip"/>
-      <toolbarbutton id="pinebuild-stop-button" class="toolbarbutton-1"
+      <toolbarbutton id="companion-stop-button" class="toolbarbutton-1"
                      data-l10n-id="toolbar-button-stop"
                      command="Browser:Stop"
                      tooltip="dynamic-shortcut-tooltip"/>
-      <toolbarbutton id="pinebuild-copy-button" class="toolbarbutton-1"
+      <toolbarbutton id="companion-copy-button" class="toolbarbutton-1"
                      onclick="CompanionService.copy(this, gBrowser.currentURI.spec);"/>
-      <toolbarbutton id="pinebuild-snapshot-button" class="toolbarbutton-1"
-                     onclick="SaveSnapshot(gBrowser.currentURI.spec);"/>
+      <toolbarbutton id="companion-snapshot-button" class="toolbarbutton-1"
+                     onclick="ProClientSaveSnapshot(gBrowser.currentURI.spec);"/>
     </hbox>
 #else
     <toolbartabstop/>
@@ -241,8 +241,8 @@
                 <description id="tracking-protection-icon-tooltip-label" class="tooltip-label"/>
               </tooltip>
             </box>
-#ifdef PINEBUILD
-            <box id="pinebuild-search-icon-box" align="center">
+#ifdef PROCLIENT_WINDOW
+            <box id="proclient-search-icon-box" align="center">
               <image id="search-icon"/>
             </box>
 #endif
@@ -525,8 +525,8 @@
                      data-l10n-id="browser-window-close-button"
                      oncommand="BrowserTryToCloseWindow(event);"/>
     </hbox>
-#ifdef PINEBUILD
-    <hbox id="pinebuild-window-controls" pack="end" skipintoolbarset="true"
+#ifdef PROCLIENT_WINDOW
+    <hbox id="companion-window-controls" pack="end" skipintoolbarset="true"
           style="-moz-box-ordinal-group: 1000;">
 #include titlebar-items.inc.xhtml
     </hbox>
@@ -597,7 +597,7 @@
     </toolbaritem>
   </toolbar>
 
-#ifndef PINEBUILD
+#ifndef PROCLIENT_WINDOW
   <html:template id="tab-notification-deck-template">
     <html:named-deck id="tab-notification-deck"></html:named-deck>
   </html:template>

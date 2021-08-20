@@ -967,8 +967,8 @@ var gMainPane = {
    * on the value of the browser.privatebrowsing.autostart pref.
    */
   updateBrowserStartupUI() {
-    if (AppConstants.PINEBUILD) {
-      // Session restore is not available in pinebuild
+    if (AppConstants.PROCLIENT_ENABLED) {
+      // Session restore is not available in Pro Client
       document.getElementById("startupPageBox").hidden = true;
     }
 

@@ -23,7 +23,7 @@
     <command id="cmd_newNavigatorTabNoEvent" oncommand="BrowserOpenTab();"/>
     <command id="Browser:OpenFile"  oncommand="BrowserOpenFileWindow();"/>
     <command id="Browser:SavePage" oncommand="saveBrowser(gBrowser.selectedBrowser);"/>
-    <command id="Browser:SaveSnapshot" oncommand="SaveSnapshot(gBrowser.currentURI.spec);"/>
+    <command id="Browser:SaveSnapshot" oncommand="ProClientSaveSnapshot(gBrowser.currentURI.spec);"/>
 
     <command id="Browser:SendLink"
              oncommand="MailIntegration.sendLinkForBrowser(gBrowser.selectedBrowser);"/>
@@ -36,7 +36,7 @@
     <command id="cmd_close" oncommand="BrowserCloseTabOrWindow(event);"/>
     <command id="cmd_closeWindow" oncommand="BrowserTryToCloseWindow(event)"/>
     <command id="cmd_toggleMute" oncommand="gBrowser.toggleMuteAudioOnMultiSelectedTabs(gBrowser.selectedTab)"/>
-#ifndef PINEBUILD
+#ifndef PROCLIENT_WINDOW
     <command id="cmd_CustomizeToolbars" oncommand="gCustomizeMode.enter()"/>
 #endif
     <command id="cmd_toggleOfflineStatus" oncommand="BrowserOffline.toggleOfflineStatus();"/>
@@ -127,7 +127,7 @@
          data-l10n-id="window-new-shortcut"
          command="cmd_newNavigator"
          modifiers="accel" reserved="true"/>
-#ifdef PINEBUILD
+#ifdef PROCLIENT_WINDOW
     <key id="key_newNavigatorTab" data-l10n-id="tab-new-shortcut" modifiers="accel"
          command="Browser:OpenLocation" reserved="true"/>
 #else
@@ -186,7 +186,7 @@
     <key id="key_undo"
          data-l10n-id="text-action-undo-shortcut"
          modifiers="accel"/>
-#ifdef PINEBUILD
+#ifdef PROCLIENT_WINDOW
     <key id="key_saveSnapshot" data-l10n-id="bookmark-this-page-shortcut" command="Browser:SaveSnapshot" modifiers="accel"/>
 #endif
     <key id="key_redo"
@@ -270,7 +270,7 @@
     <key data-l10n-id="search-find-again-shortcut-alt" command="cmd_findPrevious" modifiers="shift"/>
 
     <key id="manBookmarkKb" data-l10n-id="bookmark-show-library-shortcut" command="Browser:ShowAllBookmarks" modifiers="accel,shift"/>
-#ifndef PINEBUILD
+#ifndef PROCLIENT_WINDOW
     <key id="addBookmarkAsKb" data-l10n-id="bookmark-this-page-shortcut" command="Browser:AddBookmarkAs" modifiers="accel"/>
     <key id="bookmarkAllTabsKb"
          data-l10n-id="bookmark-this-page-shortcut"
@@ -292,7 +292,7 @@
     <key id="key_stop_mac" modifiers="accel" data-l10n-id="nav-stop-shortcut" command="Browser:Stop"/>
 #endif
 
-#ifndef PINEBUILD
+#ifndef PROCLIENT_WINDOW
     <key id="key_gotoHistory"
          data-l10n-id="history-sidebar-shortcut"
 #ifdef XP_MACOSX

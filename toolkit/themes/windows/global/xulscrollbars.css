@@ -92,8 +92,8 @@ scrollbar[orient="vertical"] > scrollbarbutton[type="decrement"] {
   -moz-default-appearance: scrollbarbutton-up;
 }
 
-/* Experimental scrollbar styling changes to support pinebuild, which do not
-   work in high contrast mode. */
+/* Experimental scrollbar styling changes to support MR2, which do not work
+   in high contrast mode. */
 @supports -moz-bool-pref("browser.companion.styleoverrides") {
   @media not (prefers-contrast) {
     /* These styles are pulled directly from the devtools
@@ -137,7 +137,7 @@ scrollbar[orient="vertical"] > scrollbarbutton[type="decrement"] {
     }
     /* End of responsive scrollbar styles */
 
-    /* Start of pinebuild scrollbar styling, see MR2-178 for more */
+    /* Start of MR2 scrollbar styling, see MR2-178 for more */
     scrollbar[orient="vertical"] {
       margin-left: -16px;
       min-width: 16px;
@@ -164,6 +164,6 @@ scrollbar[orient="vertical"] > scrollbarbutton[type="decrement"] {
       border-radius: 0 !important;
       background-color: #7F7F7F !important;
     }
-    /* End of pinebuild scrollbar styling */
+    /* End of MR2 scrollbar styling */
   }
 }

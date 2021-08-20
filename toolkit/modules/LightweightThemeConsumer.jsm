@@ -11,7 +11,7 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/AppConstants.jsm"
 );
 
-const DEFAULT_THEME_ID = AppConstants.PINEBUILD
+const DEFAULT_THEME_ID = AppConstants.PROCLIENT_ENABLED
   ? "firefox-compact-light@mozilla.org"
   : "default-theme@mozilla.org";
 const LIGHT_THEME_ID = "firefox-compact-light@mozilla.org";
@@ -269,7 +269,7 @@ LightweightThemeConsumer.prototype = {
 
     // In Linux, the default theme picks up the right colors from dark GTK themes.
     let useDarkTheme;
-    if (AppConstants.PINEBUILD) {
+    if (AppConstants.PROCLIENT_ENABLED) {
       useDarkTheme = false;
     } else {
       useDarkTheme =
@@ -280,7 +280,7 @@ LightweightThemeConsumer.prototype = {
     }
 
     let theme = useDarkTheme ? themeData.darkTheme : themeData.theme;
-    if (!theme || AppConstants.PINEBUILD) {
+    if (!theme || AppConstants.PROCLIENT_ENABLED) {
       theme.id = DEFAULT_THEME_ID;
     }
 
@@ -344,7 +344,7 @@ LightweightThemeConsumer.prototype = {
 
     this._lastExperimentData = {};
 
-    if (!active || !experiment || AppConstants.PINEBUILD) {
+    if (!active || !experiment || AppConstants.PROCLIENT_ENABLED) {
       return;
     }
 

@@ -51,7 +51,7 @@ browser.jar:
         content/browser/browser-gestureSupport.js           (content/browser-gestureSupport.js)
         content/browser/browser-pageActions.js              (content/browser-pageActions.js)
         content/browser/browser-places.js                   (content/browser-places.js)
-*       content/browser/browser-pinebuild.xhtml             (content/browser-pinebuild.xhtml)
+*       content/browser/browser-proclient.xhtml             (content/browser-proclient.xhtml)
         content/browser/browser-safebrowsing.js             (content/browser-safebrowsing.js)
         content/browser/browser-sidebar.js                  (content/browser-sidebar.js)
         content/browser/browser-siteIdentity.js             (content/browser-siteIdentity.js)

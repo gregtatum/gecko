@@ -594,7 +594,8 @@ pref("browser.tabs.insertRelatedAfterCurrent", true);
 // for non-related links. Note that if this is set to true, it will trump
 // the value of browser.tabs.insertRelatedAfterCurrent.
 pref("browser.tabs.insertAfterCurrent", false);
-#ifdef PINEBUILD
+#ifdef PROCLIENT_ENABLED
+  // MR2 don't warn on close
   pref("browser.tabs.warnOnClose", false);
 #else
   pref("browser.tabs.warnOnClose", true);
@@ -1845,7 +1846,7 @@ pref("browser.contentblocking.cfr-milestone.milestones", "[1000, 5000, 10000, 25
 // Always enable newtab segregation using containers
 pref("privacy.usercontext.about_newtab_segregation.enabled", true);
 // Enable Contextual Identity Containers
-#if defined(NIGHTLY_BUILD) && !defined(PINEBUILD)
+#if defined(NIGHTLY_BUILD) && !defined(PROCLIENT_ENABLED)
   pref("privacy.userContext.enabled", true);
   pref("privacy.userContext.ui.enabled", true);
 #else
@@ -2566,7 +2567,8 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("extensions.translations.disabled", true);
 #endif
 
-#ifdef PINEBUILD
+// MR2
+#ifdef PROCLIENT_ENABLED
   pref("browser.contentblocking.category", "strict");
   pref("privacy.trackingprotection.enabled", true);
   pref("privacy.trackingprotection.socialtracking.enabled", true);

@@ -64,14 +64,14 @@ const ThemeVariableMap = [
         if (!rgbaChannels) {
           Services.prefs.setIntPref(
             "browser.theme.toolbar-theme",
-            AppConstants.PINEBUILD ? 1 : 2
+            AppConstants.PROCLIENT_ENABLED ? 1 : 2
           );
           return null;
         }
         const { r, g, b, a } = rgbaChannels;
         Services.prefs.setIntPref(
           "browser.theme.toolbar-theme",
-          _isColorDark(r, g, b) && !AppConstants.PINEBUILD ? 0 : 1
+          _isColorDark(r, g, b) && !AppConstants.PROCLIENT_ENABLED ? 0 : 1
         );
         return `rgba(${r}, ${g}, ${b}, ${a})`;
       },
@@ -184,7 +184,9 @@ const ThemeVariableMap = [
     "--sidebar-border-color",
     {
       lwtProperty: "sidebar_border",
-      optionalElementID: AppConstants.PINEBUILD ? "browser-outer" : "browser",
+      optionalElementID: AppConstants.PROCLIENT_ENABLED
+        ? "browser-outer"
+        : "browser",
     },
   ],
 ];

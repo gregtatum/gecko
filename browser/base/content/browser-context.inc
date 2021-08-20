@@ -72,7 +72,7 @@
       <menuitem id="context-openlinkincurrent"
                 data-l10n-id="main-context-menu-open-link"
                 oncommand="gContextMenu.openLinkInCurrent();"/>
-#ifndef PINEBUILD
+#ifndef PROCLIENT_WINDOW
 # label and data-usercontextid are dynamically set.
       <menuitem id="context-openlinkincontainertab"
                 accesskey="&openLinkCmdInTab.accesskey;"
@@ -181,7 +181,7 @@
                 data-l10n-id="main-context-menu-media-show-controls"
                 oncommand="gContextMenu.mediaCommand('showcontrols');"/>
       <menuseparator id="context-media-sep-video-commands"/>
-#ifndef PINEBUILD
+#ifndef PROCLIENT_WINDOW
       <menuitem id="context-viewvideo"
                 data-l10n-id="main-context-menu-video-view-new-tab"
                 oncommand="gContextMenu.viewMedia(event);"/>
@@ -194,7 +194,7 @@
       <menuitem id="context-reloadimage"
                 data-l10n-id="main-context-menu-image-reload"
                 oncommand="gContextMenu.reloadImage();"/>
-#ifndef PINEBUILD
+#ifndef PROCLIENT_WINDOW
       <menuitem id="context-viewimage"
                 data-l10n-id="main-context-menu-image-view-new-tab"
                 oncommand="gContextMenu.viewMedia(event);"/>
@@ -326,7 +326,7 @@
           <menuitem id="context-showonlythisframe"
                     data-l10n-id="main-context-menu-frame-show-this"
                     oncommand="gContextMenu.showOnlyThisFrame();"/>
-#ifndef PINEBUILD
+#ifndef PROCLIENT_WINDOW
           <menuitem id="context-openframeintab"
                     data-l10n-id="main-context-menu-frame-open-tab"
                     oncommand="gContextMenu.openFrameInTab();"/>
@@ -395,7 +395,7 @@
       <menuitem hidden="true" id="context-bidi-page-direction-toggle"
                 data-l10n-id="main-context-menu-bidi-switch-page"
                 oncommand="gContextMenu.switchPageDirection();"/>
-#ifndef PINEBUILD
+#ifndef PROCLIENT_WINDOW
       <menuseparator id="inspect-separator" hidden="true"/>
       <menuitem id="context-viewpartialsource-selection"
                 data-l10n-id="main-context-menu-view-selection-source"

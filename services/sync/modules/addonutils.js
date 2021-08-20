@@ -331,7 +331,7 @@ AddonUtilsInternal.prototype = {
    *        for the valid elements.
    */
   canInstallAddon(addon, options) {
-    if (AppConstants.PINEBUILD) {
+    if (AppConstants.PROCLIENT_ENABLED) {
       return false;
     }
     // sourceURI presence isn't enforced by AddonRepository. So, we skip

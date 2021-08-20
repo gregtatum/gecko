@@ -257,7 +257,7 @@ var CustomizableUIInternal = {
       "save-to-pocket-button",
       "downloads-button",
       AppConstants.MOZ_DEV_EDITION ? "developer-button" : null,
-      AppConstants.PINEBUILD ? null : "sidebar-button",
+      AppConstants.PROCLIENT_ENABLED ? null : "sidebar-button",
       "fxa-toolbar-menu-button",
     ].filter(name => name);
 

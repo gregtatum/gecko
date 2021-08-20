@@ -3311,7 +3311,7 @@ static bool TelemetryPrefValue() {
   // toolkit.telemetry.enabled determines whether we send "extended" data.
   // We only want extended data from pre-release channels due to size.
 
-#ifdef PINEBUILD
+#ifdef PROCLIENT_ENABLED
   return true;
 #else
   constexpr auto channel = MOZ_STRINGIFY(MOZ_UPDATE_CHANNEL) ""_ns;

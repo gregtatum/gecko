@@ -19,7 +19,7 @@
         <vbox id="widget-overflow-fixed-list" class="widget-overflow-list" hidden="true" />
       </vbox>
       <toolbarseparator />
-#ifndef PINEBUILD
+#ifndef PROCLIENT_WINDOW
       <toolbarbutton command="cmd_CustomizeToolbars"
                       id="overflowMenu-customize-button"
                       class="subviewbutton panel-subview-footer-button"
@@ -60,7 +60,7 @@
               closemenu="single"
               class="customize-context-removeFromPanel"
               data-lazy-l10n-id="toolbar-context-menu-remove-from-toolbar"/>
-#ifndef PINEBUILD
+#ifndef PROCLIENT_WINDOW
     <menuseparator/>
     <menuitem command="cmd_CustomizeToolbars"
               class="viewCustomizeToolbar"
@@ -206,7 +206,7 @@
               accesskey="&customizeMenu.addToOverflowMenu.accesskey;"
               label="&customizeMenu.addToOverflowMenu.label;"/>
   </menupopup>
-#ifndef PINEBUILD
+#ifndef PROCLIENT_WINDOW
   <menupopup id="customizationPanelContextMenu">
     <menuitem command="cmd_CustomizeToolbars"
               accesskey="&customizeMenu.addMoreItems.accesskey;"
