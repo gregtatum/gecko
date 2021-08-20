@@ -73,7 +73,7 @@ var localProviderModules = {
     "resource:///modules/UrlbarProviderUnitConversion.jsm",
 };
 
-if (AppConstants.PROCLIENT_ENABLED) {
+if (AppConstants.PINEBUILD) {
   localProviderModules.UrlbarProviderTopSitesButtons =
     "resource:///modules/UrlbarProviderTopSitesButtons.jsm";
   const RECENT_SEARCHES_PREF = "browser.companion.urlbar.recentsearches";

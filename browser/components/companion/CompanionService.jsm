@@ -13,7 +13,7 @@ const { E10SUtils } = ChromeUtils.import(
   "resource://gre/modules/E10SUtils.jsm"
 );
 
-if (!AppConstants.PROCLIENT_ENABLED) {
+if (!AppConstants.PINEBUILD) {
   throw new Error(
     "We should not be importing the CompanionService if procient is not enabled."
   );

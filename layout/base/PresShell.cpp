@@ -5296,7 +5296,7 @@ nscolor PresShell::GetDefaultBackgroundColorToDraw() {
     return backgroundColor;
   }
 
-#ifndef PROCLIENT_ENABLED
+#ifndef PINEBUILD
   // Use a dark background for top-level about:blank that is inaccessible to
   // content JS.
   Document* doc = GetDocument();

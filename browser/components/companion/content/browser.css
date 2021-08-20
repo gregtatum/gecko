@@ -44,7 +44,7 @@
   display: none;
 }
 
-#urlbar:not(.searchButton) > #urlbar-input-container > #proclient-search-icon-box {
+#urlbar:not(.searchButton) > #urlbar-input-container > #pinebuild-search-icon-box {
   /* Ensure that when the user clicks on the contents of this box, it focuses the url bar */
   pointer-events: none;
   padding-inline: var(--urlbar-icon-padding);
@@ -54,7 +54,7 @@
   margin-inline-end: var(--identity-box-margin-inline);
 }
 
-#urlbar:not(.searchButton) > #urlbar-input-container > #proclient-search-icon-box #search-icon {
+#urlbar:not(.searchButton) > #urlbar-input-container > #pinebuild-search-icon-box #search-icon {
   -moz-context-properties: fill, fill-opacity;
   list-style-image: url(chrome://global/skin/icons/search-glass.svg);
 }
@@ -316,7 +316,7 @@
   box-shadow: unset !important;
 }
 
-.urlbarView-proClient {
+.urlbarView-pinebuild {
   margin-top: 5px;
   overflow: visible !important;
   border-radius: 10px;

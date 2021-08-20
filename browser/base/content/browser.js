@@ -402,7 +402,7 @@ XPCOMUtils.defineLazyGetter(this, "gNotificationBox", () => {
     element.setAttribute("notificationside", "top");
     element.toggleAttribute("prepend-notifications", true);
     // With Proton enabled all notification boxes are at the top, built into the browser chrome.
-    if (!AppConstants.PROCLIENT_ENABLED) {
+    if (!AppConstants.PINEBUILD) {
       let tabNotifications = document.getElementById("tab-notification-deck");
       // Notification messages use the CSS box model. When using
       // negative margins on those notification messages to animate them in or out,
@@ -413,7 +413,7 @@ XPCOMUtils.defineLazyGetter(this, "gNotificationBox", () => {
       outer.appendChild(element);
       gNavToolbox.insertBefore(outer, tabNotifications);
     } else {
-      // Don't allow notifications to be drawn above the Pro Client's persistent sidebar.
+      // Don't allow notifications to be drawn above the pinebuild's persistent sidebar.
       // Instead, draw them above the web content only. (See MR2-184.)
       // The simplest way to accomplish this is to insert before the browser element.
       let browser = document.getElementById("browser");
@@ -743,7 +743,7 @@ function UpdateBackForwardCommands(aWebNavigation) {
 
   var backDisabled = backCommand.hasAttribute("disabled");
   var forwardDisabled = forwardCommand.hasAttribute("disabled");
-  let canGoBack = AppConstants.PROCLIENT_ENABLED
+  let canGoBack = AppConstants.PINEBUILD
     ? gGlobalHistory.canGoBack
     : aWebNavigation.canGoBack;
   if (backDisabled == canGoBack) {
@@ -754,7 +754,7 @@ function UpdateBackForwardCommands(aWebNavigation) {
     }
   }
 
-  let canGoForward = AppConstants.PROCLIENT_ENABLED
+  let canGoForward = AppConstants.PINEBUILD
     ? gGlobalHistory.canGoForward
     : aWebNavigation.canGoForward;
   if (forwardDisabled == canGoForward) {
@@ -1715,7 +1715,7 @@ var gBrowserInit = {
     delete window._gBrowser;
     gBrowser.init();
 
-    if (AppConstants.PROCLIENT_ENABLED) {
+    if (AppConstants.PINEBUILD) {
       CompanionService.addBrowserWindow(window);
       gGlobalHistory.addEventListener("ViewChanged", UpdateBackForwardCommands);
       gGlobalHistory.addEventListener("ViewAdded", UpdateBackForwardCommands);
@@ -1789,7 +1789,7 @@ var gBrowserInit = {
     gBrowser.addProgressListener(window.XULBrowserWindow);
     gBrowser.addTabsProgressListener(window.TabsProgressListener);
 
-    if (!AppConstants.PROCLIENT_ENABLED) {
+    if (!AppConstants.PINEBUILD) {
       SidebarUI.init();
     }
 
@@ -2049,7 +2049,7 @@ var gBrowserInit = {
       // Enable the Restore Last Session command if needed
       RestoreLastSessionObserver.init();
 
-      if (!AppConstants.PROCLIENT_ENABLED) {
+      if (!AppConstants.PINEBUILD) {
         SidebarUI.startDelayedLoad();
       }
 
@@ -2516,7 +2516,7 @@ var gBrowserInit = {
 
     CaptivePortalWatcher.uninit();
 
-    if (!AppConstants.PROCLIENT_ENABLED) {
+    if (!AppConstants.PINEBUILD) {
       SidebarUI.uninit();
     }
 
@@ -2694,7 +2694,7 @@ function gotoHistoryIndex(aEvent) {
 function BrowserForward(aEvent) {
   // goForward returns true if it handled the request.
   // otherwise, let the current code do its thing.
-  if (AppConstants.PROCLIENT_ENABLED && gGlobalHistory.goForward()) {
+  if (AppConstants.PINEBUILD && gGlobalHistory.goForward()) {
     return;
   }
   let where = whereToOpenLink(aEvent, false, true);
@@ -2711,7 +2711,7 @@ function BrowserForward(aEvent) {
 function BrowserBack(aEvent) {
   // goBack returns true if it handled the request.
   // otherwise, let the current code do its thing.
-  if (AppConstants.PROCLIENT_ENABLED && gGlobalHistory.goBack()) {
+  if (AppConstants.PINEBUILD && gGlobalHistory.goBack()) {
     return;
   }
   let where = whereToOpenLink(aEvent, false, true);
@@ -3071,7 +3071,7 @@ function BrowserTryToCloseWindow(event) {
  * Adds a specified URL as a Snapshot.
  * @param {string} The URL that will be added as a snapshot.
  */
-function ProClientSaveSnapshot(url) {
+function SaveSnapshot(url) {
   Snapshots.add({ url, userPersisted: true });
 }
 
@@ -3720,7 +3720,7 @@ var PrintPreviewListener = {
   _hideChrome() {
     this._chromeState = {};
 
-    if (!AppConstants.PROCLIENT_ENABLED) {
+    if (!AppConstants.PINEBUILD) {
       this._chromeState.sidebarOpen = SidebarUI.isOpen;
       this._sidebarCommand = SidebarUI.currentID;
       SidebarUI.hide();
@@ -5382,7 +5382,7 @@ var XULBrowserWindow = {
           browser.documentContentType &&
           BrowserUtils.mimeTypeIsTextBased(browser.documentContentType);
         for (let element of this._elementsForViewSource) {
-          // Some of these elements can not exist (in, say, the proclient window)
+          // Some of these elements can not exist (in, say, the pinebuild window)
           if (!element) {
             continue;
           }
@@ -5595,7 +5595,7 @@ var XULBrowserWindow = {
       browser.documentContentType &&
       BrowserUtils.mimeTypeIsTextBased(browser.documentContentType);
     for (let element of this._elementsForTextBasedTypes) {
-      // Some of these elements can not exist (in, say, the proclient window)
+      // Some of these elements can not exist (in, say, the pinebuild window)
       if (!element) {
         continue;
       }
@@ -5846,7 +5846,7 @@ var CombinedStopReload = {
     let reload = document.getElementById("reload-button");
     let stop = document.getElementById("stop-button");
 
-    if (AppConstants.PROCLIENT_ENABLED) {
+    if (AppConstants.PINEBUILD) {
       reload = document.getElementById("companion-reload-button");
       stop = document.getElementById("companion-stop-button");
     }
@@ -6762,9 +6762,9 @@ function setToolbarVisibility(
   }
 
   // Normally, the titlebar is always visible since tabs are rendered
-  // in the titlebar. With ProClient, TabsToolbar is hidden and as such
+  // in the titlebar. With pinebuild, TabsToolbar is hidden and as such
   // we only want to show the titlebar if the menubar is visible.
-  if (AppConstants.PROCLIENT_ENABLED && toolbar.id == "toolbar-menubar") {
+  if (AppConstants.PINEBUILD && toolbar.id == "toolbar-menubar") {
     let titlebar = document.getElementById("titlebar");
     titlebar.hidden =
       !isVisible &&
@@ -6925,9 +6925,7 @@ var gUIDensity = {
 
     let docs = [document.documentElement];
     let shouldUpdateSidebar =
-      !AppConstants.PROCLIENT_ENABLED &&
-      SidebarUI.initialized &&
-      SidebarUI.isOpen;
+      !AppConstants.PINEBUILD && SidebarUI.initialized && SidebarUI.isOpen;
     if (shouldUpdateSidebar) {
       docs.push(SidebarUI.browser.contentDocument.documentElement);
     }
@@ -6982,7 +6980,7 @@ const nodeToTooltipMap = {
   "print-button": "printButton.tooltip",
 };
 
-if (AppConstants.PROCLIENT_ENABLED) {
+if (AppConstants.PINEBUILD) {
   nodeToTooltipMap["companion-reload-button"] = "reloadButton.tooltip";
   nodeToTooltipMap["companion-stop-button"] = "stopButton.tooltip";
 }
@@ -7008,7 +7006,7 @@ const nodeToShortcutMap = {
   "print-button": "printKb",
 };
 
-if (AppConstants.PROCLIENT_ENABLED) {
+if (AppConstants.PINEBUILD) {
   nodeToShortcutMap["companion-reload-button"] = "key_reload";
   nodeToShortcutMap["companion-stop-button"] = "key_stop";
 }

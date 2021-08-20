@@ -27,7 +27,7 @@ if test "$OS_ARCH" = "WINNT"; then
 fi
 
 BROWSER_CHROME_URL=chrome://browser/content/browser.xhtml
-BROWSER_PROCLIENT_URL=chrome://browser/content/browser-proclient.xhtml
+BROWSER_PINEBUILD_URL=chrome://browser/content/browser-pinebuild.xhtml
 
 # MOZ_APP_DISPLAYNAME will be set by branding/configure.sh
 # MOZ_BRANDING_DIRECTORY is the default branding directory used when none is
@@ -35,7 +35,7 @@ BROWSER_PROCLIENT_URL=chrome://browser/content/browser-proclient.xhtml
 # For mozilla-beta, mozilla-release, or mozilla-central repositories, use
 # "unofficial" branding.
 # For the mozilla-aurora repository, use "aurora".
-MOZ_BRANDING_DIRECTORY=browser/branding/nightly-pine
+MOZ_BRANDING_DIRECTORY=browser/branding/nightly-pinebuild
 MOZ_OFFICIAL_BRANDING_DIRECTORY=browser/branding/official
 MOZ_APP_ID={ec8030f7-c20a-464f-9b0e-13a3a9e97384}
 
