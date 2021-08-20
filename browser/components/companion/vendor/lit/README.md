@@ -1,7 +1,7 @@
 # Vendoring helpers for lit
 
-The companion uses `lit` for development of some components. This folder
-contains helpers for vendoring `lit` into the tree.
+The companion uses [`lit`](https://lit.dev/) for development of some
+components. This folder contains helpers for vendoring `lit` into the tree.
 
 ## How vendoring works
 
