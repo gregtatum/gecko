@@ -724,16 +724,13 @@ class CompanionParent extends JSWindowActorParent {
           ].getService(Ci.nsIExternalProtocolService);
           let handlerInfo = extProtocolSvc.getProtocolHandlerInfo(uri.scheme);
           if (
-            !handlerInfo.alwaysAskBeforeHandling &&
-            handlerInfo.preferredAction == Ci.nsIHandlerInfo.useHelperApp
+            (handlerInfo.preferredAction == Ci.nsIHandlerInfo.useHelperApp ||
+              handlerInfo.preferredAction ==
+                Ci.nsIHandlerInfo.useSystemDefault) &&
+            !handlerInfo.alwaysAskBeforeHandling
           ) {
-            if (
-              handlerInfo.preferredApplicationHandler instanceof
-              Ci.nsILocalHandlerApp
-            ) {
-              handlerInfo.preferredApplicationHandler.launchWithURI(uri);
-              return null;
-            }
+            handlerInfo.launchWithURI(uri, null);
+            return null;
           }
         }
         this.browsingContext.topChromeWindow.switchToTabHavingURI(
