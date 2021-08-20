@@ -45,7 +45,7 @@ window.gCalendarEventListener = {
 window.gCalendarEventListener.init();
 
 function debugEnabled() {
-  return document.body.classList.contains("debugUI");
+  return window.CompanionUtils.getBoolPref("browser.companion.debugUI", false);
 }
 
 export class CalendarEventList extends MozLitElement {
