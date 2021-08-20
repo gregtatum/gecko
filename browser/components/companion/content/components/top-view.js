@@ -4,6 +4,7 @@
 
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
 import { html } from "chrome://browser/content/companion/lit.all.js";
+import ViewGroup from "chrome://browser/content/companion/components/view-group.js";
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { PanelMultiView } = ChromeUtils.import(
@@ -99,12 +100,7 @@ class TopView extends MozLitElement {
   addView(view) {
     this.activeView = null;
 
-    if (
-      !this.#principal.isSameOrigin(
-        view.url,
-        window.browsingContext.usePrivateBrowsing
-      )
-    ) {
+    if (!ViewGroup.canGroup(this.#principal, view.url)) {
       if (!this.#principal.isNullPrincipal) {
         let e = new CustomEvent("TopViewOverflow", {
           bubbles: true,

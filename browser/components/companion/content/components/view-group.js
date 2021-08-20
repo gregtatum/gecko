@@ -9,7 +9,7 @@ import {
   ifDefined,
 } from "chrome://browser/content/companion/lit.all.js";
 
-class ViewGroup extends MozLitElement {
+export default class ViewGroup extends MozLitElement {
   static get properties() {
     return {
       views: { type: Object },
@@ -107,6 +107,51 @@ class ViewGroup extends MozLitElement {
         </div>
       </div>
     `;
+  }
+
+  /**
+   * Determines whether or not two Views should be put into the same
+   * ViewGroup.
+   *
+   * @param {nsIPrincipal} principal
+   *   The Principal of the first View to check.
+   * @param {nsIURI} candidateUrl
+   *   The URL of the second View to check.
+   * @returns {boolean} True if the two Views can be grouped.
+   */
+  static canGroup(principal, candidateUrl) {
+    let isSameOrigin = principal.isSameOrigin(
+      candidateUrl,
+      window.browsingContext.usePrivateBrowsing
+    );
+
+    if (
+      !principal.isURIInPrefList("browser.river.differentiateOnFirstPathNode")
+    ) {
+      return isSameOrigin;
+    }
+
+    // At this point, we know that the two Views are same-origin, but that
+    // they're also in our list of special domains that require more
+    // scrutiny. The way we'll compare them here is to look at the first
+    // node in their path. That way, two sites like:
+    //
+    // platform.example.com/app1/xyz/#uuid
+    //
+    // will not group with:
+    //
+    // platform.example.com/app2/xyz/#uuid
+    //
+    // In this example, "app1" and "app2" are the first nodes that are being
+    // compared.
+
+    let principalURIPath = principal.URI.pathQueryRef;
+    let principalFirstPathNode = principalURIPath.split("/")[1];
+
+    let candidateURIPath = candidateUrl.pathQueryRef;
+    let candidateFirstPathNode = candidateURIPath.split("/")[1];
+
+    return principalFirstPathNode == candidateFirstPathNode;
   }
 }
 

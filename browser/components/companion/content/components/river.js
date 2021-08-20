@@ -4,6 +4,7 @@
 
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
 import { html } from "chrome://browser/content/companion/lit.all.js";
+import ViewGroup from "chrome://browser/content/companion/components/view-group.js";
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { XPCOMUtils } = ChromeUtils.import(
@@ -95,12 +96,7 @@ export default class River extends MozLitElement {
     // 2. The number of groups reaches TOP_RIVER_GROUPS.
     for (; index >= 0; --index) {
       let view = this.#views[index];
-      if (
-        currentPrincipal.isSameOrigin(
-          view.url,
-          window.browsingContext.usePrivateBrowsing
-        )
-      ) {
+      if (ViewGroup.canGroup(currentPrincipal, view.url)) {
         currentGroup.push(view);
         continue;
       } else {
