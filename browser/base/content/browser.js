@@ -5847,8 +5847,8 @@ var CombinedStopReload = {
     let stop = document.getElementById("stop-button");
 
     if (AppConstants.PINEBUILD) {
-      reload = document.getElementById("companion-reload-button");
-      stop = document.getElementById("companion-stop-button");
+      reload = document.getElementById("pinebuild-reload-button");
+      stop = document.getElementById("pinebuild-stop-button");
     }
 
     // It's possible the stop/reload buttons have been moved to the palette.
@@ -6981,8 +6981,8 @@ const nodeToTooltipMap = {
 };
 
 if (AppConstants.PINEBUILD) {
-  nodeToTooltipMap["companion-reload-button"] = "reloadButton.tooltip";
-  nodeToTooltipMap["companion-stop-button"] = "stopButton.tooltip";
+  nodeToTooltipMap["pinebuild-reload-button"] = "reloadButton.tooltip";
+  nodeToTooltipMap["pinebuild-stop-button"] = "stopButton.tooltip";
 }
 
 const nodeToShortcutMap = {
@@ -7007,8 +7007,8 @@ const nodeToShortcutMap = {
 };
 
 if (AppConstants.PINEBUILD) {
-  nodeToShortcutMap["companion-reload-button"] = "key_reload";
-  nodeToShortcutMap["companion-stop-button"] = "key_stop";
+  nodeToShortcutMap["pinebuild-reload-button"] = "key_reload";
+  nodeToShortcutMap["pinebuild-stop-button"] = "key_stop";
 }
 
 const gDynamicTooltipCache = new Map();
