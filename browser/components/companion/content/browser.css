@@ -22,6 +22,10 @@
   min-width: calc((4 * 36px) + 580px + (350px + 10px) + 42px + var(--window-controls-width, 0px));
 }
 
+#titlebar:not([hidden]) + #nav-bar > #companion-window-controls {
+  display: none;
+}
+
 #PersonalToolbar,
 #nav-bar-overflow-button,
 #page-action-buttons,

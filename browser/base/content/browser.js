@@ -6768,7 +6768,7 @@ function setToolbarVisibility(
     let titlebar = document.getElementById("titlebar");
     titlebar.hidden =
       !isVisible &&
-      !Services.prefs.getBoolPref("browser.companion.tabdebugging");
+      !Services.prefs.getBoolPref("browser.companion.tabdebugging", false);
   }
 
   if (toolbar.getAttribute(hidingAttribute) == (!isVisible).toString()) {
