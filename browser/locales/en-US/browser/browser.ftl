@@ -421,7 +421,7 @@ enable-devtools-popup-description = To use the F12 shortcut, first open DevTools
 
 ## URL Bar
 
-# MR2 todo: bump string revs when text is settled
+# Pinebuild todo: bump string revs when text is settled
 
 # This placeholder is used when not in search mode and the user's default search
 # engine is unknown.

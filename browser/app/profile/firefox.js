@@ -595,7 +595,6 @@ pref("browser.tabs.insertRelatedAfterCurrent", true);
 // the value of browser.tabs.insertRelatedAfterCurrent.
 pref("browser.tabs.insertAfterCurrent", false);
 #ifdef PINEBUILD
-  // MR2 don't warn on close
   pref("browser.tabs.warnOnClose", false);
 #else
   pref("browser.tabs.warnOnClose", true);
@@ -2567,7 +2566,6 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("extensions.translations.disabled", true);
 #endif
 
-// MR2
 #ifdef PINEBUILD
   pref("browser.contentblocking.category", "strict");
   pref("privacy.trackingprotection.enabled", true);

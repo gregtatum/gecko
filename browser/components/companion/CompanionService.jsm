@@ -220,8 +220,8 @@ let ChromeURLBlockPolicy = {
   shouldProcess(contentLocation, loadInfo, mimeTypeGuess) {
     return Ci.nsIContentPolicy.ACCEPT;
   },
-  classDescription: "MR2 Content Policy",
-  contractID: "@mozilla-org/mr2-content-policy-service;1",
+  classDescription: "Pinebuild Content Policy",
+  contractID: "@mozilla-org/pinebuild-content-policy-service;1",
   classID: Components.ID("{ba7b9118-cabc-4845-8b26-4215d2a59ed8}"),
   QueryInterface: ChromeUtils.generateQI(["nsIContentPolicy"]),
   createInstance(outer, iid) {

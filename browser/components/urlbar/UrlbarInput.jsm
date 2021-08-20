@@ -1084,7 +1084,7 @@ class UrlbarInput {
     // Usually this is set by a previous input event, but in certain cases, like
     // when opening Top Sites on a loaded page, it wouldn't happen. To avoid
     // confusing the user, we always enforce it when a result changes our value.
-    // Necessary so the lock icon doesn't disappear in MR2
+    // Necessary so the lock icon doesn't disappear in pinebuild
     // this.setPageProxyState("invalid", true);
 
     // A previous result may have previewed search mode. If we don't expect that
@@ -2997,7 +2997,7 @@ class UrlbarInput {
       this.getAttribute("pageproxystate") == "valid" &&
       this.value != this._lastValidURLStr
     ) {
-      // Necessary so the lock icon doesn't disappear in MR2
+      // Necessary so the lock icon doesn't disappear in pinebuild
       // this.setPageProxyState("invalid", true);
     }
 
