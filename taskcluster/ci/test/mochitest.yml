@@ -282,7 +282,7 @@ mochitest-chrome:
 
 mochitest-browser-chrome-pinebuild:
     description: "Mochitest browser chrome pinebuild run"
-    treeherder-symbol: M-co(bc)
+    treeherder-symbol: M-pi(bc)
     loopback-video: true
     suite:
         name: mochitest-browser-chrome-pinebuild
