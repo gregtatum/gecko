@@ -353,6 +353,7 @@ function makeResultBuckets({ showSearchSuggestionsFirst }) {
       },
       // general
       {
+        group: UrlbarUtils.RESULT_GROUP.GENERAL_PARENT,
         children: [
           {
             availableSpan: 3,
