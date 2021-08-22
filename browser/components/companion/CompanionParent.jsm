@@ -58,6 +58,7 @@ const PLACES_CACHE_EVICT_AFTER = 60 * 6 * 1000; // 6 minutes
 // things from the places cache, otherwise we might end up scheduling
 // setTimeouts more often than we would like.
 const PLACES_EVICTION_TIMEOUT = PLACES_CACHE_EVICT_AFTER * 1.5;
+const PREFERRED_SNAPSHOT_FAVICON_WIDTH_PX = 16;
 
 // Defines pages that we force to show a certain snapshot type. The regular
 // expresions are applied to the entire url.
@@ -325,7 +326,11 @@ class CompanionParent extends JSWindowActorParent {
     tabs.removeEventListener("TabAttrModified", this._handleTabEvent);
   }
 
-  getFavicons(pages, width = 0) {
+  getFavicons(pages) {
+    let browser = this.browsingContext.top.embedderElement;
+    let width =
+      PREFERRED_SNAPSHOT_FAVICON_WIDTH_PX *
+      Math.ceil(browser.ownerGlobal.devicePixelRatio);
     return Promise.all(
       pages.map(
         page =>
@@ -420,7 +425,7 @@ class CompanionParent extends JSWindowActorParent {
 
   async ensureFaviconsCached(urls) {
     let uncachedUrls = urls.filter(u => !this._cachedFaviconURLs.has(u));
-    let favicons = await this.getFavicons(uncachedUrls, 16);
+    let favicons = await this.getFavicons(uncachedUrls);
     this._cachedFavicons.push(...favicons);
 
     let evictionTime = Date.now() + PLACES_CACHE_EVICT_AFTER;
