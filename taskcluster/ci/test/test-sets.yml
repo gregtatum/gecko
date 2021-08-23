@@ -236,7 +236,6 @@ windows-tests:
     - jsreftest
     - marionette
     - mochitest-a11y
-    - mochitest-browser-chrome
     - mochitest-browser-chrome-companion
     - mochitest-chrome
     - mochitest-remote
@@ -255,6 +254,7 @@ windows10-tests:
     - mochitest-webgl1-core
 
 windows10-2004-tests:
+    - mochitest-browser-chrome
     - mochitest-chrome-gpu
     - mochitest-devtools-chrome
     - mochitest-media
