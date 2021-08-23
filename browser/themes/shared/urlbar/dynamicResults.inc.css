@@ -201,7 +201,7 @@
   margin-block-end: 5px;
 }
 
-.urlbarView-row:not([dynamicType=topSitesButtons]) {
+.urlbarView-row:not([dynamicType=topSitesButtons]):not([dynamicType=quickActions]) {
   margin-inline: calc(5px + var(--urlbar-container-padding));
 }
 

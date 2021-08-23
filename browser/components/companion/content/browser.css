@@ -74,6 +74,19 @@
   max-width: 450px;
 }
 
+[urlbar-exceeds-toolbar-bounds=true] #urlbar-container {
+  max-width: 650px;
+}
+
+[urlbar-exceeds-toolbar-bounds=true] #companion-toolbar {
+  width: 350px;
+  overflow: hidden;
+}
+
+[urlbar-exceeds-toolbar-bounds=true] .chromeclass-toolbar-additional {
+  display: none;
+}
+
 #navigator-toolbox {
   border-bottom: 0px none;
 }
