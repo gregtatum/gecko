@@ -212,13 +212,14 @@ class CalendarEvent extends MozLitElement {
 
       .event:where(:not(:hover, :focus-within)) .event-actions .button-link,
       .event:where(:not(:hover, :focus-within)) .event-options-button {
-        display: inline-block;
-        width: 0;
-        height: 0;
-        margin: -1px;
+        /* This is essentially visually-hidden styles you'd use for screen
+         * reader content. And we're using it so the screen reader will notice
+         * the content that's hidden when not hovered/focused. */
+        clip-path: inset(50%);
         overflow: hidden;
-        padding: 0;
-        border-width: 0;
+        width: 1px;
+        /* height is left the same, so the parent's height doesn't change when
+         * the hover/focus content is shown. */
       }
 
       .event-sub-details {
