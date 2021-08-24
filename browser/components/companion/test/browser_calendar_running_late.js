@@ -42,7 +42,7 @@ const checkMailtoUrl = async (helper, index_, expected) => {
 };
 
 add_task(async function testRunningLate() {
-  await CompanionHelper.withCalendarReady(async helper => {
+  await CompanionHelper.whenReady(async helper => {
     await helper.runCompanionTask(() => {
       let calendarEventList = content.document.querySelector(
         "calendar-event-list"
@@ -90,7 +90,7 @@ add_task(async function testRunningLate() {
 });
 
 add_task(async function testRunningLateXss() {
-  await CompanionHelper.withCalendarReady(async helper => {
+  await CompanionHelper.whenReady(async helper => {
     let events = [
       {
         summary: `My XSS event" onclick="alert('hi')""`,
@@ -118,7 +118,7 @@ add_task(async function testRunningLateXss() {
 });
 
 add_task(async function testNoAttendees() {
-  await CompanionHelper.withCalendarReady(async helper => {
+  await CompanionHelper.whenReady(async helper => {
     await helper.setCalendarEvents([
       {
         summary: "My personal event",

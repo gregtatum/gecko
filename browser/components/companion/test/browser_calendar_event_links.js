@@ -7,7 +7,7 @@ const DEFAULT_FAVICON_SRC = "chrome://global/skin/icons/defaultFavicon.svg";
 
 /* Ensures that a calendar event with links is displayed in the companion */
 add_task(async function testEventWithLinks() {
-  await CompanionHelper.withCalendarReady(async helper => {
+  await CompanionHelper.whenReady(async helper => {
     let events = [
       {
         summary: "Firefox rules",
@@ -44,7 +44,7 @@ add_task(async function testEventWithLinks() {
 /* Ensures that a calendar event with more than 3 links displayed a button for expanding
    the meeting links section */
 add_task(async function testEventWithSeveralLinks() {
-  await CompanionHelper.withCalendarReady(async helper => {
+  await CompanionHelper.whenReady(async helper => {
     let events = [
       {
         summary: "Firefox rules",
@@ -95,7 +95,7 @@ add_task(async function testEventWithSeveralLinks() {
 });
 
 add_task(async function testEventWithNoLinks() {
-  await CompanionHelper.withCalendarReady(async helper => {
+  await CompanionHelper.whenReady(async helper => {
     let events = [
       {
         summary: "Firefox is cool",
@@ -115,7 +115,7 @@ add_task(async function testEventWithNoLinks() {
 });
 
 add_task(async function testEventLinksFocus() {
-  await CompanionHelper.withCalendarReady(async helper => {
+  await CompanionHelper.whenReady(async helper => {
     let events = [
       {
         summary: "Firefox is cool",

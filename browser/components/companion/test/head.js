@@ -4,10 +4,10 @@
 "use strict";
 
 class CompanionHelper {
-  static async withCalendarReady(taskFn) {
+  static async whenReady(taskFn) {
     let helper = new CompanionHelper();
     await helper.openCompanion();
-    await helper.calendarReady;
+    await helper.companionReady;
 
     await taskFn(helper);
 
@@ -80,9 +80,9 @@ class CompanionHelper {
     );
   }
 
-  get calendarReady() {
+  get companionReady() {
     return this.runCompanionTask(async () => {
-      await content.window.gCalendarEventListener.initialized;
+      await content.window.gInitialized;
     });
   }
 

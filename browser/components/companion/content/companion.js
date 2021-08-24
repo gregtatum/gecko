@@ -28,6 +28,12 @@ window.openUrl = url => {
   window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", { url });
 };
 
+let resolveInitialized;
+
+window.gInitialized = new Promise(resolve => {
+  resolveInitialized = resolve;
+});
+
 let loadObserved = false;
 let companionSetupObserved = false;
 function maybeInitializeUI() {
@@ -69,6 +75,13 @@ function maybeInitializeUI() {
     // parallel with wiring up communication. TODO remove as soon as possible.
     window.gLogins.handleAllLogins(JSON.parse(window.gLogins.mockLogins));
   }
+
+  // This is used for tests to ensure that the various components have initialized.
+  // If your component has delayed initialization, then you will want to add something
+  // to wait for it here.
+  Promise.all([window.gCalendarEventListener.initialized]).then(
+    resolveInitialized
+  );
 }
 
 function togglePasswordPanel(hidePasswordPanel) {

@@ -15,7 +15,7 @@ add_task(async function setup() {
 });
 
 add_task(async function testRelativeTimeMinutesBeforeEvent() {
-  await CompanionHelper.withCalendarReady(async helper => {
+  await CompanionHelper.whenReady(async helper => {
     let { start, end } = generateEventTimes();
 
     let events = [
@@ -57,7 +57,7 @@ add_task(async function testRelativeTimeMinutesBeforeEvent() {
 });
 
 add_task(async function testRelativeTimeMinutesAfterEvent() {
-  await CompanionHelper.withCalendarReady(async helper => {
+  await CompanionHelper.whenReady(async helper => {
     let { start, end } = generateEventTimes();
 
     let events = [
@@ -101,7 +101,7 @@ add_task(async function testRelativeTimeMinutesAfterEvent() {
 });
 
 add_task(async function testRelativeTimeHoursAndMinutesAfterEvent() {
-  await CompanionHelper.withCalendarReady(async helper => {
+  await CompanionHelper.whenReady(async helper => {
     let { start, end } = generateEventTimes(1);
     let events = [
       {
@@ -145,7 +145,7 @@ add_task(async function testRelativeTimeHoursAndMinutesAfterEvent() {
 });
 
 add_task(async function testRelativeTimeHoursBeforeEvent() {
-  await CompanionHelper.withCalendarReady(async helper => {
+  await CompanionHelper.whenReady(async helper => {
     let { start, end } = generateEventTimes(1);
     let events = [
       {
@@ -184,7 +184,7 @@ add_task(async function testRelativeTimeHoursBeforeEvent() {
 });
 
 add_task(async function testRelativeTimeHoursAndMinutesBeforeEvent() {
-  await CompanionHelper.withCalendarReady(async helper => {
+  await CompanionHelper.whenReady(async helper => {
     let { start, end } = generateEventTimes(1);
     let events = [
       {
