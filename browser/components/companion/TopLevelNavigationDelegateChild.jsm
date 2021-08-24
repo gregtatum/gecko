@@ -26,9 +26,21 @@ class TopLevelNavigationDelegateChild extends JSWindowActorChild {
 
     let isNormalLoad = !!(loadType & Ci.nsIDocShell.LOAD_CMD_NORMAL);
 
-    // For now, for simplicities sake, any POST requests or load types other
-    // than "normal" (see nsIDocShell::LoadCommand), we'll let through.
-    if (hasPostData || !isNormalLoad) {
+    // Note that loadType is a combination of both nsIDocShell load commands
+    // and nsIWebNavigation load flags. The load flags are shifted 16 bits
+    // to the left.
+    let isHistoryReplace = !!(
+      loadType &
+      (Ci.nsIWebNavigation.LOAD_FLAGS_REPLACE_HISTORY << 16)
+    );
+
+    // We currently let the following things occur within the same BrowsingContext,
+    // instead of opening a new one:
+    //
+    // 1. POST requests
+    // 2. Any load that isn't "normal" (in the nsIDocShell.LOAD_CMD_NORMAL sense)
+    // 3. Any loads that are caused by location.replace
+    if (hasPostData || !isNormalLoad || isHistoryReplace) {
       return true;
     }
 
