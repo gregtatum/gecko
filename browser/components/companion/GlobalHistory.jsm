@@ -18,6 +18,12 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/ActorManagerParent.jsm"
 );
 
+// Set to true if we register the TopLevelNavigationDelegate JSWindowActor.
+// We record this at the module level so that subsequent browser window
+// openings don't try to re-register the same actor (which will throw an
+// exception).
+let gTopLevelNavigationDelegateRegistered = false;
+
 function requestedIndex(sessionHistory) {
   return sessionHistory.requestedIndex == -1
     ? sessionHistory.index
@@ -373,9 +379,11 @@ class GlobalHistory extends EventTarget {
       Services.prefs.getBoolPref(
         "browser.tabs.openNewTabForMostNavigations",
         false
-      )
+      ) &&
+      !gTopLevelNavigationDelegateRegistered
     ) {
       ActorManagerParent.addJSWindowActors(GlobalHistoryActors);
+      gTopLevelNavigationDelegateRegistered = true;
     }
 
     for (let { linkedBrowser: browser } of this.#window.gBrowser.tabs) {
