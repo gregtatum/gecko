@@ -92,7 +92,12 @@ const OAuthConnect = {
           new Set([browserId])
         );
       } else {
-        sharedData.get(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY).add(browserId);
+        // In order for SharedData to detect the change and propagate it, we
+        // have to write a new reference value to the
+        // TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY key by creating a new Set.
+        let originalSet = sharedData.get(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY);
+        let newSet = new Set(originalSet).add(browserId);
+        sharedData.set(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY, newSet);
       }
 
       // SharedData is, by default, lazy, and will only flush the changes
