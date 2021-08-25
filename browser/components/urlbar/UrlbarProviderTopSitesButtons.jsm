@@ -163,7 +163,10 @@ class ProviderTopSitesButtons extends UrlbarProvider {
       return {
         url: link.url_urlbar || link.url,
         title: link.label || link.title || link.hostname || "",
-        favicon: link.smallFavicon || link.favicon || undefined,
+        favicon:
+          link.smallFavicon ||
+          link.favicon ||
+          "chrome://global/skin/icons/defaultFavicon.svg",
       };
     });
 
