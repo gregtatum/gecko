@@ -6,7 +6,8 @@
   "scripts": {
     "build": "rollup -c",
     "vendor-copy": "cp lit.all.js ../../content/lit.all.js",
-    "vendor": "npm install && npm run build && npm run vendor-copy"
+    "patch-lit-html": "patch lit.all.js lit-html-no-innerhtml.patch",
+    "vendor": "npm install && npm run build && npm run patch-lit-html && npm run vendor-copy"
   },
   "author": "",
   "license": "MPL-2.0",

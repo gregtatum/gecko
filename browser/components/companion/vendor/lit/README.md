@@ -10,8 +10,8 @@ it in development mode (unminified) using `rollup`. The index.js file is
 exported to lit.all.js in this folder and then copied to
 browser/components/companion/content/lit.all.js.
 
-There is currently a manual step of updating the `innerHTML` usage in
-`lit-html`.
+There is some patching that is done automatically, and it's explained at the
+end of the README.
 
 ## How to update the lit bundle
 
@@ -20,17 +20,15 @@ There is currently a manual step of updating the `innerHTML` usage in
 2. Ensure index.js is exporting the things you'd like to export.
 3. Run the vendor helpers:
   * `cd browser/components/companion/vendor/lit` - get to this folder
-  * `../../../../../mach npm run vendor` - install, bundle, copy into place
+  * `../../../../../mach npm run vendor` - install, bundle, patch, copy into place
   * One-liner: `pushd browser/components/companion/vendor/lit && ../../../../../mach npm run vendor && popd`
-4. Manually [patch](#patching-lit-all-js) lit.all.js. (MR2-605 is on file to
-  automate this).
-5. Commit your changes, this should just modify package.json, index.js (if you
-  modified it) and browser/components/companion/content/lit.all.js.
+4. Commit your changes, this should just modify package.json, index.js and
+  browser/components/companion/content/lit.all.js.
 
-## Patching lit.all.js
+## Manually patching lit.all.js
 
-The `lit-html` module has a usage of `innerHTML` which we sanitize and ends up
-breaking `lit-html`.
+The `lit-html` module has a usage of `innerHTML` which gets sanitized and ends
+up breaking `lit-html`.
 
 To work around this, we use `DOMParser.prototype.parseFromString()` instead.
 

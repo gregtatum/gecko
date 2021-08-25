@@ -1,0 +1,18 @@
+--- lit.all.js	2021-08-20 16:32:25 -0500
++++ lit.all.js.patched	2021-08-20 16:32:04 -0500
+@@ -1501,9 +1501,12 @@
+     // Overridden via `litHtmlPlatformSupport` to provide platform support.
+     /** @nocollapse */
+     static createElement(html, _options) {
+-        const el = d.createElement('template');
+-        el.innerHTML = html;
+-        return el;
++        const parser = new DOMParser();
++        const doc = parser.parseFromString(
++            `<template>${html}</template>`,
++            "text/html"
++        );
++        return document.importNode(doc.querySelector("template"), true);
+     }
+ }
+ function resolveDirective(part, value, parent = part, attributeIndex) {
