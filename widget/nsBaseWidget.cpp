@@ -10,8 +10,6 @@
 #include <utility>
 
 #include "BasicLayers.h"
-#include "ClientLayerManager.h"
-#include "FrameLayerBuilder.h"
 #include "GLConsts.h"
 #include "InputData.h"
 #include "LiveResizeListener.h"
@@ -1337,12 +1335,8 @@ already_AddRefed<LayerManager> nsBaseWidget::CreateCompositorSession(
         StaticPrefs::gfx_webrender_unaccelerated_widget_force()) {
       enableWR = gfx::gfxVars::UseWebRender();
       enableSWWR = gfx::gfxVars::UseSoftwareWebRender();
-    } else if (gfxPlatform::DoesFissionForceWebRender() ||
-               StaticPrefs::
-                   gfx_webrender_software_unaccelerated_widget_allow()) {
-      enableWR = enableSWWR = gfx::gfxVars::UseWebRender();
     } else {
-      enableWR = enableSWWR = false;
+      enableWR = enableSWWR = gfx::gfxVars::UseWebRender();
     }
     MOZ_RELEASE_ASSERT(enableWR);
     bool enableAPZ = UseAPZ();
@@ -1460,16 +1454,6 @@ void nsBaseWidget::CreateCompositor(int aWidth, int aHeight) {
                LayersBackend::LAYERS_WR);
     ImageBridgeChild::IdentifyCompositorTextureHost(textureFactoryIdentifier);
     gfx::VRManagerChild::IdentifyTextureHost(textureFactoryIdentifier);
-  } else if (lm->AsClientLayerManager()) {
-    TextureFactoryIdentifier textureFactoryIdentifier =
-        lm->GetTextureFactoryIdentifier();
-    // Some popup or transparent widgets may use a different backend than the
-    // compositors used with ImageBridge and VR (and more generally web
-    // content).
-    if (WidgetTypeSupportsAcceleration()) {
-      ImageBridgeChild::IdentifyCompositorTextureHost(textureFactoryIdentifier);
-      gfx::VRManagerChild::IdentifyTextureHost(textureFactoryIdentifier);
-    }
   }
 
   WindowUsesOMTC();

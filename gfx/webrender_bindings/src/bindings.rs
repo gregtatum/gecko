@@ -1332,7 +1332,12 @@ impl Compositor for WrCompositor {
         }
     }
 
-    fn start_compositing(&mut self, clear_color: ColorF, dirty_rects: &[DeviceIntRect], opaque_rects: &[DeviceIntRect]) {
+    fn start_compositing(
+        &mut self,
+        clear_color: ColorF,
+        dirty_rects: &[DeviceIntRect],
+        opaque_rects: &[DeviceIntRect],
+    ) {
         unsafe {
             wr_compositor_start_compositing(
                 self.0,
@@ -1837,6 +1842,7 @@ pub extern "C" fn wr_transaction_set_display_list(
     dl_descriptor: BuiltDisplayListDescriptor,
     dl_items_data: &mut WrVecU8,
     dl_cache_data: &mut WrVecU8,
+    dl_spatial_tree_data: &mut WrVecU8,
 ) {
     let color = if background.a == 0.0 { None } else { Some(background) };
 
@@ -1848,6 +1854,7 @@ pub extern "C" fn wr_transaction_set_display_list(
     let payload = DisplayListPayload {
         items_data: dl_items_data.flush_into_vec(),
         cache_data: dl_cache_data.flush_into_vec(),
+        spatial_tree: dl_spatial_tree_data.flush_into_vec(),
     };
 
     let dl = BuiltDisplayList::from_data(payload, dl_descriptor);
@@ -2357,10 +2364,7 @@ impl WebRenderFrameBuilder {
             dl_builder: DisplayListBuilder::new(root_pipeline_id),
         }
     }
-    pub fn with_capacity(
-        root_pipeline_id: WrPipelineId,
-        capacity: DisplayListCapacity,
-    ) -> WebRenderFrameBuilder {
+    pub fn with_capacity(root_pipeline_id: WrPipelineId, capacity: DisplayListCapacity) -> WebRenderFrameBuilder {
         WebRenderFrameBuilder {
             root_pipeline_id,
             dl_builder: DisplayListBuilder::with_capacity(root_pipeline_id, capacity),
@@ -2374,10 +2378,7 @@ pub struct WrState {
 }
 
 #[no_mangle]
-pub extern "C" fn wr_state_new(
-    pipeline_id: WrPipelineId,
-    capacity: DisplayListCapacity,
-) -> *mut WrState {
+pub extern "C" fn wr_state_new(pipeline_id: WrPipelineId, capacity: DisplayListCapacity) -> *mut WrState {
     assert!(unsafe { !is_in_render_thread() });
 
     let state = Box::new(WrState {
@@ -2684,11 +2685,7 @@ pub extern "C" fn wr_dp_define_rounded_rect_clip_with_parent_clip_chain(
 }
 
 #[no_mangle]
-pub extern "C" fn wr_dp_define_rect_clip(
-    state: &mut WrState,
-    space: WrSpatialId,
-    clip_rect: LayoutRect,
-) -> WrClipId {
+pub extern "C" fn wr_dp_define_rect_clip(state: &mut WrState, space: WrSpatialId, clip_rect: LayoutRect) -> WrClipId {
     debug_assert!(unsafe { is_in_main_thread() });
 
     let space_and_clip = SpaceAndClipInfo {
@@ -3779,12 +3776,14 @@ pub unsafe extern "C" fn wr_api_finalize_builder(
     dl_descriptor: &mut BuiltDisplayListDescriptor,
     dl_items_data: &mut WrVecU8,
     dl_cache_data: &mut WrVecU8,
+    dl_spatial_tree: &mut WrVecU8,
 ) {
     let frame_builder = mem::replace(&mut state.frame_builder, WebRenderFrameBuilder::new(state.pipeline_id));
     let (_, dl) = frame_builder.dl_builder.finalize();
     let (payload, descriptor) = dl.into_data();
     *dl_items_data = WrVecU8::from_vec(payload.items_data);
     *dl_cache_data = WrVecU8::from_vec(payload.cache_data);
+    *dl_spatial_tree = WrVecU8::from_vec(payload.spatial_tree);
     *dl_descriptor = descriptor;
 }
 
@@ -3887,9 +3886,7 @@ impl WrSpatialId {
     }
 
     fn from_webrender(id: SpatialId) -> Self {
-        WrSpatialId {
-            id: id.0,
-        }
+        WrSpatialId { id: id.0 }
     }
 }
 
