@@ -6,6 +6,9 @@
 
 var EXPORTED_SYMBOLS = ["NewTabUtils"];
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
@@ -773,7 +776,11 @@ var ActivityStreamProvider = {
 
   /**
    * Shared WHERE expression filtering out undesired pages, e.g., hidden,
-   * unvisited, and non-http/s urls. Assumes moz_places is in FROM / JOIN.
+   * unvisited, and non-http/s urls. Assumes moz_places is in FROM / JOIN. If
+   * the proclient is enabled, we additionally filter based off of whether
+   * we have a snapshot for the place in moz_places_metadata_snapshots, to
+   * ensure that pages which the user hasn't sufficiently interacted with don't
+   * show up.
    *
    * NB: SUBSTR(url) is used even without an index instead of url_hash because
    * most desired pages will match http/s, so it will only run on the ~10s of
@@ -786,6 +793,11 @@ var ActivityStreamProvider = {
     AND last_visit_date > 0
     AND (SUBSTR(url, 1, 6) == "https:"
       OR SUBSTR(url, 1, 5) == "http:")
+    ${
+      AppConstants.PROCLIENT_ENABLED
+        ? "AND EXISTS(SELECT 1 FROM moz_places_metadata_snapshots s WHERE id = s.place_id)"
+        : ""
+    }
   `,
 
   /**

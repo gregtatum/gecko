@@ -3,6 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 "use strict";
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
@@ -84,7 +87,12 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 const DEFAULT_SITES_PREF = "default.sites";
 const SHOWN_ON_NEWTAB_PREF = "feeds.topsites";
 const DEFAULT_TOP_SITES = [];
-const FRECENCY_THRESHOLD = 100 + 1; // 1 visit (skip first-run/one-time pages)
+// If the proclient is enabled, we set a lower threshold for frecency, because
+// we have the added filter of requiring a recorded interaction with the page
+// in moz_places_metadata_snapshots. Otherwise we try to skirt just above the
+// frecency of the first-run/one-time pages by adding 1 to their default
+// frecency.
+const FRECENCY_THRESHOLD = AppConstants.PROCLIENT_ENABLED ? 25 : 100 + 1;
 const MIN_FAVICON_SIZE = 96;
 const CACHED_LINK_PROPS_TO_MIGRATE = ["screenshot", "customScreenshot"];
 const PINNED_FAVICON_PROPS_TO_MIGRATE = [
