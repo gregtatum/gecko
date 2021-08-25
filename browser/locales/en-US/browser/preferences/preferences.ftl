@@ -168,6 +168,8 @@ preferences-services-connected-status = Connected
 preferences-services-google-account = Google Services
 preferences-services-google-mozilla-account = Google Services (Mozilla)
 preferences-services-microsoft-account = Microsoft 365
+# This will transition into microsoft once we verify it works
+preferences-services-microsoft-test-account = Microsoft 365 (TEST ONLY)
 preferences-services-firefox-account = { -fxaccount-brand-name }
 preferences-services-google-labels = Gmail, Google Calendar, Google Meet
 preferences-services-microsoft-labels = Outlook, Microsoft Teams, OneDrive

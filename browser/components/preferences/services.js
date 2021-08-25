@@ -35,6 +35,12 @@ const extraServices = [
     labelsId: "preferences-services-microsoft-labels",
     icon: "chrome://browser/content/companion/microsoft365.ico",
   },
+  {
+    type: "microsoft-test",
+    nameId: "preferences-services-microsoft-test-account",
+    labelsId: "preferences-services-microsoft-labels",
+    icon: "chrome://browser/content/companion/microsoft365.ico",
+  },
 ];
 
 class ServiceRow extends HTMLElement {

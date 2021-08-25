@@ -292,11 +292,11 @@ class GoogleService {
     ];
 
     this.auth = new OAuth2(
-      services[this.app].endpoint,
-      services[this.app].tokenEndpoint,
+      kIssuers[this.app].endpoint,
+      kIssuers[this.app].tokenEndpoint,
       scopes.join(" "),
-      services[this.app].clientId,
-      services[this.app].clientSecret,
+      kIssuers[this.app].clientId,
+      kIssuers[this.app].clientSecret,
       config?.auth
     );
     this.getUnreadCountAtom();
@@ -695,11 +695,11 @@ class MicrosoftService {
     ];
 
     this.auth = new OAuth2(
-      services[this.app].endpoint,
-      services[this.app].tokenEndpoint,
+      kIssuers[this.app].endpoint,
+      kIssuers[this.app].tokenEndpoint,
       scopes.join(" "),
-      services[this.app].clientId,
-      services[this.app].clientSecret,
+      kIssuers[this.app].clientId,
+      kIssuers[this.app].clientSecret,
       config?.auth
     );
     this.getUnreadCount();
@@ -948,7 +948,7 @@ function load() {
   }
 }
 
-let services = {
+const kIssuers = {
   google: {
     endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenEndpoint: "https://oauth2.googleapis.com/token",
@@ -975,6 +975,11 @@ let services = {
     tokenEndpoint: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
     clientId: "66d9891f-d284-4158-a9b3-27aebf6b0f8c",
     clientSecret: "P8_.eMal60dY1VFEU1K6N_-22o4cA6vo.d",
+  },
+  "microsoft-test": {
+    endpoint: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+    tokenEndpoint: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+    clientId: "2d165c7b-a525-45c6-b4dc-3039db1e7f85",
   },
 };
 
