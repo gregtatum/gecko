@@ -2,10 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const { shortURL } = ChromeUtils.import(
-  "resource://activity-stream/lib/ShortURL.jsm"
-);
-
 const MAX_SNAPSHOTS = 5;
 const DEFAULT_FAVICON = "chrome://global/skin/icons/defaultFavicon.svg";
 
@@ -90,7 +86,7 @@ export class Snapshot extends HTMLElement {
     titleEl.textContent = this.data.title || url.href;
 
     let siteTitleEl = fragment.querySelector(".snapshot-sitetitle");
-    siteTitleEl.textContent = shortURL({ url });
+    siteTitleEl.textContent = this.data.commonName;
 
     let dateEl = fragment.querySelector(".snapshot-date");
     dateEl.textContent = timeSince(this.data.lastInteractionAt);
