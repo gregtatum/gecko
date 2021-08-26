@@ -994,7 +994,7 @@ def target_tasks_nightly_desktop(full_task_graph, parameters, graph_config):
             return False
         return True
 
-    return [l for l, t in six.iteritems(full_task_graph.tasks) if filter(l, t)]
+    return [l for l, t in full_task_graph.tasks.items() if filter(l, t)]
 
 
 # Run Searchfox analysis once daily.
