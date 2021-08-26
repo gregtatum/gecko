@@ -5,9 +5,6 @@
 import LoginListItemFactory from "./login-list-item.js";
 import LoginListSectionFactory from "./login-list-section.js";
 import { recordTelemetryEvent } from "../aboutLoginsUtils.js";
-const { AppConstants } = ChromeUtils.import(
-  "resource://gre/modules/AppConstants.jsm"
-);
 
 const collator = new Intl.Collator();
 const monthFormatter = new Intl.DateTimeFormat(undefined, { month: "long" });
@@ -123,11 +120,7 @@ export default class LoginList extends HTMLElement {
     shadowRoot.appendChild(loginListTemplate.content.cloneNode(true));
 
     this._count = shadowRoot.querySelector(".count");
-    if (!AppConstants.PINEBUILD) {
-      this._createLoginButton = shadowRoot.querySelector(
-        ".create-login-button"
-      );
-    }
+    this._createLoginButton = shadowRoot.querySelector(".create-login-button");
     this._list = shadowRoot.querySelector("ol");
     this._list.appendChild(this._blankLoginListItem);
     this._sortSelect = shadowRoot.querySelector("#login-sort");
@@ -145,9 +138,7 @@ export default class LoginList extends HTMLElement {
     this._list.addEventListener("click", this);
     this.addEventListener("keydown", this);
     this.addEventListener("keyup", this);
-    if (!AppConstants.PINEBUILD) {
-      this._createLoginButton.addEventListener("click", this);
-    }
+    this._createLoginButton.addEventListener("click", this);
   }
 
   render() {
@@ -289,10 +280,19 @@ export default class LoginList extends HTMLElement {
         if (event.originalTarget == this._createLoginButton) {
           window.dispatchEvent(
             new CustomEvent("AboutLoginsShowBlankLogin", {
+              bubbles: true,
               cancelable: true,
+              detail: { newHeaderL10nId: "about-logins-header-add-password" },
             })
           );
+
           recordTelemetryEvent({ object: "new_login", method: "new" });
+          return;
+        }
+
+        if (this.classList.contains("in-companion")) {
+          // TODO: MR2-528 will introduce an overflow menu to handle
+          // other button clicks. For now, let's return.
           return;
         }
 
@@ -352,9 +352,7 @@ export default class LoginList extends HTMLElement {
         } else {
           // Clear the filter if all items have been filtered out.
           this.classList.remove("create-login-selected");
-          if (!AppConstants.PINEBUILD) {
-            this._createLoginButton.disabled = false;
-          }
+          this._createLoginButton.disabled = false;
           window.dispatchEvent(
             new CustomEvent("AboutLoginsFilterLogins", {
               detail: "",
@@ -889,9 +887,7 @@ export default class LoginList extends HTMLElement {
     }
     this.classList.toggle("create-login-selected", !listItem.dataset.guid);
     this._blankLoginListItem.hidden = !!listItem.dataset.guid;
-    if (!AppConstants.PINEBUILD) {
-      this._createLoginButton.disabled = !listItem.dataset.guid;
-    }
+    this._createLoginButton.disabled = !listItem.dataset.guid;
     listItem.classList.add("selected");
     listItem.setAttribute("aria-selected", "true");
     this._list.setAttribute("aria-activedescendant", listItem.id);

@@ -16,6 +16,8 @@ const gElements = {
   loginItem: document.querySelector("login-item"),
   loginFilter: document.querySelector("login-filter"),
   menuButton: document.querySelector("menu-button"),
+  backButton: document.querySelector(".subviewbutton-back"),
+  headerTitle: document.querySelector("#panel-header-title"),
   // removeAllLogins button is nested inside of menuButton
   get removeAllButton() {
     return this.menuButton.shadowRoot.querySelector(
@@ -39,6 +41,11 @@ function handleAllLogins(logins) {
   updateNoLogins();
 }
 
+function toggleHeaderValue(fluentId) {
+  document.documentElement.classList.toggle("login-item-view");
+  document.l10n.setAttributes(gElements.headerTitle, fluentId);
+}
+
 let fxaLoggedIn = null;
 let passwordSyncEnabled = null;
 
@@ -48,6 +55,17 @@ function handleSyncState(syncState) {
   fxaLoggedIn = syncState.loggedIn;
   passwordSyncEnabled = syncState.passwordSyncEnabled;
 }
+
+gElements.backButton.addEventListener("click", event => {
+  if (document.documentElement.classList.contains("login-item-view")) {
+    window.dispatchEvent(new CustomEvent("AboutLoginsClearSelection"));
+    toggleHeaderValue("about-logins-header-login-list");
+  } else {
+    document.dispatchEvent(
+      new CustomEvent("AboutLoginsBrowsePanel", { bubbles: true })
+    );
+  }
+});
 
 window.addEventListener("AboutLoginsChromeToContent", event => {
   switch (event.detail.messageType) {
@@ -146,6 +164,10 @@ window.addEventListener("AboutLoginsChromeToContent", event => {
     case "UpdateVulnerableLogins": {
       gElements.loginList.updateVulnerableLogins(event.detail.value);
       gElements.loginItem.updateVulnerableLogins(event.detail.value);
+      break;
+    }
+    case "HeaderChange": {
+      toggleHeaderValue(event.detail.value);
       break;
     }
   }

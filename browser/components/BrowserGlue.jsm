@@ -188,6 +188,8 @@ let JSWINDOWACTORS = {
     child: {
       moduleURI: "resource:///actors/AboutLoginsChild.jsm",
       events: {
+        AboutLoginsBrowsePanel: { wantUntrusted: true },
+        AboutLoginsClearSelection: { wantUntrusted: true },
         AboutLoginsCopyLoginDetail: { wantUntrusted: true },
         AboutLoginsCreateLogin: { wantUntrusted: true },
         AboutLoginsDeleteLogin: { wantUntrusted: true },
@@ -202,6 +204,7 @@ let JSWINDOWACTORS = {
         AboutLoginsOpenSite: { wantUntrusted: true },
         AboutLoginsRecordTelemetryEvent: { wantUntrusted: true },
         AboutLoginsRemoveAllLogins: { wantUntrusted: true },
+        AboutLoginsShowBlankLogin: { wantUntrusted: true },
         AboutLoginsSortChanged: { wantUntrusted: true },
         AboutLoginsSyncEnable: { wantUntrusted: true },
         AboutLoginsSyncOptions: { wantUntrusted: true },
@@ -210,6 +213,8 @@ let JSWINDOWACTORS = {
       },
     },
     matches: ["about:logins", "about:logins?*", "about:loginsimportreport"],
+    allFrames: true,
+    remoteTypes: ["privilegedabout"],
   },
 
   AboutNewTab: {

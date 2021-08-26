@@ -113,6 +113,7 @@ class CompanionParent extends JSWindowActorParent {
     Services.obs.addObserver(this._observer, "companion-signin");
     Services.obs.addObserver(this._observer, "companion-signout");
     Services.obs.addObserver(this._observer, "companion-services-refresh");
+    Services.obs.addObserver(this._observer, "companion-submenu-change");
 
     Services.prefs.addObserver(
       "browser.companion.globalhistorydebugging",
@@ -195,6 +196,7 @@ class CompanionParent extends JSWindowActorParent {
     Services.obs.removeObserver(this._observer, "companion-signin");
     Services.obs.removeObserver(this._observer, "companion-signout");
     Services.obs.removeObserver(this._observer, "companion-services-refresh");
+    Services.obs.removeObserver(this._observer, "companion-submenu-change");
 
     Services.prefs.removeObserver(
       "browser.companion.globalhistorydebugging",
@@ -534,6 +536,10 @@ class CompanionParent extends JSWindowActorParent {
           newFavicons: this.consumeCachedFaviconsToSend(),
         });
         break;
+      case "companion-submenu-change": {
+        this.sendAsyncMessage("Companion:BrowsePanel");
+        break;
+      }
     }
   }
 

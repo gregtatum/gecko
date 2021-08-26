@@ -86,24 +86,28 @@ const augmentVanillaLoginObject = login => {
 
 class AboutLoginsParent extends JSWindowActorParent {
   async receiveMessage(message) {
-    if (!this.browsingContext.embedderElement) {
-      return;
-    }
-    // Only respond to messages sent from a privlegedabout process. Ideally
-    // we would also check the contentPrincipal.originNoSuffix but this
-    // check has been removed due to bug 1576722.
-    if (
-      this.browsingContext.embedderElement.remoteType !=
-      EXPECTED_ABOUTLOGINS_REMOTE_TYPE
-    ) {
-      throw new Error(
-        `AboutLoginsParent: Received ${message.name} message the remote type didn't match expectations: ${this.browsingContext.embedderElement.remoteType} == ${EXPECTED_ABOUTLOGINS_REMOTE_TYPE}`
-      );
+    if (this.browsingContext.top.embedderElement.id != "companion-browser") {
+      if (!this.browsingContext.embedderElement) {
+        return;
+      }
+      // Only respond to messages sent from a privlegedabout process. Ideally
+      // we would also check the contentPrincipal.originNoSuffix but this
+      // check has been removed due to bug 1576722.
+      if (
+        this.browsingContext.embedderElement.remoteType !=
+        EXPECTED_ABOUTLOGINS_REMOTE_TYPE
+      ) {
+        throw new Error(
+          `AboutLoginsParent: Received ${message.name} message the remote type didn't match expectations: ${this.browsingContext.embedderElement.remoteType} == ${EXPECTED_ABOUTLOGINS_REMOTE_TYPE}`
+        );
+      }
     }
 
     AboutLogins._subscribers.add(this.browsingContext);
 
-    let ownerGlobal = this.browsingContext.embedderElement.ownerGlobal;
+    let ownerGlobal = this.browsingContext.embedderElement
+      ? this.browsingContext.embedderElement.ownerGlobal
+      : this.browsingContext.top.embedderElement.ownerGlobal;
     switch (message.name) {
       case "AboutLogins:CreateLogin": {
         if (!Services.policies.isAllowed("removeMasterPassword")) {
@@ -215,7 +219,9 @@ class AboutLoginsParent extends JSWindowActorParent {
         }
 
         let { isAuthorized, telemetryEvent } = await LoginHelper.requestReauth(
-          this.browsingContext.embedderElement,
+          this.browsingContext.embedderElement
+            ? this.browsingContext.embedderElement
+            : this.browsingContext.top.embedderElement,
           OS_AUTH_ENABLED,
           AboutLogins._authExpirationTime,
           messageText.value,
@@ -341,7 +347,9 @@ class AboutLoginsParent extends JSWindowActorParent {
         }
 
         let { isAuthorized, telemetryEvent } = await LoginHelper.requestReauth(
-          this.browsingContext.embedderElement,
+          this.browsingContext.embedderElement
+            ? this.browsingContext.embedderElement
+            : this.browsingContext.top.embedderElement,
           true,
           null, // Prompt regardless of a recent prompt
           messageText.value,
@@ -457,6 +465,10 @@ class AboutLoginsParent extends JSWindowActorParent {
       }
       case "AboutLogins:RemoveAllLogins": {
         Services.logins.removeAllUserFacingLogins();
+        break;
+      }
+      case "AboutLogins:BrowsePanel": {
+        Services.obs.notifyObservers(null, "companion-submenu-change");
         break;
       }
     }

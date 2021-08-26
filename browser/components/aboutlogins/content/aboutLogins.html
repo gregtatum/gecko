@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="chrome://global/skin/in-content/common.css">
     <link rel="stylesheet" href="chrome://browser/content/aboutlogins/aboutLogins.css">
     <link rel="stylesheet" href="chrome://browser/content/aboutlogins/common.css">
+    <link rel="stylesheet" href="chrome://browser/content/companion/companion.css">
     <link rel="icon" href="chrome://browser/content/aboutlogins/icons/favicon.svg">
   </head>
   <body>
@@ -37,6 +38,15 @@
       <login-filter></login-filter>
       <fxaccounts-button hidden></fxaccounts-button>
       <menu-button></menu-button>
+      <box class="panel-header">
+        <toolbarbutton class="subviewbutton subviewbutton-back"
+                       closemenu="none"
+                       tabindex="0"
+                       data-l10n-id="about-logins-back-button"></toolbarbutton>
+        <h1>
+          <span id="panel-header-title" data-l10n-id="about-logins-header-login-list"></span>
+        </h1>
+      </box>
     </header>
     <login-list></login-list>
     <login-item></login-item>

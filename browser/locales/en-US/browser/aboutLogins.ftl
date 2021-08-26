@@ -342,6 +342,12 @@ about-logins-import-report-error =
       *[other] <div data-l10n-name="count">{ $count }</div> <div data-l10n-name="details">Errors</div> <div data-l10n-name="not-imported">(not imported)</div>
   }
 
+
+about-logins-header-add-password = Add password
+about-logins-header-login-list = Passwords
+about-logins-back-button =
+  .aria-label = Back
+
 ## Logins import report page
 
 about-logins-import-report-page-title = Import Summary Report

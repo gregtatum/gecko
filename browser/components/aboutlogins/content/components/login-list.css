@@ -205,3 +205,79 @@ ol {
     fill-opacity: 1;
   }
 }
+
+:host(.in-companion) .create-login-button-container {
+  border-top: 1px solid #E0E0E6;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+}
+
+:host(.in-companion) .create-login-button {
+  margin-block: 23.5px 28px;
+  font-size: 11px;
+  width: 13em;
+  margin-inline: auto;
+}
+
+:host(.in-companion) .meta > label {
+  display: flex;
+}
+
+:host(.in-companion) .meta > label > span {
+  margin-block: 8px;
+}
+
+:host(.in-companion) .meta {
+  border-bottom: 1px solid #F0F0F4;
+  margin-bottom: 12px;
+}
+
+:host(.in-companion) #login-sort {
+  right: 0;
+  position: absolute;
+  margin-inline-end: 8px;
+}
+
+:host(.in-companion) .count {
+  display: none;
+}
+
+:host(.in-companion) .favicon-wrapper {
+  background-color: #F0F0F4;
+  border-radius: 4px;
+  background-origin: content-box;
+  padding: 8px;
+}
+
+:host(.in-companion) .favicon-wrapper .favicon[src=""] {
+  display: none;
+}
+
+:host(.in-companion) .login-list-item.selected {
+  border: none;
+}
+
+:host(.in-companion) .login-list-item.selected .title {
+    font-weight: normal;
+}
+
+:host(.in-companion) .login-list-item + .login-list-item {
+  border: none;
+  padding-block: 4px;
+}
+
+:host(.in-companion) .login-list-item {
+  padding-inline: 4px;
+  margin-inline: 12px;
+  border-radius: 4px;
+}
+
+:host(.in-companion) .login-list-item:hover {
+  background-color: var(--in-content-button-background-hover);
+  color: var(--in-content-button-text-color-hover);
+}
+
+:host(.in-companion.create-login-selected) {
+  display: none;
+}

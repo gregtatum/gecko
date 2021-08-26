@@ -27,12 +27,6 @@ body {
   }
 }
 
-@supports -moz-bool-pref("browser.companion.passwords.enabled") {
-  body {
-    --sidebar-width: 0px;
-  }
-}
-
 header {
   display: flex;
   grid-area: header;
@@ -109,4 +103,43 @@ login-item {
   width: 100vw;
   height: 100vh;
   background-color: rgba(0,0,0,0.2);
+}
+
+:root:not(.in-companion) .panel-header {
+  display: none;
+}
+
+:root.in-companion .panel-header {
+  align-items: center;
+  display: flex;
+  flex: 1 auto;
+}
+
+:root.in-companion .panel-header > .subviewbutton-back + h1 {
+  margin-inline-end: 32px;
+  margin-block: 23px 22px;
+}
+
+:root.in-companion .panel-header > h1 {
+  display: inline;
+  flex: auto;
+  font-size: inherit;
+  font-weight: 600;
+  margin: 4px 0;
+  text-align: center;
+  line-height: 1.2;
+  color: var(--in-content-text-color);
+}
+
+:root.in-companion .panel-header > h1 > span {
+  display: inline-block;
+  white-space: pre-wrap;
+}
+
+:root.in-companion header {
+  padding-inline-end: 0;
+}
+
+:root.in-companion header > :not(:last-child) {
+  display: none;
 }

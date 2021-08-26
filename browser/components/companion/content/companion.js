@@ -58,22 +58,21 @@ function maybeInitializeUI() {
   if (
     Services.prefs.getBoolPref("browser.companion.passwords.enabled", false)
   ) {
+    if (!document.querySelector(".passwords-panel")) {
+      let template = document.getElementById("template-passwords-panel");
+      let fragment = template.content.cloneNode(true);
+      browseContent.appendChild(fragment);
+    }
+
     document.querySelector(".passwords").hidden = false;
 
     browseList.querySelector(".passwords").addEventListener("click", () => {
       togglePasswordPanel(false);
-      document
-        .querySelector(".subviewbutton-back")
-        .addEventListener("click", () => {
-          togglePasswordPanel(true);
-        });
     });
 
-    window.gLogins.initLogins();
-
-    // Temporarily insert some stubbed-out logins, so we can work on styling in
-    // parallel with wiring up communication. TODO remove as soon as possible.
-    window.gLogins.handleAllLogins(JSON.parse(window.gLogins.mockLogins));
+    window.addEventListener("Companion:BrowsePanel", () => {
+      togglePasswordPanel(true);
+    });
   }
 
   // This is used for tests to ensure that the various components have initialized.
@@ -85,8 +84,12 @@ function maybeInitializeUI() {
 }
 
 function togglePasswordPanel(hidePasswordPanel) {
-  document.querySelector("#scroll-browse .content").hidden = !hidePasswordPanel;
-  document.querySelector(".passwords-panel").hidden = hidePasswordPanel;
+  for (let child of document.querySelector("#scroll-browse .content")
+    .children) {
+    child.hidden = child.classList.contains("passwords-panel")
+      ? hidePasswordPanel
+      : !hidePasswordPanel;
+  }
 }
 
 window.addEventListener(

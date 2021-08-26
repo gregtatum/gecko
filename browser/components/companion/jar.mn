@@ -12,7 +12,6 @@ browser.jar:
     content/browser/companion/globalhistorydebugging.js (content/globalhistorydebugging.js)
     content/browser/companion/googleAccount.png (content/googleAccount.png)
     content/browser/companion/lit.all.js (content/lit.all.js)
-    content/browser/companion/logins.js (content/logins.js)
     content/browser/companion/media.js (content/media.js)
     content/browser/companion/microsoft365.ico (content/microsoft365.ico)
     content/browser/companion/mozsocial.png (content/mozsocial.png)

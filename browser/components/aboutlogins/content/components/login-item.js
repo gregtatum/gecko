@@ -379,7 +379,13 @@ export default class LoginItem extends HTMLElement {
               this.setLogin(this._login);
             }
           } else if (!this.hasPendingChanges()) {
-            window.dispatchEvent(new CustomEvent("AboutLoginsClearSelection"));
+            window.dispatchEvent(
+              new CustomEvent("AboutLoginsClearSelection", {
+                bubbles: true,
+                detail: { newHeaderL10nId: "about-logins-header-login-list" },
+              })
+            );
+
             this._recordTelemetryEvent({
               object: "new_login",
               method: "cancel",
@@ -387,7 +393,10 @@ export default class LoginItem extends HTMLElement {
           } else {
             this.showConfirmationDialog("discard-changes", () => {
               window.dispatchEvent(
-                new CustomEvent("AboutLoginsClearSelection")
+                new CustomEvent("AboutLoginsClearSelection", {
+                  bubbles: true,
+                  detail: { newHeaderL10nId: "about-logins-header-login-list" },
+                })
               );
             });
           }

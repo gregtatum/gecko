@@ -63,6 +63,16 @@ class AboutLoginsChild extends JSWindowActorChild {
           AppConstants.MOZILLA_OFFICIAL
         );
 
+        if (this.browsingContext.embedderElement) {
+          documentElement.classList.add("in-companion");
+          documentElement
+            .querySelector("login-list")
+            .classList.add("in-companion");
+          documentElement
+            .querySelector("login-item")
+            .classList.add("in-companion");
+        }
+
         let win = this.browsingContext.window;
         let waivedContent = Cu.waiveXrays(win);
         let that = this;
@@ -212,6 +222,15 @@ class AboutLoginsChild extends JSWindowActorChild {
         this.sendAsyncMessage("AboutLogins:UpdateLogin", {
           login: event.detail,
         });
+        break;
+      }
+      case "AboutLoginsBrowsePanel": {
+        this.sendAsyncMessage("AboutLogins:BrowsePanel");
+        break;
+      }
+      case "AboutLoginsClearSelection":
+      case "AboutLoginsShowBlankLogin": {
+        this.sendToContent("HeaderChange", event.detail.newHeaderL10nId);
         break;
       }
     }

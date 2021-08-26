@@ -464,3 +464,42 @@ input[name="password"] {
   text-decoration: underline;
   font-weight: 600;
 }
+
+:host(.in-companion, [data-is-new-login]) {
+  display: block;
+}
+
+:host(.in-companion:not([data-is-new-login])) {
+  display: none;
+}
+
+:host(.in-companion) .tooltip-container {
+  display: none !important;
+}
+
+:host(.in-companion) .meta-info {
+  display: none;
+}
+
+:host(.in-companion) .header {
+  display: none
+}
+
+:host(.in-companion) .container {
+  padding: 16px 24px;
+  min-width: unset;
+}
+
+:host(.in-companion) .detail-grid,
+:host(.in-companion) .detail-row,
+:host(.in-companion) .form-actions-row {
+    margin-bottom: 20px;
+}
+
+:host(.in-companion) .form-actions-row {
+  text-align: center;
+}
+
+:host(.in-companion) .detail-grid {
+  row-gap: 20px;
+}
