@@ -65,6 +65,10 @@ var SessionHistory = Object.freeze({
   restoreFromParent(history, tabData) {
     return SessionHistoryInternal.restore(history, tabData);
   },
+
+  getPreviousID(shEntry) {
+    return SessionHistoryInternal._shEntryIDMap.get(shEntry);
+  },
 });
 
 /**
@@ -75,6 +79,12 @@ var SessionHistoryInternal = {
    * Mapping from legacy docshellIDs to docshellUUIDs.
    */
   _docshellUUIDMap: new Map(),
+
+  /**
+   * Mapping from nsISHEntry to any previous ID. An nsISHEntry might get
+   * a new ID if it is being restored from a serialized state.
+   */
+  _shEntryIDMap: new WeakMap(),
 
   /**
    * Returns whether the given docShell's session history is empty.
@@ -472,6 +482,7 @@ var SessionHistoryInternal = {
         idMap.used[id] = true;
       }
       shEntry.ID = id;
+      this._shEntryIDMap.set(shEntry, entry.ID);
     }
 
     // If we have the legacy docshellID on our entry, upgrade it to a

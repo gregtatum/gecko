@@ -18,6 +18,17 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/ActorManagerParent.jsm"
 );
 
+ChromeUtils.defineModuleGetter(
+  this,
+  "SessionStore",
+  "resource:///modules/sessionstore/SessionStore.jsm"
+);
+ChromeUtils.defineModuleGetter(
+  this,
+  "SessionHistory",
+  "resource://gre/modules/sessionstore/SessionHistory.jsm"
+);
+
 // Set to true if we register the TopLevelNavigationDelegate JSWindowActor.
 // We record this at the module level so that subsequent browser window
 // openings don't try to re-register the same actor (which will throw an
@@ -117,9 +128,21 @@ class InternalView {
     this.#view = new View(this);
     InternalView.viewMap.set(this.#view, this);
     this.update(browser, historyEntry);
+
+    // cachedEntry is set when session history has purged or truncated
+    // the nsISHEntry associated with this InternalView. InternalView
+    // holds on to that entry so that it's possible for the user
+    // to eventually return to this state despite it having been removed.
+    this.cachedEntry = null;
   }
 
   update(browser, historyEntry) {
+    if (this.cachedEntry) {
+      console.warn(
+        "This view has a cached entry and so shouldn't be able to be updated??"
+      );
+    }
+
     this.browserId = browser.browsingContext.id;
     this.historyId = historyEntry.ID;
 
@@ -263,8 +286,33 @@ class BrowserListener {
   /**
    * See nsISHistoryListener
    */
-  async OnHistoryPurge() {
-    await Promise.resolve();
+  OnHistoryPurge(numEntries) {
+    // History entries are going to be purged, grab them and their tab state and stash them as
+    // as closed tab.
+    let { entries } = JSON.parse(
+      SessionStore.getTabState(
+        this.#browser.getTabBrowser().getTabForBrowser(this.#browser)
+      )
+    );
+
+    this.#globalHistory._onHistoryEntriesRemoved(entries.slice(0, numEntries));
+  }
+
+  /**
+   * See nsISHistoryListener
+   */
+  OnHistoryTruncate(numEntries) {
+    // History entries are going to be truncated, grab them and their tab state and stash them as
+    // as closed tab.
+    let { entries } = JSON.parse(
+      SessionStore.getTabState(
+        this.#browser.getTabBrowser().getTabForBrowser(this.#browser)
+      )
+    );
+
+    this.#globalHistory._onHistoryEntriesRemoved(
+      entries.slice(entries.length - numEntries)
+    );
   }
 
   /**
@@ -450,6 +498,21 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
+   * Called when some nsISHEntry's have been removed from a browser
+   * being listened to.
+   *
+   * @param {nsISHEntry[]} entries The entries that were removed.
+   */
+  _onHistoryEntriesRemoved(entries) {
+    for (let entry of entries) {
+      let internalView = this.#historyViews.get(entry.ID);
+      if (internalView) {
+        internalView.cachedEntry = entry;
+      }
+    }
+  }
+
+  /**
    * Called when the document in a browser has changed title.
    */
   _onNewTitle(browser) {
@@ -505,11 +568,24 @@ class GlobalHistory extends EventTarget {
     }
 
     let internalView = this.#historyViews.get(newEntry.ID);
+    if (!internalView) {
+      // It's possible that a session restoration has resulted in a new
+      // nsISHEntry being created with a new ID that doesn't match the one
+      // we're looking for. Thankfully, SessionHistory keeps track of this,
+      // so we can try to map the new nsISHEntry's ID to the previous ID,
+      // and then update our references to use the new ID.
+      let previousID = SessionHistory.getPreviousID(newEntry);
+      if (previousID) {
+        internalView = this.#historyViews.get(previousID);
+        if (internalView) {
+          this.#historyViews.set(newEntry.ID, internalView);
+        }
+      }
+    }
 
     if (!internalView && this.#pendingView?.url.spec == newEntry.URI.spec) {
       internalView = this.#pendingView;
       this.#historyViews.delete(internalView.historyId);
-      internalView.update(browser, newEntry);
       this.#historyViews.set(internalView.historyId, internalView);
       this.#pendingView = null;
     }
@@ -526,6 +602,8 @@ class GlobalHistory extends EventTarget {
       );
     } else {
       // This is a navigation to an existing view.
+      internalView.update(browser, newEntry);
+
       let pos = this.#viewStack.indexOf(internalView);
       if (pos == this.#currentIndex) {
         // Nothing to do.
@@ -720,9 +798,23 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
-    // Either the browser is gone or the history entry is gone. In the future we could re-create
-    // this, maybe re-using session store. For now just load the url fresh and hackily update the
-    // view accordingly.
+    let { cachedEntry } = internalView;
+    if (cachedEntry) {
+      internalView.cachedEntry = null;
+
+      let tab = this.#window.gBrowser.addTrustedTab("about:blank", {
+        skipAnimation: true,
+      });
+
+      SessionStore.setTabState(tab, { entries: [cachedEntry] });
+
+      this.#window.gBrowser.selectedTab = tab;
+      return;
+    }
+
+    // Either the browser is gone or the history entry is gone and for some reason we have no cache
+    // of the session.
+    console.warn("Recreating a view with no cached entry.");
     this.#pendingView = internalView;
     this.#window.gBrowser.selectedTab = this.#window.gBrowser.addWebTab(
       internalView.url.spec
