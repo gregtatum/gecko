@@ -2,6 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+import ViewGroup from "chrome://browser/content/companion/components/view-group.js";
+
 class ActiveViewManager extends HTMLElement {
   /** @type {<html:button>} */
   #overflow;
@@ -16,6 +19,7 @@ class ActiveViewManager extends HTMLElement {
     "ViewRemoved",
     "ViewMoved",
     "ViewUpdated",
+    "RiverRebuilt",
   ];
 
   connectedCallback() {
@@ -89,6 +93,27 @@ class ActiveViewManager extends HTMLElement {
     }
   }
 
+  rebuild() {
+    let riverViews = window.top.gGlobalHistory.views;
+    let topViews = [riverViews.pop()];
+    let principal = Services.scriptSecurityManager.createContentPrincipal(
+      topViews[0].url,
+      {}
+    );
+
+    while (
+      riverViews.length &&
+      ViewGroup.canGroup(principal, riverViews[riverViews.length - 1].url)
+    ) {
+      topViews.unshift(riverViews.pop());
+    }
+
+    this.#topView.setViews(topViews);
+    this.#river.setViews(riverViews);
+
+    this.viewChanged(window.top.gGlobalHistory.currentView);
+  }
+
   handleEvent(event) {
     switch (event.type) {
       case "ViewAdded":
@@ -110,6 +135,9 @@ class ActiveViewManager extends HTMLElement {
         break;
       case "ViewUpdated":
         this.viewUpdated(event.view);
+        break;
+      case "RiverRebuilt":
+        this.rebuild();
         break;
       case "UserAction:ViewSelected":
         let view = event.detail.clickedView;

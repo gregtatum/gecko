@@ -24,14 +24,7 @@ class TopView extends MozLitElement {
 
   constructor() {
     super();
-    this._viewGroup = [
-      {
-        url: Services.io.newURI("about:blank"),
-        title: "Newtab",
-        iconURL: "chrome://global/skin/icons/defaultFavicon.svg",
-      },
-    ];
-    this.#principal = Services.scriptSecurityManager.createNullPrincipal({});
+    this.setViews([]);
   }
 
   handleEvent(event) {
@@ -125,6 +118,30 @@ class TopView extends MozLitElement {
     }
 
     this.activeView = view;
+    this.viewUpdated();
+  }
+
+  setViews(views) {
+    if (!views.length) {
+      this._viewGroup = [
+        {
+          url: Services.io.newURI("about:blank"),
+          title: "Newtab",
+          iconURL: "chrome://global/skin/icons/defaultFavicon.svg",
+        },
+      ];
+      this.#principal = Services.scriptSecurityManager.createNullPrincipal({});
+      return;
+    }
+
+    this.#principal = Services.scriptSecurityManager.createContentPrincipal(
+      views[0].url,
+      {}
+    );
+
+    this._viewGroup = views;
+
+    this.activeView = views[views.length - 1];
     this.viewUpdated();
   }
 

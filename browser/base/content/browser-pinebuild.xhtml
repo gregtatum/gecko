@@ -107,7 +107,6 @@
   Services.scriptloader.loadSubScript("chrome://browser/content/places/places-menupopup.js", this);
   Services.scriptloader.loadSubScript("chrome://browser/content/search/autocomplete-popup.js", this);
   Services.scriptloader.loadSubScript("chrome://browser/content/search/searchbar.js", this);
-  Services.scriptloader.loadSubScript("chrome://browser/content/companion/components/active-view-manager.js", this);
 
   window.onload = gBrowserInit.onLoad.bind(gBrowserInit);
   window.onunload = gBrowserInit.onUnload.bind(gBrowserInit);
@@ -123,6 +122,7 @@
   window.addEventListener("DOMContentLoaded",
     gBrowserInit.onDOMContentLoaded.bind(gBrowserInit), { once: true });
 </script>
+<script type="module" src="chrome://browser/content/companion/components/active-view-manager.js"/>
 <script type="module" src="chrome://browser/content/companion/components/river.js"/>
 <script type="module" src="chrome://browser/content/companion/components/view-group.js"/>
 <script type="module" src="chrome://browser/content/companion/components/top-view.js"/>

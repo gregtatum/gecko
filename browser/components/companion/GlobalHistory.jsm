@@ -210,14 +210,15 @@ class InternalView {
  * `ViewRemoved` - A view has been removed from the bottom of the stack.
  * `ViewMoved` - An existing view has been moved to the top of the stack.
  * `ViewUpdated` - An existing view has been moved to the top of the stack.
+ * `RiverRebuilt` - The river has been replaced with a new state and should be rebuilt.
  */
 class GlobalHistoryEvent extends Event {
   #view;
 
   /**
-   * @param {"ViewChanged" | "ViewAdded" | "ViewMoved" | "ViewRemoved" | "ViewUpdated"} type
+   * @param {"ViewChanged" | "ViewAdded" | "ViewMoved" | "ViewRemoved" | "ViewUpdated" | "RiverRebuilt"} type
    *   The event type.
-   * @param {View}
+   * @param {View | null}
    *   The related view.
    */
   constructor(type, view) {
@@ -467,6 +468,18 @@ class GlobalHistory extends EventTarget {
     );
   }
 
+  /**
+   * Dispatches a GlobalHistoryEvent of type "type" on this.
+   *
+   * @param {String} type The type of GlobalHistoryEvent to dispatch.
+   * @param {InternalView} internalView The InternalView associated with the
+   *   event. Note that the associated View will be attached to the event, and
+   *   not the InternalView.
+   */
+  #notifyEvent(type, internalView) {
+    this.dispatchEvent(new GlobalHistoryEvent(type, internalView?.view));
+  }
+
   #sessionRestoreStarted() {
     // Window is starting restoration, stop listening to everything.
     this.#windowRestoring = true;
@@ -572,10 +585,6 @@ class GlobalHistory extends EventTarget {
       }
 
       this.#viewStack.push(internalView);
-      this.#currentIndex = this.#viewStack.length - 1;
-      this.dispatchEvent(
-        new GlobalHistoryEvent("ViewAdded", internalView.view)
-      );
     }
 
     let selectedTab = windowState.tabs[windowState.selected - 1];
@@ -588,17 +597,11 @@ class GlobalHistory extends EventTarget {
       this.#historyViews.set(selectedEntry.ID, selectedView);
 
       this.#viewStack.push(selectedView);
-      this.#currentIndex = this.#viewStack.length - 1;
-      this.dispatchEvent(
-        new GlobalHistoryEvent("ViewAdded", selectedView.view)
-      );
     }
 
     // Mark the correct view.
     this.#currentIndex = this.#viewStack.indexOf(selectedView);
-    this.dispatchEvent(
-      new GlobalHistoryEvent("ViewChanged", selectedView.view)
-    );
+    this.#notifyEvent("RiverRebuilt", selectedView);
 
     // Wait for tabs to finish restoring.
     for (let tab of this.#window.gBrowser.tabs) {
@@ -709,9 +712,7 @@ class GlobalHistory extends EventTarget {
     }
 
     internalView.title = entry.title;
-    this.dispatchEvent(
-      new GlobalHistoryEvent("ViewUpdated", internalView.view)
-    );
+    this.#notifyEvent("ViewUpdated", internalView);
   }
 
   /**
@@ -725,9 +726,7 @@ class GlobalHistory extends EventTarget {
     }
 
     internalView.iconURL = browser.mIconURL;
-    this.dispatchEvent(
-      new GlobalHistoryEvent("ViewUpdated", internalView.view)
-    );
+    this.#notifyEvent("ViewUpdated", internalView);
   }
 
   /**
@@ -783,9 +782,7 @@ class GlobalHistory extends EventTarget {
       this.#viewStack.push(internalView);
       this.#historyViews.set(newEntry.ID, internalView);
 
-      this.dispatchEvent(
-        new GlobalHistoryEvent("ViewAdded", internalView.view)
-      );
+      this.#notifyEvent("ViewAdded", internalView);
     } else {
       // This is a navigation to an existing view.
       internalView.update(browser, newEntry);
@@ -801,17 +798,13 @@ class GlobalHistory extends EventTarget {
         this.#currentIndex = this.#viewStack.length;
         this.#viewStack.push(internalView);
 
-        this.dispatchEvent(
-          new GlobalHistoryEvent("ViewAdded", internalView.view)
-        );
+        this.#notifyEvent("ViewAdded", internalView);
       } else {
         this.#currentIndex = pos;
       }
     }
 
-    this.dispatchEvent(
-      new GlobalHistoryEvent("ViewChanged", internalView.view)
-    );
+    this.#notifyEvent("ViewChanged", internalView);
 
     this.#startActivationTimer();
     this.#updateSessionStore();
@@ -844,7 +837,7 @@ class GlobalHistory extends EventTarget {
     let [internalView] = this.#viewStack.splice(this.#currentIndex, 1);
     this.#viewStack.push(internalView);
     this.#currentIndex = this.#viewStack.length - 1;
-    this.dispatchEvent(new GlobalHistoryEvent("ViewMoved", internalView.view));
+    this.#notifyEvent("ViewMoved", internalView);
     this.#updateSessionStore();
   }
 
@@ -872,12 +865,10 @@ class GlobalHistory extends EventTarget {
             this.#currentIndex--;
           }
 
-          this.dispatchEvent(
-            new GlobalHistoryEvent("ViewRemoved", previousView.view)
-          );
+          this.#notifyEvent("ViewRemoved", previousView);
 
           if (this.#currentIndex === null) {
-            this.dispatchEvent(new GlobalHistoryEvent("ViewChanged", null));
+            this.#notifyEvent("ViewChanged", null);
           }
 
           return;
@@ -886,9 +877,7 @@ class GlobalHistory extends EventTarget {
         previousView.update(browser, newEntry);
         this.#historyViews.set(newEntry.ID, previousView);
 
-        this.dispatchEvent(
-          new GlobalHistoryEvent("ViewUpdated", previousView.view)
-        );
+        this.#notifyEvent("ViewUpdated", previousView);
         this.#updateSessionStore();
         return;
       }
