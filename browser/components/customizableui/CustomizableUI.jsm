@@ -1844,6 +1844,9 @@ var CustomizableUIInternal = {
       if (aWidget.tabSpecific) {
         node.setAttribute("tabspecific", aWidget.tabSpecific);
       }
+      if (aWidget.locationSpecific) {
+        node.setAttribute("locationspecific", aWidget.locationSpecific);
+      }
 
       let shortcut;
       if (aWidget.shortcutId) {
@@ -2895,6 +2898,7 @@ var CustomizableUIInternal = {
       defaultArea: null,
       shortcutId: null,
       tabSpecific: false,
+      locationSpecific: false,
       tooltiptext: null,
       l10nId: null,
       showInPrivateBrowsing: true,
@@ -2938,6 +2942,7 @@ var CustomizableUIInternal = {
       "showInPrivateBrowsing",
       "overflows",
       "tabSpecific",
+      "locationSpecific",
       "localized",
     ];
     for (let prop of kOptBoolProps) {
@@ -4009,6 +4014,10 @@ var CustomizableUI = {
    *                  as the "$shortcut" variable to the fluent message.
    * - showInPrivateBrowsing: whether to show the widget in private browsing
    *                          mode (optional, default: true)
+   * - tabSpecific:      If true, closes the panel if the tab changes.
+   * - locationSpecific: If true, closes the panel if the location changes.
+   *                     This is similar to tabSpecific, but also if the location
+   *                     changes in the same tab, we may want to close the panel.
    *
    * @param aProperties the specifications for the widget.
    * @return a wrapper around the created widget (see getWidget)

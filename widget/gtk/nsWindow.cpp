@@ -12,7 +12,6 @@
 #include <gdk/gdkkeysyms.h>
 #include <wchar.h>
 
-#include "ClientLayerManager.h"
 #include "gfx2DGlue.h"
 #include "gfxContext.h"
 #include "gfxImageSurface.h"
@@ -35,6 +34,7 @@
 #include "mozilla/gfx/GPUProcessManager.h"
 #include "mozilla/gfx/HelpersCairo.h"
 #include "mozilla/layers/LayersTypes.h"
+#include "mozilla/layers/CompositorBridgeChild.h"
 #include "mozilla/layers/CompositorBridgeParent.h"
 #include "mozilla/layers/CompositorThread.h"
 #include "mozilla/layers/KnowsCompositor.h"
@@ -108,7 +108,6 @@
 #  include "GLContextEGL.h"  // for GLContextEGL::FindVisual()
 #  include "WindowSurfaceX11Image.h"
 #  include "WindowSurfaceX11SHM.h"
-#  include "WindowSurfaceXRender.h"
 #endif
 #ifdef MOZ_WAYLAND
 #  include "nsIClipboard.h"

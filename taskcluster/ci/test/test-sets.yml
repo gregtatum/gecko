@@ -201,6 +201,7 @@ linux-talos-flex:
 
 windows-7-tests:
     - mochitest-browser-chrome
+    - mochitest-browser-chrome-pinebuild
     - mochitest-webgpu
     - reftest
     - xpcshell
@@ -226,21 +227,6 @@ windows32-tests:
     - test-verify-gpu
     - test-verify-wpt
 
-windows-tests:
-    - firefox-ui-functional-local
-    - firefox-ui-functional-remote
-    # - jittest  # See comment in windows-ccov-tests set.
-    - jsreftest
-    - marionette
-    - mochitest-a11y
-    - mochitest-browser-chrome-pinebuild
-    - mochitest-chrome
-    - mochitest-remote
-    - telemetry-tests-client
-    - test-verify
-    - test-verify-gpu
-    - test-verify-wpt
-
 windows-ccov-tests:
     # jittest run on regular windows builds is redundant with SM(p), so we omit
     # it from the windows-tests set. But, we still want to run it on ccov builds,
@@ -253,18 +239,30 @@ windows10-tests:
 windows10-2004-tests:
     - cppunit
     - crashtest
+    - firefox-ui-functional-local
+    - firefox-ui-functional-remote
     - gtest
+    - jsreftest
+    - marionette
+    - mochitest-a11y
     - mochitest-browser-chrome
+    - mochitest-browser-chrome-pinebuild
+    - mochitest-chrome
     - mochitest-chrome-gpu
     - mochitest-devtools-chrome
     - mochitest-media
     - mochitest-plain
     - mochitest-plain-gpu
+    - mochitest-remote
     - mochitest-webgpu
     - mochitest-webgl1-ext
     - mochitest-webgl2-core
     - mochitest-webgl2-ext
     - reftest
+    - telemetry-tests-client
+    - test-verify
+    - test-verify-gpu
+    - test-verify-wpt
     - xpcshell
 
 windows10-64-2004-failure-tests:
@@ -482,8 +480,10 @@ android-hw-aarch64-raptor-cpu-memory-power:
     - raptor-scn-cpu-memory-power-idle-bg-geckoview
     - raptor-scn-cpu-memory-power-idle-bg-refbrow
 
-android-hw-browsertime:
+android-hw-browsertime-power:
     - browsertime-power
+
+android-hw-browsertime:
     - browsertime-tp6m
     - browsertime-tp6m-essential
     - browsertime-tp6m-live

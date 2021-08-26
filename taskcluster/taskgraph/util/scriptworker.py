@@ -15,7 +15,6 @@ happen on mozilla-beta and mozilla-release.
 
 Additional configuration is found in the :ref:`graph config <taskgraph-graph-config>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import json
 import os
@@ -50,28 +49,24 @@ This is a list of list-pairs, for ordering.
 SIGNING_SCOPE_ALIAS_TO_PROJECT = [
     [
         "all-nightly-branches",
-        set(
-            [
-                "mozilla-central",
-                "comm-central",
-                "oak",
-                "pine",
-            ]
-        ),
+        {
+            "mozilla-central",
+            "comm-central",
+            "oak",
+            "pine",
+        },
     ],
     [
         "all-release-branches",
-        set(
-            [
-                "mozilla-beta",
-                "mozilla-release",
-                "mozilla-esr78",
-                "mozilla-esr91",
-                "comm-beta",
-                "comm-esr78",
-                "comm-esr91",
-            ]
-        ),
+        {
+            "mozilla-beta",
+            "mozilla-release",
+            "mozilla-esr78",
+            "mozilla-esr91",
+            "comm-beta",
+            "comm-esr78",
+            "comm-esr91",
+        },
     ],
 ]
 
@@ -86,11 +81,9 @@ SIGNING_CERT_SCOPES = {
 DEVEDITION_SIGNING_SCOPE_ALIAS_TO_PROJECT = [
     [
         "beta",
-        set(
-            [
-                "mozilla-beta",
-            ]
-        ),
+        {
+            "mozilla-beta",
+        },
     ]
 ]
 
@@ -104,28 +97,24 @@ DEVEDITION_SIGNING_CERT_SCOPES = {
 BEETMOVER_SCOPE_ALIAS_TO_PROJECT = [
     [
         "all-nightly-branches",
-        set(
-            [
-                "mozilla-central",
-                "comm-central",
-                "oak",
-                "pine",
-            ]
-        ),
+        {
+            "mozilla-central",
+            "comm-central",
+            "oak",
+            "pine",
+        },
     ],
     [
         "all-release-branches",
-        set(
-            [
-                "mozilla-beta",
-                "mozilla-release",
-                "mozilla-esr78",
-                "mozilla-esr91",
-                "comm-beta",
-                "comm-esr78",
-                "comm-esr91",
-            ]
-        ),
+        {
+            "mozilla-beta",
+            "mozilla-release",
+            "mozilla-esr78",
+            "mozilla-esr91",
+            "comm-beta",
+            "comm-esr78",
+            "comm-esr91",
+        },
     ],
 ]
 
@@ -163,49 +152,39 @@ This is a list of list-pairs, for ordering.
 BALROG_SCOPE_ALIAS_TO_PROJECT = [
     [
         "nightly",
-        set(
-            [
-                "mozilla-central",
-                "comm-central",
-                "oak",
-                "pine",
-            ]
-        ),
+        {
+            "mozilla-central",
+            "comm-central",
+            "oak",
+            "pine",
+        },
     ],
     [
         "beta",
-        set(
-            [
-                "mozilla-beta",
-                "comm-beta",
-            ]
-        ),
+        {
+            "mozilla-beta",
+            "comm-beta",
+        },
     ],
     [
         "release",
-        set(
-            [
-                "mozilla-release",
-                "comm-esr78",
-                "comm-esr91",
-            ]
-        ),
+        {
+            "mozilla-release",
+            "comm-esr78",
+            "comm-esr91",
+        },
     ],
     [
         "esr78",
-        set(
-            [
-                "mozilla-esr78",
-            ]
-        ),
+        {
+            "mozilla-esr78",
+        },
     ],
     [
         "esr91",
-        set(
-            [
-                "mozilla-esr91",
-            ]
-        ),
+        {
+            "mozilla-esr91",
+        },
     ],
 ]
 
@@ -434,7 +413,7 @@ def generate_beetmover_upstream_artifacts(
         **{
             "release-type": config.params["release_type"],
             "platform": platform,
-        }
+        },
     )
     map_config = deepcopy(cached_load_yaml(job["attributes"]["artifact_map"]))
     upstream_artifacts = list()
@@ -452,7 +431,7 @@ def generate_beetmover_upstream_artifacts(
         elif job.get("primary-dependency"):
             dependencies = [job["primary-dependency"].kind]
         else:
-            raise Exception("Unsupported type of dependency. Got job: {}".format(job))
+            raise Exception(f"Unsupported type of dependency. Got job: {job}")
 
     for locale, dep in itertools.product(locales, dependencies):
         paths = list()
@@ -508,7 +487,7 @@ def generate_beetmover_upstream_artifacts(
 
         upstream_artifacts.append(
             {
-                "taskId": {"task-reference": "<{}>".format(dep)},
+                "taskId": {"task-reference": f"<{dep}>"},
                 "taskType": map_config["tasktype_map"].get(dep),
                 "paths": sorted(paths),
                 "locale": locale,
@@ -544,7 +523,7 @@ def generate_beetmover_artifact_map(config, job, **kwargs):
         **{
             "release-type": config.params["release_type"],
             "platform": platform,
-        }
+        },
     )
     map_config = deepcopy(cached_load_yaml(job["attributes"]["artifact_map"]))
     base_artifact_prefix = map_config.get(
@@ -667,7 +646,7 @@ def generate_beetmover_artifact_map(config, job, **kwargs):
         paths = jsone.render(paths, kwargs)
         artifacts.append(
             {
-                "taskId": {"task-reference": "<{}>".format(dep)},
+                "taskId": {"task-reference": f"<{dep}>"},
                 "locale": locale,
                 "paths": paths,
             }
@@ -702,7 +681,7 @@ def generate_beetmover_partials_artifact_map(config, job, partials_info, **kwarg
         **{
             "release-type": config.params["release_type"],
             "platform": platform,
-        }
+        },
     )
     map_config = deepcopy(cached_load_yaml(job["attributes"]["artifact_map"]))
     base_artifact_prefix = map_config.get(
@@ -821,7 +800,7 @@ def generate_beetmover_partials_artifact_map(config, job, partials_info, **kwarg
 
         artifacts.append(
             {
-                "taskId": {"task-reference": "<{}>".format(dep)},
+                "taskId": {"task-reference": f"<{dep}>"},
                 "locale": locale,
                 "paths": paths,
             }

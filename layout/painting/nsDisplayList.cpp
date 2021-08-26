@@ -34,6 +34,7 @@
 #include "mozilla/StaticPrefs_gfx.h"
 #include "mozilla/StaticPrefs_layers.h"
 #include "mozilla/StaticPrefs_layout.h"
+#include "mozilla/StaticPrefs_print.h"
 #include "mozilla/SVGIntegrationUtils.h"
 #include "mozilla/SVGUtils.h"
 #include "mozilla/ViewportUtils.h"
@@ -54,7 +55,6 @@
 #include "mozilla/MathAlgorithms.h"
 
 #include "imgIContainer.h"
-#include "BasicLayers.h"
 #include "nsBoxFrame.h"
 #include "nsImageFrame.h"
 #include "nsSubDocumentFrame.h"
@@ -101,7 +101,6 @@
 #include "nsTextFrame.h"
 #include "nsSliderFrame.h"
 #include "nsFocusManager.h"
-#include "ClientLayerManager.h"
 #include "TextDrawTarget.h"
 #include "mozilla/layers/AnimationHelper.h"
 #include "mozilla/layers/CompositorThread.h"
@@ -571,11 +570,14 @@ nsDisplayListBuilder::Linkifier::Linkifier(nsDisplayListBuilder* aBuilder,
       }
     }
   };
-  if (elem->HasID()) {
-    maybeGenerateDest(nsGkAtoms::id);
-  }
-  if (elem->HasName()) {
-    maybeGenerateDest(nsGkAtoms::name);
+
+  if (StaticPrefs::print_save_as_pdf_internal_destinations_enabled()) {
+    if (elem->HasID()) {
+      maybeGenerateDest(nsGkAtoms::id);
+    }
+    if (elem->HasName()) {
+      maybeGenerateDest(nsGkAtoms::name);
+    }
   }
 
   // Links don't nest, so if the builder already has a destination, no need to
@@ -593,7 +595,8 @@ nsDisplayListBuilder::Linkifier::Linkifier(nsDisplayListBuilder* aBuilder,
   // Is it a local (in-page) destination?
   bool hasRef, eqExRef;
   nsIURI* docURI;
-  if (NS_SUCCEEDED(uri->GetHasRef(&hasRef)) && hasRef &&
+  if (StaticPrefs::print_save_as_pdf_internal_destinations_enabled() &&
+      NS_SUCCEEDED(uri->GetHasRef(&hasRef)) && hasRef &&
       (docURI = aFrame->PresContext()->Document()->GetDocumentURI()) &&
       NS_SUCCEEDED(uri->EqualsExceptRef(docURI, &eqExRef)) && eqExRef) {
     if (NS_FAILED(uri->GetRef(aBuilder->mLinkSpec)) ||
@@ -6001,6 +6004,8 @@ bool nsDisplayOwnLayer::CreateWebRenderCommands(
 
     prop.emplace();
     prop->id = mWrAnimationId;
+    prop->key = wr::SpatialKey(uint64_t(mFrame), GetPerFrameKey(),
+                               wr::SpatialKeyKind::APZ);
     prop->effect_type = wr::WrAnimationType::Transform;
   }
 
@@ -6587,7 +6592,9 @@ bool nsDisplayStickyPosition::CreateWebRenderCommands(
     wr::WrSpatialId spatialId = aBuilder.DefineStickyFrame(
         wr::ToLayoutRect(bounds), topMargin.ptrOr(nullptr),
         rightMargin.ptrOr(nullptr), bottomMargin.ptrOr(nullptr),
-        leftMargin.ptrOr(nullptr), vBounds, hBounds, applied);
+        leftMargin.ptrOr(nullptr), vBounds, hBounds, applied,
+        wr::SpatialKey(uint64_t(mFrame), GetPerFrameKey(),
+                       wr::SpatialKeyKind::Sticky));
 
     saccHelper.emplace(aBuilder, spatialId);
     aManager->CommandBuilder().PushOverrideForASR(mContainerASR, spatialId);
@@ -7533,6 +7540,9 @@ bool nsDisplayTransform::CreateWebRenderCommands(
     }
   }
 
+  auto key = wr::SpatialKey(uint64_t(mFrame), GetPerFrameKey(),
+                            wr::SpatialKeyKind::Transform);
+
   // We don't send animations for transform separator display items.
   uint64_t animationsId =
       mIsTransformSeparator
@@ -7540,10 +7550,8 @@ bool nsDisplayTransform::CreateWebRenderCommands(
           : AddAnimationsForWebRender(
                 this, aManager, aDisplayListBuilder,
                 IsPartialPrerender() ? Some(position) : Nothing());
-  wr::WrAnimationProperty prop{
-      wr::WrAnimationType::Transform,
-      animationsId,
-  };
+  wr::WrAnimationProperty prop{wr::WrAnimationType::Transform, animationsId,
+                               key};
 
   nsDisplayTransform* deferredTransformItem = nullptr;
   if (!mFrame->ChildrenHavePerspective()) {
@@ -7562,7 +7570,16 @@ bool nsDisplayTransform::CreateWebRenderCommands(
   wr::StackingContextParams params;
   params.mBoundTransform = &newTransformMatrix;
   params.animation = animationsId ? &prop : nullptr;
-  params.mTransformPtr = transformForSC;
+
+  wr::WrTransformInfo transform_info;
+  if (transformForSC) {
+    transform_info.transform = wr::ToLayoutTransform(newTransformMatrix);
+    transform_info.key = key;
+    params.mTransformPtr = &transform_info;
+  } else {
+    params.mTransformPtr = nullptr;
+  }
+
   params.prim_flags = !BackfaceIsHidden()
                           ? wr::PrimitiveFlags::IS_BACKFACE_VISIBLE
                           : wr::PrimitiveFlags{0};
@@ -8302,7 +8319,13 @@ bool nsDisplayPerspective::CreateWebRenderCommands(
       mFrame->Extend3DContext() || perspectiveFrame->Extend3DContext();
 
   wr::StackingContextParams params;
-  params.mTransformPtr = &perspectiveMatrix;
+
+  wr::WrTransformInfo transform_info;
+  transform_info.transform = wr::ToLayoutTransform(perspectiveMatrix);
+  transform_info.key = wr::SpatialKey(uint64_t(mFrame), GetPerFrameKey(),
+                                      wr::SpatialKeyKind::Perspective);
+  params.mTransformPtr = &transform_info;
+
   params.reference_frame_kind = wr::WrReferenceFrameKind::Perspective;
   params.prim_flags = !BackfaceIsHidden()
                           ? wr::PrimitiveFlags::IS_BACKFACE_VISIBLE
