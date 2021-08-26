@@ -402,8 +402,6 @@ class GlobalHistory extends EventTarget {
       "TabAttrModified",
       event => this.#tabAttrModified(event.target, event.detail.changed)
     );
-
-    this._onBrowserNavigate(this.#window.gBrowser.selectedBrowser);
   }
 
   /**
