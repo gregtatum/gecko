@@ -29,6 +29,8 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/sessionstore/SessionHistory.jsm"
 );
 
+const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
+
 // Set to true if we register the TopLevelNavigationDelegate JSWindowActor.
 // We record this at the module level so that subsequent browser window
 // openings don't try to re-register the same actor (which will throw an
@@ -120,31 +122,35 @@ class InternalView {
 
   /**
    * @param {DOMWindow} window
-   * @param {Browser} browser
+   * @param {Browser | null} browser
    * @param {nsISHEntry} historyEntry
    */
   constructor(window, browser, historyEntry) {
     this.#window = window;
     this.#view = new View(this);
     InternalView.viewMap.set(this.#view, this);
-    this.update(browser, historyEntry);
 
     // cachedEntry is set when session history has purged or truncated
     // the nsISHEntry associated with this InternalView. InternalView
     // holds on to that entry so that it's possible for the user
     // to eventually return to this state despite it having been removed.
     this.cachedEntry = null;
+
+    if (browser) {
+      this.update(browser, historyEntry);
+    } else {
+      this.cachedEntry = historyEntry;
+      this.historyId = historyEntry.ID;
+      this.url = Services.io.newURI(historyEntry.url);
+      this.title = historyEntry.title;
+      this.iconURL = null;
+    }
   }
 
   update(browser, historyEntry) {
-    if (this.cachedEntry) {
-      console.warn(
-        "This view has a cached entry and so shouldn't be able to be updated??"
-      );
-    }
-
     this.browserId = browser.browsingContext.id;
     this.historyId = historyEntry.ID;
+    this.cachedEntry = null;
 
     this.url = historyEntry.URI;
     this.title = historyEntry.title;
@@ -397,6 +403,11 @@ class GlobalHistory extends EventTarget {
   #pendingView = null;
 
   /**
+   * True if the window is currently being restored from a saved session.
+   */
+  #windowRestoring = false;
+
+  /**
    * @param {DOMWindow} window
    *   The top level window to track history for.
    */
@@ -450,6 +461,167 @@ class GlobalHistory extends EventTarget {
       "TabAttrModified",
       event => this.#tabAttrModified(event.target, event.detail.changed)
     );
+
+    this.#window.addEventListener("SSWindowStateBusy", () =>
+      this.#sessionRestoreStarted()
+    );
+  }
+
+  #sessionRestoreStarted() {
+    // Window is starting restoration, stop listening to everything.
+    this.#windowRestoring = true;
+
+    if (this.#activationTimer) {
+      this.#window.clearTimeout(this.#activationTimer);
+    }
+
+    for (let { linkedBrowser: browser } of this.#window.gBrowser.tabs) {
+      let listener = this.#browsers.get(browser);
+      if (listener) {
+        try {
+          browser.browsingContext.sessionHistory.removeSHistoryListener(
+            listener
+          );
+        } catch (e) {
+          console.error("Failed to remove listener", e);
+        }
+      }
+    }
+
+    this.#browsers = new WeakMap();
+
+    this.#window.addEventListener(
+      "SSWindowStateReady",
+      () => {
+        this.#sessionRestoreEnded();
+      },
+      { once: true }
+    );
+  }
+
+  #tabRestored(tab) {
+    let { sessionHistory } = tab.linkedBrowser.browsingContext;
+    for (let i = 0; i < sessionHistory.count; i++) {
+      let entry = sessionHistory.getEntryAtIndex(i);
+      let internalView = this.#historyViews.get(entry.ID);
+      if (!internalView) {
+        let previousID = SessionHistory.getPreviousID(entry);
+        if (previousID) {
+          internalView = this.#historyViews.get(previousID);
+          if (internalView) {
+            this.#historyViews.set(entry.ID, internalView);
+          }
+        }
+      }
+
+      if (internalView) {
+        internalView.update(tab.linkedBrowser, entry);
+      }
+    }
+
+    this.#watchBrowser(tab.linkedBrowser);
+  }
+
+  #sessionRestoreEnded() {
+    // Session restore is done, rebuild everything from the new state.
+    this.#windowRestoring = false;
+
+    let stateStr = SessionStore.getCustomWindowValue(
+      this.#window,
+      SESSIONSTORE_STATE_KEY
+    );
+
+    this.#viewStack = [];
+    this.#historyViews.clear();
+
+    // Tabs are not yet functional so build a set of views from cached history state.
+    let state = (stateStr && JSON.parse(stateStr)) || [];
+    if (!state.length) {
+      console.error("No state to rebuild from.");
+    }
+
+    let missingIds = new Set();
+    for (let { id, cachedEntry } of state) {
+      if (cachedEntry) {
+        let internalView = new InternalView(this.#window, null, cachedEntry);
+        this.#historyViews.set(id, internalView);
+      } else {
+        missingIds.add(id);
+      }
+    }
+
+    let [windowState] = JSON.parse(
+      SessionStore.getWindowState(this.#window)
+    ).windows;
+
+    for (let tab of windowState.tabs) {
+      for (let cachedEntry of tab.entries) {
+        if (missingIds.has(cachedEntry.ID)) {
+          let internalView = new InternalView(this.#window, null, cachedEntry);
+          this.#historyViews.set(cachedEntry.ID, internalView);
+        }
+      }
+    }
+
+    // Push those views onto the stack and to the river.
+    for (let { id } of state) {
+      let internalView = this.#historyViews.get(id);
+      if (!internalView) {
+        console.warn("Missing history entry for river entry.");
+        continue;
+      }
+
+      this.#viewStack.push(internalView);
+      this.#currentIndex = this.#viewStack.length - 1;
+      this.dispatchEvent(
+        new GlobalHistoryEvent("ViewAdded", internalView.view)
+      );
+    }
+
+    let selectedTab = windowState.tabs[windowState.selected - 1];
+    let selectedEntry = selectedTab.entries[selectedTab.index - 1];
+    let selectedView = this.#historyViews.get(selectedEntry.ID);
+
+    if (!selectedView) {
+      console.warn("Selected entry was not in state.");
+      selectedView = new InternalView(this.#window, null, selectedEntry);
+      this.#historyViews.set(selectedEntry.ID, selectedView);
+
+      this.#viewStack.push(selectedView);
+      this.#currentIndex = this.#viewStack.length - 1;
+      this.dispatchEvent(
+        new GlobalHistoryEvent("ViewAdded", selectedView.view)
+      );
+    }
+
+    // Mark the correct view.
+    this.#currentIndex = this.#viewStack.indexOf(selectedView);
+    this.dispatchEvent(
+      new GlobalHistoryEvent("ViewChanged", selectedView.view)
+    );
+
+    // Wait for tabs to finish restoring.
+    for (let tab of this.#window.gBrowser.tabs) {
+      tab.addEventListener("SSTabRestoring", () => this.#tabRestored(tab), {
+        once: true,
+      });
+    }
+
+    this.#startActivationTimer();
+  }
+
+  #updateSessionStore() {
+    // Stash the view order into session store.
+    let state = this.#viewStack.map(internalView => ({
+      id: internalView.historyId,
+      cachedEntry: internalView.cachedEntry,
+    }));
+
+    SessionStore.setCustomWindowValue(
+      this.#window,
+      SESSIONSTORE_STATE_KEY,
+      JSON.stringify(state)
+    );
   }
 
   /**
@@ -474,6 +646,10 @@ class GlobalHistory extends EventTarget {
    * @param {Tab} newTab
    */
   #tabSelected(newTab) {
+    if (this.#windowRestoring) {
+      return;
+    }
+
     this._onBrowserNavigate(newTab.linkedBrowser);
   }
 
@@ -481,6 +657,10 @@ class GlobalHistory extends EventTarget {
    * @param {Tab} newTab
    */
   #tabOpened(newTab) {
+    if (this.#windowRestoring) {
+      return;
+    }
+
     let browser = newTab.linkedBrowser;
     this.#watchBrowser(browser);
     this._onBrowserNavigate(browser);
@@ -491,6 +671,10 @@ class GlobalHistory extends EventTarget {
    * @param {Array} changed
    */
   #tabAttrModified(tab, changed) {
+    if (this.#windowRestoring) {
+      return;
+    }
+
     if (changed.includes("image")) {
       let browser = tab.linkedBrowser;
       this._onNewIcon(browser);
@@ -510,6 +694,8 @@ class GlobalHistory extends EventTarget {
         internalView.cachedEntry = entry;
       }
     }
+
+    this.#updateSessionStore();
   }
 
   /**
@@ -628,6 +814,7 @@ class GlobalHistory extends EventTarget {
     );
 
     this.#startActivationTimer();
+    this.#updateSessionStore();
   }
 
   #startActivationTimer() {
@@ -658,6 +845,7 @@ class GlobalHistory extends EventTarget {
     this.#viewStack.push(internalView);
     this.#currentIndex = this.#viewStack.length - 1;
     this.dispatchEvent(new GlobalHistoryEvent("ViewMoved", internalView.view));
+    this.#updateSessionStore();
   }
 
   /**
@@ -701,6 +889,7 @@ class GlobalHistory extends EventTarget {
         this.dispatchEvent(
           new GlobalHistoryEvent("ViewUpdated", previousView.view)
         );
+        this.#updateSessionStore();
         return;
       }
     }
@@ -800,8 +989,6 @@ class GlobalHistory extends EventTarget {
 
     let { cachedEntry } = internalView;
     if (cachedEntry) {
-      internalView.cachedEntry = null;
-
       let tab = this.#window.gBrowser.addTrustedTab("about:blank", {
         skipAnimation: true,
       });
