@@ -3,6 +3,16 @@
 
 "use strict";
 
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
+);
+
+XPCOMUtils.defineLazyModuleGetters(this, {
+  PlacesTestUtils: "resource://testing-common/PlacesTestUtils.jsm",
+  PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
+  Snapshots: "resource:///modules/Snapshots.jsm",
+});
+
 class CompanionHelper {
   static async whenReady(taskFn) {
     let helper = new CompanionHelper();
