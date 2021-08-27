@@ -27,7 +27,6 @@
 #include "mozilla/dom/SVGElement.h"
 #include "mozilla/dom/TouchEvent.h"
 #include "mozilla/gfx/2D.h"
-#include "mozilla/layers/PLayerTransaction.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/ShapeUtils.h"
 #include "mozilla/StaticPrefs_apz.h"
@@ -205,6 +204,13 @@ bool ActiveScrolledRoot::IsAncestor(const ActiveScrolledRoot* aAncestor,
     asr = asr->mParent;
   }
   return false;
+}
+
+/* static */
+bool ActiveScrolledRoot::IsProperAncestor(
+    const ActiveScrolledRoot* aAncestor,
+    const ActiveScrolledRoot* aDescendant) {
+  return aAncestor != aDescendant && IsAncestor(aAncestor, aDescendant);
 }
 
 /* static */
@@ -2967,34 +2973,6 @@ bool nsDisplayItem::ComputeVisibility(nsDisplayListBuilder* aBuilder,
                                       nsRegion* aVisibleRegion) {
   return !GetPaintRect().IsEmpty() &&
          !IsInvisibleInRect(aVisibleRegion->GetBounds());
-}
-
-bool nsDisplayItem::RecomputeVisibility(nsDisplayListBuilder* aBuilder,
-                                        nsRegion* aVisibleRegion) {
-  if (ForceNotVisible() && !GetSameCoordinateSystemChildren()) {
-    // mForceNotVisible wants to ensure that this display item doesn't render
-    // anything itself. If this item has contents, then we obviously want to
-    // render those, so we don't need this check in that case.
-    NS_ASSERTION(GetBuildingRect().IsEmpty(),
-                 "invisible items without children should have empty vis rect");
-    SetPaintRect(nsRect());
-  } else {
-    bool snap;
-    nsRect bounds = GetBounds(aBuilder, &snap);
-
-    nsRegion itemVisible;
-    itemVisible.And(*aVisibleRegion, bounds);
-    SetPaintRect(itemVisible.GetBounds());
-  }
-
-  if (!ComputeVisibility(aBuilder, aVisibleRegion)) {
-    SetPaintRect(nsRect());
-    return false;
-  }
-
-  nsRegion opaque = TreatAsOpaque(this, aBuilder);
-  aBuilder->SubtractFromVisibleRegion(aVisibleRegion, opaque);
-  return true;
 }
 
 void nsDisplayItem::SetClipChain(const DisplayItemClipChain* aClipChain,

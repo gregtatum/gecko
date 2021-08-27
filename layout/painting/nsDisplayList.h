@@ -278,6 +278,8 @@ struct ActiveScrolledRoot {
 
   static bool IsAncestor(const ActiveScrolledRoot* aAncestor,
                          const ActiveScrolledRoot* aDescendant);
+  static bool IsProperAncestor(const ActiveScrolledRoot* aAncestor,
+                               const ActiveScrolledRoot* aDescendant);
 
   static nsCString ToString(const ActiveScrolledRoot* aActiveScrolledRoot);
 
@@ -2850,16 +2852,6 @@ class nsDisplayItem : public nsDisplayItemLink {
   virtual void WriteDebugInfo(std::stringstream& aStream) {}
 
   nsDisplayItem* GetAbove() { return mAbove; }
-
-  /**
-   * Like ComputeVisibility, but does the work that nsDisplayList
-   * does per-item:
-   * -- Intersects GetBounds with aVisibleRegion and puts the result
-   * in mVisibleRect
-   * -- Subtracts bounds from aVisibleRegion if the item is opaque
-   */
-  bool RecomputeVisibility(nsDisplayListBuilder* aBuilder,
-                           nsRegion* aVisibleRegion);
 
   /**
    * Returns the result of aBuilder->ToReferenceFrame(GetUnderlyingFrame())

@@ -267,6 +267,10 @@ static bool DetectContainerLayerPropertiesBoundsChange(
   return !aGeometry.mBounds.IsEqualEdges(aData->mGeometry->mBounds);
 }
 
+/* A Display Item Group. This represents a set of diplay items that
+ * have been grouped together for rasterization and can be partially
+ * invalidated. It also tracks a number of properties from the environment
+ * that when changed would cause us to repaint like mScale. */
 struct DIGroup {
   // XXX: Storing owning pointers to the BlobItemData in a hash table is not
   // a good choice. There are two better options:
@@ -1293,9 +1297,9 @@ bool Grouper::ConstructItemInsideInactive(
       aGroup->mClippedImageBounds.Intersect(data->mRect);
 
   if (aItem->GetType() == DisplayItemType::TYPE_FILTER) {
-    // If ComputeDifferences finds any change, we invalidate the entire
-    // container item. This is needed because blob merging requires the entire
-    // item to be within the invalid region.
+    // If ConstructGroupInsideInactive finds any change, we invalidate the
+    // entire container item. This is needed because blob merging requires the
+    // entire item to be within the invalid region.
     Matrix m = mTransform;
     mTransform = Matrix();
     bool old = aGroup->mSuppressInvalidations;
@@ -1318,9 +1322,9 @@ bool Grouper::ConstructItemInsideInactive(
     Matrix t2d;
     bool is2D = t.CanDraw2D(&t2d);
     if (!is2D) {
-      // If ComputeDifferences finds any change, we invalidate the entire
-      // container item. This is needed because blob merging requires the entire
-      // item to be within the invalid region.
+      // If ConstructGroupInsideInactive finds any change, we invalidate the
+      // entire container item. This is needed because blob merging requires the
+      // entire item to be within the invalid region.
       bool old = aGroup->mSuppressInvalidations;
       aGroup->mSuppressInvalidations = true;
       mTransform = Matrix();
@@ -1836,10 +1840,22 @@ void WebRenderCommandBuilder::CreateWebRenderCommandsFromDisplayList(
             ScrollableLayerGuid::NULL_SCROLL_ID;
         bool transformShouldGetOwnLayer = false;
         if (deferred) {
+          // It's possible the transform's ASR is not only an ancestor of
+          // the item's ASR, but an ancestor of stopAtAsr. In such cases,
+          // don't use the transform at all at this level (it would be
+          // scrolled by stopAtAsr which is incorrect). The transform will
+          // instead be emitted as part of the ancestor WebRenderLayerScrollData
+          // node (the one with stopAtAsr as its item ASR), or one of its
+          // ancetors in turn.
+          if (ActiveScrolledRoot::IsProperAncestor(
+                  deferred->GetActiveScrolledRoot(), stopAtAsr)) {
+            deferred = nullptr;
+          }
+        }
+        if (deferred) {
           if (const auto* asr = deferred->GetActiveScrolledRoot()) {
             deferredId = asr->GetViewId();
           }
-
           if (deferred->GetActiveScrolledRoot() !=
               item->GetActiveScrolledRoot()) {
             transformShouldGetOwnLayer = true;
@@ -1884,7 +1900,8 @@ void WebRenderCommandBuilder::CreateWebRenderCommandsFromDisplayList(
           mLayerScrollData.emplace_back();
           mLayerScrollData.back().Initialize(
               mManager->GetScrollData(), item, descendants, stopAtAsr,
-              aSc.GetDeferredTransformMatrix(), deferredId);
+              deferred ? aSc.GetDeferredTransformMatrix() : Nothing(),
+              deferredId);
         }
       }
     }
