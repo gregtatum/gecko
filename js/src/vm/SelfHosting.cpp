@@ -905,15 +905,6 @@ js::PropertyName* js::GetClonedSelfHostedFunctionName(const JSFunction* fun) {
   return name.toString()->asAtom().asPropertyName();
 }
 
-js::PropertyName* js::GetClonedSelfHostedFunctionNameOffMainThread(
-    JSFunction* fun) {
-  Value name = fun->getExtendedSlotOffMainThread(LAZY_FUNCTION_NAME_SLOT);
-  if (!name.isString()) {
-    return nullptr;
-  }
-  return name.toString()->asAtom().asPropertyName();
-}
-
 bool js::IsExtendedUnclonedSelfHostedFunctionName(JSAtom* name) {
   if (name->length() < 2) {
     return false;
@@ -2415,6 +2406,7 @@ static const JSFunctionSpec intrinsic_functions[] = {
     JS_FN("intl_RuntimeDefaultLocale", intrinsic_RuntimeDefaultLocale, 0, 0),
     JS_FN("intl_SelectPluralRule", intl_SelectPluralRule, 2, 0),
     JS_FN("intl_SelectPluralRuleRange", intl_SelectPluralRuleRange, 3, 0),
+    JS_FN("intl_SupportedValuesOf", intl_SupportedValuesOf, 1, 0),
     JS_FN("intl_TryValidateAndCanonicalizeLanguageTag",
           intl_TryValidateAndCanonicalizeLanguageTag, 1, 0),
     JS_FN("intl_ValidateAndCanonicalizeLanguageTag",

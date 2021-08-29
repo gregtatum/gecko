@@ -109,8 +109,6 @@ using namespace mozilla::dom;
 using namespace mozilla::gfx;
 using namespace mozilla::layers;
 
-uint8_t gNotifySubDocInvalidationData;
-
 /**
  * Layer UserData for ContainerLayers that want to be notified
  * of local invalidations of them and their descendant layers.
@@ -138,11 +136,42 @@ bool nsPresContext::IsDOMPaintEventPending() {
   return false;
 }
 
-void nsPresContext::ForceReflowForFontInfoUpdate() {
-  // We can trigger reflow by pretending a font.* preference has changed;
-  // this is the same mechanism as gfxPlatform::ForceGlobalReflow() uses
-  // if new fonts are installed during the session, for example.
-  PreferenceChanged("font.internaluseonly.changed");
+void nsPresContext::ForceReflowForFontInfoUpdate(bool aNeedsReframe) {
+  // In the case of a static-clone document used for printing or print-preview,
+  // this is undesirable because the nsPrintJob is holding weak refs to frames
+  // that will get blown away unexpectedly by this reconstruction. So the
+  // prescontext for a print/preview doc ignores the font-list update.
+  //
+  // This means the print document may still be using cached fonts that are no
+  // longer present in the font list, but that should be safe given that all the
+  // required font instances have already been created, so it won't be depending
+  // on access to the font-list entries.
+  //
+  // XXX Actually, I think it's probably a bad idea to do *any* restyling of
+  // print documents in response to pref changes. We could be in the middle
+  // of printing the document, and reflowing all the frames might cause some
+  // kind of unwanted mid-document discontinuity.
+  if (IsPrintingOrPrintPreview()) {
+    return;
+  }
+
+  // If there's a user font set, discard any src:local() faces it may have
+  // loaded because their font entries may no longer be valid.
+  if (auto* fonts = Document()->GetFonts()) {
+    fonts->GetUserFontSet()->ForgetLocalFaces();
+  }
+
+  FlushFontCache();
+
+  nsChangeHint changeHint =
+      aNeedsReframe ? nsChangeHint_ReconstructFrame : NS_STYLE_HINT_REFLOW;
+
+  // We also need to trigger restyling for ex/ch units changes to take effect,
+  // if needed.
+  auto restyleHint =
+      UsesExChUnits() ? RestyleHint::RecascadeSubtree() : RestyleHint{0};
+
+  RebuildAllStyleData(changeHint, restyleHint);
 }
 
 static bool IsVisualCharset(NotNull<const Encoding*> aCharset) {
@@ -567,46 +596,16 @@ void nsPresContext::PreferenceChanged(const char* aPrefName) {
       mMissingFonts = nullptr;
     }
   }
-  if (prefName.EqualsLiteral("font.internaluseonly.changed") &&
-      !IsPrintingOrPrintPreview()) {
-    // If there's a user font set, discard any src:local() faces it may have
-    // loaded because their font entries may no longer be valid.
-    if (auto* fonts = Document()->GetFonts()) {
-      fonts->GetUserFontSet()->ForgetLocalFaces();
-    }
 
-    // If there's a change to the font list, we generally need to reconstruct
-    // frames, as the existing frames may be referring to fonts that are no
-    // longer available. But in the case of a static-clone document used for
-    // printing or print-preview, this is undesirable because the nsPrintJob
-    // is holding weak refs to frames that will get blown away unexpectedly by
-    // this reconstruction. So the prescontext for a print/preview doc ignores
-    // the font-list update.
-    //
-    // This means the print document may still be using cached fonts that are
-    // no longer present in the font list, but that should be safe given that
-    // all the required font instances have already been created, so it won't
-    // be depending on access to the font-list entries.
-    //
-    // XXX Actually, I think it's probably a bad idea to do *any* restyling of
-    // print documents in response to pref changes. We could be in the middle
-    // of printing the document, and reflowing all the frames might cause some
-    // kind of unwanted mid-document discontinuity.
-    changeHint |= nsChangeHint_ReconstructFrame;
-    // We also need to trigger restyling for ex/ch units changes to take effect,
-    // if needed.
-    if (UsesExChUnits()) {
-      restyleHint |= RestyleHint::RecascadeSubtree();
-    }
-  } else if (StringBeginsWith(prefName, "font."_ns) ||
-             // Changes to font family preferences don't change anything in the
-             // computed style data, so the style system won't generate a reflow
-             // hint for us.  We need to do that manually.
-             prefName.EqualsLiteral("intl.accept_languages") ||
-             // Changes to bidi prefs need to trigger a reflow (see bug 443629)
-             StringBeginsWith(prefName, "bidi."_ns) ||
-             // Changes to font_rendering prefs need to trigger a reflow
-             StringBeginsWith(prefName, "gfx.font_rendering."_ns)) {
+  if (StringBeginsWith(prefName, "font."_ns) ||
+      // Changes to font family preferences don't change anything in the
+      // computed style data, so the style system won't generate a reflow hint
+      // for us.  We need to do that manually.
+      prefName.EqualsLiteral("intl.accept_languages") ||
+      // Changes to bidi prefs need to trigger a reflow (see bug 443629)
+      StringBeginsWith(prefName, "bidi."_ns) ||
+      // Changes to font_rendering prefs need to trigger a reflow
+      StringBeginsWith(prefName, "gfx.font_rendering."_ns)) {
     changeHint |= NS_STYLE_HINT_REFLOW;
     if (UsesExChUnits()) {
       restyleHint |= RestyleHint::RecascadeSubtree();
@@ -1998,26 +1997,6 @@ bool nsPresContext::MayHavePaintEventListener() {
   return ::MayHavePaintEventListener(mDocument->GetInnerWindow());
 }
 
-bool nsPresContext::MayHavePaintEventListenerInSubDocument() {
-  if (MayHavePaintEventListener()) {
-    return true;
-  }
-
-  bool result = false;
-  auto recurse = [&result](dom::Document& aSubDoc) {
-    if (nsPresContext* pc = aSubDoc.GetPresContext()) {
-      if (pc->MayHavePaintEventListenerInSubDocument()) {
-        result = true;
-        return CallState::Stop;
-      }
-    }
-    return CallState::Continue;
-  };
-
-  mDocument->EnumerateSubDocuments(recurse);
-  return result;
-}
-
 void nsPresContext::NotifyInvalidation(TransactionId aTransactionId,
                                        const nsIntRect& aRect) {
   // Prevent values from overflow after DevPixelsToAppUnits().
@@ -2073,49 +2052,6 @@ void nsPresContext::NotifyInvalidation(TransactionId aTransactionId,
   TransactionInvalidations* transaction = GetInvalidations(aTransactionId);
   MOZ_ASSERT(transaction);
   transaction->mInvalidations.AppendElement(aRect);
-}
-
-/* static */
-void nsPresContext::NotifySubDocInvalidation(ContainerLayer* aContainer,
-                                             const nsIntRegion* aRegion) {
-  ContainerLayerPresContext* data = static_cast<ContainerLayerPresContext*>(
-      aContainer->GetUserData(&gNotifySubDocInvalidationData));
-  if (!data) {
-    return;
-  }
-
-  TransactionId transactionId = aContainer->Manager()->GetLastTransactionId();
-  IntRect visibleBounds =
-      aContainer->GetVisibleRegion().GetBounds().ToUnknownRect();
-
-  if (!aRegion) {
-    IntRect rect(IntPoint(0, 0), visibleBounds.Size());
-    data->mPresContext->NotifyInvalidation(transactionId, rect);
-    return;
-  }
-
-  nsIntPoint topLeft = visibleBounds.TopLeft();
-  for (auto iter = aRegion->RectIter(); !iter.Done(); iter.Next()) {
-    nsIntRect rect(iter.Get());
-    // PresContext coordinate space is relative to the start of our visible
-    // region. Is this really true? This feels like the wrong way to get the
-    // right answer.
-    rect.MoveBy(-topLeft);
-    data->mPresContext->NotifyInvalidation(transactionId, rect);
-  }
-}
-
-void nsPresContext::SetNotifySubDocInvalidationData(
-    ContainerLayer* aContainer) {
-  ContainerLayerPresContext* pres = new ContainerLayerPresContext;
-  pres->mPresContext = this;
-  aContainer->SetUserData(&gNotifySubDocInvalidationData, pres);
-}
-
-/* static */
-void nsPresContext::ClearNotifySubDocInvalidationData(
-    ContainerLayer* aContainer) {
-  aContainer->SetUserData(&gNotifySubDocInvalidationData, nullptr);
 }
 
 class DelayedFireDOMPaintEvent : public Runnable {

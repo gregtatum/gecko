@@ -938,14 +938,6 @@ class nsPresContext : public nsISupports, public mozilla::SupportsWeakPtr {
   void FireDOMPaintEvent(nsTArray<nsRect>* aList, TransactionId aTransactionId,
                          mozilla::TimeStamp aTimeStamp = mozilla::TimeStamp());
 
-  // Callback for catching invalidations in ContainerLayers
-  // Passed to LayerProperties::ComputeDifference
-  static void NotifySubDocInvalidation(
-      mozilla::layers::ContainerLayer* aContainer, const nsIntRegion* aRegion);
-  void SetNotifySubDocInvalidationData(
-      mozilla::layers::ContainerLayer* aContainer);
-  static void ClearNotifySubDocInvalidationData(
-      mozilla::layers::ContainerLayer* aContainer);
   bool IsDOMPaintEventPending();
 
   /**
@@ -1114,19 +1106,12 @@ class nsPresContext : public nsISupports, public mozilla::SupportsWeakPtr {
  public:
   // Used by the PresShell to force a reflow when some aspect of font info
   // has been updated, potentially affecting font selection and layout.
-  void ForceReflowForFontInfoUpdate();
+  void ForceReflowForFontInfoUpdate(bool aNeedsReframe);
 
   /**
    * Checks for MozAfterPaint listeners on the document
    */
   bool MayHavePaintEventListener();
-
-  /**
-   * Checks for MozAfterPaint listeners on the document and
-   * any subdocuments, except for subdocuments that are non-top-level
-   * content documents.
-   */
-  bool MayHavePaintEventListenerInSubDocument();
 
   void InvalidatePaintedLayers();
 
