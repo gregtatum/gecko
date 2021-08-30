@@ -265,6 +265,13 @@ export default class LoginItem extends HTMLElement {
     );
     this._updatePasswordRevealState();
     this._updateOriginDisplayState();
+
+    if (
+      window.AboutLoginsUtils?.pineBuild &&
+      window.AboutLoginsUtils?.platform != "win"
+    ) {
+      this._saveChangesButton.parentElement.append(this._saveChangesButton);
+    }
   }
 
   setBreaches(breachesByLoginGUID) {

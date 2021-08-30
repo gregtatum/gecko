@@ -261,6 +261,8 @@ class AboutLoginsChild extends JSWindowActorChild {
         waivedContent.AboutLoginsUtils.supportBaseURL = Services.urlFormatter.formatURLPref(
           "app.support.baseURL"
         );
+        waivedContent.AboutLoginsUtils.platform = AppConstants.platform;
+        waivedContent.AboutLoginsUtils.pineBuild = AppConstants.PINEBUILD;
         this.sendToContent("Setup", message.data);
         break;
       default:

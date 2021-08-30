@@ -54,6 +54,15 @@ button {
   min-width: 100px;
 }
 
+:host(.in-companion) button {
+  min-width: calc(50% - 8px);
+  margin-inline: 0;
+}
+
+:host(.in-companion) .cancel-button {
+  margin-inline-end: 8px;
+}
+
 form {
   flex-grow: 1;
 }
@@ -224,6 +233,11 @@ input[type = "url"]:focus:-moz-ui-invalid:not(:placeholder-shown) ~ .tooltip-con
   justify-content: start;
 }
 
+:host(.in-companion) .detail-grid {
+  justify-content: stretch;
+}
+
+
 :host([data-editing]) .detail-grid {
   grid-template-columns: auto;
 }
@@ -268,6 +282,10 @@ input[type = "url"]:focus:-moz-ui-invalid:not(:placeholder-shown) ~ .tooltip-con
 
 :host([data-editing]) .detail-cell input:read-write:not([type="checkbox"]) {
   width: 280px;
+}
+
+:host(.in-companion[data-editing]) .detail-cell input:read-write:not([type="checkbox"]) {
+  width: calc(100% - 20px);
 }
 
 .copy-button {
@@ -326,13 +344,20 @@ input[name="password"] {
   background-color: transparent !important;
   border-width: 0 !important;
   background-image: url("chrome://browser/content/aboutlogins/icons/password.svg") !important;
-  margin-inline: 10px 0 !important;
   cursor: pointer;
   -moz-context-properties: fill;
   fill: currentColor !important;
   color: inherit !important;
   opacity: var(--reveal-checkbox-opacity);
   flex-shrink: 0;
+}
+
+:host(:not((.in-companion))) .reveal-password-checkbox {
+  margin-inline: 10px 0 !important;
+}
+
+:host(.in-companion) .reveal-password-checkbox {
+  margin-inline: -32px 0 !important;
 }
 
 .reveal-password-checkbox:hover {
