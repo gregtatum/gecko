@@ -153,6 +153,13 @@ export class CalendarEventList extends MozLitElement {
 customElements.define("calendar-event-list", CalendarEventList);
 
 class CalendarEvent extends MozLitElement {
+  static get queries() {
+    return {
+      panel: "panel-list",
+      firstExpandedLink: ".event-link:nth-child(3)",
+    };
+  }
+
   static get properties() {
     return {
       event: { type: Object },
@@ -347,7 +354,7 @@ class CalendarEvent extends MozLitElement {
       // Only open on click for keyboard events, mousedown will open for pointer events.
       return;
     }
-    this.shadowRoot.querySelector("panel-list").toggle(e);
+    this.panel.toggle(e);
   }
 
   expandLinksSection(e) {
@@ -358,7 +365,7 @@ class CalendarEvent extends MozLitElement {
     ) {
       this.updateComplete.then(() => {
         // If the links were expanded with the keyboard, restore focus.
-        this.shadowRoot.querySelector(".event-link:nth-child(3)").focus();
+        this.firstExpandedLink.focus();
       });
     }
   }

@@ -4040,4 +4040,118 @@ const until = directive(UntilDirective);
  */
 // export type {UntilDirective};
 
-export { CSSResult, INTERNAL, LitElement, ReactiveElement, UpdatingElement, _$LE, _$LH, adoptStyles, asyncAppend, asyncReplace, cache, classMap, css, defaultConverter, getCompatibleStyle, guard, html, ifDefined, live, noChange, notEqual, nothing, ref, render, repeat, styleMap, supportsAdoptingStyleSheets, svg, templateContent, unsafeCSS, until };
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+/**
+ * Helper for decorating a property that is compatible with both TypeScript
+ * and Babel decorators. The optional `finisher` can be used to perform work on
+ * the class. The optional `descriptor` should return a PropertyDescriptor
+ * to install for the given property.
+ *
+ * @param finisher {function} Optional finisher method; receives the element
+ * constructor and property key as arguments and has no return value.
+ * @param descriptor {function} Optional descriptor method; receives the
+ * property key as an argument and returns a property descriptor to define for
+ * the given property.
+ * @returns {ClassElement|void}
+ */
+const decorateProperty = ({ finisher, descriptor, }) => (protoOrDescriptor, name
+// Note TypeScript requires the return type to be `void|any`
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) => {
+    var _a;
+    // TypeScript / Babel legacy mode
+    if (name !== undefined) {
+        const ctor = protoOrDescriptor
+            .constructor;
+        if (descriptor !== undefined) {
+            Object.defineProperty(protoOrDescriptor, name, descriptor(name));
+        }
+        finisher === null || finisher === void 0 ? void 0 : finisher(ctor, name);
+        // Babel standard mode
+    }
+    else {
+        // Note, the @property decorator saves `key` as `originalKey`
+        // so try to use it here.
+        const key = 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (_a = protoOrDescriptor.originalKey) !== null && _a !== void 0 ? _a : protoOrDescriptor.key;
+        const info = descriptor != undefined
+            ? {
+                kind: 'method',
+                placement: 'prototype',
+                key,
+                descriptor: descriptor(protoOrDescriptor.key),
+            }
+            : { ...protoOrDescriptor, key };
+        if (finisher != undefined) {
+            info.finisher = function (ctor) {
+                finisher(ctor, key);
+            };
+        }
+        return info;
+    }
+};
+
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+/**
+ * A property decorator that converts a class property into a getter that
+ * executes a querySelector on the element's renderRoot.
+ *
+ * @param selector A DOMString containing one or more selectors to match.
+ * @param cache An optional boolean which when true performs the DOM query only
+ *     once and caches the result.
+ *
+ * See: https://developer.mozilla.org/en-US/docs/Web/API/Document/querySelector
+ *
+ * @example
+ *
+ * ```ts
+ * class MyElement {
+ *   @query('#first')
+ *   first;
+ *
+ *   render() {
+ *     return html`
+ *       <div id="first"></div>
+ *       <div id="second"></div>
+ *     `;
+ *   }
+ * }
+ * ```
+ * @category Decorator
+ */
+function query(selector, cache) {
+    return decorateProperty({
+        descriptor: (name) => {
+            const descriptor = {
+                get() {
+                    var _a;
+                    return (_a = this.renderRoot) === null || _a === void 0 ? void 0 : _a.querySelector(selector);
+                },
+                enumerable: true,
+                configurable: true,
+            };
+            if (cache) {
+                const key = typeof name === 'symbol' ? Symbol() : `__${name}`;
+                descriptor.get = function () {
+                    var _a;
+                    if (this[key] === undefined) {
+                        this[key] = (_a = this.renderRoot) === null || _a === void 0 ? void 0 : _a.querySelector(selector);
+                    }
+                    return this[key];
+                };
+            }
+            return descriptor;
+        },
+    });
+}
+
+export { CSSResult, INTERNAL, LitElement, ReactiveElement, UpdatingElement, _$LE, _$LH, adoptStyles, asyncAppend, asyncReplace, cache, classMap, css, defaultConverter, getCompatibleStyle, guard, html, ifDefined, live, noChange, notEqual, nothing, query, ref, render, repeat, styleMap, supportsAdoptingStyleSheets, svg, templateContent, unsafeCSS, until };
