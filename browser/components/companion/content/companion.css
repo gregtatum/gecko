@@ -203,10 +203,15 @@ h2 {
   border-radius: 8px;
   padding: 16px;
   display: flex;
+  gap: 4px;
   z-index: 2;
   box-shadow: 2px 2px 10px 1px rgba(0,0,0,0.18);
   margin: 16px;
   margin-block-start: 0;
+}
+
+.media.card > * {
+  margin: 0;
 }
 
 .media button {

@@ -2,6 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
+const allowMute = Services.prefs.getBoolPref(
+  "browser.companion.media.mute.enabled",
+  false
+);
+
 export class MediaList extends HTMLElement {
   constructor(title) {
     super();
@@ -12,16 +19,21 @@ export class MediaList extends HTMLElement {
     let fragment = template.content.cloneNode(true);
     fragment.querySelector(".list-title").textContent = this.title;
 
-    // TODO: the Mute All functionality isn't working right so it's hidden for now.
-    // It's either due to some distinction between a tab being muted and the underlying
-    // media elements being muted or just some bugs here
     this.muteAll = fragment.querySelector(".mute-all");
-    this.muteAll.addEventListener("click", () => {
-      if (this.muteAll.hasAttribute("disabled")) {
-        return;
-      }
-      window.CompanionUtils.sendAsyncMessage("Companion:MuteAllTabs", null);
-    });
+    if (allowMute) {
+      // TODO: the Mute All functionality isn't working right so it's hidden for now.
+      // It's either due to some distinction between a tab being muted and the underlying
+      // media elements being muted or just some bugs here
+      this.muteAll.addEventListener("click", () => {
+        if (this.muteAll.hasAttribute("disabled")) {
+          return;
+        }
+        window.CompanionUtils.sendAsyncMessage("Companion:MuteAllTabs", null);
+      });
+    } else {
+      this.muteAll.remove();
+    }
+
     shadow.appendChild(fragment);
 
     this.trackedControllers = new WeakSet();
@@ -72,15 +84,17 @@ export class MediaList extends HTMLElement {
 
     if (this.allActiveMediaChildren.length) {
       this.removeAttribute("hidden");
-      let anyNoisy = false;
-      for (let media of this.allActiveMediaChildren) {
-        if (media.tab.soundPlaying && !media.tab.audioMuted) {
-          anyNoisy = true;
-        }
-        if (anyNoisy) {
-          this.muteAll.removeAttribute("disabled");
-        } else {
-          this.muteAll.setAttribute("disabled", "true");
+      if (allowMute) {
+        let anyNoisy = false;
+        for (let media of this.allActiveMediaChildren) {
+          if (media.tab.soundPlaying && !media.tab.audioMuted) {
+            anyNoisy = true;
+          }
+          if (anyNoisy) {
+            this.muteAll.removeAttribute("disabled");
+          } else {
+            this.muteAll.setAttribute("disabled", "true");
+          }
         }
       }
     } else {
@@ -143,8 +157,10 @@ export class Media extends HTMLElement {
     };
 
     this.playPause.addEventListener("click", mediaControlHandler("togglePlay"));
-    this.mute.addEventListener("click", mediaControlHandler("toggleMute"));
-    this.unmute.addEventListener("click", mediaControlHandler("toggleMute"));
+    if (allowMute) {
+      this.mute.addEventListener("click", mediaControlHandler("toggleMute"));
+      this.unmute.addEventListener("click", mediaControlHandler("toggleMute"));
+    }
     this.next.addEventListener("click", mediaControlHandler("nextTrack"));
     this.prev.addEventListener("click", mediaControlHandler("prevTrack"));
 
@@ -232,8 +248,8 @@ export class Media extends HTMLElement {
         : "paused";
     }
 
-    this.mute.hidden = this.tab.audioMuted;
-    this.unmute.hidden = !this.tab.audioMuted;
+    this.mute.hidden = !allowMute || this.tab.audioMuted;
+    this.unmute.hidden = !allowMute || !this.tab.audioMuted;
 
     this.prev.hidden = !supportedKeys.includes("previoustrack");
     this.next.hidden = !supportedKeys.includes("nexttrack");
