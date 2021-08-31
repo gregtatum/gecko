@@ -2599,4 +2599,5 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.urlbar.openintab", true);
   pref("browser.tabs.openNewTabForMostNavigations", false);
   pref("browser.river.differentiateOnFirstPathNode", "docs.google.com");
+  pref("browser.pinebuild.animateViewTransitions", false);
 #endif

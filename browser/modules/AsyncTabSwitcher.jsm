@@ -293,6 +293,9 @@ class AsyncTabSwitcher {
       }
     } else if (state == this.STATE_LOADED) {
       this.maybeActivateDocShell(tab);
+    } else if (state == this.STATE_UNLOADED) {
+      let panel = this.tabbrowser.tabContainer.getRelatedElement(tab);
+      panel.setAttribute("deactivated", "true");
     }
 
     if (!tab.linkedBrowser.isRemoteBrowser) {
@@ -462,6 +465,7 @@ class AsyncTabSwitcher {
 
       let tabpanels = this.tabbrowser.tabpanels;
       let showPanel = this.tabbrowser.tabContainer.getRelatedElement(showTab);
+      showPanel.removeAttribute("deactivated");
       let index = Array.prototype.indexOf.call(tabpanels.children, showPanel);
       if (index != -1) {
         this.log(`Switch to tab ${index} - ${this.tinfo(showTab)}`);

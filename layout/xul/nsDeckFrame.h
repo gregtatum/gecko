@@ -55,6 +55,7 @@ class nsDeckFrame final : public nsBoxFrame {
   explicit nsDeckFrame(ComputedStyle* aStyle, nsPresContext* aPresContext);
 
   nsIFrame* GetSelectedBox();
+  nsIFrame* GetPreviouslySelectedBox();
 
   // Returns whether this frame has any <browser> or <iframe> elements.
   // Note that this function traverses down all descendants so this function
@@ -69,6 +70,7 @@ class nsDeckFrame final : public nsBoxFrame {
 
  private:
   int32_t mIndex;
+  int32_t mPrevIndex;
 
   void Animate(nsIFrame*, bool);
 

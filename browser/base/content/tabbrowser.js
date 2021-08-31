@@ -46,6 +46,15 @@
       window.addEventListener("occlusionstatechange", this);
       window.addEventListener("framefocusrequested", this);
 
+      if (
+        Services.prefs.getBoolPref(
+          "browser.pinebuild.animateViewTransitions",
+          false
+        )
+      ) {
+        this.tabpanels.setAttribute("multideck", "true");
+      }
+
       this.tabContainer.init();
       this._setupInitialBrowserAndTab();
 

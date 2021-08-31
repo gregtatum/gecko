@@ -48,6 +48,17 @@
 
 #tabbrowser-tabpanels {
   background-color: var(--tabpanel-background-color);
+  overflow: hidden;
+}
+
+#tabbrowser-tabpanels[multideck] > hbox[deactivated] {
+  transform: translateX(-100%);
+}
+
+#tabbrowser-tabpanels[multideck] > hbox {
+  transition-property: transform;
+  transition-timing-function: var(--animation-easing-function);
+  transition-duration: var(--panelui-subview-transition-duration);
 }
 
 #tabbrowser-tabs,

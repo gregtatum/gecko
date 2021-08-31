@@ -48,7 +48,7 @@ NS_QUERYFRAME_HEAD(nsDeckFrame)
 NS_QUERYFRAME_TAIL_INHERITING(nsBoxFrame)
 
 nsDeckFrame::nsDeckFrame(ComputedStyle* aStyle, nsPresContext* aPresContext)
-    : nsBoxFrame(aStyle, aPresContext, kClassID), mIndex(0) {
+    : nsBoxFrame(aStyle, aPresContext, kClassID), mIndex(0), mPrevIndex(-1) {
   nsCOMPtr<nsBoxLayout> layout;
   NS_NewStackLayout(layout);
   SetXULLayoutManager(layout);
@@ -95,6 +95,9 @@ void nsDeckFrame::IndexChanged() {
   if (currentBox)  // only hide if it exists
     HideBox(currentBox);
 
+  if (mContent->AsElement()->HasAttr(kNameSpaceID_None, nsGkAtoms::multideck)) {
+    mPrevIndex = mIndex;
+  }
   mIndex = index;
 
   ShowBox(GetSelectedBox());
@@ -136,6 +139,10 @@ nsIFrame* nsDeckFrame::GetSelectedBox() {
   return (mIndex >= 0) ? mFrames.FrameAt(mIndex) : nullptr;
 }
 
+nsIFrame* nsDeckFrame::GetPreviouslySelectedBox() {
+  return (mPrevIndex >= 0) ? mFrames.FrameAt(mPrevIndex) : nullptr;
+}
+
 void nsDeckFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
                                    const nsDisplayListSet& aLists) {
   // if a tab is hidden all its children are too.
@@ -147,7 +154,15 @@ void nsDeckFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
 
 void nsDeckFrame::RemoveFrame(ChildListID aListID, nsIFrame* aOldFrame) {
   nsIFrame* currentFrame = GetSelectedBox();
-  if (currentFrame && aOldFrame && currentFrame != aOldFrame) {
+  nsIFrame* previousFrame = GetPreviouslySelectedBox();
+  // XXX: this previousFrame != aOldFrame check is a bit awkward, and could
+  // lead to flashing in #tabbrowser-tabpanels if we legitimately remove the
+  // previously selected browser. However this gets fired simply when the
+  // panel gets restyled, as we destroy and reconstruct the frame. So right
+  // now this is a hack to make things work, and it won't present any
+  // immediate problems because it's only enabled on proclient where you
+  // cannot currently remove background tabs.
+  if (currentFrame && aOldFrame && currentFrame != aOldFrame && previousFrame != aOldFrame) {
     // If the frame we're removing is at an index that's less
     // than mIndex, that means we're going to be shifting indexes
     // by 1.
@@ -174,9 +189,17 @@ void nsDeckFrame::BuildDisplayListForChildren(nsDisplayListBuilder* aBuilder,
   nsIFrame* box = GetSelectedBox();
   if (!box) return;
 
+  nsDisplayListSet set(aLists, aLists.BlockBorderBackgrounds());
+
+  if (mContent->AsElement()->HasAttr(kNameSpaceID_None, nsGkAtoms::multideck)) {
+    nsIFrame* prevBox = GetPreviouslySelectedBox();
+    if (prevBox && prevBox != box) {
+      BuildDisplayListForChild(aBuilder, prevBox, set);
+    }
+  }
+
   // Putting the child in the background list. This is a little weird but
   // it matches what we were doing before.
-  nsDisplayListSet set(aLists, aLists.BlockBorderBackgrounds());
   BuildDisplayListForChild(aBuilder, box, set);
 }
 
