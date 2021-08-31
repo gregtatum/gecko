@@ -12,10 +12,18 @@ class TopLevelNavigationDelegateParent extends JSWindowActorParent {
       let { uriString, triggeringPrincipal } = message.data;
 
       let gBrowser = this.browsingContext.topChromeWindow.gBrowser;
-      let newTab = gBrowser.addWebTab(uriString, {
-        triggeringPrincipal,
+
+      let tabOptions = {
         skipAnimation: true,
-      });
+        skipLoad: true,
+      };
+
+      let newTab = gBrowser.addTrustedTab(null, tabOptions);
+
+      let options = {
+        triggeringPrincipal,
+      };
+      newTab.linkedBrowser.loadURI(uriString, options);
       gBrowser.selectedTab = newTab;
     }
   }
