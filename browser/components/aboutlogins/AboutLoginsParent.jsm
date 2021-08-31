@@ -732,12 +732,15 @@ var AboutLogins = {
       this._subscribers
     );
     for (let subscriber of subscribers) {
-      let browser = subscriber.embedderElement;
+      let browser = subscriber.embedderElement
+        ? subscriber.embedderElement
+        : subscriber.top.embedderElement;
       if (
         !browser ||
         browser.remoteType != EXPECTED_ABOUTLOGINS_REMOTE_TYPE ||
         !browser.contentPrincipal ||
-        browser.contentPrincipal.originNoSuffix != ABOUT_LOGINS_ORIGIN
+        (browser.contentPrincipal.originNoSuffix != ABOUT_LOGINS_ORIGIN &&
+          subscriber.top.embedderElement.id != "companion-browser")
       ) {
         this._subscribers.delete(subscriber);
         continue;
