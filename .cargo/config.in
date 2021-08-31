@@ -15,7 +15,7 @@ rev = "85551909b95a5cf553a85dbcddfa5f117cfbbe0e"
 [source."https://github.com/mozilla/neqo"]
 git = "https://github.com/mozilla/neqo"
 replace-with = "vendored-sources"
-tag = "v0.4.30"
+tag = "v0.4.31"
 
 [source."https://github.com/mozilla/mp4parse-rust"]
 git = "https://github.com/mozilla/mp4parse-rust"
@@ -35,7 +35,7 @@ rev = "3ad5978575f501ab10b1753626f176f1bba3f584"
 [source."https://github.com/mozilla/cubeb-coreaudio-rs"]
 git = "https://github.com/mozilla/cubeb-coreaudio-rs"
 replace-with = "vendored-sources"
-rev = "8ae48c16b637d6d9a841cf4d01de06c16b1318b0"
+rev = "4ee3b283182926f9a8bb31d603219ff2db70d2fd"
 
 [source."https://github.com/mozilla/audioipc-2"]
 git = "https://github.com/mozilla/audioipc-2"
@@ -50,7 +50,7 @@ rev = "8a576fbe79199fa8664f64285524017f74ebcc5f"
 [source."https://github.com/mozilla-spidermonkey/jsparagus"]
 git = "https://github.com/mozilla-spidermonkey/jsparagus"
 replace-with = "vendored-sources"
-rev = "eb250ba0bda3551927a447db0335a309e3f296d3"
+rev = "2e56bb9bae5d8211137980a717ee991cc4a5eb98"
 
 [source."https://github.com/kvark/spirv_cross"]
 branch = "wgpu5"

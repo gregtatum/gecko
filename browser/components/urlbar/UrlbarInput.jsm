@@ -1343,11 +1343,10 @@ class UrlbarInput {
       ),
       currentPage: this.window.gBrowser.currentURI.spec,
       formHistoryName: this.formHistoryName,
-      allowSearchSuggestions:
-        !event ||
-        !UrlbarUtils.isPasteEvent(event) ||
-        !event.data ||
-        event.data.length <= UrlbarPrefs.get("maxCharsForSearchSuggestions"),
+      prohibitRemoteResults:
+        event &&
+        UrlbarUtils.isPasteEvent(event) &&
+        UrlbarPrefs.get("maxCharsForSearchSuggestions") < event.data?.length,
     };
 
     if (this.searchMode) {

@@ -582,6 +582,13 @@ class InitializeVirtualDesktopManagerTask : public Task {
  public:
   InitializeVirtualDesktopManagerTask() : Task(false, kDefaultPriorityValue) {}
 
+#ifdef MOZ_COLLECTING_RUNNABLE_TELEMETRY
+  bool GetName(nsACString& aName) override {
+    aName.AssignLiteral("InitializeVirtualDesktopManagerTask");
+    return true;
+  }
+#endif
+
   virtual bool Run() override {
 #ifndef __MINGW32__
     if (!IsWin10OrLater()) {
@@ -8624,6 +8631,11 @@ static MouseButton PenFlagsToMouseButton(PEN_FLAGS aPenFlags) {
 }
 
 bool nsWindow::OnPointerEvents(UINT msg, WPARAM aWParam, LPARAM aLParam) {
+  if (!mAPZC) {
+    // APZ is not available on context menu. Follow the behavior of touch input
+    // which fallbacks to WM_LBUTTON* and WM_GESTURE, to keep consistency.
+    return false;
+  }
   if (!mPointerEvents.ShouldHandleWinPointerMessages(msg, aWParam)) {
     return false;
   }

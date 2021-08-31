@@ -39,7 +39,6 @@ class nsAtom;
 class nsIObserver;
 class SRGBOverrideObserver;
 class gfxTextPerfMetrics;
-struct FontMatchingStats;
 typedef struct FT_LibraryRec_* FT_Library;
 
 namespace mozilla {
@@ -53,7 +52,6 @@ class DrawTarget;
 class SourceSurface;
 class DataSourceSurface;
 class ScaledFont;
-class DrawEventRecorder;
 class VsyncSource;
 class ContentDeviceData;
 class GPUDeviceData;
@@ -137,8 +135,6 @@ inline const char* GetBackendName(mozilla::gfx::BackendType aBackend) {
       return "direct2d 1.1";
     case mozilla::gfx::BackendType::WEBRENDER_TEXT:
       return "webrender text";
-    case mozilla::gfx::BackendType::CAPTURE:
-      return "capture";
     case mozilla::gfx::BackendType::NONE:
       return "none";
     case mozilla::gfx::BackendType::BACKEND_LAST:
@@ -401,8 +397,8 @@ class gfxPlatform : public mozilla::layers::MemoryPressureListener {
   gfxFontGroup* CreateFontGroup(
       const mozilla::StyleFontFamilyList& aFontFamilyList,
       const gfxFontStyle* aStyle, nsAtom* aLanguage, bool aExplicitLanguage,
-      gfxTextPerfMetrics* aTextPerf, FontMatchingStats* aFontMatchingStats,
-      gfxUserFontSet* aUserFontSet, gfxFloat aDevToCssSize) const;
+      gfxTextPerfMetrics* aTextPerf, gfxUserFontSet* aUserFontSet,
+      gfxFloat aDevToCssSize) const;
 
   /**
    * Look up a local platform font using the full font face name.
@@ -987,8 +983,6 @@ class gfxPlatform : public mozilla::layers::MemoryPressureListener {
   static void InitializeCMS();
   static void ShutdownCMS();
 
-  friend void RecordingPrefChanged(const char* aPrefName, void* aClosure);
-
   /**
    * Calling this function will compute and set the ideal tile size for the
    * platform. This will only have an effect in the parent process; child
@@ -1037,8 +1031,6 @@ class gfxPlatform : public mozilla::layers::MemoryPressureListener {
   mozilla::widget::GfxInfoCollector<gfxPlatform> mDisplayInfoCollector;
 
   nsTArray<mozilla::layers::FrameStats> mFrameStats;
-
-  RefPtr<mozilla::gfx::DrawEventRecorder> mRecorder;
 
   // Backend that we are compositing with. NONE, if no compositor has been
   // created yet.
