@@ -159,6 +159,7 @@ void WebRenderLayerManager::DoDestroy(bool aIsSync) {
     RefPtr<Runnable> task = NS_NewRunnableFunction(
         "TransactionIdAllocator::NotifyTransactionCompleted",
         [allocator, id]() -> void {
+          allocator->ClearPendingTransactions();
           allocator->NotifyTransactionCompleted(id);
         });
     NS_DispatchToMainThread(task.forget());
@@ -359,7 +360,7 @@ void WebRenderLayerManager::EndTransactionWithoutLayer(
   }
 
   if (XRE_IsContentProcess() &&
-      StaticPrefs::gfx_webrender_dl_dump_content_serialized()) {
+      StaticPrefs::gfx_webrender_debug_dl_dump_content_serialized()) {
     mDLBuilder->DumpSerializedDisplayList();
   }
 

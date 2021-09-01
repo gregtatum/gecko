@@ -1649,9 +1649,9 @@ bool WebRenderCommandBuilder::ShouldDumpDisplayList(
     nsDisplayListBuilder* aBuilder) {
   return aBuilder && aBuilder->IsInActiveDocShell() &&
          ((XRE_IsParentProcess() &&
-           StaticPrefs::gfx_webrender_dl_dump_parent()) ||
+           StaticPrefs::gfx_webrender_debug_dl_dump_parent()) ||
           (XRE_IsContentProcess() &&
-           StaticPrefs::gfx_webrender_dl_dump_content()));
+           StaticPrefs::gfx_webrender_debug_dl_dump_content()));
 }
 
 void WebRenderCommandBuilder::CreateWebRenderCommands(
@@ -2141,7 +2141,7 @@ WebRenderCommandBuilder::GenerateFallbackData(
   bool useBlobImage =
       StaticPrefs::gfx_webrender_blob_images() && !paintOnContentSide;
   Maybe<gfx::DeviceColor> highlight = Nothing();
-  if (StaticPrefs::gfx_webrender_highlight_painted_layers()) {
+  if (StaticPrefs::gfx_webrender_debug_highlight_painted_layers()) {
     highlight = Some(useBlobImage ? gfx::DeviceColor(1.0, 0.0, 0.0, 0.5)
                                   : gfx::DeviceColor(1.0, 1.0, 0.0, 0.5));
   }
@@ -2162,13 +2162,8 @@ WebRenderCommandBuilder::GenerateFallbackData(
                            ? itemBounds
                            : aItem->GetClippedBounds(aDisplayListBuilder);
 
-  // nsDisplayItem::Paint() may refer the variables that come from
-  // ComputeVisibility(). So we should call ComputeVisibility() before painting.
-  // e.g.: nsDisplayBoxShadowInner uses mPaintRect in Paint() and mPaintRect is
-  // computed in nsDisplayBoxShadowInner::ComputeVisibility().
   nsRegion visibleRegion(paintBounds);
   aItem->SetPaintRect(paintBounds);
-  aItem->ComputeVisibility(aDisplayListBuilder, &visibleRegion);
 
   const int32_t appUnitsPerDevPixel =
       aItem->Frame()->PresContext()->AppUnitsPerDevPixel();

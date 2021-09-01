@@ -131,7 +131,6 @@ EXPORTS.mozilla.layers += [
     "composite/FrameUniformityData.h",
     "composite/GPUVideoTextureHost.h",
     "composite/ImageComposite.h",
-    "composite/TextRenderer.h",
     "composite/TextureHost.h",
     "CompositionRecorder.h",
     "Compositor.h",
@@ -237,20 +236,6 @@ EXPORTS.mozilla.layers += [
     "wr/WebRenderUserData.h",
     "ZoomConstraints.h",
 ]
-
-if CONFIG["MOZ_X11"]:
-    EXPORTS.mozilla.layers += [
-        "basic/TextureClientX11.h",
-        "composite/X11TextureHost.h",
-        "ipc/ShadowLayerUtilsX11.h",
-        "opengl/X11TextureSourceOGL.h",
-    ]
-    SOURCES += [
-        "basic/TextureClientX11.cpp",
-        "composite/X11TextureHost.cpp",
-        "ipc/ShadowLayerUtilsX11.cpp",
-        "opengl/X11TextureSourceOGL.cpp",
-    ]
 
 if CONFIG["MOZ_WAYLAND"]:
     EXPORTS.mozilla.layers += [
@@ -372,8 +357,6 @@ UNIFIED_SOURCES += [
     "composite/FrameUniformityData.cpp",
     "composite/GPUVideoTextureHost.cpp",
     "composite/ImageComposite.cpp",
-    "composite/TextRenderer.cpp",
-    "composite/TextureHost.cpp",
     "CompositionRecorder.cpp",
     "Compositor.cpp",
     "CompositorAnimationStorage.cpp",
@@ -466,6 +449,7 @@ UNIFIED_SOURCES += [
 
 SOURCES += [
     "client/TextureClient.cpp",
+    "composite/TextureHost.cpp",
     "ImageContainer.cpp",
     "PersistentBufferProvider.cpp",
     "wr/WebRenderTextureHost.cpp",
