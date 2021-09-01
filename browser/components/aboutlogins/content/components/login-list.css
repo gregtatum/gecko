@@ -52,6 +52,10 @@
   display: contents;
 }
 
+:host(.in-companion) .container {
+  overflow: hidden;
+}
+
 :host(.no-logins) .empty-search-message,
 :host(:not(.empty-search)) .empty-search-message,
 :host(.empty-search:not(.create-login-selected)) ol,
@@ -208,8 +212,6 @@ ol {
 
 :host(.in-companion) .create-login-button-container {
   border-top: 1px solid #E0E0E6;
-  position: fixed;
-  bottom: 0;
   width: 100%;
 }
 

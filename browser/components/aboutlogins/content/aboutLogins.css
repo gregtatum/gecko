@@ -53,6 +53,10 @@ login-list {
   grid-area: logins;
 }
 
+:root.in-companion login-list {
+  height: 100%;
+}
+
 :root:not(.initialized) login-intro,
 :root:not(.initialized) login-item,
 :root.empty-search login-intro,
