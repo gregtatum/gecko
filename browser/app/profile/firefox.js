@@ -612,11 +612,7 @@ pref("browser.tabs.insertRelatedAfterCurrent", true);
 // for non-related links. Note that if this is set to true, it will trump
 // the value of browser.tabs.insertRelatedAfterCurrent.
 pref("browser.tabs.insertAfterCurrent", false);
-#ifdef PINEBUILD
-  pref("browser.tabs.warnOnClose", false);
-#else
-  pref("browser.tabs.warnOnClose", true);
-#endif
+pref("browser.tabs.warnOnClose", true);
 pref("browser.tabs.warnOnCloseOtherTabs", true);
 pref("browser.tabs.warnOnOpen", true);
 pref("browser.tabs.maxOpenBeforeWarn", 15);
@@ -1863,12 +1859,9 @@ pref("browser.contentblocking.cfr-milestone.milestones", "[1000, 5000, 10000, 25
 // Always enable newtab segregation using containers
 pref("privacy.usercontext.about_newtab_segregation.enabled", true);
 // Enable Contextual Identity Containers
-#if defined(NIGHTLY_BUILD) && !defined(PINEBUILD)
+#ifdef NIGHTLY_BUILD
   pref("privacy.userContext.enabled", true);
   pref("privacy.userContext.ui.enabled", true);
-#else
-  pref("privacy.userContext.enabled", false);
-  pref("privacy.userContext.ui.enabled", false);
 #endif
 pref("privacy.userContext.extension", "");
 // allows user to open container menu on a left click instead of a new
@@ -2585,9 +2578,9 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
 #endif
 
 #ifdef PINEBUILD
-  pref("browser.contentblocking.category", "strict");
-  pref("privacy.trackingprotection.enabled", true);
-  pref("privacy.trackingprotection.socialtracking.enabled", true);
+  pref("browser.contentblocking.category", "strict", locked);
+  pref("privacy.trackingprotection.enabled", true, locked);
+  pref("privacy.trackingprotection.socialtracking.enabled", true, locked);
   pref("browser.places.interactions.enabled", true, locked);
   pref("browser.pagedata.enabled", true, locked);
   pref("startup.homepage_welcome_url", "", locked);
@@ -2605,17 +2598,20 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.sessionstore.warnOnQuit", false, locked);
   pref("browser.sessionstore.resume_session_once", false, locked);
   pref("browser.sessionstore.resuming_after_os_restart", false, locked);
-  pref("services.sync.prefs.sync.browser.sessionstore.warnOnQuit", false);
-  pref("services.sync.prefs.sync.browser.sessionstore.resume_session_once", false);
-  pref("services.sync.prefs.sync.browser.sessionstore.resuming_after_os_restart", false);
-  pref("browser.companion.globalhistorydebugging", false);
-  pref("browser.companion.snapshots", false);
+  pref("services.sync.prefs.sync.browser.sessionstore.warnOnQuit", false, locked);
+  pref("services.sync.prefs.sync.browser.sessionstore.resume_session_once", false, locked);
+  pref("services.sync.prefs.sync.browser.sessionstore.resuming_after_os_restart", false, locked);
+  pref("browser.companion.globalhistorydebugging", false, locked);
+  pref("browser.companion.snapshots", false, locked);
   pref("dom.security.https_first", true, locked);
-  pref("services.sync.prefs.sync.extensions.activeThemeID", false);
-  pref("services.sync.engine.addons", false);
-  pref("browser.tabs.unloadOnLowMemory", true);
-  pref("browser.urlbar.openintab", true);
-  pref("browser.tabs.openNewTabForMostNavigations", false);
-  pref("browser.river.differentiateOnFirstPathNode", "docs.google.com");
-  pref("browser.pinebuild.animateViewTransitions", false);
+  pref("services.sync.prefs.sync.extensions.activeThemeID", false, locked);
+  pref("services.sync.engine.addons", false, locked);
+  pref("browser.tabs.unloadOnLowMemory", true, locked);
+  pref("browser.urlbar.openintab", true, locked);
+  pref("browser.tabs.openNewTabForMostNavigations", false, locked);
+  pref("browser.river.differentiateOnFirstPathNode", "docs.google.com", locked);
+  pref("browser.pinebuild.animateViewTransitions", false, locked);
+  pref("browser.tabs.warnOnClose", false, locked);
+  pref("privacy.userContext.enabled", false, locked);
+  pref("privacy.userContext.ui.enabled", false, locked);
 #endif
