@@ -15,6 +15,7 @@ EXTRA_JS_MODULES += [
     "GlobalHistory.jsm",
     "OAuth2.jsm",
     "OnlineServices.jsm",
+    "OnlineServicesHelper.jsm",
 ]
 
 FINAL_TARGET_FILES.actors += [
@@ -22,4 +23,11 @@ FINAL_TARGET_FILES.actors += [
     "CompanionParent.jsm",
     "TopLevelNavigationDelegateChild.jsm",
     "TopLevelNavigationDelegateParent.jsm",
+]
+BROWSER_CHROME_MANIFESTS += [
+    "tests/browser/browser.ini",
+]
+
+XPCSHELL_TESTS_MANIFESTS += [
+    "tests/xpcshell/xpcshell.ini",
 ]

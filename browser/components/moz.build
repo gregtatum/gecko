@@ -95,7 +95,6 @@ EXTRA_JS_MODULES += [
 ]
 
 BROWSER_CHROME_MANIFESTS += [
-    "companion/test/browser.ini",
     "safebrowsing/content/test/browser.ini",
     "tests/browser/browser.ini",
 ]
