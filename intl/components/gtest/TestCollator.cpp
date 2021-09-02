@@ -229,4 +229,24 @@ TEST(IntlCollator, GetBcp47KeywordValuesForLocale)
   ASSERT_FALSE(hasPhonebook);  // Not valid BCP 47.
 }
 
+TEST(IntlCollator, ConstCorrectness)
+{
+  // This test demonstrates the const-correctness of the unified APIs.
+  UniquePtr<Collator> mutCollator = Collator::TryCreate("en-US").unwrap();
+  UniquePtr<const Collator> constCollator =
+      Collator::TryCreate("en-US").unwrap();
+
+  Collator::Options options{};
+  options.sensitivity = Collator::Sensitivity::Base;
+  ASSERT_TRUE(mutCollator->SetOptions(options).isOk());
+
+  // Expect a compiler error:
+  //   > 'this' argument to member function 'SetOptions' has type
+  //   > 'const mozilla::intl::Collator', but function is not marked const
+  // ASSERT_TRUE(constCollator->SetOptions(options).isOk());
+
+  ASSERT_EQ(constCollator->CompareStrings(u"aa", u".bb"), 1);
+  ASSERT_EQ(mutCollator->CompareStrings(u"aa", u".bb"), 1);
+}
+
 }  // namespace mozilla::intl

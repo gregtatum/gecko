@@ -58,6 +58,9 @@ static inline bool ICUSuccessForStringSpan(UErrorCode status) {
  * a mutable or const pointer. This pointer should match the const or mutability
  * of the ICU APIs. This will then correctly propagate const-ness into the
  * mozilla::intl APIs.
+ *
+ * See the gtest IntlCollator.ConstCorrectness for an example of how this is
+ * reflected in the Intl APIs.
  */
 template <typename T>
 class ICUPointer {
