@@ -164,6 +164,7 @@ class CalendarEvent extends MozLitElement {
     return {
       event: { type: Object },
       linksCollapsed: { type: Boolean },
+      upcoming: { type: Boolean },
     };
   }
 
@@ -217,7 +218,9 @@ class CalendarEvent extends MozLitElement {
         margin-inline: 0;
       }
 
-      .event:where(:not(:hover, :focus-within)) .event-actions .button-link,
+      .event:where(:not(:hover, :focus-within, .upcoming))
+        .event-actions
+        .button-link,
       .event:where(:not(:hover, :focus-within)) .event-options-button {
         /* This is essentially visually-hidden styles you'd use for screen
          * reader content. And we're using it so the screen reader will notice
@@ -377,6 +380,9 @@ class CalendarEvent extends MozLitElement {
   }
 
   async getDocumentTitle(url) {
+    if (this._cachedDocumentTitles.has(url)) {
+      return this._cachedDocumentTitles.get(url);
+    }
     let title = await window.CompanionUtils.sendQuery(
       "Companion:GetDocumentTitle",
       { url }
@@ -521,11 +527,43 @@ class CalendarEvent extends MozLitElement {
     return attendees;
   }
 
+  // If an event is less than 10 minutes away or has already started,
+  // we show the join button.
+  setUpcomingStatus(start, end) {
+    clearTimeout(this._eventUpcomingTimer);
+    let endDate = new Date(end);
+    let eventStartTimeMinus10 = new Date(start) - 60 * 10 * 1000;
+    let now = new Date();
+    if (eventStartTimeMinus10 > now) {
+      this._eventUpcomingTimer = setTimeout(
+        () => (this.upcoming = true),
+        eventStartTimeMinus10 - now
+      );
+    } else if (now >= eventStartTimeMinus10 && now <= endDate) {
+      this.upcoming = true;
+      this._eventUpcomingTimer = setTimeout(
+        () => (this.upcoming = false),
+        endDate - now
+      );
+    }
+  }
+
+  willUpdate() {
+    let { start, end } = this.event;
+
+    this.setUpcomingStatus(start, end);
+  }
+
   render() {
     let { summary, start, end } = this.event;
 
     return html`
-      <div class="event">
+      <div
+        class=${classMap({
+          event: true,
+          upcoming: this.upcoming,
+        })}
+      >
         <div class="event-top">
           <relative-time .eventStart=${start} .eventEnd=${end}></relative-time>
           <button
