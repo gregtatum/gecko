@@ -2581,8 +2581,6 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
 #endif
 
 #ifdef PINEBUILD
-  // Preferences that are still being experimented with are in the unlocked
-  // state to allow for manual testing.
   pref("browser.contentblocking.category", "strict", locked);
   pref("privacy.trackingprotection.enabled", true, locked);
   pref("privacy.trackingprotection.socialtracking.enabled", true, locked);
@@ -2606,18 +2604,21 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("services.sync.prefs.sync.browser.sessionstore.warnOnQuit", false, locked);
   pref("services.sync.prefs.sync.browser.sessionstore.resume_session_once", false, locked);
   pref("services.sync.prefs.sync.browser.sessionstore.resuming_after_os_restart", false, locked);
-  pref("browser.companion.globalhistorydebugging", false);
-  pref("browser.companion.snapshots", false);
   pref("dom.security.https_first", true, locked);
   pref("services.sync.prefs.sync.extensions.activeThemeID", false, locked);
   pref("services.sync.engine.addons", false, locked);
   pref("browser.tabs.unloadOnLowMemory", true, locked);
   pref("browser.urlbar.openintab", true, locked);
-  pref("browser.tabs.openNewTabForMostNavigations", false);
   pref("browser.river.differentiateOnFirstPathNode", "docs.google.com", locked);
-  pref("browser.pinebuild.animateViewTransitions", false);
   pref("browser.tabs.warnOnClose", false, locked);
   pref("privacy.userContext.enabled", false, locked);
   pref("privacy.userContext.ui.enabled", false, locked);
+
+  // Preferences below here are still being experimented with are in the
+  // unlocked state to allow for manual testing.
+  pref("browser.companion.globalhistorydebugging", false);
+  pref("browser.companion.snapshots", false);
+  pref("browser.tabs.openNewTabForMostNavigations", false);
+  pref("browser.pinebuild.animateViewTransitions", false);
   pref("browser.river.pinning.enabled", false);
 #endif
