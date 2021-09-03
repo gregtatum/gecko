@@ -243,7 +243,7 @@ TEST(IntlCollator, ConstCorrectness)
   // Expect a compiler error:
   //   > 'this' argument to member function 'SetOptions' has type
   //   > 'const mozilla::intl::Collator', but function is not marked const
-  // ASSERT_TRUE(constCollator->SetOptions(options).isOk());
+  ASSERT_TRUE(constCollator->SetOptions(options).isOk());
 
   ASSERT_EQ(constCollator->CompareStrings(u"aa", u".bb"), 1);
   ASSERT_EQ(mutCollator->CompareStrings(u"aa", u".bb"), 1);

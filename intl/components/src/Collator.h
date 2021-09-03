@@ -46,7 +46,7 @@ class Collator final {
     // needed, regardless of whether the result buffer was big enough.
     UErrorCode status = U_ZERO_ERROR;
     int32_t length =
-        ucol_getSortKey(mCollator.GetConst(), aString.data(),
+        ucol_getSortKey(mCollator, aString.data(),
                         static_cast<int32_t>(aString.size()), nullptr, 0);
     if (U_FAILURE(status) || length == 0) {
       // If the length is 0, and internal error occurred according to the docs.
@@ -57,8 +57,8 @@ class Collator final {
       return Err(ICUError::OutOfMemory);
     }
 
-    length = ucol_getSortKey(mCollator.GetConst(), aString.data(),
-                             aString.size(), aBuffer.data(), length);
+    length = ucol_getSortKey(mCollator, aString.data(), aString.size(),
+                             aBuffer.data(), length);
 
     if (U_FAILURE(status) || length == 0) {
       return Err(ICUError::InternalError);
@@ -132,7 +132,7 @@ class Collator final {
    * Change the configuraton of the options.
    */
   ICUResult SetOptions(const Options& aOptions,
-                       const Maybe<Options&> aPrevOptions = Nothing());
+                       const Maybe<Options&> aPrevOptions = Nothing()) const;
 
   /**
    * Map keywords to their BCP 47 equivalents.
@@ -213,12 +213,12 @@ class Collator final {
   /**
    * Configure the Collation::Strength
    */
-  void SetStrength(Strength strength);
+  void SetStrength(Strength strength) const;
 
   /**
    * Configure Collation::AlternateHandling.
    */
-  ICUResult SetAlternateHandling(AlternateHandling aAlternateHandling);
+  ICUResult SetAlternateHandling(AlternateHandling aAlternateHandling) const;
 
   /**
    * Controls whether an extra case level (positioned before the third level) is
@@ -228,7 +228,7 @@ class Collator final {
    * attribute. A simple way to ignore accent differences in a string is to set
    * the strength to Primary and enable case level.
    */
-  ICUResult SetCaseLevel(Feature aFeature);
+  ICUResult SetCaseLevel(Feature aFeature) const;
 
   /**
    * When turned on, this attribute makes substrings of digits sort according to
@@ -245,7 +245,7 @@ class Collator final {
    * separators. There is no support for plus/minus signs, decimals, exponents,
    * etc.
    */
-  ICUResult SetNumericCollation(Feature aFeature);
+  ICUResult SetNumericCollation(Feature aFeature) const;
 
   /**
    * Controls whether the normalization check and necessary normalizations are
@@ -257,18 +257,18 @@ class Collator final {
    * data is in the FCD form. If the data is not in the FCD form, incremental
    * NFD normalization is performed.
    */
-  ICUResult SetNormalizationMode(Feature aFeature);
+  ICUResult SetNormalizationMode(Feature aFeature) const;
 
   /**
    * Configure Collation::CaseFirst.
    */
-  ICUResult SetCaseFirst(CaseFirst aCaseFirst);
+  ICUResult SetCaseFirst(CaseFirst aCaseFirst) const;
 
 #ifndef JS_STANDALONE
   FRIEND_TEST(IntlCollator, SetAttributesInternal);
 #endif
 
-  ICUPointer<UCollator> mCollator = ICUPointer<UCollator>(nullptr);
+  UCollator* mCollator = nullptr;
   Maybe<Sensitivity> mLastStrategy = Nothing();
 };
 

@@ -13,8 +13,8 @@ Collator::Collator(UCollator* aCollator) : mCollator(aCollator) {
 }
 
 Collator::~Collator() {
-  if (mCollator.GetMut()) {
-    ucol_close(mCollator.GetMut());
+  if (mCollator) {
+    ucol_close(mCollator);
   }
 }
 
@@ -32,7 +32,7 @@ Result<UniquePtr<Collator>, ICUError> Collator::TryCreate(const char* aLocale) {
 
 int32_t Collator::CompareStrings(Span<const char16_t> aSource,
                                  Span<const char16_t> aTarget) const {
-  switch (ucol_strcoll(mCollator.GetConst(), aSource.data(),
+  switch (ucol_strcoll(mCollator, aSource.data(),
                        static_cast<int32_t>(aSource.size()), aTarget.data(),
                        static_cast<int32_t>(aTarget.size()))) {
     case UCOL_LESS:
@@ -98,7 +98,7 @@ static UColAttributeValue CaseFirstToICU(Collator::CaseFirst caseFirst) {
       break;                                \
   }
 
-void Collator::SetStrength(Collator::Strength aStrength) {
+void Collator::SetStrength(Collator::Strength aStrength) const {
   UColAttributeValue strength;
   switch (aStrength) {
     case Collator::Strength::Default:
@@ -121,19 +121,19 @@ void Collator::SetStrength(Collator::Strength aStrength) {
       break;
   }
 
-  ucol_setStrength(mCollator.GetMut(), strength);
+  ucol_setStrength(mCollator, strength);
 }
 
-ICUResult Collator::SetCaseLevel(Collator::Feature aFeature) {
+ICUResult Collator::SetCaseLevel(Collator::Feature aFeature) const {
   UErrorCode status = U_ZERO_ERROR;
   UColAttributeValue featureICU;
   FEATURE_TO_ICU(featureICU, aFeature);
-  ucol_setAttribute(mCollator.GetMut(), UCOL_CASE_LEVEL, featureICU, &status);
+  ucol_setAttribute(mCollator, UCOL_CASE_LEVEL, featureICU, &status);
   return ToICUResult(status);
 }
 
 ICUResult Collator::SetAlternateHandling(
-    Collator::AlternateHandling aAlternateHandling) {
+    Collator::AlternateHandling aAlternateHandling) const {
   UErrorCode status = U_ZERO_ERROR;
   UColAttributeValue handling;
   switch (aAlternateHandling) {
@@ -148,39 +148,36 @@ ICUResult Collator::SetAlternateHandling(
       break;
   }
 
-  ucol_setAttribute(mCollator.GetMut(), UCOL_ALTERNATE_HANDLING, handling,
-                    &status);
+  ucol_setAttribute(mCollator, UCOL_ALTERNATE_HANDLING, handling, &status);
   return ToICUResult(status);
 }
 
-ICUResult Collator::SetNumericCollation(Collator::Feature aFeature) {
+ICUResult Collator::SetNumericCollation(Collator::Feature aFeature) const {
   UErrorCode status = U_ZERO_ERROR;
   UColAttributeValue featureICU;
   FEATURE_TO_ICU(featureICU, aFeature);
 
-  ucol_setAttribute(mCollator.GetMut(), UCOL_NUMERIC_COLLATION, featureICU,
-                    &status);
+  ucol_setAttribute(mCollator, UCOL_NUMERIC_COLLATION, featureICU, &status);
   return ToICUResult(status);
 }
 
-ICUResult Collator::SetNormalizationMode(Collator::Feature aFeature) {
+ICUResult Collator::SetNormalizationMode(Collator::Feature aFeature) const {
   UErrorCode status = U_ZERO_ERROR;
   UColAttributeValue featureICU;
   FEATURE_TO_ICU(featureICU, aFeature);
-  ucol_setAttribute(mCollator.GetMut(), UCOL_NORMALIZATION_MODE, featureICU,
-                    &status);
+  ucol_setAttribute(mCollator, UCOL_NORMALIZATION_MODE, featureICU, &status);
   return ToICUResult(status);
 }
 
-ICUResult Collator::SetCaseFirst(Collator::CaseFirst aCaseFirst) {
+ICUResult Collator::SetCaseFirst(Collator::CaseFirst aCaseFirst) const {
   UErrorCode status = U_ZERO_ERROR;
-  ucol_setAttribute(mCollator.GetMut(), UCOL_CASE_FIRST,
-                    CaseFirstToICU(aCaseFirst), &status);
+  ucol_setAttribute(mCollator, UCOL_CASE_FIRST, CaseFirstToICU(aCaseFirst),
+                    &status);
   return ToICUResult(status);
 }
 
 ICUResult Collator::SetOptions(const Options& aOptions,
-                               const Maybe<Options&> aPrevOptions) {
+                               const Maybe<Options&> aPrevOptions) const {
   if (aPrevOptions &&
       // Check the equality of the previous options.
       aPrevOptions->sensitivity == aOptions.sensitivity &&
