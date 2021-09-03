@@ -16,11 +16,14 @@ EXTRA_JS_MODULES += [
     "OAuth2.jsm",
     "OnlineServices.jsm",
     "OnlineServicesHelper.jsm",
+    "OnnxRuntimeService.jsm",
 ]
 
 FINAL_TARGET_FILES.actors += [
     "CompanionChild.jsm",
     "CompanionParent.jsm",
+    "ORTChild.jsm",
+    "ORTParent.jsm",
     "TopLevelNavigationDelegateChild.jsm",
     "TopLevelNavigationDelegateParent.jsm",
 ]

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+    <header>
+        <title>Derived from ONNX Runtime JavaScript examples: Quick Start - Web (using script tag)</title>
+    </header>
+    <body>
+        
+        <script src="ort.js"></script>
+        <script>
+            let session = null;
+
+            // Use an async context to call onnxruntime functions.
+            async function exec(data) {
+                if (!session) {
+                    // Create a new session and load the specific model.
+                    session = await ort.InferenceSession.create('./model_sklearn_numeric_v1.onnx');
+                }
+
+                const feeds = Object.fromEntries(
+                    Object.entries(data).map(([key, tensorInfo]) => [
+                        key,
+                        new ort.Tensor(
+                            "float32",
+                            Float32Array.from(tensorInfo.floats),
+                            tensorInfo.values,
+                        ),
+                    ]),
+                );
+
+                // feed inputs and run
+                return session.run(feeds);
+            }
+
+            document.dispatchEvent(new CustomEvent("ortReady"));
+        </script>
+    </body>
+</html>

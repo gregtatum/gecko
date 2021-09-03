@@ -57,6 +57,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   NewTabUtils: "resource://gre/modules/NewTabUtils.jsm",
   NimbusFeatures: "resource://nimbus/ExperimentAPI.jsm",
   Normandy: "resource://normandy/Normandy.jsm",
+  OnnxRuntimeService: "resource:///modules/OnnxRuntimeService.jsm",
   OS: "resource://gre/modules/osfile.jsm",
   OsEnvironment: "resource://gre/modules/OsEnvironment.jsm",
   PageActions: "resource:///modules/PageActions.jsm",
@@ -1741,6 +1742,10 @@ BrowserGlue.prototype = {
 
     DoHController.init();
 
+    if (AppConstants.PINEBUILD) {
+      OnnxRuntimeService.init();
+    }
+
     this._firstWindowTelemetry(aWindow);
     this._firstWindowLoaded();
 
@@ -1998,6 +2003,7 @@ BrowserGlue.prototype = {
     Normandy.uninit();
     RFPHelper.uninit();
     ASRouterNewTabHook.destroy();
+    OnnxRuntimeService.uninit();
   },
 
   // Set up a listener to enable/disable the screenshots extension

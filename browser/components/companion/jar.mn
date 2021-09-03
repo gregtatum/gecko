@@ -43,3 +43,9 @@ browser.jar:
     content/browser/companion/components/top-view.css (content/components/top-view.css)
     content/browser/companion/components/river.css  (content/components/river.css)
     content/browser/companion/components/river.js   (content/components/river.js)
+
+% resource ort %content/browser/companion/vendor/ort/ contentaccessible=yes
+    content/browser/companion/vendor/ort/ort.html (vendor/ort/ort.html)
+    content/browser/companion/vendor/ort/ort.js (vendor/ort/ort.js)
+    content/browser/companion/vendor/ort/ort-wasm.wasm (vendor/ort/ort-wasm.wasm)
+    content/browser/companion/vendor/ort/model_sklearn_numeric_v1.onnx (vendor/ort/model_sklearn_numeric_v1.onnx)

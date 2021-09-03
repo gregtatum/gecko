@@ -15,7 +15,7 @@ const { E10SUtils } = ChromeUtils.import(
 
 if (!AppConstants.PINEBUILD) {
   throw new Error(
-    "We should not be importing the CompanionService if procient is not enabled."
+    "We should not be importing the CompanionService if pinebuild is not enabled."
   );
 }
 
