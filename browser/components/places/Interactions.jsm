@@ -388,7 +388,11 @@ class _Interactions {
           logConsole.debug("Add to store: ", interaction);
           store.add(interaction);
 
-          Services.obs.notifyObservers(null, "interaction-added", JSON.stringify(interaction));
+          Services.obs.notifyObservers(
+            null,
+            "interaction-added",
+            JSON.stringify(interaction)
+          );
         },
         reason => {
           Cu.reportError(reason);
