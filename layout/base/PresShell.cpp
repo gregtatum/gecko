@@ -186,6 +186,7 @@
 #include "mozilla/GlobalStyleSheetCache.h"
 #include "mozilla/layers/InputAPZContext.h"
 #include "mozilla/layers/FocusTarget.h"
+#include "mozilla/layers/ScrollingInteractionContext.h"
 #include "mozilla/layers/WebRenderLayerManager.h"
 #include "mozilla/layers/WebRenderUserData.h"
 #include "mozilla/layout/ScrollAnchorContainer.h"
@@ -3134,6 +3135,8 @@ nsresult PresShell::GoToAnchor(const nsAString& aAnchorName, bool aScroll,
 
   if (content) {
     if (aScroll) {
+      ScrollingInteractionContext scrollToAnchorContext(true);
+
       rv = ScrollContentIntoView(
           content, ScrollAxis(kScrollToTop, WhenToScroll::Always), ScrollAxis(),
           ScrollFlags::AnchorScrollFlags | aAdditionalScrollFlags);
@@ -6068,7 +6071,7 @@ bool PresShell::AssumeAllFramesVisible() {
   // visibility update if the top level content document is assuming all
   // frames are visible.
   //
-  // Note that it's not safe to call IsRootContentDocument() if we're
+  // Note that it's not safe to call IsRootContentDocumentInProcess() if we're
   // currently being destroyed, so we have to check that first.
   if (!mHaveShutDown && !mIsDestroying &&
       !mPresContext->IsRootContentDocumentInProcess()) {
@@ -7107,7 +7110,7 @@ nsIFrame* PresShell::EventHandler::GetFrameToHandleNonTouchEvent(
     nsPresContext* pc = aRootFrameToHandleEvent->PresContext();
     if (pc->IsChrome()) {
       viewportType = ViewportType::Visual;
-    } else if (pc->IsRootContentDocument()) {
+    } else if (pc->IsRootContentDocumentCrossProcess()) {
       viewportType = ViewportTypeForInputEventsRelativeToRoot();
     }
   }
@@ -9808,7 +9811,8 @@ PresShell::Observe(nsISupports* aSubject, const char* aTopic,
   }
 
   if (!nsCRT::strcmp(aTopic, "memory-pressure")) {
-    if (!AssumeAllFramesVisible() && mPresContext->IsRootContentDocument()) {
+    if (!AssumeAllFramesVisible() &&
+        mPresContext->IsRootContentDocumentInProcess()) {
       DoUpdateApproximateFrameVisibility(/* aRemoveOnly = */ true);
     }
     return NS_OK;

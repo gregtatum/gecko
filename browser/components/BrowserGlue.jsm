@@ -1332,6 +1332,10 @@ BrowserGlue.prototype = {
       this._matchCBCategory
     );
     Services.prefs.removeObserver(
+      "network.http.referer.disallowCrossSiteRelaxingDefault",
+      this._matchCBCategory
+    );
+    Services.prefs.removeObserver(
       ContentBlockingCategoriesPrefs.PREF_CB_CATEGORY,
       this._updateCBCategory
     );
@@ -1768,6 +1772,10 @@ BrowserGlue.prototype = {
     );
     Services.prefs.addObserver(
       "network.cookie.cookieBehavior.pbmode",
+      this._matchCBCategory
+    );
+    Services.prefs.addObserver(
+      "network.http.referer.disallowCrossSiteRelaxingDefault",
       this._matchCBCategory
     );
     Services.prefs.addObserver(
@@ -4371,6 +4379,7 @@ var ContentBlockingCategoriesPrefs = {
         "privacy.trackingprotection.fingerprinting.enabled": null,
         "privacy.trackingprotection.cryptomining.enabled": null,
         "privacy.annotate_channels.strict_list.enabled": null,
+        "network.http.referer.disallowCrossSiteRelaxingDefault": null,
       },
       standard: {
         "network.cookie.cookieBehavior": null,
@@ -4381,6 +4390,10 @@ var ContentBlockingCategoriesPrefs = {
         "privacy.trackingprotection.fingerprinting.enabled": null,
         "privacy.trackingprotection.cryptomining.enabled": null,
         "privacy.annotate_channels.strict_list.enabled": null,
+        "network.http.referer.disallowCrossSiteRelaxingDefault": null,
+      },
+      custom: {
+        "network.http.referer.disallowCrossSiteRelaxingDefault": true,
       },
     };
     let type = "strict";
@@ -4447,6 +4460,16 @@ var ContentBlockingCategoriesPrefs = {
         case "-lvl2":
           this.CATEGORY_PREFS[type][
             "privacy.annotate_channels.strict_list.enabled"
+          ] = false;
+          break;
+        case "rp":
+          this.CATEGORY_PREFS[type][
+            "network.http.referer.disallowCrossSiteRelaxingDefault"
+          ] = true;
+          break;
+        case "-rp":
+          this.CATEGORY_PREFS[type][
+            "network.http.referer.disallowCrossSiteRelaxingDefault"
           ] = false;
           break;
         case "cookieBehavior0":
@@ -4580,11 +4603,6 @@ var ContentBlockingCategoriesPrefs = {
    * Sets all user-exposed content blocking preferences to values that match the selected category.
    */
   setPrefsToCategory(category) {
-    // Leave prefs as they were if we are switching to "custom" category.
-    if (category == "custom") {
-      return;
-    }
-
     for (let pref in this.CATEGORY_PREFS[category]) {
       let value = this.CATEGORY_PREFS[category][pref];
       if (!Services.prefs.prefIsLocked(pref)) {

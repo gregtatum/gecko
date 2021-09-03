@@ -74,8 +74,8 @@
 }
 
 .contentSearchSuggestionRow.selected {
-  background-color: Highlight;
-  color: HighlightText;
+  background-color: SelectedItem;
+  color: SelectedItemText;
 }
 
 .contentSearchHeader,
@@ -139,7 +139,7 @@
 }
 
 .contentSearchOneOffItem.selected {
-  background-color: Highlight;
+  background-color: SelectedItem;
   background-image: none;
 }
 

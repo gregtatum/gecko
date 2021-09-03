@@ -169,7 +169,7 @@ ENameValueFlag LocalAccessible::Name(nsString& aName) const {
   return nameFlag;
 }
 
-void LocalAccessible::Description(nsString& aDescription) {
+void LocalAccessible::Description(nsString& aDescription) const {
   // There are 4 conditions that make an accessible have no accDescription:
   // 1. it's a text node; or
   // 2. It has no ARIA describedby or description property
@@ -957,8 +957,9 @@ nsresult LocalAccessible::HandleAccEvent(AccEvent* aEvent) {
           break;
         }
 #endif
+        case nsIAccessibleEvent::EVENT_DESCRIPTION_CHANGE:
         case nsIAccessibleEvent::EVENT_NAME_CHANGE: {
-          SendCacheUpdate(CacheDomain::Name);
+          SendCacheUpdate(CacheDomain::NameAndDescription);
           ipcDoc->SendEvent(id, aEvent->GetEventType());
           break;
         }
@@ -2351,7 +2352,7 @@ ENameValueFlag LocalAccessible::NativeName(nsString& aName) const {
 }
 
 // LocalAccessible protected
-void LocalAccessible::NativeDescription(nsString& aDescription) {
+void LocalAccessible::NativeDescription(nsString& aDescription) const {
   bool isXUL = mContent->IsXULElement();
   if (isXUL) {
     // Try XUL <description control="[id]">description text</description>
@@ -3007,22 +3008,40 @@ void LocalAccessible::SendCacheUpdate(uint64_t aCacheDomain) {
   DocAccessibleChild* ipcDoc = mDoc->IPCDoc();
   MOZ_ASSERT(ipcDoc);
 
-  RefPtr<AccAttributes> fields = BundleFieldsForCache(aCacheDomain);
+  RefPtr<AccAttributes> fields =
+      BundleFieldsForCache(aCacheDomain, CacheUpdateType::Update);
   nsTArray<CacheData> data;
   data.AppendElement(
       CacheData(IsDoc() ? 0 : reinterpret_cast<uint64_t>(UniqueID()), fields));
-  ipcDoc->SendCache(1, data, true);
+  ipcDoc->SendCache(CacheUpdateType::Update, data, true);
 }
 
 already_AddRefed<AccAttributes> LocalAccessible::BundleFieldsForCache(
-    uint64_t aCacheDomain) {
+    uint64_t aCacheDomain, CacheUpdateType aUpdateType) {
   RefPtr<AccAttributes> fields = new AccAttributes();
 
-  if (aCacheDomain & CacheDomain::Name) {
+  if (aCacheDomain & CacheDomain::NameAndDescription) {
     nsAutoString name;
     int32_t nameFlag = Name(name);
-    fields->SetAttribute(nsGkAtoms::explicit_name, nameFlag);
-    fields->SetAttribute(nsGkAtoms::name, name);
+    if (nameFlag != eNameOK) {
+      fields->SetAttribute(nsGkAtoms::explicit_name, nameFlag);
+    } else if (aUpdateType == CacheUpdateType::Update) {
+      fields->SetAttribute(nsGkAtoms::explicit_name, DeleteEntry());
+    }
+
+    if (!name.IsEmpty()) {
+      fields->SetAttribute(nsGkAtoms::name, name);
+    } else if (aUpdateType == CacheUpdateType::Update) {
+      fields->SetAttribute(nsGkAtoms::name, DeleteEntry());
+    }
+
+    nsAutoString description;
+    Description(description);
+    if (!description.IsEmpty()) {
+      fields->SetAttribute(nsGkAtoms::description, description);
+    } else if (aUpdateType == CacheUpdateType::Update) {
+      fields->SetAttribute(nsGkAtoms::description, DeleteEntry());
+    }
   }
 
   if ((aCacheDomain & CacheDomain::Value) && HasNumericValue()) {

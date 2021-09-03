@@ -2394,7 +2394,6 @@ class nsDisplayItem : public nsDisplayItemLink {
         mExtraPageForPageNum(aOther.mExtraPageForPageNum),
         mPerFrameIndex(aOther.mPerFrameIndex),
         mBuildingRect(aOther.mBuildingRect),
-        mPaintRect(aOther.mPaintRect),
         mReferenceFrame(aOther.mReferenceFrame),
         mToReferenceFrame(aOther.mToReferenceFrame),
         mAnimatedGeometryRoot(aOther.mAnimatedGeometryRoot),
@@ -2807,16 +2806,7 @@ class nsDisplayItem : public nsDisplayItemLink {
       // building rect is staying the same.
       return;
     }
-    mPaintRect = mBuildingRect = aBuildingRect;
-    mItemFlags -= ItemFlag::PaintRectValid;
-  }
-
-  void SetPaintRect(const nsRect& aPaintRect) {
-    mPaintRect = aPaintRect;
-    mItemFlags += ItemFlag::PaintRectValid;
-  }
-  bool HasPaintRect() const {
-    return mItemFlags.contains(ItemFlag::PaintRectValid);
+    mBuildingRect = aBuildingRect;
   }
 
   /**
@@ -2957,7 +2947,7 @@ class nsDisplayItem : public nsDisplayItemLink {
   virtual Maybe<nsRect> GetClipWithRespectToASR(
       nsDisplayListBuilder* aBuilder, const ActiveScrolledRoot* aASR) const;
 
-  const nsRect& GetPaintRect() const { return mPaintRect; }
+  const nsRect& GetPaintRect() const { return mBuildingRect; }
 
   virtual const nsRect& GetUntransformedPaintRect() const {
     return GetPaintRect();
@@ -2984,7 +2974,6 @@ class nsDisplayItem : public nsDisplayItemLink {
     ForceNotVisible,
     HasHitTestInfo,
     IsGlassItem,
-    PaintRectValid,
 #ifdef MOZ_DUMP_PAINTING
     // True if this frame has been painted.
     Painted,
@@ -3002,9 +2991,6 @@ class nsDisplayItem : public nsDisplayItemLink {
   // This is the rectangle that nsDisplayListBuilder was using as the visible
   // rect to decide which items to construct.
   nsRect mBuildingRect;
-
-  // Guaranteed to be contained in GetBounds().
-  nsRect mPaintRect;
 
  protected:
   void SetItemFlag(ItemFlag aFlag, const bool aValue) {
@@ -3222,8 +3208,7 @@ class nsDisplayList {
   /**
    * Create an empty list.
    */
-  nsDisplayList()
-      : mLength(0), mForceTransparentSurface(false) {
+  nsDisplayList() : mLength(0), mForceTransparentSurface(false) {
     mTop = &mSentinel;
     mSentinel.mAbove = nullptr;
   }
@@ -3540,9 +3525,7 @@ class nsDisplayList {
 
   void SetNeedsTransparentSurface() { mForceTransparentSurface = true; }
 
-  void RestoreState() {
-    mForceTransparentSurface = false;
-  }
+  void RestoreState() { mForceTransparentSurface = false; }
 
  private:
   nsDisplayItemLink mSentinel;
@@ -3808,17 +3791,6 @@ class nsDisplayImageContainer : public nsPaintedDisplayItem {
  public:
   nsDisplayImageContainer(nsDisplayListBuilder* aBuilder, nsIFrame* aFrame)
       : nsPaintedDisplayItem(aBuilder, aFrame) {}
-
-  /**
-   * @return true if this display item can be optimized into an image layer.
-   * It is an error to call GetContainer() unless you've called
-   * CanOptimizeToImageLayer() first and it returned true.
-   */
-  virtual bool CanOptimizeToImageLayer(LayerManager* aManager,
-                                       nsDisplayListBuilder* aBuilder);
-
-  already_AddRefed<layers::ImageContainer> GetContainer(
-      LayerManager* aManager, nsDisplayListBuilder* aBuilder);
 
   virtual void UpdateDrawResult(image::ImgDrawResult aResult) = 0;
   virtual already_AddRefed<imgIContainer> GetImage() = 0;
@@ -4358,8 +4330,6 @@ class nsDisplayBackgroundImage : public nsDisplayImageContainer {
   void ComputeInvalidationRegion(nsDisplayListBuilder* aBuilder,
                                  const nsDisplayItemGeometry* aGeometry,
                                  nsRegion* aInvalidRegion) const override;
-  bool CanOptimizeToImageLayer(LayerManager* aManager,
-                               nsDisplayListBuilder* aBuilder) override;
   already_AddRefed<imgIContainer> GetImage() override;
   nsRect GetDestRect() const override;
 
@@ -4864,7 +4834,6 @@ class nsDisplayBoxShadowInner : public nsPaintedDisplayItem {
       const StackingContextHelper& aSc,
       layers::RenderRootStateManager* aManager,
       nsDisplayListBuilder* aDisplayListBuilder) override;
-
 };
 
 /**

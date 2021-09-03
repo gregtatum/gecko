@@ -12,10 +12,22 @@ namespace a11y {
 
 class CacheDomain {
  public:
-  static constexpr uint64_t Name = ((uint64_t)0x1) << 0;
+  static constexpr uint64_t NameAndDescription = ((uint64_t)0x1) << 0;
   static constexpr uint64_t Value = ((uint64_t)0x1) << 1;
   static constexpr uint64_t Bounds = ((uint64_t)0x1) << 2;
   static constexpr uint64_t All = ~((uint64_t)0x0);
+};
+
+enum class CacheUpdateType {
+  /*
+   * An initial cache push of a loaded document or inserted subtree.
+   */
+  Initial,
+
+  /*
+   * An incremental cache push of one or more fields that have changed.
+   */
+  Update,
 };
 
 }  // namespace a11y
