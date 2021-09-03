@@ -59,6 +59,7 @@ function getBrowserHistoryForView(window, view) {
     return {
       browser: null,
       historyIndex: null,
+      historyEntry: null,
     };
   }
 
@@ -70,6 +71,7 @@ function getBrowserHistoryForView(window, view) {
       return {
         browser,
         historyIndex: i,
+        historyEntry,
       };
     }
   }
@@ -77,6 +79,7 @@ function getBrowserHistoryForView(window, view) {
   return {
     browser,
     historyIndex: null,
+    historyEntry: null,
   };
 }
 
@@ -120,6 +123,9 @@ class InternalView {
 
   #window;
 
+  /** @type {boolean} **/
+  #pinned;
+
   /**
    * @param {DOMWindow} window
    * @param {Browser | null} browser
@@ -128,6 +134,7 @@ class InternalView {
   constructor(window, browser, historyEntry) {
     this.#window = window;
     this.#view = new View(this);
+    this.#pinned = false;
     InternalView.viewMap.set(this.#view, this);
 
     // cachedEntry is set when session history has purged or truncated
@@ -163,6 +170,7 @@ class InternalView {
       )
     ) {
       this.historyState = {
+        pinned: this.#pinned,
         historyId: historyEntry.ID,
         originalURISpec: historyEntry.originalURI?.spec,
         loadReplace: historyEntry.loadReplace,
@@ -171,6 +179,36 @@ class InternalView {
         URIWasModified: historyEntry.URIWasModified,
         persist: historyEntry.persist,
       };
+    }
+  }
+
+  /** @type {boolean} */
+  get pinned() {
+    return this.#pinned;
+  }
+
+  set pinned(isPinned) {
+    if (this.#pinned == isPinned) {
+      return;
+    }
+
+    this.#pinned = isPinned;
+
+    // If GlobalHistory debugging is enabled, then we want to also update
+    // the historyState object that gets shown in the sidebar.
+    if (
+      Services.prefs.getBoolPref(
+        "browser.companion.globalhistorydebugging",
+        false
+      )
+    ) {
+      let { browser, historyEntry } = getBrowserHistoryForView(
+        this.#window,
+        this
+      );
+      if (browser && historyEntry) {
+        this.update(browser, historyEntry);
+      }
     }
   }
 
@@ -211,6 +249,8 @@ class InternalView {
  * `ViewMoved` - An existing view has been moved to the top of the stack.
  * `ViewUpdated` - An existing view has been moved to the top of the stack.
  * `RiverRebuilt` - The river has been replaced with a new state and should be rebuilt.
+ * `ViewPinned` - A view has transitioned from the unpinned to pinned state.
+ * `ViewUnpinned` - A view has transitioned from the pinned to unpinned state.
  */
 class GlobalHistoryEvent extends Event {
   #view;
@@ -359,6 +399,8 @@ class BrowserListener {
  * `ViewMoved` - An existing view has been moved to the top of the stack.
  * `ViewRemoved` - An existing view has been removed.
  * `ViewUpdated` - An existing view has changed in some way.
+ * `ViewPinned` - A view has transitioned from the unpinned to pinned state.
+ * `ViewUnpinned` - A view has transitioned from the pinned to unpinned state.
  *    The view will be included in the event detail
  */
 class GlobalHistory extends EventTarget {
@@ -827,10 +869,11 @@ class GlobalHistory extends EventTarget {
 
   #activateCurrentView() {
     this.#activationTimer = null;
-    if (
-      this.#currentIndex === null ||
-      this.#currentIndex == this.#viewStack.length - 1
-    ) {
+    if (this.#currentIndex === null) {
+      return;
+    }
+
+    if (this.currentView.pinned) {
       return;
     }
 
@@ -998,11 +1041,82 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
+   * Sets the `pinned` state on a View to shouldPin.
+   *
+   * @param {View} view The View to set the pinned state on.
+   * @param {boolean} shouldPin True if the View should be pinned.
+   */
+  setViewPinnedState(view, shouldPin) {
+    if (!Services.prefs.getBoolPref("browser.river.pinning.enabled", false)) {
+      return;
+    }
+
+    if (view.pinned == shouldPin) {
+      return;
+    }
+
+    let internalView = InternalView.viewMap.get(view);
+    if (!internalView) {
+      throw new Error("Unknown view.");
+    }
+
+    // We don't want to remove Pinned Views from the #viewStack Array,
+    // since so much of GlobalHistory relies on all available Views
+    // existing in it, and for the #currentIndex to point at the index
+    // of the currently visible View.
+    //
+    // To accommodate Pinned Views, we borrow the organizational model
+    // of Pinned Tabs from tabbrowser: Views that are pinned are moved
+    // to the beginning of the #viewStack Array. So if we started with
+    // this #viewStack:
+    //
+    // [Unpinned View 1, Unpinned View 2, Unpinned View 3]
+    //
+    // and then pinned View 3, #viewStack would become:
+    //
+    // [Pinned View 3, Unpinned View 1, Unpinned View 2]
+    //
+    // This way, we can keep pinned Views within #viewStack and not have
+    // to treat them specially throughout GlobalHistory.
+
+    let currentView = this.#viewStack[this.#currentIndex];
+    let viewIndex = this.#viewStack.indexOf(internalView);
+
+    this.#viewStack.splice(viewIndex, 1);
+    let eventName;
+
+    if (shouldPin) {
+      this.#viewStack.splice(this.pinnedViewCount, 0, internalView);
+      eventName = "ViewPinned";
+    } else {
+      this.#viewStack.push(internalView);
+      eventName = "ViewUnpinned";
+    }
+
+    internalView.pinned = shouldPin;
+
+    // Now that #viewStack has updated, make sure that #currentIndex correctly
+    // points at currentView.
+    this.#currentIndex = this.#viewStack.indexOf(currentView);
+    this.#notifyEvent(eventName, internalView);
+  }
+
+  /**
+   * @type {number} The number of pinned Views in this window.
+   */
+  get pinnedViewCount() {
+    let firstUnpinned = this.#viewStack.findIndex(view => !view.pinned);
+    return firstUnpinned == -1 ? 0 : firstUnpinned;
+  }
+
+  /**
    * Whether it is possible to navigate back in the global history.
    * @type {boolean}
    */
   get canGoBack() {
-    return this.#currentIndex > 0;
+    return (
+      this.#currentIndex > 0 && !this.#viewStack[this.#currentIndex - 1].pinned
+    );
   }
 
   /**

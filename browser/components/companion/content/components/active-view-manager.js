@@ -12,6 +12,7 @@ class ActiveViewManager extends HTMLElement {
   #overflowPanel;
   #river;
   #topView;
+  #pinnedViews;
 
   static EVENTS = [
     "ViewChanged",
@@ -20,6 +21,8 @@ class ActiveViewManager extends HTMLElement {
     "ViewMoved",
     "ViewUpdated",
     "RiverRebuilt",
+    "ViewPinned",
+    "ViewUnpinned",
   ];
 
   connectedCallback() {
@@ -30,6 +33,7 @@ class ActiveViewManager extends HTMLElement {
     this.#overflow = this.querySelector("#river-overflow-button");
     this.#river = this.querySelector("river-el");
     this.#topView = this.querySelector("top-view");
+    this.#pinnedViews = this.querySelector("pinned-views");
 
     for (let event of ActiveViewManager.EVENTS) {
       window.top.gGlobalHistory.addEventListener(event, this);
@@ -38,6 +42,7 @@ class ActiveViewManager extends HTMLElement {
     this.addEventListener("UserAction:ViewSelected", this);
     this.#river.addEventListener("RiverRegrouped", this);
     this.#topView.addEventListener("TopViewOverflow", this);
+    this.#topView.addEventListener("PinView", this);
     this.#overflow.addEventListener("click", this);
   }
 
@@ -48,6 +53,7 @@ class ActiveViewManager extends HTMLElement {
     this.removeEventListener("UserAction:ViewSelected", this);
     this.#river.removeEventListener("RiverRegrouped", this);
     this.#topView.removeEventListener("TopViewOverflow", this);
+    this.#topView.removeEventListener("PinView", this);
     this.#overflow.removeEventListener("click", this);
   }
 
@@ -57,6 +63,10 @@ class ActiveViewManager extends HTMLElement {
 
   isRiverView(view) {
     return this.#river.hasView(view);
+  }
+
+  isPinnedView(view) {
+    return this.#pinnedViews.hasView(view);
   }
 
   viewChanged(view) {
@@ -139,10 +149,11 @@ class ActiveViewManager extends HTMLElement {
       case "RiverRebuilt":
         this.rebuild();
         break;
-      case "UserAction:ViewSelected":
+      case "UserAction:ViewSelected": {
         let view = event.detail.clickedView;
         this.#viewSelected(view);
         break;
+      }
       case "click":
         if (event.target == this.#overflow) {
           this.#overflowClicked(event);
@@ -164,17 +175,42 @@ class ActiveViewManager extends HTMLElement {
         this.#river.addViews(event.detail.views);
         break;
       }
+      case "PinView": {
+        window.top.gGlobalHistory.setViewPinnedState(event.detail.view, true);
+        break;
+      }
+      case "ViewPinned": {
+        let view = event.view;
+        if (this.isRiverView(view)) {
+          // Currently unsupported, since the Page Action Menu isn't
+          // available here.
+          console.warn("Saw ViewPinned for a View in the River.");
+        } else if (this.isTopView(view)) {
+          this.#topView.removeView(view);
+          this.#pinnedViews.addView(view);
+        }
+        break;
+      }
+      case "ViewUnpinned": {
+        let view = event.view;
+        this.#pinnedViews.removeView(view);
+        this.#topView.addView(event.view);
+        break;
+      }
     }
   }
 
   #viewSelected(view) {
     this.#river.activeView = null;
     this.#topView.activeView = null;
+    this.#pinnedViews.activeView = null;
 
     if (this.isRiverView(view)) {
       this.#river.activeView = view;
     } else if (this.isTopView(view)) {
       this.#topView.activeView = view;
+    } else if (this.isPinnedView(view)) {
+      this.#pinnedViews.activeView = view;
     }
     window.top.gGlobalHistory.setView(view);
   }

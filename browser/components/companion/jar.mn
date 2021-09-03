@@ -43,6 +43,8 @@ browser.jar:
     content/browser/companion/components/top-view.css (content/components/top-view.css)
     content/browser/companion/components/river.css  (content/components/river.css)
     content/browser/companion/components/river.js   (content/components/river.js)
+    content/browser/companion/components/pinned-views.js (content/components/pinned-views.js)
+    content/browser/companion/components/pinned-views.css (content/components/pinned-views.css)
 
 % resource ort %content/browser/companion/vendor/ort/ contentaccessible=yes
     content/browser/companion/vendor/ort/ort.html (vendor/ort/ort.html)

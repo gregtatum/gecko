@@ -37,8 +37,18 @@ class TopView extends MozLitElement {
       case "click":
         let titleEl = document.getElementById("site-info-title");
         let editImg = document.getElementById("site-info-edit-icon");
+        let pinView = document.getElementById("pin-view");
+
         if (event.target == editImg) {
           titleEl.focus();
+        } else if (pinView.contains(event.target)) {
+          let e = new CustomEvent("PinView", {
+            bubbles: true,
+            composed: true,
+            detail: { view: this.activeView },
+          });
+          this.dispatchEvent(e);
+          this.#pageActionPanel.hidePopup();
         } else if (event.target != titleEl) {
           this.#pageActionPanel.hidePopup();
         }
@@ -147,6 +157,18 @@ class TopView extends MozLitElement {
 
   hasView(view) {
     return this._viewGroup.includes(view);
+  }
+
+  removeView(view) {
+    let viewIndex = this._viewGroup.indexOf(view);
+    if (viewIndex != -1) {
+      this._viewGroup.splice(viewIndex, 1);
+      if (!this._viewGroup.length) {
+        this.setViews([]);
+      } else {
+        this.setViews(this._viewGroup);
+      }
+    }
   }
 
   /**

@@ -2619,4 +2619,5 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.tabs.warnOnClose", false, locked);
   pref("privacy.userContext.enabled", false, locked);
   pref("privacy.userContext.ui.enabled", false, locked);
+  pref("browser.river.pinning.enabled", false);
 #endif
