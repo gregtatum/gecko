@@ -9,9 +9,6 @@ const { XPCOMUtils } = ChromeUtils.import(
 const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
-const { E10SUtils } = ChromeUtils.import(
-  "resource://gre/modules/E10SUtils.jsm"
-);
 
 if (!AppConstants.PINEBUILD) {
   throw new Error(
@@ -20,6 +17,7 @@ if (!AppConstants.PINEBUILD) {
 }
 
 XPCOMUtils.defineLazyModuleGetters(this, {
+  E10SUtils: "resource://gre/modules/E10SUtils.jsm",
   Services: "resource://gre/modules/Services.jsm",
 });
 
@@ -30,7 +28,6 @@ const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 class BrowserWindowHandler {
   constructor(window) {
     this.window = window;
-    this.selectedTab = window.gBrowser.selectedTab;
     this._companionBox = this.window.document.getElementById("companion-box");
 
     let companionToolbar = this.window.document.getElementById(
@@ -49,15 +46,6 @@ class BrowserWindowHandler {
 
     window.addEventListener("unload", () => this.destroy(), { once: true });
 
-    this.selectedTab.addEventListener("TabAttrModified", () => {
-      this.updateTab();
-    });
-    window.gBrowser.addEventListener("TabSelect", () => {
-      this.updateTab();
-    });
-    window.gBrowser.addProgressListener(this);
-    this.updateTab();
-
     Services.prefs.addObserver(COMPANION_OPEN_PREF, this);
     this.onCompanionPrefUpdated();
 
@@ -66,19 +54,6 @@ class BrowserWindowHandler {
       .addEventListener("click", () => {
         window.gURLBar.view.close();
       });
-  }
-
-  updateTab() {
-    if (this.selectedTab != this.window.gBrowser.selectedTab) {
-      // If the selected tab has changed, unregister the event listener
-      // for the previously selected tab and register a new one
-      // for the currently selected tab.
-      this.selectedTab.removeEventListener("TabAttrModified", this);
-      this.selectedTab = this.window.gBrowser.selectedTab;
-      this.selectedTab.addEventListener("TabAttrModified", () => {
-        this.updateTab();
-      });
-    }
   }
 
   destroy() {
@@ -139,15 +114,7 @@ class BrowserWindowHandler {
     }
   }
 
-  onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags, aIsSimulated) {
-    this.updateTab();
-  }
-
-  QueryInterface = ChromeUtils.generateQI([
-    "nsIWebProgressListener",
-    "nsIWebProgressListener2",
-    "nsISupportsWeakReference",
-  ]);
+  QueryInterface = ChromeUtils.generateQI(["nsISupportsWeakReference"]);
 }
 
 const CompanionService = {
