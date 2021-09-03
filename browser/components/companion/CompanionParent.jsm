@@ -9,38 +9,22 @@ var EXPORTED_SYMBOLS = ["CompanionParent"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
-const { BrowserWindowTracker } = ChromeUtils.import(
-  "resource:///modules/BrowserWindowTracker.jsm"
-);
-
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-const { Sqlite } = ChromeUtils.import("resource://gre/modules/Sqlite.jsm");
-const { _LastSession } = ChromeUtils.import(
-  "resource:///modules/sessionstore/SessionStore.jsm"
-);
-const { clearTimeout, setTimeout, requestIdleCallback } = ChromeUtils.import(
-  "resource://gre/modules/Timer.jsm"
-);
-const { OnlineServices } = ChromeUtils.import(
-  "resource:///modules/OnlineServices.jsm"
-);
-const { Snapshots } = ChromeUtils.import("resource:///modules/Snapshots.jsm");
-const { PageDataCollector } = ChromeUtils.import(
-  "resource:///modules/pagedata/PageDataCollector.jsm"
-);
-const { SnapshotSelector } = ChromeUtils.import(
-  "resource:///modules/SnapshotSelector.jsm"
-);
-const { PageDataService } = ChromeUtils.import(
-  "resource:///modules/pagedata/PageDataService.jsm"
-);
-
-const { FileUtils } = ChromeUtils.import(
-  "resource://gre/modules/FileUtils.jsm"
-);
 
 XPCOMUtils.defineLazyModuleGetters(this, {
+  BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
+  clearTimeout: "resource://gre/modules/Timer.jsm",
+  FileUtils: "resource://gre/modules/FileUtils.jsm",
+  _LastSession: "resource:///modules/sessionstore/SessionStore.jsm",
+  OnlineServices: "resource:///modules/OnlineServices.jsm",
+  PageDataCollector: "resource:///modules/pagedata/PageDataCollector.jsm",
+  PageDataService: "resource:///modules/pagedata/PageDataService.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
+  requestIdleCallback: "resource://gre/modules/Timer.jsm",
+  Services: "resource://gre/modules/Services.jsm",
+  setTimeout: "resource://gre/modules/Timer.jsm",
+  Snapshots: "resource:///modules/Snapshots.jsm",
+  SnapshotSelector: "resource:///modules/SnapshotSelector.jsm",
+  Sqlite: "resource://gre/modules/Sqlite.jsm",
 });
 
 XPCOMUtils.defineLazyPreferenceGetter(
