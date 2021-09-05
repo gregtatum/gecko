@@ -2262,10 +2262,11 @@ WindowRenderer* nsDisplayListBuilder::GetWidgetWindowRenderer(nsView** aView) {
   return nullptr;
 }
 
-LayerManager* nsDisplayListBuilder::GetWidgetLayerManager(nsView** aView) {
+WebRenderLayerManager* nsDisplayListBuilder::GetWidgetLayerManager(
+    nsView** aView) {
   WindowRenderer* renderer = GetWidgetWindowRenderer();
   if (renderer) {
-    return renderer->AsLayerManager();
+    return renderer->AsWebRender();
   }
   return nullptr;
 }
@@ -2332,7 +2333,7 @@ already_AddRefed<LayerManager> nsDisplayList::PaintRoot(
     Maybe<double> aDisplayListBuildTime) {
   AUTO_PROFILER_LABEL("nsDisplayList::PaintRoot", GRAPHICS);
 
-  RefPtr<LayerManager> layerManager;
+  RefPtr<WebRenderLayerManager> layerManager;
   WindowRenderer* renderer = nullptr;
   bool widgetTransaction = false;
   bool doBeginTransaction = true;
@@ -2346,11 +2347,7 @@ already_AddRefed<LayerManager> nsDisplayList::PaintRoot(
         MOZ_ASSERT(!(aFlags & PAINT_EXISTING_TRANSACTION));
         renderer = nullptr;
       } else {
-        layerManager = renderer->AsLayerManager();
-        if (layerManager) {
-          layerManager->SetContainsSVG(false);
-        }
-
+        layerManager = renderer->AsWebRender();
         doBeginTransaction = !(aFlags & PAINT_EXISTING_TRANSACTION);
         widgetTransaction = true;
       }
@@ -2382,19 +2379,18 @@ already_AddRefed<LayerManager> nsDisplayList::PaintRoot(
     MOZ_ASSERT(layerManager);
     if (doBeginTransaction) {
       if (aCtx) {
-        if (!layerManager->BeginTransactionWithTarget(aCtx)) {
+        if (!layerManager->BeginTransactionWithTarget(aCtx, nsCString())) {
           return nullptr;
         }
       } else {
-        if (!layerManager->BeginTransaction()) {
+        if (!layerManager->BeginTransaction(nsCString())) {
           return nullptr;
         }
       }
     }
 
-    bool prevIsCompositingCheap =
-        aBuilder->SetIsCompositingCheap(layerManager->IsCompositingCheap());
-    MaybeSetupTransactionIdAllocator(layerManager, presContext);
+    bool prevIsCompositingCheap = aBuilder->SetIsCompositingCheap(true);
+    layerManager->SetTransactionIdAllocator(presContext->RefreshDriver());
 
     bool sent = false;
     if (aFlags & PAINT_IDENTICAL_DISPLAY_LIST) {
@@ -2443,16 +2439,13 @@ already_AddRefed<LayerManager> nsDisplayList::PaintRoot(
     return layerManager.forget();
   }
 
+  FallbackRenderer* fallback = renderer->AsFallback();
+  MOZ_ASSERT(fallback);
+
   if (doBeginTransaction) {
-    if (aCtx) {
-      MOZ_ASSERT(layerManager);
-      if (!layerManager->BeginTransactionWithTarget(aCtx)) {
-        return nullptr;
-      }
-    } else {
-      if (!renderer->BeginTransaction()) {
-        return nullptr;
-      }
+    MOZ_ASSERT(!aCtx);
+    if (!fallback->BeginTransaction()) {
+      return nullptr;
     }
   }
 
@@ -2462,20 +2455,8 @@ already_AddRefed<LayerManager> nsDisplayList::PaintRoot(
     flags = LayerManager::END_NO_COMPOSITE;
   }
 
-  if (layerManager) {
-    MaybeSetupTransactionIdAllocator(layerManager, presContext);
-  }
-
-  bool sent = false;
-  if (aFlags & PAINT_IDENTICAL_DISPLAY_LIST) {
-    sent = renderer->EndEmptyTransaction(flags);
-  }
-
-  if (!sent) {
-    MOZ_ASSERT(renderer->AsFallback());
-    renderer->AsFallback()->EndTransactionWithList(
-        aBuilder, this, presContext->AppUnitsPerDevPixel(), flags);
-  }
+  fallback->EndTransactionWithList(aBuilder, this,
+                                   presContext->AppUnitsPerDevPixel(), flags);
 
   if (widgetTransaction ||
       // SVG-as-an-image docs don't paint as part of the retained layer tree,
@@ -2494,22 +2475,14 @@ already_AddRefed<LayerManager> nsDisplayList::PaintRoot(
   bool shouldInvalidate = renderer->NeedsWidgetInvalidation();
   if (view) {
     if (shouldInvalidate) {
-      if (!renderer->AsFallback()) {
-        view->GetViewManager()->InvalidateView(view);
-      } else {
-        // If we're the fallback renderer, then we don't need to invalidate
-        // as we've just drawn directly to the window and don't need to do
-        // anything else.
-        NS_ASSERTION(!(aFlags & PAINT_NO_COMPOSITE),
-                     "Must be compositing during fallback");
-      }
+      // If we're the fallback renderer, then we don't need to invalidate
+      // as we've just drawn directly to the window and don't need to do
+      // anything else.
+      NS_ASSERTION(!(aFlags & PAINT_NO_COMPOSITE),
+                   "Must be compositing during fallback");
     }
   }
-
-  if (layerManager) {
-    layerManager->SetUserData(&gLayerManagerLayerBuilder, nullptr);
-  }
-  return layerManager.forget();
+  return nullptr;
 }
 
 nsDisplayItem* nsDisplayList::RemoveBottom() {
@@ -2938,6 +2911,18 @@ nsDisplayContainer::nsDisplayContainer(
   nsDisplayItem::SetClipChain(nullptr, true);
 }
 
+nsRect nsDisplayItem::GetPaintRect(nsDisplayListBuilder* aBuilder,
+                                   gfxContext* aCtx) {
+  nsRect result = GetClippedBounds(aBuilder);
+  if (aCtx) {
+    result.IntersectRect(result,
+                         nsLayoutUtils::RoundGfxRectToAppRect(
+                             aCtx->GetClipExtents(),
+                             mFrame->PresContext()->AppUnitsPerDevPixel()));
+  }
+  return result;
+}
+
 bool nsDisplayContainer::CreateWebRenderCommands(
     wr::DisplayListBuilder& aBuilder, wr::IpcResourceUpdateQueue& aResources,
     const StackingContextHelper& aSc, RenderRootStateManager* aManager,
@@ -3002,8 +2987,8 @@ void nsDisplaySolidColor::Paint(nsDisplayListBuilder* aBuilder,
                                 gfxContext* aCtx) {
   int32_t appUnitsPerDevPixel = mFrame->PresContext()->AppUnitsPerDevPixel();
   DrawTarget* drawTarget = aCtx->GetDrawTarget();
-  Rect rect =
-      NSRectToSnappedRect(GetPaintRect(), appUnitsPerDevPixel, *drawTarget);
+  Rect rect = NSRectToSnappedRect(GetPaintRect(aBuilder, aCtx),
+                                  appUnitsPerDevPixel, *drawTarget);
   drawTarget->FillRect(rect, ColorPattern(ToDeviceColor(mColor)));
 }
 
@@ -3619,43 +3604,6 @@ already_AddRefed<imgIContainer> nsDisplayBackgroundImage::GetImage() {
   return image.forget();
 }
 
-nsDisplayBackgroundImage::ImageLayerization
-nsDisplayBackgroundImage::ShouldCreateOwnLayer(nsDisplayListBuilder* aBuilder,
-                                               LayerManager* aManager) {
-  if (ForceActiveLayers()) {
-    return WHENEVER_POSSIBLE;
-  }
-
-  nsIFrame* backgroundStyleFrame =
-      nsCSSRendering::FindBackgroundStyleFrame(StyleFrame());
-  if (ActiveLayerTracker::IsBackgroundPositionAnimated(aBuilder,
-                                                       backgroundStyleFrame)) {
-    return WHENEVER_POSSIBLE;
-  }
-
-  if (StaticPrefs::layout_animated_image_layers_enabled() && mBackgroundStyle) {
-    const nsStyleImageLayers::Layer& layer =
-        mBackgroundStyle->StyleBackground()->mImage.mLayers[mLayer];
-    const auto* image = &layer.mImage;
-    if (auto* request = image->GetImageRequest()) {
-      nsCOMPtr<imgIContainer> image;
-      if (NS_SUCCEEDED(request->GetImage(getter_AddRefs(image))) && image) {
-        bool animated = false;
-        if (NS_SUCCEEDED(image->GetAnimated(&animated)) && animated) {
-          return WHENEVER_POSSIBLE;
-        }
-      }
-    }
-  }
-
-  if (nsLayoutUtils::GPUImageScalingEnabled() &&
-      aManager->IsCompositingCheap()) {
-    return ONLY_FOR_SCALING;
-  }
-
-  return NO_LAYER_NEEDED;
-}
-
 static void CheckForBorderItem(nsDisplayItem* aItem, uint32_t& aFlags) {
   // TODO(miko): Iterating over the display list like this is suspicious.
   for (nsDisplayList::Iterator it(aItem); it.HasNext(); ++it) {
@@ -3820,7 +3768,7 @@ bool nsDisplayBackgroundImage::RenderingMightDependOnPositioningAreaSizeChange()
 
 void nsDisplayBackgroundImage::Paint(nsDisplayListBuilder* aBuilder,
                                      gfxContext* aCtx) {
-  PaintInternal(aBuilder, aCtx, GetPaintRect(), &mBounds);
+  PaintInternal(aBuilder, aCtx, GetPaintRect(aBuilder, aCtx), &mBounds);
 }
 
 void nsDisplayBackgroundImage::PaintInternal(nsDisplayListBuilder* aBuilder,
@@ -4015,7 +3963,7 @@ nsRect nsDisplayThemedBackground::GetPositioningArea() const {
 
 void nsDisplayThemedBackground::Paint(nsDisplayListBuilder* aBuilder,
                                       gfxContext* aCtx) {
-  PaintInternal(aBuilder, aCtx, GetPaintRect(), nullptr);
+  PaintInternal(aBuilder, aCtx, GetPaintRect(aBuilder, aCtx), nullptr);
 }
 
 void nsDisplayThemedBackground::PaintInternal(nsDisplayListBuilder* aBuilder,
@@ -4322,13 +4270,14 @@ void nsDisplayOutline::Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) {
   nsPresContext* pc = mFrame->PresContext();
   if (IsThemedOutline()) {
     rect.Inflate(mFrame->StyleOutline()->mOutlineOffset.ToAppUnits());
-    pc->Theme()->DrawWidgetBackground(
-        aCtx, mFrame, StyleAppearance::FocusOutline, rect, GetPaintRect());
+    pc->Theme()->DrawWidgetBackground(aCtx, mFrame,
+                                      StyleAppearance::FocusOutline, rect,
+                                      GetPaintRect(aBuilder, aCtx));
     return;
   }
 
-  nsCSSRendering::PaintNonThemedOutline(pc, *aCtx, mFrame, GetPaintRect(), rect,
-                                        mFrame->Style());
+  nsCSSRendering::PaintNonThemedOutline(
+      pc, *aCtx, mFrame, GetPaintRect(aBuilder, aCtx), rect, mFrame->Style());
 }
 
 bool nsDisplayOutline::IsThemedOutline() const {
@@ -4555,7 +4504,7 @@ void nsDisplayBorder::Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) {
                                : PaintBorderFlags();
 
   ImgDrawResult result = nsCSSRendering::PaintBorder(
-      mFrame->PresContext(), *aCtx, mFrame, GetPaintRect(),
+      mFrame->PresContext(), *aCtx, mFrame, GetPaintRect(aBuilder, aCtx),
       nsRect(offset, mFrame->GetSize()), mFrame->Style(), flags,
       mFrame->GetSkipSides());
 
@@ -4577,7 +4526,7 @@ void nsDisplayBoxShadowOuter::Paint(nsDisplayListBuilder* aBuilder,
   AUTO_PROFILER_LABEL("nsDisplayBoxShadowOuter::Paint", GRAPHICS);
 
   nsCSSRendering::PaintBoxShadowOuter(presContext, *aCtx, mFrame, borderRect,
-                                      GetPaintRect(), mOpacity);
+                                      GetPaintRect(aBuilder, aCtx), mOpacity);
 }
 
 nsRect nsDisplayBoxShadowOuter::GetBounds(nsDisplayListBuilder* aBuilder,
@@ -5401,7 +5350,7 @@ void nsDisplayBlendMode::Paint(nsDisplayListBuilder* aBuilder,
   // been implemented for all DrawTarget backends.
   DrawTarget* dt = aCtx->GetDrawTarget();
   int32_t appUnitsPerDevPixel = mFrame->PresContext()->AppUnitsPerDevPixel();
-  Rect rect = NSRectToRect(GetPaintRect(), appUnitsPerDevPixel);
+  Rect rect = NSRectToRect(GetPaintRect(aBuilder, aCtx), appUnitsPerDevPixel);
   rect.RoundOut();
 
   // Create a temporary DrawTarget that is clipped to the area that
@@ -8891,9 +8840,7 @@ nsDisplaySVGWrapper::nsDisplaySVGWrapper(nsDisplayListBuilder* aBuilder,
 }
 
 bool nsDisplaySVGWrapper::ShouldFlattenAway(nsDisplayListBuilder* aBuilder) {
-  RefPtr<LayerManager> layerManager = aBuilder->GetWidgetLayerManager();
-  return !(layerManager &&
-           layerManager->GetBackendType() == LayersBackend::LAYERS_WR);
+  return !aBuilder->GetWidgetLayerManager();
 }
 
 bool nsDisplaySVGWrapper::CreateWebRenderCommands(
@@ -8918,9 +8865,7 @@ nsDisplayForeignObject::~nsDisplayForeignObject() {
 #endif
 
 bool nsDisplayForeignObject::ShouldFlattenAway(nsDisplayListBuilder* aBuilder) {
-  RefPtr<LayerManager> layerManager = aBuilder->GetWidgetLayerManager();
-  return !(layerManager &&
-           layerManager->GetBackendType() == LayersBackend::LAYERS_WR);
+  return !aBuilder->GetWidgetLayerManager();
 }
 
 bool nsDisplayForeignObject::CreateWebRenderCommands(
@@ -8935,8 +8880,8 @@ bool nsDisplayForeignObject::CreateWebRenderCommands(
 
 void nsDisplayLink::Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) {
   auto appPerDev = mFrame->PresContext()->AppUnitsPerDevPixel();
-  aCtx->GetDrawTarget()->Link(mLinkSpec.get(),
-                              NSRectToRect(GetPaintRect(), appPerDev));
+  aCtx->GetDrawTarget()->Link(
+      mLinkSpec.get(), NSRectToRect(GetPaintRect(aBuilder, aCtx), appPerDev));
 }
 
 void nsDisplayDestination::Paint(nsDisplayListBuilder* aBuilder,
@@ -8944,7 +8889,7 @@ void nsDisplayDestination::Paint(nsDisplayListBuilder* aBuilder,
   auto appPerDev = mFrame->PresContext()->AppUnitsPerDevPixel();
   aCtx->GetDrawTarget()->Destination(
       mDestinationName.get(),
-      NSPointToPoint(GetPaintRect().TopLeft(), appPerDev));
+      NSPointToPoint(GetPaintRect(aBuilder, aCtx).TopLeft(), appPerDev));
 }
 
 void nsDisplayListCollection::SerializeWithCorrectZOrder(

@@ -91,6 +91,7 @@ class ImageContainer;
 class StackingContextHelper;
 class WebRenderScrollData;
 class WebRenderLayerScrollData;
+class WebRenderLayerManager;
 }  // namespace layers
 
 namespace wr {
@@ -424,7 +425,8 @@ class nsDisplayListBuilder {
   }
 
   WindowRenderer* GetWidgetWindowRenderer(nsView** aView = nullptr);
-  layers::LayerManager* GetWidgetLayerManager(nsView** aView = nullptr);
+  layers::WebRenderLayerManager* GetWidgetLayerManager(
+      nsView** aView = nullptr);
 
   /**
    * @return true if the display is being built in order to determine which
@@ -2953,6 +2955,8 @@ class nsDisplayItem : public nsDisplayItemLink {
     return GetPaintRect();
   }
 
+  nsRect GetPaintRect(nsDisplayListBuilder* aBuilder, gfxContext* aCtx);
+
   virtual const HitTestInfo& GetHitTestInfo() { return HitTestInfo::Empty(); }
 
   nsIFrame* mFrame;  // 8
@@ -3850,9 +3854,10 @@ class nsDisplayGeneric : public nsPaintedDisplayItem {
   void Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) override {
     MOZ_ASSERT(!!mPaint != !!mOldPaint);
     if (mPaint) {
-      mPaint(mFrame, aCtx->GetDrawTarget(), GetPaintRect(), ToReferenceFrame());
+      mPaint(mFrame, aCtx->GetDrawTarget(), GetPaintRect(aBuilder, aCtx),
+             ToReferenceFrame());
     } else {
-      mOldPaint(mFrame, aCtx, GetPaintRect(), ToReferenceFrame());
+      mOldPaint(mFrame, aCtx, GetPaintRect(aBuilder, aCtx), ToReferenceFrame());
     }
   }
 
@@ -4376,16 +4381,6 @@ class nsDisplayBackgroundImage : public nsDisplayImageContainer {
 
   void PaintInternal(nsDisplayListBuilder* aBuilder, gfxContext* aCtx,
                      const nsRect& aBounds, nsRect* aClipRect);
-
-  // Determine whether we want to be separated into our own layer, independent
-  // of whether this item can actually be layerized.
-  enum ImageLayerization {
-    WHENEVER_POSSIBLE,
-    ONLY_FOR_SCALING,
-    NO_LAYER_NEEDED
-  };
-  ImageLayerization ShouldCreateOwnLayer(nsDisplayListBuilder* aBuilder,
-                                         LayerManager* aManager);
 
   // Cache the result of nsCSSRendering::FindBackground. Always null if
   // mIsThemed is true or if FindBackground returned false.
