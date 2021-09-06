@@ -55,6 +55,52 @@
   font-size: 1.08rem;
 }
 
+.view-domain-container {
+  display: flex;
+}
+
+#view-security-icon {
+  width: 16px;
+  background-repeat: no-repeat;
+  background-size: 10px 10px;
+  background-position: center;
+}
+
+/* View security icons */
+/** TODO: Some icons are borrowed from Firefox and may need replacing when UX provides them **/
+
+#view-security-icon.aboutUI {
+  background-image: url(chrome://branding/content/icon16.png);
+}
+
+#view-security-icon.localResource {
+  background-image: url(chrome://global/skin/icons/page-portrait.svg);
+}
+
+#view-security-icon.verifiedDomain {
+  background-image: url(chrome://global/skin/icons/security.svg);
+}
+
+#view-security-icon.certErrorPage,
+#view-security-icon.weakCipher,
+#view-security-icon.mixedDisplayContent,
+#view-security-icon.mixedDisplayContentLoadedActiveBlocked,
+#view-security-icon.certUserOverridden {
+  background-image: url(chrome://global/skin/icons/security-warning.svg);
+}
+
+#view-security-icon.httpsOnlyErrorPage,
+#view-security-icon.notSecure,
+#view-security-icon.mixedActiveContent {
+  background-image: url(chrome://global/skin/icons/security-broken.svg);
+}
+
+#view-security-icon.unknownIdentity {
+  background-image: url(chrome://global/skin/icons/defaultFavicon.svg);
+}
+
+/** END View security icons **/
+
 .view-domain,
 .view-title {
   overflow: hidden;

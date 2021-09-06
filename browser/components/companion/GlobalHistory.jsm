@@ -115,6 +115,37 @@ class View {
   get iconURL() {
     return this.#internalView.iconURL;
   }
+
+  /**
+   * Returns the appropriate connection state security flag for this view.
+   *
+   * nsIWebProgressListener.STATE_IS_INSECURE
+   *   This flag indicates that the data corresponding to the request
+   *   was received over an insecure channel.
+   *
+   * nsIWebProgressListener.STATE_IS_BROKEN
+   *   This flag indicates an unknown security state.  This may mean that the
+   *   request is being loaded as part of a page in which some content was
+   *   received over an insecure channel.
+   *
+   * nsIWebProgressListener.STATE_IS_SECURE
+   *   This flag indicates that the data corresponding to the request was
+   *   received over a secure channel.
+   *
+   * @type {number}
+   */
+  get securityState() {
+    return this.#internalView.securityState;
+  }
+
+  /**
+   * Indicates the type of "about" error page we've shown in this view.
+   * For e.g. certerror, neterror, about:blocked, etc
+   * @type {string | null}
+   */
+  get errorPageType() {
+    return this.#internalView.errorPageType;
+  }
 }
 
 class InternalView {
@@ -154,6 +185,26 @@ class InternalView {
     }
   }
 
+  /**
+   * Returns the type of "about" error page we've shown in this view. Note that
+   * it only does so in case of "certerror", "neterror", "blocked" and "httpsonlyerror"
+   * pages.
+   */
+  #getErrorPageType(docURI) {
+    let errorPageTypes = ["neterror", "httpsonlyerror", "blocked"];
+    if (
+      docURI.filePath == "certerror" ||
+      (docURI.filePath == "neterror" &&
+        new URLSearchParams(docURI.query).get("e") == "nssFailure2")
+    ) {
+      return "certerror";
+    } else if (errorPageTypes.includes(docURI.filePath)) {
+      return docURI.filePath;
+    }
+
+    return null;
+  }
+
   update(browser, historyEntry) {
     this.browserId = browser.browsingContext.id;
     this.historyId = historyEntry.ID;
@@ -162,6 +213,11 @@ class InternalView {
     this.url = historyEntry.URI;
     this.title = historyEntry.title;
     this.iconURL = browser.mIconURL;
+    this.securityState = browser.securityUI.state;
+    let docURI = browser?.documentURI;
+    if (docURI && docURI.scheme == "about") {
+      this.errorPageType = this.#getErrorPageType(docURI);
+    }
 
     if (
       Services.prefs.getBoolPref(
@@ -178,6 +234,7 @@ class InternalView {
         hasUserActivation: historyEntry.hasUserActivation,
         URIWasModified: historyEntry.URIWasModified,
         persist: historyEntry.persist,
+        securityState: browser.securityUI.state,
       };
     }
   }
@@ -440,7 +497,7 @@ class GlobalHistory extends EventTarget {
   #activationTimer = null;
 
   /**
-   * A vew that is being reloaded;
+   * A view that is being reloaded.
    * @type {InternalView}
    */
   #pendingView = null;
@@ -507,6 +564,25 @@ class GlobalHistory extends EventTarget {
 
     this.#window.addEventListener("SSWindowStateBusy", () =>
       this.#sessionRestoreStarted()
+    );
+
+    this.#window.gBrowser.addTabsProgressListener(this);
+  }
+
+  onSecurityChange(browser, webProgress, request, status) {
+    let entry = currentEntry(browser);
+    if (!entry) {
+      return;
+    }
+
+    let internalView = this.#historyViews.get(entry.ID);
+    if (!internalView) {
+      return;
+    }
+
+    internalView.update(browser, entry);
+    this.dispatchEvent(
+      new GlobalHistoryEvent("ViewUpdated", internalView.view)
     );
   }
 

@@ -1129,13 +1129,14 @@
       );
 
       let securityUI = newBrowser.securityUI;
+      let callTabsListener = AppConstants.PINEBUILD;
       if (securityUI) {
         this._callProgressListeners(
           null,
           "onSecurityChange",
           [webProgress, null, securityUI.state],
           true,
-          false
+          callTabsListener
         );
         // Include the true final argument to indicate that this event is
         // simulated (instead of being observed by the webProgressListener).
@@ -1970,12 +1971,13 @@
       let state = securityUI
         ? securityUI.state
         : Ci.nsIWebProgressListener.STATE_IS_INSECURE;
+      let callTabsListener = AppConstants.PINEBUILD;
       this._callProgressListeners(
         aBrowser,
         "onSecurityChange",
         [aBrowser.webProgress, null, state],
         true,
-        false
+        callTabsListener
       );
       let event = aBrowser.getContentBlockingEvents();
       // Include the true final argument to indicate that this event is
