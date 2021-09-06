@@ -514,14 +514,14 @@ nsresult PuppetWidget::ClearNativeTouchSequence(nsIObserver* aObserver) {
 nsresult PuppetWidget::SynthesizeNativePenInput(
     uint32_t aPointerId, TouchPointerState aPointerState,
     LayoutDeviceIntPoint aPoint, double aPressure, uint32_t aRotation,
-    int32_t aTiltX, int32_t aTiltY, nsIObserver* aObserver) {
+    int32_t aTiltX, int32_t aTiltY, int32_t aButton, nsIObserver* aObserver) {
   AutoObserverNotifier notifier(aObserver, "peninput");
   if (!mBrowserChild) {
     return NS_ERROR_FAILURE;
   }
-  mBrowserChild->SendSynthesizeNativePenInput(aPointerId, aPointerState, aPoint,
-                                              aPressure, aRotation, aTiltX,
-                                              aTiltY, notifier.SaveObserver());
+  mBrowserChild->SendSynthesizeNativePenInput(
+      aPointerId, aPointerState, aPoint, aPressure, aRotation, aTiltX, aTiltY,
+      aButton, notifier.SaveObserver());
   return NS_OK;
 }
 
@@ -616,8 +616,8 @@ WindowRenderer* PuppetWidget::GetWindowRenderer() {
 }
 
 bool PuppetWidget::CreateRemoteLayerManager(
-    const std::function<bool(LayerManager*)>& aInitializeFunc) {
-  RefPtr<LayerManager> lm = new WebRenderLayerManager(this);
+    const std::function<bool(WebRenderLayerManager*)>& aInitializeFunc) {
+  RefPtr<WebRenderLayerManager> lm = new WebRenderLayerManager(this);
   MOZ_ASSERT(mBrowserChild);
 
   if (!aInitializeFunc(lm)) {
