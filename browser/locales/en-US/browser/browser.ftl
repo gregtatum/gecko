@@ -542,6 +542,9 @@ urlbar-result-action-search-tabs = Search Tabs
 urlbar-group-firefox-suggest =
   .label = { -firefox-suggest-brand-name }
 
+urlbar-group-recent-searches =
+  .label = Recent Searches
+
 # A label shown above the search suggestions group in the urlbar results. It
 # should use title case.
 # Variables

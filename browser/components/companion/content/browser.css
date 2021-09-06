@@ -74,19 +74,45 @@
 #urlbar-container {
   min-width: 350px;
   max-width: 450px;
+  transition-property: max-width;
+  transition-timing-function: ease-in;
+  transition-duration: 0s;
 }
 
 [urlbar-exceeds-toolbar-bounds=true] #urlbar-container {
-  max-width: 650px;
+  max-width: 750px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [urlbar-exceeds-toolbar-bounds=true] #urlbar-container {
+    transition-duration: 150ms;
+  }
 }
 
 [urlbar-exceeds-toolbar-bounds=true] #pinebuild-toolbar {
-  width: 350px;
+  width: 270px;
   overflow: hidden;
 }
 
 [urlbar-exceeds-toolbar-bounds=true] .chromeclass-toolbar-additional {
   display: none;
+}
+
+#urlbar::before {
+    content: '';
+    width: 20px;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: linear-gradient(90deg, transparent 0%, var(--toolbar-bgcolor) 100%);
+    margin-left: -25px;
+    z-index: -1;
+    display: none;
+}
+
+[urlbar-exceeds-toolbar-bounds=true] #urlbar::before {
+  display: block;
 }
 
 #navigator-toolbox {

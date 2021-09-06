@@ -1742,18 +1742,10 @@ class UrlbarView {
    *   returns an l10n object for the label's l10n string: `{ id, args }`
    */
   _rowLabel(row, currentLabel) {
-    // Only show the Quick Actions label for now.
-    if (row.result.providerName == "quickActions") {
-      return "Quick Actions";
-    }
-    if (row.result.providerName == "RecentSearches") {
-      return "Recent Searches";
-    }
-
     // Labels aren't shown for top sites, i.e., when the search string is empty.
     if (
       UrlbarPrefs.get("groupLabels.enabled") &&
-      this._queryContext?.searchString &&
+      (this._queryContext?.searchString || AppConstants.PINEBUILD) &&
       !row.result.heuristic
     ) {
       switch (row.result.type) {
@@ -1763,6 +1755,9 @@ class UrlbarView {
         case UrlbarUtils.RESULT_TYPE.URL:
           return { id: "urlbar-group-firefox-suggest" };
         case UrlbarUtils.RESULT_TYPE.SEARCH:
+          if (row.result.providerName == "RecentSearches") {
+            return { id: "urlbar-group-recent-searches" };
+          }
           // Show "{ $engine } Suggestions" if it's not the first label.
           if (currentLabel && row.result.payload.suggestion) {
             let engineName =

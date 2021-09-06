@@ -21,7 +21,6 @@ const { AppConstants } = ChromeUtils.import(
 XPCOMUtils.defineLazyModuleGetters(this, {
   ObjectUtils: "resource://gre/modules/ObjectUtils.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
-  Services: "resource://gre/modules/Services.jsm",
   SkippableTimer: "resource:///modules/UrlbarUtils.jsm",
   UrlbarMuxer: "resource:///modules/UrlbarUtils.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
@@ -76,11 +75,8 @@ var localProviderModules = {
 if (AppConstants.PINEBUILD) {
   localProviderModules.UrlbarProviderTopSitesButtons =
     "resource:///modules/UrlbarProviderTopSitesButtons.jsm";
-  const RECENT_SEARCHES_PREF = "browser.companion.urlbar.recentsearches";
-  if (Services.prefs.getBoolPref(RECENT_SEARCHES_PREF, false)) {
-    localProviderModules.UrlbarProviderRecentSearches =
-      "resource:///modules/UrlbarProviderRecentSearches.jsm";
-  }
+  localProviderModules.UrlbarProviderRecentSearches =
+    "resource:///modules/UrlbarProviderRecentSearches.jsm";
 } else {
   localProviderModules.UrlbarProviderTopSites =
     "resource:///modules/UrlbarProviderTopSites.jsm";

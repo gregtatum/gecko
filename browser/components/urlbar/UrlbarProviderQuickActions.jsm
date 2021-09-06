@@ -79,28 +79,28 @@ const COMMANDS = {
     },
   },
   createmeeting: {
-    commands: ["create-meeting"],
+    commands: ["create-meeting", "calendar"],
     icon: "chrome://browser/content/urlbar/quickactions/createmeeting.svg",
     label: "Schedule a meeting",
     callback: openUrl("https://meeting.new"),
     title: "Google Calendar",
   },
   createslides: {
-    commands: ["create-slides"],
+    commands: ["create-slides", "slides"],
     icon: "chrome://browser/content/urlbar/quickactions/createslides.svg",
     label: "Create Google slides",
     callback: openUrl("https://slides.new"),
     title: "Google Slides",
   },
   createsheet: {
-    commands: ["create-sheet"],
+    commands: ["create-sheet", "spreadsheet", "sheet"],
     icon: "chrome://browser/content/urlbar/quickactions/createsheet.svg",
     label: "Create a Google Sheet",
     callback: openUrl("https://sheets.new"),
     title: "Google Sheets",
   },
   createdoc: {
-    commands: ["create-doc"],
+    commands: ["create-doc", "document"],
     icon: "chrome://browser/content/urlbar/quickactions/createdoc.svg",
     label: "Create a Google doc",
     callback: openUrl("https://docs.new"),
@@ -249,14 +249,14 @@ class ProviderQuickActionsBase extends UrlbarProvider {
             attributes: { flex: "1" },
             children: [
               {
-                name: `title-${i}`,
-                tag: "span",
-                attributes: { class: "urlbarView-title" },
-              },
-              {
                 name: `label-${i}`,
                 tag: "span",
                 attributes: { class: "urlbarView-label" },
+              },
+              {
+                name: `title-${i}`,
+                tag: "span",
+                attributes: { class: "urlbarView-title" },
               },
             ],
           },
