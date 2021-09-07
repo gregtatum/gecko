@@ -242,7 +242,7 @@ static auto PatternMatchOptions(mozilla::Span<const char16_t> aSkeleton) {
 /* static */
 Result<UniquePtr<DateTimeFormat>, ICUError> DateTimeFormat::TryCreateFromStyle(
     Span<const char> aLocale, const StyleBag& aStyleBag,
-    const DateTimeFormat::GetDateTimePatternGenerator& aGetGenFn,
+    DateTimePatternGenerator* aDateTimePatternGenerator,
     Maybe<Span<const char16_t>> aTimeZoneOverride) {
   auto dateStyle = ToUDateFormatStyle(aStyleBag.date);
   auto timeStyle = ToUDateFormatStyle(aStyleBag.time);
@@ -289,11 +289,12 @@ Result<UniquePtr<DateTimeFormat>, ICUError> DateTimeFormat::TryCreateFromStyle(
           return df;
         }
       } else {
-        DateTimePatternGenerator* gen = aGetGenFn();
-        if (!gen) {
+        if (!aDateTimePatternGenerator) {
           return Err(ICUError::InternalError);
         }
-        MOZ_TRY(FindPatternWithHourCycle(*gen, pattern, wantHour12));
+
+        MOZ_TRY(FindPatternWithHourCycle(*aDateTimePatternGenerator, pattern,
+                                         wantHour12));
       }
       // Replace the hourCycle, if present, in the pattern string. But only do
       // this if no hour12 option is present, because the latter takes

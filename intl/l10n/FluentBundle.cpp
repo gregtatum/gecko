@@ -371,11 +371,9 @@ ffi::RawDateTimeFormatter* FluentBuiltInDateTimeFormatterCreate(
   style.date = GetStyle(aOptions->date_style);
   style.time = GetStyle(aOptions->time_style);
 
-  DateTimeFormat::GetDateTimePatternGenerator getGen =
-      [&dateTimePatternGenerator]() { return dateTimePatternGenerator.get(); };
-
   auto result = DateTimeFormat::TryCreateFromStyle(
-      Span(aLocale->get(), aLocale->Length()), style, getGen);
+      Span(aLocale->get(), aLocale->Length()), style,
+      dateTimePatternGenerator.get());
 
   if (result.isErr()) {
     MOZ_ASSERT_UNREACHABLE("There was an error in DateTimeFormat");

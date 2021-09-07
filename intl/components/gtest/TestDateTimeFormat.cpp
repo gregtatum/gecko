@@ -16,16 +16,12 @@ const double DATE = 1032800850000.0;
 
 static UniquePtr<DateTimeFormat> testStyle(
     const char* aLocale, DateTimeFormat::StyleBag& aStyleBag) {
-  UniquePtr<DateTimePatternGenerator> gen = nullptr;
-  DateTimeFormat::GetDateTimePatternGenerator getGen = [&gen]() {
-    gen = DateTimePatternGenerator::TryCreate("en").unwrap();
-    return gen.get();
-  };
   // Always specify a time zone in the tests, otherwise it will use the system
   // time zone which can vary between test runs.
   auto timeZone = Some(MakeStringSpan(u"GMT+3"));
+  auto gen = DateTimePatternGenerator::TryCreate("en").unwrap();
   return DateTimeFormat::TryCreateFromStyle(MakeStringSpan(aLocale), aStyleBag,
-                                            getGen, timeZone)
+                                            gen.get(), timeZone)
       .unwrap();
 }
 
@@ -126,18 +122,14 @@ TEST(IntlDateTimeFormat, Skeleton_enUS_utf16_in)
 
 TEST(IntlDateTimeFormat, Time_zone_IANA_identifier)
 {
-  UniquePtr<DateTimePatternGenerator> gen = nullptr;
-  DateTimeFormat::GetDateTimePatternGenerator getGen = [&gen]() {
-    gen = DateTimePatternGenerator::TryCreate("en").unwrap();
-    return gen.get();
-  };
+  auto gen = DateTimePatternGenerator::TryCreate("en").unwrap();
 
   DateTimeFormat::StyleBag style;
   style.date = Some(DateTimeFormat::Style::Medium);
   style.time = Some(DateTimeFormat::Style::Medium);
 
   auto dtFormat = DateTimeFormat::TryCreateFromStyle(
-                      MakeStringSpan("en-US"), style, getGen,
+                      MakeStringSpan("en-US"), style, gen.get(),
                       Some(MakeStringSpan(u"America/Chicago")))
                       .unwrap();
   TestBuffer<char> buffer;

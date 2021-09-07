@@ -233,11 +233,6 @@ class DateTimeFormat final {
   // mozilla::Vector can avoid heap allocations for small transient buffers.
   using PatternVector = Vector<char16_t, 128>;
 
-  // The DateTimePatternGenerator is expensive to constructor. Allow callers to
-  // decide the ownership here. For instance, SpiderMonkey caches one.
-  using GetDateTimePatternGenerator =
-      std::function<DateTimePatternGenerator*()>;
-
   /**
    * Create a DateTimeFormat from styles.
    *
@@ -251,7 +246,7 @@ class DateTimeFormat final {
    */
   static Result<UniquePtr<DateTimeFormat>, ICUError> TryCreateFromStyle(
       Span<const char> aLocale, const StyleBag& aStyleBag,
-      const DateTimeFormat::GetDateTimePatternGenerator& aGetGenFn,
+      DateTimePatternGenerator* aDateTimePatternGenerator,
       Maybe<Span<const char16_t>> aTimeZoneOverride = Nothing{});
 
   /**

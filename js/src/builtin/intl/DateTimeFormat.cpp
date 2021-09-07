@@ -895,13 +895,14 @@ static mozilla::intl::DateTimeFormat* NewDateTimeFormat(
     SharedIntlData& sharedIntlData = cx->runtime()->sharedIntlData.ref();
     // The DateTimePatternGenerator is expensive to create, so only do it
     // lazily.
-    mozilla::intl::DateTimeFormat::GetDateTimePatternGenerator getGenFn =
-        [cx, &sharedIntlData, &locale]() {
-          return sharedIntlData.getDateTimePatternGenerator(cx, locale.get());
-        };
 
+    mozilla::intl::DateTimePatternGenerator* gen =
+        sharedIntlData.getDateTimePatternGenerator(cx, locale.get());
+    if (!gen) {
+      return nullptr;
+    }
     auto dfResult = mozilla::intl::DateTimeFormat::TryCreateFromStyle(
-        mozilla::MakeStringSpan(IcuLocale(locale.get())), style, getGenFn,
+        mozilla::MakeStringSpan(IcuLocale(locale.get())), style, gen,
         mozilla::Some(timeZoneChars));
     if (dfResult.isErr()) {
       intl::ReportInternalError(cx, dfResult.unwrapErr());
