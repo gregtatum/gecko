@@ -3,11 +3,12 @@
 
 "use strict";
 
-add_task(async function testExpandingLinkDetails() {
+add_task(async function testExpandingEventDetails() {
   await CompanionHelper.whenReady(async helper => {
     let events = [
       {
         summary: "Firefox rules",
+        email: "test123@gmail.com",
         links: [
           { url: "https://example.com/" },
           { url: "https://example.com/2" },
@@ -26,20 +27,37 @@ add_task(async function testExpandingLinkDetails() {
           ".event-detail-header[data-l10n-id=companion-event-document-and-links]"
         );
       };
+      let hostHeaderExists = () => {
+        return !!event.shadowRoot.querySelector(
+          ".event-detail-header[data-l10n-id=companion-event-host]"
+        );
+      };
 
-      info("Check that meeting links header aren't shown in the first place.");
+      info("Check that headers aren't shown in the first place.");
       ok(
         !meetingLinksHeaderExists(),
         "Meeting links detail header is not shown"
       );
+      ok(!hostHeaderExists(), "Host detail header is not shown");
 
-      info("Clicking the card should expand the details section.");
+      info(
+        "When an event is collapsed, check that an event with meeting links will show the links section instead of the host"
+      );
       let eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
         return event.shadowRoot.querySelector(".event-details");
       });
+      let hostDetailSection = eventDetailsSection.querySelector(".event-host");
+      let meetingLinksSection = eventDetailsSection.querySelector(
+        ".event-links"
+      );
+      ok(meetingLinksSection, "Meeting links are shown");
+      ok(!hostDetailSection, "Host section isn't shown");
+
+      info("Clicking the card should expand the details section.");
       eventDetailsSection.click();
       await event.updateComplete;
       ok(meetingLinksHeaderExists(), "Meeting links detail header is shown");
+      ok(hostHeaderExists(), "Host detail header is shown");
 
       info("Clicking the expanded card should collapse the details section.");
       eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
@@ -118,6 +136,125 @@ add_task(async function testExpandingLinkDetailsWithKeyboard() {
         eventDetailsSection,
         "Event details section is still focused"
       );
+    });
+  });
+});
+
+add_task(async function testHostDetailsWithValidOrganizerEmail() {
+  await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "Firefox rules",
+        organizer: {
+          email: "test123@gmail.com",
+        },
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+
+      info(
+        "When an event is collapsed, check that an event with no meeting links will instead show the host section"
+      );
+      let eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector(".event-details");
+      });
+      let hostDetailSection = eventDetailsSection.querySelector(".event-host");
+      ok(hostDetailSection, "Host section is shown");
+
+      info(
+        "Ensure the host email is displayed if a display name isn't available"
+      );
+      let email = eventDetailsSection.querySelector(".event-host-email");
+      is(email.textContent, "test123@gmail.com", "Email is displayed");
+
+      info("Ensure correct host type is displayed");
+      let hostType = eventDetailsSection.querySelector(".event-host-type");
+      is(
+        hostType.getAttribute("data-l10n-id"),
+        "companion-event-organizer",
+        "Host type should be 'organizer'"
+      );
+    });
+  });
+});
+
+add_task(async function testHostDetailsWithInvalidOrganizerData() {
+  await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "Firefox rules",
+        organizer: {
+          email: "auto-generated-test123@group.calendar.google.com",
+        },
+        creator: {
+          email: "test123@gmail.com",
+        },
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      info(
+        "Ensure the host email is displayed is the creator's instead of the organizer"
+      );
+      let eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector(".event-details");
+      });
+      let email = eventDetailsSection.querySelector(".event-host-email");
+      is(email.textContent, "test123@gmail.com", "Creator email is displayed");
+
+      info("Ensure correct host type is displayed");
+      let hostType = eventDetailsSection.querySelector(".event-host-type");
+      is(
+        hostType.getAttribute("data-l10n-id"),
+        "companion-event-creator",
+        "Host type should be 'creator'"
+      );
+    });
+  });
+});
+
+add_task(async function testHostDetailsDisplayName() {
+  await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "Firefox rules",
+        organizer: {
+          email: "test123@gmail.com",
+          displayName: "Test Account",
+        },
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+
+      info("Ensure the host name is displayed instead of the host type");
+      let eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector(".event-details");
+      });
+      let name = eventDetailsSection.querySelector(".event-host-name");
+      let hostType = eventDetailsSection.querySelector(".event-host-type");
+      is(name.textContent, "Test Account", "Host name is displayed");
+      ok(!hostType, "Host type is not displayed");
+
+      info("Ensure the email is displayed");
+      let email = eventDetailsSection.querySelector(".event-host-email");
+      is(email.textContent, "test123@gmail.com", "Email is shown");
     });
   });
 });

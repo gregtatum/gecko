@@ -326,14 +326,64 @@ class CalendarEvent extends MozLitElement {
         font-weight: bold;
         line-height: 14px;
         margin-block-end: 8px;
+        margin-block-start: 0;
       }
 
       .conference-info,
       .date,
       .event-detail-header,
-      .event-links > .event-link {
+      .event-links > .event-link,
+      .event-host-type,
+      .event-host-email,
+      .event-host-name {
         color: var(--in-content-deemphasized-text);
         font-size: 0.8125em;
+      }
+
+      /* Event host templates styles */
+
+      .event-host {
+        display: grid;
+        grid-template-rows: repeat(2, min-content);
+        grid-template-columns: min-content 1fr;
+      }
+
+      .event-host-name-email-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        grid-row: 2;
+      }
+
+      .event-host-email {
+        display: unset;
+      }
+
+      .event-host-name,
+      .event-host-type,
+      .event-host-email,
+      .event-host-name-email-container {
+        margin-inline-start: 4px;
+      }
+
+      .event-host-email,
+      .event-host-name-email-container {
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+
+      .event-host-image-circle {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        grid-row-start: 2;
+        grid-column: 1;
+        border-radius: 50%;
+        font-size: 1em;
+        font-weight: bold;
+        width: 32px;
+        height: 32px;
+        background-color: var(--in-content-border-color);
       }
     `;
   }
@@ -377,6 +427,7 @@ class CalendarEvent extends MozLitElement {
     if (
       e.target.tagName === "button" ||
       e.target.tagName === "a" ||
+      e.target.parentElement.tagName === "a" ||
       e.target.tagName === "panel-item"
     ) {
       return;
@@ -543,7 +594,7 @@ class CalendarEvent extends MozLitElement {
     return html`
       <div class="event-details" tabindex="0" @keydown=${this.toggleDetails}>
         ${!this.detailsCollapsed
-          ? [this.eventLinksTemplate()]
+          ? [this.eventHostTemplate(), this.eventLinksTemplate()]
           : fallbackDetailTemplate}
       </div>
     `;
@@ -557,12 +608,83 @@ class CalendarEvent extends MozLitElement {
       : "";
   }
 
+  eventHostTemplate() {
+    let { creator, organizer } = this.event;
+    // Don't display auto generated emails from GCal
+    let isCalendarEmail = e => {
+      return e.includes("group.calendar.google.com");
+    };
+
+    // First, determine the type of host to display. This can either be an
+    // "organizer" or "creator". In general, we want to display the organizer
+    // of the event, but if the organizer happens to be a calendar group then
+    // we should try showing the creator instead.
+    let host;
+    let hostType;
+    if (!isCalendarEmail(organizer.email)) {
+      host = organizer;
+      hostType = "organizer";
+    } else if (!isCalendarEmail(creator.email)) {
+      host = creator;
+      hostType = "creator";
+    }
+    if (!host) {
+      return "";
+    }
+
+    // Now that we have host, figure out what details to show.
+    let name = host.name || host.displayName;
+    let email = host.email;
+    let emailTemplate = html`
+      <span class="event-host-email line-clamp">${email}</span>
+    `;
+
+    // Ideally, we'll display the host's name if it's available.
+    let nameTemplate = name
+      ? html`
+          <span class="event-host-name line-clamp">${name}</span>
+        `
+      : null;
+
+    // If a host name isn't available then just show the host type beneath the
+    // the email.
+    let hostTypeTemplate = !nameTemplate
+      ? html`
+          <span
+            class="event-host-type line-clamp"
+            data-l10n-id=${hostType === "organizer"
+              ? "companion-event-organizer"
+              : "companion-event-creator"}
+          ></span>
+        `
+      : null;
+
+    // Get the first letter of the host's name or email.
+    let circleLetter = name ? name[0].toUpperCase() : email[0].toUpperCase();
+
+    return html`
+      <div class="event-host">
+        ${this.eventDetailHeaderTemplate("companion-event-host")}
+        <div class="event-host-image-circle">
+          ${circleLetter}
+        </div>
+        <div class="event-host-name-email-container">
+          ${nameTemplate} ${emailTemplate} ${hostTypeTemplate}
+        </div>
+      </div>
+    `;
+  }
+
   // Get the event detail to display when the card is collapsed.
   detailsCollapsedTemplate() {
-    let { links } = this.event;
+    let { links, organizer, creator } = this.event;
 
     if (links?.length) {
       return this.eventLinksTemplate();
+    }
+
+    if (organizer || creator) {
+      return this.eventHostTemplate();
     }
 
     return "";
