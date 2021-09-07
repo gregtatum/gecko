@@ -632,9 +632,9 @@ static UniqueChars DateTimeFormatLocale(
 
 static bool AssignTextComponent(
     JSContext* cx, HandleObject internals, HandlePropertyName property,
-    MutableHandleValue value,
     mozilla::Maybe<mozilla::intl::DateTimeFormat::Text>* text) {
-  if (!GetProperty(cx, internals, internals, property, value)) {
+  RootedValue value(cx);
+  if (!GetProperty(cx, internals, internals, property, &value)) {
     return false;
   }
 
@@ -660,9 +660,9 @@ static bool AssignTextComponent(
 
 static bool AssignNumericComponent(
     JSContext* cx, HandleObject internals, HandlePropertyName property,
-    MutableHandleValue value,
     mozilla::Maybe<mozilla::intl::DateTimeFormat::Numeric>* numeric) {
-  if (!GetProperty(cx, internals, internals, property, value)) {
+  RootedValue value(cx);
+  if (!GetProperty(cx, internals, internals, property, &value)) {
     return false;
   }
 
@@ -687,9 +687,9 @@ static bool AssignNumericComponent(
 
 static bool AssignMonthComponent(
     JSContext* cx, HandleObject internals, HandlePropertyName property,
-    MutableHandleValue value,
     mozilla::Maybe<mozilla::intl::DateTimeFormat::Month>* month) {
-  if (!GetProperty(cx, internals, internals, property, value)) {
+  RootedValue value(cx);
+  if (!GetProperty(cx, internals, internals, property, &value)) {
     return false;
   }
 
@@ -719,9 +719,9 @@ static bool AssignMonthComponent(
 
 static bool AssignTimeZoneNameComponent(
     JSContext* cx, HandleObject internals, HandlePropertyName property,
-    MutableHandleValue value,
     mozilla::Maybe<mozilla::intl::DateTimeFormat::TimeZoneName>* tzName) {
-  if (!GetProperty(cx, internals, internals, property, value)) {
+  RootedValue value(cx);
+  if (!GetProperty(cx, internals, internals, property, &value)) {
     return false;
   }
 
@@ -759,10 +759,9 @@ static bool AssignTimeZoneNameComponent(
 
 static bool AssignHourCycleComponent(
     JSContext* cx, HandleObject internals, HandlePropertyName property,
-    MutableHandleValue value,
-    mozilla::Maybe<mozilla::intl::DateTimeFormat::HourCycle>* hourCycle,
-    mozilla::Maybe<bool>* hour12) {
-  if (!GetProperty(cx, internals, internals, property, value)) {
+    mozilla::Maybe<mozilla::intl::DateTimeFormat::HourCycle>* hourCycle) {
+  RootedValue value(cx);
+  if (!GetProperty(cx, internals, internals, property, &value)) {
     return false;
   }
 
@@ -789,9 +788,9 @@ static bool AssignHourCycleComponent(
 }
 
 static bool AssignHour12Component(JSContext* cx, HandleObject internals,
-                                  MutableHandleValue value,
                                   mozilla::Maybe<bool>* hour12) {
-  if (!GetProperty(cx, internals, internals, cx->names().hour12, value)) {
+  RootedValue value(cx);
+  if (!GetProperty(cx, internals, internals, cx->names().hour12, &value)) {
     return false;
   }
   if (value.isBoolean()) {
@@ -805,9 +804,9 @@ static bool AssignHour12Component(JSContext* cx, HandleObject internals,
 
 static bool AssignDateTimeLength(
     JSContext* cx, HandleObject internals, HandlePropertyName property,
-    MutableHandleValue value,
     mozilla::Maybe<mozilla::intl::DateTimeFormat::Style>* style) {
-  if (!GetProperty(cx, internals, internals, property, value)) {
+  RootedValue value(cx);
+  if (!GetProperty(cx, internals, internals, property, &value)) {
     return false;
   }
 
@@ -862,6 +861,11 @@ static mozilla::intl::DateTimeFormat* NewDateTimeFormat(
 
   mozilla::Range<const char16_t> timeZoneChars = timeZone.twoByteRange();
 
+  if (!GetProperty(cx, internals, internals, cx->names().pattern, &value)) {
+    return nullptr;
+  }
+  bool hasPattern = value.isString();
+
   if (!GetProperty(cx, internals, internals, cx->names().timeStyle, &value)) {
     return nullptr;
   }
@@ -874,21 +878,44 @@ static mozilla::intl::DateTimeFormat* NewDateTimeFormat(
   }
 
   mozilla::UniquePtr<mozilla::intl::DateTimeFormat> df = nullptr;
-  if (hasStyle) {
-    mozilla::intl::DateTimeFormat::StyleBag style{};
-    if (!AssignDateTimeLength(cx, internals, cx->names().timeStyle, &value,
-                              &style.time) ||
-        !AssignDateTimeLength(cx, internals, cx->names().dateStyle, &value,
+  if (hasPattern) {
+    // This is a DateTimeFormat defined by a pattern option. This is internal
+    // to Mozilla, and not part of the ECMA-402 API.
+    if (!GetProperty(cx, internals, internals, cx->names().pattern, &value)) {
+      return nullptr;
+    }
+
+    AutoStableStringChars pattern(cx);
+    if (!pattern.initTwoByte(cx, value.toString())) {
+      return nullptr;
+    }
+
+    auto dfResult = mozilla::intl::DateTimeFormat::TryCreateFromPattern(
+        mozilla::MakeStringSpan(IcuLocale(locale.get())),
+        pattern.twoByteRange(), mozilla::Some(timeZoneChars));
+    if (dfResult.isErr()) {
+      intl::ReportInternalError(cx);
+      return nullptr;
+    }
+
+    df = dfResult.unwrap();
+  } else if (hasStyle) {
+    // This is a DateTimeFormat defined by a time style or date style.
+    mozilla::intl::DateTimeFormat::StyleBag style;
+    if (!AssignDateTimeLength(cx, internals, cx->names().timeStyle,
+                              &style.time)) {
+      return nullptr;
+    }
+    if (!AssignDateTimeLength(cx, internals, cx->names().dateStyle,
                               &style.date)) {
       return nullptr;
     }
-
-    if (!AssignHourCycleComponent(cx, internals, cx->names().hourCycle, &value,
-                                  &style.hourCycle, &style.hour12)) {
+    if (!AssignHourCycleComponent(cx, internals, cx->names().hourCycle,
+                                  &style.hourCycle)) {
       return nullptr;
     }
 
-    if (!AssignHour12Component(cx, internals, &value, &style.hour12)) {
+    if (!AssignHour12Component(cx, internals, &style.hour12)) {
       return nullptr;
     }
 
@@ -909,53 +936,49 @@ static mozilla::intl::DateTimeFormat* NewDateTimeFormat(
     }
     df = dfResult.unwrap();
   } else {
-    mozilla::intl::DateTimeFormat::ComponentsBag bag{};
+    // This is a DateTimeFormat defined by a components bag.
+    mozilla::intl::DateTimeFormat::ComponentsBag bag;
 
-    if (!AssignTextComponent(cx, internals, cx->names().era, &value,
-                             &bag.era)) {
+    if (!AssignTextComponent(cx, internals, cx->names().era, &bag.era)) {
       return nullptr;
     }
-    if (!AssignNumericComponent(cx, internals, cx->names().year, &value,
-                                &bag.year)) {
+    if (!AssignNumericComponent(cx, internals, cx->names().year, &bag.year)) {
       return nullptr;
     }
-    if (!AssignMonthComponent(cx, internals, cx->names().month, &value,
-                              &bag.month)) {
+    if (!AssignMonthComponent(cx, internals, cx->names().month, &bag.month)) {
       return nullptr;
     }
-    if (!AssignNumericComponent(cx, internals, cx->names().day, &value,
-                                &bag.day)) {
+    if (!AssignNumericComponent(cx, internals, cx->names().day, &bag.day)) {
       return nullptr;
     }
-    if (!AssignTextComponent(cx, internals, cx->names().weekday, &value,
+    if (!AssignTextComponent(cx, internals, cx->names().weekday,
                              &bag.weekday)) {
       return nullptr;
     }
-    if (!AssignNumericComponent(cx, internals, cx->names().hour, &value,
-                                &bag.hour)) {
+    if (!AssignNumericComponent(cx, internals, cx->names().hour, &bag.hour)) {
       return nullptr;
     }
-    if (!AssignNumericComponent(cx, internals, cx->names().minute, &value,
+    if (!AssignNumericComponent(cx, internals, cx->names().minute,
                                 &bag.minute)) {
       return nullptr;
     }
-    if (!AssignNumericComponent(cx, internals, cx->names().second, &value,
+    if (!AssignNumericComponent(cx, internals, cx->names().second,
                                 &bag.second)) {
       return nullptr;
     }
     if (!AssignTimeZoneNameComponent(cx, internals, cx->names().timeZoneName,
-                                     &value, &bag.timeZoneName)) {
+                                     &bag.timeZoneName)) {
       return nullptr;
     }
-    if (!AssignHourCycleComponent(cx, internals, cx->names().hourCycle, &value,
-                                  &bag.hourCycle, &bag.hour12)) {
+    if (!AssignHourCycleComponent(cx, internals, cx->names().hourCycle,
+                                  &bag.hourCycle)) {
       return nullptr;
     }
-    if (!AssignTextComponent(cx, internals, cx->names().dayPeriod, &value,
+    if (!AssignTextComponent(cx, internals, cx->names().dayPeriod,
                              &bag.dayPeriod)) {
       return nullptr;
     }
-    if (!AssignHour12Component(cx, internals, &value, &bag.hour12)) {
+    if (!AssignHour12Component(cx, internals, &bag.hour12)) {
       return nullptr;
     }
 
@@ -970,9 +993,13 @@ static mozilla::intl::DateTimeFormat* NewDateTimeFormat(
     }
 
     SharedIntlData& sharedIntlData = cx->runtime()->sharedIntlData.ref();
+    auto* dtpg = sharedIntlData.getDateTimePatternGenerator(cx, locale.get());
+    if (!dtpg) {
+      return nullptr;
+    }
+
     auto dfResult = mozilla::intl::DateTimeFormat::TryCreateFromComponents(
-        mozilla::MakeStringSpan(IcuLocale(locale.get())), bag,
-        sharedIntlData.getDateTimePatternGenerator(cx, locale.get()),
+        mozilla::MakeStringSpan(IcuLocale(locale.get())), bag, dtpg,
         mozilla::Some(timeZoneChars));
     if (dfResult.isErr()) {
       intl::ReportInternalError(cx, dfResult.unwrapErr());
@@ -1059,7 +1086,7 @@ bool js::intl_resolveDateTimeFormatComponents(JSContext* cx, unsigned argc,
   }
 
   if (!includeDateTimeFields) {
-    // Do not include date time fields
+    // Do not include date time fields.
     return true;
   }
 

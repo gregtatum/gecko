@@ -84,39 +84,30 @@ function resolveDateTimeFormatInternals(lazyDateTimeFormatData) {
     if (r.hc !== null && formatOpt.hour12 === undefined)
         formatOpt.hourCycle = r.hc;
 
-    // Steps 26-30, more or less - see comment after this function.
-    var skeleton;
-    var pattern;
+    // Steps 26-31, more or less - see comment after this function.
     if (lazyDateTimeFormatData.patternOption !== undefined) {
-        pattern = lazyDateTimeFormatData.patternOption;
-        skeleton = intl_skeletonForPattern(pattern);
-
-        internalProps.patternOption = lazyDateTimeFormatData.patternOption;
+        internalProps.pattern = lazyDateTimeFormatData.patternOption;
     } else if (lazyDateTimeFormatData.dateStyle !== undefined ||
                lazyDateTimeFormatData.timeStyle !== undefined) {
-        internalProps.dateStyle = lazyDateTimeFormatData.dateStyle;
-        internalProps.timeStyle = lazyDateTimeFormatData.timeStyle;
         internalProps.hourCycle = formatOpt.hourCycle;
         internalProps.hour12 = formatOpt.hour12;
+        internalProps.dateStyle = lazyDateTimeFormatData.dateStyle;
+        internalProps.timeStyle = lazyDateTimeFormatData.timeStyle;
     } else {
+        internalProps.hourCycle = formatOpt.hourCycle;
+        internalProps.hour12 = formatOpt.hour12;
+        internalProps.weekday = formatOpt.weekday;
         internalProps.era = formatOpt.era;
         internalProps.year = formatOpt.year;
         internalProps.month = formatOpt.month;
         internalProps.day = formatOpt.day;
-        internalProps.weekday = formatOpt.weekday;
+        internalProps.dayPeriod = formatOpt.dayPeriod;
         internalProps.hour = formatOpt.hour;
         internalProps.minute = formatOpt.minute;
         internalProps.second = formatOpt.second;
-        internalProps.timeZoneName = formatOpt.timeZoneName;
-        internalProps.hourCycle = formatOpt.hourCycle;
-        internalProps.dayPeriod = formatOpt.dayPeriod;
-        internalProps.hour12 = formatOpt.hour12;
         internalProps.fractionalSecondDigits = formatOpt.fractionalSecondDigits;
+        internalProps.timeZoneName = formatOpt.timeZoneName;
     }
-
-    // Step 31.
-    internalProps.skeleton = skeleton;
-    internalProps.pattern = pattern;
 
     // The caller is responsible for associating |internalProps| with the right
     // object using |setInternalProperties|.
@@ -770,7 +761,7 @@ function Intl_DateTimeFormat_resolvedOptions() {
         timeZone: internals.timeZone,
     };
 
-    if (internals.patternOption !== undefined) {
+    if (internals.pattern !== undefined) {
         DefineDataProperty(result, "pattern", internals.pattern);
     }
 
@@ -790,195 +781,10 @@ function Intl_DateTimeFormat_resolvedOptions() {
             DefineDataProperty(result, "timeStyle", internals.timeStyle);
         }
     } else {
+        // Components bag or (mozIntl-only) raw pattern.
         intl_resolveDateTimeFormatComponents(dtf, result, /* includeDateTimeFields = */ true);
     }
 
     // Step 6.
     return result;
 }
-
-/* eslint-disable complexity */
-/**
- * Maps an ICU pattern string to a corresponding set of date-time components
- * and their values, and adds properties for these components to the result
- * object, which will be returned by the resolvedOptions method. For the
- * interpretation of ICU pattern characters, see
- * http://unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table
- */
-function resolveICUPattern(pattern, result, includeDateTimeFields) {
-    assert(IsObject(result), "resolveICUPattern");
-
-    var hourCycle, weekday, era, year, month, day, dayPeriod, hour, minute, second,
-        fractionalSecondDigits, timeZoneName;
-    var i = 0;
-    while (i < pattern.length) {
-        var c = pattern[i++];
-        if (c === "'") {
-            while (i < pattern.length && pattern[i] !== "'")
-                i++;
-            i++;
-        } else {
-            var count = 1;
-            while (i < pattern.length && pattern[i] === c) {
-                i++;
-                count++;
-            }
-
-            var value;
-            switch (c) {
-            // "text" cases
-            case "G":
-            case "E":
-            case "c":
-            case "B":
-            case "z":
-            case "O":
-            case "v":
-            case "V":
-                if (count <= 3)
-                    value = "short";
-                else if (count === 4)
-                    value = "long";
-                else
-                    value = "narrow";
-                break;
-            // "number" cases
-            case "y":
-            case "d":
-            case "h":
-            case "H":
-            case "m":
-            case "s":
-            case "k":
-            case "K":
-                if (count === 2)
-                    value = "2-digit";
-                else
-                    value = "numeric";
-                break;
-            // "text & number" cases
-            case "M":
-            case "L":
-                if (count === 1)
-                    value = "numeric";
-                else if (count === 2)
-                    value = "2-digit";
-                else if (count === 3)
-                    value = "short";
-                else if (count === 4)
-                    value = "long";
-                else
-                    value = "narrow";
-                break;
-            case "S":
-                value = count;
-                break;
-            default:
-                // skip other pattern characters and literal text
-            }
-
-            // Map ICU pattern characters back to the corresponding date-time
-            // components of DateTimeFormat. See
-            // http://unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table
-            switch (c) {
-            case "E":
-            case "c":
-                weekday = value;
-                break;
-            case "G":
-                era = value;
-                break;
-            case "y":
-                year = value;
-                break;
-            case "M":
-            case "L":
-                month = value;
-                break;
-            case "d":
-                day = value;
-                break;
-            case "B":
-                dayPeriod = value;
-                break;
-            case "h":
-                hourCycle = "h12";
-                hour = value;
-                break;
-            case "H":
-                hourCycle = "h23";
-                hour = value;
-                break;
-            case "k":
-                hourCycle = "h24";
-                hour = value;
-                break;
-            case "K":
-                hourCycle = "h11";
-                hour = value;
-                break;
-            case "m":
-                minute = value;
-                break;
-            case "s":
-                second = value;
-                break;
-            case "S":
-                fractionalSecondDigits = value;
-                break;
-            case "z":
-                timeZoneName = value;
-                break;
-            case "O":
-                timeZoneName = value + "Offset";
-                break;
-            case "v":
-            case "V":
-                timeZoneName = value + "Generic";
-                break;
-            }
-        }
-    }
-
-    if (hourCycle) {
-        DefineDataProperty(result, "hourCycle", hourCycle);
-        DefineDataProperty(result, "hour12", hourCycle === "h11" || hourCycle === "h12");
-    }
-    if (!includeDateTimeFields) {
-        return;
-    }
-    if (weekday) {
-        DefineDataProperty(result, "weekday", weekday);
-    }
-    if (era) {
-        DefineDataProperty(result, "era", era);
-    }
-    if (year) {
-        DefineDataProperty(result, "year", year);
-    }
-    if (month) {
-        DefineDataProperty(result, "month", month);
-    }
-    if (day) {
-        DefineDataProperty(result, "day", day);
-    }
-    if (dayPeriod) {
-        DefineDataProperty(result, "dayPeriod", dayPeriod);
-    }
-    if (hour) {
-        DefineDataProperty(result, "hour", hour);
-    }
-    if (minute) {
-        DefineDataProperty(result, "minute", minute);
-    }
-    if (second) {
-        DefineDataProperty(result, "second", second);
-    }
-    if (fractionalSecondDigits) {
-        DefineDataProperty(result, "fractionalSecondDigits", fractionalSecondDigits);
-    }
-    if (timeZoneName) {
-        DefineDataProperty(result, "timeZoneName", timeZoneName);
-    }
-}
-/* eslint-enable complexity */
