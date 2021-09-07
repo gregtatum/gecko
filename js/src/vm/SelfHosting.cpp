@@ -2429,7 +2429,6 @@ static const JSFunctionSpec intrinsic_functions[] = {
     JS_FN("intl_numberingSystem", intl_numberingSystem, 1, 0),
     JS_FN("intl_resolveDateTimeFormatComponents",
           intl_resolveDateTimeFormatComponents, 3, 0),
-    JS_FN("intl_skeletonForPattern", intl_skeletonForPattern, 1, 0),
     JS_FN("intl_supportedLocaleOrFallback", intl_supportedLocaleOrFallback, 1,
           0),
     JS_FN("intl_toLocaleLowerCase", intl_toLocaleLowerCase, 2, 0),

@@ -513,33 +513,6 @@ enum class HourCycle {
   H24
 };
 
-bool js::intl_skeletonForPattern(JSContext* cx, unsigned argc, Value* vp) {
-  CallArgs args = CallArgsFromVp(argc, vp);
-  MOZ_ASSERT(args.length() == 1);
-  MOZ_ASSERT(args[0].isString());
-
-  AutoStableStringChars pattern(cx);
-  if (!pattern.initTwoByte(cx, args[0].toString())) {
-    return false;
-  }
-
-  FormatBuffer<char16_t, intl::INITIAL_CHAR_BUFFER_SIZE> skeleton(cx);
-  auto result = mozilla::intl::DateTimePatternGenerator::GetSkeleton(
-      pattern.twoByteRange(), skeleton);
-  if (result.isErr()) {
-    intl::ReportInternalError(cx, result.unwrapErr());
-    return false;
-  }
-
-  JSString* str = skeleton.toString();
-  if (!str) {
-    return false;
-  }
-
-  args.rval().setString(str);
-  return true;
-}
-
 static UniqueChars DateTimeFormatLocale(
     JSContext* cx, HandleObject internals,
     mozilla::Maybe<mozilla::intl::DateTimeFormat::HourCycle> hourCycle =

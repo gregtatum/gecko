@@ -762,6 +762,8 @@ function Intl_DateTimeFormat_resolvedOptions() {
     };
 
     if (internals.pattern !== undefined) {
+        // The raw pattern option is only internal to Mozilla, and not part of the
+        // ECMA-402 API.
         DefineDataProperty(result, "pattern", internals.pattern);
     }
 
@@ -781,7 +783,7 @@ function Intl_DateTimeFormat_resolvedOptions() {
             DefineDataProperty(result, "timeStyle", internals.timeStyle);
         }
     } else {
-        // Components bag or (mozIntl-only) raw pattern.
+        // Components bag or a (Mozilla-only) raw pattern.
         intl_resolveDateTimeFormatComponents(dtf, result, /* includeDateTimeFields = */ true);
     }
 

@@ -153,15 +153,6 @@ class DateTimeFormatObject : public NativeObject {
                                                  JS::Value* vp);
 
 /**
- * Return a skeleton for the pattern in the date-time format pattern language of
- * Unicode Technical Standard 35, Unicode Locale Data Markup Language.
- *
- * Usage: skeleton = intl_skeletonForPattern(pattern)
- */
-[[nodiscard]] extern bool intl_skeletonForPattern(JSContext* cx, unsigned argc,
-                                                  JS::Value* vp);
-
-/**
  * Returns a String value representing x (which must be a Number value)
  * according to the effective locale and the formatting options of the
  * given DateTimeFormat.
