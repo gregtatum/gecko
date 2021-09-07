@@ -146,6 +146,10 @@ class View {
   get errorPageType() {
     return this.#internalView.errorPageType;
   }
+
+  get pinned() {
+    return this.#internalView.pinned;
+  }
 }
 
 class InternalView {

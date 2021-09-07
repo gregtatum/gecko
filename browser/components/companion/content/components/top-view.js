@@ -7,13 +7,9 @@ import { html } from "chrome://browser/content/companion/lit.all.js";
 import ViewGroup from "chrome://browser/content/companion/components/view-group.js";
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-const { PanelMultiView } = ChromeUtils.import(
-  "resource:///modules/PanelMultiView.jsm"
-);
 
 class TopView extends MozLitElement {
   #principal;
-  #pageActionPanel;
 
   static get properties() {
     return {
@@ -25,79 +21,6 @@ class TopView extends MozLitElement {
   constructor() {
     super();
     this.setViews([]);
-  }
-
-  handleEvent(event) {
-    switch (event.type) {
-      case "popupshowing":
-        if (event.target == this.#pageActionPanel) {
-          this.pageActionPanelShowing();
-        }
-        break;
-      case "click":
-        let titleEl = document.getElementById("site-info-title");
-        let editImg = document.getElementById("site-info-edit-icon");
-        let pinView = document.getElementById("pin-view");
-
-        if (event.target == editImg) {
-          titleEl.focus();
-        } else if (pinView.contains(event.target)) {
-          let e = new CustomEvent("PinView", {
-            bubbles: true,
-            composed: true,
-            detail: { view: this.activeView },
-          });
-          this.dispatchEvent(e);
-          this.#pageActionPanel.hidePopup();
-        } else if (event.target != titleEl) {
-          this.#pageActionPanel.hidePopup();
-        }
-        break;
-      case "keypress":
-        let siteInfoTitleEl = document.getElementById("site-info-title");
-        if (
-          event.target == siteInfoTitleEl &&
-          event.keyCode == KeyEvent.DOM_VK_RETURN
-        ) {
-          let userTitle = siteInfoTitleEl.value;
-          if (userTitle) {
-            this.activeView.userTitle = userTitle;
-            this.viewUpdated();
-          }
-          this.#pageActionPanel.hidePopup();
-        }
-        break;
-    }
-  }
-
-  pageActionPanelShowing() {
-    let pageActionTitleEl = document.getElementById("site-info-title");
-    pageActionTitleEl.value = this.activeView.title;
-    pageActionTitleEl.scrollLeft = 0;
-
-    let pageActionUrlEl = document.getElementById("site-info-url");
-    pageActionUrlEl.textContent = this.activeView.url.spec;
-  }
-
-  getOrCreatePageActionPanel() {
-    let panel = document.getElementById("page-action-panel");
-    if (!panel) {
-      let template = document.getElementById("template-page-action-menu");
-      template.replaceWith(template.content);
-      panel = document.getElementById("page-action-panel");
-      panel.addEventListener("popupshowing", this);
-      panel.addEventListener("click", this);
-      panel.addEventListener("keypress", this);
-    }
-
-    return panel;
-  }
-
-  pageActionButtonClicked(event) {
-    this.#pageActionPanel = this.getOrCreatePageActionPanel();
-    PanelMultiView.openPopup(this.#pageActionPanel, event.target, {
-      position: "bottomcenter topright",
-    }).catch(Cu.reportError);
   }
 
   addView(view) {
@@ -195,10 +118,7 @@ class TopView extends MozLitElement {
         .views=${this._viewGroup}
         .activeView=${this.activeView}
       ></view-group>
-      <img id="page-action-button"
-           src="chrome://global/skin/icons/arrow-down.svg"
-           @click="${this.pageActionButtonClicked}"
-      ></img>`;
+    `;
   }
 }
 customElements.define("top-view", TopView);

@@ -5,14 +5,22 @@
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 import ViewGroup from "chrome://browser/content/companion/components/view-group.js";
 
+const { PanelMultiView } = ChromeUtils.import(
+  "resource:///modules/PanelMultiView.jsm"
+);
+
 class ActiveViewManager extends HTMLElement {
   /** @type {<html:button>} */
   #overflow;
   /** @type {<xul:panel>} */
   #overflowPanel;
+  /** @type {<xul:panel>} */
+  #pageActionPanel;
+
   #river;
   #topView;
   #pinnedViews;
+  #pageActionView;
 
   static EVENTS = [
     "ViewChanged",
@@ -40,9 +48,9 @@ class ActiveViewManager extends HTMLElement {
     }
 
     this.addEventListener("UserAction:ViewSelected", this);
+    this.addEventListener("UserAction:OpenPageActionMenu", this);
     this.#river.addEventListener("RiverRegrouped", this);
     this.#topView.addEventListener("TopViewOverflow", this);
-    this.#topView.addEventListener("PinView", this);
     this.#overflow.addEventListener("click", this);
   }
 
@@ -51,9 +59,9 @@ class ActiveViewManager extends HTMLElement {
       window.top.gGlobalHistory.removeEventListener(event, this);
     }
     this.removeEventListener("UserAction:ViewSelected", this);
+    this.removeEventListener("UserAction:OpenPageActionMenu", this);
     this.#river.removeEventListener("RiverRegrouped", this);
     this.#topView.removeEventListener("TopViewOverflow", this);
-    this.#topView.removeEventListener("PinView", this);
     this.#overflow.removeEventListener("click", this);
   }
 
@@ -154,16 +162,37 @@ class ActiveViewManager extends HTMLElement {
         this.#viewSelected(view);
         break;
       }
+      case "UserAction:OpenPageActionMenu": {
+        let view = event.detail.view;
+        this.#openPageActionPanel(event.composedTarget, view);
+        break;
+      }
       case "click":
         if (event.target == this.#overflow) {
-          this.#overflowClicked(event);
+          this.#openOverflowPanel(event);
         } else if (event.currentTarget == this.#overflowPanel) {
           this.#overflowPanelClicked(event);
+        } else if (event.currentTarget == this.#pageActionPanel) {
+          this.#pageActionPanelClicked(event);
         }
         break;
+      case "keypress": {
+        if (event.currentTarget == this.#pageActionPanel) {
+          this.#pageActionPanelKeypress(event);
+        }
+        break;
+      }
+      case "popuphiding": {
+        if (event.currentTarget == this.#pageActionPanel) {
+          this.#pageActionPanelHiding(event);
+        }
+        break;
+      }
       case "popupshowing":
         if (event.currentTarget == this.#overflowPanel) {
           this.#overflowPanelShowing(event);
+        } else if (event.currentTarget == this.#pageActionPanel) {
+          this.#pageActionPanelShowing(event);
         }
         break;
       case "RiverRegrouped": {
@@ -175,20 +204,14 @@ class ActiveViewManager extends HTMLElement {
         this.#river.addViews(event.detail.views);
         break;
       }
-      case "PinView": {
-        window.top.gGlobalHistory.setViewPinnedState(event.detail.view, true);
-        break;
-      }
       case "ViewPinned": {
         let view = event.view;
         if (this.isRiverView(view)) {
-          // Currently unsupported, since the Page Action Menu isn't
-          // available here.
-          console.warn("Saw ViewPinned for a View in the River.");
+          this.#river.removeView(view);
         } else if (this.isTopView(view)) {
           this.#topView.removeView(view);
-          this.#pinnedViews.addView(view);
         }
+        this.#pinnedViews.addView(view);
         break;
       }
       case "ViewUnpinned": {
@@ -215,15 +238,34 @@ class ActiveViewManager extends HTMLElement {
     window.top.gGlobalHistory.setView(view);
   }
 
-  #overflowClicked(event) {
-    if (!this.#overflowPanel) {
-      this.#overflowPanel = this.#getOrCreateOverflowPanel();
-    }
+  /**
+   * Overflow panel creation and handling
+   */
 
-    this.#overflowPanel.openPopup(this.#overflow, {
+  #openOverflowPanel(event) {
+    let panel = this.#getOverflowPanel();
+    panel.openPopup(this.#overflow, {
       position: "bottomcenter topleft",
       triggerEvent: event,
     });
+  }
+
+  #getOverflowPanel() {
+    if (!this.#overflowPanel) {
+      let panel = document.getElementById("active-view-manager-overflow-panel");
+      if (!panel) {
+        let template = document.getElementById(
+          "active-view-manager-overflow-panel-template"
+        );
+        template.replaceWith(template.content);
+        panel = document.getElementById("active-view-manager-overflow-panel");
+        panel.addEventListener("popupshowing", this);
+        panel.addEventListener("click", this);
+      }
+      this.#overflowPanel = panel;
+    }
+
+    return this.#overflowPanel;
   }
 
   #overflowPanelClicked(event) {
@@ -260,19 +302,80 @@ class ActiveViewManager extends HTMLElement {
     list.appendChild(fragment);
   }
 
-  #getOrCreateOverflowPanel() {
-    let panel = document.getElementById("active-view-manager-overflow-panel");
-    if (!panel) {
-      let template = document.getElementById(
-        "active-view-manager-overflow-panel-template"
-      );
-      template.replaceWith(template.content);
-      panel = document.getElementById("active-view-manager-overflow-panel");
-      panel.addEventListener("popupshowing", this);
-      panel.addEventListener("click", this);
-    }
+  /**
+   * Page Action panel creation and handling
+   */
 
-    return panel;
+  #openPageActionPanel(target, view) {
+    this.#pageActionView = view;
+    let panel = this.#getPageActionPanel();
+    PanelMultiView.openPopup(panel, target, {
+      position: "bottomcenter topright",
+    }).catch(Cu.reportError);
+  }
+
+  #getPageActionPanel() {
+    if (!this.#pageActionPanel) {
+      let panel = document.getElementById("page-action-panel");
+      if (!panel) {
+        let template = document.getElementById("template-page-action-menu");
+        template.replaceWith(template.content);
+        panel = document.getElementById("page-action-panel");
+        panel.addEventListener("popupshowing", this);
+        panel.addEventListener("popuphiding", this);
+        panel.addEventListener("click", this);
+        panel.addEventListener("keypress", this);
+      }
+
+      this.#pageActionPanel = panel;
+    }
+    return this.#pageActionPanel;
+  }
+
+  #pageActionPanelHiding(event) {
+    this.#pageActionView = null;
+  }
+
+  #pageActionPanelShowing(event) {
+    let pageActionTitleEl = document.getElementById("site-info-title");
+    pageActionTitleEl.value = this.#pageActionView.title;
+    pageActionTitleEl.scrollLeft = 0;
+
+    let pageActionUrlEl = document.getElementById("site-info-url");
+    pageActionUrlEl.textContent = this.#pageActionView.url.spec;
+  }
+
+  #pageActionPanelClicked(event) {
+    let titleEl = document.getElementById("site-info-title");
+    let editImg = document.getElementById("site-info-edit-icon");
+    let pinView = document.getElementById("pin-view");
+
+    if (event.target == editImg) {
+      titleEl.focus();
+    } else if (pinView.contains(event.target)) {
+      window.top.gGlobalHistory.setViewPinnedState(
+        this.#pageActionView,
+        !this.#pageActionView.pinned
+      );
+      this.#pageActionPanel.hidePopup();
+    } else if (event.target != titleEl) {
+      this.#pageActionPanel.hidePopup();
+    }
+  }
+
+  #pageActionPanelKeypress(event) {
+    let siteInfoTitleEl = document.getElementById("site-info-title");
+    if (
+      event.target == siteInfoTitleEl &&
+      event.keyCode == KeyEvent.DOM_VK_RETURN
+    ) {
+      let userTitle = siteInfoTitleEl.value;
+      if (userTitle) {
+        this.#pageActionView.userTitle = userTitle;
+        this.viewUpdated(this.#pageActionView);
+      }
+      this.#pageActionPanel.hidePopup();
+    }
   }
 }
 customElements.define("active-view-manager", ActiveViewManager);

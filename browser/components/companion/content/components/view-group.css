@@ -137,7 +137,28 @@
   height: 8px;
 }
 
-:host(:not(:is([top],[active])) > .view-el > .view-label-container > .view-domain,
-:host(:not(:is([top],[active])) > .view-el > .view-label-container > .view-title {
+.page-action-button[hidden] {
   display: none;
+}
+
+@supports not -moz-bool-pref("browser.companion.pageaction.enabled") {
+  .page-action-button {
+    display: none;
+  }
+}
+
+.page-action-button {
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  padding: 4px;
+  margin-inline: 8px;
+}
+
+.page-action-button:hover {
+  background-color: #CFCFD8;
+}
+
+.page-action-button:active {
+  background-color: gray;
 }

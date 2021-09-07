@@ -49,6 +49,15 @@ export default class ViewGroup extends MozLitElement {
     event.stopPropagation();
   }
 
+  #pageActionButtonClicked(event) {
+    let e = new CustomEvent("UserAction:OpenPageActionMenu", {
+      bubbles: true,
+      composed: true,
+      detail: { view: this.activeView },
+    });
+    event.target.dispatchEvent(e);
+  }
+
   render() {
     const DEFAULT_FAVICON = "chrome://global/skin/icons/defaultFavicon.svg";
 
@@ -112,6 +121,10 @@ export default class ViewGroup extends MozLitElement {
           </div>
           <div class="view-history" part="history">${history}</div>
         </div>
+        <img class="page-action-button" ?hidden=${!this.active}
+             src="chrome://global/skin/icons/arrow-down.svg"
+             @click="${this.#pageActionButtonClicked}"
+        ></img>
       </div>
     `;
   }
