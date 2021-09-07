@@ -3,8 +3,6 @@
 
 "use strict";
 
-const DEFAULT_FAVICON_SRC = "chrome://global/skin/icons/defaultFavicon.svg";
-
 /* Ensures that a calendar event with links is displayed in the companion */
 add_task(async function testEventWithLinks() {
   await CompanionHelper.whenReady(async helper => {

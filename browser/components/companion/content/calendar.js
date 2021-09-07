@@ -165,6 +165,7 @@ class CalendarEvent extends MozLitElement {
       event: { type: Object },
       linksCollapsed: { type: Boolean },
       upcoming: { type: Boolean },
+      detailsCollapsed: { type: Boolean },
     };
   }
 
@@ -181,8 +182,6 @@ class CalendarEvent extends MozLitElement {
         align-items: center;
         gap: 0.5em;
         font-weight: 600;
-        font-size: 0.8125em;
-        color: var(--in-content-deemphasized-text);
         margin-inline-end: 8px;
         white-space: nowrap;
       }
@@ -254,11 +253,6 @@ class CalendarEvent extends MozLitElement {
         font-weight: bold;
       }
 
-      .date {
-        color: var(--in-content-deemphasized-text);
-        font-size: 0.8125em;
-      }
-
       .line-clamp {
         display: -webkit-box;
         -webkit-line-clamp: 1;
@@ -268,9 +262,7 @@ class CalendarEvent extends MozLitElement {
 
       .event-links > .event-link {
         display: flex;
-        font-size: 0.8125em;
         white-space: normal;
-        color: var(--in-content-deemphasized-text);
         overflow: hidden;
         padding: 4px;
         border: 1px solid var(--in-content-border-color);
@@ -295,7 +287,6 @@ class CalendarEvent extends MozLitElement {
         display: grid;
         grid-template-columns: repeat(2, minmax(auto, max-content));
         column-gap: 8px;
-        margin-block-start: 20px;
       }
 
       .event-links-collapsed {
@@ -323,11 +314,33 @@ class CalendarEvent extends MozLitElement {
         -moz-context-properties: fill;
         fill: currentColor;
       }
+
+      .event-details {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        margin-block-start: 20px;
+      }
+
+      .event-detail-header {
+        font-weight: bold;
+        line-height: 14px;
+        margin-block-end: 8px;
+      }
+
+      .conference-info,
+      .date,
+      .event-detail-header,
+      .event-links > .event-link {
+        color: var(--in-content-deemphasized-text);
+        font-size: 0.8125em;
+      }
     `;
   }
 
   constructor() {
     super();
+    this.detailsCollapsed = true;
     this.linksCollapsed = true;
   }
 
@@ -358,6 +371,28 @@ class CalendarEvent extends MozLitElement {
       return;
     }
     this.panel.toggle(e);
+  }
+
+  toggleDetails(e) {
+    if (
+      e.target.tagName === "button" ||
+      e.target.tagName === "a" ||
+      e.target.tagName === "panel-item"
+    ) {
+      return;
+    }
+
+    // If taking keyboard input, only expand / collapse when the spacebar is
+    // pressed.
+    if (e.type == "keydown" && e.which != 32) {
+      return;
+    }
+
+    this.detailsCollapsed = !this.detailsCollapsed;
+
+    // Pressing the space key causes a scroll to the bottom of the window view,
+    // so suppress it.
+    e.preventDefault();
   }
 
   expandLinksSection(e) {
@@ -432,25 +467,28 @@ class CalendarEvent extends MozLitElement {
     let linksToShow = shouldCollapseLinks ? links.slice(0, 2) : links;
 
     return html`
-      <div
-        class=${classMap({
-          "event-links": true,
-          "event-links-collapsed": shouldCollapseLinks,
-        })}
-      >
-        ${linksToShow.map(link => this.eventLinkTemplate(link))}
-        ${shouldCollapseLinks
-          ? html`
-              <button
-                data-l10n-id="companion-expand-event-links-button"
-                data-l10n-args=${JSON.stringify({
-                  linkCount: this.event.links.length - 2,
-                })}
-                class="event-link"
-                @click=${this.expandLinksSection}
-              ></button>
-            `
-          : ""}
+      <div class="event-meeting-links">
+        ${this.eventDetailHeaderTemplate("companion-event-document-and-links")}
+        <div
+          class=${classMap({
+            "event-links": true,
+            "event-links-collapsed": shouldCollapseLinks,
+          })}
+        >
+          ${linksToShow.map(link => this.eventLinkTemplate(link))}
+          ${shouldCollapseLinks
+            ? html`
+                <button
+                  data-l10n-id="companion-expand-event-links-button"
+                  data-l10n-args=${JSON.stringify({
+                    linkCount: this.event.links.length - 2,
+                  })}
+                  class="event-link"
+                  @click=${this.expandLinksSection}
+                ></button>
+              `
+            : ""}
+        </div>
       </div>
     `;
   }
@@ -494,6 +532,40 @@ class CalendarEvent extends MozLitElement {
     return html`
       <span class="date line-clamp">${dateString}</span>
     `;
+  }
+
+  eventDetailsTemplate() {
+    let fallbackDetailTemplate = this.detailsCollapsedTemplate();
+    if (!fallbackDetailTemplate) {
+      return "";
+    }
+
+    return html`
+      <div class="event-details" tabindex="0" @keydown=${this.toggleDetails}>
+        ${!this.detailsCollapsed
+          ? [this.eventLinksTemplate()]
+          : fallbackDetailTemplate}
+      </div>
+    `;
+  }
+
+  eventDetailHeaderTemplate(id) {
+    return !this.detailsCollapsed
+      ? html`
+          <h3 class="event-detail-header" data-l10n-id=${id}></h3>
+        `
+      : "";
+  }
+
+  // Get the event detail to display when the card is collapsed.
+  detailsCollapsedTemplate() {
+    let { links } = this.event;
+
+    if (links?.length) {
+      return this.eventLinksTemplate();
+    }
+
+    return "";
   }
 
   // Get the "host" of the meeting, or all attendees if the user is the host or
@@ -563,6 +635,7 @@ class CalendarEvent extends MozLitElement {
           event: true,
           upcoming: this.upcoming,
         })}
+        @click=${this.toggleDetails}
       >
         <div class="event-top">
           <relative-time .eventStart=${start} .eventEnd=${end}></relative-time>
@@ -586,7 +659,7 @@ class CalendarEvent extends MozLitElement {
             ${this.joinConferenceTemplate()}
           </div>
         </div>
-        ${this.eventLinksTemplate()}
+        ${this.eventDetailsTemplate()}
         <panel-list>
           <panel-item
             class="event-item-running-late-action"
