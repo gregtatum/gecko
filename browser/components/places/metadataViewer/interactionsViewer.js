@@ -9,6 +9,9 @@ const { Interactions } = ChromeUtils.import(
 );
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { Snapshots } = ChromeUtils.import("resource:///modules/Snapshots.jsm");
+const { SessionManager } = ChromeUtils.import(
+  "resource:///modules/SessionManager.jsm"
+);
 const { PlacesUtils } = ChromeUtils.import(
   "resource://gre/modules/PlacesUtils.jsm"
 );
@@ -154,6 +157,14 @@ class TableViewer {
     let index = this.columnMap.size;
     for (let row of rows) {
       for (let [column, details] of this.columnMap.entries()) {
+        if (column == "button") {
+          viewer.children[index].textContent = "";
+          let button = document.createElement("button");
+          button.textContent = "Restore";
+          button.onclick = details.clickHandler.bind(null, row);
+          viewer.children[index].appendChild(button);
+          continue;
+        }
         let value = row[column];
 
         if (details.includeTitle) {
@@ -438,6 +449,47 @@ const placesStatsHandler = new (class extends TableViewer {
   }
 })();
 
+/**
+ * Viewer definition for the Snapshots data.
+ */
+const sessionsHandler = new (class extends TableViewer {
+  title = "Sessions";
+  cssGridTemplateColumns = "repeat(3, max-content);";
+
+  /**
+   * @see TableViewer.columnMap
+   */
+  columnMap = new Map([
+    [
+      "guid",
+      {
+        header: "Session Guid",
+      },
+    ],
+    [
+      "lastSavedAt",
+      {
+        header: "Last Saved At",
+        modifier: r => r?.toLocaleString() ?? "",
+      },
+    ],
+    [
+      "button",
+      {
+        header: "",
+        clickHandler: r => SessionManager.restoreInto(window, r.guid),
+      },
+    ],
+  ]);
+
+  /**
+   * Loads the current metadata from the database and updates the display.
+   */
+  async updateDisplay() {
+    this.displayData(await SessionManager.query({ limit: 100 }));
+  }
+})();
+
 function checkPrefs() {
   if (
     !Services.prefs.getBoolPref("browser.places.interactions.enabled", false)
@@ -466,6 +518,9 @@ function show(selectedButton) {
       break;
     case "places-stats":
       (gCurrentHandler = placesStatsHandler).start();
+      break;
+    case "sessions":
+      (gCurrentHandler = sessionsHandler).start();
       break;
   }
 }
