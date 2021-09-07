@@ -4,6 +4,7 @@
 
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
 import {
+  css,
   html,
   classMap,
   ifDefined,
@@ -18,6 +19,12 @@ export default class ViewGroup extends MozLitElement {
       activeView: { type: Object },
       active: { type: Boolean },
     };
+  }
+
+  static get styles() {
+    return css`
+      @import url("chrome://browser/content/companion/components/view-group.css");
+    `;
   }
 
   constructor() {
@@ -66,6 +73,10 @@ export default class ViewGroup extends MozLitElement {
       ? this.activeView
       : this.views[this.views.length - 1];
 
+    if (!view) {
+      return null;
+    }
+
     if (view.iconURL || view.url) {
       iconURL = view.iconURL ?? `page-icon:${view.url.spec}`;
     }
@@ -104,11 +115,6 @@ export default class ViewGroup extends MozLitElement {
     let rootTitle = this.active ? undefined : view.title;
 
     return html`
-      <link
-        rel="stylesheet"
-        href="chrome://browser/content/companion/components/view-group.css"
-        type="text/css"
-      />
       <div class="view-el" title=${ifDefined(rootTitle)}>
         <img class="view-icon" src=${iconURL} part="icon"></img>
         <div class="view-label-container" part="label-container">

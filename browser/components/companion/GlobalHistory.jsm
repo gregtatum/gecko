@@ -949,7 +949,10 @@ class GlobalHistory extends EventTarget {
 
   #activateCurrentView() {
     this.#activationTimer = null;
-    if (this.#currentIndex === null) {
+    if (
+      this.#currentIndex === null ||
+      this.#currentIndex == this.#viewStack.length - 1
+    ) {
       return;
     }
 

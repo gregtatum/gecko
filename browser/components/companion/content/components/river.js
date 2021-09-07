@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
-import { html } from "chrome://browser/content/companion/lit.all.js";
+import { css, html } from "chrome://browser/content/companion/lit.all.js";
 import ViewGroup from "chrome://browser/content/companion/components/view-group.js";
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
@@ -22,6 +22,12 @@ export default class River extends MozLitElement {
     };
   }
 
+  static get styles() {
+    return css`
+      @import url("chrome://browser/content/companion/components/river.css");
+    `;
+  }
+
   constructor() {
     super();
     this.#views = [];
@@ -38,6 +44,11 @@ export default class River extends MozLitElement {
   addView(view) {
     if (!view) {
       return;
+    }
+
+    let index = this.#views.indexOf(view);
+    if (index != -1) {
+      this.#views.splice(index, 1);
     }
 
     this.#views.push(view);
@@ -152,14 +163,20 @@ export default class River extends MozLitElement {
   }
 
   render() {
+    // The base case is that the _displayedViewGroups is empty. In that case,
+    // we still want the River <div> to render in order to take the appropriate
+    // amount of vertical space in the toolbar - it just doesn't have any
+    // contents.
+    let riverViewGroups = [...this._displayedViewGroups];
+    // If there's a topViewGroup, we need to wrap it in a new Array in order for
+    // LitElement to know to re-render the ViewGroup.
+    let topViewGroup = this._displayedViewGroups.length
+      ? [...riverViewGroups.pop()]
+      : null;
+
     return html`
-      <link
-        rel="stylesheet"
-        href="chrome://browser/content/companion/components/river.css"
-        type="text/css"
-      />
-      <div id="river" ?hidden=${!this._displayedViewGroups.length}>
-        ${this._displayedViewGroups.map(
+      <div id="river" ?hidden=${!riverViewGroups.length}>
+        ${riverViewGroups.map(
           viewGroup =>
             html`
               <view-group
@@ -171,6 +188,14 @@ export default class River extends MozLitElement {
             `
         )}
       </div>
+      <view-group
+        ?hidden=${!topViewGroup}
+        top="true"
+        exportparts="domain, history"
+        ?active=${topViewGroup && topViewGroup.includes(this.activeView)}
+        .views=${topViewGroup || []}
+        .activeView=${this.activeView}
+      ></view-group>
     `;
   }
 }

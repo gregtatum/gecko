@@ -2,6 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+:host {
+  display: flex;
+  align-items: center;
+}
+
 #river {
   display: flex;
   overflow: scroll;
@@ -12,7 +17,8 @@
 }
 
 #river[hidden] {
-  display: none;
+  visibility: hidden;
+  min-height: 32px;
 }
 
 #river:hover > view-group {
@@ -28,6 +34,24 @@
  * in the River, any view-group's after it don't overlap it.
  */
 view-group[active] + view-group,
-view-group[active] {
+view-group[active]:not([top]) {
   margin-inline-start: 0px !important;
+}
+
+view-group[top] {
+  margin-inline-start: 8px;
+}
+
+view-group[top]::part(icon) {
+  border-color: #5b5b66;
+}
+
+view-group[top]::part(label-container) {
+  line-height: 16px;
+  white-space: nowrap;
+  width: 200px;
+}
+
+view-group[top]::part(title) {
+  font-size: 1.25rem;
 }

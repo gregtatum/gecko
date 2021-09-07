@@ -18,7 +18,6 @@ class ActiveViewManager extends HTMLElement {
   #pageActionPanel;
 
   #river;
-  #topView;
   #pinnedViews;
   #pageActionView;
 
@@ -40,7 +39,6 @@ class ActiveViewManager extends HTMLElement {
 
     this.#overflow = this.querySelector("#river-overflow-button");
     this.#river = this.querySelector("river-el");
-    this.#topView = this.querySelector("top-view");
     this.#pinnedViews = this.querySelector("pinned-views");
 
     for (let event of ActiveViewManager.EVENTS) {
@@ -50,7 +48,6 @@ class ActiveViewManager extends HTMLElement {
     this.addEventListener("UserAction:ViewSelected", this);
     this.addEventListener("UserAction:OpenPageActionMenu", this);
     this.#river.addEventListener("RiverRegrouped", this);
-    this.#topView.addEventListener("TopViewOverflow", this);
     this.#overflow.addEventListener("click", this);
   }
 
@@ -61,12 +58,7 @@ class ActiveViewManager extends HTMLElement {
     this.removeEventListener("UserAction:ViewSelected", this);
     this.removeEventListener("UserAction:OpenPageActionMenu", this);
     this.#river.removeEventListener("RiverRegrouped", this);
-    this.#topView.removeEventListener("TopViewOverflow", this);
     this.#overflow.removeEventListener("click", this);
-  }
-
-  isTopView(view) {
-    return this.#topView.hasView(view);
   }
 
   isRiverView(view) {
@@ -79,11 +71,8 @@ class ActiveViewManager extends HTMLElement {
 
   viewChanged(view) {
     this.#river.activeView = null;
-    this.#topView.activeView = null;
 
-    if (this.isTopView(view)) {
-      this.#topView.activeView = view;
-    } else if (this.isRiverView(view)) {
+    if (this.isRiverView(view)) {
       this.#river.activeView = view;
     } else {
       console.warn("Saw ViewChanged for an unknown view.");
@@ -92,19 +81,12 @@ class ActiveViewManager extends HTMLElement {
 
   viewMoved(view) {
     // TODO: Show a moving animation.
-
-    // Nothing to do if "ViewMoved" was dispatched for a view that's already the top view.
-    if (this.isRiverView(view)) {
-      this.#river.activeView = null;
-      this.#river.removeView(view);
-    }
-    this.#topView.addView(view);
+    this.#river.addView(view);
+    this.#river.activeView = view;
   }
 
   viewUpdated(view) {
-    if (this.isTopView(view)) {
-      this.#topView.viewUpdated();
-    } else if (this.isRiverView(view)) {
+    if (this.isRiverView(view)) {
       this.#river.requestUpdate();
     } else {
       console.warn("Saw ViewUpdated for an unknown view.");
@@ -112,30 +94,14 @@ class ActiveViewManager extends HTMLElement {
   }
 
   rebuild() {
-    let riverViews = window.top.gGlobalHistory.views;
-    let topViews = [riverViews.pop()];
-    let principal = Services.scriptSecurityManager.createContentPrincipal(
-      topViews[0].url,
-      {}
-    );
-
-    while (
-      riverViews.length &&
-      ViewGroup.canGroup(principal, riverViews[riverViews.length - 1].url)
-    ) {
-      topViews.unshift(riverViews.pop());
-    }
-
-    this.#topView.setViews(topViews);
-    this.#river.setViews(riverViews);
-
+    this.#river.setViews(window.top.gGlobalHistory.views);
     this.viewChanged(window.top.gGlobalHistory.currentView);
   }
 
   handleEvent(event) {
     switch (event.type) {
       case "ViewAdded":
-        this.#topView.addView(event.view);
+        this.#river.addView(event.view);
         break;
       case "ViewChanged":
         this.viewChanged(event.view);
@@ -208,8 +174,6 @@ class ActiveViewManager extends HTMLElement {
         let view = event.view;
         if (this.isRiverView(view)) {
           this.#river.removeView(view);
-        } else if (this.isTopView(view)) {
-          this.#topView.removeView(view);
         }
         this.#pinnedViews.addView(view);
         break;
@@ -217,7 +181,7 @@ class ActiveViewManager extends HTMLElement {
       case "ViewUnpinned": {
         let view = event.view;
         this.#pinnedViews.removeView(view);
-        this.#topView.addView(event.view);
+        this.#river.addView(event.view);
         break;
       }
     }
@@ -225,13 +189,10 @@ class ActiveViewManager extends HTMLElement {
 
   #viewSelected(view) {
     this.#river.activeView = null;
-    this.#topView.activeView = null;
     this.#pinnedViews.activeView = null;
 
     if (this.isRiverView(view)) {
       this.#river.activeView = view;
-    } else if (this.isTopView(view)) {
-      this.#topView.activeView = view;
     } else if (this.isPinnedView(view)) {
       this.#pinnedViews.activeView = view;
     }
