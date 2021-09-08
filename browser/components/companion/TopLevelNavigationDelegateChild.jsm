@@ -34,13 +34,33 @@ class TopLevelNavigationDelegateChild extends JSWindowActorChild {
       (Ci.nsIWebNavigation.LOAD_FLAGS_REPLACE_HISTORY << 16)
     );
 
+    // There are some sites that expect to unload themselves by setting
+    // location.href, and upon setting that property, put themselves into
+    // a semi-broken / non-interactive state until the navigation
+    // completes.
+    //
+    // LOAD_FLAGS_STOP_CONTENT is set on the loadType in two cases:
+    // 1. When a site sets location.href
+    // 2. When a Service Worker attempts to navigate a connected client
+    //
+    // To fix the issue for location.href, we use this flag as a signal
+    // to not delegate the load. This heuristic might be too general, but
+    // the failure case of not delegating in these cases seems to be better
+    // than delegating.
+    let isStopContent = !!(
+      loadType &
+      (Ci.nsIWebNavigation.LOAD_FLAGS_STOP_CONTENT << 16)
+    );
+
     // We currently let the following things occur within the same BrowsingContext,
     // instead of opening a new one:
     //
     // 1. POST requests
     // 2. Any load that isn't "normal" (in the nsIDocShell.LOAD_CMD_NORMAL sense)
     // 3. Any loads that are caused by location.replace
-    if (hasPostData || !isNormalLoad || isHistoryReplace) {
+    // 4. Any loads that were caused by setting location.href, or from a
+    //    Service Worker.
+    if (hasPostData || !isNormalLoad || isHistoryReplace || isStopContent) {
       return true;
     }
 
