@@ -5,7 +5,13 @@ const EXPORTED_SYMBOLS = ["getLinkInfo", "getConferenceInfo"];
 
 const URL_REGEX = /(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])/gim;
 
-let linksToIgnore = ["https://aka.ms/JoinTeamsMeeting"];
+// Some common links provide nothing useful in the companion,
+// so we just ignore them.
+let linksToIgnore = [
+  // This link is in every Teams invite and just provides information
+  // on how to join a Teams meeting.
+  "https://aka.ms/JoinTeamsMeeting",
+];
 
 function processLink(url, text) {
   try {
@@ -78,6 +84,7 @@ function getLinkInfo(result) {
     for (let descriptionURL of descriptionURLs) {
       let descriptionLink = processLink(descriptionURL);
       if (
+        !descriptionLink ||
         links.some(
           link =>
             link.url == descriptionLink.url || link.text == descriptionLink

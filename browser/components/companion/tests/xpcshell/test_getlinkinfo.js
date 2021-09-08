@@ -20,6 +20,10 @@ const DESCRIPTION_TEST = [
     description: `<a href="https://www.example.com">text</a>`,
     links: [{ url: "https://www.example.com/", text: "text" }],
   },
+  {
+    description: `https://aka.ms/JoinTeamsMeeting`,
+    links: [],
+  },
 ];
 
 add_task(async function test_getLinkInfo() {
