@@ -120,7 +120,7 @@ login-item {
 }
 
 :root.in-companion .panel-header > .subviewbutton-back + h1 {
-  margin-inline-end: 32px;
+  margin-inline-end: 40px;
   margin-block: 23px 22px;
 }
 

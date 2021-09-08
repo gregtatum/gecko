@@ -520,10 +520,12 @@ e-global-nav-debugging h2 {
   margin-inline: 0;
 }
 
+toolbarbutton.subviewbutton-back:hover,
 .browse button:hover {
   background-color: var(--in-content-button-background-hover);
 }
 
+toolbarbutton.subviewbutton-back:hover:active,
 .browse button:hover:active {
   background-color: var(--in-content-button-background-active);
 }
@@ -556,9 +558,11 @@ e-global-nav-debugging h2 {
 toolbarbutton.subviewbutton-back {
   background-image: url(chrome://global/skin/icons/arrow-left.svg);
   background-repeat: no-repeat;
-  margin: 0 4px;
-  padding: 8px;
   margin-inline-start: 16px;
+  width: 24px;
+  height: 24px;
+  background-position: center;
+  border-radius: 4px;
 }
 
 #companion-login-browser {
