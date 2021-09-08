@@ -22,7 +22,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
  *   Session associated data to check.
  */
 async function assertSessionData(expected) {
-  let snapshot = await PlacesUtils.withConnectionWrapper(
+  let session = await PlacesUtils.withConnectionWrapper(
     "head.js::assertSessionData",
     async db => {
       let rows = await db.execute(
@@ -30,21 +30,52 @@ async function assertSessionData(expected) {
         { guid: expected.guid }
       );
       return rows.map(r => ({
-        lastSavedAt: r.getResultByName("last_saved_at"),
+        lastSavedAt: new Date(r.getResultByName("last_saved_at")),
         data: r.getResultByName("data"),
       }))[0];
     }
   );
 
-  Assert.ok(snapshot, "Should have returned a snapshot");
+  assertSession(session, expected);
+}
+
+/**
+ * Asserts that a given session matches the expected one.
+ *
+ * @param {Session} session
+ *   @see SessionManager.jsm
+ * @param {object} expected
+ * @param {string} expected.guid
+ *   The guid of the session to check.
+ * @param {number} expected.lastSavedAt
+ *   The time the session was expected to be last saved at. Note the check
+ *   for this ensures the session was saved at a time that is equal or later
+ *   than the expected.
+ * @param {object} expected.data
+ *   Session associated data to check.
+ */
+async function assertSession(session, expected) {
+  Assert.ok(session, "Should have returned a snapshot");
   Assert.greaterOrEqual(
-    snapshot.lastSavedAt,
+    session.lastSavedAt.getTime(),
     expected.lastSavedAt,
     "Should have recorded a date more recent than the expected"
   );
   Assert.deepEqual(
-    JSON.parse(snapshot.data),
+    JSON.parse(session.data),
     expected.data,
     "Should have recorded the expected data"
+  );
+}
+
+/**
+ * Clears the session database.
+ */
+async function clearSessionDatabase() {
+  await PlacesUtils.withConnectionWrapper(
+    "head.js::clearSessionDatabase",
+    async db => {
+      await db.execute("DELETE FROM moz_session_metadata");
+    }
   );
 }

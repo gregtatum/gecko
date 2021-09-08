@@ -44,4 +44,10 @@ add_task(async function test_register_session() {
     lastSavedAt: dateCheckpoint,
     data: {},
   });
+
+  await assertSession((await SessionManager.query({ guid }))[0], {
+    guid,
+    lastSavedAt: dateCheckpoint,
+    data: {},
+  });
 });

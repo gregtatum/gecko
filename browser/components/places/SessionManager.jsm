@@ -131,18 +131,66 @@ const SessionManager = new (class SessionManager {
   /**
    * Queries for saved sessions in the database.
    *
-   * @param {object} options
+   * Note: If both guid and url are specified, then the session will only be
+   * returned if the url is contained within that session.
+   *
+   * @param {object} [options]
+   * @param {guid} [options.guid]
+   *    The specific guid to search for.
    * @param {string} [options.url]
    *    If provided, the query will be limited to sessions which contain the url.
    * @param {string} [options.limit]
    *    A limit to the number of query results to return.
    * @returns {Session[]}
    */
-  async query({ url, limit = 10 }) {
+  async query({ guid, url, limit = 10 } = {}) {
     if (!perWindowEnabled) {
       return [];
     }
-    return [];
+
+    let db = await PlacesUtils.promiseDBConnection();
+
+    let clauses = [];
+    let bindings = { limit };
+
+    if (guid) {
+      clauses.push("guid = :guid");
+      bindings.guid = guid;
+    }
+
+    let whereStatement = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+
+    let rows = await db.executeCached(
+      `
+      SELECT guid, last_saved_at, data FROM moz_session_metadata
+      ${whereStatement}
+      ORDER BY last_saved_at DESC
+      LIMIT :limit
+    `,
+      bindings
+    );
+
+    return rows.map(row => {
+      return {
+        guid: row.getResultByName("guid"),
+        lastSavedAt: this.#dateOrNull(row.getResultByName("last_saved_at")),
+        data: row.getResultByName("data"),
+      };
+    });
+  }
+
+  /**
+   * Translates a date value from the database.
+   *
+   * @param {number} value
+   *   The date in milliseconds from the epoch.
+   * @returns {Date?}
+   */
+  #dateOrNull(value) {
+    if (value) {
+      return new Date(value);
+    }
+    return null;
   }
 
   /**

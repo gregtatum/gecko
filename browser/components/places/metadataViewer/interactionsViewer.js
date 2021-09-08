@@ -163,6 +163,7 @@ class TableViewer {
           button.textContent = "Restore";
           button.onclick = details.clickHandler.bind(null, row);
           viewer.children[index].appendChild(button);
+          index++;
           continue;
         }
         let value = row[column];

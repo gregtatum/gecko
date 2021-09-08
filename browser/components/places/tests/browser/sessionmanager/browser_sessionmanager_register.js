@@ -13,6 +13,11 @@ const TEST_URL2 = "https://example.com/browser/";
 const { sinon } = ChromeUtils.import("resource://testing-common/Sinon.jsm");
 
 let dateCheckpoint;
+let sessionGuids = [];
+
+add_task(async function setup() {
+  await clearSessionDatabase();
+});
 
 registerCleanupFunction(async () => {
   sinon.restore();
@@ -31,6 +36,7 @@ add_task(async function test_register_session_with_open_new_tab() {
 
   let guid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
   Assert.ok(guid, "Should have an active session");
+  sessionGuids.push(guid);
 
   await assertSessionData({
     guid,
@@ -59,6 +65,7 @@ add_task(async function test_second_navigation_doesnt_restart() {
 
   let guid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
   Assert.ok(guid, "Should have an active session");
+  sessionGuids.push(guid);
 
   await assertSessionData({
     guid,
@@ -118,12 +125,10 @@ add_task(async function test_two_consecutive_calls() {
     guidCount + 1,
     "Should have only registered one extra guid"
   );
-  Assert.ok(
-    guids.includes(
-      SessionStore.getCustomWindowValue(win, "SessionManagerGuid")
-    ),
-    "Should have stored the guid on the window"
-  );
+  let guid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
+  sessionGuids.push(guid);
+
+  Assert.ok(guids.includes(guid), "Should have stored the guid on the window");
 
   await BrowserTestUtils.closeWindow(win);
 });
@@ -152,4 +157,23 @@ add_task(async function test_register_already_in_db() {
   );
 
   await BrowserTestUtils.closeWindow(win);
+});
+
+add_task(async function test_session_query() {
+  let sessions = await SessionManager.query();
+  Assert.equal(
+    sessions.length,
+    sessionGuids.length,
+    "Should have returned the expected amount of sessions"
+  );
+
+  sessionGuids.reverse();
+
+  for (let i = 0; i++; i < sessionGuids.length) {
+    Assert.equal(
+      sessions[i].guid,
+      sessionGuids[i],
+      "Should have the GUIDS in the correct order"
+    );
+  }
 });
