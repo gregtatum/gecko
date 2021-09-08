@@ -10,13 +10,12 @@ const EXPORTED_SYMBOLS = ["GlobalHistory"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
-ChromeUtils.defineModuleGetter(
-  this,
-  "ActorManagerParent",
-  "resource://gre/modules/ActorManagerParent.jsm"
-);
+XPCOMUtils.defineLazyModuleGetters(this, {
+  ActorManagerParent: "resource://gre/modules/ActorManagerParent.jsm",
+  SessionManager: "resource:///modules/SessionManager.jsm",
+  Services: "resource://gre/modules/Services.jsm",
+});
 
 ChromeUtils.defineModuleGetter(
   this,
@@ -898,6 +897,8 @@ class GlobalHistory extends EventTarget {
     }
 
     if (!internalView) {
+      SessionManager.register(this.#window).catch(console.error);
+
       // This is a new view.
       internalView = new InternalView(this.#window, browser, newEntry);
       this.#currentIndex = this.#viewStack.length;

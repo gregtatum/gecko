@@ -2603,7 +2603,6 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("xpinstall.enabled", false, locked);
   pref("services.sync.engine.tabs", false, locked);
   pref("browser.urlbar.suggest.openpage", false, locked);
-  pref("browser.sessionstore.perwindow", false);
   pref("browser.sessionstore.warnOnQuit", false, locked);
   pref("browser.sessionstore.resume_session_once", false, locked);
   pref("browser.sessionstore.resuming_after_os_restart", false, locked);
@@ -2627,6 +2626,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.companion.snapshots", false);
   pref("browser.tabs.openNewTabForMostNavigations", false);
   pref("browser.pinebuild.animateViewTransitions", false);
+  pref("browser.places.perwindowsessions.enabled", false);
   pref("browser.river.maxGroups", 5);
   pref("browser.river.pinning.enabled", false);
 #endif

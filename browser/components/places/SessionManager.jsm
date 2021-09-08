@@ -11,14 +11,16 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
+  PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   Services: "resource://gre/modules/Services.jsm",
+  SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
 });
 
 XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
   return console.createInstance({
     prefix: "SessionManager",
     maxLogLevel: Services.prefs.getBoolPref(
-      "browser.places.interactions.log",
+      "browser.places.perwindowsessions.log",
       false
     )
       ? "Debug"
@@ -29,7 +31,7 @@ XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
 XPCOMUtils.defineLazyPreferenceGetter(
   this,
   "perWindowEnabled",
-  "browser.sessionstore.perwindow",
+  "browser.places.perwindowsessions.enabled",
   false
 );
 
@@ -58,7 +60,38 @@ const SessionManager = new (class SessionManager {
     if (!perWindowEnabled) {
       return;
     }
-    logConsole.debug("Starting new session");
+    if (SessionStore.getCustomWindowValue(window, "SessionManagerGuid")) {
+      // No need to register, we already have something for this window.
+      return;
+    }
+
+    let guid = this.makeGuid();
+    logConsole.debug("Starting new session", guid);
+    // Write to the window first, whilst we're still in the synchronous part
+    // to avoid re-entrancy issues.
+    SessionStore.setCustomWindowValue(window, "SessionManagerGuid", guid);
+
+    try {
+      // Save the session in the database, so that we have the guid saved.
+      // In the unlikely case that this fails due to the guid being non-unique,
+      // then this function will fail early. On the next navigation/start point,
+      // we'll try again with a different guid.
+      await PlacesUtils.withConnectionWrapper(
+        "SessionManager:register",
+        async db => {
+          await db.executeCached(
+            `INSERT INTO moz_session_metadata (guid, last_saved_at, data)
+             VALUES (:guid, :lastSavedAt, "{}")`,
+            { lastSavedAt: Date.now(), guid }
+          );
+        }
+      );
+    } catch (ex) {
+      logConsole.error("Could not write GUID for session", ex);
+      // Since we could not write it, delete the GUID from the window for now.
+      // Next time we attempt to register, then we'll try again.
+      SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
+    }
   }
 
   /**
@@ -76,6 +109,8 @@ const SessionManager = new (class SessionManager {
       return;
     }
     logConsole.debug("Saving session", window);
+
+    SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
   }
 
   /**
@@ -108,5 +143,15 @@ const SessionManager = new (class SessionManager {
       return [];
     }
     return [];
+  }
+
+  /**
+   * Wrapper function that is present for tests to make it possible to use
+   * specific GUIDs.
+   *
+   * @returns {string}
+   */
+  makeGuid() {
+    return PlacesUtils.history.makeGuid();
   }
 })();
