@@ -3490,6 +3490,23 @@ MailAPI.prototype = import_evt14.default.mix({
     });
     return result;
   },
+  searchFolderMessages(spec) {
+    const handle = this._nextHandle++;
+    const { folder } = spec;
+    const view = folder.type === "calendar" ? new CalEventsListView(this, handle) : new MessagesListView(this, handle);
+    view.folderId = folder.id;
+    view.folder = this.getFolderById(view.folderId);
+    this._trackedItemHandles.set(handle, { obj: view });
+    this.__bridgeSend({
+      type: "searchFolderMessages",
+      handle,
+      spec: {
+        folderId: view.folderId,
+        filter: spec.filter
+      }
+    });
+    return view;
+  },
   viewFolderMessages(folder) {
     const handle = this._nextHandle++;
     let view;

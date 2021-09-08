@@ -533,6 +533,37 @@ MailUniverse.prototype = {
     return ctx.acquire(toc);
   },
 
+  acquireSearchMessagesTOC(ctx, spec) {
+    const { folderId } = spec;
+    // Figure out what the sync stamp source is for this account.  It hinges
+    // on the sync granularity; if it's account-based then the sync stamps
+    // will be on the account, otherwise on the folder.
+    let accountId = accountIdFromFolderId(folderId);
+    let engineFacts = this.accountManager.getAccountEngineBackEndFacts(
+      accountId
+    );
+    let syncStampSource;
+    if (engineFacts.syncGranularity === "account") {
+      syncStampSource = this.accountManager.getAccountDefById(accountId);
+    } else {
+      syncStampSource = this.accountManager.getFolderById(folderId);
+    }
+    const toc = new ConversationTOC({
+      db: this.db,
+      query: this.queryManager.queryMessages(ctx, spec),
+      dataOverlayManager: this.dataOverlayManager,
+      metaHelpers: [
+        new SyncLifecycleMetaHelper({
+          folderId,
+          syncStampSource,
+          dataOverlayManager: this.dataOverlayManager,
+        }),
+      ],
+      onForgotten: () => {},
+    });
+    return ctx.acquire(toc);
+  },
+
   acquireConversationTOC(ctx, conversationId) {
     let toc;
     if (this._conversationTOCs.has(conversationId)) {

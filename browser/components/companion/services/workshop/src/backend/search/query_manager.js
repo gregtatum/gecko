@@ -18,6 +18,7 @@ import logic from "logic";
 
 import DirectFolderConversationsQuery from "./query/direct_folder_conv_query";
 import FilteringFolderQuery from "./query/filtering_folder_query";
+import FilteringFolderMessagesQuery from "./query/filtering_folder_messages_query";
 
 import DirectFolderMessagesQuery from "./query/direct_folder_messages_query";
 
@@ -203,9 +204,38 @@ QueryManager.prototype = {
       });
     }
 
-    // TODO: Starting with just the direct load for now to make sure that works
-    // sufficiently/at all.
-    throw new Error("No messages filtering yet!");
+    if (!spec.filter.event) {
+      // TODO: Starting with just the direct load for now to make sure that works
+      // sufficiently/at all.
+      throw new Error("No messages filtering yet!");
+    }
+
+    // -- Build the list of filters and determine gatherer dependencies.
+    let filters = this._buildFilters(spec.filter, messageFilters);
+
+    const preDerivers = this._buildDerivedViews(spec.viewDefsWithContexts);
+    const postDerivers = [];
+
+    const dbCtx = {
+      db: this._db,
+      ctx,
+    };
+    // The messages case
+    const rootGatherer = this._buildGatherHierarchy({
+      consumers: filters,
+      rootGatherDefs: messageGatherers,
+      bootstrapKey: "message",
+      dbCtx,
+    });
+    return new FilteringFolderMessagesQuery({
+      ctx,
+      db: this._db,
+      folderId: spec.folderId,
+      filterRunner: new FilterRunner({ filters }),
+      rootGatherer,
+      preDerivers,
+      postDerivers,
+    });
   },
 
   /**

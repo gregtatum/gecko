@@ -26,8 +26,11 @@ export class HackyHashRouter {
     });
   }
 
-  navigateTo(segments) {
-    const hash = `#/${segments.join("/")}`;
+  navigateTo(segments, query) {
+    let hash = `#/${segments.join("/")}`;
+    if (query) {
+      hash = `${hash}?${query}`;
+    }
     // history.pushState is currently being weird on providing the hash with a
     // useless NS_ERROR_FAILURE, probably because of complexities related to the
     // about URL, so we'll just directly manipulate the hash.
@@ -35,11 +38,16 @@ export class HackyHashRouter {
     window.location.hash = hash;
   }
 
-  navigateRelative(addSegments) {
+  navigateRelative(addSegments, query = null) {
     if (!this.curSegments) {
       return;
     }
-    this.navigateTo(this.curSegments.concat(addSegments));
+    if (query) {
+      query = Object.entries(query)
+        .map(([key, value]) => `${key}=${value}`)
+        .join("&");
+    }
+    this.navigateTo(this.curSegments.concat(addSegments), query);
   }
 
   inspect(val) {
@@ -51,9 +59,8 @@ export class HackyHashRouter {
 
   async updateFromHash() {
     const readHash = window.location.hash.substring(1);
-    let hash = readHash;
+    const [hash, query] = readHash.split("?");
     const pieces = hash.split("/");
-    console.log("ROUTER: processing", hash, pieces);
 
     const nextPageParams = {};
     const nextSegments = [];
@@ -73,6 +80,18 @@ export class HackyHashRouter {
         })()
       );
     };
+
+    if (query) {
+      nextPageParams.query = query
+        .split("&")
+        .map(pair => pair.split("="))
+        .reduce((acc, [key, value]) => {
+          acc[key] = value;
+          return acc;
+        }, {});
+    }
+
+    console.log("ROUTER: processing", hash, pieces, nextPageParams.query);
 
     let nextPage = this.config.root;
     pushSegmentCrumb(nextPage, undefined);

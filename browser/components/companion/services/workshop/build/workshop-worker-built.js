@@ -16070,6 +16070,16 @@ var WorkshopBackend = (() => {
       await ctx.acquire(ctx.proxy);
       this.universe.syncRefreshFolder(msg.folderId, "viewFolderMessages");
     },
+    async _cmd_searchFolderMessages(msg) {
+      const ctx = this.bridgeContext.createNamedContext(msg.handle, "FolderMessagesSearchView");
+      ctx.viewing = {
+        type: "folder",
+        folderId: msg.spec.folderId
+      };
+      const toc = await this.universe.acquireSearchMessagesTOC(ctx, msg.spec);
+      ctx.proxy = new WindowedListProxy(toc, ctx);
+      await ctx.acquire(ctx.proxy);
+    },
     async _cmd_viewConversationMessages(msg) {
       let ctx = this.bridgeContext.createNamedContext(msg.handle, "ConversationMessagesView");
       ctx.viewing = {
@@ -20435,6 +20445,20 @@ var WorkshopBackend = (() => {
       writableStrategy: new import_streams.CountQueuingStrategy({ highWaterMark: 1 }),
       readableStrategy: new import_streams.CountQueuingStrategy({ highWaterMark: 1 })
     });
+    const consider = (change) => {
+      if (!isDeletion(change)) {
+        queuedSet.add(change.id);
+        gatherStream.writable.write(change);
+      } else {
+        queuedSet.delete(change.id);
+        if (knownFilteredSet.has(change.id)) {
+          gatherStream.writable.write(change);
+        } else {
+          notifyRemoved(preDerivers, change.id);
+        }
+      }
+    };
+    const timeoutIds = new Set();
     const filterStream = new import_streams.TransformStream({
       flush(enqueue, close) {
         close();
@@ -20461,6 +20485,24 @@ var WorkshopBackend = (() => {
             let matchInfo = filterRunner.filter(gathered);
             logic(ctx, "maybeMatch", { matched: !!matchInfo });
             if (matchInfo) {
+              if (matchInfo?.event.durationBeforeToBeValid) {
+                const newChange = shallowClone2(change);
+                const id = setTimeout(() => {
+                  timeoutIds.delete(id);
+                  consider(newChange);
+                }, matchInfo.event.durationBeforeToBeValid);
+                timeoutIds.add(id);
+                done();
+                return;
+              }
+              if (matchInfo?.event.durationBeforeToBeInvalid) {
+                const newChange = shallowClone2(change);
+                const id = setTimeout(() => {
+                  timeoutIds.delete(id);
+                  consider(newChange);
+                }, matchInfo.event.durationBeforeToBeInvalid);
+                timeoutIds.add(id);
+              }
               change = shallowClone2(change);
               if (!knownFilteredSet.has(change.id)) {
                 mutateChangeToResembleAdd(change);
@@ -20495,20 +20537,11 @@ var WorkshopBackend = (() => {
       }
     }, new import_streams.CountQueuingStrategy({ highWaterMark: 1 })));
     return {
-      consider: (change) => {
-        if (!isDeletion(change)) {
-          queuedSet.add(change.id);
-          gatherStream.writable.write(change);
-        } else {
-          queuedSet.delete(change.id);
-          if (knownFilteredSet.has(change.id)) {
-            gatherStream.writable.write(change);
-          } else {
-            notifyRemoved(preDerivers, change.id);
-          }
-        }
-      },
+      consider,
       destroy: () => {
+        for (const id of timeoutIds) {
+          clearTimeout(id);
+        }
         gatherStream.writable.close();
       }
     };
@@ -20573,6 +20606,87 @@ var WorkshopBackend = (() => {
           addDate: idWithDate.date,
           height: idWithDate.height,
           oldHeight: 0,
+          matchInfo: null
+        });
+      }
+      return [];
+    },
+    bind(listenerObj, listenerMethod) {
+      this._boundListener = listenerMethod.bind(listenerObj);
+      this._db.on(this._eventId, this._bound_filteringTOCChange);
+      this._drainEvents(this._bound_filteringTOCChange);
+      this._drainEvents = null;
+    },
+    _filteringTOCChange(change) {
+      this._filteringStream.consider(change);
+    },
+    destroy() {
+      this._db.removeListener(this._eventId, this._bound_filteringTOCChange);
+      this._filteringStream.destroy();
+    }
+  };
+
+  // src/backend/search/query/filtering_folder_messages_query.js
+  function FilteringFolderMessagesQuery({
+    ctx,
+    db,
+    folderId,
+    filterRunner,
+    rootGatherer,
+    preDerivers,
+    postDerivers
+  }) {
+    this._db = db;
+    this.folderId = folderId;
+    this._eventId = null;
+    this._drainEvents = null;
+    this._boundListener = null;
+    this._filteringStream = new FilteringStream({
+      ctx,
+      filterRunner,
+      rootGatherer,
+      preDerivers,
+      postDerivers,
+      isDeletion: (change) => {
+        return !change.postDate;
+      },
+      inputToGatherInto: (change) => {
+        return {
+          messageId: change.id,
+          date: change.postDate
+        };
+      },
+      mutateChangeToResembleAdd: (change) => {
+        change.preDate = null;
+        change.freshlyAdded = true;
+      },
+      mutateChangeToResembleDeletion: (change) => {
+        change.preDate = change.postDate;
+        change.postDate = 0;
+        change.item = null;
+        change.freshlyAdded = false;
+      },
+      onFilteredUpdate: (change) => {
+        this._boundListener(change);
+      }
+    });
+    this._bound_filteringTOCChange = this._filteringTOCChange.bind(this);
+  }
+  FilteringFolderMessagesQuery.prototype = {
+    async execute() {
+      let idsWithDates;
+      ({
+        idsWithDates,
+        drainEvents: this._drainEvents,
+        eventId: this._eventId
+      } = await this._db.loadFolderMessageIdsAndListen(this.folderId));
+      for (const { id, date } of idsWithDates) {
+        this._filteringStream.consider({
+          id,
+          preDate: null,
+          postDate: date,
+          item: null,
+          freshlyAdded: true,
           matchInfo: null
         });
       }
@@ -20960,6 +21074,52 @@ var WorkshopBackend = (() => {
     }
   };
 
+  // src/backend/search/filters/message/event_filter.js
+  function EventFilter(params, args) {
+    this.durationBeforeInMillis = (args.durationBeforeInMinutes ?? -1) * 60 * 1e3;
+    this.type = args.type;
+  }
+  EventFilter.prototype = {
+    gather: {
+      bodyContents: {}
+    },
+    cost: 10,
+    alwaysRun: true,
+    test(gathered) {
+      if (this.durationBeforeInMillis < 0) {
+        return true;
+      }
+      const message = gathered?.message;
+      if (!message || !("startDate" in message)) {
+        return true;
+      }
+      const { startDate, endDate } = message;
+      const now = new Date().valueOf();
+      if (endDate <= now) {
+        return false;
+      }
+      if (this.type === "now") {
+        const shiftedStartDate = startDate - this.durationBeforeInMillis;
+        if (now < shiftedStartDate) {
+          return {
+            durationBeforeToBeValid: shiftedStartDate - now
+          };
+        }
+        return {
+          durationBeforeToBeInvalid: endDate - now
+        };
+      }
+      const dayInMillis = 24 * 60 * 60 * 1e3;
+      const tomorrow = dayInMillis * Math.floor(1 + now / dayInMillis);
+      if (startDate >= tomorrow) {
+        return false;
+      }
+      return {
+        durationBeforeToBeInvalid: endDate - now
+      };
+    }
+  };
+
   // src/backend/search/filters/message/recipients_filter.js
   function RecipientsFilter(params, args) {
     this.searchPattern = searchPatternFromArgs(args);
@@ -21118,6 +21278,10 @@ var WorkshopBackend = (() => {
         excerptSettings: DEFAULT_SEARCH_EXCERPT_SETTINGS,
         includeQuotes: true
       }
+    },
+    event: {
+      constructor: EventFilter,
+      params: null
     }
   };
 
@@ -21439,7 +21603,31 @@ var WorkshopBackend = (() => {
           folderId: spec.folderId
         });
       }
-      throw new Error("No messages filtering yet!");
+      if (!spec.filter.event) {
+        throw new Error("No messages filtering yet!");
+      }
+      let filters = this._buildFilters(spec.filter, msg_filters_default);
+      const preDerivers = this._buildDerivedViews(spec.viewDefsWithContexts);
+      const postDerivers = [];
+      const dbCtx = {
+        db: this._db,
+        ctx
+      };
+      const rootGatherer = this._buildGatherHierarchy({
+        consumers: filters,
+        rootGatherDefs: msg_gatherers_default,
+        bootstrapKey: "message",
+        dbCtx
+      });
+      return new FilteringFolderMessagesQuery({
+        ctx,
+        db: this._db,
+        folderId: spec.folderId,
+        filterRunner: new FilterRunner({ filters }),
+        rootGatherer,
+        preDerivers,
+        postDerivers
+      });
     },
     queryConversationMessages(ctx, spec) {
       if (spec.conversationId && !spec.filter) {
@@ -22909,6 +23097,32 @@ var WorkshopBackend = (() => {
         });
         this._folderMessagesTOCs.set(folderId, toc);
       }
+      return ctx.acquire(toc);
+    },
+    acquireSearchMessagesTOC(ctx, spec) {
+      const { folderId } = spec;
+      let accountId = accountIdFromFolderId(folderId);
+      let engineFacts = this.accountManager.getAccountEngineBackEndFacts(accountId);
+      let syncStampSource;
+      if (engineFacts.syncGranularity === "account") {
+        syncStampSource = this.accountManager.getAccountDefById(accountId);
+      } else {
+        syncStampSource = this.accountManager.getFolderById(folderId);
+      }
+      const toc = new ConversationTOC({
+        db: this.db,
+        query: this.queryManager.queryMessages(ctx, spec),
+        dataOverlayManager: this.dataOverlayManager,
+        metaHelpers: [
+          new SyncLifecycle({
+            folderId,
+            syncStampSource,
+            dataOverlayManager: this.dataOverlayManager
+          })
+        ],
+        onForgotten: () => {
+        }
+      });
       return ctx.acquire(toc);
     },
     acquireConversationTOC(ctx, conversationId) {

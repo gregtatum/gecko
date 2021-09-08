@@ -422,6 +422,20 @@ MailBridge.prototype = {
     this.universe.syncRefreshFolder(msg.folderId, "viewFolderMessages");
   },
 
+  async _cmd_searchFolderMessages(msg) {
+    const ctx = this.bridgeContext.createNamedContext(
+      msg.handle,
+      "FolderMessagesSearchView"
+    );
+    ctx.viewing = {
+      type: "folder",
+      folderId: msg.spec.folderId,
+    };
+    const toc = await this.universe.acquireSearchMessagesTOC(ctx, msg.spec);
+    ctx.proxy = new WindowedListProxy(toc, ctx);
+    await ctx.acquire(ctx.proxy);
+  },
+
   async _cmd_viewConversationMessages(msg) {
     let ctx = this.bridgeContext.createNamedContext(
       msg.handle,

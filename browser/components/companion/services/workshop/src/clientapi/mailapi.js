@@ -1122,6 +1122,37 @@ MailAPI.prototype = evt.mix(
     },
 
     /**
+     * Search the messages/events in a folder.  If the folder is a `calendar`
+     * folder, than a `CalEventsListView` will be returned, otherwise a
+     * `MessagesListView` will be returned.
+     */
+    searchFolderMessages(spec) {
+      const handle = this._nextHandle++;
+      const { folder } = spec;
+      const view =
+        folder.type === "calendar"
+          ? new CalEventsListView(this, handle)
+          : new MessagesListView(this, handle);
+      view.folderId = folder.id;
+      // Hackily save off the folder as a stop-gap measure to make it easier to
+      // describe the contents of the view until we enhance the tocMeta to
+      // better convey this.
+      view.folder = this.getFolderById(view.folderId);
+      this._trackedItemHandles.set(handle, { obj: view });
+
+      this.__bridgeSend({
+        type: "searchFolderMessages",
+        handle,
+        spec: {
+          folderId: view.folderId,
+          filter: spec.filter,
+        },
+      });
+
+      return view;
+    },
+
+    /**
      * View the messages/events in a folder.  If the folder is a `calendar`
      * folder, than a `CalEventsListView` will be returned, otherwise a
      * `MessagesListView` will be returned.

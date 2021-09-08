@@ -18,6 +18,7 @@ import { DEFAULT_SEARCH_EXCERPT_SETTINGS } from "../syncbase";
 
 import AuthorFilter from "./filters/message/author_filter";
 import AuthorAddressFilter from "./filters/message/author_address_filter";
+import EventFilter from "./filters/message/event_filter";
 import RecipientsFilter from "./filters/message/recipients_filter";
 import SubjectFilter from "./filters/message/subject_filter";
 import BodyFilter from "./filters/message/body_filter";
@@ -59,5 +60,9 @@ export default {
       excerptSettings: DEFAULT_SEARCH_EXCERPT_SETTINGS,
       includeQuotes: true,
     },
+  },
+  event: {
+    constructor: EventFilter,
+    params: null,
   },
 };

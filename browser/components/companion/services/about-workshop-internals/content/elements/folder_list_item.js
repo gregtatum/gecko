@@ -42,11 +42,14 @@ export class FolderListItem extends LitElement {
           class="folder-show-messages"
           type="button"
           @click=${() => {
-            window.ROUTER.navigateRelative(["folder", folder.id]);
+            const filter = this.renderRoot.querySelector(".folder-filter")
+              .value;
+            window.ROUTER.navigateRelative(["folder", folder.id], { filter });
           }}
         >
           Show Messages
         </button>
+        <input class="folder-filter" type="text" />
       </div>
     `;
   }

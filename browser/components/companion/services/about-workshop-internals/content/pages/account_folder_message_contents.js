@@ -48,7 +48,7 @@ export default class AccountFolderMessageContentsPage extends Page {
     `;
   }
 
-  constructor(opts, { folderId }) {
+  constructor(opts, { folderId, query }) {
     super(opts, {
       title: "Messages",
       pageId: "page-account-folder-message-contents",
@@ -57,6 +57,7 @@ export default class AccountFolderMessageContentsPage extends Page {
     this.folderId = folderId;
     this.folder = null; // (reactive!)
     this.listView = null;
+    this.query = query;
 
     // This could have been called during the connected callback, but there's
     // no refcount associated with this.
@@ -76,11 +77,31 @@ export default class AccountFolderMessageContentsPage extends Page {
         this.listView.release();
         this.listView = null;
       }
-      if (this.folder) {
-        this.listView = this.workshopAPI.viewFolderMessages(this.folder);
-        // Make sure a sync happens.
-        this.listView.refresh();
+      if (!this.folder) {
+        return;
       }
+
+      if (this.query?.filter) {
+        const spec = {
+          folder: this.folder,
+          filter: {},
+        };
+
+        const [type, durationBeforeInMinutes] = this.query.filter.split(":");
+        if (["now", "browse"].includes(type)) {
+          spec.filter.event = {
+            type,
+            durationBeforeInMinutes: parseInt(durationBeforeInMinutes || 0),
+          };
+        }
+
+        this.listView = this.workshopAPI.searchFolderMessages(spec);
+      } else {
+        this.listView = this.workshopAPI.viewFolderMessages(this.folder);
+      }
+
+      // Make sure a sync happens.
+      this.listView.refresh();
     }
   }
 

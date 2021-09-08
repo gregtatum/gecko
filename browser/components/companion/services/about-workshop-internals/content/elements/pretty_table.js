@@ -91,6 +91,15 @@ class TableMaker {
   }
 }
 
+function formatData(key, value) {
+  if (key.toLowerCase().includes("date")) {
+    try {
+      value = new Date(value).toString();
+    } catch {}
+  }
+  return value;
+}
+
 /**
  * More layout-friendly version that builds a single table using the above
  * TableMaker.
@@ -109,6 +118,7 @@ function prettifyData(dataRoot) {
       keyCount++;
 
       tableMaker.pushKey(key);
+      value = formatData(key, value);
 
       if (typeof value === "object") {
         traverse(value);

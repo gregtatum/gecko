@@ -122,7 +122,7 @@ export default class AddAccountPage extends Page {
       account,
     } = await this.workshopAPI.tryToCreateAccount(
       {
-        feedUrl: this.rssInput.value,
+        feedUrl: this._rssInput.value,
       },
       {
         type: "feed",

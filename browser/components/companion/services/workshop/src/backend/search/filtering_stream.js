@@ -127,6 +127,28 @@ export default function FilteringStream({
     readableStrategy: new CountQueuingStrategy({ highWaterMark: 1 }),
   });
 
+  const consider = change => {
+    if (!isDeletion(change)) {
+      // - add/change, process for filtering
+      queuedSet.add(change.id);
+      gatherStream.writable.write(change);
+    } else {
+      // - removal
+      queuedSet.delete(change.id);
+      // If the item was already reported, however, we do need to propagate
+      // this through, however.
+      if (knownFilteredSet.has(change.id)) {
+        gatherStream.writable.write(change);
+      } else {
+        notifyRemoved(preDerivers, change.id);
+        // postDerivers never heard about it since knownFilteredSet doesn't
+        // include it.
+      }
+    }
+  };
+
+  const timeoutIds = new Set();
+
   const filterStream = new TransformStream({
     flush(enqueue, close) {
       close();
@@ -158,6 +180,29 @@ export default function FilteringStream({
           let matchInfo = filterRunner.filter(gathered);
           logic(ctx, "maybeMatch", { matched: !!matchInfo });
           if (matchInfo) {
+            if (matchInfo?.event.durationBeforeToBeValid) {
+              // The change will be filtered in the future.
+              const newChange = shallowClone(change);
+              const id = setTimeout(() => {
+                timeoutIds.delete(id);
+                consider(newChange);
+              }, matchInfo.event.durationBeforeToBeValid);
+              timeoutIds.add(id);
+              done();
+              return;
+            }
+
+            if (matchInfo?.event.durationBeforeToBeInvalid) {
+              // The event is displayed but we must remove it once
+              // it's finished.
+              const newChange = shallowClone(change);
+              const id = setTimeout(() => {
+                timeoutIds.delete(id);
+                consider(newChange);
+              }, matchInfo.event.durationBeforeToBeInvalid);
+              timeoutIds.add(id);
+            }
+
             // - Match!
             // We need to much with the change from here on out, so we need to
             // make our own mutable copy.
@@ -212,26 +257,11 @@ export default function FilteringStream({
     /**
      * This is how we are fed data/changes from the database.
      */
-    consider: change => {
-      if (!isDeletion(change)) {
-        // - add/change, process for filtering
-        queuedSet.add(change.id);
-        gatherStream.writable.write(change);
-      } else {
-        // - removal
-        queuedSet.delete(change.id);
-        // If the item was already reported, however, we do need to propagate
-        // this through, however.
-        if (knownFilteredSet.has(change.id)) {
-          gatherStream.writable.write(change);
-        } else {
-          notifyRemoved(preDerivers, change.id);
-          // postDerivers never heard about it since knownFilteredSet doesn't
-          // include it.
-        }
-      }
-    },
+    consider,
     destroy: () => {
+      for (const id of timeoutIds) {
+        clearTimeout(id);
+      }
       gatherStream.writable.close();
     },
   };
