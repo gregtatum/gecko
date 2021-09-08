@@ -345,9 +345,14 @@ about-logins-import-report-error =
 
 about-logins-header-add-password = Add password
 about-logins-header-login-list = Passwords
+about-logins-header-edit-password = Edit password
 about-logins-back-button =
   .aria-label = Back
+about-logins-remove-password = Remove password
 
 ## Logins import report page
 
 about-logins-import-report-page-title = Import Summary Report
+
+pro-client-copy-username = Copy Username
+pro-client-copy-password = Copy Password

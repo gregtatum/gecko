@@ -494,7 +494,7 @@ input[name="password"] {
   display: block;
 }
 
-:host(.in-companion:not([data-is-new-login])) {
+:host(.in-companion:not([data-editing])) {
   display: none;
 }
 
@@ -527,4 +527,25 @@ input[name="password"] {
 
 :host(.in-companion) .detail-grid {
   row-gap: 20px;
+}
+
+:host(.in-companion) .remove-login-button-container {
+  border-top: 1px solid var(--in-content-border-color);
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+:host(:not(.in-companion)) .remove-login-button-container {
+  display: none;
+}
+
+:host(.in-companion) .remove-login-button {
+  margin: 16px;
+  margin-block: 23.5px 28px;
+  font-size: 11px;
+  width: 13em;
+  margin-inline: auto;
 }

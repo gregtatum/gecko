@@ -228,6 +228,7 @@ class AboutLoginsChild extends JSWindowActorChild {
         this.sendAsyncMessage("AboutLogins:BrowsePanel");
         break;
       }
+      case "AboutLoginsLoginEditLogin":
       case "AboutLoginsClearSelection":
       case "AboutLoginsShowBlankLogin": {
         this.sendToContent("HeaderChange", event.detail.newHeaderL10nId);

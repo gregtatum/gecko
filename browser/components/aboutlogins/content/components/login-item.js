@@ -119,6 +119,7 @@ export default class LoginItem extends HTMLElement {
     window.addEventListener("AboutLoginsLoginSelected", this);
     window.addEventListener("AboutLoginsShowBlankLogin", this);
     window.addEventListener("AboutLoginsRemaskPassword", this);
+    window.addEventListener("AboutLoginsLoginEditLogin", this);
   }
 
   focus() {
@@ -320,6 +321,23 @@ export default class LoginItem extends HTMLElement {
     this.render();
   }
 
+  async handleEditButton() {
+    let masterPasswordAuth = await promptForMasterPassword(
+      "about-logins-edit-login-os-auth-dialog-message"
+    );
+    if (!masterPasswordAuth) {
+      return;
+    }
+
+    this._toggleEditing();
+    this.render();
+
+    this._recordTelemetryEvent({
+      object: "existing_login",
+      method: "edit",
+    });
+  }
+
   async handleEvent(event) {
     switch (event.type) {
       case "AboutLoginsInitialLoginSelected": {
@@ -332,6 +350,11 @@ export default class LoginItem extends HTMLElement {
       }
       case "AboutLoginsLoginSelected": {
         this.confirmPendingChangesOnEvent(event, event.detail);
+        break;
+      }
+      case "AboutLoginsLoginEditLogin": {
+        this.setLogin(event.detail.login);
+        await this.handleEditButton();
         break;
       }
       case "AboutLoginsShowBlankLogin": {
@@ -474,20 +497,7 @@ export default class LoginItem extends HTMLElement {
           return;
         }
         if (classList.contains("edit-button")) {
-          let masterPasswordAuth = await promptForMasterPassword(
-            "about-logins-edit-login-os-auth-dialog-message"
-          );
-          if (!masterPasswordAuth) {
-            return;
-          }
-
-          this._toggleEditing();
-          this.render();
-
-          this._recordTelemetryEvent({
-            object: "existing_login",
-            method: "edit",
-          });
+          await this.handleEditButton();
           return;
         }
         if (
@@ -541,6 +551,12 @@ export default class LoginItem extends HTMLElement {
             new CustomEvent("AboutLoginsUpdateLogin", {
               bubbles: true,
               detail: loginUpdates,
+            })
+          );
+
+          window.dispatchEvent(
+            new CustomEvent("AboutLoginsRemoveUpdateState", {
+              bubbles: true,
             })
           );
 

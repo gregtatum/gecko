@@ -71,6 +71,14 @@
   visibility: hidden;
 }
 
+:host(.in-companion) {
+  height: 100%;
+}
+
+:host(.editing) {
+  display: none;
+}
+
 .empty-search-message,
 .intro {
   text-align: center;
@@ -149,6 +157,11 @@ ol {
   background-color: var(--in-content-page-background);
 }
 
+.login-list-item.popupShowing {
+  background-color: var(--in-content-button-background-hover);
+  color: var(--in-content-button-text-color-hover);
+}
+
 .login-list-item.selected .title {
   font-weight: 600;
 }
@@ -211,7 +224,6 @@ ol {
 }
 
 :host(.in-companion) .create-login-button-container {
-  border-top: 1px solid #E0E0E6;
   width: 100%;
 }
 
@@ -273,8 +285,10 @@ ol {
   padding-inline: 4px;
   margin-inline: 12px;
   border-radius: 4px;
+  border-inline-start: none;
 }
 
+:host(.in-companion) menuitem:hover,
 :host(.in-companion) .login-list-item:hover {
   background-color: var(--in-content-button-background-hover);
   color: var(--in-content-button-text-color-hover);
@@ -282,4 +296,65 @@ ol {
 
 :host(.in-companion.create-login-selected) {
   display: none;
+}
+
+.more-dropdown {
+  visibility: hidden;
+}
+
+.login-list-item.popupShowing .more-dropdown,
+:host(.in-companion) .login-list-item:hover .more-dropdown {
+  visibility: visible;
+  background-image: url("chrome://global/skin/icons/more.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  min-width: 24px
+}
+
+:host(.in-companion.popupShowing) .login-list-item:not(.popupShowing):hover .more-dropdown {
+  visibility: hidden;
+}
+
+:host(.in-companion.popupShowing) .login-list-item:not(.popupShowing):hover {
+  background-color: var(--in-content-box-background);
+}
+
+.more-dropdown-container {
+  position: relative;
+  display: grid;
+}
+
+:host(:not(.in-companion)) .more-dropdown-container {
+  display: none;
+}
+
+menupopup {
+  position: absolute;
+  background: var(--in-content-page-background);
+  margin-top: 24px;
+  right: 0;
+  width: 126px;
+  box-shadow: 0px 2px 14px rgba(58, 57, 68, 0.2);
+  border-radius: 4px;
+  padding-block: 4px;
+  outline: 1px solid var(--in-content-border-color);
+  visibility: hidden;
+  z-index: 1;
+}
+
+panel {
+  visibility: hidden;
+}
+
+:host(.in-companion) menupopup.popupShowing {
+  visibility: visible;
+}
+
+menuitem {
+  width: calc(100% - 2 * 12px);
+  padding-inline: 12px;
+  font-size: 12px;
+  height: 28px;
+  display: inline-block;
+  line-height: 28px;
 }

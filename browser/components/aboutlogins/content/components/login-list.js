@@ -135,6 +135,7 @@ export default class LoginList extends HTMLElement {
     window.addEventListener("AboutLoginsInitialLoginSelected", this);
     window.addEventListener("AboutLoginsLoginSelected", this);
     window.addEventListener("AboutLoginsShowBlankLogin", this);
+    window.addEventListener("AboutLoginsRemoveUpdateState", this);
     this._list.addEventListener("click", this);
     this.addEventListener("keydown", this);
     this.addEventListener("keyup", this);
@@ -275,6 +276,19 @@ export default class LoginList extends HTMLElement {
   }
 
   handleEvent(event) {
+    // Ensure the dropdown menu (if any) does not persist if the user tries to click
+    // on a different portion of the login list element.
+    if (
+      event.type != "keydown" &&
+      event.type != "keyup" &&
+      this._currentMenuPopup
+    ) {
+      this.classList.remove("popupShowing");
+      this._currentMenuPopup.classList.remove("popupShowing");
+      this._currentMenuPopup.closest("li").classList.remove("popupShowing");
+      this._currentMenuPopup = null;
+    }
+
     switch (event.type) {
       case "click": {
         if (event.originalTarget == this._createLoginButton) {
@@ -290,18 +304,58 @@ export default class LoginList extends HTMLElement {
           return;
         }
 
-        if (this.classList.contains("in-companion")) {
-          // TODO: MR2-528 will introduce an overflow menu to handle
-          // other button clicks. For now, let's return.
-          return;
-        }
-
         let listItem = event.originalTarget.closest(".login-list-item");
         if (!listItem || !listItem.dataset.guid) {
           return;
         }
 
+        if (event.originalTarget.classList.contains("more-dropdown")) {
+          let menuPopup = event.originalTarget.nextElementSibling;
+          this._currentMenuPopup = menuPopup;
+          this.classList.add("popupShowing");
+          this._currentMenuPopup.classList.add("popupShowing");
+          listItem.classList.add("popupShowing");
+          for (let child of menuPopup.children) {
+            child.addEventListener("click", this);
+          }
+          return;
+        }
+
         let { login } = this._logins[listItem.dataset.guid];
+
+        let isPassword = event.originalTarget.classList.contains(
+          "copyPassword"
+        );
+        if (
+          isPassword ||
+          event.originalTarget.classList.contains("copyUsername")
+        ) {
+          document.dispatchEvent(
+            new CustomEvent("AboutLoginsCopyLoginDetail", {
+              bubbles: true,
+              detail: isPassword ? login.password : login.username,
+            })
+          );
+          this.classList.remove("popupShowing");
+          return;
+        } else if (event.originalTarget.classList.contains("edit")) {
+          event.stopPropagation();
+          window.dispatchEvent(
+            new CustomEvent("AboutLoginsLoginEditLogin", {
+              detail: {
+                login,
+                newHeaderL10nId: "about-logins-header-edit-password",
+              },
+              cancelable: true,
+              bubbles: true,
+            })
+          );
+          this.classList.add("editing");
+          return;
+        } else if (this.classList.contains("in-companion")) {
+          return;
+        }
+
         this.dispatchEvent(
           new CustomEvent("AboutLoginsLoginSelected", {
             bubbles: true,
@@ -413,6 +467,10 @@ export default class LoginList extends HTMLElement {
           this._selectedGuid = null;
           this._setListItemAsSelected(this._blankLoginListItem);
         }
+        break;
+      }
+      case "AboutLoginsRemoveUpdateState": {
+        this.classList.remove("editing");
         break;
       }
       case "keyup":

@@ -60,6 +60,7 @@ gElements.backButton.addEventListener("click", event => {
   if (document.documentElement.classList.contains("login-item-view")) {
     window.dispatchEvent(new CustomEvent("AboutLoginsClearSelection"));
     toggleHeaderValue("about-logins-header-login-list");
+    gElements.loginList.classList.remove("editing");
   } else {
     document.dispatchEvent(
       new CustomEvent("AboutLoginsBrowsePanel", { bubbles: true })
