@@ -96,6 +96,9 @@ export default class LoginItem extends HTMLElement {
     this._vulnerableAlertLearnMoreLink = this._vulnerableAlert.querySelector(
       ".alert-learn-more-link"
     );
+    this._removePasswordButton = this.shadowRoot.querySelector(
+      ".remove-login-button"
+    );
 
     this.render();
 
@@ -114,6 +117,7 @@ export default class LoginItem extends HTMLElement {
     this._originDisplayInput.addEventListener("click", this);
     this._revealCheckbox.addEventListener("click", this);
     this._vulnerableAlertLearnMoreLink.addEventListener("click", this);
+    this._removePasswordButton.addEventListener("click", this);
     window.addEventListener("AboutLoginsInitialLoginSelected", this);
     window.addEventListener("AboutLoginsLoadInitialFavicon", this);
     window.addEventListener("AboutLoginsLoginSelected", this);
@@ -485,7 +489,10 @@ export default class LoginItem extends HTMLElement {
           });
           return;
         }
-        if (classList.contains("delete-button")) {
+        if (
+          classList.contains("delete-button") ||
+          classList.contains("remove-login-button")
+        ) {
           this.showConfirmationDialog("delete", () => {
             document.dispatchEvent(
               new CustomEvent("AboutLoginsDeleteLogin", {
@@ -631,8 +638,12 @@ export default class LoginItem extends HTMLElement {
     switch (type) {
       case "delete": {
         options = {
-          title: "about-logins-confirm-remove-dialog-title",
-          message: "confirm-delete-dialog-message",
+          title: this.classList.contains("in-companion")
+            ? "about-logins-companion-confirm-remove-password-title"
+            : "about-logins-confirm-remove-dialog-title",
+          message: this.classList.contains("in-companion")
+            ? "companion-confirm-delete-dialog-message"
+            : "confirm-delete-dialog-message",
           confirmButtonLabel:
             "about-logins-confirm-remove-dialog-confirm-button",
         };

@@ -71,6 +71,9 @@ class AboutLoginsChild extends JSWindowActorChild {
           documentElement
             .querySelector("login-item")
             .classList.add("in-companion");
+          documentElement
+            .querySelector("confirmation-dialog")
+            .classList.add("in-companion");
         }
 
         let win = this.browsingContext.window;
