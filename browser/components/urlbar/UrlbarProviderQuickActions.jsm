@@ -44,7 +44,7 @@ const MAX_RESULTS = 5;
 
 const COMMANDS = {
   checkgmail: {
-    commands: ["inbox", "email", "gmail", "check gmail"],
+    commands: ["inbox", "email", "gmail", "check gmail", "google mail"],
     icon: "chrome://browser/content/urlbar/quickactions/gmail.svg",
     label: "Go to Inbox",
     callback: openUrl("https://gmail.com"),
@@ -79,28 +79,28 @@ const COMMANDS = {
     },
   },
   createmeeting: {
-    commands: ["create-meeting", "calendar"],
+    commands: ["create-meeting", "calendar", "google calendar"],
     icon: "chrome://browser/content/urlbar/quickactions/createmeeting.svg",
     label: "Schedule a meeting",
     callback: openUrl("https://meeting.new"),
     title: "Google Calendar",
   },
   createslides: {
-    commands: ["create-slides", "slides"],
+    commands: ["create-slides", "slides", "google slides"],
     icon: "chrome://browser/content/urlbar/quickactions/createslides.svg",
     label: "Create Google slides",
     callback: openUrl("https://slides.new"),
     title: "Google Slides",
   },
   createsheet: {
-    commands: ["create-sheet", "spreadsheet", "sheet"],
+    commands: ["create-sheet", "spreadsheet", "sheet", "google sheets"],
     icon: "chrome://browser/content/urlbar/quickactions/createsheet.svg",
     label: "Create a Google Sheet",
     callback: openUrl("https://sheets.new"),
     title: "Google Sheets",
   },
   createdoc: {
-    commands: ["create-doc", "document"],
+    commands: ["create-doc", "document", "google docs"],
     icon: "chrome://browser/content/urlbar/quickactions/createdoc.svg",
     label: "Create a Google doc",
     callback: openUrl("https://docs.new"),
