@@ -545,6 +545,9 @@ urlbar-group-firefox-suggest =
 urlbar-group-recent-searches =
   .label = Recent Searches
 
+urlbar-group-quickactions =
+  .label = Quick Actions
+
 # A label shown above the search suggestions group in the urlbar results. It
 # should use title case.
 # Variables

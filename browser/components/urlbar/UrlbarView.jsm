@@ -1760,6 +1760,11 @@ class UrlbarView {
             };
           }
           break;
+          case UrlbarUtils.RESULT_TYPE.DYNAMIC:
+            if (row.result.providerName == "quickActions") {
+              return { id: "urlbar-group-quickactions" };
+            }
+            break;
       }
     }
     return null;
