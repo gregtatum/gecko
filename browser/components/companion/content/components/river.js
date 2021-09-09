@@ -182,7 +182,7 @@ export default class River extends MozLitElement {
               <view-group
                 exportparts="domain, history"
                 ?active=${viewGroup.includes(this.activeView)}
-                .views=${viewGroup}
+                .views=${[...viewGroup]}
                 .activeView=${this.activeView}
               ></view-group>
             `
