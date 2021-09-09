@@ -325,7 +325,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
    *       is done searching AND returning results.
    */
   async startQuery(queryContext, addCallback) {
-    let results = this._tree.get(queryContext.searchString);
+    let results = this._tree.get(queryContext.searchString.toLowerCase());
     if (!results) {
       return;
     }
