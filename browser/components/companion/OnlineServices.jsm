@@ -19,7 +19,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   OAuth2: "resource:///modules/OAuth2.jsm",
   Services: "resource://gre/modules/Services.jsm",
-  UtilityOverlay: "resource:///modules/UtilityOverlay.jsm",
   setInterval: "resource://gre/modules/Timer.jsm",
 });
 
@@ -65,9 +64,8 @@ async function openLink(url) {
     win.switchToTabHavingURI(url, true, {
       ignoreFragment: true,
     });
+    win.openTrustedLinkIn(url.href, "tab");
   }
-
-  UtilityOverlay.openTrustedLinkIn(url.href, "tab");
 }
 
 var nextServiceId = 0;
@@ -355,44 +353,6 @@ class GoogleService {
         messages.push(result);
       }
     }
-    return messages;
-  }
-
-  async getUnreadEmailAtom() {
-    let response = await fetch("https://mail.google.com/mail/u/0/feed/atom");
-
-    if (!response.ok) {
-      if (response.status == 403) {
-        // Atom feed won't work unless we've navigated to the inbox
-        UtilityOverlay.openTrustedLinkIn(
-          "https://mail.google.com/mail/u/0/ =",
-          "tab"
-        );
-        // Should set a timer to recheck mail
-        return [];
-      }
-      throw new Error(response.statusText);
-    }
-
-    let results = await response.text();
-
-    let doc = new DOMParser().parseFromString(results, "text/xml");
-
-    let entries = doc.querySelectorAll("entry");
-
-    let messages = [];
-
-    for (let entry of entries) {
-      let message = {};
-      message.subject = entry.querySelector("title").textContent;
-      message.from = `${entry.querySelector("author > name").textContent} <${
-        entry.querySelector("author > email").textContent
-      }>`;
-      message.url = entry.querySelector("link").getAttribute("href");
-      message.date = new Date(entry.querySelector("issued").textContent);
-      messages.push(message);
-    }
-
     return messages;
   }
 
