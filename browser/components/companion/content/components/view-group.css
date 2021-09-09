@@ -4,7 +4,6 @@
 
 .view-el {
   display: flex;
-  -moz-window-dragging: no-drag;
   align-items: center;
   justify-content: start;
 }
