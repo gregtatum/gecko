@@ -139,6 +139,7 @@ set-as-my-default-browser =
     .label = Make Default…
     .accesskey = D
 
+<<<<<<< working copy
 preferences-pane-simple-title = Settings
 preferences-quick-setup-header = Quick set-up
 preferences-primary-browser-header = Primary browser
@@ -184,8 +185,8 @@ preferences-services-devices-label =
        *[other] You have { $deviceCount } devices connected
     }
 
-startup-restore-previous-session =
-    .label = Restore previous session
+startup-restore-windows-and-tabs =
+    .label = Open previous windows and tabs
     .accesskey = s
 
 startup-restore-warn-on-quit =
@@ -204,9 +205,18 @@ open-new-link-as-tabs =
     .label = Open links in tabs instead of new windows
     .accesskey = w
 
-warn-on-close-multiple-tabs =
-    .label = Warn you when closing multiple tabs
+confirm-on-close-multiple-tabs =
+    .label = Confirm before closing multiple tabs
     .accesskey = m
+
+# This string is used for the confirm before quitting preference.
+# Variables:
+#   $quitKey (String) - the quit keyboard shortcut, and formatted
+#                       in the same manner as it would appear,
+#                       for example, in the File menu.
+confirm-on-quit-with-key =
+    .label = Confirm before quitting with { $quitKey }
+    .accesskey = b
 
 warn-on-open-many-tabs =
     .label = Warn you when opening multiple tabs might slow down { -brand-short-name }

@@ -556,6 +556,13 @@ static void WebRenderBatchingPrefChangeCallback(const char* aPrefName, void*) {
   gfx::gfxVars::SetWebRenderBatchingLookback(count);
 }
 
+static void WebRenderBlobTileSizePrefChangeCallback(const char* aPrefName,
+                                                    void*) {
+  uint32_t tileSize = Preferences::GetUint(
+      StaticPrefs::GetPrefName_gfx_webrender_blob_tile_size(), 256);
+  gfx::gfxVars::SetWebRenderBlobTileSize(tileSize);
+}
+
 static uint32_t GetSkiaGlyphCacheSize() {
   // Only increase font cache size on non-android to save memory.
 #if !defined(MOZ_WIDGET_ANDROID)
@@ -1272,6 +1279,10 @@ void gfxPlatform::ShutdownLayersIPC() {
                                       WR_DEBUG_PREF);
       Preferences::UnregisterCallback(WebRendeProfilerUIPrefChangeCallback,
                                       "gfx.webrender.debug.profiler-ui");
+      Preferences::UnregisterCallback(
+          WebRenderBlobTileSizePrefChangeCallback,
+          nsDependentCString(
+              StaticPrefs::GetPrefName_gfx_webrender_blob_tile_size()));
     }
 
   } else {
@@ -1780,19 +1791,23 @@ bool gfxPlatform::IsFontFormatSupported(uint32_t aFormatFlags) {
 }
 
 gfxFontGroup* gfxPlatform::CreateFontGroup(
-    const StyleFontFamilyList& aFontFamilyList, const gfxFontStyle* aStyle,
-    nsAtom* aLanguage, bool aExplicitLanguage, gfxTextPerfMetrics* aTextPerf,
-    gfxUserFontSet* aUserFontSet, gfxFloat aDevToCssSize) const {
-  return new gfxFontGroup(aFontFamilyList, aStyle, aLanguage, aExplicitLanguage,
-                          aTextPerf, aUserFontSet, aDevToCssSize);
+    nsPresContext* aPresContext, const StyleFontFamilyList& aFontFamilyList,
+    const gfxFontStyle* aStyle, nsAtom* aLanguage, bool aExplicitLanguage,
+    gfxTextPerfMetrics* aTextPerf, gfxUserFontSet* aUserFontSet,
+    gfxFloat aDevToCssSize) const {
+  return new gfxFontGroup(aPresContext, aFontFamilyList, aStyle, aLanguage,
+                          aExplicitLanguage, aTextPerf, aUserFontSet,
+                          aDevToCssSize);
 }
 
-gfxFontEntry* gfxPlatform::LookupLocalFont(const nsACString& aFontName,
+gfxFontEntry* gfxPlatform::LookupLocalFont(nsPresContext* aPresContext,
+                                           const nsACString& aFontName,
                                            WeightRange aWeightForEntry,
                                            StretchRange aStretchForEntry,
                                            SlantStyleRange aStyleForEntry) {
   return gfxPlatformFontList::PlatformFontList()->LookupLocalFont(
-      aFontName, aWeightForEntry, aStretchForEntry, aStyleForEntry);
+      aPresContext, aFontName, aWeightForEntry, aStretchForEntry,
+      aStyleForEntry);
 }
 
 gfxFontEntry* gfxPlatform::MakePlatformFont(const nsACString& aFontName,
@@ -2606,6 +2621,11 @@ void gfxPlatform::InitWebRenderConfig() {
         WebRenderBatchingPrefChangeCallback,
         nsDependentCString(
             StaticPrefs::GetPrefName_gfx_webrender_batching_lookback()));
+
+    Preferences::RegisterCallbackAndCall(
+        WebRenderBlobTileSizePrefChangeCallback,
+        nsDependentCString(
+            StaticPrefs::GetPrefName_gfx_webrender_blob_tile_size()));
 
     if (WebRenderResourcePathOverride()) {
       CrashReporter::AnnotateCrashReport(
