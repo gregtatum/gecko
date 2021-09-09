@@ -3330,15 +3330,24 @@ BrowserGlue.prototype = {
 
     if (currentVersion < 1) {
       // MR2-306: Force light theme until dark theme is supported
-      let themesPromise = AddonManager.getAddonsByTypes(["theme"]);
-      Promise.resolve(themesPromise).then(async themes => {
-        let theme = themes.find(
-          t => t.id == "firefox-compact-light@mozilla.org"
+      try {
+        AddonManager.getAddonsByTypes(["theme"]).then(async themes => {
+          let theme = themes.find(
+            t => t.id == "firefox-compact-light@mozilla.org"
+          );
+          if (theme) {
+            await theme.enable();
+          }
+        });
+      } catch (e) {
+        // Occurs in xpcshell test runs.
+        let env = Cc["@mozilla.org/process/environment;1"].getService(
+          Ci.nsIEnvironment
         );
-        if (theme) {
-          await theme.enable();
+        if (!env.exists("XPCSHELL_TEST_PROFILE_DIR")) {
+          throw e;
         }
-      });
+      }
     }
 
     Services.prefs.setIntPref(prefPineBuildUIVersion, VERSION);
