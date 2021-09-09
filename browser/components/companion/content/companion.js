@@ -13,16 +13,6 @@ import {
 import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
-function toggleSettings() {
-  let settings = document.getElementById("settings");
-  if (settings.hasAttribute("hidden")) {
-    settings.removeAttribute("hidden");
-  } else {
-    settings.setAttribute("hidden", "true");
-  }
-}
-window.addEventListener("Companion:ToggleSettings", toggleSettings);
-
 // Helper to open a URL in the main browser pane.
 window.openUrl = url => {
   window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", { url });

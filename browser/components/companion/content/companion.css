@@ -156,29 +156,6 @@ h2 {
   display: none;
 }
 
-#settings {
-  padding: 16px;
-  position: absolute;
-  z-index: 999;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--in-content-page-background);
-  overflow-y: scroll;
-}
-
-#sliders {
-  display: grid;
-  grid-template-columns: max-content max-content max-content;
-  justify-content: center;
-  gap: 16px;
-}
-
-#settings label input {
-  vertical-align: middle;
-}
-
 [hidden] {
   display: none !important;
 }
