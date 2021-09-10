@@ -382,3 +382,7 @@
 .browser-toolbar:not(.titlebar-color) {
   --toolbar-bgcolor: white;
 }
+
+#appcontent {
+  background-color: #F9F9FB;
+}

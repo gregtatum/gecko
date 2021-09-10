@@ -41,6 +41,15 @@ function maybeInitializeUI() {
     return;
   }
 
+  if (Services.prefs.getBoolPref("browser.pinebuild.sessionSetAside")) {
+    let setAsideButton = document.getElementById("debug-session-change-button");
+    setAsideButton.removeAttribute("hidden");
+    setAsideButton.addEventListener("click", () => {
+      window.CompanionUtils.sendAsyncMessage("Companion:ChangeSession", {
+        newSessionId: null, // TODO
+      });
+    });
+  }
   document
     .getElementById("events-placeholder")
     .appendChild(new CalendarEventList());

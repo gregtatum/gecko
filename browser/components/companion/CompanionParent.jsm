@@ -781,6 +781,12 @@ class CompanionParent extends JSWindowActorParent {
         let { url } = message.data;
         return OnlineServices.getDocumentTitle(url);
       }
+      case "Companion:ChangeSession": {
+        let { newSessionId } = message.data;
+        let win = this.browsingContext.topChromeWindow;
+        win.gBrowser.changePinebuildSession(newSessionId);
+        break;
+      }
     }
     return null;
   }

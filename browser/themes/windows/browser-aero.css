@@ -297,8 +297,10 @@
     color: white;
   }
 
-  #appcontent:not(:-moz-lwtheme) {
-    background-color: -moz-dialog;
+  @supports not(-moz-bool-pref("browser.pinebuild.styleoverrides")) {
+    #appcontent:not(:-moz-lwtheme) {
+      background-color: -moz-dialog;
+    }
   }
 }
 

@@ -2623,6 +2623,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.companion.snapshots", false);
   pref("browser.tabs.openNewTabForMostNavigations", false);
   pref("browser.pinebuild.animateViewTransitions", false);
+  pref("browser.pinebuild.sessionSetAside", false);
   pref("browser.places.perwindowsessions.enabled", false);
   pref("browser.river.maxGroups", 5);
   pref("browser.river.pinning.enabled", false);

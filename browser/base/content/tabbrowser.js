@@ -6126,6 +6126,30 @@
         }
       }
     },
+
+    changePinebuildSession(aNewSessionId) {
+      const sessionChangePreSwipeTime = 750;
+      const sessionChangeSwipeAnimationTime = 400;
+      const sessionChangePostSwipeTime = 750;
+      let tabpanels = this.tabpanels;
+
+      function delayDOMChange(cb, timeout) {
+        setTimeout(function() {
+          requestAnimationFrame(cb);
+        }, timeout);
+      }
+
+      tabpanels.setAttribute("session-change", "1");
+      delayDOMChange(function() {
+        tabpanels.setAttribute("session-change", "2");
+        delayDOMChange(function() {
+          tabpanels.setAttribute("session-change", "3");
+          delayDOMChange(function() {
+            tabpanels.removeAttribute("session-change");
+          }, sessionChangePostSwipeTime);
+        }, sessionChangeSwipeAnimationTime);
+      }, sessionChangePreSwipeTime);
+    },
   };
 
   /**
