@@ -99,7 +99,8 @@ class GoogleService {
   }
 
   async connect() {
-    // This will force login if not already logged in.
+    // This will force a new OAuth login if not logged in or the token
+    // has expired.
     let token = await this.getToken();
     return token;
   }
@@ -107,7 +108,7 @@ class GoogleService {
   async disconnect() {
     let token = await this.getToken();
 
-    // revoke access for the current stoken stored
+    // Revoke access for the currently stored token.
     let apiTarget = new URL(
       `https://oauth2.googleapis.com/revoke?token=${token}`
     );
@@ -465,35 +466,18 @@ class MicrosoftService {
   }
 
   async connect() {
-    // This will force login if not already logged in.
+    // This will force a new OAuth login if not logged in or the token
+    // has expired.
     let token = await this.getToken();
     return token;
   }
 
   async disconnect() {
-    // Unfortunately none of the documented methods
-    // for revoking tokens are working with Microsoft,
-    // so I'm punting for now.
-    /*
-    let token = await this.getToken();
-
-    // revoke access for the current stoken stored
-    let apiTarget = new URL(
-      `https://graph.microsoft.com/v1.0/me/revokeSignInSessions`
-    );
-    let headers = {
-      Authorization: `Bearer ${token}`,
-    };
-
-    let response = await fetch(apiTarget, {
-      method: "POST",
-      headers,
-    });
-
-    if (!response.ok) {
-      throw new Error(response.statusText);
-    }
-    */
+    // Unfortunately none of the documented methods for revoking tokens are
+    // working with Microsoft. Docs appear to be here if someone wants to try.
+    // https://docs.microsoft.com/en-us/graph/api/user-revokesigninsessions?view=graph-rest-1.0&tabs=http
+    //
+    // There was some sample code here before, check the log if you want it.
   }
 
   async getToken() {

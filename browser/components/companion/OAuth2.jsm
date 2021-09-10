@@ -30,6 +30,10 @@ const TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY =
 
 XPCOMUtils.defineLazyGlobalGetters(this, ["XMLHttpRequest"]);
 
+// This is used for Microsoft OAuth integration. Microsoft requires the Origin
+// header to be correct, or to be missing. There's no way to disable the Origin
+// header using `fetch()` (at best it can be empty, which doesn't work), so we
+// use XHR instead.
 function promiseXHR(data) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest({ mozAnon: true, mozSystem: true });
@@ -63,6 +67,8 @@ const OAuthConnect = {
         throw new Error("No current browser window");
       }
 
+      // This will be passed in the state parameter to identify this request
+      // when the user returns from the OAuth flow.
       let id = uuidGenerator.generateUUID().toString();
 
       let params = new URLSearchParams();
@@ -123,6 +129,11 @@ const OAuthConnect = {
     });
   },
 
+  /**
+   * Listen to nsIWebProgress events on the OAuth flow tab. Once there is a
+   * request that has a `state` parameter that we have used in the OAuth flow
+   * the request will be treated as the user returning from their OAuth flow.
+   */
   onStateChange(progress, request, flags) {
     if (
       (progress.isTopLevel &&
@@ -156,6 +167,8 @@ const OAuthConnect = {
       let { sharedData } = Services.ppmm;
       sharedData.get(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY).delete(browserId);
 
+      // Reach out to the OAuth provider's server to turn our "code" into an
+      // authenticated access token.
       let code = params.get("code");
       oauth.requestAccessToken(code).then(resolve, reject);
     }
@@ -167,6 +180,10 @@ const OAuthConnect = {
   ]),
 };
 
+/**
+ * This class is imported with modifications from the Thunderbird codebase.
+ * https://searchfox.org/comm-central/source/mailnews/base/src/OAuth2.jsm
+ */
 class OAuth2 {
   /**
    * Constructor for the OAuth2 object.

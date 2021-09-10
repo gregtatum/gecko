@@ -30,7 +30,7 @@ function processLink(url, text) {
   if (linksToIgnore.includes(url.href)) {
     return null;
   }
-  // Tag conferencing URLs in case we need them,but just return.
+  // Tag conferencing URLs in case we need them, but just return.
   if (conferencingInfo.find(info => url.host.endsWith(info.domain))) {
     return {
       url: url.href,
@@ -46,6 +46,16 @@ function processLink(url, text) {
   return link;
 }
 
+/**
+ * Parse any links out of a service-specific calendar event.
+ *
+ * @param {Object} result
+ *     This is the service-specific calendar event. Expected to come from the
+ *     Microsoft or Google API directly and unmodified.
+ * @returns {Array<Object>}
+ *     Returns an array of links with keys `url`, `text` and `type`. Only `url`
+ *     is required, `type` is undefined or "conferencing" for video call links.
+ */
 function getLinkInfo(result) {
   let doc;
   let links = [];
@@ -203,7 +213,7 @@ function getConferenceInfo(result, links) {
       // Location didn't contain a URL
     }
   }
-  // If we didn't get any conferencing data in servert response, see if there
+  // If we didn't get any conferencing data in server response, see if there
   // is a link in the document that has conferencing. We grab the first one.
   let conferenceLink = links.find(link => link.type == "conferencing");
   if (conferenceLink) {
