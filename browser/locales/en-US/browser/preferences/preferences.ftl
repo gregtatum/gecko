@@ -139,7 +139,6 @@ set-as-my-default-browser =
     .label = Make Default…
     .accesskey = D
 
-<<<<<<< working copy
 preferences-pane-simple-title = Settings
 preferences-quick-setup-header = Quick set-up
 preferences-primary-browser-header = Primary browser
