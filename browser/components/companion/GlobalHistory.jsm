@@ -29,6 +29,16 @@ ChromeUtils.defineModuleGetter(
 );
 
 const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
+/**
+ * @typedef {object} ViewHistoryData
+ *   An object containing info about a given view's history entry.
+ * @property {Browser|null} browser
+ *   The browser the view is displayed in.
+ * @property {number|null} historyIndex
+ *   Index of the view's history entry in the browser's session history.
+ * @property {nsISHistory|null} historyEntry
+ *   A view's nsISHistory entry.
+ */
 
 // Set to true if we register the TopLevelNavigationDelegate JSWindowActor.
 // We record this at the module level so that subsequent browser window
@@ -36,21 +46,42 @@ const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
 // exception).
 let gTopLevelNavigationDelegateRegistered = false;
 
-function requestedIndex(sessionHistory) {
+/**
+ * This function returns the index of the nsISHEntry for the document
+ * currently loaded in the sessionHistory. If a load is in progress, it
+ * returns the index of the nsISHEntry for the loading document.
+ *
+ * @param {nsISHistory} sessionHistory the nsISHistory to check
+ * @returns {number} The index of the loaded or loading document
+ *   nsISHEntry
+ */
+function getCurrentIndex(sessionHistory) {
   return sessionHistory.requestedIndex == -1
     ? sessionHistory.index
     : sessionHistory.requestedIndex;
 }
 
-function currentEntry(browser) {
+/**
+ * This function returns the nsISHEntry for the currently loaded
+ * or loading document in a browser.
+ * @param {Browser} browser
+ */
+function getCurrentEntry(browser) {
   let { sessionHistory } = browser.browsingContext;
-  let index = requestedIndex(sessionHistory);
+  let index = getCurrentIndex(sessionHistory);
   if (index < 0) {
     return null;
   }
 
   return sessionHistory.getEntryAtIndex(index);
 }
+
+/**
+ * @param {DOMWindow} window
+ * @param {View} view
+ *
+ * @returns { ViewHistoryData }
+ */
 
 function getBrowserHistoryForView(window, view) {
   let browser = BrowsingContext.get(view.browserId)?.embedderElement;
@@ -285,7 +316,7 @@ class InternalView {
 
     if (browser && historyIndex !== null) {
       if (
-        requestedIndex(browser.browsingContext.sessionHistory) == historyIndex
+        getCurrentIndex(browser.browsingContext.sessionHistory) == historyIndex
       ) {
         return "open";
       }
@@ -428,12 +459,12 @@ class BrowserListener {
   async OnHistoryReplaceEntry() {
     let { sessionHistory } = this.#browser.browsingContext;
     let previousEntry = sessionHistory.getEntryAtIndex(
-      requestedIndex(sessionHistory)
+      getCurrentIndex(sessionHistory)
     );
 
     await Promise.resolve();
 
-    let newEntry = currentEntry(this.#browser);
+    let newEntry = getCurrentEntry(this.#browser);
 
     this.#globalHistory._onBrowserReplace(
       this.#browser,
@@ -573,7 +604,7 @@ class GlobalHistory extends EventTarget {
   }
 
   onSecurityChange(browser, webProgress, request, status) {
-    let entry = currentEntry(browser);
+    let entry = getCurrentEntry(browser);
     if (!entry) {
       return;
     }
@@ -826,7 +857,7 @@ class GlobalHistory extends EventTarget {
    * Called when the document in a browser has changed title.
    */
   _onNewTitle(browser) {
-    let entry = currentEntry(browser);
+    let entry = getCurrentEntry(browser);
     let internalView = this.#historyViews.get(entry.ID);
     if (!internalView) {
       return;
@@ -840,7 +871,7 @@ class GlobalHistory extends EventTarget {
    * Called when the document in a browser has changed its favicon.
    */
   _onNewIcon(browser) {
-    let entry = currentEntry(browser);
+    let entry = getCurrentEntry(browser);
     let internalView = this.#historyViews.get(entry.ID);
     if (!internalView) {
       return;
@@ -856,7 +887,7 @@ class GlobalHistory extends EventTarget {
    * @param {Browser} browser
    * @param {nsISHEntry} newEntry
    */
-  _onBrowserNavigate(browser, newEntry = currentEntry(browser)) {
+  _onBrowserNavigate(browser, newEntry = getCurrentEntry(browser)) {
     if (!newEntry) {
       // Happens before anything has been loaded into the browser.
       return;
@@ -1087,7 +1118,7 @@ class GlobalHistory extends EventTarget {
       let sHistory = browser.browsingContext.sessionHistory;
 
       // Navigate if necessary.
-      let currentIndex = requestedIndex(sHistory);
+      let currentIndex = getCurrentIndex(sHistory);
       if (currentIndex != historyIndex) {
         browser.gotoIndex(historyIndex);
       }
