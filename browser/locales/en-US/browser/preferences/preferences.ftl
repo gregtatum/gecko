@@ -657,11 +657,6 @@ home-prefs-content-description = Choose what content you want on your Firefox Ho
 
 home-prefs-search-header =
     .label = Web Search
-home-prefs-topsites-header =
-    .label = Top Sites
-home-prefs-topsites-description = The sites you visit most
-home-prefs-topsites-by-option-sponsored =
-    .label = Sponsored Top Sites
 home-prefs-shortcuts-header =
     .label = Shortcuts
 home-prefs-shortcuts-description = Sites you save or visit
@@ -673,7 +668,6 @@ home-prefs-shortcuts-by-option-sponsored =
 
 home-prefs-recommended-by-header =
     .label = Recommended by { $provider }
-home-prefs-recommended-by-description-update = Exceptional content from across the web, curated by { $provider }
 home-prefs-recommended-by-description-new = Exceptional content curated by { $provider }, part of the { -brand-product-name } family
 
 ##
@@ -682,9 +676,6 @@ home-prefs-recommended-by-learn-more = How it works
 home-prefs-recommended-by-option-sponsored-stories =
     .label = Sponsored Stories
 
-home-prefs-highlights-header =
-    .label = Highlights
-home-prefs-highlights-description = A selection of sites that you’ve saved or visited
 home-prefs-highlights-option-visited-pages =
     .label = Visited Pages
 home-prefs-highlights-options-bookmarks =
@@ -704,7 +695,6 @@ home-prefs-recent-activity-description = A selection of recent sites and content
 # and non-essential but also not entirely trivial and useless.
 home-prefs-snippets-header =
     .label = Snippets
-home-prefs-snippets-description = Updates from { -vendor-short-name } and { -brand-product-name }
 
 home-prefs-snippets-description-new = Tips and news from { -vendor-short-name } and { -brand-product-name }
 

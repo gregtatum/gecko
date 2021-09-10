@@ -4969,11 +4969,6 @@
   value: 16
   mirror: once
 
-- name: gfx.logging.painted-pixel-count.enabled
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
 # The maximums here are quite conservative, we can tighten them if problems show up.
 - name: gfx.logging.texture-usage.enabled
   type: bool
@@ -6268,16 +6263,6 @@
   value: false
   mirror: always
 
-- name: layers.acceleration.draw-fps.print-histogram
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
-- name: layers.acceleration.draw-fps.write-to-file
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
 # Whether to force acceleration on, ignoring blacklists.
 
 # bug 838603 -- on Android, accidentally blacklisting OpenGL layers
@@ -6310,11 +6295,6 @@
   type: RelaxedAtomicBool
   value: false
   mirror: always
-
-- name: layers.bufferrotation.enabled
-  type: bool
-  value: true
-  mirror: once
 
 - name: layers.child-process-shutdown
   type: RelaxedAtomicBool
@@ -6355,71 +6335,6 @@
 #endif
   mirror: always
 
-- name: layers.draw-bigimage-borders
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
-- name: layers.draw-borders
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
-- name: layers.draw-tile-borders
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
-- name: layers.draw-layer-info
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
-- name: layers.dump
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
-# If we're dumping layers, also dump the texture data
-- name: layers.dump-texture
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
-#ifdef MOZ_DUMP_PAINTING
--   name: layers.dump-decision
-    type: RelaxedAtomicBool
-    value: false
-    mirror: always
-#endif
-
-- name: layers.dump-client-layers
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
-- name: layers.dump-host-layers
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
-# 0 is "no change" for contrast, positive values increase it, negative values
-# decrease it until we hit mid gray at -1 contrast, after that it gets weird.
-- name: layers.effect.contrast
-  type: AtomicFloat
-  value: 0.0f
-  mirror: always
-
-- name: layers.effect.grayscale
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
-- name: layers.effect.invert
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
 - name: layers.enable-tiles
   type: bool
 #if defined(XP_MACOSX) || defined (XP_OPENBSD)
@@ -6428,11 +6343,6 @@
   value: false
 #endif
   mirror: once
-
-- name: layers.flash-borders
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
 
 # Force all possible layers to be always active layers.
 - name: layers.force-active
@@ -6729,12 +6639,6 @@
   value: false
   mirror: always
 
-# Whether we should layerize all animated images (if otherwise possible).
-- name: layout.animated-image-layers.enabled
-  type: bool
-  value: false
-  mirror: always
-
 # One of several prefs affecting the maximum area to pre-render when animating
 # a large element on the compositor.
 # This pref enables transform (and transform like properties) animations on a
@@ -6789,7 +6693,7 @@
 # Whether @layer is enabled
 - name: layout.css.cascade-layers.enabled
   type: RelaxedAtomicBool
-  value: false
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
   rust: true
 
@@ -7465,11 +7369,6 @@
   value: 64
   mirror: always
 
-- name: layout.paint_rects_separately
-  type: bool
-  value: true
-  mirror: once
-
 # On Android, don't synth mouse move events after scrolling, as they cause
 # unexpected user-visible behaviour. Can remove this after bug 1633450 is
 # satisfactorily resolved.
@@ -7503,11 +7402,6 @@
 - name: layout.show_previous_page
   type: bool
   value: true
-  mirror: always
-
-- name: layout.smaller-painted-layers
-  type: RelaxedAtomicBool
-  value: false
   mirror: always
 
 # Pref to stop overlay scrollbars from fading out, for testing purposes.
