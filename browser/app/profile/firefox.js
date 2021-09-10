@@ -2621,7 +2621,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.companion.globalhistorydebugging", false);
   pref("browser.companion.pageaction.enabled", false);
   pref("browser.companion.snapshots", false);
-  pref("browser.tabs.openNewTabForMostNavigations", true);
+  pref("browser.tabs.openNewTabForMostNavigations", false);
   pref("browser.pinebuild.animateViewTransitions", false);
   pref("browser.places.perwindowsessions.enabled", false);
   pref("browser.river.maxGroups", 5);
