@@ -3142,7 +3142,10 @@ BrowserGlue.prototype = {
         if (bookmarksUrl) {
           // Import from bookmarks.html file.
           try {
-            if (Services.policies.isAllowed("defaultBookmarks")) {
+            if (
+              Services.policies.isAllowed("defaultBookmarks") &&
+              !(AppConstants.PINEBUILD && restoreDefaultBookmarks)
+            ) {
               await BookmarkHTMLUtils.importFromURL(bookmarksUrl, {
                 replace: true,
                 source: PlacesUtils.bookmarks.SOURCES.RESTORE_ON_STARTUP,

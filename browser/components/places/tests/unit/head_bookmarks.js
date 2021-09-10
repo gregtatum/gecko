@@ -36,8 +36,8 @@ updateAppInfo({
 });
 
 // Default bookmarks constants.
-const DEFAULT_BOOKMARKS_ON_TOOLBAR = 1;
-const DEFAULT_BOOKMARKS_ON_MENU = 1;
+const DEFAULT_BOOKMARKS_ON_TOOLBAR = AppConstants.PINEBUILD ? 0 : 1;
+const DEFAULT_BOOKMARKS_ON_MENU = AppConstants.PINEBUILD ? 0 : 1;
 
 function checkItemHasAnnotation(guid, name) {
   return PlacesUtils.promiseItemId(guid).then(id => {
