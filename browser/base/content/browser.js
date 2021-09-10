@@ -3490,6 +3490,12 @@ function BrowserFullScreen() {
   window.fullScreen = !window.fullScreen || BrowserHandler.kiosk;
 }
 
+function ToggleCompanionSettings() {
+  const browserWindow = Services.wm.getMostRecentBrowserWindow();
+  const companion = browserWindow.document.getElementById("companion-browser");
+  companion.sendMessageToActor("Companion:ToggleSettings", {}, "Companion");
+}
+
 function BrowserReloadWithFlags(reloadFlags) {
   let unchangedRemoteness = [];
 

@@ -151,6 +151,13 @@
                      key="key_preferencesCmdMac"
 #endif
                      oncommand="openPreferences()"/>
+#ifdef PINEBUILD
+      <toolbarbutton id="companion-settings-button"
+                     label="Companion Settings"
+                     class="subviewbutton"
+                     oncommand="ToggleCompanionSettings()"
+                     hidden="true"/>
+#endif
 
 #ifndef PINEBUILD
       <toolbarbutton id="appMenu-more-button2"
