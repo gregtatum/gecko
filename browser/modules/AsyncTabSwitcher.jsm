@@ -351,6 +351,30 @@ class AsyncTabSwitcher {
     this.tabbrowser.dispatchEvent(event);
   }
 
+  setViewTransitionAnimationAttributes(showPanel) {
+    // This is gated behind PINEBUILD as gGlobalHistory won't exist otherwise.
+    if (
+      AppConstants.PINEBUILD &&
+      this.window.gGlobalHistory.navigatingForward
+    ) {
+      showPanel.setAttribute("was-forward", "true");
+    } else {
+      showPanel.removeAttribute("was-forward");
+    }
+
+    // We just set the was-forward attribute, which will control whether we
+    // animate in from the left or the right. However, we need to flush so
+    // that gets picked up so that we can remove the "deactivated" attribute
+    // and let it animate in.
+    this.window
+      .promiseDocumentFlushed(() => {})
+      .then(() => {
+        this.window.requestAnimationFrame(() => {
+          showPanel.removeAttribute("deactivated");
+        });
+      });
+  }
+
   // This function is called after all the main state changes to
   // make sure we display the right tab.
   updateDisplay() {
@@ -465,7 +489,9 @@ class AsyncTabSwitcher {
 
       let tabpanels = this.tabbrowser.tabpanels;
       let showPanel = this.tabbrowser.tabContainer.getRelatedElement(showTab);
-      showPanel.removeAttribute("deactivated");
+
+      this.setViewTransitionAnimationAttributes(showPanel);
+
       let index = Array.prototype.indexOf.call(tabpanels.children, showPanel);
       if (index != -1) {
         this.log(`Switch to tab ${index} - ${this.tinfo(showTab)}`);

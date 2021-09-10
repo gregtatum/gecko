@@ -74,7 +74,12 @@
 }
 
 #tabbrowser-tabpanels[multideck] > hbox[deactivated] {
+  transition-property: none;
   transform: translateX(-100%);
+}
+
+#tabbrowser-tabpanels[multideck] > hbox[deactivated][was-forward] {
+  transform: translateX(100%);
 }
 
 #tabbrowser-tabpanels[multideck] > hbox {

@@ -542,6 +542,11 @@ class GlobalHistory extends EventTarget {
   #windowRestoring = false;
 
   /**
+   * True if our most recent navigation was forward in the global history.
+   */
+  #navigatingForward = false;
+
+  /**
    * @param {DOMWindow} window
    *   The top level window to track history for.
    */
@@ -1104,6 +1109,8 @@ class GlobalHistory extends EventTarget {
       throw new Error("Unknown View.");
     }
 
+    this.#navigatingForward = pos > this.#currentIndex;
+
     if (this.#currentIndex == pos) {
       // Nothing to do.
       return;
@@ -1266,6 +1273,14 @@ class GlobalHistory extends EventTarget {
 
     this.setView(this.#viewStack[this.#currentIndex + 1].view);
     return true;
+  }
+
+  /**
+   * True if the most recent navigation was forward in the global history.
+   * @returns {bool}
+   */
+  get navigatingForward() {
+    return !!this.#navigatingForward;
   }
 }
 
