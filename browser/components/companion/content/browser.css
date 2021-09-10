@@ -73,7 +73,7 @@
   min-width: 350px;
   max-width: 450px;
   transition-property: max-width;
-  transition-timing-function: ease-in;
+  transition-timing-function: var(--animation-timing-function);
   transition-duration: 0s;
 }
 
@@ -333,6 +333,19 @@
 
 /** END Page Info Panel **/
 
+#urlbar-page-overlay {
+  transition-property: background-color;
+  transition-timing-function: var(--animation-timing-function);
+  transition-duration: 0s;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #urlbar-page-overlay {
+    transition-duration: 150ms;
+  }
+}
+
 #urlbar[breakout][breakout-extend] #urlbar-page-overlay {
   display: block;
   position: fixed;
@@ -340,8 +353,11 @@
   bottom: 0;
   right: 0;
   left: 0;
-  background:rgba(0, 0, 0, 0.1);
   z-index: -1;
+}
+
+#urlbar[breakout][breakout-extend][breakout-extend-animate] #urlbar-page-overlay {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 #urlbar[breakout][breakout-extend] {
