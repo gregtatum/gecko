@@ -538,6 +538,7 @@ input[name="password"] {
   flex-direction: column;
 }
 
+:host([data-is-new-login]) .remove-login-button-container,
 :host(:not(.in-companion)) .remove-login-button-container {
   display: none;
 }
