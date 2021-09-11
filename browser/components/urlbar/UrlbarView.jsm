@@ -2189,7 +2189,7 @@ class UrlbarView {
       );
     }
 
-    if (UrlbarPrefs.get("quicksuggest.enabled")) {
+    if (UrlbarPrefs.get("quickSuggestEnabled")) {
       idArgs.push({ id: "urlbar-result-action-sponsored" });
     }
 

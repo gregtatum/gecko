@@ -151,6 +151,13 @@ class HTMLEditUtils final {
   }
 
   static bool IsInlineStyle(nsINode* aNode);
+
+  /**
+   * IsDisplayOutsideInline() returns true if display-outside value is
+   * "inside".  This does NOT flush the layout.
+   */
+  static bool IsDisplayOutsideInline(const Element& aElement);
+
   /**
    * IsRemovableInlineStyleElement() returns true if aElement is an inline
    * element and can be removed or split to in order to modifying inline
@@ -383,6 +390,13 @@ class HTMLEditUtils final {
     }
     return !IsVisiblePreformattedNewLine(aPoint, aFollowingBlockElement);
   }
+
+  /**
+   * ShouldInsertLinefeedCharacter() returns true if the caller should insert
+   * a linefeed character instead of <br> element.
+   */
+  static bool ShouldInsertLinefeedCharacter(EditorDOMPoint& aPointToInsert,
+                                            const Element& aEditingHost);
 
   /**
    * IsEmptyNode() returns false if aNode has some visible content nodes,
