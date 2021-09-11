@@ -2933,7 +2933,7 @@ BrowserGlue.prototype = {
         title = gTabbrowserBundle.GetStringFromName("tabs.closeTabsTitle");
         title = PluralForm.get(pagecount, title).replace("#1", pagecount);
         buttonLabel = gTabbrowserBundle.GetStringFromName(
-          "tabs.closeTabsButton"
+          "tabs.closeButtonMultiple"
         );
       }
     }

@@ -683,6 +683,9 @@ class MOZ_RAII AutoCreatedBy {
 class MOZ_RAII AutoCreatedBy {
  public:
   inline AutoCreatedBy(AssemblerShared& ash, const char* who) {}
+  // A user-defined constructor is necessary to stop some compilers from
+  // complaining about unused variables.
+  inline ~AutoCreatedBy() {}
 };
 #endif
 
