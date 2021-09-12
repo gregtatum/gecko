@@ -18,13 +18,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
 });
 
-XPCOMUtils.defineLazyServiceGetter(
-  this,
-  "uuidGenerator",
-  "@mozilla.org/uuid-generator;1",
-  "nsIUUIDGenerator"
-);
-
 const TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY =
   "TopLevelNavigationDelegate:IgnoreList";
 
@@ -69,7 +62,7 @@ const OAuthConnect = {
 
       // This will be passed in the state parameter to identify this request
       // when the user returns from the OAuth flow.
-      let id = uuidGenerator.generateUUID().toString();
+      let id = Services.uuid.generateUUID().toString();
 
       let params = new URLSearchParams();
       params.set("client_id", oauth.clientId);
