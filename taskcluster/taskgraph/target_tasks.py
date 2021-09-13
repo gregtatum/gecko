@@ -79,6 +79,10 @@ def filter_out_devedition(task, parameters):
     return not task.attributes.get("shipping_product") == "devedition"
 
 
+def filter_out_pinebuild(task, parameters):
+    return not task.attributes.get("shipping_product") == "pinebuild"
+
+
 def filter_out_cron(task, parameters):
     """
     Filter out tasks that run via cron.
@@ -400,6 +404,7 @@ def target_tasks_try_auto(full_task_graph, parameters, graph_config):
         if standard_filter(t, parameters)
         and filter_out_shipping_phase(t, parameters)
         and filter_out_devedition(t, parameters)
+        and filter_out_pinebuild(t, parameters)
         and filter_by_uncommon_try_tasks(t.label)
         and filter_by_regex(t.label, include_regexes, mode="include")
         and filter_by_regex(t.label, exclude_regexes, mode="exclude")
@@ -418,6 +423,7 @@ def target_tasks_default(full_task_graph, parameters, graph_config):
         if standard_filter(t, parameters)
         and filter_out_shipping_phase(t, parameters)
         and filter_out_devedition(t, parameters)
+        and filter_out_pinebuild(t, parameters)
     ]
 
 
@@ -708,6 +714,9 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
             "linux64-shippable",
             "macosx64",
             "macosx64-shippable",
+            "win64-pinebuild",
+            "linux64-pinebuild",
+            "macosx64-pinebuild",
         ]:
             return False
 
@@ -1126,14 +1135,15 @@ def target_tasks_staging_release(full_task_graph, parameters, graph_config):
     """
 
     def filter(task):
+        platform = task.attributes.get("build_platform", "")
         if not task.attributes.get("shipping_product"):
             return False
         if parameters["release_type"].startswith(
             "esr"
         ) and "android" in task.attributes.get("build_platform", ""):
             return False
-        if parameters["release_type"] != "beta" and "devedition" in task.attributes.get(
-            "build_platform", ""
+        if parameters["release_type"] != "beta" and (
+            "devedition" in platform or "pinebuild" in platform
         ):
             return False
         if task.attributes.get("shipping_phase") == "build":

@@ -300,10 +300,10 @@ mochitest-browser-chrome-pinebuild:
     variants: []
     run-on-projects:
         by-test-platform:
-            windows.*-32(?:-shippable)(?:-qr)?/opt: ['pine']
-            windows10-64(?:-shippable)(?:-qr)?/opt: ['pine']
-            linux1804-64-(?:shippable)(?:-qr)?/opt: ['pine']
-            macosx.*64-shippable?/opt: ['pine']
+            windows.*-32(?:-shippable)(?:-pinebuild)(?:-qr)?/opt: ['pine']
+            windows10-64(?:-shippable)(?:-pinebuild)(?:-qr)?/opt: ['pine']
+            linux1804-64-(?:shippable)(?:-pinebuild)(?:-qr)?/opt: ['pine']
+            macosx.*64(?:-shippable)(?:-pinebuild)/opt: ['pine']
             default: []
     test-manifest-loader: null  # don't load tests in the taskgraph
     max-run-time: 3600
