@@ -608,6 +608,20 @@ class GlobalHistory extends EventTarget {
     this.#window.gBrowser.addTabsProgressListener(this);
   }
 
+  /**
+   * Clears all the current tabs, and ensures the history is blank.
+   */
+  reset() {
+    let newTab = this.#window.gBrowser.addTrustedTab(
+      this.#window.BROWSER_NEW_TAB_URL
+    );
+    this.#window.gBrowser.removeAllTabsBut(newTab, { animate: false });
+    this.#viewStack = [];
+    this.#historyViews.clear();
+    this.#currentIndex = null;
+    this.#notifyEvent("RiverRebuilt");
+  }
+
   onSecurityChange(browser, webProgress, request, status) {
     let entry = getCurrentEntry(browser);
     if (!entry) {

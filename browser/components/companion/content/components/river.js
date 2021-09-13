@@ -61,10 +61,6 @@ export default class River extends MozLitElement {
   }
 
   addViews(views) {
-    if (!views.length) {
-      return;
-    }
-
     if (this.#views.length) {
       this.#views = [...this.#views, ...views];
     } else {

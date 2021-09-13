@@ -3378,8 +3378,14 @@
     /**
      * In a multi-select context, all unpinned and unselected tabs are removed.
      * Otherwise all unpinned tabs except aTab are removed.
+     *
+     * @param   aTab
+     *          The tab we will skil removing
+     * @param   aParams
+     *          An optional set of parameters that will be passed to the
+     *          removeTabs function.
      */
-    removeAllTabsBut(aTab) {
+    removeAllTabsBut(aTab, aParams) {
       let tabsToRemove = [];
       if (aTab && aTab.multiselected) {
         tabsToRemove = this.visibleTabs.filter(
@@ -3400,7 +3406,7 @@
         return;
       }
 
-      this.removeTabs(tabsToRemove);
+      this.removeTabs(tabsToRemove, aParams);
     },
 
     removeMultiSelectedTabs() {
