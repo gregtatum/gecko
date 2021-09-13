@@ -28,6 +28,13 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/sessionstore/SessionHistory.jsm"
 );
 
+XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
+  return console.createInstance({
+    prefix: "GlobalHistory",
+    maxLogLevelPref: "browser.companion.globalhistorydebugging.logLevel",
+  });
+});
+
 const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
 /**
  * @typedef {object} ViewHistoryData
@@ -356,7 +363,7 @@ class GlobalHistoryEvent extends Event {
     super(type);
     this.#view = view;
     if (view && !(view instanceof View)) {
-      console.error("Emitting a global history event with a non-view", view);
+      logConsole.error("Emitting a global history event with a non-view", view);
     }
   }
 
@@ -667,7 +674,7 @@ class GlobalHistory extends EventTarget {
             listener
           );
         } catch (e) {
-          console.error("Failed to remove listener", e);
+          logConsole.error("Failed to remove listener", e);
         }
       }
     }
@@ -721,7 +728,7 @@ class GlobalHistory extends EventTarget {
     // Tabs are not yet functional so build a set of views from cached history state.
     let state = (stateStr && JSON.parse(stateStr)) || [];
     if (!state.length) {
-      console.error("No state to rebuild from.");
+      logConsole.error("No state to rebuild from.");
     }
 
     let missingIds = new Set();
@@ -751,7 +758,7 @@ class GlobalHistory extends EventTarget {
     for (let { id } of state) {
       let internalView = this.#historyViews.get(id);
       if (!internalView) {
-        console.warn("Missing history entry for river entry.");
+        logConsole.warn("Missing history entry for river entry.");
         continue;
       }
 
@@ -763,7 +770,7 @@ class GlobalHistory extends EventTarget {
     let selectedView = this.#historyViews.get(selectedEntry.ID);
 
     if (!selectedView) {
-      console.warn("Selected entry was not in state.");
+      logConsole.warn("Selected entry was not in state.");
       selectedView = new InternalView(this.#window, null, selectedEntry);
       this.#historyViews.set(selectedEntry.ID, selectedView);
 
@@ -812,7 +819,7 @@ class GlobalHistory extends EventTarget {
     try {
       browser.browsingContext.sessionHistory.addSHistoryListener(listener);
     } catch (e) {
-      console.error("Failed to add listener", e);
+      logConsole.error("Failed to add listener", e);
     }
   }
 
@@ -947,7 +954,7 @@ class GlobalHistory extends EventTarget {
     }
 
     if (!internalView) {
-      SessionManager.register(this.#window).catch(console.error);
+      SessionManager.register(this.#window).catch(logConsole.error);
 
       // This is a new view.
       internalView = new InternalView(this.#window, browser, newEntry);
@@ -967,7 +974,7 @@ class GlobalHistory extends EventTarget {
       }
 
       if (pos < 0) {
-        console.warn("Navigated to a view not in the existing stack.");
+        logConsole.warn("Navigated to a view not in the existing stack.");
         this.#currentIndex = this.#viewStack.length;
         this.#viewStack.push(internalView);
 
@@ -1169,7 +1176,7 @@ class GlobalHistory extends EventTarget {
 
     // Either the browser is gone or the history entry is gone and for some reason we have no cache
     // of the session.
-    console.warn("Recreating a view with no cached entry.");
+    logConsole.warn("Recreating a view with no cached entry.");
     this.#pendingView = internalView;
     this.#window.gBrowser.selectedTab = this.#window.gBrowser.addWebTab(
       internalView.url.spec

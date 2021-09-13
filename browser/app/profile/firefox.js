@@ -2619,6 +2619,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   // Preferences below here are still being experimented with are in the
   // unlocked state to allow for manual testing.
   pref("browser.companion.globalhistorydebugging", false);
+  pref("browser.companion.globalhistorydebugging.logLevel", "Warn");
   pref("browser.companion.pageaction.enabled", false);
   pref("browser.companion.snapshots", false);
   pref("browser.tabs.openNewTabForMostNavigations", false);
