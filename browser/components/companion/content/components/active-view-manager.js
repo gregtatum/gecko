@@ -173,8 +173,10 @@ class ActiveViewManager extends HTMLElement {
         }
         break;
       case "RiverRegrouped": {
-        this.#overflow.textContent = `+${event.detail.overflowCount}`;
-        this.#overflow.hidden = event.detail.overflowCount == 0;
+        let l10nId = this.#overflow.getAttribute("data-l10n-id");
+        let count = event.detail.overflowCount;
+        document.l10n.setAttributes(this.#overflow, l10nId, { count });
+        this.#overflow.hidden = count == 0;
         break;
       }
       case "TopViewOverflow": {
