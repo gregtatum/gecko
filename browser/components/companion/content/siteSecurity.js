@@ -95,9 +95,17 @@ export default function(view) {
     return state & Ci.nsIWebProgressListener.STATE_LOADED_MIXED_DISPLAY_CONTENT;
   }
 
+  let uriHasHost = false;
+  try {
+    uriHasHost = !!uri.host;
+  } catch (e) {
+    // When an nsIURI doesn't have a host (for example, for about: pages),
+    // trying to access it causes an exception to be thrown.
+  }
+
   if (isSecureAboutPage()) {
     return "aboutUI";
-  } else if (!!uri.host && isSecureConnection()) {
+  } else if (uriHasHost && isSecureConnection()) {
     return "verifiedDomain";
   } else if (isBrokenConnection()) {
     if (isMixedActiveContentLoaded()) {
