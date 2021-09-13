@@ -107,6 +107,7 @@ export default class ConfirmationDialog extends HTMLElement {
       window.dispatchEvent(
         new CustomEvent("AboutLoginsRemoveUpdateState", {
           bubbles: true,
+          detail: { newHeaderL10nId: "about-logins-header-login-list" },
         })
       );
     }

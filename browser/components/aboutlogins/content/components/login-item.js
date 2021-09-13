@@ -411,6 +411,12 @@ export default class LoginItem extends HTMLElement {
               });
             } else {
               this.setLogin(this._login);
+              window.dispatchEvent(
+                new CustomEvent("AboutLoginsRemoveUpdateState", {
+                  bubbles: true,
+                  detail: { newHeaderL10nId: "about-logins-header-login-list" },
+                })
+              );
             }
           } else if (!this.hasPendingChanges()) {
             window.dispatchEvent(
@@ -564,6 +570,7 @@ export default class LoginItem extends HTMLElement {
           window.dispatchEvent(
             new CustomEvent("AboutLoginsRemoveUpdateState", {
               bubbles: true,
+              detail: { newHeaderL10nId: "about-logins-header-login-list" },
             })
           );
 

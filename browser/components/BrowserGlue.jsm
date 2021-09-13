@@ -207,6 +207,7 @@ let JSWINDOWACTORS = {
         AboutLoginsOpenSite: { wantUntrusted: true },
         AboutLoginsRecordTelemetryEvent: { wantUntrusted: true },
         AboutLoginsRemoveAllLogins: { wantUntrusted: true },
+        AboutLoginsRemoveUpdateState: { wantUntrusted: true },
         AboutLoginsShowBlankLogin: { wantUntrusted: true },
         AboutLoginsSortChanged: { wantUntrusted: true },
         AboutLoginsSyncEnable: { wantUntrusted: true },
