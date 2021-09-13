@@ -6,6 +6,8 @@ const { PanelMultiView } = ChromeUtils.import(
   "resource:///modules/PanelMultiView.jsm"
 );
 
+import getSiteSecurityInfo from "../siteSecurity.js";
+
 class ActiveViewManager extends HTMLElement {
   /** @type {<html:button>} */
   #overflow;
@@ -13,6 +15,10 @@ class ActiveViewManager extends HTMLElement {
   #overflowPanel;
   /** @type {<xul:panel>} */
   #pageActionPanel;
+  /** @type {Map<string, string>} */
+  #securityStringsMap;
+  /** @type {string} */
+  #securityIconClass;
 
   #river;
   #pinnedViews;
@@ -46,6 +52,14 @@ class ActiveViewManager extends HTMLElement {
     this.addEventListener("UserAction:OpenPageActionMenu", this);
     this.#river.addEventListener("RiverRegrouped", this);
     this.#overflow.addEventListener("click", this);
+
+    // Most strings are borrowed from Firefox. We may need to need to replace these when UX
+    // provides updated strings.
+    this.#securityStringsMap = new Map([
+      ["aboutUI", "identity-connection-internal"],
+      ["localResource", "identity-connection-file"],
+      ["verifiedDomain", "companion-page-action-secure-page"],
+    ]);
   }
 
   disconnectedCallback() {
@@ -292,6 +306,8 @@ class ActiveViewManager extends HTMLElement {
 
   #pageActionPanelHiding(event) {
     this.#pageActionView = null;
+    let siteSecurityIcon = document.getElementById("site-security-icon");
+    siteSecurityIcon.classList.remove(this.#securityIconClass);
   }
 
   #pageActionPanelShowing(event) {
@@ -301,6 +317,22 @@ class ActiveViewManager extends HTMLElement {
 
     let pageActionUrlEl = document.getElementById("site-info-url");
     pageActionUrlEl.textContent = this.#pageActionView.url.spec;
+
+    this.#securityIconClass = getSiteSecurityInfo(this.#pageActionView);
+    let siteSecurityIcon = document.getElementById("site-security-icon");
+    siteSecurityIcon.classList.add(this.#securityIconClass);
+
+    let siteSecurityInfo = document.getElementById("site-security-info");
+    if (this.#securityStringsMap.has(this.#securityIconClass)) {
+      let l10nID = this.#securityStringsMap.get(this.#securityIconClass);
+      siteSecurityInfo.setAttribute("data-l10n-id", l10nID);
+    } else {
+      // TODO: If the page is a net error page, show "Connection failure" instead.
+      siteSecurityInfo.setAttribute(
+        "data-l10n-id",
+        "identity-connection-not-secure"
+      );
+    }
   }
 
   #pageActionPanelClicked(event) {

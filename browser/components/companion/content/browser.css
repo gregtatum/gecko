@@ -240,6 +240,40 @@
 
 /** Page Info Panel **/
 
+/* Page info security icons */
+/** TODO: Some icons are borrowed from Firefox and may need replacing when UX provides them **/
+
+#site-security-icon.aboutUI {
+  background-image: url(chrome://branding/content/icon16.png);
+}
+
+#site-security-icon.localResource {
+  background-image: url(chrome://global/skin/icons/page-portrait.svg);
+}
+
+#site-security-icon.verifiedDomain {
+  background-image: url(chrome://global/skin/icons/security.svg);
+}
+
+#site-security-icon.certErrorPage,
+#site-security-icon.weakCipher,
+#site-security-icon.mixedDisplayContent,
+#site-security-icon.mixedDisplayContentLoadedActiveBlocked {
+  background-image: url(chrome://global/skin/icons/security-warning.svg);
+}
+
+#site-security-icon.httpsOnlyErrorPage,
+#site-security-icon.notSecure,
+#site-security-icon.mixedActiveContent {
+  background-image: url(chrome://global/skin/icons/security-broken.svg);
+}
+
+#site-security-icon.unknownIdentity {
+  background-image: url(chrome://global/skin/icons/defaultFavicon.svg);
+}
+
+/** END Page info security icons **/
+
 #page-action-panel,
 #page-action-panel-sections {
   width: 428px;
@@ -283,7 +317,7 @@
 
 #site-info-section {
   display: grid;
-  grid-template: 1fr 1fr / 1fr;
+  grid-template: 1fr 1fr 1fr / 1fr;
   padding: 16px 8px;
 }
 
@@ -329,6 +363,18 @@
 #site-info-url {
   padding-block: 8px;
   background: #F0F0F4;
+}
+
+#site-security-icon {
+  width: 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+#site-security-info {
+  padding-inline-start: 5px;
+  display: flex;
+  align-items: center;
 }
 
 /** END Page Info Panel **/

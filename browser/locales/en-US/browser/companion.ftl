@@ -95,3 +95,7 @@ companion-happening-now-minutes =
     }
 
 companion-event-finished = Finished
+
+# This string is used in the page action menu to indicate the
+# security status of a view.
+companion-page-action-secure-page = This website is using a secure connection.

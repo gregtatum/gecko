@@ -83,8 +83,7 @@
 #view-security-icon.certErrorPage,
 #view-security-icon.weakCipher,
 #view-security-icon.mixedDisplayContent,
-#view-security-icon.mixedDisplayContentLoadedActiveBlocked,
-#view-security-icon.certUserOverridden {
+#view-security-icon.mixedDisplayContentLoadedActiveBlocked {
   background-image: url(chrome://global/skin/icons/security-warning.svg);
 }
 
