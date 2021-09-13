@@ -742,9 +742,7 @@ class GlobalHistory extends EventTarget {
       }
     }
 
-    let [windowState] = JSON.parse(
-      SessionStore.getWindowState(this.#window)
-    ).windows;
+    let [windowState] = SessionStore.getWindowState(this.#window).windows;
 
     for (let tab of windowState.tabs) {
       for (let cachedEntry of tab.entries) {
