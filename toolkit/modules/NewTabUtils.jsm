@@ -777,7 +777,7 @@ var ActivityStreamProvider = {
   /**
    * Shared WHERE expression filtering out undesired pages, e.g., hidden,
    * unvisited, and non-http/s urls. Assumes moz_places is in FROM / JOIN. If
-   * the proclient is enabled, we additionally filter based off of whether
+   * the pinebuild is enabled, we additionally filter based off of whether
    * we have a snapshot for the place in moz_places_metadata_snapshots, to
    * ensure that pages which the user hasn't sufficiently interacted with don't
    * show up.
@@ -794,7 +794,7 @@ var ActivityStreamProvider = {
     AND (SUBSTR(url, 1, 6) == "https:"
       OR SUBSTR(url, 1, 5) == "http:")
     ${
-      AppConstants.PROCLIENT_ENABLED
+      AppConstants.PINEBUILD
         ? "AND EXISTS(SELECT 1 FROM moz_places_metadata_snapshots s WHERE id = s.place_id)"
         : ""
     }

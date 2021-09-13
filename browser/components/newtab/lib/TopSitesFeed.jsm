@@ -87,12 +87,12 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 const DEFAULT_SITES_PREF = "default.sites";
 const SHOWN_ON_NEWTAB_PREF = "feeds.topsites";
 const DEFAULT_TOP_SITES = [];
-// If the proclient is enabled, we set a lower threshold for frecency, because
+// If the pinebuild is enabled, we set a lower threshold for frecency, because
 // we have the added filter of requiring a recorded interaction with the page
 // in moz_places_metadata_snapshots. Otherwise we try to skirt just above the
 // frecency of the first-run/one-time pages by adding 1 to their default
 // frecency.
-const FRECENCY_THRESHOLD = AppConstants.PROCLIENT_ENABLED ? 25 : 100 + 1;
+const FRECENCY_THRESHOLD = AppConstants.PINEBUILD ? 25 : 100 + 1;
 const MIN_FAVICON_SIZE = 96;
 const CACHED_LINK_PROPS_TO_MIGRATE = ["screenshot", "customScreenshot"];
 const PINNED_FAVICON_PROPS_TO_MIGRATE = [
