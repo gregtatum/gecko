@@ -599,7 +599,7 @@ linux64-devedition/opt:
 
 linux64-pinebuild/opt:
     description: "Linux64 pinebuild (shippable)"
-    use-pgo: true
+    use-pgo: linux64-shippable/opt
     attributes:
         shippable: true
         enable-full-crashsymbols: true
