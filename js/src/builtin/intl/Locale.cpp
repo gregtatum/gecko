@@ -14,6 +14,7 @@
 #include "mozilla/intl/Calendar.h"
 #include "mozilla/intl/Collator.h"
 #include "mozilla/intl/DateTimeFormat.h"
+#include "mozilla/intl/NumberingSystem.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/Span.h"
 #include "mozilla/TextUtils.h"
@@ -1139,6 +1140,51 @@ static ArrayObject* HourCyclesOfLocale(JSContext* cx,
 
   return result;
 }
+
+/**
+ * NumberingSystemsOfLocale ( loc )
+ *
+ * Return the commonly used numbering systems of |loc| in preference order.
+ */
+static ArrayObject* NumberingSystemsOfLocale(JSContext* cx,
+                                             Handle<LocaleObject*> locale) {
+  RootedValue preferred(cx);
+  if (!GetUnicodeExtension(cx, locale, "nu", &preferred)) {
+    return nullptr;
+  }
+  MOZ_ASSERT(preferred.isString() || preferred.isUndefined());
+
+  if (preferred.isString()) {
+    return CreateArrayFromValue(cx, preferred);
+  }
+
+  JSLinearString* baseName = locale->baseName()->ensureLinear(cx);
+  if (!baseName) {
+    return nullptr;
+  }
+  LocaleLSR lsr(baseName);
+
+  auto numberingSystem =
+      mozilla::intl::NumberingSystem::TryCreate(lsr.toLanguageTag());
+  if (numberingSystem.isErr()) {
+    intl::ReportInternalError(cx, numberingSystem.unwrapErr());
+    return nullptr;
+  }
+
+  auto name = numberingSystem.inspect()->GetName();
+  if (name.isErr()) {
+    intl::ReportInternalError(cx, name.unwrapErr());
+    return nullptr;
+  }
+
+  JSString* jsname = NewStringCopyZ<CanGC>(cx, name.unwrap());
+  if (!jsname) {
+    return nullptr;
+  }
+  RootedValue value(cx, StringValue(jsname));
+
+  return CreateArrayFromValue(cx, value);
+}
 #endif
 
 // Intl.Locale.prototype.maximize ()
@@ -1536,6 +1582,27 @@ static bool Locale_hourCycles(JSContext* cx, unsigned argc, Value* vp) {
   CallArgs args = CallArgsFromVp(argc, vp);
   return CallNonGenericMethod<IsLocale, Locale_hourCycles>(cx, args);
 }
+
+// get Intl.Locale.prototype.numberingSystems
+static bool Locale_numberingSystems(JSContext* cx, const CallArgs& args) {
+  Rooted<LocaleObject*> locale(cx, &args.thisv().toObject().as<LocaleObject>());
+
+  // Step 3.
+  auto* result = NumberingSystemsOfLocale(cx, locale);
+  if (!result) {
+    return false;
+  }
+
+  args.rval().setObject(*result);
+  return true;
+}
+
+// get Intl.Locale.prototype.numberingSystems
+static bool Locale_numberingSystems(JSContext* cx, unsigned argc, Value* vp) {
+  // Steps 1-2.
+  CallArgs args = CallArgsFromVp(argc, vp);
+  return CallNonGenericMethod<IsLocale, Locale_numberingSystems>(cx, args);
+}
 #endif /* NIGHTLY_BUILD */
 
 static bool Locale_toSource(JSContext* cx, unsigned argc, Value* vp) {
@@ -1565,6 +1632,7 @@ static const JSPropertySpec locale_properties[] = {
     JS_PSG("calendars", Locale_calendars, 0),
     JS_PSG("collations", Locale_collations, 0),
     JS_PSG("hourCycles", Locale_hourCycles, 0),
+    JS_PSG("numberingSystems", Locale_numberingSystems, 0),
 #endif
     JS_STRING_SYM_PS(toStringTag, "Intl.Locale", JSPROP_READONLY),
     JS_PS_END};
