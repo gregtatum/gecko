@@ -64,6 +64,19 @@ class TopLevelNavigationDelegateChild extends JSWindowActorChild {
       return true;
     }
 
+    // Many of our tests expect a browser navigation to result in the load occurring
+    // in the same browser. This means that the TopLevelNavigationDelegate breaks
+    // those tests when it creates new <browser> elements that the tests didn't
+    // originally anticipate. We workaround this problem for now by not delegating
+    // when the System Principal initiated the load. In the future, we should
+    // investigate migrating our tests to be able to withstand a delegation and
+    // the creation of a new <browser>.
+    if (
+      triggeringPrincipal == Services.scriptSecurityManager.getSystemPrincipal()
+    ) {
+      return true;
+    }
+
     let { sharedData } = Services.cpmm;
 
     let ignoreList = sharedData.get(SHARED_DATA_KEY);
