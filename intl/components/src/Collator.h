@@ -155,7 +155,7 @@ class Collator final {
    * http://cldr.unicode.org/core-spec/#Key_Type_Definitions
    */
   static Result<Bcp47ExtEnumeration, ICUError> GetBcp47KeywordValuesForLocale(
-      const char* aLocale);
+      const char* aLocale, bool aCommonlyUsed = false);
 
  private:
   /**

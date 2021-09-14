@@ -249,10 +249,11 @@ ICUResult Collator::SetOptions(const Options& aOptions,
 
 /* static */
 Result<Collator::Bcp47ExtEnumeration, ICUError>
-Collator::GetBcp47KeywordValuesForLocale(const char* aLocale) {
+Collator::GetBcp47KeywordValuesForLocale(const char* aLocale,
+                                         bool aCommonlyUsed) {
   UErrorCode status = U_ZERO_ERROR;
   UEnumeration* enumeration = ucol_getKeywordValuesForLocale(
-      "collator", aLocale, /* commonlyUsed */ false, &status);
+      "collation", aLocale, aCommonlyUsed, &status);
 
   if (U_SUCCESS(status)) {
     return Bcp47ExtEnumeration(enumeration);

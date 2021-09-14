@@ -123,7 +123,8 @@ class Calendar final {
    * Return BCP 47 Unicode locale extension type keywords.
    */
   static Result<Bcp47IdentifierEnumeration, ICUError>
-  GetBcp47KeywordValuesForLocale(const char* aLocale);
+  GetBcp47KeywordValuesForLocale(const char* aLocale,
+                                 bool aCommonlyUsed = false);
 
   ~Calendar();
 
