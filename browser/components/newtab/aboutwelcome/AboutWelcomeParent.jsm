@@ -229,6 +229,10 @@ class AboutWelcomeParent extends JSWindowActorParent {
         }
         break;
       case "AWPage:SPECIAL_ACTION":
+        if (data.type == "LANGUAGE_CHANGE") {
+          Services.locale.requestedLocales = ["pl", "en-US"];
+          break;
+        }
         SpecialMessageActions.handleAction(data, browser);
         break;
       case "AWPage:FXA_METRICS_FLOW_URI":

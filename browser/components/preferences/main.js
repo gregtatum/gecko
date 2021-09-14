@@ -1231,7 +1231,8 @@ var gMainPane = {
     let locales = Array.from(
       new Set([locale, ...Services.locale.requestedLocales]).values()
     );
-    this.showConfirmLanguageChangeMessageBar(locales);
+    Services.locale.requestedLocales = locales;
+    // this.showConfirmLanguageChangeMessageBar(locales);
   },
 
   /**
@@ -1427,7 +1428,7 @@ var gMainPane = {
 
     // Prepare for changing the locales if they are different than the current locales.
     if (selected && selected.join(",") != active.join(",")) {
-      gMainPane.showConfirmLanguageChangeMessageBar(selected);
+      // gMainPane.showConfirmLanguageChangeMessageBar(selected);
       gMainPane.setBrowserLocales(selected[0]);
       return;
     }

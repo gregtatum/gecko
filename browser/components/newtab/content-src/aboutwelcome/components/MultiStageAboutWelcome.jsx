@@ -259,10 +259,10 @@ export class WelcomeScreen extends React.PureComponent {
     } else if (action.type) {
       AboutWelcomeUtils.handleUserAction(action);
       // Wait until migration closes to complete the action
-      if (action.type === "SHOW_MIGRATION_WIZARD") {
-        await window.AWWaitForMigrationClose();
-        AboutWelcomeUtils.sendActionTelemetry(props.messageId, "migrate_close");
-      }
+      // if (action.type === "SHOW_MIGRATION_WIZARD") {
+      //   await window.AWWaitForMigrationClose();
+      //   AboutWelcomeUtils.sendActionTelemetry(props.messageId, "migrate_close");
+      // }
     }
 
     // A special tiles.action.theme value indicates we should use the event's value vs provided value.

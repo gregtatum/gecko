@@ -114,7 +114,7 @@ const DEFAULT_WELCOME_CONTENT = {
               "mr1-onboarding-import-primary-button-label-no-attribution",
           },
           action: {
-            type: "SHOW_MIGRATION_WIZARD",
+            type: "LANGUAGE_CHANGE",
             data: {},
             navigate: true,
           },

@@ -94,17 +94,17 @@ mr1-onboarding-default-primary-button-label = Make default browser
 
 ## Multistage MR1 onboarding strings (about:welcome pages)
 
-mr1-onboarding-import-header = Bring it all with you
-mr1-onboarding-import-subtitle = Import your passwords, <br/>bookmarks, and more.
+mr1-onboarding-import-header = Find a common language
+mr1-onboarding-import-subtitle = Your Windows is set up to <b>Polish</b>.<br/>Would you like your Firefox to match it?
 
 # The primary import button label will depend on whether we can detect which browser was used to download Firefox.
 # Variables:
 #   $previous (Str) - Previous browser name, such as Edge, Chrome
-mr1-onboarding-import-primary-button-label-attribution = Import from { $previous }
+mr1-onboarding-import-primary-button-label-attribution = Zmień język Firefoksa z Angielskiego (Ameryka) na Polski.
 
 # This string will be used in cases where we can't detect the previous browser name.
-mr1-onboarding-import-primary-button-label-no-attribution = Import from previous browser
-mr1-onboarding-import-secondary-button-label = Not now
+mr1-onboarding-import-primary-button-label-no-attribution = Zmień język Firefoksa z Angielskiego (Ameryka) na Polski.
+mr1-onboarding-import-secondary-button-label = Keep Firefox in English (American).
 
 mr1-onboarding-theme-header = Make it your own
 mr1-onboarding-theme-subtitle = Personalize { -brand-short-name } with a theme.
