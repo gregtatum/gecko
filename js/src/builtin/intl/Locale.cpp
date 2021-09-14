@@ -12,14 +12,17 @@
 #include "mozilla/Assertions.h"
 #include "mozilla/Casting.h"
 #include "mozilla/intl/Calendar.h"
+#include "mozilla/intl/Collator.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/Span.h"
 #include "mozilla/TextUtils.h"
 
 #include <algorithm>
+#include <array>
 #include <iterator>
 #include <string>
 #include <string.h>
+#include <string_view>
 #include <utility>
 
 #include "builtin/Array.h"
@@ -48,6 +51,7 @@ using namespace js::intl::LanguageTagLimits;
 
 using intl::LanguageTag;
 using intl::LanguageTagParser;
+using intl::StringList;
 
 const JSClass LocaleObject::class_ = {
     "Intl.Locale",
@@ -980,6 +984,79 @@ static ArrayObject* CalendarsOfLocale(JSContext* cx,
 
   return array;
 }
+
+/**
+ * CollationsOfLocale ( loc )
+ *
+ * Return the commonly used collations of |loc| in preference order.
+ */
+static ArrayObject* CollationsOfLocale(JSContext* cx,
+                                       Handle<LocaleObject*> locale) {
+  RootedValue preferred(cx);
+  if (!GetUnicodeExtension(cx, locale, "co", &preferred)) {
+    return nullptr;
+  }
+  MOZ_ASSERT(preferred.isString() || preferred.isUndefined());
+
+  if (preferred.isString()) {
+    return CreateArrayFromValue(cx, preferred);
+  }
+
+  JSLinearString* baseName = locale->baseName()->ensureLinear(cx);
+  if (!baseName) {
+    return nullptr;
+  }
+  LocaleLSR lsr(baseName);
+
+  // List of collation types which mustn't be returned.
+  static constexpr std::array unsupported = {
+      "search",
+      "standard",
+  };
+
+  Rooted<StringList> list(cx, StringList(cx));
+
+  // Get the collations that are commonly used in the given locale.
+  {
+    // Hazard analysis complains that the mozilla::Result destructor calls a GC
+    // function, which is unsound when returning an unrooted value. Work around
+    // this issue by restricting the lifetime of |keywords| to a separate block.
+    auto keywords = mozilla::intl::Collator::GetBcp47KeywordValuesForLocale(
+        lsr.toIcuLocale());
+    if (keywords.isErr()) {
+      intl::ReportInternalError(cx);
+      return nullptr;
+    }
+
+    for (auto keyword : keywords.unwrap()) {
+      if (keyword.isErr()) {
+        intl::ReportInternalError(cx);
+        return nullptr;
+      }
+      auto collation = keyword.unwrap();
+
+      // Skip over known unsupported values.
+      std::string_view sv(collation.data(), collation.size());
+      if (std::any_of(std::begin(unsupported), std::end(unsupported),
+                      [sv](const auto& e) { return sv == e; })) {
+        continue;
+      }
+
+      auto* string = NewStringCopy<CanGC>(cx, collation);
+      if (!string) {
+        return nullptr;
+      }
+      if (!list.append(string)) {
+        return nullptr;
+      }
+    }
+  }
+
+  // ICU doesn't return the collations in any useful order, so we sort them
+  // alphabetically. This approach should prevent the web to depend on however
+  // ICU returns these strings.
+  return intl::CreateArrayFromList(cx, &list);
+}
 #endif
 
 // Intl.Locale.prototype.maximize ()
@@ -1335,6 +1412,27 @@ static bool Locale_calendars(JSContext* cx, unsigned argc, Value* vp) {
   CallArgs args = CallArgsFromVp(argc, vp);
   return CallNonGenericMethod<IsLocale, Locale_calendars>(cx, args);
 }
+
+// get Intl.Locale.prototype.collations
+static bool Locale_collations(JSContext* cx, const CallArgs& args) {
+  Rooted<LocaleObject*> locale(cx, &args.thisv().toObject().as<LocaleObject>());
+
+  // Step 3.
+  auto* result = CollationsOfLocale(cx, locale);
+  if (!result) {
+    return false;
+  }
+
+  args.rval().setObject(*result);
+  return true;
+}
+
+// get Intl.Locale.prototype.collations
+static bool Locale_collations(JSContext* cx, unsigned argc, Value* vp) {
+  // Steps 1-2.
+  CallArgs args = CallArgsFromVp(argc, vp);
+  return CallNonGenericMethod<IsLocale, Locale_collations>(cx, args);
+}
 #endif /* NIGHTLY_BUILD */
 
 static bool Locale_toSource(JSContext* cx, unsigned argc, Value* vp) {
@@ -1362,6 +1460,7 @@ static const JSPropertySpec locale_properties[] = {
     JS_PSG("region", Locale_region, 0),
 #ifdef NIGHTLY_BUILD
     JS_PSG("calendars", Locale_calendars, 0),
+    JS_PSG("collations", Locale_collations, 0),
 #endif
     JS_STRING_SYM_PS(toStringTag, "Intl.Locale", JSPROP_READONLY),
     JS_PS_END};
