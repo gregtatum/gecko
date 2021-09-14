@@ -15,6 +15,7 @@
 #include "mozilla/intl/Collator.h"
 #include "mozilla/intl/DateTimeFormat.h"
 #include "mozilla/intl/NumberingSystem.h"
+#include "mozilla/intl/TextLayout.h"
 #include "mozilla/intl/TimeZone.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/Range.h"
@@ -36,6 +37,7 @@
 #include "builtin/intl/LanguageTag.h"
 #include "builtin/intl/SharedIntlData.h"
 #include "builtin/String.h"
+#include "ds/IdValuePair.h"
 #include "gc/Rooting.h"
 #include "js/Conversions.h"
 #include "js/friend/ErrorMessages.h"  // js::GetErrorMessage, JSMSG_*
@@ -1357,6 +1359,38 @@ static ArrayObject* TimeZonesOfLocale(JSContext* cx, const char* region) {
 
   return intl::CreateArrayFromList(cx, &timeZones);
 }
+
+/**
+ * CharacterDirectionOfLocale ( locale )
+ *
+ * Return the character direction of |locale|.
+ */
+static JSString* CharacterDirectionOfLocale(JSContext* cx,
+                                            Handle<LocaleObject*> locale) {
+  JSLinearString* baseName = locale->baseName()->ensureLinear(cx);
+  if (!baseName) {
+    return nullptr;
+  }
+  LocaleLSR lsr(baseName);
+
+  auto orientation =
+      mozilla::intl::TextLayout::GetCharacterOrientation(lsr.toLanguageTag());
+  if (orientation.isErr()) {
+    intl::ReportInternalError(cx, orientation.unwrapErr());
+    return nullptr;
+  }
+
+  using CharacterOrientation = mozilla::intl::CharacterOrientation;
+
+  // Steps 1-2.
+  switch (orientation.unwrap()) {
+    case CharacterOrientation::LeftToRight:
+      return cx->names().ltr;
+    case CharacterOrientation::RightToLeft:
+      return cx->names().rtl;
+  }
+  MOZ_CRASH("Unexpected character orientation value");
+}
 #endif
 
 // Intl.Locale.prototype.maximize ()
@@ -1818,6 +1852,43 @@ static bool Locale_timeZones(JSContext* cx, unsigned argc, Value* vp) {
   CallArgs args = CallArgsFromVp(argc, vp);
   return CallNonGenericMethod<IsLocale, Locale_timeZones>(cx, args);
 }
+
+// get Intl.Locale.prototype.textInfo
+static bool Locale_textInfo(JSContext* cx, const CallArgs& args) {
+  Rooted<LocaleObject*> locale(cx, &args.thisv().toObject().as<LocaleObject>());
+
+  // Step 4.
+  RootedString dir(cx, CharacterDirectionOfLocale(cx, locale));
+  if (!dir) {
+    return false;
+  }
+
+  // Step 3.
+  Rooted<IdValueVector> info(cx, IdValueVector(cx));
+  if (!info.reserve(1)) {
+    return false;
+  }
+
+  // Step 5.
+  info.infallibleEmplaceBack(NameToId(cx->names().direction), StringValue(dir));
+
+  // Step 6.
+  auto* result = NewPlainObjectWithProperties(cx, info.begin(), info.length(),
+                                              GenericObject);
+  if (!result) {
+    return false;
+  }
+
+  args.rval().setObject(*result);
+  return true;
+}
+
+// get Intl.Locale.prototype.textInfo
+static bool Locale_textInfo(JSContext* cx, unsigned argc, Value* vp) {
+  // Steps 1-2.
+  CallArgs args = CallArgsFromVp(argc, vp);
+  return CallNonGenericMethod<IsLocale, Locale_textInfo>(cx, args);
+}
 #endif /* NIGHTLY_BUILD */
 
 static bool Locale_toSource(JSContext* cx, unsigned argc, Value* vp) {
@@ -1849,6 +1920,7 @@ static const JSPropertySpec locale_properties[] = {
     JS_PSG("hourCycles", Locale_hourCycles, 0),
     JS_PSG("numberingSystems", Locale_numberingSystems, 0),
     JS_PSG("timeZones", Locale_timeZones, 0),
+    JS_PSG("textInfo", Locale_textInfo, 0),
 #endif
     JS_STRING_SYM_PS(toStringTag, "Intl.Locale", JSPROP_READONLY),
     JS_PS_END};
