@@ -14,6 +14,7 @@
 #include <string.h>
 #include <type_traits>
 
+#include "js/GCVector.h"
 #include "js/RootingAPI.h"
 #include "js/Vector.h"
 #include "unicode/utypes.h"
@@ -26,6 +27,8 @@ enum class ICUError : uint8_t;
 }
 
 namespace js {
+
+class ArrayObject;
 
 namespace intl {
 
@@ -168,6 +171,11 @@ void RemoveICUCellMemory(JSFreeOp* fop, JSObject* obj, size_t nbytes);
 
 JSString* FormattedValueToString(JSContext* cx,
                                  const UFormattedValue* formattedValue);
+
+using StringList = GCVector<JSLinearString*>;
+
+ArrayObject* CreateArrayFromList(JSContext* cx,
+                                 JS::MutableHandle<StringList> list);
 
 }  // namespace intl
 
