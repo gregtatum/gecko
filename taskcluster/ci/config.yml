@@ -173,7 +173,6 @@ index:
         - 'mobile'
         - 'static-analysis'
         - 'devedition'
-        - 'pinebuild'
         - 'source'
         - 'system-symbols'
         - 'geckodriver'
@@ -209,7 +208,6 @@ release-promotion:
         - 'devedition'
         - 'fennec'
         - 'firefox'
-        - 'pinebuild'
     flavors:
         promote_devedition:
             product: devedition
