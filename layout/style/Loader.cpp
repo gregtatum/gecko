@@ -164,16 +164,6 @@ bool SheetLoadDataHashKey::KeyEquals(const SheetLoadDataHashKey& aKey) const {
 
   LOG_URI("KeyEquals(%s)\n", mURI);
 
-  if (mParsingMode != aKey.mParsingMode) {
-    LOG((" > Parsing mode mismatch\n"));
-    return false;
-  }
-
-  // Chrome URIs ignore everything else.
-  if (dom::IsChromeURI(mURI)) {
-    return true;
-  }
-
   if (!mPrincipal->Equals(aKey.mPrincipal)) {
     LOG((" > Principal mismatch\n"));
     return false;
@@ -192,6 +182,11 @@ bool SheetLoadDataHashKey::KeyEquals(const SheetLoadDataHashKey& aKey) const {
 
   if (mCORSMode != aKey.mCORSMode) {
     LOG((" > CORS mismatch\n"));
+    return false;
+  }
+
+  if (mParsingMode != aKey.mParsingMode) {
+    LOG((" > Parsing mode mismatch\n"));
     return false;
   }
 
@@ -294,15 +289,14 @@ SheetLoadData::SheetLoadData(
       mBlockResourceTiming(false),
       mLoadFailed(false),
       mPreloadKind(aPreloadKind),
-      mOwningNodeBeforeLoadEvent(aOwningNode),
-      mRequestingNodeBeforeComplete(aRequestingNode),
+      mOwningNode(aOwningNode),
       mObserver(aObserver),
       mTriggeringPrincipal(aTriggeringPrincipal),
       mReferrerInfo(aReferrerInfo),
+      mRequestingNode(aRequestingNode),
       mGuessedEncoding(GetFallbackEncoding(*aLoader, aOwningNode, nullptr)),
       mCompatMode(aLoader->CompatMode(aPreloadKind)) {
-  MOZ_ASSERT(!mOwningNodeBeforeLoadEvent ||
-                 dom::LinkStyle::FromNode(*mOwningNodeBeforeLoadEvent),
+  MOZ_ASSERT(!mOwningNode || dom::LinkStyle::FromNode(*mOwningNode),
              "Must implement LinkStyle");
   MOZ_ASSERT(mTriggeringPrincipal);
   MOZ_ASSERT(mLoader, "Must have a loader!");
@@ -337,10 +331,11 @@ SheetLoadData::SheetLoadData(Loader* aLoader, nsIURI* aURI, StyleSheet* aSheet,
       mBlockResourceTiming(false),
       mLoadFailed(false),
       mPreloadKind(StylePreloadKind::None),
-      mRequestingNodeBeforeComplete(aRequestingNode),
+      mOwningNode(nullptr),
       mObserver(aObserver),
       mTriggeringPrincipal(aTriggeringPrincipal),
       mReferrerInfo(aReferrerInfo),
+      mRequestingNode(aRequestingNode),
       mGuessedEncoding(GetFallbackEncoding(
           *aLoader, nullptr, aParentData ? aParentData->mEncoding : nullptr)),
       mCompatMode(aLoader->CompatMode(mPreloadKind)) {
@@ -379,10 +374,11 @@ SheetLoadData::SheetLoadData(
       mBlockResourceTiming(false),
       mLoadFailed(false),
       mPreloadKind(aPreloadKind),
-      mRequestingNodeBeforeComplete(aRequestingNode),
+      mOwningNode(nullptr),
       mObserver(aObserver),
       mTriggeringPrincipal(aTriggeringPrincipal),
       mReferrerInfo(aReferrerInfo),
+      mRequestingNode(aRequestingNode),
       mGuessedEncoding(
           GetFallbackEncoding(*aLoader, nullptr, aPreloadEncoding)),
       mCompatMode(aLoader->CompatMode(aPreloadKind)) {
@@ -452,7 +448,7 @@ void SheetLoadData::FireLoadEvent(nsIThreadInternal* aThread) {
   // NOTE(emilio): A bit weird that we fire the event even if the node is no
   // longer in the tree, or the sheet that just loaded / errored is not the
   // current node.sheet, but...
-  nsCOMPtr<nsINode> node = std::move(mOwningNodeBeforeLoadEvent);
+  nsCOMPtr<nsINode> node = mOwningNode;
   MOZ_ASSERT(node, "How did that happen???");
 
   nsContentUtils::DispatchTrustedEvent(node->OwnerDoc(), node,
@@ -464,7 +460,7 @@ void SheetLoadData::FireLoadEvent(nsIThreadInternal* aThread) {
 }
 
 void SheetLoadData::ScheduleLoadEventIfNeeded() {
-  if (!mOwningNodeBeforeLoadEvent) {
+  if (!mOwningNode) {
     return;
   }
 
@@ -690,7 +686,7 @@ nsresult SheetLoadData::VerifySheetReadyToParse(nsresult aStatus,
         for (SheetLoadData* data = this; data; data = data->mNext) {
           // mOwningNode may be null but AddBlockTrackingNode can cope
           doc->AddBlockedNodeByClassifier(
-              nsIContent::FromNodeOrNull(data->mOwningNodeBeforeLoadEvent));
+              nsIContent::FromNodeOrNull(data->mOwningNode));
         }
       }
     }
@@ -1069,15 +1065,14 @@ Loader::MediaMatched Loader::PrepareSheet(
  * 3) Sheets with linking elements are ordered based on document order
  *    as determined by CompareDocumentPosition.
  */
-void Loader::InsertSheetInTree(StyleSheet& aSheet) {
+void Loader::InsertSheetInTree(StyleSheet& aSheet, nsINode* aOwningNode) {
   LOG(("css::Loader::InsertSheetInTree"));
   MOZ_ASSERT(mDocument, "Must have a document to insert into");
-
-  nsINode* owningNode = aSheet.GetOwnerNode();
-  MOZ_ASSERT(!owningNode || owningNode->IsInUncomposedDoc() ||
-                 owningNode->IsInShadowTree(),
+  MOZ_ASSERT(!aOwningNode || aOwningNode->IsInUncomposedDoc() ||
+                 aOwningNode->IsInShadowTree(),
              "Why would we insert it anywhere?");
-  ShadowRoot* shadow = owningNode ? owningNode->GetContainingShadow() : nullptr;
+  ShadowRoot* shadow =
+      aOwningNode ? aOwningNode->GetContainingShadow() : nullptr;
 
   auto& target = shadow ? static_cast<DocumentOrShadowRoot&>(*shadow)
                         : static_cast<DocumentOrShadowRoot&>(*mDocument);
@@ -1097,7 +1092,7 @@ void Loader::InsertSheetInTree(StyleSheet& aSheet) {
   int32_t insertionPoint = sheetCount - 1;
   for (; insertionPoint >= 0; --insertionPoint) {
     nsINode* sheetOwner = target.SheetAt(insertionPoint)->GetOwnerNode();
-    if (sheetOwner && !owningNode) {
+    if (sheetOwner && !aOwningNode) {
       // Keep moving; all sheets with a sheetOwner come after all
       // sheets without a linkingNode
       continue;
@@ -1109,11 +1104,11 @@ void Loader::InsertSheetInTree(StyleSheet& aSheet) {
       break;
     }
 
-    MOZ_ASSERT(owningNode != sheetOwner,
+    MOZ_ASSERT(aOwningNode != sheetOwner,
                "Why do we still have our old sheet?");
 
     // Have to compare
-    if (nsContentUtils::PositionIsBefore(sheetOwner, owningNode)) {
+    if (nsContentUtils::PositionIsBefore(sheetOwner, aOwningNode)) {
       // The current sheet comes before us, and it better be the first
       // such, because now we break
       break;
@@ -1233,10 +1228,9 @@ nsresult Loader::LoadSheet(SheetLoadData& aLoadData, SheetState aSheetState,
     // This is because of a case where the node is the document being styled and
     // the principal is the stylesheet (perhaps from a different origin) that is
     // applying the styles.
-    if (aLoadData.mRequestingNodeBeforeComplete) {
+    if (aLoadData.mRequestingNode) {
       rv = NS_NewChannelWithTriggeringPrincipal(
-          getter_AddRefs(channel), aLoadData.mURI,
-          aLoadData.mRequestingNodeBeforeComplete,
+          getter_AddRefs(channel), aLoadData.mURI, aLoadData.mRequestingNode,
           aLoadData.mTriggeringPrincipal, securityFlags, contentPolicyType);
     } else {
       MOZ_ASSERT(aLoadData.mTriggeringPrincipal->Equals(LoaderPrincipal()));
@@ -1264,10 +1258,10 @@ nsresult Loader::LoadSheet(SheetLoadData& aLoadData, SheetState aSheetState,
 
     // snapshot the nonce at load start time for performing CSP checks
     if (contentPolicyType == nsIContentPolicy::TYPE_INTERNAL_STYLESHEET) {
-      if (aLoadData.mRequestingNodeBeforeComplete) {
+      if (aLoadData.mRequestingNode) {
         // TODO(bug 1607009) move to SheetLoadData
         nsString* cspNonce = static_cast<nsString*>(
-            aLoadData.mRequestingNodeBeforeComplete->GetProperty(nsGkAtoms::nonce));
+            aLoadData.mRequestingNode->GetProperty(nsGkAtoms::nonce));
         if (cspNonce) {
           nsCOMPtr<nsILoadInfo> loadInfo = channel->LoadInfo();
           loadInfo->SetCspNonce(*cspNonce);
@@ -1371,12 +1365,11 @@ nsresult Loader::LoadSheet(SheetLoadData& aLoadData, SheetState aSheetState,
   // and a principal. This is because of a case where the node is the document
   // being styled and the principal is the stylesheet (perhaps from a different
   // origin)  that is applying the styles.
-  if (aLoadData.mRequestingNodeBeforeComplete) {
+  if (aLoadData.mRequestingNode) {
     rv = NS_NewChannelWithTriggeringPrincipal(
-        getter_AddRefs(channel), aLoadData.mURI,
-        aLoadData.mRequestingNodeBeforeComplete, aLoadData.mTriggeringPrincipal,
-        securityFlags, contentPolicyType, /* PerformanceStorage */ nullptr,
-        loadGroup);
+        getter_AddRefs(channel), aLoadData.mURI, aLoadData.mRequestingNode,
+        aLoadData.mTriggeringPrincipal, securityFlags, contentPolicyType,
+        /* PerformanceStorage */ nullptr, loadGroup);
   } else {
     MOZ_ASSERT(aLoadData.mTriggeringPrincipal->Equals(LoaderPrincipal()));
     rv = NS_NewChannel(getter_AddRefs(channel), aLoadData.mURI,
@@ -1393,10 +1386,10 @@ nsresult Loader::LoadSheet(SheetLoadData& aLoadData, SheetState aSheetState,
 
   // snapshot the nonce at load start time for performing CSP checks
   if (contentPolicyType == nsIContentPolicy::TYPE_INTERNAL_STYLESHEET) {
-    if (aLoadData.mRequestingNodeBeforeComplete) {
+    if (aLoadData.mRequestingNode) {
       // TODO(bug 1607009) move to SheetLoadData
       nsString* cspNonce = static_cast<nsString*>(
-          aLoadData.mRequestingNodeBeforeComplete->GetProperty(nsGkAtoms::nonce));
+          aLoadData.mRequestingNode->GetProperty(nsGkAtoms::nonce));
       if (cspNonce) {
         nsCOMPtr<nsILoadInfo> loadInfo = channel->LoadInfo();
         loadInfo->SetCspNonce(*cspNonce);
@@ -1571,10 +1564,10 @@ void Loader::NotifyObservers(SheetLoadData& aData, nsresult aStatus) {
   }
 
   if (aData.mMustNotify) {
-    if (nsCOMPtr<nsICSSLoaderObserver> observer = std::move(aData.mObserver)) {
+    if (aData.mObserver) {
       LOG(("  Notifying observer %p for data %p.  deferred: %d",
-           observer.get(), &aData, aData.ShouldDefer()));
-      observer->StyleSheetLoaded(aData.mSheet, aData.ShouldDefer(),
+           aData.mObserver.get(), &aData, aData.ShouldDefer()));
+      aData.mObserver->StyleSheetLoaded(aData.mSheet, aData.ShouldDefer(),
                                         aStatus);
     }
 
@@ -1730,8 +1723,7 @@ Result<Loader::LoadSheetResult, nsresult> Loader::LoadInlineStyle(
     linkStyle->SetStyleSheet(sheet);
   }
   if (sheet->IsComplete()) {
-    MOZ_ASSERT(sheet->GetOwnerNode() == aInfo.mContent);
-    InsertSheetInTree(*sheet);
+    InsertSheetInTree(*sheet, aInfo.mContent);
   }
 
   Completed completed;
@@ -1835,8 +1827,7 @@ Result<Loader::LoadSheetResult, nsresult> Loader::LoadStyleLink(
     linkStyle->SetStyleSheet(sheet);
   }
   if (sheet->IsComplete()) {
-    MOZ_ASSERT(sheet->GetOwnerNode() == aInfo.mContent);
-    InsertSheetInTree(*sheet);
+    InsertSheetInTree(*sheet, aInfo.mContent);
   }
 
   // We may get here with no content for Link: headers for example.

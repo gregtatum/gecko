@@ -2675,7 +2675,7 @@ TextServicesDocument::OffsetEntryArray::FindWordRange(
 
   intl::WordBreaker* wordBreaker = nsContentUtils::WordBreaker();
   intl::WordRange res = wordBreaker->FindWord(str, strLen, strOffset);
-  if (res.mBegin == res.mEnd) {
+  if (res.mBegin > strLen) {
     return Err(str ? NS_ERROR_ILLEGAL_VALUE : NS_ERROR_NULL_POINTER);
   }
 

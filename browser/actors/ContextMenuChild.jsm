@@ -778,14 +778,21 @@ class ContextMenuChild extends JSWindowActorChild {
 
     // Set the node to containing <video>/<audio>/<embed>/<object> if the node
     // is in the videocontrols UA Widget.
-    if (node.containingShadowRoot?.isUAWidget()) {
-      const host = node.containingShadowRoot.host;
-      if (
-        host instanceof this.contentWindow.HTMLMediaElement ||
-        host instanceof this.contentWindow.HTMLEmbedElement ||
-        host instanceof this.contentWindow.HTMLObjectElement
-      ) {
-        node = host;
+    if (this.contentWindow.ShadowRoot) {
+      let n = node;
+      while (n) {
+        if (n instanceof this.contentWindow.ShadowRoot) {
+          if (
+            n.host instanceof this.contentWindow.HTMLMediaElement ||
+            n.host instanceof this.contentWindow.HTMLEmbedElement ||
+            n.host instanceof this.contentWindow.HTMLObjectElement
+          ) {
+            node = n.host;
+            break;
+          }
+          break;
+        }
+        n = n.parentNode;
       }
     }
 
@@ -1158,7 +1165,7 @@ class ContextMenuChild extends JSWindowActorChild {
         }
       }
 
-      elem = elem.flattenedTreeParentNode;
+      elem = elem.parentNode;
     }
 
     // See if the user clicked in a frame.

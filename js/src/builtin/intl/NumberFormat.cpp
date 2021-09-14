@@ -1257,7 +1257,10 @@ bool js::intl_FormatNumber(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
-  RootedString str(cx, NewStringCopy<CanGC>(cx, result.unwrap()));
+  std::u16string_view result_string_view = result.unwrap();
+  RootedString str(cx, NewStringCopyN<CanGC>(
+                           cx, result_string_view.data(),
+                           AssertedCast<uint32_t>(result_string_view.size())));
   if (!str) {
     return false;
   }
@@ -1276,7 +1279,8 @@ static JSLinearString* ToLinearString(JSContext* cx, HandleValue val) {
   // Special case to preserve negative zero.
   if (val.isDouble() && mozilla::IsNegativeZero(val.toDouble())) {
     constexpr std::string_view negativeZero = "-0";
-    return NewStringCopy<CanGC>(cx, negativeZero);
+    return NewStringCopyN<CanGC>(cx, negativeZero.data(),
+                                 negativeZero.length());
   }
 
   JSString* str = ToString(cx, val);
@@ -1600,7 +1604,9 @@ bool js::intl_FormatNumberRange(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
-  RootedString str(cx, NewStringCopy<CanGC>(cx, result.unwrap()));
+  std::u16string_view result_string_view = result.unwrap();
+  RootedString str(cx, NewStringCopyN<CanGC>(cx, result_string_view.data(),
+                                             result_string_view.size()));
   if (!str) {
     return false;
   }

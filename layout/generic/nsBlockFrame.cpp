@@ -219,19 +219,12 @@ static nsRect GetLineTextArea(nsLineBox* aLine,
  * backplate color. Otheriwse, we use the default background color from
  * our high contrast theme.
  */
-static nscolor GetBackplateColor(nsIFrame* aFrame) {
+static Maybe<nscolor> GetBackplateColor(nsIFrame* aFrame) {
   nsPresContext* pc = aFrame->PresContext();
-  nscolor currentBackgroundColor = NS_TRANSPARENT;
   for (nsIFrame* frame = aFrame; frame; frame = frame->GetParent()) {
-    // NOTE(emilio): We assume themed frames (frame->IsThemed()) have correct
-    // background-color information so as to compute the right backplate color.
-    //
-    // This holds because HTML widgets with author-specified backgrounds or
-    // borders disable theming. So as long as the UA-specified background colors
-    // match the actual theme (which they should because we always use system
-    // colors with the non-native theme, and native system colors should also
-    // match the native theme), then we're alright and we should compute an
-    // appropriate backplate color.
+    if (frame->IsThemed()) {
+      return Nothing();
+    }
     auto* style = frame->Style();
     if (style->StyleBackground()->IsTransparent(style)) {
       continue;
@@ -247,24 +240,12 @@ static nscolor GetBackplateColor(nsIFrame* aFrame) {
       // keep going up the frame tree, see bug 1723938.
       continue;
     }
-    if (NS_GET_A(currentBackgroundColor) == 0) {
-      // Try to avoid somewhat expensive math in the common case.
-      currentBackgroundColor = backgroundColor;
-    } else {
-      currentBackgroundColor =
-          NS_ComposeColors(backgroundColor, currentBackgroundColor);
-    }
-    if (NS_GET_A(currentBackgroundColor) == 0xff) {
-      // If fully opaque, we're done, otherwise keep going up blending with our
-      // background.
-      return currentBackgroundColor;
-    }
+    // NOTE: We intentionally disregard the alpha channel here for the purpose
+    // of the backplate, in order to guarantee contrast.
+    return Some(NS_RGB(NS_GET_R(backgroundColor), NS_GET_G(backgroundColor),
+                       NS_GET_B(backgroundColor)));
   }
-  nscolor backgroundColor = aFrame->PresContext()->DefaultBackgroundColor();
-  if (NS_GET_A(currentBackgroundColor) == 0) {
-    return backgroundColor;
-  }
-  return NS_ComposeColors(backgroundColor, currentBackgroundColor);
+  return Some(aFrame->PresContext()->DefaultBackgroundColor());
 }
 
 #ifdef DEBUG
@@ -7025,15 +7006,17 @@ void nsBlockFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
 
   Maybe<nscolor> backplateColor;
 
-  // We'll try to draw an accessibility backplate behind text (to ensure it's
-  // readable over any possible background-images), if all of the following
-  // hold:
-  //    (A) the backplate feature is preffed on
-  //    (B) we are not honoring the document colors
-  if (StaticPrefs::browser_display_permit_backplate() &&
-      !PresContext()->PrefSheetPrefs().mUseDocumentColors &&
-      !IsComboboxControlFrame()) {
-    backplateColor.emplace(GetBackplateColor(this));
+  {
+    // We'll try to draw an accessibility backplate behind text (to ensure it's
+    // readable over any possible background-images), if all of the following
+    // hold:
+    //    (A) the backplate feature is preffed on
+    //    (B) we are not honoring the document colors
+    if (StaticPrefs::browser_display_permit_backplate() &&
+        !PresContext()->PrefSheetPrefs().mUseDocumentColors &&
+        !IsComboboxControlFrame()) {
+      backplateColor = GetBackplateColor(this);
+    }
   }
 
   // Don't use the line cursor if we might have a descendant placeholder ...

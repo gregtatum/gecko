@@ -403,6 +403,22 @@ struct ParamTraits<mozilla::layers::OverscrollBehaviorInfo> {
 };
 
 template <>
+struct ParamTraits<mozilla::layers::LayerClip> {
+  typedef mozilla::layers::LayerClip paramType;
+
+  static void Write(Message* aMsg, const paramType& aParam) {
+    WriteParam(aMsg, aParam.mClipRect);
+    WriteParam(aMsg, aParam.mMaskLayerIndex);
+  }
+
+  static bool Read(const Message* aMsg, PickleIterator* aIter,
+                   paramType* aResult) {
+    return (ReadParam(aMsg, aIter, &aResult->mClipRect) &&
+            ReadParam(aMsg, aIter, &aResult->mMaskLayerIndex));
+  }
+};
+
+template <>
 struct ParamTraits<mozilla::ScrollGeneration>
     : PlainOldDataSerializer<mozilla::ScrollGeneration> {};
 
@@ -423,6 +439,7 @@ struct ParamTraits<mozilla::layers::ScrollMetadata>
     WriteParam(aMsg, aParam.GetContentDescription());
     WriteParam(aMsg, aParam.mLineScrollAmount);
     WriteParam(aMsg, aParam.mPageScrollAmount);
+    WriteParam(aMsg, aParam.mScrollClip);
     WriteParam(aMsg, aParam.mHasScrollgrab);
     WriteParam(aMsg, aParam.mIsLayersIdRoot);
     WriteParam(aMsg, aParam.mIsAutoDirRootContentRTL);
@@ -455,6 +472,7 @@ struct ParamTraits<mozilla::layers::ScrollMetadata>
             ReadContentDescription(aMsg, aIter, aResult) &&
             ReadParam(aMsg, aIter, &aResult->mLineScrollAmount) &&
             ReadParam(aMsg, aIter, &aResult->mPageScrollAmount) &&
+            ReadParam(aMsg, aIter, &aResult->mScrollClip) &&
             ReadBoolForBitfield(aMsg, aIter, aResult,
                                 &paramType::SetHasScrollgrab) &&
             ReadBoolForBitfield(aMsg, aIter, aResult,
@@ -917,6 +935,7 @@ struct ParamTraits<mozilla::layers::SimpleLayerAttributes> {
   static void Write(Message* aMsg, const paramType& aParam) {
     WriteParam(aMsg, aParam.mTransform);
     WriteParam(aMsg, aParam.mTransformIsPerspective);
+    WriteParam(aMsg, aParam.mScrolledClip);
     WriteParam(aMsg, aParam.mPostXScale);
     WriteParam(aMsg, aParam.mPostYScale);
     WriteParam(aMsg, aParam.mContentFlags);
@@ -934,6 +953,7 @@ struct ParamTraits<mozilla::layers::SimpleLayerAttributes> {
                    paramType* aResult) {
     return ReadParam(aMsg, aIter, &aResult->mTransform) &&
            ReadParam(aMsg, aIter, &aResult->mTransformIsPerspective) &&
+           ReadParam(aMsg, aIter, &aResult->mScrolledClip) &&
            ReadParam(aMsg, aIter, &aResult->mPostXScale) &&
            ReadParam(aMsg, aIter, &aResult->mPostYScale) &&
            ReadParam(aMsg, aIter, &aResult->mContentFlags) &&

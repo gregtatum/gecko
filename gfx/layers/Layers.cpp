@@ -319,6 +319,11 @@ RenderTargetIntRect Layer::CalculateScissorRect(
   return currentClip.Intersect(scissor);
 }
 
+Maybe<ParentLayerIntRect> Layer::GetScrolledClipRect() const {
+  const Maybe<LayerClip> clip = mSimpleAttrs.GetScrolledClip();
+  return clip ? Some(clip->GetClipRect()) : Nothing();
+}
+
 const ScrollMetadata& Layer::GetScrollMetadata(uint32_t aIndex) const {
   MOZ_ASSERT(aIndex < GetScrollMetadataCount());
   return mScrollMetadata[aIndex];
@@ -440,6 +445,10 @@ void Layer::ComputeEffectiveTransformForMaskLayers(
   if (GetMaskLayer()) {
     ComputeEffectiveTransformForMaskLayer(GetMaskLayer(), aTransformToSurface);
   }
+  for (size_t i = 0; i < GetAncestorMaskLayerCount(); i++) {
+    Layer* maskLayer = GetAncestorMaskLayerAt(i);
+    ComputeEffectiveTransformForMaskLayer(maskLayer, aTransformToSurface);
+  }
 }
 
 /* static */
@@ -529,6 +538,18 @@ bool Layer::GetVisibleRegionRelativeToRootLayer(nsIntRegion& aResult,
 
   *aLayerOffset = IntPoint(offset.x, offset.y);
   return true;
+}
+
+Maybe<ParentLayerIntRect> Layer::GetCombinedClipRect() const {
+  Maybe<ParentLayerIntRect> clip = GetClipRect();
+
+  clip = IntersectMaybeRects(clip, GetScrolledClipRect());
+
+  for (size_t i = 0; i < mScrollMetadata.Length(); i++) {
+    clip = IntersectMaybeRects(clip, mScrollMetadata[i].GetClipRect());
+  }
+
+  return clip;
 }
 
 ContainerLayer::ContainerLayer(LayerManager* aManager, void* aImplData)
@@ -892,7 +913,7 @@ void ContainerLayer::DefaultComputeEffectiveTransforms(
   }
 
   bool useIntermediateSurface;
-  if (GetMaskLayer() || GetForceIsolatedGroup()) {
+  if (HasMaskLayers() || GetForceIsolatedGroup()) {
     useIntermediateSurface = true;
 #ifdef MOZ_DUMP_PAINTING
   } else if (gfxEnv::DumpPaintIntermediate() && !Extend3DContext()) {
@@ -959,7 +980,7 @@ void ContainerLayer::DefaultComputeEffectiveTransforms(
             useIntermediateSurface = true;
             break;
           }
-          if (checkMaskLayers && child->GetMaskLayer()) {
+          if (checkMaskLayers && child->HasMaskLayers()) {
             useIntermediateSurface = true;
             break;
           }
@@ -1163,6 +1184,14 @@ void Layer::PrintInfo(std::stringstream& aStream, const char* aPrefix) {
 
   if (mClipRect) {
     aStream << " [clip=" << *mClipRect << "]";
+  }
+  if (mSimpleAttrs.GetScrolledClip()) {
+    aStream << " [scrolled-clip="
+            << mSimpleAttrs.GetScrolledClip()->GetClipRect() << "]";
+    if (const Maybe<size_t>& ix =
+            mSimpleAttrs.GetScrolledClip()->GetMaskLayerIndex()) {
+      aStream << " [scrolled-mask=" << ix.value() << "]";
+    }
   }
   if (1.0 != mSimpleAttrs.GetPostXScale() ||
       1.0 != mSimpleAttrs.GetPostYScale()) {

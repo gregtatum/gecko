@@ -7,8 +7,6 @@
 #if !defined(WMFMediaDataDecoder_h_)
 #  define WMFMediaDataDecoder_h_
 
-#  include <set>
-
 #  include "MFTDecoder.h"
 #  include "PlatformDecoderModule.h"
 #  include "WMF.h"
@@ -137,12 +135,6 @@ class WMFMediaDataDecoder
   // all available output.
   RefPtr<DecodePromise> ProcessDrain();
 
-  // Checks if `aOutput` should be discarded (guarded against) because its a
-  // potentially invalid output from the decoder. This is done because the
-  // Windows decoder appears to produce invalid outputs under certain
-  // conditions.
-  bool ShouldGuardAgaintIncorrectFirstSample(MediaData* aOutput) const;
-
   const RefPtr<TaskQueue> mTaskQueue;
 
   UniquePtr<MFTManager> mMFTManager;
@@ -152,11 +144,10 @@ class WMFMediaDataDecoder
   int64_t mLastStreamOffset;
   Maybe<media::TimeUnit> mLastTime;
   media::TimeUnit mLastDuration;
-  // Before we get the first sample, this records the times of all samples we
-  // send to the decoder which is used to validate if the first sample is valid.
-  std::set<int64_t> mInputTimesSet;
+  // Used to filter out the incorrect first output that MFT returns.
+  // It will be set when decoding the first sample, and reset in flush.
+  bool mHasGuardedAgainstIncorrectFirstSample = false;
   int64_t mSamplesCount = 0;
-  int64_t mOutputsCount = 0;
 
   bool mIsShutDown = false;
 
