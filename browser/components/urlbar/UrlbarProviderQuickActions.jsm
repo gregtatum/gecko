@@ -336,6 +336,9 @@ class ProviderQuickActionsBase extends UrlbarProvider {
       }
       return true;
     });
+    if (!results.length) {
+      return;
+    }
     results.length =
       results.length > MAX_RESULTS ? MAX_RESULTS : results.length;
     const result = new UrlbarResult(
@@ -348,7 +351,6 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     );
     result.suggestedIndex = this.getSuggestedIndex();
     result.searchString = queryContext.searchString;
-
     addCallback(this, result);
   }
 
