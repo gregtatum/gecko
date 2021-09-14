@@ -4,6 +4,8 @@
 
 #include "mozilla/intl/TimeZone.h"
 
+#include "unicode/uenum.h"
+
 namespace mozilla::intl {
 
 /* static */
@@ -39,6 +41,21 @@ Result<int32_t, ICUError> TimeZone::GetRawOffsetMs() {
     return Err(ToICUError(status));
   }
   return offset;
+}
+
+Result<SpanEnumeration<char>, ICUError> TimeZone::GetAvailableTimeZones(
+    const char* aRegion) {
+  // Get the time zones that are commonly used in the given region. Uses the
+  // UCAL_ZONE_TYPE_ANY filter so we have more fine-grained control over the
+  // returned time zones and don't omit time zones which are considered links in
+  // ICU, but are treated as proper zones in IANA.
+  UErrorCode status = U_ZERO_ERROR;
+  UEnumeration* enumeration = ucal_openTimeZoneIDEnumeration(
+      UCAL_ZONE_TYPE_ANY, aRegion, nullptr, &status);
+  if (U_FAILURE(status)) {
+    return Err(ToICUError(status));
+  }
+  return SpanEnumeration<char>(enumeration);
 }
 
 TimeZone::~TimeZone() {
