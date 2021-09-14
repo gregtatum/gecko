@@ -86,7 +86,7 @@
           data-category="paneSimple"
           hidden="true">
   <vbox class="simpleGroupboxBody">
-    <hbox>
+    <hbox align="center" class="indent">
       <label data-l10n-id="preferences-default-search-engine-label" flex="1"/>
       <!-- Please don't remove the wrapping hbox/vbox/box for these elements. It's used to properly compute the search tooltip position. -->
       <hbox>
@@ -109,6 +109,67 @@
     </hbox>
   </vbox>
 </groupbox>
+
+<!-- More from Mozilla -->
+<html:h2 data-category="paneSimple"
+         class="simple"
+         hidden="true"
+         data-l10n-id="preferences-mozproducts-header"/>
+
+<groupbox id="mozproductGroup"
+          data-category="paneSimple"
+          class="simple"
+          hidden="true">
+  <hbox class="mozproduct-row mozproduct-shuffle">
+    <image class="mozproduct-icon" id="mozproduct-vpn-icon" />
+    <vbox class="mozproduct-info" flex="1">
+      <label class="mozproduct-name" data-l10n-id="preferences-mozproduct-vpn-name" />
+      <description class="mozproduct-description" data-l10n-id="preferences-mozproduct-vpn-description" />
+    </vbox>
+    <button id="mozproductVpnButton"
+            class="accessory-button primary"
+            is="highlightable-button"
+            data-l10n-id="preferences-mozproduct-get"/>
+  </hbox>
+  <hbox class="mozproduct-row mozproduct-shuffle">
+    <image class="mozproduct-icon" id="mozproduct-rally-icon" />
+    <vbox class="mozproduct-info" flex="1">
+      <label class="mozproduct-name" data-l10n-id="preferences-mozproduct-rally-name" />
+      <description class="mozproduct-description" data-l10n-id="preferences-mozproduct-rally-description" />
+    </vbox>
+    <button id="mozproductRallyButton"
+            class="accessory-button primary"
+            is="highlightable-button"
+            data-l10n-id="preferences-mozproduct-get"/>
+  </hbox>
+  <hbox class="mozproduct-row mozproduct-shuffle">
+    <image class="mozproduct-icon" id="mozproduct-foundation-icon" />
+    <vbox class="mozproduct-info" flex="1">
+      <label class="mozproduct-name" data-l10n-id="preferences-mozproduct-foundation-name" />
+      <description class="mozproduct-description" data-l10n-id="preferences-mozproduct-foundation-description" />
+    </vbox>
+    <button id="mozproductFoundationButton"
+            class="accessory-button primary"
+            is="highlightable-button"
+            data-l10n-id="preferences-mozproduct-support"/>
+  </hbox>
+  <hbox class="mozproduct-row mozproduct-shuffle">
+    <image class="mozproduct-icon" id="mozproduct-pocket-icon" />
+    <vbox class="mozproduct-info" flex="1">
+      <label class="mozproduct-name" data-l10n-id="preferences-mozproduct-pocket-name" />
+      <description class="mozproduct-description" data-l10n-id="preferences-mozproduct-pocket-description" />
+    </vbox>
+    <button id="mozproductPocketButton"
+            class="accessory-button primary"
+            is="highlightable-button"
+            data-l10n-id="preferences-mozproduct-get"/>
+  </hbox>
+  <hbox id="mozproductsViewMore" class="mozproduct-row">
+    <label class="text-link" data-l10n-id="preferences-mozproduct-view-more" />
+  </hbox>
+
+</groupbox>
+
 <hbox id="viewAllSettingsContainer" data-category="paneSimple">
   <button id="viewAllSettings"
           data-l10n-id="preferences-simple-view-all-settings"/>

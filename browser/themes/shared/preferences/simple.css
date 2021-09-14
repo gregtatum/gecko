@@ -75,7 +75,8 @@ h2.simple {
   color: var(--in-content-deemphasized-text);
 }
 
-#viewAllSettingsContainer {
+#viewAllSettingsContainer,
+#mozproductsViewMore {
   -moz-box-pack: center;
 }
 
@@ -101,3 +102,55 @@ h2.simple {
 .extra-services-header-container > h3 {
   align-self: center;
 }
+
+.mozproduct-row:not(:first-child) {
+  margin-top: var(--simple-spacing);
+}
+
+#mozproductGroup:not([viewall]) > .mozproduct-shuffle:not(:nth-child(-n+3)),
+#mozproductGroup[viewall] > #mozproductsViewMore {
+  display: none;
+}
+
+.mozproduct-icon {
+  width: 32px;
+  margin-inline-end: 16px;
+  margin-block: 6px;
+}
+
+.mozproduct-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.mozproduct-name {
+  font-weight: 600;
+  font-size: 1.14em;
+  line-height: normal;
+}
+
+.mozproduct-description {
+  color: var(--in-content-deemphasized-text);
+  font-size: 85%;
+  white-space: nowrap;
+  line-height: normal;
+}
+
+#mozproduct-vpn-icon {
+  list-style-image: url(chrome://browser/content/companion/vpn.svg);
+}
+
+#mozproduct-rally-icon {
+  list-style-image: url(chrome://browser/content/companion/rally.svg);
+}
+
+#mozproduct-foundation-icon {
+  list-style-image: url(chrome://browser/content/companion/mozsocial.png);
+}
+
+#mozproduct-pocket-icon {
+  -moz-context-properties: fill;
+  fill: #ef4056;
+  list-style-image: url('chrome://global/skin/icons/pocket.svg');
+}
+
