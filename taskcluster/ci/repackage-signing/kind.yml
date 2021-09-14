@@ -17,7 +17,6 @@ only-for-build-platforms:
     - win32-devedition/opt
     - win32-shippable/opt
     - win64-devedition/opt
-    - win64-pinebuild/opt
     - win64-shippable/opt
     - win64-aarch64-shippable/opt
     - win64-aarch64-devedition/opt

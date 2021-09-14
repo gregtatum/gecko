@@ -20,7 +20,6 @@ only-for-attributes:
 only-for-build-platforms:
     - macosx64-shippable/opt
     - macosx64-devedition/opt
-    - macosx64-pinebuild/opt
 
 job-template:
     treeherder:
