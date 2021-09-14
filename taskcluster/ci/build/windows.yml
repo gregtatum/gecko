@@ -1339,7 +1339,7 @@ win64-devedition/opt:
 
 win64-pinebuild/opt:
     description: "Win64 Pinebuild (shippable)"
-    use-pgo: win64-shippable/opt
+    use-pgo: true
     index:
         product: pinebuild
         job-name: win64-opt
