@@ -2622,7 +2622,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.companion.globalhistorydebugging.logLevel", "Warn");
   pref("browser.companion.pageaction.enabled", false);
   pref("browser.companion.snapshots", false);
-  pref("browser.tabs.openNewTabForMostNavigations", false);
+  pref("browser.tabs.openNewTabForMostNavigations", true);
   pref("browser.pinebuild.animateViewTransitions", true);
   pref("browser.pinebuild.sessionSetAside", false);
   pref("browser.places.perwindowsessions.enabled", false);
