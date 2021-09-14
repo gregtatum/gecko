@@ -18,6 +18,7 @@ EXPORTS.mozilla.intl = [
     "src/NumberRangeFormat.h",
     "src/PluralRules.h",
     "src/RelativeTimeFormat.h",
+    "src/TimeZone.h",
 ]
 
 UNIFIED_SOURCES += [
@@ -36,6 +37,7 @@ UNIFIED_SOURCES += [
     "src/NumberRangeFormat.cpp",
     "src/PluralRules.cpp",
     "src/RelativeTimeFormat.cpp",
+    "src/TimeZone.cpp",
 ]
 
 if not CONFIG["JS_STANDALONE"]:
