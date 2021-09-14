@@ -12,6 +12,7 @@
 #include "mozilla/Casting.h"
 #include "mozilla/FloatingPoint.h"
 #include "mozilla/intl/NumberFormat.h"
+#include "mozilla/intl/NumberingSystem.h"
 #include "mozilla/intl/NumberRangeFormat.h"
 #include "mozilla/Span.h"
 #include "mozilla/TextUtils.h"
@@ -32,7 +33,6 @@
 #include "builtin/intl/LanguageTag.h"
 #include "builtin/intl/MeasureUnitGenerated.h"
 #include "builtin/intl/RelativeTimeFormat.h"
-#include "builtin/intl/ScopedICUObject.h"
 #include "ds/Sort.h"
 #include "gc/FreeOp.h"
 #include "js/CharacterEncoding.h"
@@ -45,7 +45,6 @@
 #include "unicode/uformattedvalue.h"
 #include "unicode/unum.h"
 #include "unicode/unumberformatter.h"
-#include "unicode/unumsys.h"
 #include "unicode/ures.h"
 #include "unicode/utypes.h"
 #include "util/Text.h"
@@ -222,22 +221,20 @@ bool js::intl_numberingSystem(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
-  UErrorCode status = U_ZERO_ERROR;
-  UNumberingSystem* numbers = unumsys_open(IcuLocale(locale.get()), &status);
-  if (U_FAILURE(status)) {
-    intl::ReportInternalError(cx);
+  auto numberingSystem =
+      mozilla::intl::NumberingSystem::TryCreate(locale.get());
+  if (numberingSystem.isErr()) {
+    intl::ReportInternalError(cx, numberingSystem.unwrapErr());
     return false;
   }
 
-  ScopedICUObject<UNumberingSystem, unumsys_close> toClose(numbers);
-
-  const char* name = unumsys_getName(numbers);
-  if (!name) {
-    intl::ReportInternalError(cx);
+  auto name = numberingSystem.inspect()->GetName();
+  if (name.isErr()) {
+    intl::ReportInternalError(cx, name.unwrapErr());
     return false;
   }
 
-  JSString* jsname = NewStringCopyZ<CanGC>(cx, name);
+  JSString* jsname = NewStringCopyZ<CanGC>(cx, name.unwrap());
   if (!jsname) {
     return false;
   }
