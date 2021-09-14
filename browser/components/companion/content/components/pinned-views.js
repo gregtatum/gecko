@@ -35,6 +35,10 @@ class PinnedViews extends MozLitElement {
     return this._views.includes(view);
   }
 
+  clear() {
+    this._views = [];
+  }
+
   render() {
     return html`
       <link

@@ -106,6 +106,7 @@ class ActiveViewManager extends HTMLElement {
 
   rebuild() {
     this.#river.setViews(window.top.gGlobalHistory.views);
+    this.#pinnedViews.clear();
     this.viewChanged(window.top.gGlobalHistory.currentView);
   }
 
