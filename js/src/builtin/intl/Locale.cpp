@@ -15,7 +15,9 @@
 #include "mozilla/intl/Collator.h"
 #include "mozilla/intl/DateTimeFormat.h"
 #include "mozilla/intl/NumberingSystem.h"
+#include "mozilla/intl/TimeZone.h"
 #include "mozilla/Maybe.h"
+#include "mozilla/Range.h"
 #include "mozilla/Span.h"
 #include "mozilla/TextUtils.h"
 
@@ -30,11 +32,14 @@
 #include "builtin/Array.h"
 #include "builtin/Boolean.h"
 #include "builtin/intl/CommonFunctions.h"
+#include "builtin/intl/FormatBuffer.h"
 #include "builtin/intl/LanguageTag.h"
+#include "builtin/intl/SharedIntlData.h"
 #include "builtin/String.h"
 #include "gc/Rooting.h"
 #include "js/Conversions.h"
 #include "js/friend/ErrorMessages.h"  // js::GetErrorMessage, JSMSG_*
+#include "js/StableStringChars.h"
 #include "js/TypeDecls.h"
 #include "js/Wrapper.h"
 #include "util/StringBuffer.h"
@@ -1185,6 +1190,173 @@ static ArrayObject* NumberingSystemsOfLocale(JSContext* cx,
 
   return CreateArrayFromValue(cx, value);
 }
+
+// IsValidTimeZoneName and CanonicalizeTimeZoneName functions extracted from
+// the Temporal patches.
+//
+// TODO: Remove when the Temporal patches have landed.
+
+/**
+ * IsValidTimeZoneName ( timeZone )
+ */
+static bool IsValidTimeZoneName(JSContext* cx, HandleString timeZone,
+                                MutableHandleAtom validatedTimeZone) {
+  intl::SharedIntlData& sharedIntlData = cx->runtime()->sharedIntlData.ref();
+
+  if (!sharedIntlData.validateTimeZoneName(cx, timeZone, validatedTimeZone)) {
+    return false;
+  }
+
+  if (validatedTimeZone) {
+    cx->markAtom(validatedTimeZone);
+  }
+  return true;
+}
+
+/**
+ * 6.4.2 CanonicalizeTimeZoneName ( timeZone )
+ *
+ * Canonicalizes the given IANA time zone name.
+ *
+ * ES2017 Intl draft rev 4a23f407336d382ed5e3471200c690c9b020b5f3
+ */
+static JSLinearString* CanonicalizeTimeZoneName(JSContext* cx,
+                                                HandleLinearString timeZone) {
+  // Step 1. (Not applicable, the input is already a valid IANA time zone.)
+#  ifdef DEBUG
+  MOZ_ASSERT(!StringEqualsLiteral(timeZone, "Etc/Unknown"),
+             "Invalid time zone");
+
+  RootedAtom checkTimeZone(cx);
+  if (!IsValidTimeZoneName(cx, timeZone, &checkTimeZone)) {
+    return nullptr;
+  }
+  MOZ_ASSERT(checkTimeZone && EqualStrings(timeZone, checkTimeZone),
+             "Time zone name not normalized");
+#  endif
+
+  // Step 2.
+
+  intl::SharedIntlData& sharedIntlData = cx->runtime()->sharedIntlData.ref();
+
+  // Some time zone names are canonicalized differently by ICU -- handle
+  // those first:
+  RootedAtom canonicalTimeZone(cx);
+  if (!sharedIntlData.tryCanonicalizeTimeZoneConsistentWithIANA(
+          cx, timeZone, &canonicalTimeZone)) {
+    return nullptr;
+  }
+
+  RootedLinearString ianaTimeZone(cx);
+  if (canonicalTimeZone) {
+    cx->markAtom(canonicalTimeZone);
+
+    ianaTimeZone.set(canonicalTimeZone);
+  } else {
+    JS::AutoStableStringChars stableChars(cx);
+    if (!stableChars.initTwoByte(cx, timeZone)) {
+      return nullptr;
+    }
+
+    intl::FormatBuffer<char16_t, intl::INITIAL_CHAR_BUFFER_SIZE> buffer(cx);
+    auto result = mozilla::intl::TimeZone::GetCanonicalTimeZoneID(
+        stableChars.twoByteRange(), buffer);
+    if (result.isErr()) {
+      intl::ReportInternalError(cx, result.unwrapErr());
+      return nullptr;
+    }
+
+    ianaTimeZone = buffer.toString();
+    if (!ianaTimeZone) {
+      return nullptr;
+    }
+  }
+
+#  ifdef DEBUG
+  MOZ_ASSERT(!StringEqualsLiteral(ianaTimeZone, "Etc/Unknown"),
+             "Invalid canonical time zone");
+
+  checkTimeZone.set(nullptr);
+  if (!IsValidTimeZoneName(cx, ianaTimeZone, &checkTimeZone)) {
+    return nullptr;
+  }
+  MOZ_ASSERT(checkTimeZone && EqualStrings(ianaTimeZone, checkTimeZone),
+             "Unsupported canonical time zone");
+#  endif
+
+  // Step 3.
+  if (StringEqualsLiteral(ianaTimeZone, "Etc/UTC") ||
+      StringEqualsLiteral(ianaTimeZone, "Etc/GMT")) {
+    return cx->names().UTC;
+  }
+
+  // Step 4.
+  return ianaTimeZone;
+}
+
+/**
+ * TimeZonesOfLocale ( loc )
+ *
+ * Return the commonly used time zones of |region| in alphabetical order.
+ */
+static ArrayObject* TimeZonesOfLocale(JSContext* cx, const char* region) {
+  MOZ_ASSERT(
+      intl::IsStructurallyValidRegionTag(mozilla::MakeStringSpan(region)));
+
+  // FIXME: spec issue - empty array return value not allowed per spec
+
+  // Unsorted list of canonical time zone names, possibly containing duplicates.
+  Rooted<StringList> timeZones(cx, StringList(cx));
+
+  // Get the time zones that are commonly used in the given region.
+  {
+    // Hazard analysis complains that the mozilla::Result destructor calls a GC
+    // function, which is unsound when returning an unrooted value. Work around
+    // this issue by restricting the lifetime of |values| to a separate block.
+
+    auto values = mozilla::intl::TimeZone::GetAvailableTimeZones(region);
+    if (values.isErr()) {
+      intl::ReportInternalError(cx, values.unwrapErr());
+      return nullptr;
+    }
+
+    RootedString timeZone(cx);
+    RootedAtom validatedTimeZone(cx);
+    for (auto value : values.unwrap()) {
+      if (value.isErr()) {
+        intl::ReportInternalError(cx);
+        return nullptr;
+      }
+
+      timeZone = NewStringCopy<CanGC>(cx, value.unwrap());
+      if (!timeZone) {
+        return nullptr;
+      }
+
+      validatedTimeZone.set(nullptr);
+      if (!IsValidTimeZoneName(cx, timeZone, &validatedTimeZone)) {
+        return nullptr;
+      }
+
+      // Ignore invalid, non-IANA time zones returned by ICU.
+      if (!validatedTimeZone) {
+        continue;
+      }
+
+      // Canonicalize the time zone before adding it to the result array.
+      auto* ianaTimeZone = CanonicalizeTimeZoneName(cx, validatedTimeZone);
+      if (!ianaTimeZone) {
+        return nullptr;
+      }
+
+      if (!timeZones.append(ianaTimeZone)) {
+        return nullptr;
+      }
+    }
+  }
+
+  return intl::CreateArrayFromList(cx, &timeZones);
+}
 #endif
 
 // Intl.Locale.prototype.maximize ()
@@ -1603,6 +1775,49 @@ static bool Locale_numberingSystems(JSContext* cx, unsigned argc, Value* vp) {
   CallArgs args = CallArgsFromVp(argc, vp);
   return CallNonGenericMethod<IsLocale, Locale_numberingSystems>(cx, args);
 }
+
+// get Intl.Locale.prototype.timeZones
+static bool Locale_timeZones(JSContext* cx, const CallArgs& args) {
+  auto* locale = &args.thisv().toObject().as<LocaleObject>();
+
+  // Step 3.
+  JSLinearString* baseName = locale->baseName()->ensureLinear(cx);
+  if (!baseName) {
+    return false;
+  }
+
+  auto region = BaseNameParts(baseName).region;
+
+  // Step 4.
+  if (!region) {
+    args.rval().setUndefined();
+    return true;
+  }
+
+  // Copy the region into a char array.
+  char regionChars[RegionLength + 1] = {};
+
+  MOZ_RELEASE_ASSERT(region->length <= RegionLength);
+
+  JS::LossyCopyLinearStringChars(regionChars, baseName, region->length,
+                                 region->index);
+
+  // Step 5.
+  auto* result = TimeZonesOfLocale(cx, regionChars);
+  if (!result) {
+    return false;
+  }
+
+  args.rval().setObject(*result);
+  return true;
+}
+
+// get Intl.Locale.prototype.timeZones
+static bool Locale_timeZones(JSContext* cx, unsigned argc, Value* vp) {
+  // Steps 1-2.
+  CallArgs args = CallArgsFromVp(argc, vp);
+  return CallNonGenericMethod<IsLocale, Locale_timeZones>(cx, args);
+}
 #endif /* NIGHTLY_BUILD */
 
 static bool Locale_toSource(JSContext* cx, unsigned argc, Value* vp) {
@@ -1633,6 +1848,7 @@ static const JSPropertySpec locale_properties[] = {
     JS_PSG("collations", Locale_collations, 0),
     JS_PSG("hourCycles", Locale_hourCycles, 0),
     JS_PSG("numberingSystems", Locale_numberingSystems, 0),
+    JS_PSG("timeZones", Locale_timeZones, 0),
 #endif
     JS_STRING_SYM_PS(toStringTag, "Intl.Locale", JSPROP_READONLY),
     JS_PS_END};
