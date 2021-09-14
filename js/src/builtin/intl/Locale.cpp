@@ -11,6 +11,7 @@
 #include "mozilla/ArrayUtils.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Casting.h"
+#include "mozilla/intl/Calendar.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/Span.h"
 #include "mozilla/TextUtils.h"
@@ -21,6 +22,7 @@
 #include <string.h>
 #include <utility>
 
+#include "builtin/Array.h"
 #include "builtin/Boolean.h"
 #include "builtin/intl/CommonFunctions.h"
 #include "builtin/intl/LanguageTag.h"
@@ -865,6 +867,121 @@ static inline auto BaseNameParts(JSLinearString* baseName) {
              : BaseNameParts(baseName->twoByteChars(nogc), baseName->length());
 }
 
+#ifdef NIGHTLY_BUILD
+/**
+ * Class to hold a locale's LSR (language-script-region) subtags.
+ *
+ * ICU doesn't support arbitrarily large language tags, so only pass the
+ * language-script-region subtags part to ICU to avoid running into internal ICU
+ * limitations.
+ */
+class LocaleLSR {
+  // Add +2 to account for both separators.
+  static constexpr size_t LSRLength =
+      LanguageLength + ScriptLength + RegionLength + 2;
+
+  // Add +1 to zero terminate the string.
+  char locale_[LSRLength + 1] = {};
+
+ public:
+  explicit LocaleLSR(JSLinearString* baseName);
+
+  const char* toLanguageTag() const { return locale_; }
+  const char* toIcuLocale() const { return intl::IcuLocale(locale_); }
+};
+
+LocaleLSR::LocaleLSR(JSLinearString* baseName) {
+  MOZ_ASSERT(StringIsAscii(baseName));
+
+  auto parts = BaseNameParts(baseName);
+  MOZ_ASSERT(parts.language.index == 0);
+
+  size_t length = parts.language.length;
+  if (parts.script) {
+    length = parts.script->index + parts.script->length;
+  }
+  if (parts.region) {
+    length = parts.region->index + parts.region->length;
+  }
+
+  MOZ_RELEASE_ASSERT(length <= LSRLength);
+
+  JS::LossyCopyLinearStringChars(locale_, baseName, length);
+}
+
+/**
+ * Create an array which holds a single item.
+ */
+static ArrayObject* CreateArrayFromValue(JSContext* cx, HandleValue item) {
+  auto* array = NewDenseFullyAllocatedArray(cx, 1);
+  if (!array) {
+    return nullptr;
+  }
+  array->setDenseInitializedLength(1);
+  array->initDenseElement(0, item);
+  return array;
+}
+
+/**
+ * CalendarsOfLocale ( loc )
+ *
+ * Return the commonly used calendars of |loc| in preference order.
+ */
+static ArrayObject* CalendarsOfLocale(JSContext* cx,
+                                      Handle<LocaleObject*> locale) {
+  RootedValue preferred(cx);
+  if (!GetUnicodeExtension(cx, locale, "ca", &preferred)) {
+    return nullptr;
+  }
+  MOZ_ASSERT(preferred.isString() || preferred.isUndefined());
+
+  if (preferred.isString()) {
+    return CreateArrayFromValue(cx, preferred);
+  }
+
+  JSLinearString* baseName = locale->baseName()->ensureLinear(cx);
+  if (!baseName) {
+    return nullptr;
+  }
+  LocaleLSR lsr(baseName);
+
+  RootedArrayObject array(cx, NewDenseEmptyArray(cx));
+  if (!array) {
+    return nullptr;
+  }
+
+  // Get the calendars that are commonly used in the given locale.
+  {
+    // Hazard analysis complains that the mozilla::Result destructor calls a GC
+    // function, which is unsound when returning an unrooted value. Work around
+    // this issue by restricting the lifetime of |keywords| to a separate block.
+    auto keywords = mozilla::intl::Calendar::GetBcp47KeywordValuesForLocale(
+        lsr.toIcuLocale(), true);
+    if (keywords.isErr()) {
+      intl::ReportInternalError(cx);
+      return nullptr;
+    }
+
+    for (auto keyword : keywords.unwrap()) {
+      if (keyword.isErr()) {
+        intl::ReportInternalError(cx);
+        return nullptr;
+      }
+
+      auto* string = NewStringCopy<CanGC>(cx, keyword.unwrap());
+      if (!string) {
+        return nullptr;
+      }
+      if (!NewbornArrayPush(cx, array, StringValue(string))) {
+        return nullptr;
+      }
+    }
+  }
+
+  return array;
+}
+#endif
+
 // Intl.Locale.prototype.maximize ()
 static bool Locale_maximize(JSContext* cx, const CallArgs& args) {
   MOZ_ASSERT(IsLocale(args.thisv()));
@@ -1197,6 +1314,29 @@ static bool Locale_region(JSContext* cx, unsigned argc, Value* vp) {
   return CallNonGenericMethod<IsLocale, Locale_region>(cx, args);
 }
 
+#ifdef NIGHTLY_BUILD
+// get Intl.Locale.prototype.calendars
+static bool Locale_calendars(JSContext* cx, const CallArgs& args) {
+  Rooted<LocaleObject*> locale(cx, &args.thisv().toObject().as<LocaleObject>());
+
+  // Step 3.
+  auto* result = CalendarsOfLocale(cx, locale);
+  if (!result) {
+    return false;
+  }
+
+  args.rval().setObject(*result);
+  return true;
+}
+
+// get Intl.Locale.prototype.calendars
+static bool Locale_calendars(JSContext* cx, unsigned argc, Value* vp) {
+  // Steps 1-2.
+  CallArgs args = CallArgsFromVp(argc, vp);
+  return CallNonGenericMethod<IsLocale, Locale_calendars>(cx, args);
+}
+#endif /* NIGHTLY_BUILD */
+
 static bool Locale_toSource(JSContext* cx, unsigned argc, Value* vp) {
   CallArgs args = CallArgsFromVp(argc, vp);
   args.rval().setString(cx->names().Locale);
@@ -1220,6 +1360,9 @@ static const JSPropertySpec locale_properties[] = {
     JS_PSG("language", Locale_language, 0),
     JS_PSG("script", Locale_script, 0),
     JS_PSG("region", Locale_region, 0),
+#ifdef NIGHTLY_BUILD
+    JS_PSG("calendars", Locale_calendars, 0),
+#endif
     JS_STRING_SYM_PS(toStringTag, "Intl.Locale", JSPROP_READONLY),
     JS_PS_END};
 
