@@ -622,6 +622,7 @@ class GlobalHistory extends EventTarget {
     let newTab = this.#window.gBrowser.addTrustedTab(
       this.#window.BROWSER_NEW_TAB_URL
     );
+    this.#window.gBrowser.selectedTab = newTab;
     this.#window.gBrowser.removeAllTabsBut(newTab, { animate: false });
     this.#viewStack = [];
     this.#historyViews.clear();
