@@ -168,6 +168,7 @@
   MACRO_(finally, finally_, "finally")                                         \
   MACRO_(find, find, "find")                                                   \
   MACRO_(findIndex, findIndex, "findIndex")                                    \
+  MACRO_(firstDay, firstDay, "firstDay")                                       \
   MACRO_(firstDayOfWeek, firstDayOfWeek, "firstDayOfWeek")                     \
   MACRO_(fix, fix, "fix")                                                      \
   MACRO_(flags, flags, "flags")                                                \
@@ -309,6 +310,7 @@
   MACRO_(meta, meta, "meta")                                                   \
   MACRO_(minColumn, minColumn, "minColumn")                                    \
   MACRO_(minDays, minDays, "minDays")                                          \
+  MACRO_(minimalDays, minimalDays, "minimalDays")                              \
   MACRO_(minimum, minimum, "minimum")                                          \
   MACRO_(minimumFractionDigits, minimumFractionDigits,                         \
          "minimumFractionDigits")                                              \
@@ -539,6 +541,7 @@
   MACRO_(WeakSet_add, WeakSet_add, "WeakSet_add")                              \
   MACRO_(week, week, "week")                                                   \
   MACRO_(weekday, weekday, "weekday")                                          \
+  MACRO_(weekend, weekend, "weekend")                                          \
   MACRO_(weekendEnd, weekendEnd, "weekendEnd")                                 \
   MACRO_(weekendStart, weekendStart, "weekendStart")                           \
   MACRO_(while, while_, "while")                                               \

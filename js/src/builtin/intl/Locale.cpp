@@ -11,6 +11,7 @@
 #include "mozilla/ArrayUtils.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Casting.h"
+#include "mozilla/EnumSet.h"
 #include "mozilla/intl/Calendar.h"
 #include "mozilla/intl/Collator.h"
 #include "mozilla/intl/DateTimeFormat.h"
@@ -1391,6 +1392,52 @@ static JSString* CharacterDirectionOfLocale(JSContext* cx,
   }
   MOZ_CRASH("Unexpected character orientation value");
 }
+
+struct WeekInfo final {
+  using Weekday = mozilla::intl::Weekday;
+
+  mozilla::EnumSet<Weekday> weekend;
+
+  Weekday firstDay = Weekday::Monday;
+
+  int32_t minimalDays = 0;
+};
+
+/**
+ * WeekInfoOfLocale ( locale )
+ *
+ * Return the week info of |locale|.
+ */
+static bool WeekInfoOfLocale(JSContext* cx, Handle<LocaleObject*> locale,
+                             WeekInfo& result) {
+  JSLinearString* baseName = locale->baseName()->ensureLinear(cx);
+  if (!baseName) {
+    return false;
+  }
+  LocaleLSR lsr(baseName);
+
+  // FIXME: spec issue - should explicitly define if Unicode extensions should
+  // be taken into account.
+
+  auto calendar = mozilla::intl::Calendar::TryCreate(lsr.toLanguageTag());
+  if (calendar.isErr()) {
+    intl::ReportInternalError(cx, calendar.unwrapErr());
+    return false;
+  }
+
+  auto weekend = calendar.inspect()->GetWeekend();
+  if (weekend.isErr()) {
+    intl::ReportInternalError(cx, weekend.unwrapErr());
+    return false;
+  }
+
+  result = {
+      weekend.unwrap(),
+      calendar.inspect()->GetFirstDayOfWeek(),
+      calendar.inspect()->GetMinimalDaysInFirstWeek(),
+  };
+  return true;
+}
 #endif
 
 // Intl.Locale.prototype.maximize ()
@@ -1889,6 +1936,67 @@ static bool Locale_textInfo(JSContext* cx, unsigned argc, Value* vp) {
   CallArgs args = CallArgsFromVp(argc, vp);
   return CallNonGenericMethod<IsLocale, Locale_textInfo>(cx, args);
 }
+
+// get Intl.Locale.prototype.weekInfo
+static bool Locale_weekInfo(JSContext* cx, const CallArgs& args) {
+  Rooted<LocaleObject*> locale(cx, &args.thisv().toObject().as<LocaleObject>());
+
+  // Steps 4.
+  WeekInfo weekInfo;
+  if (!WeekInfoOfLocale(cx, locale, weekInfo)) {
+    return false;
+  }
+
+  // Step 5.
+  size_t weekendDays = weekInfo.weekend.size();
+  RootedArrayObject weekend(cx, NewDenseFullyAllocatedArray(cx, weekendDays));
+  if (!weekend) {
+    return false;
+  }
+  weekend->setDenseInitializedLength(weekendDays);
+
+  size_t index = 0;
+  for (auto day : weekInfo.weekend) {
+    weekend->initDenseElement(index++, Int32Value(static_cast<int32_t>(day)));
+  }
+  MOZ_ASSERT(index == weekendDays);
+
+  // Step 3.
+  Rooted<IdValueVector> info(cx, IdValueVector(cx));
+  if (!info.reserve(3)) {
+    return false;
+  }
+
+  // Step 6.
+  info.infallibleEmplaceBack(
+      NameToId(cx->names().firstDay),
+      Int32Value(static_cast<int32_t>(weekInfo.firstDay)));
+
+  // Step 7.
+  info.infallibleEmplaceBack(NameToId(cx->names().weekend),
+                             ObjectValue(*weekend));
+
+  // Step 8.
+  info.infallibleEmplaceBack(NameToId(cx->names().minimalDays),
+                             Int32Value(weekInfo.minimalDays));
+
+  // Step 9.
+  auto* result = NewPlainObjectWithProperties(cx, info.begin(), info.length(),
+                                              GenericObject);
+  if (!result) {
+    return false;
+  }
+
+  args.rval().setObject(*result);
+  return true;
+}
+
+// get Intl.Locale.prototype.weekInfo
+static bool Locale_weekInfo(JSContext* cx, unsigned argc, Value* vp) {
+  // Steps 1-2.
+  CallArgs args = CallArgsFromVp(argc, vp);
+  return CallNonGenericMethod<IsLocale, Locale_weekInfo>(cx, args);
+}
 #endif /* NIGHTLY_BUILD */
 
 static bool Locale_toSource(JSContext* cx, unsigned argc, Value* vp) {
@@ -1921,6 +2029,7 @@ static const JSPropertySpec locale_properties[] = {
     JS_PSG("numberingSystems", Locale_numberingSystems, 0),
     JS_PSG("timeZones", Locale_timeZones, 0),
     JS_PSG("textInfo", Locale_textInfo, 0),
+    JS_PSG("weekInfo", Locale_weekInfo, 0),
 #endif
     JS_STRING_SYM_PS(toStringTag, "Intl.Locale", JSPROP_READONLY),
     JS_PS_END};
