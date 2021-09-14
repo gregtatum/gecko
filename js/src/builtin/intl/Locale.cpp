@@ -13,6 +13,7 @@
 #include "mozilla/Casting.h"
 #include "mozilla/intl/Calendar.h"
 #include "mozilla/intl/Collator.h"
+#include "mozilla/intl/DateTimeFormat.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/Span.h"
 #include "mozilla/TextUtils.h"
@@ -1057,6 +1058,87 @@ static ArrayObject* CollationsOfLocale(JSContext* cx,
   // ICU returns these strings.
   return intl::CreateArrayFromList(cx, &list);
 }
+
+/**
+ * HourCyclesOfLocale ( loc )
+ *
+ * Return the commonly used hour-cycles of |loc| in preference order.
+ */
+static ArrayObject* HourCyclesOfLocale(JSContext* cx,
+                                       Handle<LocaleObject*> locale) {
+  RootedValue preferred(cx);
+  if (!GetUnicodeExtension(cx, locale, "hc", &preferred)) {
+    return nullptr;
+  }
+  MOZ_ASSERT(preferred.isString() || preferred.isUndefined());
+
+  if (preferred.isString()) {
+    return CreateArrayFromValue(cx, preferred);
+  }
+
+  JSLinearString* baseName = locale->baseName()->ensureLinear(cx);
+  if (!baseName) {
+    return nullptr;
+  }
+
+  LanguageTag tag(cx);
+  if (!LanguageTagParser::parseBaseName(cx, baseName, tag)) {
+    return nullptr;
+  }
+
+  // If the region subtag isn't present or equal to the unknown region "ZZ",
+  // follow ICU and derive it from the likely subtags.
+  if (!tag.region().present() || tag.region().equalTo("ZZ")) {
+    if (!tag.addLikelySubtags(cx)) {
+      return nullptr;
+    }
+  }
+
+  RootedArrayObject result(cx, NewDenseEmptyArray(cx));
+  if (!result) {
+    return nullptr;
+  }
+
+  // Get the hour cycles that are commonly used in the given locale.
+  {
+    auto language = tag.language().span();
+    auto region = tag.region().present() ? mozilla::Some(tag.region().span())
+                                         : mozilla::Nothing();
+
+    auto hourCycles =
+        mozilla::intl::DateTimeFormat::GetAllowedHourCycles(language, region);
+    if (hourCycles.isErr()) {
+      intl::ReportInternalError(cx, hourCycles.unwrapErr());
+      return nullptr;
+    }
+
+    for (auto hourCycle : hourCycles.unwrap()) {
+      using HourCycle = mozilla::intl::DateTimeFormat::HourCycle;
+
+      JSString* hcname;
+      switch (hourCycle) {
+        case HourCycle::H11:
+          hcname = cx->names().h11;
+          break;
+        case HourCycle::H12:
+          hcname = cx->names().h12;
+          break;
+        case HourCycle::H23:
+          hcname = cx->names().h23;
+          break;
+        case HourCycle::H24:
+          hcname = cx->names().h24;
+          break;
+      }
+
+      if (!NewbornArrayPush(cx, result, StringValue(hcname))) {
+        return nullptr;
+      }
+    }
+  }
+
+  return result;
+}
 #endif
 
 // Intl.Locale.prototype.maximize ()
@@ -1433,6 +1515,27 @@ static bool Locale_collations(JSContext* cx, unsigned argc, Value* vp) {
   CallArgs args = CallArgsFromVp(argc, vp);
   return CallNonGenericMethod<IsLocale, Locale_collations>(cx, args);
 }
+
+// get Intl.Locale.prototype.hourCycles
+static bool Locale_hourCycles(JSContext* cx, const CallArgs& args) {
+  Rooted<LocaleObject*> locale(cx, &args.thisv().toObject().as<LocaleObject>());
+
+  // Step 3.
+  auto* result = HourCyclesOfLocale(cx, locale);
+  if (!result) {
+    return false;
+  }
+
+  args.rval().setObject(*result);
+  return true;
+}
+
+// get Intl.Locale.prototype.hourCycles
+static bool Locale_hourCycles(JSContext* cx, unsigned argc, Value* vp) {
+  // Steps 1-2.
+  CallArgs args = CallArgsFromVp(argc, vp);
+  return CallNonGenericMethod<IsLocale, Locale_hourCycles>(cx, args);
+}
 #endif /* NIGHTLY_BUILD */
 
 static bool Locale_toSource(JSContext* cx, unsigned argc, Value* vp) {
@@ -1461,6 +1564,7 @@ static const JSPropertySpec locale_properties[] = {
 #ifdef NIGHTLY_BUILD
     JS_PSG("calendars", Locale_calendars, 0),
     JS_PSG("collations", Locale_collations, 0),
+    JS_PSG("hourCycles", Locale_hourCycles, 0),
 #endif
     JS_STRING_SYM_PS(toStringTag, "Intl.Locale", JSPROP_READONLY),
     JS_PS_END};

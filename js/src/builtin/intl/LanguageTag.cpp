@@ -1371,6 +1371,20 @@ bool LanguageTagParser::parse(JSContext* cx, mozilla::Span<const char> locale,
   return false;
 }
 
+bool LanguageTagParser::parseBaseName(JSContext* cx, JSLinearString* locale,
+                                      LanguageTag& tag) {
+  bool ok;
+  JS_TRY_VAR_OR_RETURN_FALSE(cx, ok, tryParseBaseName(cx, locale, tag));
+  if (ok) {
+    return true;
+  }
+  if (UniqueChars localeChars = QuoteString(cx, locale, '"')) {
+    JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
+                              JSMSG_INVALID_LANGUAGE_TAG, localeChars.get());
+  }
+  return false;
+}
+
 bool LanguageTagParser::parseBaseName(JSContext* cx,
                                       mozilla::Span<const char> locale,
                                       LanguageTag& tag) {

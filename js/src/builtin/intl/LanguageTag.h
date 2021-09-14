@@ -694,6 +694,11 @@ class MOZ_STACK_CLASS LanguageTagParser final {
 
   // Parse the input string as the base-name parts (language, script, region,
   // variants) of a language tag. Ignores any trailing characters.
+  static bool parseBaseName(JSContext* cx, JSLinearString* locale,
+                            LanguageTag& tag);
+
+  // Parse the input string as the base-name parts (language, script, region,
+  // variants) of a language tag. Ignores any trailing characters.
   static bool parseBaseName(JSContext* cx, mozilla::Span<const char> locale,
                             LanguageTag& tag);
 
