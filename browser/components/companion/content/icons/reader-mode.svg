@@ -1,0 +1,9 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="40" height="40" rx="20" fill="#F9F9FB"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M14 15C14 13.895 14.895 13 16 13H24C25.105 13 26 13.895 26 15V25C26 26.105 25.105 27 24 27H16C14.895 27 14 26.105 14 25V15ZM24.15 25.75L24.75 25.15V14.85L24.15 14.25H15.85L15.25 14.85V25.15L15.85 25.75H24.15ZM17.875 17.25H22.125C22.47 17.25 22.75 16.97 22.75 16.625C22.75 16.28 22.47 16 22.125 16H17.875C17.53 16 17.25 16.28 17.25 16.625C17.25 16.97 17.53 17.25 17.875 17.25ZM22.125 20.25H17.875C17.53 20.25 17.25 19.97 17.25 19.625C17.25 19.28 17.53 19 17.875 19H22.125C22.47 19 22.75 19.28 22.75 19.625C22.75 19.97 22.47 20.25 22.125 20.25ZM17.875 23.25H20.125C20.47 23.25 20.75 22.97 20.75 22.625C20.75 22.28 20.47 22 20.125 22H17.875C17.53 22 17.25 22.28 17.25 22.625C17.25 22.97 17.53 23.25 17.875 23.25Z" fill="#5B5B66"/>
+<rect x="0.5" y="0.5" width="39" height="39" rx="19.5" stroke="black" stroke-opacity="0.05"/>
+</svg>
+
