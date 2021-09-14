@@ -225,6 +225,9 @@ ol {
 
 :host(.in-companion) .create-login-button-container {
   width: 100%;
+  position: absolute;
+  bottom: 0;
+  background: var(--in-content-box-background);
 }
 
 :host(.in-companion) .create-login-button {

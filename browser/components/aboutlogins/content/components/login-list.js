@@ -392,6 +392,12 @@ export default class LoginList extends HTMLElement {
         break;
       }
       case "AboutLoginsClearSelection": {
+        if (this.classList.contains("in-companion")) {
+          this.classList.remove("create-login-selected");
+          this._createLoginButton.disabled = false;
+          return;
+        }
+
         if (!this._loginGuidsSortedOrder.length) {
           return;
         }
@@ -465,7 +471,14 @@ export default class LoginList extends HTMLElement {
       case "AboutLoginsShowBlankLogin": {
         if (!event.defaultPrevented) {
           this._selectedGuid = null;
-          this._setListItemAsSelected(this._blankLoginListItem);
+          if (this.classList.contains("in-companion")) {
+            this.classList.toggle(
+              "create-login-selected",
+              !this._blankLoginListItem.dataset.guid
+            );
+          } else {
+            this._setListItemAsSelected(this._blankLoginListItem);
+          }
         }
         break;
       }

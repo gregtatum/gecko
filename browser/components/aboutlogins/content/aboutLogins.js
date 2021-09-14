@@ -58,7 +58,11 @@ function handleSyncState(syncState) {
 
 gElements.backButton.addEventListener("click", event => {
   if (document.documentElement.classList.contains("login-item-view")) {
+    // To support back navigation to the login list page, we clear the
+    // current selection and manipulate pref values to hide the
+    // login item.
     window.dispatchEvent(new CustomEvent("AboutLoginsClearSelection"));
+    window.dispatchEvent(new CustomEvent("AboutLoginsRemoveUpdateState"));
     toggleHeaderValue("about-logins-header-login-list");
     gElements.loginList.classList.remove("editing");
   } else {

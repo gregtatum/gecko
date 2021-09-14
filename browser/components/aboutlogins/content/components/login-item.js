@@ -124,6 +124,7 @@ export default class LoginItem extends HTMLElement {
     window.addEventListener("AboutLoginsShowBlankLogin", this);
     window.addEventListener("AboutLoginsRemaskPassword", this);
     window.addEventListener("AboutLoginsLoginEditLogin", this);
+    window.addEventListener("AboutLoginsRemoveUpdateState", this);
   }
 
   focus() {
@@ -342,6 +343,13 @@ export default class LoginItem extends HTMLElement {
     });
   }
 
+  toggleUpdateState() {
+    if (this.classList.contains("in-companion")) {
+      delete this.dataset.isNewLogin;
+      delete this.dataset.editing;
+    }
+  }
+
   async handleEvent(event) {
     switch (event.type) {
       case "AboutLoginsInitialLoginSelected": {
@@ -359,6 +367,10 @@ export default class LoginItem extends HTMLElement {
       case "AboutLoginsLoginEditLogin": {
         this.setLogin(event.detail.login);
         await this.handleEditButton();
+        break;
+      }
+      case "AboutLoginsRemoveUpdateState": {
+        this.toggleUpdateState();
         break;
       }
       case "AboutLoginsShowBlankLogin": {
@@ -425,6 +437,8 @@ export default class LoginItem extends HTMLElement {
                 detail: { newHeaderL10nId: "about-logins-header-login-list" },
               })
             );
+
+            this.toggleUpdateState();
 
             this._recordTelemetryEvent({
               object: "new_login",

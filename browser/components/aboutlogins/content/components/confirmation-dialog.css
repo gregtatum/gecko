@@ -37,12 +37,13 @@
 }
 
 :host(.in-companion) .container {
-  min-height: 280px;
+  min-height: 300px;
   background: var(--in-content-box-background);
   margin-top: 80px;
   margin-inline: 16px;
   width: 100%;
-  border: 0.5px solid #CFCFD8;
+  border: 0.5px solid var(--in-content-box-border-color);
+  border-radius: 4px;
 }
 
 .title {
@@ -102,7 +103,7 @@ visibility: hidden;
 }
 
 :host(.in-companion) .content {
-  margin-block: 60px;
+  margin-block: 65px;
   padding-bottom: ;
   padding-block: 0;
 }
@@ -121,9 +122,6 @@ visibility: hidden;
 :host(.in-companion) .buttons {
   padding: 0;
   margin-inline: 10px;
-  float: ;
-  border: ;
-  padding-block-end: 8px;
 }
 
 .buttons.macosx > .confirm-button {

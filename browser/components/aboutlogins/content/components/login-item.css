@@ -59,10 +59,6 @@ button {
   margin-inline: 0;
 }
 
-:host(.in-companion) .cancel-button {
-  margin-inline-end: 8px;
-}
-
 form {
   flex-grow: 1;
 }
@@ -77,6 +73,11 @@ form {
 :host(:not([data-is-new-login])) .new-login-title,
 :host(:not([data-editing])) .form-actions-row {
   display: none;
+}
+
+:host(.in-companion) .cancel-button {
+  margin-inline-end: 8px;
+  display: inline-block !important;
 }
 
 input[type="password"],
