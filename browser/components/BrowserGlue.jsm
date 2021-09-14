@@ -72,6 +72,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
   ProcessHangMonitor: "resource:///modules/ProcessHangMonitor.jsm",
   PublicSuffixList: "resource://gre/modules/netwerk-dns/PublicSuffixList.jsm",
+  PyodideService: "resource:////modules/PyodideService.jsm",
   RemoteSettings: "resource://services-settings/remote-settings.js",
   RemoteSecuritySettings:
     "resource://gre/modules/psm/RemoteSecuritySettings.jsm",
@@ -1752,6 +1753,7 @@ BrowserGlue.prototype = {
 
     if (AppConstants.PINEBUILD) {
       OnnxRuntimeService.init();
+      PyodideService.init();
     }
 
     this._firstWindowTelemetry(aWindow);
@@ -2002,6 +2004,7 @@ BrowserGlue.prototype = {
       () => RFPHelper.uninit(),
       () => ASRouterNewTabHook.destroy(),
       () => OnnxRuntimeService.uninit(),
+      () => PyodideService.uninit(),
     ];
 
     tasks.push(

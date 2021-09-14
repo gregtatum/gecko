@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <header>
+        <title>Pyodide</title>
+    </header>
+    <body>
+        <script>
+            const pyodideWorker = new Worker("./webworker.js");
+
+            function run(script, context, onSuccess, onError) {
+                pyodideWorker.onerror = onError;
+                pyodideWorker.onmessage = (e) => onSuccess(e.data);
+                pyodideWorker.postMessage({
+                    ...context,
+                    python: script,
+                });
+            }
+
+            async function exec(data) {
+                return new Promise(function (onSuccess, onError) {
+                    run(data.script, data.context, onSuccess, onError);
+                });
+            }
+
+            document.dispatchEvent(new CustomEvent("pyodideReady"));
+        </script>
+    </body>
+</html>
