@@ -1247,8 +1247,13 @@ class GlobalHistory extends EventTarget {
    * @type {number} The number of pinned Views in this window.
    */
   get pinnedViewCount() {
-    let firstUnpinned = this.#viewStack.findIndex(view => !view.pinned);
-    return firstUnpinned == -1 ? 0 : firstUnpinned;
+    let index;
+    for (index = 0; index < this.#viewStack.length; index++) {
+      if (!this.#viewStack[index].pinned) {
+        break;
+      }
+    }
+    return index;
   }
 
   /**
