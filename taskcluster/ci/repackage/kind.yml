@@ -21,10 +21,12 @@ only-for-build-platforms:
     - linux/opt
     - linux64-shippable/opt
     - linux64-devedition/opt
+    - linux64-pinebuild/opt
     - linux64-asan-reporter-shippable/opt
     - linux64/opt
     - macosx64-shippable/opt
     - macosx64-devedition/opt
+    - macosx64-pinebuild/opt
     - macosx64/opt
     - macosx64/debug
     - win32-shippable/opt
@@ -32,6 +34,7 @@ only-for-build-platforms:
     - win32/opt
     - win64-shippable/opt
     - win64-devedition/opt
+    - win64-pinebuild/opt
     - win64-aarch64-shippable/opt
     - win64-aarch64-devedition/opt
     - win64/opt

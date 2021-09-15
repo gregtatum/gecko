@@ -1337,6 +1337,123 @@ win64-devedition/opt:
             - nsis-3.01-win
             - upx-3.95-win
 
+win64-pinebuild/opt:
+    description: "Win64 Pinebuild (shippable)"
+    use-pgo: win64-shippable/opt
+    index:
+        product: pinebuild
+        job-name: win64-opt
+        type: shippable
+    attributes:
+        shippable: true
+        enable-full-crashsymbols: true
+    shipping-phase: build
+    shipping-product: pinebuild
+    treeherder:
+        platform: windows2012-64-pinebuild/opt
+        symbol: B
+        tier: 1
+    worker-type: b-linux
+    worker:
+        docker-image: {in-tree: debian11-amd64-build}
+        max-run-time: 10800
+        env:
+            TOOLTOOL_MANIFEST: "browser/config/tooltool-manifests/vs2017-15.9.manifest"
+            MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+            PERFHERDER_EXTRA_OPTIONS: pinebuild
+    run:
+        actions: [get-secrets, build]
+        options: [append-env-variables-from-configs]
+        script: mozharness/scripts/fx_desktop_build.py
+        secrets: true
+        config:
+            - builds/releng_base_firefox.py
+            - builds/releng_base_linux_64_builds.py
+            - taskcluster_nightly.py
+        extra-config:
+            stage_platform: win64-pinebuild
+            mozconfig_platform: win64
+            env:
+                LD_PRELOAD: "/builds/worker/fetches/liblowercase/liblowercase.so"
+                LOWERCASE_DIRS: "/builds/worker/checkouts/gecko/vs2017_15.9.6"
+        mozconfig-variant: pinebuild
+    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine']
+    fetches:
+        toolchain:
+            - linux64-binutils
+            - linux64-clang-win-cross
+            - linux64-rust-cross
+            - linux64-rust-size
+            - linux64-nasm
+            - linux64-node
+            - linux64-cbindgen
+            - linux64-dump_syms
+            - linux64-wine
+            - linux64-liblowercase
+            - linux64-winchecksec
+            - sysroot-x86_64-linux-gnu
+            - sysroot-wasm32-wasi
+        fetch:
+            - nsis-3.01-win
+            - upx-3.95-win
+
+win64-pinebuild/debug:
+    description: "Win64 Pinebuild Debug"
+    index:
+        product: pinebuild
+        job-name: win64-debug
+    attributes:
+        enable-build-signing: true
+        enable-full-crashsymbols: true
+    treeherder:
+        platform: windows2012-64-pinebuild/debug
+        symbol: B
+        tier: 1
+    worker-type: b-linux
+    worker:
+        docker-image: {in-tree: debian11-amd64-build}
+        max-run-time: 7200
+        env:
+            TOOLTOOL_MANIFEST: "browser/config/tooltool-manifests/vs2017-15.9.manifest"
+            # Comment out until we have tests to run
+            # MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine']
+    run:
+        options: [append-env-variables-from-configs]
+        actions: [get-secrets, build]
+        script: mozharness/scripts/fx_desktop_build.py
+        secrets: true
+        config:
+            - builds/releng_base_firefox.py
+            - builds/releng_base_linux_64_builds.py
+            - builds/taskcluster_sub_win64/debug.py
+        mozconfig-variant: debug-pinebuild
+        extra-config:
+            mozconfig_platform: win64
+            env:
+                LD_PRELOAD: "/builds/worker/fetches/liblowercase/liblowercase.so"
+                LOWERCASE_DIRS: "/builds/worker/checkouts/gecko/vs2017_15.9.6"
+    use-sccache: true
+    fetches:
+        toolchain:
+            - linux64-binutils
+            - linux64-clang-win-cross
+            - linux64-rust-cross
+            - linux64-rust-size
+            - linux64-nasm
+            - linux64-node
+            - linux64-cbindgen
+            - linux64-sccache
+            - linux64-dump_syms
+            - linux64-wine
+            - linux64-liblowercase
+            - linux64-winchecksec
+            - sysroot-x86_64-linux-gnu
+            - sysroot-wasm32-wasi
+        fetch:
+            - nsis-3.01-win
+            - upx-3.95-win
+
 win64-aarch64/debug:
     description: "AArch64 Win64 Debug"
     index:
