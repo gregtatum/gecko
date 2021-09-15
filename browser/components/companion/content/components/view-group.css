@@ -12,19 +12,24 @@
   width: 200px;
 }
 
-.view-icon {
+.view-icon-container {
+  display: flex;
   fill: currentColor;
   width: 32px;
   height: 32px;
   padding: 4px;
   box-sizing: border-box;
-  border-radius: 100px;
   background-color: #fff;
   color: #15141A;
   border: 1px solid #f0f0f4;
 }
 
-:host([top][active])) .view-icon {
+.view-icon-container,
+.view-icon {
+  border-radius: 100px;
+}
+
+:host([top][active])) .view-icon-container {
   margin-inline-end: 5px;
 }
 

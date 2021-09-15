@@ -8,7 +8,21 @@
 
 #pinned-views {
   display: flex;
-  background-color: #F0F0F4;
+  border: 1px dashed var(--button-active-bgcolor);
   border-radius: 100px;
-  padding: 5px;
+  padding: 4px;
+  align-items: center;
+}
+
+#pinned-views[hasviews] {
+  background-color: var(--toolbar-field-background-color);
+  border-color: var(--toolbar-field-background-color);
+  border-style: solid;
+}
+
+#pin-icon {
+  -moz-context-properties: fill;
+  fill: var(--toolbarbutton-icon-fill);
+  margin-inline: 9px 10px;
+  margin-block: 10px;
 }

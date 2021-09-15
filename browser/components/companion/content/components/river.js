@@ -5,6 +5,7 @@
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
 import { css, html } from "chrome://browser/content/companion/lit.all.js";
 import ViewGroup from "chrome://browser/content/companion/components/view-group.js";
+import ActiveViewManager from "chrome://browser/content/companion/components/active-view-manager.js";
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { XPCOMUtils } = ChromeUtils.import(
@@ -158,6 +159,29 @@ export default class River extends MozLitElement {
     this.dispatchEvent(e);
   }
 
+  #onDragOver(event) {
+    event.preventDefault();
+  }
+
+  #onDrop(event) {
+    event.preventDefault();
+    let dt = event.dataTransfer;
+    let droppedViewGroup = dt.mozGetDataAt(
+      ActiveViewManager.VIEWGROUP_DROP_TYPE,
+      0
+    );
+    let view = droppedViewGroup.lastView;
+
+    if (view && view.pinned) {
+      let e = new CustomEvent("UserAction:UnpinView", {
+        bubbles: true,
+        composed: true,
+        detail: { view },
+      });
+      this.dispatchEvent(e);
+    }
+  }
+
   render() {
     // The base case is that the _displayedViewGroups is empty. In that case,
     // we still want the River <div> to render in order to take the appropriate
@@ -191,6 +215,8 @@ export default class River extends MozLitElement {
         ?active=${topViewGroup && topViewGroup.includes(this.activeView)}
         .views=${topViewGroup || []}
         .activeView=${this.activeView}
+        @dragover=${this.#onDragOver}
+        @drop=${this.#onDrop}
       ></view-group>
     `;
   }

@@ -8,7 +8,7 @@ const { PanelMultiView } = ChromeUtils.import(
 
 import getSiteSecurityInfo from "../siteSecurity.js";
 
-class ActiveViewManager extends HTMLElement {
+export default class ActiveViewManager extends HTMLElement {
   /** @type {<html:button>} */
   #overflow;
   /** @type {<xul:panel>} */
@@ -50,6 +50,11 @@ class ActiveViewManager extends HTMLElement {
 
     this.addEventListener("UserAction:ViewSelected", this);
     this.addEventListener("UserAction:OpenPageActionMenu", this);
+    this.addEventListener("UserAction:PinView", this);
+    this.addEventListener("UserAction:UnpinView", this);
+
+    this.addEventListener("dragstart", this);
+    this.addEventListener("dragend", this);
     this.#river.addEventListener("RiverRegrouped", this);
     this.#overflow.addEventListener("click", this);
 
@@ -68,6 +73,11 @@ class ActiveViewManager extends HTMLElement {
     }
     this.removeEventListener("UserAction:ViewSelected", this);
     this.removeEventListener("UserAction:OpenPageActionMenu", this);
+    this.removeEventListener("UserAction:PinView", this);
+    this.removeEventListener("UserAction:UnpinView", this);
+
+    this.removeEventListener("dragstart", this);
+    this.removeEventListener("dragend", this);
     this.#river.removeEventListener("RiverRegrouped", this);
     this.#overflow.removeEventListener("click", this);
   }
@@ -82,9 +92,12 @@ class ActiveViewManager extends HTMLElement {
 
   viewChanged(view) {
     this.#river.activeView = null;
+    this.#pinnedViews.activeView = null;
 
     if (this.isRiverView(view)) {
       this.#river.activeView = view;
+    } else if (this.isPinnedView(view)) {
+      this.#pinnedViews.activeView = view;
     } else {
       console.warn("Saw ViewChanged for an unknown view.");
     }
@@ -145,6 +158,16 @@ class ActiveViewManager extends HTMLElement {
         this.#openPageActionPanel(event.composedTarget, view);
         break;
       }
+      case "UserAction:PinView": {
+        let view = event.detail.view;
+        this.#setViewPinnedState(view, true);
+        break;
+      }
+      case "UserAction:UnpinView": {
+        let view = event.detail.view;
+        this.#setViewPinnedState(view, false);
+        break;
+      }
       case "click":
         if (event.target == this.#overflow) {
           this.#openOverflowPanel(event);
@@ -154,6 +177,14 @@ class ActiveViewManager extends HTMLElement {
           this.#pageActionPanelClicked(event);
         }
         break;
+      case "dragstart": {
+        this.#onDragStart(event);
+        break;
+      }
+      case "dragend": {
+        this.#onDragEnd(event);
+        break;
+      }
       case "keypress": {
         if (event.currentTarget == this.#pageActionPanel) {
           this.#pageActionPanelKeypress(event);
@@ -346,7 +377,7 @@ class ActiveViewManager extends HTMLElement {
     if (event.target == editImg) {
       titleEl.focus();
     } else if (pinView.contains(event.target)) {
-      window.top.gGlobalHistory.setViewPinnedState(
+      this.#setViewPinnedState(
         this.#pageActionView,
         !this.#pageActionView.pinned
       );
@@ -369,6 +400,58 @@ class ActiveViewManager extends HTMLElement {
       }
       this.#pageActionPanel.hidePopup();
     }
+  }
+
+  #onDragStart(event) {
+    let draggedViewGroup = this.#getDragTargetViewGroup(event);
+    if (!draggedViewGroup) {
+      return;
+    }
+
+    this.#pinnedViews.dragging = true;
+
+    let dt = event.dataTransfer;
+
+    // Because we're relying on Lit to manipulate the DOM, we can
+    // run into situations where the dragend event fails to fire if
+    // the dragged ViewGroup element has been detached from the DOM,
+    // which seems to occur sometimes when Lit decides that a pre-exiting
+    // ViewGroup can be repurposed rather than being replaced with the
+    // dragged ViewGroup.
+    //
+    // To work around this, we use the addElement API to make sure that
+    // the dragend event fires on ActiveViewManager.
+    dt.addElement(this);
+
+    dt.mozSetDataAt(ActiveViewManager.VIEWGROUP_DROP_TYPE, draggedViewGroup, 0);
+    dt.setDragImage(draggedViewGroup.iconContainer, 0, 0);
+  }
+
+  #onDragEnd(event) {
+    this.#pinnedViews.dragging = false;
+  }
+
+  #getDragTargetViewGroup(event) {
+    let node = event.composedTarget;
+    let host = node.getRootNode().host;
+    if (host.localName == "view-group") {
+      return host;
+    }
+
+    return null;
+  }
+
+  #setViewPinnedState(view, state) {
+    if (view.pinned == state) {
+      return;
+    }
+
+    window.top.gGlobalHistory.setViewPinnedState(view, state);
+    this.#viewSelected(view);
+  }
+
+  static get VIEWGROUP_DROP_TYPE() {
+    return "application/x-moz-pinebuild-viewgroup";
   }
 }
 customElements.define("active-view-manager", ActiveViewManager);

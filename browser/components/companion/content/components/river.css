@@ -42,7 +42,7 @@ view-group[top] {
   margin-inline-start: 8px;
 }
 
-view-group[top]::part(icon) {
+view-group[top]::part(icon-container) {
   border-color: #5b5b66;
 }
 

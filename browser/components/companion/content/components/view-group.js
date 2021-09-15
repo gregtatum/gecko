@@ -13,6 +13,12 @@ import {
 import getViewSecurityState from "../siteSecurity.js";
 
 export default class ViewGroup extends MozLitElement {
+  static get queries() {
+    return {
+      iconContainer: ".view-icon-container",
+    };
+  }
+
   static get properties() {
     return {
       views: { type: Object },
@@ -38,7 +44,7 @@ export default class ViewGroup extends MozLitElement {
     let e = new CustomEvent("UserAction:ViewSelected", {
       bubbles: true,
       composed: true,
-      detail: { clickedView: this.views[this.views.length - 1] },
+      detail: { clickedView: this.lastView },
     });
     this.dispatchEvent(e);
   }
@@ -65,13 +71,19 @@ export default class ViewGroup extends MozLitElement {
     event.target.dispatchEvent(e);
   }
 
+  /**
+   * Returns the View that the majority of the ViewGroup component
+   * represents.
+   */
+  get lastView() {
+    return this.views[this.views.length - 1];
+  }
+
   render() {
     const DEFAULT_FAVICON = "chrome://global/skin/icons/defaultFavicon.svg";
 
     let iconURL = DEFAULT_FAVICON;
-    let view = this.active
-      ? this.activeView
-      : this.views[this.views.length - 1];
+    let view = this.active ? this.activeView : this.lastView;
 
     if (!view) {
       return null;
@@ -116,7 +128,9 @@ export default class ViewGroup extends MozLitElement {
 
     return html`
       <div class="view-el" title=${ifDefined(rootTitle)}>
-        <img class="view-icon" src=${iconURL} part="icon"></img>
+        <span class="view-icon-container" part="icon-container">
+          <img class="view-icon" src=${iconURL}></img>
+        </span>
         <div class="view-label-container" part="label-container">
           <div class="view-title"
                part="title"
