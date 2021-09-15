@@ -234,6 +234,14 @@ class SimpleLayerAttributes final {
     return true;
   }
 
+  bool SetScrolledClip(const Maybe<LayerClip>& aScrolledClip) {
+    if (mScrolledClip == aScrolledClip) {
+      return false;
+    }
+    mScrolledClip = aScrolledClip;
+    return true;
+  }
+
   bool SetFixedPositionData(ScrollableLayerGuid::ViewID aTargetViewId,
                             const LayerPoint& aAnchor, SideBits aSides) {
     if (mFixedPositionData && mFixedPositionData->mScrollId == aTargetViewId &&
@@ -313,6 +321,8 @@ class SimpleLayerAttributes final {
 
   bool GetTransformIsPerspective() const { return mTransformIsPerspective; }
 
+  const Maybe<LayerClip>& GetScrolledClip() const { return mScrolledClip; }
+
   ScrollableLayerGuid::ViewID GetFixedPositionScrollContainerId() const {
     return (mIsFixedPosition && mFixedPositionData)
                ? mFixedPositionData->mScrollId
@@ -344,6 +354,7 @@ class SimpleLayerAttributes final {
   bool operator==(const SimpleLayerAttributes& aOther) const {
     return mTransform == aOther.mTransform &&
            mTransformIsPerspective == aOther.mTransformIsPerspective &&
+           mScrolledClip == aOther.mScrolledClip &&
            mPostXScale == aOther.mPostXScale &&
            mPostYScale == aOther.mPostYScale &&
            mContentFlags == aOther.mContentFlags &&
@@ -358,6 +369,7 @@ class SimpleLayerAttributes final {
  private:
   gfx::Matrix4x4 mTransform;
   bool mTransformIsPerspective;
+  Maybe<LayerClip> mScrolledClip;
   float mPostXScale;
   float mPostYScale;
   uint32_t mContentFlags;

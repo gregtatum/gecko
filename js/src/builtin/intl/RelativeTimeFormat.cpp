@@ -363,7 +363,9 @@ bool js::intl_FormatRelativeTime(JSContext* cx, unsigned argc, Value* vp) {
       return false;
     }
 
-    RootedString str(cx, NewStringCopy<CanGC>(cx, result.unwrap()));
+    mozilla::Span<const char16_t> result_span = result.unwrap();
+    RootedString str(
+        cx, NewStringCopyN<CanGC>(cx, result_span.data(), result_span.size()));
     if (!str) {
       return false;
     }

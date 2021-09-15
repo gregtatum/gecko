@@ -136,7 +136,7 @@ nsresult AccessibleWrap::HandleAccEvent(AccEvent* aEvent) {
   }
 
   if (doc) {
-    if (!doc->DocumentNode()->IsContentDocument()) {
+    if (!nsCoreUtils::IsContentDocument(doc->DocumentNode())) {
       return NS_OK;
     }
   }

@@ -860,7 +860,7 @@ void GCRuntime::updateRuntimePointersToRelocatedCells(AutoGCSession& session) {
     DebugAPI::traceAllForMovingGC(&trc);
     DebugAPI::traceCrossCompartmentEdges(&trc);
 
-    // Mark all gray roots.
+    // Mark all gray roots. We call the trace callback to get the current set.
     traceEmbeddingGrayRoots(&trc);
     Compartment::traceIncomingCrossCompartmentEdgesForZoneGC(
         &trc, Compartment::GrayEdges);

@@ -199,6 +199,11 @@ class nsCoreUtils {
   static bool IsRootDocument(Document* aDocument);
 
   /**
+   * Return true if the given document is content document (not chrome).
+   */
+  static bool IsContentDocument(Document* aDocument);
+
+  /**
    * Return true if the given document is a top level content document in this
    * process.
    * This will be true for tab documents and out-of-process iframe documents.

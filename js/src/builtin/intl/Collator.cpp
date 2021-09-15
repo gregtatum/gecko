@@ -192,7 +192,8 @@ bool js::intl_availableCollations(JSContext* cx, unsigned argc, Value* vp) {
       continue;
     }
 
-    JSString* jscollation = NewStringCopy<CanGC>(cx, collation);
+    JSString* jscollation =
+        NewStringCopyN<CanGC>(cx, collation.data(), collation.size());
     if (!jscollation) {
       return false;
     }

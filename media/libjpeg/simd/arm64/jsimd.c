@@ -3,9 +3,8 @@
  *
  * Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * Copyright (C) 2011, Nokia Corporation and/or its subsidiary(-ies).
- * Copyright (C) 2009-2011, 2013-2014, 2016, 2018, 2020, D. R. Commander.
+ * Copyright (C) 2009-2011, 2013-2014, 2016, 2018, D. R. Commander.
  * Copyright (C) 2015-2016, 2018, Matthieu Darbois.
- * Copyright (C) 2020, Arm Limited.
  *
  * Based on the x86 SIMD extension for IJG JPEG library,
  * Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -17,13 +16,12 @@
  */
 
 #define JPEG_INTERNALS
-#include "../../../jinclude.h"
-#include "../../../jpeglib.h"
-#include "../../../jsimd.h"
-#include "../../../jdct.h"
-#include "../../../jsimddct.h"
+#include "../../jinclude.h"
+#include "../../jpeglib.h"
 #include "../../jsimd.h"
-#include "jconfigint.h"
+#include "../../jdct.h"
+#include "../../jsimddct.h"
+#include "../jsimd.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -191,19 +189,6 @@ jsimd_can_rgb_ycc(void)
 GLOBAL(int)
 jsimd_can_rgb_gray(void)
 {
-  init_simd();
-
-  /* The code is optimised for these values only */
-  if (BITS_IN_JSAMPLE != 8)
-    return 0;
-  if (sizeof(JDIMENSION) != 4)
-    return 0;
-  if ((RGB_PIXELSIZE != 3) && (RGB_PIXELSIZE != 4))
-    return 0;
-
-  if (simd_support & JSIMD_NEON)
-    return 1;
-
   return 0;
 }
 
@@ -252,28 +237,20 @@ jsimd_rgb_ycc_convert(j_compress_ptr cinfo, JSAMPARRAY input_buf,
 
   switch (cinfo->in_color_space) {
   case JCS_EXT_RGB:
-#ifndef NEON_INTRINSICS
     if (simd_features & JSIMD_FASTLD3)
-#endif
       neonfct = jsimd_extrgb_ycc_convert_neon;
-#ifndef NEON_INTRINSICS
     else
       neonfct = jsimd_extrgb_ycc_convert_neon_slowld3;
-#endif
     break;
   case JCS_EXT_RGBX:
   case JCS_EXT_RGBA:
     neonfct = jsimd_extrgbx_ycc_convert_neon;
     break;
   case JCS_EXT_BGR:
-#ifndef NEON_INTRINSICS
     if (simd_features & JSIMD_FASTLD3)
-#endif
       neonfct = jsimd_extbgr_ycc_convert_neon;
-#ifndef NEON_INTRINSICS
     else
       neonfct = jsimd_extbgr_ycc_convert_neon_slowld3;
-#endif
     break;
   case JCS_EXT_BGRX:
   case JCS_EXT_BGRA:
@@ -288,14 +265,10 @@ jsimd_rgb_ycc_convert(j_compress_ptr cinfo, JSAMPARRAY input_buf,
     neonfct = jsimd_extxrgb_ycc_convert_neon;
     break;
   default:
-#ifndef NEON_INTRINSICS
     if (simd_features & JSIMD_FASTLD3)
-#endif
       neonfct = jsimd_extrgb_ycc_convert_neon;
-#ifndef NEON_INTRINSICS
     else
       neonfct = jsimd_extrgb_ycc_convert_neon_slowld3;
-#endif
     break;
   }
 
@@ -307,37 +280,6 @@ jsimd_rgb_gray_convert(j_compress_ptr cinfo, JSAMPARRAY input_buf,
                        JSAMPIMAGE output_buf, JDIMENSION output_row,
                        int num_rows)
 {
-  void (*neonfct) (JDIMENSION, JSAMPARRAY, JSAMPIMAGE, JDIMENSION, int);
-
-  switch (cinfo->in_color_space) {
-  case JCS_EXT_RGB:
-    neonfct = jsimd_extrgb_gray_convert_neon;
-    break;
-  case JCS_EXT_RGBX:
-  case JCS_EXT_RGBA:
-    neonfct = jsimd_extrgbx_gray_convert_neon;
-    break;
-  case JCS_EXT_BGR:
-    neonfct = jsimd_extbgr_gray_convert_neon;
-    break;
-  case JCS_EXT_BGRX:
-  case JCS_EXT_BGRA:
-    neonfct = jsimd_extbgrx_gray_convert_neon;
-    break;
-  case JCS_EXT_XBGR:
-  case JCS_EXT_ABGR:
-    neonfct = jsimd_extxbgr_gray_convert_neon;
-    break;
-  case JCS_EXT_XRGB:
-  case JCS_EXT_ARGB:
-    neonfct = jsimd_extxrgb_gray_convert_neon;
-    break;
-  default:
-    neonfct = jsimd_extrgb_gray_convert_neon;
-    break;
-  }
-
-  neonfct(cinfo->image_width, input_buf, output_buf, output_row, num_rows);
 }
 
 GLOBAL(void)
@@ -349,28 +291,20 @@ jsimd_ycc_rgb_convert(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
 
   switch (cinfo->out_color_space) {
   case JCS_EXT_RGB:
-#ifndef NEON_INTRINSICS
     if (simd_features & JSIMD_FASTST3)
-#endif
       neonfct = jsimd_ycc_extrgb_convert_neon;
-#ifndef NEON_INTRINSICS
     else
       neonfct = jsimd_ycc_extrgb_convert_neon_slowst3;
-#endif
     break;
   case JCS_EXT_RGBX:
   case JCS_EXT_RGBA:
     neonfct = jsimd_ycc_extrgbx_convert_neon;
     break;
   case JCS_EXT_BGR:
-#ifndef NEON_INTRINSICS
     if (simd_features & JSIMD_FASTST3)
-#endif
       neonfct = jsimd_ycc_extbgr_convert_neon;
-#ifndef NEON_INTRINSICS
     else
       neonfct = jsimd_ycc_extbgr_convert_neon_slowst3;
-#endif
     break;
   case JCS_EXT_BGRX:
   case JCS_EXT_BGRA:
@@ -385,14 +319,10 @@ jsimd_ycc_rgb_convert(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
     neonfct = jsimd_ycc_extxrgb_convert_neon;
     break;
   default:
-#ifndef NEON_INTRINSICS
     if (simd_features & JSIMD_FASTST3)
-#endif
       neonfct = jsimd_ycc_extrgb_convert_neon;
-#ifndef NEON_INTRINSICS
     else
       neonfct = jsimd_ycc_extrgb_convert_neon_slowst3;
-#endif
     break;
   }
 
@@ -467,33 +397,12 @@ jsimd_h2v1_downsample(j_compress_ptr cinfo, jpeg_component_info *compptr,
 GLOBAL(int)
 jsimd_can_h2v2_upsample(void)
 {
-  init_simd();
-
-  /* The code is optimised for these values only */
-  if (BITS_IN_JSAMPLE != 8)
-    return 0;
-  if (sizeof(JDIMENSION) != 4)
-    return 0;
-
-  if (simd_support & JSIMD_NEON)
-    return 1;
-
   return 0;
 }
 
 GLOBAL(int)
 jsimd_can_h2v1_upsample(void)
 {
-  init_simd();
-
-  /* The code is optimised for these values only */
-  if (BITS_IN_JSAMPLE != 8)
-    return 0;
-  if (sizeof(JDIMENSION) != 4)
-    return 0;
-  if (simd_support & JSIMD_NEON)
-    return 1;
-
   return 0;
 }
 
@@ -501,66 +410,23 @@ GLOBAL(void)
 jsimd_h2v2_upsample(j_decompress_ptr cinfo, jpeg_component_info *compptr,
                     JSAMPARRAY input_data, JSAMPARRAY *output_data_ptr)
 {
-  jsimd_h2v2_upsample_neon(cinfo->max_v_samp_factor, cinfo->output_width,
-                           input_data, output_data_ptr);
 }
 
 GLOBAL(void)
 jsimd_h2v1_upsample(j_decompress_ptr cinfo, jpeg_component_info *compptr,
                     JSAMPARRAY input_data, JSAMPARRAY *output_data_ptr)
 {
-  jsimd_h2v1_upsample_neon(cinfo->max_v_samp_factor, cinfo->output_width,
-                           input_data, output_data_ptr);
 }
 
 GLOBAL(int)
 jsimd_can_h2v2_fancy_upsample(void)
 {
-  init_simd();
-
-  /* The code is optimised for these values only */
-  if (BITS_IN_JSAMPLE != 8)
-    return 0;
-  if (sizeof(JDIMENSION) != 4)
-    return 0;
-
-  if (simd_support & JSIMD_NEON)
-    return 1;
-
   return 0;
 }
 
 GLOBAL(int)
 jsimd_can_h2v1_fancy_upsample(void)
 {
-  init_simd();
-
-  /* The code is optimised for these values only */
-  if (BITS_IN_JSAMPLE != 8)
-    return 0;
-  if (sizeof(JDIMENSION) != 4)
-    return 0;
-
-  if (simd_support & JSIMD_NEON)
-    return 1;
-
-  return 0;
-}
-
-GLOBAL(int)
-jsimd_can_h1v2_fancy_upsample(void)
-{
-  init_simd();
-
-  /* The code is optimised for these values only */
-  if (BITS_IN_JSAMPLE != 8)
-    return 0;
-  if (sizeof(JDIMENSION) != 4)
-    return 0;
-
-  if (simd_support & JSIMD_NEON)
-    return 1;
-
   return 0;
 }
 
@@ -568,60 +434,23 @@ GLOBAL(void)
 jsimd_h2v2_fancy_upsample(j_decompress_ptr cinfo, jpeg_component_info *compptr,
                           JSAMPARRAY input_data, JSAMPARRAY *output_data_ptr)
 {
-  jsimd_h2v2_fancy_upsample_neon(cinfo->max_v_samp_factor,
-                                 compptr->downsampled_width, input_data,
-                                 output_data_ptr);
 }
 
 GLOBAL(void)
 jsimd_h2v1_fancy_upsample(j_decompress_ptr cinfo, jpeg_component_info *compptr,
                           JSAMPARRAY input_data, JSAMPARRAY *output_data_ptr)
 {
-  jsimd_h2v1_fancy_upsample_neon(cinfo->max_v_samp_factor,
-                                 compptr->downsampled_width, input_data,
-                                 output_data_ptr);
-}
-
-GLOBAL(void)
-jsimd_h1v2_fancy_upsample(j_decompress_ptr cinfo, jpeg_component_info *compptr,
-                          JSAMPARRAY input_data, JSAMPARRAY *output_data_ptr)
-{
-  jsimd_h1v2_fancy_upsample_neon(cinfo->max_v_samp_factor,
-                                 compptr->downsampled_width, input_data,
-                                 output_data_ptr);
 }
 
 GLOBAL(int)
 jsimd_can_h2v2_merged_upsample(void)
 {
-  init_simd();
-
-  /* The code is optimised for these values only */
-  if (BITS_IN_JSAMPLE != 8)
-    return 0;
-  if (sizeof(JDIMENSION) != 4)
-    return 0;
-
-  if (simd_support & JSIMD_NEON)
-    return 1;
-
   return 0;
 }
 
 GLOBAL(int)
 jsimd_can_h2v1_merged_upsample(void)
 {
-  init_simd();
-
-  /* The code is optimised for these values only */
-  if (BITS_IN_JSAMPLE != 8)
-    return 0;
-  if (sizeof(JDIMENSION) != 4)
-    return 0;
-
-  if (simd_support & JSIMD_NEON)
-    return 1;
-
   return 0;
 }
 
@@ -629,74 +458,12 @@ GLOBAL(void)
 jsimd_h2v2_merged_upsample(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
                            JDIMENSION in_row_group_ctr, JSAMPARRAY output_buf)
 {
-  void (*neonfct) (JDIMENSION, JSAMPIMAGE, JDIMENSION, JSAMPARRAY);
-
-  switch (cinfo->out_color_space) {
-    case JCS_EXT_RGB:
-      neonfct = jsimd_h2v2_extrgb_merged_upsample_neon;
-      break;
-    case JCS_EXT_RGBX:
-    case JCS_EXT_RGBA:
-      neonfct = jsimd_h2v2_extrgbx_merged_upsample_neon;
-      break;
-    case JCS_EXT_BGR:
-      neonfct = jsimd_h2v2_extbgr_merged_upsample_neon;
-      break;
-    case JCS_EXT_BGRX:
-    case JCS_EXT_BGRA:
-      neonfct = jsimd_h2v2_extbgrx_merged_upsample_neon;
-      break;
-    case JCS_EXT_XBGR:
-    case JCS_EXT_ABGR:
-      neonfct = jsimd_h2v2_extxbgr_merged_upsample_neon;
-      break;
-    case JCS_EXT_XRGB:
-    case JCS_EXT_ARGB:
-      neonfct = jsimd_h2v2_extxrgb_merged_upsample_neon;
-      break;
-    default:
-      neonfct = jsimd_h2v2_extrgb_merged_upsample_neon;
-      break;
-  }
-
-  neonfct(cinfo->output_width, input_buf, in_row_group_ctr, output_buf);
 }
 
 GLOBAL(void)
 jsimd_h2v1_merged_upsample(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
                            JDIMENSION in_row_group_ctr, JSAMPARRAY output_buf)
 {
-  void (*neonfct) (JDIMENSION, JSAMPIMAGE, JDIMENSION, JSAMPARRAY);
-
-  switch (cinfo->out_color_space) {
-    case JCS_EXT_RGB:
-      neonfct = jsimd_h2v1_extrgb_merged_upsample_neon;
-      break;
-    case JCS_EXT_RGBX:
-    case JCS_EXT_RGBA:
-      neonfct = jsimd_h2v1_extrgbx_merged_upsample_neon;
-      break;
-    case JCS_EXT_BGR:
-      neonfct = jsimd_h2v1_extbgr_merged_upsample_neon;
-      break;
-    case JCS_EXT_BGRX:
-    case JCS_EXT_BGRA:
-      neonfct = jsimd_h2v1_extbgrx_merged_upsample_neon;
-      break;
-    case JCS_EXT_XBGR:
-    case JCS_EXT_ABGR:
-      neonfct = jsimd_h2v1_extxbgr_merged_upsample_neon;
-      break;
-    case JCS_EXT_XRGB:
-    case JCS_EXT_ARGB:
-      neonfct = jsimd_h2v1_extxrgb_merged_upsample_neon;
-      break;
-    default:
-      neonfct = jsimd_h2v1_extrgb_merged_upsample_neon;
-      break;
-  }
-
-  neonfct(cinfo->output_width, input_buf, in_row_group_ctr, output_buf);
 }
 
 GLOBAL(int)
@@ -995,33 +762,17 @@ jsimd_huff_encode_one_block(void *state, JOCTET *buffer, JCOEFPTR block,
                             int last_dc_val, c_derived_tbl *dctbl,
                             c_derived_tbl *actbl)
 {
-#ifndef NEON_INTRINSICS
   if (simd_features & JSIMD_FASTTBL)
-#endif
     return jsimd_huff_encode_one_block_neon(state, buffer, block, last_dc_val,
                                             dctbl, actbl);
-#ifndef NEON_INTRINSICS
   else
     return jsimd_huff_encode_one_block_neon_slowtbl(state, buffer, block,
                                                     last_dc_val, dctbl, actbl);
-#endif
 }
 
 GLOBAL(int)
 jsimd_can_encode_mcu_AC_first_prepare(void)
 {
-  init_simd();
-
-  if (DCTSIZE != 8)
-    return 0;
-  if (sizeof(JCOEF) != 2)
-    return 0;
-  if (SIZEOF_SIZE_T != 8)
-    return 0;
-
-  if (simd_support & JSIMD_NEON)
-    return 1;
-
   return 0;
 }
 
@@ -1030,25 +781,11 @@ jsimd_encode_mcu_AC_first_prepare(const JCOEF *block,
                                   const int *jpeg_natural_order_start, int Sl,
                                   int Al, JCOEF *values, size_t *zerobits)
 {
-  jsimd_encode_mcu_AC_first_prepare_neon(block, jpeg_natural_order_start,
-                                         Sl, Al, values, zerobits);
 }
 
 GLOBAL(int)
 jsimd_can_encode_mcu_AC_refine_prepare(void)
 {
-  init_simd();
-
-  if (DCTSIZE != 8)
-    return 0;
-  if (sizeof(JCOEF) != 2)
-    return 0;
-  if (SIZEOF_SIZE_T != 8)
-    return 0;
-
-  if (simd_support & JSIMD_NEON)
-    return 1;
-
   return 0;
 }
 
@@ -1057,7 +794,5 @@ jsimd_encode_mcu_AC_refine_prepare(const JCOEF *block,
                                    const int *jpeg_natural_order_start, int Sl,
                                    int Al, JCOEF *absvalues, size_t *bits)
 {
-  return jsimd_encode_mcu_AC_refine_prepare_neon(block,
-                                                 jpeg_natural_order_start,
-                                                 Sl, Al, absvalues, bits);
+  return 0;
 }

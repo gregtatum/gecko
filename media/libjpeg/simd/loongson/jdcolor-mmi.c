@@ -2,9 +2,11 @@
  * Loongson MMI optimizations for libjpeg-turbo
  *
  * Copyright (C) 2011, 2015, D. R. Commander.  All Rights Reserved.
- * Copyright (C) 2016-2018, Loongson Technology Corporation Limited, BeiJing.
+ * Copyright (C) 2016-2017, Loongson Technology Corporation Limited, BeiJing.
  *                          All Rights Reserved.
- * Authors:  ZhangLixia <zhanglixia-hf@loongson.cn>
+ * Authors:  ZhuChen     <zhuchen@loongson.cn>
+ *           CaiWanwei   <caiwanwei@loongson.cn>
+ *           SunZhangzhi <sunzhangzhi-cq@loongson.cn>
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -58,7 +60,7 @@ static uint64_t const_value[] = {
 #define RGBX_FILLER_0XFF  1
 
 
-#include "jdmrgext-mmi.c"
+#include "jdcolext-mmi.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
@@ -68,82 +70,70 @@ static uint64_t const_value[] = {
 #define RGB_GREEN  EXT_RGB_GREEN
 #define RGB_BLUE  EXT_RGB_BLUE
 #define RGB_PIXELSIZE  EXT_RGB_PIXELSIZE
-#define jsimd_h2v1_merged_upsample_mmi  jsimd_h2v1_extrgb_merged_upsample_mmi
-#define jsimd_h2v2_merged_upsample_mmi  jsimd_h2v2_extrgb_merged_upsample_mmi
-#include "jdmrgext-mmi.c"
+#define jsimd_ycc_rgb_convert_mmi  jsimd_ycc_extrgb_convert_mmi
+#include "jdcolext-mmi.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
 #undef RGB_PIXELSIZE
-#undef jsimd_h2v1_merged_upsample_mmi
-#undef jsimd_h2v2_merged_upsample_mmi
+#undef jsimd_ycc_rgb_convert_mmi
 
 #define RGB_RED  EXT_RGBX_RED
 #define RGB_GREEN  EXT_RGBX_GREEN
 #define RGB_BLUE  EXT_RGBX_BLUE
 #define RGB_PIXELSIZE  EXT_RGBX_PIXELSIZE
-#define jsimd_h2v1_merged_upsample_mmi  jsimd_h2v1_extrgbx_merged_upsample_mmi
-#define jsimd_h2v2_merged_upsample_mmi  jsimd_h2v2_extrgbx_merged_upsample_mmi
-#include "jdmrgext-mmi.c"
+#define jsimd_ycc_rgb_convert_mmi  jsimd_ycc_extrgbx_convert_mmi
+#include "jdcolext-mmi.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
 #undef RGB_PIXELSIZE
-#undef jsimd_h2v1_merged_upsample_mmi
-#undef jsimd_h2v2_merged_upsample_mmi
+#undef jsimd_ycc_rgb_convert_mmi
 
 #define RGB_RED  EXT_BGR_RED
 #define RGB_GREEN  EXT_BGR_GREEN
 #define RGB_BLUE  EXT_BGR_BLUE
 #define RGB_PIXELSIZE  EXT_BGR_PIXELSIZE
-#define jsimd_h2v1_merged_upsample_mmi  jsimd_h2v1_extbgr_merged_upsample_mmi
-#define jsimd_h2v2_merged_upsample_mmi  jsimd_h2v2_extbgr_merged_upsample_mmi
-#include "jdmrgext-mmi.c"
+#define jsimd_ycc_rgb_convert_mmi  jsimd_ycc_extbgr_convert_mmi
+#include "jdcolext-mmi.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
 #undef RGB_PIXELSIZE
-#undef jsimd_h2v1_merged_upsample_mmi
-#undef jsimd_h2v2_merged_upsample_mmi
+#undef jsimd_ycc_rgb_convert_mmi
 
 #define RGB_RED  EXT_BGRX_RED
 #define RGB_GREEN  EXT_BGRX_GREEN
 #define RGB_BLUE  EXT_BGRX_BLUE
 #define RGB_PIXELSIZE  EXT_BGRX_PIXELSIZE
-#define jsimd_h2v1_merged_upsample_mmi  jsimd_h2v1_extbgrx_merged_upsample_mmi
-#define jsimd_h2v2_merged_upsample_mmi  jsimd_h2v2_extbgrx_merged_upsample_mmi
-#include "jdmrgext-mmi.c"
+#define jsimd_ycc_rgb_convert_mmi  jsimd_ycc_extbgrx_convert_mmi
+#include "jdcolext-mmi.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
 #undef RGB_PIXELSIZE
-#undef jsimd_h2v1_merged_upsample_mmi
-#undef jsimd_h2v2_merged_upsample_mmi
+#undef jsimd_ycc_rgb_convert_mmi
 
 #define RGB_RED  EXT_XBGR_RED
 #define RGB_GREEN  EXT_XBGR_GREEN
 #define RGB_BLUE  EXT_XBGR_BLUE
 #define RGB_PIXELSIZE  EXT_XBGR_PIXELSIZE
-#define jsimd_h2v1_merged_upsample_mmi  jsimd_h2v1_extxbgr_merged_upsample_mmi
-#define jsimd_h2v2_merged_upsample_mmi  jsimd_h2v2_extxbgr_merged_upsample_mmi
-#include "jdmrgext-mmi.c"
+#define jsimd_ycc_rgb_convert_mmi  jsimd_ycc_extxbgr_convert_mmi
+#include "jdcolext-mmi.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
 #undef RGB_PIXELSIZE
-#undef jsimd_h2v1_merged_upsample_mmi
-#undef jsimd_h2v2_merged_upsample_mmi
+#undef jsimd_ycc_rgb_convert_mmi
 
 #define RGB_RED  EXT_XRGB_RED
 #define RGB_GREEN  EXT_XRGB_GREEN
 #define RGB_BLUE  EXT_XRGB_BLUE
 #define RGB_PIXELSIZE  EXT_XRGB_PIXELSIZE
-#define jsimd_h2v1_merged_upsample_mmi  jsimd_h2v1_extxrgb_merged_upsample_mmi
-#define jsimd_h2v2_merged_upsample_mmi  jsimd_h2v2_extxrgb_merged_upsample_mmi
-#include "jdmrgext-mmi.c"
+#define jsimd_ycc_rgb_convert_mmi  jsimd_ycc_extxrgb_convert_mmi
+#include "jdcolext-mmi.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
 #undef RGB_PIXELSIZE
-#undef jsimd_h2v1_merged_upsample_mmi
-#undef jsimd_h2v2_merged_upsample_mmi
+#undef jsimd_ycc_rgb_convert_mmi

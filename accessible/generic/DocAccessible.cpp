@@ -2454,7 +2454,8 @@ void DocAccessible::SetRoleMapEntryForDoc(dom::Element* aElement) {
       entry->role == roles::DIALOG ||
       // Role alert isn't valid on the body element according to the ARIA spec,
       // but it's useful for our UI; e.g. the WebRTC sharing indicator.
-      (entry->role == roles::ALERT && !mDocumentNode->IsContentDocument())) {
+      (entry->role == roles::ALERT &&
+       !nsCoreUtils::IsContentDocument(mDocumentNode))) {
     SetRoleMapEntry(entry);
     return;
   }

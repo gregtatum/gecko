@@ -1702,7 +1702,8 @@ JS::Result<JSString*> ParseStandaloneISO639LanguageTag(JSContext* cx,
   // Take care to replace deprecated subtags with their preferred values.
   JSString* result;
   if (LanguageTag::languageMapping(languageTag) || !isLowerCase) {
-    result = NewStringCopy<CanGC>(cx, languageTag.span());
+    auto span = languageTag.span();
+    result = NewStringCopyN<CanGC>(cx, span.data(), span.size());
   } else {
     result = str;
   }

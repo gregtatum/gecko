@@ -7,13 +7,13 @@ function test() {
   window.addEventListener(
     "SSWindowStateBusy",
     function() {
-      let state = ss.getWindowState(window);
+      let state = JSON.parse(ss.getWindowState(window));
       ok(state.windows[0].busy, "window is busy");
 
       window.addEventListener(
         "SSWindowStateReady",
         function() {
-          let state2 = ss.getWindowState(window);
+          let state2 = JSON.parse(ss.getWindowState(window));
           ok(!state2.windows[0].busy, "window is not busy");
 
           executeSoon(() => {

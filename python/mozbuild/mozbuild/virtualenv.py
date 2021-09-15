@@ -18,7 +18,6 @@ import sys
 IS_NATIVE_WIN = sys.platform == "win32" and os.sep == "\\"
 IS_CYGWIN = sys.platform == "cygwin"
 PTH_FILENAME = "mach.pth"
-METADATA_FILENAME = "moz_virtualenv_metadata.json"
 
 
 UPGRADE_WINDOWS = """
@@ -33,40 +32,6 @@ If you still receive this error, your shell environment is likely detecting
 another Python version. Ensure a modern Python can be found in the paths
 defined by the $PATH environment variable and try again.
 """.lstrip()
-
-
-class MozVirtualenvMetadata:
-    """Moz-specific information that is encoded into a file at the root of a virtualenv"""
-
-    def __init__(self, hex_version, virtualenv_name, file_path):
-        self.hex_version = hex_version
-        self.virtualenv_name = virtualenv_name
-        self.file_path = file_path
-
-    def write(self):
-        raw = {"hex_version": self.hex_version, "virtualenv_name": self.virtualenv_name}
-        with open(self.file_path, "w") as file:
-            json.dump(raw, file)
-
-    def __eq__(self, other):
-        return (
-            type(self) == type(other)
-            and self.hex_version == other.hex_version
-            and self.virtualenv_name == other.virtualenv_name
-        )
-
-    @classmethod
-    def from_path(cls, path):
-        try:
-            with open(path, "r") as file:
-                raw = json.load(file)
-            return cls(
-                raw["hex_version"],
-                raw["virtualenv_name"],
-                path,
-            )
-        except (FileNotFoundError, KeyError):
-            return None
 
 
 class VirtualenvHelper(object):
@@ -101,28 +66,27 @@ class VirtualenvManager(VirtualenvHelper):
     def __init__(
         self,
         topsrcdir,
-        virtualenvs_dir,
-        virtualenv_name,
-        *,
+        virtualenv_path,
+        log_handle,
+        manifest_path,
         populate_local_paths=True,
-        log_handle=sys.stdout,
-        base_python=sys.executable,
-        manifest_path=None,
     ):
         """Create a new manager.
 
         Each manager is associated with a source directory, a path where you
         want the virtualenv to be created, and a handle to write output to.
         """
-        virtualenv_path = os.path.join(virtualenvs_dir, virtualenv_name)
         super(VirtualenvManager, self).__init__(virtualenv_path)
 
         # __PYVENV_LAUNCHER__ confuses pip, telling it to use the system
         # python interpreter rather than the local virtual environment interpreter.
         # See https://bugzilla.mozilla.org/show_bug.cgi?id=1607470
         os.environ.pop("__PYVENV_LAUNCHER__", None)
+
+        assert os.path.isabs(
+            manifest_path
+        ), "manifest_path must be an absolute path: %s" % (manifest_path)
         self.topsrcdir = topsrcdir
-        self._base_python = base_python
 
         # Record the Python executable that was used to create the Virtualenv
         # so we can check this against sys.executable when verifying the
@@ -130,20 +94,14 @@ class VirtualenvManager(VirtualenvHelper):
         self.exe_info_path = os.path.join(self.virtualenv_root, "python_exe.txt")
 
         self.log_handle = log_handle
+        self.manifest_path = manifest_path
         self.populate_local_paths = populate_local_paths
-        self._virtualenv_name = virtualenv_name
-        self._manifest_path = manifest_path or os.path.join(
-            topsrcdir, "build", f"{virtualenv_name}_virtualenv_packages.txt"
-        )
 
-        hex_version = subprocess.check_output(
-            [self._base_python, "-c", "import sys; print(sys.hexversion)"]
-        )
-        hex_version = int(hex_version.rstrip())
-        self._metadata = MozVirtualenvMetadata(
-            hex_version,
-            virtualenv_name,
-            os.path.join(self.virtualenv_root, METADATA_FILENAME),
+    @property
+    def virtualenv_script_path(self):
+        """Path to virtualenv's own populator script."""
+        return os.path.join(
+            self.topsrcdir, "third_party", "python", "virtualenv", "virtualenv.py"
         )
 
     def version_info(self):
@@ -157,7 +115,31 @@ class VirtualenvManager(VirtualenvHelper):
     def activate_path(self):
         return os.path.join(self.bin_path, "activate_this.py")
 
-    def up_to_date(self):
+    def get_exe_info(self):
+        """Returns the version of the python executable that was in use when
+        this virtualenv was created.
+        """
+        with open(self.exe_info_path, "r") as fh:
+            version = fh.read()
+        return int(version)
+
+    def write_exe_info(self, python):
+        """Records the the version of the python executable that was in use when
+        this virtualenv was created. We record this explicitly because
+        on OS X our python path may end up being a different or modified
+        executable.
+        """
+        ver = self.python_executable_hexversion(python)
+        with open(self.exe_info_path, "w") as fh:
+            fh.write("%s\n" % ver)
+
+    def python_executable_hexversion(self, python):
+        """Run a Python executable and return its sys.hexversion value."""
+        program = "import sys; print(sys.hexversion)"
+        out = subprocess.check_output([python, "-c", program]).rstrip()
+        return int(out)
+
+    def up_to_date(self, python):
         """Returns whether the virtualenv is present and up to date.
 
         Args:
@@ -183,14 +165,13 @@ class VirtualenvManager(VirtualenvHelper):
         if dep_mtime > activate_mtime:
             return False
 
-        # Verify that the metadata of the virtualenv on-disk is the same as what
-        # we expect, e.g.
-        # * If the metadata file doesn't exist, then the virtualenv wasn't fully
-        #   built
-        # * If the "hex_version" doesn't match, then the system Python has changed/been
-        #   upgraded.
-        existing_metadata = MozVirtualenvMetadata.from_path(self._metadata.file_path)
-        if existing_metadata != self._metadata:
+        # Verify that the Python we're checking here is either the virutalenv
+        # python, or we have the Python version that was used to create the
+        # virtualenv. If this fails, it is likely system Python has been
+        # upgraded, and our virtualenv would not be usable.
+        orig_version = self.get_exe_info()
+        hexversion = self.python_executable_hexversion(python)
+        if (python != self.python_path) and (hexversion != orig_version):
             return False
 
         if env_requirements.pth_requirements and self.populate_local_paths:
@@ -246,7 +227,7 @@ class VirtualenvManager(VirtualenvHelper):
 
         return True
 
-    def ensure(self):
+    def ensure(self, python=sys.executable):
         """Ensure the virtualenv is present and up to date.
 
         If the virtualenv is up to date, this does nothing. Otherwise, it
@@ -255,9 +236,9 @@ class VirtualenvManager(VirtualenvHelper):
         This should be the main API used from this class as it is the
         highest-level.
         """
-        if self.up_to_date():
+        if self.up_to_date(python):
             return self.virtualenv_root
-        return self.build()
+        return self.build(python)
 
     def _log_process_output(self, *args, **kwargs):
         if hasattr(self.log_handle, "fileno"):
@@ -274,7 +255,7 @@ class VirtualenvManager(VirtualenvHelper):
 
         return proc.wait()
 
-    def create(self):
+    def create(self, python):
         """Create a new, empty virtualenv.
 
         Receives the path to virtualenv's virtualenv.py script (which will be
@@ -285,10 +266,8 @@ class VirtualenvManager(VirtualenvHelper):
             shutil.rmtree(self.virtualenv_root)
 
         args = [
-            self._base_python,
-            os.path.join(
-                self.topsrcdir, "third_party", "python", "virtualenv", "virtualenv.py"
-            ),
+            python,
+            self.virtualenv_script_path,
             # Without this, virtualenv.py may attempt to contact the outside
             # world and search for or download a newer version of pip,
             # setuptools, or wheel. This is bad for security, reproducibility,
@@ -305,7 +284,9 @@ class VirtualenvManager(VirtualenvHelper):
                 % (self.virtualenv_root, result)
             )
 
+        self.write_exe_info(python)
         self._disable_pip_outdated_warning()
+
         return self.virtualenv_root
 
     def _requirements(self):
@@ -319,19 +300,12 @@ class VirtualenvManager(VirtualenvHelper):
             # requirements module.
             from requirements import MachEnvRequirements
 
-        if not os.path.exists(self._manifest_path):
-            raise Exception(
-                f'The current command is using the "{self._virtualenv_name}" '
-                "virtualenv. However, that virtualenv is missing its associated "
-                f'requirements definition file at "{self._manifest_path}".'
-            )
-
         thunderbird_dir = os.path.join(self.topsrcdir, "comm")
         is_thunderbird = os.path.exists(thunderbird_dir) and bool(
             os.listdir(thunderbird_dir)
         )
         return MachEnvRequirements.from_requirements_definition(
-            self.topsrcdir, is_thunderbird, self._manifest_path
+            self.topsrcdir, is_thunderbird, self.manifest_path
         )
 
     def populate(self):
@@ -386,12 +360,45 @@ class VirtualenvManager(VirtualenvHelper):
         finally:
             os.environ.update(old_env_variables)
 
-    def build(self):
+    def call_setup(self, directory, arguments):
+        """Calls setup.py in a directory."""
+        setup = os.path.join(directory, "setup.py")
+
+        program = [self.python_path, setup]
+        program.extend(arguments)
+
+        # We probably could call the contents of this file inside the context
+        # of this interpreter using execfile() or similar. However, if global
+        # variables like sys.path are adjusted, this could cause all kinds of
+        # havoc. While this may work, invoking a new process is safer.
+
+        try:
+            env = os.environ.copy()
+            env.setdefault("ARCHFLAGS", get_archflags())
+            output = subprocess.check_output(
+                program,
+                cwd=directory,
+                env=env,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+            )
+            print(output)
+        except subprocess.CalledProcessError as e:
+            if "Python.h: No such file or directory" in e.output:
+                print(
+                    "WARNING: Python.h not found. Install Python development headers."
+                )
+            else:
+                print(e.output)
+
+            raise Exception("Error installing package: %s" % directory)
+
+    def build(self, python):
         """Build a virtualenv per tree conventions.
 
         This returns the path of the created virtualenv.
         """
-        self.create()
+        self.create(python)
 
         # We need to populate the virtualenv using the Python executable in
         # the virtualenv for paths to be proper.
@@ -410,9 +417,8 @@ class VirtualenvManager(VirtualenvHelper):
             thismodule,
             "populate",
             self.topsrcdir,
-            os.path.dirname(self.virtualenv_root),
-            self._virtualenv_name,
-            self._manifest_path,
+            self.virtualenv_root,
+            self.manifest_path,
         ]
         if self.populate_local_paths:
             args.append("--populate-local-paths")
@@ -423,7 +429,6 @@ class VirtualenvManager(VirtualenvHelper):
             raise Exception("Error populating virtualenv.")
 
         os.utime(self.activate_path, None)
-        self._metadata.write()
 
         return self.virtualenv_root
 
@@ -590,8 +595,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("topsrcdir")
-    parser.add_argument("virtualenvs_dir")
-    parser.add_argument("virtualenv_name")
+    parser.add_argument("virtualenv_path")
     parser.add_argument("manifest_path")
     parser.add_argument("--populate-local-paths", action="store_true")
 
@@ -605,10 +609,10 @@ if __name__ == "__main__":
 
     manager = VirtualenvManager(
         opts.topsrcdir,
-        opts.virtualenvs_dir,
-        opts.virtualenv_name,
+        opts.virtualenv_path,
+        sys.stdout,
+        opts.manifest_path,
         populate_local_paths=opts.populate_local_paths,
-        manifest_path=opts.manifest_path,
     )
 
     if populate:

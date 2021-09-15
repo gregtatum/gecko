@@ -294,8 +294,9 @@ class MozbuildObject(ProcessExecutionMixin):
         if self._virtualenv_manager is None:
             self._virtualenv_manager = VirtualenvManager(
                 self.topsrcdir,
-                os.path.join(self.topobjdir, "_virtualenvs"),
-                self._virtualenv_name,
+                os.path.join(self.topobjdir, "_virtualenvs", self._virtualenv_name),
+                sys.stdout,
+                os.path.join(self.topsrcdir, "build", "build_virtualenv_packages.txt"),
             )
 
         return self._virtualenv_manager

@@ -116,7 +116,7 @@ static void LogDocShellState(dom::Document* aDocumentNode) {
 
 static void LogDocType(dom::Document* aDocumentNode) {
   if (aDocumentNode->IsActive()) {
-    bool isContent = aDocumentNode->IsContentDocument();
+    bool isContent = nsCoreUtils::IsContentDocument(aDocumentNode);
     printf("%s document", (isContent ? "content" : "chrome"));
   } else {
     printf("document type: [failed]");

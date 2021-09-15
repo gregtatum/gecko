@@ -4,7 +4,7 @@
 // the color of the tab line are applied properly.
 
 add_task(async function test_support_tab_line() {
-  let newWin = await BrowserTestUtils.openNewBrowserWindow();
+  let newWin = await BrowserTestUtils.openNewWindowWithFlushedXULCacheForMozSupports();
 
   const TAB_LINE_COLOR = "#ff0000";
   let extension = ExtensionTestUtils.loadExtension({
