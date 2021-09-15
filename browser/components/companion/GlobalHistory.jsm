@@ -352,16 +352,21 @@ class InternalView {
  */
 class GlobalHistoryEvent extends Event {
   #view;
+  #detail;
 
   /**
    * @param {"ViewChanged" | "ViewAdded" | "ViewMoved" | "ViewRemoved" | "ViewUpdated" | "RiverRebuilt"} type
    *   The event type.
    * @param {View | null}
    *   The related view.
+   * @param {Object | null}
+   *   Any related detail information for the event.
    */
-  constructor(type, view) {
+  constructor(type, view, detail = {}) {
     super(type);
     this.#view = view;
+    this.#detail = detail;
+
     if (view && !(view instanceof View)) {
       logConsole.error("Emitting a global history event with a non-view", view);
     }
@@ -373,6 +378,14 @@ class GlobalHistoryEvent extends Event {
    */
   get view() {
     return this.#view;
+  }
+
+  /**
+   * Optional detail information about the GlobalHistoryEvent.
+   * @type {Object}
+   */
+  get detail() {
+    return this.#detail;
   }
 }
 
@@ -654,9 +667,13 @@ class GlobalHistory extends EventTarget {
    * @param {InternalView} internalView The InternalView associated with the
    *   event. Note that the associated View will be attached to the event, and
    *   not the InternalView.
+   * @param {Object | null} detail Optional detail information to include with
+   *   the event.
    */
-  #notifyEvent(type, internalView) {
-    this.dispatchEvent(new GlobalHistoryEvent(type, internalView?.view));
+  #notifyEvent(type, internalView, detail) {
+    this.dispatchEvent(
+      new GlobalHistoryEvent(type, internalView?.view, detail)
+    );
   }
 
   #sessionRestoreStarted() {
@@ -1226,10 +1243,12 @@ class GlobalHistory extends EventTarget {
 
     this.#viewStack.splice(viewIndex, 1);
     let eventName;
+    let detail = {};
 
     if (shouldPin) {
       this.#viewStack.splice(this.pinnedViewCount, 0, internalView);
       eventName = "ViewPinned";
+      detail.index = index;
     } else {
       this.#viewStack.push(internalView);
       eventName = "ViewUnpinned";
@@ -1240,7 +1259,7 @@ class GlobalHistory extends EventTarget {
     // Now that #viewStack has updated, make sure that #currentIndex correctly
     // points at currentView.
     this.#currentIndex = this.#viewStack.indexOf(currentView);
-    this.#notifyEvent(eventName, internalView);
+    this.#notifyEvent(eventName, internalView, detail);
   }
 
   /**
