@@ -154,15 +154,8 @@ void nsDeckFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
 
 void nsDeckFrame::RemoveFrame(ChildListID aListID, nsIFrame* aOldFrame) {
   nsIFrame* currentFrame = GetSelectedBox();
-  nsIFrame* previousFrame = GetPreviouslySelectedBox();
-  // XXX: this previousFrame != aOldFrame check is a bit awkward, and could
-  // lead to flashing in #tabbrowser-tabpanels if we legitimately remove the
-  // previously selected browser. However this gets fired simply when the
-  // panel gets restyled, as we destroy and reconstruct the frame. So right
-  // now this is a hack to make things work, and it won't present any
-  // immediate problems because it's only enabled on proclient where you
-  // cannot currently remove background tabs.
-  if (currentFrame && aOldFrame && currentFrame != aOldFrame && previousFrame != aOldFrame) {
+
+  if (currentFrame && aOldFrame && currentFrame != aOldFrame) {
     // If the frame we're removing is at an index that's less
     // than mIndex, that means we're going to be shifting indexes
     // by 1.
@@ -172,6 +165,9 @@ void nsDeckFrame::RemoveFrame(ChildListID aListID, nsIFrame* aOldFrame) {
     int32_t removedIndex = mFrames.IndexOf(aOldFrame);
     MOZ_ASSERT(removedIndex >= 0,
                "A deck child was removed that was not in mFrames.");
+    if (removedIndex < mPrevIndex) {
+      mPrevIndex--;
+    }
     if (removedIndex < mIndex) {
       mIndex--;
       // This is going to cause us to handle the index change in IndexedChanged,
