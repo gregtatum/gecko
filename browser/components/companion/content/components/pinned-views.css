@@ -26,3 +26,12 @@
   margin-inline: 9px 10px;
   margin-block: 10px;
 }
+
+view-group[dragging] {
+  display: none;
+}
+
+view-group[draggingover],
+#pin-icon[draggingover] {
+  border-inline-end: 32px solid transparent;
+}

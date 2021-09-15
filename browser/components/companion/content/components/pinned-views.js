@@ -7,6 +7,14 @@ import { html } from "chrome://browser/content/companion/lit.all.js";
 import ActiveViewManager from "chrome://browser/content/companion/components/active-view-manager.js";
 
 class PinnedViews extends MozLitElement {
+  #dragOverElement;
+
+  static get queries() {
+    return {
+      pinIcon: "#pin-icon",
+    };
+  }
+
   static get properties() {
     return {
       _views: { type: Array, state: true },
@@ -20,10 +28,17 @@ class PinnedViews extends MozLitElement {
     this._views = [];
     this.activeView = null;
     this.dragging = false;
+    this.#dragOverElement = null;
   }
 
-  addView(view) {
-    this._views = [...this._views, view];
+  addView(view, atIndex) {
+    let index = this._views.indexOf(view);
+    if (index != -1) {
+      this._views.splice(index, 1);
+    }
+
+    this._views = [...this._views];
+    this._views.splice(atIndex, 0, view);
   }
 
   removeView(view) {
@@ -44,10 +59,19 @@ class PinnedViews extends MozLitElement {
 
   #onDragOver(event) {
     event.preventDefault();
+    this.#dragOverElement = event.target;
+    this.#dragOverElement.setAttribute("draggingover", "true");
+  }
+
+  #onDragLeave(event) {
+    if (event.target == this.#dragOverElement) {
+      this.#cancelDragActive();
+    }
   }
 
   #onDrop(event) {
     event.preventDefault();
+
     let dt = event.dataTransfer;
     let droppedViewGroup = dt.mozGetDataAt(
       ActiveViewManager.VIEWGROUP_DROP_TYPE,
@@ -57,15 +81,33 @@ class PinnedViews extends MozLitElement {
     // It's possible to drag a ViewGroup that is not active, so in that
     // case, we'll just assume we're dragging the last View in the group.
     let view = droppedViewGroup.activeView || droppedViewGroup.lastView;
+    let dragOverElement = this.#dragOverElement;
 
-    if (view && !view.pinned) {
+    this.#cancelDragActive();
+
+    let index = 0;
+    if (dragOverElement.tagName == "view-group") {
+      let dragOverView = dragOverElement.lastView;
+      let dragIndex = this._views.indexOf(dragOverView);
+
+      if (dragIndex != -1) {
+        index = dragIndex;
+      }
+    }
+
+    if (view) {
       let e = new CustomEvent("UserAction:PinView", {
         bubbles: true,
         composed: true,
-        detail: { view },
+        detail: { view, index },
       });
       this.dispatchEvent(e);
     }
+  }
+
+  #cancelDragActive() {
+    this.#dragOverElement.removeAttribute("draggingover");
+    this.#dragOverElement = null;
   }
 
   render() {
@@ -81,6 +123,7 @@ class PinnedViews extends MozLitElement {
         ?hasviews=${this._views.length}
         ?dragging=${this.dragging}
         @dragover=${this.#onDragOver}
+        @dragleave=${this.#onDragLeave}
         @drop=${this.#onDrop}
       >
         <img id="pin-icon" src="chrome://browser/skin/pin-12.svg"></img>

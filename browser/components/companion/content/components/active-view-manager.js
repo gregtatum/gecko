@@ -160,7 +160,8 @@ export default class ActiveViewManager extends HTMLElement {
       }
       case "UserAction:PinView": {
         let view = event.detail.view;
-        this.#setViewPinnedState(view, true);
+        let index = event.detail.index;
+        this.#setViewPinnedState(view, true, index);
         break;
       }
       case "UserAction:UnpinView": {
@@ -217,10 +218,11 @@ export default class ActiveViewManager extends HTMLElement {
       }
       case "ViewPinned": {
         let view = event.view;
+        let index = event.detail.index;
         if (this.isRiverView(view)) {
           this.#river.removeView(view);
         }
-        this.#pinnedViews.addView(view);
+        this.#pinnedViews.addView(view, index);
         break;
       }
       case "ViewUnpinned": {
@@ -408,6 +410,14 @@ export default class ActiveViewManager extends HTMLElement {
       return;
     }
 
+    // Hack needed so that the dragimage will still show the
+    // item as it appeared before it was hidden.
+    window
+      .promiseDocumentFlushed(() => {})
+      .then(() => {
+        draggedViewGroup.setAttribute("dragging", "true");
+      });
+
     this.#pinnedViews.dragging = true;
 
     let dt = event.dataTransfer;
@@ -428,6 +438,13 @@ export default class ActiveViewManager extends HTMLElement {
   }
 
   #onDragEnd(event) {
+    let dt = event.dataTransfer;
+    let draggedViewGroup = dt.mozGetDataAt(
+      ActiveViewManager.VIEWGROUP_DROP_TYPE,
+      0
+    );
+    draggedViewGroup.removeAttribute("dragging");
+
     this.#pinnedViews.dragging = false;
   }
 
@@ -441,12 +458,8 @@ export default class ActiveViewManager extends HTMLElement {
     return null;
   }
 
-  #setViewPinnedState(view, state) {
-    if (view.pinned == state) {
-      return;
-    }
-
-    window.top.gGlobalHistory.setViewPinnedState(view, state);
+  #setViewPinnedState(view, state, index) {
+    window.top.gGlobalHistory.setViewPinnedState(view, state, index);
     this.#viewSelected(view);
   }
 

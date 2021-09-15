@@ -1204,19 +1204,24 @@ class GlobalHistory extends EventTarget {
    *
    * @param {View} view The View to set the pinned state on.
    * @param {boolean} shouldPin True if the View should be pinned.
+   * @param {Number | null} index The index within the Pinned Views section
+   *   of the #viewStack to put the Pinned View. Defaults to 0.
    */
-  setViewPinnedState(view, shouldPin) {
+  setViewPinnedState(view, shouldPin, index = 0) {
     if (!Services.prefs.getBoolPref("browser.river.pinning.enabled", false)) {
-      return;
-    }
-
-    if (view.pinned == shouldPin) {
       return;
     }
 
     let internalView = InternalView.viewMap.get(view);
     if (!internalView) {
       throw new Error("Unknown view.");
+    }
+
+    let pinnedViewCount = this.pinnedViewCount;
+    if (index > pinnedViewCount) {
+      throw new Error(
+        "Cannot pin at an index greater than the number of pinned Views"
+      );
     }
 
     // We don't want to remove Pinned Views from the #viewStack Array,
@@ -1246,7 +1251,7 @@ class GlobalHistory extends EventTarget {
     let detail = {};
 
     if (shouldPin) {
-      this.#viewStack.splice(this.pinnedViewCount, 0, internalView);
+      this.#viewStack.splice(index, 0, internalView);
       eventName = "ViewPinned";
       detail.index = index;
     } else {
