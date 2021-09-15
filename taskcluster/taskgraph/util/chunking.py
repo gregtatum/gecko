@@ -50,6 +50,8 @@ def guess_mozinfo_from_task(task):
         "headless": "-headless" in task["test-name"],
         "tsan": "tsan" in task["build-attributes"]["build_platform"],
         "webrender": task.get("webrender", True),
+        # XXX pine only
+        "pinebuild": True,
     }
     for platform in ("android", "linux", "mac", "win"):
         if platform in task["build-attributes"]["build_platform"]:
