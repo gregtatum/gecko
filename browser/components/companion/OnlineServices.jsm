@@ -752,6 +752,12 @@ const OnlineServices = {
     }
     ServiceInstances.add(service);
     this.persist();
+    if (this.data) {
+      // If the cache exists, grab events for this service
+      // and put them in the cache
+      let meetingResults = await service.getNextMeetings();
+      this.data = this.data.concat(meetingResults);
+    }
     return service;
   },
 
@@ -768,6 +774,8 @@ const OnlineServices = {
     await service.disconnect();
     ServiceInstances.delete(service);
     this.persist();
+    // Delete events specific to this service from the cache
+    this.data = this.data.filter(e => e.serviceId != service.id);
   },
 
   getServices(type) {
