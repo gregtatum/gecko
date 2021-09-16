@@ -1,7 +1,11 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
-const EXPORTED_SYMBOLS = ["getLinkInfo", "getConferenceInfo"];
+const EXPORTED_SYMBOLS = [
+  "getLinkInfo",
+  "getConferenceInfo",
+  "parseGoogleCalendarResult",
+];
 
 const URL_REGEX = /(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])/gim;
 
@@ -220,4 +224,21 @@ function getConferenceInfo(result, links) {
     return getConferencingDetails(conferenceLink.url);
   }
   return null;
+}
+
+function parseGoogleCalendarResult(result) {
+  let event = {};
+  event.summary = result.summary;
+  event.start = new Date(result.start?.dateTime);
+  event.end = new Date(result.end?.dateTime);
+  let links = getLinkInfo(result);
+  event.conference = getConferenceInfo(result, links);
+  event.links = links.filter(link => link.type != "conferencing");
+  event.attendees =
+    result.attendees?.filter(a => !a.self && a.responseStatus !== "declined") ||
+    [];
+  event.organizer = result.organizer;
+  event.creator = result.creator;
+  event.url = result.htmlLink;
+  return event;
 }

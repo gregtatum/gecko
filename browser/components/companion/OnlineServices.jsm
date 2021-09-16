@@ -9,9 +9,11 @@ const { XPCOMUtils } = ChromeUtils.import(
 const { DeferredTask } = ChromeUtils.import(
   "resource://gre/modules/DeferredTask.jsm"
 );
-const { getLinkInfo, getConferenceInfo } = ChromeUtils.import(
-  "resource:///modules/OnlineServicesHelper.jsm"
-);
+const {
+  getLinkInfo,
+  getConferenceInfo,
+  parseGoogleCalendarResult,
+} = ChromeUtils.import("resource:///modules/OnlineServicesHelper.jsm");
 
 const PREF_STORE = "onlineservices.config";
 
@@ -238,20 +240,11 @@ class GoogleService {
             ) {
               continue;
             }
-            let event = {};
-            event.summary = result.summary;
-            event.start = new Date(result.start.dateTime);
-            event.end = new Date(result.end.dateTime);
-            let links = getLinkInfo(result);
-            event.conference = getConferenceInfo(result, links);
-            event.links = links.filter(link => link.type != "conferencing");
-            event.calendar = {};
-            event.calendar.id = calendar.id;
-            event.attendees = result.attendees?.filter(a => !a.self) || [];
-            event.organizer = result.organizer;
-            event.creator = result.creator;
+            let event = parseGoogleCalendarResult(result);
+            event.calendar = {
+              id: calendar.id,
+            };
             event.serviceId = this.id;
-            event.url = result.htmlLink;
             if (allEvents.has(result.id)) {
               // If an event is duplicated, use
               // the primary calendar
