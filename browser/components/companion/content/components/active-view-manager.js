@@ -5,8 +5,8 @@
 const { PanelMultiView } = ChromeUtils.import(
   "resource:///modules/PanelMultiView.jsm"
 );
-const { XPCOMUtils } = ChromeUtils.import(
-  "resource://gre/modules/XPCOMUtils.jsm"
+const { CompanionService } = ChromeUtils.import(
+  "resource:///modules/CompanionService.jsm"
 );
 
 import getSiteSecurityInfo from "../siteSecurity.js";
@@ -475,7 +475,3 @@ export default class ActiveViewManager extends HTMLElement {
   }
 }
 customElements.define("active-view-manager", ActiveViewManager);
-
-XPCOMUtils.defineLazyModuleGetters(ActiveViewManager, {
-  CompanionService: "resource:///modules/CompanionService.jsm",
-});
