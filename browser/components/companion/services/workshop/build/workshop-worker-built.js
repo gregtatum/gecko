@@ -1038,9 +1038,42 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/ical/configurator.js
+  // src/backend/accounts/mapi/configurator.js
   var configurator_exports3 = {};
   __export(configurator_exports3, {
+    default: () => configurateMapi
+  });
+  function configurateMapi(userDetails, domainInfo) {
+    const credentials = {};
+    if (domainInfo.oauth2Tokens) {
+      credentials.oauth2 = {
+        authEndpoint: domainInfo.oauth2Settings.authEndpoint,
+        tokenEndpoint: domainInfo.oauth2Settings.tokenEndpoint,
+        scope: domainInfo.oauth2Settings.scope,
+        clientId: domainInfo.oauth2Secrets.clientId,
+        clientSecret: domainInfo.oauth2Secrets.clientSecret,
+        refreshToken: domainInfo.oauth2Tokens.refreshToken,
+        accessToken: domainInfo.oauth2Tokens.accessToken,
+        expireTimeMS: domainInfo.oauth2Tokens.expireTimeMS,
+        _transientLastRenew: PERFNOW()
+      };
+    }
+    return {
+      userDetails,
+      credentials,
+      typeFields: {},
+      connInfoFields: {}
+    };
+  }
+  var init_configurator3 = __esm({
+    "src/backend/accounts/mapi/configurator.js"() {
+      init_date();
+    }
+  });
+
+  // src/backend/accounts/ical/configurator.js
+  var configurator_exports4 = {};
+  __export(configurator_exports4, {
     default: () => configurateICal
   });
   function configurateICal(userDetails) {
@@ -1053,7 +1086,7 @@ var WorkshopBackend = (() => {
       }
     };
   }
-  var init_configurator3 = __esm({
+  var init_configurator4 = __esm({
     "src/backend/accounts/ical/configurator.js"() {
     }
   });
@@ -2617,15 +2650,15 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/gapi/gapi_client.js
-  var GapiClient;
-  var init_gapi_client = __esm({
-    "src/backend/accounts/gapi/gapi_client.js"() {
+  // src/backend/utils/api_client.js
+  var ApiClient;
+  var init_api_client = __esm({
+    "src/backend/utils/api_client.js"() {
       init_logic();
       init_oauth();
-      GapiClient = class {
+      ApiClient = class {
         constructor(credentials, accountId) {
-          logic.defineScope(this, "GapiClient", { accountId });
+          logic.defineScope(this, "ApiClient", { accountId });
           this.credentials = credentials;
           this._dirtyCredentials = false;
         }
@@ -2652,26 +2685,23 @@ var WorkshopBackend = (() => {
           logic(this, "apiCall", { endpointUrl, _params: params, _result: result });
           return result;
         }
-        async pagedApiGetCall(url, params, resultPropertyName) {
-          let nextPageToken = null;
-          let resultsSoFar = [];
+        async pagedApiGetCall(url, params, resultPropertyName, nextPageGetter) {
+          let apiUrl = url;
+          let useParams = Object.assign({}, params);
+          const resultsSoFar = [];
           while (true) {
-            const useParams = Object.assign({}, params);
-            if (nextPageToken) {
-              useParams.pageToken = nextPageToken;
-              nextPageToken = null;
-            }
-            const thisResult = await this.apiGetCall(url, useParams);
+            const thisResult = await this.apiGetCall(apiUrl, useParams);
             if (thisResult.error) {
               return thisResult;
             }
             resultsSoFar.push(...thisResult[resultPropertyName]);
-            if (thisResult.nextPageToken) {
-              nextPageToken = thisResult.nextPageToken;
-            } else {
+            const connectionInfo = nextPageGetter(thisResult);
+            if (!connectionInfo) {
               thisResult[resultPropertyName] = resultsSoFar;
               return thisResult;
             }
+            useParams = Object.assign({}, connectionInfo.params || params);
+            apiUrl = connectionInfo.url || url;
           }
         }
       };
@@ -2688,7 +2718,7 @@ var WorkshopBackend = (() => {
     credentials,
     connInfoFields
   }) {
-    const client = new GapiClient(credentials);
+    const client = new ApiClient(credentials);
     const endpoint = "https://gmail.googleapis.com/gmail/v1/users/me/profile";
     try {
       const whoami = await client.apiGetCall(endpoint, {});
@@ -2713,7 +2743,46 @@ var WorkshopBackend = (() => {
   }
   var init_validator2 = __esm({
     "src/backend/accounts/gapi/validator.js"() {
-      init_gapi_client();
+      init_api_client();
+    }
+  });
+
+  // src/backend/accounts/mapi/validator.js
+  var validator_exports3 = {};
+  __export(validator_exports3, {
+    default: () => validateMapi
+  });
+  async function validateMapi({
+    userDetails,
+    credentials,
+    connInfoFields
+  }) {
+    const client = new ApiClient(credentials);
+    const endpoint = "https://graph.microsoft.com/v1.0/me";
+    try {
+      const whoami = await client.apiGetCall(endpoint, {});
+      userDetails.displayName = whoami.displayName;
+      userDetails.emailAddress = whoami.userPrincipalName;
+    } catch (ex) {
+      return {
+        error: "unknown",
+        errorDetails: {
+          endpoint,
+          ex
+        }
+      };
+    }
+    return {
+      engineFields: {
+        engine: "mapi",
+        engineData: {},
+        receiveProtoConn: null
+      }
+    };
+  }
+  var init_validator3 = __esm({
+    "src/backend/accounts/mapi/validator.js"() {
+      init_api_client();
     }
   });
 
@@ -7830,8 +7899,8 @@ var WorkshopBackend = (() => {
   });
 
   // src/backend/accounts/ical/validator.js
-  var validator_exports3 = {};
-  __export(validator_exports3, {
+  var validator_exports4 = {};
+  __export(validator_exports4, {
     default: () => validateICal
   });
   async function validateICal({
@@ -7875,7 +7944,7 @@ var WorkshopBackend = (() => {
     };
   }
   var import_ical;
-  var init_validator3 = __esm({
+  var init_validator4 = __esm({
     "src/backend/accounts/ical/validator.js"() {
       import_ical = __toModule(require_ical());
     }
@@ -7929,7 +7998,7 @@ var WorkshopBackend = (() => {
   var GapiAccount;
   var init_account2 = __esm({
     "src/backend/accounts/gapi/account.js"() {
-      init_gapi_client();
+      init_api_client();
       GapiAccount = class {
         constructor(universe2, accountDef, foldersTOC, dbConn) {
           this.universe = universe2;
@@ -7941,7 +8010,7 @@ var WorkshopBackend = (() => {
           this.identities = accountDef.identities;
           this.foldersTOC = foldersTOC;
           this.folders = this.foldersTOC.items;
-          this.client = new GapiClient(accountDef.credentials, this.id);
+          this.client = new ApiClient(accountDef.credentials, this.id);
         }
         toString() {
           return `[GapiAccount: ${this.id}]`;
@@ -7962,13 +8031,54 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/ical/account.js
+  // src/backend/accounts/mapi/account.js
   var account_exports3 = {};
   __export(account_exports3, {
+    default: () => MapiAccount
+  });
+  var MapiAccount;
+  var init_account3 = __esm({
+    "src/backend/accounts/mapi/account.js"() {
+      init_api_client();
+      MapiAccount = class {
+        constructor(universe2, accountDef, foldersTOC, dbConn) {
+          this.universe = universe2;
+          this.id = accountDef.id;
+          this.accountDef = accountDef;
+          this._db = dbConn;
+          this.enabled = true;
+          this.problems = [];
+          this.identities = accountDef.identities;
+          this.foldersTOC = foldersTOC;
+          this.folders = this.foldersTOC.items;
+          this.client = new ApiClient(accountDef.credentials, this.id);
+        }
+        toString() {
+          return `[MapiAccount: ${this.id}]`;
+        }
+        __acquire() {
+          return Promise.resolve(this);
+        }
+        __release() {
+        }
+        async checkAccount() {
+          return null;
+        }
+        shutdown() {
+        }
+      };
+      MapiAccount.type = "mapi";
+      MapiAccount.supportsServerFolders = false;
+    }
+  });
+
+  // src/backend/accounts/ical/account.js
+  var account_exports4 = {};
+  __export(account_exports4, {
     default: () => ICalAccount
   });
   var ICalAccount;
-  var init_account3 = __esm({
+  var init_account4 = __esm({
     "src/backend/accounts/ical/account.js"() {
       ICalAccount = class {
         constructor(universe2, accountDef, foldersTOC, dbConn) {
@@ -12515,7 +12625,8 @@ var WorkshopBackend = (() => {
             const rawSyncState = fromDb.syncStates.get(account.id);
             const syncState = new GapiAccountSyncStateHelper(ctx, rawSyncState, account.id);
             const foldersTOC = account.foldersTOC;
-            const clResult = await account.client.pagedApiGetCall("https://www.googleapis.com/calendar/v3/users/me/calendarList", {}, "items");
+            const clResult = await account.client.pagedApiGetCall("https://www.googleapis.com/calendar/v3/users/me/calendarList", {}, "items", (result) => {
+            });
             const newFolders = [];
             const modifiedFolders = new Map();
             const observedFolderServerIds = new Set();
@@ -12748,6 +12859,7 @@ var WorkshopBackend = (() => {
               const summary = gapiEvent.summary;
               const creator = this._chewCalIdentity(gapiEvent.creator);
               const organizer = this._chewCalIdentity(gapiEvent.organizer);
+              const location = gapiEvent.location || "";
               const attendees = (gapiEvent.attendees || []).map((who) => this._chewCalAttendee(who));
               const oldInfo = this.oldById.get(eventId);
               const eventInfo = makeCalendarEventInfo({
@@ -12864,7 +12976,7 @@ var WorkshopBackend = (() => {
       init_gapi_id_helpers();
       GapiCalFolderSyncStateHelper = class {
         constructor(ctx, rawSyncState, accountId, folderId, why) {
-          logic.defineScope(this, "ICalSyncState", { ctxId: ctx.id, why });
+          logic.defineScope(this, "GapiSyncState", { ctxId: ctx.id, why });
           if (!rawSyncState) {
             logic(ctx, "creatingDefaultSyncState", {});
             rawSyncState = {
@@ -13014,7 +13126,9 @@ var WorkshopBackend = (() => {
               };
             }
             params.maxAttendees = 50;
-            const results = await account.client.pagedApiGetCall(endpoint, params, "items");
+            const results = await account.client.pagedApiGetCall(endpoint, params, "items", (result) => result.nextPageToken ? {
+              params: { pageToken: result.nextPageToken }
+            } : null);
             for (const event of results.items) {
               syncState.ingestEvent(event);
             }
@@ -13076,13 +13190,568 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/ical/tasks/sync_folder_list.js
+  // src/backend/accounts/mapi/account_sync_state_helper.js
+  var MapiAccountSyncStateHelper;
+  var init_account_sync_state_helper2 = __esm({
+    "src/backend/accounts/mapi/account_sync_state_helper.js"() {
+      init_logic();
+      MapiAccountSyncStateHelper = class {
+        constructor(ctx, rawSyncState, accountId) {
+          if (!rawSyncState) {
+            logic(ctx, "creatingDefaultSyncState", {});
+            rawSyncState = {};
+          }
+          this._ctx = ctx;
+          this._accountId = accountId;
+          this.rawSyncState = rawSyncState;
+        }
+      };
+    }
+  });
+
+  // src/backend/accounts/mapi/tasks/sync_folder_list.js
   var sync_folder_list_default3;
   var init_sync_folder_list3 = __esm({
+    "src/backend/accounts/mapi/tasks/sync_folder_list.js"() {
+      init_task_definer();
+      init_mix_sync_folder_list();
+      init_folder_info_rep();
+      init_account_sync_state_helper2();
+      sync_folder_list_default3 = task_definer_default.defineSimpleTask([
+        mix_sync_folder_list_default,
+        {
+          essentialOfflineFolders: [],
+          async syncFolders(ctx, account) {
+            const fromDb = await ctx.beginMutate({
+              syncStates: new Map([[account.id, null]])
+            });
+            const rawSyncState = fromDb.syncStates.get(account.id);
+            const syncState = new MapiAccountSyncStateHelper(ctx, rawSyncState, account.id);
+            const foldersTOC = account.foldersTOC;
+            const clResult = await account.client.pagedApiGetCall("https://graph.microsoft.com/v1.0/me/calendars", {}, "value", (result) => {
+            });
+            const newFolders = [];
+            const modifiedFolders = new Map();
+            const observedFolderServerIds = new Set();
+            for (const calInfo of clResult.value) {
+              observedFolderServerIds.add(calInfo.id);
+              const desiredCalendarInfo = {
+                color: calInfo.hexColor || null
+              };
+              let calFolder = foldersTOC.items.find((f) => f.serverId === calInfo.id);
+              if (!calFolder) {
+                const name = calInfo.name || "unknown";
+                calFolder = makeFolderMeta({
+                  id: foldersTOC.issueFolderId(),
+                  serverId: calInfo.id,
+                  name,
+                  description: name,
+                  type: "calendar",
+                  path: null,
+                  serverPath: null,
+                  parentId: null,
+                  delim: null,
+                  depth: 0,
+                  syncGranularity: "folder",
+                  calendarInfo: desiredCalendarInfo
+                });
+                newFolders.push(calFolder);
+              } else {
+                let modified = false;
+                if (calFolder.name !== calInfo.name) {
+                  calFolder.name = calFolder.description = calInfo.name;
+                  modified = true;
+                }
+                for (const [dkey, dvalue] of Object.entries(desiredCalendarInfo)) {
+                  if (calFolder.calendarInfo[dkey] !== dvalue) {
+                    calFolder.calendarInfo[dkey] = dvalue;
+                    modified = true;
+                  }
+                }
+                if (modified) {
+                  modifiedFolders.set(calFolder.id, calFolder);
+                }
+              }
+            }
+            for (const folderInfo of foldersTOC.items.filter((x) => x.type === "calendar")) {
+              if (!observedFolderServerIds.has(folderInfo.serverId)) {
+                modifiedFolders.set(folderInfo.id, null);
+              }
+            }
+            return {
+              newFolders,
+              modifiedFolders,
+              modifiedSyncStates: new Map([[account.id, syncState.rawSyncState]])
+            };
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/accounts/mapi/mapi_id_helpers.js
+  function makeMapiCalConvId(accountId, folderId, rawRecurringId) {
+    return `${accountId}.${folderId}:${rawRecurringId}`;
+  }
+  function makeMapiCalEventId(convId, rawMapiCalEventId) {
+    return `${convId}.${rawMapiCalEventId}`;
+  }
+  var init_mapi_id_helpers = __esm({
+    "src/backend/accounts/mapi/mapi_id_helpers.js"() {
+    }
+  });
+
+  // src/backend/accounts/mapi/chew_mapi_cal_events.js
+  var MapiCalEventChewer;
+  var init_chew_mapi_cal_events = __esm({
+    "src/backend/accounts/mapi/chew_mapi_cal_events.js"() {
+      init_mail_rep();
+      init_mailchew();
+      init_date();
+      init_mapi_id_helpers();
+      init_cal_event_rep();
+      init_logic();
+      MapiCalEventChewer = class {
+        constructor({
+          ctx,
+          convId,
+          recurringId,
+          folderId,
+          rangeOldestTS,
+          rangeNewestTS,
+          eventMap,
+          oldConvInfo,
+          oldEvents,
+          foldersTOC
+        }) {
+          this.ctx = ctx;
+          this.convId = convId;
+          this.recurringId = recurringId;
+          this.folderId = folderId;
+          this.rangeOldestTS = rangeOldestTS;
+          this.rangeNewestTS = rangeNewestTS;
+          this.eventMap = eventMap;
+          this.oldConvInfo = oldConvInfo;
+          this.oldEvents = oldEvents;
+          this.foldersTOC = foldersTOC;
+          this.oldById = new Map();
+          this.unifiedEvents = [];
+          this.modifiedEventMap = new Map();
+          this.newEvents = [];
+          this.allEvents = [];
+        }
+        _chewCalIdentity(raw) {
+          const email = raw.emailAddress;
+          return makeIdentityInfo({
+            displayName: email.name,
+            email: email.address,
+            isSelf: false
+          });
+        }
+        _chewCalAttendee(raw, organizer) {
+          const email = raw.emailAddress;
+          const type = raw.type;
+          return makeAttendeeInfo({
+            displayName: email.name,
+            email: email.address,
+            isSelf: false,
+            isOrganizer: email.address === organizer.email && email.name === organizer.displayName,
+            isResource: type === "resource",
+            responseStatus: raw.status,
+            comment: "",
+            isOptional: type === "optional"
+          });
+        }
+        chewEventBundle() {
+          const oldById = this.oldById;
+          for (const oldInfo of this.oldEvents) {
+            if (EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
+              this.modifiedEventMap.set(oldInfo.id, null);
+            } else {
+              oldById.set(oldInfo.id, oldInfo);
+              this.allEvents.push(oldInfo);
+            }
+          }
+          let mainEvent = null;
+          if (this.eventMap.size > 1) {
+            mainEvent = this.eventMap.get(this.recurringId);
+            this.eventMap.delete(this.recurringId);
+          }
+          for (const mapiEvent of this.eventMap.values()) {
+            try {
+              const eventId = makeMapiCalEventId(this.convId, mapiEvent.id);
+              if (mapiEvent !== mainEvent) {
+                for (const [key, value] of Object.entries(mainEvent)) {
+                  if (!(key in mapiEvent)) {
+                    mapiEvent[key] = value;
+                  }
+                }
+              }
+              if (mapiEvent.isCancelled) {
+                this.modifiedEventMap.set(eventId, null);
+                logic(this.ctx, "cancelled", { _event: mapiEvent });
+                return;
+              }
+              logic(this.ctx, "event", { _event: mapiEvent });
+              let contentBlob, snippet, authoredBodySize;
+              const bodyReps = [];
+              const body = mapiEvent.body;
+              if (body) {
+                const { content, contentType } = body;
+                ({ contentBlob, snippet, authoredBodySize } = processMessageContent(content, contentType, true, true));
+                bodyReps.push(makeBodyPart({
+                  type: contentType,
+                  part: null,
+                  sizeEstimate: content.length,
+                  amountDownloaded: content.length,
+                  isDownloaded: true,
+                  _partInfo: null,
+                  contentBlob,
+                  authoredBodySize
+                }));
+              }
+              const isAllDay = mapiEvent.isAllDay;
+              const startDate = new Date(mapiEvent.start.dateTime).valueOf();
+              const endDate = new Date(mapiEvent.end.dateTime).valueOf();
+              const subject = mapiEvent.subject;
+              const organizer = this._chewCalIdentity(mapiEvent.organizer);
+              const creator = organizer;
+              const eventLocation = mapiEvent.location;
+              const location = `${eventLocation.displayName}@${eventLocation.address}`;
+              const attendees = (mapiEvent.attendees || []).map((who) => {
+                return this._chewCalAttendee(who, organizer);
+              });
+              const oldInfo = this.oldById.get(eventId);
+              const eventInfo = makeCalendarEventInfo({
+                id: eventId,
+                date: startDate,
+                startDate,
+                endDate,
+                isAllDay,
+                creator,
+                organizer,
+                attendees,
+                location,
+                flags: oldInfo?.flags,
+                folderIds: new Set([this.folderId]),
+                subject,
+                snippet,
+                bodyReps,
+                authoredBodySize
+              });
+              this.allEvents.push(eventInfo);
+              if (oldInfo) {
+                this.modifiedEventMap.set(eventId, eventInfo);
+              } else {
+                this.newEvents.push(eventInfo);
+              }
+            } catch (ex) {
+              logic(this.ctx, "eventChewingError", { ex });
+            }
+          }
+        }
+      };
+    }
+  });
+
+  // src/backend/accounts/mapi/tasks/cal_sync_conv.js
+  var cal_sync_conv_default2;
+  var init_cal_sync_conv2 = __esm({
+    "src/backend/accounts/mapi/tasks/cal_sync_conv.js"() {
+      init_logic();
+      init_util();
+      init_task_definer();
+      init_conv_churn_driver();
+      init_chew_mapi_cal_events();
+      cal_sync_conv_default2 = task_definer_default.defineSimpleTask([
+        {
+          name: "cal_sync_conv",
+          async plan(ctx, rawTask) {
+            let plannedTask = shallowClone2(rawTask);
+            plannedTask.exclusiveResources = [`conv:${rawTask.convId}`];
+            plannedTask.priorityTags = [`view:conv:${rawTask.convId}`];
+            await ctx.finishTask({
+              taskState: plannedTask
+            });
+          },
+          async execute(ctx, req) {
+            let account = await ctx.universe.acquireAccount(ctx, req.accountId);
+            let foldersTOC = await ctx.universe.acquireAccountFoldersTOC(ctx, account.id);
+            let fromDb = await ctx.beginMutate({
+              conversations: new Map([[req.convId, null]]),
+              messagesByConversation: new Map([[req.convId, null]])
+            });
+            const oldEvents = fromDb.messagesByConversation.get(req.convId);
+            const oldConvInfo = fromDb.conversations.get(req.convId);
+            const eventChewer = new MapiCalEventChewer({
+              ctx,
+              convId: req.convId,
+              recurringId: req.recurringId,
+              folderId: req.folderId,
+              rangeOldestTS: req.rangeOldestTS,
+              rangeNewestTS: req.rangeNewestTS,
+              eventMap: req.eventMap,
+              oldConvInfo,
+              oldEvents,
+              foldersTOC
+            });
+            eventChewer.chewEventBundle();
+            logic(ctx, "debuggy", {
+              event: eventChewer.event,
+              allEvents: eventChewer.allEvents
+            });
+            let convInfo;
+            if (eventChewer.allEvents.length) {
+              convInfo = churnConversationDriver(req.convId, oldConvInfo, eventChewer.allEvents, "event");
+            } else {
+              convInfo = null;
+            }
+            let modifiedConversations, newConversations;
+            if (oldConvInfo) {
+              modifiedConversations = new Map([[req.convId, convInfo]]);
+            } else if (convInfo) {
+              newConversations = [convInfo];
+            }
+            await ctx.finishTask({
+              mutations: {
+                conversations: modifiedConversations,
+                messages: eventChewer.modifiedEventMap
+              },
+              newData: {
+                conversations: newConversations,
+                messages: eventChewer.newEvents
+              }
+            });
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/accounts/mapi/cal_folder_sync_state_helper.js
+  var MapiCalFolderSyncStateHelper;
+  var init_cal_folder_sync_state_helper2 = __esm({
+    "src/backend/accounts/mapi/cal_folder_sync_state_helper.js"() {
+      init_logic();
+      init_date();
+      init_mapi_id_helpers();
+      MapiCalFolderSyncStateHelper = class {
+        constructor(ctx, rawSyncState, accountId, folderId, why) {
+          logic.defineScope(this, "MapiSyncState", { ctxId: ctx.id, why });
+          if (!rawSyncState) {
+            logic(ctx, "creatingDefaultSyncState", {});
+            rawSyncState = {
+              syncUrl: null,
+              calUpdatedTS: null,
+              rangeOldestTS: makeDaysAgo(15),
+              rangeNewestTS: makeDaysAgo(-60)
+            };
+          }
+          this._accountId = accountId;
+          this._folderId = folderId;
+          this.rawSyncState = rawSyncState;
+          this.eventChangesByRecurringEventId = new Map();
+          this.allEvents = [];
+          this.tasksToSchedule = [];
+          this.convMutations = null;
+        }
+        get syncUrl() {
+          return this.rawSyncState.syncUrl;
+        }
+        set syncUrl(nextSyncUrl) {
+          this.rawSyncState.syncUrl = nextSyncUrl;
+        }
+        set updatedTime(updatedTimeDateStr) {
+          this.rawSyncState.calUpdatedTS = Date.parse(updatedTimeDateStr);
+        }
+        get timeMinDateStr() {
+          return new Date(this.rawSyncState.rangeOldestTS).toISOString();
+        }
+        get timeMaxDateStr() {
+          return new Date(this.rawSyncState.rangeNewestTS).toISOString();
+        }
+        _makeUidConvTask({
+          convId,
+          recurringId,
+          eventMap,
+          calUpdatedTS,
+          rangeOldestTS,
+          rangeNewestTS
+        }) {
+          const task = {
+            type: "cal_sync_conv",
+            accountId: this._accountId,
+            folderId: this._folderId,
+            convId,
+            recurringId,
+            calUpdatedTS,
+            rangeOldestTS,
+            rangeNewestTS,
+            eventMap
+          };
+          this.tasksToSchedule.push(task);
+          return task;
+        }
+        ingestEvent(event) {
+          const recurringId = event.seriesMasterId || event.id;
+          let eventMap = this.eventChangesByRecurringEventId.get(recurringId);
+          if (!eventMap) {
+            eventMap = new Map();
+            this.eventChangesByRecurringEventId.set(recurringId, eventMap);
+          }
+          eventMap.set(event.id, event);
+        }
+        processEvents() {
+          for (const [
+            recurringId,
+            eventMap
+          ] of this.eventChangesByRecurringEventId.entries()) {
+            const convId = makeMapiCalConvId(this._accountId, this._folderId, recurringId);
+            this._makeUidConvTask({
+              convId,
+              recurringId,
+              eventMap,
+              calUpdatedTS: this.rawSyncState.calUpdatedTS,
+              rangeOldestTS: this.rawSyncState.rangeOldestTS,
+              rangeNewestTS: this.rawSyncState.rangeNewestTS
+            });
+          }
+        }
+      };
+    }
+  });
+
+  // src/backend/accounts/mapi/tasks/cal_sync_refresh.js
+  var cal_sync_refresh_default2;
+  var init_cal_sync_refresh2 = __esm({
+    "src/backend/accounts/mapi/tasks/cal_sync_refresh.js"() {
+      init_logic();
+      init_util();
+      init_date();
+      init_task_definer();
+      init_sync_overlay_helpers();
+      init_cal_folder_sync_state_helper2();
+      cal_sync_refresh_default2 = task_definer_default.defineAtMostOnceTask([
+        {
+          name: "sync_refresh",
+          binByArg: "folderId",
+          helped_overlay_folders: syncNormalOverlay,
+          helped_invalidate_overlays(folderId, dataOverlayManager) {
+            dataOverlayManager.announceUpdatedOverlayData("folders", folderId);
+          },
+          helped_already_planned(ctx, rawTask) {
+            return Promise.resolve({
+              result: ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.folderId)
+            });
+          },
+          helped_plan(ctx, rawTask) {
+            let plannedTask = shallowClone2(rawTask);
+            plannedTask.resources = [
+              "online",
+              `credentials!${rawTask.accountId}`,
+              `happy!${rawTask.accountId}`
+            ];
+            plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
+            let groupPromise = ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.folderId);
+            return {
+              taskState: plannedTask,
+              remainInProgressUntil: groupPromise,
+              result: groupPromise
+            };
+          },
+          async helped_execute(ctx, req) {
+            const fromDb = await ctx.beginMutate({
+              syncStates: new Map([[req.folderId, null]])
+            });
+            const rawSyncState = fromDb.syncStates.get(req.folderId);
+            const syncState = new MapiCalFolderSyncStateHelper(ctx, rawSyncState, req.accountId, req.folderId, "refresh");
+            const account = await ctx.universe.acquireAccount(ctx, req.accountId);
+            const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
+            const calendarId = folderInfo.serverId;
+            let syncDate = NOW();
+            logic(ctx, "syncStart", { syncDate });
+            const params = Object.create(null);
+            let endpoint;
+            if (syncState.syncUrl) {
+              endpoint = syncState.syncUrl;
+            } else {
+              endpoint = `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/calendarView/delta`;
+              if (syncState.timeMinDateStr && syncState.timeMaxDateStr) {
+                params.startDateTime = syncState.timeMinDateStr;
+                params.endDateTime = syncState.timeMaxDateStr;
+              }
+            }
+            const results = await account.client.pagedApiGetCall(endpoint, params, "value", (result) => result["@odata.nextLink"] ? {
+              url: result["@odata.nextLink"]
+            } : null);
+            for (const event of results.value) {
+              syncState.ingestEvent(event);
+            }
+            syncState.syncUrl = results["@odata.deltaLink"];
+            syncState.updatedTime = results.updatedTime;
+            syncState.updatedTime = syncDate;
+            syncState.processEvents();
+            logic(ctx, "syncEnd", {});
+            return {
+              mutations: {
+                syncStates: new Map([[req.folderId, syncState.rawSyncState]])
+              },
+              newData: {
+                tasks: syncState.tasksToSchedule
+              },
+              atomicClobbers: {
+                folders: new Map([
+                  [
+                    req.folderId,
+                    {
+                      syncInfo: {
+                        lastSuccessfulSyncAt: syncDate,
+                        lastAttemptedSyncAt: syncDate,
+                        failedSyncsSinceLastSuccessfulSync: 0
+                      }
+                    }
+                  ]
+                ])
+              }
+            };
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/accounts/mapi/mapi_tasks.js
+  var mapi_tasks_exports = {};
+  __export(mapi_tasks_exports, {
+    default: () => mapi_tasks_default
+  });
+  var mapi_tasks_default;
+  var init_mapi_tasks = __esm({
+    "src/backend/accounts/mapi/mapi_tasks.js"() {
+      init_sync_folder_list3();
+      init_cal_sync_conv2();
+      init_cal_sync_refresh2();
+      init_account_modify();
+      init_identity_modify();
+      init_new_tracking();
+      mapi_tasks_default = [
+        sync_folder_list_default3,
+        cal_sync_conv_default2,
+        cal_sync_refresh_default2,
+        account_modify_default,
+        identity_modify_default,
+        new_tracking_default
+      ];
+    }
+  });
+
+  // src/backend/accounts/ical/tasks/sync_folder_list.js
+  var sync_folder_list_default4;
+  var init_sync_folder_list4 = __esm({
     "src/backend/accounts/ical/tasks/sync_folder_list.js"() {
       init_task_definer();
       init_mix_sync_folder_list();
-      sync_folder_list_default3 = task_definer_default.defineSimpleTask([
+      sync_folder_list_default4 = task_definer_default.defineSimpleTask([
         mix_sync_folder_list_default,
         {
           essentialOfflineFolders: [
@@ -13196,9 +13865,9 @@ var WorkshopBackend = (() => {
           }
           let contentBlob, snippet, authoredBodySize;
           let bodyReps = [];
-          let location2 = null;
+          let location = null;
           if (component.hasProperty("location")) {
-            location2 = component.getFirstPropertyValue("location");
+            location = component.getFirstPropertyValue("location");
           }
           let description = component.getFirstPropertyValue("description");
           if (description) {
@@ -13227,7 +13896,7 @@ var WorkshopBackend = (() => {
             creator: organizer,
             organizer,
             attendees,
-            location: location2,
+            location,
             flags: [],
             folderIds: new Set([this.calendarFolder.id]),
             summary,
@@ -13530,14 +14199,14 @@ var WorkshopBackend = (() => {
   var ical_tasks_default;
   var init_ical_tasks = __esm({
     "src/backend/accounts/ical/ical_tasks.js"() {
-      init_sync_folder_list3();
+      init_sync_folder_list4();
       init_sync_uid();
       init_sync_refresh2();
       init_account_modify();
       init_identity_modify();
       init_new_tracking();
       ical_tasks_default = [
-        sync_folder_list_default3,
+        sync_folder_list_default4,
         sync_uid_default,
         sync_refresh_default2,
         account_modify_default,
@@ -17382,9 +18051,16 @@ var WorkshopBackend = (() => {
       }
     ],
     [
-      "ical",
+      "mapi",
       async function() {
         const mod = await Promise.resolve().then(() => (init_configurator3(), configurator_exports3));
+        return mod.default;
+      }
+    ],
+    [
+      "ical",
+      async function() {
+        const mod = await Promise.resolve().then(() => (init_configurator4(), configurator_exports4));
         return mod.default;
       }
     ]
@@ -17405,9 +18081,16 @@ var WorkshopBackend = (() => {
       }
     ],
     [
-      "ical",
+      "mapi",
       async function() {
         const mod = await Promise.resolve().then(() => (init_validator3(), validator_exports3));
+        return mod.default;
+      }
+    ],
+    [
+      "ical",
+      async function() {
+        const mod = await Promise.resolve().then(() => (init_validator4(), validator_exports4));
         return mod.default;
       }
     ]
@@ -17428,9 +18111,16 @@ var WorkshopBackend = (() => {
       }
     ],
     [
-      "ical",
+      "mapi",
       async function() {
         const mod = await Promise.resolve().then(() => (init_account3(), account_exports3));
+        return mod.default;
+      }
+    ],
+    [
+      "ical",
+      async function() {
+        const mod = await Promise.resolve().then(() => (init_account4(), account_exports4));
         return mod.default;
       }
     ]
@@ -17447,6 +18137,13 @@ var WorkshopBackend = (() => {
       "gapi",
       async function() {
         const mod = await Promise.resolve().then(() => (init_gapi_tasks(), gapi_tasks_exports));
+        return mod.default;
+      }
+    ],
+    [
+      "mapi",
+      async function() {
+        const mod = await Promise.resolve().then(() => (init_mapi_tasks(), mapi_tasks_exports));
         return mod.default;
       }
     ],
@@ -17472,6 +18169,12 @@ var WorkshopBackend = (() => {
       }
     ],
     [
+      "mapi",
+      {
+        unselectableFolderTypes: new Set()
+      }
+    ],
+    [
       "ical",
       {
         unselectableFolderTypes: new Set()
@@ -17487,6 +18190,12 @@ var WorkshopBackend = (() => {
     ],
     [
       "gapi",
+      {
+        syncGranularity: "folder"
+      }
+    ],
+    [
+      "mapi",
       {
         syncGranularity: "folder"
       }
@@ -17526,6 +18235,23 @@ var WorkshopBackend = (() => {
       }
     ],
     [
+      "mapi",
+      {
+        engineFacts: {
+          syncGranularity: "folder",
+          oauth: {
+            scopes: [
+              "offline_access",
+              "https://graph.microsoft.com/Calendars.Read",
+              "https://graph.microsoft.com/Mail.Read",
+              "https://graph.microsoft.com/User.Read"
+            ]
+          }
+        },
+        usesArchiveMetaphor: true
+      }
+    ],
+    [
       "ical",
       {
         engineFacts: {
@@ -17544,6 +18270,12 @@ var WorkshopBackend = (() => {
     ],
     [
       "gapi",
+      {
+        syncGranularity: "folder"
+      }
+    ],
+    [
+      "mapi",
       {
         syncGranularity: "folder"
       }

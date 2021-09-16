@@ -17,7 +17,7 @@
 import logic from "logic";
 
 import { makeDaysAgo } from "shared/date";
-import { makeGapiCalConvId } from "./gapi_id_helpers";
+import { makeMapiCalConvId } from "./mapi_id_helpers";
 
 /**
  * For details see `README.md`, but the core things to know are:
@@ -36,15 +36,14 @@ import { makeGapiCalConvId } from "./gapi_id_helpers";
  *     window, we do need to use the `TBL_MSG_IDS_BY_FOLDER` index to help
  *     figure out what data needs to be evicted.
  */
-export default class GapiCalFolderSyncStateHelper {
+export default class MapiCalFolderSyncStateHelper {
   constructor(ctx, rawSyncState, accountId, folderId, why) {
-    logic.defineScope(this, "GapiSyncState", { ctxId: ctx.id, why });
+    logic.defineScope(this, "MapiSyncState", { ctxId: ctx.id, why });
 
     if (!rawSyncState) {
       logic(ctx, "creatingDefaultSyncState", {});
       rawSyncState = {
-        syncToken: null,
-        etag: null,
+        syncUrl: null,
         // The timestamp of the most recent `updated` value for the calendar.
         // This should be used in preference to locally generated wall-clock
         // values when trying to ask the server for things that have changed,
@@ -66,26 +65,20 @@ export default class GapiCalFolderSyncStateHelper {
     // instance events keyed by their own id.
     this.eventChangesByRecurringEventId = new Map();
 
+    this.allEvents = [];
+
     // A running list of tasks to spin-off
     this.tasksToSchedule = [];
     // A running list of conversations to delete
     this.convMutations = null;
   }
 
-  get syncToken() {
-    return this.rawSyncState.syncToken;
+  get syncUrl() {
+    return this.rawSyncState.syncUrl;
   }
 
-  set syncToken(nextSyncToken) {
-    this.rawSyncState.syncToken = nextSyncToken;
-  }
-
-  get etag() {
-    return this.rawSyncState.etag;
-  }
-
-  set etag(etag) {
-    this.rawSyncState.etag = etag;
+  set syncUrl(nextSyncUrl) {
+    this.rawSyncState.syncUrl = nextSyncUrl;
   }
 
   set updatedTime(updatedTimeDateStr) {
@@ -102,16 +95,18 @@ export default class GapiCalFolderSyncStateHelper {
 
   _makeUidConvTask({
     convId,
+    recurringId,
     eventMap,
     calUpdatedTS,
     rangeOldestTS,
     rangeNewestTS,
   }) {
-    let task = {
+    const task = {
       type: "cal_sync_conv",
       accountId: this._accountId,
       folderId: this._folderId,
       convId,
+      recurringId,
       calUpdatedTS,
       rangeOldestTS,
       rangeNewestTS,
@@ -122,7 +117,7 @@ export default class GapiCalFolderSyncStateHelper {
   }
 
   ingestEvent(event) {
-    const recurringId = event.recurringEventId || event.id;
+    const recurringId = event.seriesMasterId || event.id;
     let eventMap = this.eventChangesByRecurringEventId.get(recurringId);
     if (!eventMap) {
       eventMap = new Map();
@@ -140,13 +135,14 @@ export default class GapiCalFolderSyncStateHelper {
       recurringId,
       eventMap,
     ] of this.eventChangesByRecurringEventId.entries()) {
-      const convId = makeGapiCalConvId(
+      const convId = makeMapiCalConvId(
         this._accountId,
         this._folderId,
         recurringId
       );
       this._makeUidConvTask({
         convId,
+        recurringId,
         eventMap,
         calUpdatedTS: this.rawSyncState.calUpdatedTS,
         rangeOldestTS: this.rawSyncState.rangeOldestTS,

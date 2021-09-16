@@ -16,7 +16,7 @@
 
 import ApiClient from "../../utils/api_client";
 
-export default class GapiAccount {
+export default class MapiAccount {
   constructor(universe, accountDef, foldersTOC, dbConn /*, receiveProtoConn*/) {
     this.universe = universe;
     this.id = accountDef.id;
@@ -36,7 +36,7 @@ export default class GapiAccount {
   }
 
   toString() {
-    return `[GapiAccount: ${this.id}]`;
+    return `[MapiAccount: ${this.id}]`;
   }
 
   // TODO: evaluate whether the account actually wants to be a RefedResource
@@ -58,5 +58,5 @@ export default class GapiAccount {
   }
 }
 
-GapiAccount.type = "gapi";
-GapiAccount.supportsServerFolders = false;
+MapiAccount.type = "mapi";
+MapiAccount.supportsServerFolders = false;

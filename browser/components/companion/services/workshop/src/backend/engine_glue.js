@@ -61,36 +61,43 @@ export const configuratorModules = new Map([
       return mod.default;
     },
   ],
+  [
+    "mapi",
+    async function() {
+      const mod = await import("./accounts/mapi/configurator");
+      return mod.default;
+    },
+  ],
   /*
-  [
-    "imap+smtp",
-    async function() {
-      const mod = await import("./accounts/composite/configurator");
-      return mod.default;
-    },
-  ],
-  [
-    "pop3+smtp",
-    async function() {
-      const mod = await import("./accounts/composite/configurator");
-      return mod.default;
-    },
-  ],
-  [
-    "phabricator",
-    async function() {
-      const mod = await import("./accounts/phabricator/configurator");
-      return mod.default;
-    },
-  ],
-  [
-    "bugzilla",
-    async function() {
-      const mod = await import("./accounts/bugzilla/configurator");
-      return mod.default;
-    },
-  ],
-  */
+     [
+     "imap+smtp",
+     async function() {
+     const mod = await import("./accounts/composite/configurator");
+     return mod.default;
+     },
+     ],
+     [
+     "pop3+smtp",
+     async function() {
+     const mod = await import("./accounts/composite/configurator");
+     return mod.default;
+     },
+     ],
+     [
+     "phabricator",
+     async function() {
+     const mod = await import("./accounts/phabricator/configurator");
+     return mod.default;
+     },
+     ],
+     [
+     "bugzilla",
+     async function() {
+     const mod = await import("./accounts/bugzilla/configurator");
+     return mod.default;
+     },
+     ],
+   */
   [
     "ical",
     async function() {
@@ -128,36 +135,43 @@ export const validatorModules = new Map([
       return mod.default;
     },
   ],
+  [
+    "mapi",
+    async function() {
+      const mod = await import("./accounts/mapi/validator");
+      return mod.default;
+    },
+  ],
   /*
-  [
-    "imap+smtp",
-    async function() {
-      const mod = await import("./accounts/composite/validator");
-      return mod.default;
-    },
-  ],
-  [
-    "pop3+smtp",
-    async function() {
-      const mod = await import("./accounts/composite/validator");
-      return mod.default;
-    },
-  ],
-  [
-    "phabricator",
-    async function() {
-      const mod = await import("./accounts/phabricator/validator");
-      return mod.default;
-    },
-  ],
-  [
-    "bugzilla",
-    async function() {
-      const mod = await import("./accounts/bugzilla/validator");
-      return mod.default;
-    },
-  ],
-  */
+     [
+     "imap+smtp",
+     async function() {
+     const mod = await import("./accounts/composite/validator");
+     return mod.default;
+     },
+     ],
+     [
+     "pop3+smtp",
+     async function() {
+     const mod = await import("./accounts/composite/validator");
+     return mod.default;
+     },
+     ],
+     [
+     "phabricator",
+     async function() {
+     const mod = await import("./accounts/phabricator/validator");
+     return mod.default;
+     },
+     ],
+     [
+     "bugzilla",
+     async function() {
+     const mod = await import("./accounts/bugzilla/validator");
+     return mod.default;
+     },
+     ],
+   */
   [
     "ical",
     async function() {
@@ -195,36 +209,43 @@ export const accountModules = new Map([
       return mod.default;
     },
   ],
+  [
+    "mapi",
+    async function() {
+      const mod = await import("./accounts/mapi/account");
+      return mod.default;
+    },
+  ],
   /*
-  [
-    "imap+smtp",
-    async function() {
-      const mod = await import("./accounts/composite/account");
-      return mod.default;
-    },
-  ],
-  [
-    "pop3+smtp",
-    async function() {
-      const mod = await import("./accounts/composite/account");
-      return mod.default;
-    },
-  ],
-  [
-    "phabricator",
-    async function() {
-      const mod = await import("./accounts/phabricator/account");
-      return mod.default;
-    },
-  ],
-  [
-    "bugzilla",
-    async function() {
-      const mod = await import("./accounts/bugzilla/account");
-      return mod.default;
-    },
-  ],
-  */
+     [
+     "imap+smtp",
+     async function() {
+     const mod = await import("./accounts/composite/account");
+     return mod.default;
+     },
+     ],
+     [
+     "pop3+smtp",
+     async function() {
+     const mod = await import("./accounts/composite/account");
+     return mod.default;
+     },
+     ],
+     [
+     "phabricator",
+     async function() {
+     const mod = await import("./accounts/phabricator/account");
+     return mod.default;
+     },
+     ],
+     [
+     "bugzilla",
+     async function() {
+     const mod = await import("./accounts/bugzilla/account");
+     return mod.default;
+     },
+     ],
+   */
   [
     "ical",
     async function() {
@@ -276,29 +297,36 @@ export const engineTaskMappings = new Map([
       return mod.default;
     },
   ],
+  [
+    "mapi",
+    async function() {
+      const mod = await import("./accounts/mapi/mapi_tasks");
+      return mod.default;
+    },
+  ],
   /*
-  [
-    "pop3",
-    async function() {
-      const mod = await import("./accounts/pop3/pop3_tasks");
-      return mod.default;
-    },
-  ],
-  [
-    "phabricator",
-    async function() {
-      const mod = await import("./accounts/phabricator/phabricator_tasks");
-      return mod.default;
-    },
-  ],
-  [
-    "bugzilla",
-    async function() {
-      const mod = await import("./accounts/bugzilla/bugzilla_tasks");
-      return mod.default;
-    },
-  ],
-  */
+     [
+     "pop3",
+     async function() {
+     const mod = await import("./accounts/pop3/pop3_tasks");
+     return mod.default;
+     },
+     ],
+     [
+     "phabricator",
+     async function() {
+     const mod = await import("./accounts/phabricator/phabricator_tasks");
+     return mod.default;
+     },
+     ],
+     [
+     "bugzilla",
+     async function() {
+     const mod = await import("./accounts/bugzilla/bugzilla_tasks");
+     return mod.default;
+     },
+     ],
+   */
   [
     "ical",
     async function() {
@@ -355,26 +383,32 @@ export const engineHacks = new Map([
       unselectableFolderTypes: new Set(),
     },
   ],
+  [
+    "mapi",
+    {
+      unselectableFolderTypes: new Set(),
+    },
+  ],
   /*
-  [
-    "pop3",
-    {
-      unselectableFolderTypes: new Set(),
-    },
-  ],
-  [
-    "phabricator",
-    {
-      unselectableFolderTypes: new Set(),
-    },
-  ],
-  [
-    "bugzilla",
-    {
-      unselectableFolderTypes: new Set(),
-    },
-  ],
-  */
+     [
+     "pop3",
+     {
+     unselectableFolderTypes: new Set(),
+     },
+     ],
+     [
+     "phabricator",
+     {
+     unselectableFolderTypes: new Set(),
+     },
+     ],
+     [
+     "bugzilla",
+     {
+     unselectableFolderTypes: new Set(),
+     },
+     ],
+   */
   [
     "ical",
     {
@@ -426,26 +460,32 @@ export const engineBackEndFacts = new Map([
       syncGranularity: "folder",
     },
   ],
-  /*
   [
-    "pop3",
+    "mapi",
     {
       syncGranularity: "folder",
     },
   ],
-  [
-    "phabricator",
-    {
-      syncGranularity: "account",
-    },
-  ],
-  [
-    "bugzilla",
-    {
-      syncGranularity: "account",
-    },
-  ],
-  */
+  /*
+     [
+     "pop3",
+     {
+     syncGranularity: "folder",
+     },
+     ],
+     [
+     "phabricator",
+     {
+     syncGranularity: "account",
+     },
+     ],
+     [
+     "bugzilla",
+     {
+     syncGranularity: "account",
+     },
+     ],
+   */
   [
     "ical",
     {
@@ -523,38 +563,55 @@ export const engineFrontEndAccountMeta = new Map([
       usesArchiveMetaphor: true,
     },
   ],
-  /*
   [
-    "pop3",
+    "mapi",
     {
       engineFacts: {
-        // This could arguably be 'account' too, but that would hinge on us
-        // having some type of local folder stuff going on.  We can of course
-        // revisit this as needed.
         syncGranularity: "folder",
+        oauth: {
+          scopes: [
+            "offline_access",
+            "https://graph.microsoft.com/Calendars.Read",
+            "https://graph.microsoft.com/Mail.Read",
+            "https://graph.microsoft.com/User.Read",
+          ],
+        },
       },
-      usesArchiveMetaphor: false,
+      usesArchiveMetaphor: true,
     },
   ],
-  [
-    "phabricator",
-    {
-      engineFacts: {
-        syncGranularity: "account",
-      },
-      usesArchiveMetaphor: false,
-    },
-  ],
-  [
-    "bugzilla",
-    {
-      engineFacts: {
-        syncGranularity: "account",
-      },
-      usesArchiveMetaphor: false,
-    },
-  ],
-  */
+  /*
+     [
+     "pop3",
+     {
+     engineFacts: {
+     // This could arguably be 'account' too, but that would hinge on us
+     // having some type of local folder stuff going on.  We can of course
+     // revisit this as needed.
+     syncGranularity: "folder",
+     },
+     usesArchiveMetaphor: false,
+     },
+     ],
+     [
+     "phabricator",
+     {
+     engineFacts: {
+     syncGranularity: "account",
+     },
+     usesArchiveMetaphor: false,
+     },
+     ],
+     [
+     "bugzilla",
+     {
+     engineFacts: {
+     syncGranularity: "account",
+     },
+     usesArchiveMetaphor: false,
+     },
+     ],
+   */
   [
     "ical",
     {
@@ -609,26 +666,32 @@ export const engineFrontEndFolderMeta = new Map([
       syncGranularity: "folder",
     },
   ],
-  /*
   [
-    "pop3",
+    "mapi",
     {
       syncGranularity: "folder",
     },
   ],
-  [
-    "phabricator",
-    {
-      syncGranularity: "account",
-    },
-  ],
-  [
-    "bugzilla",
-    {
-      syncGranularity: "account",
-    },
-  ],
-  */
+  /*
+     [
+     "pop3",
+     {
+     syncGranularity: "folder",
+     },
+     ],
+     [
+     "phabricator",
+     {
+     syncGranularity: "account",
+     },
+     ],
+     [
+     "bugzilla",
+     {
+     syncGranularity: "account",
+     },
+     ],
+   */
   [
     "ical",
     {

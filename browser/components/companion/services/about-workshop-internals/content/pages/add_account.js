@@ -13,6 +13,7 @@ export default class AddAccountPage extends Page {
       icsStatus: { state: true },
       rssStatus: { state: true },
       gapiStatus: { state: true },
+      mapiStatus: { state: true },
     };
   }
 
@@ -223,10 +224,96 @@ export default class AddAccountPage extends Page {
     }
   }
 
+  mapiTemplate() {
+    return html`
+      <section class="card">
+        <h5>Microsoft Account</h5>
+        <div id="home-add-mapi-error">${this.mapiStatus}</div>
+        <form>
+          <button
+            id="home-add-mapi-button"
+            type="button"
+            @click="${this.onClickAddMapi}"
+          >
+            Add
+          </button>
+        </form>
+      </section>
+    `;
+  }
+
+  async onClickAddMapi() {
+    this.mapiStatus = "Creating account...";
+
+    // ### Perform the oauth dance
+    // NOTE: Serious concern here: This may end up destroying our tab, causing
+    // us to lose our state.
+    const oauthInfo = this.workshopAPI.oauthBindings.microsoft;
+    const authorizer = new OAuth2(
+      oauthInfo.endpoint,
+      oauthInfo.tokenEndpoint,
+      oauthInfo.scopes.join(" "),
+      oauthInfo.clientId,
+      oauthInfo.clientSecret,
+      null
+    );
+
+    try {
+      const accessToken = await authorizer.getToken();
+      if (!accessToken) {
+        this.mapiStatus = "OAuth failure, see console.";
+        return;
+      }
+    } catch (ex) {
+      this.mapiStatus = `Exception during OAuth: ${ex}`;
+      return;
+    }
+    // The authorizer should now have accessToken, refreshToken, and
+    // tokenExpires on it.
+
+    const domainInfo = {
+      type: "mapi",
+      oauth2Settings: {
+        authEndpoint: oauthInfo.endpoint,
+        tokenEndpoint: oauthInfo.tokenEndpoint,
+        scope: oauthInfo.scopes.join(" "),
+      },
+      oauth2Secrets: {
+        clientId: oauthInfo.clientId,
+        clientSecret: oauthInfo.clientSecret,
+      },
+      oauth2Tokens: {
+        refreshToken: authorizer.refreshToken,
+        accessToken: oauthInfo.accessToken,
+        expireTimeMS: oauthInfo.tokenExpires,
+      },
+    };
+
+    let {
+      error,
+      errorDetails,
+      account,
+    } = await this.workshopAPI.tryToCreateAccount(
+      // The domainInfo should already have everything we need to pull out the
+      // account info, so there's nothing to pass here.
+      {},
+      domainInfo
+    );
+
+    if (error) {
+      const jsonDetails = JSON.stringify(errorDetails);
+      this.mapiStatus = `${error}: ${jsonDetails}`;
+    } else {
+      this.mapiStatus = "Account created!";
+      this.router.navigateTo(["account", account.id]);
+    }
+  }
+
   render() {
     return html`
       <h4>Add Accounts</h4>
       ${this.icsTemplate()} ${this.rssTemplate()} ${this.gapiTemplate()}
+      ${this.mapiTemplate()}
     `;
   }
 }

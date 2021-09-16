@@ -16,11 +16,11 @@
 
 import logic from "logic";
 
-import { ensureUpdatedCredentials } from "../../oauth";
+import { ensureUpdatedCredentials } from "../oauth";
 
 /**
- * API layer for talking to Gapi, handling oauth tokens and (optionally) paged
- * results.
+ * API layer for talking to calendars through a rest service, handling oauth
+ * tokens and (optionally) paged results.
  *
  * ### Paged Result Note
  *
@@ -40,9 +40,9 @@ import { ensureUpdatedCredentials } from "../../oauth";
  * less bad (and I believe the server may arbitrarily break up conversations for
  * its own benefit exactly for this reason).
  */
-export default class GapiClient {
+export default class ApiClient {
   constructor(credentials, accountId) {
-    logic.defineScope(this, "GapiClient", { accountId });
+    logic.defineScope(this, "ApiClient", { accountId });
     this.credentials = credentials;
     this._dirtyCredentials = false;
   }
@@ -54,7 +54,7 @@ export default class GapiClient {
   /**
    *
    * @param {String} endpointUrl
-   *   URL of the API endpoint to use.  Google APIs have different domains for
+   *   URL of the API endpoint to use.  For example, Google APIs have different domains for
    *   different services (Ex: calendar uses https://www.googleapis.com and
    *   gmail uses https://gmail.googleapis.com/) so we need the full URL.
    * @param {Object} params
@@ -91,38 +91,40 @@ export default class GapiClient {
    * results and successively issue the additional page requests, returning
    * a merged list of all results.
    *
+   * @param {String} url
+   *   Api url
+   * @param {Object} params
+   *   Api parameters
    * @param {String} resultPropertyName
    *   Property of the result object structure where we expect to find the
    *   actual set of results in each individual request.
+   * @param {Function} nextPageGetter
+   *   Get the next { url, params } to use from the result from an api call.
    * @returns
    *   The last network result with the contents of the `resultPropertyName`
    *   property replaced by the concatenated contents of that field across all
    *   network results.
    */
-  async pagedApiGetCall(url, params, resultPropertyName) {
-    let nextPageToken = null;
-    let resultsSoFar = [];
+  async pagedApiGetCall(url, params, resultPropertyName, nextPageGetter) {
+    let apiUrl = url;
+    let useParams = Object.assign({}, params);
+    const resultsSoFar = [];
     while (true) {
-      const useParams = Object.assign({}, params);
-      if (nextPageToken) {
-        useParams.pageToken = nextPageToken;
-        nextPageToken = null;
-      }
-
-      const thisResult = await this.apiGetCall(url, useParams);
-
+      const thisResult = await this.apiGetCall(apiUrl, useParams);
       if (thisResult.error) {
         return thisResult;
       }
 
       resultsSoFar.push(...thisResult[resultPropertyName]);
 
-      if (thisResult.nextPageToken) {
-        nextPageToken = thisResult.nextPageToken;
-      } else {
+      const connectionInfo = nextPageGetter(thisResult);
+      if (!connectionInfo) {
         thisResult[resultPropertyName] = resultsSoFar;
         return thisResult;
       }
+
+      useParams = Object.assign({}, connectionInfo.params || params);
+      apiUrl = connectionInfo.url || url;
     }
     // (control never falls out the bottom of the loop)
   }

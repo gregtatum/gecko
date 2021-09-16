@@ -18,7 +18,7 @@ import TaskDefiner from "../../../task_infra/task_definer";
 
 import MixinSyncFolderList from "../../../task_mixins/mix_sync_folder_list";
 import { makeFolderMeta } from "backend/db/folder_info_rep";
-import GapiAccountSyncStateHelper from "../account_sync_state_helper";
+import MapiAccountSyncStateHelper from "../account_sync_state_helper";
 
 /**
  * Sync the folder list for an ActiveSync account.  We leverage IMAP's mix-in
@@ -36,7 +36,7 @@ export default TaskDefiner.defineSimpleTask([
 
       const rawSyncState = fromDb.syncStates.get(account.id);
       // Note: We don't use this yet, but we will, so it's here.
-      const syncState = new GapiAccountSyncStateHelper(
+      const syncState = new MapiAccountSyncStateHelper(
         ctx,
         rawSyncState,
         account.id
@@ -46,13 +46,9 @@ export default TaskDefiner.defineSimpleTask([
 
       // ## Calendars
       const clResult = await account.client.pagedApiGetCall(
-        "https://www.googleapis.com/calendar/v3/users/me/calendarList",
-        // We currently don't pass `syncToken` because we expect this list to be
-        // short and the 410 GONE response indicating an expired syncToken means
-        // that we do need to be able to resolve any deltas ourselves (unless
-        // we're okay with clearing out all existing calendar state).
+        "https://graph.microsoft.com/v1.0/me/calendars",
         {},
-        "items",
+        "value",
         result => {}
       );
 
@@ -63,37 +59,24 @@ export default TaskDefiner.defineSimpleTask([
       // used when the syncToken is declared invalid!
       const observedFolderServerIds = new Set();
 
-      for (const calInfo of clResult.items) {
-        // Currently we only want folders that the user has selected in the UI.
-        let wantFolder = calInfo.selected;
-
-        let calFolder = foldersTOC.items.find(f => f.serverId === calInfo.id);
-        // We don't want to synchronize unselected folders, so we can skip them,
-        // but we do want to delete the folder if we had previously created it.
-        if (!wantFolder) {
-          if (calFolder) {
-            modifiedFolders.set(calFolder.id, null);
-          }
-          continue;
-        }
-        // (we want the folder)
-
+      for (const calInfo of clResult.value) {
         // We're only setting the folder as observed since we want it; this may
         // result in a redundant deletion between the above call to
         // modifiedFolders.set and our deletion inference pass after this loop.
         observedFolderServerIds.add(calInfo.id);
 
-        let desiredCalendarInfo = {
-          timeZone: calInfo.timeZone,
-          color: calInfo.backgroundColor || null,
+        const desiredCalendarInfo = {
+          color: calInfo.hexColor || null,
         };
 
+        let calFolder = foldersTOC.items.find(f => f.serverId === calInfo.id);
         if (!calFolder) {
+          const name = calInfo.name || "unknown";
           calFolder = makeFolderMeta({
             id: foldersTOC.issueFolderId(),
             serverId: calInfo.id,
-            name: calInfo.summary,
-            description: calInfo.description,
+            name,
+            description: name,
             type: "calendar",
             // So far our server-based calendars don't seem to support a concept
             // of a hierarchy.
@@ -111,12 +94,8 @@ export default TaskDefiner.defineSimpleTask([
           let modified = false;
 
           // For fundamental properties, we check manually.
-          if (calFolder.name !== calInfo.summary) {
-            calFolder.name = calInfo.summary;
-            modified = true;
-          }
-          if (calFolder.description !== calInfo.description) {
-            calFolder.description = calInfo.description;
+          if (calFolder.name !== calInfo.name) {
+            calFolder.name = calFolder.description = calInfo.name;
             modified = true;
           }
 

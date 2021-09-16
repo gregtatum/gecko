@@ -22,13 +22,13 @@ import ApiClient from "../../utils/api_client";
  * belong to.
  *
  */
-export default async function validateGapi({
+export default async function validateMapi({
   userDetails,
   credentials,
   connInfoFields,
 }) {
   const client = new ApiClient(credentials);
-  const endpoint = "https://gmail.googleapis.com/gmail/v1/users/me/profile";
+  const endpoint = "https://graph.microsoft.com/v1.0/me";
 
   try {
     // ## Get the user's email address so we can identify the account
@@ -44,8 +44,8 @@ export default async function validateGapi({
     // 2. If we need it, we probably want to figure out the gmail identity
     //    setup and use that even though it seems like the core OAuth ident
     //    stuff might provide it based on the implications of the oauth flows.
-    userDetails.displayName = "";
-    userDetails.emailAddress = whoami.emailAddress;
+    userDetails.displayName = whoami.displayName;
+    userDetails.emailAddress = whoami.userPrincipalName;
   } catch (ex) {
     return {
       error: "unknown",
@@ -58,7 +58,7 @@ export default async function validateGapi({
 
   return {
     engineFields: {
-      engine: "gapi",
+      engine: "mapi",
       engineData: {},
       receiveProtoConn: null,
     },

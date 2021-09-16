@@ -22,7 +22,7 @@ import { NOW } from "shared/date";
 import TaskDefiner from "../../../task_infra/task_definer";
 
 import { syncNormalOverlay } from "../../../task_helpers/sync_overlay_helpers";
-import GapiCalFolderSyncStateHelper from "../cal_folder_sync_state_helper";
+import MapiCalFolderSyncStateHelper from "../cal_folder_sync_state_helper";
 
 /**
  * Sync a Google API Calendar, which under our scheme corresponds to a single
@@ -77,7 +77,7 @@ export default TaskDefiner.defineAtMostOnceTask([
 
       const rawSyncState = fromDb.syncStates.get(req.folderId);
 
-      const syncState = new GapiCalFolderSyncStateHelper(
+      const syncState = new MapiCalFolderSyncStateHelper(
         ctx,
         rawSyncState,
         req.accountId,
@@ -93,48 +93,39 @@ export default TaskDefiner.defineAtMostOnceTask([
       let syncDate = NOW();
       logic(ctx, "syncStart", { syncDate });
 
-      const endpoint = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`;
-
-      let params;
-      if (syncState.syncToken) {
-        params = {
-          syncToken: syncState.syncToken,
-        };
+      const params = Object.create(null);
+      let endpoint;
+      if (syncState.syncUrl) {
+        endpoint = syncState.syncUrl;
       } else {
-        params = {
-          singleEvents: true,
-          timeMin: syncState.timeMinDateStr,
-          timeMax: syncState.timeMaxDateStr,
-        };
+        endpoint = `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/calendarView/delta`;
+        if (syncState.timeMinDateStr && syncState.timeMaxDateStr) {
+          params.startDateTime = syncState.timeMinDateStr;
+          params.endDateTime = syncState.timeMaxDateStr;
+        }
       }
-
-      // TODO: Factor this out into an engine constant and come up with a
-      // rationale.  Right now this is an arbitrary cut-off intended to capture
-      // when a meeting crosses from being a meeting to a large-group
-      // presentation.
-      params.maxAttendees = 50;
 
       const results = await account.client.pagedApiGetCall(
         endpoint,
         params,
-        "items",
+        "value",
         result =>
-          result.nextPageToken
+          result["@odata.nextLink"]
             ? {
-                params: { pageToken: result.nextPageToken },
+                url: result["@odata.nextLink"],
               }
             : null
       );
 
-      for (const event of results.items) {
+      for (const event of results.value) {
         syncState.ingestEvent(event);
       }
 
       // Update sync state before processing the batch; things like the
       // calUpdatedTS need to be available.
-      syncState.syncToken = results.nextSyncToken;
-      syncState.etag = results.etag;
+      syncState.syncUrl = results["@odata.deltaLink"];
       syncState.updatedTime = results.updatedTime;
+      syncState.updatedTime = syncDate;
 
       syncState.processEvents();
 

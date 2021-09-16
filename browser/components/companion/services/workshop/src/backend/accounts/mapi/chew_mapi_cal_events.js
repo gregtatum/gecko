@@ -17,7 +17,7 @@
 import * as mailRep from "../../db/mail_rep";
 import { processMessageContent } from "../../bodies/mailchew";
 import { EVENT_OUTSIDE_SYNC_RANGE } from "shared/date";
-import { makeGapiCalEventId } from "./gapi_id_helpers";
+import { makeMapiCalEventId } from "./mapi_id_helpers";
 import {
   makeAttendeeInfo,
   makeCalendarEventInfo,
@@ -32,10 +32,11 @@ import logic from "logic";
  * includes handling chnages to the sync window as given by `rangeOldestTS` and
  * `rangeNewestTS`.
  */
-export class GapiCalEventChewer {
+export class MapiCalEventChewer {
   constructor({
     ctx,
     convId,
+    recurringId,
     folderId,
     rangeOldestTS,
     rangeNewestTS,
@@ -46,6 +47,7 @@ export class GapiCalEventChewer {
   }) {
     this.ctx = ctx;
     this.convId = convId;
+    this.recurringId = recurringId;
     this.folderId = folderId;
     this.rangeOldestTS = rangeOldestTS;
     this.rangeNewestTS = rangeNewestTS;
@@ -68,28 +70,33 @@ export class GapiCalEventChewer {
   }
 
   _chewCalIdentity(raw) {
+    const email = raw.emailAddress;
     return makeIdentityInfo({
-      displayName: raw.displayName,
-      email: raw.email,
-      isSelf: raw.self,
+      displayName: email.name,
+      email: email.address,
+      isSelf: false,
     });
   }
 
   /**
-   * Helper to map the GAPI attendee and creator/organizer reps to our
+   * Helper to map the MAPI attendee and creator/organizer reps to our
    * `AttendeeInfo` rep.  Technically creator/organizer should have a different
    * path,
    */
-  _chewCalAttendee(raw) {
+  _chewCalAttendee(raw, organizer) {
+    const email = raw.emailAddress;
+    const type = raw.type;
     return makeAttendeeInfo({
-      displayName: raw.displayName,
-      email: raw.email,
-      isSelf: raw.self,
-      isOrganizer: raw.organizer,
-      isResource: raw.resource,
-      responseStatus: raw.responseStatus,
-      comment: raw.comment,
-      isOptional: raw.optional,
+      displayName: email.name,
+      email: email.address,
+      isSelf: false,
+      isOrganizer:
+        email.address === organizer.email &&
+        email.name === organizer.displayName,
+      isResource: type === "resource",
+      responseStatus: raw.status,
+      comment: "",
+      isOptional: type === "optional",
     });
   }
 
@@ -107,38 +114,56 @@ export class GapiCalEventChewer {
       }
     }
 
+    let mainEvent = null;
+    if (this.eventMap.size > 1) {
+      // The main event is a dummy event which contains main info.
+      mainEvent = this.eventMap.get(this.recurringId);
+      this.eventMap.delete(this.recurringId);
+    }
+
     // ## Process the new/modified/deleted events
-    for (const gapiEvent of this.eventMap.values()) {
+    for (const mapiEvent of this.eventMap.values()) {
       try {
-        const eventId = makeGapiCalEventId(this.convId, gapiEvent.id);
-        if (gapiEvent.status === "cancelled") {
-          // The event is now deleted!
-          this.modifiedEventMap.set(eventId, null);
-          logic(this.ctx, "cancelled", { _event: gapiEvent });
-          continue;
+        const eventId = makeMapiCalEventId(this.convId, mapiEvent.id);
+        if (mapiEvent !== mainEvent) {
+          // The main event can contain some fields (like organizer) that
+          // the occurences haven't.
+          for (const [key, value] of Object.entries(mainEvent)) {
+            if (!(key in mapiEvent)) {
+              mapiEvent[key] = value;
+            }
+          }
         }
 
-        logic(this.ctx, "event", { _event: gapiEvent });
+        if (mapiEvent.isCancelled) {
+          // The event is now deleted!
+          this.modifiedEventMap.set(eventId, null);
+          logic(this.ctx, "cancelled", { _event: mapiEvent });
+          return;
+        }
+
+        logic(this.ctx, "event", { _event: mapiEvent });
 
         let contentBlob, snippet, authoredBodySize;
         const bodyReps = [];
 
         // ## Generate an HTML body part for the description
-        const description = gapiEvent.description;
-        if (description) {
+        const body = mapiEvent.body;
+        if (body) {
+          const { content, contentType } = body;
           ({ contentBlob, snippet, authoredBodySize } = processMessageContent(
-            description,
-            "html",
+            content,
+            contentType,
             true, // isDownloaded
             true // generateSnippet
           ));
 
           bodyReps.push(
             mailRep.makeBodyPart({
-              type: "html",
+              type: contentType,
               part: null,
-              sizeEstimate: description.length,
-              amountDownloaded: description.length,
+              sizeEstimate: content.length,
+              amountDownloaded: content.length,
               isDownloaded: true,
               _partInfo: null,
               contentBlob,
@@ -147,25 +172,20 @@ export class GapiCalEventChewer {
           );
         }
 
-        let startDate, endDate, isAllDay;
-        if (!gapiEvent.start?.dateTime || !gapiEvent.end?.dateTime) {
-          isAllDay = true;
-          startDate = new Date(gapiEvent.start.date).valueOf();
-          endDate = new Date(gapiEvent.end.date).valueOf();
-        } else {
-          isAllDay = false;
-          startDate = new Date(gapiEvent.start.dateTime).valueOf();
-          endDate = new Date(gapiEvent.end.dateTime).valueOf();
-        }
+        const isAllDay = mapiEvent.isAllDay;
+        const startDate = new Date(mapiEvent.start.dateTime).valueOf();
+        const endDate = new Date(mapiEvent.end.dateTime).valueOf();
 
-        const summary = gapiEvent.summary;
-        const creator = this._chewCalIdentity(gapiEvent.creator);
-        const organizer = this._chewCalIdentity(gapiEvent.organizer);
-        const location = gapiEvent.location || "";
+        const subject = mapiEvent.subject;
 
-        const attendees = (gapiEvent.attendees || []).map(who =>
-          this._chewCalAttendee(who)
-        );
+        const organizer = this._chewCalIdentity(mapiEvent.organizer);
+        const creator = organizer;
+        const eventLocation = mapiEvent.location;
+        const location = `${eventLocation.displayName}@${eventLocation.address}`;
+
+        const attendees = (mapiEvent.attendees || []).map(who => {
+          return this._chewCalAttendee(who, organizer);
+        });
 
         const oldInfo = this.oldById.get(eventId);
 
@@ -184,7 +204,7 @@ export class GapiCalEventChewer {
           // it on the server.
           flags: oldInfo?.flags,
           folderIds: new Set([this.folderId]),
-          summary,
+          subject,
           snippet,
           bodyReps,
           authoredBodySize,
