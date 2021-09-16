@@ -5,6 +5,9 @@
 const { PanelMultiView } = ChromeUtils.import(
   "resource:///modules/PanelMultiView.jsm"
 );
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
+);
 
 import getSiteSecurityInfo from "../siteSecurity.js";
 
@@ -375,6 +378,7 @@ export default class ActiveViewManager extends HTMLElement {
     let titleEl = document.getElementById("site-info-title");
     let editImg = document.getElementById("site-info-edit-icon");
     let pinView = document.getElementById("pin-view");
+    let copyUrl = document.getElementById("copy-url");
 
     if (event.target == editImg) {
       titleEl.focus();
@@ -383,6 +387,9 @@ export default class ActiveViewManager extends HTMLElement {
         this.#pageActionView,
         !this.#pageActionView.pinned
       );
+      this.#pageActionPanel.hidePopup();
+    } else if (copyUrl.contains(event.target)) {
+      CompanionService.copy(this, this.#pageActionView.url.spec);
       this.#pageActionPanel.hidePopup();
     } else if (event.target != titleEl) {
       this.#pageActionPanel.hidePopup();
@@ -468,3 +475,7 @@ export default class ActiveViewManager extends HTMLElement {
   }
 }
 customElements.define("active-view-manager", ActiveViewManager);
+
+XPCOMUtils.defineLazyModuleGetters(ActiveViewManager, {
+  CompanionService: "resource:///modules/CompanionService.jsm",
+});
