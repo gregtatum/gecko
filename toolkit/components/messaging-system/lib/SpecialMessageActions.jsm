@@ -17,6 +17,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   UITour: "resource:///modules/UITour.jsm",
   FxAccounts: "resource://gre/modules/FxAccounts.jsm",
   MigrationUtils: "resource:///modules/MigrationUtils.jsm",
+  CompanionService: "resource:///modules/CompanionService.jsm",
 });
 
 const SpecialMessageActions = {
@@ -307,6 +308,14 @@ const SpecialMessageActions = {
         if (topWindow) {
           topWindow.BrowserHome();
         }
+        break;
+      case "HIDE_COMPANION_UI":
+        CompanionService.closeCompanion();
+        CompanionService.hideCompanionToolbar(window);
+        break;
+      case "SHOW_COMPANION_UI":
+        CompanionService.openCompanion();
+        CompanionService.showCompanionToolbar(window);
         break;
       default:
         throw new Error(

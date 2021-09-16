@@ -1,0 +1,29 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this file,
+   - You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Pro Client Onboarding</title>
+    <link rel="stylesheet" href="chrome://global/skin/in-content/common.css">
+
+    <!-- Note: we use an ifdef to remap these URLs to companion/content/aboutwelcome* -->
+    <link rel="stylesheet" href="chrome://activity-stream/content/aboutwelcome/aboutwelcome.css">
+    <script src="resource://activity-stream/aboutwelcome/aboutwelcome.bundle.js"></script>
+  </head>
+  <body>
+    <div id="content">
+      <div id="dialog">
+        <div class="content">
+          <h1>Welcome to Pro Client</h1>
+          <p>Here's some stuff you didn't know.</p>
+          <button id="done" class="primary">Get started</button>
+        </div>
+        <div class="media">
+          <img src="chrome://activity-stream/content/data/content/assets/proton-bkg.jpg" height="300" width="300">
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

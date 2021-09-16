@@ -2593,7 +2593,6 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.places.interactions.enabled", true, locked);
   pref("browser.pagedata.enabled", true, locked);
   pref("startup.homepage_welcome_url", "", locked);
-  pref("browser.aboutwelcome.enabled", false, locked);
   pref("startup.homepage_override_url", "", locked);
   pref("browser.startup.page", 1, locked);
   pref("browser.startup.homepage", "about:blank", locked);
@@ -2633,4 +2632,5 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.river.activationTimeout", 5000);
   pref("browser.river.maxGroups", 5);
   pref("browser.river.pinning.enabled", false);
+  pref("browser.aboutwelcome.enabled", false);
 #endif

@@ -157,6 +157,16 @@ const CompanionService = {
     Services.prefs.setBoolPref(COMPANION_OPEN_PREF, false);
   },
 
+  hideCompanionToolbar(aWindow) {
+    let companionToolbar = aWindow.document.getElementById("pinebuild-toolbar");
+    companionToolbar.setAttribute("hidden", "true");
+  },
+
+  showCompanionToolbar(aWindow) {
+    let companionToolbar = aWindow.document.getElementById("pinebuild-toolbar");
+    companionToolbar.removeAttribute("hidden");
+  },
+
   copy(anchor, string) {
     let clipboard = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(
       Ci.nsIClipboardHelper
