@@ -1249,6 +1249,8 @@
         this._tabAttrModified(oldTab, ["selected"]);
         this._tabAttrModified(newTab, ["selected"]);
 
+        this.readNotificationBox(newBrowser)?.shown();
+
         this._startMultiSelectChange();
         this._multiSelectChangeSelected = true;
         this.clearMultiSelectedTabs();
@@ -5545,10 +5547,12 @@
         ];
 
         notificationBox.appendNotification(
-          message,
           "refresh-blocked",
-          "chrome://browser/skin/notification-icons/popup.svg",
-          notificationBox.PRIORITY_INFO_MEDIUM,
+          {
+            label: message,
+            image: "chrome://browser/skin/notification-icons/popup.svg",
+            priority: notificationBox.PRIORITY_INFO_MEDIUM,
+          },
           buttons
         );
       }
