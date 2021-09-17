@@ -2480,7 +2480,11 @@ pref("dom.ipc.processCount.privilegedabout", 1);
 pref("dom.ipc.processCount.privilegedmozilla", 1);
 
 // Maximum number of isolated content processes per-origin.
+#ifdef ANDROID
 pref("dom.ipc.processCount.webIsolated", 1);
+#else
+pref("dom.ipc.processCount.webIsolated", 4);
+#endif
 
 // Keep a single privileged about process alive for performance reasons.
 // e.g. we do not want to throw content processes out every time we navigate
@@ -4295,6 +4299,15 @@ pref("toolkit.aboutProcesses.showAllSubframes", false);
 #else
   pref("toolkit.aboutProcesses.showThreads", false);
 #endif
+// If `true`, about:processes will offer to profile processes.
+#ifdef NIGHTLY_BUILD
+  pref("toolkit.aboutProcesses.showProfilerIcons", true);
+#else
+  pref("toolkit.aboutProcesses.showProfilerIcons", false);
+#endif
+// Time in seconds between when the profiler is started and when the
+// profile is captured.
+pref("toolkit.aboutProcesses.profileDuration", 5);
 
 // When a crash happens, whether to include heap regions of the crash context
 // in the minidump. Enabled by default on nightly and aurora.

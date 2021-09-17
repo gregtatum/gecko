@@ -554,19 +554,6 @@ pref("browser.search.separatePrivateDefault.ui.banner.max", 0);
 // Enables the display of the Mozilla VPN banner in private browsing windows
 pref("browser.privatebrowsing.vpnpromourl", "https://vpn.mozilla.org/?utm_source=firefox-browser&utm_medium=firefox-%CHANNEL%-browser&utm_campaign=private-browsing-vpn-link");
 
-pref("browser.privatebrowsing.infoEnabled", true);
-pref("browser.privatebrowsing.infoIcon", "");
-pref("browser.privatebrowsing.infoTitle", "");
-pref("browser.privatebrowsing.infoBody","");
-pref("browser.privatebrowsing.infoLinkText", "");
-pref("browser.privatebrowsing.infoLinkUrl", "");
-pref("browser.privatebrowsing.promoEnabled", true);
-pref("browser.privatebrowsing.promoTitle", "");
-pref("browser.privatebrowsing.promoLinkText", "");
-pref("browser.privatebrowsing.promoLinkUrl", "");
-pref("browser.privatebrowsing.infoTitleEnabled", true);
-pref("browser.privatebrowsing.promoTitleEnabled", true);
-
 pref("browser.sessionhistory.max_entries", 50);
 
 // Built-in default permissions.
@@ -1481,6 +1468,7 @@ pref("browser.newtabpage.activity-stream.asrouter.useRemoteL10n", true);
 // These prefs control if Discovery Stream is enabled.
 pref("browser.newtabpage.activity-stream.discoverystream.enabled", true);
 pref("browser.newtabpage.activity-stream.discoverystream.hardcoded-basic-layout", false);
+pref("browser.newtabpage.activity-stream.discoverystream.compactLayout.enabled", false);
 pref("browser.newtabpage.activity-stream.discoverystream.spoc-positions", "2,4,11,20");
 pref("browser.newtabpage.activity-stream.discoverystream.spocs-endpoint", "");
 pref("browser.newtabpage.activity-stream.discoverystream.spocs-endpoint-query", "");
@@ -1781,6 +1769,9 @@ pref("browser.contentblocking.state-partitioning.mvp.ui.enabled", true);
 //   Restrict relaxing default referrer policy:
 //     "rp": Restrict relaxing default referrer policy enabled
 //     "-rp": Restrict relaxing default referrer policy disabled
+//   OCSP cache partitioning:
+//     "ocsp": OCSP cache partitioning enabled
+//     "-ocsp": OCSP cache partitioning disabled
 //   Cookie behavior:
 //     "cookieBehavior0": cookie behaviour BEHAVIOR_ACCEPT
 //     "cookieBehavior1": cookie behaviour BEHAVIOR_REJECT_FOREIGN
@@ -1796,7 +1787,7 @@ pref("browser.contentblocking.state-partitioning.mvp.ui.enabled", true);
 //     "cookieBehaviorPBM4": cookie behaviour BEHAVIOR_REJECT_TRACKER
 //     "cookieBehaviorPBM5": cookie behaviour BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN
 // One value from each section must be included in the browser.contentblocking.features.strict pref.
-pref("browser.contentblocking.features.strict", "tp,tpPrivate,cookieBehavior5,cookieBehaviorPBM5,cm,fp,stp,lvl2,rp");
+pref("browser.contentblocking.features.strict", "tp,tpPrivate,cookieBehavior5,cookieBehaviorPBM5,cm,fp,stp,lvl2,rp,ocsp");
 
 // Hide the "Change Block List" link for trackers/tracking content in the custom
 // Content Blocking/ETP panel. By default, it will not be visible. There is also

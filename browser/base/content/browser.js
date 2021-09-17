@@ -6984,7 +6984,6 @@ const nodeToTooltipMap = {
   "appMenu-zoomReduce-button2": "zoomReduce-button.tooltip",
   "reader-mode-button": "reader-mode-button.tooltip",
   "reader-mode-button-icon": "reader-mode-button.tooltip",
-  "print-button": "printButton.tooltip",
 };
 
 if (AppConstants.PINEBUILD) {
@@ -7010,7 +7009,6 @@ const nodeToShortcutMap = {
   "appMenu-zoomReduce-button2": "key_fullZoomReduce",
   "reader-mode-button": "key_toggleReaderMode",
   "reader-mode-button-icon": "key_toggleReaderMode",
-  "print-button": "printKb",
 };
 
 if (AppConstants.PINEBUILD) {
@@ -7041,19 +7039,7 @@ function GetDynamicShortcutTooltipText(nodeId) {
 function UpdateDynamicShortcutTooltipText(aTooltip) {
   let nodeId =
     aTooltip.triggerNode.id || aTooltip.triggerNode.getAttribute("anonid");
-  if (
-    nodeId == "print-button" &&
-    !Services.prefs.getBoolPref("print.tab_modal.enabled") &&
-    AppConstants.platform !== "macosx"
-  ) {
-    // If the new print UI pref is turned off, we should display the old title that did not have the shortcut
-    aTooltip.setAttribute(
-      "label",
-      document.getElementById(nodeId).getAttribute("print-button-title")
-    );
-  } else {
-    aTooltip.setAttribute("label", GetDynamicShortcutTooltipText(nodeId));
-  }
+  aTooltip.setAttribute("label", GetDynamicShortcutTooltipText(nodeId));
 }
 
 /*
