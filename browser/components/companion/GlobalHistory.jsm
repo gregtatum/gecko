@@ -914,6 +914,9 @@ class GlobalHistory extends EventTarget {
    */
   _onNewIcon(browser) {
     let entry = getCurrentEntry(browser);
+    if (!entry) {
+      return;
+    }
     let internalView = this.#historyViews.get(entry.ID);
     if (!internalView) {
       return;

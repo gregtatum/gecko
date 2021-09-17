@@ -53,6 +53,8 @@ async function assertSessionData(expected) {
  *   than the expected.
  * @param {object} expected.data
  *   Session associated data to check.
+ * @param {object[]} expected.pages
+ *   An expected list of pages in object format with keys of "url" and "position".
  */
 async function assertSession(session, expected) {
   Assert.ok(session, "Should have returned a snapshot");
@@ -66,6 +68,13 @@ async function assertSession(session, expected) {
     expected.data,
     "Should have recorded the expected data"
   );
+  if (expected.pages) {
+    Assert.deepEqual(
+      session.pages,
+      expected.pages,
+      "Should have recorded the expected page data"
+    );
+  }
 }
 
 /**
