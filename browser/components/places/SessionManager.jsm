@@ -117,14 +117,21 @@ const SessionManager = new (class SessionManager {
     }
     logConsole.debug("Saving session", window);
 
-    // Ensure window state is as up to date as possible.
-    await TabStateFlusher.flushWindow(window);
-    let windowData = SessionStore.getWindowState(window);
+    // Start these at the same time, hopefully the save will be completed
+    // before the data is written, if it is not, then we'll pause slightly
+    // longer.
 
     // If this fails, the function will not complete and the existing session
     // will remain. This allows the user to take appropriate action.
     // TODO: MR2-867 - find a way of surfacing the failure to the user.
-    await this.#saveSessionData(windowData.windows[0]);
+    await Promise.all([
+      window.gBrowser.doPinebuildSessionHideAnimation(),
+      (async () => {
+        await TabStateFlusher.flushWindow(window);
+        let windowData = SessionStore.getWindowState(window);
+        await this.#saveSessionData(windowData.windows[0]);
+      })(),
+    ]);
 
     if (restoreSessionGuid) {
       await this.restoreInto(window, restoreSessionGuid);
@@ -133,6 +140,7 @@ const SessionManager = new (class SessionManager {
 
     SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
     window.gGlobalHistory.reset();
+    await window.gBrowser.doPinebuildSessionShowAnimation();
   }
 
   /**
@@ -151,6 +159,7 @@ const SessionManager = new (class SessionManager {
     // TODO: Temporarily this does the same as setAside with no new session.
     SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
     window.gGlobalHistory.reset();
+    await window.gBrowser.doPinebuildSessionShowAnimation();
   }
 
   /**

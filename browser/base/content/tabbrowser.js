@@ -6134,28 +6134,58 @@
       }
     },
 
-    changePinebuildSession(aNewSessionId) {
+    /**
+     * Runs the first part of an animation which shrinks the current view and
+     * slide it to the left. doPinebuildSessionShowAnimation must be called
+     * after this to clear the "session-change" attribute.
+     */
+    async doPinebuildSessionHideAnimation() {
+      if (window.matchMedia("(prefers-reduced-motion)").matches) {
+        return;
+      }
       const sessionChangePreSwipeTime = 750;
       const sessionChangeSwipeAnimationTime = 400;
+      let tabpanels = this.tabpanels;
+
+      tabpanels.setAttribute("session-change", "1");
+      await this._delayDOMChange(sessionChangePreSwipeTime);
+
+      tabpanels.setAttribute("session-change", "2");
+      await this._delayDOMChange(sessionChangeSwipeAnimationTime);
+    },
+
+    /**
+     * Runs the second part of an animation which slides in the current view
+     * from the left, and expands it to fill the whole viewport.
+     *
+     * @returns {Promise}
+     */
+    async doPinebuildSessionShowAnimation() {
+      if (window.matchMedia("(prefers-reduced-motion)").matches) {
+        return;
+      }
       const sessionChangePostSwipeTime = 750;
       let tabpanels = this.tabpanels;
 
-      function delayDOMChange(cb, timeout) {
-        setTimeout(function() {
-          requestAnimationFrame(cb);
-        }, timeout);
-      }
+      tabpanels.setAttribute("session-change", "3");
+      await this._delayDOMChange(sessionChangePostSwipeTime);
 
-      tabpanels.setAttribute("session-change", "1");
-      delayDOMChange(function() {
-        tabpanels.setAttribute("session-change", "2");
-        delayDOMChange(function() {
-          tabpanels.setAttribute("session-change", "3");
-          delayDOMChange(function() {
-            tabpanels.removeAttribute("session-change");
-          }, sessionChangePostSwipeTime);
-        }, sessionChangeSwipeAnimationTime);
-      }, sessionChangePreSwipeTime);
+      tabpanels.removeAttribute("session-change");
+    },
+
+    /**
+     * Delays a change for the specified timeout, and waits for an animation
+     * frame.
+     *
+     * @param {function} cb
+     *   Called when the delay is complete and an animation frame obtained.
+     * @param {number} timeout
+     *   The number of milliseconds to delay the change for.
+     */
+    _delayDOMChange(timeout) {
+      return new Promise(resolve =>
+        setTimeout(() => requestAnimationFrame(resolve), timeout)
+      );
     },
   };
 
