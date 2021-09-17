@@ -2165,7 +2165,7 @@ tests.push({
         );
       }
     );
-    Assert.equal(await this._getForeignCount(), 2);
+    Assert.equal(await this._getForeignCount(), AppConstants.PINEBUILD ? 4 : 2);
   },
 
   async _getForeignCount() {
