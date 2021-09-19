@@ -88,6 +88,13 @@
   transition-duration: var(--panelui-subview-transition-duration);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  #tabbrowser-tabpanels,
+  #tabbrowser-tabpanels[multideck] > hbox {
+    transition-duration: 0s !important;
+  }
+}
+
 #tabbrowser-tabs,
 #tabbrowser-arrowscrollbox,
 #tabbrowser-tabs[positionpinnedtabs] > #tabbrowser-arrowscrollbox > .tabbrowser-tab[pinned] {
