@@ -7,7 +7,6 @@ import { css, html } from "chrome://browser/content/companion/lit.all.js";
 import ViewGroup from "chrome://browser/content/companion/components/view-group.js";
 import ActiveViewManager from "chrome://browser/content/companion/components/active-view-manager.js";
 
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
