@@ -62,7 +62,7 @@ function processLink(url, text) {
  */
 function getLinkInfo(result) {
   let doc;
-  let links = [];
+  let links = new Map();
   let parser = new DOMParser();
   let description;
   if ("body" in result) {
@@ -88,8 +88,8 @@ function getLinkInfo(result) {
         continue;
       }
       let link = processLink(anchor.href, anchor.textContent);
-      if (link) {
-        links.push(link);
+      if (link && link.text !== "") {
+        links.set(link.url, link);
       }
     }
   }
@@ -99,20 +99,16 @@ function getLinkInfo(result) {
       let descriptionLink = processLink(descriptionURL);
       if (
         !descriptionLink ||
-        links.some(
-          link =>
-            link.url == descriptionLink.url || link.text == descriptionLink
-        )
+        descriptionLink.text === "" ||
+        links.get(descriptionLink.url)
       ) {
         continue;
       }
-      links.push(descriptionLink);
+      links.set(descriptionLink.url, descriptionLink);
     }
   }
 
-  return [...new Map(links.map(item => [item.url, item])).values()].filter(
-    link => link.text !== ""
-  );
+  return [...links.values()];
 }
 const conferencingInfo = [
   {
