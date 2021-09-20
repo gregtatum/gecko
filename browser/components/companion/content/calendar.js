@@ -9,6 +9,16 @@ export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
 });
 
+const GOOGLE_DOCS_ICON =
+  "https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico";
+const GOOGLE_SHEETS_ICON =
+  "https://ssl.gstatic.com/docs/spreadsheets/favicon3.ico";
+const GOOGLE_SLIDES_ICON =
+  "https://ssl.gstatic.com/docs/presentations/images/favicon5.ico";
+const GOOGLE_DRIVE_ICON =
+  "https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png";
+const DEFAULT_ICON = "chrome://global/skin/icons/defaultFavicon.svg";
+
 // Update display every minute
 const CALENDAR_UPDATE_TIME = 60 * 1000; // 1 minute
 
@@ -465,6 +475,25 @@ class CalendarEvent extends MozLitElement {
     return this._cachedDocumentTitles.get(url) || text;
   }
 
+  getDocumentIcon(url) {
+    url = new URL(url);
+    if (url.hostname.endsWith(".google.com")) {
+      let type = url.href.split("/")[3];
+      switch (type) {
+        case "document":
+          return GOOGLE_DOCS_ICON;
+        case "spreadsheets":
+          return GOOGLE_SHEETS_ICON;
+        case "presentation":
+          return GOOGLE_SLIDES_ICON;
+        case "drive":
+        case "file":
+          return GOOGLE_DRIVE_ICON;
+      }
+    }
+    return window.CompanionUtils.getFavicon(url.href) || DEFAULT_ICON;
+  }
+
   async getDocumentTitle(url) {
     if (this._cachedDocumentTitles.has(url)) {
       return this._cachedDocumentTitles.get(url);
@@ -481,9 +510,6 @@ class CalendarEvent extends MozLitElement {
   }
 
   eventLinkTemplate(link) {
-    let favicon =
-      window.CompanionUtils.getFavicon(link.url) ||
-      "chrome://global/skin/icons/defaultFavicon.svg";
     let url = link.url;
     let text = link.title || link.text || link.url;
 
@@ -494,7 +520,7 @@ class CalendarEvent extends MozLitElement {
         title=${url}
         @click=${openLink}
       >
-        <img src=${favicon} />
+        <img src=${this.getDocumentIcon(link.url)} />
         <span class="line-clamp">
           ${until(
             this.getDocumentTitle(link.url),
