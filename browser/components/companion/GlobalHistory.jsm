@@ -187,6 +187,10 @@ class View {
   get pinned() {
     return this.#internalView.pinned;
   }
+
+  get contentPrincipal() {
+    return this.#internalView.contentPrincipal;
+  }
 }
 
 class InternalView {
@@ -198,6 +202,9 @@ class InternalView {
   /** @type {boolean} **/
   #pinned;
 
+  /** @type {nsIPrincipal} **/
+  #contentPrincipal;
+
   /**
    * @param {DOMWindow} window
    * @param {Browser | null} browser
@@ -207,6 +214,9 @@ class InternalView {
     this.#window = window;
     this.#view = new View(this);
     this.#pinned = false;
+    this.#contentPrincipal = Services.scriptSecurityManager.createNullPrincipal(
+      {}
+    );
     InternalView.viewMap.set(this.#view, this);
 
     // cachedEntry is set when session history has purged or truncated
@@ -255,6 +265,8 @@ class InternalView {
     this.title = historyEntry.title;
     this.iconURL = browser.mIconURL;
     this.securityState = browser.securityUI.state;
+    this.#contentPrincipal = browser.contentPrincipal;
+
     let docURI = browser?.documentURI;
     if (docURI && docURI.scheme == "about") {
       this.errorPageType = this.#getErrorPageType(docURI);
@@ -331,6 +343,10 @@ class InternalView {
     }
 
     return "pruned";
+  }
+
+  get contentPrincipal() {
+    return this.#contentPrincipal;
   }
 
   /** @type {WeakMap<View, InternalView>} */

@@ -95,10 +95,7 @@ export default class River extends MozLitElement {
     // to do same-origin checks with other Views. We then add that View to an
     // initial group, and start the loop index at the 2nd last item in the list.
     let lastView = this.#views[this.#views.length - 1];
-    let currentPrincipal = Services.scriptSecurityManager.createContentPrincipal(
-      lastView.url,
-      {}
-    );
+    let currentPrincipal = lastView.contentPrincipal;
     let currentGroup = [lastView];
     let index = this.#views.length - 2;
 
@@ -125,10 +122,7 @@ export default class River extends MozLitElement {
         }
 
         currentGroup = [view];
-        currentPrincipal = Services.scriptSecurityManager.createContentPrincipal(
-          view.url,
-          {}
-        );
+        currentPrincipal = view.contentPrincipal;
       }
     }
 
