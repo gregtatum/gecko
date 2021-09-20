@@ -13,16 +13,6 @@ import {
 import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
-function toggleSettings() {
-  let settings = document.getElementById("settings");
-  if (settings.hasAttribute("hidden")) {
-    settings.removeAttribute("hidden");
-  } else {
-    settings.setAttribute("hidden", "true");
-  }
-}
-window.addEventListener("Companion:ToggleSettings", toggleSettings);
-
 // Helper to open a URL in the main browser pane.
 window.openUrl = url => {
   window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", { url });
@@ -118,31 +108,10 @@ function toggleDebug() {
   );
 }
 
-let OBSERVED_PREFS = new Map();
 window.addEventListener(
   "Companion:Setup",
   () => {
     companionSetupObserved = true;
-    // Cheesy approximation of preferences for the demo settings. Add a checkbox with
-    // data-pref attribute and the state will get synced & toggled automatically.
-    // Components that care about it can listen to CompanionObservedPrefChanged to rerender.
-    let settings = document.getElementById("settings");
-    for (let prefCheck of settings.querySelectorAll("[data-pref]")) {
-      let prefName = prefCheck.getAttribute("data-pref");
-      let handler = (subject, topic, data) => {
-        prefCheck.checked = window.CompanionUtils.getBoolPref(prefName);
-        document.dispatchEvent(
-          new CustomEvent("CompanionObservedPrefChanged", { bubbles: true })
-        );
-      };
-      window.CompanionUtils.addPrefObserver(prefName, handler);
-      OBSERVED_PREFS.set(prefName, handler);
-      prefCheck.addEventListener("click", () => {
-        window.CompanionUtils.setBoolPref(prefName, prefCheck.checked);
-      });
-      prefCheck.checked = window.CompanionUtils.getBoolPref(prefName, false);
-    }
-
     // Add the ability to show elements with class="debug" that help development
     // behind the "companion.debugUI" pref.
     window.CompanionUtils.addPrefObserver(DEBUG_PREF, toggleDebug);
@@ -153,9 +122,6 @@ window.addEventListener(
 );
 
 window.addEventListener("unload", () => {
-  for (let [prefName, cb] of OBSERVED_PREFS) {
-    window.CompanionUtils.removePrefObserver(prefName, cb);
-  }
   window.CompanionUtils.removePrefObserver(DEBUG_PREF, toggleDebug);
 });
 

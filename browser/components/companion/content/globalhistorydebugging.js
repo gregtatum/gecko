@@ -18,13 +18,11 @@ export class GlobalHistoryDebugging extends HTMLElement {
   }
 
   connectedCallback() {
-    document.addEventListener("CompanionObservedPrefChanged", this.render);
     window.addEventListener("Companion:GlobalHistoryEvent", this.render);
     this.render();
   }
 
   disconnectedCallback() {
-    document.removeEventListener("CompanionObservedPrefChanged", this.render);
     window.removeEventListener("Companion:GlobalHistoryEvent", this.render);
   }
 

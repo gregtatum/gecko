@@ -19,10 +19,20 @@ add_task(async function test_open_companion() {
     document.getElementById("companion-browser"),
     "The companion has been opened"
   );
+
+  info("waiting for the companion to initialize");
+  await helper.companionReady;
+
   await helper.runCompanionTask(() => {
     ok(
       content.document.querySelector(".companion-main"),
       "The companion content is available"
+    );
+
+    let deckContent = content.document.querySelector("#content");
+    ok(
+      deckContent.childElementCount,
+      "The companion contents have been populated"
     );
   });
 });
