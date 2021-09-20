@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 
 /**
  * @typedef {Object} SeekChangeInfo
@@ -46,53 +46,56 @@ import evt from "evt";
  *   delicious.
  *
  */
-export default function WindowedListView(api, itemConstructor, handle) {
-  evt.Emitter.call(this);
-  this._api = api;
-  this.handle = handle;
-  this._itemConstructor = itemConstructor;
-  this.released = false;
 
-  this.serial = 0;
-  this.tocMetaSerial = 0;
+export class WindowedListView extends Emitter {
+  constructor(api, itemConstructor, handle) {
+    super();
+    this._api = api;
+    this.handle = handle;
+    this._itemConstructor = itemConstructor;
+    this.released = false;
 
-  /**
-   * The index of `items[0]` in the true entire list.  If this is zero, then we
-   * are at the top of the list.
-   */
-  this.offset = 0;
-  this.heightOffset = 0;
-  /**
-   *
-   */
-  this.totalCount = 0;
-  this.totalHeight = 0;
-  /**
-   * @type {Array<ItemInstance|null>}
-   *
-   * The list of items
-   */
-  this.items = [];
-  /**
-   * @type {Map<Id, ItemInstance>}
-   *
-   * Maps id's to non-null object instances.  If we don't have the data yet,
-   * then there is no entry in the map.  (This is somewhat arbitrary for
-   * control-flow purposes below; feel free to change if you update the control
-   * flow.)
-   */
-  this._itemsById = new Map();
+    this.serial = 0;
+    this.tocMetaSerial = 0;
 
-  this.tocMeta = {};
+    /**
+     * The index of `items[0]` in the true entire list.  If this is zero, then we
+     * are at the top of the list.
+     */
+    this.offset = 0;
+    this.heightOffset = 0;
+    /**
+     *
+     */
+    this.totalCount = 0;
+    this.totalHeight = 0;
+    /**
+     * @type {Array<ItemInstance|null>}
+     *
+     * The list of items
+     */
+    this.items = [];
+    /**
+     * @type {Map<Id, ItemInstance>}
+     *
+     * Maps id's to non-null object instances.  If we don't have the data yet,
+     * then there is no entry in the map.  (This is somewhat arbitrary for
+     * control-flow purposes below; feel free to change if you update the control
+     * flow.)
+     */
+    this._itemsById = new Map();
 
-  /**
-   * Has this slice been completely initially populated?  If you want to wait
-   * for this, use once('complete').
-   */
-  this.complete = false;
-}
-WindowedListView.prototype = evt.mix({
-  viewKind: "windowed",
+    this.tocMeta = {};
+
+    /**
+     * Has this slice been completely initially populated?  If you want to wait
+     * for this, use once('complete').
+     */
+    this.complete = false;
+
+    this.viewKind = "windowed";
+  }
+
   toString() {
     return (
       "[WindowedListView: " +
@@ -101,14 +104,15 @@ WindowedListView.prototype = evt.mix({
       this.handle +
       "]"
     );
-  },
+  }
+
   toJSON() {
     return {
       type: "WindowedListView",
       namespace: this._ns,
       handle: this.handle,
     };
-  },
+  }
 
   __update(details) {
     let newSerial = ++this.serial;
@@ -126,8 +130,7 @@ WindowedListView.prototype = evt.mix({
     let contentsChanged = false;
 
     // - Process our contents
-    for (let i = 0; i < newIds.length; i++) {
-      let id = newIds[i];
+    for (const id of newIds) {
       let obj;
       // Object already known, update.
       if (existingSet.has(id)) {
@@ -169,12 +172,12 @@ WindowedListView.prototype = evt.mix({
     }
 
     // - If anything remained, kill it off
-    for (let deadObj of existingSet.values()) {
+    for (const deadObj of existingSet.values()) {
       itemSetChanged = true;
       deadObj.release();
     }
 
-    let whatChanged = {
+    const whatChanged = {
       offset: details.offset !== this.offset,
       totalCount: details.totalCount !== this.totalCount,
       itemSet: itemSetChanged,
@@ -196,21 +199,21 @@ WindowedListView.prototype = evt.mix({
     this.emit("seeked", whatChanged);
 
     if (details.events) {
-      for (let { name, data } of details.events) {
+      for (const { name, data } of details.events) {
         this.emit(name, data);
       }
     }
-  },
+  }
 
   // TODO: determine whether these are useful at all; seems like the virtual
   // scroll widget needs to inherently know these things and these are useless.
   // These come from a pre-absolutely-positioned implementation.
   get atTop() {
     return this.offset === 0;
-  },
+  }
   get atBottom() {
     return this.totalCount === this.offset + this.items.length;
-  },
+  }
 
   /**
    * Return the item by absolute index, returning null if it's outside the
@@ -227,7 +230,7 @@ WindowedListView.prototype = evt.mix({
       return null;
     }
     return this.items[relIndex];
-  },
+  }
 
   /**
    * Seek to the top of the list and latch there so that our slice will always
@@ -241,7 +244,7 @@ WindowedListView.prototype = evt.mix({
       visibleDesired,
       bufferDesired,
     });
-  },
+  }
 
   /**
    * Seek with the intent that we are anchored to a specific item as long as it
@@ -273,7 +276,7 @@ WindowedListView.prototype = evt.mix({
       visibleBelow,
       bufferBelow,
     });
-  },
+  }
 
   /**
    * Seek to an arbitrary absolute index in the list and then anchor on whatever
@@ -298,7 +301,7 @@ WindowedListView.prototype = evt.mix({
       visibleBelow,
       bufferBelow,
     });
-  },
+  }
 
   /**
    * Seek to the bottom of the list and latch there so that our slice will
@@ -312,7 +315,7 @@ WindowedListView.prototype = evt.mix({
       visibleDesired,
       bufferDesired,
     });
-  },
+  }
 
   /**
    * Given a quantized-height-supporting back-end where every item has an
@@ -340,7 +343,7 @@ WindowedListView.prototype = evt.mix({
       visible,
       after,
     });
-  },
+  }
 
   release() {
     if (this.released) {
@@ -353,11 +356,10 @@ WindowedListView.prototype = evt.mix({
       handle: this.handle,
     });
 
-    for (let i = 0; i < this.items.length; i++) {
-      let item = this.items[i];
+    for (const item of this.items) {
       if (item) {
         item.release();
       }
     }
-  },
-});
+  }
+}

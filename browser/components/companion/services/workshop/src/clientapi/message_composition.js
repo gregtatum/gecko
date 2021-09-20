@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 
 import { encodeInt as encodeA64 } from "shared/a64";
 
@@ -95,50 +95,53 @@ function bruteForceAttachmentId(existingAttachments) {
  * TODO: That's not actually implemented yet, but the hookup in this class is.
  * So the todo is to remove this comment once the backend is clever enough.
  */
-export default function MessageComposition(api) {
-  evt.Emitter.call(this);
-  this.api = api;
-  this._message = null;
 
-  this.senderIdentity = null;
+export class MessageComposition extends Emitter {
+  constructor(api) {
+    super();
+    this.api = api;
+    this._message = null;
 
-  this.to = null;
-  this.cc = null;
-  this.bcc = null;
+    this.senderIdentity = null;
 
-  this.subject = null;
+    this.to = null;
+    this.cc = null;
+    this.bcc = null;
 
-  this.textBody = null;
-  this.htmlBlob = null;
+    this.subject = null;
 
-  this.serial = 0;
+    this.textBody = null;
+    this.htmlBlob = null;
 
-  this._references = null;
-  /**
-   * @property attachments
-   * @type Object[]
-   *
-   * A list of attachments currently attached or currently being attached with
-   * the following attributes:
-   * - name: The filename
-   * - size: The size of the attachment payload in binary form.  This does not
-   *   include transport encoding costs.
-   *
-   * Manipulating this list has no effect on reality; the methods addAttachment
-   * and removeAttachment must be used.
-   */
-  this.attachments = null;
-}
-MessageComposition.prototype = evt.mix({
+    this.serial = 0;
+
+    this._references = null;
+    /**
+     * @property attachments
+     * @type Object[]
+     *
+     * A list of attachments currently attached or currently being attached with
+     * the following attributes:
+     * - name: The filename
+     * - size: The size of the attachment payload in binary form.  This does not
+     *   include transport encoding costs.
+     *
+     * Manipulating this list has no effect on reality; the methods addAttachment
+     * and removeAttachment must be used.
+     */
+    this.attachments = null;
+  }
+
   toString() {
     return "[MessageComposition: " + this._handle + "]";
-  },
+  }
+
   toJSON() {
     return {
       type: "MessageComposition",
       handle: this._handle,
     };
-  },
+  }
 
   async __asyncInitFromMessage(message) {
     this._message = message;
@@ -171,7 +174,7 @@ MessageComposition.prototype = evt.mix({
       this.textBody = "";
     }
     return this;
-  },
+  }
 
   /**
    * Process change events reported by the MailMessage that we are a
@@ -192,26 +195,26 @@ MessageComposition.prototype = evt.mix({
     let wireRep = this._message._wireRep;
     this.sendStatus = wireRep.draftInfo.sendStatus;
     this.emit("change");
-  },
+  }
 
   /**
    * Propagate the remove event.
    */
   _onMessageRemove() {
     this.emit("remove");
-  },
+  }
 
   release() {
     if (this._message) {
       this._message.release();
       this._message = null;
     }
-  },
+  }
 
   _mutated() {
     this.serial++;
     this.emit("change");
-  },
+  }
 
   /**
    * Add an attachment to this composition.  This is an asynchronous process
@@ -242,7 +245,7 @@ MessageComposition.prototype = evt.mix({
    * ]
    */
   addAttachment(attachmentDef) {
-    let relId = bruteForceAttachmentId(this.attachments);
+    const relId = bruteForceAttachmentId(this.attachments);
     this.api._composeAttach(this.id, {
       relId,
       name: attachmentDef.name,
@@ -258,7 +261,7 @@ MessageComposition.prototype = evt.mix({
     this.attachments.push(placeholderAttachment);
     this._mutated();
     return placeholderAttachment;
-  },
+  }
 
   /**
    * Remove an attachment previously requested to be added via `addAttachment`.
@@ -269,13 +272,13 @@ MessageComposition.prototype = evt.mix({
    *   logically equivalent object is no good.
    */
   removeAttachment(attachmentThing) {
-    var idx = this.attachments.indexOf(attachmentThing);
+    const idx = this.attachments.indexOf(attachmentThing);
     if (idx !== -1) {
       this.attachments.splice(idx, 1);
       this.api._composeDetach(this.id, attachmentThing.relId);
     }
     this._mutated();
-  },
+  }
 
   /**
    * Optional helper function for to/cc/bcc list manipulation if you like the
@@ -284,20 +287,20 @@ MessageComposition.prototype = evt.mix({
   addRecipient(bin, addressPair) {
     this[bin].push(addressPair);
     this._mutated();
-  },
+  }
 
   /**
    * Optional helper function for to/cc/bcc list manipulation if you like the
    * 'change' events for managing UI state.
    */
   removeRecipient(bin, addressPair) {
-    let recipList = this[bin];
-    let idx = recipList.indexOf(addressPair);
+    const recipList = this[bin];
+    const idx = recipList.indexOf(addressPair);
     if (idx !== -1) {
       recipList.splice(idx, 1);
       this._mutated();
     }
-  },
+  }
 
   /**
    * Optional helper function for to/cc/bcc list manipulation if you like the
@@ -305,17 +308,17 @@ MessageComposition.prototype = evt.mix({
    * bin if there is one.
    */
   removeLastRecipient(bin) {
-    let recipList = this[bin];
+    const recipList = this[bin];
     if (recipList.length) {
       recipList.pop();
       this._mutated();
     }
-  },
+  }
 
   setSubject(subject) {
     this.subject = subject;
     this._mutated();
-  },
+  }
 
   /**
    * Populate our state to send over the wire to the back-end.
@@ -330,7 +333,7 @@ MessageComposition.prototype = evt.mix({
       subject: this.subject,
       textBody: this.textBody,
     };
-  },
+  }
 
   /**
    * Enqueue the message for sending. When the callback fires, the
@@ -349,14 +352,14 @@ MessageComposition.prototype = evt.mix({
    */
   finishCompositionSendMessage() {
     return this.api._composeDone(this.id, "send", this._buildWireRep());
-  },
+  }
 
   /**
    * Save the state of this composition.
    */
   saveDraft() {
     return this.api._composeDone(this.id, "save", this._buildWireRep());
-  },
+  }
 
   /**
    * The user has indicated they neither want to send nor save the draft.  We
@@ -368,5 +371,5 @@ MessageComposition.prototype = evt.mix({
    */
   abortCompositionDeleteDraft() {
     return this.api._composeDone(this.id, "delete", null);
-  },
-});
+  }
+}

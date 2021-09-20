@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 
 /**
  * A view of the entirety of a list view that's stored in the backend.  As the
@@ -32,36 +32,38 @@ import evt from "evt";
  *    initialized, or use `on` if you're using something like react.js to do
  *    just conceptually rebuild your UI every time anything changes.
  */
-export default function EntireListView(api, itemConstructor, handle) {
-  evt.Emitter.call(this);
-  this._api = api;
-  this._itemConstructor = itemConstructor;
-  this.handle = handle;
 
-  this.serial = 0;
+export class EntireListView extends Emitter {
+  constructor(api, itemConstructor, handle) {
+    super();
+    this._api = api;
+    this._itemConstructor = itemConstructor;
+    this.handle = handle;
 
-  this.items = [];
-  this.itemsById = new Map();
+    this.serial = 0;
 
-  /**
-   * Has this slice been completely initially populated?  Use
-   * latestOnce(`complete`, callback) if you want a unified way of waiting for
-   * the event while processing ASAP if already available.
-   */
-  this.complete = false;
-}
-EntireListView.prototype = evt.mix({
-  viewKind: "entire",
+    this.items = [];
+    this.itemsById = new Map();
+
+    /**
+     * Has this slice been completely initially populated?  Use
+     * latestOnce(`complete`, callback) if you want a unified way of waiting for
+     * the event while processing ASAP if already available.
+     */
+    this.complete = false;
+    this.viewKind = "entire";
+  }
+
   toString() {
     return "[EntireListView: " + this._ns + " " + this.handle + "]";
-  },
+  }
   toJSON() {
     return {
       type: "EntireListView",
       namespace: this._ns,
       handle: this.handle,
     };
-  },
+  }
 
   __update(details) {
     let newSerial = ++this.serial;
@@ -104,7 +106,7 @@ EntireListView.prototype = evt.mix({
 
     this.complete = true;
     this.emit("complete", this);
-  },
+  }
 
   release() {
     this._api.__bridgeSend({
@@ -112,9 +114,8 @@ EntireListView.prototype = evt.mix({
       handle: this.handle,
     });
 
-    for (var i = 0; i < this.items.length; i++) {
-      var item = this.items[i];
+    for (const item of this.items) {
       item.release();
     }
-  },
-});
+  }
+}

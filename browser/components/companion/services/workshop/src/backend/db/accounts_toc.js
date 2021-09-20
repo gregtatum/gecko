@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 import logic from "logic";
 
 import { engineFrontEndAccountMeta } from "../engine_glue";
@@ -51,39 +51,40 @@ function accountDefComparator(a, b) {
  * good to go.  (This also allows us to potentially introduce some additional
  * pre-reqs in the future.)
  */
-export default function AccountsTOC() {
-  evt.Emitter.call(this);
-  logic.defineScope(this, "AccountsTOC");
+export class AccountsTOC extends Emitter {
+  constructor() {
+    super();
+    logic.defineScope(this, "AccountsTOC");
 
-  this.accountDefs = this.items = [];
-  this.accountDefsById = this.itemsById = new Map();
-}
-AccountsTOC.prototype = evt.mix({
-  type: "AccountsTOC",
-  overlayNamespace: "accounts",
+    this.type = "AccountsTOC";
+    this.overlayNamespace = "accounts";
+
+    this.accountDefs = this.items = [];
+    this.accountDefsById = this.itemsById = new Map();
+  }
 
   // We don't care about who references us because we have the lifetime of the
   // universe.
-  __acquire() {
-    return Promise.resolve(this);
-  },
+  async __acquire() {
+    return this;
+  }
 
   __release() {
     // nothing to do
-  },
+  }
 
   isKnownAccount(accountId) {
     return this.accountDefsById.has(accountId);
-  },
+  }
 
   getAllItems() {
     return this.accountDefs.map(this.accountDefToWireRep);
-  },
+  }
 
   getItemIndexById(id) {
     const item = this.itemsById.get(id);
     return this.items.indexOf(item);
-  },
+  }
 
   /**
    * Add the account with the given accountDef to be tracked by the TOC,
@@ -91,7 +92,7 @@ AccountsTOC.prototype = evt.mix({
    * have no useful return value, so why not do something ugly?)
    */
   __addAccount(accountDef) {
-    let idx = bsearchForInsert(
+    const idx = bsearchForInsert(
       this.accountDefs,
       accountDef,
       accountDefComparator
@@ -100,30 +101,30 @@ AccountsTOC.prototype = evt.mix({
     this.accountDefsById.set(accountDef.id, accountDef);
     logic(this, "addAccount", { accountId: accountDef.id, index: idx });
 
-    let wireRep = this.accountDefToWireRep(accountDef);
+    const wireRep = this.accountDefToWireRep(accountDef);
     this.emit("add", wireRep, idx);
-  },
+  }
 
   __accountModified(accountDef) {
     // (Object identity holds here, and the number of accounts will always be
     // smallish, so just use indexOf.)
-    let idx = this.accountDefs.indexOf(accountDef);
+    const idx = this.accountDefs.indexOf(accountDef);
     if (idx === -1) {
       throw new Error("how do you have a different object?");
     }
     this.emit("change", this.accountDefToWireRep(accountDef), idx);
-  },
+  }
 
   __removeAccountById(accountId) {
-    let accountDef = this.accountDefsById.get(accountId);
-    let idx = this.accountDefs.indexOf(accountDef);
+    const accountDef = this.accountDefsById.get(accountId);
+    const idx = this.accountDefs.indexOf(accountDef);
     logic(this, "removeAccountById", { accountId, index: idx });
 
     this.accountDefsById.delete(accountId);
     this.accountDefs.splice(idx, 1);
 
     this.emit("remove", accountId, idx);
-  },
+  }
 
   accountDefToWireRep(accountDef) {
     return Object.assign(
@@ -137,8 +138,8 @@ AccountsTOC.prototype = evt.mix({
 
         defaultPriority: accountDef.defaultPriority,
 
-        enabled: true, // XXX overlay mechanism or universe consultation?
-        problems: [], // XXX ditto
+        enabled: true,
+        problems: [],
 
         syncRange: accountDef.syncRange,
         syncInterval: accountDef.syncInterval,
@@ -172,5 +173,5 @@ AccountsTOC.prototype = evt.mix({
       // us: engineFacts
       engineFrontEndAccountMeta.get(accountDef.engine)
     );
-  },
-});
+  }
+}

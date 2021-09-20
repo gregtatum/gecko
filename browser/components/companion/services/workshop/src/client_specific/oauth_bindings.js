@@ -10,7 +10,7 @@
  * format is driven by what was already in use by `OnlineServices.jsm`.
  */
 
-export default {
+const OauthBindings = {
   // Google for "mozilla.com" domain email addresses
   google: {
     endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
@@ -45,3 +45,5 @@ export default {
     ],
   },
 };
+
+export { OauthBindings };

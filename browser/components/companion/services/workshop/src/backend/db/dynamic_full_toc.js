@@ -20,7 +20,7 @@ import { bsearchMaybeExists, bsearchForInsert } from "shared/util";
 
 import { conversationMessageComparator } from "./comparators";
 
-import BaseTOC from "./base_toc";
+import { BaseTOC } from "./base_toc";
 
 /**
  * Represent ordered lists of data that are always memory resident and may
@@ -28,53 +28,49 @@ import BaseTOC from "./base_toc";
  * derived views, but could envolve as use-cases arise.  Or more TOC
  * implementations should be created.
  */
-export default function DynamicFullTOC({
-  comparator,
-  idKey,
-  topOrderingKey,
-  onFlush,
-}) {
-  BaseTOC.apply(this, arguments);
+export class DynamicFullTOC extends BaseTOC {
+  constructor({ comparator, idKey, topOrderingKey, onFlush }) {
+    super(arguments);
 
-  logic.defineScope(this, "DynamicFullTOC");
+    logic.defineScope(this, "DynamicFullTOC");
 
-  this.items = [];
-  this._comparator = comparator;
-  this._idKey = idKey;
-  this._topOrderingKey = topOrderingKey;
-  this._onFlush = onFlush;
-  // leave the overlay-resolver usage in our copied/pasted code in place.
-  this._overlayResolver = () => {};
+    this.type = "DynamicFullTOC";
+    this.overlayNamespace = null;
+    this.heightAware = false;
 
-  this.__deactivate(true);
-}
-DynamicFullTOC.prototype = BaseTOC.mix({
-  type: "DynamicFullTOC",
-  overlayNamespace: null,
-  heightAware: false,
+    this.items = [];
+    this._comparator = comparator;
+    this._idKey = idKey;
+    this._topOrderingKey = topOrderingKey;
+    this._onFlush = onFlush;
+    // leave the overlay-resolver usage in our copied/pasted code in place.
+    this._overlayResolver = () => {};
+
+    this.__deactivate(true);
+  }
 
   __activateTOC() {
     return Promise.resolve();
-  },
+  }
 
-  __deactivateTOC(/*firstTime*/) {},
+  __deactivateTOC(/*firstTime*/) {}
 
   get length() {
     return this.items.length;
-  },
+  }
 
   get totalHeight() {
     return this.items.length;
-  },
+  }
 
   addItem(item) {
-    let newIndex = bsearchForInsert(this.items, item, this._comparator);
+    const newIndex = bsearchForInsert(this.items, item, this._comparator);
     this.items.splice(newIndex, 0, item);
-  },
+  }
 
-  updateItem(/*item*/) {},
+  updateItem(/*item*/) {}
 
-  removeItem(/*id*/) {},
+  removeItem(/*id*/) {}
 
   setItems(items) {
     this.items = items.concat();
@@ -82,7 +78,7 @@ DynamicFullTOC.prototype = BaseTOC.mix({
     // treat all data as invalidated.
     this.items.sort(this._comparator);
     this.emit("change", true);
-  },
+  }
 
   /**
    * Explicitly report dirtying, intended for use by lazy owners that provide
@@ -91,7 +87,7 @@ DynamicFullTOC.prototype = BaseTOC.mix({
    */
   reportDirty() {
     this.emit("change", null);
-  },
+  }
 
   /**
    * Invoked by `WindowedListProxy.flush` as the first thing it does if we
@@ -101,7 +97,7 @@ DynamicFullTOC.prototype = BaseTOC.mix({
     if (this._onFlush) {
       this._onFlush();
     }
-  },
+  }
 
   /**
    * Handle the addition or removal of a message from the TOC.  Note that while
@@ -125,8 +121,8 @@ DynamicFullTOC.prototype = BaseTOC.mix({
 
     if (freshlyAdded) {
       // - Added!
-      let newKey = { date: postDate, id, matchInfo };
-      let newIndex = bsearchForInsert(
+      const newKey = { date: postDate, id, matchInfo };
+      const newIndex = bsearchForInsert(
         this.items,
         newKey,
         conversationMessageComparator
@@ -134,8 +130,8 @@ DynamicFullTOC.prototype = BaseTOC.mix({
       this.idsWithDates.splice(newIndex, 0, newKey);
     } else if (!item) {
       // - Deleted!
-      let oldKey = { date: preDate, id };
-      let oldIndex = bsearchMaybeExists(
+      const oldKey = { date: preDate, id };
+      const oldIndex = bsearchMaybeExists(
         this.idsWithDates,
         oldKey,
         conversationMessageComparator
@@ -143,16 +139,16 @@ DynamicFullTOC.prototype = BaseTOC.mix({
       this.idsWithDates.splice(oldIndex, 1);
     } else if (preDate !== postDate) {
       // - Message date changed (this should only happen for drafts)
-      let oldKey = { date: preDate, id };
-      let oldIndex = bsearchMaybeExists(
+      const oldKey = { date: preDate, id };
+      const oldIndex = bsearchMaybeExists(
         this.idsWithDates,
         oldKey,
         conversationMessageComparator
       );
       this.idsWithDates.splice(oldIndex, 1);
 
-      let newKey = { date: postDate, id, matchInfo };
-      let newIndex = bsearchForInsert(
+      const newKey = { date: postDate, id, matchInfo };
+      const newIndex = bsearchForInsert(
         this.idsWithDates,
         newKey,
         conversationMessageComparator
@@ -164,20 +160,20 @@ DynamicFullTOC.prototype = BaseTOC.mix({
     }
 
     this.emit("change", id, metadataOnly);
-  },
+  }
 
   /**
    * Return an array of the conversation id's occupying the given indices.
    */
   sliceIds(begin, end) {
     const idKey = this._idKey;
-    let ids = [];
+    const ids = [];
     const items = this.items;
     for (let i = begin; i < end; i++) {
       ids.push(items[i][idKey]);
     }
     return ids;
-  },
+  }
 
   /**
    * Generate an ordering key that is from the distant future, effectively
@@ -186,7 +182,7 @@ DynamicFullTOC.prototype = BaseTOC.mix({
    */
   getTopOrderingKey() {
     return this._topOrderingKey;
-  },
+  }
 
   getOrderingKeyForIndex(index) {
     if (this.items.length === 0) {
@@ -197,12 +193,12 @@ DynamicFullTOC.prototype = BaseTOC.mix({
       index = this.items.length - 1;
     }
     return this.items[index];
-  },
+  }
 
   findIndexForOrderingKey(key) {
-    let index = bsearchForInsert(this.items, key, this._comparator);
+    const index = bsearchForInsert(this.items, key, this._comparator);
     return index;
-  },
+  }
 
   getDataForSliceRange(
     beginInclusive,
@@ -213,26 +209,26 @@ DynamicFullTOC.prototype = BaseTOC.mix({
     beginInclusive = Math.max(0, beginInclusive);
     endExclusive = Math.min(endExclusive, this.items.length);
 
-    let overlayResolver = this._overlayResolver;
+    const overlayResolver = this._overlayResolver;
 
     // State and overlay data to be sent to our front-end view counterpart.
     // This is (needed) state information we have synchronously available from
     // the db cache and (needed) overlay information (which can always be
     // synchronously derived.)
-    let sendState = new Map();
+    const sendState = new Map();
     // The new known set which is the stuff from alreadyKnownData we reused plus
     // the data we were able to provide synchronously.  (And the stuff we have
     // to read from the DB does NOT go in here.)
-    let newKnownSet = new Set();
+    const newKnownSet = new Set();
 
     const items = this.items;
     const idKey = this._idKey;
-    let ids = [];
+    const ids = [];
     for (let i = beginInclusive; i < endExclusive; i++) {
-      let id = items[i][idKey];
+      const id = items[i][idKey];
       ids.push(id);
-      let haveData = alreadyKnownData.has(id);
-      let haveOverlays = alreadyKnownOverlays.has(id);
+      const haveData = alreadyKnownData.has(id);
+      const haveOverlays = alreadyKnownOverlays.has(id);
       if (haveData && haveOverlays) {
         newKnownSet.add(id);
         continue;
@@ -254,5 +250,5 @@ DynamicFullTOC.prototype = BaseTOC.mix({
       readPromise: null,
       newValidDataSet: newKnownSet,
     };
-  },
-});
+  }
+}

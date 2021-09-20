@@ -70,7 +70,7 @@ const DEFAULT_STYLE_TAG =
  *   going to happen strictly after the "load" event you would receive if you
  *   added a listener to the iframe.
  */
-export default function embodyHTML(blob, containerNode, clickHandler) {
+export function embodyHTML(blob, containerNode, clickHandler) {
   let ownerDoc = containerNode.ownerDocument;
 
   let iframe = document.createElement("iframe");

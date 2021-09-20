@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 
 /**
  * Represents a calendar attendee, wrapping both the mutable RVSP information
@@ -29,23 +29,25 @@ import evt from "evt";
  * future it might make sense to extract the identity information out into a
  * common `Peep` (or better named) class.  Or this could just subclass that.
  */
-export default function CalAttendee(_event, wireRep) {
-  evt.Emitter.call(this);
+export class CalAttendee extends Emitter {
+  constructor(_event, wireRep) {
+    super();
 
-  this._event = _event;
+    this._event = _event;
 
-  this.__update(wireRep);
-}
-CalAttendee.prototype = evt.mix({
+    this.__update(wireRep);
+  }
+
   toString() {
     return '[CalAttendee: "' + this.email + '"]';
-  },
+  }
+
   toJSON() {
     return {
       type: "CalAttendee",
       filename: this.filename,
     };
-  },
+  }
 
   __update(wireRep) {
     // Identity aspects
@@ -60,5 +62,5 @@ CalAttendee.prototype = evt.mix({
     this.responseStatus = wireRep.responseStatus;
     this.comment = wireRep.comment;
     this.isOptional = wireRep.isOptional;
-  },
-});
+  }
+}

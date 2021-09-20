@@ -86,12 +86,12 @@
     }
   }
 
-  function Emitter() {
-    this._events = {};
-    this._pendingEvents = {};
-  }
+  class Emitter {
+    constructor() {
+      this._events = {};
+      this._pendingEvents = {};
+    }
 
-  Emitter.prototype = {
     /**
      * Listen for event. Call signatures:
      * - on(eventId, Function) where undefined will be use as "this"
@@ -101,7 +101,7 @@
      * - on(eventId, Object, Function) where object will be use as "this"
      *   context when Function is called.
      */
-    on: function(id, obj, fnName) {
+    on(id, obj, fnName) {
       var applyPair = objFnPair(obj, fnName);
 
       var listeners = this._events[id],
@@ -118,7 +118,7 @@
         delete this._pendingEvents[id];
       }
       return this;
-    },
+    }
 
     /**
      * Listen for event, but only once, removeListener is automatically called
@@ -126,12 +126,11 @@
      *
      * Supports same call signatures as on().
      */
-    once: function(id, obj, fnName) {
-      var self = this,
-          fired = false,
-          applyPair = objFnPair(obj, fnName);
+    once(id, obj, fnName) {
+      let fired = false;
+      const applyPair = objFnPair(obj, fnName);
 
-      function one() {
+      const one = () => {
         if (fired) {
           return;
         }
@@ -140,14 +139,12 @@
         // Remove at a further turn so that the event
         // forEach in emit does not get modified during
         // this turn.
-        setTimeout(function() {
-          self.removeListener(id, one);
-        });
+        setTimeout(() => this.removeListener(id, one));
       }
       // Pass object context in case object bulk removeListener before the
       // once is triggered.
       return this.on(id, applyPair[0], one);
-    },
+    }
 
     /**
      * Waits for a property on the object that has the event interface
@@ -161,21 +158,21 @@
      *
      * Supports same call signatures as on().
      */
-    latest: function(id, obj, fnName) {
+    latest(id, obj, fnName) {
       var applyPair = objFnPair(obj, fnName);
 
       if (this[id] && !this._pendingEvents[id]) {
         callApply(applyPair, [this[id]]);
       }
       this.on(id, applyPair[0], applyPair[1]);
-    },
+    }
 
     /**
      * Same as latest, but only calls the listener once.
      *
      * Supports same call signatures as on().
      */
-    latestOnce: function(id, obj, fnName) {
+    latestOnce(id, obj, fnName) {
       var applyPair = objFnPair(obj, fnName);
 
       if (this[id] && !this._pendingEvents[id]) {
@@ -183,14 +180,14 @@
       } else {
         this.once(id, applyPair[0], applyPair[1]);
       }
-    },
+    }
 
     /**
      * Removes all listeners the obj object has for this event emitter.
      * @param  {Object} obj the object that might have listeners for multiple
      * event IDs tracked by this event emitter.
      */
-    removeObjectListener: function(obj) {
+    removeObjectListener(obj) {
       Object.keys(this._events).forEach(function(eventId) {
         var listeners = this._events[eventId];
 
@@ -204,14 +201,14 @@
 
         cleanEventEntry(this, eventId);
       }.bind(this));
-    },
+    }
 
     /**
      * Removes event listener.
      *
      * Supports same call signatures as on().
      */
-    removeListener: function(id, obj, fnName) {
+    removeListener(id, obj, fnName) {
       var listeners = this._events[id],
           applyPair = objFnPair(obj, fnName);
 
@@ -228,7 +225,7 @@
 
         cleanEventEntry(this, id);
       }
-    },
+    }
 
     /**
      * Like emit, but if no listeners yet, holds on
@@ -236,7 +233,7 @@
      * args after first one are passed to listeners.
      * @param  {String} id event ID.
      */
-    emitWhenListener: function(id) {
+    emitWhenListener(id) {
       var listeners = this._events[id];
       if (listeners) {
         this.emit.apply(this, arguments);
@@ -246,9 +243,9 @@
         }
         this._pendingEvents[id].push(slice.call(arguments, 1));
       }
-    },
+    }
 
-    emit: function(id) {
+    emit(id) {
       var args = slice.call(arguments, 1),
           listeners = this._events[id];
 
@@ -269,15 +266,15 @@
           // If listener removed itself, set the index back a number, so that
           // a subsequent listener does not get skipped.
           if (!listeners[i] ||
-            listeners[i][0] !== thisObj ||
-            listeners[i][1] !== fn) {
+              listeners[i][0] !== thisObj ||
+              listeners[i][1] !== fn) {
             i -= 1;
           }
         }
       }
-    }
-  };
-
+    }    
+  }
+  
   evt = new Emitter();
   evt.Emitter = Emitter;
 

@@ -20,7 +20,7 @@ import { bsearchMaybeExists, bsearchForInsert } from "shared/util";
 
 import { folderConversationComparator } from "./comparators";
 
-import BaseTOC from "./base_toc";
+import { BaseTOC } from "./base_toc";
 
 /**
  * Backs view-slices listing the conversations in a folder.
@@ -37,48 +37,45 @@ import BaseTOC from "./base_toc";
  * perspective, if a conversation gets updated, it is no longer the same and
  * we instead treat the position where the { date, id } would be inserted now.
  */
-export default function FolderConversationsTOC({
-  db,
-  query,
-  dataOverlayManager,
-}) {
-  BaseTOC.apply(this, arguments);
+export class FolderConversationsTOC extends BaseTOC {
+  constructor({ db, query, dataOverlayManager }) {
+    super(arguments);
 
-  logic.defineScope(this, "FolderConversationsTOC");
+    logic.defineScope(this, "FolderConversationsTOC");
 
-  this._db = db;
-  this.query = query;
+    this.type = "FolderConversationsTOC";
+    this.overlayNamespace = "conversations";
+    this.heightAware = true;
 
-  // We share responsibility for providing overlay data with the list proxy.
-  // Our getDataForSliceRange performs the resolving, but we depend on the proxy
-  // to be listening for overlay updates and to perform appropriate dirtying.
-  this._overlayResolver = dataOverlayManager.makeBoundResolver(
-    this.overlayNamespace,
-    null
-  );
+    this._db = db;
+    this.query = query;
 
-  this._bound_onTOCChange = this.onTOCChange.bind(this);
+    // We share responsibility for providing overlay data with the list proxy.
+    // Our getDataForSliceRange performs the resolving, but we depend on the proxy
+    // to be listening for overlay updates and to perform appropriate dirtying.
+    this._overlayResolver = dataOverlayManager.makeBoundResolver(
+      this.overlayNamespace,
+      null
+    );
 
-  this.__deactivate(true);
-}
-FolderConversationsTOC.prototype = BaseTOC.mix({
-  type: "FolderConversationsTOC",
-  overlayNamespace: "conversations",
-  heightAware: true,
+    this._bound_onTOCChange = this.onTOCChange.bind(this);
+
+    this.__deactivate(true);
+  }
 
   async __activateTOC() {
-    let idsWithDates = await this.query.execute();
+    const idsWithDates = await this.query.execute();
 
     this.idsWithDates = idsWithDates;
 
     let totalHeight = 0;
-    for (let info of idsWithDates) {
+    for (const info of idsWithDates) {
       totalHeight += info.height;
     }
     this.totalHeight = totalHeight;
 
     this.query.bind(this, this.onTOCChange);
-  },
+  }
 
   __deactivateTOC(firstTime) {
     this.idsWithDates = [];
@@ -86,11 +83,11 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
     if (!firstTime) {
       this.query.destroy(this);
     }
-  },
+  }
 
   get length() {
     return this.idsWithDates.length;
-  },
+  }
 
   /**
    * Handle a TOC change on this specific folderId from the database.
@@ -114,7 +111,7 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
     if (!dataOnly) {
       let oldIndex = -1;
       if (change.removeDate) {
-        let oldKey = { date: change.removeDate, id: change.id };
+        const oldKey = { date: change.removeDate, id: change.id };
         oldIndex = bsearchMaybeExists(
           this.idsWithDates,
           oldKey,
@@ -132,7 +129,7 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
       }
       let newIndex = -1;
       if (change.addDate) {
-        let newKey = {
+        const newKey = {
           date: change.addDate,
           id: change.id,
           height: change.height,
@@ -163,19 +160,19 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
     // debug visualization?), it could make sense to expose the indices being
     // impacted.
     this.emit("change", change.id, dataOnly);
-  },
+  }
 
   /**
    * Return an array of the conversation id's occupying the given indices.
    */
   sliceIds(begin, end) {
-    let ids = [];
-    let idsWithDates = this.idsWithDates;
+    const ids = [];
+    const idsWithDates = this.idsWithDates;
     for (let i = begin; i < end; i++) {
       ids.push(idsWithDates[i].id);
     }
     return ids;
-  },
+  }
 
   getOrderingKeyForIndex(index) {
     if (this.idsWithDates.length === 0) {
@@ -186,7 +183,7 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
       index = this.idsWithDates.length - 1;
     }
     return this.idsWithDates[index];
-  },
+  }
 
   /**
    * Generate an ordering key that is from the distant future, effectively
@@ -199,16 +196,15 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
       id: "",
       height: 0,
     };
-  },
+  }
 
   findIndexForOrderingKey(key) {
-    let index = bsearchForInsert(
+    return bsearchForInsert(
       this.idsWithDates,
       key,
       folderConversationComparator
     );
-    return index;
-  },
+  }
 
   /**
    * Given a quantized height offset, find the item covering that offset and
@@ -257,17 +253,17 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
       offset: actualOffset,
       cumulativeHeight: actualOffset + meta.height,
     };
-  },
+  }
 
   getHeightOffsetForIndex(desiredIndex) {
     let height = 0;
-    let idsWithDates = this.idsWithDates;
+    const idsWithDates = this.idsWithDates;
     desiredIndex = Math.min(desiredIndex, idsWithDates.length);
     for (let i = 0; i < desiredIndex; i++) {
       height += idsWithDates[i].height;
     }
     return height;
-  },
+  }
 
   /**
    * Traverse items covering a height.  All indices are inclusive because it's
@@ -287,9 +283,9 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
    */
   _walkToCoverHeight(startIndex, delta, heightToConsume) {
     let index = startIndex;
-    let idsWithDates = this.idsWithDates;
+    const idsWithDates = this.idsWithDates;
     let info = index < idsWithDates.length && idsWithDates[index];
-    let tooHigh = idsWithDates.length - 1;
+    const tooHigh = idsWithDates.length - 1;
 
     while (heightToConsume > 0 && index < tooHigh && index + delta >= 0) {
       index += delta;
@@ -300,7 +296,7 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
       index,
       overconsumed: Math.abs(heightToConsume),
     };
-  },
+  }
 
   /**
    * Given an ordering key and a number of requested visible/buffer height
@@ -319,27 +315,27 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
       focusIndex--;
     }
 
-    let {
+    const {
       index: beginVisibleInclusive,
       overconsumed: beforeOverconsumed,
     } = this._walkToCoverHeight(focusIndex, -1, req.visibleAbove);
-    let { index: beginBufferedInclusive } = this._walkToCoverHeight(
+    const { index: beginBufferedInclusive } = this._walkToCoverHeight(
       beginVisibleInclusive,
       -1,
       req.bufferAbove - beforeOverconsumed
     );
 
-    let {
+    const {
       index: endVisibleInclusive,
       overconsumed: afterOverconsumed,
     } = this._walkToCoverHeight(focusIndex, 1, req.visibleBelow);
-    let { index: endBufferedInclusive } = this._walkToCoverHeight(
+    const { index: endBufferedInclusive } = this._walkToCoverHeight(
       endVisibleInclusive,
       1,
       req.bufferBelow - afterOverconsumed
     );
 
-    let rval = {
+    const rval = {
       beginBufferedInclusive,
       beginVisibleInclusive,
       endVisibleExclusive: endVisibleInclusive + 1,
@@ -347,7 +343,7 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
       heightOffset: this.getHeightOffsetForIndex(beginBufferedInclusive),
     };
     return rval;
-  },
+  }
 
   getDataForSliceRange(
     beginInclusive,
@@ -358,13 +354,13 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
     beginInclusive = Math.max(0, beginInclusive);
     endExclusive = Math.min(endExclusive, this.idsWithDates.length);
 
-    let overlayResolver = this._overlayResolver;
+    const overlayResolver = this._overlayResolver;
 
     // State and overlay data to be sent to our front-end view counterpart.
     // This is (needed) state information we have synchronously available from
     // the db cache and (needed) overlay information (which can always be
     // synchronously derived.)
-    let sendState = new Map();
+    const sendState = new Map();
     // Things we need to request from the database.  (Although MailDB.read will
     // immediately populate the things we need, WindowedListProxy's current
     // wire protocol calls for omitting things we don't have the state for yet.
@@ -374,16 +370,16 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
     // The new known set which is the stuff from alreadyKnownData we reused plus
     // the data we were able to provide synchronously.  (And the stuff we have
     // to read from the DB does NOT go in here.)
-    let newKnownSet = new Set();
+    const newKnownSet = new Set();
 
-    let idsWithDates = this.idsWithDates;
-    let convCache = this._db.convCache;
-    let ids = [];
+    const idsWithDates = this.idsWithDates;
+    const convCache = this._db.convCache;
+    const ids = [];
     for (let i = beginInclusive; i < endExclusive; i++) {
-      let id = idsWithDates[i].id;
+      const id = idsWithDates[i].id;
       ids.push(id);
-      let haveData = alreadyKnownData.has(id);
-      let haveOverlays = alreadyKnownOverlays.has(id);
+      const haveData = alreadyKnownData.has(id);
+      const haveOverlays = alreadyKnownOverlays.has(id);
       if (haveData && haveOverlays) {
         newKnownSet.add(id);
         continue;
@@ -420,5 +416,5 @@ FolderConversationsTOC.prototype = BaseTOC.mix({
       readPromise,
       newValidDataSet: newKnownSet,
     };
-  },
-});
+  }
+}

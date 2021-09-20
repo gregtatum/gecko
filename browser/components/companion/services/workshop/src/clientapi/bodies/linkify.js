@@ -61,15 +61,15 @@
 //                       encodeURI does not escape plus the result of escaping
 //                       (so also '%')
 // )
-var RE_URL = /(^|[\s(,;])((?:https?:\/\/|www\d{0,3}[.][-a-z0-9.]{2,249}|[-a-z0-9.]{2,250}[.][a-z]{2,4}\/)[-\w.!~*'();,/?:@&=+$#%]*)/im;
+const RE_URL = /(^|[\s(,;])((?:https?:\/\/|www\d{0,3}[.][-a-z0-9.]{2,249}|[-a-z0-9.]{2,250}[.][a-z]{2,4}\/)[-\w.!~*'();,/?:@&=+$#%]*)/im;
 // Set of terminators that are likely to have been part of the context rather
 // than part of the URL and so should be uneaten.  This is the same as our
 // mirror lead-in set (so '(', ',', ';') plus question end-ing punctuation and
 // the potential permutations with parentheses (english-specific)
-var RE_UNEAT_LAST_URL_CHARS = /(?:[),;.!?]|[.!?]\)|\)[.!?])$/;
+const RE_UNEAT_LAST_URL_CHARS = /(?:[),;.!?]|[.!?]\)|\)[.!?])$/;
 // Don't require the trailing slashes here for pre-pending purposes, although
 // our above regex currently requires them.
-var RE_HTTP = /^https?:/i;
+const RE_HTTP = /^https?:/i;
 // Note: the [^\s] is fairly international friendly, but might be too friendly.
 //
 // Note: We've added support for IDN domains in the e-mail regexp.  We would
@@ -84,19 +84,19 @@ var RE_HTTP = /^https?:/i;
 //                       giving us a high probability of an e-mail address.
 //                       Otherwise we use the same base regexp from our URL
 //                       logic.
-var RE_MAIL = /(^|[\s(,;<>])([^(,;<>@\s]+@[-a-z0-9.]{2,250}[.][-a-z0-9]{2,32})/im;
-var RE_MAILTO = /^mailto:/i;
+const RE_MAIL = /(^|[\s(,;<>])([^(,;<>@\s]+@[-a-z0-9.]{2,250}[.][-a-z0-9]{2,32})/im;
+const RE_MAILTO = /^mailto:/i;
 
 /**
  * Linkify the given plaintext, producing an Array of HTML nodes as a result.
  */
 export function linkifyPlain(body, doc) {
-  var nodes = [];
-  var contentStart;
-  for (;;) {
-    var url = RE_URL.exec(body);
-    var email = RE_MAIL.exec(body);
-    var link, text;
+  const nodes = [];
+  let contentStart;
+  while (true) {
+    const url = RE_URL.exec(body);
+    const email = RE_MAIL.exec(body);
+    let link, text;
     // Pick the regexp with the earlier content; index will always be zero.
     if (url && (!email || url.index < email.index)) {
       contentStart = url.index + url[1].length;
@@ -107,8 +107,8 @@ export function linkifyPlain(body, doc) {
       // There are some final characters for a URL that are much more likely
       // to have been part of the enclosing text rather than the end of the
       // URL.
-      var useUrl = url[2];
-      var uneat = RE_UNEAT_LAST_URL_CHARS.exec(useUrl);
+      let useUrl = url[2];
+      const uneat = RE_UNEAT_LAST_URL_CHARS.exec(useUrl);
       if (uneat) {
         useUrl = useUrl.substring(0, uneat.index);
       }
@@ -163,14 +163,13 @@ export function linkifyPlain(body, doc) {
  */
 export function linkifyHTML(doc) {
   function linkElem(elem) {
-    var children = elem.childNodes;
-    for (var i in children) {
-      var sub = children[i];
+    const children = elem.childNodes;
+    for (const sub of children) {
       if (sub.nodeName === "#text") {
-        var nodes = linkifyPlain(sub.nodeValue, doc);
+        const nodes = linkifyPlain(sub.nodeValue, doc);
 
         elem.replaceChild(nodes[nodes.length - 1], sub);
-        for (var iNode = nodes.length - 2; iNode >= 0; --iNode) {
+        for (let iNode = nodes.length - 2; iNode >= 0; --iNode) {
           elem.insertBefore(nodes[iNode], nodes[iNode + 1]);
         }
       } else if (sub.nodeName !== "A") {

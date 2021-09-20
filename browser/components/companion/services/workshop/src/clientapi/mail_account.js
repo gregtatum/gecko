@@ -14,100 +14,96 @@
  * limitations under the License.
  */
 
-import evt from "evt";
-import MailSenderIdentity from "./mail_sender_identity";
+import { Emitter } from "evt";
+import { MailSenderIdentity } from "./mail_sender_identity";
 
 /**
  *
  */
-export default function MailAccount(
-  api,
-  wireRep,
-  overlays,
-  matchInfo,
-  acctsSlice
-) {
-  evt.Emitter.call(this);
+/**
+ *
+ */
+export class MailAccount extends Emitter {
+  constructor(api, wireRep, overlays, matchInfo, acctsSlice) {
+    super();
 
-  this._api = api;
-  this.id = wireRep.id;
-  this.matchInfo = matchInfo;
+    this._api = api;
+    this.id = wireRep.id;
+    this.matchInfo = matchInfo;
 
-  // Hold on to wireRep for caching
-  this._wireRep = wireRep;
+    // Hold on to wireRep for caching
+    this._wireRep = wireRep;
 
-  // Hold on to acctsSlice for use in determining default account.
-  this.acctsSlice = acctsSlice;
+    // Hold on to acctsSlice for use in determining default account.
+    this.acctsSlice = acctsSlice;
 
-  this.type = wireRep.type;
-  this.name = wireRep.name;
-  this.syncRange = wireRep.syncRange;
-  this.syncInterval = wireRep.syncInterval;
-  this.notifyOnNew = wireRep.notifyOnNew;
-  this.playSoundOnSend = wireRep.playSoundOnSend;
+    this.type = wireRep.type;
+    this.name = wireRep.name;
+    this.syncRange = wireRep.syncRange;
+    this.syncInterval = wireRep.syncInterval;
+    this.notifyOnNew = wireRep.notifyOnNew;
+    this.playSoundOnSend = wireRep.playSoundOnSend;
 
-  /**
-   * Is the account currently enabled, as in will we talk to the server?
-   * Accounts will be automatically disabled in cases where it would be
-   * counter-productive for us to keep trying to access the server.
-   *
-   * For example: the user's password being (apparently) bad, or gmail getting
-   * upset about the amount of data transfer and locking the account out for the
-   * rest of the day.
-   */
-  this.enabled = wireRep.enabled;
-  /**
-   * @listof[@oneof[
-   *   @case['bad-user-or-pass']
-   *   @case['bad-address']
-   *   @case['needs-oauth-reauth']
-   *   @case['imap-disabled']
-   *   @case['pop-server-not-great']{
-   *     The POP3 server doesn't support IDLE and TOP, so we can't use it.
-   *   }
-   *   @case['connection']{
-   *     Generic connection problem; this problem can quite possibly be present
-   *     in conjunction with more specific problems such as a bad username /
-   *     password.
-   *   }
-   * ]]{
-   *   A list of known problems with the account which explain why the account
-   *   might not be `enabled`.  Once a problem is believed to have been
-   *   addressed, `clearProblems` should be called.
-   * }
-   */
-  this.problems = wireRep.problems;
+    /**
+     * Is the account currently enabled, as in will we talk to the server?
+     * Accounts will be automatically disabled in cases where it would be
+     * counter-productive for us to keep trying to access the server.
+     *
+     * For example: the user's password being (apparently) bad, or gmail getting
+     * upset about the amount of data transfer and locking the account out for the
+     * rest of the day.
+     */
+    this.enabled = wireRep.enabled;
+    /**
+     * @listof[@oneof[
+     *   @case['bad-user-or-pass']
+     *   @case['bad-address']
+     *   @case['needs-oauth-reauth']
+     *   @case['imap-disabled']
+     *   @case['pop-server-not-great']{
+     *     The POP3 server doesn't support IDLE and TOP, so we can't use it.
+     *   }
+     *   @case['connection']{
+     *     Generic connection problem; this problem can quite possibly be present
+     *     in conjunction with more specific problems such as a bad username /
+     *     password.
+     *   }
+     * ]]{
+     *   A list of known problems with the account which explain why the account
+     *   might not be `enabled`.  Once a problem is believed to have been
+     *   addressed, `clearProblems` should be called.
+     * }
+     */
+    this.problems = wireRep.problems;
 
-  this.identities = [];
-  for (var iIdent = 0; iIdent < wireRep.identities.length; iIdent++) {
-    this.identities.push(
-      new MailSenderIdentity(this._api, wireRep.identities[iIdent])
+    this.identities = wireRep.identities.map(
+      id => new MailSenderIdentity(this._api, id)
     );
+
+    this.username = wireRep.credentials.username;
+    this.servers = wireRep.servers;
+
+    this.authMechanism = wireRep.credentials.oauth2 ? "oauth2" : "password";
+
+    this.folders = null;
+    if (acctsSlice && acctsSlice._autoViewFolders) {
+      this.folders = api.viewFolders("account", this.id);
+    }
+
+    this.__updateOverlays(overlays);
   }
 
-  this.username = wireRep.credentials.username;
-  this.servers = wireRep.servers;
-
-  this.authMechanism = wireRep.credentials.oauth2 ? "oauth2" : "password";
-
-  this.folders = null;
-  if (acctsSlice && acctsSlice._autoViewFolders) {
-    this.folders = api.viewFolders("account", this.id);
-  }
-
-  this.__updateOverlays(overlays);
-}
-MailAccount.prototype = evt.mix({
   toString() {
     return "[MailAccount: " + this.type + " " + this.id + "]";
-  },
+  }
+
   toJSON() {
     return {
       type: "MailAccount",
       accountType: this.type,
       id: this.id,
     };
-  },
+  }
 
   __update(wireRep) {
     this._wireRep = wireRep;
@@ -118,7 +114,7 @@ MailAccount.prototype = evt.mix({
     this.notifyOnNew = wireRep.notifyOnNew;
     this.playSoundOnSend = wireRep.playSoundOnSend;
 
-    for (var i = 0; i < wireRep.identities.length; i++) {
+    for (let i = 0; i < wireRep.identities.length; i++) {
       if (this.identities[i]) {
         this.identities[i].__update(wireRep.identities[i]);
       } else {
@@ -127,15 +123,15 @@ MailAccount.prototype = evt.mix({
         );
       }
     }
-  },
+  }
 
   __updateOverlays(overlays) {
     this.syncStatus = overlays.sync_refresh ? overlays.sync_refresh : null;
-  },
+  }
 
   release() {
     // currently, nothing to clean up
-  },
+  }
 
   /**
    * Tell the back-end to clear the list of problems with the account, re-enable
@@ -143,7 +139,7 @@ MailAccount.prototype = evt.mix({
    */
   clearProblems(callback) {
     this._api._clearAccountProblems(this, callback);
-  },
+  }
 
   /**
    * @param {Object} mods
@@ -187,7 +183,7 @@ MailAccount.prototype = evt.mix({
    */
   modifyAccount(mods) {
     return this._api._modifyAccount(this, mods);
-  },
+  }
 
   /**
    * Delete the account and then immediate re-create it as if we had performed
@@ -197,7 +193,7 @@ MailAccount.prototype = evt.mix({
    */
   recreateAccount() {
     this._api._recreateAccount(this);
-  },
+  }
 
   /**
    * Delete the account and all its associated data.  No privacy guarantees are
@@ -206,7 +202,7 @@ MailAccount.prototype = evt.mix({
    */
   deleteAccount() {
     this._api._deleteAccount(this);
-  },
+  }
 
   /**
    * Synchronize the folder list for this account.  This currently doesn't
@@ -217,7 +213,7 @@ MailAccount.prototype = evt.mix({
       type: "syncFolderList",
       accountId: this.id,
     });
-  },
+  }
 
   /**
    * Clear the new-tracking state for this account.  Also accessible as
@@ -228,7 +224,7 @@ MailAccount.prototype = evt.mix({
       accountId: this.id,
       silent: (opts && opts.silent) || false,
     });
-  },
+  }
 
   /**
    * Returns true if this account is the default account, by looking at
@@ -240,5 +236,5 @@ MailAccount.prototype = evt.mix({
     }
 
     return this.acctsSlice.defaultAccount === this;
-  },
-});
+  }
+}

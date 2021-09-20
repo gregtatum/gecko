@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import WindowedListView from "./windowed_list_view";
-import MailConversation from "./mail_conversation";
+import { WindowedListView } from "./windowed_list_view";
+import { MailConversation } from "./mail_conversation";
 
 /**
  * ## tocMeta fields ##
@@ -48,90 +48,88 @@ import MailConversation from "./mail_conversation";
  *   - thisViewTriggered: Did this ConversationsListView initiate the sync (or
  *     otherwise join up with some active sync)?
  */
-export default function ConversationsListView(api, handle) {
-  WindowedListView.call(this, api, MailConversation, handle);
 
-  /**
-   * Track whether there's an outstanding sync/grow call so that we can decorate
-   * the syncComplete notification with extra data.
-   */
-  this.syncRequested = false;
+export class ConversationsListView extends WindowedListView {
+  constructor(api, handle) {
+    super(api, MailConversation, handle);
 
-  // Get at the front of the syncComplete line so we can clobber data onto it.
-  // We get our own structured clone copy, so this mutation is safe since the
-  // only instance it affects is ours, and we only want the post-mutation state.
-  this.on("syncComplete", data => {
-    data.thisViewTriggered = this.syncRequested;
+    /**
+     * Track whether there's an outstanding sync/grow call so that we can decorate
+     * the syncComplete notification with extra data.
+     */
     this.syncRequested = false;
-  });
+
+    // Get at the front of the syncComplete line so we can clobber data onto it.
+    // We get our own structured clone copy, so this mutation is safe since the
+    // only instance it affects is ours, and we only want the post-mutation state.
+    this.on("syncComplete", data => {
+      data.thisViewTriggered = this.syncRequested;
+      this.syncRequested = false;
+    });
+  }
+  _makeOrderingKeyFromItem(item) {
+    return {
+      date: item.mostRecentMessageDate.valueOf(),
+      id: item.id,
+    };
+  }
+  refresh() {
+    this.syncRequested = true;
+    this._api.__bridgeSend({
+      type: "refreshView",
+      handle: this.handle,
+    });
+  }
+  grow() {
+    this.syncRequested = true;
+    this._api.__bridgeSend({
+      type: "growView",
+      handle: this.handle,
+    });
+  }
+  /**
+   * Ensures that an effort has been made to fetch snippets for all of the
+   * messages in the conversations in the given inclusive index range.  (Note that
+   * this may technically be overkill for any given conversation since not all the
+   * snippets are likely to be displayed as part of the conversation summary.
+   * However, in most UIs, being able to see the conversation summary is likely
+   * to imply the ability to see the list of messages, in which case the snippets
+   * are really desired, so it makes sense to couple this.  Note that
+   * HeadersViewSlice also exposes an `ensureSnippets` method that operates on
+   * just its messages/conversation.
+   *
+   * Returns false if there was no need to enqueue async snippet fetching, true if
+   * there was.
+   */
+  ensureSnippets(idxStart, idxEnd) {
+    if (idxStart === undefined) {
+      idxStart = 0;
+    }
+    if (idxEnd === undefined) {
+      idxEnd = this.items.length - 1;
+    }
+
+    let convIds = [];
+    for (let i = idxStart; i <= idxEnd; i++) {
+      let convInfo = this.items[i];
+      if (!convInfo) {
+        continue;
+      }
+      if (convInfo.snippetCount < convInfo.messageCount) {
+        convIds.push(convInfo.id);
+      }
+    }
+
+    if (!convIds.length) {
+      return false;
+    }
+
+    // NB: We intentionally do not use a handle as there's no reason this needs to
+    // be statefully associated with a list view.
+    this._api.__bridgeSend({
+      type: "fetchSnippets",
+      convIds,
+    });
+    return true;
+  }
 }
-ConversationsListView.prototype = Object.create(WindowedListView.prototype);
-
-ConversationsListView.prototype._makeOrderingKeyFromItem = function(item) {
-  return {
-    date: item.mostRecentMessageDate.valueOf(),
-    id: item.id,
-  };
-};
-
-ConversationsListView.prototype.refresh = function() {
-  this.syncRequested = true;
-  this._api.__bridgeSend({
-    type: "refreshView",
-    handle: this.handle,
-  });
-};
-
-ConversationsListView.prototype.grow = function() {
-  this.syncRequested = true;
-  this._api.__bridgeSend({
-    type: "growView",
-    handle: this.handle,
-  });
-};
-
-/**
- * Ensures that an effort has been made to fetch snippets for all of the
- * messages in the conversations in the given inclusive index range.  (Note that
- * this may technically be overkill for any given conversation since not all the
- * snippets are likely to be displayed as part of the conversation summary.
- * However, in most UIs, being able to see the conversation summary is likely
- * to imply the ability to see the list of messages, in which case the snippets
- * are really desired, so it makes sense to couple this.  Note that
- * HeadersViewSlice also exposes an `ensureSnippets` method that operates on
- * just its messages/conversation.
- *
- * Returns false if there was no need to enqueue async snippet fetching, true if
- * there was.
- */
-ConversationsListView.prototype.ensureSnippets = function(idxStart, idxEnd) {
-  if (idxStart === undefined) {
-    idxStart = 0;
-  }
-  if (idxEnd === undefined) {
-    idxEnd = this.items.length - 1;
-  }
-
-  let convIds = [];
-  for (let i = idxStart; i <= idxEnd; i++) {
-    let convInfo = this.items[i];
-    if (!convInfo) {
-      continue;
-    }
-    if (convInfo.snippetCount < convInfo.messageCount) {
-      convIds.push(convInfo.id);
-    }
-  }
-
-  if (!convIds.length) {
-    return false;
-  }
-
-  // NB: We intentionally do not use a handle as there's no reason this needs to
-  // be statefully associated with a list view.
-  this._api.__bridgeSend({
-    type: "fetchSnippets",
-    convIds,
-  });
-  return true;
-};

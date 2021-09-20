@@ -49,7 +49,7 @@ var WorkshopBackend = (() => {
         }
       })(exports, function() {
         "use strict";
-        var evt10, slice = Array.prototype.slice, props = [
+        var evt4, slice = Array.prototype.slice, props = [
           "_events",
           "_pendingEvents",
           "on",
@@ -93,18 +93,18 @@ var WorkshopBackend = (() => {
           }
         }
         function emitError(err) {
-          if (evt10._events.hasOwnProperty("error")) {
-            evt10.emit("error", err);
+          if (evt4._events.hasOwnProperty("error")) {
+            evt4.emit("error", err);
           } else {
             console.error(err, err.stack);
           }
         }
-        function Emitter() {
-          this._events = {};
-          this._pendingEvents = {};
-        }
-        Emitter.prototype = {
-          on: function(id, obj, fnName) {
+        class Emitter7 {
+          constructor() {
+            this._events = {};
+            this._pendingEvents = {};
+          }
+          on(id, obj, fnName) {
             var applyPair = objFnPair(obj, fnName);
             var listeners2 = this._events[id], pending = this._pendingEvents[id];
             if (!listeners2) {
@@ -118,37 +118,36 @@ var WorkshopBackend = (() => {
               delete this._pendingEvents[id];
             }
             return this;
-          },
-          once: function(id, obj, fnName) {
-            var self2 = this, fired = false, applyPair = objFnPair(obj, fnName);
-            function one() {
+          }
+          once(id, obj, fnName) {
+            let fired = false;
+            const applyPair = objFnPair(obj, fnName);
+            const one = () => {
               if (fired) {
                 return;
               }
               fired = true;
               callApply(applyPair, arguments);
-              setTimeout(function() {
-                self2.removeListener(id, one);
-              });
-            }
+              setTimeout(() => this.removeListener(id, one));
+            };
             return this.on(id, applyPair[0], one);
-          },
-          latest: function(id, obj, fnName) {
+          }
+          latest(id, obj, fnName) {
             var applyPair = objFnPair(obj, fnName);
             if (this[id] && !this._pendingEvents[id]) {
               callApply(applyPair, [this[id]]);
             }
             this.on(id, applyPair[0], applyPair[1]);
-          },
-          latestOnce: function(id, obj, fnName) {
+          }
+          latestOnce(id, obj, fnName) {
             var applyPair = objFnPair(obj, fnName);
             if (this[id] && !this._pendingEvents[id]) {
               callApply(applyPair, [this[id]]);
             } else {
               this.once(id, applyPair[0], applyPair[1]);
             }
-          },
-          removeObjectListener: function(obj) {
+          }
+          removeObjectListener(obj) {
             Object.keys(this._events).forEach(function(eventId) {
               var listeners2 = this._events[eventId];
               for (var i = 0; i < listeners2.length; i++) {
@@ -160,8 +159,8 @@ var WorkshopBackend = (() => {
               }
               cleanEventEntry(this, eventId);
             }.bind(this));
-          },
-          removeListener: function(id, obj, fnName) {
+          }
+          removeListener(id, obj, fnName) {
             var listeners2 = this._events[id], applyPair = objFnPair(obj, fnName);
             if (listeners2) {
               listeners2.some(function(listener, i) {
@@ -172,8 +171,8 @@ var WorkshopBackend = (() => {
               });
               cleanEventEntry(this, id);
             }
-          },
-          emitWhenListener: function(id) {
+          }
+          emitWhenListener(id) {
             var listeners2 = this._events[id];
             if (listeners2) {
               this.emit.apply(this, arguments);
@@ -183,8 +182,8 @@ var WorkshopBackend = (() => {
               }
               this._pendingEvents[id].push(slice.call(arguments, 1));
             }
-          },
-          emit: function(id) {
+          }
+          emit(id) {
             var args = slice.call(arguments, 1), listeners2 = this._events[id];
             if (listeners2) {
               for (var i = 0; i < listeners2.length; i++) {
@@ -200,11 +199,11 @@ var WorkshopBackend = (() => {
               }
             }
           }
-        };
-        evt10 = new Emitter();
-        evt10.Emitter = Emitter;
-        evt10.mix = function(obj) {
-          var e = new Emitter();
+        }
+        evt4 = new Emitter7();
+        evt4.Emitter = Emitter7;
+        evt4.mix = function(obj) {
+          var e = new Emitter7();
           props.forEach(function(prop) {
             if (obj.hasOwnProperty(prop)) {
               throw new Error('Object already has a property "' + prop + '"');
@@ -213,7 +212,7 @@ var WorkshopBackend = (() => {
           });
           return obj;
         };
-        return evt10;
+        return evt4;
       });
     }
   });
@@ -15879,8 +15878,8 @@ var WorkshopBackend = (() => {
 
   // src/backend/worker-router.js
   var listeners = {};
-  function receiveMessage(port, evt10) {
-    var data = evt10.data;
+  function receiveMessage(port, evt4) {
+    var data = evt4.data;
     var listener = listeners[data.type];
     if (listener) {
       listener(data, port);
@@ -15894,8 +15893,8 @@ var WorkshopBackend = (() => {
       onConnectHandler(null);
     }
   }
-  function receiveConnect(evt10) {
-    const port = evt10.ports[0];
+  function receiveConnect(evt4) {
+    const port = evt4.ports[0];
     if (!defaultPort) {
       defaultPort = port;
       resolveDefaultPort(defaultPort);
@@ -17043,20 +17042,20 @@ var WorkshopBackend = (() => {
     return str;
   }
   function analyzeAndRejectErrorEvent(rejectFunc, event) {
-    rejectFunc(analyzeAndRejectErrorEvent(event));
+    rejectFunc(analyzeAndLogErrorEvent(event));
   }
   function computeSetDelta(before, after) {
-    let added = new Set();
-    let kept = new Set();
-    let removed = new Set();
-    for (let key of before) {
+    const added = new Set();
+    const kept = new Set();
+    const removed = new Set();
+    for (const key of before) {
       if (after.has(key)) {
         kept.add(key);
       } else {
         removed.add(key);
       }
     }
-    for (let key of after) {
+    for (const key of after) {
       if (!before.has(key)) {
         added.add(key);
       }
@@ -17070,15 +17069,15 @@ var WorkshopBackend = (() => {
   };
   var applyClobbersToObj = function(clobbers, obj) {
     if (clobbers instanceof Map) {
-      for (let [keyPath, value] of clobbers) {
+      for (const [keyPath, value] of clobbers) {
         let effObj = obj;
-        for (let keyPart of keyPath.slice(0, -1)) {
+        for (const keyPart of keyPath.slice(0, -1)) {
           effObj = effObj[keyPart];
         }
         effObj[keyPath.slice(-1)[0]] = value;
       }
     } else {
-      for (let key of Object.keys(clobbers)) {
+      for (const key of Object.keys(clobbers)) {
         obj[key] = clobbers[key];
       }
     }
@@ -17113,11 +17112,11 @@ var WorkshopBackend = (() => {
   }
   function genericUncachedLookups(store, requestMap) {
     let dbReqCount = 0;
-    for (let unlatchedKey of requestMap.keys()) {
-      let key = unlatchedKey;
+    for (const unlatchedKey of requestMap.keys()) {
+      const key = unlatchedKey;
       dbReqCount++;
-      let req = store.get(key);
-      let handler = (event) => {
+      const req = store.get(key);
+      const handler = (event) => {
         let value;
         if (req.error) {
           value = null;
@@ -17134,8 +17133,8 @@ var WorkshopBackend = (() => {
   }
   function genericUncachedWrites(trans, tableName, writeMap) {
     if (writeMap) {
-      let store = trans.objectStore(tableName);
-      for (let [key, value] of writeMap) {
+      const store = trans.objectStore(tableName);
+      for (const [key, value] of writeMap) {
         if (value !== null) {
           store.put(value, key);
         } else {
@@ -17146,19 +17145,19 @@ var WorkshopBackend = (() => {
   }
   function genericCachedLookups(store, requestMap, cache) {
     let dbReqCount = 0;
-    for (let unlatchedKey of requestMap.keys()) {
-      let key = unlatchedKey;
+    for (const unlatchedKey of requestMap.keys()) {
+      const key = unlatchedKey;
       if (cache.has(key)) {
         requestMap.set(key, cache.get(key));
         continue;
       }
       dbReqCount++;
-      let req = store.get(key);
-      let handler = (event) => {
+      const req = store.get(key);
+      const handler = (event) => {
         if (req.error) {
           analyzeAndLogErrorEvent(event);
         } else {
-          let value = req.result;
+          const value = req.result;
           if (!cache.has(key)) {
             cache.set(key, value);
           }
@@ -17170,63 +17169,82 @@ var WorkshopBackend = (() => {
     }
     return dbReqCount;
   }
-  function MailDB({ universe: universe2, testOptions }) {
-    import_evt3.default.Emitter.call(this);
-    logic.defineScope(this, "MailDB");
-    this.universe = universe2;
-    this._db = null;
-    this.triggerManager = null;
-    this.accountManager = null;
-    this._lazyConfigCarryover = null;
-    this.convCache = new Map();
-    this.messageCache = new Map();
-    let dbVersion = CUR_VERSION;
-    if (testOptions && testOptions.dbDelta) {
-      dbVersion += testOptions.dbDelta;
-    }
-    if (testOptions && testOptions.dbVersion) {
-      dbVersion = testOptions.dbVersion;
-    }
-    this._dbPromise = new Promise((resolve, reject) => {
-      let openRequest = indexedDB.open("companion-workshop", dbVersion);
-      openRequest.onsuccess = () => {
-        this._db = openRequest.result;
-        resolve();
-      };
-      openRequest.onupgradeneeded = (event) => {
-        logic(this, "upgradeNeeded", {
-          oldVersion: event.oldVersion,
-          curVersion: dbVersion
-        });
-        let db = openRequest.result;
-        if (event.oldVersion < FRIENDLY_LAZY_DB_UPGRADE_VERSION || testOptions && testOptions.nukeDb) {
-          this._nukeDB(db);
-        } else {
-          var trans = openRequest.transaction;
-          let objectStores = Array.from(db.objectStoreNames);
-          if (objectStores.includes(TBL_CONFIG)) {
-            this._getConfig(trans).then((carryover) => {
-              if (carryover) {
-                carryover.oldVersion = event.oldVersion;
-                this._lazyConfigCarryover = carryover;
-              }
-            });
+  var MailDB = class extends import_evt3.Emitter {
+    constructor({ universe: universe2, testOptions }) {
+      super();
+      logic.defineScope(this, "MailDB");
+      this.universe = universe2;
+      this._db = null;
+      this.triggerManager = null;
+      this.accountManager = null;
+      this._lazyConfigCarryover = null;
+      this.convCache = new Map();
+      this.messageCache = new Map();
+      let dbVersion = CUR_VERSION;
+      if (testOptions && testOptions.dbDelta) {
+        dbVersion += testOptions.dbDelta;
+      }
+      if (testOptions && testOptions.dbVersion) {
+        dbVersion = testOptions.dbVersion;
+      }
+      this._dbPromise = new Promise((resolve, reject) => {
+        const openRequest = indexedDB.open("companion-workshop", dbVersion);
+        openRequest.onsuccess = () => {
+          this._db = openRequest.result;
+          resolve();
+        };
+        openRequest.onupgradeneeded = (event) => {
+          logic(this, "upgradeNeeded", {
+            oldVersion: event.oldVersion,
+            curVersion: dbVersion
+          });
+          const db = openRequest.result;
+          if (event.oldVersion < FRIENDLY_LAZY_DB_UPGRADE_VERSION || testOptions && testOptions.nukeDb) {
             this._nukeDB(db);
           } else {
-            logic(this, "failsafeNuke", { objectStores });
-            this._nukeDB(db);
+            const trans = openRequest.transaction;
+            const objectStores = Array.from(db.objectStoreNames);
+            if (objectStores.includes(TBL_CONFIG)) {
+              this._getConfig(trans).then((carryover) => {
+                if (carryover) {
+                  carryover.oldVersion = event.oldVersion;
+                  this._lazyConfigCarryover = carryover;
+                }
+              });
+              this._nukeDB(db);
+            } else {
+              logic(this, "failsafeNuke", { objectStores });
+              this._nukeDB(db);
+            }
           }
-        }
-      };
-      openRequest.onerror = analyzeAndRejectErrorEvent.bind(null, reject);
-    });
-  }
-  MailDB.prototype = import_evt3.default.mix({
+        };
+        openRequest.onerror = analyzeAndRejectErrorEvent.bind(null, reject);
+      });
+    }
+    emit(eventName) {
+      const listenerCount = this._events[eventName]?.length || 0;
+      logic(this, "emit", { name: eventName, listenerCount });
+      super.emit.apply(this, arguments);
+    }
+    on(eventName) {
+      if (!eventName) {
+        throw new Error("no event type provided!");
+      }
+      logic(this, "on", { name: eventName });
+      super.on.apply(this, arguments);
+    }
+    removeListener(eventName) {
+      if (!eventName) {
+        throw new Error("no event type provided!");
+      }
+      logic(this, "removeListener", { name: eventName });
+      super.removeListener.apply(this, arguments);
+    }
     _nukeDB(db) {
       logic(this, "nukeDB", {});
-      let existingNames = db.objectStoreNames;
-      for (let i = 0; i < existingNames.length; i++) {
-        db.deleteObjectStore(existingNames[i]);
+      const existingNames = db.objectStoreNames;
+      for (const existingName of existingNames) {
+        db.deleteObjectStore(existingName);
       }
       db.createObjectStore(TBL_CONFIG);
       db.createObjectStore(TBL_SYNC_STATES);
@@ -17241,44 +17259,41 @@ var WorkshopBackend = (() => {
       db.createObjectStore(TBL_UMID_NAME);
       db.createObjectStore(TBL_UMID_LOCATION);
       db.createObjectStore(TBL_BOUNDED_LOGS);
-    },
+    }
     close() {
       if (this._db) {
         this._db.close();
         this._db = null;
       }
-    },
-    getConfig() {
-      return this._dbPromise.then(() => {
-        if (this._lazyConfigCarryover) {
-          let carryover = this._lazyConfigCarryover;
-          this._lazyConfigCarryover = null;
-          return { config: null, accountDefs: null, carryover };
-        }
-        return this._getConfig();
-      });
-    },
-    _getConfig(trans) {
+    }
+    async getConfig() {
+      await this._dbPromise;
+      if (this._lazyConfigCarryover) {
+        const carryover = this._lazyConfigCarryover;
+        this._lazyConfigCarryover = null;
+        return { config: null, accountDefs: null, carryover };
+      }
+      return this._getConfig();
+    }
+    async _getConfig(trans) {
       logic(this, "_getConfig", { trans: !!trans });
-      let transaction = trans || this._db.transaction([TBL_CONFIG], "readonly");
-      let configStore = transaction.objectStore(TBL_CONFIG);
-      return wrapReq(configStore.getAll()).then((configRows) => {
-        let config = null;
-        let accountDefs = [];
-        for (let i = 0; i < configRows.length; i++) {
-          let obj = configRows[i];
-          if (obj.id === "config") {
-            config = obj;
-          } else {
-            accountDefs.push(obj);
-          }
+      const transaction = trans || this._db.transaction([TBL_CONFIG], "readonly");
+      const configStore = transaction.objectStore(TBL_CONFIG);
+      const configRows = await wrapReq(configStore.getAll());
+      let config = null;
+      const accountDefs = [];
+      for (const obj of configRows) {
+        if (obj.id === "config") {
+          config = obj;
+        } else {
+          accountDefs.push(obj);
         }
-        return { config, accountDefs };
-      });
-    },
+      }
+      return { config, accountDefs };
+    }
     saveConfig(config) {
       return wrapTrans(this._db.transaction(TBL_CONFIG, "readwrite").objectStore(TBL_CONFIG).put(config, "config"));
-    },
+    }
     saveAccountDef(config, accountDef, folderInfo, callback) {
       var trans = this._db.transaction([TBL_CONFIG, TBL_FOLDER_INFO], "readwrite");
       var configStore = trans.objectStore(TBL_CONFIG);
@@ -17293,30 +17308,30 @@ var WorkshopBackend = (() => {
           callback();
         };
       }
-    },
+    }
     addBoundedLogs(entries) {
-      let trans = this._db.transaction(TBL_BOUNDED_LOGS, "readwrite");
-      let store = trans.objectStore(TBL_BOUNDED_LOGS);
-      for (let entry of entries) {
+      const trans = this._db.transaction(TBL_BOUNDED_LOGS, "readwrite");
+      const store = trans.objectStore(TBL_BOUNDED_LOGS);
+      for (const entry of entries) {
         store.add(entry.entry, [entry.timestamp, entry.type, entry.id]);
       }
       return wrapTrans(trans);
-    },
+    }
     updateBoundedLogs(entries) {
-      let trans = this._db.transaction(TBL_BOUNDED_LOGS, "readwrite");
-      let store = trans.objectStore(TBL_BOUNDED_LOGS);
-      for (let entry of entries) {
+      const trans = this._db.transaction(TBL_BOUNDED_LOGS, "readwrite");
+      const store = trans.objectStore(TBL_BOUNDED_LOGS);
+      for (const entry of entries) {
         store.put(entry.entry, [entry.timestamp, entry.type, entry.id]);
       }
       return wrapTrans(trans);
-    },
+    }
     reapOldBoundedLogs() {
-      let trans = this._db.transaction(TBL_BOUNDED_LOGS, "readwrite");
-      let store = trans.objectStore(TBL_BOUNDED_LOGS);
-      let deleteRange = IDBKeyRange.bound([0], [Date.now() - BOUNDED_LOG_KEEP_TIME_MILLIS, []], true, true);
+      const trans = this._db.transaction(TBL_BOUNDED_LOGS, "readwrite");
+      const store = trans.objectStore(TBL_BOUNDED_LOGS);
+      const deleteRange = IDBKeyRange.bound([0], [Date.now() - BOUNDED_LOG_KEEP_TIME_MILLIS, []], true, true);
       store.delete(deleteRange);
       return wrapTrans(trans);
-    },
+    }
     _considerCachePressure() {
       if (this._emptyingCache) {
         return;
@@ -17325,20 +17340,20 @@ var WorkshopBackend = (() => {
         this._emptyingCache = null;
         this.emptyCache();
       }, 100);
-    },
+    }
     emptyCache() {
       this.emit("cacheDrop");
       this.convCache.clear();
       this.messageCache.clear();
-    },
+    }
     _bufferChangeEventsIdiom(eventId) {
-      let bufferedEvents = [];
-      let bufferFunc = (change) => {
+      const bufferedEvents = [];
+      const bufferFunc = (change) => {
         bufferedEvents.push(change);
       };
-      let drainEvents = (changeHandler) => {
+      const drainEvents = (changeHandler) => {
         this.removeListener(eventId, bufferFunc);
-        for (let change of bufferedEvents) {
+        for (const change of bufferedEvents) {
           changeHandler(change);
         }
       };
@@ -17347,24 +17362,24 @@ var WorkshopBackend = (() => {
         drainEvents,
         eventId
       };
-    },
+    }
     read(ctx, requests) {
       return new Promise((resolve) => {
         logic(this, "read:begin", { ctxId: ctx.id });
-        let trans = this._db.transaction(TASK_MUTATION_STORES, "readonly");
+        const trans = this._db.transaction(TASK_MUTATION_STORES, "readonly");
         let dbReqCount = 0;
         if (requests.config) {
           requests.config = this.universe.config;
         }
         if (requests.accounts) {
-          let accountReqs = requests.accounts;
-          for (let accountId of accountReqs.keys()) {
+          const accountReqs = requests.accounts;
+          for (const accountId of accountReqs.keys()) {
             accountReqs.set(accountId, this.accountManager.getAccountDefById(accountId));
           }
         }
         if (requests.folders) {
-          let folderReqs = requests.folders;
-          for (let folderId of folderReqs.keys()) {
+          const folderReqs = requests.folders;
+          for (const folderId of folderReqs.keys()) {
             folderReqs.set(folderId, this.accountManager.getFolderById(folderId));
           }
         }
@@ -17387,20 +17402,20 @@ var WorkshopBackend = (() => {
           dbReqCount += genericCachedLookups(trans.objectStore(TBL_CONV_INFO), requests.conversations, this.convCache);
         }
         if (requests.messagesByConversation) {
-          let messageStore = trans.objectStore(TBL_MESSAGES);
-          let messageCache = this.messageCache;
-          let requestsMap = requests.messagesByConversation;
-          for (let unlatchedConvId of requestsMap.keys()) {
-            let convId = unlatchedConvId;
-            let messageRange = IDBKeyRange.bound([convId], [convId, []], true, true);
+          const messageStore = trans.objectStore(TBL_MESSAGES);
+          const messageCache = this.messageCache;
+          const requestsMap = requests.messagesByConversation;
+          for (const unlatchedConvId of requestsMap.keys()) {
+            const convId = unlatchedConvId;
+            const messageRange = IDBKeyRange.bound([convId], [convId, []], true, true);
             dbReqCount++;
-            let req = messageStore.getAll(messageRange);
-            let handler = (event) => {
+            const req = messageStore.getAll(messageRange);
+            const handler = (event) => {
               if (req.error) {
                 analyzeAndLogErrorEvent(event);
               } else {
-                let messages = req.result;
-                for (let message of messages) {
+                const messages = req.result;
+                for (const message of messages) {
                   if (!messageCache.has(message.id)) {
                     messageCache.set(message.id, message);
                   }
@@ -17413,29 +17428,29 @@ var WorkshopBackend = (() => {
           }
         }
         if (requests.messages) {
-          let messageStore = trans.objectStore(TBL_MESSAGES);
-          let messageCache = this.messageCache;
-          let messageRequestsMap = requests.messages;
-          let messageResultsMap = requests.messages = new Map();
-          let flushedRead = requests.flushedMessageReads || false;
-          for (let [unlatchedMessageId, date] of messageRequestsMap.keys()) {
-            let messageId = unlatchedMessageId;
+          const messageStore = trans.objectStore(TBL_MESSAGES);
+          const messageCache = this.messageCache;
+          const messageRequestsMap = requests.messages;
+          const messageResultsMap = requests.messages = new Map();
+          const flushedRead = requests.flushedMessageReads || false;
+          for (const [unlatchedMessageId, date] of messageRequestsMap.keys()) {
+            const messageId = unlatchedMessageId;
             if (!flushedRead && messageCache.has(messageId)) {
               messageResultsMap.set(messageId, messageCache.get(messageId));
               continue;
             }
-            let key = [
+            const key = [
               convIdFromMessageId(messageId),
               date,
               messageSpecificIdFromMessageId(messageId)
             ];
             dbReqCount++;
-            let req = messageStore.get(key);
-            let handler = (event) => {
+            const req = messageStore.get(key);
+            const handler = (event) => {
               if (req.error) {
                 analyzeAndLogErrorEvent(event);
               } else {
-                let message = req.result;
+                const message = req.result;
                 if (flushedRead || !messageCache.has(messageId)) {
                   messageCache.set(messageId, message);
                 }
@@ -17460,13 +17475,13 @@ var WorkshopBackend = (() => {
           };
         }
       });
-    },
+    }
     beginMutate(ctx, mutateRequests, options) {
       return this.read(ctx, mutateRequests, options).then(() => {
-        let preMutateStates = ctx._preMutateStates = ctx._preMutateStates || {};
+        const preMutateStates = ctx._preMutateStates = ctx._preMutateStates || {};
         if (mutateRequests.conversations) {
-          let preConv = preMutateStates.conversations = new Map();
-          for (let conv of mutateRequests.conversations.values()) {
+          const preConv = preMutateStates.conversations = new Map();
+          for (const conv of mutateRequests.conversations.values()) {
             if (!conv) {
               continue;
             }
@@ -17479,10 +17494,10 @@ var WorkshopBackend = (() => {
           }
         }
         if (mutateRequests.messagesByConversation || mutateRequests.messages) {
-          let preMessages = preMutateStates.messages = new Map();
+          const preMessages = preMutateStates.messages = new Map();
           if (mutateRequests.messagesByConversation) {
-            for (let convMessages of mutateRequests.messagesByConversation.values()) {
-              for (let message of convMessages) {
+            for (const convMessages of mutateRequests.messagesByConversation.values()) {
+              for (const message of convMessages) {
                 preMessages.set(message.id, {
                   date: message.date,
                   folderIds: new Set(message.folderIds)
@@ -17491,7 +17506,7 @@ var WorkshopBackend = (() => {
             }
           }
           if (mutateRequests.messages) {
-            for (let message of mutateRequests.messages.values()) {
+            for (const message of mutateRequests.messages.values()) {
               preMessages.set(message.id, {
                 date: message.date,
                 folderIds: new Set(message.folderIds)
@@ -17501,35 +17516,38 @@ var WorkshopBackend = (() => {
         }
         return mutateRequests;
       });
-    },
-    loadTasks() {
-      let trans = this._db.transaction([TBL_TASKS, TBL_COMPLEX_TASKS], "readonly");
-      let taskStore = trans.objectStore(TBL_TASKS);
-      let complexTaskStore = trans.objectStore([TBL_COMPLEX_TASKS]);
-      return Promise.all([
+    }
+    async loadTasks() {
+      const trans = this._db.transaction([TBL_TASKS, TBL_COMPLEX_TASKS], "readonly");
+      const taskStore = trans.objectStore(TBL_TASKS);
+      const complexTaskStore = trans.objectStore([TBL_COMPLEX_TASKS]);
+      const [
+        wrappedTasks,
+        complexTaskStateKeys,
+        complexTaskStateValues
+      ] = await Promise.all([
         wrapReq(taskStore.getAll()),
         wrapReq(complexTaskStore.getAllKeys()),
         wrapReq(complexTaskStore.getAll())
-      ]).then(([wrappedTasks, complexTaskStateKeys, complexTaskStateValues]) => {
-        return {
-          wrappedTasks,
-          complexTaskStates: [complexTaskStateKeys, complexTaskStateValues]
-        };
-      });
-    },
+      ]);
+      return {
+        wrappedTasks,
+        complexTaskStates: [complexTaskStateKeys, complexTaskStateValues]
+      };
+    }
     loadFoldersByAccount(accountId) {
-      let trans = this._db.transaction(TBL_FOLDER_INFO, "readonly");
-      let store = trans.objectStore(TBL_FOLDER_INFO);
-      let accountStringPrefix = IDBKeyRange.bound(accountId + ".", accountId + ".\uFFF0", true, true);
+      const trans = this._db.transaction(TBL_FOLDER_INFO, "readonly");
+      const store = trans.objectStore(TBL_FOLDER_INFO);
+      const accountStringPrefix = IDBKeyRange.bound(accountId + ".", accountId + ".\uFFF0", true, true);
       return wrapReq(store.getAll(accountStringPrefix));
-    },
+    }
     async loadFolderConversationIdsAndListen(folderId) {
-      let eventId = "fldr!" + folderId + "!convs!tocChange";
-      let retval = this._bufferChangeEventsIdiom(eventId);
-      let trans = this._db.transaction(TBL_CONV_IDS_BY_FOLDER, "readonly");
-      let convIdsStore = trans.objectStore(TBL_CONV_IDS_BY_FOLDER);
-      let folderRange = IDBKeyRange.bound([folderId], [folderId, []], true, true);
-      let tuples = await wrapReq(convIdsStore.getAll(folderRange));
+      const eventId = "fldr!" + folderId + "!convs!tocChange";
+      const retval = this._bufferChangeEventsIdiom(eventId);
+      const trans = this._db.transaction(TBL_CONV_IDS_BY_FOLDER, "readonly");
+      const convIdsStore = trans.objectStore(TBL_CONV_IDS_BY_FOLDER);
+      const folderRange = IDBKeyRange.bound([folderId], [folderId, []], true, true);
+      const tuples = await wrapReq(convIdsStore.getAll(folderRange));
       logic(this, "loadFolderConversationIdsAndListen", {
         convCount: tuples.length,
         eventId: retval.eventId
@@ -17539,11 +17557,11 @@ var WorkshopBackend = (() => {
         return { date: x[1], id: x[2], height: x[3] };
       });
       return retval;
-    },
+    }
     _processConvAdditions(trans, convs) {
-      let convStore = trans.objectStore(TBL_CONV_INFO);
-      let convIdsStore = trans.objectStore(TBL_CONV_IDS_BY_FOLDER);
-      for (let convInfo of valueIterator(convs)) {
+      const convStore = trans.objectStore(TBL_CONV_INFO);
+      const convIdsStore = trans.objectStore(TBL_CONV_IDS_BY_FOLDER);
+      for (const convInfo of valueIterator(convs)) {
         convStore.add(convInfo, convInfo.id);
         this.convCache.set(convInfo.id, convInfo);
         const eventDeltaInfo = {
@@ -17554,24 +17572,24 @@ var WorkshopBackend = (() => {
           height: convInfo.height,
           oldHeight: 0
         };
-        for (let folderId of convInfo.folderIds) {
+        for (const folderId of convInfo.folderIds) {
           this.emit("conv!*!add", convInfo);
           this.emit(convEventForFolderId(folderId), eventDeltaInfo);
           convIdsStore.add([folderId, convInfo.date, convInfo.id, convInfo.height], [folderId, convInfo.date, convInfo.id]);
         }
       }
-    },
+    }
     _processConvMutations(trans, preStates, convs) {
-      let convStore = trans.objectStore(TBL_CONV_INFO);
-      let convIdsStore = trans.objectStore(TBL_CONV_IDS_BY_FOLDER);
-      for (let [convId, convInfo] of convs) {
-        let preInfo = preStates.get(convId);
+      const convStore = trans.objectStore(TBL_CONV_INFO);
+      const convIdsStore = trans.objectStore(TBL_CONV_IDS_BY_FOLDER);
+      for (const [convId, convInfo] of convs) {
+        const preInfo = preStates.get(convId);
         let convFolderIds;
         if (convInfo === null) {
           convStore.delete(convId);
           this.convCache.delete(convId);
           convFolderIds = new Set();
-          let messageRange = IDBKeyRange.bound([convId], [convId, []], true, true);
+          const messageRange = IDBKeyRange.bound([convId], [convId, []], true, true);
           trans.objectStore(TBL_MESSAGES).delete(messageRange);
         } else {
           convFolderIds = convInfo.folderIds;
@@ -17579,9 +17597,9 @@ var WorkshopBackend = (() => {
           this.convCache.set(convId, convInfo);
         }
         this.emit("conv!" + convId + "!change", convId, convInfo);
-        let { added, kept, removed } = computeSetDelta(preInfo.folderIds, convFolderIds);
+        const { added, kept, removed } = computeSetDelta(preInfo.folderIds, convFolderIds);
         this.emit("conv!*!change", convId, preInfo, convInfo, added, kept, removed);
-        for (let folderId of added) {
+        for (const folderId of added) {
           this.emit(convEventForFolderId(folderId), {
             id: convId,
             item: convInfo,
@@ -17591,7 +17609,7 @@ var WorkshopBackend = (() => {
             oldHeight: 0
           });
         }
-        for (let folderId of kept) {
+        for (const folderId of kept) {
           this.emit(convEventForFolderId(folderId), {
             id: convId,
             item: convInfo,
@@ -17601,7 +17619,7 @@ var WorkshopBackend = (() => {
             oldHeight: preInfo.height
           });
         }
-        for (let folderId of removed) {
+        for (const folderId of removed) {
           this.emit(convEventForFolderId(folderId), {
             id: convId,
             item: convInfo,
@@ -17612,31 +17630,31 @@ var WorkshopBackend = (() => {
           });
         }
         if (!convInfo || preInfo.date !== convInfo.date || preInfo.height !== convInfo.height) {
-          for (let folderId of preInfo.folderIds) {
+          for (const folderId of preInfo.folderIds) {
             convIdsStore.delete([folderId, preInfo.date, convId]);
           }
           if (convInfo) {
-            for (let folderId of convFolderIds) {
+            for (const folderId of convFolderIds) {
               convIdsStore.add([folderId, convInfo.date, convId, convInfo.height], [folderId, convInfo.date, convId]);
             }
           }
         } else {
-          for (let folderId of removed) {
+          for (const folderId of removed) {
             convIdsStore.delete([folderId, convInfo.date, convId]);
           }
-          for (let folderId of added) {
+          for (const folderId of added) {
             convIdsStore.add([folderId, convInfo.date, convId, convInfo.height], [folderId, convInfo.date, convId]);
           }
         }
       }
-    },
+    }
     async loadFolderMessageIdsAndListen(folderId) {
-      let eventId = "fldr!" + folderId + "!messages!tocChange";
-      let retval = this._bufferChangeEventsIdiom(eventId);
-      let trans = this._db.transaction(TBL_MSG_IDS_BY_FOLDER, "readonly");
-      let msgIdsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
-      let folderRange = IDBKeyRange.bound([folderId], [folderId, []], true, true);
-      let tuples = await wrapReq(msgIdsStore.getAll(folderRange));
+      const eventId = "fldr!" + folderId + "!messages!tocChange";
+      const retval = this._bufferChangeEventsIdiom(eventId);
+      const trans = this._db.transaction(TBL_MSG_IDS_BY_FOLDER, "readonly");
+      const msgIdsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
+      const folderRange = IDBKeyRange.bound([folderId], [folderId, []], true, true);
+      const tuples = await wrapReq(msgIdsStore.getAll(folderRange));
       logic(this, "loadFolderMessageIdsAndListen", {
         msgCount: tuples.length,
         eventId: retval.eventId
@@ -17646,31 +17664,31 @@ var WorkshopBackend = (() => {
         return { date: x[1], id: x[2] };
       });
       return retval;
-    },
+    }
     async loadConversationMessageIdsAndListen(convId) {
-      let tocEventId = "conv!" + convId + "!messages!tocChange";
-      let convEventId = "conv!" + convId + "!change";
-      let { drainEvents } = this._bufferChangeEventsIdiom(tocEventId);
-      let trans = this._db.transaction(TBL_MESSAGES, "readonly");
-      let messageStore = trans.objectStore(TBL_MESSAGES);
-      let messageRange = IDBKeyRange.bound([convId], [convId, []], true, true);
-      let messages = await wrapReq(messageStore.getAll(messageRange));
-      let messageCache = this.messageCache;
-      let idsWithDates = messages.map(function(message) {
+      const tocEventId = "conv!" + convId + "!messages!tocChange";
+      const convEventId = "conv!" + convId + "!change";
+      const { drainEvents } = this._bufferChangeEventsIdiom(tocEventId);
+      const trans = this._db.transaction(TBL_MESSAGES, "readonly");
+      const messageStore = trans.objectStore(TBL_MESSAGES);
+      const messageRange = IDBKeyRange.bound([convId], [convId, []], true, true);
+      const messages = await wrapReq(messageStore.getAll(messageRange));
+      const messageCache = this.messageCache;
+      const idsWithDates = messages.map(function(message) {
         if (!messageCache.has(message.id)) {
           messageCache.set(message.id, message);
         }
         return { date: message.date, id: message.id };
       });
       return { tocEventId, convEventId, idsWithDates, drainEvents };
-    },
+    }
     _processMessageAdditions(trans, messages) {
-      let store = trans.objectStore(TBL_MESSAGES);
-      let idsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
-      let messageCache = this.messageCache;
-      for (let message of valueIterator(messages)) {
-        let convId = convIdFromMessageId(message.id);
-        let key = [
+      const store = trans.objectStore(TBL_MESSAGES);
+      const idsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
+      const messageCache = this.messageCache;
+      for (const message of valueIterator(messages)) {
+        const convId = convIdFromMessageId(message.id);
+        const key = [
           convId,
           message.date,
           messageSpecificIdFromMessageId(message.id)
@@ -17693,17 +17711,17 @@ var WorkshopBackend = (() => {
           idsStore.add([folderId, message.date, message.id], [folderId, message.date, message.id]);
         }
       }
-    },
+    }
     _processMessageMutations(trans, preStates, messages) {
-      let store = trans.objectStore(TBL_MESSAGES);
-      let idsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
-      let messageCache = this.messageCache;
-      for (let [messageId, message] of messages) {
-        let convId = convIdFromMessageId(messageId);
-        let preInfo = preStates.get(messageId);
-        let preDate = preInfo.date;
-        let postDate = message && message.date;
-        let preKey = [
+      const store = trans.objectStore(TBL_MESSAGES);
+      const idsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
+      const messageCache = this.messageCache;
+      for (const [messageId, message] of messages) {
+        const convId = convIdFromMessageId(messageId);
+        const preInfo = preStates.get(messageId);
+        const preDate = preInfo.date;
+        const postDate = message && message.date;
+        const preKey = [
           convId,
           preDate,
           messageSpecificIdFromMessageId(messageId)
@@ -17713,7 +17731,7 @@ var WorkshopBackend = (() => {
           messageCache.delete(messageId);
         } else if (preDate !== postDate) {
           store.delete(preKey);
-          let postKey = [
+          const postKey = [
             convId,
             postDate,
             messageSpecificIdFromMessageId(messageId)
@@ -17723,8 +17741,8 @@ var WorkshopBackend = (() => {
           store.put(message, preKey);
           messageCache.set(messageId, message);
         }
-        let { added, kept, removed } = computeSetDelta(preInfo.folderIds, message ? message.folderIds : new Set());
-        let convEventId = "conv!" + convId + "!messages!tocChange";
+        const { added, kept, removed } = computeSetDelta(preInfo.folderIds, message ? message.folderIds : new Set());
+        const convEventId = "conv!" + convId + "!messages!tocChange";
         this.emit(convEventId, {
           id: messageId,
           preDate,
@@ -17733,7 +17751,7 @@ var WorkshopBackend = (() => {
           freshlyAdded: false,
           matchInfo: null
         });
-        let messageEventId = "msg!" + messageId + "!change";
+        const messageEventId = "msg!" + messageId + "!change";
         this.emit(messageEventId, messageId, message);
         for (const folderId of added) {
           this.emit(messageEventForFolderId(folderId), {
@@ -17788,9 +17806,9 @@ var WorkshopBackend = (() => {
           }
         }
       }
-    },
+    }
     _applyAtomics(atomics, rootMutations) {
-      let { atomicDeltas, atomicClobbers } = atomics;
+      const { atomicDeltas, atomicClobbers } = atomics;
       const accountManager = this.accountManager;
       if (atomicDeltas) {
         if (atomicDeltas.config) {
@@ -17803,9 +17821,9 @@ var WorkshopBackend = (() => {
           if (!rootMutations.accounts) {
             rootMutations.accounts = new Map();
           }
-          let accountMutations = rootMutations.accounts;
-          for (let [accountId, deltas] of atomicDeltas.accounts) {
-            let accountDef = accountManager.getAccountDefById(accountId);
+          const accountMutations = rootMutations.accounts;
+          for (const [accountId, deltas] of atomicDeltas.accounts) {
+            const accountDef = accountManager.getAccountDefById(accountId);
             applyDeltasToObj(deltas, accountDef);
             accountMutations.set(accountId, accountDef);
           }
@@ -17814,9 +17832,9 @@ var WorkshopBackend = (() => {
           if (!rootMutations.folders) {
             rootMutations.folders = new Map();
           }
-          let folderMutations = rootMutations.folders;
-          for (let [folderId, deltas] of atomicDeltas.folders) {
-            let folder = accountManager.getFolderById(folderId);
+          const folderMutations = rootMutations.folders;
+          for (const [folderId, deltas] of atomicDeltas.folders) {
+            const folder = accountManager.getFolderById(folderId);
             applyDeltasToObj(deltas, folder);
             folderMutations.set(folderId, folder);
           }
@@ -17833,9 +17851,9 @@ var WorkshopBackend = (() => {
           if (!rootMutations.accounts) {
             rootMutations.accounts = new Map();
           }
-          let accountMutations = rootMutations.accounts;
-          for (let [accountId, clobbers] of atomicClobbers.accounts) {
-            let accountDef = accountManager.getAccountDefById(accountId);
+          const accountMutations = rootMutations.accounts;
+          for (const [accountId, clobbers] of atomicClobbers.accounts) {
+            const accountDef = accountManager.getAccountDefById(accountId);
             applyClobbersToObj(clobbers, accountDef);
             accountMutations.set(accountId, accountDef);
           }
@@ -17844,19 +17862,19 @@ var WorkshopBackend = (() => {
           if (!rootMutations.folders) {
             rootMutations.folders = new Map();
           }
-          let folderMutations = rootMutations.folders;
-          for (let [folderId, clobbers] of atomicClobbers.folders) {
-            let folder = accountManager.getFolderById(folderId);
+          const folderMutations = rootMutations.folders;
+          for (const [folderId, clobbers] of atomicClobbers.folders) {
+            const folder = accountManager.getFolderById(folderId);
             applyClobbersToObj(clobbers, folder);
             folderMutations.set(folderId, folder);
           }
         }
       }
-    },
+    }
     _processAccountDeletion(trans, accountId) {
-      let accountStringPrefix = IDBKeyRange.bound(accountId + ".", accountId + ".\uFFF0", true, true);
-      let accountArrayItemPrefix = IDBKeyRange.bound([accountId + "."], [accountId + ".\uFFF0"], true, true);
-      let accountFirstElementArray = IDBKeyRange.bound([accountId], [accountId, []], true, true);
+      const accountStringPrefix = IDBKeyRange.bound(accountId + ".", accountId + ".\uFFF0", true, true);
+      const accountArrayItemPrefix = IDBKeyRange.bound([accountId + "."], [accountId + ".\uFFF0"], true, true);
+      const accountFirstElementArray = IDBKeyRange.bound([accountId], [accountId, []], true, true);
       trans.objectStore(TBL_CONFIG).delete(CONFIG_KEYPREFIX_ACCOUNT_DEF + accountId);
       trans.objectStore(TBL_SYNC_STATES).delete(accountId);
       trans.objectStore(TBL_SYNC_STATES).delete(accountStringPrefix);
@@ -17869,45 +17887,45 @@ var WorkshopBackend = (() => {
       trans.objectStore(TBL_HEADER_ID_MAP).delete(accountFirstElementArray);
       trans.objectStore(TBL_UMID_LOCATION).delete(accountStringPrefix);
       trans.objectStore(TBL_UMID_NAME).delete(accountStringPrefix);
-    },
+    }
     _addRawTasks(trans, wrappedTasks) {
-      let store = trans.objectStore(TBL_TASKS);
+      const store = trans.objectStore(TBL_TASKS);
       wrappedTasks.forEach((wrappedTask) => {
         store.add(wrappedTask, wrappedTask.id);
       });
-    },
+    }
     addTasks(wrappedTasks) {
-      let trans = this._db.transaction([TBL_TASKS], "readwrite");
+      const trans = this._db.transaction([TBL_TASKS], "readwrite");
       this._addRawTasks(trans, wrappedTasks);
       return wrapTrans(trans);
-    },
+    }
     dangerousIncrementalWrite(ctx, mutations) {
       logic(this, "dangerousIncrementalWrite:begin", { ctxId: ctx.id });
-      let trans = this._db.transaction(TASK_MUTATION_STORES, "readwrite");
+      const trans = this._db.transaction(TASK_MUTATION_STORES, "readwrite");
       if (mutations.messages) {
         this._processMessageMutations(trans, ctx._preMutateStates.messages, mutations.messages);
       }
       return wrapTrans(trans).then(() => {
         logic(this, "dangerousIncrementalWrite:end", { ctxId: ctx.id });
       });
-    },
+    }
     finishMutate(ctx, data, taskData) {
       logic(this, "finishMutate:begin", { ctxId: ctx.id, _data: data });
-      let trans = this._db.transaction(TASK_MUTATION_STORES, "readwrite");
-      let derivedMutations = [];
+      const trans = this._db.transaction(TASK_MUTATION_STORES, "readwrite");
+      const derivedMutations = [];
       this.triggerManager.__setState(ctx, derivedMutations);
-      let newData = data.newData;
+      const newData = data.newData;
       if (newData) {
         if (newData.accounts) {
-          for (let accountDef of newData.accounts) {
+          for (const accountDef of newData.accounts) {
             trans.objectStore(TBL_CONFIG).put(accountDef, CONFIG_KEYPREFIX_ACCOUNT_DEF + accountDef.id);
             this.emit("accounts!tocChange", accountDef.id, accountDef, true);
           }
         }
         if (newData.folders) {
-          let store = trans.objectStore(TBL_FOLDER_INFO);
-          for (let folderInfo of newData.folders) {
-            let accountId = accountIdFromFolderId(folderInfo.id);
+          const store = trans.objectStore(TBL_FOLDER_INFO);
+          for (const folderInfo of newData.folders) {
+            const accountId = accountIdFromFolderId(folderInfo.id);
             store.put(folderInfo, folderInfo.id);
             this.emit(`acct!${accountId}!folders!tocChange`, folderInfo.id, folderInfo, true);
           }
@@ -17937,13 +17955,13 @@ var WorkshopBackend = (() => {
       this.triggerManager.__clearState();
       this._applyAtomics(data, mutations);
       if (derivedMutations.length) {
-        for (let derivedMut of derivedMutations) {
+        for (const derivedMut of derivedMutations) {
           this._applyAtomics(derivedMut, mutations);
           if (derivedMut.complexTaskStates) {
             if (!mutations.complexTaskStates) {
               mutations.complexTaskStates = new Map();
             }
-            for (let [key, value] of derivedMut.complexTaskStates) {
+            for (const [key, value] of derivedMut.complexTaskStates) {
               mutations.complexTaskStates.set(key, value);
             }
           }
@@ -17953,14 +17971,14 @@ var WorkshopBackend = (() => {
         }
       }
       if (mutations.complexTaskStates) {
-        for (let [key, complexTaskState] of mutations.complexTaskStates) {
+        for (const [key, complexTaskState] of mutations.complexTaskStates) {
           trans.objectStore(TBL_COMPLEX_TASKS).put(complexTaskState, key);
         }
       }
       if (mutations.folders) {
-        let store = trans.objectStore(TBL_FOLDER_INFO);
-        for (let [folderId, folderInfo] of mutations.folders) {
-          let accountId = accountIdFromFolderId(folderId);
+        const store = trans.objectStore(TBL_FOLDER_INFO);
+        for (const [folderId, folderInfo] of mutations.folders) {
+          const accountId = accountIdFromFolderId(folderId);
           if (folderInfo !== null) {
             store.put(folderInfo, folderId);
           } else {
@@ -17971,7 +17989,7 @@ var WorkshopBackend = (() => {
         }
       }
       if (mutations.accounts) {
-        for (let [accountId, accountDef] of mutations.accounts) {
+        for (const [accountId, accountDef] of mutations.accounts) {
           if (accountDef) {
             trans.objectStore(TBL_CONFIG).put(accountDef, CONFIG_KEYPREFIX_ACCOUNT_DEF + accountId);
           } else {
@@ -17986,7 +18004,7 @@ var WorkshopBackend = (() => {
         this.emit("config", mutations.config);
       }
       if (taskData.revisedTaskInfo) {
-        let revisedTaskInfo = taskData.revisedTaskInfo;
+        const revisedTaskInfo = taskData.revisedTaskInfo;
         if (revisedTaskInfo.state) {
           trans.objectStore(TBL_TASKS).put(revisedTaskInfo.state, revisedTaskInfo.id);
         } else {
@@ -17994,8 +18012,8 @@ var WorkshopBackend = (() => {
         }
       }
       if (taskData.wrappedTasks) {
-        let taskStore = trans.objectStore(TBL_TASKS);
-        for (let wrappedTask of taskData.wrappedTasks) {
+        const taskStore = trans.objectStore(TBL_TASKS);
+        for (const wrappedTask of taskData.wrappedTasks) {
           taskStore.put(wrappedTask, wrappedTask.id);
         }
       }
@@ -18004,31 +18022,7 @@ var WorkshopBackend = (() => {
         this._considerCachePressure("mutate", ctx);
       });
     }
-  });
-  MailDB.prototype._emit = MailDB.prototype.emit;
-  MailDB.prototype.emit = function(eventName) {
-    var listeners2 = this._events[eventName];
-    var listenerCount = listeners2 ? listeners2.length : 0;
-    logic(this, "emit", { name: eventName, listenerCount });
-    this._emit.apply(this, arguments);
   };
-  MailDB.prototype._on = MailDB.prototype.on;
-  MailDB.prototype.on = function(eventName) {
-    if (!eventName) {
-      throw new Error("no event type provided!");
-    }
-    logic(this, "on", { name: eventName });
-    this._on.apply(this, arguments);
-  };
-  MailDB.prototype._removeListener = MailDB.prototype.removeListener;
-  MailDB.prototype.removeListener = function(eventName) {
-    if (!eventName) {
-      throw new Error("no event type provided!");
-    }
-    logic(this, "removeListener", { name: eventName });
-    this._removeListener.apply(this, arguments);
-  };
-  var maildb_default = MailDB;
 
   // src/backend/universe/account_manager.js
   init_logic();
@@ -18300,53 +18294,53 @@ var WorkshopBackend = (() => {
     }
     return a.name.localeCompare(b.name);
   }
-  function AccountsTOC() {
-    import_evt5.default.Emitter.call(this);
-    logic.defineScope(this, "AccountsTOC");
-    this.accountDefs = this.items = [];
-    this.accountDefsById = this.itemsById = new Map();
-  }
-  AccountsTOC.prototype = import_evt5.default.mix({
-    type: "AccountsTOC",
-    overlayNamespace: "accounts",
-    __acquire() {
-      return Promise.resolve(this);
-    },
+  var AccountsTOC = class extends import_evt5.Emitter {
+    constructor() {
+      super();
+      logic.defineScope(this, "AccountsTOC");
+      this.type = "AccountsTOC";
+      this.overlayNamespace = "accounts";
+      this.accountDefs = this.items = [];
+      this.accountDefsById = this.itemsById = new Map();
+    }
+    async __acquire() {
+      return this;
+    }
     __release() {
-    },
+    }
     isKnownAccount(accountId) {
       return this.accountDefsById.has(accountId);
-    },
+    }
     getAllItems() {
       return this.accountDefs.map(this.accountDefToWireRep);
-    },
+    }
     getItemIndexById(id) {
       const item = this.itemsById.get(id);
       return this.items.indexOf(item);
-    },
+    }
     __addAccount(accountDef) {
-      let idx = bsearchForInsert(this.accountDefs, accountDef, accountDefComparator);
+      const idx = bsearchForInsert(this.accountDefs, accountDef, accountDefComparator);
       this.accountDefs.splice(idx, 0, accountDef);
       this.accountDefsById.set(accountDef.id, accountDef);
       logic(this, "addAccount", { accountId: accountDef.id, index: idx });
-      let wireRep = this.accountDefToWireRep(accountDef);
+      const wireRep = this.accountDefToWireRep(accountDef);
       this.emit("add", wireRep, idx);
-    },
+    }
     __accountModified(accountDef) {
-      let idx = this.accountDefs.indexOf(accountDef);
+      const idx = this.accountDefs.indexOf(accountDef);
       if (idx === -1) {
         throw new Error("how do you have a different object?");
       }
       this.emit("change", this.accountDefToWireRep(accountDef), idx);
-    },
+    }
     __removeAccountById(accountId) {
-      let accountDef = this.accountDefsById.get(accountId);
-      let idx = this.accountDefs.indexOf(accountDef);
+      const accountDef = this.accountDefsById.get(accountId);
+      const idx = this.accountDefs.indexOf(accountDef);
       logic(this, "removeAccountById", { accountId, index: idx });
       this.accountDefsById.delete(accountId);
       this.accountDefs.splice(idx, 1);
       this.emit("remove", accountId, idx);
-    },
+    }
     accountDefToWireRep(accountDef) {
       return Object.assign({
         id: accountDef.id,
@@ -18380,7 +18374,7 @@ var WorkshopBackend = (() => {
         ]
       }, engineFrontEndAccountMeta.get(accountDef.engine));
     }
-  });
+  };
 
   // src/backend/db/folders_toc.js
   init_logic();
@@ -18414,46 +18408,41 @@ var WorkshopBackend = (() => {
     }
     return 0;
   }
-  function FoldersTOC({
-    db,
-    accountDef,
-    folders,
-    dataOverlayManager
-  }) {
-    import_evt6.default.Emitter.call(this);
-    logic.defineScope(this, "FoldersTOC");
-    this.accountDef = accountDef;
-    this.engineFolderMeta = engineFrontEndFolderMeta.get(accountDef.engine);
-    this.engineHacks = engineHacks.get(accountDef.engine);
-    this.accountId = accountDef.id;
-    this._dataOverlayManager = dataOverlayManager;
-    this.foldersById = this.itemsById = new Map();
-    this.foldersByPath = new Map();
-    this._pendingFoldersByPath = new Map();
-    this._pendingTaskContextIdsToPendingPaths = new Map();
-    this.items = this.folders = [];
-    this.folderSortStrings = [];
-    let nextFolderNum = 0;
-    for (let folderInfo of folders) {
-      this._addFolder(folderInfo);
-      nextFolderNum = Math.max(nextFolderNum, decodeSpecificFolderIdFromFolderId(folderInfo.id) + 1);
+  var FoldersTOC = class extends import_evt6.Emitter {
+    constructor({ db, accountDef, folders, dataOverlayManager }) {
+      super();
+      logic.defineScope(this, "FoldersTOC");
+      this.type = "FoldersTOC";
+      this.overlayNamespace = "folders";
+      this.accountDef = accountDef;
+      this.engineFolderMeta = engineFrontEndFolderMeta.get(accountDef.engine);
+      this.engineHacks = engineHacks.get(accountDef.engine);
+      this.accountId = accountDef.id;
+      this._dataOverlayManager = dataOverlayManager;
+      this.foldersById = this.itemsById = new Map();
+      this.foldersByPath = new Map();
+      this._pendingFoldersByPath = new Map();
+      this._pendingTaskContextIdsToPendingPaths = new Map();
+      this.items = this.folders = [];
+      this.folderSortStrings = [];
+      let nextFolderNum = 0;
+      for (const folderInfo of folders) {
+        this._addFolder(folderInfo);
+        nextFolderNum = Math.max(nextFolderNum, decodeSpecificFolderIdFromFolderId(folderInfo.id) + 1);
+      }
+      this._nextFolderNum = nextFolderNum;
+      db.on(`acct!${accountDef.id}!change`, this._onAccountChange.bind(this));
+      db.on(`acct!${accountDef.id}!folders!tocChange`, this._onTOCChange.bind(this));
+      dataOverlayManager.on("accountCascadeToFolders", this._onAccountOverlayCascade.bind(this));
     }
-    this._nextFolderNum = nextFolderNum;
-    db.on(`acct!${accountDef.id}!change`, this._onAccountChange.bind(this));
-    db.on(`acct!${accountDef.id}!folders!tocChange`, this._onTOCChange.bind(this));
-    dataOverlayManager.on("accountCascadeToFolders", this._onAccountOverlayCascade.bind(this));
-  }
-  FoldersTOC.prototype = import_evt6.default.mix({
-    type: "FoldersTOC",
-    overlayNamespace: "folders",
     __acquire() {
       return Promise.resolve(this);
-    },
+    }
     __release() {
-    },
+    }
     issueFolderId() {
       return this.accountId + "." + encodeInt(this._nextFolderNum++);
-    },
+    }
     ensureLocalVirtualFolder(taskContext, folderPath) {
       let folderInfo = this.foldersByPath.get(folderPath);
       if (folderInfo) {
@@ -18484,7 +18473,7 @@ var WorkshopBackend = (() => {
       });
       this._pendingFoldersByPath.set(folderPath, folderInfo);
       return folderInfo;
-    },
+    }
     _isFolderPathPending(folderPath) {
       for (const taskPendingPaths of this._pendingTaskContextIdsToPendingPaths.values()) {
         if (taskPendingPaths.has(folderPath)) {
@@ -18492,7 +18481,7 @@ var WorkshopBackend = (() => {
         }
       }
       return false;
-    },
+    }
     _onTaskFinishing(taskCtx, success, finishData) {
       const taskPendingPaths = this._pendingTaskContextIdsToPendingPaths.get(taskCtx.id);
       this._pendingTaskContextIdsToPendingPaths.delete(taskCtx.id);
@@ -18518,41 +18507,40 @@ var WorkshopBackend = (() => {
         }
         finishData.newData.folders.push(folderInfo);
       }
-    },
+    }
     getAllItems() {
       return this.items;
-    },
+    }
     getItemIndexById(id) {
       return this.items.findIndex((item) => {
         return item.id === id;
       });
-    },
+    }
     _makeFolderSortString(folderInfo) {
       if (!folderInfo) {
         return "";
       }
       var parentFolderInfo = this.foldersById.get(folderInfo.parentId);
       return this._makeFolderSortString(parentFolderInfo) + "!" + FOLDER_TYPE_TO_SORT_PRIORITY[folderInfo.type] + "!" + folderInfo.name.toLocaleLowerCase();
-    },
+    }
     _onAccountOverlayCascade(accountId) {
       if (accountId === this.accountId) {
-        for (let i = 0; i < this.items.length; i++) {
-          let folder = this.items[i];
+        for (const folder of this.items) {
           this._dataOverlayManager.announceUpdatedOverlayData(this.overlayNamespace, folder.id);
         }
       }
-    },
+    }
     _onAccountChange() {
       this._fakeFolderDataChanges();
-    },
+    }
     _fakeFolderDataChanges(filterFunc) {
       for (let i = 0; i < this.items.length; i++) {
-        let folder = this.items[i];
+        const folder = this.items[i];
         if (!filterFunc || filterFunc(folder)) {
           this.emit("change", this.folderInfoToWireRep(folder), i);
         }
       }
-    },
+    }
     _onTOCChange(folderId, folderInfo, isNew) {
       if (isNew) {
         this._addFolder(folderInfo);
@@ -18561,10 +18549,10 @@ var WorkshopBackend = (() => {
       } else {
         this._removeFolderById(folderId);
       }
-    },
+    }
     _addFolder(folderInfo) {
-      let sortString = this._makeFolderSortString(folderInfo);
-      let idx = bsearchForInsert(this.folderSortStrings, sortString, strcmp);
+      const sortString = this._makeFolderSortString(folderInfo);
+      const idx = bsearchForInsert(this.folderSortStrings, sortString, strcmp);
       this.items.splice(idx, 0, folderInfo);
       logic(this, "addFolder", {
         id: folderInfo.id,
@@ -18575,10 +18563,10 @@ var WorkshopBackend = (() => {
       this.foldersById.set(folderInfo.id, folderInfo);
       this.foldersByPath.set(folderInfo.path, folderInfo);
       this.emit("add", this.folderInfoToWireRep(folderInfo), idx);
-    },
+    }
     _removeFolderById(id) {
-      let folderInfo = this.foldersById.get(id);
-      let idx = this.items.indexOf(folderInfo);
+      const folderInfo = this.foldersById.get(id);
+      const idx = this.items.indexOf(folderInfo);
       logic(this, "removeFolderById", { id, index: idx });
       if (!folderInfo || idx === -1) {
         throw new Error("the folder did not exist?");
@@ -18588,17 +18576,17 @@ var WorkshopBackend = (() => {
       this.items.splice(idx, 1);
       this.folderSortStrings.splice(idx, 1);
       this.emit("remove", id, idx);
-    },
+    }
     getCanonicalFolderByType(type) {
       return this.items.find((folder) => folder.type === type) || null;
-    },
+    }
     generatePersistenceInfo() {
       return this._foldersDbState;
-    },
+    }
     folderInfoToWireRep(folder) {
       let mixFromAccount;
       if (this.engineFolderMeta.syncGranularity === "account" && this.accountDef.syncInfo) {
-        let syncInfo = this.accountDef.syncInfo;
+        const syncInfo = this.accountDef.syncInfo;
         mixFromAccount = {
           lastSuccessfulSyncAt: syncInfo.lastSuccessfulSyncAt,
           lastAttemptedSyncAt: syncInfo.lastAttemptedSyncAt,
@@ -18609,12 +18597,12 @@ var WorkshopBackend = (() => {
         engineSaysUnselectable: this.engineHacks.unselectableFolderTypes.has(folder.type)
       }, mixFromAccount);
     }
-  });
+  };
 
   // src/backend/universe/account_manager.js
   function prereqify(mapPropName, func, forgetOnResolve) {
     return function(id) {
-      let map = this[mapPropName];
+      const map = this[mapPropName];
       let promise = map.get(id);
       if (promise) {
         return promise;
@@ -18633,109 +18621,103 @@ var WorkshopBackend = (() => {
       return promise;
     };
   }
-  function AccountManager({
-    db,
-    universe: universe2,
-    taskRegistry,
-    taskResources
-  }) {
-    logic.defineScope(this, "AccountManager");
-    this.db = db;
-    db.accountManager = this;
-    this.universe = universe2;
-    this.taskRegistry = taskRegistry;
-    this.taskResources = taskResources;
-    this._immediateAccountDefsById = new Map();
-    this.accountsTOC = new AccountsTOC();
-    this._taskTypeLoads = new Map();
-    this._accountFoldersTOCLoads = new Map();
-    this._accountLoads = new Map();
-    this._stashedConnectionsByAccountId = new Map();
-    this.accountFoldersTOCs = new Map();
-    this.accounts = new Map();
-    this.db.on("accounts!tocChange", this._onTOCChange.bind(this));
-  }
-  AccountManager.prototype = {
-    initFromDB(accountDefs) {
-      let waitFor = [];
-      for (let accountDef of accountDefs) {
-        waitFor.push(this._accountAdded(accountDef));
-      }
-      return Promise.all(waitFor);
-    },
-    stashAccountConnection(accountId, conn) {
-      this._stashedConnectionsByAccountId.set(accountId, conn);
-    },
-    _ensureTasksLoaded: prereqify("_taskTypeLoads", function(engineId) {
-      return engineTaskMappings.get(engineId)().then((tasks) => {
+  var AccountManager = class {
+    constructor({ db, universe: universe2, taskRegistry, taskResources }) {
+      logic.defineScope(this, "AccountManager");
+      this.db = db;
+      db.accountManager = this;
+      this.universe = universe2;
+      this.taskRegistry = taskRegistry;
+      this.taskResources = taskResources;
+      this._immediateAccountDefsById = new Map();
+      this.accountsTOC = new AccountsTOC();
+      this._taskTypeLoads = new Map();
+      this._accountFoldersTOCLoads = new Map();
+      this._accountLoads = new Map();
+      this._stashedConnectionsByAccountId = new Map();
+      this.accountFoldersTOCs = new Map();
+      this.accounts = new Map();
+      this.db.on("accounts!tocChange", this._onTOCChange.bind(this));
+      this._ensureTasksLoaded = prereqify("_taskTypeLoads", async (engineId) => {
+        const tasks = await engineTaskMappings.get(engineId)();
         this.taskRegistry.registerPerAccountTypeTasks(engineId, tasks);
         return true;
       });
-    }),
-    _ensureAccountFoldersTOC: prereqify("_accountFoldersTOCLoads", function(accountId) {
-      return this.db.loadFoldersByAccount(accountId).then((folders) => {
-        let accountDef = this.getAccountDefById(accountId);
-        let foldersTOC = new FoldersTOC({
-          db: this.db,
-          accountDef,
-          folders,
-          dataOverlayManager: this.universe.dataOverlayManager
+      this._ensureAccountFoldersTOC = prereqify("_accountFoldersTOCLoads", (accountId) => {
+        return this.db.loadFoldersByAccount(accountId).then((folders) => {
+          const accountDef = this.getAccountDefById(accountId);
+          const foldersTOC = new FoldersTOC({
+            db: this.db,
+            accountDef,
+            folders,
+            dataOverlayManager: this.universe.dataOverlayManager
+          });
+          this.accountFoldersTOCs.set(accountId, foldersTOC);
+          return foldersTOC;
         });
-        this.accountFoldersTOCs.set(accountId, foldersTOC);
-        return foldersTOC;
-      });
-    }, true),
-    _ensureAccount: prereqify("_accountLoads", function(accountId) {
-      return this._ensureAccountFoldersTOC(accountId).then((foldersTOC) => {
-        let accountDef = this.getAccountDefById(accountId);
-        return accountModules.get(accountDef.type)().then((accountConstructor) => {
-          let stashedConn = this._stashedConnectionsByAccountId.get(accountId);
-          this._stashedConnectionsByAccountId.delete(accountId);
-          let account = new accountConstructor(this.universe, accountDef, foldersTOC, this.db, stashedConn);
-          this.accounts.set(accountId, account);
-          if (this.universe.online) {
-            this.universe.syncFolderList(accountId, "loadAccount");
-          }
-          return account;
+      }, true);
+      this._ensureAccount = prereqify("_accountLoads", (accountId) => {
+        return this._ensureAccountFoldersTOC(accountId).then((foldersTOC) => {
+          const accountDef = this.getAccountDefById(accountId);
+          return accountModules.get(accountDef.type)().then((accountConstructor) => {
+            const stashedConn = this._stashedConnectionsByAccountId.get(accountId);
+            this._stashedConnectionsByAccountId.delete(accountId);
+            const account = new accountConstructor(this.universe, accountDef, foldersTOC, this.db, stashedConn);
+            this.accounts.set(accountId, account);
+            if (this.universe.online) {
+              this.universe.syncFolderList(accountId, "loadAccount");
+            }
+            return account;
+          });
         });
-      });
-    }, true),
+      }, true);
+    }
+    initFromDB(accountDefs) {
+      const waitFor = [];
+      for (const accountDef of accountDefs) {
+        waitFor.push(this._accountAdded(accountDef));
+      }
+      return Promise.all(waitFor);
+    }
+    stashAccountConnection(accountId, conn) {
+      this._stashedConnectionsByAccountId.set(accountId, conn);
+    }
     acquireAccountsTOC(ctx) {
       return ctx.acquire(this.accountsTOC);
-    },
+    }
     acquireAccount(ctx, accountId) {
-      let account = this.accounts.get(accountId);
+      const account = this.accounts.get(accountId);
       if (account) {
         return ctx.acquire(account);
       }
       return this._ensureAccount(accountId).then((_account) => {
         return ctx.acquire(_account);
       });
-    },
+    }
     acquireAccountFoldersTOC(ctx, accountId) {
-      let foldersTOC = this.accountFoldersTOCs.get(accountId);
+      const foldersTOC = this.accountFoldersTOCs.get(accountId);
       if (foldersTOC) {
         return ctx.acquire(foldersTOC);
       }
       return this._ensureAccountFoldersTOC(accountId).then((_foldersTOC) => {
         return ctx.acquire(_foldersTOC);
       });
-    },
+    }
     getAccountDefById(accountId) {
       return this._immediateAccountDefsById.get(accountId);
-    },
+    }
     getAccountEngineBackEndFacts(accountId) {
-      let accountDef = this._immediateAccountDefsById.get(accountId);
+      const accountDef = this._immediateAccountDefsById.get(accountId);
       return engineBackEndFacts.get(accountDef.engine);
-    },
+    }
     getAllAccountDefs() {
       return this._immediateAccountDefsById.values();
-    },
+    }
     getFolderById(folderId) {
-      let accountId = accountIdFromFolderId(folderId);
-      let foldersTOC = this.accountFoldersTOCs.get(accountId);
+      const accountId = accountIdFromFolderId(folderId);
+      const foldersTOC = this.accountFoldersTOCs.get(accountId);
       return foldersTOC.foldersById.get(folderId);
-    },
+    }
     _onTOCChange(accountId, accountDef, isNew) {
       if (isNew) {
         this._accountAdded(accountDef);
@@ -18744,13 +18726,13 @@ var WorkshopBackend = (() => {
       } else if (this.accountFoldersTOCs.has(accountId)) {
         this.accountsTOC.__accountModified(accountDef);
       }
-    },
+    }
     _accountAdded(accountDef) {
       logic(this, "accountExists", { accountId: accountDef.id });
       this.taskResources.resourceAvailable(`credentials!${accountDef.id}`);
       this.taskResources.resourceAvailable(`happy!${accountDef.id}`);
       this._immediateAccountDefsById.set(accountDef.id, accountDef);
-      let waitFor = [
+      const waitFor = [
         this._ensureTasksLoaded(accountDef.engine),
         this._ensureAccountFoldersTOC(accountDef.id)
       ];
@@ -18760,11 +18742,11 @@ var WorkshopBackend = (() => {
         }
         this.accountsTOC.__addAccount(accountDef);
       });
-    },
+    }
     _accountRemoved(accountId) {
       this._immediateAccountDefsById.delete(accountId);
-      let doAccountCleanup = () => {
-        let account = this.accounts.get(accountId);
+      const doAccountCleanup = () => {
+        const account = this.accounts.get(accountId);
         this.accounts.delete(accountId);
         this._accountLoads.delete(accountId);
         if (account) {
@@ -18776,7 +18758,7 @@ var WorkshopBackend = (() => {
       } else if (this._accountLoads.has(accountId)) {
         this._accountLoads.get(accountId).then(doAccountCleanup);
       }
-      let doFolderCleanup = () => {
+      const doFolderCleanup = () => {
         this.accountFoldersTOCs.delete(accountId);
         this._accountFoldersTOCLoads.delete(accountId);
         this.accountsTOC.__removeAccountById(accountId);
@@ -19150,8 +19132,8 @@ var WorkshopBackend = (() => {
       }
       return this;
     },
-    __release(ctx) {
-      let idx = this._activeConsumers.indexOf(ctx);
+    async __release(ctx) {
+      const idx = this._activeConsumers.indexOf(ctx);
       if (idx === -1) {
         throw new Error("context does not ref this resource!");
       }
@@ -19163,7 +19145,6 @@ var WorkshopBackend = (() => {
         }
         this._onForgotten = null;
       }
-      return Promise.resolve();
     }
   };
   RefedResource.mix = function(obj) {
@@ -19175,41 +19156,50 @@ var WorkshopBackend = (() => {
     });
     return obj;
   };
-  var refed_resource_default = RefedResource;
 
   // src/backend/db/base_toc.js
-  function BaseTOC({ metaHelpers }) {
-    refed_resource_default.apply(this, arguments);
-    import_evt7.default.Emitter.call(this);
-    this._metaHelpers = metaHelpers || [];
-    this.tocMeta = {};
-    this._everActivated = false;
-  }
-  BaseTOC.prototype = import_evt7.default.mix(refed_resource_default.mix({
+  var BaseTOC = class extends import_evt7.Emitter {
+    constructor({ metaHelpers }) {
+      super();
+      RefedResource.apply(this, arguments);
+      this._metaHelpers = metaHelpers || [];
+      this.tocMeta = {};
+      this._everActivated = false;
+      this.flush = null;
+    }
+    static checkProtoValidity(obj) {
+      Object.keys(BaseTOC.prototype).forEach(function(prop) {
+        if (!obj.hasOwnProperty(prop)) {
+          obj[prop] = BaseTOC.prototype[prop];
+        } else if (BaseTOC.prototype[prop]) {
+          throw new Error("object and base both have truthy property: " + prop);
+        }
+      });
+      return obj;
+    }
     __activate() {
       this._everActivated = true;
-      for (let metaHelper of this._metaHelpers) {
+      for (const metaHelper of this._metaHelpers) {
         logic(this, "activatingMetaHelper", {
           name: metaHelper.constructor && metaHelper.constructor.name
         });
         metaHelper.activate(this);
       }
       return this.__activateTOC.apply(this, arguments);
-    },
+    }
     __deactivate() {
       if (this._everActivated) {
-        for (let metaHelper of this._metaHelpers) {
+        for (const metaHelper of this._metaHelpers) {
           metaHelper.deactivate(this);
         }
       }
       return this.__deactivateTOC.apply(this, arguments);
-    },
-    flush: null,
+    }
     applyTOCMetaChanges(changes) {
       const tocMeta = this.tocMeta;
       let somethingChanged = false;
-      for (let key of Object.keys(changes)) {
-        let value = changes[key];
+      for (const key of Object.keys(changes)) {
+        const value = changes[key];
         if (tocMeta[key] !== value) {
           tocMeta[key] = value;
           somethingChanged = true;
@@ -19218,64 +19208,55 @@ var WorkshopBackend = (() => {
       if (somethingChanged) {
         this.emit("tocMetaChange", tocMeta);
       }
-    },
+    }
     broadcastEvent(eventName, eventData) {
       this.emit("broadcastEvent", eventName, eventData);
     }
-  }));
-  BaseTOC.mix = function(obj) {
-    Object.keys(BaseTOC.prototype).forEach(function(prop) {
-      if (!obj.hasOwnProperty(prop)) {
-        obj[prop] = BaseTOC.prototype[prop];
-      } else if (BaseTOC.prototype[prop]) {
-        throw new Error("object and base both have truthy property: " + prop);
-      }
-    });
-    return obj;
   };
+  RefedResource.mix(BaseTOC.prototype);
 
   // src/backend/db/static_toc.js
-  function StaticTOC({ items }) {
-    BaseTOC.apply(this, arguments);
-    logic.defineScope(this, "StaticTOC");
-    this.items = items;
-    this.__deactivate(true);
-  }
-  StaticTOC.prototype = BaseTOC.mix({
-    type: "StaticTOC",
-    overlayNamespace: null,
-    heightAware: false,
-    __activateTOC() {
-      return Promise.resolve(this);
-    },
+  var StaticTOC = class extends BaseTOC {
+    constructor({ items }) {
+      super(arguments);
+      logic.defineScope(this, "StaticTOC");
+      this.type = "StaticTOC";
+      this.overlayNamespace = null;
+      this.heightAware = false;
+      this.items = items;
+      this.__deactivate(true);
+    }
+    async __activateTOC() {
+      return this;
+    }
     __deactivateTOC() {
-    },
+    }
     get length() {
       return this.items.length;
-    },
+    }
     get totalHeight() {
       return this.items.length;
-    },
+    }
     getTopOrderingKey() {
       return 0;
-    },
+    }
     getOrderingKeyForIndex(index) {
       return index;
-    },
+    }
     findIndexForOrderingKey(key) {
       return key;
-    },
+    }
     getDataForSliceRange(beginInclusive, endExclusive, alreadyKnownData) {
       beginInclusive = Math.max(0, beginInclusive);
       endExclusive = Math.min(endExclusive, this.items.length);
-      let sendState = new Map();
-      let newKnownSet = new Set();
-      let items = this.items;
-      let ids = [];
+      const sendState = new Map();
+      const newKnownSet = new Set();
+      const items = this.items;
+      const ids = [];
       for (let i = beginInclusive; i < endExclusive; i++) {
-        let id = i;
+        const id = i;
         ids.push(id);
-        let haveData = alreadyKnownData.has(id);
+        const haveData = alreadyKnownData.has(id);
         if (haveData) {
           newKnownSet.add(id);
           continue;
@@ -19291,7 +19272,7 @@ var WorkshopBackend = (() => {
         newValidDataSet: newKnownSet
       };
     }
-  });
+  };
 
   // src/backend/universe/static_toc_namespace_provider.js
   function makeStaticTOCNamespaceProvider(staticMap) {
@@ -19377,19 +19358,19 @@ var WorkshopBackend = (() => {
   // src/backend/db/data_overlay_manager.js
   var import_evt8 = __toModule(require_evt());
   init_logic();
-  function DataOverlayManager() {
-    import_evt8.default.Emitter.call(this);
-    logic.defineScope(this, "DataOverlayManager");
-    this.registeredProvidersByNamespace = new Map([
-      ["accounts", new Map()],
-      ["folders", new Map()],
-      ["conversations", new Map()],
-      ["messages", new Map()]
-    ]);
-  }
-  DataOverlayManager.prototype = import_evt8.default.mix({
+  var DataOverlayManager = class extends import_evt8.Emitter {
+    constructor() {
+      super();
+      logic.defineScope(this, "DataOverlayManager");
+      this.registeredProvidersByNamespace = new Map([
+        ["accounts", new Map()],
+        ["folders", new Map()],
+        ["conversations", new Map()],
+        ["messages", new Map()]
+      ]);
+    }
     registerProvider(namespace, name, func) {
-      let providersForNamespace = this.registeredProvidersByNamespace.get(namespace);
+      const providersForNamespace = this.registeredProvidersByNamespace.get(namespace);
       if (!providersForNamespace) {
         logic(this, "badNamespace", { namespace });
       }
@@ -19399,19 +19380,19 @@ var WorkshopBackend = (() => {
         providersForNamespace.set(name, funcs);
       }
       funcs.push(func);
-    },
+    }
     announceUpdatedOverlayData(namespace, id) {
       logic(this, "announceUpdatedOverlayData", { namespace, id });
       this.emit(namespace, id);
-    },
+    }
     makeBoundResolver(namespace) {
       return this._resolveOverlays.bind(this, this.registeredProvidersByNamespace.get(namespace));
-    },
+    }
     _resolveOverlays(providersForNamespace, itemId) {
-      let overlays = {};
-      for (let [name, funcs] of providersForNamespace) {
-        for (let func of funcs) {
-          let contrib = func(itemId);
+      const overlays = {};
+      for (const [name, funcs] of providersForNamespace) {
+        for (const func of funcs) {
+          const contrib = func(itemId);
           if (contrib != null) {
             overlays[name] = contrib;
             break;
@@ -19420,55 +19401,51 @@ var WorkshopBackend = (() => {
       }
       return overlays;
     }
-  });
+  };
 
   // src/backend/db/folder_convs_toc.js
   init_logic();
   init_util();
   init_comparators();
-  function FolderConversationsTOC({
-    db,
-    query,
-    dataOverlayManager
-  }) {
-    BaseTOC.apply(this, arguments);
-    logic.defineScope(this, "FolderConversationsTOC");
-    this._db = db;
-    this.query = query;
-    this._overlayResolver = dataOverlayManager.makeBoundResolver(this.overlayNamespace, null);
-    this._bound_onTOCChange = this.onTOCChange.bind(this);
-    this.__deactivate(true);
-  }
-  FolderConversationsTOC.prototype = BaseTOC.mix({
-    type: "FolderConversationsTOC",
-    overlayNamespace: "conversations",
-    heightAware: true,
+  var FolderConversationsTOC = class extends BaseTOC {
+    constructor({ db, query, dataOverlayManager }) {
+      super(arguments);
+      logic.defineScope(this, "FolderConversationsTOC");
+      this.type = "FolderConversationsTOC";
+      this.overlayNamespace = "conversations";
+      this.heightAware = true;
+      this._db = db;
+      this.query = query;
+      this._overlayResolver = dataOverlayManager.makeBoundResolver(this.overlayNamespace, null);
+      this._bound_onTOCChange = this.onTOCChange.bind(this);
+      this.__deactivate(true);
+    }
     async __activateTOC() {
-      let idsWithDates = await this.query.execute();
+      const idsWithDates = await this.query.execute();
       this.idsWithDates = idsWithDates;
       let totalHeight = 0;
-      for (let info of idsWithDates) {
+      for (const info of idsWithDates) {
         totalHeight += info.height;
       }
       this.totalHeight = totalHeight;
       this.query.bind(this, this.onTOCChange);
-    },
+    }
     __deactivateTOC(firstTime) {
       this.idsWithDates = [];
       this.totalHeight = 0;
       if (!firstTime) {
         this.query.destroy(this);
       }
-    },
+    }
     get length() {
       return this.idsWithDates.length;
-    },
+    }
     onTOCChange(change) {
       let dataOnly = change.removeDate === change.addDate;
       if (!dataOnly) {
         let oldIndex = -1;
         if (change.removeDate) {
-          let oldKey = { date: change.removeDate, id: change.id };
+          const oldKey = { date: change.removeDate, id: change.id };
           oldIndex = bsearchMaybeExists(this.idsWithDates, oldKey, folderConversationComparator);
           if (oldIndex !== -1) {
             this.totalHeight -= change.oldHeight;
@@ -19479,7 +19456,7 @@ var WorkshopBackend = (() => {
         }
         let newIndex = -1;
         if (change.addDate) {
-          let newKey = {
+          const newKey = {
             date: change.addDate,
             id: change.id,
             height: change.height,
@@ -19497,15 +19474,15 @@ var WorkshopBackend = (() => {
         this.totalHeight += change.height - change.oldHeight;
       }
       this.emit("change", change.id, dataOnly);
-    },
+    }
     sliceIds(begin, end) {
-      let ids = [];
-      let idsWithDates = this.idsWithDates;
+      const ids = [];
+      const idsWithDates = this.idsWithDates;
       for (let i = begin; i < end; i++) {
         ids.push(idsWithDates[i].id);
       }
       return ids;
-    },
+    }
     getOrderingKeyForIndex(index) {
       if (this.idsWithDates.length === 0) {
         return this.getTopOrderingKey();
@@ -19515,18 +19492,17 @@ var WorkshopBackend = (() => {
         index = this.idsWithDates.length - 1;
       }
       return this.idsWithDates[index];
-    },
+    }
     getTopOrderingKey() {
       return {
         date: new Date(2200, 0),
         id: "",
         height: 0
       };
-    },
+    }
     findIndexForOrderingKey(key) {
-      let index = bsearchForInsert(this.idsWithDates, key, folderConversationComparator);
-      return index;
-    },
+      return bsearchForInsert(this.idsWithDates, key, folderConversationComparator);
+    }
     getInfoForOffset(desiredOffset) {
       var actualOffset = 0;
       var idsWithDates = this.idsWithDates;
@@ -19547,21 +19523,21 @@ var WorkshopBackend = (() => {
         offset: actualOffset,
         cumulativeHeight: actualOffset + meta.height
       };
-    },
+    }
     getHeightOffsetForIndex(desiredIndex) {
       let height = 0;
-      let idsWithDates = this.idsWithDates;
+      const idsWithDates = this.idsWithDates;
       desiredIndex = Math.min(desiredIndex, idsWithDates.length);
       for (let i = 0; i < desiredIndex; i++) {
         height += idsWithDates[i].height;
       }
       return height;
-    },
+    }
     _walkToCoverHeight(startIndex, delta, heightToConsume) {
       let index = startIndex;
-      let idsWithDates = this.idsWithDates;
+      const idsWithDates = this.idsWithDates;
       let info = index < idsWithDates.length && idsWithDates[index];
-      let tooHigh = idsWithDates.length - 1;
+      const tooHigh = idsWithDates.length - 1;
       while (heightToConsume > 0 && index < tooHigh && index + delta >= 0) {
         index += delta;
         info = this.idsWithDates[index];
@@ -19571,23 +19547,23 @@ var WorkshopBackend = (() => {
         index,
         overconsumed: Math.abs(heightToConsume)
       };
-    },
+    }
     findIndicesFromCoordinateSoup(req) {
       let focusIndex = this.findIndexForOrderingKey(req.orderingKey);
       if (focusIndex >= this.idsWithDates.length && this.idsWithDates.length) {
         focusIndex--;
       }
-      let {
+      const {
         index: beginVisibleInclusive,
         overconsumed: beforeOverconsumed
       } = this._walkToCoverHeight(focusIndex, -1, req.visibleAbove);
-      let { index: beginBufferedInclusive } = this._walkToCoverHeight(beginVisibleInclusive, -1, req.bufferAbove - beforeOverconsumed);
-      let {
+      const { index: beginBufferedInclusive } = this._walkToCoverHeight(beginVisibleInclusive, -1, req.bufferAbove - beforeOverconsumed);
+      const {
         index: endVisibleInclusive,
         overconsumed: afterOverconsumed
       } = this._walkToCoverHeight(focusIndex, 1, req.visibleBelow);
-      let { index: endBufferedInclusive } = this._walkToCoverHeight(endVisibleInclusive, 1, req.bufferBelow - afterOverconsumed);
-      let rval = {
+      const { index: endBufferedInclusive } = this._walkToCoverHeight(endVisibleInclusive, 1, req.bufferBelow - afterOverconsumed);
+      const rval = {
         beginBufferedInclusive,
         beginVisibleInclusive,
         endVisibleExclusive: endVisibleInclusive + 1,
@@ -19595,22 +19571,22 @@ var WorkshopBackend = (() => {
         heightOffset: this.getHeightOffsetForIndex(beginBufferedInclusive)
       };
       return rval;
-    },
+    }
     getDataForSliceRange(beginInclusive, endExclusive, alreadyKnownData, alreadyKnownOverlays) {
       beginInclusive = Math.max(0, beginInclusive);
       endExclusive = Math.min(endExclusive, this.idsWithDates.length);
-      let overlayResolver = this._overlayResolver;
-      let sendState = new Map();
+      const overlayResolver = this._overlayResolver;
+      const sendState = new Map();
       let needData = new Map();
-      let newKnownSet = new Set();
-      let idsWithDates = this.idsWithDates;
-      let convCache = this._db.convCache;
-      let ids = [];
+      const newKnownSet = new Set();
+      const idsWithDates = this.idsWithDates;
+      const convCache = this._db.convCache;
+      const ids = [];
       for (let i = beginInclusive; i < endExclusive; i++) {
-        let id = idsWithDates[i].id;
+        const id = idsWithDates[i].id;
         ids.push(id);
-        let haveData = alreadyKnownData.has(id);
-        let haveOverlays = alreadyKnownOverlays.has(id);
+        const haveData = alreadyKnownData.has(id);
+        const haveOverlays = alreadyKnownOverlays.has(id);
         if (haveData && haveOverlays) {
           newKnownSet.add(id);
           continue;
@@ -19644,83 +19620,83 @@ var WorkshopBackend = (() => {
         newValidDataSet: newKnownSet
       };
     }
-  });
+  };
 
   // src/backend/db/conv_toc.js
   init_logic();
   init_util();
   init_comparators();
-  function ConversationTOC({ db, query, dataOverlayManager }) {
-    BaseTOC.apply(this, arguments);
-    logic.defineScope(this, "ConversationTOC");
-    this._db = db;
-    this.query = query;
-    this._overlayResolver = dataOverlayManager.makeBoundResolver(this.overlayNamespace, null);
-    this.__deactivate(true);
-  }
-  ConversationTOC.prototype = BaseTOC.mix({
-    type: "ConversationTOC",
-    overlayNamespace: "messages",
-    heightAware: false,
+  var ConversationTOC = class extends BaseTOC {
+    constructor({ db, query, dataOverlayManager }) {
+      super(arguments);
+      logic.defineScope(this, "ConversationTOC");
+      this.type = "ConversationTOC";
+      this.overlayNamespace = "messages";
+      this.heightAware = false;
+      this._db = db;
+      this.query = query;
+      this._overlayResolver = dataOverlayManager.makeBoundResolver(this.overlayNamespace, null);
+      this.__deactivate(true);
+    }
     async __activateTOC() {
-      let idsWithDates = await this.query.execute();
+      const idsWithDates = await this.query.execute();
       idsWithDates.sort(conversationMessageComparator);
       this.idsWithDates = idsWithDates;
       this.query.bind(this, this.onTOCChange, this.onConvChange);
-    },
+    }
     __deactivateTOC(firstTime) {
       this.idsWithDates = [];
       if (!firstTime) {
         this.query.destroy(this);
       }
-    },
+    }
     get length() {
       return this.idsWithDates.length;
-    },
+    }
     get totalHeight() {
       return this.idsWithDates.length;
-    },
+    }
     onTOCChange({ id, preDate, postDate, item, freshlyAdded, matchInfo }) {
       let metadataOnly = item && !freshlyAdded;
       if (freshlyAdded) {
-        let newKey = { date: postDate, id, matchInfo };
-        let newIndex = bsearchForInsert(this.idsWithDates, newKey, conversationMessageComparator);
+        const newKey = { date: postDate, id, matchInfo };
+        const newIndex = bsearchForInsert(this.idsWithDates, newKey, conversationMessageComparator);
         this.idsWithDates.splice(newIndex, 0, newKey);
       } else if (!item) {
-        let oldKey = { date: preDate, id };
-        let oldIndex = bsearchMaybeExists(this.idsWithDates, oldKey, conversationMessageComparator);
+        const oldKey = { date: preDate, id };
+        const oldIndex = bsearchMaybeExists(this.idsWithDates, oldKey, conversationMessageComparator);
         this.idsWithDates.splice(oldIndex, 1);
       } else if (preDate !== postDate) {
-        let oldKey = { date: preDate, id };
-        let oldIndex = bsearchMaybeExists(this.idsWithDates, oldKey, conversationMessageComparator);
+        const oldKey = { date: preDate, id };
+        const oldIndex = bsearchMaybeExists(this.idsWithDates, oldKey, conversationMessageComparator);
         this.idsWithDates.splice(oldIndex, 1);
-        let newKey = { date: postDate, id, matchInfo };
-        let newIndex = bsearchForInsert(this.idsWithDates, newKey, conversationMessageComparator);
+        const newKey = { date: postDate, id, matchInfo };
+        const newIndex = bsearchForInsert(this.idsWithDates, newKey, conversationMessageComparator);
         this.idsWithDates.splice(newIndex, 0, newKey);
         metadataOnly = false;
       }
       this.emit("change", id, metadataOnly);
-    },
+    }
     onConvChange(convId, convInfo) {
       if (convInfo === null) {
         this.idsWithDates.splice(0, this.idsWithDates.length);
         this.emit("change", null);
       }
-    },
+    }
     sliceIds(begin, end) {
-      let ids = [];
-      let idsWithDates = this.idsWithDates;
+      const ids = [];
+      const idsWithDates = this.idsWithDates;
       for (let i = begin; i < end; i++) {
         ids.push(idsWithDates[i].id);
       }
       return ids;
-    },
+    }
     getTopOrderingKey() {
       return {
         date: new Date(2200, 0),
         id: ""
       };
-    },
+    }
     getOrderingKeyForIndex(index) {
       if (this.idsWithDates.length === 0) {
         return this.getTopOrderingKey();
@@ -19730,26 +19706,26 @@ var WorkshopBackend = (() => {
         index = this.idsWithDates.length - 1;
       }
       return this.idsWithDates[index];
-    },
+    }
     findIndexForOrderingKey(key) {
-      let index = bsearchForInsert(this.idsWithDates, key, conversationMessageComparator);
+      const index = bsearchForInsert(this.idsWithDates, key, conversationMessageComparator);
       return index;
-    },
+    }
     getDataForSliceRange(beginInclusive, endExclusive, alreadyKnownData, alreadyKnownOverlays) {
       beginInclusive = Math.max(0, beginInclusive);
       endExclusive = Math.min(endExclusive, this.idsWithDates.length);
-      let overlayResolver = this._overlayResolver;
-      let sendState = new Map();
+      const overlayResolver = this._overlayResolver;
+      const sendState = new Map();
       let needData = new Map();
-      let newKnownSet = new Set();
-      let idsWithDates = this.idsWithDates;
-      let messageCache = this._db.messageCache;
-      let ids = [];
+      const newKnownSet = new Set();
+      const idsWithDates = this.idsWithDates;
+      const messageCache = this._db.messageCache;
+      const ids = [];
       for (let i = beginInclusive; i < endExclusive; i++) {
-        let id = idsWithDates[i].id;
+        const id = idsWithDates[i].id;
         ids.push(id);
-        let haveData = alreadyKnownData.has(id);
-        let haveOverlays = alreadyKnownOverlays.has(id);
+        const haveData = alreadyKnownData.has(id);
+        const haveOverlays = alreadyKnownOverlays.has(id);
         if (haveData && haveOverlays) {
           newKnownSet.add(id);
           continue;
@@ -19764,7 +19740,7 @@ var WorkshopBackend = (() => {
             idsWithDates[i].matchInfo
           ]);
         } else {
-          let date = idsWithDates[i].date;
+          const date = idsWithDates[i].date;
           needData.set([id, date], null);
         }
       }
@@ -19784,7 +19760,7 @@ var WorkshopBackend = (() => {
         newValidDataSet: newKnownSet
       };
     }
-  });
+  };
 
   // src/backend/db/toc_meta/sync_lifecycle.js
   function SyncLifecycle({
@@ -20124,57 +20100,57 @@ var WorkshopBackend = (() => {
   };
 
   // src/backend/task_infra/task_manager.js
-  function TaskManager({
-    universe: universe2,
-    db,
-    taskRegistry,
-    taskResources,
-    taskPriorities,
-    accountManager
-  }) {
-    import_evt9.default.Emitter.call(this);
-    logic.defineScope(this, "TaskManager");
-    this._universe = universe2;
-    this._db = db;
-    this._registry = taskRegistry;
-    this._resources = taskResources;
-    this._priorities = taskPriorities;
-    this._accountManager = accountManager;
-    this._accountsTOC = accountManager.accountsTOC;
-    let idBase = Date.now() - 14e11;
-    if (idBase < 0) {
-      throw new Error("clock is bad, correctness compromised, giving up.");
+  var TaskManager = class extends import_evt9.Emitter {
+    constructor({
+      universe: universe2,
+      db,
+      taskRegistry,
+      taskResources,
+      taskPriorities,
+      accountManager
+    }) {
+      super();
+      logic.defineScope(this, "TaskManager");
+      this._universe = universe2;
+      this._db = db;
+      this._registry = taskRegistry;
+      this._resources = taskResources;
+      this._priorities = taskPriorities;
+      this._accountManager = accountManager;
+      this._accountsTOC = accountManager.accountsTOC;
+      const idBase = Date.now() - 14e11;
+      if (idBase < 0) {
+        throw new Error("clock is bad, correctness compromised, giving up.");
+      }
+      this._nextId = idBase * 100;
+      this._tasksToPlan = [];
+      this._pendingPlanWrites = 0;
+      this._activePromise = Promise.resolve(null);
+      this._activeWakeLock = null;
     }
-    this._nextId = idBase * 100;
-    this._tasksToPlan = [];
-    this._pendingPlanWrites = 0;
-    this._activePromise = Promise.resolve(null);
-    this._activeWakeLock = null;
-  }
-  TaskManager.prototype = import_evt9.default.mix({
     async __restoreFromDB() {
-      let { wrappedTasks, complexTaskStates } = await this._db.loadTasks();
+      const { wrappedTasks, complexTaskStates } = await this._db.loadTasks();
       logic(this, "restoreFromDB", { count: wrappedTasks.length });
-      for (let wrappedTask of wrappedTasks) {
+      for (const wrappedTask of wrappedTasks) {
         if (wrappedTask.state === null) {
           this._tasksToPlan.push(wrappedTask);
         } else {
           this.__queueTasksOrMarkers([wrappedTask], "restored:simple", true);
         }
       }
-      let pendingInitPromises = [];
+      const pendingInitPromises = [];
       this._registry.initializeFromDatabaseState(complexTaskStates);
       pendingInitPromises.push(this._registry.initGlobalTasks().then((markers) => {
         this.__queueTasksOrMarkers(markers, "restored:complex", true);
       }));
       this._accountsTOC.getAllItems().forEach((accountInfo) => {
-        let foldersTOC = this._accountManager.accountFoldersTOCs.get(accountInfo.id);
+        const foldersTOC = this._accountManager.accountFoldersTOCs.get(accountInfo.id);
         pendingInitPromises.push(this._registry.accountExistsInitTasks(accountInfo.id, accountInfo.engine, accountInfo, foldersTOC).then((markers) => {
           this.__queueTasksOrMarkers(markers, "restored:complex", true);
         }));
       });
       this._accountsTOC.on("add", (accountInfo) => {
-        let foldersTOC = this._accountManager.accountFoldersTOCs.get(accountInfo.id);
+        const foldersTOC = this._accountManager.accountFoldersTOCs.get(accountInfo.id);
         this._registry.accountExistsInitTasks(accountInfo.id, accountInfo.engine, accountInfo, foldersTOC).then((markers) => {
           this.__queueTasksOrMarkers(markers, "restored:complex", true);
         });
@@ -20190,7 +20166,7 @@ var WorkshopBackend = (() => {
         });
         this._maybeDoStuff();
       });
-    },
+    }
     _ensureWakeLock(why) {
       if (!this._activeWakeLock) {
         logic(this, "ensureWakeLock", { why });
@@ -20198,23 +20174,23 @@ var WorkshopBackend = (() => {
       } else {
         this._activeWakeLock.renew("TaskManager:ensure");
       }
-    },
+    }
     __renewWakeLock() {
       if (this._activeWakeLock) {
         this._activeWakeLock.renew("TaskManager:explicit");
       } else {
         logic.fail("explicit renew propagated without a wakelock?");
       }
-    },
+    }
     _releaseWakeLock() {
       if (this._activeWakeLock) {
         this._activeWakeLock.unlock("TaskManager:release");
         this._activeWakeLock = null;
       }
-    },
+    }
     scheduleTasks(rawTasks, why) {
       this._ensureWakeLock(why);
-      let wrappedTasks = this.__wrapTasks(rawTasks);
+      const wrappedTasks = this.__wrapTasks(rawTasks);
       logic(this, "schedulePersistent", { why, tasks: wrappedTasks });
       this._pendingPlanWrites++;
       return this._db.addTasks(wrappedTasks).then(() => {
@@ -20222,28 +20198,28 @@ var WorkshopBackend = (() => {
         this.__enqueuePersistedTasksForPlanning(wrappedTasks);
         return wrappedTasks.map((x) => x.id);
       });
-    },
+    }
     waitForTasksToBePlanned(taskIds) {
       return Promise.all(taskIds.map((taskId) => {
         return new Promise((resolve) => {
           this.once("planned:" + taskId, resolve);
         });
       }));
-    },
+    }
     scheduleTaskAndWaitForPlannedResult(rawTask, why) {
       return this.scheduleTasks([rawTask], why).then((taskIds) => {
         return this.waitForTasksToBePlanned(taskIds);
       }).then((results) => {
         return results[0];
       });
-    },
+    }
     scheduleTaskAndWaitForPlannedUndoTasks(rawTask, why) {
       return this.scheduleTasks([rawTask], why).then(([taskId]) => {
         return new Promise((resolve) => {
-          let undoHandler = (undoTasks) => {
+          const undoHandler = (undoTasks) => {
             resolve(undoTasks);
           };
-          let ensureCleanup = () => {
+          const ensureCleanup = () => {
             this.removeListener(`undoTasks:${taskId}`, undoHandler);
             resolve([]);
           };
@@ -20251,45 +20227,45 @@ var WorkshopBackend = (() => {
           this.once(`planned:${taskId}`, ensureCleanup);
         });
       });
-    },
+    }
     scheduleTaskAndWaitForExecutedResult(rawTask, why) {
       return this.scheduleTasks([rawTask], why).then((taskIds) => {
         return this.waitForTasksToBeExecuted(taskIds);
       }).then((results) => {
         return results[0];
       });
-    },
+    }
     waitForTasksToBeExecuted(taskIds) {
       return Promise.all(taskIds.map((taskId) => {
         return new Promise((resolve) => {
           this.once("executed:" + taskId, resolve);
         });
       }));
-    },
+    }
     scheduleNonPersistentTasks(rawTasks, why) {
       this._ensureWakeLock(why);
-      let wrappedTasks = this.__wrapTasks(rawTasks);
+      const wrappedTasks = this.__wrapTasks(rawTasks);
       logic(this, "scheduleNonPersistent", { why, tasks: wrappedTasks });
       wrappedTasks.forEach((wrapped) => {
         wrapped.nonpersistent = true;
       });
       this.__enqueuePersistedTasksForPlanning(wrappedTasks);
       return Promise.resolve(wrappedTasks.map((x) => x.id));
-    },
+    }
     scheduleNonPersistentTaskAndWaitForPlannedResult(rawTask, why) {
       return this.scheduleNonPersistentTasks([rawTask], why).then((taskIds) => {
         return this.waitForTasksToBePlanned(taskIds);
       }).then((results) => {
         return results[0];
       });
-    },
+    }
     scheduleNonPersistentTaskAndWaitForExecutedResult(rawTask, why) {
       return this.scheduleNonPersistentTasks([rawTask], why).then((taskIds) => {
         return this.waitForTasksToBeExecuted(taskIds);
       }).then((results) => {
         return results[0];
       });
-    },
+    }
     __wrapTasks(rawTasks) {
       return rawTasks.map((rawTask) => {
         return {
@@ -20298,18 +20274,18 @@ var WorkshopBackend = (() => {
           state: null
         };
       });
-    },
+    }
     __enqueuePersistedTasksForPlanning(wrappedTasks, sourceId) {
       this._ensureWakeLock();
-      for (let wrappedTask of wrappedTasks) {
+      for (const wrappedTask of wrappedTasks) {
         this.emit("willPlan", wrappedTask, sourceId);
       }
       this._tasksToPlan.splice(this._tasksToPlan.length, 0, ...wrappedTasks);
       this._maybeDoStuff();
-    },
+    }
     __queueTasksOrMarkers(taskThings, sourceId, noTrigger) {
       let prioritized = 0;
-      for (let taskThing of taskThings) {
+      for (const taskThing of taskThings) {
         logic(this, "queueing", { taskThing, sourceId });
         this.emit("willExecute", taskThing, sourceId);
         if (this._resources.ownOrRelayTaskThing(taskThing)) {
@@ -20321,11 +20297,11 @@ var WorkshopBackend = (() => {
           this._maybeDoStuff();
         });
       }
-    },
+    }
     __removeTaskOrMarker(taskId) {
       logic(this, "removing", { taskId });
       this._resources.removeTaskThing(taskId);
-    },
+    }
     _maybeDoStuff() {
       if (this._activePromise) {
         return;
@@ -20358,15 +20334,15 @@ var WorkshopBackend = (() => {
         logic(this, "taskError", { error, stack: error.stack });
         this._maybeDoStuff();
       });
-    },
+    }
     _planNextTask() {
-      let wrappedTask = this._tasksToPlan.shift();
+      const wrappedTask = this._tasksToPlan.shift();
       logic(this, "planning:begin", { task: wrappedTask });
-      let ctx = new TaskContext(wrappedTask, this._universe);
-      let planResult = this._registry.planTask(ctx, wrappedTask);
+      const ctx = new TaskContext(wrappedTask, this._universe);
+      const planResult = this._registry.planTask(ctx, wrappedTask);
       if (planResult) {
         planResult.then((maybeResult) => {
-          let result = maybeResult && maybeResult.wrappedResult || void 0;
+          const result = maybeResult && maybeResult.wrappedResult || void 0;
           logic(this, "planning:end", { success: true, task: wrappedTask });
           this.emit("planned:" + wrappedTask.id, result);
           this.emit("planned", wrappedTask.id, result);
@@ -20385,15 +20361,15 @@ var WorkshopBackend = (() => {
         this.emit("planned", wrappedTask.id, void 0);
       }
       return planResult;
-    },
+    }
     _executeNextTask() {
-      let taskThing = this._priorities.popNextAvailableTask();
+      const taskThing = this._priorities.popNextAvailableTask();
       logic(this, "executing:begin", { task: taskThing });
-      let ctx = new TaskContext(taskThing, this._universe);
-      let execResult = this._registry.executeTask(ctx, taskThing);
+      const ctx = new TaskContext(taskThing, this._universe);
+      const execResult = this._registry.executeTask(ctx, taskThing);
       if (execResult) {
         execResult.then((maybeResult) => {
-          let result = maybeResult && maybeResult.wrappedResult || void 0;
+          const result = maybeResult && maybeResult.wrappedResult || void 0;
           logic(this, "executing:end", { success: true, task: taskThing });
           this.emit("executed:" + taskThing.id, result);
           this.emit("executed", taskThing.id, result);
@@ -20412,16 +20388,16 @@ var WorkshopBackend = (() => {
         this.emit("executed", taskThing.id, void 0);
       }
       return execResult;
-    },
+    }
     __trackAndWrapSubtask(ctx, subctx, subtaskFunc, subtaskArg) {
       logic(this, "subtask:begin", { taskId: ctx.id, subtaskId: subctx.id });
-      let subtaskResult = subtaskFunc.call(subctx.__taskInstance, subctx, subtaskArg);
+      const subtaskResult = subtaskFunc.call(subctx.__taskInstance, subctx, subtaskArg);
       return subtaskResult.then((result) => {
         logic(this, "subtask:end", { taskId: ctx.id, subtaskId: subctx.id });
         return result;
       });
     }
-  });
+  };
 
   // src/backend/task_infra/task_registry.js
   init_logic();
@@ -22642,12 +22618,12 @@ var WorkshopBackend = (() => {
             cmd: "accountcommon",
             args: [xhr.responseText]
           });
-          self.addEventListener("message", function onworkerresponse(evt10) {
-            var data = evt10.data;
+          self.addEventListener("message", function onworkerresponse(evt4) {
+            var data = evt4.data;
             if (data.type !== "configparser" || data.cmd !== "accountcommon") {
               return;
             }
-            self.removeEventListener(evt10.type, onworkerresponse);
+            self.removeEventListener(evt4.type, onworkerresponse);
             var args = data.args;
             var config = args[0];
             resolve(config);
@@ -23571,7 +23547,7 @@ var WorkshopBackend = (() => {
     logic.defineScope(this, "Universe");
     this._initialized = false;
     this._appExtensions = appExtensions;
-    const db = this.db = new maildb_default({
+    const db = this.db = new MailDB({
       universe: this,
       testOptions
     });

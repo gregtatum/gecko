@@ -40,7 +40,7 @@ var require_evt = __commonJS({
       }
     })(exports, function() {
       "use strict";
-      var evt15, slice = Array.prototype.slice, props = [
+      var evt2, slice = Array.prototype.slice, props = [
         "_events",
         "_pendingEvents",
         "on",
@@ -84,18 +84,18 @@ var require_evt = __commonJS({
         }
       }
       function emitError(err) {
-        if (evt15._events.hasOwnProperty("error")) {
-          evt15.emit("error", err);
+        if (evt2._events.hasOwnProperty("error")) {
+          evt2.emit("error", err);
         } else {
           console.error(err, err.stack);
         }
       }
-      function Emitter() {
-        this._events = {};
-        this._pendingEvents = {};
-      }
-      Emitter.prototype = {
-        on: function(id, obj, fnName) {
+      class Emitter14 {
+        constructor() {
+          this._events = {};
+          this._pendingEvents = {};
+        }
+        on(id, obj, fnName) {
           var applyPair = objFnPair(obj, fnName);
           var listeners2 = this._events[id], pending = this._pendingEvents[id];
           if (!listeners2) {
@@ -109,37 +109,36 @@ var require_evt = __commonJS({
             delete this._pendingEvents[id];
           }
           return this;
-        },
-        once: function(id, obj, fnName) {
-          var self = this, fired = false, applyPair = objFnPair(obj, fnName);
-          function one() {
+        }
+        once(id, obj, fnName) {
+          let fired = false;
+          const applyPair = objFnPair(obj, fnName);
+          const one = () => {
             if (fired) {
               return;
             }
             fired = true;
             callApply(applyPair, arguments);
-            setTimeout(function() {
-              self.removeListener(id, one);
-            });
-          }
+            setTimeout(() => this.removeListener(id, one));
+          };
           return this.on(id, applyPair[0], one);
-        },
-        latest: function(id, obj, fnName) {
+        }
+        latest(id, obj, fnName) {
           var applyPair = objFnPair(obj, fnName);
           if (this[id] && !this._pendingEvents[id]) {
             callApply(applyPair, [this[id]]);
           }
           this.on(id, applyPair[0], applyPair[1]);
-        },
-        latestOnce: function(id, obj, fnName) {
+        }
+        latestOnce(id, obj, fnName) {
           var applyPair = objFnPair(obj, fnName);
           if (this[id] && !this._pendingEvents[id]) {
             callApply(applyPair, [this[id]]);
           } else {
             this.once(id, applyPair[0], applyPair[1]);
           }
-        },
-        removeObjectListener: function(obj) {
+        }
+        removeObjectListener(obj) {
           Object.keys(this._events).forEach(function(eventId) {
             var listeners2 = this._events[eventId];
             for (var i = 0; i < listeners2.length; i++) {
@@ -151,8 +150,8 @@ var require_evt = __commonJS({
             }
             cleanEventEntry(this, eventId);
           }.bind(this));
-        },
-        removeListener: function(id, obj, fnName) {
+        }
+        removeListener(id, obj, fnName) {
           var listeners2 = this._events[id], applyPair = objFnPair(obj, fnName);
           if (listeners2) {
             listeners2.some(function(listener, i) {
@@ -163,8 +162,8 @@ var require_evt = __commonJS({
             });
             cleanEventEntry(this, id);
           }
-        },
-        emitWhenListener: function(id) {
+        }
+        emitWhenListener(id) {
           var listeners2 = this._events[id];
           if (listeners2) {
             this.emit.apply(this, arguments);
@@ -174,8 +173,8 @@ var require_evt = __commonJS({
             }
             this._pendingEvents[id].push(slice.call(arguments, 1));
           }
-        },
-        emit: function(id) {
+        }
+        emit(id) {
           var args = slice.call(arguments, 1), listeners2 = this._events[id];
           if (listeners2) {
             for (var i = 0; i < listeners2.length; i++) {
@@ -191,11 +190,11 @@ var require_evt = __commonJS({
             }
           }
         }
-      };
-      evt15 = new Emitter();
-      evt15.Emitter = Emitter;
-      evt15.mix = function(obj) {
-        var e = new Emitter();
+      }
+      evt2 = new Emitter14();
+      evt2.Emitter = Emitter14;
+      evt2.mix = function(obj) {
+        var e = new Emitter14();
         props.forEach(function(prop) {
           if (obj.hasOwnProperty(prop)) {
             throw new Error('Object already has a property "' + prop + '"');
@@ -204,7 +203,7 @@ var require_evt = __commonJS({
         });
         return obj;
       };
-      return evt15;
+      return evt2;
     });
   }
 });
@@ -976,23 +975,23 @@ var import_evt14 = __toModule(require_evt());
 
 // src/clientapi/mail_folder.js
 var import_evt2 = __toModule(require_evt());
-function MailFolder(api, wireRep, overlays, matchInfo) {
-  import_evt2.default.Emitter.call(this);
-  this.api = api;
-  this.__update(wireRep);
-  this.__updateOverlays(overlays);
-  this.matchInfo = matchInfo;
-}
-MailFolder.prototype = import_evt2.default.mix({
+var MailFolder = class extends import_evt2.Emitter {
+  constructor(api, wireRep, overlays, matchInfo) {
+    super();
+    this.api = api;
+    this.__update(wireRep);
+    this.__updateOverlays(overlays);
+    this.matchInfo = matchInfo;
+  }
   toString() {
     return "[MailFolder: " + this.path + "]";
-  },
+  }
   toJSON() {
     return {
       type: this.type,
       path: this.path
     };
-  },
+  }
   __update(wireRep) {
     this._wireRep = wireRep;
     this.localUnreadConversations = wireRep.localUnreadConversations;
@@ -1022,15 +1021,15 @@ MailFolder.prototype = import_evt2.default.mix({
         this.isValidMoveTarget = true;
     }
     this.syncGranularity = wireRep.syncGranularity;
-  },
+  }
   __updateOverlays(overlays) {
     let syncOverlay = overlays.sync_refresh || overlays.sync_grow || {};
     this.syncStatus = syncOverlay.status || null;
     this.syncBlocked = syncOverlay.blocked || null;
-  },
+  }
   release() {
   }
-});
+};
 
 // src/clientapi/mail_conversation.js
 var import_evt4 = __toModule(require_evt());
@@ -1050,43 +1049,43 @@ function showBlobInImg(imgNode, blob) {
 }
 
 // src/clientapi/mail_peep.js
-function MailPeep(name, address, contactId, thumbnailBlob) {
-  import_evt3.default.Emitter.call(this);
-  this.name = name;
-  this.address = address;
-  this.contactId = contactId;
-  this._thumbnailBlob = thumbnailBlob;
-  this.type = null;
-}
-MailPeep.prototype = import_evt3.default.mix({
+var MailPeep = class extends import_evt3.Emitter {
+  constructor(name, address, contactId, thumbnailBlob) {
+    super();
+    this.name = name;
+    this.address = address;
+    this.contactId = contactId;
+    this._thumbnailBlob = thumbnailBlob;
+    this.type = null;
+  }
   get isContact() {
     return this.contactId !== null;
-  },
+  }
   toString() {
     return "[MailPeep: " + this.address + "]";
-  },
+  }
   toJSON() {
     return {
       name: this.name,
       address: this.address,
       contactId: this.contactId
     };
-  },
+  }
   toWireRep() {
     return {
       name: this.name,
       address: this.address
     };
-  },
+  }
   get hasPicture() {
     return this._thumbnailBlob !== null;
-  },
+  }
   displayPictureInImageTag(imgNode) {
     if (this._thumbnailBlob) {
       showBlobInImg(imgNode, this._thumbnailBlob);
     }
   }
-});
+};
 
 // src/clientapi/contact_cache.js
 var ContactCache = {
@@ -1100,7 +1099,7 @@ var ContactCache = {
   pendingLookupCount: 0,
   callbacks: [],
   init() {
-    var contactsAPI = navigator.mozContacts;
+    const contactsAPI = navigator.mozContacts;
     if (!contactsAPI) {
       return;
     }
@@ -1112,19 +1111,19 @@ var ContactCache = {
     this._cacheEmptyEntries = 0;
   },
   shutdown() {
-    var contactsAPI = navigator.mozContacts;
+    const contactsAPI = navigator.mozContacts;
     if (!contactsAPI) {
       return;
     }
     contactsAPI.oncontactchange = null;
   },
-  shoddyAutocomplete(phrase) {
+  async shoddyAutocomplete(phrase) {
     if (!(phrase instanceof RegExp)) {
       phrase = new RegExp(phrase.replace(/[-[\]/{}()*+?.\\^$|]/g, "\\$&"), "i");
     }
     let matches = [];
     const MAX_MATCHES = 8;
-    for (let peeps of this._livePeepsByEmail.values()) {
+    for (const peeps of this._livePeepsByEmail.values()) {
       let peep = peeps[0];
       if (peep.name) {
         if (phrase.exec(peep.name)) {
@@ -1140,32 +1139,30 @@ var ContactCache = {
         if (matches.length >= MAX_MATCHES) {
           break;
         }
-        continue;
       }
     }
-    return Promise.resolve(matches);
+    return matches;
   },
   _onContactChange(event) {
     function cleanOutPeeps(livePeeps) {
-      for (var iPeep = 0; iPeep < livePeeps.length; iPeep++) {
-        var peep = livePeeps[iPeep];
+      for (const peep of livePeeps) {
         peep.contactId = null;
         peep.emit("change", peep);
       }
     }
-    var contactsAPI = navigator.mozContacts;
-    var livePeepsById = this._livePeepsById, livePeepsByEmail = this._livePeepsByEmail;
+    const contactsAPI = navigator.mozContacts;
+    const livePeepsById = this._livePeepsById, livePeepsByEmail = this._livePeepsByEmail;
     if (this._cacheHitEntries || this._cacheEmptyEntries) {
       this._resetCache();
     }
     if (event.reason === "remove") {
       if (!event.contactID) {
-        for (let livePeeps of livePeepsById.values()) {
+        for (const livePeeps of livePeepsById.values()) {
           cleanOutPeeps(livePeeps);
         }
         livePeepsById.clear();
       } else {
-        let livePeeps = livePeepsById.get(event.contactID);
+        const livePeeps = livePeepsById.get(event.contactID);
         if (livePeeps) {
           cleanOutPeeps(livePeeps);
           livePeepsById.delete(event.contactID);
@@ -1181,15 +1178,15 @@ var ContactCache = {
         if (!req.result.length) {
           return;
         }
-        var contact = req.result[0], iPeep, peep;
+        const contact = req.result[0];
         if (event.reason === "update") {
           let livePeeps = livePeepsById.get(contact.id);
           if (livePeeps) {
             var contactEmails = contact.email ? contact.email.map(function(e) {
               return e.value;
             }) : [];
-            for (iPeep = 0; iPeep < livePeeps.length; iPeep++) {
-              peep = livePeeps[iPeep];
+            for (let iPeep = 0; iPeep < livePeeps.length; iPeep++) {
+              const peep = livePeeps[iPeep];
               if (!contactEmails.includes(peep.address)) {
                 livePeeps.splice(iPeep--, 1);
                 peep.contactId = null;
@@ -1204,17 +1201,16 @@ var ContactCache = {
         if (!contact.email) {
           return;
         }
-        for (var iEmail = 0; iEmail < contact.email.length; iEmail++) {
-          var email = contact.email[iEmail].value;
-          let livePeeps = livePeepsByEmail.get(email);
+        for (const emailData of contact.email) {
+          const email = emailData.value;
+          const livePeeps = livePeepsByEmail.get(email);
           if (!livePeeps) {
             continue;
           }
-          for (iPeep = 0; iPeep < livePeeps.length; iPeep++) {
-            peep = livePeeps[iPeep];
+          for (const peep of livePeeps) {
             if (!peep.contactId) {
               peep.contactId = contact.id;
-              var idLivePeeps = livePeepsById.get(peep.contactId);
+              let idLivePeeps = livePeepsById.get(peep.contactId);
               if (idLivePeeps === void 0) {
                 idLivePeeps = [];
                 livePeepsById.set(peep.contactId, idLivePeeps);
@@ -1236,24 +1232,24 @@ var ContactCache = {
     if (addressPairs == null) {
       return null;
     }
-    var resolved = [];
-    for (var i = 0; i < addressPairs.length; i++) {
-      resolved.push(this.resolvePeep(addressPairs[i]));
+    const resolved = [];
+    for (const addressPair of addressPairs) {
+      resolved.push(this.resolvePeep(addressPair));
     }
     return resolved;
   },
   resolvePeep(addressPair) {
-    var emailAddress = addressPair.address;
-    var entry = this._contactCache.get(emailAddress);
-    var peep;
-    var contactsAPI = navigator.mozContacts;
+    const emailAddress = addressPair.address;
+    const entry = this._contactCache.get(emailAddress);
+    let peep;
+    const contactsAPI = navigator.mozContacts;
     if (entry === null || !contactsAPI) {
       peep = new MailPeep(addressPair.name || "", emailAddress, null, null);
       if (!contactsAPI) {
         return peep;
       }
     } else if (entry !== void 0) {
-      var name = addressPair.name || "";
+      let name = addressPair.name || "";
       if (entry.name && entry.name.length) {
         name = entry.name[0];
       }
@@ -1262,25 +1258,24 @@ var ContactCache = {
       peep = new MailPeep(addressPair.name || "", emailAddress, null, null);
       this._contactCache.set(emailAddress, null);
       this.pendingLookupCount++;
-      var filterValue = emailAddress ? emailAddress.toLowerCase() : "";
-      var req = contactsAPI.find({
+      const filterValue = emailAddress ? emailAddress.toLowerCase() : "";
+      const req = contactsAPI.find({
         filterBy: ["email"],
         filterOp: "equals",
         filterValue
       });
-      var self = this, handleResult = function() {
+      const self = this, handleResult = function() {
         if (req.result && req.result.length) {
-          var contact = req.result[0];
+          const contact = req.result[0];
           ContactCache._contactCache.set(emailAddress, contact);
           if (++ContactCache._cacheHitEntries > ContactCache.MAX_CACHE_HITS) {
             self._resetCache();
           }
-          var peepsToFixup = self._livePeepsByEmail.get(emailAddress);
+          const peepsToFixup = self._livePeepsByEmail.get(emailAddress);
           if (!peepsToFixup) {
             return;
           }
-          for (let i = 0; i < peepsToFixup.length; i++) {
-            let fixupPeep = peepsToFixup[i];
+          for (const fixupPeep of peepsToFixup) {
             if (!fixupPeep.contactId) {
               fixupPeep.contactId = contact.id;
               let livePeeps2 = self._livePeepsById.get(fixupPeep.contactId);
@@ -1307,8 +1302,8 @@ var ContactCache = {
           }
         }
         if (--self.pendingLookupCount === 0) {
-          for (let i = 0; i < ContactCache.callbacks.length; i++) {
-            ContactCache.callbacks[i]();
+          for (const callback of ContactCache.callbacks) {
+            callback();
           }
           ContactCache.callbacks.splice(0, ContactCache.callbacks.length);
         }
@@ -1316,7 +1311,7 @@ var ContactCache = {
       req.onsuccess = handleResult;
       req.onerror = handleResult;
     }
-    var livePeeps;
+    let livePeeps;
     livePeeps = this._livePeepsByEmail.get(emailAddress);
     if (livePeeps === void 0) {
       livePeeps = [];
@@ -1334,14 +1329,13 @@ var ContactCache = {
     return peep;
   },
   forgetPeepInstances() {
-    var livePeepsById = this._livePeepsById, livePeepsByEmail = this._livePeepsByEmail;
-    for (var iArg = 0; iArg < arguments.length; iArg++) {
-      var peeps = arguments[iArg];
+    const livePeepsById = this._livePeepsById, livePeepsByEmail = this._livePeepsByEmail;
+    for (const peeps of arguments) {
       if (!peeps) {
         continue;
       }
-      for (var iPeep = 0; iPeep < peeps.length; iPeep++) {
-        var peep = peeps[iPeep], livePeeps, idx;
+      for (const peep of peeps) {
+        let livePeeps, idx;
         if (peep.contactId) {
           livePeeps = livePeepsById.get(peep.contactId);
           if (livePeeps) {
@@ -1368,7 +1362,6 @@ var ContactCache = {
     }
   }
 };
-var contact_cache_default = ContactCache;
 
 // src/shared/a64.js
 var ORDERED_ARBITRARY_BASE64_CHARS = [
@@ -1475,7 +1468,7 @@ function convIdFromMessageId(messageId) {
 // src/app_logic/conv_client_cleanup.js
 function cleanupConversation(mailConversation) {
   let tidbitPeeps = mailConversation.messageTidbits.map((x) => x.author);
-  contact_cache_default.forgetPeepInstances(tidbitPeeps);
+  ContactCache.forgetPeepInstances(tidbitPeeps);
 }
 
 // src/app_logic/conv_client_decorator.js
@@ -1489,7 +1482,7 @@ function decorateConversation(mailConversation, wireRep, firstTime) {
       date: new Date(tidbit.date),
       isRead: tidbit.isRead,
       isStarred: tidbit.isStarred,
-      author: contact_cache_default.resolvePeep(tidbit.author),
+      author: ContactCache.resolvePeep(tidbit.author),
       parentIndex: tidbit.parent
     };
   });
@@ -1500,71 +1493,71 @@ function decorateConversation(mailConversation, wireRep, firstTime) {
 }
 
 // src/clientapi/mail_conversation.js
-function MailConversation(api, wireRep, overlays, matchInfo, slice, handle) {
-  import_evt4.default.Emitter.call(this);
-  this._api = api;
-  this._slice = slice;
-  this._handle = handle;
-  this._wireRep = wireRep;
-  this.id = wireRep.id;
-  this.convType = wireRep.convType;
-  this.__update(wireRep, true);
-  this.matchInfo = matchInfo;
-}
-MailConversation.prototype = import_evt4.default.mix({
+var MailConversation = class extends import_evt4.Emitter {
+  constructor(api, wireRep, overlays, matchInfo, slice, handle) {
+    super();
+    this._api = api;
+    this._slice = slice;
+    this._handle = handle;
+    this._wireRep = wireRep;
+    this.id = wireRep.id;
+    this.convType = wireRep.convType;
+    this.__update(wireRep, true);
+    this.matchInfo = matchInfo;
+  }
   toString() {
     return "[MailConversation: " + this.id + "]";
-  },
+  }
   toJSON() {
     return {
       type: "MailConversation",
       id: this.id
     };
-  },
+  }
   viewMessages() {
     return this._api.viewConversationMessages(this);
-  },
+  }
   getKnownLabels() {
     let accountId = accountIdFromConvId(this.id);
     let account = this._api.accounts.getAccountById(accountId);
     return account.folders.items.concat();
-  },
+  }
   archive() {
     let accountId = accountIdFromConvId(this.id);
     let account = this._api.accounts.getAccountById(accountId);
     let inboxFolder = account.foldes.getFirstFolderWithType("inbox");
     return this.removeLabels([inboxFolder]);
-  },
+  }
   addLabels(folders) {
     return this._api.modifyLabels([this], { addLabels: folders });
-  },
+  }
   removeLabels(folders) {
     return this._api.modifyLabels([this], { removeLabels: folders });
-  },
+  }
   modifyLabels(args) {
     return this._api.modifyLabels([this], args);
-  },
+  }
   modifyTags(args) {
     return this._api.modifyTags([this], args);
-  },
+  }
   get isStarred() {
     return this.hasStarred;
-  },
+  }
   setStarred(beStarred) {
     return this._api.markStarred([this], beStarred);
-  },
+  }
   toggleStarred() {
     this.setStarred(!this.hasStarred);
-  },
+  }
   get isRead() {
     return !this.hasUnread;
-  },
+  }
   setRead(beRead) {
     return this._api.markRead([this], beRead);
-  },
+  }
   toggleRead() {
     this.setRead(!this.isRead);
-  },
+  }
   __update(wireRep, firstTime) {
     this._wireRep = wireRep;
     this.height = wireRep.height;
@@ -1572,57 +1565,57 @@ MailConversation.prototype = import_evt4.default.mix({
     this.firstSubject = wireRep.subject;
     this.messageCount = wireRep.messageCount;
     this.snippetCount = wireRep.snippetCount;
-    this.authors = contact_cache_default.resolvePeeps(wireRep.authors);
+    this.authors = ContactCache.resolvePeeps(wireRep.authors);
     decorateConversation(this, wireRep, firstTime);
     this.labels = this._api._mapLabels(this.id, wireRep.folderIds);
     this.hasUnread = wireRep.hasUnread;
     this.hasStarred = wireRep.hasStarred;
     this.hasDrafts = wireRep.hasDrafts;
     this.hasAttachments = wireRep.hasAttachments;
-  },
+  }
   __updateOverlays() {
-  },
+  }
   release() {
-    contact_cache_default.forgetPeepInstances(this.authors);
+    ContactCache.forgetPeepInstances(this.authors);
     cleanupConversation(this);
     if (this._handle) {
       this._api._cleanupContext(this._handle);
       this._handle = null;
     }
   }
-});
+};
 
 // src/clientapi/mail_message.js
 var import_evt6 = __toModule(require_evt());
 
 // src/clientapi/mail_attachment.js
 var import_evt5 = __toModule(require_evt());
-function MailAttachment(_message, wireRep) {
-  import_evt5.default.Emitter.call(this);
-  this._message = _message;
-  this.id = _message.id + "." + wireRep.relId;
-  this.relId = wireRep.relId;
-  this.partId = wireRep.part;
-  this.__update(wireRep);
-  this.__updateDownloadOverlay(null);
-}
-MailAttachment.prototype = import_evt5.default.mix({
+var MailAttachment = class extends import_evt5.Emitter {
+  constructor(_message, wireRep) {
+    super();
+    this._message = _message;
+    this.id = _message.id + "." + wireRep.relId;
+    this.relId = wireRep.relId;
+    this.partId = wireRep.part;
+    this.__update(wireRep);
+    this.__updateDownloadOverlay(null);
+  }
   toString() {
     return '[MailAttachment: "' + this.filename + '"]';
-  },
+  }
   toJSON() {
     return {
       type: "MailAttachment",
       filename: this.filename
     };
-  },
+  }
   __update(wireRep) {
     this.filename = wireRep.name;
     this.mimetype = wireRep.type;
     this.sizeEstimateInBytes = wireRep.sizeEstimate;
     this._downloadState = wireRep.downloadState;
     this._file = wireRep.file;
-  },
+  }
   __updateDownloadOverlay(info) {
     if (info) {
       this._overlayDownloadStatus = info.status;
@@ -1631,19 +1624,19 @@ MailAttachment.prototype = import_evt5.default.mix({
       this.downloadStatus = null;
       this.bytesDownloaded = 0;
     }
-  },
+  }
   get downloadState() {
     return this._downloadState || this._overlayDownloadStatus;
-  },
+  }
   get isDownloading() {
     return !!this._overlayDownloadStatus;
-  },
+  }
   get isDownloaded() {
     return (this._downloadState === "cached" || this._downloadState === "saved") && this._file;
-  },
+  }
   get isDownloadable() {
     return this.mimetype !== "application/x-gelam-no-download" && this._downloadState !== "draft";
-  },
+  }
   download(opts) {
     let downloadTarget = opts && opts.downloadTarget || "save";
     return this._message._api._downloadAttachments({
@@ -1651,7 +1644,7 @@ MailAttachment.prototype = import_evt5.default.mix({
       messageDate: this._message.date.valueOf(),
       parts: new Map([[this.relId, downloadTarget]])
     });
-  },
+  }
   getDownloadedBlob() {
     if (!this.isDownloaded) {
       return Promise.reject();
@@ -1661,10 +1654,10 @@ MailAttachment.prototype = import_evt5.default.mix({
     }
     return new Promise((resolve, reject) => {
       try {
-        var storageType = this._file[0];
-        var filename = this._file[1];
-        var storage = navigator.getDeviceStorage(storageType);
-        var getreq = storage.get(filename);
+        const storageType = this._file[0];
+        const filename = this._file[1];
+        const storage = navigator.getDeviceStorage(storageType);
+        const getreq = storage.get(filename);
         getreq.onerror = function() {
           reject(getreq.error);
           console.warn("Could not open attachment file: ", filename, getreq.error.name);
@@ -1678,7 +1671,7 @@ MailAttachment.prototype = import_evt5.default.mix({
       }
     });
   }
-});
+};
 
 // src/clientapi/keyed_list_helper.js
 function keyedListHelper({
@@ -1691,12 +1684,12 @@ function keyedListHelper({
   changeEvent,
   removeEvent
 }) {
-  let pendingRichMap = new Map();
-  for (let richRep of existingRichReps) {
+  const pendingRichMap = new Map();
+  for (const richRep of existingRichReps) {
     pendingRichMap.set(richRep[idKey], richRep);
   }
-  let updatedList = [];
-  for (let wireRep of wireReps) {
+  const updatedList = [];
+  for (const wireRep of wireReps) {
     let richRep = pendingRichMap.get(wireRep[idKey]);
     if (richRep) {
       richRep.__update(wireRep);
@@ -1713,7 +1706,7 @@ function keyedListHelper({
     }
     updatedList.push(richRep);
   }
-  for (let richRep of existingRichReps) {
+  for (const richRep of existingRichReps) {
     richRep.emit("remove", richRep);
     if (removeEvent) {
       owner.emit(removeEvent, richRep);
@@ -1724,7 +1717,7 @@ function keyedListHelper({
 
 // src/clientapi/mail_message.js
 function filterOutBuiltinFlags(flags) {
-  var outFlags = [];
+  const outFlags = [];
   for (var i = flags.length - 1; i >= 0; i--) {
     if (flags[i][0] !== "\\") {
       outFlags.push(flags[i]);
@@ -1732,40 +1725,40 @@ function filterOutBuiltinFlags(flags) {
   }
   return outFlags;
 }
-function MailMessage(api, wireRep, overlays, matchInfo, slice) {
-  import_evt6.default.Emitter.call(this);
-  this._api = api;
-  this._slice = slice;
-  this._wireRep = wireRep;
-  this.id = wireRep.id;
-  this.guid = wireRep.guid;
-  this.author = contact_cache_default.resolvePeep(wireRep.author);
-  this.to = contact_cache_default.resolvePeeps(wireRep.to);
-  this.cc = contact_cache_default.resolvePeeps(wireRep.cc);
-  this.bcc = contact_cache_default.resolvePeeps(wireRep.bcc);
-  this.replyTo = wireRep.replyTo;
-  this._relatedParts = wireRep.relatedParts;
-  this.bodyReps = wireRep.bodyReps;
-  this._references = wireRep.references;
-  this.attachments = [];
-  this.__update(wireRep);
-  this.__updateOverlays(overlays);
-  this.hasAttachments = wireRep.hasAttachments;
-  this.subject = wireRep.subject;
-  this.snippet = wireRep.snippet;
-  this.matchInfo = matchInfo;
-}
-MailMessage.prototype = import_evt6.default.mix({
-  type: "msg",
+var MailMessage = class extends import_evt6.Emitter {
+  constructor(api, wireRep, overlays, matchInfo, slice) {
+    super();
+    this._api = api;
+    this._slice = slice;
+    this._wireRep = wireRep;
+    this.id = wireRep.id;
+    this.guid = wireRep.guid;
+    this.author = ContactCache.resolvePeep(wireRep.author);
+    this.to = ContactCache.resolvePeeps(wireRep.to);
+    this.cc = ContactCache.resolvePeeps(wireRep.cc);
+    this.bcc = ContactCache.resolvePeeps(wireRep.bcc);
+    this.replyTo = wireRep.replyTo;
+    this._relatedParts = wireRep.relatedParts;
+    this.bodyReps = wireRep.bodyReps;
+    this._references = wireRep.references;
+    this.attachments = [];
+    this.__update(wireRep);
+    this.__updateOverlays(overlays);
+    this.hasAttachments = wireRep.hasAttachments;
+    this.subject = wireRep.subject;
+    this.snippet = wireRep.snippet;
+    this.matchInfo = matchInfo;
+    this.type = "msg";
+  }
   toString() {
     return "[MailMessage: " + this.id + "]";
-  },
+  }
   toJSON() {
     return {
       type: "MailMessage",
       id: this.id
     };
-  },
+  }
   __update(wireRep) {
     this._wireRep = wireRep;
     if (wireRep.snippet !== null) {
@@ -1794,120 +1787,95 @@ MailMessage.prototype = import_evt6.default.mix({
       changeEvent: "attachment:change",
       removeEvent: "attachment:remove"
     });
-  },
+  }
   __updateOverlays(overlays) {
-    let downloadMap = overlays.download;
-    for (let attachment of this.attachments) {
-      let downloadOverlay = downloadMap && downloadMap.get(attachment.relId);
+    const downloadMap = overlays.download;
+    for (const attachment of this.attachments) {
+      const downloadOverlay = downloadMap && downloadMap.get(attachment.relId);
       attachment.__updateDownloadOverlay(downloadOverlay);
       attachment.emit("change");
     }
-    this.isDownloadingEmbeddedImages = false;
-    if (downloadMap) {
-      for (let relId of downloadMap.keys()) {
-        if (relId[0] === "r") {
-          this.isDownloadingEmbeddedImages = true;
-          break;
-        }
-      }
-    }
-  },
+    this.isDownloadingEmbeddedImages = downloadMap && downloadMap.keys().some((relId) => relId[0] === "r");
+  }
   release() {
-    contact_cache_default.forgetPeepInstances([this.author], this.to, this.cc, this.bcc);
-  },
+    ContactCache.forgetPeepInstances([this.author], this.to, this.cc, this.bcc);
+  }
   archiveFromInbox() {
-    let curInboxFolders = this.labels.filter((folder) => folder.type === "inbox");
+    const curInboxFolders = this.labels.filter((folder) => folder.type === "inbox");
     if (curInboxFolders.length) {
       return this.modifyLabels({ removeLabels: curInboxFolders });
     }
     return null;
-  },
+  }
   trash() {
     return this._api.trash([this]);
-  },
+  }
   move(targetFolder) {
     return this._api.move([this], targetFolder);
-  },
+  }
   setRead(beRead) {
     return this._api.markRead([this], beRead);
-  },
+  }
   toggleRead() {
     return this.setRead(!this.isRead);
-  },
+  }
   setStarred(beStarred) {
     return this._api.markStarred([this], beStarred);
-  },
+  }
   toggleStarred() {
     return this.setStarred(!this.isStarred);
-  },
+  }
   modifyTags(args) {
     return this._api.modifyTags([this], args);
-  },
+  }
   modifyLabels(args) {
     return this._api.modifyLabels([this], args);
-  },
+  }
   get bytesToDownloadForBodyDisplay() {
     return this._wireRep.bytesToDownloadForBodyDisplay || 0;
-  },
+  }
   editAsDraft() {
     if (!this.isDraft) {
       throw new Error("Nice try, but I am not a magical localdraft.");
     }
     return this._api.resumeMessageComposition(this);
-  },
+  }
   replyToMessage(replyMode, options) {
     return this._slice._api.beginMessageComposition(this, null, {
       command: "reply",
       mode: replyMode,
       noComposer: options && options.noComposer
     });
-  },
+  }
   forwardMessage(forwardMode, options) {
     return this._slice._api.beginMessageComposition(this, null, {
       command: "forward",
       mode: forwardMode,
       noComposer: options && options.noComposer
     });
-  },
+  }
   get embeddedImageCount() {
-    if (!this._relatedParts) {
-      return 0;
-    }
-    return this._relatedParts.length;
-  },
+    return this.relatedParts?.length || 0;
+  }
   downloadBodyReps() {
     this._api._downloadBodyReps(this.id, this.date.valueOf());
-  },
+  }
   get bodyRepsDownloaded() {
-    var i = 0;
-    var len = this.bodyReps.length;
-    for (; i < len; i++) {
-      if (!this.bodyReps[i].isDownloaded) {
-        return false;
-      }
-    }
-    return true;
-  },
+    return this.bodyReps.every((bodyRep) => bodyRep.isDownloaded);
+  }
   get embeddedImagesDownloaded() {
-    for (var i = 0; i < this._relatedParts.length; i++) {
-      var relatedPart = this._relatedParts[i];
-      if (!relatedPart.file) {
-        return false;
-      }
-    }
-    return true;
-  },
-  downloadEmbeddedImages() {
-    var relatedPartRelIds = [];
-    for (var i = 0; i < this._relatedParts.length; i++) {
-      var relatedPart = this._relatedParts[i];
+    return this._relatedParts.every((relatedPart) => relatedPart.file);
+  }
+  async downloadEmbeddedImages() {
+    const relatedPartRelIds = [];
+    for (const relatedPart of this._relatedParts) {
       if (relatedPart.file) {
         continue;
       }
       relatedPartRelIds.push(relatedPart.relId);
     }
     if (!relatedPartRelIds.length) {
-      return Promise.resolve();
+      return null;
     }
     return this._api._downloadAttachments({
       messageId: this.id,
@@ -1915,37 +1883,35 @@ MailMessage.prototype = import_evt6.default.mix({
       relatedPartRelIds,
       attachmentRelIds: null
     });
-  },
+  }
   showEmbeddedImages(htmlNode, loadCallback) {
-    var i, cidToBlob = {};
-    for (i = 0; i < this._relatedParts.length; i++) {
-      var relPart = this._relatedParts[i];
-      if (relPart.file && !Array.isArray(relPart.file)) {
-        cidToBlob[relPart.contentId] = relPart.file;
+    const cidToBlob = new Map();
+    for (const { file, contentId } of this._relatedParts) {
+      if (file && !Array.isArray(file)) {
+        cidToBlob.set(contentId, file);
       }
     }
-    var nodes = htmlNode.querySelectorAll(".moz-embedded-image");
-    for (i = 0; i < nodes.length; i++) {
-      var node = nodes[i], cid = node.getAttribute("cid-src");
-      if (!cidToBlob.hasOwnProperty(cid)) {
+    const nodes = htmlNode.querySelectorAll(".moz-embedded-image");
+    for (const node of nodes) {
+      const cid = node.getAttribute("cid-src");
+      if (!cidToBlob.has(cid)) {
         continue;
       }
-      showBlobInImg(node, cidToBlob[cid]);
+      showBlobInImg(node, cidToBlob.get(cid));
       if (loadCallback) {
         node.addEventListener("load", loadCallback);
       }
       node.removeAttribute("cid-src");
       node.classList.remove("moz-embedded-image");
     }
-  },
+  }
   checkForExternalImages(htmlNode) {
-    var someNode = htmlNode.querySelector(".moz-external-image");
+    const someNode = htmlNode.querySelector(".moz-external-image");
     return someNode !== null;
-  },
+  }
   showExternalImages(htmlNode, loadCallback) {
-    var nodes = htmlNode.querySelectorAll(".moz-external-image");
-    for (var i = 0; i < nodes.length; i++) {
-      var node = nodes[i];
+    const nodes = htmlNode.querySelectorAll(".moz-external-image");
+    for (const node of nodes) {
       if (loadCallback) {
         node.addEventListener("load", loadCallback);
       }
@@ -1954,36 +1920,36 @@ MailMessage.prototype = import_evt6.default.mix({
       node.classList.remove("moz-external-image");
     }
   }
-});
+};
 
 // src/clientapi/undoable_operation.js
-function UndoableOperation({
-  api,
-  id,
-  operation,
-  affectedCount,
-  affectedType,
-  undoableTasksPromise
-}) {
-  this._api = api;
-  this.id = id;
-  this.operation = operation;
-  this.affectedCount = affectedCount;
-  this.affectedType = affectedType;
-  this._undoableTasksPromise = undoableTasksPromise;
-  this._undoRequested = false;
-}
-UndoableOperation.prototype = {
+var UndoableOperation = class {
+  constructor({
+    api,
+    id,
+    operation,
+    affectedCount,
+    affectedType,
+    undoableTasksPromise
+  }) {
+    this._api = api;
+    this.id = id;
+    this.operation = operation;
+    this.affectedCount = affectedCount;
+    this.affectedType = affectedType;
+    this._undoableTasksPromise = undoableTasksPromise;
+    this._undoRequested = false;
+  }
   toString() {
     return "[UndoableOperation]";
-  },
+  }
   toJSON() {
     return {
       type: "UndoableOperation",
       affectedType: this.affectedType,
       affectedCount: this.affectedCount
     };
-  },
+  }
   undo() {
     if (!this._undoableTasksPromise) {
       return;
@@ -2000,28 +1966,28 @@ UndoableOperation.prototype = {
 
 // src/clientapi/entire_list_view.js
 var import_evt7 = __toModule(require_evt());
-function EntireListView(api, itemConstructor, handle) {
-  import_evt7.default.Emitter.call(this);
-  this._api = api;
-  this._itemConstructor = itemConstructor;
-  this.handle = handle;
-  this.serial = 0;
-  this.items = [];
-  this.itemsById = new Map();
-  this.complete = false;
-}
-EntireListView.prototype = import_evt7.default.mix({
-  viewKind: "entire",
+var EntireListView = class extends import_evt7.Emitter {
+  constructor(api, itemConstructor, handle) {
+    super();
+    this._api = api;
+    this._itemConstructor = itemConstructor;
+    this.handle = handle;
+    this.serial = 0;
+    this.items = [];
+    this.itemsById = new Map();
+    this.complete = false;
+    this.viewKind = "entire";
+  }
   toString() {
     return "[EntireListView: " + this._ns + " " + this.handle + "]";
-  },
+  }
   toJSON() {
     return {
       type: "EntireListView",
       namespace: this._ns,
       handle: this.handle
     };
-  },
+  }
   __update(details) {
     let newSerial = ++this.serial;
     for (let change of details.changes) {
@@ -2049,39 +2015,38 @@ EntireListView.prototype = import_evt7.default.mix({
     }
     this.complete = true;
     this.emit("complete", this);
-  },
+  }
   release() {
     this._api.__bridgeSend({
       type: "cleanupContext",
       handle: this.handle
     });
-    for (var i = 0; i < this.items.length; i++) {
-      var item = this.items[i];
+    for (const item of this.items) {
       item.release();
     }
   }
-});
+};
 
 // src/clientapi/mail_account.js
 var import_evt8 = __toModule(require_evt());
 
 // src/clientapi/mail_sender_identity.js
-function MailSenderIdentity(api, wireRep) {
-  this._api = api;
-  this.id = wireRep.id;
-  this.name = wireRep.name;
-  this.address = wireRep.address;
-  this.replyTo = wireRep.replyTo;
-  this.signature = wireRep.signature;
-  this.signatureEnabled = wireRep.signatureEnabled;
-}
-MailSenderIdentity.prototype = {
+var MailSenderIdentity = class {
+  constructor(api, wireRep) {
+    this._api = api;
+    this.id = wireRep.id;
+    this.name = wireRep.name;
+    this.address = wireRep.address;
+    this.replyTo = wireRep.replyTo;
+    this.signature = wireRep.signature;
+    this.signatureEnabled = wireRep.signatureEnabled;
+  }
   toString() {
     return "[MailSenderIdentity: " + this.type + " " + this.id + "]";
-  },
+  }
   toJSON() {
     return { type: "MailSenderIdentity" };
-  },
+  }
   __update(wireRep) {
     this.id = wireRep.id;
     this.name = wireRep.name;
@@ -2089,7 +2054,7 @@ MailSenderIdentity.prototype = {
     this.replyTo = wireRep.replyTo;
     this.signature = wireRep.signature;
     this.signatureEnabled = wireRep.signatureEnabled;
-  },
+  }
   modifyIdentity(mods) {
     if (typeof mods.signature !== "undefined") {
       this.signature = mods.signature;
@@ -2098,51 +2063,48 @@ MailSenderIdentity.prototype = {
       this.signatureEnabled = mods.signatureEnabled;
     }
     return this._api._modifyIdentity(this, mods);
-  },
+  }
   release() {
   }
 };
 
 // src/clientapi/mail_account.js
-function MailAccount(api, wireRep, overlays, matchInfo, acctsSlice) {
-  import_evt8.default.Emitter.call(this);
-  this._api = api;
-  this.id = wireRep.id;
-  this.matchInfo = matchInfo;
-  this._wireRep = wireRep;
-  this.acctsSlice = acctsSlice;
-  this.type = wireRep.type;
-  this.name = wireRep.name;
-  this.syncRange = wireRep.syncRange;
-  this.syncInterval = wireRep.syncInterval;
-  this.notifyOnNew = wireRep.notifyOnNew;
-  this.playSoundOnSend = wireRep.playSoundOnSend;
-  this.enabled = wireRep.enabled;
-  this.problems = wireRep.problems;
-  this.identities = [];
-  for (var iIdent = 0; iIdent < wireRep.identities.length; iIdent++) {
-    this.identities.push(new MailSenderIdentity(this._api, wireRep.identities[iIdent]));
+var MailAccount = class extends import_evt8.Emitter {
+  constructor(api, wireRep, overlays, matchInfo, acctsSlice) {
+    super();
+    this._api = api;
+    this.id = wireRep.id;
+    this.matchInfo = matchInfo;
+    this._wireRep = wireRep;
+    this.acctsSlice = acctsSlice;
+    this.type = wireRep.type;
+    this.name = wireRep.name;
+    this.syncRange = wireRep.syncRange;
+    this.syncInterval = wireRep.syncInterval;
+    this.notifyOnNew = wireRep.notifyOnNew;
+    this.playSoundOnSend = wireRep.playSoundOnSend;
+    this.enabled = wireRep.enabled;
+    this.problems = wireRep.problems;
+    this.identities = wireRep.identities.map((id) => new MailSenderIdentity(this._api, id));
+    this.username = wireRep.credentials.username;
+    this.servers = wireRep.servers;
+    this.authMechanism = wireRep.credentials.oauth2 ? "oauth2" : "password";
+    this.folders = null;
+    if (acctsSlice && acctsSlice._autoViewFolders) {
+      this.folders = api.viewFolders("account", this.id);
+    }
+    this.__updateOverlays(overlays);
   }
-  this.username = wireRep.credentials.username;
-  this.servers = wireRep.servers;
-  this.authMechanism = wireRep.credentials.oauth2 ? "oauth2" : "password";
-  this.folders = null;
-  if (acctsSlice && acctsSlice._autoViewFolders) {
-    this.folders = api.viewFolders("account", this.id);
-  }
-  this.__updateOverlays(overlays);
-}
-MailAccount.prototype = import_evt8.default.mix({
   toString() {
     return "[MailAccount: " + this.type + " " + this.id + "]";
-  },
+  }
   toJSON() {
     return {
       type: "MailAccount",
       accountType: this.type,
       id: this.id
     };
-  },
+  }
   __update(wireRep) {
     this._wireRep = wireRep;
     this.enabled = wireRep.enabled;
@@ -2151,211 +2113,173 @@ MailAccount.prototype = import_evt8.default.mix({
     this.syncInterval = wireRep.syncInterval;
     this.notifyOnNew = wireRep.notifyOnNew;
     this.playSoundOnSend = wireRep.playSoundOnSend;
-    for (var i = 0; i < wireRep.identities.length; i++) {
+    for (let i = 0; i < wireRep.identities.length; i++) {
       if (this.identities[i]) {
         this.identities[i].__update(wireRep.identities[i]);
       } else {
         this.identities.push(new MailSenderIdentity(this._api, wireRep.identities[i]));
       }
     }
-  },
+  }
   __updateOverlays(overlays) {
     this.syncStatus = overlays.sync_refresh ? overlays.sync_refresh : null;
-  },
+  }
   release() {
-  },
+  }
   clearProblems(callback) {
     this._api._clearAccountProblems(this, callback);
-  },
+  }
   modifyAccount(mods) {
     return this._api._modifyAccount(this, mods);
-  },
+  }
   recreateAccount() {
     this._api._recreateAccount(this);
-  },
+  }
   deleteAccount() {
     this._api._deleteAccount(this);
-  },
+  }
   syncFolderList() {
     this._api.__bridgeSend({
       type: "syncFolderList",
       accountId: this.id
     });
-  },
+  }
   clearNewTracking(opts) {
     this._api.clearNewTrackingForAccount({
       accountId: this.id,
       silent: opts && opts.silent || false
     });
-  },
+  }
   get isDefault() {
     if (!this.acctsSlice) {
       throw new Error("No account slice available");
     }
     return this.acctsSlice.defaultAccount === this;
   }
-});
+};
 
-// src/clientapi/accounts_view_slice.js
-function AccountsViewSlice(api, handle, opts) {
-  EntireListView.call(this, api, MailAccount, handle);
-  this._autoViewFolders = opts && opts.autoViewFolders || false;
-}
-AccountsViewSlice.prototype = Object.create(EntireListView.prototype);
-AccountsViewSlice.prototype.getAccountById = function(id) {
-  for (var i = 0; i < this.items.length; i++) {
-    if (this.items[i].id === id) {
-      return this.items[i];
-    }
+// src/clientapi/accounts_list_view.js
+var AccountsListView = class extends EntireListView {
+  constructor(api, handle, opts) {
+    super(api, MailAccount, handle);
+    this._autoViewFolders = opts && opts.autoViewFolders || false;
   }
-  return null;
-};
-AccountsViewSlice.prototype.eventuallyGetAccountById = function(id) {
-  return new Promise((resolve, reject) => {
-    const existingAccount = this.getAccountById(id);
-    if (existingAccount) {
-      resolve(existingAccount);
-      return;
-    }
-    let addListener = (account) => {
-      if (account.id === id) {
-        this.removeListener("add", addListener);
-        resolve(account);
+  getAccountById(id) {
+    return this.items.find((item) => item.id === id) || null;
+  }
+  eventuallyGetAccountById(id) {
+    return new Promise((resolve, reject) => {
+      const existingAccount = this.getAccountById(id);
+      if (existingAccount) {
+        resolve(existingAccount);
+        return;
       }
-    };
-    this.on("add", addListener);
-  });
-};
-Object.defineProperty(AccountsViewSlice.prototype, "defaultAccount", {
-  get() {
-    var defaultAccount = this.items[0];
-    for (var i = 1; i < this.items.length; i++) {
-      if ((this.items[i]._wireRep.defaultPriority || 0) > (defaultAccount._wireRep.defaultPriority || 0)) {
-        defaultAccount = this.items[i];
+      const addListener = (account) => {
+        if (account.id === id) {
+          this.removeListener("add", addListener);
+          resolve(account);
+        }
+      };
+      this.on("add", addListener);
+    });
+  }
+  get defaultAccount() {
+    const items = this.items;
+    let defaultAccount = items[0];
+    for (let i = 1; i < items.length; i++) {
+      if ((items[i]._wireRep.defaultPriority || 0) > (defaultAccount._wireRep.defaultPriority || 0)) {
+        defaultAccount = items[i];
       }
     }
     return defaultAccount;
   }
-});
+};
 
 // src/clientapi/folders_list_view.js
-function FoldersViewSlice(api, handle) {
-  EntireListView.call(this, api, MailFolder, handle);
-  this.inbox = null;
-  var inboxListener = (mailFolder) => {
-    if (mailFolder.type === "inbox") {
-      this.inbox = mailFolder;
-      this.removeListener("add", inboxListener);
-      this.emit("inbox", mailFolder);
-    }
-  };
-  this.on("add", inboxListener);
-}
-FoldersViewSlice.prototype = Object.create(EntireListView.prototype);
-FoldersViewSlice.prototype.getFolderById = function(id) {
-  var items = this.items;
-  for (var i = 0; i < items.length; i++) {
-    var folder = items[i];
-    if (folder.id === id) {
-      return folder;
-    }
-  }
-  return null;
-};
-FoldersViewSlice.prototype.eventuallyGetFolderById = function(id) {
-  return new Promise(function(resolve, reject) {
-    const existingFolder = this.getFolderById(id);
-    if (existingFolder) {
-      resolve(existingFolder);
-      return;
-    }
-    if (this.complete) {
-      reject("already complete");
-      return;
-    }
-    var addListener = function(folder) {
-      if (folder.id === id) {
-        this.removeListener("add", addListener);
-        resolve(folder);
+var FoldersListView = class extends EntireListView {
+  constructor(api, handle) {
+    super(api, MailFolder, handle);
+    this.inbox = null;
+    const inboxListener = (mailFolder) => {
+      if (mailFolder.type === "inbox") {
+        this.inbox = mailFolder;
+        this.removeListener("add", inboxListener);
+        this.emit("inbox", mailFolder);
       }
-    }.bind(this);
-    var completeListener = function() {
-      this.removeListener("add", addListener);
-      this.removeListener("complete", completeListener);
-      reject("async complete");
-    }.bind(this);
-    this.on("add", addListener);
-    this.on("complete", completeListener);
-  }.bind(this));
-};
-FoldersViewSlice.prototype.getFirstFolderWithType = function(type, items) {
-  if (!items) {
-    items = this.items;
+    };
+    this.on("add", inboxListener);
   }
-  for (var i = 0; i < items.length; i++) {
-    var folder = items[i];
-    if (folder.type === type) {
-      return folder;
-    }
+  getFolderById(id) {
+    return this.items.find((folder) => folder.id === id) || null;
   }
-  return null;
-};
-FoldersViewSlice.prototype.getFirstFolderWithName = function(name, items) {
-  if (!items) {
-    items = this.items;
+  eventuallyGetFolderById(id) {
+    return new Promise((resolve, reject) => {
+      const existingFolder = this.getFolderById(id);
+      if (existingFolder) {
+        resolve(existingFolder);
+        return;
+      }
+      if (this.complete) {
+        reject("already complete");
+        return;
+      }
+      const addListener = (folder) => {
+        if (folder.id === id) {
+          this.removeListener("add", addListener);
+          resolve(folder);
+        }
+      };
+      const completeListener = () => {
+        this.removeListener("add", addListener);
+        this.removeListener("complete", completeListener);
+        reject("async complete");
+      };
+      this.on("add", addListener);
+      this.on("complete", completeListener);
+    });
   }
-  for (var i = 0; i < items.length; i++) {
-    var folder = items[i];
-    if (folder.name === name) {
-      return folder;
-    }
+  getFirstFolderWithType(type, items) {
+    return (items || this.items).find((folder) => folder.type === type) || null;
   }
-  return null;
-};
-FoldersViewSlice.prototype.getFirstFolderWithPath = function(path, items) {
-  if (!items) {
-    items = this.items;
+  getFirstFolderWithName(name, items) {
+    return (items || this.items).find((folder) => folder.name === name) || null;
   }
-  for (var i = 0; i < items.length; i++) {
-    var folder = items[i];
-    if (folder.path === path) {
-      return folder;
-    }
+  getFirstFolderWithPath(path, items) {
+    return (items || this.items).find((folder) => folder.path === path) || null;
   }
-  return null;
 };
 
 // src/clientapi/windowed_list_view.js
 var import_evt9 = __toModule(require_evt());
-function WindowedListView(api, itemConstructor, handle) {
-  import_evt9.default.Emitter.call(this);
-  this._api = api;
-  this.handle = handle;
-  this._itemConstructor = itemConstructor;
-  this.released = false;
-  this.serial = 0;
-  this.tocMetaSerial = 0;
-  this.offset = 0;
-  this.heightOffset = 0;
-  this.totalCount = 0;
-  this.totalHeight = 0;
-  this.items = [];
-  this._itemsById = new Map();
-  this.tocMeta = {};
-  this.complete = false;
-}
-WindowedListView.prototype = import_evt9.default.mix({
-  viewKind: "windowed",
+var WindowedListView = class extends import_evt9.Emitter {
+  constructor(api, itemConstructor, handle) {
+    super();
+    this._api = api;
+    this.handle = handle;
+    this._itemConstructor = itemConstructor;
+    this.released = false;
+    this.serial = 0;
+    this.tocMetaSerial = 0;
+    this.offset = 0;
+    this.heightOffset = 0;
+    this.totalCount = 0;
+    this.totalHeight = 0;
+    this.items = [];
+    this._itemsById = new Map();
+    this.tocMeta = {};
+    this.complete = false;
+    this.viewKind = "windowed";
+  }
   toString() {
     return "[WindowedListView: " + this._itemConstructor.name + " " + this.handle + "]";
-  },
+  }
   toJSON() {
     return {
       type: "WindowedListView",
       namespace: this._ns,
       handle: this.handle
     };
-  },
+  }
   __update(details) {
     let newSerial = ++this.serial;
     let existingSet = this._itemsById;
@@ -2365,8 +2289,7 @@ WindowedListView.prototype = import_evt9.default.mix({
     let newItems = [];
     let itemSetChanged = newIds.length !== this.items.length;
     let contentsChanged = false;
-    for (let i = 0; i < newIds.length; i++) {
-      let id = newIds[i];
+    for (const id of newIds) {
       let obj;
       if (existingSet.has(id)) {
         obj = existingSet.get(id);
@@ -2395,11 +2318,11 @@ WindowedListView.prototype = import_evt9.default.mix({
       }
       newItems.push(obj);
     }
-    for (let deadObj of existingSet.values()) {
+    for (const deadObj of existingSet.values()) {
       itemSetChanged = true;
       deadObj.release();
     }
-    let whatChanged = {
+    const whatChanged = {
       offset: details.offset !== this.offset,
       totalCount: details.totalCount !== this.totalCount,
       itemSet: itemSetChanged,
@@ -2418,24 +2341,24 @@ WindowedListView.prototype = import_evt9.default.mix({
     }
     this.emit("seeked", whatChanged);
     if (details.events) {
-      for (let { name, data } of details.events) {
+      for (const { name, data } of details.events) {
         this.emit(name, data);
       }
     }
-  },
+  }
   get atTop() {
     return this.offset === 0;
-  },
+  }
   get atBottom() {
     return this.totalCount === this.offset + this.items.length;
-  },
+  }
   getItemByAbsoluteIndex(absIndex) {
     let relIndex = absIndex - this.offset;
     if (relIndex < 0 || relIndex >= this.items.length) {
       return null;
     }
     return this.items[relIndex];
-  },
+  }
   seekToTop(visibleDesired, bufferDesired) {
     this._api.__bridgeSend({
       type: "seekProxy",
@@ -2444,7 +2367,7 @@ WindowedListView.prototype = import_evt9.default.mix({
       visibleDesired,
       bufferDesired
     });
-  },
+  }
   seekFocusedOnItem(item, bufferAbove, visibleAbove, visibleBelow, bufferBelow) {
     let idx = this.items.indexOf(item);
     if (idx === -1) {
@@ -2460,7 +2383,7 @@ WindowedListView.prototype = import_evt9.default.mix({
       visibleBelow,
       bufferBelow
     });
-  },
+  }
   seekFocusedOnAbsoluteIndex(index, bufferAbove, visibleAbove, visibleBelow, bufferBelow) {
     this._api.__bridgeSend({
       type: "seekProxy",
@@ -2472,7 +2395,7 @@ WindowedListView.prototype = import_evt9.default.mix({
       visibleBelow,
       bufferBelow
     });
-  },
+  }
   seekToBottom(visibleDesired, bufferDesired) {
     this._api.__bridgeSend({
       type: "seekProxy",
@@ -2481,7 +2404,7 @@ WindowedListView.prototype = import_evt9.default.mix({
       visibleDesired,
       bufferDesired
     });
-  },
+  }
   seekInCoordinateSpace(offset, before, visible, after) {
     this._api.__bridgeSend({
       type: "seekProxy",
@@ -2492,7 +2415,7 @@ WindowedListView.prototype = import_evt9.default.mix({
       visible,
       after
     });
-  },
+  }
   release() {
     if (this.released) {
       return;
@@ -2502,132 +2425,134 @@ WindowedListView.prototype = import_evt9.default.mix({
       type: "cleanupContext",
       handle: this.handle
     });
-    for (let i = 0; i < this.items.length; i++) {
-      let item = this.items[i];
+    for (const item of this.items) {
       if (item) {
         item.release();
       }
     }
   }
-});
+};
 
 // src/clientapi/conversations_list_view.js
-function ConversationsListView(api, handle) {
-  WindowedListView.call(this, api, MailConversation, handle);
-  this.syncRequested = false;
-  this.on("syncComplete", (data) => {
-    data.thisViewTriggered = this.syncRequested;
+var ConversationsListView = class extends WindowedListView {
+  constructor(api, handle) {
+    super(api, MailConversation, handle);
     this.syncRequested = false;
-  });
-}
-ConversationsListView.prototype = Object.create(WindowedListView.prototype);
-ConversationsListView.prototype._makeOrderingKeyFromItem = function(item) {
-  return {
-    date: item.mostRecentMessageDate.valueOf(),
-    id: item.id
-  };
-};
-ConversationsListView.prototype.refresh = function() {
-  this.syncRequested = true;
-  this._api.__bridgeSend({
-    type: "refreshView",
-    handle: this.handle
-  });
-};
-ConversationsListView.prototype.grow = function() {
-  this.syncRequested = true;
-  this._api.__bridgeSend({
-    type: "growView",
-    handle: this.handle
-  });
-};
-ConversationsListView.prototype.ensureSnippets = function(idxStart, idxEnd) {
-  if (idxStart === void 0) {
-    idxStart = 0;
+    this.on("syncComplete", (data) => {
+      data.thisViewTriggered = this.syncRequested;
+      this.syncRequested = false;
+    });
   }
-  if (idxEnd === void 0) {
-    idxEnd = this.items.length - 1;
+  _makeOrderingKeyFromItem(item) {
+    return {
+      date: item.mostRecentMessageDate.valueOf(),
+      id: item.id
+    };
   }
-  let convIds = [];
-  for (let i = idxStart; i <= idxEnd; i++) {
-    let convInfo = this.items[i];
-    if (!convInfo) {
-      continue;
+  refresh() {
+    this.syncRequested = true;
+    this._api.__bridgeSend({
+      type: "refreshView",
+      handle: this.handle
+    });
+  }
+  grow() {
+    this.syncRequested = true;
+    this._api.__bridgeSend({
+      type: "growView",
+      handle: this.handle
+    });
+  }
+  ensureSnippets(idxStart, idxEnd) {
+    if (idxStart === void 0) {
+      idxStart = 0;
     }
-    if (convInfo.snippetCount < convInfo.messageCount) {
-      convIds.push(convInfo.id);
+    if (idxEnd === void 0) {
+      idxEnd = this.items.length - 1;
     }
+    let convIds = [];
+    for (let i = idxStart; i <= idxEnd; i++) {
+      let convInfo = this.items[i];
+      if (!convInfo) {
+        continue;
+      }
+      if (convInfo.snippetCount < convInfo.messageCount) {
+        convIds.push(convInfo.id);
+      }
+    }
+    if (!convIds.length) {
+      return false;
+    }
+    this._api.__bridgeSend({
+      type: "fetchSnippets",
+      convIds
+    });
+    return true;
   }
-  if (!convIds.length) {
-    return false;
-  }
-  this._api.__bridgeSend({
-    type: "fetchSnippets",
-    convIds
-  });
-  return true;
 };
 
 // src/clientapi/messages_list_view.js
-function MessagesListView(api, handle) {
-  WindowedListView.call(this, api, MailMessage, handle);
-  this._nextSnippetRequestValidAt = 0;
-}
-MessagesListView.prototype = Object.create(WindowedListView.prototype);
-MessagesListView.prototype.ensureSnippets = function() {
-  let snippetsNeeded = this.items.some((message) => {
-    return message && message.snippet === null;
-  });
-  if (snippetsNeeded) {
-    if (this._nextSnippetRequestValidAt > Date.now()) {
-      return;
+var MessagesListView = class extends WindowedListView {
+  constructor(api, handle) {
+    super(api, MailMessage, handle);
+    this._nextSnippetRequestValidAt = 0;
+  }
+  ensureSnippets() {
+    const snippetsNeeded = this.items.some((message) => {
+      return message && message.snippet === null;
+    });
+    if (snippetsNeeded) {
+      if (this._nextSnippetRequestValidAt > Date.now()) {
+        return;
+      }
+      this._nextSnippetRequestValidAt = Date.now() + 5e3;
+      this._api.__bridgeSend({
+        type: "fetchSnippets",
+        convIds: [this.conversationId]
+      });
     }
-    this._nextSnippetRequestValidAt = Date.now() + 5e3;
+  }
+  refresh() {
     this._api.__bridgeSend({
-      type: "fetchSnippets",
-      convIds: [this.conversationId]
+      type: "refreshView",
+      handle: this.handle
     });
   }
-};
-MessagesListView.prototype.refresh = function() {
-  this._api.__bridgeSend({
-    type: "refreshView",
-    handle: this.handle
-  });
 };
 
 // src/clientapi/raw_item.js
 var import_evt10 = __toModule(require_evt());
-function RawItem(api, wireRep, overlays, matchInfo) {
-  import_evt10.default.Emitter.call(this);
-  this.id = wireRep.id || wireRep._id;
-  this.__update(wireRep);
-  this.__updateOverlays(overlays);
-  this.matchInfo = matchInfo;
-}
-RawItem.prototype = import_evt10.default.mix({
+var RawItem = class extends import_evt10.Emitter {
+  constructor(api, wireRep, overlays, matchInfo) {
+    super();
+    this.id = wireRep.id || wireRep._id;
+    this.__update(wireRep);
+    this.__updateOverlays(overlays);
+    this.matchInfo = matchInfo;
+  }
   toString() {
     return "[RawItem]";
-  },
+  }
   toJSON() {
     return {
       data: this.data
     };
-  },
+  }
   __update(wireRep) {
     this.data = wireRep;
-  },
+  }
   __updateOverlays() {
-  },
+  }
   release() {
   }
-});
+};
 
 // src/clientapi/raw_list_view.js
-function RawListView(api, handle) {
-  WindowedListView.call(this, api, RawItem, handle);
-}
-RawListView.prototype = Object.create(WindowedListView.prototype);
+var RawListView = class extends WindowedListView {
+  constructor(api, handle) {
+    super(api, RawItem, handle);
+  }
+};
 
 // src/clientapi/message_composition.js
 var import_evt11 = __toModule(require_evt());
@@ -2646,31 +2571,31 @@ function bruteForceAttachmentId(existingAttachments) {
   } while (existingIds.has(relId));
   return relId;
 }
-function MessageComposition(api) {
-  import_evt11.default.Emitter.call(this);
-  this.api = api;
-  this._message = null;
-  this.senderIdentity = null;
-  this.to = null;
-  this.cc = null;
-  this.bcc = null;
-  this.subject = null;
-  this.textBody = null;
-  this.htmlBlob = null;
-  this.serial = 0;
-  this._references = null;
-  this.attachments = null;
-}
-MessageComposition.prototype = import_evt11.default.mix({
+var MessageComposition = class extends import_evt11.Emitter {
+  constructor(api) {
+    super();
+    this.api = api;
+    this._message = null;
+    this.senderIdentity = null;
+    this.to = null;
+    this.cc = null;
+    this.bcc = null;
+    this.subject = null;
+    this.textBody = null;
+    this.htmlBlob = null;
+    this.serial = 0;
+    this._references = null;
+    this.attachments = null;
+  }
   toString() {
     return "[MessageComposition: " + this._handle + "]";
-  },
+  }
   toJSON() {
     return {
       type: "MessageComposition",
       handle: this._handle
     };
-  },
+  }
   async __asyncInitFromMessage(message) {
     this._message = message;
     message.on("change", this._onMessageChange.bind(this));
@@ -2696,27 +2621,27 @@ MessageComposition.prototype = import_evt11.default.mix({
       this.textBody = "";
     }
     return this;
-  },
+  }
   _onMessageChange() {
     let wireRep = this._message._wireRep;
     this.sendStatus = wireRep.draftInfo.sendStatus;
     this.emit("change");
-  },
+  }
   _onMessageRemove() {
     this.emit("remove");
-  },
+  }
   release() {
     if (this._message) {
       this._message.release();
       this._message = null;
     }
-  },
+  }
   _mutated() {
     this.serial++;
     this.emit("change");
-  },
+  }
   addAttachment(attachmentDef) {
-    let relId = bruteForceAttachmentId(this.attachments);
+    const relId = bruteForceAttachmentId(this.attachments);
     this.api._composeAttach(this.id, {
       relId,
       name: attachmentDef.name,
@@ -2731,38 +2656,38 @@ MessageComposition.prototype = import_evt11.default.mix({
     this.attachments.push(placeholderAttachment);
     this._mutated();
     return placeholderAttachment;
-  },
+  }
   removeAttachment(attachmentThing) {
-    var idx = this.attachments.indexOf(attachmentThing);
+    const idx = this.attachments.indexOf(attachmentThing);
     if (idx !== -1) {
       this.attachments.splice(idx, 1);
       this.api._composeDetach(this.id, attachmentThing.relId);
     }
     this._mutated();
-  },
+  }
   addRecipient(bin, addressPair) {
     this[bin].push(addressPair);
     this._mutated();
-  },
+  }
   removeRecipient(bin, addressPair) {
-    let recipList = this[bin];
-    let idx = recipList.indexOf(addressPair);
+    const recipList = this[bin];
+    const idx = recipList.indexOf(addressPair);
     if (idx !== -1) {
       recipList.splice(idx, 1);
       this._mutated();
     }
-  },
+  }
   removeLastRecipient(bin) {
-    let recipList = this[bin];
+    const recipList = this[bin];
     if (recipList.length) {
       recipList.pop();
       this._mutated();
     }
-  },
+  }
   setSubject(subject) {
     this.subject = subject;
     this._mutated();
-  },
+  }
   _buildWireRep() {
     return {
       date: Date.now(),
@@ -2772,20 +2697,20 @@ MessageComposition.prototype = import_evt11.default.mix({
       subject: this.subject,
       textBody: this.textBody
     };
-  },
+  }
   finishCompositionSendMessage() {
     return this.api._composeDone(this.id, "send", this._buildWireRep());
-  },
+  }
   saveDraft() {
     return this.api._composeDone(this.id, "save", this._buildWireRep());
-  },
+  }
   abortCompositionDeleteDraft() {
     return this.api._composeDone(this.id, "delete", null);
   }
-});
+};
 
 // src/client_specific/oauth_bindings.js
-var oauth_bindings_default = {
+var OauthBindings = {
   google: {
     endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenEndpoint: "https://oauth2.googleapis.com/token",
@@ -2824,19 +2749,19 @@ var RE_HTTP = /^https?:/i;
 var RE_MAIL = /(^|[\s(,;<>])([^(,;<>@\s]+@[-a-z0-9.]{2,250}[.][-a-z0-9]{2,32})/im;
 var RE_MAILTO = /^mailto:/i;
 function linkifyPlain(body, doc) {
-  var nodes = [];
-  var contentStart;
-  for (; ; ) {
-    var url = RE_URL.exec(body);
-    var email = RE_MAIL.exec(body);
-    var link, text;
+  const nodes = [];
+  let contentStart;
+  while (true) {
+    const url = RE_URL.exec(body);
+    const email = RE_MAIL.exec(body);
+    let link, text;
     if (url && (!email || url.index < email.index)) {
       contentStart = url.index + url[1].length;
       if (contentStart > 0) {
         nodes.push(doc.createTextNode(body.substring(0, contentStart)));
       }
-      var useUrl = url[2];
-      var uneat = RE_UNEAT_LAST_URL_CHARS.exec(useUrl);
+      let useUrl = url[2];
+      const uneat = RE_UNEAT_LAST_URL_CHARS.exec(useUrl);
       if (uneat) {
         useUrl = useUrl.substring(0, uneat.index);
       }
@@ -2878,13 +2803,12 @@ function linkifyPlain(body, doc) {
 }
 function linkifyHTML(doc) {
   function linkElem(elem) {
-    var children = elem.childNodes;
-    for (var i in children) {
-      var sub = children[i];
+    const children = elem.childNodes;
+    for (const sub of children) {
       if (sub.nodeName === "#text") {
-        var nodes = linkifyPlain(sub.nodeValue, doc);
+        const nodes = linkifyPlain(sub.nodeValue, doc);
         elem.replaceChild(nodes[nodes.length - 1], sub);
-        for (var iNode = nodes.length - 2; iNode >= 0; --iNode) {
+        for (let iNode = nodes.length - 2; iNode >= 0; --iNode) {
           elem.insertBefore(nodes[iNode], nodes[iNode + 1]);
         }
       } else if (sub.nodeName !== "A") {
@@ -2900,21 +2824,21 @@ var import_evt13 = __toModule(require_evt());
 
 // src/clientapi/cal_attendee.js
 var import_evt12 = __toModule(require_evt());
-function CalAttendee(_event, wireRep) {
-  import_evt12.default.Emitter.call(this);
-  this._event = _event;
-  this.__update(wireRep);
-}
-CalAttendee.prototype = import_evt12.default.mix({
+var CalAttendee = class extends import_evt12.Emitter {
+  constructor(_event, wireRep) {
+    super();
+    this._event = _event;
+    this.__update(wireRep);
+  }
   toString() {
     return '[CalAttendee: "' + this.email + '"]';
-  },
+  }
   toJSON() {
     return {
       type: "CalAttendee",
       filename: this.filename
     };
-  },
+  }
   __update(wireRep) {
     this.email = wireRep.email;
     this.displayName = wireRep.displayName;
@@ -2925,43 +2849,43 @@ CalAttendee.prototype = import_evt12.default.mix({
     this.comment = wireRep.comment;
     this.isOptional = wireRep.isOptional;
   }
-});
+};
 
 // src/clientapi/cal_event.js
 function filterOutBuiltinFlags2(flags) {
-  var outFlags = [];
-  for (var i = flags.length - 1; i >= 0; i--) {
+  const outFlags = [];
+  for (let i = flags.length - 1; i >= 0; i--) {
     if (flags[i][0] !== "\\") {
       outFlags.push(flags[i]);
     }
   }
   return outFlags;
 }
-function CalEvent(api, wireRep, overlays, matchInfo, slice) {
-  import_evt13.default.Emitter.call(this);
-  this._api = api;
-  this._slice = slice;
-  this._wireRep = wireRep;
-  this.id = wireRep.id;
-  this.attendees = [];
-  this.creator = wireRep.creator;
-  this.organizer = wireRep.organizer;
-  this.bodyReps = wireRep.bodyReps;
-  this.__update(wireRep);
-  this.__updateOverlays(overlays);
-  this.matchInfo = matchInfo;
-}
-CalEvent.prototype = import_evt13.default.mix({
-  type: "cal",
+var CalEvent = class extends import_evt13.Emitter {
+  constructor(api, wireRep, overlays, matchInfo, slice) {
+    super();
+    this._api = api;
+    this._slice = slice;
+    this._wireRep = wireRep;
+    this.id = wireRep.id;
+    this.attendees = [];
+    this.creator = wireRep.creator;
+    this.organizer = wireRep.organizer;
+    this.bodyReps = wireRep.bodyReps;
+    this.__update(wireRep);
+    this.__updateOverlays(overlays);
+    this.matchInfo = matchInfo;
+    this.type = "cal";
+  }
   toString() {
     return "[CalEvent: " + this.id + "]";
-  },
+  }
   toJSON() {
     return {
       type: "CalEvent",
       id: this.id
     };
-  },
+  }
   __update(wireRep) {
     this._wireRep = wireRep;
     if (wireRep.snippet !== null) {
@@ -2986,76 +2910,74 @@ CalEvent.prototype = import_evt13.default.mix({
       changeEvent: "attendee:change",
       removeEvent: "attendee:remove"
     });
-  },
+  }
   __updateOverlays(overlays) {
-  },
+  }
   release() {
-  },
+  }
   modifyTags(args) {
     return this._api.modifyTags([this], args);
   }
-});
+};
 
 // src/clientapi/cal_events_list_view.js
-function CalEventsListView(api, handle) {
-  WindowedListView.call(this, api, CalEvent, handle);
-  this._nextSnippetRequestValidAt = 0;
-}
-CalEventsListView.prototype = Object.create(WindowedListView.prototype);
-CalEventsListView.prototype.ensureSnippets = function() {
-  let snippetsNeeded = this.items.some((message) => {
-    return message && message.snippet === null;
-  });
-  if (snippetsNeeded) {
-    if (this._nextSnippetRequestValidAt > Date.now()) {
-      return;
+var CalEventsListView = class extends WindowedListView {
+  constructor(api, handle) {
+    super(api, CalEvent, handle);
+    this._nextSnippetRequestValidAt = 0;
+  }
+  ensureSnippets() {
+    const snippetsNeeded = this.items.some((message) => {
+      return message && message.snippet === null;
+    });
+    if (snippetsNeeded) {
+      if (this._nextSnippetRequestValidAt > Date.now()) {
+        return;
+      }
+      this._nextSnippetRequestValidAt = Date.now() + 5e3;
+      this._api.__bridgeSend({
+        type: "fetchSnippets",
+        convIds: [this.conversationId]
+      });
     }
-    this._nextSnippetRequestValidAt = Date.now() + 5e3;
+  }
+  refresh() {
     this._api.__bridgeSend({
-      type: "fetchSnippets",
-      convIds: [this.conversationId]
+      type: "refreshView",
+      handle: this.handle
     });
   }
 };
-CalEventsListView.prototype.refresh = function() {
-  this._api.__bridgeSend({
-    type: "refreshView",
-    handle: this.handle
-  });
-};
 
 // src/clientapi/mailapi.js
-var normalizeFoldersToIds = (folders) => {
-  if (!folders) {
-    return folders;
-  }
-  return folders.map((folder) => folder.id);
-};
+var normalizeFoldersToIds = (folders) => folders?.map((folder) => folder.id);
 var LEGAL_CONFIG_KEYS = ["debugLogging"];
-function MailAPI() {
-  import_evt14.default.Emitter.call(this);
-  logic.defineScope(this, "MailAPI", {});
-  this._nextHandle = 1;
-  this._trackedItemHandles = new Map();
-  this._pendingRequests = {};
-  this._liveBodies = {};
-  this._storedSends = [];
-  this._processingMessage = null;
-  this._deferredMessages = [];
-  this.config = null;
-  this.configLoaded = false;
-  this.accountsLoaded = false;
-  contact_cache_default.init();
-  this.accounts = this.viewAccounts({ autoViewFolders: true });
-}
-MailAPI.prototype = import_evt14.default.mix({
+var MailAPI = class extends import_evt14.Emitter {
+  constructor() {
+    super();
+    logic.defineScope(this, "MailAPI", {});
+    this._nextHandle = 1;
+    this._trackedItemHandles = new Map();
+    this._pendingRequests = {};
+    this._liveBodies = {};
+    this._storedSends = [];
+    this._processingMessage = null;
+    this._deferredMessages = [];
+    this.config = null;
+    this.configLoaded = false;
+    this.accountsLoaded = false;
+    ContactCache.init();
+    this.accounts = this.viewAccounts({ autoViewFolders: true });
+    this.oauthBindings = OauthBindings;
+    this.utils = linkify_exports;
+    this.l10n_folder_names = {};
+  }
   toString() {
     return "[MailAPI]";
-  },
+  }
   toJSON() {
     return { type: "MailAPI" };
-  },
-  oauthBindings: oauth_bindings_default,
+  }
   __universeAvailable() {
     this.configLoaded = true;
     this.emit("configLoaded");
@@ -3071,22 +2993,20 @@ MailAPI.prototype = import_evt14.default.mix({
         this.emit("accountsLoaded");
       });
     });
-  },
-  utils: linkify_exports,
+  }
   eventuallyGetAccountById(accountId) {
     return this.accounts.eventuallyGetAccountById(accountId);
-  },
-  eventuallyGetFolderById(folderId) {
-    var accountId = accountIdFromFolderId(folderId);
-    return this.accounts.eventuallyGetAccountById(accountId).then(function gotAccount(account) {
-      return account.folders.eventuallyGetFolderById(folderId);
-    });
-  },
+  }
+  async eventuallyGetFolderById(folderId) {
+    const accountId = accountIdFromFolderId(folderId);
+    const account = await this.accounts.eventuallyGetAccountById(accountId);
+    return account.folders.eventuallyGetFolderById(folderId);
+  }
   getFolderById(folderId) {
     const accountId = accountIdFromFolderId(folderId);
     const account = this.accounts.getAccountById(accountId);
     return account && account.folders.getFolderById(folderId);
-  },
+  }
   _mapLabels(messageId, folderIds) {
     let accountId = accountIdFromMessageId(messageId);
     let account = this.accounts.getAccountById(accountId);
@@ -3097,11 +3017,11 @@ MailAPI.prototype = import_evt14.default.mix({
     return Array.from(folderIds).map((folderId) => {
       return folders.getFolderById(folderId);
     });
-  },
+  }
   __bridgeSend(msg) {
     logic(this, "storingSend", { msg });
     this._storedSends.push(msg);
-  },
+  }
   __bridgeReceive(msg) {
     if (this._processingMessage && msg.type !== "pong") {
       logic(this, "deferMessage", { type: msg.type });
@@ -3110,16 +3030,16 @@ MailAPI.prototype = import_evt14.default.mix({
       logic(this, "immediateProcess", { type: msg.type });
       this._processMessage(msg);
     }
-  },
+  }
   _processMessage(msg) {
-    var methodName = "_recv_" + msg.type;
+    const methodName = "_recv_" + msg.type;
     if (!(methodName in this)) {
       logic.fail(new Error("Unsupported message type:", msg.type));
       return;
     }
     try {
       logic(this, "processMessage", { type: msg.type });
-      var promise = this[methodName](msg);
+      const promise = this[methodName](msg);
       if (promise && promise.then) {
         this._processingMessage = promise;
         promise.then(this._doneProcessingMessage.bind(this, msg));
@@ -3131,7 +3051,7 @@ MailAPI.prototype = import_evt14.default.mix({
         stack: ex.stack
       });
     }
-  },
+  }
   _doneProcessingMessage(msg) {
     if (this._processingMessage && this._processingMessage !== msg) {
       throw new Error("Mismatched message completion!");
@@ -3140,41 +3060,39 @@ MailAPI.prototype = import_evt14.default.mix({
     while (this._processingMessage === null && this._deferredMessages.length) {
       this._processMessage(this._deferredMessages.shift());
     }
-  },
+  }
   shoddyAutocomplete(phrase) {
-    return contact_cache_default.shoddyAutocomplete(phrase);
-  },
-  getConversation(conversationId, priorityTags) {
-    return this.eventuallyGetAccountById(accountIdFromConvId(conversationId)).then(() => {
-      return this._getItemAndTrackUpdates("conv", conversationId, MailConversation, priorityTags);
-    });
-  },
-  getMessage(messageNamer, priorityTags) {
-    let messageId = messageNamer[0];
-    return this.eventuallyGetAccountById(accountIdFromMessageId(messageId)).then(() => {
-      return this._getItemAndTrackUpdates("msg", messageNamer, MailMessage, priorityTags);
-    });
-  },
+    return ContactCache.shoddyAutocomplete(phrase);
+  }
+  async getConversation(conversationId, priorityTags) {
+    await this.eventuallyGetAccountById(accountIdFromConvId(conversationId));
+    return this._getItemAndTrackUpdates("conv", conversationId, MailConversation, priorityTags);
+  }
+  async getMessage(messageNamer, priorityTags) {
+    const messageId = messageNamer[0];
+    await this.eventuallyGetAccountById(accountIdFromMessageId(messageId));
+    return this._getItemAndTrackUpdates("msg", messageNamer, MailMessage, priorityTags);
+  }
   _sendPromisedRequest(sendMsg) {
     return new Promise((resolve) => {
-      let handle = sendMsg.handle = this._nextHandle++;
+      const handle = sendMsg.handle = this._nextHandle++;
       this._pendingRequests[handle] = {
         type: sendMsg.type,
         resolve
       };
       this.__bridgeSend(sendMsg);
     });
-  },
+  }
   _recv_promisedResult(msg) {
-    let handle = msg.handle;
-    let pending = this._pendingRequests[handle];
+    const { handle } = msg;
+    const pending = this._pendingRequests[handle];
     delete this._pendingRequests[handle];
     pending.resolve(msg.data);
-  },
+  }
   _sendUndoableRequest(undoableInfo, requestPayload) {
-    let id = this._nextHandle;
-    let undoableTasksPromise = this._sendPromisedRequest(requestPayload);
-    let undoableOp = new UndoableOperation({
+    const id = this._nextHandle;
+    const undoableTasksPromise = this._sendPromisedRequest(requestPayload);
+    const undoableOp = new UndoableOperation({
       api: this,
       id,
       operation: undoableInfo.operation,
@@ -3184,14 +3102,14 @@ MailAPI.prototype = import_evt14.default.mix({
     });
     this.emit("undoableOp", undoableOp);
     return undoableOp;
-  },
+  }
   __scheduleUndoTasks(undoableOp, undoTasks) {
     this.emit("undoing", undoableOp);
     this.__bridgeSend({
       type: "undo",
       undoTasks
     });
-  },
+  }
   _normalizeConversationSelectorArgs(arrayOfStuff, args) {
     let {
       detectType: argDetect,
@@ -3226,8 +3144,8 @@ MailAPI.prototype = import_evt14.default.mix({
       affectedCount = argMessages.length;
       convSelectors = [];
       let selectorByConvId = new Map();
-      for (let message of argMessages) {
-        let convId = convIdFromMessageId(message.id);
+      for (const message of argMessages) {
+        const convId = convIdFromMessageId(message.id);
         let selector = selectorByConvId.get(convId);
         if (!selector) {
           selector = {
@@ -3244,14 +3162,14 @@ MailAPI.prototype = import_evt14.default.mix({
       throw new Error("Weird conversation/message selector.");
     }
     return { convSelectors, affectedType, affectedCount };
-  },
+  }
   _recv_broadcast(msg) {
-    let { name, data } = msg.payload;
+    const { name, data } = msg.payload;
     this.emit(name, data);
-  },
+  }
   _getItemAndTrackUpdates(itemType, itemId, itemConstructor, priorityTags) {
     return new Promise((resolve, reject) => {
-      let handle = this._nextHandle++;
+      const handle = this._nextHandle++;
       this._trackedItemHandles.set(handle, {
         type: itemType,
         id: itemId,
@@ -3260,7 +3178,7 @@ MailAPI.prototype = import_evt14.default.mix({
             reject(new Error("track problem, error: " + msg.error + " has data?: " + !!msg.data));
             return;
           }
-          let obj = new itemConstructor(this, msg.data.state, msg.data.overlays, null, handle);
+          const obj = new itemConstructor(this, msg.data.state, msg.data.overlays, null, handle);
           resolve(obj);
           this._trackedItemHandles.set(handle, {
             type: itemType,
@@ -3278,33 +3196,33 @@ MailAPI.prototype = import_evt14.default.mix({
       });
       return handle;
     });
-  },
+  }
   _recv_gotItemNowTrackingUpdates(msg) {
-    let details = this._trackedItemHandles.get(msg.handle);
+    const details = this._trackedItemHandles.get(msg.handle);
     details.callback(msg);
-  },
+  }
   _updateTrackedItemPriorityTags(handle, priorityTags) {
     this.__bridgeSend({
       type: "updateTrackedItemPriorityTags",
       handle,
       priorityTags
     });
-  },
+  }
   _recv_update(msg) {
-    let details = this._trackedItemHandles.get(msg.handle);
+    const details = this._trackedItemHandles.get(msg.handle);
     if (details && details.obj) {
-      let obj = details.obj;
+      const obj = details.obj;
       let data = msg.data;
       obj.__update(data);
     } else {
       logic(this, "unknownHandle", { msg });
     }
-  },
+  }
   _recv_updateItem(msg) {
-    let details = this._trackedItemHandles.get(msg.handle);
+    const details = this._trackedItemHandles.get(msg.handle);
     if (details && details.obj) {
-      let obj = details.obj;
-      let data = msg.data;
+      const obj = details.obj;
+      const data = msg.data;
       if (data === null) {
         obj.emit("remove", obj);
       } else {
@@ -3320,35 +3238,35 @@ MailAPI.prototype = import_evt14.default.mix({
     } else {
       logic(this, "unknownHandle", { msg });
     }
-  },
+  }
   _cleanupContext(handle) {
     this.__bridgeSend({
       type: "cleanupContext",
       handle
     });
-  },
+  }
   _recv_contextCleanedUp(msg) {
     this._trackedItemHandles.delete(msg.handle);
-  },
+  }
   _downloadBodyReps(messageId, messageDate) {
     this.__bridgeSend({
       type: "downloadBodyReps",
       id: messageId,
       date: messageDate
     });
-  },
+  }
   _downloadAttachments(downloadReq) {
     return this._sendPromisedRequest({
       type: "downloadAttachments",
       downloadReq
     });
-  },
+  }
   learnAboutAccount(details) {
     return this._sendPromisedRequest({
       type: "learnAboutAccount",
       details
     });
-  },
+  }
   tryToCreateAccount(userDetails, domainInfo) {
     return this._sendPromisedRequest({
       type: "tryToCreateAccount",
@@ -3369,9 +3287,9 @@ MailAPI.prototype = import_evt14.default.mix({
         errorDetails: result.errorDetails
       };
     });
-  },
+  }
   _clearAccountProblems(account, callback) {
-    var handle = this._nextHandle++;
+    const handle = this._nextHandle++;
     this._pendingRequests[handle] = {
       type: "clearAccountProblems",
       callback
@@ -3381,51 +3299,51 @@ MailAPI.prototype = import_evt14.default.mix({
       accountId: account.id,
       handle
     });
-  },
+  }
   _recv_clearAccountProblems(msg) {
-    var req = this._pendingRequests[msg.handle];
+    const req = this._pendingRequests[msg.handle];
     delete this._pendingRequests[msg.handle];
     req.callback && req.callback();
-  },
+  }
   _modifyAccount(account, mods) {
     return this._sendPromisedRequest({
       type: "modifyAccount",
       accountId: account.id,
       mods
     }).then(() => null);
-  },
+  }
   _recreateAccount(account) {
     this.__bridgeSend({
       type: "recreateAccount",
       accountId: account.id
     });
-  },
+  }
   _deleteAccount(account) {
     this.__bridgeSend({
       type: "deleteAccount",
       accountId: account.id
     });
-  },
+  }
   _modifyIdentity(identity, mods) {
     return this._sendPromisedRequest({
       type: "modifyIdentity",
       identityId: identity.id,
       mods
     }).then(() => null);
-  },
+  }
   syncAllSubscribedCalendars() {
-  },
+  }
   viewAccounts(opts) {
-    var handle = this._nextHandle++, view = new AccountsViewSlice(this, handle, opts);
+    const handle = this._nextHandle++, view = new AccountsListView(this, handle, opts);
     this._trackedItemHandles.set(handle, { obj: view });
     this.__bridgeSend({
       type: "viewAccounts",
       handle
     });
     return view;
-  },
+  }
   viewFolders(mode, accountId) {
-    var handle = this._nextHandle++, view = new FoldersViewSlice(this, handle);
+    const handle = this._nextHandle++, view = new FoldersListView(this, handle);
     this._trackedItemHandles.set(handle, { obj: view });
     this.__bridgeSend({
       type: "viewFolders",
@@ -3434,9 +3352,9 @@ MailAPI.prototype = import_evt14.default.mix({
       accountId
     });
     return view;
-  },
+  }
   viewRawList(namespace, name) {
-    var handle = this._nextHandle++, view = new RawListView(this, handle);
+    const handle = this._nextHandle++, view = new RawListView(this, handle);
     view.source = { namespace, name };
     this._trackedItemHandles.set(handle, { obj: view });
     this.__bridgeSend({
@@ -3446,9 +3364,9 @@ MailAPI.prototype = import_evt14.default.mix({
       name
     });
     return view;
-  },
+  }
   viewFolderConversations(folder) {
-    var handle = this._nextHandle++, view = new ConversationsListView(this, handle);
+    const handle = this._nextHandle++, view = new ConversationsListView(this, handle);
     view.folderId = folder.id;
     view.folder = this.getFolderById(view.folderId);
     this._trackedItemHandles.set(handle, { obj: view });
@@ -3458,7 +3376,7 @@ MailAPI.prototype = import_evt14.default.mix({
       handle
     });
     return view;
-  },
+  }
   _makeDerivedViews(rootView, viewSpecs) {
     const viewDefsWithHandles = [];
     const createView = (viewDef) => {
@@ -3472,17 +3390,16 @@ MailAPI.prototype = import_evt14.default.mix({
       });
       return view;
     };
-    let apiResult = {
+    const apiResult = {
       root: rootView
     };
-    for (let key of Object.keys(viewSpecs)) {
-      let viewDefs = viewSpecs[key];
+    for (const [key, viewDefs] of Object.entries(viewSpecs)) {
       apiResult[key] = viewDefs.map(createView);
     }
     return { apiResult, viewDefsWithHandles };
-  },
+  }
   searchFolderConversations(spec) {
-    var handle = this._nextHandle++, view = new ConversationsListView(this, handle);
+    const handle = this._nextHandle++, view = new ConversationsListView(this, handle);
     view.folderId = spec.folder.id;
     view.folder = this.getFolderById(view.folderId);
     this._trackedItemHandles.set(handle, { obj: view });
@@ -3501,7 +3418,7 @@ MailAPI.prototype = import_evt14.default.mix({
       viewDefsWithHandles
     });
     return result;
-  },
+  }
   searchFolderMessages(spec) {
     const handle = this._nextHandle++;
     const { folder } = spec;
@@ -3518,7 +3435,7 @@ MailAPI.prototype = import_evt14.default.mix({
       }
     });
     return view;
-  },
+  }
   viewFolderMessages(folder) {
     const handle = this._nextHandle++;
     let view;
@@ -3536,9 +3453,9 @@ MailAPI.prototype = import_evt14.default.mix({
       handle
     });
     return view;
-  },
+  }
   viewConversationMessages(convOrId) {
-    var handle = this._nextHandle++, view = new MessagesListView(this, handle);
+    const handle = this._nextHandle++, view = new MessagesListView(this, handle);
     view.conversationId = typeof convOrId === "string" ? convOrId : convOrId.id;
     this._trackedItemHandles.set(handle, { obj: view });
     this.__bridgeSend({
@@ -3547,9 +3464,9 @@ MailAPI.prototype = import_evt14.default.mix({
       handle
     });
     return view;
-  },
+  }
   searchConversationMessages(spec) {
-    var handle = this._nextHandle++, view = new MessagesListView(this, handle);
+    const handle = this._nextHandle++, view = new MessagesListView(this, handle);
     view.conversationId = spec.conversation.id;
     this._trackedItemHandles.set(handle, { obj: view });
     this.__bridgeSend({
@@ -3561,9 +3478,9 @@ MailAPI.prototype = import_evt14.default.mix({
       }
     });
     return view;
-  },
+  }
   trash(arrayOfStuff, opts) {
-    let {
+    const {
       convSelectors,
       affectedType,
       affectedCount
@@ -3576,9 +3493,9 @@ MailAPI.prototype = import_evt14.default.mix({
       type: "trash",
       conversations: convSelectors
     });
-  },
+  }
   move(arrayOfStuff, targetFolder, opts) {
-    let {
+    const {
       convSelectors,
       affectedType,
       affectedCount
@@ -3592,14 +3509,14 @@ MailAPI.prototype = import_evt14.default.mix({
       conversations: convSelectors,
       targetFolderId: targetFolder.id
     });
-  },
+  }
   markRead(arrayOfStuff, beRead) {
     return this.modifyTags(arrayOfStuff, {
       operation: beRead ? "read" : "unread",
       addTags: beRead ? ["\\Seen"] : null,
       removeTags: beRead ? null : ["\\Seen"]
     });
-  },
+  }
   markStarred(arrayOfStuff, beStarred) {
     return this.modifyTags(arrayOfStuff, {
       operation: beStarred ? "star" : "unstar",
@@ -3607,9 +3524,9 @@ MailAPI.prototype = import_evt14.default.mix({
       removeTags: beStarred ? null : ["\\Flagged"],
       messageSelector: beStarred ? "last" : null
     });
-  },
+  }
   modifyLabels(arrayOfStuff, opts) {
-    let {
+    const {
       convSelectors,
       affectedType,
       affectedCount
@@ -3624,9 +3541,9 @@ MailAPI.prototype = import_evt14.default.mix({
       add: normalizeFoldersToIds(opts.addLabels),
       remove: normalizeFoldersToIds(opts.removeLabels)
     });
-  },
+  }
   modifyTags(arrayOfStuff, opts) {
-    let {
+    const {
       convSelectors,
       affectedType,
       affectedCount
@@ -3641,72 +3558,70 @@ MailAPI.prototype = import_evt14.default.mix({
       add: opts.addTags,
       remove: opts.removeTags
     });
-  },
+  }
   setOutboxSyncEnabled(account, enabled) {
     return this._sendPromisedRequest({
       type: "outboxSetPaused",
       accountId: account.id,
       bePaused: !enabled
     });
-  },
+  }
   parseMailbox(email) {
     try {
-      var mailbox = import_addressparser.default.parse(email);
+      const mailbox = import_addressparser.default.parse(email);
       return mailbox.length >= 1 ? mailbox[0] : null;
     } catch (ex) {
       return null;
     }
-  },
+  }
   resolveEmailAddressToPeep(emailAddress, callback) {
-    var peep = contact_cache_default.resolvePeep({
+    const peep = ContactCache.resolvePeep({
       name: null,
       address: emailAddress
     });
-    if (contact_cache_default.pendingLookupCount) {
-      contact_cache_default.callbacks.push(callback.bind(null, peep));
+    if (ContactCache.pendingLookupCount) {
+      ContactCache.callbacks.push(callback.bind(null, peep));
     } else {
       callback(peep);
     }
-  },
-  beginMessageComposition(message, folder, options) {
+  }
+  async beginMessageComposition(message, folder, options) {
     if (!options) {
       options = {};
     }
-    return this._sendPromisedRequest({
+    const data = await this._sendPromisedRequest({
       type: "createDraft",
       draftType: options.command,
       mode: options.mode,
       refMessageId: message ? message.id : null,
       refMessageDate: message ? message.date.valueOf() : null,
       folderId: folder ? folder.id : null
-    }).then((data) => {
-      let namer = { id: data.messageId, date: data.messageDate };
-      if (options.noComposer) {
-        return namer;
-      }
-      return this.resumeMessageComposition(namer);
     });
-  },
-  resumeMessageComposition(namer) {
-    return this.getMessage([namer.id, namer.date.valueOf()]).then((msg) => {
-      let composer = new MessageComposition(this);
-      return composer.__asyncInitFromMessage(msg);
-    });
-  },
+    const namer = { id: data.messageId, date: data.messageDate };
+    if (options.noComposer) {
+      return namer;
+    }
+    return this.resumeMessageComposition(namer);
+  }
+  async resumeMessageComposition(namer) {
+    const msg = await this.getMessage([namer.id, namer.date.valueOf()]);
+    const composer = new MessageComposition(this);
+    return composer.__asyncInitFromMessage(msg);
+  }
   _composeAttach(messageId, attachmentDef) {
     this.__bridgeSend({
       type: "attachBlobToDraft",
       messageId,
       attachmentDef
     });
-  },
+  }
   _composeDetach(messageId, attachmentRelId) {
     this.__bridgeSend({
       type: "detachAttachmentFromDraft",
       messageId,
       attachmentRelId
     });
-  },
+  }
   _composeDone(messageId, command, draftFields) {
     return this._sendPromisedRequest({
       type: "doneCompose",
@@ -3714,12 +3629,12 @@ MailAPI.prototype = import_evt14.default.mix({
       command,
       draftFields
     });
-  },
+  }
   setInteractive() {
     this.__bridgeSend({
       type: "setInteractive"
     });
-  },
+  }
   useLocalizedStrings(strings) {
     this.__bridgeSend({
       type: "localizedStrings",
@@ -3728,34 +3643,34 @@ MailAPI.prototype = import_evt14.default.mix({
     if (strings.folderNames) {
       this.l10n_folder_names = strings.folderNames;
     }
-  },
-  l10n_folder_names: {},
+  }
   l10n_folder_name(name, type) {
     if (this.l10n_folder_names.hasOwnProperty(type)) {
-      var lowerName = name.toLowerCase();
+      const lowerName = name.toLowerCase();
       if (type === lowerName || type === "drafts" || type === "junk" || type === "queue") {
         return this.l10n_folder_names[type];
       }
     }
     return name;
-  },
-  modifyConfig(mods) {
-    for (var key in mods) {
+  }
+  async modifyConfig(mods) {
+    for (const key in mods) {
       if (!LEGAL_CONFIG_KEYS.includes(key)) {
         throw new Error(key + " is not a legal config key!");
       }
     }
-    return this._sendPromisedRequest({
+    await this._sendPromisedRequest({
       type: "modifyConfig",
       mods
-    }).then(() => null);
-  },
+    });
+    return null;
+  }
   _recv_config(msg) {
     this.config = msg.config;
     logic.realtimeLogEverything = this.config.debugLogging === "realtime";
-  },
+  }
   ping(callback) {
-    var handle = this._nextHandle++;
+    const handle = this._nextHandle++;
     this._pendingRequests[handle] = {
       type: "ping",
       callback
@@ -3766,12 +3681,12 @@ MailAPI.prototype = import_evt14.default.mix({
         handle
       });
     }, 0);
-  },
+  }
   _recv_pong(msg) {
-    var req = this._pendingRequests[msg.handle];
+    const req = this._pendingRequests[msg.handle];
     delete this._pendingRequests[msg.handle];
     req.callback();
-  },
+  }
   clearNewTrackingForAccount({ account, accountId, silent }) {
     if (account && !accountId) {
       accountId = account.id;
@@ -3781,14 +3696,14 @@ MailAPI.prototype = import_evt14.default.mix({
       accountId,
       silent
     });
-  },
+  }
   flushNewAggregates() {
     this.__bridgeSend({
       type: "flushNewAggregates"
     });
-  },
+  }
   debugForceCronSync({ accountIds, notificationAccountIds }) {
-    let allAccountIds = this.accounts.items.map((account) => account.id);
+    const allAccountIds = this.accounts.items.map((account) => account.id);
     if (!accountIds) {
       accountIds = allAccountIds;
     }
@@ -3800,13 +3715,13 @@ MailAPI.prototype = import_evt14.default.mix({
       accountIds,
       notificationAccountIds
     });
-  },
+  }
   getPersistedLogs() {
     return this._sendPromisedRequest({
       type: "getPersistedLogs"
     });
   }
-});
+};
 
 // src/worker-support/main-router.js
 var listeners = {};
@@ -3851,8 +3766,8 @@ function useWorker(_worker) {
   } else {
     workerPort = worker;
   }
-  workerPort.onmessage = function dispatchToListener(evt15) {
-    var data = evt15.data;
+  workerPort.onmessage = function dispatchToListener(evt2) {
+    var data = evt2.data;
     var listener = listeners[data.type];
     if (listener) {
       listener(data);
@@ -4348,8 +4263,8 @@ function open(uid, host, port, options) {
   sock.onopen = function() {
     me4.sendMessage(uid, "onopen");
   };
-  sock.onerror = function(evt15) {
-    var err = evt15.data;
+  sock.onerror = function(evt2) {
+    var err = evt2.data;
     var wrappedErr;
     if (err && typeof err === "object") {
       wrappedErr = {
@@ -4362,8 +4277,8 @@ function open(uid, host, port, options) {
     }
     me4.sendMessage(uid, "onerror", wrappedErr);
   };
-  sock.ondata = function(evt15) {
-    var buf = evt15.data;
+  sock.ondata = function(evt2) {
+    var buf = evt2.data;
     me4.sendMessage(uid, "ondata", buf, [buf]);
   };
   sock.ondrain = function() {
@@ -4504,11 +4419,11 @@ var control = {
     var online = navigator.onLine;
     logic(SCOPE, "sendingHello");
     control.sendMessage(uid, "hello", [online]);
-    window.addEventListener("online", function(evt15) {
-      control.sendMessage(uid, evt15.type, [true]);
+    window.addEventListener("online", function(evt2) {
+      control.sendMessage(uid, evt2.type, [true]);
     });
-    window.addEventListener("offline", function(evt15) {
-      control.sendMessage(uid, evt15.type, [false]);
+    window.addEventListener("offline", function(evt2) {
+      control.sendMessage(uid, evt2.type, [false]);
     });
     unregister(control);
   }

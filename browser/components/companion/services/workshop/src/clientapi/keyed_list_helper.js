@@ -27,7 +27,7 @@
  *   if the memory profiler says to mutate (or only fork to create a new Array
  *   on divergence), we can do that.
  */
-export default function keyedListHelper({
+export function keyedListHelper({
   wireReps,
   existingRichReps,
   constructor,
@@ -39,13 +39,13 @@ export default function keyedListHelper({
 }) {
   // Map of existing rich reps that we haven't processed yet.  By removing them
   // as we go we can use it to infer deletion.
-  let pendingRichMap = new Map();
-  for (let richRep of existingRichReps) {
+  const pendingRichMap = new Map();
+  for (const richRep of existingRichReps) {
     pendingRichMap.set(richRep[idKey], richRep);
   }
 
-  let updatedList = [];
-  for (let wireRep of wireReps) {
+  const updatedList = [];
+  for (const wireRep of wireReps) {
     let richRep = pendingRichMap.get(wireRep[idKey]);
     if (richRep) {
       richRep.__update(wireRep);
@@ -63,7 +63,7 @@ export default function keyedListHelper({
     updatedList.push(richRep);
   }
 
-  for (let richRep of existingRichReps) {
+  for (const richRep of existingRichReps) {
     richRep.emit("remove", richRep);
     if (removeEvent) {
       owner.emit(removeEvent, richRep);

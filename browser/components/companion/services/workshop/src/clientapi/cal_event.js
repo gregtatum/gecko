@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 
-import keyedListHelper from "./keyed_list_helper";
+import { keyedListHelper } from "./keyed_list_helper";
 
-import CalAttendee from "./cal_attendee";
+import { CalAttendee } from "./cal_attendee";
 
 function filterOutBuiltinFlags(flags) {
   // so, we could mutate in-place if we were sure the wire rep actually came
   // over the wire.  Right now there is de facto rep sharing, so let's not
   // mutate and screw ourselves over.
-  var outFlags = [];
-  for (var i = flags.length - 1; i >= 0; i--) {
+  const outFlags = [];
+  for (let i = flags.length - 1; i >= 0; i--) {
     if (flags[i][0] !== "\\") {
       outFlags.push(flags[i]);
     }
@@ -36,40 +36,42 @@ function filterOutBuiltinFlags(flags) {
 /**
  * First attempt at a calendar-event specific variant of MailMessage.
  */
-export default function CalEvent(api, wireRep, overlays, matchInfo, slice) {
-  evt.Emitter.call(this);
-  this._api = api;
-  this._slice = slice;
+export class CalEvent extends Emitter {
+  constructor(api, wireRep, overlays, matchInfo, slice) {
+    super();
+    this._api = api;
+    this._slice = slice;
 
-  // Note: The _wireRep is currently maintained for debugging / inspection but
-  // is a candidate for removal in the future.  Previously it was retained
-  // so the fast startup layer could cache all visible objects.
-  this._wireRep = wireRep;
+    // Note: The _wireRep is currently maintained for debugging / inspection but
+    // is a candidate for removal in the future.  Previously it was retained
+    // so the fast startup layer could cache all visible objects.
+    this._wireRep = wireRep;
 
-  this.id = wireRep.id;
+    this.id = wireRep.id;
 
-  this.attendees = [];
-  this.creator = wireRep.creator;
-  this.organizer = wireRep.organizer;
+    this.attendees = [];
+    this.creator = wireRep.creator;
+    this.organizer = wireRep.organizer;
 
-  this.bodyReps = wireRep.bodyReps;
+    this.bodyReps = wireRep.bodyReps;
 
-  this.__update(wireRep);
-  this.__updateOverlays(overlays);
+    this.__update(wireRep);
+    this.__updateOverlays(overlays);
 
-  this.matchInfo = matchInfo;
-}
-CalEvent.prototype = evt.mix({
-  type: "cal",
+    this.matchInfo = matchInfo;
+    this.type = "cal";
+  }
+
   toString() {
     return "[CalEvent: " + this.id + "]";
-  },
+  }
+
   toJSON() {
     return {
       type: "CalEvent",
       id: this.id,
     };
-  },
+  }
 
   __update(wireRep) {
     this._wireRep = wireRep;
@@ -104,12 +106,12 @@ CalEvent.prototype = evt.mix({
       changeEvent: "attendee:change",
       removeEvent: "attendee:remove",
     });
-  },
+  }
 
   __updateOverlays(overlays) {
     // Nothing to do at this time; MailMessage did this for attachment download
     // states.
-  },
+  }
 
   /**
    * Release subscriptions associated with this event.  Currently nothing, but
@@ -117,7 +119,7 @@ CalEvent.prototype = evt.mix({
    */
   release() {
     // nop.
-  },
+  }
 
   /**
    * Add and/or remove tags/flags from this message.
@@ -127,5 +129,5 @@ CalEvent.prototype = evt.mix({
    */
   modifyTags(args) {
     return this._api.modifyTags([this], args);
-  },
-});
+  }
+}

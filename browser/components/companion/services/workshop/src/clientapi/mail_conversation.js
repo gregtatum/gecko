@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 
-import ContactCache from "./contact_cache";
+import { ContactCache } from "./contact_cache";
 
 import { accountIdFromConvId } from "shared/id_conversions";
 
-import decorateConversation from "app_logic/conv_client_decorator";
-import cleanupConversation from "app_logic/conv_client_cleanup";
+import { decorateConversation } from "app_logic/conv_client_decorator";
+import { cleanupConversation } from "app_logic/conv_client_cleanup";
 
 /**
  * @typedef {Object} ConvMsgTidbit
@@ -80,41 +80,36 @@ import cleanupConversation from "app_logic/conv_client_cleanup";
  * @property {Boolean} hasDraft
  * @property {Boolean} hasAttachments
  */
-export default function MailConversation(
-  api,
-  wireRep,
-  overlays,
-  matchInfo,
-  slice,
-  handle
-) {
-  evt.Emitter.call(this);
-  this._api = api;
-  this._slice = slice;
-  this._handle = handle;
 
-  // Store the wireRep so it can be used for caching.
-  this._wireRep = wireRep;
+export class MailConversation extends Emitter {
+  constructor(api, wireRep, overlays, matchInfo, slice, handle) {
+    super();
+    this._api = api;
+    this._slice = slice;
+    this._handle = handle;
 
-  this.id = wireRep.id;
-  this.convType = wireRep.convType;
-  this.__update(wireRep, true);
-  this.matchInfo = matchInfo;
-}
-MailConversation.prototype = evt.mix({
+    // Store the wireRep so it can be used for caching.
+    this._wireRep = wireRep;
+
+    this.id = wireRep.id;
+    this.convType = wireRep.convType;
+    this.__update(wireRep, true);
+    this.matchInfo = matchInfo;
+  }
+
   toString() {
     return "[MailConversation: " + this.id + "]";
-  },
+  }
   toJSON() {
     return {
       type: "MailConversation",
       id: this.id,
     };
-  },
+  }
 
   viewMessages() {
     return this._api.viewConversationMessages(this);
-  },
+  }
 
   /**
    * Return the list of folders that correspond to labels that can be applied to
@@ -133,7 +128,7 @@ MailConversation.prototype = evt.mix({
     let accountId = accountIdFromConvId(this.id);
     let account = this._api.accounts.getAccountById(accountId);
     return account.folders.items.concat();
-  },
+  }
 
   /**
    * Archive the message.  What this means is implementation dependent:
@@ -147,7 +142,7 @@ MailConversation.prototype = evt.mix({
     let account = this._api.accounts.getAccountById(accountId);
     let inboxFolder = account.foldes.getFirstFolderWithType("inbox");
     return this.removeLabels([inboxFolder]);
-  },
+  }
 
   /**
    * Add the label(s) identified by the given folder(s) to this conversation.
@@ -157,24 +152,24 @@ MailConversation.prototype = evt.mix({
    */
   addLabels(folders) {
     return this._api.modifyLabels([this], { addLabels: folders });
-  },
+  }
 
   removeLabels(folders) {
     return this._api.modifyLabels([this], { removeLabels: folders });
-  },
+  }
 
   modifyLabels(args) {
     return this._api.modifyLabels([this], args);
-  },
+  }
 
   modifyTags(args) {
     return this._api.modifyTags([this], args);
-  },
+  }
 
   // Alias for hasStarred for symmetry with MailMessage.
   get isStarred() {
     return this.hasStarred;
-  },
+  }
 
   /**
    * Mark the conversation as starred or unstarred.
@@ -188,16 +183,16 @@ MailConversation.prototype = evt.mix({
    */
   setStarred(beStarred) {
     return this._api.markStarred([this], beStarred);
-  },
+  }
 
   toggleStarred() {
     this.setStarred(!this.hasStarred);
-  },
+  }
 
   // Inverting alias for symmetry with MailMessage
   get isRead() {
     return !this.hasUnread;
-  },
+  }
 
   /**
    * Mark the conversation as read or unread.  This will modify the state of all
@@ -205,11 +200,11 @@ MailConversation.prototype = evt.mix({
    */
   setRead(beRead) {
     return this._api.markRead([this], beRead);
-  },
+  }
 
   toggleRead() {
     this.setRead(!this.isRead);
-  },
+  }
 
   __update(wireRep, firstTime) {
     this._wireRep = wireRep;
@@ -229,11 +224,11 @@ MailConversation.prototype = evt.mix({
     this.hasStarred = wireRep.hasStarred;
     this.hasDrafts = wireRep.hasDrafts;
     this.hasAttachments = wireRep.hasAttachments;
-  },
+  }
 
   __updateOverlays(/*overlays*/) {
     // XXX currently no overlays for conversations
-  },
+  }
 
   /**
    * Cleanup.
@@ -245,5 +240,5 @@ MailConversation.prototype = evt.mix({
       this._api._cleanupContext(this._handle);
       this._handle = null;
     }
-  },
-});
+  }
+}

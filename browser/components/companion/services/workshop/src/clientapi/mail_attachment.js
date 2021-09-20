@@ -14,39 +14,41 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 
 /**
  * Provides the file name, mime-type, and estimated file size of an attachment.
  * In the future this will also be the means for requesting the download of
  * an attachment or for attachment-forwarding semantics.
  */
-export default function MailAttachment(_message, wireRep) {
-  evt.Emitter.call(this);
+export class MailAttachment extends Emitter {
+  constructor(_message, wireRep) {
+    super();
 
-  this._message = _message;
-  // Create an absolute id that uniquely identifies the attachment.  (There's
-  // no API that cares about this id yet, though.)
-  this.id = _message.id + "." + wireRep.relId;
-  // The unique id for the attachment on this message.  Not unique elsewhere.
-  this.relId = wireRep.relId;
-  // The IMAP part number for this attachment.  If you need this for anything
-  // other than debugging, then it's a sad day for all.
-  this.partId = wireRep.part;
+    this._message = _message;
+    // Create an absolute id that uniquely identifies the attachment.  (There's
+    // no API that cares about this id yet, though.)
+    this.id = _message.id + "." + wireRep.relId;
+    // The unique id for the attachment on this message.  Not unique elsewhere.
+    this.relId = wireRep.relId;
+    // The IMAP part number for this attachment.  If you need this for anything
+    // other than debugging, then it's a sad day for all.
+    this.partId = wireRep.part;
 
-  this.__update(wireRep);
-  this.__updateDownloadOverlay(null);
-}
-MailAttachment.prototype = evt.mix({
+    this.__update(wireRep);
+    this.__updateDownloadOverlay(null);
+  }
+
   toString() {
     return '[MailAttachment: "' + this.filename + '"]';
-  },
+  }
+
   toJSON() {
     return {
       type: "MailAttachment",
       filename: this.filename,
     };
-  },
+  }
 
   __update(wireRep) {
     this.filename = wireRep.name;
@@ -54,7 +56,7 @@ MailAttachment.prototype = evt.mix({
     this.sizeEstimateInBytes = wireRep.sizeEstimate;
     this._downloadState = wireRep.downloadState;
     this._file = wireRep.file;
-  },
+  }
 
   /**
    * Since we're not first-class and instead owned by the MailMessage, only it
@@ -68,7 +70,7 @@ MailAttachment.prototype = evt.mix({
       this.downloadStatus = null;
       this.bytesDownloaded = 0;
     }
-  },
+  }
 
   /**
    * The very, very detailed download state.  The values will be one of the
@@ -88,11 +90,11 @@ MailAttachment.prototype = evt.mix({
    */
   get downloadState() {
     return this._downloadState || this._overlayDownloadStatus;
-  },
+  }
 
   get isDownloading() {
     return !!this._overlayDownloadStatus;
-  },
+  }
 
   /**
    * Is the file downloaded and available to access via `getDownloadedBlob`.
@@ -104,7 +106,7 @@ MailAttachment.prototype = evt.mix({
       (this._downloadState === "cached" || this._downloadState === "saved") &&
       this._file
     );
-  },
+  }
 
   /**
    * Is this attachment something we can download?  In almost all cases, the
@@ -121,7 +123,7 @@ MailAttachment.prototype = evt.mix({
       this.mimetype !== "application/x-gelam-no-download" &&
       this._downloadState !== "draft"
     );
-  },
+  }
 
   /**
    * Queue this attachment for downloading.
@@ -164,7 +166,7 @@ MailAttachment.prototype = evt.mix({
       messageDate: this._message.date.valueOf(),
       parts: new Map([[this.relId, downloadTarget]]),
     });
-  },
+  }
 
   /**
    * If isDownloaded currently returns true, then we will return a Promise that
@@ -191,10 +193,10 @@ MailAttachment.prototype = evt.mix({
     return new Promise((resolve, reject) => {
       try {
         // Get the file contents as a blob, so we can open the blob
-        var storageType = this._file[0];
-        var filename = this._file[1];
-        var storage = navigator.getDeviceStorage(storageType);
-        var getreq = storage.get(filename);
+        const storageType = this._file[0];
+        const filename = this._file[1];
+        const storage = navigator.getDeviceStorage(storageType);
+        const getreq = storage.get(filename);
 
         getreq.onerror = function() {
           reject(getreq.error);
@@ -219,5 +221,5 @@ MailAttachment.prototype = evt.mix({
         reject(ex);
       }
     });
-  },
-});
+  }
+}

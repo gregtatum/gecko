@@ -18,7 +18,7 @@ import logic from "logic";
 
 import { bsearchForInsert } from "shared/util";
 
-import evt from "evt";
+import { Emitter } from "evt";
 
 import { encodeInt as encodeA64Int } from "shared/a64";
 import { decodeSpecificFolderIdFromFolderId } from "shared/id_conversions";
@@ -26,7 +26,7 @@ import { decodeSpecificFolderIdFromFolderId } from "shared/id_conversions";
 import { engineFrontEndFolderMeta, engineHacks } from "../engine_glue";
 import { makeFolderMeta } from "./folder_info_rep";
 
-let FOLDER_TYPE_TO_SORT_PRIORITY = {
+const FOLDER_TYPE_TO_SORT_PRIORITY = {
   account: "a",
   inbox: "c",
   starred: "e",
@@ -70,114 +70,110 @@ function strcmp(a, b) {
  * ordered things by our crazy sort priority.  Now we use the sort priority here
  * in the back-end and expose that to the front-end too.
  */
-export default function FoldersTOC({
-  db,
-  accountDef,
-  folders,
-  dataOverlayManager,
-}) {
-  evt.Emitter.call(this);
-  logic.defineScope(this, "FoldersTOC");
+export class FoldersTOC extends Emitter {
+  constructor({ db, accountDef, folders, dataOverlayManager }) {
+    super();
+    logic.defineScope(this, "FoldersTOC");
 
-  this.accountDef = accountDef;
-  this.engineFolderMeta = engineFrontEndFolderMeta.get(accountDef.engine);
-  this.engineHacks = engineHacks.get(accountDef.engine);
-  this.accountId = accountDef.id;
-  this._dataOverlayManager = dataOverlayManager;
+    this.type = "FoldersTOC";
+    this.overlayNamespace = "folders";
 
-  /**
-   * Folder information keyed by unique id.
-   *
-   * Managed by `_addFolder` and `_removeFolderById`.
-   *
-   * @type {Map<FolderId, FolderInfo>}
-   */
-  this.foldersById = this.itemsById = new Map();
+    this.accountDef = accountDef;
+    this.engineFolderMeta = engineFrontEndFolderMeta.get(accountDef.engine);
+    this.engineHacks = engineHacks.get(accountDef.engine);
+    this.accountId = accountDef.id;
+    this._dataOverlayManager = dataOverlayManager;
 
-  /**
-   * Folder information keyed by path.
-   *
-   * Managed by `_addFolder` and `_removeFolderById`.
-   *
-   * @type {Map<String, FolderInfo>}
-   */
-  this.foldersByPath = new Map();
+    /**
+     * Folder information keyed by unique id.
+     *
+     * Managed by `_addFolder` and `_removeFolderById`.
+     *
+     * @type {Map<FolderId, FolderInfo>}
+     */
+    this.foldersById = this.itemsById = new Map();
 
-  /**
-   * Like `foldersByPath` but for folders whose creation has been requested by
-   * `ensureLocalVirtualFolder` but the folder hasn't yet been flushed by a
-   * completing task.
-   *
-   * @type {Map<String, FolderInfo>}
-   */
-  this._pendingFoldersByPath = new Map();
+    /**
+     * Folder information keyed by path.
+     *
+     * Managed by `_addFolder` and `_removeFolderById`.
+     *
+     * @type {Map<String, FolderInfo>}
+     */
+    this.foldersByPath = new Map();
 
-  /**
-   * A map from Task id's to `Set`s of pending folder paths.  Tasks are added
-   * to this Map by `ensureLocalVirtualFolder` when a call to
-   * `TaskContext.__decorateFinish` is made and removed by the callback
-   * `_onTaskFinishing` passed as an argument to that method.
-   *
-   * The Set values may contain paths that are no longer present in
-   * `_pendingFoldersByPath` because some other task that ensured its creation
-   * finished before the current task.
-   */
-  this._pendingTaskContextIdsToPendingPaths = new Map();
+    /**
+     * Like `foldersByPath` but for folders whose creation has been requested by
+     * `ensureLocalVirtualFolder` but the folder hasn't yet been flushed by a
+     * completing task.
+     *
+     * @type {Map<String, FolderInfo>}
+     */
+    this._pendingFoldersByPath = new Map();
 
-  /**
-   * Ordered list of the folders.
-   */
-  this.items = this.folders = [];
-  /**
-   * Parallel ordering array to items; the contents are the folder sort strings
-   * corresponding to the folder at the same index.
-   *
-   * While we could stick the sort string in the FolderInfo, the strings can
-   * get long and ugly and we don't want to worry about changes to the sort
-   * ordering screwing things up on upgrade/downgrade/etc.  Plus, this is how
-   * we did it in v1.
-   */
-  this.folderSortStrings = [];
+    /**
+     * A map from Task id's to `Set`s of pending folder paths.  Tasks are added
+     * to this Map by `ensureLocalVirtualFolder` when a call to
+     * `TaskContext.__decorateFinish` is made and removed by the callback
+     * `_onTaskFinishing` passed as an argument to that method.
+     *
+     * The Set values may contain paths that are no longer present in
+     * `_pendingFoldersByPath` because some other task that ensured its creation
+     * finished before the current task.
+     */
+    this._pendingTaskContextIdsToPendingPaths = new Map();
 
-  let nextFolderNum = 0;
-  for (let folderInfo of folders) {
-    this._addFolder(folderInfo);
-    nextFolderNum = Math.max(
-      nextFolderNum,
-      decodeSpecificFolderIdFromFolderId(folderInfo.id) + 1
+    /**
+     * Ordered list of the folders.
+     */
+    this.items = this.folders = [];
+    /**
+     * Parallel ordering array to items; the contents are the folder sort strings
+     * corresponding to the folder at the same index.
+     *
+     * While we could stick the sort string in the FolderInfo, the strings can
+     * get long and ugly and we don't want to worry about changes to the sort
+     * ordering screwing things up on upgrade/downgrade/etc.  Plus, this is how
+     * we did it in v1.
+     */
+    this.folderSortStrings = [];
+
+    let nextFolderNum = 0;
+    for (const folderInfo of folders) {
+      this._addFolder(folderInfo);
+      nextFolderNum = Math.max(
+        nextFolderNum,
+        decodeSpecificFolderIdFromFolderId(folderInfo.id) + 1
+      );
+    }
+
+    // See `issueFolderId` for the sordid details.
+    this._nextFolderNum = nextFolderNum;
+
+    // TODO: on account deletion we should be removing these listeners, but this
+    // is a relatively harmless leak given that account creation and deletion is
+    // a relatively rare operation.
+    db.on(`acct!${accountDef.id}!change`, this._onAccountChange.bind(this));
+    db.on(
+      `acct!${accountDef.id}!folders!tocChange`,
+      this._onTOCChange.bind(this)
+    );
+
+    dataOverlayManager.on(
+      "accountCascadeToFolders",
+      this._onAccountOverlayCascade.bind(this)
     );
   }
-
-  // See `issueFolderId` for the sordid details.
-  this._nextFolderNum = nextFolderNum;
-
-  // TODO: on account deletion we should be removing these listeners, but this
-  // is a relatively harmless leak given that account creation and deletion is
-  // a relatively rare operation.
-  db.on(`acct!${accountDef.id}!change`, this._onAccountChange.bind(this));
-  db.on(
-    `acct!${accountDef.id}!folders!tocChange`,
-    this._onTOCChange.bind(this)
-  );
-
-  dataOverlayManager.on(
-    "accountCascadeToFolders",
-    this._onAccountOverlayCascade.bind(this)
-  );
-}
-FoldersTOC.prototype = evt.mix({
-  type: "FoldersTOC",
-  overlayNamespace: "folders",
 
   // We don't care about who references us because we have the lifetime of the
   // universe.  (At least, unless our owning account gets deleted.)
   __acquire() {
     return Promise.resolve(this);
-  },
+  }
 
   __release() {
     // nothing to do
-  },
+  }
 
   /**
    * Someone needs to allocate folder id's (that are namespaced by the account
@@ -227,7 +223,7 @@ FoldersTOC.prototype = evt.mix({
    */
   issueFolderId() {
     return this.accountId + "." + encodeA64Int(this._nextFolderNum++);
-  },
+  }
 
   /**
    * Mechanism for tasks that automatically create virtual folders / labels to
@@ -315,7 +311,7 @@ FoldersTOC.prototype = evt.mix({
     this._pendingFoldersByPath.set(folderPath, folderInfo);
 
     return folderInfo;
-  },
+  }
 
   /**
    * Helper to `_onTaskFinishing` that returns true if the given folder path is
@@ -330,7 +326,7 @@ FoldersTOC.prototype = evt.mix({
     }
 
     return false;
-  },
+  }
 
   /**
    * Called by TaskContexts that we registered a decorator callback on inside
@@ -387,17 +383,17 @@ FoldersTOC.prototype = evt.mix({
       // have no action beyond putting the folder in newData!
       finishData.newData.folders.push(folderInfo);
     }
-  },
+  }
 
   getAllItems() {
     return this.items;
-  },
+  }
 
   getItemIndexById(id) {
     return this.items.findIndex(item => {
       return item.id === id;
     });
-  },
+  }
 
   /**
    * Make a folder sorting function that groups folders by account, puts the
@@ -421,7 +417,7 @@ FoldersTOC.prototype = evt.mix({
       "!" +
       folderInfo.name.toLocaleLowerCase()
     );
-  },
+  }
 
   /**
    * Some complex tasks may do things at an account granularity but which should
@@ -431,15 +427,14 @@ FoldersTOC.prototype = evt.mix({
   _onAccountOverlayCascade(accountId) {
     // This event is an unfiltered firehose; we have to filter down to our id.
     if (accountId === this.accountId) {
-      for (let i = 0; i < this.items.length; i++) {
-        let folder = this.items[i];
+      for (const folder of this.items) {
         this._dataOverlayManager.announceUpdatedOverlayData(
           this.overlayNamespace,
           folder.id
         );
       }
     }
-  },
+  }
 
   /**
    * Keep up-to-date with account changes.  Note that while the accountDef
@@ -452,19 +447,19 @@ FoldersTOC.prototype = evt.mix({
     // runtime without retracting and re-adding the account.  This is an
     // invariant, though.
     this._fakeFolderDataChanges();
-  },
+  }
 
   /**
    * Pretend the selected folders changed (data-wise, not overlay-wise).
    */
   _fakeFolderDataChanges(filterFunc) {
     for (let i = 0; i < this.items.length; i++) {
-      let folder = this.items[i];
+      const folder = this.items[i];
       if (!filterFunc || filterFunc(folder)) {
         this.emit("change", this.folderInfoToWireRep(folder), i);
       }
     }
-  },
+  }
 
   _onTOCChange(folderId, folderInfo, isNew) {
     if (isNew) {
@@ -482,11 +477,11 @@ FoldersTOC.prototype = evt.mix({
       // - remove
       this._removeFolderById(folderId);
     }
-  },
+  }
 
   _addFolder(folderInfo) {
-    let sortString = this._makeFolderSortString(folderInfo);
-    let idx = bsearchForInsert(this.folderSortStrings, sortString, strcmp);
+    const sortString = this._makeFolderSortString(folderInfo);
+    const idx = bsearchForInsert(this.folderSortStrings, sortString, strcmp);
     this.items.splice(idx, 0, folderInfo);
     logic(this, "addFolder", {
       id: folderInfo.id,
@@ -498,11 +493,11 @@ FoldersTOC.prototype = evt.mix({
     this.foldersByPath.set(folderInfo.path, folderInfo);
 
     this.emit("add", this.folderInfoToWireRep(folderInfo), idx);
-  },
+  }
 
   _removeFolderById(id) {
-    let folderInfo = this.foldersById.get(id);
-    let idx = this.items.indexOf(folderInfo);
+    const folderInfo = this.foldersById.get(id);
+    const idx = this.items.indexOf(folderInfo);
     logic(this, "removeFolderById", { id, index: idx });
     if (!folderInfo || idx === -1) {
       throw new Error("the folder did not exist?");
@@ -512,7 +507,7 @@ FoldersTOC.prototype = evt.mix({
     this.items.splice(idx, 1);
     this.folderSortStrings.splice(idx, 1);
     this.emit("remove", id, idx);
-  },
+  }
 
   /**
    * For cases like the sent folder or drafts folder where there is only one
@@ -523,11 +518,11 @@ FoldersTOC.prototype = evt.mix({
    */
   getCanonicalFolderByType(type) {
     return this.items.find(folder => folder.type === type) || null;
-  },
+  }
 
   generatePersistenceInfo() {
     return this._foldersDbState;
-  },
+  }
 
   /**
    * Generate the wire rep for a folder *belonging to this account*, mixing in
@@ -541,7 +536,7 @@ FoldersTOC.prototype = evt.mix({
       this.engineFolderMeta.syncGranularity === "account" &&
       this.accountDef.syncInfo
     ) {
-      let syncInfo = this.accountDef.syncInfo;
+      const syncInfo = this.accountDef.syncInfo;
       mixFromAccount = {
         lastSuccessfulSyncAt: syncInfo.lastSuccessfulSyncAt,
         lastAttemptedSyncAt: syncInfo.lastAttemptedSyncAt,
@@ -562,5 +557,5 @@ FoldersTOC.prototype = evt.mix({
       },
       mixFromAccount
     );
-  },
-});
+  }
+}

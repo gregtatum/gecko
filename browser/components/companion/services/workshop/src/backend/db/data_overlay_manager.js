@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 import logic from "logic";
 
 /**
@@ -85,20 +85,22 @@ import logic from "logic";
  *
  *
  */
-export default function DataOverlayManager() {
-  evt.Emitter.call(this);
-  logic.defineScope(this, "DataOverlayManager");
 
-  this.registeredProvidersByNamespace = new Map([
-    ["accounts", new Map()],
-    ["folders", new Map()],
-    ["conversations", new Map()],
-    ["messages", new Map()],
-  ]);
-}
-DataOverlayManager.prototype = evt.mix({
+export class DataOverlayManager extends Emitter {
+  constructor() {
+    super();
+    logic.defineScope(this, "DataOverlayManager");
+
+    this.registeredProvidersByNamespace = new Map([
+      ["accounts", new Map()],
+      ["folders", new Map()],
+      ["conversations", new Map()],
+      ["messages", new Map()],
+    ]);
+  }
+
   registerProvider(namespace, name, func) {
-    let providersForNamespace = this.registeredProvidersByNamespace.get(
+    const providersForNamespace = this.registeredProvidersByNamespace.get(
       namespace
     );
     if (!providersForNamespace) {
@@ -110,7 +112,7 @@ DataOverlayManager.prototype = evt.mix({
       providersForNamespace.set(name, funcs);
     }
     funcs.push(func);
-  },
+  }
 
   /**
    * Announce that there is new overlay data available for the given id in the
@@ -119,22 +121,22 @@ DataOverlayManager.prototype = evt.mix({
   announceUpdatedOverlayData(namespace, id) {
     logic(this, "announceUpdatedOverlayData", { namespace, id });
     this.emit(namespace, id);
-  },
+  }
 
   makeBoundResolver(namespace /*, ctx*/) {
     return this._resolveOverlays.bind(
       this,
       this.registeredProvidersByNamespace.get(namespace)
     );
-  },
+  }
 
   _resolveOverlays(providersForNamespace, itemId) {
-    let overlays = {};
-    for (let [name, funcs] of providersForNamespace) {
+    const overlays = {};
+    for (const [name, funcs] of providersForNamespace) {
       // The first func to return something short-circuits our search.  Each id
       // is owned by at most one overlay for its name.
-      for (let func of funcs) {
-        let contrib = func(itemId);
+      for (const func of funcs) {
+        const contrib = func(itemId);
         // undefined and null also don't merit being relayed or stopping our
         // search.
         if (contrib != null) {
@@ -144,5 +146,5 @@ DataOverlayManager.prototype = evt.mix({
       }
     }
     return overlays;
-  },
-});
+  }
+}

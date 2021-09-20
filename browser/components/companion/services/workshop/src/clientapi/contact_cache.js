@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import MailPeep from "./mail_peep";
+import { MailPeep } from "./mail_peep";
 
 /**
  * Caches contact lookups, both hits and misses, as well as updating the
@@ -38,7 +38,7 @@ import MailPeep from "./mail_peep";
  * who can use an e-mail address, but the e-mail app only allows one contact
  * to correspond to an e-mail address at a time.
  */
-var ContactCache = {
+const ContactCache = {
   /**
    * Maps e-mail addresses to the mozContact rep for the object, or null if
    * there was a miss.
@@ -73,7 +73,7 @@ var ContactCache = {
   callbacks: [],
 
   init() {
-    var contactsAPI = navigator.mozContacts;
+    const contactsAPI = navigator.mozContacts;
     if (!contactsAPI) {
       return;
     }
@@ -88,7 +88,7 @@ var ContactCache = {
   },
 
   shutdown() {
-    var contactsAPI = navigator.mozContacts;
+    const contactsAPI = navigator.mozContacts;
     if (!contactsAPI) {
       return;
     }
@@ -111,7 +111,7 @@ var ContactCache = {
    *   life-cycle management burden associated with this.  Or maybe we will
    *   return an `EntireListView` instance.
    */
-  shoddyAutocomplete(phrase) {
+  async shoddyAutocomplete(phrase) {
     // string-for-regexp escaping logic from searchfilter.js that I worry about
     // a little:
     // TODO: use a proper factored-out/supported regexp-from-string module
@@ -124,7 +124,7 @@ var ContactCache = {
 
     // The email map includes MailPeeps that are not backed by mozContacts as
     // well as ones that are, so that's the one to use.
-    for (let peeps of this._livePeepsByEmail.values()) {
+    for (const peeps of this._livePeepsByEmail.values()) {
       // It's a list of practically identical instances, we only want one.
       let peep = peeps[0];
       if (peep.name) {
@@ -141,14 +141,13 @@ var ContactCache = {
         if (matches.length >= MAX_MATCHES) {
           break;
         }
-        continue;
       }
       // NB: We could also look at fields on the actual mozContacts instance
       // if we had the instance.  (We don't.  Also this is a lazy hackjob
       // remember.)
     }
 
-    return Promise.resolve(matches);
+    return matches;
   },
 
   /**
@@ -168,15 +167,14 @@ var ContactCache = {
    */
   _onContactChange(event) {
     function cleanOutPeeps(livePeeps) {
-      for (var iPeep = 0; iPeep < livePeeps.length; iPeep++) {
-        var peep = livePeeps[iPeep];
+      for (const peep of livePeeps) {
         peep.contactId = null;
         peep.emit("change", peep);
       }
     }
 
-    var contactsAPI = navigator.mozContacts;
-    var livePeepsById = this._livePeepsById,
+    const contactsAPI = navigator.mozContacts;
+    const livePeepsById = this._livePeepsById,
       livePeepsByEmail = this._livePeepsByEmail;
 
     // clear the cache if it has anything in it (per the above doc block)
@@ -188,14 +186,14 @@ var ContactCache = {
     if (event.reason === "remove") {
       // - all contacts removed! (clear() called)
       if (!event.contactID) {
-        for (let livePeeps of livePeepsById.values()) {
+        for (const livePeeps of livePeepsById.values()) {
           cleanOutPeeps(livePeeps);
         }
         livePeepsById.clear();
       }
       // - just one contact removed
       else {
-        let livePeeps = livePeepsById.get(event.contactID);
+        const livePeeps = livePeepsById.get(event.contactID);
         if (livePeeps) {
           cleanOutPeeps(livePeeps);
           livePeepsById.delete(event.contactID);
@@ -215,9 +213,7 @@ var ContactCache = {
         if (!req.result.length) {
           return;
         }
-        var contact = req.result[0],
-          iPeep,
-          peep;
+        const contact = req.result[0];
 
         // - process update with apparent e-mail address removal
         if (event.reason === "update") {
@@ -228,8 +224,8 @@ var ContactCache = {
                   return e.value;
                 })
               : [];
-            for (iPeep = 0; iPeep < livePeeps.length; iPeep++) {
-              peep = livePeeps[iPeep];
+            for (let iPeep = 0; iPeep < livePeeps.length; iPeep++) {
+              const peep = livePeeps[iPeep];
               if (!contactEmails.includes(peep.address)) {
                 // Need to fix-up iPeep because of the splice; reverse iteration
                 // reorders our notifications and we don't want that, hence
@@ -248,21 +244,20 @@ var ContactCache = {
         if (!contact.email) {
           return;
         }
-        for (var iEmail = 0; iEmail < contact.email.length; iEmail++) {
-          var email = contact.email[iEmail].value;
-          let livePeeps = livePeepsByEmail.get(email);
+        for (const emailData of contact.email) {
+          const email = emailData.value;
+          const livePeeps = livePeepsByEmail.get(email);
           // nothing to do if there are no peeps that use that email address
           if (!livePeeps) {
             continue;
           }
 
-          for (iPeep = 0; iPeep < livePeeps.length; iPeep++) {
-            peep = livePeeps[iPeep];
+          for (const peep of livePeeps) {
             // If the peep is not yet associated with this contact or any other
             // contact, then associate it.
             if (!peep.contactId) {
               peep.contactId = contact.id;
-              var idLivePeeps = livePeepsById.get(peep.contactId);
+              let idLivePeeps = livePeepsById.get(peep.contactId);
               if (idLivePeeps === undefined) {
                 idLivePeeps = [];
                 livePeepsById.set(peep.contactId, idLivePeeps);
@@ -293,12 +288,13 @@ var ContactCache = {
     if (addressPairs == null) {
       return null;
     }
-    var resolved = [];
-    for (var i = 0; i < addressPairs.length; i++) {
-      resolved.push(this.resolvePeep(addressPairs[i]));
+    const resolved = [];
+    for (const addressPair of addressPairs) {
+      resolved.push(this.resolvePeep(addressPair));
     }
     return resolved;
   },
+
   /**
    * Create a MailPeep instance with the best information available and return
    * it.  Information from the (moz)Contacts API always trumps the passed-in
@@ -315,10 +311,10 @@ var ContactCache = {
    * generate N callbacks when 1 will do.
    */
   resolvePeep(addressPair) {
-    var emailAddress = addressPair.address;
-    var entry = this._contactCache.get(emailAddress);
-    var peep;
-    var contactsAPI = navigator.mozContacts;
+    const emailAddress = addressPair.address;
+    const entry = this._contactCache.get(emailAddress);
+    let peep;
+    const contactsAPI = navigator.mozContacts;
     // known miss; create miss peep
     // no contacts API, always a miss, skip out before extra logic happens
     if (entry === null || !contactsAPI) {
@@ -329,7 +325,7 @@ var ContactCache = {
     }
     // known contact; unpack contact info
     else if (entry !== undefined) {
-      var name = addressPair.name || "";
+      let name = addressPair.name || "";
       if (entry.name && entry.name.length) {
         name = entry.name[0];
       }
@@ -364,13 +360,13 @@ var ContactCache = {
       // being returned. Potentially all contacts. However passing empty string
       // gives back no results, even if there is a contact with no email address
       // assigned to it.
-      var filterValue = emailAddress ? emailAddress.toLowerCase() : "";
-      var req = contactsAPI.find({
+      const filterValue = emailAddress ? emailAddress.toLowerCase() : "";
+      const req = contactsAPI.find({
         filterBy: ["email"],
         filterOp: "equals",
         filterValue,
       });
-      var self = this,
+      const self = this,
         handleResult = function() {
           if (req.result && req.result.length) {
             // CONSIDER TODO SOMEDAY: since the search is done witha a
@@ -379,20 +375,19 @@ var ContactCache = {
             // to find the best casing match, but the payoff for that is likely
             // small, and the common case will be that the first one is good to
             // use.
-            var contact = req.result[0];
+            const contact = req.result[0];
 
             ContactCache._contactCache.set(emailAddress, contact);
             if (++ContactCache._cacheHitEntries > ContactCache.MAX_CACHE_HITS) {
               self._resetCache();
             }
 
-            var peepsToFixup = self._livePeepsByEmail.get(emailAddress);
+            const peepsToFixup = self._livePeepsByEmail.get(emailAddress);
             // there might no longer be any MailPeeps alive to care; leave
             if (!peepsToFixup) {
               return;
             }
-            for (let i = 0; i < peepsToFixup.length; i++) {
-              let fixupPeep = peepsToFixup[i];
+            for (const fixupPeep of peepsToFixup) {
               if (!fixupPeep.contactId) {
                 fixupPeep.contactId = contact.id;
                 let livePeeps = self._livePeepsById.get(fixupPeep.contactId);
@@ -426,8 +421,8 @@ var ContactCache = {
           }
           // Only notify callbacks if all outstanding lookups have completed
           if (--self.pendingLookupCount === 0) {
-            for (let i = 0; i < ContactCache.callbacks.length; i++) {
-              ContactCache.callbacks[i]();
+            for (const callback of ContactCache.callbacks) {
+              callback();
             }
             ContactCache.callbacks.splice(0, ContactCache.callbacks.length);
           }
@@ -437,7 +432,7 @@ var ContactCache = {
     }
 
     // - track the peep in our lists of live peeps
-    var livePeeps;
+    let livePeeps;
     livePeeps = this._livePeepsByEmail.get(emailAddress);
     if (livePeeps === undefined) {
       livePeeps = [];
@@ -458,17 +453,14 @@ var ContactCache = {
   },
 
   forgetPeepInstances() {
-    var livePeepsById = this._livePeepsById,
+    const livePeepsById = this._livePeepsById,
       livePeepsByEmail = this._livePeepsByEmail;
-    for (var iArg = 0; iArg < arguments.length; iArg++) {
-      var peeps = arguments[iArg];
+    for (const peeps of arguments) {
       if (!peeps) {
         continue;
       }
-      for (var iPeep = 0; iPeep < peeps.length; iPeep++) {
-        var peep = peeps[iPeep],
-          livePeeps,
-          idx;
+      for (const peep of peeps) {
+        let livePeeps, idx;
         if (peep.contactId) {
           livePeeps = livePeepsById.get(peep.contactId);
           if (livePeeps) {
@@ -496,4 +488,4 @@ var ContactCache = {
   },
 };
 
-export default ContactCache;
+export { ContactCache };

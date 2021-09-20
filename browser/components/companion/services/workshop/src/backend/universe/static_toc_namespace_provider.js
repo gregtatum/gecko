@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import StaticTOC from "../db/static_toc";
+import { StaticTOC } from "../db/static_toc";
 
 export default function makeStaticTOCNamespaceProvider(staticMap) {
   const tocCache = new Map();

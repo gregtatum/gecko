@@ -14,26 +14,28 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 
-export default function MailFolder(api, wireRep, overlays, matchInfo) {
-  evt.Emitter.call(this);
-  this.api = api;
+export class MailFolder extends Emitter {
+  constructor(api, wireRep, overlays, matchInfo) {
+    super();
+    this.api = api;
 
-  this.__update(wireRep);
-  this.__updateOverlays(overlays);
-  this.matchInfo = matchInfo;
-}
-MailFolder.prototype = evt.mix({
+    this.__update(wireRep);
+    this.__updateOverlays(overlays);
+    this.matchInfo = matchInfo;
+  }
+
   toString() {
     return "[MailFolder: " + this.path + "]";
-  },
+  }
+
   toJSON() {
     return {
       type: this.type,
       path: this.path,
     };
-  },
+  }
   /**
    * Loads the current unread message count as reported by the FolderStorage
    * backend. this.unread is the current number of unread messages that are
@@ -125,7 +127,7 @@ MailFolder.prototype = evt.mix({
 
     // -- Things mixed-in by the folders_toc from engine meta
     this.syncGranularity = wireRep.syncGranularity;
-  },
+  }
 
   __updateOverlays(overlays) {
     let syncOverlay = overlays.sync_refresh || overlays.sync_grow || {};
@@ -173,9 +175,9 @@ MailFolder.prototype = evt.mix({
      *   understand.
      */
     this.syncBlocked = syncOverlay.blocked || null;
-  },
+  }
 
   release() {
     // currently nothing to clean up
-  },
-});
+  }
+}

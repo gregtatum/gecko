@@ -15,21 +15,21 @@
  */
 
 import logic from "logic";
-import MailDB from "./maildb";
+import { MailDB } from "./maildb";
 
-import AccountManager from "./universe/account_manager";
+import { AccountManager } from "./universe/account_manager";
 import CronSyncSupport from "./universe/cronsync_support";
 import ExtensionManager from "./universe/extension_manager";
 import TOCManager from "./universe/toc_manager";
 import DerivedViewManager from "./universe/derived_view_manager";
 
-import DataOverlayManager from "./db/data_overlay_manager";
-import FolderConversationsTOC from "./db/folder_convs_toc";
-import ConversationTOC from "./db/conv_toc";
+import { DataOverlayManager } from "./db/data_overlay_manager";
+import { FolderConversationsTOC } from "./db/folder_convs_toc";
+import { ConversationTOC } from "./db/conv_toc";
 
 import SyncLifecycleMetaHelper from "./db/toc_meta/sync_lifecycle";
 
-import TaskManager from "./task_infra/task_manager";
+import { TaskManager } from "./task_infra/task_manager";
 import TaskRegistry from "./task_infra/task_registry";
 import TaskPriorities from "./task_infra/task_priorities";
 import TaskResources from "./task_infra/task_resources";

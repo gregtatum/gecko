@@ -14,49 +14,53 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 
 import { showBlobInImg } from "./blob_helpers";
 
 /**
  * See `identities.md`.
  */
-export default function MailPeep(name, address, contactId, thumbnailBlob) {
-  evt.Emitter.call(this);
+export class MailPeep extends Emitter {
+  constructor(name, address, contactId, thumbnailBlob) {
+    super();
 
-  this.name = name;
-  this.address = address;
-  this.contactId = contactId;
-  this._thumbnailBlob = thumbnailBlob;
+    this.name = name;
+    this.address = address;
+    this.contactId = contactId;
+    this._thumbnailBlob = thumbnailBlob;
 
-  // peeps are usually one of: from, to, cc, bcc
-  this.type = null;
-}
-MailPeep.prototype = evt.mix({
+    // peeps are usually one of: from, to, cc, bcc
+    this.type = null;
+  }
+
   get isContact() {
     return this.contactId !== null;
-  },
+  }
 
   toString() {
     return "[MailPeep: " + this.address + "]";
-  },
+  }
+
   toJSON() {
     return {
       name: this.name,
       address: this.address,
       contactId: this.contactId,
     };
-  },
+  }
+
   toWireRep() {
     return {
       name: this.name,
       address: this.address,
     };
-  },
+  }
 
   get hasPicture() {
     return this._thumbnailBlob !== null;
-  },
+  }
+
   /**
    * Display the contact's thumbnail on the given image node, abstracting away
    * the issue of Blob URL life-cycle management.
@@ -65,5 +69,5 @@ MailPeep.prototype = evt.mix({
     if (this._thumbnailBlob) {
       showBlobInImg(imgNode, this._thumbnailBlob);
     }
-  },
-});
+  }
+}

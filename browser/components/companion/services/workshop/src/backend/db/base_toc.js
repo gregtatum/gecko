@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 import logic from "logic";
-import RefedResource from "../refed_resource";
+import { RefedResource } from "../refed_resource";
 
 /**
  * Base class for TOC implementations.
@@ -26,90 +26,91 @@ import RefedResource from "../refed_resource";
  * clarity" and "oh crap, code duplication, this is not going to end well!".
  * (Most of the code was also subtly different for each TOC up to this point.)
  */
-export default function BaseTOC({ metaHelpers }) {
-  RefedResource.apply(this, arguments);
-  evt.Emitter.call(this);
+export class BaseTOC extends Emitter {
+  constructor({ metaHelpers }) {
+    super();
+    RefedResource.apply(this, arguments);
 
-  this._metaHelpers = metaHelpers || [];
+    this._metaHelpers = metaHelpers || [];
 
-  this.tocMeta = {};
-  this._everActivated = false;
-}
-BaseTOC.prototype = evt.mix(
-  RefedResource.mix({
-    __activate() {
-      this._everActivated = true;
-      for (let metaHelper of this._metaHelpers) {
-        logic(this, "activatingMetaHelper", {
-          name: metaHelper.constructor && metaHelper.constructor.name,
-        });
-        metaHelper.activate(this);
-      }
-
-      return this.__activateTOC.apply(this, arguments);
-    },
-
-    __deactivate() {
-      if (this._everActivated) {
-        for (let metaHelper of this._metaHelpers) {
-          metaHelper.deactivate(this);
-        }
-      }
-
-      return this.__deactivateTOC.apply(this, arguments);
-    },
+    this.tocMeta = {};
+    this._everActivated = false;
 
     /**
      * Optional hook to let lazy/pull-based TOC's
      */
-    flush: null,
+    this.flush = null;
+  }
 
-    /**
-     * A helper that takes a dictionary and applies it to `tocMeta`.  Exists as
-     * a central logging point and to have a quick/easy way to do simple diffing
-     * to know whether anything is actually changing to avoid emitting events if
-     * nothing is changing.  Although there is some performance motivation to
-     * this, I expect this to be a larger debugging win because there won't be
-     * misleading messages transiting the system that have no effect.
-     */
-    applyTOCMetaChanges(changes) {
-      const tocMeta = this.tocMeta;
-      let somethingChanged = false;
-      for (let key of Object.keys(changes)) {
-        let value = changes[key];
-        if (tocMeta[key] !== value) {
-          tocMeta[key] = value;
-          somethingChanged = true;
-        }
+  // TODO more rigorous mixin magic
+  static checkProtoValidity(obj) {
+    Object.keys(BaseTOC.prototype).forEach(function(prop) {
+      // allow optional methods like "flush" which we only define as null.
+      // eslint-disable-next-line no-prototype-builtins
+      if (!obj.hasOwnProperty(prop)) {
+        obj[prop] = BaseTOC.prototype[prop];
+      } else if (BaseTOC.prototype[prop]) {
+        throw new Error("object and base both have truthy property: " + prop);
       }
+    });
+    return obj;
+  }
 
-      if (somethingChanged) {
-        this.emit("tocMetaChange", tocMeta);
-      }
-    },
-
-    /**
-     * Emit an event.  The list view proxy should be listening for this,
-     * accumulate the event, dirty the proxy, and then send the event as part of
-     * its flush.  On the client side this should then be emitted on the list view
-     * instance with the provided eventName and eventData.
-     */
-    broadcastEvent(eventName, eventData) {
-      this.emit("broadcastEvent", eventName, eventData);
-    },
-  })
-);
-
-// TODO more rigorous mixin magic
-BaseTOC.mix = function(obj) {
-  Object.keys(BaseTOC.prototype).forEach(function(prop) {
-    // allow optional methods like "flush" which we only define as null.
-    // eslint-disable-next-line no-prototype-builtins
-    if (!obj.hasOwnProperty(prop)) {
-      obj[prop] = BaseTOC.prototype[prop];
-    } else if (BaseTOC.prototype[prop]) {
-      throw new Error("object and base both have truthy property: " + prop);
+  __activate() {
+    this._everActivated = true;
+    for (const metaHelper of this._metaHelpers) {
+      logic(this, "activatingMetaHelper", {
+        name: metaHelper.constructor && metaHelper.constructor.name,
+      });
+      metaHelper.activate(this);
     }
-  });
-  return obj;
-};
+
+    return this.__activateTOC.apply(this, arguments);
+  }
+
+  __deactivate() {
+    if (this._everActivated) {
+      for (const metaHelper of this._metaHelpers) {
+        metaHelper.deactivate(this);
+      }
+    }
+
+    return this.__deactivateTOC.apply(this, arguments);
+  }
+
+  /**
+   * A helper that takes a dictionary and applies it to `tocMeta`.  Exists as
+   * a central logging point and to have a quick/easy way to do simple diffing
+   * to know whether anything is actually changing to avoid emitting events if
+   * nothing is changing.  Although there is some performance motivation to
+   * this, I expect this to be a larger debugging win because there won't be
+   * misleading messages transiting the system that have no effect.
+   */
+  applyTOCMetaChanges(changes) {
+    const tocMeta = this.tocMeta;
+    let somethingChanged = false;
+    for (const key of Object.keys(changes)) {
+      const value = changes[key];
+      if (tocMeta[key] !== value) {
+        tocMeta[key] = value;
+        somethingChanged = true;
+      }
+    }
+
+    if (somethingChanged) {
+      this.emit("tocMetaChange", tocMeta);
+    }
+  }
+
+  /**
+   * Emit an event.  The list view proxy should be listening for this,
+   * accumulate the event, dirty the proxy, and then send the event as part of
+   * its flush.  On the client side this should then be emitted on the list view
+   * instance with the provided eventName and eventData.
+   */
+  broadcastEvent(eventName, eventData) {
+    this.emit("broadcastEvent", eventName, eventData);
+  }
+}
+
+RefedResource.mix(BaseTOC.prototype);

@@ -24,25 +24,27 @@
  * - reply-to address
  * - signature
  */
-export default function MailSenderIdentity(api, wireRep) {
-  // We store the API so that we can create identities for the composer without
-  // needing to create an account too.
-  this._api = api;
-  this.id = wireRep.id;
+export class MailSenderIdentity {
+  constructor(api, wireRep) {
+    // We store the API so that we can create identities for the composer without
+    // needing to create an account too.
+    this._api = api;
+    this.id = wireRep.id;
 
-  this.name = wireRep.name;
-  this.address = wireRep.address;
-  this.replyTo = wireRep.replyTo;
-  this.signature = wireRep.signature;
-  this.signatureEnabled = wireRep.signatureEnabled;
-}
-MailSenderIdentity.prototype = {
+    this.name = wireRep.name;
+    this.address = wireRep.address;
+    this.replyTo = wireRep.replyTo;
+    this.signature = wireRep.signature;
+    this.signatureEnabled = wireRep.signatureEnabled;
+  }
+
   toString() {
     return "[MailSenderIdentity: " + this.type + " " + this.id + "]";
-  },
+  }
+
   toJSON() {
     return { type: "MailSenderIdentity" };
-  },
+  }
 
   __update(wireRep) {
     this.id = wireRep.id;
@@ -51,7 +53,8 @@ MailSenderIdentity.prototype = {
     this.replyTo = wireRep.replyTo;
     this.signature = wireRep.signature;
     this.signatureEnabled = wireRep.signatureEnabled;
-  },
+  }
+
   /**
    * Modifies the identity. Applies all of the changes in mods and leaves all
    * other values the same.
@@ -73,9 +76,9 @@ MailSenderIdentity.prototype = {
       this.signatureEnabled = mods.signatureEnabled;
     }
     return this._api._modifyIdentity(this, mods);
-  },
+  }
 
   release() {
     // nothing to clean up currently
-  },
-};
+  }
+}

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 
-import ContactCache from "./contact_cache";
-import MailAttachment from "./mail_attachment";
+import { ContactCache } from "./contact_cache";
+import { MailAttachment } from "./mail_attachment";
 
-import keyedListHelper from "./keyed_list_helper";
+import { keyedListHelper } from "./keyed_list_helper";
 
 import { showBlobInImg } from "./blob_helpers";
 
@@ -27,7 +27,7 @@ function filterOutBuiltinFlags(flags) {
   // so, we could mutate in-place if we were sure the wire rep actually came
   // over the wire.  Right now there is de facto rep sharing, so let's not
   // mutate and screw ourselves over.
-  var outFlags = [];
+  const outFlags = [];
   for (var i = flags.length - 1; i >= 0; i--) {
     if (flags[i][0] !== "\\") {
       outFlags.push(flags[i]);
@@ -81,50 +81,53 @@ function filterOutBuiltinFlags(flags) {
  * its new state then you should wait for the message's `change` event to be
  * emitted.
  */
-export default function MailMessage(api, wireRep, overlays, matchInfo, slice) {
-  evt.Emitter.call(this);
-  this._api = api;
-  this._slice = slice;
 
-  // Store the wireRep so it can be used for caching.
-  // XXX we can and should probably stop doing this after minor cleanup
-  this._wireRep = wireRep;
+export class MailMessage extends Emitter {
+  constructor(api, wireRep, overlays, matchInfo, slice) {
+    super();
+    this._api = api;
+    this._slice = slice;
 
-  this.id = wireRep.id;
-  this.guid = wireRep.guid;
+    // Store the wireRep so it can be used for caching.
+    // XXX we can and should probably stop doing this after minor cleanup
+    this._wireRep = wireRep;
 
-  this.author = ContactCache.resolvePeep(wireRep.author);
-  this.to = ContactCache.resolvePeeps(wireRep.to);
-  this.cc = ContactCache.resolvePeeps(wireRep.cc);
-  this.bcc = ContactCache.resolvePeeps(wireRep.bcc);
-  this.replyTo = wireRep.replyTo;
+    this.id = wireRep.id;
+    this.guid = wireRep.guid;
 
-  this._relatedParts = wireRep.relatedParts;
-  this.bodyReps = wireRep.bodyReps;
-  // references is included for debug/unit testing purposes, hence is private
-  this._references = wireRep.references;
+    this.author = ContactCache.resolvePeep(wireRep.author);
+    this.to = ContactCache.resolvePeeps(wireRep.to);
+    this.cc = ContactCache.resolvePeeps(wireRep.cc);
+    this.bcc = ContactCache.resolvePeeps(wireRep.bcc);
+    this.replyTo = wireRep.replyTo;
 
-  // actual attachments population occurs in __update
-  this.attachments = [];
-  this.__update(wireRep);
-  this.__updateOverlays(overlays);
-  this.hasAttachments = wireRep.hasAttachments;
+    this._relatedParts = wireRep.relatedParts;
+    this.bodyReps = wireRep.bodyReps;
+    // references is included for debug/unit testing purposes, hence is private
+    this._references = wireRep.references;
 
-  this.subject = wireRep.subject;
-  this.snippet = wireRep.snippet;
-  this.matchInfo = matchInfo;
-}
-MailMessage.prototype = evt.mix({
-  type: "msg",
+    // actual attachments population occurs in __update
+    this.attachments = [];
+    this.__update(wireRep);
+    this.__updateOverlays(overlays);
+    this.hasAttachments = wireRep.hasAttachments;
+
+    this.subject = wireRep.subject;
+    this.snippet = wireRep.snippet;
+    this.matchInfo = matchInfo;
+    this.type = "msg";
+  }
+
   toString() {
     return "[MailMessage: " + this.id + "]";
-  },
+  }
+
   toJSON() {
     return {
       type: "MailMessage",
       id: this.id,
     };
-  },
+  }
 
   __update(wireRep) {
     this._wireRep = wireRep;
@@ -172,29 +175,22 @@ MailMessage.prototype = evt.mix({
       changeEvent: "attachment:change",
       removeEvent: "attachment:remove",
     });
-  },
+  }
 
   __updateOverlays(overlays) {
-    let downloadMap = overlays.download;
+    const downloadMap = overlays.download;
     // Loop over all attachments even if there isn't a download map; when the
     // map gets retracted, that's still a notable change that we need to update
     // for.
-    for (let attachment of this.attachments) {
-      let downloadOverlay = downloadMap && downloadMap.get(attachment.relId);
+    for (const attachment of this.attachments) {
+      const downloadOverlay = downloadMap && downloadMap.get(attachment.relId);
       attachment.__updateDownloadOverlay(downloadOverlay);
       attachment.emit("change");
     }
 
-    this.isDownloadingEmbeddedImages = false;
-    if (downloadMap) {
-      for (let relId of downloadMap.keys()) {
-        if (relId[0] === "r") {
-          this.isDownloadingEmbeddedImages = true;
-          break;
-        }
-      }
-    }
-  },
+    this.isDownloadingEmbeddedImages =
+      downloadMap && downloadMap.keys().some(relId => relId[0] === "r");
+  }
 
   /**
    * Release subscriptions associated with the header; currently this just means
@@ -202,7 +198,7 @@ MailMessage.prototype = evt.mix({
    */
   release() {
     ContactCache.forgetPeepInstances([this.author], this.to, this.cc, this.bcc);
-  },
+  }
 
   /**
    * In Gmail, removes the \Inbox label from a message.  For other account
@@ -216,12 +212,14 @@ MailMessage.prototype = evt.mix({
     // Filter things down to only inbox folders.  (This lets us avoid an inbox
     // lookup and a potentially redundant/spurious remove in one swoop.  Not
     // that the back-end really cares.  It's SMRT.)
-    let curInboxFolders = this.labels.filter(folder => folder.type === "inbox");
+    const curInboxFolders = this.labels.filter(
+      folder => folder.type === "inbox"
+    );
     if (curInboxFolders.length) {
       return this.modifyLabels({ removeLabels: curInboxFolders });
     }
     return null;
-  },
+  }
 
   /**
    * Delete this message by moving the messages to the trash folder if not
@@ -230,7 +228,7 @@ MailMessage.prototype = evt.mix({
    */
   trash() {
     return this._api.trash([this]);
-  },
+  }
 
   /*
    * Copy this message to another folder.
@@ -247,29 +245,29 @@ MailMessage.prototype = evt.mix({
    */
   move(targetFolder) {
     return this._api.move([this], targetFolder);
-  },
+  }
 
   /**
    * Set or clear the read status of this message.
    */
   setRead(beRead) {
     return this._api.markRead([this], beRead);
-  },
+  }
 
   toggleRead() {
     return this.setRead(!this.isRead);
-  },
+  }
 
   /**
    * Set or clear the starred/flagged status of this message.
    */
   setStarred(beStarred) {
     return this._api.markStarred([this], beStarred);
-  },
+  }
 
   toggleStarred() {
     return this.setStarred(!this.isStarred);
-  },
+  }
 
   /**
    * Add and/or remove tags/flags from this message.
@@ -279,7 +277,7 @@ MailMessage.prototype = evt.mix({
    */
   modifyTags(args) {
     return this._api.modifyTags([this], args);
-  },
+  }
 
   /**
    * And and/or remove gmail labels from this message.  This only makes sense
@@ -290,7 +288,7 @@ MailMessage.prototype = evt.mix({
    */
   modifyLabels(args) {
     return this._api.modifyLabels([this], args);
-  },
+  }
 
   /**
    * Returns the number of bytes needed before we can display the full
@@ -303,7 +301,7 @@ MailMessage.prototype = evt.mix({
     // If this is unset (old message), default to zero so that we just
     // won't show any warnings (rather than prompting incorrectly).
     return this._wireRep.bytesToDownloadForBodyDisplay || 0;
-  },
+  }
 
   /**
    * Assume this is a draft message and return a Promise that will be resolved
@@ -314,7 +312,7 @@ MailMessage.prototype = evt.mix({
       throw new Error("Nice try, but I am not a magical localdraft.");
     }
     return this._api.resumeMessageComposition(this);
-  },
+  }
 
   /**
    * Start composing a reply to this message.
@@ -335,7 +333,7 @@ MailMessage.prototype = evt.mix({
       mode: replyMode,
       noComposer: options && options.noComposer,
     });
-  },
+  }
 
   /**
    * Start composing a forward of this message.
@@ -356,18 +354,15 @@ MailMessage.prototype = evt.mix({
       mode: forwardMode,
       noComposer: options && options.noComposer,
     });
-  },
+  }
 
   /**
    * true if this is an HTML document with inline images sent as part of the
    * messages.
    */
   get embeddedImageCount() {
-    if (!this._relatedParts) {
-      return 0;
-    }
-    return this._relatedParts.length;
-  },
+    return this.relatedParts?.length || 0;
+  }
 
   /**
    * Trigger download of the body parts for this message if they're not already
@@ -378,52 +373,37 @@ MailMessage.prototype = evt.mix({
    */
   downloadBodyReps() {
     this._api._downloadBodyReps(this.id, this.date.valueOf());
-  },
+  }
 
   /**
    * true if all the bodyReps are downloaded.
    */
   get bodyRepsDownloaded() {
-    var i = 0;
-    var len = this.bodyReps.length;
-
-    for (; i < len; i++) {
-      if (!this.bodyReps[i].isDownloaded) {
-        return false;
-      }
-    }
-    return true;
-  },
+    return this.bodyReps.every(bodyRep => bodyRep.isDownloaded);
+  }
 
   /**
    * true if all of the images are already downloaded.
    */
   get embeddedImagesDownloaded() {
-    for (var i = 0; i < this._relatedParts.length; i++) {
-      var relatedPart = this._relatedParts[i];
-      if (!relatedPart.file) {
-        return false;
-      }
-    }
-    return true;
-  },
+    return this._relatedParts.every(relatedPart => relatedPart.file);
+  }
 
   /**
    * Trigger the download of any inline images sent as part of the message.
    * Returns a promise that is resolved when the parts have been downloaded and
    * are available to showEmbeddedImages().
    */
-  downloadEmbeddedImages() {
-    var relatedPartRelIds = [];
-    for (var i = 0; i < this._relatedParts.length; i++) {
-      var relatedPart = this._relatedParts[i];
+  async downloadEmbeddedImages() {
+    const relatedPartRelIds = [];
+    for (const relatedPart of this._relatedParts) {
       if (relatedPart.file) {
         continue;
       }
       relatedPartRelIds.push(relatedPart.relId);
     }
     if (!relatedPartRelIds.length) {
-      return Promise.resolve();
+      return null;
     }
     return this._api._downloadAttachments({
       messageId: this.id,
@@ -431,7 +411,7 @@ MailMessage.prototype = evt.mix({
       relatedPartRelIds,
       attachmentRelIds: null,
     });
-  },
+  }
 
   /**
    * Synchronously trigger the display of embedded images.
@@ -440,28 +420,25 @@ MailMessage.prototype = evt.mix({
    * image is known since Gecko still doesn't have seamless iframes.
    */
   showEmbeddedImages(htmlNode, loadCallback) {
-    var i,
-      cidToBlob = {};
+    const cidToBlob = new Map();
     // - Generate object URLs for the attachments
-    for (i = 0; i < this._relatedParts.length; i++) {
-      var relPart = this._relatedParts[i];
+    for (const { file, contentId } of this._relatedParts) {
       // Related parts should all be stored as Blobs-in-IndexedDB
-      if (relPart.file && !Array.isArray(relPart.file)) {
-        cidToBlob[relPart.contentId] = relPart.file;
+      if (file && !Array.isArray(file)) {
+        cidToBlob.set(contentId, file);
       }
     }
 
     // - Transform the links
-    var nodes = htmlNode.querySelectorAll(".moz-embedded-image");
-    for (i = 0; i < nodes.length; i++) {
-      var node = nodes[i],
-        cid = node.getAttribute("cid-src");
+    const nodes = htmlNode.querySelectorAll(".moz-embedded-image");
+    for (const node of nodes) {
+      const cid = node.getAttribute("cid-src");
 
       // eslint-disable-next-line no-prototype-builtins
-      if (!cidToBlob.hasOwnProperty(cid)) {
+      if (!cidToBlob.has(cid)) {
         continue;
       }
-      showBlobInImg(node, cidToBlob[cid]);
+      showBlobInImg(node, cidToBlob.get(cid));
       if (loadCallback) {
         node.addEventListener("load", loadCallback);
       }
@@ -469,7 +446,7 @@ MailMessage.prototype = evt.mix({
       node.removeAttribute("cid-src");
       node.classList.remove("moz-embedded-image");
     }
-  },
+  }
 
   /**
    * @return[Boolean]{
@@ -480,9 +457,9 @@ MailMessage.prototype = evt.mix({
    * }
    */
   checkForExternalImages(htmlNode) {
-    var someNode = htmlNode.querySelector(".moz-external-image");
+    const someNode = htmlNode.querySelector(".moz-external-image");
     return someNode !== null;
-  },
+  }
 
   /**
    * Transform previously sanitized references to external images into live
@@ -493,9 +470,8 @@ MailMessage.prototype = evt.mix({
   showExternalImages(htmlNode, loadCallback) {
     // querySelectorAll is not live, whereas getElementsByClassName is; we
     // don't need/want live, especially with our manipulations.
-    var nodes = htmlNode.querySelectorAll(".moz-external-image");
-    for (var i = 0; i < nodes.length; i++) {
-      var node = nodes[i];
+    const nodes = htmlNode.querySelectorAll(".moz-external-image");
+    for (const node of nodes) {
       if (loadCallback) {
         node.addEventListener("load", loadCallback);
       }
@@ -503,5 +479,5 @@ MailMessage.prototype = evt.mix({
       node.removeAttribute("ext-src");
       node.classList.remove("moz-external-image");
     }
-  },
-});
+  }
+}

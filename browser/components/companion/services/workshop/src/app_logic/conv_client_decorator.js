@@ -14,19 +14,15 @@
  * limitations under the License.
  */
 
-import ContactCache from "gelam/clientapi/contact_cache";
+import { ContactCache } from "gelam/clientapi/contact_cache";
 
-import cleanupConversation from "./conv_client_cleanup";
+import { cleanupConversation } from "./conv_client_cleanup";
 
 /**
  * Put stuff that our "conv_churn.js" created onto the MailConversation
  * instance.  Cleanup happens in "conv_client_cleanup.js".
  */
-export default function decorateConversation(
-  mailConversation,
-  wireRep,
-  firstTime
-) {
+export function decorateConversation(mailConversation, wireRep, firstTime) {
   // Delta-computing peeps is hard, forget them all then re-resolve them all.
   // We have a cache.  It's fine.
   if (!firstTime) {

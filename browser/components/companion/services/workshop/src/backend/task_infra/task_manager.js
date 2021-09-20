@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 import logic from "logic";
 
 import TaskContext from "./task_context";
@@ -40,83 +40,84 @@ import { SmartWakeLock } from "../wakelocks";
  * `__restoreFromDB` method and we have fully initialized all complex tasks.
  * (Complex task initialization can be async.)
  */
-export default function TaskManager({
-  universe,
-  db,
-  taskRegistry,
-  taskResources,
-  taskPriorities,
-  accountManager,
-}) {
-  evt.Emitter.call(this);
-  logic.defineScope(this, "TaskManager");
-  this._universe = universe;
-  this._db = db;
-  this._registry = taskRegistry;
-  this._resources = taskResources;
-  this._priorities = taskPriorities;
-  this._accountManager = accountManager;
-  this._accountsTOC = accountManager.accountsTOC;
+export class TaskManager extends Emitter {
+  constructor({
+    universe,
+    db,
+    taskRegistry,
+    taskResources,
+    taskPriorities,
+    accountManager,
+  }) {
+    super();
+    logic.defineScope(this, "TaskManager");
+    this._universe = universe;
+    this._db = db;
+    this._registry = taskRegistry;
+    this._resources = taskResources;
+    this._priorities = taskPriorities;
+    this._accountManager = accountManager;
+    this._accountsTOC = accountManager.accountsTOC;
 
-  // XXX SADNESS.  So we wanted to use autoincrement to avoid collisions or us
-  // having to manage a counter.  Unfortunately, we want to use mozGetAll for
-  // retrieval, but that can't include the keys, so we need to always have
-  // the key inside the value.  To avoid managing the counter we go with a
-  // strategy to avoid colliding keys, probably.  We use Date.now and then
-  // assume that we won't generate tasks at a sustainted rate of more than 100
-  // tasks per millisecond (on average).
-  let idBase = Date.now() - 1400000000000;
-  if (idBase < 0) {
-    throw new Error("clock is bad, correctness compromised, giving up.");
+    // XXX SADNESS.  So we wanted to use autoincrement to avoid collisions or us
+    // having to manage a counter.  Unfortunately, we want to use mozGetAll for
+    // retrieval, but that can't include the keys, so we need to always have
+    // the key inside the value.  To avoid managing the counter we go with a
+    // strategy to avoid colliding keys, probably.  We use Date.now and then
+    // assume that we won't generate tasks at a sustainted rate of more than 100
+    // tasks per millisecond (on average).
+    const idBase = Date.now() - 1400000000000;
+    if (idBase < 0) {
+      throw new Error("clock is bad, correctness compromised, giving up.");
+    }
+    this._nextId = idBase * 100;
+
+    /**
+     * @type{RawTask[]}
+     * The tasks that we still need to plan (but have scheduled/durably persisted
+     * to disk.)
+     */
+    this._tasksToPlan = [];
+    /**
+     * Track the number of plan writes so that we can avoid declaring the queue
+     * empty if there will soon be enqueued tasks once the write completes.
+     */
+    this._pendingPlanWrites = 0;
+
+    // Wedge our processing infrastructure until we have loaded everything from
+    // the database.  Note that nothing will actually .then() off of this, and
+    // we're just using an already-resolved Promise for typing reasons.
+    this._activePromise = Promise.resolve(null);
+
+    /**
+     * The SmartWakeLock we're holding, if any.  We hold the wakelocks rather than
+     * our tasks doing it themselves because we manage their lifecycles anyways
+     * and it's not like the wakelocks are for "highspeed" or anything fancy.  We
+     * need to hold the "cpu" wakelock if we want our code to keep executing, and
+     * we need to hold the "wifi" wakelock if we want to keep our network around.
+     * (There is some ugliness related to the "wifi" wakelock that we won't get
+     * into here.)  In the event wakelocks get fancier, we'll potentially deal
+     * with that by exposing additional data on the task or adding helpers to the
+     * TaskContext.
+     *
+     * Current we:
+     * - Acquire the wakelock when we have any work to do.
+     * - Renew the wakelock at the point we would have acquired it if we didn't
+     *   already hold it.  The SmartWakeLock defaults to a 45 second timeout
+     *   which we're currently calling more than sufficiently generous, but
+     *   long-running tasks are on the hook for invoking TaskContext.heartbeat()
+     *   to help us renew the wakelock while it's still going.
+     * - Release the wakelock when we run out of things to do.
+     */
+    this._activeWakeLock = null;
   }
-  this._nextId = idBase * 100;
 
-  /**
-   * @type{RawTask[]}
-   * The tasks that we still need to plan (but have scheduled/durably persisted
-   * to disk.)
-   */
-  this._tasksToPlan = [];
-  /**
-   * Track the number of plan writes so that we can avoid declaring the queue
-   * empty if there will soon be enqueued tasks once the write completes.
-   */
-  this._pendingPlanWrites = 0;
-
-  // Wedge our processing infrastructure until we have loaded everything from
-  // the database.  Note that nothing will actually .then() off of this, and
-  // we're just using an already-resolved Promise for typing reasons.
-  this._activePromise = Promise.resolve(null);
-
-  /**
-   * The SmartWakeLock we're holding, if any.  We hold the wakelocks rather than
-   * our tasks doing it themselves because we manage their lifecycles anyways
-   * and it's not like the wakelocks are for "highspeed" or anything fancy.  We
-   * need to hold the "cpu" wakelock if we want our code to keep executing, and
-   * we need to hold the "wifi" wakelock if we want to keep our network around.
-   * (There is some ugliness related to the "wifi" wakelock that we won't get
-   * into here.)  In the event wakelocks get fancier, we'll potentially deal
-   * with that by exposing additional data on the task or adding helpers to the
-   * TaskContext.
-   *
-   * Current we:
-   * - Acquire the wakelock when we have any work to do.
-   * - Renew the wakelock at the point we would have acquired it if we didn't
-   *   already hold it.  The SmartWakeLock defaults to a 45 second timeout
-   *   which we're currently calling more than sufficiently generous, but
-   *   long-running tasks are on the hook for invoking TaskContext.heartbeat()
-   *   to help us renew the wakelock while it's still going.
-   * - Release the wakelock when we run out of things to do.
-   */
-  this._activeWakeLock = null;
-}
-TaskManager.prototype = evt.mix({
   async __restoreFromDB() {
-    let { wrappedTasks, complexTaskStates } = await this._db.loadTasks();
+    const { wrappedTasks, complexTaskStates } = await this._db.loadTasks();
     logic(this, "restoreFromDB", { count: wrappedTasks.length });
 
     // -- Restore wrapped tasks
-    for (let wrappedTask of wrappedTasks) {
+    for (const wrappedTask of wrappedTasks) {
       if (wrappedTask.state === null) {
         this._tasksToPlan.push(wrappedTask);
       } else {
@@ -125,7 +126,7 @@ TaskManager.prototype = evt.mix({
     }
 
     // -- Push complex task state into complex tasks
-    let pendingInitPromises = [];
+    const pendingInitPromises = [];
     this._registry.initializeFromDatabaseState(complexTaskStates);
     // Initialize the global tasks.
     pendingInitPromises.push(
@@ -135,7 +136,7 @@ TaskManager.prototype = evt.mix({
     );
 
     this._accountsTOC.getAllItems().forEach(accountInfo => {
-      let foldersTOC = this._accountManager.accountFoldersTOCs.get(
+      const foldersTOC = this._accountManager.accountFoldersTOCs.get(
         accountInfo.id
       );
       pendingInitPromises.push(
@@ -152,7 +153,7 @@ TaskManager.prototype = evt.mix({
       );
     });
     this._accountsTOC.on("add", accountInfo => {
-      let foldersTOC = this._accountManager.accountFoldersTOCs.get(
+      const foldersTOC = this._accountManager.accountFoldersTOCs.get(
         accountInfo.id
       );
       this._registry
@@ -180,7 +181,7 @@ TaskManager.prototype = evt.mix({
       });
       this._maybeDoStuff();
     });
-  },
+  }
 
   /**
    * Ensure that we have a wake-lock.  Invoke us when something happens that
@@ -194,7 +195,7 @@ TaskManager.prototype = evt.mix({
     } else {
       this._activeWakeLock.renew("TaskManager:ensure");
     }
-  },
+  }
 
   __renewWakeLock() {
     if (this._activeWakeLock) {
@@ -202,7 +203,7 @@ TaskManager.prototype = evt.mix({
     } else {
       logic.fail("explicit renew propagated without a wakelock?");
     }
-  },
+  }
 
   /**
    * Release the wakelock *because we are sure we have no more work to do right
@@ -214,7 +215,7 @@ TaskManager.prototype = evt.mix({
       this._activeWakeLock.unlock("TaskManager:release");
       this._activeWakeLock = null;
     }
-  },
+  }
 
   /**
    * Schedule one or more persistent tasks.
@@ -241,7 +242,7 @@ TaskManager.prototype = evt.mix({
    */
   scheduleTasks(rawTasks, why) {
     this._ensureWakeLock(why);
-    let wrappedTasks = this.__wrapTasks(rawTasks);
+    const wrappedTasks = this.__wrapTasks(rawTasks);
 
     logic(this, "schedulePersistent", { why, tasks: wrappedTasks });
 
@@ -251,7 +252,7 @@ TaskManager.prototype = evt.mix({
       this.__enqueuePersistedTasksForPlanning(wrappedTasks);
       return wrappedTasks.map(x => x.id);
     });
-  },
+  }
 
   /**
    * Return a promise that will be resolved when the tasks with the given id's
@@ -267,7 +268,7 @@ TaskManager.prototype = evt.mix({
         });
       })
     );
-  },
+  }
 
   /**
    * Schedule a persistent task, returning a promise that will be resolved
@@ -281,7 +282,7 @@ TaskManager.prototype = evt.mix({
       .then(results => {
         return results[0];
       });
-  },
+  }
 
   /**
    * Schedule a task and wait for it to be planned and possibly generate undo
@@ -298,10 +299,10 @@ TaskManager.prototype = evt.mix({
         // there was an associated object, we add the undo listener just using
         // `on` and explicitly remove it in our (guaranteed-to-fire) `once`
         // planned handler.
-        let undoHandler = undoTasks => {
+        const undoHandler = undoTasks => {
           resolve(undoTasks);
         };
-        let ensureCleanup = () => {
+        const ensureCleanup = () => {
           this.removeListener(`undoTasks:${taskId}`, undoHandler);
           // (will be ignored if the undo handler fired.)
           resolve([]);
@@ -310,7 +311,7 @@ TaskManager.prototype = evt.mix({
         this.once(`planned:${taskId}`, ensureCleanup);
       });
     });
-  },
+  }
 
   /**
    * Schedule a persistent task, returning a promise that will be resolved
@@ -324,7 +325,7 @@ TaskManager.prototype = evt.mix({
       .then(results => {
         return results[0];
       });
-  },
+  }
 
   /**
    * Return a promise that will be resolved when the tasks with the given id's
@@ -340,7 +341,7 @@ TaskManager.prototype = evt.mix({
         });
       })
     );
-  },
+  }
 
   /**
    * Schedule one or more non-persistent tasks.  You only want to do this for
@@ -353,7 +354,7 @@ TaskManager.prototype = evt.mix({
    */
   scheduleNonPersistentTasks(rawTasks, why) {
     this._ensureWakeLock(why);
-    let wrappedTasks = this.__wrapTasks(rawTasks);
+    const wrappedTasks = this.__wrapTasks(rawTasks);
     logic(this, "scheduleNonPersistent", { why, tasks: wrappedTasks });
 
     wrappedTasks.forEach(wrapped => {
@@ -361,7 +362,7 @@ TaskManager.prototype = evt.mix({
     });
     this.__enqueuePersistedTasksForPlanning(wrappedTasks);
     return Promise.resolve(wrappedTasks.map(x => x.id));
-  },
+  }
 
   /**
    * Schedules a non-persistent task, returning a promise that will be resolved
@@ -383,7 +384,7 @@ TaskManager.prototype = evt.mix({
       .then(results => {
         return results[0];
       });
-  },
+  }
 
   /**
    * Schedules a non-persistent task, returning a promise that will be resolved
@@ -405,7 +406,7 @@ TaskManager.prototype = evt.mix({
       .then(results => {
         return results[0];
       });
-  },
+  }
 
   /**
    * Wrap raw tasks and issue them an id, suitable for persisting to the
@@ -419,7 +420,7 @@ TaskManager.prototype = evt.mix({
         state: null, // => planned => (deleted)
       };
     });
-  },
+  }
 
   /**
    * Enqueue the given tasks for planning now that they have been persisted to
@@ -427,12 +428,12 @@ TaskManager.prototype = evt.mix({
    */
   __enqueuePersistedTasksForPlanning(wrappedTasks, sourceId) {
     this._ensureWakeLock();
-    for (let wrappedTask of wrappedTasks) {
+    for (const wrappedTask of wrappedTasks) {
       this.emit("willPlan", wrappedTask, sourceId);
     }
     this._tasksToPlan.splice(this._tasksToPlan.length, 0, ...wrappedTasks);
     this._maybeDoStuff();
-  },
+  }
 
   /**
    * Makes us aware of planned tasks or complex task markers.  This happens
@@ -447,7 +448,7 @@ TaskManager.prototype = evt.mix({
     // TaskPriorities.  If this stays zero, everything was blocked on a resource
     // and there's no new work to do.
     let prioritized = 0;
-    for (let taskThing of taskThings) {
+    for (const taskThing of taskThings) {
       logic(this, "queueing", { taskThing, sourceId });
       this.emit("willExecute", taskThing, sourceId);
       if (this._resources.ownOrRelayTaskThing(taskThing)) {
@@ -468,7 +469,7 @@ TaskManager.prototype = evt.mix({
         this._maybeDoStuff();
       });
     }
-  },
+  }
 
   /**
    * Allows TaskContext to trigger removal of complex task markers when
@@ -477,7 +478,7 @@ TaskManager.prototype = evt.mix({
   __removeTaskOrMarker(taskId) {
     logic(this, "removing", { taskId });
     this._resources.removeTaskThing(taskId);
-  },
+  }
 
   /**
    * If we have any task planning or task executing to do.
@@ -539,7 +540,7 @@ TaskManager.prototype = evt.mix({
         this._maybeDoStuff();
       }
     );
-  },
+  }
 
   /**
    * Plan the next task.  This task will advance to 'planned' atomically as part
@@ -547,14 +548,15 @@ TaskManager.prototype = evt.mix({
    * happen via a call to `__queueTasksOrMarkers` via TaskContext.
    */
   _planNextTask() {
-    let wrappedTask = this._tasksToPlan.shift();
+    const wrappedTask = this._tasksToPlan.shift();
     logic(this, "planning:begin", { task: wrappedTask });
-    let ctx = new TaskContext(wrappedTask, this._universe);
-    let planResult = this._registry.planTask(ctx, wrappedTask);
+    const ctx = new TaskContext(wrappedTask, this._universe);
+    const planResult = this._registry.planTask(ctx, wrappedTask);
     if (planResult) {
       planResult.then(
         maybeResult => {
-          let result = (maybeResult && maybeResult.wrappedResult) || undefined;
+          const result =
+            (maybeResult && maybeResult.wrappedResult) || undefined;
           logic(this, "planning:end", { success: true, task: wrappedTask });
           this.emit("planned:" + wrappedTask.id, result);
           this.emit("planned", wrappedTask.id, result);
@@ -575,18 +577,19 @@ TaskManager.prototype = evt.mix({
       this.emit("planned", wrappedTask.id, undefined);
     }
     return planResult;
-  },
+  }
 
   _executeNextTask() {
-    let taskThing = this._priorities.popNextAvailableTask();
+    const taskThing = this._priorities.popNextAvailableTask();
     logic(this, "executing:begin", { task: taskThing });
 
-    let ctx = new TaskContext(taskThing, this._universe);
-    let execResult = this._registry.executeTask(ctx, taskThing);
+    const ctx = new TaskContext(taskThing, this._universe);
+    const execResult = this._registry.executeTask(ctx, taskThing);
     if (execResult) {
       execResult.then(
         maybeResult => {
-          let result = (maybeResult && maybeResult.wrappedResult) || undefined;
+          const result =
+            (maybeResult && maybeResult.wrappedResult) || undefined;
           logic(this, "executing:end", { success: true, task: taskThing });
           this.emit("executed:" + taskThing.id, result);
           this.emit("executed", taskThing.id, result);
@@ -607,7 +610,7 @@ TaskManager.prototype = evt.mix({
       this.emit("executed", taskThing.id, undefined);
     }
     return execResult;
-  },
+  }
 
   /**
    * Used by `TaskContext.spawnSubtask` to tell us about subtasks it is
@@ -634,7 +637,7 @@ TaskManager.prototype = evt.mix({
    */
   __trackAndWrapSubtask(ctx, subctx, subtaskFunc, subtaskArg) {
     logic(this, "subtask:begin", { taskId: ctx.id, subtaskId: subctx.id });
-    let subtaskResult = subtaskFunc.call(
+    const subtaskResult = subtaskFunc.call(
       subctx.__taskInstance,
       subctx,
       subtaskArg
@@ -644,5 +647,5 @@ TaskManager.prototype = evt.mix({
       logic(this, "subtask:end", { taskId: ctx.id, subtaskId: subctx.id });
       return result;
     });
-  },
-});
+  }
+}

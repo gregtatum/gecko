@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 import logic from "logic";
 
 import {
@@ -333,22 +333,22 @@ function analyzeAndLogErrorEvent(event) {
 }
 
 function analyzeAndRejectErrorEvent(rejectFunc, event) {
-  rejectFunc(analyzeAndRejectErrorEvent(event));
+  rejectFunc(analyzeAndLogErrorEvent(event));
 }
 
 function computeSetDelta(before, after) {
-  let added = new Set();
-  let kept = new Set();
-  let removed = new Set();
+  const added = new Set();
+  const kept = new Set();
+  const removed = new Set();
 
-  for (let key of before) {
+  for (const key of before) {
     if (after.has(key)) {
       kept.add(key);
     } else {
       removed.add(key);
     }
   }
-  for (let key of after) {
+  for (const key of after) {
     if (!before.has(key)) {
       added.add(key);
     }
@@ -378,16 +378,16 @@ const applyDeltasToObj = function(deltas, obj) {
 const applyClobbersToObj = function(clobbers, obj) {
   // -- Complex case, map whose keys are paths and values are values.
   if (clobbers instanceof Map) {
-    for (let [keyPath, value] of clobbers) {
+    for (const [keyPath, value] of clobbers) {
       let effObj = obj;
-      for (let keyPart of keyPath.slice(0, -1)) {
+      for (const keyPart of keyPath.slice(0, -1)) {
         effObj = effObj[keyPart];
       }
       effObj[keyPath.slice(-1)[0]] = value;
     }
   } else {
     // -- Simple case: object with single string key and value.
-    for (let key of Object.keys(clobbers)) {
+    for (const key of Object.keys(clobbers)) {
       obj[key] = clobbers[key];
     }
   }
@@ -447,11 +447,11 @@ function wrapTrans(idbTransaction) {
  */
 function genericUncachedLookups(store, requestMap) {
   let dbReqCount = 0;
-  for (let unlatchedKey of requestMap.keys()) {
-    let key = unlatchedKey;
+  for (const unlatchedKey of requestMap.keys()) {
+    const key = unlatchedKey;
     dbReqCount++;
-    let req = store.get(key);
-    let handler = event => {
+    const req = store.get(key);
+    const handler = event => {
       let value;
       if (req.error) {
         value = null;
@@ -469,8 +469,8 @@ function genericUncachedLookups(store, requestMap) {
 
 function genericUncachedWrites(trans, tableName, writeMap) {
   if (writeMap) {
-    let store = trans.objectStore(tableName);
-    for (let [key, value] of writeMap) {
+    const store = trans.objectStore(tableName);
+    for (const [key, value] of writeMap) {
       if (value !== null) {
         store.put(value, key);
       } else {
@@ -482,8 +482,8 @@ function genericUncachedWrites(trans, tableName, writeMap) {
 
 function genericCachedLookups(store, requestMap, cache) {
   let dbReqCount = 0;
-  for (let unlatchedKey of requestMap.keys()) {
-    let key = unlatchedKey;
+  for (const unlatchedKey of requestMap.keys()) {
+    const key = unlatchedKey;
     // fill from cache if available
     if (cache.has(key)) {
       requestMap.set(key, cache.get(key));
@@ -492,12 +492,12 @@ function genericCachedLookups(store, requestMap, cache) {
 
     // otherwise we need to ask the database
     dbReqCount++;
-    let req = store.get(key);
-    let handler = event => {
+    const req = store.get(key);
+    const handler = event => {
       if (req.error) {
         analyzeAndLogErrorEvent(event);
       } else {
-        let value = req.result;
+        const value = req.result;
         // Don't clobber a value in the cache; there might have been a write.
         if (!cache.has(key)) {
           cache.set(key, value);
@@ -537,651 +537,658 @@ function genericCachedLookups(store, requestMap, cache) {
  *   onupgradeneeded event.
  *
  */
-function MailDB({ universe, testOptions }) {
-  evt.Emitter.call(this);
-  logic.defineScope(this, "MailDB");
+export class MailDB extends Emitter {
+  constructor({ universe, testOptions }) {
+    super();
+    logic.defineScope(this, "MailDB");
 
-  this.universe = universe;
-  this._db = null;
-  /**
-   * @type {TriggerManager}
-   * We need access to the TriggerManager to directly manipulate its
-   * derivedMutations property that database triggers will push manipulations
-   * onto.  The TriggerManager clobbers itself onto us when it is initialized
-   * for circular dependency reasons.
-   */
-  this.triggerManager = null;
-  /**
-   * @type {AccountManager}
-   * The AccountManager is the authoritative source of the always-in-memory
-   * account definitions and folder infos which are needed for our atomic
-   * manipulations of them.  The AccountManager clobbers itself onto us when it
-   * is initialized for circular dependency reasons.
-   */
-  this.accountManager = null;
+    this.universe = universe;
+    this._db = null;
+    /**
+     * @type {TriggerManager}
+     * We need access to the TriggerManager to directly manipulate its
+     * derivedMutations property that database triggers will push manipulations
+     * onto.  The TriggerManager clobbers itself onto us when it is initialized
+     * for circular dependency reasons.
+     */
+    this.triggerManager = null;
+    /**
+     * @type {AccountManager}
+     * The AccountManager is the authoritative source of the always-in-memory
+     * account definitions and folder infos which are needed for our atomic
+     * manipulations of them.  The AccountManager clobbers itself onto us when it
+     * is initialized for circular dependency reasons.
+     */
+    this.accountManager = null;
 
-  this._lazyConfigCarryover = null;
+    this._lazyConfigCarryover = null;
 
-  this.convCache = new Map();
-  this.messageCache = new Map();
+    this.convCache = new Map();
+    this.messageCache = new Map();
 
-  let dbVersion = CUR_VERSION;
-  if (testOptions && testOptions.dbDelta) {
-    dbVersion += testOptions.dbDelta;
-  }
-  if (testOptions && testOptions.dbVersion) {
-    dbVersion = testOptions.dbVersion;
-  }
-  /**
-   * A promise that is resolved once the database has been
-   * created/upgraded/opened.  If there is any _lazyConfigCarryover, it will
-   * have been set by the time the promise is resolved.
-   */
-  this._dbPromise = new Promise((resolve, reject) => {
-    let openRequest = indexedDB.open("companion-workshop", dbVersion);
-    openRequest.onsuccess = () => {
-      this._db = openRequest.result;
+    let dbVersion = CUR_VERSION;
+    if (testOptions && testOptions.dbDelta) {
+      dbVersion += testOptions.dbDelta;
+    }
+    if (testOptions && testOptions.dbVersion) {
+      dbVersion = testOptions.dbVersion;
+    }
+    /**
+     * A promise that is resolved once the database has been
+     * created/upgraded/opened.  If there is any _lazyConfigCarryover, it will
+     * have been set by the time the promise is resolved.
+     */
+    this._dbPromise = new Promise((resolve, reject) => {
+      const openRequest = indexedDB.open("companion-workshop", dbVersion);
+      openRequest.onsuccess = () => {
+        this._db = openRequest.result;
 
-      resolve();
-    };
-    openRequest.onupgradeneeded = event => {
-      logic(this, "upgradeNeeded", {
-        oldVersion: event.oldVersion,
-        curVersion: dbVersion,
-      });
-      let db = openRequest.result;
+        resolve();
+      };
+      openRequest.onupgradeneeded = event => {
+        logic(this, "upgradeNeeded", {
+          oldVersion: event.oldVersion,
+          curVersion: dbVersion,
+        });
+        const db = openRequest.result;
 
-      // - reset to clean slate
-      if (
-        event.oldVersion < FRIENDLY_LAZY_DB_UPGRADE_VERSION ||
-        (testOptions && testOptions.nukeDb)
-      ) {
-        this._nukeDB(db);
-      }
-      // - friendly, lazy upgrade
-      // Load the current config, save it off so getConfig can use it, then
-      // nuke like usual.  This is obviously a potentially data-lossy approach
-      // to things; but this is a 'lazy' / best-effort approach to make us
-      // more willing to bump revs during development, not the holy grail.
-      else {
-        var trans = openRequest.transaction;
-        let objectStores = Array.from(db.objectStoreNames);
-        // If there is no configuration table, there is nothing to migrate...
-        if (objectStores.includes(TBL_CONFIG)) {
-          // Note that there is no data-dependency between the read and the
-          // nuking.  The nice thing about this is that it allows us to have
-          // _getConfig be a promise-wrapped implementation.
-          this._getConfig(trans).then(carryover => {
-            if (carryover) {
-              carryover.oldVersion = event.oldVersion;
-              this._lazyConfigCarryover = carryover;
-            }
-          });
+        // - reset to clean slate
+        if (
+          event.oldVersion < FRIENDLY_LAZY_DB_UPGRADE_VERSION ||
+          (testOptions && testOptions.nukeDb)
+        ) {
           this._nukeDB(db);
         }
-        // ...so just get nuking.  We call this a failsafe not because we're
-        // expecting IndexedDB betrayal, but instead that when I was between
-        // linters I made a lot of dumb typo bugs and it's a hassle to manually
-        // delete the databases from the profile.
+
+        // - friendly, lazy upgrade
+        // Load the current config, save it off so getConfig can use it, then
+        // nuke like usual.  This is obviously a potentially data-lossy approach
+        // to things; but this is a 'lazy' / best-effort approach to make us
+        // more willing to bump revs during development, not the holy grail.
         else {
-          logic(this, "failsafeNuke", { objectStores });
-          this._nukeDB(db);
+          const trans = openRequest.transaction;
+          const objectStores = Array.from(db.objectStoreNames);
+          // If there is no configuration table, there is nothing to migrate...
+          if (objectStores.includes(TBL_CONFIG)) {
+            // Note that there is no data-dependency between the read and the
+            // nuking.  The nice thing about this is that it allows us to have
+            // _getConfig be a promise-wrapped implementation.
+            this._getConfig(trans).then(carryover => {
+              if (carryover) {
+                carryover.oldVersion = event.oldVersion;
+                this._lazyConfigCarryover = carryover;
+              }
+            });
+            this._nukeDB(db);
+          }
+
+          // ...so just get nuking.  We call this a failsafe not because we're
+          // expecting IndexedDB betrayal, but instead that when I was between
+          // linters I made a lot of dumb typo bugs and it's a hassle to manually
+          // delete the databases from the profile.
+          else {
+            logic(this, "failsafeNuke", { objectStores });
+            this._nukeDB(db);
+          }
         }
+      };
+      openRequest.onerror = analyzeAndRejectErrorEvent.bind(null, reject);
+    });
+  }
+
+  emit(eventName) {
+    const listenerCount = this._events[eventName]?.length || 0;
+    logic(this, "emit", { name: eventName, listenerCount });
+    super.emit.apply(this, arguments);
+  }
+
+  on(eventName) {
+    if (!eventName) {
+      throw new Error("no event type provided!");
+    }
+    logic(this, "on", { name: eventName });
+    super.on.apply(this, arguments);
+  }
+
+  removeListener(eventName) {
+    if (!eventName) {
+      throw new Error("no event type provided!");
+    }
+    logic(this, "removeListener", { name: eventName });
+    super.removeListener.apply(this, arguments);
+  }
+
+  /**
+   * Reset the contents of the database.
+   */
+  _nukeDB(db) {
+    logic(this, "nukeDB", {});
+    const existingNames = db.objectStoreNames;
+    for (const existingName of existingNames) {
+      db.deleteObjectStore(existingName);
+    }
+
+    db.createObjectStore(TBL_CONFIG);
+    db.createObjectStore(TBL_SYNC_STATES);
+    db.createObjectStore(TBL_TASKS);
+    db.createObjectStore(TBL_COMPLEX_TASKS);
+    db.createObjectStore(TBL_FOLDER_INFO);
+    db.createObjectStore(TBL_CONV_INFO);
+    db.createObjectStore(TBL_CONV_IDS_BY_FOLDER);
+    db.createObjectStore(TBL_MESSAGES);
+    db.createObjectStore(TBL_MSG_IDS_BY_FOLDER);
+    db.createObjectStore(TBL_HEADER_ID_MAP);
+    db.createObjectStore(TBL_UMID_NAME);
+    db.createObjectStore(TBL_UMID_LOCATION);
+    db.createObjectStore(TBL_BOUNDED_LOGS);
+  }
+
+  close() {
+    if (this._db) {
+      this._db.close();
+      this._db = null;
+    }
+  }
+
+  async getConfig() {
+    await this._dbPromise;
+
+    // At this point, if there is any carryover, it's in this property here.
+    if (this._lazyConfigCarryover) {
+      const carryover = this._lazyConfigCarryover;
+      this._lazyConfigCarryover = null;
+      return { config: null, accountDefs: null, carryover };
+    }
+    return this._getConfig();
+  }
+
+  /**
+   * Retrieve the configuration from the database.  This does not use promises
+   * and is otherwise somewhat convoluted because we have two different callers:
+   * 1) Standard: The MailUniverse wants a Promise resolved with our state.
+   * 2) Upgrade: We call ourselves inside onupgradeneeded.  Because the
+   *    IndexedDB transaction model is not (currently) compatible with promises
+   *    as specified and implemented, we need to generate callbacks so that we
+   *
+   * Additionally, in the first/standard case, in the event we did perform an
+   * upgrade, this is the point at which we pass the saved-off
+   */
+  async _getConfig(trans) {
+    logic(this, "_getConfig", { trans: !!trans });
+    const transaction = trans || this._db.transaction([TBL_CONFIG], "readonly");
+    const configStore = transaction.objectStore(TBL_CONFIG);
+
+    const configRows = await wrapReq(configStore.getAll());
+    let config = null;
+    const accountDefs = [];
+    // - Process the results
+    for (const obj of configRows) {
+      if (obj.id === "config") {
+        config = obj;
+      } else {
+        accountDefs.push(obj);
+      }
+    }
+    return { config, accountDefs };
+  }
+
+  /**
+   * Save our global configuration.  This is the *only* write that happens
+   * outside of the task transaction model using `finishMutate` and friends.
+   * Note, however, that various reads (including the accountDefs) happen
+   * outside of that.
+   */
+  saveConfig(config) {
+    return wrapTrans(
+      this._db
+        .transaction(TBL_CONFIG, "readwrite")
+        .objectStore(TBL_CONFIG)
+        .put(config, "config")
+    );
+  }
+
+  /**
+   * Save the addition of a new account or when changing account settings.  Only
+   * pass `folderInfo` for the new account case; omit it for changing settings
+   * so it doesn't get updated.  For coherency reasons it should only be updated
+   * using saveAccountFolderStates.
+   */
+  saveAccountDef(config, accountDef, folderInfo, callback) {
+    var trans = this._db.transaction(
+      [TBL_CONFIG, TBL_FOLDER_INFO],
+      "readwrite"
+    );
+
+    var configStore = trans.objectStore(TBL_CONFIG);
+    configStore.put(config, "config");
+    configStore.put(accountDef, CONFIG_KEYPREFIX_ACCOUNT_DEF + accountDef.id);
+    if (folderInfo) {
+      trans.objectStore(TBL_FOLDER_INFO).put(folderInfo, accountDef.id);
+    }
+    trans.onerror = analyzeAndLogErrorEvent;
+    if (callback) {
+      trans.oncomplete = function() {
+        callback();
+      };
+    }
+  }
+
+  /**
+   * Add one or more new bounded-log entries to disk outside of a task.  Entries
+   * should take the form of { timestamp, type, id, entry }.
+   */
+  addBoundedLogs(entries) {
+    const trans = this._db.transaction(TBL_BOUNDED_LOGS, "readwrite");
+    const store = trans.objectStore(TBL_BOUNDED_LOGS);
+
+    for (const entry of entries) {
+      store.add(entry.entry, [entry.timestamp, entry.type, entry.id]);
+    }
+
+    return wrapTrans(trans);
+  }
+
+  /**
+   * Update one or more existing bounded-log entries to disk.  Entries should
+   * take the form of { timestamp, type, id, entry }.
+   */
+  updateBoundedLogs(entries) {
+    const trans = this._db.transaction(TBL_BOUNDED_LOGS, "readwrite");
+    const store = trans.objectStore(TBL_BOUNDED_LOGS);
+
+    for (const entry of entries) {
+      store.put(entry.entry, [entry.timestamp, entry.type, entry.id]);
+    }
+
+    return wrapTrans(trans);
+  }
+
+  /**
+   * Reap bounded logs beyond our keep time horizon.
+   */
+  reapOldBoundedLogs() {
+    const trans = this._db.transaction(TBL_BOUNDED_LOGS, "readwrite");
+    const store = trans.objectStore(TBL_BOUNDED_LOGS);
+
+    const deleteRange = IDBKeyRange.bound(
+      // Start at the dawn of time.
+      [0],
+      // And delete through 2 weeks ago or whatever or constant is.
+      [Date.now() - BOUNDED_LOG_KEEP_TIME_MILLIS, []],
+      true,
+      true
+    );
+
+    store.delete(deleteRange);
+
+    return wrapTrans(trans);
+  }
+
+  /**
+   * Placeholder mechanism for things to tell us it might be a good time to do
+   * something cache-related.
+   *
+   * Current callers:
+   * - 'read': A database read batch completed and so there may now be a bunch
+   *   more stuff in the cache.
+   *
+   * @param {String} why
+   *   What happened, ex: 'read'.
+   * @param {Object} ctx
+   *   The TaskContext/BridgeContext/whatever caused us to do this.  Because
+   *   things that read data are likely to hold it as long as they need it,
+   *   there probably isn't much value in tracking 'live consumers'; the benefit
+   *   of the cache would primarily be in the locality benefits where the next
+   *   context that cares isn't going to be the one that read it from disk.  So
+   *   this would be for debugging, and maybe should just be removed.
+   */
+  _considerCachePressure(/*why, ctx*/) {
+    // XXX memory-backed Blobs are being a real pain.  So let's start
+    // aggressively dropping the cache.  But because of how promises work and
+    // when we trigger this, we really want to use a setTimeout with a fixed
+    // delay so we don't nuke the cache out from under a read() caller before
+    // they are able to handle the data.
+    // TODO: potentially consider allowing some concept of providing a promise
+    // as a cache-nuking barrier.  We would accept the promise and a blame label
+    // and create a racing timer (promise?) that would generate an error and
+    // then perform the flush despite the promise.  (The primary goal is to
+    // avoid infinite read() loops like was happening without this setTimeout
+    // where list view logic was being defeated given its ordering assumptions
+    // and steady-state design that relies on the cache.)
+    if (this._emptyingCache) {
+      return;
+    }
+    this._emptyingCache = globalThis.setTimeout(
+      () => {
+        this._emptyingCache = null;
+        this.emptyCache();
+      },
+      // This need not actually be 100. But just doing Promise.resolve().then
+      // here would not be sufficient for correctness.  setTimeout(0) would
+      // probably be okay.  This here give us some locality, however.
+      100
+    );
+  }
+
+  emptyCache() {
+    this.emit("cacheDrop");
+
+    this.convCache.clear();
+    this.messageCache.clear();
+  }
+
+  /**
+   * Idiom for buffering write event notifications until the database load
+   * impacted by the writes completes.  See "maildb.md" for more info, but the
+   * key idea is that:
+   * - The caller issues the load and are given the data they asked for, a
+   *   "drainEvents" function, and the name of the event that write mutations
+   *   will occur on (as a convenience to avoid typo mismatches).
+   * - We started buffering the events as soon as the load was issued.  The call
+   *   to drainEvents removes our listener and synchronously calls the provided
+   *   callback.  This structuring ensures that no matter what kind of promise /
+   *   async control-flow shenanigans are going on, events won't get lost.
+   *
+   * The main footgun is:
+   * - The caller needs to be responsible about calling drainEvents even if they
+   *   got canceled.  Otherwise it's memory-leaks-ville.  RefedResource
+   *   implementations can and should simplify their logic by forcing their
+   *   consumers to wait for the load to complete first.
+   *
+   * Returns an object containing { drainEvents, eventId } that you should feel
+   * free to mutate to use as the basis for your own return value.
+   */
+  _bufferChangeEventsIdiom(eventId) {
+    const bufferedEvents = [];
+    const bufferFunc = change => {
+      bufferedEvents.push(change);
+    };
+    const drainEvents = changeHandler => {
+      this.removeListener(eventId, bufferFunc);
+      for (const change of bufferedEvents) {
+        changeHandler(change);
       }
     };
-    openRequest.onerror = analyzeAndRejectErrorEvent.bind(null, reject);
-  });
-}
 
-MailDB.prototype = evt.mix(
-  /** @lends module:maildb.MailDB.prototype */ {
-    /**
-     * Reset the contents of the database.
-     */
-    _nukeDB(db) {
-      logic(this, "nukeDB", {});
-      let existingNames = db.objectStoreNames;
-      for (let i = 0; i < existingNames.length; i++) {
-        db.deleteObjectStore(existingNames[i]);
+    this.on(eventId, bufferFunc);
+
+    return {
+      drainEvents,
+      eventId,
+    };
+  }
+
+  /**
+   * Issue read-only batch requests.
+   *
+   * @param ctx
+   * @param {Object} requests
+   *   A dictionary object of Maps whose keys are record identifiers and values
+   *   are initially null but will be filled in by us (if we can find the
+   *   record).  See the specific
+   * @param {Map<ConversationId, ConversationInfo>} requests.conversations
+   *   Load the given ConversationInfo structure.
+   * @param {Map<ConversationId, MessageInfo[]>} requests.messagesByConversation
+   *   Load all of the known messages for the given conversation, returning an
+   *   array ordered by the database storage order which is ascending by DateMS
+   *   and the encoded gmail message id.  Note that this mechanism currently
+   *   cannot take advantage of the `messageCache`.  (There are some easy-ish
+   *   things we could do to accomplish this, but it's not believed to be a
+   *   major concern at this time.)
+   * @param {Map<[MessageId, DateMS], MessageInfo>} requests.messages
+   *   Load specific messages.  Note that we need the canonical MessageId plus
+   *   the DateMS associated with the message to find the record if it's not in
+   *   cache.  This is a little weird but it's assumed you have previously
+   *   loaded the (now potentially stale) MessageInfo and so have the
+   *   information at hand.
+   * @param {Boolean} [requests.flushedMessageReads=false]
+   *   Should this read bypass the cache when reading and when read, clobber
+   *   the cache state?  This should only be done for Blob-memory-shenanigans
+   *   and should be done with a (de facto) mutate lock held.  Currently, to
+   *   ensure the Blobs propagate, a final write should occur which is a
+   *   redudnant write so that listeners are notified.  But in the future we
+   *   could enhance this by just generating change notifications on the read.
+   */
+  read(ctx, requests) {
+    return new Promise(resolve => {
+      logic(this, "read:begin", { ctxId: ctx.id });
+      const trans = this._db.transaction(TASK_MUTATION_STORES, "readonly");
+
+      let dbReqCount = 0;
+
+      // -- In-memory lookups
+      if (requests.config) {
+        requests.config = this.universe.config;
       }
-
-      db.createObjectStore(TBL_CONFIG);
-      db.createObjectStore(TBL_SYNC_STATES);
-      db.createObjectStore(TBL_TASKS);
-      db.createObjectStore(TBL_COMPLEX_TASKS);
-      db.createObjectStore(TBL_FOLDER_INFO);
-      db.createObjectStore(TBL_CONV_INFO);
-      db.createObjectStore(TBL_CONV_IDS_BY_FOLDER);
-      db.createObjectStore(TBL_MESSAGES);
-      db.createObjectStore(TBL_MSG_IDS_BY_FOLDER);
-      db.createObjectStore(TBL_HEADER_ID_MAP);
-      db.createObjectStore(TBL_UMID_NAME);
-      db.createObjectStore(TBL_UMID_LOCATION);
-      db.createObjectStore(TBL_BOUNDED_LOGS);
-    },
-
-    close() {
-      if (this._db) {
-        this._db.close();
-        this._db = null;
-      }
-    },
-
-    getConfig() {
-      return this._dbPromise.then(() => {
-        // At this point, if there is any carryover, it's in this property here.
-        if (this._lazyConfigCarryover) {
-          let carryover = this._lazyConfigCarryover;
-          this._lazyConfigCarryover = null;
-          return { config: null, accountDefs: null, carryover };
-        }
-        return this._getConfig();
-      });
-    },
-
-    /**
-     * Retrieve the configuration from the database.  This does not use promises
-     * and is otherwise somewhat convoluted because we have two different callers:
-     * 1) Standard: The MailUniverse wants a Promise resolved with our state.
-     * 2) Upgrade: We call ourselves inside onupgradeneeded.  Because the
-     *    IndexedDB transaction model is not (currently) compatible with promises
-     *    as specified and implemented, we need to generate callbacks so that we
-     *
-     * Additionally, in the first/standard case, in the event we did perform an
-     * upgrade, this is the point at which we pass the saved-off
-     */
-    _getConfig(trans) {
-      logic(this, "_getConfig", { trans: !!trans });
-      let transaction = trans || this._db.transaction([TBL_CONFIG], "readonly");
-      let configStore = transaction.objectStore(TBL_CONFIG);
-
-      return wrapReq(configStore.getAll()).then(configRows => {
-        let config = null;
-        let accountDefs = [];
-
-        // - Process the results
-        for (let i = 0; i < configRows.length; i++) {
-          let obj = configRows[i];
-          if (obj.id === "config") {
-            config = obj;
-          } else {
-            accountDefs.push(obj);
-          }
-        }
-
-        return { config, accountDefs };
-      });
-    },
-
-    /**
-     * Save our global configuration.  This is the *only* write that happens
-     * outside of the task transaction model using `finishMutate` and friends.
-     * Note, however, that various reads (including the accountDefs) happen
-     * outside of that.
-     */
-    saveConfig(config) {
-      return wrapTrans(
-        this._db
-          .transaction(TBL_CONFIG, "readwrite")
-          .objectStore(TBL_CONFIG)
-          .put(config, "config")
-      );
-    },
-
-    /**
-     * Save the addition of a new account or when changing account settings.  Only
-     * pass `folderInfo` for the new account case; omit it for changing settings
-     * so it doesn't get updated.  For coherency reasons it should only be updated
-     * using saveAccountFolderStates.
-     */
-    saveAccountDef(config, accountDef, folderInfo, callback) {
-      var trans = this._db.transaction(
-        [TBL_CONFIG, TBL_FOLDER_INFO],
-        "readwrite"
-      );
-
-      var configStore = trans.objectStore(TBL_CONFIG);
-      configStore.put(config, "config");
-      configStore.put(accountDef, CONFIG_KEYPREFIX_ACCOUNT_DEF + accountDef.id);
-      if (folderInfo) {
-        trans.objectStore(TBL_FOLDER_INFO).put(folderInfo, accountDef.id);
-      }
-      trans.onerror = analyzeAndLogErrorEvent;
-      if (callback) {
-        trans.oncomplete = function() {
-          callback();
-        };
-      }
-    },
-
-    /**
-     * Add one or more new bounded-log entries to disk outside of a task.  Entries
-     * should take the form of { timestamp, type, id, entry }.
-     */
-    addBoundedLogs(entries) {
-      let trans = this._db.transaction(TBL_BOUNDED_LOGS, "readwrite");
-      let store = trans.objectStore(TBL_BOUNDED_LOGS);
-
-      for (let entry of entries) {
-        store.add(entry.entry, [entry.timestamp, entry.type, entry.id]);
-      }
-
-      return wrapTrans(trans);
-    },
-
-    /**
-     * Update one or more existing bounded-log entries to disk.  Entries should
-     * take the form of { timestamp, type, id, entry }.
-     */
-    updateBoundedLogs(entries) {
-      let trans = this._db.transaction(TBL_BOUNDED_LOGS, "readwrite");
-      let store = trans.objectStore(TBL_BOUNDED_LOGS);
-
-      for (let entry of entries) {
-        store.put(entry.entry, [entry.timestamp, entry.type, entry.id]);
-      }
-
-      return wrapTrans(trans);
-    },
-
-    /**
-     * Reap bounded logs beyond our keep time horizon.
-     */
-    reapOldBoundedLogs() {
-      let trans = this._db.transaction(TBL_BOUNDED_LOGS, "readwrite");
-      let store = trans.objectStore(TBL_BOUNDED_LOGS);
-
-      let deleteRange = IDBKeyRange.bound(
-        // Start at the dawn of time.
-        [0],
-        // And delete through 2 weeks ago or whatever or constant is.
-        [Date.now() - BOUNDED_LOG_KEEP_TIME_MILLIS, []],
-        true,
-        true
-      );
-
-      store.delete(deleteRange);
-
-      return wrapTrans(trans);
-    },
-
-    /**
-     * Placeholder mechanism for things to tell us it might be a good time to do
-     * something cache-related.
-     *
-     * Current callers:
-     * - 'read': A database read batch completed and so there may now be a bunch
-     *   more stuff in the cache.
-     *
-     * @param {String} why
-     *   What happened, ex: 'read'.
-     * @param {Object} ctx
-     *   The TaskContext/BridgeContext/whatever caused us to do this.  Because
-     *   things that read data are likely to hold it as long as they need it,
-     *   there probably isn't much value in tracking 'live consumers'; the benefit
-     *   of the cache would primarily be in the locality benefits where the next
-     *   context that cares isn't going to be the one that read it from disk.  So
-     *   this would be for debugging, and maybe should just be removed.
-     */
-    _considerCachePressure(/*why, ctx*/) {
-      // XXX memory-backed Blobs are being a real pain.  So let's start
-      // aggressively dropping the cache.  But because of how promises work and
-      // when we trigger this, we really want to use a setTimeout with a fixed
-      // delay so we don't nuke the cache out from under a read() caller before
-      // they are able to handle the data.
-      // TODO: potentially consider allowing some concept of providing a promise
-      // as a cache-nuking barrier.  We would accept the promise and a blame label
-      // and create a racing timer (promise?) that would generate an error and
-      // then perform the flush despite the promise.  (The primary goal is to
-      // avoid infinite read() loops like was happening without this setTimeout
-      // where list view logic was being defeated given its ordering assumptions
-      // and steady-state design that relies on the cache.)
-      if (this._emptyingCache) {
-        return;
-      }
-      this._emptyingCache = globalThis.setTimeout(
-        () => {
-          this._emptyingCache = null;
-          this.emptyCache();
-        },
-        // This need not actually be 100. But just doing Promise.resolve().then
-        // here would not be sufficient for correctness.  setTimeout(0) would
-        // probably be okay.  This here give us some locality, however.
-        100
-      );
-    },
-
-    emptyCache() {
-      this.emit("cacheDrop");
-
-      this.convCache.clear();
-      this.messageCache.clear();
-    },
-
-    /**
-     * Idiom for buffering write event notifications until the database load
-     * impacted by the writes completes.  See "maildb.md" for more info, but the
-     * key idea is that:
-     * - The caller issues the load and are given the data they asked for, a
-     *   "drainEvents" function, and the name of the event that write mutations
-     *   will occur on (as a convenience to avoid typo mismatches).
-     * - We started buffering the events as soon as the load was issued.  The call
-     *   to drainEvents removes our listener and synchronously calls the provided
-     *   callback.  This structuring ensures that no matter what kind of promise /
-     *   async control-flow shenanigans are going on, events won't get lost.
-     *
-     * The main footgun is:
-     * - The caller needs to be responsible about calling drainEvents even if they
-     *   got canceled.  Otherwise it's memory-leaks-ville.  RefedResource
-     *   implementations can and should simplify their logic by forcing their
-     *   consumers to wait for the load to complete first.
-     *
-     * Returns an object containing { drainEvents, eventId } that you should feel
-     * free to mutate to use as the basis for your own return value.
-     */
-    _bufferChangeEventsIdiom(eventId) {
-      let bufferedEvents = [];
-      let bufferFunc = change => {
-        bufferedEvents.push(change);
-      };
-      let drainEvents = changeHandler => {
-        this.removeListener(eventId, bufferFunc);
-        for (let change of bufferedEvents) {
-          changeHandler(change);
-        }
-      };
-
-      this.on(eventId, bufferFunc);
-
-      return {
-        drainEvents,
-        eventId,
-      };
-    },
-
-    /**
-     * Issue read-only batch requests.
-     *
-     * @param ctx
-     * @param {Object} requests
-     *   A dictionary object of Maps whose keys are record identifiers and values
-     *   are initially null but will be filled in by us (if we can find the
-     *   record).  See the specific
-     * @param {Map<ConversationId, ConversationInfo>} requests.conversations
-     *   Load the given ConversationInfo structure.
-     * @param {Map<ConversationId, MessageInfo[]>} requests.messagesByConversation
-     *   Load all of the known messages for the given conversation, returning an
-     *   array ordered by the database storage order which is ascending by DateMS
-     *   and the encoded gmail message id.  Note that this mechanism currently
-     *   cannot take advantage of the `messageCache`.  (There are some easy-ish
-     *   things we could do to accomplish this, but it's not believed to be a
-     *   major concern at this time.)
-     * @param {Map<[MessageId, DateMS], MessageInfo>} requests.messages
-     *   Load specific messages.  Note that we need the canonical MessageId plus
-     *   the DateMS associated with the message to find the record if it's not in
-     *   cache.  This is a little weird but it's assumed you have previously
-     *   loaded the (now potentially stale) MessageInfo and so have the
-     *   information at hand.
-     * @param {Boolean} [requests.flushedMessageReads=false]
-     *   Should this read bypass the cache when reading and when read, clobber
-     *   the cache state?  This should only be done for Blob-memory-shenanigans
-     *   and should be done with a (de facto) mutate lock held.  Currently, to
-     *   ensure the Blobs propagate, a final write should occur which is a
-     *   redudnant write so that listeners are notified.  But in the future we
-     *   could enhance this by just generating change notifications on the read.
-     */
-    read(ctx, requests) {
-      return new Promise(resolve => {
-        logic(this, "read:begin", { ctxId: ctx.id });
-        let trans = this._db.transaction(TASK_MUTATION_STORES, "readonly");
-
-        let dbReqCount = 0;
-
-        // -- In-memory lookups
-        if (requests.config) {
-          requests.config = this.universe.config;
-        }
-        if (requests.accounts) {
-          let accountReqs = requests.accounts;
-          for (let accountId of accountReqs.keys()) {
-            accountReqs.set(
-              accountId,
-              this.accountManager.getAccountDefById(accountId)
-            );
-          }
-        }
-        if (requests.folders) {
-          let folderReqs = requests.folders;
-          for (let folderId of folderReqs.keys()) {
-            folderReqs.set(
-              folderId,
-              this.accountManager.getFolderById(folderId)
-            );
-          }
-        }
-
-        // -- Uncached lookups
-        // Note that being uncached isn't actually netting us any correctness
-        // wins since our mutating transactions don't live for the duration for
-        // which a mutation lock needs to be held.  These are all candidates for
-        // caching in the future if we end up caring.
-        if (requests.syncStates) {
-          dbReqCount += genericUncachedLookups(
-            trans.objectStore(TBL_SYNC_STATES),
-            requests.syncStates
+      if (requests.accounts) {
+        const accountReqs = requests.accounts;
+        for (const accountId of accountReqs.keys()) {
+          accountReqs.set(
+            accountId,
+            this.accountManager.getAccountDefById(accountId)
           );
         }
-        if (requests.headerIdMaps) {
-          dbReqCount += genericUncachedLookups(
-            trans.objectStore(TBL_HEADER_ID_MAP),
-            requests.headerIdMaps
-          );
+      }
+      if (requests.folders) {
+        const folderReqs = requests.folders;
+        for (const folderId of folderReqs.keys()) {
+          folderReqs.set(folderId, this.accountManager.getFolderById(folderId));
         }
-        if (requests.umidNames) {
-          dbReqCount += genericUncachedLookups(
-            trans.objectStore(TBL_UMID_NAME),
-            requests.umidNames
-          );
-        }
-        if (requests.umidLocations) {
-          dbReqCount += genericUncachedLookups(
-            trans.objectStore(TBL_UMID_LOCATION),
-            requests.umidLocations
-          );
-        }
-        if (requests.complexTaskStates) {
-          dbReqCount += genericUncachedLookups(
-            trans.objectStore(TBL_COMPLEX_TASKS),
-            requests.complexTaskStates
-          );
-        }
+      }
 
-        // -- Cached lookups
-        if (requests.conversations) {
-          dbReqCount += genericCachedLookups(
-            trans.objectStore(TBL_CONV_INFO),
-            requests.conversations,
-            this.convCache
+      // -- Uncached lookups
+      // Note that being uncached isn't actually netting us any correctness
+      // wins since our mutating transactions don't live for the duration for
+      // which a mutation lock needs to be held.  These are all candidates for
+      // caching in the future if we end up caring.
+      if (requests.syncStates) {
+        dbReqCount += genericUncachedLookups(
+          trans.objectStore(TBL_SYNC_STATES),
+          requests.syncStates
+        );
+      }
+      if (requests.headerIdMaps) {
+        dbReqCount += genericUncachedLookups(
+          trans.objectStore(TBL_HEADER_ID_MAP),
+          requests.headerIdMaps
+        );
+      }
+      if (requests.umidNames) {
+        dbReqCount += genericUncachedLookups(
+          trans.objectStore(TBL_UMID_NAME),
+          requests.umidNames
+        );
+      }
+      if (requests.umidLocations) {
+        dbReqCount += genericUncachedLookups(
+          trans.objectStore(TBL_UMID_LOCATION),
+          requests.umidLocations
+        );
+      }
+      if (requests.complexTaskStates) {
+        dbReqCount += genericUncachedLookups(
+          trans.objectStore(TBL_COMPLEX_TASKS),
+          requests.complexTaskStates
+        );
+      }
+
+      // -- Cached lookups
+      if (requests.conversations) {
+        dbReqCount += genericCachedLookups(
+          trans.objectStore(TBL_CONV_INFO),
+          requests.conversations,
+          this.convCache
+        );
+      }
+      // messagesByConversation requires special logic and can't use the helpers
+      if (requests.messagesByConversation) {
+        const messageStore = trans.objectStore(TBL_MESSAGES);
+        const messageCache = this.messageCache;
+        const requestsMap = requests.messagesByConversation;
+
+        for (const unlatchedConvId of requestsMap.keys()) {
+          const convId = unlatchedConvId;
+          const messageRange = IDBKeyRange.bound(
+            [convId],
+            [convId, []],
+            true,
+            true
           );
-        }
-        // messagesByConversation requires special logic and can't use the helpers
-        if (requests.messagesByConversation) {
-          let messageStore = trans.objectStore(TBL_MESSAGES);
-          let messageCache = this.messageCache;
-          let requestsMap = requests.messagesByConversation;
-
-          for (let unlatchedConvId of requestsMap.keys()) {
-            let convId = unlatchedConvId;
-            let messageRange = IDBKeyRange.bound(
-              [convId],
-              [convId, []],
-              true,
-              true
-            );
-            dbReqCount++;
-            let req = messageStore.getAll(messageRange);
-            let handler = event => {
-              if (req.error) {
-                analyzeAndLogErrorEvent(event);
-              } else {
-                let messages = req.result;
-                for (let message of messages) {
-                  // Put it in the cache unless it's already there (reads must
-                  // not clobber writes/mutations!)
-                  // NB: This does mean that there's potential inconsistency
-                  // problems for this reader in the event the cache does know the
-                  // message and the values are not the same.
-                  // TODO: lock that down with checks or some fancy thinkin'
-                  if (!messageCache.has(message.id)) {
-                    messageCache.set(message.id, message);
-                  }
-                }
-                requestsMap.set(convId, messages);
-              }
-            };
-            req.onsuccess = handler;
-            req.onerror = handler;
-          }
-        }
-        // messages requires special logic and can't use the helpers
-        if (requests.messages) {
-          let messageStore = trans.objectStore(TBL_MESSAGES);
-          let messageCache = this.messageCache;
-          // The requests have keys for the form [messageId, date], but we want
-          // the results to be more sane, keyed by just the messageId and without
-          // the awkward tuples.
-          let messageRequestsMap = requests.messages;
-          let messageResultsMap = (requests.messages = new Map());
-          let flushedRead = requests.flushedMessageReads || false;
-          for (let [unlatchedMessageId, date] of messageRequestsMap.keys()) {
-            let messageId = unlatchedMessageId;
-            // fill from cache if available
-            if (!flushedRead && messageCache.has(messageId)) {
-              messageResultsMap.set(messageId, messageCache.get(messageId));
-              continue;
-            }
-
-            // otherwise we need to ask the database
-            let key = [
-              convIdFromMessageId(messageId),
-              date,
-              messageSpecificIdFromMessageId(messageId),
-            ];
-            dbReqCount++;
-            let req = messageStore.get(key);
-            let handler = event => {
-              if (req.error) {
-                analyzeAndLogErrorEvent(event);
-              } else {
-                let message = req.result;
+          dbReqCount++;
+          const req = messageStore.getAll(messageRange);
+          const handler = event => {
+            if (req.error) {
+              analyzeAndLogErrorEvent(event);
+            } else {
+              const messages = req.result;
+              for (const message of messages) {
                 // Put it in the cache unless it's already there (reads must
                 // not clobber writes/mutations!)
-                if (flushedRead || !messageCache.has(messageId)) {
-                  messageCache.set(messageId, message);
+                // NB: This does mean that there's potential inconsistency
+                // problems for this reader in the event the cache does know the
+                // message and the values are not the same.
+                // TODO: lock that down with checks or some fancy thinkin'
+                if (!messageCache.has(message.id)) {
+                  messageCache.set(message.id, message);
                 }
-                messageResultsMap.set(messageId, message);
               }
-            };
-            req.onsuccess = handler;
-            req.onerror = handler;
-          }
-        }
-
-        if (!dbReqCount) {
-          // NB: We used to have to issue a wasted read here to avoid hanging the
-          // transactions due to an IndexedDB bug, tracked as
-          // https://bugzilla.mozilla.org/show_bug.cgi?id=1161690.  It apparently
-          // got fixed by something (not the Promises fix, though), so I'm
-          // commenting the logic out.  We should remove this comment and the
-          // commented-out code here if nothing recurs by mid-September 2015.
-          //trans.objectStore(TBL_CONFIG).get('doesnotexist');
-          //console.warn('creating useless read to avoid hanging IndexedDB');
-          resolve(requests);
-          // it would be nice if we could have avoided creating the transaction...
-        } else {
-          trans.oncomplete = () => {
-            logic(this, "read:end", {
-              ctxId: ctx.id,
-              dbReqCount,
-              _requests: requests,
-            });
-            resolve(requests);
-            this._considerCachePressure("read", ctx);
+              requestsMap.set(convId, messages);
+            }
           };
+          req.onsuccess = handler;
+          req.onerror = handler;
         }
-      });
-    },
-
-    /**
-     * Acquire mutation rights for the given set of records.
-     *
-     * Currently this just means:
-     * - Do the read
-     * - Save the state off from the reads to that in finishMutate we can do any
-     *   delta work required.
-     *
-     * In the TODO future this will also mean:
-     * - Track active mutations so we can detect collisions and serialize
-     *   mutations.  See maildb.md for more.
-     */
-    beginMutate(ctx, mutateRequests, options) {
-      // disabling guard here because TaskContext has protections and a cop-out.
-      /*
-    if (ctx._preMutateStates) {
-      throw new Error('Context already has mutation states tracked?!');
-    }
-    */
-
-      return this.read(ctx, mutateRequests, options).then(() => {
-        // XXX the _preMutateStates || {} is because we're allowing multiple
-        // calls.
-        let preMutateStates = (ctx._preMutateStates =
-          ctx._preMutateStates || {});
-
-        // (nothing to do for "syncStates")
-        // (nothing to do for "accounts")
-        // (nothing to do for "folders")
-
-        // - conversations
-        if (mutateRequests.conversations) {
-          let preConv = (preMutateStates.conversations = new Map());
-          for (let conv of mutateRequests.conversations.values()) {
-            if (!conv) {
-              // It's conceivable for the read to fail, and it will already have
-              // logged.  So just skip any explosions here.
-              continue;
-            }
-
-            preConv.set(conv.id, {
-              date: conv.date,
-              // A well-behaved mutation will not mutate the list and instead
-              // replace it with a new one, but we are not so naive as to
-              // have our correctness depend on that.
-              folderIds: new Set(conv.folderIds),
-              hasUnread: conv.hasUnread,
-              height: conv.height,
-            });
+      }
+      // messages requires special logic and can't use the helpers
+      if (requests.messages) {
+        const messageStore = trans.objectStore(TBL_MESSAGES);
+        const messageCache = this.messageCache;
+        // The requests have keys for the form [messageId, date], but we want
+        // the results to be more sane, keyed by just the messageId and without
+        // the awkward tuples.
+        const messageRequestsMap = requests.messages;
+        const messageResultsMap = (requests.messages = new Map());
+        const flushedRead = requests.flushedMessageReads || false;
+        for (const [unlatchedMessageId, date] of messageRequestsMap.keys()) {
+          const messageId = unlatchedMessageId;
+          // fill from cache if available
+          if (!flushedRead && messageCache.has(messageId)) {
+            messageResultsMap.set(messageId, messageCache.get(messageId));
+            continue;
           }
-        }
 
-        // - messages
-        // we need the date for all messages, whether directly loaded or loaded
-        // via messagesByConversation
-        if (mutateRequests.messagesByConversation || mutateRequests.messages) {
-          let preMessages = (preMutateStates.messages = new Map());
-
-          if (mutateRequests.messagesByConversation) {
-            for (let convMessages of mutateRequests.messagesByConversation.values()) {
-              for (let message of convMessages) {
-                preMessages.set(message.id, {
-                  date: message.date,
-                  folderIds: new Set(message.folderIds),
-                });
+          // otherwise we need to ask the database
+          const key = [
+            convIdFromMessageId(messageId),
+            date,
+            messageSpecificIdFromMessageId(messageId),
+          ];
+          dbReqCount++;
+          const req = messageStore.get(key);
+          const handler = event => {
+            if (req.error) {
+              analyzeAndLogErrorEvent(event);
+            } else {
+              const message = req.result;
+              // Put it in the cache unless it's already there (reads must
+              // not clobber writes/mutations!)
+              if (flushedRead || !messageCache.has(messageId)) {
+                messageCache.set(messageId, message);
               }
+              messageResultsMap.set(messageId, message);
             }
+          };
+          req.onsuccess = handler;
+          req.onerror = handler;
+        }
+      }
+
+      if (!dbReqCount) {
+        // NB: We used to have to issue a wasted read here to avoid hanging the
+        // transactions due to an IndexedDB bug, tracked as
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=1161690.  It apparently
+        // got fixed by something (not the Promises fix, though), so I'm
+        // commenting the logic out.  We should remove this comment and the
+        // commented-out code here if nothing recurs by mid-September 2015.
+        //trans.objectStore(TBL_CONFIG).get('doesnotexist');
+        //console.warn('creating useless read to avoid hanging IndexedDB');
+        resolve(requests);
+        // it would be nice if we could have avoided creating the transaction...
+      } else {
+        trans.oncomplete = () => {
+          logic(this, "read:end", {
+            ctxId: ctx.id,
+            dbReqCount,
+            _requests: requests,
+          });
+          resolve(requests);
+          this._considerCachePressure("read", ctx);
+        };
+      }
+    });
+  }
+
+  /**
+   * Acquire mutation rights for the given set of records.
+   *
+   * Currently this just means:
+   * - Do the read
+   * - Save the state off from the reads to that in finishMutate we can do any
+   *   delta work required.
+   *
+   * In the TODO future this will also mean:
+   * - Track active mutations so we can detect collisions and serialize
+   *   mutations.  See maildb.md for more.
+   */
+  beginMutate(ctx, mutateRequests, options) {
+    // disabling guard here because TaskContext has protections and a cop-out.
+    /*
+      if (ctx._preMutateStates) {
+        throw new Error('Context already has mutation states tracked?!');
+      }
+      */
+
+    return this.read(ctx, mutateRequests, options).then(() => {
+      // XXX the _preMutateStates || {} is because we're allowing multiple
+      // calls.
+      const preMutateStates = (ctx._preMutateStates =
+        ctx._preMutateStates || {});
+
+      // (nothing to do for "syncStates")
+      // (nothing to do for "accounts")
+      // (nothing to do for "folders")
+
+      // - conversations
+      if (mutateRequests.conversations) {
+        const preConv = (preMutateStates.conversations = new Map());
+        for (const conv of mutateRequests.conversations.values()) {
+          if (!conv) {
+            // It's conceivable for the read to fail, and it will already have
+            // logged.  So just skip any explosions here.
+            continue;
           }
-          if (mutateRequests.messages) {
-            for (let message of mutateRequests.messages.values()) {
+
+          preConv.set(conv.id, {
+            date: conv.date,
+            // A well-behaved mutation will not mutate the list and instead
+            // replace it with a new one, but we are not so naive as to
+            // have our correctness depend on that.
+            folderIds: new Set(conv.folderIds),
+            hasUnread: conv.hasUnread,
+            height: conv.height,
+          });
+        }
+      }
+
+      // - messages
+      // we need the date for all messages, whether directly loaded or loaded
+      // via messagesByConversation
+      if (mutateRequests.messagesByConversation || mutateRequests.messages) {
+        const preMessages = (preMutateStates.messages = new Map());
+
+        if (mutateRequests.messagesByConversation) {
+          for (const convMessages of mutateRequests.messagesByConversation.values()) {
+            for (const message of convMessages) {
               preMessages.set(message.id, {
                 date: message.date,
                 folderIds: new Set(message.folderIds),
@@ -1189,254 +1196,251 @@ MailDB.prototype = evt.mix(
             }
           }
         }
-
-        return mutateRequests;
-      });
-    },
-
-    /**
-     * Load all tasks from thew database.  Ideally this is called before any calls
-     * to addTasks if you want to avoid having a bad time.
-     */
-    loadTasks() {
-      let trans = this._db.transaction(
-        [TBL_TASKS, TBL_COMPLEX_TASKS],
-        "readonly"
-      );
-      let taskStore = trans.objectStore(TBL_TASKS);
-      let complexTaskStore = trans.objectStore([TBL_COMPLEX_TASKS]);
-      return Promise.all([
-        wrapReq(taskStore.getAll()),
-        wrapReq(complexTaskStore.getAllKeys()),
-        wrapReq(complexTaskStore.getAll()),
-      ]).then(
-        ([wrappedTasks, complexTaskStateKeys, complexTaskStateValues]) => {
-          return {
-            wrappedTasks,
-            complexTaskStates: [complexTaskStateKeys, complexTaskStateValues],
-          };
+        if (mutateRequests.messages) {
+          for (const message of mutateRequests.messages.values()) {
+            preMessages.set(message.id, {
+              date: message.date,
+              folderIds: new Set(message.folderIds),
+            });
+          }
         }
+      }
+
+      return mutateRequests;
+    });
+  }
+
+  /**
+   * Load all tasks from thew database.  Ideally this is called before any calls
+   * to addTasks if you want to avoid having a bad time.
+   */
+  async loadTasks() {
+    const trans = this._db.transaction(
+      [TBL_TASKS, TBL_COMPLEX_TASKS],
+      "readonly"
+    );
+    const taskStore = trans.objectStore(TBL_TASKS);
+    const complexTaskStore = trans.objectStore([TBL_COMPLEX_TASKS]);
+    const [
+      wrappedTasks,
+      complexTaskStateKeys,
+      complexTaskStateValues,
+    ] = await Promise.all([
+      wrapReq(taskStore.getAll()),
+      wrapReq(complexTaskStore.getAllKeys()),
+      wrapReq(complexTaskStore.getAll()),
+    ]);
+    return {
+      wrappedTasks,
+      complexTaskStates: [complexTaskStateKeys, complexTaskStateValues],
+    };
+  }
+
+  /**
+   * Load all the folders for an account.  This is intended to be used only by
+   * the AccountManager exactly once when it learns about an account.  After
+   * that, the canonical data is stored in memory by the AccountManager with
+   * write-through mutations occurring.  (Noting that the MailDB does
+   * automatically defer to the AccountManager for read requests via other
+   * helpers.)
+   */
+  loadFoldersByAccount(accountId) {
+    const trans = this._db.transaction(TBL_FOLDER_INFO, "readonly");
+    const store = trans.objectStore(TBL_FOLDER_INFO);
+    const accountStringPrefix = IDBKeyRange.bound(
+      accountId + ".",
+      accountId + ".\ufff0",
+      true,
+      true
+    );
+    return wrapReq(store.getAll(accountStringPrefix));
+  }
+
+  /**
+   * Load the ordered list of all of the known conversations.  Once loaded, the
+   * caller is expected to keep up with events to maintain this ordering in
+   * memory.
+   *
+   *
+   *
+   * NB: Events are synchronously emitted as writes are queued up.  This means
+   * that during the same event loop that you issue this call you also need to
+   * wire up your event listeners and you need to buffer those events until we
+   * return this data to you.  Then you need to process that backlog of events
+   * until you catch up.
+   */
+  async loadFolderConversationIdsAndListen(folderId) {
+    const eventId = "fldr!" + folderId + "!convs!tocChange";
+    const retval = this._bufferChangeEventsIdiom(eventId);
+
+    const trans = this._db.transaction(TBL_CONV_IDS_BY_FOLDER, "readonly");
+    const convIdsStore = trans.objectStore(TBL_CONV_IDS_BY_FOLDER);
+    // [folderId] lower-bounds all [FolderId, DateTS, ...] keys because a
+    // shorter array is by definition less than a longer array that is equal
+    // up to their shared length.
+    // [folderId, []] upper-bounds all [FolderId, DateTS, ...] because arrays
+    // are always greater than strings/dates/numbers.  So we use this idiom
+    // to simplify our lives for sanity purposes.
+    const folderRange = IDBKeyRange.bound(
+      [folderId],
+      [folderId, []],
+      true,
+      true
+    );
+    const tuples = await wrapReq(convIdsStore.getAll(folderRange));
+    logic(this, "loadFolderConversationIdsAndListen", {
+      convCount: tuples.length,
+      eventId: retval.eventId,
+    });
+
+    // These are sorted in ascending order, but we want them in descending
+    // order.
+    tuples.reverse();
+    retval.idsWithDates = tuples.map(function(x) {
+      return { date: x[1], id: x[2], height: x[3] };
+    });
+    return retval;
+  }
+
+  _processConvAdditions(trans, convs) {
+    const convStore = trans.objectStore(TBL_CONV_INFO);
+    const convIdsStore = trans.objectStore(TBL_CONV_IDS_BY_FOLDER);
+    for (const convInfo of valueIterator(convs)) {
+      convStore.add(convInfo, convInfo.id);
+      this.convCache.set(convInfo.id, convInfo);
+
+      const eventDeltaInfo = {
+        id: convInfo.id,
+        item: convInfo,
+        removeDate: null,
+        addDate: convInfo.date,
+        height: convInfo.height,
+        oldHeight: 0,
+      };
+      for (const folderId of convInfo.folderIds) {
+        this.emit("conv!*!add", convInfo);
+        this.emit(convEventForFolderId(folderId), eventDeltaInfo);
+
+        convIdsStore.add(
+          [folderId, convInfo.date, convInfo.id, convInfo.height], // value
+          [folderId, convInfo.date, convInfo.id]
+        ); // key
+      }
+    }
+  }
+
+  /**
+   * Process changes to conversations.  This does not cover additions, but it
+   * does cover deletion.
+   */
+  _processConvMutations(trans, preStates, convs) {
+    const convStore = trans.objectStore(TBL_CONV_INFO);
+    const convIdsStore = trans.objectStore(TBL_CONV_IDS_BY_FOLDER);
+    for (const [convId, convInfo] of convs) {
+      const preInfo = preStates.get(convId);
+
+      // We do various folder-spcific things below; to allow for simplficiations
+      // under deletion of the conversation, we have a helper here so that even
+      // if convInfo is null, we can have an empty set for its folderIds that
+      // will not result in a null de-ref.
+      let convFolderIds;
+      // -- Deletion
+      if (convInfo === null) {
+        // - Delete the conversation summary
+        convStore.delete(convId);
+        this.convCache.delete(convId);
+
+        // - The new folder set is the empty set
+        // This simplifies all the logic below.
+        convFolderIds = new Set();
+
+        // - Delete all affiliated messages
+        // TODO: uh, we should explicitly nuke the messages out of the cache
+        // too.  There isn't a huge harm to not doing it, but we should.
+        // (I'm punting because we need to do a cache walk to accomplish this.)
+        const messageRange = IDBKeyRange.bound(
+          [convId],
+          [convId, []],
+          true,
+          true
+        );
+
+        trans.objectStore(TBL_MESSAGES).delete(messageRange);
+      } else {
+        // Modification
+        convFolderIds = convInfo.folderIds;
+        convStore.put(convInfo, convId);
+        this.convCache.set(convId, convInfo);
+      }
+
+      // Notify specific listeners, and yeah, deletion is just telling a null
+      // value.
+      this.emit("conv!" + convId + "!change", convId, convInfo);
+
+      const { added, kept, removed } = computeSetDelta(
+        preInfo.folderIds,
+        convFolderIds
       );
-    },
 
-    /**
-     * Load all the folders for an account.  This is intended to be used only by
-     * the AccountManager exactly once when it learns about an account.  After
-     * that, the canonical data is stored in memory by the AccountManager with
-     * write-through mutations occurring.  (Noting that the MailDB does
-     * automatically defer to the AccountManager for read requests via other
-     * helpers.)
-     */
-    loadFoldersByAccount(accountId) {
-      let trans = this._db.transaction(TBL_FOLDER_INFO, "readonly");
-      let store = trans.objectStore(TBL_FOLDER_INFO);
-      let accountStringPrefix = IDBKeyRange.bound(
-        accountId + ".",
-        accountId + ".\ufff0",
-        true,
-        true
+      // Notify wildcard listeners (probably db_triggers implementations)
+      this.emit(
+        "conv!*!change",
+        convId,
+        preInfo,
+        convInfo,
+        added,
+        kept,
+        removed
       );
-      return wrapReq(store.getAll(accountStringPrefix));
-    },
 
-    /**
-     * Load the ordered list of all of the known conversations.  Once loaded, the
-     * caller is expected to keep up with events to maintain this ordering in
-     * memory.
-     *
-     *
-     *
-     * NB: Events are synchronously emitted as writes are queued up.  This means
-     * that during the same event loop that you issue this call you also need to
-     * wire up your event listeners and you need to buffer those events until we
-     * return this data to you.  Then you need to process that backlog of events
-     * until you catch up.
-     */
-    async loadFolderConversationIdsAndListen(folderId) {
-      let eventId = "fldr!" + folderId + "!convs!tocChange";
-      let retval = this._bufferChangeEventsIdiom(eventId);
-
-      let trans = this._db.transaction(TBL_CONV_IDS_BY_FOLDER, "readonly");
-      let convIdsStore = trans.objectStore(TBL_CONV_IDS_BY_FOLDER);
-      // [folderId] lower-bounds all [FolderId, DateTS, ...] keys because a
-      // shorter array is by definition less than a longer array that is equal
-      // up to their shared length.
-      // [folderId, []] upper-bounds all [FolderId, DateTS, ...] because arrays
-      // are always greater than strings/dates/numbers.  So we use this idiom
-      // to simplify our lives for sanity purposes.
-      let folderRange = IDBKeyRange.bound(
-        [folderId],
-        [folderId, []],
-        true,
-        true
-      );
-      let tuples = await wrapReq(convIdsStore.getAll(folderRange));
-      logic(this, "loadFolderConversationIdsAndListen", {
-        convCount: tuples.length,
-        eventId: retval.eventId,
-      });
-
-      // These are sorted in ascending order, but we want them in descending
-      // order.
-      tuples.reverse();
-      retval.idsWithDates = tuples.map(function(x) {
-        return { date: x[1], id: x[2], height: x[3] };
-      });
-      return retval;
-    },
-
-    _processConvAdditions(trans, convs) {
-      let convStore = trans.objectStore(TBL_CONV_INFO);
-      let convIdsStore = trans.objectStore(TBL_CONV_IDS_BY_FOLDER);
-      for (let convInfo of valueIterator(convs)) {
-        convStore.add(convInfo, convInfo.id);
-        this.convCache.set(convInfo.id, convInfo);
-
-        const eventDeltaInfo = {
-          id: convInfo.id,
+      // Notify the TOCs
+      for (const folderId of added) {
+        this.emit(convEventForFolderId(folderId), {
+          id: convId,
           item: convInfo,
           removeDate: null,
           addDate: convInfo.date,
           height: convInfo.height,
           oldHeight: 0,
-        };
-        for (let folderId of convInfo.folderIds) {
-          this.emit("conv!*!add", convInfo);
-          this.emit(convEventForFolderId(folderId), eventDeltaInfo);
-
-          convIdsStore.add(
-            [folderId, convInfo.date, convInfo.id, convInfo.height], // value
-            [folderId, convInfo.date, convInfo.id]
-          ); // key
-        }
+        });
       }
-    },
+      // (We still want to generate an event even if there is no date change
+      // since otherwise the TOC won't know something has changed.)
+      for (const folderId of kept) {
+        this.emit(convEventForFolderId(folderId), {
+          id: convId,
+          item: convInfo,
+          removeDate: preInfo.date,
+          addDate: convInfo.date,
+          height: convInfo.height,
+          oldHeight: preInfo.height,
+        });
+      }
+      for (const folderId of removed) {
+        this.emit(convEventForFolderId(folderId), {
+          id: convId,
+          item: convInfo,
+          removeDate: preInfo.date,
+          addDate: null,
+          height: 0,
+          oldHeight: preInfo.height,
+        });
+      }
 
-    /**
-     * Process changes to conversations.  This does not cover additions, but it
-     * does cover deletion.
-     */
-    _processConvMutations(trans, preStates, convs) {
-      let convStore = trans.objectStore(TBL_CONV_INFO);
-      let convIdsStore = trans.objectStore(TBL_CONV_IDS_BY_FOLDER);
-      for (let [convId, convInfo] of convs) {
-        let preInfo = preStates.get(convId);
-
-        // We do various folder-spcific things below; to allow for simplficiations
-        // under deletion of the conversation, we have a helper here so that even
-        // if convInfo is null, we can have an empty set for its folderIds that
-        // will not result in a null de-ref.
-        let convFolderIds;
-        // -- Deletion
-        if (convInfo === null) {
-          // - Delete the conversation summary
-          convStore.delete(convId);
-          this.convCache.delete(convId);
-
-          // - The new folder set is the empty set
-          // This simplifies all the logic below.
-          convFolderIds = new Set();
-
-          // - Delete all affiliated messages
-          // TODO: uh, we should explicitly nuke the messages out of the cache
-          // too.  There isn't a huge harm to not doing it, but we should.
-          // (I'm punting because we need to do a cache walk to accomplish this.)
-          let messageRange = IDBKeyRange.bound(
-            [convId],
-            [convId, []],
-            true,
-            true
-          );
-
-          trans.objectStore(TBL_MESSAGES).delete(messageRange);
-        } else {
-          // Modification
-          convFolderIds = convInfo.folderIds;
-          convStore.put(convInfo, convId);
-          this.convCache.set(convId, convInfo);
+      // If this is a conversation deletion, the most recent message date
+      // changed or the height changed, we need to blow away all the existing
+      // mappings and all the mappings are new anyways.
+      if (
+        !convInfo ||
+        preInfo.date !== convInfo.date ||
+        preInfo.height !== convInfo.height
+      ) {
+        for (const folderId of preInfo.folderIds) {
+          convIdsStore.delete([folderId, preInfo.date, convId]);
         }
-
-        // Notify specific listeners, and yeah, deletion is just telling a null
-        // value.
-        this.emit("conv!" + convId + "!change", convId, convInfo);
-
-        let { added, kept, removed } = computeSetDelta(
-          preInfo.folderIds,
-          convFolderIds
-        );
-
-        // Notify wildcard listeners (probably db_triggers implementations)
-        this.emit(
-          "conv!*!change",
-          convId,
-          preInfo,
-          convInfo,
-          added,
-          kept,
-          removed
-        );
-
-        // Notify the TOCs
-        for (let folderId of added) {
-          this.emit(convEventForFolderId(folderId), {
-            id: convId,
-            item: convInfo,
-            removeDate: null,
-            addDate: convInfo.date,
-            height: convInfo.height,
-            oldHeight: 0,
-          });
-        }
-        // (We still want to generate an event even if there is no date change
-        // since otherwise the TOC won't know something has changed.)
-        for (let folderId of kept) {
-          this.emit(convEventForFolderId(folderId), {
-            id: convId,
-            item: convInfo,
-            removeDate: preInfo.date,
-            addDate: convInfo.date,
-            height: convInfo.height,
-            oldHeight: preInfo.height,
-          });
-        }
-        for (let folderId of removed) {
-          this.emit(convEventForFolderId(folderId), {
-            id: convId,
-            item: convInfo,
-            removeDate: preInfo.date,
-            addDate: null,
-            height: 0,
-            oldHeight: preInfo.height,
-          });
-        }
-
-        // If this is a conversation deletion, the most recent message date
-        // changed or the height changed, we need to blow away all the existing
-        // mappings and all the mappings are new anyways.
-        if (
-          !convInfo ||
-          preInfo.date !== convInfo.date ||
-          preInfo.height !== convInfo.height
-        ) {
-          for (let folderId of preInfo.folderIds) {
-            convIdsStore.delete([folderId, preInfo.date, convId]);
-          }
-          // If this wasn't a deletion, add the updated info back.
-          if (convInfo) {
-            for (let folderId of convFolderIds) {
-              convIdsStore.add(
-                [folderId, convInfo.date, convId, convInfo.height], // value
-                [folderId, convInfo.date, convId]
-              ); // key
-            }
-          }
-        }
-        // Otherwise we need to cleverly compute the delta
-        else {
-          for (let folderId of removed) {
-            convIdsStore.delete([folderId, convInfo.date, convId]);
-          }
-          for (let folderId of added) {
+        // If this wasn't a deletion, add the updated info back.
+        if (convInfo) {
+          for (const folderId of convFolderIds) {
             convIdsStore.add(
               [folderId, convInfo.date, convId, convInfo.height], // value
               [folderId, convInfo.date, convId]
@@ -1444,146 +1448,181 @@ MailDB.prototype = evt.mix(
           }
         }
       }
-    },
-
-    async loadFolderMessageIdsAndListen(folderId) {
-      let eventId = "fldr!" + folderId + "!messages!tocChange";
-      let retval = this._bufferChangeEventsIdiom(eventId);
-
-      let trans = this._db.transaction(TBL_MSG_IDS_BY_FOLDER, "readonly");
-      let msgIdsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
-      // [folderId] lower-bounds all [FolderId, DateTS, ...] keys because a
-      // shorter array is by definition less than a longer array that is equal
-      // up to their shared length.
-      // [folderId, []] upper-bounds all [FolderId, DateTS, ...] because arrays
-      // are always greater than strings/dates/numbers.  So we use this idiom
-      // to simplify our lives for sanity purposes.
-      let folderRange = IDBKeyRange.bound(
-        [folderId],
-        [folderId, []],
-        true,
-        true
-      );
-      let tuples = await wrapReq(msgIdsStore.getAll(folderRange));
-      logic(this, "loadFolderMessageIdsAndListen", {
-        msgCount: tuples.length,
-        eventId: retval.eventId,
-      });
-
-      // These are sorted in ascending order, but we want them in descending
-      // order.
-      tuples.reverse();
-      retval.idsWithDates = tuples.map(function(x) {
-        return { date: x[1], id: x[2] };
-      });
-      return retval;
-    },
-
-    async loadConversationMessageIdsAndListen(convId) {
-      let tocEventId = "conv!" + convId + "!messages!tocChange";
-      let convEventId = "conv!" + convId + "!change";
-      let { drainEvents } = this._bufferChangeEventsIdiom(tocEventId);
-
-      let trans = this._db.transaction(TBL_MESSAGES, "readonly");
-      let messageStore = trans.objectStore(TBL_MESSAGES);
-      let messageRange = IDBKeyRange.bound([convId], [convId, []], true, true);
-      let messages = await wrapReq(messageStore.getAll(messageRange));
-      let messageCache = this.messageCache;
-      let idsWithDates = messages.map(function(message) {
-        // Put it in the cache unless it's already there (reads must
-        // not clobber writes/mutations!)
-        if (!messageCache.has(message.id)) {
-          messageCache.set(message.id, message);
+      // Otherwise we need to cleverly compute the delta
+      else {
+        for (const folderId of removed) {
+          convIdsStore.delete([folderId, convInfo.date, convId]);
         }
-        return { date: message.date, id: message.id };
-      });
-      return { tocEventId, convEventId, idsWithDates, drainEvents };
-    },
+        for (const folderId of added) {
+          convIdsStore.add(
+            [folderId, convInfo.date, convId, convInfo.height], // value
+            [folderId, convInfo.date, convId]
+          ); // key
+        }
+      }
+    }
+  }
 
-    _processMessageAdditions(trans, messages) {
-      let store = trans.objectStore(TBL_MESSAGES);
-      let idsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
-      let messageCache = this.messageCache;
-      for (let message of valueIterator(messages)) {
-        let convId = convIdFromMessageId(message.id);
-        let key = [
-          convId,
-          message.date,
-          messageSpecificIdFromMessageId(message.id),
-        ];
-        store.add(message, key);
+  async loadFolderMessageIdsAndListen(folderId) {
+    const eventId = "fldr!" + folderId + "!messages!tocChange";
+    const retval = this._bufferChangeEventsIdiom(eventId);
+
+    const trans = this._db.transaction(TBL_MSG_IDS_BY_FOLDER, "readonly");
+    const msgIdsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
+    // [folderId] lower-bounds all [FolderId, DateTS, ...] keys because a
+    // shorter array is by definition less than a longer array that is equal
+    // up to their shared length.
+    // [folderId, []] upper-bounds all [FolderId, DateTS, ...] because arrays
+    // are always greater than strings/dates/numbers.  So we use this idiom
+    // to simplify our lives for sanity purposes.
+    const folderRange = IDBKeyRange.bound(
+      [folderId],
+      [folderId, []],
+      true,
+      true
+    );
+    const tuples = await wrapReq(msgIdsStore.getAll(folderRange));
+    logic(this, "loadFolderMessageIdsAndListen", {
+      msgCount: tuples.length,
+      eventId: retval.eventId,
+    });
+
+    // These are sorted in ascending order, but we want them in descending
+    // order.
+    tuples.reverse();
+    retval.idsWithDates = tuples.map(function(x) {
+      return { date: x[1], id: x[2] };
+    });
+    return retval;
+  }
+
+  async loadConversationMessageIdsAndListen(convId) {
+    const tocEventId = "conv!" + convId + "!messages!tocChange";
+    const convEventId = "conv!" + convId + "!change";
+    const { drainEvents } = this._bufferChangeEventsIdiom(tocEventId);
+
+    const trans = this._db.transaction(TBL_MESSAGES, "readonly");
+    const messageStore = trans.objectStore(TBL_MESSAGES);
+    const messageRange = IDBKeyRange.bound([convId], [convId, []], true, true);
+    const messages = await wrapReq(messageStore.getAll(messageRange));
+    const messageCache = this.messageCache;
+    const idsWithDates = messages.map(function(message) {
+      // Put it in the cache unless it's already there (reads must
+      // not clobber writes/mutations!)
+      if (!messageCache.has(message.id)) {
         messageCache.set(message.id, message);
+      }
+      return { date: message.date, id: message.id };
+    });
+    return { tocEventId, convEventId, idsWithDates, drainEvents };
+  }
 
-        this.emit("msg!*!add", message);
-        const convTocEventId = "conv!" + convId + "!messages!tocChange";
-        const eventDeltaInfo = {
-          id: message.id,
-          preDate: null,
-          postDate: message.date,
+  _processMessageAdditions(trans, messages) {
+    const store = trans.objectStore(TBL_MESSAGES);
+    const idsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
+    const messageCache = this.messageCache;
+    for (const message of valueIterator(messages)) {
+      const convId = convIdFromMessageId(message.id);
+      const key = [
+        convId,
+        message.date,
+        messageSpecificIdFromMessageId(message.id),
+      ];
+      store.add(message, key);
+      messageCache.set(message.id, message);
+
+      this.emit("msg!*!add", message);
+      const convTocEventId = "conv!" + convId + "!messages!tocChange";
+      const eventDeltaInfo = {
+        id: message.id,
+        preDate: null,
+        postDate: message.date,
+        item: message,
+        freshlyAdded: true,
+        matchInfo: null,
+      };
+      this.emit(convTocEventId, eventDeltaInfo);
+      // emit in all its folders as well
+      for (const folderId of message.folderIds) {
+        this.emit(messageEventForFolderId(folderId), eventDeltaInfo);
+
+        // TODO: As covered elsewhere, we want to remove the redundant value
+        // if possible, although if we end up storing more data in the value,
+        // we may not be able to.
+        idsStore.add(
+          [folderId, message.date, message.id], // value
+          [folderId, message.date, message.id] // key
+        );
+      }
+    }
+  }
+
+  /**
+   * Process message modification and removal.
+   */
+  _processMessageMutations(trans, preStates, messages) {
+    const store = trans.objectStore(TBL_MESSAGES);
+    const idsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
+    const messageCache = this.messageCache;
+    for (const [messageId, message] of messages) {
+      const convId = convIdFromMessageId(messageId);
+      const preInfo = preStates.get(messageId);
+      const preDate = preInfo.date;
+      const postDate = message && message.date;
+      const preKey = [
+        convId,
+        preDate,
+        messageSpecificIdFromMessageId(messageId),
+      ];
+
+      if (message === null) {
+        // -- Deletion
+        store.delete(preKey);
+        messageCache.delete(messageId);
+      } else if (preDate !== postDate) {
+        // -- Draft update that changes the timestamp
+        store.delete(preKey);
+        const postKey = [
+          convId,
+          postDate,
+          messageSpecificIdFromMessageId(messageId),
+        ];
+        store.put(message, postKey);
+      } else {
+        // -- Modification without date change
+        store.put(message, preKey);
+        messageCache.set(messageId, message);
+      }
+
+      const { added, kept, removed } = computeSetDelta(
+        preInfo.folderIds,
+        message ? message.folderIds : new Set()
+      );
+
+      const convEventId = "conv!" + convId + "!messages!tocChange";
+      this.emit(convEventId, {
+        id: messageId,
+        preDate,
+        postDate,
+        item: message,
+        freshlyAdded: false,
+        matchInfo: null,
+      });
+      const messageEventId = "msg!" + messageId + "!change";
+      this.emit(messageEventId, messageId, message);
+
+      for (const folderId of added) {
+        this.emit(messageEventForFolderId(folderId), {
+          id: messageId,
+          preDate,
+          postDate,
           item: message,
           freshlyAdded: true,
           matchInfo: null,
-        };
-        this.emit(convTocEventId, eventDeltaInfo);
-        // emit in all its folders as well
-        for (const folderId of message.folderIds) {
-          this.emit(messageEventForFolderId(folderId), eventDeltaInfo);
-
-          // TODO: As covered elsewhere, we want to remove the redundant value
-          // if possible, although if we end up storing more data in the value,
-          // we may not be able to.
-          idsStore.add(
-            [folderId, message.date, message.id], // value
-            [folderId, message.date, message.id] // key
-          );
-        }
+        });
       }
-    },
-
-    /**
-     * Process message modification and removal.
-     */
-    _processMessageMutations(trans, preStates, messages) {
-      let store = trans.objectStore(TBL_MESSAGES);
-      let idsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
-      let messageCache = this.messageCache;
-      for (let [messageId, message] of messages) {
-        let convId = convIdFromMessageId(messageId);
-        let preInfo = preStates.get(messageId);
-        let preDate = preInfo.date;
-        let postDate = message && message.date;
-        let preKey = [
-          convId,
-          preDate,
-          messageSpecificIdFromMessageId(messageId),
-        ];
-
-        if (message === null) {
-          // -- Deletion
-          store.delete(preKey);
-          messageCache.delete(messageId);
-        } else if (preDate !== postDate) {
-          // -- Draft update that changes the timestamp
-          store.delete(preKey);
-          let postKey = [
-            convId,
-            postDate,
-            messageSpecificIdFromMessageId(messageId),
-          ];
-          store.put(message, postKey);
-        } else {
-          // -- Modification without date change
-          store.put(message, preKey);
-          messageCache.set(messageId, message);
-        }
-
-        let { added, kept, removed } = computeSetDelta(
-          preInfo.folderIds,
-          message ? message.folderIds : new Set()
-        );
-
-        let convEventId = "conv!" + convId + "!messages!tocChange";
-        this.emit(convEventId, {
+      for (const folderId of kept) {
+        this.emit(messageEventForFolderId(folderId), {
           id: messageId,
           preDate,
           postDate,
@@ -1591,76 +1630,41 @@ MailDB.prototype = evt.mix(
           freshlyAdded: false,
           matchInfo: null,
         });
-        let messageEventId = "msg!" + messageId + "!change";
-        this.emit(messageEventId, messageId, message);
+      }
+      for (const folderId of removed) {
+        this.emit(messageEventForFolderId(folderId), {
+          id: messageId,
+          preDate,
+          postDate,
+          item: message,
+          freshlyAdded: false,
+          matchInfo: null,
+        });
+      }
 
-        for (const folderId of added) {
-          this.emit(messageEventForFolderId(folderId), {
-            id: messageId,
-            preDate,
-            postDate,
-            item: message,
-            freshlyAdded: true,
-            matchInfo: null,
-          });
-        }
-        for (const folderId of kept) {
-          this.emit(messageEventForFolderId(folderId), {
-            id: messageId,
-            preDate,
-            postDate,
-            item: message,
-            freshlyAdded: false,
-            matchInfo: null,
-          });
-        }
-        for (const folderId of removed) {
-          this.emit(messageEventForFolderId(folderId), {
-            id: messageId,
-            preDate,
-            postDate,
-            item: message,
-            freshlyAdded: false,
-            matchInfo: null,
-          });
-        }
+      this.emit(
+        "msg!*!change",
+        messageId,
+        preInfo,
+        message,
+        added,
+        kept,
+        removed
+      );
+      if (!message) {
+        this.emit("msg!" + messageId + "!remove", messageId);
+        this.emit("msg!*!remove", messageId);
+      }
 
-        this.emit(
-          "msg!*!change",
-          messageId,
-          preInfo,
-          message,
-          added,
-          kept,
-          removed
-        );
-        if (!message) {
-          this.emit("msg!" + messageId + "!remove", messageId);
-          this.emit("msg!*!remove", messageId);
+      // -- Cleanup the by-folder derived quasi-index
+      // Handle deletions and changes in the data payload
+      if (!message || preDate !== postDate) {
+        for (const folderId of preInfo.folderIds) {
+          idsStore.delete([folderId, preInfo.date, messageId]);
         }
-
-        // -- Cleanup the by-folder derived quasi-index
-        // Handle deletions and changes in the data payload
-        if (!message || preDate !== postDate) {
-          for (const folderId of preInfo.folderIds) {
-            idsStore.delete([folderId, preInfo.date, messageId]);
-          }
-          // If this wasn't a deletion, add the updated info back.
-          if (message) {
-            for (const folderId of message.folderIds) {
-              idsStore.add(
-                [folderId, message.date, message.id], // value
-                [folderId, message.date, message.id] // key
-              );
-            }
-          }
-        }
-        // Effect any change in folderIds
-        else {
-          for (const folderId of removed) {
-            idsStore.delete([folderId, message.date, messageId]);
-          }
-          for (const folderId of added) {
+        // If this wasn't a deletion, add the updated info back.
+        if (message) {
+          for (const folderId of message.folderIds) {
             idsStore.add(
               [folderId, message.date, message.id], // value
               [folderId, message.date, message.id] // key
@@ -1668,205 +1672,290 @@ MailDB.prototype = evt.mix(
           }
         }
       }
-    },
-
-    /**
-     * Apply the atomicClobbers and atomicDeltas fields from the given mutation
-     * objects.  We are applied against both the task's explicit mutations payload
-     * plus also any derivedMutations provided by database triggers.
-     *
-     * As described elsewhere, all of the data that atomic manipulations mess with
-     * will be in-memory before any tasks are allowed to run.  The AccountManager
-     * is in charge of them, so we ask it for the fields.
-     *
-     * @param {Object} atomics
-     *   The atomic manipulations to perform.  This could be the same as
-     *   rootMutations if specified by the task, or could be a separate object
-     *   contributed by a database trigger implementation.
-     * @param {Object} [atomics.atomicDeltas]
-     * @param {Object} [atomics.atomicDeltas.accounts]
-     * @param {Object} [atomics.atomicDeltas.folders]
-     * @param {Object} [atomics.atomicClobbers]
-     * @param {Object} [atomics.atomicClobbers.config]
-     * @param {Object} [atomics.atomicClobbers.accounts]
-     * @param {Object} [atomics.atomicClobbers.folders]
-     * @param {Object} rootMutations
-     *   The root mutations object passed to finishMutate.  In order to create
-     *   a unified set of writes, we will manipulate existing accounts and folders
-     *   write Maps, or if they do not exist, we will create them ourselves.
-     *   Correctness fundamentally requires that if these are mutations that the
-     *   AccountManager-owned object identities are maintained.  (Which is on the
-     *   task/caller.)
-     */
-    _applyAtomics(atomics, rootMutations) {
-      let { atomicDeltas, atomicClobbers } = atomics;
-      const accountManager = this.accountManager;
-      if (atomicDeltas) {
-        if (atomicDeltas.config) {
-          if (!rootMutations.config) {
-            rootMutations.config = this.universe.config;
-          }
-          applyDeltasToObj(atomicDeltas.config, rootMutations.config);
+      // Effect any change in folderIds
+      else {
+        for (const folderId of removed) {
+          idsStore.delete([folderId, message.date, messageId]);
         }
-        if (atomicDeltas.accounts) {
-          if (!rootMutations.accounts) {
-            rootMutations.accounts = new Map();
-          }
-          let accountMutations = rootMutations.accounts;
-          for (let [accountId, deltas] of atomicDeltas.accounts) {
-            let accountDef = accountManager.getAccountDefById(accountId);
-            applyDeltasToObj(deltas, accountDef);
-            accountMutations.set(accountId, accountDef);
-          }
-        }
-        if (atomicDeltas.folders) {
-          if (!rootMutations.folders) {
-            rootMutations.folders = new Map();
-          }
-          let folderMutations = rootMutations.folders;
-          for (let [folderId, deltas] of atomicDeltas.folders) {
-            let folder = accountManager.getFolderById(folderId);
-            applyDeltasToObj(deltas, folder);
-            folderMutations.set(folderId, folder);
-          }
+        for (const folderId of added) {
+          idsStore.add(
+            [folderId, message.date, message.id], // value
+            [folderId, message.date, message.id] // key
+          );
         }
       }
-      if (atomicClobbers) {
-        if (atomicClobbers.config) {
-          if (!rootMutations.config) {
-            rootMutations.config = this.universe.config;
-          }
-          applyClobbersToObj(atomicClobbers.config, rootMutations.config);
+    }
+  }
+
+  /**
+   * Apply the atomicClobbers and atomicDeltas fields from the given mutation
+   * objects.  We are applied against both the task's explicit mutations payload
+   * plus also any derivedMutations provided by database triggers.
+   *
+   * As described elsewhere, all of the data that atomic manipulations mess with
+   * will be in-memory before any tasks are allowed to run.  The AccountManager
+   * is in charge of them, so we ask it for the fields.
+   *
+   * @param {Object} atomics
+   *   The atomic manipulations to perform.  This could be the same as
+   *   rootMutations if specified by the task, or could be a separate object
+   *   contributed by a database trigger implementation.
+   * @param {Object} [atomics.atomicDeltas]
+   * @param {Object} [atomics.atomicDeltas.accounts]
+   * @param {Object} [atomics.atomicDeltas.folders]
+   * @param {Object} [atomics.atomicClobbers]
+   * @param {Object} [atomics.atomicClobbers.config]
+   * @param {Object} [atomics.atomicClobbers.accounts]
+   * @param {Object} [atomics.atomicClobbers.folders]
+   * @param {Object} rootMutations
+   *   The root mutations object passed to finishMutate.  In order to create
+   *   a unified set of writes, we will manipulate existing accounts and folders
+   *   write Maps, or if they do not exist, we will create them ourselves.
+   *   Correctness fundamentally requires that if these are mutations that the
+   *   AccountManager-owned object identities are maintained.  (Which is on the
+   *   task/caller.)
+   */
+  _applyAtomics(atomics, rootMutations) {
+    const { atomicDeltas, atomicClobbers } = atomics;
+    const accountManager = this.accountManager;
+    if (atomicDeltas) {
+      if (atomicDeltas.config) {
+        if (!rootMutations.config) {
+          rootMutations.config = this.universe.config;
         }
-        if (atomicClobbers.accounts) {
-          if (!rootMutations.accounts) {
-            rootMutations.accounts = new Map();
-          }
-          let accountMutations = rootMutations.accounts;
-          for (let [accountId, clobbers] of atomicClobbers.accounts) {
-            let accountDef = accountManager.getAccountDefById(accountId);
-            applyClobbersToObj(clobbers, accountDef);
-            accountMutations.set(accountId, accountDef);
-          }
+        applyDeltasToObj(atomicDeltas.config, rootMutations.config);
+      }
+      if (atomicDeltas.accounts) {
+        if (!rootMutations.accounts) {
+          rootMutations.accounts = new Map();
         }
-        if (atomicClobbers.folders) {
-          if (!rootMutations.folders) {
-            rootMutations.folders = new Map();
-          }
-          let folderMutations = rootMutations.folders;
-          for (let [folderId, clobbers] of atomicClobbers.folders) {
-            let folder = accountManager.getFolderById(folderId);
-            applyClobbersToObj(clobbers, folder);
-            folderMutations.set(folderId, folder);
-          }
+        const accountMutations = rootMutations.accounts;
+        for (const [accountId, deltas] of atomicDeltas.accounts) {
+          const accountDef = accountManager.getAccountDefById(accountId);
+          applyDeltasToObj(deltas, accountDef);
+          accountMutations.set(accountId, accountDef);
         }
       }
-    },
+      if (atomicDeltas.folders) {
+        if (!rootMutations.folders) {
+          rootMutations.folders = new Map();
+        }
+        const folderMutations = rootMutations.folders;
+        for (const [folderId, deltas] of atomicDeltas.folders) {
+          const folder = accountManager.getFolderById(folderId);
+          applyDeltasToObj(deltas, folder);
+          folderMutations.set(folderId, folder);
+        }
+      }
+    }
+    if (atomicClobbers) {
+      if (atomicClobbers.config) {
+        if (!rootMutations.config) {
+          rootMutations.config = this.universe.config;
+        }
+        applyClobbersToObj(atomicClobbers.config, rootMutations.config);
+      }
+      if (atomicClobbers.accounts) {
+        if (!rootMutations.accounts) {
+          rootMutations.accounts = new Map();
+        }
+        const accountMutations = rootMutations.accounts;
+        for (const [accountId, clobbers] of atomicClobbers.accounts) {
+          const accountDef = accountManager.getAccountDefById(accountId);
+          applyClobbersToObj(clobbers, accountDef);
+          accountMutations.set(accountId, accountDef);
+        }
+      }
+      if (atomicClobbers.folders) {
+        if (!rootMutations.folders) {
+          rootMutations.folders = new Map();
+        }
+        const folderMutations = rootMutations.folders;
+        for (const [folderId, clobbers] of atomicClobbers.folders) {
+          const folder = accountManager.getFolderById(folderId);
+          applyClobbersToObj(clobbers, folder);
+          folderMutations.set(folderId, folder);
+        }
+      }
+    }
+  }
 
-    _processAccountDeletion(trans, accountId) {
-      // Build a range that covers our family of keys where we use an
-      // array whose first item is a string id that is a concatenation of
-      // `AccountId`, the string ".", and then some more array parts.  Our
-      // prefix string provides a lower bound, and the prefix with the
-      // highest possible unicode character thing should be strictly
-      // greater than any legal suffix (\ufff0 not being a legal suffix
-      // in our key-space.)
-      let accountStringPrefix = IDBKeyRange.bound(
-        accountId + ".",
-        accountId + ".\ufff0",
-        true,
-        true
+  _processAccountDeletion(trans, accountId) {
+    // Build a range that covers our family of keys where we use an
+    // array whose first item is a string id that is a concatenation of
+    // `AccountId`, the string ".", and then some more array parts.  Our
+    // prefix string provides a lower bound, and the prefix with the
+    // highest possible unicode character thing should be strictly
+    // greater than any legal suffix (\ufff0 not being a legal suffix
+    // in our key-space.)
+    const accountStringPrefix = IDBKeyRange.bound(
+      accountId + ".",
+      accountId + ".\ufff0",
+      true,
+      true
+    );
+    // A key range where the key is an array and the first item is a string that
+    // is a namespaced-suffix of the accountId.  For example, FolderId and
+    // ConversationId and MessageId are all suffixes.  If the first item is
+    // *only* the accountId,
+    const accountArrayItemPrefix = IDBKeyRange.bound(
+      [accountId + "."],
+      [accountId + ".\ufff0"],
+      true,
+      true
+    );
+    // A key range where the key is an array and the first item is the
+    // AccountId.
+    const accountFirstElementArray = IDBKeyRange.bound(
+      [accountId],
+      // We use an array as the second element since arrays are greater than
+      // all other key values.  We do this instead of suffixing the (variable
+      // length) AccountId because although this way is slightly more magic,
+      // I believe it's significantly easier to intuitively understand as
+      // correct.  If only because everyone should be innately terrified of
+      // string comparisons and unicode.  (It does, however forbid any of our
+      // data types from using nested arrays as the second element.  This is
+      // currently the case.)
+      [accountId, []],
+      true,
+      true
+    );
+
+    // We handle the syncStates, folders, conversations, and message
+    // ranges here.
+    // Task fallout needs to be explicitly managed by the task in
+    // coordination with the TaskManager.
+    trans
+      .objectStore(TBL_CONFIG)
+      .delete(CONFIG_KEYPREFIX_ACCOUNT_DEF + accountId);
+
+    // Sync state: delete the accountId and any delimited suffixes
+    trans.objectStore(TBL_SYNC_STATES).delete(accountId);
+    trans.objectStore(TBL_SYNC_STATES).delete(accountStringPrefix);
+
+    trans.objectStore(TBL_COMPLEX_TASKS).delete(accountFirstElementArray);
+
+    // Folders: Just delete by accountId
+    trans.objectStore(TBL_FOLDER_INFO).delete(accountStringPrefix);
+
+    // Conversation: string ordering unicode tricks
+    trans.objectStore(TBL_CONV_INFO).delete(accountStringPrefix);
+    trans.objectStore(TBL_CONV_IDS_BY_FOLDER).delete(accountArrayItemPrefix);
+
+    // Messages: string ordering unicode tricks
+    trans.objectStore(TBL_MESSAGES).delete(accountArrayItemPrefix);
+    trans.objectStore(TBL_MSG_IDS_BY_FOLDER).delete(accountArrayItemPrefix);
+
+    trans.objectStore(TBL_HEADER_ID_MAP).delete(accountFirstElementArray);
+    trans.objectStore(TBL_UMID_LOCATION).delete(accountStringPrefix);
+    trans.objectStore(TBL_UMID_NAME).delete(accountStringPrefix);
+  }
+
+  _addRawTasks(trans, wrappedTasks) {
+    const store = trans.objectStore(TBL_TASKS);
+    wrappedTasks.forEach(wrappedTask => {
+      store.add(wrappedTask, wrappedTask.id);
+    });
+  }
+
+  /**
+   * Insert the raw task portions of each provided wrappedTask into the databse,
+   * storing the resulting autogenerated id into the `id` field of each
+   * wrappedTask.  A promise is returned; when it is resolved, all of the
+   * wrappedTasks should have had an id assigned.
+   */
+  addTasks(wrappedTasks) {
+    const trans = this._db.transaction([TBL_TASKS], "readwrite");
+    this._addRawTasks(trans, wrappedTasks);
+    return wrapTrans(trans);
+  }
+
+  /**
+   * Dangerously perform a write in a write transaction that's not part of a
+   * coherent/atomic change.  This is intended to be used *ONLY* for the
+   * write-blob-then-read-blob idiom and only for messages.  Pre-mutate-state
+   * must have been saved off already for message id naming purposes.
+   *
+   * This method may be replaced by a single write-then-read implementation that
+   * does better with event emitting to minimize wackiness, but right now it's
+   * on the caller to issue the flushed read and we expose the constituent
+   * methods as a sort-of experiment as we iterate.
+   */
+  dangerousIncrementalWrite(ctx, mutations) {
+    logic(this, "dangerousIncrementalWrite:begin", { ctxId: ctx.id });
+    const trans = this._db.transaction(TASK_MUTATION_STORES, "readwrite");
+
+    if (mutations.messages) {
+      this._processMessageMutations(
+        trans,
+        ctx._preMutateStates.messages,
+        mutations.messages
       );
-      // A key range where the key is an array and the first item is a string that
-      // is a namespaced-suffix of the accountId.  For example, FolderId and
-      // ConversationId and MessageId are all suffixes.  If the first item is
-      // *only* the accountId,
-      let accountArrayItemPrefix = IDBKeyRange.bound(
-        [accountId + "."],
-        [accountId + ".\ufff0"],
-        true,
-        true
-      );
-      // A key range where the key is an array and the first item is the
-      // AccountId.
-      let accountFirstElementArray = IDBKeyRange.bound(
-        [accountId],
-        // We use an array as the second element since arrays are greater than
-        // all other key values.  We do this instead of suffixing the (variable
-        // length) AccountId because although this way is slightly more magic,
-        // I believe it's significantly easier to intuitively understand as
-        // correct.  If only because everyone should be innately terrified of
-        // string comparisons and unicode.  (It does, however forbid any of our
-        // data types from using nested arrays as the second element.  This is
-        // currently the case.)
-        [accountId, []],
-        true,
-        true
-      );
+    }
 
-      // We handle the syncStates, folders, conversations, and message
-      // ranges here.
-      // Task fallout needs to be explicitly managed by the task in
-      // coordination with the TaskManager.
-      trans
-        .objectStore(TBL_CONFIG)
-        .delete(CONFIG_KEYPREFIX_ACCOUNT_DEF + accountId);
+    return wrapTrans(trans).then(() => {
+      logic(this, "dangerousIncrementalWrite:end", { ctxId: ctx.id });
+    });
+  }
 
-      // Sync state: delete the accountId and any delimited suffixes
-      trans.objectStore(TBL_SYNC_STATES).delete(accountId);
-      trans.objectStore(TBL_SYNC_STATES).delete(accountStringPrefix);
+  finishMutate(ctx, data, taskData) {
+    logic(this, "finishMutate:begin", { ctxId: ctx.id, _data: data });
+    const trans = this._db.transaction(TASK_MUTATION_STORES, "readwrite");
 
-      trans.objectStore(TBL_COMPLEX_TASKS).delete(accountFirstElementArray);
+    // The TriggerManager needs context for the events we will be
+    // (synchronously, unawaitingly) firing.  We clear the state below.
+    const derivedMutations = [];
+    this.triggerManager.__setState(ctx, derivedMutations);
 
-      // Folders: Just delete by accountId
-      trans.objectStore(TBL_FOLDER_INFO).delete(accountStringPrefix);
+    // -- New / Added data
+    const newData = data.newData;
+    if (newData) {
+      if (newData.accounts) {
+        for (const accountDef of newData.accounts) {
+          trans
+            .objectStore(TBL_CONFIG)
+            .put(accountDef, CONFIG_KEYPREFIX_ACCOUNT_DEF + accountDef.id);
+          this.emit("accounts!tocChange", accountDef.id, accountDef, true);
+        }
+      }
+      if (newData.folders) {
+        const store = trans.objectStore(TBL_FOLDER_INFO);
+        for (const folderInfo of newData.folders) {
+          const accountId = accountIdFromFolderId(folderInfo.id);
+          store.put(folderInfo, folderInfo.id);
+          this.emit(
+            `acct!${accountId}!folders!tocChange`,
+            folderInfo.id,
+            folderInfo,
+            true
+          );
+        }
+      }
+      if (newData.conversations) {
+        this._processConvAdditions(trans, newData.conversations);
+      }
+      if (newData.messages) {
+        this._processMessageAdditions(trans, newData.messages);
+      }
+      // newData.tasks is transformed by the TaskContext into
+      // taskData.wrappedTasks
+    }
 
-      // Conversation: string ordering unicode tricks
-      trans.objectStore(TBL_CONV_INFO).delete(accountStringPrefix);
-      trans.objectStore(TBL_CONV_IDS_BY_FOLDER).delete(accountArrayItemPrefix);
+    // -- Mutations (begun via beginMutate)
+    let mutations = data.mutations;
+    if (mutations) {
+      genericUncachedWrites(trans, TBL_SYNC_STATES, mutations.syncStates);
+      genericUncachedWrites(trans, TBL_HEADER_ID_MAP, mutations.headerIdMaps);
+      genericUncachedWrites(trans, TBL_UMID_NAME, mutations.umidNames);
+      genericUncachedWrites(trans, TBL_UMID_LOCATION, mutations.umidLocations);
 
-      // Messages: string ordering unicode tricks
-      trans.objectStore(TBL_MESSAGES).delete(accountArrayItemPrefix);
-      trans.objectStore(TBL_MSG_IDS_BY_FOLDER).delete(accountArrayItemPrefix);
-
-      trans.objectStore(TBL_HEADER_ID_MAP).delete(accountFirstElementArray);
-      trans.objectStore(TBL_UMID_LOCATION).delete(accountStringPrefix);
-      trans.objectStore(TBL_UMID_NAME).delete(accountStringPrefix);
-    },
-
-    _addRawTasks(trans, wrappedTasks) {
-      let store = trans.objectStore(TBL_TASKS);
-      wrappedTasks.forEach(wrappedTask => {
-        store.add(wrappedTask, wrappedTask.id);
-      });
-    },
-
-    /**
-     * Insert the raw task portions of each provided wrappedTask into the databse,
-     * storing the resulting autogenerated id into the `id` field of each
-     * wrappedTask.  A promise is returned; when it is resolved, all of the
-     * wrappedTasks should have had an id assigned.
-     */
-    addTasks(wrappedTasks) {
-      let trans = this._db.transaction([TBL_TASKS], "readwrite");
-      this._addRawTasks(trans, wrappedTasks);
-      return wrapTrans(trans);
-    },
-
-    /**
-     * Dangerously perform a write in a write transaction that's not part of a
-     * coherent/atomic change.  This is intended to be used *ONLY* for the
-     * write-blob-then-read-blob idiom and only for messages.  Pre-mutate-state
-     * must have been saved off already for message id naming purposes.
-     *
-     * This method may be replaced by a single write-then-read implementation that
-     * does better with event emitting to minimize wackiness, but right now it's
-     * on the caller to issue the flushed read and we expose the constituent
-     * methods as a sort-of experiment as we iterate.
-     */
-    dangerousIncrementalWrite(ctx, mutations) {
-      logic(this, "dangerousIncrementalWrite:begin", { ctxId: ctx.id });
-      let trans = this._db.transaction(TASK_MUTATION_STORES, "readwrite");
+      if (mutations.conversations) {
+        this._processConvMutations(
+          trans,
+          ctx._preMutateStates.conversations,
+          mutations.conversations
+        );
+      }
 
       if (mutations.messages) {
         this._processMessageMutations(
@@ -1876,225 +1965,119 @@ MailDB.prototype = evt.mix(
         );
       }
 
-      return wrapTrans(trans).then(() => {
-        logic(this, "dangerousIncrementalWrite:end", { ctxId: ctx.id });
-      });
-    },
+      // complexTaskStates are committed after merging in trigger side-effects.
+    } else {
+      // atomics potentially need this.
+      mutations = {};
+    }
 
-    finishMutate(ctx, data, taskData) {
-      logic(this, "finishMutate:begin", { ctxId: ctx.id, _data: data });
-      let trans = this._db.transaction(TASK_MUTATION_STORES, "readwrite");
+    // Clear state; triggers have had their chance already, no point adding
+    // confusion.
+    this.triggerManager.__clearState();
 
-      // The TriggerManager needs context for the events we will be
-      // (synchronously, unawaitingly) firing.  We clear the state below.
-      let derivedMutations = [];
-      this.triggerManager.__setState(ctx, derivedMutations);
+    // -- Atomics
+    this._applyAtomics(data, mutations);
+    if (derivedMutations.length) {
+      for (const derivedMut of derivedMutations) {
+        this._applyAtomics(derivedMut, mutations);
 
-      // -- New / Added data
-      let newData = data.newData;
-      if (newData) {
-        if (newData.accounts) {
-          for (let accountDef of newData.accounts) {
-            trans
-              .objectStore(TBL_CONFIG)
-              .put(accountDef, CONFIG_KEYPREFIX_ACCOUNT_DEF + accountDef.id);
-            this.emit("accounts!tocChange", accountDef.id, accountDef, true);
+        // - Merge in complex task states.
+        // (It's very possible for a task-based trigger to fire multiple times
+        // in a single transaction.  In that case, there will be redundant state
+        // writes being made )
+        if (derivedMut.complexTaskStates) {
+          if (!mutations.complexTaskStates) {
+            mutations.complexTaskStates = new Map();
+          }
+          for (const [key, value] of derivedMut.complexTaskStates) {
+            mutations.complexTaskStates.set(key, value);
           }
         }
-        if (newData.folders) {
-          let store = trans.objectStore(TBL_FOLDER_INFO);
-          for (let folderInfo of newData.folders) {
-            let accountId = accountIdFromFolderId(folderInfo.id);
-            store.put(folderInfo, folderInfo.id);
-            this.emit(
-              `acct!${accountId}!folders!tocChange`,
-              folderInfo.id,
-              folderInfo,
-              true
-            );
-          }
-        }
-        if (newData.conversations) {
-          this._processConvAdditions(trans, newData.conversations);
-        }
-        if (newData.messages) {
-          this._processMessageAdditions(trans, newData.messages);
-        }
-        // newData.tasks is transformed by the TaskContext into
-        // taskData.wrappedTasks
-      }
 
-      // -- Mutations (begun via beginMutate)
-      let mutations = data.mutations;
-      if (mutations) {
-        genericUncachedWrites(trans, TBL_SYNC_STATES, mutations.syncStates);
-        genericUncachedWrites(trans, TBL_HEADER_ID_MAP, mutations.headerIdMaps);
-        genericUncachedWrites(trans, TBL_UMID_NAME, mutations.umidNames);
-        genericUncachedWrites(
-          trans,
-          TBL_UMID_LOCATION,
-          mutations.umidLocations
-        );
+        // TODO: allow database triggers to contribute tasks too.
+        // sorta resolved by the rootGroupDeferredTask mechanism here...
 
-        if (mutations.conversations) {
-          this._processConvMutations(
-            trans,
-            ctx._preMutateStates.conversations,
-            mutations.conversations
-          );
-        }
-
-        if (mutations.messages) {
-          this._processMessageMutations(
-            trans,
-            ctx._preMutateStates.messages,
-            mutations.messages
-          );
-        }
-
-        // complexTaskStates are committed after merging in trigger side-effects.
-      } else {
-        // atomics potentially need this.
-        mutations = {};
-      }
-
-      // Clear state; triggers have had their chance already, no point adding
-      // confusion.
-      this.triggerManager.__clearState();
-
-      // -- Atomics
-      this._applyAtomics(data, mutations);
-      if (derivedMutations.length) {
-        for (let derivedMut of derivedMutations) {
-          this._applyAtomics(derivedMut, mutations);
-
-          // - Merge in complex task states.
-          // (It's very possible for a task-based trigger to fire multiple times
-          // in a single transaction.  In that case, there will be redundant state
-          // writes being made )
-          if (derivedMut.complexTaskStates) {
-            if (!mutations.complexTaskStates) {
-              mutations.complexTaskStates = new Map();
-            }
-            for (let [key, value] of derivedMut.complexTaskStates) {
-              mutations.complexTaskStates.set(key, value);
-            }
-          }
-
-          // TODO: allow database triggers to contribute tasks too.
-          // sorta resolved by the rootGroupDeferredTask mechanism here...
-
-          if (derivedMut.rootGroupDeferredTask) {
-            ctx.ensureRootTaskGroupFollowOnTask(
-              derivedMut.rootGroupDeferredTask
-            );
-          }
+        if (derivedMut.rootGroupDeferredTask) {
+          ctx.ensureRootTaskGroupFollowOnTask(derivedMut.rootGroupDeferredTask);
         }
       }
+    }
 
-      // -- Atomics-controlled writes
-      if (mutations.complexTaskStates) {
-        for (let [key, complexTaskState] of mutations.complexTaskStates) {
-          trans.objectStore(TBL_COMPLEX_TASKS).put(complexTaskState, key);
-        }
+    // -- Atomics-controlled writes
+    if (mutations.complexTaskStates) {
+      for (const [key, complexTaskState] of mutations.complexTaskStates) {
+        trans.objectStore(TBL_COMPLEX_TASKS).put(complexTaskState, key);
       }
+    }
 
-      if (mutations.folders) {
-        let store = trans.objectStore(TBL_FOLDER_INFO);
-        for (let [folderId, folderInfo] of mutations.folders) {
-          let accountId = accountIdFromFolderId(folderId);
-          if (folderInfo !== null) {
-            store.put(folderInfo, folderId);
-          } else {
-            store.delete(folderId);
-          }
-          this.emit(`fldr!${folderId}!change`, folderId, folderInfo);
-          this.emit(
-            `acct!${accountId}!folders!tocChange`,
-            folderId,
-            folderInfo,
-            false
-          );
-        }
-      }
-
-      if (mutations.accounts) {
-        // (This intentionally comes after all other mutation types and newData
-        // so that our deletions should clobber new introductions of data,
-        // although arguably no such writes should be occurring.)
-        for (let [accountId, accountDef] of mutations.accounts) {
-          if (accountDef) {
-            // - Update
-            trans
-              .objectStore(TBL_CONFIG)
-              .put(accountDef, CONFIG_KEYPREFIX_ACCOUNT_DEF + accountId);
-          } else {
-            // - Account Deletion!
-            this._processAccountDeletion(trans, accountId);
-          }
-
-          this.emit(`acct!${accountId}!change`, accountId, accountDef);
-          this.emit("accounts!tocChange", accountId, accountDef, false);
-        }
-      }
-
-      if (mutations.config) {
-        trans.objectStore(TBL_CONFIG).put(mutations.config, "config");
-        this.emit("config", mutations.config);
-      }
-
-      // -- Tasks
-      // Update the task's state in the database.
-      if (taskData.revisedTaskInfo) {
-        let revisedTaskInfo = taskData.revisedTaskInfo;
-        if (revisedTaskInfo.state) {
-          trans
-            .objectStore(TBL_TASKS)
-            .put(revisedTaskInfo.state, revisedTaskInfo.id);
+    if (mutations.folders) {
+      const store = trans.objectStore(TBL_FOLDER_INFO);
+      for (const [folderId, folderInfo] of mutations.folders) {
+        const accountId = accountIdFromFolderId(folderId);
+        if (folderInfo !== null) {
+          store.put(folderInfo, folderId);
         } else {
-          trans.objectStore(TBL_TASKS).delete(revisedTaskInfo.id);
+          store.delete(folderId);
         }
+        this.emit(`fldr!${folderId}!change`, folderId, folderInfo);
+        this.emit(
+          `acct!${accountId}!folders!tocChange`,
+          folderId,
+          folderInfo,
+          false
+        );
       }
+    }
 
-      // New tasks
-      if (taskData.wrappedTasks) {
-        let taskStore = trans.objectStore(TBL_TASKS);
-        for (let wrappedTask of taskData.wrappedTasks) {
-          taskStore.put(wrappedTask, wrappedTask.id);
+    if (mutations.accounts) {
+      // (This intentionally comes after all other mutation types and newData
+      // so that our deletions should clobber new introductions of data,
+      // although arguably no such writes should be occurring.)
+      for (const [accountId, accountDef] of mutations.accounts) {
+        if (accountDef) {
+          // - Update
+          trans
+            .objectStore(TBL_CONFIG)
+            .put(accountDef, CONFIG_KEYPREFIX_ACCOUNT_DEF + accountId);
+        } else {
+          // - Account Deletion!
+          this._processAccountDeletion(trans, accountId);
         }
+
+        this.emit(`acct!${accountId}!change`, accountId, accountDef);
+        this.emit("accounts!tocChange", accountId, accountDef, false);
       }
+    }
 
-      return wrapTrans(trans).then(() => {
-        logic(this, "finishMutate:end", { ctxId: ctx.id });
-        this._considerCachePressure("mutate", ctx);
-      });
-    },
-  }
-);
-// XXX hopefully temporary debugging hack to be able to see when we're properly
-// emitting events.
-MailDB.prototype._emit = MailDB.prototype.emit;
-MailDB.prototype.emit = function(eventName) {
-  var listeners = this._events[eventName];
-  var listenerCount = listeners ? listeners.length : 0;
-  logic(this, "emit", { name: eventName, listenerCount });
-  this._emit.apply(this, arguments);
-};
-MailDB.prototype._on = MailDB.prototype.on;
-MailDB.prototype.on = function(eventName) {
-  if (!eventName) {
-    throw new Error("no event type provided!");
-  }
-  logic(this, "on", { name: eventName });
-  this._on.apply(this, arguments);
-};
-MailDB.prototype._removeListener = MailDB.prototype.removeListener;
-MailDB.prototype.removeListener = function(eventName) {
-  if (!eventName) {
-    throw new Error("no event type provided!");
-  }
-  logic(this, "removeListener", { name: eventName });
-  this._removeListener.apply(this, arguments);
-};
+    if (mutations.config) {
+      trans.objectStore(TBL_CONFIG).put(mutations.config, "config");
+      this.emit("config", mutations.config);
+    }
 
-export default MailDB;
+    // -- Tasks
+    // Update the task's state in the database.
+    if (taskData.revisedTaskInfo) {
+      const revisedTaskInfo = taskData.revisedTaskInfo;
+      if (revisedTaskInfo.state) {
+        trans
+          .objectStore(TBL_TASKS)
+          .put(revisedTaskInfo.state, revisedTaskInfo.id);
+      } else {
+        trans.objectStore(TBL_TASKS).delete(revisedTaskInfo.id);
+      }
+    }
+
+    // New tasks
+    if (taskData.wrappedTasks) {
+      const taskStore = trans.objectStore(TBL_TASKS);
+      for (const wrappedTask of taskData.wrappedTasks) {
+        taskStore.put(wrappedTask, wrappedTask.id);
+      }
+    }
+
+    return wrapTrans(trans).then(() => {
+      logic(this, "finishMutate:end", { ctxId: ctx.id });
+      this._considerCachePressure("mutate", ctx);
+    });
+  }
+}

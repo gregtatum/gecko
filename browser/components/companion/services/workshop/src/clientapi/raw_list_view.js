@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import WindowedListView from "./windowed_list_view";
-import RawItem from "./raw_item";
+import { WindowedListView } from "./windowed_list_view";
+import { RawItem } from "./raw_item";
 
 /**
  * Windowed list view that contains `RawItem` instances that expose their wire
@@ -29,7 +29,9 @@ import RawItem from "./raw_item";
  * have no idea about what goes in here.  In most cases, if you want an
  * EntireListView experience, the caller can just issue a very wide seek window.
  */
-export default function RawListView(api, handle) {
-  WindowedListView.call(this, api, RawItem, handle);
+
+export class RawListView extends WindowedListView {
+  constructor(api, handle) {
+    super(api, RawItem, handle);
+  }
 }
-RawListView.prototype = Object.create(WindowedListView.prototype);

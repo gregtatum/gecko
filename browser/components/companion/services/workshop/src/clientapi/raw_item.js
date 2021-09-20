@@ -14,29 +14,31 @@
  * limitations under the License.
  */
 
-import evt from "evt";
+import { Emitter } from "evt";
 
-export default function RawItem(api, wireRep, overlays, matchInfo) {
-  evt.Emitter.call(this);
+export class RawItem extends Emitter {
+  constructor(api, wireRep, overlays, matchInfo) {
+    super();
 
-  // TODO: have the keying id be parameterized, easiest is probably just to have
-  // caller pass the id in since in the windowed case it already knows the id
-  // since that's how the naming/mapping occurs.
-  this.id = wireRep.id || wireRep._id;
+    // TODO: have the keying id be parameterized, easiest is probably just to have
+    // caller pass the id in since in the windowed case it already knows the id
+    // since that's how the naming/mapping occurs.
+    this.id = wireRep.id || wireRep._id;
 
-  this.__update(wireRep);
-  this.__updateOverlays(overlays);
-  this.matchInfo = matchInfo;
-}
-RawItem.prototype = evt.mix({
+    this.__update(wireRep);
+    this.__updateOverlays(overlays);
+    this.matchInfo = matchInfo;
+  }
+
   toString() {
     return "[RawItem]";
-  },
+  }
+
   toJSON() {
     return {
       data: this.data,
     };
-  },
+  }
 
   /**
    * Loads the current unread message count as reported by the FolderStorage
@@ -46,11 +48,11 @@ RawItem.prototype = evt.mix({
    */
   __update(wireRep) {
     this.data = wireRep;
-  },
+  }
 
-  __updateOverlays(/*overlays*/) {},
+  __updateOverlays(/*overlays*/) {}
 
   release() {
     // currently nothing to clean up
-  },
-});
+  }
+}

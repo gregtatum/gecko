@@ -19,6 +19,11 @@
  * implementations that need to be reference counted for resource management
  * reasons.
  */
+
+// TODO: move RefedResource to a class.
+//   BaseTOC extends evt.Emitter and RefedResource: javascript doesn't
+//   support multiple inheritance.
+//   It exists some libraries to do that correctly, e.g. https://github.com/rse/aggregation.
 function RefedResource({ onForgotten }) {
   this._activatePromise = null;
   this._valid = false;
@@ -47,8 +52,8 @@ RefedResource.prototype = {
     return this;
   },
 
-  __release(ctx) {
-    let idx = this._activeConsumers.indexOf(ctx);
+  async __release(ctx) {
+    const idx = this._activeConsumers.indexOf(ctx);
     if (idx === -1) {
       throw new Error("context does not ref this resource!");
     }
@@ -62,8 +67,6 @@ RefedResource.prototype = {
       }
       this._onForgotten = null;
     }
-
-    return Promise.resolve();
   },
 };
 
@@ -77,4 +80,4 @@ RefedResource.mix = function(obj) {
   return obj;
 };
 
-export default RefedResource;
+export { RefedResource };

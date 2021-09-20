@@ -44,23 +44,24 @@
  *   example, if switching folders, we will avoid announcing the folder switch
  *   until
  */
-export default function BrowseContext({ api }) {
-  this._api = api;
+export class BrowseContext {
+  constructor({ api }) {
+    this._api = api;
+  }
+
+  selectAccount(account) {}
+
+  selectAccountId(accountId) {}
+
+  selectFolder(folder) {}
+
+  selectFolderId(folderId) {}
+
+  selectConversation(conversation) {}
+
+  selectConversationId(conversationId) {}
+
+  selectMessage(message) {}
+
+  selectMessageId(messageId) {}
 }
-BrowseContext.prototype = {
-  selectAccount(account) {},
-
-  selectAccountId(accountId) {},
-
-  selectFolder(folder) {},
-
-  selectFolderId(folderId) {},
-
-  selectConversation(conversation) {},
-
-  selectConversationId(conversationId) {},
-
-  selectMessage(message) {},
-
-  selectMessageId(messageId) {},
-};
