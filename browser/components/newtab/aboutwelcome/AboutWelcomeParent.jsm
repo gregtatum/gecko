@@ -230,7 +230,7 @@ class AboutWelcomeParent extends JSWindowActorParent {
         break;
       case "AWPage:SPECIAL_ACTION":
         if (data.type == "LANGUAGE_CHANGE") {
-          Services.locale.requestedLocales = ["pl", "en-US"];
+          Services.locale.requestedLocales = ["es-ES", "en-US"];
           break;
         }
         SpecialMessageActions.handleAction(data, browser);
