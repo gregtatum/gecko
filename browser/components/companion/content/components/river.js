@@ -95,7 +95,6 @@ export default class River extends MozLitElement {
     // to do same-origin checks with other Views. We then add that View to an
     // initial group, and start the loop index at the 2nd last item in the list.
     let lastView = this.#views[this.#views.length - 1];
-    let currentPrincipal = lastView.contentPrincipal;
     let currentGroup = [lastView];
     let index = this.#views.length - 2;
 
@@ -106,7 +105,7 @@ export default class River extends MozLitElement {
     // 2. The number of groups reaches TOP_RIVER_GROUPS.
     for (; index >= 0; --index) {
       let view = this.#views[index];
-      if (ViewGroup.canGroup(currentPrincipal, view.url)) {
+      if (ViewGroup.canGroup(currentGroup[0], view)) {
         currentGroup.push(view);
         continue;
       } else {
@@ -122,7 +121,6 @@ export default class River extends MozLitElement {
         }
 
         currentGroup = [view];
-        currentPrincipal = view.contentPrincipal;
       }
     }
 

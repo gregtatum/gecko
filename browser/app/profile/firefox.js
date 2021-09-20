@@ -2610,7 +2610,6 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("services.sync.engine.addons", false, locked);
   pref("browser.tabs.unloadOnLowMemory", true, locked);
   pref("browser.urlbar.openintab", true, locked);
-  pref("browser.river.differentiateOnFirstPathNode", "docs.google.com", locked);
   pref("browser.tabs.warnOnClose", false, locked);
   pref("privacy.userContext.enabled", false, locked);
   pref("privacy.userContext.ui.enabled", false, locked);
