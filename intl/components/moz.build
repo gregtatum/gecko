@@ -13,11 +13,14 @@ EXPORTS.mozilla.intl = [
     "src/ICUError.h",
     "src/ListFormat.h",
     "src/LocaleCanonicalizer.h",
+    "src/MeasureUnit.h",
     "src/NumberFormat.h",
+    "src/NumberingSystem.h",
     "src/NumberPart.h",
     "src/NumberRangeFormat.h",
     "src/PluralRules.h",
     "src/RelativeTimeFormat.h",
+    "src/TimeZone.h",
 ]
 
 UNIFIED_SOURCES += [
@@ -29,12 +32,15 @@ UNIFIED_SOURCES += [
     "src/ICU4CGlue.cpp",
     "src/ListFormat.cpp",
     "src/LocaleCanonicalizer.cpp",
+    "src/MeasureUnit.cpp",
     "src/NumberFormat.cpp",
     "src/NumberFormatFields.cpp",
     "src/NumberFormatterSkeleton.cpp",
+    "src/NumberingSystem.cpp",
     "src/NumberRangeFormat.cpp",
     "src/PluralRules.cpp",
     "src/RelativeTimeFormat.cpp",
+    "src/TimeZone.cpp",
 ]
 
 if not CONFIG["JS_STANDALONE"]:
