@@ -58,9 +58,14 @@ add_task(async function test_register_session() {
   });
 });
 
-add_task(async function test_setAside() {
+add_task(async function test_set_aside_session() {
   dateCheckpoint = Date.now();
-  await SessionManager.setAside(win);
+  let changeComplete = BrowserTestUtils.waitForEvent(
+    win,
+    "session-replace-complete"
+  );
+  win.document.getElementById("session-setaside-button").click();
+  await changeComplete;
 
   Assert.ok(
     !SessionStore.getCustomWindowValue(win, "SessionManagerGuid"),

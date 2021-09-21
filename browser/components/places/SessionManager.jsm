@@ -102,16 +102,15 @@ const SessionManager = new (class SessionManager {
   }
 
   /**
-   * Sets aside the session in the selected window, saving it on disk
-   * and in the database. If a new session is specified, then that session
-   * will be restored into the window as well.
+   * Saves the current session on disk and in the database. Then replaces it
+   * with a new one, or restores a provided one.
    *
    * @param {DOMWindow} window
    *   The window for the session to save.
    * @param {string} [restoreSessionGuid]
    *   The guid of the session to load into the window.
    */
-  async setAside(window, restoreSessionGuid) {
+  async replaceSession(window, restoreSessionGuid) {
     if (!perWindowEnabled) {
       return;
     }
@@ -134,13 +133,15 @@ const SessionManager = new (class SessionManager {
     ]);
 
     if (restoreSessionGuid) {
-      await this.restoreInto(window, restoreSessionGuid);
+      await this.#restoreInto(window, restoreSessionGuid);
+      window.dispatchEvent(new CustomEvent("session-replace-complete"));
       return;
     }
 
     SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
     window.gGlobalHistory.reset();
     await window.gBrowser.doPinebuildSessionShowAnimation();
+    window.dispatchEvent(new CustomEvent("session-replace-complete"));
   }
 
   /**
@@ -151,7 +152,7 @@ const SessionManager = new (class SessionManager {
    * @param {string} guid
    *   The GUID of the session to restore.
    */
-  async restoreInto(window, guid) {
+  async #restoreInto(window, guid) {
     if (!perWindowEnabled) {
       throw new Error("SessionManager.restoreInto called when disabled.");
     }

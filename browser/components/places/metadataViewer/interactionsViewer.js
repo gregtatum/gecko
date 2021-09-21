@@ -478,7 +478,11 @@ const sessionsHandler = new (class extends TableViewer {
       "button",
       {
         header: "",
-        clickHandler: r => SessionManager.restoreInto(window, r.guid),
+        clickHandler: r =>
+          SessionManager.replaceSession(
+            window.browsingContext.topChromeWindow,
+            r.guid
+          ),
       },
     ],
   ]);

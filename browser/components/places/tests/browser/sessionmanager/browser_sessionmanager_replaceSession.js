@@ -4,7 +4,7 @@
 "use strict";
 
 /**
- * Tests for setting aside a session.
+ * Tests for replacing a session
  */
 
 const TEST_URL = "https://example.com/";
@@ -38,7 +38,12 @@ async function runSessionTest(loadPagesCallback, expectedPages) {
   Assert.ok(sessionGuid, "Should have an active session");
 
   let dateCheckpoint = Date.now();
-  await SessionManager.setAside(win);
+  let changeComplete = BrowserTestUtils.waitForEvent(
+    win,
+    "session-replace-complete"
+  );
+  win.document.getElementById("session-setaside-button").click();
+  await changeComplete;
 
   Assert.ok(
     !SessionStore.getCustomWindowValue(win, "SessionManagerGuid"),
@@ -81,7 +86,7 @@ async function runSessionTest(loadPagesCallback, expectedPages) {
   return sessionGuid;
 }
 
-add_task(async function test_setAside_simple_session() {
+add_task(async function test_replaceSession_set_aside_simple_session() {
   await runSessionTest(async () => {
     BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, TEST_URL);
     await BrowserTestUtils.browserLoaded(
@@ -92,7 +97,7 @@ add_task(async function test_setAside_simple_session() {
   }, [{ url: TEST_URL, position: 0 }]);
 });
 
-add_task(async function test_setAside_complex_session() {
+add_task(async function test_replaceSession_set_aside_complex_session() {
   await runSessionTest(async () => {
     BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, TEST_URL);
     await BrowserTestUtils.browserLoaded(
@@ -119,7 +124,7 @@ add_task(async function test_setAside_complex_session() {
 let previousSessionGuid;
 
 // This test saves the session guid for the next test to use.
-add_task(async function test_setAside_reordered_session() {
+add_task(async function test_replaceSession_set_aside_reordered_session() {
   previousSessionGuid = await runSessionTest(async () => {
     let originalTab = win.gBrowser.selectedTab;
 
@@ -156,7 +161,7 @@ add_task(async function test_setAside_reordered_session() {
 // with the one from the previous test, causing that session to be overwritten.
 // This is a cheap way that we can set up an updated session with different data,
 // to ensure the code works correctly.
-add_task(async function test_setAside_updated_session() {
+add_task(async function test_replaceSession_set_aside_updated_session() {
   await runSessionTest(async () => {
     BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, TEST_URL4);
     await BrowserTestUtils.browserLoaded(
