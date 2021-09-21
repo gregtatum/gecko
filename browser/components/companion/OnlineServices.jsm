@@ -240,7 +240,7 @@ class GoogleService {
             ) {
               continue;
             }
-            let event = parseGoogleCalendarResult(result);
+            let event = parseGoogleCalendarResult(result, this.emailAddress);
             event.calendar = {
               id: calendar.id,
             };

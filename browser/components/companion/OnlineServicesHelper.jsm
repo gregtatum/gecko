@@ -222,7 +222,7 @@ function getConferenceInfo(result, links) {
   return null;
 }
 
-function parseGoogleCalendarResult(result) {
+function parseGoogleCalendarResult(result, primaryEmail) {
   let event = {};
   event.summary = result.summary;
   event.start = new Date(result.start?.dateTime);
@@ -235,6 +235,14 @@ function parseGoogleCalendarResult(result) {
     [];
   event.organizer = result.organizer;
   event.creator = result.creator;
+  // Secondary calendars don't use the same email as
+  // the primary, so we manually mark the "self" entries
+  if (event.organizer?.email == primaryEmail) {
+    event.organizer.self = true;
+  }
+  if (event.creator?.email == primaryEmail) {
+    event.creator.self = true;
+  }
   event.url = result.htmlLink;
   return event;
 }

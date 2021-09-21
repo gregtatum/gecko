@@ -10,6 +10,12 @@ const { parseGoogleCalendarResult } = ChromeUtils.import(
 const GOOGLE_TEST = [
   {
     result: {
+      organizer: {
+        email: "email@example.com",
+      },
+      creator: {
+        email: "email@example.com",
+      },
       attendees: [
         {
           email: "declined@example.com",
@@ -34,10 +40,12 @@ const GOOGLE_TEST = [
 
 add_task(async function test_parseGoogleCalendarResult() {
   for (let test of GOOGLE_TEST) {
-    let event = parseGoogleCalendarResult(test.result);
+    let event = parseGoogleCalendarResult(test.result, "email@example.com");
     deepEqual(
       event.attendees,
       test.result.attendees.filter(a => a.responseStatus !== "declined")
     );
+    equal(event.organizer.self, true);
+    equal(event.creator.self, true);
   }
 });
