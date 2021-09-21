@@ -193,8 +193,12 @@ preferences-mozproduct-foundation-description = The not-for-profit that stands f
 preferences-mozproduct-pocket-name = Pocket
 preferences-mozproduct-pocket-description = Discover, capture and savor content that fascinates you.
 preferences-mozproduct-view-more = View more
-preferences-mozproduct-get =
-    .label = Get now
+preferences-mozproduct-get-vpn =
+    .label = Get VPN
+preferences-mozproduct-get-rally =
+    .label = Get Rally
+preferences-mozproduct-get-pocket =
+    .label = Get Pocket
 preferences-mozproduct-support =
     .label = Support
 
