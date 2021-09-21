@@ -345,6 +345,10 @@ XPCOMUtils.defineLazyGetter(this, "gGlobalHistory", () => {
   return new GlobalHistory(window);
 });
 
+XPCOMUtils.defineLazyGetter(this, "gActiveViewManager", () => {
+  return document.querySelector("active-view-manager");
+});
+
 XPCOMUtils.defineLazyGetter(this, "gURLBar", () => {
   let urlbar = new UrlbarInput({
     textbox: document.getElementById("urlbar"),

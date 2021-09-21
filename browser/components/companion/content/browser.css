@@ -281,36 +281,71 @@
 }
 
 #page-action-panel-sections {
-  display: grid;
-  grid-template: 1fr 1fr / 1fr;
-  padding-inline: 8px;
+  padding: 8px;
 }
 
 #page-actions-section {
   grid-template: 1fr / repeat(6, auto);
   display: grid;
-  padding-bottom: 10px;
+  padding-block: 2px 10px;
   border-bottom: 1px lightgray solid;
 }
 
-#page-actions-section > div {
-  display: grid;
-  grid-template: 75% 25% / 1fr;
-  justify-items: center;
-  padding-block: 15px 5px;
+#page-actions-section > toolbarbutton {
+  -moz-box-orient: vertical;
 }
 
-#page-actions-section > div > img {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
+#page-actions-section > toolbarbutton > .toolbarbutton-icon {
+  padding: 22px;
+  border-radius: 100px;
+  -moz-context-properties: fill;
+  fill: var(--toolbarbutton-icon-fill);
+  background-size: 15px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: rgb(249,249,251);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-#page-actions-section > div > span {
-  max-width: 70px;
-  display: block;
-  text-align: center;
-  font-size: 10px;
+#page-actions-section > toolbarbutton:hover > .toolbarbutton-icon {
+  background-color: var(--button-hover-bgcolor);
+}
+
+#page-actions-section > toolbarbutton:active > .toolbarbutton-icon {
+  background-color: var(--button-active-bgcolor);
+}
+
+#page-actions-section > toolbarbutton:focus-visible {
+  outline: 2px solid var(--focus-outline-color);
+  outline-offset: var(--focus-outline-offset, 2px);
+}
+
+#page-action-pin-view > .toolbarbutton-icon {
+  background-image: url("chrome://browser/skin/pin-12.svg");
+}
+
+#page-action-copy-url > .toolbarbutton-icon {
+  background-image: url("chrome://browser/skin/edit-copy.svg");
+}
+
+#page-action-close-view > .toolbarbutton-icon {
+  background-image: url("chrome://global/skin/icons/close.svg");
+}
+
+#page-action-mute > .toolbarbutton-icon {
+  background-image: url("chrome://global/skin/media/audio-muted.svg");
+}
+
+#page-action-reader-mode > .toolbarbutton-icon {
+  background-image: url("chrome://browser/skin/reader-mode.svg");
+}
+
+#page-action-more > .toolbarbutton-icon {
+  background-image: url("chrome://global/skin/icons/more.svg");
+}
+
+#page-actions-section > toolbarbutton > .toolbarbutton-text {
+  margin-block-start: 8px;
 }
 
 #site-info-section {

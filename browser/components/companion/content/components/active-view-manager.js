@@ -8,6 +8,9 @@ const { PanelMultiView } = ChromeUtils.import(
 const { CompanionService } = ChromeUtils.import(
   "resource:///modules/CompanionService.jsm"
 );
+const { CustomizableUI } = ChromeUtils.import(
+  "resource:///modules/CustomizableUI.jsm"
+);
 
 import getSiteSecurityInfo from "../siteSecurity.js";
 
@@ -344,12 +347,15 @@ export default class ActiveViewManager extends HTMLElement {
   }
 
   #pageActionPanelHiding(event) {
+    CustomizableUI.removePanelCloseListeners(this.#pageActionPanel);
     this.#pageActionView = null;
     let siteSecurityIcon = document.getElementById("site-security-icon");
     siteSecurityIcon.classList.remove(this.#securityIconClass);
   }
 
   #pageActionPanelShowing(event) {
+    CustomizableUI.addPanelCloseListeners(this.#pageActionPanel);
+
     let pageActionTitleEl = document.getElementById("site-info-title");
     pageActionTitleEl.value = this.#pageActionView.title;
     pageActionTitleEl.scrollLeft = 0;
@@ -377,23 +383,21 @@ export default class ActiveViewManager extends HTMLElement {
   #pageActionPanelClicked(event) {
     let titleEl = document.getElementById("site-info-title");
     let editImg = document.getElementById("site-info-edit-icon");
-    let pinView = document.getElementById("pin-view");
-    let copyUrl = document.getElementById("copy-url");
 
     if (event.target == editImg) {
       titleEl.focus();
-    } else if (pinView.contains(event.target)) {
-      this.#setViewPinnedState(
-        this.#pageActionView,
-        !this.#pageActionView.pinned
-      );
-      this.#pageActionPanel.hidePopup();
-    } else if (copyUrl.contains(event.target)) {
-      CompanionService.copy(this, this.#pageActionView.url.spec);
-      this.#pageActionPanel.hidePopup();
-    } else if (event.target != titleEl) {
-      this.#pageActionPanel.hidePopup();
     }
+  }
+
+  pageActionPinView(event) {
+    this.#setViewPinnedState(
+      this.#pageActionView,
+      !this.#pageActionView.pinned
+    );
+  }
+
+  pageActionCopyURL(event) {
+    CompanionService.copy(this, this.#pageActionView.url.spec);
   }
 
   #pageActionPanelKeypress(event) {

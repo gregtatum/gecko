@@ -152,30 +152,20 @@
           <panelview id="page-action-panel-mainview">
           <vbox id="page-action-panel-sections">
             <hbox id="page-actions-section">
-              <div id="pin-view">
-                <html:img src="chrome://browser/content/companion/icons/pin.svg"/>
-                <span data-l10n-id="page-action-pin-view"/>
-              </div>
-              <div id="copy-url">
-                <html:img src="chrome://browser/content/companion/icons/copy.svg"/>
-                <span data-l10n-id="page-action-copy-url"/>
-              </div>
-              <div>
-                <html:img src="chrome://browser/content/companion/icons/close.svg"/>
-                <span data-l10n-id="page-action-close-view"/>
-              </div>
-              <div>
-                <html:img src="chrome://browser/content/companion/icons/mute.svg"/>
-                <span data-l10n-id="page-action-mute"/>
-              </div>
-              <div>
-                <html:img src="chrome://browser/content/companion/icons/reader-mode.svg"/>
-                <span data-l10n-id="page-action-reader-mode"/>
-              </div>
-              <div>
-                <html:img src="chrome://browser/content/companion/icons/more.svg"/>
-                <span data-l10n-id="page-action-more"/>
-              </div>
+              <toolbarbutton id="page-action-pin-view"
+                             data-l10n-id="page-action-pin-view"
+                             oncommand="gActiveViewManager.pageActionPinView(event);"/>
+              <toolbarbutton id="page-action-copy-url"
+                             data-l10n-id="page-action-copy-url"
+                             oncommand="gActiveViewManager.pageActionCopyURL(event);"/>
+              <toolbarbutton id="page-action-close-view"
+                             data-l10n-id="page-action-close-view"/>
+              <toolbarbutton id="page-action-mute"
+                             data-l10n-id="page-action-mute"/>
+              <toolbarbutton id="page-action-reader-mode"
+                             data-l10n-id="page-action-reader-mode"/>
+              <toolbarbutton id="page-action-more"
+                             data-l10n-id="page-action-more"/>
             </hbox>
             <hbox id="site-info-section">
               <div id="site-info-title-section">

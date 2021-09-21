@@ -5,9 +5,15 @@
 active-view-manager-overflow-button-text = +{$count}
 
 # Page action menu strings.
-page-action-pin-view = Pin
-page-action-copy-url = Copy
-page-action-close-view = Close
-page-action-mute = Mute
-page-action-reader-mode = Reader Mode
-page-action-more = More
+page-action-pin-view =
+  .label = Pin
+page-action-copy-url =
+  .label = Copy
+page-action-close-view =
+  .label = Close
+page-action-mute =
+  .label = Mute
+page-action-reader-mode =
+  .label = Reader Mode
+page-action-more =
+  .label = More
