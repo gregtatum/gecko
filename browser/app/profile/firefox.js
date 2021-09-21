@@ -2613,18 +2613,23 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.tabs.warnOnClose", false, locked);
   pref("privacy.userContext.enabled", false, locked);
   pref("privacy.userContext.ui.enabled", false, locked);
+  pref("browser.aboutwelcome.enabled", false);
+  pref("browser.tabs.openNewTabForMostNavigations", true);
+
+  // Pinebuild specific configurations
+  pref("browser.companion.globalhistorydebugging", false);
+  pref("browser.companion.globalhistorydebugging.logLevel", "Warn");
+  pref("browser.river.activationTimeout", 5000);
+  pref("browser.river.maxGroups", 5);
+
+  // Preferences below here were at one point off by default and now have
+  // been enabled (and should likely be removed eventually).
+  pref("browser.pinebuild.animateViewTransitions", true);
 
   // Preferences below here are still being experimented with are in the
   // unlocked state to allow for manual testing.
-  pref("browser.companion.globalhistorydebugging", false);
-  pref("browser.companion.globalhistorydebugging.logLevel", "Warn");
   pref("browser.companion.pageaction.enabled", false);
   pref("browser.companion.snapshots", false);
-  pref("browser.tabs.openNewTabForMostNavigations", true);
-  pref("browser.pinebuild.animateViewTransitions", true);
   pref("browser.places.perwindowsessions.enabled", false);
-  pref("browser.river.activationTimeout", 5000);
-  pref("browser.river.maxGroups", 5);
   pref("browser.river.pinning.enabled", false);
-  pref("browser.aboutwelcome.enabled", false);
 #endif
