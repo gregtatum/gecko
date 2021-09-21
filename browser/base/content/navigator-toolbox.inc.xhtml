@@ -431,6 +431,14 @@
         <toolbartabstop/>
       </toolbaritem>
 
+#ifdef PINEBUILD
+      <toolbarbutton id="session-setaside-button" class="toolbarbutton-1"
+                     hidden="true"
+                     data-l10n-id="toolbar-button-setaside-session"
+                     tooltip="dynamic-shortcut-tooltip"
+                     onclick="SessionManager.setAside(window)"/>
+#endif
+
       <toolbarspring cui-areatype="toolbar" class="chromeclass-toolbar-additional"/>
 
       <toolbarbutton id="downloads-button"

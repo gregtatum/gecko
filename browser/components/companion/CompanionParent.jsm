@@ -22,7 +22,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   requestIdleCallback: "resource://gre/modules/Timer.jsm",
   Services: "resource://gre/modules/Services.jsm",
   setTimeout: "resource://gre/modules/Timer.jsm",
-  SessionManager: "resource:///modules/SessionManager.jsm",
   Snapshots: "resource:///modules/Snapshots.jsm",
   SnapshotSelector: "resource:///modules/SnapshotSelector.jsm",
   Sqlite: "resource://gre/modules/Sqlite.jsm",
@@ -781,12 +780,6 @@ class CompanionParent extends JSWindowActorParent {
       case "Companion:GetDocumentTitle": {
         let { url } = message.data;
         return OnlineServices.getDocumentTitle(url);
-      }
-      case "Companion:ChangeSession": {
-        let { newSessionId } = message.data;
-        let win = this.browsingContext.topChromeWindow;
-        SessionManager.setAside(win, newSessionId);
-        break;
       }
     }
     return null;

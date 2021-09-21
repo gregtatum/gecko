@@ -246,6 +246,7 @@ var CustomizableUIInternal = {
         : "home-button",
       "spring",
       "urlbar-container",
+      AppConstants.PINEBUILD ? null : "session-setaside-button",
       "spring",
       "save-to-pocket-button",
       "downloads-button",

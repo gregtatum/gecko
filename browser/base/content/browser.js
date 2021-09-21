@@ -71,6 +71,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   SafeBrowsing: "resource://gre/modules/SafeBrowsing.jsm",
   Sanitizer: "resource:///modules/Sanitizer.jsm",
   SaveToPocket: "chrome://pocket/content/SaveToPocket.jsm",
+  SessionManager: "resource:///modules/SessionManager.jsm",
   SessionStartup: "resource:///modules/sessionstore/SessionStartup.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.jsm",
@@ -519,6 +520,16 @@ XPCOMUtils.defineLazyPreferenceGetter(
   "gBookmarksToolbarVisibility",
   "browser.toolbars.bookmarks.visibility",
   "newtab"
+);
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "gPerWindowSessionsEnabled",
+  "browser.places.perwindowsessions.enabled",
+  false,
+  (aPref, aOldVal, aNewVal) => {
+    document.getElementById("session-setaside-button").hidden = !aNewVal;
+  }
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -1723,6 +1734,9 @@ var gBrowserInit = {
       gGlobalHistory.addEventListener("ViewAdded", UpdateBackForwardCommands);
       gGlobalHistory.addEventListener("ViewRemoved", UpdateBackForwardCommands);
       gGlobalHistory.addEventListener("ViewMoved", UpdateBackForwardCommands);
+      document.getElementById(
+        "session-setaside-button"
+      ).hidden = !gPerWindowSessionsEnabled;
     }
 
     BrowserWindowTracker.track(window);
@@ -6987,6 +7001,7 @@ const nodeToTooltipMap = {
 if (AppConstants.PINEBUILD) {
   nodeToTooltipMap["pinebuild-reload-button"] = "reloadButton.tooltip";
   nodeToTooltipMap["pinebuild-stop-button"] = "stopButton.tooltip";
+  nodeToTooltipMap["session-setaside-button"] = "sessionSetAsideButton.tooltip";
 }
 
 const nodeToShortcutMap = {

@@ -182,7 +182,9 @@
   skin/classic/browser/window.svg                     (../shared/icons/window.svg)
   skin/classic/browser/zoom-out.svg                   (../shared/icons/zoom-out.svg)
   skin/classic/browser/ion.svg                        (../shared/icons/ion.svg)
-
+#ifdef PINEBUILD
+  skin/classic/browser/session-setaside.svg           (../shared/icons/session-setaside.svg)
+#endif
 
   skin/classic/browser/search-engine-placeholder.png           (../shared/search/search-engine-placeholder.png)
   skin/classic/browser/search-engine-placeholder@2x.png        (../shared/search/search-engine-placeholder@2x.png)
