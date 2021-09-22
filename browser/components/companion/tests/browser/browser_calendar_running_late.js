@@ -57,7 +57,7 @@ add_task(async function testRunningLate() {
       {
         summary: `My test event`,
         attendees: [{ email: "attendee@example.com", self: false }],
-        organizer: { self: true },
+        organizer: { email: "me@example.com", self: true },
       },
       {
         summary: `Your test event`,
@@ -122,7 +122,7 @@ add_task(async function testNoAttendees() {
     await helper.setCalendarEvents([
       {
         summary: "My personal event",
-        organizer: { self: true },
+        organizer: { email: "me@example.com", self: true },
         creator: { self: true },
       },
     ]);
