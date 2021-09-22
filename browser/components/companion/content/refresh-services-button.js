@@ -5,7 +5,9 @@
 import { MozLitElement } from "./widget-utils.js";
 import { classMap, html, css } from "./lit.all.js";
 
-const { OnlineServices } = ChromeUtils.import(
+ChromeUtils.defineModuleGetter(
+  globalThis,
+  "OnlineServices",
   "resource:///modules/OnlineServices.jsm"
 );
 

@@ -2,13 +2,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const { PanelMultiView } = ChromeUtils.import(
+ChromeUtils.defineModuleGetter(
+  globalThis,
+  "PanelMultiView",
   "resource:///modules/PanelMultiView.jsm"
 );
-const { CompanionService } = ChromeUtils.import(
+ChromeUtils.defineModuleGetter(
+  globalThis,
+  "CompanionService",
   "resource:///modules/CompanionService.jsm"
 );
-const { CustomizableUI } = ChromeUtils.import(
+ChromeUtils.defineModuleGetter(
+  globalThis,
+  "CustomizableUI",
   "resource:///modules/CustomizableUI.jsm"
 );
 

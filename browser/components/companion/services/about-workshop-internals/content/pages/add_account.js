@@ -5,7 +5,11 @@
 import { css, html } from "../lit_glue.js";
 import { Page } from "../page.js";
 
-const { OAuth2 } = ChromeUtils.import("resource:///modules/OAuth2.jsm");
+ChromeUtils.defineModuleGetter(
+  globalThis,
+  "OAuth2",
+  "resource:///modules/OAuth2.jsm"
+);
 
 export default class AddAccountPage extends Page {
   static get properties() {
