@@ -1350,6 +1350,58 @@ class GlobalHistory extends EventTarget {
   get navigatingForward() {
     return !!this.#navigatingForward;
   }
+
+  /**
+   * Removes the passed in View from the current View stack,
+   * cleans up any leftover resources from the View, and then
+   * fires the ViewRemoved event so that the UI can update the
+   * visualization of Views.
+   *
+   * @param {View} view The View to close.
+   */
+  closeView(view) {
+    let internalView = InternalView.viewMap.get(view);
+    if (!internalView) {
+      throw new Error("Unknown view.");
+    }
+
+    let { browser } = getBrowserHistoryForView(this.#window, internalView);
+
+    let index = this.#viewStack.indexOf(internalView);
+    if (index == -1) {
+      throw new Error("Could not find the View in the #viewStack");
+    }
+
+    // First, attempt to switch to the next View
+    let viewToSwitchTo = this.#viewStack[index + 1];
+
+    // If no such View exists, then go to the previous View instead.
+    if (!viewToSwitchTo) {
+      viewToSwitchTo = this.#viewStack[index - 1];
+    }
+
+    // If that's not possible, then we conclude that we're closing
+    // the last View and do a reset.
+    if (!viewToSwitchTo) {
+      this.reset();
+      return;
+    }
+
+    this.setView(viewToSwitchTo.view);
+
+    // If the associated <browser> only had a single entry in it,
+    // then presumably it was for the history entry of the View
+    // that just removed. In that case, we can get rid of that
+    // <browser>.
+    if (browser.browsingContext.sessionHistory.count == 1) {
+      let tab = this.#window.gBrowser.getTabForBrowser(browser);
+      this.#window.gBrowser.removeTab(tab, { animate: false });
+    }
+
+    this.#viewStack.splice(index, 1);
+    this.#historyViews.delete(internalView.historyId);
+    this.#notifyEvent("ViewRemoved", internalView);
+  }
 }
 
 XPCOMUtils.defineLazyPreferenceGetter(

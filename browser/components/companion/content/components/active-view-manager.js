@@ -400,6 +400,10 @@ export default class ActiveViewManager extends HTMLElement {
     CompanionService.copy(this, this.#pageActionView.url.spec);
   }
 
+  pageActionCloseView(event) {
+    window.top.gGlobalHistory.closeView(this.#pageActionView);
+  }
+
   #pageActionPanelKeypress(event) {
     let siteInfoTitleEl = document.getElementById("site-info-title");
     if (
