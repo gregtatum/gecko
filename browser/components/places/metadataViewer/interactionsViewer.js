@@ -99,6 +99,7 @@ class TableViewer {
 /* Sets the first row of elements to bold. The number is the number of columns */
 #tableViewer > div:nth-child(-n+${numColumns}) {
   font-weight: bold;
+  white-space: break-spaces;
 }
 
 /* Highlights every other row to make visual scanning of the table easier.
@@ -199,7 +200,7 @@ class TableViewer {
 const metadataHandler = new (class extends TableViewer {
   title = "Interactions";
   cssGridTemplateColumns =
-    "max-content fit-content(100%) repeat(4, max-content) fit-content(100%);";
+    "max-content fit-content(100%) repeat(6, min-content) fit-content(100%);";
 
   /**
    * @see TableViewer.columnMap
@@ -229,6 +230,14 @@ const metadataHandler = new (class extends TableViewer {
       },
     ],
     ["key_presses", { header: "Key Presses" }],
+    [
+      "scrolling_time",
+      {
+        header: "Scroll Time (s)",
+        modifier: scrollingTime => (scrollingTime / 1000).toFixed(2),
+      },
+    ],
+    ["scrolling_distance", { header: "Scroll Distance (pixels)" }],
     ["referrer", { header: "Referrer", includeTitle: true }],
   ]);
 
@@ -259,7 +268,7 @@ const metadataHandler = new (class extends TableViewer {
   async updateDisplay() {
     let rows = await this.#getRows(
       `SELECT m.id AS id, h.url AS url, updated_at, total_view_time,
-              typing_time, key_presses, h2.url as referrer
+              typing_time, key_presses, scrolling_time, scrolling_distance, h2.url as referrer
        FROM moz_places_metadata m
        JOIN moz_places h ON h.id = m.place_id
        LEFT JOIN moz_places h2 ON h2.id = m.referrer_place_id
@@ -284,6 +293,8 @@ const metadataHandler = new (class extends TableViewer {
       h.frecency,
       m.typing_time,
       m.key_presses,
+      m.scrolling_time,
+      m.scrolling_distance,
       vall.visit_dates,
       vall.visit_types
   FROM moz_places_metadata m
@@ -310,6 +321,8 @@ const metadataHandler = new (class extends TableViewer {
         "frecency",
         "typing_time",
         "key_presses",
+        "scrolling_time",
+        "scrolling_distance",
         "visit_dates",
         "visit_types",
       ]
