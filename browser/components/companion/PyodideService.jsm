@@ -227,6 +227,9 @@ const PyodideService = {
    *  Release the browser, remove observers.
    */
   uninit() {
+    if (!Services.prefs.getBoolPref("browser.companion.pyodide", false)) {
+      return;
+    }
     this._browser = null;
     Services.obs.removeObserver(this, "interactions-exported");
   },
