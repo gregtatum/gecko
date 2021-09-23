@@ -85,14 +85,16 @@ add_task(async function test_set_aside_session() {
   );
 });
 
-add_task(async function test_start_second_session() {
-  let previousSessionGuid = sessionGuid;
+let previousSessionGuid;
 
-  BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, TEST_URL);
+add_task(async function test_start_second_session() {
+  previousSessionGuid = sessionGuid;
+
+  BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, TEST_URL2);
   await BrowserTestUtils.browserLoaded(
     win.gBrowser.selectedBrowser,
     false,
-    TEST_URL
+    TEST_URL2
   );
 
   sessionGuid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
@@ -101,5 +103,27 @@ add_task(async function test_start_second_session() {
     sessionGuid,
     previousSessionGuid,
     "Should have a different guid"
+  );
+});
+
+add_task(async function test_restore_first_session() {
+  let restoreComplete = BrowserTestUtils.waitForEvent(
+    win,
+    "SSWindowStateReady"
+  );
+  await SessionManager.replaceSession(win, previousSessionGuid);
+  await restoreComplete;
+
+  sessionGuid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
+  Assert.equal(
+    sessionGuid,
+    previousSessionGuid,
+    "Should have the expected guid"
+  );
+  // We should have loaded the previous URL into the window.
+  await BrowserTestUtils.browserLoaded(
+    win.gBrowser.selectedBrowser,
+    false,
+    TEST_URL
   );
 });

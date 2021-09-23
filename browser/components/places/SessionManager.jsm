@@ -116,6 +116,13 @@ const SessionManager = new (class SessionManager {
     }
     logConsole.debug("Saving session", window);
 
+    // Kick off loading the new session data so that it is hopefully
+    // ready as soon as we need it.
+    let loadDataPromise;
+    if (restoreSessionGuid) {
+      loadDataPromise = this.#loadSessionData(restoreSessionGuid);
+    }
+
     // Start these at the same time, hopefully the save will be completed
     // before the data is written, if it is not, then we'll pause slightly
     // longer.
@@ -133,8 +140,8 @@ const SessionManager = new (class SessionManager {
     ]);
 
     if (restoreSessionGuid) {
-      await this.#restoreInto(window, restoreSessionGuid);
-      window.dispatchEvent(new CustomEvent("session-replace-complete"));
+      let data = await loadDataPromise;
+      await this.#restoreInto(window, restoreSessionGuid, data);
       return;
     }
 
@@ -151,16 +158,20 @@ const SessionManager = new (class SessionManager {
    *   The window to restore into.
    * @param {string} guid
    *   The GUID of the session to restore.
+   * @param {object} data
+   *   The data to load for the session, recovered from disk.
    */
-  async #restoreInto(window, guid) {
-    if (!perWindowEnabled) {
-      throw new Error("SessionManager.restoreInto called when disabled.");
+  async #restoreInto(window, guid, data) {
+    if (data) {
+      logConsole.debug("Loading session", guid, "from session store data");
+      // Restoring the session also restores the SessionManagerGuid on the window.
+      SessionStore.setWindowState(window, { windows: [data] }, true);
     }
-    logConsole.debug("Restoring session", guid);
-    // TODO: Temporarily this does the same as setAside with no new session.
-    SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
-    window.gGlobalHistory.reset();
+    // TODO: MR2-867 - if we are unable to load the data, we should find a way
+    // of surfacing the failure to the user.
+
     await window.gBrowser.doPinebuildSessionShowAnimation();
+    window.dispatchEvent(new CustomEvent("session-replace-complete"));
   }
 
   /**
@@ -263,6 +274,36 @@ const SessionManager = new (class SessionManager {
    */
   makeGuid() {
     return PlacesUtils.history.makeGuid();
+  }
+
+  /**
+   * Loads session data from the disk. If the data is not found locally,
+   * then it will be loaded from the places store.
+   *
+   * @param {string} guid
+   *   The guid of the session to load data for.
+   * @returns {object} data
+   *   The session data.
+   */
+  async #loadSessionData(guid) {
+    let path = await this.#getSessionFilePath(guid);
+    let data;
+    try {
+      data = await IOUtils.readJSON(path, { decompress: true });
+    } catch (ex) {
+      if (ex.name != "NotFoundError") {
+        logConsole.error("Failed to read session store file for", guid, ex);
+      }
+    }
+    if (!data) {
+      logConsole.debug(
+        "Falling back to loading session",
+        guid,
+        "from saved places data"
+      );
+      // TODO: To be implemented in follow-up patch.
+    }
+    return data;
   }
 
   /**
