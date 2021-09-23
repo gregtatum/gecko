@@ -2525,9 +2525,9 @@ set_define("MOZ_OXIDIZED_BREAKPAD", True, when=oxidized_breakpad)
 
 # Wine
 # ==============================================================
-@depends(target, host, compile_environment)
-def want_wine(target, host, compile_environment):
-    return compile_environment and target.kernel == "WINNT" and host.kernel != "WINNT"
+@depends(target, host)
+def want_wine(target, host):
+    return target.kernel == "WINNT" and host.kernel != "WINNT"
 
 
 wine = check_prog(

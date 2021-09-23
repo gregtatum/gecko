@@ -20,12 +20,12 @@ rev = "72eb355ddeada541d7e57dbe5fb60eb5124dea0d"
 [source."https://github.com/mozilla/l10nregistry-rs"]
 git = "https://github.com/mozilla/l10nregistry-rs"
 replace-with = "vendored-sources"
-rev = "a69df9836b1ef536727195209013b9ad6b132618"
+rev = "fd02134161505f978e132114cbabdac057ce3b71"
 
 [source."https://github.com/mozilla/cubeb-pulse-rs"]
 git = "https://github.com/mozilla/cubeb-pulse-rs"
 replace-with = "vendored-sources"
-rev = "b5aea956e1478b9d0c67911a35fe0aa9d544307a"
+rev = "e9e55a4529642da99e64452467ecaef9f7753531"
 
 [source."https://github.com/mozilla/cubeb-coreaudio-rs"]
 git = "https://github.com/mozilla/cubeb-coreaudio-rs"
@@ -45,7 +45,7 @@ rev = "8a576fbe79199fa8664f64285524017f74ebcc5f"
 [source."https://github.com/mozilla-spidermonkey/jsparagus"]
 git = "https://github.com/mozilla-spidermonkey/jsparagus"
 replace-with = "vendored-sources"
-rev = "2e56bb9bae5d8211137980a717ee991cc4a5eb98"
+rev = "6c97434b6586fc234fdba0494f4ddd004b9578de"
 
 [source."https://github.com/kvark/dummy-web"]
 git = "https://github.com/kvark/dummy-web"
