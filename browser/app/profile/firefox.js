@@ -2630,6 +2630,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   // unlocked state to allow for manual testing.
   pref("browser.companion.pageaction.enabled", false);
   pref("browser.companion.snapshots", false);
+  pref("browser.companion.passwords.enabled", false);
   pref("browser.places.perwindowsessions.enabled", false);
   pref("browser.river.pinning.enabled", false);
 #endif

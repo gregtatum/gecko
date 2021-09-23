@@ -238,6 +238,12 @@ class AboutLoginsChild extends JSWindowActorChild {
         this.sendToContent("HeaderChange", event.detail.newHeaderL10nId);
         break;
       }
+      case "contextmenu": {
+        if (this.browsingContext.embedderElement) {
+          event.preventDefault();
+        }
+        break;
+      }
     }
   }
 
