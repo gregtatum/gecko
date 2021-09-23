@@ -554,6 +554,12 @@ function setupListeners() {
     e.preventDefault();
     const data = await metadataHandler.export();
 
+    Services.obs.notifyObservers(
+      null,
+      "interactions-exported",
+      JSON.stringify(data)
+    );
+
     const blob = new Blob([JSON.stringify(data)], {
       type: "text/json;charset=utf-8",
     });

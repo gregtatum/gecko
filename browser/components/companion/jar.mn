@@ -62,6 +62,7 @@ browser.jar:
     content/browser/companion/vendor/pyodide/joblib.js             (vendor/pyodide/joblib.js)
     content/browser/companion/vendor/pyodide/numpy.data            (vendor/pyodide/numpy.data)
     content/browser/companion/vendor/pyodide/numpy.js              (vendor/pyodide/numpy.js)
+    content/browser/companion/vendor/pyodide/packages.json         (vendor/pyodide/packages.json)
     content/browser/companion/vendor/pyodide/pandas.data           (vendor/pyodide/pandas.data)
     content/browser/companion/vendor/pyodide/pandas.js             (vendor/pyodide/pandas.js)
     content/browser/companion/vendor/pyodide/pyodide.asm.data      (vendor/pyodide/pyodide.asm.data)
@@ -80,5 +81,7 @@ browser.jar:
     content/browser/companion/vendor/pyodide/scikit-learn.js       (vendor/pyodide/scikit-learn.js)
     content/browser/companion/vendor/pyodide/scipy.data            (vendor/pyodide/scipy.data)
     content/browser/companion/vendor/pyodide/scipy.js              (vendor/pyodide/scipy.js)
-    content/browser/companion/vendor/pyodide/webworker.js           (vendor/pyodide/webworker.js)
+    content/browser/companion/vendor/pyodide/six.data              (vendor/pyodide/six.data)
+    content/browser/companion/vendor/pyodide/six.js                (vendor/pyodide/six.js)
+    content/browser/companion/vendor/pyodide/webworker.js          (vendor/pyodide/webworker.js)
     

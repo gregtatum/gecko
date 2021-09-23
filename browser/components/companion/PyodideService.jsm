@@ -81,7 +81,7 @@ const PyodideService = {
 
   /**
    * Currently only initializing by pref (defaulting to false).
-   * Register the actors.
+   * Register the actors, add observers.
    */
   init() {
     if (!Services.prefs.getBoolPref("browser.companion.pyodide", false)) {
@@ -101,6 +101,7 @@ const PyodideService = {
       matches: ["resource://pyodide/pyodide.html"],
     });
 
+    Services.obs.addObserver(this, "interactions-exported");
     logConsole.debug("PyodideService init");
   },
 
@@ -155,6 +156,51 @@ const PyodideService = {
   },
 
   /**
+   * Respond to observer topics
+   */
+  async observe(aSubject, aTopic, aData) {
+    switch (aTopic) {
+      case "interactions-exported":
+        logConsole.debug("Received 'interactions-exported'");
+
+        if (!this._browser) {
+          await this.loadContent();
+        }
+
+        const interactions = JSON.parse(aData);
+        if (interactions.length) {
+          let headers = Object.keys(interactions[0]);
+          // Create a row for each interaction
+          let rows = interactions.map(item => headers.map(prop => item[prop]));
+
+          const { results, error } = await this.executePython(
+            `
+              from js import rows_js
+              from js import headers_js
+              import numpy as np
+              import pandas as pd
+
+              df = pd.DataFrame(rows_js, columns = headers_js)
+              output = "DataFrame shape: " + str(df.shape) + " DataFrame columns: " + str(df.columns)
+              output
+            `,
+            {
+              rows_js: rows,
+              headers_js: headers,
+            }
+          );
+
+          if (results) {
+            logConsole.info("Pyodide interactions results ", results);
+          }
+          if (error) {
+            logConsole.info("Pyodide interactions error: ", error);
+          }
+        }
+    }
+  },
+
+  /**
    * A simple test case to demonstrate usage of pyodide.
    * Makes use of numpy and sklearn.
    */
@@ -170,17 +216,18 @@ const PyodideService = {
     );
 
     if (results) {
-      logConsole.debug("testLoadPyodide Pyodide results ", results);
+      logConsole.info("testLoadPyodide Pyodide results ", results);
     }
     if (error) {
-      logConsole.info(" testLoadPyodide Pyodide error: ", error);
+      logConsole.info("testLoadPyodide Pyodide error: ", error);
     }
   },
 
   /**
-   *  Release the browser.
+   *  Release the browser, remove observers.
    */
   uninit() {
     this._browser = null;
+    Services.obs.removeObserver(this, "interactions-exported");
   },
 };
