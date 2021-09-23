@@ -224,6 +224,18 @@ MailBridge.prototype = {
     this.universe.syncFolderList(msg.accountId, "bridge");
   },
 
+  _cmd_modifyFolder(msg) {
+    this.universe
+      .modifyFolder(msg.accountId, msg.mods, "bridge")
+      .then(result => {
+        this.__sendMessage({
+          type: "promisedResult",
+          handle: msg.handle,
+          data: null,
+        });
+      });
+  },
+
   async _cmd_clearAccountProblems(msg) {
     var account = this.universe.getAccountForAccountId(msg.accountId),
       self = this;
@@ -432,6 +444,23 @@ MailBridge.prototype = {
       folderId: msg.spec.folderId,
     };
     const toc = await this.universe.acquireSearchMessagesTOC(ctx, msg.spec);
+    ctx.proxy = new WindowedListProxy(toc, ctx);
+    await ctx.acquire(ctx.proxy);
+  },
+
+  async _cmd_searchAccountMessages(msg) {
+    const ctx = this.bridgeContext.createNamedContext(
+      msg.handle,
+      "AccountMessagesSearchView"
+    );
+    ctx.viewing = {
+      type: "account",
+      accountId: msg.spec.accountId,
+    };
+    const toc = await this.universe.acquireSearchAccountMessagesTOC(
+      ctx,
+      msg.spec
+    );
     ctx.proxy = new WindowedListProxy(toc, ctx);
     await ctx.acquire(ctx.proxy);
   },

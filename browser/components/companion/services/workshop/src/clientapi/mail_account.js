@@ -185,6 +185,10 @@ export class MailAccount extends Emitter {
     return this._api._modifyAccount(this, mods);
   }
 
+  async modifyFolder(mods) {
+    return this._api._modifyFolder(this, mods);
+  }
+
   /**
    * Delete the account and then immediate re-create it as if we had performed
    * a lazy config migration.  This is intended mainly for debugging and

@@ -17,6 +17,7 @@
 import logic from "logic";
 
 import DirectFolderConversationsQuery from "./query/direct_folder_conv_query";
+import FilteringAccountMessagesQuery from "./query/filtering_account_messages_query";
 import FilteringFolderQuery from "./query/filtering_folder_query";
 import FilteringFolderMessagesQuery from "./query/filtering_folder_messages_query";
 
@@ -271,5 +272,46 @@ QueryManager.prototype = {
       filterRunner: new FilterRunner({ filters }),
       rootGatherer,
     });
+  },
+
+  /**
+   * Search in messages belonging to the different folders
+   * as if they were in one unique folder.
+   */
+  queryAccountMessages(ctx, spec) {
+    try {
+      const { filter, folderIds } = spec;
+
+      // -- Build the list of filters and determine gatherer dependencies.
+      let filters = this._buildFilters(filter, messageFilters);
+
+      const preDerivers = this._buildDerivedViews(spec.viewDefsWithContexts);
+      const postDerivers = [];
+
+      const dbCtx = {
+        db: this._db,
+        ctx,
+      };
+      // The messages case
+      const rootGatherer = this._buildGatherHierarchy({
+        consumers: filters,
+        rootGatherDefs: messageGatherers,
+        bootstrapKey: "message",
+        dbCtx,
+      });
+
+      return new FilteringAccountMessagesQuery({
+        ctx,
+        db: this._db,
+        folderIds,
+        filterRunner: new FilterRunner({ filters }),
+        rootGatherer,
+        preDerivers,
+        postDerivers,
+      });
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
   },
 };

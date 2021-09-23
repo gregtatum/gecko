@@ -27,9 +27,9 @@ import { RefedResource } from "../refed_resource";
  * (Most of the code was also subtly different for each TOC up to this point.)
  */
 export class BaseTOC extends Emitter {
-  constructor({ metaHelpers }) {
+  constructor({ metaHelpers, onForgotten }) {
     super();
-    RefedResource.apply(this, arguments);
+    RefedResource.call(this, onForgotten);
 
     this._metaHelpers = metaHelpers || [];
 

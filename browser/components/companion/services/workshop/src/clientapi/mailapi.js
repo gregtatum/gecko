@@ -911,6 +911,14 @@ export class MailAPI extends Emitter {
     }).then(() => null);
   }
 
+  _modifyFolder(account, mods) {
+    return this._sendPromisedRequest({
+      type: "modifyFolder",
+      accountId: account.id,
+      mods,
+    }).then(() => null);
+  }
+
   /**
    * Synchronize all calendars that the user is currently subscribed to.
    * (Accounts may also know about calendars that the user is not subscribed
@@ -1131,6 +1139,37 @@ export class MailAPI extends Emitter {
       handle,
       spec: {
         folderId: view.folderId,
+        filter: spec.filter,
+      },
+    });
+
+    return view;
+  }
+
+  /**
+   * Search the messages/events in a folder.  If the folder is a `calendar`
+   * folder, than a `CalEventsListView` will be returned, otherwise a
+   * `MessagesListView` will be returned.
+   */
+  searchAccountMessages(spec) {
+    const handle = this._nextHandle++;
+    const { account } = spec;
+    // TODO: add a calendar type in account.
+    const view = ["mapi", "gapi"].includes(account.type)
+      ? new CalEventsListView(this, handle)
+      : new MessagesListView(this, handle);
+    view.accountId = account.id;
+    // Hackily save off the folder as a stop-gap measure to make it easier to
+    // describe the contents of the view until we enhance the tocMeta to
+    // better convey this.
+    view.account = this.accounts.getAccountById(account.id);
+    this._trackedItemHandles.set(handle, { obj: view });
+
+    this.__bridgeSend({
+      type: "searchAccountMessages",
+      handle,
+      spec: {
+        accountId: view.accountId,
         filter: spec.filter,
       },
     });

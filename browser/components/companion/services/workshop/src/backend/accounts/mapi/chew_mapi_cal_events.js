@@ -125,7 +125,7 @@ export class MapiCalEventChewer {
     for (const mapiEvent of this.eventMap.values()) {
       try {
         const eventId = makeMapiCalEventId(this.convId, mapiEvent.id);
-        if (mapiEvent !== mainEvent) {
+        if (mainEvent && mapiEvent !== mainEvent) {
           // The main event can contain some fields (like organizer) that
           // the occurences haven't.
           for (const [key, value] of Object.entries(mainEvent)) {
@@ -173,8 +173,11 @@ export class MapiCalEventChewer {
         }
 
         const isAllDay = mapiEvent.isAllDay;
-        const startDate = new Date(mapiEvent.start.dateTime).valueOf();
-        const endDate = new Date(mapiEvent.end.dateTime).valueOf();
+
+        // TODO: use the timeZone field to set the correct timezone.
+        // For now, consider that all dates are UTC.
+        const startDate = new Date(mapiEvent.start.dateTime + "Z").valueOf();
+        const endDate = new Date(mapiEvent.end.dateTime + "Z").valueOf();
 
         const subject = mapiEvent.subject;
 

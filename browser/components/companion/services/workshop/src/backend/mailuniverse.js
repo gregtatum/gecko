@@ -564,6 +564,51 @@ MailUniverse.prototype = {
     return ctx.acquire(toc);
   },
 
+  acquireSearchAccountMessagesTOC(ctx, spec) {
+    const { accountId } = spec;
+    // Figure out what the sync stamp source is for this account.  It hinges
+    // on the sync granularity; if it's account-based then the sync stamps
+    // will be on the account, otherwise on the folder.
+    const engineFacts = this.accountManager.getAccountEngineBackEndFacts(
+      accountId
+    );
+
+    let syncStampSource = null;
+    if (engineFacts.syncGranularity === "account") {
+      syncStampSource = this.accountManager.getAccountDefById(accountId);
+    }
+
+    const folderIds = (spec.folderIds = this.accountManager.getFolderIdsByTag(
+      accountId,
+      spec?.filter.tag || null
+    ));
+
+    const metaHelpers = [];
+    for (const folderId of folderIds) {
+      metaHelpers.push(
+        new SyncLifecycleMetaHelper({
+          folderId,
+          syncStampSource:
+            syncStampSource || this.accountManager.getFolderById(folderId),
+          dataOverlayManager: this.dataOverlayManager,
+        })
+      );
+      // TODO: do we need to await Promise.all(...) for all the
+      // returned values here ?
+      this.syncRefreshFolder(folderId, "searchAccountMessages");
+    }
+
+    const toc = new ConversationTOC({
+      db: this.db,
+      query: this.queryManager.queryAccountMessages(ctx, spec),
+      dataOverlayManager: this.dataOverlayManager,
+      metaHelpers,
+      // TODO: add a comment to explain why we do nothing here.
+      onForgotten: () => {},
+    });
+    return ctx.acquire(toc);
+  },
+
   acquireConversationTOC(ctx, conversationId) {
     let toc;
     if (this._conversationTOCs.has(conversationId)) {
@@ -766,6 +811,17 @@ MailUniverse.prototype = {
     return this.taskManager.scheduleTaskAndWaitForPlannedResult(
       {
         type: "identity_modify",
+        accountId,
+        mods,
+      },
+      why
+    );
+  },
+
+  modifyFolder(accountId, mods, why) {
+    return this.taskManager.scheduleTaskAndWaitForPlannedResult(
+      {
+        type: "folder_modify",
         accountId,
         mods,
       },
@@ -1166,7 +1222,7 @@ MailUniverse.prototype = {
    * ]
    */
   createFolder(/*accountId, parentFolderId, folderName, folderType,
-                 containOtherFolders*/) {
+                  containOtherFolders*/) {
     // XXX implement!
   },
 

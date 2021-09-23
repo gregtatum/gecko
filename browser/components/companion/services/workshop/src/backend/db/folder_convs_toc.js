@@ -38,8 +38,8 @@ import { BaseTOC } from "./base_toc";
  * we instead treat the position where the { date, id } would be inserted now.
  */
 export class FolderConversationsTOC extends BaseTOC {
-  constructor({ db, query, dataOverlayManager }) {
-    super(arguments);
+  constructor({ db, query, dataOverlayManager, metaHelpers, onForgotten }) {
+    super({ metaHelpers, onForgotten });
 
     logic.defineScope(this, "FolderConversationsTOC");
 

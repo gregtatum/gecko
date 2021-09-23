@@ -127,10 +127,11 @@
      * Supports same call signatures as on().
      */
     once(id, obj, fnName) {
+      const self = this;
       let fired = false;
       const applyPair = objFnPair(obj, fnName);
 
-      const one = () => {
+      function one() {
         if (fired) {
           return;
         }
@@ -139,7 +140,7 @@
         // Remove at a further turn so that the event
         // forEach in emit does not get modified during
         // this turn.
-        setTimeout(() => this.removeListener(id, one));
+        setTimeout(() => self.removeListener(id, one));
       }
       // Pass object context in case object bulk removeListener before the
       // once is triggered.

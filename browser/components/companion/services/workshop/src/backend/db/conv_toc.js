@@ -40,8 +40,8 @@ import { conversationMessageComparator } from "./comparators";
  * view slices care about.
  */
 export class ConversationTOC extends BaseTOC {
-  constructor({ db, query, dataOverlayManager }) {
-    super(arguments);
+  constructor({ db, query, dataOverlayManager, metaHelpers, onForgotten }) {
+    super({ metaHelpers, onForgotten });
 
     logic.defineScope(this, "ConversationTOC");
 

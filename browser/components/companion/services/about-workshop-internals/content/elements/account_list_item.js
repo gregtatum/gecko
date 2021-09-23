@@ -78,7 +78,7 @@ export class AccountListItem extends LitElement {
             class="account-sync-folders"
             type="button"
             @click=${() => {
-              account.onSyncFolders();
+              account.syncFolderList();
             }}
           >
             Sync Folders

@@ -24,7 +24,7 @@
 //   BaseTOC extends evt.Emitter and RefedResource: javascript doesn't
 //   support multiple inheritance.
 //   It exists some libraries to do that correctly, e.g. https://github.com/rse/aggregation.
-function RefedResource({ onForgotten }) {
+function RefedResource(onForgotten) {
   this._activatePromise = null;
   this._valid = false;
   this._activeConsumers = [];

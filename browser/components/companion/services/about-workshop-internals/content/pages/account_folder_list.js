@@ -8,6 +8,7 @@ import { Page } from "../page.js";
 
 import "../elements/list_view.js";
 import "../elements/folder_list_item.js";
+import "../elements/folders_tag.js";
 
 export default class AccountFolderListPage extends Page {
   static get properties() {
@@ -62,9 +63,14 @@ export default class AccountFolderListPage extends Page {
         .listView=${this.account.folders}
         .factory=${folder =>
           html`
-            <awi-folder-list-item .folder=${folder} .serial=${folder.serial} />
+            <awi-folder-list-item
+              .account=${this.account}
+              .folder=${folder}
+              .serial=${folder.serial}
+            />
           `}
-      />
+      ></awi-list-view>
+      <awi-folders-tag .account=${this.account} />
     `;
   }
 }

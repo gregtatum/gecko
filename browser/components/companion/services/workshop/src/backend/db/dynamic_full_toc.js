@@ -29,8 +29,15 @@ import { BaseTOC } from "./base_toc";
  * implementations should be created.
  */
 export class DynamicFullTOC extends BaseTOC {
-  constructor({ comparator, idKey, topOrderingKey, onFlush }) {
-    super(arguments);
+  constructor({
+    comparator,
+    idKey,
+    topOrderingKey,
+    onFlush,
+    metaHelpers,
+    onForgotten,
+  }) {
+    super({ metaHelpers, onForgotten });
 
     logic.defineScope(this, "DynamicFullTOC");
 

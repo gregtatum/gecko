@@ -111,16 +111,17 @@ var require_evt = __commonJS({
           return this;
         }
         once(id, obj, fnName) {
+          const self = this;
           let fired = false;
           const applyPair = objFnPair(obj, fnName);
-          const one = () => {
+          function one() {
             if (fired) {
               return;
             }
             fired = true;
             callApply(applyPair, arguments);
-            setTimeout(() => this.removeListener(id, one));
-          };
+            setTimeout(() => self.removeListener(id, one));
+          }
           return this.on(id, applyPair[0], one);
         }
         latest(id, obj, fnName) {
@@ -1021,6 +1022,7 @@ var MailFolder = class extends import_evt2.Emitter {
         this.isValidMoveTarget = true;
     }
     this.syncGranularity = wireRep.syncGranularity;
+    this.tags = wireRep.tags || [];
   }
   __updateOverlays(overlays) {
     let syncOverlay = overlays.sync_refresh || overlays.sync_grow || {};
@@ -2131,6 +2133,9 @@ var MailAccount = class extends import_evt8.Emitter {
   }
   modifyAccount(mods) {
     return this._api._modifyAccount(this, mods);
+  }
+  async modifyFolder(mods) {
+    return this._api._modifyFolder(this, mods);
   }
   recreateAccount() {
     this._api._recreateAccount(this);
@@ -3331,6 +3336,13 @@ var MailAPI = class extends import_evt14.Emitter {
       mods
     }).then(() => null);
   }
+  _modifyFolder(account, mods) {
+    return this._sendPromisedRequest({
+      type: "modifyFolder",
+      accountId: account.id,
+      mods
+    }).then(() => null);
+  }
   syncAllSubscribedCalendars() {
   }
   viewAccounts(opts) {
@@ -3431,6 +3443,23 @@ var MailAPI = class extends import_evt14.Emitter {
       handle,
       spec: {
         folderId: view.folderId,
+        filter: spec.filter
+      }
+    });
+    return view;
+  }
+  searchAccountMessages(spec) {
+    const handle = this._nextHandle++;
+    const { account } = spec;
+    const view = ["mapi", "gapi"].includes(account.type) ? new CalEventsListView(this, handle) : new MessagesListView(this, handle);
+    view.accountId = account.id;
+    view.account = this.accounts.getAccountById(account.id);
+    this._trackedItemHandles.set(handle, { obj: view });
+    this.__bridgeSend({
+      type: "searchAccountMessages",
+      handle,
+      spec: {
+        accountId: view.accountId,
         filter: spec.filter
       }
     });

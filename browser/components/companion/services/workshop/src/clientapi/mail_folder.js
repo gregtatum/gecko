@@ -127,6 +127,8 @@ export class MailFolder extends Emitter {
 
     // -- Things mixed-in by the folders_toc from engine meta
     this.syncGranularity = wireRep.syncGranularity;
+
+    this.tags = wireRep.tags || [];
   }
 
   __updateOverlays(overlays) {

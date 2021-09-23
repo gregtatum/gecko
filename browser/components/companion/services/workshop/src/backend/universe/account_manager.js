@@ -291,6 +291,17 @@ export class AccountManager {
   }
 
   /**
+   * Return the an array of ids for the given tag.  This is only safe to call
+   * after the universe has fully loaded.
+   */
+  getFolderIdsByTag(accountId, tag) {
+    const foldersTOC = this.accountFoldersTOCs.get(accountId);
+    const foldersInfo =
+      (tag && foldersTOC.foldersByTag.get(tag)) || foldersTOC.getAllItems();
+    return foldersInfo.map(info => info.id);
+  }
+
+  /**
    * Our MailDB.on('accounts!tocChange') listener.
    */
   _onTOCChange(accountId, accountDef, isNew) {

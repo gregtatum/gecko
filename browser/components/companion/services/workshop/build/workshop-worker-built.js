@@ -120,16 +120,17 @@ var WorkshopBackend = (() => {
             return this;
           }
           once(id, obj, fnName) {
+            const self2 = this;
             let fired = false;
             const applyPair = objFnPair(obj, fnName);
-            const one = () => {
+            function one() {
               if (fired) {
                 return;
               }
               fired = true;
               callApply(applyPair, arguments);
-              setTimeout(() => this.removeListener(id, one));
-            };
+              setTimeout(() => self2.removeListener(id, one));
+            }
             return this.on(id, applyPair[0], one);
           }
           latest(id, obj, fnName) {
@@ -13164,6 +13165,71 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/backend/tasks/folder_modify.js
+  var CommonFolderModify;
+  var init_folder_modify = __esm({
+    "src/backend/tasks/folder_modify.js"() {
+      init_logic();
+      init_task_definer();
+      CommonFolderModify = task_definer_default.defineSimpleTask([
+        {
+          name: "folder_modify",
+          async plan(ctx, rawTask) {
+            const { mods } = rawTask;
+            const folders = new Map();
+            const folderClobbers = new Map();
+            for (const [folderId, actions] of Object.entries(mods.actions)) {
+              const folderDef = await ctx.readSingle("folders", folderId);
+              const tags = folderDef.tags || [];
+              for (const [key, val] of Object.entries(actions)) {
+                switch (key) {
+                  case "addtag":
+                    {
+                      const prevLength = tags.length;
+                      for (const tag of val) {
+                        if (!tags.includes(tag)) {
+                          tags.push(tag);
+                        }
+                      }
+                      if (tags.length !== prevLength) {
+                        folderClobbers.set(["tags"], tags);
+                      }
+                    }
+                    break;
+                  case "rmtag":
+                    {
+                      const prevLength = tags.length;
+                      for (const tag of val) {
+                        const idx = tags.indexOf(tag);
+                        if (idx !== -1) {
+                          tags.splice(idx, 1);
+                        }
+                      }
+                      if (tags.length !== prevLength) {
+                        folderClobbers.set(["tags"], tags);
+                      }
+                    }
+                    break;
+                  default:
+                    logic(ctx, "badModifyFolderKey", { key });
+                    break;
+                }
+              }
+              if (folderClobbers.size) {
+                folders.set(folderId, folderClobbers);
+              }
+            }
+            await ctx.finishTask({
+              atomicClobbers: {
+                folders
+              }
+            });
+          }
+        }
+      ]);
+    }
+  });
+
   // src/backend/accounts/gapi/gapi_tasks.js
   var gapi_tasks_exports = {};
   __export(gapi_tasks_exports, {
@@ -13176,6 +13242,7 @@ var WorkshopBackend = (() => {
       init_cal_sync_conv();
       init_cal_sync_refresh();
       init_account_modify();
+      init_folder_modify();
       init_identity_modify();
       init_new_tracking();
       gapi_tasks_default = [
@@ -13183,6 +13250,7 @@ var WorkshopBackend = (() => {
         cal_sync_conv_default,
         cal_sync_refresh_default,
         account_modify_default,
+        CommonFolderModify,
         identity_modify_default,
         new_tracking_default
       ];
@@ -13379,7 +13447,7 @@ var WorkshopBackend = (() => {
           for (const mapiEvent of this.eventMap.values()) {
             try {
               const eventId = makeMapiCalEventId(this.convId, mapiEvent.id);
-              if (mapiEvent !== mainEvent) {
+              if (mainEvent && mapiEvent !== mainEvent) {
                 for (const [key, value] of Object.entries(mainEvent)) {
                   if (!(key in mapiEvent)) {
                     mapiEvent[key] = value;
@@ -13410,8 +13478,8 @@ var WorkshopBackend = (() => {
                 }));
               }
               const isAllDay = mapiEvent.isAllDay;
-              const startDate = new Date(mapiEvent.start.dateTime).valueOf();
-              const endDate = new Date(mapiEvent.end.dateTime).valueOf();
+              const startDate = new Date(mapiEvent.start.dateTime + "Z").valueOf();
+              const endDate = new Date(mapiEvent.end.dateTime + "Z").valueOf();
               const subject = mapiEvent.subject;
               const organizer = this._chewCalIdentity(mapiEvent.organizer);
               const creator = organizer;
@@ -13731,6 +13799,7 @@ var WorkshopBackend = (() => {
       init_cal_sync_conv2();
       init_cal_sync_refresh2();
       init_account_modify();
+      init_folder_modify();
       init_identity_modify();
       init_new_tracking();
       mapi_tasks_default = [
@@ -13738,6 +13807,7 @@ var WorkshopBackend = (() => {
         cal_sync_conv_default2,
         cal_sync_refresh_default2,
         account_modify_default,
+        CommonFolderModify,
         identity_modify_default,
         new_tracking_default
       ];
@@ -16605,6 +16675,15 @@ var WorkshopBackend = (() => {
     _cmd_syncFolderList(msg) {
       this.universe.syncFolderList(msg.accountId, "bridge");
     },
+    _cmd_modifyFolder(msg) {
+      this.universe.modifyFolder(msg.accountId, msg.mods, "bridge").then((result) => {
+        this.__sendMessage({
+          type: "promisedResult",
+          handle: msg.handle,
+          data: null
+        });
+      });
+    },
     async _cmd_clearAccountProblems(msg) {
       var account = this.universe.getAccountForAccountId(msg.accountId), self2 = this;
       let [incomingErr, outgoingErr] = await account.checkAccount();
@@ -16745,6 +16824,16 @@ var WorkshopBackend = (() => {
         folderId: msg.spec.folderId
       };
       const toc = await this.universe.acquireSearchMessagesTOC(ctx, msg.spec);
+      ctx.proxy = new WindowedListProxy(toc, ctx);
+      await ctx.acquire(ctx.proxy);
+    },
+    async _cmd_searchAccountMessages(msg) {
+      const ctx = this.bridgeContext.createNamedContext(msg.handle, "AccountMessagesSearchView");
+      ctx.viewing = {
+        type: "account",
+        accountId: msg.spec.accountId
+      };
+      const toc = await this.universe.acquireSearchAccountMessagesTOC(ctx, msg.spec);
       ctx.proxy = new WindowedListProxy(toc, ctx);
       await ctx.acquire(ctx.proxy);
     },
@@ -18421,6 +18510,7 @@ var WorkshopBackend = (() => {
       this._dataOverlayManager = dataOverlayManager;
       this.foldersById = this.itemsById = new Map();
       this.foldersByPath = new Map();
+      this.foldersByTag = new Map();
       this._pendingFoldersByPath = new Map();
       this._pendingTaskContextIdsToPendingPaths = new Map();
       this.items = this.folders = [];
@@ -18545,9 +18635,44 @@ var WorkshopBackend = (() => {
       if (isNew) {
         this._addFolder(folderInfo);
       } else if (folderInfo) {
-        this.emit("change", this.folderInfoToWireRep(folderInfo), this.items.indexOf(folderInfo));
+        this._handleFolderTagChange(folderInfo);
+        this.emit("change", this.folderInfoToWireRep(folderInfo), this.items.findIndex((info) => info.id === folderId));
       } else {
         this._removeFolderById(folderId);
+      }
+    }
+    _handleFolderTagChange(folderInfo) {
+      if (!folderInfo.tags) {
+        return;
+      }
+      const folderId = folderInfo.id;
+      const folderTags = new Set(folderInfo.tags);
+      for (const [tag, folders] of this.foldersByTag) {
+        const idx = folders.findIndex((info) => info.id === folderId);
+        if (folderTags.has(tag)) {
+          folderTags.delete(tag);
+          if (idx === -1) {
+            folders.push(folderInfo);
+          }
+        } else if (idx !== -1) {
+          folders.splice(idx, 1);
+        }
+      }
+      for (const tag of folderTags) {
+        const folders = [];
+        this.foldersByTag.set(tag, folders);
+        folders.push(folderInfo);
+      }
+    }
+    _addFolderTag(folderInfo) {
+      const tags = folderInfo.tags || [];
+      for (const tag of tags) {
+        let folders = this.foldersByTag.get(tag);
+        if (!folders) {
+          folders = [];
+          this.foldersByTag.set(tag, folders);
+        }
+        folders.push(folderInfo);
       }
     }
     _addFolder(folderInfo) {
@@ -18562,7 +18687,21 @@ var WorkshopBackend = (() => {
       this.folderSortStrings.splice(idx, 0, sortString);
       this.foldersById.set(folderInfo.id, folderInfo);
       this.foldersByPath.set(folderInfo.path, folderInfo);
+      this._addFolderTag(folderInfo);
       this.emit("add", this.folderInfoToWireRep(folderInfo), idx);
+    }
+    _removeFolderTag(folderInfo) {
+      const tags = folderInfo.tags || [];
+      const folderId = folderInfo.id;
+      for (const tag of tags) {
+        const folders = this.foldersByTag.get(tag);
+        if (folders) {
+          const idx = folders.findIndex((info) => info.id === folderId);
+          if (idx !== -1) {
+            folders.splice(idx, 1);
+          }
+        }
+      }
     }
     _removeFolderById(id) {
       const folderInfo = this.foldersById.get(id);
@@ -18575,6 +18714,7 @@ var WorkshopBackend = (() => {
       this.foldersByPath.delete(folderInfo.path);
       this.items.splice(idx, 1);
       this.folderSortStrings.splice(idx, 1);
+      this._removeFolderTag(folderInfo);
       this.emit("remove", id, idx);
     }
     getCanonicalFolderByType(type) {
@@ -18717,6 +18857,11 @@ var WorkshopBackend = (() => {
       const accountId = accountIdFromFolderId(folderId);
       const foldersTOC = this.accountFoldersTOCs.get(accountId);
       return foldersTOC.foldersById.get(folderId);
+    }
+    getFolderIdsByTag(accountId, tag) {
+      const foldersTOC = this.accountFoldersTOCs.get(accountId);
+      const foldersInfo = tag && foldersTOC.foldersByTag.get(tag) || foldersTOC.getAllItems();
+      return foldersInfo.map((info) => info.id);
     }
     _onTOCChange(accountId, accountDef, isNew) {
       if (isNew) {
@@ -19110,7 +19255,7 @@ var WorkshopBackend = (() => {
   init_logic();
 
   // src/backend/refed_resource.js
-  function RefedResource({ onForgotten }) {
+  function RefedResource(onForgotten) {
     this._activatePromise = null;
     this._valid = false;
     this._activeConsumers = [];
@@ -19159,9 +19304,9 @@ var WorkshopBackend = (() => {
 
   // src/backend/db/base_toc.js
   var BaseTOC = class extends import_evt7.Emitter {
-    constructor({ metaHelpers }) {
+    constructor({ metaHelpers, onForgotten }) {
       super();
-      RefedResource.apply(this, arguments);
+      RefedResource.call(this, onForgotten);
       this._metaHelpers = metaHelpers || [];
       this.tocMeta = {};
       this._everActivated = false;
@@ -19217,8 +19362,8 @@ var WorkshopBackend = (() => {
 
   // src/backend/db/static_toc.js
   var StaticTOC = class extends BaseTOC {
-    constructor({ items }) {
-      super(arguments);
+    constructor({ items, metaHelpers, onForgotten }) {
+      super({ metaHelpers, onForgotten });
       logic.defineScope(this, "StaticTOC");
       this.type = "StaticTOC";
       this.overlayNamespace = null;
@@ -19408,8 +19553,8 @@ var WorkshopBackend = (() => {
   init_util();
   init_comparators();
   var FolderConversationsTOC = class extends BaseTOC {
-    constructor({ db, query, dataOverlayManager }) {
-      super(arguments);
+    constructor({ db, query, dataOverlayManager, metaHelpers, onForgotten }) {
+      super({ metaHelpers, onForgotten });
       logic.defineScope(this, "FolderConversationsTOC");
       this.type = "FolderConversationsTOC";
       this.overlayNamespace = "conversations";
@@ -19627,8 +19772,8 @@ var WorkshopBackend = (() => {
   init_util();
   init_comparators();
   var ConversationTOC = class extends BaseTOC {
-    constructor({ db, query, dataOverlayManager }) {
-      super(arguments);
+    constructor({ db, query, dataOverlayManager, metaHelpers, onForgotten }) {
+      super({ metaHelpers, onForgotten });
       logic.defineScope(this, "ConversationTOC");
       this.type = "ConversationTOC";
       this.overlayNamespace = "messages";
@@ -21255,6 +21400,94 @@ var WorkshopBackend = (() => {
     };
   }
 
+  // src/backend/search/query/filtering_account_messages_query.js
+  function FilteringAccountMessagesQuery({
+    ctx,
+    db,
+    folderIds,
+    filterRunner,
+    rootGatherer,
+    preDerivers,
+    postDerivers
+  }) {
+    this._db = db;
+    this.folderIds = folderIds;
+    this._eventId = null;
+    this._drainEvents = null;
+    this._boundListener = null;
+    this._filteringStream = new FilteringStream({
+      ctx,
+      filterRunner,
+      rootGatherer,
+      preDerivers,
+      postDerivers,
+      isDeletion: (change) => {
+        return !change.postDate;
+      },
+      inputToGatherInto: (change) => {
+        return {
+          messageId: change.id,
+          date: change.postDate
+        };
+      },
+      mutateChangeToResembleAdd: (change) => {
+        change.preDate = null;
+        change.freshlyAdded = true;
+      },
+      mutateChangeToResembleDeletion: (change) => {
+        change.preDate = change.postDate;
+        change.postDate = 0;
+        change.item = null;
+        change.freshlyAdded = false;
+      },
+      onFilteredUpdate: (change) => {
+        this._boundListener(change);
+      }
+    });
+    this._bound_filteringTOCChange = this._filteringTOCChange.bind(this);
+  }
+  FilteringAccountMessagesQuery.prototype = {
+    async execute() {
+      this._drainEvents = [];
+      this._eventId = [];
+      const data = await Promise.all(this.folderIds.map((folderId) => this._db.loadFolderMessageIdsAndListen(folderId)));
+      for (const { idsWithDates, drainEvents, eventId } of data) {
+        this._drainEvents.push(drainEvents);
+        this._eventId.push(eventId);
+        for (const { id, date } of idsWithDates) {
+          this._filteringStream.consider({
+            id,
+            preDate: null,
+            postDate: date,
+            item: null,
+            freshlyAdded: true,
+            matchInfo: null
+          });
+        }
+      }
+      return [];
+    },
+    bind(listenerObj, listenerMethod) {
+      this._boundListener = listenerMethod.bind(listenerObj);
+      for (const eventId of this._eventId) {
+        this._db.on(eventId, this._bound_filteringTOCChange);
+      }
+      for (const drainEvents of this._drainEvents) {
+        drainEvents(this._bound_filteringTOCChange);
+      }
+      this._drainEvents = null;
+    },
+    _filteringTOCChange(change) {
+      this._filteringStream.consider(change);
+    },
+    destroy() {
+      for (const eventId of this._eventId) {
+        this._db.removeListener(eventId, this._bound_filteringTOCChange);
+      }
+      this._filteringStream.destroy();
+    }
+  };
+
   // src/backend/search/query/filtering_folder_query.js
   function FilteringFolderQuery({
     ctx,
@@ -21803,6 +22036,10 @@ var WorkshopBackend = (() => {
       }
       const { startDate, endDate } = message;
       const now = new Date().valueOf();
+      const dayInMillis = 24 * 60 * 60 * 1e3;
+      if (startDate > now + dayInMillis) {
+        return false;
+      }
       if (endDate <= now) {
         return false;
       }
@@ -21817,7 +22054,6 @@ var WorkshopBackend = (() => {
           durationBeforeToBeInvalid: endDate - now
         };
       }
-      const dayInMillis = 24 * 60 * 60 * 1e3;
       const tomorrow = dayInMillis * Math.floor(1 + now / dayInMillis);
       if (startDate >= tomorrow) {
         return false;
@@ -22362,6 +22598,36 @@ var WorkshopBackend = (() => {
         filterRunner: new FilterRunner({ filters }),
         rootGatherer
       });
+    },
+    queryAccountMessages(ctx, spec) {
+      try {
+        const { filter, folderIds } = spec;
+        let filters = this._buildFilters(filter, msg_filters_default);
+        const preDerivers = this._buildDerivedViews(spec.viewDefsWithContexts);
+        const postDerivers = [];
+        const dbCtx = {
+          db: this._db,
+          ctx
+        };
+        const rootGatherer = this._buildGatherHierarchy({
+          consumers: filters,
+          rootGatherDefs: msg_gatherers_default,
+          bootstrapKey: "message",
+          dbCtx
+        });
+        return new FilteringAccountMessagesQuery({
+          ctx,
+          db: this._db,
+          folderIds,
+          filterRunner: new FilterRunner({ filters }),
+          rootGatherer,
+          preDerivers,
+          postDerivers
+        });
+      } catch (e) {
+        console.error(e);
+        throw e;
+      }
     }
   };
 
@@ -23833,6 +24099,33 @@ var WorkshopBackend = (() => {
       });
       return ctx.acquire(toc);
     },
+    acquireSearchAccountMessagesTOC(ctx, spec) {
+      const { accountId } = spec;
+      const engineFacts = this.accountManager.getAccountEngineBackEndFacts(accountId);
+      let syncStampSource = null;
+      if (engineFacts.syncGranularity === "account") {
+        syncStampSource = this.accountManager.getAccountDefById(accountId);
+      }
+      const folderIds = spec.folderIds = this.accountManager.getFolderIdsByTag(accountId, spec?.filter.tag || null);
+      const metaHelpers = [];
+      for (const folderId of folderIds) {
+        metaHelpers.push(new SyncLifecycle({
+          folderId,
+          syncStampSource: syncStampSource || this.accountManager.getFolderById(folderId),
+          dataOverlayManager: this.dataOverlayManager
+        }));
+        this.syncRefreshFolder(folderId, "searchAccountMessages");
+      }
+      const toc = new ConversationTOC({
+        db: this.db,
+        query: this.queryManager.queryAccountMessages(ctx, spec),
+        dataOverlayManager: this.dataOverlayManager,
+        metaHelpers,
+        onForgotten: () => {
+        }
+      });
+      return ctx.acquire(toc);
+    },
     acquireConversationTOC(ctx, conversationId) {
       let toc;
       if (this._conversationTOCs.has(conversationId)) {
@@ -23954,6 +24247,13 @@ var WorkshopBackend = (() => {
       const accountId = accountIdFromIdentityId(identityId);
       return this.taskManager.scheduleTaskAndWaitForPlannedResult({
         type: "identity_modify",
+        accountId,
+        mods
+      }, why);
+    },
+    modifyFolder(accountId, mods, why) {
+      return this.taskManager.scheduleTaskAndWaitForPlannedResult({
+        type: "folder_modify",
         accountId,
         mods
       }, why);

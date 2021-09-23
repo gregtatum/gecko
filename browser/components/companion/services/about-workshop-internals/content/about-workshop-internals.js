@@ -11,6 +11,7 @@ window.WORKSHOP_API = workshopAPI;
 
 import AccountFolderListPage from "./pages/account_folder_list.js";
 import AccountFolderMessageContentsPage from "./pages/account_folder_message_contents.js";
+import AccountMessageContentsByTagPage from "./pages/account_message_contents_by_tag.js";
 import AddAccountPage from "./pages/add_account.js";
 import HomePage from "./pages/home.js";
 import LogsPage from "./pages/logs.js";
@@ -53,6 +54,17 @@ window.ROUTER = new HackyHashRouter({
                 folderId
               );
               return `Folder: ${folder.name}`;
+            },
+          },
+          tag: {
+            pageConstructor: AccountMessageContentsByTagPage,
+            valueName: "accountId",
+            valueParser: parseId,
+            makeLabel: async accountId => {
+              const account = await workshopAPI.eventuallyGetAccountById(
+                accountId
+              );
+              return `Account: ${account.name}`;
             },
           },
         },

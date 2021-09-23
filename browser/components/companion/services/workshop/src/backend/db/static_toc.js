@@ -24,8 +24,8 @@ import { BaseTOC } from "./base_toc";
  * reusable TOC is probably in the cards for fancier needs in the future.
  */
 export class StaticTOC extends BaseTOC {
-  constructor({ items }) {
-    super(arguments);
+  constructor({ items, metaHelpers, onForgotten }) {
+    super({ metaHelpers, onForgotten });
 
     logic.defineScope(this, "StaticTOC");
 

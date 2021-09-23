@@ -103,6 +103,15 @@ export class FoldersTOC extends Emitter {
     this.foldersByPath = new Map();
 
     /**
+     * Folder information keyed by tag.
+     *
+     * Managed by `_addFolder` and `_removeFolderById`.
+     *
+     * @type {Map<String, FolderInfo>}
+     */
+    this.foldersByTag = new Map();
+
+    /**
      * Like `foldersByPath` but for folders whose creation has been requested by
      * `ensureLocalVirtualFolder` but the folder hasn't yet been flushed by a
      * completing task.
@@ -467,15 +476,56 @@ export class FoldersTOC extends Emitter {
       this._addFolder(folderInfo);
     } else if (folderInfo) {
       // - change
-      // object identity ensures folderInfo is already present.
+      this._handleFolderTagChange(folderInfo);
       this.emit(
         "change",
         this.folderInfoToWireRep(folderInfo),
-        this.items.indexOf(folderInfo)
+        this.items.findIndex(info => info.id === folderId)
       );
     } else {
       // - remove
       this._removeFolderById(folderId);
+    }
+  }
+
+  _handleFolderTagChange(folderInfo) {
+    if (!folderInfo.tags) {
+      return;
+    }
+
+    const folderId = folderInfo.id;
+    const folderTags = new Set(folderInfo.tags);
+    for (const [tag, folders] of this.foldersByTag) {
+      const idx = folders.findIndex(info => info.id === folderId);
+      if (folderTags.has(tag)) {
+        folderTags.delete(tag);
+        if (idx === -1) {
+          // The tag has been added.
+          folders.push(folderInfo);
+        }
+      } else if (idx !== -1) {
+        // The tag has been removed.
+        folders.splice(idx, 1);
+      }
+    }
+
+    // Remaining tags are not in this.foldersByTag.
+    for (const tag of folderTags) {
+      const folders = [];
+      this.foldersByTag.set(tag, folders);
+      folders.push(folderInfo);
+    }
+  }
+
+  _addFolderTag(folderInfo) {
+    const tags = folderInfo.tags || [];
+    for (const tag of tags) {
+      let folders = this.foldersByTag.get(tag);
+      if (!folders) {
+        folders = [];
+        this.foldersByTag.set(tag, folders);
+      }
+      folders.push(folderInfo);
     }
   }
 
@@ -491,8 +541,23 @@ export class FoldersTOC extends Emitter {
     this.folderSortStrings.splice(idx, 0, sortString);
     this.foldersById.set(folderInfo.id, folderInfo);
     this.foldersByPath.set(folderInfo.path, folderInfo);
+    this._addFolderTag(folderInfo);
 
     this.emit("add", this.folderInfoToWireRep(folderInfo), idx);
+  }
+
+  _removeFolderTag(folderInfo) {
+    const tags = folderInfo.tags || [];
+    const folderId = folderInfo.id;
+    for (const tag of tags) {
+      const folders = this.foldersByTag.get(tag);
+      if (folders) {
+        const idx = folders.findIndex(info => info.id === folderId);
+        if (idx !== -1) {
+          folders.splice(idx, 1);
+        }
+      }
+    }
   }
 
   _removeFolderById(id) {
@@ -506,6 +571,8 @@ export class FoldersTOC extends Emitter {
     this.foldersByPath.delete(folderInfo.path);
     this.items.splice(idx, 1);
     this.folderSortStrings.splice(idx, 1);
+    this._removeFolderTag(folderInfo);
+
     this.emit("remove", id, idx);
   }
 

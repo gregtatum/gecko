@@ -20,6 +20,7 @@ import gapi_syncConv from "./tasks/cal_sync_conv";
 import gapi_cal_syncRefresh from "./tasks/cal_sync_refresh";
 
 import CommonAccountModify from "../../tasks/account_modify";
+import { CommonFolderModify } from "../../tasks/folder_modify";
 import CommonIdentityModify from "../../tasks/identity_modify";
 
 import CommonNewTracking from "../../tasks/new_tracking";
@@ -31,6 +32,7 @@ export default [
   gapi_cal_syncRefresh,
 
   CommonAccountModify,
+  CommonFolderModify,
   CommonIdentityModify,
 
   CommonNewTracking,
