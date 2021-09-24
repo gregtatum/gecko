@@ -2804,13 +2804,10 @@ FrameMetrics nsLayoutUtils::CalculateBasicFrameMetrics(
   LayerToParentLayerScale layerToParentLayerScale(1.0f);
   metrics.SetDevPixelsPerCSSPixel(deviceScale);
   metrics.SetPresShellResolution(resolution);
+  metrics.SetTransformToAncestorScale(
+      Scale2D(nsLayoutUtils::GetTransformToAncestorScale(frame)));
   metrics.SetCumulativeResolution(cumulativeResolution);
   metrics.SetZoom(deviceScale * cumulativeResolution * layerToParentLayerScale);
-  LayoutDeviceToScreenScale2D resolutionToScreen(
-      presShell->GetCumulativeResolution() *
-      nsLayoutUtils::GetTransformToAncestorScale(frame));
-  metrics.SetExtraResolution(metrics.GetCumulativeResolution() /
-                             resolutionToScreen);
 
   // Only the size of the composition bounds is relevant to the
   // displayport calculation, not its origin.
@@ -8766,12 +8763,10 @@ ScrollMetadata nsLayoutUtils::ComputeScrollMetadata(
   metrics.SetCumulativeResolution(LayoutDeviceToLayerScale2D(
       LayoutDeviceToLayerScale(presShell->GetCumulativeResolution())));
 
-  LayoutDeviceToScreenScale2D resolutionToScreen(
-      presShell->GetCumulativeResolution() *
-      nsLayoutUtils::GetTransformToAncestorScale(aScrollFrame ? aScrollFrame
-                                                              : aForFrame));
-  metrics.SetExtraResolution(metrics.GetCumulativeResolution() /
-                             resolutionToScreen);
+  gfxSize transformToAncestorScale = nsLayoutUtils::GetTransformToAncestorScale(
+      aScrollFrame ? aScrollFrame : aForFrame);
+
+  metrics.SetTransformToAncestorScale(Scale2D(transformToAncestorScale));
 
   metrics.SetDevPixelsPerCSSPixel(presContext->CSSToDevPixelScale());
 

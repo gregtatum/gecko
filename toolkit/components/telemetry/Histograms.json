@@ -713,6 +713,26 @@
     "description": "Requested GC slice budget (ms)",
     "bug_numbers": [1637318]
   },
+  "GC_BUDGET_WAS_INCREASED": {
+    "record_in_processes": ["main", "content"],
+    "products": ["firefox"],
+    "alert_emails": ["dev-telemetry-gc-alerts@mozilla.org", "jcoppeard@mozilla.com"],
+    "expires_in_version": "never",
+    "releaseChannelCollection": "opt-out",
+    "kind": "boolean",
+    "description": "Whether the budget was increased due to taking too long or approaching the incremental limit",
+    "bug_numbers": [1697526]
+  },
+  "GC_SLICE_WAS_LONG": {
+    "record_in_processes": ["main", "content"],
+    "products": ["firefox"],
+    "alert_emails": ["dev-telemetry-gc-alerts@mozilla.org", "jcoppeard@mozilla.com"],
+    "expires_in_version": "never",
+    "releaseChannelCollection": "opt-out",
+    "kind": "boolean",
+    "description": "Whether a GC slice took 1.5 times or 5ms more than its budget",
+    "bug_numbers": [1697526]
+  },
   "GC_ANIMATION_MS": {
     "record_in_processes": ["main", "content"],
     "products": ["firefox", "fennec"],
@@ -3107,6 +3127,17 @@
     "n_buckets": 100,
     "description": "ms elapsed time scanning for client certificates",
     "bug_numbers": [1711154]
+  },
+  "CRLITE_VS_OCSP_RESULT": {
+    "record_in_processes": ["main", "socket"],
+    "products": ["firefox", "fennec"],
+    "alert_emails": ["seceng-telemetry@mozilla.com", "dkeeler@mozilla.com"],
+    "bug_numbers": [1675655],
+    "expires_in_version": "101",
+    "kind": "categorical",
+    "releaseChannelCollection": "opt-out",
+    "description": "Does CRLite and OCSP fetching agree when a certificate is revoked?",
+    "labels": ["CRLiteOkOCSPFail", "CRLiteRevOCSPFail", "CRLiteOkOCSPOk", "CRLiteOkOCSPRev", "CRLiteRevOCSPOk", "CRLiteRevOCSPRev", "CRLiteOkOCSPUnk", "CRLiteRevOCSPUnk", "CRLiteOkOCSPSoft", "CRLiteRevOCSPSoft" ]
   },
   "WEBSOCKETS_HANDSHAKE_TYPE": {
     "record_in_processes": ["main", "content"],
