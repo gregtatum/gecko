@@ -1227,6 +1227,20 @@ BrowserGlue.prototype = {
 
   // initialization (called on application startup)
   _init: function BG__init() {
+    if (AppConstants.PINEBUILD) {
+      JSWINDOWACTORS.ContentfulPaintTracker = {
+        parent: {
+          moduleURI: "resource:///actors/ContentfulPaintTrackerParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/ContentfulPaintTrackerChild.jsm",
+          events: {
+            MozFirstContentfulPaint: { capture: true },
+          },
+        },
+      };
+    }
+
     let os = Services.obs;
     os.addObserver(this, "notifications-open-settings");
     os.addObserver(this, "final-ui-startup");

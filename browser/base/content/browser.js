@@ -8624,6 +8624,45 @@ var gPrivateBrowsingUI = {
   },
 };
 
+async function openPinebuildCompanionLink(aURI) {
+  let tabbox = gBrowser.tabbox;
+  tabbox.setAttribute("companion-link-open", "1");
+  let switched = false;
+  try {
+    switched = switchToTabHavingURI(aURI.spec, true, {
+      ignoreFragment: true,
+      excludeOtherWindows: true,
+    });
+  } finally {
+    async function animateContentIn() {
+      await window.promiseDocumentFlushed(() => {});
+      tabbox.setAttribute("companion-link-open", "2");
+      function transitionEnd() {
+        tabbox.removeAttribute("companion-link-open");
+        tabbox.removeEventListener("transitionend", transitionEnd);
+        tabbox.removeEventListener("transitioncancel", transitionEnd);
+      }
+      tabbox.addEventListener("transitionend", transitionEnd);
+      tabbox.addEventListener("transitioncancel", transitionEnd);
+    }
+    let viewSwitchEvent = switched
+      ? "TabSwitchDone"
+      : "TabFirstContentfulPaint";
+    // Just in case we never get a contentful paint, add a backup. How long
+    // should this be? *shrug*
+    const contentfulPaintWaitTimeout = 8000;
+    await Promise.race([
+      new Promise(resolve => {
+        gBrowser.addEventListener(viewSwitchEvent, resolve, {
+          once: true,
+        });
+      }),
+      new Promise(resolve => setTimeout(resolve, contentfulPaintWaitTimeout)),
+    ]);
+    animateContentIn();
+  }
+}
+
 /**
  * Switch to a tab that has a given URI, and focuses its browser window.
  * If a matching tab is in this window, it will be switched to. Otherwise, other

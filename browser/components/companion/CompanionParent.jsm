@@ -728,13 +728,7 @@ class CompanionParent extends JSWindowActorParent {
             return null;
           }
         }
-        this.browsingContext.topChromeWindow.switchToTabHavingURI(
-          uri.spec,
-          true,
-          {
-            ignoreFragment: true,
-          }
-        );
+        this.browsingContext.topChromeWindow.openPinebuildCompanionLink(uri);
         break;
       }
       case "Companion:DeleteSnapshot": {
