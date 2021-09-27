@@ -120,10 +120,10 @@ add_task(async function test_restore_first_session() {
     previousSessionGuid,
     "Should have the expected guid"
   );
-  // We should have loaded the previous URL into the window.
-  await BrowserTestUtils.browserLoaded(
-    win.gBrowser.selectedBrowser,
-    false,
-    TEST_URL
+
+  Assert.equal(
+    win.gBrowser.selectedTab.linkedBrowser.currentURI.spec,
+    TEST_URL,
+    "Should have loaded the expected URL"
   );
 });

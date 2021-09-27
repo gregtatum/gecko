@@ -14,6 +14,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   Services: "resource://gre/modules/Services.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
+  setTimeout: "resource://gre/modules/Timer.jsm",
   TabStateFlusher: "resource:///modules/sessionstore/TabStateFlusher.jsm",
 });
 
@@ -123,15 +124,19 @@ const SessionManager = new (class SessionManager {
       loadDataPromise = this.#loadSessionData(restoreSessionGuid);
     }
 
-    // Start these at the same time, hopefully the save will be completed
-    // before the data is written, if it is not, then we'll pause slightly
-    // longer.
+    // Start the animation and whilst that's running, start saving data.
+    let {
+      animationCompletePromise,
+      timerCompletePromise,
+    } = window.gBrowser.doPinebuildSessionHideAnimation();
 
     // If this fails, the function will not complete and the existing session
     // will remain. This allows the user to take appropriate action.
     // TODO: MR2-867 - find a way of surfacing the failure to the user.
     await Promise.all([
-      window.gBrowser.doPinebuildSessionHideAnimation(),
+      // Wait for the animation to complete only, then we can start loading into
+      // windows before the timer is complete.
+      animationCompletePromise,
       (async () => {
         await TabStateFlusher.flushWindow(window);
         let windowData = SessionStore.getWindowState(window);
@@ -141,12 +146,20 @@ const SessionManager = new (class SessionManager {
 
     if (restoreSessionGuid) {
       let data = await loadDataPromise;
-      await this.#restoreInto(window, restoreSessionGuid, data);
+      await this.#restoreInto(
+        window,
+        restoreSessionGuid,
+        data,
+        timerCompletePromise
+      );
       return;
     }
 
     SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
     window.gGlobalHistory.reset();
+    // Let the time for the previous animation completely elapse before
+    // we start the new one.
+    await timerCompletePromise;
     await window.gBrowser.doPinebuildSessionShowAnimation();
     window.dispatchEvent(new CustomEvent("session-replace-complete"));
   }
@@ -160,16 +173,41 @@ const SessionManager = new (class SessionManager {
    *   The GUID of the session to restore.
    * @param {object} data
    *   The data to load for the session, recovered from disk.
+   * @param {Promise} timerCompletePromise
+   *   A promise that is resolved when the hide animation timer is complete.
    */
-  async #restoreInto(window, guid, data) {
-    if (data) {
-      logConsole.debug("Loading session", guid, "from session store data");
-      // Restoring the session also restores the SessionManagerGuid on the window.
-      SessionStore.setWindowState(window, { windows: [data] }, true);
+  async #restoreInto(window, guid, data, timerCompletePromise) {
+    if (!data) {
+      // TODO: MR2-867 - if we are unable to load the data, we should find a way
+      // of surfacing the failure to the user.
+      await timerCompletePromise;
+      await window.gBrowser.doPinebuildSessionShowAnimation();
+      window.dispatchEvent(new CustomEvent("session-replace-complete"));
+      return;
     }
-    // TODO: MR2-867 - if we are unable to load the data, we should find a way
-    // of surfacing the failure to the user.
 
+    logConsole.debug("Loading session", guid, "from session store data");
+    // Restoring the session also restores the SessionManagerGuid on the window.
+    SessionStore.setWindowState(window, { windows: [data] }, true);
+
+    // We really want to make sure that we've changed the session before showing
+    // the animation. TabFirstContentfulPaint is a useful proxy, though we
+    // won't wait a long time for it - if the network is slow to load, that
+    // won't matter too much, we'll just have a blank tab displayed as the
+    // animation starts.
+    let contentfulPaintWaitTimeout = 1000;
+    let promiseFirstPaint = Promise.race([
+      new Promise(resolve => {
+        window.gBrowser.addEventListener("TabFirstContentfulPaint", resolve, {
+          once: true,
+        });
+      }),
+      new Promise(resolve => setTimeout(resolve, contentfulPaintWaitTimeout)),
+    ]);
+
+    // Ensure we've fully completed the time for the previous animation,
+    // and we've hit first paint for the session being loaded.
+    await Promise.all([timerCompletePromise, promiseFirstPaint]);
     await window.gBrowser.doPinebuildSessionShowAnimation();
     window.dispatchEvent(new CustomEvent("session-replace-complete"));
   }

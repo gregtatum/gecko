@@ -199,15 +199,6 @@ async function testReplaceSession(win, guid, expected) {
     "Should have the correct amount of tabs"
   );
 
-  let expectedSelTab = expected.tabs[expectedIndex];
-
-  // Wait for the selected tab to load.
-  await BrowserTestUtils.browserLoaded(
-    win.gBrowser.selectedTab.linkedBrowser,
-    false,
-    expectedSelTab[expectedSelTab.length - 1]
-  );
-
   Assert.equal(
     win.gBrowser.tabs[expectedIndex],
     win.gBrowser.selectedTab,

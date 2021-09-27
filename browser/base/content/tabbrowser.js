@@ -6139,23 +6139,70 @@
     },
 
     /**
+     * @typedef {object} HideAnimationReturnType
+     * @property {Promise} animationCompletePromise
+     *   A promise that is resolved when the animation part has completed. When
+     *   this is resolved, the session has been hidden from the main view and
+     *   work to load a new session into the UI can start.
+     * @property {Promise} timerCompletePromise
+     *   A promise this is resolved when the timer has completed. The show
+     *   animation should only be started once this promise has been resolved.
+     */
+
+    /**
      * Runs the first part of an animation which shrinks the current view and
      * slide it to the left. doPinebuildSessionShowAnimation must be called
-     * after this to clear the "session-change" attribute.
+     * after this to clear the "session-change" attribute. See also the notes
+     * on `HideAnimationReturnType`.
+     *
+     * @returns {HideAnimationReturnType}
      */
-    async doPinebuildSessionHideAnimation() {
+    doPinebuildSessionHideAnimation() {
       if (window.matchMedia("(prefers-reduced-motion)").matches) {
-        return;
+        return {
+          animationCompletePromise: Promise.resolve(),
+          timerCompletePromise: Promise.resolve(),
+        };
       }
+      // These times reflect the animation time plus a little longer per UX
+      // requirements.
       const sessionChangePreSwipeTime = 750;
       const sessionChangeSwipeAnimationTime = 400;
+
       let tabpanels = this.tabpanels;
-
       tabpanels.setAttribute("session-change", "1");
-      await this._delayDOMChange(sessionChangePreSwipeTime);
 
-      tabpanels.setAttribute("session-change", "2");
-      await this._delayDOMChange(sessionChangeSwipeAnimationTime);
+      let resolveAnimation = PromiseUtils.defer();
+      let resolveTimer = PromiseUtils.defer();
+
+      this._delayDOMChange(() => {
+        // This tracks when the animation is complete, and allows the caller
+        // to start work before the full required animation time is up.
+        function transitionEnd() {
+          tabpanels.removeEventListener("transitionend", transitionEnd);
+          tabpanels.removeEventListener("transitioncancel", transitionEnd);
+
+          resolveAnimation.resolve();
+        }
+        // As soon as the animation is complete, allow this function to return
+        // and the caller to continue. However, we still want to ensure the
+        // show animation does not happen until after `sessionChangeSwipeAnimationTime`,
+        // so save that in a promise for the show animation function to await
+        // upon.
+        tabpanels.addEventListener("transitionend", transitionEnd);
+        tabpanels.addEventListener("transitioncancel", transitionEnd);
+
+        tabpanels.setAttribute("session-change", "2");
+        this._slideOutWaitPromise = this._delayDOMChange(
+          resolveTimer.resolve,
+          sessionChangeSwipeAnimationTime
+        );
+      }, sessionChangePreSwipeTime);
+
+      return {
+        animationCompletePromise: resolveAnimation.promise,
+        timerCompletePromise: resolveTimer.promise,
+      };
     },
 
     /**
@@ -6168,13 +6215,17 @@
       if (window.matchMedia("(prefers-reduced-motion)").matches) {
         return;
       }
+
       const sessionChangePostSwipeTime = 750;
       let tabpanels = this.tabpanels;
 
-      tabpanels.setAttribute("session-change", "3");
-      await this._delayDOMChange(sessionChangePostSwipeTime);
-
-      tabpanels.removeAttribute("session-change");
+      await new Promise(resolve => {
+        tabpanels.setAttribute("session-change", "3");
+        this._delayDOMChange(() => {
+          tabpanels.removeAttribute("session-change");
+          resolve();
+        }, sessionChangePostSwipeTime);
+      });
     },
 
     /**
@@ -6186,10 +6237,8 @@
      * @param {number} timeout
      *   The number of milliseconds to delay the change for.
      */
-    _delayDOMChange(timeout) {
-      return new Promise(resolve =>
-        setTimeout(() => requestAnimationFrame(resolve), timeout)
-      );
+    _delayDOMChange(cb, timeout) {
+      setTimeout(() => requestAnimationFrame(cb), timeout);
     },
   };
 

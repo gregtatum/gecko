@@ -48,10 +48,9 @@ add_task(async function test_replaceSession_set_aside_simple_session() {
 
   Assert.equal(win.gBrowser.tabs.length, 1, "Should only have one tab open");
 
-  // We should have loaded the URL into the tab.
-  await BrowserTestUtils.browserLoaded(
-    win.gBrowser.selectedBrowser,
-    false,
-    TEST_URL
+  Assert.equal(
+    win.gBrowser.selectedTab.linkedBrowser.currentURI.spec,
+    TEST_URL,
+    "Should have loaded the expected URL"
   );
 });
