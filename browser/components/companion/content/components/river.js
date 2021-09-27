@@ -81,6 +81,12 @@ export default class River extends MozLitElement {
     this.overflowedViews = [];
 
     if (!this.#views.length) {
+      let e = new CustomEvent("RiverRegrouped", {
+        bubbles: true,
+        composed: true,
+        detail: { overflowCount: 0 },
+      });
+      this.dispatchEvent(e);
       return;
     }
 
