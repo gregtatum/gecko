@@ -5,6 +5,7 @@ const EXPORTED_SYMBOLS = [
   "getLinkInfo",
   "getConferenceInfo",
   "parseGoogleCalendarResult",
+  "parseMicrosoftCalendarResult",
 ];
 
 const URL_REGEX = /(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])/gim;
@@ -244,5 +245,32 @@ function parseGoogleCalendarResult(result, primaryEmail) {
     event.creator.self = true;
   }
   event.url = result.htmlLink;
+  return event;
+}
+
+function parseMicrosoftCalendarResult(result) {
+  function _normalizeUser(user, { self } = {}) {
+    return {
+      email: user.emailAddress.address,
+      name: user.emailAddress.name,
+      self: !!self,
+    };
+  }
+
+  let event = {};
+  event.summary = result.subject;
+  event.start = new Date(result.start?.dateTime + "Z");
+  event.end = new Date(result.end?.dateTime + "Z");
+  let links = getLinkInfo(result);
+  event.conference = getConferenceInfo(result, links);
+  event.links = links.filter(link => link.type != "conferencing");
+  event.url = result.webLink;
+  event.creator = null; // No creator seems to be available.
+  event.organizer = _normalizeUser(result.organizer, {
+    self: result.isOrganizer,
+  });
+  event.attendees = result.attendees
+    .filter(a => a.status.response != "declined")
+    .map(a => _normalizeUser(a));
   return event;
 }

@@ -10,9 +10,8 @@ const { DeferredTask } = ChromeUtils.import(
   "resource://gre/modules/DeferredTask.jsm"
 );
 const {
-  getLinkInfo,
-  getConferenceInfo,
   parseGoogleCalendarResult,
+  parseMicrosoftCalendarResult,
 } = ChromeUtils.import("resource:///modules/OnlineServicesHelper.jsm");
 
 const PREF_STORE = "onlineservices.config";
@@ -547,23 +546,11 @@ class MicrosoftService {
             if (result.isAllDay) {
               continue;
             }
-            let event = {};
-            event.summary = result.subject;
-            event.start = new Date(result.start.dateTime + "Z");
-            event.end = new Date(result.end.dateTime + "Z");
-            let links = getLinkInfo(result);
-            event.conference = getConferenceInfo(result, links);
-            event.links = links.filter(link => link.type != "conferencing");
-            event.calendar = {};
-            event.calendar.id = calendar.id;
+            let event = parseMicrosoftCalendarResult(result);
+            event.calendar = {
+              id: calendar.id,
+            };
             event.serviceId = this.id;
-            event.url = result.webLink;
-
-            event.creator = null; // No creator seems to be available.
-            event.organizer = this._normalizeUser(result.organizer, {
-              self: result.isOrganizer,
-            });
-            event.attendees = result.attendees.map(a => this._normalizeUser(a));
             allEvents.set(result.id, event);
           } catch (e) {
             log.error(e);
@@ -631,14 +618,6 @@ class MicrosoftService {
       this.mailCount = 0;
     }
     this.mailCount = results["@odata.count"];
-  }
-
-  _normalizeUser(user, { self } = {}) {
-    return {
-      email: user.emailAddress.address,
-      name: user.emailAddress.name,
-      self: !!self,
-    };
   }
 
   toJSON() {
