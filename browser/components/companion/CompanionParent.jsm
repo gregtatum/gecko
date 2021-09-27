@@ -760,11 +760,6 @@ class CompanionParent extends JSWindowActorParent {
         Services.prefs.setIntPref(name, value);
         break;
       }
-      case "Companion:OpenCalendar": {
-        let { event } = message.data;
-        OnlineServices.findServiceById(event.serviceId).openCalendar(event);
-        break;
-      }
       case "Companion:SetGlobalHistoryViewIndex": {
         let { index } = message.data;
         let hist = this.browsingContext.topChromeWindow.gGlobalHistory;

@@ -406,9 +406,7 @@ class CalendarEvent extends MozLitElement {
 
   openCalendar(e) {
     e.preventDefault();
-    window.CompanionUtils.sendAsyncMessage("Companion:OpenCalendar", {
-      event: this.event,
-    });
+    window.openUrl(this.event.url);
   }
 
   openRunningLate(e) {

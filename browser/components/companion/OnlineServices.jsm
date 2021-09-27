@@ -17,7 +17,6 @@ const {
 const PREF_STORE = "onlineservices.config";
 
 XPCOMUtils.defineLazyModuleGetters(this, {
-  BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   OAuth2: "resource:///modules/OAuth2.jsm",
   Services: "resource://gre/modules/Services.jsm",
   setInterval: "resource://gre/modules/Timer.jsm",
@@ -37,37 +36,6 @@ XPCOMUtils.defineLazyGetter(this, "log", () => {
 Cu.importGlobalProperties(["fetch"]);
 
 const PREF_LOGLEVEL = "browser.companion.loglevel";
-
-async function openLink(url) {
-  for (let window of BrowserWindowTracker.orderedWindows) {
-    for (let browser of window.gBrowser.browsers) {
-      try {
-        if (browser.currentURI.hostPort == url.host) {
-          window.gBrowser.selectedTab = window.gBrowser.getTabForBrowser(
-            browser
-          );
-          browser.loadURI(url, {
-            triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
-          });
-          return;
-        }
-      } catch (e) {
-        // Bad hostPort.
-      }
-    }
-  }
-
-  let win = BrowserWindowTracker.getTopWindow({
-    allowPopups: false,
-  });
-
-  if (win) {
-    win.switchToTabHavingURI(url, true, {
-      ignoreFragment: true,
-    });
-    win.openTrustedLinkIn(url.href, "tab");
-  }
-}
 
 var nextServiceId = 0;
 
@@ -137,10 +105,6 @@ class GoogleService {
 
   async getAccountAddress() {
     return this.emailAddress;
-  }
-
-  openCalendar(event) {
-    openLink(new URL(event.url));
   }
 
   async getNextMeetings() {
@@ -265,88 +229,6 @@ class GoogleService {
       }
       return a.start - b.start;
     });
-  }
-
-  openEmail(messageData) {
-    if ("link" in messageData) {
-      openLink(new URL(messageData.link));
-    } else {
-      openLink(
-        new URL(`https://mail.google.com/mail/#inbox/${messageData.id}`)
-      );
-    }
-  }
-
-  async getEmailInfo(messageId) {
-    let token = await this.getToken();
-
-    let apiTarget = new URL(
-      `https://www.googleapis.com/gmail/v1/users/me/messages/${messageId}`
-    );
-
-    let headers = {
-      Authorization: `Bearer ${token}`,
-    };
-
-    let response = await fetch(apiTarget, {
-      headers,
-    });
-
-    if (!response.ok) {
-      throw new Error(response.statusText);
-    }
-
-    let results = await response.json();
-
-    log.debug(JSON.stringify(results));
-
-    return {
-      id: results.id,
-      subject: results.payload.headers.find(
-        header => header.name.toLowerCase() == "subject"
-      )?.value,
-      from: results.payload.headers.find(
-        header => header.name.toLowerCase() == "from"
-      )?.value,
-      date: new Date(parseInt(results.internalDate)),
-      snippet: results.snippet,
-    };
-  }
-
-  async getUnreadEmail() {
-    let token = await this.getToken();
-
-    let apiTarget = new URL(
-      "https://www.googleapis.com/gmail/v1/users/me/messages"
-    );
-
-    apiTarget.searchParams.set("q", "is:unread in:inbox");
-    apiTarget.searchParams.set("maxResults", 3);
-
-    let headers = {
-      Authorization: `Bearer ${token}`,
-    };
-
-    let response = await fetch(apiTarget, {
-      headers,
-    });
-
-    if (!response.ok) {
-      throw new Error(response.statusText);
-    }
-
-    let results = await response.json();
-    log.debug(JSON.stringify(results));
-
-    let messages = [];
-
-    if ("messages" in results) {
-      for (const message of results.messages) {
-        let result = await this.getEmailInfo(message.id);
-        messages.push(result);
-      }
-    }
-    return messages;
   }
 
   async getUnreadCountAtom() {
@@ -478,10 +360,6 @@ class MicrosoftService {
       OnlineServices.persist();
     }
     return token;
-  }
-
-  openCalendar(event) {
-    openLink(new URL(event.url));
   }
 
   async getNextMeetings() {
