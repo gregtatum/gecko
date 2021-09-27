@@ -569,6 +569,12 @@ export default class LoginItem extends HTMLElement {
         if (!this.hasPendingChanges()) {
           this._toggleEditing(false);
           this.render();
+          window.dispatchEvent(
+            new CustomEvent("AboutLoginsRemoveUpdateState", {
+              bubbles: true,
+              detail: { newHeaderL10nId: "about-logins-header-login-list" },
+            })
+          );
           return;
         }
         let loginUpdates = this._loginFromForm();
