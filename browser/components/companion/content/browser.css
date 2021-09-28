@@ -291,6 +291,15 @@
   border-bottom: 1px lightgray solid;
 }
 
+@supports not -moz-bool-pref("browser.river.pinning.enabled") {
+  #page-action-pin-view {
+    display: none;
+  }
+  #page-actions-section {
+    grid-template: 1fr / repeat(4, auto);
+  }
+}
+
 #page-actions-section > toolbarbutton {
   -moz-box-orient: vertical;
 }
