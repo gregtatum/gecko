@@ -91,8 +91,14 @@ function getCurrentEntry(browser) {
  */
 
 function getBrowserHistoryForView(window, view) {
-  let browser = BrowsingContext.get(view.browserId)?.embedderElement;
+  let currentBrowserBC = BrowsingContext.getCurrentTopByBrowserId(
+    view.browserId
+  );
+  let browser = currentBrowserBC?.embedderElement;
   if (!browser || !window.document.contains(browser)) {
+    logConsole.debug(
+      `Browser(${view.browserId}) does not exist in this window.`
+    );
     return {
       browser: null,
       historyIndex: null,
@@ -268,7 +274,7 @@ class InternalView {
   }
 
   update(browser, historyEntry) {
-    this.browserId = browser.browsingContext.id;
+    this.browserId = browser.browserId;
     this.historyId = historyEntry.ID;
     this.cachedEntry = null;
 
