@@ -285,7 +285,7 @@
 }
 
 #page-actions-section {
-  grid-template: 1fr / repeat(6, auto);
+  grid-template: 1fr / repeat(5, auto);
   display: grid;
   padding-block: 2px 10px;
   border-bottom: 1px lightgray solid;
