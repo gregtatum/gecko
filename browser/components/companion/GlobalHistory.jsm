@@ -194,6 +194,9 @@ class View {
 }
 
 class InternalView {
+  /** @type {Number} **/
+  #id;
+
   /** @type {View} */
   #view;
 
@@ -211,6 +214,7 @@ class InternalView {
    * @param {nsISHEntry} historyEntry
    */
   constructor(window, browser, historyEntry) {
+    this.#id = InternalView.nextInternalViewID++;
     this.#window = window;
     this.#view = new View(this);
     this.#pinned = false;
@@ -226,8 +230,15 @@ class InternalView {
     this.cachedEntry = null;
 
     if (browser) {
+      logConsole.debug(
+        `Created InternalView ${this.#id} with SHEntry ID: ${historyEntry.ID}`
+      );
       this.update(browser, historyEntry);
     } else {
+      logConsole.debug(
+        `Created InternalView ${this.#id} with cached SHEntry ID: ` +
+          historyEntry.ID
+      );
       this.cachedEntry = historyEntry;
       this.historyId = historyEntry.ID;
       this.url = Services.io.newURI(historyEntry.url);
@@ -272,6 +283,8 @@ class InternalView {
       this.errorPageType = this.#getErrorPageType(docURI);
     }
 
+    logConsole.debug(`Updated InternalView ${this.toString()}`);
+
     if (
       Services.prefs.getBoolPref(
         "browser.companion.globalhistorydebugging",
@@ -290,6 +303,11 @@ class InternalView {
         securityState: browser.securityUI.state,
       };
     }
+  }
+
+  /** @type {Number} */
+  get id() {
+    return this.#id;
   }
 
   /** @type {boolean} */
@@ -349,8 +367,17 @@ class InternalView {
     return this.#contentPrincipal;
   }
 
+  toString() {
+    return (
+      `{ (${this.#id}) bc: ${this.browserId}, SHEntry: ${this.historyId} ` +
+      `${this.title} - ${this.url.spec} }`
+    );
+  }
+
   /** @type {WeakMap<View, InternalView>} */
   static viewMap = new WeakMap();
+
+  static nextInternalViewID = 1;
 }
 
 /**
@@ -436,6 +463,10 @@ class BrowserListener {
    * See nsISHistoryListener
    */
   async OnHistoryNewEntry(newURI, oldIndex) {
+    logConsole.debug(
+      `Browser(${this.#browser.browsingContext.id}) - OnHistoryNewEntry: ` +
+        `${newURI.spec}`
+    );
     await Promise.resolve();
 
     this.#globalHistory._onBrowserNavigate(this.#browser);
@@ -445,6 +476,9 @@ class BrowserListener {
    * See nsISHistoryListener
    */
   async OnHistoryReload() {
+    logConsole.debug(
+      `Browser(${this.#browser.browsingContext.id}) - OnHistoryReload`
+    );
     await Promise.resolve();
   }
 
@@ -452,6 +486,9 @@ class BrowserListener {
    * See nsISHistoryListener
    */
   async OnHistoryGotoIndex() {
+    logConsole.debug(
+      `Browser(${this.#browser.browsingContext.id}) - OnHistoryGotoIndex`
+    );
     await Promise.resolve();
 
     this.#globalHistory._onBrowserNavigate(this.#browser);
@@ -461,6 +498,10 @@ class BrowserListener {
    * See nsISHistoryListener
    */
   OnHistoryPurge(numEntries) {
+    logConsole.debug(
+      `Browser(${this.#browser.browsingContext.id}) - OnHistoryPurge: ` +
+        numEntries
+    );
     // History entries are going to be purged, grab them and their tab state and stash them as
     // as closed tab.
     let { entries } = JSON.parse(
@@ -476,6 +517,10 @@ class BrowserListener {
    * See nsISHistoryListener
    */
   OnHistoryTruncate(numEntries) {
+    logConsole.debug(
+      `Browser(${this.#browser.browsingContext.id}) - OnHistoryTruncate: ` +
+        numEntries
+    );
     // History entries are going to be truncated, grab them and their tab state and stash them as
     // as closed tab.
     let { entries } = JSON.parse(
@@ -493,6 +538,9 @@ class BrowserListener {
    * See nsISHistoryListener
    */
   async OnHistoryReplaceEntry() {
+    logConsole.debug(
+      `Browser(${this.#browser.browsingContext.id}) - OnHistoryReplaceEntry`
+    );
     let { sessionHistory } = this.#browser.browsingContext;
     let previousEntry = sessionHistory.getEntryAtIndex(
       getCurrentIndex(sessionHistory)
@@ -693,6 +741,8 @@ class GlobalHistory extends EventTarget {
   }
 
   #sessionRestoreStarted() {
+    logConsole.debug("Session restore started.");
+
     // Window is starting restoration, stop listening to everything.
     this.#windowRestoring = true;
 
@@ -748,6 +798,7 @@ class GlobalHistory extends EventTarget {
   }
 
   #sessionRestoreEnded() {
+    logConsole.debug("Session restore ended.");
     // Session restore is done, rebuild everything from the new state.
     this.#windowRestoring = false;
 
@@ -863,6 +914,10 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
+    logConsole.debug(
+      `Browser(${newTab.linkedBrowser.browsingContext.id}) staged.`
+    );
+
     this._onBrowserNavigate(newTab.linkedBrowser);
   }
 
@@ -875,6 +930,9 @@ class GlobalHistory extends EventTarget {
     }
 
     let browser = newTab.linkedBrowser;
+
+    logConsole.debug(`Browser(${browser.browsingContext.id}) created.`);
+
     this.#watchBrowser(browser);
     this._onBrowserNavigate(browser);
   }
@@ -949,24 +1007,37 @@ class GlobalHistory extends EventTarget {
    * @param {nsISHEntry} newEntry
    */
   _onBrowserNavigate(browser, newEntry = getCurrentEntry(browser)) {
+    logConsole.group(
+      `_onBrowserNavigate for browser(${browser.browsingContext.id}), ` +
+        `SHEntry(${newEntry?.ID})`
+    );
     if (!newEntry) {
+      logConsole.debug("No newEntry");
+      logConsole.groupEnd();
       // Happens before anything has been loaded into the browser.
       return;
     }
 
     if (this.#window.gBrowser.selectedBrowser !== browser) {
       // Only care about the currently visible browser. We will re-visit if the tab is selected.
+      logConsole.debug("Browser is not selected.");
+      logConsole.groupEnd();
       return;
     }
 
     if (this.#window.isInitialPage(newEntry.URI)) {
       // Don't store initial pages in the river.
+      logConsole.debug("SHEntry is pointed at an initial page.");
+      logConsole.groupEnd();
       this.#currentIndex = null;
       return;
     }
 
     let internalView = this.#historyViews.get(newEntry.ID);
     if (!internalView) {
+      logConsole.debug(
+        `Did not initially find InternalView with ID: ${newEntry.ID}.`
+      );
       // It's possible that a session restoration has resulted in a new
       // nsISHEntry being created with a new ID that doesn't match the one
       // we're looking for. Thankfully, SessionHistory keeps track of this,
@@ -974,14 +1045,19 @@ class GlobalHistory extends EventTarget {
       // and then update our references to use the new ID.
       let previousID = SessionHistory.getPreviousID(newEntry);
       if (previousID) {
+        logConsole.debug(`Found previous SHEntry ID: ${previousID}`);
         internalView = this.#historyViews.get(previousID);
         if (internalView) {
+          logConsole.debug(`Found InternalView ${internalView.toString()}`);
           this.#historyViews.set(newEntry.ID, internalView);
         }
       }
     }
 
     if (!internalView && this.#pendingView?.url.spec == newEntry.URI.spec) {
+      logConsole.debug(
+        `Found pending InternalView ${this.#pendingView.toString()}.`
+      );
       internalView = this.#pendingView;
       this.#historyViews.delete(internalView.historyId);
       this.#historyViews.set(internalView.historyId, internalView);
@@ -989,6 +1065,7 @@ class GlobalHistory extends EventTarget {
     }
 
     if (!internalView) {
+      logConsole.debug(`Creating a new InternalView.`);
       SessionManager.register(this.#window).catch(logConsole.error);
 
       // This is a new view.
@@ -999,11 +1076,14 @@ class GlobalHistory extends EventTarget {
 
       this.#notifyEvent("ViewAdded", internalView);
     } else {
+      logConsole.debug(`Updating InternalView ${internalView.toString()}.`);
       // This is a navigation to an existing view.
       internalView.update(browser, newEntry);
 
       let pos = this.#viewStack.indexOf(internalView);
       if (pos == this.#currentIndex) {
+        logConsole.debug(`Updated InternalView is the current index.`);
+        logConsole.groupEnd();
         // Nothing to do.
         return;
       }
@@ -1016,13 +1096,15 @@ class GlobalHistory extends EventTarget {
         this.#notifyEvent("ViewAdded", internalView);
       } else {
         this.#currentIndex = pos;
+        logConsole.debug(`Setting currentIndex to ${this.#currentIndex}.`);
       }
     }
 
     this.#notifyEvent("ViewChanged", internalView);
-
     this.#startActivationTimer();
     this.#updateSessionStore();
+
+    logConsole.groupEnd();
   }
 
   #startActivationTimer() {
@@ -1035,21 +1117,25 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
+    logConsole.debug(`Starting activation timer.`);
     this.#activationTimer = this.#window.setTimeout(() => {
       this.#activateCurrentView();
     }, timeout);
   }
 
   #activateCurrentView() {
+    logConsole.debug(`Activating current InternalView.`);
     this.#activationTimer = null;
     if (
       this.#currentIndex === null ||
       this.#currentIndex == this.#viewStack.length - 1
     ) {
+      logConsole.debug(`Cannot activate index: ${this.#currentIndex}.`);
       return;
     }
 
     if (this.currentView.pinned) {
+      logConsole.debug(`Cannot activate a pinned InternalView.`);
       return;
     }
 
@@ -1058,6 +1144,7 @@ class GlobalHistory extends EventTarget {
     this.#currentIndex = this.#viewStack.length - 1;
     this.#notifyEvent("ViewMoved", internalView);
     this.#updateSessionStore();
+    logConsole.debug(`Activated InternalView ${internalView.toString()}`);
   }
 
   /**
@@ -1068,13 +1155,23 @@ class GlobalHistory extends EventTarget {
    * @param {nsISHEntry} newEntry
    */
   _onBrowserReplace(browser, previousEntry, newEntry) {
+    logConsole.debug(
+      `_onBrowserReplace for browser(${browser.browsingContext.id}), ` +
+        `previous SHEntry(${previousEntry.ID}), new SHEntry(${newEntry.ID})`
+    );
     let previousView = this.#historyViews.get(previousEntry.ID);
     if (previousView) {
+      logConsole.debug(
+        `Found previous InternalView: ${previousView.toString()}`
+      );
       this.#historyViews.delete(previousEntry.ID);
 
       let pos = this.#viewStack.indexOf(previousView);
       if (pos >= 0) {
         if (this.#window.isInitialPage(newEntry.URI)) {
+          logConsole.debug(
+            `Previous InternalView was at internal page - discarding.`
+          );
           // Don't store initial pages in the river.
           this.#viewStack.splice(pos, 1);
 
@@ -1100,9 +1197,14 @@ class GlobalHistory extends EventTarget {
         this.#updateSessionStore();
         return;
       }
+      logConsole.error(
+        `Could not find InternalView ${previousView.toString()} in ` +
+          `the #viewStack.`
+      );
     }
 
     // Fallback in the event that the previous entry is not present in the stack.
+    logConsole.debug("Falling back to _onBrowserNavigate.");
     this._onBrowserNavigate(browser, newEntry);
   }
 
@@ -1155,10 +1257,15 @@ class GlobalHistory extends EventTarget {
    *   The view to navigate to.
    */
   async setView(view) {
+    logConsole.debug("Setting a new View as current.");
     let internalView = InternalView.viewMap.get(view);
     if (!internalView) {
       throw new Error("Unknown view.");
     }
+
+    logConsole.debug(
+      `Setting current InternalView to ${internalView.toString()}`
+    );
 
     let pos = this.#viewStack.indexOf(internalView);
     if (pos == -1) {
@@ -1169,6 +1276,7 @@ class GlobalHistory extends EventTarget {
 
     if (this.#currentIndex == pos) {
       // Nothing to do.
+      logConsole.debug("InternalView is already current.");
       return;
     }
 
@@ -1178,16 +1286,24 @@ class GlobalHistory extends EventTarget {
     );
 
     if (historyIndex !== null) {
+      logConsole.debug(`Found historyIndex ${historyIndex} for InternalView.`);
       let sHistory = browser.browsingContext.sessionHistory;
 
       // Navigate if necessary.
       let currentIndex = getCurrentIndex(sHistory);
       if (currentIndex != historyIndex) {
+        logConsole.debug(
+          `Navigating browser ${browser.browsingContext.id} to SHistory ` +
+            `index ${historyIndex}.`
+        );
         browser.gotoIndex(historyIndex);
       }
 
       // Tab switch if necessary.
       if (this.#window.gBrowser.selectedBrowser !== browser) {
+        logConsole.debug(
+          `Putting browser ${browser.browsingContext.id} on the stage.`
+        );
         let tab = this.#window.gBrowser.getTabForBrowser(browser);
         this.#window.gBrowser.selectedTab = tab;
       }
@@ -1197,14 +1313,26 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
+    logConsole.debug(
+      `No historyIndex found for InternalView ${internalView.toString()}`
+    );
+
     let { cachedEntry } = internalView;
     if (cachedEntry) {
+      logConsole.debug(
+        `Found cached SHEntry ${cachedEntry.ID} for InternalView. ` +
+          `Creating and staging a new browser for it.`
+      );
       let tab = this.#window.gBrowser.addTrustedTab("about:blank", {
         skipAnimation: true,
       });
 
       SessionStore.setTabState(tab, { entries: [cachedEntry] });
+      let newBrowser = tab.linkedBrowser;
 
+      logConsole.debug(
+        `Created and staged browser ${newBrowser.browsingContext.id}.`
+      );
       this.#window.gBrowser.selectedTab = tab;
       return;
     }
