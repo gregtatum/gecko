@@ -89,7 +89,14 @@
       this.open = true;
     }
 
-    hide(triggeringEvent) {
+    hide(triggeringEvent, { force = false } = {}) {
+      if (
+        Services.prefs.getBoolPref("ui.popup.disable_autohide", false) &&
+        !force
+      ) {
+        // Don't hide if this wasn't "forced" (using escape or click in menu).
+        return;
+      }
       let openingEvent = this.triggeringEvent;
       this.triggeringEvent = triggeringEvent;
       this.open = false;
@@ -102,7 +109,7 @@
 
     toggle(triggeringEvent) {
       if (this.open) {
-        this.hide(triggeringEvent);
+        this.hide(triggeringEvent, { force: true });
       } else {
         this.show(triggeringEvent);
       }
@@ -246,7 +253,7 @@
           break;
         case "click":
           if (inPanelList) {
-            this.hide();
+            this.hide(undefined, { force: true });
           } else {
             // Avoid falling through to the default click handler of the
             // add-on card, which would expand the add-on card.
@@ -291,7 +298,7 @@
             }
             break;
           } else if (e.key === "Escape") {
-            this.hide();
+            this.hide(undefined, { force: true });
           } else if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
             // Check if any of the children have an accesskey for this letter.
             let item = this.querySelector(
