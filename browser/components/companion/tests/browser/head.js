@@ -137,3 +137,76 @@ class CompanionHelper {
     );
   }
 }
+
+var PinebuildTestUtils = {
+  /**
+   * Waits for the <browser> to load, and then returns the current View.
+   * This assumes that the desired load is going to result in a new View
+   * that will become current.
+   *
+   * @param {Element} browser The <browser> that will start the load.
+   * @param {String|null} [wantLoad=null]
+   *        If a function, takes a URL and returns true if that's the load we're
+   *        interested in. If a string, gives the URL of the load we're interested
+   *        in. If not present, the first non-about:blank load is used.
+   * @return {Promise}
+   * @resolves With the View that is current after the load is completed.
+   */
+  async waitForNewView(browser, wantLoad = null) {
+    await BrowserTestUtils.browserLoaded(browser, false, wantLoad);
+    return gGlobalHistory.currentView;
+  },
+
+  /**
+   * Sets a View to be current, and waits for the ViewChanged event to fire.
+   *
+   * @param {View} view The View to make current.
+   * @return {Promise}
+   * @resolves With the ViewChanged event that fired after setting the View.
+   */
+  setCurrentView(view) {
+    let viewChangedPromise = BrowserTestUtils.waitForEvent(
+      gGlobalHistory,
+      "ViewChanged"
+    );
+    gGlobalHistory.setView(view);
+    return viewChangedPromise;
+  },
+
+  /**
+   * Helper assertion function that checks that two View references are
+   * pointing at the same object. If not, logs some interesting things about
+   * the unequal Views.
+   *
+   * @param {View} viewA The View to compare with viewB
+   * @param {View} viewB The View to compare with viewA
+   */
+  assertEqualViews(viewA, viewB) {
+    if (viewA === viewB) {
+      Assert.ok(true, "Views are equal.");
+    } else {
+      Assert.ok(false, "Views are not equal.");
+      info(`View A: ${viewA.title} - ${viewA.url.spec}\n`);
+      info(`View B: ${viewB.title} - ${viewB.url.spec}\n`);
+    }
+  },
+
+  /**
+   * Helper assertion function that compares the current windows array of
+   * Views with viewArray and logs information if they don't match.
+   *
+   * @param {View[]} viewArray
+   *        An Array of Views to compare with gGlobalHistory.views.
+   */
+  assertViewsAre(viewArray) {
+    if (gGlobalHistory.views.length != viewArray.length) {
+      Assert.ok(false, "View lengths do not match.");
+      return;
+    }
+
+    for (let i = 0; i < viewArray.length; ++i) {
+      info(`Checking View at index ${i}`);
+      this.assertEqualViews(gGlobalHistory.views[i], viewArray[i]);
+    }
+  },
+};

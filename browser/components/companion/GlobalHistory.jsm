@@ -1327,8 +1327,16 @@ class GlobalHistory extends EventTarget {
         skipAnimation: true,
       });
 
-      SessionStore.setTabState(tab, { entries: [cachedEntry] });
       let newBrowser = tab.linkedBrowser;
+
+      SessionHistory.restoreFromParent(
+        newBrowser.browsingContext.sessionHistory,
+        {
+          entries: [cachedEntry],
+        }
+      );
+
+      newBrowser.gotoIndex(0);
 
       logConsole.debug(
         `Created and staged browser ${newBrowser.browsingContext.id}.`
