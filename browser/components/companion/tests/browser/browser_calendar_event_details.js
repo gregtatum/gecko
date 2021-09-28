@@ -258,3 +258,35 @@ add_task(async function testHostDetailsDisplayName() {
     });
   });
 });
+
+add_task(async function testVisibilityOfHostSelf() {
+  await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "Firefox rules",
+        organizer: {
+          email: "test123@gmail.com",
+          displayName: "Test Account",
+          self: true,
+        },
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+
+      info("Ensure a self hosted event doesn't display in collapsed view.");
+      let eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector(
+          ".event-details.event-details-none"
+        );
+      });
+      let eventHost = eventDetailsSection.querySelector(".event-host");
+      ok(!eventHost, "Event host is not displayed");
+    });
+  });
+});

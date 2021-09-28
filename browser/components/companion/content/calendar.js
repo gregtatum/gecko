@@ -332,6 +332,10 @@ class CalendarEvent extends MozLitElement {
         margin-block-start: 20px;
       }
 
+      .event-details-none {
+        margin-block-start: 0;
+      }
+
       .event-detail-header {
         font-weight: bold;
         line-height: 14px;
@@ -432,12 +436,7 @@ class CalendarEvent extends MozLitElement {
   }
 
   toggleDetails(e) {
-    if (
-      e.target.tagName === "button" ||
-      e.target.tagName === "a" ||
-      e.target.parentElement.tagName === "a" ||
-      e.target.tagName === "panel-item"
-    ) {
+    if (e.target.closest("button, a, panel-item")) {
       return;
     }
 
@@ -611,12 +610,17 @@ class CalendarEvent extends MozLitElement {
 
   eventDetailsTemplate() {
     let fallbackDetailTemplate = this.detailsCollapsedTemplate();
-    if (!fallbackDetailTemplate) {
-      return "";
-    }
 
     return html`
-      <div class="event-details" tabindex="0" @keydown=${this.toggleDetails}>
+      <div
+        class=${classMap({
+          "event-details": true,
+          "event-details-none":
+            this.detailsCollapsed && !fallbackDetailTemplate,
+        })}
+        tabindex="0"
+        @keydown=${this.toggleDetails}
+      >
         ${!this.detailsCollapsed
           ? [this.eventHostTemplate(), this.eventLinksTemplate()]
           : fallbackDetailTemplate}
@@ -707,7 +711,8 @@ class CalendarEvent extends MozLitElement {
       return this.eventLinksTemplate();
     }
 
-    if (organizer || creator) {
+    let host = organizer || creator;
+    if (!host.self) {
       return this.eventHostTemplate();
     }
 
