@@ -605,6 +605,12 @@ export default class LoginItem extends HTMLElement {
               detail: loginUpdates,
             })
           );
+          window.dispatchEvent(
+            new CustomEvent("AboutLoginsRemoveUpdateState", {
+              bubbles: true,
+              detail: { newHeaderL10nId: "about-logins-header-login-list" },
+            })
+          );
 
           this._recordTelemetryEvent({ object: "new_login", method: "save" });
         }
