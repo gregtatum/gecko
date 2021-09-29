@@ -56,11 +56,35 @@ const DESCRIPTION_TEST = [
       { url: "https://www.something.ca/", text: "https://www.something.ca" },
     ],
   },
+  // tel: links should be ignored
+  {
+    description: `tel:123456789`,
+    links: [],
+  },
+  // For Microsoft events, only HTML is parsed, not text.
+  {
+    body: {
+      content: `<html><a href="https://example.org">Example</a>https://example.com</html>`,
+    },
+    links: [{ url: "https://example.org/", text: "Example" }],
+  },
+  // Strange Microsoft markup only shows proper HTML links.
+  {
+    body: {
+      content: `
+        <a href="http://example.com">An example</a>
+        Some other text
+        http://www.yahoo.com
+        Strange markup<https://mysettings.lync.com/pstnconferencing>
+      `,
+    },
+    links: [{ url: "http://example.com/", text: "An example" }],
+  },
 ];
 
 add_task(async function test_getLinkInfo() {
   for (let test of DESCRIPTION_TEST) {
-    let links = getLinkInfo({ description: test.description });
+    let links = getLinkInfo(test);
     equal(test.links.length, links.length);
     for (let i = 0; i < links.length; i++) {
       let linkInfo = links[i];

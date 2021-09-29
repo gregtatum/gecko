@@ -32,7 +32,7 @@ function processLink(url, text) {
       return null;
     }
   }
-  if (linksToIgnore.includes(url.href)) {
+  if (linksToIgnore.includes(url.href) || url.protocol === "tel:") {
     return null;
   }
   // Tag conferencing URLs in case we need them, but just return.
@@ -94,18 +94,21 @@ function getLinkInfo(result) {
       }
     }
   }
-  let descriptionURLs = description?.match(URL_REGEX);
-  if (descriptionURLs?.length) {
-    for (let descriptionURL of descriptionURLs) {
-      let descriptionLink = processLink(descriptionURL);
-      if (
-        !descriptionLink ||
-        descriptionLink.text === "" ||
-        links.get(descriptionLink.url)
-      ) {
-        continue;
+  // We only parse the description as text for Google events
+  if ("description" in result) {
+    let descriptionURLs = description?.match(URL_REGEX);
+    if (descriptionURLs?.length) {
+      for (let descriptionURL of descriptionURLs) {
+        let descriptionLink = processLink(descriptionURL);
+        if (
+          !descriptionLink ||
+          descriptionLink.text === "" ||
+          links.get(descriptionLink.url)
+        ) {
+          continue;
+        }
+        links.set(descriptionLink.url, descriptionLink);
       }
-      links.set(descriptionLink.url, descriptionLink);
     }
   }
 
