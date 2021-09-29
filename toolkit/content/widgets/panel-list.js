@@ -220,7 +220,7 @@
       this.focusHasChanged = false;
       // Hide on resize, scroll or losing window focus.
       window.addEventListener("resize", this);
-      window.addEventListener("scroll", this);
+      window.addEventListener("scroll", this, { capture: true });
       window.addEventListener("blur", this);
     }
 
@@ -230,7 +230,7 @@
       document.removeEventListener("mousedown", this);
       document.removeEventListener("focusin", this);
       window.removeEventListener("resize", this);
-      window.removeEventListener("scroll", this);
+      window.removeEventListener("scroll", this, { capture: true });
       window.removeEventListener("blur", this);
     }
 
@@ -243,7 +243,7 @@
       let target = this.getTargetForEvent(e);
       let inPanelList = e.composed
         ? e.composedPath().some(el => el == this)
-        : e.closest("panel-list") == this;
+        : e.target.closest && e.target.closest("panel-list") == this;
 
       switch (e.type) {
         case "resize":
@@ -255,8 +255,7 @@
           if (inPanelList) {
             this.hide(undefined, { force: true });
           } else {
-            // Avoid falling through to the default click handler of the
-            // add-on card, which would expand the add-on card.
+            // Avoid falling through to the default click handler of the parent.
             e.stopPropagation();
           }
           break;
