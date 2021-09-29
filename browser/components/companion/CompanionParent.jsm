@@ -94,8 +94,6 @@ class CompanionParent extends JSWindowActorParent {
       "browser-window-tracker-tab-removed"
     );
 
-    Services.obs.addObserver(this._observer, "companion-signin");
-    Services.obs.addObserver(this._observer, "companion-signout");
     Services.obs.addObserver(this._observer, "companion-services-refresh");
     Services.obs.addObserver(this._observer, "companion-submenu-change");
 
@@ -177,8 +175,6 @@ class CompanionParent extends JSWindowActorParent {
       "browser-window-tracker-tab-removed"
     );
 
-    Services.obs.removeObserver(this._observer, "companion-signin");
-    Services.obs.removeObserver(this._observer, "companion-signout");
     Services.obs.removeObserver(this._observer, "companion-services-refresh");
     Services.obs.removeObserver(this._observer, "companion-submenu-change");
 
@@ -477,7 +473,7 @@ class CompanionParent extends JSWindowActorParent {
       });
     }
 
-    let events = await OnlineServices.getEvents();
+    let events = OnlineServices.getEventsFromCache();
     await this.populateAdditionalEventData(events);
     return events;
   }
@@ -510,10 +506,8 @@ class CompanionParent extends JSWindowActorParent {
         this.sendAsyncMessage("Companion:TabRemoved", this.getTabData(subj));
         break;
       }
-      case "companion-signin":
-      case "companion-signout":
       case "companion-services-refresh":
-        let events = await OnlineServices.fetchEvents();
+        let events = subj.wrappedJSObject;
         await this.populateAdditionalEventData(events);
         this.sendAsyncMessage("Companion:RegisterEvents", {
           events,

@@ -37,6 +37,9 @@ Cu.importGlobalProperties(["fetch"]);
 
 const PREF_LOGLEVEL = "browser.companion.loglevel";
 
+// Fetch calendar events every five minutes.
+const CALENDAR_FETCH_TIME = 5 * 60 * 1000; // 5 minutes
+
 var nextServiceId = 0;
 
 class GoogleService {
@@ -572,13 +575,12 @@ const kIssuers = {
 };
 
 const OnlineServices = {
-  lastAccess: new Date("1999-12-31"),
-  data: null,
-  freshnessMs: 5 * 60 * 1000,
+  lastAccess: 0,
+  data: [],
 
   get isFresh() {
     let now = new Date();
-    return now - this.lastAccess < this.freshnessMs;
+    return now - this.lastAccess < CALENDAR_FETCH_TIME;
   },
 
   async createService(type) {
@@ -602,12 +604,10 @@ const OnlineServices = {
     }
     ServiceInstances.add(service);
     this.persist();
-    if (this.data) {
-      // If the cache exists, grab events for this service
-      // and put them in the cache
-      let meetingResults = await service.getNextMeetings();
-      this.data = this.data.concat(meetingResults);
-    }
+    // grab events for this service and put them in the cache
+    let meetingResults = await service.getNextMeetings();
+    this.data = this.data.concat(meetingResults);
+    Services.obs.notifyObservers(this.data, "companion-services-refresh");
     return service;
   },
 
@@ -626,6 +626,7 @@ const OnlineServices = {
     this.persist();
     // Delete events specific to this service from the cache
     this.data = this.data.filter(e => e.serviceId != service.id);
+    Services.obs.notifyObservers(this.data, "companion-services-refresh");
   },
 
   getServices(type) {
@@ -678,18 +679,6 @@ const OnlineServices = {
     Services.prefs.setCharPref(PREF_STORE, config);
   },
 
-  refreshEvents() {
-    if (!this._refreshCompletePromise) {
-      this._refreshCompletePromise = new Promise(resolve => {
-        this._promiseRefresh = resolve;
-        Services.obs.notifyObservers(null, "companion-services-refresh");
-      }).finally(() => {
-        this._refreshCompletePromise = null;
-      });
-    }
-    return this._refreshCompletePromise;
-  },
-
   setCache(data) {
     this.data = data;
     this.lastAccess = new Date();
@@ -699,19 +688,36 @@ const OnlineServices = {
     return this.data;
   },
 
-  async getEvents() {
-    return this.isFresh ? this.getCache() : this.fetchEvents();
+  // This task will be armed after the events are retrieved for the first time.
+  refreshEventsTask: new DeferredTask(async () => {
+    try {
+      // We're only awaiting here so we can catch errors.
+      await OnlineServices.fetchEvents();
+    } catch (e) {
+      Cu.reportError(e);
+    } finally {
+      // Just don't throw, fetchEvents() will have re-armed the task.
+    }
+  }, CALENDAR_FETCH_TIME),
+
+  getEventsFromCache() {
+    if (!this.isFresh) {
+      // If we don't have fresh events, we kick off the process
+      // to get new events. The refresh will happen later via
+      // an observer notification.
+      this.fetchEvents();
+    }
+    return this.getCache();
   },
+
+  alreadyFetching: false,
 
   async fetchEvents() {
     let servicesData = this.getAllServices();
-    if (!servicesData.length) {
-      if (this._promiseRefresh) {
-        this._promiseRefresh();
-        this._promiseRefresh = null;
-      }
-      return [];
+    if (!servicesData.length || this.alreadyFetching) {
+      return;
     }
+    this.alreadyFetching = true;
 
     let meetingResults = new Array(servicesData.length);
     let i = 0;
@@ -724,28 +730,12 @@ const OnlineServices = {
     let events = eventResults.flatMap(r => r.value || []);
 
     this.setCache(events);
-
-    if (this._promiseRefresh) {
-      this._promiseRefresh();
-      this._promiseRefresh = null;
-    }
+    Services.obs.notifyObservers(events, "companion-services-refresh");
 
     // Reset the auto refresh task to its full refresh time. This will also
     // queue the first auto-refresh if this is the first time we load events.
-    refreshEventsTask.disarm();
-    refreshEventsTask.arm();
-
-    return events;
+    this.refreshEventsTask.disarm();
+    this.refreshEventsTask.arm();
+    this.alreadyFetching = false;
   },
 };
-
-// This task will be armed after the events are retrieved for the first time.
-const refreshEventsTask = new DeferredTask(async () => {
-  try {
-    await OnlineServices.refreshEvents();
-  } catch (e) {
-    Cu.reportError(e);
-  } finally {
-    // Just don't throw, fetchEvents() will have re-armed the task.
-  }
-}, OnlineServices.freshnessMs);

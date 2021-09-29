@@ -73,7 +73,7 @@ export class RefreshServicesButton extends MozLitElement {
     this.isRefreshing = true;
 
     try {
-      await OnlineServices.refreshEvents();
+      await OnlineServices.fetchEvents();
     } finally {
       this.isRefreshing = false;
     }
