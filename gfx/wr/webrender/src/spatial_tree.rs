@@ -11,7 +11,7 @@ use crate::internal_types::{FastHashMap, FastHashSet};
 use crate::print_tree::{PrintableTree, PrintTree, PrintTreePrinter};
 use crate::scene::SceneProperties;
 use crate::spatial_node::{ScrollFrameInfo, SpatialNode, SpatialNodeType, StickyFrameInfo};
-use crate::spatial_node::{SpatialNodeUid, ScrollFrameKind};
+use crate::spatial_node::{SpatialNodeUid, ScrollFrameKind, SceneSpatialNode, SpatialNodeInfo};
 use std::{ops, u32};
 use crate::util::{FastTransform, LayoutToWorldFastTransform, MatrixHelpers, ScaleOffset, scale_factors};
 use smallvec::SmallVec;
@@ -26,13 +26,6 @@ pub type ScrollStates = FastHashMap<ExternalScrollId, ScrollFrameInfo>;
 #[cfg_attr(feature = "capture", derive(Serialize))]
 #[cfg_attr(feature = "replay", derive(Deserialize))]
 pub struct CoordinateSystemId(pub u32);
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct StaticCoordinateSystemId(pub u32);
-
-impl StaticCoordinateSystemId {
-    pub const ROOT: StaticCoordinateSystemId = StaticCoordinateSystemId(0);
-}
 
 /// A node in the hierarchy of coordinate system
 /// transforms.
@@ -55,7 +48,7 @@ impl CoordinateSystem {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, Hash, MallocSizeOf, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, Eq, Hash, MallocSizeOf, PartialEq)]
 #[cfg_attr(feature = "capture", derive(Serialize))]
 #[cfg_attr(feature = "replay", derive(Deserialize))]
 pub struct SpatialNodeIndex(u32);
@@ -107,11 +100,11 @@ impl ops::Not for VisibleFace {
     }
 }
 
-/// Some helper functions and structs need to access spatial nodes both during
-/// scene and frame building. This allows generic access to a container of
-/// spatial nodes
+/// Allows functions and methods to retrieve common information about
+/// a spatial node, whether during scene or frame building
 pub trait SpatialNodeContainer {
-    fn get_spatial_node(&self, index: SpatialNodeIndex) -> &SpatialNode;
+    /// Get the common information for a given spatial node
+    fn get_node_info(&self, index: SpatialNodeIndex) -> SpatialNodeInfo;
 }
 
 /// The representation of the spatial tree during scene building, which is
@@ -120,27 +113,31 @@ pub trait SpatialNodeContainer {
 pub struct SceneSpatialTree {
     /// Nodes which determine the positions (offsets and transforms) for primitives
     /// and clips.
-    spatial_nodes: Vec<SpatialNode>,
+    spatial_nodes: Vec<SceneSpatialNode>,
 
     /// A set of the uids we've encountered for spatial nodes, used to assert that
     /// we're not seeing duplicates. Likely to be removed once we rely on this feature.
     spatial_node_uids: FastHashSet<SpatialNodeUid>,
 
-    /// Next id to assign when creating a new static coordinate system
-    next_static_coord_system_id: u32,
-
     root_reference_frame_index: SpatialNodeIndex,
 }
 
 impl SpatialNodeContainer for SceneSpatialTree {
-    fn get_spatial_node(&self, index: SpatialNodeIndex) -> &SpatialNode {
-        &self.spatial_nodes[index.0 as usize]
+    fn get_node_info(&self, index: SpatialNodeIndex) -> SpatialNodeInfo {
+        let node = &self.spatial_nodes[index.0 as usize];
+
+        SpatialNodeInfo {
+            parent: node.parent,
+            node_type: &node.node_type,
+            is_root_coord_system: node.is_root_coord_system,
+            snapping_transform: node.snapping_transform,
+        }
     }
 }
 
 impl SceneSpatialTree {
     pub fn new() -> Self {
-        let node = SpatialNode::new_reference_frame(
+        let node = SceneSpatialNode::new_reference_frame(
             None,
             TransformStyle::Flat,
             PropertyBinding::Value(LayoutTransform::identity()),
@@ -150,14 +147,13 @@ impl SceneSpatialTree {
             },
             LayoutVector2D::zero(),
             PipelineId::dummy(),
-            StaticCoordinateSystemId::ROOT,
+            true,
         );
 
         let mut tree = SceneSpatialTree {
             spatial_nodes: Vec::new(),
             spatial_node_uids: FastHashSet::default(),
             root_reference_frame_index: SpatialNodeIndex(0),
-            next_static_coord_system_id: 1,
         };
 
         tree.add_spatial_node(node, SpatialNodeUid::root());
@@ -179,7 +175,7 @@ impl SceneSpatialTree {
         let mut current_node = maybe_child;
 
         while current_node != self.root_reference_frame_index {
-            let node = self.get_spatial_node(current_node);
+            let node = self.get_node_info(current_node);
             current_node = node.parent.expect("bug: no parent");
 
             if current_node == maybe_parent {
@@ -202,7 +198,7 @@ impl SceneSpatialTree {
         let mut node_index = spatial_node_index;
 
         while node_index != self.root_reference_frame_index {
-            let node = self.get_spatial_node(node_index);
+            let node = self.get_node_info(node_index);
             match node.node_type {
                 SpatialNodeType::ReferenceFrame(ref info) => {
                     match info.kind {
@@ -278,7 +274,7 @@ impl SceneSpatialTree {
 
     fn add_spatial_node(
         &mut self,
-        mut node: SpatialNode,
+        mut node: SceneSpatialNode,
         uid: SpatialNodeUid,
     ) -> SpatialNodeIndex {
         let index = SpatialNodeIndex::new(self.spatial_nodes.len());
@@ -333,22 +329,16 @@ impl SceneSpatialTree {
             }
         };
 
-        let static_coordinate_system_id = if new_static_coord_system {
-            let id = StaticCoordinateSystemId(self.next_static_coord_system_id);
-            self.next_static_coord_system_id += 1;
-            id
-        } else {
-            self.get_static_coordinate_system_id(parent_index)
-        };
+        let is_root_coord_system = self.get_node_info(parent_index).is_root_coord_system && !new_static_coord_system;
 
-        let node = SpatialNode::new_reference_frame(
+        let node = SceneSpatialNode::new_reference_frame(
             Some(parent_index),
             transform_style,
             source_transform,
             kind,
             origin_in_parent_reference_frame,
             pipeline_id,
-            static_coordinate_system_id,
+            is_root_coord_system,
         );
         self.add_spatial_node(node, uid)
     }
@@ -366,9 +356,9 @@ impl SceneSpatialTree {
         uid: SpatialNodeUid,
     ) -> SpatialNodeIndex {
         // Scroll frames are only 2d translations - they can't introduce a new static coord system
-        let static_coordinate_system_id = self.get_static_coordinate_system_id(parent_index);
+        let is_root_coord_system = self.get_node_info(parent_index).is_root_coord_system;
 
-        let node = SpatialNode::new_scroll_frame(
+        let node = SceneSpatialNode::new_scroll_frame(
             pipeline_id,
             parent_index,
             external_id,
@@ -377,7 +367,7 @@ impl SceneSpatialTree {
             scroll_sensitivity,
             frame_kind,
             external_scroll_offset,
-            static_coordinate_system_id,
+            is_root_coord_system,
         );
         self.add_spatial_node(node, uid)
     }
@@ -390,21 +380,16 @@ impl SceneSpatialTree {
         key: SpatialTreeItemKey,
     ) -> SpatialNodeIndex {
         // Sticky frames are only 2d translations - they can't introduce a new static coord system
-        let static_coordinate_system_id = self.get_static_coordinate_system_id(parent_index);
+        let is_root_coord_system = self.get_node_info(parent_index).is_root_coord_system;
         let uid = SpatialNodeUid::external(key);
 
-        let node = SpatialNode::new_sticky_frame(
+        let node = SceneSpatialNode::new_sticky_frame(
             parent_index,
             sticky_frame_info,
             pipeline_id,
-            static_coordinate_system_id,
+            is_root_coord_system,
         );
         self.add_spatial_node(node, uid)
-    }
-
-    /// Get the static coordinate system for a given spatial node index
-    pub fn get_static_coordinate_system_id(&self, node_index: SpatialNodeIndex) -> StaticCoordinateSystemId {
-        self.get_spatial_node(node_index).static_coordinate_system_id
     }
 }
 
@@ -535,21 +520,39 @@ enum TransformScroll {
 }
 
 impl SpatialNodeContainer for SpatialTree {
-    fn get_spatial_node(&self, index: SpatialNodeIndex) -> &SpatialNode {
-        &self.spatial_nodes[index.0 as usize]
+    fn get_node_info(&self, index: SpatialNodeIndex) -> SpatialNodeInfo {
+        let node = &self.spatial_nodes[index.0 as usize];
+
+        SpatialNodeInfo {
+            parent: node.parent,
+            node_type: &node.node_type,
+            is_root_coord_system: node.is_root_coord_system,
+            snapping_transform: node.snapping_transform,
+        }
     }
 }
 
 impl SpatialTree {
-    pub fn new(scene: SceneSpatialTree) -> Self {
+    pub fn new(scene: &SceneSpatialTree) -> Self {
+        let spatial_nodes = scene.spatial_nodes
+            .iter()
+            .map(|node| {
+                SpatialNode::from(node)
+            })
+            .collect();
+
         SpatialTree {
-            spatial_nodes: scene.spatial_nodes,
+            spatial_nodes,
             coord_systems: Vec::new(),
             pending_scroll_offsets: FastHashMap::default(),
             pipelines_to_discard: FastHashSet::default(),
             root_reference_frame_index: scene.root_reference_frame_index,
             update_state_stack: Vec::new(),
         }
+    }
+
+    pub fn get_spatial_node(&self, index: SpatialNodeIndex) -> &SpatialNode {
+        &self.spatial_nodes[index.0 as usize]
     }
 
     /// Get total number of spatial nodes
@@ -605,37 +608,20 @@ impl SpatialTree {
         let child = self.get_spatial_node(child_index);
         let parent = self.get_spatial_node(parent_index);
 
+        // TODO(gw): We expect this never to fail, but it's possible that it might due to
+        //           either (a) a bug in WR / Gecko, or (b) some obscure real-world content
+        //           that we're unaware of. If we ever hit this, please open a bug with any
+        //           repro steps!
+        assert!(
+            child.coordinate_system_id.0 >= parent.coordinate_system_id.0,
+            "bug: this is an unexpected case - please open a bug and talk to #gfx team!",
+        );
+
         if child.coordinate_system_id == parent.coordinate_system_id {
             let scale_offset = parent.content_transform
                 .inverse()
                 .accumulate(&child.content_transform);
             return CoordinateSpaceMapping::ScaleOffset(scale_offset);
-        }
-
-        if child_index.0 < parent_index.0 {
-            warn!("Unexpected transform queried from {:?} to {:?}, please call the graphics team!", child_index, parent_index);
-            let child_cs = &self.coord_systems[child.coordinate_system_id.0 as usize];
-            let child_transform = child.content_transform
-                .to_transform::<LayoutPixel, LayoutPixel>()
-                .then(&child_cs.world_transform);
-            let parent_cs = &self.coord_systems[parent.coordinate_system_id.0 as usize];
-            let parent_transform = parent.content_transform
-                .to_transform()
-                .then(&parent_cs.world_transform);
-
-            let result = parent_transform
-                .inverse()
-                .unwrap_or_default()
-                .then(&child_transform)
-                .with_source::<LayoutPixel>()
-                .with_destination::<LayoutPixel>();
-
-            if let Some(face) = visible_face {
-                if result.is_backface_visible() {
-                    *face = VisibleFace::Back;
-                }
-            }
-            return CoordinateSpaceMapping::Transform(result);
         }
 
         let mut coordinate_system_id = child.coordinate_system_id;
@@ -880,11 +866,6 @@ impl SpatialTree {
         }
     }
 
-    /// Get the static coordinate system for a given spatial node index
-    pub fn get_static_coordinate_system_id(&self, node_index: SpatialNodeIndex) -> StaticCoordinateSystemId {
-        self.get_spatial_node(node_index).static_coordinate_system_id
-    }
-
     pub fn discard_frame_state_for_pipeline(&mut self, pipeline_id: PipelineId) {
         self.pipelines_to_discard.insert(pipeline_id);
     }
@@ -922,7 +903,6 @@ impl SpatialTree {
         pt.add_item(format!("viewport_transform: {:?}", node.viewport_transform));
         pt.add_item(format!("snapping_transform: {:?}", node.snapping_transform));
         pt.add_item(format!("coordinate_system_id: {:?}", node.coordinate_system_id));
-        pt.add_item(format!("static_coordinate_system_id: {:?}", node.static_coordinate_system_id));
 
         for child_index in &node.children {
             self.print_node(*child_index, pt);
@@ -973,9 +953,9 @@ pub fn get_external_scroll_offset<S: SpatialNodeContainer>(
     let mut current_node = Some(node_index);
 
     while let Some(node_index) = current_node {
-        let node = spatial_tree.get_spatial_node(node_index);
+        let node_info = spatial_tree.get_node_info(node_index);
 
-        match node.node_type {
+        match node_info.node_type {
             SpatialNodeType::ScrollFrame(ref scrolling) => {
                 offset += scrolling.external_scroll_offset;
             }
@@ -989,7 +969,7 @@ pub fn get_external_scroll_offset<S: SpatialNodeContainer>(
             }
         }
 
-        current_node = node.parent;
+        current_node = node_info.parent;
     }
 
     offset
@@ -1079,7 +1059,7 @@ fn test_cst_simple_translation() {
         SpatialTreeItemKey::new(0, 3),
     );
 
-    let mut cst = SpatialTree::new(cst);
+    let mut cst = SpatialTree::new(&cst);
     cst.update_tree(&SceneProperties::new());
 
     test_pt(100.0, 100.0, &cst, child1, root, 200.0, 100.0);
@@ -1127,7 +1107,7 @@ fn test_cst_simple_scale() {
         SpatialTreeItemKey::new(0, 3),
     );
 
-    let mut cst = SpatialTree::new(cst);
+    let mut cst = SpatialTree::new(&cst);
     cst.update_tree(&SceneProperties::new());
 
     test_pt(100.0, 100.0, &cst, child1, root, 400.0, 100.0);
@@ -1184,7 +1164,7 @@ fn test_cst_scale_translation() {
         SpatialTreeItemKey::new(0, 4),
     );
 
-    let mut cst = SpatialTree::new(cst);
+    let mut cst = SpatialTree::new(&cst);
     cst.update_tree(&SceneProperties::new());
 
     test_pt(100.0, 100.0, &cst, child1, root, 200.0, 150.0);
@@ -1222,7 +1202,7 @@ fn test_cst_translation_rotate() {
         SpatialTreeItemKey::new(0, 1),
     );
 
-    let mut cst = SpatialTree::new(cst);
+    let mut cst = SpatialTree::new(&cst);
     cst.update_tree(&SceneProperties::new());
 
     test_pt(100.0, 0.0, &cst, child1, root, 0.0, -100.0);

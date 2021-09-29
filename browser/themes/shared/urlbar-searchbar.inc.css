@@ -278,6 +278,7 @@
 #urlbar-search-mode-indicator {
   display: none;
   background-color: var(--urlbar-box-bgcolor);
+  color: var(--urlbar-box-text-color);
   margin-inline-end: 8px;
   align-items: center;
   border-radius: var(--urlbar-icon-border-radius);
@@ -303,7 +304,6 @@
   height: 16px;
   -moz-context-properties: fill, fill-opacity;
   fill-opacity: 0.6;
-  stroke-opacity: var(--identity-box-label-opacity);
   fill: currentColor;
   border-radius: var(--urlbar-icon-border-radius);
 }
@@ -330,7 +330,6 @@
 
 #urlbar-search-mode-indicator-title {
   padding-inline: 0 3px;
-  opacity: var(--identity-box-label-opacity);
 }
 
 /* Page action panel */
@@ -349,7 +348,7 @@
 }
 #star-button[starred] {
   fill-opacity: 1;
-  fill: var(--toolbarbutton-icon-fill-attention);
+  fill: var(--lwt-toolbar-field-icon-fill-attention, var(--toolbarbutton-icon-fill-attention));
 }
 
 /* URL bar and page action buttons */
@@ -585,6 +584,7 @@
   padding: 3px 7px;
   border-radius: var(--urlbar-icon-border-radius);
   background-color: var(--urlbar-box-bgcolor);
+  color: var(--urlbar-box-text-color);
   margin-block: calc((var(--urlbar-min-height) - 20px) / 2 - 1px /* border */ - var(--urlbar-container-padding));
   overflow: hidden;
 }

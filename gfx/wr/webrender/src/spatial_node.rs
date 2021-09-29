@@ -7,7 +7,7 @@ use api::{ExternalScrollId, PipelineId, PropertyBinding, PropertyBindingId, Refe
 use api::{TransformStyle, ScrollSensitivity, StickyOffsetBounds, SpatialTreeItemKey};
 use api::units::*;
 use crate::spatial_tree::{CoordinateSystem, SpatialNodeIndex, TransformUpdateState};
-use crate::spatial_tree::{CoordinateSystemId, StaticCoordinateSystemId};
+use crate::spatial_tree::{CoordinateSystemId};
 use euclid::{Vector2D, SideOffsets2D};
 use crate::scene::SceneProperties;
 use crate::util::{LayoutFastTransform, MatrixHelpers, ScaleOffset, TransformedRectKind, PointHelpers};
@@ -80,6 +80,7 @@ impl SpatialNodeUid {
     }
 }
 
+#[derive(Clone)]
 pub enum SpatialNodeType {
     /// A special kind of node that adjusts its position based on the position
     /// of its parent node and a given set of sticky positioning offset bounds.
@@ -93,6 +94,192 @@ pub enum SpatialNodeType {
 
     /// A reference frame establishes a new coordinate space in the tree.
     ReferenceFrame(ReferenceFrameInfo),
+}
+
+/// Information about a spatial node that can be queried during either scene of
+/// frame building.
+pub struct SpatialNodeInfo<'a> {
+    /// The type of this node and any data associated with that node type.
+    pub node_type: &'a SpatialNodeType,
+
+    /// Parent spatial node. If this is None, we are the root node.
+    pub parent: Option<SpatialNodeIndex>,
+
+    /// If true, this spatial node is known to exist in the root coordinate
+    /// system in all cases (it has no animated or complex transforms)
+    pub is_root_coord_system: bool,
+
+    /// Snapping scale/offset relative to the coordinate system. If None, then
+    /// we should not snap entities bound to this spatial node.
+    pub snapping_transform: Option<ScaleOffset>,
+}
+
+/// Scene building specific representation of a spatial node, which is a much
+/// lighter subset of a full spatial node constructed and used for frame building
+pub struct SceneSpatialNode {
+    /// Child nodes
+    children: Vec<SpatialNodeIndex>,
+
+    /// Snapping scale/offset relative to the coordinate system. If None, then
+    /// we should not snap entities bound to this spatial node.
+    pub snapping_transform: Option<ScaleOffset>,
+
+    /// Parent spatial node. If this is None, we are the root node.
+    pub parent: Option<SpatialNodeIndex>,
+
+    /// The type of this node and any data associated with that node type.
+    pub node_type: SpatialNodeType,
+
+    /// Pipeline that this layer belongs to
+    pipeline_id: PipelineId,
+
+    /// If true, this spatial node is known to exist in the root coordinate
+    /// system in all cases (it has no animated or complex transforms)
+    pub is_root_coord_system: bool,
+}
+
+impl SceneSpatialNode {
+    pub fn new_reference_frame(
+        parent_index: Option<SpatialNodeIndex>,
+        transform_style: TransformStyle,
+        source_transform: PropertyBinding<LayoutTransform>,
+        kind: ReferenceFrameKind,
+        origin_in_parent_reference_frame: LayoutVector2D,
+        pipeline_id: PipelineId,
+        is_root_coord_system: bool,
+    ) -> Self {
+        let info = ReferenceFrameInfo {
+            transform_style,
+            source_transform,
+            kind,
+            origin_in_parent_reference_frame,
+            invertible: true,
+        };
+        Self::new(
+            pipeline_id,
+            parent_index,
+            SpatialNodeType::ReferenceFrame(info),
+            is_root_coord_system,
+        )
+    }
+
+    pub fn new_scroll_frame(
+        pipeline_id: PipelineId,
+        parent_index: SpatialNodeIndex,
+        external_id: ExternalScrollId,
+        frame_rect: &LayoutRect,
+        content_size: &LayoutSize,
+        scroll_sensitivity: ScrollSensitivity,
+        frame_kind: ScrollFrameKind,
+        external_scroll_offset: LayoutVector2D,
+        is_root_coord_system: bool,
+    ) -> Self {
+        let node_type = SpatialNodeType::ScrollFrame(ScrollFrameInfo::new(
+                *frame_rect,
+                scroll_sensitivity,
+                LayoutSize::new(
+                    (content_size.width - frame_rect.width()).max(0.0),
+                    (content_size.height - frame_rect.height()).max(0.0)
+                ),
+                external_id,
+                frame_kind,
+                external_scroll_offset,
+            )
+        );
+
+        Self::new(
+            pipeline_id,
+            Some(parent_index),
+            node_type,
+            is_root_coord_system,
+        )
+    }
+
+    pub fn new_sticky_frame(
+        parent_index: SpatialNodeIndex,
+        sticky_frame_info: StickyFrameInfo,
+        pipeline_id: PipelineId,
+        is_root_coord_system: bool,
+    ) -> Self {
+        Self::new(
+            pipeline_id,
+            Some(parent_index),
+            SpatialNodeType::StickyFrame(sticky_frame_info),
+            is_root_coord_system,
+        )
+    }
+
+    pub fn add_child(&mut self, child: SpatialNodeIndex) {
+        self.children.push(child);
+    }
+
+    pub fn update_snapping(
+        &mut self,
+        parent: Option<&SceneSpatialNode>,
+    ) {
+        // Reset in case of an early return.
+        self.snapping_transform = None;
+
+        // We need to incorporate the parent scale/offset with the child.
+        // If the parent does not have a scale/offset, then we know we are
+        // not 2d axis aligned and thus do not need to snap its children
+        // either.
+        let parent_scale_offset = match parent {
+            Some(parent) => {
+                match parent.snapping_transform {
+                    Some(scale_offset) => scale_offset,
+                    None => return,
+                }
+            },
+            _ => ScaleOffset::identity(),
+        };
+
+        let scale_offset = match self.node_type {
+            SpatialNodeType::ReferenceFrame(ref info) => {
+                match info.source_transform {
+                    PropertyBinding::Value(ref value) => {
+                        // We can only get a ScaleOffset if the transform is 2d axis
+                        // aligned.
+                        match ScaleOffset::from_transform(value) {
+                            Some(scale_offset) => {
+                                let origin_offset = info.origin_in_parent_reference_frame;
+                                ScaleOffset::from_offset(origin_offset.to_untyped())
+                                    .accumulate(&scale_offset)
+                            }
+                            None => return,
+                        }
+                    }
+
+                    // Assume animations start at the identity transform for snapping purposes.
+                    // We still want to incorporate the reference frame offset however.
+                    // TODO(aosmond): Is there a better known starting point?
+                    PropertyBinding::Binding(..) => {
+                        let origin_offset = info.origin_in_parent_reference_frame;
+                        ScaleOffset::from_offset(origin_offset.to_untyped())
+                    }
+                }
+            }
+            _ => ScaleOffset::identity(),
+        };
+
+        self.snapping_transform = Some(parent_scale_offset.accumulate(&scale_offset));
+    }
+
+    fn new(
+        pipeline_id: PipelineId,
+        parent_index: Option<SpatialNodeIndex>,
+        node_type: SpatialNodeType,
+        is_root_coord_system: bool,
+    ) -> Self {
+        SceneSpatialNode {
+            parent: parent_index,
+            children: Vec::new(),
+            node_type,
+            snapping_transform: None,
+            is_root_coord_system,
+            pipeline_id,
+        }
+    }
 }
 
 /// Contains information common among all types of SpatialTree nodes.
@@ -111,10 +298,6 @@ pub struct SpatialNode {
 
     /// The axis-aligned coordinate system id of this node.
     pub coordinate_system_id: CoordinateSystemId,
-
-    /// Coordinate system statically assigned during scene building (doesn't change regardless of
-    /// the current property binding value during frame building).
-    pub static_coordinate_system_id: StaticCoordinateSystemId,
 
     /// The current transform kind of this node.
     pub transform_kind: TransformedRectKind,
@@ -144,6 +327,32 @@ pub struct SpatialNode {
     /// This is calculated in update(). This will be used to decide whether
     /// to override corresponding picture's raster space as an optimisation.
     pub is_ancestor_or_self_zooming: bool,
+
+    /// If true, this spatial node is known to exist in the root coordinate
+    /// system in all cases (it has no animated or complex transforms)
+    pub is_root_coord_system: bool,
+}
+
+impl From<&SceneSpatialNode> for SpatialNode {
+    /// Construct a complete spatial node from the lightweight scene building
+    /// spatial node representation
+    fn from(node: &SceneSpatialNode) -> Self {
+        SpatialNode {
+            viewport_transform: ScaleOffset::identity(),
+            content_transform: ScaleOffset::identity(),
+            snapping_transform: node.snapping_transform,
+            coordinate_system_id: CoordinateSystemId(0),
+            transform_kind: TransformedRectKind::AxisAligned,
+            parent: node.parent,
+            children: node.children.clone(),
+            pipeline_id: node.pipeline_id,
+            node_type: node.node_type.clone(),
+            invertible: true,
+            is_async_zooming: false,
+            is_ancestor_or_self_zooming: false,
+            is_root_coord_system: node.is_root_coord_system,
+        }
+    }
 }
 
 /// Snap an offset to be incorporated into a transform, where the local space
@@ -165,103 +374,6 @@ fn snap_offset<OffsetUnits, ScaleUnits>(
 }
 
 impl SpatialNode {
-    pub fn new(
-        pipeline_id: PipelineId,
-        parent_index: Option<SpatialNodeIndex>,
-        node_type: SpatialNodeType,
-        static_coordinate_system_id: StaticCoordinateSystemId,
-    ) -> Self {
-        SpatialNode {
-            viewport_transform: ScaleOffset::identity(),
-            content_transform: ScaleOffset::identity(),
-            snapping_transform: None,
-            coordinate_system_id: CoordinateSystemId(0),
-            static_coordinate_system_id,
-            transform_kind: TransformedRectKind::AxisAligned,
-            parent: parent_index,
-            children: Vec::new(),
-            pipeline_id,
-            node_type,
-            invertible: true,
-            is_async_zooming: false,
-            is_ancestor_or_self_zooming: false,
-        }
-    }
-
-    pub fn new_scroll_frame(
-        pipeline_id: PipelineId,
-        parent_index: SpatialNodeIndex,
-        external_id: ExternalScrollId,
-        frame_rect: &LayoutRect,
-        content_size: &LayoutSize,
-        scroll_sensitivity: ScrollSensitivity,
-        frame_kind: ScrollFrameKind,
-        external_scroll_offset: LayoutVector2D,
-        static_coordinate_system_id: StaticCoordinateSystemId,
-    ) -> Self {
-        let node_type = SpatialNodeType::ScrollFrame(ScrollFrameInfo::new(
-                *frame_rect,
-                scroll_sensitivity,
-                LayoutSize::new(
-                    (content_size.width - frame_rect.width()).max(0.0),
-                    (content_size.height - frame_rect.height()).max(0.0)
-                ),
-                external_id,
-                frame_kind,
-                external_scroll_offset,
-            )
-        );
-
-        Self::new(
-            pipeline_id,
-            Some(parent_index),
-            node_type,
-            static_coordinate_system_id,
-        )
-    }
-
-    pub fn new_reference_frame(
-        parent_index: Option<SpatialNodeIndex>,
-        transform_style: TransformStyle,
-        source_transform: PropertyBinding<LayoutTransform>,
-        kind: ReferenceFrameKind,
-        origin_in_parent_reference_frame: LayoutVector2D,
-        pipeline_id: PipelineId,
-        static_coordinate_system_id: StaticCoordinateSystemId,
-    ) -> Self {
-        let info = ReferenceFrameInfo {
-            transform_style,
-            source_transform,
-            kind,
-            origin_in_parent_reference_frame,
-            invertible: true,
-        };
-        Self::new(
-            pipeline_id,
-            parent_index,
-            SpatialNodeType::ReferenceFrame(info),
-            static_coordinate_system_id,
-        )
-    }
-
-    pub fn new_sticky_frame(
-        parent_index: SpatialNodeIndex,
-        sticky_frame_info: StickyFrameInfo,
-        pipeline_id: PipelineId,
-        static_coordinate_system_id: StaticCoordinateSystemId,
-    ) -> Self {
-        Self::new(
-            pipeline_id,
-            Some(parent_index),
-            SpatialNodeType::StickyFrame(sticky_frame_info),
-            static_coordinate_system_id,
-        )
-    }
-
-    pub fn add_child(&mut self, child: SpatialNodeIndex) {
-        self.children.push(child);
-    }
-
     pub fn apply_old_scrolling_state(&mut self, old_scroll_info: &ScrollFrameInfo) {
         match self.node_type {
             SpatialNodeType::ScrollFrame(ref mut scrolling) => {
@@ -752,59 +864,6 @@ impl SpatialNode {
         }
     }
 
-    /// Updates the snapping transform.
-    pub fn update_snapping(
-        &mut self,
-        parent: Option<&SpatialNode>,
-    ) {
-        // Reset in case of an early return.
-        self.snapping_transform = None;
-
-        // We need to incorporate the parent scale/offset with the child.
-        // If the parent does not have a scale/offset, then we know we are
-        // not 2d axis aligned and thus do not need to snap its children
-        // either.
-        let parent_scale_offset = match parent {
-            Some(parent) => {
-                match parent.snapping_transform {
-                    Some(scale_offset) => scale_offset,
-                    None => return,
-                }
-            },
-            _ => ScaleOffset::identity(),
-        };
-
-        let scale_offset = match self.node_type {
-            SpatialNodeType::ReferenceFrame(ref info) => {
-                match info.source_transform {
-                    PropertyBinding::Value(ref value) => {
-                        // We can only get a ScaleOffset if the transform is 2d axis
-                        // aligned.
-                        match ScaleOffset::from_transform(value) {
-                            Some(scale_offset) => {
-                                let origin_offset = info.origin_in_parent_reference_frame;
-                                ScaleOffset::from_offset(origin_offset.to_untyped())
-                                    .accumulate(&scale_offset)
-                            }
-                            None => return,
-                        }
-                    }
-
-                    // Assume animations start at the identity transform for snapping purposes.
-                    // We still want to incorporate the reference frame offset however.
-                    // TODO(aosmond): Is there a better known starting point?
-                    PropertyBinding::Binding(..) => {
-                        let origin_offset = info.origin_in_parent_reference_frame;
-                        ScaleOffset::from_offset(origin_offset.to_untyped())
-                    }
-                }
-            }
-            _ => ScaleOffset::identity(),
-        };
-
-        self.snapping_transform = Some(parent_scale_offset.accumulate(&scale_offset));
-    }
-
     /// Returns true for ReferenceFrames whose source_transform is
     /// bound to the property binding id.
     pub fn is_transform_bound_to_property(&self, id: PropertyBindingId) -> bool {
@@ -1031,7 +1090,7 @@ fn test_cst_perspective_relative_scroll() {
         SpatialNodeUid::external(SpatialTreeItemKey::new(0, 4)),
     );
 
-    let mut cst = SpatialTree::new(cst);
+    let mut cst = SpatialTree::new(&cst);
     cst.update_tree(&SceneProperties::new());
 
     let world_transform = cst.get_world_transform(ref_frame).into_transform().cast_unit();

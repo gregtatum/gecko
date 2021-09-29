@@ -2433,6 +2433,7 @@ BrowserGlue.prototype = {
     }
 
     Sanitizer.onStartup();
+    this._maybeShowRestoreSessionInfoBar();
     this._scheduleStartupIdleTasks();
     this._lateTasksIdleObserver = (idleService, topic, data) => {
       if (topic == "idle") {
@@ -3045,14 +3046,12 @@ BrowserGlue.prototype = {
     // The warning will appear even when only one window/tab is open. For other
     // methods of quitting, the warning only appears when there is more than one
     // window or tab open.
-    if (this._quitSource == "shortcut") {
-      if (!Services.prefs.getBoolPref("browser.warnOnQuitShortcut")) {
-        return;
-      }
-    } else if (
-      pagecount < 2 ||
-      !Services.prefs.getBoolPref("browser.tabs.warnOnClose")
-    ) {
+    let shouldWarnForShortcut =
+      this._quitSource == "shortcut" &&
+      Services.prefs.getBoolPref("browser.warnOnQuitShortcut");
+    let shouldWarnForTabs =
+      pagecount >= 2 && Services.prefs.getBoolPref("browser.tabs.warnOnClose");
+    if (!shouldWarnForTabs && !shouldWarnForShortcut) {
       return;
     }
 
@@ -3080,7 +3079,7 @@ BrowserGlue.prototype = {
       title = gTabbrowserBundle.GetStringFromName("tabs.closeTabsTitle");
       title = PluralForm.get(pagecount, title).replace("#1", pagecount);
 
-      if (this._quitSource == "shortcut") {
+      if (shouldWarnForShortcut) {
         let productName = gBrandBundle.GetStringFromName("brandShorterName");
         title = gTabbrowserBundle.formatStringFromName(
           "tabs.closeTabsWithKeyTitle",
@@ -3102,7 +3101,7 @@ BrowserGlue.prototype = {
     // The checkbox label is different depending on whether the shortcut
     // was used to quit or not.
     let checkboxLabel;
-    if (this._quitSource == "shortcut") {
+    if (shouldWarnForShortcut) {
       let quitKeyElement = win.document.getElementById("key_quitApplication");
       let quitKey = ShortcutUtils.prettifyShortcut(quitKeyElement);
 
@@ -3156,7 +3155,7 @@ BrowserGlue.prototype = {
     // If the user has unticked the box, and has confirmed closing, stop showing
     // the warning.
     if (buttonPressed == 0 && !warnOnClose.value) {
-      if (this._quitSource == "shortcut") {
+      if (shouldWarnForShortcut) {
         Services.prefs.setBoolPref("browser.warnOnQuitShortcut", false);
       } else {
         Services.prefs.setBoolPref("browser.tabs.warnOnClose", false);
@@ -4259,6 +4258,73 @@ BrowserGlue.prototype = {
       id: "defaultBrowserCheck",
       context: { willShowDefaultPrompt: willPrompt, source: "startup" },
     });
+  },
+
+  /**
+   * Only show the infobar when canRestoreLastSession and the pref value == 1
+   */
+  async _maybeShowRestoreSessionInfoBar() {
+    let count = Services.prefs.getIntPref(
+      "browser.startup.couldRestoreSession.count",
+      0
+    );
+    if (count < 0 || count >= 2) {
+      return;
+    }
+    if (count == 0) {
+      // We don't show the infobar right after the update which establishes this pref
+      // Increment the counter so we can consider it next time
+      Services.prefs.setIntPref(
+        "browser.startup.couldRestoreSession.count",
+        ++count
+      );
+      return;
+    }
+
+    // We've restarted at least once; we will show the notification if possible:
+    if (!SessionStore.canRestoreLastSession) {
+      return;
+    }
+
+    Services.prefs.setIntPref(
+      "browser.startup.couldRestoreSession.count",
+      ++count
+    );
+
+    const win = BrowserWindowTracker.getTopWindow();
+    const messageFragment = win.document.createDocumentFragment();
+    const message = win.document.createElement("span");
+    const icon = win.document.createElement("img");
+    icon.src = "chrome://browser/skin/menu.svg";
+    icon.setAttribute("data-l10n-name", "icon");
+    icon.className = "inline-icon";
+    message.appendChild(icon);
+    messageFragment.appendChild(message);
+    win.document.l10n.setAttributes(
+      message,
+      "restore-session-startup-suggestion-message"
+    );
+
+    const buttons = [
+      {
+        "l10n-id": "restore-session-startup-suggestion-button",
+        callback: () => {
+          win.PanelUI.show();
+        },
+      },
+    ];
+
+    const notifyBox = win.gBrowser.getNotificationBox();
+    const notification = notifyBox.appendNotification(
+      "startup-restore-session-suggestion",
+      {
+        label: messageFragment,
+        priority: notifyBox.PRIORITY_INFO_MEDIUM,
+      },
+      buttons
+    );
+    // Don't allow it to be immediately hidden:
+    notification.timeout = Date.now() + 3000;
   },
 
   /**

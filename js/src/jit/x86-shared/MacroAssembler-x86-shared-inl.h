@@ -2719,6 +2719,26 @@ void MacroAssembler::unsignedTruncSatFloat64x2ToInt32x4(FloatRegister src,
   MacroAssemblerX86Shared::unsignedTruncSatFloat64x2ToInt32x4(src, temp, dest);
 }
 
+void MacroAssembler::truncSatFloat32x4ToInt32x4Relaxed(FloatRegister src,
+                                                       FloatRegister dest) {
+  vcvttps2dq(src, dest);
+}
+
+void MacroAssembler::unsignedTruncSatFloat32x4ToInt32x4Relaxed(
+    FloatRegister src, FloatRegister dest) {
+  MacroAssemblerX86Shared::unsignedTruncSatFloat32x4ToInt32x4Relaxed(src, dest);
+}
+
+void MacroAssembler::truncSatFloat64x2ToInt32x4Relaxed(FloatRegister src,
+                                                       FloatRegister dest) {
+  vcvttpd2dq(src, dest);
+}
+
+void MacroAssembler::unsignedTruncSatFloat64x2ToInt32x4Relaxed(
+    FloatRegister src, FloatRegister dest) {
+  MacroAssemblerX86Shared::unsignedTruncSatFloat64x2ToInt32x4Relaxed(src, dest);
+}
+
 // Floating point widening
 
 void MacroAssembler::convertFloat64x2ToFloat32x4(FloatRegister src,
@@ -2870,6 +2890,26 @@ void MacroAssembler::fmsFloat64x2(FloatRegister src1, FloatRegister src2,
   moveSimd128(src1, scratch);
   mulFloat64x2(src2, scratch);
   subFloat64x2(scratch, srcDest);
+}
+
+void MacroAssembler::minFloat32x4Relaxed(FloatRegister src,
+                                         FloatRegister srcDest) {
+  vminps(Operand(src), srcDest, srcDest);
+}
+
+void MacroAssembler::maxFloat32x4Relaxed(FloatRegister src,
+                                         FloatRegister srcDest) {
+  vmaxps(Operand(src), srcDest, srcDest);
+}
+
+void MacroAssembler::minFloat64x2Relaxed(FloatRegister src,
+                                         FloatRegister srcDest) {
+  vminpd(Operand(src), srcDest, srcDest);
+}
+
+void MacroAssembler::maxFloat64x2Relaxed(FloatRegister src,
+                                         FloatRegister srcDest) {
+  vmaxpd(Operand(src), srcDest, srcDest);
 }
 
 // ========================================================================
