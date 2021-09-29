@@ -1,0 +1,93 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.session {
+  display: block;
+  margin: 1em;
+  background: #F9F9FB;
+  border: 0.5px solid #CFCFD8;
+  box-sizing: border-box;
+  border-radius: 8px;
+  padding: 0 0 0 16px;
+}
+
+.extended {
+  display: none;
+  justify-content: space-between;
+  padding: 8px 8px 8px 0;
+}
+
+.card-image {
+  flex-grow: 2;
+  background: darkgray;
+  border-radius: 0 8px 8px 0;
+  width: 8em;
+  display: flex;
+  align-items: flex-end;
+}
+
+.session.expanded .card-image {
+  display: flex;
+  border-radius: 0 8px 0 0;
+}
+
+.session.expanded > .extended {
+  display: flex;
+}
+
+.data {
+  width: 15em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-card {
+  display: flex;
+}
+
+.site-icon {
+  width: 16px;
+  height: 16px;
+  margin: 8px;
+}
+
+.details {
+  color: #5B5B66;
+  font-size: 12px;
+}
+
+.title {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  margin-block-end: .5em;
+}
+
+.icon {
+  display: block;
+  height: 32px;
+  width: 32px;
+  border-radius: 32px;
+  background: #FFFFFF;
+  border: 1px solid #F0F0F4;
+  position: absolute;
+  transition: left 500ms;
+  padding: 5px;
+}
+
+.icon:nth-child(1) { left: 0px; }
+.icon:nth-child(2) { left: 15px; }
+.icon:nth-child(3) { left: 30px; }
+.icon:nth-child(4) { left: 45px; }
+
+.icons:hover .icon:nth-child(1) { left: 0px; }
+.icons:hover .icon:nth-child(2) { left: 42px; }
+.icons:hover .icon:nth-child(3) { left: 84px; }
+.icons:hover .icon:nth-child(4) { left: 126px; }
+
+.icons {
+  width: 5em;
+  position: relative;
+  flex-grow: 2;
+}

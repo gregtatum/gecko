@@ -6,6 +6,7 @@ import { CalendarEventList } from "./calendar.js";
 import { BrowseList } from "./browse.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
+import { LastSessionList } from "./sessions.js";
 import {
   SuggestedSnapshotList,
   RecentlyClosedSnapshotList,
@@ -42,6 +43,7 @@ function maybeInitializeUI() {
   let browseContent = document.querySelector("#scroll-browse .content");
   let browseList = new BrowseList();
   browseContent.appendChild(browseList);
+  browseContent.appendChild(new LastSessionList());
   browseContent.appendChild(new RecentlyClosedSnapshotList("Recently Closed"));
   browseContent.appendChild(new PocketList());
 

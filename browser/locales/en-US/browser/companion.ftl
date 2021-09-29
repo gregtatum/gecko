@@ -102,3 +102,10 @@ companion-page-action-secure-page = This website is using a secure connection.
 
 companion-pocket-interesting-reads = Interesting Reads
 companion-pocket-powered-by = Powered by Pocket
+
+# The title of the Last Session section in the companion.
+last-session-title = Last Session
+
+# This string is used in the browse tab of the companion in a button that
+# restores the users last session.
+restore-session = Restore

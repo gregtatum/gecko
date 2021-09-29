@@ -24,6 +24,8 @@ browser.jar:
     content/browser/companion/rally.svg (content/rally.svg)
     content/browser/companion/refresh-services-button.js (content/refresh-services-button.js)
     content/browser/companion/relative-time.js (content/relative-time.js)
+    content/browser/companion/sessions.css (content/sessions.css)
+    content/browser/companion/sessions.js (content/sessions.js)
     content/browser/companion/siteSecurity.js (content/siteSecurity.js)
     content/browser/companion/snapshots-list.css (content/snapshots-list.css)
     content/browser/companion/snapshots.js (content/snapshots.js)
@@ -32,6 +34,7 @@ browser.jar:
     content/browser/companion/jitsi.png (content/jitsi.png)
     content/browser/companion/meet.png (content/meet.png)
     content/browser/companion/teams.png (content/teams.png)
+    content/browser/companion/time-since.js (content/time-since.js)
     content/browser/companion/vpn.svg (content/vpn.svg)
     content/browser/companion/webex.png (content/webex.png)
     content/browser/companion/widget-utils.js (content/widget-utils.js)
@@ -84,4 +87,3 @@ browser.jar:
     content/browser/companion/vendor/pyodide/six.data              (vendor/pyodide/six.data)
     content/browser/companion/vendor/pyodide/six.js                (vendor/pyodide/six.js)
     content/browser/companion/vendor/pyodide/webworker.js          (vendor/pyodide/webworker.js)
-    

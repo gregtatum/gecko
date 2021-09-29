@@ -316,8 +316,10 @@ class CommonNames {
     if (commonName) {
       return commonName;
     }
+    return CommonNames.getURLName(new URL(snapshot.url));
+  }
 
-    let url = new URL(snapshot.url);
+  static getURLName(url) {
     let longest = null;
     for (let suffix of CUSTOM_NAMES.keys()) {
       let reg = CUSTOM_NAMES_REGEX.get(suffix);

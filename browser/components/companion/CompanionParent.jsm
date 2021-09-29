@@ -20,6 +20,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   PageDataService: "resource:///modules/pagedata/PageDataService.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   requestIdleCallback: "resource://gre/modules/Timer.jsm",
+  SessionManager: "resource:///modules/SessionManager.jsm",
   Services: "resource://gre/modules/Services.jsm",
   setTimeout: "resource://gre/modules/Timer.jsm",
   Snapshots: "resource:///modules/Snapshots.jsm",
@@ -68,6 +69,7 @@ class CompanionParent extends JSWindowActorParent {
 
     this._observer = this.observe.bind(this);
     this._handleTabEvent = this.handleTabEvent.bind(this);
+    this._handleWinEvent = this.handleWinEvent.bind(this);
     this._handleGlobalHistoryEvent = this.handleGlobalHistoryEvent.bind(this);
     this._pageDataFound = this.pageDataFound.bind(this);
     this._setupGlobalHistoryPrefObservers = this.setUpGlobalHistoryDebuggingObservers.bind(
@@ -114,6 +116,8 @@ class CompanionParent extends JSWindowActorParent {
   actorCreated() {
     this.setUpGlobalHistoryDebuggingObservers();
     this._destroyed = false;
+    // Initialise the display of the last session UI.
+    this.getSessionData();
   }
 
   setUpGlobalHistoryDebuggingObservers() {
@@ -301,38 +305,63 @@ class CompanionParent extends JSWindowActorParent {
   registerWindow(win) {
     let tabs = win.gBrowser.tabContainer;
     tabs.addEventListener("TabAttrModified", this._handleTabEvent);
+    win.addEventListener("session-replace-complete", this._handleWinEvent);
   }
 
   unregisterWindow(win) {
     let tabs = win.gBrowser.tabContainer;
     tabs.removeEventListener("TabAttrModified", this._handleTabEvent);
+    win.removeEventListener("session-replace-complete", this._handleWinEvent);
+  }
+
+  async getFavicon(page, width) {
+    let service = Cc["@mozilla.org/browser/favicon-service;1"].getService(
+      Ci.nsIFaviconService
+    );
+    return new Promise(resolve => {
+      service.getFaviconDataForPage(
+        Services.io.newURI(page),
+        (uri, dataLength, data, mimeType) => {
+          resolve({
+            url: page,
+            data: dataLength ? data : null,
+            mimeType,
+          });
+        },
+        width
+      );
+    });
+  }
+
+  async getSessionData() {
+    if (this._destroyed) {
+      return;
+    }
+    let width = this.#getFaviconWidth(this.browsingContext.top.embedderElement);
+    let results = await SessionManager.query({ includePages: true });
+    let first = results.find(session => session.pages.length);
+    if (first) {
+      for (const page of first.pages) {
+        page.favicon = await this.getFavicon(page.url, width);
+      }
+      // If the child has already been closed, then bail out early to avoid
+      // errors thrown in tests.
+      if (this._destroyed) {
+        return;
+      }
+      this.sendAsyncMessage("Companion:SessionUpdated", first);
+    }
   }
 
   getFavicons(pages) {
-    let browser = this.browsingContext.top.embedderElement;
-    let width =
+    let width = this.#getFaviconWidth(this.browsingContext.top.embedderElement);
+    return Promise.all(pages.map(page => this.getFavicon(page, width)));
+  }
+
+  async #getFaviconWidth(browser) {
+    return (
       PREFERRED_SNAPSHOT_FAVICON_WIDTH_PX *
-      Math.ceil(browser.ownerGlobal.devicePixelRatio);
-    return Promise.all(
-      pages.map(
-        page =>
-          new Promise(resolve => {
-            let service = Cc[
-              "@mozilla.org/browser/favicon-service;1"
-            ].getService(Ci.nsIFaviconService);
-            service.getFaviconDataForPage(
-              Services.io.newURI(page),
-              (uri, dataLength, data, mimeType) => {
-                resolve({
-                  url: page,
-                  data: dataLength ? data : null,
-                  mimeType,
-                });
-              },
-              width
-            );
-          })
-      )
+      Math.ceil(browser.ownerGlobal.devicePixelRatio)
     );
   }
 
@@ -546,6 +575,15 @@ class CompanionParent extends JSWindowActorParent {
     }
   }
 
+  handleWinEvent(event) {
+    switch (event.type) {
+      case "session-replace-complete": {
+        this.getSessionData();
+        break;
+      }
+    }
+  }
+
   validateCompanionPref(name) {
     let result =
       name.startsWith("companion") || name.startsWith("browser.companion");
@@ -728,6 +766,14 @@ class CompanionParent extends JSWindowActorParent {
       case "Companion:DeleteSnapshot": {
         let { url } = message.data;
         await Snapshots.delete(url);
+        break;
+      }
+      case "Companion:RestoreSession": {
+        let { guid } = message.data;
+        SessionManager.replaceSession(
+          this.browsingContext.topChromeWindow,
+          guid
+        );
         break;
       }
       case "Companion:setCharPref": {
