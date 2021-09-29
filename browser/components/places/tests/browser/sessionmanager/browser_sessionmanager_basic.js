@@ -24,7 +24,7 @@ add_task(async function setup() {
   win = await BrowserTestUtils.openNewBrowserWindow();
 
   registerCleanupFunction(async () => {
-    await BrowserTestUtils.closeWindow(win);
+    await promiseWindowClosedAndSessionSaved(win);
   });
 });
 
@@ -60,10 +60,7 @@ add_task(async function test_register_session() {
 
 add_task(async function test_set_aside_session() {
   dateCheckpoint = Date.now();
-  let changeComplete = BrowserTestUtils.waitForEvent(
-    win,
-    "session-replace-complete"
-  );
+  let changeComplete = SessionManager.once("sessions-updated");
   win.document.getElementById("session-setaside-button").click();
   await changeComplete;
 

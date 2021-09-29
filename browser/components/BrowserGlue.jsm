@@ -82,6 +82,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   SaveToPocket: "chrome://pocket/content/SaveToPocket.jsm",
   ScreenshotsUtils: "resource:///modules/ScreenshotsUtils.jsm",
   SearchSERPTelemetry: "resource:///modules/SearchSERPTelemetry.jsm",
+  SessionManager: "resource:///modules/SessionManager.jsm",
   SessionStartup: "resource:///modules/sessionstore/SessionStartup.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.jsm",
@@ -2152,6 +2153,7 @@ BrowserGlue.prototype = {
       () => BrowserUsageTelemetry.uninit(),
       () => SearchSERPTelemetry.uninit(),
       () => Interactions.uninit(),
+      () => SessionManager.uninit(),
       () => PageDataService.uninit(),
       () => PageThumbs.uninit(),
       () => NewTabUtils.uninit(),
@@ -2392,6 +2394,7 @@ BrowserGlue.prototype = {
     SearchSERPTelemetry.init();
 
     Interactions.init();
+    SessionManager.init();
     PageDataService.init();
     ExtensionsUI.init();
 

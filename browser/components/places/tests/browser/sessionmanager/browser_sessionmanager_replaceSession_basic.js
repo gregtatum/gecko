@@ -21,7 +21,7 @@ add_task(async function setup() {
   win = await BrowserTestUtils.openNewBrowserWindow();
 
   registerCleanupFunction(async () => {
-    await BrowserTestUtils.closeWindow(win);
+    await promiseWindowClosedAndSessionSaved(win);
   });
 });
 

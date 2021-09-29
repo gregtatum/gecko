@@ -119,10 +119,15 @@ async function testSetAsideSession(win, loadPagesCallback, expectedPages) {
   Assert.ok(sessionGuid, "Should have an active session");
 
   let dateCheckpoint = Date.now();
-  let changeComplete = BrowserTestUtils.waitForEvent(
-    win,
-    "session-replace-complete"
-  );
+  function listener(name, window, guid) {
+    Assert.equal(window, win, "Should have received the expected window");
+    Assert.equal(
+      guid,
+      null,
+      "Should not have received a replacement guid for set aside"
+    );
+  }
+  let changeComplete = SessionManager.once("session-replaced", listener);
   win.document.getElementById("session-setaside-button").click();
   await changeComplete;
 
@@ -137,6 +142,24 @@ async function testSetAsideSession(win, loadPagesCallback, expectedPages) {
     "There should be no views in the global history"
   );
 
+  await assertSavedSession(sessionGuid, expectedPages, dateCheckpoint);
+
+  return sessionGuid;
+}
+
+/**
+ * Tests that saved session data has been written to a file, and the
+ * associated data in the database is correct.
+ *
+ * @param {string} sessionGuid
+ *   The expected guid of the session.
+ * @param {object[]} expectedPages
+ *   An array of expected pages for the session. With properties url and
+ *   position.
+ * @param {number} dateCheckpoint
+ *   The expected earliest time (in milliseconds from the epoch) of the session.
+ */
+async function assertSavedSession(sessionGuid, expectedPages, dateCheckpoint) {
   let exists = await IOUtils.exists(
     PathUtils.join(
       await PathUtils.getProfileDir(),
@@ -163,8 +186,6 @@ async function testSetAsideSession(win, loadPagesCallback, expectedPages) {
     data: {},
     pages: expectedPages,
   });
-
-  return sessionGuid;
 }
 
 /**
@@ -172,7 +193,7 @@ async function testSetAsideSession(win, loadPagesCallback, expectedPages) {
  *
  * @param {DOMWindow} win
  *   The window to restore into.
- * @param {string} guid
+ * @param {string} expectedGuid
  *   The session guid to restore.
  * @param {object} expected
  *   Details of the pages expected to be restored.
@@ -182,15 +203,16 @@ async function testSetAsideSession(win, loadPagesCallback, expectedPages) {
  *   The expected index of the selected tab. If not provided, it is assumed
  *   to be the index of the last entry in the tabs array.
  */
-async function testReplaceSession(win, guid, expected) {
+async function testReplaceSession(win, expectedGuid, expected) {
   let expectedIndex = expected.index ?? expected.tabs.length - 1;
 
-  let restoreComplete = BrowserTestUtils.waitForEvent(
-    win,
-    "SSWindowStateReady"
-  );
-  await SessionManager.replaceSession(win, guid);
-  await restoreComplete;
+  function listener(name, window, guid) {
+    Assert.equal(window, win, "Should have received the expected window");
+    Assert.equal(guid, expectedGuid, "Should have received the expected guid");
+  }
+  let changeComplete = SessionManager.once("session-replaced", listener);
+  await SessionManager.replaceSession(win, expectedGuid);
+  await changeComplete;
 
   let numTabs = win.gBrowser.tabs.length;
   Assert.equal(
@@ -221,4 +243,24 @@ async function testReplaceSession(win, guid, expected) {
       `Should have the correct pages stored for history in tab ${i}`
     );
   }
+}
+
+/**
+ * Ensures that a session save has been completed when a window is closed.
+ * This is required to ensure that the writes are complete when closing a window
+ * in the tests. Without this there is a risk of race conditions where the
+ * session write could complete after the next test has started.
+ *
+ * @param {DOMWindow} win
+ *   The window to close.
+ */
+async function promiseWindowClosedAndSessionSaved(win) {
+  // Only wait if there is an active session.
+  if (SessionStore.getCustomWindowValue(win, "SessionManagerGuid")) {
+    let savePromise = SessionManager.once("sessions-updated");
+    await BrowserTestUtils.closeWindow(win);
+    return savePromise;
+  }
+
+  return BrowserTestUtils.closeWindow(win);
 }

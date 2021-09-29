@@ -69,9 +69,9 @@ class CompanionParent extends JSWindowActorParent {
 
     this._observer = this.observe.bind(this);
     this._handleTabEvent = this.handleTabEvent.bind(this);
-    this._handleWinEvent = this.handleWinEvent.bind(this);
     this._handleGlobalHistoryEvent = this.handleGlobalHistoryEvent.bind(this);
     this._pageDataFound = this.pageDataFound.bind(this);
+    this._handleSessionUpdate = this.handleSessionUpdate.bind(this);
     this._setupGlobalHistoryPrefObservers = this.setUpGlobalHistoryDebuggingObservers.bind(
       this
     );
@@ -116,6 +116,8 @@ class CompanionParent extends JSWindowActorParent {
   actorCreated() {
     this.setUpGlobalHistoryDebuggingObservers();
     this._destroyed = false;
+    SessionManager.on("session-replaced", this._handleSessionUpdate);
+    SessionManager.on("sessions-updated", this._handleSessionUpdate);
     // Initialise the display of the last session UI.
     this.getSessionData();
   }
@@ -203,6 +205,8 @@ class CompanionParent extends JSWindowActorParent {
       PageDataService.off("no-page-data", this._pageDataFound);
       this.snapshotSelector = null;
     }
+    SessionManager.off("session-replaced", this._handleSessionUpdate);
+    SessionManager.off("sessions-updated", this._handleSessionUpdate);
   }
 
   ensureCacheCleanupRunning() {
@@ -305,13 +309,11 @@ class CompanionParent extends JSWindowActorParent {
   registerWindow(win) {
     let tabs = win.gBrowser.tabContainer;
     tabs.addEventListener("TabAttrModified", this._handleTabEvent);
-    win.addEventListener("session-replace-complete", this._handleWinEvent);
   }
 
   unregisterWindow(win) {
     let tabs = win.gBrowser.tabContainer;
     tabs.removeEventListener("TabAttrModified", this._handleTabEvent);
-    win.removeEventListener("session-replace-complete", this._handleWinEvent);
   }
 
   async getFavicon(page, width) {
@@ -575,9 +577,11 @@ class CompanionParent extends JSWindowActorParent {
     }
   }
 
-  handleWinEvent(event) {
-    switch (event.type) {
-      case "session-replace-complete": {
+  handleSessionUpdate(eventName, window, guid) {
+    console.log(eventName, window, guid);
+    switch (eventName) {
+      case "session-replaced":
+      case "sessions-updated": {
         this.getSessionData();
         break;
       }

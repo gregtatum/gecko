@@ -44,7 +44,7 @@ add_task(async function test_register_session_with_open_new_tab() {
     data: {},
   });
 
-  await BrowserTestUtils.closeWindow(win);
+  await promiseWindowClosedAndSessionSaved(win);
 });
 
 add_task(async function test_second_navigation_doesnt_restart() {
@@ -92,7 +92,7 @@ add_task(async function test_second_navigation_doesnt_restart() {
     data: {},
   });
 
-  await BrowserTestUtils.closeWindow(win);
+  await promiseWindowClosedAndSessionSaved(win);
 });
 
 function getGUIDs() {
@@ -156,7 +156,7 @@ add_task(async function test_register_already_in_db() {
     "Should have cleared the GUID from the window."
   );
 
-  await BrowserTestUtils.closeWindow(win);
+  await promiseWindowClosedAndSessionSaved(win);
 });
 
 add_task(async function test_session_query() {

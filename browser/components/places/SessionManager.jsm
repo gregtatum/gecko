@@ -11,6 +11,7 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
+  EventEmitter: "resource://gre/modules/EventEmitter.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   Services: "resource://gre/modules/Services.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
@@ -37,6 +38,8 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
+const WINDOW_TRACKER_REMOVE_TOPIC = "sessionstore-closed-objects-changed";
+
 /**
  * @typedef {object} Session
  * @property {string} guid
@@ -49,8 +52,44 @@ XPCOMUtils.defineLazyPreferenceGetter(
  * The session manager is wrapper around SessionStore and it is responsible
  * for handling sessions across the application. Each window is its own session.
  * Sessions may be saved, set aside and started at any time.
+ *
+ * SessionManager is an event emitter that will emit events at various times:
+ *
+ * - sessions-updated
+ *   This event is emitted when the session data has been updated, e.g. after
+ *   a window is closed.
+ *   It is not emitted when saving session data when replacing a session. Use
+ *   the session-replaced event in that case.
+ *
+ * - session-replaced
+ *   This event is emitted when a session has been replaced. The additional
+ *   parameters are the window where the session was replaced and the guid
+ *   of the new session. The guid may be null if there was no new session.
  */
-const SessionManager = new (class SessionManager {
+const SessionManager = new (class SessionManager extends EventEmitter {
+  init() {
+    if (!perWindowEnabled) {
+      return;
+    }
+    Services.obs.addObserver(this, WINDOW_TRACKER_REMOVE_TOPIC, true);
+  }
+
+  uninit() {
+    if (!perWindowEnabled) {
+      return;
+    }
+    Services.obs.removeObserver(this, WINDOW_TRACKER_REMOVE_TOPIC);
+  }
+
+  /**
+   * @type {number}
+   *   The last closed window Id received from Session Restore. Tracking this
+   *   avoids re-saving closed windows multiple times.
+   *   This starts at -1 to be below the initial value of
+   *   SessionStoreInternal._nextClosedId.
+   */
+  #lastClosedWindowId = -1;
+
   /**
    * @type {string|null}
    *   The user's profile directory, cached to avoid repeated look-ups.
@@ -161,7 +200,7 @@ const SessionManager = new (class SessionManager {
     // we start the new one.
     await timerCompletePromise;
     await window.gBrowser.doPinebuildSessionShowAnimation();
-    window.dispatchEvent(new CustomEvent("session-replace-complete"));
+    this.emit("session-replaced", window, null);
   }
 
   /**
@@ -182,7 +221,7 @@ const SessionManager = new (class SessionManager {
       // of surfacing the failure to the user.
       await timerCompletePromise;
       await window.gBrowser.doPinebuildSessionShowAnimation();
-      window.dispatchEvent(new CustomEvent("session-replace-complete"));
+      this.emit("session-replaced", window, null);
       return;
     }
 
@@ -209,7 +248,7 @@ const SessionManager = new (class SessionManager {
     // and we've hit first paint for the session being loaded.
     await Promise.all([timerCompletePromise, promiseFirstPaint]);
     await window.gBrowser.doPinebuildSessionShowAnimation();
-    window.dispatchEvent(new CustomEvent("session-replace-complete"));
+    this.emit("session-replaced", window, guid);
   }
 
   /**
@@ -288,6 +327,39 @@ const SessionManager = new (class SessionManager {
     }
 
     return sessionData;
+  }
+
+  /*
+   * Handles notifications from the observer service.
+   *
+   * @param {nsISupports} subject
+   * @param {string} topic
+   * @param {string} data
+   */
+  observe(subject, topic, data) {
+    switch (topic) {
+      case WINDOW_TRACKER_REMOVE_TOPIC:
+        this.#saveClosedWindowData();
+        break;
+    }
+  }
+
+  /**
+   * Handles saving of sessions in closed windows.
+   */
+  async #saveClosedWindowData() {
+    let data = SessionStore.getClosedWindowData(false);
+    let highestWindowId = -1;
+    for (let windowData of data) {
+      if (windowData.closedId > this.#lastClosedWindowId) {
+        await this.#saveSessionData(windowData).catch(logConsole.error);
+        // Keep track of the highest window Id we saved, so that we can
+        // avoid saving the same windows multiple times.
+        highestWindowId = Math.max(windowData.closedId, highestWindowId);
+      }
+    }
+    this.#lastClosedWindowId = highestWindowId;
+    this.emit("sessions-updated");
   }
 
   /**
@@ -456,4 +528,9 @@ const SessionManager = new (class SessionManager {
     }
     return PathUtils.join(this.#profileDir, "sessions", `${guid}.jsonlz4`);
   }
+
+  QueryInterface = ChromeUtils.generateQI([
+    "nsIObserver",
+    "nsISupportsWeakReference",
+  ]);
 })();
