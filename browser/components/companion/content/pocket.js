@@ -2,69 +2,184 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { MozLitElement } from "./widget-utils.js";
+import { html, css } from "./lit.all.js";
+
 const NUM_POCKET_STORIES = 3;
 
+// The filters: portion of this URL is handled on the pocket
+// servers to adjust the image. If you need to change the image
+// properties you can talk to the pocket team about them.
 const POCKET_IMG_URL =
-  "https://img-getpocket.cdn.mozilla.net/158x96/filters:format(jpeg):quality(100):no_upscale():strip_exif()/";
+  "https://img-getpocket.cdn.mozilla.net/616x144/filters:format(jpeg):quality(100):no_upscale():strip_exif()/";
 
-export class PocketStory extends HTMLElement {
-  constructor(data) {
-    super();
-    this.data = data;
-
-    this.className = "pocket card";
-
-    let template = document.getElementById("template-pocket-story");
-    let fragment = template.content.cloneNode(true);
-
-    fragment.querySelector(".title").textContent = this.data.title;
-
-    fragment
-      .querySelector(".preview")
-      .setAttribute(
-        "src",
-        POCKET_IMG_URL + encodeURIComponent(this.data.raw_image_src)
-      );
-    fragment.querySelector(".excerpt").textContent = this.data.excerpt;
-    fragment.querySelector(".domain").textContent = this.data.domain;
-
-    this.appendChild(fragment);
-    this.addEventListener("click", this);
+export class PocketStory extends MozLitElement {
+  static get properties() {
+    return {
+      story: { type: Object },
+    };
   }
 
-  handleEvent() {
-    window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
-      url: this.data.url,
-    });
-  }
-}
-
-customElements.define("e-pocketstory", PocketStory);
-
-export class PocketList extends HTMLElement {
   constructor() {
     super();
-
-    let template = document.getElementById("template-pocket-list");
-    let fragment = template.content.cloneNode(true);
-    fragment.querySelector(".list-title").textContent = "Interesting Reads";
-    fragment.querySelector(".list-subtitle").textContent = "Powered by Pocket";
-    let shadow = this.attachShadow({ mode: "open" });
-    shadow.appendChild(fragment);
+    this.story = {};
   }
 
-  async connectedCallback() {
+  static get styles() {
+    return css`
+      .pocket {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        border: 0.5px solid var(--in-content-border-color);
+        border-radius: 8px;
+        box-shadow: none;
+        margin: 0 0 8px;
+        padding: 0;
+      }
+
+      .pocket:hover {
+        cursor: pointer;
+      }
+
+      .pocket-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding: 8px;
+        border-radius: 0px 0px 8px 8px;
+        border-top: 0.5px solid var(--in-content-border-color);
+        background: #fafafa;
+      }
+
+      p {
+        width: 100%;
+      }
+
+      a {
+        color: currentColor;
+        text-decoration: none;
+      }
+
+      a:focus {
+        text-decoration: underline;
+      }
+
+      .preview {
+        object-fit: cover;
+        border-radius: 8px 8px 0 0;
+        height: 72px;
+      }
+
+      .title,
+      .excerpt,
+      .domain {
+        margin: 0;
+      }
+
+      .title,
+      .excerpt {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        margin-bottom: 4px;
+      }
+
+      .title {
+        font-size: 0.87em;
+      }
+
+      .excerpt {
+        font-size: 0.73em;
+        color: var(--in-content-deemphasized-text);
+      }
+
+      .domain {
+        font-size: 0.6em;
+        color: color-mix(
+          in srgb,
+          var(--in-content-deemphasized-text) 75%,
+          transparent
+        );
+      }
+    `;
+  }
+
+  get imageUrl() {
     if (window.CompanionUtils.isInAutomation) {
-      return;
+      return this.story.raw_image_src;
     }
+    return POCKET_IMG_URL + encodeURIComponent(this.story.raw_image_src);
+  }
+
+  openStory(e) {
+    e.preventDefault();
+    window.openUrl(this.story.url);
+  }
+
+  render() {
+    let { story, openStory, imageUrl } = this;
+    return html`
+      <div class="pocket pocket-story" @click=${openStory}>
+        <img class="preview" src="${imageUrl}" />
+        <div class="pocket-content">
+          <p class="title">
+            <a href=${story.url}>${story.title}</a>
+          </p>
+          <p class="excerpt">${story.excerpt}</p>
+          <p class="domain">${story.domain}</p>
+        </div>
+      </div>
+    `;
+  }
+}
+customElements.define("pocket-story", PocketStory);
+
+export class PocketList extends MozLitElement {
+  static get properties() {
+    return {
+      stories: { type: Array, state: true },
+    };
+  }
+
+  constructor() {
+    super();
+    this.stories = [];
+  }
+
+  static get styles() {
+    return css`
+      @import url("chrome://browser/content/companion/companion.css");
+
+      .pocket-stories {
+        margin: 0 16px 16px 16px;
+      }
+    `;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.fetchPocketRecommendations();
+  }
+
+  async fetchPocketRecommendations() {
     let key = window.CompanionUtils.getCharPref(
       "extensions.pocket.oAuthConsumerKey"
     );
 
-    let target = new URL(
-      `https://getpocket.cdn.mozilla.net/v3/firefox/global-recs?version=3&consumer_key=${key}`
+    let pocketURL = window.CompanionUtils.getCharPref(
+      "browser.pinebuild.pocket.url",
+      ""
     );
 
+    if (!pocketURL) {
+      // This will happen in tests that don't care about pocket.
+      return;
+    }
+
+    let target = new URL(`${pocketURL}?version=3&consumer_key=${key}`);
     let response = await fetch(target);
 
     if (!response.ok) {
@@ -72,29 +187,49 @@ export class PocketList extends HTMLElement {
     }
 
     let results = await response.json();
-    let recommendations = results.recommendations;
-    let usedIndices = new Set();
+    this.selectPocketStories(results.recommendations);
+  }
 
+  selectPocketStories(data) {
+    let startIndex = Math.floor(Math.random() * Math.floor(data.length));
+    this.stories = [];
     for (let i = 0; i < NUM_POCKET_STORIES; i++) {
-      let index = Math.floor(
-        Math.random() * Math.floor(recommendations.length)
-      );
-      if (usedIndices.has(index)) {
-        i--;
-        continue;
-      } else {
-        usedIndices.add(index);
-      }
-      this.appendChild(
-        new PocketStory({
-          url: recommendations[index].url,
-          domain: recommendations[index].domain,
-          title: recommendations[index].title,
-          excerpt: recommendations[index].excerpt,
-          raw_image_src: recommendations[index].raw_image_src,
-        })
+      this.stories.push(
+        this.getStoryData(data[(startIndex + i) % data.length])
       );
     }
   }
+
+  getStoryData(story) {
+    return {
+      url: story.url,
+      domain: story.domain,
+      title: story.title,
+      excerpt: story.excerpt,
+      raw_image_src: story.raw_image_src,
+    };
+  }
+
+  render() {
+    return html`
+      <div id="pocket-list" ?hidden=${!this.stories.length}>
+        <h2
+          class="list-title"
+          data-l10n-id="companion-pocket-interesting-reads"
+        ></h2>
+        <h3
+          class="list-subtitle"
+          data-l10n-id="companion-pocket-powered-by"
+        ></h3>
+        <div class="pocket-stories">
+          ${this.stories.map(
+            story => html`
+              <pocket-story .story=${story}></pocket-story>
+            `
+          )}
+        </div>
+      </div>
+    `;
+  }
 }
-customElements.define("e-pocketlist", PocketList);
+customElements.define("pocket-list", PocketList);
