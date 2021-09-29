@@ -174,8 +174,12 @@ export class PocketList extends MozLitElement {
       ""
     );
 
-    if (!pocketURL) {
-      // This will happen in tests that don't care about pocket.
+    // This will happen in tests that don't care about pocket.
+    if (
+      !pocketURL ||
+      (window.CompanionUtils.isInAutomation &&
+        !new URL(pocketURL).hostname.includes("example.com"))
+    ) {
       return;
     }
 
