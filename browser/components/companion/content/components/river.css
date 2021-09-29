@@ -5,20 +5,38 @@
 :host {
   display: flex;
   align-items: center;
+  --light-bg-color: #F0F0F4;
+}
+
+:host:-moz-lwtheme-brighttext {
+  --light-bg-color: #42414D;
 }
 
 #river {
   display: flex;
   overflow: scroll;
   scrollbar-width: none;
-  background-color: #F0F0F4;
-  border-radius: 100px;
+  background-color: var(--light-bg-color);
   padding: 5px;
+  padding-inline-end: 0;
+  border-start-start-radius: 25px;
+  border-end-start-radius: 25px;
+}
+
+#river::after {
+  border-inline-start: 1px solid var(--button-hover-bgcolor);
+  margin-inline-start: 12px;
+  content: "";
 }
 
 #river[hidden] {
   visibility: hidden;
   min-height: 32px;
+}
+
+#river[hidden] + view-group[top] {
+  border-start-start-radius: 25px;
+  border-end-start-radius: 25px;
 }
 
 #river:hover > view-group {
@@ -39,11 +57,11 @@ view-group[active]:not([top]) {
 }
 
 view-group[top] {
-  margin-inline-start: 8px;
-}
-
-view-group[top]::part(icon-container) {
-  border-color: #5b5b66;
+  background-color: var(--light-bg-color);
+  border-start-end-radius: 25px;
+  border-end-end-radius: 25px;
+  padding-block: 5px;
+  padding-inline-start: 12px;
 }
 
 view-group[top]::part(label-container) {
