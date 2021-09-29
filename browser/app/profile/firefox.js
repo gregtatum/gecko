@@ -2624,6 +2624,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.companion.globalhistorydebugging.logLevel", "Warn");
   pref("browser.river.activationTimeout", 5000);
   pref("browser.river.maxGroups", 5);
+  pref("browser.pinebuild.workshop.enabled", false);
 
   // Preferences below here were at one point off by default and now have
   // been enabled (and should likely be removed eventually).
