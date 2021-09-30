@@ -106,14 +106,10 @@ export class LastSessionList extends HideableElement {
 
     this.appendChild(fragment);
 
-    let showHide = () => {
-      this.hidden = !window.CompanionUtils.getBoolPref(
-        SESSIONS_ENABLED_PREF,
-        false
-      );
-    };
-    window.CompanionUtils.addPrefObserver(SESSIONS_ENABLED_PREF, showHide);
-    showHide();
+    this.hidden = !window.CompanionUtils.getBoolPref(
+      SESSIONS_ENABLED_PREF,
+      false
+    );
   }
 
   connectedCallback() {
