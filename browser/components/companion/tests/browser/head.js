@@ -14,14 +14,18 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 });
 
 class CompanionHelper {
-  static async whenReady(taskFn) {
-    let helper = new CompanionHelper();
+  static async whenReady(taskFn, browserWindow = window) {
+    let helper = new CompanionHelper(browserWindow);
     await helper.openCompanion();
     await helper.companionReady;
 
     await taskFn(helper);
 
     await helper.closeCompanion();
+  }
+
+  constructor(browserWindow = window) {
+    this.browserWindow = browserWindow;
   }
 
   async openCompanion() {
@@ -97,15 +101,17 @@ class CompanionHelper {
   }
 
   get browser() {
-    return document.getElementById("companion-browser");
+    return this.browserWindow.document.getElementById("companion-browser");
   }
 
   get companionBox() {
-    return document.getElementById("companion-box");
+    return this.browserWindow.document.getElementById("companion-box");
   }
 
   get companionToggleButton() {
-    return document.getElementById("companion-sidebar-button");
+    return this.browserWindow.document.getElementById(
+      "companion-sidebar-button"
+    );
   }
 
   async setCalendarEvents(eventsData) {

@@ -580,6 +580,8 @@ class CompanionParent extends JSWindowActorParent {
   handleSessionUpdate(eventName, window, guid) {
     switch (eventName) {
       case "session-replaced":
+        this.sendAsyncMessage("Companion:SessionRestored");
+      // Intentional fallthrough: eslint-disable-next-line no-fallthrough
       case "sessions-updated": {
         this.getSessionData();
         break;
