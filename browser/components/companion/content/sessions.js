@@ -20,7 +20,7 @@ function sessionTitle(session) {
 }
 
 function pageToDataURI(page) {
-  if (!page.favicon) {
+  if (!page.favicon?.data) {
     return DEFAULT_FAVICON;
   }
   let b64 = btoa(
