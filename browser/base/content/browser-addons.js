@@ -847,6 +847,12 @@ var gXPInstallObserver = {
           }
 
           messageString = gNavigatorBundle.getFormattedString(error, args);
+          if (
+            AppConstants.PINEBUILD &&
+            error == "addonInstallBlockedByPolicy"
+          ) {
+            messageString = "Pro Client doesn't support this extension.";
+          }
 
           PopupNotifications.show(
             browser,

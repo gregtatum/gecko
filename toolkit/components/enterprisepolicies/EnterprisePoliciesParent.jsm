@@ -432,6 +432,13 @@ let DisallowedFeatures = {};
 let SupportMenu = null;
 let ExtensionPolicies = null;
 let ExtensionSettings = null;
+if (AppConstants.PINEBUILD) {
+  ExtensionSettings = {
+    "*": {
+      installation_mode: "blocked",
+    },
+  };
+}
 let InstallSources = null;
 
 /**
