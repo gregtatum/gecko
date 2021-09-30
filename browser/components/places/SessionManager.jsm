@@ -11,6 +11,7 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
+  BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   EventEmitter: "resource://gre/modules/EventEmitter.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   Services: "resource://gre/modules/Services.jsm",
@@ -275,6 +276,9 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    *    The specific guid to search for.
    * @param {string} [options.url]
    *    If provided, the query will be limited to sessions which contain the url.
+   * @param {boolean} [options.includeActive]
+   *    Optionally include active sessions in the query results. Only applies
+   *    if guid is not specified.
    * @param {boolean} [options.includePages]
    *    Optionally include the pages associated with the session in the query
    *    results. This is a more expensive lookup, so is off by default.
@@ -282,7 +286,13 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    *    A limit to the number of query results to return.
    * @returns {Session[]}
    */
-  async query({ guid, url, includePages = false, limit = 10 } = {}) {
+  async query({
+    guid,
+    url,
+    includeActive = false,
+    includePages = false,
+    limit = 10,
+  } = {}) {
     if (!perWindowEnabled) {
       return [];
     }
@@ -290,7 +300,16 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     let db = await PlacesUtils.promiseDBConnection();
 
     let clauses = [];
-    let bindings = { limit };
+
+    let activeSessions = [];
+    // Only work out active sessions if not looking for a specific guid.
+    if (!includeActive && !guid) {
+      activeSessions = this.#getActiveSessions();
+    }
+
+    // The limit is increased by the number of active sessions, in case we
+    // need to remove those from the results.
+    let bindings = { limit: limit + activeSessions.length };
 
     if (guid) {
       clauses.push("guid = :guid");
@@ -308,14 +327,21 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     `,
       bindings
     );
+    let sessionData = rows
+      .map(row => {
+        return {
+          guid: row.getResultByName("guid"),
+          lastSavedAt: this.#dateOrNull(row.getResultByName("last_saved_at")),
+          data: row.getResultByName("data"),
+        };
+      })
+      .filter(row => !activeSessions.includes(row.guid));
 
-    let sessionData = rows.map(row => {
-      return {
-        guid: row.getResultByName("guid"),
-        lastSavedAt: this.#dateOrNull(row.getResultByName("last_saved_at")),
-        data: row.getResultByName("data"),
-      };
-    });
+    // Ensure we still only return the limit, e.g. if active sessions were not
+    // in the result.
+    if (sessionData.length > limit) {
+      sessionData.length = limit;
+    }
 
     if (includePages) {
       for (let session of sessionData) {
@@ -443,7 +469,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
   async #saveSessionData(data) {
     let guid = data.extData?.SessionManagerGuid;
     if (!guid) {
-      logConsole.error("No session to save");
+      logConsole.debug("No session to save");
       return;
     }
 
@@ -540,6 +566,26 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       this.#profileDir = await PathUtils.getProfileDir();
     }
     return PathUtils.join(this.#profileDir, "sessions", `${guid}.jsonlz4`);
+  }
+
+  #getActiveSessions() {
+    let activeSessions = [];
+    let windowSessionGuid;
+    for (let win of BrowserWindowTracker.orderedWindows) {
+      try {
+        windowSessionGuid = SessionStore.getCustomWindowValue(
+          win,
+          "SessionManagerGuid"
+        );
+      } catch (ex) {
+        // In some cases SessionStore might not be tracking a window, that is
+        // fine, just continue.
+      }
+      if (windowSessionGuid) {
+        activeSessions.push(windowSessionGuid);
+      }
+    }
+    return activeSessions;
   }
 
   QueryInterface = ChromeUtils.generateQI([

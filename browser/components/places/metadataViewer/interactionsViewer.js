@@ -161,7 +161,7 @@ class TableViewer {
         if (column == "button") {
           viewer.children[index].textContent = "";
           let button = document.createElement("button");
-          button.textContent = "Restore";
+          button.textContent = details.header;
           button.onclick = details.clickHandler.bind(null, row);
           viewer.children[index].appendChild(button);
           index++;
@@ -490,7 +490,7 @@ const sessionsHandler = new (class extends TableViewer {
     [
       "button",
       {
-        header: "",
+        header: "Restore",
         clickHandler: r =>
           SessionManager.replaceSession(
             window.browsingContext.topChromeWindow,
@@ -504,7 +504,9 @@ const sessionsHandler = new (class extends TableViewer {
    * Loads the current metadata from the database and updates the display.
    */
   async updateDisplay() {
-    this.displayData(await SessionManager.query({ limit: 100 }));
+    this.displayData(
+      await SessionManager.query({ limit: 100, includeActive: true })
+    );
   }
 })();
 
