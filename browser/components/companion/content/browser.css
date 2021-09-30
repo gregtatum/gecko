@@ -41,6 +41,10 @@
   visibility: collapse;
 }
 
+#nav-bar pinned-views {
+  padding-inline-start: 8px;
+}
+
 #nav-bar:hover river-el::part(domain),
 #nav-bar:hover pinned-views::part(domain),
 #nav-bar:not(:hover) river-el::part(history),
