@@ -17,3 +17,5 @@ page-action-reader-mode =
   .label = Reader Mode
 page-action-more =
   .label = More
+
+last-session-saved = Last session saved in Companion

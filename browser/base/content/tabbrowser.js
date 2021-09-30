@@ -6229,6 +6229,25 @@
     },
 
     /**
+     * Shows a confirmation message for a short period before fading out.
+     *
+     * @param {string} templateId
+     *   The id of the template element that will be cloned and displayed.
+     */
+    showConfirmation(templateId) {
+      let template = document.getElementById(templateId);
+      let fragment = template.content.cloneNode(true);
+      let elem = fragment.firstElementChild;
+      document.body.appendChild(fragment);
+      this._delayDOMChange(() => {
+        elem.addEventListener("transitionend", () => elem.remove());
+        elem.classList.add("fadeout");
+      }, 3000);
+      // This removes flickering while l10n inserts text.
+      this._delayDOMChange(() => elem.removeAttribute("hidden"), 100);
+    },
+
+    /**
      * Delays a change for the specified timeout, and waits for an animation
      * frame.
      *

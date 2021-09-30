@@ -200,6 +200,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     // we start the new one.
     await timerCompletePromise;
     await window.gBrowser.doPinebuildSessionShowAnimation();
+    await window.gBrowser.showConfirmation("session-saved-confirmation");
     this.emit("session-replaced", window, null);
   }
 
