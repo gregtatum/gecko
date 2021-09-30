@@ -72,6 +72,19 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       return;
     }
     Services.obs.addObserver(this, WINDOW_TRACKER_REMOVE_TOPIC, true);
+
+    PlacesUtils.history.shutdownClient.jsclient.addBlocker(
+      "SessionManager: flushing sessions",
+      () => {
+        // Session store will have flushed the state of all windows in quit-application-granted so
+        // we can grab it synchronously.
+        let { windows } = SessionStore.getCurrentState();
+
+        return Promise.all(
+          windows.map(windowData => this.#saveSessionData(windowData))
+        );
+      }
+    );
   }
 
   uninit() {
