@@ -21,13 +21,6 @@ XPCOMUtils.defineLazyGetter(this, "gBrandBundle", function() {
 
 const PREF_LAUNCH_ON_LOGIN = "browser.startup.launchOnOSLogin";
 
-function getFirefoxExecutableFilename() {
-  if (AppConstants.platform === "win") {
-    return AppConstants.MOZ_APP_NAME + ".exe";
-  }
-  return AppConstants.MOZ_APP_NAME;
-}
-
 // Returns a nsIFile to the firefox.exe (really, application) executable file.
 function getFirefoxExecutableFile() {
   return Services.dirsvc.get("XREExeF", Ci.nsIFile);
