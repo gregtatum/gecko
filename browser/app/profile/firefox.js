@@ -2621,6 +2621,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("privacy.userContext.ui.enabled", false, locked);
   pref("browser.aboutwelcome.enabled", false);
   pref("browser.tabs.openNewTabForMostNavigations", true);
+  pref("browser.startup.launchOnOSLogin", false);
 
   // Pinebuild specific configurations
   pref("browser.companion.globalhistorydebugging", false);

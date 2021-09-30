@@ -50,6 +50,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   HomePage: "resource:///modules/HomePage.jsm",
   Integration: "resource://gre/modules/Integration.jsm",
   Interactions: "resource:///modules/Interactions.jsm",
+  LaunchOnOSLogin: "resource:///modules/LaunchOnOSLogin.jsm",
   Log: "resource://gre/modules/Log.jsm",
   LoginBreaches: "resource:///modules/LoginBreaches.jsm",
   PageDataService: "resource:///modules/pagedata/PageDataService.jsm",
@@ -2434,6 +2435,8 @@ BrowserGlue.prototype = {
       );
       AsanReporter.init();
     }
+
+    LaunchOnOSLogin.init();
 
     Sanitizer.onStartup();
     this._maybeShowRestoreSessionInfoBar();
