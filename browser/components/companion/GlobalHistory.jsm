@@ -35,6 +35,13 @@ XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
   });
 });
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "DEBUG",
+  "browser.companion.globalhistorydebugging",
+  false
+);
+
 const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
 /**
  * @typedef {object} ViewHistoryData
@@ -291,12 +298,7 @@ class InternalView {
 
     logConsole.debug(`Updated InternalView ${this.toString()}`);
 
-    if (
-      Services.prefs.getBoolPref(
-        "browser.companion.globalhistorydebugging",
-        false
-      )
-    ) {
+    if (DEBUG) {
       this.historyState = {
         pinned: this.#pinned,
         historyId: historyEntry.ID,
@@ -330,12 +332,7 @@ class InternalView {
 
     // If GlobalHistory debugging is enabled, then we want to also update
     // the historyState object that gets shown in the sidebar.
-    if (
-      Services.prefs.getBoolPref(
-        "browser.companion.globalhistorydebugging",
-        false
-      )
-    ) {
+    if (DEBUG) {
       let { browser, historyEntry } = getBrowserHistoryForView(
         this.#window,
         this
@@ -1055,6 +1052,7 @@ class GlobalHistory extends EventTarget {
         internalView = this.#historyViews.get(previousID);
         if (internalView) {
           logConsole.debug(`Found InternalView ${internalView.toString()}`);
+          this.#historyViews.delete(previousID);
           this.#historyViews.set(newEntry.ID, internalView);
         }
       }
@@ -1066,11 +1064,30 @@ class GlobalHistory extends EventTarget {
       );
       internalView = this.#pendingView;
       this.#historyViews.delete(internalView.historyId);
-      this.#historyViews.set(internalView.historyId, internalView);
+      this.#historyViews.set(newEntry.ID, internalView);
       this.#pendingView = null;
     }
 
     if (!internalView) {
+      // More than once, we've stumbled onto some bugs where a new InternalView
+      // gets created with an SHEntry that maps to a pre-existing InternalView.
+      // While we've fixed a good number of these cases, to make it easier to
+      // detect if more cases exist, we make a little bit of noise when debugging
+      // when that duplication arises.
+      if (DEBUG) {
+        let preexisting = this.#viewStack.find(v => v.historyId == newEntry.ID);
+        logConsole.assert(
+          !preexisting,
+          `Should not find a pre-existing InternalView with SHEntry ID ${newEntry.ID}`
+        );
+        if (preexisting) {
+          logConsole.debug(JSON.parse(JSON.stringify(this.#viewStack)));
+          logConsole.debug(
+            JSON.parse(JSON.stringify([...this.#historyViews.entries()]))
+          );
+        }
+      }
+
       logConsole.debug(`Creating a new InternalView.`);
       SessionManager.register(this.#window).catch(logConsole.error);
 
@@ -1232,12 +1249,7 @@ class GlobalHistory extends EventTarget {
    * @type {InternalView[]}
    */
   get internalViewsDebuggingOnly() {
-    if (
-      !Services.prefs.getBoolPref(
-        "browser.companion.globalhistorydebugging",
-        false
-      )
-    ) {
+    if (!DEBUG) {
       return null;
     }
 

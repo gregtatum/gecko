@@ -215,4 +215,34 @@ var PinebuildTestUtils = {
       this.assertEqualViews(gGlobalHistory.views[i], viewArray[i]);
     }
   },
+
+  /**
+   * Sends the current window back a View.
+   * @return {Promise}
+   * @resolves With the ViewChanged event that fired after switching to the
+   *           View.
+   */
+  async goBack() {
+    let viewChangedPromise = BrowserTestUtils.waitForEvent(
+      gGlobalHistory,
+      "ViewChanged"
+    );
+    gGlobalHistory.goBack();
+    return viewChangedPromise;
+  },
+
+  /**
+   * Sends the current window forward a View.
+   * @return {Promise}
+   * @resolves With the ViewChanged event that fired after switching to the
+   *           View.
+   */
+  async goForward() {
+    let viewChangedPromise = BrowserTestUtils.waitForEvent(
+      gGlobalHistory,
+      "ViewChanged"
+    );
+    gGlobalHistory.goForward();
+    return viewChangedPromise;
+  },
 };
