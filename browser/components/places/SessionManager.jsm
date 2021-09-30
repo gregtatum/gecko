@@ -154,7 +154,6 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     if (!perWindowEnabled) {
       return;
     }
-    logConsole.debug("Saving session", window);
 
     // Kick off loading the new session data so that it is hopefully
     // ready as soon as we need it.
