@@ -578,7 +578,6 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   handleSessionUpdate(eventName, window, guid) {
-    console.log(eventName, window, guid);
     switch (eventName) {
       case "session-replaced":
       case "sessions-updated": {
