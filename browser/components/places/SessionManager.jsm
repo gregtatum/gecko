@@ -42,11 +42,21 @@ XPCOMUtils.defineLazyPreferenceGetter(
 const WINDOW_TRACKER_REMOVE_TOPIC = "sessionstore-closed-objects-changed";
 
 /**
+ * @typedef {object} SessionPageRecord
+ * @property {string} url
+ *   The url visited.
+ * @property {number} position
+ *   The position of the url in the active view manager.
+ */
+
+/**
  * @typedef {object} Session
  * @property {string} guid
  *   The guid of the session.
  * @property {Date} lastSavedAt
  *   The time the session was last saved.
+ * @property {SessionPageRecord[]} pages
+ *   A list of pages associated with the session.
  */
 
 /**
@@ -197,6 +207,8 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     ]);
 
     if (restoreSessionGuid) {
+      // TODO: MR2-867 - if we are unable to load any data, we should find a way
+      // of surfacing the failure to the user and recovering nicely.
       let data = await loadDataPromise;
       await this.#restoreInto(
         window,
@@ -230,16 +242,8 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    *   A promise that is resolved when the hide animation timer is complete.
    */
   async #restoreInto(window, guid, data, timerCompletePromise) {
-    if (!data) {
-      // TODO: MR2-867 - if we are unable to load the data, we should find a way
-      // of surfacing the failure to the user.
-      await timerCompletePromise;
-      await window.gBrowser.doPinebuildSessionShowAnimation();
-      this.emit("session-replaced", window, null);
-      return;
-    }
-
     logConsole.debug("Loading session", guid, "from session store data");
+
     // Restoring the session also restores the SessionManagerGuid on the window.
     SessionStore.setWindowState(window, { windows: [data] }, true);
 
@@ -450,7 +454,33 @@ const SessionManager = new (class SessionManager extends EventEmitter {
         guid,
         "from saved places data"
       );
-      // TODO: To be implemented in follow-up patch.
+
+      let sessionData = await this.query({ guid, includePages: true });
+
+      // Formulate our own simulated session store data structure.
+      data = {
+        extData: {
+          SessionManagerGuid: guid,
+        },
+        selected: sessionData[0].pages.length,
+      };
+
+      let historyState = [];
+      // There is no record of what was loaded in particular tabs, simply
+      // load everything in separate tabs.
+      data.tabs = sessionData[0].pages.map((p, i) => {
+        historyState.push({ id: i, cachedEntry: null });
+        return {
+          entries: [
+            {
+              ID: i,
+              url: p.url,
+            },
+          ],
+        };
+      });
+
+      data.extData.GlobalHistoryState = JSON.stringify(historyState);
     }
     return data;
   }
