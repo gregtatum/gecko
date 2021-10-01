@@ -177,7 +177,7 @@ export default TaskDefiner.defineComplexTask([
         // the body. XXX this changes with mcav's streaming fixes.
         bodyContent = bodyContent.replace(/\r/g, "");
 
-        let { contentBlob, snippet } = processMessageContent(
+        let { contentBlob, snippet } = await processMessageContent(
           bodyContent,
           bodyType,
           !snippetOnly, // isDownloaded

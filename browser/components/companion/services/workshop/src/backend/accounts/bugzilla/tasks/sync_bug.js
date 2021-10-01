@@ -99,7 +99,7 @@ export default TaskDefiner.defineSimpleTask([
         bugInfo,
       });
 
-      bugChewer.chewBug();
+      await bugChewer.chewBug();
 
       await userChewer.gatherDataFromServer(account.client);
 

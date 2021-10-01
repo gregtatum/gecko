@@ -242,6 +242,11 @@ export class MailAPI extends Emitter {
     return account && account.folders.getFolderById(folderId);
   }
 
+  willDie() {
+    // Must be overwritten in main-frame-setup.js.
+    throw new Error("Not implemented");
+  }
+
   /**
    * Convert the folder id's for a message into MailFolder instances by looking
    * them up from the account's folders list view.

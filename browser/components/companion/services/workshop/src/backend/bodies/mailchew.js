@@ -453,7 +453,7 @@ export function mergeUserTextWithHTML(text, html) {
  *   here.
  * @return {{ contentBlob, snippet, authoredBodySize }}
  */
-export function processMessageContent(
+export async function processMessageContent(
   content,
   type,
   isDownloaded,
@@ -495,7 +495,7 @@ export function processMessageContent(
     case "html":
       if (generateSnippet) {
         try {
-          snippet = $htmlchew.generateSnippet(content);
+          snippet = await $htmlchew.generateSnippet(content);
         } catch (ex) {
           logic(scope, "htmlSnippetError", { ex });
           snippet = "";
@@ -503,13 +503,11 @@ export function processMessageContent(
       }
       if (isDownloaded) {
         try {
-          parsedContent = $htmlchew.sanitizeAndNormalizeHtml(content);
+          parsedContent = await $htmlchew.sanitizeAndNormalizeHtml(content);
           // TODO: Should we use a MIME type to convey this is sanitized HTML?
           // (Possibly also including our sanitizer version as a parameter?)
           contentBlob = new Blob([parsedContent], { type: "text/html" });
-          // bleach.js explicitly normalizes whitespace as part of its chars()
-          // method, although
-          authoredBodySize = $htmlchew.generateSearchableTextVersion(
+          authoredBodySize = await $htmlchew.generateSnippet(
             parsedContent,
             /* include quotes */ false
           ).length;

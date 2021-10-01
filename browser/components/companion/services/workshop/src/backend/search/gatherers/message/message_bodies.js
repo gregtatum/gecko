@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { generateSearchableTextVersion } from "../../../bodies/htmlchew";
+import { generateSnippet } from "../../../bodies/htmlchew";
 
 /**
  * Fetch the contents of the body part Blobs as strings, also normalizing HTML
@@ -64,7 +64,7 @@ GatherMessageBodies.prototype = {
       if (bodyRep.type === "html") {
         bodyResults.push({
           type: bodyRep.type,
-          textBody: generateSearchableTextVersion(bodyObj, this.includeQuotes),
+          textBody: generateSnippet(bodyObj, this.includeQuotes),
         });
       } else {
         bodyResults.push({

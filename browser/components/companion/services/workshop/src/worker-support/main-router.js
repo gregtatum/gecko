@@ -14,83 +14,67 @@
  * limitations under the License.
  */
 
-let listeners = {};
-let modules = [];
-let worker = null;
+const modules = [];
+const listeners = new Map();
 let workerPort = null;
 
 export function register(module) {
-  var action,
-    name = module.name;
-
   modules.push(module);
 
+  let action;
   if (module.process) {
-    action = function(msg) {
+    action = msg => {
       module.process(msg.uid, msg.cmd, msg.args);
     };
   } else if (module.dispatch) {
-    action = function(msg) {
+    action = msg => {
       if (module.dispatch[msg.cmd]) {
         module.dispatch[msg.cmd].apply(module.dispatch, msg.args);
       }
     };
   }
 
-  listeners[name] = action;
+  const name = module.name;
+  if (action) {
+    listeners.set(name, action);
+  }
 
-  module.sendMessage = function(uid, cmd, args, transferArgs) {
+  module.sendMessage = (uid, cmd, args, error = null) => {
     //dump('\x1b[34mM => w: send: ' + name + ' ' + uid + ' ' + cmd + '\x1b[0m\n');
     //debug('onmessage: ' + name + ": " + uid + " - " + cmd);
     try {
-      workerPort.postMessage(
-        {
-          type: name,
-          uid,
-          cmd,
-          args,
-        },
-        transferArgs
-      );
-    } catch (ex) {
-      console.error(
-        "Presumed DataCloneError on:",
+      workerPort.postMessage({
+        type: name,
+        uid,
+        cmd,
         args,
-        "with transfer args",
-        transferArgs,
-        "ex:",
-        ex
-      );
+        error,
+      });
+    } catch (ex) {
+      console.error("Presumed DataCloneError on:", args, "ex:", ex);
     }
   };
 }
 
 export function unregister(module) {
-  delete listeners["on" + module.name];
+  listeners.delete(module.name);
 }
 
 export function shutdown() {
-  modules.forEach(function(module) {
+  modules.forEach(module => {
     if (module.shutdown) {
       module.shutdown();
     }
   });
 }
 
-export function useWorker(_worker) {
-  worker = _worker;
+export function useWorker(worker) {
   // Currently we're assuming SharedWorker, but try and also handle being run
   // under a Worker as well.
-  if (worker.port) {
-    workerPort = worker.port;
-  } else {
-    workerPort = worker;
-  }
+  workerPort = worker.port || worker;
+
   workerPort.onmessage = function dispatchToListener(evt) {
-    var data = evt.data;
-    var listener = listeners[data.type];
-    if (listener) {
-      listener(data);
-    }
+    const { data } = evt;
+    listeners.get(data.type)?.(data);
   };
 }

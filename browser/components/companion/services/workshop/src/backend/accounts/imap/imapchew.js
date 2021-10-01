@@ -330,7 +330,7 @@ export function chewMessageStructure(
  *    //    and set its value.
  *
  */
-export function updateMessageWithFetch(message, req, res) {
+export async function updateMessageWithFetch(message, req, res) {
   var bodyRep = message.bodyReps[req.bodyRepIndex];
 
   // check if the request was unbounded or we got back less bytes then we
@@ -352,7 +352,7 @@ export function updateMessageWithFetch(message, req, res) {
     contentBlob,
     snippet,
     authoredBodySize,
-  } = $mailchew.processMessageContent(
+  } = await $mailchew.processMessageContent(
     res.text,
     bodyRep.type,
     bodyRep.isDownloaded,

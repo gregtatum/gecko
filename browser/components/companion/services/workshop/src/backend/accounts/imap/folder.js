@@ -860,13 +860,13 @@ ImapFolderConn.prototype = {
 
     // This will be invoked once per body part that is successfully downloaded
     // or fails to download.
-    fetcher.onparsed = function(err, req, resp) {
+    fetcher.onparsed = async function(err, req, resp) {
       if (err) {
         req.headerUpdatedCallback(err);
         return;
       }
 
-      $imapchew.updateMessageWithFetch(header, body, req, resp);
+      await $imapchew.updateMessageWithFetch(header, body, req, resp);
 
       header.bytesToDownloadForBodyDisplay = $imapchew.calculateBytesToDownloadForImapBodyDisplay(
         body

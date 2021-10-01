@@ -5,7 +5,6 @@
       "*": ["vendor/*", "*"],
       "gelam/*": ["*"],
       "logic": ["shared/logic"],
-      "bleach": ["vendor/bleach/bleach"],
       "equal": ["vendor/equal"],
       "imap-formal-syntax": ["vendor/imap-handler/src/imap-formal-syntax"],
       "smtpclient-response-parser": ["vendor/smtpclient/src/smtpclient-response-parser"]

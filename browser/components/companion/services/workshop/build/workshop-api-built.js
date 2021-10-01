@@ -3012,6 +3012,9 @@ var MailAPI = class extends import_evt14.Emitter {
     const account = this.accounts.getAccountById(accountId);
     return account && account.folders.getFolderById(folderId);
   }
+  willDie() {
+    throw new Error("Not implemented");
+  }
   _mapLabels(messageId, folderIds) {
     let accountId = accountIdFromMessageId(messageId);
     let account = this.accounts.getAccountById(accountId);
@@ -3753,54 +3756,49 @@ var MailAPI = class extends import_evt14.Emitter {
 };
 
 // src/worker-support/main-router.js
-var listeners = {};
 var modules = [];
-var worker = null;
+var listeners = new Map();
 var workerPort = null;
 function register(module) {
-  var action, name = module.name;
   modules.push(module);
+  let action;
   if (module.process) {
-    action = function(msg) {
+    action = (msg) => {
       module.process(msg.uid, msg.cmd, msg.args);
     };
   } else if (module.dispatch) {
-    action = function(msg) {
+    action = (msg) => {
       if (module.dispatch[msg.cmd]) {
         module.dispatch[msg.cmd].apply(module.dispatch, msg.args);
       }
     };
   }
-  listeners[name] = action;
-  module.sendMessage = function(uid, cmd, args, transferArgs) {
+  const name = module.name;
+  if (action) {
+    listeners.set(name, action);
+  }
+  module.sendMessage = (uid, cmd, args, error = null) => {
     try {
       workerPort.postMessage({
         type: name,
         uid,
         cmd,
-        args
-      }, transferArgs);
+        args,
+        error
+      });
     } catch (ex) {
-      console.error("Presumed DataCloneError on:", args, "with transfer args", transferArgs, "ex:", ex);
+      console.error("Presumed DataCloneError on:", args, "ex:", ex);
     }
   };
 }
 function unregister(module) {
-  delete listeners["on" + module.name];
+  listeners.delete(module.name);
 }
-function useWorker(_worker) {
-  worker = _worker;
-  if (worker.port) {
-    workerPort = worker.port;
-  } else {
-    workerPort = worker;
-  }
+function useWorker(worker) {
+  workerPort = worker.port || worker;
   workerPort.onmessage = function dispatchToListener(evt2) {
-    var data = evt2.data;
-    var listener = listeners[data.type];
-    if (listener) {
-      listener(data);
-    }
+    const { data } = evt2;
+    listeners.get(data.type)?.(data);
   };
 }
 
@@ -4457,59 +4455,83 @@ var control = {
     unregister(control);
   }
 };
-var MailAPI2 = new MailAPI();
-var worker2;
-var workerPort2;
-var bridge = {
-  name: "bridge",
-  sendMessage: null,
-  process(uid, cmd, args) {
-    var msg = args;
-    if (msg.type === "hello") {
-      delete MailAPI2._fake;
-      logic.tid = `api${uid}`;
-      logic(SCOPE, "gotHello", { uid, storedSends: MailAPI2._storedSends });
-      MailAPI2.__bridgeSend = function(sendMsg) {
-        logic(this, "send", { msg: sendMsg });
-        try {
+function MailAPIFactory(mainThreadService) {
+  const MailAPI2 = new MailAPI();
+  const worker = makeWorker();
+  logic.defineScope(worker, "Worker");
+  const workerPort2 = worker.port;
+  const bridge = {
+    name: "bridge",
+    sendMessage: null,
+    process(uid, cmd, args) {
+      var msg = args;
+      if (msg.type === "hello") {
+        delete MailAPI2._fake;
+        logic.tid = `api${uid}`;
+        logic(SCOPE, "gotHello", { uid, storedSends: MailAPI2._storedSends });
+        MailAPI2.__bridgeSend = function(sendMsg) {
+          logic(this, "send", { msg: sendMsg });
+          try {
+            workerPort2.postMessage({
+              uid,
+              type: "bridge",
+              msg: sendMsg
+            });
+          } catch (ex) {
+            console.error("Presumed DataCloneError on:", sendMsg, "ex:", ex);
+          }
+        };
+        MailAPI2.willDie = () => {
           workerPort2.postMessage({
-            uid,
-            type: "bridge",
-            msg: sendMsg
+            type: "willDie"
           });
-        } catch (ex) {
-          console.error("Presumed DataCloneError on:", sendMsg, "ex:", ex);
-        }
-      };
-      MailAPI2.config = msg.config;
-      MailAPI2._storedSends.forEach(function(storedMsg) {
-        MailAPI2.__bridgeSend(storedMsg);
-      });
-      MailAPI2.__universeAvailable();
-    } else {
-      MailAPI2.__bridgeReceive(msg);
+        };
+        MailAPI2.config = msg.config;
+        MailAPI2._storedSends.forEach(function(storedMsg) {
+          MailAPI2.__bridgeSend(storedMsg);
+        });
+        MailAPI2.__universeAvailable();
+      } else {
+        MailAPI2.__bridgeReceive(msg);
+      }
     }
-  }
-};
-worker2 = makeWorker();
-workerPort2 = worker2.port || worker2;
-logic.defineScope(worker2, "Worker");
-worker2.onerror = (event) => {
-  logic(worker2, "workerError", {
-    message: event.message,
-    filename: event.filename,
-    lineno: event.lineno
-  });
-};
-useWorker(worker2);
-register(control);
-register(bridge);
-register(configparser_main_default);
-register(cronsync_main_default);
-register(devicestorage_main_default);
-register(net_main_default);
-register(wakelocks_main_default);
-var main_frame_setup_default = MailAPI2;
+  };
+  const mainThreadServiceModule = {
+    name: "mainThreadService",
+    process(uid, cmd, args) {
+      if (!mainThreadService?.hasOwnProperty(cmd)) {
+        this.sendMessage(uid, cmd, args, `No service ${cmd} in the main thread.`);
+      }
+      try {
+        const result = mainThreadService[cmd](...args);
+        if (result instanceof Promise) {
+          result.then((res) => this.sendMessage(uid, cmd, res, null)).catch((err) => this.sendMessage(uid, cmd, args, `Main thread service threw: ${err.message}`));
+        } else {
+          this.sendMessage(uid, cmd, result, null);
+        }
+      } catch (ex) {
+        this.sendMessage(uid, cmd, args, `Main thread service threw: ${ex.message}`);
+      }
+    }
+  };
+  worker.onerror = (event) => {
+    logic(worker, "workerError", {
+      message: event.message,
+      filename: event.filename,
+      lineno: event.lineno
+    });
+  };
+  register(mainThreadServiceModule);
+  register(control);
+  register(bridge);
+  register(configparser_main_default);
+  register(cronsync_main_default);
+  register(devicestorage_main_default);
+  register(net_main_default);
+  register(wakelocks_main_default);
+  useWorker(worker);
+  return MailAPI2;
+}
 export {
-  main_frame_setup_default as default
+  MailAPIFactory
 };

@@ -100,7 +100,7 @@ export class MapiCalEventChewer {
     });
   }
 
-  chewEventBundle() {
+  async chewEventBundle() {
     // ## Remove any old messages that no longer fit within the sync window.
     const oldById = this.oldById;
     for (const oldInfo of this.oldEvents) {
@@ -151,7 +151,11 @@ export class MapiCalEventChewer {
         const body = mapiEvent.body;
         if (body) {
           const { content, contentType } = body;
-          ({ contentBlob, snippet, authoredBodySize } = processMessageContent(
+          ({
+            contentBlob,
+            snippet,
+            authoredBodySize,
+          } = await processMessageContent(
             content,
             contentType,
             true, // isDownloaded

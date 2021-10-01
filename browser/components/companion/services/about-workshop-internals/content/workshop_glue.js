@@ -8,6 +8,6 @@
  * straightforward relative path.  Import maps would help sidestep this.
  **/
 
-import workshopAPI from "chrome://browser/content/companion/workshop-api-built.js";
+import { MailAPIFactory } from "chrome://browser/content/companion/workshop-api-built.js";
 
-export default workshopAPI;
+export { MailAPIFactory };

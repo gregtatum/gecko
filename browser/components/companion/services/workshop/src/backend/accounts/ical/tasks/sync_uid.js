@@ -77,7 +77,7 @@ export default TaskDefiner.defineSimpleTask([
         oldEvents,
         foldersTOC,
       });
-      eventChewer.chewEventBundle();
+      await eventChewer.chewEventBundle();
 
       let convInfo;
       // It's possible we don't want a conversation (anymore) if there are no

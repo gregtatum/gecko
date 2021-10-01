@@ -77,7 +77,7 @@ export default TaskDefiner.defineSimpleTask([
         foldersTOC,
       });
 
-      itemChewer.chewItem();
+      await itemChewer.chewItem();
 
       const convInfo = churnConversation(
         req.convId,

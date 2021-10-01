@@ -93,7 +93,7 @@ export class GapiCalEventChewer {
     });
   }
 
-  chewEventBundle() {
+  async chewEventBundle() {
     // ## Remove any old messages that no longer fit within the sync window.
     const oldById = this.oldById;
     for (const oldInfo of this.oldEvents) {
@@ -126,7 +126,11 @@ export class GapiCalEventChewer {
         // ## Generate an HTML body part for the description
         const description = gapiEvent.description;
         if (description) {
-          ({ contentBlob, snippet, authoredBodySize } = processMessageContent(
+          ({
+            contentBlob,
+            snippet,
+            authoredBodySize,
+          } = await processMessageContent(
             description,
             "html",
             true, // isDownloaded

@@ -132,16 +132,16 @@ export class BugChewer {
     }
   }
 
-  chewBug() {
+  async chewBug() {
     this._mergeHistoryAndComments();
 
     let iEvent = 0;
-    for (const eventInfo of this.unifiedEvents) {
-      this._chewEvent(iEvent++, eventInfo);
-    }
+    await Promise.all(
+      this.unifiedEvents.map(eventInfo => this._chewEvent(iEvent++, eventInfo))
+    );
   }
 
-  _chewEvent(iEvent, { history, comment }) {
+  async _chewEvent(iEvent, { history, comment }) {
     // Padded for consistency with email (gmail) message id's.
     const msgId = `${this.convId}.${iEvent}.0`;
 
@@ -212,7 +212,7 @@ export class BugChewer {
       this.notableChanges++;
 
       const commentText = comment.raw_text;
-      ({ contentBlob, snippet, authoredBodySize } = processMessageContent(
+      ({ contentBlob, snippet, authoredBodySize } = await processMessageContent(
         commentText,
         "plain",
         true, // isDownloaded

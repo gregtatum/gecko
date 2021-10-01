@@ -418,7 +418,7 @@ export class TransactionChewer {
     this.notableChanges = 0;
   }
 
-  chewTransaction(tx) {
+  async chewTransaction(tx) {
     // As explained in `../sync.md` we pad a 0 onto the end for consistency
     // with email (gmail) message id's.
     const msgId = `${this.convId}.${tx.id}.0`;
@@ -458,7 +458,7 @@ export class TransactionChewer {
       this.notableChanges++;
 
       const commentText = tx.comments[0].content.raw;
-      ({ contentBlob, snippet, authoredBodySize } = processMessageContent(
+      ({ contentBlob, snippet, authoredBodySize } = await processMessageContent(
         commentText,
         "plain",
         true, // isDownloaded

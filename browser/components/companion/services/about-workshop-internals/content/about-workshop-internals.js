@@ -2,12 +2,27 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+// Main thread services used by the backend.
+const OnlineServicesHelper = ChromeUtils.import(
+  "resource:///modules/OnlineServicesHelper.jsm"
+);
+
 window.onunhandledrejection = event => {
   console.warn("UNHANDLED PROMISE REJECTION", event.reason);
 };
 
-import workshopAPI from "./workshop_glue.js";
-window.WORKSHOP_API = workshopAPI;
+import { MailAPIFactory } from "./workshop_glue.js";
+const workshopAPI = (window.WORKSHOP_API = MailAPIFactory(
+  OnlineServicesHelper
+));
+
+const unloadListener = evt => {
+  window.removeEventListener("beforeunload", unloadListener);
+  // We're unloading and maybe a main thread service is using
+  // the port associated with the workshopAPI.
+  workshopAPI.willDie();
+};
+window.addEventListener("beforeunload", unloadListener);
 
 import AccountFolderListPage from "./pages/account_folder_list.js";
 import AccountFolderMessageContentsPage from "./pages/account_folder_message_contents.js";

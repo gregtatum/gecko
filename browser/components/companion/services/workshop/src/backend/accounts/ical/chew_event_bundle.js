@@ -73,7 +73,7 @@ export class RecurringEventBundleChewer {
     this.allEvents = [];
   }
 
-  chewEventBundle() {
+  async chewEventBundle() {
     // In cases where the calendar event was deleted, jcalEvents will be an
     // empty list now.
     if (!this.jcalEvents.length) {
@@ -108,7 +108,7 @@ export class RecurringEventBundleChewer {
         endDate: rootEvent.endDate,
       };
 
-      this._chewOccurrence(fakeOccur);
+      await this._chewOccurrence(fakeOccur);
     }
     // # Recurring
     else {
@@ -123,6 +123,7 @@ export class RecurringEventBundleChewer {
       // have a backstop.
       let stepCount = 0;
 
+      const promises = [];
       for (
         calIter.next();
         calIter.complete === false &&
@@ -144,8 +145,9 @@ export class RecurringEventBundleChewer {
         ) {
           continue;
         }
-        this._chewOccurrence(occurInfo);
+        promises.push(this._chewOccurrence(occurInfo));
       }
+      await Promise.all(promises);
     }
   }
 
@@ -172,7 +174,7 @@ export class RecurringEventBundleChewer {
     });
   }
 
-  _chewOccurrence({ recurrenceId, item, startDate, endDate }) {
+  async _chewOccurrence({ recurrenceId, item, startDate, endDate }) {
     // Padded for consistency with email (gmail) message id's.
     const msgId = `${this.convId}.${recurrenceId}.0`;
     const component = item.component;
@@ -200,7 +202,7 @@ export class RecurringEventBundleChewer {
     if (description) {
       // At least as retrieved as a value, newlines are escaped.
       description = description.replace(/\\n/g, "\n");
-      ({ contentBlob, snippet, authoredBodySize } = processMessageContent(
+      ({ contentBlob, snippet, authoredBodySize } = await processMessageContent(
         description,
         "html",
         true, // isDownloaded

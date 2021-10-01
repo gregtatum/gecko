@@ -170,9 +170,9 @@ export default TaskDefiner.defineSimpleTask([
         revInfo,
       });
 
-      for (const tx of revTransactions.data) {
-        txChewer.chewTransaction(tx);
-      }
+      await Promise.all(
+        revTransactions.data.map(tx => txChewer.chewTransaction(tx))
+      );
 
       await userChewer.gatherDataFromServer(account.client);
 

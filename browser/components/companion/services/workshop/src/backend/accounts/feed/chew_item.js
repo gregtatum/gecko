@@ -26,7 +26,7 @@ export class FeedItemChewer {
     this.allMessages = [];
   }
 
-  chewItem() {
+  async chewItem() {
     const item = this.item;
     let contentBlob, snippet, authoredBodySize;
     let bodyReps = [];
@@ -34,7 +34,7 @@ export class FeedItemChewer {
 
     if (item.description) {
       const description = item.description;
-      ({ contentBlob, snippet, authoredBodySize } = processMessageContent(
+      ({ contentBlob, snippet, authoredBodySize } = await processMessageContent(
         description,
         "html",
         true, // isDownloaded

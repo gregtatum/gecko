@@ -780,6 +780,125 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/backend/worker-router.js
+  function runOnConnect(handler) {
+    onConnectHandler = handler;
+  }
+  function getFirstPort() {
+    return allPorts.values().next().value;
+  }
+  function _eventuallySendToDefaultHelper(message, resolve, reject) {
+    const port = getFirstPort();
+    if (!port) {
+      reject(new Error("No default route to the main thread."));
+      return;
+    }
+    const uid = message.uid = nextMessageUid++;
+    port._messages.set(uid, { message, resolve, reject });
+    port.postMessage(message);
+  }
+  async function eventuallySendToDefault(message) {
+    return new Promise((resolve, reject) => {
+      _eventuallySendToDefaultHelper(message, resolve, reject);
+    });
+  }
+  function unregister(type) {
+    listeners.delete(type);
+  }
+  function registerSimple(type, callback) {
+    listeners.set(type, callback);
+    return function sendSimpleMessage(cmd, args, explicitPort) {
+      const msg = { type, uid: null, cmd, args };
+      if (explicitPort) {
+        explicitPort.postMessage(msg);
+      } else {
+        eventuallySendToDefault(msg).then(callback);
+      }
+    };
+  }
+  function registerCallbackType(type) {
+    let sender = callbackSenders.get(type);
+    if (!sender) {
+      sender = function sendCallbackMessage(cmd, args) {
+        return eventuallySendToDefault({ type, cmd, args });
+      };
+      callbackSenders.set(type, sender);
+    }
+    return sender;
+  }
+  function registerInstanceType(type) {
+    const instanceMap = new Map();
+    listeners.set(type, function receiveInstanceMessage(data) {
+      instanceMap.get(data.uid)?.(data);
+    });
+    return {
+      register(instanceListener, usePort) {
+        const uid = nextMessageUid++;
+        instanceMap.set(uid, instanceListener);
+        return {
+          sendMessage: function sendInstanceMessage(cmd, args) {
+            usePort.postMessage({ type, uid, cmd, args });
+          },
+          unregister: function unregisterInstance() {
+            instanceMap.delete(uid);
+          }
+        };
+      }
+    };
+  }
+  async function callOnMainThread({ cmd, args }) {
+    const { args: result } = await eventuallySendToDefault({
+      type: "mainThreadService",
+      cmd,
+      args
+    });
+    return result;
+  }
+  var nextMessageUid, onConnectHandler, allPorts, callbackSenders, listeners;
+  var init_worker_router = __esm({
+    "src/backend/worker-router.js"() {
+      nextMessageUid = 0;
+      onConnectHandler = null;
+      allPorts = new Set();
+      callbackSenders = new Map();
+      listeners = new Map([
+        [
+          "willDie",
+          (data, port) => {
+            allPorts.remove(port);
+            for (const { message, resolve, reject } of port._messages.values()) {
+              _eventuallySendToDefaultHelper(message, resolve, reject);
+            }
+          }
+        ]
+      ]);
+      onconnect = (connectionEvent) => {
+        const port = connectionEvent.ports[0];
+        allPorts.add(port);
+        const portMessages = port._messages = new Map();
+        port.onmessage = (messageEvent) => {
+          if (!allPorts.has(port)) {
+            return;
+          }
+          const { data } = messageEvent;
+          if (portMessages.has(data.uid)) {
+            const { uid, cmd, args, error } = data;
+            const { resolve, reject } = portMessages.get(uid);
+            portMessages.delete(uid);
+            if (error) {
+              reject(new Error(error));
+            } else {
+              resolve({ cmd, args });
+            }
+          } else {
+            listeners.get(data.type)?.(data, port);
+          }
+        };
+        onConnectHandler?.(port);
+      };
+    }
+  });
+
   // src/backend/bodies/mailchew_strings.js
   function set(_strings) {
     strings = _strings;
@@ -2398,8 +2517,8 @@ var WorkshopBackend = (() => {
       xhtml: XhtmlNamespace
     };
     const nodeBuilder = new NodeBuilder(nsSetUp, new Root(), RssNamespace);
-    const parser2 = new XMLParser(nodeBuilder);
-    return parser2.parse(str);
+    const parser = new XMLParser(nodeBuilder);
+    return parser.parse(str);
   }
   var Root;
   var init_feed_parser = __esm({
@@ -3914,12 +4033,12 @@ var WorkshopBackend = (() => {
           }
         }
         ParserError.prototype = Error.prototype;
-        function parser2(input) {
+        function parser(input) {
           var state = {};
           var root = state.component = [];
           state.stack = [root];
-          parser2._eachLine(input, function(err, line) {
-            parser2._handleContentLine(line, state);
+          parser._eachLine(input, function(err, line) {
+            parser._handleContentLine(line, state);
           });
           if (state.stack.length > 1) {
             throw new ParserError("invalid ical body. component began but did not end");
@@ -3927,19 +4046,19 @@ var WorkshopBackend = (() => {
           state = null;
           return root.length == 1 ? root[0] : root;
         }
-        parser2.property = function(str, designSet) {
+        parser.property = function(str, designSet) {
           var state = {
             component: [[], []],
             designSet: designSet || design.defaultSet
           };
-          parser2._handleContentLine(str, state);
+          parser._handleContentLine(str, state);
           return state.component[1][0];
         };
-        parser2.component = function(str) {
-          return parser2(str);
+        parser.component = function(str) {
+          return parser(str);
         };
-        parser2.ParserError = ParserError;
-        parser2._handleContentLine = function(line, state) {
+        parser.ParserError = ParserError;
+        parser._handleContentLine = function(line, state) {
           var valuePos = line.indexOf(VALUE_DELIMITER);
           var paramPos = line.indexOf(PARAM_DELIMITER);
           var lastParamIndex;
@@ -3955,7 +4074,7 @@ var WorkshopBackend = (() => {
           var parsedParams;
           if (paramPos !== -1) {
             name = line.substring(0, paramPos).toLowerCase();
-            parsedParams = parser2._parseParameters(line.substring(paramPos), 0, state.designSet);
+            parsedParams = parser._parseParameters(line.substring(paramPos), 0, state.designSet);
             if (parsedParams[2] == -1) {
               throw new ParserError("Invalid parameters in '" + line + "'");
             }
@@ -4019,16 +4138,16 @@ var WorkshopBackend = (() => {
           delete params.value;
           var result;
           if (multiValue && structuredValue) {
-            value = parser2._parseMultiValue(value, structuredValue, valueType, [], multiValue, state.designSet, structuredValue);
+            value = parser._parseMultiValue(value, structuredValue, valueType, [], multiValue, state.designSet, structuredValue);
             result = [name, params, valueType, value];
           } else if (multiValue) {
             result = [name, params, valueType];
-            parser2._parseMultiValue(value, multiValue, valueType, result, null, state.designSet, false);
+            parser._parseMultiValue(value, multiValue, valueType, result, null, state.designSet, false);
           } else if (structuredValue) {
-            value = parser2._parseMultiValue(value, structuredValue, valueType, [], null, state.designSet, structuredValue);
+            value = parser._parseMultiValue(value, structuredValue, valueType, [], null, state.designSet, structuredValue);
             result = [name, params, valueType, value];
           } else {
-            value = parser2._parseValue(value, valueType, state.designSet, false);
+            value = parser._parseValue(value, valueType, state.designSet, false);
             result = [name, params, valueType, value];
           }
           if (state.component[0] === "vcard" && state.component[1].length === 0 && !(name === "version" && value === "4.0")) {
@@ -4036,13 +4155,13 @@ var WorkshopBackend = (() => {
           }
           state.component[1].push(result);
         };
-        parser2._parseValue = function(value, type, designSet, structuredValue) {
+        parser._parseValue = function(value, type, designSet, structuredValue) {
           if (type in designSet.value && "fromICAL" in designSet.value[type]) {
             return designSet.value[type].fromICAL(value, structuredValue);
           }
           return value;
         };
-        parser2._parseParameters = function(line, start, designSet) {
+        parser._parseParameters = function(line, start, designSet) {
           var lastParam = start;
           var pos = 0;
           var delim = PARAM_NAME_DELIMITER;
@@ -4066,7 +4185,7 @@ var WorkshopBackend = (() => {
             if (lcname in designSet.param) {
               multiValue = designSet.param[lcname].multiValue;
               if (designSet.param[lcname].multiValueSeparateDQuote) {
-                mvdelim = parser2._rfc6868Escape('"' + multiValue + '"');
+                mvdelim = parser._rfc6868Escape('"' + multiValue + '"');
               }
             }
             var nextChar = line[pos + 1];
@@ -4111,12 +4230,12 @@ var WorkshopBackend = (() => {
               }
               value = line.substr(valuePos, nextPos - valuePos);
             }
-            value = parser2._rfc6868Escape(value);
+            value = parser._rfc6868Escape(value);
             if (multiValue) {
               var delimiter = mvdelim || multiValue;
-              value = parser2._parseMultiValue(value, delimiter, type, [], null, designSet);
+              value = parser._parseMultiValue(value, delimiter, type, [], null, designSet);
             } else {
-              value = parser2._parseValue(value, type, designSet);
+              value = parser._parseValue(value, type, designSet);
             }
             if (multiValue && lcname in result) {
               if (Array.isArray(result[lcname])) {
@@ -4133,13 +4252,13 @@ var WorkshopBackend = (() => {
           }
           return [result, value, valuePos];
         };
-        parser2._rfc6868Escape = function(val) {
+        parser._rfc6868Escape = function(val) {
           return val.replace(/\^['n^]/g, function(x) {
             return RFC6868_REPLACE_MAP[x];
           });
         };
         var RFC6868_REPLACE_MAP = { "^'": '"', "^n": "\n", "^^": "^" };
-        parser2._parseMultiValue = function(buffer, delim, type, result, innerMulti, designSet, structuredValue) {
+        parser._parseMultiValue = function(buffer, delim, type, result, innerMulti, designSet, structuredValue) {
           var pos = 0;
           var lastPos = 0;
           var value;
@@ -4149,23 +4268,23 @@ var WorkshopBackend = (() => {
           while ((pos = helpers.unescapedIndexOf(buffer, delim, lastPos)) !== -1) {
             value = buffer.substr(lastPos, pos - lastPos);
             if (innerMulti) {
-              value = parser2._parseMultiValue(value, innerMulti, type, [], null, designSet, structuredValue);
+              value = parser._parseMultiValue(value, innerMulti, type, [], null, designSet, structuredValue);
             } else {
-              value = parser2._parseValue(value, type, designSet, structuredValue);
+              value = parser._parseValue(value, type, designSet, structuredValue);
             }
             result.push(value);
             lastPos = pos + delim.length;
           }
           value = buffer.substr(lastPos);
           if (innerMulti) {
-            value = parser2._parseMultiValue(value, innerMulti, type, [], null, designSet, structuredValue);
+            value = parser._parseMultiValue(value, innerMulti, type, [], null, designSet, structuredValue);
           } else {
-            value = parser2._parseValue(value, type, designSet, structuredValue);
+            value = parser._parseValue(value, type, designSet, structuredValue);
           }
           result.push(value);
           return result.length == 1 ? result[0] : result;
         };
-        parser2._eachLine = function(buffer, callback) {
+        parser._eachLine = function(buffer, callback) {
           var len = buffer.length;
           var lastPos = buffer.search(CHAR);
           var pos = lastPos;
@@ -4197,7 +4316,7 @@ var WorkshopBackend = (() => {
           if (line.length)
             callback(null, line);
         };
-        return parser2;
+        return parser;
       }();
       ICAL.Component = function() {
         "use strict";
@@ -9261,1786 +9380,51 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/vendor/bleach/bleach/css-parser/tokenizer.js
-  var require_tokenizer = __commonJS({
-    "src/vendor/bleach/bleach/css-parser/tokenizer.js"(exports) {
-      (function(root, factory) {
-        if (typeof define === "function" && define.amd) {
-          define(["exports"], factory);
-        } else if (typeof exports !== "undefined") {
-          factory(exports);
-        } else {
-          factory(root);
-        }
-      })(exports, function(exports2) {
-        var between = function(num, first, last) {
-          return num >= first && num <= last;
-        };
-        function digit(code) {
-          return between(code, 48, 57);
-        }
-        function hexdigit(code) {
-          return digit(code) || between(code, 65, 70) || between(code, 97, 102);
-        }
-        function uppercaseletter(code) {
-          return between(code, 65, 90);
-        }
-        function lowercaseletter(code) {
-          return between(code, 97, 122);
-        }
-        function letter(code) {
-          return uppercaseletter(code) || lowercaseletter(code);
-        }
-        function nonascii(code) {
-          return code >= 160;
-        }
-        function namestartchar(code) {
-          return letter(code) || nonascii(code) || code == 95;
-        }
-        function namechar(code) {
-          return namestartchar(code) || digit(code) || code == 45;
-        }
-        function nonprintable(code) {
-          return between(code, 0, 8) || between(code, 14, 31) || between(code, 127, 159);
-        }
-        function newline(code) {
-          return code == 10 || code == 12;
-        }
-        function whitespace(code) {
-          return newline(code) || code == 9 || code == 32;
-        }
-        function badescape(code) {
-          return newline(code) || isNaN(code);
-        }
-        var maximumallowedcodepoint = 1114111;
-        function tokenize(str, options) {
-          if (options == void 0)
-            options = { transformFunctionWhitespace: false, scientificNotation: false };
-          var i = -1;
-          var tokens = [];
-          var state = "data";
-          var code;
-          var currtoken;
-          var line = 0;
-          var column = 0;
-          var lastLineLength = 0;
-          var incrLineno = function() {
-            line += 1;
-            lastLineLength = column;
-            column = 0;
-          };
-          var locStart = { line, column };
-          var next = function(num) {
-            if (num === void 0)
-              num = 1;
-            return str.charCodeAt(i + num);
-          };
-          var consume = function(num) {
-            if (num === void 0)
-              num = 1;
-            i += num;
-            code = str.charCodeAt(i);
-            if (newline(code))
-              incrLineno();
-            else
-              column += num;
-            return true;
-          };
-          var reconsume = function() {
-            i -= 1;
-            if (newline(code)) {
-              line -= 1;
-              column = lastLineLength;
-            } else {
-              column -= 1;
-            }
-            locStart.line = line;
-            locStart.column = column;
-            return true;
-          };
-          var eof = function() {
-            return i >= str.length;
-          };
-          var donothing = function() {
-          };
-          var emit = function(token) {
-            if (token) {
-              token.finish();
-            } else {
-              token = currtoken.finish();
-            }
-            if (options.loc === true) {
-              token.loc = {};
-              token.loc.start = { line: locStart.line, column: locStart.column, idx: locStart.idx };
-              locStart = { line, column, idx: i };
-              token.loc.end = locStart;
-            }
-            tokens.push(token);
-            currtoken = void 0;
-            return true;
-          };
-          var create = function(token) {
-            currtoken = token;
-            return true;
-          };
-          var parseerror = function() {
-            return true;
-          };
-          var catchfire = function(msg) {
-            return true;
-          };
-          var switchto = function(newstate) {
-            state = newstate;
-            return true;
-          };
-          var consumeEscape = function() {
-            consume();
-            if (hexdigit(code)) {
-              var digits = [];
-              for (var total2 = 0; total2 < 6; total2++) {
-                if (hexdigit(code)) {
-                  digits.push(code);
-                  consume();
-                } else {
-                  break;
-                }
-              }
-              var value = parseInt(digits.map(String.fromCharCode).join(""), 16);
-              if (value > maximumallowedcodepoint)
-                value = 65533;
-              if (!whitespace(code))
-                reconsume();
-              return value;
-            } else {
-              return code;
-            }
-          };
-          for (; ; ) {
-            if (i > str.length * 2)
-              return "I'm infinite-looping!";
-            consume();
-            switch (state) {
-              case "data":
-                if (whitespace(code)) {
-                  emit(new WhitespaceToken());
-                  while (whitespace(next()))
-                    consume();
-                } else if (code == 34)
-                  switchto("double-quote-string");
-                else if (code == 35)
-                  switchto("hash");
-                else if (code == 39)
-                  switchto("single-quote-string");
-                else if (code == 40)
-                  emit(new OpenParenToken());
-                else if (code == 41)
-                  emit(new CloseParenToken());
-                else if (code == 43) {
-                  if (digit(next()) || next() == 46 && digit(next(2)))
-                    switchto("number") && reconsume();
-                  else
-                    emit(new DelimToken(code));
-                } else if (code == 45) {
-                  if (next(1) == 45 && next(2) == 62)
-                    consume(2) && emit(new CDCToken());
-                  else if (digit(next()) || next(1) == 46 && digit(next(2)))
-                    switchto("number") && reconsume();
-                  else
-                    switchto("ident") && reconsume();
-                } else if (code == 46) {
-                  if (digit(next()))
-                    switchto("number") && reconsume();
-                  else
-                    emit(new DelimToken(code));
-                } else if (code == 47) {
-                  if (next() == 42)
-                    consume() && switchto("comment");
-                  else
-                    emit(new DelimToken(code));
-                } else if (code == 58)
-                  emit(new ColonToken());
-                else if (code == 59)
-                  emit(new SemicolonToken());
-                else if (code == 60) {
-                  if (next(1) == 33 && next(2) == 45 && next(3) == 45)
-                    consume(3) && emit(new CDOToken());
-                  else
-                    emit(new DelimToken(code));
-                } else if (code == 64)
-                  switchto("at-keyword");
-                else if (code == 91)
-                  emit(new OpenSquareToken());
-                else if (code == 92) {
-                  if (badescape(next()))
-                    parseerror() && emit(new DelimToken(code));
-                  else
-                    switchto("ident") && reconsume();
-                } else if (code == 93)
-                  emit(new CloseSquareToken());
-                else if (code == 123)
-                  emit(new OpenCurlyToken());
-                else if (code == 125)
-                  emit(new CloseCurlyToken());
-                else if (digit(code))
-                  switchto("number") && reconsume();
-                else if (code == 85 || code == 117) {
-                  if (next(1) == 43 && hexdigit(next(2)))
-                    consume() && switchto("unicode-range");
-                  else
-                    switchto("ident") && reconsume();
-                } else if (namestartchar(code))
-                  switchto("ident") && reconsume();
-                else if (eof()) {
-                  emit(new EOFToken2());
-                  return tokens;
-                } else
-                  emit(new DelimToken(code));
-                break;
-              case "double-quote-string":
-                if (currtoken == void 0)
-                  create(new StringToken());
-                if (code == 34)
-                  emit() && switchto("data");
-                else if (eof())
-                  parseerror() && emit() && switchto("data") && reconsume();
-                else if (newline(code))
-                  parseerror() && emit(new BadStringToken()) && switchto("data") && reconsume();
-                else if (code == 92) {
-                  if (badescape(next()))
-                    parseerror() && emit(new BadStringToken()) && switchto("data");
-                  else if (newline(next()))
-                    consume();
-                  else
-                    currtoken.append(consumeEscape());
-                } else
-                  currtoken.append(code);
-                break;
-              case "single-quote-string":
-                if (currtoken == void 0)
-                  create(new StringToken());
-                if (code == 39)
-                  emit() && switchto("data");
-                else if (eof())
-                  parseerror() && emit() && switchto("data");
-                else if (newline(code))
-                  parseerror() && emit(new BadStringToken()) && switchto("data") && reconsume();
-                else if (code == 92) {
-                  if (badescape(next()))
-                    parseerror() && emit(new BadStringToken()) && switchto("data");
-                  else if (newline(next()))
-                    consume();
-                  else
-                    currtoken.append(consumeEscape());
-                } else
-                  currtoken.append(code);
-                break;
-              case "hash":
-                if (namechar(code))
-                  create(new HashToken(code)) && switchto("hash-rest");
-                else if (code == 92) {
-                  if (badescape(next()))
-                    parseerror() && emit(new DelimToken(35)) && switchto("data") && reconsume();
-                  else
-                    create(new HashToken(consumeEscape())) && switchto("hash-rest");
-                } else
-                  emit(new DelimToken(35)) && switchto("data") && reconsume();
-                break;
-              case "hash-rest":
-                if (namechar(code))
-                  currtoken.append(code);
-                else if (code == 92) {
-                  if (badescape(next()))
-                    parseerror() && emit() && switchto("data") && reconsume();
-                  else
-                    currtoken.append(consumeEscape());
-                } else
-                  emit() && switchto("data") && reconsume();
-                break;
-              case "comment":
-                if (code == 42) {
-                  if (next() == 47)
-                    consume() && switchto("data");
-                  else
-                    donothing();
-                } else if (eof())
-                  parseerror() && switchto("data") && reconsume();
-                else
-                  donothing();
-                break;
-              case "at-keyword":
-                if (code == 45) {
-                  if (namestartchar(next()))
-                    create(new AtKeywordToken(45)) && switchto("at-keyword-rest");
-                  else if (next(1) == 92 && !badescape(next(2)))
-                    create(new AtKeywordtoken(45)) && switchto("at-keyword-rest");
-                  else
-                    parseerror() && emit(new DelimToken(64)) && switchto("data") && reconsume();
-                } else if (namestartchar(code))
-                  create(new AtKeywordToken(code)) && switchto("at-keyword-rest");
-                else if (code == 92) {
-                  if (badescape(next()))
-                    parseerror() && emit(new DelimToken(35)) && switchto("data") && reconsume();
-                  else
-                    create(new AtKeywordToken(consumeEscape())) && switchto("at-keyword-rest");
-                } else
-                  emit(new DelimToken(64)) && switchto("data") && reconsume();
-                break;
-              case "at-keyword-rest":
-                if (namechar(code))
-                  currtoken.append(code);
-                else if (code == 92) {
-                  if (badescape(next()))
-                    parseerror() && emit() && switchto("data") && reconsume();
-                  else
-                    currtoken.append(consumeEscape());
-                } else
-                  emit() && switchto("data") && reconsume();
-                break;
-              case "ident":
-                if (code == 45) {
-                  if (namestartchar(next()))
-                    create(new IdentifierToken(code)) && switchto("ident-rest");
-                  else if (next(1) == 92 && !badescape(next(2)))
-                    create(new IdentifierToken(code)) && switchto("ident-rest");
-                  else
-                    emit(new DelimToken(45)) && switchto("data");
-                } else if (namestartchar(code))
-                  create(new IdentifierToken(code)) && switchto("ident-rest");
-                else if (code == 92) {
-                  if (badescape(next()))
-                    parseerror() && switchto("data") && reconsume();
-                  else
-                    create(new IdentifierToken(consumeEscape())) && switchto("ident-rest");
-                } else
-                  catchfire("Hit the generic 'else' clause in ident state.") && switchto("data") && reconsume();
-                break;
-              case "ident-rest":
-                if (namechar(code))
-                  currtoken.append(code);
-                else if (code == 92) {
-                  if (badescape(next()))
-                    parseerror() && emit() && switchto("data") && reconsume();
-                  else
-                    currtoken.append(consumeEscape());
-                } else if (code == 40) {
-                  if (currtoken.ASCIImatch("url"))
-                    switchto("url");
-                  else
-                    emit(new FunctionToken(currtoken)) && switchto("data");
-                } else if (whitespace(code) && options.transformFunctionWhitespace)
-                  switchto("transform-function-whitespace") && reconsume();
-                else
-                  emit() && switchto("data") && reconsume();
-                break;
-              case "transform-function-whitespace":
-                if (whitespace(next()))
-                  donothing();
-                else if (code == 40)
-                  emit(new FunctionToken(currtoken)) && switchto("data");
-                else
-                  emit() && switchto("data") && reconsume();
-                break;
-              case "number":
-                create(new NumberToken());
-                if (code == 45) {
-                  if (digit(next()))
-                    consume() && currtoken.append([45, code]) && switchto("number-rest");
-                  else if (next(1) == 46 && digit(next(2)))
-                    consume(2) && currtoken.append([45, 46, code]) && switchto("number-fraction");
-                  else
-                    switchto("data") && reconsume();
-                } else if (code == 43) {
-                  if (digit(next()))
-                    consume() && currtoken.append([43, code]) && switchto("number-rest");
-                  else if (next(1) == 46 && digit(next(2)))
-                    consume(2) && currtoken.append([43, 46, code]) && switchto("number-fraction");
-                  else
-                    switchto("data") && reconsume();
-                } else if (digit(code))
-                  currtoken.append(code) && switchto("number-rest");
-                else if (code == 46) {
-                  if (digit(next()))
-                    consume() && currtoken.append([46, code]) && switchto("number-fraction");
-                  else
-                    switchto("data") && reconsume();
-                } else
-                  switchto("data") && reconsume();
-                break;
-              case "number-rest":
-                if (digit(code))
-                  currtoken.append(code);
-                else if (code == 46) {
-                  if (digit(next()))
-                    consume() && currtoken.append([46, code]) && switchto("number-fraction");
-                  else
-                    emit() && switchto("data") && reconsume();
-                } else if (code == 37)
-                  emit(new PercentageToken(currtoken)) && switchto("data");
-                else if (code == 69 || code == 101) {
-                  if (digit(next()))
-                    consume() && currtoken.append([37, code]) && switchto("sci-notation");
-                  else if ((next(1) == 43 || next(1) == 45) && digit(next(2)))
-                    currtoken.append([37, next(1), next(2)]) && consume(2) && switchto("sci-notation");
-                  else
-                    create(new DimensionToken(currtoken, code)) && switchto("dimension");
-                } else if (code == 45) {
-                  if (namestartchar(next()))
-                    consume() && create(new DimensionToken(currtoken, [45, code])) && switchto("dimension");
-                  else if (next(1) == 92 && badescape(next(2)))
-                    parseerror() && emit() && switchto("data") && reconsume();
-                  else if (next(1) == 92)
-                    consume() && create(new DimensionToken(currtoken, [45, consumeEscape()])) && switchto("dimension");
-                  else
-                    emit() && switchto("data") && reconsume();
-                } else if (namestartchar(code))
-                  create(new DimensionToken(currtoken, code)) && switchto("dimension");
-                else if (code == 92) {
-                  if (badescape(next))
-                    parseerror() && emit() && switchto("data") && reconsume();
-                  else
-                    create(new DimensionToken(currtoken, consumeEscape)) && switchto("dimension");
-                } else
-                  emit() && switchto("data") && reconsume();
-                break;
-              case "number-fraction":
-                currtoken.type = "number";
-                if (digit(code))
-                  currtoken.append(code);
-                else if (code == 37)
-                  emit(new PercentageToken(currtoken)) && switchto("data");
-                else if (code == 69 || code == 101) {
-                  if (digit(next()))
-                    consume() && currtoken.append([101, code]) && switchto("sci-notation");
-                  else if ((next(1) == 43 || next(1) == 45) && digit(next(2)))
-                    currtoken.append([101, next(1), next(2)]) && consume(2) && switchto("sci-notation");
-                  else
-                    create(new DimensionToken(currtoken, code)) && switchto("dimension");
-                } else if (code == 45) {
-                  if (namestartchar(next()))
-                    consume() && create(new DimensionToken(currtoken, [45, code])) && switchto("dimension");
-                  else if (next(1) == 92 && badescape(next(2)))
-                    parseerror() && emit() && switchto("data") && reconsume();
-                  else if (next(1) == 92)
-                    consume() && create(new DimensionToken(currtoken, [45, consumeEscape()])) && switchto("dimension");
-                  else
-                    emit() && switchto("data") && reconsume();
-                } else if (namestartchar(code))
-                  create(new DimensionToken(currtoken, code)) && switchto("dimension");
-                else if (code == 92) {
-                  if (badescape(next))
-                    parseerror() && emit() && switchto("data") && reconsume();
-                  else
-                    create(new DimensionToken(currtoken, consumeEscape())) && switchto("dimension");
-                } else
-                  emit() && switchto("data") && reconsume();
-                break;
-              case "dimension":
-                if (namechar(code))
-                  currtoken.append(code);
-                else if (code == 92) {
-                  if (badescape(next()))
-                    parseerror() && emit() && switchto("data") && reconsume();
-                  else
-                    currtoken.append(consumeEscape());
-                } else
-                  emit() && switchto("data") && reconsume();
-                break;
-              case "sci-notation":
-                currtoken.type = "number";
-                if (digit(code))
-                  currtoken.append(code);
-                else
-                  emit() && switchto("data") && reconsume();
-                break;
-              case "url":
-                if (eof())
-                  parseerror() && emit(new BadURLToken()) && switchto("data");
-                else if (code == 34)
-                  switchto("url-double-quote");
-                else if (code == 39)
-                  switchto("url-single-quote");
-                else if (code == 41)
-                  emit(new URLToken()) && switchto("data");
-                else if (whitespace(code))
-                  donothing();
-                else
-                  switchto("url-unquoted") && reconsume();
-                break;
-              case "url-double-quote":
-                if (!(currtoken instanceof URLToken))
-                  create(new URLToken());
-                if (eof())
-                  parseerror() && emit(new BadURLToken()) && switchto("data");
-                else if (code == 34)
-                  switchto("url-end");
-                else if (newline(code))
-                  parseerror() && switchto("bad-url");
-                else if (code == 92) {
-                  if (newline(next()))
-                    consume();
-                  else if (badescape(next()))
-                    parseerror() && emit(new BadURLToken()) && switchto("data") && reconsume();
-                  else
-                    currtoken.append(consumeEscape());
-                } else
-                  currtoken.append(code);
-                break;
-              case "url-single-quote":
-                if (!(currtoken instanceof URLToken))
-                  create(new URLToken());
-                if (eof())
-                  parseerror() && emit(new BadURLToken()) && switchto("data");
-                else if (code == 39)
-                  switchto("url-end");
-                else if (newline(code))
-                  parseerror() && switchto("bad-url");
-                else if (code == 92) {
-                  if (newline(next()))
-                    consume();
-                  else if (badescape(next()))
-                    parseerror() && emit(new BadURLToken()) && switchto("data") && reconsume();
-                  else
-                    currtoken.append(consumeEscape());
-                } else
-                  currtoken.append(code);
-                break;
-              case "url-end":
-                if (eof())
-                  parseerror() && emit(new BadURLToken()) && switchto("data");
-                else if (whitespace(code))
-                  donothing();
-                else if (code == 41)
-                  emit() && switchto("data");
-                else
-                  parseerror() && switchto("bad-url") && reconsume();
-                break;
-              case "url-unquoted":
-                if (!(currtoken instanceof URLToken))
-                  create(new URLToken());
-                if (eof())
-                  parseerror() && emit(new BadURLToken()) && switchto("data");
-                else if (whitespace(code))
-                  switchto("url-end");
-                else if (code == 41)
-                  emit() && switchto("data");
-                else if (code == 34 || code == 39 || code == 40 || nonprintable(code))
-                  parseerror() && switchto("bad-url");
-                else if (code == 92) {
-                  if (badescape(next()))
-                    parseerror() && switchto("bad-url");
-                  else
-                    currtoken.append(consumeEscape());
-                } else
-                  currtoken.append(code);
-                break;
-              case "bad-url":
-                if (eof())
-                  parseerror() && emit(new BadURLToken()) && switchto("data");
-                else if (code == 41)
-                  emit(new BadURLToken()) && switchto("data");
-                else if (code == 92) {
-                  if (badescape(next()))
-                    donothing();
-                  else
-                    consumeEscape();
-                } else
-                  donothing();
-                break;
-              case "unicode-range":
-                var start = [code], end = [code];
-                for (var total = 1; total < 6; total++) {
-                  if (hexdigit(next())) {
-                    consume();
-                    start.push(code);
-                    end.push(code);
-                  } else
-                    break;
-                }
-                if (next() == 63) {
-                  for (; total < 6; total++) {
-                    if (next() == 63) {
-                      consume();
-                      start.push("0".charCodeAt(0));
-                      end.push("f".charCodeAt(0));
-                    } else
-                      break;
-                  }
-                  emit(new UnicodeRangeToken(start, end)) && switchto("data");
-                } else if (next(1) == 45 && hexdigit(next(2))) {
-                  consume();
-                  consume();
-                  end = [code];
-                  for (var total = 1; total < 6; total++) {
-                    if (hexdigit(next())) {
-                      consume();
-                      end.push(code);
-                    } else
-                      break;
-                  }
-                  emit(new UnicodeRangeToken(start, end)) && switchto("data");
-                } else
-                  emit(new UnicodeRangeToken(start)) && switchto("data");
-                break;
-              default:
-                catchfire("Unknown state '" + state + "'");
-            }
-          }
-        }
-        function stringFromCodeArray(arr) {
-          return String.fromCharCode.apply(null, arr.filter(function(e) {
-            return e;
-          }));
-        }
-        function CSSParserToken(options) {
-          return this;
-        }
-        CSSParserToken.prototype.finish = function() {
-          return this;
-        };
-        CSSParserToken.prototype.toString = function() {
-          return this.tokenType;
-        };
-        CSSParserToken.prototype.toJSON = function() {
-          return this.toString();
-        };
-        function BadStringToken() {
-          return this;
-        }
-        BadStringToken.prototype = new CSSParserToken();
-        BadStringToken.prototype.tokenType = "BADSTRING";
-        function BadURLToken() {
-          return this;
-        }
-        BadURLToken.prototype = new CSSParserToken();
-        BadURLToken.prototype.tokenType = "BADURL";
-        function WhitespaceToken() {
-          return this;
-        }
-        WhitespaceToken.prototype = new CSSParserToken();
-        WhitespaceToken.prototype.tokenType = "WHITESPACE";
-        WhitespaceToken.prototype.toString = function() {
-          return "WS";
-        };
-        function CDOToken() {
-          return this;
-        }
-        CDOToken.prototype = new CSSParserToken();
-        CDOToken.prototype.tokenType = "CDO";
-        function CDCToken() {
-          return this;
-        }
-        CDCToken.prototype = new CSSParserToken();
-        CDCToken.prototype.tokenType = "CDC";
-        function ColonToken() {
-          return this;
-        }
-        ColonToken.prototype = new CSSParserToken();
-        ColonToken.prototype.tokenType = ":";
-        function SemicolonToken() {
-          return this;
-        }
-        SemicolonToken.prototype = new CSSParserToken();
-        SemicolonToken.prototype.tokenType = ";";
-        function OpenCurlyToken() {
-          return this;
-        }
-        OpenCurlyToken.prototype = new CSSParserToken();
-        OpenCurlyToken.prototype.tokenType = "{";
-        function CloseCurlyToken() {
-          return this;
-        }
-        CloseCurlyToken.prototype = new CSSParserToken();
-        CloseCurlyToken.prototype.tokenType = "}";
-        function OpenSquareToken() {
-          return this;
-        }
-        OpenSquareToken.prototype = new CSSParserToken();
-        OpenSquareToken.prototype.tokenType = "[";
-        function CloseSquareToken() {
-          return this;
-        }
-        CloseSquareToken.prototype = new CSSParserToken();
-        CloseSquareToken.prototype.tokenType = "]";
-        function OpenParenToken() {
-          return this;
-        }
-        OpenParenToken.prototype = new CSSParserToken();
-        OpenParenToken.prototype.tokenType = "(";
-        function CloseParenToken() {
-          return this;
-        }
-        CloseParenToken.prototype = new CSSParserToken();
-        CloseParenToken.prototype.tokenType = ")";
-        function EOFToken2() {
-          return this;
-        }
-        EOFToken2.prototype = new CSSParserToken();
-        EOFToken2.prototype.tokenType = "EOF";
-        function DelimToken(code) {
-          this.value = String.fromCharCode(code);
-          return this;
-        }
-        DelimToken.prototype = new CSSParserToken();
-        DelimToken.prototype.tokenType = "DELIM";
-        DelimToken.prototype.toString = function() {
-          return "DELIM(" + this.value + ")";
-        };
-        function StringValuedToken() {
-          return this;
-        }
-        StringValuedToken.prototype = new CSSParserToken();
-        StringValuedToken.prototype.append = function(val) {
-          if (val instanceof Array) {
-            for (var i = 0; i < val.length; i++) {
-              this.value.push(val[i]);
-            }
-          } else {
-            this.value.push(val);
-          }
-          return true;
-        };
-        StringValuedToken.prototype.finish = function() {
-          this.value = this.valueAsString();
-          return this;
-        };
-        StringValuedToken.prototype.ASCIImatch = function(str) {
-          return this.valueAsString().toLowerCase() == str.toLowerCase();
-        };
-        StringValuedToken.prototype.valueAsString = function() {
-          if (typeof this.value == "string")
-            return this.value;
-          return stringFromCodeArray(this.value);
-        };
-        StringValuedToken.prototype.valueAsCodes = function() {
-          if (typeof this.value == "string") {
-            var ret = [];
-            for (var i = 0; i < this.value.length; i++)
-              ret.push(this.value.charCodeAt(i));
-            return ret;
-          }
-          return this.value.filter(function(e) {
-            return e;
-          });
-        };
-        function IdentifierToken(val) {
-          this.value = [];
-          this.append(val);
-        }
-        IdentifierToken.prototype = new StringValuedToken();
-        IdentifierToken.prototype.tokenType = "IDENT";
-        IdentifierToken.prototype.toString = function() {
-          return "IDENT(" + this.value + ")";
-        };
-        function FunctionToken(val) {
-          this.value = val.finish().value;
-        }
-        FunctionToken.prototype = new StringValuedToken();
-        FunctionToken.prototype.tokenType = "FUNCTION";
-        FunctionToken.prototype.toString = function() {
-          return "FUNCTION(" + this.value + ")";
-        };
-        function AtKeywordToken(val) {
-          this.value = [];
-          this.append(val);
-        }
-        AtKeywordToken.prototype = new StringValuedToken();
-        AtKeywordToken.prototype.tokenType = "AT-KEYWORD";
-        AtKeywordToken.prototype.toString = function() {
-          return "AT(" + this.value + ")";
-        };
-        function HashToken(val) {
-          this.value = [];
-          this.append(val);
-        }
-        HashToken.prototype = new StringValuedToken();
-        HashToken.prototype.tokenType = "HASH";
-        HashToken.prototype.toString = function() {
-          return "HASH(" + this.value + ")";
-        };
-        function StringToken(val) {
-          this.value = [];
-          this.append(val);
-        }
-        StringToken.prototype = new StringValuedToken();
-        StringToken.prototype.tokenType = "STRING";
-        StringToken.prototype.toString = function() {
-          return '"' + this.value + '"';
-        };
-        function URLToken(val) {
-          this.value = [];
-          this.append(val);
-        }
-        URLToken.prototype = new StringValuedToken();
-        URLToken.prototype.tokenType = "URL";
-        URLToken.prototype.toString = function() {
-          return "URL(" + this.value + ")";
-        };
-        function NumberToken(val) {
-          this.value = [];
-          this.append(val);
-          this.type = "integer";
-        }
-        NumberToken.prototype = new StringValuedToken();
-        NumberToken.prototype.tokenType = "NUMBER";
-        NumberToken.prototype.toString = function() {
-          if (this.type == "integer")
-            return "INT(" + this.value + ")";
-          return "NUMBER(" + this.value + ")";
-        };
-        NumberToken.prototype.finish = function() {
-          this.repr = this.valueAsString();
-          this.value = this.repr * 1;
-          if (Math.abs(this.value) % 1 != 0)
-            this.type = "number";
-          return this;
-        };
-        function PercentageToken(val) {
-          val.finish();
-          this.value = val.value;
-          this.repr = val.repr;
-        }
-        PercentageToken.prototype = new CSSParserToken();
-        PercentageToken.prototype.tokenType = "PERCENTAGE";
-        PercentageToken.prototype.toString = function() {
-          return "PERCENTAGE(" + this.value + ")";
-        };
-        function DimensionToken(val, unit) {
-          val.finish();
-          this.num = val.value;
-          this.unit = [];
-          this.repr = val.repr;
-          this.append(unit);
-        }
-        DimensionToken.prototype = new CSSParserToken();
-        DimensionToken.prototype.tokenType = "DIMENSION";
-        DimensionToken.prototype.toString = function() {
-          return "DIM(" + this.num + "," + this.unit + ")";
-        };
-        DimensionToken.prototype.append = function(val) {
-          if (val instanceof Array) {
-            for (var i = 0; i < val.length; i++) {
-              this.unit.push(val[i]);
-            }
-          } else {
-            this.unit.push(val);
-          }
-          return true;
-        };
-        DimensionToken.prototype.finish = function() {
-          this.unit = stringFromCodeArray(this.unit);
-          this.repr += this.unit;
-          return this;
-        };
-        function UnicodeRangeToken(start, end) {
-          start = parseInt(stringFromCodeArray(start), 16);
-          if (end === void 0)
-            end = start + 1;
-          else
-            end = parseInt(stringFromCodeArray(end), 16);
-          if (start > maximumallowedcodepoint)
-            end = start;
-          if (end < start)
-            end = start;
-          if (end > maximumallowedcodepoint)
-            end = maximumallowedcodepoint;
-          this.start = start;
-          this.end = end;
-          return this;
-        }
-        UnicodeRangeToken.prototype = new CSSParserToken();
-        UnicodeRangeToken.prototype.tokenType = "UNICODE-RANGE";
-        UnicodeRangeToken.prototype.toString = function() {
-          if (this.start + 1 == this.end)
-            return "UNICODE-RANGE(" + this.start.toString(16).toUpperCase() + ")";
-          if (this.start < this.end)
-            return "UNICODE-RANGE(" + this.start.toString(16).toUpperCase() + "-" + this.end.toString(16).toUpperCase() + ")";
-          return "UNICODE-RANGE()";
-        };
-        UnicodeRangeToken.prototype.contains = function(code) {
-          return code >= this.start && code < this.end;
-        };
-        exports2.tokenize = tokenize;
-        exports2.EOFToken = EOFToken2;
-      });
-    }
-  });
-
-  // src/vendor/bleach/bleach/css-parser/parser.js
-  var require_parser = __commonJS({
-    "src/vendor/bleach/bleach/css-parser/parser.js"(exports) {
-      (function(root, factory) {
-        if (typeof define === "function" && define.amd) {
-          define(["exports", "./tokenizer"], factory);
-        } else if (typeof exports !== "undefined") {
-          factory(exports, require_tokenizer());
-        } else {
-          factory(root, root);
-        }
-      })(exports, function(exports2, tokenizer2) {
-        function parse(tokens, initialMode) {
-          var mode = initialMode || "top-level";
-          var i = -1;
-          var token;
-          var stylesheet;
-          switch (mode) {
-            case "top-level":
-              stylesheet = new Stylesheet();
-              break;
-            case "declaration":
-              stylesheet = new StyleRule();
-              break;
-          }
-          stylesheet.startTok = tokens[0];
-          var stack = [stylesheet];
-          var rule = stack[0];
-          var consume = function(advance) {
-            if (advance === void 0)
-              advance = 1;
-            i += advance;
-            if (i < tokens.length)
-              token = tokens[i];
-            else
-              token = new EOFToken();
-            return true;
-          };
-          var reprocess = function() {
-            i--;
-            return true;
-          };
-          var next = function() {
-            return tokens[i + 1];
-          };
-          var switchto = function(newmode) {
-            if (newmode === void 0) {
-              if (rule.fillType !== "")
-                mode = rule.fillType;
-              else if (rule.type == "STYLESHEET")
-                mode = "top-level";
-              else {
-              }
-            } else {
-              mode = newmode;
-            }
-            return true;
-          };
-          var push = function(newRule) {
-            rule = newRule;
-            rule.startTok = token;
-            stack.push(rule);
-            return true;
-          };
-          var parseerror = function(msg) {
-            return true;
-          };
-          var pop = function() {
-            var oldrule = stack.pop();
-            oldrule.endTok = token;
-            rule = stack[stack.length - 1];
-            rule.append(oldrule);
-            return true;
-          };
-          var discard = function() {
-            stack.pop();
-            rule = stack[stack.length - 1];
-            return true;
-          };
-          var finish = function() {
-            while (stack.length > 1) {
-              pop();
-            }
-            rule.endTok = token;
-          };
-          for (; ; ) {
-            consume();
-            switch (mode) {
-              case "top-level":
-                switch (token.tokenType) {
-                  case "CDO":
-                  case "CDC":
-                  case "WHITESPACE":
-                    break;
-                  case "AT-KEYWORD":
-                    push(new AtRule(token.value)) && switchto("at-rule");
-                    break;
-                  case "{":
-                    parseerror("Attempt to open a curly-block at top-level.") && consumeAPrimitive();
-                    break;
-                  case "EOF":
-                    finish();
-                    return stylesheet;
-                  default:
-                    push(new StyleRule()) && switchto("selector") && reprocess();
-                }
-                break;
-              case "at-rule":
-                switch (token.tokenType) {
-                  case ";":
-                    pop() && switchto();
-                    break;
-                  case "{":
-                    if (rule.fillType !== "")
-                      switchto(rule.fillType);
-                    else
-                      parseerror("Attempt to open a curly-block in a statement-type at-rule.") && discard() && switchto("next-block") && reprocess();
-                    break;
-                  case "EOF":
-                    finish();
-                    return stylesheet;
-                  default:
-                    rule.appendPrelude(consumeAPrimitive());
-                }
-                break;
-              case "rule":
-                switch (token.tokenType) {
-                  case "WHITESPACE":
-                    break;
-                  case "}":
-                    pop() && switchto();
-                    break;
-                  case "AT-KEYWORD":
-                    push(new AtRule(token.value)) && switchto("at-rule");
-                    break;
-                  case "EOF":
-                    finish();
-                    return stylesheet;
-                  default:
-                    push(new StyleRule()) && switchto("selector") && reprocess();
-                }
-                break;
-              case "selector":
-                switch (token.tokenType) {
-                  case "{":
-                    switchto("declaration");
-                    break;
-                  case "EOF":
-                    discard() && finish();
-                    return stylesheet;
-                  default:
-                    rule.appendSelector(consumeAPrimitive());
-                }
-                break;
-              case "declaration":
-                switch (token.tokenType) {
-                  case "WHITESPACE":
-                  case ";":
-                    break;
-                  case "}":
-                    pop() && switchto();
-                    break;
-                  case "AT-RULE":
-                    push(new AtRule(token.value)) && switchto("at-rule");
-                    break;
-                  case "IDENT":
-                    push(new Declaration(token.value)) && switchto("after-declaration-name");
-                    break;
-                  case "EOF":
-                    finish();
-                    return stylesheet;
-                  default:
-                    parseerror() && discard() && switchto("next-declaration");
-                }
-                break;
-              case "after-declaration-name":
-                switch (token.tokenType) {
-                  case "WHITESPACE":
-                    break;
-                  case ":":
-                    switchto("declaration-value");
-                    break;
-                  case ";":
-                    parseerror("Incomplete declaration - semicolon after property name.") && discard() && switchto();
-                    break;
-                  case "EOF":
-                    discard() && finish();
-                    return stylesheet;
-                  default:
-                    parseerror("Invalid declaration - additional token after property name") && discard() && switchto("next-declaration");
-                }
-                break;
-              case "declaration-value":
-                switch (token.tokenType) {
-                  case "DELIM":
-                    if (token.value == "!" && next().tokenType == "IDENTIFIER" && next().value.toLowerCase() == "important") {
-                      consume();
-                      rule.important = true;
-                      switchto("declaration-end");
-                    } else {
-                      rule.append(token);
-                    }
-                    break;
-                  case ";":
-                    pop() && switchto();
-                    break;
-                  case "}":
-                    pop() && pop() && switchto();
-                    break;
-                  case "EOF":
-                    finish();
-                    return stylesheet;
-                  default:
-                    rule.append(consumeAPrimitive());
-                }
-                break;
-              case "declaration-end":
-                switch (token.tokenType) {
-                  case "WHITESPACE":
-                    break;
-                  case ";":
-                    pop() && switchto();
-                    break;
-                  case "}":
-                    pop() && pop() && switchto();
-                    break;
-                  case "EOF":
-                    finish();
-                    return stylesheet;
-                  default:
-                    parseerror("Invalid declaration - additional token after !important.") && discard() && switchto("next-declaration");
-                }
-                break;
-              case "next-block":
-                switch (token.tokenType) {
-                  case "{":
-                    consumeAPrimitive() && switchto();
-                    break;
-                  case "EOF":
-                    finish();
-                    return stylesheet;
-                  default:
-                    consumeAPrimitive();
-                    break;
-                }
-                break;
-              case "next-declaration":
-                switch (token.tokenType) {
-                  case ";":
-                    switchto("declaration");
-                    break;
-                  case "}":
-                    switchto("declaration") && reprocess();
-                    break;
-                  case "EOF":
-                    finish();
-                    return stylesheet;
-                  default:
-                    consumeAPrimitive();
-                    break;
-                }
-                break;
-              default:
-                return;
-            }
-          }
-          function consumeAPrimitive() {
-            switch (token.tokenType) {
-              case "(":
-              case "[":
-              case "{":
-                return consumeASimpleBlock();
-              case "FUNCTION":
-                return consumeAFunc();
-              default:
-                return token;
-            }
-          }
-          function consumeASimpleBlock() {
-            var endingTokenType = { "(": ")", "[": "]", "{": "}" }[token.tokenType];
-            var block = new SimpleBlock(token.tokenType);
-            for (; ; ) {
-              consume();
-              switch (token.tokenType) {
-                case "EOF":
-                case endingTokenType:
-                  return block;
-                default:
-                  block.append(consumeAPrimitive());
-              }
-            }
-          }
-          function consumeAFunc() {
-            var func = new Func(token.value);
-            var arg = new FuncArg();
-            for (; ; ) {
-              consume();
-              switch (token.tokenType) {
-                case "EOF":
-                case ")":
-                  func.append(arg);
-                  return func;
-                case "DELIM":
-                  if (token.value == ",") {
-                    func.append(arg);
-                    arg = new FuncArg();
-                  } else {
-                    arg.append(token);
-                  }
-                  break;
-                default:
-                  arg.append(consumeAPrimitive());
-              }
-            }
-          }
-        }
-        function CSSParserRule() {
-          return this;
-        }
-        CSSParserRule.prototype.fillType = "";
-        CSSParserRule.prototype.toString = function(indent) {
-          return JSON.stringify(this.toJSON(), null, indent);
-        };
-        CSSParserRule.prototype.append = function(val) {
-          this.value.push(val);
-          return this;
-        };
-        function Stylesheet() {
-          this.value = [];
-          return this;
-        }
-        Stylesheet.prototype = new CSSParserRule();
-        Stylesheet.prototype.type = "STYLESHEET";
-        Stylesheet.prototype.toJSON = function() {
-          return { type: "stylesheet", value: this.value.map(function(e) {
-            return e.toJSON();
-          }) };
-        };
-        function AtRule(name) {
-          this.name = name;
-          this.prelude = [];
-          this.value = [];
-          if (name in AtRule.registry)
-            this.fillType = AtRule.registry[name];
-          return this;
-        }
-        AtRule.prototype = new CSSParserRule();
-        AtRule.prototype.type = "AT-RULE";
-        AtRule.prototype.appendPrelude = function(val) {
-          this.prelude.push(val);
-          return this;
-        };
-        AtRule.prototype.toJSON = function() {
-          return { type: "at", name: this.name, prelude: this.prelude.map(function(e) {
-            return e.toJSON();
-          }), value: this.value.map(function(e) {
-            return e.toJSON();
-          }) };
-        };
-        AtRule.registry = {
-          "import": "",
-          "media": "rule",
-          "font-face": "declaration",
-          "page": "declaration",
-          "keyframes": "rule",
-          "namespace": "",
-          "counter-style": "declaration",
-          "supports": "rule",
-          "document": "rule",
-          "font-feature-values": "declaration",
-          "viewport": "",
-          "region-style": "rule"
-        };
-        function StyleRule() {
-          this.selector = [];
-          this.value = [];
-          return this;
-        }
-        StyleRule.prototype = new CSSParserRule();
-        StyleRule.prototype.type = "STYLE-RULE";
-        StyleRule.prototype.fillType = "declaration";
-        StyleRule.prototype.appendSelector = function(val) {
-          this.selector.push(val);
-          return this;
-        };
-        StyleRule.prototype.toJSON = function() {
-          return { type: "selector", selector: this.selector.map(function(e) {
-            return e.toJSON();
-          }), value: this.value.map(function(e) {
-            return e.toJSON();
-          }) };
-        };
-        function Declaration(name) {
-          this.name = name;
-          this.value = [];
-          return this;
-        }
-        Declaration.prototype = new CSSParserRule();
-        Declaration.prototype.type = "DECLARATION";
-        Declaration.prototype.toJSON = function() {
-          return { type: "declaration", name: this.name, value: this.value.map(function(e) {
-            return e.toJSON();
-          }) };
-        };
-        function SimpleBlock(type) {
-          this.name = type;
-          this.value = [];
-          return this;
-        }
-        SimpleBlock.prototype = new CSSParserRule();
-        SimpleBlock.prototype.type = "BLOCK";
-        SimpleBlock.prototype.toJSON = function() {
-          return { type: "block", name: this.name, value: this.value.map(function(e) {
-            return e.toJSON();
-          }) };
-        };
-        function Func(name) {
-          this.name = name;
-          this.value = [];
-          return this;
-        }
-        Func.prototype = new CSSParserRule();
-        Func.prototype.type = "FUNCTION";
-        Func.prototype.toJSON = function() {
-          return { type: "func", name: this.name, value: this.value.map(function(e) {
-            return e.toJSON();
-          }) };
-        };
-        function FuncArg() {
-          this.value = [];
-          return this;
-        }
-        FuncArg.prototype = new CSSParserRule();
-        FuncArg.prototype.type = "FUNCTION-ARG";
-        FuncArg.prototype.toJSON = function() {
-          return this.value.map(function(e) {
-            return e.toJSON();
-          });
-        };
-        exports2.parse = parse;
-      });
-    }
-  });
-
-  // src/vendor/bleach/bleach.js
-  function clean(html, opts) {
-    if (!html)
-      return "";
-    html = html.replace(/<!DOCTYPE\s+[^>]*>/gi, "");
-    return cleanNode(html, opts);
-  }
-  function cleanNode(html, opts) {
-    try {
-      let debug = function(str) {
-        console.log("Bleach: " + str + "\n");
-      };
-      opts = opts || DEFAULTS;
-      var attrsByTag = opts.hasOwnProperty("attributes") ? opts.attributes : DEFAULTS.attributes;
-      var wildAttrs;
-      if (Array.isArray(attrsByTag)) {
-        wildAttrs = attrsByTag;
-        attrsByTag = {};
-      } else if (attrsByTag.hasOwnProperty("*")) {
-        wildAttrs = attrsByTag["*"];
-      } else {
-        wildAttrs = [];
-      }
-      var sanitizeOptions = {
-        ignoreComment: "stripComments" in opts ? opts.stripComments : DEFAULTS.stripComments,
-        allowedStyles: opts.styles || DEFAULTS.styles,
-        allowedTags: opts.tags || DEFAULTS.tags,
-        stripMode: "strip" in opts ? opts.strip : DEFAULTS.strip,
-        pruneTags: opts.prune || DEFAULTS.prune,
-        allowedAttributesByTag: attrsByTag,
-        wildAttributes: wildAttrs,
-        callbackRegexp: opts.callbackRegexp || null,
-        callback: opts.callbackRegexp && opts.callback || null,
-        maxLength: opts.maxLength || 0
-      };
-      var sanitizer = new HTMLSanitizer(sanitizeOptions);
-      HTMLParser.HTMLParser(html, sanitizer);
-      return sanitizer.output;
-    } catch (e) {
-      console.error(e, "\n", e.stack);
-      throw e;
-    }
-  }
-  function makeReverseEntities() {
-    reverseEntities = {};
-    Object.keys(entities).forEach(function(key) {
-      reverseEntities[entities[key]] = key;
+  // src/backend/bodies/htmlchew.js
+  function sanitizeAndNormalizeHtml(htmlString) {
+    return callOnMainThread({
+      cmd: "sanitizeHTML",
+      args: [htmlString]
     });
   }
-  function escapeHTMLTextKeepingExistingEntities(text) {
-    return text.replace(/[<>"']|&(?![#a-zA-Z0-9]+;)/g, function(c) {
-      return "&#" + c.charCodeAt(0) + ";";
-    });
-  }
-  function unescapeHTMLEntities(text) {
-    return text.replace(entityRegExp, function(match, ref) {
-      var converted = "";
-      if (ref.charAt(0) === "#") {
-        var secondChar = ref.charAt(1);
-        if (secondChar === "x" || secondChar === "X") {
-          converted = String.fromCharCode(parseInt(ref.substring(2), 16));
-        } else {
-          converted = String.fromCharCode(parseInt(ref.substring(1), 10));
-        }
-      } else {
-        if (!reverseEntities)
-          makeReverseEntities();
-        if (reverseEntities.hasOwnProperty(ref))
-          converted = String.fromCharCode(reverseEntities[ref]);
-      }
-      return converted;
+  function generateSnippet2(htmlString, includeQuotes) {
+    return callOnMainThread({
+      cmd: "convertHTMLToPlainText",
+      args: [htmlString]
     });
   }
   function escapePlaintextIntoElementContext(text) {
-    return text.replace(/[&<>"'\/]/g, function(c) {
-      var code = c.charCodeAt(0);
-      return "&" + (entities[code] || "#" + code) + ";";
+    return text.replace(/[&<>"'\/]/g, (c) => {
+      const code = c.charCodeAt(0);
+      return `&${entities[code] || "#" + code};`;
     });
   }
   function escapePlaintextIntoAttribute(text) {
     return text.replace(/[\u0000-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u0100]/g, function(c) {
       var code = c.charCodeAt(0);
-      return "&" + (entities[code] || "#" + code) + ";";
+      return `&${entities[code] || "#" + code};`;
     });
   }
-  var import_tokenizer, import_parser, ALLOWED_TAGS, ALLOWED_ATTRIBUTES, ALLOWED_STYLES, DEFAULTS, RE_NORMALIZE_WHITESPACE2, HTMLSanitizer, HTMLParser, CSSParser, entities, reverseEntities, entityRegExp;
-  var init_bleach = __esm({
-    "src/vendor/bleach/bleach.js"() {
-      import_tokenizer = __toModule(require_tokenizer());
-      import_parser = __toModule(require_parser());
-      ALLOWED_TAGS = [
-        "a",
-        "abbr",
-        "acronym",
-        "b",
-        "blockquote",
-        "code",
-        "em",
-        "i",
-        "li",
-        "ol",
-        "strong",
-        "ul"
-      ];
-      ALLOWED_ATTRIBUTES = {
-        "a": ["href", "title"],
-        "abbr": ["title"],
-        "acronym": ["title"]
-      };
-      ALLOWED_STYLES = [];
-      DEFAULTS = {
-        tags: ALLOWED_TAGS,
-        prune: [],
-        attributes: ALLOWED_ATTRIBUTES,
-        styles: ALLOWED_STYLES,
-        strip: false,
-        stripComments: true
-      };
-      RE_NORMALIZE_WHITESPACE2 = /\s+/g;
-      HTMLSanitizer = function(options) {
-        this.output = "";
-        this.ignoreComment = options.ignoreComment;
-        this.allowedStyles = options.allowedStyles;
-        this.allowedTags = options.allowedTags;
-        this.stripMode = options.stripMode;
-        this.pruneTags = options.pruneTags;
-        this.allowedAttributesByTag = options.allowedAttributesByTag;
-        this.wildAttributes = options.wildAttributes;
-        this.callbackRegexp = options.callbackRegexp;
-        this.callback = options.callback;
-        this.isInsideStyleTag = false;
-        this.isInsidePrunedTag = 0;
-        this.isInsideStrippedTag = 0;
-        this.maxLength = options.maxLength || 0;
-        this.complete = false;
-        this.ignoreFragments = this.maxLength > 0;
-      };
-      HTMLSanitizer.prototype = {
-        start: function(tag, attrs, unary) {
-          if (this.pruneTags.indexOf(tag) !== -1) {
-            if (!unary)
-              this.isInsidePrunedTag++;
-            return;
-          } else if (this.isInsidePrunedTag) {
-            return;
-          }
-          if (this.allowedTags.indexOf(tag) === -1) {
-            if (this.stripMode) {
-              if (!unary) {
-                this.isInsideStrippedTag++;
-              }
-              return;
-            }
-            this.output += "&lt;" + (unary ? "/" : "") + tag + "&gt;";
-            return;
-          }
-          this.isInsideStyleTag = tag == "style" && !unary;
-          var callbackRegexp = this.callbackRegexp;
-          if (callbackRegexp && callbackRegexp.test(tag)) {
-            attrs = this.callback(tag, attrs);
-          }
-          var whitelist = this.allowedAttributesByTag[tag];
-          var wildAttrs = this.wildAttributes;
-          var result = "<" + tag;
-          for (var i = 0; i < attrs.length; i++) {
-            var attr = attrs[i];
-            var attrName = attr.name.toLowerCase();
-            if (attr.safe || wildAttrs.indexOf(attrName) !== -1 || whitelist && whitelist.indexOf(attrName) !== -1) {
-              if (attrName == "style") {
-                var attrValue = "";
-                try {
-                  attrValue = CSSParser.parseAttribute(attr.escaped, this.allowedStyles);
-                } catch (e) {
-                  console.log('CSSParser.parseAttribute failed for: "' + attr.escaped + '", skipping. Error: ' + e);
-                }
-                result += " " + attrName + '="' + attrValue + '"';
-              } else {
-                result += " " + attrName + '="' + attr.escaped + '"';
-              }
-            }
-          }
-          result += (unary ? "/" : "") + ">";
-          this.output += result;
-        },
-        end: function(tag) {
-          if (this.pruneTags.indexOf(tag) !== -1) {
-            this.isInsidePrunedTag--;
-            return;
-          } else if (this.isInsidePrunedTag) {
-            return;
-          }
-          if (this.allowedTags.indexOf(tag) === -1) {
-            if (this.isInsideStrippedTag) {
-              this.isInsideStrippedTag--;
-              return;
-            }
-            this.output += "&lt;/" + tag + "&gt;";
-            return;
-          }
-          if (this.isInsideStyleTag) {
-            this.isInsideStyleTag = false;
-          }
-          this.output += "</" + tag + ">";
-        },
-        chars: function(text) {
-          if (this.isInsidePrunedTag || this.complete)
-            return;
-          if (this.isInsideStyleTag) {
-            this.output += CSSParser.parseBody(text, this.allowedStyles);
-            return;
-          }
-          if (this.maxLength) {
-            if (this.insideTagForSnippet) {
-              if (text.indexOf(">") !== -1) {
-                this.insideTagForSnippet = false;
-              }
-              return;
-            } else {
-              if (text.charAt(0) === "<") {
-                this.insideTagForSnippet = true;
-                return;
-              }
-            }
-            var normalizedText = text.replace(RE_NORMALIZE_WHITESPACE2, " ");
-            var length = this.output.length;
-            if (length && normalizedText[0] === " " && this.output[length - 1] === " ") {
-              normalizedText = normalizedText.substring(1);
-            }
-            this.output += normalizedText;
-            if (this.output.length >= this.maxLength) {
-              this.output = this.output.substring(0, this.maxLength);
-              this.complete = true;
-            }
-          } else {
-            this.output += escapeHTMLTextKeepingExistingEntities(text);
-          }
-        },
-        comment: function(comment) {
-          if (this.isInsidePrunedTag)
-            return;
-          if (this.ignoreComment)
-            return;
-          this.output += "<!--" + comment + "-->";
-        }
-      };
-      HTMLParser = function() {
-        var startTag = /^<(?:[-A-Za-z0-9_]+:)?([-A-Za-z0-9_]+)([^>]*)>/, endTag = /^<\/(?:[-A-Za-z0-9_]+:)?([-A-Za-z0-9_]+)[^>]*>/, attr = /(?:[-A-Za-z0-9_]+:)?([-A-Za-z0-9_]+)(?:\s*=\s*(?:(?:"([^"]*)")|(?:'([^']*)')|([^>\s]+)))?/g;
-        var empty = makeMap("area,base,basefont,br,col,frame,hr,img,input,isindex,link,meta,param,embed");
-        var block = makeMap("address,applet,blockquote,button,center,dd,del,dir,div,dl,dt,fieldset,form,frameset,hr,iframe,ins,isindex,li,map,menu,noframes,noscript,object,ol,p,pre,script,table,tbody,td,tfoot,th,thead,tr,ul");
-        var inline = makeMap("abbr,acronym,applet,b,basefont,bdo,big,br,button,cite,code,del,dfn,em,font,i,iframe,img,input,ins,kbd,label,map,object,q,s,samp,script,select,small,span,strike,strong,sub,sup,textarea,tt,u,var");
-        var closeSelf = makeMap("colgroup,dd,dt,li,options,p,td,tfoot,th,thead,tr");
-        var fillAttrs = makeMap("checked,compact,declare,defer,disabled,ismap,multiple,nohref,noresize,noshade,nowrap,readonly,selected");
-        var special = makeMap("script,style");
-        var HTMLParser2 = this.HTMLParser = function(html, handler) {
-          var index, chars, match, stack = [], last = html;
-          stack.last = function() {
-            return this[this.length - 1];
-          };
-          while (html) {
-            chars = true;
-            if (!stack.last() || !special[stack.last()]) {
-              if (html.lastIndexOf("<!--", 0) == 0) {
-                index = html.indexOf("-->");
-                if (index >= 4) {
-                  if (handler.comment)
-                    handler.comment(html.substring(4, index));
-                  html = html.substring(index + 3);
-                  chars = false;
-                } else {
-                  if (handler.comment)
-                    handler.comment(html.substring(4, -1));
-                  html = "";
-                  chars = false;
-                }
-              } else if (html.lastIndexOf("</", 0) == 0) {
-                match = html.match(endTag);
-                if (match) {
-                  html = html.substring(match[0].length);
-                  match[0].replace(endTag, parseEndTag);
-                  chars = false;
-                }
-              } else if (html.lastIndexOf("<", 0) == 0) {
-                match = html.match(startTag);
-                if (match) {
-                  html = html.substring(match[0].length);
-                  match[0].replace(startTag, parseStartTag);
-                  chars = false;
-                }
-              }
-              if (chars) {
-                index = html.indexOf("<");
-                if (index === 0) {
-                  var text = html.substring(0, 1);
-                  html = html.substring(1);
-                } else {
-                  var text = index < 0 ? html : html.substring(0, index);
-                  html = index < 0 ? "" : html.substring(index);
-                }
-                if (handler.chars) {
-                  handler.chars(text);
-                  if (handler.complete)
-                    return this;
-                }
-              }
-            } else {
-              var skipWork = false;
-              html = html.replace(new RegExp("^([^]*?)</" + stack.last() + "[^>]*>", "i"), function(all, text2) {
-                if (!skipWork) {
-                  text2 = text2.replace(/<!--([^]*?)-->/g, "$1").replace(/<!\[CDATA\[([^]*?)]]>/g, "$1");
-                  if (handler.chars) {
-                    handler.chars(text2);
-                    skipWork = handler.complete;
-                  }
-                }
-                return "";
-              });
-              if (handler.complete)
-                return this;
-              parseEndTag("", stack.last());
-            }
-            if (html == last) {
-              if (handler.ignoreFragments) {
-                return;
-              } else {
-                console.log(html);
-                console.log(last);
-                throw "Parse Error: " + html;
-              }
-            }
-            last = html;
-          }
-          parseEndTag();
-          function parseStartTag(tag, tagName, rest) {
-            tagName = tagName.toLowerCase();
-            if (block[tagName]) {
-              while (stack.last() && inline[stack.last()]) {
-                parseEndTag("", stack.last());
-              }
-            }
-            if (closeSelf[tagName] && stack.last() == tagName) {
-              parseEndTag("", tagName);
-            }
-            var unary = empty[tagName];
-            if (rest.length && rest[rest.length - 1] === "/") {
-              unary = true;
-              rest = rest.slice(0, -1);
-            }
-            if (!unary)
-              stack.push(tagName);
-            if (handler.start) {
-              var attrs = [];
-              rest.replace(attr, function(match2, name) {
-                var value = arguments[2] ? arguments[2] : arguments[3] ? arguments[3] : arguments[4] ? arguments[4] : fillAttrs[name] ? name : "";
-                attrs.push({
-                  name,
-                  value,
-                  escaped: value.replace(/"/g, "&quot;"),
-                  safe: false
-                });
-              });
-              if (handler.start)
-                handler.start(tagName, attrs, unary);
-            }
-          }
-          function parseEndTag(tag, tagName) {
-            if (!tagName)
-              var pos = 0;
-            else {
-              tagName = tagName.toLowerCase();
-              for (var pos = stack.length - 1; pos >= 0; pos--)
-                if (stack[pos] == tagName)
-                  break;
-            }
-            if (pos >= 0) {
-              for (var i = stack.length - 1; i >= pos; i--)
-                if (handler.end)
-                  handler.end(stack[i]);
-              stack.length = pos;
-            }
-          }
-        };
-        function makeMap(str) {
-          var obj = {}, items = str.split(",");
-          for (var i = 0; i < items.length; i++)
-            obj[items[i]] = true;
-          return obj;
-        }
-        return this;
-      }();
-      CSSParser = {
-        parseAttribute: function(data, allowedStyles) {
-          var tokens = import_tokenizer.default.tokenize(data, { loc: true });
-          var rule = import_parser.default.parse(tokens, "declaration");
-          var keepText = [];
-          this._filterDeclarations(null, rule.value, allowedStyles, data, keepText);
-          var oot = keepText.join("");
-          return oot;
-        },
-        _filterDeclarations: function(parent, decls, allowedStyles, fullText, textOut) {
-          for (var i = 0; i < decls.length; i++) {
-            var decl = decls[i];
-            if (decl.type !== "DECLARATION") {
-              continue;
-            }
-            if (allowedStyles.indexOf(decl.name) !== -1) {
-              textOut.push(fullText.substring(decl.startTok.loc.start.idx, parent && parent.endTok === decl.endTok ? decl.endTok.loc.start.idx : decl.endTok.loc.end.idx + 1));
-            }
-          }
-        },
-        parseBody: function(data, allowedStyles) {
-          var body = "";
-          var oot = "";
-          try {
-            var tokens = import_tokenizer.default.tokenize(data, { loc: true });
-            var stylesheet = import_parser.default.parse(tokens);
-            var keepText = [];
-            for (var i = 0; i < stylesheet.value.length; i++) {
-              var sub = stylesheet.value[i];
-              if (sub.type === "STYLE-RULE") {
-                keepText.push(data.substring(sub.startTok.loc.start.idx, sub.value.length ? sub.value[0].startTok.loc.start.idx : sub.endTok.loc.start.idx));
-                this._filterDeclarations(sub, sub.value, allowedStyles, data, keepText);
-                keepText.push(data.substring(sub.endTok.loc.start.idx, sub.endTok.loc.end.idx + 1));
-              }
-            }
-            oot = keepText.join("");
-          } catch (e) {
-            console.log("bleach CSS parsing failed, skipping. Error: " + e);
-            oot = "";
-          }
-          return oot;
-        }
-      };
+  function wrapTextIntoSafeHTMLString(text, wrapTag, transformNewlines, attrs) {
+    if (transformNewlines === void 0) {
+      transformNewlines = true;
+    }
+    wrapTag = wrapTag || "div";
+    text = escapePlaintextIntoElementContext(text);
+    text = transformNewlines ? text.replace(/\n/g, "<br/>") : text;
+    let attributes = "";
+    for (let i = 0, ii = attrs?.length || 0; i < ii; i += 2) {
+      attributes += ` ${attrs[i]}="${escapePlaintextIntoAttribute(attrs[i + 1])}"`;
+    }
+    return `<${wrapTag}${attributes}>${text}</${wrapTag}>`;
+  }
+  function escapeAttrValue(s) {
+    return s.replace(RE_QUOTE_CHAR, "&quot;");
+  }
+  var entities, RE_QUOTE_CHAR;
+  var init_htmlchew = __esm({
+    "src/backend/bodies/htmlchew.js"() {
+      init_worker_router();
       entities = {
         34: "quot",
         38: "amp",
@@ -11296,408 +9680,6 @@ var WorkshopBackend = (() => {
         8250: "rsaquo",
         8364: "euro"
       };
-      entityRegExp = /\&([#a-zA-Z0-9]+);/g;
-    }
-  });
-
-  // src/backend/bodies/htmlchew.js
-  function getAttributeFromList(attrs, name) {
-    var len = attrs.length;
-    for (var i = 0; i < len; i++) {
-      var attr = attrs[i];
-      if (attr.name.toLowerCase() === name) {
-        return attr;
-      }
-    }
-    return null;
-  }
-  function stashLinks(lowerTag, attrs) {
-    var classAttr;
-    if (RE_IMG_TAG.test(lowerTag)) {
-      attrs = attrs.filter(function(attr) {
-        switch (attr.name.toLowerCase()) {
-          case "cid-src":
-          case "ext-src":
-            return false;
-          case "class":
-            classAttr = attr;
-          default:
-            return true;
-        }
-      });
-      var srcAttr = getAttributeFromList(attrs, "src");
-      if (srcAttr) {
-        if (RE_CID_URL.test(srcAttr.escaped)) {
-          srcAttr.name = "cid-src";
-          if (classAttr) {
-            classAttr.escaped += " moz-embedded-image";
-          } else {
-            attrs.push({ name: "class", escaped: "moz-embedded-image" });
-          }
-          srcAttr.escaped = srcAttr.escaped.substring(4);
-        } else if (RE_HTTP_URL.test(srcAttr.escaped)) {
-          srcAttr.name = "ext-src";
-          if (classAttr) {
-            classAttr.escaped += " moz-external-image";
-          } else {
-            attrs.push({ name: "class", escaped: "moz-external-image" });
-          }
-        }
-      }
-    } else {
-      attrs = attrs.filter(function(attr) {
-        switch (attr.name.toLowerCase()) {
-          case "cid-src":
-          case "ext-src":
-            return false;
-          case "class":
-            classAttr = attr;
-          default:
-            return true;
-        }
-      });
-      var linkAttr = getAttributeFromList(attrs, "href");
-      if (linkAttr) {
-        var link = linkAttr.escaped;
-        if (RE_HTTP_URL.test(link) || RE_MAILTO_URL.test(link)) {
-          linkAttr.name = "ext-href";
-          if (classAttr) {
-            classAttr.escaped += " moz-external-link";
-          } else {
-            attrs.push({ name: "class", escaped: "moz-external-link" });
-          }
-        } else {
-          attrs.splice(attrs.indexOf(linkAttr), 1);
-        }
-      }
-    }
-    return attrs;
-  }
-  function sanitizeAndNormalizeHtml(htmlString) {
-    return clean(htmlString, BLEACH_SETTINGS);
-  }
-  function generateSnippet2(htmlString) {
-    return unescapeHTMLEntities(clean(htmlString, BLEACH_SNIPPET_SETTINGS));
-  }
-  function generateSearchableTextVersion(htmlString, includeQuotes) {
-    var settings;
-    if (includeQuotes) {
-      settings = BLEACH_SEARCHABLE_TEXT_WITH_QUOTES_SETTINGS;
-    } else {
-      settings = BLEACH_SEARCHABLE_TEXT_WITHOUT_QUOTES_SETTINGS;
-    }
-    var cleaned = clean(htmlString, settings);
-    return unescapeHTMLEntities(cleaned);
-  }
-  function wrapTextIntoSafeHTMLString(text, wrapTag, transformNewlines, attrs) {
-    if (transformNewlines === void 0) {
-      transformNewlines = true;
-    }
-    wrapTag = wrapTag || "div";
-    text = escapePlaintextIntoElementContext(text);
-    text = transformNewlines ? text.replace(/\n/g, "<br/>") : text;
-    var attributes = "";
-    if (attrs) {
-      var len = attrs.length;
-      for (var i = 0; i < len; i += 2) {
-        attributes += " " + attrs[i] + '="' + escapePlaintextIntoAttribute(attrs[i + 1]) + '"';
-      }
-    }
-    return "<" + wrapTag + attributes + ">" + text + "</" + wrapTag + ">";
-  }
-  function escapeAttrValue(s) {
-    return s.replace(RE_QUOTE_CHAR, "&quot;");
-  }
-  var LEGAL_TAGS, PRUNE_TAGS, LEGAL_ATTR_MAP, LEGAL_STYLES, RE_NODE_NEEDS_TRANSFORM, RE_CID_URL, RE_HTTP_URL, RE_MAILTO_URL, RE_IMG_TAG, BLEACH_SETTINGS, BLEACH_SNIPPET_SETTINGS, MAX_SEARCHABLE_TEXT_LENGTH, BLEACH_SEARCHABLE_TEXT_WITH_QUOTES_SETTINGS, BLEACH_SEARCHABLE_TEXT_WITHOUT_QUOTES_SETTINGS, RE_QUOTE_CHAR;
-  var init_htmlchew = __esm({
-    "src/backend/bodies/htmlchew.js"() {
-      init_bleach();
-      init_syncbase();
-      LEGAL_TAGS = [
-        "a",
-        "abbr",
-        "acronym",
-        "area",
-        "article",
-        "aside",
-        "b",
-        "bdi",
-        "bdo",
-        "big",
-        "blockquote",
-        "br",
-        "caption",
-        "center",
-        "cite",
-        "code",
-        "col",
-        "colgroup",
-        "dd",
-        "del",
-        "details",
-        "dfn",
-        "dir",
-        "div",
-        "dl",
-        "dt",
-        "em",
-        "figcaption",
-        "figure",
-        "font",
-        "footer",
-        "h1",
-        "h2",
-        "h3",
-        "h4",
-        "h5",
-        "h6",
-        "header",
-        "hgroup",
-        "hr",
-        "i",
-        "img",
-        "ins",
-        "kbd",
-        "label",
-        "legend",
-        "li",
-        "listing",
-        "map",
-        "mark",
-        "nav",
-        "nobr",
-        "noscript",
-        "ol",
-        "output",
-        "p",
-        "pre",
-        "q",
-        "rp",
-        "rt",
-        "ruby",
-        "s",
-        "samp",
-        "section",
-        "small",
-        "span",
-        "strike",
-        "strong",
-        "style",
-        "sub",
-        "summary",
-        "sup",
-        "table",
-        "tbody",
-        "td",
-        "tfoot",
-        "th",
-        "thead",
-        "time",
-        "title",
-        "tr",
-        "tt",
-        "u",
-        "ul",
-        "var",
-        "wbr"
-      ];
-      PRUNE_TAGS = [
-        "button",
-        "datalist",
-        "script",
-        "select",
-        "svg",
-        "title"
-      ];
-      LEGAL_ATTR_MAP = {
-        "*": [
-          "abbr",
-          "align",
-          "alt",
-          "axis",
-          "bgcolor",
-          "border",
-          "cellpadding",
-          "cellspacing",
-          "charoff",
-          "class",
-          "clear",
-          "color",
-          "cols",
-          "colspan",
-          "compact",
-          "coords",
-          "datetime",
-          "dir",
-          "face",
-          "frame",
-          "headers",
-          "height",
-          "hspace",
-          "id",
-          "lang",
-          "media",
-          "nohref",
-          "noshade",
-          "nowrap",
-          "open",
-          "pointsize",
-          "pubdate",
-          "reversed",
-          "rows",
-          "rowspan",
-          "rules",
-          "size",
-          "scope",
-          "scoped",
-          "shape",
-          "span",
-          "start",
-          "summary",
-          "style",
-          "title",
-          "valign",
-          "value",
-          "vspace",
-          "width"
-        ],
-        a: ["ext-href", "hreflang"],
-        area: ["ext-href", "hreflang"],
-        blockquote: ["cite", "type"],
-        img: ["cid-src", "ext-src", "ismap", "usemap"],
-        meta: ["charset"],
-        ol: ["type"],
-        style: ["type"]
-      };
-      LEGAL_STYLES = [
-        "background-color",
-        "border",
-        "border-bottom",
-        "border-bottom-color",
-        "border-bottom-left-radius",
-        "border-bottom-right-radius",
-        "border-bottom-style",
-        "border-bottom-width",
-        "border-color",
-        "border-left",
-        "border-left-color",
-        "border-left-style",
-        "border-left-width",
-        "border-radius",
-        "border-right",
-        "border-right-color",
-        "border-right-style",
-        "border-right-width",
-        "border-style",
-        "border-top",
-        "border-top-color",
-        "border-top-left-radius",
-        "border-top-right-radius",
-        "border-top-style",
-        "border-top-width",
-        "border-width",
-        "clear",
-        "color",
-        "display",
-        "float",
-        "font-family",
-        "font-size",
-        "font-style",
-        "font-weight",
-        "height",
-        "line-height",
-        "list-style-position",
-        "list-style-type",
-        "margin",
-        "margin-bottom",
-        "margin-left",
-        "margin-right",
-        "margin-top",
-        "padding",
-        "padding-bottom",
-        "padding-left",
-        "padding-right",
-        "padding-top",
-        "text-align",
-        "text-align-last",
-        "text-decoration",
-        "text-decoration-color",
-        "text-decoration-line",
-        "text-decoration-style",
-        "text-indent",
-        "vertical-align",
-        "white-space",
-        "width",
-        "word-break",
-        "word-spacing",
-        "word-wrap"
-      ];
-      RE_NODE_NEEDS_TRANSFORM = /^(?:a|area|img)$/;
-      RE_CID_URL = /^cid:/i;
-      RE_HTTP_URL = /^http(?:s)?/i;
-      RE_MAILTO_URL = /^mailto:/i;
-      RE_IMG_TAG = /^img$/;
-      BLEACH_SETTINGS = {
-        tags: LEGAL_TAGS,
-        strip: true,
-        stripComments: true,
-        prune: PRUNE_TAGS,
-        attributes: LEGAL_ATTR_MAP,
-        styles: LEGAL_STYLES,
-        asNode: true,
-        callbackRegexp: RE_NODE_NEEDS_TRANSFORM,
-        callback: stashLinks
-      };
-      BLEACH_SNIPPET_SETTINGS = {
-        tags: [],
-        strip: true,
-        stripComments: true,
-        prune: [
-          "style",
-          "button",
-          "datalist",
-          "script",
-          "select",
-          "svg",
-          "title"
-        ],
-        asNode: true,
-        maxLength: DESIRED_SNIPPET_LENGTH
-      };
-      MAX_SEARCHABLE_TEXT_LENGTH = 256 * 1024;
-      BLEACH_SEARCHABLE_TEXT_WITH_QUOTES_SETTINGS = {
-        tags: [],
-        strip: true,
-        stripComments: true,
-        prune: [
-          "style",
-          "button",
-          "datalist",
-          "script",
-          "select",
-          "svg",
-          "title"
-        ],
-        asNode: true,
-        maxLength: MAX_SEARCHABLE_TEXT_LENGTH
-      };
-      BLEACH_SEARCHABLE_TEXT_WITHOUT_QUOTES_SETTINGS = {
-        tags: [],
-        strip: true,
-        stripComments: true,
-        prune: [
-          "style",
-          "button",
-          "datalist",
-          "script",
-          "select",
-          "svg",
-          "title",
-          "blockquote"
-        ],
-        asNode: true,
-        maxLength: MAX_SEARCHABLE_TEXT_LENGTH
-      };
       RE_QUOTE_CHAR = /"/g;
     }
   });
@@ -11850,7 +9832,7 @@ var WorkshopBackend = (() => {
     }
     return makeBodyPartsFromTextAndHTML(textMsg, htmlMsg);
   }
-  function processMessageContent(content, type, isDownloaded, generateSnippet3) {
+  async function processMessageContent(content, type, isDownloaded, generateSnippet3) {
     if (content.slice(-1) === "\n") {
       content = content.slice(0, -1);
     }
@@ -11880,7 +9862,7 @@ var WorkshopBackend = (() => {
       case "html":
         if (generateSnippet3) {
           try {
-            snippet = generateSnippet2(content);
+            snippet = await generateSnippet2(content);
           } catch (ex) {
             logic(scope3, "htmlSnippetError", { ex });
             snippet = "";
@@ -11888,9 +9870,9 @@ var WorkshopBackend = (() => {
         }
         if (isDownloaded) {
           try {
-            parsedContent = sanitizeAndNormalizeHtml(content);
+            parsedContent = await sanitizeAndNormalizeHtml(content);
             contentBlob = new Blob([parsedContent], { type: "text/html" });
-            authoredBodySize = generateSearchableTextVersion(parsedContent, false).length;
+            authoredBodySize = await generateSnippet2(parsedContent, false).length;
           } catch (ex) {
             logic(scope3, "htmlParseError", { ex });
             parsedContent = "";
@@ -11949,14 +9931,14 @@ var WorkshopBackend = (() => {
           this.inboxFolder = foldersTOC.getCanonicalFolderByType("inbox");
           this.allMessages = [];
         }
-        chewItem() {
+        async chewItem() {
           const item = this.item;
           let contentBlob, snippet, authoredBodySize;
           let bodyReps = [];
           const msgId = this.convId;
           if (item.description) {
             const description = item.description;
-            ({ contentBlob, snippet, authoredBodySize } = processMessageContent(description, "html", true, true));
+            ({ contentBlob, snippet, authoredBodySize } = await processMessageContent(description, "html", true, true));
             bodyReps.push(makeBodyPart({
               type: "html",
               part: null,
@@ -12031,7 +10013,7 @@ var WorkshopBackend = (() => {
               item: req.item,
               foldersTOC
             });
-            itemChewer.chewItem();
+            await itemChewer.chewItem();
             const convInfo = churnConversationDriver(req.convId, null, itemChewer.allMessages);
             await ctx.finishTask({
               newData: {
@@ -12811,7 +10793,7 @@ var WorkshopBackend = (() => {
             isOptional: raw.optional
           });
         }
-        chewEventBundle() {
+        async chewEventBundle() {
           const oldById = this.oldById;
           for (const oldInfo of this.oldEvents) {
             if (EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
@@ -12834,7 +10816,11 @@ var WorkshopBackend = (() => {
               const bodyReps = [];
               const description = gapiEvent.description;
               if (description) {
-                ({ contentBlob, snippet, authoredBodySize } = processMessageContent(description, "html", true, true));
+                ({
+                  contentBlob,
+                  snippet,
+                  authoredBodySize
+                } = await processMessageContent(description, "html", true, true));
                 bodyReps.push(makeBodyPart({
                   type: "html",
                   part: null,
@@ -12934,7 +10920,7 @@ var WorkshopBackend = (() => {
               oldEvents,
               foldersTOC
             });
-            eventChewer.chewEventBundle();
+            await eventChewer.chewEventBundle();
             logic(ctx, "debuggy", {
               eventMap: eventChewer.eventMap,
               allEvents: eventChewer.allEvents
@@ -13429,7 +11415,7 @@ var WorkshopBackend = (() => {
             isOptional: type === "optional"
           });
         }
-        chewEventBundle() {
+        async chewEventBundle() {
           const oldById = this.oldById;
           for (const oldInfo of this.oldEvents) {
             if (EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
@@ -13465,7 +11451,11 @@ var WorkshopBackend = (() => {
               const body = mapiEvent.body;
               if (body) {
                 const { content, contentType } = body;
-                ({ contentBlob, snippet, authoredBodySize } = processMessageContent(content, contentType, true, true));
+                ({
+                  contentBlob,
+                  snippet,
+                  authoredBodySize
+                } = await processMessageContent(content, contentType, true, true));
                 bodyReps.push(makeBodyPart({
                   type: contentType,
                   part: null,
@@ -13562,7 +11552,7 @@ var WorkshopBackend = (() => {
               oldEvents,
               foldersTOC
             });
-            eventChewer.chewEventBundle();
+            await eventChewer.chewEventBundle();
             logic(ctx, "debuggy", {
               event: eventChewer.event,
               allEvents: eventChewer.allEvents
@@ -13880,7 +11870,7 @@ var WorkshopBackend = (() => {
           this.newEvents = [];
           this.allEvents = [];
         }
-        chewEventBundle() {
+        async chewEventBundle() {
           if (!this.jcalEvents.length) {
             return;
           }
@@ -13896,18 +11886,20 @@ var WorkshopBackend = (() => {
               startDate: rootEvent.startDate,
               endDate: rootEvent.endDate
             };
-            this._chewOccurrence(fakeOccur);
+            await this._chewOccurrence(fakeOccur);
           } else {
             const calIter = rootEvent.iterator();
             let stepCount = 0;
+            const promises = [];
             for (calIter.next(); calIter.complete === false && stepCount < 1024 && calIter.last.toJSDate().valueOf() <= this.rangeNewestTS; calIter.next(), stepCount++) {
               const curOccur = calIter.last;
               const occurInfo = rootEvent.getOccurrenceDetails(curOccur);
               if (occurInfo.endDate.toJSDate().valueOf() < this.rangeOldestTS || occurInfo.startDate.toJSDate().valueOf() > this.rangeNewestTS) {
                 continue;
               }
-              this._chewOccurrence(occurInfo);
+              promises.push(this._chewOccurrence(occurInfo));
             }
+            await Promise.all(promises);
           }
         }
         _chewCalIdentity(calAddress) {
@@ -13924,7 +11916,7 @@ var WorkshopBackend = (() => {
             email: mailto
           });
         }
-        _chewOccurrence({ recurrenceId, item, startDate, endDate }) {
+        async _chewOccurrence({ recurrenceId, item, startDate, endDate }) {
           const msgId = `${this.convId}.${recurrenceId}.0`;
           const component = item.component;
           if (!this.contentsChanged && this.oldById.has(msgId)) {
@@ -13941,7 +11933,7 @@ var WorkshopBackend = (() => {
           let description = component.getFirstPropertyValue("description");
           if (description) {
             description = description.replace(/\\n/g, "\n");
-            ({ contentBlob, snippet, authoredBodySize } = processMessageContent(description, "html", true, true));
+            ({ contentBlob, snippet, authoredBodySize } = await processMessageContent(description, "html", true, true));
             bodyReps.push(makeBodyPart({
               type: "html",
               part: null,
@@ -14026,7 +12018,7 @@ var WorkshopBackend = (() => {
               oldEvents,
               foldersTOC
             });
-            eventChewer.chewEventBundle();
+            await eventChewer.chewEventBundle();
             let convInfo;
             if (eventChewer.allEvents.length) {
               convInfo = churnConversationDriver(req.convId, oldConvInfo, eventChewer.allEvents);
@@ -15945,116 +13937,7 @@ var WorkshopBackend = (() => {
 
   // src/backend/worker-setup.js
   init_logic();
-
-  // src/backend/worker-router.js
-  var listeners = {};
-  function receiveMessage(port, evt4) {
-    var data = evt4.data;
-    var listener = listeners[data.type];
-    if (listener) {
-      listener(data, port);
-    }
-  }
-  var inSharedWorker = "onconnect" in globalThis;
-  var onConnectHandler = null;
-  function runOnConnect(handler) {
-    onConnectHandler = handler;
-    if (!inSharedWorker) {
-      onConnectHandler(null);
-    }
-  }
-  function receiveConnect(evt4) {
-    const port = evt4.ports[0];
-    if (!defaultPort) {
-      defaultPort = port;
-      resolveDefaultPort(defaultPort);
-    }
-    port.onmessage = receiveMessage.bind(null, port);
-    if (onConnectHandler) {
-      onConnectHandler(port);
-    }
-  }
-  var defaultPort;
-  var defaultPortPromise;
-  var resolveDefaultPort = null;
-  if (!inSharedWorker) {
-    defaultPort = globalThis;
-    defaultPortPromise = Promise.resolve(defaultPort);
-    globalThis.addEventListener("message", receiveMessage);
-  } else {
-    globalThis.addEventListener("connect", receiveConnect);
-    defaultPortPromise = new Promise((resolve) => {
-      resolveDefaultPort = resolve;
-    });
-  }
-  async function eventuallySendToDefault(message) {
-    await defaultPortPromise;
-    defaultPort.postMessage(message);
-  }
-  function unregister(type) {
-    delete listeners[type];
-  }
-  function registerSimple(type, callback) {
-    listeners[type] = callback;
-    return function sendSimpleMessage(cmd, args, explicitPort) {
-      const msg = { type, uid: null, cmd, args };
-      if (explicitPort) {
-        explicitPort.postMessage(msg);
-      } else {
-        eventuallySendToDefault(msg);
-      }
-    };
-  }
-  var callbackSenders = {};
-  function registerCallbackType(type) {
-    if (callbackSenders.hasOwnProperty(type)) {
-      return callbackSenders[type];
-    }
-    var callbacks = {};
-    var uid = 0;
-    listeners[type] = function receiveCallbackMessage(data) {
-      var callback = callbacks[data.uid];
-      if (!callback) {
-        return;
-      }
-      delete callbacks[data.uid];
-      callback(data.args);
-    };
-    var sender = function sendCallbackMessage(cmd, args) {
-      return new Promise((resolve) => {
-        callbacks[uid] = resolve;
-        eventuallySendToDefault({ type, uid: uid++, cmd, args });
-      });
-    };
-    callbackSenders[type] = sender;
-    return sender;
-  }
-  function registerInstanceType(type) {
-    var uid = 0;
-    var instanceMap = {};
-    listeners[type] = function receiveInstanceMessage(data) {
-      var instanceListener = instanceMap[data.uid];
-      if (!instanceListener) {
-        return;
-      }
-      instanceListener(data);
-    };
-    return {
-      register(instanceListener, explicitPort) {
-        const usePort = explicitPort || defaultPort;
-        var thisUid = uid++;
-        instanceMap[thisUid] = instanceListener;
-        return {
-          sendMessage: function sendInstanceMessage(cmd, args, transferArgs) {
-            usePort.postMessage({ type, uid: thisUid, cmd, args }, transferArgs);
-          },
-          unregister: function unregisterInstance() {
-            delete instanceMap[thisUid];
-          }
-        };
-      }
-    };
-  }
+  init_worker_router();
 
   // src/backend/mailbridge.js
   init_logic();
@@ -18918,10 +16801,12 @@ var WorkshopBackend = (() => {
 
   // src/backend/universe/cronsync_support.js
   init_logic();
+  init_worker_router();
   init_syncbase();
 
   // src/backend/wakelocks.js
   init_logic();
+  init_worker_router();
   var sendWakeLockMessage = registerCallbackType("wakelocks");
   function SmartWakeLock(opts) {
     logic.defineScope(this, "SmartWakeLock", { types: opts.locks });
@@ -22368,7 +20253,7 @@ var WorkshopBackend = (() => {
         if (bodyRep.type === "html") {
           bodyResults.push({
             type: bodyRep.type,
-            textBody: generateSearchableTextVersion(bodyObj, this.includeQuotes)
+            textBody: generateSnippet2(bodyObj, this.includeQuotes)
           });
         } else {
           bodyResults.push({

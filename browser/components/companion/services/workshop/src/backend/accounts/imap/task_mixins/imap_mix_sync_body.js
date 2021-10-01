@@ -146,7 +146,7 @@ export default {
         let bodyResult = bodyParser.complete();
 
         // - Update the message
-        imapchew.updateMessageWithFetch(
+        await imapchew.updateMessageWithFetch(
           message,
           {
             bodyRepIndex: iBodyRep,

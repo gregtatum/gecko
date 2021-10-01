@@ -80,7 +80,7 @@ export default TaskDefiner.defineSimpleTask([
         oldEvents,
         foldersTOC,
       });
-      eventChewer.chewEventBundle();
+      await eventChewer.chewEventBundle();
       logic(ctx, "debuggy", {
         eventMap: eventChewer.eventMap,
         allEvents: eventChewer.allEvents,

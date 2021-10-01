@@ -6,7 +6,13 @@ const EXPORTED_SYMBOLS = [
   "getConferenceInfo",
   "parseGoogleCalendarResult",
   "parseMicrosoftCalendarResult",
+  "sanitizeHTML",
+  "convertHTMLToPlainText",
 ];
+
+const parserUtils = Cc["@mozilla.org/parserutils;1"].getService(
+  Ci.nsIParserUtils
+);
 
 const URL_REGEX = /(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])/gim;
 
@@ -276,4 +282,17 @@ function parseMicrosoftCalendarResult(result) {
     .filter(a => a.status.response != "declined")
     .map(a => _normalizeUser(a));
   return event;
+}
+
+const SanitizerFlags =
+  parserUtils.SanitizerDropForms |
+  parserUtils.SanitizerDropMedia |
+  parserUtils.SanitizerDropNonCSSPresentation;
+
+function sanitizeHTML(str) {
+  return parserUtils.sanitize(str, SanitizerFlags);
+}
+
+function convertHTMLToPlainText(str, wrapCol = 0) {
+  return parserUtils.convertToPlainText(str, SanitizerFlags, wrapCol);
 }
