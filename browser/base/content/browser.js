@@ -5448,6 +5448,10 @@ var XULBrowserWindow = {
 
     UpdateBackForwardCommands(gBrowser.webNavigation);
 
+    document.getElementById(
+      "pinebuild-snapshot-button"
+    ).disabled = !Snapshots.canSnapshotUrl(aLocationURI);
+
     Services.obs.notifyObservers(
       aWebProgress,
       "touchbar-location-change",
