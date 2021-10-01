@@ -806,15 +806,10 @@ void ContentParent::ReleaseCachedProcesses() {
   }
 
 #ifdef DEBUG
-  int num = 0;
-  for (const auto& contentParents : sBrowserContentParents->Values()) {
-    num += contentParents->Length();
-    for (auto* cp : *contentParents) {
-      MOZ_LOG(ContentParent::GetLog(), LogLevel::Debug,
-              ("%s: %zu processes", cp->mRemoteType.get(),
-               contentParents->Length()));
-      break;
-    }
+  for (const auto& cps : *sBrowserContentParents) {
+    MOZ_LOG(ContentParent::GetLog(), LogLevel::Debug,
+            ("%s: %zu processes", PromiseFlatCString(cps.GetKey()).get(),
+             cps.GetData()->Length()));
   }
 #endif
   // We process the toRelease array outside of the iteration to avoid modifying
@@ -7353,13 +7348,8 @@ ContentParent::RecvGetLoadingSessionHistoryInfoFromParent(
   }
 
   Maybe<LoadingSessionHistoryInfo> info;
-  int32_t requestedIndex = -1;
-  int32_t sessionHistoryLength = 0;
-  aContext.get_canonical()->GetLoadingSessionHistoryInfoFromParent(
-      info, &requestedIndex, &sessionHistoryLength);
-  aResolver(
-      Tuple<const mozilla::Maybe<LoadingSessionHistoryInfo>&, const int32_t&,
-            const int32_t&>(info, requestedIndex, sessionHistoryLength));
+  aContext.get_canonical()->GetLoadingSessionHistoryInfoFromParent(info);
+  aResolver(info);
 
   return IPC_OK();
 }

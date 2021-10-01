@@ -4767,7 +4767,11 @@
   # attempt to isolate video layers in fullscreen windows.
 -   name: gfx.core-animation.specialize-video
     type: RelaxedAtomicBool
+#if defined(MOZ_AARCH64)
+    value: false
+#else
     value: true
+#endif
     mirror: always
 #endif
 
@@ -6832,7 +6836,7 @@
 # Is support for CSS backdrop-filter enabled?
 - name: layout.css.backdrop-filter.enabled
   type: bool
-  value: @IS_EARLY_BETA_OR_EARLIER@
+  value: false
   mirror: always
 
 # Should stray control characters be rendered visibly?
@@ -7075,10 +7079,10 @@
   value: true
   mirror: always
 
-# Enables parsing size properties in page at-rules
+# Enables support for the size property inside of CSS @page rules.
 - name: layout.css.page-size.enabled
   type: RelaxedAtomicBool
-  value: false
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
   rust: true
 

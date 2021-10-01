@@ -3399,31 +3399,6 @@ exports.CSS_PROPERTIES = {
       "unset"
     ]
   },
-  "backdrop-filter": {
-    "isInherited": false,
-    "subproperties": [
-      "backdrop-filter"
-    ],
-    "supports": [],
-    "values": [
-      "blur",
-      "brightness",
-      "contrast",
-      "drop-shadow",
-      "grayscale",
-      "hue-rotate",
-      "inherit",
-      "initial",
-      "invert",
-      "none",
-      "opacity",
-      "revert",
-      "saturate",
-      "sepia",
-      "unset",
-      "url"
-    ]
-  },
   "backface-visibility": {
     "isInherited": false,
     "subproperties": [
@@ -9789,6 +9764,32 @@ exports.CSS_PROPERTIES = {
       "inherit",
       "initial",
       "optimizespeed",
+      "revert",
+      "unset"
+    ]
+  },
+  "size": {
+    "isInherited": false,
+    "subproperties": [
+      "size"
+    ],
+    "supports": [],
+    "values": [
+      "a3",
+      "a4",
+      "a5",
+      "auto",
+      "b4",
+      "b5",
+      "inherit",
+      "initial",
+      "jis-b4",
+      "jis-b5",
+      "landscape",
+      "ledger",
+      "legal",
+      "letter",
+      "portrait",
       "revert",
       "unset"
     ]
