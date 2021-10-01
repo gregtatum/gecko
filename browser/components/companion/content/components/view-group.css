@@ -12,6 +12,55 @@
   width: 200px;
 }
 
+.view-el > .view-loading-spinner-container {
+  position: absolute;
+  opacity: 0;
+  overflow: hidden;
+  width: 32px;
+  height: 32px;
+}
+
+:host(:is([top], [active])) > .view-el[busy] > .view-loading-spinner-container {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :host(:is([top], [active])) > .view-el:not([pause-animation]) > .view-loading-spinner-container {
+    animation: loadingSpinner 0.7s linear infinite;
+  }
+
+  :host(:is([top], [active])) > .view-el:not([busy]) > .view-loading-spinner-container {
+    transition: opacity 1s var(--animation-easing-function);
+  }
+}
+
+:host(:is([top], [active])) > .view-el > .view-loading-spinner-container > .view-loading-spinner {
+  transform: translateX(-462px);
+  animation-iteration-count: 1;
+  animation-timing-function: steps(14);
+  animation-fill-mode: both;
+  animation-duration: .25s;
+}
+
+:host(:is([top], [active])) > .view-el[busy] > .view-loading-spinner-container > .view-loading-spinner {
+  animation-name: startSpinner;
+}
+
+@keyframes loadingSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes startSpinner {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-462px);
+  }
+}
+
 .view-icon-container {
   display: flex;
   fill: currentColor;

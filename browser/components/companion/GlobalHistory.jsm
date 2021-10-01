@@ -166,6 +166,10 @@ class View {
     return this.#internalView.iconURL;
   }
 
+  get busy() {
+    return this.#internalView.busy;
+  }
+
   /**
    * Returns the appropriate connection state security flag for this view.
    *
@@ -288,6 +292,9 @@ class InternalView {
     this.url = historyEntry.URI;
     this.title = historyEntry.title;
     this.iconURL = browser.mIconURL;
+    this.busy = this.#window.gBrowser
+      .getTabForBrowser(browser)
+      ?.hasAttribute("busy");
     this.securityState = browser.securityUI.state;
     this.#contentPrincipal = browser.contentPrincipal;
 
@@ -949,9 +956,11 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
+    let browser = tab.linkedBrowser;
     if (changed.includes("image")) {
-      let browser = tab.linkedBrowser;
       this._onNewIcon(browser);
+    } else if (changed.includes("busy")) {
+      this._onBusyChanged(browser, tab.hasAttribute("busy"));
     }
   }
 
@@ -1000,6 +1009,23 @@ class GlobalHistory extends EventTarget {
     }
 
     internalView.iconURL = browser.mIconURL;
+    this.#notifyEvent("ViewUpdated", internalView);
+  }
+
+  /**
+   * Called when the browser's busy state has changed.
+   */
+  _onBusyChanged(browser, busy) {
+    let entry = getCurrentEntry(browser);
+    if (!entry) {
+      return;
+    }
+    let internalView = this.#historyViews.get(entry.ID);
+    if (!internalView) {
+      return;
+    }
+
+    internalView.busy = busy;
     this.#notifyEvent("ViewUpdated", internalView);
   }
 

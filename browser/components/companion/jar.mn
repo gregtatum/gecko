@@ -35,6 +35,7 @@ browser.jar:
     content/browser/companion/meet.png (content/meet.png)
     content/browser/companion/teams.png (content/teams.png)
     content/browser/companion/time-since.js (content/time-since.js)
+    content/browser/companion/viewLoading.svg (content/viewLoading.svg)
     content/browser/companion/vpn.svg (content/vpn.svg)
     content/browser/companion/webex.png (content/webex.png)
     content/browser/companion/widget-utils.js (content/widget-utils.js)

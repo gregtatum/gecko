@@ -24,6 +24,7 @@ export default class ViewGroup extends MozLitElement {
       views: { type: Object },
       activeView: { type: Object },
       active: { type: Boolean },
+      busyAnimating: { type: Boolean },
     };
   }
 
@@ -37,6 +38,7 @@ export default class ViewGroup extends MozLitElement {
     super();
     this.views = [];
     this.activeView = null;
+    this.busyAnimationTimeout = null;
     this.addEventListener("click", this.#onClick);
   }
 
@@ -77,6 +79,11 @@ export default class ViewGroup extends MozLitElement {
    */
   get lastView() {
     return this.views[this.views.length - 1];
+  }
+
+  #transitionEndOrCancel() {
+    let view = this.active ? this.activeView : this.lastView;
+    this.busyAnimating = view.busy;
   }
 
   render() {
@@ -126,8 +133,28 @@ export default class ViewGroup extends MozLitElement {
     // on any history "breadcrumbs".
     let rootTitle = this.active ? undefined : view.title;
 
+    // So, this is a bit annoying. This is basically a battery usage
+    // optimization. When we change the `busy` attribute to false, the opacity
+    // of the spinner will transition to 0. We need to give it time to do that,
+    // and we want to continue spinning while it does so. However, if we
+    // continue spinning indefinitely, then even though nothing will be
+    // visible to the user, we'll still generate frames on the compositor and
+    // eat up battery life, which is A Bad Thing. So we add a listener to
+    // transitionend on the spinner and check inside it if we're busy or not,
+    // in order to re-update the attribute.
+    if (view.busy && !this.busyAnimating) {
+      this.busyAnimating = true;
+    }
+
     return html`
-      <div class="view-el" title=${ifDefined(rootTitle)}>
+      <div class="view-el" title=${ifDefined(rootTitle)} ?busy=${
+      view.busy
+    } ?pause-animation=${!this.busyAnimating}>
+        <div class="view-loading-spinner-container" @transitionend=${
+          this.#transitionEndOrCancel
+        } @transitioncancel=${this.#transitionEndOrCancel}>
+          <img class="view-loading-spinner" src="chrome://browser/content/companion/viewLoading.svg"></img>
+        </div>
         <span class="view-icon-container" part="icon-container">
           <img class="view-icon" src=${iconURL}></img>
         </span>
