@@ -26,7 +26,8 @@ exports.CSS_PROPERTIES = {
       "animation-iteration-count",
       "animation-direction",
       "animation-fill-mode",
-      "animation-play-state"
+      "animation-play-state",
+      "animation-timeline"
     ],
     "supports": [
       "timing-function"
@@ -34,6 +35,7 @@ exports.CSS_PROPERTIES = {
     "values": [
       "alternate",
       "alternate-reverse",
+      "auto",
       "backwards",
       "both",
       "cubic-bezier",
@@ -1235,7 +1237,8 @@ exports.CSS_PROPERTIES = {
       "animation-iteration-count",
       "animation-direction",
       "animation-fill-mode",
-      "animation-play-state"
+      "animation-play-state",
+      "animation-timeline"
     ],
     "supports": [
       "timing-function"
@@ -1243,6 +1246,7 @@ exports.CSS_PROPERTIES = {
     "values": [
       "alternate",
       "alternate-reverse",
+      "auto",
       "backwards",
       "both",
       "cubic-bezier",
@@ -2828,6 +2832,7 @@ exports.CSS_PROPERTIES = {
       "animation-play-state",
       "animation-fill-mode",
       "animation-delay",
+      "animation-timeline",
       "transform",
       "rotate",
       "scale",
@@ -3101,7 +3106,8 @@ exports.CSS_PROPERTIES = {
       "animation-iteration-count",
       "animation-direction",
       "animation-fill-mode",
-      "animation-play-state"
+      "animation-play-state",
+      "animation-timeline"
     ],
     "supports": [
       "timing-function"
@@ -3109,6 +3115,7 @@ exports.CSS_PROPERTIES = {
     "values": [
       "alternate",
       "alternate-reverse",
+      "auto",
       "backwards",
       "both",
       "cubic-bezier",
@@ -11030,6 +11037,10 @@ exports.PREFERENCES = [
   [
     "align-tracks",
     "layout.css.grid-template-masonry-value.enabled"
+  ],
+  [
+    "animation-timeline",
+    "layout.css.scroll-linked-animations.enabled"
   ],
   [
     "backdrop-filter",

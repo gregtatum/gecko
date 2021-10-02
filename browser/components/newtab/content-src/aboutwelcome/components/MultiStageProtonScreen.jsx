@@ -4,6 +4,7 @@
 
 import React from "react";
 import { Localized } from "./MSLocalized";
+import { Colorways } from "./Colorways";
 import { Themes } from "./Themes";
 import { SecondaryCTA, StepsIndicator } from "./MultiStageAboutWelcome";
 
@@ -13,8 +14,10 @@ export class MultiStageProtonScreen extends React.PureComponent {
   }
 
   render() {
-    const { content, totalNumberOfScreens: total } = this.props;
+    const { autoClose, content, totalNumberOfScreens: total } = this.props;
     const isWelcomeScreen = this.props.order === 0;
+    const isLastScreen = this.props.order === total;
+    const autoCloseTime = 20000;
     // Assign proton screen style 'screen-1' or 'screen-2' by checking
     // if screen order is even or odd.
     const screenClassName = isWelcomeScreen
@@ -22,6 +25,15 @@ export class MultiStageProtonScreen extends React.PureComponent {
       : `${this.props.order === 1 ? `dialog-initial` : ``} ${
           this.props.order === total ? `dialog-last` : ``
         } screen-${this.props.order % 2 !== 0 ? 1 : 2}`;
+
+    if (this.props.order === total && autoClose) {
+      let currentURL = window.location.href;
+      setTimeout(function() {
+        if (window.location.href === currentURL) {
+          window.location.href = "about:home";
+        }
+      }, autoCloseTime);
+    }
 
     return (
       <main className={`screen ${this.props.id} ${screenClassName}`}>
@@ -55,9 +67,16 @@ export class MultiStageProtonScreen extends React.PureComponent {
           <div className={`noodle outline-L`} />
           <div className={`noodle yellow-circle`} />
           <div className="main-content">
-            <div className="brand-logo" />
+            <div className={`brand-logo ${content.hideLogo ? "hide" : ""}`} />
+            {isLastScreen && content.hasFancyTitle ? (
+              <div className="confetti" />
+            ) : null}
             <div className="main-content-inner">
-              <div className="welcome-text">
+              <div
+                className={`welcome-text ${
+                  content.hasFancyTitle ? "fancy-headings" : ""
+                }`}
+              >
                 <Localized text={content.title}>
                   <h1
                     tabIndex="-1"
@@ -72,6 +91,15 @@ export class MultiStageProtonScreen extends React.PureComponent {
                   </Localized>
                 ) : null}
               </div>
+              {content.tiles &&
+              content.tiles.type === "colorway" &&
+              content.tiles.colorways ? (
+                <Colorways
+                  content={content}
+                  activeTheme={this.props.activeTheme}
+                  handleAction={this.props.handleAction}
+                />
+              ) : null}
               {content.tiles &&
               content.tiles.type === "theme" &&
               content.tiles.data ? (
