@@ -1075,15 +1075,14 @@ nsIWidget* nsPresContext::GetNearestWidget(nsPoint* aOffset) {
   return rootView->GetNearestWidget(aOffset);
 }
 
-nsIWidget* nsPresContext::GetRootWidget() const {
+already_AddRefed<nsIWidget> nsPresContext::GetRootWidget() const {
   NS_ENSURE_TRUE(mPresShell, nullptr);
   nsViewManager* vm = mPresShell->GetViewManager();
   if (!vm) {
     return nullptr;
   }
-  nsCOMPtr<nsIWidget> widget;
-  vm->GetRootWidget(getter_AddRefs(widget));
-  return widget.get();
+
+  return vm->GetRootWidget();
 }
 
 // We may want to replace this with something faster, maybe caching the root
