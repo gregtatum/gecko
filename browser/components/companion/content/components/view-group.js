@@ -83,7 +83,7 @@ export default class ViewGroup extends MozLitElement {
 
   #transitionEndOrCancel() {
     let view = this.active ? this.activeView : this.lastView;
-    this.busyAnimating = view.busy;
+    this.busyAnimating = view?.busy ?? false;
   }
 
   render() {
