@@ -91,30 +91,46 @@ function getCurrentEntry(browser) {
 }
 
 /**
- * Gets the current index for the history with the given ID in the given browser.
+ * @param {DOMWindow} window
+ * @param {View} view
  *
- * @param {Browser} browser
- *   The browser element.
- * @param {number} historyId
- *   The history ID to look for.
- * @returns {number | null}
- *   The index found or null if the entry did not exist or the browser was a lazy browser.
+ * @returns { ViewHistoryData }
  */
-function getHistoryIndex(browser, historyId) {
-  if (!browser.browsingContext) {
-    return null;
+
+function getBrowserHistoryForView(window, view) {
+  let currentBrowserBC = BrowsingContext.getCurrentTopByBrowserId(
+    view.browserId
+  );
+  let browser = currentBrowserBC?.embedderElement;
+  if (!browser || !window.document.contains(browser)) {
+    logConsole.debug(
+      `Browser(${view.browserId}) does not exist in this window.`
+    );
+    return {
+      browser: null,
+      historyIndex: null,
+      historyEntry: null,
+    };
   }
 
-  let { sessionHistory } = browser.browsingContext;
+  let sHistory = browser.browsingContext.sessionHistory;
 
-  for (let i = 0; i < sessionHistory.count; i++) {
-    let historyEntry = sessionHistory.getEntryAtIndex(i);
-    if (historyEntry.ID == historyId) {
-      return i;
+  for (let i = 0; i < sHistory.count; i++) {
+    let historyEntry = sHistory.getEntryAtIndex(i);
+    if (historyEntry.ID == view.historyId) {
+      return {
+        browser,
+        historyIndex: i,
+        historyEntry,
+      };
     }
   }
 
-  return null;
+  return {
+    browser,
+    historyIndex: null,
+    historyEntry: null,
+  };
 }
 
 /**
@@ -210,35 +226,9 @@ class InternalView {
   #contentPrincipal;
 
   /**
-   * The internal representation of a view. Each view maps to a history entry though the actual
-   * history entry may no longer exist.
-   *
-   * A view can be in one of three states:
-   *
-   *   * An in-memory view.
-   *     - The history entry that this view represents exists in a browser in the current window.
-   *     - `cachedEntry` is null.
-   *     - `browserId` is the `browserId` for the browser element.
-   *     - `browserKey` is the `permanentKey` for the browser element.
-   *   * A view in a lazy browser.
-   *     - This history entry is tied to a lazy browser and will be re-created when the browser is
-   *       restored.
-   *     - `cachedEntry` is the session store serialized nsISHEntry as a JS object.
-   *     - `browserId` is undefined.
-   *     - `browserKey` is the `permanentKey` for the browser element.
-   *   * A dropped history entry.
-   *     - If the holding browser element is removed or the history entry has been expired somehow.
-   *     - `cachedEntry` is the session store serialized nsISHEntry as a JS object.
-   *     - `browserId` is undefined.
-   *     - `browserKey` is undefined.
-   *
    * @param {DOMWindow} window
-   *   The top-level DOM window this view is in.
    * @param {Browser | null} browser
-   *   The browser element that holds this view or null if this is a view for a discarded entry.
-   * @param {nsISHEntry | object} historyEntry
-   *   The nsISHEntry for this view or the serialized version if this view is for a lazy or
-   *   dropped entry.
+   * @param {nsISHEntry} historyEntry
    */
   constructor(window, browser, historyEntry) {
     this.#id = InternalView.nextInternalViewID++;
@@ -250,67 +240,28 @@ class InternalView {
     );
     InternalView.viewMap.set(this.#view, this);
 
-    if (historyEntry instanceof Ci.nsISHEntry) {
+    // cachedEntry is set when session history has purged or truncated
+    // the nsISHEntry associated with this InternalView. InternalView
+    // holds on to that entry so that it's possible for the user
+    // to eventually return to this state despite it having been removed.
+    this.cachedEntry = null;
+
+    if (browser) {
       logConsole.debug(
         `Created InternalView ${this.#id} with SHEntry ID: ${historyEntry.ID}`
       );
-
       this.update(browser, historyEntry);
     } else {
       logConsole.debug(
-        `Created InternalView ${this.#id} with ${
-          browser ? "lazy" : "cached"
-        } SHEntry ID: ` + historyEntry.ID
+        `Created InternalView ${this.#id} with cached SHEntry ID: ` +
+          historyEntry.ID
       );
-      this.browserId = browser?.browserId;
-      this.browserKey = browser?.permanentKey;
-
-      this.historyId = historyEntry.ID;
       this.cachedEntry = historyEntry;
-
+      this.historyId = historyEntry.ID;
       this.url = Services.io.newURI(historyEntry.url);
       this.title = historyEntry.title;
-      this.iconURL = browser?.mIconURL;
+      this.iconURL = null;
     }
-  }
-
-  /**
-   * Gets the current browser element for this view. This will return null for a view that has
-   * had is history entry dropped.
-   *
-   * @returns {Browser | null}
-   */
-  getBrowser() {
-    if (!this.browserId && !this.browserKey) {
-      return null;
-    }
-
-    if (this.browserId) {
-      let currentBrowserBC = BrowsingContext.getCurrentTopByBrowserId(
-        this.browserId
-      );
-
-      let browser = currentBrowserBC?.embedderElement;
-      if (browser && this.#window.document.contains(browser)) {
-        return browser;
-      }
-
-      logConsole.warn(
-        `Browser(${this.browserId}) does not exist in this window.`
-      );
-    }
-
-    for (let browser of this.#window.gBrowser.browsers) {
-      if (browser.permanentKey === this.browserKey) {
-        return browser;
-      }
-    }
-
-    logConsole.warn(
-      "Failed to find the browser element for still active view."
-    );
-    logConsole.debug(this.toString());
-    return null;
   }
 
   /**
@@ -333,18 +284,8 @@ class InternalView {
     return null;
   }
 
-  /**
-   * Updates this view following some change to the view's properties. This will also convert the
-   * view to a real view after being a dropped or lazy view.
-   *
-   * @param {Browser} browser
-   *   The browser element that holds this view.
-   * @param {nsISHEntry | object} historyEntry
-   *   The nsISHEntry for this view.
-   */
   update(browser, historyEntry) {
     this.browserId = browser.browserId;
-    this.browserKey = browser.permanentKey;
     this.historyId = historyEntry.ID;
     this.cachedEntry = null;
 
@@ -357,7 +298,7 @@ class InternalView {
     this.securityState = browser.securityUI.state;
     this.#contentPrincipal = browser.contentPrincipal;
 
-    let docURI = browser.documentURI;
+    let docURI = browser?.documentURI;
     if (docURI && docURI.scheme == "about") {
       this.errorPageType = this.#getErrorPageType(docURI);
     }
@@ -377,31 +318,6 @@ class InternalView {
         securityState: browser.securityUI.state,
       };
     }
-  }
-
-  /**
-   * Called when a browser becomes a lazy browser.
-   *
-   * @param {object} entry
-   *   The serialized history entry.
-   */
-  discard(entry) {
-    this.cachedEntry = entry;
-    this.browserId = undefined;
-    logConsole.assert(this.browserKey);
-  }
-
-  /**
-   * Called when the history entry for this view has been removed, either the browser element itself
-   * was removed or the history got too long and entries were removed.
-   *
-   * @param {object} entry
-   *   The serialized history entry.
-   */
-  drop(entry) {
-    this.cachedEntry = entry;
-    this.browserId = undefined;
-    this.browserKey = undefined;
   }
 
   /** @type {Number} */
@@ -424,15 +340,10 @@ class InternalView {
     // If GlobalHistory debugging is enabled, then we want to also update
     // the historyState object that gets shown in the sidebar.
     if (DEBUG) {
-      let browser = this.getBrowser();
-      let historyIndex = browser
-        ? getHistoryIndex(browser, this.historyId)
-        : null;
-      let historyEntry =
-        historyIndex !== null
-          ? browser.browsingContext.sessionHistory.getEntryAtIndex(historyIndex)
-          : null;
-
+      let { browser, historyEntry } = getBrowserHistoryForView(
+        this.#window,
+        this
+      );
       if (browser && historyEntry) {
         this.update(browser, historyEntry);
       }
@@ -445,12 +356,12 @@ class InternalView {
   }
 
   get state() {
-    let browser = this.getBrowser();
-    let historyIndex = browser
-      ? getHistoryIndex(browser, this.historyId)
-      : null;
+    let { browser, historyIndex } = getBrowserHistoryForView(
+      this.#window,
+      this
+    );
 
-    if (historyIndex !== null) {
+    if (browser && historyIndex !== null) {
       if (
         getCurrentIndex(browser.browsingContext.sessionHistory) == historyIndex
       ) {
@@ -620,7 +531,6 @@ class BrowserListener {
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryTruncate: ` +
         numEntries
     );
-
     // History entries are going to be truncated, grab them and their tab state and stash them as
     // as closed tab.
     let { entries } = JSON.parse(
@@ -785,17 +695,7 @@ class GlobalHistory extends EventTarget {
       event => this.#tabAttrModified(event.target, event.detail.changed)
     );
 
-    this.#window.gBrowser.tabContainer.addEventListener(
-      "SSTabRestoring",
-      event => this.#tabRestored(event.target)
-    );
-
-    this.#window.gBrowser.tabContainer.addEventListener(
-      "TabBrowserDiscarded",
-      event => this.#tabDiscarded(event.target)
-    );
-
-    this.#window.addEventListener("SSWindowRestoring", () =>
+    this.#window.addEventListener("SSWindowStateBusy", () =>
       this.#sessionRestoreStarted()
     );
 
@@ -876,7 +776,7 @@ class GlobalHistory extends EventTarget {
     this.#browsers = new WeakMap();
 
     this.#window.addEventListener(
-      "SSWindowRestored",
+      "SSWindowStateReady",
       () => {
         this.#sessionRestoreEnded();
       },
@@ -885,38 +785,26 @@ class GlobalHistory extends EventTarget {
   }
 
   #tabRestored(tab) {
-    logConsole.debug("Saw a tab restored");
-
     let { sessionHistory } = tab.linkedBrowser.browsingContext;
     for (let i = 0; i < sessionHistory.count; i++) {
       let entry = sessionHistory.getEntryAtIndex(i);
-      let entryId = SessionHistory.getPreviousID(entry) ?? entry.ID;
-
-      let internalView = this.#historyViews.get(entryId);
-      if (internalView) {
-        if (entry.ID != entryId) {
-          this.#historyViews.delete(entryId);
-          this.#historyViews.set(entry.ID, internalView);
+      let internalView = this.#historyViews.get(entry.ID);
+      if (!internalView) {
+        let previousID = SessionHistory.getPreviousID(entry);
+        if (previousID) {
+          internalView = this.#historyViews.get(previousID);
+          if (internalView) {
+            this.#historyViews.set(entry.ID, internalView);
+          }
         }
+      }
 
+      if (internalView) {
         internalView.update(tab.linkedBrowser, entry);
       }
     }
 
     this.#watchBrowser(tab.linkedBrowser);
-  }
-
-  #tabDiscarded(tab) {
-    logConsole.debug("Saw a tab discarded");
-
-    // At this point the browser has already lost its history state so update from session store.
-    let state = JSON.parse(SessionStore.getTabState(tab));
-    for (let entry of state.entries) {
-      let internalView = this.#historyViews.get(entry.ID);
-      if (internalView) {
-        internalView.discard(entry);
-      }
-    }
   }
 
   #sessionRestoreEnded() {
@@ -933,95 +821,35 @@ class GlobalHistory extends EventTarget {
     this.#historyViews.clear();
 
     // Tabs are not yet functional so build a set of views from cached history state.
-    let state = [];
-    if (stateStr) {
-      try {
-        state = JSON.parse(stateStr);
-      } catch (e) {
-        logConsole.warn("Failed to deserialize global history state.", e);
-      }
-    }
-
+    let state = (stateStr && JSON.parse(stateStr)) || [];
     if (!state.length) {
       logConsole.error("No state to rebuild from.");
     }
 
-    logConsole.debug(
-      "Attempting to restore views for history entries",
-      state.map(entry => entry.id)
-    );
-
     let missingIds = new Set();
-    let previousIdMap = new Map();
     for (let { id, cachedEntry } of state) {
       if (cachedEntry) {
         let internalView = new InternalView(this.#window, null, cachedEntry);
         this.#historyViews.set(id, internalView);
-        previousIdMap.set(id, internalView);
       } else {
         missingIds.add(id);
       }
     }
 
-    if (previousIdMap.size) {
-      logConsole.debug("Found cached history entries", [
-        ...previousIdMap.keys(),
-      ]);
-    }
+    let [windowState] = SessionStore.getWindowState(this.#window).windows;
 
-    let restoredIds = [];
-    let pendingIds = [];
-    for (let tab of this.#window.gBrowser.tabs) {
-      if (tab.linkedBrowser.browsingContext) {
-        // This browser is already restored
-        let { sessionHistory } = tab.linkedBrowser.browsingContext;
-        for (let i = 0; i < sessionHistory.count; i++) {
-          let entry = sessionHistory.getEntryAtIndex(i);
-          let entryId = SessionHistory.getPreviousID(entry) ?? entry.ID;
-
-          if (missingIds.has(entryId)) {
-            let internalView = new InternalView(
-              this.#window,
-              tab.linkedBrowser,
-              entry
-            );
-            this.#historyViews.set(entry.ID, internalView);
-            previousIdMap.set(entryId, internalView);
-            restoredIds.push(entryId);
-            missingIds.delete(entryId);
-          }
-        }
-      } else {
-        let tabState = JSON.parse(SessionStore.getTabState(tab));
-        for (let entry of tabState.entries) {
-          if (missingIds.has(entry.ID)) {
-            let internalView = new InternalView(
-              this.#window,
-              tab.linkedBrowser,
-              entry
-            );
-            this.#historyViews.set(entry.ID, internalView);
-            previousIdMap.set(entry.ID, internalView);
-            pendingIds.push(entry.ID);
-            missingIds.delete(entry.ID);
-          }
+    for (let tab of windowState.tabs) {
+      for (let cachedEntry of tab.entries) {
+        if (missingIds.has(cachedEntry.ID)) {
+          let internalView = new InternalView(this.#window, null, cachedEntry);
+          this.#historyViews.set(cachedEntry.ID, internalView);
         }
       }
     }
 
-    if (restoredIds.size) {
-      logConsole.debug("Found already restored history entries", restoredIds);
-    }
-    if (pendingIds.size) {
-      logConsole.debug("Found history entries in pending tabs", pendingIds);
-    }
-    if (missingIds.size) {
-      logConsole.debug("Failed to find history state for ids", [...missingIds]);
-    }
-
     // Push those views onto the stack and to the river.
     for (let { id } of state) {
-      let internalView = previousIdMap.get(id);
+      let internalView = this.#historyViews.get(id);
       if (!internalView) {
         logConsole.warn("Missing history entry for river entry.");
         continue;
@@ -1030,17 +858,13 @@ class GlobalHistory extends EventTarget {
       this.#viewStack.push(internalView);
     }
 
-    let selectedBrowser = this.#window.gBrowser.selectedBrowser;
-    let selectedEntry = getCurrentEntry(selectedBrowser);
+    let selectedTab = windowState.tabs[windowState.selected - 1];
+    let selectedEntry = selectedTab.entries[selectedTab.index - 1];
     let selectedView = this.#historyViews.get(selectedEntry.ID);
 
     if (!selectedView) {
       logConsole.warn("Selected entry was not in state.");
-      selectedView = new InternalView(
-        this.#window,
-        selectedBrowser,
-        selectedEntry
-      );
+      selectedView = new InternalView(this.#window, null, selectedEntry);
       this.#historyViews.set(selectedEntry.ID, selectedView);
 
       this.#viewStack.push(selectedView);
@@ -1049,6 +873,13 @@ class GlobalHistory extends EventTarget {
     // Mark the correct view.
     this.#currentIndex = this.#viewStack.indexOf(selectedView);
     this.#notifyEvent("RiverRebuilt", selectedView);
+
+    // Wait for tabs to finish restoring.
+    for (let tab of this.#window.gBrowser.tabs) {
+      tab.addEventListener("SSTabRestoring", () => this.#tabRestored(tab), {
+        once: true,
+      });
+    }
 
     this.#startActivationTimer();
   }
@@ -1137,13 +968,13 @@ class GlobalHistory extends EventTarget {
    * Called when some nsISHEntry's have been removed from a browser
    * being listened to.
    *
-   * @param {object[]} entries The serialized entries that were removed.
+   * @param {nsISHEntry[]} entries The entries that were removed.
    */
   _onHistoryEntriesRemoved(entries) {
     for (let entry of entries) {
       let internalView = this.#historyViews.get(entry.ID);
       if (internalView) {
-        internalView.drop(entry);
+        internalView.cachedEntry = entry;
       }
     }
 
@@ -1318,9 +1149,9 @@ class GlobalHistory extends EventTarget {
       }
     }
 
+    this.#notifyEvent("ViewChanged", internalView);
     this.#startActivationTimer();
     this.#updateSessionStore();
-    this.#notifyEvent("ViewChanged", internalView);
 
     logConsole.groupEnd();
   }
@@ -1493,69 +1324,42 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
-    let browser = internalView.getBrowser();
+    let { browser, historyIndex } = getBrowserHistoryForView(
+      this.#window,
+      internalView
+    );
 
-    if (browser) {
-      if (!browser.browsingContext) {
-        // This is a lazy browser, trigger restoration.
-        let tab = this.#window.gBrowser.getTabForBrowser(browser);
-        let state = JSON.parse(SessionStore.getTabState(tab));
+    if (historyIndex !== null) {
+      logConsole.debug(`Found historyIndex ${historyIndex} for InternalView.`);
+      let sHistory = browser.browsingContext.sessionHistory;
 
-        for (let i = 0; i < state.entries.length; i++) {
-          if (state.entries[i].ID == internalView.historyId) {
-            // Update state before triggering restoration so the correct page loads immediately.
-            if (state.index != i + 1) {
-              state.index = i + 1;
-              SessionStore.setTabState(tab, state);
-            }
-
-            // Selecting the browser will trigger session restoration and page load with will be
-            // detected and send out the ViewChanged notification elsewhere.
-            logConsole.debug(`Putting lazy browser on the stage.`);
-            this.#window.gBrowser.selectedTab = tab;
-            return;
-          }
-        }
-      } else {
-        let historyIndex = getHistoryIndex(browser, internalView.historyId);
-
-        if (historyIndex !== null) {
-          logConsole.debug(
-            `Found historyIndex ${historyIndex} for InternalView.`
-          );
-
-          // Navigate if necessary.
-          let currentIndex = getCurrentIndex(
-            browser.browsingContext.sessionHistory
-          );
-
-          if (currentIndex != historyIndex) {
-            logConsole.debug(
-              `Navigating browser ${browser.browsingContext.id} to SHistory ` +
-                `index ${historyIndex}.`
-            );
-            browser.gotoIndex(historyIndex);
-          }
-
-          // Tab switch if necessary.
-          if (this.#window.gBrowser.selectedBrowser !== browser) {
-            logConsole.debug(
-              `Putting browser ${browser.browsingContext.id} on the stage.`
-            );
-            let tab = this.#window.gBrowser.getTabForBrowser(browser);
-            this.#window.gBrowser.selectedTab = tab;
-          }
-
-          // The history navigation/tab switch should be detected and send out the ViewChanged
-          // notification.
-          return;
-        }
+      // Navigate if necessary.
+      let currentIndex = getCurrentIndex(sHistory);
+      if (currentIndex != historyIndex) {
+        logConsole.debug(
+          `Navigating browser ${browser.browsingContext.id} to SHistory ` +
+            `index ${historyIndex}.`
+        );
+        browser.gotoIndex(historyIndex);
       }
 
-      logConsole.warn(
-        `Failed to recover history for a view ${internalView.toString()}`
-      );
+      // Tab switch if necessary.
+      if (this.#window.gBrowser.selectedBrowser !== browser) {
+        logConsole.debug(
+          `Putting browser ${browser.browsingContext.id} on the stage.`
+        );
+        let tab = this.#window.gBrowser.getTabForBrowser(browser);
+        this.#window.gBrowser.selectedTab = tab;
+      }
+
+      // The history navigation/tab switch should be detected and send out the ViewChanged
+      // notification.
+      return;
     }
+
+    logConsole.debug(
+      `No historyIndex found for InternalView ${internalView.toString()}`
+    );
 
     let { cachedEntry } = internalView;
     if (cachedEntry) {
@@ -1741,6 +1545,8 @@ class GlobalHistory extends EventTarget {
       throw new Error("Unknown view.");
     }
 
+    let { browser } = getBrowserHistoryForView(this.#window, internalView);
+
     let index = this.#viewStack.indexOf(internalView);
     if (index == -1) {
       throw new Error("Could not find the View in the #viewStack");
@@ -1763,12 +1569,11 @@ class GlobalHistory extends EventTarget {
 
     this.setView(viewToSwitchTo.view);
 
-    let { browser } = internalView;
     // If the associated <browser> only had a single entry in it,
     // then presumably it was for the history entry of the View
     // that just removed. In that case, we can get rid of that
     // <browser>.
-    if (browser?.browsingContext.sessionHistory.count == 1) {
+    if (browser.browsingContext.sessionHistory.count == 1) {
       let tab = this.#window.gBrowser.getTabForBrowser(browser);
       this.#window.gBrowser.removeTab(tab, { animate: false });
     }
