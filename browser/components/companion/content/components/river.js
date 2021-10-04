@@ -179,6 +179,10 @@ export default class River extends MozLitElement {
     }
   }
 
+  viewUpdated() {
+    this.#groupViews();
+  }
+
   render() {
     // The base case is that the _displayedViewGroups is empty. In that case,
     // we still want the River <div> to render in order to take the appropriate

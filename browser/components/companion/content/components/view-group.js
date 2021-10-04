@@ -180,6 +180,15 @@ export default class ViewGroup extends MozLitElement {
    * Determines whether or not two Views should be put into the same
    * ViewGroup.
    *
+   * Views can be grouped if they are same origin AND their favicons
+   * match (or one of their favicons are null). This heuristic allows
+   * us to keep most same-origin navigations grouped, but lets us have
+   * group separation for sites that have multiple "apps" hosted under
+   * the same origin - for example, docs.google.com is where both
+   * Google Docs, Google Spreadsheets and Google Presentatations can be
+   * found. However Google makes their favicons distinct, which means
+   * we correctly skip grouping them together.
+   *
    * @param {View} viewA
    *   The View to check for grouping with viewB
    * @param {View} viewB
@@ -192,7 +201,15 @@ export default class ViewGroup extends MozLitElement {
       window.browsingContext.usePrivateBrowsing
     );
 
-    return isSameOrigin && viewA.iconURL == viewB.iconURL;
+    // If either of the View icons are null, we'll still let them group
+    // if they're same origin. We'll have a chance to reconsider the grouping
+    // once the favicon finishes loading.
+    return (
+      isSameOrigin &&
+      (viewA.iconURL == viewB.iconURL ||
+        viewA.iconURL == null ||
+        viewB.iconURL == null)
+    );
   }
 }
 

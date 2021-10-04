@@ -123,7 +123,7 @@ export default class ActiveViewManager extends HTMLElement {
 
   viewUpdated(view) {
     if (this.isRiverView(view)) {
-      this.#river.requestUpdate();
+      this.#river.viewUpdated();
     } else {
       console.warn("Saw ViewUpdated for an unknown view.");
     }
