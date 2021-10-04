@@ -439,7 +439,7 @@ class CalendarEvent extends MozLitElement {
   }
 
   toggleDetails(e) {
-    if (e.target.closest("button, a, panel-item")) {
+    if (e.target.closest("button, a, panel-item") || this.panel.open) {
       return;
     }
 
@@ -789,7 +789,7 @@ class CalendarEvent extends MozLitElement {
           event: true,
           upcoming: this.upcoming,
         })}
-        @click=${this.toggleDetails}
+        @mousedown=${this.toggleDetails}
       >
         <div class="event-top">
           <relative-time .eventStart=${start} .eventEnd=${end}></relative-time>

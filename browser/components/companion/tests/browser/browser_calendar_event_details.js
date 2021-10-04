@@ -54,7 +54,13 @@ add_task(async function testExpandingEventDetails() {
       ok(!hostDetailSection, "Host section isn't shown");
 
       info("Clicking the card should expand the details section.");
-      eventDetailsSection.click();
+      EventUtils.sendMouseEvent(
+        {
+          type: "mousedown",
+        },
+        eventDetailsSection,
+        content
+      );
       await event.updateComplete;
       ok(meetingLinksHeaderExists(), "Meeting links detail header is shown");
       ok(hostHeaderExists(), "Host detail header is shown");
@@ -63,7 +69,13 @@ add_task(async function testExpandingEventDetails() {
       eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
         return event.shadowRoot.querySelector(".event-details");
       });
-      eventDetailsSection.click();
+      EventUtils.sendMouseEvent(
+        {
+          type: "mousedown",
+        },
+        eventDetailsSection,
+        content
+      );
       await event.updateComplete;
       ok(
         !meetingLinksHeaderExists(),
