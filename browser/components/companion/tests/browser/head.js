@@ -160,22 +160,24 @@ var PinebuildTestUtils = {
    */
   async waitForNewView(browser, wantLoad = null) {
     await BrowserTestUtils.browserLoaded(browser, false, wantLoad);
-    return gGlobalHistory.currentView;
+    return browser.ownerGlobal.gGlobalHistory.currentView;
   },
 
   /**
    * Sets a View to be current, and waits for the ViewChanged event to fire.
    *
    * @param {View} view The View to make current.
+   * @param {Window?} win
+   *   The window to the view is from, the current window is used by default
    * @return {Promise}
    * @resolves With the ViewChanged event that fired after setting the View.
    */
-  setCurrentView(view) {
+  setCurrentView(view, win = window) {
     let viewChangedPromise = BrowserTestUtils.waitForEvent(
-      gGlobalHistory,
+      win.gGlobalHistory,
       "ViewChanged"
     );
-    gGlobalHistory.setView(view);
+    win.gGlobalHistory.setView(view);
     return viewChangedPromise;
   },
 
@@ -198,51 +200,71 @@ var PinebuildTestUtils = {
   },
 
   /**
-   * Helper assertion function that compares the current windows array of
+   * Helper assertion function that compares a window's array of Views and
+   * compares their urls to those provided.
+   *
+   * @param {string[]} urls
+   *   An Array of urls.
+   * @param {Window?} win
+   *   The window the views are from, the current window is used by default
+   */
+  assertUrlsAre(urls, win = window) {
+    let riverUrls = win.gGlobalHistory.views.map(view => view.url.spec);
+    Assert.deepEqual(riverUrls, urls);
+  },
+
+  /**
+   * Helper assertion function that compares a window's array of
    * Views with viewArray and logs information if they don't match.
    *
    * @param {View[]} viewArray
-   *        An Array of Views to compare with gGlobalHistory.views.
+   *   An Array of Views to compare with gGlobalHistory.views.
+   * @param {Window?} win
+   *   The window the views are from, the current window is used by default
    */
-  assertViewsAre(viewArray) {
-    if (gGlobalHistory.views.length != viewArray.length) {
+  assertViewsAre(viewArray, win = window) {
+    if (win.gGlobalHistory.views.length != viewArray.length) {
       Assert.ok(false, "View lengths do not match.");
       return;
     }
 
     for (let i = 0; i < viewArray.length; ++i) {
       info(`Checking View at index ${i}`);
-      this.assertEqualViews(gGlobalHistory.views[i], viewArray[i]);
+      this.assertEqualViews(win.gGlobalHistory.views[i], viewArray[i]);
     }
   },
 
   /**
-   * Sends the current window back a View.
+   * Sends a window back a View.
+   * @param {Window?} win
+   *   The window to navigate, the current window is used by default
    * @return {Promise}
    * @resolves With the ViewChanged event that fired after switching to the
    *           View.
    */
-  async goBack() {
+  async goBack(win = window) {
     let viewChangedPromise = BrowserTestUtils.waitForEvent(
-      gGlobalHistory,
+      win.gGlobalHistory,
       "ViewChanged"
     );
-    gGlobalHistory.goBack();
+    win.gGlobalHistory.goBack();
     return viewChangedPromise;
   },
 
   /**
-   * Sends the current window forward a View.
+   * Sends a window forward a View.
+   * @param {Window?} win
+   *   The window to navigate, the current window is used by default
    * @return {Promise}
    * @resolves With the ViewChanged event that fired after switching to the
    *           View.
    */
-  async goForward() {
+  async goForward(win = window) {
     let viewChangedPromise = BrowserTestUtils.waitForEvent(
-      gGlobalHistory,
+      win.gGlobalHistory,
       "ViewChanged"
     );
-    gGlobalHistory.goForward();
+    win.gGlobalHistory.goForward();
     return viewChangedPromise;
   },
 };
