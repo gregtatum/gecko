@@ -432,13 +432,6 @@ let DisallowedFeatures = {};
 let SupportMenu = null;
 let ExtensionPolicies = null;
 let ExtensionSettings = null;
-if (AppConstants.PINEBUILD && !(Cu.isInAutomation || isXpcshell)) {
-  ExtensionSettings = {
-    "*": {
-      installation_mode: "blocked",
-    },
-  };
-}
 let InstallSources = null;
 
 /**

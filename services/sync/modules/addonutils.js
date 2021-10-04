@@ -331,6 +331,9 @@ AddonUtilsInternal.prototype = {
    *        for the valid elements.
    */
   canInstallAddon(addon, options) {
+    if (AppConstants.PINEBUILD) {
+      return false;
+    }
     // sourceURI presence isn't enforced by AddonRepository. So, we skip
     // add-ons without a sourceURI.
     if (!addon.sourceURI) {
