@@ -39,12 +39,7 @@ add_task(async function test_replaceSession_set_aside_simple_session() {
     [{ url: TEST_URL, position: 0 }]
   );
 
-  let restoreComplete = BrowserTestUtils.waitForEvent(
-    win,
-    "SSWindowStateReady"
-  );
-  await SessionManager.replaceSession(win, originalSessionGuid);
-  await restoreComplete;
+  await replaceSession(win, originalSessionGuid, 1);
 
   Assert.equal(win.gBrowser.tabs.length, 1, "Should only have one tab open");
 

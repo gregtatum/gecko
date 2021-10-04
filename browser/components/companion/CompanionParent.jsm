@@ -339,6 +339,11 @@ class CompanionParent extends JSWindowActorParent {
     if (this._destroyed) {
       return;
     }
+    let browser = this.browsingContext.top.embedderElement;
+    if (!browser) {
+      // The browser element has gone away, so skip the rest.
+      return;
+    }
     let width = this.#getFaviconWidth(this.browsingContext.top.embedderElement);
     let results = await SessionManager.query({ includePages: true });
     let first = results.find(session => session.pages.length);
@@ -356,11 +361,16 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   getFavicons(pages) {
-    let width = this.#getFaviconWidth(this.browsingContext.top.embedderElement);
+    let browser = this.browsingContext.top.embedderElement;
+    if (!browser) {
+      // The browser element has gone away, so just continue.
+      return [];
+    }
+    let width = this.#getFaviconWidth(browser);
     return Promise.all(pages.map(page => this.getFavicon(page, width)));
   }
 
-  async #getFaviconWidth(browser) {
+  #getFaviconWidth(browser) {
     return (
       PREFERRED_SNAPSHOT_FAVICON_WIDTH_PX *
       Math.ceil(browser.ownerGlobal.devicePixelRatio)

@@ -104,12 +104,7 @@ add_task(async function test_start_second_session() {
 });
 
 add_task(async function test_restore_first_session() {
-  let restoreComplete = BrowserTestUtils.waitForEvent(
-    win,
-    "SSWindowStateReady"
-  );
-  await SessionManager.replaceSession(win, previousSessionGuid);
-  await restoreComplete;
+  await replaceSession(win, previousSessionGuid, 1);
 
   sessionGuid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
   Assert.equal(

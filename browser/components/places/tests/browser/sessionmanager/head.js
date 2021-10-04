@@ -189,6 +189,65 @@ async function assertSavedSession(sessionGuid, expectedPages, dateCheckpoint) {
 }
 
 /**
+ * Promises that a certain amount of tabs have been restored by SessionStore,
+ * taking into account the lazy loading preferences.
+ *
+ * @param {DOMWindow} win
+ *   The window the test is operating within.
+ * @param {number} expectedTabCount
+ *   The number of tabs expected to be restored.
+ * @returns {Promise}
+ */
+function promiseNTabsRestored(win, expectedTabCount) {
+  // This should match the |restoreTabsLazily| value that
+  // SessionStore.restoreWindow() uses.
+  let restoreTabsLazily =
+    Services.prefs.getBoolPref("browser.sessionstore.restore_on_demand") &&
+    Services.prefs.getBoolPref("browser.sessionstore.restore_tabs_lazily");
+
+  let expectedTabsRestored = restoreTabsLazily ? 1 : expectedTabCount;
+  let count = 0;
+  return new Promise(resolve => {
+    function onTabRestored() {
+      if (++count == expectedTabsRestored) {
+        win.gBrowser.tabContainer.removeEventListener(
+          "SSTabRestored",
+          onTabRestored
+        );
+        resolve();
+      }
+    }
+    win.gBrowser.tabContainer.addEventListener("SSTabRestored", onTabRestored);
+  });
+}
+
+/**
+ * Replaces a session for tests, ensuring the the session replacment is
+ * as complete as possible - the session replacement is finished and the
+ * expected tabs have been restored.
+ *
+ * @param {DOMWindow} win
+ *   The window the test is operating within.
+ * @param {string} newGuid
+ *   The GUID of the session to load.
+ * @param {number} expectedTabCount
+ *   The number of tabs expected to be restored.
+ * @returns {Promise}
+ */
+async function replaceSession(win, newGuid, expectedTabCount) {
+  function listener(name, window, guid) {
+    Assert.equal(window, win, "Should have received the expected window");
+    Assert.equal(guid, newGuid, "Should have received the expected guid");
+  }
+
+  let restoredPromise = promiseNTabsRestored(win, expectedTabCount);
+  let changeComplete = SessionManager.once("session-replaced", listener);
+  await SessionManager.replaceSession(win, newGuid);
+  await changeComplete;
+  await restoredPromise;
+}
+
+/**
  * Tests replacing a session and checks the window status and tabs.
  *
  * @param {DOMWindow} win
@@ -206,13 +265,7 @@ async function assertSavedSession(sessionGuid, expectedPages, dateCheckpoint) {
 async function testReplaceSession(win, expectedGuid, expected) {
   let expectedIndex = expected.index ?? expected.tabs.length - 1;
 
-  function listener(name, window, guid) {
-    Assert.equal(window, win, "Should have received the expected window");
-    Assert.equal(guid, expectedGuid, "Should have received the expected guid");
-  }
-  let changeComplete = SessionManager.once("session-replaced", listener);
-  await SessionManager.replaceSession(win, expectedGuid);
-  await changeComplete;
+  await replaceSession(win, expectedGuid, expected.tabs.length);
 
   let numTabs = win.gBrowser.tabs.length;
   Assert.equal(
