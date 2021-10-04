@@ -4985,7 +4985,10 @@ ContentPermissionPrompt.prototype = {
     let userInputHistogram = Services.telemetry.getKeyedHistogramById(
       "PERMISSION_REQUEST_HANDLING_USER_INPUT"
     );
-    userInputHistogram.add(type, request.isHandlingUserInput);
+    userInputHistogram.add(
+      type,
+      request.hasValidTransientUserGestureActivation
+    );
   },
 };
 
