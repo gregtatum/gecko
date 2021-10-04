@@ -192,6 +192,14 @@ export class PocketList extends MozLitElement {
 
     let results = await response.json();
     this.selectPocketStories(results.recommendations);
+
+    await this.updateComplete;
+    this.dispatchEvent(
+      new CustomEvent("pocket-loaded", {
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   selectPocketStories(data) {
