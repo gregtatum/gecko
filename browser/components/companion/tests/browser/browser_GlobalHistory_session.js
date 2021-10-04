@@ -33,13 +33,7 @@ function waitForLazyBrowserLoad(browser) {
 
 /* Verify that the river functions correctly after a session restore */
 add_task(async function testSessionRestore() {
-  // This test originally ran in a new window which then closed at the
-  // end of the test. This, however, resulted in shutdown leaks. Those
-  // leaks are being investigated in MR2-1011. For now, we work around
-  // these leaks and green up the tree by making the test run within
-  // the existing. We then call `gGlobalHistory.reset()` at the end
-  // of this test rather than closing the window.
-  let win = window; // await BrowserTestUtils.openNewBrowserWindow();
+  let win = await BrowserTestUtils.openNewBrowserWindow();
   let { gBrowser, gGlobalHistory } = win;
 
   let windowState = {
@@ -244,5 +238,5 @@ add_task(async function testSessionRestore() {
   Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[4]);
   Assert.equal(gGlobalHistory.currentView, gGlobalHistory.views[3]);
 
-  gGlobalHistory.reset(); // await BrowserTestUtils.closeWindow(win);
+  await BrowserTestUtils.closeWindow(win);
 });

@@ -207,6 +207,8 @@ class CompanionParent extends JSWindowActorParent {
     }
     SessionManager.off("session-replaced", this._handleSessionUpdate);
     SessionManager.off("sessions-updated", this._handleSessionUpdate);
+
+    this._browserIdsToTabs.clear();
   }
 
   ensureCacheCleanupRunning() {
