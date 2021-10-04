@@ -426,10 +426,13 @@ class CalendarEvent extends MozLitElement {
 
   openMenu(e) {
     if (
-      e.type == "click" &&
-      e.mozInputSource != MouseEvent.MOZ_SOURCE_KEYBOARD
-    ) {
+      // Ignore right clicks.
+      e.button != 0 ||
+      // Ignore ctrl + left click which opens the context menu on mac.
+      (e.ctrlKey && e.button == 0) ||
       // Only open on click for keyboard events, mousedown will open for pointer events.
+      (e.type == "click" && e.mozInputSource != MouseEvent.MOZ_SOURCE_KEYBOARD)
+    ) {
       return;
     }
     this.panel.toggle(e);
