@@ -181,11 +181,11 @@ class CompanionChild extends JSWindowActorChild {
         waivedContent.CompanionUtils.globalHistory = globalHistory;
         break;
       }
-      case "Companion:SessionRestored":
+      case "Companion:ViewTab":
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
         waivedContent.document.getElementById(
           "companion-deck"
-        ).selectedViewName = "now";
+        ).selectedViewName = message.data.tab;
         break;
     }
 

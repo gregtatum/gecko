@@ -217,19 +217,28 @@
     </html:button-group>
     <html:named-deck id="companion-deck">
       <div xmlns="http://www.w3.org/1999/xhtml" id="scroll" name="now">
-        <div id="top-sites-placeholder"></div>
-        <div id="events-placeholder"></div>
-        <div id="email" hidden="true">
-          <div class="email-header">
-            <h2 class="email-title">New Mail</h2>
-            <div>
-              <div id="inbox-link">Go to Inbox &#8594;</div>
+        <section id="flow-reset-placeholder">
+          <img src="chrome://browser/content/companion/flow-reset-placeholder.png" />
+          <h3 data-l10n-id="session-cleared-title"/>
+          <p data-l10n-id="session-cleared">
+            <a id="session-cleared-link" data-l10n-name="session-cleared-link"></a>
+          </p>
+        </section>
+        <section id="now-content">
+          <div id="top-sites-placeholder"></div>
+          <div id="events-placeholder"></div>
+          <div id="email" hidden="true">
+            <div class="email-header">
+              <h2 class="email-title">New Mail</h2>
+              <div>
+                <div id="inbox-link">Go to Inbox &#8594;</div>
+              </div>
             </div>
+            <div id="email-panel"/>
           </div>
-          <div id="email-panel"/>
-        </div>
-        <div id="content">
-        </div>
+          <div id="content">
+          </div>
+        </section>
       </div>
       <div xmlns="http://www.w3.org/1999/xhtml" id="scroll-browse" name="browse">
         <div class="content"></div>

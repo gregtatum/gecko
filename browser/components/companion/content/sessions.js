@@ -32,6 +32,14 @@ function pageToDataURI(page) {
   return `data:${page.favicon.mimeType};base64,${b64}`;
 }
 
+export function initSessionUI() {
+  document
+    .getElementById("session-cleared-link")
+    .addEventListener("click", () => {
+      document.getElementById("companion-deck").selectedViewName = "browse";
+    });
+}
+
 export class SessionCard extends HTMLElement {
   constructor(data) {
     super();
@@ -114,16 +122,28 @@ export class LastSessionList extends HideableElement {
 
   connectedCallback() {
     window.addEventListener("Companion:SessionUpdated", this);
+    window.addEventListener("Companion:ResetFlowEntered", this);
+    window.addEventListener("Companion:ResetFlowExited", this);
   }
 
   disconnectedCallback() {
     window.removeEventListener("Companion:SessionUpdated", this);
+    window.removeEventListener("Companion:ResetFlowEntered", this);
+    window.removeEventListener("Companion:ResetFlowExited", this);
   }
 
   handleEvent(event) {
     switch (event.type) {
       case "Companion:SessionUpdated": {
         this.sessionUpdated(event.detail);
+        break;
+      }
+      case "Companion:ResetFlowEntered": {
+        document.body.setAttribute("flow-reset", true);
+        break;
+      }
+      case "Companion:ResetFlowExited": {
+        document.body.removeAttribute("flow-reset");
         break;
       }
     }

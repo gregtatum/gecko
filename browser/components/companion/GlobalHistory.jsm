@@ -812,11 +812,12 @@ class GlobalHistory extends EventTarget {
 
   /**
    * Clears all the current tabs, and ensures the history is blank.
+   *
+   * @param {string} [url]
+   *   An optional url to load default tab content.
    */
-  reset() {
-    let newTab = this.#window.gBrowser.addTrustedTab(
-      this.#window.BROWSER_NEW_TAB_URL
-    );
+  reset(url = this.#window.BROWSER_NEW_TAB_URL) {
+    let newTab = this.#window.gBrowser.addTrustedTab(url);
     this.#window.gBrowser.selectedTab = newTab;
     this.#window.gBrowser.removeAllTabsBut(newTab, { animate: false });
     this.#viewStack = [];

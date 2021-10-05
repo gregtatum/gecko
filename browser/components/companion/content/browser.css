@@ -37,6 +37,13 @@
   -moz-box-flex: 1;
 }
 
+[flow-reset] #pinebuild-back-button,
+[flow-reset] #pinebuild-reload-button,
+[flow-reset] #pinebuild-copy-button,
+[flow-reset] #session-setaside-button {
+  visibility: hidden;
+}
+
 :root[companion][inDOMFullscreen] #companion-box {
   visibility: collapse;
 }
@@ -101,20 +108,16 @@
 }
 
 #urlbar::before {
-    content: '';
-    width: 20px;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-    background: linear-gradient(90deg, transparent 0%, var(--toolbar-bgcolor) 100%);
-    margin-left: -25px;
-    z-index: -1;
-    display: none;
-}
-
-[urlbar-exceeds-toolbar-bounds=true] #urlbar::before {
-  display: block;
+  content: '';
+  width: 20px;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--toolbar-bgcolor) 100%);
+  margin-left: -25px;
+  z-index: -1;
+  display: none;
 }
 
 #navigator-toolbox {
@@ -458,15 +461,46 @@
   background-color: rgba(0, 0, 0, 0.1);
 }
 
-#urlbar[breakout][breakout-extend] {
-  width: 100% !important;
-  height: var(--urlbar-height) !important;
-  top: calc((var(--urlbar-toolbar-height) - var(--urlbar-height)) / 2) !important;
-  left: 0 !important;
+#main-window [flow-reset] #urlbar[breakout],
+#main-window [flow-reset] #urlbar[breakout][breakout-extend] {
+  display: block;
+  position: fixed;
+  top: calc((var(--urlbar-toolbar-height) + 15%));
+  left: calc(var(--companion-width));
+  right: 0;
+  width: -moz-available;
+  box-shadow: 0px 4px 4px 0px #00000040;
+  border-radius: 32px;
+  z-index: 999;
+  height: calc(2 * var(--urlbar-height));
+  max-width: 750px;
+  margin: 0 auto;
 }
 
-#urlbar-background {
-  border-radius: 100px !important;
+#main-window [flow-reset] #urlbar-background {
+  background: white;
+  border-radius: 32px;
+}
+
+#main-window [flow-reset] #urlbar[open] #urlbar-background {
+  border-radius: 16px 16px 0 0;
+}
+
+#main-window [flow-reset] .urlbarView-pinebuild {
+  margin-top: 0;
+  border-radius: 0 0 16px 16px;
+}
+
+#urlbar[breakout][breakout-extend],
+#main-window #urlbar[breakout][breakout-extend] {
+  width: 100%;
+  height: var(--urlbar-height);
+  top: calc((var(--urlbar-toolbar-height) - var(--urlbar-height)) / 2);
+  left: 0;
+}
+
+#main-window #urlbar-background {
+  border-radius: 16px;
 }
 
 #urlbar[breakout-extend] #urlbar-background {
@@ -509,8 +543,7 @@
   position: fixed;
   top: 100px;
   left: calc(50% + var(--companion-width) / 2);
-  background: var(--in-content-page-background);
-  color: var(--in-content-text-color);
+  background: white;
   border: 0.5px solid #CFCFD8;
   box-shadow: 0px 2px 6px rgba(58, 57, 68, 0.2);
   border-radius: 50px;
