@@ -621,11 +621,11 @@ const OnlineServices = {
   },
 
   async deleteService(service) {
+    // Delete events specific to this service from the cache
+    this.data = this.data.filter(e => e.serviceId != service.id);
     await service.disconnect();
     ServiceInstances.delete(service);
     this.persist();
-    // Delete events specific to this service from the cache
-    this.data = this.data.filter(e => e.serviceId != service.id);
     Services.obs.notifyObservers(this.data, "companion-services-refresh");
   },
 
