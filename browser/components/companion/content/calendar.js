@@ -761,6 +761,7 @@ class CalendarEvent extends MozLitElement {
     let eventStartTimeMinus10 = new Date(start) - 60 * 10 * 1000;
     let now = new Date();
     if (eventStartTimeMinus10 > now) {
+      this.upcoming = false;
       this._eventUpcomingTimer = setTimeout(
         () => (this.upcoming = true),
         eventStartTimeMinus10 - now

@@ -267,4 +267,45 @@ var PinebuildTestUtils = {
     win.gGlobalHistory.goForward();
     return viewChangedPromise;
   },
+
+  /**
+   * Test helper for generating a start time at 18:00 and an end time. By default,
+   * the event's duration is only 30 minutes but can be set using the `eventHourDuration`
+   * and `eventMinutesDuration` parameters.
+   *
+   * @param {Number}  eventDurationHours
+   *        Optional. The hour duration of an event. Defaults to 0.
+   * @param {Number}  eventDurationMinutes
+   *        Optional. The remaining minute duration of an event. Defaults to 30.
+   * @param {Number}  eventStartHour
+   *        Optional. The starting hour for the event. Defaults to 18:00.
+   * @param {Number}  eventStartMinutes
+   *        Optional. The starting minutes for the event. Defaults to 0.
+   * @return {Object} Object containing the event start and end times as ISO strings.
+   */
+  generateEventTimes(
+    eventDurationHours = 0,
+    eventDurationMinutes = 30,
+    eventStartHour = 18,
+    eventStartMinutes = 0
+  ) {
+    // Set start time
+    let startTime = new Date();
+    startTime.setHours(eventStartHour);
+    startTime.setMinutes(eventStartMinutes);
+
+    // Set end time
+    let endTime = new Date(startTime);
+
+    if (eventDurationHours > 0) {
+      endTime.setHours(eventStartHour + eventDurationHours);
+    }
+
+    endTime.setMinutes(eventStartMinutes + eventDurationMinutes);
+
+    return {
+      start: startTime.toISOString(),
+      end: endTime.toISOString(),
+    };
+  },
 };

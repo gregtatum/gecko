@@ -5,8 +5,6 @@
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 const ONE_HOUR = 1000 * 60 * 60;
-// Generated events start at 18:00
-const DUMMY_START_HOUR = 18;
 
 add_task(async function setup() {
   await SpecialPowers.pushPrefEnv({
@@ -16,13 +14,13 @@ add_task(async function setup() {
 
 add_task(async function testRelativeTimeMinutesBeforeEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes();
+    let { start, end } = PinebuildTestUtils.generateEventTimes();
 
     let events = [
       {
         summary: "My meeting",
-        start: start.toISOString(),
-        end: end.toISOString(),
+        start,
+        end,
       },
     ];
 
@@ -58,13 +56,13 @@ add_task(async function testRelativeTimeMinutesBeforeEvent() {
 
 add_task(async function testRelativeTimeMinutesAfterEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes();
+    let { start, end } = PinebuildTestUtils.generateEventTimes();
 
     let events = [
       {
         summary: "My meeting",
-        start: start.toISOString(),
-        end: end.toISOString(),
+        start,
+        end,
       },
     ];
 
@@ -102,12 +100,12 @@ add_task(async function testRelativeTimeMinutesAfterEvent() {
 
 add_task(async function testRelativeTimeHoursAndMinutesAfterEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(1);
+    let { start, end } = PinebuildTestUtils.generateEventTimes(1);
     let events = [
       {
         summary: "My meeting",
-        start: start.toISOString(),
-        end: end.toISOString(),
+        start,
+        end,
       },
     ];
 
@@ -146,12 +144,12 @@ add_task(async function testRelativeTimeHoursAndMinutesAfterEvent() {
 
 add_task(async function testRelativeTimeHoursBeforeEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(1);
+    let { start, end } = PinebuildTestUtils.generateEventTimes(1);
     let events = [
       {
         summary: "My meeting",
-        start: start.toISOString(),
-        end: end.toISOString(),
+        start,
+        end,
       },
     ];
 
@@ -185,12 +183,12 @@ add_task(async function testRelativeTimeHoursBeforeEvent() {
 
 add_task(async function testRelativeTimeHoursAndMinutesBeforeEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(1);
+    let { start, end } = PinebuildTestUtils.generateEventTimes(1);
     let events = [
       {
         summary: "My meeting",
-        start: start.toISOString(),
-        end: end.toISOString(),
+        start,
+        end,
       },
     ];
 
@@ -226,34 +224,3 @@ add_task(async function testRelativeTimeHoursAndMinutesBeforeEvent() {
     });
   });
 });
-
-/**
- * Test helper for generating a start time at 18:00 and an end time. By default,
- * the event's duration is only 30 minutes but can be set using the `eventHourDuration`
- * and `eventMinutesDuration` parameters.
- *
- * @param {Number}  eventHourDuration
- *        Optional. The hour duration of an event. Defaults to 0.
- * @param {Number}  eventMinutesDuration
- *        Optional. The remaining minute duration of an event. Defaults to 30.
- */
-function generateEventTimes(eventHourDuration = 0, eventMinutesDuration = 30) {
-  // Set start time
-  let startTime = new Date();
-  startTime.setHours(DUMMY_START_HOUR);
-  startTime.setMinutes(0);
-
-  // Set end time
-  let endTime = new Date(startTime);
-
-  if (eventHourDuration > 0) {
-    endTime.setHours(DUMMY_START_HOUR + eventHourDuration);
-  }
-
-  endTime.setMinutes(eventMinutesDuration);
-
-  return {
-    start: startTime,
-    end: endTime,
-  };
-}
