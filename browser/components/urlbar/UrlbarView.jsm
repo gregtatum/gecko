@@ -93,6 +93,16 @@ class UrlbarView {
         addDynamicStylesheet(this.window, viewTemplate.stylesheet);
       }
     }
+
+    if (AppConstants.PINEBUILD) {
+      // urlbar-page-overlay is displayed over the whole browser window when the
+      // urlbar is open.
+      this.window.document
+        .getElementById("urlbar-page-overlay")
+        .addEventListener("click", () => {
+          this.close();
+        });
+    }
   }
 
   get oneOffSearchButtons() {

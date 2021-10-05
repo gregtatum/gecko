@@ -34,12 +34,6 @@ class BrowserWindowHandler {
 
     Services.prefs.addObserver(COMPANION_OPEN_PREF, this);
     this.onCompanionPrefUpdated();
-
-    window.document
-      .getElementById("urlbar-page-overlay")
-      .addEventListener("click", () => {
-        window.gURLBar.view.close();
-      });
   }
 
   destroy() {
