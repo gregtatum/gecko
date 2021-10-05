@@ -498,17 +498,3 @@ toolbarbutton.subviewbutton-back {
   height: 100%;
   width: 100%;
 }
-
-#flow-reset-placeholder {
-  text-align: center;
-  margin: 1em;
-  display: none;
-}
-
-[flow-reset] #flow-reset-placeholder {
-  display: block;
-}
-
-[flow-reset] #now-content {
-  display: none;
-}

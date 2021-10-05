@@ -6,7 +6,7 @@ import { CalendarEventList } from "./calendar.js";
 import { BrowseList } from "./browse.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
-import { LastSessionList, initSessionUI } from "./sessions.js";
+import { LastSessionList } from "./sessions.js";
 import {
   SuggestedSnapshotList,
   RecentlyClosedSnapshotList,
@@ -66,8 +66,6 @@ function maybeInitializeUI() {
       togglePasswordPanel(true);
     });
   }
-
-  initSessionUI();
 
   // This is used for tests to ensure that the various components have initialized.
   // If your component has delayed initialization, then you will want to add something

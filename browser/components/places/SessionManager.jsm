@@ -220,25 +220,15 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     }
 
     SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
-    window.gGlobalHistory.reset("about:flow-reset");
+    window.gGlobalHistory.reset();
     // Let the time for the previous animation completely elapse before
     // we start the new one.
     await timerCompletePromise;
     await window.gBrowser.doPinebuildSessionShowAnimation();
     await window.gBrowser.showConfirmation("session-saved-confirmation");
-    this.emit("session-replaced", window, restoreSessionGuid);
+    this.emit("session-replaced", window, null);
   }
 
-  /**
-   * Restores the last session.
-   *
-   * @param {DOMWindow} window
-   *   The window for the session to save.
-   */
-  async restoreLastSession(window) {
-    let results = await this.query({ limit: 1 });
-    this.replaceSession(window, results?.[0].guid);
-  }
   /**
    * Restores a saved session from disk and/or the database.
    *

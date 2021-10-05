@@ -131,11 +131,8 @@ static const RedirEntry kRedirMap[] = {
     {"ion", "chrome://browser/content/ion.html",
      nsIAboutModule::ALLOW_SCRIPT | nsIAboutModule::HIDE_FROM_ABOUTABOUT},
     {"companion-workshop-internals",
-     "chrome://browser/content/about-workshop-internals/"
-     "about-workshop-internals.html",
+     "chrome://browser/content/about-workshop-internals/about-workshop-internals.html",
      nsIAboutModule::ALLOW_SCRIPT},
-    {"flow-reset", "chrome://browser/content/companion/flow-reset.html",
-     nsIAboutModule::ALLOW_SCRIPT | nsIAboutModule::HIDE_FROM_ABOUTABOUT},
 };
 
 static nsAutoCString GetAboutModuleName(nsIURI* aURI) {
