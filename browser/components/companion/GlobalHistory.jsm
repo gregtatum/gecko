@@ -768,6 +768,14 @@ class GlobalHistory extends EventTarget {
       gTopLevelNavigationDelegateRegistered = true;
     }
 
+    let companionToolbar = this.#window.document.getElementById(
+      "pinebuild-toolbar"
+    );
+    let activeViewManager = this.#window.document.createElement(
+      "active-view-manager"
+    );
+    companionToolbar.appendChild(activeViewManager);
+
     for (let { linkedBrowser: browser } of this.#window.gBrowser.tabs) {
       this.#watchBrowser(browser);
     }

@@ -30,20 +30,6 @@ class BrowserWindowHandler {
     this.window = window;
     this._companionBox = this.window.document.getElementById("companion-box");
 
-    let companionToolbar = this.window.document.getElementById(
-      "pinebuild-toolbar"
-    );
-    let activeViewManager = this.window.document.createElement(
-      "active-view-manager"
-    );
-    companionToolbar.appendChild(activeViewManager);
-
-    //    let lock = this.window.document.getElementById("identity-box");
-    //    let companionIdentityBox = this.window.document.getElementById(
-    //    "companion-identity-box"
-    //  );
-    //  companionIdentityBox.appendChild(lock);
-
     window.addEventListener("unload", () => this.destroy(), { once: true });
 
     Services.prefs.addObserver(COMPANION_OPEN_PREF, this);
