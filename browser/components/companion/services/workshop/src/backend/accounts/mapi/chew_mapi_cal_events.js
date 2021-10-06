@@ -149,7 +149,7 @@ export class MapiCalEventChewer {
 
         // ## Generate an HTML body part for the description
         const body = mapiEvent.body;
-        if (body) {
+        if (body?.content) {
           const { content, contentType } = body;
           ({
             contentBlob,
@@ -183,7 +183,7 @@ export class MapiCalEventChewer {
         const startDate = new Date(mapiEvent.start.dateTime + "Z").valueOf();
         const endDate = new Date(mapiEvent.end.dateTime + "Z").valueOf();
 
-        const subject = mapiEvent.subject;
+        const summary = mapiEvent.subject;
 
         const organizer = this._chewCalIdentity(mapiEvent.organizer);
         const creator = organizer;
@@ -211,7 +211,7 @@ export class MapiCalEventChewer {
           // it on the server.
           flags: oldInfo?.flags,
           folderIds: new Set([this.folderId]),
-          subject,
+          summary,
           snippet,
           bodyReps,
           authoredBodySize,

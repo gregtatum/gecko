@@ -86,6 +86,7 @@ export function makeAccountDef({
   engineFields,
   connInfoFields,
   identities,
+  kind,
 }) {
   let def = {
     id: infra.id,
@@ -101,6 +102,7 @@ export function makeAccountDef({
     // connInfo/receiveConnInfo/sendConnInfo come from connInfoFields
 
     identities,
+    kind,
   };
 
   for (let key of Object.keys(prefFields)) {

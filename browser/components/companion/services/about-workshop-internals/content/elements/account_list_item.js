@@ -28,6 +28,11 @@ export class AccountListItem extends LitElement {
       .account-name {
         margin: 0;
       }
+
+      .account-kind {
+        font-family: sans-serif;
+        font-weight: bold;
+      }
     `;
   }
 
@@ -62,6 +67,9 @@ export class AccountListItem extends LitElement {
         </div>
         <div class="account-details-row">
           <span class="account-type">${account.type}</span>
+        </div>
+        <div class="account-details-row">
+          <span class="account-kind">${account.kind}</span>
         </div>
         ${maybeProblems}
         <div class="account-actions-row">

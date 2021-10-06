@@ -194,6 +194,7 @@ export default TaskDefiner.defineSimpleTask([
         engineFields: validationResult.engineFields,
         connInfoFields: fragments.connInfoFields,
         identities: [identity],
+        kind: fragments.kind,
       });
 
       await ctx.finishTask({

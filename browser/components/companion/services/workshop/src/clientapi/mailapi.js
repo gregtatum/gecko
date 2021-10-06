@@ -1152,17 +1152,17 @@ export class MailAPI extends Emitter {
   }
 
   /**
-   * Search the messages/events in a folder.  If the folder is a `calendar`
+   * Search the messages/events in an account.  If the folder is a `calendar`
    * folder, than a `CalEventsListView` will be returned, otherwise a
    * `MessagesListView` will be returned.
    */
   searchAccountMessages(spec) {
     const handle = this._nextHandle++;
     const { account } = spec;
-    // TODO: add a calendar type in account.
-    const view = ["mapi", "gapi"].includes(account.type)
-      ? new CalEventsListView(this, handle)
-      : new MessagesListView(this, handle);
+    const view =
+      account.kind === "calendar"
+        ? new CalEventsListView(this, handle)
+        : new MessagesListView(this, handle);
     view.accountId = account.id;
     // Hackily save off the folder as a stop-gap measure to make it easier to
     // describe the contents of the view until we enhance the tocMeta to
@@ -1175,6 +1175,29 @@ export class MailAPI extends Emitter {
       handle,
       spec: {
         accountId: view.accountId,
+        filter: spec.filter,
+      },
+    });
+
+    return view;
+  }
+
+  /**
+   * Search the messages in all accounts.
+   */
+  searchAllMessages(spec) {
+    const handle = this._nextHandle++;
+    const view =
+      spec.kind === "calendar"
+        ? new CalEventsListView(this, handle)
+        : new MessagesListView(this, handle);
+    this._trackedItemHandles.set(handle, { obj: view });
+
+    this.__bridgeSend({
+      type: "searchAllMessages",
+      handle,
+      spec: {
+        kind: spec.kind,
         filter: spec.filter,
       },
     });

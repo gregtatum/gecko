@@ -280,6 +280,16 @@ export class AccountManager {
     return this._immediateAccountDefsById.values();
   }
 
+  getAllAccountIdsWithKind(kind) {
+    const ids = [];
+    for (const accountDef of this.getAllAccountDefs()) {
+      if (!kind || accountDef.kind === kind) {
+        ids.push(accountDef.id);
+      }
+    }
+    return ids;
+  }
+
   /**
    * Return the FolderInfo for the given FolderId.  This is only safe to call
    * after the universe has fully loaded.

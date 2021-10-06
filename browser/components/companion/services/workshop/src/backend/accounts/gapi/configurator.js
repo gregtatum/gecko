@@ -51,5 +51,6 @@ export default function configurateGapi(userDetails, domainInfo) {
     credentials,
     typeFields: {},
     connInfoFields: {},
+    kind: "calendar",
   };
 }

@@ -39,6 +39,7 @@ export class MailAccount extends Emitter {
 
     this.type = wireRep.type;
     this.name = wireRep.name;
+    this.kind = wireRep.kind || "";
     this.syncRange = wireRep.syncRange;
     this.syncInterval = wireRep.syncInterval;
     this.notifyOnNew = wireRep.notifyOnNew;

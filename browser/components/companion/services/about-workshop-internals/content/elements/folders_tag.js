@@ -49,6 +49,12 @@ export class FoldersTag extends LitElement {
             <input class="account-duration" type="number" />
           </label>
         </div>
+        <div>
+          <label>
+            Account kind (to search all)
+            <input class="account-kind" value="calendar" />
+          </label>
+        </div>
         <div class="folder-actions-row">
           <button
             class="folder-show-messages"
@@ -64,6 +70,22 @@ export class FoldersTag extends LitElement {
             }}
           >
             Show Messages
+          </button>
+          <button
+            class="folder-show-all-messages"
+            type="button"
+            @click=${() => {
+              const tag = this.renderRoot.querySelector(".account-tag").value;
+              const type = this.renderRoot.querySelector(".account-type").value;
+              const durationBeforeInMinutes = this.renderRoot.querySelector(
+                ".account-duration"
+              ).value;
+              const kind = this.renderRoot.querySelector(".account-kind").value;
+              const filter = { tag, type, durationBeforeInMinutes, kind };
+              window.ROUTER.navigateRelative(["tag-all"], filter);
+            }}
+          >
+            Show All Messages
           </button>
         </div>
       </div>

@@ -330,6 +330,10 @@ MailUniverse.prototype = {
     };
   },
 
+  getAllAccountIdsWithKind(kind) {
+    return this.accountManager.getAllAccountIdsWithKind(kind);
+  },
+
   /**
    * The home for thin bindings of back-end events to be front-end events.
    *
@@ -564,8 +568,7 @@ MailUniverse.prototype = {
     return ctx.acquire(toc);
   },
 
-  acquireSearchAccountMessagesTOC(ctx, spec) {
-    const { accountId } = spec;
+  __acquireSearchFoldersHelper(accountId, spec, metaHelpers, why) {
     // Figure out what the sync stamp source is for this account.  It hinges
     // on the sync granularity; if it's account-based then the sync stamps
     // will be on the account, otherwise on the folder.
@@ -578,12 +581,12 @@ MailUniverse.prototype = {
       syncStampSource = this.accountManager.getAccountDefById(accountId);
     }
 
-    const folderIds = (spec.folderIds = this.accountManager.getFolderIdsByTag(
+    const folderIds = this.accountManager.getFolderIdsByTag(
       accountId,
       spec?.filter.tag || null
-    ));
+    );
+    spec.folderIds.push(...folderIds);
 
-    const metaHelpers = [];
     for (const folderId of folderIds) {
       metaHelpers.push(
         new SyncLifecycleMetaHelper({
@@ -595,7 +598,43 @@ MailUniverse.prototype = {
       );
       // TODO: do we need to await Promise.all(...) for all the
       // returned values here ?
-      this.syncRefreshFolder(folderId, "searchAccountMessages");
+      this.syncRefreshFolder(folderId, why);
+    }
+  },
+
+  acquireSearchAccountMessagesTOC(ctx, spec) {
+    const { accountId } = spec;
+    spec.folderIds = [];
+    const metaHelpers = [];
+    this.__acquireSearchFoldersHelper(
+      accountId,
+      spec,
+      metaHelpers,
+      "searchAccountMessages"
+    );
+
+    const toc = new ConversationTOC({
+      db: this.db,
+      query: this.queryManager.queryAccountMessages(ctx, spec),
+      dataOverlayManager: this.dataOverlayManager,
+      metaHelpers,
+      // TODO: add a comment to explain why we do nothing here.
+      onForgotten: () => {},
+    });
+    return ctx.acquire(toc);
+  },
+
+  acquireSearchAllAccountsMessagesTOC(ctx, spec) {
+    const { accountIds } = spec;
+    spec.folderIds = [];
+    const metaHelpers = [];
+    for (const accountId of accountIds) {
+      this.__acquireSearchFoldersHelper(
+        accountId,
+        spec,
+        metaHelpers,
+        "searchAllAccountsMessages"
+      );
     }
 
     const toc = new ConversationTOC({

@@ -141,6 +141,8 @@ export class AccountsTOC extends Emitter {
         enabled: true,
         problems: [],
 
+        kind: accountDef.kind,
+
         syncRange: accountDef.syncRange,
         syncInterval: accountDef.syncInterval,
         notifyOnNew: accountDef.notifyOnNew,

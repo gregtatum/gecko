@@ -22,6 +22,7 @@ browser.jar:
     content/browser/about-workshop-internals/pages/account_folder_list.js (pages/account_folder_list.js)
     content/browser/about-workshop-internals/pages/account_folder_message_contents.js (pages/account_folder_message_contents.js)
     content/browser/about-workshop-internals/pages/account_message_contents_by_tag.js (pages/account_message_contents_by_tag.js)
+    content/browser/about-workshop-internals/pages/all_message_contents_by_tag.js (pages/all_message_contents_by_tag.js)
     content/browser/about-workshop-internals/pages/add_account.js (pages/add_account.js)
     content/browser/about-workshop-internals/pages/home.js (pages/home.js)
     content/browser/about-workshop-internals/pages/logs.js (pages/logs.js)

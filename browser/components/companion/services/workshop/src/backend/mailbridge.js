@@ -465,6 +465,26 @@ MailBridge.prototype = {
     await ctx.acquire(ctx.proxy);
   },
 
+  async _cmd_searchAllMessages(msg) {
+    const ctx = this.bridgeContext.createNamedContext(
+      msg.handle,
+      "AllSearchView"
+    );
+    const allAccountIds = (msg.spec.accountIds = this.universe.getAllAccountIdsWithKind(
+      msg.spec.kind
+    ));
+    ctx.viewing = {
+      type: "account",
+      accountId: allAccountIds,
+    };
+    const toc = await this.universe.acquireSearchAllAccountsMessagesTOC(
+      ctx,
+      msg.spec
+    );
+    ctx.proxy = new WindowedListProxy(toc, ctx);
+    await ctx.acquire(ctx.proxy);
+  },
+
   async _cmd_viewConversationMessages(msg) {
     let ctx = this.bridgeContext.createNamedContext(
       msg.handle,

@@ -28,6 +28,7 @@ import AccountFolderListPage from "./pages/account_folder_list.js";
 import AccountFolderMessageContentsPage from "./pages/account_folder_message_contents.js";
 import AccountMessageContentsByTagPage from "./pages/account_message_contents_by_tag.js";
 import AddAccountPage from "./pages/add_account.js";
+import AllMessageContentsByTagPage from "./pages/all_message_contents_by_tag.js";
 import HomePage from "./pages/home.js";
 import LogsPage from "./pages/logs.js";
 import SettingsPage from "./pages/settings.js";
@@ -81,6 +82,10 @@ window.ROUTER = new HackyHashRouter({
               );
               return `Account: ${account.name}`;
             },
+          },
+          "tag-all": {
+            pageConstructor: AllMessageContentsByTagPage,
+            makeLabel: () => "All Messages",
           },
         },
       },

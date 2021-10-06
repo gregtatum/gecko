@@ -1148,7 +1148,8 @@ var WorkshopBackend = (() => {
       userDetails,
       credentials,
       typeFields: {},
-      connInfoFields: {}
+      connInfoFields: {},
+      kind: "calendar"
     };
   }
   var init_configurator2 = __esm({
@@ -1181,7 +1182,8 @@ var WorkshopBackend = (() => {
       userDetails,
       credentials,
       typeFields: {},
-      connInfoFields: {}
+      connInfoFields: {},
+      kind: "calendar"
     };
   }
   var init_configurator3 = __esm({
@@ -11449,7 +11451,7 @@ var WorkshopBackend = (() => {
               let contentBlob, snippet, authoredBodySize;
               const bodyReps = [];
               const body = mapiEvent.body;
-              if (body) {
+              if (body?.content) {
                 const { content, contentType } = body;
                 ({
                   contentBlob,
@@ -11470,7 +11472,7 @@ var WorkshopBackend = (() => {
               const isAllDay = mapiEvent.isAllDay;
               const startDate = new Date(mapiEvent.start.dateTime + "Z").valueOf();
               const endDate = new Date(mapiEvent.end.dateTime + "Z").valueOf();
-              const subject = mapiEvent.subject;
+              const summary = mapiEvent.subject;
               const organizer = this._chewCalIdentity(mapiEvent.organizer);
               const creator = organizer;
               const eventLocation = mapiEvent.location;
@@ -11491,7 +11493,7 @@ var WorkshopBackend = (() => {
                 location,
                 flags: oldInfo?.flags,
                 folderIds: new Set([this.folderId]),
-                subject,
+                summary,
                 snippet,
                 bodyReps,
                 authoredBodySize
@@ -14720,6 +14722,17 @@ var WorkshopBackend = (() => {
       ctx.proxy = new WindowedListProxy(toc, ctx);
       await ctx.acquire(ctx.proxy);
     },
+    async _cmd_searchAllMessages(msg) {
+      const ctx = this.bridgeContext.createNamedContext(msg.handle, "AllSearchView");
+      const allAccountIds = msg.spec.accountIds = this.universe.getAllAccountIdsWithKind(msg.spec.kind);
+      ctx.viewing = {
+        type: "account",
+        accountId: allAccountIds
+      };
+      const toc = await this.universe.acquireSearchAllAccountsMessagesTOC(ctx, msg.spec);
+      ctx.proxy = new WindowedListProxy(toc, ctx);
+      await ctx.acquire(ctx.proxy);
+    },
     async _cmd_viewConversationMessages(msg) {
       let ctx = this.bridgeContext.createNamedContext(msg.handle, "ConversationMessagesView");
       ctx.viewing = {
@@ -16322,6 +16335,7 @@ var WorkshopBackend = (() => {
         defaultPriority: accountDef.defaultPriority,
         enabled: true,
         problems: [],
+        kind: accountDef.kind,
         syncRange: accountDef.syncRange,
         syncInterval: accountDef.syncInterval,
         notifyOnNew: accountDef.notifyOnNew,
@@ -16735,6 +16749,15 @@ var WorkshopBackend = (() => {
     }
     getAllAccountDefs() {
       return this._immediateAccountDefsById.values();
+    }
+    getAllAccountIdsWithKind(kind) {
+      const ids = [];
+      for (const accountDef of this.getAllAccountDefs()) {
+        if (!kind || accountDef.kind === kind) {
+          ids.push(accountDef.id);
+        }
+      }
+      return ids;
     }
     getFolderById(folderId) {
       const accountId = accountIdFromFolderId(folderId);
@@ -21078,7 +21101,8 @@ var WorkshopBackend = (() => {
     typeFields,
     engineFields,
     connInfoFields,
-    identities
+    identities,
+    kind
   }) {
     let def = {
       id: infra.id,
@@ -21088,7 +21112,8 @@ var WorkshopBackend = (() => {
       engine: engineFields.engine,
       engineData: engineFields.engineData,
       credentials,
-      identities
+      identities,
+      kind
     };
     for (let key of Object.keys(prefFields)) {
       def[key] = prefFields[key];
@@ -21167,7 +21192,8 @@ var WorkshopBackend = (() => {
           typeFields: fragments.typeFields,
           engineFields: validationResult.engineFields,
           connInfoFields: fragments.connInfoFields,
-          identities: [identity]
+          identities: [identity],
+          kind: fragments.kind
         });
         await ctx.finishTask({
           newData: {
@@ -21846,6 +21872,9 @@ var WorkshopBackend = (() => {
         debugLogging: config.debugLogging
       };
     },
+    getAllAccountIdsWithKind(kind) {
+      return this.accountManager.getAllAccountIdsWithKind(kind);
+    },
     _bindStandardBroadcasts() {
       this.db.on("config", () => {
         this.broadcastOverBridges("config", this.exposeConfigForClient());
@@ -21984,22 +22013,44 @@ var WorkshopBackend = (() => {
       });
       return ctx.acquire(toc);
     },
-    acquireSearchAccountMessagesTOC(ctx, spec) {
-      const { accountId } = spec;
+    __acquireSearchFoldersHelper(accountId, spec, metaHelpers, why) {
       const engineFacts = this.accountManager.getAccountEngineBackEndFacts(accountId);
       let syncStampSource = null;
       if (engineFacts.syncGranularity === "account") {
         syncStampSource = this.accountManager.getAccountDefById(accountId);
       }
-      const folderIds = spec.folderIds = this.accountManager.getFolderIdsByTag(accountId, spec?.filter.tag || null);
-      const metaHelpers = [];
+      const folderIds = this.accountManager.getFolderIdsByTag(accountId, spec?.filter.tag || null);
+      spec.folderIds.push(...folderIds);
       for (const folderId of folderIds) {
         metaHelpers.push(new SyncLifecycle({
           folderId,
           syncStampSource: syncStampSource || this.accountManager.getFolderById(folderId),
           dataOverlayManager: this.dataOverlayManager
         }));
-        this.syncRefreshFolder(folderId, "searchAccountMessages");
+        this.syncRefreshFolder(folderId, why);
+      }
+    },
+    acquireSearchAccountMessagesTOC(ctx, spec) {
+      const { accountId } = spec;
+      spec.folderIds = [];
+      const metaHelpers = [];
+      this.__acquireSearchFoldersHelper(accountId, spec, metaHelpers, "searchAccountMessages");
+      const toc = new ConversationTOC({
+        db: this.db,
+        query: this.queryManager.queryAccountMessages(ctx, spec),
+        dataOverlayManager: this.dataOverlayManager,
+        metaHelpers,
+        onForgotten: () => {
+        }
+      });
+      return ctx.acquire(toc);
+    },
+    acquireSearchAllAccountsMessagesTOC(ctx, spec) {
+      const { accountIds } = spec;
+      spec.folderIds = [];
+      const metaHelpers = [];
+      for (const accountId of accountIds) {
+        this.__acquireSearchFoldersHelper(accountId, spec, metaHelpers, "searchAllAccountsMessages");
       }
       const toc = new ConversationTOC({
         db: this.db,

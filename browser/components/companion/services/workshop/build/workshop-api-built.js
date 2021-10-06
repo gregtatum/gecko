@@ -2081,6 +2081,7 @@ var MailAccount = class extends import_evt8.Emitter {
     this.acctsSlice = acctsSlice;
     this.type = wireRep.type;
     this.name = wireRep.name;
+    this.kind = wireRep.kind || "";
     this.syncRange = wireRep.syncRange;
     this.syncInterval = wireRep.syncInterval;
     this.notifyOnNew = wireRep.notifyOnNew;
@@ -3454,7 +3455,7 @@ var MailAPI = class extends import_evt14.Emitter {
   searchAccountMessages(spec) {
     const handle = this._nextHandle++;
     const { account } = spec;
-    const view = ["mapi", "gapi"].includes(account.type) ? new CalEventsListView(this, handle) : new MessagesListView(this, handle);
+    const view = account.kind === "calendar" ? new CalEventsListView(this, handle) : new MessagesListView(this, handle);
     view.accountId = account.id;
     view.account = this.accounts.getAccountById(account.id);
     this._trackedItemHandles.set(handle, { obj: view });
@@ -3463,6 +3464,20 @@ var MailAPI = class extends import_evt14.Emitter {
       handle,
       spec: {
         accountId: view.accountId,
+        filter: spec.filter
+      }
+    });
+    return view;
+  }
+  searchAllMessages(spec) {
+    const handle = this._nextHandle++;
+    const view = spec.kind === "calendar" ? new CalEventsListView(this, handle) : new MessagesListView(this, handle);
+    this._trackedItemHandles.set(handle, { obj: view });
+    this.__bridgeSend({
+      type: "searchAllMessages",
+      handle,
+      spec: {
+        kind: spec.kind,
         filter: spec.filter
       }
     });

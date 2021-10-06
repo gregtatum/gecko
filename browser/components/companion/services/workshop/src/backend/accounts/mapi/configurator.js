@@ -51,5 +51,6 @@ export default function configurateMapi(userDetails, domainInfo) {
     credentials,
     typeFields: {},
     connInfoFields: {},
+    kind: "calendar",
   };
 }
