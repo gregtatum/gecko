@@ -281,7 +281,7 @@ LightweightThemeConsumer.prototype = {
 
     let theme = useDarkTheme ? themeData.darkTheme : themeData.theme;
     if (!theme || AppConstants.PINEBUILD) {
-      theme.id = DEFAULT_THEME_ID;
+      theme = { id: DEFAULT_THEME_ID };
     }
 
     let active = (this._active = Object.keys(theme).length);
