@@ -3,12 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 <hbox class="titlebar-buttonbox-container" skipintoolbarset="true">
-#if defined(XP_WIN) && defined(PINEBUILD)
-  <toolbarbutton
-    id="companion-sidebar-button-win" class="toolbarbutton-1 chromeclass-toolbar-additional"
-    oncommand="CompanionService.toggleCompanion()"
-    onclick="checkForMiddleClick(this, event);"/>
-#endif
   <hbox class="titlebar-buttonbox titlebar-color">
     <toolbarbutton class="titlebar-button titlebar-min"
                    oncommand="window.minimize();"
