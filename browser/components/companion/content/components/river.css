@@ -27,6 +27,9 @@
   border-inline-start: 1px solid var(--button-hover-bgcolor);
   margin-inline-start: 12px;
   content: "";
+  /* When hovering the river, view-group icons will expand. Put the border on
+     top of the icons so it looks like they move behind the available space. */
+  z-index: 1;
 }
 
 #river[hidden] {
@@ -39,20 +42,42 @@
   border-end-start-radius: 25px;
 }
 
-#river:hover > view-group {
-  transition: margin-inline-start 160ms ease-out;
+#river {
+  --river-collapse-amount: 16px;
+  overflow: hidden;
 }
 
-#river:not(:hover) > view-group:not(:first-of-type) {
-  margin-inline-start: -16px;
+.view-groups-wrapper {
+  display: flex;
+}
+
+.view-groups-wrapper > view-group:not(:first-of-type) {
+  margin-inline-start: calc(var(--river-collapse-amount) * -1);
+}
+
+.view-groups-wrapper > view-group {
+  transition: translate 150ms cubic-bezier(.66,.61,.43,1.41);
+}
+.view-groups-wrapper > view-group::part(icon-container) {
+  transition: scale 100ms;
+}
+.view-groups-wrapper > view-group:hover::part(icon-container) {
+  scale: 1.25;
+}
+
+.view-groups-wrapper:hover > view-group:not(:hover) {
+  translate: calc(-1 * var(--river-collapse-amount));
+}
+.view-groups-wrapper:hover > view-group:hover ~ view-group {
+  translate: calc(1 * var(--river-collapse-amount));
 }
 
 /**
  * A bit of hackery here to make it so that when an active view-el is
  * in the River, any view-group's after it don't overlap it.
  */
-view-group[active] + view-group,
-view-group[active]:not([top]) {
+.view-groups-wrapper:not(:hover) > view-group[active] + view-group,
+.view-groups-wrapper:not(:hover) > view-group[active]:not([top]) {
   margin-inline-start: 0px !important;
 }
 

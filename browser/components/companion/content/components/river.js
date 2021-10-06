@@ -194,20 +194,21 @@ export default class River extends MozLitElement {
     let topViewGroup = this._displayedViewGroups.length
       ? [...riverViewGroups.pop()]
       : null;
-
     return html`
       <div id="river" ?hidden=${!riverViewGroups.length}>
-        ${riverViewGroups.map(
-          viewGroup =>
-            html`
-              <view-group
-                exportparts="domain, history"
-                ?active=${viewGroup.includes(this.activeView)}
-                .views=${[...viewGroup]}
-                .activeView=${this.activeView}
-              ></view-group>
-            `
-        )}
+        <div class="view-groups-wrapper">
+          ${riverViewGroups.map(
+            viewGroup =>
+              html`
+                <view-group
+                  exportparts="domain, history"
+                  ?active=${viewGroup.includes(this.activeView)}
+                  .views=${[...viewGroup]}
+                  .activeView=${this.activeView}
+                ></view-group>
+              `
+          )}
+        </div>
       </div>
       <view-group
         ?hidden=${!topViewGroup}
