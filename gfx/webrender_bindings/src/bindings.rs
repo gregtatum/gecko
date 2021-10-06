@@ -530,7 +530,7 @@ extern "C" {
     fn wr_notifier_new_frame_ready(window_id: WrWindowId);
     fn wr_notifier_nop_frame_done(window_id: WrWindowId);
     fn wr_notifier_external_event(window_id: WrWindowId, raw_event: usize);
-    fn wr_schedule_render(window_id: WrWindowId);
+    fn wr_schedule_render(window_id: WrWindowId, reasons: RenderReasons);
     // NOTE: This moves away from pipeline_info.
     fn wr_finished_scene_build(window_id: WrWindowId, pipeline_info: &mut WrPipelineInfo);
 
@@ -986,7 +986,7 @@ impl SceneBuilderHooks for APZCallbacks {
     }
 
     fn post_resource_update(&self, _document_ids: &Vec<DocumentId>) {
-        unsafe { wr_schedule_render(self.window_id) }
+        unsafe { wr_schedule_render(self.window_id, RenderReasons::POST_RESOURCE_UPDATES_HOOK) }
         unsafe {
             gecko_profiler_end_marker(b"SceneBuilding\0".as_ptr() as *const c_char);
         }
@@ -1855,11 +1855,6 @@ pub extern "C" fn wr_transaction_set_display_list(
 ) {
     let color = if background.a == 0.0 { None } else { Some(background) };
 
-    // See the documentation of set_display_list in api.rs. I don't think
-    // it makes a difference in gecko at the moment(until APZ is figured out)
-    // but I suppose it is a good default.
-    let preserve_frame_state = true;
-
     let payload = DisplayListPayload {
         items_data: dl_items_data.flush_into_vec(),
         cache_data: dl_cache_data.flush_into_vec(),
@@ -1868,7 +1863,7 @@ pub extern "C" fn wr_transaction_set_display_list(
 
     let dl = BuiltDisplayList::from_data(payload, dl_descriptor);
 
-    txn.set_display_list(epoch, color, viewport_size, (pipeline_id, dl), preserve_frame_state);
+    txn.set_display_list(epoch, color, viewport_size, (pipeline_id, dl));
 }
 
 #[no_mangle]
@@ -1877,13 +1872,13 @@ pub extern "C" fn wr_transaction_set_document_view(txn: &mut Transaction, doc_re
 }
 
 #[no_mangle]
-pub extern "C" fn wr_transaction_generate_frame(txn: &mut Transaction, id: u64) {
-    txn.generate_frame(id);
+pub extern "C" fn wr_transaction_generate_frame(txn: &mut Transaction, id: u64, reasons: RenderReasons) {
+    txn.generate_frame(id, reasons);
 }
 
 #[no_mangle]
-pub extern "C" fn wr_transaction_invalidate_rendered_frame(txn: &mut Transaction) {
-    txn.invalidate_rendered_frame();
+pub extern "C" fn wr_transaction_invalidate_rendered_frame(txn: &mut Transaction, reasons: RenderReasons) {
+    txn.invalidate_rendered_frame(reasons);
 }
 
 fn wr_animation_properties_into_vec<T>(
@@ -2152,7 +2147,6 @@ pub unsafe extern "C" fn wr_transaction_clear_display_list(
     epoch: WrEpoch,
     pipeline_id: WrPipelineId,
 ) {
-    let preserve_frame_state = true;
     let mut frame_builder = WebRenderFrameBuilder::new(pipeline_id);
     frame_builder.dl_builder.begin();
 
@@ -2161,7 +2155,6 @@ pub unsafe extern "C" fn wr_transaction_clear_display_list(
         None,
         LayoutSize::new(0.0, 0.0),
         frame_builder.dl_builder.end(),
-        preserve_frame_state,
     );
 }
 

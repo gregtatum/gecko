@@ -5,6 +5,9 @@ const HOST = get_host_info().ORIGINAL_HOST;
 const PORT = '{{ports[webtransport-h3][0]}}';
 const BASE = `https://${HOST}:${PORT}`;
 
+// Wait for the given number of milliseconds (ms).
+function wait(ms) { return new Promise(res => step_timeout(res, ms)); }
+
 // Create URL for WebTransport session.
 function webtransport_url(handler) {
   return `${BASE}/webtransport/handlers/${handler}`;
@@ -51,6 +54,4 @@ function check_and_remove_standard_headers(headers) {
   delete headers[':protocol'];
   assert_equals(headers['origin'], `${get_host_info().ORIGIN}`);
   delete headers['origin'];
-  assert_equals(headers['datagram-flow-id'], '0');
-  delete headers['datagram-flow-id'];
 }
