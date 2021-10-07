@@ -729,6 +729,8 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
             "build",
             "build-signing",
             "repackage",
+            "system-symbols-upload",
+            "upload-symbols",
         ]:
             return False
 
