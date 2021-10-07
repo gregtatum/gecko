@@ -68,17 +68,9 @@
 .view-groups-wrapper:hover > view-group:not(:hover) {
   translate: calc(-1 * var(--river-collapse-amount));
 }
+.view-groups-wrapper:not(:hover) > view-group[active] ~ view-group,
 .view-groups-wrapper:hover > view-group:hover ~ view-group {
   translate: calc(1 * var(--river-collapse-amount));
-}
-
-/**
- * A bit of hackery here to make it so that when an active view-el is
- * in the River, any view-group's after it don't overlap it.
- */
-.view-groups-wrapper:not(:hover) > view-group[active] + view-group,
-.view-groups-wrapper:not(:hover) > view-group[active]:not([top]) {
-  margin-inline-start: 0px !important;
 }
 
 view-group[top] {
