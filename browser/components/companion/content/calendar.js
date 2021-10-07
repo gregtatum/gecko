@@ -3,7 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { openLink, openMeeting, MozLitElement } from "./widget-utils.js";
-import { css, html, classMap, until } from "./lit.all.js";
+import { css, html, classMap, until, repeat } from "./lit.all.js";
 
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
@@ -141,20 +141,25 @@ export class CalendarEventList extends MozLitElement {
   }
 
   calendarEventItemsTemplate() {
-    return this.events.map(
-      event =>
-        html`
-          <div class="calendar-event">
-            <calendar-event .event=${event}></calendar-event>
-          </div>
-        `
+    if (!this.events.length) {
+      return null;
+    }
+
+    return repeat(
+      this.events,
+      event => event.id,
+      event => html`
+        <div class="calendar-event">
+          <calendar-event .event=${event}></calendar-event>
+        </div>
+      `
     );
   }
 
   render() {
     let eventItems = this.calendarEventItemsTemplate();
     return html`
-      <div class="calendar" ?hidden=${!eventItems.length}>
+      <div class="calendar" ?hidden=${!eventItems}>
         <div id="calendar-panel" class="card card-no-hover">${eventItems}</div>
       </div>
     `;

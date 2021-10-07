@@ -119,6 +119,7 @@ class CompanionHelper {
     oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
     let standardizedEvents = eventsData
       .map(event => ({
+        id: new Date(), // guarantee a unique id for this event
         start: new Date(),
         end: oneHourFromNow,
         links: [],

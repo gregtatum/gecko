@@ -234,6 +234,7 @@ function getConferenceInfo(result, links) {
 
 function parseGoogleCalendarResult(result, primaryEmail) {
   let event = {};
+  event.id = result.id;
   event.summary = result.summary;
   event.start = new Date(result.start?.dateTime);
   event.end = new Date(result.end?.dateTime);
@@ -267,6 +268,7 @@ function parseMicrosoftCalendarResult(result) {
   }
 
   let event = {};
+  event.id = result.id;
   event.summary = result.subject;
   event.start = new Date(result.start?.dateTime + "Z");
   event.end = new Date(result.end?.dateTime + "Z");
