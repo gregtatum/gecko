@@ -426,10 +426,7 @@ class CalendarEvent extends MozLitElement {
 
   openMenu(e) {
     if (
-      // Ignore right clicks.
-      e.button != 0 ||
-      // Ignore ctrl + left click which opens the context menu on mac.
-      (e.ctrlKey && e.button == 0) ||
+      this.shouldOpenContextMenu(e) ||
       // Only open on click for keyboard events, mousedown will open for pointer events.
       (e.type == "click" && e.mozInputSource != MouseEvent.MOZ_SOURCE_KEYBOARD)
     ) {
@@ -439,7 +436,11 @@ class CalendarEvent extends MozLitElement {
   }
 
   toggleDetails(e) {
-    if (e.target.closest("button, a, panel-item") || this.panel.open) {
+    if (
+      e.target.closest("button, a, panel-item") ||
+      this.panel.open ||
+      this.shouldOpenContextMenu(e)
+    ) {
       return;
     }
 
@@ -454,6 +455,14 @@ class CalendarEvent extends MozLitElement {
     // Pressing the space key causes a scroll to the bottom of the window view,
     // so suppress it.
     e.preventDefault();
+  }
+
+  shouldOpenContextMenu(e) {
+    return (
+      e.mozInputSource == MouseEvent.MOZ_SOURCE_MOUSE &&
+      // Menu opens on right click or on ctrl + left click on mac.
+      (e.button != 0 || (e.ctrlKey && e.button == 0))
+    );
   }
 
   expandLinksSection(e) {
