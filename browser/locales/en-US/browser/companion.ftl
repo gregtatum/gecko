@@ -109,3 +109,8 @@ last-session-title = Last Session
 # This string is used in the browse tab of the companion in a button that
 # restores the users last session.
 restore-session = Restore
+
+# These are shown in the now tab when the user has set aside a session and
+# entered "Flow Reset" state.
+session-cleared-title = All cleared
+session-cleared = Your last session has been saved in <a data-l10n-name="session-cleared-link">Browse</a>

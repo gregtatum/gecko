@@ -564,6 +564,10 @@ class CompanionParent extends JSWindowActorParent {
     }
   }
 
+  viewTab(tab) {
+    this.sendAsyncMessage("Companion:ViewTab", { tab });
+  }
+
   handleGlobalHistoryEvent(event) {
     let globalHistory = this.maybeGetGlobalHistory();
     this.sendAsyncMessage("Companion:GlobalHistoryEvent", {
@@ -592,12 +596,31 @@ class CompanionParent extends JSWindowActorParent {
   handleSessionUpdate(eventName, window, guid) {
     switch (eventName) {
       case "session-replaced":
-        this.sendAsyncMessage("Companion:SessionRestored");
+        if (window == this.browsingContext.topChromeWindow) {
+          this.sessionReplaced(guid);
+        }
       // Intentional fallthrough: eslint-disable-next-line no-fallthrough
       case "sessions-updated": {
         this.getSessionData();
         break;
       }
+    }
+  }
+
+  sessionReplaced(guid) {
+    this.viewTab("now");
+    if (!guid) {
+      this.sendAsyncMessage("Companion:ResetFlowEntered");
+      let win = this.browsingContext.topChromeWindow;
+      win.document.body.setAttribute("flow-reset", true);
+      let listener = event => {
+        if (event.view.url.spec != "about:flow-reset") {
+          win.gGlobalHistory.removeEventListener("ViewAdded", listener);
+          win.document.body.removeAttribute("flow-reset");
+          this.sendAsyncMessage("Companion:ResetFlowExited");
+        }
+      };
+      win.gGlobalHistory.addEventListener("ViewAdded", listener);
     }
   }
 
@@ -693,6 +716,11 @@ class CompanionParent extends JSWindowActorParent {
           events,
           newFavicons: this.consumeCachedFaviconsToSend(),
         });
+
+        Services.obs.notifyObservers(
+          this.browsingContext.top.embedderElement.ownerGlobal,
+          "companion-open"
+        );
         break;
       }
       case "Companion:MuteAllTabs": {

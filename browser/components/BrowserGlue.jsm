@@ -543,6 +543,20 @@ let JSWINDOWACTORS = {
     allFrames: true,
   },
 
+  FlowReset: {
+    parent: {
+      moduleURI: "resource:///actors/FlowResetParent.jsm",
+    },
+    child: {
+      moduleURI: "resource:///actors/FlowResetChild.jsm",
+      events: {
+        ViewCompanionBrowseTab: { wantUntrusted: true },
+        RestoreLastSession: { wantUntrusted: true },
+      },
+    },
+    matches: ["about:flow-reset"],
+  },
+
   LightweightTheme: {
     child: {
       moduleURI: "resource:///actors/LightweightThemeChild.jsm",

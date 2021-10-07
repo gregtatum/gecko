@@ -26,6 +26,8 @@ FINAL_TARGET_FILES.actors += [
     "CompanionParent.jsm",
     "ContentfulPaintTrackerChild.jsm",
     "ContentfulPaintTrackerParent.jsm",
+    "FlowResetChild.jsm",
+    "FlowResetParent.jsm",
     "ORTChild.jsm",
     "ORTParent.jsm",
     "PyodideChild.jsm",

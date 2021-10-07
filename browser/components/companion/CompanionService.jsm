@@ -89,8 +89,10 @@ class BrowserWindowHandler {
       });
       resizeObserver.observe(this._companionBox);
     } else {
-      this.window.document.documentElement.removeAttribute("companion");
-      this.window.document.getElementById("companion-browser")?.remove();
+      let doc = this.window.document;
+      doc.documentElement.removeAttribute("companion");
+      doc.getElementById("companion-browser")?.remove();
+      doc.documentElement.style.setProperty("--companion-width", "0px");
     }
   }
 
