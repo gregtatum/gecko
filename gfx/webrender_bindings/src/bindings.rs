@@ -2776,7 +2776,6 @@ pub extern "C" fn wr_dp_define_scroll_layer(
         ExternalScrollId(external_scroll_id, state.pipeline_id),
         content_rect,
         clip_rect,
-        ScrollSensitivity::Script,
         // TODO(gw): We should also update the Gecko-side APIs to provide
         //           this as a vector rather than a point.
         scroll_offset.to_vector(),
@@ -3819,7 +3818,7 @@ pub struct HitResult {
 pub extern "C" fn wr_api_hit_test(dh: &mut DocumentHandle, point: WorldPoint, out_results: &mut ThinVec<HitResult>) {
     dh.ensure_hit_tester();
 
-    let result = dh.hit_tester.as_ref().unwrap().hit_test(None, point);
+    let result = dh.hit_tester.as_ref().unwrap().hit_test(point);
 
     for item in &result.items {
         out_results.push(HitResult {
