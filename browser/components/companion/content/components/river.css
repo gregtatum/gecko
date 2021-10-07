@@ -72,6 +72,11 @@
 .view-groups-wrapper:hover > view-group:hover ~ view-group {
   translate: calc(1 * var(--river-collapse-amount));
 }
+.view-groups-wrapper > view-group {
+  /* The icons will clip through each other as they scale/translate. Giving them
+     all the same z-index fixes that. */
+  z-index: 0;
+}
 
 view-group[top] {
   background-color: var(--light-bg-color);
