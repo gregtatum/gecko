@@ -4171,6 +4171,9 @@ BrowserGlue.prototype = {
    * Only show the infobar when canRestoreLastSession and the pref value == 1
    */
   async _maybeShowRestoreSessionInfoBar() {
+    if (AppConstants.PINEBUILD) {
+      return;
+    }
     let count = Services.prefs.getIntPref(
       "browser.startup.couldRestoreSession.count",
       0
