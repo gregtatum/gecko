@@ -116,12 +116,12 @@ export default class ViewGroup extends MozLitElement {
 
       history.push(
         html`
-          <span
+          <button
             class=${classMap(classes)}
             .view=${this.views[i]}
             @click=${this.#onHistoryClick}
             title=${this.views[i].title}
-          ></span>
+          ></button>
         `
       );
     }
