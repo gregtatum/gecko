@@ -117,6 +117,7 @@ class CompanionParent extends JSWindowActorParent {
     this.setUpGlobalHistoryDebuggingObservers();
     this._destroyed = false;
     SessionManager.on("session-replaced", this._handleSessionUpdate);
+    SessionManager.on("session-set-aside", this._handleSessionUpdate);
     SessionManager.on("sessions-updated", this._handleSessionUpdate);
     // Initialise the display of the last session UI.
     this.getSessionData();
@@ -206,6 +207,7 @@ class CompanionParent extends JSWindowActorParent {
       this.snapshotSelector = null;
     }
     SessionManager.off("session-replaced", this._handleSessionUpdate);
+    SessionManager.off("session-set-aside", this._handleSessionUpdate);
     SessionManager.off("sessions-updated", this._handleSessionUpdate);
 
     this._browserIdsToTabs.clear();
@@ -595,11 +597,12 @@ class CompanionParent extends JSWindowActorParent {
 
   handleSessionUpdate(eventName, window, guid) {
     switch (eventName) {
-      case "session-replaced":
+      case "session-set-aside":
         if (window == this.browsingContext.topChromeWindow) {
-          this.sessionReplaced(guid);
+          this.sessionSetAside();
         }
       // Intentional fallthrough: eslint-disable-next-line no-fallthrough
+      case "session-replaced":
       case "sessions-updated": {
         this.getSessionData();
         break;
@@ -607,21 +610,25 @@ class CompanionParent extends JSWindowActorParent {
     }
   }
 
-  sessionReplaced(guid) {
+  sessionSetAside() {
     this.viewTab("now");
-    if (!guid) {
-      this.sendAsyncMessage("Companion:ResetFlowEntered");
-      let win = this.browsingContext.topChromeWindow;
-      win.document.body.setAttribute("flow-reset", true);
-      let listener = event => {
-        if (event.view.url.spec != "about:flow-reset") {
-          win.gGlobalHistory.removeEventListener("ViewAdded", listener);
-          win.document.body.removeAttribute("flow-reset");
-          this.sendAsyncMessage("Companion:ResetFlowExited");
-        }
-      };
-      win.gGlobalHistory.addEventListener("ViewAdded", listener);
-    }
+    this.sendAsyncMessage("Companion:ResetFlowEntered");
+    let win = this.browsingContext.topChromeWindow;
+    win.document.body.setAttribute("flow-reset", true);
+
+    let listener = (event, eventWin) => {
+      if (eventWin != win) {
+        return;
+      }
+
+      SessionManager.off("session-view-added", listener);
+      SessionManager.off("session-change-start", listener);
+      win.document.body.removeAttribute("flow-reset");
+      this.sendAsyncMessage("Companion:ResetFlowExited");
+    };
+
+    SessionManager.on("session-view-added", listener);
+    SessionManager.on("session-change-start", listener);
   }
 
   validateCompanionPref(name) {

@@ -32,19 +32,27 @@ add_task(async function setup() {
           "browse")
     );
 
-    let browserLoaded = BrowserTestUtils.browserLoaded(
-      win.gBrowser.selectedBrowser
-    );
     BrowserTestUtils.loadURI(
       win.gBrowser.selectedBrowser,
-      "http://example.com"
+      "https://example.com/"
     );
-    await browserLoaded;
+    await BrowserTestUtils.browserLoaded(
+      win.gBrowser.selectedBrowser,
+      false,
+      "https://example.com/"
+    );
 
-    let sessionReplaced = new Promise(resolve =>
-      SessionManager.once("session-replaced", resolve)
-    );
+    let sessionSetAside = SessionManager.once("session-set-aside");
+    let sessionReplaced = SessionManager.once("session-replaced");
     win.document.getElementById("session-setaside-button").click();
+    await sessionSetAside;
+
+    // This should be set as soon as the session is set aside..
+    Assert.ok(
+      win.document.body.hasAttribute("flow-reset"),
+      "Should have set the flow-reset attribute on the window"
+    );
+
     await sessionReplaced;
 
     await BrowserTestUtils.waitForCondition(() => {
@@ -62,9 +70,6 @@ add_task(async function setup() {
     );
     Assert.equal(currentView, "now", "Companion has switched to now tab");
 
-    await BrowserTestUtils.waitForCondition(() =>
-      isHidden(win, "pinebuild-back-button")
-    );
     Assert.ok(isHidden(win, "pinebuild-back-button"), "Back button hidden");
     Assert.ok(isHidden(win, "pinebuild-reload-button"), "Reload button hidden");
     Assert.ok(isHidden(win, "pinebuild-copy-button"), "Copy button hidden");

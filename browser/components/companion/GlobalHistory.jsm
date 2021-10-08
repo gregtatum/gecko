@@ -1293,13 +1293,16 @@ class GlobalHistory extends EventTarget {
       }
 
       logConsole.debug(`Creating a new InternalView.`);
-      SessionManager.register(this.#window).catch(logConsole.error);
 
       // This is a new view.
       internalView = new InternalView(this.#window, browser, newEntry);
       this.#currentIndex = this.#viewStack.length;
       this.#viewStack.push(internalView);
       this.#historyViews.set(newEntry.ID, internalView);
+
+      SessionManager.register(this.#window, internalView.url.spec).catch(
+        logConsole.error
+      );
 
       this.#notifyEvent("ViewAdded", internalView);
     } else {

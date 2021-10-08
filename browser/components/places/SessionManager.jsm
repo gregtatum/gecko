@@ -72,6 +72,15 @@ const WINDOW_TRACKER_REMOVE_TOPIC = "sessionstore-closed-objects-changed";
  *   It is not emitted when saving session data when replacing a session. Use
  *   the session-replaced event in that case.
  *
+ * - session-change-start
+ *   This event is emitted when a session change is started. The additional
+ *   parameter is the window where the session change is happening.
+ *
+ * - session-set-aside
+ *   This event is emitted when a session is set aside and the hide animations
+ *   are complete, but before the show animation starts. The additional
+ *   parameter is the window where the session change is happening.
+ *
  * - session-replaced
  *   This event is emitted when a session has been replaced. The additional
  *   parameters are the window where the session was replaced and the guid
@@ -126,8 +135,10 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    *
    * @param {DOMWindow} window
    *   The window in which to start the new session.
+   * @param {string} url
+   *   The url that was loaded to potentially trigger the new session.
    */
-  async register(window) {
+  async register(window, url) {
     if (!perWindowEnabled) {
       return;
     }
@@ -135,6 +146,10 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       // No need to register, we already have something for this window.
       return;
     }
+    if (url == "about:flow-reset") {
+      return;
+    }
+    this.emit("session-view-added", window);
 
     let guid = this.makeGuid();
     logConsole.debug("Starting new session", guid);
@@ -186,6 +201,8 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       loadDataPromise = this.#loadSessionData(restoreSessionGuid);
     }
 
+    this.emit("session-change-start", window);
+
     // Start the animation and whilst that's running, start saving data.
     let {
       animationCompletePromise,
@@ -224,6 +241,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     // Let the time for the previous animation completely elapse before
     // we start the new one.
     await timerCompletePromise;
+    this.emit("session-set-aside", window);
     await window.gBrowser.doPinebuildSessionShowAnimation();
     await window.gBrowser.showConfirmation("session-saved-confirmation");
     this.emit("session-replaced", window, restoreSessionGuid);
