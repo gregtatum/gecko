@@ -75,6 +75,13 @@ export function generateSnippet(htmlString, includeQuotes) {
   });
 }
 
+export function sanitizeSnippetAndExtractLinks(htmlString) {
+  return callOnMainThread({
+    cmd: "sanitizeSnippetAndExtractLinks",
+    args: [htmlString],
+  });
+}
+
 const entities = {
   34: "quot",
   38: "amp",

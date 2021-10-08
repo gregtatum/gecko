@@ -6,8 +6,7 @@ const EXPORTED_SYMBOLS = [
   "getConferenceInfo",
   "parseGoogleCalendarResult",
   "parseMicrosoftCalendarResult",
-  "sanitizeHTML",
-  "convertHTMLToPlainText",
+  "MainThreadServices",
 ];
 
 const parserUtils = Cc["@mozilla.org/parserutils;1"].getService(
@@ -120,6 +119,7 @@ function getLinkInfo(result) {
 
   return [...links.values()];
 }
+
 const conferencingInfo = [
   {
     name: "Zoom",
@@ -286,15 +286,63 @@ function parseMicrosoftCalendarResult(result) {
   return event;
 }
 
-const SanitizerFlags =
-  parserUtils.SanitizerDropForms |
-  parserUtils.SanitizerDropMedia |
-  parserUtils.SanitizerDropNonCSSPresentation;
+function MainThreadServices(window) {
+  const SanitizerFlags =
+    parserUtils.SanitizerDropForms |
+    parserUtils.SanitizerDropMedia |
+    parserUtils.SanitizerDropNonCSSPresentation;
+  const serializer = new XMLSerializer();
 
-function sanitizeHTML(str) {
-  return parserUtils.sanitize(str, SanitizerFlags);
-}
+  const doc = window.document
+    .createElement("template")
+    .content.ownerDocument.implementation.createHTMLDocument();
+  // parserUtils.parseFragment needs to have a context in order
+  // to get the associated document.
+  const context = doc.createElement("template");
 
-function convertHTMLToPlainText(str, wrapCol = 0) {
-  return parserUtils.convertToPlainText(str, SanitizerFlags, wrapCol);
+  return {
+    sanitizeHTML(str) {
+      return parserUtils.sanitize(str, SanitizerFlags);
+    },
+
+    convertHTMLToPlainText(str, wrapCol = 0) {
+      return parserUtils.convertToPlainText(str, SanitizerFlags, wrapCol);
+    },
+
+    /**
+     * Sanitize, generate a snippet and extract any links out of
+     * a service-specific calendar event,
+     *
+     * @param {Object} description
+     *     HTML description of an event
+     * @returns {Object}
+     */
+    sanitizeSnippetAndExtractLinks(description) {
+      // This function is aimed to be call by the worker
+      // so we must try to minimize the work done here.
+      const links = Object.create(null);
+      const docFragment = parserUtils.parseFragment(
+        description,
+        SanitizerFlags,
+        false,
+        null,
+        context
+      );
+      const anchors = docFragment.querySelectorAll("a");
+      for (const anchor of anchors) {
+        // We explicitly ignore anchors with empty text content
+        // as they wouldn't show up in the calendar UI anyway.
+        if (!anchor.href || anchor.textContent === "") {
+          continue;
+        }
+        links[anchor.href] = anchor.textContent;
+      }
+
+      return {
+        links,
+        document: serializer.serializeToString(docFragment).trim(),
+        snippet: docFragment.textContent.trim(),
+      };
+    },
+  };
 }

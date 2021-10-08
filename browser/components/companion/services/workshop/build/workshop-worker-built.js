@@ -9395,6 +9395,12 @@ var WorkshopBackend = (() => {
       args: [htmlString]
     });
   }
+  function sanitizeSnippetAndExtractLinks(htmlString) {
+    return callOnMainThread({
+      cmd: "sanitizeSnippetAndExtractLinks",
+      args: [htmlString]
+    });
+  }
   function escapePlaintextIntoElementContext(text) {
     return text.replace(/[&<>"'\/]/g, (c) => {
       const code = c.charCodeAt(0);
@@ -9686,6 +9692,156 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/backend/bodies/urlchew.js
+  function processLink(url, text) {
+    try {
+      url = new URL(url);
+    } catch {
+      try {
+        url = new URL(`https://${url}`);
+      } catch {
+        return null;
+      }
+    }
+    if (linksToIgnore.includes(url.href) || url.protocol === "tel:") {
+      return null;
+    }
+    const link = {
+      url: url.href
+    };
+    if (conferencingInfo.find((info) => url.host.endsWith(info.domain))) {
+      link.type = "conferencing";
+      return link;
+    }
+    if (text && url.href !== text) {
+      link.text = text;
+    }
+    return link;
+  }
+  function processLinks(links, description) {
+    const map = new Map();
+    for (const [href, content] of Object.entries(links)) {
+      const link = processLink(href, content);
+      if (link?.text !== "") {
+        map.set(link.url, link);
+      }
+    }
+    if (description) {
+      const descriptionURLs = description.match(URL_REGEX);
+      if (descriptionURLs?.length) {
+        for (const descriptionURL of descriptionURLs) {
+          const descriptionLink = processLink(descriptionURL);
+          if (descriptionLink?.text && !map.has(descriptionLink.url)) {
+            map.set(descriptionLink.url, descriptionLink);
+          }
+        }
+      }
+    }
+    return Array.from(map.values());
+  }
+  function getConferencingDetails(url) {
+    if (!url) {
+      return null;
+    }
+    try {
+      url = new URL(url);
+    } catch {
+      try {
+        url = new URL(`https://${url}`);
+      } catch {
+        return null;
+      }
+    }
+    const domainInfo = conferencingInfo.find((info) => url.host.endsWith(info.domain));
+    if (!domainInfo) {
+      return null;
+    }
+    return {
+      icon: domainInfo.icon,
+      name: domainInfo.name,
+      url: url.toString()
+    };
+  }
+  function getConferenceInfo(data, links) {
+    if (data.conferenceData?.conferenceSolution) {
+      let locationURL;
+      for (const entry of data.conferenceData.entryPoints) {
+        if (entry.uri.startsWith("https:")) {
+          locationURL = new URL(entry.uri);
+          break;
+        }
+      }
+      const conferencingDetails = getConferencingDetails(locationURL);
+      return conferencingDetails || {
+        icon: data.conferenceData.conferenceSolution.iconUri,
+        name: data.conferenceData.conferenceSolution.name,
+        url: locationURL.toString()
+      };
+    }
+    if (data.onlineMeeting) {
+      const locationURL = new URL(data.onlineMeeting.joinUrl);
+      return getConferencingDetails(locationURL);
+    }
+    if (data.location) {
+      try {
+        let locationURL;
+        if (data.location.displayName) {
+          locationURL = new URL(data.location.displayName);
+        } else {
+          locationURL = new URL(data.location);
+        }
+        return getConferencingDetails(locationURL);
+      } catch {
+      }
+    }
+    const conferenceLink = links.find((link) => link.type == "conferencing");
+    if (conferenceLink) {
+      return getConferencingDetails(conferenceLink.url);
+    }
+    return null;
+  }
+  var URL_REGEX, linksToIgnore, conferencingInfo;
+  var init_urlchew = __esm({
+    "src/backend/bodies/urlchew.js"() {
+      URL_REGEX = /(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])/gim;
+      linksToIgnore = [
+        "https://aka.ms/JoinTeamsMeeting"
+      ];
+      conferencingInfo = [
+        {
+          name: "Zoom",
+          domain: "zoom.us",
+          icon: "chrome://browser/content/companion/zoom.png"
+        },
+        {
+          name: "Teams",
+          domain: "teams.microsoft.com",
+          icon: "chrome://browser/content/companion/teams.png"
+        },
+        {
+          name: "Meet",
+          domain: "meet.google.com",
+          icon: "chrome://browser/content/companion/meet.png"
+        },
+        {
+          name: "Jitsi",
+          domain: "meet.jit.si",
+          icon: "chrome://browser/content/companion/jitsi.png"
+        },
+        {
+          name: "GoToMeeting",
+          domain: ".gotomeeting.com",
+          icon: "chrome://browser/content/companion/gotomeeting.png"
+        },
+        {
+          name: "WebEx",
+          domain: ".webex.com",
+          icon: "chrome://browser/content/companion/webex.png"
+        }
+      ];
+    }
+  });
+
   // src/backend/bodies/mailchew.js
   function generateBaseComposeParts(identity) {
     let textMsg;
@@ -9887,6 +10043,25 @@ var WorkshopBackend = (() => {
     }
     return { contentBlob, snippet, authoredBodySize };
   }
+  async function processEventContent({
+    data,
+    content,
+    type,
+    processAsText = false
+  }) {
+    const { links, document, snippet } = type === "html" ? await sanitizeSnippetAndExtractLinks(content) : { links: {}, document: content, snippet: content };
+    const contentBlob = new Blob([document], { type: `text/${type}` });
+    const authoredBodySize = snippet.length;
+    const processedLinks = processLinks(links, (processAsText || type === "plain") && content);
+    const conference = getConferenceInfo(data, processedLinks);
+    return {
+      conference,
+      links: processedLinks.filter((link) => link.type != "conferencing"),
+      contentBlob,
+      snippet,
+      authoredBodySize
+    };
+  }
   var scope3, RE_RE, RE_FWD, l10n_wroteString, l10n_originalMessageString, l10n_forward_header_labels;
   var init_mailchew = __esm({
     "src/backend/bodies/mailchew.js"() {
@@ -9895,6 +10070,7 @@ var WorkshopBackend = (() => {
       init_mailchew_strings();
       init_quotechew();
       init_htmlchew();
+      init_urlchew();
       init_syncbase();
       init_mail_rep();
       scope3 = logic.scope("MailChew");
@@ -10717,7 +10893,7 @@ var WorkshopBackend = (() => {
     return {
       id: raw.id,
       type: "cal",
-      date: raw.startDate,
+      date: raw.date,
       startDate: raw.startDate,
       endDate: raw.endDate,
       isAllDay: raw.isAllDay,
@@ -10726,8 +10902,8 @@ var WorkshopBackend = (() => {
       attendees: raw.attendees || null,
       flags: raw.flags || [],
       folderIds: raw.folderIds || new Set(),
-      subject: raw.summary != null ? raw.summary : null,
-      snippet: raw.snippet != null ? raw.snippet : null,
+      subject: raw.summary ?? null,
+      snippet: raw.snippet ?? null,
       bodyReps: raw.bodyReps,
       authoredBodySize: raw.authoredBodySize || 0,
       conference: raw.conference || null,
@@ -10814,15 +10990,23 @@ var WorkshopBackend = (() => {
                 continue;
               }
               logic(this.ctx, "event", { _event: gapiEvent });
-              let contentBlob, snippet, authoredBodySize;
+              let contentBlob, snippet, authoredBodySize, links, conference;
               const bodyReps = [];
-              const description = gapiEvent.description;
+              let description = gapiEvent.description;
               if (description) {
+                description = description.trim().replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/<wbr>/g, "");
                 ({
                   contentBlob,
                   snippet,
-                  authoredBodySize
-                } = await processMessageContent(description, "html", true, true));
+                  authoredBodySize,
+                  links,
+                  conference
+                } = await processEventContent({
+                  data: gapiEvent,
+                  content: description,
+                  type: "html",
+                  processAsText: true
+                }));
                 bodyReps.push(makeBodyPart({
                   type: "html",
                   part: null,
@@ -10865,7 +11049,9 @@ var WorkshopBackend = (() => {
                 summary,
                 snippet,
                 bodyReps,
-                authoredBodySize
+                authoredBodySize,
+                links,
+                conference
               });
               this.allEvents.push(eventInfo);
               if (oldInfo) {
@@ -11448,18 +11634,24 @@ var WorkshopBackend = (() => {
                 return;
               }
               logic(this.ctx, "event", { _event: mapiEvent });
-              let contentBlob, snippet, authoredBodySize;
+              let contentBlob, snippet, authoredBodySize, links, conference;
               const bodyReps = [];
               const body = mapiEvent.body;
               if (body?.content) {
-                const { content, contentType } = body;
+                const { content, contentType: type } = body;
                 ({
                   contentBlob,
                   snippet,
-                  authoredBodySize
-                } = await processMessageContent(content, contentType, true, true));
+                  authoredBodySize,
+                  links,
+                  conference
+                } = await processEventContent({
+                  data: mapiEvent,
+                  content,
+                  type
+                }));
                 bodyReps.push(makeBodyPart({
-                  type: contentType,
+                  type,
                   part: null,
                   sizeEstimate: content.length,
                   amountDownloaded: content.length,
@@ -11496,7 +11688,9 @@ var WorkshopBackend = (() => {
                 summary,
                 snippet,
                 bodyReps,
-                authoredBodySize
+                authoredBodySize,
+                links,
+                conference
               });
               this.allEvents.push(eventInfo);
               if (oldInfo) {

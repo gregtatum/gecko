@@ -34,6 +34,7 @@ import { formatAddresses } from "shared/util";
 import * as $mailchewStrings from "./mailchew_strings";
 import * as $quotechew from "./quotechew";
 import * as $htmlchew from "./htmlchew";
+import * as $urlchew from "./urlchew";
 
 import { DESIRED_SNIPPET_LENGTH } from "../syncbase";
 
@@ -524,6 +525,63 @@ export async function processMessageContent(
   }
 
   return { contentBlob, snippet, authoredBodySize };
+}
+
+/**
+ * Generate the snippet, parsed body from the message body's content and extract links.
+ * This is currently an asynchronous process:
+ * the function sanitizeSnippetAndExtractLinks calls its counterpart in the main thread.
+ *
+ * @param {String} content
+ *   The decoded contents of the body.  (This means both transport encoding and
+ *   the character set encoding have been decoded.)  In the future this may
+ *   become a stream.
+ * @param {'plain'|'html'} type
+ *   The body type, so we know what to do.
+ * @param {Boolean} processAsText
+ *   Process links in the content (see as plain text).
+ * @return {{ contentBlob, snippet, authoredBodySize }}
+ */
+export async function processEventContent({
+  data,
+  content,
+  type,
+  processAsText = false,
+}) {
+  // TODO: think about a cache here.
+  //
+  // The call to sanitizeSnippetAndExtractLinks is a bit costly
+  // (send a message on the other side, get it, execute the function
+  // on the main thread, post a message and finally get the result here).
+  //
+  // Recurring events share the same content (is that correct ??) so
+  // we can likely cache the results from the call.
+  // But no need to have a global cache: contents in a gmail or outlook accounts
+  // are likely different.
+  // And it doesn't make sense to keep the data in the cache for ever,
+  // so we need to have a strategy to clean it up (when we're almost done
+  // with an full update/creation of a new calendar).
+
+  const { links, document, snippet } =
+    type === "html"
+      ? await $htmlchew.sanitizeSnippetAndExtractLinks(content)
+      : { links: {}, document: content, snippet: content };
+
+  const contentBlob = new Blob([document], { type: `text/${type}` });
+  const authoredBodySize = snippet.length;
+  const processedLinks = $urlchew.processLinks(
+    links,
+    (processAsText || type === "plain") && content
+  );
+  const conference = $urlchew.getConferenceInfo(data, processedLinks);
+
+  return {
+    conference,
+    links: processedLinks.filter(link => link.type != "conferencing"),
+    contentBlob,
+    snippet,
+    authoredBodySize,
+  };
 }
 
 /**

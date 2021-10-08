@@ -13,7 +13,7 @@ window.onunhandledrejection = event => {
 
 import { MailAPIFactory } from "./workshop_glue.js";
 const workshopAPI = (window.WORKSHOP_API = MailAPIFactory(
-  OnlineServicesHelper
+  OnlineServicesHelper.MainThreadServices(window)
 ));
 
 const unloadListener = evt => {

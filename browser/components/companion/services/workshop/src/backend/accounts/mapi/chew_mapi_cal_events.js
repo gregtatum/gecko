@@ -15,7 +15,7 @@
  */
 
 import * as mailRep from "../../db/mail_rep";
-import { processMessageContent } from "../../bodies/mailchew";
+import { processEventContent } from "../../bodies/mailchew";
 import { EVENT_OUTSIDE_SYNC_RANGE } from "shared/date";
 import { makeMapiCalEventId } from "./mapi_id_helpers";
 import {
@@ -144,27 +144,28 @@ export class MapiCalEventChewer {
 
         logic(this.ctx, "event", { _event: mapiEvent });
 
-        let contentBlob, snippet, authoredBodySize;
+        let contentBlob, snippet, authoredBodySize, links, conference;
         const bodyReps = [];
 
         // ## Generate an HTML body part for the description
         const body = mapiEvent.body;
         if (body?.content) {
-          const { content, contentType } = body;
+          const { content, contentType: type } = body;
           ({
             contentBlob,
             snippet,
             authoredBodySize,
-          } = await processMessageContent(
+            links,
+            conference,
+          } = await processEventContent({
+            data: mapiEvent,
             content,
-            contentType,
-            true, // isDownloaded
-            true // generateSnippet
-          ));
+            type,
+          }));
 
           bodyReps.push(
             mailRep.makeBodyPart({
-              type: contentType,
+              type,
               part: null,
               sizeEstimate: content.length,
               amountDownloaded: content.length,
@@ -215,6 +216,8 @@ export class MapiCalEventChewer {
           snippet,
           bodyReps,
           authoredBodySize,
+          links,
+          conference,
         });
 
         this.allEvents.push(eventInfo);

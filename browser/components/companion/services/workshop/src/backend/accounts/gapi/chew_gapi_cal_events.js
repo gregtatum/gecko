@@ -15,7 +15,7 @@
  */
 
 import * as mailRep from "../../db/mail_rep";
-import { processMessageContent } from "../../bodies/mailchew";
+import { processEventContent } from "../../bodies/mailchew";
 import { EVENT_OUTSIDE_SYNC_RANGE } from "shared/date";
 import { makeGapiCalEventId } from "./gapi_id_helpers";
 import {
@@ -120,22 +120,29 @@ export class GapiCalEventChewer {
 
         logic(this.ctx, "event", { _event: gapiEvent });
 
-        let contentBlob, snippet, authoredBodySize;
+        let contentBlob, snippet, authoredBodySize, links, conference;
         const bodyReps = [];
 
         // ## Generate an HTML body part for the description
-        const description = gapiEvent.description;
+        let description = gapiEvent.description;
         if (description) {
+          description = description
+            .trim()
+            .replace(/&amp;/g, "&")
+            .replace(/&nbsp;/g, " ")
+            .replace(/<wbr>/g, "");
           ({
             contentBlob,
             snippet,
             authoredBodySize,
-          } = await processMessageContent(
-            description,
-            "html",
-            true, // isDownloaded
-            true // generateSnippet
-          ));
+            links,
+            conference,
+          } = await processEventContent({
+            data: gapiEvent,
+            content: description,
+            type: "html",
+            processAsText: true,
+          }));
 
           bodyReps.push(
             mailRep.makeBodyPart({
@@ -192,6 +199,8 @@ export class GapiCalEventChewer {
           snippet,
           bodyReps,
           authoredBodySize,
+          links,
+          conference,
         });
 
         this.allEvents.push(eventInfo);
