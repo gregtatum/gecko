@@ -5,7 +5,8 @@
 #define intl_components_Bidi_h_
 
 #include "mozilla/intl/ICU4CGlue.h"
-#include "unicode/ubidi.h"
+
+struct UBiDi;
 
 namespace mozilla::intl {
 
@@ -51,14 +52,75 @@ class Bidi final {
    * Embedding levels are numbers that indicate how deeply the bidi text is
    * nested, and the default direction of text on that level. Embedding levels
    * are changed by using the Left-to-Right Embedding (LRE) codepoint (U+202A),
-   * or the Right-to-Left Embedding (RLE) codepoitn (U+202B). The minimum
+   * or the Right-to-Left Embedding (RLE) codepoint (U+202B). The minimum
    * embedding level of text is zero, and the maximum explicit depth is 125
-   *
-   *  - Even values 0 - 124 represent an explicit embedding level that is LTR.
-   *  - Odd values 1 - 125 represent an explicit embedding level that is RTL.
-   *  - The value 128 represents a level override.
    */
-  using EmbeddingLevel = uint8_t;
+  class EmbeddingLevel {
+   public:
+    bool IsDefaultLTR() const;
+    bool IsDefaultRTL() const;
+    bool IsLTR() const;
+    bool IsRTL() const;
+    bool IsPseudoValue() const;
+    bool IsSameDirection(EmbeddingLevel aOther) const;
+    uint8_t GetExplicitValue() const;
+    Direction Direction() const;
+    Maybe<EmbeddingLevel> TryIncrement() const;
+
+    EmbeddingLevel() = default;
+    EmbeddingLevel(const EmbeddingLevel& other) = default;
+    EmbeddingLevel& operator=(const EmbeddingLevel& other) = default;
+
+    bool operator<(const EmbeddingLevel& aOther) {
+      return mValue < aOther.mValue;
+    }
+    bool operator>(const EmbeddingLevel& aOther) {
+      return mValue > aOther.mValue;
+    }
+    bool operator<=(const EmbeddingLevel& aOther) {
+      return mValue <= aOther.mValue;
+    }
+    bool operator>=(const EmbeddingLevel& aOther) {
+      return mValue >= aOther.mValue;
+    }
+    bool operator==(const EmbeddingLevel& aOther) {
+      return mValue == aOther.mValue;
+    }
+    bool operator!=(const EmbeddingLevel& aOther) {
+      return mValue != aOther.mValue;
+    }
+    EmbeddingLevel Min(const EmbeddingLevel& aOther) {
+      return (aOther.mValue < mValue) ? aOther : *this;
+    }
+    EmbeddingLevel Max(const EmbeddingLevel& aOther) {
+      return (aOther.mValue > mValue) ? aOther : *this;
+    }
+
+    static EmbeddingLevel LTR();
+    static EmbeddingLevel RTL();
+    static EmbeddingLevel DefaultLTR();
+    static EmbeddingLevel DefaultRTL();
+    static EmbeddingLevel PseudoValue();
+    static EmbeddingLevel FromExplicitValue(uint8_t aValue);
+
+   private:
+    explicit EmbeddingLevel(uint8_t aValue) : mValue(aValue){};
+
+    /**
+     * The actual value of the embedded level is encoded to mean different
+     * things.
+     *
+     *  - Even values (plus 0) ranged 0 - 124 represent an explicit embedding
+     *      level that is LTR.
+     *  - Odd values ranged 1 - 125 represent an explicit embedding level that
+     *      is RTL.
+     *  - The value 0x80 represents a level override.
+     *  - 0xfe means the text is by default LTR
+     *  - 0xff means the text is by default RTL
+     */
+    uint8_t mValue = 0;
+    friend class Bidi;
+  };
 
   /**
    * Set the current paragraph of text to analyze for its bidi properties. This
@@ -74,7 +136,10 @@ class Bidi final {
   /**
    * Get the embedding level for the paragraph that was set by SetParagraph.
    */
-  EmbeddingLevel GetParagraphLevel() const;
+  EmbeddingLevel GetParagraphEmbeddingLevel() const;
+
+  static bool IsEmbeddingLevelDefaultLTR();
+  static bool IsEmbeddingLevelDefaultRTL();
 
   /**
    * Get the directionality of the paragraph text that was set by SetParagraph.
@@ -87,12 +152,7 @@ class Bidi final {
    */
   struct LogicalRun {
     Span<const char16_t> string;
-    EmbeddingLevel embeddingLevel = 0;
-
-    Direction Direction() const {
-      // The least significant bit determines the direction.
-      return embeddingLevel & 0x1 ? Direction::RTL : Direction::LTR;
-    }
+    EmbeddingLevel embeddingLevel;
   };
 
   /**
@@ -101,6 +161,31 @@ class Bidi final {
    * and not in display order.
    */
   Result<Maybe<Bidi::LogicalRun>, ICUError> GetNextLogicalRun();
+
+  /**
+   * TODO before landing - Unify better.
+   *
+   * This is a convenience function that does not use a nsBidi object.
+   * It is intended to be used for when an application has determined the
+   * embedding levels of objects (character sequences) and just needs to have
+   * them reordered (L2). This is equivalent to using <code>GetVisualMap</code>
+   * on a <code>nsBidi</code> object.
+   *
+   * @param aLevels is an array with <code>aLength</code> levels that have been
+   *      determined by the application.
+   *
+   * @param aLength is the number of levels in the array, or, semantically,
+   *      the number of objects to be reordered.
+   *      It must be <code>aLength>0</code>.
+   *
+   * @param aIndexMap is a pointer to an array of <code>aLength</code>
+   *      indexes which will reflect the reordering of the characters.
+   *      The array does not need to be initialized.<p>
+   *      The index map will result in
+   *        <code>aIndexMap[aVisualIndex]==aLogicalIndex</code>.
+   */
+  static void ReorderVisual(const EmbeddingLevel* aLevels, int32_t aLength,
+                            int32_t* aIndexMap);
 
   /**
    * A logical run is a run of text that is in the memory order, not the display

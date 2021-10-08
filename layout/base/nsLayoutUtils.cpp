@@ -60,6 +60,7 @@
 #include "mozilla/gfx/2D.h"
 #include "mozilla/gfx/gfxVars.h"
 #include "mozilla/gfx/PathHelpers.h"
+#include "mozilla/intl/Bidi.h"
 #include "mozilla/layers/APZCCallbackHelper.h"
 #include "mozilla/layers/APZPublicUtils.h"  // for apz::CalculatePendingDisplayPort
 #include "mozilla/layers/CompositorBridgeChild.h"
@@ -5531,9 +5532,11 @@ nscoord nsLayoutUtils::AppUnitWidthOfStringBidi(const char16_t* aString,
                                                 gfxContext& aContext) {
   nsPresContext* presContext = aFrame->PresContext();
   if (presContext->BidiEnabled()) {
-    nsBidiLevel level = nsBidiPresUtils::BidiLevelFromStyle(aFrame->Style());
-    return nsBidiPresUtils::MeasureTextWidth(
-        aString, aLength, level, presContext, aContext, aFontMetrics);
+    mozilla::intl::Bidi::EmbeddingLevel level =
+        nsBidiPresUtils::BidiLevelFromStyle(aFrame->Style());
+    return nsBidiPresUtils::MeasureTextWidth(aString, aLength,
+                                             level.Direction(), presContext,
+                                             aContext, aFontMetrics);
   }
   aFontMetrics.SetTextRunRTL(false);
   aFontMetrics.SetVertical(aFrame->GetWritingMode().IsVertical());
@@ -5610,10 +5613,11 @@ void nsLayoutUtils::DrawString(const nsIFrame* aFrame,
 
   nsPresContext* presContext = aFrame->PresContext();
   if (presContext->BidiEnabled()) {
-    nsBidiLevel level = nsBidiPresUtils::BidiLevelFromStyle(aComputedStyle);
-    rv = nsBidiPresUtils::RenderText(aString, aLength, level, presContext,
-                                     *aContext, aContext->GetDrawTarget(),
-                                     aFontMetrics, aPoint.x, aPoint.y);
+    rv = nsBidiPresUtils::RenderText(
+        aString, aLength,
+        nsBidiPresUtils::BidiLevelFromStyle(aComputedStyle).Direction(),
+        presContext, *aContext, aContext->GetDrawTarget(), aFontMetrics,
+        aPoint.x, aPoint.y);
   }
   if (NS_FAILED(rv)) {
     aFontMetrics.SetTextRunRTL(false);

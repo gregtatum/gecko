@@ -14,6 +14,7 @@
 #include "mozilla/PresShell.h"
 #include "mozilla/layers/RenderRootStateManager.h"
 #include "mozilla/gfx/2D.h"
+#include "mozilla/intl/Bidi.h"
 #include "nsFontMetrics.h"
 #include "nsReadableUtils.h"
 #include "nsCOMPtr.h"
@@ -484,21 +485,22 @@ void nsTextBoxFrame::DrawText(gfxContext& aRenderingContext,
 
   if (mState & NS_FRAME_IS_BIDI) {
     presContext->SetBidiEnabled();
-    nsBidiLevel level = nsBidiPresUtils::BidiLevelFromStyle(Style());
+    mozilla::intl::Bidi::Direction direction =
+        nsBidiPresUtils::BidiLevelFromStyle(Style()).Direction();
     if (mAccessKeyInfo && mAccessKeyInfo->mAccesskeyIndex != kNotFound) {
       // We let the RenderText function calculate the mnemonic's
       // underline position for us.
       nsBidiPositionResolve posResolve;
       posResolve.logicalIndex = mAccessKeyInfo->mAccesskeyIndex;
       rv = nsBidiPresUtils::RenderText(
-          mCroppedTitle.get(), mCroppedTitle.Length(), level, presContext,
+          mCroppedTitle.get(), mCroppedTitle.Length(), direction, presContext,
           aRenderingContext, refDrawTarget, *fontMet, baselinePt.x,
           baselinePt.y, &posResolve, 1);
       mAccessKeyInfo->mBeforeWidth = posResolve.visualLeftTwips;
       mAccessKeyInfo->mAccessWidth = posResolve.visualWidth;
     } else {
       rv = nsBidiPresUtils::RenderText(
-          mCroppedTitle.get(), mCroppedTitle.Length(), level, presContext,
+          mCroppedTitle.get(), mCroppedTitle.Length(), direction, presContext,
           aRenderingContext, refDrawTarget, *fontMet, baselinePt.x,
           baselinePt.y);
     }

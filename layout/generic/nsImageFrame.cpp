@@ -1437,26 +1437,26 @@ void nsImageFrame::DisplayAltText(nsPresContext* aPresContext,
     nsresult rv = NS_ERROR_FAILURE;
 
     if (aPresContext->BidiEnabled()) {
-      nsBidiDirection dir;
+      mozilla::intl::Bidi::Direction dir;
       nscoord x, y;
 
       if (isVertical) {
         x = pt.x + maxDescent;
         if (wm.IsBidiLTR()) {
           y = aRect.y;
-          dir = NSBIDI_LTR;
+          dir = mozilla::intl::Bidi::Direction::LTR;
         } else {
           y = aRect.YMost() - strWidth;
-          dir = NSBIDI_RTL;
+          dir = mozilla::intl::Bidi::Direction::RTL;
         }
       } else {
         y = pt.y + maxAscent;
         if (wm.IsBidiLTR()) {
           x = aRect.x;
-          dir = NSBIDI_LTR;
+          dir = mozilla::intl::Bidi::Direction::LTR;
         } else {
           x = aRect.XMost() - strWidth;
-          dir = NSBIDI_RTL;
+          dir = mozilla::intl::Bidi::Direction::RTL;
         }
       }
 

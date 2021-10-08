@@ -9,11 +9,11 @@
 
 #include <ostream>
 
+#include "mozilla/intl/Bidi.h"
 #include "mozilla/ComputedStyle.h"
 #include "mozilla/EnumeratedRange.h"
 
 #include "nsRect.h"
-#include "nsBidiUtils.h"
 
 // It is the caller's responsibility to operate on logical-coordinate objects
 // with matched writing modes. Failure to do so will be a runtime bug; the
@@ -521,11 +521,9 @@ class WritingMode {
    * the rtl-ness doesn't match), then we correct the direction by flipping the
    * same bits that get flipped in the constructor's CSS 'direction'-based
    * chunk.
-   *
-   * XXX change uint8_t to UBiDiLevel after bug 924851
    */
-  void SetDirectionFromBidiLevel(uint8_t level) {
-    if (IS_LEVEL_RTL(level) == IsBidiLTR()) {
+  void SetDirectionFromBidiLevel(mozilla::intl::Bidi::EmbeddingLevel level) {
+    if (level.IsRTL() == IsBidiLTR()) {
       mWritingMode ^= StyleWritingMode::RTL | StyleWritingMode::INLINE_REVERSED;
     }
   }
@@ -613,19 +611,16 @@ class WritingMode {
 };
 
 inline std::ostream& operator<<(std::ostream& aStream, const WritingMode& aWM) {
-  return aStream << (aWM.IsVertical()
-                         ? aWM.IsVerticalLR() ? aWM.IsBidiLTR()
-                                                    ? aWM.IsSideways()
-                                                          ? "sw-lr-ltr"
-                                                          : "v-lr-ltr"
-                                                : aWM.IsSideways() ? "sw-lr-rtl"
-                                                                   : "v-lr-rtl"
-                           : aWM.IsBidiLTR()
-                               ? aWM.IsSideways() ? "sw-rl-ltr" : "v-rl-ltr"
-                           : aWM.IsSideways() ? "sw-rl-rtl"
-                                              : "v-rl-rtl"
-                     : aWM.IsBidiLTR() ? "h-ltr"
-                                       : "h-rtl");
+  return aStream
+         << (aWM.IsVertical()
+                 ? aWM.IsVerticalLR()
+                       ? aWM.IsBidiLTR()
+                             ? aWM.IsSideways() ? "sw-lr-ltr" : "v-lr-ltr"
+                             : aWM.IsSideways() ? "sw-lr-rtl" : "v-lr-rtl"
+                       : aWM.IsBidiLTR()
+                             ? aWM.IsSideways() ? "sw-rl-ltr" : "v-rl-ltr"
+                             : aWM.IsSideways() ? "sw-rl-rtl" : "v-rl-rtl"
+                 : aWM.IsBidiLTR() ? "h-ltr" : "h-rtl");
 }
 
 /**

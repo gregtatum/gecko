@@ -43,7 +43,6 @@
 #include "nsThreadUtils.h"
 #include "Units.h"
 
-class nsBidi;
 class nsIPrintSettings;
 class nsDocShell;
 class nsIDocShell;
@@ -90,6 +89,9 @@ namespace dom {
 class Document;
 class Element;
 }  // namespace dom
+namespace intl {
+class Bidi;
+}
 }  // namespace mozilla
 
 // supported values for cached integer pref types
@@ -1078,7 +1080,7 @@ class nsPresContext : public nsISupports, public mozilla::SupportsWeakPtr {
     mHasWarnedAboutTooLargeDashedOrDottedRadius = true;
   }
 
-  nsBidi& GetBidiEngine();
+  mozilla::intl::Bidi& GetBidiEngine();
 
   gfxFontFeatureValueSet* GetFontFeatureValuesLookup() const {
     return mFontFeatureValuesLookup;
@@ -1108,6 +1110,7 @@ class nsPresContext : public nsISupports, public mozilla::SupportsWeakPtr {
   void UpdateCharSet(NotNull<const Encoding*> aCharSet);
 
   void DoForceReflowForFontInfoUpdateFromStyle();
+
  public:
   // Used by the PresShell to force a reflow when some aspect of font info
   // has been updated, potentially affecting font selection and layout.
@@ -1205,7 +1208,7 @@ class nsPresContext : public nsISupports, public mozilla::SupportsWeakPtr {
   nsCOMPtr<nsITheme> mTheme;
   nsCOMPtr<nsIPrintSettings> mPrintSettings;
 
-  mozilla::UniquePtr<nsBidi> mBidiEngine;
+  mozilla::UniquePtr<mozilla::intl::Bidi> mBidiEngine;
 
   AutoTArray<TransactionInvalidations, 4> mTransactions;
 

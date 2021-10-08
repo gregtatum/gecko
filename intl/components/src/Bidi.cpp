@@ -6,6 +6,8 @@
 #include "mozilla/Casting.h"
 #include "mozilla/intl/ICU4CGlue.h"
 
+#include "unicode/ubidi.h"
+
 namespace mozilla::intl {
 
 Bidi::Bidi() { mBidi = ubidi_open(); }
@@ -27,8 +29,72 @@ ICUResult Bidi::SetParagraph(Span<const char16_t> aParagraph,
   return ToICUResult(status);
 }
 
-Bidi::EmbeddingLevel Bidi::GetParagraphLevel() const {
-  return ubidi_getParaLevel(mBidi.GetConst());
+bool Bidi::EmbeddingLevel::IsDefaultLTR() const {
+  return mValue == UBIDI_DEFAULT_LTR;
+};
+
+bool Bidi::EmbeddingLevel::IsDefaultRTL() const {
+  return mValue == UBIDI_DEFAULT_RTL;
+};
+
+bool Bidi::EmbeddingLevel::IsLTR() const { return mValue & 0x1; };
+
+bool Bidi::EmbeddingLevel::IsRTL() const { return (mValue & 0x1) == 0; };
+
+bool Bidi::EmbeddingLevel::IsPseudoValue() const {
+  return mValue > UBIDI_MAX_EXPLICIT_LEVEL;
+};
+
+bool Bidi::EmbeddingLevel::IsSameDirection(Bidi::EmbeddingLevel aOther) const {
+  return (((mValue ^ aOther.mValue) & 1) == 0);
+}
+
+/* static */
+Bidi::EmbeddingLevel Bidi::EmbeddingLevel::LTR() { return EmbeddingLevel(0); };
+
+/* static */
+Bidi::EmbeddingLevel Bidi::EmbeddingLevel::RTL() { return EmbeddingLevel(1); };
+
+/* static */
+Bidi::EmbeddingLevel Bidi::EmbeddingLevel::DefaultLTR() {
+  return EmbeddingLevel(UBIDI_DEFAULT_LTR);
+};
+
+/* static */
+Bidi::EmbeddingLevel Bidi::EmbeddingLevel::DefaultRTL() {
+  return EmbeddingLevel(UBIDI_DEFAULT_RTL);
+};
+
+/* static */
+Bidi::EmbeddingLevel Bidi::EmbeddingLevel::PseudoValue() {
+  // Arbitrarily choose UBIDI_DEFAULT_RTL which is 0xff.
+  return EmbeddingLevel(UBIDI_DEFAULT_RTL);
+};
+
+/* static */
+Bidi::EmbeddingLevel Bidi::EmbeddingLevel::FromExplicitValue(uint8_t aValue) {
+  MOZ_ASSERT(aValue <= UBIDI_MAX_EXPLICIT_LEVEL);
+  return EmbeddingLevel(aValue);
+};
+
+uint8_t Bidi::EmbeddingLevel::GetExplicitValue() const {
+  MOZ_ASSERT(!IsPseudoValue());
+  return mValue;
+}
+
+Bidi::Direction Bidi::EmbeddingLevel::Direction() const {
+  return mValue & 0x1 ? Direction::RTL : Direction::LTR;
+};
+
+Maybe<Bidi::EmbeddingLevel> Bidi::EmbeddingLevel::TryIncrement() const {
+  if (mValue >= UBIDI_MAX_EXPLICIT_LEVEL) {
+    return Nothing();
+  }
+  return Some(Bidi::EmbeddingLevel(mValue + 1));
+}
+
+Bidi::EmbeddingLevel Bidi::GetParagraphEmbeddingLevel() const {
+  return Bidi::EmbeddingLevel(ubidi_getParaLevel(mBidi.GetConst()));
 }
 
 Bidi::ParagraphDirection Bidi::GetParagraphDirection() const {
@@ -52,7 +118,8 @@ Result<Maybe<Bidi::LogicalRun>, ICUError> Bidi::GetNextLogicalRun() {
 
   UErrorCode status = U_ZERO_ERROR;
   if (!mLevels || mLogicalRunCharIndex == 0) {
-    mLevels = ubidi_getLevels(mBidi.GetMut(), &status);
+    mLevels = reinterpret_cast<const EmbeddingLevel*>(
+        ubidi_getLevels(mBidi.GetMut(), &status));
     if (U_FAILURE(status)) {
       mLevels = nullptr;
       return Err(ToICUError(status));
@@ -79,7 +146,7 @@ Result<Maybe<Bidi::LogicalRun>, ICUError> Bidi::GetNextLogicalRun() {
 
   size_t nextRunCharIndex = mLogicalRunCharIndex + 1;
   for (; nextRunCharIndex < mParagraph.Length(); nextRunCharIndex++) {
-    if (mLevels[nextRunCharIndex] != embeddingLevel) {
+    if (mLevels[nextRunCharIndex].mValue != embeddingLevel.mValue) {
       break;
     }
   }
@@ -91,6 +158,14 @@ Result<Maybe<Bidi::LogicalRun>, ICUError> Bidi::GetNextLogicalRun() {
   mLogicalRunCharIndex = nextRunCharIndex;
 
   return Some(Bidi::LogicalRun{string, embeddingLevel});
+}
+
+/* static */
+void ReorderVisual(const Bidi::EmbeddingLevel* aLevels, int32_t aLength,
+                   int32_t* aIndexMap) {
+  static_assert(sizeof(uint8_t) == sizeof(Bidi::EmbeddingLevel));
+  ubidi_reorderVisual(reinterpret_cast<const UBiDiLevel*>(aLevels), aLength,
+                      aIndexMap);
 }
 
 static Bidi::Direction ToBidiDirection(UBiDiDirection aDirection) {
@@ -110,7 +185,8 @@ Result<Bidi::VisualRunIter, ICUError> Bidi::GetVisualRuns(
   MOZ_TRY(SetParagraph(aParagraph, aDefaultDirection));
 
   UErrorCode status = U_ZERO_ERROR;
-  mLevels = ubidi_getLevels(mBidi.GetMut(), &status);
+  mLevels = reinterpret_cast<const EmbeddingLevel*>(
+      ubidi_getLevels(mBidi.GetMut(), &status));
   if (U_FAILURE(status)) {
     mLevels = nullptr;
     return Err(ToICUError(status));
