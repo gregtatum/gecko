@@ -6,18 +6,20 @@
 /* Ensures that the companion can be opened. */
 add_task(async function test_open_companion() {
   let helper = new CompanionHelper();
-  await helper.closeCompanion();
+  helper.closeCompanion();
+
+  let companionBrowser = document.getElementById("companion-browser");
 
   ok(
-    !document.getElementById("companion-browser"),
-    "There's no companion browser"
+    BrowserTestUtils.is_hidden(companionBrowser),
+    "Companion browser should be hidden"
   );
 
-  await helper.openCompanion();
+  helper.openCompanion();
 
   ok(
-    document.getElementById("companion-browser"),
-    "The companion has been opened"
+    BrowserTestUtils.is_visible(companionBrowser),
+    "Companion browser should be visible"
   );
 
   info("waiting for the companion to initialize");

@@ -19,12 +19,6 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/AddonManager.jsm"
 );
 
-ChromeUtils.defineModuleGetter(
-  this,
-  "CompanionService",
-  "resource:///modules/CompanionService.jsm"
-);
-
 const SIMPLETEST_OVERRIDES = [
   "ok",
   "record",
@@ -862,6 +856,13 @@ Tester.prototype = {
             }
           }
 
+          if (AppConstants.PINEBUILD) {
+            // Remove the companion browser element. This will prevent false
+            // positives for tests that were the last to touch the companion.
+            // They will thus not be blamed for leaking a document.
+            document.getElementById("companion-browser").remove();
+          }
+
           // Destroy BackgroundPageThumbs resources.
           let { BackgroundPageThumbs } = ChromeUtils.import(
             "resource://gre/modules/BackgroundPageThumbs.jsm"
@@ -871,10 +872,6 @@ Tester.prototype = {
           if (window.gBrowser) {
             NewTabPagePreloading.removePreloadedBrowser(window);
           }
-        }
-
-        if (AppConstants.PINEBUILD) {
-          CompanionService.closeCompanion();
         }
 
         // Schedule GC and CC runs before finishing in order to detect

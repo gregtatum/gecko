@@ -11,10 +11,6 @@
   --companion-background: var(--in-content-page-background);;
 }
 
-:root:not([companion]) #companion-box {
-  display: none;
-}
-
 :root:not([chromehidden~="toolbar"]) {
   /* Make sure we have enough space for 4 buttons (sidebar, back,
      reload, copy), the river at max-width including margins,
@@ -41,10 +37,6 @@
 [flow-reset] #pinebuild-copy-button,
 [flow-reset] #session-setaside-button {
   visibility: hidden;
-}
-
-:root[companion][inDOMFullscreen] #companion-box {
-  visibility: collapse;
 }
 
 #nav-bar pinned-views {
@@ -121,16 +113,6 @@
 
 #navigator-toolbox {
   border-bottom: 0px none;
-}
-
-:root[companion] #companion-box {
-  width: var(--companion-width);
-  min-width: var(--companion-min-width);
-  max-width: var(--companion-max-width);
-}
-
-:root[companion] #companion-box {
-  border-inline-end: 1px solid var(--chrome-content-separator-color);
 }
 
 #pinebuild-mac-buttonbox                {

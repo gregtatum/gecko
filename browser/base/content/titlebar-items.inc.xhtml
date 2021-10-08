@@ -28,7 +28,7 @@
 #if defined(XP_MACOSX) && defined(PINEBUILD)
   <toolbarbutton
     id="companion-sidebar-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
-    oncommand="CompanionService.toggleCompanion()"
+    oncommand="document.getElementById('companion-box').toggleVisible();"
     onclick="checkForMiddleClick(this, event);"/>
 #endif
 </hbox>

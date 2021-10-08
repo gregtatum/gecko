@@ -18,8 +18,7 @@ add_task(async function testPocketCardsDisplay() {
   });
 
   await CompanionHelper.whenReady(async helper => {
-    await helper.closeCompanion();
-    await helper.openCompanion();
+    await helper.reload();
 
     await helper.runCompanionTask(async () => {
       // switch to the "Browse" view in the companion

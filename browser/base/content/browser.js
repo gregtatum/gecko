@@ -1734,7 +1734,7 @@ var gBrowserInit = {
     gBrowser.init();
 
     if (AppConstants.PINEBUILD) {
-      CompanionService.addBrowserWindow(window);
+      CompanionService.init();
       gGlobalHistory.addEventListener("ViewChanged", UpdateBackForwardCommands);
       gGlobalHistory.addEventListener("ViewAdded", UpdateBackForwardCommands);
       gGlobalHistory.addEventListener("ViewRemoved", UpdateBackForwardCommands);

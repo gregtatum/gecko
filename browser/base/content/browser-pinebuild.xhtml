@@ -31,6 +31,7 @@
 <?xml-stylesheet href="chrome://browser/skin/places/tree-icons.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/skin/places/editBookmark.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/content/companion/components/active-view-manager.css" type="text/css"?>
+<?xml-stylesheet href="chrome://browser/content/companion/components/companion-manager.css" type="text/css"?>
 
 <html id="main-window"
         xmlns:html="http://www.w3.org/1999/xhtml"
@@ -122,6 +123,7 @@
     gBrowserInit.onDOMContentLoaded.bind(gBrowserInit), { once: true });
 </script>
 <script type="module" src="chrome://browser/content/companion/components/active-view-manager.js"></script>
+<script type="module" src="chrome://browser/content/companion/components/companion-manager.js"></script>
 <script type="module" src="chrome://browser/content/companion/components/river.js"></script>
 <script type="module" src="chrome://browser/content/companion/components/view-group.js"></script>
 <script type="module" src="chrome://browser/content/companion/components/pinned-views.js"></script>
@@ -206,7 +208,8 @@
 #include navigator-toolbox.inc.xhtml
 
   <hbox id="browser-outer" flex="1">
-  <vbox id="companion-box"/>
+  <companion-manager id="companion-box"/>
+
   <splitter class="sidebar-splitter"/>
   <vbox flex="1">
     <html:template id="tab-notification-deck-template">

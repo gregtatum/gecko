@@ -11,44 +11,28 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
-  CompanionService: "resource:///modules/CompanionService.jsm",
-  Services: "resource://gre/modules/Services.jsm",
   SessionManager: "resource:///modules/SessionManager.jsm",
 });
 
 class FlowResetParent extends JSWindowActorParent {
   async receiveMessage(message) {
+    let window = this.browsingContext.topChromeWindow;
     switch (message.name) {
       case "ViewCompanionBrowseTab":
-        let onOpen = () => {
-          let browser = this.browsingContext.topChromeWindow.document.getElementById(
-            "companion-browser"
-          );
-          let actor = browser?.browsingContext?.currentWindowGlobal?.getActor(
-            "Companion"
-          );
-          if (actor) {
-            actor.viewTab("browse");
-          }
-        };
-        if (!CompanionService.isOpen) {
-          let onCompanionOpen = win => {
-            if (win !== this.browsingContext.topChromeWindow) {
-              return;
-            }
-
-            Services.obs.removeObserver(onCompanionOpen, "companion-open");
-            onOpen();
-          };
-
-          Services.obs.addObserver(onCompanionOpen, "companion-open");
-          CompanionService.openCompanion();
-        } else {
-          onOpen();
+        let companion = window.document.getElementById("companion-box");
+        if (!companion.isOpen) {
+          companion.toggleVisible();
+        }
+        let browser = window.document.getElementById("companion-browser");
+        let actor = browser?.browsingContext?.currentWindowGlobal?.getActor(
+          "Companion"
+        );
+        if (actor) {
+          actor.viewTab("browse");
         }
         break;
       case "RestoreLastSession":
-        SessionManager.restoreLastSession(this.browsingContext.topChromeWindow);
+        SessionManager.restoreLastSession(window);
     }
   }
 }

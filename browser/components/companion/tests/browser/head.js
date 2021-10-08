@@ -13,56 +13,52 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   Snapshots: "resource:///modules/Snapshots.jsm",
 });
 
+registerCleanupFunction(async () => {
+  // Reload the companion in the main window, in case tests have been using that.
+  let helper = new CompanionHelper(window);
+  await helper.reload();
+});
+
 class CompanionHelper {
   static async whenReady(taskFn, browserWindow = window) {
     let helper = new CompanionHelper(browserWindow);
-    await helper.openCompanion();
+    helper.openCompanion();
     await helper.companionReady;
 
     await taskFn(helper);
 
-    await helper.closeCompanion();
+    helper.closeCompanion();
   }
 
   constructor(browserWindow = window) {
     this.browserWindow = browserWindow;
   }
 
-  async openCompanion() {
-    if (CompanionService.isOpen) {
+  openCompanion() {
+    let companionBox = this.companionBox;
+    if (companionBox.isOpen) {
       return;
     }
-    let companionInitializedPromise;
-    let browserAdded = BrowserTestUtils.waitForMutationCondition(
-      this.companionBox,
-      { childList: true },
-      () => {
-        if (!this.browser) {
-          return false;
-        }
-        companionInitializedPromise = BrowserTestUtils.waitForContentEvent(
-          this.browser,
-          "CompanionInit"
-        );
-        return true;
-      }
-    );
-    CompanionService.openCompanion();
-    await browserAdded;
-    await companionInitializedPromise;
+
+    companionBox.toggleVisible();
   }
 
-  async closeCompanion() {
-    if (!CompanionService.isOpen) {
+  closeCompanion() {
+    let companionBox = this.companionBox;
+    if (!companionBox.isOpen) {
       return;
     }
-    let { browser, companionBox } = this;
-    CompanionService.closeCompanion();
-    await BrowserTestUtils.waitForMutationCondition(
-      companionBox,
-      { childList: true },
-      () => !browser.isConnected
+    companionBox.toggleVisible();
+  }
+
+  async reload() {
+    this.browser.reload();
+    await BrowserTestUtils.browserLoaded(
+      this.browser,
+      false,
+      "chrome://browser/content/companion/companion.xhtml"
     );
+    await this.companionReady;
   }
 
   runCompanionTask(taskFn, args = []) {
@@ -105,7 +101,9 @@ class CompanionHelper {
   }
 
   get companionBox() {
-    return this.browserWindow.document.getElementById("companion-box");
+    return this.browserWindow.document.getElementsByTagName(
+      "companion-manager"
+    )[0];
   }
 
   get companionToggleButton() {

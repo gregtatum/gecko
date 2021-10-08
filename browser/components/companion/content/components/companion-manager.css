@@ -1,0 +1,21 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+:root:not([companion]) companion-manager {
+  display: none;
+}
+
+:root[companion][inDOMFullscreen] companion-manager {
+  visibility: collapse;
+}
+
+:root[companion] companion-manager {
+  width: var(--companion-width);
+  min-width: var(--companion-min-width);
+  max-width: var(--companion-max-width);
+}
+
+:root[companion] companion-manager {
+  border-inline-end: 1px solid var(--chrome-content-separator-color);
+}
