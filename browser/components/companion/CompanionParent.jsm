@@ -674,6 +674,11 @@ class CompanionParent extends JSWindowActorParent {
   async receiveMessage(message) {
     switch (message.name) {
       case "Companion:Subscribe": {
+        // If this doesn't exist, the companion has been closed already.
+        // Return early to avoid test failures.
+        if (!this.browsingContext.top.embedderElement?.ownerGlobal) {
+          return null;
+        }
         let tabs = BrowserWindowTracker.orderedWindows.flatMap(w =>
           w.gBrowser.tabs.map(t => this.getTabData(t))
         );
