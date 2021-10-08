@@ -134,7 +134,7 @@ class AboutLoginsChild extends JSWindowActorChild {
         break;
       }
       case "AboutLoginsCopyLoginDetail": {
-        ClipboardHelper.copyString(event.detail);
+        ClipboardHelper.copyString(event.detail, ClipboardHelper.Sensitive);
         break;
       }
       case "AboutLoginsCreateLogin": {
