@@ -309,14 +309,22 @@ const SpecialMessageActions = {
           topWindow.BrowserHome();
         }
         break;
-      case "HIDE_COMPANION_UI":
-        CompanionService.closeCompanion();
+      case "HIDE_COMPANION_UI": {
+        let companionBox = window.document.getElementById("companion-box");
+        if (companionBox.isOpen) {
+          companionBox.toggleVisible();
+        }
         CompanionService.hideCompanionToolbar(window);
         break;
-      case "SHOW_COMPANION_UI":
-        CompanionService.openCompanion();
+      }
+      case "SHOW_COMPANION_UI": {
+        let companionBox = window.document.getElementById("companion-box");
+        if (!companionBox.isOpen) {
+          companionBox.toggleVisible();
+        }
         CompanionService.showCompanionToolbar(window);
         break;
+      }
       case "ENABLE_TOTAL_COOKIE_PROTECTION":
         Services.prefs.setBoolPref(
           "privacy.restrict3rdpartystorage.rollout.enabledByDefault",
