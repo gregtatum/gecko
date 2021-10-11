@@ -36,6 +36,8 @@ s3_bucket_paths:
     by-platform:
         .*devedition.*:
             - pub/devedition/candidates
+        .*pinebuild.*:
+            - pub/pinebuild/candidates
         default:
             - pub/firefox/candidates
 default_locales:
@@ -50,13 +52,16 @@ platform_names:
             linux-devedition: 'linux-i686'
             linux64-shippable: 'linux-x86_64'
             linux64-devedition: 'linux-x86_64'
+            linux64-pinebuild: 'linux-x86_64'
             linux64-asan-reporter-shippable: 'linux-x86_64-asan-reporter'
             macosx64-shippable: 'mac'
             macosx64-devedition: 'mac'
+            macosx64-pinebuild: 'mac'
             win32-shippable: 'win32'
             win32-devedition: 'win32'
             win64-shippable: 'win64'
             win64-devedition: 'win64'
+            win64-pinebuild: 'win64'
             win64-aarch64-shippable: 'win64-aarch64'
             win64-aarch64-devedition: 'win64-aarch64'
             win64-asan-reporter-shippable: 'win64-asan-reporter'
