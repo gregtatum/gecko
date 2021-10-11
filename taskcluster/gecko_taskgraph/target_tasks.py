@@ -962,6 +962,23 @@ def target_tasks_daily_releases(full_task_graph, parameters, graph_config):
     return [l for l, t in full_task_graph.tasks.items() if filter(t)]
 
 
+@_target_task("nightly_pinebuild")
+def target_tasks_nightly_pinebuild(full_task_graph, parameters, graph_config):
+    indep_filter = make_desktop_nightly_filter({None})
+    platform_filter = make_desktop_nightly_filter(
+        {"macosx64-pinebuild", "win64-pinebuild"}
+    )
+
+    def filter(task):
+        if task.attributes.get("shipping_product") == "pinebuild" and indep_filter(
+            task, parameters
+        ):
+            return True
+        return platform_filter(task, parameters)
+
+    return [l for l, t in full_task_graph.tasks.items() if filter(t)]
+
+
 @_target_task("nightly_desktop")
 def target_tasks_nightly_desktop(full_task_graph, parameters, graph_config):
     """Select the set of tasks required for a nightly build of linux, mac,
