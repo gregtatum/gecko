@@ -90,6 +90,17 @@ jobs:
           - mozilla-central
       when: []  # never (hook only)
 
+    - name: nightly-pinebuild
+      job:
+          type: decision-task
+          treeherder-symbol: Npi
+          target-tasks-method: nightly_pinebuild
+          include-push-tasks: true
+      run-on-projects:
+          - pine
+          - maple
+      when: []  # hook only
+
     - name: ship-geckoview
       job:
           type: decision-task
