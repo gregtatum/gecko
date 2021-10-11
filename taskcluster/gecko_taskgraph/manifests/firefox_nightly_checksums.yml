@@ -33,6 +33,10 @@ platform_names:
             win64-aarch64-shippable: 'win64-aarch64'
             win64-aarch64-devedition: 'win64-aarch64'
             win64-asan-reporter-shippable: 'win64-asan-reporter'
+    product_platform:
+        by-platform:
+            .*-pinebuild: pinebuild
+            default: firefox
 
 # A default entry, which the mappings below extend and override.
 # Final 'destinations' will be the product of:
@@ -56,5 +60,5 @@ mapping:
     target.checksums:
         <<: *default
         description: "Checksums file containing size, hash, sha algorithm and filename"
-        pretty_name: firefox-${version}.${locale}.${filename_platform}.checksums
-        checksums_path: firefox-${version}.${locale}.${filename_platform}.checksums
+        pretty_name: ${product_platform}-${version}.${locale}.${filename_platform}.checksums
+        checksums_path: ${product_platform}-${version}.${locale}.${filename_platform}.checksums
