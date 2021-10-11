@@ -91,6 +91,23 @@ jobs:
         treeherder:
             platform: macosx64-shippable/opt
 
+    macosx64-pinebuild:
+        dependencies:
+            repackage: repackage-macosx64-pinebuild/opt
+        run:
+            using: mach
+            python-version: 3
+        extra-config:
+            upstream_kind: repackage
+            upstream_artifact: target.dmg
+            binary: Contents/MacOS/firefox
+        worker-type: t-osx-1015-r8
+        shipping-product: pinebuild
+        attributes:
+            build_platform: macosx64-pinebuild
+        treeherder:
+            platform: macosx64-pinebuild/opt
+
     win32:
         dependencies:
             repackage-signing: repackage-signing-win32-shippable/opt
@@ -124,3 +141,20 @@ jobs:
             build_platform: win64-shippable
         treeherder:
             platform: windows2012-64-shippable/opt
+
+    win64-pinebuild:
+        dependencies:
+            repackage-signing: repackage-signing-win64-pinebuild/opt
+        run:
+            using: mach
+            python-version: 3
+        extra-config:
+            upstream_kind: repackage-signing
+            upstream_artifact: target.installer.exe
+            binary: core/firefox.exe
+        worker-type: t-win10-64-source
+        shipping-product: pinebuild
+        attributes:
+            build_platform: win64-pinebuild
+        treeherder:
+            platform: windows2012-64-pinebuild/opt
