@@ -27,6 +27,8 @@ only-for-build-platforms:
     - win64-aarch64-devedition/opt
     - linux64-asan-reporter-shippable/opt
     - win64-asan-reporter-shippable/opt
+    - macosx64-pinebuild/opt
+    - win64-pinebuild/opt
 
 job-template:
     shipping-phase: promote

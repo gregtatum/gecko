@@ -12,8 +12,10 @@ from gecko_taskgraph.util.declarative_artifacts import get_geckoview_upstream_ar
 LANGPACK_SIGN_PLATFORMS = {  # set
     "linux64-shippable",
     "linux64-devedition",
+    "linux64-pinebuild",
     "macosx64-shippable",
     "macosx64-devedition",
+    "macosx64-pinebuild",
 }
 
 

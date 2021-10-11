@@ -33,7 +33,11 @@
 # `from_buildid`          -- flag needed downstream in beetmover jobs to reckon the balrog manifest
 
 s3_bucket_paths:
-    - pub/firefox/nightly
+    by-platform:
+        .*pinebuild.*:
+            - pub/pinebuild/nightly
+        default:
+            - pub/firefox/nightly
 default_locales:
     - en-US
 tasktype_map:
@@ -53,13 +57,16 @@ platform_names:
             linux-devedition: 'linux-i686'
             linux64-shippable: 'linux-x86_64'
             linux64-devedition: 'linux-x86_64'
+            linux64-pinebuild: 'linux-x86_64'
             linux64-asan-reporter-shippable: 'linux-x86_64-asan-reporter'
             macosx64-shippable: 'mac'
             macosx64-devedition: 'mac'
+            macosx64-pinebuild: 'mac'
             win32-shippable: 'win32'
             win32-devedition: 'win32'
             win64-shippable: 'win64'
             win64-devedition: 'win64'
+            win64-pinebuild: 'win64'
             win64-aarch64-shippable: 'win64-aarch64'
             win64-aarch64-devedition: 'win64-aarch64'
             win64-asan-reporter-shippable: 'win64-asan-reporter'
@@ -70,12 +77,15 @@ platform_names:
             linux64-asan-reporter-shippable: 'linux64-asan-reporter'
             linux64-shippable: 'linux64'
             linux64-devedition: 'linux64'
+            linux64-pinebuild: 'linux64'
             macosx64-shippable: 'macosx64'
             macosx64-devedition: 'macosx64'
+            macosx64-pinebuild: 'macosx64'
             win32-shippable: 'win32'
             win32-devedition: 'win32'
             win64-shippable: 'win64'
             win64-devedition: 'win64'
+            win64-pinebuild: 'win64'
             win64-aarch64-shippable: 'win64-aarch64'
             win64-aarch64-devedition: 'win64-aarch64'
             win64-asan-reporter-shippable: 'win64-asan-reporter'
@@ -231,6 +241,8 @@ mapping:
             - win64-aarch64-shippable
             - win64-asan-reporter-shippable
             - linux64-asan-reporter-shippable
+            - macosx64-pinebuild
+            - win64-pinebuild
         pretty_name: firefox-${version}.${locale}.langpack.xpi
         checksums_path: firefox-${version}.${locale}.langpack.xpi
         destinations:
@@ -250,6 +262,7 @@ mapping:
             - win64-shippable
             - win64-aarch64-shippable
             - win64-asan-reporter-shippable
+            - win64-pinebuild
         destinations:
             - ${year}/${month}/${upload_date}-${branch}/mar-tools/${stage_platform}
     mbsdiff:
@@ -263,6 +276,7 @@ mapping:
             - win64-shippable
             - win64-aarch64-shippable
             - win64-asan-reporter-shippable
+            - win64-pinebuild
         destinations:
             - ${year}/${month}/${upload_date}-${branch}/mar-tools/${stage_platform}
     target.tar.bz2:
@@ -309,6 +323,7 @@ mapping:
             - signing
         only_for_platforms:
             - macosx64-shippable
+            - macosx64-pinebuild
         pretty_name: firefox-${version}.${locale}.${filename_platform}.pkg
         checksums_path: firefox-${version}.${locale}.${filename_platform}.pkg
         destinations:
@@ -325,6 +340,7 @@ mapping:
             - repackage
         only_for_platforms:
             - macosx64-shippable
+            - macosx64-pinebuild
         pretty_name: firefox-${version}.${locale}.${filename_platform}.dmg
         checksums_path: firefox-${version}.${locale}.${filename_platform}.dmg
         destinations:
@@ -344,6 +360,7 @@ mapping:
             - win32-shippable
             - win64-aarch64-shippable
             - win64-asan-reporter-shippable
+            - win64-pinebuild
         pretty_name: firefox-${version}.${locale}.${filename_platform}.zip
         checksums_path: firefox-${version}.${locale}.${filename_platform}.zip
     target.installer.exe:
@@ -357,6 +374,7 @@ mapping:
             - win32-shippable
             - win64-aarch64-shippable
             - win64-asan-reporter-shippable
+            - win64-pinebuild
         pretty_name: firefox-${version}.${locale}.${filename_platform}.installer.exe
         checksums_path: firefox-${version}.${locale}.${filename_platform}.installer.exe
         destinations:
@@ -390,6 +408,7 @@ mapping:
         only_for_platforms:
             - win64-shippable
             - win32-shippable
+            - win64-pinebuild
         pretty_name: firefox-${version}.${locale}.${filename_platform}.installer.msi
         checksums_path: firefox-${version}.${locale}.${filename_platform}.installer.msi
         destinations:

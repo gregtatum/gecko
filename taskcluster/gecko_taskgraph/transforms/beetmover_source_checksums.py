@@ -60,6 +60,8 @@ def make_beetmover_checksums_description(config, jobs):
         extra = {}
         if "devedition" in build_platform:
             extra["product"] = "devedition"
+        elif "pinebuild" in build_platform:
+            extra["product"] = "pinebuild"
         else:
             extra["product"] = "firefox"
 
