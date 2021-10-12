@@ -72,7 +72,6 @@ add_task(async function setup() {
 
     Assert.ok(isHidden(win, "pinebuild-back-button"), "Back button hidden");
     Assert.ok(isHidden(win, "pinebuild-reload-button"), "Reload button hidden");
-    Assert.ok(isHidden(win, "pinebuild-copy-button"), "Copy button hidden");
     Assert.ok(
       isHidden(win, "session-setaside-button"),
       "Setaside button hidden"
@@ -91,7 +90,6 @@ add_task(async function setup() {
     );
     Assert.ok(!isHidden(win, "pinebuild-back-button"), "Back button shown");
     Assert.ok(!isHidden(win, "pinebuild-reload-button"), "Reload button shown");
-    Assert.ok(!isHidden(win, "pinebuild-copy-button"), "Copy button shown");
     Assert.ok(
       !isHidden(win, "session-setaside-button"),
       "Setaside button shown"
