@@ -4,15 +4,12 @@
 
 /* global MozXULElement, Services */
 
-const { XPCOMUtils } = ChromeUtils.import(
-  "resource://gre/modules/XPCOMUtils.jsm"
-);
-
 /**
  * CompanionManager looks after the display of the companion sidebar.
  */
 class CompanionManager extends MozXULElement {
   #companionBox;
+  #isOpen = true;
 
   static get markup() {
     return `
@@ -40,19 +37,11 @@ class CompanionManager extends MozXULElement {
   constructor() {
     super();
 
-    XPCOMUtils.defineLazyPreferenceGetter(
-      this,
-      "isOpen",
-      "companion.open",
-      false,
-      this.#onPreferenceChange.bind(this)
-    );
-
     this.destroy = this.destroy.bind(this);
   }
 
   connectedCallback() {
-    this.#onPreferenceChange(null, null, this.isOpen);
+    this.#updateVisibility();
 
     this.appendChild(this.constructor.fragment);
 
@@ -69,12 +58,16 @@ class CompanionManager extends MozXULElement {
 
   destroy() {
     window.removeEventListener("unload", this.destroy);
-    let xulStore = Services.xulStore;
-    xulStore.persist(this, "width");
+    Services.xulStore.persist(this, "width");
+  }
+
+  get isOpen() {
+    return this.#isOpen;
   }
 
   toggleVisible() {
-    Services.prefs.setBoolPref("companion.open", !this.isOpen);
+    this.#isOpen = !this.#isOpen;
+    this.#updateVisibility();
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -86,8 +79,8 @@ class CompanionManager extends MozXULElement {
     }
   }
 
-  #onPreferenceChange(pref, value, newValue) {
-    if (newValue) {
+  #updateVisibility() {
+    if (this.#isOpen) {
       document.documentElement.setAttribute("companion", "true");
       document.documentElement.style.setProperty(
         "--companion-width",
@@ -100,4 +93,5 @@ class CompanionManager extends MozXULElement {
     }
   }
 }
+
 customElements.define("companion-manager", CompanionManager);

@@ -40,7 +40,12 @@ class CompanionHelper {
       return;
     }
 
-    companionBox.toggleVisible();
+    // We intentionally click the button here rather than call
+    // companionBox.toggleVisible. This is so that we can test that the button
+    // is working properly.
+    this.browserWindow.document
+      .getElementById("companion-sidebar-button")
+      .click();
   }
 
   closeCompanion() {
@@ -48,7 +53,13 @@ class CompanionHelper {
     if (!companionBox.isOpen) {
       return;
     }
-    companionBox.toggleVisible();
+
+    // We intentionally click the button here rather than call
+    // companionBox.toggleVisible. This is so that we can test that the button
+    // is working properly.
+    this.browserWindow.document
+      .getElementById("companion-sidebar-button")
+      .click();
   }
 
   async reload() {

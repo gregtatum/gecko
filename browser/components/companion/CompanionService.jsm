@@ -20,8 +20,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   Services: "resource://gre/modules/Services.jsm",
 });
 
-const COMPANION_OPEN_PREF = "companion.open";
-
 const CompanionService = {
   init() {
     if (this.inited) {
@@ -29,7 +27,21 @@ const CompanionService = {
     }
     this.inited = true;
 
-    Services.prefs.setBoolPref(COMPANION_OPEN_PREF, true);
+    let registrar = Components.manager.QueryInterface(Ci.nsIComponentRegistrar);
+    registrar.registerFactory(
+      ChromeURLBlockPolicy.classID,
+      ChromeURLBlockPolicy.classDescription,
+      ChromeURLBlockPolicy.contractID,
+      ChromeURLBlockPolicy
+    );
+
+    Services.catMan.addCategoryEntry(
+      "content-policy",
+      ChromeURLBlockPolicy.contractID,
+      ChromeURLBlockPolicy.contractID,
+      false,
+      true
+    );
   },
 
   hideCompanionToolbar(aWindow) {
@@ -78,19 +90,3 @@ let ChromeURLBlockPolicy = {
     return this.QueryInterface(iid);
   },
 };
-
-let registrar = Components.manager.QueryInterface(Ci.nsIComponentRegistrar);
-registrar.registerFactory(
-  ChromeURLBlockPolicy.classID,
-  ChromeURLBlockPolicy.classDescription,
-  ChromeURLBlockPolicy.contractID,
-  ChromeURLBlockPolicy
-);
-
-Services.catMan.addCategoryEntry(
-  "content-policy",
-  ChromeURLBlockPolicy.contractID,
-  ChromeURLBlockPolicy.contractID,
-  false,
-  true
-);
