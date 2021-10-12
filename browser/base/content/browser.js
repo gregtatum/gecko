@@ -28,7 +28,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   CFRPageActions: "resource://activity-stream/lib/CFRPageActions.jsm",
   Color: "resource://gre/modules/Color.jsm",
-  CompanionService: "resource:///modules/CompanionService.jsm",
   GlobalHistory: "resource:///modules/GlobalHistory.jsm",
   ContextualIdentityService:
     "resource://gre/modules/ContextualIdentityService.jsm",
@@ -1734,7 +1733,6 @@ var gBrowserInit = {
     gBrowser.init();
 
     if (AppConstants.PINEBUILD) {
-      CompanionService.init();
       gGlobalHistory.addEventListener("ViewChanged", UpdateBackForwardCommands);
       gGlobalHistory.addEventListener("ViewAdded", UpdateBackForwardCommands);
       gGlobalHistory.addEventListener("ViewRemoved", UpdateBackForwardCommands);

@@ -11,7 +11,6 @@ DIRS += [
 JAR_MANIFESTS += ["jar.mn"]
 
 EXTRA_JS_MODULES += [
-    "CompanionService.jsm",
     "GlobalHistory.jsm",
     "LaunchOnOSLogin.jsm",
     "OAuth2.jsm",

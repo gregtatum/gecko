@@ -6,7 +6,9 @@ toolkit.jar:
 % content mozapps %content/mozapps/
 #ifndef MOZ_FENNEC
   content/mozapps/extensions/OpenH264-license.txt               (content/OpenH264-license.txt)
+#ifndef PINEBUILD
   content/mozapps/extensions/aboutaddons.html                   (content/aboutaddons.html)
+#endif
   content/mozapps/extensions/aboutaddons.js                     (content/aboutaddons.js)
   content/mozapps/extensions/aboutaddonsCommon.js               (content/aboutaddonsCommon.js)
   content/mozapps/extensions/aboutaddons.css                    (content/aboutaddons.css)
