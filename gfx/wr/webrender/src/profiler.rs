@@ -29,7 +29,6 @@ use api::units::DeviceIntSize;
 use std::collections::vec_deque::VecDeque;
 use std::fmt::{Write, Debug};
 use std::f32;
-use std::ffi::CStr;
 use std::ops::Range;
 use std::time::Duration;
 use time::precise_time_ns;
@@ -94,7 +93,7 @@ static PROFILER_PRESETS: &'static[(&'static str, &'static str)] = &[
     // Gpu sampler queries (need the pref gfx.webrender.debug.gpu-sampler-queries).
     (&"GPU samplers", &"Alpha targets samplers,Transparent pass samplers,Opaque pass samplers,Total samplers"),
 
-    (&"Render reasons", &"Reason scene, Reason animated propert, Reason resource update, Reason async image, Reason clear resources, Reason APZ, Reason resize, Reason widget, Reason cache flush, Reason snapshot, Reason resource hook, Reason config change, Reason content sync, Reason flush, Reason vsync, Reason testing, Reason other"),
+    (&"Render reasons", &"Reason scene, Reason animated property, Reason resource update, Reason async image, Reason clear resources, Reason APZ, Reason resize, Reason widget, Reason cache flush, Reason snapshot, Reason resource hook, Reason config change, Reason content sync, Reason flush, On vsync, Reason testing, Reason other"),
 ];
 
 fn find_preset(name: &str) -> Option<&'static str> {
@@ -409,14 +408,14 @@ impl Profiler {
             float("Shader build time", "ms", SHADER_BUILD_TIME, Expected::none()),
             // We use the expected range to highlight render reasons that are happening.
             float("Reason scene", "", RENDER_REASON_SCENE, expected(0.0..0.01)),
-            float("Reason animated propert", "", RENDER_REASON_ANIMATED_PROPERTY, expected(0.0..0.01)),
+            float("Reason animated property", "", RENDER_REASON_ANIMATED_PROPERTY, expected(0.0..0.01)),
             float("Reason resource update", "", RENDER_REASON_RESOURCE_UPDATE, expected(0.0..0.01)),
             float("Reason async image", "", RENDER_REASON_ASYNC_IMAGE, expected(0.0..0.01)),
             float("Reason clear resources", "", RENDER_REASON_CLEAR_RESOURCES, expected(0.0..0.01)),
             float("Reason APZ", "", RENDER_REASON_APZ, expected(0.0..0.01)),
             float("Reason resize", "", RENDER_REASON_RESIZE, expected(0.0..0.01)),
             float("Reason widget", "", RENDER_REASON_WIDGET, expected(0.0..0.01)),
-            float("Reason texture cache flush", "", RENDER_REASON_TEXTURE_CACHE_FLUSH, expected(0.0..0.01)),
+            float("Reason cache flush", "", RENDER_REASON_TEXTURE_CACHE_FLUSH, expected(0.0..0.01)),
             float("Reason snapshot", "", RENDER_REASON_SNAPSHOT, expected(0.0..0.01)),
             float("Reason resource hook", "", RENDER_REASON_POST_RESOURCE_UPDATE_HOOKS, expected(0.0..0.01)),
             float("Reason config change", "", RENDER_REASON_CONFIG_CHANGE, expected(0.0..0.01)),
@@ -1226,17 +1225,14 @@ pub trait ProfilerHooks : Send + Sync {
     /// Unregister a thread with the profiler.
     fn unregister_thread(&self);
 
-    /// Called at the beginning of a profile scope. The label must
-    /// be a C string (null terminated).
-    fn begin_marker(&self, label: &CStr);
+    /// Called at the beginning of a profile scope.
+    fn begin_marker(&self, label: &str);
 
-    /// Called at the end of a profile scope. The label must
-    /// be a C string (null terminated).
-    fn end_marker(&self, label: &CStr);
+    /// Called at the end of a profile scope.
+    fn end_marker(&self, label: &str);
 
-    /// Called to mark an event happening. The label must
-    /// be a C string (null terminated).
-    fn event_marker(&self, label: &CStr);
+    /// Called to mark an event happening.
+    fn event_marker(&self, label: &str);
 
     /// Called with a duration to indicate a text marker that just ended. Text
     /// markers allow different types of entries to be recorded on the same row
@@ -1245,7 +1241,7 @@ pub trait ProfilerHooks : Send + Sync {
     /// This variant is also useful when the caller only wants to record events
     /// longer than a certain threshold, and thus they don't know in advance
     /// whether the event will qualify.
-    fn add_text_marker(&self, label: &CStr, text: &str, duration: Duration);
+    fn add_text_marker(&self, label: &str, text: &str, duration: Duration);
 
     /// Returns true if the current thread is being profiled.
     fn thread_is_being_profiled(&self) -> bool;
@@ -1267,7 +1263,7 @@ pub fn set_profiler_hooks(hooks: Option<&'static dyn ProfilerHooks>) {
 
 /// A simple RAII style struct to manage a profile scope.
 pub struct ProfileScope {
-    name: &'static CStr,
+    name: &'static str,
 }
 
 
@@ -1291,7 +1287,7 @@ pub fn unregister_thread() {
 }
 
 /// Records a marker of the given duration that just ended.
-pub fn add_text_marker(label: &CStr, text: &str, duration: Duration) {
+pub fn add_text_marker(label: &str, text: &str, duration: Duration) {
     unsafe {
         if let Some(ref hooks) = PROFILER_HOOKS {
             hooks.add_text_marker(label, text, duration);
@@ -1300,7 +1296,7 @@ pub fn add_text_marker(label: &CStr, text: &str, duration: Duration) {
 }
 
 /// Records a marker of the given duration that just ended.
-pub fn add_event_marker(label: &CStr) {
+pub fn add_event_marker(label: &str) {
     unsafe {
         if let Some(ref hooks) = PROFILER_HOOKS {
             hooks.event_marker(label);
@@ -1317,7 +1313,7 @@ pub fn thread_is_being_profiled() -> bool {
 
 impl ProfileScope {
     /// Begin a new profile scope
-    pub fn new(name: &'static CStr) -> Self {
+    pub fn new(name: &'static str) -> Self {
         unsafe {
             if let Some(ref hooks) = PROFILER_HOOKS {
                 hooks.begin_marker(name);
@@ -1343,7 +1339,7 @@ impl Drop for ProfileScope {
 /// A helper macro to define profile scopes.
 macro_rules! profile_marker {
     ($string:expr) => {
-        let _scope = $crate::profiler::ProfileScope::new(cstr!($string));
+        let _scope = $crate::profiler::ProfileScope::new($string);
     };
 }
 

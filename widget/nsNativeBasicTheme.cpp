@@ -398,12 +398,18 @@ std::pair<sRGBColor, sRGBColor> nsNativeBasicTheme::ComputeCheckboxColors(
     const Colors& aColors) {
   MOZ_ASSERT(aAppearance == StyleAppearance::Checkbox ||
              aAppearance == StyleAppearance::Radio);
+
   bool isDisabled = aState.HasState(NS_EVENT_STATE_DISABLED);
   bool isChecked = aState.HasState(NS_EVENT_STATE_CHECKED);
   bool isIndeterminate = aAppearance == StyleAppearance::Checkbox &&
                          aState.HasState(NS_EVENT_STATE_INDETERMINATE);
 
-  if (!isDisabled && (isChecked || isIndeterminate)) {
+  if (isChecked || isIndeterminate) {
+    if (isDisabled) {
+      auto color = ComputeBorderColor(aState, aColors, OutlineCoversBorder::No);
+      return std::make_pair(color, color);
+    }
+
     bool isActive =
         aState.HasAllStates(NS_EVENT_STATE_HOVER | NS_EVENT_STATE_ACTIVE);
     bool isHovered = aState.HasState(NS_EVENT_STATE_HOVER);
@@ -413,7 +419,7 @@ std::pair<sRGBColor, sRGBColor> nsNativeBasicTheme::ComputeCheckboxColors(
     return std::make_pair(color, color);
   }
 
-  return ComputeTextfieldColors(aState, aColors);
+  return ComputeTextfieldColors(aState, aColors, OutlineCoversBorder::No);
 }
 
 sRGBColor nsNativeBasicTheme::ComputeCheckmarkColor(const EventStates& aState,
@@ -427,8 +433,9 @@ sRGBColor nsNativeBasicTheme::ComputeCheckmarkColor(const EventStates& aState,
   return aColors.Accent().GetForeground();
 }
 
-sRGBColor nsNativeBasicTheme::ComputeBorderColor(const EventStates& aState,
-                                                 const Colors& aColors) {
+sRGBColor nsNativeBasicTheme::ComputeBorderColor(
+    const EventStates& aState, const Colors& aColors,
+    OutlineCoversBorder aOutlineCoversBorder) {
   bool isDisabled = aState.HasState(NS_EVENT_STATE_DISABLED);
   if (aColors.HighContrast()) {
     return aColors.System(isDisabled ? StyleSystemColor::Graytext
@@ -441,13 +448,13 @@ sRGBColor nsNativeBasicTheme::ComputeBorderColor(const EventStates& aState,
   if (isDisabled) {
     return sColorGrey40Alpha50;
   }
-  if (isFocused) {
-    // We draw the outline over the border for all controls that call into this,
-    // so to prevent issues where the border shows underneath if it snaps in the
-    // wrong direction, we use a transparent border. An alternative to this is
-    // ensuring that we snap the offset in PaintRoundedFocusRect the same was a
-    // we snap border widths, so that negative offsets are guaranteed to cover
-    // the border. But this looks harder to mess up.
+  if (isFocused && aOutlineCoversBorder == OutlineCoversBorder::Yes) {
+    // If we draw the outline over the border, prevent issues where the border
+    // shows underneath if it snaps in the wrong direction by using a
+    // transparent border. An alternative to this is ensuring that we snap the
+    // offset in PaintRoundedFocusRect the same was a we snap border widths, so
+    // that negative offsets are guaranteed to cover the border.
+    // But this looks harder to mess up.
     return sTransparent;
   }
   bool dark = aColors.IsDark();
@@ -480,7 +487,8 @@ std::pair<sRGBColor, sRGBColor> nsNativeBasicTheme::ComputeButtonColors(
     return aColors.System(StyleSystemColor::Buttonface);
   }();
 
-  const sRGBColor borderColor = ComputeBorderColor(aState, aColors);
+  const sRGBColor borderColor =
+      ComputeBorderColor(aState, aColors, OutlineCoversBorder::Yes);
   return std::make_pair(backgroundColor, borderColor);
 }
 
@@ -489,7 +497,8 @@ std::pair<sRGBColor, sRGBColor> nsNativeBasicTheme::ComputeButtonColors(
 constexpr nscolor kAutofillColor = NS_RGBA(255, 249, 145, 128);
 
 std::pair<sRGBColor, sRGBColor> nsNativeBasicTheme::ComputeTextfieldColors(
-    const EventStates& aState, const Colors& aColors) {
+    const EventStates& aState, const Colors& aColors,
+    OutlineCoversBorder aOutlineCoversBorder) {
   nscolor backgroundColor = [&] {
     if (aState.HasState(NS_EVENT_STATE_DISABLED)) {
       return aColors.SystemNs(StyleSystemColor::MozDisabledfield);
@@ -502,7 +511,8 @@ std::pair<sRGBColor, sRGBColor> nsNativeBasicTheme::ComputeTextfieldColors(
     backgroundColor = NS_ComposeColors(backgroundColor, kAutofillColor);
   }
 
-  const sRGBColor borderColor = ComputeBorderColor(aState, aColors);
+  const sRGBColor borderColor =
+      ComputeBorderColor(aState, aColors, aOutlineCoversBorder);
   return std::make_pair(sRGBColor::FromABGR(backgroundColor), borderColor);
 }
 
@@ -1251,7 +1261,8 @@ void nsNativeBasicTheme::PaintTextField(PaintBackendData& aPaintData,
                                         const EventStates& aState,
                                         const Colors& aColors,
                                         DPIRatio aDpiRatio) {
-  auto [backgroundColor, borderColor] = ComputeTextfieldColors(aState, aColors);
+  auto [backgroundColor, borderColor] =
+      ComputeTextfieldColors(aState, aColors, OutlineCoversBorder::Yes);
 
   const CSSCoord radius = 2.0f;
 
@@ -1272,7 +1283,8 @@ void nsNativeBasicTheme::PaintListbox(PaintBackendData& aPaintData,
                                       const Colors& aColors,
                                       DPIRatio aDpiRatio) {
   const CSSCoord radius = 2.0f;
-  auto [backgroundColor, borderColor] = ComputeTextfieldColors(aState, aColors);
+  auto [backgroundColor, borderColor] =
+      ComputeTextfieldColors(aState, aColors, OutlineCoversBorder::Yes);
 
   PaintRoundedRectWithRadius(aPaintData, aRect, backgroundColor, borderColor,
                              kMenulistBorderWidth, radius, aDpiRatio);

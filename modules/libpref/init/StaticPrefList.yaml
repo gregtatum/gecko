@@ -6368,7 +6368,12 @@
 
 - name: layers.force-synchronous-resize
   type: RelaxedAtomicBool
+#ifdef MOZ_WAYLAND
+  # We want to control it by nsWindow::SynchronouslyRepaintOnResize() on Linux/Wayland.
+  value: false
+#else
   value: true
+#endif
   mirror: always
 
 - name: layers.gpu-process.allow-software
@@ -9820,6 +9825,17 @@
   value: false
   mirror: always
 
+# The maximum allowed length for a URL - 32MB default.
+# If 0 that means no limit.
+- name: network.url.max-length
+  type: RelaxedAtomicUint32
+#if defined(EARLY_BETA_OR_EARLIER)
+  value: 32 * 1024 * 1024
+#else
+  value: 0
+#endif
+  mirror: always
+
 # Force remapping of remote port numbers to allow reaching local testing
 # servers or port forwarders listening on non-standard ports.  Note that
 # this is not changing the origin URL in the addressbar, only internally
@@ -9967,7 +9983,7 @@
 # If no regressions occur this pref should be removed.
 - name: network.cache.bug1708673
   type: RelaxedAtomicBool
-  value: true
+  value: false
   mirror: always
 
 #  This is used for a temporary workaround for a web-compat issue. If pref is

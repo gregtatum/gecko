@@ -90,9 +90,7 @@ class XDRBuffer<XDR_ENCODE> : public XDRBufferBase {
     return true;
   }
 
-#ifdef DEBUG
   bool isAligned32() { return cursor_ % 4 == 0; }
-#endif
 
   const uint8_t* read(size_t n) {
     MOZ_CRASH("Should never read in encode mode");
@@ -114,6 +112,8 @@ class XDRBuffer<XDR_DECODE> : public XDRBufferBase {
   XDRBuffer(JSContext* cx, const JS::TranscodeRange& range)
       : XDRBufferBase(cx), buffer_(range) {}
 
+  // This isn't used by XDRStencilDecoder.
+  // Defined just for XDRState, shared with XDRStencilEncoder.
   XDRBuffer(JSContext* cx, JS::TranscodeBuffer& buffer, size_t cursor = 0)
       : XDRBufferBase(cx, cursor), buffer_(buffer.begin(), buffer.length()) {}
 
@@ -131,9 +131,7 @@ class XDRBuffer<XDR_DECODE> : public XDRBufferBase {
     return true;
   }
 
-#ifdef DEBUG
   bool isAligned32() { return cursor_ % 4 == 0; }
-#endif
 
   const uint8_t* read(size_t n) {
     MOZ_ASSERT(cursor_ < buffer_.length());
@@ -243,9 +241,7 @@ class XDRState : public XDRCoderBase {
     return mozilla::Ok();
   }
 
-#ifdef DEBUG
   bool isAligned32() { return buf->isAligned32(); }
-#endif
 
   XDRResult readData(const uint8_t** pptr, size_t length) {
     const uint8_t* ptr = buf->read(length);
@@ -453,12 +449,6 @@ class XDRStencilDecoder : public XDRState<XDR_DECODE> {
   using Base = XDRState<XDR_DECODE>;
 
  public:
-  XDRStencilDecoder(JSContext* cx, JS::TranscodeBuffer& buffer, size_t cursor)
-      : Base(cx, buffer, cursor) {
-    MOZ_ASSERT(JS::IsTranscodingBytecodeAligned(buffer.begin()));
-    MOZ_ASSERT(JS::IsTranscodingBytecodeOffsetAligned(cursor));
-  }
-
   XDRStencilDecoder(JSContext* cx, const JS::TranscodeRange& range)
       : Base(cx, range) {
     MOZ_ASSERT(JS::IsTranscodingBytecodeAligned(range.begin().get()));

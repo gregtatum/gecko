@@ -961,6 +961,39 @@ void LIRGenerator::visitCompare(MCompare* comp) {
   // LCompareSAndBranch. Doing this now wouldn't be wrong, but doesn't
   // make sense and avoids confusion.
   if (comp->compareType() == MCompare::Compare_String) {
+    if (IsEqualityOp(comp->jsop())) {
+      MConstant* constant = nullptr;
+      if (left->isConstant()) {
+        constant = left->toConstant();
+      } else if (right->isConstant()) {
+        constant = right->toConstant();
+      }
+
+      if (constant) {
+        JSLinearString* linear = &constant->toString()->asLinear();
+        size_t length = linear->length();
+
+        // Limit the number of inline instructions used for character
+        // comparisons. Use the same instruction limit for both encodings, i.e.
+        // two-byte uses half the limit of Latin-1 strings.
+        constexpr size_t Latin1StringCompareCutoff = 32;
+        constexpr size_t TwoByteStringCompareCutoff = 16;
+
+        bool canCompareInline =
+            length > 0 &&
+            (linear->hasLatin1Chars() ? length <= Latin1StringCompareCutoff
+                                      : length <= TwoByteStringCompareCutoff);
+        if (canCompareInline) {
+          MDefinition* input = left->isConstant() ? right : left;
+
+          auto* lir = new (alloc()) LCompareSInline(useRegister(input), linear);
+          define(lir, comp);
+          assignSafepoint(lir, comp);
+          return;
+        }
+      }
+    }
+
     LCompareS* lir =
         new (alloc()) LCompareS(useRegister(left), useRegister(right));
     define(lir, comp);
@@ -4716,8 +4749,20 @@ void LIRGenerator::visitWasmAddOffset(MWasmAddOffset* ins) {
 }
 
 void LIRGenerator::visitWasmLoadTls(MWasmLoadTls* ins) {
-  auto* lir = new (alloc()) LWasmLoadTls(useRegisterAtStart(ins->tlsPtr()));
-  define(lir, ins);
+  if (ins->type() == MIRType::Int64) {
+#ifdef JS_PUNBOX64
+    LAllocation tlsPtr = useRegisterAtStart(ins->tlsPtr());
+#else
+    // Avoid reusing tlsPtr for a 64-bit output pair as the load clobbers the
+    // first half of that pair before loading the second half.
+    LAllocation tlsPtr = useRegister(ins->tlsPtr());
+#endif
+    auto* lir = new (alloc()) LWasmLoadTls64(tlsPtr);
+    defineInt64(lir, ins);
+  } else {
+    auto* lir = new (alloc()) LWasmLoadTls(useRegisterAtStart(ins->tlsPtr()));
+    define(lir, ins);
+  }
 }
 
 void LIRGenerator::visitWasmBoundsCheck(MWasmBoundsCheck* ins) {
@@ -4768,6 +4813,8 @@ void LIRGenerator::visitWasmLoadGlobalVar(MWasmLoadGlobalVar* ins) {
 #ifdef JS_PUNBOX64
     LAllocation tlsPtr = useRegisterAtStart(ins->tlsPtr());
 #else
+    // Avoid reusing tlsPtr for the output pair as the load clobbers the first
+    // half of that pair before loading the second half.
     LAllocation tlsPtr = useRegister(ins->tlsPtr());
 #endif
     defineInt64(new (alloc()) LWasmLoadSlotI64(tlsPtr, offs), ins);
@@ -4782,6 +4829,8 @@ void LIRGenerator::visitWasmLoadGlobalCell(MWasmLoadGlobalCell* ins) {
 #ifdef JS_PUNBOX64
     LAllocation cellPtr = useRegisterAtStart(ins->cellPtr());
 #else
+    // Avoid reusing cellPtr for the output pair as the load clobbers the first
+    // half of that pair before loading the second half.
     LAllocation cellPtr = useRegister(ins->cellPtr());
 #endif
     defineInt64(new (alloc()) LWasmLoadSlotI64(cellPtr, /*offs=*/0), ins);
