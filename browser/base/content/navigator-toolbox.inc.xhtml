@@ -140,7 +140,7 @@
                      command="Browser:Stop"
                      tooltip="dynamic-shortcut-tooltip"/>
       <toolbarbutton id="pinebuild-copy-button" class="toolbarbutton-1"
-                     onclick="CompanionService.copy(this, gBrowser.currentURI.spec);"/>
+                     onclick="PineBuildUIUtils.copy(this, gBrowser.currentURI.spec);"/>
       <toolbarbutton id="pinebuild-snapshot-button" class="toolbarbutton-1"
                      disabled="true"
                      onclick="SaveSnapshot(gBrowser.currentURI.spec);"/>

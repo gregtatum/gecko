@@ -17,7 +17,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   UITour: "resource:///modules/UITour.jsm",
   FxAccounts: "resource://gre/modules/FxAccounts.jsm",
   MigrationUtils: "resource:///modules/MigrationUtils.jsm",
-  CompanionService: "resource:///modules/CompanionService.jsm",
 });
 
 const SpecialMessageActions = {
@@ -314,7 +313,7 @@ const SpecialMessageActions = {
         if (companionBox.isOpen) {
           companionBox.toggleVisible();
         }
-        CompanionService.hideCompanionToolbar(window);
+        window.PineBuildUIUtils.hideToolbar();
         break;
       }
       case "SHOW_COMPANION_UI": {
@@ -322,7 +321,7 @@ const SpecialMessageActions = {
         if (!companionBox.isOpen) {
           companionBox.toggleVisible();
         }
-        CompanionService.showCompanionToolbar(window);
+        window.PineBuildUIUtils.showToolbar();
         break;
       }
       case "ENABLE_TOTAL_COOKIE_PROTECTION":

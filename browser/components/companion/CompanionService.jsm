@@ -43,24 +43,6 @@ const CompanionService = {
       true
     );
   },
-
-  hideCompanionToolbar(aWindow) {
-    let companionToolbar = aWindow.document.getElementById("pinebuild-toolbar");
-    companionToolbar.setAttribute("hidden", "true");
-  },
-
-  showCompanionToolbar(aWindow) {
-    let companionToolbar = aWindow.document.getElementById("pinebuild-toolbar");
-    companionToolbar.removeAttribute("hidden");
-  },
-
-  copy(anchor, string) {
-    let clipboard = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(
-      Ci.nsIClipboardHelper
-    );
-    clipboard.copyString(string);
-    anchor.ownerGlobal.ConfirmationHint.show(anchor, "copyURL");
-  },
 };
 
 let ChromeURLBlockPolicy = {

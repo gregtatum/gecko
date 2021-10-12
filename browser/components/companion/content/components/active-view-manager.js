@@ -9,14 +9,11 @@ ChromeUtils.defineModuleGetter(
 );
 ChromeUtils.defineModuleGetter(
   globalThis,
-  "CompanionService",
-  "resource:///modules/CompanionService.jsm"
-);
-ChromeUtils.defineModuleGetter(
-  globalThis,
   "CustomizableUI",
   "resource:///modules/CustomizableUI.jsm"
 );
+
+/* import-globals-from ../../../../base/content/browser-pinebuild.js */
 
 import getSiteSecurityInfo from "../siteSecurity.js";
 
@@ -403,7 +400,7 @@ export default class ActiveViewManager extends HTMLElement {
   }
 
   pageActionCopyURL(event) {
-    CompanionService.copy(this, this.#pageActionView.url.spec);
+    PineBuildUIUtils.copy(this, this.#pageActionView.url.spec);
   }
 
   pageActionCloseView(event) {
