@@ -86,12 +86,6 @@ view-group[top] {
   padding-inline-start: 12px;
 }
 
-view-group[top]::part(label-container) {
-  line-height: 16px;
-  white-space: nowrap;
-  width: 200px;
-}
-
 view-group[top]::part(title) {
   font-size: 1.25rem;
 }
