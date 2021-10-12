@@ -362,7 +362,7 @@ var PinebuildTestUtils = {
 
   /**
    * Returns the ViewGroup DOM elements in the ActiveViewManager
-   * in a window. This does not include pinned ViewGroups.
+   * in a window.
    *
    * @param {Window?} win
    *   The window to get the ViewGroups for. The current window is used by
@@ -371,19 +371,6 @@ var PinebuildTestUtils = {
    */
   getViewGroups(win = window) {
     let river = window.document.querySelector("river-el");
-    return river.shadowRoot.querySelectorAll("view-group");
-  },
-
-  /**
-   * Returns the pinned ViewGroups in the ActiveViewManager in a window.
-   *
-   * @param {Window?} win
-   *   The window to get the ViewGroups for. The current window is used by
-   *   default
-   * @return {ViewGroup[]}
-   */
-  getPinnedViewGroups(win = window) {
-    let river = window.document.querySelector("pinned-views");
     return river.shadowRoot.querySelectorAll("view-group");
   },
 

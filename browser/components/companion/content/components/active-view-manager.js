@@ -359,20 +359,15 @@ export default class ActiveViewManager extends HTMLElement {
 
   #pageActionPanelShowing(event) {
     CustomizableUI.addPanelCloseListeners(this.#pageActionPanel);
-    let view = this.#pageActionView;
-
-    let pinView = document.getElementById("page-action-pin-view");
-    let pinL10nId = "page-action-toggle-pinning";
-    document.l10n.setAttributes(pinView, pinL10nId, { isPinned: view.pinned });
 
     let pageActionTitleEl = document.getElementById("site-info-title");
-    pageActionTitleEl.value = view.title;
+    pageActionTitleEl.value = this.#pageActionView.title;
     pageActionTitleEl.scrollLeft = 0;
 
     let pageActionUrlEl = document.getElementById("site-info-url");
-    pageActionUrlEl.textContent = view.url.spec;
+    pageActionUrlEl.textContent = this.#pageActionView.url.spec;
 
-    this.#securityIconClass = getSiteSecurityInfo(view);
+    this.#securityIconClass = getSiteSecurityInfo(this.#pageActionView);
     let siteSecurityIcon = document.getElementById("site-security-icon");
     siteSecurityIcon.classList.add(this.#securityIconClass);
 
