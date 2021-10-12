@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 ChromeUtils.defineModuleGetter(
   globalThis,
   "PanelMultiView",
@@ -479,6 +480,27 @@ export default class ActiveViewManager extends HTMLElement {
   #setViewPinnedState(view, state, index) {
     window.top.gGlobalHistory.setViewPinnedState(view, state, index);
     this.#viewSelected(view);
+  }
+
+  /**
+   * Returns an Object that exposes various private methods or
+   * properties to help with automated testing. Returns null if
+   * browser.pinebuild.active-view-manager.testing.enabled is not
+   * set to true.
+   */
+  getTestingAPI() {
+    if (
+      !Services.prefs.getBoolPref(
+        "browser.pinebuild.active-view-manager.testing.enabled",
+        false
+      )
+    ) {
+      return null;
+    }
+
+    return {
+      getPageActionPanel: () => this.#getPageActionPanel(),
+    };
   }
 
   static get VIEWGROUP_DROP_TYPE() {

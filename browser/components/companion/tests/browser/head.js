@@ -17,6 +17,19 @@ registerCleanupFunction(async () => {
   // Reload the companion in the main window, in case tests have been using that.
   let helper = new CompanionHelper(window);
   await helper.reload();
+
+  // Make sure that no tests have accidentally left the Page Action Menu
+  // panel open
+  let avm = document.querySelector("active-view-manager");
+  let testingAPI = avm.getTestingAPI();
+  let pageActionMenuPanel = testingAPI.getPageActionPanel();
+  if (pageActionMenuPanel.state == "open") {
+    await PinebuildTestUtils.closePageActionMenu(pageActionMenuPanel);
+  }
+
+  // No matter what happens, blow away window history after tests run
+  // in this directory to avoid leaking state between tests.
+  gGlobalHistory.reset();
 });
 
 class CompanionHelper {
@@ -182,12 +195,14 @@ var PinebuildTestUtils = {
    * @return {Promise}
    * @resolves With the ViewChanged event that fired after setting the View.
    */
-  setCurrentView(view, win = window) {
+  async setCurrentView(view, win = window) {
     let viewChangedPromise = BrowserTestUtils.waitForEvent(
       win.gGlobalHistory,
-      "ViewChanged"
+      "ViewChanged",
+      false,
+      event => event.view == view
     );
-    win.gGlobalHistory.setView(view);
+    await win.gGlobalHistory.setView(view);
     return viewChangedPromise;
   },
 
@@ -317,5 +332,104 @@ var PinebuildTestUtils = {
       start: startTime.toISOString(),
       end: endTime.toISOString(),
     };
+  },
+
+  /**
+   * Loads a series of URLs into the window and waits until the Views
+   * have been added to the ActiveViewManager.
+   *
+   * @param {String[]} urls
+   *   An array of URL strings to load, in order.
+   * @param {Window?} win
+   *   The window to load the URLs in. The current window is used by
+   *   default
+   * @return {Promise}
+   * @resolves {View[]} The array of Views that were loaded, in the same
+   *   order as the URL strings.
+   */
+  async loadViews(urls, win = window) {
+    let browser = window.gBrowser.selectedBrowser;
+    let views = [];
+
+    for (let url of urls) {
+      let newViewCreated = PinebuildTestUtils.waitForNewView(browser, url);
+      BrowserTestUtils.loadURI(browser, url);
+      views.push(await newViewCreated);
+    }
+
+    return views;
+  },
+
+  /**
+   * Returns the ViewGroup DOM elements in the ActiveViewManager
+   * in a window.
+   *
+   * @param {Window?} win
+   *   The window to get the ViewGroups for. The current window is used by
+   *   default
+   * @return {ViewGroup[]}
+   */
+  getViewGroups(win = window) {
+    let river = window.document.querySelector("river-el");
+    return river.shadowRoot.querySelectorAll("view-group");
+  },
+
+  /**
+   * Opens the Page Action Menu for a ViewGroup and returns the <panel>
+   * element for the Page Action Menu. This assumes that the ViewGroup
+   * contains the current View and that the Page Action Menu button is
+   * visible. Callers should ensure that they close the Page Action Menu
+   * by passing the <panel> to closePageActionMenu, unless they close
+   * it by some other means.
+   *
+   * @param {ViewGroup} viewGroup
+   *   The ViewGroup to open the Page Action Menu for.
+   * @return {Promise}
+   * @resolves {Element} The <panel> for the Page Action Menu.
+   */
+  async openPageActionMenu(viewGroup) {
+    let win = viewGroup.ownerGlobal;
+    let doc = win.document;
+    let avm = doc.querySelector("active-view-manager");
+    let testingAPI = avm.getTestingAPI();
+    let pageActionMenuPanel = testingAPI.getPageActionPanel();
+    Assert.ok(
+      pageActionMenuPanel,
+      "Should have found the Page Action Menu panel."
+    );
+
+    let popupshowing = BrowserTestUtils.waitForEvent(
+      pageActionMenuPanel,
+      "popupshowing"
+    );
+    let pageActionMenuButton = viewGroup.shadowRoot.querySelector(
+      ".page-action-button"
+    );
+
+    Assert.ok(
+      !BrowserTestUtils.is_hidden(pageActionMenuButton),
+      "Page Action Menu button is visible."
+    );
+    EventUtils.synthesizeMouseAtCenter(pageActionMenuButton, {}, win);
+    await popupshowing;
+    return pageActionMenuPanel;
+  },
+
+  /**
+   * Closes a previously opened Page Action Menu.
+   *
+   * @param {Element} pageActionMenuPanel
+   *   The panel for the Page Action Menu.
+   * @return {Promise}
+   * @resolves {undefined}
+   *   Resolves once the Page Action Menu has fired its popuphidden event.
+   */
+  async closePageActionMenu(pageActionMenu) {
+    let popuphidden = BrowserTestUtils.waitForEvent(
+      pageActionMenu,
+      "popuphidden"
+    );
+    pageActionMenu.hidePopup();
+    await popuphidden;
   },
 };

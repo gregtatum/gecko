@@ -305,7 +305,12 @@ var BrowserTestUtils = {
 
     // Hiding a parent element will hide all its children
     if (element.parentNode != element.ownerDocument) {
-      return BrowserTestUtils.is_hidden(element.parentNode);
+      let parent = element.parentNode;
+
+      if (parent instanceof element.ownerGlobal.ShadowRoot) {
+        parent = parent.host;
+      }
+      return BrowserTestUtils.is_hidden(parent);
     }
 
     return false;
