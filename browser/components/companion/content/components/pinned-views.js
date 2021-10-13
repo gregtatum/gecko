@@ -80,7 +80,9 @@ class PinnedViews extends MozLitElement {
 
     // It's possible to drag a ViewGroup that is not active, so in that
     // case, we'll just assume we're dragging the last View in the group.
-    let view = droppedViewGroup.activeView || droppedViewGroup.lastView;
+    let view = droppedViewGroup.active
+      ? droppedViewGroup.activeView
+      : droppedViewGroup.lastView;
     let dragOverElement = this.#dragOverElement;
 
     this.#cancelDragActive();
@@ -91,7 +93,7 @@ class PinnedViews extends MozLitElement {
       let dragIndex = this._views.indexOf(dragOverView);
 
       if (dragIndex != -1) {
-        index = dragIndex;
+        index = dragIndex + 1;
       }
     }
 

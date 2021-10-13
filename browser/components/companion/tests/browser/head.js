@@ -202,7 +202,14 @@ var PinebuildTestUtils = {
       false,
       event => event.view == view
     );
+    let viewUpdatedPromise = BrowserTestUtils.waitForEvent(
+      win.gGlobalHistory,
+      "ViewUpdated",
+      false,
+      event => event.view == view
+    );
     await win.gGlobalHistory.setView(view);
+    await Promise.all([viewUpdatedPromise, viewChangedPromise]);
     return viewChangedPromise;
   },
 
@@ -352,9 +359,13 @@ var PinebuildTestUtils = {
     let views = [];
 
     for (let url of urls) {
-      let newViewCreated = PinebuildTestUtils.waitForNewView(browser, url);
+      let viewAddedPromise = BrowserTestUtils.waitForEvent(
+        gGlobalHistory,
+        "ViewAdded"
+      );
       BrowserTestUtils.loadURI(browser, url);
-      views.push(await newViewCreated);
+      let viewAddedEvent = await viewAddedPromise;
+      views.push(viewAddedEvent.view);
     }
 
     return views;
@@ -376,6 +387,7 @@ var PinebuildTestUtils = {
 
   /**
    * Returns the pinned ViewGroups in the ActiveViewManager in a window.
+   * This also ensures that there's only 1 View per pinned ViewGroup.
    *
    * @param {Window?} win
    *   The window to get the ViewGroups for. The current window is used by
@@ -384,7 +396,16 @@ var PinebuildTestUtils = {
    */
   getPinnedViewGroups(win = window) {
     let river = window.document.querySelector("pinned-views");
-    return river.shadowRoot.querySelectorAll("view-group");
+    let viewGroups = river.shadowRoot.querySelectorAll("view-group");
+    for (let viewGroup of viewGroups) {
+      Assert.equal(
+        viewGroup.views.length,
+        1,
+        "There should be 1 View for each pinned ViewGroup."
+      );
+    }
+
+    return viewGroups;
   },
 
   /**
