@@ -139,7 +139,7 @@ export default class AddAccountPage extends Page {
       this.rssStatus = `${error}: ${jsonDetails}`;
     } else {
       this.rssStatus = "Account created!";
-      this.router.naigateTo(["account", account.id]);
+      this.router.navigateTo(["account", account.id]);
     }
   }
 

@@ -36,14 +36,14 @@ export class FeedItemChewer {
       const description = item.description;
       ({ contentBlob, snippet, authoredBodySize } = await processMessageContent(
         description,
-        "html",
+        item.contentType,
         true, // isDownloaded
         true // generateSnippet
       ));
 
       bodyReps.push(
         mailRep.makeBodyPart({
-          type: "html",
+          type: item.contentType,
           part: null,
           sizeEstimate: description.length,
           amountDownloaded: description.length,

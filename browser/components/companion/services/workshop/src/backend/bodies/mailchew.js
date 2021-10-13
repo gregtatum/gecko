@@ -508,9 +508,11 @@ export async function processMessageContent(
           // TODO: Should we use a MIME type to convey this is sanitized HTML?
           // (Possibly also including our sanitizer version as a parameter?)
           contentBlob = new Blob([parsedContent], { type: "text/html" });
-          authoredBodySize = await $htmlchew.generateSnippet(
-            parsedContent,
-            /* include quotes */ false
+          authoredBodySize = (
+            await $htmlchew.generateSnippet(
+              parsedContent,
+              /* include quotes */ false
+            )
           ).length;
         } catch (ex) {
           logic(scope, "htmlParseError", { ex });

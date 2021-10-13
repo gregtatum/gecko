@@ -76,8 +76,35 @@ export default class FeedSyncStateHelper {
     data.author = item.author || data.author;
     data.title = item.title || data.title;
     data.description = item.description || data.description;
+    data.contentType = "html";
 
     const convId = `${this._accountId}.${data.guid}`;
+    this._makeItemConvTask({
+      convId,
+      item: data,
+    });
+  }
+
+  /**
+   * This function ingests an item coming from a Json feed:
+   *   https://www.jsonfeed.org/version/1.1/#items-a-name-items-a
+   */
+  ingestJsonItem(item) {
+    const data = this._makeDefaultData();
+    data.guid = item.id;
+    data.date = (item.date_published || NOW()).valueOf();
+    data.dateModified = (item.date_modified || NOW()).valueOf();
+    data.author = item.authors?.[0]?.name || data.author;
+    data.title = item.title || data.title;
+    if (item.content_html) {
+      data.description = item.content_html;
+      data.contentType = "html";
+    } else {
+      data.description = item.content_text;
+      data.contentType = "plain";
+    }
+
+    const convId = `${this._accountId}.${data.guid}.`;
     this._makeItemConvTask({
       convId,
       item: data,
@@ -108,6 +135,7 @@ export default class FeedSyncStateHelper {
     }
     data.title = entry.title || data.title;
     data.description = entry.summary || data.description;
+    data.contentType = "html";
 
     const convId = `${this._accountId}.${data.guid}`;
     this._makeItemConvTask({

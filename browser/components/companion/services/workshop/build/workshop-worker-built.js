@@ -1212,6 +1212,200 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/backend/parsers/json/feed_parser.js
+  function isJsonFeed(headers) {
+    return (headers.get("content-type") || "").toLowerCase().split(";").map((e) => e.trim()).some((e) => ["application/json", "application/feed+json"].includes(e));
+  }
+  function validate(obj, validator) {
+    const newObj = Object.create(null);
+    for (const [name, valueValidator] of Object.entries(validator.properties)) {
+      if (!obj.hasOwnProperty(name)) {
+        if (!valueValidator.optional) {
+          throw new MissingRequiredError(name);
+        }
+        continue;
+      }
+      const value = obj[name];
+      const result = valueValidator.validate(value, name);
+      if (result !== null) {
+        newObj[name] = result;
+      }
+    }
+    if (validator.finalCheck && !validator.finalCheck(newObj)) {
+      return null;
+    }
+    return Object.getOwnPropertyNames(newObj).length !== 0 ? newObj : null;
+  }
+  function makeOptionalOrRequired(validator, optional) {
+    return {
+      validate: (data, name) => {
+        if (optional) {
+          try {
+            return validator.validate(data);
+          } catch {
+            return null;
+          }
+        }
+        const result = validator.validate(data);
+        if (result !== null) {
+          return result;
+        }
+        throw new InvalidValueError(name);
+      },
+      optional
+    };
+  }
+  function OptionalArray(validator) {
+    return {
+      validate: (x) => {
+        if (!Array.isArray(x)) {
+          return null;
+        }
+        const result = [];
+        for (const el of x) {
+          try {
+            const r = validate(el, validator);
+            if (r !== null) {
+              result.push(r);
+            }
+          } catch {
+          }
+        }
+        return result;
+      },
+      optional: true
+    };
+  }
+  function Optional(validator) {
+    return {
+      validate: (x) => {
+        try {
+          return validate(x, validator);
+        } catch {
+          return null;
+        }
+      },
+      optional: true
+    };
+  }
+  function parseJsonFeed(str) {
+    const obj = JSON.parse(str);
+    return validate(obj, MainValidator);
+  }
+  var MissingRequiredError, InvalidValueError, StringValidator, OptionalString, RequiredString, OptionalInteger, OptionalBoolean, OptionalDate, AuthorValidator, HubValidator, AttachmentValidator, ItemValidator, MainValidator;
+  var init_feed_parser = __esm({
+    "src/backend/parsers/json/feed_parser.js"() {
+      MissingRequiredError = class extends Error {
+        constructor(name) {
+          super(`"${name}" is a required property`);
+          this.name = "JSONFeedMissingRequired";
+        }
+      };
+      InvalidValueError = class extends Error {
+        constructor(name) {
+          super(`Invalid value for ${name} property`);
+          this.name = "JSONFeedInvalidValue";
+        }
+      };
+      StringValidator = {
+        validate: (x) => typeof x === "string" ? x : null
+      };
+      OptionalString = makeOptionalOrRequired(StringValidator, true);
+      RequiredString = makeOptionalOrRequired(StringValidator, false);
+      OptionalInteger = makeOptionalOrRequired({
+        validate: (x) => !isNaN(x) && x >= 0 ? parseInt(x) : null
+      }, true);
+      OptionalBoolean = makeOptionalOrRequired({
+        validate: (x) => x === !!x ? x : null
+      }, true);
+      OptionalDate = makeOptionalOrRequired({
+        validate: (x) => {
+          const date = new Date(x);
+          return isNaN(date) ? null : date;
+        }
+      }, true);
+      AuthorValidator = {
+        properties: {
+          name: OptionalString,
+          url: OptionalString,
+          avatar: OptionalString
+        }
+      };
+      HubValidator = {
+        properties: {
+          type: RequiredString,
+          url: RequiredString
+        }
+      };
+      AttachmentValidator = {
+        properties: {
+          url: RequiredString,
+          mime_type: RequiredString,
+          title: OptionalString,
+          size_in_bytes: OptionalInteger,
+          duration_in_seconds: OptionalInteger
+        }
+      };
+      ItemValidator = {
+        properties: {
+          id: RequiredString,
+          url: OptionalString,
+          external_url: OptionalString,
+          title: OptionalString,
+          content_html: OptionalString,
+          content_text: OptionalString,
+          summary: OptionalString,
+          image: OptionalString,
+          banner_image: OptionalString,
+          date_published: OptionalDate,
+          date_modified: OptionalDate,
+          authors: OptionalArray(AuthorValidator),
+          author: Optional(AuthorValidator),
+          tags: OptionalArray(StringValidator),
+          language: OptionalString,
+          attachments: OptionalArray(AttachmentValidator)
+        },
+        finalCheck(obj) {
+          if (!obj.content_html && !obj.content_text) {
+            return false;
+          }
+          if (obj.author) {
+            if (!obj.authors) {
+              obj.authors = [];
+            }
+            obj.authors.push(obj.author);
+            delete obj.author;
+          }
+          return true;
+        }
+      };
+      MainValidator = {
+        properties: {
+          version: RequiredString,
+          title: RequiredString,
+          home_page_url: OptionalString,
+          feed_url: OptionalString,
+          description: OptionalString,
+          user_comment: OptionalString,
+          next_url: OptionalString,
+          icon: OptionalString,
+          favicon: OptionalString,
+          authors: OptionalArray(AuthorValidator),
+          language: OptionalString,
+          expired: OptionalBoolean,
+          hubs: OptionalArray(HubValidator),
+          items: OptionalArray(ItemValidator)
+        },
+        finalCheck(obj) {
+          if (obj.feed_url && obj.next_url === obj.feed_url) {
+            delete obj.next_url;
+          }
+          return true;
+        }
+      };
+    }
+  });
+
   // src/backend/parsers/xml/namespaces.js
   var NamespaceIds;
   var init_namespaces = __esm({
@@ -1243,12 +1437,12 @@ var WorkshopBackend = (() => {
   });
 
   // src/backend/parsers/xml/utils.js
-  function validateString({ data, defaultValue, validate, convert = null }) {
+  function validateString({ data, defaultValue, validate: validate2, convert = null }) {
     if (!data) {
       return defaultValue;
     }
     data = data.trim();
-    if (validate(data)) {
+    if (validate2(data)) {
       return convert ? convert(data) : data;
     }
     return defaultValue;
@@ -2523,7 +2717,7 @@ var WorkshopBackend = (() => {
     return parser.parse(str);
   }
   var Root;
-  var init_feed_parser = __esm({
+  var init_feed_parser2 = __esm({
     "src/backend/parsers/xml/feed_parser.js"() {
       init_atom();
       init_namespaces();
@@ -2580,7 +2774,7 @@ var WorkshopBackend = (() => {
         };
       }
       const feedText = await feedResp.text();
-      const parsed = parseFeed(feedText);
+      const parsed = isJsonFeed(await feedResp.headers) ? parseJsonFeed(feedText) : parseFeed(feedText);
       if (!parsed) {
         throw new Error("Cannot parse the feed stream");
       }
@@ -2603,6 +2797,7 @@ var WorkshopBackend = (() => {
   var init_validator = __esm({
     "src/backend/accounts/feed/validator.js"() {
       init_feed_parser();
+      init_feed_parser2();
     }
   });
 
@@ -10030,7 +10225,7 @@ var WorkshopBackend = (() => {
           try {
             parsedContent = await sanitizeAndNormalizeHtml(content);
             contentBlob = new Blob([parsedContent], { type: "text/html" });
-            authoredBodySize = await generateSnippet2(parsedContent, false).length;
+            authoredBodySize = (await generateSnippet2(parsedContent, false)).length;
           } catch (ex) {
             logic(scope3, "htmlParseError", { ex });
             parsedContent = "";
@@ -10116,9 +10311,9 @@ var WorkshopBackend = (() => {
           const msgId = this.convId;
           if (item.description) {
             const description = item.description;
-            ({ contentBlob, snippet, authoredBodySize } = await processMessageContent(description, "html", true, true));
+            ({ contentBlob, snippet, authoredBodySize } = await processMessageContent(description, item.contentType, true, true));
             bodyReps.push(makeBodyPart({
-              type: "html",
+              type: item.contentType,
               part: null,
               sizeEstimate: description.length,
               amountDownloaded: description.length,
@@ -10294,7 +10489,28 @@ var WorkshopBackend = (() => {
           data.author = item.author || data.author;
           data.title = item.title || data.title;
           data.description = item.description || data.description;
+          data.contentType = "html";
           const convId = `${this._accountId}.${data.guid}`;
+          this._makeItemConvTask({
+            convId,
+            item: data
+          });
+        }
+        ingestJsonItem(item) {
+          const data = this._makeDefaultData();
+          data.guid = item.id;
+          data.date = (item.date_published || NOW()).valueOf();
+          data.dateModified = (item.date_modified || NOW()).valueOf();
+          data.author = item.authors?.[0]?.name || data.author;
+          data.title = item.title || data.title;
+          if (item.content_html) {
+            data.description = item.content_html;
+            data.contentType = "html";
+          } else {
+            data.description = item.content_text;
+            data.contentType = "plain";
+          }
+          const convId = `${this._accountId}.${data.guid}.`;
           this._makeItemConvTask({
             convId,
             item: data
@@ -10313,6 +10529,7 @@ var WorkshopBackend = (() => {
           }
           data.title = entry.title || data.title;
           data.description = entry.summary || data.description;
+          data.contentType = "html";
           const convId = `${this._accountId}.${data.guid}`;
           this._makeItemConvTask({
             convId,
@@ -10366,6 +10583,7 @@ var WorkshopBackend = (() => {
       init_logic();
       init_feed_parser();
       init_network();
+      init_feed_parser2();
       init_util();
       init_date();
       init_task_definer();
@@ -10418,17 +10636,21 @@ var WorkshopBackend = (() => {
               return null;
             }
             const feedText = await response.text();
-            const parsed = parseFeed(feedText);
+            const parsed = isJsonFeed(await response.headers) ? parseJsonFeed(feedText) : parseFeed(feedText);
             if (parsed?.rss?.channel.item) {
               for (const item of parsed.rss.channel.item) {
                 syncState.ingestItem(item);
               }
-            } else if (parsed?.feed.entry) {
+            } else if (parsed?.feed?.entry) {
               for (const entry of parsed.feed.entry) {
                 syncState.ingestEntry(entry);
               }
             } else if (parsed?.entry) {
               syncState.ingestEntry(parsed.entry);
+            } else if (parsed?.items) {
+              for (const item of parsed.items) {
+                syncState.ingestJsonItem(item);
+              }
             }
             logic(ctx, "syncEnd", {});
             return {

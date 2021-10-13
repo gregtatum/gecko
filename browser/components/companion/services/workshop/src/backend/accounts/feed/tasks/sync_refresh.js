@@ -16,8 +16,9 @@
 
 import logic from "logic";
 
-import { parseFeed } from "../../../parsers/xml/feed_parser";
+import { isJsonFeed, parseJsonFeed } from "../../../parsers/json/feed_parser";
 import { fetchCacheAware } from "../../../utils/network";
+import { parseFeed } from "../../../parsers/xml/feed_parser";
 
 import { shallowClone } from "shared/util";
 import { NOW } from "shared/date";
@@ -128,18 +129,24 @@ export default TaskDefiner.defineAtMostOnceTask([
       }
 
       const feedText = await response.text();
-      const parsed = parseFeed(feedText);
+      const parsed = isJsonFeed(await response.headers)
+        ? parseJsonFeed(feedText)
+        : parseFeed(feedText);
 
       if (parsed?.rss?.channel.item) {
         for (const item of parsed.rss.channel.item) {
           syncState.ingestItem(item);
         }
-      } else if (parsed?.feed.entry) {
+      } else if (parsed?.feed?.entry) {
         for (const entry of parsed.feed.entry) {
           syncState.ingestEntry(entry);
         }
       } else if (parsed?.entry) {
         syncState.ingestEntry(parsed.entry);
+      } else if (parsed?.items) {
+        for (const item of parsed.items) {
+          syncState.ingestJsonItem(item);
+        }
       }
       logic(ctx, "syncEnd", {});
 

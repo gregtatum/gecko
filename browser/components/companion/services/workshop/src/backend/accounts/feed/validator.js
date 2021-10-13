@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { isJsonFeed, parseJsonFeed } from "../../parsers/json/feed_parser";
 import { parseFeed } from "../../parsers/xml/feed_parser";
 
 /**
@@ -41,8 +42,9 @@ export default async function validateFeed({
     }
 
     const feedText = await feedResp.text();
-    const parsed = parseFeed(feedText);
-
+    const parsed = isJsonFeed(await feedResp.headers)
+      ? parseJsonFeed(feedText)
+      : parseFeed(feedText);
     if (!parsed) {
       throw new Error("Cannot parse the feed stream");
     }
