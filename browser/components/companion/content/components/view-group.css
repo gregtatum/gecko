@@ -90,6 +90,12 @@
   display: none;
 }
 
+:host(:is([top],[active])) .view-label-container {
+  line-height: 16px;
+  white-space: nowrap;
+  width: 200px;
+}
+
 /**
  * We must supply a min-width here in order for the text inside
  * the domain / title containers to overflow properly.
