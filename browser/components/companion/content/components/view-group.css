@@ -91,9 +91,12 @@
 }
 
 :host(:is([top],[active])) .view-label-container {
-  line-height: 16px;
   white-space: nowrap;
   width: 200px;
+}
+
+:host(:not(:is([top],[active]))) {
+  padding-block: 2px;
 }
 
 /**
@@ -111,7 +114,8 @@
 }
 
 .view-title {
-  font-size: 1.08rem;
+  font-size: 1.25rem;
+  min-height: 20px;
 }
 
 .view-domain-container {
@@ -170,7 +174,7 @@
 .view-history {
   display: flex;
   align-items: center;
-  height: 1rem;
+  min-height: 16px;
 }
 
 .view-history > .history {
@@ -181,6 +185,8 @@
   background-image: url("resource://usercontext-content/circle.svg");
   background-repeat: no-repeat;
   background-size: 6px 6px;
+  background-position: center center;
+  background-repeat: no-repeat;
   width: 6px;
   height: 6px;
   -moz-context-properties: fill;
