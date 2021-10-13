@@ -323,8 +323,7 @@ class nsBidiPresUtils {
   /**
    * Get an mozilla::intl::Bidi::Direction representing the direction implied by
    * the bidi base level of the frame.
-   * @return NSBIDI_LTR (left-to-right) or NSBIDI_RTL (right-to-left)
-   *  NSBIDI_MIXED will never be returned.
+   * @return mozilla::intl::Bidi::Direction
    */
   static mozilla::intl::Bidi::Direction ParagraphDirection(
       const nsIFrame* aFrame) {
@@ -334,8 +333,7 @@ class nsBidiPresUtils {
   /**
    * Get an mozilla::intl::Bidi::Direction representing the direction implied by
    * the bidi embedding level of the frame.
-   * @return NSBIDI_LTR (left-to-right) or NSBIDI_RTL (right-to-left)
-   *  NSBIDI_MIXED will never be returned.
+   * @return mozilla::intl::Bidi::Direction
    */
   static mozilla::intl::Bidi::Direction FrameDirection(nsIFrame* aFrame) {
     return GetFrameEmbeddingLevel(aFrame).Direction();
@@ -386,13 +384,12 @@ class nsBidiPresUtils {
    * Use style attributes to determine the base paragraph level to pass to the
    * bidi algorithm.
    *
-   * If |unicode-bidi| is set to "[-moz-]plaintext", returns NSBIDI_DEFAULT_LTR,
+   * If |unicode-bidi| is set to "[-moz-]plaintext", returns DefaultLTR,
    * in other words the direction is determined from the first strong character
    * in the text according to rules P2 and P3 of the bidi algorithm, or LTR if
    * there is no strong character.
    *
-   * Otherwise returns NSBIDI_LTR or NSBIDI_RTL depending on the value of
-   * |direction|
+   * Otherwise returns LTR or RTL depending on the value of |direction|
    */
   static mozilla::intl::Bidi::EmbeddingLevel BidiLevelFromStyle(
       mozilla::ComputedStyle* aComputedStyle);

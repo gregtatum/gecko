@@ -25,8 +25,6 @@
 
 class nsRange;
 
-#define BIDI_LEVEL_UNDEFINED 0x80
-
 //----------------------------------------------------------------------
 
 // Selection interface

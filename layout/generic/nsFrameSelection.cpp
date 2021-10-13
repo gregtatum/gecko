@@ -80,6 +80,7 @@ static NS_DEFINE_CID(kFrameTraversalCID, NS_FRAMETRAVERSAL_CID);
 #include "mozilla/dom/SelectionBinding.h"
 #include "mozilla/AsyncEventDispatcher.h"
 #include "mozilla/Telemetry.h"
+#include "mozilla/intl/Bidi.h"
 
 #include "nsFocusManager.h"
 #include "nsPIDOMWindow.h"
@@ -616,7 +617,7 @@ mozilla::intl::Bidi::EmbeddingLevel nsFrameSelection::GetCaretBidiLevel()
 }
 
 void nsFrameSelection::UndefineCaretBidiLevel() {
-  mCaret.mBidiLevel |= BIDI_LEVEL_UNDEFINED;
+  mCaret.mBidiLevel = mozilla::intl::Bidi::EmbeddingLevel::PseudoValue();
 }
 
 #ifdef PRINT_RANGE
@@ -665,7 +666,8 @@ static nsDirection GetCaretDirection(const nsIFrame& aFrame,
                                      bool aVisualMovement) {
   const mozilla::intl::Bidi::Direction paragraphDirection =
       nsBidiPresUtils::ParagraphDirection(&aFrame);
-  return (aVisualMovement && paragraphDirection == mozilla::intl::Bidi::Direction::RTL)
+  return (aVisualMovement &&
+          paragraphDirection == mozilla::intl::Bidi::Direction::RTL)
              ? nsDirection(1 - aDirection)
              : aDirection;
 }
@@ -929,7 +931,8 @@ nsPrevNextBidiLevels nsFrameSelection::GetPrevNextBidiLevels(
   nsDirection direction;
 
   nsPrevNextBidiLevels levels{};
-  levels.SetData(nullptr, nullptr, 0, 0);
+  levels.SetData(nullptr, nullptr, mozilla::intl::Bidi::EmbeddingLevel::LTR(),
+                 mozilla::intl::Bidi::EmbeddingLevel::LTR());
 
   currentFrame = GetFrameForNodeOffset(
       aNode, static_cast<int32_t>(aContentOffset), aHint, &currentOffset);
@@ -991,7 +994,8 @@ nsresult nsFrameSelection::GetFrameFromLevel(
     mozilla::intl::Bidi::EmbeddingLevel aBidiLevel,
     nsIFrame** aFrameOut) const {
   NS_ENSURE_STATE(mPresShell);
-  mozilla::intl::Bidi::EmbeddingLevel foundLevel = 0;
+  mozilla::intl::Bidi::EmbeddingLevel foundLevel =
+      mozilla::intl::Bidi::EmbeddingLevel::LTR();
   nsIFrame* foundFrame = aFrameIn;
 
   nsCOMPtr<nsIFrameEnumerator> frameTraversal;

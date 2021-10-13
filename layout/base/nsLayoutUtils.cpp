@@ -1540,7 +1540,9 @@ nsRect nsLayoutUtils::GetScrolledRect(nsIFrame* aScrolledFrame,
   WritingMode wm = aScrolledFrame->GetWritingMode();
   // Potentially override the frame's direction to use the direction found
   // by ScrollFrameHelper::GetScrolledFrameDir()
-  wm.SetDirectionFromBidiLevel(aDirection == StyleDirection::Rtl ? 1 : 0);
+  wm.SetDirectionFromBidiLevel(aDirection == StyleDirection::Rtl
+    ? mozilla::intl::Bidi::EmbeddingLevel::RTL()
+    : mozilla::intl::Bidi::EmbeddingLevel::LTR());
 
   nscoord x1 = aScrolledFrameOverflowArea.x,
           x2 = aScrolledFrameOverflowArea.XMost(),

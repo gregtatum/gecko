@@ -407,8 +407,8 @@ struct FrameBidiData {
   intl::Bidi::EmbeddingLevel baseLevel;
   intl::Bidi::EmbeddingLevel embeddingLevel;
   // The embedding level of virtual bidi formatting character before
-  // this frame if any. kBidiLevelNone is used to indicate nonexistence
-  // or unnecessity of such virtual character.
+  // this frame if any. An embedding level with a pseudo value is used to
+  // indicate nonexistence or unnecessity of such virtual character.
   intl::Bidi::EmbeddingLevel precedingControl;
 };
 
@@ -1321,7 +1321,8 @@ class nsIFrame : public nsQueryFrame {
     bool exists;
     mozilla::FrameBidiData bidiData = GetProperty(BidiDataProperty(), &exists);
     if (!exists) {
-      bidiData.precedingControl = mozilla::intl::Bidi::EmbeddingLevel::PseudoValue();
+      bidiData.precedingControl =
+          mozilla::intl::Bidi::EmbeddingLevel::PseudoValue();
     }
     return bidiData;
   }
