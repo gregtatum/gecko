@@ -432,6 +432,16 @@ let DisallowedFeatures = {};
 let SupportMenu = null;
 let ExtensionPolicies = null;
 let ExtensionSettings = null;
+if (AppConstants.PINEBUILD && !(Cu.isInAutomation || isXpcshell)) {
+  ExtensionSettings = {
+    "*": {
+      installation_mode: "blocked",
+    },
+    "quitter@mozilla.org": {
+      installation_mode: "allowed",
+    },
+  };
+}
 let InstallSources = null;
 
 /**

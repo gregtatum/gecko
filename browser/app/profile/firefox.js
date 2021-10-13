@@ -2603,7 +2603,6 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("pref.browser.homepage.disable_button.bookmark_page", true, locked);
   pref("pref.browser.homepage.disable_button.restore_default", true, locked);
   pref("browser.newtabpage.enabled", false, locked);
-  pref("xpinstall.enabled", false, locked);
   pref("services.sync.engine.tabs", false, locked);
   pref("browser.urlbar.suggest.openpage", false, locked);
   pref("browser.sessionstore.warnOnQuit", false, locked);

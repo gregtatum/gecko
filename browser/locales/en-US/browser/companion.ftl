@@ -114,3 +114,7 @@ restore-session = Restore
 # entered "Flow Reset" state.
 session-cleared-title = All cleared
 session-cleared = Your last session has been saved in <a data-l10n-name="session-cleared-link">Browse</a>
+
+# This is shown when you try to install an addon in the Pro Client that is not on the allowed list.
+# It overrides the default message that is normally used by enterprise policy.
+addons-unsupported = { -brand-short-name } does not support this extension.

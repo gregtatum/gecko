@@ -476,7 +476,7 @@ var gXPInstallObserver = {
     Services.console.logMessage(consoleMsg);
   },
 
-  observe(aSubject, aTopic, aData) {
+  async observe(aSubject, aTopic, aData) {
     var brandBundle = document.getElementById("bundle_brand");
     var installInfo = aSubject.wrappedJSObject;
     var browser = installInfo.browser;
@@ -847,6 +847,16 @@ var gXPInstallObserver = {
           }
 
           messageString = gNavigatorBundle.getFormattedString(error, args);
+          if (
+            AppConstants.PINEBUILD &&
+            error == "addonInstallBlockedByPolicy"
+          ) {
+            let l10n = new Localization([
+              "branding/brand.ftl",
+              "browser/companion.ftl",
+            ]);
+            messageString = await l10n.formatValue("addons-unsupported");
+          }
 
           PopupNotifications.show(
             browser,
