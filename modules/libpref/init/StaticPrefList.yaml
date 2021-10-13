@@ -9316,7 +9316,7 @@
 
 - name: network.predictor.enable-prefetch
   type: bool
-  value: false
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
 
 - name: network.predictor.page-degradation.day
@@ -9526,6 +9526,11 @@
   value: true
   mirror: always
 #endif
+
+- name: network.proxy.parse_pac_on_socket_process
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
 
 # Some requests during a page load are marked as "tail", mainly trackers, but not only.
 # This pref controls whether such requests are put to the tail, behind other requests
@@ -10939,6 +10944,13 @@
 # Cancel outgoing requests from SystemPrincipal:
 # but only with scheme data and contentpolicytype subdocument
 - name: security.disallow_privileged_data_subdocuments_loads
+  type: bool
+  value: true
+  mirror: always
+
+# Cancel outgoing requests from SystemPrincipal:
+# but only with scheme http(s) and contentpolicytype stylesheet
+- name: security.disallow_privileged_https_stylesheet_loads
   type: bool
   value: true
   mirror: always

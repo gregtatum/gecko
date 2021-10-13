@@ -120,63 +120,10 @@ menuitem.bookmark-item {
 %include ../shared/toolbarbutton-icons.inc.css
 %include ../shared/menupanel.inc.css
 
-/* Fullscreen window controls */
-
 :root {
   --titlebar-button-hpadding: 12px;
   --titlebar-button-icon-width: 12px;
   --window-controls-width: calc(3 * ((var(--titlebar-button-hpadding) * 2) + var(--titlebar-button-icon-width)));
-}
-
-#minimize-button,
-#restore-button,
-#close-button {
-  appearance: none;
-  padding: 6px 12px;
-  -moz-context-properties: stroke;
-  stroke: currentColor;
-  color: inherit;
-}
-
-#minimize-button {
-  list-style-image: url(chrome://browser/skin/window-controls/minimize.svg);
-}
-
-#restore-button {
-  list-style-image: url(chrome://browser/skin/window-controls/restore.svg);
-}
-
-#minimize-button:hover,
-#restore-button:hover {
-  background-color: hsla(0,0%,0%,.12);
-}
-
-#minimize-button:hover:active,
-#restore-button:hover:active {
-  background-color: hsla(0,0%,0%,.22);
-}
-
-#TabsToolbar[brighttext] > #window-controls > #minimize-button:hover,
-#TabsToolbar[brighttext] > #window-controls > #restore-button:hover {
-  background-color: hsla(0,0%,100%,.12);
-}
-
-#TabsToolbar[brighttext] > #window-controls > #minimize-button:hover:active,
-#TabsToolbar[brighttext] > #window-controls > #restore-button:hover:active {
-  background-color: hsla(0,0%,100%,.22);
-}
-
-#close-button {
-  list-style-image: url(chrome://browser/skin/window-controls/close.svg);
-}
-
-#close-button:hover {
-  background-color: #d70022;
-  stroke: white;
-}
-
-#close-button:hover:active {
-  background-color: #ff0039;
 }
 
 /* Address bar */
@@ -407,11 +354,11 @@ menuitem.bookmark-item {
   :root[tabsintitlebar] #titlebar {
     appearance: auto;
     -moz-default-appearance: -moz-window-titlebar-maximized;
-    color: -moz-gtk-titlebar-text;
+    color: CaptionText;
   }
 
   :root[tabsintitlebar] #titlebar:-moz-window-inactive {
-    color: -moz-gtk-titlebar-inactive-text;
+    color: InactiveCaptionText;
   }
 
   :root[tabsintitlebar] #titlebar:-moz-lwtheme {

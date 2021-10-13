@@ -421,7 +421,7 @@
                         hidden="true"
                         oncommand="gSync.openSignInAgainPage('menubar');" data-l10n-id="menu-tools-fxa-re-auth"/>
               <menuseparator id="devToolsSeparator"/>
-              <menu id="webDeveloperMenu"
+              <menu id="browserToolsMenu"
                     data-l10n-id="menu-tools-browser-tools"
 #ifdef PINEBUILD
                     hidden="true"

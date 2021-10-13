@@ -2925,8 +2925,9 @@ Tests for page-load performance. The links direct to the actual websites that ar
    * **page cycles**: 25
    * **page timeout**: 60000
    * **playback**: mitmproxy
-   * **playback pageset manifest**: mitm5-linux-firefox-instagram.manifest
-   * **playback version**: 5.1.1
+   * **playback pageset manifest**: mitm6-linux-firefox-instagram.manifest
+   * **playback version**: 6.0.2
+   * **secondary url**: `<https://www.instagram.com/nobelprize_org/>`__
    * **test url**: `<https://www.instagram.com/>`__
    * **type**: pageload
    * **unit**: ms
@@ -3528,8 +3529,9 @@ Tests for page-load performance. The links direct to the actual websites that ar
    * **page cycles**: 25
    * **page timeout**: 60000
    * **playback**: mitmproxy
-   * **playback pageset manifest**: mitm5-linux-firefox-pinterest.manifest
-   * **playback version**: 5.1.1
+   * **playback pageset manifest**: mitm6-linux-firefox-pinterest.manifest
+   * **playback version**: 6.0.2
+   * **secondary url**: `<https://www.pinterest.com/today/best/halloween-costumes-for-your-furry-friends/75787/>`__
    * **test url**: `<https://pinterest.com/>`__
    * **type**: pageload
    * **unit**: ms
@@ -3691,8 +3693,9 @@ Tests for page-load performance. The links direct to the actual websites that ar
    * **page cycles**: 25
    * **page timeout**: 60000
    * **playback**: mitmproxy
-   * **playback pageset manifest**: mitm5-linux-firefox-tumblr.manifest
-   * **playback version**: 5.1.1
+   * **playback pageset manifest**: mitm6-linux-firefox-tumblr.manifest
+   * **playback version**: 6.0.2
+   * **secondary url**: `<https://www.tumblr.com/tagged/funny+cats?sort=top>`__
    * **test url**: `<https://www.tumblr.com/dashboard>`__
    * **type**: pageload
    * **unit**: ms
@@ -3991,8 +3994,9 @@ Tests for page-load performance. The links direct to the actual websites that ar
    * **page cycles**: 25
    * **page timeout**: 60000
    * **playback**: mitmproxy
-   * **playback pageset manifest**: mitm5-linux-firefox-wikipedia.manifest
-   * **playback version**: 5.1.1
+   * **playback pageset manifest**: mitm6-linux-firefox-wikipedia.manifest
+   * **playback version**: 6.0.2
+   * **secondary url**: `<https://en.wikipedia.org/wiki/Joe_Biden>`__
    * **test url**: `<https://en.wikipedia.org/wiki/Barack_Obama>`__
    * **type**: pageload
    * **unit**: ms
@@ -4153,8 +4157,9 @@ Tests for page-load performance. The links direct to the actual websites that ar
    * **page cycles**: 25
    * **page timeout**: 60000
    * **playback**: mitmproxy
-   * **playback pageset manifest**: mitm5-linux-firefox-youtube.manifest
-   * **playback version**: 5.1.1
+   * **playback pageset manifest**: mitm6-linux-firefox-youtube.manifest
+   * **playback version**: 6.0.2
+   * **secondary url**: `<https://www.youtube.com/watch?v=JrdEMERq8MA>`__
    * **test url**: `<https://www.youtube.com>`__
    * **type**: pageload
    * **unit**: ms

@@ -126,6 +126,7 @@
 #include "nsGkAtoms.h"
 #include "nsICanvasRenderingContextInternal.h"
 #include "nsIContent.h"
+#include "nsIContentInlines.h"
 #include "nsIContentViewer.h"
 #include "nsIDocShell.h"
 #include "nsIFrameInlines.h"
@@ -7411,7 +7412,7 @@ SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
 Element* nsLayoutUtils::GetEditableRootContentByContentEditable(
     Document* aDocument) {
   // If the document is in designMode we should return nullptr.
-  if (!aDocument || aDocument->HasFlag(NODE_IS_EDITABLE)) {
+  if (!aDocument || aDocument->IsInDesignMode()) {
     return nullptr;
   }
 
@@ -8155,7 +8156,7 @@ nsMargin nsLayoutUtils::ScrollbarAreaToExcludeFromCompositionBoundsFor(
   if (!isRootContentDocRootScrollFrame) {
     return nsMargin();
   }
-  if (LookAndFeel::GetInt(LookAndFeel::IntID::UseOverlayScrollbars)) {
+  if (presContext->UseOverlayScrollbars()) {
     return nsMargin();
   }
   nsIScrollableFrame* scrollableFrame = aScrollFrame->GetScrollTargetFrame();
@@ -9052,9 +9053,9 @@ void nsLayoutUtils::GetFrameTextContent(nsIFrame* aFrame, nsAString& aResult) {
 void nsLayoutUtils::AppendFrameTextContent(nsIFrame* aFrame,
                                            nsAString& aResult) {
   if (aFrame->IsTextFrame()) {
-    auto textFrame = static_cast<nsTextFrame*>(aFrame);
-    auto offset = textFrame->GetContentOffset();
-    auto length = textFrame->GetContentLength();
+    auto* const textFrame = static_cast<nsTextFrame*>(aFrame);
+    const auto offset = AssertedCast<uint32_t>(textFrame->GetContentOffset());
+    const auto length = AssertedCast<uint32_t>(textFrame->GetContentLength());
     textFrame->TextFragment()->AppendTo(aResult, offset, length);
   } else {
     for (nsIFrame* child : aFrame->PrincipalChildList()) {

@@ -150,19 +150,25 @@ int32_t nsPlainTextSerializer::CurrentLine::FindWrapIndexForContent(
   }
 
   // In this case we don't want strings, especially CJK-ones, to be split. See
-  // bug 333064 for more information.
-  if (aWrapColumn < prefixwidth) {
-    goodSpace = (prefixwidth > aWrapColumn) ? 1 : aWrapColumn - prefixwidth;
-    const int32_t contentLength = mContent.Length();
-    while (goodSpace < contentLength &&
-           !nsCRT::IsAsciiSpace(mContent.CharAt(goodSpace))) {
-      goodSpace++;
-    }
-  } else {
-    goodSpace = std::min(aWrapColumn - prefixwidth, mContent.Length() - 1);
-    while (goodSpace >= 0 && !nsCRT::IsAsciiSpace(mContent.CharAt(goodSpace))) {
+  // bug 333064 for more information. We break only at ASCII spaces.
+  if (aWrapColumn >= prefixwidth) {
+    // Search backward from the adjusted wrap column or from the text end.
+    goodSpace = static_cast<int32_t>(
+        std::min(aWrapColumn - prefixwidth, mContent.Length() - 1));
+    while (goodSpace >= 0) {
+      if (nsCRT::IsAsciiSpace(mContent.CharAt(goodSpace))) {
+        return goodSpace;
+      }
       goodSpace--;
     }
+  }
+
+  // Search forward from the adjusted wrap column.
+  goodSpace = (prefixwidth > aWrapColumn) ? 1 : aWrapColumn - prefixwidth;
+  const int32_t contentLength = mContent.Length();
+  while (goodSpace < contentLength &&
+         !nsCRT::IsAsciiSpace(mContent.CharAt(goodSpace))) {
+    goodSpace++;
   }
 
   return goodSpace;
@@ -430,7 +436,7 @@ nsPlainTextSerializer::AppendText(nsIContent* aText, int32_t aStartOffset,
 
   // Mask the text if the text node is in a password field.
   if (content->HasFlag(NS_MAYBE_MASKED)) {
-    EditorUtils::MaskString(textstr, content->AsText(), 0, aStartOffset);
+    EditorUtils::MaskString(textstr, *content->AsText(), 0, aStartOffset);
   }
 
   // We have to split the string across newlines

@@ -7097,7 +7097,7 @@ EditorBase* nsContentUtils::GetActiveEditor(nsPIDOMWindowOuter* aWindow) {
 
   // If it's in designMode, nobody can have focus.  Therefore, the HTMLEditor
   // handles all events.  I.e., it's focused editor in this case.
-  if (aWindow->GetExtantDoc()->HasFlag(NODE_IS_EDITABLE)) {
+  if (aWindow->GetExtantDoc()->IsInDesignMode()) {
     return GetHTMLEditor(nsDocShell::Cast(aWindow->GetDocShell()));
   }
 
@@ -7120,7 +7120,7 @@ EditorBase* nsContentUtils::GetActiveEditor(nsPIDOMWindowOuter* aWindow) {
 
 // static
 TextEditor* nsContentUtils::GetTextEditorFromAnonymousNodeWithoutCreation(
-    nsIContent* aAnonymousContent) {
+    const nsIContent* aAnonymousContent) {
   if (!aAnonymousContent) {
     return nullptr;
   }
