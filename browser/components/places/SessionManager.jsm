@@ -533,6 +533,29 @@ const SessionManager = new (class SessionManager extends EventEmitter {
 
     logConsole.debug("Saving session", guid);
 
+    // Here we filter out internal pages from the data. We also build the
+    // page map that we need for working out the order of the pages.
+    // If that filtering ends up in an empty section, we'll filter that out
+    // too.
+    let pageMap = new Map();
+    data.tabs = data.tabs.filter(tab => {
+      tab.entries = tab.entries.filter(({ url, ID }) => {
+        if (url.startsWith("about:") || url.startsWith("chrome:")) {
+          return false;
+        }
+        pageMap.set(ID, url);
+        return true;
+      });
+      return tab.entries.length;
+    });
+
+    if (!data.tabs.length) {
+      logConsole.error(
+        "Unexpected empty session after filtering internal pages"
+      );
+      return;
+    }
+
     // First save the data to disk first as this is probably more likely to
     // fail than the write to DB, so we'll keep the data in sync in that case.
     let path = await this.#getSessionFilePath(guid);
@@ -542,36 +565,28 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       tmpPath: path + ".tmp",
     });
 
-    // Now update the database.
+    // Now work out what we need for updating the database.
+
+    // We reverse the state then reverse it again after ordering the pages.
+    // This has the side-effect of ensuring that we keep the most recent
+    // duplicate of a page.
+    let historyState = JSON.parse(data.extData.GlobalHistoryState).reverse();
+
+    let orderedPages = new Set();
+    for (let entry of historyState) {
+      let page = pageMap.get(entry.id);
+      if (page) {
+        orderedPages.add(page);
+      }
+    }
+
+    let pages = [...orderedPages.values()];
+    pages.reverse();
+    pages = pages.map((url, position) => ({ url, position }));
+
     await PlacesUtils.withConnectionWrapper(
       "SessionManager:register",
       async db => {
-        let pageMap = new Map();
-        for (let tab of data.tabs) {
-          for (let { ID, url } of tab.entries) {
-            pageMap.set(ID, url);
-          }
-        }
-
-        // We reverse the state then reverse it again after ordering the pages.
-        // This has the side-effect of ensuring that we keep the most recent
-        // duplicate of a page.
-        let historyState = JSON.parse(
-          data.extData.GlobalHistoryState
-        ).reverse();
-
-        let orderedPages = new Set();
-        for (let entry of historyState) {
-          let page = pageMap.get(entry.id);
-          if (page) {
-            orderedPages.add(page);
-          }
-        }
-
-        let pages = [...orderedPages.values()];
-        pages.reverse();
-        pages = pages.map((url, position) => ({ url, position }));
-
         await db.executeTransaction(async () => {
           let rows = await db.executeCached(
             `UPDATE moz_session_metadata SET last_saved_at = :lastSavedAt
