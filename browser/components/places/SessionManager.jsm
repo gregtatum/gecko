@@ -135,7 +135,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    *
    * @param {DOMWindow} window
    *   The window in which to start the new session.
-   * @param {string} url
+   * @param {nsIURI} url
    *   The url that was loaded to potentially trigger the new session.
    */
   async register(window, url) {
@@ -146,7 +146,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       // No need to register, we already have something for this window.
       return;
     }
-    if (url == "about:flow-reset") {
+    if (!url || url.schemeIs("about") || url.schemeIs("chrome")) {
       return;
     }
     this.emit("session-view-added", window);

@@ -116,8 +116,8 @@ add_task(async function test_two_consecutive_calls() {
   let guidCount = (await getGUIDs()).length;
 
   // Calling register consecutively should only record the first GUID.
-  SessionManager.register(win);
-  SessionManager.register(win);
+  SessionManager.register(win, Services.io.newURI(TEST_URL));
+  SessionManager.register(win, Services.io.newURI(TEST_URL));
 
   let guids = await getGUIDs();
   Assert.equal(
@@ -142,7 +142,7 @@ add_task(async function test_register_already_in_db() {
 
   sinon.stub(SessionManager, "makeGuid").returns(guids[0]);
 
-  SessionManager.register(win);
+  SessionManager.register(win, Services.io.newURI(TEST_URL));
 
   let newGuids = await getGUIDs();
 
@@ -155,6 +155,54 @@ add_task(async function test_register_already_in_db() {
     !SessionStore.getCustomWindowValue(win, "SessionManagerGuid"),
     "Should have cleared the GUID from the window."
   );
+
+  await promiseWindowClosedAndSessionSaved(win);
+
+  sinon.restore();
+});
+
+add_task(async function test_internal_pages() {
+  let win = await BrowserTestUtils.openNewBrowserWindow();
+
+  BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, "about:mozilla");
+  await BrowserTestUtils.browserLoaded(
+    win.gBrowser.selectedBrowser,
+    false,
+    "about:mozilla"
+  );
+
+  Assert.ok(
+    !SessionStore.getCustomWindowValue(win, "SessionManagerGuid"),
+    "Should not have registered a session when loading an about: page"
+  );
+
+  let chromeURL = getRootDirectory(gTestPath);
+
+  BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, chromeURL);
+  await BrowserTestUtils.browserLoaded(
+    win.gBrowser.selectedBrowser,
+    false,
+    chromeURL
+  );
+
+  Assert.ok(
+    !SessionStore.getCustomWindowValue(win, "SessionManagerGuid"),
+    "Should not have registered a session when loading a chrome: page"
+  );
+
+  BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, TEST_URL);
+  await BrowserTestUtils.browserLoaded(
+    win.gBrowser.selectedBrowser,
+    false,
+    TEST_URL
+  );
+
+  let guid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
+  Assert.ok(
+    guid,
+    "Should register a session when loading a normal page after internal pages"
+  );
+  sessionGuids.push(guid);
 
   await promiseWindowClosedAndSessionSaved(win);
 });

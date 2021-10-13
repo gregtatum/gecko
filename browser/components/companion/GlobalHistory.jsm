@@ -1300,7 +1300,7 @@ class GlobalHistory extends EventTarget {
       this.#viewStack.push(internalView);
       this.#historyViews.set(newEntry.ID, internalView);
 
-      SessionManager.register(this.#window, internalView.url.spec).catch(
+      SessionManager.register(this.#window, internalView.url).catch(
         logConsole.error
       );
 
