@@ -5,8 +5,11 @@
 active-view-manager-overflow-button-text = +{$count}
 
 # Page action menu strings.
-page-action-pin-view =
-  .label = Pin
+page-action-toggle-pinning =
+  .label = { $isPinned ->
+     [true] Unpin
+    *[other] Pin
+  }
 page-action-copy-url =
   .label = Copy
 page-action-close-view =
