@@ -1211,7 +1211,7 @@ void GCRuntime::sweepMisc() {
   SweepingTracer trc(rt);
   for (SweepGroupRealmsIter r(this); !r.done(); r.next()) {
     AutoSetThreadIsSweeping threadIsSweeping(r->zone());
-    r->traceWeakObjects(&trc);
+    r->traceWeakGlobalEdge(&trc);
     r->traceWeakSavedStacks(&trc);
     r->traceWeakObjectRealm(&trc);
     r->traceWeakRegExps(&trc);
@@ -1263,9 +1263,10 @@ void GCRuntime::sweepFinalizationRegistriesOnMainThread() {
   gcstats::AutoPhase ap1(stats(), gcstats::PhaseKind::SWEEP_COMPARTMENTS);
   gcstats::AutoPhase ap2(stats(),
                          gcstats::PhaseKind::SWEEP_FINALIZATION_REGISTRIES);
+  SweepingTracer trc(rt);
   AutoLockStoreBuffer lock(&storeBuffer());
   for (SweepGroupZonesIter zone(this); !zone.done(); zone.next()) {
-    sweepFinalizationRegistries(zone);
+    traceWeakFinalizationRegistryEdges(&trc, zone);
   }
 }
 
@@ -1288,6 +1289,7 @@ void GCRuntime::joinTask(GCParallelTask& task,
 }
 
 void GCRuntime::sweepDebuggerOnMainThread(JSFreeOp* fop) {
+  SweepingTracer trc(rt);
   AutoLockStoreBuffer lock(&storeBuffer());
 
   // Detach unreachable debuggers and global objects from each other.
@@ -1302,7 +1304,7 @@ void GCRuntime::sweepDebuggerOnMainThread(JSFreeOp* fop) {
   {
     gcstats::AutoPhase ap2(stats(), gcstats::PhaseKind::SWEEP_MISC);
     for (SweepGroupRealmsIter r(rt); !r.done(); r.next()) {
-      r->sweepDebugEnvironments();
+      r->traceWeakDebugEnvironmentEdges(&trc);
     }
   }
 }
