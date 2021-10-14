@@ -164,7 +164,7 @@ class nsBidiPresUtils {
      *  mixed direction.
      */
     virtual void SetText(const char16_t* aText, int32_t aLength,
-                         nsBidiDirection aDirection) = 0;
+                         mozilla::intl::Bidi::Direction aDirection) = 0;
 
     /**
      * Returns the measured width of the text given in SetText. If SetText was
@@ -325,23 +325,26 @@ class nsBidiPresUtils {
   static nsBidiLevel GetFrameBaseLevel(const nsIFrame* aFrame);
 
   /**
-   * Get an nsBidiDirection representing the direction implied by the
-   * bidi base level of the frame.
+   * Get an mozilla::intl::Bidi::Direction representing the direction implied by
+   * the bidi base level of the frame.
    * @return NSBIDI_LTR (left-to-right) or NSBIDI_RTL (right-to-left)
    *  NSBIDI_MIXED will never be returned.
    */
-  static nsBidiDirection ParagraphDirection(const nsIFrame* aFrame) {
-    return DIRECTION_FROM_LEVEL(GetFrameBaseLevel(aFrame));
+  static mozilla::intl::Bidi::Direction ParagraphDirection(
+      const nsIFrame* aFrame) {
+    return mozilla::intl::Bidi::EmbeddingLevel::Direction(
+        GetFrameBaseLevel(aFrame));
   }
 
   /**
-   * Get an nsBidiDirection representing the direction implied by the
-   * bidi embedding level of the frame.
+   * Get an mozilla::intl::Bidi::Direction representing the direction implied by
+   * the bidi embedding level of the frame.
    * @return NSBIDI_LTR (left-to-right) or NSBIDI_RTL (right-to-left)
    *  NSBIDI_MIXED will never be returned.
    */
-  static nsBidiDirection FrameDirection(nsIFrame* aFrame) {
-    return DIRECTION_FROM_LEVEL(GetFrameEmbeddingLevel(aFrame));
+  static mozilla::intl::Bidi::Direction FrameDirection(nsIFrame* aFrame) {
+    return mozilla::intl::Bidi::EmbeddingLevel::Direction(
+        GetFrameEmbeddingLevel(aFrame));
   }
 
   static bool IsFrameInParagraphDirection(nsIFrame* aFrame) {
@@ -353,7 +356,8 @@ class nsBidiPresUtils {
   // the leaf frame.
   static bool IsReversedDirectionFrame(const nsIFrame* aFrame) {
     mozilla::FrameBidiData bidiData = aFrame->GetBidiData();
-    return !IS_SAME_DIRECTION(bidiData.embeddingLevel, bidiData.baseLevel);
+    return !mozilla::intl::Bidi::EmbeddingLevel::IsSameDirection(
+        bidiData.embeddingLevel, bidiData.baseLevel);
   }
 
   enum Mode { MODE_DRAW, MODE_MEASURE };

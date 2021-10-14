@@ -49,80 +49,6 @@ class Bidi final {
   enum ParagraphDirection { LTR, RTL, Mixed };
 
   /**
-   * Embedding levels are numbers that indicate how deeply the bidi text is
-   * nested, and the default direction of text on that level. Embedding levels
-   * are changed by using the Left-to-Right Embedding (LRE) codepoint (U+202A),
-   * or the Right-to-Left Embedding (RLE) codepoint (U+202B). The minimum
-   * embedding level of text is zero, and the maximum explicit depth is 125
-   */
-  class EmbeddingLevel {
-   public:
-    bool IsDefaultLTR() const;
-    bool IsDefaultRTL() const;
-    bool IsLTR() const;
-    bool IsRTL() const;
-    bool IsPseudoValue() const;
-    bool IsSameDirection(EmbeddingLevel aOther) const;
-    uint8_t GetExplicitValue() const;
-    Direction Direction() const;
-    Maybe<EmbeddingLevel> TryIncrement() const;
-
-    EmbeddingLevel() = default;
-    EmbeddingLevel(const EmbeddingLevel& other) = default;
-    EmbeddingLevel& operator=(const EmbeddingLevel& other) = default;
-
-    bool operator<(const EmbeddingLevel& aOther) {
-      return mValue < aOther.mValue;
-    }
-    bool operator>(const EmbeddingLevel& aOther) {
-      return mValue > aOther.mValue;
-    }
-    bool operator<=(const EmbeddingLevel& aOther) {
-      return mValue <= aOther.mValue;
-    }
-    bool operator>=(const EmbeddingLevel& aOther) {
-      return mValue >= aOther.mValue;
-    }
-    bool operator==(const EmbeddingLevel& aOther) {
-      return mValue == aOther.mValue;
-    }
-    bool operator!=(const EmbeddingLevel& aOther) {
-      return mValue != aOther.mValue;
-    }
-    EmbeddingLevel Min(const EmbeddingLevel& aOther) {
-      return (aOther.mValue < mValue) ? aOther : *this;
-    }
-    EmbeddingLevel Max(const EmbeddingLevel& aOther) {
-      return (aOther.mValue > mValue) ? aOther : *this;
-    }
-
-    static EmbeddingLevel LTR();
-    static EmbeddingLevel RTL();
-    static EmbeddingLevel DefaultLTR();
-    static EmbeddingLevel DefaultRTL();
-    static EmbeddingLevel PseudoValue();
-    static EmbeddingLevel FromExplicitValue(uint8_t aValue);
-
-   private:
-    explicit EmbeddingLevel(uint8_t aValue) : mValue(aValue){};
-
-    /**
-     * The actual value of the embedded level is encoded to mean different
-     * things.
-     *
-     *  - Even values (plus 0) ranged 0 - 124 represent an explicit embedding
-     *      level that is LTR.
-     *  - Odd values ranged 1 - 125 represent an explicit embedding level that
-     *      is RTL.
-     *  - The value 0x80 represents a level override.
-     *  - 0xfe means the text is by default LTR
-     *  - 0xff means the text is by default RTL
-     */
-    uint8_t mValue = 0;
-    friend class Bidi;
-  };
-
-  /**
    * Set the current paragraph of text to analyze for its bidi properties. This
    * performs the Unicode bidi algorithm as specified by:
    * https://unicode.org/reports/tr9/
@@ -136,10 +62,7 @@ class Bidi final {
   /**
    * Get the embedding level for the paragraph that was set by SetParagraph.
    */
-  EmbeddingLevel GetParagraphEmbeddingLevel() const;
-
-  static bool IsEmbeddingLevelDefaultLTR();
-  static bool IsEmbeddingLevelDefaultRTL();
+  uint8_t GetParagraphEmbeddingLevel() const;
 
   /**
    * Get the directionality of the paragraph text that was set by SetParagraph.
@@ -152,7 +75,38 @@ class Bidi final {
    */
   struct LogicalRun {
     Span<const char16_t> string;
-    EmbeddingLevel embeddingLevel;
+    uint8_t embeddingLevel;
+  };
+
+  /**
+   * A logical run is a run of text that is in the memory order, not the display
+   * order.
+   */
+  struct LogicalRun2 {
+    int32_t limit;
+    uint8_t embeddingLevel;
+  };
+
+  /**
+   * Embedding levels are numbers that indicate how deeply the bidi text is
+   * nested, and the default direction of text on that level. Embedding levels
+   * are changed by using the Left-to-Right Embedding (LRE) codepoint (U+202A),
+   * or the Right-to-Left Embedding (RLE) codepoint (U+202B). The minimum
+   * embedding level of text is zero, and the maximum explicit depth is 125
+   */
+  class EmbeddingLevel {
+   public:
+    static bool IsDefaultLTR(uint8_t aValue);
+    static bool IsDefaultRTL(uint8_t aValue);
+    static bool IsLTR(uint8_t aValue);
+    static bool IsRTL(uint8_t aValue);
+    static bool IsPseudoValue(uint8_t aValue);
+    static bool IsSameDirection(uint8_t aLeft, uint8_t aRight);
+    static Direction Direction(uint8_t aValue);
+    static uint8_t LTR();
+    static uint8_t RTL();
+    static uint8_t DefaultLTR();
+    static uint8_t DefaultRTL();
   };
 
   /**
@@ -161,6 +115,15 @@ class Bidi final {
    * and not in display order.
    */
   Result<Maybe<Bidi::LogicalRun>, ICUError> GetNextLogicalRun();
+
+  Result<int32_t, ICUError> CountRuns();
+
+  /**
+   * Get the next logical run. The logical runs are a run of text that has the
+   * same directionality and embedding level. These runs are in memory order,
+   * and not in display order.
+   */
+  LogicalRun2 GetLogicalRun(int32_t aLogicalStart);
 
   /**
    * TODO before landing - Unify better.
@@ -184,7 +147,7 @@ class Bidi final {
    *      The index map will result in
    *        <code>aIndexMap[aVisualIndex]==aLogicalIndex</code>.
    */
-  static void ReorderVisual(const EmbeddingLevel* aLevels, int32_t aLength,
+  static void ReorderVisual(const uint8_t* aLevels, int32_t aLength,
                             int32_t* aIndexMap);
 
   /**
@@ -229,7 +192,8 @@ class Bidi final {
   ICUPointer<UBiDi> mBidi = ICUPointer<UBiDi>(nullptr);
   Span<const char16_t> mParagraph = Span<const char16_t>();
   size_t mLogicalRunCharIndex = 0;
-  const EmbeddingLevel* mLevels = nullptr;
+  const uint8_t* mLevels = nullptr;
+  int32_t mLength = 0;
 };
 
 }  // namespace mozilla::intl

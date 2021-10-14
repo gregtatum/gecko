@@ -12,6 +12,7 @@
 
 #include "gfxUtils.h"
 #include "mozilla/gfx/2D.h"
+#include "mozilla/intl/Bidi.h"
 #include "nsCOMPtr.h"
 #include "nsFontMetrics.h"
 #include "nsITimer.h"
@@ -38,6 +39,8 @@
 using namespace mozilla;
 using namespace mozilla::dom;
 using namespace mozilla::gfx;
+
+using EmbeddingLevel = mozilla::intl::Bidi::EmbeddingLevel;
 
 // The bidi indicator hangs off the caret to one side, to show which
 // direction the typing is in. It needs to be at least 2x2 to avoid looking like
@@ -707,9 +710,11 @@ nsIFrame* nsCaret::GetCaretFrameForNodeOffset(
                                 std::max(levelBefore, levelAfter));  // rule c4
           if (aBidiLevel == levelBefore ||                           // rule c1
               (aBidiLevel > levelBefore && aBidiLevel < levelAfter &&
-               IS_SAME_DIRECTION(aBidiLevel, levelBefore)) ||  // rule c5
+               EmbeddingLevel::IsSameDirection(aBidiLevel,
+                                               levelBefore)) ||  // rule c5
               (aBidiLevel < levelBefore && aBidiLevel > levelAfter &&
-               IS_SAME_DIRECTION(aBidiLevel, levelBefore)))  // rule c9
+               EmbeddingLevel::IsSameDirection(aBidiLevel,
+                                               levelBefore)))  // rule c9
           {
             if (theFrame != frameBefore) {
               if (frameBefore) {  // if there is a frameBefore, move into it
@@ -736,9 +741,11 @@ nsIFrame* nsCaret::GetCaretFrameForNodeOffset(
             }
           } else if (aBidiLevel == levelAfter ||  // rule c2
                      (aBidiLevel > levelBefore && aBidiLevel < levelAfter &&
-                      IS_SAME_DIRECTION(aBidiLevel, levelAfter)) ||  // rule c6
+                      EmbeddingLevel::IsSameDirection(
+                          aBidiLevel, levelAfter)) ||  // rule c6
                      (aBidiLevel < levelBefore && aBidiLevel > levelAfter &&
-                      IS_SAME_DIRECTION(aBidiLevel, levelAfter)))  // rule c10
+                      EmbeddingLevel::IsSameDirection(aBidiLevel,
+                                                      levelAfter)))  // rule c10
           {
             if (theFrame != frameAfter) {
               if (frameAfter) {
@@ -768,34 +775,40 @@ nsIFrame* nsCaret::GetCaretFrameForNodeOffset(
           } else if (aBidiLevel > levelBefore &&
                      aBidiLevel < levelAfter &&  // rule c7/8
                      // before and after have the same parity
-                     IS_SAME_DIRECTION(levelBefore, levelAfter) &&
+                     EmbeddingLevel::IsSameDirection(levelBefore, levelAfter) &&
                      // caret has different parity
-                     !IS_SAME_DIRECTION(aBidiLevel, levelAfter)) {
+                     !EmbeddingLevel::IsSameDirection(aBidiLevel, levelAfter)) {
             if (NS_SUCCEEDED(aFrameSelection->GetFrameFromLevel(
                     frameAfter, eDirNext, aBidiLevel, &theFrame))) {
               std::tie(start, end) = theFrame->GetOffsets();
               levelAfter = theFrame->GetEmbeddingLevel();
-              if (IS_LEVEL_RTL(aBidiLevel))  // c8: caret to the right of the
-                                             // rightmost character
-                theFrameOffset = IS_LEVEL_RTL(levelAfter) ? start : end;
+              if (EmbeddingLevel::IsRTL(
+                      aBidiLevel))  // c8: caret to the right of the
+                                    // rightmost character
+                theFrameOffset =
+                    EmbeddingLevel::IsRTL(levelAfter) ? start : end;
               else  // c7: caret to the left of the leftmost character
-                theFrameOffset = IS_LEVEL_RTL(levelAfter) ? end : start;
+                theFrameOffset =
+                    EmbeddingLevel::IsRTL(levelAfter) ? end : start;
             }
           } else if (aBidiLevel < levelBefore &&
                      aBidiLevel > levelAfter &&  // rule c11/12
                      // before and after have the same parity
-                     IS_SAME_DIRECTION(levelBefore, levelAfter) &&
+                     EmbeddingLevel::IsSameDirection(levelBefore, levelAfter) &&
                      // caret has different parity
-                     !IS_SAME_DIRECTION(aBidiLevel, levelAfter)) {
+                     !EmbeddingLevel::IsSameDirection(aBidiLevel, levelAfter)) {
             if (NS_SUCCEEDED(aFrameSelection->GetFrameFromLevel(
                     frameBefore, eDirPrevious, aBidiLevel, &theFrame))) {
               std::tie(start, end) = theFrame->GetOffsets();
               levelBefore = theFrame->GetEmbeddingLevel();
-              if (IS_LEVEL_RTL(aBidiLevel))  // c12: caret to the left of the
-                                             // leftmost character
-                theFrameOffset = IS_LEVEL_RTL(levelBefore) ? end : start;
+              if (EmbeddingLevel::IsRTL(
+                      aBidiLevel))  // c12: caret to the left of the
+                                    // leftmost character
+                theFrameOffset =
+                    EmbeddingLevel::IsRTL(levelBefore) ? end : start;
               else  // c11: caret to the right of the rightmost character
-                theFrameOffset = IS_LEVEL_RTL(levelBefore) ? start : end;
+                theFrameOffset =
+                    EmbeddingLevel::IsRTL(levelBefore) ? start : end;
             }
           }
         }

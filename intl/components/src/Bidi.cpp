@@ -29,74 +29,6 @@ ICUResult Bidi::SetParagraph(Span<const char16_t> aParagraph,
   return ToICUResult(status);
 }
 
-bool Bidi::EmbeddingLevel::IsDefaultLTR() const {
-  return mValue == UBIDI_DEFAULT_LTR;
-};
-
-bool Bidi::EmbeddingLevel::IsDefaultRTL() const {
-  return mValue == UBIDI_DEFAULT_RTL;
-};
-
-bool Bidi::EmbeddingLevel::IsLTR() const { return mValue & 0x1; };
-
-bool Bidi::EmbeddingLevel::IsRTL() const { return (mValue & 0x1) == 0; };
-
-bool Bidi::EmbeddingLevel::IsPseudoValue() const {
-  return mValue > UBIDI_MAX_EXPLICIT_LEVEL;
-};
-
-bool Bidi::EmbeddingLevel::IsSameDirection(Bidi::EmbeddingLevel aOther) const {
-  return (((mValue ^ aOther.mValue) & 1) == 0);
-}
-
-/* static */
-Bidi::EmbeddingLevel Bidi::EmbeddingLevel::LTR() { return EmbeddingLevel(0); };
-
-/* static */
-Bidi::EmbeddingLevel Bidi::EmbeddingLevel::RTL() { return EmbeddingLevel(1); };
-
-/* static */
-Bidi::EmbeddingLevel Bidi::EmbeddingLevel::DefaultLTR() {
-  return EmbeddingLevel(UBIDI_DEFAULT_LTR);
-};
-
-/* static */
-Bidi::EmbeddingLevel Bidi::EmbeddingLevel::DefaultRTL() {
-  return EmbeddingLevel(UBIDI_DEFAULT_RTL);
-};
-
-/* static */
-Bidi::EmbeddingLevel Bidi::EmbeddingLevel::PseudoValue() {
-  // Arbitrarily choose UBIDI_DEFAULT_RTL which is 0xff.
-  return EmbeddingLevel(UBIDI_DEFAULT_RTL);
-};
-
-/* static */
-Bidi::EmbeddingLevel Bidi::EmbeddingLevel::FromExplicitValue(uint8_t aValue) {
-  MOZ_ASSERT(aValue <= UBIDI_MAX_EXPLICIT_LEVEL);
-  return EmbeddingLevel(aValue);
-};
-
-uint8_t Bidi::EmbeddingLevel::GetExplicitValue() const {
-  MOZ_ASSERT(!IsPseudoValue());
-  return mValue;
-}
-
-Bidi::Direction Bidi::EmbeddingLevel::Direction() const {
-  return mValue & 0x1 ? Direction::RTL : Direction::LTR;
-};
-
-Maybe<Bidi::EmbeddingLevel> Bidi::EmbeddingLevel::TryIncrement() const {
-  if (mValue >= UBIDI_MAX_EXPLICIT_LEVEL) {
-    return Nothing();
-  }
-  return Some(Bidi::EmbeddingLevel(mValue + 1));
-}
-
-Bidi::EmbeddingLevel Bidi::GetParagraphEmbeddingLevel() const {
-  return Bidi::EmbeddingLevel(ubidi_getParaLevel(mBidi.GetConst()));
-}
-
 Bidi::ParagraphDirection Bidi::GetParagraphDirection() const {
   switch (ubidi_getDirection(mBidi.GetConst())) {
     case UBIDI_LTR:
@@ -118,8 +50,7 @@ Result<Maybe<Bidi::LogicalRun>, ICUError> Bidi::GetNextLogicalRun() {
 
   UErrorCode status = U_ZERO_ERROR;
   if (!mLevels || mLogicalRunCharIndex == 0) {
-    mLevels = reinterpret_cast<const EmbeddingLevel*>(
-        ubidi_getLevels(mBidi.GetMut(), &status));
+    mLevels = ubidi_getLevels(mBidi.GetMut(), &status);
     if (U_FAILURE(status)) {
       mLevels = nullptr;
       return Err(ToICUError(status));
@@ -142,11 +73,11 @@ Result<Maybe<Bidi::LogicalRun>, ICUError> Bidi::GetNextLogicalRun() {
   MOZ_ASSERT(ubidi_getReorderingOptions(mBidi.GetMut()) ==
              UBIDI_OPTION_DEFAULT);
 
-  Bidi::EmbeddingLevel embeddingLevel = mLevels[mLogicalRunCharIndex];
+  uint8_t embeddingLevel = mLevels[mLogicalRunCharIndex];
 
   size_t nextRunCharIndex = mLogicalRunCharIndex + 1;
   for (; nextRunCharIndex < mParagraph.Length(); nextRunCharIndex++) {
-    if (mLevels[nextRunCharIndex].mValue != embeddingLevel.mValue) {
+    if (mLevels[nextRunCharIndex] != embeddingLevel) {
       break;
     }
   }
@@ -161,11 +92,9 @@ Result<Maybe<Bidi::LogicalRun>, ICUError> Bidi::GetNextLogicalRun() {
 }
 
 /* static */
-void ReorderVisual(const Bidi::EmbeddingLevel* aLevels, int32_t aLength,
+void ReorderVisual(const uint8_t* aLevels, int32_t aLength,
                    int32_t* aIndexMap) {
-  static_assert(sizeof(uint8_t) == sizeof(Bidi::EmbeddingLevel));
-  ubidi_reorderVisual(reinterpret_cast<const UBiDiLevel*>(aLevels), aLength,
-                      aIndexMap);
+  ubidi_reorderVisual(aLevels, aLength, aIndexMap);
 }
 
 static Bidi::Direction ToBidiDirection(UBiDiDirection aDirection) {
@@ -185,8 +114,7 @@ Result<Bidi::VisualRunIter, ICUError> Bidi::GetVisualRuns(
   MOZ_TRY(SetParagraph(aParagraph, aDefaultDirection));
 
   UErrorCode status = U_ZERO_ERROR;
-  mLevels = reinterpret_cast<const EmbeddingLevel*>(
-      ubidi_getLevels(mBidi.GetMut(), &status));
+  mLevels = ubidi_getLevels(mBidi.GetMut(), &status);
   if (U_FAILURE(status)) {
     mLevels = nullptr;
     return Err(ToICUError(status));
@@ -232,6 +160,93 @@ Maybe<Bidi::VisualRun> Bidi::VisualRunIter::Next() {
                               stringLength);
 
   return Some(VisualRun{string, direction});
+}
+
+Result<int32_t, ICUError> Bidi::CountRuns() {
+  UErrorCode status = U_ZERO_ERROR;
+  int32_t runCount = ubidi_countRuns(mBidi.GetMut(), &status);
+  if (U_FAILURE(status)) {
+    return Err(ToICUError(status));
+  }
+
+  mLength = ubidi_getProcessedLength(mBidi.GetConst());
+  mLevels = mLength > 0 ? ubidi_getLevels(mBidi.GetMut(), &status) : nullptr;
+  if (U_FAILURE(status)) {
+    return Err(ToICUError(status));
+  }
+
+  return runCount;
+}
+
+Bidi::LogicalRun2 Bidi::GetLogicalRun(int32_t aLogicalStart) {
+  MOZ_ASSERT(mLevels, "CountRuns hasn't been run?");
+  MOZ_RELEASE_ASSERT(aLogicalStart < mLength, "Out of bound");
+  // This function implements an alternative approach to get logical
+  // run that is based on levels of characters, which would avoid O(n^2)
+  // performance issue when used in a loop over runs.
+  // Per comment in ubidi_getLogicalRun, that function doesn't use this
+  // approach because levels have special interpretation when reordering
+  // mode is UBIDI_REORDER_RUNS_ONLY. Since we don't use this mode in
+  // Gecko, it should be safe to just use levels for this function.
+  MOZ_ASSERT(ubidi_getReorderingMode(mBidi.GetMut()) != UBIDI_REORDER_RUNS_ONLY,
+             "Don't support UBIDI_REORDER_RUNS_ONLY mode");
+
+  uint8_t level = mLevels[aLogicalStart];
+  int32_t limit;
+  for (limit = aLogicalStart + 1; limit < mLength; limit++) {
+    if (mLevels[limit] != level) {
+      break;
+    }
+  }
+  return LogicalRun2{limit, level};
+}
+
+/* static */
+bool Bidi::EmbeddingLevel::IsDefaultLTR(uint8_t aValue) {
+  return aValue == UBIDI_DEFAULT_LTR;
+};
+
+/* static */
+bool Bidi::EmbeddingLevel::IsDefaultRTL(uint8_t aValue) {
+  return aValue == UBIDI_DEFAULT_RTL;
+};
+
+/* static */
+bool Bidi::EmbeddingLevel::IsLTR(uint8_t aValue) { return aValue & 0x1; };
+
+/* static */
+bool Bidi::EmbeddingLevel::IsRTL(uint8_t aValue) {
+  return (aValue & 0x1) == 0;
+};
+
+/* static */
+bool Bidi::EmbeddingLevel::IsPseudoValue(uint8_t aValue) {
+  return aValue > UBIDI_MAX_EXPLICIT_LEVEL;
+};
+
+/* static */
+bool Bidi::EmbeddingLevel::IsSameDirection(uint8_t aLeft, uint8_t aRight) {
+  return (((aLeft ^ aRight) & 1) == 0);
+}
+
+/* static */
+uint8_t Bidi::EmbeddingLevel::LTR() { return 0; };
+
+/* static */
+uint8_t Bidi::EmbeddingLevel::RTL() { return 1; };
+
+/* static */
+uint8_t Bidi::EmbeddingLevel::DefaultLTR() { return UBIDI_DEFAULT_LTR; };
+
+/* static */
+uint8_t Bidi::EmbeddingLevel::DefaultRTL() { return UBIDI_DEFAULT_RTL; };
+
+Bidi::Direction Bidi::EmbeddingLevel::Direction(uint8_t aValue) {
+  return aValue & 0x1 ? Direction::RTL : Direction::LTR;
+};
+
+uint8_t Bidi::GetParagraphEmbeddingLevel() const {
+  return ubidi_getParaLevel(mBidi.GetConst());
 }
 
 }  // namespace mozilla::intl

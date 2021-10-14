@@ -13,7 +13,7 @@ TEST(IntlBidi, SimpleLTR)
   ASSERT_TRUE(bidi.SetParagraph(MakeStringSpan(u"this is a paragraph"),
                                 Bidi::Direction::LTR)
                   .isOk());
-  ASSERT_EQ(bidi.GetParagraphEmbeddingLevel().GetExplicitValue(), 0);
+  ASSERT_EQ(bidi.GetParagraphEmbeddingLevel(), 0);
   ASSERT_EQ(bidi.GetParagraphDirection(), Bidi::ParagraphDirection::LTR);
 
   {
@@ -21,9 +21,9 @@ TEST(IntlBidi, SimpleLTR)
     ASSERT_TRUE(logicalRun.isOk());
     ASSERT_EQ(logicalRun.inspect()->string,
               MakeStringSpan(u"this is a paragraph"));
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.Direction(),
-              Bidi::Direction::LTR);
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.GetExplicitValue(), 0);
+    // ASSERT_EQ(logicalRun.inspect()->embeddingLevel.Direction(),
+    //           Bidi::Direction::LTR);
+    ASSERT_EQ(logicalRun.inspect()->embeddingLevel, 0);
   }
 
   {
@@ -39,16 +39,16 @@ TEST(IntlBidi, SimpleRTL)
   ASSERT_TRUE(
       bidi.SetParagraph(MakeStringSpan(u"فايرفوكس رائع "), Bidi::Direction::LTR)
           .isOk());
-  ASSERT_EQ(bidi.GetParagraphEmbeddingLevel().GetExplicitValue(), 1);
+  ASSERT_EQ(bidi.GetParagraphEmbeddingLevel(), 1);
   ASSERT_EQ(bidi.GetParagraphDirection(), Bidi::ParagraphDirection::RTL);
 
   {
     auto logicalRun = bidi.GetNextLogicalRun();
     ASSERT_TRUE(logicalRun.isOk());
     ASSERT_EQ(logicalRun.inspect()->string, MakeStringSpan(u"فايرفوكس رائع "));
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.Direction(),
-              Bidi::Direction::RTL);
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.GetExplicitValue(), 1);
+    // ASSERT_EQ(logicalRun.inspect()->embeddingLevel.Direction(),
+    //           Bidi::Direction::RTL);
+    ASSERT_EQ(logicalRun.inspect()->embeddingLevel, 1);
   }
 
   {
@@ -65,7 +65,7 @@ TEST(IntlBidi, MultiLevel)
       bidi.SetParagraph(MakeStringSpan(u"Firefox is awesome: رائع Firefox"),
                         Bidi::Direction::LTR)
           .isOk());
-  ASSERT_EQ(bidi.GetParagraphEmbeddingLevel().GetExplicitValue(), 0);
+  ASSERT_EQ(bidi.GetParagraphEmbeddingLevel(), 0);
   ASSERT_EQ(bidi.GetParagraphDirection(), Bidi::ParagraphDirection::Mixed);
 
   {
@@ -73,19 +73,19 @@ TEST(IntlBidi, MultiLevel)
     ASSERT_TRUE(logicalRun.isOk());
     ASSERT_EQ(logicalRun.inspect()->string,
               MakeStringSpan(u"Firefox is awesome: "));
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.GetExplicitValue(), 0);
+    ASSERT_EQ(logicalRun.inspect()->embeddingLevel, 0);
   }
   {
     auto logicalRun = bidi.GetNextLogicalRun();
     ASSERT_TRUE(logicalRun.isOk());
     ASSERT_EQ(logicalRun.inspect()->string, MakeStringSpan(u"رائع"));
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.GetExplicitValue(), 1);
+    ASSERT_EQ(logicalRun.inspect()->embeddingLevel, 1);
   }
   {
     auto logicalRun = bidi.GetNextLogicalRun();
     ASSERT_TRUE(logicalRun.isOk());
     ASSERT_EQ(logicalRun.inspect()->string, MakeStringSpan(u" Firefox"));
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.GetExplicitValue(), 0);
+    ASSERT_EQ(logicalRun.inspect()->embeddingLevel, 0);
   }
   {
     auto logicalRun = bidi.GetNextLogicalRun();
@@ -105,33 +105,33 @@ TEST(IntlBidi, RtlOverride)
       bidi.SetParagraph(MakeStringSpan(u"ltr\u202b___رائع___\u202a___ltr__"),
                         Bidi::Direction::LTR)
           .isOk());
-  ASSERT_EQ(bidi.GetParagraphEmbeddingLevel().GetExplicitValue(), 0);
+  ASSERT_EQ(bidi.GetParagraphEmbeddingLevel(), 0);
   ASSERT_EQ(bidi.GetParagraphDirection(), Bidi::ParagraphDirection::Mixed);
 
   {
     auto logicalRun = bidi.GetNextLogicalRun();
     ASSERT_TRUE(logicalRun.isOk());
     ASSERT_EQ(logicalRun.inspect()->string, MakeStringSpan(u"ltr"));
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.GetExplicitValue(), 0);
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.Direction(),
-              Bidi::Direction::LTR);
+    ASSERT_EQ(logicalRun.inspect()->embeddingLevel, 0);
+    // ASSERT_EQ(logicalRun.inspect()->embeddingLevel.Direction(),
+    //           Bidi::Direction::LTR);
   }
   {
     auto logicalRun = bidi.GetNextLogicalRun();
     ASSERT_TRUE(logicalRun.isOk());
     ASSERT_EQ(logicalRun.inspect()->string,
               MakeStringSpan(u"\u202b___رائع___"));
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.GetExplicitValue(), 1);
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.Direction(),
-              Bidi::Direction::RTL);
+    ASSERT_EQ(logicalRun.inspect()->embeddingLevel, 1);
+    // ASSERT_EQ(logicalRun.inspect()->embeddingLevel.Direction(),
+    //           Bidi::Direction::RTL);
   }
   {
     auto logicalRun = bidi.GetNextLogicalRun();
     ASSERT_TRUE(logicalRun.isOk());
     ASSERT_EQ(logicalRun.inspect()->string, MakeStringSpan(u"\u202a___ltr__"));
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.GetExplicitValue(), 2);
-    ASSERT_EQ(logicalRun.inspect()->embeddingLevel.Direction(),
-              Bidi::Direction::LTR);
+    ASSERT_EQ(logicalRun.inspect()->embeddingLevel, 2);
+    // ASSERT_EQ(logicalRun.inspect()->embeddingLevel.Direction(),
+    //           Bidi::Direction::LTR);
   }
   {
     auto logicalRun = bidi.GetNextLogicalRun();

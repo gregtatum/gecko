@@ -6,6 +6,7 @@
 
 #include "nsBidiPresUtils.h"
 
+#include "mozilla/intl/Bidi.h"
 #include "mozilla/IntegerRange.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/PresShell.h"
@@ -481,7 +482,7 @@ struct MOZ_STACK_CLASS BidiLineData {
       mLogicalFrames.AppendElement(frame);
       mLevels.AppendElement(level);
       mIndexMap.AppendElement(0);
-      if (IS_LEVEL_RTL(level)) {
+      if (mozilla::intl::Bidi::EmbeddingLevel::IsRTL(level)) {
         hasRTLFrames = true;
       }
     };
@@ -1870,9 +1871,11 @@ nscoord nsBidiPresUtils::RepositionInlineFrames(BidiLineData* aBld,
   }
   for (; index != limit; index += step) {
     frame = aBld->VisualFrameAt(index);
-    start += RepositionFrame(
-        frame, !(IS_LEVEL_RTL(aBld->mLevels[aBld->mIndexMap[index]])), start,
-        &continuationStates, aLineWM, false, aContainerSize);
+    start += RepositionFrame(frame,
+                             !(mozilla::intl::Bidi::EmbeddingLevel::IsRTL(
+                                 aBld->mLevels[aBld->mIndexMap[index]])),
+                             start, &continuationStates, aLineWM, false,
+                             aContainerSize);
   }
   return start;
 }
@@ -2180,12 +2183,13 @@ nsresult nsBidiPresUtils::ProcessText(const char16_t* aText, int32_t aLength,
   }
 
   for (i = 0; i < runCount; i++) {
-    nsBidiDirection dir = aBidiEngine->GetVisualRun(i, &start, &length);
+    mozilla::intl::Bidi::Direction dir =
+        aBidiEngine->GetVisualRun(i, &start, &length);
 
     nsBidiLevel level;
     aBidiEngine->GetLogicalRun(start, &limit, &level);
 
-    dir = DIRECTION_FROM_LEVEL(level);
+    dir = mozilla::intl::Bidi::EmbeddingLevel::Direction(level);
     int32_t subRunLength = limit - start;
     int32_t lineOffset = start;
     int32_t typeLimit = std::min(limit, aLength);
@@ -2204,7 +2208,7 @@ nsresult nsBidiPresUtils::ProcessText(const char16_t* aText, int32_t aLength,
      * x-coordinate of the end of the run for the start of the next run.
      */
 
-    if (dir == NSBIDI_RTL) {
+    if (dir == mozilla::intl::Bidi::Direction::RTL) {
       aprocessor.SetText(text + start, subRunLength, dir);
       width = aprocessor.GetWidth();
       xOffset += width;
@@ -2227,7 +2231,7 @@ nsresult nsBidiPresUtils::ProcessText(const char16_t* aText, int32_t aLength,
       aprocessor.SetText(runVisualText.get(), subRunLength, dir);
       width = aprocessor.GetWidth();
       totalWidth += width;
-      if (dir == NSBIDI_RTL) {
+      if (dir == mozilla::intl::Bidi::Direction::RTL) {
         xOffset -= width;
       }
       if (aMode == MODE_DRAW) {
