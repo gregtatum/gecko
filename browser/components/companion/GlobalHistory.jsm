@@ -825,6 +825,10 @@ class GlobalHistory extends EventTarget {
       this.#tabOpened(event.target)
     );
 
+    this.#window.gBrowser.tabContainer.addEventListener("TabClose", event =>
+      this.#tabClosed(event.target)
+    );
+
     this.#window.gBrowser.tabContainer.addEventListener(
       "TabAttrModified",
       event => this.#tabAttrModified(event.target, event.detail.changed)
@@ -1160,6 +1164,26 @@ class GlobalHistory extends EventTarget {
 
     this.#watchBrowser(browser);
     this._onBrowserNavigate(browser);
+  }
+
+  /**
+   * @param {Tab} closingTab
+   */
+  #tabClosed(closingTab) {
+    // If we're closing the special OAuth tab, blow away any Views
+    // associated with it.
+    if (closingTab.getAttribute("pinebuild-oauth-flow")) {
+      let browser = closingTab.linkedBrowser;
+      // We iterate the Views in reverse order because we're going to
+      // be removing some along the way, and we don't want to worry
+      // about shifting indexes while we do it.
+      for (let i = this.#viewStack.length - 1; i >= 0; --i) {
+        let view = this.#viewStack[i];
+        if (view.browserId == browser.browserId) {
+          this.#closeInternalView(view);
+        }
+      }
+    }
   }
 
   /**
@@ -1852,10 +1876,7 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
-   * Removes the passed in View from the current View stack,
-   * cleans up any leftover resources from the View, and then
-   * fires the ViewRemoved event so that the UI can update the
-   * visualization of Views.
+   * Public method for removing a View from GlobalHistory.
    *
    * @param {View} view The View to close.
    */
@@ -1865,6 +1886,18 @@ class GlobalHistory extends EventTarget {
       throw new Error("Unknown view.");
     }
 
+    this.#closeInternalView(internalView);
+  }
+
+  /**
+   * Removes the passed in InternalView from the current #viewStack,
+   * cleans up any leftover resources from the InternalView, and then
+   * fires the ViewRemoved event so that the UI can update the
+   * visualization of Views.
+   *
+   * @param {InternalView} internalView The InternalView to close.
+   */
+  #closeInternalView(internalView) {
     let index = this.#viewStack.indexOf(internalView);
     if (index == -1) {
       throw new Error("Could not find the View in the #viewStack");

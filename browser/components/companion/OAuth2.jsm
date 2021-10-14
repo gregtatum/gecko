@@ -75,6 +75,8 @@ const OAuthConnect = {
 
       let url = new URL(oauth.authorizationEndpoint + "?" + params);
       let tab = win.gBrowser.addTrustedTab("about:blank");
+      tab.setAttribute("pinebuild-oauth-flow", "true");
+
       win.gBrowser.selectedTab = tab;
 
       // If the TopLevelNavigationDelegateChild is being used, we need it
