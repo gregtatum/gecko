@@ -371,9 +371,13 @@ menuitem.bookmark-item {
 
 %include ../shared/sidebar.inc.css
 
-#browser,
-#browser-outer {
+#browser {
   --sidebar-border-color: ThreeDLightShadow;
+}
+
+/* PINEBUILD specific override */
+#browser-outer {
+  --sidebar-border-color: var(--chrome-content-separator-color)
 }
 
 /* Tabstrip */

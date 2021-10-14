@@ -15,7 +15,3 @@
   min-width: var(--companion-min-width);
   max-width: var(--companion-max-width);
 }
-
-:root[companion] companion-manager {
-  border-inline-end: 1px solid var(--chrome-content-separator-color);
-}

@@ -360,6 +360,11 @@ moz-input-box > menupopup .context-menu-add-engine > .menu-iconic-left {
   --sidebar-border-color: hsla(240, 5%, 5%, .1);
 }
 
+/* PINEBUILD specific override */
+#browser-outer {
+  --sidebar-border-color: var(--chrome-content-separator-color)
+}
+
 #sidebar-box {
   /* Default font size is 11px on mac, so this is 12px */
   font-size: 1.0909rem;

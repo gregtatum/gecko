@@ -409,7 +409,7 @@ e-global-nav-debugging h2 {
 .tab-button-group {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border: 1px solid #E0E0E6;
+  border-bottom: 1px solid var(--chrome-content-separator-color);
 }
 
 .tab-button {
