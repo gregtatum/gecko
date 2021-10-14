@@ -2645,5 +2645,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.companion.onnx", false);
   pref("browser.companion.pyodide", false);
   pref("browser.places.perwindowsessions.enabled", false);
+  pref("browser.pinebuild.interstitial-view-overwriting.enabled", true);
+  pref("browser.pinebuild.interstitial-view-overwriting.threshold_ms", 5000);
   pref("browser.river.pinning.enabled", false);
 #endif

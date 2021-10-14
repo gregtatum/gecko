@@ -42,6 +42,20 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "INTERSTITIAL_VIEW_OVERWRITING",
+  "browser.pinebuild.interstitial-view-overwriting.enabled",
+  false
+);
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "INTERSTITIAL_VIEW_OVERWRITING_THRESHOLD_MS",
+  "browser.pinebuild.interstitial-view-overwriting.threshold_ms",
+  5000
+);
+
 const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
 /**
  * @typedef {object} ViewHistoryData
@@ -209,6 +223,9 @@ class InternalView {
   /** @type {nsIPrincipal} **/
   #contentPrincipal;
 
+  /** @type {Number} **/
+  #creationTime;
+
   /**
    * The internal representation of a view. Each view maps to a history entry though the actual
    * history entry may no longer exist.
@@ -248,6 +265,8 @@ class InternalView {
     this.#contentPrincipal = Services.scriptSecurityManager.createNullPrincipal(
       {}
     );
+    this.#creationTime = Cu.now();
+
     InternalView.viewMap.set(this.#view, this);
 
     if (historyEntry instanceof Ci.nsISHEntry) {
@@ -342,7 +361,7 @@ class InternalView {
    * @param {nsISHEntry | object} historyEntry
    *   The nsISHEntry for this view.
    */
-  update(browser, historyEntry) {
+  update(browser, historyEntry, options = {}) {
     this.browserId = browser.browserId;
     this.browserKey = browser.permanentKey;
     this.historyId = historyEntry.ID;
@@ -362,11 +381,18 @@ class InternalView {
       this.errorPageType = this.#getErrorPageType(docURI);
     }
 
+    if (options.resetCreationTime) {
+      this.#creationTime = Cu.now();
+    }
+
     logConsole.debug(`Updated InternalView ${this.toString()}`);
 
     if (DEBUG) {
       this.historyState = {
+        id: this.#id,
         pinned: this.#pinned,
+        loadType: historyEntry.loadType,
+        creationTime: this.#creationTime,
         historyId: historyEntry.ID,
         originalURISpec: historyEntry.originalURI?.spec,
         loadReplace: historyEntry.loadReplace,
@@ -464,6 +490,17 @@ class InternalView {
 
   get contentPrincipal() {
     return this.#contentPrincipal;
+  }
+
+  /**
+   * Returns a high-resolution timestamp for the time at which this
+   * InternalView was created or last overwritten due to a quick
+   * navigation.
+   *
+   * @type {Number}
+   */
+  get creationTime() {
+    return this.#creationTime;
   }
 
   toString() {
@@ -1240,37 +1277,10 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
-    let internalView = this.#historyViews.get(newEntry.ID);
-    if (!internalView) {
-      logConsole.debug(
-        `Did not initially find InternalView with ID: ${newEntry.ID}.`
-      );
-      // It's possible that a session restoration has resulted in a new
-      // nsISHEntry being created with a new ID that doesn't match the one
-      // we're looking for. Thankfully, SessionHistory keeps track of this,
-      // so we can try to map the new nsISHEntry's ID to the previous ID,
-      // and then update our references to use the new ID.
-      let previousID = SessionHistory.getPreviousID(newEntry);
-      if (previousID) {
-        logConsole.debug(`Found previous SHEntry ID: ${previousID}`);
-        internalView = this.#historyViews.get(previousID);
-        if (internalView) {
-          logConsole.debug(`Found InternalView ${internalView.toString()}`);
-          this.#historyViews.delete(previousID);
-          this.#historyViews.set(newEntry.ID, internalView);
-        }
-      }
-    }
-
-    if (!internalView && this.#pendingView?.url.spec == newEntry.URI.spec) {
-      logConsole.debug(
-        `Found pending InternalView ${this.#pendingView.toString()}.`
-      );
-      internalView = this.#pendingView;
-      this.#historyViews.delete(internalView.historyId);
-      this.#historyViews.set(newEntry.ID, internalView);
-      this.#pendingView = null;
-    }
+    let { internalView, overwriting } = this.#findInternalViewToNavigate(
+      browser,
+      newEntry
+    );
 
     if (!internalView) {
       // More than once, we've stumbled onto some bugs where a new InternalView
@@ -1308,13 +1318,15 @@ class GlobalHistory extends EventTarget {
     } else {
       logConsole.debug(`Updating InternalView ${internalView.toString()}.`);
       // This is a navigation to an existing view.
-      internalView.update(browser, newEntry);
+      internalView.update(browser, newEntry, {
+        resetCreationTime: overwriting,
+      });
 
       let pos = this.#viewStack.indexOf(internalView);
       if (pos == this.#currentIndex) {
         logConsole.debug(`Updated InternalView is the current index.`);
         logConsole.groupEnd();
-        // Nothing to do.
+        this.#notifyEvent("ViewUpdated", internalView);
         return;
       }
 
@@ -1335,6 +1347,106 @@ class GlobalHistory extends EventTarget {
     this.#notifyEvent("ViewChanged", internalView);
 
     logConsole.groupEnd();
+  }
+
+  /**
+   * @typedef {object} FindInternalViewResult
+   *   A result returned from #findInternalViewToNavigate when searching for
+   *   the right InternalView to navigate.
+   * @property {InternalView|null} browser
+   *   The InternalView that was found to navigate. Null if no appropriate
+   *   InternalView was found.
+   * @property {boolean} overwriting
+   *   True if the InternalView that was found qualifies for overwriting due
+   *   to a quick navigation.
+   */
+
+  /**
+   * Determines which, if any, pre-existing InternalView should be updated
+   * for a navigation to newEntry from browser. If it can't find an
+   * appropriate InternalView to update, this will return null.
+   *
+   * @param {Browser} browser
+   * @param {nsISHEntry} newEntry
+   * @returns {FindInternalViewResult}
+   */
+  #findInternalViewToNavigate(browser, newEntry) {
+    let internalView = this.#historyViews.get(newEntry.ID);
+    if (internalView) {
+      return { internalView, overwriting: false };
+    }
+
+    logConsole.debug(
+      `Did not initially find InternalView with ID: ${newEntry.ID}.`
+    );
+    // It's possible that a session restoration has resulted in a new
+    // nsISHEntry being created with a new ID that doesn't match the one
+    // we're looking for. Thankfully, SessionHistory keeps track of this,
+    // so we can try to map the new nsISHEntry's ID to the previous ID,
+    // and then update our references to use the new ID.
+    let previousID = SessionHistory.getPreviousID(newEntry);
+    if (previousID) {
+      logConsole.debug(`Found previous SHEntry ID: ${previousID}`);
+      internalView = this.#historyViews.get(previousID);
+      if (internalView) {
+        logConsole.debug(`Found InternalView ${internalView.toString()}`);
+        this.#historyViews.delete(previousID);
+        this.#historyViews.set(newEntry.ID, internalView);
+        return { internalView, overwriting: false };
+      }
+    }
+
+    if (this.#pendingView?.url.spec == newEntry.URI.spec) {
+      logConsole.debug(
+        `Found pending InternalView ${this.#pendingView.toString()}.`
+      );
+      internalView = this.#pendingView;
+      this.#historyViews.delete(internalView.historyId);
+      this.#historyViews.set(newEntry.ID, internalView);
+      this.#pendingView = null;
+      return { internalView, overwriting: false };
+    }
+
+    if (INTERSTITIAL_VIEW_OVERWRITING) {
+      // For quick navigations (for example, bounces through an OAuth
+      // provider), we want to avoid creating extra InternalViews
+      // unnecessarily, as the user is unlikely to want to return to
+      // them. We check to see if the previous InternalView for this
+      // browser is considered a quick navigation, and if so, we return
+      // that for overwriting.
+      let newEntryHistoryIndex = getHistoryIndex(browser, newEntry.ID);
+      let previousEntryHistoryIndex = newEntryHistoryIndex - 1;
+
+      if (previousEntryHistoryIndex >= 0) {
+        let { sessionHistory, currentWindowGlobal } = browser.browsingContext;
+        let previousEntry = sessionHistory.getEntryAtIndex(
+          previousEntryHistoryIndex
+        );
+        if (previousEntry) {
+          let previousView = this.#historyViews.get(previousEntry.ID);
+          if (previousView) {
+            let timeSinceCreation = Cu.now() - previousView.creationTime;
+            if (
+              !currentWindowGlobal.isInitialDocument &&
+              !previousEntry.hasUserInteraction &&
+              timeSinceCreation < INTERSTITIAL_VIEW_OVERWRITING_THRESHOLD_MS
+            ) {
+              logConsole.debug(
+                `Overwriting InternalView ${previousView.toString()} due to quick ` +
+                  `navigation`
+              );
+              // We're going to be calling into `update` again shortly in
+              // _onBrowserNavigate anyways
+              this.#historyViews.delete(previousView.historyId);
+              this.#historyViews.set(newEntry.ID, previousView);
+              return { internalView: previousView, overwriting: true };
+            }
+          }
+        }
+      }
+    }
+
+    return { internalView: null, overwriting: false };
   }
 
   #startActivationTimer() {
@@ -1464,7 +1576,7 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
-   * Returns the currently displayed view on null if there is no current view.
+   * Returns the currently displayed View or null if there is no current View.
    * @type {View | null}
    */
   get currentView() {
