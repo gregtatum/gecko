@@ -196,12 +196,6 @@ export default class ActiveViewManager extends HTMLElement {
         this.#onDragEnd(event);
         break;
       }
-      case "keypress": {
-        if (event.currentTarget == this.#pageActionPanel) {
-          this.#pageActionPanelKeypress(event);
-        }
-        break;
-      }
       case "popuphiding": {
         if (event.currentTarget == this.#pageActionPanel) {
           this.#pageActionPanelHiding(event);
@@ -342,7 +336,6 @@ export default class ActiveViewManager extends HTMLElement {
         panel.addEventListener("popupshowing", this);
         panel.addEventListener("popuphiding", this);
         panel.addEventListener("click", this);
-        panel.addEventListener("keypress", this);
       }
 
       this.#pageActionPanel = panel;
@@ -398,6 +391,11 @@ export default class ActiveViewManager extends HTMLElement {
     }
   }
 
+  pageActionEditViewTitle(event) {
+    this.#pageActionView.userTitle = event.target.value;
+    this.viewUpdated(this.#pageActionView);
+  }
+
   pageActionPinView(event) {
     this.#setViewPinnedState(
       this.#pageActionView,
@@ -411,21 +409,6 @@ export default class ActiveViewManager extends HTMLElement {
 
   pageActionCloseView(event) {
     window.top.gGlobalHistory.closeView(this.#pageActionView);
-  }
-
-  #pageActionPanelKeypress(event) {
-    let siteInfoTitleEl = document.getElementById("site-info-title");
-    if (
-      event.target == siteInfoTitleEl &&
-      event.keyCode == KeyEvent.DOM_VK_RETURN
-    ) {
-      let userTitle = siteInfoTitleEl.value;
-      if (userTitle) {
-        this.#pageActionView.userTitle = userTitle;
-        this.viewUpdated(this.#pageActionView);
-      }
-      this.#pageActionPanel.hidePopup();
-    }
   }
 
   #onDragStart(event) {
