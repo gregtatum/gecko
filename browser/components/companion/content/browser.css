@@ -268,7 +268,6 @@
 
 /** END Page info security icons **/
 
-#page-action-panel,
 #page-action-panel-sections {
   width: 428px;
   height: 230px;
@@ -295,6 +294,7 @@
 }
 
 #page-actions-section > toolbarbutton {
+  appearance: none;
   -moz-box-orient: vertical;
 }
 
