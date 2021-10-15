@@ -119,16 +119,6 @@ export default class ActiveViewManager extends HTMLElement {
     this.#river.activeView = view;
   }
 
-  viewRemoved(view) {
-    if (this.isRiverView(view)) {
-      this.#river.removeView(view);
-    } else if (this.isPinnedView(view)) {
-      this.#pinnedViews.removeView(view);
-    } else {
-      console.warn("Saw ViewRemoved for an unknown view.");
-    }
-  }
-
   viewUpdated(view) {
     if (this.isRiverView(view)) {
       this.#river.viewUpdated();
@@ -155,7 +145,12 @@ export default class ActiveViewManager extends HTMLElement {
         this.viewMoved(event.view);
         break;
       case "ViewRemoved":
-        this.viewRemoved(event.view);
+        // TODO: Support users removing specific views like closing a tab.
+
+        // I'm assuming here that we'd never want to remove a view from GlobalHistory unless it
+        // is in the river or the overflow menu i.e. we don't ever want to remove a view that is
+        // user's the top view.
+        this.#river.removeView(event.view);
         break;
       case "ViewUpdated":
         this.viewUpdated(event.view);
