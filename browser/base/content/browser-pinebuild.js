@@ -20,4 +20,9 @@ var PineBuildUIUtils = {
     clipboard.copyString(string);
     anchor.ownerGlobal.ConfirmationHint.show(anchor, "copyURL");
   },
+
+  closeCurrentView() {
+    let gHistory = window.top.gGlobalHistory;
+    gHistory.closeView(gHistory.currentView);
+  },
 };

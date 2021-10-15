@@ -418,10 +418,6 @@ export default class ActiveViewManager extends HTMLElement {
     PineBuildUIUtils.copy(this, this.#pageActionView.url.spec);
   }
 
-  pageActionCloseView(event) {
-    window.top.gGlobalHistory.closeView(this.#pageActionView);
-  }
-
   #onDragStart(event) {
     let draggedViewGroup = this.#getDragTargetViewGroup(event);
     if (!draggedViewGroup) {

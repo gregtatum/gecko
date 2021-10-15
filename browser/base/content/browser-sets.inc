@@ -33,8 +33,14 @@
     <command id="cmd_printPreview" oncommand="PrintUtils.printPreview(PrintPreviewListener).catch(() => {});"/>
     <command id="cmd_file_importFromAnotherBrowser" oncommand="MigrationUtils.showMigrationWizard(window, [MigrationUtils.MIGRATION_ENTRYPOINT_FILE_MENU]);"/>
     <command id="cmd_help_importFromAnotherBrowser" oncommand="MigrationUtils.showMigrationWizard(window, [MigrationUtils.MIGRATION_ENTRYPOINT_HELP_MENU]);"/>
+
+#ifdef PINEBUILD
+    <command id="cmd_close" oncommand="PineBuildUIUtils.closeCurrentView();"/>
+#else
     <command id="cmd_close" oncommand="BrowserCloseTabOrWindow(event);"/>
     <command id="cmd_closeWindow" oncommand="BrowserTryToCloseWindow(event)"/>
+#endif
+
     <command id="cmd_toggleMute" oncommand="gBrowser.toggleMuteAudioOnMultiSelectedTabs(gBrowser.selectedTab)"/>
 #ifndef PINEBUILD
     <command id="cmd_CustomizeToolbars" oncommand="gCustomizeMode.enter()"/>
