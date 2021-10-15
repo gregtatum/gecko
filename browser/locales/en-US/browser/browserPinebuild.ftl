@@ -14,8 +14,11 @@ page-action-copy-url =
   .label = Copy
 page-action-close-view =
   .label = Close
-page-action-mute =
-  .label = Mute
+page-action-toggle-muting =
+  .label = { $isMuted ->
+     [true] Unmute
+    *[other] Mute
+  }
 page-action-reader-mode =
   .label = Reader Mode
 page-action-more =

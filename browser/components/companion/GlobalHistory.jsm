@@ -199,6 +199,13 @@ class View {
     return this.#internalView.errorPageType;
   }
 
+  /**
+   * Returns a boolean indicating whether the view is muted.
+   */
+  get muted() {
+    return this.#internalView.muted;
+  }
+
   get pinned() {
     return this.#internalView.pinned;
   }
@@ -219,6 +226,9 @@ class InternalView {
 
   /** @type {boolean} **/
   #pinned;
+
+  /** @type {boolean} **/
+  #muted;
 
   /** @type {nsIPrincipal} **/
   #contentPrincipal;
@@ -433,6 +443,12 @@ class InternalView {
   /** @type {Number} */
   get id() {
     return this.#id;
+  }
+
+  /** @type {boolean} */
+  get muted() {
+    let browser = this.getBrowser();
+    return browser?.audioMuted;
   }
 
   /** @type {boolean} */

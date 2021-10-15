@@ -358,6 +358,11 @@ export default class ActiveViewManager extends HTMLElement {
     let pinL10nId = "page-action-toggle-pinning";
     document.l10n.setAttributes(pinView, pinL10nId, { isPinned: view.pinned });
 
+    let muteView = document.getElementById("page-action-mute");
+    document.l10n.setAttributes(muteView, "page-action-toggle-muting", {
+      isMuted: view.muted,
+    });
+
     let pageActionTitleEl = document.getElementById("site-info-title");
     pageActionTitleEl.value = view.title;
     pageActionTitleEl.scrollLeft = 0;
