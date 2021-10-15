@@ -339,6 +339,10 @@
   background-image: url("chrome://global/skin/media/audio-muted.svg");
 }
 
+#page-action-mute[unmute] > .toolbarbutton-icon {
+  background-image: url("chrome://global/skin/media/audio.svg");
+}
+
 #page-action-reader-mode > .toolbarbutton-icon {
   background-image: url("chrome://browser/skin/reader-mode.svg");
 }

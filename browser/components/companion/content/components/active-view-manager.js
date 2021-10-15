@@ -362,6 +362,7 @@ export default class ActiveViewManager extends HTMLElement {
     document.l10n.setAttributes(muteView, "page-action-toggle-muting", {
       isMuted: view.muted,
     });
+    muteView.toggleAttribute("unmute", view.muted);
 
     let pageActionTitleEl = document.getElementById("site-info-title");
     pageActionTitleEl.value = view.title;
