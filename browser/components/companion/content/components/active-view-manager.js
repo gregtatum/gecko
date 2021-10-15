@@ -29,10 +29,13 @@ export default class ActiveViewManager extends HTMLElement {
   #securityStringsMap;
   /** @type {string} */
   #securityIconClass;
+  /** @type {GlobalHistory} */
+  #globalHistory;
 
   #river;
   #pinnedViews;
   #pageActionView;
+  #initted = false;
 
   static EVENTS = [
     "ViewChanged",
@@ -49,13 +52,21 @@ export default class ActiveViewManager extends HTMLElement {
     let template = document.getElementById("template-active-view-manager");
     let fragment = template.content.cloneNode(true);
     this.appendChild(fragment);
+  }
+
+  init(globalHistory) {
+    if (this.#initted) {
+      throw new Error("ActiveViewManager already initted.");
+    }
+
+    this.#globalHistory = globalHistory;
 
     this.#overflow = this.querySelector("#river-overflow-button");
     this.#river = this.querySelector("river-el");
     this.#pinnedViews = this.querySelector("pinned-views");
 
     for (let event of ActiveViewManager.EVENTS) {
-      window.top.gGlobalHistory.addEventListener(event, this);
+      this.#globalHistory.addEventListener(event, this);
     }
 
     this.addEventListener("UserAction:ViewSelected", this);
@@ -75,11 +86,13 @@ export default class ActiveViewManager extends HTMLElement {
       ["localResource", "identity-connection-file"],
       ["verifiedDomain", "companion-page-action-secure-page"],
     ]);
+
+    this.#initted = true;
   }
 
   disconnectedCallback() {
     for (let event of ActiveViewManager.EVENTS) {
-      window.top.gGlobalHistory.removeEventListener(event, this);
+      this.#globalHistory.removeEventListener(event, this);
     }
     this.removeEventListener("UserAction:ViewSelected", this);
     this.removeEventListener("UserAction:OpenPageActionMenu", this);
@@ -90,6 +103,8 @@ export default class ActiveViewManager extends HTMLElement {
     this.removeEventListener("dragend", this);
     this.#river.removeEventListener("RiverRegrouped", this);
     this.#overflow.removeEventListener("click", this);
+    this.#globalHistory = null;
+    this.#initted = false;
   }
 
   isRiverView(view) {
@@ -138,9 +153,9 @@ export default class ActiveViewManager extends HTMLElement {
   }
 
   rebuild() {
-    this.#river.setViews(window.top.gGlobalHistory.views);
+    this.#river.setViews(this.#globalHistory.views);
     this.#pinnedViews.clear();
-    this.viewChanged(window.top.gGlobalHistory.currentView);
+    this.viewChanged(this.#globalHistory.currentView);
   }
 
   handleEvent(event) {
@@ -252,7 +267,7 @@ export default class ActiveViewManager extends HTMLElement {
     } else if (this.isPinnedView(view)) {
       this.#pinnedViews.activeView = view;
     }
-    window.top.gGlobalHistory.setView(view);
+    this.#globalHistory.setView(view);
   }
 
   /**
@@ -473,7 +488,7 @@ export default class ActiveViewManager extends HTMLElement {
   }
 
   #setViewPinnedState(view, state, index) {
-    window.top.gGlobalHistory.setViewPinnedState(view, state, index);
+    this.#globalHistory.setViewPinnedState(view, state, index);
     this.#viewSelected(view);
   }
 
