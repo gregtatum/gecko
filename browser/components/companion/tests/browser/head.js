@@ -208,7 +208,7 @@ var PinebuildTestUtils = {
       false,
       event => event.view == view
     );
-    await win.gGlobalHistory.setView(view);
+    win.gGlobalHistory.setView(view);
     await Promise.all([viewUpdatedPromise, viewChangedPromise]);
     return viewChangedPromise;
   },

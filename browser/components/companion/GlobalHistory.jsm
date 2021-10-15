@@ -1633,7 +1633,7 @@ class GlobalHistory extends EventTarget {
    * @param {View} view
    *   The view to navigate to.
    */
-  async setView(view) {
+  setView(view) {
     logConsole.debug("Setting a new View as current.");
     let internalView = InternalView.viewMap.get(view);
     if (!internalView) {
@@ -1927,9 +1927,18 @@ class GlobalHistory extends EventTarget {
       viewToSwitchTo = this.#viewStack[index - 1];
     }
 
-    // If that's not possible, then we conclude that we're closing
+    // If the View we're closing is pinned, and the View that
+    // we've selected to switch to isn't pinned, then we must
+    // have run out of pinned Views. In that case, just switch
+    // to the last View in the River.
+    if (internalView.pinned && viewToSwitchTo && !viewToSwitchTo.pinned) {
+      viewToSwitchTo = this.#viewStack[this.#viewStack.length - 1];
+    }
+
+    // If none of that was possible, then we conclude that we're closing
     // the last View and do a reset.
     if (!viewToSwitchTo) {
+      this.#notifyEvent("ViewRemoved", internalView);
       this.reset();
       return;
     }
@@ -1949,6 +1958,19 @@ class GlobalHistory extends EventTarget {
     this.#viewStack.splice(index, 1);
     this.#historyViews.delete(internalView.historyId);
     this.#notifyEvent("ViewRemoved", internalView);
+
+    // Right now, we assume that the internalView was the current
+    // View when closing. This means that it's possible that after
+    // splicing the closed View out of the #viewStack, that the
+    // currentIndex will match the _new_ index of the viewToSwitchTo
+    // if the viewToSwitchTo was positioned _after_ the InternalView
+    // that was removed. If we detect that case, we'll fire the
+    // ViewChanged event to signal to the front-end to update the
+    // visualization of the currentView.
+    let pos = this.#viewStack.indexOf(viewToSwitchTo);
+    if (this.#currentIndex == pos) {
+      this.#notifyEvent("ViewChanged", viewToSwitchTo);
+    }
   }
 }
 
