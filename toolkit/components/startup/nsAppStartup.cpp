@@ -284,10 +284,6 @@ nsAppStartup::Run(void) {
   if (!mShuttingDown && mConsiderQuitStopper != 0) {
 #ifdef XP_MACOSX
     EnterLastWindowClosingSurvivalArea();
-#elif defined(XP_WIN)
-    if (mAllowWindowless) {
-      EnterLastWindowClosingSurvivalArea();
-    }
 #endif
 
     mRunning = true;
@@ -425,10 +421,6 @@ nsAppStartup::Quit(uint32_t aMode, int aExitCode, bool* aUserAllowedQuit) {
 #ifdef XP_MACOSX
       // now even the Mac wants to quit when the last window is closed
       ExitLastWindowClosingSurvivalArea();
-#elif defined(XP_WIN)
-      if (mAllowWindowless) {
-        ExitLastWindowClosingSurvivalArea();
-      }
 #endif
       if (obsService)
         obsService->NotifyObservers(nullptr, "quit-application-granted",
@@ -649,6 +641,16 @@ nsAppStartup::GetWasRestarted(bool* aResult) {
 NS_IMETHODIMP
 nsAppStartup::GetWasSilentlyStarted(bool* aResult) {
   *aResult = mWasSilentlyStarted;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppStartup::GetAllowWindowless(bool* aResult) {
+#ifdef XP_WIN
+  *aResult = mAllowWindowless;
+#else
+  *aResult = false;
+#endif
   return NS_OK;
 }
 

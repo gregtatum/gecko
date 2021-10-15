@@ -230,6 +230,12 @@ interface nsIAppStartup : nsISupports
     readonly attribute boolean wasSilentlyStarted;
 
     /**
+     * If true, we want to allow the application to run without a perceivable
+     * window.
+     */
+    readonly attribute boolean allowWindowless;
+
+    /**
      * The number of seconds since the OS was last rebooted
      */
     readonly attribute int64_t secondsSinceLastOSRestart;

@@ -5,6 +5,7 @@
 var EXPORTED_SYMBOLS = [
   "nsBrowserContentHandler",
   "nsDefaultCommandLineHandler",
+  "openBrowserWindow",
 ];
 
 const { XPCOMUtils } = ChromeUtils.import(

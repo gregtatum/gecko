@@ -26,6 +26,8 @@ browser.jar:
     content/browser/companion/play.svg (content/play.svg)
     content/browser/companion/pause.svg (content/pause.svg)
     content/browser/companion/pocket.js (content/pocket.js)
+    content/browser/companion/proclientBackground.js (content/proclientBackground.js)
+    content/browser/companion/proclientBackground.xhtml (content/proclientBackground.xhtml)
     content/browser/companion/rally.svg (content/rally.svg)
     content/browser/companion/refresh-services-button.js (content/refresh-services-button.js)
     content/browser/companion/relative-time.js (content/relative-time.js)

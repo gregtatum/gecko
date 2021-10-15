@@ -889,6 +889,14 @@ let JSWINDOWACTORS = {
   TelemetryTimestamps.add("blankWindowShown");
 })();
 
+if (AppConstants.PINEBUILD && Services.startup.allowWindowless) {
+  const PROCLIENT_BACKGROUND_UI =
+    "chrome://browser/content/companion/proclientBackground.xhtml";
+  let features = "chrome,titlebar=no,alwaysontop,minimizable=yes";
+
+  Services.ww.openWindow(null, PROCLIENT_BACKGROUND_UI, "_blank", features, []);
+}
+
 XPCOMUtils.defineLazyGetter(
   this,
   "WeaveService",
