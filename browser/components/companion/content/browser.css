@@ -270,7 +270,6 @@
 
 #page-action-panel-sections {
   width: 428px;
-  height: 230px;
 }
 
 #page-action-panel-sections {
@@ -358,11 +357,12 @@
 #site-info-section {
   display: grid;
   grid-template: 1fr 1fr 1fr / 1fr;
-  padding: 16px 8px;
+  padding: 6px 0 8px;
 }
 
 #site-info-section > div {
   height: 32px;
+  margin-top: 10px;
 }
 
 #site-info-title-section {
@@ -403,6 +403,12 @@
 #site-info-url {
   padding-block: 8px;
   background: #F0F0F4;
+}
+
+#site-security-info-section,
+#site-info-title,
+#site-info-url {
+  padding-inline: 8px;
 }
 
 #site-security-icon {
