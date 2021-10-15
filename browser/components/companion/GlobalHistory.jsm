@@ -827,7 +827,18 @@ class GlobalHistory extends EventTarget {
     let activeViewManager = this.#window.document.createElement(
       "active-view-manager"
     );
-    companionToolbar.appendChild(activeViewManager);
+
+    // The connectedCallback of the ActiveViewManager relies on this
+    // constructor having finished running. It seems that sometimes
+    // the connectedCallback will run immediately upon appending
+    // the node to the document - and when that occurs, it fails
+    // to set up correctly because the GlobalHistory constructor
+    // hasn't exited yet. We head that case off by waiting until
+    // we're just about to paint before adding the AVM to the
+    // document.
+    window.requestAnimationFrame(() => {
+      companionToolbar.appendChild(activeViewManager);
+    });
 
     for (let { linkedBrowser: browser } of this.#window.gBrowser.tabs) {
       this.#watchBrowser(browser);
