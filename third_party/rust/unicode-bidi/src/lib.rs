@@ -56,10 +56,8 @@
 //! [tr9]: <http://www.unicode.org/reports/tr9/>
 
 #![forbid(unsafe_code)]
-
-#![cfg_attr(feature="flame_it", feature(plugin, custom_attribute))]
-#![cfg_attr(feature="flame_it", plugin(flamer))]
-
+#![cfg_attr(feature = "flame_it", feature(plugin, custom_attribute))]
+#![cfg_attr(feature = "flame_it", plugin(flamer))]
 
 #[macro_use]
 extern crate matches;
@@ -74,7 +72,6 @@ extern crate serde_test;
 #[cfg(feature = "flame_it")]
 extern crate flame;
 
-
 pub mod deprecated;
 pub mod format_chars;
 pub mod level;
@@ -84,7 +81,7 @@ mod explicit;
 mod implicit;
 mod prepare;
 
-pub use char_data::{BidiClass, bidi_class, UNICODE_VERSION};
+pub use char_data::{bidi_class, BidiClass, UNICODE_VERSION};
 pub use level::{Level, LTR_LEVEL, RTL_LEVEL};
 pub use prepare::LevelRun;
 
@@ -93,9 +90,8 @@ use std::cmp::{max, min};
 use std::iter::repeat;
 use std::ops::Range;
 
-use BidiClass::*;
 use format_chars as chars;
-
+use BidiClass::*;
 
 /// Bidi information about a single paragraph
 #[derive(Debug, PartialEq)]
@@ -146,19 +142,21 @@ impl<'text> InitialInfo<'text> {
         let mut para_start = 0;
         let mut para_level = default_para_level;
 
-        #[cfg(feature = "flame_it")] flame::start("InitialInfo::new(): iter text.char_indices()");
+        #[cfg(feature = "flame_it")]
+        flame::start("InitialInfo::new(): iter text.char_indices()");
 
         for (i, c) in text.char_indices() {
             let class = bidi_class(c);
 
-            #[cfg(feature = "flame_it")] flame::start("original_classes.extend()");
+            #[cfg(feature = "flame_it")]
+            flame::start("original_classes.extend()");
 
             original_classes.extend(repeat(class).take(c.len_utf8()));
 
-            #[cfg(feature = "flame_it")] flame::end("original_classes.extend()");
+            #[cfg(feature = "flame_it")]
+            flame::end("original_classes.extend()");
 
             match class {
-
                 B => {
                     // P1. Split the text into separate paragraphs. The paragraph separator is kept
                     // with the previous paragraph.
@@ -220,7 +218,8 @@ impl<'text> InitialInfo<'text> {
         }
         assert_eq!(original_classes.len(), text.len());
 
-        #[cfg(feature = "flame_it")] flame::end("InitialInfo::new(): iter text.char_indices()");
+        #[cfg(feature = "flame_it")]
+        flame::end("InitialInfo::new(): iter text.char_indices()");
 
         InitialInfo {
             text,
@@ -326,7 +325,6 @@ impl<'text> BidiInfo<'text> {
         let levels = self.reordered_levels(para, line);
         self.text.char_indices().map(|(i, _)| levels[i]).collect()
     }
-
 
     /// Re-order a line based on resolved levels and return the line in display order.
     #[cfg_attr(feature = "flame_it", flame)]
@@ -458,9 +456,9 @@ impl<'text> BidiInfo<'text> {
 
                 seq_start = seq_end;
             }
-            max_level.lower(1).expect(
-                "Lowering embedding level below zero",
-            );
+            max_level
+                .lower(1)
+                .expect("Lowering embedding level below zero");
         }
 
         (levels, runs)
@@ -488,7 +486,6 @@ fn assign_levels_to_removed_chars(para_level: Level, classes: &[BidiClass], leve
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -501,12 +498,10 @@ mod tests {
             InitialInfo {
                 text,
                 original_classes: vec![L, EN],
-                paragraphs: vec![
-                    ParagraphInfo {
-                        range: 0..2,
-                        level: LTR_LEVEL,
-                    },
-                ],
+                paragraphs: vec![ParagraphInfo {
+                    range: 0..2,
+                    level: LTR_LEVEL,
+                },],
             }
         );
 
@@ -516,12 +511,10 @@ mod tests {
             InitialInfo {
                 text,
                 original_classes: vec![AL, AL, WS, R, R],
-                paragraphs: vec![
-                    ParagraphInfo {
-                        range: 0..5,
-                        level: RTL_LEVEL,
-                    },
-                ],
+                paragraphs: vec![ParagraphInfo {
+                    range: 0..5,
+                    level: RTL_LEVEL,
+                },],
             }
         );
 
@@ -550,12 +543,10 @@ mod tests {
             InitialInfo {
                 text: &text,
                 original_classes: vec![RLI, RLI, RLI, R, R, PDI, PDI, PDI, L],
-                paragraphs: vec![
-                    ParagraphInfo {
-                        range: 0..9,
-                        level: LTR_LEVEL,
-                    },
-                ],
+                paragraphs: vec![ParagraphInfo {
+                    range: 0..9,
+                    level: LTR_LEVEL,
+                },],
             }
         );
     }
@@ -569,12 +560,10 @@ mod tests {
                 text,
                 levels: Level::vec(&[0, 0, 0, 0, 0, 0]),
                 original_classes: vec![L, L, L, EN, EN, EN],
-                paragraphs: vec![
-                    ParagraphInfo {
-                        range: 0..6,
-                        level: LTR_LEVEL,
-                    },
-                ],
+                paragraphs: vec![ParagraphInfo {
+                    range: 0..6,
+                    level: LTR_LEVEL,
+                },],
             }
         );
 
@@ -585,12 +574,10 @@ mod tests {
                 text,
                 levels: Level::vec(&[0, 0, 0, 0, 1, 1, 1, 1, 1, 1]),
                 original_classes: vec![L, L, L, WS, R, R, R, R, R, R],
-                paragraphs: vec![
-                    ParagraphInfo {
-                        range: 0..10,
-                        level: LTR_LEVEL,
-                    },
-                ],
+                paragraphs: vec![ParagraphInfo {
+                    range: 0..10,
+                    level: LTR_LEVEL,
+                },],
             }
         );
         assert_eq!(
@@ -599,12 +586,10 @@ mod tests {
                 text,
                 levels: Level::vec(&[2, 2, 2, 1, 1, 1, 1, 1, 1, 1]),
                 original_classes: vec![L, L, L, WS, R, R, R, R, R, R],
-                paragraphs: vec![
-                    ParagraphInfo {
-                        range: 0..10,
-                        level: RTL_LEVEL,
-                    },
-                ],
+                paragraphs: vec![ParagraphInfo {
+                    range: 0..10,
+                    level: RTL_LEVEL,
+                },],
             }
         );
 
@@ -615,12 +600,10 @@ mod tests {
                 text,
                 levels: Level::vec(&[1, 1, 1, 1, 1, 1, 0, 0, 0, 0]),
                 original_classes: vec![R, R, R, R, R, R, WS, L, L, L],
-                paragraphs: vec![
-                    ParagraphInfo {
-                        range: 0..10,
-                        level: LTR_LEVEL,
-                    },
-                ],
+                paragraphs: vec![ParagraphInfo {
+                    range: 0..10,
+                    level: LTR_LEVEL,
+                },],
             }
         );
         assert_eq!(
@@ -629,12 +612,10 @@ mod tests {
                 text,
                 levels: Level::vec(&[1, 1, 1, 1, 1, 1, 1, 2, 2, 2]),
                 original_classes: vec![R, R, R, R, R, R, WS, L, L, L],
-                paragraphs: vec![
-                    ParagraphInfo {
-                        range: 0..10,
-                        level: RTL_LEVEL,
-                    },
-                ],
+                paragraphs: vec![ParagraphInfo {
+                    range: 0..10,
+                    level: RTL_LEVEL,
+                },],
             }
         );
 
@@ -645,12 +626,10 @@ mod tests {
                 text,
                 levels: Level::vec(&[1, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1]),
                 original_classes: vec![AL, AL, EN, AL, AL, WS, R, R, EN, R, R],
-                paragraphs: vec![
-                    ParagraphInfo {
-                        range: 0..11,
-                        level: LTR_LEVEL,
-                    },
-                ],
+                paragraphs: vec![ParagraphInfo {
+                    range: 0..11,
+                    level: LTR_LEVEL,
+                },],
             }
         );
 
@@ -764,10 +743,7 @@ mod tests {
         assert_eq!(reorder_paras("A אבג?"), vec!["A גבא?"]);
 
         // Testing neutral characters with Implicit RTL Marker
-        assert_eq!(
-            reorder_paras("A אבג?\u{200F}"),
-            vec!["A \u{200F}?גבא"]
-        );
+        assert_eq!(reorder_paras("A אבג?\u{200F}"), vec!["A \u{200F}?גבא"]);
         assert_eq!(reorder_paras("אבג abc"), vec!["abc גבא"]);
         assert_eq!(
             reorder_paras("abc\u{2067}.-\u{2069}ghi"),
@@ -783,10 +759,7 @@ mod tests {
         assert_eq!(reorder_paras("א(ב)ג."), vec![".ג)ב(א"]);
 
         // With mirrorable characters on level boundry
-        assert_eq!(
-            reorder_paras("אב(גד[&ef].)gh"),
-            vec!["ef].)gh&[דג(בא"]
-        );
+        assert_eq!(reorder_paras("אב(גד[&ef].)gh"), vec!["ef].)gh&[דג(בא"]);
     }
 
     fn reordered_levels_for_paras(text: &str) -> Vec<Vec<Level>> {
@@ -803,15 +776,12 @@ mod tests {
         bidi_info
             .paragraphs
             .iter()
-            .map(|para| {
-                bidi_info.reordered_levels_per_char(para, para.range.clone())
-            })
+            .map(|para| bidi_info.reordered_levels_per_char(para, para.range.clone()))
             .collect()
     }
 
     #[test]
     fn test_reordered_levels() {
-
         /// BidiTest:946 (LRI PDI)
         let text = "\u{2067}\u{2069}";
         assert_eq!(
@@ -846,11 +816,10 @@ mod tests {
     }
 }
 
-
 #[cfg(all(feature = "serde", test))]
 mod serde_tests {
-    use serde_test::{Token, assert_tokens};
     use super::*;
+    use serde_test::{assert_tokens, Token};
 
     #[test]
     fn test_levels() {

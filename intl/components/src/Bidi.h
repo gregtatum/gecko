@@ -60,9 +60,43 @@ class Bidi final {
                          Direction aDefaultDirection);
 
   /**
+   * Embedding levels are numbers that indicate how deeply the bidi text is
+   * nested, and the default direction of text on that level. Embedding levels
+   * are changed by using the Left-to-Right Embedding (LRE) codepoint (U+202A),
+   * or the Right-to-Left Embedding (RLE) codepoint (U+202B). The minimum
+   * embedding level of text is zero, and the maximum explicit depth is 125
+   */
+  class EmbeddingLevel {
+   public:
+    bool IsDefaultLTR();
+    bool IsDefaultRTL();
+    bool IsLTR();
+    bool IsRTL();
+    bool IsPseudoValue();
+    bool IsSameDirection(EmbeddingLevel aOther);
+    Direction Direction();
+    static EmbeddingLevel LTR();
+    static EmbeddingLevel RTL();
+    static EmbeddingLevel DefaultLTR();
+    static EmbeddingLevel DefaultRTL();
+    uint8_t Value();
+
+    operator uint8_t() const { return mValue; }
+    explicit EmbeddingLevel(uint8_t aValue) : mValue(aValue) {}
+    explicit EmbeddingLevel(int aValue)
+        : mValue(static_cast<uint8_t>(aValue)) {}
+    EmbeddingLevel() = default;
+    EmbeddingLevel(const EmbeddingLevel& other) = default;
+    EmbeddingLevel& operator=(const EmbeddingLevel& other) = default;
+
+   private:
+    uint8_t mValue = 0;
+  };
+
+  /**
    * Get the embedding level for the paragraph that was set by SetParagraph.
    */
-  uint8_t GetParagraphEmbeddingLevel() const;
+  EmbeddingLevel GetParagraphEmbeddingLevel() const;
 
   /**
    * Get the directionality of the paragraph text that was set by SetParagraph.
@@ -84,29 +118,7 @@ class Bidi final {
    */
   struct LogicalRun2 {
     int32_t limit;
-    uint8_t embeddingLevel;
-  };
-
-  /**
-   * Embedding levels are numbers that indicate how deeply the bidi text is
-   * nested, and the default direction of text on that level. Embedding levels
-   * are changed by using the Left-to-Right Embedding (LRE) codepoint (U+202A),
-   * or the Right-to-Left Embedding (RLE) codepoint (U+202B). The minimum
-   * embedding level of text is zero, and the maximum explicit depth is 125
-   */
-  class EmbeddingLevel {
-   public:
-    static bool IsDefaultLTR(uint8_t aValue);
-    static bool IsDefaultRTL(uint8_t aValue);
-    static bool IsLTR(uint8_t aValue);
-    static bool IsRTL(uint8_t aValue);
-    static bool IsPseudoValue(uint8_t aValue);
-    static bool IsSameDirection(uint8_t aLeft, uint8_t aRight);
-    static Direction Direction(uint8_t aValue);
-    static uint8_t LTR();
-    static uint8_t RTL();
-    static uint8_t DefaultLTR();
-    static uint8_t DefaultRTL();
+    EmbeddingLevel embeddingLevel;
   };
 
   /**
@@ -147,7 +159,7 @@ class Bidi final {
    *      The index map will result in
    *        <code>aIndexMap[aVisualIndex]==aLogicalIndex</code>.
    */
-  static void ReorderVisual(const uint8_t* aLevels, int32_t aLength,
+  static void ReorderVisual(const EmbeddingLevel* aLevels, int32_t aLength,
                             int32_t* aIndexMap);
 
   /**
@@ -188,11 +200,14 @@ class Bidi final {
   Result<VisualRunIter, ICUError> GetVisualRuns(
       Span<const char16_t> aParagraph, Bidi::Direction aDefaultDirection);
 
+  Direction GetVisualRun(int32_t aRunIndex, int32_t* aLogicalStart,
+                         int32_t* aLength);
+
  private:
   ICUPointer<UBiDi> mBidi = ICUPointer<UBiDi>(nullptr);
   Span<const char16_t> mParagraph = Span<const char16_t>();
   size_t mLogicalRunCharIndex = 0;
-  const uint8_t* mLevels = nullptr;
+  const EmbeddingLevel* mLevels = nullptr;
   int32_t mLength = 0;
 };
 

@@ -1933,7 +1933,7 @@ bool BuildTextRunsScanner::ContinueTextRunAcrossFrames(nsTextFrame* aFrame1,
     Side side2 = wm.PhysicalSide(eLogicalSideIStart);
     // If the frames have an embedding level that is opposite to the writing
     // mode, we need to swap which sides we're checking.
-    if (mozilla::intl::Bidi::EmbeddingLevel::IsRTL(aFrame1->GetEmbeddingLevel()) == wm.IsBidiLTR()) {
+    if (aFrame1->GetEmbeddingLevel().IsRTL() == wm.IsBidiLTR()) {
       std::swap(side1, side2);
     }
 
@@ -2394,7 +2394,7 @@ already_AddRefed<gfxTextRun> BuildTextRunsScanner::BuildTextRunForFrames(
   if (flags2 & nsTextFrameUtils::Flags::HasShy) {
     flags |= gfx::ShapedTextFlags::TEXT_ENABLE_HYPHEN_BREAKS;
   }
-  if (mBidiEnabled && (mozilla::intl::Bidi::EmbeddingLevel::IsRTL(firstFrame->GetEmbeddingLevel()))) {
+  if (mBidiEnabled && (firstFrame->GetEmbeddingLevel().IsRTL())) {
     flags |= gfx::ShapedTextFlags::TEXT_IS_RTL;
   }
   if (mNextRunContextInfo & nsTextFrameUtils::INCOMING_WHITESPACE) {
@@ -4506,7 +4506,8 @@ class nsContinuingTextFrame final : public nsTextFrame {
         auto* prev = static_cast<nsContinuingTextFrame*>(mPrevContinuation);
         MOZ_ASSERT(mFirstContinuation == prev->mFirstContinuation);
       } else {
-        MOZ_ASSERT(mFirstContinuation == mPrevContinuation->FirstContinuation());
+        MOZ_ASSERT(mFirstContinuation ==
+                   mPrevContinuation->FirstContinuation());
       }
     } else {
       MOZ_ASSERT(!mFirstContinuation);

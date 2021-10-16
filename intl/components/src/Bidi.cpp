@@ -50,7 +50,8 @@ Result<Maybe<Bidi::LogicalRun>, ICUError> Bidi::GetNextLogicalRun() {
 
   UErrorCode status = U_ZERO_ERROR;
   if (!mLevels || mLogicalRunCharIndex == 0) {
-    mLevels = ubidi_getLevels(mBidi.GetMut(), &status);
+    mLevels = reinterpret_cast<const Bidi::EmbeddingLevel*>(
+        ubidi_getLevels(mBidi.GetMut(), &status));
     if (U_FAILURE(status)) {
       mLevels = nullptr;
       return Err(ToICUError(status));
@@ -92,9 +93,10 @@ Result<Maybe<Bidi::LogicalRun>, ICUError> Bidi::GetNextLogicalRun() {
 }
 
 /* static */
-void ReorderVisual(const uint8_t* aLevels, int32_t aLength,
-                   int32_t* aIndexMap) {
-  ubidi_reorderVisual(aLevels, aLength, aIndexMap);
+void Bidi::ReorderVisual(const EmbeddingLevel* aLevels, int32_t aLength,
+                         int32_t* aIndexMap) {
+  ubidi_reorderVisual(reinterpret_cast<const uint8_t*>(aLevels), aLength,
+                      aIndexMap);
 }
 
 static Bidi::Direction ToBidiDirection(UBiDiDirection aDirection) {
@@ -114,7 +116,8 @@ Result<Bidi::VisualRunIter, ICUError> Bidi::GetVisualRuns(
   MOZ_TRY(SetParagraph(aParagraph, aDefaultDirection));
 
   UErrorCode status = U_ZERO_ERROR;
-  mLevels = ubidi_getLevels(mBidi.GetMut(), &status);
+  mLevels = reinterpret_cast<const Bidi::EmbeddingLevel*>(
+      ubidi_getLevels(mBidi.GetMut(), &status));
   if (U_FAILURE(status)) {
     mLevels = nullptr;
     return Err(ToICUError(status));
@@ -170,7 +173,9 @@ Result<int32_t, ICUError> Bidi::CountRuns() {
   }
 
   mLength = ubidi_getProcessedLength(mBidi.GetConst());
-  mLevels = mLength > 0 ? ubidi_getLevels(mBidi.GetMut(), &status) : nullptr;
+  mLevels = mLength > 0 ? reinterpret_cast<const Bidi::EmbeddingLevel*>(
+                              ubidi_getLevels(mBidi.GetMut(), &status))
+                        : nullptr;
   if (U_FAILURE(status)) {
     return Err(ToICUError(status));
   }
@@ -191,7 +196,7 @@ Bidi::LogicalRun2 Bidi::GetLogicalRun(int32_t aLogicalStart) {
   MOZ_ASSERT(ubidi_getReorderingMode(mBidi.GetMut()) != UBIDI_REORDER_RUNS_ONLY,
              "Don't support UBIDI_REORDER_RUNS_ONLY mode");
 
-  uint8_t level = mLevels[aLogicalStart];
+  EmbeddingLevel level = mLevels[aLogicalStart];
   int32_t limit;
   for (limit = aLogicalStart + 1; limit < mLength; limit++) {
     if (mLevels[limit] != level) {
@@ -201,52 +206,56 @@ Bidi::LogicalRun2 Bidi::GetLogicalRun(int32_t aLogicalStart) {
   return LogicalRun2{limit, level};
 }
 
-/* static */
-bool Bidi::EmbeddingLevel::IsDefaultLTR(uint8_t aValue) {
-  return aValue == UBIDI_DEFAULT_LTR;
+bool Bidi::EmbeddingLevel::IsDefaultLTR() {
+  return mValue == UBIDI_DEFAULT_LTR;
 };
 
-/* static */
-bool Bidi::EmbeddingLevel::IsDefaultRTL(uint8_t aValue) {
-  return aValue == UBIDI_DEFAULT_RTL;
+bool Bidi::EmbeddingLevel::IsDefaultRTL() {
+  return mValue == UBIDI_DEFAULT_RTL;
 };
 
-/* static */
-bool Bidi::EmbeddingLevel::IsLTR(uint8_t aValue) { return aValue & 0x1; };
+bool Bidi::EmbeddingLevel::IsLTR() { return mValue & 0x1; };
 
-/* static */
-bool Bidi::EmbeddingLevel::IsRTL(uint8_t aValue) {
-  return (aValue & 0x1) == 0;
+bool Bidi::EmbeddingLevel::IsRTL() { return (mValue & 0x1) == 0; };
+
+bool Bidi::EmbeddingLevel::IsPseudoValue() {
+  return mValue > UBIDI_MAX_EXPLICIT_LEVEL;
 };
 
-/* static */
-bool Bidi::EmbeddingLevel::IsPseudoValue(uint8_t aValue) {
-  return aValue > UBIDI_MAX_EXPLICIT_LEVEL;
-};
-
-/* static */
-bool Bidi::EmbeddingLevel::IsSameDirection(uint8_t aLeft, uint8_t aRight) {
-  return (((aLeft ^ aRight) & 1) == 0);
+bool Bidi::EmbeddingLevel::IsSameDirection(EmbeddingLevel aOther) {
+  return (((mValue ^ aOther) & 1) == 0);
 }
 
-/* static */
-uint8_t Bidi::EmbeddingLevel::LTR() { return 0; };
-
-/* static */
-uint8_t Bidi::EmbeddingLevel::RTL() { return 1; };
-
-/* static */
-uint8_t Bidi::EmbeddingLevel::DefaultLTR() { return UBIDI_DEFAULT_LTR; };
-
-/* static */
-uint8_t Bidi::EmbeddingLevel::DefaultRTL() { return UBIDI_DEFAULT_RTL; };
-
-Bidi::Direction Bidi::EmbeddingLevel::Direction(uint8_t aValue) {
-  return aValue & 0x1 ? Direction::RTL : Direction::LTR;
+Bidi::EmbeddingLevel Bidi::EmbeddingLevel::LTR() {
+  return Bidi::EmbeddingLevel(0);
 };
 
-uint8_t Bidi::GetParagraphEmbeddingLevel() const {
-  return ubidi_getParaLevel(mBidi.GetConst());
+Bidi::EmbeddingLevel Bidi::EmbeddingLevel::RTL() {
+  return Bidi::EmbeddingLevel(1);
+};
+
+Bidi::EmbeddingLevel Bidi::EmbeddingLevel::DefaultLTR() {
+  return Bidi::EmbeddingLevel(UBIDI_DEFAULT_LTR);
+};
+
+Bidi::EmbeddingLevel Bidi::EmbeddingLevel::DefaultRTL() {
+  return Bidi::EmbeddingLevel(UBIDI_DEFAULT_RTL);
+};
+
+Bidi::Direction Bidi::EmbeddingLevel::Direction() {
+  return mValue & 0x1 ? Direction::RTL : Direction::LTR;
+};
+
+uint8_t Bidi::EmbeddingLevel::Value() { return mValue; }
+
+Bidi::EmbeddingLevel Bidi::GetParagraphEmbeddingLevel() const {
+  return Bidi::EmbeddingLevel(ubidi_getParaLevel(mBidi.GetConst()));
+}
+
+Bidi::Direction Bidi::GetVisualRun(int32_t aRunIndex, int32_t* aLogicalStart,
+                                   int32_t* aLength) {
+  return ToBidiDirection(
+      ubidi_getVisualRun(mBidi.GetMut(), aRunIndex, aLogicalStart, aLength));
 }
 
 }  // namespace mozilla::intl
