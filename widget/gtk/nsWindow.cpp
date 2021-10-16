@@ -1094,15 +1094,11 @@ void nsWindow::ApplySizeConstraints(void) {
       }
       AddCSDDecorationSize(&geometry.min_width, &geometry.min_height);
       hints |= GDK_HINT_MIN_SIZE;
-      LOG("nsWindow::ApplySizeConstraints [%p] min size %d %d\n", (void*)this,
-          geometry.min_width, geometry.min_height);
     }
     if (mSizeConstraints.mMaxSize !=
         LayoutDeviceIntSize(NS_MAXSIZE, NS_MAXSIZE)) {
       AddCSDDecorationSize(&geometry.max_width, &geometry.max_height);
       hints |= GDK_HINT_MAX_SIZE;
-      LOG("nsWindow::ApplySizeConstraints [%p] max size %d %d\n", (void*)this,
-          geometry.max_width, geometry.max_height);
     }
 
     if (mAspectRatio != 0.0f) {
@@ -2744,13 +2740,18 @@ void nsWindow::GetWorkspaceID(nsAString& workspaceID) {
   if (!GdkIsX11Display() || !mShell) {
     return;
   }
+
+  LOG("nsWindow::GetWorkspaceID() [%p]", (void*)this);
+
   // Get the gdk window for this widget.
   GdkWindow* gdk_window = gtk_widget_get_window(mShell);
   if (!gdk_window) {
+    LOG("  missing Gdk window, quit.");
     return;
   }
 
   if (WorkspaceManagementDisabled(gdk_window)) {
+    LOG("  WorkspaceManagementDisabled, quit.");
     return;
   }
 
@@ -2767,9 +2768,11 @@ void nsWindow::GetWorkspaceID(nsAString& workspaceID) {
                         FALSE,      // delete
                         &type_returned, &format_returned, &length_returned,
                         (guchar**)&wm_desktop)) {
+    LOG("  gdk_property_get() failed, quit.");
     return;
   }
 
+  LOG("  got workspace ID %d", (int32_t)wm_desktop[0]);
   workspaceID.AppendInt((int32_t)wm_desktop[0]);
   g_free(wm_desktop);
 }
@@ -2777,13 +2780,17 @@ void nsWindow::GetWorkspaceID(nsAString& workspaceID) {
 void nsWindow::MoveToWorkspace(const nsAString& workspaceIDStr) {
   nsresult rv = NS_OK;
   int32_t workspaceID = workspaceIDStr.ToInteger(&rv);
+
+  LOG("nsWindow::MoveToWorkspace() [%p] ID %d", (void*)this, workspaceID);
   if (NS_FAILED(rv) || !workspaceID || !GdkIsX11Display() || !mShell) {
+    LOG("  MoveToWorkspace disabled, quit");
     return;
   }
 
   // Get the gdk window for this widget.
   GdkWindow* gdk_window = gtk_widget_get_window(mShell);
   if (!gdk_window) {
+    LOG("  failed to get GdkWindow, quit.");
     return;
   }
 
@@ -2814,6 +2821,7 @@ void nsWindow::MoveToWorkspace(const nsAString& workspaceIDStr) {
              SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
 
   XFlush(xdisplay);
+  LOG("  moved to workspace");
 }
 
 using SetUserTimeFunc = void (*)(GdkWindow*, guint32);
@@ -5904,10 +5912,11 @@ void nsWindow::NativeMoveResize(bool aMoved, bool aResized) {
   GdkRectangle size = DevicePixelsToGdkSizeRoundUp(mBounds.Size());
   GdkPoint topLeft = DevicePixelsToGdkPointRoundDown(mBounds.TopLeft());
 
-  LOG("nsWindow::NativeMoveResize [%p] %d,%d -> %d x %d\n", (void*)this,
-      topLeft.x, topLeft.y, size.width, size.height);
+  LOG("nsWindow::NativeMoveResize [%p] move %d resize %d to %d,%d -> %d x %d\n",
+      (void*)this, aMoved, aResized, topLeft.x, topLeft.y, size.width,
+      size.height);
 
-  if (!AreBoundsSane()) {
+  if (aResized && !AreBoundsSane()) {
     LOG("  bounds are insane, hidding the window");
     // We have been resized but to incorrect size.
     // If someone has set this so that the needs show flag is false
@@ -5940,8 +5949,12 @@ void nsWindow::NativeMoveResize(bool aMoved, bool aResized) {
   } else {
     if (mIsTopLevel) {
       // x and y give the position of the window manager frame top-left.
-      gtk_window_move(GTK_WINDOW(mShell), topLeft.x, topLeft.y);
-      gtk_window_resize(GTK_WINDOW(mShell), size.width, size.height);
+      if (aMoved) {
+        gtk_window_move(GTK_WINDOW(mShell), topLeft.x, topLeft.y);
+      }
+      if (aResized) {
+        gtk_window_resize(GTK_WINDOW(mShell), size.width, size.height);
+      }
     } else if (mContainer) {
       GtkAllocation allocation;
       allocation.x = topLeft.x;
@@ -5962,7 +5975,7 @@ void nsWindow::NativeMoveResize(bool aMoved, bool aResized) {
   }
 
   // Does it need to be shown because bounds were previously insane?
-  if (mNeedsShow && mIsShown) {
+  if (mNeedsShow && mIsShown && aResized) {
     NativeShow(true);
   }
 }
@@ -7065,7 +7078,6 @@ void nsWindow::PerformFullscreenTransition(FullscreenTransitionStage aStage,
 }
 
 already_AddRefed<nsIScreen> nsWindow::GetWidgetScreen() {
-  LOG("nsWindow::GetWidgetScreen() [%p]", this);
   // Wayland can read screen directly
   if (GdkIsWaylandDisplay()) {
     RefPtr<nsIScreen> screen = ScreenHelperGTK::GetScreenForWindow(this);
@@ -7074,7 +7086,6 @@ already_AddRefed<nsIScreen> nsWindow::GetWidgetScreen() {
     }
   }
 
-  LOG("  fallback to Gtk code");
   nsCOMPtr<nsIScreenManager> screenManager;
   screenManager = do_GetService("@mozilla.org/gfx/screenmanager;1");
   if (!screenManager) {
@@ -8134,18 +8145,13 @@ static gboolean drag_motion_event_cb(GtkWidget* aWidget,
 void WindowDragLeaveHandler(GtkWidget* aWidget) {
   LOGDRAG("WindowDragLeaveHandler()\n");
 
-  RefPtr<nsDragService> dragService = nsDragService::GetInstance();
-  if (!dragService->IsDragActive()) {
-    LOGDRAG("    Already finished.\n");
-    return;
-  }
-
   RefPtr<nsWindow> window = get_window_for_gtk_widget(aWidget);
   if (!window) {
     LOGDRAG("    Failed - can't find nsWindow!\n");
     return;
   }
 
+  RefPtr<nsDragService> dragService = nsDragService::GetInstance();
   nsWindow* mostRecentDragWindow = dragService->GetMostRecentDestWindow();
   if (!mostRecentDragWindow) {
     // This can happen when the target will not accept a drop.  A GTK drag
