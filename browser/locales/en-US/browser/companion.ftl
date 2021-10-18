@@ -96,6 +96,12 @@ companion-happening-now-minutes =
 
 companion-event-finished = Finished
 
+# This is used to show the number of minutes between two events indicating that
+# there is a small break (eg: 10 minute break).
+# Variables:
+#   $duration (Number) - Length of the break in minutes
+companion-event-break = { $duration } minute break
+
 # This string is used in the page action menu to indicate the
 # security status of a view.
 companion-page-action-secure-page = This website is using a secure connection.

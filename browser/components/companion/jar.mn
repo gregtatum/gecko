@@ -44,6 +44,7 @@ browser.jar:
     content/browser/companion/time-since.js (content/time-since.js)
     content/browser/companion/viewLoading.svg (content/viewLoading.svg)
     content/browser/companion/vpn.svg (content/vpn.svg)
+    content/browser/companion/breakTime.svg (content/breakTime.svg)
     content/browser/companion/webex.png (content/webex.png)
     content/browser/companion/widget-utils.js (content/widget-utils.js)
     content/browser/companion/workshop-api-built.js (services/workshop/build/workshop-api-built.js)

@@ -4,6 +4,7 @@
 
 import { openLink, openMeeting, MozLitElement } from "./widget-utils.js";
 import { css, html, classMap, until, repeat } from "./lit.all.js";
+var { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
@@ -92,11 +93,31 @@ export class CalendarEventList extends MozLitElement {
       }
 
       .calendar-event {
-        border-bottom: 1px solid var(--in-content-border-color);
+        border-block-start: 1px solid var(--in-content-border-color);
       }
 
-      .calendar-event:last-of-type {
+      .calendar-event:first-of-type,
+      .calendar-break-time + .calendar-event {
         border: none;
+      }
+
+      .calendar-break-time {
+        display: flex;
+        padding: 4px 16px;
+        font-size: 0.67em;
+        font-weight: 500;
+        color: rgba(0, 135, 135, 1);
+      }
+
+      .calendar-break-time-icon {
+        margin-inline-end: 4px;
+        height: 13px;
+        width: 12px;
+        background-image: url("chrome://browser/content/companion/breakTime.svg");
+        background-repeat: no-repeat;
+        background-position: center;
+        fill: currentColor;
+        -moz-context-properties: fill;
       }
     `;
   }
@@ -136,8 +157,41 @@ export class CalendarEventList extends MozLitElement {
 
   handleEvent(e) {
     if (e.type == "refresh-events") {
-      this.events = this.getRelevantEvents(e.detail.events);
+      let plainEvents = this.getRelevantEvents(e.detail.events);
+      let eventsAndBreaks = this.getEventsAndBreaks(plainEvents);
+      this.events = eventsAndBreaks;
     }
+  }
+
+  getEventsAndBreaks(events) {
+    let minBreakTime = Services.prefs.getIntPref(
+      "browser.pinebuild.calendar.minBreakTime",
+      0
+    );
+    let maxBreakTime = Services.prefs.getIntPref(
+      "browser.pinebuild.calendar.maxBreakTime",
+      0
+    );
+
+    if (!maxBreakTime || minBreakTime > maxBreakTime || events.length < 2) {
+      return events;
+    }
+
+    let eventsAndBreaks = [events.shift()];
+    for (let event of events) {
+      let lastEvent = eventsAndBreaks.at(-1);
+      let timeBetween = Math.round(
+        (new Date(event.start) - new Date(lastEvent.end)) / 60 / 1000
+      );
+      if (minBreakTime <= timeBetween && timeBetween <= maxBreakTime) {
+        eventsAndBreaks.push({
+          isBreakTime: true,
+          length: timeBetween,
+        });
+      }
+      eventsAndBreaks.push(event);
+    }
+    return eventsAndBreaks;
   }
 
   calendarEventItemsTemplate() {
@@ -148,11 +202,25 @@ export class CalendarEventList extends MozLitElement {
     return repeat(
       this.events,
       event => event.id,
-      event => html`
-        <div class="calendar-event">
-          <calendar-event .event=${event}></calendar-event>
-        </div>
-      `
+      event =>
+        event.isBreakTime
+          ? html`
+              <div class="calendar-break-time">
+                <span class="calendar-break-time-icon"></span>
+                <span
+                  class="calendar-break-time-label"
+                  data-l10n-id="companion-event-break"
+                  data-l10n-args=${JSON.stringify({
+                    duration: event.length,
+                  })}
+                ></span>
+              </div>
+            `
+          : html`
+              <div class="calendar-event">
+                <calendar-event .event=${event}></calendar-event>
+              </div>
+            `
     );
   }
 

@@ -2625,6 +2625,8 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.river.maxGroups", 5);
   pref("browser.pinebuild.workshop.enabled", false);
   pref("browser.pinebuild.pocket.url", "https://getpocket.cdn.mozilla.net/v3/firefox/global-recs");
+  pref("browser.pinebuild.calendar.minBreakTime", 5);
+  pref("browser.pinebuild.calendar.maxBreakTime", 15);
 
   // Preferences below here were at one point off by default and now have
   // been enabled (and should likely be removed eventually).
