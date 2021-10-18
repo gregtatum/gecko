@@ -201,7 +201,7 @@ class GoogleService {
               !result.attendees.filter(
                 attendee =>
                   attendee.self === true &&
-                  attendee.responseStatus === "accepted"
+                  attendee.responseStatus !== "declined"
               ).length
             ) {
               continue;
