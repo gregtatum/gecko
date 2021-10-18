@@ -1470,13 +1470,13 @@ WindowRenderer* nsBaseWidget::GetWindowRenderer() {
     }
 
     if (!mWindowRenderer) {
-      mWindowRenderer = CreateBasicLayerManager();
+      mWindowRenderer = CreateFallbackRenderer();
     }
   }
   return mWindowRenderer;
 }
 
-WindowRenderer* nsBaseWidget::CreateBasicLayerManager() {
+WindowRenderer* nsBaseWidget::CreateFallbackRenderer() {
   return new FallbackRenderer;
 }
 
@@ -1869,7 +1869,7 @@ void nsBaseWidget::ZoomToRect(const uint32_t& aPresShellId,
           "layers::IAPZCTreeManager::ZoomToRect", mAPZC,
           &IAPZCTreeManager::ZoomToRect,
           ScrollableLayerGuid(layerId, aPresShellId, aViewId),
-          ZoomTarget{aRect, Nothing()}, aFlags));
+          ZoomTarget{aRect}, aFlags));
 }
 
 #ifdef ACCESSIBILITY
@@ -2252,7 +2252,7 @@ void nsIWidget::CaptureRegisteredPlugins(uintptr_t aOwnerWidget) {
 
 uint64_t nsBaseWidget::CreateScrollCaptureContainer() {
   mScrollCaptureContainer =
-      LayerManager::CreateImageContainer(ImageContainer::ASYNCHRONOUS);
+      MakeAndAddRef<ImageContainer>(ImageContainer::ASYNCHRONOUS);
   if (!mScrollCaptureContainer) {
     NS_WARNING("Failed to create ImageContainer for widget image capture.");
     return ImageContainer::sInvalidAsyncContainerId;
