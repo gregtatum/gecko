@@ -382,7 +382,7 @@ var PinebuildTestUtils = {
    */
   getViewGroups(win = window) {
     let river = window.document.querySelector("river-el");
-    return river.shadowRoot.querySelectorAll("view-group");
+    return river.shadowRoot.querySelectorAll("view-group:not([hidden])");
   },
 
   /**

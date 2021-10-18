@@ -23,7 +23,13 @@
   border-end-start-radius: 25px;
 }
 
-#river::after {
+#river:not([containsActive]) {
+  padding-inline-end: 5px;
+  border-start-end-radius: 25px;
+  border-end-end-radius: 25px;
+}
+
+#river[containsActive]::after {
   border-inline-start: 1px solid var(--button-hover-bgcolor);
   margin-inline-start: 12px;
   content: "";

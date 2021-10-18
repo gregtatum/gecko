@@ -35,6 +35,8 @@ export default class River extends MozLitElement {
     this._displayedViewGroups = [];
     // The Views that will be listed in the overflow menu.
     this.overflowedViews = [];
+    this.addEventListener("dragover", this.#onDragOver);
+    this.addEventListener("drop", this.#onDrop);
   }
 
   hasView(view) {
@@ -184,6 +186,7 @@ export default class River extends MozLitElement {
   }
 
   render() {
+    let containsActive = this.#views.includes(this.activeView);
     // The base case is that the _displayedViewGroups is empty. In that case,
     // we still want the River <div> to render in order to take the appropriate
     // amount of vertical space in the toolbar - it just doesn't have any
@@ -191,11 +194,16 @@ export default class River extends MozLitElement {
     let riverViewGroups = [...this._displayedViewGroups];
     // If there's a topViewGroup, we need to wrap it in a new Array in order for
     // LitElement to know to re-render the ViewGroup.
-    let topViewGroup = this._displayedViewGroups.length
-      ? [...riverViewGroups.pop()]
-      : null;
+    let topViewGroup =
+      containsActive && this._displayedViewGroups.length
+        ? [...riverViewGroups.pop()]
+        : null;
     return html`
-      <div id="river" ?hidden=${!riverViewGroups.length}>
+      <div
+        id="river"
+        ?hidden=${!riverViewGroups.length}
+        ?containsActive=${containsActive}
+      >
         <div class="view-groups-wrapper">
           ${riverViewGroups.map(
             viewGroup =>
@@ -217,8 +225,6 @@ export default class River extends MozLitElement {
         ?active=${topViewGroup && topViewGroup.includes(this.activeView)}
         .views=${topViewGroup || []}
         .activeView=${this.activeView}
-        @dragover=${this.#onDragOver}
-        @drop=${this.#onDrop}
       ></view-group>
     `;
   }
