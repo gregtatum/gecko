@@ -180,11 +180,18 @@
 }
 
 .urlbarView-row[dynamicType=quickActions] .urlbarView-favicon {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border: 1px solid #E0E0E6;
-  padding: 3px;
   border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.urlbarView-row[dynamicType=quickActions] .urlbarView-favicon-img {
+  width: 20px;
+  height: 20px;
 }
 
 .urlbarView-row[dynamicType=quickActions][label]::before {

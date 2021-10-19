@@ -235,8 +235,15 @@ class ProviderQuickActionsBase extends UrlbarProvider {
         children: [
           {
             name: `icon-${i}`,
-            tag: "img",
+            tag: "div",
             attributes: { class: "urlbarView-favicon" },
+            children: [
+              {
+                name: `image-${i}`,
+                tag: "img",
+                attributes: { class: "urlbarView-favicon-img" },
+              },
+            ],
           },
           {
             name: `badge-${i}`,
@@ -364,7 +371,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
       buttonAttributes.hidden = hidden ? true : null;
       buttonAttributes.role = hidden ? "" : "button";
       viewUpdate[`button-${i}`] = { attributes: buttonAttributes };
-      viewUpdate[`icon-${i}`] = { attributes: { src: data.icon } };
+      viewUpdate[`image-${i}`] = { attributes: { src: data.icon } };
       viewUpdate[`label-${i}`] = { textContent: data.label };
       viewUpdate[`title-${i}`] = { textContent: data.title };
       if (data.hasOwnProperty("showBadge")) {
