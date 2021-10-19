@@ -80,6 +80,16 @@ const DESCRIPTION_TEST = [
     },
     links: [{ url: "http://example.com/", text: "An example" }],
   },
+  // href value differs from the link text, but both can be parsed as valid URLs
+  {
+    description: `<a href="https://docs.google.com/key">https://docs.google.com/blah</a>`,
+    links: [
+      {
+        url: "https://docs.google.com/key",
+        text: "https://docs.google.com/blah",
+      },
+    ],
+  },
 ];
 
 add_task(async function test_getLinkInfo() {

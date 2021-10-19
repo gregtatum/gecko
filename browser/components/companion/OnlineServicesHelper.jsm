@@ -69,6 +69,7 @@ function processLink(url, text) {
 function getLinkInfo(result) {
   let doc;
   let links = new Map();
+  let anchorText = new Set();
   let parser = new DOMParser();
   let description;
   if ("body" in result) {
@@ -96,6 +97,7 @@ function getLinkInfo(result) {
       let link = processLink(anchor.href, anchor.textContent);
       if (link && link.text !== "") {
         links.set(link.url, link);
+        anchorText.add(link.text);
       }
     }
   }
@@ -104,11 +106,16 @@ function getLinkInfo(result) {
     let descriptionURLs = description?.match(URL_REGEX);
     if (descriptionURLs?.length) {
       for (let descriptionURL of descriptionURLs) {
+        // skip processing if URL is the textContent of an anchor element
+        if (anchorText.has(descriptionURL)) {
+          continue;
+        }
+
         let descriptionLink = processLink(descriptionURL);
         if (
           !descriptionLink ||
           descriptionLink.text === "" ||
-          links.get(descriptionLink.url)
+          links.has(descriptionLink.url)
         ) {
           continue;
         }
