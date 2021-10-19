@@ -8,10 +8,6 @@
   justify-content: start;
 }
 
-:host(:not([top])[active]) > .view-el {
-  width: 200px;
-}
-
 .view-el > .view-loading-spinner-container {
   position: absolute;
   opacity: 0;
