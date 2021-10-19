@@ -171,10 +171,9 @@ export default class ViewGroup extends MozLitElement {
           </div>
           <div class="view-history" part="history">${history}</div>
         </div>
-        <img class="page-action-button" ?hidden=${!this.active}
-             src="chrome://global/skin/icons/arrow-down.svg"
+        <button class="page-action-button" ?hidden=${!this.active}
              @click="${this.#pageActionButtonClicked}"
-        ></img>
+        ></button>
       </div>
     `;
   }

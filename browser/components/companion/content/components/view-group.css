@@ -222,11 +222,22 @@
 }
 
 .page-action-button {
+  appearance: none;
+  background: url(chrome://global/skin/icons/arrow-down.svg) center center no-repeat;
+  -moz-context-properties: fill;
+  fill: var(--toolbarbutton-icon-fill);
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  border-width: 0;
+  box-sizing: content-box;
+  min-width: 20px;
+  min-height: 20px;
   padding: 4px;
   margin-inline: 8px;
+}
+
+.page-action-button:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: var(--focus-outline-offset);
 }
 
 .page-action-button:hover {
