@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+:host,
 .view-el {
   display: flex;
   align-items: center;
@@ -95,10 +96,6 @@
   width: 200px;
 }
 
-:host(:not(:is([top],[active]))) {
-  padding-block: 2px;
-}
-
 /**
  * We must supply a min-width here in order for the text inside
  * the domain / title containers to overflow properly.
@@ -114,8 +111,7 @@
 }
 
 .view-title {
-  font-size: 1.25rem;
-  min-height: 20px;
+  font-size: 1.20rem;
 }
 
 .view-domain-container {

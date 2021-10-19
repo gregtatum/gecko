@@ -17,7 +17,7 @@
   overflow: scroll;
   scrollbar-width: none;
   background-color: var(--light-bg-color);
-  padding: 5px;
+  padding: 4px;
   padding-inline-end: 0;
   border-start-start-radius: 25px;
   border-end-start-radius: 25px;
@@ -38,8 +38,9 @@
   z-index: 1;
 }
 
-#river[hidden] {
-  visibility: hidden;
+#river[hidden],
+view-group[top][hidden] {
+  visibility: collapse;
   min-height: 32px;
 }
 
@@ -88,8 +89,10 @@ view-group[top] {
   background-color: var(--light-bg-color);
   border-start-end-radius: 25px;
   border-end-end-radius: 25px;
-  padding-block: 5px;
-  padding-inline-start: 12px;
+  padding-block: 4px;
+  padding-inline-start: 4px;
 }
 
+#river:not([hidden]) + view-group[top] {
+  padding-inline-start: 12px;
 }
