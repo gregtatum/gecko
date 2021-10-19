@@ -495,7 +495,6 @@ void GCRuntime::freeFromBackgroundThread(AutoLockHelperThreadState& lock) {
 
 void GCRuntime::waitBackgroundFreeEnd() { freeTask.join(); }
 
-
 template <class ZoneIterT>
 IncrementalProgress GCRuntime::markWeakReferences(
     SliceBudget& incrementalBudget) {
@@ -1407,7 +1406,7 @@ static bool PrepareWeakCacheTasks(JSRuntime* rt,
 
   bool ok =
       IterateWeakCaches(rt, [&](JS::detail::WeakCacheBase* cache, Zone* zone) {
-        if (!cache->needsSweep()) {
+        if (cache->empty()) {
           return true;
         }
 

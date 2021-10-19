@@ -422,7 +422,7 @@ class Query {
               }
             }
           })
-          .catch(Cu.reportError)
+          .catch(ex => logger.error(ex))
       );
     }
 
@@ -509,13 +509,13 @@ class Query {
       provider.tryMethod("cancelQuery", this.context);
     }
     if (this._heuristicProviderTimer) {
-      this._heuristicProviderTimer.cancel().catch(Cu.reportError);
+      this._heuristicProviderTimer.cancel().catch(ex => logger.error(ex));
     }
     if (this._chunkTimer) {
-      this._chunkTimer.cancel().catch(Cu.reportError);
+      this._chunkTimer.cancel().catch(ex => logger.error(ex));
     }
     if (this._sleepTimer) {
-      this._sleepTimer.fire().catch(Cu.reportError);
+      this._sleepTimer.fire().catch(ex => logger.error(ex));
     }
   }
 
@@ -617,7 +617,7 @@ class Query {
       this._heuristicProviderTimer &&
       !this.context.pendingHeuristicProviders.size
     ) {
-      this._heuristicProviderTimer.fire().catch(Cu.reportError);
+      this._heuristicProviderTimer.fire().catch(ex => logger.error(ex));
     }
   }
 
@@ -625,12 +625,12 @@ class Query {
     this.muxer.sort(this.context);
 
     if (this._heuristicProviderTimer) {
-      this._heuristicProviderTimer.cancel().catch(Cu.reportError);
+      this._heuristicProviderTimer.cancel().catch(ex => logger.error(ex));
       this._heuristicProviderTimer = null;
     }
 
     if (this._chunkTimer) {
-      this._chunkTimer.cancel().catch(Cu.reportError);
+      this._chunkTimer.cancel().catch(ex => logger.error(ex));
       this._chunkTimer = null;
     }
 

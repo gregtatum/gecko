@@ -25,7 +25,6 @@ EXPORTS += [
     "LayerUserData.h",
     "opengl/OGLShaderConfig.h",
     "opengl/OGLShaderProgram.h",
-    "ReadbackLayer.h",
 ]
 
 if CONFIG["MOZ_WIDGET_TOOLKIT"] == "windows":
@@ -177,7 +176,6 @@ EXPORTS.mozilla.layers += [
     "ipc/VideoBridgeParent.h",
     "ipc/VideoBridgeUtils.h",
     "LayerAttributes.h",
-    "LayerManager.h",
     "LayersTypes.h",
     "MemoryPressureObserver.h",
     "NativeLayer.h",

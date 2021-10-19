@@ -1385,6 +1385,8 @@ void MNearbyInt::printOpcode(GenericPrinter& out) const {
 }
 #endif
 
+AliasSet MRandom::getAliasSet() const { return AliasSet::Store(AliasSet::RNG); }
+
 MDefinition* MSign::foldsTo(TempAllocator& alloc) {
   MDefinition* input = getOperand(0);
   if (!input->isConstant() ||
@@ -4650,16 +4652,22 @@ MDefinition* MWasmAddOffset::foldsTo(TempAllocator& alloc) {
     return this;
   }
 
-  MOZ_ASSERT(baseArg->type() == MIRType::Int32);
-  CheckedInt<uint32_t> ptr = baseArg->toConstant()->toInt32();
+  if (baseArg->type() == MIRType::Int32) {
+    CheckedInt<uint32_t> ptr = baseArg->toConstant()->toInt32();
+    ptr += offset();
+    if (!ptr.isValid()) {
+      return this;
+    }
+    return MConstant::New(alloc, Int32Value(ptr.value()));
+  }
 
+  MOZ_ASSERT(baseArg->type() == MIRType::Int64);
+  CheckedInt<uint64_t> ptr = baseArg->toConstant()->toInt64();
   ptr += offset();
-
   if (!ptr.isValid()) {
     return this;
   }
-
-  return MConstant::New(alloc, Int32Value(ptr.value()));
+  return MConstant::NewInt64(alloc, ptr.value());
 }
 
 bool MWasmAlignmentCheck::congruentTo(const MDefinition* ins) const {

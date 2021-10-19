@@ -438,4 +438,12 @@ this.AppConstants = Object.freeze({
 #else
     false,
 #endif
+  
+  MOZ_JXL:
+#ifdef MOZ_JXL
+    true,
+#else
+    false,
+#endif
+
 });

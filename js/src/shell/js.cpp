@@ -2298,7 +2298,7 @@ static bool Evaluate(JSContext* cx, unsigned argc, Value* vp) {
 
   options.setIntroductionType("js shell evaluate")
       .setFileAndLine("@evaluate", 1)
-      .setdeferDebugMetadata();
+      .setDeferDebugMetadata();
 
   options.borrowBuffer = true;
 
@@ -2497,7 +2497,8 @@ static bool Evaluate(JSContext* cx, unsigned argc, Value* vp) {
           return false;
         }
 
-        script = JS::InstantiateGlobalStencil(cx, options, stencil);
+        JS::InstantiateOptions instantiateOptions(options);
+        script = JS::InstantiateGlobalStencil(cx, instantiateOptions, stencil);
         if (!script) {
           return false;
         }
@@ -2548,7 +2549,8 @@ static bool Evaluate(JSContext* cx, unsigned argc, Value* vp) {
       }
     }
 
-    if (!JS::UpdateDebugMetadata(cx, script, options, privateValue,
+    JS::InstantiateOptions instantiateOptions(options);
+    if (!JS::UpdateDebugMetadata(cx, script, instantiateOptions, privateValue,
                                  elementAttributeName, nullptr, nullptr)) {
       return false;
     }
@@ -5334,7 +5336,7 @@ static bool Compile(JSContext* cx, unsigned argc, Value* vp) {
       .setFileAndLine("<string>", 1)
       .setIsRunOnce(true)
       .setNoScriptRval(true)
-      .setdeferDebugMetadata();
+      .setDeferDebugMetadata();
   RootedValue privateValue(cx);
   RootedString elementAttributeName(cx);
 
@@ -5365,7 +5367,8 @@ static bool Compile(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
-  if (!JS::UpdateDebugMetadata(cx, script, options, privateValue,
+  JS::InstantiateOptions instantiateOptions(options);
+  if (!JS::UpdateDebugMetadata(cx, script, instantiateOptions, privateValue,
                                elementAttributeName, nullptr, nullptr)) {
     return false;
   }
@@ -6227,7 +6230,7 @@ static bool OffThreadCompileScript(JSContext* cx, unsigned argc, Value* vp) {
   CompileOptions options(cx);
   options.setIntroductionType("js shell offThreadCompileScript")
       .setFileAndLine("<string>", 1)
-      .setdeferDebugMetadata();
+      .setDeferDebugMetadata();
 
   if (args.length() >= 2) {
     if (args[1].isPrimitive()) {
@@ -6340,8 +6343,10 @@ static bool runOffThreadScript(JSContext* cx, unsigned argc, Value* vp) {
   }
 
   CompileOptions dummyOptions(cx);
-  if (!JS::UpdateDebugMetadata(cx, script, dummyOptions, privateValue,
-                               elementAttributeName, nullptr, nullptr)) {
+  JS::InstantiateOptions dummyInstantiateOptions(dummyOptions);
+  if (!JS::UpdateDebugMetadata(cx, script, dummyInstantiateOptions,
+                               privateValue, elementAttributeName, nullptr,
+                               nullptr)) {
     return false;
   }
 
@@ -6370,7 +6375,7 @@ static bool OffThreadCompileToStencil(JSContext* cx, unsigned argc, Value* vp) {
   CompileOptions options(cx);
   options.setIntroductionType("js shell offThreadCompileToStencil")
       .setFileAndLine("<string>", 1)
-      .setdeferDebugMetadata();
+      .setDeferDebugMetadata();
 
   if (args.length() >= 2) {
     if (args[1].isPrimitive()) {
@@ -7827,6 +7832,7 @@ struct SharedObjectMailbox {
     struct {
       SharedArrayRawBuffer* buffer;
       size_t length;
+      bool isHugeMemory;  // For a WasmMemory tag, otherwise false
     } sarb;
     JS::WasmModule* module;
     double number;
@@ -7929,7 +7935,8 @@ static bool GetSharedObject(JSContext* cx, unsigned argc, Value* vp) {
           }
           RootedObject proto(cx,
                              &cx->global()->getPrototype(JSProto_WasmMemory));
-          newObj = WasmMemoryObject::create(cx, maybesab, proto);
+          newObj = WasmMemoryObject::create(cx, maybesab,
+                                            mbx->val.sarb.isHugeMemory, proto);
           MOZ_ASSERT_IF(newObj, newObj->as<WasmMemoryObject>().isShared());
           if (!newObj) {
             return false;
@@ -7983,6 +7990,7 @@ static bool SetSharedObject(JSContext* cx, unsigned argc, Value* vp) {
       tag = MailboxTag::SharedArrayBuffer;
       value.sarb.buffer = sab->rawBufferObject();
       value.sarb.length = sab->byteLength();
+      value.sarb.isHugeMemory = false;
       if (!value.sarb.buffer->addReference()) {
         JS_ReportErrorASCII(cx,
                             "Reference count overflow on SharedArrayBuffer");
@@ -7999,6 +8007,7 @@ static bool SetSharedObject(JSContext* cx, unsigned argc, Value* vp) {
         tag = MailboxTag::WasmMemory;
         value.sarb.buffer = sab->rawBufferObject();
         value.sarb.length = sab->byteLength();
+        value.sarb.isHugeMemory = obj->as<WasmMemoryObject>().isHuge();
         if (!value.sarb.buffer->addReference()) {
           JS_ReportErrorASCII(cx,
                               "Reference count overflow on SharedArrayBuffer");

@@ -881,6 +881,10 @@ nsresult nsLookAndFeel::NativeGetFloat(FloatID aID, float& aResult) {
       EnsureInit();
       aResult = mSystemTheme.mCaretRatio;
       break;
+    case FloatID::TitlebarRadius:
+      EnsureInit();
+      aResult = EffectiveTheme().mTitlebarRadius;
+      break;
     case FloatID::TextScaleFactor:
       aResult = gfxPlatformGtk::GetFontScaleFactor();
       break;
@@ -1529,6 +1533,36 @@ void nsLookAndFeel::PerThemeData::Init() {
     mTitlebarInactiveText = GDK_RGBA_TO_NS_RGBA(color);
     mTitlebarInactiveBackground =
         GetBackgroundColor(style, mTitlebarText, GTK_STATE_FLAG_BACKDROP);
+
+    GValue value = G_VALUE_INIT;
+    // NOTE(emilio): In an ideal world, we'd query the two longhands
+    // (border-top-left-radius and border-top-right-radius) separately. However,
+    // that doesn't work (GTK rejects the query with:
+    //
+    //   Style property "border-top-left-radius" is not gettable
+    //
+    // However! Getting border-radius does work, and it does return the
+    // border-top-left-radius as a gint:
+    //
+    //   https://docs.gtk.org/gtk3/const.STYLE_PROPERTY_BORDER_RADIUS.html
+    //   https://gitlab.gnome.org/GNOME/gtk/-/blob/gtk-3-20/gtk/gtkcssshorthandpropertyimpl.c#L961-977
+    //
+    // So we abuse this fact, and make the assumption here that the
+    // border-top-{left,right}-radius are the same, and roll with it.
+    gtk_style_context_get_property(style, "border-radius",
+                                   GTK_STATE_FLAG_NORMAL, &value);
+
+    mTitlebarRadius = [&]() -> float {
+      auto type = G_VALUE_TYPE(&value);
+      if (type == G_TYPE_INT) {
+        return float(g_value_get_int(&value));
+      }
+      NS_WARNING(
+          nsPrintfCString("Unknown value type %lu for titlebar radius", type)
+              .get());
+      return 0.0f;
+    }();
+    g_value_unset(&value);
   }
 
   style = GetStyleContext(MOZ_GTK_MENUPOPUP);
@@ -1790,6 +1824,7 @@ void nsLookAndFeel::PerThemeData::Init() {
              GetColorPrefName(id), NS_SUCCEEDED(rv),
              NS_SUCCEEDED(rv) ? color : 0);
     }
+    LOGLNF(" * titlebar-radius: %f\n", mTitlebarRadius);
   }
 }
 

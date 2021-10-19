@@ -93,6 +93,7 @@
 #include "mozilla/Unused.h"
 #include "MobileViewportManager.h"
 #include "VisualViewport.h"
+#include "WindowRenderer.h"
 #include <algorithm>
 #include <cstdlib>  // for std::abs(int/long)
 #include <cmath>    // for std::abs(float/double)
@@ -5439,8 +5440,6 @@ nsresult ScrollFrameHelper::CreateAnonymousContent(
   if (neededAnonContent.contains(AnonymousContentType::Resizer)) {
     MOZ_ASSERT(!mIsRoot, "Root scroll frame shouldn't be resizable");
 
-    AnonymousContentKey key = AnonymousContentKey::Type_Resizer;
-
     RefPtr<NodeInfo> nodeInfo;
     nodeInfo = nodeInfoManager->GetNodeInfo(
         nsGkAtoms::resizer, nullptr, kNameSpaceID_XUL, nsINode::ELEMENT_NODE);
@@ -5453,7 +5452,6 @@ nsresult ScrollFrameHelper::CreateAnonymousContent(
       case StyleResize::Horizontal:
         if (IsScrollbarOnRight()) {
           dir.AssignLiteral("right");
-          key |= AnonymousContentKey::Flag_Resizer_Right;
         } else {
           dir.AssignLiteral("left");
         }
@@ -5463,18 +5461,13 @@ nsresult ScrollFrameHelper::CreateAnonymousContent(
         if (!IsScrollbarOnRight()) {
           mResizerContent->SetAttr(kNameSpaceID_None, nsGkAtoms::flip, u""_ns,
                                    false);
-          key |= AnonymousContentKey::Flag_Resizer_Bottom_Flip;
-        } else {
-          key |= AnonymousContentKey::Flag_Resizer_Bottom;
         }
         break;
       case StyleResize::Both:
         if (IsScrollbarOnRight()) {
           dir.AssignLiteral("bottomright");
-          key |= AnonymousContentKey::Flag_Resizer_BottomRight;
         } else {
           dir.AssignLiteral("bottomleft");
-          key |= AnonymousContentKey::Flag_Resizer_BottomLeft;
         }
         break;
       default:
@@ -5485,7 +5478,7 @@ nsresult ScrollFrameHelper::CreateAnonymousContent(
                              u"_parent"_ns, false);
     mResizerContent->SetAttr(kNameSpaceID_None, nsGkAtoms::clickthrough,
                              u"always"_ns, false);
-    aElements.AppendElement(ContentInfo(mResizerContent, key));
+    aElements.AppendElement(mResizerContent);
   }
 
   if (neededAnonContent.contains(AnonymousContentType::HorizontalScrollbar) &&

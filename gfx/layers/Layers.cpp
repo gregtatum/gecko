@@ -16,7 +16,6 @@
 #include "CompositableHost.h"  // for CompositableHost
 #include "GeckoProfiler.h"  // for profiler_can_accept_markers, PROFILER_MARKER_TEXT
 #include "LayerUserData.h"  // for LayerUserData
-#include "ReadbackLayer.h"  // for ReadbackLayer
 #include "TreeTraversal.h"  // for ForwardIterator, ForEachNode, DepthFirstSearch, TraversalFlag, TraversalFl...
 #include "UnitTransforms.h"  // for ViewAs, PixelCastJustification, PixelCastJustification::RenderTargetIsPare...
 #include "apz/src/AsyncPanZoomController.h"  // for AsyncPanZoomController
@@ -76,10 +75,6 @@ void WriteSnapshotToDumpFile_internal(T* aObj, DataSourceSurface* aSurf) {
   if (gfxUtils::sDumpPaintFile != stderr) {
     fprintf_stderr(gfxUtils::sDumpPaintFile, R"(";)");
   }
-}
-
-void WriteSnapshotToDumpFile(LayerManager* aManager, DataSourceSurface* aSurf) {
-  WriteSnapshotToDumpFile_internal(aManager, aSurf);
 }
 
 void WriteSnapshotToDumpFile(Compositor* aCompositor, DrawTarget* aTarget) {
