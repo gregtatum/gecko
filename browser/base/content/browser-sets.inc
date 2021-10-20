@@ -38,9 +38,9 @@
     <command id="cmd_close" oncommand="PineBuildUIUtils.closeCurrentView();"/>
 #else
     <command id="cmd_close" oncommand="BrowserCloseTabOrWindow(event);"/>
-    <command id="cmd_closeWindow" oncommand="BrowserTryToCloseWindow(event)"/>
 #endif
 
+    <command id="cmd_closeWindow" oncommand="BrowserTryToCloseWindow(event)"/>
     <command id="cmd_toggleMute" oncommand="gBrowser.toggleMuteAudioOnMultiSelectedTabs(gBrowser.selectedTab)"/>
 #ifndef PINEBUILD
     <command id="cmd_CustomizeToolbars" oncommand="gCustomizeMode.enter()"/>
