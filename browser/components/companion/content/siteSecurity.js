@@ -15,7 +15,7 @@ ChromeUtils.defineModuleGetter(
 export default function(view) {
   let uri = view.url;
   let state = view.securityState;
-  let errorPageType = view.errorPageType;
+  let aboutPageType = view.aboutPageType;
 
   /**
    * Whether its an internally implemented, secure, "about" page that does not
@@ -120,11 +120,13 @@ export default function(view) {
       return "mixedDisplayContent";
     }
     return "weakCipher";
-  } else if (errorPageType == "certerror") {
+  } else if (aboutPageType == "reader") {
+    return "readerMode";
+  } else if (aboutPageType == "certerror") {
     return "certErrorPage";
-  } else if (errorPageType == "httpsonlyerror") {
+  } else if (aboutPageType == "httpsonlyerror") {
     return "httpsOnlyErrorPage";
-  } else if (errorPageType == "neterror" || errorPageType == "blocked") {
+  } else if (aboutPageType == "neterror" || aboutPageType == "blocked") {
     // Using a placeholder icon in this case. We will require a new icon from UX.
     return "unknownIdentity";
   } else if (

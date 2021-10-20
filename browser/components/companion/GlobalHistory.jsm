@@ -191,12 +191,12 @@ class View {
   }
 
   /**
-   * Indicates the type of "about" error page we've shown in this view.
-   * For e.g. certerror, neterror, about:blocked, etc
+   * Indicates the type of "about" page we've shown in this view.
+   * For e.g. certerror, neterror, about:blocked, about:reader, etc.
    * @type {string | null}
    */
-  get errorPageType() {
-    return this.#internalView.errorPageType;
+  get aboutPageType() {
+    return this.#internalView.aboutPageType;
   }
 
   /**
@@ -343,19 +343,23 @@ class InternalView {
   }
 
   /**
-   * Returns the type of "about" error page we've shown in this view. Note that
-   * it only does so in case of "certerror", "neterror", "blocked" and "httpsonlyerror"
-   * pages.
+   * Returns the type of "about" page shown in this view. Note that it only does so in case of
+   * "certerror", "neterror", "blocked", "httpsonlyerror" and "reader" pages. These about pages
+   * are different in that they indicate the loading state of regular webpages.
    */
-  #getErrorPageType(docURI) {
-    let errorPageTypes = ["neterror", "httpsonlyerror", "blocked"];
+  #getAboutPageType(docURI) {
+    if (!docURI.schemeIs("about")) {
+      return null;
+    }
+
+    let aboutPageTypes = ["neterror", "httpsonlyerror", "blocked", "reader"];
     if (
       docURI.filePath == "certerror" ||
       (docURI.filePath == "neterror" &&
         new URLSearchParams(docURI.query).get("e") == "nssFailure2")
     ) {
       return "certerror";
-    } else if (errorPageTypes.includes(docURI.filePath)) {
+    } else if (aboutPageTypes.includes(docURI.filePath)) {
       return docURI.filePath;
     }
 
@@ -388,7 +392,7 @@ class InternalView {
 
     let docURI = browser.documentURI;
     if (docURI && docURI.scheme == "about") {
-      this.errorPageType = this.#getErrorPageType(docURI);
+      this.aboutPageType = this.#getAboutPageType(docURI);
     }
 
     if (options.resetCreationTime) {

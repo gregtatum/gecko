@@ -242,6 +242,10 @@
   background-image: url(chrome://branding/content/icon16.png);
 }
 
+#site-security-icon.readerMode {
+  background-image: url("chrome://browser/skin/reader-mode.svg");
+}
+
 #site-security-icon.localResource {
   background-image: url(chrome://global/skin/icons/page-portrait.svg);
 }

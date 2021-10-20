@@ -83,8 +83,9 @@ export default class ActiveViewManager extends HTMLElement {
     // provides updated strings.
     this.#securityStringsMap = new Map([
       ["aboutUI", "identity-connection-internal"],
+      ["readerMode", "page-action-menu-reader-mode"],
       ["localResource", "identity-connection-file"],
-      ["verifiedDomain", "companion-page-action-secure-page"],
+      ["verifiedDomain", "page-action-menu-secure-page"],
     ]);
 
     this.#initted = true;

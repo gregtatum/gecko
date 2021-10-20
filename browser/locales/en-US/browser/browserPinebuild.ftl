@@ -25,3 +25,7 @@ page-action-more =
   .label = More
 
 last-session-saved = Last session saved in Companion
+
+# Pro Client connection security strings.
+page-action-menu-secure-page = This website is using a secure connection.
+page-action-menu-reader-mode = This page is in Reader mode.
