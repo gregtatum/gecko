@@ -83,6 +83,7 @@ scrollcorner {
   cursor: default;
 }
 
+%ifdef XP_WIN
 /* Experimental scrollbar styling changes to support pinebuild, which do not
    work in high contrast mode. */
 @supports -moz-bool-pref("browser.pinebuild.styleoverrides") {
@@ -158,3 +159,4 @@ scrollcorner {
     /* End of pinebuild scrollbar styling */
   }
 }
+%endif
