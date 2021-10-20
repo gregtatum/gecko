@@ -1312,6 +1312,13 @@
   value: false
   mirror: always
 
+# Testing-only pref to cause PBrowser creation for a specific BrowsingContext to
+# fail, to test the errored codepath.
+- name: browser.tabs.remote.testOnly.failPBrowserCreation.enabled
+  type: bool
+  value: false
+  mirror: always
+
 - name: browser.tabs.remote.desktopbehavior
   type: bool
   value: false
@@ -4928,6 +4935,13 @@
   value: true
   mirror: once
 
+#if !defined(MOZ_WIDGET_ANDROID)
+- name: gfx.egl.prefer-gles.enabled
+  type: bool
+  value: false
+  mirror: once
+#endif
+
 # [Windows] Whether registry FontSubstitutes entries are used unconditionally,
 # or only if the original font is not available.
 #if defined(XP_WIN)
@@ -5053,6 +5067,22 @@
   type: RelaxedAtomicInt32
   value: 0
   mirror: always
+
+# SwapInterval
+- name: gfx.swap-interval.glx
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
+
+- name: gfx.swap-interval.egl
+  type: RelaxedAtomicBool
+  mirror: always
+#ifdef MOZ_WIDGET_ANDROID
+  value: true
+#else
+  value: false
+#endif
+
 
 # Log severe performance warnings to the error console and profiles.
 # This should be use to quickly find which slow paths are used by test cases.
@@ -6354,15 +6384,6 @@
 #endif
   mirror: always
 
-- name: layers.enable-tiles
-  type: bool
-#if defined(XP_MACOSX) || defined (XP_OPENBSD)
-  value: true
-#else
-  value: false
-#endif
-  mirror: once
-
 # Force all possible layers to be always active layers.
 - name: layers.force-active
   type: bool
@@ -6511,30 +6532,6 @@
   value: true
   mirror: always
 
-# We allow for configurable and rectangular tile size to avoid wasting memory
-# on devices whose screen size does not align nicely to the default tile size.
-# Although layers can be any size, they are often the same size as the screen,
-# especially for width.
-- name: layers.tile-width
-  type: int32_t
-  value: 512
-  mirror: once
-
-- name: layers.tile-height
-  type: int32_t
-  value: 512
-  mirror: once
-
-# If this is set the tile size will only be treated as a suggestion.
-# On B2G we will round this to the stride of the underlying allocation.
-# On any platform we may later use the screen size and ignore
-# tile-width/tile-height entirely. Its recommended to turn this off
-# if you change the tile size.
-- name: layers.tiles.adjust
-  type: bool
-  value: true
-  mirror: once
-
 - name: layers.recycle-allocator-rdd
   type: bool
   value: true
@@ -6547,7 +6544,7 @@
 
 - name: layers.iosurfaceimage.use-nv12
   type: bool
-  value: false
+  value: true
   mirror: once
 
 #---------------------------------------------------------------------------
@@ -8841,7 +8838,9 @@
 
 - name: media.webrtc.platformencoder
   type: bool
-#if defined(MOZ_WIDGET_ANDROID) || defined(NIGHTLY_BUILD)
+#if defined(MOZ_WIDGET_ANDROID)
+  value: true
+#elif defined(NIGHTLY_BUILD) && !defined(MOZ_WIDGET_GTK)
   value: true
 #else
   value: false
@@ -10274,11 +10273,6 @@
 #---------------------------------------------------------------------------
 # Prefs starting with "privacy."
 #---------------------------------------------------------------------------
-
-- name: privacy.file_unique_origin
-  type: bool
-  value: true
-  mirror: always
 
 - name: privacy.fuzzyfox.clockgrainus
   type: RelaxedAtomicUint32

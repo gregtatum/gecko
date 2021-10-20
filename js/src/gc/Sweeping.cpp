@@ -1176,7 +1176,8 @@ class ImmediateSweepWeakCacheTask : public GCParallelTask {
   void run(AutoLockHelperThreadState& lock) override {
     AutoUnlockHelperThreadState unlock(lock);
     AutoSetThreadIsSweeping threadIsSweeping(zone);
-    cache.sweep(&gc->storeBuffer());
+    SweepingTracer trc(gc->rt);
+    cache.traceWeak(&trc, &gc->storeBuffer());
   }
 };
 
@@ -1201,9 +1202,10 @@ void GCRuntime::updateAtomsBitmap() {
 }
 
 void GCRuntime::sweepCCWrappers() {
+  SweepingTracer trc(rt);
   AutoSetThreadIsSweeping threadIsSweeping;  // This can touch all zones.
   for (SweepGroupZonesIter zone(this); !zone.done(); zone.next()) {
-    zone->sweepAllCrossCompartmentWrappers();
+    zone->traceWeakCCWEdges(&trc);
   }
 }
 
@@ -1235,6 +1237,7 @@ void GCRuntime::sweepCompressionTasks() {
 }
 
 void GCRuntime::sweepWeakMaps() {
+  SweepingTracer trc(rt);
   AutoSetThreadIsSweeping threadIsSweeping;  // This may touch any zone.
   for (SweepGroupZonesIter zone(this); !zone.done(); zone.next()) {
     /* No need to look up any more weakmap keys from this sweep group. */
@@ -1246,7 +1249,7 @@ void GCRuntime::sweepWeakMaps() {
     // Lock the storebuffer since this may access it when rehashing or resizing
     // the tables.
     AutoLockStoreBuffer lock(&storeBuffer());
-    zone->sweepWeakMaps();
+    zone->sweepWeakMaps(&trc);
   }
 }
 
@@ -1404,6 +1407,7 @@ static bool PrepareWeakCacheTasks(JSRuntime* rt,
 
   MOZ_ASSERT(immediateTasks->empty());
 
+  GCRuntime* gc = &rt->gc;
   bool ok =
       IterateWeakCaches(rt, [&](JS::detail::WeakCacheBase* cache, Zone* zone) {
         if (cache->empty()) {
@@ -1411,11 +1415,11 @@ static bool PrepareWeakCacheTasks(JSRuntime* rt,
         }
 
         // Caches that support incremental sweeping will be swept later.
-        if (zone && cache->setNeedsIncrementalBarrier(true)) {
+        if (zone && cache->setIncrementalBarrierTracer(&gc->sweepingTracer)) {
           return true;
         }
 
-        return immediateTasks->emplaceBack(&rt->gc, zone, *cache);
+        return immediateTasks->emplaceBack(gc, zone, *cache);
       });
 
   if (!ok) {
@@ -1428,11 +1432,12 @@ static bool PrepareWeakCacheTasks(JSRuntime* rt,
 static void SweepAllWeakCachesOnMainThread(JSRuntime* rt) {
   // If we ran out of memory, do all the work on the main thread.
   gcstats::AutoPhase ap(rt->gc.stats(), gcstats::PhaseKind::SWEEP_WEAK_CACHES);
+  SweepingTracer trc(rt);
   IterateWeakCaches(rt, [&](JS::detail::WeakCacheBase* cache, Zone* zone) {
     if (cache->needsIncrementalBarrier()) {
-      cache->setNeedsIncrementalBarrier(false);
+      cache->setIncrementalBarrierTracer(nullptr);
     }
-    cache->sweep(&rt->gc.storeBuffer());
+    cache->traceWeak(&trc, &rt->gc.storeBuffer());
     return true;
   });
 }
@@ -1841,8 +1846,10 @@ static size_t IncrementalSweepWeakCache(GCRuntime* gc,
 
   JS::detail::WeakCacheBase* cache = item.cache;
   MOZ_ASSERT(cache->needsIncrementalBarrier());
-  size_t steps = cache->sweep(&gc->storeBuffer());
-  cache->setNeedsIncrementalBarrier(false);
+
+  SweepingTracer trc(gc->rt);
+  size_t steps = cache->traceWeak(&trc, &gc->storeBuffer());
+  cache->setIncrementalBarrierTracer(nullptr);
 
   return steps;
 }

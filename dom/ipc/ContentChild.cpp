@@ -1680,12 +1680,14 @@ static void DisconnectWindowServer(bool aIsSandboxEnabled) {
   // is called.
   CGSShutdownServerConnections();
 
-  // Actual security benefits are only acheived when we additionally deny
-  // future connections, however this currently breaks WebGL so it's not done
-  // by default.
+  // Actual security benefits are only achieved when we additionally deny
+  // future connections using the sandbox policy. WebGL must be remoted if
+  // the windowserver connections are blocked. WebGL remoting is disabled
+  // for some tests.
   if (aIsSandboxEnabled &&
       Preferences::GetBool(
-          "security.sandbox.content.mac.disconnect-windowserver")) {
+          "security.sandbox.content.mac.disconnect-windowserver") &&
+      Preferences::GetBool("webgl.out-of-process")) {
     CGError result = CGSSetDenyWindowServerConnections(true);
     MOZ_DIAGNOSTIC_ASSERT(result == kCGErrorSuccess);
 #  if !MOZ_DIAGNOSTIC_ASSERT_ENABLED
@@ -1783,7 +1785,30 @@ mozilla::ipc::IPCResult ContentChild::RecvConstructBrowser(
     nsPrintfCString reason("%s initial %s BrowsingContext",
                            browsingContext ? "discarded" : "missing",
                            aIsTopLevel ? "top" : "frame");
+    MOZ_LOG(BrowsingContext::GetLog(), LogLevel::Warning, ("%s", reason.get()));
+    if (!aIsTopLevel) {
+      // Recover if the BrowsingContext is missing for a new subframe. The
+      // `ManagedEndpoint` instances will be automatically destroyed.
+      NS_WARNING(reason.get());
+      return IPC_OK();
+    }
     return IPC_FAIL(this, reason.get());
+  }
+
+  if (xpc::IsInAutomation() &&
+      StaticPrefs::
+          browser_tabs_remote_testOnly_failPBrowserCreation_enabled()) {
+    nsAutoCString idString;
+    if (NS_SUCCEEDED(Preferences::GetCString(
+            "browser.tabs.remote.testOnly.failPBrowserCreation.browsingContext",
+            idString))) {
+      nsresult rv = NS_OK;
+      uint64_t bcid = idString.ToInteger64(&rv);
+      if (NS_SUCCEEDED(rv) && bcid == browsingContext->Id()) {
+        NS_WARNING("Injecting artificial PBrowser creation failure");
+        return IPC_OK();
+      }
+    }
   }
 
   if (!aWindowInit.isInitialDocument() ||
