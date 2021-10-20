@@ -237,11 +237,11 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     }
 
     SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
+    this.emit("session-set-aside", window);
     window.gGlobalHistory.reset("about:flow-reset");
     // Let the time for the previous animation completely elapse before
     // we start the new one.
     await timerCompletePromise;
-    this.emit("session-set-aside", window);
     await window.gBrowser.doPinebuildSessionShowAnimation();
     await window.gBrowser.showConfirmation("session-saved-confirmation");
     this.emit("session-replaced", window, restoreSessionGuid);

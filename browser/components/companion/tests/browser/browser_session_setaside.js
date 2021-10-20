@@ -76,6 +76,12 @@ add_task(async function setup() {
       isHidden(win, "session-setaside-button"),
       "Setaside button hidden"
     );
+    Assert.ok(
+      BrowserTestUtils.is_hidden(
+        win.document.querySelector("active-view-manager")
+      ),
+      "Active View Manager hidden"
+    );
 
     await UrlbarTestUtils.promiseAutocompleteResultPopup({
       window: win,

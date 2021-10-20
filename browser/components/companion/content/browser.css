@@ -35,7 +35,8 @@
 [flow-reset] #pinebuild-back-button,
 [flow-reset] #pinebuild-reload-button,
 [flow-reset] #pinebuild-copy-button,
-[flow-reset] #session-setaside-button {
+[flow-reset] #session-setaside-button,
+[flow-reset] active-view-manager {
   visibility: hidden;
 }
 

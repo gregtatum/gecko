@@ -41,10 +41,10 @@ class CompanionManager extends MozXULElement {
   }
 
   connectedCallback() {
-    this.#updateVisibility();
-
     this.appendChild(this.constructor.fragment);
-
+    window.addEventListener("load", () => this.#updateVisibility(), {
+      once: true,
+    });
     window.addEventListener("unload", this.destroy);
   }
 
@@ -84,7 +84,7 @@ class CompanionManager extends MozXULElement {
       document.documentElement.setAttribute("companion", "true");
       document.documentElement.style.setProperty(
         "--companion-width",
-        this.width + "px"
+        (this.width || this.clientWidth) + "px"
       );
     } else {
       document.documentElement.removeAttribute("companion");
