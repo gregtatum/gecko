@@ -2645,6 +2645,8 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.sessionstore.warnOnQuit", false, locked);
   pref("browser.sessionstore.resume_session_once", false, locked);
   pref("browser.sessionstore.resuming_after_os_restart", false, locked);
+  // Always resume session from crashes
+  pref("browser.sessionstore.max_resumed_crashes", -1, locked);
   pref("services.sync.prefs.sync.browser.sessionstore.warnOnQuit", false, locked);
   pref("services.sync.prefs.sync.browser.sessionstore.resume_session_once", false, locked);
   pref("services.sync.prefs.sync.browser.sessionstore.resuming_after_os_restart", false, locked);
