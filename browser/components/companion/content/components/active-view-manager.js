@@ -464,7 +464,15 @@ export default class ActiveViewManager extends HTMLElement {
     dt.addElement(this);
 
     dt.mozSetDataAt(ActiveViewManager.VIEWGROUP_DROP_TYPE, draggedViewGroup, 0);
-    dt.setDragImage(draggedViewGroup.iconContainer, 0, 0);
+
+    let iconBounds = window.windowUtils.getBoundsWithoutFlushing(
+      draggedViewGroup.iconContainer
+    );
+    dt.setDragImage(
+      draggedViewGroup.iconContainer,
+      iconBounds.width / 2,
+      iconBounds.height / 2
+    );
   }
 
   #onDragEnd(event) {
