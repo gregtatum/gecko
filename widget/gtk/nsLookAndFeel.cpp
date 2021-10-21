@@ -362,10 +362,10 @@ void nsLookAndFeel::PerThemeData::InitCellHighlightColors() {
 void nsLookAndFeel::NativeInit() { EnsureInit(); }
 
 void nsLookAndFeel::RefreshImpl() {
-  nsXPLookAndFeel::RefreshImpl();
+  mInitialized = false;
   moz_gtk_refresh();
 
-  mInitialized = false;
+  nsXPLookAndFeel::RefreshImpl();
 }
 
 nsresult nsLookAndFeel::NativeGetColor(ColorID aID, ColorScheme aScheme,
@@ -832,6 +832,11 @@ nsresult nsLookAndFeel::NativeGetInt(IntID aID, int32_t& aResult) {
       aResult = mSystemTheme.mHighContrast;
       break;
     }
+    case IntID::TitlebarRadius: {
+      EnsureInit();
+      aResult = EffectiveTheme().mTitlebarRadius;
+      break;
+    }
     case IntID::AllowOverlayScrollbarsOverlap: {
       aResult = 1;
       break;
@@ -871,10 +876,6 @@ nsresult nsLookAndFeel::NativeGetFloat(FloatID aID, float& aResult) {
     case FloatID::CaretAspectRatio:
       EnsureInit();
       aResult = mSystemTheme.mCaretRatio;
-      break;
-    case FloatID::TitlebarRadius:
-      EnsureInit();
-      aResult = EffectiveTheme().mTitlebarRadius;
       break;
     case FloatID::TextScaleFactor:
       aResult = gfxPlatformGtk::GetFontScaleFactor();
@@ -1313,8 +1314,20 @@ bool nsLookAndFeel::MatchFirefoxThemeIfNeeded() {
   AutoRestore<bool> restoreIgnoreSettings(sIgnoreChangedSettings);
   sIgnoreChangedSettings = true;
 
-  const bool matchesSystem =
-      (ColorSchemeForChrome() == ColorScheme::Dark) == mSystemTheme.mIsDark;
+  const bool matchesSystem = [&] {
+    // NOTE: We can't call ColorSchemeForChrome directly because this might run
+    // while we're computing it.
+    switch (ColorSchemeSettingForChrome()) {
+      case ChromeColorSchemeSetting::Light:
+        return !mSystemTheme.mIsDark;
+      case ChromeColorSchemeSetting::Dark:
+        return mSystemTheme.mIsDark;
+      case ChromeColorSchemeSetting::System:
+        break;
+    };
+    return true;
+  }();
+
   const bool usingSystem = !mSystemThemeOverridden;
 
   LOGLNF("MatchFirefoxThemeIfNeeded(matchesSystem=%d, usingSystem=%d)\n",
@@ -1543,15 +1556,15 @@ void nsLookAndFeel::PerThemeData::Init() {
     gtk_style_context_get_property(style, "border-radius",
                                    GTK_STATE_FLAG_NORMAL, &value);
 
-    mTitlebarRadius = [&]() -> float {
+    mTitlebarRadius = [&]() -> int {
       auto type = G_VALUE_TYPE(&value);
       if (type == G_TYPE_INT) {
-        return float(g_value_get_int(&value));
+        return g_value_get_int(&value);
       }
       NS_WARNING(
           nsPrintfCString("Unknown value type %lu for titlebar radius", type)
               .get());
-      return 0.0f;
+      return 0;
     }();
     g_value_unset(&value);
   }
@@ -1815,7 +1828,7 @@ void nsLookAndFeel::PerThemeData::Init() {
              GetColorPrefName(id), NS_SUCCEEDED(rv),
              NS_SUCCEEDED(rv) ? color : 0);
     }
-    LOGLNF(" * titlebar-radius: %f\n", mTitlebarRadius);
+    LOGLNF(" * titlebar-radius: %d\n", mTitlebarRadius);
   }
 }
 
