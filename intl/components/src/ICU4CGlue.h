@@ -27,6 +27,7 @@
 #include <iterator>
 #include <stddef.h>
 #include <stdint.h>
+#include <string>
 #include <string_view>
 
 struct UFormattedValue;
@@ -41,13 +42,14 @@ static inline const char* IcuLocale(const char* aLocale) {
   return locale;
 }
 
-static inline const char* AssertNullTerminatedString(Span<const char> aSpan) {
+template <typename CharType>
+static inline CharType* AssertNullTerminatedString(Span<CharType> aSpan) {
   // Intentionally check one past the last character, because we expect that the
   // NUL character isn't part of the string.
   MOZ_ASSERT(*(aSpan.data() + aSpan.size()) == '\0');
 
   // Also ensure there aren't any other NUL characters within the string.
-  MOZ_ASSERT(std::strlen(aSpan.data()) == aSpan.size());
+  MOZ_ASSERT(std::char_traits<CharType>::length(aSpan.data()) == aSpan.size());
 
   return aSpan.data();
 }
