@@ -177,8 +177,9 @@ export class CalendarEventList extends MozLitElement {
       return events;
     }
 
-    let eventsAndBreaks = [events.shift()];
-    for (let event of events) {
+    let [firstEvent, ...otherEvents] = events;
+    let eventsAndBreaks = [firstEvent];
+    for (let event of otherEvents) {
       let lastEvent = eventsAndBreaks.at(-1);
       let timeBetween = Math.round(
         (new Date(event.start) - new Date(lastEvent.end)) / 60 / 1000
