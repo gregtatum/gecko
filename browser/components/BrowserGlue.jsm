@@ -888,7 +888,11 @@ let JSWINDOWACTORS = {
   TelemetryTimestamps.add("blankWindowShown");
 })();
 
-if (AppConstants.PINEBUILD && Services.startup.allowWindowless) {
+if (
+  AppConstants.PINEBUILD &&
+  (AppConstants.platform == "macosx" || AppConstants.platform == "win") &&
+  Services.prefs.getBoolPref("browser.startup.launchOnOSLogin", false)
+) {
   const PROCLIENT_BACKGROUND_UI =
     "chrome://browser/content/companion/proclientBackground.xhtml";
   let features = "chrome,titlebar=no,alwaysontop,minimizable=yes";

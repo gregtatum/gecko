@@ -26,6 +26,12 @@ browser.jar:
     content/browser/companion/play.svg (content/play.svg)
     content/browser/companion/pause.svg (content/pause.svg)
     content/browser/companion/pocket.js (content/pocket.js)
+#ifdef XP_MACOSX
+    content/browser/companion/proclientBackground.css (content/proclientBackground-mac.css)
+    content/browser/companion/statusbarIcon.svg (content/statusbarIcon-mac.svg)
+#elif defined(XP_WIN)
+    content/browser/companion/proclientBackground.css (content/proclientBackground-windows.css)
+#endif
     content/browser/companion/proclientBackground.js (content/proclientBackground.js)
     content/browser/companion/proclientBackground.xhtml (content/proclientBackground.xhtml)
     content/browser/companion/rally.svg (content/rally.svg)

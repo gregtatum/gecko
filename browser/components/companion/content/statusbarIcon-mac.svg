@@ -1,0 +1,17 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<svg width="56" height="56" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <mask id="circle1Mask">
+    <rect fill="white" x="0" y="0" width="100%" height="100%" />
+    <circle cx="28" cy="28" r="17" fill="black"/>
+  </mask>
+  <mask id="circle2Mask">
+    <rect fill="white" x="0" y="0" width="100%" height="100%" />
+    <circle cx="42" cy="28" r="17" fill="black"/>
+  </mask>
+
+  <circle cx="14" cy="28" r="14" fill="rgba(1,1,1,0.33)" mask="url(#circle1Mask)"/>
+  <circle cx="28" cy="28" r="14" fill="rgba(1,1,1,0.66)" mask="url(#circle2Mask)"/>
+  <circle cx="42" cy="28" r="14" fill="rgba(1,1,1,1)"/>
+</svg>
