@@ -648,10 +648,12 @@ class Dumper:
                             # have symbols that start with "_GLOBAL_sub"
                             if "_GLOBAL__sub_" in line:
                                 ctors += 1
+                                print("!!!greg ctor: %s" % line, file=sys.stderr)
                             # MSVC creates `dynamic initializer for '...'`
                             # symbols.
                             elif "`dynamic initializer for '" in line:
                                 ctors += 1
+                                print("!!!greg ctor: %s" % line, file=sys.stderr)
 
                         # pass through all other lines unchanged
                         f.write(line)
