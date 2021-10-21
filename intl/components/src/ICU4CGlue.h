@@ -7,6 +7,7 @@
 
 #include "unicode/uenum.h"
 #include "unicode/utypes.h"
+#include "mozilla/Buffer.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/Result.h"
@@ -27,18 +28,20 @@
 #include <iterator>
 #include <stddef.h>
 #include <stdint.h>
+#include <string>
 #include <string_view>
 
 struct UFormattedValue;
 namespace mozilla::intl {
 
-static inline const char* AssertNullTerminatedString(Span<const char> aSpan) {
+template <typename CharType>
+static inline CharType* AssertNullTerminatedString(Span<CharType> aSpan) {
   // Intentionally check one past the last character, because we expect that the
   // NUL character isn't part of the string.
   MOZ_ASSERT(*(aSpan.data() + aSpan.size()) == '\0');
 
   // Also ensure there aren't any other NUL characters within the string.
-  MOZ_ASSERT(std::strlen(aSpan.data()) == aSpan.size());
+  MOZ_ASSERT(std::char_traits<CharType>::length(aSpan.data()) == aSpan.size());
 
   return aSpan.data();
 }
@@ -72,6 +75,15 @@ static inline const char* IcuLocale(const char* aLocale) {
  */
 static inline const char* IcuLocale(Span<const char> aLocale) {
   return IcuLocale(AssertNullTerminatedString(aLocale));
+}
+
+/**
+ * Ensure a locale in the buffer is null-terminated, and map the "und" locale to
+ * an empty string, which the ICU uses internally.
+ */
+static inline const char* IcuLocale(const Buffer<char>& aLocale) {
+  return IcuLocale(
+      AssertNullTerminatedString(Span(aLocale.begin(), aLocale.Length() - 1)));
 }
 
 using ICUResult = Result<Ok, ICUError>;
