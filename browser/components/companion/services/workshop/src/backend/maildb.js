@@ -826,7 +826,53 @@ export class MailDB extends Emitter {
 
   /**
    * Placeholder mechanism for things to tell us it might be a good time to do
-   * something cache-related.
+   * some cache clearing.
+   *
+   * ### Interaction with Batch Manager: Decisions
+   *
+   * This is now a little more complex than it used to be.  Specifically, the
+   * cache exists to:
+   * 1. Provide cached locality for tasks using the MailDB.
+   * 2. Provide cached locality for list proxy TOC data.  This data can be
+   *    populated via reads, but it can also come from new/modified data being
+   *    written to the database that matches existing TOCs.
+   *
+   * Originally we were fine with list proxies flushing their data whenever.
+   * However, for our new consumer we are now trying to only deliver updates to
+   * the UI at coherent points.  It's also nice for tests too!
+   *
+   * Previously, we would handle a request to drop the cache by forcing an
+   * immediate flush of all dirty proxies.  They can access the data immediately
+   * before it goes away.  Now that we want coherent updates, however, our
+   * options are some combination of:
+   * - Delaying the clearing of the cache until the proxies have all been
+   *   flushed.
+   * - Maintain the existing clearing timing but buffer or otherwise accumulate
+   *   the changes in the front-end until we perform an explicit semantic flush.
+   *   - This has the advantage that it potentially spreads the structured
+   *     serialization out over time.  This is potentially offset by the same
+   *     semantic object being serialized multiple times.
+   *   - There's some potential for pathological situations here where new data
+   *     is constantly being added in such a way that it all gets sent to the
+   *     front-end, but each new sub-flush obsoletes the prior data.  However,
+   *     this would also have been our exact behavior under our original
+   *     flushing behavior.  The only problem here is if we're too naive, but if
+   *     we use the same logic we've already been using and just add the new
+   *     logic for the coherent update, we should be good.
+   * - A variation on existing synchronous consumption, but where the data is
+   *   held by the proxy here in the back-end worker global, ending up as a
+   *   secondary cache that's of no benefit to the MailDB and can increase
+   *   memory use overall.  Alternately, if this caching layer were integrated
+   *   into the MailDB cache, it would like:
+   * - Have a more sophisticated caching mechanism that's aware of the proxies'
+   *   and TOCs' interests in the data.
+   *
+   * On balance, it sounds like continuing the existing flushing behavior and
+   * having the client logic just gain a mechanism to wait for an explicit
+   * coherent update, that will help us avoid synchronous jank due to
+   * accumulated large deltas.
+   *
+   * ### Other Implementation Details
    *
    * Current callers:
    * - 'read': A database read batch completed and so there may now be a bunch

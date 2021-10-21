@@ -286,8 +286,11 @@ TaskRegistry.prototype = {
     // We need to force tasks to finalize if they don't do so themselves.  This
     // is true for both rejections and returns without finalization.
     if (maybePromiseResult.then) {
-      let doFinalize = () => {
+      const successFinalize = () => {
         ctx.__failsafeFinalize();
+      };
+      const failureFinalize = err => {
+        ctx.__failsafeFinalize(err);
       };
       // I'm intentionally not forcing the return to wait on the failsafe
       // finalization to happen out of paranoia.  It might be a good idea,
@@ -296,7 +299,7 @@ TaskRegistry.prototype = {
       // And note that because of this choice, it doesn't matter that we're
       // doing the same thing for the callback and errback... because we don't
       // do anything with this then()'s returned promise.
-      maybePromiseResult.then(doFinalize, doFinalize);
+      maybePromiseResult.then(successFinalize, failureFinalize);
     } else {
       ctx.__failsafeFinalize();
     }
@@ -313,7 +316,11 @@ TaskRegistry.prototype = {
       let perAccountTasks = this._perAccountIdTaskRegistry.get(accountId);
       if (!perAccountTasks) {
         // This means the account is no longer known to us.  Return immediately,
-        logic(this, "noSuchAccount", { taskType, accountId });
+        logic(this, "noSuchAccount", {
+          taskType,
+          accountId,
+          knownAccounts: Array.from(this._perAccountIdTaskRegistry.keys()),
+        });
         return null;
       }
       taskMeta = perAccountTasks.get(taskType);

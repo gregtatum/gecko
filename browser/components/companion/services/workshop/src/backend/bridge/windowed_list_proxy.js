@@ -389,6 +389,10 @@ WindowedListProxy.prototype = {
       ids,
       values: state,
       events: sendEvents,
+      // This field's value needs to be collaboratively maintained with our
+      // caller, but we definitely know that if we had to issue reads that this
+      // is definitely not yet a coherent snapshot.
+      coherentSnapshot: !readPromise,
     };
   },
 };

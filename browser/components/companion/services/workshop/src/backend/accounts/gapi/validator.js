@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { normalizeError } from "../../utils/normalize_err";
 import ApiClient from "../../utils/api_client";
 
 /**
@@ -51,7 +52,7 @@ export default async function validateGapi({
       error: "unknown",
       errorDetails: {
         endpoint,
-        ex,
+        ex: normalizeError(ex),
       },
     };
   }
@@ -60,7 +61,7 @@ export default async function validateGapi({
     engineFields: {
       engine: "gapi",
       engineData: {},
-      receiveProtoConn: null,
     },
+    receiveProtoConn: null,
   };
 }

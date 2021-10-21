@@ -16,7 +16,8 @@
 
 let nextMessageUid = 0;
 let onConnectHandler = null;
-const allPorts = new Set();
+// A map from ports to { resolveCleanupPromise, cleanupPromise }
+const allPorts = new Map();
 const callbackSenders = new Map();
 
 /**
@@ -38,7 +39,9 @@ const listeners = new Map([
   [
     "willDie",
     (data, port) => {
-      allPorts.remove(port);
+      const { resolveCleanupPromise } = allPorts.get(port);
+      resolveCleanupPromise();
+      allPorts.delete(port);
       for (const { message, resolve, reject } of port._messages.values()) {
         _eventuallySendToDefaultHelper(message, resolve, reject);
       }
@@ -50,7 +53,12 @@ onconnect = connectionEvent => {
   const port = connectionEvent.ports[0];
 
   // Track all the available ports
-  allPorts.add(port);
+  let portCleanupInfo = {};
+  const cleanupPromise = new Promise(resolveCleanupPromise => {
+    portCleanupInfo.resolveCleanupPromise = resolveCleanupPromise;
+    allPorts.set(port, portCleanupInfo);
+  });
+  portCleanupInfo.cleanupPromise = cleanupPromise;
 
   // This map contains the messages which don't care about
   // the port itself: in case the port is closed (using "willDie" type)
@@ -76,7 +84,7 @@ onconnect = connectionEvent => {
         resolve({ cmd, args });
       }
     } else {
-      listeners.get(data.type)?.(data, port);
+      listeners.get(data.type)?.(data, port, cleanupPromise);
     }
   };
 
@@ -88,7 +96,7 @@ export function runOnConnect(handler) {
 }
 
 function getFirstPort() {
-  return allPorts.values().next().value;
+  return allPorts.keys().next().value;
 }
 
 function _eventuallySendToDefaultHelper(message, resolve, reject) {
@@ -163,7 +171,11 @@ export function registerInstanceType(type) {
 
       return {
         sendMessage: function sendInstanceMessage(cmd, args) {
-          usePort.postMessage({ type, uid, cmd, args });
+          try {
+            usePort.postMessage({ type, uid, cmd, args });
+          } catch (ex) {
+            console.error("serialization error", ex, "on", args);
+          }
         },
         unregister: function unregisterInstance() {
           instanceMap.delete(uid);

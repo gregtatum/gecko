@@ -48,6 +48,8 @@ import { Emitter } from "evt";
  */
 
 export class WindowedListView extends Emitter {
+  #bufferedState;
+
   constructor(api, itemConstructor, handle) {
     super();
     this._api = api;
@@ -64,9 +66,6 @@ export class WindowedListView extends Emitter {
      */
     this.offset = 0;
     this.heightOffset = 0;
-    /**
-     *
-     */
     this.totalCount = 0;
     this.totalHeight = 0;
     /**
@@ -94,6 +93,9 @@ export class WindowedListView extends Emitter {
     this.complete = false;
 
     this.viewKind = "windowed";
+
+    this.useCoherentMode = true;
+    this.#bufferedState = null;
   }
 
   toString() {
@@ -114,7 +116,79 @@ export class WindowedListView extends Emitter {
     };
   }
 
+  /**
+   * Coherent mode helper to merge newly received update details with already
+   * received #bufferedState.  See `__update` for more context.
+   */
+  #mergeBufferedState(details) {
+    if (!this.#bufferedState) {
+      this.#bufferedState = details;
+      return;
+    }
+
+    // We can propagate the simple scalar fields.
+    this.#bufferedState.offset = details.offset;
+    this.#bufferedState.heightOffset = details.heightOffset;
+    this.#bufferedState.totalCount = details.totalCount;
+    this.#bufferedState.totalHeight = details.totalHeight;
+    this.#bufferedState.tocMeta = details.tocMeta;
+
+    // `ids` is the current list of identifiers.  Each update is authoritative,
+    // so we can overwrite, but we also need to make sure that we remove any
+    // `values` which are no longer present in `ids`
+    this.#bufferedState.ids = details.ids;
+    for (const id of this.#bufferedState.values.keys()) {
+      if (!details.ids.includes(id)) {
+        this.#bufferedState.values.delete(id);
+      }
+    }
+    for (const [id, value] of details.values.entries()) {
+      this.#bufferedState.values.set(id, value);
+    }
+
+    // (events can be null)
+    if (details.events) {
+      if (this.#bufferedState.events) {
+        this.#bufferedState.events.push(...details.events);
+      } else {
+        this.#bufferedState.events = details.events;
+      }
+    }
+  }
+
+  /**
+   * Receive and process updates.
+   *
+   * ### Incremental updates versus Coherent Snapshot updates.
+   *
+   * Originally all updates would be applied whenever they were received, which
+   * we'll call incremental mode.  This made a lot of sense for a mail UI where
+   * messages/conversations were largely immutable and obeyed time's arrow.
+   * This is less suitable for calendars, and so we want the ability to only
+   * update at specific "coherent snapshots".
+   *
+   * When operating in incremental mode, we apply changes as they're received.
+   * When operating in snapshot mode, we accumulate changes until we receive an
+   * update that's a `coherentSnapshot`, in which case we then we still update
+   * our aggregate state and then we apply that aggregated state.
+   */
   __update(details) {
+    if (this.useCoherentMode) {
+      // If we already have any buffered state or this isn't a coherent snapshot
+      // then we need to integrate the state into the buffered state.
+      if (this.#bufferedState || !details.coherentSnapshot) {
+        this.#mergeBufferedState(details);
+      }
+      if (!details.coherentSnapshot) {
+        return;
+      }
+      // Use and consume the buffered state if we have one.
+      if (this.#bufferedState) {
+        details = this.#bufferedState;
+        this.#bufferedState = null;
+      }
+    }
+
     let newSerial = ++this.serial;
 
     let existingSet = this._itemsById;

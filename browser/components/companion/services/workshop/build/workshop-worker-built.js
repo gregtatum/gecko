@@ -99,7 +99,7 @@ var WorkshopBackend = (() => {
             console.error(err, err.stack);
           }
         }
-        class Emitter7 {
+        class Emitter8 {
           constructor() {
             this._events = {};
             this._pendingEvents = {};
@@ -123,15 +123,20 @@ var WorkshopBackend = (() => {
             const self2 = this;
             let fired = false;
             const applyPair = objFnPair(obj, fnName);
-            function one() {
+            const one = (...args) => {
               if (fired) {
                 return;
               }
               fired = true;
-              callApply(applyPair, arguments);
+              callApply(applyPair, args);
               setTimeout(() => self2.removeListener(id, one));
-            }
+            };
             return this.on(id, applyPair[0], one);
+          }
+          promisedOnce(id) {
+            return new Promise((resolve) => {
+              this.once(id, resolve);
+            });
           }
           latest(id, obj, fnName) {
             var applyPair = objFnPair(obj, fnName);
@@ -147,6 +152,11 @@ var WorkshopBackend = (() => {
             } else {
               this.once(id, applyPair[0], applyPair[1]);
             }
+          }
+          promisedLatestOnce(id) {
+            return new Promise((resolve) => {
+              this.latestOnce(id, resolve);
+            });
           }
           removeObjectListener(obj) {
             Object.keys(this._events).forEach(function(eventId) {
@@ -173,19 +183,19 @@ var WorkshopBackend = (() => {
               cleanEventEntry(this, id);
             }
           }
-          emitWhenListener(id) {
+          emitWhenListener(id, ...args) {
             var listeners2 = this._events[id];
             if (listeners2) {
-              this.emit.apply(this, arguments);
+              this.emit.apply(this, [id, ...args]);
             } else {
               if (!this._pendingEvents[id]) {
                 this._pendingEvents[id] = [];
               }
-              this._pendingEvents[id].push(slice.call(arguments, 1));
+              this._pendingEvents[id].push(args);
             }
           }
-          emit(id) {
-            var args = slice.call(arguments, 1), listeners2 = this._events[id];
+          emit(id, ...args) {
+            var listeners2 = this._events[id];
             if (listeners2) {
               for (var i = 0; i < listeners2.length; i++) {
                 var thisObj = listeners2[i][0], fn = listeners2[i][1];
@@ -201,10 +211,10 @@ var WorkshopBackend = (() => {
             }
           }
         }
-        evt4 = new Emitter7();
-        evt4.Emitter = Emitter7;
+        evt4 = new Emitter8();
+        evt4.Emitter = Emitter8;
         evt4.mix = function(obj) {
-          var e = new Emitter7();
+          var e = new Emitter8();
           props.forEach(function(prop) {
             if (obj.hasOwnProperty(prop)) {
               throw new Error('Object already has a property "' + prop + '"');
@@ -514,7 +524,8 @@ var WorkshopBackend = (() => {
           });
         }
         if (logic.realtimeLogEverything) {
-          dump("logic: " + JSON.stringify(event) + "\n");
+          dump(`logic[${logic.tid}]: ${JSON.stringify(event)}
+`);
         }
         return event;
       };
@@ -785,7 +796,7 @@ var WorkshopBackend = (() => {
     onConnectHandler = handler;
   }
   function getFirstPort() {
-    return allPorts.values().next().value;
+    return allPorts.keys().next().value;
   }
   function _eventuallySendToDefaultHelper(message, resolve, reject) {
     const port = getFirstPort();
@@ -837,7 +848,11 @@ var WorkshopBackend = (() => {
         instanceMap.set(uid, instanceListener);
         return {
           sendMessage: function sendInstanceMessage(cmd, args) {
-            usePort.postMessage({ type, uid, cmd, args });
+            try {
+              usePort.postMessage({ type, uid, cmd, args });
+            } catch (ex) {
+              console.error("serialization error", ex, "on", args);
+            }
           },
           unregister: function unregisterInstance() {
             instanceMap.delete(uid);
@@ -859,13 +874,15 @@ var WorkshopBackend = (() => {
     "src/backend/worker-router.js"() {
       nextMessageUid = 0;
       onConnectHandler = null;
-      allPorts = new Set();
+      allPorts = new Map();
       callbackSenders = new Map();
       listeners = new Map([
         [
           "willDie",
           (data, port) => {
-            allPorts.remove(port);
+            const { resolveCleanupPromise } = allPorts.get(port);
+            resolveCleanupPromise();
+            allPorts.delete(port);
             for (const { message, resolve, reject } of port._messages.values()) {
               _eventuallySendToDefaultHelper(message, resolve, reject);
             }
@@ -874,7 +891,12 @@ var WorkshopBackend = (() => {
       ]);
       onconnect = (connectionEvent) => {
         const port = connectionEvent.ports[0];
-        allPorts.add(port);
+        let portCleanupInfo = {};
+        const cleanupPromise = new Promise((resolveCleanupPromise) => {
+          portCleanupInfo.resolveCleanupPromise = resolveCleanupPromise;
+          allPorts.set(port, portCleanupInfo);
+        });
+        portCleanupInfo.cleanupPromise = cleanupPromise;
         const portMessages = port._messages = new Map();
         port.onmessage = (messageEvent) => {
           if (!allPorts.has(port)) {
@@ -891,7 +913,7 @@ var WorkshopBackend = (() => {
               resolve({ cmd, args });
             }
           } else {
-            listeners.get(data.type)?.(data, port);
+            listeners.get(data.type)?.(data, port, cleanupPromise);
           }
         };
         onConnectHandler?.(port);
@@ -910,6 +932,52 @@ var WorkshopBackend = (() => {
       import_evt2 = __toModule(require_evt());
       events = new import_evt2.default.Emitter();
       strings = null;
+    }
+  });
+
+  // src/shared/date.js
+  function EVENT_IN_SYNC_RANGE(eventInfo, syncRangeInfo) {
+    return eventInfo.endDate < syncRangeInfo.rangeOldestTS || eventInfo.startDate > syncRangeInfo.rangeNewestTS;
+  }
+  function EVENT_OUTSIDE_SYNC_RANGE(eventInfo, syncRangeInfo) {
+    return !EVENT_IN_SYNC_RANGE(eventInfo, syncRangeInfo);
+  }
+  function TEST_LetsDoTheTimewarpAgain(fakeNow) {
+    if (fakeNow === null) {
+      TIME_WARPED_NOW = null;
+      return;
+    }
+    if (typeof fakeNow !== "number") {
+      fakeNow = fakeNow.valueOf();
+    }
+    TIME_WARPED_NOW = fakeNow;
+  }
+  function NOW() {
+    return TIME_WARPED_NOW || Date.now();
+  }
+  function PERFNOW() {
+    return TIME_WARPED_NOW || perfObj.now();
+  }
+  function makeDaysAgo(numDays) {
+    var past = quantizeDate(TIME_WARPED_NOW || Date.now()) - numDays * DAY_MILLIS;
+    return past;
+  }
+  function quantizeDate(date) {
+    if (date === null) {
+      return null;
+    }
+    if (typeof date === "number") {
+      date = new Date(date);
+    }
+    return date.setUTCHours(0, 0, 0, 0).valueOf();
+  }
+  var HOUR_MILLIS, DAY_MILLIS, TIME_WARPED_NOW, perfObj;
+  var init_date = __esm({
+    "src/shared/date.js"() {
+      HOUR_MILLIS = 60 * 60 * 1e3;
+      DAY_MILLIS = 24 * 60 * 60 * 1e3;
+      TIME_WARPED_NOW = null;
+      perfObj = typeof performance !== "undefined" ? performance : Date;
     }
   });
 
@@ -1085,42 +1153,6 @@ var WorkshopBackend = (() => {
   }
   var init_configurator = __esm({
     "src/backend/accounts/feed/configurator.js"() {
-    }
-  });
-
-  // src/shared/date.js
-  function EVENT_IN_SYNC_RANGE(eventInfo, syncRangeInfo) {
-    return eventInfo.endDate < syncRangeInfo.rangeOldestTS || eventInfo.startDate > syncRangeInfo.rangeNewestTS;
-  }
-  function EVENT_OUTSIDE_SYNC_RANGE(eventInfo, syncRangeInfo) {
-    return !EVENT_IN_SYNC_RANGE(eventInfo, syncRangeInfo);
-  }
-  function NOW() {
-    return TIME_WARPED_NOW || Date.now();
-  }
-  function PERFNOW() {
-    return TIME_WARPED_NOW || perfObj.now();
-  }
-  function makeDaysAgo(numDays) {
-    var past = quantizeDate(TIME_WARPED_NOW || Date.now()) - numDays * DAY_MILLIS;
-    return past;
-  }
-  function quantizeDate(date) {
-    if (date === null) {
-      return null;
-    }
-    if (typeof date === "number") {
-      date = new Date(date);
-    }
-    return date.setUTCHours(0, 0, 0, 0).valueOf();
-  }
-  var HOUR_MILLIS, DAY_MILLIS, TIME_WARPED_NOW, perfObj;
-  var init_date = __esm({
-    "src/shared/date.js"() {
-      HOUR_MILLIS = 60 * 60 * 1e3;
-      DAY_MILLIS = 24 * 60 * 60 * 1e3;
-      TIME_WARPED_NOW = null;
-      perfObj = typeof performance !== "undefined" ? performance : Date;
     }
   });
 
@@ -2801,6 +2833,19 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/backend/utils/normalize_err.js
+  function normalizeError(err) {
+    return {
+      name: err?.name,
+      message: err?.message,
+      stack: err?.stack
+    };
+  }
+  var init_normalize_err = __esm({
+    "src/backend/utils/normalize_err.js"() {
+    }
+  });
+
   // src/backend/errorutils.js
   function analyzeException(err) {
     if (err === "Connection refused") {
@@ -3045,20 +3090,21 @@ var WorkshopBackend = (() => {
         error: "unknown",
         errorDetails: {
           endpoint,
-          ex
+          ex: normalizeError(ex)
         }
       };
     }
     return {
       engineFields: {
         engine: "gapi",
-        engineData: {},
-        receiveProtoConn: null
-      }
+        engineData: {}
+      },
+      receiveProtoConn: null
     };
   }
   var init_validator2 = __esm({
     "src/backend/accounts/gapi/validator.js"() {
+      init_normalize_err();
       init_api_client();
     }
   });
@@ -11119,6 +11165,7 @@ var WorkshopBackend = (() => {
       startDate: raw.startDate,
       endDate: raw.endDate,
       isAllDay: raw.isAllDay,
+      isRecurring: raw.isRecurring || false,
       creator: raw.creator,
       organizer: raw.organizer,
       attendees: raw.attendees || null,
@@ -14363,45 +14410,45 @@ var WorkshopBackend = (() => {
 
   // src/backend/bridge/bridge_context.js
   init_logic();
-  function NamedContext(name, type, bridgeContext) {
-    logic.defineScope(this, type, {
-      name,
-      bridge: bridgeContext.bridge.name
-    });
-    this.name = name;
-    this._bridgeContext = bridgeContext;
-    this._active = true;
-    this._stuffToRelease = [];
-    this.__childContexts = [];
-    this.pendingCommand = null;
-    this.commandQueue = [];
-  }
-  NamedContext.prototype = {
+  var NamedContext = class {
+    constructor(name, type, bridgeContext) {
+      logic.defineScope(this, type, {
+        name,
+        bridge: bridgeContext.bridge.name
+      });
+      this.name = name;
+      this._bridgeContext = bridgeContext;
+      this._active = true;
+      this._stuffToRelease = [];
+      this.__childContexts = [];
+      this.pendingCommand = null;
+      this.commandQueue = [];
+    }
     get batchManager() {
       return this._bridgeContext.batchManager;
-    },
+    }
     get dataOverlayManager() {
       return this._bridgeContext.dataOverlayManager;
-    },
+    }
     acquire(acquireable) {
       if (!this._active) {
         throw new Error("we have already cleaned up!");
       }
       this._stuffToRelease.push(acquireable);
       return acquireable.__acquire(this);
-    },
+    }
     sendMessage(type, data) {
       this._bridgeContext.bridge.__sendMessage({
         type,
         handle: this.name,
         data
       });
-    },
+    }
     runAtCleanup(func) {
       this._stuffToRelease.push({
         __release: func
       });
-    },
+    }
     cleanup() {
       this._active = false;
       for (let acquireable of this._stuffToRelease) {
@@ -14417,18 +14464,19 @@ var WorkshopBackend = (() => {
       }
     }
   };
-  function BridgeContext({
-    bridge,
-    batchManager,
-    dataOverlayManager
-  }) {
-    logic.defineScope(this, "BridgeContext", { name: bridge.name });
-    this.bridge = bridge;
-    this.batchManager = batchManager;
-    this.dataOverlayManager = dataOverlayManager;
-    this._namedContexts = new Map();
-  }
-  BridgeContext.prototype = {
+  var BridgeContext = class {
+    constructor({ bridge, batchManager, dataOverlayManager, taskGroupTracker }) {
+      logic.defineScope(this, "BridgeContext", { name: bridge.name });
+      this.bridge = bridge;
+      this.batchManager = batchManager;
+      this.dataOverlayManager = dataOverlayManager;
+      this.taskGroupTracker = taskGroupTracker;
+      this._namedContexts = new Map();
+      this.taskGroupTracker.on("rootTaskGroupCompleted", this, "onRootTaskGroupCompleted");
+    }
+    onRootTaskGroupCompleted() {
+      this.batchManager.flushBecauseTaskGroupCompleted();
+    }
     createNamedContext(name, type, parentContext) {
       let ctx = new NamedContext(name, type, this);
       this._namedContexts.set(name, ctx);
@@ -14436,16 +14484,16 @@ var WorkshopBackend = (() => {
         parentContext.__childContexts.push(ctx);
       }
       return ctx;
-    },
+    }
     getNamedContextOrThrow(name) {
       if (this._namedContexts.has(name)) {
         return this._namedContexts.get(name);
       }
       throw new Error("no such namedContext: " + name);
-    },
+    }
     maybeGetNamedContext(name) {
       return this._namedContexts.get(name);
-    },
+    }
     cleanupNamedContext(name) {
       if (!this._namedContexts.has(name)) {
         return;
@@ -14456,32 +14504,36 @@ var WorkshopBackend = (() => {
       }
       this._namedContexts.delete(name);
       ctx.cleanup();
-    },
+    }
     cleanupAll() {
       for (let namedContext of this._namedContext.values()) {
         namedContext.cleanup();
       }
       this._namedContexts.clear();
     }
+    shutdown() {
+      this.taskGroupTracker.removeObjectListener(this);
+      this.cleanupAll();
+    }
   };
 
   // src/backend/bridge/batch_manager.js
   init_logic();
-  function BatchManager(db) {
-    logic.defineScope(this, "BatchManager");
-    this._db = db;
-    this._pendingProxies = new Set();
-    this._timer = null;
-    this._bound_timerFired = this._flushPending.bind(this, true);
-    this._bound_dbFlush = this._flushPending.bind(this, false);
-    this.flushDelayMillis = 100;
-    this._db.on("cacheDrop", this._bound_dbFlush);
-  }
-  BatchManager.prototype = {
+  var BatchManager = class {
+    constructor(db) {
+      logic.defineScope(this, "BatchManager");
+      this._db = db;
+      this._pendingProxies = new Set();
+      this._timer = null;
+      this._bound_timerFired = this._flushPending.bind(this, true, false);
+      this._bound_dbFlush = this._flushPending.bind(this, false, false);
+      this.flushDelayMillis = 5e3;
+      this._db.on("cacheDrop", this._bound_dbFlush);
+    }
     __cleanup() {
       this._db.removeListener("cacheDrop", this._bound_dbFlush);
-    },
-    _flushPending(timerFired) {
+    }
+    _flushPending(timerFired, coherentSnapshot) {
       if (!timerFired) {
         globalThis.clearTimeout(this._timer);
       }
@@ -14491,16 +14543,21 @@ var WorkshopBackend = (() => {
         tocTypes: Array.from(this._pendingProxies).map((proxy) => {
           return proxy.toc.type;
         }),
-        timerFired
+        timerFired,
+        coherentSnapshot
       });
       for (let proxy of this._pendingProxies) {
         let payload = proxy.flush();
+        payload.coherentSnapshot &&= coherentSnapshot;
         if (payload) {
           proxy.ctx.sendMessage("update", payload);
         }
       }
       this._pendingProxies.clear();
-    },
+    }
+    flushBecauseTaskGroupCompleted() {
+      this._flushPending(false, true);
+    }
     registerDirtyView(proxy, flushMode) {
       logic(this, "dirtying", {
         tocType: proxy.toc.type,
@@ -14827,12 +14884,14 @@ var WorkshopBackend = (() => {
         tocMeta: sendMeta,
         ids,
         values: state,
-        events: sendEvents
+        events: sendEvents,
+        coherentSnapshot: !readPromise
       };
     }
   };
 
   // src/backend/mailbridge.js
+  init_date();
   function MailBridge(universe2, db, name) {
     logic.defineScope(this, "MailBridge", { name });
     this.name = name;
@@ -14843,10 +14902,14 @@ var WorkshopBackend = (() => {
     this.bridgeContext = new BridgeContext({
       bridge: this,
       batchManager: this.batchManager,
+      taskGroupTracker: this.universe.taskGroupTracker,
       dataOverlayManager: this.universe.dataOverlayManager
     });
   }
   MailBridge.prototype = {
+    shutdown() {
+      this.bridgeContext.shutdown();
+    },
     __sendMessage() {
       throw new Error("This is supposed to get hidden by an instance var.");
     },
@@ -14939,6 +15002,10 @@ var WorkshopBackend = (() => {
         handle: msg.handle
       });
     },
+    _cmd_TEST_timeWarp(msg) {
+      logic(this, "timeWarp", { fakeNow: msg.fakeNow });
+      TEST_LetsDoTheTimewarpAgain(msg.fakeNow);
+    },
     _cmd_setInteractive() {
       this.universe.setInteractive();
     },
@@ -14965,16 +15032,13 @@ var WorkshopBackend = (() => {
         this.__sendMessage({
           type: "promisedResult",
           handle: msg.handle,
-          data: {
-            accountId: result.accountId || null,
-            error: result.error,
-            errorDetails: result.errorDetails
-          }
+          data: result
         });
       });
     },
-    _cmd_syncFolderList(msg) {
-      this.universe.syncFolderList(msg.accountId, "bridge");
+    async _cmd_syncFolderList(msg) {
+      await this.universe.syncFolderList(msg.accountId, "bridge");
+      this.__sendMessage({ type: "promisedResult", handle: msg.handle });
     },
     _cmd_modifyFolder(msg) {
       this.universe.modifyFolder(msg.accountId, msg.mods, "bridge").then((result) => {
@@ -15170,11 +15234,12 @@ var WorkshopBackend = (() => {
       await ctx.acquire(ctx.proxy);
     },
     async _cmd_refreshView(msg) {
-      let ctx = this.bridgeContext.getNamedContextOrThrow(msg.handle);
+      let ctx = this.bridgeContext.getNamedContextOrThrow(msg.viewHandle);
       if (ctx.viewing.type === "folder") {
         await this.universe.syncRefreshFolder(ctx.viewing.folderId, "refreshView");
       } else {
       }
+      this.__sendMessage({ type: "promisedResult", handle: msg.handle });
     },
     _cmd_growView(msg) {
       let ctx = this.bridgeContext.getNamedContextOrThrow(msg.handle);
@@ -18548,11 +18613,11 @@ var WorkshopBackend = (() => {
     returnValue(value) {
       return { wrappedResult: value };
     },
-    __failsafeFinalize() {
+    __failsafeFinalize(err) {
       if (this.state === "finishing") {
         return;
       }
-      logic(this, "failsafeFinalize");
+      logic(this, "failsafeFinalize", { err });
       for (const decoratorCallback of this._decoratorCallbacks) {
         try {
           decoratorCallback(this, false, null);
@@ -18657,30 +18722,28 @@ var WorkshopBackend = (() => {
         this._activeWakeLock = null;
       }
     }
-    scheduleTasks(rawTasks, why) {
+    async scheduleTasks(rawTasks, why) {
       this._ensureWakeLock(why);
       const wrappedTasks = this.__wrapTasks(rawTasks);
       logic(this, "schedulePersistent", { why, tasks: wrappedTasks });
       this._pendingPlanWrites++;
-      return this._db.addTasks(wrappedTasks).then(() => {
-        this._pendingPlanWrites--;
-        this.__enqueuePersistedTasksForPlanning(wrappedTasks);
-        return wrappedTasks.map((x) => x.id);
-      });
+      await this._db.addTasks(wrappedTasks);
+      this._pendingPlanWrites--;
+      this.__enqueuePersistedTasksForPlanning(wrappedTasks);
+      return wrappedTasks.map((x) => x.id);
     }
-    waitForTasksToBePlanned(taskIds) {
-      return Promise.all(taskIds.map((taskId) => {
-        return new Promise((resolve) => {
-          this.once("planned:" + taskId, resolve);
-        });
+    async waitForTasksToBePlanned(taskIds, flattenSingleResult = false) {
+      let results = await Promise.all(taskIds.map((taskId) => {
+        return this.promisedOnce("planned:" + taskId);
       }));
+      if (flattenSingleResult && results.length === 1) {
+        results = results[0];
+      }
+      return results;
     }
-    scheduleTaskAndWaitForPlannedResult(rawTask, why) {
-      return this.scheduleTasks([rawTask], why).then((taskIds) => {
-        return this.waitForTasksToBePlanned(taskIds);
-      }).then((results) => {
-        return results[0];
-      });
+    async scheduleTaskAndWaitForPlannedResult(rawTask, why) {
+      const taskIds = await this.scheduleTasks([rawTask], why);
+      return this.waitForTasksToBePlanned(taskIds, true);
     }
     scheduleTaskAndWaitForPlannedUndoTasks(rawTask, why) {
       return this.scheduleTasks([rawTask], why).then(([taskId]) => {
@@ -18697,19 +18760,18 @@ var WorkshopBackend = (() => {
         });
       });
     }
-    scheduleTaskAndWaitForExecutedResult(rawTask, why) {
-      return this.scheduleTasks([rawTask], why).then((taskIds) => {
-        return this.waitForTasksToBeExecuted(taskIds);
-      }).then((results) => {
-        return results[0];
-      });
+    async scheduleTaskAndWaitForExecutedResult(rawTask, why) {
+      const taskIds = await this.scheduleTasks([rawTask], why);
+      return this.waitForTasksToBeExecuted(taskIds, true);
     }
-    waitForTasksToBeExecuted(taskIds) {
-      return Promise.all(taskIds.map((taskId) => {
-        return new Promise((resolve) => {
-          this.once("executed:" + taskId, resolve);
-        });
+    async waitForTasksToBeExecuted(taskIds, flattenSingleResult = false) {
+      let results = await Promise.all(taskIds.map((taskId) => {
+        return this.promisedOnce("executed:" + taskId);
       }));
+      if (flattenSingleResult && results.length === 1) {
+        results = results[0];
+      }
+      return results;
     }
     scheduleNonPersistentTasks(rawTasks, why) {
       this._ensureWakeLock(why);
@@ -18721,19 +18783,13 @@ var WorkshopBackend = (() => {
       this.__enqueuePersistedTasksForPlanning(wrappedTasks);
       return Promise.resolve(wrappedTasks.map((x) => x.id));
     }
-    scheduleNonPersistentTaskAndWaitForPlannedResult(rawTask, why) {
-      return this.scheduleNonPersistentTasks([rawTask], why).then((taskIds) => {
-        return this.waitForTasksToBePlanned(taskIds);
-      }).then((results) => {
-        return results[0];
-      });
+    async scheduleNonPersistentTaskAndWaitForPlannedResult(rawTask, why) {
+      const taskIds = await this.scheduleNonPersistentTasks([rawTask], why);
+      return this.waitForTasksToBePlanned(taskIds, true);
     }
-    scheduleNonPersistentTaskAndWaitForExecutedResult(rawTask, why) {
-      return this.scheduleNonPersistentTasks([rawTask], why).then((taskIds) => {
-        return this.waitForTasksToBeExecuted(taskIds);
-      }).then((results) => {
-        return results[0];
-      });
+    async scheduleNonPersistentTaskAndWaitForExecutedResult(rawTask, why) {
+      const taskIds = await this.scheduleNonPersistentTasks([rawTask], why);
+      return this.waitForTasksToBeExecuted(taskIds, true);
     }
     __wrapTasks(rawTasks) {
       return rawTasks.map((rawTask) => {
@@ -18812,7 +18868,11 @@ var WorkshopBackend = (() => {
       if (planResult) {
         planResult.then((maybeResult) => {
           const result = maybeResult && maybeResult.wrappedResult || void 0;
-          logic(this, "planning:end", { success: true, task: wrappedTask });
+          logic(this, "planning:end", {
+            success: true,
+            task: wrappedTask,
+            _result: result
+          });
           this.emit("planned:" + wrappedTask.id, result);
           this.emit("planned", wrappedTask.id, result);
         }, (err) => {
@@ -18839,7 +18899,11 @@ var WorkshopBackend = (() => {
       if (execResult) {
         execResult.then((maybeResult) => {
           const result = maybeResult && maybeResult.wrappedResult || void 0;
-          logic(this, "executing:end", { success: true, task: taskThing });
+          logic(this, "executing:end", {
+            success: true,
+            task: taskThing,
+            _result: result
+          });
           this.emit("executed:" + taskThing.id, result);
           this.emit("executed", taskThing.id, result);
         }, (err) => {
@@ -19027,10 +19091,13 @@ var WorkshopBackend = (() => {
     },
     _forceFinalize(ctx, maybePromiseResult) {
       if (maybePromiseResult.then) {
-        let doFinalize = () => {
+        const successFinalize = () => {
           ctx.__failsafeFinalize();
         };
-        maybePromiseResult.then(doFinalize, doFinalize);
+        const failureFinalize = (err) => {
+          ctx.__failsafeFinalize(err);
+        };
+        maybePromiseResult.then(successFinalize, failureFinalize);
       } else {
         ctx.__failsafeFinalize();
       }
@@ -19045,7 +19112,11 @@ var WorkshopBackend = (() => {
         let accountId = rawTask.accountId;
         let perAccountTasks = this._perAccountIdTaskRegistry.get(accountId);
         if (!perAccountTasks) {
-          logic(this, "noSuchAccount", { taskType, accountId });
+          logic(this, "noSuchAccount", {
+            taskType,
+            accountId,
+            knownAccounts: Array.from(this._perAccountIdTaskRegistry.keys())
+          });
           return null;
         }
         taskMeta = perAccountTasks.get(taskType);
@@ -19408,23 +19479,25 @@ var WorkshopBackend = (() => {
   };
 
   // src/backend/task_infra/task_group_tracker.js
+  var import_evt10 = __toModule(require_evt());
   init_logic();
-  function TaskGroupTracker(taskManager) {
-    logic.defineScope(this, "TaskGroupTracker");
-    this.taskManager = taskManager;
-    this._nextGroupId = 1;
-    this._groupsByName = new Map();
-    this._taskIdsToGroups = new Map();
-    this._pendingTaskIdReuses = new Set();
-    this.__registerListeners(taskManager);
-  }
-  TaskGroupTracker.prototype = {
+  var TaskGroupTracker = class extends import_evt10.Emitter {
+    constructor(taskManager) {
+      super();
+      logic.defineScope(this, "TaskGroupTracker");
+      this.taskManager = taskManager;
+      this._nextGroupId = 1;
+      this._groupsByName = new Map();
+      this._taskIdsToGroups = new Map();
+      this._pendingTaskIdReuses = new Set();
+      this.__registerListeners(taskManager);
+    }
     __registerListeners(emitter) {
       emitter.on("willPlan", this, this._onWillPlan);
       emitter.on("willExecute", this, this._onWillExecute);
       emitter.on("planned", this, this._onPlanned);
       emitter.on("executed", this, this._onExecuted);
-    },
+    }
     _ensureNamedTaskGroup(groupName, taskId) {
       let group = this._groupsByName.get(groupName);
       if (!group) {
@@ -19441,11 +19514,11 @@ var WorkshopBackend = (() => {
       group.totalCount++;
       this._taskIdsToGroups.set(taskId, group);
       return group;
-    },
+    }
     ensureNamedTaskGroup(groupName, taskId) {
       let group = this._ensureNamedTaskGroup(groupName, taskId);
       return group.promise;
-    },
+    }
     getRootTaskGroupForTask(taskId) {
       let taskGroup = this._taskIdsToGroups.get(taskId);
       if (!taskGroup) {
@@ -19455,7 +19528,7 @@ var WorkshopBackend = (() => {
         taskGroup = taskGroup.parentGroup;
       }
       return taskGroup;
-    },
+    }
     ensureRootTaskGroupFollowOnTask(taskId, taskToPlan) {
       let rootTaskGroup = this.getRootTaskGroupForTask(taskId);
       if (!rootTaskGroup) {
@@ -19465,7 +19538,7 @@ var WorkshopBackend = (() => {
         rootTaskGroup.tasksToScheduleOnCompletion = new Set();
       }
       rootTaskGroup.tasksToScheduleOnCompletion.add(taskToPlan);
-    },
+    }
     _makeTaskGroup(groupName) {
       let group = {
         groupName,
@@ -19482,7 +19555,7 @@ var WorkshopBackend = (() => {
       });
       this._groupsByName.set(groupName, group);
       return group;
-    },
+    }
     _onWillPlan(taskThing, sourceId) {
       if (!sourceId) {
         return;
@@ -19493,7 +19566,7 @@ var WorkshopBackend = (() => {
         sourceGroup.totalCount++;
         this._taskIdsToGroups.set(taskThing.id, sourceGroup);
       }
-    },
+    }
     _onWillExecute(taskThing, sourceId) {
       if (!sourceId) {
         return;
@@ -19508,7 +19581,7 @@ var WorkshopBackend = (() => {
         sourceGroup.totalCount++;
         this._taskIdsToGroups.set(taskThing.id, sourceGroup);
       }
-    },
+    }
     _decrementGroupPendingCount(group) {
       if (--group.pendingCount === 0) {
         logic(this, "resolveGroup", {
@@ -19522,9 +19595,11 @@ var WorkshopBackend = (() => {
         }
         if (group.parentGroup) {
           this._decrementGroupPendingCount(group.parentGroup);
+        } else {
+          this.emit("rootTaskGroupCompleted", { group });
         }
       }
-    },
+    }
     _onPlanned(taskId) {
       if (this._pendingTaskIdReuses.has(taskId)) {
         this._pendingTaskIdReuses.delete(taskId);
@@ -19535,12 +19610,14 @@ var WorkshopBackend = (() => {
         this._taskIdsToGroups.delete(taskId);
         this._decrementGroupPendingCount(group);
       }
-    },
+    }
     _onExecuted(taskId) {
       let group = this._taskIdsToGroups.get(taskId);
       if (group) {
         this._taskIdsToGroups.delete(taskId);
         this._decrementGroupPendingCount(group);
+      } else {
+        this.emit("rootTaskGroupCompleted", { taskId });
       }
     }
   };
@@ -22630,17 +22707,14 @@ var WorkshopBackend = (() => {
       }
     },
     syncFolderList(accountId, why) {
-      return this.taskManager.scheduleTasks([
-        {
-          type: "sync_folder_list",
-          accountId
-        }
-      ], why);
+      return this.taskManager.scheduleTaskAndWaitForExecutedResult({
+        type: "sync_folder_list",
+        accountId
+      }, why);
     },
     syncGrowFolder(folderId, why) {
-      console.log("in syncGrowFolder", folderId);
       const accountId = accountIdFromFolderId(folderId);
-      return this.taskManager.scheduleTaskAndWaitForPlannedResult({
+      return this.taskManager.scheduleTaskAndWaitForExecutedResult({
         type: "sync_grow",
         accountId,
         folderId
@@ -22648,7 +22722,7 @@ var WorkshopBackend = (() => {
     },
     syncRefreshFolder(folderId, why) {
       const accountId = accountIdFromFolderId(folderId);
-      return this.taskManager.scheduleTaskAndWaitForPlannedResult({
+      return this.taskManager.scheduleTaskAndWaitForExecutedResult({
         type: "sync_refresh",
         accountId,
         folderId
@@ -22823,8 +22897,11 @@ var WorkshopBackend = (() => {
   logic.defineScope(SCOPE, "WorkerSetup");
   var routerBridgeMaker = registerInstanceType("bridge");
   var nextBridgeUid = 0;
-  function createBridgePair(universe2, usePort, uid) {
+  function createBridgePair(universe2, usePort, uid, cleanupPromise) {
     const TMB = new MailBridge(universe2, universe2.db, uid);
+    cleanupPromise.then(() => {
+      TMB.shutdown();
+    });
     const routerInfo = routerBridgeMaker.register(function(data) {
       TMB.__receiveMessage(data.msg);
     }, usePort);
@@ -22840,7 +22917,7 @@ var WorkshopBackend = (() => {
   }
   var universe = null;
   var universePromise = null;
-  var sendControl = registerSimple("control", async function(data, source) {
+  var sendControl = registerSimple("control", async function(data, source, cleanupPromise) {
     var args = data.args;
     switch (data.cmd) {
       case "hello": {
@@ -22857,7 +22934,7 @@ var WorkshopBackend = (() => {
         logic(SCOPE, "awaitingUniverse", { bridgeUid });
         await universePromise;
         logic(SCOPE, "gotUniverse", { bridgeUid });
-        createBridgePair(universe, source, bridgeUid);
+        createBridgePair(universe, source, bridgeUid, cleanupPromise);
         break;
       }
       case "online":

@@ -37,50 +37,45 @@ import logic from "logic";
  * TODO: Adapt root cause id mechanism to allow flushing to occur exactly when
  * appropriate and thereby cancel the timeout.  We will still always want
  * timeouts, however, since unbounded feedback delays suck.
- *
- * ROOT CAUSE ID BRAINSTORMING FROM IRC:
- 8:14 PM <asuth> jrburke: you mean like an evt.on() triggered by the UI action was making the UI do stuff before api.accounts actually updated?
-8:15 PM <asuth> if it helps I can have deleteAccount() return a promise that's resolved only after the api.accounts view should have been updated
-8:17 PM <asuth> since there is indisputably some benefit towards letting the UI seem to take more time to hide some UI in order to avoid a flash-of-imminently-doomed-content
-8:17 PM <asuth> in this case the BatchManager and its 100ms delay is probably conspiring to screw you over
-8:17 PM <asuth> for accounts I can certainly have it perform an immediate flush
-8:18 PM <asuth> and in general track whether changes are directly user-triggered or not and do direct flushes in that case
-8:19 PM <asuth> the BatchManager dirty/flushing goal was intended more to cover cases like sync where we have a flood of changes that come from logically distinct tasks
-8:20 PM <asuth> hm, actually, I think what I could do is improve on the timeout mechanism and attach a "rootCauseId" to stuff
-8:20 PM <asuth> the BatchManager could flush if all pending things associated with the rootCauseId have been fully processed
-8:20 PM <asuth> so in the case of a user deleting 1 account, we flush after just the one deletion task has completed.  in the case of a user deleting 1 message, same dea.  In the case of a user deleting 10 messages, we wait until all 10 have been processed
-8:21 PM <asuth> so they all disappear at once rather than having them flicker out one by one
-8:22 PM <asuth> and I could tie the promise you get from the manipulation to the Promise you're waiting on.
-8:22 PM <asuth> er, bad phrasing.  I could tie the rootCauseId to the promise you're waiting on
-8:23 PM <asuth> right now I would accomplish that by explicitly waiting on the tasks that are directly scheduled as a result of the request you issue
-8:23 PM <asuth> but by tying it to the rootCauseId I can handle cascades too
- *
  */
-export default function BatchManager(db) {
-  logic.defineScope(this, "BatchManager");
+export class BatchManager {
+  constructor(db) {
+    logic.defineScope(this, "BatchManager");
 
-  this._db = db;
-  this._pendingProxies = new Set();
-  /**
-   * When null, there's no timer scheduled.  When `true`, it means we scheduled
-   * a Promise to do the flush.  Otherwise it's a number that's a timer handle
-   * that we can use to invoke clearTimeout on.
-   */
-  this._timer = null;
+    this._db = db;
+    this._pendingProxies = new Set();
+    /**
+     * When null, there's no timer scheduled.  When `true`, it means we scheduled
+     * a Promise to do the flush.  Otherwise it's a number that's a timer handle
+     * that we can use to invoke clearTimeout on.
+     */
+    this._timer = null;
 
-  this._bound_timerFired = this._flushPending.bind(this, true);
-  this._bound_dbFlush = this._flushPending.bind(this, false);
+    this._bound_timerFired = this._flushPending.bind(this, true, false);
+    this._bound_dbFlush = this._flushPending.bind(this, false, false);
 
-  this.flushDelayMillis = 100;
+    // Originally this was set to 100ms with the rationale that we should update
+    // the UI in a timely fashion but avoid DOM churn for efficiency reasons.
+    //
+    // We've now increased the value to 5sec because the `BridgeContext` now
+    // triggers flushes via `flushBecauseTaskGroupCompleted` when tasks
+    // complete in the interest of reducing visual churn for users.  We maintain
+    // a time-based delay right now so that in failure modes the UI doesn't
+    // completely break and when a lot of stuff is happening the UI still
+    // updates.  I initially thought 1sec but that's still pretty frequent and
+    // could potentially trigger in automated testing situations under debug
+    // builds (or rr), so adjusted it upwards to 5sec.  We might want to adjust
+    // even further upwards but should re-evaluate after trying this.
+    this.flushDelayMillis = 5000;
 
-  this._db.on("cacheDrop", this._bound_dbFlush);
-}
-BatchManager.prototype = {
+    this._db.on("cacheDrop", this._bound_dbFlush);
+  }
+
   __cleanup() {
     this._db.removeListener("cacheDrop", this._bound_dbFlush);
-  },
+  }
 
-  _flushPending(timerFired) {
+  _flushPending(timerFired, coherentSnapshot) {
     if (!timerFired) {
       globalThis.clearTimeout(this._timer);
     }
@@ -93,15 +88,22 @@ BatchManager.prototype = {
         return proxy.toc.type;
       }),
       timerFired,
+      coherentSnapshot,
     });
     for (let proxy of this._pendingProxies) {
       let payload = proxy.flush();
+      // If a database load is required, this will already be false.
+      payload.coherentSnapshot &&= coherentSnapshot;
       if (payload) {
         proxy.ctx.sendMessage("update", payload);
       }
     }
     this._pendingProxies.clear();
-  },
+  }
+
+  flushBecauseTaskGroupCompleted() {
+    this._flushPending(false, true);
+  }
 
   /**
    * Register a dirty view, potentially accelerating the flush.
@@ -149,5 +151,5 @@ BatchManager.prototype = {
         this.flushDelayMillis
       );
     }
-  },
-};
+  }
+}

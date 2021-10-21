@@ -89,6 +89,7 @@ export function makeAttendeeInfo(raw) {
  *   be something richer like an `ICAL.Time` JSON rep.
  * @property {DateMS} endDate
  * @property {Boolean} isAllDay
+ * @property {Boolean} isRecurring
  * @property {CalIdentity} creator
  * @property {CalIdentity} organizer
  * @property {AttendeeInfo[]} attendees
@@ -116,6 +117,7 @@ export function makeCalendarEventInfo(raw) {
     startDate: raw.startDate,
     endDate: raw.endDate,
     isAllDay: raw.isAllDay,
+    isRecurring: raw.isRecurring || false,
     creator: raw.creator,
     organizer: raw.organizer,
     attendees: raw.attendees || null,

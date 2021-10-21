@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { Emitter } from "evt";
 import logic from "logic";
 
 /**
@@ -35,40 +36,58 @@ import logic from "logic";
  *
  * There are use-cases where it's handy for a task group to effectively contain
  * other groups.  Since the task-begets-task graph is a tree, we can easily
- * accomplish this by having groups be aware of their parent groups
+ * accomplish this by having groups be aware of their parent groups.
+ *
+ * ## Events Emitted
+ *
+ * ### rootTaskGroupCompleted
+ *
+ * This is intended to be used by the BridgeContext to tell the BatchManager
+ * when to flush changes so that the UI can update when a task compeletes and
+ * we don't believe it has any other related tasks that still need to run and
+ * potentially further update the UI.
+ *
+ * This will be emitted whenever:
+ * - A task finished execution and it was the last task in the group, allowing
+ *   the group to be resolved.
+ * - A task finished execution and the task was not associated with a group.
+ *   This covers one-off tasks like syncing a folder list that don't need a
+ *   formal group to be established.
  */
-export default function TaskGroupTracker(taskManager) {
-  logic.defineScope(this, "TaskGroupTracker");
+export class TaskGroupTracker extends Emitter {
+  constructor(taskManager) {
+    super();
+    logic.defineScope(this, "TaskGroupTracker");
 
-  this.taskManager = taskManager;
+    this.taskManager = taskManager;
 
-  /**
-   * Uniqueifying id helper so we can differentiate group "instances".  While
-   * it's great that we can use semantic names like "sync_refresh:2" for when
-   * we're syncing account 2, it's also useful to be able to distinguish one
-   * aggregated sync effort from one that happens later.  We use the group id's
-   * to this end.  We assume and require that group id's will only be compared
-   * within a single universe lifetime with any comparisons being "!==" tests
-   * initialized to null on each reset so this does not pose a problem.
-   */
-  this._nextGroupId = 1;
-  this._groupsByName = new Map();
-  this._taskIdsToGroups = new Map();
-  // All task id's in this set are a case of a simple task reusing its id and
-  // where we have heard the willExecute for the id but have not yet heard the
-  // planned for the id.  We add the id here in `willExecute` and remove it in
-  // `planned`, skipping the rest of our usual logic in `planned`.
-  this._pendingTaskIdReuses = new Set();
+    /**
+     * Uniqueifying id helper so we can differentiate group "instances".  While
+     * it's great that we can use semantic names like "sync_refresh:2" for when
+     * we're syncing account 2, it's also useful to be able to distinguish one
+     * aggregated sync effort from one that happens later.  We use the group id's
+     * to this end.  We assume and require that group id's will only be compared
+     * within a single universe lifetime with any comparisons being "!==" tests
+     * initialized to null on each reset so this does not pose a problem.
+     */
+    this._nextGroupId = 1;
+    this._groupsByName = new Map();
+    this._taskIdsToGroups = new Map();
+    // All task id's in this set are a case of a simple task reusing its id and
+    // where we have heard the willExecute for the id but have not yet heard the
+    // planned for the id.  We add the id here in `willExecute` and remove it in
+    // `planned`, skipping the rest of our usual logic in `planned`.
+    this._pendingTaskIdReuses = new Set();
 
-  this.__registerListeners(taskManager);
-}
-TaskGroupTracker.prototype = {
+    this.__registerListeners(taskManager);
+  }
+
   __registerListeners(emitter) {
     emitter.on("willPlan", this, this._onWillPlan);
     emitter.on("willExecute", this, this._onWillExecute);
     emitter.on("planned", this, this._onPlanned);
     emitter.on("executed", this, this._onExecuted);
-  },
+  }
 
   // Internal heart of ensureNamedTaskGroup that exposes internal rep for reuse
   // by other class code.
@@ -94,7 +113,7 @@ TaskGroupTracker.prototype = {
     group.totalCount++;
     this._taskIdsToGroups.set(taskId, group);
     return group;
-  },
+  }
 
   /**
    * Ensure that a task group exists with the given name, and return a Promise
@@ -103,7 +122,7 @@ TaskGroupTracker.prototype = {
   ensureNamedTaskGroup(groupName, taskId) {
     let group = this._ensureNamedTaskGroup(groupName, taskId);
     return group.promise;
-  },
+  }
 
   /**
    * Return the root ancestor task group.  See TaskContext.rootTaskGroupId for
@@ -118,7 +137,7 @@ TaskGroupTracker.prototype = {
       taskGroup = taskGroup.parentGroup;
     }
     return taskGroup;
-  },
+  }
 
   ensureRootTaskGroupFollowOnTask(taskId, taskToPlan) {
     let rootTaskGroup = this.getRootTaskGroupForTask(taskId);
@@ -133,7 +152,7 @@ TaskGroupTracker.prototype = {
       rootTaskGroup.tasksToScheduleOnCompletion = new Set();
     }
     rootTaskGroup.tasksToScheduleOnCompletion.add(taskToPlan);
-  },
+  }
 
   _makeTaskGroup(groupName) {
     let group = {
@@ -155,7 +174,7 @@ TaskGroupTracker.prototype = {
     });
     this._groupsByName.set(groupName, group);
     return group;
-  },
+  }
 
   /**
    * The TaskManager tells us about every raw task enqueued for planning, and
@@ -173,7 +192,7 @@ TaskGroupTracker.prototype = {
       sourceGroup.totalCount++;
       this._taskIdsToGroups.set(taskThing.id, sourceGroup);
     }
-  },
+  }
 
   /**
    * The task tells us about every planned task or task marker queued for
@@ -201,7 +220,7 @@ TaskGroupTracker.prototype = {
       sourceGroup.totalCount++;
       this._taskIdsToGroups.set(taskThing.id, sourceGroup);
     }
-  },
+  }
 
   _decrementGroupPendingCount(group) {
     if (--group.pendingCount === 0) {
@@ -219,9 +238,15 @@ TaskGroupTracker.prototype = {
       }
       if (group.parentGroup) {
         this._decrementGroupPendingCount(group.parentGroup);
+      } else {
+        // This is being added in order to allow MailBridge BridgeContexts to
+        // listen to know to flush the BatchManager whenever a top-level
+        // operation has completed, like a specific sync request or a cronsync
+        // request.
+        this.emit("rootTaskGroupCompleted", { group });
       }
     }
-  },
+  }
 
   _onPlanned(taskId) {
     // Other side of our willExecute specialization for the simple task that is
@@ -236,13 +261,19 @@ TaskGroupTracker.prototype = {
       this._taskIdsToGroups.delete(taskId);
       this._decrementGroupPendingCount(group);
     }
-  },
+  }
 
   _onExecuted(taskId) {
     let group = this._taskIdsToGroups.get(taskId);
     if (group) {
       this._taskIdsToGroups.delete(taskId);
       this._decrementGroupPendingCount(group);
+    } else {
+      // The given task was not part of a task group, which means that it should
+      // be reported as `rootTaskGroupCompleted` itself for the purposes of
+      // BatchManager being flushing only when we aren't expecting additional
+      // changes.
+      this.emit("rootTaskGroupCompleted", { taskId });
     }
-  },
-};
+  }
+}

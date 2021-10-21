@@ -240,18 +240,17 @@ export class TaskManager extends Emitter {
    *   resulting task ids of the tasks.  This is a tenative babystep
    *   towards v3 undo support.  This may be removed.
    */
-  scheduleTasks(rawTasks, why) {
+  async scheduleTasks(rawTasks, why) {
     this._ensureWakeLock(why);
     const wrappedTasks = this.__wrapTasks(rawTasks);
 
     logic(this, "schedulePersistent", { why, tasks: wrappedTasks });
 
     this._pendingPlanWrites++;
-    return this._db.addTasks(wrappedTasks).then(() => {
-      this._pendingPlanWrites--;
-      this.__enqueuePersistedTasksForPlanning(wrappedTasks);
-      return wrappedTasks.map(x => x.id);
-    });
+    await this._db.addTasks(wrappedTasks);
+    this._pendingPlanWrites--;
+    this.__enqueuePersistedTasksForPlanning(wrappedTasks);
+    return wrappedTasks.map(x => x.id);
   }
 
   /**
@@ -259,29 +258,32 @@ export class TaskManager extends Emitter {
    * have been planned.  The resolved value is a list of the declared results
    * of each task having been planned.  Tasks may optionally return a result;
    * if they return no result, `undefined` will be returned.
+   *
+   * @param {Boolean} [flattenSingleResult=false]
+   *   When true, if a single taskId and therefore single result is being
+   *   returned, this will automatically extract the result from the array.
+   *   This is intended to be used as a helper for related functions that are
+   *   explicitly dealing with a single task.
    */
-  waitForTasksToBePlanned(taskIds) {
-    return Promise.all(
+  async waitForTasksToBePlanned(taskIds, flattenSingleResult = false) {
+    let results = await Promise.all(
       taskIds.map(taskId => {
-        return new Promise(resolve => {
-          this.once("planned:" + taskId, resolve);
-        });
+        return this.promisedOnce("planned:" + taskId);
       })
     );
+    if (flattenSingleResult && results.length === 1) {
+      results = results[0];
+    }
+    return results;
   }
 
   /**
    * Schedule a persistent task, returning a promise that will be resolved
    * with the return value of the task's planning stage.
    */
-  scheduleTaskAndWaitForPlannedResult(rawTask, why) {
-    return this.scheduleTasks([rawTask], why)
-      .then(taskIds => {
-        return this.waitForTasksToBePlanned(taskIds);
-      })
-      .then(results => {
-        return results[0];
-      });
+  async scheduleTaskAndWaitForPlannedResult(rawTask, why) {
+    const taskIds = await this.scheduleTasks([rawTask], why);
+    return this.waitForTasksToBePlanned(taskIds, true);
   }
 
   /**
@@ -317,14 +319,9 @@ export class TaskManager extends Emitter {
    * Schedule a persistent task, returning a promise that will be resolved
    * with the return value of the task's execution stage.
    */
-  scheduleTaskAndWaitForExecutedResult(rawTask, why) {
-    return this.scheduleTasks([rawTask], why)
-      .then(taskIds => {
-        return this.waitForTasksToBeExecuted(taskIds);
-      })
-      .then(results => {
-        return results[0];
-      });
+  async scheduleTaskAndWaitForExecutedResult(rawTask, why) {
+    const taskIds = await this.scheduleTasks([rawTask], why);
+    return this.waitForTasksToBeExecuted(taskIds, true);
   }
 
   /**
@@ -332,15 +329,23 @@ export class TaskManager extends Emitter {
    * have been executed.  The resolved value is a list of the declared results
    * of each task having been executed.  Tasks may optionally return a result;
    * if they return no result, `undefined` will be returned.
+   *
+   * @param {Boolean} [flattenSingleResult=false]
+   *   When true, if a single taskId and therefore single result is being
+   *   returned, this will automatically extract the result from the array.
+   *   This is intended to be used as a helper for related functions that are
+   *   explicitly dealing with a single task.
    */
-  waitForTasksToBeExecuted(taskIds) {
-    return Promise.all(
+  async waitForTasksToBeExecuted(taskIds, flattenSingleResult = false) {
+    let results = await Promise.all(
       taskIds.map(taskId => {
-        return new Promise(resolve => {
-          this.once("executed:" + taskId, resolve);
-        });
+        return this.promisedOnce("executed:" + taskId);
       })
     );
+    if (flattenSingleResult && results.length === 1) {
+      results = results[0];
+    }
+    return results;
   }
 
   /**
@@ -376,14 +381,9 @@ export class TaskManager extends Emitter {
    * because the expected idiom is that all actions are fundamentally
    * interactive.
    */
-  scheduleNonPersistentTaskAndWaitForPlannedResult(rawTask, why) {
-    return this.scheduleNonPersistentTasks([rawTask], why)
-      .then(taskIds => {
-        return this.waitForTasksToBePlanned(taskIds);
-      })
-      .then(results => {
-        return results[0];
-      });
+  async scheduleNonPersistentTaskAndWaitForPlannedResult(rawTask, why) {
+    const taskIds = await this.scheduleNonPersistentTasks([rawTask], why);
+    return this.waitForTasksToBePlanned(taskIds, true);
   }
 
   /**
@@ -398,14 +398,9 @@ export class TaskManager extends Emitter {
    * because the expected idiom is that all actions are fundamentally
    * interactive.
    */
-  scheduleNonPersistentTaskAndWaitForExecutedResult(rawTask, why) {
-    return this.scheduleNonPersistentTasks([rawTask], why)
-      .then(taskIds => {
-        return this.waitForTasksToBeExecuted(taskIds);
-      })
-      .then(results => {
-        return results[0];
-      });
+  async scheduleNonPersistentTaskAndWaitForExecutedResult(rawTask, why) {
+    const taskIds = await this.scheduleNonPersistentTasks([rawTask], why);
+    return this.waitForTasksToBeExecuted(taskIds, true);
   }
 
   /**
@@ -557,7 +552,11 @@ export class TaskManager extends Emitter {
         maybeResult => {
           const result =
             (maybeResult && maybeResult.wrappedResult) || undefined;
-          logic(this, "planning:end", { success: true, task: wrappedTask });
+          logic(this, "planning:end", {
+            success: true,
+            task: wrappedTask,
+            _result: result,
+          });
           this.emit("planned:" + wrappedTask.id, result);
           this.emit("planned", wrappedTask.id, result);
         },
@@ -590,7 +589,11 @@ export class TaskManager extends Emitter {
         maybeResult => {
           const result =
             (maybeResult && maybeResult.wrappedResult) || undefined;
-          logic(this, "executing:end", { success: true, task: taskThing });
+          logic(this, "executing:end", {
+            success: true,
+            task: taskThing,
+            _result: result,
+          });
           this.emit("executed:" + taskThing.id, result);
           this.emit("executed", taskThing.id, result);
         },

@@ -663,13 +663,13 @@ TaskContext.prototype = {
     return { wrappedResult: value };
   },
 
-  __failsafeFinalize() {
+  __failsafeFinalize(err) {
     // things are good if we finished automatically.
     if (this.state === "finishing") {
       return;
     }
 
-    logic(this, "failsafeFinalize");
+    logic(this, "failsafeFinalize", { err });
 
     // notify decorator callbacks of failure
     for (const decoratorCallback of this._decoratorCallbacks) {

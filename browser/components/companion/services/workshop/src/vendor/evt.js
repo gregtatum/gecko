@@ -131,12 +131,12 @@
       let fired = false;
       const applyPair = objFnPair(obj, fnName);
 
-      function one() {
+      const one = (...args) => {
         if (fired) {
           return;
         }
         fired = true;
-        callApply(applyPair, arguments);
+        callApply(applyPair, args);
         // Remove at a further turn so that the event
         // forEach in emit does not get modified during
         // this turn.
@@ -145,6 +145,23 @@
       // Pass object context in case object bulk removeListener before the
       // once is triggered.
       return this.on(id, applyPair[0], one);
+    }
+
+    /**
+     * Promise-returning version of `once` that can be `await`ed.  Also see
+     * `promisedLatestOnce` for variations where there's a single rising-edge
+     * event which may already have a high (truthy) value.  This method itself
+     * is intended for the case when it's known there will be an event fired
+     * in the future and we want to wait for that a single time.
+     *
+     * Note that there is no promise variant of `on` because `on` implies that
+     * a sequence of events will be generated and this maps to streams, not
+     * promises.
+     */
+    promisedOnce(id) {
+      return new Promise(resolve => {
+        this.once(id, resolve);
+      });
     }
 
     /**
@@ -181,6 +198,12 @@
       } else {
         this.once(id, applyPair[0], applyPair[1]);
       }
+    }
+
+    promisedLatestOnce(id) {
+      return new Promise(resolve => {
+        this.latestOnce(id, resolve);
+      });
     }
 
     /**
@@ -234,21 +257,20 @@
      * args after first one are passed to listeners.
      * @param  {String} id event ID.
      */
-    emitWhenListener(id) {
+    emitWhenListener(id, ...args) {
       var listeners = this._events[id];
       if (listeners) {
-        this.emit.apply(this, arguments);
+        this.emit.apply(this, [id, ...args]);
       } else {
         if (!this._pendingEvents[id]) {
           this._pendingEvents[id] = [];
         }
-        this._pendingEvents[id].push(slice.call(arguments, 1));
+        this._pendingEvents[id].push(args);
       }
     }
 
-    emit(id) {
-      var args = slice.call(arguments, 1),
-          listeners = this._events[id];
+    emit(id, ...args) {
+      var listeners = this._events[id];
 
       if (listeners) {
         // Use a for loop instead of forEach, in case the listener removes

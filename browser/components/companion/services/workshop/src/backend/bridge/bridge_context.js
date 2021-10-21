@@ -16,36 +16,37 @@
 
 import logic from "logic";
 
-function NamedContext(name, type, bridgeContext) {
-  logic.defineScope(this, type, {
-    name,
-    bridge: bridgeContext.bridge.name,
-  });
-  this.name = name;
-  this._bridgeContext = bridgeContext;
-  this._active = true;
+class NamedContext {
+  constructor(name, type, bridgeContext) {
+    logic.defineScope(this, type, {
+      name,
+      bridge: bridgeContext.bridge.name,
+    });
+    this.name = name;
+    this._bridgeContext = bridgeContext;
+    this._active = true;
 
-  this._stuffToRelease = [];
-  this.__childContexts = [];
+    this._stuffToRelease = [];
+    this.__childContexts = [];
 
-  /**
-   * If the bridge is currently processing an async command for this context,
-   * this is the promise.
-   */
-  this.pendingCommand = null;
-  /**
-   * Any commands not yet processed because we're waiting on a pendingCommand.
-   */
-  this.commandQueue = [];
-}
-NamedContext.prototype = {
+    /**
+     * If the bridge is currently processing an async command for this context,
+     * this is the promise.
+     */
+    this.pendingCommand = null;
+    /**
+     * Any commands not yet processed because we're waiting on a pendingCommand.
+     */
+    this.commandQueue = [];
+  }
+
   get batchManager() {
     return this._bridgeContext.batchManager;
-  },
+  }
 
   get dataOverlayManager() {
     return this._bridgeContext.dataOverlayManager;
-  },
+  }
 
   /**
    * Asynchronously acquire a resource and track that we are using it so that
@@ -59,7 +60,7 @@ NamedContext.prototype = {
 
     this._stuffToRelease.push(acquireable);
     return acquireable.__acquire(this);
-  },
+  }
 
   /**
    * Helper to send a message with the given `data` to the associated bridge
@@ -71,7 +72,7 @@ NamedContext.prototype = {
       handle: this.name,
       data,
     });
-  },
+  }
 
   /**
    * Schedule a function to be run at cleanup-time.
@@ -82,7 +83,7 @@ NamedContext.prototype = {
     this._stuffToRelease.push({
       __release: func,
     });
-  },
+  }
 
   /**
    * Run through the list of acquired stuff to release and release it all.
@@ -101,8 +102,8 @@ NamedContext.prototype = {
         });
       }
     }
-  },
-};
+  }
+}
 
 /**
  * In conjunction with its helper class, provides a mechanism for tracking
@@ -113,19 +114,30 @@ NamedContext.prototype = {
  * Things that end up using this:
  * - View proxies (EntireListProxy, WindowedListProxy)
  */
-export default function BridgeContext({
-  bridge,
-  batchManager,
-  dataOverlayManager,
-}) {
-  logic.defineScope(this, "BridgeContext", { name: bridge.name });
-  this.bridge = bridge;
-  this.batchManager = batchManager;
-  this.dataOverlayManager = dataOverlayManager;
+export class BridgeContext {
+  constructor({ bridge, batchManager, dataOverlayManager, taskGroupTracker }) {
+    logic.defineScope(this, "BridgeContext", { name: bridge.name });
+    this.bridge = bridge;
+    this.batchManager = batchManager;
+    this.dataOverlayManager = dataOverlayManager;
+    this.taskGroupTracker = taskGroupTracker;
 
-  this._namedContexts = new Map();
-}
-BridgeContext.prototype = {
+    this._namedContexts = new Map();
+
+    // Subscribe for notifications of when 1) task groups complete or 2) random
+    // tasks that aren't part of a group complete so that we can flush UI
+    // changes.
+    this.taskGroupTracker.on(
+      "rootTaskGroupCompleted",
+      this,
+      "onRootTaskGroupCompleted"
+    );
+  }
+
+  onRootTaskGroupCompleted() {
+    this.batchManager.flushBecauseTaskGroupCompleted();
+  }
+
   /**
    *
    * @param {String} name
@@ -154,7 +166,7 @@ BridgeContext.prototype = {
       parentContext.__childContexts.push(ctx);
     }
     return ctx;
-  },
+  }
 
   getNamedContextOrThrow(name) {
     if (this._namedContexts.has(name)) {
@@ -162,11 +174,11 @@ BridgeContext.prototype = {
     }
 
     throw new Error("no such namedContext: " + name);
-  },
+  }
 
   maybeGetNamedContext(name) {
     return this._namedContexts.get(name);
-  },
+  }
 
   cleanupNamedContext(name) {
     if (!this._namedContexts.has(name)) {
@@ -179,12 +191,17 @@ BridgeContext.prototype = {
     }
     this._namedContexts.delete(name);
     ctx.cleanup();
-  },
+  }
 
   cleanupAll() {
     for (let namedContext of this._namedContext.values()) {
       namedContext.cleanup();
     }
     this._namedContexts.clear();
-  },
-};
+  }
+
+  shutdown() {
+    this.taskGroupTracker.removeObjectListener(this);
+    this.cleanupAll();
+  }
+}

@@ -114,15 +114,20 @@ var require_evt = __commonJS({
           const self = this;
           let fired = false;
           const applyPair = objFnPair(obj, fnName);
-          function one() {
+          const one = (...args) => {
             if (fired) {
               return;
             }
             fired = true;
-            callApply(applyPair, arguments);
+            callApply(applyPair, args);
             setTimeout(() => self.removeListener(id, one));
-          }
+          };
           return this.on(id, applyPair[0], one);
+        }
+        promisedOnce(id) {
+          return new Promise((resolve) => {
+            this.once(id, resolve);
+          });
         }
         latest(id, obj, fnName) {
           var applyPair = objFnPair(obj, fnName);
@@ -138,6 +143,11 @@ var require_evt = __commonJS({
           } else {
             this.once(id, applyPair[0], applyPair[1]);
           }
+        }
+        promisedLatestOnce(id) {
+          return new Promise((resolve) => {
+            this.latestOnce(id, resolve);
+          });
         }
         removeObjectListener(obj) {
           Object.keys(this._events).forEach(function(eventId) {
@@ -164,19 +174,19 @@ var require_evt = __commonJS({
             cleanEventEntry(this, id);
           }
         }
-        emitWhenListener(id) {
+        emitWhenListener(id, ...args) {
           var listeners2 = this._events[id];
           if (listeners2) {
-            this.emit.apply(this, arguments);
+            this.emit.apply(this, [id, ...args]);
           } else {
             if (!this._pendingEvents[id]) {
               this._pendingEvents[id] = [];
             }
-            this._pendingEvents[id].push(slice.call(arguments, 1));
+            this._pendingEvents[id].push(args);
           }
         }
-        emit(id) {
-          var args = slice.call(arguments, 1), listeners2 = this._events[id];
+        emit(id, ...args) {
+          var listeners2 = this._events[id];
           if (listeners2) {
             for (var i = 0; i < listeners2.length; i++) {
               var thisObj = listeners2[i][0], fn = listeners2[i][1];
@@ -541,7 +551,8 @@ logic.event = function(scope, type, details) {
     });
   }
   if (logic.realtimeLogEverything) {
-    dump("logic: " + JSON.stringify(event) + "\n");
+    dump(`logic[${logic.tid}]: ${JSON.stringify(event)}
+`);
   }
   return event;
 };
@@ -2144,8 +2155,8 @@ var MailAccount = class extends import_evt8.Emitter {
   deleteAccount() {
     this._api._deleteAccount(this);
   }
-  syncFolderList() {
-    this._api.__bridgeSend({
+  async syncFolderList() {
+    await this._api._sendPromisedRequest({
       type: "syncFolderList",
       accountId: this.id
     });
@@ -2258,6 +2269,7 @@ var FoldersListView = class extends EntireListView {
 // src/clientapi/windowed_list_view.js
 var import_evt9 = __toModule(require_evt());
 var WindowedListView = class extends import_evt9.Emitter {
+  #bufferedState;
   constructor(api, itemConstructor, handle) {
     super();
     this._api = api;
@@ -2275,6 +2287,8 @@ var WindowedListView = class extends import_evt9.Emitter {
     this.tocMeta = {};
     this.complete = false;
     this.viewKind = "windowed";
+    this.useCoherentMode = true;
+    this.#bufferedState = null;
   }
   toString() {
     return "[WindowedListView: " + this._itemConstructor.name + " " + this.handle + "]";
@@ -2286,7 +2300,46 @@ var WindowedListView = class extends import_evt9.Emitter {
       handle: this.handle
     };
   }
+  #mergeBufferedState(details) {
+    if (!this.#bufferedState) {
+      this.#bufferedState = details;
+      return;
+    }
+    this.#bufferedState.offset = details.offset;
+    this.#bufferedState.heightOffset = details.heightOffset;
+    this.#bufferedState.totalCount = details.totalCount;
+    this.#bufferedState.totalHeight = details.totalHeight;
+    this.#bufferedState.tocMeta = details.tocMeta;
+    this.#bufferedState.ids = details.ids;
+    for (const id of this.#bufferedState.values.keys()) {
+      if (!details.ids.includes(id)) {
+        this.#bufferedState.values.delete(id);
+      }
+    }
+    for (const [id, value] of details.values.entries()) {
+      this.#bufferedState.values.set(id, value);
+    }
+    if (details.events) {
+      if (this.#bufferedState.events) {
+        this.#bufferedState.events.push(...details.events);
+      } else {
+        this.#bufferedState.events = details.events;
+      }
+    }
+  }
   __update(details) {
+    if (this.useCoherentMode) {
+      if (this.#bufferedState || !details.coherentSnapshot) {
+        this.#mergeBufferedState(details);
+      }
+      if (!details.coherentSnapshot) {
+        return;
+      }
+      if (this.#bufferedState) {
+        details = this.#bufferedState;
+        this.#bufferedState = null;
+      }
+    }
     let newSerial = ++this.serial;
     let existingSet = this._itemsById;
     let newSet = new Map();
@@ -2901,6 +2954,7 @@ var CalEvent = class extends import_evt13.Emitter {
     this.startDate = new Date(wireRep.startDate);
     this.endDate = new Date(wireRep.endDate);
     this.isAllDay = wireRep.isAllDay;
+    this.isRecurring = wireRep.isRecurring;
     this.summary = wireRep.subject;
     this.snippet = wireRep.snippet;
     this.tags = filterOutBuiltinFlags2(wireRep.flags);
@@ -2947,10 +3001,10 @@ var CalEventsListView = class extends WindowedListView {
       });
     }
   }
-  refresh() {
-    this._api.__bridgeSend({
+  async refresh() {
+    await this._api._sendPromisedRequest({
       type: "refreshView",
-      handle: this.handle
+      viewHandle: this.handle
     });
   }
 };
@@ -2961,6 +3015,7 @@ var LEGAL_CONFIG_KEYS = ["debugLogging"];
 var MailAPI = class extends import_evt14.Emitter {
   constructor() {
     super();
+    this.logic = logic;
     logic.defineScope(this, "MailAPI", {});
     this._nextHandle = 1;
     this._trackedItemHandles = new Map();
@@ -3175,6 +3230,10 @@ var MailAPI = class extends import_evt14.Emitter {
   _recv_broadcast(msg) {
     const { name, data } = msg.payload;
     this.emit(name, data);
+    const handler = `_recvbroadcast_${name}`;
+    if (handler in this) {
+      this[handler](data);
+    }
   }
   _getItemAndTrackUpdates(itemType, itemId, itemConstructor, priorityTags) {
     return new Promise((resolve, reject) => {
@@ -3712,8 +3771,8 @@ var MailAPI = class extends import_evt14.Emitter {
     });
     return null;
   }
-  _recv_config(msg) {
-    this.config = msg.config;
+  _recvbroadcast_config(config) {
+    this.config = config;
     logic.realtimeLogEverything = this.config.debugLogging === "realtime";
   }
   ping(callback) {
@@ -3742,6 +3801,12 @@ var MailAPI = class extends import_evt14.Emitter {
       type: "clearNewTrackingForAccount",
       accountId,
       silent
+    });
+  }
+  TEST_timeWarp({ fakeNow }) {
+    this.__bridgeSend({
+      type: "TEST_timeWarp",
+      fakeNow
     });
   }
   flushNewAggregates() {

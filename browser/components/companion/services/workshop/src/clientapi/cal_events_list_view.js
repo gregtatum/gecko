@@ -55,10 +55,10 @@ export class CalEventsListView extends WindowedListView {
     }
   }
   // XXX The conversations list view has extra mechanics around this.
-  refresh() {
-    this._api.__bridgeSend({
+  async refresh() {
+    await this._api._sendPromisedRequest({
       type: "refreshView",
-      handle: this.handle,
+      viewHandle: this.handle,
     });
   }
 }

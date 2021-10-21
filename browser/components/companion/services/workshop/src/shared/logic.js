@@ -320,7 +320,7 @@ logic.event = function(scope, type, details) {
 
   if (logic.realtimeLogEverything) {
     //dump('logic: ' + event.toString() + '\n');
-    dump("logic: " + JSON.stringify(event) + "\n");
+    dump(`logic[${logic.tid}]: ${JSON.stringify(event)}\n`);
   }
 
   return event;

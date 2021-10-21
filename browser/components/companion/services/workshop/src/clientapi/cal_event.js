@@ -83,6 +83,7 @@ export class CalEvent extends Emitter {
     this.startDate = new Date(wireRep.startDate);
     this.endDate = new Date(wireRep.endDate);
     this.isAllDay = wireRep.isAllDay;
+    this.isRecurring = wireRep.isRecurring;
 
     this.summary = wireRep.subject;
     this.snippet = wireRep.snippet;

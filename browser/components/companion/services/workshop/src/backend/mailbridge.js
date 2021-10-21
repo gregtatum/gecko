@@ -17,11 +17,12 @@
 import logic from "logic";
 import * as $mailchewStrings from "./bodies/mailchew_strings";
 
-import BridgeContext from "./bridge/bridge_context";
-import BatchManager from "./bridge/batch_manager";
+import { BridgeContext } from "./bridge/bridge_context";
+import { BatchManager } from "./bridge/batch_manager";
 
 import EntireListProxy from "./bridge/entire_list_proxy";
 import WindowedListProxy from "./bridge/windowed_list_proxy";
+import { TEST_LetsDoTheTimewarpAgain } from "shared/date";
 
 /**
  * There is exactly one `MailBridge` instance for each `MailAPI` instance.
@@ -42,10 +43,26 @@ export default function MailBridge(universe, db, name) {
   this.bridgeContext = new BridgeContext({
     bridge: this,
     batchManager: this.batchManager,
+    taskGroupTracker: this.universe.taskGroupTracker,
     dataOverlayManager: this.universe.dataOverlayManager,
   });
 }
 MailBridge.prototype = {
+  /**
+   * Currently should be invoked when the MessagePort tells us it's going away.
+   *
+   * TODO: In the future we may instead want to use a WebLock (once implemented)
+   * where the MailAPI in the front-end holds a lock that we're waiting on.
+   * When the MailAPI instance gets collected due to being forgotten or because
+   * the global terminates, we would acquire the lock which lets us know to
+   * perform a shutdown.  This will require the frontend/backend to coordinate
+   * on the lock names.  Currently the mechanism for `logic` `tid` allocation
+   * should be sufficient.
+   */
+  shutdown() {
+    this.bridgeContext.shutdown();
+  },
+
   __sendMessage() {
     throw new Error("This is supposed to get hidden by an instance var.");
   },
@@ -177,6 +194,11 @@ MailBridge.prototype = {
     });
   },
 
+  _cmd_TEST_timeWarp(msg) {
+    logic(this, "timeWarp", { fakeNow: msg.fakeNow });
+    TEST_LetsDoTheTimewarpAgain(msg.fakeNow);
+  },
+
   _cmd_setInteractive(/*msg*/) {
     this.universe.setInteractive();
   },
@@ -211,17 +233,14 @@ MailBridge.prototype = {
         this.__sendMessage({
           type: "promisedResult",
           handle: msg.handle,
-          data: {
-            accountId: result.accountId || null,
-            error: result.error,
-            errorDetails: result.errorDetails,
-          },
+          data: result,
         });
       });
   },
 
-  _cmd_syncFolderList(msg) {
-    this.universe.syncFolderList(msg.accountId, "bridge");
+  async _cmd_syncFolderList(msg) {
+    await this.universe.syncFolderList(msg.accountId, "bridge");
+    this.__sendMessage({ type: "promisedResult", handle: msg.handle });
   },
 
   _cmd_modifyFolder(msg) {
@@ -520,7 +539,7 @@ MailBridge.prototype = {
   },
 
   async _cmd_refreshView(msg) {
-    let ctx = this.bridgeContext.getNamedContextOrThrow(msg.handle);
+    let ctx = this.bridgeContext.getNamedContextOrThrow(msg.viewHandle);
     if (ctx.viewing.type === "folder") {
       await this.universe.syncRefreshFolder(
         ctx.viewing.folderId,
@@ -535,6 +554,7 @@ MailBridge.prototype = {
       // to comprehensively backfill.)
       //this.universe.syncRefreshFolder(null, 'refreshView');
     }
+    this.__sendMessage({ type: "promisedResult", handle: msg.handle });
   },
 
   _cmd_growView(msg) {

@@ -210,11 +210,12 @@ export class MailAccount extends Emitter {
   }
 
   /**
-   * Synchronize the folder list for this account.  This currently doesn't
-   * return a promise letting you know when this completed, but it could.
+   * Synchronize the folder list for this account.  While this method is async
+   * and you can await it, you don't have to; the contents of the `folders`
+   * list view will automatically update.  This is handy for testing, though.
    */
-  syncFolderList() {
-    this._api.__bridgeSend({
+  async syncFolderList() {
+    await this._api._sendPromisedRequest({
       type: "syncFolderList",
       accountId: this.id,
     });

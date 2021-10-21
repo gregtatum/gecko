@@ -34,8 +34,12 @@ import appExtensions from "app_logic/worker_extensions";
 const routerBridgeMaker = $router.registerInstanceType("bridge");
 
 let nextBridgeUid = 0;
-function createBridgePair(universe, usePort, uid) {
+function createBridgePair(universe, usePort, uid, cleanupPromise) {
   const TMB = new MailBridge(universe, universe.db, uid);
+  // When the port tells us it's going away, we need to shutdown the bridge.
+  cleanupPromise.then(() => {
+    TMB.shutdown();
+  });
   const routerInfo = routerBridgeMaker.register(function(data) {
     TMB.__receiveMessage(data.msg);
   }, usePort);
@@ -59,7 +63,8 @@ let universePromise = null;
 
 var sendControl = $router.registerSimple("control", async function(
   data,
-  source
+  source,
+  cleanupPromise
 ) {
   var args = data.args;
   switch (data.cmd) {
@@ -77,7 +82,7 @@ var sendControl = $router.registerSimple("control", async function(
       logic(SCOPE, "awaitingUniverse", { bridgeUid });
       await universePromise;
       logic(SCOPE, "gotUniverse", { bridgeUid });
-      createBridgePair(universe, source, bridgeUid);
+      createBridgePair(universe, source, bridgeUid, cleanupPromise);
       break;
     }
     case "online":

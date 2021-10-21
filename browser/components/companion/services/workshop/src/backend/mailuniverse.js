@@ -33,7 +33,7 @@ import { TaskManager } from "./task_infra/task_manager";
 import TaskRegistry from "./task_infra/task_registry";
 import TaskPriorities from "./task_infra/task_priorities";
 import TaskResources from "./task_infra/task_resources";
-import TaskGroupTracker from "./task_infra/task_group_tracker";
+import { TaskGroupTracker } from "./task_infra/task_group_tracker";
 
 import QueryManager from "./search/query_manager";
 import TriggerManager from "./db/trigger_manager";
@@ -906,14 +906,17 @@ MailUniverse.prototype = {
     }
   },
 
+  /**
+   * Schedule synchronization of the folder list for the given account,
+   * returning a promise that will be resolved when the task has completed
+   * executing.
+   */
   syncFolderList(accountId, why) {
-    return this.taskManager.scheduleTasks(
-      [
-        {
-          type: "sync_folder_list",
-          accountId,
-        },
-      ],
+    return this.taskManager.scheduleTaskAndWaitForExecutedResult(
+      {
+        type: "sync_folder_list",
+        accountId,
+      },
       why
     );
   },
@@ -923,9 +926,8 @@ MailUniverse.prototype = {
    * resolved when the task group associated with the request completes.
    */
   syncGrowFolder(folderId, why) {
-    console.log("in syncGrowFolder", folderId);
     const accountId = accountIdFromFolderId(folderId);
-    return this.taskManager.scheduleTaskAndWaitForPlannedResult(
+    return this.taskManager.scheduleTaskAndWaitForExecutedResult(
       {
         type: "sync_grow",
         accountId,
@@ -941,7 +943,7 @@ MailUniverse.prototype = {
    */
   syncRefreshFolder(folderId, why) {
     const accountId = accountIdFromFolderId(folderId);
-    return this.taskManager.scheduleTaskAndWaitForPlannedResult(
+    return this.taskManager.scheduleTaskAndWaitForExecutedResult(
       {
         type: "sync_refresh",
         accountId,

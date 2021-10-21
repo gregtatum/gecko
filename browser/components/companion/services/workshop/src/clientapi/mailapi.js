@@ -73,6 +73,9 @@ const LEGAL_CONFIG_KEYS = ["debugLogging"];
 export class MailAPI extends Emitter {
   constructor() {
     super();
+    // We expose logic so that consumer code which cannot currently directly
+    // import the module can also have unified access to the logging.
+    this.logic = logic;
     logic.defineScope(this, "MailAPI", {});
     this._nextHandle = 1;
 
@@ -372,6 +375,10 @@ export class MailAPI extends Emitter {
    * Sends a message with a freshly allocated single-use handle, returning a
    * Promise that will be resolved when the MailBridge responds to the message.
    * (Someday it may also be rejected if we lose the back-end.)
+   *
+   * The corresponding logic in MailBridge for the command needs to send a
+   * message back with type "promisedResult" with the same handle (as currently
+   * implemented).  It's not enough for the handler to be an `async` function.
    */
   _sendPromisedRequest(sendMsg) {
     return new Promise(resolve => {
@@ -482,6 +489,10 @@ export class MailAPI extends Emitter {
   _recv_broadcast(msg) {
     const { name, data } = msg.payload;
     this.emit(name, data);
+    const handler = `_recvbroadcast_${name}`;
+    if (handler in this) {
+      this[handler](data);
+    }
   }
 
   /**
@@ -1760,8 +1771,8 @@ export class MailAPI extends Emitter {
     return null;
   }
 
-  _recv_config(msg) {
-    this.config = msg.config;
+  _recvbroadcast_config(config) {
+    this.config = config;
     logic.realtimeLogEverything = this.config.debugLogging === "realtime";
   }
 
@@ -1817,6 +1828,23 @@ export class MailAPI extends Emitter {
       type: "clearNewTrackingForAccount",
       accountId,
       silent,
+    });
+  }
+
+  /**
+   * Tell the back-end to act like `fakeNow` is the current time if the value
+   * is numeric, or resets the system back to following the real wall-clock
+   * time if the value is null.
+   *
+   * This is directly integrated to the API because this is expected to be
+   * useful during interactive testing as well as unit testing (where we
+   * could simply evaluate arbitrary code in the backend to achieve the same
+   * goal).
+   */
+  TEST_timeWarp({ fakeNow }) {
+    this.__bridgeSend({
+      type: "TEST_timeWarp",
+      fakeNow,
     });
   }
 

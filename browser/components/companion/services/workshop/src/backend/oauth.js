@@ -110,7 +110,6 @@ export function ensureUpdatedCredentials(
     });
   }
   logic(scope, "credentials-ok");
-  // Not OAUTH; everything is fine.
   return Promise.resolve(false);
 }
 
