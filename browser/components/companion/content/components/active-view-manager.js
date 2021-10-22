@@ -342,9 +342,7 @@ export default class ActiveViewManager extends HTMLElement {
   #openPageActionPanel(target, view) {
     this.#pageActionView = view;
     let panel = this.#getPageActionPanel();
-    PanelMultiView.openPopup(panel, target, {
-      position: "bottomcenter topright",
-    }).catch(Cu.reportError);
+    PanelMultiView.openPopup(panel, target, "after_end").catch(Cu.reportError);
   }
 
   #getPageActionPanel() {

@@ -273,16 +273,17 @@
 
 /** END Page info security icons **/
 
-#page-action-panel-sections {
-  width: 428px;
+#page-action-panel {
+  margin-inline-end: -30px;
 }
 
 #page-action-panel-sections {
+  width: 428px;
   padding: 8px;
 }
 
 #page-actions-section {
-  grid-template: 1fr / repeat(5, auto);
+  grid-template: 1fr / repeat(5, 85px);
   display: grid;
   padding-block: 2px 10px;
   border-bottom: 1px lightgray solid;

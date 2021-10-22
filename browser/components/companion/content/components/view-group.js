@@ -70,7 +70,7 @@ export default class ViewGroup extends MozLitElement {
       composed: true,
       detail: { view: this.activeView },
     });
-    event.target.dispatchEvent(e);
+    this.dispatchEvent(e);
     // We don't want this to get handled by the #onClick handler, since
     // that will then switch to the last View in this group.
     event.stopPropagation();
