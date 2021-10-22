@@ -24,6 +24,7 @@ export default function configurateFeed(userDetails /*, domainInfo*/) {
     typeFields: {},
     connInfoFields: {
       feedUrl: userDetails.feedUrl,
+      feedType: "",
     },
   };
 }

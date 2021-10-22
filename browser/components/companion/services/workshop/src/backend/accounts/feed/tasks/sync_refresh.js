@@ -16,7 +16,8 @@
 
 import logic from "logic";
 
-import { isJsonFeed, parseJsonFeed } from "../../../parsers/json/feed_parser";
+import { parseHFeedFromUrl } from "../../../parsers/html/feed_parser";
+import { parseJsonFeed } from "../../../parsers/json/feed_parser";
 import { fetchCacheAware } from "../../../utils/network";
 import { parseFeed } from "../../../parsers/xml/feed_parser";
 
@@ -116,36 +117,44 @@ export default TaskDefiner.defineAtMostOnceTask([
 
       logic(ctx, "syncStart", { syncDate });
 
-      // ### Fetch the feed.
-      const { response, requestCacheState } = await fetchCacheAware(
-        account.feedUrl,
-        syncState.rawSyncState.requestCacheState
-      );
-      syncState.rawSyncState.requestCacheState = requestCacheState;
-
-      if (!response) {
-        logic(ctx, "syncEnd", {});
-        return null;
-      }
-
-      const feedText = await response.text();
-      const parsed = isJsonFeed(await response.headers)
-        ? parseJsonFeed(feedText)
-        : parseFeed(feedText);
-
-      if (parsed?.rss?.channel.item) {
-        for (const item of parsed.rss.channel.item) {
-          syncState.ingestItem(item);
+      if (account.feedType === "html") {
+        const parsed = await parseHFeedFromUrl(account.feedUrl);
+        for (const entry of parsed.entries) {
+          syncState.ingestHEntry(entry);
         }
-      } else if (parsed?.feed?.entry) {
-        for (const entry of parsed.feed.entry) {
-          syncState.ingestEntry(entry);
+      } else {
+        // ### Fetch the feed.
+        const { response, requestCacheState } = await fetchCacheAware(
+          account.feedUrl,
+          syncState.rawSyncState.requestCacheState
+        );
+        syncState.rawSyncState.requestCacheState = requestCacheState;
+
+        if (!response) {
+          logic(ctx, "syncEnd", {});
+          return null;
         }
-      } else if (parsed?.entry) {
-        syncState.ingestEntry(parsed.entry);
-      } else if (parsed?.items) {
-        for (const item of parsed.items) {
-          syncState.ingestJsonItem(item);
+
+        const feedText = await response.text();
+        const parsed =
+          account.feedType === "json"
+            ? parseJsonFeed(feedText)
+            : parseFeed(feedText);
+
+        if (parsed?.rss?.channel.item) {
+          for (const item of parsed.rss.channel.item) {
+            syncState.ingestItem(item);
+          }
+        } else if (parsed?.feed?.entry) {
+          for (const entry of parsed.feed.entry) {
+            syncState.ingestEntry(entry);
+          }
+        } else if (parsed?.entry) {
+          syncState.ingestEntry(parsed.entry);
+        } else if (parsed?.items) {
+          for (const item of parsed.items) {
+            syncState.ingestJsonItem(item);
+          }
         }
       }
       logic(ctx, "syncEnd", {});

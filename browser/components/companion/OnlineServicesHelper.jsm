@@ -13,6 +13,10 @@ const parserUtils = Cc["@mozilla.org/parserutils;1"].getService(
   Ci.nsIParserUtils
 );
 
+const { parseHFromStr, parseHFromUrl } = ChromeUtils.import(
+  "resource:///modules/HParser.jsm"
+);
+
 const URL_REGEX = /(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])/gim;
 
 // Some common links provide nothing useful in the companion,
@@ -351,5 +355,7 @@ function MainThreadServices(window) {
         snippet: docFragment.textContent.trim(),
       };
     },
+    parseHFromUrl,
+    parseHFromStr,
   };
 }

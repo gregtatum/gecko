@@ -4583,12 +4583,7 @@ function MailAPIFactory(mainThreadService) {
         this.sendMessage(uid, cmd, args, `No service ${cmd} in the main thread.`);
       }
       try {
-        const result = mainThreadService[cmd](...args);
-        if (result instanceof Promise) {
-          result.then((res) => this.sendMessage(uid, cmd, res, null)).catch((err) => this.sendMessage(uid, cmd, args, `Main thread service threw: ${err.message}`));
-        } else {
-          this.sendMessage(uid, cmd, result, null);
-        }
+        Promise.resolve(mainThreadService[cmd](...args)).then((res) => this.sendMessage(uid, cmd, res, null)).catch((err) => this.sendMessage(uid, cmd, args, `Main thread service threw: ${err.message}`));
       } catch (ex) {
         this.sendMessage(uid, cmd, args, `Main thread service threw: ${ex.message}`);
       }

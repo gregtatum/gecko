@@ -1147,7 +1147,8 @@ var WorkshopBackend = (() => {
       credentials: {},
       typeFields: {},
       connInfoFields: {
-        feedUrl: userDetails.feedUrl
+        feedUrl: userDetails.feedUrl,
+        feedType: ""
       }
     };
   }
@@ -1244,6 +1245,28 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/backend/parsers/html/feed_parser.js
+  function isHFeed(headers) {
+    return (headers.get("content-type") || "").toLowerCase().split(";").map((e) => e.trim()).some((e) => e === "text/html");
+  }
+  function parseHFeedFromUrl(url) {
+    return callOnMainThread({
+      cmd: "parseHFromUrl",
+      args: [url, "feed"]
+    });
+  }
+  function parseHFeed(str, url) {
+    return callOnMainThread({
+      cmd: "parseHFromStr",
+      args: [str, url, "feed"]
+    });
+  }
+  var init_feed_parser = __esm({
+    "src/backend/parsers/html/feed_parser.js"() {
+      init_worker_router();
+    }
+  });
+
   // src/backend/parsers/json/feed_parser.js
   function isJsonFeed(headers) {
     return (headers.get("content-type") || "").toLowerCase().split(";").map((e) => e.trim()).some((e) => ["application/json", "application/feed+json"].includes(e));
@@ -1325,7 +1348,7 @@ var WorkshopBackend = (() => {
     return validate(obj, MainValidator);
   }
   var MissingRequiredError, InvalidValueError, StringValidator, OptionalString, RequiredString, OptionalInteger, OptionalBoolean, OptionalDate, AuthorValidator, HubValidator, AttachmentValidator, ItemValidator, MainValidator;
-  var init_feed_parser = __esm({
+  var init_feed_parser2 = __esm({
     "src/backend/parsers/json/feed_parser.js"() {
       MissingRequiredError = class extends Error {
         constructor(name) {
@@ -2749,7 +2772,7 @@ var WorkshopBackend = (() => {
     return parser.parse(str);
   }
   var Root;
-  var init_feed_parser2 = __esm({
+  var init_feed_parser3 = __esm({
     "src/backend/parsers/xml/feed_parser.js"() {
       init_atom();
       init_namespaces();
@@ -2806,7 +2829,18 @@ var WorkshopBackend = (() => {
         };
       }
       const feedText = await feedResp.text();
-      const parsed = isJsonFeed(await feedResp.headers) ? parseJsonFeed(feedText) : parseFeed(feedText);
+      const headers = await feedResp.headers;
+      let parsed;
+      if (isJsonFeed(headers)) {
+        parsed = parseJsonFeed(feedText);
+        connInfoFields.feedType = "json";
+      } else if (isHFeed(headers)) {
+        parsed = await parseHFeed(feedText, feedUrl);
+        connInfoFields.feedType = "html";
+      } else {
+        parsed = parseFeed(feedText);
+        connInfoFields.feedType = "xml";
+      }
       if (!parsed) {
         throw new Error("Cannot parse the feed stream");
       }
@@ -2830,6 +2864,7 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/feed/validator.js"() {
       init_feed_parser();
       init_feed_parser2();
+      init_feed_parser3();
     }
   });
 
@@ -8332,6 +8367,7 @@ var WorkshopBackend = (() => {
           this.foldersTOC = foldersTOC;
           this.folders = this.foldersTOC.items;
           this.feedUrl = accountDef.feedUrl;
+          this.feedType = accountDef.feedType;
         }
         toString() {
           return `[FeedAccount: ${this.id}]`;
@@ -10524,6 +10560,27 @@ var WorkshopBackend = (() => {
             description: ""
           };
         }
+        ingestHEntry(entry) {
+          const data = this._makeDefaultData();
+          data.guid = entry.uid?.[0] || entry.name?.[0] || entry.summary?.[0];
+          data.date = (entry.published?.[0] || NOW()).valueOf();
+          data.dateModified = (entry.updated?.[0] || NOW()).valueOf();
+          data.author = entry.author?.[0] || data.author;
+          data.title = entry.name?.[0] || data.title;
+          const content = entry.content?.[0] || {};
+          if (content.html) {
+            data.description = content.html;
+            data.contentType = "html";
+          } else {
+            data.description = content.value || "";
+            data.contentType = "plain";
+          }
+          const convId = `${this._accountId}.${data.guid}`;
+          this._makeItemConvTask({
+            convId,
+            item: data
+          });
+        }
         ingestItem(item) {
           const data = this._makeDefaultData();
           if (item.guid) {
@@ -10628,8 +10685,9 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/feed/tasks/sync_refresh.js"() {
       init_logic();
       init_feed_parser();
-      init_network();
       init_feed_parser2();
+      init_network();
+      init_feed_parser3();
       init_util();
       init_date();
       init_task_definer();
@@ -10675,27 +10733,34 @@ var WorkshopBackend = (() => {
             let account = await ctx.universe.acquireAccount(ctx, req.accountId);
             let syncDate = NOW();
             logic(ctx, "syncStart", { syncDate });
-            const { response, requestCacheState } = await fetchCacheAware(account.feedUrl, syncState.rawSyncState.requestCacheState);
-            syncState.rawSyncState.requestCacheState = requestCacheState;
-            if (!response) {
-              logic(ctx, "syncEnd", {});
-              return null;
-            }
-            const feedText = await response.text();
-            const parsed = isJsonFeed(await response.headers) ? parseJsonFeed(feedText) : parseFeed(feedText);
-            if (parsed?.rss?.channel.item) {
-              for (const item of parsed.rss.channel.item) {
-                syncState.ingestItem(item);
+            if (account.feedType === "html") {
+              const parsed = await parseHFeedFromUrl(account.feedUrl);
+              for (const entry of parsed.entries) {
+                syncState.ingestHEntry(entry);
               }
-            } else if (parsed?.feed?.entry) {
-              for (const entry of parsed.feed.entry) {
-                syncState.ingestEntry(entry);
+            } else {
+              const { response, requestCacheState } = await fetchCacheAware(account.feedUrl, syncState.rawSyncState.requestCacheState);
+              syncState.rawSyncState.requestCacheState = requestCacheState;
+              if (!response) {
+                logic(ctx, "syncEnd", {});
+                return null;
               }
-            } else if (parsed?.entry) {
-              syncState.ingestEntry(parsed.entry);
-            } else if (parsed?.items) {
-              for (const item of parsed.items) {
-                syncState.ingestJsonItem(item);
+              const feedText = await response.text();
+              const parsed = account.feedType === "json" ? parseJsonFeed(feedText) : parseFeed(feedText);
+              if (parsed?.rss?.channel.item) {
+                for (const item of parsed.rss.channel.item) {
+                  syncState.ingestItem(item);
+                }
+              } else if (parsed?.feed?.entry) {
+                for (const entry of parsed.feed.entry) {
+                  syncState.ingestEntry(entry);
+                }
+              } else if (parsed?.entry) {
+                syncState.ingestEntry(parsed.entry);
+              } else if (parsed?.items) {
+                for (const item of parsed.items) {
+                  syncState.ingestJsonItem(item);
+                }
               }
             }
             logic(ctx, "syncEnd", {});

@@ -31,6 +31,7 @@ export default class FeedAccount {
     this.folders = this.foldersTOC.items;
 
     this.feedUrl = accountDef.feedUrl;
+    this.feedType = accountDef.feedType;
   }
 
   toString() {

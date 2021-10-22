@@ -62,6 +62,36 @@ export default class FeedSyncStateHelper {
    * This function ingests an item coming from a RSS feed:
    *   https://www.rssboard.org/rss-specification#hrelementsOfLtitemgt
    */
+  ingestHEntry(entry) {
+    const data = this._makeDefaultData();
+    data.guid = entry.uid?.[0] || entry.name?.[0] || entry.summary?.[0];
+
+    data.date = (entry.published?.[0] || NOW()).valueOf();
+    data.dateModified = (entry.updated?.[0] || NOW()).valueOf();
+    data.author = entry.author?.[0] || data.author;
+    data.title = entry.name?.[0] || data.title;
+
+    const content = entry.content?.[0] || {};
+    if (content.html) {
+      data.description = content.html;
+      data.contentType = "html";
+    } else {
+      data.description = content.value || "";
+      data.contentType = "plain";
+    }
+
+    //console.log(data);
+    const convId = `${this._accountId}.${data.guid}`;
+    this._makeItemConvTask({
+      convId,
+      item: data,
+    });
+  }
+
+  /**
+   * This function ingests an item coming from a RSS feed:
+   *   https://www.rssboard.org/rss-specification#hrelementsOfLtitemgt
+   */
   ingestItem(item) {
     const data = this._makeDefaultData();
     if (item.guid) {
