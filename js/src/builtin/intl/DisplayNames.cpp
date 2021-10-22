@@ -10,6 +10,7 @@
 
 #include "mozilla/Assertions.h"
 #include "mozilla/intl/DateTimePatternGenerator.h"
+#include "mozilla/intl/DisplayNames.h"
 #include "mozilla/intl/Locale.h"
 #include "mozilla/Span.h"
 #include "mozilla/TextUtils.h"
@@ -219,11 +220,10 @@ static bool MozDisplayNames(JSContext* cx, unsigned argc, Value* vp) {
 void js::DisplayNamesObject::finalize(JSFreeOp* fop, JSObject* obj) {
   MOZ_ASSERT(fop->onMainThread());
 
-  if (ULocaleDisplayNames* ldn =
-          obj->as<DisplayNamesObject>().getLocaleDisplayNames()) {
+  if (mozilla::intl::DisplayNames* displayNames =
+          obj->as<DisplayNamesObject>().getDisplayNames()) {
     intl::RemoveICUCellMemory(fop, obj, DisplayNamesObject::EstimatedMemoryUse);
-
-    uldn_close(ldn);
+    delete displayNames;
   }
 }
 
@@ -260,64 +260,34 @@ bool JS::AddMozDisplayNamesConstructor(JSContext* cx, HandleObject intl) {
   return DefineDataProperty(cx, intl, cx->names().DisplayNames, ctorValue, 0);
 }
 
-// Note: Abbreviated is a non-standard extension for MozDisplayNames.
-enum class DisplayNamesStyle { Long, Abbreviated, Short, Narrow };
-
-enum class DisplayNamesFallback { None, Code };
-
-enum class DisplayNamesLanguageDisplay { Standard, Dialect };
-
-static ULocaleDisplayNames* NewULocaleDisplayNames(
-    JSContext* cx, const char* locale, DisplayNamesStyle displayStyle,
-    DisplayNamesLanguageDisplay languageDisplay) {
-  UErrorCode status = U_ZERO_ERROR;
-
-  UDisplayContext contexts[] = {
-      // Use either standard or dialect names.
-      // For example either "English (GB)" or "British English".
-      languageDisplay == DisplayNamesLanguageDisplay::Standard
-          ? UDISPCTX_STANDARD_NAMES
-          : UDISPCTX_DIALECT_NAMES,
-
-      // Assume the display names are used in a stand-alone context.
-      UDISPCTX_CAPITALIZATION_FOR_STANDALONE,
-
-      // Select either the long or short form. There's no separate narrow form
-      // available in ICU, therefore we equate "narrow"/"short" styles here.
-      displayStyle == DisplayNamesStyle::Long ? UDISPCTX_LENGTH_FULL
-                                              : UDISPCTX_LENGTH_SHORT,
-
-      // Don't apply substitutes, because we need to apply our own fallbacks.
-      UDISPCTX_NO_SUBSTITUTE,
-  };
-
-  ULocaleDisplayNames* ldn = uldn_openForContext(IcuLocale(locale), contexts,
-                                                 std::size(contexts), &status);
-  if (U_FAILURE(status)) {
-    intl::ReportInternalError(cx);
+static mozilla::intl::DisplayNames* NewDisplayNames(
+    JSContext* cx, const char* locale,
+    mozilla::intl::DisplayNames::Options& options) {
+  auto result =
+      mozilla::intl::DisplayNames::TryCreate(IcuLocale(locale), options);
+  if (result.isErr()) {
+    intl::ReportInternalError(cx, result.unwrapErr());
     return nullptr;
   }
-  return ldn;
+  return result.unwrap().release();
 }
 
-static ULocaleDisplayNames* GetOrCreateLocaleDisplayNames(
+static mozilla::intl::DisplayNames* GetOrCreateDisplayNames(
     JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    DisplayNamesStyle displayStyle,
-    DisplayNamesLanguageDisplay languageDisplay =
-        DisplayNamesLanguageDisplay::Standard) {
-  // Obtain a cached ULocaleDisplayNames object.
-  ULocaleDisplayNames* ldn = displayNames->getLocaleDisplayNames();
-  if (!ldn) {
-    ldn = NewULocaleDisplayNames(cx, locale, displayStyle, languageDisplay);
-    if (!ldn) {
+    mozilla::intl::DisplayNames::Options& options) {
+  // Obtain a cached mozilla::intl::DisplayNames object.
+  mozilla::intl::DisplayNames* dn = displayNames->getDisplayNames();
+  if (!dn) {
+    dn = NewDisplayNames(cx, locale, options);
+    if (!dn) {
       return nullptr;
     }
-    displayNames->setLocaleDisplayNames(ldn);
+    displayNames->setDisplayNames(dn);
 
     intl::AddICUCellMemory(displayNames,
                            DisplayNamesObject::EstimatedMemoryUse);
   }
-  return ldn;
+  return dn;
 }
 
 static void ReportInvalidOptionError(JSContext* cx, const char* type,
@@ -356,8 +326,8 @@ static bool TryParseBaseName(JSContext* cx, HandleLinearString languageStr,
 
 static JSString* GetLanguageDisplayName(
     JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    DisplayNamesStyle displayStyle, DisplayNamesLanguageDisplay languageDisplay,
-    DisplayNamesFallback fallback, HandleLinearString languageStr) {
+    mozilla::intl::DisplayNames::Options& options,
+    HandleLinearString languageStr) {
   mozilla::intl::Locale tag;
   if (!TryParseBaseName(cx, languageStr, tag)) {
     return nullptr;
@@ -389,9 +359,9 @@ static JSString* GetLanguageDisplayName(
     return nullptr;
   }
 
-  ULocaleDisplayNames* ldn = GetOrCreateLocaleDisplayNames(
-      cx, displayNames, locale, displayStyle, languageDisplay);
-  if (!ldn) {
+  mozilla::intl::DisplayNames* dn =
+      GetOrCreateDisplayNames(cx, displayNames, locale, options);
+  if (!dn) {
     return nullptr;
   }
 
@@ -413,19 +383,18 @@ static JSString* GetLanguageDisplayName(
   }
 
   // Return the canonicalized input when no localized language name was found.
-  if (str->empty() && fallback == DisplayNamesFallback::Code) {
+  if (str->empty() && fallback == mozilla::intl::DisplayNames::Fallback::Code) {
     return NewStringCopyZ<CanGC>(cx, languageChars.get());
   }
 
   return str;
 }
 
-static JSString* GetScriptDisplayName(JSContext* cx,
-                                      Handle<DisplayNamesObject*> displayNames,
-                                      const char* locale,
-                                      DisplayNamesStyle displayStyle,
-                                      DisplayNamesFallback fallback,
-                                      HandleLinearString scriptStr) {
+static JSString* GetScriptDisplayName(
+    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
+    mozilla::intl::DisplayNames::Style displayStyle,
+    mozilla::intl::DisplayNames::Fallback fallback,
+    HandleLinearString scriptStr) {
   mozilla::intl::ScriptSubtag script;
   if (!intl::ParseStandaloneScriptTag(scriptStr, script)) {
     ReportInvalidOptionError(cx, "script", scriptStr);
@@ -451,7 +420,7 @@ static JSString* GetScriptDisplayName(JSContext* cx,
   // to the long form.)
   //
   // ICU bug: https://unicode-org.atlassian.net/browse/ICU-9301
-  if (displayStyle == DisplayNamesStyle::Long) {
+  if (displayStyle == mozilla::intl::DisplayNames::Style::Long) {
     // |uloc_getDisplayScript| expects a full locale identifier as its input.
     intl::FormatBuffer<char> buffer(cx);
     if (auto result = tag.toString(buffer); result.isErr()) {
@@ -483,7 +452,8 @@ static JSString* GetScriptDisplayName(JSContext* cx,
     }
 
     // Return the case-canonicalized input when no localized name was found.
-    if (str->empty() && fallback == DisplayNamesFallback::Code) {
+    if (str->empty() &&
+        fallback == mozilla::intl::DisplayNames::Fallback::Code) {
       script.toTitleCase();
       return NewStringCopy<CanGC>(cx, script.span());
     }
@@ -499,7 +469,7 @@ static JSString* GetScriptDisplayName(JSContext* cx,
               scriptChars);
 
   ULocaleDisplayNames* ldn =
-      GetOrCreateLocaleDisplayNames(cx, displayNames, locale, displayStyle);
+      GetOrCreateDisplayNames(cx, displayNames, locale, displayStyle);
   if (!ldn) {
     return nullptr;
   }
@@ -521,7 +491,7 @@ static JSString* GetScriptDisplayName(JSContext* cx,
   }
 
   // Return the case-canonicalized input when no localized name was found.
-  if (str->empty() && fallback == DisplayNamesFallback::Code) {
+  if (str->empty() && fallback == mozilla::intl::DisplayNames::Fallback::Code) {
     script.toTitleCase();
     return NewStringCopy<CanGC>(cx, script.span());
   }
@@ -529,12 +499,11 @@ static JSString* GetScriptDisplayName(JSContext* cx,
   return str;
 }
 
-static JSString* GetRegionDisplayName(JSContext* cx,
-                                      Handle<DisplayNamesObject*> displayNames,
-                                      const char* locale,
-                                      DisplayNamesStyle displayStyle,
-                                      DisplayNamesFallback fallback,
-                                      HandleLinearString regionStr) {
+static JSString* GetRegionDisplayName(
+    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
+    mozilla::intl::DisplayNames::Style displayStyle,
+    mozilla::intl::DisplayNames::Fallback fallback,
+    HandleLinearString regionStr) {
   mozilla::intl::RegionSubtag region;
   if (!intl::ParseStandaloneRegionTag(regionStr, region)) {
     ReportInvalidOptionError(cx, "region", regionStr);
@@ -563,7 +532,7 @@ static JSString* GetRegionDisplayName(JSContext* cx,
               regionChars);
 
   ULocaleDisplayNames* ldn =
-      GetOrCreateLocaleDisplayNames(cx, displayNames, locale, displayStyle);
+      GetOrCreateDisplayNames(cx, displayNames, locale, displayStyle);
   if (!ldn) {
     return nullptr;
   }
@@ -585,7 +554,7 @@ static JSString* GetRegionDisplayName(JSContext* cx,
   }
 
   // Return the case-canonicalized input when no localized name was found.
-  if (str->empty() && fallback == DisplayNamesFallback::Code) {
+  if (str->empty() && fallback == mozilla::intl::DisplayNames::Fallback::Code) {
     region.toUpperCase();
     return NewStringCopy<CanGC>(cx, region.span());
   }
@@ -593,10 +562,11 @@ static JSString* GetRegionDisplayName(JSContext* cx,
   return str;
 }
 
-static JSString* GetCurrencyDisplayName(JSContext* cx, const char* locale,
-                                        DisplayNamesStyle displayStyle,
-                                        DisplayNamesFallback fallback,
-                                        HandleLinearString currencyStr) {
+static JSString* GetCurrencyDisplayName(
+    JSContext* cx, const char* locale,
+    mozilla::intl::DisplayNames::Style displayStyle,
+    mozilla::intl::DisplayNames::Fallback fallback,
+    HandleLinearString currencyStr) {
   // Inlined implementation of `IsWellFormedCurrencyCode ( currency )`.
   if (currencyStr->length() != 3) {
     ReportInvalidOptionError(cx, "currency", currencyStr);
@@ -616,14 +586,14 @@ static JSString* GetCurrencyDisplayName(JSContext* cx, const char* locale,
 
   UCurrNameStyle currencyStyle;
   switch (displayStyle) {
-    case DisplayNamesStyle::Long:
+    case mozilla::intl::DisplayNames::Style::Long:
       currencyStyle = UCURR_LONG_NAME;
       break;
-    case DisplayNamesStyle::Abbreviated:
-    case DisplayNamesStyle::Short:
+    case mozilla::intl::DisplayNames::Style::Abbreviated:
+    case mozilla::intl::DisplayNames::Style::Short:
       currencyStyle = UCURR_SYMBOL_NAME;
       break;
-    case DisplayNamesStyle::Narrow:
+    case mozilla::intl::DisplayNames::Style::Narrow:
       currencyStyle = UCURR_NARROW_SYMBOL_NAME;
       break;
   }
@@ -640,7 +610,7 @@ static JSString* GetCurrencyDisplayName(JSContext* cx, const char* locale,
 
   if (status == U_USING_DEFAULT_WARNING) {
     // Return the canonicalized input when no localized currency name was found.
-    if (fallback == DisplayNamesFallback::Code) {
+    if (fallback == mozilla::intl::DisplayNames::Fallback::Code) {
       // Canonical case for currency is upper case.
       return js::StringToUpperCase(cx, currencyStr);
     }
@@ -652,7 +622,8 @@ static JSString* GetCurrencyDisplayName(JSContext* cx, const char* locale,
 
 static JSString* GetCalendarDisplayName(
     JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    DisplayNamesStyle displayStyle, DisplayNamesFallback fallback,
+    mozilla::intl::DisplayNames::Style displayStyle,
+    mozilla::intl::DisplayNames::Fallback fallback,
     HandleLinearString calendarStr) {
   // Report an error if the input can't be parsed as a Unicode type nonterminal.
   if (calendarStr->empty() || !StringIsAscii(calendarStr)) {
@@ -694,7 +665,7 @@ static JSString* GetCalendarDisplayName(
     // |uldn_keyValueDisplayName| expects old-style keyword values.
     if (const char* cal = uloc_toLegacyType("calendar", canonicalCalendar)) {
       ULocaleDisplayNames* ldn =
-          GetOrCreateLocaleDisplayNames(cx, displayNames, locale, displayStyle);
+          GetOrCreateDisplayNames(cx, displayNames, locale, displayStyle);
       if (!ldn) {
         return nullptr;
       }
@@ -723,7 +694,7 @@ static JSString* GetCalendarDisplayName(
   }
 
   // Return the canonicalized input when no localized calendar name was found.
-  if (fallback == DisplayNamesFallback::Code) {
+  if (fallback == mozilla::intl::DisplayNames::Fallback::Code) {
     // Canonical case for calendar is lower case.
     return js::StringToLowerCase(cx, calendarStr);
   }
@@ -852,12 +823,10 @@ static ListObject* GetDateTimeDisplayNames(
   return names;
 }
 
-static JSString* GetWeekdayDisplayName(JSContext* cx,
-                                       Handle<DisplayNamesObject*> displayNames,
-                                       const char* locale,
-                                       HandleLinearString calendar,
-                                       DisplayNamesStyle displayStyle,
-                                       HandleLinearString code) {
+static JSString* GetWeekdayDisplayName(
+    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
+    HandleLinearString calendar,
+    mozilla::intl::DisplayNames::Style displayStyle, HandleLinearString code) {
   uint8_t weekday;
   {
     double d;
@@ -876,21 +845,21 @@ static JSString* GetWeekdayDisplayName(JSContext* cx,
 
   UDateFormatSymbolType symbolType;
   switch (displayStyle) {
-    case DisplayNamesStyle::Long:
+    case mozilla::intl::DisplayNames::Style::Long:
       symbolType = UDAT_STANDALONE_WEEKDAYS;
       break;
 
-    case DisplayNamesStyle::Abbreviated:
+    case mozilla::intl::DisplayNames::Style::Abbreviated:
       // ICU "short" is CLDR "abbreviated" format.
       symbolType = UDAT_STANDALONE_SHORT_WEEKDAYS;
       break;
 
-    case DisplayNamesStyle::Short:
+    case mozilla::intl::DisplayNames::Style::Short:
       // ICU "shorter" is CLDR "short" format.
       symbolType = UDAT_STANDALONE_SHORTER_WEEKDAYS;
       break;
 
-    case DisplayNamesStyle::Narrow:
+    case mozilla::intl::DisplayNames::Style::Narrow:
       symbolType = UDAT_STANDALONE_NARROW_WEEKDAYS;
       break;
   }
@@ -911,8 +880,9 @@ static JSString* GetWeekdayDisplayName(JSContext* cx,
 
 static JSString* GetMonthDisplayName(
     JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    HandleLinearString calendar, DisplayNamesStyle displayStyle,
-    DisplayNamesFallback fallback, HandleLinearString code) {
+    HandleLinearString calendar,
+    mozilla::intl::DisplayNames::Style displayStyle,
+    mozilla::intl::DisplayNames::Fallback fallback, HandleLinearString code) {
   uint8_t month;
   {
     double d;
@@ -931,16 +901,16 @@ static JSString* GetMonthDisplayName(
 
   UDateFormatSymbolType symbolType;
   switch (displayStyle) {
-    case DisplayNamesStyle::Long:
+    case mozilla::intl::DisplayNames::Style::Long:
       symbolType = UDAT_STANDALONE_MONTHS;
       break;
 
-    case DisplayNamesStyle::Abbreviated:
-    case DisplayNamesStyle::Short:
+    case mozilla::intl::DisplayNames::Style::Abbreviated:
+    case mozilla::intl::DisplayNames::Style::Short:
       symbolType = UDAT_STANDALONE_SHORT_MONTHS;
       break;
 
-    case DisplayNamesStyle::Narrow:
+    case mozilla::intl::DisplayNames::Style::Narrow:
       symbolType = UDAT_STANDALONE_NARROW_MONTHS;
       break;
   }
@@ -959,18 +929,16 @@ static JSString* GetMonthDisplayName(
   MOZ_ASSERT(names->length() == std::size(indices));
 
   JSString* str = names->get(month - 1).toString();
-  if (str->empty() && fallback == DisplayNamesFallback::Code) {
+  if (str->empty() && fallback == mozilla::intl::DisplayNames::Fallback::Code) {
     return cx->staticStrings().getInt(month);
   }
   return str;
 }
 
-static JSString* GetQuarterDisplayName(JSContext* cx,
-                                       Handle<DisplayNamesObject*> displayNames,
-                                       const char* locale,
-                                       HandleLinearString calendar,
-                                       DisplayNamesStyle displayStyle,
-                                       HandleLinearString code) {
+static JSString* GetQuarterDisplayName(
+    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
+    HandleLinearString calendar,
+    mozilla::intl::DisplayNames::Style displayStyle, HandleLinearString code) {
   uint8_t quarter;
   {
     double d;
@@ -989,13 +957,13 @@ static JSString* GetQuarterDisplayName(JSContext* cx,
 
   UDateFormatSymbolType symbolType;
   switch (displayStyle) {
-    case DisplayNamesStyle::Long:
+    case mozilla::intl::DisplayNames::Style::Long:
       symbolType = UDAT_STANDALONE_QUARTERS;
       break;
 
-    case DisplayNamesStyle::Abbreviated:
-    case DisplayNamesStyle::Short:
-    case DisplayNamesStyle::Narrow:
+    case mozilla::intl::DisplayNames::Style::Abbreviated:
+    case mozilla::intl::DisplayNames::Style::Short:
+    case mozilla::intl::DisplayNames::Style::Narrow:
       // CLDR "narrow" style not supported in ICU.
       symbolType = UDAT_STANDALONE_SHORT_QUARTERS;
       break;
@@ -1042,9 +1010,10 @@ static JSString* GetDayPeriodDisplayName(
   return names->get(index).toString();
 }
 
-static JSString* GetDateTimeFieldDisplayName(JSContext* cx, const char* locale,
-                                             DisplayNamesStyle displayStyle,
-                                             HandleLinearString dateTimeField) {
+static JSString* GetDateTimeFieldDisplayName(
+    JSContext* cx, const char* locale,
+    mozilla::intl::DisplayNames::Style displayStyle,
+    HandleLinearString dateTimeField) {
   // Inlined implementation of `IsValidDateTimeFieldCode ( field )`.
   UDateTimePatternField field;
   if (StringEqualsLiteral(dateTimeField, "era")) {
@@ -1078,14 +1047,14 @@ static JSString* GetDateTimeFieldDisplayName(JSContext* cx, const char* locale,
 
   UDateTimePGDisplayWidth width;
   switch (displayStyle) {
-    case DisplayNamesStyle::Long:
+    case mozilla::intl::DisplayNames::Style::Long:
       width = UDATPG_WIDE;
       break;
-    case DisplayNamesStyle::Abbreviated:
-    case DisplayNamesStyle::Short:
+    case mozilla::intl::DisplayNames::Style::Abbreviated:
+    case mozilla::intl::DisplayNames::Style::Short:
       width = UDATPG_ABBREVIATED;
       break;
-    case DisplayNamesStyle::Narrow:
+    case mozilla::intl::DisplayNames::Style::Narrow:
       width = UDATPG_NARROW;
       break;
   }
@@ -1136,7 +1105,7 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
-  DisplayNamesStyle displayStyle;
+  mozilla::intl::DisplayNames::Style displayStyle;
   {
     JSLinearString* style = args[3].toString()->ensureLinear(cx);
     if (!style) {
@@ -1144,18 +1113,18 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
     }
 
     if (StringEqualsLiteral(style, "long")) {
-      displayStyle = DisplayNamesStyle::Long;
+      displayStyle = mozilla::intl::DisplayNames::Style::Long;
     } else if (StringEqualsLiteral(style, "short")) {
-      displayStyle = DisplayNamesStyle::Short;
+      displayStyle = mozilla::intl::DisplayNames::Style::Short;
     } else if (StringEqualsLiteral(style, "narrow")) {
-      displayStyle = DisplayNamesStyle::Narrow;
+      displayStyle = mozilla::intl::DisplayNames::Style::Narrow;
     } else {
       MOZ_ASSERT(StringEqualsLiteral(style, "abbreviated"));
-      displayStyle = DisplayNamesStyle::Abbreviated;
+      displayStyle = mozilla::intl::DisplayNames::Style::Abbreviated;
     }
   }
 
-  DisplayNamesLanguageDisplay languageDisplay;
+  mozilla::intl::DisplayNames::LanguageDisplay languageDisplay;
   {
     JSLinearString* language = args[4].toString()->ensureLinear(cx);
     if (!language) {
@@ -1163,15 +1132,15 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
     }
 
     if (StringEqualsLiteral(language, "dialect")) {
-      languageDisplay = DisplayNamesLanguageDisplay::Dialect;
+      languageDisplay = mozilla::intl::DisplayNames::LanguageDisplay::Dialect;
     } else {
       MOZ_ASSERT(language->empty() ||
                  StringEqualsLiteral(language, "standard"));
-      languageDisplay = DisplayNamesLanguageDisplay::Standard;
+      languageDisplay = mozilla::intl::DisplayNames::LanguageDisplay::Standard;
     }
   }
 
-  DisplayNamesFallback displayFallback;
+  mozilla::intl::DisplayNames::Fallback displayFallback;
   {
     JSLinearString* fallback = args[5].toString()->ensureLinear(cx);
     if (!fallback) {
@@ -1179,10 +1148,10 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
     }
 
     if (StringEqualsLiteral(fallback, "none")) {
-      displayFallback = DisplayNamesFallback::None;
+      displayFallback = mozilla::intl::DisplayNames::Fallback::None;
     } else {
       MOZ_ASSERT(StringEqualsLiteral(fallback, "code"));
-      displayFallback = DisplayNamesFallback::Code;
+      displayFallback = mozilla::intl::DisplayNames::Fallback::Code;
     }
   }
 
@@ -1230,7 +1199,7 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
 
   if (!result->empty()) {
     args.rval().setString(result);
-  } else if (displayFallback == DisplayNamesFallback::Code) {
+  } else if (displayFallback == mozilla::intl::DisplayNames::Fallback::Code) {
     args.rval().setString(code);
   } else {
     args.rval().setUndefined();
