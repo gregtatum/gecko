@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* import-globals-from ../../preferences/preferences.js */
+
 import { MozLitElement } from "./widget-utils.js";
 import { classMap, html, css } from "./lit.all.js";
 
@@ -15,6 +17,7 @@ export class RefreshServicesButton extends MozLitElement {
   static get properties() {
     return {
       isRefreshing: { type: Boolean },
+      servicesConnected: { type: Boolean },
     };
   }
 
@@ -67,6 +70,30 @@ export class RefreshServicesButton extends MozLitElement {
   constructor() {
     super();
     this.isRefreshing = false;
+    this.updateServicesConnected = this.updateServicesConnected.bind(this);
+    this.updateServicesConnected();
+  }
+
+  updateServicesConnected() {
+    this.servicesConnected = !!OnlineServices.getAllServices().length;
+  }
+
+  connectedCallback() {
+    Services.obs.addObserver(this.updateServicesConnected, "companion-signin");
+    Services.obs.addObserver(this.updateServicesConnected, "companion-signout");
+    super.connectedCallback();
+  }
+
+  disconnectedCallback() {
+    Services.obs.removeObserver(
+      this.updateServicesConnected,
+      "companion-signin"
+    );
+    Services.obs.removeObserver(
+      this.updateServicesConnected,
+      "companion-signout"
+    );
+    super.connectedCallback();
   }
 
   async onClick() {
@@ -82,6 +109,7 @@ export class RefreshServicesButton extends MozLitElement {
   render() {
     return html`
       <button
+        ?hidden=${!this.servicesConnected}
         @click=${this.onClick}
         ?disabled=${this.isRefreshing}
         class=${classMap({
