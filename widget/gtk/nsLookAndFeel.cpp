@@ -77,6 +77,8 @@ static void settings_changed_cb(GtkSettings*, GParamSpec*, void*) {
   widget::IMContextWrapper::OnThemeChanged();
 }
 
+static bool sCSDAvailable;
+
 nsLookAndFeel::nsLookAndFeel() {
   static constexpr nsLiteralCString kObservedSettings[] = {
       // Affects system font sizes.
@@ -110,6 +112,9 @@ nsLookAndFeel::nsLookAndFeel() {
     g_signal_connect_after(settings, setting.get(),
                            G_CALLBACK(settings_changed_cb), nullptr);
   }
+
+  sCSDAvailable =
+      nsWindow::GetSystemGtkWindowDecoration() != nsWindow::GTK_DECORATION_NONE;
 }
 
 nsLookAndFeel::~nsLookAndFeel() {
@@ -786,12 +791,7 @@ nsresult nsLookAndFeel::NativeGetInt(IntID aID, int32_t& aResult) {
       aResult = 2;
       break;
     case IntID::GTKCSDAvailable:
-      EnsureInit();
-      aResult = mCSDAvailable;
-      break;
-    case IntID::GTKCSDHideTitlebarByDefault:
-      EnsureInit();
-      aResult = mCSDHideTitlebarByDefault;
+      aResult = sCSDAvailable;
       break;
     case IntID::GTKCSDMaximizeButton:
       EnsureInit();
@@ -1243,10 +1243,6 @@ void nsLookAndFeel::EnsureInit() {
   } else {
     mCaretBlinkCount = -1;
   }
-
-  mCSDAvailable =
-      nsWindow::GtkWindowDecoration() != nsWindow::GTK_DECORATION_NONE;
-  mCSDHideTitlebarByDefault = nsWindow::HideTitlebarByDefault();
 
   mSystemTheme.Init();
 
@@ -1839,6 +1835,28 @@ char16_t nsLookAndFeel::GetPasswordCharacterImpl() {
 }
 
 bool nsLookAndFeel::GetEchoPasswordImpl() { return false; }
+
+bool nsLookAndFeel::GetDefaultDrawInTitlebar() {
+  static bool drawInTitlebar = []() {
+    // When user defined widget.default-hidden-titlebar don't do any
+    // heuristics and just follow it.
+    if (Preferences::HasUserValue("widget.default-hidden-titlebar")) {
+      return Preferences::GetBool("widget.default-hidden-titlebar", false);
+    }
+
+    // Don't hide titlebar when it's disabled on current desktop.
+    const char* currentDesktop = getenv("XDG_CURRENT_DESKTOP");
+    if (!currentDesktop || !sCSDAvailable) {
+      return false;
+    }
+
+    // We hide system titlebar on Gnome/ElementaryOS without any restriction.
+    return strstr(currentDesktop, "GNOME-Flashback:GNOME") ||
+           strstr(currentDesktop, "GNOME") ||
+           strstr(currentDesktop, "Pantheon");
+  }();
+  return drawInTitlebar;
+}
 
 void nsLookAndFeel::GetThemeInfo(nsACString& aInfo) {
   aInfo.Append(mSystemTheme.mName);
