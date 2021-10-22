@@ -250,7 +250,7 @@
             </menu>
 
             <menu id="history-menu" data-l10n-id="menu-history">
-              <menupopup id="goPopup"
+              <menupopup id="historyMenuPopup"
 #ifndef XP_MACOSX
                          placespopup="true"
                          is="places-popup"
