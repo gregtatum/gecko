@@ -93,6 +93,7 @@ export class CalendarEventList extends MozLitElement {
       }
 
       .calendar-event {
+        margin: 0 8px;
         border-block-start: 1px solid var(--in-content-border-color);
       }
 
@@ -102,11 +103,24 @@ export class CalendarEventList extends MozLitElement {
       }
 
       .calendar-break-time {
+        position: relative;
         display: flex;
-        padding: 4px 16px;
-        font-size: 0.67em;
-        font-weight: 500;
-        color: rgba(0, 135, 135, 1);
+        align-items: center;
+        justify-content: center;
+        padding: 0 8px;
+        color: var(--in-content-deemphasized-text);
+      }
+
+      .calendar-break-time-divider {
+        border-block-start: 1px solid var(--in-content-border-color);
+        width: 100%;
+      }
+
+      .calendar-break-time-label {
+        position: absolute;
+        background-color: var(--in-content-page-background);
+        padding: 0 8px;
+        display: flex;
       }
 
       .calendar-break-time-icon {
@@ -118,6 +132,11 @@ export class CalendarEventList extends MozLitElement {
         background-position: center;
         fill: currentColor;
         -moz-context-properties: fill;
+      }
+
+      .calendar-break-time-text {
+        font-size: 0.67em;
+        font-weight: 400;
       }
     `;
   }
@@ -207,14 +226,17 @@ export class CalendarEventList extends MozLitElement {
         event.isBreakTime
           ? html`
               <div class="calendar-break-time">
-                <span class="calendar-break-time-icon"></span>
-                <span
-                  class="calendar-break-time-label"
-                  data-l10n-id="companion-event-break"
-                  data-l10n-args=${JSON.stringify({
-                    duration: event.length,
-                  })}
-                ></span>
+                <hr class="calendar-break-time-divider"></hr>
+                <div class="calendar-break-time-label">
+                  <span class="calendar-break-time-icon"></span>
+                  <span
+                    class="calendar-break-time-text"
+                    data-l10n-id="companion-event-break"
+                    data-l10n-args=${JSON.stringify({
+                      duration: event.length,
+                    })}
+                  ></span>
+                </div>
               </div>
             `
           : html`
@@ -258,7 +280,7 @@ class CalendarEvent extends MozLitElement {
       @import url("chrome://global/skin/in-content/common.css");
 
       .event {
-        padding: 16px;
+        padding: 16px 8px;
       }
 
       .conference-info {

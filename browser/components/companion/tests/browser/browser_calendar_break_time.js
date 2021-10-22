@@ -61,7 +61,7 @@ add_task(async function testBreakIndicatorsBetweenMeetings() {
 
         is(breaks.length, 1, "Displays one break between meetings.");
 
-        let breakLabel = breaks[0].querySelector(".calendar-break-time-label");
+        let breakLabel = breaks[0].querySelector(".calendar-break-time-text");
         let duration = content.document.l10n.getAttributes(breakLabel).args
           .duration;
 
