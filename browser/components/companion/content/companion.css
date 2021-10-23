@@ -93,7 +93,7 @@ h2 {
   font-weight: normal;
 }
 
-.snapshot, .email, .app-overview {
+.email, .app-overview {
   display: flex;
   flex-direction: row;
   justify-content: start;
@@ -117,7 +117,7 @@ h2 {
   align-self: center;
 }
 
-.snapshot .snapshot-contents, .app-overview .title {
+.app-overview .title {
   flex: 1;
   white-space: nowrap;
   text-overflow: ellipsis;

@@ -116,6 +116,9 @@ last-session-title = Last Session
 # restores the users last session.
 restore-session = Restore
 
+# This string is used session cards to display the number of sites within a session
+session-pages-count = { $pages } sites
+
 # These are shown in the now tab when the user has set aside a session and
 # entered "Flow Reset" state.
 session-cleared-title = All cleared

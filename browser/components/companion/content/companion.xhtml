@@ -136,39 +136,39 @@
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-snapshot-list">
-    <link rel="stylesheet" href="snapshots-list.css"/>
+    <link rel="stylesheet" href="card.css"/>
     <h2 class="list-title"/>
     <div class="snapshots-panel"/>
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-snapshot">
-    <div class="snapshot-favicon"><img /></div>
-    <div class="snapshot-contents">
-      <span class="title"/>
-      <span class="info">
-        <span class="snapshot-sitetitle"/>
-        <span class="snapshot-info-divider"/>
-        <span class="snapshot-date"/>
-      </span>
+    <div class="snapshot-contents contents">
+      <div class="info">
+        <span class="title"/>
+        <span class="snapshot-sitetitle sub"/>
+        <span class="info-divider sub"/>
+        <span class="snapshot-date sub"/>
+      </div>
+      <div class="card-image"><img /></div>
     </div>
-    <span class="snapshot-delete"/>
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-last-session-list">
+    <link rel="stylesheet" href="card.css"/>
     <link rel="stylesheet" href="sessions.css"/>
     <h2 class="list-title" data-l10n-id="last-session-title"/>
     <div class="last-sessions-panel"/>
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-session-card">
-    <div class="session-card">
-      <div class="data">
-        <p class="title"/>
-        <p class="details"/>
+    <div class="session-card contents">
+      <div class="info">
+        <span class="title"/>
+        <span class="pages sub" data-l10n-id="session-pages-count"/>
+        <span class="info-divider sub"/>
+        <span class="date sub"/>
       </div>
-      <div class="card-image">
-        <img class="site-icon"/>
-      </div>
+      <div class="card-image"><img /></div>
     </div>
     <div class="extended">
       <div class="icons"/>

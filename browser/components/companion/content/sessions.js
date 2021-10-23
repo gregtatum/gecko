@@ -49,9 +49,10 @@ export class SessionCard extends HTMLElement {
     let template = document.getElementById("template-session-card");
     let fragment = template.content.cloneNode(true);
 
-    fragment.querySelector(".details").textContent = `${
-      data.pages.length
-    } sites • ${timeSince(data.lastSavedAt)}`;
+    fragment.querySelector(".pages").dataset.l10nArgs = JSON.stringify({
+      pages: data.pages.length,
+    });
+    fragment.querySelector(".date").textContent = timeSince(data.lastSavedAt);
     fragment.querySelector(".title").textContent = sessionTitle(data);
 
     data.pages.length = Math.min(data.pages.length, MAX_ICONS);
@@ -62,7 +63,9 @@ export class SessionCard extends HTMLElement {
       return img;
     });
 
-    fragment.querySelector(".site-icon").src = pageToDataURI(data.pages[0]);
+    fragment.querySelector(".card-image > img").src = pageToDataURI(
+      data.pages[0]
+    );
     fragment.querySelector(".icons").replaceChildren(...icons);
     fragment.querySelector(".session-card").addEventListener("click", this);
 

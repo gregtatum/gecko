@@ -1,0 +1,67 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.card {
+  display: block;
+  margin: 1em;
+  background: #F0F0F4;
+  border: 0.5px solid #AFAFBA;
+  box-sizing: border-box;
+  border-radius: 8px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.card:hover {
+  background: #F9F9FB;
+  border: 0.5px solid #CFCFD8;
+}
+
+.contents {
+  display: flex;
+}
+
+.info {
+  padding: 10px;
+  width: 15em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.title {
+  font-size: 13px;
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  margin-block-end: .5em;
+}
+
+.sub {
+  color: #5B5B66;
+  font-size: 12px;
+}
+
+.info-divider::after {
+  content: "\00B7";
+  font-size: 30px;
+  line-height: 0;
+  position: relative;
+  top: 4px;
+}
+
+.card-image {
+  flex-grow: 2;
+  background: darkgray;
+  border-radius: 0 8px 8px 0;
+  width: 8em;
+  display: flex;
+  align-items: flex-end;
+}
+
+.card-image img {
+  width: 16px;
+  height: 16px;
+  margin: 8px;
+}

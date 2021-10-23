@@ -42,36 +42,16 @@ export class Snapshot extends HTMLElement {
 
     // TODO: MR2-344: Fetch a richer image preview and display it along with the
     // favicon.
-    let iconEl = fragment.querySelector(".snapshot-favicon > img");
+    let iconEl = fragment.querySelector(".card-image > img");
     iconEl.src = window.CompanionUtils.getFavicon(url.href) || DEFAULT_FAVICON;
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
-    this.addEventListener("mouseover", this);
-    this.addEventListener("mouseout", this);
   }
 
   handleEvent(event) {
     switch (event.type) {
-      case "mouseover": {
-        if (event.target.classList.contains("snapshot-delete")) {
-          this.toggleAttribute("removeIsHovered", true);
-        }
-        break;
-      }
-      case "mouseout": {
-        if (event.target.classList.contains("snapshot-delete")) {
-          this.removeAttribute("removeIsHovered");
-        }
-        break;
-      }
       case "click": {
-        if (event.target.classList.contains("snapshot-delete")) {
-          window.CompanionUtils.sendAsyncMessage("Companion:DeleteSnapshot", {
-            url: this.data.url,
-          });
-          break;
-        }
         window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
           url: this.data.url,
         });
