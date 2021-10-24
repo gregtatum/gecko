@@ -311,25 +311,18 @@ function buildExtraServiceRows() {
   let extraServicesContainer = document.getElementById(
     "extra-services-container"
   );
-  // we want to show different account options if using workshop backend
-  if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled", false)) {
-    extraServicesContainer.append(
-      document.createElement("workshop-services-list")
-    );
-  } else {
-    let services = OnlineServices.getAllServices();
-    let nodes = [];
+  let services = OnlineServices.getAllServices();
+  let nodes = [];
 
-    for (let serviceData of extraServices) {
-      // Check if there is a connected account for a service.
-      // TODO: This assumes a user only has 1 account of every service...
-      let connectedService = services.find(s => s.app === serviceData.type);
+  for (let serviceData of extraServices) {
+    // Check if there is a connected account for a service.
+    // TODO: This assumes a user only has 1 account of every service...
+    let connectedService = services.find(s => s.app === serviceData.type);
 
-      nodes.push(new ServiceRow(connectedService, serviceData));
-    }
-
-    extraServicesContainer.replaceChildren(...nodes);
+    nodes.push(new ServiceRow(connectedService, serviceData));
   }
+
+  extraServicesContainer.replaceChildren(...nodes);
 }
 
 async function buildFirefoxAccount() {

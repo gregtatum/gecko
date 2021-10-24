@@ -55,7 +55,6 @@ browser.jar:
     content/browser/companion/widget-utils.js (content/widget-utils.js)
     content/browser/companion/workshop-api-built.js (services/workshop/build/workshop-api-built.js)
     content/browser/companion/workshop-worker-built.js (services/workshop/build/workshop-worker-built.js)
-    content/browser/companion/workshop-services.js (content/workshop-services.js)
     content/browser/companion/zoom.png (content/zoom.png)
     content/browser/companion/components/companion-manager.js (content/components/companion-manager.js)
     content/browser/companion/components/companion-manager.css (content/components/companion-manager.css)
