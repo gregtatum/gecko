@@ -1023,16 +1023,6 @@ nsXULAppInfo::GetUniqueProcessID(uint64_t* aResult) {
 }
 
 NS_IMETHODIMP
-nsXULAppInfo::GetOsRealUserID(int64_t* aResult) {
-#ifdef XP_UNIX
-  *aResult = getuid();
-  return NS_OK;
-#else
-  return NS_ERROR_NOT_AVAILABLE;
-#endif
-}
-
-NS_IMETHODIMP
 nsXULAppInfo::GetRemoteType(nsACString& aRemoteType) {
   if (XRE_IsContentProcess()) {
     aRemoteType = ContentChild::GetSingleton()->GetRemoteType();
