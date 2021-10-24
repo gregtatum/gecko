@@ -152,7 +152,7 @@
 }
 
 #pinebuild-copy-button {
-  list-style-image: url("chrome://browser/skin/link.svg");
+  list-style-image: url("chrome://global/skin/icons/link.svg");
 }
 
 @supports -moz-bool-pref("browser.companion.pageaction.enabled") {
