@@ -59,7 +59,6 @@ add_task(async function test_session_change() {
 
     // Now switch back to the previous session.
     sessionReplaced = SessionManager.once("session-replaced");
-    let sessionChangeStart = SessionManager.once("session-change-start");
 
     await SpecialPowers.spawn(
       win.gBrowser.selectedBrowser.browsingContext,
@@ -69,12 +68,10 @@ add_task(async function test_session_change() {
       }
     );
 
-    await sessionChangeStart;
-    // This should be cleared as soon as the session change happens.
+    await sessionReplaced;
     Assert.ok(
       !win.document.body.hasAttribute("flow-reset"),
       "Should have cleared the flow-reset attribute on the window"
     );
-    await sessionReplaced;
   }, win);
 });

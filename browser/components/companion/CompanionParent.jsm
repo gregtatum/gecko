@@ -616,19 +616,24 @@ class CompanionParent extends JSWindowActorParent {
     let win = this.browsingContext.topChromeWindow;
     win.document.body.setAttribute("flow-reset", true);
 
-    let listener = (event, eventWin) => {
-      if (eventWin != win) {
-        return;
-      }
+    const listener = {
+      QueryInterface: ChromeUtils.generateQI(["nsIWebProgressListener"]),
 
-      SessionManager.off("session-view-added", listener);
-      SessionManager.off("session-change-start", listener);
-      win.document.body.removeAttribute("flow-reset");
-      this.sendAsyncMessage("Companion:ResetFlowExited");
+      onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags) {
+        // Wait for the first location change away from the about:flow-reset page,
+        // loading about:flow-reset includes load events for about:blank and there
+        // is no problem with being in flow reset state over about:blank.
+        let ignored = ["about:flow-reset", "about:blank"];
+        if (!aWebProgress.isTopLevel || ignored.includes(aLocationURI.spec)) {
+          return;
+        }
+        win.document.body.removeAttribute("flow-reset");
+        this.sendAsyncMessage("Companion:ResetFlowExited");
+        win.gBrowser.removeProgressListener(listener);
+      },
     };
-
-    SessionManager.on("session-view-added", listener);
-    SessionManager.on("session-change-start", listener);
+    listener.onLocationChange = listener.onLocationChange.bind(this);
+    win.gBrowser.addProgressListener(listener);
   }
 
   validateCompanionPref(name) {

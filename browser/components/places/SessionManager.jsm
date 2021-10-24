@@ -72,10 +72,6 @@ const WINDOW_TRACKER_REMOVE_TOPIC = "sessionstore-closed-objects-changed";
  *   It is not emitted when saving session data when replacing a session. Use
  *   the session-replaced event in that case.
  *
- * - session-change-start
- *   This event is emitted when a session change is started. The additional
- *   parameter is the window where the session change is happening.
- *
  * - session-set-aside
  *   This event is emitted when a session is set aside and the hide animations
  *   are complete, but before the show animation starts. The additional
@@ -149,7 +145,6 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     if (!url || url.schemeIs("about") || url.schemeIs("chrome")) {
       return;
     }
-    this.emit("session-view-added", window);
 
     let guid = this.makeGuid();
     logConsole.debug("Starting new session", guid);
@@ -200,8 +195,6 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     if (restoreSessionGuid) {
       loadDataPromise = this.#loadSessionData(restoreSessionGuid);
     }
-
-    this.emit("session-change-start", window);
 
     // Start the animation and whilst that's running, start saving data.
     let {

@@ -44,6 +44,11 @@ add_task(async function setup() {
 
     let sessionSetAside = SessionManager.once("session-set-aside");
     let sessionReplaced = SessionManager.once("session-replaced");
+    let flowResetLoaded = BrowserTestUtils.waitForNewTab(
+      win.gBrowser,
+      "about:flow-reset",
+      true
+    );
     win.document.getElementById("session-setaside-button").click();
     await sessionSetAside;
 
@@ -54,16 +59,7 @@ add_task(async function setup() {
     );
 
     await sessionReplaced;
-
-    await BrowserTestUtils.waitForCondition(() => {
-      return win.gBrowser.selectedBrowser.currentURI.spec == "about:flow-reset";
-    });
-
-    Assert.equal(
-      win.gBrowser.selectedBrowser.currentURI.spec,
-      "about:flow-reset",
-      "Browser is showing the Reset Flow page"
-    );
+    await flowResetLoaded;
 
     let currentView = await helper.runCompanionTask(
       () => content.document.getElementById("companion-deck").selectedViewName
@@ -83,9 +79,11 @@ add_task(async function setup() {
       "Active View Manager hidden"
     );
 
+    // Navigate to an about: page to test that the reset flow state
+    // is still exited on navigation.
     await UrlbarTestUtils.promiseAutocompleteResultPopup({
       window: win,
-      value: "http://example.com",
+      value: "about:config",
     });
 
     let element = await UrlbarTestUtils.waitForAutocompleteResultAt(win, 0);
