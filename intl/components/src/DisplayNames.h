@@ -208,10 +208,10 @@ class DisplayNames final {
    * In the future, if we switch from ICU4C to ICU4X, this will most likely
    * always require a `char` type.
    */
-  template <typename B, typename CharType>
-  Result<Ok, DisplayNamesError> Of(B& aBuffer, Span<const CharType> aCode,
+  template <typename B>
+  Result<Ok, DisplayNamesError> Of(B& aBuffer, Span<const char> aCode,
                                    Fallback aFallback = Fallback::None) const {
-    if constexpr (std::is_same<CharType, char>::value) {
+    if constexpr (std::is_same_v<typename B::CharType, char>) {
       switch (mOptions.type) {
         case Type::Language:
           return this->GetLanguage(aBuffer, aCode, aFallback);
@@ -235,7 +235,7 @@ class DisplayNames final {
           MOZ_ASSERT_UNREACHABLE("Type requires a char CharType.");
       }
     }
-    if constexpr (std::is_same<CharType, char16_t>::value) {
+    if constexpr (std::is_same_v<typename B::CharType, char16_t>) {
       switch (mOptions.type) {
         case Type::Currency: {
           auto result = ToResult(this->GetCurrency(aBuffer, aCode));
@@ -324,14 +324,9 @@ class DisplayNames final {
 
     if (aBuffer.length() == 0 && aFallback == Fallback::Code) {
       // The language was empty, fallback to the Fallback code.
-      if (!aBuffer.reserve(tagVec.length())) {
+      if (!FillBuffer(tagVec, aBuffer)) {
         return Err(DisplayNamesError::OutOfMemory);
       }
-      for (size_t i = 0; i < tagVec.length(); i++) {
-        aBuffer.data()[i] = tagVec.begin()[i];
-      }
-      // Do not include the null termination in the written amount.
-      aBuffer.written(tagVec.length() - 1);
     }
 
     return Ok();
@@ -341,16 +336,59 @@ class DisplayNames final {
    * Get the display names for Apply the DisplayNames::Type::Region.
    */
   template <typename B>
-  ICUResult GetRegion(B& aBuffer, Span<const char> aRegion) const {
+  Result<Ok, DisplayNamesError> GetRegion(B& aBuffer, Span<const char> aCode,
+                                          Fallback aFallback) const {
     static_assert(std::is_same<typename B::CharType, char16_t>::value);
 
-    return FillBufferWithICUDisplayNames(
+    mozilla::intl::RegionSubtag region;
+    if (!IsStructurallyValidRegionTag(aCode)) {
+      return Err(DisplayNamesError::InvalidOption);
+    }
+    region.set(aCode);
+
+    mozilla::intl::Locale tag;
+    tag.setLanguage("und");
+    tag.setRegion(region);
+
+    {
+      // ICU always canonicalizes the input locale, but since we know that ICU's
+      // canonicalization is incomplete, we need to perform our own
+      // canonicalization to ensure consistent result.
+      auto result = tag.canonicalizeBaseName();
+      if (result.isErr()) {
+        return Err(ToError(result.unwrapErr()));
+      }
+    }
+
+    MOZ_ASSERT(tag.region().present());
+
+    // Note: ICU requires the region subtag to be in canonical case.
+    const mozilla::intl::RegionSubtag& canonicalRegion = tag.region();
+
+    char regionChars[mozilla::intl::LanguageTagLimits::RegionLength + 1] = {};
+    std::copy_n(canonicalRegion.span().data(), canonicalRegion.length(),
+                regionChars);
+
+    auto result = FillBufferWithICUDisplayNames(
         aBuffer, [&](UChar* chars, uint32_t size, UErrorCode* status) {
           return uldn_regionDisplayName(
-              mULocaleDisplayNames.GetConst(),
-              AssertNullTerminatedString(aRegion), chars,
+              mULocaleDisplayNames.GetConst(), regionChars, chars,
               AssertedCast<int32_t, uint32_t>(size), status);
         });
+
+    if (result.IsErr()) {
+      return Err(ToError(result.unwrapErr()));
+    }
+
+    if (aBuffer.length() == 0 && aFallback == Fallback::Code) {
+      // Fallback to the case-canonicalized input.
+      region.toUpperCase();
+      if (!FillBuffer(region.span(), aBuffer)) {
+        return Err(DisplayNamesError::OutOfMemory);
+      }
+    }
+
+    return Ok();
   }
 
   /**

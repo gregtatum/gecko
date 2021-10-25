@@ -433,69 +433,6 @@ static JSString* GetScriptDisplayName(
   return str;
 }
 
-static JSString* GetRegionDisplayName(
-    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    mozilla::intl::DisplayNames::Style displayStyle,
-    mozilla::intl::DisplayNames::Fallback fallback,
-    HandleLinearString regionStr) {
-  mozilla::intl::RegionSubtag region;
-  if (!intl::ParseStandaloneRegionTag(regionStr, region)) {
-    ReportInvalidOptionError(cx, "region", regionStr);
-    return nullptr;
-  }
-
-  mozilla::intl::Locale tag;
-  tag.setLanguage("und");
-  tag.setRegion(region);
-
-  // ICU always canonicalizes the input locale, but since we know that ICU's
-  // canonicalization is incomplete, we need to perform our own canonicalization
-  // to ensure consistent result.
-  if (tag.canonicalizeBaseName().isErr()) {
-    intl::ReportInternalError(cx);
-    return nullptr;
-  }
-
-  MOZ_ASSERT(tag.region().present());
-
-  // Note: ICU requires the region subtag to be in canonical case.
-  const mozilla::intl::RegionSubtag& canonicalRegion = tag.region();
-
-  char regionChars[mozilla::intl::LanguageTagLimits::RegionLength + 1] = {};
-  std::copy_n(canonicalRegion.span().data(), canonicalRegion.length(),
-              regionChars);
-
-  ULocaleDisplayNames* ldn =
-      GetOrCreateDisplayNames(cx, displayNames, locale, displayStyle);
-  if (!ldn) {
-    return nullptr;
-  }
-
-  JSString* str = CallICU(cx, [ldn, regionChars](UChar* chars, uint32_t size,
-                                                 UErrorCode* status) {
-    int32_t res = uldn_regionDisplayName(ldn, regionChars, chars, size, status);
-
-    // |uldn_regionDisplayName| reports U_ILLEGAL_ARGUMENT_ERROR when no display
-    // name was found.
-    if (*status == U_ILLEGAL_ARGUMENT_ERROR) {
-      *status = U_ZERO_ERROR;
-      res = 0;
-    }
-    return res;
-  });
-  if (!str) {
-    return nullptr;
-  }
-
-  // Return the case-canonicalized input when no localized name was found.
-  if (str->empty() && fallback == mozilla::intl::DisplayNames::Fallback::Code) {
-    region.toUpperCase();
-    return NewStringCopy<CanGC>(cx, region.span());
-  }
-
-  return str;
-}
-
 static JSString* GetCurrencyDisplayName(
     JSContext* cx, const char* locale,
     mozilla::intl::DisplayNames::Style displayStyle,
@@ -1134,13 +1071,18 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
   // API, but internally uses UTF-8 or UTF-16 strings.
   JSString* str = nullptr;
   mozilla::Maybe<mozilla::intl::DisplayNamesError> error = mozilla::Nothing();
-  if (mozilla::intl::DisplayNames::SupportsUtf8(options.type)) {
+  {
+    // Do not GC while querying mozilla::intl::DisplayNames::Of, as it directly
+    // references JSString contents.
     JS::AutoCheckCannotGC nogc;
+
     mozilla::Span<const char> span;
+    // Only allocate a temporary string if the code is non-ASCII.
     JS::UniqueChars utf8 = nullptr;
     if (StringIsAscii(code)) {
       // The string is just ascii characters, so there is no need to allocate a
-      // new string. This is a common case for BCP47 language tags.
+      // new string. This is a common case for BCP47 language tags, and probably
+      // other codes.
       span = mozilla::MakeStringSpan(
           // reinterpret_cast is required to cast from |const unsigned char*|
           // to |const char*|
@@ -1150,25 +1092,22 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
       span = mozilla::MakeStringSpan(utf8.get());
     }
 
-    intl::FormatBuffer<char, intl::INITIAL_CHAR_BUFFER_SIZE> buffer(cx);
-
-    auto result = dn->Of(buffer, span, fallback);
-    if (result.isErr()) {
-      error = mozilla::Some(result.unwrapErr());
+    if (mozilla::intl::DisplayNames::SupportsUtf8(options.type)) {
+      intl::FormatBuffer<char, intl::INITIAL_CHAR_BUFFER_SIZE> buffer(cx);
+      auto result = dn->Of(buffer, span, fallback);
+      if (result.isErr()) {
+        error = mozilla::Some(result.unwrapErr());
+      } else {
+        str = buffer.toString(cx);
+      }
     } else {
-      str = buffer.toString(cx);
-    }
-  } else {
-    JS::AutoCheckCannotGC nogc;
-    intl::FormatBuffer<char16_t, intl::INITIAL_CHAR_BUFFER_SIZE> buffer(cx);
-    mozilla::Span<const char16_t> span =
-        mozilla::MakeStringSpan(code.get()->twoByteChars(nogc));
-    auto result = dn->Of(buffer, span, fallback);
-
-    if (result.isErr()) {
-      error = mozilla::Some(result.unwrapErr());
-    } else {
-      str = buffer.toString(cx);
+      intl::FormatBuffer<char16_t, intl::INITIAL_CHAR_BUFFER_SIZE> buffer(cx);
+      auto result = dn->Of(buffer, span, fallback);
+      if (result.isErr()) {
+        error = mozilla::Some(result.unwrapErr());
+      } else {
+        str = buffer.toString(cx);
+      }
     }
   }
 
