@@ -115,7 +115,20 @@ class DisplayNames final {
     //   "EUR" => "Euro" (en-US), "euro" (es_ES), "欧元", (zh)
     //   "JPY" => "Japanese Yen" (en-US), "yen" (es_ES), "日元", (zh)
     Currency,
+
+    Calendar,
+    Weekday,
+    Month,
+    Quarter,
+    DayPeriod,
+    DateTimeField,
   };
+
+  /**
+   * Get a static string of the DisplayNames::Type that matches the equivalent
+   * ECMA-402 option.
+   */
+  static const char* ToString(DisplayNames::Type type);
 
   enum class LanguageDisplay {
     Standard,
@@ -144,7 +157,6 @@ class DisplayNames final {
     Type type;
 
     // Optional:
-    LocaleMatcher localeMatcher = LocaleMatcher::BestFit;
     Style style = Style::Long;
     LanguageDisplay languageDisplay = LanguageDisplay::Standard;
   };
@@ -176,6 +188,8 @@ class DisplayNames final {
    */
   DisplayNamesError ToError(Locale::CanonicalizationError aError) const;
 
+  static bool SupportsUtf8(DisplayNames::Type aType);
+
   /**
    * Get the results for a display name.
    *
@@ -187,6 +201,9 @@ class DisplayNames final {
    * exposed for computing everything. However, the underlying ICU4C calls may
    * require one type or another. Rather than introduce extraneous string
    * copying, this method enforces the correct CharType through a template.
+   *
+   * Use the `DisplayNames::SupportsUtf8()` method to determine which type of
+   * buffer to use.
    *
    * In the future, if we switch from ICU4C to ICU4X, this will most likely
    * always require a `char` type.
@@ -402,6 +419,7 @@ class DisplayNames final {
   template <typename B>
   ICUResult GetScript(B& aBuffer, Span<const char> aScript) const {
     static_assert(std::is_same<typename B::CharType, char16_t>::value);
+    mozilla::intl::ScriptSubtag script;
 
     if (mOptions.style == DisplayNames::Style::Long) {
       // |uldn_scriptDisplayName| doesn't use the stand-alone form for script

@@ -324,72 +324,6 @@ static bool TryParseBaseName(JSContext* cx, HandleLinearString languageStr,
   return false;
 }
 
-static JSString* GetLanguageDisplayName(
-    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    mozilla::intl::DisplayNames::Options& options,
-    HandleLinearString languageStr) {
-  mozilla::intl::Locale tag;
-  if (!TryParseBaseName(cx, languageStr, tag)) {
-    return nullptr;
-  }
-
-  // ICU always canonicalizes the input locale, but since we know that ICU's
-  // canonicalization is incomplete, we need to perform our own canonicalization
-  // to ensure consistent result.
-  if (auto result = tag.canonicalizeBaseName(); result.isErr()) {
-    if (result.unwrapErr() ==
-        mozilla::intl::Locale::CanonicalizationError::DuplicateVariant) {
-      JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
-                                JSMSG_DUPLICATE_VARIANT_SUBTAG);
-    } else {
-      intl::ReportInternalError(cx);
-    }
-
-    return nullptr;
-  }
-
-  intl::FormatBuffer<char> buffer(cx);
-  if (auto result = tag.toString(buffer); result.isErr()) {
-    intl::ReportInternalError(cx, result.unwrapErr());
-    return nullptr;
-  }
-
-  UniqueChars languageChars = buffer.extractStringZ();
-  if (!languageChars) {
-    return nullptr;
-  }
-
-  mozilla::intl::DisplayNames* dn =
-      GetOrCreateDisplayNames(cx, displayNames, locale, options);
-  if (!dn) {
-    return nullptr;
-  }
-
-  JSString* str = CallICU(cx, [ldn, &languageChars](UChar* chars, uint32_t size,
-                                                    UErrorCode* status) {
-    int32_t res =
-        uldn_localeDisplayName(ldn, languageChars.get(), chars, size, status);
-
-    // |uldn_localeDisplayName| reports U_ILLEGAL_ARGUMENT_ERROR when no
-    // display name was found.
-    if (*status == U_ILLEGAL_ARGUMENT_ERROR) {
-      *status = U_ZERO_ERROR;
-      res = 0;
-    }
-    return res;
-  });
-  if (!str) {
-    return nullptr;
-  }
-
-  // Return the canonicalized input when no localized language name was found.
-  if (str->empty() && fallback == mozilla::intl::DisplayNames::Fallback::Code) {
-    return NewStringCopyZ<CanGC>(cx, languageChars.get());
-  }
-
-  return str;
-}
-
 static JSString* GetScriptDisplayName(
     JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
     mozilla::intl::DisplayNames::Style displayStyle,
@@ -1140,69 +1074,128 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
     }
   }
 
-  mozilla::intl::DisplayNames::Fallback displayFallback;
+  mozilla::intl::DisplayNames::Fallback fallback;
   {
-    JSLinearString* fallback = args[5].toString()->ensureLinear(cx);
-    if (!fallback) {
+    JSLinearString* fallbackStr = args[5].toString()->ensureLinear(cx);
+    if (!fallbackStr) {
       return false;
     }
 
-    if (StringEqualsLiteral(fallback, "none")) {
-      displayFallback = mozilla::intl::DisplayNames::Fallback::None;
+    if (StringEqualsLiteral(fallbackStr, "none")) {
+      fallback = mozilla::intl::DisplayNames::Fallback::None;
     } else {
-      MOZ_ASSERT(StringEqualsLiteral(fallback, "code"));
-      displayFallback = mozilla::intl::DisplayNames::Fallback::Code;
+      MOZ_ASSERT(StringEqualsLiteral(fallbackStr, "code"));
+      fallback = mozilla::intl::DisplayNames::Fallback::Code;
     }
   }
 
-  JSLinearString* type = args[6].toString()->ensureLinear(cx);
-  if (!type) {
+  mozilla::intl::DisplayNames::Type type;
+  {
+    JSLinearString* typeStr = args[6].toString()->ensureLinear(cx);
+    if (!typeStr) {
+      return false;
+    }
+    using Type = mozilla::intl::DisplayNames::Type;
+    if (StringEqualsLiteral(typeStr, "language")) {
+      type = Type::Language;
+    } else if (StringEqualsLiteral(typeStr, "script")) {
+      type = Type::Script;
+    } else if (StringEqualsLiteral(typeStr, "region")) {
+      type = Type::Region;
+    } else if (StringEqualsLiteral(typeStr, "currency")) {
+      type = Type::Currency;
+    } else if (StringEqualsLiteral(typeStr, "calendar")) {
+      type = Type::Calendar;
+    } else if (StringEqualsLiteral(typeStr, "weekday")) {
+      type = Type::Weekday;
+    } else if (StringEqualsLiteral(typeStr, "month")) {
+      type = Type::Month;
+    } else if (StringEqualsLiteral(typeStr, "quarter")) {
+      type = Type::Quarter;
+    } else if (StringEqualsLiteral(typeStr, "dayPeriod")) {
+      type = Type::DayPeriod;
+    } else {
+      MOZ_ASSERT(StringEqualsLiteral(typeStr, "dateTimeField"));
+      type = Type::DateTimeField;
+    }
+  }
+
+  mozilla::intl::DisplayNames::Options options(type);
+  options.style = displayStyle;
+  options.languageDisplay = languageDisplay;
+
+  mozilla::intl::DisplayNames* dn =
+      GetOrCreateDisplayNames(cx, displayNames, locale.get(), options);
+  if (!dn) {
     return false;
   }
 
-  JSString* result;
-  if (StringEqualsLiteral(type, "language")) {
-    result =
-        GetLanguageDisplayName(cx, displayNames, locale.get(), displayStyle,
-                               languageDisplay, displayFallback, code);
-  } else if (StringEqualsLiteral(type, "script")) {
-    result = GetScriptDisplayName(cx, displayNames, locale.get(), displayStyle,
-                                  displayFallback, code);
-  } else if (StringEqualsLiteral(type, "region")) {
-    result = GetRegionDisplayName(cx, displayNames, locale.get(), displayStyle,
-                                  displayFallback, code);
-  } else if (StringEqualsLiteral(type, "currency")) {
-    result = GetCurrencyDisplayName(cx, locale.get(), displayStyle,
-                                    displayFallback, code);
-  } else if (StringEqualsLiteral(type, "calendar")) {
-    result = GetCalendarDisplayName(cx, displayNames, locale.get(),
-                                    displayStyle, displayFallback, code);
-  } else if (StringEqualsLiteral(type, "weekday")) {
-    result = GetWeekdayDisplayName(cx, displayNames, locale.get(), calendar,
-                                   displayStyle, code);
-  } else if (StringEqualsLiteral(type, "month")) {
-    result = GetMonthDisplayName(cx, displayNames, locale.get(), calendar,
-                                 displayStyle, displayFallback, code);
-  } else if (StringEqualsLiteral(type, "quarter")) {
-    result = GetQuarterDisplayName(cx, displayNames, locale.get(), calendar,
-                                   displayStyle, code);
-  } else if (StringEqualsLiteral(type, "dayPeriod")) {
-    result =
-        GetDayPeriodDisplayName(cx, displayNames, locale.get(), calendar, code);
+  // mozilla::intl::DisplayNames::Of matches the API of the Intl.DisplayNames
+  // API, but internally uses UTF-8 or UTF-16 strings.
+  JSString* str = nullptr;
+  mozilla::Maybe<mozilla::intl::DisplayNamesError> error = mozilla::Nothing();
+  if (mozilla::intl::DisplayNames::SupportsUtf8(options.type)) {
+    JS::AutoCheckCannotGC nogc;
+    mozilla::Span<const char> span;
+    JS::UniqueChars utf8 = nullptr;
+    if (StringIsAscii(code)) {
+      // The string is just ascii characters, so there is no need to allocate a
+      // new string. This is a common case for BCP47 language tags.
+      span = mozilla::MakeStringSpan(
+          // reinterpret_cast is required to cast from |const unsigned char*|
+          // to |const char*|
+          reinterpret_cast<const char*>(code.get()->latin1Chars(nogc)));
+    } else {
+      utf8 = JS_EncodeStringToUTF8(cx, code);
+      span = mozilla::MakeStringSpan(utf8.get());
+    }
+
+    intl::FormatBuffer<char, intl::INITIAL_CHAR_BUFFER_SIZE> buffer(cx);
+
+    auto result = dn->Of(buffer, span, fallback);
+    if (result.isErr()) {
+      error = mozilla::Some(result.unwrapErr());
+    } else {
+      str = buffer.toString(cx);
+    }
   } else {
-    MOZ_ASSERT(StringEqualsLiteral(type, "dateTimeField"));
-    result = GetDateTimeFieldDisplayName(cx, locale.get(), displayStyle, code);
+    JS::AutoCheckCannotGC nogc;
+    intl::FormatBuffer<char16_t, intl::INITIAL_CHAR_BUFFER_SIZE> buffer(cx);
+    mozilla::Span<const char16_t> span =
+        mozilla::MakeStringSpan(code.get()->twoByteChars(nogc));
+    auto result = dn->Of(buffer, span, fallback);
+
+    if (result.isErr()) {
+      error = mozilla::Some(result.unwrapErr());
+    } else {
+      str = buffer.toString(cx);
+    }
   }
-  if (!result) {
+
+  if (error) {
+    switch (error.value()) {
+      case mozilla::intl::DisplayNamesError::InternalError:
+        intl::ReportInternalError(cx);
+        break;
+      case mozilla::intl::DisplayNamesError::OutOfMemory:
+        ReportOutOfMemory(cx);
+        break;
+      case mozilla::intl::DisplayNamesError::InvalidOption:
+        ReportInvalidOptionError(
+            cx, mozilla::intl::DisplayNames::ToString(type), code);
+        break;
+      case mozilla::intl::DisplayNamesError::DuplicateVariantSubtag:
+        JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
+                                  JSMSG_DUPLICATE_VARIANT_SUBTAG);
+    }
     return false;
   }
 
-  if (!result->empty()) {
-    args.rval().setString(result);
-  } else if (displayFallback == mozilla::intl::DisplayNames::Fallback::Code) {
-    args.rval().setString(code);
-  } else {
+  if (str->empty()) {
     args.rval().setUndefined();
+  } else {
+    args.rval().setString(str);
   }
+
   return true;
 }
