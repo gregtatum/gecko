@@ -333,7 +333,7 @@
 }
 
 #page-action-copy-url > .toolbarbutton-icon {
-  background-image: url("chrome://browser/skin/edit-copy.svg");
+  background-image: url("chrome://global/skin/icons/edit-copy.svg");
 }
 
 #page-action-close-view > .toolbarbutton-icon {
