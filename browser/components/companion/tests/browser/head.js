@@ -432,9 +432,9 @@ var PinebuildTestUtils = {
       "Should have found the Page Action Menu panel."
     );
 
-    let popupshowing = BrowserTestUtils.waitForEvent(
+    let popupshown = BrowserTestUtils.waitForEvent(
       pageActionMenuPanel,
-      "popupshowing"
+      "popupshown"
     );
     let pageActionMenuButton = viewGroup.shadowRoot.querySelector(
       ".page-action-button"
@@ -445,7 +445,7 @@ var PinebuildTestUtils = {
       "Page Action Menu button is visible."
     );
     EventUtils.synthesizeMouseAtCenter(pageActionMenuButton, {}, win);
-    await popupshowing;
+    await popupshown;
     return pageActionMenuPanel;
   },
 
