@@ -355,12 +355,12 @@ var PinebuildTestUtils = {
    *   order as the URL strings.
    */
   async loadViews(urls, win = window) {
-    let browser = window.gBrowser.selectedBrowser;
+    let browser = win.gBrowser.selectedBrowser;
     let views = [];
 
     for (let url of urls) {
       let viewAddedPromise = BrowserTestUtils.waitForEvent(
-        gGlobalHistory,
+        win.gGlobalHistory,
         "ViewAdded"
       );
       BrowserTestUtils.loadURI(browser, url);

@@ -1140,6 +1140,7 @@ class GlobalHistory extends EventTarget {
     this.#notifyEvent("RiverRebuilt", selectedView);
 
     this.#startActivationTimer();
+    this.#updateSessionStore();
   }
 
   #updateSessionStore() {

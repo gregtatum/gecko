@@ -240,3 +240,69 @@ add_task(async function testSessionRestore() {
 
   await BrowserTestUtils.closeWindow(win);
 });
+
+/**
+ * Tests that persisting a session that hasn't changed since its last
+ * restoration persists properly.
+ */
+add_task(async function testSessionRestoreNoChange() {
+  let win = await BrowserTestUtils.openNewBrowserWindow();
+  let { gBrowser, gGlobalHistory } = win;
+
+  let [view1] = await PinebuildTestUtils.loadViews([TEST_URL1], win);
+
+  PinebuildTestUtils.assertUrlsAre([TEST_URL1], win);
+  assertTabUrls(win, [TEST_URL1]);
+  Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[0]);
+  Assert.equal(gGlobalHistory.currentView, view1);
+
+  let guid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
+  Assert.ok(guid, "A session has been started.");
+
+  let sessionSetAside = SessionManager.once("session-set-aside");
+  let sessionReplaced = SessionManager.once("session-replaced");
+  let flowResetLoaded = BrowserTestUtils.waitForNewTab(
+    win.gBrowser,
+    "about:flow-reset",
+    true
+  );
+  await SessionManager.replaceSession(win);
+  await sessionSetAside;
+  await sessionReplaced;
+  await flowResetLoaded;
+
+  let result = await SessionManager.query({ guid, includePages: true });
+  Assert.equal(result.length, 1);
+  Assert.equal(result[0].pages.length, 1);
+
+  sessionReplaced = SessionManager.once("session-replaced");
+  let pageLoaded = BrowserTestUtils.waitForEvent(
+    win.gBrowser.tabContainer,
+    "SSTabRestored"
+  );
+  await SessionManager.replaceSession(win, guid);
+  await sessionReplaced;
+  await pageLoaded;
+
+  result = await SessionManager.query({ guid, includePages: true });
+  Assert.equal(result.length, 1);
+  Assert.equal(result[0].pages.length, 1);
+
+  sessionSetAside = SessionManager.once("session-set-aside");
+  sessionReplaced = SessionManager.once("session-replaced");
+  flowResetLoaded = BrowserTestUtils.waitForNewTab(
+    win.gBrowser,
+    "about:flow-reset",
+    true
+  );
+  await SessionManager.replaceSession(win);
+  await sessionSetAside;
+  await sessionReplaced;
+  await flowResetLoaded;
+
+  result = await SessionManager.query({ guid, includePages: true });
+  Assert.equal(result.length, 1);
+  Assert.equal(result[0].pages.length, 1);
+
+  await BrowserTestUtils.closeWindow(win);
+});
