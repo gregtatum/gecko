@@ -191,6 +191,13 @@
         </panelmultiview>
       </panel>
     </html:template>
+
+    <menupopup id="active-view-manager-context-menu">
+      <menuitem id="active-view-manager-context-menu-toggle-pinning"
+                data-l10n-id="active-view-manager-context-menu-toggle-pinning"
+                data-l10n-args='{"isPinned": false}'
+                oncommand="gActiveViewManager.contextMenuPinView(event);"/>
+    </menupopup>
   </popupset>
 
 #include appmenu-viewcache.inc.xhtml

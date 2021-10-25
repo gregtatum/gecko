@@ -31,10 +31,13 @@ export default class ActiveViewManager extends HTMLElement {
   #securityIconClass;
   /** @type {GlobalHistory} */
   #globalHistory;
+  /** @type {<xul:menupopup>} */
+  #contextMenuPopup;
 
   #river;
   #pinnedViews;
   #pageActionView;
+  #contextMenuView;
   #initted = false;
 
   static EVENTS = [
@@ -64,6 +67,9 @@ export default class ActiveViewManager extends HTMLElement {
     this.#overflow = this.querySelector("#river-overflow-button");
     this.#river = this.querySelector("river-el");
     this.#pinnedViews = this.querySelector("pinned-views");
+    this.#contextMenuPopup = document.getElementById(
+      "active-view-manager-context-menu"
+    );
 
     for (let event of ActiveViewManager.EVENTS) {
       this.#globalHistory.addEventListener(event, this);
@@ -74,10 +80,13 @@ export default class ActiveViewManager extends HTMLElement {
     this.addEventListener("UserAction:PinView", this);
     this.addEventListener("UserAction:UnpinView", this);
 
+    this.addEventListener("contextmenu", this);
     this.addEventListener("dragstart", this);
     this.addEventListener("dragend", this);
     this.#river.addEventListener("RiverRegrouped", this);
     this.#overflow.addEventListener("click", this);
+    this.#contextMenuPopup.addEventListener("popupshowing", this);
+    this.#contextMenuPopup.addEventListener("popuphiding", this);
 
     // Most strings are borrowed from Firefox. We may need to need to replace these when UX
     // provides updated strings.
@@ -100,6 +109,7 @@ export default class ActiveViewManager extends HTMLElement {
     this.removeEventListener("UserAction:PinView", this);
     this.removeEventListener("UserAction:UnpinView", this);
 
+    this.removeEventListener("contextmenu", this);
     this.removeEventListener("dragstart", this);
     this.removeEventListener("dragend", this);
     this.#river.removeEventListener("RiverRegrouped", this);
@@ -209,6 +219,10 @@ export default class ActiveViewManager extends HTMLElement {
           this.#pageActionPanelClicked(event);
         }
         break;
+      case "contextmenu": {
+        this.#onContextMenu(event);
+        break;
+      }
       case "dragstart": {
         this.#onDragStart(event);
         break;
@@ -220,6 +234,8 @@ export default class ActiveViewManager extends HTMLElement {
       case "popuphiding": {
         if (event.currentTarget == this.#pageActionPanel) {
           this.#pageActionPanelHiding(event);
+        } else if (event.currentTarget == this.#contextMenuPopup) {
+          this.#contextMenuPopupHiding(event);
         }
         break;
       }
@@ -228,6 +244,8 @@ export default class ActiveViewManager extends HTMLElement {
           this.#overflowPanelShowing(event);
         } else if (event.currentTarget == this.#pageActionPanel) {
           this.#pageActionPanelShowing(event);
+        } else if (event.currentTarget == this.#contextMenuPopup) {
+          this.#contextMenuPopupShowing(event);
         }
         break;
       case "RiverRegrouped": {
@@ -432,8 +450,52 @@ export default class ActiveViewManager extends HTMLElement {
     PineBuildUIUtils.copy(this, this.#pageActionView.url.spec);
   }
 
+  #onContextMenu(event) {
+    let viewGroup = this.#getEventViewGroup(event);
+    if (!viewGroup) {
+      return;
+    }
+
+    // It's possible to open the context menu on a ViewGroup that is not
+    // active, so in that case, we'll just assume we're opening the menu
+    // on the last View in the group.
+    this.#contextMenuView = viewGroup.active
+      ? viewGroup.activeView
+      : viewGroup.lastView;
+
+    this.#contextMenuPopup.openPopupAtScreen(
+      event.screenX,
+      event.screenY,
+      true,
+      event
+    );
+    event.stopPropagation();
+    event.preventDefault();
+  }
+
+  #contextMenuPopupShowing(event) {
+    let pinViewMenuItem = document.getElementById(
+      "active-view-manager-context-menu-toggle-pinning"
+    );
+    let pinL10nId = "active-view-manager-context-menu-toggle-pinning";
+    document.l10n.setAttributes(pinViewMenuItem, pinL10nId, {
+      isPinned: this.#contextMenuView.pinned,
+    });
+  }
+
+  #contextMenuPopupHiding(event) {
+    this.#contextMenuView = null;
+  }
+
+  contextMenuPinView(event) {
+    this.#setViewPinnedState(
+      this.#contextMenuView,
+      !this.#contextMenuView.pinned
+    );
+  }
+
   #onDragStart(event) {
-    let draggedViewGroup = this.#getDragTargetViewGroup(event);
+    let draggedViewGroup = this.#getEventViewGroup(event);
     if (!draggedViewGroup) {
       return;
     }
@@ -484,7 +546,7 @@ export default class ActiveViewManager extends HTMLElement {
     this.#pinnedViews.dragging = false;
   }
 
-  #getDragTargetViewGroup(event) {
+  #getEventViewGroup(event) {
     let node = event.composedTarget;
     let host = node.getRootNode().host;
     if (host.localName == "view-group") {
