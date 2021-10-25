@@ -196,6 +196,15 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       loadDataPromise = this.#loadSessionData(restoreSessionGuid);
     }
 
+    let abort = await window.gBrowser.runBeforeUnloadForTabs(
+      window.gBrowser.visibleTabs
+    );
+    if (abort) {
+      return;
+    }
+
+    this.emit("session-change-start", window);
+
     // Start the animation and whilst that's running, start saving data.
     let {
       animationCompletePromise,
@@ -231,7 +240,11 @@ const SessionManager = new (class SessionManager extends EventEmitter {
 
     SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
     this.emit("session-set-aside", window);
-    window.gGlobalHistory.reset("about:flow-reset");
+    window.gGlobalHistory.reset({
+      url: "about:flow-reset",
+      // runBeforeUnloadForTabs has been called above.
+      skipPermitUnload: true,
+    });
     // Let the time for the previous animation completely elapse before
     // we start the new one.
     await timerCompletePromise;

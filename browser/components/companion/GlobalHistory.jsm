@@ -883,13 +883,23 @@ class GlobalHistory extends EventTarget {
   /**
    * Clears all the current tabs, and ensures the history is blank.
    *
-   * @param {string} [url]
+   * @param {object} [options]
+   * @param {string} [options.url]
    *   An optional url to load default tab content.
+   * @param {boolean} [options.skipPermitUnload]
+   *   Set to true if it is ok to skip the before unload handlers when closing
+   *   tabs (e.g. tabbrowser.runBeforeUnloadForTabs() has been called).
    */
-  reset(url = this.#window.BROWSER_NEW_TAB_URL) {
+  reset({
+    url = this.#window.BROWSER_NEW_TAB_URL,
+    skipPermitUnload = false,
+  } = {}) {
     let newTab = this.#window.gBrowser.addTrustedTab(url);
     this.#window.gBrowser.selectedTab = newTab;
-    this.#window.gBrowser.removeAllTabsBut(newTab, { animate: false });
+    this.#window.gBrowser.removeAllTabsBut(newTab, {
+      animate: false,
+      skipPermitUnload,
+    });
     this.#viewStack = [];
     this.#historyViews.clear();
     this.#currentIndex = null;
