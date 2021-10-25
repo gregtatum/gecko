@@ -193,8 +193,9 @@ static ICUResult FillBufferWithICUCall(Vector<CharType, InlineSize>& vector,
 }
 
 /**
- * ICU4C works with UTF-16 strings, but consumers of mozilla::intl may require
- * UTF-8 strings.
+ * Fill a UTF-8 or a UTF-16 buffer with a UTF-16 span. ICU4C mostly uses UTF-16
+ * internally, but different consumers may have different situations with their
+ * buffers.
  */
 template <typename Buffer>
 [[nodiscard]] bool FillBuffer(Span<const char16_t> utf16Span,
@@ -228,6 +229,42 @@ template <typename Buffer>
     for (size_t i = 0; i < amount; i++) {
       targetBuffer.data()[i] = utf16Span[i];
     }
+    targetBuffer.written(amount);
+  }
+
+  return true;
+}
+
+/**
+ * Fill a UTF-8 or a UTF-16 buffer with a UTF-8 span. ICU4C mostly uses UTF-16
+ * internally, but different consumers may have different situations with their
+ * buffers.
+ */
+template <typename Buffer>
+[[nodiscard]] bool FillBuffer(Span<const char> utf8Span, Buffer& targetBuffer) {
+  static_assert(std::is_same_v<typename Buffer::CharType, char> ||
+                std::is_same_v<typename Buffer::CharType, unsigned char> ||
+                std::is_same_v<typename Buffer::CharType, char16_t>);
+
+  if constexpr (std::is_same_v<typename Buffer::CharType, char> ||
+                std::is_same_v<typename Buffer::CharType, unsigned char>) {
+    size_t amount = utf8Span.Length();
+    if (!targetBuffer.reserve(amount)) {
+      return false;
+    }
+    for (size_t i = 0; i < amount; i++) {
+      targetBuffer.data()[i] = utf8Span[i];
+    }
+    targetBuffer.written(amount);
+  }
+  if constexpr (std::is_same_v<typename Buffer::CharType, char16_t>) {
+    if (!targetBuffer.reserve(utf8Span.Length() + 1)) {
+      return false;
+    }
+
+    size_t amount = ConvertUtf8toUtf16(
+        utf8Span, Span(targetBuffer.data(), targetBuffer.capacity()));
+
     targetBuffer.written(amount);
   }
 
