@@ -236,6 +236,7 @@
   outline-offset: var(--focus-outline-offset);
 }
 
+:host([open="true"]) .page-action-button,
 .page-action-button:hover {
   background-color: #CFCFD8;
 }
