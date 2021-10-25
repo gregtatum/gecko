@@ -76,6 +76,17 @@ export default function WindowedListProxy(toc, ctx) {
   this.batchManager = ctx.batchManager;
 
   this.dirty = false;
+  // Tracks whether we need to explicitly issue an update for this proxy that
+  // has `coherentSnapshot: true` which lets the front-end know we're done with
+  // our current set of high-level tasks that could cause changes.  It's
+  // possible that we will have already flushed all of the underlying changes
+  // incrementally, but that we still need to send an update that's marked with
+  // `coherentSnapshot`.
+  //
+  // Whenever we set the `dirty` bit we also set the `needsCoherentFlush`.  This
+  // will only be cleared by the BatchManager after calling our flush() method
+  // if the update was sent as a `coherentSnapshot`.
+  this.needsCoherentFlush = false;
   this.dirtyMeta = true;
 
   /**
@@ -187,6 +198,7 @@ WindowedListProxy.prototype = {
     }
 
     this.dirty = true;
+    this.needsCoherentFlush = true;
     this.batchManager.registerDirtyView(this, "immediate");
   },
 
@@ -225,6 +237,7 @@ WindowedListProxy.prototype = {
       return;
     }
     this.dirty = true;
+    this.needsCoherentFlush = true;
     this.batchManager.registerDirtyView(this);
   },
 
@@ -242,6 +255,7 @@ WindowedListProxy.prototype = {
       return;
     }
     this.dirty = true;
+    this.needsCoherentFlush = true;
     this.batchManager.registerDirtyView(this);
   },
 
@@ -254,6 +268,7 @@ WindowedListProxy.prototype = {
       return;
     }
     this.dirty = true;
+    this.needsCoherentFlush = true;
     this.batchManager.registerDirtyView(this);
   },
 
@@ -261,6 +276,7 @@ WindowedListProxy.prototype = {
     this.pendingBroadcastEvents.push({ name: eventName, data: eventData });
 
     this.dirty = true;
+    this.needsCoherentFlush = true;
     this.batchManager.registerDirtyView(this, "soon");
   },
 
@@ -341,6 +357,11 @@ WindowedListProxy.prototype = {
     }
 
     this.dirty = false;
+    // The BatchManager is responsible for clearing `needsCoherentFlush` because
+    // it has information about the context that we don't (currently) have.  In
+    // the future this could be passed in if it makes more sense, but the
+    // BatchManager does still need to be aware of what's going on so it knows
+    // whether to remove us from the pending proxy set.
 
     // XXX prioritization hints should be generated as a result of the visible
     // range!

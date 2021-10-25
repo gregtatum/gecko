@@ -45,6 +45,8 @@ export default function EntireListProxy(toc, ctx) {
   this._idToChangeIndex = new Map();
   // initialize to dirty so that populateFromList can be in charge
   this.dirty = true;
+  // see WindowedListProxy and BatchManager's documentation on this field.
+  this.needsCoherentFlush = true;
   this._active = false;
 }
 EntireListProxy.prototype = {
@@ -101,6 +103,7 @@ EntireListProxy.prototype = {
     }
 
     this.dirty = true;
+    this.needsCoherentFlush = true;
     this.batchManager.registerDirtyView(this);
   },
 
@@ -188,6 +191,10 @@ EntireListProxy.prototype = {
 
     return {
       changes,
+      // Because we never do database lookups, this can always be considered a
+      // coherent snapshot for this method's purposes, although the BatchManager
+      // may switch this to false depending on why we're being flushed.
+      coherentSnapshot: true,
     };
   },
 };

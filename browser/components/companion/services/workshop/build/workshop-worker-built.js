@@ -14612,13 +14612,17 @@ var WorkshopBackend = (() => {
         coherentSnapshot
       });
       for (let proxy of this._pendingProxies) {
-        let payload = proxy.flush();
+        if (!proxy.dirty && !coherentSnapshot) {
+          continue;
+        }
+        const payload = proxy.flush();
         payload.coherentSnapshot &&= coherentSnapshot;
-        if (payload) {
-          proxy.ctx.sendMessage("update", payload);
+        proxy.ctx.sendMessage("update", payload);
+        if (payload.coherentSnapshot) {
+          proxy.needsCoherentFlush = false;
+          this._pendingProxies.delete(proxy);
         }
       }
-      this._pendingProxies.clear();
     }
     flushBecauseTaskGroupCompleted() {
       this._flushPending(false, true);
@@ -14664,6 +14668,7 @@ var WorkshopBackend = (() => {
     this._pendingChanges = [];
     this._idToChangeIndex = new Map();
     this.dirty = true;
+    this.needsCoherentFlush = true;
     this._active = false;
   }
   EntireListProxy.prototype = {
@@ -14696,6 +14701,7 @@ var WorkshopBackend = (() => {
         return;
       }
       this.dirty = true;
+      this.needsCoherentFlush = true;
       this.batchManager.registerDirtyView(this);
     },
     onAdd(item, index) {
@@ -14756,7 +14762,8 @@ var WorkshopBackend = (() => {
       this._idToChangeIndex.clear();
       this.dirty = false;
       return {
-        changes
+        changes,
+        coherentSnapshot: true
       };
     }
   };
@@ -14767,6 +14774,7 @@ var WorkshopBackend = (() => {
     this.ctx = ctx;
     this.batchManager = ctx.batchManager;
     this.dirty = false;
+    this.needsCoherentFlush = false;
     this.dirtyMeta = true;
     this.validDataSet = new Set();
     this.pendingBroadcastEvents = [];
@@ -14842,6 +14850,7 @@ var WorkshopBackend = (() => {
         throw new Error("bogus seek mode: " + req.mode);
       }
       this.dirty = true;
+      this.needsCoherentFlush = true;
       this.batchManager.registerDirtyView(this, "immediate");
     },
     onChange(id, dataOnly) {
@@ -14857,6 +14866,7 @@ var WorkshopBackend = (() => {
         return;
       }
       this.dirty = true;
+      this.needsCoherentFlush = true;
       this.batchManager.registerDirtyView(this);
     },
     onOverlayPush(id) {
@@ -14868,6 +14878,7 @@ var WorkshopBackend = (() => {
         return;
       }
       this.dirty = true;
+      this.needsCoherentFlush = true;
       this.batchManager.registerDirtyView(this);
     },
     onTOCMetaChange() {
@@ -14876,11 +14887,13 @@ var WorkshopBackend = (() => {
         return;
       }
       this.dirty = true;
+      this.needsCoherentFlush = true;
       this.batchManager.registerDirtyView(this);
     },
     onBroadcastEvent(eventName, eventData) {
       this.pendingBroadcastEvents.push({ name: eventName, data: eventData });
       this.dirty = true;
+      this.needsCoherentFlush = true;
       this.batchManager.registerDirtyView(this, "soon");
     },
     flush() {

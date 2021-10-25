@@ -91,14 +91,26 @@ export class BatchManager {
       coherentSnapshot,
     });
     for (let proxy of this._pendingProxies) {
-      let payload = proxy.flush();
+      // Skip this proxy if it's not dirty and this isn't a coherent flush.  We
+      // keep the proxy around because it still needs a coherent snapshot, but
+      // there's no point sending an update without any information in it.
+      if (!proxy.dirty && !coherentSnapshot) {
+        continue;
+      }
+      const payload = proxy.flush();
+
       // If a database load is required, this will already be false.
       payload.coherentSnapshot &&= coherentSnapshot;
-      if (payload) {
-        proxy.ctx.sendMessage("update", payload);
+      proxy.ctx.sendMessage("update", payload);
+
+      // If this was a coherent snapshot, we can clear the bit on the proxy and
+      // stop tracking the proxy until it re-dirties itself in the future (and
+      // simultaneously sets `needCoherentFlush` to true as well).
+      if (payload.coherentSnapshot) {
+        proxy.needsCoherentFlush = false;
+        this._pendingProxies.delete(proxy);
       }
     }
-    this._pendingProxies.clear();
   }
 
   flushBecauseTaskGroupCompleted() {
