@@ -90,15 +90,14 @@ class CompanionHelper {
   }
 
   catchNextOpenedUrl() {
-    info("catchNextOpenedUrl");
     return this.runCompanionTask(async () => {
-      let oldOpenUrl = content.window.openUrl;
+      let oldOpenUrl = content.openUrl;
       try {
         return await new Promise(resolve => {
-          content.window.openUrl = url => resolve(url);
+          content.openUrl = url => resolve(url);
         });
       } finally {
-        content.window.openUrl = oldOpenUrl;
+        content.openUrl = oldOpenUrl;
       }
     });
   }
@@ -106,7 +105,7 @@ class CompanionHelper {
   overrideRelativeTime(start, diff) {
     return this.runCompanionTask(
       async (startTime, timeDiff) => {
-        content.window.RelativeTime.getNow = () => {
+        content.RelativeTime.getNow = () => {
           return new Date(new Date(startTime).getTime() + timeDiff);
         };
       },
@@ -116,7 +115,11 @@ class CompanionHelper {
 
   get companionReady() {
     return this.runCompanionTask(async () => {
-      await content.window.gInitialized;
+      if (content.gInitialized) {
+        await content.gInitialized;
+      } else {
+        await ContentTaskUtils.waitForEvent(content, "CompanionInitialized");
+      }
     });
   }
 
@@ -157,7 +160,7 @@ class CompanionHelper {
     await this.runCompanionTask(
       async events => {
         content.document.dispatchEvent(
-          new content.window.CustomEvent("refresh-events", {
+          new content.CustomEvent("refresh-events", {
             detail: { events },
           })
         );
