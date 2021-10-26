@@ -78,7 +78,10 @@ function maybeInitializeUI() {
   // This is used for tests to ensure that the various components have initialized.
   // If your component has delayed initialization, then you will want to add something
   // to wait for it here.
-  Promise.all([window.gCalendarEventListener.initialized]).then(() => {
+  Promise.all([
+    window.gCalendarEventListener.initialized,
+    servicesOnboarding.updateComplete,
+  ]).then(() => {
     resolveInitialized();
     window.dispatchEvent(new Event("CompanionInitialized", { bubbles: true }));
   });

@@ -597,6 +597,15 @@ const OnlineServices = {
       service = new GoogleService({ type });
     } else if (type.startsWith("microsoft")) {
       service = new MicrosoftService({ type });
+    } else if (Cu.isInAutomation) {
+      Services.obs.notifyObservers(
+        null,
+        "pinebuild-test-connect-service",
+        type
+      );
+      return null;
+    } else {
+      throw new Error(`Unknown service "${type}"`);
     }
     let token = await service.connect();
     if (!token) {
