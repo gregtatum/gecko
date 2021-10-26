@@ -5,8 +5,6 @@
 import { MozLitElement } from "./widget-utils.js";
 import { css, html, classMap } from "./lit.all.js";
 
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-
 const GOOGLE_SERVICE = {
   icon: "chrome://browser/content/companion/googleAccount.png",
   name: "Google Services",
@@ -70,7 +68,7 @@ export class ServicesOnboarding extends MozLitElement {
     this.connectedServices = new Set(window.CompanionUtils.connectedServices);
     if (Cu.isInAutomation) {
       const testServices = JSON.parse(
-        Services.prefs.getStringPref(
+        window.CompanionUtils.getCharPref(
           "browser.pinebuild.companion.test-services",
           "[]"
         )

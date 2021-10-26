@@ -12,6 +12,7 @@ registerCleanupFunction(() => {
 add_task(async function setup() {
   await SpecialPowers.pushPrefEnv({
     set: [
+      ["browser.pinebuild.companion-service-onboarding.enabled", true],
       [
         "browser.pinebuild.companion.test-services",
         JSON.stringify([

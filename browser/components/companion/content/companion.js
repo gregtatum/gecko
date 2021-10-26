@@ -32,13 +32,22 @@ function maybeInitializeUI() {
   if (!loadObserved || !companionSetupObserved) {
     return;
   }
+  let initPromises = [window.gCalendarEventListener.initialized];
 
-  let servicesOnboarding = new ServicesOnboarding();
   let eventsPlaceholder = document.getElementById("events-placeholder");
-  eventsPlaceholder.parentElement.insertBefore(
-    servicesOnboarding,
-    eventsPlaceholder
-  );
+  if (
+    Services.prefs.getBoolPref(
+      "browser.pinebuild.companion-service-onboarding.enabled",
+      false
+    )
+  ) {
+    let servicesOnboarding = new ServicesOnboarding();
+    initPromises.push(servicesOnboarding.updateComplete);
+    eventsPlaceholder.parentElement.insertBefore(
+      servicesOnboarding,
+      eventsPlaceholder
+    );
+  }
   eventsPlaceholder.appendChild(new CalendarEventList());
 
   let content = document.getElementById("content");
@@ -78,10 +87,7 @@ function maybeInitializeUI() {
   // This is used for tests to ensure that the various components have initialized.
   // If your component has delayed initialization, then you will want to add something
   // to wait for it here.
-  Promise.all([
-    window.gCalendarEventListener.initialized,
-    servicesOnboarding.updateComplete,
-  ]).then(() => {
+  Promise.all(initPromises).then(() => {
     resolveInitialized();
     window.dispatchEvent(new Event("CompanionInitialized", { bubbles: true }));
   });
