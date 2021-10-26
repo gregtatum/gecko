@@ -1,7 +1,7 @@
 /* Any copyright is dedicated to the Public Domain.
    http://creativecommons.org/publicdomain/zero/1.0/ */
 
-/*globals WorkshopHelper */
+/* globals WorkshopHelper, GapiConfigurator, MapiConfigurator */
 
 "use strict";
 
@@ -9,7 +9,7 @@
  * Validate calendar synchronization for the current day.
  */
 async function check_single_day_for_account_type({
-  accountType,
+  configurator,
   initialEventSketches,
   addEventSketches,
 }) {
@@ -24,7 +24,7 @@ async function check_single_day_for_account_type({
   */
 
   const fakeServer = await WorkshopHelper.createFakeServer({
-    type: accountType,
+    configurator,
     events: initialEvents,
   });
 
@@ -102,18 +102,16 @@ const ADD_EVENTS = [
 
 add_task(async function test_gapi_calendar_single_day() {
   await check_single_day_for_account_type({
-    accountType: "gapi",
+    configurator: GapiConfigurator,
     initialEventSketches: INITIAL_EVENTS,
     addEventSketches: ADD_EVENTS,
   });
 });
 
-/*
 add_task(async function test_mapi_calendar_single_day() {
   await check_single_day_for_account_type({
-    accountType: "mapi",
+    configurator: MapiConfigurator,
     initialEventSketches: INITIAL_EVENTS,
     addEventSketches: ADD_EVENTS,
   });
 });
-*/

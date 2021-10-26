@@ -5,15 +5,16 @@
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
-const { GapiFakeServer } = ChromeUtils.import(
-  "resource:///modules/WorkshopFakeServers.jsm"
-);
 const { FakeEventFactory } = ChromeUtils.import(
   "resource:///modules/WorkshopFakeEvents.jsm"
 );
 
 const { XPCShellContentUtils } = ChromeUtils.import(
   "resource://testing-common/XPCShellContentUtils.jsm"
+);
+
+const { GapiFakeServer, MapiFakeServer } = ChromeUtils.import(
+  "resource:///modules/WorkshopFakeServers.jsm"
 );
 
 Cu.importGlobalProperties(["fetch"]);
@@ -176,7 +177,7 @@ class WorkshopHelperClass {
     return httpServer;
   }
 
-  async createFakeServer({ type, events }) {
+  async createFakeServer({ configurator, events }) {
     if (!this.#redirector) {
       this.#redirector = new Redirector();
     }
@@ -184,33 +185,20 @@ class WorkshopHelperClass {
     // Note: We could use XPCShellContentUtils.createHttpServer to create a
     // server and set up a proxy mapping so that we can have a more real-world
     // looking domain name.
-    let httpServer, fakeServer;
-    if (type === "gapi") {
-      httpServer = this.#createHttpServer({
-        hosts: [
-          // Primary is the email domain.
-          "gmail.com",
-          "accounts.google.com",
-          "docs.googleapis.com",
-          "oauth2.googleapis.com",
-          "gmail.googleapis.com",
-          "sheets.googleapis.com",
-          "slides.googleapis.com",
-          "www.googleapis.com",
-        ],
-      });
+    const httpServer = this.#createHttpServer({
+      hosts: configurator.hosts /**/,
+    });
 
-      const serverScope = {};
-      this.#defineLoggerScope(serverScope, "GapiFakeServer", {});
-      fakeServer = new GapiFakeServer({
-        httpServer,
-        logRequest: (logType, details) => {
-          this.#log(serverScope, logType, details);
-        },
-      });
-    } else {
-      throw new Error(`No fakeServer type: ${type}`);
-    }
+    const serverScope = {};
+    this.#defineLoggerScope(serverScope, `${configurator.name}FakeServer`, {});
+    const fakeServer = configurator.createFakeServer({
+      httpServer,
+      logRequest: (logType, details) => {
+        this.#log(serverScope, logType, details);
+      },
+    });
+
+    fakeServer.start();
 
     fakeServer.defaultCalendar = fakeServer.populateCalendar({
       id: "default",
@@ -219,8 +207,6 @@ class WorkshopHelperClass {
       // Note that this is a name I just made up, not from gapi/mapi.
       calendarOwner: this.user,
     });
-
-    fakeServer.start();
 
     return fakeServer;
   }
@@ -303,4 +289,45 @@ class WorkshopHelperClass {
     return workshopAPI;
   }
 }
-let WorkshopHelper = new WorkshopHelperClass();
+
+class GapiConfiguratorHelperClass {
+  get name() {
+    return "Gapi";
+  }
+
+  get hosts() {
+    return [
+      // Primary is the email domain.
+      "gmail.com",
+      "accounts.google.com",
+      "docs.googleapis.com",
+      "oauth2.googleapis.com",
+      "gmail.googleapis.com",
+      "sheets.googleapis.com",
+      "slides.googleapis.com",
+      "www.googleapis.com",
+    ];
+  }
+
+  createFakeServer({ httpServer, logRequest }) {
+    return new GapiFakeServer({ httpServer, logRequest });
+  }
+}
+
+class MapiConfiguratorHelperClass {
+  get name() {
+    return "Mapi";
+  }
+
+  get hosts() {
+    return ["graph.microsoft.com", "login.microsoftonline.com"];
+  }
+
+  createFakeServer({ httpServer, logRequest }) {
+    return new MapiFakeServer({ httpServer, logRequest });
+  }
+}
+
+const GapiConfigurator = new GapiConfiguratorHelperClass();
+const MapiConfigurator = new MapiConfiguratorHelperClass();
+const WorkshopHelper = new WorkshopHelperClass();

@@ -15,7 +15,7 @@
  */
 
 // eslint-disable-next-line no-unused-vars
-const EXPORTED_SYMBOLS = ["GapiFakeServer"];
+const EXPORTED_SYMBOLS = ["GapiFakeServer", "MapiFakeServer"];
 
 const { HttpError } = ChromeUtils.import("resource://testing-common/httpd.js");
 
@@ -28,8 +28,6 @@ function backdatedISOString(date, delta) {
 }
 
 class FakeCalendar {
-  #nextEventId;
-
   constructor(serverOwner, { id, name, events, calendarOwner }) {
     this.serverOwner = serverOwner;
     this.id = id;
@@ -68,25 +66,16 @@ class FakeCalendar {
   }
 }
 
-// eslint-disable-next-line no-unused-vars
-class GapiFakeServer {
-  #calendars;
-  #pagedStateByPageToken;
+class BaseFakeServer {
   #nextEventId;
-  /**
-   * The access tokens to issue.  If a string we just always return the same
-   * access token.  If it's an array we'll shift them off the front for each
-   * request.
-   */
-  #oauthTokens;
 
   constructor({ httpServer, logRequest }) {
     this.server = httpServer;
 
-    this.#oauthTokens = "access-token";
+    this.oauthTokens = "access-token";
 
-    this.#calendars = [];
-    this.#pagedStateByPageToken = new Map();
+    this.calendars = [];
+    this.pagedStateByPageToken = new Map();
     this.#nextEventId = 0;
 
     this.logRequest = logRequest;
@@ -94,8 +83,8 @@ class GapiFakeServer {
     this.pageSize = 10;
   }
 
-  #getCalendarById(id) {
-    return this.#calendars.find(x => x.id === id);
+  getCalendarById(id) {
+    return this.calendars.find(x => x.id === id);
   }
 
   // old, maybe reuse
@@ -118,58 +107,22 @@ class GapiFakeServer {
 
   populateCalendar(calendarArgs) {
     const fakeCalendar = new FakeCalendar(this, calendarArgs);
-    this.#calendars.push(fakeCalendar);
+    this.calendars.push(fakeCalendar);
     return fakeCalendar;
   }
 
-  /**
-   * Start the server on the first available port.  Port information will be
-   * made available on the `domain`, `origin`, and `domainInfo` properties.
-   */
-  start() {
-    const paged = handlerMethod => {
-      handlerMethod.paged = true;
-      return handlerMethod;
-    };
-    const unpaged = handlerMethod => {
-      handlerMethod.paged = false;
-      return handlerMethod;
-    };
+  paged(handlerMethod) {
+    handlerMethod.paged = true;
+    return handlerMethod;
+  }
 
-    const API_HANDLERS = [
-      // ## OAuth support
-      {
-        path: "/o/oauth2/v2/auth",
-        handler: unpaged(this.unpaged_oauth_endpoint),
-      },
-      {
-        path: "/token",
-        handler: unpaged(this.unpaged_oauth_token),
-      },
-      // `https://gmail.googleapis.com/gmail/v1/users/${userId}/METHOD`
-      {
-        prefix: "/gmail/v1/users/",
-        extraPathSegments: ["userId", "*METHOD*"],
-        methodHandlers: {
-          profile: unpaged(this.unpaged_userProfile),
-        },
-      },
-      // `/calendar/v3/users/${userId}/METHOD`
-      {
-        path: "/calendar/v3/users/me/calendarList",
-        handler: paged(this.paged_calendarList),
-      },
-      {
-        // prefix for `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/METHOD`
-        prefix: "/calendar/v3/calendars/",
-        extraPathSegments: ["calendarId", "*METHOD*"],
-        methodHandlers: {
-          events: paged(this.paged_calendarEvents),
-        },
-      },
-    ];
+  unpaged(handlerMethod) {
+    handlerMethod.paged = false;
+    return handlerMethod;
+  }
 
-    for (const handlerInfo of API_HANDLERS) {
+  registerAPIHandlers(handlers) {
+    for (const handlerInfo of handlers) {
       if (handlerInfo.prefix) {
         this.server.registerPrefixHandler(
           handlerInfo.prefix,
@@ -185,33 +138,14 @@ class GapiFakeServer {
         throw new Error("Bad API_HANDLER definition!");
       }
     }
+  }
 
-    const ident = this.server.identity;
-    this.domain = `${ident.primaryHost}:${ident.primaryPort}`;
-    this.origin = `${ident.primaryScheme}://${this.domain}`;
+  htmlLinkForEvent(cal, event) {
+    return `${this.origin}/blah/${cal.id}/${event.id}`;
+  }
 
-    this.testUserEmail = `test-user@${ident.primaryHost}`;
-
-    // Since we are the server that validates this info, we currently don't care
-    // about most of these values.
-    this.domainInfo = {
-      type: "gapi",
-      oauth2Settings: {
-        // we're now using proxy magic so we can use the real domains.
-        authEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
-        tokenEndpoint: "https://oauth2.googleapis.com/token",
-        scope: "scope1 scope2 scope3 scope4",
-      },
-      oauth2Secrets: {
-        clientId: "imaClient",
-        clientSecret: "imaSecret",
-      },
-      oauth2Tokens: {
-        refreshToken: "refreshing-token",
-        accessToken: "valid0",
-        expireTimeMS: this.useNowTS + 24 * 60 * 60 * 1000,
-      },
-    };
+  wrapResults(results) {
+    return results;
   }
 
   /**
@@ -248,14 +182,7 @@ class GapiFakeServer {
 
         this.logRequest(req.path, { results });
 
-        if (isPaged) {
-          results = {
-            kind: "not-a-real-type",
-            etag: "not-a-real-etag",
-            items: results,
-            nextSyncToken: "not-a-real-sync-token-yet",
-          };
-        }
+        results = this.wrapResults(results, isPaged);
 
         resp.setStatusLine(null, 200, "OK");
         resp.setHeader("Content-Type", "application/json");
@@ -271,6 +198,89 @@ class GapiFakeServer {
     } catch (ex) {
       this.logRequest("requestError", { ex: ex.toString() });
     }
+  }
+}
+
+// eslint-disable-next-line no-unused-vars
+class GapiFakeServer extends BaseFakeServer {
+  /**
+   * Start the server on the first available port.  Port information will be
+   * made available on the `domain`, `origin`, and `domainInfo` properties.
+   */
+  start() {
+    const API_HANDLERS = [
+      // ## OAuth support
+      {
+        path: "/o/oauth2/v2/auth",
+        handler: this.unpaged(this.unpaged_oauth_endpoint),
+      },
+      {
+        path: "/token",
+        handler: this.unpaged(this.unpaged_oauth_token),
+      },
+      // `https://gmail.googleapis.com/gmail/v1/users/${userId}/METHOD`
+      {
+        prefix: "/gmail/v1/users/",
+        extraPathSegments: ["userId", "*METHOD*"],
+        methodHandlers: {
+          profile: this.unpaged(this.unpaged_userProfile),
+        },
+      },
+      // `/calendar/v3/users/${userId}/METHOD`
+      {
+        path: "/calendar/v3/users/me/calendarList",
+        handler: this.paged(this.paged_calendarList),
+      },
+      {
+        // prefix for `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/METHOD`
+        prefix: "/calendar/v3/calendars/",
+        extraPathSegments: ["calendarId", "*METHOD*"],
+        methodHandlers: {
+          events: this.paged(this.paged_calendarEvents),
+        },
+      },
+    ];
+
+    this.registerAPIHandlers(API_HANDLERS);
+
+    const ident = this.server.identity;
+    this.domain = `${ident.primaryHost}:${ident.primaryPort}`;
+    this.origin = `${ident.primaryScheme}://${this.domain}`;
+
+    this.testUserEmail = `test-user@${ident.primaryHost}`;
+
+    // Since we are the server that validates this info, we currently don't care
+    // about most of these values.
+    this.domainInfo = {
+      type: "gapi",
+      oauth2Settings: {
+        // we're now using proxy magic so we can use the real domains.
+        authEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenEndpoint: "https://oauth2.googleapis.com/token",
+        scope: "scope1 scope2 scope3 scope4",
+      },
+      oauth2Secrets: {
+        clientId: "imaClient",
+        clientSecret: "imaSecret",
+      },
+      oauth2Tokens: {
+        refreshToken: "refreshing-token",
+        accessToken: "valid0",
+        expireTimeMS: this.useNowTS + 24 * 60 * 60 * 1000,
+      },
+    };
+  }
+
+  wrapResults(results, isPaged) {
+    if (isPaged) {
+      return {
+        kind: "not-a-real-type",
+        etag: "not-a-real-etag",
+        items: results,
+        nextSyncToken: "not-a-real-sync-token-yet",
+      };
+    }
+    return results;
   }
 
   /**
@@ -289,10 +299,10 @@ class GapiFakeServer {
    */
   unpaged_oauth_token() {
     var nextAccessToken;
-    if (typeof this.#oauthTokens === "string") {
-      nextAccessToken = this.#oauthTokens;
+    if (typeof this.oauthTokens === "string") {
+      nextAccessToken = this.oauthTokens;
     } else {
-      nextAccessToken = this.#oauthTokens.shift();
+      nextAccessToken = this.oauthTokens.shift();
     }
 
     return {
@@ -315,17 +325,13 @@ class GapiFakeServer {
     throw new HttpError(400, "Only 'me' is implemented.");
   }
 
-  #etagFromEvent(event) {
+  etagFromEvent(event) {
     // In the future this will to include
     return `Etag-#{event.id}-${event.serial}`;
   }
 
-  #htmlLinkForEvent(cal, event) {
-    return `${this.origin}/blah/${cal.id}/${event.id}`;
-  }
-
   paged_calendarList(args, req) {
-    return this.#calendars.map(cal => {
+    return this.calendars.map(cal => {
       return {
         id: cal.id,
         summary: cal.name,
@@ -339,7 +345,7 @@ class GapiFakeServer {
   }
 
   paged_calendarEvents(args, req) {
-    const cal = this.#getCalendarById(args.calendarId);
+    const cal = this.getCalendarById(args.calendarId);
     return cal.events.map(event => {
       const mapPeep = peep => {
         return {
@@ -364,10 +370,10 @@ class GapiFakeServer {
           dateTime: event.endDate.toISOString(),
           // XXX timeZone fidelity
         },
-        etag: this.#etagFromEvent(event),
+        etag: this.etagFromEvent(event),
         eventType: "default",
         extendedProperties: {},
-        htmlLink: this.#htmlLinkForEvent(cal, event),
+        htmlLink: this.htmlLinkForEvent(cal, event),
         iCalUID: event.iCalUID,
         id: event.id,
         kind: "calendar#event",
@@ -391,6 +397,215 @@ class GapiFakeServer {
         transparency: "opaque",
         updated: backdatedISOString(event.startDate, { days: 6 }),
         visibility: "default",
+      };
+    });
+  }
+}
+
+// eslint-disable-next-line no-unused-vars
+class MapiFakeServer extends BaseFakeServer {
+  /**
+   * Start the server on the first available port.  Port information will be
+   * made available on the `domain`, `origin`, and `domainInfo` properties.
+   */
+  start() {
+    const API_HANDLERS = [
+      // ## OAuth support
+      // https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+      {
+        path: "/common/oauth2/v2.0/authorize/",
+        handler: this.unpaged(this.unpaged_oauth_endpoint),
+      },
+      // https://login.microsoftonline.com/common/oauth2/v2.0/token
+      {
+        path: "/common/oauth2/v2.0/token/",
+        handler: this.unpaged(this.unpaged_oauth_token),
+      },
+      // https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/calendarView/METHOD
+      {
+        path: "/v1.0/me",
+        handler: this.unpaged(this.unpaged_me),
+      },
+      // https://graph.microsoft.com/v1.0/me/calendars
+      {
+        path: "/v1.0/me/calendars",
+        handler: this.unpaged(this.unpaged_calendars),
+      },
+      // https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/calendarView/METHOD
+      {
+        prefix: "/v1.0/me/calendars/",
+        extraPathSegments: ["calendarId", "calendarView", "*METHOD*"],
+        methodHandlers: {
+          delta: this.paged(this.paged_delta),
+        },
+      },
+    ];
+
+    this.registerAPIHandlers(API_HANDLERS);
+
+    const ident = this.server.identity;
+    this.domain = `${ident.primaryHost}:${ident.primaryPort}`;
+    this.origin = `${ident.primaryScheme}://${this.domain}`;
+
+    this.testDisplayName = `test-user`;
+    this.testUserEmail = `${this.testDisplayName}@${ident.primaryHost}`;
+
+    // Since we are the server that validates this info, we currently don't care
+    // about most of these values.
+    this.domainInfo = {
+      type: "mapi",
+      oauth2Settings: {
+        // we're now using proxy magic so we can use the real domains.
+        authEndpoint:
+          "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        tokenEndpoint:
+          "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        scope: "scope1 scope2 scope3 scope4",
+      },
+      oauth2Secrets: {
+        clientId: "imaClient",
+        clientSecret: "imaSecret",
+      },
+      oauth2Tokens: {
+        refreshToken: "refreshing-token",
+        accessToken: "valid0",
+        expireTimeMS: this.useNowTS + 24 * 60 * 60 * 1000,
+      },
+    };
+    this.toto = 0;
+  }
+
+  wrapResults(results, isPaged) {
+    return {
+      value: results,
+    };
+  }
+
+  /**
+   * Eh, we don't need the auth endpoint quite yet.  It's expected that the
+   * front-end is responsible for hitting the auth endpoint and performing
+   * the initial redemption to get the refresh token.  When we start doing
+   * more full-fledged integration tests we'll need this.
+   */
+  unpaged_oauth_endpoint() {
+    throw new HttpError(400, "OAuth Endpoint Not Implemented Yet");
+  }
+
+  /**
+   * The token endpoint.  Currently this assumes the caller is providing a
+   * valid refresh token.
+   */
+  unpaged_oauth_token() {
+    var nextAccessToken;
+    if (typeof this.oauthTokens === "string") {
+      nextAccessToken = this.oauthTokens;
+    } else {
+      nextAccessToken = this.oauthTokens.shift();
+    }
+
+    return {
+      access_token: nextAccessToken,
+      expires_in: 60 * 60,
+      token_type: "Bearer",
+    };
+  }
+
+  unpaged_me() {
+    return {
+      emailAddress: this.testUserEmail,
+      userPrincipalName: this.testDisplayName,
+    };
+  }
+
+  unpaged_calendars() {
+    return this.calendars.map(cal => {
+      return {
+        id: cal.id,
+        name: cal.name,
+      };
+    });
+  }
+
+  paged_delta(args, req) {
+    const cal = this.getCalendarById(args.calendarId);
+    return cal.events.map(event => {
+      const mapPeep = peep => {
+        return {
+          address: peep.email,
+          name: peep.displayName,
+        };
+      };
+      //event.startDate = new Date(event.startDate.valueOf() + this.toto++);
+      return {
+        // XXX more fidelity on organizer/creator here too, with decision of
+        // whether the FakeEventFactory should be making inclusion decisions too.
+        // (The factory probably should be, yeah.  Which then leaves the question
+        // of whether we standardize the organizer/self booleans or just key off
+        // of the emails... probably again yeah.)
+        attendees: event.attendees.map(mapPeep),
+        body: {
+          content: event.description,
+          contentType: "plain",
+        },
+        bodyPreview: event.description,
+        cancelledOccurrences: [],
+        categories: [],
+        changeKey: "",
+        createdDateTime: backdatedISOString(event.startDate, { days: 7 }),
+        end: {
+          dateTime: event.endDate.toISOString().replace("Z", ""),
+          // XXX timeZone fidelity
+        },
+        exceptionOccurrences: [],
+        hasAttachments: false,
+        hideAttendees: false,
+        iCalUId: event.iCalUID,
+        id: event.id,
+        importance: "low",
+        isAllDay: false,
+        isCancelled: false,
+        isDraft: false,
+        isOnlineMeeting: false,
+        isOrganizer: false,
+        isReminderOn: false,
+        lastModifiedDateTime: backdatedISOString(event.startDate, { days: 7 }),
+        location: {
+          address: "",
+          coordinates: null,
+          displayName: event.location,
+          locationEmailAddress: "",
+          locationUri: "",
+          locationType: "default",
+        },
+        locations: [],
+        occurrenceId: "",
+        onlineMeeting: null,
+        onlineMeetingProvider: "unknown",
+        onlineMeetingUrl: "",
+        organizer: {
+          emailAddress: mapPeep(event.organizer),
+        },
+        originalEndTimeZone: "",
+        originalStart: "",
+        originalStartTimeZone: "",
+        recurrence: null,
+        reminderMinutesBeforeStart: 0,
+        responseRequested: true,
+        responseStatus: null,
+        sensitivity: "normal",
+        seriesMasterId: "",
+        showAs: "unknown",
+        start: {
+          dateTime: event.startDate.toISOString().replace("Z", ""),
+          // XXX timeZone fidelity
+        },
+        subject: event.summary,
+        status: "confirmed",
+        summary: event.summary,
+        transactionId: "",
+        type: "singleInstance",
+        uid: event.iCalUID,
+        webLink: this.htmlLinkForEvent(cal, event),
       };
     });
   }

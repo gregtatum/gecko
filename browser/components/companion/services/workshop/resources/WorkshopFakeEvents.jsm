@@ -97,11 +97,7 @@ class FakeEventFactory {
         attendees = [];
       }
 
-      let location;
-      if (sketch.location) {
-        location = sketch.location;
-      }
-
+      const location = sketch.location || undefined;
       const fullEvent = {
         startDate,
         endDate,
