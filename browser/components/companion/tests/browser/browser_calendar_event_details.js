@@ -279,7 +279,7 @@ add_task(async function testVisibilityOfHostSelf() {
         organizer: {
           email: "test123@gmail.com",
           displayName: "Test Account",
-          isSelf: true,
+          self: true,
         },
       },
     ];

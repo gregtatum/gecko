@@ -19,8 +19,8 @@ add_task(async function testRelativeTimeMinutesBeforeEvent() {
     let events = [
       {
         summary: "My meeting",
-        startDate: start,
-        endDate: end,
+        start,
+        end,
       },
     ];
 
@@ -61,8 +61,8 @@ add_task(async function testRelativeTimeMinutesAfterEvent() {
     let events = [
       {
         summary: "My meeting",
-        startDate: start,
-        endDate: end,
+        start,
+        end,
       },
     ];
 
@@ -104,8 +104,8 @@ add_task(async function testRelativeTimeHoursAndMinutesAfterEvent() {
     let events = [
       {
         summary: "My meeting",
-        startDate: start,
-        endDate: end,
+        start,
+        end,
       },
     ];
 
@@ -148,8 +148,8 @@ add_task(async function testRelativeTimeHoursBeforeEvent() {
     let events = [
       {
         summary: "My meeting",
-        startDate: start,
-        endDate: end,
+        start,
+        end,
       },
     ];
 
@@ -187,8 +187,8 @@ add_task(async function testRelativeTimeHoursAndMinutesBeforeEvent() {
     let events = [
       {
         summary: "My meeting",
-        startDate: start,
-        endDate: end,
+        start,
+        end,
       },
     ];
 

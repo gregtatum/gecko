@@ -53,8 +53,8 @@ add_task(async function test_joinMeetingButtonVisibility() {
         conference: {
           url: "http://example.com/joinme",
         },
-        startDate: start,
-        endDate: end,
+        start,
+        end,
       },
     ];
 
@@ -76,8 +76,8 @@ add_task(async function test_joinMeetingButtonVisibility() {
     let newEvents = [
       {
         ...events[0],
-        startDate: newStart,
-        endDate: newEnd,
+        start: newStart,
+        end: newEnd,
       },
     ];
 

@@ -227,10 +227,10 @@ class GoogleService {
       })
     );
     return Array.from(allEvents.values()).sort((a, b) => {
-      if (a.startDate.getTime() == b.startDate.getTime()) {
-        return a.endDate - a.startDate - (b.endDate - b.startDate);
+      if (a.start.getTime() == b.start.getTime()) {
+        return a.end - a.start - (b.end - b.start);
       }
-      return a.startDate - b.startDate;
+      return a.start - b.start;
     });
   }
 
@@ -439,9 +439,7 @@ class MicrosoftService {
         }
       })
     );
-    return Array.from(allEvents.values()).sort(
-      (a, b) => a.startDate - b.startDate
-    );
+    return Array.from(allEvents.values()).sort((a, b) => a.start - b.start);
   }
 
   async getInboxURL() {
@@ -583,20 +581,6 @@ const OnlineServices = {
   get isFresh() {
     let now = new Date();
     return now - this.lastAccess < CALENDAR_FETCH_TIME;
-  },
-
-  getCalendarEventQuery(filterConfig = {}) {
-    return {
-      kind: "calendar",
-      filter: {
-        tag: "",
-        event: {
-          type: "now",
-          durationBeforeInMinutes: 60,
-        },
-        ...filterConfig,
-      },
-    };
   },
 
   async createService(type) {

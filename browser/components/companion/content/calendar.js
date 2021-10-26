@@ -4,12 +4,7 @@
 
 import { openLink, openMeeting, MozLitElement } from "./widget-utils.js";
 import { css, html, classMap, until, repeat } from "./lit.all.js";
-import { workshopAPI } from "chrome://browser/content/companion/workshopAPI.js";
-
 var { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-const { OnlineServices } = ChromeUtils.import(
-  "resource:///modules/OnlineServices.jsm"
-);
 
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
@@ -62,13 +57,6 @@ window.gCalendarEventListener.init();
 
 function debugEnabled() {
   return window.CompanionUtils.getBoolPref("browser.companion.debugUI", false);
-}
-
-function workshopEnabled() {
-  return window.CompanionUtils.getBoolPref(
-    "browser.pinebuild.workshop.enabled",
-    false
-  );
 }
 
 export class CalendarEventList extends MozLitElement {
@@ -156,22 +144,6 @@ export class CalendarEventList extends MozLitElement {
   constructor() {
     super();
     this.events = [];
-    this.listView = null;
-  }
-
-  maybeStopListening() {
-    if (this.listeningTo) {
-      this.listeningTo.removeListener("seeked", this, this.onListViewUpdated);
-      this.listeningTo = null;
-    }
-  }
-
-  maybeListen() {
-    if (this.listView) {
-      this.listView.seekToTop(10, 990);
-      this.listView.on("seeked", this, this.onListViewUpdated);
-    }
-    this.listeningTo = this.listView;
   }
 
   connectedCallback() {
@@ -180,22 +152,8 @@ export class CalendarEventList extends MozLitElement {
   }
 
   disconnectedCallback() {
-    if (workshopEnabled()) {
-      if (this.listView) {
-        this.listView.release();
-        this.listView = null;
-      }
-      this.maybeStopListening();
-    }
-
     document.removeEventListener("refresh-events", this);
     super.disconnectedCallback();
-  }
-
-  onListViewUpdated() {
-    this.events = this.getRelevantEvents(
-      this.listView.items.filter(event => event)
-    );
   }
 
   getRelevantEvents(events) {
@@ -209,22 +167,18 @@ export class CalendarEventList extends MozLitElement {
     oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
     return events
       .filter(event => {
-        let startDate = new Date(event.startDate);
-        let endDate = new Date(event.endDate);
+        let startDate = new Date(event.start);
+        let endDate = new Date(event.end);
         return startDate <= oneHourFromNow && endDate >= now;
       })
-      .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+      .sort((a, b) => new Date(a.start) - new Date(b.start));
   }
 
   handleEvent(e) {
     if (e.type == "refresh-events") {
-      if (workshopEnabled()) {
-        this.updateCalendarListView();
-      } else {
-        let plainEvents = this.getRelevantEvents(e.detail.events);
-        let eventsAndBreaks = this.getEventsAndBreaks(plainEvents);
-        this.events = eventsAndBreaks;
-      }
+      let plainEvents = this.getRelevantEvents(e.detail.events);
+      let eventsAndBreaks = this.getEventsAndBreaks(plainEvents);
+      this.events = eventsAndBreaks;
     }
   }
 
@@ -247,7 +201,7 @@ export class CalendarEventList extends MozLitElement {
     for (let event of otherEvents) {
       let lastEvent = eventsAndBreaks.at(-1);
       let timeBetween = Math.round(
-        (new Date(event.startDate) - new Date(lastEvent.endDate)) / 60 / 1000
+        (new Date(event.start) - new Date(lastEvent.end)) / 60 / 1000
       );
       if (minBreakTime <= timeBetween && timeBetween <= maxBreakTime) {
         eventsAndBreaks.push({
@@ -258,22 +212,6 @@ export class CalendarEventList extends MozLitElement {
       eventsAndBreaks.push(event);
     }
     return eventsAndBreaks;
-  }
-
-  updateCalendarListView() {
-    if (this.listView) {
-      this.listView.release();
-      this.listView = null;
-    }
-
-    const spec = OnlineServices.getCalendarEventQuery();
-    this.listView = workshopAPI.searchAllMessages(spec);
-
-    // Make sure a sync happens.
-    this.listView.refresh();
-
-    this.maybeStopListening();
-    this.maybeListen();
   }
 
   calendarEventItemsTemplate() {
@@ -703,7 +641,7 @@ class CalendarEvent extends MozLitElement {
     let { event, linksCollapsed } = this;
     let { links } = event;
 
-    if (!links?.length) {
+    if (!links.length) {
       return "";
     }
 
@@ -766,9 +704,9 @@ class CalendarEvent extends MozLitElement {
   }
 
   eventTimeTemplate() {
-    let { startDate, endDate } = this.event;
-    let startTime = new Date(Date.parse(startDate));
-    let endTime = new Date(Date.parse(endDate));
+    let { start, end } = this.event;
+    let startTime = new Date(Date.parse(start));
+    let endTime = new Date(Date.parse(end));
     let dateString = `${timeFormat.format(startTime)} - ${timeFormat.format(
       endTime
     )}`;
@@ -882,7 +820,7 @@ class CalendarEvent extends MozLitElement {
     }
 
     let host = organizer || creator;
-    if (!host.isSelf) {
+    if (!host.self) {
       return this.eventHostTemplate();
     }
 
@@ -896,7 +834,7 @@ class CalendarEvent extends MozLitElement {
     let isNonSelfAttendee = user => {
       return (
         user &&
-        !user.isSelf &&
+        !user.self &&
         // If there are no attendees treat all users as attending.
         (!attendees?.length || attendees.some(a => a.email == user.email))
       );
@@ -943,13 +881,13 @@ class CalendarEvent extends MozLitElement {
   }
 
   willUpdate() {
-    let { startDate, endDate } = this.event;
+    let { start, end } = this.event;
 
-    this.setUpcomingStatus(startDate, endDate);
+    this.setUpcomingStatus(start, end);
   }
 
   render() {
-    let { summary, startDate, endDate } = this.event;
+    let { summary, start, end } = this.event;
 
     return html`
       <div
@@ -960,10 +898,7 @@ class CalendarEvent extends MozLitElement {
         @mousedown=${this.toggleDetails}
       >
         <div class="event-top">
-          <relative-time
-            .eventStart=${startDate}
-            .eventEnd=${endDate}
-          ></relative-time>
+          <relative-time .eventStart=${start} .eventEnd=${end}></relative-time>
           <button
             class="ghost-button event-options-button"
             aria-haspopup="menu"
