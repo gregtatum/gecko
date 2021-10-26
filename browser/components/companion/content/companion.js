@@ -7,6 +7,7 @@ import { BrowseList } from "./browse.js";
 import { MediaList } from "./media.js";
 import { PocketList } from "./pocket.js";
 import { LastSessionList, initSessionUI } from "./sessions.js";
+import { ServicesOnboarding } from "./onboarding-services.js";
 import {
   SuggestedSnapshotList,
   RecentlyClosedSnapshotList,
@@ -32,9 +33,14 @@ function maybeInitializeUI() {
     return;
   }
 
-  document
-    .getElementById("events-placeholder")
-    .appendChild(new CalendarEventList());
+  let servicesOnboarding = new ServicesOnboarding();
+  let eventsPlaceholder = document.getElementById("events-placeholder");
+  eventsPlaceholder.parentElement.insertBefore(
+    servicesOnboarding,
+    eventsPlaceholder
+  );
+  eventsPlaceholder.appendChild(new CalendarEventList());
+
   let content = document.getElementById("content");
   content.appendChild(new MediaList("Media"));
   content.appendChild(new GlobalHistoryDebugging());

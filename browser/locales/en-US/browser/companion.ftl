@@ -102,6 +102,13 @@ companion-event-finished = Finished
 #   $duration (Number) - Length of the break in minutes
 companion-event-break = { $duration } minute break
 
+# Shown on the companion onboarding card when visiting a site that we support
+# integrations for, but the user hasn't signed in. Ex: Google [Connect]
+companion-onboarding-service-connect = Connect
+# Shown on the companion onboarding card when a user has signed in to ProClient
+# with a service.
+companion-onboarding-service-connected = Connected
+
 # This string is used in the page action menu to indicate the
 # security status of a view.
 companion-page-action-secure-page = This website is using a secure connection.
