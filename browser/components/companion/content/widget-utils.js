@@ -4,6 +4,7 @@
 
 import {
   query,
+  queryAll,
   LitElement,
 } from "chrome://browser/content/companion/lit.all.js";
 
@@ -32,14 +33,19 @@ export function openLink(e) {
  * static get queries() {
  *   return {
  *     propertyName: ".aNormal .cssSelector",
+ *     anotherName: { all: ".selectorFor .querySelectorAll" },
  *   };
  * }
  *
- * This example would add a property that would be written like this without
+ * This example would add properties that would be written like this without
  * using `queries`:
  *
  * get propertyName() {
  *   return this.renderRoot?.querySelector(".aNormal .cssSelector");
+ * }
+ *
+ * get anotherName() {
+ *   return this.renderRoot?.querySelectorAll(".selectorFor .querySelectorAll");
  * }
  *
  *******
@@ -48,6 +54,34 @@ export function openLink(e) {
  *
  * Fluent requires that a shadowRoot be connected before it can use Fluent.
  * Shadow roots will get connected automatically.
+ *
+ *******
+ *
+ * Test helper for sending events after a change: `dispatchOnUpdateComplete`
+ *
+ * When some async stuff is going on and you want to wait for it in a test, you
+ * can use `this.dispatchOnUpdateComplete(myEvent)` and have the test wait on
+ * your event.
+ *
+ * The component will then wait for your reactive property change to take effect
+ * and dispatch the desired event.
+ *
+ * Example:
+ *
+ * async onClick() {
+ *   let response = await this.getServerResponse(this.data);
+ *   // Show the response status to the user.
+ *   this.responseStatus = respose.status;
+ *   this.dispatchOnUpdateComplete(
+ *     new CustomEvent("status-shown")
+ *   );
+ * }
+ *
+ * add_task(async testButton() {
+ *   let button = this.setupAndGetButton();
+ *   button.click();
+ *   await BrowserTestUtils.waitForEvent(button, "status-shown");
+ * });
  */
 export class MozLitElement extends LitElement {
   constructor() {
@@ -55,7 +89,11 @@ export class MozLitElement extends LitElement {
     let { queries } = this.constructor;
     if (queries) {
       for (let [name, selector] of Object.entries(queries)) {
-        query(selector)(this, name);
+        if (selector.all) {
+          queryAll(selector.all)(this, name);
+        } else {
+          query(selector)(this, name);
+        }
       }
     }
   }
@@ -66,5 +104,10 @@ export class MozLitElement extends LitElement {
       document.l10n.connectRoot(this.renderRoot);
       this._l10nRootConnected = true;
     }
+  }
+
+  async dispatchOnUpdateComplete(event) {
+    await this.updateComplete;
+    this.dispatchEvent(event);
   }
 }

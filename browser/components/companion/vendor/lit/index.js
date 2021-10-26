@@ -15,4 +15,4 @@ export { repeat } from "lit/directives/repeat.js";
 export { styleMap } from "lit/directives/style-map.js";
 export { templateContent } from "lit/directives/template-content.js";
 export { until } from "lit/directives/until.js";
-export { query } from "lit/decorators.js";
+export { query, queryAll } from "lit/decorators.js";

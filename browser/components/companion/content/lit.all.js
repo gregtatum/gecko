@@ -4154,4 +4154,47 @@ function query(selector, cache) {
     });
 }
 
-export { CSSResult, INTERNAL, LitElement, ReactiveElement, UpdatingElement, _$LE, _$LH, adoptStyles, asyncAppend, asyncReplace, cache, classMap, css, defaultConverter, getCompatibleStyle, guard, html, ifDefined, live, noChange, notEqual, nothing, query, ref, render, repeat, styleMap, supportsAdoptingStyleSheets, svg, templateContent, unsafeCSS, until };
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+/**
+ * A property decorator that converts a class property into a getter
+ * that executes a querySelectorAll on the element's renderRoot.
+ *
+ * @param selector A DOMString containing one or more selectors to match.
+ *
+ * See:
+ * https://developer.mozilla.org/en-US/docs/Web/API/Document/querySelectorAll
+ *
+ * @example
+ * ```ts
+ * class MyElement {
+ *   @queryAll('div')
+ *   divs;
+ *
+ *   render() {
+ *     return html`
+ *       <div id="first"></div>
+ *       <div id="second"></div>
+ *     `;
+ *   }
+ * }
+ * ```
+ * @category Decorator
+ */
+function queryAll(selector) {
+    return decorateProperty({
+        descriptor: (_name) => ({
+            get() {
+                var _a;
+                return (_a = this.renderRoot) === null || _a === void 0 ? void 0 : _a.querySelectorAll(selector);
+            },
+            enumerable: true,
+            configurable: true,
+        }),
+    });
+}
+
+export { CSSResult, INTERNAL, LitElement, ReactiveElement, UpdatingElement, _$LE, _$LH, adoptStyles, asyncAppend, asyncReplace, cache, classMap, css, defaultConverter, getCompatibleStyle, guard, html, ifDefined, live, noChange, notEqual, nothing, query, queryAll, ref, render, repeat, styleMap, supportsAdoptingStyleSheets, svg, templateContent, unsafeCSS, until };
