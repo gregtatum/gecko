@@ -117,6 +117,7 @@ class CompanionChild extends JSWindowActorChild {
           tabs,
           newFavicons,
           currentURI,
+          connectedServices,
           servicesConnected,
           globalHistory,
         } = message.data;
@@ -126,6 +127,7 @@ class CompanionChild extends JSWindowActorChild {
         for (let tab of tabs) {
           waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
         }
+        waivedContent.CompanionUtils.connectedServices = connectedServices;
         waivedContent.CompanionUtils.servicesConnected = servicesConnected;
         waivedContent.CompanionUtils.currentURI = currentURI;
         waivedContent.CompanionUtils.globalHistory = globalHistory;

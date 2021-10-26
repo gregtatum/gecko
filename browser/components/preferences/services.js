@@ -174,17 +174,11 @@ class ServiceRow extends HTMLElement {
     if (!this.service) {
       return;
     }
-    Services.obs.notifyObservers(
-      this.service,
-      "companion-signin",
-      this.service.id
-    );
     this.setAttribute("status", "connected");
   }
 
   async signout() {
     await OnlineServices.deleteService(this.service);
-    Services.obs.notifyObservers(null, "companion-signout", this.service.id);
     this.service = null;
     this.setAttribute("status", "disconnected");
   }

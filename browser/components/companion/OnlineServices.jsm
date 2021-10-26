@@ -608,6 +608,7 @@ const OnlineServices = {
     let meetingResults = await service.getNextMeetings();
     this.data = this.data.concat(meetingResults);
     Services.obs.notifyObservers(this.data, "companion-services-refresh");
+    Services.obs.notifyObservers(null, "companion-signin", service.app);
     return service;
   },
 
@@ -627,12 +628,17 @@ const OnlineServices = {
     ServiceInstances.delete(service);
     this.persist();
     Services.obs.notifyObservers(this.data, "companion-services-refresh");
+    Services.obs.notifyObservers(null, "companion-signout", service.app);
   },
 
   getServices(type) {
     return [...ServiceInstances].filter(service =>
       service.app.startsWith(type)
     );
+  },
+
+  get connectedServiceTypes() {
+    return [...new Set(OnlineServices.getAllServices().map(s => s.app))];
   },
 
   hasService(type) {

@@ -70,6 +70,9 @@ class CompanionParent extends JSWindowActorParent {
     this._observer = this.observe.bind(this);
     this._handleTabEvent = this.handleTabEvent.bind(this);
     this._handleGlobalHistoryEvent = this.handleGlobalHistoryEvent.bind(this);
+    this._handleViewLocationListener = this.handleViewLocationListener.bind(
+      this
+    );
     this._pageDataFound = this.pageDataFound.bind(this);
     this._handleSessionUpdate = this.handleSessionUpdate.bind(this);
     this._setupGlobalHistoryPrefObservers = this.setUpGlobalHistoryDebuggingObservers.bind(
@@ -96,6 +99,8 @@ class CompanionParent extends JSWindowActorParent {
       "browser-window-tracker-tab-removed"
     );
 
+    Services.obs.addObserver(this._observer, "companion-signin");
+    Services.obs.addObserver(this._observer, "companion-signout");
     Services.obs.addObserver(this._observer, "companion-services-refresh");
     Services.obs.addObserver(this._observer, "companion-submenu-change");
 
@@ -115,6 +120,9 @@ class CompanionParent extends JSWindowActorParent {
 
   actorCreated() {
     this.setUpGlobalHistoryDebuggingObservers();
+    let hist = this.browsingContext.topChromeWindow.gGlobalHistory;
+    hist.addEventListener("ViewChanged", this._handleViewLocationListener);
+    hist.addEventListener("ViewUpdated", this._handleViewLocationListener);
     this._destroyed = false;
     SessionManager.on("session-replaced", this._handleSessionUpdate);
     SessionManager.on("session-set-aside", this._handleSessionUpdate);
@@ -156,6 +164,8 @@ class CompanionParent extends JSWindowActorParent {
     ]) {
       hist.removeEventListener(event, this._handleGlobalHistoryEvent);
     }
+    hist.removeEventListener("ViewChanged", this._handleViewLocationListener);
+    hist.removeEventListener("ViewUpdated", this._handleViewLocationListener);
   }
 
   didDestroy() {
@@ -182,6 +192,8 @@ class CompanionParent extends JSWindowActorParent {
       "browser-window-tracker-tab-removed"
     );
 
+    Services.obs.removeObserver(this._observer, "companion-signin");
+    Services.obs.removeObserver(this._observer, "companion-signout");
     Services.obs.removeObserver(this._observer, "companion-services-refresh");
     Services.obs.removeObserver(this._observer, "companion-submenu-change");
 
@@ -551,6 +563,20 @@ class CompanionParent extends JSWindowActorParent {
         this.sendAsyncMessage("Companion:TabRemoved", this.getTabData(subj));
         break;
       }
+      case "companion-signin":
+      case "companion-signout":
+        if (topic == "companion-signin") {
+          this.sendAsyncMessage("Companion:SignIn", {
+            service: data,
+            connectedServices: OnlineServices.connectedServiceTypes,
+          });
+        } else if (topic == "companion-signout") {
+          this.sendAsyncMessage("Companion:SignOut", {
+            service: data,
+            connectedServices: OnlineServices.connectedServiceTypes,
+          });
+        }
+        break;
       case "companion-services-refresh":
         let events = subj.wrappedJSObject;
         await this.populateAdditionalEventData(events);
@@ -575,6 +601,23 @@ class CompanionParent extends JSWindowActorParent {
     this.sendAsyncMessage("Companion:GlobalHistoryEvent", {
       globalHistory,
     });
+    if (
+      Services.prefs.getBoolPref("browser.companion.globalhistorydebugging")
+    ) {
+      // When debugging is enabled we only want to register one listener, so
+      // this gets repurposed for the debug events and the view location events.
+      this.handleViewLocationListener(event);
+    }
+  }
+
+  handleViewLocationListener(event) {
+    let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
+    let { selectedBrowser } = gBrowser;
+    if (selectedBrowser.documentURI) {
+      this.sendAsyncMessage("Companion:ViewLocation", {
+        url: selectedBrowser.documentURI.spec,
+      });
+    }
   }
 
   handleTabEvent(event) {
@@ -700,6 +743,7 @@ class CompanionParent extends JSWindowActorParent {
         let globalHistory = this.maybeGetGlobalHistory();
         this.sendAsyncMessage("Companion:Setup", {
           tabs,
+          connectedServices: OnlineServices.connectedServiceTypes,
           servicesConnected,
           newFavicons,
           currentURI,
@@ -871,6 +915,10 @@ class CompanionParent extends JSWindowActorParent {
       case "Companion:GetDocumentTitle": {
         let { url } = message.data;
         return OnlineServices.getDocumentTitle(url);
+      }
+      case "Companion:ConnectService": {
+        let { type } = message.data;
+        OnlineServices.createService(type);
       }
     }
     return null;
