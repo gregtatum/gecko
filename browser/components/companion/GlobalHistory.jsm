@@ -210,6 +210,10 @@ class View {
     return this.#internalView.pinned;
   }
 
+  get isArticle() {
+    return this.#internalView.isArticle;
+  }
+
   get contentPrincipal() {
     return this.#internalView.contentPrincipal;
   }
@@ -229,6 +233,9 @@ class InternalView {
 
   /** @type {boolean} **/
   #muted;
+
+  /** @type {boolean} **/
+  #isArticle;
 
   /** @type {nsIPrincipal} **/
   #contentPrincipal;
@@ -453,6 +460,12 @@ class InternalView {
   get muted() {
     let browser = this.getBrowser();
     return browser?.audioMuted;
+  }
+
+  /** @type {boolean} */
+  get isArticle() {
+    let browser = this.getBrowser();
+    return browser?.isArticle;
   }
 
   /** @type {boolean} */

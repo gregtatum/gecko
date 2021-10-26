@@ -385,6 +385,11 @@ export default class ActiveViewManager extends HTMLElement {
     this.#pageActionView = null;
     let siteSecurityIcon = document.getElementById("site-security-icon");
     siteSecurityIcon.classList.remove(this.#securityIconClass);
+
+    let readerMode = document.getElementById("page-action-reader-mode");
+    readerMode.hidden = true;
+    let pageActionsPanel = document.getElementById("page-action-panel");
+    pageActionsPanel.classList.remove("reader-mode-available");
   }
 
   #pageActionPanelShowing(event) {
@@ -400,6 +405,13 @@ export default class ActiveViewManager extends HTMLElement {
       isMuted: view.muted,
     });
     muteView.toggleAttribute("unmute", view.muted);
+
+    if (view.isArticle) {
+      let readerMode = document.getElementById("page-action-reader-mode");
+      readerMode.hidden = false;
+      let pageActionPanel = document.getElementById("page-action-panel");
+      pageActionPanel.classList.add("reader-mode-available");
+    }
 
     let pageActionTitleEl = document.getElementById("site-info-title");
     pageActionTitleEl.value = view.title;
