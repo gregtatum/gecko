@@ -298,6 +298,8 @@ function parseMicrosoftCalendarResult(result) {
 }
 
 function MainThreadServices(window) {
+  let workshopAPI;
+
   const SanitizerFlags =
     parserUtils.SanitizerDropForms |
     parserUtils.SanitizerDropMedia |
@@ -310,6 +312,14 @@ function MainThreadServices(window) {
   // parserUtils.parseFragment needs to have a context in order
   // to get the associated document.
   const context = doc.createElement("template");
+
+  const unloadListener = evt => {
+    window.removeEventListener("beforeunload", unloadListener);
+    // We're unloading and maybe a main thread service is using
+    // the port associated with the workshopAPI.
+    workshopAPI?.willDie();
+  };
+  window.addEventListener("beforeunload", unloadListener);
 
   return {
     sanitizeHTML(str) {
@@ -354,6 +364,12 @@ function MainThreadServices(window) {
         document: serializer.serializeToString(docFragment).trim(),
         snippet: docFragment.textContent.trim(),
       };
+    },
+
+    // Enables us to pass a reference to an api object once it has been created
+    // this in turn allows us to handle sending messages on "beforeunload".
+    registerWorkshopAPI(api) {
+      workshopAPI = api;
     },
     parseHFromUrl,
     parseHFromStr,

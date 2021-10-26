@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 browser.jar:
+    content/browser/companion/breakTime.svg (content/breakTime.svg)
     content/browser/companion/browse.js (content/browse.js)
 *   content/browser/companion/browser.css (content/browser.css)
     content/browser/companion/calendar.js (content/calendar.js)
@@ -50,11 +51,12 @@ browser.jar:
     content/browser/companion/time-since.js (content/time-since.js)
     content/browser/companion/viewLoading.svg (content/viewLoading.svg)
     content/browser/companion/vpn.svg (content/vpn.svg)
-    content/browser/companion/breakTime.svg (content/breakTime.svg)
     content/browser/companion/webex.png (content/webex.png)
     content/browser/companion/widget-utils.js (content/widget-utils.js)
     content/browser/companion/workshop-api-built.js (services/workshop/build/workshop-api-built.js)
     content/browser/companion/workshop-worker-built.js (services/workshop/build/workshop-worker-built.js)
+    content/browser/companion/workshop-services.js (content/workshop-services.js)
+    content/browser/companion/workshopAPI.js (content/workshopAPI.js)
     content/browser/companion/zoom.png (content/zoom.png)
     content/browser/companion/components/companion-manager.js (content/components/companion-manager.js)
     content/browser/companion/components/companion-manager.css (content/components/companion-manager.css)
