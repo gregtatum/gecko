@@ -19,19 +19,34 @@ TEST(IntlDisplayNames, Script)
     auto result = DisplayNames::TryCreate("en-US", options);
     ASSERT_TRUE(result.isOk());
     auto displayNames = result.unwrap();
+
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("Hans")).isOk());
     ASSERT_TRUE(buffer.verboseMatches(u"Simplified Han"));
 
     buffer.clear();
+    {
+      // The code is too long here.
+      auto err = displayNames->Of(buffer, MakeStringSpan("ThisIsTooLong"));
+      ASSERT_TRUE(err.isErr());
+      ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+      ASSERT_TRUE(buffer.verboseMatches(u""));
+    }
+
+    // Test fallbacking for unknown scripts.
+
+    buffer.clear();
     ASSERT_TRUE(
-        displayNames->Of(buffer, MakeStringSpan("ThisIsTooLong")).isOk());
+        displayNames
+            ->Of(buffer, MakeStringSpan("Fake"), DisplayNames::Fallback::None)
+            .isOk());
     ASSERT_TRUE(buffer.verboseMatches(u""));
 
     buffer.clear();
     ASSERT_TRUE(
-        displayNames->Of(buffer, MakeStringSpan("✋🏽 non-ascii input"))
+        displayNames
+            ->Of(buffer, MakeStringSpan("Fake"), DisplayNames::Fallback::Code)
             .isOk());
-    ASSERT_TRUE(buffer.verboseMatches(u""));
+    ASSERT_TRUE(buffer.verboseMatches(u"Fake"));
   }
 
   {
@@ -53,6 +68,21 @@ TEST(IntlDisplayNames, Script)
     buffer.clear();
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("Hans")).isOk());
     ASSERT_TRUE(buffer.verboseMatches(u"Simplified"));
+
+    // Test fallbacking for unknown scripts.
+    buffer.clear();
+    ASSERT_TRUE(
+        displayNames
+            ->Of(buffer, MakeStringSpan("Fake"), DisplayNames::Fallback::None)
+            .isOk());
+    ASSERT_TRUE(buffer.verboseMatches(u""));
+
+    buffer.clear();
+    ASSERT_TRUE(
+        displayNames
+            ->Of(buffer, MakeStringSpan("Fake"), DisplayNames::Fallback::Code)
+            .isOk());
+    ASSERT_TRUE(buffer.verboseMatches(u"Fake"));
   }
 
   {

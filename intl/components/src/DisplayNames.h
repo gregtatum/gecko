@@ -232,14 +232,8 @@ class DisplayNames final {
           return this->GetCurrency(aBuffer, aCode, aFallback);
         case Type::Language:
           return this->GetLanguage(aBuffer, aCode, aFallback);
-        case Type::Script: {
-          auto result = ToResult(this->GetScript(aBuffer, aCode));
-          if (result.isOk()) {
-            return Ok();
-          } else {
-            return Err(ToError(result.unwrapErr()));
-          }
-        }
+        case Type::Script:
+          return this->GetScript(aBuffer, aCode, aFallback);
         case Type::Region:
           return this->GetRegion(aBuffer, aCode, aFallback);
         case Type::Calendar:
@@ -259,6 +253,9 @@ class DisplayNames final {
  private:
   /**
    * This is a specialized form of the FillBufferWithICUCall for DisplayNames.
+   * Different APIs report that no display name is found with different
+   * statuses. This method signals no display name was found by setting the
+   * buffer to 0.
    *
    * The display name APIs such as `uldn_scriptDisplayName`,
    * `uloc_getDisplayScript`, and `uldn_regionDisplayName` report
@@ -266,13 +263,15 @@ class DisplayNames final {
    * accomodate fallbacking, return an empty string in this case.
    */
   template <typename B, typename F>
-  static ICUResult FillBufferWithICUDisplayNames(B& aBuffer, F aCallback) {
+  static ICUResult FillBufferWithICUDisplayNames(
+      B& aBuffer, UErrorCode aNoDisplayNameStatus, F aCallback) {
     return FillBufferWithICUCall(
         aBuffer, [&](UChar* target, int32_t length, UErrorCode* status) {
           int32_t res = aCallback(target, length, status);
 
-          if (*status == U_ILLEGAL_ARGUMENT_ERROR) {
+          if (*status == aNoDisplayNameStatus) {
             *status = U_ZERO_ERROR;
+            res = 0;
           }
           return res;
         });
@@ -315,7 +314,8 @@ class DisplayNames final {
     }
 
     auto result = FillBufferWithICUDisplayNames(
-        aBuffer, [&](UChar* target, int32_t length, UErrorCode* status) {
+        aBuffer, U_ILLEGAL_ARGUMENT_ERROR,
+        [&](UChar* target, int32_t length, UErrorCode* status) {
           return uldn_localeDisplayName(mULocaleDisplayNames.GetConst(),
                                         tagVec.begin(), target, length, status);
         });
@@ -372,7 +372,8 @@ class DisplayNames final {
                 regionChars);
 
     auto result = FillBufferWithICUDisplayNames(
-        aBuffer, [&](UChar* chars, uint32_t size, UErrorCode* status) {
+        aBuffer, U_ILLEGAL_ARGUMENT_ERROR,
+        [&](UChar* chars, uint32_t size, UErrorCode* status) {
           return uldn_regionDisplayName(
               mULocaleDisplayNames.GetConst(), regionChars, chars,
               AssertedCast<int32_t, uint32_t>(size), status);
@@ -490,42 +491,102 @@ class DisplayNames final {
    * Get the display names for Apply the DisplayNames::Type::Script.
    */
   template <typename B>
-  ICUResult GetScript(B& aBuffer, Span<const char> aScript) const {
+  Result<Ok, DisplayNamesError> GetScript(B& aBuffer, Span<const char> aScript,
+                                          Fallback aFallback) const {
     static_assert(std::is_same<typename B::CharType, char16_t>::value);
     mozilla::intl::ScriptSubtag script;
+    if (!IsStructurallyValidScriptTag(aScript)) {
+      return Err(DisplayNamesError::InvalidOption);
+    }
+    script.set(aScript);
 
-    if (mOptions.style == DisplayNames::Style::Long) {
-      // |uldn_scriptDisplayName| doesn't use the stand-alone form for script
-      // subtags, so we're using |uloc_getDisplayScript| instead. (This only
-      // applies to the long form.)
-      //
-      // ICU bug: https://unicode-org.atlassian.net/browse/ICU-9301
-      //
-      // |uloc_getDisplayScript| expects a full locale identifier as its input.
-      // Manually append the script. This could be handled more gracefully with
-      // full language tag support. See Bug
-      //
-      // Total length: 9 ("und-" 4) + ("Latn" 4) + ("\0" 1)
-      ScriptLocaleVector locale{};
-      if (!ConvertScriptToLocale(locale, aScript)) {
-        // In case the locale is not valid, do not write to the buffer to allow
-        // for fallbacking.
-        return Ok();
+    mozilla::intl::Locale tag;
+    tag.setLanguage("und");
+
+    tag.setScript(script);
+
+    {
+      // ICU always canonicalizes the input locale, but since we know that ICU's
+      // canonicalization is incomplete, we need to perform our own
+      // canonicalization to ensure consistent result.
+      auto result = tag.canonicalizeBaseName();
+      if (result.isErr()) {
+        return Err(ToError(result.unwrapErr()));
       }
-
-      return FillBufferWithICUDisplayNames(
-          aBuffer, [&](UChar* target, int32_t length, UErrorCode* status) {
-            return uloc_getDisplayScript(locale.begin(), mLocale.data(), target,
-                                         length, status);
-          });
     }
 
-    return FillBufferWithICUDisplayNames(
-        aBuffer, [&](UChar* target, int32_t length, UErrorCode* status) {
-          return uldn_scriptDisplayName(mULocaleDisplayNames.GetConst(),
-                                        AssertNullTerminatedString(aScript),
-                                        target, length, status);
-        });
+    MOZ_ASSERT(tag.script().present());
+    mozilla::Vector<char, 32> tagString;
+    VectorToBufferAdaptor buffer(tagString);
+
+    switch (mOptions.style) {
+      case Style::Long: {
+        // doesn't use the stand-alone form for script subtags.
+        //
+        // ICU bug: https://unicode-org.atlassian.net/browse/ICU-9301
+
+        // |uloc_getDisplayScript| expects a full locale identifier as its
+        // input.
+        if (auto result = tag.toString(buffer); result.isErr()) {
+          return Err(ToError(result.unwrapErr()));
+        }
+
+        // Null terminate the tag string.
+        if (!tagString.append('\0')) {
+          return Err(DisplayNamesError::OutOfMemory);
+        }
+
+        auto result = FillBufferWithICUDisplayNames(
+            aBuffer, U_USING_DEFAULT_WARNING,
+            [&](UChar* target, int32_t length, UErrorCode* status) {
+              return uloc_getDisplayScript(tagString.begin(), mLocale.data(),
+                                           target, length, status);
+            });
+
+        if (result.isErr()) {
+          return Err(ToError(result.unwrapErr()));
+        }
+        break;
+      }
+      case Style::Abbreviated:
+      case Style::Short:
+      case Style::Narrow: {
+        // Note: ICU requires the script subtag to be in canonical case.
+        const mozilla::intl::ScriptSubtag& canonicalScript = tag.script();
+
+        char scriptChars[mozilla::intl::LanguageTagLimits::ScriptLength + 1] =
+            {};
+        MOZ_ASSERT(canonicalScript.length() <=
+                   mozilla::intl::LanguageTagLimits::ScriptLength + 1);
+        std::copy_n(canonicalScript.span().data(), canonicalScript.length(),
+                    scriptChars);
+
+        auto result = FillBufferWithICUDisplayNames(
+            aBuffer, U_ILLEGAL_ARGUMENT_ERROR,
+            [&](UChar* target, int32_t length, UErrorCode* status) {
+              return uldn_scriptDisplayName(mULocaleDisplayNames.GetConst(),
+                                            scriptChars, target, length,
+                                            status);
+            });
+
+        if (result.isErr()) {
+          return Err(ToError(result.unwrapErr()));
+        }
+        break;
+      }
+    }
+
+    if (aBuffer.length() == 0 && aFallback == DisplayNames::Fallback::Code) {
+      // Fallback to the case-canonicalized input when no localized name was
+      // found.
+      script.toTitleCase();
+
+      if (!FillBuffer(script.span(), aBuffer)) {
+        return Err(DisplayNamesError::OutOfMemory);
+      }
+    }
+
+    return Ok();
   };
 
   [[nodiscard]] static bool ConvertScriptToLocale(ScriptLocaleVector& aLocale,
