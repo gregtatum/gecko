@@ -39,13 +39,13 @@ add_task(async function testBreakIndicatorsBetweenMeetings() {
     let events = [
       {
         summary: "First meeting",
-        start,
-        end,
+        startDate: start,
+        endDate: end,
       },
       {
         summary: "Another meeting later",
-        start: nextStart,
-        end: nextEnd,
+        startDate: nextStart,
+        endDate: nextEnd,
       },
     ];
 

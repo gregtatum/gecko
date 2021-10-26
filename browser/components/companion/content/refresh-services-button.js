@@ -6,6 +6,9 @@
 
 import { MozLitElement } from "./widget-utils.js";
 import { classMap, html, css } from "./lit.all.js";
+import { workshopAPI } from "chrome://browser/content/companion/workshopAPI.js";
+
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 ChromeUtils.defineModuleGetter(
   globalThis,
@@ -100,7 +103,25 @@ export class RefreshServicesButton extends MozLitElement {
     this.isRefreshing = true;
 
     try {
-      await OnlineServices.fetchEvents();
+      if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
+        await new Promise(resolve => {
+          // Wait for the list view to finish syncing by checking its sync
+          // status. However, MR2-1182 will be adding a method that refreshes
+          // all subscribed calendars in a single call and we can avoid having
+          // to do all these extra steps below.
+          let spec = OnlineServices.getCalendarEventQuery();
+          let listView = workshopAPI.searchAllMessages(spec);
+          listView.refresh();
+          listView.seekToTop(10, 990);
+          listView.on("seeked", this, () => {
+            if (!listView.tocMeta.syncStatus) {
+              resolve();
+            }
+          });
+        });
+      } else {
+        await OnlineServices.fetchEvents();
+      }
     } finally {
       this.isRefreshing = false;
     }

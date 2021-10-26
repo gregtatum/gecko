@@ -247,8 +247,8 @@ function parseGoogleCalendarResult(result, primaryEmail) {
   let event = {};
   event.id = result.id;
   event.summary = result.summary;
-  event.start = new Date(result.start?.dateTime);
-  event.end = new Date(result.end?.dateTime);
+  event.startDate = new Date(result.start?.dateTime);
+  event.endDate = new Date(result.end?.dateTime);
   let links = getLinkInfo(result);
   event.conference = getConferenceInfo(result, links);
   event.links = links.filter(link => link.type != "conferencing");
@@ -260,10 +260,10 @@ function parseGoogleCalendarResult(result, primaryEmail) {
   // Secondary calendars don't use the same email as
   // the primary, so we manually mark the "self" entries
   if (event.organizer?.email == primaryEmail) {
-    event.organizer.self = true;
+    event.organizer.isSelf = true;
   }
   if (event.creator?.email == primaryEmail) {
-    event.creator.self = true;
+    event.creator.isSelf = true;
   }
   event.url = result.htmlLink;
   return event;
@@ -274,15 +274,15 @@ function parseMicrosoftCalendarResult(result) {
     return {
       email: user.emailAddress.address,
       name: user.emailAddress.name,
-      self: !!self,
+      isSelf: !!self,
     };
   }
 
   let event = {};
   event.id = result.id;
   event.summary = result.subject;
-  event.start = new Date(result.start?.dateTime + "Z");
-  event.end = new Date(result.end?.dateTime + "Z");
+  event.startDate = new Date(result.start?.dateTime + "Z");
+  event.endDate = new Date(result.end?.dateTime + "Z");
   let links = getLinkInfo(result);
   event.conference = getConferenceInfo(result, links);
   event.links = links.filter(link => link.type != "conferencing");

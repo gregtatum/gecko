@@ -145,18 +145,18 @@ class CompanionHelper {
     let standardizedEvents = eventsData
       .map(event => ({
         id: new Date(), // guarantee a unique id for this event
-        start: new Date(),
-        end: oneHourFromNow,
+        startDate: new Date(),
+        endDate: oneHourFromNow,
         links: [],
         conference: {},
         calendar: { id: "primary" },
         attendees: [],
-        organizer: { email: "organizer@example.com", self: false },
-        creator: { email: "creator@example.com", self: false },
+        organizer: { email: "organizer@example.com", isSelf: false },
+        creator: { email: "creator@example.com", isSelf: false },
         serviceId: 0,
         ...event,
       }))
-      .sort((a, b) => a.start - b.start);
+      .sort((a, b) => a.startDate - b.startDate);
     await this.runCompanionTask(
       async events => {
         content.document.dispatchEvent(

@@ -56,8 +56,8 @@ add_task(async function testRunningLate() {
     let events = [
       {
         summary: `My test event`,
-        attendees: [{ email: "attendee@example.com", self: false }],
-        organizer: { email: "me@example.com", self: true },
+        attendees: [{ email: "attendee@example.com", isSelf: false }],
+        organizer: { email: "me@example.com", isSelf: true },
       },
       {
         summary: `Your test event`,
@@ -94,7 +94,7 @@ add_task(async function testRunningLateXss() {
     let events = [
       {
         summary: `My XSS event" onclick="alert('hi')""`,
-        attendees: [{ email: "uhoh@example.com", self: false }],
+        attendees: [{ email: "uhoh@example.com", isSelf: false }],
       },
     ];
 
@@ -122,8 +122,8 @@ add_task(async function testNoAttendees() {
     await helper.setCalendarEvents([
       {
         summary: "My personal event",
-        organizer: { email: "me@example.com", self: true },
-        creator: { self: true },
+        organizer: { email: "me@example.com", isSelf: true },
+        creator: { isSelf: true },
       },
     ]);
 
