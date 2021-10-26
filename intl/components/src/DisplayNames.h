@@ -228,14 +228,8 @@ class DisplayNames final {
     }
     if constexpr (std::is_same_v<typename B::CharType, char16_t>) {
       switch (mOptions.type) {
-        case Type::Currency: {
-          auto result = ToResult(this->GetCurrency(aBuffer, aCode));
-          if (result.isOk()) {
-            return Ok();
-          } else {
-            return Err(ToError(result.unwrapErr()));
-          }
-        }
+        case Type::Currency:
+          return this->GetCurrency(aBuffer, aCode, aFallback);
         case Type::Language:
           return this->GetLanguage(aBuffer, aCode, aFallback);
         case Type::Script: {
@@ -331,6 +325,7 @@ class DisplayNames final {
 
     if (aBuffer.length() == 0 && aFallback == Fallback::Code) {
       // The language was empty, fallback to the Fallback code.
+      tagVec.shrinkBy(1);  // Remove the null terminator.
       if (!FillBuffer(tagVec, aBuffer)) {
         return Err(DisplayNamesError::OutOfMemory);
       }
@@ -399,6 +394,14 @@ class DisplayNames final {
   }
 
   /**
+   * Given an ASCII alpha, convert it to upper case.
+   */
+  static inline char16_t AsciiAlphaToUpperCase(char16_t aCh) {
+    MOZ_ASSERT(aCh >= 'a' && aCh <= 'z');
+    return aCh - ('a' - 'A');
+  }
+
+  /**
    * Get the display names for Apply the DisplayNames::Type::Currency.
    *
    * Note that this function requires a `const char16_t` for the currency. This
@@ -406,8 +409,27 @@ class DisplayNames final {
    * ICU4X.
    */
   template <typename B>
-  ICUResult GetCurrency(B& aBuffer, Span<const char> aCurrency) const {
+  Result<Ok, DisplayNamesError> GetCurrency(B& aBuffer,
+                                            Span<const char> aCurrency,
+                                            Fallback aFallback) const {
     static_assert(std::is_same<typename B::CharType, char16_t>::value);
+    if (aCurrency.size() != 3) {
+      return Err(DisplayNamesError::InvalidOption);
+    }
+
+    if (!mozilla::IsAsciiAlpha(aCurrency[0]) ||
+        !mozilla::IsAsciiAlpha(aCurrency[1]) ||
+        !mozilla::IsAsciiAlpha(aCurrency[2])) {
+      return Err(DisplayNamesError::InvalidOption);
+    }
+
+    // Normally this type of operation wouldn't be safe, but ASCII characters
+    // all take 1 byte in UTF-8 encoding, and can be zero padded to be valid
+    // UTF-16. Currency codes are all three ASCII letters.
+    char16_t currency[] = {static_cast<char16_t>(aCurrency[0]),
+                           static_cast<char16_t>(aCurrency[1]),
+                           static_cast<char16_t>(aCurrency[2]), u'\0'};
+
     UCurrNameStyle style;
     switch (mOptions.style) {
       case Style::Long:
@@ -422,35 +444,34 @@ class DisplayNames final {
         break;
     }
 
-    // ucurr_getName requires a UTF-16 input.
-    mozilla::Vector<char16_t, 32> currencyUtf16;
-    if (!FillUTF16Vector(aCurrency, currencyUtf16)) {
-      return Err(ICUError::OutOfMemory);
-    }
-
     int32_t length = 0;
     UErrorCode status = U_ZERO_ERROR;
-    const char16_t* name =
-        ucurr_getName(AssertNullTerminatedString(
-                          Span(currencyUtf16.begin(), currencyUtf16.length())),
-                      mLocale.data(), style, nullptr, &length, &status);
+    const char16_t* name = ucurr_getName(currency, mLocale.data(), style,
+                                         nullptr, &length, &status);
     if (U_FAILURE(status)) {
-      return Err(ICUError::InternalError);
+      return Err(DisplayNamesError::InternalError);
     }
 
     if (status == U_USING_DEFAULT_WARNING) {
       // A resource bundle lookup returned a result from the root locale.
-      // Do not write to the buffer.
-      if (aBuffer.length() != 0) {
-        // Ensure an empty string is in the buffer.
+      if (aFallback == DisplayNames::Fallback::Code) {
+        // Return the canonicalized input when no localized currency name was
+        // found. Canonical case for currency is upper case.
+        if (!aBuffer.reserve(3)) {
+          return Err(DisplayNamesError::OutOfMemory);
+        }
+        aBuffer.data()[0] = AsciiAlphaToUpperCase(currency[0]);
+        aBuffer.data()[1] = AsciiAlphaToUpperCase(currency[1]);
+        aBuffer.data()[2] = AsciiAlphaToUpperCase(currency[2]);
+        aBuffer.written(3);
+      } else if (aBuffer.length() != 0) {
+        // Ensure an empty string is in the buffer when there is no fallback.
         aBuffer.written(0);
       }
       return Ok();
     }
 
-    // Write the name, which is a static string, out to the buffer. This has a
-    // small performance cost compared to just returning the reference to the
-    // static string, but ensures a consistent DisplayNames::Of API.
+    // Write out the name to the buffer.
     size_t amount = length;
     aBuffer.reserve(amount);
     for (size_t i = 0; i < amount; i++) {

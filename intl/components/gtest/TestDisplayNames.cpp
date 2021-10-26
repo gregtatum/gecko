@@ -20,18 +20,18 @@ TEST(IntlDisplayNames, Script)
     ASSERT_TRUE(result.isOk());
     auto displayNames = result.unwrap();
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("Hans")).isOk());
-    buffer.verboseMatches(u"Simplified Han");
+    ASSERT_TRUE(buffer.verboseMatches(u"Simplified Han"));
 
     buffer.clear();
     ASSERT_TRUE(
         displayNames->Of(buffer, MakeStringSpan("ThisIsTooLong")).isOk());
-    buffer.verboseMatches(u"");
+    ASSERT_TRUE(buffer.verboseMatches(u""));
 
     buffer.clear();
     ASSERT_TRUE(
         displayNames->Of(buffer, MakeStringSpan("✋🏽 non-ascii input"))
             .isOk());
-    buffer.verboseMatches(u"");
+    ASSERT_TRUE(buffer.verboseMatches(u""));
   }
 
   {
@@ -41,7 +41,7 @@ TEST(IntlDisplayNames, Script)
 
     buffer.clear();
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("Hans")).isOk());
-    buffer.verboseMatches(u"han simplificado");
+    ASSERT_TRUE(buffer.verboseMatches(u"han simplificado"));
   }
 
   options.style = DisplayNames::Style::Short;
@@ -52,7 +52,7 @@ TEST(IntlDisplayNames, Script)
 
     buffer.clear();
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("Hans")).isOk());
-    buffer.verboseMatches(u"Simplified");
+    ASSERT_TRUE(buffer.verboseMatches(u"Simplified"));
   }
 
   {
@@ -62,7 +62,7 @@ TEST(IntlDisplayNames, Script)
 
     buffer.clear();
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("Hans")).isOk());
-    buffer.verboseMatches(u"simplificado");
+    ASSERT_TRUE(buffer.verboseMatches(u"simplificado"));
   }
 }
 
@@ -77,11 +77,11 @@ TEST(IntlDisplayNames, Language)
     auto displayNames = result.unwrap();
 
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("es-ES")).isOk());
-    buffer.verboseMatches(u"Spanish (Spain)");
+    ASSERT_TRUE(buffer.verboseMatches(u"Spanish (Spain)"));
 
     buffer.clear();
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("zh-Hant")).isOk());
-    buffer.verboseMatches(u"Chinese (Traditional)");
+    ASSERT_TRUE(buffer.verboseMatches(u"Chinese (Traditional)"));
 
     // The undefined locale returns an empty string.
     buffer.clear();
@@ -100,7 +100,7 @@ TEST(IntlDisplayNames, Language)
         displayNames
             ->Of(buffer, MakeStringSpan("zz"), DisplayNames::Fallback::None)
             .isOk());
-    buffer.verboseMatches(u"");
+    ASSERT_TRUE(buffer.verboseMatches(u""));
 
     // Unknown locales can fallback to the language code.
     buffer.clear();
@@ -108,7 +108,7 @@ TEST(IntlDisplayNames, Language)
         displayNames
             ->Of(buffer, MakeStringSpan("zz-US"), DisplayNames::Fallback::Code)
             .isOk());
-    buffer.verboseMatches(u"zz-US");
+    ASSERT_TRUE(buffer.verboseMatches(u"zz-US"));
 
     // Unknown locales with a unicode extension error. Is this correct?
     buffer.clear();
@@ -116,7 +116,7 @@ TEST(IntlDisplayNames, Language)
                     ->Of(buffer, MakeStringSpan("zz-US-u-ca-chinese"),
                          DisplayNames::Fallback::Code)
                     .isErr());
-    buffer.verboseMatches(u"");
+    ASSERT_TRUE(buffer.verboseMatches(u""));
   }
   {
     auto result = DisplayNames::TryCreate("es-ES", options);
@@ -125,11 +125,11 @@ TEST(IntlDisplayNames, Language)
 
     buffer.clear();
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("es-ES")).isOk());
-    buffer.verboseMatches(u"español (España)");
+    ASSERT_TRUE(buffer.verboseMatches(u"español (España)"));
 
     buffer.clear();
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("zh-Hant")).isOk());
-    buffer.verboseMatches(u"chino (tradicional)");
+    ASSERT_TRUE(buffer.verboseMatches(u"chino (tradicional)"));
   }
 }
 
@@ -146,22 +146,22 @@ TEST(IntlDisplayNames, Region)
     auto displayNames = result.unwrap();
 
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("US")).isOk());
-    buffer.verboseMatches(u"United States");
+    ASSERT_TRUE(buffer.verboseMatches(u"United States"));
 
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("ES")).isOk());
-    buffer.verboseMatches(u"Spain");
+    ASSERT_TRUE(buffer.verboseMatches(u"Spain"));
 
     ASSERT_TRUE(
         displayNames
             ->Of(buffer, MakeStringSpan("ZX"), DisplayNames::Fallback::None)
             .isOk());
-    buffer.verboseMatches(u"");
+    ASSERT_TRUE(buffer.verboseMatches(u""));
 
     ASSERT_TRUE(
         displayNames
             ->Of(buffer, MakeStringSpan("ZX"), DisplayNames::Fallback::Code)
             .isOk());
-    buffer.verboseMatches(u"ZX");
+    ASSERT_TRUE(buffer.verboseMatches(u"ZX"));
   }
   {
     auto result = DisplayNames::TryCreate("es-ES", options);
@@ -169,10 +169,10 @@ TEST(IntlDisplayNames, Region)
     auto displayNames = result.unwrap();
 
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("US")).isOk());
-    buffer.verboseMatches(u"Estados Unidos");
+    ASSERT_TRUE(buffer.verboseMatches(u"Estados Unidos"));
 
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("ES")).isOk());
-    buffer.verboseMatches(u"España");
+    ASSERT_TRUE(buffer.verboseMatches(u"España"));
   }
 }
 
@@ -187,7 +187,42 @@ TEST(IntlDisplayNames, Currency)
   ASSERT_TRUE(result.isOk());
   auto displayNames = result.unwrap();
   ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("EUR")).isOk());
-  buffer.verboseMatches(u"Euro");
+  ASSERT_TRUE(buffer.verboseMatches(u"Euro"));
+
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("USD")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"US Dollar"));
+
+  ASSERT_TRUE(
+      displayNames
+          ->Of(buffer, MakeStringSpan("moz"), DisplayNames::Fallback::None)
+          .isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u""));
+
+  ASSERT_TRUE(
+      displayNames
+          ->Of(buffer, MakeStringSpan("moz"), DisplayNames::Fallback::Code)
+          .isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"MOZ"));
+
+  // Invalid options.
+  {
+    // Code with fewer than 3 characters.
+    auto err = displayNames->Of(buffer, MakeStringSpan("US"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Code with more than 3 characters.
+    auto err = displayNames->Of(buffer, MakeStringSpan("USDDDDDDD"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Code with non-ascii alpha letters/
+    auto err = displayNames->Of(buffer, MakeStringSpan("US1"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
 }
 
 }  // namespace mozilla::intl
