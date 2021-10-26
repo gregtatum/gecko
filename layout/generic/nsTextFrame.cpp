@@ -977,7 +977,8 @@ class BuildTextRunsScanner {
  public:
   BuildTextRunsScanner(nsPresContext* aPresContext, DrawTarget* aDrawTarget,
                        nsIFrame* aLineContainer,
-                       nsTextFrame::TextRunType aWhichTextRun)
+                       nsTextFrame::TextRunType aWhichTextRun,
+                       bool aDoLineBreaking)
       : mDrawTarget(aDrawTarget),
         mLineContainer(aLineContainer),
         mCommonAncestorWithLastFrame(nullptr),
@@ -986,6 +987,7 @@ class BuildTextRunsScanner {
         mStartOfLine(true),
         mSkipIncompleteTextRuns(false),
         mCanStopOnThisLine(false),
+        mDoLineBreaking(aDoLineBreaking),
         mWhichTextRun(aWhichTextRun),
         mNextRunContextInfo(nsTextFrameUtils::INCOMING_NONE),
         mCurrentRunContextInfo(nsTextFrameUtils::INCOMING_NONE) {
@@ -1149,6 +1151,7 @@ class BuildTextRunsScanner {
   bool mStartOfLine;
   bool mSkipIncompleteTextRuns;
   bool mCanStopOnThisLine;
+  bool mDoLineBreaking;
   nsTextFrame::TextRunType mWhichTextRun;
   uint8_t mNextRunContextInfo;
   uint8_t mCurrentRunContextInfo;
@@ -1433,8 +1436,9 @@ static void BuildTextRuns(DrawTarget* aDrawTarget, nsTextFrame* aForFrame,
   }
 
   nsPresContext* presContext = aLineContainer->PresContext();
+  bool doLineBreaking = !SVGUtils::IsInSVGTextSubtree(aForFrame);
   BuildTextRunsScanner scanner(presContext, aDrawTarget, aLineContainer,
-                               aWhichTextRun);
+                               aWhichTextRun, doLineBreaking);
 
   nsBlockFrame* block = do_QueryFrame(aLineContainer);
 
@@ -1636,9 +1640,11 @@ void BuildTextRunsScanner::FlushFrames(bool aFlushLineBreaks,
       // Optimization: We do not need to (re)build the textrun.
       textRun = mCurrentFramesAllSameTextRun;
 
-      // Feed this run's text into the linebreaker to provide context.
-      if (!SetupLineBreakerContext(textRun)) {
-        return;
+      if (mDoLineBreaking) {
+        // Feed this run's text into the linebreaker to provide context.
+        if (!SetupLineBreakerContext(textRun)) {
+          return;
+        }
       }
 
       // Update mNextRunContextInfo appropriately
@@ -2566,7 +2572,9 @@ already_AddRefed<gfxTextRun> BuildTextRunsScanner::BuildTextRunForFrames(
   // the breaks may be stored in the textrun during this very call.
   // This is a bit annoying because it requires another loop over the frames
   // making up the textrun, but I don't see a way to avoid this.
-  SetupBreakSinksForTextRun(textRun.get(), textPtr);
+  if (mDoLineBreaking) {
+    SetupBreakSinksForTextRun(textRun.get(), textPtr);
+  }
 
   if (anyTextEmphasis) {
     SetupTextEmphasisForTextRun(textRun.get(), textPtr);
@@ -8168,11 +8176,10 @@ ClusterIterator::ClusterIterator(nsTextFrame* aTextFrame, int32_t aPosition,
     mFrag->AppendTo(str, textOffset, textLen);
     aContext.Insert(str, 0);
   }
-  mozilla::intl::WordBreaker* wordBreaker = nsContentUtils::WordBreaker();
   uint32_t nextWord = textStart > 0 ? textStart - 1 : textStart;
   while (true) {
     const int32_t scanResult =
-        wordBreaker->Next(aContext.get(), aContext.Length(), nextWord);
+        intl::WordBreaker::Next(aContext.get(), aContext.Length(), nextWord);
     if (NS_WORDBREAKER_NEED_MORE_TEXT == scanResult ||
         AssertedCast<uint32_t>(scanResult) > textStart + textLen) {
       break;
