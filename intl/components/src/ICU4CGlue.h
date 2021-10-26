@@ -274,22 +274,29 @@ template <typename Buffer>
 /**
  * It is convenient for callers to be able to pass in UTF-8 strings to the API.
  * This function can be used to convert that to a stack-allocated UTF-16
- * mozilla::Vector that can then be passed into ICU calls.
+ * mozilla::Vector that can then be passed into ICU calls. The string will be
+ * null terminated.
  */
 template <size_t StackSize>
 [[nodiscard]] static bool FillUTF16Vector(
     Span<const char> utf8Span,
     mozilla::Vector<char16_t, StackSize>& utf16TargetVec) {
   // Per ConvertUtf8toUtf16: The length of aDest must be at least one greater
-  // than the length of aSource
-  if (!utf16TargetVec.reserve(utf8Span.Length() + 1)) {
+  // than the length of aSource. Add an additional value for the null
+  // termination.
+  if (!utf16TargetVec.reserve(utf8Span.Length() + 2)) {
     return false;
   }
+
   // ConvertUtf8toUtf16 fills the buffer with the data, but the length of the
-  // vector is unchanged. The call to resizeUninitialized notifies the vector of
-  // how much was written.
-  return utf16TargetVec.resizeUninitialized(ConvertUtf8toUtf16(
-      utf8Span, Span(utf16TargetVec.begin(), utf16TargetVec.capacity())));
+  // vector is unchanged.
+  size_t length = ConvertUtf8toUtf16(
+      utf8Span, Span(utf16TargetVec.begin(), utf16TargetVec.capacity()));
+  utf16TargetVec.begin()[length] = '\0';
+
+  // The call to resizeUninitialized notifies the vector of how much was written
+  // exclusive of the null terminated character.
+  return utf16TargetVec.resizeUninitialized(length);
 }
 
 /**

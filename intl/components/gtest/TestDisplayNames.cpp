@@ -150,6 +150,18 @@ TEST(IntlDisplayNames, Region)
 
     ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("ES")).isOk());
     buffer.verboseMatches(u"Spain");
+
+    ASSERT_TRUE(
+        displayNames
+            ->Of(buffer, MakeStringSpan("ZX"), DisplayNames::Fallback::None)
+            .isOk());
+    buffer.verboseMatches(u"");
+
+    ASSERT_TRUE(
+        displayNames
+            ->Of(buffer, MakeStringSpan("ZX"), DisplayNames::Fallback::Code)
+            .isOk());
+    buffer.verboseMatches(u"ZX");
   }
   {
     auto result = DisplayNames::TryCreate("es-ES", options);
@@ -174,7 +186,7 @@ TEST(IntlDisplayNames, Currency)
   auto result = DisplayNames::TryCreate("en-US", options);
   ASSERT_TRUE(result.isOk());
   auto displayNames = result.unwrap();
-  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan(u"EUR")).isOk());
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("EUR")).isOk());
   buffer.verboseMatches(u"Euro");
 }
 

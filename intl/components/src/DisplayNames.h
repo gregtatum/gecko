@@ -213,25 +213,16 @@ class DisplayNames final {
                                    Fallback aFallback = Fallback::None) const {
     if constexpr (std::is_same_v<typename B::CharType, char>) {
       switch (mOptions.type) {
+        case Type::Region:
+        case Type::Script:
         case Type::Language:
-          return this->GetLanguage(aBuffer, aCode, aFallback);
-        case Type::Region: {
-          auto result = ToResult(this->GetRegion(aBuffer, aCode));
-          if (result.isOk()) {
-            return Ok();
-          } else {
-            return Err(ToError(result.unwrapErr()));
-          }
-        }
-        case Type::Script: {
-          auto result = ToResult(this->GetScript(aBuffer, aCode));
-          if (result.isOk()) {
-            return Ok();
-          } else {
-            return Err(ToError(result.unwrapErr()));
-          }
-        }
         case Type::Currency:
+        case Type::Calendar:
+        case Type::Weekday:
+        case Type::Month:
+        case Type::Quarter:
+        case Type::DayPeriod:
+        case Type::DateTimeField:
           MOZ_ASSERT_UNREACHABLE("Type requires a char CharType.");
       }
     }
@@ -246,9 +237,25 @@ class DisplayNames final {
           }
         }
         case Type::Language:
+          return this->GetLanguage(aBuffer, aCode, aFallback);
+        case Type::Script: {
+          auto result = ToResult(this->GetScript(aBuffer, aCode));
+          if (result.isOk()) {
+            return Ok();
+          } else {
+            return Err(ToError(result.unwrapErr()));
+          }
+        }
         case Type::Region:
-        case Type::Script:
-          MOZ_ASSERT_UNREACHABLE("Type requires a char16_t CharType.");
+          return this->GetRegion(aBuffer, aCode, aFallback);
+        case Type::Calendar:
+        case Type::Weekday:
+        case Type::Month:
+        case Type::Quarter:
+        case Type::DayPeriod:
+        case Type::DateTimeField:
+          MOZ_CRASH("Unimplemented");
+          // MOZ_ASSERT_UNREACHABLE("Type requires a char16_t CharType.");
       }
     }
     MOZ_ASSERT_UNREACHABLE();
@@ -376,7 +383,7 @@ class DisplayNames final {
               AssertedCast<int32_t, uint32_t>(size), status);
         });
 
-    if (result.IsErr()) {
+    if (result.isErr()) {
       return Err(ToError(result.unwrapErr()));
     }
 
@@ -399,7 +406,7 @@ class DisplayNames final {
    * ICU4X.
    */
   template <typename B>
-  ICUResult GetCurrency(B& aBuffer, Span<const char16_t> aCurrency) const {
+  ICUResult GetCurrency(B& aBuffer, Span<const char> aCurrency) const {
     static_assert(std::is_same<typename B::CharType, char16_t>::value);
     UCurrNameStyle style;
     switch (mOptions.style) {
@@ -415,11 +422,18 @@ class DisplayNames final {
         break;
     }
 
+    // ucurr_getName requires a UTF-16 input.
+    mozilla::Vector<char16_t, 32> currencyUtf16;
+    if (!FillUTF16Vector(aCurrency, currencyUtf16)) {
+      return Err(ICUError::OutOfMemory);
+    }
+
     int32_t length = 0;
     UErrorCode status = U_ZERO_ERROR;
     const char16_t* name =
-        ucurr_getName(AssertNullTerminatedString(aCurrency), mLocale.data(),
-                      style, nullptr, &length, &status);
+        ucurr_getName(AssertNullTerminatedString(
+                          Span(currencyUtf16.begin(), currencyUtf16.length())),
+                      mLocale.data(), style, nullptr, &length, &status);
     if (U_FAILURE(status)) {
       return Err(ICUError::InternalError);
     }
