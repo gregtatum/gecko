@@ -13,6 +13,7 @@
 #include "mozilla/Result.h"
 #include "mozilla/ResultVariant.h"
 #include "mozilla/Span.h"
+#include "mozilla/TextUtils.h"
 #include "mozilla/UniquePtr.h"
 
 namespace mozilla::intl {
@@ -588,9 +589,23 @@ class DisplayNames final {
 
     return Ok();
   };
+  
+  /**
+   * Get the display names for DisplayNames::Type::Calendar.
+   */
+  template <typename B>
+  Result<Ok, DisplayNamesError> GetCalendar(B& aBuffer, Span<const char> aCalendar,
+                                          Fallback aFallback) const {
+    if (aCalendar.empty() || !IsAscii(aCalendar)) {
+      return Err(DisplayNamesError::InvalidOption); 
+    }
+     
+    if (LocaleParser::canParseUnicodeExtensionType(aCalendar)
+          .isErr()) {
+      return Err(DisplayNamesError::InvalidOption); 
+    }
 
-  [[nodiscard]] static bool ConvertScriptToLocale(ScriptLocaleVector& aLocale,
-                                                  Span<const char> aScript);
+  }
 
   Options mOptions;
   std::string mLocale;
@@ -601,3 +616,4 @@ class DisplayNames final {
 }  // namespace mozilla::intl
 
 #endif
+d

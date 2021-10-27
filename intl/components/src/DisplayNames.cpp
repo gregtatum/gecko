@@ -120,35 +120,4 @@ Result<UniquePtr<DisplayNames>, ICUError> DisplayNames::TryCreate(
                                   aOptions);
 };
 
-/* static */
-bool DisplayNames::ConvertScriptToLocale(ScriptLocaleVector& aLocale,
-                                         Span<const char> aScript) {
-  const char* localeText = "und-";
-  for (size_t i = 0; i < 4; i++) {
-    mozilla::DebugOnly<bool> result = aLocale.append(localeText[i]);
-    // The allocation would only fail due to a logic error in the
-    // implementation, as the buffer is already stack-allocated.
-    MOZ_ASSERT(result);
-  }
-
-  // Script tags are 4 ascii characters followed by a null terminator.
-  // https://unicode-org.github.io/cldr-staging/charts/37/supplemental/languages_and_scripts.html
-  if (aScript.Length() != 4) {
-    // The script was not the correct size, return early without writing to
-    // the buffer.
-    return false;
-  }
-
-  for (size_t i = 0; i < aScript.Length(); i++) {
-    mozilla::DebugOnly<bool> result = aLocale.append(aScript[i]);
-    // The allocation would only fail due to a logic error in the
-    // implementation, as the buffer is already stack-allocated.
-    MOZ_ASSERT(result);
-  }
-  mozilla::DebugOnly<bool> result = aLocale.append('\0');
-  MOZ_ASSERT(result);
-
-  return true;
-}
-
 }  // namespace mozilla::intl
