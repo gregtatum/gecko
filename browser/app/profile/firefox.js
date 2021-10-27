@@ -2673,6 +2673,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   // Preferences below here were at one point off by default and now have
   // been enabled (and should likely be removed eventually).
   pref("browser.pinebuild.animateViewTransitions", true);
+  pref("browser.river.pinning.enabled", true);
 
   // Preferences below here are still being experimented with are in the
   // unlocked state to allow for manual testing.
@@ -2684,5 +2685,4 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.places.perwindowsessions.enabled", false);
   pref("browser.pinebuild.interstitial-view-overwriting.enabled", true);
   pref("browser.pinebuild.interstitial-view-overwriting.threshold_ms", 5000);
-  pref("browser.river.pinning.enabled", false);
 #endif
