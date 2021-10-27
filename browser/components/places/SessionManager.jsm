@@ -539,6 +539,8 @@ const SessionManager = new (class SessionManager extends EventEmitter {
 
     logConsole.debug("Saving session", guid);
 
+    this.#removeUnwantedSessionData(data);
+
     // Here we filter out internal pages from the data. We also build the
     // page map that we need for working out the order of the pages.
     // If that filtering ends up in an empty section, we'll filter that out
@@ -638,6 +640,30 @@ const SessionManager = new (class SessionManager extends EventEmitter {
         });
       }
     );
+  }
+
+  /**
+   * Removes from a SessionStore session any data that should not be restored.
+   * For example, we don't want to save complete window state, as some of it
+   * should not apply to per-window sessions.
+   *
+   * @param {object} data
+   *   The session data to be modified. This is changed in-place.
+   */
+  #removeUnwantedSessionData(data) {
+    // We don't save most data related to the window.
+    for (let item of [
+      "height",
+      "screenX",
+      "screenY",
+      "sizemode",
+      "sizemodeBeforeMinimized",
+      "width",
+      "workspaceID",
+      "zIndex",
+    ]) {
+      delete data[item];
+    }
   }
 
   async #getSessionFilePath(guid) {
