@@ -669,6 +669,7 @@ var gInitialPages = [
   "about:welcomeback",
   "about:sessionrestore",
   "about:welcome",
+  "about:flow-reset",
 ];
 
 function isInitialPage(url) {

@@ -259,23 +259,13 @@ add_task(async function testSessionRestoreNoChange() {
   let guid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
   Assert.ok(guid, "A session has been started.");
 
-  let sessionSetAside = SessionManager.once("session-set-aside");
-  let sessionReplaced = SessionManager.once("session-replaced");
-  let flowResetLoaded = BrowserTestUtils.waitForNewTab(
-    win.gBrowser,
-    "about:flow-reset",
-    true
-  );
-  await SessionManager.replaceSession(win);
-  await sessionSetAside;
-  await sessionReplaced;
-  await flowResetLoaded;
+  await PinebuildTestUtils.setAsideSession(win);
 
   let result = await SessionManager.query({ guid, includePages: true });
   Assert.equal(result.length, 1);
   Assert.equal(result[0].pages.length, 1);
 
-  sessionReplaced = SessionManager.once("session-replaced");
+  let sessionReplaced = SessionManager.once("session-replaced");
   let pageLoaded = BrowserTestUtils.waitForEvent(
     win.gBrowser.tabContainer,
     "SSTabRestored"
@@ -288,21 +278,54 @@ add_task(async function testSessionRestoreNoChange() {
   Assert.equal(result.length, 1);
   Assert.equal(result[0].pages.length, 1);
 
-  sessionSetAside = SessionManager.once("session-set-aside");
-  sessionReplaced = SessionManager.once("session-replaced");
-  flowResetLoaded = BrowserTestUtils.waitForNewTab(
-    win.gBrowser,
-    "about:flow-reset",
-    true
-  );
-  await SessionManager.replaceSession(win);
-  await sessionSetAside;
-  await sessionReplaced;
-  await flowResetLoaded;
+  await PinebuildTestUtils.setAsideSession(win);
 
   result = await SessionManager.query({ guid, includePages: true });
   Assert.equal(result.length, 1);
   Assert.equal(result[0].pages.length, 1);
+
+  await BrowserTestUtils.closeWindow(win);
+});
+
+/**
+ * Tests that setting aside a session and then navigating doesn't cause
+ * the about:flow-reset page to appear in the AVM.
+ */
+add_task(async function testSessionSetAsideNoFlowReset() {
+  let win = await BrowserTestUtils.openNewBrowserWindow();
+  let { gGlobalHistory } = win;
+
+  await PinebuildTestUtils.loadViews([TEST_URL1], win);
+
+  let guid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
+  Assert.ok(guid, "A session has been started.");
+
+  await PinebuildTestUtils.setAsideSession(win);
+  let [view2] = await PinebuildTestUtils.loadViews([TEST_URL2], win);
+
+  Assert.equal(gGlobalHistory.views.length, 1, "Should only be 1 View");
+  console.log(gGlobalHistory.views);
+  Assert.equal(
+    gGlobalHistory.currentView,
+    view2,
+    "Should be looking at View 2"
+  );
+
+  let river = document.querySelector("river-el");
+  await river.updateComplete;
+
+  let viewGroups = PinebuildTestUtils.getViewGroups(win);
+  Assert.equal(viewGroups.length, 1, "Should only be 1 ViewGroup");
+  Assert.equal(
+    viewGroups[0].views.length,
+    1,
+    "Should only be 1 View in the ViewGroup"
+  );
+  Assert.equal(
+    viewGroups[0].lastView,
+    view2,
+    "The view in the ViewGroup should be view2"
+  );
 
   await BrowserTestUtils.closeWindow(win);
 });

@@ -1348,7 +1348,10 @@ class GlobalHistory extends EventTarget {
 
     if (this.#window.isInitialPage(newEntry.URI)) {
       // Don't store initial pages in the river.
-      logConsole.debug("SHEntry is pointed at an initial page.");
+      logConsole.debug(
+        "SHEntry is pointed at an initial or ignored page: ",
+        newEntry.URI.spec
+      );
       logConsole.groupEnd();
       this.#currentIndex = null;
       return;

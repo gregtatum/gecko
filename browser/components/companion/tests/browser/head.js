@@ -366,9 +366,16 @@ var PinebuildTestUtils = {
         win.gGlobalHistory,
         "ViewAdded"
       );
+      let viewChangedPromise = BrowserTestUtils.waitForEvent(
+        win.gGlobalHistory,
+        "ViewChanged"
+      );
+      let loaded = BrowserTestUtils.browserLoaded(browser, false, url);
       BrowserTestUtils.loadURI(browser, url);
       let viewAddedEvent = await viewAddedPromise;
       views.push(viewAddedEvent.view);
+      await viewChangedPromise;
+      await loaded;
     }
 
     return views;
@@ -384,7 +391,7 @@ var PinebuildTestUtils = {
    * @return {ViewGroup[]}
    */
   getViewGroups(win = window) {
-    let river = window.document.querySelector("river-el");
+    let river = win.document.querySelector("river-el");
     return river.shadowRoot.querySelectorAll("view-group:not([hidden])");
   },
 
@@ -468,5 +475,30 @@ var PinebuildTestUtils = {
     );
     pageActionMenu.hidePopup();
     await popuphidden;
+  },
+
+  /**
+   * Sets aside a session in a window and waits until the about:flow-reset
+   * page is displayed.
+   *
+   * @param {Window?} win
+   *   The window to set aside a session for. It is assumed that a session
+   *   has begun for this window.
+   * @return {Promise}
+   * @resolves {undefined}
+   *   Resolves once the about:flow-reset page has been loaded.
+   */
+  async setAsideSession(win = window) {
+    let sessionSetAside = SessionManager.once("session-set-aside");
+    let sessionReplaced = SessionManager.once("session-replaced");
+    let flowResetLoaded = BrowserTestUtils.waitForNewTab(
+      win.gBrowser,
+      "about:flow-reset",
+      true
+    );
+    await SessionManager.replaceSession(win);
+    await sessionSetAside;
+    await sessionReplaced;
+    await flowResetLoaded;
   },
 };
