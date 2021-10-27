@@ -238,6 +238,7 @@ class DisplayNames final {
         case Type::Region:
           return this->GetRegion(aBuffer, aCode, aFallback);
         case Type::Calendar:
+          return this->GetCalendar(aBuffer, aCode, aFallback);
         case Type::Weekday:
         case Type::Month:
         case Type::Quarter:
@@ -252,6 +253,19 @@ class DisplayNames final {
   }
 
  private:
+  template <typename B, typename Fn>
+  static Result<Ok, DisplayNamesError> HandleFallback(B& aBuffer,
+                                                      Fallback aFallback,
+                                                      Fn aGetFallbackSpan) {
+    if (aBuffer.length() == 0 &&
+        aFallback == mozilla::intl::DisplayNames::Fallback::Code) {
+      if (!FillBuffer(aGetFallbackSpan(), aBuffer)) {
+        return Err(DisplayNamesError::OutOfMemory);
+      }
+    }
+    return Ok();
+  }
+
   /**
    * This is a specialized form of the FillBufferWithICUCall for DisplayNames.
    * Different APIs report that no display name is found with different
@@ -324,15 +338,10 @@ class DisplayNames final {
       return Err(ToError(result.unwrapErr()));
     }
 
-    if (aBuffer.length() == 0 && aFallback == Fallback::Code) {
-      // The language was empty, fallback to the Fallback code.
-      tagVec.shrinkBy(1);  // Remove the null terminator.
-      if (!FillBuffer(tagVec, aBuffer)) {
-        return Err(DisplayNamesError::OutOfMemory);
-      }
-    }
-
-    return Ok();
+    return HandleFallback(aBuffer, aFallback, [&] {
+      // Remove the null terminator.
+      return Span(tagVec.begin(), tagVec.length() - 1);
+    });
   };
 
   /**
@@ -577,34 +586,76 @@ class DisplayNames final {
       }
     }
 
-    if (aBuffer.length() == 0 && aFallback == DisplayNames::Fallback::Code) {
-      // Fallback to the case-canonicalized input when no localized name was
-      // found.
+    return HandleFallback(aBuffer, aFallback, [&] {
       script.toTitleCase();
-
-      if (!FillBuffer(script.span(), aBuffer)) {
-        return Err(DisplayNamesError::OutOfMemory);
-      }
-    }
-
-    return Ok();
+      return script.span();
+    });
   };
-  
+
   /**
    * Get the display names for DisplayNames::Type::Calendar.
    */
   template <typename B>
-  Result<Ok, DisplayNamesError> GetCalendar(B& aBuffer, Span<const char> aCalendar,
-                                          Fallback aFallback) const {
+  Result<Ok, DisplayNamesError> GetCalendar(B& aBuffer,
+                                            Span<const char> aCalendar,
+                                            Fallback aFallback) const {
     if (aCalendar.empty() || !IsAscii(aCalendar)) {
-      return Err(DisplayNamesError::InvalidOption); 
-    }
-     
-    if (LocaleParser::canParseUnicodeExtensionType(aCalendar)
-          .isErr()) {
-      return Err(DisplayNamesError::InvalidOption); 
+      return Err(DisplayNamesError::InvalidOption);
     }
 
+    if (LocaleParser::canParseUnicodeExtensionType(aCalendar).isErr()) {
+      return Err(DisplayNamesError::InvalidOption);
+    }
+
+    Vector<char, 16> lowerCaseCalendar;
+    for (size_t i = 0; i < aCalendar.size(); i++) {
+      if (!lowerCaseCalendar.append(AsciiToLowerCase(aCalendar[i]))) {
+        return Err(DisplayNamesError::OutOfMemory);
+      }
+    }
+    if (!lowerCaseCalendar.append('\0')) {
+      return Err(DisplayNamesError::OutOfMemory);
+    }
+
+    Span<const char> canonicalCalendar = mozilla::Span(
+        lowerCaseCalendar.begin(), lowerCaseCalendar.length() - 1);
+
+    // Search if there's a replacement for the Unicode calendar keyword.
+    {
+      Span<const char> key = mozilla::MakeStringSpan("ca");
+      Span<const char> type = canonicalCalendar;
+      if (const char* replacement =
+              mozilla::intl::Locale::replaceUnicodeExtensionType(key, type)) {
+        canonicalCalendar = Span(replacement, strlen(replacement));
+      }
+    }
+
+    // The input calendar name is user-controlled, so be extra cautious before
+    // passing arbitrarily large strings to ICU.
+    static constexpr size_t maximumCalendarLength = 100;
+
+    if (canonicalCalendar.size() <= maximumCalendarLength) {
+      // |uldn_keyValueDisplayName| expects old-style keyword values.
+      if (const char* legacyCalendar =
+              uloc_toLegacyType("calendar", canonicalCalendar.Elements())) {
+        auto result = FillBufferWithICUDisplayNames(
+            aBuffer, U_ILLEGAL_ARGUMENT_ERROR,
+            [&](UChar* chars, uint32_t size, UErrorCode* status) {
+              // |uldn_keyValueDisplayName| expects old-style keyword values.
+              return uldn_keyValueDisplayName(mULocaleDisplayNames.GetConst(),
+                                              "calendar", legacyCalendar, chars,
+                                              size, status);
+            });
+        if (result.isErr()) {
+          return Err(ToError(result.unwrapErr()));
+        }
+      }
+    } else {
+      aBuffer.written(0);
+    }
+
+    return HandleFallback(aBuffer, aFallback,
+                          [&] { return canonicalCalendar; });
   }
 
   Options mOptions;
@@ -616,4 +667,3 @@ class DisplayNames final {
 }  // namespace mozilla::intl
 
 #endif
-d

@@ -255,4 +255,63 @@ TEST(IntlDisplayNames, Currency)
   }
 }
 
+TEST(IntlDisplayNames, Calendar)
+{
+  TestBuffer<char16_t> buffer;
+
+  DisplayNames::Options options(DisplayNames::Type::Calendar);
+  auto result = DisplayNames::TryCreate("en-US", options);
+  ASSERT_TRUE(result.isOk());
+  auto displayNames = result.unwrap();
+
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("buddhist")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"Buddhist Calendar"));
+
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("gregory")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"Gregorian Calendar"));
+
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("GREGORY")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"Gregorian Calendar"));
+
+  {
+    // Code with non-ascii alpha letters.
+    auto err = displayNames->Of(buffer, MakeStringSpan("🥸 not ascii"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Empty string.
+    auto err = displayNames->Of(buffer, MakeStringSpan(""));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Non-valid ascii.
+    auto err =
+        displayNames->Of(buffer, MakeStringSpan("ascii-but_not(valid)1234"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+
+  // Test fallbacking.
+
+  ASSERT_TRUE(
+      displayNames
+          ->Of(buffer, MakeStringSpan("moz"), DisplayNames::Fallback::None)
+          .isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u""));
+
+  ASSERT_TRUE(
+      displayNames
+          ->Of(buffer, MakeStringSpan("moz"), DisplayNames::Fallback::Code)
+          .isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"moz"));
+
+  ASSERT_TRUE(
+      displayNames
+          ->Of(buffer, MakeStringSpan("MOZ"), DisplayNames::Fallback::Code)
+          .isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"moz"));
+}
+
 }  // namespace mozilla::intl
