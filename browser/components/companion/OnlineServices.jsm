@@ -509,6 +509,31 @@ class MicrosoftService {
   }
 }
 
+class TestService {
+  constructor(config) {
+    this.name = "Test";
+    this.app = config.type;
+    this.id = ++nextServiceId;
+  }
+
+  async connect() {
+    return "test-token";
+  }
+  async disconnect() {}
+  async getNextMeetings() {
+    return [];
+  }
+  async getInboxURL() {
+    return "https://example.com";
+  }
+  async getUnreadCount() {
+    return 0;
+  }
+  toJSON() {
+    return { type: this.app };
+  }
+}
+
 const ServiceInstances = new Set();
 
 let loaded = false;
@@ -597,13 +622,8 @@ const OnlineServices = {
       service = new GoogleService({ type });
     } else if (type.startsWith("microsoft")) {
       service = new MicrosoftService({ type });
-    } else if (Cu.isInAutomation) {
-      Services.obs.notifyObservers(
-        null,
-        "pinebuild-test-connect-service",
-        type
-      );
-      return null;
+    } else if (Cu.isInAutomation && type.startsWith("testservice")) {
+      service = new TestService({ type });
     } else {
       throw new Error(`Unknown service "${type}"`);
     }

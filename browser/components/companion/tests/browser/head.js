@@ -8,6 +8,7 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
+  OnlineServices: "resource:///modules/OnlineServices.jsm",
   PlacesTestUtils: "resource://testing-common/PlacesTestUtils.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   Snapshots: "resource:///modules/Snapshots.jsm",
@@ -475,6 +476,18 @@ var PinebuildTestUtils = {
     );
     pageActionMenu.hidePopup();
     await popuphidden;
+  },
+
+  async loginToTestService(serviceType) {
+    await OnlineServices.createService(serviceType);
+  },
+
+  async logoutFromTestService(serviceType) {
+    await Promise.all(
+      OnlineServices.getServices(serviceType).map(service =>
+        OnlineServices.deleteService(service)
+      )
+    );
   },
 
   /**

@@ -3,10 +3,11 @@
 
 "use strict";
 
-registerCleanupFunction(() => {
+registerCleanupFunction(async () => {
   // No matter what happens, blow away window history after this file runs
   // to avoid leaking state between tests.
   gGlobalHistory.reset();
+  await PinebuildTestUtils.logoutFromTestService("testservice");
 });
 
 add_task(async function setup() {
@@ -21,13 +22,67 @@ add_task(async function setup() {
             name: "Test service",
             services: "Test calendar things",
             domains: ["www.example.com", "test2.example.com"],
-            type: "test-service",
+            type: "testservice",
           },
         ]),
       ],
     ],
   });
 });
+
+async function assertConnectCard(helper, _opts) {
+  await helper.runCompanionTask(
+    async opts => {
+      let servicesOnboarding = content.document.querySelector(
+        "services-onboarding"
+      );
+
+      if (opts.service) {
+        if (opts.recentlyAuthed) {
+          ok(
+            servicesOnboarding.recentlyAuthedServices.has(opts.service),
+            "Service is recently authed"
+          );
+        } else {
+          is(
+            servicesOnboarding.currentService,
+            opts.service,
+            "Service is current"
+          );
+        }
+      } else {
+        ok(!servicesOnboarding.currentService, "No connect to service shown");
+      }
+
+      is(
+        servicesOnboarding.connectServiceElements.length,
+        opts.length,
+        `${opts.length} connect-service elements are shown`
+      );
+
+      if (opts.length == 1) {
+        let connectService = servicesOnboarding.connectServiceElements[0];
+        is(
+          connectService.type,
+          opts.service,
+          "The connect card is for the test service"
+        );
+        is(
+          connectService.connected,
+          opts.connected,
+          "The connect card has the right connected state"
+        );
+
+        if (opts.clickConnect) {
+          connectService.connectButton.click();
+        } else if (opts.hideService) {
+          servicesOnboarding.hideService(opts.service);
+        }
+      }
+    },
+    [_opts]
+  );
+}
 
 async function withNewBrowserWindow(fn) {
   let win = await BrowserTestUtils.openNewBrowserWindow();
@@ -75,16 +130,7 @@ add_task(async function testConnectOptionNotShown() {
       await loadURI(gBrowser, testUrl);
       await urlHandled;
 
-      await helper.runCompanionTask(async () => {
-        let servicesOnboarding = content.document.querySelector(
-          "services-onboarding"
-        );
-        ok(!servicesOnboarding.currentService, "No connect to service shown");
-        ok(
-          !servicesOnboarding.connectServiceElements.length,
-          "No connect-service elements shown"
-        );
-      });
+      await assertConnectCard(helper, { length: 0 });
     }, win);
   });
 });
@@ -97,41 +143,64 @@ add_task(async function testConnectOptionShown() {
       let testUrl = "https://test2.example.com/";
       let domain = "test2.example.com";
 
+      await assertConnectCard(helper, { length: 0 });
+
       let urlHandled = waitForDomainHandled(helper, domain);
 
       await loadURI(gBrowser, testUrl);
       await urlHandled;
 
-      let connectServiceCalled = TestUtils.topicObserved(
-        "pinebuild-test-connect-service",
-        (_, data) => data == "test-service"
+      let connected = TestUtils.topicObserved(
+        "companion-signin",
+        (_, data) => data == "testservice"
       );
 
-      await helper.runCompanionTask(async () => {
-        let servicesOnboarding = content.document.querySelector(
-          "services-onboarding"
-        );
-        is(
-          servicesOnboarding.currentService,
-          "test-service",
-          "test-service should be shown"
-        );
-        is(
-          servicesOnboarding.connectServiceElements.length,
-          1,
-          "The test service is shown"
-        );
-
-        let connectService = servicesOnboarding.connectServiceElements[0];
-        is(
-          connectService.type,
-          "test-service",
-          "The connect card is for the test service"
-        );
-        connectService.connectButton.click();
+      await assertConnectCard(helper, {
+        service: "testservice",
+        length: 1,
+        connected: false,
+        clickConnect: true,
       });
 
-      await connectServiceCalled;
+      await connected;
+      await assertConnectCard(helper, {
+        service: "testservice",
+        length: 1,
+        connected: true,
+        recentlyAuthed: true,
+        hideService: true,
+      });
+
+      await PinebuildTestUtils.logoutFromTestService("testservice");
+    }, win);
+  });
+});
+
+add_task(async function testDuplicateServiceTypeHidden() {
+  await withNewBrowserWindow(async win => {
+    const { gBrowser } = win;
+
+    await CompanionHelper.whenReady(async helper => {
+      await assertConnectCard(helper, { length: 0 });
+      await PinebuildTestUtils.loginToTestService("testservice-connect");
+      await assertConnectCard(helper, {
+        service: "testservice",
+        length: 1,
+        connected: true,
+        recentlyAuthed: true,
+        hideService: true,
+      });
+      await assertConnectCard(helper, { length: 0 });
+
+      let testUrl = "https://test2.example.com/";
+      let domain = "test2.example.com";
+
+      let urlHandled = waitForDomainHandled(helper, domain);
+
+      await loadURI(gBrowser, testUrl);
+      await urlHandled;
+      await assertConnectCard(helper, { service: "testservice", length: 0 });
+      await PinebuildTestUtils.logoutFromTestService("testservice-connect");
     }, win);
   });
 });

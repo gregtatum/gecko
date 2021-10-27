@@ -24,6 +24,10 @@ const MICROSOFT_SERVICE = {
   ],
   type: "microsoft",
 };
+const DEFAULT_SERVICE_TYPES = new Set([
+  GOOGLE_SERVICE.type,
+  MICROSOFT_SERVICE.type,
+]);
 
 const SERVICE_BY_DOMAIN = new Map();
 const SERVICE_BY_TYPE = new Map();
@@ -37,6 +41,47 @@ function registerService(service) {
 
 registerService(GOOGLE_SERVICE);
 registerService(MICROSOFT_SERVICE);
+
+const TEST_SERVICES_PREF = "browser.pinebuild.companion.test-services";
+function setTestServices() {
+  for (let type of SERVICE_BY_TYPE.keys()) {
+    if (!DEFAULT_SERVICE_TYPES.has(type)) {
+      SERVICE_BY_TYPE.delete(type);
+    }
+  }
+  for (let [domain, type] of SERVICE_BY_DOMAIN.entries()) {
+    if (!DEFAULT_SERVICE_TYPES.has(type)) {
+      SERVICE_BY_DOMAIN.delete(domain);
+    }
+  }
+
+  const testServices = JSON.parse(
+    window.CompanionUtils.getCharPref(TEST_SERVICES_PREF, "[]")
+  );
+  for (let service of testServices) {
+    registerService(service);
+  }
+}
+
+if (Cu.isInAutomation) {
+  window.addEventListener(
+    "Companion:Setup",
+    () => {
+      window.CompanionUtils.addPrefObserver(
+        TEST_SERVICES_PREF,
+        setTestServices
+      );
+      setTestServices();
+    },
+    { once: true }
+  );
+  window.addEventListener("unload", () => {
+    window.CompanionUtils.removePrefObserver(
+      TEST_SERVICES_PREF,
+      setTestServices
+    );
+  });
+}
 
 export class ServicesOnboarding extends MozLitElement {
   static get properties() {
@@ -65,18 +110,7 @@ export class ServicesOnboarding extends MozLitElement {
     window.addEventListener("Companion:ViewLocation", this);
     window.addEventListener("Companion:SignIn", this);
     window.addEventListener("Companion:SignOut", this);
-    this.connectedServices = new Set(window.CompanionUtils.connectedServices);
-    if (Cu.isInAutomation) {
-      const testServices = JSON.parse(
-        window.CompanionUtils.getCharPref(
-          "browser.pinebuild.companion.test-services",
-          "[]"
-        )
-      );
-      for (let service of testServices) {
-        registerService(service);
-      }
-    }
+    this.setConnectedServices(window.CompanionUtils.connectedServices);
   }
 
   disconnectedCallback() {
@@ -84,7 +118,7 @@ export class ServicesOnboarding extends MozLitElement {
     window.removeEventListener("Companion:ViewLocation", this);
     window.removeEventListener("Companion:SignIn", this);
     window.removeEventListener("Companion:SignOut", this);
-    this.connectedServices = new Set();
+    this.setConnectedServices([]);
   }
 
   handleEvent(e) {
@@ -109,19 +143,18 @@ export class ServicesOnboarding extends MozLitElement {
 
   onSignIn(e) {
     let { service, connectedServices } = e.detail;
-    this.connectedServices = new Set(connectedServices);
-    // The service could be something like "google-mozilla" or "microsoft-test".
-    // Grab the service identifier without the extra parts.
-    this.showService(service.split("-")[0]);
+    this.setConnectedServices(connectedServices);
+    this.showService(service);
   }
 
   onSignOut(e) {
     let { service, connectedServices } = e.detail;
-    this.connectedServices = new Set(connectedServices);
+    this.setConnectedServices(connectedServices);
     this.hideService(service);
   }
 
   showService(serviceType) {
+    serviceType = this.normalizeServiceType(serviceType);
     this.recentlyAuthedServices.add(serviceType);
     this.requestUpdate();
 
@@ -136,6 +169,7 @@ export class ServicesOnboarding extends MozLitElement {
   }
 
   hideService(serviceType) {
+    serviceType = this.normalizeServiceType(serviceType);
     this.recentlyAuthedServices.delete(serviceType);
     this.requestUpdate();
 
@@ -147,8 +181,26 @@ export class ServicesOnboarding extends MozLitElement {
     }
   }
 
+  setConnectedServices(serviceTypes) {
+    this.connectedServices = new Set(
+      serviceTypes.map(type => this.normalizeServiceType(type))
+    );
+  }
+
+  normalizeServiceType(serviceType) {
+    // With OnlineServices we have "google-mozilla" and "google". We want to
+    // make sure that we treat them both as connected when one is connected.
+    return serviceType.split("-")[0];
+  }
+
   connectTemplate(serviceType) {
-    let { icon, name, services, type } = SERVICE_BY_TYPE.get(serviceType);
+    serviceType = this.normalizeServiceType(serviceType);
+    let service = SERVICE_BY_TYPE.get(serviceType);
+    if (!service) {
+      Cu.reportError(new Error(`Can't find service "${serviceType}"`));
+      return "";
+    }
+    let { icon, name, services, type } = service;
     let connected =
       this.connectedServices.has(type) || this.recentlyAuthedServices.has(type);
     return html`
