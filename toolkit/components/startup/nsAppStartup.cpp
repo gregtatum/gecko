@@ -160,7 +160,12 @@ nsAppStartup::nsAppStartup()
       mAttemptingQuit(false),
       mInterrupted(false),
       mIsSafeModeNecessary(false),
-      mStartupCrashTrackingEnded(false) {
+      mStartupCrashTrackingEnded(false)
+#if defined(XP_MACOSX) && defined(PINEBUILD)
+      ,
+      mExitLastWindowClosingSurvivalAreaOnQuit(false)
+#endif
+{
   char* mozAppSilentStart = PR_GetEnv("MOZ_APP_SILENT_START");
 
   /* When calling PR_SetEnv() with an empty value the existing variable may
@@ -283,7 +288,14 @@ nsAppStartup::Run(void) {
 
   if (!mShuttingDown && mConsiderQuitStopper != 0) {
 #ifdef XP_MACOSX
+#  ifdef PINEBUILD
+    if (!Preferences::GetBool("browser.startup.launchOnOSLogin", false)) {
+      EnterLastWindowClosingSurvivalArea();
+      mExitLastWindowClosingSurvivalAreaOnQuit = true;
+    }
+#  else
     EnterLastWindowClosingSurvivalArea();
+#  endif
 #endif
 
     mRunning = true;
@@ -419,8 +431,14 @@ nsAppStartup::Quit(uint32_t aMode, int aExitCode, bool* aUserAllowedQuit) {
     if (!mAttemptingQuit) {
       mAttemptingQuit = true;
 #ifdef XP_MACOSX
-      // now even the Mac wants to quit when the last window is closed
+#  ifdef PINEBUILD
+      if (mExitLastWindowClosingSurvivalAreaOnQuit) {
+        // now even the Mac wants to quit when the last window is closed
+        ExitLastWindowClosingSurvivalArea();
+      }
+#  else
       ExitLastWindowClosingSurvivalArea();
+#  endif
 #endif
       if (obsService)
         obsService->NotifyObservers(nullptr, "quit-application-granted",

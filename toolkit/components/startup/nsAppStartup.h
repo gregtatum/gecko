@@ -60,6 +60,11 @@ class nsAppStartup final : public nsIAppStartup,
                                     // already ended
   bool mWasSilentlyStarted;         // Was this startup a silent start?
 
+#if defined(XP_MACOSX) && defined(PINEBUILD)
+  // Did we explicitly call EnterLastWindowClosingSurvivalArea on startup?
+  bool mExitLastWindowClosingSurvivalAreaOnQuit;
+#endif
+
 #if defined(XP_WIN)
   // If true, allow the process to live on after the last window is closed
   bool mAllowWindowless;
