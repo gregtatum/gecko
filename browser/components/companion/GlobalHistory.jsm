@@ -838,10 +838,7 @@ class GlobalHistory extends EventTarget {
       gTopLevelNavigationDelegateRegistered = true;
     }
 
-    let companionToolbar = this.#window.document.getElementById(
-      "pinebuild-toolbar"
-    );
-    let activeViewManager = this.#window.document.createElement(
+    let activeViewManager = this.#window.document.getElementById(
       "active-view-manager"
     );
 
@@ -850,7 +847,6 @@ class GlobalHistory extends EventTarget {
     // for the ActiveViewManager to finish binding to the DOM in order to
     // access the init method. We break this cycle by deferring initialization
     // to the very end of this frame after the constructor has exited.
-    companionToolbar.appendChild(activeViewManager);
     window.requestAnimationFrame(() => {
       activeViewManager.init(this);
     });
