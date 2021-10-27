@@ -371,21 +371,21 @@
 #site-info-section {
   display: grid;
   grid-template: 1fr 1fr 1fr / 1fr;
-  padding: 6px 0 8px;
+  padding: 3px 0 5px;
 }
 
 #site-info-section > div {
   height: 32px;
-  margin-top: 10px;
+  margin-top: 7px;
 }
 
 #site-info-title-section {
-  display: grid;
-  grid-template: 1fr / 95% 5%;
+  display: flex;
 }
 
 #site-info-edit-icon {
   background: url("chrome://global/skin/icons/edit.svg") no-repeat right;
+  width: 16px;
 }
 
 #site-info-title:focus ~ #site-info-edit-icon,
@@ -393,18 +393,22 @@
   background: none;
 }
 
+#site-info-title:focus ~ #site-info-edit-icon {
+  display: none;
+}
+
 #site-info-title:focus-visible {
-  border: 1px solid #0060DF;
+  outline: 1px solid var(--focus-outline-color);
   border-radius: 4px;
   background: #F0F0F4;
   text-overflow: unset;
-  outline: none;
 }
 
 #site-info-title {
   font-size: 14px;
   margin: 0;
   border: none;
+  flex: 1;
 }
 
 #site-info-title,
