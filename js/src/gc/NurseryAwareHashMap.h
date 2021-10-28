@@ -200,6 +200,9 @@ struct GCPolicy<js::detail::UnsafeBareWeakHeapPtr<T>> {
                         js::detail::UnsafeBareWeakHeapPtr<T>* thingp) {
     return js::TraceWeakEdge(trc, thingp, "UnsafeBareWeakHeapPtr");
   }
+  static bool needsSweep(js::detail::UnsafeBareWeakHeapPtr<T>* thingp) {
+    return js::gc::IsAboutToBeFinalized(thingp);
+  }
 };
 
 }  // namespace JS

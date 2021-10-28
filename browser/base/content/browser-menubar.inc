@@ -55,7 +55,7 @@
                           hidden="true"
 #endif
                           key="key_close"
-                          command="cmd_close" data-l10n-id="menu-file-close"/>
+                          command="cmd_close" data-l10n-id="menu-file-close-tab" data-l10n-args='{"tabCount": 1}'/>
                 <menuitem id="menu_closeWindow"
                           class="show-only-for-keyboard"
                           hidden="true"
