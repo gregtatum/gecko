@@ -2654,10 +2654,12 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.tabs.warnOnCloseOtherTabs", false, locked);
   pref("privacy.userContext.enabled", false, locked);
   pref("privacy.userContext.ui.enabled", false, locked);
+  pref("fission.autostart", true, locked);
   pref("browser.aboutwelcome.enabled", false);
   pref("browser.tabs.openNewTabForMostNavigations", true);
   pref("browser.startup.launchOnOSLogin", false);
   pref("browser.crashReports.unsubmittedCheck.autoSubmit2", true);
+
 
   // Pinebuild specific configurations
   pref("browser.companion.globalhistorydebugging", false);
