@@ -386,6 +386,9 @@ export default class ActiveViewManager extends HTMLElement {
     let siteSecurityIcon = document.getElementById("site-security-icon");
     siteSecurityIcon.classList.remove(this.#securityIconClass);
 
+    let pageActionUrlEl = document.getElementById("site-info-url");
+    pageActionUrlEl.removeAttribute("title");
+
     let readerMode = document.getElementById("page-action-reader-mode");
     readerMode.hidden = true;
     let pageActionsPanel = document.getElementById("page-action-panel");
@@ -419,6 +422,8 @@ export default class ActiveViewManager extends HTMLElement {
 
     let pageActionUrlEl = document.getElementById("site-info-url");
     pageActionUrlEl.textContent = view.url.spec;
+    pageActionUrlEl.setAttribute("tooltiptext", view.url.spec);
+    pageActionUrlEl.scrollLeft = 0;
 
     this.#securityIconClass = getSiteSecurityInfo(view);
     let siteSecurityIcon = document.getElementById("site-security-icon");
@@ -438,10 +443,14 @@ export default class ActiveViewManager extends HTMLElement {
   }
 
   #pageActionPanelClicked(event) {
-    let titleEl = document.getElementById("site-info-title");
-    let editImg = document.getElementById("site-info-edit-icon");
+    let urlEl = document.getElementById("site-info-url");
+    if (event.target != urlEl) {
+      document.getSelection().removeAllRanges();
+    }
 
+    let editImg = document.getElementById("site-info-edit-icon");
     if (event.target == editImg) {
+      let titleEl = document.getElementById("site-info-title");
       titleEl.focus();
     }
   }

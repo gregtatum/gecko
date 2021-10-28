@@ -409,18 +409,20 @@
   margin: 0;
   border: none;
   flex: 1;
+  overflow: hidden;
 }
 
 #site-info-title,
 #site-info-url {
   border-radius: 4px;
-  overflow: hidden;
   text-overflow: ellipsis;
 }
 
 #site-info-url {
   padding-block: 8px;
-  background: #F0F0F4;
+  overflow: scroll;
+  scrollbar-width: none;
+  user-select: all;
 }
 
 #site-security-info-section,
