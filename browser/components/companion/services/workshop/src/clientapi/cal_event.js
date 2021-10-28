@@ -50,7 +50,9 @@ export class CalEvent extends Emitter {
     this.id = wireRep.id;
 
     this.attendees = [];
+    this.conference = wireRep.conference;
     this.creator = wireRep.creator;
+    this.links = wireRep.links;
     this.organizer = wireRep.organizer;
 
     this.bodyReps = wireRep.bodyReps;

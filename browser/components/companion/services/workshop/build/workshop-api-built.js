@@ -2942,7 +2942,9 @@ var CalEvent = class extends import_evt13.Emitter {
     this._wireRep = wireRep;
     this.id = wireRep.id;
     this.attendees = [];
+    this.conference = wireRep.conference;
     this.creator = wireRep.creator;
+    this.links = wireRep.links;
     this.organizer = wireRep.organizer;
     this.bodyReps = wireRep.bodyReps;
     this.__update(wireRep);
