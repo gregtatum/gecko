@@ -81,6 +81,29 @@ const WINDOW_TRACKER_REMOVE_TOPIC = "sessionstore-closed-objects-changed";
  *   This event is emitted when a session has been replaced. The additional
  *   parameters are the window where the session was replaced and the guid
  *   of the new session. The guid may be null if there was no new session.
+ *
+ * - session-save-error
+ *   This event is emitted when there was an error while trying to save the
+ *   session, and as a consequence the session was not stored on disk. The
+ *   additional parameter is an Error representing the failure. The Error object
+ *   is decorated with one additional `type` property, describing the reason of
+ *   the failure:
+ *    - "NoSpaceLeftOnDevice"
+ *        not enough space left on disk, or the filesystem is corrupt and
+ *        reports no space.
+ *    - "InvalidSessionFilePath"
+ *        Session file path may be too long, or it may point to an invalid node.
+ *    - "SessionFileAccessDenied"
+ *        The session file is not writable, or has wrong permissions.
+ *    - "DatabaseAccessDenied"
+ *        The database file cannot be accessed, either it has wrong permissions,
+ *        is read-only, or file system is corrupt.
+ *    - "OutOfMemory"
+ *        The system is out of memory.
+ *    - "Abort"
+ *        The operation was unexpectedly interrupted.
+ *    - "CorruptDatabase"
+ *        Generic database corruption.
  */
 const SessionManager = new (class SessionManager extends EventEmitter {
   init() {
@@ -172,6 +195,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       // Since we could not write it, delete the GUID from the window for now.
       // Next time we attempt to register, then we'll try again.
       SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
+      this.emit("session-save-error", annotateDatabaseError(ex));
     }
   }
 
@@ -520,6 +544,20 @@ const SessionManager = new (class SessionManager extends EventEmitter {
   }
 
   /**
+   * Write compressed data to a path.
+   * This is a separate public method for testing purposes.
+   * @param {string} path Path to the compressed JSON file to write
+   * @param {object} data The data to write
+   */
+  async write(path, data) {
+    await IOUtils.writeJSON(path, data, {
+      mode: "overwrite",
+      compress: true,
+      tmpPath: path + ".tmp",
+    });
+  }
+
+  /**
    * Saves session data to the disk and to the database. Full session data
    * is stored on disk, whilst just the urls and positions in the river are
    * stored in the database.
@@ -567,11 +605,12 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     // First save the data to disk first as this is probably more likely to
     // fail than the write to DB, so we'll keep the data in sync in that case.
     let path = await this.#getSessionFilePath(guid);
-    await IOUtils.writeJSON(path, data, {
-      mode: "overwrite",
-      compress: true,
-      tmpPath: path + ".tmp",
-    });
+    try {
+      await this.write(path, data);
+    } catch (ex) {
+      this.emit("session-save-error", annotateIOError(ex, path));
+      throw ex;
+    }
 
     // Now work out what we need for updating the database.
 
@@ -592,54 +631,59 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     pages.reverse();
     pages = pages.map((url, position) => ({ url, position }));
 
-    await PlacesUtils.withConnectionWrapper(
-      "SessionManager:register",
-      async db => {
-        await db.executeTransaction(async () => {
-          let rows = await db.executeCached(
-            `UPDATE moz_session_metadata SET last_saved_at = :lastSavedAt
-             WHERE guid = :guid
-             RETURNING id`,
-            { lastSavedAt: Date.now(), guid }
-          );
-          let sessionId = rows[0].getResultByName("id");
-
-          // Some entries need removing, others modifying or adding. The easiest
-          // way to do this is to remove the session first and then add only
-          // what we need.
-          await db.executeCached(
-            `DELETE FROM moz_session_to_places WHERE session_id = :sessionId`,
-            { sessionId }
-          );
-
-          for (let chunk of PlacesUtils.chunkArray(
-            pages,
-            // We're using 2 variables per row, and 1 extra variable across all rows.
-            db.variableLimit / 2 - 1
-          )) {
-            let valuesFragment = Array.from(
-              { length: chunk.length },
-              (_, i) =>
-                `(:sessionId, (SELECT id FROM moz_places WHERE url_hash = hash(:url${i}) AND url = :url${i}), :position${i})`
+    try {
+      await PlacesUtils.withConnectionWrapper(
+        "SessionManager:register",
+        async db => {
+          await db.executeTransaction(async () => {
+            let rows = await db.executeCached(
+              `UPDATE moz_session_metadata SET last_saved_at = :lastSavedAt
+              WHERE guid = :guid
+              RETURNING id`,
+              { lastSavedAt: Date.now(), guid }
             );
+            let sessionId = rows[0].getResultByName("id");
 
-            let values = { sessionId };
-            for (let [i, value] of chunk.entries()) {
-              values[`url${i}`] = value.url;
-              values[`position${i}`] = value.position;
-            }
-
+            // Some entries need removing, others modifying or adding. The easiest
+            // way to do this is to remove the session first and then add only
+            // what we need.
             await db.executeCached(
-              `
-              INSERT OR IGNORE INTO moz_session_to_places (session_id, place_id, position)
-              VALUES ${valuesFragment.join(",")}
-              `,
-              values
+              `DELETE FROM moz_session_to_places WHERE session_id = :sessionId`,
+              { sessionId }
             );
-          }
-        });
-      }
-    );
+
+            for (let chunk of PlacesUtils.chunkArray(
+              pages,
+              // We're using 2 variables per row, and 1 extra variable across all rows.
+              db.variableLimit / 2 - 1
+            )) {
+              let valuesFragment = Array.from(
+                { length: chunk.length },
+                (_, i) =>
+                  `(:sessionId, (SELECT id FROM moz_places WHERE url_hash = hash(:url${i}) AND url = :url${i}), :position${i})`
+              );
+
+              let values = { sessionId };
+              for (let [i, value] of chunk.entries()) {
+                values[`url${i}`] = value.url;
+                values[`position${i}`] = value.position;
+              }
+
+              await db.executeCached(
+                `
+                INSERT OR IGNORE INTO moz_session_to_places (session_id, place_id, position)
+                VALUES ${valuesFragment.join(",")}
+                `,
+                values
+              );
+            }
+          });
+        }
+      );
+    } catch (ex) {
+      this.emit("session-save-error", annotateDatabaseError(ex));
+      throw ex;
+    }
   }
 
   /**
@@ -698,3 +742,72 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     "nsISupportsWeakReference",
   ]);
 })();
+
+/**
+ * Annotates a database generated exception with a more specific error type.
+ * @param {Exception} ex The exception to annotate.
+ * @returns {Exception} An exception annotated with a `type` property, having
+ *   one of the following values:
+ *     - "DatabaseAccessDenied": The database file cannot be accessed.
+ *     - "NoSpaceLeftOnDevice": Not enough space left.
+ *     - "OutOfMemory": Out of memory.
+ *     - "Abort": Operation was interrupted.
+ *     - "CorruptDatabase": Generic database corruption.
+ */
+function annotateDatabaseError(ex) {
+  switch (ex.result) {
+    case Cr.NS_ERROR_FILE_ACCESS_DENIED:
+    case Cr.NS_ERROR_FILE_IS_LOCKED:
+    case Cr.NS_ERROR_FILE_READ_ONLY:
+    case Cr.NS_ERROR_STORAGE_IOERR:
+      ex.type = "DatabaseAccessDenied";
+      break;
+    case Cr.NS_ERROR_ABORT:
+    case Cr.NS_ERROR_STORAGE_BUSY:
+      ex.type = "Abort";
+      break;
+    case Cr.NS_ERROR_FILE_NO_DEVICE_SPACE:
+      ex.type = "NoSpaceLeftOnDevice";
+      break;
+    case Cr.NS_ERROR_OUT_OF_MEMORY:
+      ex.type = "OutOfMemory";
+      break;
+    default:
+      ex.type = "CorruptDatabase";
+      break;
+  }
+  return ex;
+}
+
+/**
+ * Annotates a IO generated exception with a more specific error type.
+ * @param {Exception} ex The exception to annotate.
+ * @param {string} path The path to the file.
+ * @returns {Exception} An exception annotated with a `type` property, having
+ *   one of the following values:
+ *     - "NoSpaceLeftOnDevice": Not enough space left, or corrupt filesystem
+ *                              showing no space.
+ *     - "InvalidSessionFilePath": Session file path may be too long,
+ *                                 unrecognized, or wrong type.
+ *     - "SessionFileAccessDenied": The session file is not writable.
+ *   Additionally a `path` property is set to the passed-in path argument.
+ */
+function annotateIOError(ex, path) {
+  switch (ex.name) {
+    case "OperationError":
+    case "InvalidAccessError":
+      ex.type = "InvalidSessionFilePath";
+      break;
+    case "NotReadableError":
+      if (ex.message.includes("Target device is full")) {
+        ex.type = "NoSpaceLeftOnDevice";
+        break;
+      }
+    // Fall-through.
+    default:
+      ex.type = "SessionFileAccessDenied";
+      break;
+  }
+  ex.path = path;
+  return ex;
+}

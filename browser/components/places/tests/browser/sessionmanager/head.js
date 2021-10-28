@@ -5,6 +5,7 @@
 XPCOMUtils.defineLazyModuleGetters(this, {
   SessionManager: "resource:///modules/SessionManager.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
+  sinon: "resource://testing-common/Sinon.jsm",
 });
 
 /**
