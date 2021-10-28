@@ -314,4 +314,116 @@ TEST(IntlDisplayNames, Calendar)
   ASSERT_TRUE(buffer.verboseMatches(u"moz"));
 }
 
+TEST(IntlDisplayNames, Weekday)
+{
+  TestBuffer<char16_t> buffer;
+
+  DisplayNames::Options options(DisplayNames::Type::Weekday);
+  auto result = DisplayNames::TryCreate("en-US", options);
+  ASSERT_TRUE(result.isOk());
+  auto displayNames = result.unwrap();
+
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("1")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"Monday"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("2")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"Tuesday"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("3")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"Wednesday"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("4")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"Thursday"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("5")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"Friday"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("6")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"Saturday"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("7")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"Sunday"));
+
+  {
+    // Empty string.
+    auto err = displayNames->Of(buffer, MakeStringSpan(""));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Not a number.
+    auto err = displayNames->Of(buffer, MakeStringSpan("A"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Multiple numbers.
+    auto err = displayNames->Of(buffer, MakeStringSpan("12"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Below valid range.
+    auto err = displayNames->Of(buffer, MakeStringSpan("0"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Above valid range.
+    auto err = displayNames->Of(buffer, MakeStringSpan("8"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+}
+
+TEST(IntlDisplayNames, WeekdaySpanish)
+{
+  TestBuffer<char16_t> buffer;
+
+  DisplayNames::Options options(DisplayNames::Type::Weekday);
+  auto result = DisplayNames::TryCreate("es-ES", options);
+  ASSERT_TRUE(result.isOk());
+  auto displayNames = result.unwrap();
+
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("1")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"lunes"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("2")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"martes"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("3")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"miércoles"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("4")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"jueves"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("5")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"viernes"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("6")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"sábado"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("7")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"domingo"));
+}
+
+TEST(IntlDisplayNames, WeekdayCalendars)
+{
+  TestBuffer<char16_t> buffer;
+  {
+    DisplayNames::Options options(DisplayNames::Type::Weekday);
+    auto result = DisplayNames::TryCreate("en-US-u-ca-buddhist", options);
+    ASSERT_TRUE(result.isOk());
+    auto displayNames = result.unwrap();
+    ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("1")).isOk());
+    ASSERT_TRUE(buffer.verboseMatches(u"Monday"));
+  }
+  {
+    DisplayNames::Options options(DisplayNames::Type::Weekday);
+    options.calendar = MakeStringSpan("gregory");
+    auto result = DisplayNames::TryCreate("en-US", options);
+    ASSERT_TRUE(result.isOk());
+    auto displayNames = result.unwrap();
+    ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("1")).isOk());
+    ASSERT_TRUE(buffer.verboseMatches(u"Monday"));
+  }
+  {
+    DisplayNames::Options options(DisplayNames::Type::Weekday);
+    options.calendar = MakeStringSpan("gregory");
+    auto result = DisplayNames::TryCreate("en-US", options);
+    ASSERT_TRUE(result.isOk());
+    auto displayNames = result.unwrap();
+    ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("1")).isOk());
+    ASSERT_TRUE(buffer.verboseMatches(u"Monday"));
+  }
+}
+
 }  // namespace mozilla::intl

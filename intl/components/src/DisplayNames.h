@@ -4,6 +4,9 @@
 #ifndef intl_components_DisplayNames_h_
 #define intl_components_DisplayNames_h_
 
+#include <string>
+#include "ScopedICUObject.h"
+#include "unicode/udat.h"
 #include "unicode/uldnames.h"
 #include "unicode/uloc.h"
 #include "unicode/ucurr.h"
@@ -33,6 +36,7 @@ enum class DisplayNamesError {
   OutOfMemory = 4,
   InvalidOption = 6,
   DuplicateVariantSubtag = 8,
+  InvalidLanguageTag = 10,
 };
 }  // namespace mozilla::intl
 
@@ -50,6 +54,47 @@ struct HasFreeLSB<intl::DisplayNamesError> {
 }  // namespace mozilla::detail
 
 namespace mozilla::intl {
+
+#ifdef DEBUG
+static bool IsStandaloneMonth(UDateFormatSymbolType symbolType) {
+  switch (symbolType) {
+    case UDAT_STANDALONE_MONTHS:
+    case UDAT_STANDALONE_SHORT_MONTHS:
+    case UDAT_STANDALONE_NARROW_MONTHS:
+      return true;
+
+    case UDAT_ERAS:
+    case UDAT_MONTHS:
+    case UDAT_SHORT_MONTHS:
+    case UDAT_WEEKDAYS:
+    case UDAT_SHORT_WEEKDAYS:
+    case UDAT_AM_PMS:
+    case UDAT_LOCALIZED_CHARS:
+    case UDAT_ERA_NAMES:
+    case UDAT_NARROW_MONTHS:
+    case UDAT_NARROW_WEEKDAYS:
+    case UDAT_STANDALONE_WEEKDAYS:
+    case UDAT_STANDALONE_SHORT_WEEKDAYS:
+    case UDAT_STANDALONE_NARROW_WEEKDAYS:
+    case UDAT_QUARTERS:
+    case UDAT_SHORT_QUARTERS:
+    case UDAT_STANDALONE_QUARTERS:
+    case UDAT_STANDALONE_SHORT_QUARTERS:
+    case UDAT_SHORTER_WEEKDAYS:
+    case UDAT_STANDALONE_SHORTER_WEEKDAYS:
+    case UDAT_CYCLIC_YEARS_WIDE:
+    case UDAT_CYCLIC_YEARS_ABBREVIATED:
+    case UDAT_CYCLIC_YEARS_NARROW:
+    case UDAT_ZODIAC_NAMES_WIDE:
+    case UDAT_ZODIAC_NAMES_ABBREVIATED:
+    case UDAT_ZODIAC_NAMES_NARROW:
+      return false;
+  }
+
+  MOZ_ASSERT_UNREACHABLE("unenumerated, undocumented symbol type");
+  return false;
+}
+#endif
 
 class DisplayNames final {
  public:
@@ -160,6 +205,9 @@ class DisplayNames final {
     // Optional:
     Style style = Style::Long;
     LanguageDisplay languageDisplay = LanguageDisplay::Standard;
+
+    // MozExtension, not part of ECMA-402.
+    Span<const char> calendar;
   };
 
   DisplayNames(ULocaleDisplayNames* aDisplayNames, Span<const char> aLocale,
@@ -211,7 +259,7 @@ class DisplayNames final {
    */
   template <typename B>
   Result<Ok, DisplayNamesError> Of(B& aBuffer, Span<const char> aCode,
-                                   Fallback aFallback = Fallback::None) const {
+                                   Fallback aFallback = Fallback::None) {
     if constexpr (std::is_same_v<typename B::CharType, char>) {
       switch (mOptions.type) {
         case Type::Region:
@@ -239,7 +287,9 @@ class DisplayNames final {
           return this->GetRegion(aBuffer, aCode, aFallback);
         case Type::Calendar:
           return this->GetCalendar(aBuffer, aCode, aFallback);
+        // Non-ECMA 402 options:
         case Type::Weekday:
+          return this->GetWeekday(aBuffer, aCode, aFallback);
         case Type::Month:
         case Type::Quarter:
         case Type::DayPeriod:
@@ -290,6 +340,79 @@ class DisplayNames final {
           }
           return res;
         });
+  }
+
+  Result<Ok, DisplayNamesError> ComputeDateTimeDisplayNames(
+      UDateFormatSymbolType symbolType, mozilla::Span<const int32_t> indices) {
+    if (!mDateTimeDisplayNames.empty()) {
+      // No need to re-compute the display names.
+      return Ok();
+    }
+    mozilla::intl::Locale tag;
+    if (LocaleParser::tryParse(Span(mLocale.data(), mLocale.size()), tag)
+            .isErr()) {
+      return Err(DisplayNamesError::InvalidLanguageTag);
+    }
+
+    Span<const char> calendar = mOptions.calendar.empty()
+                                    ? MakeStringSpan("gregory")
+                                    : mOptions.calendar;
+
+    // Add the calendar extension to the locale.
+    Vector<char, 32> extension;
+    Span<const char> prefix = MakeStringSpan("u-ca-");
+    if (!extension.append(prefix.data(), prefix.size()) ||
+        !extension.append(calendar.data(), calendar.size()) ||
+        !extension.append('\0')) {
+      return Err(DisplayNamesError::OutOfMemory);
+    }
+    if (!tag.setUnicodeExtension(extension.begin())) {
+      return Err(DisplayNamesError::InternalError);
+    };
+
+    constexpr char16_t* timeZone = nullptr;
+    constexpr int32_t timeZoneLength = 0;
+
+    constexpr char16_t* pattern = nullptr;
+    constexpr int32_t patternLength = 0;
+
+    Vector<char, 32> localeWithCalendar;
+    VectorToBufferAdaptor buffer(localeWithCalendar);
+    if (auto result = tag.toString(buffer); result.isErr()) {
+      return Err(ToError(result.unwrapErr()));
+    }
+
+    UErrorCode status = U_ZERO_ERROR;
+    UDateFormat* fmt = udat_open(
+        UDAT_DEFAULT, UDAT_DEFAULT, IcuLocale(localeWithCalendar.begin()),
+        timeZone, timeZoneLength, pattern, patternLength, &status);
+    if (U_FAILURE(status)) {
+      return Err(DisplayNamesError::InternalError);
+    }
+    ScopedICUObject<UDateFormat, udat_close> datToClose(fmt);
+
+    Vector<char16_t, 32> name;
+    for (uint32_t i = 0; i < indices.size(); i++) {
+      int32_t index = indices[i];
+      auto result = FillBufferWithICUCall(
+          name, [&](UChar* target, int32_t length, UErrorCode* status) {
+            return udat_getSymbols(fmt, symbolType, index, target, length,
+                                   status);
+          });
+      if (result.isErr()) {
+        return Err(ToError(result.unwrapErr()));
+      }
+
+      // Everything except Undecimber should always have a non-empty name.
+      MOZ_ASSERT_IF(!IsStandaloneMonth(symbolType) || index != UCAL_UNDECIMBER,
+                    !name.empty());
+
+      if (!mDateTimeDisplayNames.append(
+              std::u16string(name.begin(), name.length()))) {
+        return Err(DisplayNamesError::OutOfMemory);
+      }
+    }
+    return Ok();
   }
 
   /**
@@ -658,8 +781,66 @@ class DisplayNames final {
                           [&] { return canonicalCalendar; });
   }
 
+  /**
+   * Get the display names for DisplayNames::Type::Calendar.
+   */
+  template <typename B>
+  Result<Ok, DisplayNamesError> GetWeekday(B& aBuffer,
+                                           Span<const char> aWeekday,
+                                           Fallback aFallback) {
+    if (aWeekday.size() != 1 || aWeekday[0] < '1' || aWeekday[0] > '7') {
+      // Must be a single character 1-9.
+      return Err(DisplayNamesError::InvalidOption);
+    }
+
+    // Convert the ASCII "1" through "8" to an index 0 - 7.
+    uint8_t weekday = aWeekday[0] - '1';
+
+    UDateFormatSymbolType symbolType;
+    switch (mOptions.style) {
+      case DisplayNames::Style::Long:
+        symbolType = UDAT_STANDALONE_WEEKDAYS;
+        break;
+
+      case DisplayNames::Style::Abbreviated:
+        // ICU "short" is CLDR "abbreviated" format.
+        symbolType = UDAT_STANDALONE_SHORT_WEEKDAYS;
+        break;
+
+      case DisplayNames::Style::Short:
+        // ICU "shorter" is CLDR "short" format.
+        symbolType = UDAT_STANDALONE_SHORTER_WEEKDAYS;
+        break;
+
+      case DisplayNames::Style::Narrow:
+        symbolType = UDAT_STANDALONE_NARROW_WEEKDAYS;
+        break;
+    }
+
+    static constexpr int32_t indices[] = {
+        UCAL_MONDAY, UCAL_TUESDAY,  UCAL_WEDNESDAY, UCAL_THURSDAY,
+        UCAL_FRIDAY, UCAL_SATURDAY, UCAL_SUNDAY};
+
+    if (auto result =
+            ComputeDateTimeDisplayNames(symbolType, mozilla::Span(indices));
+        result.isErr()) {
+      return result.propagateErr();
+    }
+    MOZ_ASSERT(mDateTimeDisplayNames.length() == std::size(indices));
+
+    auto& name = mDateTimeDisplayNames[weekday];
+    if (!FillBuffer(Span(name.data(), name.size()), aBuffer)) {
+      return Err(DisplayNamesError::OutOfMemory);
+    }
+
+    // There is no need to fallback, as invalid options are
+    // DisplayNamesError::InvalidOption.
+    return Ok();
+  }
+
   Options mOptions;
   std::string mLocale;
+  Vector<std::u16string> mDateTimeDisplayNames;
   ICUPointer<ULocaleDisplayNames> mULocaleDisplayNames =
       ICUPointer<ULocaleDisplayNames>(nullptr);
 };
