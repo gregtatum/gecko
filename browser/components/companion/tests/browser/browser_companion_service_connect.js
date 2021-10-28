@@ -24,6 +24,13 @@ add_task(async function setup() {
             domains: ["www.example.com", "test2.example.com"],
             type: "testservice",
           },
+          {
+            icon: "chrome://browser/content/companion/googleAccount.png",
+            name: "Test service",
+            services: "Test calendar things",
+            domains: ["example.net"],
+            type: "testserviceauth",
+          },
         ]),
       ],
     ],
@@ -71,6 +78,16 @@ async function assertConnectCard(helper, _opts) {
           connectService.connected,
           opts.connected,
           "The connect card has the right connected state"
+        );
+        is(
+          connectService.authenticating,
+          !!opts.authenticating,
+          "The connect card has the correct authenticating state"
+        );
+        is(
+          connectService.connectButton.hasAttribute("disabled"),
+          !!opts.authenticating,
+          "The connect button has the correct disablee state"
         );
 
         if (opts.clickConnect) {
@@ -201,6 +218,44 @@ add_task(async function testDuplicateServiceTypeHidden() {
       await urlHandled;
       await assertConnectCard(helper, { service: "testservice", length: 0 });
       await PinebuildTestUtils.logoutFromTestService("testservice-connect");
+    }, win);
+  });
+});
+
+add_task(async function testOauthFlow() {
+  await withNewBrowserWindow(async win => {
+    const { gBrowser } = win;
+
+    await CompanionHelper.whenReady(async helper => {
+      let testUrl = "https://example.net/";
+      let domain = "example.net";
+
+      await assertConnectCard(helper, { length: 0 });
+
+      let urlHandled = waitForDomainHandled(helper, domain);
+
+      await loadURI(gBrowser, testUrl);
+      await urlHandled;
+
+      let authStarted = BrowserTestUtils.waitForNewTab(gBrowser);
+
+      await assertConnectCard(helper, {
+        service: "testserviceauth",
+        length: 1,
+        connected: false,
+        authenticating: false,
+        clickConnect: true,
+      });
+
+      await authStarted;
+
+      await assertConnectCard(helper, {
+        service: "testserviceauth",
+        length: 1,
+        connected: false,
+        authenticating: true,
+        hideService: true,
+      });
     }, win);
   });
 });

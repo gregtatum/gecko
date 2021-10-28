@@ -612,10 +612,11 @@ class CompanionParent extends JSWindowActorParent {
 
   handleViewLocationListener(event) {
     let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
-    let { selectedBrowser } = gBrowser;
+    let { selectedBrowser, selectedTab } = gBrowser;
     if (selectedBrowser.documentURI) {
       this.sendAsyncMessage("Companion:ViewLocation", {
         url: selectedBrowser.documentURI.spec,
+        oauthFlowService: selectedTab.getAttribute("pinebuild-oauth-flow"),
       });
     }
   }

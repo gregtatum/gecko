@@ -61,7 +61,8 @@ class GoogleService {
       scopes.join(" "),
       kIssuers[this.app].clientId,
       kIssuers[this.app].clientSecret,
-      config?.auth
+      config?.auth,
+      this.app
     );
     this.getUnreadCountAtom();
     this.mailCountTimer = setInterval(
@@ -332,7 +333,8 @@ class MicrosoftService {
       scopes.join(" "),
       kIssuers[this.app].clientId,
       kIssuers[this.app].clientSecret,
-      config?.auth
+      config?.auth,
+      this.app
     );
     this.getUnreadCount();
     this.mailCountTimer = setInterval(
@@ -516,21 +518,41 @@ class TestService {
     this.name = "Test";
     this.app = config.type;
     this.id = ++nextServiceId;
+
+    if (this.app == "testserviceauth") {
+      this.auth = new OAuth2(
+        "https://test1.example.net/oauth-login",
+        "https://test1.example.net/oauth-token",
+        "all",
+        "client-id",
+        "client-secret",
+        null,
+        this.app
+      );
+    }
   }
 
   async connect() {
+    if (this.auth) {
+      await this.auth.getToken();
+    }
     return "test-token";
   }
+
   async disconnect() {}
+
   async getNextMeetings() {
     return [];
   }
+
   async getInboxURL() {
     return "https://example.com";
   }
+
   async getUnreadCount() {
     return 0;
   }
+
   toJSON() {
     return { type: this.app };
   }

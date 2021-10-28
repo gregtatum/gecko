@@ -9,7 +9,13 @@ const GOOGLE_SERVICE = {
   icon: "chrome://browser/content/companion/googleAccount.png",
   name: "Google Services",
   services: "Gmail, Calendar, Meet",
-  domains: ["mail.google.com", "calendar.google.com", "meet.google.com"],
+  domains: [
+    "mail.google.com",
+    "calendar.google.com",
+    "meet.google.com",
+    "accounts.google.com",
+    "apps.google.com",
+  ],
   type: "google",
 };
 const MICROSOFT_SERVICE = {
@@ -87,6 +93,7 @@ export class ServicesOnboarding extends MozLitElement {
   static get properties() {
     return {
       currentService: { type: String },
+      authenticatingService: { type: String },
       recentlyAuthedServices: { type: Set },
     };
   }
@@ -132,13 +139,25 @@ export class ServicesOnboarding extends MozLitElement {
   }
 
   onViewLocation(e) {
-    let currentDomain = new URL(e.detail.url).host;
-    this.currentService = SERVICE_BY_DOMAIN.get(currentDomain);
-    this.dispatchOnUpdateComplete(
-      new CustomEvent("service-onboarding-url-handled", {
-        detail: { domain: currentDomain },
-      })
-    );
+    let oauthFlowService = e.detail.oauthFlowService;
+    if (oauthFlowService) {
+      this.currentService = this.normalizeServiceType(oauthFlowService);
+      this.authenticatingService = this.currentService;
+      this.dispatchOnUpdateComplete(
+        new CustomEvent("service-onboarding-flow-handled", {
+          detail: { service: oauthFlowService },
+        })
+      );
+    } else {
+      this.authenticatingService = null;
+      let currentDomain = new URL(e.detail.url).host;
+      this.currentService = SERVICE_BY_DOMAIN.get(currentDomain);
+      this.dispatchOnUpdateComplete(
+        new CustomEvent("service-onboarding-url-handled", {
+          detail: { domain: currentDomain },
+        })
+      );
+    }
   }
 
   onSignIn(e) {
@@ -205,11 +224,12 @@ export class ServicesOnboarding extends MozLitElement {
       this.connectedServices.has(type) || this.recentlyAuthedServices.has(type);
     return html`
       <connect-service
+        .authenticating=${serviceType == this.authenticatingService}
+        .connected=${connected}
         .icon=${icon}
         .name=${name}
         .services=${services}
         .type=${type}
-        .connected=${connected}
       ></connect-service>
     `;
   }
@@ -235,6 +255,7 @@ customElements.define("services-onboarding", ServicesOnboarding);
 class ConnectService extends MozLitElement {
   static get properties() {
     return {
+      authenticating: { type: Boolean },
       connected: { type: Boolean },
       icon: { type: String },
       name: { type: String },
@@ -317,6 +338,16 @@ class ConnectService extends MozLitElement {
     }
   }
 
+  get connectButtonLabelId() {
+    if (this.authenticating) {
+      return "companion-onboarding-service-connecting";
+    }
+    if (this.connected) {
+      return "companion-onboarding-service-connected";
+    }
+    return "companion-onboarding-service-connect";
+  }
+
   render() {
     return html`
       <div class="card card-no-hover">
@@ -331,10 +362,9 @@ class ConnectService extends MozLitElement {
             primary: !this.connected,
             connected: this.connected,
           })}
+          ?disabled=${this.authenticating}
           @click=${this.connectService}
-          data-l10n-id=${this.connected
-            ? "companion-onboarding-service-connected"
-            : "companion-onboarding-service-connect"}
+          data-l10n-id=${this.connectButtonLabelId}
         ></button>
       </div>
     `;

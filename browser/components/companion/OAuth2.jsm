@@ -75,7 +75,7 @@ const OAuthConnect = {
 
       let url = new URL(oauth.authorizationEndpoint + "?" + params);
       let tab = win.gBrowser.addTrustedTab("about:blank");
-      tab.setAttribute("pinebuild-oauth-flow", "true");
+      tab.setAttribute("pinebuild-oauth-flow", oauth.serviceType || "true");
 
       win.gBrowser.selectedTab = tab;
 
@@ -201,13 +201,15 @@ class OAuth2 {
     scope,
     clientId,
     clientSecret = null,
-    config = null
+    config = null,
+    serviceType = null
   ) {
     this.authorizationEndpoint = authorizationEndpoint;
     this.tokenEndpoint = tokenEndpoint;
     this.scope = scope;
     this.clientId = clientId;
     this.consumerSecret = clientSecret;
+    this.serviceType = serviceType;
 
     this.extraAuthParams = [];
 
