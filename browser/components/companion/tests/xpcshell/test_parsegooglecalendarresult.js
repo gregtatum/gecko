@@ -45,7 +45,7 @@ add_task(async function test_parseGoogleCalendarResult() {
       event.attendees,
       test.result.attendees.filter(a => a.responseStatus !== "declined")
     );
-    equal(event.organizer.self, true);
-    equal(event.creator.self, true);
+    equal(event.organizer.isSelf, true);
+    equal(event.creator.isSelf, true);
   }
 });

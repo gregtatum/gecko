@@ -60,17 +60,17 @@ const MICROSOFT_TEST = [
         {
           name: "None",
           email: "none@example.com",
-          self: false,
+          isSelf: false,
         },
         {
           name: "Tentatively Accepted",
           email: "tentativelyAccepted@example.com",
-          self: false,
+          isSelf: false,
         },
         {
           name: "Accepted",
           email: "accepted@example.com",
-          self: false,
+          isSelf: false,
         },
       ],
     },

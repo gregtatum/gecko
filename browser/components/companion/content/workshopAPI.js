@@ -7,12 +7,16 @@ import { MailAPIFactory } from "chrome://browser/content/companion/workshop-api-
 const OnlineServicesHelper = ChromeUtils.import(
   "resource:///modules/OnlineServicesHelper.jsm"
 );
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
-const mainThreadServices = OnlineServicesHelper.MainThreadServices(window);
-const workshopAPI = MailAPIFactory(mainThreadServices);
+let workshopAPI = null;
 
-// Let mainThreadServices know about the workshopAPI obj
-// so that we can properly handle "beforeunload" events.
-mainThreadServices.registerWorkshopAPI(workshopAPI);
+if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
+  const mainThreadServices = OnlineServicesHelper.MainThreadServices(window);
+  workshopAPI = MailAPIFactory(mainThreadServices);
+  // Let mainThreadServices know about the workshopAPI obj
+  // so that we can properly handle "beforeunload" events.
+  mainThreadServices.registerWorkshopAPI(workshopAPI);
+}
 
 export { workshopAPI };
