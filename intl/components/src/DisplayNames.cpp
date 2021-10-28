@@ -59,6 +59,9 @@ DisplayNames::~DisplayNames() {
   if (mULocaleDisplayNames.GetMut()) {
     uldn_close(mULocaleDisplayNames.GetMut());
   }
+  if (mUDateTimePatternGen) {
+    udatpg_close(mUDateTimePatternGen);
+  }
 }
 
 DisplayNamesError DisplayNames::ToError(ICUError aError) const {

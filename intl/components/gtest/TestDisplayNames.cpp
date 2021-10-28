@@ -426,4 +426,197 @@ TEST(IntlDisplayNames, WeekdayCalendars)
   }
 }
 
+TEST(IntlDisplayNames, Month)
+{
+  TestBuffer<char16_t> buffer;
+
+  DisplayNames::Options options(DisplayNames::Type::Month);
+  auto result = DisplayNames::TryCreate("en-US", options);
+  ASSERT_TRUE(result.isOk());
+  auto displayNames = result.unwrap();
+
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("1")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"January"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("2")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"February"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("3")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"March"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("4")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"April"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("5")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"May"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("6")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"June"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("7")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"July"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("8")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"August"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("9")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"September"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("10")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"October"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("11")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"November"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("12")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"December"));
+
+  {
+    // Empty string.
+    auto err = displayNames->Of(buffer, MakeStringSpan(""));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Not a number.
+    auto err = displayNames->Of(buffer, MakeStringSpan("A"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Below valid range.
+    auto err = displayNames->Of(buffer, MakeStringSpan("0"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Above valid range.
+    auto err = displayNames->Of(buffer, MakeStringSpan("13"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+}
+
+TEST(IntlDisplayNames, Quarter)
+{
+  TestBuffer<char16_t> buffer;
+
+  DisplayNames::Options options(DisplayNames::Type::Quarter);
+  auto result = DisplayNames::TryCreate("en-US", options);
+  ASSERT_TRUE(result.isOk());
+  auto displayNames = result.unwrap();
+
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("1")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"1st quarter"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("2")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"2nd quarter"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("3")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"3rd quarter"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("4")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"4th quarter"));
+
+  {
+    // Empty string.
+    auto err = displayNames->Of(buffer, MakeStringSpan(""));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Not a number.
+    auto err = displayNames->Of(buffer, MakeStringSpan("A"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Below valid range.
+    auto err = displayNames->Of(buffer, MakeStringSpan("0"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Above valid range.
+    auto err = displayNames->Of(buffer, MakeStringSpan("5"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+}
+
+TEST(IntlDisplayNames, DayPeriod_en_US)
+{
+  TestBuffer<char16_t> buffer;
+
+  DisplayNames::Options options(DisplayNames::Type::DayPeriod);
+  auto result = DisplayNames::TryCreate("en-US", options);
+  ASSERT_TRUE(result.isOk());
+  auto displayNames = result.unwrap();
+
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("am")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"AM"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("pm")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"PM"));
+
+  {
+    // Empty string.
+    auto err = displayNames->Of(buffer, MakeStringSpan(""));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Not a am or pm.
+    auto err = displayNames->Of(buffer, MakeStringSpan("amm"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+}
+
+TEST(IntlDisplayNames, DayPeriod_ar)
+{
+  TestBuffer<char16_t> buffer;
+
+  DisplayNames::Options options(DisplayNames::Type::DayPeriod);
+  auto result = DisplayNames::TryCreate("ar", options);
+  ASSERT_TRUE(result.isOk());
+  auto displayNames = result.unwrap();
+
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("am")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"ص"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("pm")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"م"));
+}
+
+TEST(IntlDisplayNames, DateTimeField)
+{
+  TestBuffer<char16_t> buffer;
+
+  DisplayNames::Options options(DisplayNames::Type::DateTimeField);
+  auto result = DisplayNames::TryCreate("en-US", options);
+  ASSERT_TRUE(result.isOk());
+  auto displayNames = result.unwrap();
+
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("year")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"year"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("quarter")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"quarter"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("month")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"month"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("weekOfYear")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"week"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("weekday")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"day of the week"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("day")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"day"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("dayPeriod")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"AM/PM"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("hour")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"hour"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("minute")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"minute"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("second")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"second"));
+  ASSERT_TRUE(displayNames->Of(buffer, MakeStringSpan("timeZoneName")).isOk());
+  ASSERT_TRUE(buffer.verboseMatches(u"time zone"));
+
+  {
+    // Empty string.
+    auto err = displayNames->Of(buffer, MakeStringSpan(""));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+  {
+    // Not a valid field.
+    auto err = displayNames->Of(buffer, MakeStringSpan("mozilla"));
+    ASSERT_TRUE(err.isErr());
+    ASSERT_EQ(err.unwrapErr(), DisplayNamesError::InvalidOption);
+  }
+}
+
 }  // namespace mozilla::intl

@@ -5,8 +5,10 @@
 #define intl_components_DisplayNames_h_
 
 #include <string>
+#include <string_view>
 #include "ScopedICUObject.h"
 #include "unicode/udat.h"
+#include "unicode/udatpg.h"
 #include "unicode/uldnames.h"
 #include "unicode/uloc.h"
 #include "unicode/ucurr.h"
@@ -260,43 +262,30 @@ class DisplayNames final {
   template <typename B>
   Result<Ok, DisplayNamesError> Of(B& aBuffer, Span<const char> aCode,
                                    Fallback aFallback = Fallback::None) {
-    if constexpr (std::is_same_v<typename B::CharType, char>) {
-      switch (mOptions.type) {
-        case Type::Region:
-        case Type::Script:
-        case Type::Language:
-        case Type::Currency:
-        case Type::Calendar:
-        case Type::Weekday:
-        case Type::Month:
-        case Type::Quarter:
-        case Type::DayPeriod:
-        case Type::DateTimeField:
-          MOZ_ASSERT_UNREACHABLE("Type requires a char CharType.");
-      }
-    }
-    if constexpr (std::is_same_v<typename B::CharType, char16_t>) {
-      switch (mOptions.type) {
-        case Type::Currency:
-          return this->GetCurrency(aBuffer, aCode, aFallback);
-        case Type::Language:
-          return this->GetLanguage(aBuffer, aCode, aFallback);
-        case Type::Script:
-          return this->GetScript(aBuffer, aCode, aFallback);
-        case Type::Region:
-          return this->GetRegion(aBuffer, aCode, aFallback);
-        case Type::Calendar:
-          return this->GetCalendar(aBuffer, aCode, aFallback);
-        // Non-ECMA 402 options:
-        case Type::Weekday:
-          return this->GetWeekday(aBuffer, aCode, aFallback);
-        case Type::Month:
-        case Type::Quarter:
-        case Type::DayPeriod:
-        case Type::DateTimeField:
-          MOZ_CRASH("Unimplemented");
-          // MOZ_ASSERT_UNREACHABLE("Type requires a char16_t CharType.");
-      }
+    static_assert(std::is_same<typename B::CharType, char16_t>::value);
+    switch (mOptions.type) {
+      case Type::Currency:
+        return this->GetCurrency(aBuffer, aCode, aFallback);
+      case Type::Language:
+        return this->GetLanguage(aBuffer, aCode, aFallback);
+      case Type::Script:
+        return this->GetScript(aBuffer, aCode, aFallback);
+      case Type::Region:
+        return this->GetRegion(aBuffer, aCode, aFallback);
+      case Type::Calendar:
+        return this->GetCalendar(aBuffer, aCode, aFallback);
+
+      // Non-ECMA 402 options:
+      case Type::Weekday:
+        return this->GetWeekday(aBuffer, aCode, aFallback);
+      case Type::Month:
+        return this->GetMonth(aBuffer, aCode, aFallback);
+      case Type::Quarter:
+        return this->GetQuarter(aBuffer, aCode, aFallback);
+      case Type::DayPeriod:
+        return this->GetDayPeriod(aBuffer, aCode, aFallback);
+      case Type::DateTimeField:
+        return this->GetDateTimeField(aBuffer, aCode, aFallback);
     }
     MOZ_ASSERT_UNREACHABLE();
     return Err(DisplayNamesError::InternalError);
@@ -537,10 +526,6 @@ class DisplayNames final {
 
   /**
    * Get the display names for Apply the DisplayNames::Type::Currency.
-   *
-   * Note that this function requires a `const char16_t` for the currency. This
-   * is done to match the underlying ICU4C call. This may change if we move to
-   * ICU4X.
    */
   template <typename B>
   Result<Ok, DisplayNamesError> GetCurrency(B& aBuffer,
@@ -782,19 +767,43 @@ class DisplayNames final {
   }
 
   /**
-   * Get the display names for DisplayNames::Type::Calendar.
+   * Validate an ASCII string as a number 1-99.
+   */
+  static Maybe<uint8_t> ValidateDisplayNamesNumber(Span<const char> aNumber,
+                                                   uint8_t aMax) {
+    MOZ_ASSERT(aMax < 100);
+    uint8_t result;
+    if (aNumber.size() == 2) {
+      if (aNumber[0] < '1' || aNumber[0] > '9' || aNumber[1] < '0' ||
+          aNumber[1] > '9') {
+        return Nothing();
+      }
+      result = (aNumber[0] - '0') * 10 + (aNumber[1] - '0');
+    } else if (aNumber.size() == 1) {
+      if (aNumber[0] < '1' || aNumber[0] > '9') {
+        return Nothing();
+      }
+      result = aNumber[0] - '0';
+    } else {
+      return Nothing();
+    }
+    if (result > aMax) {
+      return Nothing();
+    }
+    return Some(result);
+  }
+
+  /**
+   * Get the display names for DisplayNames::Type::Weekday.
    */
   template <typename B>
   Result<Ok, DisplayNamesError> GetWeekday(B& aBuffer,
                                            Span<const char> aWeekday,
                                            Fallback aFallback) {
-    if (aWeekday.size() != 1 || aWeekday[0] < '1' || aWeekday[0] > '7') {
-      // Must be a single character 1-9.
+    Maybe<uint8_t> weekday = ValidateDisplayNamesNumber(aWeekday, 7);
+    if (weekday.isNothing()) {
       return Err(DisplayNamesError::InvalidOption);
     }
-
-    // Convert the ASCII "1" through "8" to an index 0 - 7.
-    uint8_t weekday = aWeekday[0] - '1';
 
     UDateFormatSymbolType symbolType;
     switch (mOptions.style) {
@@ -828,11 +837,217 @@ class DisplayNames final {
     }
     MOZ_ASSERT(mDateTimeDisplayNames.length() == std::size(indices));
 
-    auto& name = mDateTimeDisplayNames[weekday];
+    auto& name = mDateTimeDisplayNames[weekday.value() - 1];
     if (!FillBuffer(Span(name.data(), name.size()), aBuffer)) {
       return Err(DisplayNamesError::OutOfMemory);
     }
 
+    // There is no need to fallback, as invalid options are
+    // DisplayNamesError::InvalidOption.
+    return Ok();
+  }
+
+  /**
+   * Get the display names for DisplayNames::Type::Month.
+   */
+  template <typename B>
+  Result<Ok, DisplayNamesError> GetMonth(B& aBuffer, Span<const char> aMonth,
+                                         Fallback aFallback) {
+    Maybe<uint8_t> month = ValidateDisplayNamesNumber(aMonth, 12);
+    if (month.isNothing()) {
+      return Err(DisplayNamesError::InvalidOption);
+    }
+
+    UDateFormatSymbolType symbolType;
+    switch (mOptions.style) {
+      case DisplayNames::Style::Long:
+        symbolType = UDAT_STANDALONE_MONTHS;
+        break;
+
+      case DisplayNames::Style::Abbreviated:
+      case DisplayNames::Style::Short:
+        symbolType = UDAT_STANDALONE_SHORT_MONTHS;
+        break;
+
+      case DisplayNames::Style::Narrow:
+        symbolType = UDAT_STANDALONE_NARROW_MONTHS;
+        break;
+    }
+
+    static constexpr int32_t indices[] = {
+        UCAL_JANUARY,   UCAL_FEBRUARY, UCAL_MARCH,    UCAL_APRIL,
+        UCAL_MAY,       UCAL_JUNE,     UCAL_JULY,     UCAL_AUGUST,
+        UCAL_SEPTEMBER, UCAL_OCTOBER,  UCAL_NOVEMBER, UCAL_DECEMBER,
+        UCAL_UNDECIMBER};
+
+    if (auto result =
+            ComputeDateTimeDisplayNames(symbolType, mozilla::Span(indices));
+        result.isErr()) {
+      return result.propagateErr();
+    }
+    MOZ_ASSERT(mDateTimeDisplayNames.length() == std::size(indices));
+
+    auto& name = mDateTimeDisplayNames[month.value() - 1];
+    if (!FillBuffer(Span(name.data(), name.size()), aBuffer)) {
+      return Err(DisplayNamesError::OutOfMemory);
+    }
+
+    // There is no need to fallback, as invalid options are
+    // DisplayNamesError::InvalidOption.
+    return Ok();
+  }
+
+  /**
+   * Get the display names for DisplayNames::Type::Quarter.
+   */
+  template <typename B>
+  Result<Ok, DisplayNamesError> GetQuarter(B& aBuffer, Span<const char> aMonth,
+                                           Fallback aFallback) {
+    Maybe<uint8_t> quarter = ValidateDisplayNamesNumber(aMonth, 4);
+    if (quarter.isNothing()) {
+      return Err(DisplayNamesError::InvalidOption);
+    }
+
+    UDateFormatSymbolType symbolType;
+    switch (mOptions.style) {
+      case DisplayNames::Style::Long:
+        symbolType = UDAT_STANDALONE_QUARTERS;
+        break;
+
+      case DisplayNames::Style::Abbreviated:
+      case DisplayNames::Style::Short:
+      case DisplayNames::Style::Narrow:
+        // CLDR "narrow" style not supported in ICU.
+        symbolType = UDAT_STANDALONE_SHORT_QUARTERS;
+        break;
+    }
+
+    // ICU doesn't provide an enum for quarters.
+    static constexpr int32_t indices[] = {0, 1, 2, 3};
+
+    if (auto result =
+            ComputeDateTimeDisplayNames(symbolType, mozilla::Span(indices));
+        result.isErr()) {
+      return result.propagateErr();
+    }
+    MOZ_ASSERT(mDateTimeDisplayNames.length() == std::size(indices));
+
+    auto& name = mDateTimeDisplayNames[quarter.value() - 1];
+    if (!FillBuffer(Span(name.data(), name.size()), aBuffer)) {
+      return Err(DisplayNamesError::OutOfMemory);
+    }
+
+    // There is no need to fallback, as invalid options are
+    // DisplayNamesError::InvalidOption.
+    return Ok();
+  }
+
+  /**
+   * Get the display names for DisplayNames::Type::DayPeriod.
+   */
+  template <typename B>
+  Result<Ok, DisplayNamesError> GetDayPeriod(B& aBuffer,
+                                             Span<const char> aDayPeriod,
+                                             Fallback aFallback) {
+    uint32_t index;
+    if (aDayPeriod == MakeStringSpan("am")) {
+      index = 0;
+    } else if (aDayPeriod == MakeStringSpan("pm")) {
+      index = 1;
+    } else {
+      return Err(DisplayNamesError::InvalidOption);
+    }
+
+    UDateFormatSymbolType symbolType = UDAT_AM_PMS;
+
+    static constexpr int32_t indices[] = {UCAL_AM, UCAL_PM};
+
+    if (auto result =
+            ComputeDateTimeDisplayNames(symbolType, mozilla::Span(indices));
+        result.isErr()) {
+      return result.propagateErr();
+    }
+    MOZ_ASSERT(mDateTimeDisplayNames.length() == std::size(indices));
+
+    auto& name = mDateTimeDisplayNames[index];
+    if (!FillBuffer(Span(name.data(), name.size()), aBuffer)) {
+      return Err(DisplayNamesError::OutOfMemory);
+    }
+
+    // There is no need to fallback, as invalid options are
+    // DisplayNamesError::InvalidOption.
+    return Ok();
+  }
+
+  /**
+   * Get the display names for DisplayNames::Type::DayPeriod.
+   */
+  template <typename B>
+  Result<Ok, DisplayNamesError> GetDateTimeField(B& aBuffer,
+                                                 Span<const char> aField,
+                                                 Fallback aFallback) {
+    UDateTimePatternField field;
+    if (aField == MakeStringSpan("era")) {
+      field = UDATPG_ERA_FIELD;
+    } else if (aField == MakeStringSpan("year")) {
+      field = UDATPG_YEAR_FIELD;
+    } else if (aField == MakeStringSpan("quarter")) {
+      field = UDATPG_QUARTER_FIELD;
+    } else if (aField == MakeStringSpan("month")) {
+      field = UDATPG_MONTH_FIELD;
+    } else if (aField == MakeStringSpan("weekOfYear")) {
+      field = UDATPG_WEEK_OF_YEAR_FIELD;
+    } else if (aField == MakeStringSpan("weekday")) {
+      field = UDATPG_WEEKDAY_FIELD;
+    } else if (aField == MakeStringSpan("day")) {
+      field = UDATPG_DAY_FIELD;
+    } else if (aField == MakeStringSpan("dayPeriod")) {
+      field = UDATPG_DAYPERIOD_FIELD;
+    } else if (aField == MakeStringSpan("hour")) {
+      field = UDATPG_HOUR_FIELD;
+    } else if (aField == MakeStringSpan("minute")) {
+      field = UDATPG_MINUTE_FIELD;
+    } else if (aField == MakeStringSpan("second")) {
+      field = UDATPG_SECOND_FIELD;
+    } else if (aField == MakeStringSpan("timeZoneName")) {
+      field = UDATPG_ZONE_FIELD;
+    } else {
+      return Err(DisplayNamesError::InvalidOption);
+    }
+
+    UDateTimePGDisplayWidth width;
+    switch (mOptions.style) {
+      case DisplayNames::Style::Long:
+        width = UDATPG_WIDE;
+        break;
+      case DisplayNames::Style::Abbreviated:
+      case DisplayNames::Style::Short:
+        width = UDATPG_ABBREVIATED;
+        break;
+      case DisplayNames::Style::Narrow:
+        width = UDATPG_NARROW;
+        break;
+    }
+
+    // This is the only method that needs a date time pattern generator. Lazily
+    // create one here.
+    if (!mUDateTimePatternGen) {
+      UErrorCode status = U_ZERO_ERROR;
+      mUDateTimePatternGen = udatpg_open(mLocale.data(), &status);
+      if (U_FAILURE(status)) {
+        return Err(ToError(ToICUError(status)));
+      }
+    }
+
+    auto result = FillBufferWithICUCall(
+        aBuffer, [&](UChar* target, int32_t length, UErrorCode* status) {
+          return udatpg_getFieldDisplayName(mUDateTimePatternGen, field, width,
+                                            target, length, status);
+        });
+
+    if (result.isErr()) {
+      return Err(ToError(result.unwrapErr()));
+    }
     // There is no need to fallback, as invalid options are
     // DisplayNamesError::InvalidOption.
     return Ok();
@@ -843,6 +1058,10 @@ class DisplayNames final {
   Vector<std::u16string> mDateTimeDisplayNames;
   ICUPointer<ULocaleDisplayNames> mULocaleDisplayNames =
       ICUPointer<ULocaleDisplayNames>(nullptr);
+
+  // Only lazily construct the date time pattern generator. This is only used
+  // for the Type::DateTimeField, which is not part of ECMA 402.
+  UDateTimePatternGenerator* mUDateTimePatternGen = nullptr;
 };
 
 }  // namespace mozilla::intl
