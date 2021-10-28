@@ -17,6 +17,7 @@
 import logic from "logic";
 
 import { makeDaysAgo } from "shared/date";
+import { makeGlobalNamespacedConvId } from "shared/id_conversions";
 
 /**
  * See `sync.md`.
@@ -54,8 +55,8 @@ export default class BugzillaSyncStateHelper {
   }
 
   _makeBugConvTask({ bugId, lastChangeDatestamp }) {
-    let convId = this._accountId + "." + bugId;
-    let task = {
+    const convId = makeGlobalNamespacedConvId(this._accountId, `${bugId}`);
+    const task = {
       type: "sync_bug",
       accountId: this._accountId,
       convId,

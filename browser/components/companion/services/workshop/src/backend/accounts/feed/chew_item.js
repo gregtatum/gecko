@@ -16,6 +16,7 @@
 
 import * as mailRep from "../../db/mail_rep";
 import { processMessageContent } from "../../bodies/mailchew";
+import { makeMessageId } from "shared/id_conversions";
 
 export class FeedItemChewer {
   constructor({ convId, item, foldersTOC }) {
@@ -30,7 +31,9 @@ export class FeedItemChewer {
     const item = this.item;
     let contentBlob, snippet, authoredBodySize;
     let bodyReps = [];
-    const msgId = this.convId;
+    // For now there's only ever a single message in the conversation, so we
+    // arbitrarily choose to use "0" as the MessageIdComponent.
+    const msgId = makeMessageId(this.convId, "0");
 
     if (item.description) {
       const description = item.description;

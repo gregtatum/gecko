@@ -17,7 +17,7 @@
 import * as mailRep from "../../db/mail_rep";
 import { processEventContent } from "../../bodies/mailchew";
 import { EVENT_OUTSIDE_SYNC_RANGE } from "shared/date";
-import { makeMapiCalEventId } from "./mapi_id_helpers";
+import { makeMessageId } from "shared/id_conversions";
 import {
   makeAttendeeInfo,
   makeCalendarEventInfo,
@@ -124,7 +124,7 @@ export class MapiCalEventChewer {
     // ## Process the new/modified/deleted events
     for (const mapiEvent of this.eventMap.values()) {
       try {
-        const eventId = makeMapiCalEventId(this.convId, mapiEvent.id);
+        const eventId = makeMessageId(this.convId, mapiEvent.id);
         if (mainEvent && mapiEvent !== mainEvent) {
           // The main event can contain some fields (like organizer) that
           // the occurences haven't.

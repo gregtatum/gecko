@@ -1106,29 +1106,101 @@ var WorkshopBackend = (() => {
   });
 
   // src/shared/id_conversions.js
+  function makeAccountId(accountNum) {
+    return encodeInt(accountNum);
+  }
+  function makeIdentityId(accountId, identityNum) {
+    if (/\0/.test(accountId)) {
+      throw new Error(`AccountId '${accountId}' has a nul!`);
+    }
+    return `${accountId}\0${encodeInt(identityNum)}`;
+  }
   function accountIdFromIdentityId(identityId) {
-    return identityId.split(/\./g, 1)[0];
+    const pieces = identityId.split(/\0/g);
+    if (pieces.length !== 2) {
+      throw new Error(`Malformed IdentityId: ${identityId}`);
+    }
+    return pieces[0];
+  }
+  function getAccountIdBounds(accountId) {
+    return {
+      lower: accountId + "\0",
+      upper: accountId + "\0\uFFF0"
+    };
+  }
+  function makeFolderId(accountId, folderNum) {
+    if (/\0/.test(accountId)) {
+      throw new Error(`AccountId '${accountId}' has a nul!`);
+    }
+    return `${accountId}\0${encodeInt(folderNum)}`;
   }
   function accountIdFromFolderId(folderId) {
-    return folderId.split(/\./g, 1)[0];
+    const pieces = folderId.split(/\0/g);
+    if (pieces.length !== 2) {
+      throw new Error(`Malformed FolderId: ${folderId}`);
+    }
+    return pieces[0];
   }
-  function decodeSpecificFolderIdFromFolderId(folderId) {
-    let idxFirst = folderId.indexOf(".");
-    return decodeA64Int(folderId.substring(idxFirst + 1));
+  function decodeFolderIdComponentFromFolderId(folderId) {
+    const pieces = folderId.split(/\0/g);
+    if (pieces.length !== 2) {
+      throw new Error(`Malformed FolderId: ${folderId}`);
+    }
+    return decodeA64Int(pieces[1]);
+  }
+  function makeFolderNamespacedConvId(folderId, convIdComponent) {
+    const pieces = folderId.split(/\0/g);
+    if (pieces.length !== 2) {
+      throw new Error(`Malformed FolderId: ${folderId}`);
+    }
+    if (/\0/.test(convIdComponent)) {
+      throw new Error(`ConvIdComnponent '${convIdComponent}' has a nul!`);
+    }
+    return `${folderId}\0${convIdComponent}`;
+  }
+  function makeGlobalNamespacedConvId(accountId, convIdComponent) {
+    if (/\0/.test(accountId)) {
+      throw new Error(`AccountId '${accountId}' has a nul!`);
+    }
+    return `${accountId}\0\0${convIdComponent}`;
   }
   function accountIdFromConvId(convId) {
-    return convId.split(/\./g, 1)[0];
+    const pieces = convId.split(/\0/g);
+    if (pieces.length !== 3) {
+      throw new Error(`Malformed ConversationId: ${convId}`);
+    }
+    return pieces[0];
+  }
+  function makeMessageId(convId, messageIdComponent) {
+    const pieces = convId.split(/\0/g);
+    if (pieces.length !== 3) {
+      throw new Error(`Malformed ConversationId: ${convId}`);
+    }
+    if (/\0/.test(messageIdComponent)) {
+      throw new Error(`MessageIdComponent '${messageIdComponent}' has a nul!`);
+    }
+    return `${convId}\0${messageIdComponent}`;
   }
   function accountIdFromMessageId(messageId) {
-    return messageId.split(/\./g, 1)[0];
+    const pieces = messageId.split(/\0/g);
+    if (pieces.length !== 4) {
+      throw new Error(`Malformed MessageId: ${messageId}`);
+    }
+    return pieces[0];
   }
   function convIdFromMessageId(messageId) {
-    let idxFirst = messageId.indexOf(".");
-    let idxSecond = messageId.indexOf(".", idxFirst + 1);
-    return messageId.substring(0, idxSecond);
+    const pieces = messageId.split(/\0/g);
+    if (pieces.length !== 4) {
+      throw new Error(`Malformed MessageId: ${messageId}`);
+    }
+    return pieces.slice(0, 3).join("\0");
   }
-  function messageSpecificIdFromMessageId(messageId) {
-    return messageId.split(/\./g, 3)[2];
+  function messageIdComponentFromMessageId(messageId) {
+    const pieces = messageId.split(/\0/g);
+    if (pieces.length !== 4) {
+      throw new Error(`Malformed MessageId: ${messageId}`);
+    }
+    return pieces[3];
   }
   var init_id_conversions = __esm({
     "src/shared/id_conversions.js"() {
@@ -10378,6 +10450,7 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/feed/chew_item.js"() {
       init_mail_rep();
       init_mailchew();
+      init_id_conversions();
       FeedItemChewer = class {
         constructor({ convId, item, foldersTOC }) {
           this.convId = convId;
@@ -10390,7 +10463,7 @@ var WorkshopBackend = (() => {
           const item = this.item;
           let contentBlob, snippet, authoredBodySize;
           let bodyReps = [];
-          const msgId = this.convId;
+          const msgId = makeMessageId(this.convId, "0");
           if (item.description) {
             const description = item.description;
             ({ contentBlob, snippet, authoredBodySize } = await processMessageContent(description, item.contentType, true, true));
@@ -10529,6 +10602,7 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/feed/sync_state_helper.js"() {
       init_logic();
       init_date();
+      init_id_conversions();
       FeedSyncStateHelper = class {
         constructor(ctx, rawSyncState, accountId, why) {
           logic.defineScope(this, "FeedSyncState", { ctxId: ctx.id, why });
@@ -10575,7 +10649,7 @@ var WorkshopBackend = (() => {
             data.description = content.value || "";
             data.contentType = "plain";
           }
-          const convId = `${this._accountId}.${data.guid}`;
+          const convId = makeGlobalNamespacedConvId(this._accountId, data.guid);
           this._makeItemConvTask({
             convId,
             item: data
@@ -10593,7 +10667,7 @@ var WorkshopBackend = (() => {
           data.title = item.title || data.title;
           data.description = item.description || data.description;
           data.contentType = "html";
-          const convId = `${this._accountId}.${data.guid}`;
+          const convId = makeGlobalNamespacedConvId(this._accountId, data.guid);
           this._makeItemConvTask({
             convId,
             item: data
@@ -10613,7 +10687,7 @@ var WorkshopBackend = (() => {
             data.description = item.content_text;
             data.contentType = "plain";
           }
-          const convId = `${this._accountId}.${data.guid}.`;
+          const convId = makeGlobalNamespacedConvId(this._accountId, data.guid);
           this._makeItemConvTask({
             convId,
             item: data
@@ -10633,7 +10707,7 @@ var WorkshopBackend = (() => {
           data.title = entry.title || data.title;
           data.description = entry.summary || data.description;
           data.contentType = "html";
-          const convId = `${this._accountId}.${data.guid}`;
+          const convId = makeGlobalNamespacedConvId(this._accountId, data.guid);
           this._makeItemConvTask({
             convId,
             item: data
@@ -11190,18 +11264,6 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/gapi/gapi_id_helpers.js
-  function makeGapiCalConvId(accountId, folderId, rawRecurringId) {
-    return `${accountId}.${folderId}.${rawRecurringId}`;
-  }
-  function makeGapiCalEventId(convId, rawGapiCalEventId) {
-    return `${convId}.${rawGapiCalEventId}`;
-  }
-  var init_gapi_id_helpers = __esm({
-    "src/backend/accounts/gapi/gapi_id_helpers.js"() {
-    }
-  });
-
   // src/backend/db/cal_event_rep.js
   function makeIdentityInfo(raw) {
     return {
@@ -11256,7 +11318,7 @@ var WorkshopBackend = (() => {
       init_mail_rep();
       init_mailchew();
       init_date();
-      init_gapi_id_helpers();
+      init_id_conversions();
       init_cal_event_rep();
       init_logic();
       GapiCalEventChewer = class {
@@ -11317,7 +11379,7 @@ var WorkshopBackend = (() => {
           }
           for (const gapiEvent of this.eventMap.values()) {
             try {
-              const eventId = makeGapiCalEventId(this.convId, gapiEvent.id);
+              const eventId = makeMessageId(this.convId, gapiEvent.id);
               if (gapiEvent.status === "cancelled") {
                 this.modifiedEventMap.set(eventId, null);
                 logic(this.ctx, "cancelled", { _event: gapiEvent });
@@ -11481,7 +11543,7 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/gapi/cal_folder_sync_state_helper.js"() {
       init_logic();
       init_date();
-      init_gapi_id_helpers();
+      init_id_conversions();
       GapiCalFolderSyncStateHelper = class {
         constructor(ctx, rawSyncState, accountId, folderId, why) {
           logic.defineScope(this, "GapiSyncState", { ctxId: ctx.id, why });
@@ -11557,7 +11619,7 @@ var WorkshopBackend = (() => {
             recurringId,
             eventMap
           ] of this.eventChangesByRecurringEventId.entries()) {
-            const convId = makeGapiCalConvId(this._accountId, this._folderId, recurringId);
+            const convId = makeFolderNamespacedConvId(this._folderId, recurringId);
             this._makeUidConvTask({
               convId,
               eventMap,
@@ -11864,18 +11926,6 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/mapi/mapi_id_helpers.js
-  function makeMapiCalConvId(accountId, folderId, rawRecurringId) {
-    return `${accountId}.${folderId}:${rawRecurringId}`;
-  }
-  function makeMapiCalEventId(convId, rawMapiCalEventId) {
-    return `${convId}.${rawMapiCalEventId}`;
-  }
-  var init_mapi_id_helpers = __esm({
-    "src/backend/accounts/mapi/mapi_id_helpers.js"() {
-    }
-  });
-
   // src/backend/accounts/mapi/chew_mapi_cal_events.js
   var MapiCalEventChewer;
   var init_chew_mapi_cal_events = __esm({
@@ -11883,7 +11933,7 @@ var WorkshopBackend = (() => {
       init_mail_rep();
       init_mailchew();
       init_date();
-      init_mapi_id_helpers();
+      init_id_conversions();
       init_cal_event_rep();
       init_logic();
       MapiCalEventChewer = class {
@@ -11954,7 +12004,7 @@ var WorkshopBackend = (() => {
           }
           for (const mapiEvent of this.eventMap.values()) {
             try {
-              const eventId = makeMapiCalEventId(this.convId, mapiEvent.id);
+              const eventId = makeMessageId(this.convId, mapiEvent.id);
               if (mainEvent && mapiEvent !== mainEvent) {
                 for (const [key, value] of Object.entries(mainEvent)) {
                   if (!(key in mapiEvent)) {
@@ -12121,7 +12171,7 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/mapi/cal_folder_sync_state_helper.js"() {
       init_logic();
       init_date();
-      init_mapi_id_helpers();
+      init_id_conversions();
       MapiCalFolderSyncStateHelper = class {
         constructor(ctx, rawSyncState, accountId, folderId, why) {
           logic.defineScope(this, "MapiSyncState", { ctxId: ctx.id, why });
@@ -12193,7 +12243,7 @@ var WorkshopBackend = (() => {
             recurringId,
             eventMap
           ] of this.eventChangesByRecurringEventId.entries()) {
-            const convId = makeMapiCalConvId(this._accountId, this._folderId, recurringId);
+            const convId = makeFolderNamespacedConvId(this._folderId, recurringId);
             this._makeUidConvTask({
               convId,
               recurringId,
@@ -15525,8 +15575,8 @@ var WorkshopBackend = (() => {
     IDBRequest,
     IDBKeyRange
   } = globalThis;
-  var CUR_VERSION = 123;
-  var FRIENDLY_LAZY_DB_UPGRADE_VERSION = 122;
+  var CUR_VERSION = 124;
+  var FRIENDLY_LAZY_DB_UPGRADE_VERSION = 124;
   var TBL_CONFIG = "config";
   var CONFIG_KEYPREFIX_ACCOUNT_DEF = "accountDef:";
   var TBL_SYNC_STATES = "syncStates";
@@ -15986,7 +16036,7 @@ var WorkshopBackend = (() => {
             const key = [
               convIdFromMessageId(messageId),
               date,
-              messageSpecificIdFromMessageId(messageId)
+              messageIdComponentFromMessageId(messageId)
             ];
             dbReqCount++;
             const req = messageStore.get(key);
@@ -16082,7 +16132,8 @@ var WorkshopBackend = (() => {
     loadFoldersByAccount(accountId) {
       const trans = this._db.transaction(TBL_FOLDER_INFO, "readonly");
       const store = trans.objectStore(TBL_FOLDER_INFO);
-      const accountStringPrefix = IDBKeyRange.bound(accountId + ".", accountId + ".\uFFF0", true, true);
+      const accountIdBounds = getAccountIdBounds(accountId);
+      const accountStringPrefix = IDBKeyRange.bound(accountIdBounds.lower, accountIdBounds.upper, true, true);
       return wrapReq(store.getAll(accountStringPrefix));
     }
     async loadFolderConversationIdsAndListen(folderId) {
@@ -16235,7 +16286,7 @@ var WorkshopBackend = (() => {
         const key = [
           convId,
           message.date,
-          messageSpecificIdFromMessageId(message.id)
+          messageIdComponentFromMessageId(message.id)
         ];
         store.add(message, key);
         messageCache.set(message.id, message);
@@ -16268,7 +16319,7 @@ var WorkshopBackend = (() => {
         const preKey = [
           convId,
           preDate,
-          messageSpecificIdFromMessageId(messageId)
+          messageIdComponentFromMessageId(messageId)
         ];
         if (message === null) {
           store.delete(preKey);
@@ -16278,7 +16329,7 @@ var WorkshopBackend = (() => {
           const postKey = [
             convId,
             postDate,
-            messageSpecificIdFromMessageId(messageId)
+            messageIdComponentFromMessageId(messageId)
           ];
           store.put(message, postKey);
         } else {
@@ -16416,8 +16467,9 @@ var WorkshopBackend = (() => {
       }
     }
     _processAccountDeletion(trans, accountId) {
-      const accountStringPrefix = IDBKeyRange.bound(accountId + ".", accountId + ".\uFFF0", true, true);
-      const accountArrayItemPrefix = IDBKeyRange.bound([accountId + "."], [accountId + ".\uFFF0"], true, true);
+      const accountIdBounds = getAccountIdBounds(accountId);
+      const accountStringPrefix = IDBKeyRange.bound(accountIdBounds.lower, accountIdBounds.upper, true, true);
+      const accountArrayItemPrefix = IDBKeyRange.bound([accountIdBounds.lower], [accountIdBounds.upper], true, true);
       const accountFirstElementArray = IDBKeyRange.bound([accountId], [accountId, []], true, true);
       trans.objectStore(TBL_CONFIG).delete(CONFIG_KEYPREFIX_ACCOUNT_DEF + accountId);
       trans.objectStore(TBL_SYNC_STATES).delete(accountId);
@@ -16925,7 +16977,6 @@ var WorkshopBackend = (() => {
   init_logic();
   init_util();
   var import_evt6 = __toModule(require_evt());
-  init_a64();
   init_id_conversions();
   init_folder_info_rep();
   var FOLDER_TYPE_TO_SORT_PRIORITY = {
@@ -16974,7 +17025,7 @@ var WorkshopBackend = (() => {
       let nextFolderNum = 0;
       for (const folderInfo of folders) {
         this._addFolder(folderInfo);
-        nextFolderNum = Math.max(nextFolderNum, decodeSpecificFolderIdFromFolderId(folderInfo.id) + 1);
+        nextFolderNum = Math.max(nextFolderNum, decodeFolderIdComponentFromFolderId(folderInfo.id) + 1);
       }
       this._nextFolderNum = nextFolderNum;
       db.on(`acct!${accountDef.id}!change`, this._onAccountChange.bind(this));
@@ -16987,7 +17038,7 @@ var WorkshopBackend = (() => {
     __release() {
     }
     issueFolderId() {
-      return this.accountId + "." + encodeInt(this._nextFolderNum++);
+      return makeFolderId(this.accountId, this._nextFolderNum++);
     }
     ensureLocalVirtualFolder(taskContext, folderPath) {
       let folderInfo = this.foldersByPath.get(folderPath);
@@ -21661,7 +21712,6 @@ var WorkshopBackend = (() => {
 
   // src/backend/tasks/account_create.js
   init_task_definer();
-  init_a64();
 
   // src/backend/db/account_def_rep.js
   init_date();
@@ -21718,6 +21768,7 @@ var WorkshopBackend = (() => {
   var default_prefs_default = DEFAULT_PREFS;
 
   // src/backend/tasks/account_create.js
+  init_id_conversions();
   var account_create_default = task_definer_default.defineSimpleTask([
     {
       name: "account_create",
@@ -21740,12 +21791,12 @@ var WorkshopBackend = (() => {
           return ctx.returnValue(validationResult);
         }
         let accountNum = ctx.universe.config.nextAccountNum;
-        let accountId = encodeInt(accountNum);
+        let accountId = makeAccountId(accountNum);
         if (validationResult.receiveProtoConn) {
           ctx.universe.accountManager.stashAccountConnection(accountId, validationResult.receiveProtoConn);
         }
         let identity = makeIdentity({
-          id: accountId + "." + encodeInt(0),
+          id: makeIdentityId(accountId, 0),
           name: userDetails.displayName,
           address: userDetails.emailAddress,
           replyTo: null,

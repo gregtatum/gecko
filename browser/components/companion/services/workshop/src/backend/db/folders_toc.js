@@ -20,8 +20,10 @@ import { bsearchForInsert } from "shared/util";
 
 import { Emitter } from "evt";
 
-import { encodeInt as encodeA64Int } from "shared/a64";
-import { decodeSpecificFolderIdFromFolderId } from "shared/id_conversions";
+import {
+  decodeFolderIdComponentFromFolderId,
+  makeFolderId,
+} from "shared/id_conversions";
 
 import { engineFrontEndFolderMeta, engineHacks } from "../engine_glue";
 import { makeFolderMeta } from "./folder_info_rep";
@@ -152,7 +154,7 @@ export class FoldersTOC extends Emitter {
       this._addFolder(folderInfo);
       nextFolderNum = Math.max(
         nextFolderNum,
-        decodeSpecificFolderIdFromFolderId(folderInfo.id) + 1
+        decodeFolderIdComponentFromFolderId(folderInfo.id) + 1
       );
     }
 
@@ -231,7 +233,7 @@ export class FoldersTOC extends Emitter {
    * regret.
    */
   issueFolderId() {
-    return this.accountId + "." + encodeA64Int(this._nextFolderNum++);
+    return makeFolderId(this.accountId, this._nextFolderNum++);
   }
 
   /**

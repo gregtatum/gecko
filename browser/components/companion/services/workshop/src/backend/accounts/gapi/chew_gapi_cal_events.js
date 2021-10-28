@@ -17,7 +17,7 @@
 import * as mailRep from "../../db/mail_rep";
 import { processEventContent } from "../../bodies/mailchew";
 import { EVENT_OUTSIDE_SYNC_RANGE } from "shared/date";
-import { makeGapiCalEventId } from "./gapi_id_helpers";
+import { makeMessageId } from "shared/id_conversions";
 import {
   makeAttendeeInfo,
   makeCalendarEventInfo,
@@ -110,7 +110,7 @@ export class GapiCalEventChewer {
     // ## Process the new/modified/deleted events
     for (const gapiEvent of this.eventMap.values()) {
       try {
-        const eventId = makeGapiCalEventId(this.convId, gapiEvent.id);
+        const eventId = makeMessageId(this.convId, gapiEvent.id);
         if (gapiEvent.status === "cancelled") {
           // The event is now deleted!
           this.modifiedEventMap.set(eventId, null);

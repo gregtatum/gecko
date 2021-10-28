@@ -17,7 +17,7 @@
 import logic from "logic";
 
 import { makeDaysAgo } from "shared/date";
-import { makeMapiCalConvId } from "./mapi_id_helpers";
+import { makeFolderNamespacedConvId } from "shared/id_conversions";
 
 /**
  * For details see `README.md`, but the core things to know are:
@@ -135,11 +135,7 @@ export default class MapiCalFolderSyncStateHelper {
       recurringId,
       eventMap,
     ] of this.eventChangesByRecurringEventId.entries()) {
-      const convId = makeMapiCalConvId(
-        this._accountId,
-        this._folderId,
-        recurringId
-      );
+      const convId = makeFolderNamespacedConvId(this._folderId, recurringId);
       this._makeUidConvTask({
         convId,
         recurringId,

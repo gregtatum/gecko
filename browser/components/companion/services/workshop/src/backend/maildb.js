@@ -20,7 +20,8 @@ import logic from "logic";
 import {
   accountIdFromFolderId,
   convIdFromMessageId,
-  messageSpecificIdFromMessageId,
+  getAccountIdBounds,
+  messageIdComponentFromMessageId,
 } from "shared/id_conversions";
 
 const {
@@ -39,7 +40,7 @@ const {
  * For convoy this gets bumped willy-nilly as I make minor changes to things.
  * We probably want to drop this way back down before merging anywhere official.
  */
-const CUR_VERSION = 123;
+const CUR_VERSION = 124;
 
 /**
  * What is the lowest database version that we are capable of performing a
@@ -49,7 +50,7 @@ const CUR_VERSION = 123;
  * Note that this type of upgrade can still be EXTREMELY DANGEROUS because it
  * may blow away user actions that haven't hit a server yet.
  */
-const FRIENDLY_LAZY_DB_UPGRADE_VERSION = 122;
+const FRIENDLY_LAZY_DB_UPGRADE_VERSION = 124;
 
 /**
  * The configuration table contains configuration data that should persist
@@ -1127,7 +1128,7 @@ export class MailDB extends Emitter {
           const key = [
             convIdFromMessageId(messageId),
             date,
-            messageSpecificIdFromMessageId(messageId),
+            messageIdComponentFromMessageId(messageId),
           ];
           dbReqCount++;
           const req = messageStore.get(key);
@@ -1293,9 +1294,10 @@ export class MailDB extends Emitter {
   loadFoldersByAccount(accountId) {
     const trans = this._db.transaction(TBL_FOLDER_INFO, "readonly");
     const store = trans.objectStore(TBL_FOLDER_INFO);
+    const accountIdBounds = getAccountIdBounds(accountId);
     const accountStringPrefix = IDBKeyRange.bound(
-      accountId + ".",
-      accountId + ".\ufff0",
+      accountIdBounds.lower,
+      accountIdBounds.upper,
       true,
       true
     );
@@ -1572,7 +1574,7 @@ export class MailDB extends Emitter {
       const key = [
         convId,
         message.date,
-        messageSpecificIdFromMessageId(message.id),
+        messageIdComponentFromMessageId(message.id),
       ];
       store.add(message, key);
       messageCache.set(message.id, message);
@@ -1618,7 +1620,7 @@ export class MailDB extends Emitter {
       const preKey = [
         convId,
         preDate,
-        messageSpecificIdFromMessageId(messageId),
+        messageIdComponentFromMessageId(messageId),
       ];
 
       if (message === null) {
@@ -1631,7 +1633,7 @@ export class MailDB extends Emitter {
         const postKey = [
           convId,
           postDate,
-          messageSpecificIdFromMessageId(messageId),
+          messageIdComponentFromMessageId(messageId),
         ];
         store.put(message, postKey);
       } else {
@@ -1827,16 +1829,10 @@ export class MailDB extends Emitter {
   }
 
   _processAccountDeletion(trans, accountId) {
-    // Build a range that covers our family of keys where we use an
-    // array whose first item is a string id that is a concatenation of
-    // `AccountId`, the string ".", and then some more array parts.  Our
-    // prefix string provides a lower bound, and the prefix with the
-    // highest possible unicode character thing should be strictly
-    // greater than any legal suffix (\ufff0 not being a legal suffix
-    // in our key-space.)
+    const accountIdBounds = getAccountIdBounds(accountId);
     const accountStringPrefix = IDBKeyRange.bound(
-      accountId + ".",
-      accountId + ".\ufff0",
+      accountIdBounds.lower,
+      accountIdBounds.upper,
       true,
       true
     );
@@ -1845,8 +1841,8 @@ export class MailDB extends Emitter {
     // ConversationId and MessageId are all suffixes.  If the first item is
     // *only* the accountId,
     const accountArrayItemPrefix = IDBKeyRange.bound(
-      [accountId + "."],
-      [accountId + ".\ufff0"],
+      [accountIdBounds.lower],
+      [accountIdBounds.upper],
       true,
       true
     );

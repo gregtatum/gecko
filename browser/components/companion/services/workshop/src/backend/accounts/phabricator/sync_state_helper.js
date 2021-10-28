@@ -17,6 +17,7 @@
 import logic from "logic";
 
 import { millisecsToSeconds, makeDaysAgo } from "shared/date";
+import { makeGlobalNamespacedConvId } from "shared/id_conversions";
 
 /**
  * See `sync.md`.
@@ -44,8 +45,8 @@ export default class PhabricatorSyncStateHelper {
   }
 
   _makeDrevConvTask({ drevId, drevPhid, modifiedStamp }) {
-    let convId = this._accountId + "." + drevId;
-    let task = {
+    const convId = makeGlobalNamespacedConvId(this._accountId, drevId);
+    const task = {
       type: "sync_drev",
       accountId: this._accountId,
       convId,

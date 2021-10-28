@@ -21,6 +21,7 @@ import {
   processMessageContent,
   processAttributeContent,
 } from "../../bodies/mailchew";
+import { makeMessageId } from "shared/id_conversions";
 
 /**
  * Maps from the "type" of a transaction to information on how to process it.
@@ -419,9 +420,7 @@ export class TransactionChewer {
   }
 
   async chewTransaction(tx) {
-    // As explained in `../sync.md` we pad a 0 onto the end for consistency
-    // with email (gmail) message id's.
-    const msgId = `${this.convId}.${tx.id}.0`;
+    const msgId = makeMessageId(this.convId, `${tx.id}`);
 
     const folderIds = new Set([this.inboxFolder.id]);
 

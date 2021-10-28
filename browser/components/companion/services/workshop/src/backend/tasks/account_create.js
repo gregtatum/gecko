@@ -16,12 +16,12 @@
 
 import TaskDefiner from "../task_infra/task_definer";
 
-import { encodeInt } from "shared/a64";
 import { makeAccountDef, makeIdentity } from "../db/account_def_rep";
 
 import { configuratorModules, validatorModules } from "../engine_glue";
 
 import defaultPrefs from "../default_prefs";
+import { makeAccountId, makeIdentityId } from "shared/id_conversions";
 
 /**
  * Create an account using previously retrieved autoconfig data or using
@@ -163,7 +163,7 @@ export default TaskDefiner.defineSimpleTask([
 
       // Allocate an id for the account now that it's a sure thing.
       let accountNum = ctx.universe.config.nextAccountNum;
-      let accountId = encodeInt(accountNum);
+      let accountId = makeAccountId(accountNum);
 
       // Hand-off the connection if one was returned.
       if (validationResult.receiveProtoConn) {
@@ -174,7 +174,7 @@ export default TaskDefiner.defineSimpleTask([
       }
 
       let identity = makeIdentity({
-        id: accountId + "." + encodeInt(0),
+        id: makeIdentityId(accountId, 0),
         name: userDetails.displayName,
         address: userDetails.emailAddress,
         replyTo: null,

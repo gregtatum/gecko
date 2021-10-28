@@ -19,6 +19,7 @@ import {
   processMessageContent,
   processAttributeContent,
 } from "../../bodies/mailchew";
+import { makeMessageId } from "shared/id_conversions";
 
 /**
  * Merges bug comments and history back together into a unified representation
@@ -142,8 +143,7 @@ export class BugChewer {
   }
 
   async _chewEvent(iEvent, { history, comment }) {
-    // Padded for consistency with email (gmail) message id's.
-    const msgId = `${this.convId}.${iEvent}.0`;
+    const msgId = makeMessageId(this.convId, `${iEvent}`);
 
     // If we've previously seen this event and it doesn't seem like it's changed
     // due to the comment being edited, then don't do anything.

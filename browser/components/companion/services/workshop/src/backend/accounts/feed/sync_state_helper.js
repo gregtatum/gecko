@@ -17,6 +17,7 @@
 import logic from "logic";
 
 import { NOW } from "shared/date";
+import { makeGlobalNamespacedConvId } from "shared/id_conversions";
 
 /**
  * See `README.md`.
@@ -81,7 +82,7 @@ export default class FeedSyncStateHelper {
     }
 
     //console.log(data);
-    const convId = `${this._accountId}.${data.guid}`;
+    const convId = makeGlobalNamespacedConvId(this._accountId, data.guid);
     this._makeItemConvTask({
       convId,
       item: data,
@@ -108,7 +109,7 @@ export default class FeedSyncStateHelper {
     data.description = item.description || data.description;
     data.contentType = "html";
 
-    const convId = `${this._accountId}.${data.guid}`;
+    const convId = makeGlobalNamespacedConvId(this._accountId, data.guid);
     this._makeItemConvTask({
       convId,
       item: data,
@@ -134,7 +135,7 @@ export default class FeedSyncStateHelper {
       data.contentType = "plain";
     }
 
-    const convId = `${this._accountId}.${data.guid}.`;
+    const convId = makeGlobalNamespacedConvId(this._accountId, data.guid);
     this._makeItemConvTask({
       convId,
       item: data,
@@ -167,7 +168,7 @@ export default class FeedSyncStateHelper {
     data.description = entry.summary || data.description;
     data.contentType = "html";
 
-    const convId = `${this._accountId}.${data.guid}`;
+    const convId = makeGlobalNamespacedConvId(this._accountId, data.guid);
     this._makeItemConvTask({
       convId,
       item: data,

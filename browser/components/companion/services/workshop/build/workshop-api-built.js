@@ -1464,18 +1464,32 @@ var P2_36 = Math.pow(2, 36);
 
 // src/shared/id_conversions.js
 function accountIdFromFolderId(folderId) {
-  return folderId.split(/\./g, 1)[0];
+  const pieces = folderId.split(/\0/g);
+  if (pieces.length !== 2) {
+    throw new Error(`Malformed FolderId: ${folderId}`);
+  }
+  return pieces[0];
 }
 function accountIdFromConvId(convId) {
-  return convId.split(/\./g, 1)[0];
+  const pieces = convId.split(/\0/g);
+  if (pieces.length !== 3) {
+    throw new Error(`Malformed ConversationId: ${convId}`);
+  }
+  return pieces[0];
 }
 function accountIdFromMessageId(messageId) {
-  return messageId.split(/\./g, 1)[0];
+  const pieces = messageId.split(/\0/g);
+  if (pieces.length !== 4) {
+    throw new Error(`Malformed MessageId: ${messageId}`);
+  }
+  return pieces[0];
 }
 function convIdFromMessageId(messageId) {
-  let idxFirst = messageId.indexOf(".");
-  let idxSecond = messageId.indexOf(".", idxFirst + 1);
-  return messageId.substring(0, idxSecond);
+  const pieces = messageId.split(/\0/g);
+  if (pieces.length !== 4) {
+    throw new Error(`Malformed MessageId: ${messageId}`);
+  }
+  return pieces.slice(0, 3).join("\0");
 }
 
 // src/app_logic/conv_client_cleanup.js
