@@ -13,6 +13,9 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { LayoutUtils } = ChromeUtils.import(
+  "resource://gre/modules/LayoutUtils.jsm"
+);
 
 ChromeUtils.defineModuleGetter(
   this,
@@ -63,7 +66,7 @@ class AboutLoginsChild extends JSWindowActorChild {
         break;
       }
       case "AboutLoginsCopyLoginDetail": {
-        this.onAboutLoginsCopyLoginDetail(event.detail);
+        this.onAboutLoginsCopyLoginDetail(event.detail, event.target);
         break;
       }
       case "AboutLoginsCreateLogin": {
@@ -210,7 +213,15 @@ class AboutLoginsChild extends JSWindowActorChild {
     );
   }
 
-  onAboutLoginsCopyLoginDetail(detail) {
+  onAboutLoginsCopyLoginDetail(detail, target) {
+    if (AppConstants.PINEBUILD) {
+      let rect = LayoutUtils.getElementBoundingScreenRect(
+        target.closest(".login-list-item")
+      );
+      this.sendAsyncMessage("AboutLogins:CopyLoginDetail", {
+        rect,
+      });
+    }
     ClipboardHelper.copyString(detail, ClipboardHelper.Sensitive);
   }
 

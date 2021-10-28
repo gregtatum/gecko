@@ -471,6 +471,12 @@ class AboutLoginsParent extends JSWindowActorParent {
         Services.obs.notifyObservers(null, "companion-submenu-change");
         break;
       }
+      case "AboutLogins:CopyLoginDetail": {
+        ownerGlobal.ConfirmationHint.show(null, "copyURL", {
+          rect: message.data.rect,
+          position: "after_end",
+        });
+      }
     }
   }
 

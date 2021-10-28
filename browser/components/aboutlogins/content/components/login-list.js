@@ -330,7 +330,7 @@ export default class LoginList extends HTMLElement {
           isPassword ||
           event.originalTarget.classList.contains("copyUsername")
         ) {
-          document.dispatchEvent(
+          listItem.dispatchEvent(
             new CustomEvent("AboutLoginsCopyLoginDetail", {
               bubbles: true,
               detail: isPassword ? login.password : login.username,

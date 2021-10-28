@@ -9988,16 +9988,18 @@ var ConfirmationHint = {
   _timerID: null,
 
   /**
-   * Shows a transient, non-interactive confirmation hint anchored to an
-   * element, usually used in response to a user action to reaffirm that it was
-   * successful and potentially provide extra context. Examples for such hints:
+   * Shows a transient, non-interactive confirmation hint. Can be anchored to an
+   * element, or positioned with coordinates provided in options. Usually used in
+   * response to a user action to reaffirm that it was successful and potentially
+   * provide extra context. Examples for such hints:
    * - "Saved to bookmarks" after bookmarking a page
    * - "Sent!" after sending a tab to another device
    * - "Queued (offline)" when attempting to send a tab to another device
    *   while offline
    *
-   * @param  anchor (DOM node, required)
-   *         The anchor for the panel.
+   * @param  anchor (DOM node, optional)
+   *         The anchor for the panel. If not provided, a DOMRect for anchoring
+   *         will be expected in the options object.
    * @param  messageId (string, required)
    *         For getting the message string from browser.properties:
    *         confirmationHint.<messageId>.label
@@ -10006,7 +10008,9 @@ var ConfirmationHint = {
    *         - event (DOM event): The event that triggered the feedback.
    *         - hideArrow (boolean): Optionally hide the arrow.
    *         - showDescription (boolean): show description text (confirmationHint.<messageId>.description)
-   *
+   *         - position (string): Optional position string for the hint. Defaults to "bottomcenter topleft".
+   *         - rect (DOMRect): Rectangle for an out-of-process element to anchor on. This is only used if the
+   *                           anchor is null.
    */
   show(anchor, messageId, options = {}) {
     this._reset();
@@ -10050,16 +10054,31 @@ var ConfirmationHint = {
     this._panel.addEventListener(
       "popuphidden",
       () => {
-        // reset the timerId in case our timeout wasn't the cause of the popup being hidden
+        // Reset the timerId, in case our timeout wasn't the cause of the popup being hidden.
         this._reset();
       },
       { once: true }
     );
 
-    this._panel.openPopup(anchor, {
-      position: "bottomcenter topleft",
+    const panelOptions = {
+      position: options.position || "bottomcenter topleft",
       triggerEvent: options.event,
-    });
+    };
+
+    if (anchor === null && options.rect) {
+      this._panel.openPopupAtScreenRect(
+        panelOptions.position,
+        options.rect.left,
+        options.rect.top,
+        options.rect.width,
+        options.rect.height,
+        false,
+        false,
+        options.triggerEvent
+      );
+    } else {
+      this._panel.openPopup(anchor, panelOptions);
+    }
   },
 
   _reset() {
