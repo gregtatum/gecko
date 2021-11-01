@@ -407,6 +407,7 @@ toolbarbutton.bookmark-item[dragover="true"][open="true"] {
   appearance: none;
   background: SelectedItem !important;
   color: SelectedItemText !important;
+  fill: SelectedItemText;
 }
 
 /* Translation infobar */

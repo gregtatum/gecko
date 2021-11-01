@@ -16,6 +16,7 @@
 #include "nsTArray.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/widget/ThemeChangeKind.h"
+#include "mozilla/ColorScheme.h"
 
 struct gfxFontStyle;
 
@@ -24,9 +25,6 @@ class nsIFrame;
 namespace mozilla {
 
 struct StyleColorSchemeFlags;
-
-// Whether we should use a light or dark appearance.
-enum class ColorScheme : uint8_t { Light, Dark };
 
 namespace dom {
 class Document;
@@ -334,6 +332,9 @@ class LookAndFeel {
     /** GTK titlebar radius */
     TitlebarRadius,
 
+    /** GTK menu radius */
+    GtkMenuRadius,
+
     /*
      * Not an ID; used to define the range of valid IDs.  Must be last.
      */
@@ -393,6 +394,9 @@ class LookAndFeel {
 
     // GTK text scale factor.
     TextScaleFactor,
+
+    // Mouse pointer scaling factor.
+    CursorScale,
 
     // Not an ID; used to define the range of valid IDs.  Must be last.
     End,

@@ -1194,10 +1194,11 @@ def x11_libs(webrtc):
             "xfixes",
             "xi",
         ]
-    return " ".join(libs)
+    return libs
 
 
 pkg_check_modules("MOZ_X11", x11_libs, when=toolkit_gtk)
+pkg_check_modules("MOZ_X11_SM", ["ice", "sm"], cflags_only=True, when=toolkit_gtk)
 
 
 # ASan Reporter Addon
@@ -2112,9 +2113,13 @@ def wasm_sandboxing_libraries():
     )
 
 
-@depends(dependable(wasm_sandboxing_libraries))
-def default_wasm_sandboxing_libraries(libraries):
-    return tuple(l for l in libraries)
+@depends(dependable(wasm_sandboxing_libraries), target)
+def default_wasm_sandboxing_libraries(libraries, target):
+    non_default_libs = set()
+    if target.bitness == 32:
+        non_default_libs.add("hunspell")
+
+    return tuple(l for l in libraries if l not in non_default_libs)
 
 
 option(

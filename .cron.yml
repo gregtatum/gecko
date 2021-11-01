@@ -164,16 +164,6 @@ jobs:
               elm: [{hour: 10, minute: 0}]
               pine: [{hour: 10, minute: 0}]
 
-    - name: coverity-tree-analysis
-      job:
-          type: decision-task
-          treeherder-symbol: CoverityTA
-          target-tasks-method: coverity_static_analysis_full
-      run-on-projects:
-          - mozilla-central
-      when:
-          - {hour: 10, minute: 0}
-
     - name: linux64-clang-trunk-perf
       job:
           type: decision-task

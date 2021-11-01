@@ -588,9 +588,6 @@ module.exports = {
         "toolkit/components/osfile/modules/osfile_async_front.jsm",
         "toolkit/components/osfile/modules/osfile_native.jsm",
         "toolkit/components/osfile/tests/xpcshell/test_osfile_kill.js",
-        "toolkit/components/passwordmgr/test/unit/test_getFormFields.js",
-        "toolkit/components/passwordmgr/test/unit/test_getPasswordFields.js",
-        "toolkit/components/passwordmgr/test/unit/test_getUserNameAndPasswordFields.js",
         "toolkit/components/processsingleton/MainProcessSingleton.jsm",
         "toolkit/modules/subprocess/test/xpcshell/test_subprocess.js",
         "toolkit/modules/tests/xpcshell/test_GMPInstallManager.js",
@@ -610,7 +607,6 @@ module.exports = {
         "toolkit/mozapps/extensions/test/xpcshell/test_webextension.js",
         "toolkit/mozapps/extensions/test/xpcshell/test_webextension_events.js",
         "toolkit/mozapps/extensions/test/xpcshell/test_XPIStates.js",
-        "toolkit/mozapps/installer/precompile_cache.js",
       ],
       rules: {
         "mozilla/reject-chromeutils-import-params": "off",
