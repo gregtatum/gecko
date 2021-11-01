@@ -121,6 +121,13 @@ const OAuthConnect = {
       });
 
       tab.linkedBrowser.addProgressListener(this);
+
+      let self = this;
+      tab.addEventListener("TabClose", function onClose() {
+        self.connections.delete(id);
+        tab.removeEventListener("TabClose", onClose);
+        tab.linkedBrowser.removeProgressListener(self);
+      });
     });
   },
 

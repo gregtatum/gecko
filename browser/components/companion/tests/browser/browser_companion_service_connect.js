@@ -256,6 +256,7 @@ add_task(async function testOauthFlow() {
         authenticating: true,
         hideService: true,
       });
+      gBrowser.removeTab(gBrowser.selectedTab);
     }, win);
   });
 });
