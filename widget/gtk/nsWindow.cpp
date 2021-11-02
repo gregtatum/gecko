@@ -3723,7 +3723,8 @@ gboolean nsWindow::OnConfigureEvent(GtkWidget* aWidget,
   //   coordinates are root coordinates.
 
   LOG("configure event %d,%d -> %d x %d scale %d\n", aEvent->x, aEvent->y,
-      aEvent->width, aEvent->height, gdk_window_get_scale_factor(mGdkWindow));
+      aEvent->width, aEvent->height,
+      mGdkWindow ? gdk_window_get_scale_factor(mGdkWindow) : -1);
 
   if (mPendingConfigures > 0) {
     mPendingConfigures--;
@@ -3732,6 +3733,8 @@ gboolean nsWindow::OnConfigureEvent(GtkWidget* aWidget,
   // Don't fire configure event for scale changes, we handle that
   // OnScaleChanged event. Skip that for toplevel windows only.
   if (mWindowType == eWindowType_toplevel) {
+    MOZ_DIAGNOSTIC_ASSERT(mGdkWindow,
+                          "Getting configure for invisible window?");
     if (mWindowScaleFactor != gdk_window_get_scale_factor(mGdkWindow)) {
       LOG("  scale factor changed to %d,return early",
           gdk_window_get_scale_factor(mGdkWindow));
@@ -4781,6 +4784,12 @@ void nsWindow::OnCompositedChanged() {
 }
 
 void nsWindow::OnScaleChanged() {
+  // Force scale factor recalculation
+  if (!mGdkWindow) {
+    mWindowScaleFactorChanged = true;
+    return;
+  }
+
   // Gtk supply us sometimes with doubled events so stay calm in such case.
   if (gdk_window_get_scale_factor(mGdkWindow) == mWindowScaleFactor) {
     return;
@@ -5134,9 +5143,6 @@ nsCString nsWindow::GetPopupTypeName() {
 // We do our best to persuade Gtk/Gdk to ignore all painting
 // to the widget.
 static void GtkWidgetDisableUpdates(GtkWidget* aWidget) {
-  // clear draw signal from widget class
-  GTK_WIDGET_GET_CLASS(aWidget)->draw = nullptr;
-
   // Clear exposure mask - it disabled synthesized events.
   GdkWindow* window = gtk_widget_get_window(aWidget);
   gdk_window_set_events(window, (GdkEventMask)(gdk_window_get_events(window) &
@@ -5631,6 +5637,7 @@ nsresult nsWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
 
 #ifdef MOZ_WAYLAND
       if (mIsDragPopup && GdkIsWaylandDisplay()) {
+        LOG("  set commit to parent");
         moz_container_wayland_set_commit_to_parent(mContainer);
       }
 #endif
@@ -8370,11 +8377,13 @@ void nsWindow::SetDrawsInTitlebar(bool aState) {
 
   if (mIsPIPWindow && aState == mDrawInTitlebar) {
     gtk_window_set_decorated(GTK_WINDOW(mShell), !aState);
+    LOG("  set decoration for PIP %d", aState);
     return;
   }
 
-  if (!mShell || mGtkWindowDecoration == GTK_DECORATION_NONE ||
+  if (mGtkWindowDecoration == GTK_DECORATION_NONE ||
       aState == mDrawInTitlebar) {
+    LOG("  already set, quit");
     return;
   }
 

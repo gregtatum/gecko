@@ -11783,8 +11783,7 @@ void Document::MutationEventDispatched(nsINode* aTarget) {
     nsCOMArray<nsINode> realTargets;
     for (int32_t i = 0; i < count; ++i) {
       nsINode* possibleTarget = mSubtreeModifiedTargets[i];
-      nsCOMPtr<nsIContent> content = do_QueryInterface(possibleTarget);
-      if (content && content->ChromeOnlyAccess()) {
+      if (possibleTarget && possibleTarget->ChromeOnlyAccess()) {
         continue;
       }
 
@@ -15091,11 +15090,11 @@ void Document::PostVisibilityUpdateEvent() {
 }
 
 void Document::MaybeActiveMediaComponents() {
-  if (!mWindow) {
+  auto* window = GetWindow();
+  if (!window || !window->ShouldDelayMediaFromStart()) {
     return;
   }
-
-  GetWindow()->MaybeActiveMediaComponents();
+  window->ActivateMediaComponents();
 }
 
 void Document::DocAddSizeOfExcludingThis(nsWindowSizes& aWindowSizes) const {

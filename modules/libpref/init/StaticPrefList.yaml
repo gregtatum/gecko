@@ -827,6 +827,8 @@
   value: "#0000EE"
   mirror: never
 
+# If you change this, you probably also want to change
+# nsXPLookAndFeel::GenericDarkColor for MozNativehyperlinktext.
 - name: browser.anchor_color.dark
   type: String
   value: "#9E9EFF"
@@ -1449,6 +1451,8 @@
   value: "#551A8B"
   mirror: never
 
+# If you change this, you probably also want to change
+# nsXPLookAndFeel::GenericDarkColor for MozNativevisitedhyperlinktext.
 - name: browser.visited_color.dark
   type: String
   value: "#D0ADF0"
@@ -6899,6 +6903,12 @@
   value: true
   mirror: always
 
+# Whether we should expose all shorthands in getComputedStyle().
+- name: layout.css.computed-style.shorthands
+  type: bool
+  value: false
+  mirror: always
+
 # Are implicit tracks in computed grid templates serialized?
 - name: layout.css.serialize-grid-implicit-tracks
   type: RelaxedAtomicBool
@@ -7272,12 +7282,6 @@
   mirror: always
   rust: true
 
-# Is CSSOM-View scroll-behavior and its MSD smooth scrolling enabled?
-- name: layout.css.scroll-behavior.enabled
-  type: RelaxedAtomicBool
-  value: true
-  mirror: always
-
 # Tuning of the smooth scroll motion used by CSSOM-View scroll-behavior.
 # Spring-constant controls the strength of the simulated MSD
 # (Mass-Spring-Damper).
@@ -7596,6 +7600,14 @@
 - name: layout.css.scroll-anchoring.highlight
   type: bool
   value: false
+  mirror: always
+
+# Pref to control whether we reselect scroll anchors if sub-optimal
+#
+# See https://github.com/w3c/csswg-drafts/issues/6787
+- name: layout.css.scroll-anchoring.reselect-if-suboptimal
+  type: bool
+  value: true
   mirror: always
 
 # Are shared memory User Agent style sheets enabled?
