@@ -838,19 +838,6 @@ class GlobalHistory extends EventTarget {
       gTopLevelNavigationDelegateRegistered = true;
     }
 
-    let activeViewManager = this.#window.document.getElementById(
-      "active-view-manager"
-    );
-
-    // ActiveViewManager needs to wait for the GlobalHistory constructor to
-    // exit in order to properly initialize, and GlobalHistory needs to wait
-    // for the ActiveViewManager to finish binding to the DOM in order to
-    // access the init method. We break this cycle by deferring initialization
-    // to the very end of this frame after the constructor has exited.
-    window.requestAnimationFrame(() => {
-      activeViewManager.init(this);
-    });
-
     for (let { linkedBrowser: browser } of this.#window.gBrowser.tabs) {
       this.#watchBrowser(browser);
     }
