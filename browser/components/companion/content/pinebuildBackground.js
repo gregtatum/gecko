@@ -12,15 +12,15 @@ function ensureWindowInvisible() {
 let gMenu = null;
 let gStatusBar = null;
 const gMenuItems = [
-  { id: "proclientBackground-newWindow", command: openWindow },
-  { id: "proclientBackground-exitApplication", command: exitApplication },
+  { id: "pinebuildBackground-newWindow", command: openWindow },
+  { id: "pinebuildBackground-exitApplication", command: exitApplication },
 ];
 
 addEventListener("load", async () => {
   gStatusBar = Cc["@mozilla.org/widget/systemstatusbar;1"].getService(
     Ci.nsISystemStatusBar
   );
-  gMenu = document.getElementById(`proclientBackground-menu`);
+  gMenu = document.getElementById(`pinebuildBackground-menu`);
   gStatusBar.addItem(gMenu);
 
   // This window just exists to be a host to the status bar menu - we don't want

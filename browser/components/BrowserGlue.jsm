@@ -873,11 +873,11 @@ if (
   (AppConstants.platform == "macosx" || AppConstants.platform == "win") &&
   Services.prefs.getBoolPref("browser.startup.launchOnOSLogin", false)
 ) {
-  const PROCLIENT_BACKGROUND_UI =
-    "chrome://browser/content/companion/proclientBackground.xhtml";
+  const PINEBUILD_BACKGROUND_UI =
+    "chrome://browser/content/companion/pinebuildBackground.xhtml";
   let features = "chrome,titlebar=no,alwaysontop,minimizable=yes";
 
-  Services.ww.openWindow(null, PROCLIENT_BACKGROUND_UI, "_blank", features, []);
+  Services.ww.openWindow(null, PINEBUILD_BACKGROUND_UI, "_blank", features, []);
 }
 
 XPCOMUtils.defineLazyGetter(
