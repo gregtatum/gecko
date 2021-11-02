@@ -42,6 +42,10 @@
 #include "prenv.h"
 #include "nsAppDirectoryServiceDefs.h"
 
+#if defined(XP_MACOSX)
+#  include "mozilla/MacApplicationDelegate.h"
+#endif
+
 #if defined(XP_WIN)
 // Prevent collisions with nsAppStartup::GetStartupInfo()
 #  undef GetStartupInfo
@@ -61,6 +65,8 @@ static NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
 #define kPrefMaxResumedCrashes "toolkit.startup.max_resumed_crashes"
 #define kPrefRecentCrashes "toolkit.startup.recent_crashes"
 #define kPrefAlwaysUseSafeMode "toolkit.startup.always_use_safe_mode"
+#define kPinebuildBackgroundUrl \
+  "chrome://browser/content/companion/pinebuildBackground.xhtml"
 
 #define kNanosecondsPerSecond 1000000000.0
 
@@ -445,11 +451,24 @@ nsAppStartup::Quit(uint32_t aMode, int aExitCode, bool* aUserAllowedQuit) {
                                     nullptr);
     }
 
+    bool backgroundApplication = false;
+#if defined(XP_MACOSX)
+    if (ferocity == eAttemptQuit &&
+        Preferences::GetBool("browser.startup.launchOnOSLogin", false)) {
+      backgroundApplication = true;
+    }
+#endif
     /* Enumerate through each open window and close it. It's important to do
        this before we forcequit because this can control whether we really quit
        at all. e.g. if one of these windows has an unload handler that
        opens a new window. Ugh. I know. */
-    CloseAllWindows();
+    CloseAllWindows(backgroundApplication);
+
+#if defined(XP_MACOSX)
+    if (backgroundApplication) {
+      SetActivationPolicyToAccessory();
+    }
+#endif
 
     if (mediator) {
       if (ferocity == eAttemptQuit) {
@@ -566,7 +585,7 @@ nsAppStartup::IsInOrBeyondShutdownPhase(IDLShutdownPhase aPhase,
   return NS_OK;
 }
 
-void nsAppStartup::CloseAllWindows() {
+void nsAppStartup::CloseAllWindows(bool excludePinebuildBackground) {
   nsCOMPtr<nsIWindowMediator> mediator(
       do_GetService(NS_WINDOWMEDIATOR_CONTRACTID));
 
@@ -583,7 +602,13 @@ void nsAppStartup::CloseAllWindows() {
 
     nsCOMPtr<nsPIDOMWindowOuter> window = do_QueryInterface(isupports);
     NS_ASSERTION(window, "not an nsPIDOMWindow");
-    if (window) {
+    // The pinebuild background window is a special window which, when it
+    // exists, we may want to leave around in order to appear to "background"
+    // the application. Currently this is only used on Mac, where it will leave
+    // an icon in the menubar.
+    if (window && (!excludePinebuildBackground ||
+                   !window->GetDocumentURI()->GetSpecOrDefault().EqualsLiteral(
+                       kPinebuildBackgroundUrl))) {
       window->ForceClose();
     }
   }
@@ -794,7 +819,7 @@ nsAppStartup::Observe(nsISupports* aSubject, const char* aTopic,
   } else if (!strcmp(aTopic, "profile-change-teardown")) {
     if (!mShuttingDown) {
       EnterLastWindowClosingSurvivalArea();
-      CloseAllWindows();
+      CloseAllWindows(false);
       ExitLastWindowClosingSurvivalArea();
     }
   } else if (!strcmp(aTopic, "xul-window-registered")) {

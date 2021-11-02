@@ -38,6 +38,7 @@ class nsAppShell : public nsBaseAppShell {
   nsAppShell();
 
   nsresult Init();
+  void BackgroundApplication();
 
   NS_IMETHOD Run(void) override;
   NS_IMETHOD Exit(void) override;

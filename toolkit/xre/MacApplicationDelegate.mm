@@ -121,6 +121,10 @@ void ProcessPendingGetURLAppleEvents() {
   }
 }
 
+void SetActivationPolicyToAccessory() {
+  [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
+}
+
 @implementation MacApplicationDelegate
 
 - (id)init {

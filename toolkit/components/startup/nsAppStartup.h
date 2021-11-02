@@ -43,7 +43,7 @@ class nsAppStartup final : public nsIAppStartup,
  private:
   ~nsAppStartup() = default;
 
-  void CloseAllWindows();
+  void CloseAllWindows(bool excludePinebuildBackground);
 
   friend class nsAppExitEvent;
 
