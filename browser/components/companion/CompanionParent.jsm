@@ -931,6 +931,9 @@ class CompanionParent extends JSWindowActorParent {
     }
 
     if (!aLocationURI.schemeIs("http") && !aLocationURI.schemeIs("https")) {
+      // Reset the current URL for the snapshot selector, as this is a
+      // non-web page, and we want to allow all snapshots to be displayed.
+      this.snapshotSelector.setUrl();
       return;
     }
 

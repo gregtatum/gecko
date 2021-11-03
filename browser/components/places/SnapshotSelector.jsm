@@ -180,7 +180,10 @@ class SnapshotSelector extends EventEmitter {
   /**
    * Sets the current context's url for this selector.
    *
-   * @param {string} url
+   * @param {string} [url]
+   *   The url of the current page. If the url is not specified, the context
+   *   url will be cleared, and the context will be rebuilt as if no page
+   *   is currently displayed.
    */
   setUrl(url) {
     if (this.#context.url == url) {
