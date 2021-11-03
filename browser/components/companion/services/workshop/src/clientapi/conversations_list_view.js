@@ -73,9 +73,9 @@ export class ConversationsListView extends WindowedListView {
       id: item.id,
     };
   }
-  refresh() {
+  async refresh() {
     this.syncRequested = true;
-    this._api.__bridgeSend({
+    await this._api._sendPromisedRequest({
       type: "refreshView",
       handle: this.handle,
     });

@@ -382,12 +382,16 @@ export class MailAPI extends Emitter {
    */
   _sendPromisedRequest(sendMsg) {
     return new Promise(resolve => {
-      const handle = (sendMsg.handle = this._nextHandle++);
+      const handle = this._nextHandle++;
       this._pendingRequests[handle] = {
         type: sendMsg.type,
         resolve,
       };
-      this.__bridgeSend(sendMsg);
+      this.__bridgeSend({
+        type: "promised",
+        handle,
+        wrapped: sendMsg,
+      });
     });
   }
 
@@ -913,10 +917,10 @@ export class MailAPI extends Emitter {
   }
 
   _deleteAccount(account) {
-    this.__bridgeSend({
+    return this._sendPromisedRequest({
       type: "deleteAccount",
       accountId: account.id,
-    });
+    }).then(() => null);
   }
 
   _modifyIdentity(identity, mods) {

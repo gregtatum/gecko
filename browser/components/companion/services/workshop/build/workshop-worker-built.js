@@ -15072,7 +15072,27 @@ var WorkshopBackend = (() => {
       throw new Error("This is supposed to get hidden by an instance var.");
     },
     __receiveMessage(msg) {
-      var implCmdName = "_cmd_" + msg.type;
+      let replyFunc = void 0;
+      let implCmdName;
+      if (msg.type === "promised") {
+        const promisedHandle = msg.handle;
+        let repliedAlready = false;
+        replyFunc = (data) => {
+          if (repliedAlready) {
+            return;
+          }
+          this.__sendMessage({
+            type: "promisedResult",
+            handle: promisedHandle,
+            data
+          });
+          repliedAlready = true;
+        };
+        msg = msg.wrapped;
+        implCmdName = `_promised_${msg.type}`;
+      } else {
+        implCmdName = `_cmd_${msg.type}`;
+      }
       if (!(implCmdName in this)) {
         logic(this, "badMessageTypeError", { type: msg.type });
         return;
@@ -15081,16 +15101,15 @@ var WorkshopBackend = (() => {
         let namedContext = msg.handle && this.bridgeContext.maybeGetNamedContext(msg.handle);
         if (namedContext) {
           if (namedContext.pendingCommand) {
-            console.warn("deferring", msg);
-            namedContext.commandQueue.push(msg);
+            namedContext.commandQueue.push([msg, implCmdName, replyFunc]);
           } else {
-            let promise = namedContext.pendingCommand = this._processCommand(msg, implCmdName);
+            let promise = namedContext.pendingCommand = this._processCommand(msg, implCmdName, replyFunc);
             if (promise) {
               this._trackCommandForNamedContext(namedContext, promise);
             }
           }
         } else {
-          let promise = this._processCommand(msg, implCmdName);
+          let promise = this._processCommand(msg, implCmdName, replyFunc);
           if (promise && msg.handle) {
             namedContext = this.bridgeContext.maybeGetNamedContext(msg.handle);
             if (namedContext) {
@@ -15115,8 +15134,7 @@ var WorkshopBackend = (() => {
     },
     _commandCompletedProcessNextCommandInQueue(namedContext) {
       if (namedContext.commandQueue.length) {
-        console.warn("processing deferred command");
-        let promise = namedContext.pendingCommand = this._processCommand(namedContext.commandQueue.shift());
+        let promise = namedContext.pendingCommand = this._processCommand(...namedContext.commandQueue.shift());
         if (promise) {
           let runNext = () => {
             this._commandCompletedProcessNextCommandInQueue(namedContext);
@@ -15133,16 +15151,13 @@ var WorkshopBackend = (() => {
         payload: { name, data }
       });
     },
-    _processCommand(msg, implCmdName) {
-      if (!implCmdName) {
-        implCmdName = "_cmd_" + msg.type;
-      }
+    _processCommand(msg, implCmdName, replyFunc) {
       logic(this, "cmd", {
         type: msg.type,
         msg
       });
       try {
-        let result = this[implCmdName](msg);
+        let result = this[implCmdName](msg, replyFunc);
         if (result && result.then) {
           logic.await(this, "asyncCommand", { type: msg.type }, result);
           return result;
@@ -15164,18 +15179,13 @@ var WorkshopBackend = (() => {
       logic(this, "timeWarp", { fakeNow: msg.fakeNow });
       TEST_LetsDoTheTimewarpAgain(msg.fakeNow);
     },
-    _cmd_TEST_parseFeed(msg) {
+    async _promised_TEST_parseFeed(msg, replyFunc) {
       logic(this, "parseFeed", {
         parserType: msg.parserType,
         code: `${msg.code.slice(0, 128)}...`
       });
-      TEST_parseFeed(msg.parserType, msg.code, msg.url).then((data) => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data
-        });
-      });
+      const data = await TEST_parseFeed(msg.parserType, msg.code, msg.url);
+      replyFunc(data);
     },
     _cmd_setInteractive() {
       this.universe.setInteractive();
@@ -15183,42 +15193,25 @@ var WorkshopBackend = (() => {
     _cmd_localizedStrings(msg) {
       set(msg.strings);
     },
-    _cmd_learnAboutAccount(msg) {
+    _promised_learnAboutAccount(msg, replyFunc) {
       this.universe.learnAboutAccount(msg.details).then((info) => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: info
-        });
+        replyFunc(info);
       }, () => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: { result: "no-config-info", configInfo: null }
-        });
+        replyFunc({ result: "no-config-info", configInfo: null });
       });
     },
-    _cmd_tryToCreateAccount(msg) {
+    _promised_tryToCreateAccount(msg, replyFunc) {
       this.universe.tryToCreateAccount(msg.userDetails, msg.domainInfo).then((result) => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: result
-        });
+        replyFunc(result);
       });
     },
-    async _cmd_syncFolderList(msg) {
+    async _promised_syncFolderList(msg, replyFunc) {
       await this.universe.syncFolderList(msg.accountId, "bridge");
-      this.__sendMessage({ type: "promisedResult", handle: msg.handle });
+      replyFunc(null);
     },
-    _cmd_modifyFolder(msg) {
-      this.universe.modifyFolder(msg.accountId, msg.mods, "bridge").then((result) => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: null
-        });
-      });
+    async _promised_modifyFolder(msg, replyFunc) {
+      await this.universe.modifyFolder(msg.accountId, msg.mods, "bridge");
+      replyFunc(null);
     },
     async _cmd_clearAccountProblems(msg) {
       var account = this.universe.getAccountForAccountId(msg.accountId), self2 = this;
@@ -15234,38 +15227,24 @@ var WorkshopBackend = (() => {
         handle: msg.handle
       });
     },
-    _cmd_modifyConfig(msg) {
-      this.universe.modifyConfig(msg.mods, "bridge").then(() => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: null
-        });
-      });
+    async _promised_modifyConfig(msg, replyFunc) {
+      await this.universe.modifyConfig(msg.mods, "bridge");
+      replyFunc(null);
     },
-    _cmd_modifyAccount(msg) {
-      this.universe.modifyAccount(msg.accountId, msg.mods, "bridge").then(() => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: null
-        });
-      });
+    async _promised_modifyAccount(msg, replyFunc) {
+      await this.universe.modifyAccount(msg.accountId, msg.mods, "bridge");
+      replyFunc(null);
     },
     _cmd_recreateAccount(msg) {
       this.universe.recreateAccount(msg.accountId, "bridge");
     },
-    _cmd_deleteAccount(msg) {
-      this.universe.deleteAccount(msg.accountId, "bridge");
+    async _promised_deleteAccount(msg, replyFunc) {
+      await this.universe.deleteAccount(msg.accountId, "bridge");
+      replyFunc(null);
     },
-    _cmd_modifyIdentity(msg) {
-      this.universe.modifyIdentity(msg.identityId, msg.mods, "bridge").then(() => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: null
-        });
-      });
+    async _promised_modifyIdentity(msg, replyFunc) {
+      await this.universe.modifyIdentity(msg.identityId, msg.mods, "bridge");
+      replyFunc(null);
     },
     notifyBadLogin(account, problem, whichSide) {
       this.__sendMessage({
@@ -15404,13 +15383,10 @@ var WorkshopBackend = (() => {
       ctx.proxy = new WindowedListProxy(toc, ctx);
       await ctx.acquire(ctx.proxy);
     },
-    async _cmd_refreshView(msg) {
-      let ctx = this.bridgeContext.getNamedContextOrThrow(msg.viewHandle);
-      if (ctx.viewing.type === "folder") {
-        await this.universe.syncRefreshFolder(ctx.viewing.folderId, "refreshView");
-      } else {
-      }
-      this.__sendMessage({ type: "promisedResult", handle: msg.handle });
+    async _promised_refreshView(msg, replyFunc) {
+      let ctx = this.bridgeContext.getNamedContextOrThrow(msg.handle);
+      await ctx.proxy?.toc?.refresh("refreshView");
+      replyFunc(null);
     },
     _cmd_growView(msg) {
       let ctx = this.bridgeContext.getNamedContextOrThrow(msg.handle);
@@ -15506,65 +15482,43 @@ var WorkshopBackend = (() => {
     _cmd_downloadBodyReps(msg) {
       this.universe.fetchMessageBody(msg.id, msg.date, "bridge");
     },
-    _cmd_downloadAttachments(msg) {
-      this.universe.downloadMessageAttachments(msg.downloadReq).then(() => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: null
-        });
-      });
+    async _promised_downloadAttachments(msg, replyFunc) {
+      await this.universe.downloadMessageAttachments(msg.downloadReq);
+      replyFunc(null);
     },
-    __accumulateUndoTasksAndReply(sourceMsg, promises) {
+    __accumulateUndoTasksAndReply(sourceMsg, promises, replyFunc) {
       Promise.all(promises).then((nestedUndoTasks) => {
         let undoTasks = [];
         undoTasks = undoTasks.concat.apply(undoTasks, nestedUndoTasks);
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: sourceMsg.handle,
-          data: undoTasks
-        });
+        replyFunc(undoTasks);
       });
     },
-    _cmd_store_labels(msg) {
+    _promised_store_labels(msg, replyFunc) {
       this.__accumulateUndoTasksAndReply(msg, msg.conversations.map((convInfo) => {
         return this.universe.storeLabels(convInfo.id, convInfo.messageIds, convInfo.messageSelector, msg.add, msg.remove);
-      }));
+      }), replyFunc);
     },
-    _cmd_store_flags(msg) {
+    _promised_store_flags(msg, replyFunc) {
       this.__accumulateUndoTasksAndReply(msg, msg.conversations.map((convInfo) => {
         return this.universe.storeFlags(convInfo.id, convInfo.messageIds, convInfo.messageSelector, msg.add, msg.remove);
-      }));
+      }), replyFunc);
     },
-    _cmd_outboxSetPaused(msg) {
-      this.universe.outboxSetPaused(msg.accountId, msg.bePaused).then(() => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: null
-        });
-      });
+    async _promised_outboxSetPaused(msg, replyFunc) {
+      await this.universe.outboxSetPaused(msg.accountId, msg.bePaused);
+      replyFunc();
     },
     _cmd_undo(msg) {
       this.universe.undo(msg.undoTasks);
     },
-    _cmd_createDraft(msg) {
-      this.universe.createDraft({
+    async _promised_createDraft(msg, replyFunc) {
+      let { messageId, messageDate } = await this.universe.createDraft({
         draftType: msg.draftType,
         mode: msg.mode,
         refMessageId: msg.refMessageId,
         refMessageDate: msg.refMessageDate,
         folderId: msg.folderId
-      }).then(({ messageId, messageDate }) => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: {
-            messageId,
-            messageDate
-          }
-        });
       });
+      replyFunc({ messageId, messageDate });
     },
     _cmd_attachBlobToDraft(msg) {
       this.universe.attachBlobToDraft(msg.messageId, msg.attachmentDef);
@@ -15572,7 +15526,7 @@ var WorkshopBackend = (() => {
     _cmd_detachAttachmentFromDraft(msg) {
       this.universe.detachAttachmentFromDraft(msg.messageId, msg.attachmentRelId);
     },
-    _cmd_doneCompose(msg) {
+    _promised_doneCompose(msg, replyFunc) {
       if (msg.command === "delete") {
         this.universe.deleteDraft(msg.messageId);
         return;
@@ -15580,11 +15534,7 @@ var WorkshopBackend = (() => {
       this.universe.saveDraft(msg.messageId, msg.draftFields);
       if (msg.command === "send") {
         this.universe.outboxSendDraft(msg.messageId).then((sendProblem) => {
-          this.__sendMessage({
-            type: "promisedResult",
-            handle: msg.handle,
-            data: sendProblem
-          });
+          replyFunc(sendProblem);
         });
       }
     },
@@ -17865,10 +17815,11 @@ var WorkshopBackend = (() => {
 
   // src/backend/db/base_toc.js
   var BaseTOC = class extends import_evt7.Emitter {
-    constructor({ metaHelpers, onForgotten }) {
+    constructor({ metaHelpers = [], refreshHelpers = [], onForgotten }) {
       super();
       RefedResource.call(this, onForgotten);
-      this._metaHelpers = metaHelpers || [];
+      this._metaHelpers = metaHelpers;
+      this._refreshHelpers = refreshHelpers;
       this.tocMeta = {};
       this._everActivated = false;
       this.flush = null;
@@ -17917,6 +17868,10 @@ var WorkshopBackend = (() => {
     }
     broadcastEvent(eventName, eventData) {
       this.emit("broadcastEvent", eventName, eventData);
+    }
+    refresh(why) {
+      const refreshPromises = this._refreshHelpers.map((x) => x(why));
+      return Promise.all(refreshPromises);
     }
   };
   RefedResource.mix(BaseTOC.prototype);
@@ -18333,8 +18288,15 @@ var WorkshopBackend = (() => {
   init_util();
   init_comparators();
   var ConversationTOC = class extends BaseTOC {
-    constructor({ db, query, dataOverlayManager, metaHelpers, onForgotten }) {
-      super({ metaHelpers, onForgotten });
+    constructor({
+      db,
+      query,
+      dataOverlayManager,
+      metaHelpers,
+      refreshHelpers = null,
+      onForgotten
+    }) {
+      super({ metaHelpers, refreshHelpers, onForgotten });
       logic.defineScope(this, "ConversationTOC");
       this.type = "ConversationTOC";
       this.overlayNamespace = "messages";
@@ -20594,9 +20556,7 @@ var WorkshopBackend = (() => {
     this.type = args.type;
   }
   EventFilter.prototype = {
-    gather: {
-      bodyContents: {}
-    },
+    gather: {},
     cost: 10,
     alwaysRun: true,
     test(gathered) {
@@ -22586,6 +22546,7 @@ var WorkshopBackend = (() => {
               dataOverlayManager: this.dataOverlayManager
             })
           ],
+          refreshHelpers: [(why) => this.universe.syncRefreshFolder(folderId, why)],
           onForgotten: () => {
             this._folderConvsTOCs.delete(folderId);
           }
@@ -22615,6 +22576,7 @@ var WorkshopBackend = (() => {
             dataOverlayManager: this.dataOverlayManager
           })
         ],
+        refreshHelpers: [(why) => this.universe.syncRefreshFolder(folderId, why)],
         onForgotten: () => {
         }
       });
@@ -22644,6 +22606,7 @@ var WorkshopBackend = (() => {
               dataOverlayManager: this.dataOverlayManager
             })
           ],
+          refreshHelpers: [(why) => this.universe.syncRefreshFolder(folderId, why)],
           onForgotten: () => {
             this._folderMessagesTOCs.delete(folderId);
           }
@@ -22673,12 +22636,13 @@ var WorkshopBackend = (() => {
             dataOverlayManager: this.dataOverlayManager
           })
         ],
+        refreshHelpers: [(why) => this.universe.syncRefreshFolder(folderId, why)],
         onForgotten: () => {
         }
       });
       return ctx.acquire(toc);
     },
-    __acquireSearchFoldersHelper(accountId, spec, metaHelpers, why) {
+    __acquireSearchFoldersHelper(accountId, spec, metaHelpers, refreshHelpers) {
       const engineFacts = this.accountManager.getAccountEngineBackEndFacts(accountId);
       let syncStampSource = null;
       if (engineFacts.syncGranularity === "account") {
@@ -22692,39 +22656,49 @@ var WorkshopBackend = (() => {
           syncStampSource: syncStampSource || this.accountManager.getFolderById(folderId),
           dataOverlayManager: this.dataOverlayManager
         }));
-        this.syncRefreshFolder(folderId, why);
+        refreshHelpers.push((why) => this.syncRefreshFolder(folderId, why));
       }
     },
     acquireSearchAccountMessagesTOC(ctx, spec) {
       const { accountId } = spec;
       spec.folderIds = [];
       const metaHelpers = [];
-      this.__acquireSearchFoldersHelper(accountId, spec, metaHelpers, "searchAccountMessages");
+      const refreshHelpers = [];
+      this.__acquireSearchFoldersHelper(accountId, spec, metaHelpers, refreshHelpers);
       const toc = new ConversationTOC({
         db: this.db,
         query: this.queryManager.queryAccountMessages(ctx, spec),
         dataOverlayManager: this.dataOverlayManager,
         metaHelpers,
+        refreshHelpers,
         onForgotten: () => {
         }
       });
+      if (spec.refresh) {
+        toc.refresh("searchAccountMessages");
+      }
       return ctx.acquire(toc);
     },
     acquireSearchAllAccountsMessagesTOC(ctx, spec) {
       const { accountIds } = spec;
       spec.folderIds = [];
       const metaHelpers = [];
+      const refreshHelpers = [];
       for (const accountId of accountIds) {
-        this.__acquireSearchFoldersHelper(accountId, spec, metaHelpers, "searchAllAccountsMessages");
+        this.__acquireSearchFoldersHelper(accountId, spec, metaHelpers, refreshHelpers);
       }
       const toc = new ConversationTOC({
         db: this.db,
         query: this.queryManager.queryAccountMessages(ctx, spec),
         dataOverlayManager: this.dataOverlayManager,
         metaHelpers,
+        refreshHelpers,
         onForgotten: () => {
         }
       });
+      if (spec.refresh) {
+        toc.refresh("searchAllAccountsMessages");
+      }
       return ctx.acquire(toc);
     },
     acquireConversationTOC(ctx, conversationId) {
@@ -22791,7 +22765,7 @@ var WorkshopBackend = (() => {
       });
     },
     deleteAccount(accountId, why) {
-      this.taskManager.scheduleTasks([
+      return this.taskManager.scheduleTasksAndWaitForExecutedResult([
         {
           type: "account_delete",
           accountId

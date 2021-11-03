@@ -2522,9 +2522,9 @@ var ConversationsListView = class extends WindowedListView {
       id: item.id
     };
   }
-  refresh() {
+  async refresh() {
     this.syncRequested = true;
-    this._api.__bridgeSend({
+    await this._api._sendPromisedRequest({
       type: "refreshView",
       handle: this.handle
     });
@@ -2585,8 +2585,8 @@ var MessagesListView = class extends WindowedListView {
       });
     }
   }
-  refresh() {
-    this._api.__bridgeSend({
+  async refresh() {
+    await this._api._sendPromisedRequest({
       type: "refreshView",
       handle: this.handle
     });
@@ -3020,7 +3020,7 @@ var CalEventsListView = class extends WindowedListView {
   async refresh() {
     await this._api._sendPromisedRequest({
       type: "refreshView",
-      viewHandle: this.handle
+      handle: this.handle
     });
   }
 };
@@ -3155,12 +3155,16 @@ var MailAPI = class extends import_evt14.Emitter {
   }
   _sendPromisedRequest(sendMsg) {
     return new Promise((resolve) => {
-      const handle = sendMsg.handle = this._nextHandle++;
+      const handle = this._nextHandle++;
       this._pendingRequests[handle] = {
         type: sendMsg.type,
         resolve
       };
-      this.__bridgeSend(sendMsg);
+      this.__bridgeSend({
+        type: "promised",
+        handle,
+        wrapped: sendMsg
+      });
     });
   }
   _recv_promisedResult(msg) {
@@ -3403,10 +3407,10 @@ var MailAPI = class extends import_evt14.Emitter {
     });
   }
   _deleteAccount(account) {
-    this.__bridgeSend({
+    return this._sendPromisedRequest({
       type: "deleteAccount",
       accountId: account.id
-    });
+    }).then(() => null);
   }
   _modifyIdentity(identity, mods) {
     return this._sendPromisedRequest({

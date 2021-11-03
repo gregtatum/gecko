@@ -71,6 +71,33 @@ MailBridge.prototype = {
   /**
    * Synchronously process incoming messages; the processing may be async.
    *
+   * There are 2 orthogonal clever things that may go on here:
+   * - "promised" requests are sent via `_sendPromisedRequest` and are a means
+   *   of letting individual requests return promises.  In detail:
+   *   - Using `_sendPromisedRequest` results in the underlying message (which
+   *     can use a `handle` as it normally would) being wrapped so that a
+   *     separate handle is allocated just for the promised request.  This means
+   *     that `refreshView` can be used on a view that has a `handle` associated
+   *     with a `namedContext` but also still separately indicate when the
+   *     refresh completes.
+   *   - Using `_sendPromisedRequest` means that the handling function on this
+   *     class will be `_promised_MESSAGETYPE` instead of `_cmd_MESSAGETYPE`.
+   *     The handler will take a second argument which is `replyFunc`, a helper
+   *     that ensures that we send at most one "promisedResult".  This helper
+   *     can be invoked whenever you want; if the `_promised_MESSAGETYPE`
+   *     handler is async or otherwise returns a promise, there is no required
+   *     ordering of when that promise resolves and when you invoke replyFunc.
+   * - named contexts will have their requests serialized if the command returns
+   *   a Promise.
+   *   - Note that in cases where you don't want requests serialized but you
+   *     have a `_promised_FOO` handler, this may mean that you need to avoid
+   *     using `async` directly on your handling function even if it makes it
+   *     cleaner to call the `replyFunc`.  For example, you can use promises
+   *     internally or an internal async function so that the caller does not
+   *     see a promise returned.
+   *
+   * More details:
+   *
    * TODO: be clever about serializing commands on a per-handle basis so that
    * we can maintain a logical ordering of data-dependent commands but not have
    * long-running commands interfering with orthogonal things.  For instance,
@@ -78,7 +105,29 @@ MailBridge.prototype = {
    * creating the list view has been fully processed.
    */
   __receiveMessage(msg) {
-    var implCmdName = "_cmd_" + msg.type;
+    let replyFunc = undefined;
+    let implCmdName;
+    if (msg.type === "promised") {
+      const promisedHandle = msg.handle;
+      let repliedAlready = false;
+      replyFunc = data => {
+        if (repliedAlready) {
+          return;
+        }
+        this.__sendMessage({
+          type: "promisedResult",
+          handle: promisedHandle,
+          data,
+        });
+        repliedAlready = true;
+      };
+      // pierce the wrapping.
+      msg = msg.wrapped;
+      implCmdName = `_promised_${msg.type}`;
+    } else {
+      implCmdName = `_cmd_${msg.type}`;
+    }
+
     if (!(implCmdName in this)) {
       logic(this, "badMessageTypeError", { type: msg.type });
       return;
@@ -88,19 +137,19 @@ MailBridge.prototype = {
         msg.handle && this.bridgeContext.maybeGetNamedContext(msg.handle);
       if (namedContext) {
         if (namedContext.pendingCommand) {
-          console.warn("deferring", msg);
-          namedContext.commandQueue.push(msg);
+          namedContext.commandQueue.push([msg, implCmdName, replyFunc]);
         } else {
           let promise = (namedContext.pendingCommand = this._processCommand(
             msg,
-            implCmdName
+            implCmdName,
+            replyFunc
           ));
           if (promise) {
             this._trackCommandForNamedContext(namedContext, promise);
           }
         }
       } else {
-        let promise = this._processCommand(msg, implCmdName);
+        let promise = this._processCommand(msg, implCmdName, replyFunc);
         // If the command went async, then it's also possible that the command
         // grew a namedContext and that we therefore need to get it and set up the
         // bookkeeping so that if any other commands come in on this handle before
@@ -131,9 +180,8 @@ MailBridge.prototype = {
 
   _commandCompletedProcessNextCommandInQueue(namedContext) {
     if (namedContext.commandQueue.length) {
-      console.warn("processing deferred command");
       let promise = (namedContext.pendingCommand = this._processCommand(
-        namedContext.commandQueue.shift()
+        ...namedContext.commandQueue.shift()
       ));
       if (promise) {
         let runNext = () => {
@@ -166,16 +214,13 @@ MailBridge.prototype = {
    *   fast-fail purposes and still available.  In async cases we may not have
    *   it anymore because it's not worth the hassle to cart it around.
    */
-  _processCommand(msg, implCmdName) {
-    if (!implCmdName) {
-      implCmdName = "_cmd_" + msg.type;
-    }
+  _processCommand(msg, implCmdName, replyFunc) {
     logic(this, "cmd", {
       type: msg.type,
       msg,
     });
     try {
-      let result = this[implCmdName](msg);
+      let result = this[implCmdName](msg, replyFunc);
       if (result && result.then) {
         logic.await(this, "asyncCommand", { type: msg.type }, result);
         return result;
@@ -200,18 +245,13 @@ MailBridge.prototype = {
     TEST_LetsDoTheTimewarpAgain(msg.fakeNow);
   },
 
-  _cmd_TEST_parseFeed(msg) {
+  async _promised_TEST_parseFeed(msg, replyFunc) {
     logic(this, "parseFeed", {
       parserType: msg.parserType,
       code: `${msg.code.slice(0, 128)}...`,
     });
-    TEST_parseFeed(msg.parserType, msg.code, msg.url).then(data => {
-      this.__sendMessage({
-        type: "promisedResult",
-        handle: msg.handle,
-        data,
-      });
-    });
+    const data = await TEST_parseFeed(msg.parserType, msg.code, msg.url);
+    replyFunc(data);
   },
 
   _cmd_setInteractive(/*msg*/) {
@@ -222,52 +262,33 @@ MailBridge.prototype = {
     $mailchewStrings.set(msg.strings);
   },
 
-  _cmd_learnAboutAccount(msg) {
+  _promised_learnAboutAccount(msg, replyFunc) {
     this.universe.learnAboutAccount(msg.details).then(
       info => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: info,
-        });
+        replyFunc(info);
       },
       (/*err*/) => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: { result: "no-config-info", configInfo: null },
-        });
+        replyFunc({ result: "no-config-info", configInfo: null });
       }
     );
   },
 
-  _cmd_tryToCreateAccount(msg) {
+  _promised_tryToCreateAccount(msg, replyFunc) {
     this.universe
       .tryToCreateAccount(msg.userDetails, msg.domainInfo)
       .then(result => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: result,
-        });
+        replyFunc(result);
       });
   },
 
-  async _cmd_syncFolderList(msg) {
+  async _promised_syncFolderList(msg, replyFunc) {
     await this.universe.syncFolderList(msg.accountId, "bridge");
-    this.__sendMessage({ type: "promisedResult", handle: msg.handle });
+    replyFunc(null);
   },
 
-  _cmd_modifyFolder(msg) {
-    this.universe
-      .modifyFolder(msg.accountId, msg.mods, "bridge")
-      .then(result => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: null,
-        });
-      });
+  async _promised_modifyFolder(msg, replyFunc) {
+    await this.universe.modifyFolder(msg.accountId, msg.mods, "bridge");
+    replyFunc(null);
   },
 
   async _cmd_clearAccountProblems(msg) {
@@ -298,44 +319,28 @@ MailBridge.prototype = {
     });
   },
 
-  _cmd_modifyConfig(msg) {
-    this.universe.modifyConfig(msg.mods, "bridge").then(() => {
-      this.__sendMessage({
-        type: "promisedResult",
-        handle: msg.handle,
-        data: null,
-      });
-    });
+  async _promised_modifyConfig(msg, replyFunc) {
+    await this.universe.modifyConfig(msg.mods, "bridge");
+    replyFunc(null);
   },
 
-  _cmd_modifyAccount(msg) {
-    this.universe.modifyAccount(msg.accountId, msg.mods, "bridge").then(() => {
-      this.__sendMessage({
-        type: "promisedResult",
-        handle: msg.handle,
-        data: null,
-      });
-    });
+  async _promised_modifyAccount(msg, replyFunc) {
+    await this.universe.modifyAccount(msg.accountId, msg.mods, "bridge");
+    replyFunc(null);
   },
 
   _cmd_recreateAccount(msg) {
     this.universe.recreateAccount(msg.accountId, "bridge");
   },
 
-  _cmd_deleteAccount(msg) {
-    this.universe.deleteAccount(msg.accountId, "bridge");
+  async _promised_deleteAccount(msg, replyFunc) {
+    await this.universe.deleteAccount(msg.accountId, "bridge");
+    replyFunc(null);
   },
 
-  _cmd_modifyIdentity(msg) {
-    this.universe
-      .modifyIdentity(msg.identityId, msg.mods, "bridge")
-      .then(() => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: null,
-        });
-      });
+  async _promised_modifyIdentity(msg, replyFunc) {
+    await this.universe.modifyIdentity(msg.identityId, msg.mods, "bridge");
+    replyFunc(null);
   },
 
   /**
@@ -553,23 +558,10 @@ MailBridge.prototype = {
     await ctx.acquire(ctx.proxy);
   },
 
-  async _cmd_refreshView(msg) {
-    let ctx = this.bridgeContext.getNamedContextOrThrow(msg.viewHandle);
-    if (ctx.viewing.type === "folder") {
-      await this.universe.syncRefreshFolder(
-        ctx.viewing.folderId,
-        "refreshView"
-      );
-    } else {
-      // TODO: only for gmail is generic refreshing sufficient to refresh a
-      // conversation in its entirety.  (Noting that this is tricky conceptually
-      // anyways; probably what the user wants is to find some other message in
-      // the conversation, which means trawling for new messages and triggering
-      // backfilling, which is also trawling for new messages if we managed
-      // to comprehensively backfill.)
-      //this.universe.syncRefreshFolder(null, 'refreshView');
-    }
-    this.__sendMessage({ type: "promisedResult", handle: msg.handle });
+  async _promised_refreshView(msg, replyFunc) {
+    let ctx = this.bridgeContext.getNamedContextOrThrow(msg.handle);
+    await ctx.proxy?.toc?.refresh("refreshView");
+    replyFunc(null);
   },
 
   _cmd_growView(msg) {
@@ -710,14 +702,9 @@ MailBridge.prototype = {
     this.universe.fetchMessageBody(msg.id, msg.date, "bridge");
   },
 
-  _cmd_downloadAttachments(msg) {
-    this.universe.downloadMessageAttachments(msg.downloadReq).then(() => {
-      this.__sendMessage({
-        type: "promisedResult",
-        handle: msg.handle,
-        data: null,
-      });
-    });
+  async _promised_downloadAttachments(msg, replyFunc) {
+    await this.universe.downloadMessageAttachments(msg.downloadReq);
+    replyFunc(null);
   },
 
   //////////////////////////////////////////////////////////////////////////////
@@ -732,21 +719,17 @@ MailBridge.prototype = {
    * invoked to undo the effects of the just-planned task.  Handles flattening
    * the array of arrays and the very limited promisedResult boilerplate.
    */
-  __accumulateUndoTasksAndReply(sourceMsg, promises) {
+  __accumulateUndoTasksAndReply(sourceMsg, promises, replyFunc) {
     Promise.all(promises).then(nestedUndoTasks => {
       // Have concat do the flattening for us.
       let undoTasks = [];
       undoTasks = undoTasks.concat.apply(undoTasks, nestedUndoTasks);
 
-      this.__sendMessage({
-        type: "promisedResult",
-        handle: sourceMsg.handle,
-        data: undoTasks,
-      });
+      replyFunc(undoTasks);
     });
   },
 
-  _cmd_store_labels(msg) {
+  _promised_store_labels(msg, replyFunc) {
     this.__accumulateUndoTasksAndReply(
       msg,
       msg.conversations.map(convInfo => {
@@ -757,11 +740,12 @@ MailBridge.prototype = {
           msg.add,
           msg.remove
         );
-      })
+      }),
+      replyFunc
     );
   },
 
-  _cmd_store_flags(msg) {
+  _promised_store_flags(msg, replyFunc) {
     this.__accumulateUndoTasksAndReply(
       msg,
       msg.conversations.map(convInfo => {
@@ -772,18 +756,14 @@ MailBridge.prototype = {
           msg.add,
           msg.remove
         );
-      })
+      }),
+      replyFunc
     );
   },
 
-  _cmd_outboxSetPaused(msg) {
-    this.universe.outboxSetPaused(msg.accountId, msg.bePaused).then(() => {
-      this.__sendMessage({
-        type: "promisedResult",
-        handle: msg.handle,
-        data: null,
-      });
-    });
+  async _promised_outboxSetPaused(msg, replyFunc) {
+    await this.universe.outboxSetPaused(msg.accountId, msg.bePaused);
+    replyFunc();
   },
 
   _cmd_undo(msg) {
@@ -793,25 +773,15 @@ MailBridge.prototype = {
   //////////////////////////////////////////////////////////////////////////////
   // Composition
 
-  _cmd_createDraft(msg) {
-    this.universe
-      .createDraft({
-        draftType: msg.draftType,
-        mode: msg.mode,
-        refMessageId: msg.refMessageId,
-        refMessageDate: msg.refMessageDate,
-        folderId: msg.folderId,
-      })
-      .then(({ messageId, messageDate }) => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: {
-            messageId,
-            messageDate,
-          },
-        });
-      });
+  async _promised_createDraft(msg, replyFunc) {
+    let { messageId, messageDate } = await this.universe.createDraft({
+      draftType: msg.draftType,
+      mode: msg.mode,
+      refMessageId: msg.refMessageId,
+      refMessageDate: msg.refMessageDate,
+      folderId: msg.folderId,
+    });
+    replyFunc({ messageId, messageDate });
   },
 
   _cmd_attachBlobToDraft(msg) {
@@ -828,7 +798,7 @@ MailBridge.prototype = {
    * Drafts are saved in our IndexedDB storage. This is notable because we are
    * told about attachments via their Blobs.
    */
-  _cmd_doneCompose(msg) {
+  _promised_doneCompose(msg, replyFunc) {
     // Delete and be done if delete.
     if (msg.command === "delete") {
       this.universe.deleteDraft(msg.messageId);
@@ -840,11 +810,7 @@ MailBridge.prototype = {
     // Actually send if send.
     if (msg.command === "send") {
       this.universe.outboxSendDraft(msg.messageId).then(sendProblem => {
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: msg.handle,
-          data: sendProblem,
-        });
+        replyFunc(sendProblem);
       });
     }
   },

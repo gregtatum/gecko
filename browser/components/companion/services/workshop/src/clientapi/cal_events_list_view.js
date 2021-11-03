@@ -58,7 +58,7 @@ export class CalEventsListView extends WindowedListView {
   async refresh() {
     await this._api._sendPromisedRequest({
       type: "refreshView",
-      viewHandle: this.handle,
+      handle: this.handle,
     });
   }
 }

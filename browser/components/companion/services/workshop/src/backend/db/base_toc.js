@@ -27,11 +27,12 @@ import { RefedResource } from "../refed_resource";
  * (Most of the code was also subtly different for each TOC up to this point.)
  */
 export class BaseTOC extends Emitter {
-  constructor({ metaHelpers, onForgotten }) {
+  constructor({ metaHelpers = [], refreshHelpers = [], onForgotten }) {
     super();
     RefedResource.call(this, onForgotten);
 
-    this._metaHelpers = metaHelpers || [];
+    this._metaHelpers = metaHelpers;
+    this._refreshHelpers = refreshHelpers;
 
     this.tocMeta = {};
     this._everActivated = false;
@@ -110,6 +111,16 @@ export class BaseTOC extends Emitter {
    */
   broadcastEvent(eventName, eventData) {
     this.emit("broadcastEvent", eventName, eventData);
+  }
+
+  /**
+   * Trigger a refresh on this TOC, returning a Promise that will be resolved
+   * when all constituent refreshes have completed or rejected if any refreshes
+   * reject.  (Promise.all semantics for now unless we need to change it.)
+   */
+  refresh(why) {
+    const refreshPromises = this._refreshHelpers.map(x => x(why));
+    return Promise.all(refreshPromises);
   }
 }
 

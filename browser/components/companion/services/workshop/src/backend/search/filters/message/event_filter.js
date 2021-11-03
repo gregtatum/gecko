@@ -26,9 +26,7 @@ EventFilter.prototype = {
   /**
    * We don't need anything beyond the message.
    */
-  gather: {
-    bodyContents: {},
-  },
+  gather: {},
 
   /**
    * Orders of magnitude: boolean (1), string (10), honking big string (100).

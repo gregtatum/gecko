@@ -459,6 +459,7 @@ MailUniverse.prototype = {
             dataOverlayManager: this.dataOverlayManager,
           }),
         ],
+        refreshHelpers: [why => this.universe.syncRefreshFolder(folderId, why)],
         onForgotten: () => {
           this._folderConvsTOCs.delete(folderId);
         },
@@ -494,6 +495,7 @@ MailUniverse.prototype = {
           dataOverlayManager: this.dataOverlayManager,
         }),
       ],
+      refreshHelpers: [why => this.universe.syncRefreshFolder(folderId, why)],
       onForgotten: () => {},
     });
     return ctx.acquire(toc);
@@ -528,6 +530,7 @@ MailUniverse.prototype = {
             dataOverlayManager: this.dataOverlayManager,
           }),
         ],
+        refreshHelpers: [why => this.universe.syncRefreshFolder(folderId, why)],
         onForgotten: () => {
           this._folderMessagesTOCs.delete(folderId);
         },
@@ -563,12 +566,13 @@ MailUniverse.prototype = {
           dataOverlayManager: this.dataOverlayManager,
         }),
       ],
+      refreshHelpers: [why => this.universe.syncRefreshFolder(folderId, why)],
       onForgotten: () => {},
     });
     return ctx.acquire(toc);
   },
 
-  __acquireSearchFoldersHelper(accountId, spec, metaHelpers, why) {
+  __acquireSearchFoldersHelper(accountId, spec, metaHelpers, refreshHelpers) {
     // Figure out what the sync stamp source is for this account.  It hinges
     // on the sync granularity; if it's account-based then the sync stamps
     // will be on the account, otherwise on the folder.
@@ -596,9 +600,7 @@ MailUniverse.prototype = {
           dataOverlayManager: this.dataOverlayManager,
         })
       );
-      // TODO: do we need to await Promise.all(...) for all the
-      // returned values here ?
-      this.syncRefreshFolder(folderId, why);
+      refreshHelpers.push(why => this.syncRefreshFolder(folderId, why));
     }
   },
 
@@ -606,11 +608,12 @@ MailUniverse.prototype = {
     const { accountId } = spec;
     spec.folderIds = [];
     const metaHelpers = [];
+    const refreshHelpers = [];
     this.__acquireSearchFoldersHelper(
       accountId,
       spec,
       metaHelpers,
-      "searchAccountMessages"
+      refreshHelpers
     );
 
     const toc = new ConversationTOC({
@@ -618,9 +621,13 @@ MailUniverse.prototype = {
       query: this.queryManager.queryAccountMessages(ctx, spec),
       dataOverlayManager: this.dataOverlayManager,
       metaHelpers,
+      refreshHelpers,
       // TODO: add a comment to explain why we do nothing here.
       onForgotten: () => {},
     });
+    if (spec.refresh) {
+      toc.refresh("searchAccountMessages");
+    }
     return ctx.acquire(toc);
   },
 
@@ -628,12 +635,13 @@ MailUniverse.prototype = {
     const { accountIds } = spec;
     spec.folderIds = [];
     const metaHelpers = [];
+    const refreshHelpers = [];
     for (const accountId of accountIds) {
       this.__acquireSearchFoldersHelper(
         accountId,
         spec,
         metaHelpers,
-        "searchAllAccountsMessages"
+        refreshHelpers
       );
     }
 
@@ -642,9 +650,13 @@ MailUniverse.prototype = {
       query: this.queryManager.queryAccountMessages(ctx, spec),
       dataOverlayManager: this.dataOverlayManager,
       metaHelpers,
+      refreshHelpers,
       // TODO: add a comment to explain why we do nothing here.
       onForgotten: () => {},
     });
+    if (spec.refresh) {
+      toc.refresh("searchAllAccountsMessages");
+    }
     return ctx.acquire(toc);
   },
 
@@ -746,7 +758,7 @@ MailUniverse.prototype = {
    * Shutdown the account, forget about it, nuke associated database entries.
    */
   deleteAccount(accountId, why) {
-    this.taskManager.scheduleTasks(
+    return this.taskManager.scheduleTasksAndWaitForExecutedResult(
       [
         {
           type: "account_delete",
