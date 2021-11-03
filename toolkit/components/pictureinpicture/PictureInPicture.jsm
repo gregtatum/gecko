@@ -228,6 +228,17 @@ var PictureInPicture = {
     actor.sendAsyncMessage("PictureInPicture:KeyToggle");
   },
 
+  _focusPipBrowserWindow(win) {
+    let browser = this.weakWinToBrowser.get(win);
+    let gBrowser = browser.ownerGlobal.gBrowser;
+    let tab = gBrowser.getTabForBrowser(browser);
+
+    // focus the tab's window
+    if (tab) {
+      tab.ownerGlobal.focus();
+    }
+  },
+
   async focusTabAndClosePip(window, pipActor) {
     let browser = this.weakWinToBrowser.get(window);
     if (!browser) {
@@ -236,6 +247,9 @@ var PictureInPicture = {
 
     let gBrowser = browser.ownerGlobal.gBrowser;
     let tab = gBrowser.getTabForBrowser(browser);
+
+    // focus the tab's window
+    tab.ownerGlobal.focus();
 
     gBrowser.selectedTab = tab;
     await this.closeSinglePipWindow({ reason: "unpip", actorRef: pipActor });
@@ -306,7 +320,7 @@ var PictureInPicture = {
     if (!win) {
       return;
     }
-
+    this._focusPipBrowserWindow(win);
     await this.closePipWindow(win);
     gCloseReasons.set(win, reason);
   },
@@ -330,6 +344,7 @@ var PictureInPicture = {
       if (win.closed) {
         continue;
       }
+      this._focusPipBrowserWindow(win);
       let closedPromise = new Promise(resolve => {
         win.addEventListener("unload", resolve, { once: true });
       });
