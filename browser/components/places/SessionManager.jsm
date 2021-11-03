@@ -40,6 +40,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
 );
 
 const WINDOW_TRACKER_REMOVE_TOPIC = "sessionstore-closed-objects-changed";
+const SESSION_WRITE_COMPLETE_TOPIC = "sessionstore-state-write-complete";
 
 /**
  * @typedef {object} SessionPageRecord
@@ -111,6 +112,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       return;
     }
     Services.obs.addObserver(this, WINDOW_TRACKER_REMOVE_TOPIC, true);
+    Services.obs.addObserver(this, SESSION_WRITE_COMPLETE_TOPIC, true);
 
     PlacesUtils.history.shutdownClient.jsclient.addBlocker(
       "SessionManager: flushing sessions",
@@ -131,6 +133,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       return;
     }
     Services.obs.removeObserver(this, WINDOW_TRACKER_REMOVE_TOPIC);
+    Services.obs.removeObserver(this, SESSION_WRITE_COMPLETE_TOPIC);
   }
 
   /**
@@ -149,6 +152,12 @@ const SessionManager = new (class SessionManager extends EventEmitter {
   #profileDir = null;
 
   /**
+   * @type {Set}
+   *   Any pending saves to happen after the next session store save cycle.
+   */
+  #pendingSaves = new Set();
+
+  /**
    * Registers a new session for a window by allocating a UUID and registering
    * it with SessionStore.
    *
@@ -161,7 +170,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     if (!perWindowEnabled) {
       return;
     }
-    if (SessionStore.getCustomWindowValue(window, "SessionManagerGuid")) {
+    if (this.#hasActiveSession(window)) {
       // No need to register, we already have something for this window.
       return;
     }
@@ -287,6 +296,30 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     let results = await this.query({ limit: 1 });
     this.replaceSession(window, results?.[0].guid);
   }
+
+  /**
+   * Saves a window's session on the next SessionStore update, this is normally
+   * triggered by a blur of the window.
+   *
+   * @param {DOMWindow} window
+   *   The window for the session to save.
+   */
+  async queueSessionSave(window) {
+    if (this.#hasActiveSession(window)) {
+      this.#pendingSaves.add(window);
+    }
+  }
+
+  /**
+   * Clears a window from being saved, e.g. for when a window is unloaded.
+   *
+   * @param {DOMWindow} window
+   *   The window for which to clear any saves.
+   */
+  async clearSessionSave(window) {
+    this.#pendingSaves.delete(window);
+  }
+
   /**
    * Restores a saved session from disk and/or the database.
    *
@@ -442,6 +475,9 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       case WINDOW_TRACKER_REMOVE_TOPIC:
         this.#saveClosedWindowData();
         break;
+      case SESSION_WRITE_COMPLETE_TOPIC:
+        this.#savePendingWindowData();
+        break;
     }
   }
 
@@ -460,6 +496,27 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       }
     }
     this.#lastClosedWindowId = highestWindowId;
+    this.emit("sessions-updated");
+  }
+
+  /**
+   * Saves session data for any windows that are pending, e.g. have recently
+   * been deactivated.
+   *
+   * This does not force update of the session store window/tab data. Therefore
+   * this data may be slightly out of date (< 30 seconds), which is currently
+   * deemed acceptable.
+   */
+  async #savePendingWindowData() {
+    if (!this.#pendingSaves.size) {
+      return;
+    }
+
+    for (let window of this.#pendingSaves) {
+      let windowData = SessionStore.getWindowState(window);
+      await this.#saveSessionData(windowData.windows[0]);
+    }
+    this.#pendingSaves.clear();
     this.emit("sessions-updated");
   }
 
@@ -735,6 +792,18 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       }
     }
     return activeSessions;
+  }
+
+  /**
+   * Determine if a window has an active session or not.
+   *
+   * @param {DOMWindow} window
+   *   The window to check.
+   * @returns {boolean}
+   *   True if there is an active session.
+   */
+  #hasActiveSession(window) {
+    return !!SessionStore.getCustomWindowValue(window, "SessionManagerGuid");
   }
 
   QueryInterface = ChromeUtils.generateQI([
