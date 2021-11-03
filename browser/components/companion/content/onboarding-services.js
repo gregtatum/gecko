@@ -4,90 +4,7 @@
 
 import { MozLitElement } from "./widget-utils.js";
 import { css, html, classMap } from "./lit.all.js";
-
-const GOOGLE_SERVICE = {
-  icon: "chrome://browser/content/companion/googleAccount.png",
-  name: "Google Services",
-  services: "Gmail, Calendar, Meet",
-  domains: [
-    "mail.google.com",
-    "calendar.google.com",
-    "meet.google.com",
-    "accounts.google.com",
-    "apps.google.com",
-  ],
-  type: "google",
-};
-const MICROSOFT_SERVICE = {
-  icon: "chrome://browser/content/companion/microsoft365.ico",
-  name: "Microsoft 365",
-  services: "Outlook, Teams, OneDrive",
-  domains: [
-    "outlook.live.com",
-    "login.live.com",
-    "login.microsoftonline.com",
-    "www.office.com",
-  ],
-  type: "microsoft",
-};
-const DEFAULT_SERVICE_TYPES = new Set([
-  GOOGLE_SERVICE.type,
-  MICROSOFT_SERVICE.type,
-]);
-
-const SERVICE_BY_DOMAIN = new Map();
-const SERVICE_BY_TYPE = new Map();
-
-function registerService(service) {
-  SERVICE_BY_TYPE.set(service.type, service);
-  for (let domain of service.domains) {
-    SERVICE_BY_DOMAIN.set(domain, service.type);
-  }
-}
-
-registerService(GOOGLE_SERVICE);
-registerService(MICROSOFT_SERVICE);
-
-const TEST_SERVICES_PREF = "browser.pinebuild.companion.test-services";
-function setTestServices() {
-  for (let type of SERVICE_BY_TYPE.keys()) {
-    if (!DEFAULT_SERVICE_TYPES.has(type)) {
-      SERVICE_BY_TYPE.delete(type);
-    }
-  }
-  for (let [domain, type] of SERVICE_BY_DOMAIN.entries()) {
-    if (!DEFAULT_SERVICE_TYPES.has(type)) {
-      SERVICE_BY_DOMAIN.delete(domain);
-    }
-  }
-
-  const testServices = JSON.parse(
-    window.CompanionUtils.getCharPref(TEST_SERVICES_PREF, "[]")
-  );
-  for (let service of testServices) {
-    registerService(service);
-  }
-}
-
-if (Cu.isInAutomation) {
-  window.addEventListener(
-    "Companion:Setup",
-    () => {
-      window.CompanionUtils.addPrefObserver(
-        TEST_SERVICES_PREF,
-        setTestServices
-      );
-      setTestServices();
-    },
-    { once: true }
-  );
-  window.addEventListener("unload", () => {
-    window.CompanionUtils.removePrefObserver(
-      TEST_SERVICES_PREF,
-      setTestServices
-    );
-  });
-}
+import { ServiceUtils } from "./service-utils.js";
 
 export class ServicesOnboarding extends MozLitElement {
   static get properties() {
@@ -151,7 +68,7 @@ export class ServicesOnboarding extends MozLitElement {
     } else {
       this.authenticatingService = null;
       let currentDomain = new URL(e.detail.url).host;
-      this.currentService = SERVICE_BY_DOMAIN.get(currentDomain);
+      this.currentService = ServiceUtils.getServiceForDomain(currentDomain);
       this.dispatchOnUpdateComplete(
         new CustomEvent("service-onboarding-url-handled", {
           detail: { domain: currentDomain },
@@ -214,7 +131,7 @@ export class ServicesOnboarding extends MozLitElement {
 
   connectTemplate(serviceType) {
     serviceType = this.normalizeServiceType(serviceType);
-    let service = SERVICE_BY_TYPE.get(serviceType);
+    let service = ServiceUtils.getServiceByType(serviceType);
     if (!service) {
       Cu.reportError(new Error(`Can't find service "${serviceType}"`));
       return "";

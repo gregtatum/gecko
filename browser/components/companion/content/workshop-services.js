@@ -5,22 +5,13 @@
 import { workshopAPI } from "chrome://browser/content/companion/workshopAPI.js";
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
 import { html, css } from "chrome://browser/content/companion/lit.all.js";
+import { ServiceUtils } from "chrome://browser/content/companion/service-utils.js";
 
 ChromeUtils.defineModuleGetter(
   globalThis,
   "OAuth2",
   "resource:///modules/OAuth2.jsm"
 );
-
-const WORKSHOP_SERVICE_TYPES = ["google", "microsoft"];
-const API_BY_SERVICE_TYPE = {
-  google: "gapi",
-  microsoft: "mapi",
-};
-const SERVICE_TYPE_BY_API = {
-  gapi: "google",
-  mapi: "microsoft",
-};
 
 export default class WorkshopServicesList extends MozLitElement {
   static get properties() {
@@ -61,7 +52,8 @@ export default class WorkshopServicesList extends MozLitElement {
     let workshopAccounts = workshopAPI.accounts?.items;
     if (workshopAccounts?.length) {
       workshopAccounts.forEach(account => {
-        connectedServices.set(SERVICE_TYPE_BY_API[account.type], account);
+        let serviceType = ServiceUtils.getServiceByApi(account.type)?.type;
+        connectedServices.set(serviceType, account);
       });
     }
     this.connectedServices = connectedServices;
@@ -86,7 +78,7 @@ export default class WorkshopServicesList extends MozLitElement {
     // The authorizer should now have accessToken, refreshToken, and
     // tokenExpires on it.
     const domainInfo = {
-      type: API_BY_SERVICE_TYPE[type],
+      type: ServiceUtils.getServiceByType(type)?.api,
       oauth2Settings: {
         authEndpoint: oauthInfo.endpoint,
         tokenEndpoint: oauthInfo.tokenEndpoint,
@@ -121,11 +113,14 @@ export default class WorkshopServicesList extends MozLitElement {
   }
 
   render() {
-    return WORKSHOP_SERVICE_TYPES.map(service => {
-      let connected = this.connectedServices.has(service);
+    return Array.from(ServiceUtils.serviceByType.values()).map(service => {
+      let connected = this.connectedServices.has(service.type);
       return html`
         <workshop-service
-          .type=${service}
+          .icon=${service.icon}
+          .name=${service.name}
+          .services=${service.services}
+          .type=${service.type}
           .connected=${connected}
         ></workshop-service>
       `;
@@ -137,8 +132,11 @@ customElements.define("workshop-services-list", WorkshopServicesList);
 class WorkshopService extends MozLitElement {
   static get properties() {
     return {
-      type: { type: String },
       connected: { type: Boolean },
+      icon: { type: String },
+      name: { type: String },
+      services: { type: String },
+      type: { type: String },
     };
   }
 
@@ -175,8 +173,10 @@ class WorkshopService extends MozLitElement {
     return html`
       <div class="service-wrapper">
         <div class="service-info-container">
+          <img class="service-icon" src=${this.icon}></img>
           <div class="service-info">
-            <div class="service-name">${this.type}</div>
+            <div class="service-name">${this.name}</div>
+            <div class="service-labels">${this.services}</div>
           </div>
         </div>
         <div class="service-status">
