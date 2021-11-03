@@ -1,10 +1,11 @@
-/* Copyright 2021 Mozilla Foundation
+/**
+ * Copyright 2021 Mozilla Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,17 +14,18 @@
  * limitations under the License.
  */
 
-import { XmlNodeObject } from "./xml_object";
-import { NamespaceIds } from "./namespaces";
+import { parseFeed } from "./xml/feed_parser.js";
+import { parseJsonFeed } from "./json/feed_parser.js";
+import { parseHFeed } from "./html/feed_parser.js";
 
-const XHTML_NS_ID = NamespaceIds.get("xhtml").id;
-
-// TODO: Validate or not the xhtml: it isn't hard but just long to do.
-
-class XhtmlNamespace {
-  static $buildXMLObject(name, attributes) {
-    return new XmlNodeObject(XHTML_NS_ID, name, attributes);
+export async function TEST_parseFeed(parserType, code, url) {
+  switch (parserType) {
+    case "rss":
+      return parseFeed(code);
+    case "hfeed":
+      return parseHFeed(code, url);
+    case "jsonfeed":
+      return parseJsonFeed(code, url);
   }
+  return null;
 }
-
-export { XhtmlNamespace };

@@ -1,0 +1,60 @@
+{
+  "feed": {
+    "author": [{ "name": "Foo Bar" }],
+    "id": "urn:uuid:1225c696-cfb8-4ebb-aaaa-80da344efa6b",
+    "link": [
+      { "href": "http://allizom.org/feed/", "rel": "self" },
+      { "href": "http://allizom.org/" }
+    ],
+    "subtitle": "A subtitle",
+    "title": "Atom",
+    "updated": "2021-11-03T10:30:02.000Z",
+    "entry": [
+      {
+        "author": [{ "name": "Alli Zom", "email": "allizom@mozilla.com" }],
+        "content": {
+          "type": "xhtml",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>This is the entry content.</p></div>"
+        },
+        "id": "urn:uuid:1225c696-cfb8-4ebb-aaaa-80da344efa6b",
+        "link": [
+          { "href": "http://allizom.org/2021/11/03/314" },
+          {
+            "href": "http://allizom.org/2021/11/03/314.html",
+            "rel": "alternate",
+            "type": "text/html"
+          },
+          { "href": "http://allizom.org/2021/11/03/314/edit", "rel": "edit" }
+        ],
+        "summary": "Some text.",
+        "title": "A title for an entry",
+        "updated": "2021-11-03T18:30:02.000Z"
+      },
+      {
+        "author": [{ "name": "Rab Oof", "email": "raboof@foo.bar" }],
+        "category": [
+          { "term": "a term", "label": "a label" },
+          { "term": "an other term", "label": "an other label" }
+        ],
+        "content": {
+          "type": "xhtml",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>This is the entry content.</p></div>"
+        },
+        "contributor": [{ "name": "Contri Butor", "email": "cb@mozilla.com" }],
+        "id": "urn:uuid:2225c696-cfb8-4ebb-aaaa-80da344efa6b",
+        "link": [
+          { "href": "http://allizom.org/2021/11/03/314" },
+          {
+            "href": "http://allizom.org/2021/11/03/314.html",
+            "rel": "alternate",
+            "type": "text/html"
+          },
+          { "href": "http://allizom.org/2021/11/03/314/edit", "rel": "edit" }
+        ],
+        "summary": "A summary.",
+        "title": { "type": "html", "#content": "A title" },
+        "updated": "2021-11-03T10:30:02.000Z"
+      }
+    ]
+  }
+}

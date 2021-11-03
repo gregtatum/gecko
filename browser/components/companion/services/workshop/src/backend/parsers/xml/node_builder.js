@@ -28,7 +28,6 @@ class Empty extends XMLObject {
 }
 
 /**
- * This class provides a way to connect the dots between xml node, the
  * namespace where it lives and the JS representation of the node.
  * The node is validated when the representation is fed with the data.
  */

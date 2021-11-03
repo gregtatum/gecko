@@ -156,7 +156,7 @@ class StringObject extends XMLObject {
 }
 
 class XmlNodeObject extends XMLObject {
-  constructor(nsId, name, attributes = {}) {
+  constructor(nsId, name, attributes = null) {
     super(nsId, name);
     this.$content = "";
     if (name !== "#text") {
@@ -172,8 +172,13 @@ class XmlNodeObject extends XMLObject {
       return;
     }
     buf.push(`<${tagName}`);
-    for (const [name, value] of this.$attributes) {
-      buf.push(` ${name}="${encodeToXmlString(value.$content)}"`);
+    if (this.$attributes) {
+      for (const [ns, map] of this.$attributes) {
+        const prefix = !ns ? "" : `${ns}:`;
+        for (const [name, value] of map) {
+          buf.push(` ${prefix}${name}="${encodeToXmlString(value)}"`);
+        }
+      }
     }
     if (!this.$content && this.$children.length === 0) {
       buf.push("/>");
@@ -189,7 +194,7 @@ class XmlNodeObject extends XMLObject {
       }
     } else {
       for (const child of this.$children) {
-        child.$serialize(buf);
+        child.$serialize?.(buf);
       }
     }
     buf.push(`</${tagName}>`);
@@ -219,7 +224,9 @@ class XmlNodeObject extends XMLObject {
   }
 
   $dump() {
-    return this.$serialize().join("");
+    const buffer = [];
+    this.$serialize(buffer);
+    return buffer.join("");
   }
 }
 

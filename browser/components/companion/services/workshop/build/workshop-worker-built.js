@@ -981,558 +981,6 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/shared/a64.js
-  function encodeInt(v, padTo) {
-    var sbits = [];
-    do {
-      sbits.push(ORDERED_ARBITRARY_BASE64_CHARS[v & 63]);
-      v = Math.floor(v / 64);
-    } while (v > 0);
-    sbits.reverse();
-    var estr = sbits.join("");
-    if (padTo && estr.length < padTo) {
-      return ZERO_PADDING.substring(0, padTo - estr.length) + estr;
-    }
-    return estr;
-  }
-  function decodeA64Int(es) {
-    return parseInt(decodeUI64(es), 10);
-  }
-  function decodeUI64(es) {
-    var iNonZero = 0;
-    for (; es.charCodeAt(iNonZero) === 48; iNonZero++) {
-    }
-    if (iNonZero) {
-      es = es.substring(iNonZero);
-    }
-    var v, i;
-    if (es.length <= 8) {
-      v = 0;
-      for (i = 0; i < es.length; i++) {
-        v = v * 64 + ORDERED_ARBITRARY_BASE64_CHARS.indexOf(es[i]);
-      }
-      return v.toString(10);
-    }
-    var ues = es.substring(0, es.length - 6), uv = 0, les = es.substring(es.length - 6), lv = 0;
-    for (i = 0; i < ues.length; i++) {
-      uv = uv * 64 + ORDERED_ARBITRARY_BASE64_CHARS.indexOf(ues[i]);
-    }
-    for (i = 0; i < les.length; i++) {
-      lv = lv * 64 + ORDERED_ARBITRARY_BASE64_CHARS.indexOf(les[i]);
-    }
-    var rsh14val = uv * P2_22 + Math.floor(lv / P2_14), uraw = rsh14val / E10_14_RSH_14, udv = Math.floor(uraw), uds = udv.toString();
-    var rsh14Leftover = rsh14val - udv * E10_14_RSH_14, lowBitsRemoved = rsh14Leftover * P2_14 + lv % P2_14;
-    var lds = lowBitsRemoved.toString();
-    if (lds.length < 14) {
-      lds = ZERO_PADDING.substring(0, 14 - lds.length) + lds;
-    }
-    return uds + lds;
-  }
-  var ORDERED_ARBITRARY_BASE64_CHARS, ZERO_PADDING, E10_14_RSH_14, P2_14, P2_22, P2_36;
-  var init_a64 = __esm({
-    "src/shared/a64.js"() {
-      ORDERED_ARBITRARY_BASE64_CHARS = [
-        "0",
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "A",
-        "B",
-        "C",
-        "D",
-        "E",
-        "F",
-        "G",
-        "H",
-        "I",
-        "J",
-        "K",
-        "L",
-        "M",
-        "N",
-        "O",
-        "P",
-        "Q",
-        "R",
-        "S",
-        "T",
-        "U",
-        "V",
-        "W",
-        "X",
-        "Y",
-        "Z",
-        "a",
-        "b",
-        "c",
-        "d",
-        "e",
-        "f",
-        "g",
-        "h",
-        "i",
-        "j",
-        "k",
-        "l",
-        "m",
-        "n",
-        "o",
-        "p",
-        "q",
-        "r",
-        "s",
-        "t",
-        "u",
-        "v",
-        "w",
-        "x",
-        "y",
-        "z",
-        "{",
-        "}"
-      ];
-      ZERO_PADDING = "0000000000000000";
-      E10_14_RSH_14 = Math.pow(10, 14) / Math.pow(2, 14);
-      P2_14 = Math.pow(2, 14);
-      P2_22 = Math.pow(2, 22);
-      P2_36 = Math.pow(2, 36);
-    }
-  });
-
-  // src/shared/id_conversions.js
-  function makeAccountId(accountNum) {
-    return encodeInt(accountNum);
-  }
-  function makeIdentityId(accountId, identityNum) {
-    if (/\0/.test(accountId)) {
-      throw new Error(`AccountId '${accountId}' has a nul!`);
-    }
-    return `${accountId}\0${encodeInt(identityNum)}`;
-  }
-  function accountIdFromIdentityId(identityId) {
-    const pieces = identityId.split(/\0/g);
-    if (pieces.length !== 2) {
-      throw new Error(`Malformed IdentityId: ${identityId}`);
-    }
-    return pieces[0];
-  }
-  function getAccountIdBounds(accountId) {
-    return {
-      lower: accountId + "\0",
-      upper: accountId + "\0\uFFF0"
-    };
-  }
-  function makeFolderId(accountId, folderNum) {
-    if (/\0/.test(accountId)) {
-      throw new Error(`AccountId '${accountId}' has a nul!`);
-    }
-    return `${accountId}\0${encodeInt(folderNum)}`;
-  }
-  function accountIdFromFolderId(folderId) {
-    const pieces = folderId.split(/\0/g);
-    if (pieces.length !== 2) {
-      throw new Error(`Malformed FolderId: ${folderId}`);
-    }
-    return pieces[0];
-  }
-  function decodeFolderIdComponentFromFolderId(folderId) {
-    const pieces = folderId.split(/\0/g);
-    if (pieces.length !== 2) {
-      throw new Error(`Malformed FolderId: ${folderId}`);
-    }
-    return decodeA64Int(pieces[1]);
-  }
-  function makeFolderNamespacedConvId(folderId, convIdComponent) {
-    const pieces = folderId.split(/\0/g);
-    if (pieces.length !== 2) {
-      throw new Error(`Malformed FolderId: ${folderId}`);
-    }
-    if (/\0/.test(convIdComponent)) {
-      throw new Error(`ConvIdComnponent '${convIdComponent}' has a nul!`);
-    }
-    return `${folderId}\0${convIdComponent}`;
-  }
-  function makeGlobalNamespacedConvId(accountId, convIdComponent) {
-    if (/\0/.test(accountId)) {
-      throw new Error(`AccountId '${accountId}' has a nul!`);
-    }
-    return `${accountId}\0\0${convIdComponent}`;
-  }
-  function accountIdFromConvId(convId) {
-    const pieces = convId.split(/\0/g);
-    if (pieces.length !== 3) {
-      throw new Error(`Malformed ConversationId: ${convId}`);
-    }
-    return pieces[0];
-  }
-  function makeMessageId(convId, messageIdComponent) {
-    const pieces = convId.split(/\0/g);
-    if (pieces.length !== 3) {
-      throw new Error(`Malformed ConversationId: ${convId}`);
-    }
-    if (/\0/.test(messageIdComponent)) {
-      throw new Error(`MessageIdComponent '${messageIdComponent}' has a nul!`);
-    }
-    return `${convId}\0${messageIdComponent}`;
-  }
-  function accountIdFromMessageId(messageId) {
-    const pieces = messageId.split(/\0/g);
-    if (pieces.length !== 4) {
-      throw new Error(`Malformed MessageId: ${messageId}`);
-    }
-    return pieces[0];
-  }
-  function convIdFromMessageId(messageId) {
-    const pieces = messageId.split(/\0/g);
-    if (pieces.length !== 4) {
-      throw new Error(`Malformed MessageId: ${messageId}`);
-    }
-    return pieces.slice(0, 3).join("\0");
-  }
-  function messageIdComponentFromMessageId(messageId) {
-    const pieces = messageId.split(/\0/g);
-    if (pieces.length !== 4) {
-      throw new Error(`Malformed MessageId: ${messageId}`);
-    }
-    return pieces[3];
-  }
-  var init_id_conversions = __esm({
-    "src/shared/id_conversions.js"() {
-      init_a64();
-    }
-  });
-
-  // src/backend/accounts/feed/configurator.js
-  var configurator_exports = {};
-  __export(configurator_exports, {
-    default: () => configurateFeed
-  });
-  function configurateFeed(userDetails) {
-    return {
-      userDetails,
-      credentials: {},
-      typeFields: {},
-      connInfoFields: {
-        feedUrl: userDetails.feedUrl,
-        feedType: ""
-      }
-    };
-  }
-  var init_configurator = __esm({
-    "src/backend/accounts/feed/configurator.js"() {
-    }
-  });
-
-  // src/backend/accounts/gapi/configurator.js
-  var configurator_exports2 = {};
-  __export(configurator_exports2, {
-    default: () => configurateGapi
-  });
-  function configurateGapi(userDetails, domainInfo) {
-    const credentials = {};
-    if (domainInfo.oauth2Tokens) {
-      credentials.oauth2 = {
-        authEndpoint: domainInfo.oauth2Settings.authEndpoint,
-        tokenEndpoint: domainInfo.oauth2Settings.tokenEndpoint,
-        scope: domainInfo.oauth2Settings.scope,
-        clientId: domainInfo.oauth2Secrets.clientId,
-        clientSecret: domainInfo.oauth2Secrets.clientSecret,
-        refreshToken: domainInfo.oauth2Tokens.refreshToken,
-        accessToken: domainInfo.oauth2Tokens.accessToken,
-        expireTimeMS: domainInfo.oauth2Tokens.expireTimeMS,
-        _transientLastRenew: PERFNOW()
-      };
-    }
-    return {
-      userDetails,
-      credentials,
-      typeFields: {},
-      connInfoFields: {},
-      kind: "calendar"
-    };
-  }
-  var init_configurator2 = __esm({
-    "src/backend/accounts/gapi/configurator.js"() {
-      init_date();
-    }
-  });
-
-  // src/backend/accounts/mapi/configurator.js
-  var configurator_exports3 = {};
-  __export(configurator_exports3, {
-    default: () => configurateMapi
-  });
-  function configurateMapi(userDetails, domainInfo) {
-    const credentials = {};
-    if (domainInfo.oauth2Tokens) {
-      credentials.oauth2 = {
-        authEndpoint: domainInfo.oauth2Settings.authEndpoint,
-        tokenEndpoint: domainInfo.oauth2Settings.tokenEndpoint,
-        scope: domainInfo.oauth2Settings.scope,
-        clientId: domainInfo.oauth2Secrets.clientId,
-        clientSecret: domainInfo.oauth2Secrets.clientSecret,
-        refreshToken: domainInfo.oauth2Tokens.refreshToken,
-        accessToken: domainInfo.oauth2Tokens.accessToken,
-        expireTimeMS: domainInfo.oauth2Tokens.expireTimeMS,
-        _transientLastRenew: PERFNOW()
-      };
-    }
-    return {
-      userDetails,
-      credentials,
-      typeFields: {},
-      connInfoFields: {},
-      kind: "calendar"
-    };
-  }
-  var init_configurator3 = __esm({
-    "src/backend/accounts/mapi/configurator.js"() {
-      init_date();
-    }
-  });
-
-  // src/backend/accounts/ical/configurator.js
-  var configurator_exports4 = {};
-  __export(configurator_exports4, {
-    default: () => configurateICal
-  });
-  function configurateICal(userDetails) {
-    return {
-      userDetails,
-      credentials: {},
-      typeFields: {},
-      connInfoFields: {
-        calendarUrl: userDetails.calendarUrl
-      }
-    };
-  }
-  var init_configurator4 = __esm({
-    "src/backend/accounts/ical/configurator.js"() {
-    }
-  });
-
-  // src/backend/parsers/html/feed_parser.js
-  function isHFeed(headers) {
-    return (headers.get("content-type") || "").toLowerCase().split(";").map((e) => e.trim()).some((e) => e === "text/html");
-  }
-  function parseHFeedFromUrl(url) {
-    return callOnMainThread({
-      cmd: "parseHFromUrl",
-      args: [url, "feed"]
-    });
-  }
-  function parseHFeed(str, url) {
-    return callOnMainThread({
-      cmd: "parseHFromStr",
-      args: [str, url, "feed"]
-    });
-  }
-  var init_feed_parser = __esm({
-    "src/backend/parsers/html/feed_parser.js"() {
-      init_worker_router();
-    }
-  });
-
-  // src/backend/parsers/json/feed_parser.js
-  function isJsonFeed(headers) {
-    return (headers.get("content-type") || "").toLowerCase().split(";").map((e) => e.trim()).some((e) => ["application/json", "application/feed+json"].includes(e));
-  }
-  function validate(obj, validator) {
-    const newObj = Object.create(null);
-    for (const [name, valueValidator] of Object.entries(validator.properties)) {
-      if (!obj.hasOwnProperty(name)) {
-        if (!valueValidator.optional) {
-          throw new MissingRequiredError(name);
-        }
-        continue;
-      }
-      const value = obj[name];
-      const result = valueValidator.validate(value, name);
-      if (result !== null) {
-        newObj[name] = result;
-      }
-    }
-    if (validator.finalCheck && !validator.finalCheck(newObj)) {
-      return null;
-    }
-    return Object.getOwnPropertyNames(newObj).length !== 0 ? newObj : null;
-  }
-  function makeOptionalOrRequired(validator, optional) {
-    return {
-      validate: (data, name) => {
-        if (optional) {
-          try {
-            return validator.validate(data);
-          } catch {
-            return null;
-          }
-        }
-        const result = validator.validate(data);
-        if (result !== null) {
-          return result;
-        }
-        throw new InvalidValueError(name);
-      },
-      optional
-    };
-  }
-  function OptionalArray(validator) {
-    return {
-      validate: (x) => {
-        if (!Array.isArray(x)) {
-          return null;
-        }
-        const result = [];
-        for (const el of x) {
-          try {
-            const r = validate(el, validator);
-            if (r !== null) {
-              result.push(r);
-            }
-          } catch {
-          }
-        }
-        return result;
-      },
-      optional: true
-    };
-  }
-  function Optional(validator) {
-    return {
-      validate: (x) => {
-        try {
-          return validate(x, validator);
-        } catch {
-          return null;
-        }
-      },
-      optional: true
-    };
-  }
-  function parseJsonFeed(str) {
-    const obj = JSON.parse(str);
-    return validate(obj, MainValidator);
-  }
-  var MissingRequiredError, InvalidValueError, StringValidator, OptionalString, RequiredString, OptionalInteger, OptionalBoolean, OptionalDate, AuthorValidator, HubValidator, AttachmentValidator, ItemValidator, MainValidator;
-  var init_feed_parser2 = __esm({
-    "src/backend/parsers/json/feed_parser.js"() {
-      MissingRequiredError = class extends Error {
-        constructor(name) {
-          super(`"${name}" is a required property`);
-          this.name = "JSONFeedMissingRequired";
-        }
-      };
-      InvalidValueError = class extends Error {
-        constructor(name) {
-          super(`Invalid value for ${name} property`);
-          this.name = "JSONFeedInvalidValue";
-        }
-      };
-      StringValidator = {
-        validate: (x) => typeof x === "string" ? x : null
-      };
-      OptionalString = makeOptionalOrRequired(StringValidator, true);
-      RequiredString = makeOptionalOrRequired(StringValidator, false);
-      OptionalInteger = makeOptionalOrRequired({
-        validate: (x) => !isNaN(x) && x >= 0 ? parseInt(x) : null
-      }, true);
-      OptionalBoolean = makeOptionalOrRequired({
-        validate: (x) => x === !!x ? x : null
-      }, true);
-      OptionalDate = makeOptionalOrRequired({
-        validate: (x) => {
-          const date = new Date(x);
-          return isNaN(date) ? null : date;
-        }
-      }, true);
-      AuthorValidator = {
-        properties: {
-          name: OptionalString,
-          url: OptionalString,
-          avatar: OptionalString
-        }
-      };
-      HubValidator = {
-        properties: {
-          type: RequiredString,
-          url: RequiredString
-        }
-      };
-      AttachmentValidator = {
-        properties: {
-          url: RequiredString,
-          mime_type: RequiredString,
-          title: OptionalString,
-          size_in_bytes: OptionalInteger,
-          duration_in_seconds: OptionalInteger
-        }
-      };
-      ItemValidator = {
-        properties: {
-          id: RequiredString,
-          url: OptionalString,
-          external_url: OptionalString,
-          title: OptionalString,
-          content_html: OptionalString,
-          content_text: OptionalString,
-          summary: OptionalString,
-          image: OptionalString,
-          banner_image: OptionalString,
-          date_published: OptionalDate,
-          date_modified: OptionalDate,
-          authors: OptionalArray(AuthorValidator),
-          author: Optional(AuthorValidator),
-          tags: OptionalArray(StringValidator),
-          language: OptionalString,
-          attachments: OptionalArray(AttachmentValidator)
-        },
-        finalCheck(obj) {
-          if (!obj.content_html && !obj.content_text) {
-            return false;
-          }
-          if (obj.author) {
-            if (!obj.authors) {
-              obj.authors = [];
-            }
-            obj.authors.push(obj.author);
-            delete obj.author;
-          }
-          return true;
-        }
-      };
-      MainValidator = {
-        properties: {
-          version: RequiredString,
-          title: RequiredString,
-          home_page_url: OptionalString,
-          feed_url: OptionalString,
-          description: OptionalString,
-          user_comment: OptionalString,
-          next_url: OptionalString,
-          icon: OptionalString,
-          favicon: OptionalString,
-          authors: OptionalArray(AuthorValidator),
-          language: OptionalString,
-          expired: OptionalBoolean,
-          hubs: OptionalArray(HubValidator),
-          items: OptionalArray(ItemValidator)
-        },
-        finalCheck(obj) {
-          if (obj.feed_url && obj.next_url === obj.feed_url) {
-            delete obj.next_url;
-          }
-          return true;
-        }
-      };
-    }
-  });
-
   // src/backend/parsers/xml/namespaces.js
   var NamespaceIds;
   var init_namespaces = __esm({
@@ -1711,7 +1159,7 @@ var WorkshopBackend = (() => {
         }
       };
       XmlNodeObject = class extends XMLObject {
-        constructor(nsId, name, attributes = {}) {
+        constructor(nsId, name, attributes = null) {
           super(nsId, name);
           this.$content = "";
           if (name !== "#text") {
@@ -1726,8 +1174,13 @@ var WorkshopBackend = (() => {
             return;
           }
           buf.push(`<${tagName}`);
-          for (const [name, value] of this.$attributes) {
-            buf.push(` ${name}="${encodeToXmlString(value.$content)}"`);
+          if (this.$attributes) {
+            for (const [ns, map] of this.$attributes) {
+              const prefix = !ns ? "" : `${ns}:`;
+              for (const [name, value] of map) {
+                buf.push(` ${prefix}${name}="${encodeToXmlString(value)}"`);
+              }
+            }
           }
           if (!this.$content && this.$children.length === 0) {
             buf.push("/>");
@@ -1742,7 +1195,7 @@ var WorkshopBackend = (() => {
             }
           } else {
             for (const child of this.$children) {
-              child.$serialize(buf);
+              child.$serialize?.(buf);
             }
           }
           buf.push(`</${tagName}>`);
@@ -1768,7 +1221,9 @@ var WorkshopBackend = (() => {
           }
         }
         $dump() {
-          return this.$serialize().join("");
+          const buffer = [];
+          this.$serialize(buffer);
+          return buffer.join("");
         }
       };
     }
@@ -2293,11 +1748,8 @@ var WorkshopBackend = (() => {
           super(RSS_NS_ID, "pubDate");
         }
         $finalize() {
-          try {
-            this.$content = new Date(this.$content);
-          } catch {
-            this.$isInvalid = true;
-          }
+          this.$content = new Date(this.$content);
+          this.$isInvalid = isNaN(this.$content);
         }
       };
       LastBuildDate = class extends StringObject {
@@ -2305,11 +1757,8 @@ var WorkshopBackend = (() => {
           super(RSS_NS_ID, "lastBuildDate");
         }
         $finalize() {
-          try {
-            this.$content = new Date(this.$content);
-          } catch {
-            this.$isInvalid = true;
-          }
+          this.$content = new Date(this.$content);
+          this.$isInvalid = isNaN(this.$content);
         }
       };
       Category2 = class extends StringObject {
@@ -2443,6 +1892,7 @@ var WorkshopBackend = (() => {
             "name",
             "language",
             "copyright",
+            "managingEditor",
             "webMaster",
             "generator",
             "docs",
@@ -2510,7 +1960,7 @@ var WorkshopBackend = (() => {
       init_namespaces();
       XHTML_NS_ID2 = NamespaceIds.get("xhtml").id;
       XhtmlNamespace = class {
-        static $buildXFAObject(name, attributes) {
+        static $buildXMLObject(name, attributes) {
           return new XmlNodeObject(XHTML_NS_ID2, name, attributes);
         }
       };
@@ -2844,7 +2294,7 @@ var WorkshopBackend = (() => {
     return parser.parse(str);
   }
   var Root;
-  var init_feed_parser3 = __esm({
+  var init_feed_parser = __esm({
     "src/backend/parsers/xml/feed_parser.js"() {
       init_atom();
       init_namespaces();
@@ -2874,6 +2324,558 @@ var WorkshopBackend = (() => {
           }
         }
       };
+    }
+  });
+
+  // src/backend/parsers/json/feed_parser.js
+  function isJsonFeed(headers) {
+    return (headers.get("content-type") || "").toLowerCase().split(";").map((e) => e.trim()).some((e) => ["application/json", "application/feed+json"].includes(e));
+  }
+  function validate(obj, validator) {
+    const newObj = Object.create(null);
+    for (const [name, valueValidator] of Object.entries(validator.properties)) {
+      if (!obj.hasOwnProperty(name)) {
+        if (!valueValidator.optional) {
+          throw new MissingRequiredError(name);
+        }
+        continue;
+      }
+      const value = obj[name];
+      const result = valueValidator.validate(value, name);
+      if (result !== null) {
+        newObj[name] = result;
+      }
+    }
+    if (validator.finalCheck && !validator.finalCheck(newObj)) {
+      return null;
+    }
+    return Object.getOwnPropertyNames(newObj).length !== 0 ? newObj : null;
+  }
+  function makeOptionalOrRequired(validator, optional) {
+    return {
+      validate: (data, name) => {
+        if (optional) {
+          try {
+            return validator.validate(data);
+          } catch {
+            return null;
+          }
+        }
+        const result = validator.validate(data);
+        if (result !== null) {
+          return result;
+        }
+        throw new InvalidValueError(name);
+      },
+      optional
+    };
+  }
+  function OptionalArray(validator) {
+    return {
+      validate: (x) => {
+        if (!Array.isArray(x)) {
+          return null;
+        }
+        const result = [];
+        for (const el of x) {
+          try {
+            const r = validate(el, validator);
+            if (r !== null) {
+              result.push(r);
+            }
+          } catch {
+          }
+        }
+        return result;
+      },
+      optional: true
+    };
+  }
+  function Optional(validator) {
+    return {
+      validate: (x) => {
+        try {
+          return validate(x, validator);
+        } catch {
+          return null;
+        }
+      },
+      optional: true
+    };
+  }
+  function parseJsonFeed(str) {
+    const obj = JSON.parse(str);
+    return validate(obj, MainValidator);
+  }
+  var MissingRequiredError, InvalidValueError, StringValidator, OptionalString, RequiredString, OptionalInteger, OptionalBoolean, OptionalDate, AuthorValidator, HubValidator, AttachmentValidator, ItemValidator, MainValidator;
+  var init_feed_parser2 = __esm({
+    "src/backend/parsers/json/feed_parser.js"() {
+      MissingRequiredError = class extends Error {
+        constructor(name) {
+          super(`"${name}" is a required property`);
+          this.name = "JSONFeedMissingRequired";
+        }
+      };
+      InvalidValueError = class extends Error {
+        constructor(name) {
+          super(`Invalid value for ${name} property`);
+          this.name = "JSONFeedInvalidValue";
+        }
+      };
+      StringValidator = {
+        validate: (x) => typeof x === "string" ? x : null
+      };
+      OptionalString = makeOptionalOrRequired(StringValidator, true);
+      RequiredString = makeOptionalOrRequired(StringValidator, false);
+      OptionalInteger = makeOptionalOrRequired({
+        validate: (x) => !isNaN(x) && x >= 0 ? parseInt(x) : null
+      }, true);
+      OptionalBoolean = makeOptionalOrRequired({
+        validate: (x) => x === !!x ? x : null
+      }, true);
+      OptionalDate = makeOptionalOrRequired({
+        validate: (x) => {
+          const date = new Date(x);
+          return isNaN(date) ? null : date;
+        }
+      }, true);
+      AuthorValidator = {
+        properties: {
+          name: OptionalString,
+          url: OptionalString,
+          avatar: OptionalString
+        }
+      };
+      HubValidator = {
+        properties: {
+          type: RequiredString,
+          url: RequiredString
+        }
+      };
+      AttachmentValidator = {
+        properties: {
+          url: RequiredString,
+          mime_type: RequiredString,
+          title: OptionalString,
+          size_in_bytes: OptionalInteger,
+          duration_in_seconds: OptionalInteger
+        }
+      };
+      ItemValidator = {
+        properties: {
+          id: RequiredString,
+          url: OptionalString,
+          external_url: OptionalString,
+          title: OptionalString,
+          content_html: OptionalString,
+          content_text: OptionalString,
+          summary: OptionalString,
+          image: OptionalString,
+          banner_image: OptionalString,
+          date_published: OptionalDate,
+          date_modified: OptionalDate,
+          authors: OptionalArray(AuthorValidator),
+          author: Optional(AuthorValidator),
+          tags: OptionalArray(StringValidator),
+          language: OptionalString,
+          attachments: OptionalArray(AttachmentValidator)
+        },
+        finalCheck(obj) {
+          if (!obj.content_html && !obj.content_text) {
+            return false;
+          }
+          if (obj.author) {
+            if (!obj.authors) {
+              obj.authors = [];
+            }
+            obj.authors.push(obj.author);
+            delete obj.author;
+          }
+          return true;
+        }
+      };
+      MainValidator = {
+        properties: {
+          version: RequiredString,
+          title: RequiredString,
+          home_page_url: OptionalString,
+          feed_url: OptionalString,
+          description: OptionalString,
+          user_comment: OptionalString,
+          next_url: OptionalString,
+          icon: OptionalString,
+          favicon: OptionalString,
+          authors: OptionalArray(AuthorValidator),
+          language: OptionalString,
+          expired: OptionalBoolean,
+          hubs: OptionalArray(HubValidator),
+          items: OptionalArray(ItemValidator)
+        },
+        finalCheck(obj) {
+          if (obj.feed_url && obj.next_url === obj.feed_url) {
+            delete obj.next_url;
+          }
+          return true;
+        }
+      };
+    }
+  });
+
+  // src/backend/parsers/html/feed_parser.js
+  function isHFeed(headers) {
+    return (headers.get("content-type") || "").toLowerCase().split(";").map((e) => e.trim()).some((e) => e === "text/html");
+  }
+  function parseHFeedFromUrl(url) {
+    return callOnMainThread({
+      cmd: "parseHFromUrl",
+      args: [url, "feed"]
+    });
+  }
+  function parseHFeed(str, url) {
+    return callOnMainThread({
+      cmd: "parseHFromStr",
+      args: [str, url, "feed"]
+    });
+  }
+  var init_feed_parser3 = __esm({
+    "src/backend/parsers/html/feed_parser.js"() {
+      init_worker_router();
+    }
+  });
+
+  // src/shared/a64.js
+  function encodeInt(v, padTo) {
+    var sbits = [];
+    do {
+      sbits.push(ORDERED_ARBITRARY_BASE64_CHARS[v & 63]);
+      v = Math.floor(v / 64);
+    } while (v > 0);
+    sbits.reverse();
+    var estr = sbits.join("");
+    if (padTo && estr.length < padTo) {
+      return ZERO_PADDING.substring(0, padTo - estr.length) + estr;
+    }
+    return estr;
+  }
+  function decodeA64Int(es) {
+    return parseInt(decodeUI64(es), 10);
+  }
+  function decodeUI64(es) {
+    var iNonZero = 0;
+    for (; es.charCodeAt(iNonZero) === 48; iNonZero++) {
+    }
+    if (iNonZero) {
+      es = es.substring(iNonZero);
+    }
+    var v, i;
+    if (es.length <= 8) {
+      v = 0;
+      for (i = 0; i < es.length; i++) {
+        v = v * 64 + ORDERED_ARBITRARY_BASE64_CHARS.indexOf(es[i]);
+      }
+      return v.toString(10);
+    }
+    var ues = es.substring(0, es.length - 6), uv = 0, les = es.substring(es.length - 6), lv = 0;
+    for (i = 0; i < ues.length; i++) {
+      uv = uv * 64 + ORDERED_ARBITRARY_BASE64_CHARS.indexOf(ues[i]);
+    }
+    for (i = 0; i < les.length; i++) {
+      lv = lv * 64 + ORDERED_ARBITRARY_BASE64_CHARS.indexOf(les[i]);
+    }
+    var rsh14val = uv * P2_22 + Math.floor(lv / P2_14), uraw = rsh14val / E10_14_RSH_14, udv = Math.floor(uraw), uds = udv.toString();
+    var rsh14Leftover = rsh14val - udv * E10_14_RSH_14, lowBitsRemoved = rsh14Leftover * P2_14 + lv % P2_14;
+    var lds = lowBitsRemoved.toString();
+    if (lds.length < 14) {
+      lds = ZERO_PADDING.substring(0, 14 - lds.length) + lds;
+    }
+    return uds + lds;
+  }
+  var ORDERED_ARBITRARY_BASE64_CHARS, ZERO_PADDING, E10_14_RSH_14, P2_14, P2_22, P2_36;
+  var init_a64 = __esm({
+    "src/shared/a64.js"() {
+      ORDERED_ARBITRARY_BASE64_CHARS = [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "T",
+        "U",
+        "V",
+        "W",
+        "X",
+        "Y",
+        "Z",
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "m",
+        "n",
+        "o",
+        "p",
+        "q",
+        "r",
+        "s",
+        "t",
+        "u",
+        "v",
+        "w",
+        "x",
+        "y",
+        "z",
+        "{",
+        "}"
+      ];
+      ZERO_PADDING = "0000000000000000";
+      E10_14_RSH_14 = Math.pow(10, 14) / Math.pow(2, 14);
+      P2_14 = Math.pow(2, 14);
+      P2_22 = Math.pow(2, 22);
+      P2_36 = Math.pow(2, 36);
+    }
+  });
+
+  // src/shared/id_conversions.js
+  function makeAccountId(accountNum) {
+    return encodeInt(accountNum);
+  }
+  function makeIdentityId(accountId, identityNum) {
+    if (/\0/.test(accountId)) {
+      throw new Error(`AccountId '${accountId}' has a nul!`);
+    }
+    return `${accountId}\0${encodeInt(identityNum)}`;
+  }
+  function accountIdFromIdentityId(identityId) {
+    const pieces = identityId.split(/\0/g);
+    if (pieces.length !== 2) {
+      throw new Error(`Malformed IdentityId: ${identityId}`);
+    }
+    return pieces[0];
+  }
+  function getAccountIdBounds(accountId) {
+    return {
+      lower: accountId + "\0",
+      upper: accountId + "\0\uFFF0"
+    };
+  }
+  function makeFolderId(accountId, folderNum) {
+    if (/\0/.test(accountId)) {
+      throw new Error(`AccountId '${accountId}' has a nul!`);
+    }
+    return `${accountId}\0${encodeInt(folderNum)}`;
+  }
+  function accountIdFromFolderId(folderId) {
+    const pieces = folderId.split(/\0/g);
+    if (pieces.length !== 2) {
+      throw new Error(`Malformed FolderId: ${folderId}`);
+    }
+    return pieces[0];
+  }
+  function decodeFolderIdComponentFromFolderId(folderId) {
+    const pieces = folderId.split(/\0/g);
+    if (pieces.length !== 2) {
+      throw new Error(`Malformed FolderId: ${folderId}`);
+    }
+    return decodeA64Int(pieces[1]);
+  }
+  function makeFolderNamespacedConvId(folderId, convIdComponent) {
+    const pieces = folderId.split(/\0/g);
+    if (pieces.length !== 2) {
+      throw new Error(`Malformed FolderId: ${folderId}`);
+    }
+    if (/\0/.test(convIdComponent)) {
+      throw new Error(`ConvIdComnponent '${convIdComponent}' has a nul!`);
+    }
+    return `${folderId}\0${convIdComponent}`;
+  }
+  function makeGlobalNamespacedConvId(accountId, convIdComponent) {
+    if (/\0/.test(accountId)) {
+      throw new Error(`AccountId '${accountId}' has a nul!`);
+    }
+    return `${accountId}\0\0${convIdComponent}`;
+  }
+  function accountIdFromConvId(convId) {
+    const pieces = convId.split(/\0/g);
+    if (pieces.length !== 3) {
+      throw new Error(`Malformed ConversationId: ${convId}`);
+    }
+    return pieces[0];
+  }
+  function makeMessageId(convId, messageIdComponent) {
+    const pieces = convId.split(/\0/g);
+    if (pieces.length !== 3) {
+      throw new Error(`Malformed ConversationId: ${convId}`);
+    }
+    if (/\0/.test(messageIdComponent)) {
+      throw new Error(`MessageIdComponent '${messageIdComponent}' has a nul!`);
+    }
+    return `${convId}\0${messageIdComponent}`;
+  }
+  function accountIdFromMessageId(messageId) {
+    const pieces = messageId.split(/\0/g);
+    if (pieces.length !== 4) {
+      throw new Error(`Malformed MessageId: ${messageId}`);
+    }
+    return pieces[0];
+  }
+  function convIdFromMessageId(messageId) {
+    const pieces = messageId.split(/\0/g);
+    if (pieces.length !== 4) {
+      throw new Error(`Malformed MessageId: ${messageId}`);
+    }
+    return pieces.slice(0, 3).join("\0");
+  }
+  function messageIdComponentFromMessageId(messageId) {
+    const pieces = messageId.split(/\0/g);
+    if (pieces.length !== 4) {
+      throw new Error(`Malformed MessageId: ${messageId}`);
+    }
+    return pieces[3];
+  }
+  var init_id_conversions = __esm({
+    "src/shared/id_conversions.js"() {
+      init_a64();
+    }
+  });
+
+  // src/backend/accounts/feed/configurator.js
+  var configurator_exports = {};
+  __export(configurator_exports, {
+    default: () => configurateFeed
+  });
+  function configurateFeed(userDetails) {
+    return {
+      userDetails,
+      credentials: {},
+      typeFields: {},
+      connInfoFields: {
+        feedUrl: userDetails.feedUrl,
+        feedType: ""
+      }
+    };
+  }
+  var init_configurator = __esm({
+    "src/backend/accounts/feed/configurator.js"() {
+    }
+  });
+
+  // src/backend/accounts/gapi/configurator.js
+  var configurator_exports2 = {};
+  __export(configurator_exports2, {
+    default: () => configurateGapi
+  });
+  function configurateGapi(userDetails, domainInfo) {
+    const credentials = {};
+    if (domainInfo.oauth2Tokens) {
+      credentials.oauth2 = {
+        authEndpoint: domainInfo.oauth2Settings.authEndpoint,
+        tokenEndpoint: domainInfo.oauth2Settings.tokenEndpoint,
+        scope: domainInfo.oauth2Settings.scope,
+        clientId: domainInfo.oauth2Secrets.clientId,
+        clientSecret: domainInfo.oauth2Secrets.clientSecret,
+        refreshToken: domainInfo.oauth2Tokens.refreshToken,
+        accessToken: domainInfo.oauth2Tokens.accessToken,
+        expireTimeMS: domainInfo.oauth2Tokens.expireTimeMS,
+        _transientLastRenew: PERFNOW()
+      };
+    }
+    return {
+      userDetails,
+      credentials,
+      typeFields: {},
+      connInfoFields: {},
+      kind: "calendar"
+    };
+  }
+  var init_configurator2 = __esm({
+    "src/backend/accounts/gapi/configurator.js"() {
+      init_date();
+    }
+  });
+
+  // src/backend/accounts/mapi/configurator.js
+  var configurator_exports3 = {};
+  __export(configurator_exports3, {
+    default: () => configurateMapi
+  });
+  function configurateMapi(userDetails, domainInfo) {
+    const credentials = {};
+    if (domainInfo.oauth2Tokens) {
+      credentials.oauth2 = {
+        authEndpoint: domainInfo.oauth2Settings.authEndpoint,
+        tokenEndpoint: domainInfo.oauth2Settings.tokenEndpoint,
+        scope: domainInfo.oauth2Settings.scope,
+        clientId: domainInfo.oauth2Secrets.clientId,
+        clientSecret: domainInfo.oauth2Secrets.clientSecret,
+        refreshToken: domainInfo.oauth2Tokens.refreshToken,
+        accessToken: domainInfo.oauth2Tokens.accessToken,
+        expireTimeMS: domainInfo.oauth2Tokens.expireTimeMS,
+        _transientLastRenew: PERFNOW()
+      };
+    }
+    return {
+      userDetails,
+      credentials,
+      typeFields: {},
+      connInfoFields: {},
+      kind: "calendar"
+    };
+  }
+  var init_configurator3 = __esm({
+    "src/backend/accounts/mapi/configurator.js"() {
+      init_date();
+    }
+  });
+
+  // src/backend/accounts/ical/configurator.js
+  var configurator_exports4 = {};
+  __export(configurator_exports4, {
+    default: () => configurateICal
+  });
+  function configurateICal(userDetails) {
+    return {
+      userDetails,
+      credentials: {},
+      typeFields: {},
+      connInfoFields: {
+        calendarUrl: userDetails.calendarUrl
+      }
+    };
+  }
+  var init_configurator4 = __esm({
+    "src/backend/accounts/ical/configurator.js"() {
     }
   });
 
@@ -2934,9 +2936,9 @@ var WorkshopBackend = (() => {
   }
   var init_validator = __esm({
     "src/backend/accounts/feed/validator.js"() {
-      init_feed_parser();
-      init_feed_parser2();
       init_feed_parser3();
+      init_feed_parser2();
+      init_feed_parser();
     }
   });
 
@@ -10631,7 +10633,8 @@ var WorkshopBackend = (() => {
           return {
             author: "No author",
             title: "No title",
-            description: ""
+            description: "",
+            contentType: "plain"
           };
         }
         ingestHEntry(entry) {
@@ -10695,7 +10698,9 @@ var WorkshopBackend = (() => {
         }
         ingestEntry(entry) {
           const data = this._makeDefaultData();
-          data.guid = entry.id || entry.title || entry.description || NOW().valueOf().toString();
+          entry.title = entry.title?.["#content"] || "";
+          entry.summary = entry.summary?.["#content"] || "";
+          data.guid = entry.id || entry.title || entry.summary || NOW().valueOf().toString();
           data.date = (entry.published || entry.updated || NOW()).valueOf();
           data.dateModified = entry.updated?.valueOf() || data.date;
           const author = entry.author?.[0];
@@ -10705,8 +10710,15 @@ var WorkshopBackend = (() => {
             data.author = author?.name || author?.email || data.author;
           }
           data.title = entry.title || data.title;
-          data.description = entry.summary || data.description;
-          data.contentType = "html";
+          if (entry.content) {
+            if (entry.content.type === "text") {
+              data.description = entry.content["#content"];
+              data.contentType = "plain";
+            } else {
+              data.description = entry.content.div;
+              data.contentType = "html";
+            }
+          }
           const convId = makeGlobalNamespacedConvId(this._accountId, data.guid);
           this._makeItemConvTask({
             convId,
@@ -10758,10 +10770,10 @@ var WorkshopBackend = (() => {
   var init_sync_refresh = __esm({
     "src/backend/accounts/feed/tasks/sync_refresh.js"() {
       init_logic();
-      init_feed_parser();
+      init_feed_parser3();
       init_feed_parser2();
       init_network();
-      init_feed_parser3();
+      init_feed_parser();
       init_util();
       init_date();
       init_task_definer();
@@ -15020,6 +15032,24 @@ var WorkshopBackend = (() => {
 
   // src/backend/mailbridge.js
   init_date();
+
+  // src/backend/parsers/parsers.js
+  init_feed_parser();
+  init_feed_parser2();
+  init_feed_parser3();
+  async function TEST_parseFeed(parserType, code, url) {
+    switch (parserType) {
+      case "rss":
+        return parseFeed(code);
+      case "hfeed":
+        return parseHFeed(code, url);
+      case "jsonfeed":
+        return parseJsonFeed(code, url);
+    }
+    return null;
+  }
+
+  // src/backend/mailbridge.js
   function MailBridge(universe2, db, name) {
     logic.defineScope(this, "MailBridge", { name });
     this.name = name;
@@ -15133,6 +15163,19 @@ var WorkshopBackend = (() => {
     _cmd_TEST_timeWarp(msg) {
       logic(this, "timeWarp", { fakeNow: msg.fakeNow });
       TEST_LetsDoTheTimewarpAgain(msg.fakeNow);
+    },
+    _cmd_TEST_parseFeed(msg) {
+      logic(this, "parseFeed", {
+        parserType: msg.parserType,
+        code: `${msg.code.slice(0, 128)}...`
+      });
+      TEST_parseFeed(msg.parserType, msg.code, msg.url).then((data) => {
+        this.__sendMessage({
+          type: "promisedResult",
+          handle: msg.handle,
+          data
+        });
+      });
     },
     _cmd_setInteractive() {
       this.universe.setInteractive();

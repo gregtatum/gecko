@@ -1848,6 +1848,15 @@ export class MailAPI extends Emitter {
     });
   }
 
+  TEST_parseFeed(parserType, code, url) {
+    return this._sendPromisedRequest({
+      type: "TEST_parseFeed",
+      parserType,
+      code,
+      url,
+    });
+  }
+
   /**
    * Cause the 'newMessagesUpdate' message to be re-derived and re-broadcast.
    * This should only be used in exceptional circumstances because the whole

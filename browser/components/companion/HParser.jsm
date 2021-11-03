@@ -298,11 +298,7 @@ function parseDateTime(aValues) {
       // YYYY-MM-DD
       /^(\d{4})-(\d{2})-(\d{2})/,
       (y, m, d) => {
-        dateInMillis ??= new Date(
-          parseInt(y),
-          parseInt(m) - 1,
-          parseInt(d)
-        ).valueOf();
+        dateInMillis ??= Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d));
       },
     ],
     [
@@ -310,8 +306,7 @@ function parseDateTime(aValues) {
       /^(\d{4})-(\d{3})/,
       (y, d) => {
         dateInMillis ??=
-          new Date(parseInt(y), 0, 1).valueOf() +
-          (parseInt(d) - 1) * MILLIS_BY_DAY;
+          Date.UTC(parseInt(y), 0, 1) + (parseInt(d) - 1) * MILLIS_BY_DAY;
       },
     ],
     [
@@ -327,7 +322,7 @@ function parseDateTime(aValues) {
       // HH:MM+XXYY
       // HH:MMZ
       // HH:MM
-      /^(\d{2}):(\d{2})(?:([aApP])\.?[mM]\.?)?(?::(\d{2})(?:([aApP])\.?[mM]\.?))?(?:Z|([-+])(\d{2}):?(\d{2}))?/,
+      /^(\d{2}):(\d{2})(?:([aApP])\.?[mM]\.?)?(?::(\d{2})(?:([aApP])\.?[mM]\.?)?)?(?:Z|([-+])(\d{2}):?(\d{2}))?/,
       (h, m, ap1, s, ap2, pm, x, y) => {
         timeInMillis ??=
           getHours(parseInt(h), (ap1 ?? ap2)?.toLowerCase()) * MILLIS_BY_HOUR +
@@ -474,7 +469,7 @@ function parseP(aNode) {
     getAttributeFor(aNode, ["DATA", "INPUT"], "value") ??
     getAttributeFor(aNode, ["IMG", "AREA"], "alt") ??
     aNode.innerText
-  );
+  ).trim();
 }
 
 /**
@@ -551,7 +546,7 @@ function parseE(aNode) {
   // TODO: it's a bit useless and time consuming to serialize and
   // sanitize (== parse + filter + serialize).
   // So we should likely add the ability to sanitize a node.
-  const serialized = aNode.innerHtml;
+  const serialized = aNode.innerHTML;
   const html = parserUtils.sanitize(serialized, SanitizerFlags).trim();
 
   return {

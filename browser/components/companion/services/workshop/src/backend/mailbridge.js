@@ -23,6 +23,7 @@ import { BatchManager } from "./bridge/batch_manager";
 import EntireListProxy from "./bridge/entire_list_proxy";
 import WindowedListProxy from "./bridge/windowed_list_proxy";
 import { TEST_LetsDoTheTimewarpAgain } from "shared/date";
+import { TEST_parseFeed } from "./parsers/parsers";
 
 /**
  * There is exactly one `MailBridge` instance for each `MailAPI` instance.
@@ -197,6 +198,20 @@ MailBridge.prototype = {
   _cmd_TEST_timeWarp(msg) {
     logic(this, "timeWarp", { fakeNow: msg.fakeNow });
     TEST_LetsDoTheTimewarpAgain(msg.fakeNow);
+  },
+
+  _cmd_TEST_parseFeed(msg) {
+    logic(this, "parseFeed", {
+      parserType: msg.parserType,
+      code: `${msg.code.slice(0, 128)}...`,
+    });
+    TEST_parseFeed(msg.parserType, msg.code, msg.url).then(data => {
+      this.__sendMessage({
+        type: "promisedResult",
+        handle: msg.handle,
+        data,
+      });
+    });
   },
 
   _cmd_setInteractive(/*msg*/) {

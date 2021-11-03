@@ -94,11 +94,8 @@ class PubDate extends StringObject {
   }
 
   $finalize() {
-    try {
-      this.$content = new Date(this.$content);
-    } catch {
-      this.$isInvalid = true;
-    }
+    this.$content = new Date(this.$content);
+    this.$isInvalid = isNaN(this.$content);
   }
 }
 
@@ -108,11 +105,8 @@ class LastBuildDate extends StringObject {
   }
 
   $finalize() {
-    try {
-      this.$content = new Date(this.$content);
-    } catch {
-      this.$isInvalid = true;
-    }
+    this.$content = new Date(this.$content);
+    this.$isInvalid = isNaN(this.$content);
   }
 }
 
@@ -298,6 +292,7 @@ class RssNamespace {
         "name",
         "language",
         "copyright",
+        "managingEditor",
         "webMaster",
         "generator",
         "docs",

@@ -15,3 +15,9 @@ front-end and by the "connect" event in the back-end SharedWorker.
 - Create a testing task for each.
 - Add the account.
 -
+
+### Parser tests
+
+- The two first articles in test_hfeed.html come from [microformats.org](http://microformats.org/wiki/h-feed#Publisher_Compatibility) and are licensed under [CC0](https://creativecommons.org/publicdomain/zero/1.0/legalcode).
+- The file test_jsonfeed.json contains a json from [wikipedia](https://en.wikipedia.org/wiki/JSON_Feed#Example) which is licensed under [CC BY-SA](https://en.wikipedia.org/wiki/Wikipedia:Text_of_Creative_Commons_Attribution-ShareAlike_3.0_Unported_License)
+and has been slightly modified in adding some "wrong" fields.

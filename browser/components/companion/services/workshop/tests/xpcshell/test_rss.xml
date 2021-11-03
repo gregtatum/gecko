@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<rss version="2.0">
+   <channel>
+      <title>Allizom news</title>
+      <link>https://allizom.org</link>
+      <description>Liftoff to Space Exploration.</description>
+      <language>en-us</language>
+      <pubDate>Wed, 03 Nov 2021 03:14:15 GMT</pubDate>
+      <lastBuildDate>Wed, 03 Nov 2021 03:14:16 GMT</lastBuildDate>
+      <docs>http://allizom.org/rss</docs>
+      <generator>Firefox test</generator>
+      <managingEditor>editor@allizom.com</managingEditor>
+      <webMaster>webmaster@allizom.com</webMaster>
+      <item>
+         <title>Test 1</title>
+         <link>https://allizom.org/news/2021/test-1.asp</link>
+         <description>
+            This is a string for test 1 with an url inside
+            &lt;a href="http://allizom.org/test-1.htm"&gt;Test 1&lt;/a&gt;.
+         </description>
+         <pubDate>Wed, 03 Nov 2021 03:14:15 GMT</pubDate>
+         <guid>https://allizom.org/2021/11/03.html#item314</guid>
+         <author>alli.zom@mozilla.org (Alli Zom)</author>
+      </item>
+      <item>
+         <description>Test 2 has no title</description>
+         <pubDate>Wed, 03 Nov 2021 04:14:15 GMT</pubDate>
+         <guid>https://allizom.org/2021/11/03.html#item271</guid>
+         <wrong>this tag doesn't exist in rss so it shouldn't appear</wrong>
+      </item>
+      <item>
+         <title>A title for test 3</title>
+         <link>https://allizom.org/news/2021/news.asp</link>
+         <description>No description</description>
+         <pubDate>Wed, 03 Nov 2021 03:14:17 GMT</pubDate>
+         <guid>https://allizom.org/2021/11/03.html#item159</guid>
+         <category>A category</category>
+         <comments>https://allizom.org/a_comment.html</comments>
+      </item>
+   </channel>
+</rss>

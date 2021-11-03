@@ -22,6 +22,11 @@ Cu.importGlobalProperties(["fetch"]);
 // Relevant subsystems like profile-after-change.
 do_get_profile(true);
 
+function readFileData(path) {
+  const file = do_get_file(path, false);
+  return IOUtils.readUTF8(file.path);
+}
+
 /**
  * The default fixed date/time to use if not explicitly specified, currently
  * Monday, September 13th at 8:50am in the local timezone.

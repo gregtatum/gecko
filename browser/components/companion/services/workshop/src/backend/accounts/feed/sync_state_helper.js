@@ -56,6 +56,7 @@ export default class FeedSyncStateHelper {
       author: "No author",
       title: "No title",
       description: "",
+      contentType: "plain",
     };
   }
 
@@ -81,7 +82,6 @@ export default class FeedSyncStateHelper {
       data.contentType = "plain";
     }
 
-    //console.log(data);
     const convId = makeGlobalNamespacedConvId(this._accountId, data.guid);
     this._makeItemConvTask({
       convId,
@@ -148,11 +148,14 @@ export default class FeedSyncStateHelper {
    */
   ingestEntry(entry) {
     const data = this._makeDefaultData();
+    entry.title = entry.title?.["#content"] || "";
+    entry.summary = entry.summary?.["#content"] || "";
+
     // Normally we should always have an id.
     data.guid =
       entry.id ||
       entry.title ||
-      entry.description ||
+      entry.summary ||
       NOW()
         .valueOf()
         .toString();
@@ -165,8 +168,15 @@ export default class FeedSyncStateHelper {
       data.author = author?.name || author?.email || data.author;
     }
     data.title = entry.title || data.title;
-    data.description = entry.summary || data.description;
-    data.contentType = "html";
+    if (entry.content) {
+      if (entry.content.type === "text") {
+        data.description = entry.content["#content"];
+        data.contentType = "plain";
+      } else {
+        data.description = entry.content.div;
+        data.contentType = "html";
+      }
+    }
 
     const convId = makeGlobalNamespacedConvId(this._accountId, data.guid);
     this._makeItemConvTask({

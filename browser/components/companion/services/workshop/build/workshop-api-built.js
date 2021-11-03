@@ -3825,6 +3825,14 @@ var MailAPI = class extends import_evt14.Emitter {
       fakeNow
     });
   }
+  TEST_parseFeed(parserType, code, url) {
+    return this._sendPromisedRequest({
+      type: "TEST_parseFeed",
+      parserType,
+      code,
+      url
+    });
+  }
   flushNewAggregates() {
     this.__bridgeSend({
       type: "flushNewAggregates"
