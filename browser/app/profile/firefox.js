@@ -2699,4 +2699,5 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.places.perwindowsessions.enabled", false);
   pref("browser.pinebuild.interstitial-view-overwriting.enabled", true);
   pref("browser.pinebuild.interstitial-view-overwriting.threshold_ms", 5000);
+  pref("browser.pinebuild.ignoreBeforeUnloadOnExit", true);
 #endif

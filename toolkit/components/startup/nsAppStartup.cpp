@@ -67,6 +67,8 @@ static NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
 #define kPrefAlwaysUseSafeMode "toolkit.startup.always_use_safe_mode"
 #define kPinebuildBackgroundUrl \
   "chrome://browser/content/companion/pinebuildBackground.xhtml"
+#define kPinebuildSuppressWindowChecks \
+  "browser.pinebuild.ignoreBeforeUnloadOnExit"
 
 #define kNanosecondsPerSecond 1000000000.0
 
@@ -380,11 +382,13 @@ nsAppStartup::Quit(uint32_t aMode, int aExitCode, bool* aUserAllowedQuit) {
   }
 
   nsCOMPtr<nsIObserverService> obsService;
+  bool suppressWindowChecks = false;
+  Preferences::GetBool(kPinebuildSuppressWindowChecks, &suppressWindowChecks);
   if (ferocity == eAttemptQuit || ferocity == eForceQuit) {
     nsCOMPtr<nsISimpleEnumerator> windowEnumerator;
     nsCOMPtr<nsIWindowMediator> mediator(
         do_GetService(NS_WINDOWMEDIATOR_CONTRACTID));
-    if (mediator) {
+    if (mediator && !suppressWindowChecks) {
       mediator->GetEnumerator(nullptr, getter_AddRefs(windowEnumerator));
       if (windowEnumerator) {
         bool more;
