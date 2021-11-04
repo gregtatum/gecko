@@ -43,7 +43,7 @@ export default async function validateFeed({
     }
 
     const feedText = await feedResp.text();
-    const headers = await feedResp.headers;
+    const headers = feedResp.headers;
     let parsed;
     if (isJsonFeed(headers)) {
       parsed = parseJsonFeed(feedText);

@@ -15,7 +15,7 @@
  */
 
 // eslint-disable-next-line no-unused-vars
-const EXPORTED_SYMBOLS = ["GapiFakeServer", "MapiFakeServer"];
+const EXPORTED_SYMBOLS = ["GapiFakeServer", "MapiFakeServer", "FeedFakeServer"];
 
 const { HttpError } = ChromeUtils.import("resource://testing-common/httpd.js");
 
@@ -145,7 +145,11 @@ class BaseFakeServer {
   }
 
   wrapResults(results) {
-    return results;
+    return {
+      results,
+      strResults: JSON.stringify(results),
+      mimeType: "application/json",
+    };
   }
 
   /**
@@ -178,15 +182,16 @@ class BaseFakeServer {
       try {
         // XXX for now, don't do any paging yet, we just wrap.
         const isPaged = handler.paged;
-        let results = handler.call(this, args, req);
+        const { strResults, results, mimeType } = this.wrapResults(
+          handler.call(this, args, req),
+          isPaged
+        );
 
         this.logRequest(req.path, { results });
 
-        results = this.wrapResults(results, isPaged);
-
         resp.setStatusLine(null, 200, "OK");
-        resp.setHeader("Content-Type", "application/json");
-        resp.write(JSON.stringify(results));
+        resp.setHeader("Content-Type", mimeType);
+        resp.write(strResults);
       } catch (ex) {
         this.logRequest(req.path, { error: `${ex}`, stack: ex.stack });
         if (ex instanceof HttpError) {
@@ -273,14 +278,14 @@ class GapiFakeServer extends BaseFakeServer {
 
   wrapResults(results, isPaged) {
     if (isPaged) {
-      return {
+      return super.wrapResults({
         kind: "not-a-real-type",
         etag: "not-a-real-etag",
         items: results,
         nextSyncToken: "not-a-real-sync-token-yet",
-      };
+      });
     }
-    return results;
+    return super.wrapResults(results);
   }
 
   /**
@@ -472,13 +477,12 @@ class MapiFakeServer extends BaseFakeServer {
         expireTimeMS: this.useNowTS + 24 * 60 * 60 * 1000,
       },
     };
-    this.toto = 0;
   }
 
   wrapResults(results, isPaged) {
-    return {
+    return super.wrapResults({
       value: results,
-    };
+    });
   }
 
   /**
@@ -535,7 +539,7 @@ class MapiFakeServer extends BaseFakeServer {
           name: peep.displayName,
         };
       };
-      //event.startDate = new Date(event.startDate.valueOf() + this.toto++);
+
       return {
         // XXX more fidelity on organizer/creator here too, with decision of
         // whether the FakeEventFactory should be making inclusion decisions too.
@@ -608,5 +612,118 @@ class MapiFakeServer extends BaseFakeServer {
         webLink: this.htmlLinkForEvent(cal, event),
       };
     });
+  }
+}
+
+// eslint-disable-next-line no-unused-vars
+class FeedFakeServer extends BaseFakeServer {
+  /**
+   * Start the server on the first available port.  Port information will be
+   * made available on the `domain`, `origin`, and `domainInfo` properties.
+   */
+  start() {
+    const API_HANDLERS = [
+      {
+        prefix: "/feed/",
+        extraPathSegments: ["calendarId", "*METHOD*"],
+        methodHandlers: {
+          rss: this.unpaged(this.unpaged_rss),
+        },
+      },
+    ];
+
+    this.registerAPIHandlers(API_HANDLERS);
+
+    const ident = this.server.identity;
+    this.domain = `${ident.primaryHost}:${ident.primaryPort}`;
+    this.origin = `${ident.primaryScheme}://${this.domain}`;
+
+    this.testDisplayName = `test-user`;
+    this.testUserEmail = `${this.testDisplayName}@${ident.primaryHost}`;
+
+    // Since we are the server that validates this info, we currently don't care
+    // about most of these values.
+    this.domainInfo = {
+      type: "feed",
+    };
+  }
+
+  wrapResults(results, isPaged) {
+    return {
+      results,
+      strResults: results,
+      mimeType: "application/xml",
+    };
+  }
+
+  #toXMLAttrs(attributes) {
+    return attributes
+      ? " " +
+          Object.entries(attributes)
+            .map(([key, value]) => `${key}="${value}"`)
+            .join(" ")
+      : "";
+  }
+
+  #toXMLHelper(data, parentKey, attributes, buf) {
+    if (Array.isArray(data)) {
+      for (const val of data) {
+        this.#toXMLHelper(val, parentKey, attributes, buf);
+      }
+      return;
+    }
+
+    buf.push(`<${parentKey}${this.#toXMLAttrs(attributes)}>`);
+    if (typeof data === "object") {
+      for (const [key, value] of Object.entries(data)) {
+        if (!key.startsWith("_")) {
+          this.#toXMLHelper(value, key, value._attributes, buf);
+        }
+      }
+      if (data._content) {
+        buf.push(`${data._content}`);
+      }
+    } else {
+      buf.push(`${data}`);
+    }
+    buf.push(`</${parentKey}>`);
+  }
+
+  toXML(data) {
+    const mainKey = Object.keys(data)[0];
+    data = data[mainKey];
+    const buffer = ['<?xml version="1.0"?>'];
+    this.#toXMLHelper(data, mainKey, data._attributes, buffer);
+    return buffer.join("\n");
+  }
+
+  unpaged_rss(args, req) {
+    const cal = this.getCalendarById(args.calendarId);
+    const xml = {
+      rss: {
+        _attributes: {
+          version: "2.0",
+        },
+        channel: {
+          title: "Allizom news",
+          link: "https://allizom.org",
+          description: "Mozilla RSS feed",
+          language: "en-uS",
+          pubDate: "Sun, 14 Mar 2021 01:59:26 GMT",
+          item: cal.events.map(event => {
+            return {
+              title: event.summary,
+              description: event.description,
+              author: event.creator.email,
+              category: event.location || "",
+              pubDate: event.startDate.toISOString(),
+              guid: event.id,
+            };
+          }),
+        },
+      },
+    };
+
+    return this.toXML(xml);
   }
 }

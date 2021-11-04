@@ -1111,7 +1111,7 @@ var WorkshopBackend = (() => {
               continue;
             }
             const value = this[name];
-            const dumpedValue = value?.$dump?.() || value;
+            const dumpedValue = value?.$dump ? value.$dump() : value;
             if (dumpedValue === null || dumpedValue === void 0 || dumpedValue === "" || Array.isArray(dumpedValue) && dumpedValue.length === 0) {
               continue;
             }
@@ -1121,7 +1121,7 @@ var WorkshopBackend = (() => {
           if (!this.$content) {
             return empty ? null : dumped;
           }
-          const content = this.$content?.$dump?.() || this.$content;
+          const content = this.$content?.$dump ? this.$content.$dump() : this.$content;
           if (empty) {
             return content;
           }
@@ -1144,7 +1144,7 @@ var WorkshopBackend = (() => {
           return this.children.length === 0;
         }
         $dump() {
-          return this.children.map((v) => v.$dump());
+          return this.children.map((v) => v.$dump()).filter((v) => !!v);
         }
       };
       StringObject = class extends XMLObject {
@@ -2903,7 +2903,7 @@ var WorkshopBackend = (() => {
         };
       }
       const feedText = await feedResp.text();
-      const headers = await feedResp.headers;
+      const headers = feedResp.headers;
       let parsed;
       if (isJsonFeed(headers)) {
         parsed = parseJsonFeed(feedText);

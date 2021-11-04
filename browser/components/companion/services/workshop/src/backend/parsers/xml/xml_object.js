@@ -85,7 +85,7 @@ class XMLObject {
       }
 
       const value = this[name];
-      const dumpedValue = value?.$dump?.() || value;
+      const dumpedValue = value?.$dump ? value.$dump() : value;
       if (
         dumpedValue === null ||
         dumpedValue === undefined ||
@@ -103,7 +103,9 @@ class XMLObject {
       return empty ? null : dumped;
     }
 
-    const content = this.$content?.$dump?.() || this.$content;
+    const content = this.$content?.$dump
+      ? this.$content.$dump()
+      : this.$content;
     if (empty) {
       return content;
     }
@@ -135,7 +137,7 @@ class XMLObjectArray {
   }
 
   $dump() {
-    return this.children.map(v => v.$dump());
+    return this.children.map(v => v.$dump()).filter(v => !!v);
   }
 }
 

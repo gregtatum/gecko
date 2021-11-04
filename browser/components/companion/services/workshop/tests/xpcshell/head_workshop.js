@@ -13,7 +13,7 @@ const { XPCShellContentUtils } = ChromeUtils.import(
   "resource://testing-common/XPCShellContentUtils.jsm"
 );
 
-const { GapiFakeServer, MapiFakeServer } = ChromeUtils.import(
+const { GapiFakeServer, MapiFakeServer, FeedFakeServer } = ChromeUtils.import(
   "resource:///modules/WorkshopFakeServers.jsm"
 );
 
@@ -333,6 +333,21 @@ class MapiConfiguratorHelperClass {
   }
 }
 
+class FeedConfiguratorHelperClass {
+  get name() {
+    return "Feed";
+  }
+
+  get hosts() {
+    return ["www.allizom.org"];
+  }
+
+  createFakeServer({ httpServer, logRequest }) {
+    return new FeedFakeServer({ httpServer, logRequest });
+  }
+}
+
 const GapiConfigurator = new GapiConfiguratorHelperClass();
 const MapiConfigurator = new MapiConfiguratorHelperClass();
+const FeedConfigurator = new FeedConfiguratorHelperClass();
 const WorkshopHelper = new WorkshopHelperClass();
