@@ -42,7 +42,7 @@ export class Snapshot extends HTMLElement {
 
     if (preview) {
       let previewEl = fragment.querySelector(".card-image");
-      previewEl.style.backgroundImage = "url(" + preview + ")";
+      previewEl.style.backgroundImage = "url('" + preview + "')";
     }
 
     let iconEl = fragment.querySelector(".card-image > img.favicon");

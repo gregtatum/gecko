@@ -16,7 +16,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   FileUtils: "resource://gre/modules/FileUtils.jsm",
   _LastSession: "resource:///modules/sessionstore/SessionStore.jsm",
   OnlineServices: "resource:///modules/OnlineServices.jsm",
-  PageDataCollector: "resource:///modules/pagedata/PageDataCollector.jsm",
+  PageDataSchema: "resource:///modules/pagedata/PageDataSchema.jsm",
   PageDataService: "resource:///modules/pagedata/PageDataService.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   requestIdleCallback: "resource://gre/modules/Timer.jsm",
@@ -48,7 +48,7 @@ const PREFERRED_SNAPSHOT_FAVICON_WIDTH_PX = 16;
 // Defines pages that we force to show a certain snapshot type. The regular
 // expresions are applied to the entire url.
 const DOMAIN_TYPES = {
-  [PageDataCollector.DATA_TYPE.PRODUCT]: [
+  [PageDataSchema.DATA_TYPE.PRODUCT]: [
     /^https:\/\/www\.walmart\.com\//,
     /^https:\/\/www\.target\.com\//,
 
@@ -215,7 +215,6 @@ class CompanionParent extends JSWindowActorParent {
     if (this.snapshotSelector) {
       this.snapshotSelector.destroy();
       PageDataService.off("page-data", this._pageDataFound);
-      PageDataService.off("no-page-data", this._pageDataFound);
       this.snapshotSelector = null;
     }
     SessionManager.off("session-replaced", this._handleSessionUpdate);
@@ -717,13 +716,14 @@ class CompanionParent extends JSWindowActorParent {
 
   pageDataFound(event, pageData) {
     let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
+    let type = Object.keys(pageData.data)[0];
     if (
       selectByType &&
       !this._pageType &&
       this.snapshotSelector &&
       pageData.url == gBrowser.currentURI.spec
     ) {
-      this.snapshotSelector.setType(pageData.data[0]?.type);
+      this.snapshotSelector.setType(type);
     }
   }
 
@@ -758,7 +758,6 @@ class CompanionParent extends JSWindowActorParent {
         gBrowser.addProgressListener(this);
 
         PageDataService.on("page-data", this._pageDataFound);
-        PageDataService.on("no-page-data", this._pageDataFound);
 
         this.snapshotSelector.on("snapshots-updated", async (_, snapshots) => {
           await this.ensureFaviconsCached(snapshots.map(s => s.url));
