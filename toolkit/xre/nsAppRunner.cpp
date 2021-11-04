@@ -5312,11 +5312,11 @@ nsresult XREMain::XRE_mainRun() {
 }
 
 #if defined(MOZ_WIDGET_ANDROID)
-static already_AddRefed<nsIFile> GreOmniPath() {
+static already_AddRefed<nsIFile> GreOmniPath(int argc, char** argv) {
   nsresult rv;
 
   const char* path = nullptr;
-  ArgResult ar = CheckArg("greomni", &path);
+  ArgResult ar = CheckArg(argc, argv, "greomni", &path, CheckArgFlag::None);
   if (ar == ARG_BAD) {
     PR_fprintf(PR_STDERR,
                "Error: argument --greomni requires a path argument\n");
@@ -5408,7 +5408,7 @@ int XREMain::XRE_main(int argc, char* argv[], const BootstrapConfig& aConfig) {
     nsCOMPtr<nsIFile> greDir;
 
 #if defined(MOZ_WIDGET_ANDROID)
-    greDir = GreOmniPath();
+    greDir = GreOmniPath(argc, argv);
     if (!greDir) {
       return 2;
     }
@@ -5590,7 +5590,8 @@ nsresult XRE_InitCommandLine(int aArgc, char* aArgv[]) {
 #endif
 
 #if defined(MOZ_WIDGET_ANDROID)
-  nsCOMPtr<nsIFile> greOmni = gAppData ? gAppData->xreDirectory : GreOmniPath();
+  nsCOMPtr<nsIFile> greOmni =
+      gAppData ? gAppData->xreDirectory : GreOmniPath(aArgc, aArgv);
   if (!greOmni) {
     return NS_ERROR_FAILURE;
   }
