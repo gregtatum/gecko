@@ -70,3 +70,52 @@ export function initDialog(element, templateSelector) {
   shadowRoot.appendChild(template.content.cloneNode(true));
   return shadowRoot;
 }
+
+/**
+ * Shows a confirmation dialog.
+ * @param {object} detail The type of confirmation dialog to display.
+ * Expected attributes: type (string), existingLogin (boolean)
+ * @param {boolean} onConfirm Optional, the function to execute when the confirm button is clicked.
+ */
+export function showConfirmationDialog(detail, onConfirm = () => {}) {
+  const dialog = document.querySelector("confirmation-dialog");
+  let options;
+  switch (detail.type) {
+    case "delete": {
+      options = {
+        title: this.classList.contains("in-companion")
+          ? "about-logins-companion-confirm-remove-password-title"
+          : "about-logins-confirm-remove-dialog-title",
+        message: this.classList.contains("in-companion")
+          ? "companion-confirm-delete-dialog-message"
+          : "confirm-delete-dialog-message",
+        confirmButtonLabel: "about-logins-confirm-remove-dialog-confirm-button",
+      };
+      break;
+    }
+    case "discard-changes": {
+      options = {
+        title: "confirm-discard-changes-dialog-title",
+        message: "confirm-discard-changes-dialog-message",
+        confirmButtonLabel: "confirm-discard-changes-dialog-confirm-button",
+      };
+      break;
+    }
+  }
+  let wasExistingLogin = detail.existingLogin;
+  let method = detail.type == "delete" ? "delete" : "cancel";
+  let dialogPromise = dialog.show(options);
+  dialogPromise.then(
+    () => {
+      try {
+        onConfirm();
+      } catch (ex) {}
+      recordTelemetryEvent({
+        object: wasExistingLogin ? "existing_login" : "new_login",
+        method,
+      });
+    },
+    () => {}
+  );
+  return dialogPromise;
+}

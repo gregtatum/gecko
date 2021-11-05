@@ -5,6 +5,7 @@
 import {
   recordTelemetryEvent,
   promptForMasterPassword,
+  showConfirmationDialog,
 } from "../aboutLoginsUtils.js";
 
 export default class LoginItem extends HTMLElement {
@@ -418,9 +419,15 @@ export default class LoginItem extends HTMLElement {
           let wasExistingLogin = !!this._login.guid;
           if (wasExistingLogin) {
             if (this.hasPendingChanges()) {
-              this.showConfirmationDialog("discard-changes", () => {
-                this.setLogin(this._login);
-              });
+              showConfirmationDialog(
+                {
+                  type: "discard-changes",
+                  existingLogin: !!this._login.guid,
+                },
+                () => {
+                  this.setLogin(this._login);
+                }
+              );
             } else {
               this.setLogin(this._login);
               window.dispatchEvent(
@@ -445,14 +452,22 @@ export default class LoginItem extends HTMLElement {
               method: "cancel",
             });
           } else {
-            this.showConfirmationDialog("discard-changes", () => {
-              window.dispatchEvent(
-                new CustomEvent("AboutLoginsClearSelection", {
-                  bubbles: true,
-                  detail: { newHeaderL10nId: "about-logins-header-login-list" },
-                })
-              );
-            });
+            showConfirmationDialog(
+              {
+                type: "discard-changes",
+                existingLogin: !!this._login.guid,
+              },
+              () => {
+                window.dispatchEvent(
+                  new CustomEvent("AboutLoginsClearSelection", {
+                    bubbles: true,
+                    detail: {
+                      newHeaderL10nId: "about-logins-header-login-list",
+                    },
+                  })
+                );
+              }
+            );
           }
           return;
         }
@@ -513,14 +528,20 @@ export default class LoginItem extends HTMLElement {
           classList.contains("delete-button") ||
           classList.contains("remove-login-button")
         ) {
-          this.showConfirmationDialog("delete", () => {
-            document.dispatchEvent(
-              new CustomEvent("AboutLoginsDeleteLogin", {
-                bubbles: true,
-                detail: this._login,
-              })
-            );
-          });
+          showConfirmationDialog(
+            {
+              type: "delete",
+              existingLogin: !!this._login.guid,
+            },
+            () => {
+              document.dispatchEvent(
+                new CustomEvent("AboutLoginsDeleteLogin", {
+                  bubbles: true,
+                  detail: this._login,
+                })
+              );
+            }
+          );
           return;
         }
         if (classList.contains("edit-button")) {
@@ -644,69 +665,26 @@ export default class LoginItem extends HTMLElement {
   confirmPendingChangesOnEvent(event, login) {
     if (this.hasPendingChanges()) {
       event.preventDefault();
-      this.showConfirmationDialog("discard-changes", () => {
-        // Clear any pending changes
-        this.setLogin(login);
+      showConfirmationDialog(
+        {
+          type: "discard-changes",
+          existingLogin: !!this._login.guid,
+        },
+        () => {
+          // Clear any pending changes
+          this.setLogin(login);
 
-        window.dispatchEvent(
-          new CustomEvent(event.type, {
-            detail: login,
-            cancelable: false,
-          })
-        );
-      });
+          window.dispatchEvent(
+            new CustomEvent(event.type, {
+              detail: login,
+              cancelable: false,
+            })
+          );
+        }
+      );
     } else {
       this.setLogin(login);
     }
-  }
-
-  /**
-   * Shows a confirmation dialog.
-   * @param {string} type The type of confirmation dialog to display.
-   * @param {boolean} onConfirm Optional, the function to execute when the confirm button is clicked.
-   */
-  showConfirmationDialog(type, onConfirm = () => {}) {
-    const dialog = document.querySelector("confirmation-dialog");
-    let options;
-    switch (type) {
-      case "delete": {
-        options = {
-          title: this.classList.contains("in-companion")
-            ? "about-logins-companion-confirm-remove-password-title"
-            : "about-logins-confirm-remove-dialog-title",
-          message: this.classList.contains("in-companion")
-            ? "companion-confirm-delete-dialog-message"
-            : "confirm-delete-dialog-message",
-          confirmButtonLabel:
-            "about-logins-confirm-remove-dialog-confirm-button",
-        };
-        break;
-      }
-      case "discard-changes": {
-        options = {
-          title: "confirm-discard-changes-dialog-title",
-          message: "confirm-discard-changes-dialog-message",
-          confirmButtonLabel: "confirm-discard-changes-dialog-confirm-button",
-        };
-        break;
-      }
-    }
-    let wasExistingLogin = !!this._login.guid;
-    let method = type == "delete" ? "delete" : "cancel";
-    let dialogPromise = dialog.show(options);
-    dialogPromise.then(
-      () => {
-        try {
-          onConfirm();
-        } catch (ex) {}
-        this._recordTelemetryEvent({
-          object: wasExistingLogin ? "existing_login" : "new_login",
-          method,
-        });
-      },
-      () => {}
-    );
-    return dialogPromise;
   }
 
   hasPendingChanges() {
@@ -821,9 +799,15 @@ export default class LoginItem extends HTMLElement {
       this.dataset.editing &&
       !window.AboutLoginsUtils.doLoginsMatch(login, this._loginFromForm());
     if (valuesChanged) {
-      this.showConfirmationDialog("discard-changes", () => {
-        this.setLogin(login);
-      });
+      showConfirmationDialog(
+        {
+          type: "discard-changes",
+          existingLogin: !!this._login.guid,
+        },
+        () => {
+          this.setLogin(login);
+        }
+      );
     } else {
       this.setLogin(login);
     }

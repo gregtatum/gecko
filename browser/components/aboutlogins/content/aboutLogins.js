@@ -5,6 +5,7 @@
 import {
   recordTelemetryEvent,
   setKeyboardAccessForNonDialogElements,
+  showConfirmationDialog,
 } from "./aboutLoginsUtils.js";
 
 // The init code isn't wrapped in a DOMContentLoaded/load event listener so the
@@ -56,15 +57,44 @@ function handleSyncState(syncState) {
   passwordSyncEnabled = syncState.passwordSyncEnabled;
 }
 
+/**
+ * Handles returning to the list view when clicking the header back button.
+ */
+function exitDetailView() {
+  // To support back navigation to the login list page, we clear the
+  // current selection and manipulate pref values to hide the
+  // login item.
+  window.dispatchEvent(
+    new CustomEvent("AboutLoginsClearSelection", {
+      bubbles: true,
+      detail: { newHeaderL10nId: "about-logins-header-login-list" },
+    })
+  );
+  window.dispatchEvent(
+    new CustomEvent("AboutLoginsRemoveUpdateState", {
+      bubbles: true,
+      detail: { newHeaderL10nId: "about-logins-header-login-list" },
+    })
+  );
+  gElements.loginItem.setLogin(gElements.loginItem._login);
+  gElements.loginList.classList.remove("editing");
+}
+
 gElements.backButton.addEventListener("click", event => {
   if (document.documentElement.classList.contains("login-item-view")) {
-    // To support back navigation to the login list page, we clear the
-    // current selection and manipulate pref values to hide the
-    // login item.
-    window.dispatchEvent(new CustomEvent("AboutLoginsClearSelection"));
-    window.dispatchEvent(new CustomEvent("AboutLoginsRemoveUpdateState"));
-    toggleHeaderValue("about-logins-header-login-list");
-    gElements.loginList.classList.remove("editing");
+    // If user has changed login details, confirm whether to discard
+    // before moving back to the list.
+    if (gElements.loginItem.hasPendingChanges()) {
+      showConfirmationDialog(
+        {
+          type: "discard-changes",
+          existingLogin: !!gElements.loginItem._login.guid,
+        },
+        exitDetailView
+      );
+    } else {
+      exitDetailView();
+    }
   } else {
     document.dispatchEvent(
       new CustomEvent("AboutLoginsBrowsePanel", { bubbles: true })
