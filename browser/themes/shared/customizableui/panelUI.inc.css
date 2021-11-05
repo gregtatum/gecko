@@ -1377,6 +1377,7 @@ menuitem.subviewbutton@menuStateActive@,
 #identity-popup-securityView > toolbarseparator,
 #editBookmarkPanel toolbarseparator,
 #downloadsFooterButtons > toolbarseparator,
+#page-action-panel-mainview toolbarseparator,
 .cui-widget-panelview menuseparator,
 .cui-widget-panel toolbarseparator {
   appearance: none;

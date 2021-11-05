@@ -376,8 +376,6 @@ export default class ActiveViewManager extends HTMLElement {
 
     let readerMode = document.getElementById("page-action-reader-mode");
     readerMode.hidden = true;
-    let pageActionsPanel = document.getElementById("page-action-panel");
-    pageActionsPanel.classList.remove("reader-mode-available");
   }
 
   #pageActionPanelShowing(event) {
@@ -397,8 +395,6 @@ export default class ActiveViewManager extends HTMLElement {
     if (view.isArticle) {
       let readerMode = document.getElementById("page-action-reader-mode");
       readerMode.hidden = false;
-      let pageActionPanel = document.getElementById("page-action-panel");
-      pageActionPanel.classList.add("reader-mode-available");
     }
 
     let pageActionTitleEl = document.getElementById("site-info-title");

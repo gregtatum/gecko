@@ -154,30 +154,37 @@
       <panel id="page-action-panel" type="arrow" class="panel-no-padding">
         <panelmultiview id="page-action-panel-multiview" mainViewId="page-action-panel-mainview">
           <panelview id="page-action-panel-mainview">
-          <vbox id="page-action-panel-sections">
-            <hbox id="page-actions-section">
+          <div id="page-action-panel-sections">
+            <div id="page-actions-section">
               <toolbarbutton id="page-action-pin-view"
                              data-l10n-id="page-action-toggle-pinning"
                              data-l10n-args='{"isPinned": false}'
+                             wrap="true"
                              oncommand="gActiveViewManager.pageActionPinView(event);"/>
               <toolbarbutton id="page-action-copy-url"
                              data-l10n-id="page-action-copy-url"
+                             wrap="true"
                              oncommand="gActiveViewManager.pageActionCopyURL(event);"/>
               <toolbarbutton id="page-action-mute"
+                             wrap="true"
                              command="cmd_toggleMute"/>
               <toolbarbutton id="page-action-reader-mode"
                              hidden="true"
+                             wrap="true"
                              data-l10n-id="page-action-reader-mode"
                              command="View:ReaderView"/>
               <!-- The Close button should always be the last item before More. -->
               <toolbarbutton id="page-action-close-view"
                              data-l10n-id="page-action-close-view"
+                             wrap="true"
                              oncommand="PineBuildUIUtils.closeCurrentView();"/>
               <toolbarbutton id="page-action-more"
                              hidden="true"
+                             wrap="true"
                              data-l10n-id="page-action-more"/>
-            </hbox>
-            <hbox id="site-info-section">
+            </div>
+            <toolbarseparator/>
+            <div id="site-info-section">
               <div id="site-info-title-section">
                 <html:input type="text" id="site-info-title" oninput="gActiveViewManager.pageActionEditViewTitle(event);"></html:input>
                 <div id="site-info-edit-icon"></div>
@@ -187,8 +194,8 @@
                 <img id="site-security-icon"/>
                 <div id="site-security-info"></div>
               </div>
-            </hbox>
-          </vbox>
+            </div>
+          </div>
           </panelview>
         </panelmultiview>
       </panel>
