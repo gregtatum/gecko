@@ -132,6 +132,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     if (!perWindowEnabled) {
       return;
     }
+    this.#pendingSaves.clear();
     Services.obs.removeObserver(this, WINDOW_TRACKER_REMOVE_TOPIC);
     Services.obs.removeObserver(this, SESSION_WRITE_COMPLETE_TOPIC);
   }
