@@ -10697,22 +10697,30 @@ var WorkshopBackend = (() => {
           });
         }
         ingestEntry(entry) {
+          const getContent = (value) => value?.["#content"] || value;
           const data = this._makeDefaultData();
-          entry.title = entry.title?.["#content"] || "";
-          entry.summary = entry.summary?.["#content"] || "";
+          for (const fieldName of [
+            "title",
+            "summary",
+            "id",
+            "published",
+            "updated"
+          ]) {
+            entry[fieldName] = getContent(entry[fieldName]);
+          }
           data.guid = entry.id || entry.title || entry.summary || NOW().valueOf().toString();
           data.date = (entry.published || entry.updated || NOW()).valueOf();
           data.dateModified = entry.updated?.valueOf() || data.date;
           const author = entry.author?.[0];
           if (author?.name && author?.email) {
-            data.author = `${author.name} (${author.email})`;
+            data.author = `${getContent(author.name)} (${getContent(author.email)})`;
           } else {
-            data.author = author?.name || author?.email || data.author;
+            data.author = getContent(author?.name) || getContent(author?.email) || data.author;
           }
           data.title = entry.title || data.title;
           if (entry.content) {
             if (entry.content.type === "text") {
-              data.description = entry.content["#content"];
+              data.description = getContent(entry.content);
               data.contentType = "plain";
             } else {
               data.description = entry.content.div;

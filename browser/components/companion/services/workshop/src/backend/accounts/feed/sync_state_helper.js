@@ -147,9 +147,20 @@ export default class FeedSyncStateHelper {
    *   https://datatracker.ietf.org/doc/html/rfc4287#section-4.1.2
    */
   ingestEntry(entry) {
+    // When a node which contains a single value (string, number, ...) has some
+    // attributes then the dumped node has the following structure:
+    //   {attr1: ... , attr2: ..., #content: ...}
+    const getContent = value => value?.["#content"] || value;
     const data = this._makeDefaultData();
-    entry.title = entry.title?.["#content"] || "";
-    entry.summary = entry.summary?.["#content"] || "";
+    for (const fieldName of [
+      "title",
+      "summary",
+      "id",
+      "published",
+      "updated",
+    ]) {
+      entry[fieldName] = getContent(entry[fieldName]);
+    }
 
     // Normally we should always have an id.
     data.guid =
@@ -163,14 +174,15 @@ export default class FeedSyncStateHelper {
     data.dateModified = entry.updated?.valueOf() || data.date;
     const author = entry.author?.[0];
     if (author?.name && author?.email) {
-      data.author = `${author.name} (${author.email})`;
+      data.author = `${getContent(author.name)} (${getContent(author.email)})`;
     } else {
-      data.author = author?.name || author?.email || data.author;
+      data.author =
+        getContent(author?.name) || getContent(author?.email) || data.author;
     }
     data.title = entry.title || data.title;
     if (entry.content) {
       if (entry.content.type === "text") {
-        data.description = entry.content["#content"];
+        data.description = getContent(entry.content);
         data.contentType = "plain";
       } else {
         data.description = entry.content.div;

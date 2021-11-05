@@ -6,9 +6,9 @@
 "use strict";
 
 /**
- * Validate a RSS account with a RSS feed generated from a calendar.
+ * Validate a feed account with a feed generated from a calendar.
  */
-async function check_rss_account({
+async function check_feed_account({
   configurator,
   initialEventSketches,
   addEventSketches,
@@ -110,12 +110,22 @@ const ADD_EVENTS = [
 /* We don't really care about the data we can have in the feed itself.
    So we just reuse the ones we have for events.
    */
-add_task(async function test_feed_accounts() {
-  await check_rss_account({
+add_task(async function test_rss_account() {
+  await check_feed_account({
     configurator: FeedConfigurator,
     initialEventSketches: INITIAL_EVENTS,
     addEventSketches: ADD_EVENTS,
     calendarId: "default",
     feedType: "rss",
+  });
+});
+
+add_task(async function test_atom_account() {
+  await check_feed_account({
+    configurator: FeedConfigurator,
+    initialEventSketches: INITIAL_EVENTS,
+    addEventSketches: ADD_EVENTS,
+    calendarId: "default",
+    feedType: "atom",
   });
 });

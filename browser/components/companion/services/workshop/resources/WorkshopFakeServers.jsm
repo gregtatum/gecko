@@ -628,6 +628,7 @@ class FeedFakeServer extends BaseFakeServer {
         extraPathSegments: ["calendarId", "*METHOD*"],
         methodHandlers: {
           rss: this.unpaged(this.unpaged_rss),
+          atom: this.unpaged(this.unpaged_atom),
         },
       },
     ];
@@ -721,6 +722,52 @@ class FeedFakeServer extends BaseFakeServer {
             };
           }),
         },
+      },
+    };
+
+    return this.toXML(xml);
+  }
+
+  unpaged_atom(args, req) {
+    const cal = this.getCalendarById(args.calendarId);
+    const xml = {
+      feed: {
+        _attributes: {
+          xmlns: "http://www.w3.org/2005/Atom",
+        },
+        title: "Allizom news",
+        link: "https://allizom.org",
+        id: "https://alizom.org/atom",
+        subtitle: "Mozilla Atom feed",
+        updated: "Sun, 14 Mar 2021 01:59:26 GMT",
+        entry: cal.events.map(event => {
+          return {
+            title: {
+              _attributes: {
+                lang: "en-US",
+              },
+              _content: event.summary,
+            },
+            content: {
+              _attributes: {
+                type: "text",
+              },
+              _content: event.description,
+            },
+            author: {
+              name: event.creator.displayName,
+              email: event.creator.email,
+            },
+            category: {
+              _attributes: {
+                term: event.location || "",
+              },
+            },
+            published: event.startDate.toISOString(),
+            updated: event.endDate.toISOString(),
+            id: event.id,
+          };
+        }),
       },
     };
 
