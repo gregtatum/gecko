@@ -274,13 +274,13 @@
 /** END Page info security icons **/
 
 #page-action-panel {
-  margin-inline-end: -40px;
+  margin-inline-end: -20px;
+  min-width: 285px;
 }
 
 #page-action-panel-sections {
   display: flex;
   flex-direction: column;
-  width: 428px;
   padding: 8px;
 }
 
