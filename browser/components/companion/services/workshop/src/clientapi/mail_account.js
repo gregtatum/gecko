@@ -186,7 +186,7 @@ export class MailAccount extends Emitter {
     return this._api._modifyAccount(this, mods);
   }
 
-  async modifyFolder(mods) {
+  modifyFolder(mods) {
     return this._api._modifyFolder(this, mods);
   }
 
@@ -197,7 +197,7 @@ export class MailAccount extends Emitter {
    * from scratch without typing things all over again.
    */
   recreateAccount() {
-    this._api._recreateAccount(this);
+    return this._api._recreateAccount(this);
   }
 
   /**
@@ -206,7 +206,7 @@ export class MailAccount extends Emitter {
    * (IndexedDB) database's guarantees on that.
    */
   deleteAccount() {
-    this._api._deleteAccount(this);
+    return this._api._deleteAccount(this);
   }
 
   /**

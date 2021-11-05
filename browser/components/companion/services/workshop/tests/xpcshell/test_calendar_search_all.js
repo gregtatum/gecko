@@ -141,9 +141,18 @@ async function check_searchAllMessages_with_accounts({
 
   // ## Cleanup
   // ### Delete the accounts.
-  await Promise.all(
+  const expectedNulls = new Array(allFakeServers.length);
+  expectedNulls.fill(null);
+  const nullDeletions = await Promise.all(
     workshopAPI.accounts.items.map(acct => acct.deleteAccount())
   );
+  deepEqual(
+    nullDeletions,
+    expectedNulls,
+    "deleteAccount should resolve with null"
+  );
+
+  deepEqual(workshopAPI.accounts.items, [], "no more accounts after deletion!");
 
   // TODO: This is where we'd decomission the fake-servers and/or their users.
 }

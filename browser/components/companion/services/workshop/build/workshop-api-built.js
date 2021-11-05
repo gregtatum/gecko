@@ -2160,14 +2160,14 @@ var MailAccount = class extends import_evt8.Emitter {
   modifyAccount(mods) {
     return this._api._modifyAccount(this, mods);
   }
-  async modifyFolder(mods) {
+  modifyFolder(mods) {
     return this._api._modifyFolder(this, mods);
   }
   recreateAccount() {
-    this._api._recreateAccount(this);
+    return this._api._recreateAccount(this);
   }
   deleteAccount() {
-    this._api._deleteAccount(this);
+    return this._api._deleteAccount(this);
   }
   async syncFolderList() {
     await this._api._sendPromisedRequest({
