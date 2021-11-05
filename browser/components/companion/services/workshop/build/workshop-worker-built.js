@@ -14641,7 +14641,7 @@ var WorkshopBackend = (() => {
       ctx.cleanup();
     }
     cleanupAll() {
-      for (let namedContext of this._namedContext.values()) {
+      for (let namedContext of this._namedContexts.values()) {
         namedContext.cleanup();
       }
       this._namedContexts.clear();
@@ -22773,12 +22773,10 @@ var WorkshopBackend = (() => {
       });
     },
     deleteAccount(accountId, why) {
-      return this.taskManager.scheduleTasksAndWaitForExecutedResult([
-        {
-          type: "account_delete",
-          accountId
-        }
-      ], why);
+      return this.taskManager.scheduleTaskAndWaitForExecutedResult({
+        type: "account_delete",
+        accountId
+      }, why);
     },
     recreateAccount(accountId, why) {
       let accountDef = this.accountManager.getAccountDefById(accountId);

@@ -758,13 +758,11 @@ MailUniverse.prototype = {
    * Shutdown the account, forget about it, nuke associated database entries.
    */
   deleteAccount(accountId, why) {
-    return this.taskManager.scheduleTasksAndWaitForExecutedResult(
-      [
-        {
-          type: "account_delete",
-          accountId,
-        },
-      ],
+    return this.taskManager.scheduleTaskAndWaitForExecutedResult(
+      {
+        type: "account_delete",
+        accountId,
+      },
       why
     );
   },

@@ -194,7 +194,7 @@ export class BridgeContext {
   }
 
   cleanupAll() {
-    for (let namedContext of this._namedContext.values()) {
+    for (let namedContext of this._namedContexts.values()) {
       namedContext.cleanup();
     }
     this._namedContexts.clear();
