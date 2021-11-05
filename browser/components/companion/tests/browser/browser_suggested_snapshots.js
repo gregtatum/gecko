@@ -3,14 +3,17 @@
 
 "use strict";
 
-const TEST_URL0 = "https://example.com/";
-const TEST_URL1 = "https://invalid.com/";
-const TEST_URL2 = "https://foo.com/";
-const TEST_URL3 = "https://bar.com/";
-const TITLES = ["mochitest index /", "Page 2", "Page 3", "Page 4"];
+const TEST_URL0 = "https://invalid.com/";
+const TEST_URL1 = "https://foo.com/";
+const TEST_URL2 = "https://bar.com/";
+const TEST_URL3 = "https://example.com/";
+const TITLES = ["Page 0", "Page 1", "Page 2", "mochitest index /"];
 
 const { FilterAdult } = ChromeUtils.import(
   "resource://activity-stream/lib/FilterAdult.jsm"
+);
+const { Interactions } = ChromeUtils.import(
+  "resource:///modules/Interactions.jsm"
 );
 
 let win;
@@ -60,6 +63,8 @@ function testSnapshotTitles(helper, expectedTitles, excludedTitle) {
 }
 
 add_task(async function setup() {
+  await Interactions.reset();
+  await PlacesUtils.history.clear();
   await PlacesTestUtils.addVisits([
     { uri: TEST_URL0, title: TITLES[0] },
     { uri: TEST_URL1, title: TITLES[1] },
@@ -106,19 +111,20 @@ add_task(async function test_suggested_snapshots_filter_adult() {
 
 add_task(async function test_current_snapshot_hidden() {
   await CompanionHelper.whenReady(async helper => {
-    // There are four snapshots added when starting the test, visit the first.
-    BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, TEST_URL0);
+    // There are four snapshots added when starting the test, visit the last
+    // so that we don't cause a visit order change.
+    BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, TEST_URL3);
     await BrowserTestUtils.browserLoaded(
       win.gBrowser.selectedBrowser,
       false,
-      TEST_URL0
+      TEST_URL3
     );
 
     await testSnapshotTitles(
       helper,
-      [TITLES[3], TITLES[2], TITLES[1]],
+      [TITLES[2], TITLES[1], TITLES[0]],
       // The page we're on shouldn't be displayed.
-      TITLES[0]
+      TITLES[3]
     );
 
     let originalTab = win.gBrowser.selectedTab;
@@ -138,8 +144,8 @@ add_task(async function test_current_snapshot_hidden() {
 
     await testSnapshotTitles(
       helper,
-      [TITLES[3], TITLES[2], TITLES[1]],
-      TITLES[0]
+      [TITLES[2], TITLES[1], TITLES[0]],
+      TITLES[3]
     );
   }, win);
 });
