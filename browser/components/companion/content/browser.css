@@ -373,6 +373,7 @@
   padding-inline: 4px;
 }
 
+#site-info-url-section,
 #site-info-title-section {
   display: flex;
   margin-block-start: 6px;
@@ -392,6 +393,7 @@
   display: none;
 }
 
+#site-info-url:focus-visible,
 #site-info-title:focus-visible {
   outline: 1px solid var(--focus-outline-color);
   border-radius: 4px;
@@ -415,11 +417,10 @@
 }
 
 #site-info-url {
-  margin-block-start: 6px;
+  flex: 1;
+  margin: 0;
+  border: 0;
   padding-block: 8px;
-  overflow: scroll;
-  scrollbar-width: none;
-  user-select: all;
   background-color: var(--toolbar-field-background-color);
 }
 

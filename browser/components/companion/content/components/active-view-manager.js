@@ -216,6 +216,12 @@ export default class ActiveViewManager extends HTMLElement {
         this.#onDragEnd(event);
         break;
       }
+      case "keydown": {
+        if (this.#pageActionPanel.contains(event.target)) {
+          this.#pageActionPanelKeyDown(event);
+        }
+        break;
+      }
       case "popuphiding": {
         if (event.currentTarget == this.#pageActionPanel) {
           this.#pageActionPanelHiding(event);
@@ -358,6 +364,7 @@ export default class ActiveViewManager extends HTMLElement {
         panel.addEventListener("popupshowing", this);
         panel.addEventListener("popuphiding", this);
         panel.addEventListener("click", this);
+        panel.addEventListener("keydown", this);
       }
 
       this.#pageActionPanel = panel;
@@ -402,9 +409,13 @@ export default class ActiveViewManager extends HTMLElement {
     pageActionTitleEl.scrollLeft = 0;
 
     let pageActionUrlEl = document.getElementById("site-info-url");
-    pageActionUrlEl.textContent = view.url.spec;
-    pageActionUrlEl.setAttribute("tooltiptext", view.url.spec);
+    pageActionUrlEl.value = view.url.spec;
     pageActionUrlEl.scrollLeft = 0;
+
+    let pageActionUrlSectionEl = document.getElementById(
+      "site-info-url-section"
+    );
+    pageActionUrlSectionEl.setAttribute("tooltiptext", view.url.spec);
 
     this.#securityIconClass = getSiteSecurityInfo(view);
     let siteSecurityIcon = document.getElementById("site-security-icon");
@@ -433,6 +444,17 @@ export default class ActiveViewManager extends HTMLElement {
     if (event.target == editImg) {
       let titleEl = document.getElementById("site-info-title");
       titleEl.focus();
+    }
+  }
+
+  #pageActionPanelKeyDown(event) {
+    let urlEl = document.getElementById("site-info-url");
+    if (event.target == urlEl && event.keyCode == KeyEvent.DOM_VK_RETURN) {
+      let url = event.target.value;
+      window.openTrustedLinkIn(url, "tab", {
+        fromChrome: true,
+        skipTabAnimation: true,
+      });
     }
   }
 
