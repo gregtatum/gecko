@@ -129,3 +129,23 @@ add_task(async function test_atom_account() {
     feedType: "atom",
   });
 });
+
+add_task(async function test_jsonfeed_account() {
+  await check_feed_account({
+    configurator: FeedConfigurator,
+    initialEventSketches: INITIAL_EVENTS,
+    addEventSketches: ADD_EVENTS,
+    calendarId: "default",
+    feedType: "jsonfeed",
+  });
+});
+
+add_task(async function test_hfeed_account() {
+  await check_feed_account({
+    configurator: FeedConfigurator,
+    initialEventSketches: INITIAL_EVENTS,
+    addEventSketches: ADD_EVENTS,
+    calendarId: "default",
+    feedType: "hfeed",
+  });
+});

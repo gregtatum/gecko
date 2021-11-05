@@ -426,7 +426,7 @@ function valueClassPatternDateTime(aNode) {
       getAttributeFor(el, ["ABBR"], "title") ??
       getAttributeFor(el, ["DEL", "INS", "TIME"], "datetime") ??
       el.innerText
-  );
+  ).map(value => value.trim());
 
   if (!values.length) {
     return undefined;
@@ -515,7 +515,7 @@ function parseU(aNode, aOptions) {
  * @returns {Date}
  */
 function parseDt(aNode) {
-  const getDate = value => new Date(value);
+  const getDate = value => new Date(value.trim());
   return (
     valueClassPatternDateTime(aNode) ??
     getAttributeForAndApply(

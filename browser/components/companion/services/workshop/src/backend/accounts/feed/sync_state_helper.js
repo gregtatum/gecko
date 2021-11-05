@@ -71,7 +71,7 @@ export default class FeedSyncStateHelper {
     data.date = (entry.published?.[0] || NOW()).valueOf();
     data.dateModified = (entry.updated?.[0] || NOW()).valueOf();
     data.author = entry.author?.[0] || data.author;
-    data.title = entry.name?.[0] || data.title;
+    data.title = entry.name?.[0] || entry.summary?.[0] || data.title;
 
     const content = entry.content?.[0] || {};
     if (content.html) {

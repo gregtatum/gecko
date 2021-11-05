@@ -144,7 +144,7 @@ class BaseFakeServer {
     return `${this.origin}/blah/${cal.id}/${event.id}`;
   }
 
-  wrapResults(results) {
+  wrapResults(results, isPaged, args) {
     return {
       results,
       strResults: JSON.stringify(results),
@@ -184,7 +184,8 @@ class BaseFakeServer {
         const isPaged = handler.paged;
         const { strResults, results, mimeType } = this.wrapResults(
           handler.call(this, args, req),
-          isPaged
+          isPaged,
+          args
         );
 
         this.logRequest(req.path, { results });
@@ -276,16 +277,20 @@ class GapiFakeServer extends BaseFakeServer {
     };
   }
 
-  wrapResults(results, isPaged) {
+  wrapResults(results, isPaged, args) {
     if (isPaged) {
-      return super.wrapResults({
-        kind: "not-a-real-type",
-        etag: "not-a-real-etag",
-        items: results,
-        nextSyncToken: "not-a-real-sync-token-yet",
-      });
+      return super.wrapResults(
+        {
+          kind: "not-a-real-type",
+          etag: "not-a-real-etag",
+          items: results,
+          nextSyncToken: "not-a-real-sync-token-yet",
+        },
+        isPaged,
+        args
+      );
     }
-    return super.wrapResults(results);
+    return super.wrapResults(results, isPaged, args);
   }
 
   /**
@@ -479,10 +484,14 @@ class MapiFakeServer extends BaseFakeServer {
     };
   }
 
-  wrapResults(results, isPaged) {
-    return super.wrapResults({
-      value: results,
-    });
+  wrapResults(results, isPaged, args) {
+    return super.wrapResults(
+      {
+        value: results,
+      },
+      isPaged,
+      args
+    );
   }
 
   /**
@@ -629,6 +638,8 @@ class FeedFakeServer extends BaseFakeServer {
         methodHandlers: {
           rss: this.unpaged(this.unpaged_rss),
           atom: this.unpaged(this.unpaged_atom),
+          jsonfeed: this.unpaged(this.unpaged_jsonfeed),
+          hfeed: this.unpaged(this.unpaged_hfeed),
         },
       },
     ];
@@ -649,11 +660,27 @@ class FeedFakeServer extends BaseFakeServer {
     };
   }
 
-  wrapResults(results, isPaged) {
+  wrapResults(results, isPaged, args) {
+    let mimeType;
+    let strResults = results;
+    switch (args["*METHOD*"]) {
+      case "atom":
+      case "rss":
+        mimeType = "application/xml";
+        break;
+      case "jsonfeed":
+        mimeType = "application/json";
+        strResults = JSON.stringify(results);
+        break;
+      case "hfeed":
+        mimeType = "text/html";
+        break;
+    }
+
     return {
       results,
-      strResults: results,
-      mimeType: "application/xml",
+      strResults,
+      mimeType,
     };
   }
 
@@ -669,7 +696,7 @@ class FeedFakeServer extends BaseFakeServer {
   #toXMLHelper(data, parentKey, attributes, buf) {
     if (Array.isArray(data)) {
       for (const val of data) {
-        this.#toXMLHelper(val, parentKey, attributes, buf);
+        this.#toXMLHelper(val, parentKey, attributes || val._attributes, buf);
       }
       return;
     }
@@ -690,10 +717,10 @@ class FeedFakeServer extends BaseFakeServer {
     buf.push(`</${parentKey}>`);
   }
 
-  toXML(data) {
+  toXML(data, isHTML = false) {
     const mainKey = Object.keys(data)[0];
     data = data[mainKey];
-    const buffer = ['<?xml version="1.0"?>'];
+    const buffer = isHTML ? [] : ['<?xml version="1.0"?>'];
     this.#toXMLHelper(data, mainKey, data._attributes, buffer);
     return buffer.join("\n");
   }
@@ -772,5 +799,70 @@ class FeedFakeServer extends BaseFakeServer {
     };
 
     return this.toXML(xml);
+  }
+
+  unpaged_jsonfeed(args, req) {
+    const cal = this.getCalendarById(args.calendarId);
+    return {
+      version: "https://jsonfeed.org/version/1.1",
+      title: "Allizom news",
+      home_page_url: "https://allizom.org",
+      feed_url: "https://allizom.org/feed/default/jsonfeed",
+      description: "Mozilla JSON feed",
+      items: cal.events.map(event => {
+        return {
+          id: event.id,
+          title: event.summary,
+          content_text: event.description,
+          author: {
+            name: event.creator.displayName,
+            url: event.creator.email,
+          },
+          tags: event.location || "",
+          date_published: event.startDate.toISOString(),
+          date_modified: event.endDate.toISOString(),
+        };
+      }),
+    };
+  }
+
+  unpaged_hfeed(args, req) {
+    const cal = this.getCalendarById(args.calendarId);
+    const makeNode = (key, value) => ({
+      _attributes: {
+        class: key,
+      },
+      _content: value,
+    });
+    const html = {
+      div: {
+        _attributes: {
+          class: "h-feed",
+        },
+        span: [
+          makeNode("p-name", "Allizom news"),
+          makeNode("u-url", "https://allizom.org"),
+          makeNode("p-author", "Alli Zom"),
+        ],
+        div: cal.events.map(event => ({
+          div: {
+            _attributes: {
+              class: "h-entry",
+            },
+            span: [
+              makeNode("p-summary", event.summary),
+              makeNode("e-content", event.description),
+              makeNode("p-author", event.creator.displayName),
+              makeNode("p-category", event.location || ""),
+              makeNode("dt-published", event.startDate.toISOString()),
+              makeNode("dt-updated", event.endDate.toISOString()),
+              makeNode("u-uid", `https://allizom.org/${event.id}`),
+            ],
+          },
+        })),
+      },
+    };
+
+    return this.toXML(html, true);
   }
 }
