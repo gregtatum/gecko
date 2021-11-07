@@ -44,6 +44,18 @@ function openWindow() {
   }
 }
 
+function openOrFocusWindow() {
+  let browserWindow = Services.wm.getMostRecentWindow("navigator:browser");
+  if (browserWindow) {
+    browserWindow.focus();
+  } else {
+    const { openBrowserWindow } = ChromeUtils.import(
+      "resource:///modules/BrowserContentHandler.jsm"
+    );
+    openBrowserWindow();
+  }
+}
+
 async function exitApplication() {
   let browserWindow = Services.wm.getMostRecentWindow("navigator:browser");
   if (browserWindow && browserWindow.gBrowserInit) {
@@ -66,4 +78,8 @@ window.addEventListener("popupshowing", event => {
     menuitem.addEventListener("command", item.command);
   }
   menupopup._initialied = true;
+});
+
+window.addEventListener("systemstatusbarclick", event => {
+  openOrFocusWindow();
 });
