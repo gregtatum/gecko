@@ -313,25 +313,12 @@ class DisplayNames final {
    */
   DisplayNamesError ToError(Locale::CanonicalizationError aError) const;
 
-  static bool SupportsUtf8(DisplayNames::Type aType);
-
   /**
-   * Get the results for a display name.
+   * Get the results for a display name given a code. The code is specific to
+   * the type of display name being requested.
    *
    * https://tc39.es/ecma402/#sec-Intl.DisplayNames.prototype.of
    * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DisplayNames/of
-   *
-   * Note that this function can take either a `char` or `char16_t` CharType.
-   * This was done to ensure there is a single public DisplayName::Of method
-   * exposed for computing everything. However, the underlying ICU4C calls may
-   * require one type or another. Rather than introduce extraneous string
-   * copying, this method enforces the correct CharType through a template.
-   *
-   * Use the `DisplayNames::SupportsUtf8()` method to determine which type of
-   * buffer to use.
-   *
-   * In the future, if we switch from ICU4C to ICU4X, this will most likely
-   * always require a `char` type.
    */
   template <typename B>
   Result<Ok, DisplayNamesError> Of(B& aBuffer, Span<const char> aCode,

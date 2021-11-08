@@ -33,26 +33,6 @@ const char* DisplayNames::ToString(DisplayNames::Type aType) {
   return "";
 }
 
-/* static */
-bool DisplayNames::SupportsUtf8(DisplayNames::Type aType) {
-  switch (aType) {
-    case Type::Script:
-    case Type::Region:
-    case Type::Language:
-      return true;
-    case Type::Currency:
-    case Type::Calendar:
-    case Type::Weekday:
-    case Type::Month:
-    case Type::Quarter:
-    case Type::DayPeriod:
-    case Type::DateTimeField:
-      return false;
-  }
-  MOZ_ASSERT_UNREACHABLE();
-  return true;
-}
-
 DisplayNames::~DisplayNames() {
   // The mDisplayNames will not exist when the DisplayNames is being
   // moved.

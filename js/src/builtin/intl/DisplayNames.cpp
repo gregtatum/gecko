@@ -9,9 +9,7 @@
 #include "builtin/intl/DisplayNames.h"
 
 #include "mozilla/Assertions.h"
-#include "mozilla/intl/DateTimePatternGenerator.h"
 #include "mozilla/intl/DisplayNames.h"
-#include "mozilla/intl/Locale.h"
 #include "mozilla/Span.h"
 #include "mozilla/TextUtils.h"
 
@@ -24,9 +22,6 @@
 
 #include "builtin/intl/CommonFunctions.h"
 #include "builtin/intl/FormatBuffer.h"
-#include "builtin/intl/LanguageTag.h"
-#include "builtin/intl/ScopedICUObject.h"
-#include "builtin/intl/SharedIntlData.h"
 #include "builtin/intl/StringAsciiChars.h"
 #include "builtin/String.h"
 #include "gc/AllocKind.h"
@@ -44,20 +39,10 @@
 #include "js/RootingAPI.h"
 #include "js/TypeDecls.h"
 #include "js/Utility.h"
-#include "unicode/ucal.h"
-#include "unicode/ucurr.h"
-#include "unicode/udat.h"
-#include "unicode/udatpg.h"
-#include "unicode/udisplaycontext.h"
-#include "unicode/uldnames.h"
-#include "unicode/uloc.h"
-#include "unicode/umachine.h"
-#include "unicode/utypes.h"
 #include "vm/GlobalObject.h"
 #include "vm/JSAtom.h"
 #include "vm/JSContext.h"
 #include "vm/JSObject.h"
-#include "vm/List.h"
 #include "vm/Printer.h"
 #include "vm/Runtime.h"
 #include "vm/SelfHosting.h"
@@ -66,15 +51,11 @@
 #include "vm/WellKnownAtom.h"  // js_*_str
 
 #include "vm/JSObject-inl.h"
-#include "vm/List-inl.h"
 #include "vm/NativeObject-inl.h"
 
 using namespace js;
 
-using js::intl::CallICU;
 using js::intl::IcuLocale;
-
-using mozilla::intl::LocaleParser;
 
 const JSClassOps DisplayNamesObject::classOps_ = {nullptr, /* addProperty */
                                                   nullptr, /* delProperty */
@@ -298,658 +279,6 @@ static void ReportInvalidOptionError(JSContext* cx, const char* type,
   }
 }
 
-static void ReportInvalidOptionError(JSContext* cx, const char* type,
-                                     double option) {
-  ToCStringBuf cbuf;
-  if (const char* str = NumberToCString(cx, &cbuf, option)) {
-    JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
-                              JSMSG_INVALID_DIGITS_VALUE, str);
-  }
-}
-
-static bool TryParseBaseName(JSContext* cx, HandleLinearString languageStr,
-                             mozilla::intl::Locale& tag) {
-  if (StringIsAscii(languageStr)) {
-    intl::StringAsciiChars chars(languageStr);
-    if (!chars.init(cx)) {
-      return false;
-    }
-
-    if (LocaleParser::tryParseBaseName(chars, tag).isOk()) {
-      return true;
-    }
-  }
-
-  ReportInvalidOptionError(cx, "language", languageStr);
-  return false;
-}
-
-static JSString* GetScriptDisplayName(
-    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    mozilla::intl::DisplayNames::Style displayStyle,
-    mozilla::intl::DisplayNames::Fallback fallback,
-    HandleLinearString scriptStr) {
-  mozilla::intl::ScriptSubtag script;
-  if (!intl::ParseStandaloneScriptTag(scriptStr, script)) {
-    ReportInvalidOptionError(cx, "script", scriptStr);
-    return nullptr;
-  }
-
-  mozilla::intl::Locale tag;
-  tag.setLanguage("und");
-  tag.setScript(script);
-
-  // ICU always canonicalizes the input locale, but since we know that ICU's
-  // canonicalization is incomplete, we need to perform our own canonicalization
-  // to ensure consistent result.
-  if (tag.canonicalizeBaseName().isErr()) {
-    intl::ReportInternalError(cx);
-    return nullptr;
-  }
-
-  MOZ_ASSERT(tag.script().present());
-
-  // |uldn_scriptDisplayName| doesn't use the stand-alone form for script
-  // subtags, so we're using |uloc_getDisplayScript| instead. (This only applies
-  // to the long form.)
-  //
-  // ICU bug: https://unicode-org.atlassian.net/browse/ICU-9301
-  if (displayStyle == mozilla::intl::DisplayNames::Style::Long) {
-    // |uloc_getDisplayScript| expects a full locale identifier as its input.
-    intl::FormatBuffer<char> buffer(cx);
-    if (auto result = tag.toString(buffer); result.isErr()) {
-      intl::ReportInternalError(cx, result.unwrapErr());
-      return nullptr;
-    }
-
-    UniqueChars scriptChars = buffer.extractStringZ();
-    if (!scriptChars) {
-      return nullptr;
-    }
-
-    JSString* str =
-        CallICU(cx, [locale, &scriptChars](UChar* chars, uint32_t size,
-                                           UErrorCode* status) {
-          int32_t res = uloc_getDisplayScript(scriptChars.get(), locale, chars,
-                                              size, status);
-
-          // |uloc_getDisplayScript| reports U_USING_DEFAULT_WARNING when no
-          // display name was found.
-          if (*status == U_USING_DEFAULT_WARNING) {
-            *status = U_ZERO_ERROR;
-            res = 0;
-          }
-          return res;
-        });
-    if (!str) {
-      return nullptr;
-    }
-
-    // Return the case-canonicalized input when no localized name was found.
-    if (str->empty() &&
-        fallback == mozilla::intl::DisplayNames::Fallback::Code) {
-      script.toTitleCase();
-      return NewStringCopy<CanGC>(cx, script.span());
-    }
-
-    return str;
-  }
-
-  // Note: ICU requires the script subtag to be in canonical case.
-  const mozilla::intl::ScriptSubtag& canonicalScript = tag.script();
-
-  char scriptChars[mozilla::intl::LanguageTagLimits::ScriptLength + 1] = {};
-  std::copy_n(canonicalScript.span().data(), canonicalScript.length(),
-              scriptChars);
-
-  ULocaleDisplayNames* ldn =
-      GetOrCreateDisplayNames(cx, displayNames, locale, displayStyle);
-  if (!ldn) {
-    return nullptr;
-  }
-
-  JSString* str = CallICU(cx, [ldn, scriptChars](UChar* chars, uint32_t size,
-                                                 UErrorCode* status) {
-    int32_t res = uldn_scriptDisplayName(ldn, scriptChars, chars, size, status);
-
-    // |uldn_scriptDisplayName| reports U_ILLEGAL_ARGUMENT_ERROR when no display
-    // name was found.
-    if (*status == U_ILLEGAL_ARGUMENT_ERROR) {
-      *status = U_ZERO_ERROR;
-      res = 0;
-    }
-    return res;
-  });
-  if (!str) {
-    return nullptr;
-  }
-
-  // Return the case-canonicalized input when no localized name was found.
-  if (str->empty() && fallback == mozilla::intl::DisplayNames::Fallback::Code) {
-    script.toTitleCase();
-    return NewStringCopy<CanGC>(cx, script.span());
-  }
-
-  return str;
-}
-
-static JSString* GetCurrencyDisplayName(
-    JSContext* cx, const char* locale,
-    mozilla::intl::DisplayNames::Style displayStyle,
-    mozilla::intl::DisplayNames::Fallback fallback,
-    HandleLinearString currencyStr) {
-  // Inlined implementation of `IsWellFormedCurrencyCode ( currency )`.
-  if (currencyStr->length() != 3) {
-    ReportInvalidOptionError(cx, "currency", currencyStr);
-    return nullptr;
-  }
-
-  char16_t currency[] = {currencyStr->latin1OrTwoByteChar(0),
-                         currencyStr->latin1OrTwoByteChar(1),
-                         currencyStr->latin1OrTwoByteChar(2), '\0'};
-
-  if (!mozilla::IsAsciiAlpha(currency[0]) ||
-      !mozilla::IsAsciiAlpha(currency[1]) ||
-      !mozilla::IsAsciiAlpha(currency[2])) {
-    ReportInvalidOptionError(cx, "currency", currencyStr);
-    return nullptr;
-  }
-
-  UCurrNameStyle currencyStyle;
-  switch (displayStyle) {
-    case mozilla::intl::DisplayNames::Style::Long:
-      currencyStyle = UCURR_LONG_NAME;
-      break;
-    case mozilla::intl::DisplayNames::Style::Abbreviated:
-    case mozilla::intl::DisplayNames::Style::Short:
-      currencyStyle = UCURR_SYMBOL_NAME;
-      break;
-    case mozilla::intl::DisplayNames::Style::Narrow:
-      currencyStyle = UCURR_NARROW_SYMBOL_NAME;
-      break;
-  }
-
-  int32_t length = 0;
-  UErrorCode status = U_ZERO_ERROR;
-  const char16_t* name =
-      ucurr_getName(currency, locale, currencyStyle, nullptr, &length, &status);
-  if (U_FAILURE(status)) {
-    intl::ReportInternalError(cx);
-    return nullptr;
-  }
-  MOZ_ASSERT(length >= 0);
-
-  if (status == U_USING_DEFAULT_WARNING) {
-    // Return the canonicalized input when no localized currency name was found.
-    if (fallback == mozilla::intl::DisplayNames::Fallback::Code) {
-      // Canonical case for currency is upper case.
-      return js::StringToUpperCase(cx, currencyStr);
-    }
-    return cx->emptyString();
-  }
-
-  return NewStringCopyN<CanGC>(cx, name, size_t(length));
-}
-
-static JSString* GetCalendarDisplayName(
-    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    mozilla::intl::DisplayNames::Style displayStyle,
-    mozilla::intl::DisplayNames::Fallback fallback,
-    HandleLinearString calendarStr) {
-  // Report an error if the input can't be parsed as a Unicode type nonterminal.
-  if (calendarStr->empty() || !StringIsAscii(calendarStr)) {
-    ReportInvalidOptionError(cx, "calendar", calendarStr);
-    return nullptr;
-  }
-
-  UniqueChars calendar = EncodeAscii(cx, calendarStr);
-  if (!calendar) {
-    return nullptr;
-  }
-
-  if (LocaleParser::canParseUnicodeExtensionType(
-          mozilla::Span(calendar.get(), calendarStr->length()))
-          .isErr()) {
-    ReportInvalidOptionError(cx, "calendar", calendarStr);
-    return nullptr;
-  }
-
-  // Convert into canonical case before searching for replacements.
-  mozilla::intl::AsciiToLowerCase(calendar.get(), calendarStr->length(),
-                                  calendar.get());
-
-  auto key = mozilla::MakeStringSpan("ca");
-  auto type = mozilla::Span(calendar.get(), calendarStr->length());
-
-  // Search if there's a replacement for the Unicode calendar keyword.
-  const char* canonicalCalendar = calendar.get();
-  if (const char* replacement =
-          mozilla::intl::Locale::replaceUnicodeExtensionType(key, type)) {
-    canonicalCalendar = replacement;
-  }
-
-  // The input calendar name is user-controlled, so be extra cautious before
-  // passing arbitrarily large strings to ICU.
-  static constexpr size_t maximumCalendarLength = 100;
-
-  if (std::strlen(canonicalCalendar) <= maximumCalendarLength) {
-    // |uldn_keyValueDisplayName| expects old-style keyword values.
-    if (const char* cal = uloc_toLegacyType("calendar", canonicalCalendar)) {
-      ULocaleDisplayNames* ldn =
-          GetOrCreateDisplayNames(cx, displayNames, locale, displayStyle);
-      if (!ldn) {
-        return nullptr;
-      }
-
-      JSString* str = CallICU(
-          cx, [ldn, &cal](UChar* chars, uint32_t size, UErrorCode* status) {
-            // |uldn_keyValueDisplayName| expects old-style keyword values.
-            int32_t res = uldn_keyValueDisplayName(ldn, "calendar", cal, chars,
-                                                   size, status);
-
-            // |uldn_keyValueDisplayName| reports U_ILLEGAL_ARGUMENT_ERROR when
-            // no display name was found.
-            if (*status == U_ILLEGAL_ARGUMENT_ERROR) {
-              *status = U_ZERO_ERROR;
-              res = 0;
-            }
-            return res;
-          });
-      if (!str) {
-        return nullptr;
-      }
-      if (!str->empty()) {
-        return str;
-      }
-    }
-  }
-
-  // Return the canonicalized input when no localized calendar name was found.
-  if (fallback == mozilla::intl::DisplayNames::Fallback::Code) {
-    // Canonical case for calendar is lower case.
-    return js::StringToLowerCase(cx, calendarStr);
-  }
-  return cx->emptyString();
-}
-
-#ifdef DEBUG
-static bool IsStandaloneMonth(UDateFormatSymbolType symbolType) {
-  switch (symbolType) {
-    case UDAT_STANDALONE_MONTHS:
-    case UDAT_STANDALONE_SHORT_MONTHS:
-    case UDAT_STANDALONE_NARROW_MONTHS:
-      return true;
-
-    case UDAT_ERAS:
-    case UDAT_MONTHS:
-    case UDAT_SHORT_MONTHS:
-    case UDAT_WEEKDAYS:
-    case UDAT_SHORT_WEEKDAYS:
-    case UDAT_AM_PMS:
-    case UDAT_LOCALIZED_CHARS:
-    case UDAT_ERA_NAMES:
-    case UDAT_NARROW_MONTHS:
-    case UDAT_NARROW_WEEKDAYS:
-    case UDAT_STANDALONE_WEEKDAYS:
-    case UDAT_STANDALONE_SHORT_WEEKDAYS:
-    case UDAT_STANDALONE_NARROW_WEEKDAYS:
-    case UDAT_QUARTERS:
-    case UDAT_SHORT_QUARTERS:
-    case UDAT_STANDALONE_QUARTERS:
-    case UDAT_STANDALONE_SHORT_QUARTERS:
-    case UDAT_SHORTER_WEEKDAYS:
-    case UDAT_STANDALONE_SHORTER_WEEKDAYS:
-    case UDAT_CYCLIC_YEARS_WIDE:
-    case UDAT_CYCLIC_YEARS_ABBREVIATED:
-    case UDAT_CYCLIC_YEARS_NARROW:
-    case UDAT_ZODIAC_NAMES_WIDE:
-    case UDAT_ZODIAC_NAMES_ABBREVIATED:
-    case UDAT_ZODIAC_NAMES_NARROW:
-      return false;
-  }
-
-  MOZ_ASSERT_UNREACHABLE("unenumerated, undocumented symbol type");
-  return false;
-}
-#endif
-
-static ListObject* GetDateTimeDisplayNames(
-    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    HandleLinearString calendar, UDateFormatSymbolType symbolType,
-    mozilla::Span<const int32_t> indices) {
-  if (auto* names = displayNames->getDateTimeNames()) {
-    return names;
-  }
-
-  mozilla::intl::Locale tag;
-  if (LocaleParser::tryParse(mozilla::MakeStringSpan(locale), tag).isErr()) {
-    JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
-                              JSMSG_INVALID_LANGUAGE_TAG, locale);
-    return nullptr;
-  }
-
-  JS::RootedVector<intl::UnicodeExtensionKeyword> keywords(cx);
-  if (!keywords.emplaceBack("ca", calendar)) {
-    return nullptr;
-  }
-
-  if (!intl::ApplyUnicodeExtensionToTag(cx, tag, keywords)) {
-    return nullptr;
-  }
-
-  intl::FormatBuffer<char> buffer(cx);
-  if (auto result = tag.toString(buffer); result.isErr()) {
-    intl::ReportInternalError(cx, result.unwrapErr());
-    return nullptr;
-  }
-  UniqueChars localeWithCalendar = buffer.extractStringZ();
-  if (!localeWithCalendar) {
-    return nullptr;
-  }
-
-  constexpr char16_t* timeZone = nullptr;
-  constexpr int32_t timeZoneLength = 0;
-
-  constexpr char16_t* pattern = nullptr;
-  constexpr int32_t patternLength = 0;
-
-  UErrorCode status = U_ZERO_ERROR;
-  UDateFormat* fmt =
-      udat_open(UDAT_DEFAULT, UDAT_DEFAULT, IcuLocale(localeWithCalendar.get()),
-                timeZone, timeZoneLength, pattern, patternLength, &status);
-  if (U_FAILURE(status)) {
-    intl::ReportInternalError(cx);
-    return nullptr;
-  }
-  ScopedICUObject<UDateFormat, udat_close> datToClose(fmt);
-
-  Rooted<ListObject*> names(cx, ListObject::create(cx));
-  if (!names) {
-    return nullptr;
-  }
-
-  RootedValue value(cx);
-  for (uint32_t i = 0; i < indices.size(); i++) {
-    int32_t index = indices[i];
-    JSString* name =
-        CallICU(cx, [fmt, symbolType, index](UChar* chars, int32_t size,
-                                             UErrorCode* status) {
-          return udat_getSymbols(fmt, symbolType, index, chars, size, status);
-        });
-    if (!name) {
-      return nullptr;
-    }
-
-    // Everything except Undecimber should always have a non-empty name.
-    MOZ_ASSERT_IF(!IsStandaloneMonth(symbolType) || index != UCAL_UNDECIMBER,
-                  !name->empty());
-
-    value.setString(name);
-    if (!names->append(cx, value)) {
-      return nullptr;
-    }
-  }
-
-  displayNames->setDateTimeNames(names);
-  return names;
-}
-
-static JSString* GetWeekdayDisplayName(
-    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    HandleLinearString calendar,
-    mozilla::intl::DisplayNames::Style displayStyle, HandleLinearString code) {
-  uint8_t weekday;
-  {
-    double d;
-    if (!StringToNumber(cx, code, &d)) {
-      return nullptr;
-    }
-
-    // Inlined implementation of `IsValidWeekdayCode ( weekday )`.
-    if (!IsInteger(d) || d < 1 || d > 7) {
-      ReportInvalidOptionError(cx, "weekday", d);
-      return nullptr;
-    }
-
-    weekday = uint8_t(d);
-  }
-
-  UDateFormatSymbolType symbolType;
-  switch (displayStyle) {
-    case mozilla::intl::DisplayNames::Style::Long:
-      symbolType = UDAT_STANDALONE_WEEKDAYS;
-      break;
-
-    case mozilla::intl::DisplayNames::Style::Abbreviated:
-      // ICU "short" is CLDR "abbreviated" format.
-      symbolType = UDAT_STANDALONE_SHORT_WEEKDAYS;
-      break;
-
-    case mozilla::intl::DisplayNames::Style::Short:
-      // ICU "shorter" is CLDR "short" format.
-      symbolType = UDAT_STANDALONE_SHORTER_WEEKDAYS;
-      break;
-
-    case mozilla::intl::DisplayNames::Style::Narrow:
-      symbolType = UDAT_STANDALONE_NARROW_WEEKDAYS;
-      break;
-  }
-
-  static constexpr int32_t indices[] = {
-      UCAL_MONDAY, UCAL_TUESDAY,  UCAL_WEDNESDAY, UCAL_THURSDAY,
-      UCAL_FRIDAY, UCAL_SATURDAY, UCAL_SUNDAY};
-
-  ListObject* names = GetDateTimeDisplayNames(
-      cx, displayNames, locale, calendar, symbolType, mozilla::Span(indices));
-  if (!names) {
-    return nullptr;
-  }
-  MOZ_ASSERT(names->length() == std::size(indices));
-
-  return names->get(weekday - 1).toString();
-}
-
-static JSString* GetMonthDisplayName(
-    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    HandleLinearString calendar,
-    mozilla::intl::DisplayNames::Style displayStyle,
-    mozilla::intl::DisplayNames::Fallback fallback, HandleLinearString code) {
-  uint8_t month;
-  {
-    double d;
-    if (!StringToNumber(cx, code, &d)) {
-      return nullptr;
-    }
-
-    // Inlined implementation of `IsValidMonthCode ( month )`.
-    if (!IsInteger(d) || d < 1 || d > 13) {
-      ReportInvalidOptionError(cx, "month", d);
-      return nullptr;
-    }
-
-    month = uint8_t(d);
-  }
-
-  UDateFormatSymbolType symbolType;
-  switch (displayStyle) {
-    case mozilla::intl::DisplayNames::Style::Long:
-      symbolType = UDAT_STANDALONE_MONTHS;
-      break;
-
-    case mozilla::intl::DisplayNames::Style::Abbreviated:
-    case mozilla::intl::DisplayNames::Style::Short:
-      symbolType = UDAT_STANDALONE_SHORT_MONTHS;
-      break;
-
-    case mozilla::intl::DisplayNames::Style::Narrow:
-      symbolType = UDAT_STANDALONE_NARROW_MONTHS;
-      break;
-  }
-
-  static constexpr int32_t indices[] = {
-      UCAL_JANUARY,   UCAL_FEBRUARY, UCAL_MARCH,    UCAL_APRIL,
-      UCAL_MAY,       UCAL_JUNE,     UCAL_JULY,     UCAL_AUGUST,
-      UCAL_SEPTEMBER, UCAL_OCTOBER,  UCAL_NOVEMBER, UCAL_DECEMBER,
-      UCAL_UNDECIMBER};
-
-  ListObject* names = GetDateTimeDisplayNames(
-      cx, displayNames, locale, calendar, symbolType, mozilla::Span(indices));
-  if (!names) {
-    return nullptr;
-  }
-  MOZ_ASSERT(names->length() == std::size(indices));
-
-  JSString* str = names->get(month - 1).toString();
-  if (str->empty() && fallback == mozilla::intl::DisplayNames::Fallback::Code) {
-    return cx->staticStrings().getInt(month);
-  }
-  return str;
-}
-
-static JSString* GetQuarterDisplayName(
-    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    HandleLinearString calendar,
-    mozilla::intl::DisplayNames::Style displayStyle, HandleLinearString code) {
-  uint8_t quarter;
-  {
-    double d;
-    if (!StringToNumber(cx, code, &d)) {
-      return nullptr;
-    }
-
-    // Inlined implementation of `IsValidQuarterCode ( quarter )`.
-    if (!IsInteger(d) || d < 1 || d > 4) {
-      ReportInvalidOptionError(cx, "quarter", d);
-      return nullptr;
-    }
-
-    quarter = uint8_t(d);
-  }
-
-  UDateFormatSymbolType symbolType;
-  switch (displayStyle) {
-    case mozilla::intl::DisplayNames::Style::Long:
-      symbolType = UDAT_STANDALONE_QUARTERS;
-      break;
-
-    case mozilla::intl::DisplayNames::Style::Abbreviated:
-    case mozilla::intl::DisplayNames::Style::Short:
-    case mozilla::intl::DisplayNames::Style::Narrow:
-      // CLDR "narrow" style not supported in ICU.
-      symbolType = UDAT_STANDALONE_SHORT_QUARTERS;
-      break;
-  }
-
-  // ICU doesn't provide an enum for quarters.
-  static constexpr int32_t indices[] = {0, 1, 2, 3};
-
-  ListObject* names = GetDateTimeDisplayNames(
-      cx, displayNames, locale, calendar, symbolType, mozilla::Span(indices));
-  if (!names) {
-    return nullptr;
-  }
-  MOZ_ASSERT(names->length() == std::size(indices));
-
-  return names->get(quarter - 1).toString();
-}
-
-static JSString* GetDayPeriodDisplayName(
-    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    HandleLinearString calendar, HandleLinearString dayPeriod) {
-  // Inlined implementation of `IsValidDayPeriodCode ( dayperiod )`.
-  uint32_t index;
-  if (StringEqualsLiteral(dayPeriod, "am")) {
-    index = 0;
-  } else if (StringEqualsLiteral(dayPeriod, "pm")) {
-    index = 1;
-  } else {
-    ReportInvalidOptionError(cx, "dayPeriod", dayPeriod);
-    return nullptr;
-  }
-
-  UDateFormatSymbolType symbolType = UDAT_AM_PMS;
-
-  static constexpr int32_t indices[] = {UCAL_AM, UCAL_PM};
-
-  ListObject* names = GetDateTimeDisplayNames(
-      cx, displayNames, locale, calendar, symbolType, mozilla::Span(indices));
-  if (!names) {
-    return nullptr;
-  }
-  MOZ_ASSERT(names->length() == std::size(indices));
-
-  return names->get(index).toString();
-}
-
-static JSString* GetDateTimeFieldDisplayName(
-    JSContext* cx, const char* locale,
-    mozilla::intl::DisplayNames::Style displayStyle,
-    HandleLinearString dateTimeField) {
-  // Inlined implementation of `IsValidDateTimeFieldCode ( field )`.
-  UDateTimePatternField field;
-  if (StringEqualsLiteral(dateTimeField, "era")) {
-    field = UDATPG_ERA_FIELD;
-  } else if (StringEqualsLiteral(dateTimeField, "year")) {
-    field = UDATPG_YEAR_FIELD;
-  } else if (StringEqualsLiteral(dateTimeField, "quarter")) {
-    field = UDATPG_QUARTER_FIELD;
-  } else if (StringEqualsLiteral(dateTimeField, "month")) {
-    field = UDATPG_MONTH_FIELD;
-  } else if (StringEqualsLiteral(dateTimeField, "weekOfYear")) {
-    field = UDATPG_WEEK_OF_YEAR_FIELD;
-  } else if (StringEqualsLiteral(dateTimeField, "weekday")) {
-    field = UDATPG_WEEKDAY_FIELD;
-  } else if (StringEqualsLiteral(dateTimeField, "day")) {
-    field = UDATPG_DAY_FIELD;
-  } else if (StringEqualsLiteral(dateTimeField, "dayPeriod")) {
-    field = UDATPG_DAYPERIOD_FIELD;
-  } else if (StringEqualsLiteral(dateTimeField, "hour")) {
-    field = UDATPG_HOUR_FIELD;
-  } else if (StringEqualsLiteral(dateTimeField, "minute")) {
-    field = UDATPG_MINUTE_FIELD;
-  } else if (StringEqualsLiteral(dateTimeField, "second")) {
-    field = UDATPG_SECOND_FIELD;
-  } else if (StringEqualsLiteral(dateTimeField, "timeZoneName")) {
-    field = UDATPG_ZONE_FIELD;
-  } else {
-    ReportInvalidOptionError(cx, "dateTimeField", dateTimeField);
-    return nullptr;
-  }
-
-  UDateTimePGDisplayWidth width;
-  switch (displayStyle) {
-    case mozilla::intl::DisplayNames::Style::Long:
-      width = UDATPG_WIDE;
-      break;
-    case mozilla::intl::DisplayNames::Style::Abbreviated:
-    case mozilla::intl::DisplayNames::Style::Short:
-      width = UDATPG_ABBREVIATED;
-      break;
-    case mozilla::intl::DisplayNames::Style::Narrow:
-      width = UDATPG_NARROW;
-      break;
-  }
-
-  intl::SharedIntlData& sharedIntlData = cx->runtime()->sharedIntlData.ref();
-  mozilla::intl::DateTimePatternGenerator* dtpgen =
-      sharedIntlData.getDateTimePatternGenerator(cx, locale);
-  if (!dtpgen) {
-    return nullptr;
-  }
-
-  UDateTimePatternGenerator* dtpg =
-      dtpgen->UnsafeGetUDateTimePatternGenerator();
-  MOZ_ASSERT(dtpg);
-
-  JSString* str = intl::CallICU(cx, [dtpg, field, width](UChar* chars,
-                                                         uint32_t size,
-                                                         UErrorCode* status) {
-    return udatpg_getFieldDisplayName(dtpg, field, width, chars, size, status);
-  });
-  MOZ_ASSERT_IF(str, !str->empty());
-  return str;
-}
-
 /**
  * intl_ComputeDisplayName(displayNames, locale, calendar, style,
  *                         languageDisplay, fallback, type, code)
@@ -1068,7 +397,8 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
   }
 
   // mozilla::intl::DisplayNames::Of matches the API of the Intl.DisplayNames
-  // API, but internally uses UTF-8 or UTF-16 strings.
+  // API. The code gets passed in as UTF-8 as the string commonly has an ASCII
+  // representation.
   JSString* str = nullptr;
   mozilla::Maybe<mozilla::intl::DisplayNamesError> error = mozilla::Nothing();
   {
@@ -1092,22 +422,12 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
       span = mozilla::MakeStringSpan(utf8.get());
     }
 
-    if (mozilla::intl::DisplayNames::SupportsUtf8(options.type)) {
-      intl::FormatBuffer<char, intl::INITIAL_CHAR_BUFFER_SIZE> buffer(cx);
-      auto result = dn->Of(buffer, span, fallback);
-      if (result.isErr()) {
-        error = mozilla::Some(result.unwrapErr());
-      } else {
-        str = buffer.toString(cx);
-      }
+    intl::FormatBuffer<char16_t, intl::INITIAL_CHAR_BUFFER_SIZE> buffer(cx);
+    auto result = dn->Of(buffer, span, fallback);
+    if (result.isErr()) {
+      error = mozilla::Some(result.unwrapErr());
     } else {
-      intl::FormatBuffer<char16_t, intl::INITIAL_CHAR_BUFFER_SIZE> buffer(cx);
-      auto result = dn->Of(buffer, span, fallback);
-      if (result.isErr()) {
-        error = mozilla::Some(result.unwrapErr());
-      } else {
-        str = buffer.toString(cx);
-      }
+      str = buffer.toString(cx);
     }
   }
 
@@ -1126,6 +446,11 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
       case mozilla::intl::DisplayNamesError::DuplicateVariantSubtag:
         JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
                                   JSMSG_DUPLICATE_VARIANT_SUBTAG);
+        break;
+      case mozilla::intl::DisplayNamesError::InvalidLanguageTag:
+        JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
+                                  JSMSG_INVALID_LANGUAGE_TAG);
+        break;
     }
     return false;
   }
