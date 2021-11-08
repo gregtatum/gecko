@@ -40,6 +40,8 @@
 #include "nsWeakReference.h"         // for nsSupportsWeakReference
 #include "nscore.h"                  // for nsresult, nsAString, etc.
 
+#include <tuple>  // for std::tuple
+
 class mozInlineSpellChecker;
 class nsAtom;
 class nsCaret;
@@ -878,10 +880,8 @@ class EditorBase : public nsIEditor,
     void DidSplitContent(EditorBase& aEditorBase,
                          nsIContent& aExistingRightContent,
                          nsIContent& aNewLeftContent);
-    void WillJoinContents(EditorBase& aEditorBase, nsIContent& aLeftContent,
-                          nsIContent& aRightContent);
-    void DidJoinContents(EditorBase& aEditorBase, nsIContent& aLeftContent,
-                         nsIContent& aRightContent);
+    void DidJoinContents(EditorBase& aEditorBase,
+                         const EditorRawDOMPoint& aJoinedPoint);
     void DidInsertText(EditorBase& aEditorBase,
                        const EditorRawDOMPoint& aInsertionBegin,
                        const EditorRawDOMPoint& aInsertionEnd);
@@ -937,8 +937,6 @@ class EditorBase : public nsIEditor,
   };
 
   struct MOZ_STACK_CLASS EditSubActionData final {
-    uint32_t mJoinedLeftNodeLength;
-
     // While this is set to false, TopLevelEditSubActionData::mChangedRange
     // shouldn't be modified since in some cases, modifying it in the setter
     // itself may be faster.  Note that we should affect this only for current
@@ -946,10 +944,7 @@ class EditorBase : public nsIEditor,
     bool mAdjustChangedRangeFromListener;
 
    private:
-    void Clear() {
-      mJoinedLeftNodeLength = 0;
-      mAdjustChangedRangeFromListener = true;
-    }
+    void Clear() { mAdjustChangedRangeFromListener = true; }
 
     friend EditorBase;
   };
@@ -2530,7 +2525,7 @@ class EditorBase : public nsIEditor,
    * in a text node.  If mutation event listener changed the text data, this
    * returns a range which covers all over the text data.
    */
-  Tuple<EditorDOMPointInText, EditorDOMPointInText> ComputeInsertedRange(
+  std::tuple<EditorDOMPointInText, EditorDOMPointInText> ComputeInsertedRange(
       const EditorDOMPointInText& aInsertedPoint,
       const nsAString& aInsertedString) const;
 

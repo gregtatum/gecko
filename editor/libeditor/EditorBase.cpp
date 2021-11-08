@@ -63,8 +63,7 @@
 #include "mozilla/TextServicesDocument.h"  // for TextServicesDocument
 #include "mozilla/TextEditor.h"
 #include "mozilla/TextEvents.h"
-#include "mozilla/TransactionManager.h"  // for TransactionManager
-#include "mozilla/Tuple.h"
+#include "mozilla/TransactionManager.h"   // for TransactionManager
 #include "mozilla/dom/AbstractRange.h"    // for AbstractRange
 #include "mozilla/dom/Attr.h"             // for Attr
 #include "mozilla/dom/BrowsingContext.h"  // for BrowsingContext
@@ -2975,24 +2974,23 @@ static bool TextFragmentBeginsWithStringAtOffset(
   return aString.EqualsLatin1(aTextFragment.Get1b() + aOffset, stringLength);
 }
 
-static Tuple<EditorDOMPointInText, EditorDOMPointInText>
+static std::tuple<EditorDOMPointInText, EditorDOMPointInText>
 AdjustTextInsertionRange(const EditorDOMPointInText& aInsertedPoint,
                          const nsAString& aInsertedString) {
   if (TextFragmentBeginsWithStringAtOffset(
           aInsertedPoint.ContainerAsText()->TextFragment(),
           aInsertedPoint.Offset(), aInsertedString)) {
-    return MakeTuple(aInsertedPoint,
-                     EditorDOMPointInText(
-                         aInsertedPoint.ContainerAsText(),
-                         aInsertedPoint.Offset() + aInsertedString.Length()));
+    return {aInsertedPoint,
+            EditorDOMPointInText(
+                aInsertedPoint.ContainerAsText(),
+                aInsertedPoint.Offset() + aInsertedString.Length())};
   }
 
-  return MakeTuple(
-      EditorDOMPointInText(aInsertedPoint.ContainerAsText(), 0),
-      EditorDOMPointInText::AtEndOf(*aInsertedPoint.ContainerAsText()));
+  return {EditorDOMPointInText(aInsertedPoint.ContainerAsText(), 0),
+          EditorDOMPointInText::AtEndOf(*aInsertedPoint.ContainerAsText())};
 }
 
-Tuple<EditorDOMPointInText, EditorDOMPointInText>
+std::tuple<EditorDOMPointInText, EditorDOMPointInText>
 EditorBase::ComputeInsertedRange(const EditorDOMPointInText& aInsertedPoint,
                                  const nsAString& aInsertedString) const {
   MOZ_ASSERT(aInsertedPoint.IsSet());
@@ -3005,13 +3003,13 @@ EditorBase::ComputeInsertedRange(const EditorDOMPointInText& aInsertedPoint,
     EditorDOMPointInText endOfInsertion(
         aInsertedPoint.ContainerAsText(),
         aInsertedPoint.Offset() + aInsertedString.Length());
-    return MakeTuple(aInsertedPoint, endOfInsertion);
+    return {aInsertedPoint, endOfInsertion};
   }
   if (aInsertedPoint.ContainerAsText()->IsInComposedDoc()) {
     EditorDOMPointInText begin, end;
     return AdjustTextInsertionRange(aInsertedPoint, aInsertedString);
   }
-  return MakeTuple(EditorDOMPointInText(), EditorDOMPointInText());
+  return {EditorDOMPointInText(), EditorDOMPointInText()};
 }
 
 nsresult EditorBase::InsertTextIntoTextNodeWithTransaction(
@@ -3051,8 +3049,7 @@ nsresult EditorBase::InsertTextIntoTextNodeWithTransaction(
   EndUpdateViewBatch();
 
   if (IsHTMLEditor() && pointToInsert.IsSet()) {
-    EditorDOMPointInText begin, end;
-    Tie(begin, end) = ComputeInsertedRange(pointToInsert, aStringToInsert);
+    auto [begin, end] = ComputeInsertedRange(pointToInsert, aStringToInsert);
     if (begin.IsSet() && end.IsSet()) {
       TopLevelEditSubActionDataRef().DidInsertText(*this, begin, end);
     }
@@ -6539,27 +6536,8 @@ void EditorBase::TopLevelEditSubActionData::DidSplitContent(
                        "failed, but ignored");
 }
 
-void EditorBase::TopLevelEditSubActionData::WillJoinContents(
-    EditorBase& aEditorBase, nsIContent& aLeftContent,
-    nsIContent& aRightContent) {
-  MOZ_ASSERT(aEditorBase.AsHTMLEditor());
-
-  if (!aEditorBase.mInitSucceeded || aEditorBase.Destroyed()) {
-    return;  // We have not been initialized yet or already been destroyed.
-  }
-
-  if (!aEditorBase.EditSubActionDataRef().mAdjustChangedRangeFromListener) {
-    return;  // Temporarily disabled by edit sub-action handler.
-  }
-
-  // remember split point
-  aEditorBase.EditSubActionDataRef().mJoinedLeftNodeLength =
-      aLeftContent.Length();
-}
-
 void EditorBase::TopLevelEditSubActionData::DidJoinContents(
-    EditorBase& aEditorBase, nsIContent& aLeftContent,
-    nsIContent& aRightContent) {
+    EditorBase& aEditorBase, const EditorRawDOMPoint& aJoinedPoint) {
   MOZ_ASSERT(aEditorBase.AsHTMLEditor());
 
   if (!aEditorBase.mInitSucceeded || aEditorBase.Destroyed()) {
@@ -6570,11 +6548,8 @@ void EditorBase::TopLevelEditSubActionData::DidJoinContents(
     return;  // Temporarily disabled by edit sub-action handler.
   }
 
-  DebugOnly<nsresult> rvIgnored = AddPointToChangedRange(
-      *aEditorBase.AsHTMLEditor(),
-      EditorRawDOMPoint(
-          &aRightContent,
-          aEditorBase.EditSubActionDataRef().mJoinedLeftNodeLength));
+  DebugOnly<nsresult> rvIgnored =
+      AddPointToChangedRange(*aEditorBase.AsHTMLEditor(), aJoinedPoint);
   NS_WARNING_ASSERTION(NS_SUCCEEDED(rvIgnored),
                        "TopLevelEditSubActionData::AddPointToChangedRange() "
                        "failed, but ignored");

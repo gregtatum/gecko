@@ -204,26 +204,11 @@ class VirtualenvManager(VirtualenvHelper):
                 with open(
                     os.path.join(self._site_packages_dir(), PTH_FILENAME)
                 ) as file:
-                    pth_lines = file.read().strip().split("\n")
+                    current_paths = file.read().strip().split("\n")
             except FileNotFoundError:
                 return False
 
-            current_paths = [
-                os.path.normcase(
-                    os.path.abspath(os.path.join(self._site_packages_dir(), path))
-                )
-                for path in pth_lines
-            ]
-
-            required_paths = [
-                os.path.normcase(
-                    os.path.abspath(os.path.join(self.topsrcdir, pth.path))
-                )
-                for pth in env_requirements.pth_requirements
-                + env_requirements.vendored_requirements
-            ]
-
-            if current_paths != required_paths:
+            if current_paths != env_requirements.pths_as_absolute(self.topsrcdir):
                 return False
 
         if not skip_pip_package_check:
@@ -310,17 +295,9 @@ class VirtualenvManager(VirtualenvHelper):
         self.create()
         env_requirements = self.requirements()
         site_packages_dir = self._site_packages_dir()
+        pthfile_lines = self.requirements().pths_as_absolute(self.topsrcdir)
         with open(os.path.join(site_packages_dir, PTH_FILENAME), "a") as f:
-            for pth_requirement in (
-                env_requirements.pth_requirements
-                + env_requirements.vendored_requirements
-            ):
-                path = os.path.join(self.topsrcdir, pth_requirement.path)
-                # This path is relative to the .pth file.  Using a
-                # relative path allows the srcdir/objdir combination
-                # to be moved around (as long as the paths relative to
-                # each other remain the same).
-                f.write("{}\n".format(os.path.relpath(path, site_packages_dir)))
+            f.write("\n".join(pthfile_lines))
 
         old_env_variables = {}
         try:
@@ -439,13 +416,20 @@ class VirtualenvManager(VirtualenvHelper):
         # because it's needed by the "virtualenv" package.
         from distutils import dist
 
+        normalized_venv_root = os.path.normpath(self.virtualenv_root)
+
         distribution = dist.Distribution({"script_args": "--no-user-cfg"})
         installer = distribution.get_command_obj("install")
-        installer.prefix = os.path.normpath(self.virtualenv_root)
+        installer.prefix = normalized_venv_root
         installer.finalize_options()
 
         # Path to virtualenv's "site-packages" directory
-        return installer.install_purelib
+        path = installer.install_purelib
+        local_folder = os.path.join(normalized_venv_root, "local")
+        # Hack around https://github.com/pypa/virtualenv/issues/2208
+        if path.startswith(local_folder):
+            path = os.path.join(normalized_venv_root, path[len(local_folder) + 1 :])
+        return path
 
 
 def get_archflags():

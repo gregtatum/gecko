@@ -1982,6 +1982,42 @@
   value: true
   mirror: always
 
+# Enable/disable Gecko specific edit commands
+- name: dom.document.edit_command.contentReadOnly.enabled
+  type: bool
+  value: @IS_NOT_NIGHTLY_BUILD@
+  mirror: always
+
+- name: dom.document.edit_command.decreasefontsize.enabled
+  type: bool
+  value: false
+  mirror: always
+
+- name: dom.document.edit_command.gethtml.enabled
+  type: bool
+  value: false
+  mirror: always
+
+- name: dom.document.edit_command.heading.enabled
+  type: bool
+  value: false
+  mirror: always
+
+- name: dom.document.edit_command.increasefontsize.enabled
+  type: bool
+  value: false
+  mirror: always
+
+- name: dom.document.edit_command.insertBrOnReturn.enabled
+  type: bool
+  value: @IS_NOT_NIGHTLY_BUILD@
+  mirror: always
+
+- name: dom.document.edit_command.readonly.enabled
+  type: bool
+  value: false
+  mirror: always
+
 # If set this to true, `Document.execCommand` may be performed nestedly.
 # Otherwise, nested calls just return false.
 - name: dom.document.exec_command.nested_calls_allowed
@@ -6184,7 +6220,7 @@
 
 - name: javascript.options.wasm_caching
   type: bool
-  value: true
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
 
 # The amount of time we wait between a request to GC (due to leaving a page) and doing the actual GC, in ms.
@@ -11790,6 +11826,11 @@
 #endif
   mirror: always
 
+- name: webgl.out-of-process.worker
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
+
 - name: webgl.out-of-process.force
   type: RelaxedAtomicBool
   value: false
@@ -12103,7 +12144,7 @@
 
 - name: widget.windows.window_occlusion_tracking.enabled
   type: bool
-  value: false
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
 
 - name: widget.windows.window_occlusion_tracking_display_state.enabled
