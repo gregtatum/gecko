@@ -105,6 +105,10 @@ class DisplayNames final {
     BestFit,
   };
 
+  /**
+   * The style of the display name, specified by the amount of space available
+   * for displaying the text.
+   */
   enum class Style {
     Narrow,
     Short,
@@ -114,7 +118,17 @@ class DisplayNames final {
     Abbreviated,
   };
 
+  /**
+   * This enum class specifies the type of DisplayName to use. It is used in the
+   * constructor only as part of the options. The first enum values are for
+   * ECMA-402 compliant types, and then the second half are for Mozilla-specific
+   * extensions.
+   */
   enum class Type {
+    /**
+     * ECMA-402 compatible types for DisplayNames.
+     */
+
     // Return the localized name of a language.
     //
     // Accepts:
@@ -164,11 +178,59 @@ class DisplayNames final {
     //   "JPY" => "Japanese Yen" (en-US), "yen" (es_ES), "日元", (zh)
     Currency,
 
+    /**
+     * The following are not part of ECMA 402, but are available as a
+     * MozExtension.
+     */
+
+    // Get the localized name of a calendar.
+    // Accepts:
+    //   Unicode calendar key:
+    //   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Locale/calendar#unicode_calendar_keys
     Calendar,
+    // Get the localized name of a weekday.
+    //
+    // Accepts:
+    //   "1" - "7".
+    //
+    // Examples:
+    //   "1" -> "Monday"
+    //   "2" -> "Tuesday"
     Weekday,
+    // Get the localized name of a month.
+    //
+    // Accepts:
+    //   "1" - "12".
+    //
+    // Examples:
+    //   "1" -> "January"
+    //   "2" -> "February"
     Month,
+    // Get the localized name of a quarter.
+    //
+    // Accepts:
+    //   "1" - "4".
+    //
+    // Examples:
+    //   "1" -> "1st quarter"
+    //   "2" -> "2nd quarter"
     Quarter,
+    // Get the localized name of a day period.
+    //
+    // Accepts:
+    //   "am", "pm"
+    //
+    // Examples:
+    //   "am" -> "a.m."
+    //   "pm" -> "p.m."
     DayPeriod,
+    // Get the localized name of a date time field.
+    // Accepts:
+    //    "era", "year", "quarter", "month", "weekOfYear", "weekday", "day",
+    //    "dayPeriod", "hour", "minute", "second", "timeZoneName"
+    // Examples:
+    //   "weekday" => "day of the week"
+    //   "dayPeriod" => "AM/PM"
     DateTimeField,
   };
 
@@ -183,7 +245,15 @@ class DisplayNames final {
     Dialect,
   };
 
-  enum class Fallback { None, Code };
+  /**
+   * Determines the fallback behavior if no match is found for DisplayNames::Of.
+   */
+  enum class Fallback {
+    // The buffer will contain an empty string.
+    None,
+    // The buffer will contain the code, but typically in a canonicalized form.
+    Code
+  };
 
   /**
    * These options map to ECMA 402 DisplayNames options. Make sure the defaults
@@ -207,9 +277,7 @@ class DisplayNames final {
     // Optional:
     Style style = Style::Long;
     LanguageDisplay languageDisplay = LanguageDisplay::Standard;
-
-    // MozExtension, not part of ECMA-402.
-    Span<const char> calendar;
+    Span<const char> calendar;  // MozExtension, not part of ECMA-402.
   };
 
   DisplayNames(ULocaleDisplayNames* aDisplayNames, Span<const char> aLocale,
@@ -220,6 +288,12 @@ class DisplayNames final {
     MOZ_ASSERT(aDisplayNames);
   };
 
+  /**
+   * Initialize a new DisplayNames for the provided locale and using the
+   * provided options.
+   *
+   * https://tc39.es/ecma402/#sec-Intl.DisplayNames
+   */
   static Result<UniquePtr<DisplayNames>, ICUError> TryCreate(
       const char* aLocale, Options aOptions);
 
@@ -264,6 +338,7 @@ class DisplayNames final {
                                    Fallback aFallback = Fallback::None) {
     static_assert(std::is_same<typename B::CharType, char16_t>::value);
     switch (mOptions.type) {
+      // ECMA 402 types:
       case Type::Currency:
         return this->GetCurrency(aBuffer, aCode, aFallback);
       case Type::Language:
@@ -275,7 +350,7 @@ class DisplayNames final {
       case Type::Calendar:
         return this->GetCalendar(aBuffer, aCode, aFallback);
 
-      // Non-ECMA 402 options:
+      // Non-ECMA 402 types (available through MozExtension):
       case Type::Weekday:
         return this->GetWeekday(aBuffer, aCode, aFallback);
       case Type::Month:
