@@ -81,10 +81,10 @@ export function showConfirmationDialog(detail, onConfirm = () => {}) {
   switch (detail.type) {
     case "delete": {
       options = {
-        title: this.classList.contains("in-companion")
+        title: dialog.classList.contains("in-companion")
           ? "about-logins-companion-confirm-remove-password-title"
           : "about-logins-confirm-remove-dialog-title",
-        message: this.classList.contains("in-companion")
+        message: dialog.classList.contains("in-companion")
           ? "companion-confirm-delete-dialog-message"
           : "confirm-delete-dialog-message",
         confirmButtonLabel: "about-logins-confirm-remove-dialog-confirm-button",
