@@ -2671,6 +2671,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.tabs.openNewTabForMostNavigations", true);
   pref("browser.startup.launchOnOSLogin", false);
   pref("browser.crashReports.unsubmittedCheck.autoSubmit2", true);
+  pref("browser.warnOnQuit", false);
 
 
   // Pinebuild specific configurations
