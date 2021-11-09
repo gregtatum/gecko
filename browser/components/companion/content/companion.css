@@ -431,7 +431,7 @@ e-global-nav-debugging h2 {
 .browse {
   display: flex;
   flex-direction: column;
-  margin: 16px;
+  padding: 16px 16px 0;
 }
 
 .browse button {
