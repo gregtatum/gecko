@@ -26,6 +26,7 @@ const MICROSOFT_SERVICE = {
     "login.live.com",
     "login.microsoftonline.com",
     "www.office.com",
+    "outlook.office.com",
   ],
   type: "microsoft",
   api: "mapi",
