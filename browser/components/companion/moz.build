@@ -28,6 +28,8 @@ FINAL_TARGET_FILES.actors += [
     "ContentfulPaintTrackerParent.jsm",
     "FlowResetChild.jsm",
     "FlowResetParent.jsm",
+    "HistoryCarouselChild.jsm",
+    "HistoryCarouselParent.jsm",
     "ORTChild.jsm",
     "ORTParent.jsm",
     "PyodideChild.jsm",

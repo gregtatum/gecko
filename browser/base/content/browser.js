@@ -680,6 +680,7 @@ var gInitialPages = [
   "about:sessionrestore",
   "about:welcome",
   "about:flow-reset",
+  "about:historycarousel",
 ];
 
 function isInitialPage(url) {

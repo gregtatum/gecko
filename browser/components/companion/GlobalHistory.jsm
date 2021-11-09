@@ -13,6 +13,7 @@ const { XPCOMUtils } = ChromeUtils.import(
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   ActorManagerParent: "resource://gre/modules/ActorManagerParent.jsm",
+  PageThumbs: "resource://gre/modules/PageThumbs.jsm",
   SessionManager: "resource:///modules/SessionManager.jsm",
   Services: "resource://gre/modules/Services.jsm",
 });
@@ -799,6 +800,11 @@ class GlobalHistory extends EventTarget {
    * True if our most recent navigation was forward in the global history.
    */
   #navigatingForward = false;
+
+  /**
+   * True if the history carousel is currently visible in the window.
+   */
+  #historyCarouselMode = false;
 
   /**
    * @param {DOMWindow} window
@@ -1672,6 +1678,14 @@ class GlobalHistory extends EventTarget {
       throw new Error("Unknown View.");
     }
 
+    // If we're showing the history carousel, then we don't actually want
+    // to change the staged View - but we do want to update the AVM with the
+    // selection.
+    if (this.#historyCarouselMode) {
+      this.#notifyEvent("ViewChanged", internalView);
+      return;
+    }
+
     this.#navigatingForward = pos > this.#currentIndex;
 
     if (this.#currentIndex == pos) {
@@ -1994,6 +2008,180 @@ class GlobalHistory extends EventTarget {
     if (this.#currentIndex == pos) {
       this.#notifyEvent("ViewChanged", viewToSwitchTo);
     }
+  }
+
+  /**
+   * Sets up or tears down the history carousel for the current window.
+   *
+   * @param {Boolean} shouldShow
+   *   True if the carousel should be shown.
+   * @returns {Promise}
+   * @resolves {undefined}
+   *   Resolves once the state has been entered (or if we're already in the
+   *   selected state).
+   */
+  async showHistoryCarousel(shouldShow) {
+    if (this.#historyCarouselMode == shouldShow) {
+      return;
+    }
+
+    logConsole.debug("Show history carousel: ", shouldShow);
+
+    if (this.#viewStack.length <= 1) {
+      throw new Error(
+        "Cannot enter history carousel mode without multiple views"
+      );
+    }
+
+    let gBrowser = this.#window.gBrowser;
+
+    if (shouldShow) {
+      this.#historyCarouselMode = shouldShow;
+      logConsole.debug("Adding history carousel browser");
+      let tab = gBrowser.addTrustedTab("about:historycarousel", {
+        skipAnimation: true,
+      });
+
+      logConsole.debug("Waiting for history carousel browser to be ready");
+
+      await new Promise(resolve => {
+        let listener = e => {
+          resolve();
+        };
+        this.#window.addEventListener("HistoryCarousel:Ready", listener, {
+          once: true,
+        });
+      });
+
+      logConsole.debug("History carousel browser is ready. Making visible.");
+      gBrowser.selectedTab = tab;
+    } else {
+      if (gBrowser.selectedBrowser.currentURI.spec != "about:historycarousel") {
+        throw new Error("Selected <browser> should be the carousel.");
+      }
+      let carouselTab = gBrowser.selectedTab;
+      let actor = gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
+        "HistoryCarousel"
+      );
+      let finalIndex = await actor.sendQuery("Exit");
+
+      this.#historyCarouselMode = shouldShow;
+
+      let internalView = this.#viewStack[finalIndex];
+      this.setView(internalView.view);
+
+      logConsole.debug("Removing history carousel browser.");
+      gBrowser.removeTab(carouselTab, { animate: false });
+    }
+  }
+
+  /**
+   * Sets the currently selected View, but only works if we're currently
+   * viewing the history carousel. This is the correct way for the carousel
+   * to update the current View selection.
+   *
+   * @param {Number} index
+   *   The index of the View to make the current selection.
+   */
+  setHistoryCarouselIndex(index) {
+    logConsole.assert(
+      this.#historyCarouselMode,
+      "Should only receive this in History Carousel mode"
+    );
+    if (!this.#historyCarouselMode) {
+      return;
+    }
+
+    let internalView = this.#viewStack[index];
+    this.setView(internalView.view);
+  }
+
+  /**
+   * @typedef {object} HistoryCarouselData
+   *   An object that contains information to render a single View in the
+   *   history carousel.
+   * @property {String} title
+   *   The View's title.
+   * @property {String} url
+   *   The View's URL as a string.
+   * @property {String} iconURL
+   *   The View's favicon URL as a string.
+   * @property {Blob} image
+   *   A viewport screenshot of the View as a blob.
+   */
+
+  /**
+   * @typedef {object} InitialHistoryCarouselData
+   *   An object containing enough information to render the currently
+   *   selected View and empty slots for the remaining Views.
+   * @property {Number} currentIndex
+   *   The currentIndex of the selected View.
+   * @property {HistoryCarouselData|null[]} previews
+   *   An array that contains empty slots for every View except for the
+   *   currently selected View - that slot contains HistoryCarouselData for
+   *   that View. This array is in the same order as the #viewStack.
+   */
+
+  /**
+   * Returns a Promise that resolves with enough information for the history
+   * carousel to render the currently selected View and empty slots for every
+   * other View.
+   *
+   * @returns {Promise}
+   * @resolves {InitialHistoryCarouselData}
+   *   Resolves once the state has been entered (or if we're already in the
+   *   selected state).
+   */
+  async getInitialHistoryCarouselData() {
+    let viewCount = this.#viewStack.length - this.pinnedViewCount;
+
+    let data = {
+      currentIndex: this.#currentIndex,
+      previews: new Array(viewCount),
+    };
+
+    for (let i = 0; i < this.#viewStack.length; ++i) {
+      data.previews[i] = {
+        title: this.#viewStack[i].title,
+        url: this.#viewStack[i].url.spec,
+        iconURL: this.#viewStack[i].iconURL,
+        image: null,
+      };
+    }
+
+    let currentInternalView = this.#viewStack[this.#currentIndex];
+    let currentBrowser = currentInternalView.getBrowser();
+    data.previews[this.#currentIndex].image = await PageThumbs.captureToBlob(
+      currentBrowser,
+      {
+        fullScale: true,
+        fullViewport: true,
+      }
+    );
+
+    return data;
+  }
+
+  /**
+   * Returns a Promise that resolves with HistoryCarouselData for a View at
+   * a particular View in the #viewStack.
+   *
+   * @param {Number} index
+   *   The index of the View to get the HistoryCarouselData for.
+   * @returns {Promise}
+   * @resolves {InitialHistoryCarouselData|null}
+   *   Resolves once the viewport screenshot has been captured. Resolves
+   *   with null if the View is not currently loaded in memory.
+   */
+  async getHistoryCarouselDataForIndex(index) {
+    let internalView = this.#viewStack[index];
+    if (internalView.state == "open") {
+      return PageThumbs.captureToBlob(internalView.getBrowser(), {
+        fullScale: true,
+        fullViewport: true,
+      });
+    }
+    return null;
   }
 }
 

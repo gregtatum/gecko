@@ -1246,6 +1246,20 @@ BrowserGlue.prototype = {
           },
         },
       };
+
+      JSWINDOWACTORS.HistoryCarousel = {
+        parent: {
+          moduleURI: "resource:///actors/HistoryCarouselParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/HistoryCarouselChild.jsm",
+          events: {
+            HistoryCarouselInit: { wantUntrusted: true },
+          },
+        },
+        matches: ["about:historycarousel"],
+        remoteTypes: ["privilegedabout"],
+      };
     }
 
     let os = Services.obs;
