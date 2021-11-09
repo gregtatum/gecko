@@ -41,9 +41,7 @@ export class PageFrame extends LitElement {
       }
 
       #page {
-        height: 100%;
         overflow: auto;
-        flex-grow: 1;
       }
 
       #sidebar {

@@ -65,6 +65,8 @@ export class LogEvent extends LitElement {
       :host {
         display: block;
         line-height: 1.3;
+        height: 16px;
+        overflow: hidden;
       }
 
       .event-time {
@@ -137,7 +139,7 @@ export class LogEvent extends LitElement {
           // - Directly stringify primitives
           showVal = val + "";
           // too long?
-          if (showVal.length > 80) {
+          if (showVal.length > 100) {
             showVal = null;
           }
         } else if (

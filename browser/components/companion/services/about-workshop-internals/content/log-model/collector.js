@@ -9,7 +9,7 @@
 export class BroadcastCollector {
   constructor() {
     this.entries = [];
-    this.honorClears = true;
+    this.honorClears = false;
     this.generation = 1;
     this.serial = 1;
     this.listener = null;
@@ -18,11 +18,7 @@ export class BroadcastCollector {
     this.bc = new BroadcastChannel("logic");
     this.bc.onmessage = evt => {
       if (evt.data.mode === "clear") {
-        if (this.honorClears) {
-          this.generation++;
-          this.serial++;
-          this.entries = [];
-        }
+        this.clear();
         return;
       }
       if (evt.data.mode !== "append") {
@@ -81,10 +77,12 @@ export class BroadcastCollector {
   }
 
   clear() {
-    this.generation++;
-    this.serial++;
-    this.entries = [];
+    if (this.honorClears) {
+      this.generation++;
+      this.serial++;
+      this.entries = [];
 
-    this.scheduleTimer();
+      this.scheduleTimer();
+    }
   }
 }

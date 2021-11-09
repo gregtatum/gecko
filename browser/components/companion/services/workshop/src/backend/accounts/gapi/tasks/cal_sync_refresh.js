@@ -126,19 +126,49 @@ export default TaskDefiner.defineAtMostOnceTask([
             : null
       );
 
-      for (const event of results.items) {
-        syncState.ingestEvent(event);
+      let syncInfoClobbers;
+      if (results.error) {
+        // TODO: Improved error handling; MR2-1326 should be the core of this.
+        //
+        // So far we've seen this with:
+        // { code: 403, errors: [ { message: "Insufficient Permission",
+        //   domain: "global", reason: "insufficientPermissions" }],
+        //   status: "PERMISSION_DENIED" }.
+        //
+        // That's a permanent failure on a single calendar; it's not clear that
+        // this should generate a permanent problem for the account.
+        logic(ctx, "syncError", { error: results.error });
+
+        syncInfoClobbers = {
+          lastAttemptedSyncAt: syncDate,
+          // XXX this should theoretically be an atomicDelta, not a clobber...
+          // That said, this is harmless since we have exclusive ownership over
+          // this field, as opposed to unread counts for folders which can have
+          // multiple incidental writers, etc.
+          failedSyncsSinceLastSuccessfulSync:
+            folderInfo.failedSyncsSinceLastSuccessfulSync + 1,
+        };
+      } else {
+        for (const event of results.items) {
+          syncState.ingestEvent(event);
+        }
+
+        // Update sync state before processing the batch; things like the
+        // calUpdatedTS need to be available.
+        syncState.syncToken = results.nextSyncToken;
+        syncState.etag = results.etag;
+        syncState.updatedTime = results.updatedTime;
+
+        syncState.processEvents();
+
+        logic(ctx, "syncEnd", {});
+
+        syncInfoClobbers = {
+          lastSuccessfulSyncAt: syncDate,
+          lastAttemptedSyncAt: syncDate,
+          failedSyncsSinceLastSuccessfulSync: 0,
+        };
       }
-
-      // Update sync state before processing the batch; things like the
-      // calUpdatedTS need to be available.
-      syncState.syncToken = results.nextSyncToken;
-      syncState.etag = results.etag;
-      syncState.updatedTime = results.updatedTime;
-
-      syncState.processEvents();
-
-      logic(ctx, "syncEnd", {});
 
       return {
         mutations: {
@@ -152,11 +182,7 @@ export default TaskDefiner.defineAtMostOnceTask([
             [
               req.folderId,
               {
-                syncInfo: {
-                  lastSuccessfulSyncAt: syncDate,
-                  lastAttemptedSyncAt: syncDate,
-                  failedSyncsSinceLastSuccessfulSync: 0,
-                },
+                syncInfo: syncInfoClobbers,
               },
             ],
           ]),

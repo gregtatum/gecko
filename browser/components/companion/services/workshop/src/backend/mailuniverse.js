@@ -459,7 +459,7 @@ MailUniverse.prototype = {
             dataOverlayManager: this.dataOverlayManager,
           }),
         ],
-        refreshHelpers: [why => this.universe.syncRefreshFolder(folderId, why)],
+        refreshHelpers: [why => this.syncRefreshFolder(folderId, why)],
         onForgotten: () => {
           this._folderConvsTOCs.delete(folderId);
         },
@@ -495,7 +495,7 @@ MailUniverse.prototype = {
           dataOverlayManager: this.dataOverlayManager,
         }),
       ],
-      refreshHelpers: [why => this.universe.syncRefreshFolder(folderId, why)],
+      refreshHelpers: [why => this.syncRefreshFolder(folderId, why)],
       onForgotten: () => {},
     });
     return ctx.acquire(toc);
@@ -530,7 +530,7 @@ MailUniverse.prototype = {
             dataOverlayManager: this.dataOverlayManager,
           }),
         ],
-        refreshHelpers: [why => this.universe.syncRefreshFolder(folderId, why)],
+        refreshHelpers: [why => this.syncRefreshFolder(folderId, why)],
         onForgotten: () => {
           this._folderMessagesTOCs.delete(folderId);
         },
@@ -566,7 +566,7 @@ MailUniverse.prototype = {
           dataOverlayManager: this.dataOverlayManager,
         }),
       ],
-      refreshHelpers: [why => this.universe.syncRefreshFolder(folderId, why)],
+      refreshHelpers: [why => this.syncRefreshFolder(folderId, why)],
       onForgotten: () => {},
     });
     return ctx.acquire(toc);

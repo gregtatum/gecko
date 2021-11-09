@@ -140,7 +140,8 @@ static const RedirEntry kRedirMap[] = {
     {"companion-workshop-internals",
      "chrome://browser/content/about-workshop-internals/"
      "about-workshop-internals.html",
-     nsIAboutModule::ALLOW_SCRIPT},
+     nsIAboutModule::ALLOW_SCRIPT | nsIAboutModule::URI_MUST_LOAD_IN_CHILD |
+         nsIAboutModule::URI_CAN_LOAD_IN_PRIVILEGEDABOUT_PROCESS},
     {"flow-reset", "chrome://browser/content/companion/flow-reset.html",
      nsIAboutModule::ALLOW_SCRIPT | nsIAboutModule::HIDE_FROM_ABOUTABOUT},
 };

@@ -43,9 +43,7 @@ export class HackyHashRouter {
       return;
     }
     if (query) {
-      query = Object.entries(query)
-        .map(([key, value]) => `${key}=${value}`)
-        .join("&");
+      query = new URLSearchParams(Object.entries(query)).toString();
     }
     this.navigateTo(this.curSegments.concat(addSegments), query);
   }
@@ -59,7 +57,7 @@ export class HackyHashRouter {
 
   async updateFromHash() {
     const readHash = window.location.hash.substring(1);
-    const [hash, query] = readHash.split("?");
+    const [hash, rawQuery] = readHash.split("?");
     const pieces = hash.split("/");
 
     const nextPageParams = {};
@@ -81,14 +79,10 @@ export class HackyHashRouter {
       );
     };
 
-    if (query) {
-      nextPageParams.query = query
-        .split("&")
-        .map(pair => pair.split("="))
-        .reduce((acc, [key, value]) => {
-          acc[key] = value;
-          return acc;
-        }, {});
+    if (rawQuery) {
+      nextPageParams.query = Object.fromEntries(
+        new URLSearchParams(rawQuery).entries()
+      );
     }
 
     console.log("ROUTER: processing", hash, pieces, nextPageParams.query);

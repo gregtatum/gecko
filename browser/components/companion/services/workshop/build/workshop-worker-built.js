@@ -11719,14 +11719,28 @@ var WorkshopBackend = (() => {
             const results = await account.client.pagedApiGetCall(endpoint, params, "items", (result) => result.nextPageToken ? {
               params: { pageToken: result.nextPageToken }
             } : null);
-            for (const event of results.items) {
-              syncState.ingestEvent(event);
+            let syncInfoClobbers;
+            if (results.error) {
+              logic(ctx, "syncError", { error: results.error });
+              syncInfoClobbers = {
+                lastAttemptedSyncAt: syncDate,
+                failedSyncsSinceLastSuccessfulSync: folderInfo.failedSyncsSinceLastSuccessfulSync + 1
+              };
+            } else {
+              for (const event of results.items) {
+                syncState.ingestEvent(event);
+              }
+              syncState.syncToken = results.nextSyncToken;
+              syncState.etag = results.etag;
+              syncState.updatedTime = results.updatedTime;
+              syncState.processEvents();
+              logic(ctx, "syncEnd", {});
+              syncInfoClobbers = {
+                lastSuccessfulSyncAt: syncDate,
+                lastAttemptedSyncAt: syncDate,
+                failedSyncsSinceLastSuccessfulSync: 0
+              };
             }
-            syncState.syncToken = results.nextSyncToken;
-            syncState.etag = results.etag;
-            syncState.updatedTime = results.updatedTime;
-            syncState.processEvents();
-            logic(ctx, "syncEnd", {});
             return {
               mutations: {
                 syncStates: new Map([[req.folderId, syncState.rawSyncState]])
@@ -11739,11 +11753,7 @@ var WorkshopBackend = (() => {
                   [
                     req.folderId,
                     {
-                      syncInfo: {
-                        lastSuccessfulSyncAt: syncDate,
-                        lastAttemptedSyncAt: syncDate,
-                        failedSyncsSinceLastSuccessfulSync: 0
-                      }
+                      syncInfo: syncInfoClobbers
                     }
                   ]
                 ])
@@ -22554,7 +22564,7 @@ var WorkshopBackend = (() => {
               dataOverlayManager: this.dataOverlayManager
             })
           ],
-          refreshHelpers: [(why) => this.universe.syncRefreshFolder(folderId, why)],
+          refreshHelpers: [(why) => this.syncRefreshFolder(folderId, why)],
           onForgotten: () => {
             this._folderConvsTOCs.delete(folderId);
           }
@@ -22584,7 +22594,7 @@ var WorkshopBackend = (() => {
             dataOverlayManager: this.dataOverlayManager
           })
         ],
-        refreshHelpers: [(why) => this.universe.syncRefreshFolder(folderId, why)],
+        refreshHelpers: [(why) => this.syncRefreshFolder(folderId, why)],
         onForgotten: () => {
         }
       });
@@ -22614,7 +22624,7 @@ var WorkshopBackend = (() => {
               dataOverlayManager: this.dataOverlayManager
             })
           ],
-          refreshHelpers: [(why) => this.universe.syncRefreshFolder(folderId, why)],
+          refreshHelpers: [(why) => this.syncRefreshFolder(folderId, why)],
           onForgotten: () => {
             this._folderMessagesTOCs.delete(folderId);
           }
@@ -22644,7 +22654,7 @@ var WorkshopBackend = (() => {
             dataOverlayManager: this.dataOverlayManager
           })
         ],
-        refreshHelpers: [(why) => this.universe.syncRefreshFolder(folderId, why)],
+        refreshHelpers: [(why) => this.syncRefreshFolder(folderId, why)],
         onForgotten: () => {
         }
       });

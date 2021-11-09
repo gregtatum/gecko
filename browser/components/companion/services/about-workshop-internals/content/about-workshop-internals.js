@@ -44,7 +44,7 @@ import { HackyHashRouter } from "./router.js";
 // - Are we losing logs when trying to explicitly use the about UI?
 import "./log_collected.js";
 
-const parseId = s => s;
+const parseUrlEncodedId = s => globalThis.decodeURIComponent(s);
 
 window.ROUTER = new HackyHashRouter({
   workshopAPI,
@@ -55,7 +55,7 @@ window.ROUTER = new HackyHashRouter({
       account: {
         pageConstructor: AccountFolderListPage,
         valueName: "accountId",
-        valueParser: parseId,
+        valueParser: parseUrlEncodedId,
         makeLabel: async accountId => {
           const account = await workshopAPI.eventuallyGetAccountById(accountId);
           return `Account: ${account.name}`;
@@ -64,7 +64,7 @@ window.ROUTER = new HackyHashRouter({
           folder: {
             pageConstructor: AccountFolderMessageContentsPage,
             valueName: "folderId",
-            valueParser: parseId,
+            valueParser: parseUrlEncodedId,
             makeLabel: async folderId => {
               const folder = await workshopAPI.eventuallyGetFolderById(
                 folderId
@@ -75,7 +75,7 @@ window.ROUTER = new HackyHashRouter({
           tag: {
             pageConstructor: AccountMessageContentsByTagPage,
             valueName: "accountId",
-            valueParser: parseId,
+            valueParser: parseUrlEncodedId,
             makeLabel: async accountId => {
               const account = await workshopAPI.eventuallyGetAccountById(
                 accountId
