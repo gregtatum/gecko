@@ -196,7 +196,7 @@ add_task(async function testHostDetailsWithValidOrganizerEmail() {
   });
 });
 
-add_task(async function testHostDetailsWithInvalidOrganizerData() {
+add_task(async function testHostDetailsWithSecondaryGCalOrganizerData() {
   await CompanionHelper.whenReady(async helper => {
     let events = [
       {
@@ -299,6 +299,49 @@ add_task(async function testVisibilityOfHostSelf() {
       });
       let eventHost = eventDetailsSection.querySelector(".event-host");
       ok(!eventHost, "Event host is not displayed");
+    });
+  });
+});
+
+add_task(async function testSecondaryGCalWithNoCreatorAvailable() {
+  await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "Firefox rules",
+        organizer: {
+          name: "Test secondary calendar",
+          email: "auto-generated-test123@group.calendar.google.com",
+        },
+        creator: null,
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      let eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector(".event-details");
+      });
+
+      info("Ensure the correct host name is displayed");
+      let name = eventDetailsSection.querySelector(".event-host-name");
+      ok(name, "Host name is displayed.");
+      is(name.textContent, "Test secondary calendar", "Host name is correct.");
+
+      info("Ensure correct host type is displayed");
+      let hostType = eventDetailsSection.querySelector(".event-host-type");
+      is(
+        hostType.getAttribute("data-l10n-id"),
+        "companion-event-organizer",
+        "Host type should be 'organizer'"
+      );
+
+      info("Ensure the host email is not displayed");
+      let email = eventDetailsSection.querySelector(".event-host-email");
+      ok(!email, "No email is displayed");
     });
   });
 });

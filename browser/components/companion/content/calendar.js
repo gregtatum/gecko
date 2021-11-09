@@ -802,33 +802,42 @@ class CalendarEvent extends MozLitElement {
   eventHostTemplate() {
     let { creator, organizer } = this.event;
     // Don't display auto generated emails from GCal
-    let isCalendarEmail = e => {
+    let isSecondaryCalendarEmail = e => {
       return e.includes("group.calendar.google.com");
     };
 
-    // First, determine the type of host to display. This can either be an
+    // Determine the type of host to display. This can either be an
     // "organizer" or "creator". In general, we want to display the organizer
     // of the event, but if the organizer happens to be a calendar group then
     // we should try showing the creator instead.
     let host;
     let hostType;
-    if (!isCalendarEmail(organizer.email)) {
+    if (!isSecondaryCalendarEmail(organizer.email)) {
       host = organizer;
       hostType = "organizer";
-    } else if (!isCalendarEmail(creator.email)) {
+    } else if (creator && !isSecondaryCalendarEmail(creator.email)) {
       host = creator;
       hostType = "creator";
+    } else if (isSecondaryCalendarEmail(organizer.email)) {
+      // Still don't have a host, then just show the organizer information but
+      // with the email omitted.
+      host = { ...organizer, email: null };
+      hostType = "organizer";
     }
+
     if (!host) {
       return "";
     }
 
-    // Now that we have host, figure out what details to show.
+    // Now we have host, figure out what details to show.
     let name = host.name || host.displayName;
     let email = host.email;
-    let emailTemplate = html`
-      <span class="event-host-email line-clamp">${email}</span>
-    `;
+
+    let emailTemplate = email
+      ? html`
+          <span class="event-host-email line-clamp">${email}</span>
+        `
+      : null;
 
     // Ideally, we'll display the host's name if it's available.
     let nameTemplate = name
@@ -839,16 +848,17 @@ class CalendarEvent extends MozLitElement {
 
     // If a host name isn't available then just show the host type beneath the
     // the email.
-    let hostTypeTemplate = !nameTemplate
-      ? html`
-          <span
-            class="event-host-type line-clamp"
-            data-l10n-id=${hostType === "organizer"
-              ? "companion-event-organizer"
-              : "companion-event-creator"}
-          ></span>
-        `
-      : null;
+    let hostTypeTemplate =
+      !nameTemplate || !emailTemplate
+        ? html`
+            <span
+              class="event-host-type line-clamp"
+              data-l10n-id=${hostType === "organizer"
+                ? "companion-event-organizer"
+                : "companion-event-creator"}
+            ></span>
+          `
+        : null;
 
     // Get the first letter of the host's name or email.
     let circleLetter = name ? name[0].toUpperCase() : email[0].toUpperCase();
