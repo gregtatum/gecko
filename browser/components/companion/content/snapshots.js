@@ -22,7 +22,7 @@ class HidableElement extends HTMLElement {
 }
 
 export class Snapshot extends HTMLElement {
-  constructor(data) {
+  constructor(data, preview) {
     super();
     this.data = data;
     this.className = "snapshot card";
@@ -40,10 +40,13 @@ export class Snapshot extends HTMLElement {
     let dateEl = fragment.querySelector(".snapshot-date");
     dateEl.textContent = timeSince(this.data.lastInteractionAt);
 
-    // TODO: MR2-344: Fetch a richer image preview and display it along with the
-    // favicon.
-    let iconEl = fragment.querySelector(".card-image > img");
-    iconEl.src = window.CompanionUtils.getFavicon(url.href) || DEFAULT_FAVICON;
+    if (preview) {
+      let previewEl = fragment.querySelector(".card-image > img.preview");
+      previewEl.src = preview;
+    }
+
+    let iconEl = fragment.querySelector(".card-image > img.favicon");
+    iconEl.src = window.CompanionUtils.getFavicon(url.href) ?? DEFAULT_FAVICON;
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
@@ -77,8 +80,8 @@ export class SnapshotList extends HidableElement {
     let panel = this.querySelector(".snapshots-panel");
     let nodes = [];
     this.hidden = !snapshots.length;
-    for (let snapshot of snapshots) {
-      nodes.push(new Snapshot(snapshot));
+    for (let { snapshot, preview } of snapshots) {
+      nodes.push(new Snapshot(snapshot, preview));
     }
 
     panel.replaceChildren(...nodes);

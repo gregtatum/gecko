@@ -762,10 +762,16 @@ class CompanionParent extends JSWindowActorParent {
 
         this.snapshotSelector.on("snapshots-updated", async (_, snapshots) => {
           await this.ensureFaviconsCached(snapshots.map(s => s.url));
+          let snapshotList = await Promise.all(
+            snapshots.map(async s => ({
+              snapshot: s,
+              preview: await Snapshots.getSnapshotImageURL(s),
+            }))
+          );
 
           if (!this._destroyed) {
             this.sendAsyncMessage("Companion:SnapshotsChanged", {
-              snapshots,
+              snapshots: snapshotList,
               newFavicons: this.consumeCachedFaviconsToSend(),
             });
           }
