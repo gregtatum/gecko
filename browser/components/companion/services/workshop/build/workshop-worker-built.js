@@ -937,7 +937,7 @@ var WorkshopBackend = (() => {
 
   // src/shared/date.js
   function EVENT_IN_SYNC_RANGE(eventInfo, syncRangeInfo) {
-    return eventInfo.endDate < syncRangeInfo.rangeOldestTS || eventInfo.startDate > syncRangeInfo.rangeNewestTS;
+    return syncRangeInfo.rangeOldestTS <= eventInfo.endDate && eventInfo.startDate <= syncRangeInfo.rangeNewestTS;
   }
   function EVENT_OUTSIDE_SYNC_RANGE(eventInfo, syncRangeInfo) {
     return !EVENT_IN_SYNC_RANGE(eventInfo, syncRangeInfo);

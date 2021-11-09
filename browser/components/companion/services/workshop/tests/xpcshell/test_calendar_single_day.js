@@ -46,7 +46,7 @@ async function check_single_day_for_account_type({
   ok(calFolder, "have calendar folder");
 
   // ### View the contents of the folder in its entirety
-  const calView = workshopAPI.viewFolderMessages(calFolder);
+  let calView = workshopAPI.viewFolderMessages(calFolder);
 
   // ## Sync Tests Proper
 
@@ -66,6 +66,13 @@ async function check_single_day_for_account_type({
   // completed.
   await calView.promisedOnce("seeked");
 
+  WorkshopHelper.eventsEqual(calView.items, initialEvents);
+
+  // ### Release the review and reload its contents from disk
+  calView.release();
+  calView = workshopAPI.viewFolderMessages(calFolder);
+  calView.seekToTop(10, 990);
+  await calView.promisedOnce("seeked");
   WorkshopHelper.eventsEqual(calView.items, initialEvents);
 
   // ### Have the server add another event and then we sync it.

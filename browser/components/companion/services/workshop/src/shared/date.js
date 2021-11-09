@@ -116,9 +116,11 @@ export function IN_BS_DATE_RANGE(testDate, startTS, endTS) {
  * if any part of the event falls inside the sync range.
  */
 export function EVENT_IN_SYNC_RANGE(eventInfo, syncRangeInfo) {
+  // [a; b] inter [c; d] is empty iff d < a || b < c
+  // [a; b] inter [c; d] isn't empty iff a <= d && c <= b
   return (
-    eventInfo.endDate < syncRangeInfo.rangeOldestTS ||
-    eventInfo.startDate > syncRangeInfo.rangeNewestTS
+    syncRangeInfo.rangeOldestTS <= eventInfo.endDate &&
+    eventInfo.startDate <= syncRangeInfo.rangeNewestTS
   );
 }
 
