@@ -148,7 +148,18 @@
         <span class="info-divider sub"/>
         <span class="snapshot-date sub"/>
       </div>
-      <div class="card-image"><img class="preview"/><img class="favicon"/></div>
+      <div class="card-image">
+        <img class="favicon"/>
+        <button
+            class="options-button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            data-action="toggle-panel"></button>
+        <panel-list>
+          <panel-item data-l10n-id="snapshot-dont-show" data-action="dont-show"></panel-item>
+          <panel-item data-l10n-id="snapshot-not-relevant" data-action="not-relevant"></panel-item>
+        </panel-list>
+      </div>
     </div>
   </template>
 

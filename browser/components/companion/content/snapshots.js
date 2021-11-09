@@ -41,8 +41,8 @@ export class Snapshot extends HTMLElement {
     dateEl.textContent = timeSince(this.data.lastInteractionAt);
 
     if (preview) {
-      let previewEl = fragment.querySelector(".card-image > img.preview");
-      previewEl.src = preview;
+      let previewEl = fragment.querySelector(".card-image");
+      previewEl.style.backgroundImage = "url(" + preview + ")";
     }
 
     let iconEl = fragment.querySelector(".card-image > img.favicon");
@@ -55,9 +55,21 @@ export class Snapshot extends HTMLElement {
   handleEvent(event) {
     switch (event.type) {
       case "click": {
-        window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
-          url: this.data.url,
-        });
+        switch (event.target.dataset.action) {
+          case "toggle-panel":
+            this.querySelector("panel-list").toggle(event);
+            break;
+          case "dont-show":
+          case "not-relevant":
+            window.CompanionUtils.sendAsyncMessage("Companion:DeleteSnapshot", {
+              url: this.data.url,
+            });
+            break;
+          default:
+            window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
+              url: this.data.url,
+            });
+        }
       }
     }
   }
