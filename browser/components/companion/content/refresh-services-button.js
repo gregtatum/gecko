@@ -78,25 +78,55 @@ export class RefreshServicesButton extends MozLitElement {
   }
 
   updateServicesConnected() {
-    this.servicesConnected = !!OnlineServices.getAllServices().length;
+    this.servicesConnected = Services.prefs.getBoolPref(
+      "browser.pinebuild.workshop.enabled"
+    )
+      ? !!workshopAPI.accounts?.items.length
+      : !!OnlineServices.getAllServices().length;
   }
 
   connectedCallback() {
-    Services.obs.addObserver(this.updateServicesConnected, "companion-signin");
-    Services.obs.addObserver(this.updateServicesConnected, "companion-signout");
+    if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
+      workshopAPI.accounts.on("add", this, this.updateServicesConnected);
+      workshopAPI.accounts.on("remove", this, this.updateServicesConnected);
+    } else {
+      Services.obs.addObserver(
+        this.updateServicesConnected,
+        "companion-signin"
+      );
+      Services.obs.addObserver(
+        this.updateServicesConnected,
+        "companion-signout"
+      );
+    }
+
     super.connectedCallback();
   }
 
   disconnectedCallback() {
-    Services.obs.removeObserver(
-      this.updateServicesConnected,
-      "companion-signin"
-    );
-    Services.obs.removeObserver(
-      this.updateServicesConnected,
-      "companion-signout"
-    );
-    super.connectedCallback();
+    if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
+      workshopAPI.accounts.removeListener(
+        "add",
+        this,
+        this.updateServicesConnected
+      );
+      workshopAPI.accounts.removeListener(
+        "remove",
+        this,
+        this.updateServicesConnected
+      );
+    } else {
+      Services.obs.removeObserver(
+        this.updateServicesConnected,
+        "companion-signin"
+      );
+      Services.obs.removeObserver(
+        this.updateServicesConnected,
+        "companion-signout"
+      );
+    }
+
+    super.disconnectedCallback();
   }
 
   async onClick() {
@@ -114,9 +144,7 @@ export class RefreshServicesButton extends MozLitElement {
           listView.refresh();
           listView.seekToTop(10, 990);
           listView.on("seeked", this, () => {
-            if (!listView.tocMeta.syncStatus) {
-              resolve();
-            }
+            resolve();
           });
         });
       } else {
