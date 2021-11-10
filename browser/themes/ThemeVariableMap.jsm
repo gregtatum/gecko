@@ -60,21 +60,6 @@ const ThemeVariableMap = [
     "--toolbar-bgcolor",
     {
       lwtProperty: "toolbarColor",
-      processColor(rgbaChannels, element) {
-        if (!rgbaChannels) {
-          Services.prefs.setIntPref(
-            "browser.theme.toolbar-theme",
-            AppConstants.PINEBUILD ? 1 : 2
-          );
-          return null;
-        }
-        const { r, g, b, a } = rgbaChannels;
-        Services.prefs.setIntPref(
-          "browser.theme.toolbar-theme",
-          _isColorDark(r, g, b) && !AppConstants.PINEBUILD ? 0 : 1
-        );
-        return `rgba(${r}, ${g}, ${b}, ${a})`;
-      },
     },
   ],
   [
@@ -192,18 +177,10 @@ const ThemeVariableMap = [
     {
       lwtProperty: "ntp_background",
       processColor(rgbaChannels) {
-        if (!rgbaChannels) {
-          Services.prefs.setIntPref("browser.theme.content-theme", 2);
-          return null;
-        }
-
-        const { r, g, b } = rgbaChannels;
-        Services.prefs.setIntPref(
-          "browser.theme.content-theme",
-          _isColorDark(r, g, b) ? 0 : 1
-        );
-
-        if (!Services.prefs.getBoolPref("browser.newtabpage.enabled")) {
+        if (
+          !rgbaChannels ||
+          !Services.prefs.getBoolPref("browser.newtabpage.enabled")
+        ) {
           // We only set the tabpanel background to the new tab background color
           // if the user uses about:home for new tabs. Otherwise, we flash a
           // colorful background when a new tab is opened. We will flash the
@@ -213,6 +190,7 @@ const ThemeVariableMap = [
           return null;
         }
         // Drop alpha channel
+        let { r, g, b } = rgbaChannels;
         return `rgb(${r}, ${g}, ${b})`;
       },
     },
@@ -228,8 +206,3 @@ const ThemeContentPropertyList = [
   "sidebar_highlight_text",
   "sidebar_text",
 ];
-
-// This is copied from LightweightThemeConsumer.jsm.
-function _isColorDark(r, g, b) {
-  return 0.2125 * r + 0.7154 * g + 0.0721 * b <= 127;
-}

@@ -16,6 +16,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   NimbusFeatures: "resource://nimbus/ExperimentAPI.jsm",
   PartnerLinkAttribution: "resource:///modules/PartnerLinkAttribution.jsm",
   Services: "resource://gre/modules/Services.jsm",
+  SkippableTimer: "resource:///modules/UrlbarUtils.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
   UrlbarQuickSuggest: "resource:///modules/UrlbarQuickSuggest.jsm",
   UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
@@ -28,6 +29,11 @@ XPCOMUtils.defineLazyGlobalGetters(this, ["AbortController", "fetch"]);
 const MERINO_ENDPOINT_PARAM_QUERY = "q";
 
 const TELEMETRY_MERINO_LATENCY = "FX_URLBAR_MERINO_LATENCY_MS";
+const TELEMETRY_MERINO_RESPONSE = "FX_URLBAR_MERINO_RESPONSE";
+
+const TELEMETRY_REMOTE_SETTINGS_LATENCY =
+  "FX_URLBAR_QUICK_SUGGEST_REMOTE_SETTINGS_LATENCY_MS";
+
 const TELEMETRY_SCALAR_IMPRESSION =
   "contextual.services.quicksuggest.impression";
 const TELEMETRY_SCALAR_CLICK = "contextual.services.quicksuggest.click";
@@ -102,7 +108,8 @@ class ProviderQuickSuggest extends UrlbarProvider {
       !queryContext.searchMode &&
       !queryContext.isPrivate &&
       UrlbarPrefs.get("quickSuggestEnabled") &&
-      UrlbarPrefs.get("suggest.quicksuggest")
+      (UrlbarPrefs.get("suggest.quicksuggest.nonsponsored") ||
+        UrlbarPrefs.get("suggest.quicksuggest.sponsored"))
     );
   }
 
@@ -121,32 +128,34 @@ class ProviderQuickSuggest extends UrlbarProvider {
     // affect the suggestions.
     let searchString = queryContext.searchString.trimStart();
 
-    // We currently have two sources for quick suggest: remote settings
-    // (from `UrlbarQuickSuggest`) and Merino.
+    // There are two sources for quick suggest: remote settings (from
+    // `UrlbarQuickSuggest`) and Merino.
     let promises = [];
     if (UrlbarPrefs.get("quickSuggestRemoteSettingsEnabled")) {
-      promises.push(UrlbarQuickSuggest.query(searchString));
+      promises.push(
+        this._fetchRemoteSettingsSuggestion(queryContext, searchString)
+      );
     }
-    if (UrlbarPrefs.get("merinoEnabled") && queryContext.allowRemoteResults()) {
+    if (
+      UrlbarPrefs.get("merinoEnabled") &&
+      UrlbarPrefs.get("quicksuggest.dataCollection.enabled") &&
+      queryContext.allowRemoteResults()
+    ) {
       promises.push(this._fetchMerinoSuggestions(queryContext, searchString));
     }
 
+    // Wait for both sources to finish before adding a suggestion.
     let allSuggestions = await Promise.all(promises);
     if (instance != this.queryInstance) {
       return;
     }
 
-    // Filter out sponsored suggestions if they're disabled. Also filter out
-    // null suggestions since both the remote settings and Merino fetches return
-    // null when there are no matches. Take the remaining suggestion with the
-    // largest score.
+    // Filter suggestions, keeping in mind both the remote settings and Merino
+    // fetches return null when there are no matches. Take the remaining one
+    // with the largest score.
     let suggestion = allSuggestions
       .flat()
-      .filter(
-        s =>
-          s &&
-          (!s.is_sponsored || UrlbarPrefs.get("suggest.quicksuggest.sponsored"))
-      )
+      .filter(s => s && this._canAddSuggestion(s))
       .sort((a, b) => b.score - a.score)[0];
     if (!suggestion) {
       return;
@@ -277,15 +286,15 @@ class ProviderQuickSuggest extends UrlbarProvider {
         requestId,
       } = result.payload;
 
-      let searchQuery;
-      let matchedKeywords;
       let scenario = UrlbarPrefs.get("quicksuggest.scenario");
-      // Only collect search query and matched keywords for the "online" scenario
-      // backed by the RemoteSettings source. For other scenarios and when the
-      // suggestions are provided by Merino, those two fields will not be sent,
-      // i.e. set as "undefined".
+
+      // Collect the search query and matched keywords only when the user has
+      // opted in to data collection and only for remote settings suggestions.
+      // Otherwise record those fields as undefined.
+      let matchedKeywords;
+      let searchQuery;
       if (
-        scenario === "online" &&
+        UrlbarPrefs.get("quicksuggest.dataCollection.enabled") &&
         source === QUICK_SUGGEST_SOURCE.REMOTE_SETTINGS
       ) {
         matchedKeywords = qsSuggestion || details.searchString;
@@ -325,15 +334,23 @@ class ProviderQuickSuggest extends UrlbarProvider {
   }
 
   /**
-   * Called when a urlbar pref changes.  We use this to listen for changes to
-   * `browser.urlbar.suggest.quicksuggest` so we can record a telemetry event.
+   * Called when a urlbar pref changes.
    *
    * @param {string} pref
    *   The name of the pref relative to `browser.urlbar`.
    */
   onPrefChanged(pref) {
     switch (pref) {
-      case "suggest.quicksuggest":
+      case "quicksuggest.dataCollection.enabled":
+        if (!UrlbarPrefs.updatingFirefoxSuggestScenario) {
+          Services.telemetry.recordEvent(
+            TELEMETRY_EVENT_CATEGORY,
+            "data_collect_toggled",
+            UrlbarPrefs.get(pref) ? "enabled" : "disabled"
+          );
+        }
+        break;
+      case "suggest.quicksuggest.nonsponsored":
         if (!UrlbarPrefs.updatingFirefoxSuggestScenario) {
           Services.telemetry.recordEvent(
             TELEMETRY_EVENT_CATEGORY,
@@ -360,12 +377,45 @@ class ProviderQuickSuggest extends UrlbarProvider {
    * @param {UrlbarQueryContext} queryContext
    */
   cancelQuery(queryContext) {
+    // Cancel the Merino timeout timer so it doesn't fire and record a timeout.
+    // If it's already canceled or has fired, this is a no-op.
+    this._merinoTimeoutTimer?.cancel();
+
+    // Don't abort the Merino fetch if one is ongoing. By design we allow
+    // fetches to finish so we can record their latency.
+  }
+
+  /**
+   * Fetches a remote settings suggestion.
+   *
+   * @param {UrlbarQueryContext} queryContext
+   * @param {string} searchString
+   * @returns {object}
+   *   The remote settings suggestion or null if there's no match.
+   */
+  async _fetchRemoteSettingsSuggestion(queryContext, searchString) {
+    let instance = this.queryInstance;
+
+    let suggestion;
+    TelemetryStopwatch.start(TELEMETRY_REMOTE_SETTINGS_LATENCY, queryContext);
     try {
-      this._merinoFetchController?.abort();
+      suggestion = await UrlbarQuickSuggest.query(searchString);
+      TelemetryStopwatch.finish(
+        TELEMETRY_REMOTE_SETTINGS_LATENCY,
+        queryContext
+      );
+      if (instance != this.queryInstance) {
+        return null;
+      }
     } catch (error) {
-      this.logger.error(error);
+      TelemetryStopwatch.cancel(
+        TELEMETRY_REMOTE_SETTINGS_LATENCY,
+        queryContext
+      );
+      this.logger.error("Could not fetch remote settings suggestion: " + error);
     }
-    this._merinoFetchController = null;
+
+    return suggestion;
   }
 
   /**
@@ -380,46 +430,98 @@ class ProviderQuickSuggest extends UrlbarProvider {
   async _fetchMerinoSuggestions(queryContext, searchString) {
     let instance = this.queryInstance;
 
-    // Fetch a response from the endpoint.
-    let response;
-    let controller;
+    // Get the URL.
+    let url;
     try {
-      let url = new URL(UrlbarPrefs.get("merino.endpointURL"));
-      url.searchParams.set(MERINO_ENDPOINT_PARAM_QUERY, searchString);
-
-      controller = this._merinoFetchController = new AbortController();
-      TelemetryStopwatch.start(TELEMETRY_MERINO_LATENCY, queryContext);
-      response = await fetch(url, {
-        signal: controller.signal,
-      });
-      TelemetryStopwatch.finish(TELEMETRY_MERINO_LATENCY, queryContext);
-      if (instance != this.queryInstance) {
-        return null;
-      }
+      url = new URL(UrlbarPrefs.get("merino.endpointURL"));
     } catch (error) {
-      TelemetryStopwatch.cancel(TELEMETRY_MERINO_LATENCY, queryContext);
-      if (error.name != "AbortError") {
-        this.logger.error(error);
-      }
-    } finally {
-      if (controller == this._merinoFetchController) {
-        this._merinoFetchController = null;
-      }
+      this.logger.error("Could not make Merino endpoint URL: " + error);
+      return null;
+    }
+    url.searchParams.set(MERINO_ENDPOINT_PARAM_QUERY, searchString);
+
+    let responseHistogram = Services.telemetry.getHistogramById(
+      TELEMETRY_MERINO_RESPONSE
+    );
+    let maybeRecordResponse = category => {
+      responseHistogram?.add(category);
+      responseHistogram = null;
+    };
+
+    // Set up the timeout timer.
+    let timeout = UrlbarPrefs.get("merinoTimeoutMs");
+    let timer = (this._merinoTimeoutTimer = new SkippableTimer({
+      name: "Merino timeout",
+      time: timeout,
+      logger: this.logger,
+      callback: () => {
+        // The fetch timed out.
+        this.logger.info(`Merino fetch timed out (timeout = ${timeout}ms)`);
+        maybeRecordResponse("timeout");
+      },
+    }));
+
+    // If there's an ongoing fetch, abort it so there's only one at a time. By
+    // design we do not abort fetches on timeout or when the query is canceled
+    // so we can record their latency.
+    try {
+      this._merinoFetchController?.abort();
+    } catch (error) {
+      this.logger.error("Could not abort Merino fetch: " + error);
     }
 
-    if (!response) {
+    // Do the fetch.
+    let response;
+    let controller = (this._merinoFetchController = new AbortController());
+    TelemetryStopwatch.start(TELEMETRY_MERINO_LATENCY, queryContext);
+    await Promise.race([
+      timer.promise,
+      (async () => {
+        try {
+          // Canceling the timer below resolves its promise, which can resolve
+          // the outer promise created by `Promise.race`. This inner async
+          // function happens not to await anything after canceling the timer,
+          // but if it did, `timer.promise` could win the race and resolve the
+          // outer promise without a value. For that reason, we declare
+          // `response` in the outer scope and set it here instead of returning
+          // the response from this inner function and assuming it will also be
+          // returned by `Promise.race`.
+          response = await fetch(url, { signal: controller.signal });
+          TelemetryStopwatch.finish(TELEMETRY_MERINO_LATENCY, queryContext);
+          maybeRecordResponse(response.ok ? "success" : "http_error");
+        } catch (error) {
+          TelemetryStopwatch.cancel(TELEMETRY_MERINO_LATENCY, queryContext);
+          if (error.name != "AbortError") {
+            this.logger.error("Could not fetch Merino endpoint: " + error);
+            maybeRecordResponse("network_error");
+          }
+        } finally {
+          // Now that the fetch is done, cancel the timeout timer so it doesn't
+          // fire and record a timeout. If it already fired, which it would have
+          // on timeout, or was already canceled, this is a no-op.
+          timer.cancel();
+          if (controller == this._merinoFetchController) {
+            this._merinoFetchController = null;
+          }
+        }
+      })(),
+    ]);
+    if (timer == this._merinoTimeoutTimer) {
+      this._merinoTimeoutTimer = null;
+    }
+    if (instance != this.queryInstance) {
       return null;
     }
 
     // Get the response body as an object.
     let body;
     try {
-      body = await response.json();
+      body = await response?.json();
       if (instance != this.queryInstance) {
         return null;
       }
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error("Could not get Merino response as JSON: " + error);
     }
 
     if (!body?.suggestions?.length) {
@@ -437,6 +539,24 @@ class ProviderQuickSuggest extends UrlbarProvider {
       request_id,
       source: QUICK_SUGGEST_SOURCE.MERINO,
     }));
+  }
+
+  /**
+   * Returns whether a given suggestion can be added for a query, assuming the
+   * provider itself should be active.
+   *
+   * @param {object} suggestion
+   *   A suggestion object fetched from UrlbarQuickSuggest.
+   * @returns {boolean}
+   *   Whether the suggestion can be added.
+   */
+  _canAddSuggestion(suggestion) {
+    return (
+      (suggestion.is_sponsored &&
+        UrlbarPrefs.get("suggest.quicksuggest.sponsored")) ||
+      (!suggestion.is_sponsored &&
+        UrlbarPrefs.get("suggest.quicksuggest.nonsponsored"))
+    );
   }
 
   /**

@@ -129,6 +129,7 @@ struct WorkerLoadInfoData {
   uint64_t mWindowID;
 
   nsCOMPtr<nsIReferrerInfo> mReferrerInfo;
+  uint32_t mPrincipalHashValue;
   bool mFromWindow;
   bool mEvalAllowed;
   bool mReportCSPViolations;
@@ -140,8 +141,8 @@ struct WorkerLoadInfoData {
   bool mUseRegularPrincipal;
   bool mHasStorageAccessPermissionGranted;
   bool mServiceWorkersTestingInWindow;
+  bool mShouldResistFingerprinting;
   OriginAttributes mOriginAttributes;
-  bool mIsThirdPartyContextToTopWindow;
 
   enum {
     eNotSet,

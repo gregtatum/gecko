@@ -1528,7 +1528,7 @@ already_AddRefed<IAPZCTreeManager> CompositorBridgeParent::GetAPZCTreeManager(
 
 static void InsertVsyncProfilerMarker(TimeStamp aVsyncTimestamp) {
   MOZ_ASSERT(CompositorThreadHolder::IsInCompositorThread());
-  if (profiler_thread_is_being_profiled()) {
+  if (profiler_thread_is_being_profiled_for_markers()) {
     // Tracks when a vsync occurs according to the HardwareComposer.
     struct VsyncMarker {
       static constexpr mozilla::Span<const char> MarkerTypeName() {
@@ -1872,11 +1872,11 @@ CompositorBridgeParent::GetGeckoContentControllerForRoot(
 }
 
 PTextureParent* CompositorBridgeParent::AllocPTextureParent(
-    const SurfaceDescriptor& aSharedData, const ReadLockDescriptor& aReadLock,
+    const SurfaceDescriptor& aSharedData, ReadLockDescriptor& aReadLock,
     const LayersBackend& aLayersBackend, const TextureFlags& aFlags,
     const LayersId& aId, const uint64_t& aSerial,
     const wr::MaybeExternalImageId& aExternalImageId) {
-  return TextureHost::CreateIPDLActor(this, aSharedData, aReadLock,
+  return TextureHost::CreateIPDLActor(this, aSharedData, std::move(aReadLock),
                                       aLayersBackend, aFlags, aSerial,
                                       aExternalImageId);
 }
@@ -1915,7 +1915,7 @@ int32_t RecordContentFrameTime(
   double latencyNorm = latencyMs / aVsyncRate.ToMilliseconds();
   int32_t fracLatencyNorm = lround(latencyNorm * 100.0);
 
-  if (profiler_thread_is_being_profiled()) {
+  if (profiler_thread_is_being_profiled_for_markers()) {
     struct ContentFrameMarker {
       static constexpr Span<const char> MarkerTypeName() {
         return MakeStringSpan("CONTENT_FRAME_TIME");

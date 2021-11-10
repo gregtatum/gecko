@@ -301,8 +301,9 @@ LightweightThemeConsumer.prototype = {
         theme.id == DARK_THEME_ID
     );
     this._setExperiment(active, themeData.experiment, theme.experimental);
-    _setImage(root, active, "--lwt-header-image", theme.headerURL);
+    _setImage(this._win, root, active, "--lwt-header-image", theme.headerURL);
     _setImage(
+      this._win,
       root,
       active,
       "--lwt-additional-images",
@@ -311,8 +312,10 @@ LightweightThemeConsumer.prototype = {
     _setProperties(root, active, theme);
 
     if (theme.id != DEFAULT_THEME_ID || useDarkTheme) {
+      _determineToolbarAndContentTheme(this._doc, theme);
       root.setAttribute("lwtheme", "true");
     } else {
+      _determineToolbarAndContentTheme(this._doc, null);
       root.removeAttribute("lwtheme");
       root.removeAttribute("lwthemetextcolor");
     }
@@ -410,7 +413,7 @@ function _getContentProperties(doc, active, data) {
   return properties;
 }
 
-function _setImage(aRoot, aActive, aVariableName, aURLs) {
+function _setImage(aWin, aRoot, aActive, aVariableName, aURLs) {
   if (aURLs && !Array.isArray(aURLs)) {
     aURLs = [aURLs];
   }
@@ -418,7 +421,7 @@ function _setImage(aRoot, aActive, aVariableName, aURLs) {
     aRoot,
     aActive,
     aVariableName,
-    aURLs && aURLs.map(v => `url("${v.replace(/"/g, '\\"')}")`).join(",")
+    aURLs && aURLs.map(v => `url(${aWin.CSS.escape(v)})`).join(", ")
   );
 }
 
@@ -430,8 +433,29 @@ function _setProperty(elem, active, variableName, value) {
   }
 }
 
+function _determineToolbarAndContentTheme(aDoc, aTheme) {
+  function prefValue(aColor) {
+    if (!aColor) {
+      return 2;
+    }
+    return _isColorDark(aColor.r, aColor.g, aColor.b) ? 0 : 1;
+  }
+
+  let toolbarColor = _cssColorToRGBA(aDoc, aTheme?.toolbarColor);
+  let contentColor = _cssColorToRGBA(aDoc, aTheme?.ntp_background);
+  Services.prefs.setIntPref(
+    "browser.theme.toolbar-theme",
+    AppConstants.PINEBUILD ? 1 : prefValue(toolbarColor)
+  );
+  Services.prefs.setIntPref(
+    "browser.theme.content-theme",
+    prefValue(contentColor)
+  );
+}
+
 function _setProperties(root, active, themeData) {
   let propertyOverrides = new Map();
+  let doc = root.ownerDocument;
 
   for (let map of [toolkitVariableMap, ThemeVariableMap]) {
     for (let [cssVarName, definition] of map) {
@@ -443,7 +467,7 @@ function _setProperties(root, active, themeData) {
         isColor = true,
       } = definition;
       let elem = optionalElementID
-        ? root.ownerDocument.getElementById(optionalElementID)
+        ? doc.getElementById(optionalElementID)
         : root;
       if (!elem) {
         continue;
@@ -451,12 +475,9 @@ function _setProperties(root, active, themeData) {
 
       let val = propertyOverrides.get(lwtProperty) || themeData[lwtProperty];
       if (isColor) {
-        val = _cssColorToRGBA(root.ownerDocument, val);
+        val = _cssColorToRGBA(doc, val);
         if (!val && fallbackProperty) {
-          val = _cssColorToRGBA(
-            root.ownerDocument,
-            themeData[fallbackProperty]
-          );
+          val = _cssColorToRGBA(doc, themeData[fallbackProperty]);
         }
         if (processColor) {
           val = processColor(val, elem, propertyOverrides);
@@ -491,7 +512,6 @@ function _rgbaToString(parsedColor) {
   return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
 
-// There is a second copy of this in ThemeVariableMap.jsm.
 function _isColorDark(r, g, b) {
   return 0.2125 * r + 0.7154 * g + 0.0721 * b <= 127;
 }

@@ -2,7 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Basic tests for the quick suggest provider.
+// Basic tests for the quick suggest provider using the remote settings source.
+// See also test_quicksuggest_merino.js.
 
 "use strict";
 
@@ -11,6 +12,9 @@ XPCOMUtils.defineLazyModuleGetters(this, {
     "resource:///modules/UrlbarProviderQuickSuggest.jsm",
   UrlbarQuickSuggest: "resource:///modules/UrlbarQuickSuggest.jsm",
 });
+
+const TELEMETRY_REMOTE_SETTINGS_LATENCY =
+  "FX_URLBAR_QUICK_SUGGEST_REMOTE_SETTINGS_LATENCY_MS";
 
 const SPONSORED_SEARCH_STRING = "frab";
 const NONSPONSORED_SEARCH_STRING = "nonspon";
@@ -159,7 +163,7 @@ add_task(async function init() {
 // Tests with only non-sponsored suggestions enabled with a matching search
 // string.
 add_task(async function nonsponsoredOnly_match() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", false);
 
   let context = createContext(NONSPONSORED_SEARCH_STRING, {
@@ -175,7 +179,7 @@ add_task(async function nonsponsoredOnly_match() {
 // Tests with only non-sponsored suggestions enabled with a non-matching search
 // string.
 add_task(async function nonsponsoredOnly_noMatch() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", false);
 
   let context = createContext(SPONSORED_SEARCH_STRING, {
@@ -185,23 +189,25 @@ add_task(async function nonsponsoredOnly_noMatch() {
   await check_results({ context, matches: [] });
 });
 
-// Tests with sponsored suggestions enabled but with the main pref disabled and
-// with a search string that matches the sponsored suggestion.
+// Tests with only sponsored suggestions enabled with a matching search string.
 add_task(async function sponsoredOnly_sponsored() {
-  UrlbarPrefs.set("suggest.quicksuggest", false);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", false);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
 
   let context = createContext(SPONSORED_SEARCH_STRING, {
     providers: [UrlbarProviderQuickSuggest.name],
     isPrivate: false,
   });
-  await check_results({ context, matches: [] });
+  await check_results({
+    context,
+    matches: [EXPECTED_SPONSORED_RESULT],
+  });
 });
 
-// Tests with sponsored suggestions enabled but with the main pref disabled and
-// with a search string that matches the non-sponsored suggestion.
+// Tests with only sponsored suggestions enabled with a non-matching search
+// string.
 add_task(async function sponsoredOnly_nonsponsored() {
-  UrlbarPrefs.set("suggest.quicksuggest", false);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", false);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
 
   let context = createContext(NONSPONSORED_SEARCH_STRING, {
@@ -214,7 +220,7 @@ add_task(async function sponsoredOnly_nonsponsored() {
 // Tests with both sponsored and non-sponsored suggestions enabled with a
 // search string that matches the sponsored suggestion.
 add_task(async function both_sponsored() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
 
   let context = createContext(SPONSORED_SEARCH_STRING, {
@@ -230,7 +236,7 @@ add_task(async function both_sponsored() {
 // Tests with both sponsored and non-sponsored suggestions enabled with a
 // search string that matches the non-sponsored suggestion.
 add_task(async function both_nonsponsored() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
 
   let context = createContext(NONSPONSORED_SEARCH_STRING, {
@@ -246,7 +252,7 @@ add_task(async function both_nonsponsored() {
 // Tests with both sponsored and non-sponsored suggestions enabled with a
 // search string that doesn't match either suggestion.
 add_task(async function both_noMatch() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
 
   let context = createContext("this doesn't match anything", {
@@ -259,7 +265,7 @@ add_task(async function both_noMatch() {
 // Tests with both the main and sponsored prefs disabled with a search string
 // that matches the sponsored suggestion.
 add_task(async function neither_sponsored() {
-  UrlbarPrefs.set("suggest.quicksuggest", false);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", false);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", false);
 
   let context = createContext(SPONSORED_SEARCH_STRING, {
@@ -272,7 +278,7 @@ add_task(async function neither_sponsored() {
 // Tests with both the main and sponsored prefs disabled with a search string
 // that matches the non-sponsored suggestion.
 add_task(async function neither_nonsponsored() {
-  UrlbarPrefs.set("suggest.quicksuggest", false);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", false);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", false);
 
   let context = createContext(NONSPONSORED_SEARCH_STRING, {
@@ -284,7 +290,7 @@ add_task(async function neither_nonsponsored() {
 
 // Search string matching should be case insensitive and ignore leading spaces.
 add_task(async function caseInsensitiveAndLeadingSpaces() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
 
   let context = createContext("  " + SPONSORED_SEARCH_STRING.toUpperCase(), {
@@ -300,7 +306,7 @@ add_task(async function caseInsensitiveAndLeadingSpaces() {
 // Results should be returned even when `browser.search.suggest.enabled` is
 // false.
 add_task(async function browser_search_suggest_enabled() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
   UrlbarPrefs.set("browser.search.suggest.enabled", false);
 
@@ -319,7 +325,7 @@ add_task(async function browser_search_suggest_enabled() {
 // Results should be returned even when `browser.urlbar.suggest.searches` is
 // false.
 add_task(async function browser_search_suggest_enabled() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
   UrlbarPrefs.set("suggest.searches", false);
 
@@ -338,7 +344,7 @@ add_task(async function browser_search_suggest_enabled() {
 // Neither sponsored nor non-sponsored results should appear in private contexts
 // even when suggestions in private windows are enabled.
 add_task(async function privateContext() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
 
   for (let privateSuggestionsEnabled of [true, false]) {
@@ -362,7 +368,7 @@ add_task(async function privateContext() {
 // When search suggestions come before general results and the only general
 // result is a quick suggest result, it should come last.
 add_task(async function suggestionsBeforeGeneral_only() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
   UrlbarPrefs.set("browser.search.suggest.enabled", true);
   UrlbarPrefs.set("suggest.searches", true);
@@ -400,7 +406,7 @@ add_task(async function suggestionsBeforeGeneral_only() {
 // general results besides quick suggest, the quick suggest result should come
 // last.
 add_task(async function suggestionsBeforeGeneral_others() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
   UrlbarPrefs.set("browser.search.suggest.enabled", true);
   UrlbarPrefs.set("suggest.searches", true);
@@ -455,7 +461,7 @@ add_task(async function suggestionsBeforeGeneral_others() {
 // When general results come before search suggestions and the only general
 // result is a quick suggest result, it should come before suggestions.
 add_task(async function generalBeforeSuggestions_only() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
   UrlbarPrefs.set("browser.search.suggest.enabled", true);
   UrlbarPrefs.set("suggest.searches", true);
@@ -493,7 +499,7 @@ add_task(async function generalBeforeSuggestions_only() {
 // general results besides quick suggest, the quick suggest result should be the
 // last general result.
 add_task(async function generalBeforeSuggestions_others() {
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
   UrlbarPrefs.set("browser.search.suggest.enabled", true);
   UrlbarPrefs.set("suggest.searches", true);
@@ -610,7 +616,8 @@ async function doDedupeAgainstURLTest({
   // First, do a search with quick suggest disabled to make sure the search
   // string matches the visit.
   info("Doing first query");
-  UrlbarPrefs.set("suggest.quicksuggest", false);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", false);
+  UrlbarPrefs.set("suggest.quicksuggest.sponsored", false);
   let context = createContext(searchString, { isPrivate: false });
   await check_results({
     context,
@@ -628,7 +635,7 @@ async function doDedupeAgainstURLTest({
   });
 
   // Now do another search with quick suggest enabled.
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
 
   context = createContext(searchString, { isPrivate: false });
@@ -653,61 +660,106 @@ async function doDedupeAgainstURLTest({
   info("Doing second query");
   await check_results({ context, matches: expectedResults });
 
-  UrlbarPrefs.clear("suggest.quicksuggest");
+  UrlbarPrefs.clear("suggest.quicksuggest.nonsponsored");
   UrlbarPrefs.clear("suggest.quicksuggest.sponsored");
   UrlbarPrefs.clear("suggest.searches");
   await PlacesUtils.history.clear();
 }
 
+// Tests the remote settings latency histogram.
+add_task(async function latencyTelemetry() {
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
+  UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
+
+  let histogram = Services.telemetry.getHistogramById(
+    TELEMETRY_REMOTE_SETTINGS_LATENCY
+  );
+  histogram.clear();
+
+  let context = createContext(SPONSORED_SEARCH_STRING, {
+    providers: [UrlbarProviderQuickSuggest.name],
+    isPrivate: false,
+  });
+  await check_results({
+    context,
+    matches: [EXPECTED_SPONSORED_RESULT],
+  });
+
+  // In the latency histogram, there should be a single value across all
+  // buckets.
+  Assert.deepEqual(
+    Object.values(histogram.snapshot().values).filter(v => v > 0),
+    [1],
+    "Latency histogram updated after search"
+  );
+  Assert.ok(
+    !TelemetryStopwatch.running(TELEMETRY_REMOTE_SETTINGS_LATENCY, context),
+    "Stopwatch not running after search"
+  );
+});
+
 // Tests setup and teardown of the remote settings client depending on whether
 // quick suggest is enabled.
 add_task(async function setupAndTeardown() {
-  // Sanity check pref values at the start of this task. We assume all previous
-  // tasks have left `quicksuggest.enabled` set to true (from the init task) and
-  // the `suggest.quicksuggest` prefs set to false.
-  let initialPrefs = {
-    "quicksuggest.enabled": true,
-    "suggest.quicksuggest": false,
-    "suggest.quicksuggest.sponsored": false,
-  };
-  for (let [name, expectedValue] of Object.entries(initialPrefs)) {
-    Assert.equal(
-      UrlbarPrefs.get(name),
-      expectedValue,
-      `Initial value of ${name} is ${expectedValue}`
-    );
-  }
-
-  // Initially the settings client will be null since both
-  // `suggest.quicksuggest` prefs are false.
-  Assert.ok(!UrlbarQuickSuggest._rs, "Settings client is null initially");
-
-  UrlbarPrefs.set("suggest.quicksuggest", true);
-  await UrlbarQuickSuggest.readyPromise;
-  Assert.ok(
-    UrlbarQuickSuggest._rs,
-    "Settings client is non-null after enabling suggest.quicksuggest"
-  );
-
-  UrlbarPrefs.set("suggest.quicksuggest", false);
+  // Disable the suggest prefs so the settings client starts out torn down.
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", false);
+  UrlbarPrefs.set("suggest.quicksuggest.sponsored", false);
   await UrlbarQuickSuggest.readyPromise;
   Assert.ok(
     !UrlbarQuickSuggest._rs,
-    "Settings client is null after disabling suggest.quicksuggest"
+    "Settings client is null after disabling suggest prefs"
+  );
+
+  // Setting one of the suggest prefs should cause the client to be set up. We
+  // assume all previous tasks left `quicksuggest.enabled` true (from the init
+  // task).
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
+  await UrlbarQuickSuggest.readyPromise;
+  Assert.ok(
+    UrlbarQuickSuggest._rs,
+    "Settings client is non-null after enabling suggest.quicksuggest.nonsponsored"
+  );
+
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", false);
+  await UrlbarQuickSuggest.readyPromise;
+  Assert.ok(
+    !UrlbarQuickSuggest._rs,
+    "Settings client is null after disabling suggest.quicksuggest.nonsponsored"
   );
 
   UrlbarPrefs.set("suggest.quicksuggest.sponsored", true);
   await UrlbarQuickSuggest.readyPromise;
   Assert.ok(
-    !UrlbarQuickSuggest._rs,
-    "Settings client remains null after enabling suggest.quicksuggest.sponsored"
+    UrlbarQuickSuggest._rs,
+    "Settings client is non-null after enabling suggest.quicksuggest.sponsored"
   );
 
-  UrlbarPrefs.set("suggest.quicksuggest", true);
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
   await UrlbarQuickSuggest.readyPromise;
   Assert.ok(
     UrlbarQuickSuggest._rs,
-    "Settings client is non-null after enabling suggest.quicksuggest"
+    "Settings client remains non-null after enabling suggest.quicksuggest.nonsponsored"
+  );
+
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", false);
+  await UrlbarQuickSuggest.readyPromise;
+  Assert.ok(
+    UrlbarQuickSuggest._rs,
+    "Settings client remains non-null after disabling suggest.quicksuggest.nonsponsored"
+  );
+
+  UrlbarPrefs.set("suggest.quicksuggest.sponsored", false);
+  await UrlbarQuickSuggest.readyPromise;
+  Assert.ok(
+    !UrlbarQuickSuggest._rs,
+    "Settings client is null after disabling suggest.quicksuggest.sponsored"
+  );
+
+  UrlbarPrefs.set("suggest.quicksuggest.nonsponsored", true);
+  await UrlbarQuickSuggest.readyPromise;
+  Assert.ok(
+    UrlbarQuickSuggest._rs,
+    "Settings client is non-null after enabling suggest.quicksuggest.nonsponsored"
   );
 
   UrlbarPrefs.set("quicksuggest.enabled", false);
@@ -718,7 +770,7 @@ add_task(async function setupAndTeardown() {
   );
 
   // Leave the prefs in the same state as when the task started.
-  UrlbarPrefs.clear("suggest.quicksuggest");
+  UrlbarPrefs.clear("suggest.quicksuggest.nonsponsored");
   UrlbarPrefs.clear("suggest.quicksuggest.sponsored");
   UrlbarPrefs.set("quicksuggest.enabled", true);
   await UrlbarQuickSuggest.readyPromise;

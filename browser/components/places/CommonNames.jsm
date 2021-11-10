@@ -11,7 +11,6 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
-  PageDataCollector: "resource:///modules/pagedata/PageDataCollector.jsm",
   shortURL: "resource://activity-stream/lib/ShortURL.jsm",
 });
 
@@ -310,13 +309,7 @@ class CommonNames {
    * @returns {string} The snapshot's common name.
    */
   static getName(snapshot) {
-    let commonName = snapshot.pageData.get(
-      PageDataCollector.DATA_TYPE.GENERAL
-    )?.[0]?.site_name;
-    if (commonName) {
-      return commonName;
-    }
-    return CommonNames.getURLName(new URL(snapshot.url));
+    return snapshot.siteName ?? CommonNames.getURLName(new URL(snapshot.url));
   }
 
   static getURLName(url) {

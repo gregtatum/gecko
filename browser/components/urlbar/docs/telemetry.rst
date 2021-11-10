@@ -26,6 +26,16 @@ FX_URLBAR_MERINO_LATENCY_MS
   response. It is an exponential histogram with values between 0 and 30000 (0s
   and 30s).
 
+FX_URLBAR_MERINO_RESPONSE
+  This probe is related to the Firefox Suggest (quick suggest) feature. It is a
+  categorical histogram that records whether each Merino fetch was successful or
+  not. It has the following categories. ``success`` (0): The fetch completed
+  without any error before the timeout elapsed. ``timeout`` (1): The timeout
+  elapsed before the fetch completed or otherwise failed. ``network_error`` (2):
+  The fetch failed due to a network error before the timeout elapsed. e.g., the
+  user's network or the Merino server was down. ``http_error`` (3): The fetch
+  completed before the timeout elapsed but the server returned an error.
+
 FX_URLBAR_SELECTED_RESULT_METHOD
   This probe tracks how a result was picked by the user from the list.
   It is a categorical histogram with these values:
@@ -514,7 +524,18 @@ contextservices.quicksuggest
   true.
 
   The following event is recorded when the
-  ``browser.urlbar.suggest.quicksuggest`` pref is toggled:
+  ``browser.urlbar.quicksuggest.dataCollection.enabled`` pref is toggled:
+
+    - Category: ``contextservices.quicksuggest``
+    - Method: ``data_collect_toggled``
+    - Objects: ``enabled``, ``disabled`` -- ``enabled`` is recorded when the
+      pref is flipped from false to true, and ``disabled`` is recorded when the
+      pref is flipped from true to false.
+    - Value: Not used
+    - Extra: Not used
+
+  The following event is recorded when the
+  ``browser.urlbar.suggest.quicksuggest.nonsponsored`` pref is toggled:
 
     - Category: ``contextservices.quicksuggest``
     - Method: ``enable_toggled``
@@ -587,10 +608,15 @@ Telemetry Environment
       for example when the dialog is replaced with another higher priority
       dialog like the one shown when quitting the app (the user remains opted
       out).
-    - ``browser.urlbar.suggest.quicksuggest``: True if Firefox Suggest
-      suggestions in general are enabled in the urlbar.
+    - ``browser.urlbar.quicksuggest.dataCollection.enabled``: Whether the user
+      has opted in to data collection for Firefox Suggest. This pref is set to
+      true when the user opts in to the Firefox Suggest onboarding dialog
+      modal. The user can also toggle the pref using a toggle switch in the
+      Firefox Suggest preferences UI.
+    - ``browser.urlbar.suggest.quicksuggest.nonsponsored``: True if
+      non-sponsored Firefox Suggest suggestions are enabled in the urlbar.
     - ``browser.urlbar.suggest.quicksuggest.sponsored``: True if sponsored
-      Firefox Suggest suggestions in particular are enabled in the urlbar.
+      Firefox Suggest suggestions are enabled in the urlbar.
     - ``browser.urlbar.suggest.searches``: True if search suggestions are
       enabled in the urlbar. Defaults to false.
 

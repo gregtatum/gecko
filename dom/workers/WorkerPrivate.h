@@ -739,6 +739,10 @@ class WorkerPrivate final : public RelativeTimeline {
     return *mLoadInfo.mPrincipalInfo;
   }
 
+  uint32_t GetPrincipalHashValue() const {
+    return mLoadInfo.mPrincipalHashValue;
+  }
+
   const mozilla::ipc::PrincipalInfo& GetEffectiveStoragePrincipalInfo() const;
 
   already_AddRefed<nsIChannel> ForgetWorkerChannel() {
@@ -834,9 +838,8 @@ class WorkerPrivate final : public RelativeTimeline {
     return mLoadInfo.mServiceWorkersTestingInWindow;
   }
 
-  // Determin if the worker was created under a third-party context.
-  bool IsThirdPartyContextToTopWindow() const {
-    return mLoadInfo.mIsThirdPartyContextToTopWindow;
+  bool ShouldResistFingerprinting() const {
+    return mLoadInfo.mShouldResistFingerprinting;
   }
 
   bool IsWatchedByDevTools() const { return mLoadInfo.mWatchedByDevTools; }
