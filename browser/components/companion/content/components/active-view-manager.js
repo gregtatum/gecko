@@ -374,6 +374,10 @@ export default class ActiveViewManager extends HTMLElement {
 
   #pageActionPanelHiding(event) {
     CustomizableUI.removePanelCloseListeners(this.#pageActionPanel);
+
+    // Restart view activation timer once PAM is closed.
+    window.gGlobalHistory.startActivationTimer();
+
     this.#pageActionView = null;
     let siteSecurityIcon = document.getElementById("site-security-icon");
     siteSecurityIcon.classList.remove(this.#securityIconClass);
@@ -387,8 +391,11 @@ export default class ActiveViewManager extends HTMLElement {
 
   #pageActionPanelShowing(event) {
     CustomizableUI.addPanelCloseListeners(this.#pageActionPanel);
-    let view = this.#pageActionView;
 
+    // Clear activation timeout if the page action menu is open.
+    window.gGlobalHistory.clearActivationTimer();
+
+    let view = this.#pageActionView;
     let pinView = document.getElementById("page-action-pin-view");
     let pinL10nId = "page-action-toggle-pinning";
     document.l10n.setAttributes(pinView, pinL10nId, { isPinned: view.pinned });

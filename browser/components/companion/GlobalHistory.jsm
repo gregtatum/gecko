@@ -948,7 +948,7 @@ class GlobalHistory extends EventTarget {
     this.#windowRestoring = true;
 
     if (this.#activationTimer) {
-      this.#window.clearTimeout(this.#activationTimer);
+      this.clearActivationTimer();
     }
 
     for (let { linkedBrowser: browser } of this.#window.gBrowser.tabs) {
@@ -1141,7 +1141,7 @@ class GlobalHistory extends EventTarget {
     this.#currentIndex = this.#viewStack.indexOf(selectedView);
     this.#notifyEvent("RiverRebuilt", selectedView);
 
-    this.#startActivationTimer();
+    this.startActivationTimer();
     this.#updateSessionStore();
   }
 
@@ -1411,7 +1411,7 @@ class GlobalHistory extends EventTarget {
       }
     }
 
-    this.#startActivationTimer();
+    this.startActivationTimer();
     this.#updateSessionStore();
     this.#notifyEvent("ViewChanged", internalView);
 
@@ -1518,9 +1518,13 @@ class GlobalHistory extends EventTarget {
     return { internalView: null, overwriting: false };
   }
 
-  #startActivationTimer() {
+  clearActivationTimer() {
+    this.#window.clearTimeout(this.#activationTimer);
+  }
+
+  startActivationTimer() {
     if (this.#activationTimer) {
-      this.#window.clearTimeout(this.#activationTimer);
+      this.clearActivationTimer();
     }
 
     let timeout = GlobalHistory.activationTimeout;
