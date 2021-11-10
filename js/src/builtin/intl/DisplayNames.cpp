@@ -10,6 +10,7 @@
 
 #include "mozilla/Assertions.h"
 #include "mozilla/intl/DisplayNames.h"
+#include "mozilla/PodOperations.h"
 #include "mozilla/Span.h"
 #include "mozilla/TextUtils.h"
 
@@ -403,41 +404,27 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
-  // mozilla::intl::DisplayNames::Of matches the API of the Intl.DisplayNames
-  // API. The code gets passed in as UTF-8 as the string commonly has an ASCII
-  // representation.
-  bool codeIsUtf8Ascii = code->hasLatin1Chars() && StringIsAscii(code);
-  mozilla::Span<const char> span = nullptr;
-
+  // The "code" is usually a small ASCII string, so try to avoid an allocation
+  // by copying it to the stack. Unfortunately we can't pass a string span of
+  // the JSString directly to the unified DisplayNames API, as the
+  // intl::FormatBuffer will be written to. This writing can trigger a GC and
+  // invalidate the span, creating a nogc rooting hazard.
   JS::UniqueChars utf8 = nullptr;
-  if (!codeIsUtf8Ascii) {
+  unsigned char ascii[32];
+  mozilla::Span<const char> codeSpan = nullptr;
+  if (code->length() < 32 && code->hasLatin1Chars() && StringIsAscii(code)) {
+    JS::AutoCheckCannotGC nogc;
+    mozilla::PodCopy(ascii, code->latin1Chars(nogc), code->length());
+    codeSpan =
+        mozilla::Span(reinterpret_cast<const char*>(ascii), code->length());
+  } else {
     utf8 = JS_EncodeStringToUTF8(cx, code);
-    span = mozilla::MakeStringSpan(utf8.get());
+    codeSpan = mozilla::MakeStringSpan(utf8.get());
   }
 
   intl::FormatBuffer<char16_t, intl::INITIAL_CHAR_BUFFER_SIZE> buffer(cx);
-  mozilla::Result<mozilla::Ok, mozilla::intl::DisplayNamesError> result =
-      mozilla::Ok();
 
-  // Do not GC while querying mozilla::intl::DisplayNames::Of, as it directly
-  // references JSString contents. The result must be handled after the
-  // following lexical scope.
-  {
-    JS::AutoCheckCannotGC nogc;
-
-    if (codeIsUtf8Ascii) {
-      // The string is just ascii characters, so there is no need to allocate a
-      // new string. This is a common case for BCP47 language tags, and probably
-      // other codes.
-      span = mozilla::AsChars(code->latin1Range(nogc));
-    }
-
-    MOZ_ASSERT(span.data());
-
-    result = dn->Of(buffer, span, fallback);
-  }
-
-  if (result.isErr()) {
+  if (auto result = dn->Of(buffer, codeSpan, fallback); result.isErr()) {
     switch (result.unwrapErr()) {
       case mozilla::intl::DisplayNamesError::InternalError:
         intl::ReportInternalError(cx);
