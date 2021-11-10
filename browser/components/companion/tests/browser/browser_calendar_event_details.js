@@ -345,3 +345,48 @@ add_task(async function testSecondaryGCalWithNoCreatorAvailable() {
     });
   });
 });
+
+add_task(async function testHostNameMatchesHostEmail() {
+  await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "This happens for Microsoft events",
+        organizer: {
+          name: "test@gmail.com",
+          email: "test@gmail.com",
+        },
+        creator: null,
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      let eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector(".event-details");
+      });
+
+      info(
+        "Ensure host email is displayed when the name provided is the same email address"
+      );
+      let email = eventDetailsSection.querySelector(".event-host-email");
+      ok(email, "Host email is displayed.");
+      is(email.textContent, "test@gmail.com", "Host email is correct.");
+
+      info("Ensure correct host type is displayed");
+      let hostType = eventDetailsSection.querySelector(".event-host-type");
+      is(
+        hostType.getAttribute("data-l10n-id"),
+        "companion-event-organizer",
+        "Host type should be 'organizer'"
+      );
+
+      info("Ensure the host name is not displayed");
+      let name = eventDetailsSection.querySelector(".event-host-name");
+      ok(!name, "No host name is displayed");
+    });
+  });
+});

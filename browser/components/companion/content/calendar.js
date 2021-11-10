@@ -840,11 +840,14 @@ class CalendarEvent extends MozLitElement {
       : null;
 
     // Ideally, we'll display the host's name if it's available.
-    let nameTemplate = name
-      ? html`
-          <span class="event-host-name line-clamp">${name}</span>
-        `
-      : null;
+    // If the host name is the same as the host email, don't display
+    // the name to avoid duplicating information.
+    let nameTemplate =
+      name && name !== email
+        ? html`
+            <span class="event-host-name line-clamp">${name}</span>
+          `
+        : null;
 
     // If a host name isn't available then just show the host type beneath the
     // the email.
