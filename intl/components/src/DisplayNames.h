@@ -206,24 +206,6 @@ class DisplayNames final {
    */
   static bool IsStandaloneMonth(UDateFormatSymbolType symbolType);
 #endif
-
-  /**
-   * A helper function to handle the fallback behavior, where if there is a
-   * fallback the buffer is filled with the "code", often in canonicalized form.
-   */
-  template <typename B, typename Fn>
-  static Result<Ok, DisplayNamesError> HandleFallback(B& aBuffer,
-                                                      Fallback aFallback,
-                                                      Fn aGetFallbackSpan) {
-    if (aBuffer.length() == 0 &&
-        aFallback == mozilla::intl::DisplayNames::Fallback::Code) {
-      if (!FillBuffer(aGetFallbackSpan(), aBuffer)) {
-        return Err(DisplayNamesError::OutOfMemory);
-      }
-    }
-    return Ok();
-  }
-
   /**
    * This is a specialized form of the FillBufferWithICUCall for DisplayNames.
    * Different APIs report that no display name is found with different
@@ -355,10 +337,15 @@ class DisplayNames final {
       return Err(ToError(result.unwrapErr()));
     }
 
-    return HandleFallback(aBuffer, aFallback, [&] {
-      // Remove the null terminator.
-      return Span(tagVec.begin(), tagVec.length() - 1);
-    });
+    // Handle the fallbacking.
+    if (aBuffer.length() == 0 &&
+        aFallback == mozilla::intl::DisplayNames::Fallback::Code) {
+      if (!FillBuffer(  // Remove the null terminator.
+              Span(tagVec.begin(), tagVec.length() - 1), aBuffer)) {
+        return Err(DisplayNamesError::OutOfMemory);
+      }
+    }
+    return Ok();
   };
 
   /**
@@ -613,10 +600,16 @@ class DisplayNames final {
       }
     }
 
-    return HandleFallback(aBuffer, aFallback, [&] {
+    // Handle the fallbacking.
+    if (aBuffer.length() == 0 &&
+        aFallback == mozilla::intl::DisplayNames::Fallback::Code) {
       script.toTitleCase();
-      return script.span();
-    });
+
+      if (!FillBuffer(script.span(), aBuffer)) {
+        return Err(DisplayNamesError::OutOfMemory);
+      }
+    }
+    return Ok();
   };
 
   /**
@@ -685,8 +678,14 @@ class DisplayNames final {
       aBuffer.written(0);
     }
 
-    return HandleFallback(aBuffer, aFallback,
-                          [&] { return canonicalCalendar; });
+    // Handle the fallbacking.
+    if (aBuffer.length() == 0 &&
+        aFallback == mozilla::intl::DisplayNames::Fallback::Code) {
+      if (!FillBuffer(canonicalCalendar, aBuffer)) {
+        return Err(DisplayNamesError::OutOfMemory);
+      }
+    }
+    return Ok();
   }
 
   /**
@@ -799,7 +798,14 @@ class DisplayNames final {
       return Err(DisplayNamesError::OutOfMemory);
     }
 
-    return HandleFallback(aBuffer, aFallback, [&] { return ToCodeString(aMonth); });
+    // Handle the fallbacking.
+    if (aBuffer.length() == 0 &&
+        aFallback == mozilla::intl::DisplayNames::Fallback::Code) {
+      if (!FillBuffer(ToCodeString(aMonth), aBuffer)) {
+        return Err(DisplayNamesError::OutOfMemory);
+      }
+    }
+    return Ok();
   }
 
   /**
