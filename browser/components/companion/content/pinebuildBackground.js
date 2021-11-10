@@ -81,5 +81,6 @@ window.addEventListener("popupshowing", event => {
 });
 
 window.addEventListener("systemstatusbarclick", event => {
+  ensureWindowInvisible();
   openOrFocusWindow();
 });
