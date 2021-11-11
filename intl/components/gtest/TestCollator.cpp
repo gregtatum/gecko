@@ -136,7 +136,7 @@ TEST(IntlCollator, LocaleSensitiveCollations)
   TestBuffer<uint8_t> bufferB;
 
   auto changeLocale = [&](const char* locale) {
-    auto result = Collator::TryCreate(locale);
+    auto result = Collator::TryCreate(MakeStringSpan(locale));
     ASSERT_TRUE(result.isOk());
     collator = result.unwrap();
 

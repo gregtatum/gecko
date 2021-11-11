@@ -658,7 +658,7 @@ Result<Ok, nsresult> Key::EncodeLocaleString(const nsAString& aString,
     return Ok();
   }
 
-  auto collResult = intl::Collator::TryCreate(aLocale.get());
+  auto collResult = intl::Collator::TryCreate(aLocale);
   if (collResult.isErr()) {
     return Err(NS_ERROR_FAILURE);
   }

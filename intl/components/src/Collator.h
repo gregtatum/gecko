@@ -34,7 +34,8 @@ class Collator final {
   /**
    * Attempt to initialize a new collator.
    */
-  static Result<UniquePtr<Collator>, ICUError> TryCreate(const char* aLocale);
+  static Result<UniquePtr<Collator>, ICUError> TryCreate(
+      Span<const char> aLocale);
 
   ~Collator();
 
