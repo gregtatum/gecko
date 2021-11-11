@@ -861,7 +861,7 @@ static mozilla::intl::DateTimeFormat* NewDateTimeFormat(
       return nullptr;
     }
 
-    auto dfResult = mozilla::intl::DateTimeFormat::TryCreateFromPattern(
+    auto dfResult = mozilla::intl::DateTimeFormat::TryCreate(
         mozilla::MakeStringSpan(locale.get()), pattern.twoByteRange(),
         mozilla::Some(timeZoneChars));
     if (dfResult.isErr()) {
@@ -897,7 +897,7 @@ static mozilla::intl::DateTimeFormat* NewDateTimeFormat(
     if (!gen) {
       return nullptr;
     }
-    auto dfResult = mozilla::intl::DateTimeFormat::TryCreateFromStyle(
+    auto dfResult = mozilla::intl::DateTimeFormat::TryCreate(
         mozilla::MakeStringSpan(locale.get()), style, gen,
         mozilla::Some(timeZoneChars));
     if (dfResult.isErr()) {
@@ -968,7 +968,7 @@ static mozilla::intl::DateTimeFormat* NewDateTimeFormat(
       return nullptr;
     }
 
-    auto dfResult = mozilla::intl::DateTimeFormat::TryCreateFromComponents(
+    auto dfResult = mozilla::intl::DateTimeFormat::TryCreate(
         mozilla::MakeStringSpan(locale.get()), bag, dtpg,
         mozilla::Some(timeZoneChars));
     if (dfResult.isErr()) {

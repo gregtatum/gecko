@@ -161,8 +161,8 @@ bool OSPreferences::GetDateTimePatternForStyle(DateTimeFormatStyle aDateStyle,
   }
   auto generator = genResult.unwrap();
 
-  auto dfResult = DateTimeFormat::TryCreateFromStyle(
-      MakeStringSpan(locale.get()), style, generator.get(), Nothing());
+  auto dfResult = DateTimeFormat::TryCreate(MakeStringSpan(locale.get()), style,
+                                            generator.get(), Nothing());
   if (dfResult.isErr()) {
     return false;
   }
