@@ -247,7 +247,7 @@ class DateTimeFormat final {
    * time zone. This is a UTF-16 string that takes the form "GMT±hh:mm", or
    * an IANA time zone identifier, e.g. "America/Chicago".
    */
-  static Result<UniquePtr<DateTimeFormat>, ICUError> TryCreateFromStyle(
+  static Result<UniquePtr<DateTimeFormat>, ICUError> TryCreate(
       Span<const char> aLocale, const StyleBag& aStyleBag,
       DateTimePatternGenerator* aDateTimePatternGenerator,
       Maybe<Span<const char16_t>> aTimeZoneOverride = Nothing{});
@@ -264,7 +264,7 @@ class DateTimeFormat final {
    * time zone. This is a string that takes the form "GMT±hh:mm", or
    * an IANA time zone identifier, e.g. "America/Chicago".
    */
-  static Result<UniquePtr<DateTimeFormat>, ICUError> TryCreateFromSkeleton(
+  static Result<UniquePtr<DateTimeFormat>, ICUError> TryCreate(
       Span<const char> aLocale, Span<const char16_t> aSkeleton,
       DateTimePatternGenerator* aDateTimePatternGenerator,
       Maybe<DateTimeFormat::HourCycle> aHourCycle = Nothing{},
@@ -273,9 +273,9 @@ class DateTimeFormat final {
   /**
    * Create a DateTimeFormat from a UTF-8 skeleton.
    *
-   * See the TryCreateFromSkeleton for const char16_t for documentation.
+   * See the other TryCreate for const char16_t skeletons for documentation.
    */
-  static Result<UniquePtr<DateTimeFormat>, ICUError> TryCreateFromSkeleton(
+  static Result<UniquePtr<DateTimeFormat>, ICUError> TryCreate(
       Span<const char> aLocale, Span<const char> aSkeleton,
       DateTimePatternGenerator* aDateTimePatternGenerator,
       Maybe<DateTimeFormat::HourCycle> aHourCycle = Nothing{},
@@ -290,7 +290,7 @@ class DateTimeFormat final {
    * time zone. This is a string that takes the form "GMT±hh:mm", or
    * an IANA time zone identifier, e.g. "America/Chicago".
    */
-  static Result<UniquePtr<DateTimeFormat>, ICUError> TryCreateFromComponents(
+  static Result<UniquePtr<DateTimeFormat>, ICUError> TryCreate(
       Span<const char> aLocale, const ComponentsBag& bag,
       DateTimePatternGenerator* aDateTimePatternGenerator,
       Maybe<Span<const char16_t>> aTimeZoneOverride = Nothing{});
@@ -301,7 +301,7 @@ class DateTimeFormat final {
    * Warning: This method should not be added to new code. In the near future we
    * plan to remove it.
    */
-  static Result<UniquePtr<DateTimeFormat>, ICUError> TryCreateFromPattern(
+  static Result<UniquePtr<DateTimeFormat>, ICUError> TryCreate(
       Span<const char> aLocale, Span<const char16_t> aPattern,
       Maybe<Span<const char16_t>> aTimeZoneOverride = Nothing{});
 

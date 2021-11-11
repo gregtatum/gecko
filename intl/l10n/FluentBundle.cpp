@@ -354,7 +354,7 @@ ffi::RawDateTimeFormatter* FluentBuiltInDateTimeFormatterCreate(
   if (aOptions->date_style == ffi::FluentDateTimeStyle::None &&
       aOptions->time_style == ffi::FluentDateTimeStyle::None &&
       !aOptions->skeleton.IsEmpty()) {
-    auto result = DateTimeFormat::TryCreateFromSkeleton(
+    auto result = DateTimeFormat::TryCreate(
         Span(aLocale->get(), aLocale->Length()),
         Span(aOptions->skeleton.get(), aOptions->skeleton.Length()),
         dateTimePatternGenerator.get(), Nothing());
@@ -371,9 +371,9 @@ ffi::RawDateTimeFormatter* FluentBuiltInDateTimeFormatterCreate(
   style.date = GetStyle(aOptions->date_style);
   style.time = GetStyle(aOptions->time_style);
 
-  auto result = DateTimeFormat::TryCreateFromStyle(
-      Span(aLocale->get(), aLocale->Length()), style,
-      dateTimePatternGenerator.get());
+  auto result =
+      DateTimeFormat::TryCreate(Span(aLocale->get(), aLocale->Length()), style,
+                                dateTimePatternGenerator.get());
 
   if (result.isErr()) {
     MOZ_ASSERT_UNREACHABLE("There was an error in DateTimeFormat");
