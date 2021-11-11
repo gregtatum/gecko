@@ -70,6 +70,7 @@
 }
 
 .options-button {
+  display: none;
   padding: 0;
   margin: 0;
   min-width: unset;
@@ -82,4 +83,9 @@
   background-color: var(--light-bg-color);
   margin-block-start: 8px;
   margin-inline-end: 8px;
+}
+
+.card:hover .options-button,
+.options-button[aria-expanded=true] {
+  display: block;
 }
