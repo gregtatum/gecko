@@ -2044,8 +2044,7 @@ static void SetupSkeletonUIPrefs() {
   Preferences::RegisterCallback(&ReflectSkeletonUIPrefToRegistry, kPrefThemeId);
   Preferences::RegisterCallback(
       &ReflectSkeletonUIPrefToRegistry,
-      nsDependentCString(
-          StaticPrefs::GetPrefName_browser_tabs_drawInTitlebar()));
+      nsDependentCString(StaticPrefs::GetPrefName_browser_tabs_inTitlebar()));
 }
 
 #  if defined(MOZ_LAUNCHER_PROCESS)
