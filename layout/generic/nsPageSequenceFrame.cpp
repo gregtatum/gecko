@@ -6,13 +6,15 @@
 
 #include "nsPageSequenceFrame.h"
 
+#include "mozilla/dom/HTMLCanvasElement.h"
+#include "mozilla/intl/DateTimeFormat.h"
+#include "mozilla/intl/FormatBuffer.h"
+#include "mozilla/intl/LocaleService.h"
 #include "mozilla/Logging.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/PrintedSheetFrame.h"
-#include "mozilla/dom/HTMLCanvasElement.h"
 #include "mozilla/StaticPresData.h"
 
-#include "DateTimeFormat.h"
 #include "nsCOMPtr.h"
 #include "nsDeviceContext.h"
 #include "nsPresContext.h"
@@ -35,6 +37,8 @@
 
 using namespace mozilla;
 using namespace mozilla::dom;
+using DateTimeFormat = mozilla::intl::DateTimeFormat;
+using LocaleService = mozilla::intl::LocaleService;
 
 mozilla::LazyLogModule gLayoutPrintingLog("printing-layout");
 
@@ -385,11 +389,24 @@ void nsPageSequenceFrame::Reflow(nsPresContext* aPresContext,
     }
   }
 
-  nsAutoString formattedDateString;
-  PRTime now = PR_Now();
-  if (NS_SUCCEEDED(DateTimeFormat::FormatPRTime(
-          kDateFormatShort, kTimeFormatShort, now, formattedDateString))) {
-    SetDateTimeStr(formattedDateString);
+  {
+    nsAutoString formattedDateString;
+    PRTime now = PR_Now();
+    DateTimeFormat::StyleBag bag{};
+    bag.date = Some(DateTimeFormat::Style::Short);
+    bag.time = Some(DateTimeFormat::Style::Short);
+
+    auto result =
+        LocaleService::TryCreateComponent<DateTimeFormat>(bag, nullptr);
+    if (result.isOk()) {
+      auto dtFormat = result.unwrap();
+      mozilla::intl::nsTStringToBufferAdapter buffer(formattedDateString);
+      // There is no mechanism to report the error here.
+      auto format = dtFormat->TryFormat(now, buffer);
+      if (format.isOk()) {
+        SetDateTimeStr(formattedDateString);
+      }
+    }
   }
 
   // cache the size so we can set the desired size for the other reflows that
