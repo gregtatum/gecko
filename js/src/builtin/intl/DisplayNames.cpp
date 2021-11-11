@@ -10,6 +10,7 @@
 
 #include "mozilla/Assertions.h"
 #include "mozilla/intl/DateTimePatternGenerator.h"
+#include "mozilla/intl/DisplayNames.h"
 #include "mozilla/intl/Locale.h"
 #include "mozilla/Span.h"
 #include "mozilla/TextUtils.h"
