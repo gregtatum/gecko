@@ -120,12 +120,6 @@ menuitem.bookmark-item {
 %include ../shared/toolbarbutton-icons.inc.css
 %include ../shared/menupanel.inc.css
 
-:root {
-  --titlebar-button-hpadding: 12px;
-  --titlebar-button-icon-width: 12px;
-  --window-controls-width: calc(3 * ((var(--titlebar-button-hpadding) * 2) + var(--titlebar-button-icon-width)));
-}
-
 /* Address bar */
 
 %include ../shared/urlbar-searchbar.inc.css

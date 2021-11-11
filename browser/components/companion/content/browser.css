@@ -12,10 +12,7 @@
 }
 
 :root:not([chromehidden~="toolbar"]) {
-  /* Make sure we have enough space for 4 buttons (sidebar, back,
-     reload, copy), the river at max-width including margins,
-     urlbar + horizontal margins, appmenu, and window controls. */
-  min-width: calc((4 * 36px) + 580px + (350px + 10px) + 42px + var(--window-controls-width, 0px));
+  min-width: 1024px;
 }
 
 #titlebar:not([hidden]) + #nav-bar > #pinebuild-window-controls {
@@ -73,7 +70,7 @@
 }
 
 #urlbar-container {
-  min-width: 350px;
+  min-width: 50px;
   max-width: 450px;
   transition-property: max-width;
   transition-timing-function: var(--animation-timing-function);
