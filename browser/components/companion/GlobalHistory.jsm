@@ -843,7 +843,12 @@ class GlobalHistory extends EventTarget {
       ActorManagerParent.addJSWindowActors(GlobalHistoryActors);
       gTopLevelNavigationDelegateRegistered = true;
     }
+  }
 
+  /**
+   * Called once the DOM is ready, and we know that gBrowser is available.
+   */
+  init() {
     for (let { linkedBrowser: browser } of this.#window.gBrowser.tabs) {
       this.#watchBrowser(browser);
     }

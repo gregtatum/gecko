@@ -18,7 +18,7 @@ ChromeUtils.defineModuleGetter(
 
 import getSiteSecurityInfo from "../siteSecurity.js";
 
-export default class ActiveViewManager extends HTMLElement {
+export default class ActiveViewManager extends window.MozHTMLElement {
   /** @type {<html:button>} */
   #overflow;
   /** @type {<xul:panel>} */
@@ -49,6 +49,10 @@ export default class ActiveViewManager extends HTMLElement {
   ];
 
   connectedCallback() {
+    if (this.delayConnectedCallback()) {
+      return;
+    }
+
     let template = document.getElementById("template-active-view-manager");
     let fragment = template.content.cloneNode(true);
     this.appendChild(fragment);
@@ -88,6 +92,10 @@ export default class ActiveViewManager extends HTMLElement {
   }
 
   disconnectedCallback() {
+    if (this.delayConnectedCallback()) {
+      return;
+    }
+
     for (let event of ActiveViewManager.EVENTS) {
       window.gGlobalHistory.removeEventListener(event, this);
     }
