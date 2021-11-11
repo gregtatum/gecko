@@ -14,6 +14,7 @@ EXPORTS.mozilla.intl = [
     "src/DateTimePart.h",
     "src/DateTimePatternGenerator.h",
     "src/DisplayNames.h",
+    "src/FormatBuffer.h",
     "src/ICU4CGlue.h",
     "src/ICU4CLibrary.h",
     "src/ICUError.h",
