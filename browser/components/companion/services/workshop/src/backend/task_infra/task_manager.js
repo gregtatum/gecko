@@ -316,8 +316,18 @@ export class TaskManager extends Emitter {
   }
 
   /**
-   * Schedule a persistent task, returning a promise that will be resolved
-   * with the return value of the task's execution stage.
+   * Schedule a persistent simple task, returning a promise that will be
+   * resolved with the return value of the task's execution stage.
+   *
+   * Note that this method is only suitable for simple tasks at this time.  For
+   * `defineAtMostOnceTask`-defined tasks, you should instead call
+   * `scheduleTaskAndWaitForPlannedResult` which will return a promise
+   * corresponding to the task group promise and then await that promise.  (In
+   * this case, the id of the executed task will instead be the name of the
+   * task group and not the task id that was assigned at scheduling time.)
+   *
+   * For other complex tasks, you'll either want to see if they return a promise
+   * or can return a promise, or consider an additional enhancement.
    */
   async scheduleTaskAndWaitForExecutedResult(rawTask, why) {
     const taskIds = await this.scheduleTasks([rawTask], why);

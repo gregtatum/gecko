@@ -17,11 +17,9 @@ async function check_single_day_for_account_type({
     eventSketches: initialEventSketches,
   });
   // (These will get scheduled sequentially after the ones above.)
-  /*
   const addEvents = WorkshopHelper.deriveFullEvents({
     eventSketches: addEventSketches,
   });
-  */
 
   const fakeServer = await WorkshopHelper.createFakeServer({
     configurator,
@@ -76,14 +74,10 @@ async function check_single_day_for_account_type({
   WorkshopHelper.eventsEqual(calView.items, initialEvents);
 
   // ### Have the server add another event and then we sync it.
-  // THIS CHECK CAN ONLY BE ENABLED ONCE THE CONVID ISSUE IS ADDRESSED
-  // I AM LANDING IT LIKE THIS SO THE FIX CAN BE A SEPARATE COMMIT.
-  /*
   fakeServer.defaultCalendar.addEvents(addEvents);
   await calView.refresh();
 
   WorkshopHelper.eventsEqual(calView.items, [...initialEvents, ...addEvents]);
-  */
 }
 
 const INITIAL_EVENTS = [

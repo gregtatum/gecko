@@ -48,6 +48,10 @@ async function check_searchAllMessages_with_accounts({
   const initialEvents = WorkshopHelper.deriveFullEvents({
     eventSketches: initialEventSketches,
   });
+  // (These will get scheduled sequentially after the ones above.)
+  const addEvents = WorkshopHelper.deriveFullEvents({
+    eventSketches: addEventSketches,
+  });
 
   let totalCalendarCount = 0;
   for (const { calendarCount } of accountConfigs) {
@@ -109,35 +113,27 @@ async function check_searchAllMessages_with_accounts({
   // ### Then we sync/refresh and we should have today's events.
 
   // Trigger a refresh across all the folders represented in the view.
-  // TODO: Ensure that the resulting refresh gets grouped under a single task
-  // group so that the coherentSnapshot mechanism will only fire once for the
-  // group rather than after each individual folder updates.
-
-  // XXX ARGH: The refreshes work correctly right now but the mailbridge is not
-  // ending up sending back the "promisedResult" so there clearly is a bug, but
-  // we can at least iterate on this if we just wait for each of the syncs to
-  // complete and generate a coherent snapshot.  Note that per the above there's
-  // 1 per account right now, but that should be reduced to 1 when we force the
-  // syncs all into the same task group.
-
-  // XXX we should be awaiting this right now per the above, but the promise
-  // doesn't resolve...
-  calView.refresh();
-  for (let i = 0; i < allFakeServers.length; i++) {
-    await calView.promisedOnce("seeked");
-  }
+  // Note: This still happens as N separate task groups, but this refresh
+  // request is a Promise.all() over all of those, so this does what we want,
+  // but because there isn't a single task group, we will be seeing multiple
+  // coherent snapshots.
+  await calView.refresh();
 
   WorkshopHelper.eventsEqual(calView.items, initialEvents);
 
-  // ### Have the server add another event and then we sync it.
-  // THIS CHECK CAN ONLY BE ENABLED ONCE THE CONVID ISSUE IS ADDRESSED
-  // I AM LANDING IT LIKE THIS SO THE FIX CAN BE A SEPARATE COMMIT.
-  /*
-  fakeServer.defaultCalendar.addEvents(addEvents);
+  // ### Spread out our additional events over the fake-servers / calendars
+  calendarShardIndex = 0;
+  for (const fakeServer of allFakeServers) {
+    // XXX the calendarCount should matter here, see TODOs around the initial
+    // event population too.
+    const thisShardIndex = calendarShardIndex++;
+    fakeServer.defaultCalendar.addEvents(
+      computeArrayShard(addEvents, thisShardIndex, totalCalendarCount)
+    );
+  }
   await calView.refresh();
 
   WorkshopHelper.eventsEqual(calView.items, [...initialEvents, ...addEvents]);
-  */
 
   // ## Cleanup
   // ### Delete the accounts.
@@ -175,6 +171,12 @@ const INITIAL_EVENTS = [
 const ADD_EVENTS = [
   {
     summary: "Late breaking meeting!",
+  },
+  {
+    summary: "Oh wow, another late breaking meeting!",
+  },
+  {
+    summary: "Yeah, I know, another one of these late breaking meetings!",
   },
 ];
 

@@ -22874,17 +22874,17 @@ var WorkshopBackend = (() => {
         accountId
       }, why);
     },
-    syncGrowFolder(folderId, why) {
+    async syncGrowFolder(folderId, why) {
       const accountId = accountIdFromFolderId(folderId);
-      return this.taskManager.scheduleTaskAndWaitForExecutedResult({
+      await this.taskManager.scheduleTaskAndWaitForPlannedResult({
         type: "sync_grow",
         accountId,
         folderId
       }, why);
     },
-    syncRefreshFolder(folderId, why) {
+    async syncRefreshFolder(folderId, why) {
       const accountId = accountIdFromFolderId(folderId);
-      return this.taskManager.scheduleTaskAndWaitForExecutedResult({
+      await this.taskManager.scheduleTaskAndWaitForPlannedResult({
         type: "sync_refresh",
         accountId,
         folderId

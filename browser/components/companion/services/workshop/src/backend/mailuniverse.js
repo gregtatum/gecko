@@ -758,6 +758,8 @@ MailUniverse.prototype = {
    * Shutdown the account, forget about it, nuke associated database entries.
    */
   deleteAccount(accountId, why) {
+    // This is a simple task and so it's okay to wait for the execution this
+    // way.
     return this.taskManager.scheduleTaskAndWaitForExecutedResult(
       {
         type: "account_delete",
@@ -922,6 +924,9 @@ MailUniverse.prototype = {
    * executing.
    */
   syncFolderList(accountId, why) {
+    // Because sync_folder_list is a simple task, the executed task will have
+    // the same id as the planned task and so it's okay to use this method, but
+    // this doesn't hold for more complex tasks like sync_grow/sync_refresh.
     return this.taskManager.scheduleTaskAndWaitForExecutedResult(
       {
         type: "sync_folder_list",
@@ -935,9 +940,14 @@ MailUniverse.prototype = {
    * Schedule a sync for the given folder, returning a promise that will be
    * resolved when the task group associated with the request completes.
    */
-  syncGrowFolder(folderId, why) {
+  async syncGrowFolder(folderId, why) {
     const accountId = accountIdFromFolderId(folderId);
-    return this.taskManager.scheduleTaskAndWaitForExecutedResult(
+    // sync_grow explicitly returns a promise corresponding to the task group
+    // it creates as its result.  Because we're awaiting a promise for when the
+    // planned result completes and that will be resolved with the task group
+    // promise, we can't actually independently await the group, so this single
+    // await does both things for us.
+    await this.taskManager.scheduleTaskAndWaitForPlannedResult(
       {
         type: "sync_grow",
         accountId,
@@ -951,9 +961,14 @@ MailUniverse.prototype = {
    * Schedule a sync for the given folder, returning a promise that will be
    * resolved when the task group associated with the request completes.
    */
-  syncRefreshFolder(folderId, why) {
+  async syncRefreshFolder(folderId, why) {
     const accountId = accountIdFromFolderId(folderId);
-    return this.taskManager.scheduleTaskAndWaitForExecutedResult(
+    // sync_refresh explicitly returns a promise corresponding to the task group
+    // it creates as its result.  Because we're awaiting a promise for when the
+    // planned result completes and that will be resolved with the task group
+    // promise, we can't actually independently await the group, so this single
+    // await does both things for us.
+    await this.taskManager.scheduleTaskAndWaitForPlannedResult(
       {
         type: "sync_refresh",
         accountId,

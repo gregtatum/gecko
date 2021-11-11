@@ -19,11 +19,9 @@ async function check_feed_account({
     eventSketches: initialEventSketches,
   });
   // (These will get scheduled sequentially after the ones above.)
-  /*
   const addEvents = WorkshopHelper.deriveFullEvents({
     eventSketches: addEventSketches,
   });
-  */
 
   const fakeServer = await WorkshopHelper.createFakeServer({
     configurator,
@@ -76,14 +74,13 @@ async function check_feed_account({
   WorkshopHelper.eventsEqual(feedView.items, initialEvents);
 
   // ### Have the server add another event and then we sync it.
-  // THIS CHECK CAN ONLY BE ENABLED ONCE THE CONVID ISSUE IS ADDRESSED
-  // I AM LANDING IT LIKE THIS SO THE FIX CAN BE A SEPARATE COMMIT.
-  /*
   fakeServer.defaultCalendar.addEvents(addEvents);
-  await calView.refresh();
+  await feedView.refresh();
 
-  WorkshopHelper.eventsEqual(calView.items, [...initialEvents, ...addEvents]);
-  */
+  for (const item of feedView.items) {
+    item.summary = item.subject;
+  }
+  WorkshopHelper.eventsEqual(feedView.items, [...initialEvents, ...addEvents]);
 }
 
 const INITIAL_EVENTS = [
