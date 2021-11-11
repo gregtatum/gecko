@@ -23,8 +23,8 @@ static UniquePtr<DateTimeFormat> testStyle(
   // time zone which can vary between test runs.
   auto timeZone = Some(MakeStringSpan(u"GMT+3"));
   auto gen = DateTimePatternGenerator::TryCreate("en").unwrap();
-  return DateTimeFormat::TryCreateFromStyle(MakeStringSpan(aLocale), aStyleBag,
-                                            gen.get(), timeZone)
+  return DateTimeFormat::TryCreate(MakeStringSpan(aLocale), aStyleBag,
+                                   gen.get(), timeZone)
       .unwrap();
 }
 
@@ -96,10 +96,10 @@ TEST(IntlDateTimeFormat, Skeleton_enUS_utf8_in)
       DateTimePatternGenerator::TryCreate("en").unwrap();
 
   UniquePtr<DateTimeFormat> dtFormat =
-      DateTimeFormat::TryCreateFromSkeleton(
-          MakeStringSpan("en-US"), MakeStringSpan("yMdhhmmss"),
-          dateTimePatternGenerator.get(), Nothing(),
-          Some(MakeStringSpan("GMT+3")))
+      DateTimeFormat::TryCreate(MakeStringSpan("en-US"),
+                                MakeStringSpan("yMdhhmmss"),
+                                dateTimePatternGenerator.get(), Nothing(),
+                                Some(MakeStringSpan("GMT+3")))
           .unwrap();
   TestBuffer<char> buffer;
   dtFormat->TryFormat(DATE, buffer).unwrap();
@@ -114,10 +114,10 @@ TEST(IntlDateTimeFormat, Skeleton_enUS_utf16_in)
       DateTimePatternGenerator::TryCreate("en").unwrap();
 
   UniquePtr<DateTimeFormat> dtFormat =
-      DateTimeFormat::TryCreateFromSkeleton(
-          MakeStringSpan("en-US"), MakeStringSpan(u"yMdhhmmss"),
-          dateTimePatternGenerator.get(), Nothing(),
-          Some(MakeStringSpan(u"GMT+3")))
+      DateTimeFormat::TryCreate(MakeStringSpan("en-US"),
+                                MakeStringSpan(u"yMdhhmmss"),
+                                dateTimePatternGenerator.get(), Nothing(),
+                                Some(MakeStringSpan(u"GMT+3")))
           .unwrap();
   TestBuffer<char> buffer;
   dtFormat->TryFormat(DATE, buffer).unwrap();
@@ -133,10 +133,10 @@ TEST(IntlDateTimeFormat, Time_zone_IANA_identifier)
   style.date = Some(DateTimeFormat::Style::Medium);
   style.time = Some(DateTimeFormat::Style::Medium);
 
-  auto dtFormat = DateTimeFormat::TryCreateFromStyle(
-                      MakeStringSpan("en-US"), style, gen.get(),
-                      Some(MakeStringSpan(u"America/Chicago")))
-                      .unwrap();
+  auto dtFormat =
+      DateTimeFormat::TryCreate(MakeStringSpan("en-US"), style, gen.get(),
+                                Some(MakeStringSpan(u"America/Chicago")))
+          .unwrap();
   TestBuffer<char> buffer;
   dtFormat->TryFormat(DATE, buffer).unwrap();
   ASSERT_TRUE(buffer.verboseMatches("Sep 23, 2002, 12:07:30 PM"));
@@ -196,9 +196,9 @@ TEST(IntlDateTimePatternGenerator, GetPlaceholderPattern)
   auto dateTimePatternGenerator =
       DateTimePatternGenerator::TryCreate(aLocale.data()).unwrap();
 
-  auto dtFormat = DateTimeFormat::TryCreateFromComponents(
-      aLocale, aComponents, dateTimePatternGenerator.get(),
-      Some(MakeStringSpan(u"GMT+3")));
+  auto dtFormat = DateTimeFormat::TryCreate(aLocale, aComponents,
+                                            dateTimePatternGenerator.get(),
+                                            Some(MakeStringSpan(u"GMT+3")));
   if (dtFormat.isErr()) {
     fprintf(stderr, "Could not create a DateTimeFormat\n");
     return false;
@@ -367,9 +367,9 @@ template <typename T>
   UniquePtr<DateTimePatternGenerator> gen = nullptr;
   auto dateTimePatternGenerator =
       DateTimePatternGenerator::TryCreate("en").unwrap();
-  auto dtFormat = DateTimeFormat::TryCreateFromComponents(
-      aLocale, aComponentsIn, dateTimePatternGenerator.get(),
-      Some(MakeStringSpan(u"GMT+3")));
+  auto dtFormat = DateTimeFormat::TryCreate(aLocale, aComponentsIn,
+                                            dateTimePatternGenerator.get(),
+                                            Some(MakeStringSpan(u"GMT+3")));
   if (dtFormat.isErr()) {
     fprintf(stderr, "Could not create a DateTimeFormat\n");
     return false;
@@ -488,9 +488,9 @@ TEST(IntlDateTimeFormat, GetOriginalSkeleton)
   auto dateTimePatternGenerator =
       DateTimePatternGenerator::TryCreate(locale).unwrap();
 
-  auto result = DateTimeFormat::TryCreateFromComponents(
-      MakeStringSpan(locale), components, dateTimePatternGenerator.get(),
-      Some(MakeStringSpan(u"GMT+3")));
+  auto result = DateTimeFormat::TryCreate(MakeStringSpan(locale), components,
+                                          dateTimePatternGenerator.get(),
+                                          Some(MakeStringSpan(u"GMT+3")));
   ASSERT_TRUE(result.isOk());
   auto dtFormat = result.unwrap();
 
@@ -544,10 +544,10 @@ TEST(IntlDateTimeFormat, TryFormatToParts)
       DateTimePatternGenerator::TryCreate("en").unwrap();
 
   UniquePtr<DateTimeFormat> dtFormat =
-      DateTimeFormat::TryCreateFromSkeleton(
-          MakeStringSpan("en-US"), MakeStringSpan(u"yMMddHHmm"),
-          dateTimePatternGenerator.get(), Nothing(),
-          Some(MakeStringSpan(u"GMT")))
+      DateTimeFormat::TryCreate(MakeStringSpan("en-US"),
+                                MakeStringSpan(u"yMMddHHmm"),
+                                dateTimePatternGenerator.get(), Nothing(),
+                                Some(MakeStringSpan(u"GMT")))
           .unwrap();
 
   TestBuffer<char16_t> buffer;

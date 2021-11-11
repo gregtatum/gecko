@@ -249,7 +249,7 @@ static auto PatternMatchOptions(mozilla::Span<const char16_t> aSkeleton) {
 }
 
 /* static */
-Result<UniquePtr<DateTimeFormat>, ICUError> DateTimeFormat::TryCreateFromStyle(
+Result<UniquePtr<DateTimeFormat>, ICUError> DateTimeFormat::TryCreate(
     Span<const char> aLocale, const StyleBag& aStyleBag,
     DateTimePatternGenerator* aDateTimePatternGenerator,
     Maybe<Span<const char16_t>> aTimeZoneOverride) {
@@ -312,8 +312,8 @@ Result<UniquePtr<DateTimeFormat>, ICUError> DateTimeFormat::TryCreateFromStyle(
         DateTimeFormat::ReplaceHourSymbol(pattern, *aStyleBag.hourCycle);
       }
 
-      auto result = DateTimeFormat::TryCreateFromPattern(aLocale, pattern,
-                                                         aTimeZoneOverride);
+      auto result =
+          DateTimeFormat::TryCreate(aLocale, pattern, aTimeZoneOverride);
       if (result.isErr()) {
         return Err(result.unwrapErr());
       }
@@ -526,20 +526,18 @@ ICUResult ToICUSkeleton(const DateTimeFormat::ComponentsBag& aBag,
 }
 
 /* static */
-Result<UniquePtr<DateTimeFormat>, ICUError>
-DateTimeFormat::TryCreateFromComponents(
+Result<UniquePtr<DateTimeFormat>, ICUError> DateTimeFormat::TryCreate(
     Span<const char> aLocale, const DateTimeFormat::ComponentsBag& aBag,
     DateTimePatternGenerator* aDateTimePatternGenerator,
     Maybe<Span<const char16_t>> aTimeZoneOverride) {
   DateTimeFormat::SkeletonVector skeleton;
   MOZ_TRY(ToICUSkeleton(aBag, skeleton));
-  return TryCreateFromSkeleton(aLocale, skeleton, aDateTimePatternGenerator,
-                               aBag.hourCycle, aTimeZoneOverride);
+  return TryCreate(aLocale, skeleton, aDateTimePatternGenerator, aBag.hourCycle,
+                   aTimeZoneOverride);
 }
 
 /* static */
-Result<UniquePtr<DateTimeFormat>, ICUError>
-DateTimeFormat::TryCreateFromPattern(
+Result<UniquePtr<DateTimeFormat>, ICUError> DateTimeFormat::TryCreate(
     Span<const char> aLocale, Span<const char16_t> aPattern,
     Maybe<Span<const char16_t>> aTimeZoneOverride) {
   UErrorCode status = U_ZERO_ERROR;
@@ -568,8 +566,7 @@ DateTimeFormat::TryCreateFromPattern(
 }
 
 /* static */
-Result<UniquePtr<DateTimeFormat>, ICUError>
-DateTimeFormat::TryCreateFromSkeleton(
+Result<UniquePtr<DateTimeFormat>, ICUError> DateTimeFormat::TryCreate(
     Span<const char> aLocale, Span<const char16_t> aSkeleton,
     DateTimePatternGenerator* aDateTimePatternGenerator,
     Maybe<DateTimeFormat::HourCycle> aHourCycle,
@@ -588,8 +585,7 @@ DateTimeFormat::TryCreateFromSkeleton(
     DateTimeFormat::ReplaceHourSymbol(pattern, *aHourCycle);
   }
 
-  auto result =
-      DateTimeFormat::TryCreateFromPattern(aLocale, pattern, aTimeZoneOverride);
+  auto result = DateTimeFormat::TryCreate(aLocale, pattern, aTimeZoneOverride);
   if (result.isErr()) {
     return Err(result.unwrapErr());
   }
@@ -599,8 +595,7 @@ DateTimeFormat::TryCreateFromSkeleton(
 }
 
 /* static */
-Result<UniquePtr<DateTimeFormat>, ICUError>
-DateTimeFormat::TryCreateFromSkeleton(
+Result<UniquePtr<DateTimeFormat>, ICUError> DateTimeFormat::TryCreate(
     Span<const char> aLocale, Span<const char> aSkeleton,
     DateTimePatternGenerator* aDateTimePatternGenerator,
     Maybe<DateTimeFormat::HourCycle> aHourCycle,
@@ -623,9 +618,9 @@ DateTimeFormat::TryCreateFromSkeleton(
         Some(Span<const char16_t>(tzUtf16Vec.begin(), tzUtf16Vec.length()));
   }
 
-  auto result = DateTimeFormat::TryCreateFromSkeleton(
-      aLocale, skeletonUtf16Buffer, aDateTimePatternGenerator, aHourCycle,
-      timeZone);
+  auto result = DateTimeFormat::TryCreate(aLocale, skeletonUtf16Buffer,
+                                          aDateTimePatternGenerator, aHourCycle,
+                                          timeZone);
   if (result.isErr()) {
     return result;
   }
