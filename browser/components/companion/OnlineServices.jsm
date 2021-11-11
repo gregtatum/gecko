@@ -426,7 +426,7 @@ class MicrosoftService {
         for (let result of results.value) {
           try {
             // Ignore all day events
-            if (result.isAllDay) {
+            if (result.isAllDay || result.isCancelled) {
               continue;
             }
             let event = parseMicrosoftCalendarResult(result);
