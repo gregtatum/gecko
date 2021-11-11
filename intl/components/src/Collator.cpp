@@ -18,7 +18,8 @@ Collator::~Collator() {
   }
 }
 
-Result<UniquePtr<Collator>, ICUError> Collator::TryCreate(const char* aLocale) {
+Result<UniquePtr<Collator>, ICUError> Collator::TryCreate(
+    Span<const char> aLocale) {
   UErrorCode status = U_ZERO_ERROR;
   UCollator* collator = ucol_open(IcuLocale(aLocale), &status);
   if (U_FAILURE(status)) {

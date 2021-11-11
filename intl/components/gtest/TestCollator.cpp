@@ -15,7 +15,7 @@ TEST(IntlCollator, SetAttributesInternal)
 {
   // Run through each settings to make sure MOZ_ASSERT is not triggered for
   // misconfigured attributes.
-  auto result = Collator::TryCreate("en-US");
+  auto result = Collator::TryCreate(MakeStringSpan("en-US"));
   ASSERT_TRUE(result.isOk());
   auto collator = result.unwrap();
 
@@ -52,7 +52,7 @@ TEST(IntlCollator, GetSortKey)
 {
   // Do some light sort key comparisons to ensure everything is wired up
   // correctly. This is not doing extensive correctness testing.
-  auto result = Collator::TryCreate("en-US");
+  auto result = Collator::TryCreate(MakeStringSpan("en-US"));
   ASSERT_TRUE(result.isOk());
   auto collator = result.unwrap();
   TestBuffer<uint8_t> bufferA;
@@ -75,7 +75,7 @@ TEST(IntlCollator, CompareStrings)
 {
   // Do some light string comparisons to ensure everything is wired up
   // correctly. This is not doing extensive correctness testing.
-  auto result = Collator::TryCreate("en-US");
+  auto result = Collator::TryCreate(MakeStringSpan("en-US"));
   ASSERT_TRUE(result.isOk());
   auto collator = result.unwrap();
   TestBuffer<uint8_t> bufferA;
@@ -91,7 +91,7 @@ TEST(IntlCollator, SetOptionsSensitivity)
 {
   // Test the ECMA 402 sensitivity behavior per:
   // https://tc39.es/ecma402/#sec-collator-comparestrings
-  auto result = Collator::TryCreate("en-US");
+  auto result = Collator::TryCreate(MakeStringSpan("en-US"));
   ASSERT_TRUE(result.isOk());
   auto collator = result.unwrap();
 
@@ -136,7 +136,7 @@ TEST(IntlCollator, LocaleSensitiveCollations)
   TestBuffer<uint8_t> bufferB;
 
   auto changeLocale = [&](const char* locale) {
-    auto result = Collator::TryCreate(locale);
+    auto result = Collator::TryCreate(MakeStringSpan(locale));
     ASSERT_TRUE(result.isOk());
     collator = result.unwrap();
 
@@ -176,7 +176,7 @@ TEST(IntlCollator, IgnorePunctuation)
   TestBuffer<uint8_t> bufferA;
   TestBuffer<uint8_t> bufferB;
 
-  auto result = Collator::TryCreate("en-US");
+  auto result = Collator::TryCreate(MakeStringSpan("en-US"));
   ASSERT_TRUE(result.isOk());
   auto collator = result.unwrap();
   Collator::Options options{};
@@ -322,7 +322,7 @@ TEST(IntlCollator, GetAvailableLocales)
 
 TEST(IntlCollator, GetCaseFirst)
 {
-  auto result = Collator::TryCreate("en-US");
+  auto result = Collator::TryCreate(MakeStringSpan("en-US"));
   ASSERT_TRUE(result.isOk());
   auto collator = result.unwrap();
 

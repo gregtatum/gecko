@@ -190,7 +190,8 @@ class LocaleService final : public mozILocaleService,
     nsAutoCStringN<32> appLocale;
     mozilla::intl::LocaleService::GetInstance()->GetAppLocaleAsBCP47(appLocale);
 
-    return T::TryCreate(appLocale.get(), args...);
+    return T::TryCreate(mozilla::Span(appLocale.get(), appLocale.Length()),
+                        args...);
   }
 
   /**
@@ -199,7 +200,7 @@ class LocaleService final : public mozILocaleService,
    */
   template <typename T, typename... Args>
   static Result<UniquePtr<T>, ICUError> TryCreateComponentWithLocale(
-      const char* aLocale, Args... args) {
+      Span<const char> aLocale, Args... args) {
     auto result = T::TryCreate(aLocale, args...);
     if (result.isOk()) {
       return result;
