@@ -160,14 +160,14 @@ TEST(Intl_Locale_LocaleService, TryCreateComponent)
     // Create a Collator with the "en" locale.
     auto result =
         LocaleService::GetInstance()->TryCreateComponentWithLocale<Collator>(
-            "en");
+            mozilla::MakeStringSpan("en"));
     ASSERT_TRUE(result.isOk());
   }
   {
     // Fallback to the app locale when an invalid one is used.
     auto result =
         LocaleService::GetInstance()->TryCreateComponentWithLocale<Collator>(
-            "$invalidName");
+            mozilla::MakeStringSpan("$invalidName"));
     ASSERT_TRUE(result.isOk());
   }
 }
