@@ -11469,11 +11469,14 @@ var WorkshopBackend = (() => {
                 links,
                 conference
               });
-              this.allEvents.push(eventInfo);
               if (oldInfo) {
                 this.modifiedEventMap.set(eventId, eventInfo);
+              } else if (this.modifiedEventMap.has(eventId)) {
+                this.modifiedEventMap.set(eventId, eventInfo);
+                this.allEvents.push(eventInfo);
               } else {
                 this.newEvents.push(eventInfo);
+                this.allEvents.push(eventInfo);
               }
             } catch (ex) {
               logic(this.ctx, "eventChewingError", { ex });
@@ -12106,11 +12109,14 @@ var WorkshopBackend = (() => {
                 links,
                 conference
               });
-              this.allEvents.push(eventInfo);
               if (oldInfo) {
                 this.modifiedEventMap.set(eventId, eventInfo);
+              } else if (this.modifiedEventMap.has(eventId)) {
+                this.modifiedEventMap.set(eventId, eventInfo);
+                this.allEvents.push(eventInfo);
               } else {
                 this.newEvents.push(eventInfo);
+                this.allEvents.push(eventInfo);
               }
             } catch (ex) {
               logic(this.ctx, "eventChewingError", { ex });

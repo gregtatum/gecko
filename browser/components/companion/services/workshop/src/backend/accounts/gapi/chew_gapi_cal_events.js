@@ -203,11 +203,23 @@ export class GapiCalEventChewer {
           conference,
         });
 
-        this.allEvents.push(eventInfo);
         if (oldInfo) {
           this.modifiedEventMap.set(eventId, eventInfo);
+          // the event was already added to allEvents when we put it in
+          // `oldById`, so we don't need to add it.
+        } else if (this.modifiedEventMap.has(eventId)) {
+          // An event that has fallen outside our sync range based on our old
+          // (pre-sync) understanding of the event could have been moved so that
+          // it's once again in our current sync range.  In that case, we will
+          // not have an `oldInfo` and will have already put a null in the
+          // `modifiedEventMap` to express a deletion.  But it should be a
+          // modification, not a deletion followed by an addition.
+          this.modifiedEventMap.set(eventId, eventInfo);
+          // This didn't get added to allEvents previously.
+          this.allEvents.push(eventInfo);
         } else {
           this.newEvents.push(eventInfo);
+          this.allEvents.push(eventInfo);
         }
       } catch (ex) {
         logic(this.ctx, "eventChewingError", { ex });
