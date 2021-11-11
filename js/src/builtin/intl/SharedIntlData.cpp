@@ -598,7 +598,8 @@ bool js::intl::SharedIntlData::ensureUpperCaseFirstLocales(JSContext* cx) {
 
   RootedAtom locale(cx);
   for (const char* rawLocale : mozilla::intl::Collator::GetAvailableLocales()) {
-    auto collator = mozilla::intl::Collator::TryCreate(rawLocale);
+    auto collator =
+        mozilla::intl::Collator::TryCreate(mozilla::MakeStringSpan(rawLocale));
     if (collator.isErr()) {
       ReportInternalError(cx, collator.unwrapErr());
       return false;

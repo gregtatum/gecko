@@ -33,7 +33,7 @@ nsresult txResultStringComparator::init(const nsString& aLanguage) {
       aLanguage.IsEmpty()
           ? mozilla::intl::LocaleService::TryCreateComponent<Collator>()
           : mozilla::intl::LocaleService::TryCreateComponentWithLocale<
-                Collator>(NS_ConvertUTF16toUTF8(aLanguage).get());
+                Collator>(NS_ConvertUTF16toUTF8(aLanguage));
 
   NS_ENSURE_TRUE(result.isOk(), NS_ERROR_FAILURE);
   auto collator = result.unwrap();

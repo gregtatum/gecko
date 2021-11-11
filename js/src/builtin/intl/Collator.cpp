@@ -335,7 +335,7 @@ static mozilla::intl::Collator* NewIntlCollator(
     }
   }
 
-  auto collResult = Collator::TryCreate(locale.get());
+  auto collResult = Collator::TryCreate(mozilla::MakeStringSpan(locale.get()));
   if (collResult.isErr()) {
     ReportInternalError(cx, collResult.unwrapErr());
     return nullptr;
