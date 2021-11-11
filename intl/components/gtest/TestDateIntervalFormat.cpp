@@ -56,10 +56,10 @@ TEST(IntlDateIntervalFormat, TryFormatCalendar)
       DateTimePatternGenerator::TryCreate("en").unwrap();
 
   UniquePtr<DateTimeFormat> dtFormat =
-      DateTimeFormat::TryCreateFromSkeleton(
-          MakeStringSpan("en-US"), MakeStringSpan(u"yMMddHHmm"),
-          dateTimePatternGenerator.get(), Nothing(),
-          Some(MakeStringSpan(u"GMT")))
+      DateTimeFormat::TryCreate(MakeStringSpan("en-US"),
+                                MakeStringSpan(u"yMMddHHmm"),
+                                dateTimePatternGenerator.get(), Nothing(),
+                                Some(MakeStringSpan(u"GMT")))
           .unwrap();
 
   UniquePtr<DateIntervalFormat> dif =

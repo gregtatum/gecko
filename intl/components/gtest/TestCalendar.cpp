@@ -97,7 +97,7 @@ TEST(IntlCalendar, CloneFrom)
   DateTimeFormat::StyleBag style;
   style.date = Some(DateTimeFormat::Style::Medium);
   style.time = Some(DateTimeFormat::Style::Medium);
-  auto dtFormat = DateTimeFormat::TryCreateFromStyle(
+  auto dtFormat = DateTimeFormat::TryCreate(
                       MakeStringSpan("en-US"), style,
                       // It's ok to pass nullptr here, as it will cause format
                       // operations to fail, but this test is only checking
