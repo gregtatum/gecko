@@ -85,7 +85,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     // provides updated strings.
     this.#securityStringsMap = new Map([
       ["aboutUI", "identity-connection-internal"],
-      ["readerMode", "page-action-menu-reader-mode"],
+      ["readerMode", "page-action-menu-reader-view"],
       ["localResource", "identity-connection-file"],
       ["verifiedDomain", "page-action-menu-secure-page"],
     ]);

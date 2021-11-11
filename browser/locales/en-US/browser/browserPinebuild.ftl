@@ -19,8 +19,8 @@ page-action-toggle-muting =
      [true] Unmute
     *[other] Mute
   }
-page-action-reader-mode =
-  .label = Reader Mode
+page-action-reader-view =
+  .label = Reader View
 page-action-more =
   .label = More
 
@@ -28,7 +28,7 @@ last-session-saved = Last session saved in Companion
 
 # Pro Client connection security strings.
 page-action-menu-secure-page = This website is using a secure connection.
-page-action-menu-reader-mode = This page is in Reader mode.
+page-action-menu-reader-view = This page is in Reader View.
 
 active-view-manager-context-menu-toggle-pinning =
   .label = { $isPinned ->
