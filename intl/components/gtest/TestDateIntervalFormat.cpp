@@ -53,7 +53,7 @@ TEST(IntlDateIntervalFormat, TryFormatDateTime)
 TEST(IntlDateIntervalFormat, TryFormatCalendar)
 {
   auto dateTimePatternGenerator =
-      DateTimePatternGenerator::TryCreate("en").unwrap();
+      DateTimePatternGenerator::TryCreate(MakeStringSpan("en")).unwrap();
 
   UniquePtr<DateTimeFormat> dtFormat =
       DateTimeFormat::TryCreate(MakeStringSpan("en-US"),

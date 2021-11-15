@@ -30,7 +30,7 @@ namespace mozilla::intl {
 #ifndef JS_STANDALONE
 /**
  * mozilla::intl APIs require sizeable buffers. This class abstracts over
- * the nsTString.
+ * the nsTSubstring.
  */
 template <typename T>
 class nsTStringToBufferAdapter {
@@ -41,7 +41,7 @@ class nsTStringToBufferAdapter {
   nsTStringToBufferAdapter(const nsTStringToBufferAdapter&) = delete;
   nsTStringToBufferAdapter& operator=(const nsTStringToBufferAdapter&) = delete;
 
-  explicit nsTStringToBufferAdapter(nsTString<CharType>& aString)
+  explicit nsTStringToBufferAdapter(nsTSubstring<CharType>& aString)
       : mString(aString) {}
 
   /**
@@ -81,7 +81,7 @@ class nsTStringToBufferAdapter {
   }
 
  private:
-  nsTString<CharType>& mString;
+  nsTSubstring<CharType>& mString;
 };
 
 #endif /* JS_STANDALONE */

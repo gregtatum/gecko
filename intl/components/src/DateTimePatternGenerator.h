@@ -36,7 +36,7 @@ class DateTimePatternGenerator final {
   ~DateTimePatternGenerator();
 
   static Result<UniquePtr<DateTimePatternGenerator>, ICUError> TryCreate(
-      const char* aLocale);
+      Span<const char> aLocale);
 
   enum class PatternMatchOption {
     /**

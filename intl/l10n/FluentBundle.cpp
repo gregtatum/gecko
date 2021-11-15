@@ -343,7 +343,7 @@ static Maybe<DateTimeFormat::Style> GetStyle(ffi::FluentDateTimeStyle aStyle) {
 
 ffi::RawDateTimeFormatter* FluentBuiltInDateTimeFormatterCreate(
     const nsCString* aLocale, const ffi::FluentDateTimeOptionsRaw* aOptions) {
-  auto genResult = DateTimePatternGenerator::TryCreate(aLocale->get());
+  auto genResult = DateTimePatternGenerator::TryCreate(*aLocale);
   if (genResult.isErr()) {
     MOZ_ASSERT_UNREACHABLE("There was an error in DateTimeFormat");
     return nullptr;
