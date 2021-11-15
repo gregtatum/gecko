@@ -819,10 +819,11 @@ class CalendarEvent extends MozLitElement {
       host = creator;
       hostType = "creator";
     } else if (isSecondaryCalendarEmail(organizer.email)) {
-      // Still don't have a host, then just show the organizer information but
-      // with the email omitted.
+      // Still don't have a host. Since this is a secondary calendar, the host
+      // type is a "creator", but we display the calendar's name instead of the
+      // email.
       host = { ...organizer, email: null };
-      hostType = "organizer";
+      hostType = "creator";
     }
 
     if (!host) {

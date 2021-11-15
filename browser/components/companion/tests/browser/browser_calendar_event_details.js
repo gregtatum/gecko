@@ -335,8 +335,8 @@ add_task(async function testSecondaryGCalWithNoCreatorAvailable() {
       let hostType = eventDetailsSection.querySelector(".event-host-type");
       is(
         hostType.getAttribute("data-l10n-id"),
-        "companion-event-organizer",
-        "Host type should be 'organizer'"
+        "companion-event-creator",
+        "Host type should be 'creator'"
       );
 
       info("Ensure the host email is not displayed");
