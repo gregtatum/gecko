@@ -9,6 +9,7 @@
 #include "builtin/intl/DisplayNames.h"
 
 #include "mozilla/Assertions.h"
+#include "mozilla/Unused.h"
 #include "mozilla/intl/DisplayNames.h"
 #include "mozilla/PodOperations.h"
 #include "mozilla/Span.h"
@@ -55,8 +56,6 @@
 #include "vm/NativeObject-inl.h"
 
 using namespace js;
-
-using js::intl::IcuLocale;
 
 const JSClassOps DisplayNamesObject::classOps_ = {nullptr, /* addProperty */
                                                   nullptr, /* delProperty */
@@ -242,218 +241,10 @@ bool JS::AddMozDisplayNamesConstructor(JSContext* cx, HandleObject intl) {
   return DefineDataProperty(cx, intl, cx->names().DisplayNames, ctorValue, 0);
 }
 
-static mozilla::intl::DisplayNames* NewDisplayNames(
-    JSContext* cx, const char* locale,
-    mozilla::intl::DisplayNames::Options& options) {
-  auto result = mozilla::intl::DisplayNames::TryCreate(locale, options);
-  if (result.isErr()) {
-    intl::ReportInternalError(cx, result.unwrapErr());
-    return nullptr;
-  }
-  return result.unwrap().release();
-}
-
-static mozilla::intl::DisplayNames* GetOrCreateDisplayNames(
-    JSContext* cx, Handle<DisplayNamesObject*> displayNames, const char* locale,
-    mozilla::intl::DisplayNames::Options& options) {
-  // Obtain a cached mozilla::intl::DisplayNames object.
-  mozilla::intl::DisplayNames* dn = displayNames->getDisplayNames();
-  if (!dn) {
-    dn = NewDisplayNames(cx, locale, options);
-    if (!dn) {
-      return nullptr;
-    }
-    displayNames->setDisplayNames(dn);
-
-    intl::AddICUCellMemory(displayNames,
-                           DisplayNamesObject::EstimatedMemoryUse);
-  }
-  return dn;
-}
-
-static void ReportInvalidOptionError(JSContext* cx, const char* type,
-                                     HandleString option) {
-  if (UniqueChars str = QuoteString(cx, option, '"')) {
-    JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
-                              JSMSG_INVALID_OPTION_VALUE, type, str.get());
-  }
-}
-
 /**
  * intl_ComputeDisplayName(displayNames, locale, calendar, style,
  *                         languageDisplay, fallback, type, code)
  */
 bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
-  CallArgs args = CallArgsFromVp(argc, vp);
-  MOZ_ASSERT(args.length() == 8);
-
-  Rooted<DisplayNamesObject*> displayNames(
-      cx, &args[0].toObject().as<DisplayNamesObject>());
-
-  UniqueChars locale = intl::EncodeLocale(cx, args[1].toString());
-  if (!locale) {
-    return false;
-  }
-
-  RootedLinearString calendar(cx, args[2].toString()->ensureLinear(cx));
-  if (!calendar) {
-    return false;
-  }
-
-  RootedLinearString code(cx, args[7].toString()->ensureLinear(cx));
-  if (!code) {
-    return false;
-  }
-
-  mozilla::intl::DisplayNames::Style displayStyle;
-  {
-    JSLinearString* style = args[3].toString()->ensureLinear(cx);
-    if (!style) {
-      return false;
-    }
-
-    if (StringEqualsLiteral(style, "long")) {
-      displayStyle = mozilla::intl::DisplayNames::Style::Long;
-    } else if (StringEqualsLiteral(style, "short")) {
-      displayStyle = mozilla::intl::DisplayNames::Style::Short;
-    } else if (StringEqualsLiteral(style, "narrow")) {
-      displayStyle = mozilla::intl::DisplayNames::Style::Narrow;
-    } else {
-      MOZ_ASSERT(StringEqualsLiteral(style, "abbreviated"));
-      displayStyle = mozilla::intl::DisplayNames::Style::Abbreviated;
-    }
-  }
-
-  mozilla::intl::DisplayNames::LanguageDisplay languageDisplay;
-  {
-    JSLinearString* language = args[4].toString()->ensureLinear(cx);
-    if (!language) {
-      return false;
-    }
-
-    if (StringEqualsLiteral(language, "dialect")) {
-      languageDisplay = mozilla::intl::DisplayNames::LanguageDisplay::Dialect;
-    } else {
-      MOZ_ASSERT(language->empty() ||
-                 StringEqualsLiteral(language, "standard"));
-      languageDisplay = mozilla::intl::DisplayNames::LanguageDisplay::Standard;
-    }
-  }
-
-  mozilla::intl::DisplayNames::Fallback fallback;
-  {
-    JSLinearString* fallbackStr = args[5].toString()->ensureLinear(cx);
-    if (!fallbackStr) {
-      return false;
-    }
-
-    if (StringEqualsLiteral(fallbackStr, "none")) {
-      fallback = mozilla::intl::DisplayNames::Fallback::None;
-    } else {
-      MOZ_ASSERT(StringEqualsLiteral(fallbackStr, "code"));
-      fallback = mozilla::intl::DisplayNames::Fallback::Code;
-    }
-  }
-
-  mozilla::intl::DisplayNames::Type type;
-  {
-    JSLinearString* typeStr = args[6].toString()->ensureLinear(cx);
-    if (!typeStr) {
-      return false;
-    }
-    using Type = mozilla::intl::DisplayNames::Type;
-    if (StringEqualsLiteral(typeStr, "language")) {
-      type = Type::Language;
-    } else if (StringEqualsLiteral(typeStr, "script")) {
-      type = Type::Script;
-    } else if (StringEqualsLiteral(typeStr, "region")) {
-      type = Type::Region;
-    } else if (StringEqualsLiteral(typeStr, "currency")) {
-      type = Type::Currency;
-    } else if (StringEqualsLiteral(typeStr, "calendar")) {
-      type = Type::Calendar;
-    } else if (StringEqualsLiteral(typeStr, "weekday")) {
-      type = Type::Weekday;
-    } else if (StringEqualsLiteral(typeStr, "month")) {
-      type = Type::Month;
-    } else if (StringEqualsLiteral(typeStr, "quarter")) {
-      type = Type::Quarter;
-    } else if (StringEqualsLiteral(typeStr, "dayPeriod")) {
-      type = Type::DayPeriod;
-    } else {
-      MOZ_ASSERT(StringEqualsLiteral(typeStr, "dateTimeField"));
-      type = Type::DateTimeField;
-    }
-  }
-
-  mozilla::intl::DisplayNames::Options options(type);
-  options.style = displayStyle;
-  options.languageDisplay = languageDisplay;
-
-  // If a calendar exists, set it as an option.
-  JS::UniqueChars calendarChars = nullptr;
-  if (!calendar->empty()) {
-    calendarChars = JS_EncodeStringToUTF8(cx, calendar);
-    options.calendar = mozilla::MakeStringSpan(calendarChars.get());
-  }
-
-  mozilla::intl::DisplayNames* dn =
-      GetOrCreateDisplayNames(cx, displayNames, locale.get(), options);
-  if (!dn) {
-    return false;
-  }
-
-  // The "code" is usually a small ASCII string, so try to avoid an allocation
-  // by copying it to the stack. Unfortunately we can't pass a string span of
-  // the JSString directly to the unified DisplayNames API, as the
-  // intl::FormatBuffer will be written to. This writing can trigger a GC and
-  // invalidate the span, creating a nogc rooting hazard.
-  JS::UniqueChars utf8 = nullptr;
-  unsigned char ascii[32];
-  mozilla::Span<const char> codeSpan = nullptr;
-  if (code->length() < 32 && code->hasLatin1Chars() && StringIsAscii(code)) {
-    JS::AutoCheckCannotGC nogc;
-    mozilla::PodCopy(ascii, code->latin1Chars(nogc), code->length());
-    codeSpan =
-        mozilla::Span(reinterpret_cast<const char*>(ascii), code->length());
-  } else {
-    utf8 = JS_EncodeStringToUTF8(cx, code);
-    codeSpan = mozilla::MakeStringSpan(utf8.get());
-  }
-
-  intl::FormatBuffer<char16_t, intl::INITIAL_CHAR_BUFFER_SIZE> buffer(cx);
-
-  if (auto result = dn->Of(buffer, codeSpan, fallback); result.isErr()) {
-    switch (result.unwrapErr()) {
-      case mozilla::intl::DisplayNamesError::InternalError:
-        intl::ReportInternalError(cx);
-        break;
-      case mozilla::intl::DisplayNamesError::OutOfMemory:
-        ReportOutOfMemory(cx);
-        break;
-      case mozilla::intl::DisplayNamesError::InvalidOption:
-        ReportInvalidOptionError(
-            cx, mozilla::intl::DisplayNames::ToString(type), code);
-        break;
-      case mozilla::intl::DisplayNamesError::DuplicateVariantSubtag:
-        JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
-                                  JSMSG_DUPLICATE_VARIANT_SUBTAG);
-        break;
-      case mozilla::intl::DisplayNamesError::InvalidLanguageTag:
-        JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
-                                  JSMSG_INVALID_LANGUAGE_TAG);
-        break;
-    }
-    return false;
-  }
-
-  JSString* str = buffer.toString(cx);
-
-  if (str->empty()) {
-    args.rval().setUndefined();
-  } else {
-    args.rval().setString(str);
-  }
-
-  return true;
+  return false;
 }
