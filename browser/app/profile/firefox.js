@@ -2682,7 +2682,14 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("fission.autostart", true, locked);
   pref("browser.aboutwelcome.enabled", false);
   pref("browser.tabs.openNewTabForMostNavigations", true);
+#ifdef MOZILLA_OFFICIAL
+  pref("browser.startup.launchOnOSLogin", true);
+#else
+  // On unofficial (local) builds, having this enabled is painfully annoying,
+  // as it will launch your local build on login, which can cause all kinds of
+  // headaches if you don't realize it's happening.
   pref("browser.startup.launchOnOSLogin", false);
+#endif
   pref("browser.crashReports.unsubmittedCheck.autoSubmit2", true);
   pref("browser.warnOnQuit", false);
 
