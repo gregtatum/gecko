@@ -134,19 +134,9 @@ export class RefreshServicesButton extends MozLitElement {
 
     try {
       if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
-        await new Promise(resolve => {
-          // Wait for the list view to finish syncing by checking its sync
-          // status. However, MR2-1182 will be adding a method that refreshes
-          // all subscribed calendars in a single call and we can avoid having
-          // to do all these extra steps below.
-          let spec = OnlineServices.getCalendarEventQuery();
-          let listView = workshopAPI.searchAllMessages(spec);
-          listView.refresh();
-          listView.seekToTop(10, 990);
-          listView.on("seeked", this, () => {
-            resolve();
-          });
-        });
+        let spec = OnlineServices.getCalendarEventQuery();
+        let syncFinished = workshopAPI.refreshAllMessages(spec);
+        await syncFinished;
       } else {
         await OnlineServices.fetchEvents();
       }

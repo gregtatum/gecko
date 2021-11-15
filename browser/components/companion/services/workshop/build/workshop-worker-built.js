@@ -15387,6 +15387,19 @@ var WorkshopBackend = (() => {
       ctx.proxy = new WindowedListProxy(toc, ctx);
       await ctx.acquire(ctx.proxy);
     },
+    async _promised_refreshAllMessages(msg, replyFunc) {
+      const spec = msg.spec;
+      const accountIds = this.universe.getAllAccountIdsWithKind(spec.kind);
+      const metaHelpers = [];
+      const refreshHelpers = [];
+      spec.folderIds = [];
+      for (let accountId of accountIds) {
+        this.universe.__acquireSearchFoldersHelper(accountId, spec, metaHelpers, refreshHelpers);
+      }
+      let promises = refreshHelpers.map((helper) => helper("sync-all-messages"));
+      await Promise.all(promises);
+      replyFunc(null);
+    },
     async _cmd_viewConversationMessages(msg) {
       let ctx = this.bridgeContext.createNamedContext(msg.handle, "ConversationMessagesView");
       ctx.viewing = {

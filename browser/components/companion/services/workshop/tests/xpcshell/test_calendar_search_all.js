@@ -94,7 +94,7 @@ async function check_searchAllMessages_with_accounts({
 
   // ## Sync Tests Proper
   // ### Create the searchAllMessagesView
-  const calView = workshopAPI.searchAllMessages({
+  const spec = {
     kind: "calendar",
     filter: {
       // All folders (and therefore calendars).
@@ -102,7 +102,9 @@ async function check_searchAllMessages_with_accounts({
       // Get all events by not specifying a truthy `durationBeforeInMinutes`.
       event: {},
     },
-  });
+  };
+
+  const calView = workshopAPI.searchAllMessages(spec);
 
   // ### Initially, there should be no events.
   calView.seekToTop(10, 990);
@@ -117,7 +119,7 @@ async function check_searchAllMessages_with_accounts({
   // request is a Promise.all() over all of those, so this does what we want,
   // but because there isn't a single task group, we will be seeing multiple
   // coherent snapshots.
-  await calView.refresh();
+  await workshopAPI.refreshAllMessages(spec);
 
   WorkshopHelper.eventsEqual(calView.items, initialEvents);
 
@@ -131,7 +133,7 @@ async function check_searchAllMessages_with_accounts({
       computeArrayShard(addEvents, thisShardIndex, totalCalendarCount)
     );
   }
-  await calView.refresh();
+  await workshopAPI.refreshAllMessages(spec);
 
   WorkshopHelper.eventsEqual(calView.items, [...initialEvents, ...addEvents]);
 

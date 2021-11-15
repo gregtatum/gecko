@@ -3562,6 +3562,15 @@ var MailAPI = class extends import_evt14.Emitter {
     });
     return view;
   }
+  refreshAllMessages(spec) {
+    return this._sendPromisedRequest({
+      type: "refreshAllMessages",
+      spec: {
+        kind: spec.kind,
+        filter: spec.filter
+      }
+    });
+  }
   viewFolderMessages(folder) {
     const handle = this._nextHandle++;
     let view;
