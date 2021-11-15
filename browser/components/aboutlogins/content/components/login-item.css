@@ -55,7 +55,7 @@ button {
 }
 
 :host(.in-companion) button {
-  min-width: calc(50% - 8px);
+  min-width: calc(45% - 8px);
   margin-inline: 0;
 }
 
