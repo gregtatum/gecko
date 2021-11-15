@@ -111,7 +111,7 @@ button {
 
 }
 
-#previous
+#previous,
 #next:dir(rtl) {
   background-image: url("chrome://global/skin/icons/arrow-left-12.svg");
 }
