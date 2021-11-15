@@ -2705,7 +2705,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
 
   // Preferences below here are still being experimented with are in the
   // unlocked state to allow for manual testing.
-  pref("browser.companion.pageaction.enabled", false);
+  pref("browser.companion.pageaction.enabled", true);
   pref("browser.companion.snapshots", false);
   pref("browser.companion.passwords.enabled", false);
   pref("browser.companion.onnx", false);
