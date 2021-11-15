@@ -2,6 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+:root {
+  --total-previews: 0;
+}
+
 body {
   font-family: system-ui, -apple-system, sans-serif;
   margin: 0;
@@ -36,7 +40,8 @@ figure {
   position: relative;
 }
 
-figcaption {
+figcaption,
+nav {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -66,4 +71,92 @@ body:is([exiting]) li:not([current="true"]) .preview-image {
   width: 16px;
   height: 16px;
   margin-inline-end: 8px;
+}
+
+nav {
+  position: absolute;
+  bottom: 0;
+  transform: translateY(0);
+  transition: transform 500ms ease-in;
+  /**
+   * We set pointer-events: none; here so that swipe gestures can
+   * got through the majority of the <nav> element to the underlying
+   * list. We then set pointer-events: all; on the individual controls
+   * within nav.
+   */
+  pointer-events: none;
+}
+
+nav > button,
+nav > input {
+  pointer-events: auto;
+}
+
+body:is([invisible],[exiting]) nav {
+  transform: translateY(100%);
+}
+
+button {
+  appearance: none;
+  border: 0;
+  -moz-context-properties: fill;
+  fill: var(--in-content-icon-color);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  border-radius: 50px;
+  min-width: 45px;
+  min-height: 20px;
+  margin-inline: 12px;
+
+}
+
+#previous
+#next:dir(rtl) {
+  background-image: url("chrome://global/skin/icons/arrow-left-12.svg");
+}
+
+#next,
+#previous:dir(rtl) {
+  background-image: url("chrome://global/skin/icons/arrow-right-12.svg");
+}
+
+#scrubber {
+  min-width: 580px;
+}
+
+#scrubber::-moz-range-track {
+  background-color: var(--in-content-button-background);
+}
+
+#scrubber::-moz-range-track,
+#scrubber::-moz-range-thumb {
+  border-radius: 50px;
+  transform: scaleY(0.5);
+  transition: transform 50ms ease-in;
+  height: 8px;
+}
+
+#scrubber:hover::-moz-range-track {
+  background-color: var(--in-content-button-background-hover);
+}
+
+#scrubber:hover::-moz-range-track,
+#scrubber:hover::-moz-range-thumb {
+  transform: scaleY(1);
+}
+
+#scrubber::-moz-range-thumb {
+  border: 0;
+  min-width: 16px;
+  width: calc(100% / var(--total-previews));
+  background-color: var(--in-content-primary-button-background);
+}
+
+#scrubber:hover::-moz-range-thumb {
+  background-color: var(--in-content-primary-button-background-hover);
+}
+
+#scrubber:hover:active::-moz-range-thumb {
+  background-color: var(--in-content-primary-button-background-active);
 }

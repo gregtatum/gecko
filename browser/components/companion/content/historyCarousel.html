@@ -6,12 +6,18 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Security-Policy" content="default-src chrome:; object-src 'none'; img-src blob: data:">
+    <link rel="stylesheet" type="text/css" href="chrome://global/skin/in-content/common.css">
     <link rel="stylesheet" href="chrome://browser/content/companion/historyCarousel.css">
     <script type="module" src="chrome://browser/content/companion/historyCarousel.js"></script>
   </head>
   <body invisible="true">
     <main>
       <ol id="preview-list"></ol>
+      <nav>
+        <button id="previous"></button>
+        <input id="scrubber" type="range" step="1" min="0"/>
+        <button id="next"></button>
+      </nav>
     </main>
     <template id="preview-element-template">
       <figure>

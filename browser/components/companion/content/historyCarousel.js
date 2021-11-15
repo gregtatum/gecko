@@ -64,7 +64,7 @@ const HistoryCarousel = {
    * The list of DOM events that we listen for on this page. These get event
    * listeners set up for them, and are then handled in handleDOMEvent.
    */
-  DOM_EVENTS: ["visibilitychange", "click", "keydown"],
+  DOM_EVENTS: ["visibilitychange", "click", "keydown", "change"],
 
   /**
    * An Array that contains the list of View indexes that still need
@@ -73,6 +73,12 @@ const HistoryCarousel = {
    * previewTaskQueue.pop().
    */
   previewTaskQueue: [],
+
+  /**
+   * A cache of the total number of previews that comes down from the parent
+   * process during setup. Defaults to -1 until setup is complete.
+   */
+  totalPreviews: -1,
 
   /**
    * A convenience getter for the main <ol> element that contains each
@@ -84,6 +90,39 @@ const HistoryCarousel = {
     delete this.list;
     this.list = document.getElementById("preview-list");
     return this.list;
+  },
+
+  /**
+   * A convenience getter for the scrubber range input element.
+   *
+   * @type {Element}
+   */
+  get scrubber() {
+    delete this.scrubber;
+    this.scrubber = document.getElementById("scrubber");
+    return this.scrubber;
+  },
+
+  /**
+   * A convenience getter for the "previous" button next to the scrubber.
+   *
+   * @type {Element}
+   */
+  get previousBtn() {
+    delete this.previousBtn;
+    this.previousBtn = document.getElementById("previous");
+    return this.previousBtn;
+  },
+
+  /**
+   * A convenience getter for the "previous" button next to the scrubber.
+   *
+   * @type {Element}
+   */
+  get nextBtn() {
+    delete this.nextBtn;
+    this.nextBtn = document.getElementById("next");
+    return this.nextBtn;
   },
 
   /**
@@ -143,6 +182,10 @@ const HistoryCarousel = {
    */
   handleDOMEvent(event) {
     switch (event.type) {
+      case "change": {
+        this.onChange(event);
+        break;
+      }
       case "click": {
         this.onClick(event);
         break;
@@ -170,6 +213,10 @@ const HistoryCarousel = {
     let previews = CarouselUtils.getInitialPreviews();
     let currentIndex = CarouselUtils.getCurrentIndex();
     let currentPreview = null;
+
+    this.totalPreviews = previews.length;
+    let root = document.documentElement;
+    root.style.setProperty("--total-previews", this.totalPreviews);
 
     let fn = this.onIntersection.bind(this);
     this.intersectionObserver = new IntersectionObserver(fn, {
@@ -207,6 +254,9 @@ const HistoryCarousel = {
     // so do so and snap it into the viewport if it's not already there.
     currentPreview.setBlob(previews[currentIndex].image);
     currentPreview.scrollIntoView({ behavior: "instant", inline: "center" });
+
+    this.scrubber.setAttribute("max", previews.length - 1);
+    this.scrubber.value = currentIndex;
   },
 
   /**
@@ -223,8 +273,8 @@ const HistoryCarousel = {
         let index = parseInt(previewEl.getAttribute("index"), 10);
         if (CarouselUtils.getCurrentIndex() != index) {
           CarouselUtils.selectCurrentIndex(index);
-          this.updateCurrentIndex(index);
         }
+        this.updateCurrentIndex(index);
         // We presume only 1 entry can be considered current at a time,
         // so after finding the first intersection we bail out.
         break;
@@ -279,6 +329,10 @@ const HistoryCarousel = {
     this.previewTaskQueue.sort(
       (a, b) => Math.abs(index - b) - Math.abs(index - a)
     );
+
+    this.scrubber.value = index;
+    this.previousBtn.toggleAttribute("disabled", index == 0);
+    this.nextBtn.toggleAttribute("disabled", index == this.totalPreviews - 1);
   },
 
   /**
@@ -305,13 +359,30 @@ const HistoryCarousel = {
    *
    * @param {Number} index
    *   The index of the PreviewElement to scroll into view.
+   * @param {Boolean} [instant]
+   *   If set to true, the selected index does an instant scroll into the
+   *   viewport.
    */
-  selectCurrentIndex(index) {
+  selectCurrentIndex(index, instant = false) {
     let previewEl = document.querySelector(`li[index="${index}"]`);
-    previewEl.scrollIntoView({ behavior: "smooth", inline: "center" });
+    let behavior = instant ? "instant" : "smooth";
+    previewEl.scrollIntoView({ behavior, inline: "center" });
   },
 
   // DOM event handlers
+
+  /**
+   * Handles change events on the whole window.
+   *
+   * @param {Event} event
+   *   The change event to handle.
+   */
+  onChange(event) {
+    if (event.target == this.scrubber) {
+      let index = Math.round(this.scrubber.value);
+      this.selectCurrentIndex(index, true /* instant */);
+    }
+  },
 
   /**
    * Handles click events on the whole window.
@@ -320,11 +391,29 @@ const HistoryCarousel = {
    *   The click event to handle.
    */
   onClick(event) {
-    let previewEl = event.target.closest("li");
-    if (previewEl) {
-      let index = parseInt(previewEl.getAttribute("index"), 10);
-      if (CarouselUtils.getCurrentIndex() == index) {
-        CarouselUtils.requestExit();
+    switch (event.target) {
+      case this.previousBtn: {
+        let index = CarouselUtils.getCurrentIndex();
+        if (index > 0) {
+          this.selectCurrentIndex(index - 1, true /* instant */);
+        }
+        break;
+      }
+      case this.nextBtn: {
+        let index = CarouselUtils.getCurrentIndex();
+        if (index < this.totalPreviews - 1) {
+          this.selectCurrentIndex(index + 1, true /* instant */);
+        }
+        break;
+      }
+      default: {
+        let previewEl = event.target.closest("li");
+        if (previewEl) {
+          let index = parseInt(previewEl.getAttribute("index"), 10);
+          if (CarouselUtils.getCurrentIndex() == index) {
+            CarouselUtils.requestExit();
+          }
+        }
       }
     }
   },
