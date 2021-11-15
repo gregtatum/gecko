@@ -5,7 +5,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src chrome:; object-src 'none'; img-src blob:">
+    <meta http-equiv="Content-Security-Policy" content="default-src chrome:; object-src 'none'; img-src blob: data:">
     <link rel="stylesheet" href="chrome://browser/content/companion/historyCarousel.css">
     <script type="module" src="chrome://browser/content/companion/historyCarousel.js"></script>
   </head>
@@ -15,7 +15,7 @@
     </main>
     <template id="preview-element-template">
       <figure>
-        <figcaption class="caption"></figcaption>
+        <figcaption><img class="favicon"/><span class="caption"/></figcaption>
         <img class="preview-image"/>
       </figure>
     </template>

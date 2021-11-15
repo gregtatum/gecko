@@ -20,6 +20,7 @@ const INTERSECTION_THRESHOLD_FOR_CURRENT = 0.6; // From 0.0 to 1.0
 class PreviewElement extends HTMLLIElement {
   #image = null;
   #caption = null;
+  #favicon = null;
 
   connectedCallback() {
     let template = document.querySelector("#preview-element-template");
@@ -28,6 +29,8 @@ class PreviewElement extends HTMLLIElement {
     this.#caption = this.querySelector(".caption");
     this.#caption.textContent = this.getAttribute("title");
     this.#caption.title = this.getAttribute("url");
+    this.#favicon = this.querySelector(".favicon");
+    this.#favicon.src = this.getAttribute("iconURL");
   }
 
   setBlob(blob) {

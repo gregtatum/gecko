@@ -37,6 +37,9 @@ figure {
 }
 
 figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: absolute;
   text-align: center;
   width: 100%;
@@ -44,17 +47,23 @@ figcaption {
   box-sizing: border-box;
 }
 
-img {
+.preview-image {
   transition: scale 500ms ease-in, opacity 500ms ease-in;
   scale: 0.8;
   border-radius: 12px;
   box-shadow: 0px 4px 12px 0px rgba(0.23, 0.22, 0.27, 0.2);
 }
 
-body:is([invisible],[exiting]) img {
+body:is([invisible],[exiting]) .preview-image {
   scale: 1.0;
 }
 
-body:is([exiting]) li:not([current="true"]) img {
+body:is([exiting]) li:not([current="true"]) .preview-image {
   opacity: 0;
+}
+
+.favicon {
+  width: 16px;
+  height: 16px;
+  margin-inline-end: 8px;
 }
