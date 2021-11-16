@@ -871,7 +871,6 @@ let JSWINDOWACTORS = {
 if (
   AppConstants.PINEBUILD &&
   (AppConstants.platform == "macosx" || AppConstants.platform == "win") &&
-  !Cu.isInAutomation &&
   Services.prefs.getBoolPref("browser.startup.launchOnOSLogin", false)
 ) {
   const PINEBUILD_BACKGROUND_UI =

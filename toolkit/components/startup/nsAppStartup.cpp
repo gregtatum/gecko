@@ -41,7 +41,6 @@
 #include "js/PropertyAndElement.h"  // JS_DefineProperty
 #include "prenv.h"
 #include "nsAppDirectoryServiceDefs.h"
-#include "xpcpublic.h"
 
 #if defined(XP_MACOSX)
 #  include "mozilla/MacApplicationDelegate.h"
@@ -298,8 +297,7 @@ nsAppStartup::Run(void) {
   if (!mShuttingDown && mConsiderQuitStopper != 0) {
 #ifdef XP_MACOSX
 #  ifdef PINEBUILD
-    if (xpc::IsInAutomation() ||
-        !Preferences::GetBool("browser.startup.launchOnOSLogin", false)) {
+    if (!Preferences::GetBool("browser.startup.launchOnOSLogin", false)) {
       EnterLastWindowClosingSurvivalArea();
       mExitLastWindowClosingSurvivalAreaOnQuit = true;
     }
