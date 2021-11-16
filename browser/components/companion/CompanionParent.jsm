@@ -13,7 +13,6 @@ const { XPCOMUtils } = ChromeUtils.import(
 XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   clearTimeout: "resource://gre/modules/Timer.jsm",
-  FileUtils: "resource://gre/modules/FileUtils.jsm",
   _LastSession: "resource:///modules/sessionstore/SessionStore.jsm",
   OnlineServices: "resource:///modules/OnlineServices.jsm",
   PageDataSchema: "resource:///modules/pagedata/PageDataSchema.jsm",
@@ -25,7 +24,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   setTimeout: "resource://gre/modules/Timer.jsm",
   Snapshots: "resource:///modules/Snapshots.jsm",
   SnapshotSelector: "resource:///modules/SnapshotSelector.jsm",
-  Sqlite: "resource://gre/modules/Sqlite.jsm",
 });
 
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -390,28 +388,6 @@ class CompanionParent extends JSWindowActorParent {
       PREFERRED_SNAPSHOT_FAVICON_WIDTH_PX *
       Math.ceil(browser.ownerGlobal.devicePixelRatio)
     );
-  }
-
-  async getPreviewImageURL(url) {
-    let placesDbPath = FileUtils.getFile("ProfD", ["places.sqlite"]).path;
-    let previewImage;
-    let db = await Sqlite.openConnection({ path: placesDbPath });
-    try {
-      let sql = "SELECT * FROM moz_places WHERE url = :url;";
-      let rows = await db.executeCached(sql, { url });
-      if (rows.length) {
-        for (let row of rows) {
-          previewImage = row.getResultByName("preview_image_url");
-          if (previewImage) {
-            break;
-          }
-        }
-      }
-    } finally {
-      await db.close();
-    }
-
-    return previewImage;
   }
 
   async getEventLinkTitles(urls) {
