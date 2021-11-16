@@ -156,10 +156,14 @@ class View {
     return this.#internalView.userTitle || this.#internalView.title;
   }
 
+  /** @type {string} **/
+  /** Returns url of the favicon resource for a view. **/
   get iconURL() {
     return this.#internalView.iconURL;
   }
 
+  /** @type {boolean} **/
+  /** Returns a boolean indicating whether this view's browser is in a busy state. **/
   get busy() {
     return this.#internalView.busy;
   }
@@ -197,19 +201,29 @@ class View {
 
   /**
    * Returns a boolean indicating whether the view is muted.
+   * @type {boolean}
    */
   get muted() {
     return this.#internalView.muted;
   }
 
+  /**
+   * Returns a boolean indicating whether the view is pinned by the user.
+   * @type {boolean}
+   */
   get pinned() {
     return this.#internalView.pinned;
   }
 
+  /**
+   * Returns a boolean indicating whether the view is loading an article.
+   * @type {boolean}
+   */
   get isArticle() {
     return this.#internalView.isArticle;
   }
 
+  /** @type {nsIPrincipal} **/
   get contentPrincipal() {
     return this.#internalView.contentPrincipal;
   }
@@ -632,6 +646,8 @@ class BrowserListener {
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryNewEntry: ` +
         `${newURI.spec}`
     );
+
+    // Wait for SessionHistory to get updated before proceeding.
     await Promise.resolve();
 
     this.#globalHistory._onBrowserNavigate(this.#browser);
@@ -644,6 +660,8 @@ class BrowserListener {
     logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryReload`
     );
+
+    // Wait for SessionHistory to get updated before proceeding.
     await Promise.resolve();
   }
 
@@ -654,6 +672,8 @@ class BrowserListener {
     logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryGotoIndex`
     );
+
+    // Wait for SessionHistory to get updated before proceeding.
     await Promise.resolve();
 
     this.#globalHistory._onBrowserNavigate(this.#browser);
@@ -712,6 +732,7 @@ class BrowserListener {
       getCurrentIndex(sessionHistory)
     );
 
+    // Wait for SessionHistory to get updated before proceeding.
     await Promise.resolve();
 
     let newEntry = getCurrentEntry(this.#browser);
@@ -1160,6 +1181,8 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
+   * This function attaches listeners to a browser element
+   * that listen to changes to its session history.
    * @param {Browser} browser
    */
   #watchBrowser(browser) {
@@ -1264,6 +1287,9 @@ class GlobalHistory extends EventTarget {
 
   /**
    * Called when the document in a browser has changed title.
+   * @param {Browser} browser
+   *    Underlying browser element of a view whose title was updated by
+   *    its publishing website.
    */
   _onNewTitle(browser) {
     let entry = getCurrentEntry(browser);
@@ -1278,6 +1304,10 @@ class GlobalHistory extends EventTarget {
 
   /**
    * Called when a user changes a page's title.
+   * @param {View} view
+   *        View whose page title was updated by the user.
+   * @param {String} userTitle
+   *        Contains updated title provided by the user.
    */
   updateUserTitle(view, userTitle) {
     let internalView = InternalView.viewMap.get(view);
@@ -1291,6 +1321,9 @@ class GlobalHistory extends EventTarget {
 
   /**
    * Called when the document in a browser has changed its favicon.
+   * @param {Browser} browser
+   *        Underlying browser of a view whose icon was updated by
+   *        its publishing website.
    */
   _onNewIcon(browser) {
     let entry = getCurrentEntry(browser);
@@ -1531,10 +1564,20 @@ class GlobalHistory extends EventTarget {
     return { internalView: null, overwriting: false };
   }
 
+  /**
+   * This function clears the activation timer that moves views
+   * to the top of the river. We may want to clear the timer when
+   * the page action menu is opened, for example, to avoid promoting
+   * views to the top and disconnecting them from the menu.
+   */
   clearActivationTimer() {
     this.#window.clearTimeout(this.#activationTimer);
   }
 
+  /**
+   * This function starts a timer to move a view in the river to
+   * the top position.
+   */
   startActivationTimer() {
     if (this.#activationTimer) {
       this.clearActivationTimer();
@@ -1551,6 +1594,9 @@ class GlobalHistory extends EventTarget {
     }, timeout);
   }
 
+  /**
+   * This function moves the current/staged view to the top of the river.
+   */
   #activateCurrentView() {
     logConsole.debug(`Activating current InternalView.`);
     this.#activationTimer = null;
