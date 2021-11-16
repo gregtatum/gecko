@@ -437,10 +437,23 @@ bool nsHTMLScrollFrame::TryLayout(ScrollReflowInput* aState,
     return false;
   }
 
-  if (aAssumeVScroll != aState->mReflowedContentsWithVScrollbar ||
-      (aAssumeHScroll != aState->mReflowedContentsWithHScrollbar &&
-       ScrolledContentDependsOnHeight(aState))) {
-    if (aAssumeHScroll != aState->mReflowedContentsWithHScrollbar) {
+  const bool assumeVScrollChanged =
+      aAssumeVScroll != aState->mReflowedContentsWithVScrollbar;
+  const bool assumeHScrollChanged =
+      aAssumeHScroll != aState->mReflowedContentsWithHScrollbar;
+  const bool isVertical = GetWritingMode().IsVertical();
+
+  const bool shouldReflowScolledFrame = [=]() {
+    if (isVertical) {
+      return assumeHScrollChanged ||
+             (assumeVScrollChanged && ScrolledContentDependsOnBSize(aState));
+    }
+    return assumeVScrollChanged ||
+           (assumeHScrollChanged && ScrolledContentDependsOnBSize(aState));
+  }();
+
+  if (shouldReflowScolledFrame) {
+    if (isVertical ? assumeVScrollChanged : assumeHScrollChanged) {
       nsLayoutUtils::MarkIntrinsicISizesDirtyIfDependentOnBSize(
           mHelper.mScrolledFrame);
     }
@@ -644,13 +657,8 @@ bool nsHTMLScrollFrame::TryLayout(ScrollReflowInput* aState,
   return true;
 }
 
-// XXX Height/BSize mismatch needs to be addressed here; check the caller!
-// Currently this will only behave as expected for horizontal writing modes.
-// (See bug 1175509.)
-bool nsHTMLScrollFrame::ScrolledContentDependsOnHeight(
-    ScrollReflowInput* aState) {
-  // Return true if ReflowScrolledFrame is going to do something different
-  // based on the presence of a horizontal scrollbar.
+bool nsHTMLScrollFrame::ScrolledContentDependsOnBSize(
+    ScrollReflowInput* aState) const {
   return mHelper.mScrolledFrame->HasAnyStateBits(
              NS_FRAME_CONTAINS_RELATIVE_BSIZE |
              NS_FRAME_DESCENDANT_INTRINSIC_ISIZE_DEPENDS_ON_BSIZE) ||
@@ -778,6 +786,19 @@ void nsHTMLScrollFrame::ReflowScrolledFrame(ScrollReflowInput* aState,
       mHelper.mScrolledFrame, presContext, *aMetrics, &kidReflowInput, wm,
       LogicalPoint(wm), dummyContainerSize,
       ReflowChildFlags::NoMoveFrame | ReflowChildFlags::NoSizeView);
+
+  if (mHelper.mScrolledFrame->HasAnyStateBits(
+          NS_FRAME_CONTAINS_RELATIVE_BSIZE)) {
+    // Propagate NS_FRAME_CONTAINS_RELATIVE_BSIZE from our inner scrolled frame
+    // to ourselves so that our containing block is aware of it.
+    //
+    // Note: If the scrolled frame has any child whose block-size depends on the
+    // containing block's block-size, the NS_FRAME_CONTAINS_RELATIVE_BSIZE bit
+    // is set on the scrolled frame when initializing the child's ReflowInput in
+    // ReflowInput::InitResizeFlags(). Therefore, we propagate the bit here
+    // after we reflowed the scrolled frame.
+    AddStateBits(NS_FRAME_CONTAINS_RELATIVE_BSIZE);
+  }
 
   // XXX Some frames (e.g. nsFrameFrame, nsTextFrame) don't
   // bother setting their mOverflowArea. This is wrong because every frame
@@ -2361,16 +2382,26 @@ void ScrollFrameHelper::ScrollTo(nsPoint aScrollPosition, ScrollMode aMode,
 
 void ScrollFrameHelper::ScrollToCSSPixels(const CSSIntPoint& aScrollPosition,
                                           ScrollMode aMode) {
-  nsPoint current = GetScrollPosition();
   CSSIntPoint currentCSSPixels = GetScrollPositionCSSPixels();
-  nsPoint pt = CSSPoint::ToAppUnits(aScrollPosition);
+  // Transmogrify this scroll to a relative one if there's any on-going
+  // animation in APZ triggered by __user__.
+  // Bug 1740164: We will apply it for cases there's no animation in APZ.
+  if (mCurrentAPZScrollAnimationType ==
+          APZScrollAnimationType::TriggeredByUserInput &&
+      !IsScrollAnimating(IncludeApzAnimation::No)) {
+    CSSIntPoint delta = aScrollPosition - currentCSSPixels;
+    ScrollByCSSPixels(delta, aMode);
+    return;
+  }
 
   nscoord halfPixel = nsPresContext::CSSPixelsToAppUnits(0.5f);
+  nsPoint pt = CSSPoint::ToAppUnits(aScrollPosition);
   nsRect range(pt.x - halfPixel, pt.y - halfPixel, 2 * halfPixel - 1,
                2 * halfPixel - 1);
   // XXX I don't think the following blocks are needed anymore, now that
   // ScrollToImpl simply tries to scroll an integer number of layer
   // pixels from the current position
+  nsPoint current = GetScrollPosition();
   if (currentCSSPixels.x == aScrollPosition.x) {
     pt.x = current.x;
     range.x = pt.x;

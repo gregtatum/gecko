@@ -2688,7 +2688,8 @@ static bool HasCompressedLeadingWhitespace(
 
 void BuildTextRunsScanner::SetupBreakSinksForTextRun(gfxTextRun* aTextRun,
                                                      const void* aTextPtr) {
-  using mozilla::intl::LineBreaker;
+  using mozilla::intl::LineBreakRule;
+  using mozilla::intl::WordBreakRule;
 
   // textruns have uniform language
   const nsStyleFont* styleFont = mMappedFlows[0].mStartFrame->StyleFont();
@@ -2710,32 +2711,32 @@ void BuildTextRunsScanner::SetupBreakSinksForTextRun(gfxTextRun* aTextRun,
     auto wordBreak = styleText->EffectiveWordBreak();
     switch (wordBreak) {
       case StyleWordBreak::BreakAll:
-        mLineBreaker.SetWordBreak(LineBreaker::WordBreak::BreakAll);
+        mLineBreaker.SetWordBreak(WordBreakRule::BreakAll);
         break;
       case StyleWordBreak::KeepAll:
-        mLineBreaker.SetWordBreak(LineBreaker::WordBreak::KeepAll);
+        mLineBreaker.SetWordBreak(WordBreakRule::KeepAll);
         break;
       case StyleWordBreak::Normal:
       default:
         MOZ_ASSERT(wordBreak == StyleWordBreak::Normal);
-        mLineBreaker.SetWordBreak(LineBreaker::WordBreak::Normal);
+        mLineBreaker.SetWordBreak(WordBreakRule::Normal);
         break;
     }
     switch (styleText->mLineBreak) {
       case StyleLineBreak::Auto:
-        mLineBreaker.SetStrictness(LineBreaker::Strictness::Auto);
+        mLineBreaker.SetStrictness(LineBreakRule::Auto);
         break;
       case StyleLineBreak::Normal:
-        mLineBreaker.SetStrictness(LineBreaker::Strictness::Normal);
+        mLineBreaker.SetStrictness(LineBreakRule::Normal);
         break;
       case StyleLineBreak::Loose:
-        mLineBreaker.SetStrictness(LineBreaker::Strictness::Loose);
+        mLineBreaker.SetStrictness(LineBreakRule::Loose);
         break;
       case StyleLineBreak::Strict:
-        mLineBreaker.SetStrictness(LineBreaker::Strictness::Strict);
+        mLineBreaker.SetStrictness(LineBreakRule::Strict);
         break;
       case StyleLineBreak::Anywhere:
-        mLineBreaker.SetStrictness(LineBreaker::Strictness::Anywhere);
+        mLineBreaker.SetStrictness(LineBreakRule::Anywhere);
         break;
     }
 
@@ -4129,13 +4130,18 @@ bool nsTextPaintStyle::InitSelectionColorsAndShadow() {
     return true;
   }
 
+  mSelectionTextColor =
+      LookAndFeel::Color(LookAndFeel::ColorID::Highlighttext, mFrame);
+
   nscolor selectionBGColor =
       LookAndFeel::Color(LookAndFeel::ColorID::Highlight, mFrame);
 
   switch (selectionStatus) {
     case nsISelectionController::SELECTION_ATTENTION: {
+      mSelectionTextColor = LookAndFeel::Color(
+          LookAndFeel::ColorID::TextSelectAttentionForeground, mFrame);
       mSelectionBGColor = LookAndFeel::Color(
-          LookAndFeel::ColorID::TextSelectBackgroundAttention, mFrame);
+          LookAndFeel::ColorID::TextSelectAttentionBackground, mFrame);
       mSelectionBGColor =
           EnsureDifferentColors(mSelectionBGColor, selectionBGColor);
       break;
@@ -4146,15 +4152,12 @@ bool nsTextPaintStyle::InitSelectionColorsAndShadow() {
     }
     default: {
       mSelectionBGColor = LookAndFeel::Color(
-          LookAndFeel::ColorID::TextSelectBackgroundDisabled, mFrame);
+          LookAndFeel::ColorID::TextSelectDisabledBackground, mFrame);
       mSelectionBGColor =
           EnsureDifferentColors(mSelectionBGColor, selectionBGColor);
       break;
     }
   }
-
-  mSelectionTextColor =
-      LookAndFeel::Color(LookAndFeel::ColorID::Highlighttext, mFrame);
 
   if (mResolveColors) {
     EnsureSufficientContrast(&mSelectionTextColor, &mSelectionBGColor);

@@ -3127,17 +3127,7 @@ var AddonManagerInternal = {
 
   setupPromptHandler(browser, url, install, requireConfirm, source) {
     install.promptHandler = info =>
-      new Promise((resolve, _reject) => {
-        let reject = () => {
-          this.installNotifyObservers(
-            "addon-install-cancelled",
-            browser,
-            url,
-            install
-          );
-          _reject();
-        };
-
+      new Promise((resolve, reject) => {
         this._verifyThirdPartyInstall(browser, url, install, info, source)
           .then(() => {
             // All installs end up in this callback when the add-on is available
@@ -4268,8 +4258,7 @@ AMTelemetry = {
   init() {
     // Enable the addonsManager telemetry event category before the AddonManager
     // has completed its startup, otherwise telemetry events recorded during the
-    // AddonManager/XPIProvider startup will not be recorded (e.g. the telemetry
-    // events for the extension migrated to the private browsing permission).
+    // AddonManager/XPIProvider startup will not be recorded.
     Services.telemetry.setEventRecordingEnabled("addonsManager", true);
   },
 
