@@ -474,8 +474,10 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   }
 
   pageActionEditViewTitle(event) {
-    this.#pageActionView.userTitle = event.target.value;
-    this.viewUpdated(this.#pageActionView);
+    window.gGlobalHistory.updateUserTitle(
+      this.#pageActionView,
+      event.target.value
+    );
   }
 
   pageActionPinView(event) {

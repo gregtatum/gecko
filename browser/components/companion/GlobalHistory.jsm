@@ -137,7 +137,6 @@ function getHistoryIndex(browser, historyId) {
  */
 class View {
   #internalView;
-  #userTitle;
 
   /**
    * @param {InternalView} internalView
@@ -154,11 +153,7 @@ class View {
   /** @type {string} */
   /** Always return user edited title if present **/
   get title() {
-    return this.#userTitle || this.#internalView.title;
-  }
-
-  set userTitle(userTitle) {
-    this.#userTitle = userTitle;
+    return this.#internalView.userTitle || this.#internalView.title;
   }
 
   get iconURL() {
@@ -1278,6 +1273,19 @@ class GlobalHistory extends EventTarget {
     }
 
     internalView.title = entry.title;
+    this.#notifyEvent("ViewUpdated", internalView);
+  }
+
+  /**
+   * Called when a user changes a page's title.
+   */
+  updateUserTitle(view, userTitle) {
+    let internalView = InternalView.viewMap.get(view);
+    if (!internalView) {
+      return;
+    }
+
+    internalView.userTitle = userTitle;
     this.#notifyEvent("ViewUpdated", internalView);
   }
 
