@@ -29,7 +29,9 @@ function getFirefoxExecutableFile() {
 }
 
 function ensureOSSettingsMatchPref() {
-  var prefVal = Services.prefs.getBoolPref(PREF_LAUNCH_ON_LOGIN, false);
+  var prefVal =
+    !Cu.isInAutomation &&
+    Services.prefs.getBoolPref(PREF_LAUNCH_ON_LOGIN, false);
   if (AppConstants.platform == "win") {
     reflectPrefToRegistry(prefVal);
   } else if (AppConstants.platform == "macosx") {
