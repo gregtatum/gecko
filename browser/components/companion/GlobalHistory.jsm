@@ -565,9 +565,9 @@ class InternalView {
  *
  * `ViewChanged` - The current view has changed.
  * `ViewAdded` - A new view has been added to the top of the stack.
- * `ViewRemoved` - A view has been removed from the bottom of the stack.
+ * `ViewRemoved` - An existing view has been removed.
  * `ViewMoved` - An existing view has been moved to the top of the stack.
- * `ViewUpdated` - An existing view has been moved to the top of the stack.
+ * `ViewUpdated` - An existing view has changed in some way.
  * `RiverRebuilt` - The river has been replaced with a new state and should be rebuilt.
  * `ViewPinned` - A view has transitioned from the unpinned to pinned state.
  * `ViewUnpinned` - A view has transitioned from the pinned to unpinned state.
@@ -577,7 +577,8 @@ class GlobalHistoryEvent extends Event {
   #detail;
 
   /**
-   * @param {"ViewChanged" | "ViewAdded" | "ViewMoved" | "ViewRemoved" | "ViewUpdated" | "RiverRebuilt"} type
+   * @param {"ViewChanged" | "ViewAdded" | "ViewMoved" | "ViewRemoved" | "ViewUpdated" |
+   *   "RiverRebuilt" | "ViewPinned" | "ViewUnpinned"} type
    *   The event type.
    * @param {View | null}
    *   The related view.
