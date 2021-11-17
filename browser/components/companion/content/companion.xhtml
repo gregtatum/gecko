@@ -227,17 +227,19 @@
 
   <div class="companion-main">
     <html:button-group class="tab-button-group">
-      <html:button class="tab-button ghost-button" name="now" is="named-deck-button" deck="companion-deck">Now</html:button>
-      <html:button class="tab-button ghost-button" name="browse" is="named-deck-button" deck="companion-deck">Browse</html:button>
+      <html:button class="tab-button ghost-button" name="now" is="named-deck-button" deck="companion-deck"><img /><span data-l10n-id="companion-deck-now"></span></html:button>
+      <html:button class="tab-button ghost-button" name="browse" is="named-deck-button" deck="companion-deck"><img /><span data-l10n-id="companion-deck-browse"></span></html:button>
     </html:button-group>
     <html:named-deck id="companion-deck">
       <div xmlns="http://www.w3.org/1999/xhtml" id="scroll" name="now">
         <section id="flow-reset-placeholder">
+
           <img src="chrome://browser/content/companion/flow-reset-placeholder.png" />
+          <button id="flow-reset-close"></button>
           <h3 data-l10n-id="session-cleared-title"/>
-          <p data-l10n-id="session-cleared">
+          <small data-l10n-id="session-cleared">
             <a id="session-cleared-link" data-l10n-name="session-cleared-link"></a>
-          </p>
+          </small>
         </section>
         <section id="now-content">
           <div id="top-sites-placeholder"></div>

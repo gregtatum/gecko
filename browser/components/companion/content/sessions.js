@@ -38,6 +38,9 @@ export function initSessionUI() {
     .addEventListener("click", () => {
       document.getElementById("companion-deck").selectedViewName = "browse";
     });
+  document.getElementById("flow-reset-close").addEventListener("click", () => {
+    document.body.removeAttribute("flow-reset");
+  });
 }
 
 export class SessionCard extends HTMLElement {

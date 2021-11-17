@@ -27,6 +27,19 @@ h2 {
   margin: 16px;
 }
 
+h3 {
+  font-size: 0.9em;
+}
+
+button {
+  min-width: unset;
+  cursor: pointer;
+}
+
+a {
+  cursor: pointer;
+}
+
 .companion-main {
   display: grid;
   grid-template-rows: auto 1fr;
@@ -41,6 +54,7 @@ h2 {
 
 :root {
   --light-bg-color: #F0F0F4;
+  --in-content-primary-button-background: #0060DF;
 }
 
 :root:-moz-lwtheme-brighttext {
@@ -192,11 +206,9 @@ h2 {
 }
 
 .media button {
-  min-width: unset;
   background: none;
   z-index: 2;
   max-width: 24px;
-  cursor: pointer;
   /* Quick method to make sure they are visible on contrasting backgrounds */
   filter: drop-shadow(0px 1px 1px black);
   fill: rgba(249, 249, 250, 1);
@@ -415,18 +427,44 @@ e-global-nav-debugging h2 {
 
 .tab-button {
   /* Overwrite the generic button styles */
-  font-weight: bold;
   background-color: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: 0;
   -moz-outline-radius: 0;
   margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.tab-button span {
+  padding-inline-start: 4px;
+  font-weight: normal;
 }
 
 .tab-button[selected] {
   color: var(--in-content-primary-button-background);
   border-color: var(--in-content-primary-button-background);
+}
+
+.tab-button img {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  -moz-context-properties: fill;
+}
+
+.tab-button[selected] img {
+  fill: var(--in-content-primary-button-background);
+}
+
+#companion-deck-button-browse img {
+  background: center center no-repeat url(chrome://browser/skin/reader-mode.svg);
+}
+
+#companion-deck-button-now img {
+  background: center center no-repeat url(chrome://activity-stream/content/data/content/assets/glyph-trending-16.svg);
 }
 
 .browse {
@@ -520,10 +558,50 @@ toolbarbutton.subviewbutton-back {
   width: 100%;
 }
 
+#scroll {
+  height: calc(100% - 30px);
+}
+
 #flow-reset-placeholder {
   text-align: center;
   margin: 1em;
   display: none;
+  position: relative;
+  border-radius: 16px;
+  padding-block-start: 55px;
+  box-shadow: 0px 2px 6px 0px #3A394433;
+  height: 100%;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+#flow-reset-placeholder::after {
+  content: "";
+  position: absolute;
+  top: -15px;
+  left: -15px;
+  bottom: 382px;
+  right: -15px;
+  background: radial-gradient(481.74% 98.84% at 50% 83.12%, rgba(255, 255, 255, 0) 39.42%, rgba(0, 197, 224, 0.02) 60.44%, rgba(0, 184, 224, 0.145) 73.89%, rgba(132, 89, 255, 0.4) 94.52%);
+  border-radius: 16px;
+  opacity: .7;
+  rotate: -6deg;
+  pointer-events: none;
+}
+
+#flow-reset-close {
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: center center no-repeat url(chrome://global/skin/icons/close.svg);
+  background-size: 12px;
+}
+
+#flow-reset-close:hover {
+  background-color: var(--light-bg-color);
 }
 
 [flow-reset] #flow-reset-placeholder {

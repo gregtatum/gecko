@@ -131,7 +131,7 @@ session-pages-count = { $pages } sites
 
 # These are shown in the now tab when the user has set aside a session and
 # entered "Flow Reset" state.
-session-cleared-title = All cleared
+session-cleared-title = Start fresh
 session-cleared = Your last session has been saved in <a data-l10n-name="session-cleared-link">Browse</a>
 
 # This is shown when you try to install an addon in the Pro Client that is not on the allowed list.
@@ -147,3 +147,7 @@ browse-list-sessions = Sessions
 
 # Title of the Sessions section.
 session-section-header = Sessions
+
+# The title of the tab buttons at the top of the companion.
+companion-deck-now = Now
+companion-deck-browse = Browse
