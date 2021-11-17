@@ -34,8 +34,7 @@ const OauthBindings = {
   microsoft: {
     endpoint: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
     tokenEndpoint: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
-    clientId: "66d9891f-d284-4158-a9b3-27aebf6b0f8c",
-    clientSecret: "P8_.eMal60dY1VFEU1K6N_-22o4cA6vo.d",
+    clientId: "2d165c7b-a525-45c6-b4dc-3039db1e7f85",
     scopes: [
       // This is required or we don't get a refreshToken
       "offline_access",

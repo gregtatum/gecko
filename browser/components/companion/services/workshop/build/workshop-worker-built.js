@@ -3050,15 +3050,17 @@ var WorkshopBackend = (() => {
       xhr.open("POST", oauthInfo.tokenEndpoint, true);
       xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
       xhr.timeout = CONNECT_TIMEOUT_MS;
-      xhr.send([
-        "client_id=",
-        encodeURIComponent(oauthInfo.clientId),
-        "&client_secret=",
-        encodeURIComponent(oauthInfo.clientSecret),
-        "&refresh_token=",
-        encodeURIComponent(oauthInfo.refreshToken),
-        "&grant_type=refresh_token"
-      ].join(""));
+      let params = [
+        `client_id=${encodeURIComponent(oauthInfo.clientId)}`,
+        `refresh_token=${encodeURIComponent(oauthInfo.refreshToken)}`,
+        "grant_type=refresh_token",
+      ];
+      if (oauthInfo.clientSecret) {
+        params.append(
+          `client_secret=${encodeURIComponent(oauthInfo.clientSecret)}`
+        );
+      }
+      xhr.send(params.join("&"));
       xhr.onload = function() {
         if (xhr.status < 200 || xhr.status >= 300) {
           try {
