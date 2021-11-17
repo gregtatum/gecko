@@ -868,18 +868,6 @@ let JSWINDOWACTORS = {
   TelemetryTimestamps.add("blankWindowShown");
 })();
 
-if (
-  AppConstants.PINEBUILD &&
-  (AppConstants.platform == "macosx" || AppConstants.platform == "win") &&
-  Services.prefs.getBoolPref("browser.startup.launchOnOSLogin", false)
-) {
-  const PINEBUILD_BACKGROUND_UI =
-    "chrome://browser/content/companion/pinebuildBackground.xhtml";
-  let features = "chrome,titlebar=no,alwaysontop,minimizable=yes";
-
-  Services.ww.openWindow(null, PINEBUILD_BACKGROUND_UI, "_blank", features, []);
-}
-
 XPCOMUtils.defineLazyGetter(
   this,
   "WeaveService",
@@ -909,6 +897,27 @@ XPCOMUtils.defineLazyGetter(this, "gTabbrowserBundle", function() {
     "chrome://browser/locale/tabbrowser.properties"
   );
 });
+
+XPCOMUtils.defineLazyGetter(this, "gIsXPCShell", function() {
+  let env = Cc["@mozilla.org/process/environment;1"].getService(
+    Ci.nsIEnvironment
+  );
+  return env.exists("XPCSHELL_TEST_PROFILE_DIR");
+});
+
+if (
+  AppConstants.PINEBUILD &&
+  (AppConstants.platform == "macosx" || AppConstants.platform == "win") &&
+  !Cu.isInAutomation &&
+  !gIsXPCShell &&
+  Services.prefs.getBoolPref("browser.startup.launchOnOSLogin", false)
+) {
+  const PINEBUILD_BACKGROUND_UI =
+    "chrome://browser/content/companion/pinebuildBackground.xhtml";
+  let features = "chrome,titlebar=no,alwaysontop,minimizable=yes";
+
+  Services.ww.openWindow(null, PINEBUILD_BACKGROUND_UI, "_blank", features, []);
+}
 
 const global = this;
 

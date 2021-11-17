@@ -41,6 +41,7 @@
 #include "js/PropertyAndElement.h"  // JS_DefineProperty
 #include "prenv.h"
 #include "nsAppDirectoryServiceDefs.h"
+#include "xpcpublic.h"
 
 #if defined(XP_MACOSX)
 #  include "mozilla/MacApplicationDelegate.h"
@@ -297,7 +298,12 @@ nsAppStartup::Run(void) {
   if (!mShuttingDown && mConsiderQuitStopper != 0) {
 #ifdef XP_MACOSX
 #  ifdef PINEBUILD
-    if (!Preferences::GetBool("browser.startup.launchOnOSLogin", false)) {
+    // We disable this when in automation because it would just globally
+    // complicate things a lot, as our normal means of quitting would no
+    // longer work. Elsewhere, we also check that we're not in xpcshell.
+    // However, that should be impossible here.
+    if (xpc::IsInAutomation() ||
+        !Preferences::GetBool("browser.startup.launchOnOSLogin", false)) {
       EnterLastWindowClosingSurvivalArea();
       mExitLastWindowClosingSurvivalAreaOnQuit = true;
     }

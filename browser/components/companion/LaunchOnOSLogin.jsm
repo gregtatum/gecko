@@ -21,6 +21,13 @@ XPCOMUtils.defineLazyGetter(this, "gBrandBundle", function() {
   );
 });
 
+XPCOMUtils.defineLazyGetter(this, "gIsXPCShell", function() {
+  let env = Cc["@mozilla.org/process/environment;1"].getService(
+    Ci.nsIEnvironment
+  );
+  return env.exists("XPCSHELL_TEST_PROFILE_DIR");
+});
+
 const PREF_LAUNCH_ON_LOGIN = "browser.startup.launchOnOSLogin";
 
 // Returns a nsIFile to the firefox.exe (really, application) executable file.
@@ -29,7 +36,10 @@ function getFirefoxExecutableFile() {
 }
 
 function ensureOSSettingsMatchPref() {
-  var prefVal = Services.prefs.getBoolPref(PREF_LAUNCH_ON_LOGIN, false);
+  var prefVal =
+    !Cu.isInAutomation &&
+    !gIsXPCShell &&
+    Services.prefs.getBoolPref(PREF_LAUNCH_ON_LOGIN, false);
   if (AppConstants.platform == "win") {
     reflectPrefToRegistry(prefVal);
   } else if (AppConstants.platform == "macosx") {
