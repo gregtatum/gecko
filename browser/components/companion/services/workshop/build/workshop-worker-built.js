@@ -14855,7 +14855,7 @@ var WorkshopBackend = (() => {
   };
 
   // src/backend/bridge/windowed_list_proxy.js
-  function WindowedListProxy(toc, ctx) {
+  function WindowedListProxy(toc, ctx, seekArgs) {
     this.toc = toc;
     this.ctx = ctx;
     this.batchManager = ctx.batchManager;
@@ -14869,6 +14869,12 @@ var WorkshopBackend = (() => {
     this._bound_onTOCMetaChange = this.onTOCMetaChange.bind(this);
     this._bound_onBroadcastEvent = this.onBroadcastEvent.bind(this);
     this._bound_onOverlayPush = this.onOverlayPush.bind(this);
+    this.mode = seekArgs?.mode || "top";
+    this.focusKey = null;
+    this.bufferAbove = seekArgs?.bufferAbove || 0;
+    this.visibleAbove = seekArgs?.visibleAbove || 0;
+    this.visibleBelow = seekArgs?.visibleBelow || 10;
+    this.bufferBelow = seekArgs?.bufferBelow || 990;
   }
   WindowedListProxy.prototype = {
     __acquire() {

@@ -70,7 +70,7 @@
  *   told it.)  As we hear about changes that are in our validDataSet, we remove
  *   them so that when we flush we pull the value from the database cache.
  */
-export default function WindowedListProxy(toc, ctx) {
+export default function WindowedListProxy(toc, ctx, seekArgs) {
   this.toc = toc;
   this.ctx = ctx;
   this.batchManager = ctx.batchManager;
@@ -111,7 +111,20 @@ export default function WindowedListProxy(toc, ctx) {
   this._bound_onTOCMetaChange = this.onTOCMetaChange.bind(this);
   this._bound_onBroadcastEvent = this.onBroadcastEvent.bind(this);
   this._bound_onOverlayPush = this.onOverlayPush.bind(this);
+
+  // Set the default seek params in order to have something usable asap.
+  // For now the seek call can happen after the flush which leads to an empty
+  // listView in calendar.js.
+  // It should make sense to have these seek parameters when creating this
+  // proxy.
+  this.mode = seekArgs?.mode || "top";
+  this.focusKey = null;
+  this.bufferAbove = seekArgs?.bufferAbove || 0;
+  this.visibleAbove = seekArgs?.visibleAbove || 0;
+  this.visibleBelow = seekArgs?.visibleBelow || 10;
+  this.bufferBelow = seekArgs?.bufferBelow || 990;
 }
+
 WindowedListProxy.prototype = {
   __acquire() {
     this.toc.on("change", this._bound_onChange);
