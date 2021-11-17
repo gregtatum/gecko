@@ -13,6 +13,7 @@
   cursor: pointer;
 }
 
+.card.popupshowing,
 .card:hover {
   background: #F9F9FB;
   border: 0.5px solid #CFCFD8;
@@ -20,13 +21,18 @@
 
 .contents {
   display: flex;
+  position: relative;
 }
 
 .info {
   padding: 10px;
-  width: 15em;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+}
+
+.subtitle {
+  white-space: nowrap;
 }
 
 .title {
@@ -52,13 +58,12 @@
 }
 
 .card-image {
-  flex-grow: 2;
-  background: darkgray;
-  border-radius: 0 8px 8px 0;
-  width: 8em;
-  display: flex;
-  justify-content: space-between;
+  background: var(--light-bg-color);
+  border-radius: 8px 0 0 8px;
+  flex-basis: 25%;
   background-size: cover;
+  background-position: center;
+  display: flex;
 }
 
 .card-image img.favicon {
@@ -69,7 +74,30 @@
   align-self: end;
 }
 
+.nopreview img.favicon {
+  width: 24px;
+  height: 24px;
+  align-self: center;
+  margin: 0 auto;
+  -moz-context-properties: fill;
+  fill: #CFCFD8;
+}
+
+.snapshot .contents::before {
+  content: " ";
+  background: linear-gradient(269.67deg, var(--light-bg-color) 26.15%, rgba(240, 240, 244, 0) 72.84%);
+  height: 100%;
+  width: 50%;
+  border-radius: 0 8px 8px 0;
+  position: absolute;
+  right: 0;
+  display: none;
+}
+
 .options-button {
+  position: absolute;
+  right: 8px;
+  top: calc(50% - 12px);
   display: none;
   padding: 0;
   margin: 0;
@@ -77,15 +105,12 @@
   min-height: unset;
   width: 24px;
   height: 24px;
-  background-image: url("chrome://global/skin/icons/more.svg");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-color: var(--light-bg-color);
-  margin-block-start: 8px;
-  margin-inline-end: 8px;
+  background: var(--light-bg-color) no-repeat center url("chrome://global/skin/icons/more.svg");
 }
 
 .card:hover .options-button,
-.options-button[aria-expanded=true] {
+.card:hover .contents::before,
+.popupshowing .contents::before,
+.popupshowing .options-button {
   display: block;
 }

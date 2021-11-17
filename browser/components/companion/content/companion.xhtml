@@ -143,25 +143,27 @@
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-snapshot">
     <div class="snapshot-contents contents">
-      <div class="info">
-        <span class="title"/>
-        <span class="snapshot-sitetitle sub"/>
-        <span class="info-divider sub"/>
-        <span class="snapshot-date sub"/>
-      </div>
       <div class="card-image">
         <img class="favicon"/>
-        <button
+      </div>
+      <div class="info">
+        <span class="title"/>
+        <div class="subtitle">
+          <span class="snapshot-sitetitle sub"/>
+          <span class="info-divider sub"/>
+          <span class="snapshot-date sub"/>
+        </div>
+      </div>
+      <button
             class="options-button"
             aria-haspopup="menu"
             aria-expanded="false"
             data-action="toggle-panel"></button>
-        <panel-list>
-          <panel-item data-l10n-id="snapshot-dont-show" data-action="dont-show"></panel-item>
-          <panel-item data-l10n-id="snapshot-not-relevant" data-action="not-relevant"></panel-item>
-        </panel-list>
-      </div>
     </div>
+    <panel-list>
+      <panel-item data-l10n-id="snapshot-dont-show" data-action="dont-show"></panel-item>
+      <panel-item data-l10n-id="snapshot-not-relevant" data-action="not-relevant"></panel-item>
+    </panel-list>
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-last-session-list">

@@ -7,6 +7,29 @@ import { timeSince } from "./time-since.js";
 const MAX_SNAPSHOTS = 5;
 const DEFAULT_FAVICON = "chrome://global/skin/icons/defaultFavicon.svg";
 
+function pickColorFromImage(icon) {
+  let canvas = document.createElement("canvas");
+  let ctx = canvas.getContext("2d");
+
+  // Make small canvas so enough to spread some colours but will not take
+  // too long to process.
+  let width = 24;
+  let height = 24;
+  canvas.width = width;
+  canvas.height = height;
+  ctx.drawImage(icon, 0, 0, width, height, 0, 0, width, height);
+
+  let colors = {};
+  let data = ctx.getImageData(0, 0, width, height).data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    let key = `${data[i]},${data[i + 1]},${data[i + 2]}`;
+    colors[key] = key in colors ? colors[key] + 1 : 1;
+  }
+  canvas.remove();
+  return Object.entries(colors).sort((a, b) => b[1] - a[1])[0];
+}
+
 class HidableElement extends HTMLElement {
   get hidden() {
     return this.hasAttribute("hidden");
@@ -40,16 +63,26 @@ export class Snapshot extends HTMLElement {
     let dateEl = fragment.querySelector(".snapshot-date");
     dateEl.textContent = timeSince(this.data.lastInteractionAt);
 
-    if (preview) {
-      let previewEl = fragment.querySelector(".card-image");
-      previewEl.style.backgroundImage = "url('" + preview + "')";
-    }
-
     let iconEl = fragment.querySelector(".card-image > img.favicon");
-    iconEl.src = window.CompanionUtils.getFavicon(url.href) ?? DEFAULT_FAVICON;
+    let iconSrc = window.CompanionUtils.getFavicon(url.href);
+    iconEl.src = iconSrc ?? DEFAULT_FAVICON;
+
+    let previewEl = fragment.querySelector(".card-image");
+    if (preview) {
+      previewEl.style.backgroundImage = "url('" + preview + "')";
+    } else {
+      this.classList.add("nopreview");
+    }
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
+
+    if (!preview && iconSrc) {
+      let primaryIconColor = pickColorFromImage(iconEl);
+      if (primaryIconColor) {
+        previewEl.style.backgroundColor = `rgb(${primaryIconColor})`;
+      }
+    }
   }
 
   handleEvent(event) {
@@ -57,7 +90,18 @@ export class Snapshot extends HTMLElement {
       case "click": {
         switch (event.target.dataset.action) {
           case "toggle-panel":
-            this.querySelector("panel-list").toggle(event);
+            let panel = this.querySelector("panel-list");
+            if (!panel.open) {
+              this.classList.add("popupshowing");
+              panel.addEventListener(
+                "hidden",
+                () => {
+                  this.classList.remove("popupshowing");
+                },
+                { once: true }
+              );
+            }
+            panel.toggle(event);
             break;
           case "dont-show":
           case "not-relevant":
