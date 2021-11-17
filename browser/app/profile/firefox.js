@@ -2692,6 +2692,8 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
 #endif
   pref("browser.crashReports.unsubmittedCheck.autoSubmit2", true);
   pref("browser.warnOnQuit", false);
+  // Disable product promos delivered via messaging system
+  pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features", false);
 
 
   // Pinebuild specific configurations
