@@ -2783,6 +2783,30 @@ BrowserGlue.prototype = {
       },
 
       {
+        condition: AppConstants.PINEBUILD,
+        task: () => {
+          // Use an increasing number to keep track of the current feature
+          // onboarding version.
+          const ONBOARDING_VERSION = 2;
+
+          // Show the onboarding content, if we have something new to show.
+          const prefBranch = Services.prefs.getBranch(
+            "browser.pinebuild.companion.onboarding."
+          );
+          const isEnabled = prefBranch.getBoolPref("enabled", false);
+          const lastSeenVersion = prefBranch.getIntPref("lastSeenVersion");
+
+          if (isEnabled && ONBOARDING_VERSION > lastSeenVersion) {
+            prefBranch.setIntPref("lastSeenVersion", ONBOARDING_VERSION);
+            const topWindow = BrowserWindowTracker.getTopWindow();
+            topWindow.gDialogBox.open(
+              "chrome://browser/content/companion/onboarding.html"
+            );
+          }
+        },
+      },
+
+      {
         condition: AppConstants.MOZ_UPDATE_AGENT,
         task: () => {
           // Never in automation!  This is close to

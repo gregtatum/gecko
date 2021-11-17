@@ -29,6 +29,9 @@ browser.jar:
     content/browser/companion/muted.svg (content/muted.svg)
     content/browser/companion/onboarding-services.js (content/onboarding-services.js)
     content/browser/companion/firefoxParentBrand.png (content/firefoxParentBrand.png)
+    content/browser/companion/onboarding.css (content/onboarding.css)
+    content/browser/companion/onboarding.html (content/onboarding.html)
+    content/browser/companion/onboarding.js (content/onboarding.js)
     content/browser/companion/play.svg (content/play.svg)
     content/browser/companion/pause.svg (content/pause.svg)
 #ifdef XP_MACOSX
