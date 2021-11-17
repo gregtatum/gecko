@@ -11,7 +11,7 @@ const { CommonNames } = ChromeUtils.import(
 const SESSIONS_ENABLED_PREF = "browser.places.perwindowsessions.enabled";
 const DEFAULT_FAVICON = "chrome://global/skin/icons/defaultFavicon.svg";
 
-const MAX_ICONS = 4;
+const MAX_ICONS = 7;
 
 function sessionTitle(session) {
   return session.pages
@@ -55,17 +55,23 @@ export class SessionCard extends HTMLElement {
     fragment.querySelector(".date").textContent = timeSince(data.lastSavedAt);
     fragment.querySelector(".title").textContent = sessionTitle(data);
 
-    data.pages.length = Math.min(data.pages.length, MAX_ICONS);
-    let icons = data.pages.map(page => {
+    let pages = data.pages.slice(0, MAX_ICONS);
+    let icons = pages.map(page => {
       let img = document.createElement("img");
       img.className = "icon";
       img.src = pageToDataURI(page);
       return img;
     });
 
-    fragment.querySelector(".card-image > img").src = pageToDataURI(
+    if (data.pages.length > MAX_ICONS) {
+      let overflow = document.createElement("span");
+      overflow.className = "icon";
+      overflow.textContent = `+${data.pages.length - MAX_ICONS}`;
+      icons.push(overflow);
+    }
+    /*fragment.querySelector(".card-image > img").src = pageToDataURI(
       data.pages[0]
-    );
+    );*/
     fragment.querySelector(".icons").replaceChildren(...icons);
     fragment.querySelector(".session-card").addEventListener("click", this);
 
@@ -73,22 +79,29 @@ export class SessionCard extends HTMLElement {
     restoreBtn.addEventListener("click", this);
     restoreBtn.dataset.session = data.guid;
 
+    let hideBtn = fragment.querySelector("#session-hide");
+    hideBtn.addEventListener("click", this);
+    hideBtn.dataset.session = data.guid;
+
     this.appendChild(fragment);
   }
 
   handleEvent(event) {
-    switch (event.type) {
-      case "click": {
-        let guid = event.target.dataset.session;
-        if (guid) {
-          window.CompanionUtils.sendAsyncMessage("Companion:RestoreSession", {
-            guid,
-          });
-        } else {
-          this.classList.toggle("expanded");
-        }
+    switch (event.target.dataset.action) {
+      case "restore-session": {
+        window.CompanionUtils.sendAsyncMessage("Companion:RestoreSession", {
+          guid: event.target.dataset.session,
+        });
         break;
       }
+      case "hide-session": {
+        window.CompanionUtils.sendAsyncMessage("Companion:HideSession", {
+          guid: event.target.dataset.session,
+        });
+        break;
+      }
+      default:
+        this.classList.toggle("expanded");
     }
   }
 }
@@ -107,13 +120,17 @@ class HideableElement extends HTMLElement {
   }
 }
 
-export class LastSessionList extends HideableElement {
-  constructor() {
+class SessionList extends HideableElement {
+  constructor({ showTitle = false } = {}) {
     super();
     this.className = "last-session-list";
 
-    let template = document.getElementById("template-last-session-list");
+    let template = document.getElementById("template-session-list");
     let fragment = template.content.cloneNode(true);
+
+    if (showTitle) {
+      fragment.querySelector("h2").hidden = false;
+    }
 
     this.appendChild(fragment);
 
@@ -152,15 +169,31 @@ export class LastSessionList extends HideableElement {
     }
   }
 
-  sessionUpdated(session) {
-    if (!session.pages.length) {
-      this.hidden = true;
-      return;
-    }
+  sessionUpdated(sessions) {
     let panel = this.querySelector(".last-sessions-panel");
-    panel.replaceChildren(new SessionCard(session));
+    let fragment = new DocumentFragment();
+    for (const session of sessions) {
+      fragment.appendChild(new SessionCard(session));
+      if (this.limitSessionCards) {
+        break;
+      }
+    }
+    panel.replaceChildren(fragment);
+  }
+}
+
+export class LastSessionList extends SessionList {
+  get limitSessionCards() {
+    return true;
+  }
+}
+
+export class FullSessionList extends SessionList {
+  get limitSessionCards() {
+    return false;
   }
 }
 
 customElements.define("e-session-card", SessionCard);
 customElements.define("e-last-session-list", LastSessionList);
+customElements.define("e-full-session-list", FullSessionList);

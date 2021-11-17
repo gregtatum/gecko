@@ -23,6 +23,7 @@ body {
 
 h2 {
   font-size: 1em;
+  font-weight: normal;
   margin: 16px;
 }
 
@@ -79,9 +80,8 @@ h2 {
 }
 
 .list-title {
-  font-size: 1em;
+  font-size: 11px;
   margin: 16px;
-  font-weight: bold;
 }
 
 .list-subtitle {
@@ -436,10 +436,12 @@ e-global-nav-debugging h2 {
 }
 
 .browse button {
+  position: relative;
   padding-inline-start: 35px;
   text-align: start;
   background: center left 10px / 16px no-repeat url("chrome://global/skin/icons/defaultFavicon.svg");
   margin-inline: 0;
+  font-weight: normal;
 }
 
 toolbarbutton.subviewbutton-back:hover,
@@ -452,8 +454,26 @@ toolbarbutton.subviewbutton-back:hover:active,
   background-color: var(--in-content-button-background-active);
 }
 
+.browse button::after {
+  content: " ";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: center left no-repeat url(chrome://global/skin/icons/arrow-right.svg);
+  inset-inline-end: 0;
+}
+
+.browse button::after:dir(rtl) {
+  background-image: url(chrome://global/skin/icons/arrow-left.svg);
+  background-position-x: right;
+}
+
 .browse button.groups {
   background-image: url("chrome://global/skin/icons/defaultFavicon.svg");
+}
+
+.browse button.sessions {
+  background-image: url("sessions.svg");
 }
 
 .browse button.activities {
@@ -512,4 +532,30 @@ toolbarbutton.subviewbutton-back {
 
 [flow-reset] #now-content {
   display: none;
+}
+
+header {
+  display: flex;
+  margin: 10px 0;
+  align-items: center;
+}
+
+header button {
+  margin-inline-start: 16px;
+  width: 24px;
+  height: 24px;
+  min-width: unset;
+}
+
+header .back {
+  background: center center no-repeat url(chrome://global/skin/icons/arrow-left.svg);
+}
+
+header .back:dir(rtl) {
+  background-image: url(chrome://global/skin/icons/arrow-right.svg);
+}
+
+header h2 {
+  margin: 0;
+  margin-inline-start: 4px;
 }
