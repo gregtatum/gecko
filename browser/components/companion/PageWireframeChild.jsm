@@ -5,6 +5,8 @@
 
 "use strict";
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
 var EXPORTED_SYMBOLS = ["PageWireframeChild"];
 
 /**
@@ -14,7 +16,10 @@ var EXPORTED_SYMBOLS = ["PageWireframeChild"];
  */
 class LocationChangeListener {
   onLocationChange(aWebProgress, aRequest, aLocation, aFlags) {
-    if (!aWebProgress.isTopLevel) {
+    if (
+      !aWebProgress.isTopLevel ||
+      Services.appinfo.processType == Services.appinfo.PROCESS_TYPE_DEFAULT
+    ) {
       return;
     }
 
