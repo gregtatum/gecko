@@ -821,6 +821,12 @@ class GlobalHistory extends EventTarget {
   #viewStack = [];
 
   /**
+   * Currently staged view's internal view object.
+   * @type {InternalView | null}
+   */
+  #currentInternalView = null;
+
+  /**
    * Maintains a reference to the browser listener as long as the browser is alive.
    * @type {WeakMap<Browser, BrowserListener>}
    */
@@ -831,12 +837,6 @@ class GlobalHistory extends EventTarget {
    * @type {Map<number, InternalView>}
    */
   #historyViews = new Map();
-
-  /**
-   * The position of the current view in the stack.
-   * @type {number | null}
-   */
-  #currentIndex = null;
 
   /**
    * A timer to track when to activate the current view.
@@ -967,7 +967,7 @@ class GlobalHistory extends EventTarget {
     });
     this.#viewStack = [];
     this.#historyViews.clear();
-    this.#currentIndex = null;
+    this.#currentInternalView = null;
     this.#notifyEvent("RiverRebuilt");
   }
 
@@ -1201,7 +1201,7 @@ class GlobalHistory extends EventTarget {
     }
 
     // Mark the correct view.
-    this.#currentIndex = this.#viewStack.indexOf(selectedView);
+    this.#currentInternalView = selectedView;
     this.#notifyEvent("RiverRebuilt", selectedView);
 
     this.startActivationTimer();
@@ -1430,7 +1430,7 @@ class GlobalHistory extends EventTarget {
         newEntry.URI.spec
       );
       logConsole.groupEnd();
-      this.#currentIndex = null;
+      this.#currentInternalView = null;
       return;
     }
 
@@ -1463,7 +1463,7 @@ class GlobalHistory extends EventTarget {
 
       // This is a new view.
       internalView = new InternalView(this.#window, browser, newEntry);
-      this.#currentIndex = this.#viewStack.length;
+      this.#currentInternalView = internalView;
       this.#viewStack.push(internalView);
       this.#historyViews.set(newEntry.ID, internalView);
 
@@ -1479,23 +1479,20 @@ class GlobalHistory extends EventTarget {
         resetCreationTime: overwriting,
       });
 
-      let pos = this.#viewStack.indexOf(internalView);
-      if (pos == this.#currentIndex) {
+      if (internalView == this.#currentInternalView) {
         logConsole.debug(`Updated InternalView is the current index.`);
         logConsole.groupEnd();
         this.#notifyEvent("ViewUpdated", internalView);
         return;
       }
 
+      this.#currentInternalView = internalView;
+      let pos = this.#viewStack.indexOf(internalView);
       if (pos < 0) {
         logConsole.warn("Navigated to a view not in the existing stack.");
-        this.#currentIndex = this.#viewStack.length;
         this.#viewStack.push(internalView);
 
         this.#notifyEvent("ViewAdded", internalView);
-      } else {
-        this.#currentIndex = pos;
-        logConsole.debug(`Setting currentIndex to ${this.#currentIndex}.`);
       }
     }
 
@@ -1642,22 +1639,26 @@ class GlobalHistory extends EventTarget {
   #activateCurrentView() {
     logConsole.debug(`Activating current InternalView.`);
     this.#activationTimer = null;
-    if (
-      this.#currentIndex === null ||
-      this.#currentIndex == this.#viewStack.length - 1
-    ) {
-      logConsole.debug(`Cannot activate index: ${this.#currentIndex}.`);
+
+    if (!this.#currentInternalView) {
+      logConsole.debug(`We don't have a view to activate`);
       return;
     }
 
-    if (this.currentView.pinned) {
-      logConsole.debug(`Cannot activate a pinned InternalView.`);
+    let lastIndex = this.#viewStack.length - 1;
+    if (this.#currentInternalView == this.#viewStack[lastIndex]) {
+      logConsole.debug(`View is already active`);
       return;
     }
 
-    let [internalView] = this.#viewStack.splice(this.#currentIndex, 1);
+    if (this.#currentInternalView.pinned) {
+      logConsole.debug(`Cannot activate a pinned view.`);
+      return;
+    }
+
+    let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
+    let [internalView] = this.#viewStack.splice(currentIndex, 1);
     this.#viewStack.push(internalView);
-    this.#currentIndex = this.#viewStack.length - 1;
     this.#notifyEvent("ViewMoved", internalView);
     this.#updateSessionStore();
     logConsole.debug(`Activated InternalView ${internalView.toString()}`);
@@ -1686,23 +1687,18 @@ class GlobalHistory extends EventTarget {
       if (pos >= 0) {
         if (this.#window.isInitialPage(newEntry.URI)) {
           logConsole.debug(
-            `Previous InternalView was at internal page - discarding.`
+            `Previous InternalView was an internal page - discarding.`
           );
           // Don't store initial pages in the river.
           this.#viewStack.splice(pos, 1);
-
-          if (pos == this.#currentIndex) {
-            this.#currentIndex = null;
-          } else if (this.#currentIndex > pos) {
-            this.#currentIndex--;
+          if (previousView == this.#currentInternalView) {
+            this.#currentInternalView = null;
           }
-
           this.#notifyEvent("ViewRemoved", previousView);
 
-          if (this.#currentIndex === null) {
+          if (this.#currentInternalView === null) {
             this.#notifyEvent("ViewChanged", null);
           }
-
           return;
         }
 
@@ -1750,15 +1746,11 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
-   * Returns the currently displayed View or null if there is no current View.
-   * @type {View | null}
+   * Returns currently staged view.
+   * @type {View | null} view
    */
   get currentView() {
-    if (this.#currentIndex === null) {
-      return null;
-    }
-
-    return this.#viewStack[this.#currentIndex].view;
+    return this.#currentInternalView?.view || null;
   }
 
   /**
@@ -1791,11 +1783,12 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
-    this.#navigatingForward = pos > this.#currentIndex;
+    let currentViewIndex = this.#viewStack.indexOf(this.#currentInternalView);
+    this.#navigatingForward = pos > currentViewIndex;
 
-    if (this.#currentIndex == pos) {
+    if (this.#currentInternalView == internalView) {
       // Nothing to do.
-      logConsole.debug("InternalView is already current.");
+      logConsole.debug("View is already the current view.");
       return;
     }
 
@@ -1927,8 +1920,7 @@ class GlobalHistory extends EventTarget {
 
     // We don't want to remove Pinned Views from the #viewStack Array,
     // since so much of GlobalHistory relies on all available Views
-    // existing in it, and for the #currentIndex to point at the index
-    // of the currently visible View.
+    // existing in it.
     //
     // To accommodate Pinned Views, we borrow the organizational model
     // of Pinned Tabs from tabbrowser: Views that are pinned are moved
@@ -1944,9 +1936,8 @@ class GlobalHistory extends EventTarget {
     // This way, we can keep pinned Views within #viewStack and not have
     // to treat them specially throughout GlobalHistory.
 
-    let currentView = this.#viewStack[this.#currentIndex];
+    this.#currentInternalView = internalView;
     let viewIndex = this.#viewStack.indexOf(internalView);
-
     this.#viewStack.splice(viewIndex, 1);
     let eventName;
     let detail = {};
@@ -1961,10 +1952,6 @@ class GlobalHistory extends EventTarget {
     }
 
     internalView.pinned = shouldPin;
-
-    // Now that #viewStack has updated, make sure that #currentIndex correctly
-    // points at currentView.
-    this.#currentIndex = this.#viewStack.indexOf(currentView);
     this.#notifyEvent(eventName, internalView, detail);
   }
 
@@ -1986,9 +1973,8 @@ class GlobalHistory extends EventTarget {
    * @type {boolean}
    */
   get canGoBack() {
-    return (
-      this.#currentIndex > 0 && !this.#viewStack[this.#currentIndex - 1].pinned
-    );
+    let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
+    return currentIndex > 0 && !this.#viewStack[currentIndex - 1].pinned;
   }
 
   /**
@@ -1996,7 +1982,8 @@ class GlobalHistory extends EventTarget {
    * @type {boolean}
    */
   get canGoForward() {
-    return this.#currentIndex < this.#viewStack.length - 1;
+    let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
+    return currentIndex < this.#viewStack.length - 1;
   }
 
   /**
@@ -2008,7 +1995,8 @@ class GlobalHistory extends EventTarget {
       return false;
     }
 
-    this.setView(this.#viewStack[this.#currentIndex - 1].view);
+    let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
+    this.setView(this.#viewStack[currentIndex - 1].view);
     return true;
   }
 
@@ -2021,7 +2009,8 @@ class GlobalHistory extends EventTarget {
       return false;
     }
 
-    this.setView(this.#viewStack[this.#currentIndex + 1].view);
+    let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
+    this.setView(this.#viewStack[currentIndex + 1].view);
     return true;
   }
 
@@ -2100,19 +2089,6 @@ class GlobalHistory extends EventTarget {
     this.#viewStack.splice(index, 1);
     this.#historyViews.delete(internalView.historyId);
     this.#notifyEvent("ViewRemoved", internalView);
-
-    // Right now, we assume that the internalView was the current
-    // View when closing. This means that it's possible that after
-    // splicing the closed View out of the #viewStack, that the
-    // currentIndex will match the _new_ index of the viewToSwitchTo
-    // if the viewToSwitchTo was positioned _after_ the InternalView
-    // that was removed. If we detect that case, we'll fire the
-    // ViewChanged event to signal to the front-end to update the
-    // visualization of the currentView.
-    let pos = this.#viewStack.indexOf(viewToSwitchTo);
-    if (this.#currentIndex == pos) {
-      this.#notifyEvent("ViewChanged", viewToSwitchTo);
-    }
   }
 
   /**
@@ -2239,9 +2215,10 @@ class GlobalHistory extends EventTarget {
    */
   async getInitialHistoryCarouselData() {
     let viewCount = this.#viewStack.length - this.pinnedViewCount;
+    let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
 
     let data = {
-      currentIndex: this.#currentIndex,
+      currentIndex,
       previews: new Array(viewCount),
     };
 
@@ -2254,9 +2231,8 @@ class GlobalHistory extends EventTarget {
       };
     }
 
-    let currentInternalView = this.#viewStack[this.#currentIndex];
-    let currentBrowser = currentInternalView.getBrowser();
-    data.previews[this.#currentIndex].image = await PageThumbs.captureToBlob(
+    let currentBrowser = this.#currentInternalView.getBrowser();
+    data.previews[currentIndex].image = await PageThumbs.captureToBlob(
       currentBrowser,
       {
         fullScale: true,
