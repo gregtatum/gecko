@@ -542,7 +542,7 @@ export async function processMessageContent(
  *   The body type, so we know what to do.
  * @param {Boolean} processAsText
  *   Process links in the content (see as plain text).
- * @return {{ contentBlob, snippet, authoredBodySize }}
+ * @return {Promise<{ contentBlob, snippet, authoredBodySize }>}
  */
 export async function processEventContent({
   data,

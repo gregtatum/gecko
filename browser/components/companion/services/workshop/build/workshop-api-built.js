@@ -1594,7 +1594,6 @@ var MailConversation = class extends import_evt4.Emitter {
     this.snippetCount = wireRep.snippetCount;
     this.authors = ContactCache.resolvePeeps(wireRep.authors);
     decorateConversation(this, wireRep, firstTime);
-    this.labels = this._api._mapLabels(this.id, wireRep.folderIds);
     this.hasUnread = wireRep.hasUnread;
     this.hasStarred = wireRep.hasStarred;
     this.hasDrafts = wireRep.hasDrafts;

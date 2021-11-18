@@ -9067,7 +9067,7 @@ var WorkshopBackend = (() => {
         date: message.date,
         isRead,
         isStarred,
-        author: message.author,
+        author: message.author || message.creator || message.organizer,
         parent: findClosestAncestor(message.references)
       });
       midToIndex.set(message.guid, tidbits.length - 1);

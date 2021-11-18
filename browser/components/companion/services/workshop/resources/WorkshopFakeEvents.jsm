@@ -98,6 +98,7 @@ class FakeEventFactory {
       }
 
       const location = sketch.location || undefined;
+      const every = sketch.every || undefined;
       const fullEvent = {
         startDate,
         endDate,
@@ -108,6 +109,8 @@ class FakeEventFactory {
         organizer,
         attendees,
         location,
+        every,
+        cancelled: false,
       };
 
       this.sketchToFullMap.set(sketch, fullEvent);

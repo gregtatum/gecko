@@ -23,9 +23,22 @@ function backdate(date, { days }) {
   return date.valueOf() - days * 24 * 60 * 60 * 1000;
 }
 
+function nowTs() {
+  return new Date().valueOf();
+}
+
 function backdatedISOString(date, delta) {
   return new Date(backdate(date, delta)).toISOString();
 }
+
+const DURATIONS = new Map([
+  ["minute", 60 * 1000],
+  ["hour", 60 * 60 * 1000],
+  ["day", 24 * 60 * 60 * 1000],
+  ["week", 7 * 24 * 60 * 60 * 1000],
+  ["2-weeks", 2 * 7 * 24 * 60 * 60 * 1000],
+  ["month", 30 * 24 * 60 * 60 * 1000],
+]);
 
 class FakeCalendar {
   constructor(serverOwner, { id, name, events, calendarOwner }) {
@@ -44,25 +57,95 @@ class FakeCalendar {
    * - icalUID: A ical-standard unique identifier which is decoupled from the
    *   server-internal identifier.
    * - serial: Mutation sequence number for sync purposes.
+   * - alterationTs: a timestamp corresponding to the last alteration (it'll be
+   *   used to compare with timestamp in the syncToken when getting some
+   *   events).
+   * - recurringId: base id to identify the main event and its derivated.
    */
   #convertEvents(events) {
     return events.map(rawEvent => {
       const { serverId, icalId } = this.serverOwner.issueEventIds();
-      return Object.assign(
+      const result = Object.assign(
         {
           // gapi: base32 constraint: 0-9, a-v
           id: serverId,
           iCalUID: icalId,
           serial: this.serial,
+          alterationTs: nowTs(),
         },
         rawEvent
       );
+      if (rawEvent.every) {
+        result.recurringId = this.serverOwner.issueRecurringEventId();
+      }
+      return result;
     });
   }
 
   addEvents(events) {
     const newEvents = this.#convertEvents(events);
     this.events.push(...newEvents);
+  }
+
+  getEventsInRange({ start, end, token }) {
+    let lastGetTs, serial;
+    if (token) {
+      [start, end, lastGetTs, serial] = token.split(":").map(x => parseInt(x));
+      [start, end] = [start, end].map(x => new Date(x));
+      if (serial !== this.serial) {
+        // serial has changed, so consider all events whatever their
+        // alterationTs are.
+        lastGetTs = 0;
+      }
+    } else {
+      serial = this.serial;
+      lastGetTs = 0;
+      start = new Date(start);
+      end = new Date(end);
+    }
+
+    const events = [];
+    for (const event of this.events) {
+      if (event.alterationTs <= lastGetTs) {
+        continue;
+      }
+
+      if (!event.every) {
+        if (start <= event.startDate && event.startDate <= end) {
+          events.push(event);
+        }
+        continue;
+      }
+
+      // Look for the number (n) of cycles to have an event in the range.
+      const { startDate, endDate } = event;
+      const eventDuration = endDate - startDate;
+      const duration = DURATIONS.get(event.every);
+      const lowerN = Math.max(0, Math.ceil((start - startDate) / duration));
+      const upperN = Math.floor((end - startDate) / duration);
+
+      for (let n = lowerN; n <= upperN; n++) {
+        const newEvent = Object.assign({}, event);
+        newEvent.startDate = new Date(startDate.valueOf() + n * duration);
+        newEvent.endDate = new Date(
+          newEvent.startDate.valueOf() + eventDuration
+        );
+        const id = `${event.recurringId}-${newEvent.startDate.valueOf()}`;
+        Object.assign(newEvent, {
+          id,
+          iCalUID: id,
+          serial: this.serial,
+          recurringId: event.recurringId,
+        });
+        events.push(newEvent);
+      }
+    }
+
+    lastGetTs = nowTs();
+    const syncToken = `${start.valueOf()}:${end.valueOf()}:${lastGetTs}:${
+      this.serial
+    }`;
+    return { syncToken, events };
   }
 }
 
@@ -81,6 +164,19 @@ class BaseFakeServer {
     this.logRequest = logRequest;
 
     this.pageSize = 10;
+  }
+
+  /**
+   * Increment the serial of each calendar: next get will return all the events.
+   * It's helpful to test that the backend won't have any doubloons in case of
+   * server issues.
+   */
+  invalidateCalendarTokens() {
+    // Update calendar serial in order to have all the events in the next call
+    // to getEventsInRange.
+    for (const calendar of this.calendars) {
+      calendar.serial++;
+    }
   }
 
   getCalendarById(id) {
@@ -103,6 +199,10 @@ class BaseFakeServer {
       serverId: `srv${useEventId}`,
       icalId: `${useEventId}@${this.domain}`,
     };
+  }
+
+  issueRecurringEventId() {
+    return `recurring${this.#nextEventId++}`;
   }
 
   populateCalendar(calendarArgs) {
@@ -284,7 +384,7 @@ class GapiFakeServer extends BaseFakeServer {
           kind: "not-a-real-type",
           etag: "not-a-real-etag",
           items: results,
-          nextSyncToken: "not-a-real-sync-token-yet",
+          nextSyncToken: args.syncToken || "not-a-real-sync-token-yet",
         },
         isPaged,
         args
@@ -355,8 +455,22 @@ class GapiFakeServer extends BaseFakeServer {
   }
 
   paged_calendarEvents(args, req) {
+    const params = new URLSearchParams(req._queryString);
     const cal = this.getCalendarById(args.calendarId);
-    return cal.events.map(event => {
+
+    // The first time events are got, singleEvents (set to true), timeMin and
+    // timeMax are provided to get all the events with the the time range.
+    // Then a syncToken is issued with the events in order to be able to get
+    // only the "new" events in the next calls.
+    const { syncToken, events } = params.get("singleEvents")
+      ? cal.getEventsInRange({
+          start: params.get("timeMin"),
+          end: params.get("timeMax"),
+        })
+      : cal.getEventsInRange({ token: params.get("syncToken") });
+    args.syncToken = syncToken;
+
+    return events.map(event => {
       const mapPeep = peep => {
         return {
           email: peep.email,
@@ -392,7 +506,7 @@ class GapiFakeServer extends BaseFakeServer {
         // XXX recurrences:
         // - originalStartTime object
         // - recurrence array
-        // - recurringEventId string
+        recurringEventId: event.recurringId || "",
         reminders: {},
         // XXX iCal sequence mapping (which is distinct from our serial concept)
         sequence: 0,
@@ -488,6 +602,7 @@ class MapiFakeServer extends BaseFakeServer {
     return super.wrapResults(
       {
         value: results,
+        "@odata.deltaLink": args.deltaLink || "",
       },
       isPaged,
       args
@@ -540,8 +655,20 @@ class MapiFakeServer extends BaseFakeServer {
   }
 
   paged_delta(args, req) {
+    const params = new URLSearchParams(req._queryString);
     const cal = this.getCalendarById(args.calendarId);
-    return cal.events.map(event => {
+
+    // The first time events are got, startDateTime and endDateTime are provided
+    // and an url for the next call is provided.
+    const { syncToken, events } = !params.has("mozTestSyncToken")
+      ? cal.getEventsInRange({
+          start: params.get("startDateTime"),
+          end: params.get("endDateTime"),
+        })
+      : cal.getEventsInRange({ token: params.get("mozTestSyncToken") });
+    args.deltaLink = `https://graph.microsoft.com/v1.0/me/calendars/${args.calendarId}/calendarView/delta?mozTestSyncToken=${syncToken}`;
+
+    return events.map(event => {
       const mapPeep = peep => {
         return {
           address: peep.email,
@@ -606,7 +733,7 @@ class MapiFakeServer extends BaseFakeServer {
         responseRequested: true,
         responseStatus: null,
         sensitivity: "normal",
-        seriesMasterId: "",
+        seriesMasterId: event.recurringId || "",
         showAs: "unknown",
         start: {
           dateTime: event.startDate.toISOString().replace("Z", ""),

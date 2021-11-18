@@ -217,7 +217,11 @@ export class MailConversation extends Emitter {
     this.authors = ContactCache.resolvePeeps(wireRep.authors);
     decorateConversation(this, wireRep, firstTime);
 
-    this.labels = this._api._mapLabels(this.id, wireRep.folderIds);
+    // _mapLabels is supposed to have a messageId as first argument
+    // and here we pass a convId => error.
+    // For now, comment that stuff.
+    // TODO: evaluate if we need to have this label stuff.
+    // this.labels = this._api._mapLabels(this.id, wireRep.folderIds);
 
     // Are there any unread messages in this
     this.hasUnread = wireRep.hasUnread;
