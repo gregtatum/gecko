@@ -381,7 +381,7 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   getFavicons(pages) {
-    let browser = this.browsingContext.top.embedderElement;
+    let browser = this?.browsingContext.top.embedderElement;
     if (!browser) {
       // The browser element has gone away, so just continue.
       return [];
