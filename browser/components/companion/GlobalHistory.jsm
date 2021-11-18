@@ -254,6 +254,38 @@ class InternalView {
   #creationTime;
 
   /**
+   * @typedef {object} WireframeRect
+   *   An object representing a single rectangle captured via
+   *   document.getWireframe().
+   * @property {string} color
+   *   The color value of the rectangle in rgb format. Example: "rgb(255,0,0)"
+   * @property {DOMRectReadOnly} rect
+   *   The rectangle geometry.
+   * @property {string} type
+   *   The type of the rectangle. Currently, these should only be "text"
+   *   or "background".
+   */
+
+  /**
+   * @typedef {object} Wireframe
+   *   An object that contains enough information to generate a low-fidelity
+   *   visual representation of a webpage.
+   * @property {string} canvasBackground
+   *   The color value of the page background represented as a string in
+   *   the rgb format. Example: "rgb(255,0,0)".
+   * @property {WireframeRect[]} rects
+   *   The rectangles that were visible in the viewport at the time of
+   *   wireframe capture. These are ordered from back to front.
+   * @property {number} width
+   *   The width of the content area at the time of wireframe capture.
+   * @property {number} height
+   *   The height of the content area at the time of wireframe capture.
+   */
+
+  /** @type Wireframe **/
+  #wireframe;
+
+  /**
    * The internal representation of a view. Each view maps to a history entry though the actual
    * history entry may no longer exist.
    *
@@ -293,6 +325,7 @@ class InternalView {
       {}
     );
     this.#creationTime = Cu.now();
+    this.#wireframe = null;
 
     InternalView.viewMap.set(this.#view, this);
 
@@ -461,6 +494,10 @@ class InternalView {
     this.browserKey = undefined;
   }
 
+  updateWireframe(wireframe) {
+    this.#wireframe = wireframe;
+  }
+
   /** @type {Number} */
   get id() {
     return this.#id;
@@ -544,6 +581,10 @@ class InternalView {
    */
   get creationTime() {
     return this.#creationTime;
+  }
+
+  get wireframe() {
+    return this.#wireframe;
   }
 
   toString() {
@@ -2246,6 +2287,16 @@ class GlobalHistory extends EventTarget {
       });
     }
     return null;
+  }
+
+  updateWireframe(browser, wireframe) {
+    let entry = getCurrentEntry(browser);
+    let internalView = this.#historyViews.get(entry.ID);
+    if (!internalView) {
+      return;
+    }
+
+    internalView.updateWireframe(wireframe);
   }
 }
 

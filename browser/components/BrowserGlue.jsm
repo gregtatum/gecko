@@ -1269,6 +1269,20 @@ BrowserGlue.prototype = {
         matches: ["about:historycarousel"],
         remoteTypes: ["privilegedabout"],
       };
+
+      JSWINDOWACTORS.PageWireframe = {
+        parent: {
+          moduleURI: "resource:///actors/PageWireframeParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/PageWireframeChild.jsm",
+          events: {
+            MozFirstContentfulPaint: { capture: true },
+          },
+        },
+
+        messageManagerGroups: ["browsers"],
+      };
     }
 
     let os = Services.obs;
