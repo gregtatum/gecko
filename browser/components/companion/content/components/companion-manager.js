@@ -20,7 +20,6 @@ class CompanionManager extends MozXULElement {
         disablehistory="true"
         flex="1"
         message="true"
-        messagemanagergroup="browsers"
         remoteType="privilegedabout"
         remote="true"
         selectmenulist="ContentSelectDropdown"
