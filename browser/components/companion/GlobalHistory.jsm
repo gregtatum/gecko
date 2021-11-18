@@ -2280,13 +2280,24 @@ class GlobalHistory extends EventTarget {
    */
   async getHistoryCarouselDataForIndex(index) {
     let internalView = this.#viewStack[index];
+    let result = {
+      title: internalView.title,
+      url: internalView.url.spec,
+      iconURL: internalView.iconURL,
+      image: null,
+    };
+
     if (internalView.state == "open") {
-      return PageThumbs.captureToBlob(internalView.getBrowser(), {
+      let blob = await PageThumbs.captureToBlob(internalView.getBrowser(), {
         fullScale: true,
         fullViewport: true,
       });
+      result.image = { blob };
+    } else {
+      result.image = { wireframe: internalView.wireframe };
     }
-    return null;
+
+    return result;
   }
 
   updateWireframe(browser, wireframe) {

@@ -56,7 +56,15 @@ class HistoryCarouselChild extends JSWindowActorChild {
         return self.wrapPromise(
           new Promise(resolve => {
             self.sendQuery("GetPreview", { index }).then(result => {
-              resolve(Cu.cloneInto(result, self.contentWindow));
+              // Sometimes, GetPreview will resolve with wireframes generated
+              // via document.getWireframe(). These wireframes contain
+              // DOMRectReadOnly DOM objects which don't clone properly using
+              // cloneInto, so we wrap them instead with wrapReflectors.
+              resolve(
+                Cu.cloneInto(result, self.contentWindow, {
+                  wrapReflectors: true,
+                })
+              );
             });
           })
         );

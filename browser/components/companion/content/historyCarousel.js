@@ -18,6 +18,10 @@ const INTERSECTION_THRESHOLD_FOR_CURRENT = 0.6; // From 0.0 to 1.0
  * a single entry in the carousel.
  */
 class PreviewElement extends HTMLLIElement {
+  static get observedAttributes() {
+    return ["title", "url", "iconURL"];
+  }
+
   #image = null;
   #caption = null;
   #favicon = null;
@@ -27,14 +31,58 @@ class PreviewElement extends HTMLLIElement {
     this.appendChild(template.content.cloneNode(true));
     this.#image = this.querySelector(".preview-image");
     this.#caption = this.querySelector(".caption");
-    this.#caption.textContent = this.getAttribute("title");
-    this.#caption.title = this.getAttribute("url");
     this.#favicon = this.querySelector(".favicon");
-    this.#favicon.src = this.getAttribute("iconURL");
+    this.#updateFromAttributes();
   }
 
   setBlob(blob) {
     this.#image.src = URL.createObjectURL(blob);
+  }
+
+  setWireframe(wireframe) {
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    let svg = document.createElementNS(SVG_NS, "svg");
+    svg.classList.add("preview-image");
+
+    svg.setAttributeNS(
+      null,
+      "viewBox",
+      `0 0 ${wireframe.width} ${wireframe.height}`
+    );
+    svg.style.backgroundColor = wireframe.canvasBackground;
+
+    for (let rectObj of wireframe.rects) {
+      let rectEl = document.createElementNS(SVG_NS, "rect");
+      rectEl.setAttribute("x", rectObj.rect.x);
+      rectEl.setAttribute("y", rectObj.rect.y);
+      rectEl.setAttribute("width", rectObj.rect.width);
+      rectEl.setAttribute("height", rectObj.rect.height);
+
+      if (rectObj.type == "background") {
+        rectEl.setAttribute("fill", rectObj.color);
+      } else if (rectObj.type == "text") {
+        rectEl.setAttribute(
+          "fill",
+          "color-mix(in srgb, black 10%, transparent)"
+        );
+      }
+
+      svg.appendChild(rectEl);
+    }
+    this.#image.parentNode.replaceChild(svg, this.#image);
+    this.#image = svg;
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (this.isConnected) {
+      this.#updateFromAttributes();
+    }
+  }
+
+  #updateFromAttributes() {
+    this.#caption.textContent = this.getAttribute("title");
+    this.#caption.title = this.getAttribute("url");
+    this.#favicon.src = this.getAttribute("iconURL");
   }
 }
 
@@ -345,8 +393,15 @@ const HistoryCarousel = {
     if (index !== undefined) {
       CarouselUtils.requestPreview(index).then(result => {
         if (result) {
-          let img = document.querySelector(`li[index="${index}"`);
-          img.setBlob(result);
+          let preview = document.querySelector(`li[index="${index}"`);
+          preview.setAttribute("title", result.title);
+          preview.setAttribute("url", result.url);
+          preview.setAttribute("iconURL", result.iconURL);
+          if (result.image.blob) {
+            preview.setBlob(result.image.blob);
+          } else if (result.image.wireframe) {
+            preview.setWireframe(result.image.wireframe);
+          }
         }
         this.kickTaskQueue();
       });
