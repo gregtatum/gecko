@@ -40,7 +40,21 @@ if (workshopEnabled) {
       return this.connectedAccounts;
     },
 
+    async hasConnectedAccountType(type) {
+      const connectedAccounts = await this.getConnectedAccounts();
+      return connectedAccounts.includes(type);
+    },
+
+    async assertNoAccountOfType(type) {
+      if (await this.hasConnectedAccountType(type)) {
+        throw new Error(`Account of type "${type}" already connected`);
+      }
+    },
+
     async connectAccount(type) {
+      // Ensure this account type doesn't exist before prompting for log in.
+      await this.assertNoAccountOfType(type);
+
       const oauthInfo = workshopAPI.oauthBindings[type];
       let oauth2Tokens = await this.companionActor.sendQuery(
         "Companion:GetOAuth2Tokens",
@@ -53,6 +67,10 @@ if (workshopEnabled) {
           type,
         }
       );
+
+      // If more than one login was started prior to one completing, there could
+      // now be an account of this type. Abort if that's the case.
+      await this.assertNoAccountOfType(type);
 
       // The authorizer should now have accessToken, refreshToken, and
       // tokenExpires on it.

@@ -518,11 +518,19 @@ class TestService {
     this.name = "Test";
     this.app = config.type;
     this.id = ++nextServiceId;
-
     if (this.app == "testserviceauth") {
+      let html = `
+        <a href="http://example.net/login">Login</a>
+        <script>
+          document.querySelector("a").href = "https://localhost/oauth?state=".concat(
+            new URL(window.location.href).searchParams.get("state")
+          );
+        </script>
+      `.replace(new RegExp("\\n *", "g"), "");
+      const url = `https://example.net/document-builder.sjs?html=${html}`;
       this.auth = new OAuth2(
-        "https://test1.example.net/oauth-login",
-        "https://test1.example.net/oauth-token",
+        url,
+        'data:application/json,{"accesstoken":"testserviceauth-token"}',
         "all",
         "client-id",
         "client-secret",
@@ -659,10 +667,20 @@ const OnlineServices = {
     } else {
       throw new Error(`Unknown service "${type}"`);
     }
+
     let token = await service.connect();
     if (!token) {
       return null;
     }
+
+    // Since we just went out to the service for log in, that may have taken a
+    // while and an account may have been created for this type already. If
+    // there was another account created before this returned then abort.
+    if ([...ServiceInstances].filter(item => item.app == type).length) {
+      log.error(`Service ${type} already exists`);
+      return null;
+    }
+
     ServiceInstances.add(service);
     this.persist();
     // grab events for this service and put them in the cache

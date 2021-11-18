@@ -8,6 +8,7 @@ registerCleanupFunction(async () => {
   // to avoid leaking state between tests.
   gGlobalHistory.reset();
   await PinebuildTestUtils.logoutFromTestService("testservice");
+  await PinebuildTestUtils.logoutFromTestService("testserviceauth");
 });
 
 add_task(async function setup() {
@@ -87,7 +88,7 @@ async function assertConnectCard(helper, _opts) {
         is(
           connectService.connectButton.hasAttribute("disabled"),
           !!opts.authenticating,
-          "The connect button has the correct disablee state"
+          "The connect button has the correct disable state"
         );
 
         if (opts.clickConnect) {
@@ -257,6 +258,85 @@ add_task(async function testOauthFlow() {
         hideService: true,
       });
       gBrowser.removeTab(gBrowser.selectedTab);
+    }, win);
+  });
+});
+
+add_task(async function testMultipleOauthFlow() {
+  await withNewBrowserWindow(async win => {
+    const { gBrowser } = win;
+
+    await CompanionHelper.whenReady(async helper => {
+      let testUrl = "https://example.net/";
+      let domain = "example.net";
+
+      await assertConnectCard(helper, { length: 0 });
+
+      let urlHandled = waitForDomainHandled(helper, domain);
+
+      await loadURI(gBrowser, testUrl);
+      await urlHandled;
+
+      let exampleTab = gBrowser.selectedTab;
+      let initialTabCount = gBrowser.tabs.length;
+      let authStarted = BrowserTestUtils.waitForNewTab(gBrowser);
+
+      await assertConnectCard(helper, {
+        service: "testserviceauth",
+        length: 1,
+        connected: false,
+        authenticating: false,
+        clickConnect: true,
+      });
+
+      await authStarted;
+
+      await assertConnectCard(helper, {
+        service: "testserviceauth",
+        length: 1,
+        connected: false,
+        authenticating: true,
+        hideService: true,
+      });
+
+      gBrowser.selectedTab = exampleTab;
+      let authStartedAgain = BrowserTestUtils.waitForNewTab(gBrowser);
+
+      await assertConnectCard(helper, {
+        service: "testserviceauth",
+        length: 1,
+        connected: false,
+        authenticating: false,
+        clickConnect: true,
+      });
+      await authStartedAgain;
+
+      is(gBrowser.tabs.length, initialTabCount + 2, "Two OAuth tabs created");
+
+      await assertConnectCard(helper, {
+        service: "testserviceauth",
+        length: 1,
+        connected: false,
+        authenticating: true,
+      });
+
+      let authenticated = TestUtils.topicObserved(
+        "companion-signin",
+        (_, data) => data == "testserviceauth"
+      );
+
+      await SpecialPowers.spawn(gBrowser.selectedBrowser, [], async () => {
+        let link = await ContentTaskUtils.waitForCondition(() =>
+          content.document.querySelector("a")
+        );
+        link.click();
+      });
+
+      await authenticated;
+
+      is(gBrowser.tabs.length, initialTabCount, "OAuth tabs have been removed");
+
+      await PinebuildTestUtils.logoutFromTestService("testserviceauth");
     }, win);
   });
 });

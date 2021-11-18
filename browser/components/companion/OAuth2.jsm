@@ -64,16 +64,15 @@ const OAuthConnect = {
       // when the user returns from the OAuth flow.
       let id = Services.uuid.generateUUID().toString();
 
-      let params = new URLSearchParams();
-      params.set("client_id", oauth.clientId);
-      params.set("redirect_uri", oauth.redirectionEndpoint);
-      params.set("response_type", "code");
-      params.set("scope", oauth.scope);
-      params.set("access_type", "offline");
-      params.set("state", id);
-      params.set("prompt", "select_account");
+      let url = new URL(oauth.authorizationEndpoint);
+      url.searchParams.set("client_id", oauth.clientId);
+      url.searchParams.set("redirect_uri", oauth.redirectionEndpoint);
+      url.searchParams.set("response_type", "code");
+      url.searchParams.set("scope", oauth.scope);
+      url.searchParams.set("access_type", "offline");
+      url.searchParams.set("state", id);
+      url.searchParams.set("prompt", "select_account");
 
-      let url = new URL(oauth.authorizationEndpoint + "?" + params);
       let tab = win.gBrowser.addTrustedTab("about:blank");
       tab.setAttribute("pinebuild-oauth-flow", oauth.serviceType || "true");
 
@@ -152,7 +151,7 @@ const OAuthConnect = {
         return;
       }
 
-      let { tab, oauth, resolve, reject } = this.connections.get(id);
+      let { oauth, resolve, reject } = this.connections.get(id);
 
       if (
         request.URI.prePath + request.URI.filePath !=
@@ -161,13 +160,36 @@ const OAuthConnect = {
         return;
       }
 
-      this.connections.delete(id);
-      let browserId = tab.linkedBrowser.browsingContext.browserId;
+      // Cleanup any OAuth tabs we opened for this service.
+      // 1. Get all stored connections related to the service type.
+      // 2. Remove the stored connections from our global list.
+      // 3. Remove all tabs related to the connections.
+      // 4. Remove the history for the browsers we created.
+      let serviceConnections = [...this.connections.entries()].filter(
+        ([, connection]) => connection.oauth.serviceType == oauth.serviceType
+      );
+      const browserIds = serviceConnections.map(
+        ([, connection]) =>
+          connection.tab.linkedBrowser.browsingContext.browserId
+      );
+      let tabsPerWindow = new Map();
+      for (let [, connection] of serviceConnections) {
+        if (!tabsPerWindow.has(connection.tab.ownerGlobal)) {
+          tabsPerWindow.set(connection.tab.ownerGlobal, []);
+        }
+        tabsPerWindow.get(connection.tab.ownerGlobal).push(connection.tab);
+      }
 
-      tab.ownerGlobal.gBrowser.removeTab(tab);
-
-      let { sharedData } = Services.ppmm;
-      sharedData.get(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY).delete(browserId);
+      for (let [connectionId] of serviceConnections) {
+        this.connections.delete(connectionId);
+      }
+      for (let [window, _tabs] of tabsPerWindow.entries()) {
+        window.gBrowser.removeTabs(_tabs, { animate: false });
+      }
+      for (let browserId of browserIds) {
+        const { sharedData } = Services.ppmm;
+        sharedData.get(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY).delete(browserId);
+      }
 
       // Reach out to the OAuth provider's server to turn our "code" into an
       // authenticated access token.
