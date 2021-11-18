@@ -907,7 +907,7 @@ XPCOMUtils.defineLazyGetter(this, "gIsXPCShell", function() {
 
 if (
   AppConstants.PINEBUILD &&
-  (AppConstants.platform == "macosx" || AppConstants.platform == "win") &&
+  AppConstants.platform == "win" &&
   !Cu.isInAutomation &&
   !gIsXPCShell &&
   Services.prefs.getBoolPref("browser.startup.launchOnOSLogin", false)

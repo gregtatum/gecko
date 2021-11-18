@@ -43,7 +43,7 @@ class nsAppStartup final : public nsIAppStartup,
  private:
   ~nsAppStartup() = default;
 
-  void CloseAllWindows(bool excludePinebuildBackground);
+  void CloseAllWindows();
 
   friend class nsAppExitEvent;
 
@@ -59,10 +59,8 @@ class nsAppStartup final : public nsIAppStartup,
   bool mStartupCrashTrackingEnded;  // Whether startup crash tracking has
                                     // already ended
   bool mWasSilentlyStarted;         // Was this startup a silent start?
-
 #if defined(XP_MACOSX) && defined(PINEBUILD)
-  // Did we explicitly call EnterLastWindowClosingSurvivalArea on startup?
-  bool mExitLastWindowClosingSurvivalAreaOnQuit;
+  bool mHaveBackgroundMenubarIcon;  // Do we have a background menubar icon?
 #endif
 
 #if defined(XP_WIN)

@@ -7,6 +7,9 @@
 #define HIDDEN_WINDOW
 
 <?xml-stylesheet href="chrome://browser/skin/webRTC-menubar-indicator.css" type="text/css"?>
+#ifdef PINEBUILD
+<?xml-stylesheet href="chrome://browser/content/companion/pinebuildBackground.css" type="text/css"?>
+#endif
 
 <window id="main-window"
         xmlns:html="http://www.w3.org/1999/xhtml"
@@ -15,9 +18,22 @@
 
   <linkset>
     <html:link rel="localization" href="browser/appmenu.ftl"/>
+#ifdef PINEBUILD
+    <html:link rel="localization" href="browser/pinebuildBackground.ftl"/>
+#endif
   </linkset>
 
 #include macWindow.inc.xhtml
+
+#ifdef PINEBUILD
+<script src="chrome://browser/content/companion/pinebuildBackground.js"></script>
+<menu id="pinebuildBackground-menu" data-l10n-id="pinebuild-background-menu" contextmenu="true">
+  <menupopup>
+    <menuitem id="pinebuildBackground-newWindow" data-l10n-id="pinebuild-background-new-window" />
+    <menuitem id="pinebuildBackground-exitApplication" data-l10n-id="pinebuild-background-exit-application" />
+  </menupopup>
+</menu>
+#endif
 
 <!-- Dock menu -->
 <popupset>
