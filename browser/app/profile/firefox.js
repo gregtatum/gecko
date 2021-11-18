@@ -2694,6 +2694,7 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.warnOnQuit", false);
   // Disable product promos delivered via messaging system
   pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features", false);
+  pref("browser.places.perwindowsessions.enabled", true);
 
 
   // Pinebuild specific configurations
@@ -2719,7 +2720,6 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.companion.passwords.enabled", false);
   pref("browser.companion.onnx", false);
   pref("browser.companion.pyodide", false);
-  pref("browser.places.perwindowsessions.enabled", false);
   pref("browser.pinebuild.interstitial-view-overwriting.enabled", true);
   pref("browser.pinebuild.interstitial-view-overwriting.threshold_ms", 5000);
   pref("browser.pinebuild.ignoreBeforeUnloadOnExit", true);
