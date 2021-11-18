@@ -101,6 +101,10 @@ ol {
   scroll-padding-top: 24px; /* there is the section header that is sticky to the top */
 }
 
+:host(.in-companion) ol {
+  margin-block: 0 1em;
+}
+
 .create-login-button {
   margin: 16px;
 }
@@ -202,6 +206,10 @@ ol {
   width: 16px;
 }
 
+:host(.in-companion) .favicon {
+  width: 24px;
+}
+
 .username {
   font-size: 0.85em;
   color: var(--in-content-deemphasized-text);
@@ -261,40 +269,50 @@ ol {
 }
 
 :host(.in-companion) .favicon-wrapper {
-  background-color: #F0F0F4;
+  background-color: #F9F9FB;
   border-radius: 4px;
   background-origin: content-box;
   padding: 8px;
+  height: 24px;
+  width: 24px;
+  background-size: cover;
+  margin-inline-end: 4px;
+}
+
+:host(.in-companion) .login-list-item:hover .favicon-wrapper {
+  background-color: #F0F0F4;
 }
 
 :host(.in-companion) .favicon-wrapper .favicon[src=""] {
-  display: none;
-}
-
-:host(.in-companion) .login-list-item.selected {
-  border: none;
+  visibility: hidden;
 }
 
 :host(.in-companion) .login-list-item.selected .title {
     font-weight: normal;
 }
 
-:host(.in-companion) .login-list-item + .login-list-item {
-  border: none;
-  padding-block: 4px;
-}
-
 :host(.in-companion) .login-list-item {
-  padding-inline: 4px;
-  margin-inline: 12px;
-  border-radius: 4px;
+  padding: 4px;
+  margin: 1em;
+  border-radius: 8px;
   border-inline-start: none;
+  background-color: #F9F9FB;
+  box-sizing: border-box;
+  border: 0.5px solid #CFCFD8;
 }
 
-:host(.in-companion) menuitem:hover,
-:host(.in-companion) .login-list-item:hover {
+:host(.in-companion) .login-list-item:first-child {
+  margin-top: 0;
+}
+
+:host(.in-companion) menuitem:hover {
   background-color: var(--in-content-button-background-hover);
   color: var(--in-content-button-text-color-hover);
+}
+
+:host(.in-companion) .login-list-item:hover {
+  background: #F0F0F4;
+  border-color: #AFAFBA;
 }
 
 :host(.in-companion.create-login-selected) {
@@ -305,13 +323,32 @@ ol {
   visibility: hidden;
 }
 
+:host(.in-companion) .more-dropdown {
+  min-width: unset;
+  min-height: unset;
+  height: 24px;
+  width: 24px;
+  padding-inline: 12px;
+  border: none;
+}
+
 .login-list-item.popupShowing .more-dropdown,
 :host(.in-companion) .login-list-item:hover .more-dropdown {
   visibility: visible;
   background-image: url("chrome://global/skin/icons/more.svg");
   background-repeat: no-repeat;
   background-position: center;
-  min-width: 24px
+  min-width: 24px;
+  cursor: pointer;
+}
+
+
+:host(.in-companion) .login-list-item:hover .more-dropdown {
+  background-color: #FFFFFF;
+}
+
+:host(.in-companion) .login-list-item:hover .more-dropdown:hover {
+  background-color: #CFCFD8;
 }
 
 :host(.in-companion.popupShowing) .login-list-item:not(.popupShowing):hover .more-dropdown {
