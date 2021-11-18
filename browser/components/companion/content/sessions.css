@@ -19,109 +19,28 @@
 
 .icon {
   display: block;
-  height: 24px;
-  width: 24px;
-  border-radius: 24px;
+  height: 32px;
+  width: 32px;
+  border-radius: 32px;
   background: #FFFFFF;
   border: 1px solid #F0F0F4;
-  padding: 4px;
+  position: absolute;
+  transition: left 500ms;
+  padding: 5px;
 }
 
-.expanded .icon {
-  transform: unset !important;
-  border: 0;
-  display: block !important;
-}
+.icon:nth-child(1) { left: 0px; }
+.icon:nth-child(2) { left: 15px; }
+.icon:nth-child(3) { left: 30px; }
+.icon:nth-child(4) { left: 45px; }
 
-.icon:nth-child(2) { transform: translate(-25px); }
-.icon:nth-child(3) { transform: translate(-50px); }
-.icon:nth-child(4) { transform: translate(-75px); }
-.icon:nth-child(5) { transform: translate(-100px); }
-.icon:nth-child(6) { display: none; }
-.icon:nth-child(7) { display: none; }
+.icons:hover .icon:nth-child(1) { left: 0px; }
+.icons:hover .icon:nth-child(2) { left: 42px; }
+.icons:hover .icon:nth-child(3) { left: 84px; }
+.icons:hover .icon:nth-child(4) { left: 126px; }
 
 .icons {
-  display: flex;
-  padding: 4px;
-  gap: 4px;
-  width: 7em;
-  overflow: hidden;
-}
-
-.expanded .icons {
-  border-radius: 20px;
-  margin: 0 10px;
-  width: 100%;
-  background: #F0F0F4;
-}
-
-.icons span {
-  display: none;
-}
-
-.expanded .icons span {
-  display: block;
-  font-size: smaller;
-  height: 24px;
-  width: 24px;
-  text-align: center;
-  background: transparent;
-  line-height: 24px;
-}
-
-.session-card {
-  padding-inline-end: 32px;
+  width: 5em;
   position: relative;
-  align-items: center;
-}
-
-.expanded .session-card {
-  align-items: unset;
-}
-
-.session-card::after {
-  content: "";
-  position: absolute;
-  background: center center no-repeat url(chrome://global/skin/icons/arrow-down.svg);
-  width: 36px;
-  height: 36px;
-  top: 12px;
-  inset-inline-end: 0;
-  transition-duration: 0.2s;
-  transition-property: transform;
-}
-
-.expanded .session-card::after {
-  transform: rotate(180deg);
-}
-
-.expanded .session-card {
-  flex-direction: column;
-}
-
-.extended button {
-  min-width: unset;
-  width: 100%;
-  font-weight: normal;
-  cursor: pointer;
-}
-
-#session-hide {
-  width: 24px;
-  height: 24px;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-image: url("chrome://browser/content/aboutlogins/icons/password-hide.svg");
-}
-
-.extended .restore-button {
-  background-color: var(--in-content-primary-button-background);
-  color: var(--in-content-primary-button-text-color);
-  border-color: var(--in-content-primary-button-border-color);
-}
-
-.extended .restore-button:hover {
-  background-color: var(--in-content-primary-button-background-hover);
-  color: var(--in-content-primary-button-text-color-hover);
-  border-color: var(--in-content-primary-button-border-hover);
+  flex-grow: 2;
 }

@@ -166,14 +166,14 @@
     </panel-list>
   </template>
 
-  <template xmlns="http://www.w3.org/1999/xhtml" id="template-session-list">
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-last-session-list">
+    <link rel="stylesheet" href="card.css"/>
     <link rel="stylesheet" href="sessions.css"/>
-    <h2 class="list-title" hidden="true" data-l10n-id="last-session-title"/>
+    <h2 class="list-title" data-l10n-id="last-session-title"/>
     <div class="last-sessions-panel"/>
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-session-card">
-    <link rel="stylesheet" href="card.css"/>
     <div class="session-card contents">
       <div class="info">
         <span class="title"/>
@@ -181,11 +181,11 @@
         <span class="info-divider sub"/>
         <span class="date sub"/>
       </div>
-      <div class="icons"/>
+      <div class="card-image"><img class="favicon"/></div>
     </div>
     <div class="extended">
-      <button id="session-hide" data-action="hide-session" hidden="true"></button>
-      <button class="restore-button" data-action="restore-session" data-l10n-id="restore-session"></button>
+      <div class="icons"/>
+      <button class="restore-button" data-l10n-id="restore-session"></button>
     </div>
   </template>
 
@@ -210,7 +210,6 @@
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-browse-list">
     <div class="browse">
       <button class="groups">Groups</button>
-      <button class="sessions" data-l10n-id="browse-list-sessions" data-action="viewtab" data-tab="sessions"></button>
       <button class="activities">Activities</button>
       <button class="shopping">Shopping</button>
       <button class="downloads">Downloads</button>
@@ -258,13 +257,6 @@
         </section>
       </div>
       <div xmlns="http://www.w3.org/1999/xhtml" id="scroll-browse" name="browse">
-        <div class="content"></div>
-      </div>
-      <div xmlns="http://www.w3.org/1999/xhtml" id="sessions" name="sessions">
-        <header>
-          <button class="back" data-action="viewtab" data-tab="browse"></button>
-          <h2 data-l10n-id="session-section-header"></h2>
-        </header>
         <div class="content"></div>
       </div>
     </html:named-deck>

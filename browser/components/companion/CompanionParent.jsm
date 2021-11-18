@@ -357,31 +357,24 @@ class CompanionParent extends JSWindowActorParent {
       // The browser element has gone away, so skip the rest.
       return;
     }
+    let width = this.#getFaviconWidth(this.browsingContext.top.embedderElement);
     let results = await SessionManager.query({ includePages: true });
-    results = results.filter(session => session.pages.length);
-
-    if (results) {
-      let urls = results
-        .map(result => result.pages.map(page => page.url))
-        .flat();
-      let icons = await this.getFavicons(urls);
-      for (const result of results) {
-        for (const page of result.pages) {
-          page.favicon = icons.find(icon => icon.url.includes(page.url));
-        }
+    let first = results.find(session => session.pages.length);
+    if (first) {
+      for (const page of first.pages) {
+        page.favicon = await this.getFavicon(page.url, width);
       }
-
       // If the child has already been closed, then bail out early to avoid
       // errors thrown in tests.
       if (this._destroyed) {
         return;
       }
-      this.sendAsyncMessage("Companion:SessionUpdated", results);
+      this.sendAsyncMessage("Companion:SessionUpdated", first);
     }
   }
 
   getFavicons(pages) {
-    let browser = this?.browsingContext.top.embedderElement;
+    let browser = this.browsingContext.top.embedderElement;
     if (!browser) {
       // The browser element has gone away, so just continue.
       return [];
