@@ -812,6 +812,7 @@ function SetClickAndHoldHandlers() {
 
 const gClickAndHoldListenersOnElement = {
   _timers: new Map(),
+  _callbacks: new WeakMap(),
 
   _mousedownHandler(aEvent) {
     if (
@@ -822,8 +823,10 @@ const gClickAndHoldListenersOnElement = {
       return;
     }
 
-    // Prevent the menupopup from opening immediately
-    aEvent.currentTarget.menupopup.hidden = true;
+    if (aEvent.currentTarget.hasAttribute("context")) {
+      // Prevent the menupopup from opening immediately
+      aEvent.currentTarget.menupopup.hidden = true;
+    }
 
     aEvent.currentTarget.addEventListener("mouseout", this);
     aEvent.currentTarget.addEventListener("mouseup", this);
@@ -866,8 +869,13 @@ const gClickAndHoldListenersOnElement = {
 
   _openMenu(aButton) {
     this._cancelHold(aButton);
-    aButton.firstElementChild.hidden = false;
-    aButton.open = true;
+    let callback = this._callbacks.get(aButton);
+    if (callback) {
+      callback();
+    } else {
+      aButton.firstElementChild.hidden = false;
+      aButton.open = true;
+    }
   },
 
   _mouseoutHandler(aEvent) {
@@ -923,13 +931,15 @@ const gClickAndHoldListenersOnElement = {
   },
 
   remove(aButton) {
+    this._callbacks.delete(aButton);
     aButton.removeEventListener("mousedown", this, true);
     aButton.removeEventListener("click", this, true);
     aButton.removeEventListener("keypress", this, true);
   },
 
-  add(aElm) {
+  add(aElm, aCallback) {
     this._timers.delete(aElm);
+    this._callbacks.set(aElm, aCallback);
 
     aElm.addEventListener("mousedown", this, true);
     aElm.addEventListener("click", this, true);
@@ -2168,6 +2178,10 @@ var gBrowserInit = {
       this._schedulePerWindowIdleTasks();
       document.documentElement.setAttribute("sessionrestored", "true");
     });
+
+    if (AppConstants.PINEBUILD) {
+      window.PineBuildUIUtils.delayedStartup();
+    }
 
     this.delayedStartupFinished = true;
     _resolveDelayedStartup();

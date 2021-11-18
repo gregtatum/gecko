@@ -2723,6 +2723,9 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.pinebuild.interstitial-view-overwriting.enabled", true);
   pref("browser.pinebuild.interstitial-view-overwriting.threshold_ms", 5000);
   pref("browser.pinebuild.ignoreBeforeUnloadOnExit", true);
+  pref("browser.pinebuild.megaback.enabled", false);
+  pref("browser.pinebuild.megaback.click-count-timeout-ms", 3000);
+  pref("browser.pinebuild.megaback.click-count-threshold", 5);
   // Leave onboarding disabled until we have content.
   pref("browser.pinebuild.companion.onboarding.enabled", false);
   pref("browser.pinebuild.companion.onboarding.lastSeenVersion", 1);
