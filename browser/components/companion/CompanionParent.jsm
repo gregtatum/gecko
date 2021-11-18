@@ -14,6 +14,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   clearTimeout: "resource://gre/modules/Timer.jsm",
   _LastSession: "resource:///modules/sessionstore/SessionStore.jsm",
+  OAuth2: "resource:///modules/OAuth2.jsm",
   OnlineServices: "resource:///modules/OnlineServices.jsm",
   PageDataSchema: "resource:///modules/pagedata/PageDataSchema.jsm",
   PageDataService: "resource:///modules/pagedata/PageDataService.jsm",
@@ -30,6 +31,10 @@ XPCOMUtils.defineLazyPreferenceGetter(
   this,
   "selectByType",
   "browser.companion.snapshots.selectByType",
+  false
+);
+const workshopEnabled = Services.prefs.getBoolPref(
+  "browser.pinebuild.workshop.enabled",
   false
 );
 
@@ -543,12 +548,16 @@ class CompanionParent extends JSWindowActorParent {
         if (topic == "companion-signin") {
           this.sendAsyncMessage("Companion:SignIn", {
             service: data,
-            connectedServices: OnlineServices.connectedServiceTypes,
+            connectedServices: workshopEnabled
+              ? null
+              : OnlineServices.connectedServiceTypes,
           });
         } else if (topic == "companion-signout") {
           this.sendAsyncMessage("Companion:SignOut", {
             service: data,
-            connectedServices: OnlineServices.connectedServiceTypes,
+            connectedServices: workshopEnabled
+              ? null
+              : OnlineServices.connectedServiceTypes,
           });
         }
         break;
@@ -901,6 +910,44 @@ class CompanionParent extends JSWindowActorParent {
       case "Companion:ConnectService": {
         let { type } = message.data;
         OnlineServices.createService(type);
+        break;
+      }
+      case "Companion:GetOAuth2Tokens": {
+        let {
+          endpoint,
+          tokenEndpoint,
+          scopes,
+          clientId,
+          clientSecret,
+          type,
+        } = message.data;
+        const authorizer = new OAuth2(
+          endpoint,
+          tokenEndpoint,
+          scopes,
+          clientId,
+          clientSecret,
+          null,
+          type
+        );
+        await authorizer.getToken();
+        return authorizer.toJSON();
+      }
+      case "Companion:AccountCreated": {
+        Services.obs.notifyObservers(
+          null,
+          "companion-signin",
+          message.data.type
+        );
+        break;
+      }
+      case "Companion:AccountDeleted": {
+        Services.obs.notifyObservers(
+          null,
+          "companion-signout",
+          message.data.type
+        );
+        break;
       }
     }
     return null;

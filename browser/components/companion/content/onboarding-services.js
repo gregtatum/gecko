@@ -5,6 +5,7 @@
 import { MozLitElement } from "./widget-utils.js";
 import { css, html, classMap } from "./lit.all.js";
 import { ServiceUtils } from "./service-utils.js";
+import { Workshop, workshopEnabled } from "./workshopAPI.js";
 
 export class ServicesOnboarding extends MozLitElement {
   static get properties() {
@@ -34,7 +35,13 @@ export class ServicesOnboarding extends MozLitElement {
     window.addEventListener("Companion:ViewLocation", this);
     window.addEventListener("Companion:SignIn", this);
     window.addEventListener("Companion:SignOut", this);
-    this.setConnectedServices(window.CompanionUtils.connectedServices);
+    if (workshopEnabled) {
+      Workshop.getConnectedAccounts().then(accounts =>
+        this.setConnectedServices(accounts)
+      );
+    } else {
+      this.setConnectedServices(window.CompanionUtils.connectedServices);
+    }
   }
 
   disconnectedCallback() {
@@ -79,13 +86,21 @@ export class ServicesOnboarding extends MozLitElement {
 
   onSignIn(e) {
     let { service, connectedServices } = e.detail;
-    this.setConnectedServices(connectedServices);
     this.showService(service);
+    if (workshopEnabled) {
+      this.setConnectedServices(Workshop.connectedAccounts);
+    } else {
+      this.setConnectedServices(connectedServices);
+    }
   }
 
   onSignOut(e) {
     let { service, connectedServices } = e.detail;
-    this.setConnectedServices(connectedServices);
+    if (workshopEnabled) {
+      this.setConnectedServices(Workshop.connectedAccounts);
+    } else {
+      this.setConnectedServices(connectedServices);
+    }
     this.hideService(service);
   }
 
@@ -247,11 +262,15 @@ class ConnectService extends MozLitElement {
     `;
   }
 
-  connectService() {
+  async connectService() {
     if (!this.connected) {
-      window.CompanionUtils.sendAsyncMessage("Companion:ConnectService", {
-        type: this.type,
-      });
+      if (workshopEnabled) {
+        Workshop.connectAccount(this.type);
+      } else {
+        window.CompanionUtils.sendAsyncMessage("Companion:ConnectService", {
+          type: this.type,
+        });
+      }
     }
   }
 

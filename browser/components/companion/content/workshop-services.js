@@ -2,16 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { workshopAPI } from "chrome://browser/content/companion/workshopAPI.js";
+import {
+  Workshop,
+  workshopAPI,
+} from "chrome://browser/content/companion/workshopAPI.js";
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
 import { html, css } from "chrome://browser/content/companion/lit.all.js";
 import { ServiceUtils } from "chrome://browser/content/companion/service-utils.js";
-
-ChromeUtils.defineModuleGetter(
-  globalThis,
-  "OAuth2",
-  "resource:///modules/OAuth2.jsm"
-);
 
 export default class WorkshopServicesList extends MozLitElement {
   static get properties() {
@@ -63,51 +60,17 @@ export default class WorkshopServicesList extends MozLitElement {
     if (this.connectedServices.has(type)) {
       return null;
     }
-
-    const oauthInfo = workshopAPI.oauthBindings[type];
-    const authorizer = new OAuth2(
-      oauthInfo.endpoint,
-      oauthInfo.tokenEndpoint,
-      oauthInfo.scopes?.join(" "),
-      oauthInfo.clientId,
-      oauthInfo.clientSecret,
-      null
-    );
-    await authorizer.getToken();
-
-    // The authorizer should now have accessToken, refreshToken, and
-    // tokenExpires on it.
-    const domainInfo = {
-      type: ServiceUtils.getServiceByType(type)?.api,
-      oauth2Settings: {
-        authEndpoint: oauthInfo.endpoint,
-        tokenEndpoint: oauthInfo.tokenEndpoint,
-        scope: oauthInfo.scopes.join(" "),
-      },
-      oauth2Secrets: {
-        clientId: oauthInfo.clientId,
-        clientSecret: oauthInfo.clientSecret,
-      },
-      oauth2Tokens: {
-        refreshToken: authorizer.refreshToken,
-        accessToken: oauthInfo.accessToken,
-        expireTimeMS: oauthInfo.tokenExpires,
-      },
-    };
-
-    let { account } = await workshopAPI.tryToCreateAccount({}, domainInfo);
-
+    let account = await Workshop.connectAccount(type);
     if (account) {
       this.connectedServices.set(type, account);
       this.requestUpdate();
     }
-
     return account;
   }
 
   disconnectService(type) {
     let account = this.connectedServices.get(type);
-    account.deleteAccount();
+    Workshop.deleteAccount(account);
     this.connectedServices.delete(type);
     this.requestUpdate();
   }

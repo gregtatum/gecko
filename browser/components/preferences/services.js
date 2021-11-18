@@ -16,6 +16,11 @@ XPCOMUtils.defineLazyPreferenceGetter(
 );
 const FXA_SIGNUP_URL = new URL("/signup", FXA_ROOT_URL).href;
 
+const workshopEnabled = Services.prefs.getBoolPref(
+  "browser.pinebuild.workshop.enabled",
+  false
+);
+
 const extraServices = [
   {
     type: "google-mozilla",
@@ -300,7 +305,7 @@ function buildExtraServiceRows() {
     "extra-services-container"
   );
   // we want to show different account options if using workshop backend
-  if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled", false)) {
+  if (workshopEnabled) {
     extraServicesContainer.append(
       document.createElement("workshop-services-list")
     );

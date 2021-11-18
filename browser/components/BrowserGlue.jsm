@@ -421,7 +421,10 @@ let JSWINDOWACTORS = {
         CompanionInit: { wantUntrusted: true },
       },
     },
-    matches: ["chrome://browser/content/companion/companion.xhtml"],
+    matches: [
+      "chrome://browser/content/companion/companion.xhtml",
+      "about:preferences",
+    ],
   },
 
   ContentSearch: {
