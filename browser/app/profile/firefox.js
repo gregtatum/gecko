@@ -2686,14 +2686,14 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("fission.autostart", true, locked);
   pref("browser.aboutwelcome.enabled", false);
   pref("browser.tabs.openNewTabForMostNavigations", true);
-#ifdef MOZILLA_OFFICIAL
-  pref("browser.startup.launchOnOSLogin", true);
-#else
-  // On unofficial (local) builds, having this enabled is painfully annoying,
-  // as it will launch your local build on login, which can cause all kinds of
-  // headaches if you don't realize it's happening.
-  pref("browser.startup.launchOnOSLogin", false);
-#endif
+  #ifdef MOZILLA_OFFICIAL
+    pref("browser.startup.launchOnOSLogin", true);
+  #else
+    // On unofficial (local) builds, having this enabled is painfully annoying,
+    // as it will launch your local build on login, which can cause all kinds of
+    // headaches if you don't realize it's happening.
+    pref("browser.startup.launchOnOSLogin", false);
+  #endif
   pref("browser.crashReports.unsubmittedCheck.autoSubmit2", true);
   pref("browser.warnOnQuit", false);
   // Disable product promos delivered via messaging system
@@ -2711,8 +2711,13 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.pinebuild.calendar.minBreakTime", 5);
   pref("browser.pinebuild.calendar.maxBreakTime", 15);
   pref("browser.pinebuild.companion-service-onboarding.enabled", true);
-  pref("browser.pinebuild.companion.onboarding.enabled", true);
   pref("browser.pinebuild.companion.onboarding.lastSeenVersion", 1);
+  // Don't show the onboarding modal in unofficial (local) builds.
+  #ifdef MOZILLA_OFFICIAL
+    pref("browser.pinebuild.companion.onboarding.enabled", true);
+  #else
+    pref("browser.pinebuild.companion.onboarding.enabled", false);
+  #endif
 
   // Preferences below here were at one point off by default and now have
   // been enabled (and should likely be removed eventually).
