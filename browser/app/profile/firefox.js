@@ -2711,6 +2711,8 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.pinebuild.calendar.minBreakTime", 5);
   pref("browser.pinebuild.calendar.maxBreakTime", 15);
   pref("browser.pinebuild.companion-service-onboarding.enabled", true);
+  pref("browser.pinebuild.companion.onboarding.enabled", true);
+  pref("browser.pinebuild.companion.onboarding.lastSeenVersion", 1);
 
   // Preferences below here were at one point off by default and now have
   // been enabled (and should likely be removed eventually).
@@ -2730,7 +2732,4 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
   pref("browser.pinebuild.megaback.enabled", false);
   pref("browser.pinebuild.megaback.click-count-timeout-ms", 3000);
   pref("browser.pinebuild.megaback.click-count-threshold", 5);
-  // Leave onboarding disabled until we have content.
-  pref("browser.pinebuild.companion.onboarding.enabled", false);
-  pref("browser.pinebuild.companion.onboarding.lastSeenVersion", 1);
 #endif
