@@ -139,7 +139,7 @@ export class MapiCalEventChewer {
           // The event is now deleted!
           this.modifiedEventMap.set(eventId, null);
           logic(this.ctx, "cancelled", { _event: mapiEvent });
-          return;
+          continue;
         }
 
         logic(this.ctx, "event", { _event: mapiEvent });
@@ -242,5 +242,14 @@ export class MapiCalEventChewer {
         logic(this.ctx, "eventChewingError", { ex });
       }
     }
+
+    // Remove the cancelled events.
+    const allExistingEvents = [];
+    for (const event of this.allEvents) {
+      if (this.modifiedEventMap.get(event.id) !== null) {
+        allExistingEvents.push(event);
+      }
+    }
+    this.allEvents = allExistingEvents;
   }
 }

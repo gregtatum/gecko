@@ -31,6 +31,7 @@ async function check_recurring_events_for_account_type({
   configurator,
   initialEventSketches,
   addEventSketches,
+  cancelledEventSketches,
 }) {
   const initialEvents = WorkshopHelper.deriveFullEvents({
     eventSketches: initialEventSketches,
@@ -84,6 +85,19 @@ async function check_recurring_events_for_account_type({
   expectedCounts.push(...addEventSketches.map(mapEventFn));
   expectedCounts.sort();
   await getAndCompare(workshopAPI, calFolder, expectedCounts, rounds + 1);
+
+  // Remove some events.
+  for (const { summary, startDates } of cancelledEventSketches) {
+    fakeServer.defaultCalendar.cancelEvent(summary, startDates);
+    const i = expectedCounts.findIndex(x => x[0] === summary);
+    if (!startDates || startDates.length === 0) {
+      expectedCounts.splice(i, 1);
+    } else {
+      expectedCounts[i][1] -= startDates.length;
+    }
+  }
+
+  await getAndCompare(workshopAPI, calFolder, expectedCounts, rounds + 2);
 }
 
 const today = new Date(DEFAULT_FAKE_NOW_TS).toISOString().split("T")[0];
@@ -135,11 +149,32 @@ const ADD_EVENTS = [
   },
 ];
 
+const weeklyMeetingStart = new Date(INITIAL_EVENTS[0].start).valueOf();
+const coffeeMeetingStart = new Date(INITIAL_EVENTS[1].start).valueOf();
+const weekInMs = 7 * 24 * 60 * 60 * 1000;
+const CANCELLED_EVENTS = [
+  {
+    summary: "Weekly Meeting",
+    startDates: [
+      new Date(weeklyMeetingStart + 2 * weekInMs),
+      new Date(weeklyMeetingStart + 6 * weekInMs),
+    ],
+  },
+  {
+    summary: "Fortnightly Coffee Meeting",
+    startDates: [new Date(coffeeMeetingStart)],
+  },
+  {
+    summary: "Meeting with Karl and Leonhard",
+  },
+];
+
 add_task(async function test_gapi_calendar_single_day() {
   await check_recurring_events_for_account_type({
     configurator: GapiConfigurator,
     initialEventSketches: INITIAL_EVENTS,
     addEventSketches: ADD_EVENTS,
+    cancelledEventSketches: CANCELLED_EVENTS,
   });
 });
 
@@ -148,5 +183,6 @@ add_task(async function test_mapi_calendar_single_day() {
     configurator: MapiConfigurator,
     initialEventSketches: INITIAL_EVENTS,
     addEventSketches: ADD_EVENTS,
+    cancelledEventSketches: CANCELLED_EVENTS,
   });
 });

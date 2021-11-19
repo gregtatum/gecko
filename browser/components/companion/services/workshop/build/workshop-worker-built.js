@@ -3053,12 +3053,10 @@ var WorkshopBackend = (() => {
       let params = [
         `client_id=${encodeURIComponent(oauthInfo.clientId)}`,
         `refresh_token=${encodeURIComponent(oauthInfo.refreshToken)}`,
-        "grant_type=refresh_token",
+        "grant_type=refresh_token"
       ];
       if (oauthInfo.clientSecret) {
-        params.append(
-          `client_secret=${encodeURIComponent(oauthInfo.clientSecret)}`
-        );
+        params.append(`client_secret=${encodeURIComponent(oauthInfo.clientSecret)}`);
       }
       xhr.send(params.join("&"));
       xhr.onload = function() {
@@ -11451,7 +11449,7 @@ var WorkshopBackend = (() => {
               const organizer = this._chewCalIdentity(gapiEvent.organizer);
               const location = gapiEvent.location || "";
               const attendees = (gapiEvent.attendees || []).map((who) => this._chewCalAttendee(who));
-              const oldInfo = this.oldById.get(eventId);
+              const oldInfo = oldById.get(eventId);
               const eventInfo = makeCalendarEventInfo({
                 id: eventId,
                 date: startDate,
@@ -11484,6 +11482,13 @@ var WorkshopBackend = (() => {
               logic(this.ctx, "eventChewingError", { ex });
             }
           }
+          const allExistingEvents = [];
+          for (const event of this.allEvents) {
+            if (this.modifiedEventMap.get(event.id) !== null) {
+              allExistingEvents.push(event);
+            }
+          }
+          this.allEvents = allExistingEvents;
         }
       };
     }
@@ -12050,7 +12055,7 @@ var WorkshopBackend = (() => {
               if (mapiEvent.isCancelled) {
                 this.modifiedEventMap.set(eventId, null);
                 logic(this.ctx, "cancelled", { _event: mapiEvent });
-                return;
+                continue;
               }
               logic(this.ctx, "event", { _event: mapiEvent });
               let contentBlob, snippet, authoredBodySize, links, conference;
@@ -12124,6 +12129,13 @@ var WorkshopBackend = (() => {
               logic(this.ctx, "eventChewingError", { ex });
             }
           }
+          const allExistingEvents = [];
+          for (const event of this.allEvents) {
+            if (this.modifiedEventMap.get(event.id) !== null) {
+              allExistingEvents.push(event);
+            }
+          }
+          this.allEvents = allExistingEvents;
         }
       };
     }

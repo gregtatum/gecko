@@ -87,6 +87,41 @@ class FakeCalendar {
     this.events.push(...newEvents);
   }
 
+  /**
+   * Cancel the event with the given summary starting at the given dates or all
+   * the event if no dates.
+   * @param {string} summary
+   * @param {Array<Date>|undefined} nths
+   */
+  cancelEvent(summary, startDates) {
+    const event = this.events.find(x => x.summary === summary);
+    if (!event.every || !startDates || startDates.length === 0) {
+      event.cancelled = true;
+      event.alterationTs = nowTs();
+      return;
+    }
+
+    const eventDuration = event.endDate - event.startDate;
+    for (const startDate of startDates) {
+      const id = `${event.recurringId}-${startDate.valueOf()}`;
+      const newEvent = Object.assign({}, event);
+      newEvent.startDate = startDate;
+      newEvent.endDate = new Date(startDate.valueOf() + eventDuration);
+      delete newEvent.every;
+      Object.assign(newEvent, {
+        id,
+        iCalUID: id,
+        serial: this.serial,
+        recurringId: event.recurringId,
+        cancelled: true,
+        alterationTs: nowTs(),
+      });
+
+      // Add these fake events (fake because they've been cancelled).
+      this.events.push(newEvent);
+    }
+  }
+
   getEventsInRange({ start, end, token }) {
     let lastGetTs, serial;
     if (token) {
@@ -516,7 +551,7 @@ class GapiFakeServer extends BaseFakeServer {
           // XXX timeZone fidelity
         },
         // XXX handle tentative
-        status: "confirmed",
+        status: event.cancelled ? "cancelled" : "confirmed",
         summary: event.summary,
         transparency: "opaque",
         updated: backdatedISOString(event.startDate, { days: 6 }),
@@ -703,7 +738,7 @@ class MapiFakeServer extends BaseFakeServer {
         id: event.id,
         importance: "low",
         isAllDay: false,
-        isCancelled: false,
+        isCancelled: event.cancelled,
         isDraft: false,
         isOnlineMeeting: false,
         isOrganizer: false,

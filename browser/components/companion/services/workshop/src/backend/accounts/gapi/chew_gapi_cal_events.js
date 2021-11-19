@@ -178,7 +178,7 @@ export class GapiCalEventChewer {
           this._chewCalAttendee(who)
         );
 
-        const oldInfo = this.oldById.get(eventId);
+        const oldInfo = oldById.get(eventId);
 
         const eventInfo = makeCalendarEventInfo({
           id: eventId,
@@ -225,5 +225,14 @@ export class GapiCalEventChewer {
         logic(this.ctx, "eventChewingError", { ex });
       }
     }
+
+    // Remove the cancelled events.
+    const allExistingEvents = [];
+    for (const event of this.allEvents) {
+      if (this.modifiedEventMap.get(event.id) !== null) {
+        allExistingEvents.push(event);
+      }
+    }
+    this.allEvents = allExistingEvents;
   }
 }
