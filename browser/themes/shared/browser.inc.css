@@ -9,6 +9,12 @@
 %define themeTransition background-color 0.1s cubic-bezier(.17,.67,.83,.67)
 %define urlbarBreakoutExtend 2px
 
+%ifdef PINEBUILD
+* {
+  font-family: "Inter", system-ui;
+}
+%endif
+
 :root {
   --toolbar-bgcolor: var(--toolbar-non-lwt-bgcolor);
   --toolbar-bgimage: var(--toolbar-non-lwt-bgimage);

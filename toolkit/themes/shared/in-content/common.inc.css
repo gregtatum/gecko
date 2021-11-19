@@ -254,6 +254,12 @@
   }
 }
 
+%ifdef PINEBUILD
+* {
+  font-family: "Inter", system-ui;
+}
+%endif
+
 :root {
   font: message-box;
   appearance: none;
