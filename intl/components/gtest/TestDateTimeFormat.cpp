@@ -22,7 +22,8 @@ static UniquePtr<DateTimeFormat> testStyle(
   // Always specify a time zone in the tests, otherwise it will use the system
   // time zone which can vary between test runs.
   auto timeZone = Some(MakeStringSpan(u"GMT+3"));
-  auto gen = DateTimePatternGenerator::TryCreate("en").unwrap();
+  auto gen =
+      DateTimePatternGenerator::TryCreate(MakeStringSpan(aLocale)).unwrap();
   return DateTimeFormat::TryCreateFromStyle(MakeStringSpan(aLocale), aStyleBag,
                                             gen.get(), timeZone)
       .unwrap();
@@ -91,9 +92,10 @@ TEST(IntlDateTimeFormat, Style_enUS_fallback_to_default_styles)
 
 TEST(IntlDateTimeFormat, Skeleton_enUS_utf8_in)
 {
+  Span locale = MakeStringSpan("en-US");
   UniquePtr<DateTimePatternGenerator> gen = nullptr;
   auto dateTimePatternGenerator =
-      DateTimePatternGenerator::TryCreate("en").unwrap();
+      DateTimePatternGenerator::TryCreate(locale).unwrap();
 
   UniquePtr<DateTimeFormat> dtFormat =
       DateTimeFormat::TryCreateFromSkeleton(
@@ -109,9 +111,10 @@ TEST(IntlDateTimeFormat, Skeleton_enUS_utf8_in)
 
 TEST(IntlDateTimeFormat, Skeleton_enUS_utf16_in)
 {
+  Span locale = MakeStringSpan("en-US");
   UniquePtr<DateTimePatternGenerator> gen = nullptr;
   auto dateTimePatternGenerator =
-      DateTimePatternGenerator::TryCreate("en").unwrap();
+      DateTimePatternGenerator::TryCreate(locale).unwrap();
 
   UniquePtr<DateTimeFormat> dtFormat =
       DateTimeFormat::TryCreateFromSkeleton(
@@ -127,7 +130,8 @@ TEST(IntlDateTimeFormat, Skeleton_enUS_utf16_in)
 
 TEST(IntlDateTimeFormat, Time_zone_IANA_identifier)
 {
-  auto gen = DateTimePatternGenerator::TryCreate("en").unwrap();
+  Span locale = MakeStringSpan("en-US");
+  auto gen = DateTimePatternGenerator::TryCreate(locale).unwrap();
 
   DateTimeFormat::StyleBag style;
   style.date = Some(DateTimeFormat::Style::Medium);
@@ -163,7 +167,7 @@ TEST(IntlDateTimeFormat, GetAllowedHourCycles)
 
 TEST(IntlDateTimePatternGenerator, GetBestPattern)
 {
-  auto gen = DateTimePatternGenerator::TryCreate("en").unwrap();
+  auto gen = DateTimePatternGenerator::TryCreate(MakeStringSpan("en")).unwrap();
   TestBuffer<char16_t> buffer;
 
   gen->GetBestPattern(MakeStringSpan(u"yMd"), buffer).unwrap();
@@ -172,7 +176,7 @@ TEST(IntlDateTimePatternGenerator, GetBestPattern)
 
 TEST(IntlDateTimePatternGenerator, GetSkeleton)
 {
-  auto gen = DateTimePatternGenerator::TryCreate("en").unwrap();
+  auto gen = DateTimePatternGenerator::TryCreate(MakeStringSpan("en")).unwrap();
   TestBuffer<char16_t> buffer;
 
   DateTimePatternGenerator::GetSkeleton(MakeStringSpan(u"M/d/y"), buffer)
@@ -182,7 +186,7 @@ TEST(IntlDateTimePatternGenerator, GetSkeleton)
 
 TEST(IntlDateTimePatternGenerator, GetPlaceholderPattern)
 {
-  auto gen = DateTimePatternGenerator::TryCreate("en").unwrap();
+  auto gen = DateTimePatternGenerator::TryCreate(MakeStringSpan("en")).unwrap();
   auto span = gen->GetPlaceholderPattern();
   // The default date-time pattern for 'en' locale is u"{1}, {0}".
   ASSERT_EQ(span, MakeStringSpan(u"{1}, {0}"));
@@ -194,7 +198,7 @@ TEST(IntlDateTimePatternGenerator, GetPlaceholderPattern)
     Span<const char> aLocale = MakeStringSpan("en-US")) {
   UniquePtr<DateTimePatternGenerator> gen = nullptr;
   auto dateTimePatternGenerator =
-      DateTimePatternGenerator::TryCreate(aLocale.data()).unwrap();
+      DateTimePatternGenerator::TryCreate(aLocale).unwrap();
 
   auto dtFormat = DateTimeFormat::TryCreateFromComponents(
       aLocale, aComponents, dateTimePatternGenerator.get(),
@@ -366,7 +370,7 @@ template <typename T>
     Span<const char> aLocale = MakeStringSpan("en-US")) {
   UniquePtr<DateTimePatternGenerator> gen = nullptr;
   auto dateTimePatternGenerator =
-      DateTimePatternGenerator::TryCreate("en").unwrap();
+      DateTimePatternGenerator::TryCreate(MakeStringSpan("en")).unwrap();
   auto dtFormat = DateTimeFormat::TryCreateFromComponents(
       aLocale, aComponentsIn, dateTimePatternGenerator.get(),
       Some(MakeStringSpan(u"GMT+3")));
@@ -484,12 +488,12 @@ TEST(IntlDateTimeFormat, GetOriginalSkeleton)
   components.month = Some(DateTimeFormat::Month::Narrow);
   components.day = Some(DateTimeFormat::Numeric::TwoDigit);
 
-  const char* locale = "zh-Hans-CN";
+  Span<const char> locale = MakeStringSpan("zh-Hans-CN");
   auto dateTimePatternGenerator =
       DateTimePatternGenerator::TryCreate(locale).unwrap();
 
   auto result = DateTimeFormat::TryCreateFromComponents(
-      MakeStringSpan(locale), components, dateTimePatternGenerator.get(),
+      locale, components, dateTimePatternGenerator.get(),
       Some(MakeStringSpan(u"GMT+3")));
   ASSERT_TRUE(result.isOk());
   auto dtFormat = result.unwrap();
@@ -540,8 +544,9 @@ TEST(IntlDateTimeFormat, GetAvailableLocales)
 
 TEST(IntlDateTimeFormat, TryFormatToParts)
 {
+  Span locale = MakeStringSpan("en-US");
   auto dateTimePatternGenerator =
-      DateTimePatternGenerator::TryCreate("en").unwrap();
+      DateTimePatternGenerator::TryCreate(locale).unwrap();
 
   UniquePtr<DateTimeFormat> dtFormat =
       DateTimeFormat::TryCreateFromSkeleton(

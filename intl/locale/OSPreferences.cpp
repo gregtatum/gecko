@@ -155,7 +155,7 @@ bool OSPreferences::GetDateTimePatternForStyle(DateTimeFormatStyle aDateStyle,
   }
 
   auto genResult =
-      DateTimePatternGenerator::TryCreate(PromiseFlatCString(aLocale).get());
+      DateTimePatternGenerator::TryCreate(PromiseFlatCString(aLocale));
   if (genResult.isErr()) {
     return false;
   }
@@ -197,7 +197,7 @@ bool OSPreferences::GetDateTimeSkeletonForStyle(DateTimeFormatStyle aDateStyle,
   }
 
   auto genResult =
-      DateTimePatternGenerator::TryCreate(PromiseFlatCString(aLocale).get());
+      DateTimePatternGenerator::TryCreate(PromiseFlatCString(aLocale));
   if (genResult.isErr()) {
     return false;
   }
@@ -349,7 +349,7 @@ bool OSPreferences::GetPatternForSkeleton(const nsACString& aSkeleton,
   aRetVal.Truncate();
 
   auto genResult =
-      DateTimePatternGenerator::TryCreate(PromiseFlatCString(aLocale).get());
+      DateTimePatternGenerator::TryCreate(PromiseFlatCString(aLocale));
   if (genResult.isErr()) {
     return false;
   }
@@ -388,7 +388,7 @@ bool OSPreferences::GetDateTimeConnectorPattern(const nsACString& aLocale,
   }
 
   auto genResult =
-      DateTimePatternGenerator::TryCreate(PromiseFlatCString(aLocale).get());
+      DateTimePatternGenerator::TryCreate(PromiseFlatCString(aLocale));
   if (genResult.isErr()) {
     return false;
   }

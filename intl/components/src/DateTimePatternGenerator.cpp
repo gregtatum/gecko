@@ -15,7 +15,7 @@ DateTimePatternGenerator::~DateTimePatternGenerator() {
 
 /* static */
 Result<UniquePtr<DateTimePatternGenerator>, ICUError>
-DateTimePatternGenerator::TryCreate(const char* aLocale) {
+DateTimePatternGenerator::TryCreate(Span<const char> aLocale) {
   UErrorCode status = U_ZERO_ERROR;
   UDateTimePatternGenerator* generator =
       udatpg_open(IcuLocale(aLocale), &status);

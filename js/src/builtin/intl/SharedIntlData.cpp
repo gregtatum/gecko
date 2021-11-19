@@ -693,7 +693,8 @@ js::intl::SharedIntlData::getDateTimePatternGenerator(JSContext* cx,
     return dateTimePatternGenerator.get();
   }
 
-  auto result = mozilla::intl::DateTimePatternGenerator::TryCreate(locale);
+  auto result = mozilla::intl::DateTimePatternGenerator::TryCreate(
+      mozilla::MakeStringSpan(locale));
   if (result.isErr()) {
     intl::ReportInternalError(cx, result.unwrapErr());
     return nullptr;
