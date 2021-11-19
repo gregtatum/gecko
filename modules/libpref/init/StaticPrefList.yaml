@@ -1108,7 +1108,7 @@
   mirror: always
 
 - name: browser.display.use_system_colors
-  type: bool
+  type: RelaxedAtomicBool
 #ifdef XP_WIN
   value: true
 #else
@@ -7023,6 +7023,12 @@
   value: false
   mirror: always
 
+# Whether we should avoid exposing styles of elements outside the flat tree in getComputedStyle().
+- name: layout.css.computed-style.styles-outside-flat-tree
+  type: bool
+  value: @IS_NOT_NIGHTLY_BUILD@
+  mirror: always
+
 # Are implicit tracks in computed grid templates serialized?
 - name: layout.css.serialize-grid-implicit-tracks
   type: RelaxedAtomicBool
@@ -8743,7 +8749,7 @@
   mirror: always
 
 - name: media.flac.enabled
-  type: bool
+  type: RelaxedAtomicBool
   value: true
   mirror: always
 

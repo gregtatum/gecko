@@ -525,89 +525,109 @@ nscolor nsXPLookAndFeel::GetStandinForNativeColor(ColorID aID,
     return NS_RGBA(r, g, b, a);
 
   switch (aID) {
-    // CSS 2 colors:
-    COLOR(Activeborder, 0xB4, 0xB4, 0xB4)
-    COLOR(Activecaption, 0x99, 0xB4, 0xD1)
-    COLOR(Appworkspace, 0xAB, 0xAB, 0xAB)
-    COLOR(Background, 0x00, 0x00, 0x00)
-    COLOR(Buttonhighlight, 0xFF, 0xFF, 0xFF)
-    COLOR(Buttonshadow, 0xA0, 0xA0, 0xA0)
+    // These are here for the purposes of headless mode.
+    case ColorID::IMESelectedRawTextBackground:
+    case ColorID::IMESelectedConvertedTextBackground:
+    case ColorID::IMERawInputBackground:
+    case ColorID::IMEConvertedTextBackground:
+      return NS_TRANSPARENT;
+    case ColorID::IMESelectedRawTextForeground:
+    case ColorID::IMESelectedConvertedTextForeground:
+    case ColorID::IMERawInputForeground:
+    case ColorID::IMEConvertedTextForeground:
+      return NS_SAME_AS_FOREGROUND_COLOR;
+    case ColorID::IMERawInputUnderline:
+    case ColorID::IMEConvertedTextUnderline:
+      return NS_40PERCENT_FOREGROUND_COLOR;
+      COLOR(MozAccentColor, 53, 132, 228)
+      COLOR(MozAccentColorForeground, 0xff, 0xff, 0xff)
+      COLOR(SpellCheckerUnderline, 0xff, 0x00, 0x00)
+      COLOR(TextSelectDisabledBackground, 0xaa, 0xaa, 0xaa)
 
-    // Buttons and comboboxes should be kept in sync since they are drawn with
-    // the same colors by the non-native theme.
-    COLOR(Buttonface, 0xe9, 0xe9, 0xed)
-    COLORA(MozButtondisabledface, 0xe9, 0xe9, 0xed, 128)
+      // CSS 2 colors:
+      COLOR(Activeborder, 0xB4, 0xB4, 0xB4)
+      COLOR(Activecaption, 0x99, 0xB4, 0xD1)
+      COLOR(Appworkspace, 0xAB, 0xAB, 0xAB)
+      COLOR(Background, 0x00, 0x00, 0x00)
+      COLOR(Buttonhighlight, 0xFF, 0xFF, 0xFF)
+      COLOR(Buttonshadow, 0xA0, 0xA0, 0xA0)
 
-    COLOR(MozCombobox, 0xe9, 0xe9, 0xed)
+      // Buttons and comboboxes should be kept in sync since they are drawn with
+      // the same colors by the non-native theme.
+      COLOR(Buttonface, 0xe9, 0xe9, 0xed)
+      COLORA(MozButtondisabledface, 0xe9, 0xe9, 0xed, 128)
 
-    COLOR(Buttontext, 0x00, 0x00, 0x00)
-    COLOR(MozComboboxtext, 0x00, 0x00, 0x00)
+      COLOR(MozCombobox, 0xe9, 0xe9, 0xed)
 
-    COLOR(Captiontext, 0x00, 0x00, 0x00)
-    COLOR(Graytext, 0x6D, 0x6D, 0x6D)
-    COLOR(Highlight, 0x33, 0x99, 0xFF)
-    COLOR(Highlighttext, 0xFF, 0xFF, 0xFF)
-    COLOR(Inactiveborder, 0xF4, 0xF7, 0xFC)
-    COLOR(Inactivecaption, 0xBF, 0xCD, 0xDB)
-    COLOR(Inactivecaptiontext, 0x43, 0x4E, 0x54)
-    COLOR(Infobackground, 0xFF, 0xFF, 0xE1)
-    COLOR(Infotext, 0x00, 0x00, 0x00)
-    COLOR(Menu, 0xF0, 0xF0, 0xF0)
-    COLOR(Menutext, 0x00, 0x00, 0x00)
-    COLOR(Scrollbar, 0xC8, 0xC8, 0xC8)
-    COLOR(Threeddarkshadow, 0x69, 0x69, 0x69)
-    COLOR(Threedface, 0xF0, 0xF0, 0xF0)
-    COLOR(Threedhighlight, 0xFF, 0xFF, 0xFF)
-    COLOR(Threedlightshadow, 0xE3, 0xE3, 0xE3)
-    COLOR(Threedshadow, 0xA0, 0xA0, 0xA0)
-    COLOR(Window, 0xFF, 0xFF, 0xFF)
-    COLOR(Windowframe, 0x64, 0x64, 0x64)
-    COLOR(Windowtext, 0x00, 0x00, 0x00)
-    COLOR(MozButtondefault, 0x69, 0x69, 0x69)
-    COLOR(Field, 0xFF, 0xFF, 0xFF)
-    COLORA(MozDisabledfield, 0xFF, 0xFF, 0xFF, 128)
-    COLOR(Fieldtext, 0x00, 0x00, 0x00)
-    COLOR(MozDialog, 0xF0, 0xF0, 0xF0)
-    COLOR(MozDialogtext, 0x00, 0x00, 0x00)
-    COLOR(MozColheadertext, 0x00, 0x00, 0x00)
-    COLOR(MozColheaderhovertext, 0x00, 0x00, 0x00)
-    COLOR(MozDragtargetzone, 0xFF, 0xFF, 0xFF)
-    COLOR(MozCellhighlight, 0xF0, 0xF0, 0xF0)
-    COLOR(MozCellhighlighttext, 0x00, 0x00, 0x00)
-    COLOR(Selecteditem, 0x33, 0x99, 0xFF)
-    COLOR(Selecteditemtext, 0xFF, 0xFF, 0xFF)
-    COLOR(MozButtonhoverface, 0xd0, 0xd0, 0xd7)
-    COLOR(MozButtonhovertext, 0x00, 0x00, 0x00)
-    COLOR(MozButtonactiveface, 0xb1, 0xb1, 0xb9)
-    COLOR(MozButtonactivetext, 0x00, 0x00, 0x00)
-    COLOR(MozMenuhover, 0x33, 0x99, 0xFF)
-    COLOR(MozMenuhovertext, 0x00, 0x00, 0x00)
-    COLOR(MozMenubartext, 0x00, 0x00, 0x00)
-    COLOR(MozMenubarhovertext, 0x00, 0x00, 0x00)
-    COLOR(MozOddtreerow, 0xFF, 0xFF, 0xFF)
-    COLOR(MozMacChromeActive, 0xB2, 0xB2, 0xB2)
-    COLOR(MozMacChromeInactive, 0xE1, 0xE1, 0xE1)
-    COLOR(MozMacFocusring, 0x60, 0x9D, 0xD7)
-    COLOR(MozMacMenuselect, 0x38, 0x75, 0xD7)
-    COLOR(MozMacMenushadow, 0xA3, 0xA3, 0xA3)
-    COLOR(MozMacMenutextdisable, 0x88, 0x88, 0x88)
-    COLOR(MozMacMenutextselect, 0xFF, 0xFF, 0xFF)
-    COLOR(MozMacDisabledtoolbartext, 0x3F, 0x3F, 0x3F)
-    COLOR(MozMacSecondaryhighlight, 0xD4, 0xD4, 0xD4)
-    COLOR(MozMacVibrantTitlebarLight, 0xf7, 0xf7, 0xf7)
-    COLOR(MozMacVibrantTitlebarDark, 0x28, 0x28, 0x28)
-    COLOR(MozMacMenupopup, 0xe6, 0xe6, 0xe6)
-    COLOR(MozMacMenuitem, 0xe6, 0xe6, 0xe6)
-    COLOR(MozMacActiveMenuitem, 0x0a, 0x64, 0xdc)
-    COLOR(MozMacSourceList, 0xf7, 0xf7, 0xf7)
-    COLOR(MozMacSourceListSelection, 0xc8, 0xc8, 0xc8)
-    COLOR(MozMacActiveSourceListSelection, 0x0a, 0x64, 0xdc)
-    COLOR(MozMacTooltip, 0xf7, 0xf7, 0xf7)
-    // Seems to be the default color (hardcoded because of bug 1065998)
-    COLOR(MozWinMediatext, 0xFF, 0xFF, 0xFF)
-    COLOR(MozWinCommunicationstext, 0xFF, 0xFF, 0xFF)
-    COLOR(MozNativehyperlinktext, 0x00, 0x66, 0xCC)
-    COLOR(MozNativevisitedhyperlinktext, 0x55, 0x1A, 0x8B)
+      COLOR(Buttontext, 0x00, 0x00, 0x00)
+      COLOR(MozComboboxtext, 0x00, 0x00, 0x00)
+
+      COLOR(Captiontext, 0x00, 0x00, 0x00)
+      COLOR(Graytext, 0x6D, 0x6D, 0x6D)
+      COLOR(Highlight, 0x33, 0x99, 0xFF)
+      COLOR(Highlighttext, 0xFF, 0xFF, 0xFF)
+      COLOR(Inactiveborder, 0xF4, 0xF7, 0xFC)
+      COLOR(Inactivecaption, 0xBF, 0xCD, 0xDB)
+      COLOR(Inactivecaptiontext, 0x43, 0x4E, 0x54)
+      COLOR(Infobackground, 0xFF, 0xFF, 0xE1)
+      COLOR(Infotext, 0x00, 0x00, 0x00)
+      COLOR(Menu, 0xF0, 0xF0, 0xF0)
+      COLOR(Menutext, 0x00, 0x00, 0x00)
+      COLOR(Scrollbar, 0xC8, 0xC8, 0xC8)
+      COLOR(Threeddarkshadow, 0x69, 0x69, 0x69)
+      COLOR(Threedface, 0xF0, 0xF0, 0xF0)
+      COLOR(Threedhighlight, 0xFF, 0xFF, 0xFF)
+      COLOR(Threedlightshadow, 0xE3, 0xE3, 0xE3)
+      COLOR(Threedshadow, 0xA0, 0xA0, 0xA0)
+      COLOR(Window, 0xFF, 0xFF, 0xFF)
+      COLOR(Windowframe, 0x64, 0x64, 0x64)
+      COLOR(Windowtext, 0x00, 0x00, 0x00)
+      COLOR(MozButtondefault, 0x69, 0x69, 0x69)
+      COLOR(Field, 0xFF, 0xFF, 0xFF)
+      COLORA(MozDisabledfield, 0xFF, 0xFF, 0xFF, 128)
+      COLOR(Fieldtext, 0x00, 0x00, 0x00)
+      COLOR(MozDialog, 0xF0, 0xF0, 0xF0)
+      COLOR(MozDialogtext, 0x00, 0x00, 0x00)
+      COLOR(MozColheadertext, 0x00, 0x00, 0x00)
+      COLOR(MozColheaderhovertext, 0x00, 0x00, 0x00)
+      COLOR(MozDragtargetzone, 0xFF, 0xFF, 0xFF)
+      COLOR(MozCellhighlight, 0xF0, 0xF0, 0xF0)
+      COLOR(MozCellhighlighttext, 0x00, 0x00, 0x00)
+      COLOR(Selecteditem, 0x33, 0x99, 0xFF)
+      COLOR(Selecteditemtext, 0xFF, 0xFF, 0xFF)
+      COLOR(MozButtonhoverface, 0xd0, 0xd0, 0xd7)
+      COLOR(MozButtonhovertext, 0x00, 0x00, 0x00)
+      COLOR(MozButtonactiveface, 0xb1, 0xb1, 0xb9)
+      COLOR(MozButtonactivetext, 0x00, 0x00, 0x00)
+      COLOR(MozMenuhover, 0x33, 0x99, 0xFF)
+      COLOR(MozMenuhovertext, 0x00, 0x00, 0x00)
+      COLOR(MozMenubartext, 0x00, 0x00, 0x00)
+      COLOR(MozMenubarhovertext, 0x00, 0x00, 0x00)
+      COLOR(MozEventreerow, 0xFF, 0xFF, 0xFF)
+      COLOR(MozOddtreerow, 0xFF, 0xFF, 0xFF)
+      COLOR(MozMacChromeActive, 0xB2, 0xB2, 0xB2)
+      COLOR(MozMacChromeInactive, 0xE1, 0xE1, 0xE1)
+      COLOR(MozMacFocusring, 0x60, 0x9D, 0xD7)
+      COLOR(MozMacMenuselect, 0x38, 0x75, 0xD7)
+      COLOR(MozMacMenushadow, 0xA3, 0xA3, 0xA3)
+      COLOR(MozMacMenutextdisable, 0x88, 0x88, 0x88)
+      COLOR(MozMacMenutextselect, 0xFF, 0xFF, 0xFF)
+      COLOR(MozMacDisabledtoolbartext, 0x3F, 0x3F, 0x3F)
+      COLOR(MozMacSecondaryhighlight, 0xD4, 0xD4, 0xD4)
+      COLOR(MozMacVibrantTitlebarLight, 0xf7, 0xf7, 0xf7)
+      COLOR(MozMacVibrantTitlebarDark, 0x28, 0x28, 0x28)
+      COLOR(MozMacMenupopup, 0xe6, 0xe6, 0xe6)
+      COLOR(MozMacMenuitem, 0xe6, 0xe6, 0xe6)
+      COLOR(MozMacActiveMenuitem, 0x0a, 0x64, 0xdc)
+      COLOR(MozMacSourceList, 0xf7, 0xf7, 0xf7)
+      COLOR(MozMacSourceListSelection, 0xc8, 0xc8, 0xc8)
+      COLOR(MozMacActiveSourceListSelection, 0x0a, 0x64, 0xdc)
+      COLOR(MozMacTooltip, 0xf7, 0xf7, 0xf7)
+      // Seems to be the default color (hardcoded because of bug 1065998)
+      COLOR(MozWinMediatext, 0xFF, 0xFF, 0xFF)
+      COLOR(MozWinCommunicationstext, 0xFF, 0xFF, 0xFF)
+      COLOR(MozNativehyperlinktext, 0x00, 0x66, 0xCC)
+      COLOR(MozNativevisitedhyperlinktext, 0x55, 0x1A, 0x8B)
     default:
       break;
   }
@@ -1121,6 +1141,27 @@ void LookAndFeel::RecomputeColorSchemes() {
 
 ColorScheme LookAndFeel::ColorSchemeForStyle(
     const dom::Document& aDoc, const StyleColorSchemeFlags& aFlags) {
+  if (PreferenceSheet::MayForceColors()) {
+    auto& prefs = PreferenceSheet::PrefsFor(aDoc);
+    if (!prefs.mUseDocumentColors) {
+      // When forcing colors, we can use our preferred color-scheme. Do this
+      // only if we're using system colors, as dark preference colors are not
+      // exposed on the UI.
+      //
+      // Also, use light if we're using a high-contrast-theme on Windows, since
+      // Windows overrides the light colors with HCM colors when HCM is active.
+#ifdef XP_WIN
+      if (prefs.mUseAccessibilityTheme) {
+        return ColorScheme::Light;
+      }
+#endif
+      if (StaticPrefs::browser_display_use_system_colors()) {
+        return aDoc.PreferredColorScheme();
+      }
+      return ColorScheme::Light;
+    }
+  }
+
   StyleColorSchemeFlags style(aFlags);
   if (!style) {
     style.bits = aDoc.GetColorSchemeBits();

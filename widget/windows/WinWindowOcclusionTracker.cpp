@@ -86,16 +86,16 @@ class OcclusionUpdateRunnable : public CancelableRunnable {
 
 class UpdateOcclusionStateRunnable : public Runnable {
  public:
-  UpdateOcclusionStateRunnable(
-      ThreadSafeWeakPtr<WinWindowOcclusionTracker> aOcclusionTracker,
-      std::unordered_map<HWND, OcclusionState>* aMap, bool aShowAllWindows)
+  UpdateOcclusionStateRunnable(std::unordered_map<HWND, OcclusionState>* aMap,
+                               bool aShowAllWindows)
       : Runnable("UpdateOcclusionStateRunnable"),
-        mOcclusionTracker(aOcclusionTracker),
         mMap(aMap),
         mShowAllWindows(aShowAllWindows) {}
 
   NS_IMETHOD Run() override {
-    auto tracker = RefPtr<WinWindowOcclusionTracker>(mOcclusionTracker);
+    MOZ_ASSERT(NS_IsMainThread());
+
+    auto* tracker = WinWindowOcclusionTracker::Get();
     if (tracker) {
       tracker->UpdateOcclusionState(mMap, mShowAllWindows);
     }
@@ -103,7 +103,6 @@ class UpdateOcclusionStateRunnable : public Runnable {
   }
 
  private:
-  ThreadSafeWeakPtr<WinWindowOcclusionTracker> mOcclusionTracker;
   std::unordered_map<HWND, OcclusionState>* const mMap;
   const bool mShowAllWindows;
 };
@@ -334,7 +333,7 @@ already_AddRefed<SerializedRunnable> SerializedTaskDispatcher::GetNextTask(
 StaticRefPtr<WinWindowOcclusionTracker> WinWindowOcclusionTracker::sTracker;
 
 /* static */
-RefPtr<WinWindowOcclusionTracker> WinWindowOcclusionTracker::Get() {
+WinWindowOcclusionTracker* WinWindowOcclusionTracker::Get() {
   MOZ_ASSERT(NS_IsMainThread());
   return sTracker;
 }
@@ -762,9 +761,8 @@ WinWindowOcclusionTracker::WindowOcclusionCalculator::
   MOZ_ASSERT(NS_IsMainThread());
   LOG(LogLevel::Info, "WindowOcclusionCalculator()");
 
-  auto tracker = WinWindowOcclusionTracker::Get();
-  mSerializedTaskDispatcher = tracker->GetSerializedTaskDispatcher();
-  mOcclusionTracker = ThreadSafeWeakPtr<WinWindowOcclusionTracker>(tracker);
+  mSerializedTaskDispatcher =
+      WinWindowOcclusionTracker::Get()->GetSerializedTaskDispatcher();
 }
 
 WinWindowOcclusionTracker::WindowOcclusionCalculator::
@@ -917,10 +915,15 @@ void WinWindowOcclusionTracker::WindowOcclusionCalculator::
   // Compute the LayoutDeviceIntRegion for the screen.
   int screenLeft = ::GetSystemMetrics(SM_XVIRTUALSCREEN);
   int screenTop = ::GetSystemMetrics(SM_YVIRTUALSCREEN);
-  LayoutDeviceIntRegion screenRegion = LayoutDeviceIntRect(
-      screenLeft, screenTop, GetSystemMetrics(SM_CXVIRTUALSCREEN),
-      GetSystemMetrics(SM_CYVIRTUALSCREEN));
+  int screenWidth = ::GetSystemMetrics(SM_CXVIRTUALSCREEN);
+  int screenHeight = ::GetSystemMetrics(SM_CYVIRTUALSCREEN);
+  LayoutDeviceIntRegion screenRegion =
+      LayoutDeviceIntRect(screenLeft, screenTop, screenWidth, screenHeight);
   mNumRootWindowsWithUnknownOcclusionState = 0;
+
+  CALC_LOG(LogLevel::Debug,
+           "ComputeNativeWindowOcclusionStatus() screen(%d, %d, %d, %d)",
+           screenLeft, screenTop, screenWidth, screenHeight);
 
   for (auto& [hwnd, state] : mRootWindowHwndsOcclusionState) {
     // IsIconic() checks for a minimized window. Immediately set the state of
@@ -984,7 +987,7 @@ void WinWindowOcclusionTracker::WindowOcclusionCalculator::
   }
 
   RefPtr<Runnable> runnable = new UpdateOcclusionStateRunnable(
-      mOcclusionTracker, &mRootWindowHwndsOcclusionState, mShowingThumbnails);
+      &mRootWindowHwndsOcclusionState, mShowingThumbnails);
   mSerializedTaskDispatcher->PostTaskToMain(runnable.forget());
 }
 
@@ -1120,6 +1123,12 @@ bool WinWindowOcclusionTracker::WindowOcclusionCalculator::
     return true;
   }
 
+  CALC_LOG(LogLevel::Debug,
+           "ProcessComputeNativeWindowOcclusionStatusCallback() windowRect(%d, "
+           "%d, %d, %d) IsOccluding %d",
+           windowRect.x, windowRect.y, windowRect.width, windowRect.height,
+           windowIsOccluding);
+
   // On Win7, default theme makes root windows have complex regions by
   // default. But we can still check if their bounding rect is occluded.
   if (!windowIsOccluding) {
@@ -1194,8 +1203,7 @@ void WinWindowOcclusionTracker::WindowOcclusionCalculator::
         mShowingThumbnails = true;
 
         RefPtr<Runnable> runnable = new UpdateOcclusionStateRunnable(
-            mOcclusionTracker, &mRootWindowHwndsOcclusionState,
-            mShowingThumbnails);
+            &mRootWindowHwndsOcclusionState, mShowingThumbnails);
         mSerializedTaskDispatcher->PostTaskToMain(runnable.forget());
       }
     }
