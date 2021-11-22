@@ -736,10 +736,19 @@ class CompanionParent extends JSWindowActorParent {
           globalHistory,
         });
 
-        let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
+        let {
+          gBrowser,
+          gGlobalHistory,
+        } = this.browsingContext.top.embedderElement.ownerGlobal;
         this.snapshotSelector = new SnapshotSelector({
           count: 5,
           filterAdult: true,
+          selectOverlappingVisits: Services.prefs.getBoolPref(
+            "browser.pinebuild.snapshots.relevancy.enabled",
+            false
+          ),
+          getCurrentSessionUrls: () =>
+            new Set(gGlobalHistory.views.map(view => view.url)),
         });
         this.snapshotSelector.setUrlAndRebuildNow(gBrowser.currentURI.spec);
 
