@@ -381,6 +381,12 @@ const HistoryCarousel = {
     this.scrubber.value = index;
     this.previousBtn.toggleAttribute("disabled", index == 0);
     this.nextBtn.toggleAttribute("disabled", index == this.totalPreviews - 1);
+    document.dispatchEvent(
+      new CustomEvent("HistoryCarouselIndexUpdated", {
+        bubbles: true,
+        detail: index,
+      })
+    );
   },
 
   /**
@@ -405,6 +411,10 @@ const HistoryCarousel = {
         }
         this.kickTaskQueue();
       });
+    } else {
+      document.dispatchEvent(
+        new CustomEvent("HistoryCarouselReady", { bubbles: true })
+      );
     }
   },
 
