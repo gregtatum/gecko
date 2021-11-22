@@ -33,7 +33,8 @@
 #include "js/Transcoding.h"             // JS::TranscodeBuffer
 #include "js/Value.h"                   // ObjectValue
 #include "js/WasmModule.h"              // JS::WasmModule
-#include "vm/BindingKind.h"             // BindingKind
+#include "vm/BigIntType.h"   // ParseBigIntLiteral, BigIntLiteralIsZero
+#include "vm/BindingKind.h"  // BindingKind
 #include "vm/EnvironmentObject.h"
 #include "vm/GeneratorAndAsyncKind.h"  // GeneratorKind, FunctionAsyncKind
 #include "vm/HelperThreads.h"          // js::StartOffThreadParseScript
@@ -46,8 +47,9 @@
 #include "vm/Printer.h"       // js::Fprinter
 #include "vm/RegExpObject.h"  // js::RegExpObject
 #include "vm/Scope.h"  // Scope, *Scope, ScopeKind::*, ScopeKindString, ScopeIter, ScopeKindIsCatch, BindingIter, GetScopeDataTrailingNames
-#include "vm/ScopeKind.h"     // ScopeKind
-#include "vm/SelfHosting.h"   // SetClonedSelfHostedFunctionName
+#include "vm/ScopeKind.h"    // ScopeKind
+#include "vm/SelfHosting.h"  // SetClonedSelfHostedFunctionName
+#include "vm/StaticStrings.h"
 #include "vm/StencilEnums.h"  // ImmutableScriptFlagsEnum
 #include "vm/StringType.h"    // JSAtom, js::CopyChars
 #include "vm/Xdr.h"  // XDRMode, XDRResult, XDRStencilEncoder, XDRStencilDecoder
@@ -1424,20 +1426,10 @@ static bool InstantiateScriptSourceObject(JSContext* cx,
     return false;
   }
 
-  // Off-thread compilations do all their GC heap allocation, including the
-  // SSO, in a temporary compartment. Hence, for the SSO to refer to the
-  // gc-heap-allocated values in |options|, it would need cross-compartment
-  // wrappers from the temporary compartment to the real compartment --- which
-  // would then be inappropriate once we merged the temporary and real
-  // compartments.
-  //
-  // Instead, we put off populating those SSO slots in off-thread compilations
-  // until after we've merged compartments.
-  if (!cx->isHelperThreadContext()) {
-    Rooted<ScriptSourceObject*> sourceObject(cx, gcOutput.sourceObject);
-    if (!ScriptSourceObject::initFromOptions(cx, sourceObject, options)) {
-      return false;
-    }
+  MOZ_ASSERT(!cx->isHelperThreadContext());
+  Rooted<ScriptSourceObject*> sourceObject(cx, gcOutput.sourceObject);
+  if (!ScriptSourceObject::initFromOptions(cx, sourceObject, options)) {
+    return false;
   }
 
   return true;
@@ -1678,12 +1670,9 @@ static bool InstantiateTopLevel(JSContext* cx, CompilationInput& input,
       return false;
     }
 
-    // Off-thread compilation with parseGlobal will freeze the module object
-    // in GlobalHelperThreadState::finishSingleParseTask instead.
-    if (!cx->isHelperThreadContext()) {
-      if (!ModuleObject::Freeze(cx, module)) {
-        return false;
-      }
+    MOZ_ASSERT(!cx->isHelperThreadContext());
+    if (!ModuleObject::Freeze(cx, module)) {
+      return false;
     }
   }
 
@@ -2762,6 +2751,16 @@ bool BigIntStencil::init(JSContext* cx, LifoAlloc& alloc,
   mozilla::PodCopy(p, buf.data(), length);
   source_ = mozilla::Span(p, length);
   return true;
+}
+
+BigInt* BigIntStencil::createBigInt(JSContext* cx) const {
+  mozilla::Range<const char16_t> source(source_.data(), source_.size());
+  return js::ParseBigIntLiteral(cx, source);
+}
+
+bool BigIntStencil::isZero() const {
+  mozilla::Range<const char16_t> source(source_.data(), source_.size());
+  return js::BigIntLiteralIsZero(source);
 }
 
 #ifdef DEBUG

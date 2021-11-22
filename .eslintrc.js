@@ -249,7 +249,6 @@ module.exports = {
       rules: {
         "mozilla/no-arbitrary-setTimeout": "off",
         "mozilla/no-define-cc-etc": "off",
-        "mozilla/use-services": "off",
         "consistent-return": "off",
         "no-eval": "off",
         "no-global-assign": "off",
@@ -581,7 +580,6 @@ module.exports = {
         "toolkit/mozapps/extensions/test/xpcshell/test_permissions_prefs.js",
         "toolkit/mozapps/extensions/test/xpcshell/test_signed_updatepref.js",
         "toolkit/mozapps/extensions/test/xpcshell/test_signed_verify.js",
-        "toolkit/mozapps/extensions/test/xpcshell/test_webextension.js",
         "toolkit/mozapps/extensions/test/xpcshell/test_webextension_events.js",
         "toolkit/mozapps/extensions/test/xpcshell/test_XPIStates.js",
       ],

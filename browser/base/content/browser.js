@@ -8080,12 +8080,12 @@ var WebAuthnPromptHelper = {
       checkbox: {
         label: gNavigatorBundle.getString("webauthn.anonymize"),
       },
+      hintText: "webauthn.registerDirectPromptHint",
     };
-
     this.show(
       tid,
       "register-direct",
-      "webauthn.registerDirectPrompt2",
+      "webauthn.registerDirectPrompt3",
       origin,
       mainAction,
       secondaryActions,
@@ -8118,11 +8118,15 @@ var WebAuthnPromptHelper = {
     let brandShortName = document
       .getElementById("bundle_brand")
       .getString("brandShortName");
-    let message = gNavigatorBundle.getFormattedString(
-      stringId,
-      ["<>", brandShortName],
-      1
-    );
+    let message = gNavigatorBundle.getFormattedString(stringId, [
+      "<>",
+      brandShortName,
+    ]);
+    if (options.hintText) {
+      options.hintText = gNavigatorBundle.getFormattedString(options.hintText, [
+        brandShortName,
+      ]);
+    }
 
     options.name = origin;
     options.hideClose = true;
@@ -10058,7 +10062,6 @@ var ConfirmationHint = {
    * @param  options (object, optional)
    *         An object with the following optional properties:
    *         - event (DOM event): The event that triggered the feedback.
-   *         - hideArrow (boolean): Optionally hide the arrow.
    *         - showDescription (boolean): show description text (confirmationHint.<messageId>.description)
    *         - position (string): Optional position string for the hint. Defaults to "bottomcenter topleft".
    *         - rect (DOMRect): Rectangle for an out-of-process element to anchor on. This is only used if the
@@ -10080,10 +10083,6 @@ var ConfirmationHint = {
     } else {
       this._description.hidden = true;
       this._panel.classList.remove("with-description");
-    }
-
-    if (options.hideArrow) {
-      this._panel.setAttribute("hidearrow", "true");
     }
 
     this._panel.setAttribute("data-message-id", messageId);
@@ -10139,7 +10138,6 @@ var ConfirmationHint = {
       this._timerID = null;
     }
     if (this.__panel) {
-      this._panel.removeAttribute("hidearrow");
       this._animationBox.removeAttribute("animate");
       this._panel.removeAttribute("data-message-id");
     }

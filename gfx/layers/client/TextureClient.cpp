@@ -263,9 +263,8 @@ static TextureType GetTextureType(gfx::SurfaceFormat aFormat,
 
 #ifdef XP_WIN
   int32_t maxTextureSize = aKnowsCompositor->GetMaxTextureSize();
-  if ((layersBackend == LayersBackend::LAYERS_D3D11 ||
-       (layersBackend == LayersBackend::LAYERS_WR &&
-        !aKnowsCompositor->UsingSoftwareWebRender())) &&
+  if ((layersBackend == LayersBackend::LAYERS_WR &&
+       !aKnowsCompositor->UsingSoftwareWebRender()) &&
       (moz2DBackend == gfx::BackendType::DIRECT2D ||
        moz2DBackend == gfx::BackendType::DIRECT2D1_1 ||
        (!!(aAllocFlags & ALLOC_FOR_OUT_OF_BAND_CONTENT))) &&
@@ -276,9 +275,8 @@ static TextureType GetTextureType(gfx::SurfaceFormat aFormat,
 #endif
 
 #ifdef MOZ_WAYLAND
-  if ((layersBackend == LayersBackend::LAYERS_OPENGL ||
-       (layersBackend == LayersBackend::LAYERS_WR &&
-        !aKnowsCompositor->UsingSoftwareWebRender())) &&
+  if ((layersBackend == LayersBackend::LAYERS_WR &&
+       !aKnowsCompositor->UsingSoftwareWebRender()) &&
       widget::GetDMABufDevice()->IsDMABufTexturesEnabled() &&
       aFormat != SurfaceFormat::A8) {
     return TextureType::DMABUF;
@@ -1206,8 +1204,7 @@ already_AddRefed<TextureClient> TextureClient::CreateFromSurface(
 
   int32_t maxTextureSize = aAllocator->GetMaxTextureSize();
 
-  if ((layersBackend == LayersBackend::LAYERS_D3D11 ||
-       layersBackend == LayersBackend::LAYERS_WR) &&
+  if (layersBackend == LayersBackend::LAYERS_WR &&
       (moz2DBackend == gfx::BackendType::DIRECT2D ||
        moz2DBackend == gfx::BackendType::DIRECT2D1_1 ||
        (!!(aAllocFlags & ALLOC_FOR_OUT_OF_BAND_CONTENT) &&

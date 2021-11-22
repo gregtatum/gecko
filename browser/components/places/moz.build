@@ -24,6 +24,7 @@ EXTRA_JS_MODULES += [
     "PlacesUIUtils.jsm",
     "SessionManager.jsm",
     "Snapshots.jsm",
+    "SnapshotScorer.jsm",
     "SnapshotSelector.jsm",
 ]
 

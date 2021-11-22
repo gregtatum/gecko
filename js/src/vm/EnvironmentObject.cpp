@@ -195,8 +195,7 @@ CallObject* CallObject::create(JSContext* cx, AbstractFramePtr frame) {
         continue;
       }
       callobj->setAliasedBinding(
-          cx, fi,
-          frame.unaliasedFormal(fi.argumentSlot(), DONT_CHECK_ALIASING));
+          fi, frame.unaliasedFormal(fi.argumentSlot(), DONT_CHECK_ALIASING));
     }
   }
 
@@ -462,11 +461,6 @@ bool ModuleEnvironmentObject::lookupImport(
     jsid name, ModuleEnvironmentObject** envOut,
     mozilla::Maybe<PropertyInfo>* propOut) {
   return importBindings().lookup(name, envOut, propOut);
-}
-
-void ModuleEnvironmentObject::fixEnclosingEnvironmentAfterRealmMerge(
-    GlobalObject& global) {
-  setEnclosingEnvironment(&global.lexicalEnvironment());
 }
 
 /* static */

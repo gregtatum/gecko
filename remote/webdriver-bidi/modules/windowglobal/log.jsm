@@ -14,6 +14,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   Services: "resource://gre/modules/Services.jsm",
 
   Module: "chrome://remote/content/shared/messagehandler/Module.jsm",
+  serialize: "chrome://remote/content/webdriver-bidi/RemoteValue.jsm",
 });
 
 class Log extends Module {
@@ -31,10 +32,20 @@ class Log extends Module {
   }
 
   /**
-   * Commands
+   * Private methods
    */
-  _subscribeEvent(params) {
-    if (params.event === "log.entryAdded") {
+  _applySessionData(params) {
+    // TODO: Bug 1741861. Move this logic to a shared module or the an abstract
+    // class.
+    if (params.category === "event") {
+      for (const event of params.values) {
+        this._subscribeEvent(event);
+      }
+    }
+  }
+
+  _subscribeEvent(event) {
+    if (event === "log.entryAdded") {
       Services.obs.addObserver(
         this._onConsoleAPILogEvent,
         "console-api-log-event"
@@ -78,12 +89,11 @@ class Log extends Module {
     const args = messageObject.arguments || [];
     text += args.map(String).join(" ");
 
-    // 6. Start building the serialized args
+    // Step 6 and 7: Serialize each arg as remote value.
     const serializedArgs = [];
-
-    // 7. Add the string representation of all arguments to serializedArgs.
-    // TODO: again, for m1 we only support string arguments.
-    args.forEach(arg => serializedArgs.push(String(arg)));
+    for (const arg of args) {
+      serializedArgs.push(serialize(arg /*, null, true, new Set() */));
+    }
 
     // 8. TODO: set realm to the current realm id.
 

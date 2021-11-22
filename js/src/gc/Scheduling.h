@@ -784,15 +784,6 @@ class HeapSize {
       parent_->removeBytes(nbytes, wasSwept);
     }
   }
-
-  /* Pair to adoptArenas. Adopts the attendant usage statistics. */
-  void adopt(HeapSize& source) {
-    // Skip retainedBytes_: we never adopt zones that are currently being
-    // collected.
-    bytes_ += source.bytes_;
-    source.retainedBytes_ = 0;
-    source.bytes_ = 0;
-  }
 };
 
 // Heap size thresholds used to trigger GC. This is an abstract base class for
@@ -826,7 +817,8 @@ class HeapThreshold {
   size_t incrementalBytesRemaining(const HeapSize& heapSize) const;
 
   void setSliceThreshold(ZoneAllocator* zone, const HeapSize& heapSize,
-                         const GCSchedulingTunables& tunables);
+                         const GCSchedulingTunables& tunables,
+                         bool waitingOnBGTask);
   void clearSliceThreshold() { sliceBytes_ = SIZE_MAX; }
   bool hasSliceThreshold() const { return sliceBytes_ != SIZE_MAX; }
 

@@ -14,8 +14,6 @@ ChromeUtils.defineModuleGetter(
 const DEFAULT_THEME_ID = AppConstants.PINEBUILD
   ? "firefox-compact-light@mozilla.org"
   : "default-theme@mozilla.org";
-const LIGHT_THEME_ID = "firefox-compact-light@mozilla.org";
-const DARK_THEME_ID = "firefox-compact-dark@mozilla.org";
 
 // Get the theme variables from the app resource directory.
 // This allows per-app variables.
@@ -294,12 +292,6 @@ LightweightThemeConsumer.prototype = {
       root.removeAttribute("lwtheme-image");
     }
 
-    root.toggleAttribute(
-      "lwtheme-mozlightdark",
-      theme.id == DEFAULT_THEME_ID ||
-        theme.id == LIGHT_THEME_ID ||
-        theme.id == DARK_THEME_ID
-    );
     this._setExperiment(active, themeData.experiment, theme.experimental);
     _setImage(this._win, root, active, "--lwt-header-image", theme.headerURL);
     _setImage(
@@ -438,14 +430,15 @@ function _determineToolbarAndContentTheme(aDoc, aTheme) {
     if (!aColor) {
       return 2;
     }
-    return _isColorDark(aColor.r, aColor.g, aColor.b) ? 0 : 1;
+    return _isColorDark(aColor.r, aColor.g, aColor.b) ? 1 : 0;
   }
 
+  // Fall back to black as textcolor processing does above.
   let toolbarColor = _cssColorToRGBA(
     aDoc,
-    aTheme?.toolbarColor || aTheme?.accentcolor
+    aTheme ? aTheme.toolbar_text || aTheme.textcolor || "black" : null
   );
-  let contentColor = _cssColorToRGBA(aDoc, aTheme?.ntp_background);
+  let contentColor = _cssColorToRGBA(aDoc, aTheme?.ntp_text);
   Services.prefs.setIntPref(
     "browser.theme.toolbar-theme",
     AppConstants.PINEBUILD ? 1 : prefValue(toolbarColor)
