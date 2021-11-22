@@ -200,7 +200,12 @@ var PinebuildTestUtils = {
    * @resolves With the ViewChanged event that fired after setting the View.
    */
   async setCurrentView(view, win = window) {
-    let viewChangedPromise = this.waitForSelectedView(view, win);
+    let viewChangedPromise = BrowserTestUtils.waitForEvent(
+      win.gGlobalHistory,
+      "ViewChanged",
+      false,
+      event => event.view == view
+    );
     let viewUpdatedPromise = BrowserTestUtils.waitForEvent(
       win.gGlobalHistory,
       "ViewUpdated",
@@ -210,24 +215,6 @@ var PinebuildTestUtils = {
     win.gGlobalHistory.setView(view);
     await Promise.all([viewUpdatedPromise, viewChangedPromise]);
     return viewChangedPromise;
-  },
-
-  /**
-   * Waits for a particular View to be made current in GlobalHistory.
-   *
-   * @param {View} view The View that is expected to become current.
-   * @param {Window?} win
-   *   The window to the view is from, the current window is used by default
-   * @return {Promise}
-   * @resolves With the ViewChanged event that fired after setting the View.
-   */
-  waitForSelectedView(view, win = window) {
-    return BrowserTestUtils.waitForEvent(
-      win.gGlobalHistory,
-      "ViewChanged",
-      false,
-      event => event.view == view
-    );
   },
 
   /**
@@ -526,173 +513,5 @@ var PinebuildTestUtils = {
     await sessionSetAside;
     await sessionReplaced;
     await flowResetLoaded;
-  },
-
-  /**
-   * Enters the history carousel for a particular window.
-   *
-   * @param {Window?} win
-   *   The window to open the history carousel in. Defaults to the current
-   *   window.
-   * @return {Promise}
-   * @resolves {Element}
-   *   Resolves with the <browser> element hosting the about:historycarousel
-   *   document once it has fired the event declaring itself as "ready".
-   */
-  async enterHistoryCarousel(win = window) {
-    let tabPromise = BrowserTestUtils.waitForNewTab(
-      win.gBrowser,
-      "about:historycarousel"
-    );
-    let entered = win.gGlobalHistory.showHistoryCarousel(true);
-    let tab = await tabPromise;
-    let ready = BrowserTestUtils.waitForContentEvent(
-      tab.linkedBrowser,
-      "HistoryCarouselReady"
-    );
-    await Promise.all([entered, ready]);
-    return tab.linkedBrowser;
-  },
-
-  /**
-   * Exits the history carousel for a particular window.
-   *
-   * @param {Window?} win
-   *   The window to open the history carousel in. Defaults to the current
-   *   window.
-   * @return {Promise}
-   * @resolves {undefined}
-   *   Resolves once the about:historycarousel document has been torn down
-   *   and the current View is staged.
-   */
-  async exitHistoryCarousel(win = window) {
-    await win.gGlobalHistory.showHistoryCarousel(false);
-  },
-
-  /**
-   * @typedef {object} HistoryCarouselPreview
-   *   An object describing an individual preview hosted in
-   *   about:historycarousel.
-   * @property {string} title
-   *   The title rendered for the preview in the <caption> element.
-   * @property {string} titleTooltip
-   *   The tooltip shown to the user when they hover the <caption> element.
-   * @property {string} iconURL
-   *   The URL for the favicon shown next to the title.
-   * @property {boolean} hasBlob
-   *   True if the preview is showing the <img> displaying a Blob URL.
-   * @property {boolean} hasWireframe
-   *   True if the preview is showing an <svg> wireframe for an unloaded
-   *   page.
-   */
-
-  /**
-   * @typedef {object} HistoryCarouselPreviewsData
-   *   An object describing the previews shown in about:historycarousel.
-   * @property {number} currentIndex
-   *   The currently selected index within the carousel.
-   * @property {HistoryCarouselPreview[]} previews
-   *   An array of HistoryCarouselPreview objects describing each preview.
-   */
-
-  /**
-   * Reaches into a <browser> element hosting an about:historycarousel
-   * document, and returns information about the previews that its showing.
-   *
-   * @param {Element} browser
-   *   The <browser> element hosting the about:historycarousel document.
-   * @return {Promise}
-   * @resolves {HistoryCarouselPreviewsData}
-   *   Resolves with an object describing the previews being shown in the
-   *   history carousel.
-   */
-  async getHistoryCarouselPreviews(browser) {
-    return SpecialPowers.spawn(browser, [], async () => {
-      let previewEls = Array.from(content.document.querySelectorAll("li"));
-      let previews = previewEls.map(p => {
-        let faviconSrc = p.querySelector(".favicon").src;
-        let iconURL = faviconSrc == "null" ? null : faviconSrc;
-
-        return {
-          title: p.querySelector(".caption").textContent,
-          titleTooltip: p.querySelector(".caption").title,
-          iconURL,
-          hasBlob: p.querySelector(".preview-image").src.startsWith("blob:"),
-          hasWireframe: !!p.querySelector("svg"),
-        };
-      });
-      let currentPreview = content.document.querySelector("li[current]");
-      let currentIndex = previewEls.indexOf(currentPreview);
-      return {
-        previews,
-        currentIndex,
-      };
-    });
-  },
-
-  /**
-   * Reaches into a <browser> element hosting an about:historycarousel
-   * document, simulates scrolling to a preview at a particular index.
-   *
-   * @param {Element} browser
-   *   The <browser> element hosting the about:historycarousel document.
-   * @param {number} previewIndex
-   *   The index of the preview to scroll to.
-   * @return {Promise}
-   * @resolves {undefined}
-   *   Resolves once both GlobalHistory and the history carousel have
-   *   acknowledged that the current preview index has changed.
-   */
-  async selectHistoryCarouselIndex(browser, previewIndex) {
-    let waitForSelectionChange = this.waitForSelectedHistoryCarouselIndex(
-      browser,
-      previewIndex
-    );
-    await SpecialPowers.spawn(browser, [previewIndex], async index => {
-      let previewEls = Array.from(content.document.querySelectorAll("li"));
-      let previewEl = previewEls[index];
-      previewEl.scrollIntoView({ behavior: "instant", inline: "center" });
-    });
-    await waitForSelectionChange;
-  },
-
-  /**
-   * Waits for the about:historycarousel document hosted in browser to
-   * set a particular preview as selected, meaning that it's scrolled
-   * into the center of the viewport.
-   *
-   * @param {Element} browser
-   *   The <browser> element hosting the about:historycarousel document.
-   * @param {number} previewIndex
-   *   The index of the preview that is expected to be selected.
-   * @return {Promise}
-   * @resolves {undefined}
-   *   Resolves once both GlobalHistory and the history carousel have
-   *   acknowledged that the current preview index has changed.
-   */
-  async waitForSelectedHistoryCarouselIndex(browser, previewIndex) {
-    await SpecialPowers.spawn(browser, [previewIndex], async index => {
-      let previewEls = Array.from(content.document.querySelectorAll("li"));
-      let oldSelectedPreview = content.document.querySelector("li[current]");
-      Assert.notEqual(
-        index,
-        previewEls.indexOf(oldSelectedPreview),
-        "Selected index wasn't initially the current one."
-      );
-      await ContentTaskUtils.waitForEvent(
-        content,
-        "HistoryCarouselIndexUpdated",
-        false,
-        e => e.detail == index
-      );
-
-      let newSelectedPreview = content.document.querySelector("li[current]");
-      Assert.notEqual(oldSelectedPreview, newSelectedPreview);
-      Assert.equal(
-        previewEls.indexOf(newSelectedPreview),
-        index,
-        "Selected preview element has the right index."
-      );
-    });
   },
 };
