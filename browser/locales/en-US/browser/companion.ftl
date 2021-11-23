@@ -142,6 +142,12 @@ addons-unsupported = { -brand-short-name } does not support this extension.
 snapshot-dont-show = Don’t show again
 snapshot-not-relevant = Not relevant
 
+# The list of sections in the browse tab of the companion.
+browse-list-sessions = Sessions
+
+# Title of the Sessions section.
+session-section-header = Sessions
+
 # The title of the tab buttons at the top of the companion.
 companion-deck-now = Now
 companion-deck-browse = Browse

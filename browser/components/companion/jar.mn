@@ -49,6 +49,7 @@ browser.jar:
     content/browser/companion/service-utils.js (content/service-utils.js)
     content/browser/companion/sessions.css (content/sessions.css)
     content/browser/companion/sessions.js (content/sessions.js)
+    content/browser/companion/sessions.svg (content/sessions.svg)
     content/browser/companion/siteSecurity.js (content/siteSecurity.js)
     content/browser/companion/snapshots.js (content/snapshots.js)
     content/browser/companion/next.svg (content/next.svg)
