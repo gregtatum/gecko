@@ -443,7 +443,7 @@ nsAppStartup::Quit(uint32_t aMode, int aExitCode, bool* aUserAllowedQuit) {
     bool backgroundApplication = false;
 #if defined(XP_MACOSX) && defined(PINEBUILD)
     if (ferocity == eAttemptQuit && !mAttemptingQuit &&
-        mHaveBackgroundMenubarIcon) {
+        !mozilla::AppShutdown::IsRestarting() && mHaveBackgroundMenubarIcon) {
       SetActivationPolicyToAccessory();
       backgroundApplication = true;
     }
