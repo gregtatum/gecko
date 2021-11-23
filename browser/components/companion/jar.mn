@@ -27,6 +27,7 @@ browser.jar:
     content/browser/companion/mozsocial.png (content/mozsocial.png)
     content/browser/companion/mute.svg (content/mute.svg)
     content/browser/companion/muted.svg (content/muted.svg)
+    content/browser/companion/notifications.js (content/notifications.js)
     content/browser/companion/onboarding-services.js (content/onboarding-services.js)
     content/browser/companion/firefoxParentBrand.png (content/firefoxParentBrand.png)
     content/browser/companion/onboarding.css (content/onboarding.css)

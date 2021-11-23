@@ -971,6 +971,17 @@ class CompanionParent extends JSWindowActorParent {
         );
         break;
       }
+      case "Companion:Open": {
+        let win = this.browsingContext.topChromeWindow;
+        let companion = win.document.getElementById("companion-box");
+        if (!companion.isOpen) {
+          companion.toggleVisible();
+        }
+        break;
+      }
+      case "Companion:IsActiveWindow": {
+        return !!Services.focus.activeWindow;
+      }
     }
     return null;
   }

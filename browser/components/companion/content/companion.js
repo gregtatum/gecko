@@ -13,6 +13,7 @@ import {
   RecentlyClosedSnapshotList,
 } from "./snapshots.js";
 import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
+import { initNotifications, uninitNotifications } from "./notifications.js";
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 // Helper to open a URL in the main browser pane.
@@ -87,6 +88,8 @@ function maybeInitializeUI() {
 
   initSessionUI();
 
+  initNotifications();
+
   // This is used for tests to ensure that the various components have initialized.
   // If your component has delayed initialization, then you will want to add something
   // to wait for it here.
@@ -137,6 +140,7 @@ window.addEventListener(
 
 window.addEventListener("unload", () => {
   window.CompanionUtils.removePrefObserver(DEBUG_PREF, toggleDebug);
+  uninitNotifications();
 });
 
 document.dispatchEvent(new CustomEvent("CompanionInit", { bubbles: true }));

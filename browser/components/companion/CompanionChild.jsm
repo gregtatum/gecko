@@ -91,6 +91,9 @@ class CompanionChild extends JSWindowActorChild {
           removePrefObserver(name, observer) {
             Services.prefs.removeObserver(name, observer);
           },
+          openCompanion() {
+            this.sendAsyncMessage("Companion:Open");
+          },
         };
 
         waivedContent.CompanionUtils = Cu.cloneInto(
