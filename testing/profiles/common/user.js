@@ -77,5 +77,8 @@ user_pref("browser.region.network.url", "");
 user_pref("browser.tabs.unloadOnLowMemory", false);
 // Don't pull Top Sites content from the network
 user_pref("browser.topsites.contile.enabled", false);
+// Default Glean to "record but don't report" mode. Docs:
+// https://firefox-source-docs.mozilla.org/toolkit/components/glean/dev/preferences.html
+user_pref("telemetry.fog.test.localhost_port", -1);
 // Disable pinebuild onboarding in automation.
 user_pref("browser.pinebuild.companion.onboarding.enabled", false);
