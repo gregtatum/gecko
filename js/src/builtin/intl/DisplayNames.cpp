@@ -385,13 +385,13 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
 
   // If a calendar exists, set it as an option.
   JS::UniqueChars calendarChars = nullptr;
-  if (!calendar->empty()) {
-    calendarChars = JS_EncodeStringToUTF8(cx, calendar);
-    if (!calendarChars) {
-      return false;
-    }
-    options.calendar = mozilla::MakeStringSpan(calendarChars.get());
-  }
+  // if (!calendar->empty()) {
+  //   calendarChars = JS_EncodeStringToUTF8(cx, calendar);
+  //   if (!calendarChars) {
+  //     return false;
+  //   }
+  //   options.calendar = mozilla::MakeStringSpan(calendarChars.get());
+  // }
 
   mozilla::intl::DisplayNames* dn =
       GetOrCreateDisplayNames(cx, displayNames, locale.get(), options);
