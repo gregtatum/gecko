@@ -179,36 +179,10 @@ void SetActivationPolicyToAccessory() {
 - (BOOL)applicationShouldHandleReopen:(NSApplication*)theApp hasVisibleWindows:(BOOL)flag {
   nsCOMPtr<nsINativeAppSupport> nas = NS_GetNativeAppSupport();
   NS_ENSURE_TRUE(nas, NO);
-  NSApplicationActivationPolicy activationPolicy = [NSApp activationPolicy];
-  if (activationPolicy == NSApplicationActivationPolicyAccessory) {
-    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-  }
 
   // Go to the common Carbon/Cocoa reopen method.
   nsresult rv = nas->ReOpen();
   NS_ENSURE_SUCCESS(rv, NO);
-
-  // So, if we try to open a window now after our activationPolicy was accessory,
-  // we'll run into a weird issue where we're at the back of the CMD+Tab list,
-  // and our app menu is completely unresponsive. This is reproducible with a
-  // minimal test application, so it's nothing weird going on in Gecko or
-  // elsewhere. The best fix we could figure out was to simply activate another
-  // app (the login window, which we should be able to rely on) and then reactivate
-  // ourselves.
-  if (activationPolicy == NSApplicationActivationPolicyAccessory) {
-    NSRunningApplication* login = [[NSRunningApplication
-        runningApplicationsWithBundleIdentifier:@"com.apple.loginwindow"] firstObject];
-    MOZ_DIAGNOSTIC_ASSERT(login, "Unable to find Mac login window");
-    if (login) {
-      [login activateWithOptions:NSApplicationActivateIgnoringOtherApps];
-
-      NSRunningApplication* ourApp = [NSRunningApplication currentApplication];
-      MOZ_DIAGNOSTIC_ASSERT(ourApp, "Unable to find our own application!");
-      if (ourApp) {
-        [ourApp activateWithOptions:NSApplicationActivateIgnoringOtherApps];
-      }
-    }
-  }
 
   // NO says we don't want NSApplication to do anything else for us.
   return NO;

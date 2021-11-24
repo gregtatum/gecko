@@ -801,9 +801,17 @@ void nsCocoaWindow::Show(bool bState) {
     // If we had set the activationPolicy to accessory, then right now we won't
     // have a dock icon. Make sure that we undo that and show a dock icon now that
     // we're going to show a window.
-    if ([NSApp activationPolicy] != NSApplicationActivationPolicyRegular) {
+    NSApplicationActivationPolicy activationPolicy = [NSApp activationPolicy];
+    if (activationPolicy != NSApplicationActivationPolicyRegular) {
       [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
       PR_SetEnv("MOZ_APP_NO_DOCK=");
+
+      NSRunningApplication* login = [[NSRunningApplication
+          runningApplicationsWithBundleIdentifier:@"com.apple.loginwindow"] firstObject];
+      MOZ_DIAGNOSTIC_ASSERT(login, "Unable to find Mac login window");
+      if (login) {
+        [login activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+      }
     }
 
     // Don't try to show a popup when the parent isn't visible or is minimized.
@@ -946,6 +954,19 @@ void nsCocoaWindow::Show(bool bState) {
       } else {
         [mWindow makeKeyAndOrderFront:nil];
       }
+
+      // So, if we try to open a window now after our activationPolicy was accessory,
+      // we'll run into a weird issue where we're at the back of the CMD+Tab list,
+      // and our app menu is completely unresponsive. This is reproducible with a
+      // minimal test application, so it's nothing weird going on in Gecko or
+      // elsewhere. The best fix we could figure out was to simply activate another
+      // app (the login window, which we should be able to rely on) and then reactivate
+      // ourselves.
+      if (activationPolicy != NSApplicationActivationPolicyRegular) {
+        NSRunningApplication* ourApp = [NSRunningApplication currentApplication];
+        [ourApp activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+      }
+
       NS_OBJC_END_TRY_IGNORE_BLOCK;
       SendSetZLevelEvent();
     }
