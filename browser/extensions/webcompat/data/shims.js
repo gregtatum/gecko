@@ -533,6 +533,44 @@ const AVAILABLE_SHIMS = [
     ],
     onlyIfDFPIActive: true,
   },
+  {
+    id: "MicrosoftLogin",
+    platform: "desktop",
+    name: "Microsoft Login",
+    bug: "1638383",
+    requestStorageAccessForRedirect: [
+      ["*://web.powerva.microsoft.com/*", "*://login.microsoftonline.com/*"],
+      ["*://teams.microsoft.com/*", "*://login.microsoftonline.com/*"],
+    ],
+    contentScripts: [
+      {
+        js: "microsoftLogin.js",
+        matches: [
+          "*://web.powerva.microsoft.com/*",
+          "*://teams.microsoft.com/*",
+        ],
+        runAt: "document_start",
+      },
+    ],
+    onlyIfDFPIActive: true,
+  },
+  {
+    id: "Humblebundle",
+    platform: "desktop",
+    name: "Humblebundle",
+    bug: "1742553",
+    contentScripts: [
+      {
+        js: "humblebundle.js",
+        matches: [
+          "*://www.humblebundle.com/login*",
+          "*://www.humblebundle.com/signup*",
+        ],
+        runAt: "document_start",
+      },
+    ],
+    onlyIfDFPIActive: true,
+  },
 ];
 
 module.exports = AVAILABLE_SHIMS;
