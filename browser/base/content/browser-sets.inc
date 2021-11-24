@@ -24,7 +24,7 @@
     <command id="Browser:OpenFile"  oncommand="BrowserOpenFileWindow();"/>
     <command id="Browser:SavePage" oncommand="saveBrowser(gBrowser.selectedBrowser);"/>
 #ifdef PINEBUILD
-    <command id="Browser:SaveSnapshot" oncommand="SaveSnapshot(gBrowser.currentURI.spec);"/>
+    <command id="Browser:SaveSnapshot" oncommand="Snapshots.add({ url: gBrowser.currentURI.spec, userPersisted: true });" disabled="true"/>
 #endif
 
     <command id="Browser:SendLink"
@@ -103,7 +103,7 @@
     <command id="Tools:PrivateBrowsing"
       oncommand="OpenBrowserWindow({private: true});"/>
     <command id="Browser:Screenshot" oncommand="ScreenshotsUtils.notify(window, 'shortcut')"/>
-    
+
 #ifdef NIGHTLY_BUILD
     <command id="Tools:FissionWindow"
       oncommand="OpenBrowserWindow({fission: true, private: !!window?.browsingContext?.usePrivateBrowsing});"

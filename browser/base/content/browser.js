@@ -3092,14 +3092,6 @@ function BrowserTryToCloseWindow(event) {
   } // WindowIsClosing does all the necessary checks
 }
 
-/**
- * Adds a specified URL as a Snapshot.
- * @param {string} The URL that will be added as a snapshot.
- */
-function SaveSnapshot(url) {
-  Snapshots.add({ url, userPersisted: true });
-}
-
 function loadURI(
   uri,
   referrerInfo,
@@ -5475,9 +5467,14 @@ var XULBrowserWindow = {
 
     UpdateBackForwardCommands(gBrowser.webNavigation);
 
-    document.getElementById(
-      "pinebuild-snapshot-button"
-    ).disabled = !Snapshots.canSnapshotUrl(aLocationURI);
+    if (AppConstants.PINEBUILD) {
+      let saveSnapshot = document.getElementById("Browser:SaveSnapshot");
+      if (!Snapshots.canSnapshotUrl(aLocationURI)) {
+        saveSnapshot.setAttribute("disabled", "true");
+      } else {
+        saveSnapshot.removeAttribute("disabled");
+      }
+    }
 
     Services.obs.notifyObservers(
       aWebProgress,
