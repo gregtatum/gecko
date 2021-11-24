@@ -387,9 +387,9 @@ bool js::intl_ComputeDisplayName(JSContext* cx, unsigned argc, Value* vp) {
   JS::UniqueChars calendarChars = nullptr;
   if (!calendar->empty()) {
     calendarChars = JS_EncodeStringToUTF8(cx, calendar);
-    if (!calendarChars) {
-      return false;
-    }
+    // if (!calendarChars) {
+    //   return false;
+    // }
     // options.calendar = mozilla::MakeStringSpan(calendarChars.get());
   }
 
