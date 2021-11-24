@@ -291,7 +291,7 @@ ol {
 
 :host(.in-companion) .login-list-item {
   padding: 4px;
-  margin: 1em;
+  margin: 0 16px 8px;
   border-radius: 8px;
   border-inline-start: none;
   background-color: #F9F9FB;
