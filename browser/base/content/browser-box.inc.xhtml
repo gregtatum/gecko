@@ -27,7 +27,9 @@
 #endif
   <vbox id="appcontent" flex="1">
     <!-- gNotificationBox will be added here lazily. -->
+#ifdef PINEBUILD
     <box id="companionLinkTransitionOverlay"/>
+#endif
     <tabbox id="tabbrowser-tabbox"
             flex="1" tabcontainer="tabbrowser-tabs">
       <tabpanels id="tabbrowser-tabpanels"

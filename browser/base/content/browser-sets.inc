@@ -23,7 +23,9 @@
     <command id="cmd_newNavigatorTabNoEvent" oncommand="BrowserOpenTab();"/>
     <command id="Browser:OpenFile"  oncommand="BrowserOpenFileWindow();"/>
     <command id="Browser:SavePage" oncommand="saveBrowser(gBrowser.selectedBrowser);"/>
+#ifdef PINEBUILD
     <command id="Browser:SaveSnapshot" oncommand="SaveSnapshot(gBrowser.currentURI.spec);"/>
+#endif
 
     <command id="Browser:SendLink"
              oncommand="MailIntegration.sendLinkForBrowser(gBrowser.selectedBrowser);"/>

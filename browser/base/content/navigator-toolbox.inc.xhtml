@@ -7,7 +7,12 @@
 <box>
 <toolbox id="navigator-toolbox" flex="1">
 
-  <vbox id="titlebar" persist="hidden" hidden="true">
+  <vbox id="titlebar"
+#ifdef PINEBUILD
+        persist="hidden"
+        hidden="true"
+#endif
+        >
     <!-- Menu -->
     <toolbar type="menubar" id="toolbar-menubar"
              class="browser-toolbar chromeclass-menubar titlebar-color"
@@ -154,7 +159,11 @@
     <toolbartabstop/>
 #endif
 
-    <hbox id="nav-bar-customization-target" flex="1" pack="end">
+    <hbox id="nav-bar-customization-target" flex="1"
+#ifdef PINEBUILD
+          pack="end"
+#endif
+          >
       <toolbarbutton id="back-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
                      data-l10n-id="toolbar-button-back-2"
                      removable="false" overflows="false"
