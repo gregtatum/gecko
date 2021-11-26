@@ -57,7 +57,7 @@ export default function(userDetails, domainInfo) {
       clientSecret: domainInfo.oauth2Secrets.clientSecret,
       refreshToken: domainInfo.oauth2Tokens.refreshToken,
       accessToken: domainInfo.oauth2Tokens.accessToken,
-      expireTimeMS: domainInfo.oauth2Tokens.expireTimeMS,
+      tokenExpires: domainInfo.oauth2Tokens.tokenExpires,
       // Treat the access token like it was recently retrieved; although we
       // generally expect the XOAUTH2 case should go through without
       // failure, in the event something is wrong, immediately re-fetching

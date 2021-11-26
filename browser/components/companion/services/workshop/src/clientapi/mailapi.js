@@ -812,7 +812,7 @@ export class MailAPI extends Emitter {
    *
    *     {
    *       oauth2Secrets: { clientId, clientSecret }
-   *       oauth2Tokens: { accessToken, refreshToken, expireTimeMS }
+   *       oauth2Tokens: { accessToken, refreshToken, tokenExpires }
    *     }
    *
    *   If performing a manual config, a manually created configInfo object of

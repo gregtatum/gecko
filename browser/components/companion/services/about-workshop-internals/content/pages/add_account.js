@@ -204,7 +204,7 @@ export default class AddAccountPage extends Page {
       oauth2Tokens: {
         refreshToken: authorizer.refreshToken,
         accessToken: oauthInfo.accessToken,
-        expireTimeMS: oauthInfo.tokenExpires,
+        tokenExpires: oauthInfo.tokenExpires,
       },
     };
 
@@ -289,7 +289,7 @@ export default class AddAccountPage extends Page {
       oauth2Tokens: {
         refreshToken: authorizer.refreshToken,
         accessToken: oauthInfo.accessToken,
-        expireTimeMS: oauthInfo.tokenExpires,
+        tokenExpires: oauthInfo.tokenExpires,
       },
     };
 

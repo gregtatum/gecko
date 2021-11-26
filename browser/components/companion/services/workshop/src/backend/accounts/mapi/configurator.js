@@ -34,13 +34,24 @@ export default function configurateMapi(userDetails, domainInfo) {
       clientSecret: domainInfo.oauth2Secrets.clientSecret,
       refreshToken: domainInfo.oauth2Tokens.refreshToken,
       accessToken: domainInfo.oauth2Tokens.accessToken,
-      expireTimeMS: domainInfo.oauth2Tokens.expireTimeMS,
+      tokenExpires: domainInfo.oauth2Tokens.tokenExpires,
       // Treat the access token like it was recently retrieved; although we
       // generally expect the XOAUTH2 case should go through without
       // failure, in the event something is wrong, immediately re-fetching
       // a new accessToken is not going to be useful for us.
       _transientLastRenew: PERFNOW(),
     };
+
+    // Check that all the fields have a value.
+    // This check is only done at account creation so it doesn't hurt to have it
+    // and it helps to avoid regression because of missing information.
+    for (const [key, value] of Object.entries(credentials.oauth2)) {
+      // See https://docs.microsoft.com/en-us/graph/auth-v2-user#5-use-the-refresh-token-to-get-a-new-access-token
+      // clientSecret is not required for native app.
+      if (!value && key !== "clientSecret") {
+        throw new Error(`Some Oauth2 info for mapi are missing: ${key}.`);
+      }
+    }
   }
 
   return {

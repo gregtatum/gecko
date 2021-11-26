@@ -199,6 +199,7 @@ class BaseFakeServer {
     this.logRequest = logRequest;
 
     this.pageSize = 10;
+    this.useNowTS = nowTs();
   }
 
   /**
@@ -407,7 +408,7 @@ class GapiFakeServer extends BaseFakeServer {
       oauth2Tokens: {
         refreshToken: "refreshing-token",
         accessToken: "valid0",
-        expireTimeMS: this.useNowTS + 24 * 60 * 60 * 1000,
+        tokenExpires: this.useNowTS + 24 * 60 * 60 * 1000,
       },
     };
   }
@@ -628,7 +629,7 @@ class MapiFakeServer extends BaseFakeServer {
       oauth2Tokens: {
         refreshToken: "refreshing-token",
         accessToken: "valid0",
-        expireTimeMS: this.useNowTS + 24 * 60 * 60 * 1000,
+        tokenExpires: this.useNowTS + 24 * 60 * 60 * 1000,
       },
     };
   }

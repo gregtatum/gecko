@@ -92,16 +92,16 @@ export function ensureUpdatedCredentials(
   // If this is an OAUTH account, see if we need to refresh the
   // accessToken. If not, just continue on our way.
   if (
-    (oauth2 && (!oauth2.accessToken || oauth2.expireTimeMS < NOW())) ||
+    (oauth2 && (!oauth2.accessToken || oauth2.tokenExpires < NOW())) ||
     forceRenew
   ) {
     return renewAccessToken(oauth2).then(function(newTokenData) {
       oauth2.accessToken = newTokenData.accessToken;
-      oauth2.expireTimeMS = newTokenData.expireTimeMS;
+      oauth2.tokenExpires = newTokenData.tokenExpires;
 
       logic(scope, "credentials-changed", {
         _accessToken: oauth2.accessToken,
-        expireTimeMS: oauth2.expireTimeMS,
+        tokenExpires: oauth2.tokenExpires,
       });
 
       if (credsUpdatedCallback) {
@@ -122,7 +122,7 @@ export function ensureUpdatedCredentials(
  * @param {String} refreshToken
  *   The long-lived refresh token we've stored in long-term storage.
  * @return {Promise}
- *   success: {String} { accessToken, expireTimeMS }
+ *   success: {String} { accessToken, tokenExpires }
  *   failure: {String} normalized errorString
  */
 function renewAccessToken(oauthInfo) {
@@ -135,17 +135,15 @@ function renewAccessToken(oauthInfo) {
     xhr.open("POST", oauthInfo.tokenEndpoint, true);
     xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
     xhr.timeout = CONNECT_TIMEOUT_MS;
-    let params = [
-      `client_id=${encodeURIComponent(oauthInfo.clientId)}`,
-      `refresh_token=${encodeURIComponent(oauthInfo.refreshToken)}`,
-      "grant_type=refresh_token",
-    ];
+    const params = new URLSearchParams([
+      ["client_id", oauthInfo.clientId],
+      ["refresh_token", oauthInfo.refreshToken],
+      ["grant_type", "refresh_token"],
+    ]);
     if (oauthInfo.clientSecret) {
-      params.append(
-        `client_secret=${encodeURIComponent(oauthInfo.clientSecret)}`
-      );
+      params.append("client_secret", oauthInfo.clientSecret);
     }
-    xhr.send(params.join("&"));
+    xhr.send(params);
     xhr.onload = function() {
       // If we couldn't retrieve the access token, either the user
       // revoked the access we granted (per Google's OAUTH docs) or
@@ -178,10 +176,10 @@ function renewAccessToken(oauthInfo) {
             // to give a buffer from a the token expiring before a renewal is
             // attempted.
             var expiresInMS = data.expires_in * 1000;
-            var expireTimeMS = NOW() + Math.max(0, expiresInMS - TIMEOUT_MS);
+            var tokenExpires = NOW() + Math.max(0, expiresInMS - TIMEOUT_MS);
             resolve({
               accessToken: data.access_token,
-              expireTimeMS,
+              tokenExpires,
             });
           } else {
             logic(scope, "no-access-token", {

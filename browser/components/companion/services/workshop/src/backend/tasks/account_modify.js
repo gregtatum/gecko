@@ -98,8 +98,8 @@ export default TaskDefiner.defineSimpleTask([
               val.refreshToken
             );
             accountClobbers.set(
-              ["credentials", "oauth2", "expireTimeMS"],
-              val.expireTimeMS
+              ["credentials", "oauth2", "tokenExpires"],
+              val.tokenExpires
             );
             break;
 

@@ -2807,9 +2807,14 @@ var WorkshopBackend = (() => {
         clientSecret: domainInfo.oauth2Secrets.clientSecret,
         refreshToken: domainInfo.oauth2Tokens.refreshToken,
         accessToken: domainInfo.oauth2Tokens.accessToken,
-        expireTimeMS: domainInfo.oauth2Tokens.expireTimeMS,
+        tokenExpires: domainInfo.oauth2Tokens.tokenExpires,
         _transientLastRenew: PERFNOW()
       };
+      for (const [key, value] of Object.entries(credentials.oauth2)) {
+        if (!value) {
+          throw new Error(`Some Oauth2 info for gapi are missing: ${key}.`);
+        }
+      }
     }
     return {
       userDetails,
@@ -2841,9 +2846,14 @@ var WorkshopBackend = (() => {
         clientSecret: domainInfo.oauth2Secrets.clientSecret,
         refreshToken: domainInfo.oauth2Tokens.refreshToken,
         accessToken: domainInfo.oauth2Tokens.accessToken,
-        expireTimeMS: domainInfo.oauth2Tokens.expireTimeMS,
+        tokenExpires: domainInfo.oauth2Tokens.tokenExpires,
         _transientLastRenew: PERFNOW()
       };
+      for (const [key, value] of Object.entries(credentials.oauth2)) {
+        if (!value && key !== "clientSecret") {
+          throw new Error(`Some Oauth2 info for mapi are missing: ${key}.`);
+        }
+      }
     }
     return {
       userDetails,
@@ -3024,13 +3034,13 @@ var WorkshopBackend = (() => {
       console.log("ensureUpdatedCredentials: force renewing token");
     }
     var oauth2 = credentials.oauth2;
-    if (oauth2 && (!oauth2.accessToken || oauth2.expireTimeMS < NOW()) || forceRenew) {
+    if (oauth2 && (!oauth2.accessToken || oauth2.tokenExpires < NOW()) || forceRenew) {
       return renewAccessToken(oauth2).then(function(newTokenData) {
         oauth2.accessToken = newTokenData.accessToken;
-        oauth2.expireTimeMS = newTokenData.expireTimeMS;
+        oauth2.tokenExpires = newTokenData.tokenExpires;
         logic(scope, "credentials-changed", {
           _accessToken: oauth2.accessToken,
-          expireTimeMS: oauth2.expireTimeMS
+          tokenExpires: oauth2.tokenExpires
         });
         if (credsUpdatedCallback) {
           credsUpdatedCallback(credentials);
@@ -3050,15 +3060,15 @@ var WorkshopBackend = (() => {
       xhr.open("POST", oauthInfo.tokenEndpoint, true);
       xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
       xhr.timeout = CONNECT_TIMEOUT_MS;
-      let params = [
-        `client_id=${encodeURIComponent(oauthInfo.clientId)}`,
-        `refresh_token=${encodeURIComponent(oauthInfo.refreshToken)}`,
-        "grant_type=refresh_token"
-      ];
+      const params = new URLSearchParams([
+        ["client_id", oauthInfo.clientId],
+        ["refresh_token", oauthInfo.refreshToken],
+        ["grant_type", "refresh_token"]
+      ]);
       if (oauthInfo.clientSecret) {
-        params.append(`client_secret=${encodeURIComponent(oauthInfo.clientSecret)}`);
+        params.append("client_secret", oauthInfo.clientSecret);
       }
-      xhr.send(params.join("&"));
+      xhr.send(params);
       xhr.onload = function() {
         if (xhr.status < 200 || xhr.status >= 300) {
           try {
@@ -3079,10 +3089,10 @@ var WorkshopBackend = (() => {
                 _accessToken: data.access_token
               });
               var expiresInMS = data.expires_in * 1e3;
-              var expireTimeMS = NOW() + Math.max(0, expiresInMS - TIMEOUT_MS);
+              var tokenExpires = NOW() + Math.max(0, expiresInMS - TIMEOUT_MS);
               resolve({
                 accessToken: data.access_token,
-                expireTimeMS
+                tokenExpires
               });
             } else {
               logic(scope, "no-access-token", {
@@ -10932,7 +10942,7 @@ var WorkshopBackend = (() => {
                 case "oauthTokens":
                   accountClobbers.set(["credentials", "oauth2", "accessToken"], val.accessToken);
                   accountClobbers.set(["credentials", "oauth2", "refreshToken"], val.refreshToken);
-                  accountClobbers.set(["credentials", "oauth2", "expireTimeMS"], val.expireTimeMS);
+                  accountClobbers.set(["credentials", "oauth2", "tokenExpires"], val.tokenExpires);
                   break;
                 case "identities":
                   break;
