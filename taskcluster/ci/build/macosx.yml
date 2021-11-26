@@ -204,7 +204,7 @@ macosx64-pinebuild/debug:
             - linux64-cctools-port
             - linux64-clang-macosx-cross
             - linux64-sccache
-            - macosx64-sdk-10.12
+            - macosx64-sdk-11.0
             - sysroot-wasm32-wasi
 
 macosx64-x64-devedition/opt:
@@ -453,7 +453,7 @@ macosx64-x64-pinebuild/opt:
         toolchain:
             - linux64-cctools-port
             - linux64-clang-macosx-cross
-            - macosx64-sdk-10.12
+            - macosx64-sdk-11.0
             - sysroot-wasm32-wasi
 
 macosx64-aarch64-pinebuild/opt:
