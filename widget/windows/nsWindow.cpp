@@ -2758,8 +2758,8 @@ void nsWindow::UpdateDarkModeToolbar() {
   if (!IsWin10OrLater()) {
     return;
   }
-  BOOL dark =
-      LookAndFeel::ColorSchemeForChrome() == LookAndFeel::ColorScheme::Dark;
+  LookAndFeel::EnsureColorSchemesInitialized();
+  BOOL dark = LookAndFeel::ColorSchemeForChrome() == ColorScheme::Dark;
   DwmSetWindowAttribute(mWnd, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, &dark,
                         sizeof dark);
   DwmSetWindowAttribute(mWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark,
@@ -7342,6 +7342,14 @@ void nsWindow::OnSizeModeChange(nsSizeMode aSizeMode) {
   if (NeedsToTrackWindowOcclusionState()) {
     WinWindowOcclusionTracker::Get()->OnWindowVisibilityChanged(
         this, aSizeMode != nsSizeMode_Minimized);
+
+    wr::DebugFlags flags{0};
+    flags.bits = gfx::gfxVars::WebRenderDebugFlags();
+    bool debugEnabled = bool(flags & wr::DebugFlags::WINDOW_VISIBILITY_DBG);
+    if (debugEnabled && mCompositorWidgetDelegate) {
+      mCompositorWidgetDelegate->NotifyVisibilityUpdated(aSizeMode,
+                                                         mIsFullyOccluded);
+    }
   }
 
   if (mCompositorWidgetDelegate) {

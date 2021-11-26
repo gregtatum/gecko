@@ -842,6 +842,11 @@ class WorkerPrivate final : public RelativeTimeline {
     return mLoadInfo.mShouldResistFingerprinting;
   }
 
+  // Determin if the worker was created under a third-party context.
+  bool IsThirdPartyContextToTopWindow() const {
+    return mLoadInfo.mIsThirdPartyContextToTopWindow;
+  }
+
   bool IsWatchedByDevTools() const { return mLoadInfo.mWatchedByDevTools; }
 
   // Determine if the worker is currently loading its top level script.
@@ -1016,6 +1021,15 @@ class WorkerPrivate final : public RelativeTimeline {
       const nsILoadInfo::CrossOriginOpenerPolicy aAgentClusterOpenerPolicy);
 
   ~WorkerPrivate();
+
+  struct AgentClusterIdAndCoop {
+    nsID mId;
+    nsILoadInfo::CrossOriginOpenerPolicy mCoop;
+  };
+
+  static AgentClusterIdAndCoop ComputeAgentClusterIdAndCoop(
+      WorkerPrivate* aParent, WorkerKind aWorkerKind,
+      WorkerLoadInfo* aLoadInfo);
 
   bool MayContinueRunning() {
     AssertIsOnWorkerThread();
@@ -1291,7 +1305,7 @@ class WorkerPrivate final : public RelativeTimeline {
     uint32_t mDebuggerEventLoopLevel;
 
     uint32_t mErrorHandlerRecursionCount;
-    uint32_t mNextTimeoutId;
+    int32_t mNextTimeoutId;
 
     // Tracks the current setTimeout/setInterval nesting level.
     // When there isn't a TimeoutHandler on the stack, this will be 0.

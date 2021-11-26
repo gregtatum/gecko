@@ -709,7 +709,7 @@ already_AddRefed<Promise> IOUtils::Copy(GlobalObject& aGlobal,
 }
 
 /* static */
-already_AddRefed<Promise> IOUtils::Touch(
+already_AddRefed<Promise> IOUtils::SetModificationTime(
     GlobalObject& aGlobal, const nsAString& aPath,
     const Optional<int64_t>& aModification) {
   MOZ_DIAGNOSTIC_ASSERT(XRE_IsParentProcess());
@@ -728,7 +728,7 @@ already_AddRefed<Promise> IOUtils::Touch(
     }
     DispatchAndResolve<int64_t>(state.ref()->mEventQueue, promise,
                                 [file = std::move(file), newTime]() {
-                                  return TouchSync(file, newTime);
+                                  return SetModificationTimeSync(file, newTime);
                                 });
   } else {
     RejectShuttingDown(promise);
@@ -737,8 +737,9 @@ already_AddRefed<Promise> IOUtils::Touch(
 }
 
 /* static */
-already_AddRefed<Promise> IOUtils::GetChildren(GlobalObject& aGlobal,
-                                               const nsAString& aPath) {
+already_AddRefed<Promise> IOUtils::GetChildren(
+    GlobalObject& aGlobal, const nsAString& aPath,
+    const GetChildrenOptions& aOptions) {
   MOZ_DIAGNOSTIC_ASSERT(XRE_IsParentProcess());
   RefPtr<Promise> promise = CreateJSPromise(aGlobal);
   if (!promise) {
@@ -751,7 +752,9 @@ already_AddRefed<Promise> IOUtils::GetChildren(GlobalObject& aGlobal,
 
     DispatchAndResolve<nsTArray<nsString>>(
         state.ref()->mEventQueue, promise,
-        [file = std::move(file)]() { return GetChildrenSync(file); });
+        [file = std::move(file), ignoreAbsent = aOptions.mIgnoreAbsent]() {
+          return GetChildrenSync(file, ignoreAbsent);
+        });
   } else {
     RejectShuttingDown(promise);
   }
@@ -1417,7 +1420,7 @@ Result<IOUtils::InternalFileInfo, IOUtils::IOError> IOUtils::StatSync(
 }
 
 /* static */
-Result<int64_t, IOUtils::IOError> IOUtils::TouchSync(
+Result<int64_t, IOUtils::IOError> IOUtils::SetModificationTimeSync(
     nsIFile* aFile, const Maybe<int64_t>& aNewModTime) {
   MOZ_ASSERT(!NS_IsMainThread());
 
@@ -1443,8 +1446,8 @@ Result<int64_t, IOUtils::IOError> IOUtils::TouchSync(
         IOError(NS_ERROR_ILLEGAL_VALUE)
             .WithMessage(
                 "Refusing to set the modification time of file(%s) to 0.\n"
-                "To use the current system time, call `touch` with no "
-                "arguments",
+                "To use the current system time, call `setModificationTime` "
+                "with no arguments",
                 aFile->HumanReadablePath().get()));
   }
 
@@ -1454,7 +1457,8 @@ Result<int64_t, IOUtils::IOError> IOUtils::TouchSync(
     IOError err(rv);
     if (IsFileNotFound(rv)) {
       return Err(
-          err.WithMessage("Could not touch file(%s) because it does not exist",
+          err.WithMessage("Could not set modification time of file(%s) "
+                          "because it does not exist",
                           aFile->HumanReadablePath().get()));
     }
     return Err(err);
@@ -1464,11 +1468,15 @@ Result<int64_t, IOUtils::IOError> IOUtils::TouchSync(
 
 /* static */
 Result<nsTArray<nsString>, IOUtils::IOError> IOUtils::GetChildrenSync(
-    nsIFile* aFile) {
+    nsIFile* aFile, bool aIgnoreAbsent) {
   MOZ_ASSERT(!NS_IsMainThread());
 
+  nsTArray<nsString> children;
   nsCOMPtr<nsIDirectoryEnumerator> iter;
   nsresult rv = aFile->GetDirectoryEntries(getter_AddRefs(iter));
+  if (aIgnoreAbsent && IsFileNotFound(rv)) {
+    return children;
+  }
   if (NS_FAILED(rv)) {
     IOError err(rv);
     if (IsFileNotFound(rv)) {
@@ -1483,7 +1491,6 @@ Result<nsTArray<nsString>, IOUtils::IOError> IOUtils::GetChildrenSync(
     }
     return Err(err);
   }
-  nsTArray<nsString> children;
 
   bool hasMoreElements = false;
   MOZ_TRY(iter->HasMoreElements(&hasMoreElements));

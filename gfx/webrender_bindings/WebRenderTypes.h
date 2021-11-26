@@ -20,6 +20,7 @@
 #include "mozilla/Range.h"
 #include "mozilla/TypeTraits.h"
 #include "Units.h"
+#include "nsIWidgetListener.h"
 
 namespace mozilla {
 
@@ -139,7 +140,7 @@ struct ImageDescriptor : public wr::WrImageDescriptor {
 
   ImageDescriptor(const gfx::IntSize& aSize, gfx::SurfaceFormat aFormat,
                   bool aPreferCompositorSurface = false) {
-    format = wr::SurfaceFormatToImageFormat(aFormat).value();
+    format = wr::SurfaceFormatToImageFormat(aFormat).valueOr((ImageFormat)0);
     width = aSize.width;
     height = aSize.height;
     stride = 0;
@@ -151,7 +152,7 @@ struct ImageDescriptor : public wr::WrImageDescriptor {
   ImageDescriptor(const gfx::IntSize& aSize, uint32_t aByteStride,
                   gfx::SurfaceFormat aFormat,
                   bool aPreferCompositorSurface = false) {
-    format = wr::SurfaceFormatToImageFormat(aFormat).value();
+    format = wr::SurfaceFormatToImageFormat(aFormat).valueOr((ImageFormat)0);
     width = aSize.width;
     height = aSize.height;
     stride = aByteStride;
@@ -163,7 +164,7 @@ struct ImageDescriptor : public wr::WrImageDescriptor {
   ImageDescriptor(const gfx::IntSize& aSize, uint32_t aByteStride,
                   gfx::SurfaceFormat aFormat, OpacityType aOpacity,
                   bool aPreferCompositorSurface = false) {
-    format = wr::SurfaceFormatToImageFormat(aFormat).value();
+    format = wr::SurfaceFormatToImageFormat(aFormat).valueOr((ImageFormat)0);
     width = aSize.width;
     height = aSize.height;
     stride = aByteStride;
@@ -870,6 +871,22 @@ static inline wr::SyntheticItalics DegreesToSyntheticItalics(float aDegrees) {
   synthetic_italics.angle =
       int16_t(std::min(std::max(aDegrees, -89.0f), 89.0f) * 256.0f);
   return synthetic_italics;
+}
+
+static inline wr::WindowSizeMode ToWrWindowSizeMode(nsSizeMode aSizeMode) {
+  switch (aSizeMode) {
+    case nsSizeMode_Normal:
+      return wr::WindowSizeMode::Normal;
+    case nsSizeMode_Minimized:
+      return wr::WindowSizeMode::Minimized;
+    case nsSizeMode_Maximized:
+      return wr::WindowSizeMode::Maximized;
+    case nsSizeMode_Fullscreen:
+      return wr::WindowSizeMode::Fullscreen;
+    default:
+      MOZ_ASSERT_UNREACHABLE("Tried to convert invalid size mode.");
+      return wr::WindowSizeMode::Invalid;
+  }
 }
 
 }  // namespace wr

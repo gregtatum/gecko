@@ -161,7 +161,9 @@ namespace IOUtils {
   /**
    * Updates the |modification| time for the file at |path|.
    *
-   * @param path         An absolute file path identifying the file to touch.
+   * @param path         An absolute file path identifying the file whose
+   *                     modification time is to be set. This file must exist
+   *                     and will not be created.
    * @param modification An optional modification time for the file expressed in
    *                     milliseconds since the Unix epoch
    *                     (1970-01-01T00:00:00Z). The current system time is used
@@ -171,11 +173,10 @@ namespace IOUtils {
    *         milliseconds since the Unix epoch, otherwise rejects with a
    *         DOMException.
    */
-  Promise<long long> touch(DOMString path, optional long long modification);
+  Promise<long long> setModificationTime(DOMString path, optional long long modification);
   /**
    * Retrieves a (possibly empty) list of immediate children of the directory at
-   * |path|. If the file at |path| is not a directory, this method resolves with
-   * an empty list.
+   * |path|.
    *
    * @param path An absolute file path.
    *
@@ -183,7 +184,7 @@ namespace IOUtils {
    *         children of the directory at |path|, otherwise rejects with a
    *         DOMException.
    */
-  Promise<sequence<DOMString>> getChildren(DOMString path);
+  Promise<sequence<DOMString>> getChildren(DOMString path, optional GetChildrenOptions options = {});
   /**
    * Set the permissions of the file at |path|.
    *
@@ -409,6 +410,16 @@ dictionary CopyOptions {
    * If true, copy the source recursively.
    */
   boolean recursive = false;
+};
+
+/**
+ * Options to be passed to the |IOUtils.getChildren| method.
+ */
+dictionary GetChildrenOptions {
+  /**
+   * If true, no error will be reported if the target file is missing.
+   */
+  boolean ignoreAbsent = false;
 };
 
 /**

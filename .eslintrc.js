@@ -21,7 +21,11 @@ function removeOverrides(config) {
   return config;
 }
 
-const xpcshellTestPaths = ["**/test*/unit*/**/", "**/test*/xpcshell/**/"];
+const xpcshellTestPaths = [
+  "**/test*/unit*/**/",
+  "**/test*/*/unit*/",
+  "**/test*/xpcshell/**/",
+];
 
 const browserTestPaths = ["**/test*/**/browser*/"];
 
@@ -446,7 +450,6 @@ module.exports = {
         "dom/base/test/chrome/test_bug884693.xhtml",
         "dom/base/test/chrome/test_document-element-inserted.xhtml",
         "dom/base/test/chrome/test_domparsing.xhtml",
-        "dom/base/test/chrome/test_fileconstructor.xhtml",
         "dom/base/test/chrome/title_window.xhtml",
         "dom/base/test/chrome/window_nsITextInputProcessor.xhtml",
         "dom/base/test/chrome/window_swapFrameLoaders.xhtml",
@@ -495,9 +498,7 @@ module.exports = {
         "no-redeclare": "off",
         "no-shadow": "off",
         "no-throw-literal": "off",
-        "no-undef": "off",
         "no-unsanitized/method": "off",
-        "no-unused-vars": "off",
         "no-useless-return": "off",
         "object-shorthand": "off",
       },

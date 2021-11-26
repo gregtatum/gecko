@@ -108,12 +108,13 @@ class IOUtils final {
                                         const nsAString& aDestPath,
                                         const CopyOptions& aOptions);
 
-  static already_AddRefed<Promise> Touch(
+  static already_AddRefed<Promise> SetModificationTime(
       GlobalObject& aGlobal, const nsAString& aPath,
       const Optional<int64_t>& aModification);
 
-  static already_AddRefed<Promise> GetChildren(GlobalObject& aGlobal,
-                                               const nsAString& aPath);
+  static already_AddRefed<Promise> GetChildren(
+      GlobalObject& aGlobal, const nsAString& aPath,
+      const GetChildrenOptions& aOptions);
 
   static already_AddRefed<Promise> SetPermissions(GlobalObject& aGlobal,
                                                   const nsAString& aPath,
@@ -328,8 +329,8 @@ class IOUtils final {
    *
    * @return Timestamp of the file if the operation was successful, or an error.
    */
-  static Result<int64_t, IOError> TouchSync(nsIFile* aFile,
-                                            const Maybe<int64_t>& aNewModTime);
+  static Result<int64_t, IOError> SetModificationTimeSync(
+      nsIFile* aFile, const Maybe<int64_t>& aNewModTime);
 
   /**
    * Returns the immediate children of the directory at |aFile|, if any.
@@ -339,7 +340,8 @@ class IOUtils final {
    * @return An array of absolute paths identifying the children of |aFile|.
    *         If there are no children, an empty array. Otherwise, an error.
    */
-  static Result<nsTArray<nsString>, IOError> GetChildrenSync(nsIFile* aFile);
+  static Result<nsTArray<nsString>, IOError> GetChildrenSync(
+      nsIFile* aFile, bool aIgnoreAbsent);
 
   /**
    * Set the permissions of the given file.
