@@ -24,6 +24,7 @@ if (workshopEnabled) {
   mainThreadServices.registerWorkshopAPI(workshopAPI);
 
   Workshop = {
+    _calendarListView: null,
     get connectedAccounts() {
       let workshopAccounts = workshopAPI.accounts?.items;
       if (workshopAccounts?.length) {
@@ -91,6 +92,7 @@ if (workshopEnabled) {
       let { account } = await workshopAPI.tryToCreateAccount({}, domainInfo);
 
       if (account) {
+        account.syncFolderList();
         this.companionActor.sendAsyncMessage("Companion:AccountCreated", {
           type,
         });
@@ -109,6 +111,32 @@ if (workshopEnabled) {
 
     get companionActor() {
       return window.windowGlobalChild.getActor("Companion");
+    },
+
+    getCalendarEventQuery(filterConfig = {}) {
+      return {
+        kind: "calendar",
+        filter: {
+          tag: "",
+          event: {
+            type: "now",
+            durationBeforeInMinutes: 60,
+          },
+          ...filterConfig,
+        },
+      };
+    },
+
+    createCalendarListView() {
+      const spec = this.getCalendarEventQuery();
+      let listView = workshopAPI.searchAllMessages(spec);
+      listView.refresh();
+      return listView;
+    },
+
+    refreshServices() {
+      const spec = this.getCalendarEventQuery();
+      return workshopAPI.refreshAllMessages(spec);
     },
   };
 }

@@ -6,7 +6,7 @@
 
 import { MozLitElement } from "./widget-utils.js";
 import { classMap, html, css } from "./lit.all.js";
-import { workshopAPI } from "./workshopAPI.js";
+import { Workshop, workshopAPI } from "./workshopAPI.js";
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
@@ -134,9 +134,7 @@ export class RefreshServicesButton extends MozLitElement {
 
     try {
       if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
-        let spec = OnlineServices.getCalendarEventQuery();
-        let syncFinished = workshopAPI.refreshAllMessages(spec);
-        await syncFinished;
+        await Workshop.refreshServices();
       } else {
         await OnlineServices.fetchEvents();
       }

@@ -634,20 +634,6 @@ const OnlineServices = {
     return now - this.lastAccess < CALENDAR_FETCH_TIME;
   },
 
-  getCalendarEventQuery(filterConfig = {}) {
-    return {
-      kind: "calendar",
-      filter: {
-        tag: "",
-        event: {
-          type: "now",
-          durationBeforeInMinutes: 60,
-        },
-        ...filterConfig,
-      },
-    };
-  },
-
   async createService(type) {
     load();
 

@@ -4,12 +4,9 @@
 
 import { openLink, openMeeting, MozLitElement } from "./widget-utils.js";
 import { css, html, classMap, until, repeat } from "./lit.all.js";
-import { workshopAPI } from "./workshopAPI.js";
+import { Workshop, workshopAPI } from "./workshopAPI.js";
 
 var { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-const { OnlineServices } = ChromeUtils.import(
-  "resource:///modules/OnlineServices.jsm"
-);
 
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
@@ -153,32 +150,43 @@ export class CalendarEventList extends MozLitElement {
   }
 
   maybeStopListening() {
-    if (this.listeningTo) {
-      this.listeningTo.removeListener("seeked", this, this.onListViewUpdated);
-      this.listeningTo = null;
-    }
+    this.listView.removeListener("seeked", this, this.onListViewUpdated);
   }
 
   maybeListen() {
-    if (this.listView) {
-      this.listView.seekToTop(10, 990);
-      this.listView.on("seeked", this, this.onListViewUpdated);
-    }
-    this.listeningTo = this.listView;
+    this.listView.seekToTop(10, 990);
+    this.listView.on("seeked", this, this.onListViewUpdated);
   }
 
   connectedCallback() {
     document.addEventListener("refresh-events", this);
+
+    if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
+      window.addEventListener("unload", () => {
+        if (this.listView) {
+          this.unloadListView();
+        }
+      });
+      workshopAPI.accounts.on("add", this, this.updateCalendarListView);
+      workshopAPI.accounts.on("remove", this, this.updateCalendarListView);
+    }
+
     super.connectedCallback();
   }
 
   disconnectedCallback() {
     if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
-      if (this.listView) {
-        this.listView.release();
-        this.listView = null;
-      }
       this.maybeStopListening();
+      workshopAPI.accounts.removeListener(
+        "add",
+        this,
+        this.updateCalendarListView
+      );
+      workshopAPI.accounts.removeListener(
+        "remove",
+        this,
+        this.updateCalendarListView
+      );
     }
 
     document.removeEventListener("refresh-events", this);
@@ -189,6 +197,18 @@ export class CalendarEventList extends MozLitElement {
     this.events = this.getRelevantEvents(
       this.listView.items.filter(event => event)
     );
+  }
+
+  unloadListView() {
+    this.listView.release();
+    this.listView = null;
+  }
+
+  listenToListView() {
+    if (this.listView) {
+      this.maybeStopListening();
+      this.maybeListen();
+    }
   }
 
   getRelevantEvents(events) {
@@ -253,20 +273,20 @@ export class CalendarEventList extends MozLitElement {
     return eventsAndBreaks;
   }
 
-  updateCalendarListView() {
+  async updateCalendarListView() {
     if (this.listView) {
-      this.listView.release();
-      this.listView = null;
+      this.maybeStopListening();
+      this.unloadListView();
     }
 
-    const spec = OnlineServices.getCalendarEventQuery();
-    this.listView = workshopAPI.searchAllMessages(spec);
-
-    // Make sure a sync happens.
-    this.listView.refresh();
-
-    this.maybeStopListening();
-    this.maybeListen();
+    let accounts = await Workshop.getConnectedAccounts();
+    if (accounts.length) {
+      this.listView = Workshop.createCalendarListView();
+      this.listenToListView();
+    } else {
+      // If there arent't any connected accounts, just clear the events list.
+      this.events = [];
+    }
   }
 
   calendarEventItemsTemplate() {
