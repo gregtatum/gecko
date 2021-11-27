@@ -6153,7 +6153,8 @@ var SessionStoreInternal = {
       !browser.userTypedValue &&
       uri &&
       !data.isRemotenessUpdate &&
-      !win.gInitialPages.includes(uri)
+      !win.gInitialPages.includes(uri) &&
+      !AppConstants.PINEBUILD
     ) {
       browser.userTypedValue = uri;
     }

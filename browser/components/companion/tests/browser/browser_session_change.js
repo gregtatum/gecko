@@ -73,5 +73,6 @@ add_task(async function test_session_change() {
       !win.document.body.hasAttribute("flow-reset"),
       "Should have cleared the flow-reset attribute on the window"
     );
+    Assert.equal(win.gURLBar.value, "", "URLBar should be empty");
   }, win);
 });
