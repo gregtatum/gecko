@@ -25,6 +25,12 @@ XPCOMUtils.defineLazyModuleGetters(this, {
  * MessageHandler network.
  */
 class WindowGlobalMessageHandler extends MessageHandler {
+  constructor() {
+    super(...arguments);
+
+    this._innerWindowId = this._context.window.windowGlobalChild.innerWindowId;
+  }
+
   /**
    * Returns the WindowGlobalMessageHandler module path.
    *
@@ -57,13 +63,15 @@ class WindowGlobalMessageHandler extends MessageHandler {
     return context.id;
   }
 
-  forwardCommand(command) {
-    throw new Error(
-      `Cannot forward commands from a "WINDOW_GLOBAL" MessageHandler`
-    );
+  get innerWindowId() {
+    return this._innerWindowId;
   }
 
-  async _applyInitialSessionDataItems(sessionDataItems) {
+  async applyInitialSessionDataItems(sessionDataItems) {
+    if (!Array.isArray(sessionDataItems)) {
+      return;
+    }
+
     for (const sessionDataItem of sessionDataItems) {
       const {
         moduleName,
@@ -89,6 +97,12 @@ class WindowGlobalMessageHandler extends MessageHandler {
         });
       }
     }
+  }
+
+  forwardCommand(command) {
+    throw new Error(
+      `Cannot forward commands from a "WINDOW_GLOBAL" MessageHandler`
+    );
   }
 
   _isRelevantContext(contextDescriptor) {
