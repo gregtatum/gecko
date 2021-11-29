@@ -211,12 +211,6 @@
   display: none;
 }
 
-@supports not -moz-bool-pref("browser.companion.pageaction.enabled") {
-  .page-action-button {
-    display: none;
-  }
-}
-
 .page-action-button {
   appearance: none;
   background: url(chrome://global/skin/icons/arrow-down.svg) center center no-repeat;

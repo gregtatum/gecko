@@ -152,10 +152,8 @@
   list-style-image: url("chrome://global/skin/icons/link.svg");
 }
 
-@supports -moz-bool-pref("browser.companion.pageaction.enabled") {
-  #pinebuild-copy-button {
-    display: none;
-  }
+#pinebuild-copy-button {
+  display: none;
 }
 
 @supports not -moz-bool-pref("browser.companion.snapshots") {
