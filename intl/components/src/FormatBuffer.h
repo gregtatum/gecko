@@ -10,24 +10,12 @@
  * argument. Adaptors that can automatically be deduced are kept as private
  * in ICU4CGlue.h. There is also the SpiderMonkey specific adaptor
  * js::intl::FormatBuffer in js/src/builtin/intl/FormatBuffer.h.
- *
- * Example buffer creation:
- *
- *      auto buffer = ToBuffer(aString);
- *      auto result = component->format(options, buffer);
  */
 
-#ifndef JS_STANDALONE
-// When building standalone js shell, it will include headers from
-// intl/components if JS_HAS_INTL_API is true (the default value), but js shell
-// won't include headers from XPCOM, so don't include nsTString.h when building
-// standalone js shell.
-#  include "nsTString.h"
-#endif
+#include "nsTString.h"
 
 namespace mozilla::intl {
 
-#ifndef JS_STANDALONE
 /**
  * mozilla::intl APIs require sizeable buffers. This class abstracts over
  * the nsTSubstring.
@@ -84,7 +72,6 @@ class nsTStringToBufferAdapter {
   nsTSubstring<CharType>& mString;
 };
 
-#endif /* JS_STANDALONE */
 }  // namespace mozilla::intl
 
 #endif /* intl_components_FormatBuffer_h */
