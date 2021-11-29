@@ -23,6 +23,7 @@ import hashlib
 import json
 import logging
 import re
+from importlib import import_module
 
 import jsone
 from mozbuild.schedules import INCLUSIVE_COMPONENTS
@@ -311,11 +312,7 @@ test_description_schema = Schema(
         Optional("expires-after"): str,
         # The different configurations that should be run against this task, defined
         # in the TEST_VARIANTS object.
-        Optional("variants"): Any(list(TEST_VARIANTS)),
-        # Internal config set by 'split_variants' transform. Do not use.
-        # TODO This is needed as variants get split before schema validation.
-        # We should handle variants in a new file to avoid this.
-        Optional("variant-suffix"): str,
+        Optional("variants"): [str],
         # Whether to run this task with e10s.  If false, run
         # without e10s; if true, run with e10s; if 'both', run one task with and
         # one task without e10s.  E10s tasks have "-e10s" appended to the test name
@@ -362,7 +359,7 @@ test_description_schema = Schema(
         ),
         # seconds of runtime after which the task will be killed.  Like 'chunks',
         # this can be keyed by test pltaform.
-        Required("max-run-time"): optionally_keyed_by("test-platform", int),
+        Required("max-run-time"): optionally_keyed_by("test-platform", "subtest", int),
         # the exit status code that indicates the task should be retried
         Optional("retry-exit-status"): [int],
         # Whether to perform a gecko checkout.
@@ -435,7 +432,7 @@ test_description_schema = Schema(
         Required("test-platform"): str,
         # limit the test-platforms (as defined in test-platforms.yml)
         # that the test will run on
-        Optional("limit-platforms"): optionally_keyed_by("app", [str]),
+        Optional("limit-platforms"): optionally_keyed_by("app", "subtest", [str]),
         # the name of the test (the key in tests.yml)
         Required("test-name"): str,
         # the product name, defaults to firefox
@@ -466,6 +463,7 @@ test_description_schema = Schema(
         # target.dmg (Mac), target.apk (Android), target.tar.bz2 (Linux),
         # or target.zip (Windows).
         Optional("target"): optionally_keyed_by(
+            "app",
             "test-platform",
             Any(
                 str,
@@ -473,14 +471,16 @@ test_description_schema = Schema(
                 {Required("index"): str, Required("name"): str},
             ),
         ),
-        # A list of artifacts to install from 'fetch' tasks.
-        Optional("fetches"): {str: optionally_keyed_by("test-platform", [str])},
+        # A list of artifacts to install from 'fetch' tasks. Validation deferred
+        # to 'job' transforms.
+        Optional("fetches"): object,
         # Opt-in to Python 3 support
         Optional("python-3"): bool,
-        # Raptor / browsertime specific keys that need to be here to support
-        # using `by-key` after `by-variant`. Ideally these keys should not exist
-        # in the tests.py schema and instead we'd split variants before the raptor
-        # transforms need them. See bug 1700774.
+        # Raptor / browsertime specific keys, defer validation to 'raptor.py'
+        # transform.
+        Optional("raptor"): object,
+        # Raptor / browsertime specific keys that need to be here since 'raptor' schema
+        # is evluated *before* test_description_schema
         Optional("app"): str,
         Optional("subtest"): str,
         # Define if a given task supports artifact builds or not, see bug 1695325.
@@ -568,6 +568,9 @@ def set_defaults(config, tasks):
         yield task
 
 
+transforms.add_validate(test_description_schema)
+
+
 variant_description_schema = Schema(
     {
         str: {
@@ -626,8 +629,7 @@ def split_variants(config, tasks):
 
                 # If any variant in a composite fails this check we skip it.
                 if "when" in variant:
-                    context = {"task": task, "mobile": get_mobile_project(task)}
-                    if not jsone.render(variant["when"], context):
+                    if not jsone.render(variant["when"], {"task": task}):
                         break
 
                 taskv = apply_variant(variant, taskv)
@@ -652,16 +654,21 @@ def resolve_keys(config, tasks):
 
 
 @transforms.add
-def setup_raptor(config, tasks):
-    """Add options that are specific to raptor jobs (identified by suite=raptor)"""
-    from gecko_taskgraph.transforms.raptor import transforms as raptor_transforms
+def run_sibling_transforms(config, tasks):
+    """Runs other transform files next to this module."""
+    # List of modules to load transforms from in order.
+    transform_modules = (("raptor", lambda t: t["suite"] == "raptor"),)
 
     for task in tasks:
-        if task["suite"] != "raptor":
-            yield task
-            continue
+        xforms = TransformSequence()
+        for name, filterfn in transform_modules:
+            if filterfn and not filterfn(task):
+                continue
 
-        yield from raptor_transforms(config, [task])
+            mod = import_module(f"gecko_taskgraph.transforms.test.{name}")
+            xforms.add(mod.transforms)
+
+        yield from xforms(config, [task])
 
 
 @transforms.add
@@ -674,9 +681,6 @@ def limit_platforms(config, tasks):
         limited_platforms = {key: key for key in task["limit-platforms"]}
         if keymatch(limited_platforms, task["test-platform"]):
             yield task
-
-
-transforms.add_validate(test_description_schema)
 
 
 @transforms.add
@@ -1184,6 +1188,7 @@ def enable_code_coverage(config, tasks):
                 task.setdefault("fetches", {})
                 task["fetches"].setdefault("fetch", [])
                 task["fetches"].setdefault("toolchain", [])
+                task["fetches"].setdefault("build", [])
 
             if "linux" in task["build-platform"]:
                 task["fetches"]["toolchain"].append("linux64-grcov")
@@ -1191,6 +1196,8 @@ def enable_code_coverage(config, tasks):
                 task["fetches"]["fetch"].append("grcov-osx-x86_64")
             elif "win" in task["build-platform"]:
                 task["fetches"]["toolchain"].append("win64-grcov")
+
+            task["fetches"]["build"].append({"artifact": "target.mozinfo.json"})
 
             if "talos" in task["test-name"]:
                 task["max-run-time"] = 7200
