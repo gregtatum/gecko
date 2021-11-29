@@ -9,6 +9,14 @@
   justify-content: start;
 }
 
+.view-icon-overlay {
+  background: transparent;
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #f0f0f4;
+}
+
 .view-el > .view-loading-spinner-container {
   position: absolute;
   opacity: 0;
@@ -71,9 +79,9 @@
   box-sizing: border-box;
   background-color: #fff;
   color: #15141A;
-  border: 1px solid #f0f0f4;
 }
 
+.view-icon-overlay,
 .view-icon-container,
 .view-icon {
   border-radius: 100px;

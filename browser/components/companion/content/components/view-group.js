@@ -153,6 +153,7 @@ export default class ViewGroup extends MozLitElement {
       <div class="view-el" title=${ifDefined(rootTitle)} ?busy=${
       view.busy
     } ?pause-animation=${!this.busyAnimating}>
+        <div class="view-icon-overlay"></div>
         <div class="view-loading-spinner-container" @transitionend=${
           this.#transitionEndOrCancel
         } @transitioncancel=${this.#transitionEndOrCancel}>
