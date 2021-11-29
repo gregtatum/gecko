@@ -1902,10 +1902,6 @@ class GlobalHistory extends EventTarget {
    *   of the #viewStack to put the Pinned View. Defaults to 0.
    */
   setViewPinnedState(view, shouldPin, index = 0) {
-    if (!Services.prefs.getBoolPref("browser.river.pinning.enabled", false)) {
-      return;
-    }
-
     let internalView = InternalView.viewMap.get(view);
     if (!internalView) {
       throw new Error("Unknown view.");

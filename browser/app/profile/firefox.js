@@ -2733,7 +2733,6 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   // Preferences below here were at one point off by default and now have
   // been enabled (and should likely be removed eventually).
   pref("browser.pinebuild.animateViewTransitions", true);
-  pref("browser.river.pinning.enabled", true);
 
   // Preferences below here are still being experimented with are in the
   // unlocked state to allow for manual testing.
