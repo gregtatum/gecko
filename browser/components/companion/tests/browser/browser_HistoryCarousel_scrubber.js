@@ -82,7 +82,7 @@ add_task(async function test_scrubber() {
 
     let selectIndex = async index => {
       scrubber.valueAsNumber = index;
-      scrubber.dispatchEvent(new content.Event("change", { bubbles: true }));
+      scrubber.dispatchEvent(new content.Event("input", { bubbles: true }));
       await waitForSelectedIndex(index);
     };
 

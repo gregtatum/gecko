@@ -112,7 +112,7 @@ const HistoryCarousel = {
    * The list of DOM events that we listen for on this page. These get event
    * listeners set up for them, and are then handled in handleDOMEvent.
    */
-  DOM_EVENTS: ["visibilitychange", "click", "keydown", "change"],
+  DOM_EVENTS: ["visibilitychange", "click", "keydown", "input"],
 
   /**
    * An Array that contains the list of View indexes that still need
@@ -230,8 +230,8 @@ const HistoryCarousel = {
    */
   handleDOMEvent(event) {
     switch (event.type) {
-      case "change": {
-        this.onChange(event);
+      case "input": {
+        this.onInput(event);
         break;
       }
       case "click": {
@@ -437,12 +437,12 @@ const HistoryCarousel = {
   // DOM event handlers
 
   /**
-   * Handles change events on the whole window.
+   * Handles input events on the whole window.
    *
    * @param {Event} event
-   *   The change event to handle.
+   *   The input event to handle.
    */
-  onChange(event) {
+  onInput(event) {
     if (event.target == this.scrubber) {
       let index = Math.round(this.scrubber.value);
       this.selectCurrentIndex(index, true /* instant */);
