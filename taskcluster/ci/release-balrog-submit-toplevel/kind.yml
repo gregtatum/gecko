@@ -70,3 +70,26 @@ jobs:
             symbol: Rel(BPDev)
             tier: 1
             kind: build
+
+    pinebuild:
+        name: submit-toplevel-pinebuild-release-to-balrog
+        description: submit toplevel pinebuild release to balrog
+        shipping-product: pinebuild
+        worker:
+            product: pinebuild
+            channel-names:
+                by-release-type:
+                    beta: ["beta-pine", "beta-pine-localtest", "beta-pine-cdntest"]
+                    release(-rc)?: ["release-pine", "release-pine-localtest", "release-pine-cdntest"]
+                    default: []
+            rules-to-update:
+                by-release-type:
+                    beta: ["beta-pine-cdntest", "beta-pine-localtest"]
+                    release(-rc)?: ["release-pine-cdntest", "release-pine-localtest"]
+                    default: []
+            platforms: ["macosx64", "win64"]
+        treeherder:
+            platform: pinebuild-release/opt
+            symbol: Rel(BPP)
+            tier: 1
+            kind: build

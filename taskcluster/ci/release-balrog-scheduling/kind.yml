@@ -84,3 +84,27 @@ jobs:
             symbol: Rel(BSDev)
             tier: 1
             kind: build
+
+    pinebuild:
+        description: Schedule Pinebuild publishing in balrog
+        name: release-pinebuild_schedule_publishing_in_balrog
+        shipping-product: pinebuild
+        worker:
+            product: pinebuild
+            publish-rules:
+                by-release-level:
+                    production: []
+                    staging:
+                        by-release-type:
+                            beta: [895]
+                            default: []
+            background-rate: null
+            force-fallback-mapping-update:
+                by-release-type:
+                    beta: true
+                    default: false
+        treeherder:
+            platform: pinebuild-release/opt
+            symbol: Rel(BSPi)
+            tier: 1
+            kind: build

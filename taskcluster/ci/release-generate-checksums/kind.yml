@@ -84,3 +84,20 @@ jobs:
                         bucket_name: "net-mozaws-stage-delivery-archive"
         treeherder:
             platform: devedition-release/opt
+
+    pinebuild:
+        shipping-product: pinebuild
+        attributes:
+            build_platform: pinebuild-release
+            build_type: opt
+        run:
+            extra-config:
+                by-release-level:
+                    production:
+                        stage_product: "pinebuild"
+                        bucket_name: "net-mozaws-prod-delivery-archive"
+                    staging:
+                        stage_product: "pinebuild"
+                        bucket_name: "net-mozaws-stage-delivery-archive"
+        treeherder:
+            platform: pinebuild-release/opt

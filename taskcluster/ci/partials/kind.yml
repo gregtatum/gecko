@@ -32,6 +32,7 @@ only-for-build-platforms:
     - linux-devedition/opt
     - linux64-shippable/opt
     - linux64-devedition/opt
+    - linux64-pinebuild/opt
 
 job-template:
     shipping-phase: promote

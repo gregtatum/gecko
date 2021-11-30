@@ -21,6 +21,7 @@ platform_names:
             linux-devedition: 'linux-i686'
             linux64-shippable: 'linux-x86_64'
             linux64-devedition: 'linux-x86_64'
+            linux64-pinebuild: 'linux-x86_64'
             linux64-asan-reporter-shippable: 'linux-x86_64-asan-reporter'
             macosx64-shippable: 'mac'
             macosx64-devedition: 'mac'

@@ -38,6 +38,13 @@ jobs:
         treeherder:
             platform: devedition-release/opt
 
+    pinebuild:
+        bouncer-platforms: ['osx', 'win64']
+        bouncer-products: ['complete-mar', 'installer', 'installer-ssl', 'partial-mar', 'msi']  # XXX pkg?
+        shipping-product: pinebuild
+        treeherder:
+            platform: pinebuild-release/opt
+
     firefox:
         bouncer-platforms: ['linux', 'linux64', 'osx', 'win', 'win64', 'win64-aarch64']
         bouncer-products:

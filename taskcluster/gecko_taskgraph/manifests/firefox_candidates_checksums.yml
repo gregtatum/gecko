@@ -70,6 +70,10 @@ platform_names:
             macosx64: 'mac'
             win32: 'win32'
             win64: 'win64'
+    product_platform:
+        by-platform:
+            .*-pinebuild: pinebuild
+            default: firefox
 
 default: &default
     from:
@@ -85,8 +89,8 @@ mapping:
     target.checksums:
         <<: *default
         description: "Checksums file containing size, hash, sha algorithm and filename"
-        pretty_name: firefox-${version}.checksums.beet
-        checksums_path: beetmover-checksums/${path_platform}/${locale}/firefox-${version}.checksums.beet
+        pretty_name: ${product_platform}-${version}.checksums.beet
+        checksums_path: beetmover-checksums/${path_platform}/${locale}/${product_platform}-${version}.checksums.beet
     target-langpack.checksums:
         <<: *default
         description: "Checksums file containing size, hash, sha algorithm and filename for the langpack"

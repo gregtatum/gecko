@@ -936,7 +936,7 @@ def target_tasks_daily_releases(full_task_graph, parameters, graph_config):
 def target_tasks_nightly_pinebuild(full_task_graph, parameters, graph_config):
     indep_filter = make_desktop_nightly_filter({None})
     platform_filter = make_desktop_nightly_filter(
-        {"macosx64-pinebuild", "win64-pinebuild"}
+        {"macosx64-pinebuild", "win64-pinebuild", "linux64-pinebuild"}
     )
 
     def filter(task):

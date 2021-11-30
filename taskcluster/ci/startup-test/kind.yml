@@ -74,6 +74,25 @@ jobs:
         treeherder:
             platform: linux64-shippable/opt
 
+    linux64-pinebuild:
+        dependencies:
+            build-signing: build-signing-linux64-pinebuild/opt
+        run:
+            using: run-task
+            cwd: "{checkout}"
+        extra-config:
+            upstream_kind: build-signing
+            upstream_artifact: target.tar.bz2
+            binary: firefox
+        worker-type: b-linux
+        worker:
+            docker-image: {in-tree: ubuntu1804-test}
+        shipping-product: pinebuild
+        attributes:
+            build_platform: linux64-pinebuild
+        treeherder:
+            platform: linux64-pinebuild/opt
+
     macosx64:
         dependencies:
             repackage: repackage-macosx64-shippable/opt

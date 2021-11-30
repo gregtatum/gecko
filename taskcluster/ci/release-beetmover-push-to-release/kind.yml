@@ -29,3 +29,9 @@ jobs:
         product: firefox
         shipping-product: firefox
         treeherder-platform: firefox-release/opt
+
+    pinebuild-push-to-release:
+        name: pinebuild_push_to_release
+        product: pinebuild
+        shipping-product: pinebuild
+        treeherder-platform: pinebuild-release/opt

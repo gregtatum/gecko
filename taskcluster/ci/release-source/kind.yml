@@ -53,3 +53,9 @@ jobs:
         treeherder:
             platform: devedition-release/opt
         shipping-product: devedition
+
+    pinebuild-source/opt:
+        description: "Pinebuild source builder"
+        treeherder:
+            platform: pinebuild-release/opt
+        shipping-product: pinebuild

@@ -33,3 +33,12 @@ jobs:
         worker-type: succeed
         worker:
             implementation: succeed
+    pinebuild-promote:
+        name: post-beetmover-checksums-dummy
+        description: Dummy task to deal with max_dependencies
+        run-on-projects: []
+        shipping-phase: promote
+        shipping-product: pinebuild
+        worker-type: succeed
+        worker:
+            implementation: succeed

@@ -98,3 +98,19 @@ jobs:
         shipping-product: firefox
         treeherder:
             platform: firefox-release/opt
+
+    pinebuild:
+        bouncer-products-per-alias:
+            by-project:
+                mozilla-beta:
+                    firefox-pinebuild-latest-ssl: installer-ssl
+                    firefox-pinebuild-latest: installer
+                    firefox-pinebuild-msi-latest-ssl: msi
+                maple:
+                    firefox-pinebuild-latest-ssl: installer-ssl
+                    firefox-pinebuild-latest: installer
+                    firefox-pinebuild-msi-latest-ssl: msi
+                default: {}
+        shipping-product: pinebuild
+        treeherder:
+            platform: pinebuild-release/opt

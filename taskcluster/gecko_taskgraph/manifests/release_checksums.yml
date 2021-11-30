@@ -8,6 +8,8 @@ s3_bucket_paths:
             - pub/devedition/candidates
         firefox-release:
             - pub/firefox/candidates
+        pinebuild-release:
+            - pub/pinebuild/candidates
 default_locales:  # if given an empty locale, use these locales
     - en-US
 tasktype_map:  # Map task reference to task type.

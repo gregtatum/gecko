@@ -110,6 +110,14 @@ platform_names:
             win64-aarch64-shippable: 'win64_aarch64'
             win64-aarch64-devedition: 'win64_aarch64'
             win64-asan-reporter-shippable: 'win64-asan-reporter'
+    product_platform:
+        by-platform:
+            .*-pinebuild: pinebuild
+            default: firefox
+    pretty_product_platform:
+        by-platform:
+            .*-pinebuild: Pinebuild
+            default: Firefox
 
 default: &default
     from:
@@ -134,69 +142,69 @@ mapping:
     target.common.tests.tar.gz:
         <<: *default
         description: "Mixture of reftests, mochitests, UI and others, commonly bundled together in a test suite"
-        pretty_name: firefox-${version}.common.tests.tar.gz
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.common.tests.tar.gz
+        pretty_name: ${product_platform}-${version}.common.tests.tar.gz
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.common.tests.tar.gz
     target.cppunittest.tests.tar.gz:
         <<: *default
         description: "C++ unittests related in-tree test infrastructure"
-        pretty_name: firefox-${version}.cppunittest.tests.tar.gz
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.cppunittest.tests.tar.gz
+        pretty_name: ${product_platform}-${version}.cppunittest.tests.tar.gz
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.cppunittest.tests.tar.gz
     target.crashreporter-symbols.zip:
         <<: *default
         description: "Crashreporter symbols to be consumed by Socorro"
-        pretty_name: firefox-${version}.crashreporter-symbols.zip
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.crashreporter-symbols.zip
+        pretty_name: ${product_platform}-${version}.crashreporter-symbols.zip
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.crashreporter-symbols.zip
     target.json:
         <<: *default
         description: "Various compile and moz_app flags baked together in a json file"
-        pretty_name: firefox-${version}.json
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.json
+        pretty_name: ${product_platform}-${version}.json
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.json
     target.mochitest.tests.tar.gz:
         <<: *default
         description: "Results for running the mochitest testing framework via Javascript function calls"
-        pretty_name: firefox-${version}.mochitest.tests.tar.gz
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.mochitest.tests.tar.gz
+        pretty_name: ${product_platform}-${version}.mochitest.tests.tar.gz
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.mochitest.tests.tar.gz
     target.mozinfo.json:
         <<: *default
         description: "Various compile and moz_app flags baked together in a json file"
-        pretty_name: firefox-${version}.mozinfo.json
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.mozinfo.json
+        pretty_name: ${product_platform}-${version}.mozinfo.json
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.mozinfo.json
     target.reftest.tests.tar.gz:
         <<: *default
         description: "Results for running the reftest testing framework via display of two Web pages comparison"
-        pretty_name: firefox-${version}.reftest.tests.tar.gz
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.reftest.tests.tar.gz
+        pretty_name: ${product_platform}-${version}.reftest.tests.tar.gz
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.reftest.tests.tar.gz
     target.talos.tests.tar.gz:
         <<: *default
         description: "Results for running the talos testing framework to measure performance"
-        pretty_name: firefox-${version}.talos.tests.tar.gz
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.talos.tests.tar.gz
+        pretty_name: ${product_platform}-${version}.talos.tests.tar.gz
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.talos.tests.tar.gz
     target.awsy.tests.tar.gz:
         <<: *default
         description: "Results for running the awsy testing framework to track memory usage"
-        pretty_name: firefox-${version}.awsy.tests.tar.gz
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.awsy.tests.tar.gz
+        pretty_name: ${product_platform}-${version}.awsy.tests.tar.gz
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.awsy.tests.tar.gz
     target.test_packages.json:
         <<: *default
         description: "File containing metadata about all other files and testing harnesses specifics"
-        pretty_name: firefox-${version}.test_packages.json
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.test_packages.json
+        pretty_name: ${product_platform}-${version}.test_packages.json
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.test_packages.json
     target.web-platform.tests.tar.gz:
         <<: *default
         description: "Results for running the webplatform testing framework to cover standard Web platform features"
-        pretty_name: firefox-${version}.web-platform.tests.tar.gz
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.web-platform.tests.tar.gz
+        pretty_name: ${product_platform}-${version}.web-platform.tests.tar.gz
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.web-platform.tests.tar.gz
     target.xpcshell.tests.tar.gz:
         <<: *default
         description: "Results for running the xpcshell testing framework to enable XPConnect console application"
-        pretty_name: firefox-${version}.xpcshell.tests.tar.gz
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.xpcshell.tests.tar.gz
+        pretty_name: ${product_platform}-${version}.xpcshell.tests.tar.gz
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.xpcshell.tests.tar.gz
     target.normandy.json:
         <<: *default
         description: "Metadata about the Normandy client of this build"
         only_for_platforms:
             - linux64-shippable
-        pretty_name: firefox-${version}.normandy.json
+        pretty_name: ${product_platform}-${version}.normandy.json
         checksums_path: ${path_platform}/${locale}/target.normandy.json
     target_info.txt:
         <<: *default
@@ -284,8 +292,8 @@ mapping:
             - linux-devedition
             - linux64-devedition
             - linux64-pinebuild
-        pretty_name: firefox-${version}.tar.bz2
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.tar.bz2
+        pretty_name: ${product_platform}-${version}.tar.bz2
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.tar.bz2
     target.tar.bz2.asc:
         <<: *default
         description: "Detached signature for the checksums file"
@@ -298,8 +306,8 @@ mapping:
             - linux-devedition
             - linux64-devedition
             - linux64-pinebuild
-        pretty_name: firefox-${version}.tar.bz2.asc
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.tar.bz2.asc
+        pretty_name: ${product_platform}-${version}.tar.bz2.asc
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.tar.bz2.asc
     target.pkg:
         <<: *default
         description: "Main package installer for Mac OS X platforms"
@@ -308,8 +316,8 @@ mapping:
             - signing
         only_for_platforms:
             - macosx64-shippable
-        pretty_name: Firefox ${version}.pkg
-        checksums_path: ${path_platform}/${locale}/Firefox ${version}.pkg
+        pretty_name: ${pretty_product_platform} ${version}.pkg
+        checksums_path: ${path_platform}/${locale}/${pretty_product_platform} ${version}.pkg
     target.dmg:
         <<: *default
         description: "Main package disk image for Mac OS X platforms"
@@ -320,8 +328,8 @@ mapping:
             - macosx64-shippable
             - macosx64-devedition
             - macosx64-pinebuild
-        pretty_name: Firefox ${version}.dmg
-        checksums_path: ${path_platform}/${locale}/Firefox ${version}.dmg
+        pretty_name: ${pretty_product_platform} ${version}.dmg
+        checksums_path: ${path_platform}/${locale}/${pretty_product_platform} ${version}.dmg
     target.zip:
         <<: *default
         description: "Main package installer for Windows platforms"
@@ -336,8 +344,8 @@ mapping:
             - win32-devedition
             - win64-aarch64-devedition
             - win64-pinebuild
-        pretty_name: firefox-${version}.zip
-        checksums_path: ${path_platform}/${locale}/firefox-${version}.zip
+        pretty_name: ${product_platform}-${version}.zip
+        checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.zip
     target.installer.exe:
         <<: *default
         description: "Main installer for Windows platforms"
@@ -352,8 +360,8 @@ mapping:
             - win32-devedition
             - win64-aarch64-devedition
             - win64-pinebuild
-        pretty_name: Firefox Setup ${version}.exe
-        checksums_path: ${path_platform}/${locale}/Firefox Setup ${version}.exe
+        pretty_name: ${pretty_product_platform} Setup ${version}.exe
+        checksums_path: ${path_platform}/${locale}/${pretty_product_platform} Setup ${version}.exe
     target.stub-installer.exe:
         <<: *default
         description: "Stub installer for Win32 platforms"
@@ -363,8 +371,8 @@ mapping:
         only_for_platforms:
             - win32-shippable
             - win32-devedition
-        pretty_name: Firefox Installer.exe
-        checksums_path: ${path_platform}/${locale}/Firefox Installer.exe
+        pretty_name: ${pretty_product_platform} Installer.exe
+        checksums_path: ${path_platform}/${locale}/${pretty_product_platform} Installer.exe
     target.installer.msi:
         <<: *default
         description: "Windows installer for MSI platform"
@@ -377,8 +385,8 @@ mapping:
             - win64-devedition
             - win32-devedition
             - win64-pinebuild
-        pretty_name: Firefox Setup ${version}.msi
-        checksums_path: ${path_platform}/${locale}/Firefox Setup ${version}.msi
+        pretty_name: ${pretty_product_platform} Setup ${version}.msi
+        checksums_path: ${path_platform}/${locale}/${pretty_product_platform} Setup ${version}.msi
     target.installer.msix:
         <<: *default
         description: "Windows MSIX installer"
@@ -398,8 +406,8 @@ mapping:
         all_locales: true
         from:
             - mar-signing
-        pretty_name: firefox-${version}.complete.mar
-        checksums_path: update/${path_platform}/${locale}/firefox-${version}.complete.mar
+        pretty_name: ${product_platform}-${version}.complete.mar
+        checksums_path: update/${path_platform}/${locale}/${product_platform}-${version}.complete.mar
         update_balrog_manifest: true
         destinations:
             - ${version}-candidates/build${build_number}/update/${path_platform}
@@ -410,8 +418,8 @@ mapping:
         from:
             - partials-signing
         partials_only: true
-        pretty_name: firefox-${previous_version}-${version}.partial.mar
-        checksums_path: update/${path_platform}/${locale}/firefox-${previous_version}-${version}.partial.mar
+        pretty_name: ${product_platform}-${previous_version}-${version}.partial.mar
+        checksums_path: update/${path_platform}/${locale}/${product_platform}-${previous_version}-${version}.partial.mar
         update_balrog_manifest: true
         from_buildid: ${from_buildid}
         destinations:

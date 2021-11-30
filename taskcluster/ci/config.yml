@@ -246,12 +246,20 @@ release-promotion:
             is-rc: true
             target-tasks-method: promote_desktop
             partial-updates: true
+        promote_pinebuild:
+            product: pinebuild
+            target-tasks-method: promote_desktop
+            partial-updates: true
         push_devedition:
             product: devedition
             target-tasks-method: push_desktop
             partial-updates: true
         push_firefox:
             product: firefox
+            target-tasks-method: push_desktop
+            partial-updates: true
+        push_pinebuild:
+            product: pinebuild
             target-tasks-method: push_desktop
             partial-updates: true
         ship_devedition:
@@ -261,6 +269,11 @@ release-promotion:
             partial-updates: true
         ship_firefox:
             product: firefox
+            target-tasks-method: ship_desktop
+            version-bump: true
+            partial-updates: true
+        ship_pinebuild:
+            product: pinebuild
             target-tasks-method: ship_desktop
             version-bump: true
             partial-updates: true
