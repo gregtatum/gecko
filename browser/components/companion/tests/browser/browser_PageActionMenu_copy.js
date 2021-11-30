@@ -3,21 +3,20 @@
 
 "use strict";
 
+const TEST_URL1 = "https://example.com/";
 /**
  * Tests copying the URL via the toolbar button.
  */
-add_task(async function test_copy_via_toolbar_button() {
-  // Run test in a new window to avoid affecting the main test window.
-  let win = await BrowserTestUtils.openNewBrowserWindow();
+add_task(async function test_PageActionMenu_copy() {
+  await PinebuildTestUtils.loadViews([TEST_URL1]);
+  let viewGroups = PinebuildTestUtils.getViewGroups(window);
+  Assert.equal(viewGroups.length, 1, "There should be one total ViewGroups");
+  let pam = await PinebuildTestUtils.openPageActionMenu(viewGroups[0]);
+  let copyButton = pam.querySelector("#page-action-copy-url");
 
-  registerCleanupFunction(async () => {
-    await BrowserTestUtils.closeWindow(win);
-  });
-
-  BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, "https://example.com");
-  await BrowserTestUtils.browserLoaded(win.gBrowser.selectedBrowser);
-
-  win.document.getElementById("pinebuild-copy-button").click();
+  let pamClosed = BrowserTestUtils.waitForEvent(pam, "popuphidden");
+  EventUtils.synthesizeMouseAtCenter(copyButton, {}, window);
+  await pamClosed;
 
   var xferable = Cc["@mozilla.org/widget/transferable;1"].createInstance(
     Ci.nsITransferable
@@ -30,7 +29,7 @@ add_task(async function test_copy_via_toolbar_button() {
 
   Assert.equal(
     data.value.QueryInterface(Ci.nsISupportsString).data,
-    "https://example.com/",
+    TEST_URL1,
     "Should have copied the correct url value"
   );
 });
