@@ -129,6 +129,13 @@ const HistoryCarousel = {
   totalPreviews: -1,
 
   /**
+   * A cache of the originally selected index. We hold onto this in case the
+   * user wants to revert back to the originally selected View. Defaults to
+   * -1 until setup is complete.
+   */
+  originalIndex: -1,
+
+  /**
    * A convenience getter for the main <ol> element that contains each
    * PreviewElement.
    *
@@ -187,6 +194,7 @@ const HistoryCarousel = {
     for (let domEventType of this.DOM_EVENTS) {
       addEventListener(domEventType, this);
     }
+    this.scrubber.focus({ preventFocusRing: true });
   },
 
   /**
@@ -262,6 +270,7 @@ const HistoryCarousel = {
     let currentIndex = CarouselUtils.getCurrentIndex();
     let currentPreview = null;
 
+    this.originalIndex = currentIndex;
     this.totalPreviews = previews.length;
     let root = document.documentElement;
     root.style.setProperty("--total-previews", this.totalPreviews);
@@ -490,11 +499,25 @@ const HistoryCarousel = {
    *   The click event to handle.
    */
   onKeyDown(event) {
-    if (
-      event.keyCode == KeyEvent.DOM_VK_ESCAPE ||
-      event.keyCode == KeyEvent.DOM_VK_RETURN
-    ) {
-      CarouselUtils.requestExit();
+    switch (event.keyCode) {
+      case KeyEvent.DOM_VK_ESCAPE: {
+        this.selectCurrentIndex(this.originalIndex, true /* instant */);
+        // We need to ensure that the IntersectionObserver fires, and the
+        // parent has acknowledged receipt of the updated index before we
+        // finally exit.
+        addEventListener(
+          "HistoryCarouselIndexUpdated",
+          () => {
+            CarouselUtils.requestExit();
+          },
+          { once: true }
+        );
+        break;
+      }
+      case KeyEvent.DOM_VK_RETURN: {
+        CarouselUtils.requestExit();
+        break;
+      }
     }
   },
 
