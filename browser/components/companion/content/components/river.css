@@ -14,8 +14,6 @@
 
 #river {
   display: flex;
-  overflow: scroll;
-  scrollbar-width: none;
   background-color: var(--light-bg-color);
   padding: 4px;
   padding-inline-end: 0;
