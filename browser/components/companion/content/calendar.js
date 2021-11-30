@@ -194,9 +194,14 @@ export class CalendarEventList extends MozLitElement {
   }
 
   onListViewUpdated() {
-    this.events = this.getRelevantEvents(
+    let plainEvents = this.getRelevantEvents(
       this.listView.items.filter(event => event)
     );
+    let eventsAndBreaks = this.getEventsAndBreaks(plainEvents);
+    this.events = eventsAndBreaks;
+    if (this.events.length) {
+      this.dispatchOnUpdateComplete(new CustomEvent("calendar-events-updated"));
+    }
   }
 
   unloadListView() {

@@ -59,9 +59,12 @@ class FakeEventFactory {
       // NB: Right now the legacy model uses "start" and "end" without prefix,
       // but this does seem appropriate for sketch purposes where we wouldn't
       // want this to be an explicit absolute time anyways.
-      if (sketch.start && sketch.end) {
-        startDate = new Date(sketch.start);
-        endDate = new Date(sketch.end);
+      if (
+        (sketch.start && sketch.end) ||
+        (sketch.startDate && sketch.endDate)
+      ) {
+        startDate = new Date(sketch.start || sketch.startDate);
+        endDate = new Date(sketch.end || sketch.endDate);
         this.#nextEventTS =
           startDate.valueOf() + this.#defaultEventSpacingMillis;
         if (endDate.valueOf() > this.#nextEventTS) {

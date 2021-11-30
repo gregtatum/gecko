@@ -7,6 +7,21 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+const { XPCShellContentUtils } = ChromeUtils.import(
+  "resource://testing-common/XPCShellContentUtils.jsm"
+);
+
+const { GapiFakeServer, MapiFakeServer } = ChromeUtils.import(
+  "resource:///modules/WorkshopFakeServers.jsm"
+);
+
+const { FakeEventFactory } = ChromeUtils.import(
+  "resource:///modules/WorkshopFakeEvents.jsm"
+);
+
+// Facilitates creating a server using XPCShellContentUtils.createHttpServer
+XPCShellContentUtils.initMochitest(this);
+
 XPCOMUtils.defineLazyModuleGetters(this, {
   OnlineServices: "resource:///modules/OnlineServices.jsm",
   PlacesTestUtils: "resource://testing-common/PlacesTestUtils.jsm",
@@ -33,9 +48,304 @@ registerCleanupFunction(async () => {
   gGlobalHistory.reset();
 });
 
+const redirectHook = "http-on-modify-request";
+class Redirector {
+  constructor() {
+    Services.obs.addObserver(this, redirectHook, true);
+  }
+
+  QueryInterface = ChromeUtils.generateQI([
+    "nsIObserver",
+    "nsISupportsWeakReference",
+  ]);
+
+  observe(subject, topic, data) {
+    if (topic == redirectHook) {
+      if (!(subject instanceof Ci.nsIHttpChannel)) {
+        throw new Error(redirectHook + " observed a non-HTTP channel");
+      }
+      let channel = subject.QueryInterface(Ci.nsIHttpChannel);
+      let target = null;
+      if (channel.URI.scheme === "https") {
+        target = channel.URI.spec.replace("https", "http");
+      }
+      // if we have a target, redirect there
+      if (target) {
+        let tURI = Services.io.newURI(target);
+        try {
+          channel.redirectTo(tURI);
+        } catch (e) {
+          throw new Error("Exception in redirectTo " + e + "\n");
+        }
+      }
+    }
+  }
+}
+
+/**
+ * The time the first event should start at, set to the current time in ms.
+ * The UI only shows events starting within the next hour, so we want to ensure
+ * any events we create start within that range.
+ */
+const DEFAULT_FIRST_EVENT_TS = new Date().valueOf();
+
+class WorkshopHelper {
+  #redirector;
+  #apiContentPage;
+  #logicLogger;
+  #logicScopeBacklog;
+  #logicLogBacklog;
+
+  constructor() {
+    this.#redirector = null;
+    this.#apiContentPage = null;
+    this.#logicLogger = null;
+    this.#logicScopeBacklog = [];
+    this.#logicLogBacklog = [];
+
+    this.user = {
+      email: "organizer@example.com",
+      displayName: "Test User",
+    };
+
+    this.eventFactory = new FakeEventFactory({
+      firstEventTS: DEFAULT_FIRST_EVENT_TS,
+    });
+
+    // Clear accounts between test runs.
+    // This will need to change when we support multiple account types.
+    registerCleanupFunction(async () => {
+      if (this.account) {
+        await this.deleteAccount();
+      }
+    });
+  }
+
+  #defineLoggerScope(...args) {
+    if (this.#logicLogger) {
+      this.#logicLogger.defineScope(...args);
+    } else {
+      this.#logicScopeBacklog.push(args);
+    }
+  }
+
+  #gotLogicInstance(logic) {
+    if (this.#logicLogger) {
+      return;
+    }
+
+    this.#logicLogger = logic;
+
+    for (const args of this.#logicScopeBacklog) {
+      logic.defineScope(...args);
+    }
+    this.#logicScopeBacklog = null;
+
+    for (const args of this.#logicLogBacklog) {
+      logic(...args);
+    }
+    this.#logicLogBacklog = null;
+  }
+
+  #log(...args) {
+    if (this.#logicLogger) {
+      this.#logicLogger(...args);
+    } else {
+      this.#logicLogBacklog.push(args);
+    }
+  }
+
+  #createHttpServer({ hosts }) {
+    const httpServer = XPCShellContentUtils.createHttpServer({ hosts });
+
+    return httpServer;
+  }
+
+  createFakeServer({ hosts }) {
+    if (!this.#redirector) {
+      this.#redirector = new Redirector();
+    }
+
+    // We use XPCShellContentUtils.createHttpServer to create a
+    // server and set up a proxy mapping so that we can have a more real-world
+    // looking domain name.
+    const httpServer = this.#createHttpServer({
+      hosts,
+    });
+
+    // Hardcoding the server type for now.
+    // In the future we will need to make this work with any server type.
+    const serverScope = {};
+    this.#defineLoggerScope(serverScope, "GapiFakeServer", {});
+    this.fakeServer = new GapiFakeServer({
+      httpServer,
+      logRequest: (logType, details) => {
+        this.#log(serverScope, logType, details);
+      },
+    });
+
+    this.fakeServer.start();
+  }
+
+  async createAccount() {
+    if (!this.workshopAPI) {
+      this.workshopAPI = await this.startBackend({});
+    }
+
+    const { account } = await this.workshopAPI.tryToCreateAccount(
+      {},
+      this.fakeServer.domainInfo
+    );
+
+    this.account = account;
+  }
+
+  async addCalendarEvents(eventsData) {
+    if (!this.account) {
+      await this.createAccount();
+    }
+
+    let standardizedEvents = this.deriveFullEvents({
+      eventSketches: eventsData,
+    });
+
+    this.fakeServer.defaultCalendar = this.fakeServer.populateCalendar({
+      id: "default",
+      name: "Default Calendar",
+      events: standardizedEvents,
+      // Note that this is a name I just made up, not from gapi/mapi.
+      calendarOwner: this.user,
+    });
+
+    await this.account.syncFolderList();
+  }
+
+  async deleteAccount() {
+    await this.account.deleteAccount();
+    this.account = null;
+  }
+
+  /**
+   * Given an ordered list of minimal event characteristics, fill in necessary
+   * details to be a valid event and order the events sequentially.
+   */
+  deriveFullEvents({ eventSketches }) {
+    return this.eventFactory.deriveFullEvents({
+      eventSketches,
+      creator: this.user,
+      organizer: this.user,
+    });
+  }
+
+  /**
+   * Start up the Workshop backend. Returns the created
+   * WorkshopAPI after waiting for it to reach either "accountsLoaded" (default)
+   * or "configLoaded" states.
+   *
+   * In theory this could be called multiple times to create multiple clients,
+   * but if you do that, you should probably update the docs here.
+   *
+   * ## Implementation Note Re: Modules
+   *
+   * Because module loading can only happen inside a window right now and the
+   * sandbox and backstagepass globals lack the necessary window global, we
+   * create a chrome-privileged about:blank that we use.
+   */
+  async startBackend({ waitFor = "accountsLoaded" }) {
+    if (this.#apiContentPage) {
+      this.#apiContentPage.close();
+      this.#apiContentPage = null;
+    }
+
+    this.windowlessBrowser = Services.appShell.createWindowlessBrowser(true, 0);
+
+    let system = Services.scriptSecurityManager.getSystemPrincipal();
+
+    this.chromeShell = this.windowlessBrowser.docShell.QueryInterface(
+      Ci.nsIWebNavigation
+    );
+
+    this.chromeShell.createAboutBlankContentViewer(system, system);
+
+    const scriptUrl =
+      "chrome://browser/content/companion/workshop-api-built.js";
+    const scriptModule = `
+      import { MailAPIFactory } from "${scriptUrl}";
+      const OnlineServicesHelper = ChromeUtils.import(
+        "resource:///modules/OnlineServicesHelper.jsm"
+      );
+      const workshopAPI = (window.WORKSHOP_API = MailAPIFactory(
+        OnlineServicesHelper.MainThreadServices(window)
+      ));
+      window.dispatchEvent(new CustomEvent("apiLoaded"));
+`.replace(/\n/g, "");
+    const doc = this.chromeShell.document;
+    const scriptElem = doc.createElement("script");
+    scriptElem.setAttribute("type", "module");
+    scriptElem.textContent = scriptModule;
+    doc.body.appendChild(scriptElem);
+    const win = doc.defaultView;
+
+    await new Promise(resolve => {
+      win.addEventListener("apiLoaded", resolve, { once: true });
+    });
+
+    const workshopAPI = Cu.waiveXrays(win.WORKSHOP_API);
+
+    // Note: This currently labels us as using the same "tid" as the API.  This
+    // is pedantically correct under "t = thread", but it might be better for
+    // the test itself to be further delineated.  This could be handled by
+    // having the scopes just include extra meta-info though.
+
+    await workshopAPI.modifyConfig({
+      debugLogging: "realtime",
+    });
+    this.#gotLogicInstance(workshopAPI.logic);
+
+    console.log("waiting for", waitFor);
+    await workshopAPI.promisedLatestOnce(waitFor);
+    console.log("done waiting for", waitFor);
+
+    return workshopAPI;
+  }
+}
+
 class CompanionHelper {
   static async whenReady(taskFn, browserWindow = window) {
-    let helper = new CompanionHelper(browserWindow);
+    let helper;
+
+    const workshopEnabled = Services.prefs.getBoolPref(
+      "browser.pinebuild.workshop.enabled",
+      false
+    );
+
+    if (workshopEnabled) {
+      let workshopHelper = new WorkshopHelper();
+
+      // Start the Workshop server before the tests run.
+      // For now we're hardcoding the supported Google hosts.
+      workshopHelper.createFakeServer({
+        hosts: [
+          "gmail.com",
+          "accounts.google.com",
+          "docs.googleapis.com",
+          "oauth2.googleapis.com",
+          "gmail.googleapis.com",
+          "sheets.googleapis.com",
+          "slides.googleapis.com",
+          "www.googleapis.com",
+        ],
+      });
+
+      helper = new CompanionHelper(
+        browserWindow,
+        workshopEnabled,
+        workshopHelper
+      );
+    } else {
+      helper = new CompanionHelper(browserWindow);
+    }
+
     helper.openCompanion();
     await helper.companionReady;
 
@@ -44,8 +354,14 @@ class CompanionHelper {
     helper.closeCompanion();
   }
 
-  constructor(browserWindow = window) {
+  constructor(
+    browserWindow = window,
+    workshopEnabled = false,
+    workshopHelper = {}
+  ) {
     this.browserWindow = browserWindow;
+    this.workshopEnabled = workshopEnabled;
+    this.workshopHelper = workshopHelper;
   }
 
   openCompanion() {
@@ -141,33 +457,51 @@ class CompanionHelper {
   }
 
   async setCalendarEvents(eventsData) {
-    let oneHourFromNow = new Date();
-    oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
-    let standardizedEvents = eventsData
-      .map(event => ({
-        id: new Date(), // guarantee a unique id for this event
-        startDate: new Date(),
-        endDate: oneHourFromNow,
-        links: [],
-        conference: {},
-        calendar: { id: "primary" },
-        attendees: [],
-        organizer: { email: "organizer@example.com", isSelf: false },
-        creator: { email: "creator@example.com", isSelf: false },
-        serviceId: 0,
-        ...event,
-      }))
-      .sort((a, b) => a.startDate - b.startDate);
-    await this.runCompanionTask(
-      async events => {
+    if (this.workshopEnabled) {
+      await this.workshopHelper.addCalendarEvents(eventsData);
+      await this.runCompanionTask(async () => {
         content.document.dispatchEvent(
-          new content.CustomEvent("refresh-events", {
-            detail: { events },
-          })
+          new content.CustomEvent("refresh-events", {})
         );
-      },
-      [standardizedEvents]
-    );
+        // Checking the event list based on the assumption that we're testing
+        // the calendar UI whenever we set events, which seems reasonable for now.
+        let calendarEventList = content.document.querySelector(
+          "calendar-event-list"
+        );
+        await ContentTaskUtils.waitForEvent(
+          calendarEventList,
+          "calendar-events-updated"
+        );
+      });
+    } else {
+      let oneHourFromNow = new Date();
+      oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
+      let standardizedEvents = eventsData
+        .map(event => ({
+          id: new Date(), // guarantee a unique id for this event
+          startDate: new Date(),
+          endDate: oneHourFromNow,
+          links: [],
+          conference: {},
+          calendar: { id: "primary" },
+          attendees: [],
+          organizer: { email: "organizer@example.com", isSelf: false },
+          creator: { email: "creator@example.com", isSelf: false },
+          serviceId: 0,
+          ...event,
+        }))
+        .sort((a, b) => a.startDate - b.startDate);
+      await this.runCompanionTask(
+        async events => {
+          content.document.dispatchEvent(
+            new content.CustomEvent("refresh-events", {
+              detail: { events },
+            })
+          );
+        },
+        [standardizedEvents]
+      );
+    }
   }
 }
 
