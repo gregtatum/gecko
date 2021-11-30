@@ -2219,8 +2219,10 @@ class GlobalHistory extends EventTarget {
     };
 
     for (let i = 0; i < this.#viewStack.length; ++i) {
+      // We use the title of the View rather than the InternalView since
+      // we want to show the user-edited title if one exists.
       data.previews[i] = {
-        title: this.#viewStack[i].title,
+        title: this.#viewStack[i].view.title,
         url: this.#viewStack[i].url.spec,
         iconURL: this.#viewStack[i].iconURL,
         image: null,
@@ -2252,8 +2254,10 @@ class GlobalHistory extends EventTarget {
    */
   async getHistoryCarouselDataForIndex(index) {
     let internalView = this.#viewStack[index];
+    // We use the title of the View rather than the InternalView since
+    // we want to show the user-edited title if one exists.
     let result = {
-      title: internalView.title,
+      title: internalView.view.title,
       url: internalView.url.spec,
       iconURL: internalView.iconURL,
       image: null,
