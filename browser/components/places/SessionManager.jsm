@@ -210,6 +210,23 @@ const SessionManager = new (class SessionManager extends EventEmitter {
   }
 
   /**
+   * Sets aside the current session and ensures the user cannot click
+   * the button while the previous setAside is in progress.
+   *
+   * @param {DOMWindow} window
+   *   The window for the session to save.
+   */
+  async setAsideBtnPressed(window) {
+    let setAsideBtn = window.document.getElementById("session-setaside-button");
+    if (setAsideBtn.disabled) {
+      return;
+    }
+    setAsideBtn.disabled = true;
+    await this.replaceSession(window);
+    setAsideBtn.removeAttribute("disabled");
+  }
+
+  /**
    * Saves the current session on disk and in the database. Then replaces it
    * with a new one, or restores a provided one.
    *

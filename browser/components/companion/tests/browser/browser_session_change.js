@@ -8,6 +8,7 @@ const { SessionManager } = ChromeUtils.import(
 add_task(async function test_session_change() {
   // Run test in a new window to avoid affecting the main test window.
   let win = await BrowserTestUtils.openNewBrowserWindow();
+  let setAsideBtn = win.document.getElementById("session-setaside-button");
 
   registerCleanupFunction(async () => {
     await BrowserTestUtils.closeWindow(win);
@@ -38,7 +39,12 @@ add_task(async function test_session_change() {
       true
     );
 
-    await SessionManager.replaceSession(win);
+    setAsideBtn.click();
+
+    Assert.ok(
+      setAsideBtn.hasAttribute("disabled"),
+      "SetAside button is disabled"
+    );
     await sessionSetAside;
 
     // This should be set as soon as the session is set aside..
@@ -60,10 +66,15 @@ add_task(async function test_session_change() {
     // Now switch back to the previous session.
     sessionReplaced = SessionManager.once("session-replaced");
 
+    let sessionReplaceCalls = 0;
+    let countSessionReplaceCalls = () => sessionReplaceCalls++;
+    SessionManager.on("session-replaced", countSessionReplaceCalls);
+
     await SpecialPowers.spawn(
       win.gBrowser.selectedBrowser.browsingContext,
       [],
       async () => {
+        content.document.getElementById("restore").click();
         content.document.getElementById("restore").click();
       }
     );
@@ -74,5 +85,16 @@ add_task(async function test_session_change() {
       "Should have cleared the flow-reset attribute on the window"
     );
     Assert.equal(win.gURLBar.value, "", "URLBar should be empty");
+
+    // setTimeout is to allow the failing condition to complete, it
+    // will not cause intermittent failures.
+    // eslint-disable-next-line mozilla/no-arbitrary-setTimeout
+    await new Promise(resolve => setTimeout(resolve, 100));
+    SessionManager.off("session-replaced", countSessionReplaceCalls);
+    Assert.equal(
+      sessionReplaceCalls,
+      1,
+      "Session should only be replaced once"
+    );
   }, win);
 });
