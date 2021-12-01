@@ -122,9 +122,16 @@ class GoogleService {
       Authorization: `Bearer ${token}`,
     };
 
-    let response = await fetch(apiTarget, {
-      headers,
-    });
+    let response;
+    try {
+      response = await fetch(apiTarget, {
+        headers,
+      });
+    } catch (ex) {
+      // If we fail here, it's probably a network error.
+      // Return null so we can detect this situation.
+      return null;
+    }
 
     let calendarList = [];
 
@@ -376,9 +383,16 @@ class MicrosoftService {
       Authorization: `Bearer ${token}`,
     };
 
-    let response = await fetch(apiTarget, {
-      headers,
-    });
+    let response;
+    try {
+      response = await fetch(apiTarget, {
+        headers,
+      });
+    } catch (ex) {
+      // If we fail here, it's probably a network error.
+      // Return null so we can detect this situation.
+      return null;
+    }
 
     let results = await response.json();
     log.debug(JSON.stringify(results));
@@ -798,10 +812,14 @@ const OnlineServices = {
     }
 
     let eventResults = await Promise.allSettled(meetingResults);
-    let events = eventResults.flatMap(r => r.value || []);
 
-    this.setCache(events);
-    Services.obs.notifyObservers(events, "companion-services-refresh");
+    // Only update the events if at least one service successfully responds.
+    // If all services failed then there was likely a network error.
+    if (eventResults.some(r => r.value != null)) {
+      let events = eventResults.flatMap(r => r.value || []);
+      this.setCache(events);
+      Services.obs.notifyObservers(events, "companion-services-refresh");
+    }
 
     // Reset the auto refresh task to its full refresh time. This will also
     // queue the first auto-refresh if this is the first time we load events.
