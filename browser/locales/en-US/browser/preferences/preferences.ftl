@@ -165,6 +165,7 @@ preferences-services-connect-button = Connect
 preferences-services-status = STATUS
 preferences-services-disconnected-status = Not connected
 preferences-services-connected-status = Connected
+preferences-services-connecting-status = Connecting
 preferences-services-google-account = Google Services
 preferences-services-google-mozilla-account = Google Services (Mozilla)
 preferences-services-microsoft-account = Microsoft 365

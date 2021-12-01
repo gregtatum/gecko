@@ -11,7 +11,8 @@ export class ServicesOnboarding extends MozLitElement {
   static get properties() {
     return {
       currentService: { type: String },
-      authenticatingService: { type: String },
+      currentlyAuthenticatingTabService: { type: String },
+      currentlyAuthorizingServices: { type: Set },
       recentlyAuthedServices: { type: Set },
     };
   }
@@ -25,6 +26,7 @@ export class ServicesOnboarding extends MozLitElement {
   constructor() {
     super();
     this.recentlyAuthedServices = new Set();
+    this.currentlyAuthorizingServices = new Set();
     this.hideTimeouts = new Map();
     this.connectedServices = new Set();
     this.showConnectedMs = 10 * 1000;
@@ -35,6 +37,8 @@ export class ServicesOnboarding extends MozLitElement {
     window.addEventListener("Companion:ViewLocation", this);
     window.addEventListener("Companion:SignIn", this);
     window.addEventListener("Companion:SignOut", this);
+    window.addEventListener("Companion:OAuthRefreshTokenReceived", this);
+    window.addEventListener("Companion:OAuthAccessTokenError", this);
     if (workshopEnabled) {
       Workshop.getConnectedAccounts().then(accounts =>
         this.setConnectedServices(accounts)
@@ -49,6 +53,8 @@ export class ServicesOnboarding extends MozLitElement {
     window.removeEventListener("Companion:ViewLocation", this);
     window.removeEventListener("Companion:SignIn", this);
     window.removeEventListener("Companion:SignOut", this);
+    window.removeEventListener("Companion:OAuthRefreshTokenReceived", this);
+    window.removeEventListener("Companion:OAuthAccessTokenError", this);
     this.setConnectedServices([]);
   }
 
@@ -59,6 +65,12 @@ export class ServicesOnboarding extends MozLitElement {
       this.onSignIn(e);
     } else if (e.type == "Companion:SignOut") {
       this.onSignOut(e);
+    } else if (e.type == "Companion:OAuthRefreshTokenReceived") {
+      this.currentlyAuthorizingServices.add(e.detail.service);
+      this.requestUpdate();
+    } else if (e.type == "Companion:OAuthAccessTokenError") {
+      this.currentlyAuthorizingServices.delete(e.detail.service);
+      this.requestUpdate();
     }
   }
 
@@ -66,14 +78,14 @@ export class ServicesOnboarding extends MozLitElement {
     let oauthFlowService = e.detail.oauthFlowService;
     if (oauthFlowService) {
       this.currentService = this.normalizeServiceType(oauthFlowService);
-      this.authenticatingService = this.currentService;
+      this.currentlyAuthenticatingTabService = this.currentService;
       this.dispatchOnUpdateComplete(
         new CustomEvent("service-onboarding-flow-handled", {
           detail: { service: oauthFlowService },
         })
       );
     } else {
-      this.authenticatingService = null;
+      this.currentlyAuthenticatingTabService = null;
       let currentDomain = new URL(e.detail.url).host;
       this.currentService = ServiceUtils.getServiceForDomain(currentDomain);
       this.dispatchOnUpdateComplete(
@@ -86,6 +98,7 @@ export class ServicesOnboarding extends MozLitElement {
 
   onSignIn(e) {
     let { service, connectedServices } = e.detail;
+    this.currentlyAuthorizingServices.delete(service);
     this.showService(service);
     if (workshopEnabled) {
       this.setConnectedServices(Workshop.connectedAccounts);
@@ -96,6 +109,7 @@ export class ServicesOnboarding extends MozLitElement {
 
   onSignOut(e) {
     let { service, connectedServices } = e.detail;
+    this.currentlyAuthorizingServices.delete(service);
     if (workshopEnabled) {
       this.setConnectedServices(Workshop.connectedAccounts);
     } else {
@@ -156,7 +170,9 @@ export class ServicesOnboarding extends MozLitElement {
       this.connectedServices.has(type) || this.recentlyAuthedServices.has(type);
     return html`
       <connect-service
-        .authenticating=${serviceType == this.authenticatingService}
+        .authenticating=${serviceType ==
+          this.currentlyAuthenticatingTabService ||
+          this.currentlyAuthorizingServices.has(serviceType)}
         .connected=${connected}
         .icon=${icon}
         .name=${name}

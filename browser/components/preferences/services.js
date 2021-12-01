@@ -85,8 +85,9 @@ class ServiceRow extends HTMLElement {
         </div>
         <div class="service-status">
           <div class="status-text" data-l10n-id="preferences-services-status"></div>
-          <div class="status-connected" data-l10n-id="preferences-services-connected-status" hidden></div>
-          <div class="status-disconnected" data-l10n-id="preferences-services-disconnected-status" hidden></div>
+          <div class="status-text status-connected" data-l10n-id="preferences-services-connected-status" hidden></div>
+          <div class="status-text status-connecting" data-l10n-id="preferences-services-connecting-status" hidden></div>
+          <div class="status-text status-disconnected" data-l10n-id="preferences-services-disconnected-status" hidden></div>
         </div>
         <button class="button-disconnect"
                 data-l10n-id="preferences-services-disconnect-button"
@@ -128,17 +129,23 @@ class ServiceRow extends HTMLElement {
 
   updateStatus(status) {
     let connected = status == "connected";
+    let connecting = status == "connecting";
+    let disconnected = status == "disconnected";
 
     let connectedStatus = this._getElement(".status-connected");
+    let connectingStatus = this._getElement(".status-connecting");
     let disconnectedStatus = this._getElement(".status-disconnected");
 
     let disconnectButton = this._getElement(".button-disconnect");
     let connectButton = this._getElement(".button-connect");
 
     connectedStatus?.toggleAttribute("hidden", !connected);
-    disconnectButton?.toggleAttribute("hidden", !connected);
-    disconnectedStatus?.toggleAttribute("hidden", connected);
+    connectingStatus?.toggleAttribute("hidden", !connecting);
+    disconnectedStatus?.toggleAttribute("hidden", !disconnected);
+
     connectButton?.toggleAttribute("hidden", connected);
+    connectButton?.toggleAttribute("disabled", connecting);
+    disconnectButton?.toggleAttribute("hidden", !connected);
   }
 
   getServiceStatus() {
@@ -199,6 +206,7 @@ class ServiceRow extends HTMLElement {
     connectButton.addEventListener("click", this);
 
     this.setAttribute("status", this.getServiceStatus());
+    this.setAttribute("service-type", this.data.type);
   }
 }
 
@@ -300,6 +308,18 @@ class FxaServiceRow extends ServiceRow {
 
 customElements.define("fxa-service-row", FxaServiceRow);
 
+function oauthObserver(subject, topic, data) {
+  let serviceRow = document.querySelector(`service-row[service-type="${data}"`);
+  if (!serviceRow) {
+    return;
+  }
+  if (topic == "oauth-refresh-token-received") {
+    serviceRow.setAttribute("status", "connecting");
+  } else if (topic == "oauth-access-token-error") {
+    serviceRow.setAttribute("status", "disconnected");
+  }
+}
+
 function buildExtraServiceRows() {
   let extraServicesContainer = document.getElementById(
     "extra-services-container"
@@ -323,6 +343,13 @@ function buildExtraServiceRows() {
 
     extraServicesContainer.replaceChildren(...nodes);
   }
+
+  Services.obs.addObserver(oauthObserver, "oauth-refresh-token-received");
+  Services.obs.addObserver(oauthObserver, "oauth-access-token-error");
+  window.addEventListener("unload", () => {
+    Services.obs.removeObserver(oauthObserver, "oauth-refresh-token-received");
+    Services.obs.removeObserver(oauthObserver, "oauth-access-token-error");
+  });
 }
 
 async function buildFirefoxAccount() {

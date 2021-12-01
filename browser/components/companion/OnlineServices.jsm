@@ -557,6 +557,14 @@ class TestService {
   async connect() {
     if (this.auth) {
       await this.auth.getToken();
+      if (
+        Services.prefs.getBoolPref(
+          "pinebuild.testing.OAuthErrorAccessToken",
+          false
+        )
+      ) {
+        return null;
+      }
     }
     return "test-token";
   }

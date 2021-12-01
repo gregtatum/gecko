@@ -160,6 +160,12 @@ const OAuthConnect = {
         return;
       }
 
+      Services.obs.notifyObservers(
+        null,
+        "oauth-refresh-token-received",
+        oauth.serviceType
+      );
+
       // Cleanup any OAuth tabs we opened for this service.
       // 1. Get all stored connections related to the service type.
       // 2. Remove the stored connections from our global list.
@@ -194,7 +200,13 @@ const OAuthConnect = {
       // Reach out to the OAuth provider's server to turn our "code" into an
       // authenticated access token.
       let code = params.get("code");
-      oauth.requestAccessToken(code).then(resolve, reject);
+      oauth.requestAccessToken(code).then(token => {
+        let message = token
+          ? "oauth-access-token-received"
+          : "oauth-access-token-error";
+        Services.obs.notifyObservers(null, message, oauth.serviceType);
+        resolve(token);
+      }, reject);
     }
   },
 
@@ -330,6 +342,16 @@ class OAuth2 {
       data.append("redirect_uri", this.redirectionEndpoint);
     }
 
+    const delayPref = "pinebuild.testing.OAuthDelayAccessToken";
+    if (Cu.isInAutomation && Services.prefs.getBoolPref(delayPref, false)) {
+      await new Promise(resolve => {
+        Services.prefs.addObserver(delayPref, function handle() {
+          Services.prefs.removeObserver(delayPref, handle);
+          resolve();
+        });
+      });
+    }
+
     let response = await promiseXHR({
       url: this.tokenEndpoint,
       method: "POST",
@@ -338,7 +360,13 @@ class OAuth2 {
 
     let result = response.json;
 
-    if ("error" in result) {
+    const shouldError =
+      Cu.isInAutomation &&
+      Services.prefs.getBoolPref(
+        "pinebuild.testing.OAuthErrorAccessToken",
+        false
+      );
+    if ("error" in result || shouldError) {
       // RFC 6749 section 5.2. Error Response
 
       // Typically in production this would be {"error": "invalid_grant"}.

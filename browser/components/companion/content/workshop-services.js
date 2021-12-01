@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
 import {
   Workshop,
   workshopAPI,
@@ -14,18 +16,27 @@ export default class WorkshopServicesList extends MozLitElement {
   static get properties() {
     return {
       connectedServices: { type: Map },
+      connectingServices: { type: Set },
     };
   }
 
   constructor() {
     super();
     this.connectedServices = new Map();
+    this.connectingServices = new Set();
   }
 
   connectedCallback() {
     super.connectedCallback();
     this.addEventListener("workshop-connect", this);
     this.addEventListener("workshop-disconnect", this);
+    let _observe = this.observe.bind(this);
+    Services.obs.addObserver(_observe, "oauth-refresh-token-received");
+    Services.obs.addObserver(_observe, "oauth-access-token-error");
+    window.addEventListener("unload", () => {
+      Services.obs.removeObserver(_observe, "oauth-refresh-token-received");
+      Services.obs.removeObserver(_observe, "oauth-access-token-error");
+    });
     this.registerConnectedServices();
   }
 
@@ -40,6 +51,16 @@ export default class WorkshopServicesList extends MozLitElement {
       this.connectService(e.detail.type);
     } else if (e.type == "workshop-disconnect") {
       this.disconnectService(e.detail.type);
+    }
+  }
+
+  observe(subject, topic, data) {
+    if (topic == "oauth-refresh-token-received") {
+      this.connectingServices.add(data);
+      this.requestUpdate();
+    } else if (topic == "oauth-access-token-error") {
+      this.connectingServices.delete(data);
+      this.requestUpdate();
     }
   }
 
@@ -77,14 +98,21 @@ export default class WorkshopServicesList extends MozLitElement {
 
   render() {
     return Array.from(ServiceUtils.serviceByType.values()).map(service => {
-      let connected = this.connectedServices.has(service.type);
+      let status;
+      if (this.connectedServices.has(service.type)) {
+        status = "connected";
+      } else if (this.connectingServices.has(service.type)) {
+        status = "connecting";
+      } else {
+        status = "disconnected";
+      }
       return html`
         <workshop-service
           .icon=${service.icon}
           .name=${service.name}
           .services=${service.services}
           .type=${service.type}
-          .connected=${connected}
+          .status=${status}
         ></workshop-service>
       `;
     });
@@ -95,7 +123,7 @@ customElements.define("workshop-services-list", WorkshopServicesList);
 class WorkshopService extends MozLitElement {
   static get properties() {
     return {
-      connected: { type: Boolean },
+      status: { type: String },
       icon: { type: String },
       name: { type: String },
       services: { type: String },
@@ -112,6 +140,18 @@ class WorkshopService extends MozLitElement {
         text-transform: capitalize;
       }
     `;
+  }
+
+  get connected() {
+    return this.status == "connected";
+  }
+
+  get connecting() {
+    return this.status == "connecting";
+  }
+
+  get disconnected() {
+    return !this.connected;
   }
 
   connectService() {
@@ -148,18 +188,12 @@ class WorkshopService extends MozLitElement {
             data-l10n-id="preferences-services-status"
           ></div>
           <div
-            ?hidden=${!this.connected}
-            class="status-connected"
-            data-l10n-id="preferences-services-connected-status"
-          ></div>
-          <div
-            ?hidden=${this.connected}
-            class="status-disconnected"
-            data-l10n-id="preferences-services-disconnected-status"
+            class=${`status-text status-${this.status}`}
+            data-l10n-id=${`preferences-services-${this.status}-status`}
           ></div>
         </div>
         <button
-          ?hidden=${!this.connected}
+          ?hidden=${this.disconnected}
           @click=${this.disconnectService}
           class="button-disconnect"
           data-l10n-id="preferences-services-disconnect-button"
@@ -167,6 +201,7 @@ class WorkshopService extends MozLitElement {
         ></button>
         <button
           ?hidden=${this.connected}
+          ?disabled=${this.connecting}
           @click=${this.connectService}
           class="button-connect"
           data-l10n-id="preferences-services-connect-button"

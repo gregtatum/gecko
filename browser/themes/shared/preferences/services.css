@@ -26,11 +26,9 @@
 }
 
 .service-status {
-  justify-self: center;
+  justify-self: flex-start;
 }
 
-.status-connected,
-.status-disconnected,
 .service-labels,
 .status-text {
   color: var(--in-content-deemphasized-text);

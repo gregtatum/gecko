@@ -106,6 +106,9 @@ class CompanionParent extends JSWindowActorParent {
     Services.obs.addObserver(this._observer, "companion-signout");
     Services.obs.addObserver(this._observer, "companion-services-refresh");
     Services.obs.addObserver(this._observer, "companion-submenu-change");
+    Services.obs.addObserver(this._observer, "oauth-refresh-token-received");
+    Services.obs.addObserver(this._observer, "oauth-access-token-received");
+    Services.obs.addObserver(this._observer, "oauth-access-token-error");
 
     Services.prefs.addObserver(
       "browser.companion.globalhistorydebugging",
@@ -199,6 +202,9 @@ class CompanionParent extends JSWindowActorParent {
     Services.obs.removeObserver(this._observer, "companion-signout");
     Services.obs.removeObserver(this._observer, "companion-services-refresh");
     Services.obs.removeObserver(this._observer, "companion-submenu-change");
+    Services.obs.removeObserver(this._observer, "oauth-refresh-token-received");
+    Services.obs.removeObserver(this._observer, "oauth-access-token-received");
+    Services.obs.removeObserver(this._observer, "oauth-access-token-error");
 
     Services.prefs.removeObserver(
       "browser.companion.globalhistorydebugging",
@@ -583,6 +589,16 @@ class CompanionParent extends JSWindowActorParent {
         this.sendAsyncMessage("Companion:BrowsePanel");
         break;
       }
+      case "oauth-refresh-token-received":
+        this.sendAsyncMessage("Companion:OAuthRefreshTokenReceived", {
+          service: data,
+        });
+        break;
+      case "oauth-access-token-error":
+        this.sendAsyncMessage("Companion:OAuthAccessTokenError", {
+          service: data,
+        });
+        break;
     }
   }
 

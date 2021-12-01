@@ -325,6 +325,11 @@ add_task(async function testMultipleOauthFlow() {
         (_, data) => data == "testserviceauth"
       );
 
+      const delayPref = "pinebuild.testing.OAuthDelayAccessToken";
+      Services.prefs.setBoolPref(delayPref, true);
+
+      let tabClosed = BrowserTestUtils.waitForTabClosing(gBrowser.selectedTab);
+
       await SpecialPowers.spawn(gBrowser.selectedBrowser, [], async () => {
         let link = await ContentTaskUtils.waitForCondition(() =>
           content.document.querySelector("a")
@@ -332,9 +337,87 @@ add_task(async function testMultipleOauthFlow() {
         link.click();
       });
 
+      await tabClosed;
+      await assertConnectCard(helper, {
+        service: "testserviceauth",
+        length: 1,
+        connected: false,
+        authenticating: true,
+      });
+
+      Services.prefs.clearUserPref(delayPref);
       await authenticated;
 
       is(gBrowser.tabs.length, initialTabCount, "OAuth tabs have been removed");
+
+      await PinebuildTestUtils.logoutFromTestService("testserviceauth");
+    }, win);
+  });
+});
+
+add_task(async function testOauthFlowError() {
+  await withNewBrowserWindow(async win => {
+    const { gBrowser } = win;
+
+    await CompanionHelper.whenReady(async helper => {
+      let testUrl = "https://example.net/";
+      let domain = "example.net";
+
+      await assertConnectCard(helper, { length: 0 });
+
+      let urlHandled = waitForDomainHandled(helper, domain);
+
+      await loadURI(gBrowser, testUrl);
+      await urlHandled;
+
+      let authStarted = BrowserTestUtils.waitForNewTab(gBrowser);
+
+      await assertConnectCard(helper, {
+        service: "testserviceauth",
+        length: 1,
+        connected: false,
+        authenticating: false,
+        clickConnect: true,
+      });
+
+      await authStarted;
+
+      await assertConnectCard(helper, {
+        service: "testserviceauth",
+        length: 1,
+        connected: false,
+        authenticating: true,
+        hideService: true,
+      });
+
+      await assertConnectCard(helper, {
+        service: "testserviceauth",
+        length: 1,
+        connected: false,
+        authenticating: true,
+      });
+
+      const errorPref = "pinebuild.testing.OAuthErrorAccessToken";
+      Services.prefs.setBoolPref(errorPref, true);
+
+      let tabClosed = BrowserTestUtils.waitForTabClosing(gBrowser.selectedTab);
+
+      await SpecialPowers.spawn(gBrowser.selectedBrowser, [], async () => {
+        let link = await ContentTaskUtils.waitForCondition(() =>
+          content.document.querySelector("a")
+        );
+        link.click();
+      });
+
+      await tabClosed;
+      await assertConnectCard(helper, {
+        service: "testserviceauth",
+        length: 1,
+        connected: false,
+        authenticating: false,
+      });
+
+      Services.prefs.clearUserPref(errorPref);
 
       await PinebuildTestUtils.logoutFromTestService("testserviceauth");
     }, win);
