@@ -125,28 +125,31 @@ Result<Ok, ICUError> Calendar::SetTimeInMs(double aUnixEpoch) {
 }
 
 /* static */
-Result<SpanEnumeration<char>, ICUError>
+EnumeratedSpan<const char> Calendar::LegacyIdentifierToBcp47(
+    UErrorCode status, const char* aIdentifier, int32_t aLength) {
+  if (U_FAILURE(status)) {
+    return Some(Err(ToICUError(status)));
+  }
+  if (!aIdentifier) {
+    return Maybe<Span<const char>>(Nothing());
+  }
+  // aLength is not needed here, as the ICU call uses the null terminated
+  // string.
+  return Some(MakeStringSpan(uloc_toUnicodeLocaleType("ca", aIdentifier)));
+}
+
+/* static */
+Result<SpanEnumeration<const char>, ICUError>
 Calendar::GetLegacyKeywordValuesForLocale(const char* aLocale) {
   UErrorCode status = U_ZERO_ERROR;
   UEnumeration* enumeration = ucal_getKeywordValuesForLocale(
       "calendar", aLocale, /* commonlyUsed */ false, &status);
 
-  if (U_SUCCESS(status)) {
-    return SpanEnumeration<char>(enumeration);
+  if (U_FAILURE(status)) {
+    return Err(ToICUError(status));
   }
 
-  return Err(ToICUError(status));
-}
-
-/* static */
-SpanResult<char> Calendar::LegacyIdentifierToBcp47(const char* aIdentifier,
-                                                   int32_t aLength) {
-  if (aIdentifier == nullptr) {
-    return Err(InternalError{});
-  }
-  // aLength is not needed here, as the ICU call uses the null terminated
-  // string.
-  return MakeStringSpan(uloc_toUnicodeLocaleType("ca", aIdentifier));
+  return SpanEnumeration<const char>(enumeration);
 }
 
 /* static */

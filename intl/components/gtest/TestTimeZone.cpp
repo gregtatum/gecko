@@ -161,8 +161,8 @@ TEST(IntlTimeZone, GetAvailableTimeZones)
   bool hasEuropeBerlin = false;
   bool hasEuropeBusingen = false;
 
-  for (auto timeZone : timeZones) {
-    auto span = timeZone.unwrap();
+  while (auto timeZone = timeZones.Next()) {
+    auto span = timeZone->unwrap();
     if (span == EuropeBerlin) {
       ASSERT_FALSE(hasEuropeBerlin);
       hasEuropeBerlin = true;
@@ -191,8 +191,8 @@ TEST(IntlTimeZone, GetAvailableTimeZonesNoRegion)
   bool hasAsiaTokyo = false;
   bool hasEuropeParis = false;
 
-  for (auto timeZone : timeZones) {
-    auto span = timeZone.unwrap();
+  while (auto timeZone = timeZones.Next()) {
+    auto span = timeZone->unwrap();
     if (span == AmericaNewYork) {
       ASSERT_FALSE(hasAmericaNewYork);
       hasAmericaNewYork = true;

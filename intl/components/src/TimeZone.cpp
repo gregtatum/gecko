@@ -313,7 +313,7 @@ Result<Span<const char>, ICUError> TimeZone::GetTZDataVersion() {
   return MakeStringSpan(tzdataVersion);
 }
 
-Result<SpanEnumeration<char>, ICUError> TimeZone::GetAvailableTimeZones(
+Result<SpanEnumeration<const char>, ICUError> TimeZone::GetAvailableTimeZones(
     const char* aRegion) {
   // Get the time zones that are commonly used in the given region. Uses the
   // UCAL_ZONE_TYPE_ANY filter so we have more fine-grained control over the
@@ -326,17 +326,18 @@ Result<SpanEnumeration<char>, ICUError> TimeZone::GetAvailableTimeZones(
     return Err(ToICUError(status));
   }
 
-  return SpanEnumeration<char>(enumeration);
+  return SpanEnumeration<const char>(enumeration);
 }
 
-Result<SpanEnumeration<char>, ICUError> TimeZone::GetAvailableTimeZones() {
+Result<SpanEnumeration<const char>, ICUError>
+TimeZone::GetAvailableTimeZones() {
   UErrorCode status = U_ZERO_ERROR;
   UEnumeration* enumeration = ucal_openTimeZones(&status);
   if (U_FAILURE(status)) {
     return Err(ToICUError(status));
   }
 
-  return SpanEnumeration<char>(enumeration);
+  return SpanEnumeration<const char>(enumeration);
 }
 
 #if !MOZ_INTL_USE_ICU_CPP_TIMEZONE

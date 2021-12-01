@@ -19,13 +19,16 @@ TEST(IntlCalendar, GetLegacyKeywordValuesForLocale)
   bool hasIslamic = false;
   auto gregorian = MakeStringSpan("gregorian");
   auto islamic = MakeStringSpan("islamic");
-  auto keywords = Calendar::GetLegacyKeywordValuesForLocale("en-US").unwrap();
-  for (auto name : keywords) {
+  auto keywordsResult = Calendar::GetLegacyKeywordValuesForLocale("en-US");
+  ASSERT_TRUE(keywordsResult.isOk());
+  auto keywords = keywordsResult.unwrap();
+  while (auto keyword = keywords.Next()) {
+    ASSERT_TRUE(keyword->isOk());
     // Check a few keywords, as this list may not be stable between ICU updates.
-    if (name.unwrap() == gregorian) {
+    if (keyword->unwrap() == gregorian) {
       hasGregorian = true;
     }
-    if (name.unwrap() == islamic) {
+    if (keyword->unwrap() == islamic) {
       hasIslamic = true;
     }
   }
@@ -40,12 +43,14 @@ TEST(IntlCalendar, GetBcp47KeywordValuesForLocale)
   auto gregory = MakeStringSpan("gregory");
   auto islamic = MakeStringSpan("islamic");
   auto keywords = Calendar::GetBcp47KeywordValuesForLocale("en-US").unwrap();
-  for (auto name : keywords) {
+  while (auto keyword = keywords.Next()) {
+    ASSERT_TRUE(keyword->isOk());
+
     // Check a few keywords, as this list may not be stable between ICU updates.
-    if (name.unwrap() == gregory) {
+    if (keyword->unwrap() == gregory) {
       hasGregory = true;
     }
-    if (name.unwrap() == islamic) {
+    if (keyword->unwrap() == islamic) {
       hasIslamic = true;
     }
   }
@@ -62,12 +67,13 @@ TEST(IntlCalendar, GetBcp47KeywordValuesForLocaleCommonlyUsed)
   auto keywords = Calendar::GetBcp47KeywordValuesForLocale(
                       "en-US", Calendar::CommonlyUsed::Yes)
                       .unwrap();
-  for (auto name : keywords) {
+  while (auto keyword = keywords.Next()) {
+    ASSERT_TRUE(keyword->isOk());
     // Check a few keywords, as this list may not be stable between ICU updates.
-    if (name.unwrap() == gregory) {
+    if (keyword->unwrap() == gregory) {
       hasGregory = true;
     }
-    if (name.unwrap() == islamic) {
+    if (keyword->unwrap() == islamic) {
       hasIslamic = true;
     }
   }

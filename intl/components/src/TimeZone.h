@@ -216,13 +216,13 @@ class TimeZone final {
    * Return an enumeration over all time zones commonly used in the given
    * region.
    */
-  static Result<SpanEnumeration<char>, ICUError> GetAvailableTimeZones(
+  static Result<SpanEnumeration<const char>, ICUError> GetAvailableTimeZones(
       const char* aRegion);
 
   /**
    * Return an enumeration over all available time zones.
    */
-  static Result<SpanEnumeration<char>, ICUError> GetAvailableTimeZones();
+  static Result<SpanEnumeration<const char>, ICUError> GetAvailableTimeZones();
 
  private:
 #if MOZ_INTL_USE_ICU_CPP_TIMEZONE

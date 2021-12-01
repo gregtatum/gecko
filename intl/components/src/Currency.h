@@ -22,7 +22,7 @@ class Currency final {
   /**
    * Returns an enumeration of all supported ISO currency codes.
    */
-  static Result<SpanEnumeration<char>, ICUError> GetISOCurrencies();
+  static Result<SpanEnumeration<const char>, ICUError> GetISOCurrencies();
 };
 
 }  // namespace mozilla::intl

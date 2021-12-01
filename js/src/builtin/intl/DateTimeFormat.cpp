@@ -297,20 +297,20 @@ bool js::intl_availableCalendars(JSContext* cx, unsigned argc, Value* vp) {
 
   // Now get the calendars that "would make a difference", i.e., not the
   // default.
-  auto keywords =
+  auto keywordsResult =
       mozilla::intl::Calendar::GetBcp47KeywordValuesForLocale(locale.get());
-  if (keywords.isErr()) {
-    intl::ReportInternalError(cx, keywords.unwrapErr());
+  if (keywordsResult.isErr()) {
+    intl::ReportInternalError(cx, keywordsResult.unwrapErr());
     return false;
   }
-
-  for (auto keyword : keywords.unwrap()) {
-    if (keyword.isErr()) {
+  auto keywords = keywordsResult.unwrap();
+  while (auto keyword = keywords.Next()) {
+    if (keyword->isErr()) {
       intl::ReportInternalError(cx);
       return false;
     }
 
-    JSString* jscalendar = NewStringCopy<CanGC>(cx, keyword.unwrap());
+    JSString* jscalendar = NewStringCopy<CanGC>(cx, keyword->unwrap());
     if (!jscalendar) {
       return false;
     }

@@ -16,13 +16,13 @@ TEST(IntlCurrency, GetISOCurrencies)
   constexpr auto euro = MakeStringSpan("EUR");
 
   auto currencies = Currency::GetISOCurrencies().unwrap();
-  for (auto currency : currencies) {
+  while (auto currency = currencies.Next()) {
     // Check a few currencies, as the list may not be stable between ICU
     // updates.
-    if (currency.unwrap() == usdollar) {
+    if (currency->unwrap() == usdollar) {
       hasUSDollar = true;
     }
-    if (currency.unwrap() == euro) {
+    if (currency->unwrap() == euro) {
       hasEuro = true;
     }
   }

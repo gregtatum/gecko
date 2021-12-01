@@ -146,8 +146,8 @@ class Collator final {
   /**
    * Map keywords to their BCP 47 equivalents.
    */
-  static SpanResult<char> KeywordValueToBcp47Extension(const char* aKeyword,
-                                                       int32_t aLength);
+  static EnumeratedSpan<const char> KeywordValueToBcp47Extension(
+      UErrorCode aStatus, const char* aKeyword, int32_t aLength);
 
   enum class CommonlyUsed : bool {
     /**
@@ -162,7 +162,7 @@ class Collator final {
   };
 
   using Bcp47ExtEnumeration =
-      Enumeration<char, SpanResult<char>,
+      Enumeration<const char, Span<const char>,
                   Collator::KeywordValueToBcp47Extension>;
 
   /**

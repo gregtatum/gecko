@@ -294,12 +294,17 @@ Collator::GetBcp47KeywordValues() {
 }
 
 /* static */
-SpanResult<char> Collator::KeywordValueToBcp47Extension(const char* aKeyword,
-                                                        int32_t aLength) {
-  if (aKeyword == nullptr) {
-    return Err(InternalError{});
+EnumeratedSpan<const char> Collator::KeywordValueToBcp47Extension(
+    UErrorCode aStatus, const char* aKeyword, int32_t aLength) {
+  if (U_FAILURE(aStatus)) {
+    return Some(Err(ToICUError(aStatus)));
   }
-  return MakeStringSpan(uloc_toUnicodeLocaleType("co", aKeyword));
+  if (!aKeyword) {
+    return Maybe<Span<const char>>(Nothing());
+  }
+  MOZ_ASSERT(aLength >= 0);
+
+  return Some(MakeStringSpan(uloc_toUnicodeLocaleType("co", aKeyword)));
 }
 
 }  // namespace mozilla::intl

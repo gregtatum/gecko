@@ -546,12 +546,12 @@ static ArrayObject* CreateArrayFromSortedList(
 template <const auto& unsupported, class Enumeration>
 static bool EnumerationIntoList(JSContext* cx, Enumeration values,
                                 MutableHandle<StringList> list) {
-  for (auto value : values) {
-    if (value.isErr()) {
+  while (auto value = values.Next()) {
+    if (value->isErr()) {
       intl::ReportInternalError(cx);
       return false;
     }
-    auto span = value.unwrap();
+    auto span = value->unwrap();
 
     // Skip over known, unsupported values.
     std::string_view sv(span.data(), span.size());

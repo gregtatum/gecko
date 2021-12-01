@@ -342,23 +342,29 @@ template <size_t StackSize>
 }
 
 /**
- * An iterable class that wraps calls to the ICU UEnumeration C API.
- *
- * Usage:
- *
- *  // Make sure the range expression is non-temporary, otherwise there is a
- *  // risk of undefined behavior:
- *  auto result = Calendar::GetBcp47KeywordValuesForLocale("en-US");
- *
- *  for (auto name : result.unwrap()) {
- *    MOZ_ASSERT(name.unwrap(), "An iterable value exists".);
- *  }
+ * This is the return type of a mapper function.
  */
-template <typename CharType, typename T, T(Mapper)(const CharType*, int32_t)>
-class Enumeration {
+template <typename T>
+using EnumeratedT = Maybe<Result<T, ICUError>>;
+
+/**
+ * This is the return type of a mapper function.
+ */
+template <typename CharType>
+using EnumeratedSpan = EnumeratedT<Span<CharType>>;
+
+/**
+ * An iterator for the ICU UEnumerations class. The third argument is the
+ * mapping function for converting a `UErrorCode`, `const char*` and `int32_t`
+ * to the final argument. This can be a `Span` through the `SpanEnumeration` or
+ * a custom mapper function.
+ */
+template <typename CharType, typename T,
+          EnumeratedT<T>(Mapper)(UErrorCode, const char*, int32_t)>
+class MOZ_STACK_CLASS Enumeration {
  public:
-  class Iterator;
-  friend class Iterator;
+  explicit Enumeration(UEnumeration* aUEnumeration)
+      : mUEnumeration(aUEnumeration) {}
 
   // Transfer ownership of the UEnumeration in the move constructor.
   Enumeration(Enumeration&& other) noexcept
@@ -371,87 +377,10 @@ class Enumeration {
     if (this == &other) {
       return *this;
     }
-    if (mUEnumeration) {
-      uenum_close(mUEnumeration);
-    }
     mUEnumeration = other.mUEnumeration;
     other.mUEnumeration = nullptr;
     return *this;
   }
-
-  class Iterator {
-    Enumeration& mEnumeration;
-    // `Nothing` signifies that no enumeration has been loaded through ICU yet.
-    Maybe<int32_t> mIteration = Nothing{};
-    const CharType* mNext = nullptr;
-    int32_t mNextLength = 0;
-
-   public:
-    using value_type = const CharType*;
-    using reference = T;
-    using iterator_category = std::input_iterator_tag;
-
-    explicit Iterator(Enumeration& aEnumeration, bool aIsBegin)
-        : mEnumeration(aEnumeration) {
-      if (aIsBegin) {
-        AdvanceUEnum();
-      }
-    }
-
-    Iterator& operator++() {
-      AdvanceUEnum();
-      return *this;
-    }
-
-    Iterator operator++(int) {
-      Iterator retval = *this;
-      ++(*this);
-      return retval;
-    }
-
-    bool operator==(Iterator other) const {
-      return mIteration == other.mIteration;
-    }
-
-    bool operator!=(Iterator other) const { return !(*this == other); }
-
-    T operator*() const {
-      // Map the iterated value to something new.
-      return Mapper(mNext, mNextLength);
-    }
-
-   private:
-    void AdvanceUEnum() {
-      if (mIteration.isNothing()) {
-        mIteration = Some(-1);
-      }
-      UErrorCode status = U_ZERO_ERROR;
-      if constexpr (std::is_same_v<CharType, char16_t>) {
-        mNext = uenum_unext(mEnumeration.mUEnumeration, &mNextLength, &status);
-      } else {
-        static_assert(std::is_same_v<CharType, char>,
-                      "Only char16_t and char are supported by "
-                      "mozilla::intl::Enumeration.");
-        mNext = uenum_next(mEnumeration.mUEnumeration, &mNextLength, &status);
-      }
-      if (U_FAILURE(status)) {
-        mNext = nullptr;
-      }
-
-      if (mNext) {
-        (*mIteration)++;
-      } else {
-        // The iterator is complete.
-        mIteration = Nothing{};
-      }
-    }
-  };
-
-  Iterator begin() { return Iterator(*this, true); }
-  Iterator end() { return Iterator(*this, false); }
-
-  explicit Enumeration(UEnumeration* aUEnumeration)
-      : mUEnumeration(aUEnumeration) {}
 
   ~Enumeration() {
     if (mUEnumeration) {
@@ -460,26 +389,49 @@ class Enumeration {
     }
   }
 
+  EnumeratedT<T> Next() {
+    static_assert(std::is_same_v<CharType, const char16_t> ||
+                  std::is_same_v<CharType, const char>);
+    MOZ_ASSERT(mUEnumeration);
+    CharType* next = nullptr;
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t length = 0;
+
+    if constexpr (std::is_same_v<CharType, const char16_t>) {
+      next = uenum_unext(mUEnumeration, &length, &status);
+    }
+    if constexpr (std::is_same_v<CharType, const char>) {
+      next = uenum_next(mUEnumeration, &length, &status);
+    }
+
+    return Mapper(status, next, length);
+  }
+
  private:
   UEnumeration* mUEnumeration = nullptr;
 };
 
+/**
+ * Map an ICU Enumeration to a Span. This is the default type of Mapper.
+ */
 template <typename CharType>
-Result<Span<const CharType>, InternalError> SpanMapper(const CharType* string,
-                                                       int32_t length) {
-  // Return the raw value from this Iterator.
-  if (string == nullptr) {
-    return Err(InternalError{});
+EnumeratedSpan<CharType> SpanMapper(UErrorCode status, CharType* string,
+                                    int32_t length) {
+  if (U_FAILURE(status)) {
+    return Some(Err(ToICUError(status)));
+  }
+  if (!string) {
+    return Nothing();
   }
   MOZ_ASSERT(length >= 0);
-  return Span<const CharType>(string, static_cast<size_t>(length));
+  return Some(Span<CharType>(string, static_cast<size_t>(length)));
 }
 
+/**
+ * An enumeration that iterates over a span.
+ */
 template <typename CharType>
-using SpanResult = Result<Span<const CharType>, InternalError>;
-
-template <typename CharType>
-using SpanEnumeration = Enumeration<CharType, SpanResult<CharType>, SpanMapper>;
+using SpanEnumeration = Enumeration<CharType, Span<CharType>, SpanMapper>;
 
 /**
  * An iterable class that wraps calls to ICU's available locales API.

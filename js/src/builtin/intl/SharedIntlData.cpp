@@ -131,19 +131,20 @@ bool js::intl::SharedIntlData::ensureTimeZones(JSContext* cx) {
   // OOM, clear all sets/maps and start from scratch.
   availableTimeZones.clearAndCompact();
 
-  auto timeZones = mozilla::intl::TimeZone::GetAvailableTimeZones();
-  if (timeZones.isErr()) {
-    ReportInternalError(cx, timeZones.unwrapErr());
+  auto timeZonesResult = mozilla::intl::TimeZone::GetAvailableTimeZones();
+  if (timeZonesResult.isErr()) {
+    ReportInternalError(cx, timeZonesResult.unwrapErr());
     return false;
   }
+  auto timeZones = timeZonesResult.unwrap();
 
   RootedAtom timeZone(cx);
-  for (auto timeZoneName : timeZones.unwrap()) {
-    if (timeZoneName.isErr()) {
+  while (auto timeZoneName = timeZones.Next()) {
+    if (timeZoneName->isErr()) {
       ReportInternalError(cx);
       return false;
     }
-    auto timeZoneSpan = timeZoneName.unwrap();
+    auto timeZoneSpan = timeZoneName->unwrap();
 
     // Skip legacy ICU time zone names.
     if (IsLegacyICUTimeZone(timeZoneSpan)) {

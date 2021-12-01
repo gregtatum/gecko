@@ -158,10 +158,10 @@ bool js::intl_availableCollations(JSContext* cx, unsigned argc, Value* vp) {
   if (!locale) {
     return false;
   }
-  auto keywords =
+  auto keywordsResult =
       mozilla::intl::Collator::GetBcp47KeywordValuesForLocale(locale.get());
-  if (keywords.isErr()) {
-    ReportInternalError(cx, keywords.unwrapErr());
+  if (keywordsResult.isErr()) {
+    ReportInternalError(cx, keywordsResult.unwrapErr());
     return false;
   }
 
@@ -176,12 +176,13 @@ bool js::intl_availableCollations(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
-  for (auto result : keywords.unwrap()) {
-    if (result.isErr()) {
+  auto keywords = keywordsResult.unwrap();
+  while (auto result = keywords.Next()) {
+    if (result->isErr()) {
       ReportInternalError(cx);
       return false;
     }
-    mozilla::Span<const char> collation = result.unwrap();
+    mozilla::Span<const char> collation = result->unwrap();
 
     // Per ECMA-402, 10.2.3, we don't include standard and search:
     // "The values 'standard' and 'search' must not be used as elements in

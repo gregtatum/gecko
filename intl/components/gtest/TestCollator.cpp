@@ -211,9 +211,9 @@ TEST(IntlCollator, GetBcp47KeywordValuesForLocale)
   bool hasPhonebk = false;
   bool hasPhonebook = false;
 
-  for (auto extensionResult : extensions) {
-    ASSERT_TRUE(extensionResult.isOk());
-    auto extension = extensionResult.unwrap();
+  while (auto extensionResult = extensions.Next()) {
+    ASSERT_TRUE(extensionResult->isOk());
+    auto extension = extensionResult->unwrap();
     hasStandard |= extension == standard;
     hasSearch |= extension == search;
     hasPhonebk |= extension == phonebk;
@@ -245,9 +245,9 @@ TEST(IntlCollator, GetBcp47KeywordValuesForLocaleCommonlyUsed)
   bool hasPhonebk = false;
   bool hasPhonebook = false;
 
-  for (auto extensionResult : extensions) {
-    ASSERT_TRUE(extensionResult.isOk());
-    auto extension = extensionResult.unwrap();
+  while (auto extensionResult = extensions.Next()) {
+    ASSERT_TRUE(extensionResult->isOk());
+    auto extension = extensionResult->unwrap();
     hasStandard |= extension == standard;
     hasSearch |= extension == search;
     hasPhonebk |= extension == phonebk;
@@ -278,9 +278,9 @@ TEST(IntlCollator, GetBcp47KeywordValues)
   bool hasPhonebk = false;
   bool hasPhonebook = false;
 
-  for (auto extensionResult : extensions) {
-    ASSERT_TRUE(extensionResult.isOk());
-    auto extension = extensionResult.unwrap();
+  while (auto extensionResult = extensions.Next()) {
+    ASSERT_TRUE(extensionResult->isOk());
+    auto extension = extensionResult->unwrap();
     hasStandard |= extension == standard;
     hasSearch |= extension == search;
     hasPhonebk |= extension == phonebk;

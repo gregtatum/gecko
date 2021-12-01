@@ -10,13 +10,13 @@
 
 namespace mozilla::intl {
 
-Result<SpanEnumeration<char>, ICUError> Currency::GetISOCurrencies() {
+Result<SpanEnumeration<const char>, ICUError> Currency::GetISOCurrencies() {
   UErrorCode status = U_ZERO_ERROR;
   UEnumeration* enumeration = ucurr_openISOCurrencies(UCURR_ALL, &status);
   if (U_FAILURE(status)) {
     return Err(ToICUError(status));
   }
-  return SpanEnumeration<char>(enumeration);
+  return SpanEnumeration<const char>(enumeration);
 }
 
 }  // namespace mozilla::intl

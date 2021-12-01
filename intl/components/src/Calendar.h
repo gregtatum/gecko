@@ -85,7 +85,7 @@ class Calendar final {
    * Return ICU legacy keywords, such as "gregorian", "islamic",
    * "islamic-civil", "hebrew", etc.
    */
-  static Result<SpanEnumeration<char>, ICUError>
+  static Result<SpanEnumeration<const char>, ICUError>
   GetLegacyKeywordValuesForLocale(const char* aLocale);
 
  private:
@@ -93,8 +93,8 @@ class Calendar final {
    * Internal function to convert a legacy calendar identifier to the newer
    * BCP 47 identifier.
    */
-  static SpanResult<char> LegacyIdentifierToBcp47(const char* aIdentifier,
-                                                  int32_t aLength);
+  static EnumeratedSpan<const char> LegacyIdentifierToBcp47(
+      UErrorCode status, const char* aIdentifier, int32_t aLength);
 
  public:
   enum class CommonlyUsed : bool {
@@ -110,7 +110,8 @@ class Calendar final {
   };
 
   using Bcp47IdentifierEnumeration =
-      Enumeration<char, SpanResult<char>, Calendar::LegacyIdentifierToBcp47>;
+      Enumeration<const char, Span<const char>,
+                  Calendar::LegacyIdentifierToBcp47>;
 
   /**
    * Return BCP 47 Unicode locale extension type keywords.

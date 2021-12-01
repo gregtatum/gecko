@@ -56,7 +56,7 @@ class MeasureUnit final {
      public:
       // std::iterator traits.
       using iterator_category = std::input_iterator_tag;
-      using value_type = SpanResult<char>;
+      using value_type = Result<Span<const char>, InternalError>;
       using difference_type = ptrdiff_t;
       using pointer = value_type*;
       using reference = value_type&;
