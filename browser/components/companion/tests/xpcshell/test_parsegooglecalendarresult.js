@@ -11,10 +11,10 @@ const GOOGLE_TEST = [
   {
     result: {
       organizer: {
-        email: "email@example.com",
+        email: "organizer@example.com",
       },
       creator: {
-        email: "email@example.com",
+        email: "creator@example.com",
       },
       attendees: [
         {
@@ -35,17 +35,32 @@ const GOOGLE_TEST = [
         },
       ],
     },
+    test_result: {
+      attendees: [
+        {
+          email: "needsAction@example.com",
+          responseStatus: "needsAction",
+        },
+        {
+          email: "tentative@example.com",
+          responseStatus: "tentative",
+        },
+        {
+          email: "accepted@example.com",
+          responseStatus: "accepted",
+        },
+        {
+          email: "organizer@example.com",
+        },
+      ],
+    },
   },
 ];
 
 add_task(async function test_parseGoogleCalendarResult() {
   for (let test of GOOGLE_TEST) {
-    let event = parseGoogleCalendarResult(test.result, "email@example.com");
-    deepEqual(
-      event.attendees,
-      test.result.attendees.filter(a => a.responseStatus !== "declined")
-    );
-    equal(event.organizer.isSelf, true);
+    let event = parseGoogleCalendarResult(test.result, "creator@example.com");
+    deepEqual(event.attendees, test.test_result.attendees);
     equal(event.creator.isSelf, true);
   }
 });

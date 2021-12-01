@@ -259,6 +259,19 @@ function parseGoogleCalendarResult(result, primaryEmail) {
     [];
   event.organizer = result.organizer;
   event.creator = result.creator;
+  // Add organizer to attendees list if:
+  // 1. They aren't the owner of this calendar.
+  // 2. They aren't a group calendar email.
+  // 3. They aren't already in the list.
+  // This is needed because outlook doesn't put organizers as attendees.
+  if (
+    !event.organizer.self &&
+    !event.organizer.email.endsWith("@group.calendar.google.com") &&
+    !event.attendees.some(attendee => attendee.email == event.organizer.email)
+  ) {
+    event.attendees.push(event.organizer);
+  }
+
   // Secondary calendars don't use the same email as
   // the primary, so we manually mark the "self" entries
   if (event.organizer?.email == primaryEmail) {
