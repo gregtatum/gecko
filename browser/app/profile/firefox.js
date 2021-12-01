@@ -1818,8 +1818,8 @@ pref("browser.contentblocking.database.enabled", true);
 
 pref("dom.storage_access.enabled", true);
 
-// Enable URL query stripping in Nightly.
-#ifdef NIGHTLY_BUILD
+// Enable URL query stripping in Nightly or pinebuild.
+#if defined(NIGHTLY_BUILD) || defined(PINEBUILD)
 pref("privacy.query_stripping.enabled", true);
 pref("privacy.query_stripping.strip_list", "mc_eid oly_anon_id oly_enc_id __s vero_id _hsenc mkt_tok fbclid");
 #endif
