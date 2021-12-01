@@ -80,9 +80,10 @@ add_task(async function test_session_change() {
     );
 
     await sessionReplaced;
-    Assert.ok(
-      !win.document.body.hasAttribute("flow-reset"),
-      "Should have cleared the flow-reset attribute on the window"
+
+    await BrowserTestUtils.waitForCondition(
+      () => !win.document.body.hasAttribute("flow-reset"),
+      "Should clear the flow-reset attribute on the window"
     );
     Assert.equal(win.gURLBar.value, "", "URLBar should be empty");
 
