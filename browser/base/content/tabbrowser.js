@@ -3390,7 +3390,7 @@
      * Otherwise all unpinned tabs except aTab are removed.
      *
      * @param   aTab
-     *          The tab we will skil removing
+     *          The tab we will skip removing
      * @param   aParams
      *          An optional set of parameters that will be passed to the
      *          removeTabs function.
@@ -3452,7 +3452,7 @@
      *   The set of tabs to remove.
      * @param {object} options
      * @param {boolean} options.animate
-     *   Whether or not to animate closing, defaults to true.
+     *   Whether or not to animate closing.
      * @param {boolean} options.suppressWarnAboutClosingWindow
      *   This will supress the warning about closing a window with the last tab.
      * @param {boolean} options.skipPermitUnload
@@ -3518,7 +3518,7 @@
                 }
               },
               err => {
-                console.log("error while calling asyncPermitUnload", err);
+                console.error("error while calling asyncPermitUnload", err);
                 tab._pendingPermitUnload = false;
                 TelemetryStopwatch.finish(
                   "FX_TAB_CLOSE_PERMIT_UNLOAD_TIME_MS",

@@ -11114,9 +11114,7 @@ nsDocShell::AddState(JS::Handle<JS::Value> aData, const nsAString& aTitle,
   }
 
   // Check that the state object isn't too long.
-  // Default max length: 2097152 (0x200000) bytes.
-  int32_t maxStateObjSize =
-      Preferences::GetInt("browser.history.maxStateObjectSize", 2097152);
+  int32_t maxStateObjSize = StaticPrefs::browser_history_maxStateObjectSize();
   if (maxStateObjSize < 0) {
     maxStateObjSize = 0;
   }
@@ -12767,7 +12765,7 @@ nsresult nsDocShell::OnLinkClickSync(nsIContent* aContent,
             extProtService->IsExposedProtocol(scheme.get(), &isExposed);
         if (NS_SUCCEEDED(rv) && !isExposed) {
           return extProtService->LoadURI(aLoadState->URI(), triggeringPrincipal,
-                                         mBrowsingContext,
+                                         nullptr, mBrowsingContext,
                                          /* aTriggeredExternally */ false);
         }
       }
@@ -13046,6 +13044,16 @@ bool nsDocShell::ServiceWorkerAllowedToControlWindow(nsIPrincipal* aPrincipal,
 
   StorageAccess storage =
       StorageAllowedForNewWindow(aPrincipal, aURI, parentInner);
+
+  // If the partitioned service worker is enabled, service worker is allowed to
+  // control the window if partition is enabled.
+  if (StaticPrefs::privacy_partition_serviceWorkers() && parentInner) {
+    RefPtr<Document> doc = parentInner->GetExtantDoc();
+
+    if (doc && StoragePartitioningEnabled(storage, doc->CookieJarSettings())) {
+      return true;
+    }
+  }
 
   return storage == StorageAccess::eAllow;
 }
