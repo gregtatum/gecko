@@ -34,7 +34,22 @@ add_task(async function test_keyboard_controls() {
       browser,
       expectedIndex
     );
-    await BrowserTestUtils.synthesizeKey(keyCode, {}, browser);
+
+    // We synthesize the key event inside of a SpecialPowers.spawn to ensure
+    // that the asynchronous task setting up the event listeners in
+    // waitForSelectedHistoryCarouselIndex have had a chance to be set
+    // up. Using BrowserTestUtils.synthesizeKey immediately here would
+    // open the possibility of the key event firing _before_ the task spawned
+    // in waitForSelectedHistoryCarouselIndex is done setting up.
+    //
+    // See bug 1743857.
+    await SpecialPowers.spawn(browser, [keyCode], keyCodeToSimulate => {
+      const { EventUtils } = ChromeUtils.import(
+        "resource://specialpowers/SpecialPowersEventUtils.jsm"
+      );
+      EventUtils.synthesizeKey(keyCodeToSimulate, {}, this.content);
+    });
+
     await indexChanged;
     await selected;
   };
