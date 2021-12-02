@@ -31,7 +31,9 @@ add_task(async function testPocketCardsDisplay() {
       let pocketList = content.document.querySelector("pocket-list");
       ok(pocketList, "List of pocket recommendations is visible");
 
-      await ContentTaskUtils.waitForEvent(pocketList, "pocket-loaded");
+      if (!pocketList.shadowRoot.querySelectorAll("pocket-story").length) {
+        await ContentTaskUtils.waitForEvent(pocketList, "pocket-loaded");
+      }
 
       let pocketStories = pocketList.shadowRoot.querySelectorAll(
         "pocket-story"
