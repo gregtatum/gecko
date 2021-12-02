@@ -4,6 +4,8 @@
 
 import { timeSince } from "./time-since.js";
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
 const MAX_SNAPSHOTS = 5;
 const DEFAULT_FAVICON = "chrome://global/skin/icons/defaultFavicon.svg";
 
@@ -74,8 +76,12 @@ export class Snapshot extends HTMLElement {
       this.classList.add("nopreview");
     }
 
+    let contents = fragment.querySelector(".snapshot-contents");
+    contents.href = this.data.url;
+
     this.appendChild(fragment);
     this.addEventListener("click", this);
+    this.addEventListener("contextmenu", this);
 
     if (!preview && iconSrc) {
       let primaryIconColor = pickColorFromImage(iconEl);
@@ -86,22 +92,31 @@ export class Snapshot extends HTMLElement {
   }
 
   handleEvent(event) {
+    const togglePanel = () => {
+      let panel = this.querySelector("panel-list");
+      if (!panel.open) {
+        this.classList.add("popupshowing");
+        panel.addEventListener(
+          "hidden",
+          () => {
+            this.classList.remove("popupshowing");
+            if (panel.contains(document.activeElement)) {
+              Services.focus.setFocus(
+                this.querySelector(".snapshot-contents"),
+                Services.focus.FLAG_BYKEY
+              );
+            }
+          },
+          { once: true }
+        );
+      }
+      panel.toggle(event);
+    };
     switch (event.type) {
       case "click": {
         switch (event.target.dataset.action) {
           case "toggle-panel":
-            let panel = this.querySelector("panel-list");
-            if (!panel.open) {
-              this.classList.add("popupshowing");
-              panel.addEventListener(
-                "hidden",
-                () => {
-                  this.classList.remove("popupshowing");
-                },
-                { once: true }
-              );
-            }
-            panel.toggle(event);
+            togglePanel();
             break;
           case "dont-show":
           case "not-relevant":
@@ -114,8 +129,15 @@ export class Snapshot extends HTMLElement {
               url: this.data.url,
             });
         }
+        break;
+      }
+      case "contextmenu": {
+        togglePanel();
+        break;
       }
     }
+
+    event.preventDefault();
   }
 }
 

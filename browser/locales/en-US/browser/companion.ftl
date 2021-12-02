@@ -141,6 +141,8 @@ addons-unsupported = { -brand-short-name } does not support this extension.
 # These are menu items shown on snapshot cards in the companion.
 snapshot-dont-show = Don’t show again
 snapshot-not-relevant = Not relevant
+snapshot-options =
+  .aria-label = Options
 
 # The list of sections in the browse tab of the companion.
 browse-list-sessions = Sessions

@@ -142,22 +142,29 @@
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-snapshot">
-    <div class="snapshot-contents contents">
-      <div class="card-image">
-        <img class="favicon"/>
-      </div>
-      <div class="info">
-        <span class="title"/>
-        <div class="subtitle">
-          <span class="snapshot-sitetitle sub"/>
-          <span class="info-divider sub"/>
-          <span class="snapshot-date sub"/>
+    <div class="card-content-wrapper">
+      <a class="snapshot-contents contents" href="#">
+        <div class="card-image">
+          <img class="favicon"/>
         </div>
-      </div>
+        <div class="info">
+          <span class="title"/>
+          <div class="subtitle">
+            <span class="snapshot-sitetitle sub"/>
+            <span class="info-divider sub"/>
+            <span class="snapshot-date sub"/>
+          </div>
+        </div>
+      </a>
+      <!-- We add tabindex="-1" here because the menu this controls is intended
+           to be activated via the context menu key when navigating via
+           keyboard. -->
       <button
             class="options-button"
+            tabindex="-1"
             aria-haspopup="menu"
             aria-expanded="false"
+            data-l10n-id="snapshot-options"
             data-action="toggle-panel"></button>
     </div>
     <panel-list>
