@@ -5,16 +5,12 @@
 var EXPORTED_SYMBOLS = ["LightweightThemeConsumer"];
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
 ChromeUtils.defineModuleGetter(
   this,
   "AppConstants",
   "resource://gre/modules/AppConstants.jsm"
 );
-
-const DEFAULT_THEME_ID = AppConstants.PINEBUILD
-  ? "firefox-compact-light@mozilla.org"
-  : "default-theme@mozilla.org";
-
 // Get the theme variables from the app resource directory.
 // This allows per-app variables.
 ChromeUtils.defineModuleGetter(
@@ -27,6 +23,14 @@ ChromeUtils.defineModuleGetter(
   "ThemeVariableMap",
   "resource:///modules/ThemeVariableMap.jsm"
 );
+
+const DEFAULT_THEME_ID = AppConstants.PINEBUILD
+  ? "firefox-compact-light@mozilla.org"
+  : "default-theme@mozilla.org";
+
+// On Linux, the default theme picks up the right colors from dark GTK themes.
+const DEFAULT_THEME_RESPECTS_SYSTEM_COLOR_SCHEME =
+  AppConstants.platform == "linux";
 
 const toolkitVariableMap = [
   [
@@ -265,18 +269,12 @@ LightweightThemeConsumer.prototype = {
   _update(themeData) {
     this._lastData = themeData;
 
-    // In Linux, the default theme picks up the right colors from dark GTK themes.
-    let useDarkTheme;
-    if (AppConstants.PINEBUILD) {
-      useDarkTheme = false;
-    } else {
-      useDarkTheme =
-        themeData.darkTheme &&
-        this.darkThemeMediaQuery?.matches &&
-        (themeData.darkTheme.id != DEFAULT_THEME_ID ||
-          AppConstants.platform != "linux");
-    }
-
+    const useDarkTheme =
+      !AppConstants.PINEBUILD &&
+      themeData.darkTheme &&
+      this.darkThemeMediaQuery?.matches &&
+      (themeData.darkTheme.id != DEFAULT_THEME_ID ||
+        !DEFAULT_THEME_RESPECTS_SYSTEM_COLOR_SCHEME);
     let theme = useDarkTheme ? themeData.darkTheme : themeData.theme;
     if (!theme || AppConstants.PINEBUILD) {
       theme = { id: DEFAULT_THEME_ID };
@@ -439,6 +437,9 @@ function _determineToolbarAndContentTheme(aDoc, aTheme) {
     }
 
     if (!aTheme) {
+      if (!DEFAULT_THEME_RESPECTS_SYSTEM_COLOR_SCHEME) {
+        return 1;
+      }
       return 2;
     }
     // We prefer looking at toolbar background first (if it's opaque) because
