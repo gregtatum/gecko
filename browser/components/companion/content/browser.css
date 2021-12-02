@@ -40,10 +40,13 @@
   padding-inline-start: 8px;
 }
 
+#nav-bar:hover river-el::part(history),
+#nav-bar:hover pinned-views::part(history) {
+  display: flex;
+}
+
 #nav-bar:hover river-el::part(domain),
-#nav-bar:hover pinned-views::part(domain),
-#nav-bar:not(:hover) river-el::part(history),
-#nav-bar:not(:hover) pinned-views::part(history) {
+#nav-bar:hover pinned-views::part(domain) {
   display: none;
 }
 

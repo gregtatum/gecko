@@ -149,6 +149,12 @@ export default class ViewGroup extends MozLitElement {
       this.busyAnimating = true;
     }
 
+    // We expose the history / domain parts of a ViewGroup so that consumers
+    // can choose to hide the domain and show the history breadcrumbs when
+    // hovering the toolbar. We only need to show breadcrumbs if there's more
+    // than one view in the group.
+    let shouldExposeParts = this.views.length > 1;
+
     return html`
       <div class="view-el" title=${ifDefined(rootTitle)} ?busy=${
       view.busy
@@ -166,11 +172,15 @@ export default class ViewGroup extends MozLitElement {
           <div class="view-title"
                part="title"
                title=${view.title}>${view.title}</div>
-          <div class="view-domain-container" part="domain">
+          <div class="view-domain-container" part=${
+            shouldExposeParts ? "domain" : ""
+          }>
             <div id="view-security-icon" class="${securityIconClass}"></div>
             <div class="view-domain">${domain}</div>
           </div>
-          <div class="view-history" part="history">${history}</div>
+          <div class="view-history" part=${
+            shouldExposeParts ? "history" : ""
+          }>${history}</div>
         </div>
         <button class="page-action-button" ?hidden=${!this.active}
              @click="${this.#pageActionButtonClicked}"

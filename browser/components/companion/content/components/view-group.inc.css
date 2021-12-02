@@ -174,9 +174,16 @@
   white-space: nowrap;
 }
 
+.view-domain {
+  display: flex;
+}
+
+.view-history {
+  display: none;
+}
+
 .view-domain,
 .view-history {
-  display: flex;
   align-items: center;
   min-height: 16px;
 }
