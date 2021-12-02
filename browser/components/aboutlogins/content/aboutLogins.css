@@ -43,6 +43,11 @@ menu-button {
   margin-inline-start: 18px;
 }
 
+:root.in-companion.login-selected header menu-button,
+:root.in-companion section header {
+  display: none;
+}
+
 login-list {
   grid-area: logins;
 }
@@ -111,7 +116,6 @@ body > section {
 :root.in-companion .panel-header {
   align-items: center;
   display: flex;
-  flex: 1 auto;
 }
 
 :root.in-companion .panel-header > .subviewbutton-back + h1 {

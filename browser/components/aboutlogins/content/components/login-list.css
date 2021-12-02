@@ -252,7 +252,8 @@ ol {
 }
 
 :host(.in-companion) .meta {
-  border-bottom: 1px solid #F0F0F4;
+  border: 1px solid #F0F0F4;
+  border-inline: none;
   margin-bottom: 12px;
 }
 
