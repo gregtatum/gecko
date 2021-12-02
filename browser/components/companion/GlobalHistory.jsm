@@ -2132,6 +2132,11 @@ class GlobalHistory extends EventTarget {
 
       logConsole.debug("History carousel browser is ready. Making visible.");
       gBrowser.selectedTab = tab;
+      for (let backgroundTab of gBrowser.tabs) {
+        if (backgroundTab != gBrowser.selectedTab) {
+          backgroundTab.linkedBrowser.enterModalState();
+        }
+      }
     } else {
       if (gBrowser.selectedBrowser.currentURI.spec != "about:historycarousel") {
         throw new Error("Selected <browser> should be the carousel.");
@@ -2149,6 +2154,9 @@ class GlobalHistory extends EventTarget {
 
       logConsole.debug("Removing history carousel browser.");
       gBrowser.removeTab(carouselTab, { animate: false });
+      for (let backgroundTab of gBrowser.tabs) {
+        backgroundTab.linkedBrowser.leaveModalState();
+      }
     }
   }
 
