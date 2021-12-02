@@ -3,10 +3,10 @@
 
 "use strict";
 
-const checkMailtoUrl = async (helper, index_, expected) => {
+const checkOpenedUrl = async (helper, expected, btnSelector, index_ = 0) => {
   let openedUrl = helper.catchNextOpenedUrl();
   await helper.runCompanionTask(
-    async index => {
+    async (index, selector) => {
       let calendarEventList = content.document.querySelector(
         "calendar-event-list"
       );
@@ -28,13 +28,11 @@ const checkMailtoUrl = async (helper, index_, expected) => {
       info("Now click to open the menu.");
       EventUtils.synthesizeMouseAtCenter(openMenuButton, {}, content);
       await ContentTaskUtils.waitForEvent(panelMenu, "shown");
-      let runningLateButton = event.shadowRoot.querySelector(
-        ".event-item-running-late-action"
-      );
-      ok(!runningLateButton.hidden, "Running late button is visible");
-      runningLateButton.click();
+      let panelButton = event.shadowRoot.querySelector(selector);
+      ok(!panelButton.hidden, "Panel button is visible");
+      panelButton.click();
     },
-    [index_]
+    [index_, btnSelector]
   );
 
   let url = await openedUrl;
@@ -75,16 +73,17 @@ add_task(async function testRunningLate() {
       is(visibleEvents.length, 2, "There are now 2 events");
     });
 
-    await checkMailtoUrl(
+    await checkOpenedUrl(
       helper,
-      0,
-      "mailto:attendee@example.com?subject=Running late to meeting My test event"
+      "mailto:attendee@example.com?subject=Running late to meeting My test event",
+      ".event-item-running-late-action"
     );
 
-    await checkMailtoUrl(
+    await checkOpenedUrl(
       helper,
-      1,
-      "mailto:organizer@example.com?subject=Running late to meeting Your test event"
+      "mailto:organizer@example.com?subject=Running late to meeting Your test event",
+      ".event-item-running-late-action",
+      1
     );
   });
 });
@@ -109,15 +108,15 @@ add_task(async function testRunningLateXss() {
       is(visibleEvents.length, 1, "There's an event");
     });
 
-    await checkMailtoUrl(
+    await checkOpenedUrl(
       helper,
-      0,
-      `mailto:uhoh@example.com?subject=Running late to meeting My XSS event" onclick="alert('hi')""`
+      `mailto:uhoh@example.com?subject=Running late to meeting My XSS event" onclick="alert('hi')""`,
+      ".event-item-running-late-action"
     );
   });
 });
 
-add_task(async function testNoAttendees() {
+add_task(async function testRunningLateNoAttendees() {
   await CompanionHelper.whenReady(async helper => {
     await helper.setCalendarEvents([
       {
@@ -141,5 +140,31 @@ add_task(async function testNoAttendees() {
       );
       ok(runningLateButton.hidden, "The running late button is hidden");
     });
+  });
+});
+
+add_task(async function testOpenInCalendar() {
+  await CompanionHelper.whenReady(async helper => {
+    const EVENT_URL = "https://www.example.com";
+
+    let events = [
+      {
+        summary: "Event to open in calendar",
+        url: EVENT_URL,
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let visibleEvents = calendarEventList.shadowRoot.querySelectorAll(
+        "calendar-event"
+      );
+      is(visibleEvents.length, 1, "There's an event");
+    });
+
+    await checkOpenedUrl(helper, EVENT_URL, ".event-item-open-calendar-action");
   });
 });

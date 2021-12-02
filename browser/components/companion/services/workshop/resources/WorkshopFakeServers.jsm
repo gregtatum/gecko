@@ -533,7 +533,7 @@ class GapiFakeServer extends BaseFakeServer {
         etag: this.etagFromEvent(event),
         eventType: "default",
         extendedProperties: {},
-        htmlLink: this.htmlLinkForEvent(cal, event),
+        htmlLink: event.url || this.htmlLinkForEvent(cal, event),
         iCalUID: event.iCalUID,
         id: event.id,
         kind: "calendar#event",
@@ -781,7 +781,7 @@ class MapiFakeServer extends BaseFakeServer {
         transactionId: "",
         type: "singleInstance",
         uid: event.iCalUID,
-        webLink: this.htmlLinkForEvent(cal, event),
+        webLink: event.url || this.htmlLinkForEvent(cal, event),
       };
     });
   }

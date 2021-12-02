@@ -196,6 +196,7 @@ export class MapiCalEventChewer {
         });
 
         const oldInfo = this.oldById.get(eventId);
+        const url = mapiEvent.webLink || "";
 
         const eventInfo = makeCalendarEventInfo({
           id: eventId,
@@ -218,6 +219,7 @@ export class MapiCalEventChewer {
           authoredBodySize,
           links,
           conference,
+          url,
         });
 
         if (oldInfo) {

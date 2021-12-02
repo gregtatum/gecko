@@ -102,6 +102,7 @@ class FakeEventFactory {
 
       const location = sketch.location || undefined;
       const every = sketch.every || undefined;
+      const url = sketch.url || undefined;
       const fullEvent = {
         startDate,
         endDate,
@@ -113,6 +114,7 @@ class FakeEventFactory {
         attendees,
         location,
         every,
+        url,
         cancelled: false,
       };
 

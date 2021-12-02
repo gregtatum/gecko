@@ -179,6 +179,7 @@ export class GapiCalEventChewer {
         );
 
         const oldInfo = oldById.get(eventId);
+        const url = gapiEvent.htmlLink || "";
 
         const eventInfo = makeCalendarEventInfo({
           id: eventId,
@@ -201,6 +202,7 @@ export class GapiCalEventChewer {
           authoredBodySize,
           links,
           conference,
+          url,
         });
 
         if (oldInfo) {

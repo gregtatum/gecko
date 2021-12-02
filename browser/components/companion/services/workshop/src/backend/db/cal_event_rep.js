@@ -129,5 +129,6 @@ export function makeCalendarEventInfo(raw) {
     authoredBodySize: raw.authoredBodySize || 0,
     conference: raw.conference || null,
     links: raw.links || [],
+    url: raw.url,
   };
 }

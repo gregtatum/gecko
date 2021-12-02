@@ -98,6 +98,7 @@ export class CalEvent extends Emitter {
     this.labels = this._api._mapLabels(this.id, wireRep.folderIds);
 
     this.bodyReps = wireRep.bodyReps;
+    this.url = wireRep.url;
 
     this.attendees = keyedListHelper({
       wireReps: wireRep.attendees,

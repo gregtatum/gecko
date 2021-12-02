@@ -11333,7 +11333,8 @@ var WorkshopBackend = (() => {
       bodyReps: raw.bodyReps,
       authoredBodySize: raw.authoredBodySize || 0,
       conference: raw.conference || null,
-      links: raw.links || []
+      links: raw.links || [],
+      url: raw.url
     };
   }
   var init_cal_event_rep = __esm({
@@ -11460,6 +11461,7 @@ var WorkshopBackend = (() => {
               const location = gapiEvent.location || "";
               const attendees = (gapiEvent.attendees || []).map((who) => this._chewCalAttendee(who));
               const oldInfo = oldById.get(eventId);
+              const url = gapiEvent.htmlLink || "";
               const eventInfo = makeCalendarEventInfo({
                 id: eventId,
                 date: startDate,
@@ -11477,7 +11479,8 @@ var WorkshopBackend = (() => {
                 bodyReps,
                 authoredBodySize,
                 links,
-                conference
+                conference,
+                url
               });
               if (oldInfo) {
                 this.modifiedEventMap.set(eventId, eventInfo);
@@ -12107,6 +12110,7 @@ var WorkshopBackend = (() => {
                 return this._chewCalAttendee(who, organizer);
               });
               const oldInfo = this.oldById.get(eventId);
+              const url = mapiEvent.webLink || "";
               const eventInfo = makeCalendarEventInfo({
                 id: eventId,
                 date: startDate,
@@ -12124,7 +12128,8 @@ var WorkshopBackend = (() => {
                 bodyReps,
                 authoredBodySize,
                 links,
-                conference
+                conference,
+                url
               });
               if (oldInfo) {
                 this.modifiedEventMap.set(eventId, eventInfo);

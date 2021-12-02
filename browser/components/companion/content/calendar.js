@@ -1025,6 +1025,7 @@ class CalendarEvent extends MozLitElement {
             ?hidden=${!this._getRunningLateTargets().length}
           ></panel-item>
           <panel-item
+            class="event-item-open-calendar-action"
             data-l10n-id="companion-open-calendar"
             @click=${this.openCalendar}
           ></panel-item>

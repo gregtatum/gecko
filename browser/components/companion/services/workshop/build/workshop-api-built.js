@@ -2974,6 +2974,7 @@ var CalEvent = class extends import_evt13.Emitter {
     this.tags = filterOutBuiltinFlags2(wireRep.flags);
     this.labels = this._api._mapLabels(this.id, wireRep.folderIds);
     this.bodyReps = wireRep.bodyReps;
+    this.url = wireRep.url;
     this.attendees = keyedListHelper({
       wireReps: wireRep.attendees,
       existingRichReps: this.attendees,
