@@ -660,8 +660,9 @@ var PinebuildTestUtils = {
    *        Optional. The hour duration of an event. Defaults to 0.
    * @param {Number}  eventDurationMinutes
    *        Optional. The remaining minute duration of an event. Defaults to 30.
-   * @param {Number}  eventStartHour
-   *        Optional. The starting hour for the event. Defaults to 18:00.
+   * @param {Number|Date}  eventStartHourOrDate
+   *        Optional. Either the hour or Date the event starts at. In cases where we are
+   *        using dynamically generated times, passing a Date is more reliable. Defaults to 18:00.
    * @param {Number}  eventStartMinutes
    *        Optional. The starting minutes for the event. Defaults to 0.
    * @return {Object} Object containing the event start and end times as ISO strings.
@@ -669,22 +670,27 @@ var PinebuildTestUtils = {
   generateEventTimes(
     eventDurationHours = 0,
     eventDurationMinutes = 30,
-    eventStartHour = 18,
+    eventStartHourOrDate = 18,
     eventStartMinutes = 0
   ) {
     // Set start time
-    let startTime = new Date();
-    startTime.setHours(eventStartHour);
-    startTime.setMinutes(eventStartMinutes);
+    let startTime;
+    if (eventStartHourOrDate instanceof Date) {
+      startTime = eventStartHourOrDate;
+    } else {
+      startTime = new Date();
+      startTime.setHours(eventStartHourOrDate);
+      startTime.setMinutes(eventStartMinutes);
+    }
 
     // Set end time
     let endTime = new Date(startTime);
 
     if (eventDurationHours > 0) {
-      endTime.setHours(eventStartHour + eventDurationHours);
+      endTime.setHours(startTime.getHours() + eventDurationHours);
     }
 
-    endTime.setMinutes(eventStartMinutes + eventDurationMinutes);
+    endTime.setMinutes(startTime.getMinutes() + eventDurationMinutes);
 
     return {
       start: startTime.toISOString(),

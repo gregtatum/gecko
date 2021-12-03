@@ -16,25 +16,16 @@ add_task(async function testBreakIndicatorsBetweenMeetings() {
   await CompanionHelper.whenReady(async helper => {
     // generate start and end times for a 10 min meeting starting now.
     let now = new Date();
-    let { start, end } = PinebuildTestUtils.generateEventTimes(
-      0,
-      10,
-      now.getHours(),
-      now.getMinutes()
-    );
+    let { start, end } = PinebuildTestUtils.generateEventTimes(0, 10, now);
 
     // generate times for a meeting starting 10 minutes after the first meeting.
     const BREAK_TIME = 10;
-    let meetingEnd = new Date(end);
+    let nextEventStart = new Date(end);
+    nextEventStart.setMinutes(nextEventStart.getMinutes() + BREAK_TIME);
     let {
       start: nextStart,
       end: nextEnd,
-    } = PinebuildTestUtils.generateEventTimes(
-      0,
-      10,
-      meetingEnd.getHours(),
-      meetingEnd.getMinutes() + BREAK_TIME
-    );
+    } = PinebuildTestUtils.generateEventTimes(0, 10, nextEventStart);
 
     let events = [
       {
@@ -58,7 +49,6 @@ add_task(async function testBreakIndicatorsBetweenMeetings() {
         let breaks = calendarEventList.shadowRoot.querySelectorAll(
           ".calendar-break-time"
         );
-
         is(breaks.length, 1, "Displays one break between meetings.");
 
         let breakLabel = breaks[0].querySelector(".calendar-break-time-text");
