@@ -65,6 +65,13 @@ class ServiceRow extends HTMLElement {
     super();
     this.service = service;
     this.data = data;
+    if (this.service) {
+      let handleStatus = ({ status }) => this.setAttribute("status", status);
+      this.service.addListener("status", handleStatus);
+      window.addEventListener("unload", () => {
+        this.service.removeListener("status", handleStatus);
+      });
+    }
   }
 
   static get observedAttributes() {
@@ -88,6 +95,7 @@ class ServiceRow extends HTMLElement {
           <div class="status-text status-connected" data-l10n-id="preferences-services-connected-status" hidden></div>
           <div class="status-text status-connecting" data-l10n-id="preferences-services-connecting-status" hidden></div>
           <div class="status-text status-disconnected" data-l10n-id="preferences-services-disconnected-status" hidden></div>
+          <div class="status-text status-error" data-l10n-id="preferences-services-error-status" hidden></div>
         </div>
         <button class="button-disconnect"
                 data-l10n-id="preferences-services-disconnect-button"
@@ -131,25 +139,41 @@ class ServiceRow extends HTMLElement {
     let connected = status == "connected";
     let connecting = status == "connecting";
     let disconnected = status == "disconnected";
+    let error = status == "error";
 
     let connectedStatus = this._getElement(".status-connected");
     let connectingStatus = this._getElement(".status-connecting");
     let disconnectedStatus = this._getElement(".status-disconnected");
-
+    let errorStatus = this._getElement(".status-error");
     let disconnectButton = this._getElement(".button-disconnect");
     let connectButton = this._getElement(".button-connect");
 
     connectedStatus?.toggleAttribute("hidden", !connected);
     connectingStatus?.toggleAttribute("hidden", !connecting);
     disconnectedStatus?.toggleAttribute("hidden", !disconnected);
+    errorStatus?.toggleAttribute("hidden", !error);
 
-    connectButton?.toggleAttribute("hidden", connected);
+    connectButton?.toggleAttribute("hidden", connected || error);
     connectButton?.toggleAttribute("disabled", connecting);
-    disconnectButton?.toggleAttribute("hidden", !connected);
+    disconnectButton?.toggleAttribute("hidden", disconnected || connecting);
   }
 
   getServiceStatus() {
-    return this.service?.auth?.accessToken ? "connected" : "disconnected";
+    let auth = this.service?.auth;
+    if (!auth) {
+      return "disconnected";
+    }
+    if (
+      auth.accessToken &&
+      new Date() < auth.tokenExpires &&
+      !this.service.hasConnectionError
+    ) {
+      return "connected";
+    }
+    if (auth.refreshToken) {
+      return "error";
+    }
+    return "disconnected";
   }
 
   connectedCallback() {

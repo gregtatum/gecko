@@ -281,11 +281,11 @@ class OAuth2 {
       try {
         return await this.requestAccessToken();
       } catch (e) {
-        console.error("Failed to refresh token, attempting to log in again.");
+        console.error("Failed to refresh token");
       }
     }
 
-    return OAuthConnect.connect(this);
+    return null;
   }
 
   async getToken() {
@@ -296,6 +296,15 @@ class OAuth2 {
     }
 
     return this.getTokenPromise;
+  }
+
+  async connect() {
+    if (!this.connectPromise) {
+      this.connectPromise = OAuthConnect.connect(this).finally(
+        () => (this.connectPromise = null)
+      );
+    }
+    return this.connectPromise;
   }
 
   toJSON() {

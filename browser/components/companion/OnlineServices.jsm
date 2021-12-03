@@ -47,6 +47,8 @@ class GoogleService {
     this.name = "Google";
     this.app = config.type;
     this.id = ++nextServiceId;
+    this.hasConnectionError = false;
+    this.listeners = new Map([["status", new Set()]]);
 
     let scopes = [
       "https://www.googleapis.com/auth/gmail.readonly",
@@ -74,7 +76,10 @@ class GoogleService {
   async connect() {
     // This will force a new OAuth login if not logged in or the token
     // has expired.
-    let token = await this.getToken();
+    let token = await this.auth.connect();
+    if (token) {
+      OnlineServices.persist();
+    }
     return token;
   }
 
@@ -99,12 +104,26 @@ class GoogleService {
     }
   }
 
-  async getToken() {
-    let token = await this.auth.getToken();
-    if (token) {
-      OnlineServices.persist();
+  addListener(eventName, fn) {
+    this.listeners.get(eventName).add(fn);
+  }
+
+  removeListener(eventName, fn) {
+    this.listeners.get(eventName).delete(fn);
+  }
+
+  notifyListeners(eventName, data) {
+    for (let listener of this.listeners.get(eventName)) {
+      try {
+        listener(data);
+      } catch (ex) {
+        Cu.report(ex);
+      }
     }
-    return token;
+  }
+
+  getToken() {
+    return this.auth.getToken();
   }
 
   async getAccountAddress() {
@@ -123,11 +142,20 @@ class GoogleService {
     };
 
     let response;
+    let hadError = this.hasConnectionError;
     try {
       response = await fetch(apiTarget, {
         headers,
       });
+      this.hasConnectionError = false;
+      if (hadError) {
+        this.notifyListeners("status", { status: "connected" });
+      }
     } catch (ex) {
+      this.hasConnectionError = true;
+      if (!hadError) {
+        this.notifyListeners("status", { status: "error" });
+      }
       // If we fail here, it's probably a network error.
       // Return null so we can detect this situation.
       return null;
@@ -326,6 +354,8 @@ class MicrosoftService {
     this.name = "Microsoft";
     this.app = config.type;
     this.id = ++nextServiceId;
+    this.hasConnectionError = false;
+    this.listeners = new Map([["status", new Set()]]);
 
     let scopes = [
       // This is required or we don't get a refreshToken
@@ -354,7 +384,10 @@ class MicrosoftService {
   async connect() {
     // This will force a new OAuth login if not logged in or the token
     // has expired.
-    let token = await this.getToken();
+    let token = await this.auth.connect();
+    if (token) {
+      OnlineServices.persist();
+    }
     return token;
   }
 
@@ -366,12 +399,26 @@ class MicrosoftService {
     // There was some sample code here before, check the log if you want it.
   }
 
-  async getToken() {
-    let token = await this.auth.getToken();
-    if (token) {
-      OnlineServices.persist();
+  addListener(eventName, fn) {
+    this.listeners.get(eventName).add(fn);
+  }
+
+  removeListener(eventName, fn) {
+    this.listeners.get(eventName).delete(fn);
+  }
+
+  notifyListeners(eventName, data) {
+    for (let listener of this.listeners.get(eventName)) {
+      try {
+        listener(data);
+      } catch (ex) {
+        Cu.report(ex);
+      }
     }
-    return token;
+  }
+
+  getToken() {
+    return this.auth.getToken();
   }
 
   async getNextMeetings() {
@@ -384,11 +431,20 @@ class MicrosoftService {
     };
 
     let response;
+    let hadError = this.hasConnectionError;
     try {
       response = await fetch(apiTarget, {
         headers,
       });
+      this.hasConnectionError = false;
+      if (hadError) {
+        this.notifyListeners("status", { status: "connected" });
+      }
     } catch (ex) {
+      this.hasConnectionError = true;
+      if (!hadError) {
+        this.notifyListeners("status", { status: "error" });
+      }
       // If we fail here, it's probably a network error.
       // Return null so we can detect this situation.
       return null;
@@ -532,6 +588,7 @@ class TestService {
     this.name = "Test";
     this.app = config.type;
     this.id = ++nextServiceId;
+    this.hasConnectionError = false;
     if (this.app == "testserviceauth") {
       let html = `
         <a href="http://example.net/login">Login</a>
@@ -556,7 +613,7 @@ class TestService {
 
   async connect() {
     if (this.auth) {
-      await this.auth.getToken();
+      await this.auth.connect();
       if (
         Services.prefs.getBoolPref(
           "pinebuild.testing.OAuthErrorAccessToken",
