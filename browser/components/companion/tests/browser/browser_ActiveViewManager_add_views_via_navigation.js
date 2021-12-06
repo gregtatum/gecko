@@ -21,26 +21,31 @@ add_task(async function test_add_view_navigation() {
   Assert.equal(viewGroups.length, 1, "There should be 1 ViewGroup.");
   Assert.equal(viewGroups[0].lastView, view);
 
-  let viewAddedPromise = BrowserTestUtils.waitForEvent(
-    gGlobalHistory,
-    "ViewAdded"
+  let newBrowserCreatedPromise = BrowserTestUtils.waitForNewTab(
+    gBrowser,
+    "https://example.com/",
+    true
   );
-  let browser = gBrowser.selectedTab.linkedBrowser;
+  let browser = gBrowser.selectedBrowser;
   await BrowserTestUtils.synthesizeMouseAtCenter("#link-new-view", {}, browser);
-  await viewAddedPromise;
-  info("ViewAdded was dispatched by GlobalHistory");
+  await newBrowserCreatedPromise;
+  info("New browser was created after clicking link.");
 
   viewGroups = await PinebuildTestUtils.getViewGroups();
   Assert.equal(viewGroups.length, 1, "There should be 1 ViewGroup.");
   Assert.equal(viewGroups[0].lastView.url.spec, "https://example.com/");
 
-  viewAddedPromise = BrowserTestUtils.waitForEvent(gGlobalHistory, "ViewAdded");
+  newBrowserCreatedPromise = BrowserTestUtils.waitForNewTab(
+    gBrowser,
+    "http://mochi.test:8888/",
+    true
+  );
   await BrowserTestUtils.synthesizeMouseAtCenter(
     "#link-new-view-group",
     {},
     browser
   );
-  await viewAddedPromise;
+  await newBrowserCreatedPromise;
   viewGroups = await PinebuildTestUtils.getViewGroups();
   Assert.equal(viewGroups.length, 2, "There should be 2 ViewGroups.");
   Assert.equal(viewGroups[1].lastView.url.spec, "http://mochi.test:8888/");
