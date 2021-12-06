@@ -24,11 +24,15 @@ exclude: true
   ([bug 1740634]({{bugzilla}}1740634)).
 - Added [`SelectionActionDelegate.Selection.pasteAsPlainText`][96.4] to paste
   HTML content as plain text.
+- Removed deprecated Content Blocking APIs.
+  ([bug 1743706]({{bugzilla}}1743706)).
+- Added [`OrientationController`][96.5] to allow GeckoView to handle orientation locking.
 
 [96.1]: {{javadoc_uri}}/Autocomplete.StorageDelegate.html#onLoginFetch--
 [96.2]: {{javadoc_uri}}/GeckoResult.html#finally_-java.lang.Runnable-
 [96.3]: {{javadoc_uri}}/WebExtension.InstallException.ErrorCodes.html#ERROR_INVALID_DOMAIN-
 [96.4]: {{javadoc_uri}}/GeckoSession.SelectionActionDelegate.Selection.html#pasteAsPlainText--
+[96.5]: {{javadoc_uri}}/OrientationController.html
 
 ## v95
 - Added [`GeckoSession.ContentDelegate.onPointerIconChange()`][95.1] to notify
@@ -1089,4 +1093,4 @@ to allow adding gecko profiler markers.
 [65.24]: {{javadoc_uri}}/CrashReporter.html#sendCrashReport-android.content.Context-android.os.Bundle-java.lang.String-
 [65.25]: {{javadoc_uri}}/GeckoResult.html
 
-[api-version]: 59458dfdb55ae869b0e7b55535c9742f0ad0c4bd
+[api-version]: 2e5d064d5675b5e38eeb25595a11906ed8d43e1a

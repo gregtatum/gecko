@@ -10,7 +10,7 @@ rev = "029ac0d54b237f27dc7d8d4e51bc0fb076e5e852"
 [source."https://github.com/mozilla/neqo"]
 git = "https://github.com/mozilla/neqo"
 replace-with = "vendored-sources"
-tag = "v0.5.3"
+tag = "v0.5.6"
 
 [source."https://github.com/mozilla/mp4parse-rust"]
 git = "https://github.com/mozilla/mp4parse-rust"
@@ -45,7 +45,7 @@ rev = "8a576fbe79199fa8664f64285524017f74ebcc5f"
 [source."https://github.com/mozilla-spidermonkey/jsparagus"]
 git = "https://github.com/mozilla-spidermonkey/jsparagus"
 replace-with = "vendored-sources"
-rev = "b0650f3f7551cac34e8facf9cfa2711c0d99d0cc"
+rev = "23a37b0881b20f923f952b3c0648f2cd4a6acc9f"
 
 [source."https://github.com/kvark/dummy-web"]
 git = "https://github.com/kvark/dummy-web"
