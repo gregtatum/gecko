@@ -24,16 +24,11 @@ add_task(async function test_no_top_view() {
     TEST_URL3,
   ]);
 
-  let river = document.querySelector("river-el");
-
   gGlobalHistory.setViewPinnedState(view3, true, 0);
-
-  // Ensure that the River has finished rendering
-  await river.updateComplete;
 
   // Despite there being two items still in the River, there
   // should be no "top" ViewGroup.
-  let viewGroups = PinebuildTestUtils.getViewGroups();
+  let viewGroups = await PinebuildTestUtils.getViewGroups();
   Assert.equal(viewGroups.length, 1, "There should be 1 ViewGroup.");
   Assert.ok(
     !viewGroups[0].hasAttribute("top"),

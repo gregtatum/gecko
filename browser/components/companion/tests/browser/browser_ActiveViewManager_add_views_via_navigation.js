@@ -10,14 +10,14 @@
 add_task(async function test_add_view_navigation() {
   gGlobalHistory.reset();
 
-  let viewGroups = PinebuildTestUtils.getViewGroups();
+  let viewGroups = await PinebuildTestUtils.getViewGroups();
   Assert.equal(viewGroups.length, 0, "There should be no ViewGroups.");
 
   const TEST_URL =
     "http://example.com/browser/browser/components/companion/tests/browser/example.html";
   let [view] = await PinebuildTestUtils.loadViews([TEST_URL]);
 
-  viewGroups = PinebuildTestUtils.getViewGroups();
+  viewGroups = await PinebuildTestUtils.getViewGroups();
   Assert.equal(viewGroups.length, 1, "There should be 1 ViewGroup.");
   Assert.equal(viewGroups[0].lastView, view);
 
@@ -30,7 +30,7 @@ add_task(async function test_add_view_navigation() {
   await viewAddedPromise;
   info("ViewAdded was dispatched by GlobalHistory");
 
-  viewGroups = PinebuildTestUtils.getViewGroups();
+  viewGroups = await PinebuildTestUtils.getViewGroups();
   Assert.equal(viewGroups.length, 1, "There should be 1 ViewGroup.");
   Assert.equal(viewGroups[0].lastView.url.spec, "https://example.com/");
 
@@ -41,7 +41,7 @@ add_task(async function test_add_view_navigation() {
     browser
   );
   await viewAddedPromise;
-  viewGroups = PinebuildTestUtils.getViewGroups();
+  viewGroups = await PinebuildTestUtils.getViewGroups();
   Assert.equal(viewGroups.length, 2, "There should be 2 ViewGroups.");
   Assert.equal(viewGroups[1].lastView.url.spec, "http://mochi.test:8888/");
 });

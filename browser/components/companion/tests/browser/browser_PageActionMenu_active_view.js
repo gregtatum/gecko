@@ -23,7 +23,7 @@ add_task(async function test_PageActionMenu_active_view() {
     TEST_URL5,
   ]);
 
-  let viewGroups = PinebuildTestUtils.getViewGroups(window);
+  let viewGroups = await PinebuildTestUtils.getViewGroups(window);
 
   Assert.equal(viewGroups.length, 2, "There should be two total ViewGroups");
   Assert.ok(

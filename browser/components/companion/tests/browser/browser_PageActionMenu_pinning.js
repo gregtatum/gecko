@@ -11,7 +11,7 @@ const TEST_URL1 = "https://example.com/";
 
 add_task(async function test_PageActionMenu_active_view() {
   let [view1] = await PinebuildTestUtils.loadViews([TEST_URL1]);
-  let viewGroups = PinebuildTestUtils.getViewGroups(window);
+  let viewGroups = await PinebuildTestUtils.getViewGroups(window);
   Assert.equal(viewGroups.length, 1, "There should be only 1 ViewGroup.");
   Assert.ok(
     viewGroups[0].hasAttribute("top"),
@@ -51,7 +51,7 @@ add_task(async function test_PageActionMenu_active_view() {
 
   Assert.ok(view1.pinned, "View should now be pinned.");
 
-  viewGroups = PinebuildTestUtils.getPinnedViewGroups(window);
+  viewGroups = await PinebuildTestUtils.getPinnedViewGroups(window);
   Assert.equal(viewGroups.length, 1, "Should be 1 pinned ViewGroup.");
 
   pam = await PinebuildTestUtils.openPageActionMenu(viewGroups[0]);

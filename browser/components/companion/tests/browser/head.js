@@ -742,10 +742,13 @@ var PinebuildTestUtils = {
    * @param {Window?} win
    *   The window to get the ViewGroups for. The current window is used by
    *   default
-   * @return {ViewGroup[]}
+   * @return {Promise}
+   * @resolves {ViewGroup[]} The ViewGroup DOM nodes for the current window.
    */
-  getViewGroups(win = window) {
+  async getViewGroups(win = window) {
     let river = win.document.querySelector("river-el");
+    // Make sure LitElement has finished any in-flight DOM update jobs.
+    await river.updateComplete;
     return river.shadowRoot.querySelectorAll("view-group:not([hidden])");
   },
 
@@ -756,11 +759,15 @@ var PinebuildTestUtils = {
    * @param {Window?} win
    *   The window to get the ViewGroups for. The current window is used by
    *   default
-   * @return {ViewGroup[]}
+   * @return {Promise}
+   * @resolves {ViewGroup[]} The pinned ViewGroup DOM nodes for the current
+   *   window.
    */
-  getPinnedViewGroups(win = window) {
-    let river = window.document.querySelector("pinned-views");
-    let viewGroups = river.shadowRoot.querySelectorAll("view-group");
+  async getPinnedViewGroups(win = window) {
+    let pinnedViews = window.document.querySelector("pinned-views");
+    // Make sure LitElement has finished any in-flight DOM update jobs.
+    await pinnedViews.updateComplete;
+    let viewGroups = pinnedViews.shadowRoot.querySelectorAll("view-group");
     for (let viewGroup of viewGroups) {
       Assert.equal(
         viewGroup.views.length,

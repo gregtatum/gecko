@@ -311,10 +311,7 @@ add_task(async function testSessionSetAsideNoFlowReset() {
     "Should be looking at View 2"
   );
 
-  let river = document.querySelector("river-el");
-  await river.updateComplete;
-
-  let viewGroups = PinebuildTestUtils.getViewGroups(win);
+  let viewGroups = await PinebuildTestUtils.getViewGroups(win);
   Assert.equal(viewGroups.length, 1, "Should only be 1 ViewGroup");
   Assert.equal(
     viewGroups[0].views.length,
