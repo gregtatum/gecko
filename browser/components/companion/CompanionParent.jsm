@@ -968,7 +968,7 @@ class CompanionParent extends JSWindowActorParent {
           null,
           type
         );
-        await authorizer.getToken();
+        await authorizer.connect();
         return authorizer.toJSON();
       }
       case "Companion:AccountCreated": {
