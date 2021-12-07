@@ -132,6 +132,7 @@ mapping:
         checksums_path: KEY
         only_for_platforms:
             - linux64-shippable
+            - linux64-pinebuild
         destinations:
             - ${year}/${month}/${upload_date}-${branch}
             - latest-${branch}
@@ -208,6 +209,7 @@ mapping:
         description: "Metadata about the Normandy client of this build"
         only_for_platforms:
             - linux64-shippable
+            - linux64-pinebuild
         pretty_name: ${product_platform}-${version}.normandy.json
         checksums_path: ${product_platform}-${version}.normandy.json
     target_info.txt:
@@ -294,6 +296,7 @@ mapping:
             - linux-shippable
             - linux64-shippable
             - linux64-asan-reporter-shippable
+            - linux64-pinebuild
         pretty_name: ${product_platform}-${version}.${locale}.${filename_platform}.tar.bz2
         checksums_path: ${product_platform}-${version}.${locale}.${filename_platform}.tar.bz2
         destinations:
@@ -312,6 +315,7 @@ mapping:
             - linux-shippable
             - linux64-shippable
             - linux64-asan-reporter-shippable
+            - linux64-pinebuild
         pretty_name: ${product_platform}-${version}.${locale}.${filename_platform}.tar.bz2.asc
         checksums_path: ${product_platform}-${version}.${locale}.${filename_platform}.tar.bz2.asc
         destinations:
