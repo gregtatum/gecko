@@ -47,7 +47,7 @@ const COMMANDS = {
     commands: ["inbox", "email", "gmail", "check gmail", "google mail"],
     icon: "chrome://browser/content/urlbar/quickactions/gmail.svg",
     label: "Go to Inbox",
-    callback: openUrl("https://gmail.com"),
+    url: "https://gmail.com",
     title: "Gmail",
     hide(isDefault) {
       if (isDefault) {
@@ -65,7 +65,7 @@ const COMMANDS = {
     label: "Go to Inbox",
     callback: () => {
       let inboxURL = OnlineServices.getInboxURL("microsoft");
-      openUrl(inboxURL)();
+      openUrl(inboxURL);
     },
     title: "Outlook",
     hide(isDefault) {
@@ -82,28 +82,28 @@ const COMMANDS = {
     commands: ["create-meeting", "calendar", "google calendar"],
     icon: "chrome://browser/content/urlbar/quickactions/createmeeting.svg",
     label: "Schedule a meeting",
-    callback: openUrl("https://meeting.new"),
+    url: "https://meeting.new",
     title: "Google Calendar",
   },
   createslides: {
     commands: ["create-slides", "slides", "google slides"],
     icon: "chrome://browser/content/urlbar/quickactions/createslides.svg",
     label: "Create Google slides",
-    callback: openUrl("https://slides.new"),
+    url: "https://slides.new",
     title: "Google Slides",
   },
   createsheet: {
     commands: ["create-sheet", "spreadsheet", "sheet", "google sheets"],
     icon: "chrome://browser/content/urlbar/quickactions/createsheet.svg",
     label: "Create a Google Sheet",
-    callback: openUrl("https://sheets.new"),
+    url: "https://sheets.new",
     title: "Google Sheets",
   },
   createdoc: {
     commands: ["create-doc", "document", "google docs"],
     icon: "chrome://browser/content/urlbar/quickactions/createdoc.svg",
     label: "Create a Google doc",
-    callback: openUrl("https://docs.new"),
+    url: "https://docs.new",
     title: "Google Docs",
   },
   screenshot: {
@@ -121,7 +121,7 @@ const COMMANDS = {
     icon: "chrome://global/skin/icons/settings.svg",
     label: "Open Preferences",
     hide: hideExtra,
-    callback: openUrl("about:preferences"),
+    url: "about:preferences",
     title: "Pro Client",
   },
   downloads: {
@@ -129,7 +129,7 @@ const COMMANDS = {
     icon: "chrome://browser/skin/downloads/downloads.svg",
     label: "Open Downloads",
     hide: hideExtra,
-    callback: openUrl("about:downloads"),
+    url: "about:downloads",
     title: "Pro Client",
   },
   privacy: {
@@ -137,7 +137,7 @@ const COMMANDS = {
     icon: "chrome://global/skin/icons/settings.svg",
     label: "Open Preferences (Privacy & Security)",
     hide: hideExtra,
-    callback: openUrl("about:preferences#privacy"),
+    callback: "about:preferences#privacy",
     title: "Pro Client",
   },
   viewsource: {
@@ -148,7 +148,7 @@ const COMMANDS = {
     callback: () => {
       let window = BrowserWindowTracker.getTopWindow();
       let spec = window.gBrowser.selectedTab.linkedBrowser.documentURI.spec;
-      openUrl("view-source:" + spec)();
+      openUrl("view-source:" + spec);
     },
     title: "Pro Client",
   },
@@ -179,13 +179,11 @@ const COMMANDS = {
 };
 
 function openUrl(url) {
-  return function() {
-    let window = BrowserWindowTracker.getTopWindow();
-    window.gBrowser.loadOneTab(url, {
-      inBackground: false,
-      triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
-    });
-  };
+  let window = BrowserWindowTracker.getTopWindow();
+  window.gBrowser.loadOneTab(url, {
+    inBackground: false,
+    triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+  });
 }
 
 function restartBrowser() {
@@ -406,7 +404,22 @@ class ProviderQuickActionsBase extends UrlbarProvider {
   }
 
   async pickResult(results, itemPicked) {
-    COMMANDS[itemPicked.dataset.key].callback();
+    let result = COMMANDS[itemPicked.dataset.key];
+    if (result.url) {
+      openUrl(result.url);
+    } else {
+      result.callback();
+    }
+  }
+
+  /**
+   * Adds a new QuickAction.
+   * @param {string} command The command to add.
+   * @param {string} definition An object that describes the command.
+   */
+  addAction(command, definition) {
+    COMMANDS[command] = definition;
+    this._tree.set(command, [command]);
   }
 }
 
