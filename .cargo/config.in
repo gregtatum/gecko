@@ -40,7 +40,7 @@ rev = "470320364f59672c0e1ee60240f2cd15f0e5b52f"
 [source."https://github.com/mozilla/application-services"]
 git = "https://github.com/mozilla/application-services"
 replace-with = "vendored-sources"
-rev = "8a576fbe79199fa8664f64285524017f74ebcc5f"
+rev = "c51b63595a27a6ef45161012323e0261475c10c9"
 
 [source."https://github.com/mozilla-spidermonkey/jsparagus"]
 git = "https://github.com/mozilla-spidermonkey/jsparagus"
@@ -90,11 +90,6 @@ rev = "28ba9d8"
 git = "https://github.com/gfx-rs/naga"
 replace-with = "vendored-sources"
 rev = "29571cc"
-
-[source."https://github.com/bytecodealliance/wasmtime"]
-git = "https://github.com/bytecodealliance/wasmtime"
-replace-with = "vendored-sources"
-rev = "824fa69756523f2b6d49029fe25de94130b1f144"
 
 [source.crates-io]
 replace-with = "vendored-sources"
