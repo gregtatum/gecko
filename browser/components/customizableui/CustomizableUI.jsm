@@ -237,6 +237,7 @@ var CustomizableUIInternal = {
       Services.policies.isAllowed("removeHomeButtonByDefault")
         ? null
         : "home-button",
+      AppConstants.PINEBUILD ? "pinebuild-toolbar" : null,
       "spring",
       "urlbar-container",
       AppConstants.PINEBUILD ? null : "session-setaside-button",

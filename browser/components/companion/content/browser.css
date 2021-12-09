@@ -8,7 +8,13 @@
   --companion-width: 340px;
   --companion-min-width: 300px;
   --companion-max-width: 600px;
-  --companion-background: var(--in-content-page-background);;
+  --companion-background: var(--in-content-page-background);
+
+  --urlbar-border-radius: 20px;
+}
+
+#urlbar[breakout][breakout-extend] {
+  --urlbar-border-radius: 12px;
 }
 
 :root:not([chromehidden~="toolbar"]) {
@@ -24,7 +30,7 @@
 #page-action-buttons,
 #tracking-protection-icon-container,
 #identity-box,
-#nav-bar-customization-target > *:not(#urlbar-container, #profiler-button, #session-setaside-button, toolbarspring:nth-of-type(1)) {
+#nav-bar-customization-target > *:not(#urlbar-container, #profiler-button, #companion-sidebar-button, #active-view-manager, [id^="pinebuild-"], #session-setaside-button, toolbarspring:nth-of-type(1)) {
   display: none;
   -moz-box-flex: 1;
 }
@@ -442,6 +448,7 @@
 
 /** END Page Info Panel **/
 
+/** Urlbar **/
 #urlbar-page-overlay {
   transition-property: background-color;
   transition-timing-function: var(--animation-timing-function);
@@ -469,71 +476,72 @@
   background-color: rgba(0, 0, 0, 0.1);
 }
 
+#main-window #urlbar[breakout][breakout-extend] {
+  /* -6px because we want to leave a bit of space between the top of the toolbar
+     and the Urlbar. */
+  top: calc((var(--urlbar-toolbar-height) - var(--urlbar-height)) / 2 - 6px);
+  /* We shift the Urlbar right by the same size as its top border-radius.
+     If we didn't, when the Urlbar overlaps the AVM, we'd show a notch of
+     toolbar in the space between the Urlbar's rounded border and the edge of
+     its outer box. */
+  left: calc(-1 * var(--urlbar-border-radius));
+  width: calc(100% + var(--urlbar-border-radius));
+}
+
+#main-window #urlbar-background {
+  border-radius: var(--urlbar-border-radius);
+}
+
+#main-window #urlbar[breakout][breakout-extend] > #urlbar-input-container {
+  /* Reduce the amount of blank space above and below the Urlbar by half. */
+  height: calc(var(--urlbar-toolbar-height) - (var(--urlbar-toolbar-height) - var(--urlbar-height)) / 2);
+}
+
+/* Since we want topSitesButtons to have no margin, but it can't be positioned
+   absolutely, we set margin-inline on each row, instead of the entire view. */
+.urlbarView-row:not([dynamicType=topSitesButtons]) {
+  margin-inline: var(--urlbar-margin-inline);
+}
+
+.urlbarView-row[dynamicType=topSitesButtons] {
+  margin-block-start: calc(-1 * var(--urlbar-view-padding-block));
+}
+
 #main-window [flow-reset] #urlbar[breakout],
 #main-window [flow-reset] #urlbar[breakout][breakout-extend] {
   display: block;
   position: fixed;
   top: calc((var(--urlbar-toolbar-height) + 15%));
-  left: calc(var(--companion-width));
+  left: var(--companion-width);
   right: 0;
   width: -moz-available;
   box-shadow: 0px 4px 4px 0px #00000040;
-  border-radius: 32px;
+  border-radius: calc(var(--urlbar-border-radius) * 2);
   z-index: 999;
-  height: calc(2 * var(--urlbar-height));
   max-width: 750px;
   margin: 0 auto;
 }
 
+#main-window [flow-reset] #urlbar:not([open])[breakout] > #urlbar-background,
+#main-window [flow-reset] #urlbar[breakout] > #urlbar-input-container {
+  height: calc(2 * var(--urlbar-height));
+  /* We use a margin variable in a padding rule because the Pro Client Urlbar
+     shifts some of the Firefox Urlbar global margin rules to instead apply to
+     individual elements. We must reflect that margin in the unopened flow-reset
+     Urlbar so that the search icon doesn't jump when the Urlbar is opened. */
+  padding-inline: calc(var(--urlbar-margin-inline) + var(--urlbar-container-padding));
+}
+
 #main-window [flow-reset] #urlbar-background {
   background: white;
-  border-radius: 32px;
+  border-radius: calc(var(--urlbar-border-radius) * 2);
 }
 
 #main-window [flow-reset] #urlbar[open] #urlbar-background {
-  border-radius: 16px 16px 0 0;
+  border-radius: var(--urlbar-border-radius);
 }
 
-#main-window [flow-reset] .urlbarView-pinebuild {
-  margin-top: 0;
-  border-radius: 0 0 16px 16px;
-}
-
-#urlbar[breakout][breakout-extend],
-#main-window #urlbar[breakout][breakout-extend] {
-  width: 100%;
-  height: var(--urlbar-height);
-  top: calc((var(--urlbar-toolbar-height) - var(--urlbar-height)) / 2);
-  left: 0;
-}
-
-#main-window #urlbar-background {
-  border-radius: 16px;
-}
-
-#urlbar[breakout-extend] #urlbar-background {
-  box-shadow: unset !important;
-}
-
-.urlbarView-pinebuild {
-  margin-top: 5px;
-  overflow: visible !important;
-  border-radius: 10px;
-  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
-  background: white;
-  border-inline: 0 !important;
-}
-
-#urlbar[breakout-extend] > #urlbar-input-container {
-  border-radius: 18px;
-  height: 100% !important;
-  padding: var(--urlbar-container-padding) !important;
-}
-
-.urlbarView-row[dynamicType=topSitesButtons] {
-  margin-block-start: -4px;
-  border-radius: 8px 8px 0 0;
-}
+/** END Urlbar **/
 
 .browser-toolbar:not(.titlebar-color) {
   --toolbar-bgcolor: white;

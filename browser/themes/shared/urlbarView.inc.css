@@ -5,7 +5,6 @@
 %endif
 
 %filter substitution
-%define urlbarViewPadding 4px
 %define urlbarViewFaviconWidth 16px
 %define urlbarViewIconMarginEnd (var(--urlbar-icon-padding) + var(--identity-box-margin-inline))
 
@@ -14,6 +13,8 @@
 :root {
   --autocomplete-popup-highlight-background: SelectedItem;
   --autocomplete-popup-highlight-color: SelectedItemText;
+
+  --urlbar-view-padding-block: 4px;
 
   --urlbar-popup-action-color: hsl(178, 100%, 28%);
 
@@ -67,12 +68,12 @@
   width: 100%;
 }
 
-#urlbar[open] > .urlbarView:not(.urlbarView-pinebuild) > .urlbarView-body-outer > .urlbarView-body-inner {
+#urlbar[open] > .urlbarView > .urlbarView-body-outer > .urlbarView-body-inner {
   border-top: 1px solid var(--autocomplete-popup-separator-color);
 }
 
 .urlbarView-results {
-  padding-block: @urlbarViewPadding@;
+  padding-block: var(--urlbar-view-padding-block);
   white-space: nowrap;
 }
 
@@ -678,7 +679,7 @@
   flex-wrap: wrap;
 }
 
-.urlbarView:not(.urlbarView-pinebuild, [noresults]) > .search-one-offs:not([hidden]) {
+.urlbarView:not([noresults]) > .search-one-offs:not([hidden]) {
   border-top: 1px solid var(--autocomplete-popup-separator-color);
 }
 

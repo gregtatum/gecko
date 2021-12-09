@@ -24,16 +24,6 @@ var PineBuildUIUtils = {
     HistoryCarouselUI.init();
   },
 
-  hideToolbar() {
-    let companionToolbar = document.getElementById("pinebuild-toolbar");
-    companionToolbar.hidden = true;
-  },
-
-  showToolbar() {
-    let companionToolbar = document.getElementById("pinebuild-toolbar");
-    companionToolbar.hidden = false;
-  },
-
   copy(anchor, string) {
     let clipboard = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(
       Ci.nsIClipboardHelper
