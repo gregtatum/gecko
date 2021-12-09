@@ -8689,6 +8689,7 @@ var gPrivateBrowsingUI = {
 
 async function openPinebuildCompanionLink(aURI) {
   let tabbox = gBrowser.tabbox;
+  tabbox.setAttribute("disable-history-animations", "true");
   tabbox.setAttribute("companion-link-open", "1");
   let switched = false;
   try {
@@ -8702,6 +8703,7 @@ async function openPinebuildCompanionLink(aURI) {
       tabbox.setAttribute("companion-link-open", "2");
       function transitionEnd() {
         tabbox.removeAttribute("companion-link-open");
+        tabbox.removeAttribute("disable-history-animations");
         tabbox.removeEventListener("transitionend", transitionEnd);
         tabbox.removeEventListener("transitioncancel", transitionEnd);
       }
