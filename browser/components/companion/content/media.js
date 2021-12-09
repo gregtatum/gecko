@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { getListDiff } from "./listDiff.js";
+
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 const allowMute = Services.prefs.getBoolPref(
@@ -74,13 +76,53 @@ export class MediaList extends HTMLElement {
   }
 
   render() {
-    this.innerHTML = "";
-    for (let tab of this.tabs) {
-      if (!tab.media) {
-        continue;
+    let transform = getListDiff(
+      this.children,
+      [...this.tabs].filter(t => t.media),
+      c => c.tab.browserId,
+      t => t.browserId
+    );
+
+    let children = [];
+    for (let t of transform) {
+      switch (t.type) {
+        case "insertion": {
+          children.push(new Media(t.data));
+          break;
+        }
+        case "move": {
+          // Updating the node rather than re-rendering it allows us to
+          // maintain continuity of focus.
+          let media = this.children[t.oldIndex];
+          media.update(t.data);
+          children.push(media);
+          break;
+        }
+        case "deletion": {
+          // We do nothing right now on deletion. The node will get cleaned up
+          // via this.replaceChildren. However, we may in the future want to
+          // animate media out, in which case we'll want to keep a tombstone
+          // element around to animate, and remove it on animation end.
+          break;
+        }
+        default: {
+          console.error(`Unexpected transform type: ${t.type}`);
+          break;
+        }
       }
-      this.append(new Media(tab));
     }
+
+    // There's ultimately nothing we can do to perfectly retain focus when
+    // elements are moving around. We could try to use the minimal number of
+    // this.insertBefore(...) calls, to avoid removing elements from the DOM
+    // when possible, but ultimately if the order of children change, at least
+    // one of them needs to be removed and re-added, which will drop focus. So,
+    // we just remember what was focused before the reordering, and try to
+    // focus that afterward. If it was removed, then this will simply do
+    // nothing.
+    let focused = document.activeElement;
+    this.replaceChildren(...children);
+    focused.focus();
 
     if (this.allActiveMediaChildren.length) {
       this.removeAttribute("hidden");
@@ -185,6 +227,11 @@ export class Media extends HTMLElement {
     });
   }
 
+  update(tab) {
+    this.tab = tab;
+    this.render();
+  }
+
   get artwork() {
     return this.querySelector(".artwork");
   }
@@ -224,6 +271,7 @@ export class Media extends HTMLElement {
       this.hidden = true;
       return;
     }
+    this.hidden = false;
 
     let artwork = metadata?.artwork[0]
       ? "url(" + metadata.artwork[0].src + ")"
