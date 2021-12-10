@@ -2442,6 +2442,9 @@ pref("devtools.netmonitor.audits.slow", 500);
 // Enable the EventSource Inspector
 pref("devtools.netmonitor.features.serverSentEvents", true);
 
+// Enable the new Edit and Resend panel
+pref("devtools.netmonitor.features.newEditAndResend", false);
+
 // Enable the Storage Inspector
 pref("devtools.storage.enabled", true);
 
