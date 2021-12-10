@@ -85,16 +85,16 @@
   opacity: 0;
 }
 
-#tabbrowser-tabbox:not([disable-history-animations]) > #tabbrowser-tabpanels[multideck] > hbox[deactivated] {
+#tabbrowser-tabbox:not([companion-link-open]) > #tabbrowser-tabpanels[multideck] > hbox[deactivated] {
   transition-property: none;
   transform: translateX(-100%);
 }
 
-#tabbrowser-tabbox:not([disable-history-animations]) > #tabbrowser-tabpanels[multideck] > hbox[deactivated][was-forward] {
+#tabbrowser-tabbox:not([companion-link-open]) > #tabbrowser-tabpanels[multideck] > hbox[deactivated][was-forward] {
   transform: translateX(100%);
 }
 
-#tabbrowser-tabbox:not([disable-history-animations]) > #tabbrowser-tabpanels[multideck] > hbox {
+#tabbrowser-tabbox:not([companion-link-open]) > #tabbrowser-tabpanels[multideck] > hbox {
   transition-property: transform;
   transition-timing-function: var(--animation-easing-function);
   transition-duration: var(--panelui-subview-transition-duration);
