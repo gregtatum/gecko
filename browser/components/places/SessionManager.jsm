@@ -39,7 +39,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
-const WINDOW_TRACKER_REMOVE_TOPIC = "sessionstore-closed-objects-changed";
+const SESSION_CLOSED_OBJECTS_CHANGED = "sessionstore-closed-objects-changed";
 const SESSION_WRITE_COMPLETE_TOPIC = "sessionstore-state-write-complete";
 
 /**
@@ -111,7 +111,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     if (!perWindowEnabled) {
       return;
     }
-    Services.obs.addObserver(this, WINDOW_TRACKER_REMOVE_TOPIC, true);
+    Services.obs.addObserver(this, SESSION_CLOSED_OBJECTS_CHANGED, true);
     Services.obs.addObserver(this, SESSION_WRITE_COMPLETE_TOPIC, true);
 
     PlacesUtils.history.shutdownClient.jsclient.addBlocker(
@@ -133,7 +133,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       return;
     }
     this.#pendingSaves.clear();
-    Services.obs.removeObserver(this, WINDOW_TRACKER_REMOVE_TOPIC);
+    Services.obs.removeObserver(this, SESSION_CLOSED_OBJECTS_CHANGED);
     Services.obs.removeObserver(this, SESSION_WRITE_COMPLETE_TOPIC);
   }
 
@@ -490,7 +490,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    */
   observe(subject, topic, data) {
     switch (topic) {
-      case WINDOW_TRACKER_REMOVE_TOPIC:
+      case SESSION_CLOSED_OBJECTS_CHANGED:
         this.#saveClosedWindowData();
         break;
       case SESSION_WRITE_COMPLETE_TOPIC:
@@ -507,13 +507,17 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     let highestWindowId = -1;
     for (let windowData of data) {
       if (windowData.closedId > this.#lastClosedWindowId) {
-        await this.#saveSessionData(windowData).catch(logConsole.error);
+        await this.#saveSessionData(windowData).catch(console.error);
         // Keep track of the highest window Id we saved, so that we can
         // avoid saving the same windows multiple times.
         highestWindowId = Math.max(windowData.closedId, highestWindowId);
       }
     }
-    this.#lastClosedWindowId = highestWindowId;
+    // If only tabs are closed we may be notified about the closed data, but
+    // we won't actually have saved any so skip updating lastClosedWindowId.
+    if (highestWindowId > -1) {
+      this.#lastClosedWindowId = highestWindowId;
+    }
     this.emit("sessions-updated");
   }
 
