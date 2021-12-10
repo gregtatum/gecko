@@ -2694,6 +2694,7 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("pref.browser.homepage.disable_button.restore_default", true, locked);
   pref("browser.newtabpage.enabled", false, locked);
   pref("services.sync.engine.tabs", false, locked);
+  pref("browser.urlbar.suggest.engines", false);
   pref("browser.urlbar.suggest.openpage", false, locked);
   pref("browser.sessionstore.warnOnQuit", false, locked);
   pref("browser.sessionstore.resume_session_once", false, locked);
