@@ -33,6 +33,12 @@ urlbar:
     Exposure is sent once per browsing session after the first urlbar query is
     made.
   variables:
+    merinoClientVariants:
+      type: string
+      fallbackPref: browser.urlbar.merino.clientVariants
+      description: >-
+        Comma separated list of client variants to report to the Merino server.
+        May impact server behavior.
     merinoEnabled:
       type: boolean
       fallbackPref: browser.urlbar.merino.enabled
@@ -66,6 +72,10 @@ urlbar:
         - history
         - offline
         - online
+    quickSuggestAllowPositionInSuggestions:
+      type: boolean
+      fallbackPref: browser.urlbar.quicksuggest.allowPositionInSuggestions
+      description: Whether quick suggest results can be shown in position specified in the suggestions.
     quickSuggestShouldShowOnboardingDialog:
       type: boolean
       fallbackPref: browser.urlbar.quicksuggest.shouldShowOnboardingDialog
