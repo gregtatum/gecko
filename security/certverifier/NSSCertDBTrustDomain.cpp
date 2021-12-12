@@ -20,7 +20,6 @@
 #include "mozilla/AppShutdown.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Casting.h"
-#include "mozilla/ClearOnShutdown.h"
 #include "mozilla/PodOperations.h"
 #include "mozilla/Services.h"
 #include "mozilla/SyncRunnable.h"
@@ -36,7 +35,6 @@
 #include "nsNSSCertHelper.h"
 #include "nsNSSCertificate.h"
 #include "nsNSSCertificateDB.h"
-#include "nsNSSIOLayer.h"
 #include "nsPrintfCString.h"
 #include "nsServiceManagerUtils.h"
 #include "nsThreadUtils.h"
@@ -99,6 +97,7 @@ NSSCertDBTrustDomain::NSSCertDBTrustDomain(
       mThirdPartyIntermediateInputs(thirdPartyIntermediateInputs),
       mExtraCertificates(extraCertificates),
       mBuiltChain(builtChain),
+      mIsBuiltChainRootBuiltInRoot(false),
       mPinningTelemetryInfo(pinningTelemetryInfo),
       mHostname(hostname),
       mCertStorage(do_GetService(NS_CERT_STORAGE_CID)),
@@ -1262,6 +1261,36 @@ nsresult isDistrustedCertificateChain(
   return NS_OK;
 }
 
+// This is used by NSSCertDBTrustDomain to ensure IsCertBuiltInRoot is only
+// called from the socket thread during TLS server certificate verification.
+Result IsCertBuiltInRootWithSyncDispatch(Input certInput, bool& result) {
+  nsCOMPtr<nsIEventTarget> socketThread(
+      do_GetService(NS_SOCKETTRANSPORTSERVICE_CONTRACTID));
+  if (!socketThread) {
+    return Result::FATAL_ERROR_LIBRARY_FAILURE;
+  }
+  bool onSocketThread = true;
+  nsresult rv = socketThread->IsOnCurrentThread(&onSocketThread);
+  if (NS_FAILED(rv) || onSocketThread) {
+    return Result::FATAL_ERROR_LIBRARY_FAILURE;
+  }
+
+  result = false;
+  Result runnableRV = Result::FATAL_ERROR_LIBRARY_FAILURE;
+
+  RefPtr<Runnable> isBuiltInRootTask = NS_NewRunnableFunction(
+      "IsCertBuiltInRoot",
+      [&]() { runnableRV = IsCertBuiltInRoot(certInput, result); });
+  rv = SyncRunnable::DispatchToThread(socketThread, isBuiltInRootTask);
+  if (NS_FAILED(rv)) {
+    return Result::FATAL_ERROR_LIBRARY_FAILURE;
+  }
+  if (runnableRV != Success) {
+    return runnableRV;
+  }
+  return Success;
+}
+
 Result NSSCertDBTrustDomain::IsChainValid(const DERArray& reversedDERArray,
                                           Time time,
                                           const CertPolicyId& requiredPolicy) {
@@ -1278,15 +1307,14 @@ Result NSSCertDBTrustDomain::IsChainValid(const DERArray& reversedDERArray,
     certArray.EmplaceBack(derInput->UnsafeGetData(), derInput->GetLength());
   }
 
-  bool isBuiltInRoot = false;
-
   const nsTArray<uint8_t>& rootBytes = certArray.LastElement();
   Input rootInput;
   Result rv = rootInput.Init(rootBytes.Elements(), rootBytes.Length());
   if (rv != Success) {
     return rv;
   }
-  rv = IsCertBuiltInRoot(rootInput, isBuiltInRoot);
+  rv = IsCertBuiltInRootWithSyncDispatch(rootInput,
+                                         mIsBuiltChainRootBuiltInRoot);
   if (rv != Result::Success) {
     return rv;
   }
@@ -1301,8 +1329,8 @@ Result NSSCertDBTrustDomain::IsChainValid(const DERArray& reversedDERArray,
 
     bool chainHasValidPins;
     nsrv = PublicKeyPinningService::ChainHasValidPins(
-        derCertSpanList, mHostname, time, isBuiltInRoot, chainHasValidPins,
-        mPinningTelemetryInfo);
+        derCertSpanList, mHostname, time, mIsBuiltChainRootBuiltInRoot,
+        chainHasValidPins, mPinningTelemetryInfo);
     if (NS_FAILED(nsrv)) {
       return Result::FATAL_ERROR_LIBRARY_FAILURE;
     }
@@ -1313,7 +1341,7 @@ Result NSSCertDBTrustDomain::IsChainValid(const DERArray& reversedDERArray,
 
   // Check that the childs' certificate NotBefore date is anterior to
   // the NotAfter value of the parent when the root is a builtin.
-  if (isBuiltInRoot) {
+  if (mIsBuiltChainRootBuiltInRoot) {
     bool isDistrusted;
     nsrv =
         isDistrustedCertificateChain(certArray, mCertDBTrustType, isDistrusted);
@@ -1503,6 +1531,7 @@ void NSSCertDBTrustDomain::ResetAccumulatedState() {
   mSCTListFromOCSPStapling = nullptr;
   mSCTListFromCertificate = nullptr;
   mSawDistrustedCAByPolicyError = false;
+  mIsBuiltChainRootBuiltInRoot = false;
 }
 
 static Input SECItemToInput(const UniqueSECItem& item) {
@@ -1524,6 +1553,10 @@ Input NSSCertDBTrustDomain::GetSCTListFromCertificate() const {
 
 Input NSSCertDBTrustDomain::GetSCTListFromOCSPStapling() const {
   return SECItemToInput(mSCTListFromOCSPStapling);
+}
+
+bool NSSCertDBTrustDomain::GetIsBuiltChainRootBuiltInRoot() const {
+  return mIsBuiltChainRootBuiltInRoot;
 }
 
 bool NSSCertDBTrustDomain::GetIsErrorDueToDistrustedCAPolicy() const {
@@ -1606,12 +1639,8 @@ void DisableMD5() {
       NSS_USE_ALG_IN_CERT_SIGNATURE | NSS_USE_ALG_IN_CMS_SIGNATURE);
 }
 
-// Load a given PKCS#11 module located in the given directory. It will be named
-// the given module name. Optionally pass some string parameters to it via
-// 'params'. This argument will be provided to C_Initialize when called on the
-// module.
 bool LoadUserModuleAt(const char* moduleName, const char* libraryName,
-                      const nsCString& dir, /* optional */ const char* params) {
+                      const nsCString& dir) {
   // If a module exists with the same name, make a best effort attempt to delete
   // it. Note that it isn't possible to delete the internal module, so checking
   // the return value would be detrimental in that case.
@@ -1635,11 +1664,6 @@ bool LoadUserModuleAt(const char* moduleName, const char* libraryName,
   pkcs11ModuleSpec.AppendLiteral("\" library=\"");
   pkcs11ModuleSpec.Append(fullLibraryPath);
   pkcs11ModuleSpec.AppendLiteral("\"");
-  if (params) {
-    pkcs11ModuleSpec.AppendLiteral("\" parameters=\"");
-    pkcs11ModuleSpec.Append(params);
-    pkcs11ModuleSpec.AppendLiteral("\"");
-  }
 
   UniqueSECMODModule userModule(SECMOD_LoadUserModule(
       const_cast<char*>(pkcs11ModuleSpec.get()), nullptr, false));
@@ -1654,31 +1678,6 @@ bool LoadUserModuleAt(const char* moduleName, const char* libraryName,
   return true;
 }
 
-const char* kIPCClientCertsModuleName = "IPC Client Cert Module";
-
-bool LoadIPCClientCertsModule(const nsCString& dir) {
-  // The IPC client certs module needs to be able to call back into gecko to be
-  // able to communicate with the parent process over IPC. This is achieved by
-  // serializing the addresses of the relevant functions and passing them as an
-  // extra string parameter that will be available when C_Initialize is called
-  // on IPC client certs.
-  nsPrintfCString addrs("%p,%p", DoFindObjects, DoSign);
-  if (!LoadUserModuleAt(kIPCClientCertsModuleName, "ipcclientcerts", dir,
-                        addrs.get())) {
-    return false;
-  }
-  RunOnShutdown(
-      []() {
-        UniqueSECMODModule ipcClientCertsModule(
-            SECMOD_FindModule(kIPCClientCertsModuleName));
-        if (ipcClientCertsModule) {
-          SECMOD_UnloadUserModule(ipcClientCertsModule.get());
-        }
-      },
-      ShutdownPhase::XPCOMWillShutdown);
-  return true;
-}
-
 const char* kOSClientCertsModuleName = "OS Client Cert Module";
 
 bool LoadOSClientCertsModule(const nsCString& dir) {
@@ -1688,8 +1687,7 @@ bool LoadOSClientCertsModule(const nsCString& dir) {
     return false;
   }
 #endif
-  return LoadUserModuleAt(kOSClientCertsModuleName, "osclientcerts", dir,
-                          nullptr);
+  return LoadUserModuleAt(kOSClientCertsModuleName, "osclientcerts", dir);
 }
 
 bool LoadLoadableRoots(const nsCString& dir) {
@@ -1700,7 +1698,7 @@ bool LoadLoadableRoots(const nsCString& dir) {
   // "Root Certs" module allows us to load the correct one. See bug 1406396.
   int unusedModType;
   Unused << SECMOD_DeleteModule("Root Certs", &unusedModType);
-  return LoadUserModuleAt(kRootModuleName, "nssckbi", dir, nullptr);
+  return LoadUserModuleAt(kRootModuleName, "nssckbi", dir);
 }
 
 nsresult DefaultServerNicknameForCert(const CERTCertificate* cert,
