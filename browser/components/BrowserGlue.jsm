@@ -1296,6 +1296,18 @@ BrowserGlue.prototype = {
 
         messageManagerGroups: ["browsers"],
       };
+
+      JSWINDOWACTORS.TopLevelNavigationDelegate = {
+        parent: {
+          moduleURI: "resource:///actors/TopLevelNavigationDelegateParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/TopLevelNavigationDelegateChild.jsm",
+        },
+
+        messageManagerGroups: ["browsers"],
+        enablePreference: "browser.tabs.openNewTabForMostNavigations",
+      };
     }
 
     let os = Services.obs;

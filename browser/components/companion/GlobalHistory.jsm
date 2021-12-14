@@ -12,7 +12,6 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
-  ActorManagerParent: "resource://gre/modules/ActorManagerParent.jsm",
   PageThumbs: "resource://gre/modules/PageThumbs.jsm",
   SessionManager: "resource:///modules/SessionManager.jsm",
   Services: "resource://gre/modules/Services.jsm",
@@ -68,12 +67,6 @@ const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
  * @property {nsISHistory|null} historyEntry
  *   A view's nsISHistory entry.
  */
-
-// Set to true if we register the TopLevelNavigationDelegate JSWindowActor.
-// We record this at the module level so that subsequent browser window
-// openings don't try to re-register the same actor (which will throw an
-// exception).
-let gTopLevelNavigationDelegateRegistered = false;
 
 /**
  * This function returns the index of the nsISHEntry for the document
@@ -876,30 +869,6 @@ class GlobalHistory extends EventTarget {
       throw new Error(
         "Cannot function unless session history is in the parent."
       );
-    }
-
-    const GlobalHistoryActors = {
-      TopLevelNavigationDelegate: {
-        parent: {
-          moduleURI: "resource:///actors/TopLevelNavigationDelegateParent.jsm",
-        },
-        child: {
-          moduleURI: "resource:///actors/TopLevelNavigationDelegateChild.jsm",
-        },
-
-        messageManagerGroups: ["browsers"],
-      },
-    };
-
-    if (
-      Services.prefs.getBoolPref(
-        "browser.tabs.openNewTabForMostNavigations",
-        false
-      ) &&
-      !gTopLevelNavigationDelegateRegistered
-    ) {
-      ActorManagerParent.addJSWindowActors(GlobalHistoryActors);
-      gTopLevelNavigationDelegateRegistered = true;
     }
   }
 
