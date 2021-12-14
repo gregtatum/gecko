@@ -3312,9 +3312,9 @@ static bool TelemetryPrefValue() {
   // toolkit.telemetry.enabled determines whether we send "extended" data.
   // We only want extended data from pre-release channels due to size.
 
-#ifdef PINEBUILD
+#  ifdef PINEBUILD
   return true;
-#else
+#  else
   constexpr auto channel = MOZ_STRINGIFY(MOZ_UPDATE_CHANNEL) ""_ns;
 
   // Easy cases: Nightly, Aurora, Beta.
@@ -3323,12 +3323,12 @@ static bool TelemetryPrefValue() {
     return true;
   }
 
-#  ifndef MOZILLA_OFFICIAL
+#    ifndef MOZILLA_OFFICIAL
   // Local developer builds: non-official builds on the "default" channel.
   if (channel.EqualsLiteral("default")) {
     return true;
   }
-#  endif
+#    endif
 
   // Release Candidate builds: builds that think they are release builds, but
   // are shipped to beta users.
@@ -3342,7 +3342,7 @@ static bool TelemetryPrefValue() {
   }
 
   return false;
-#endif
+#  endif
 }
 
 /* static */
@@ -3726,8 +3726,7 @@ Preferences::ResetPrefs() {
   return InitInitialObjects(/* isStartup */ false);
 }
 
-NS_IMETHODIMP
-Preferences::ResetUserPrefs() {
+nsresult Preferences::ResetUserPrefs() {
   ENSURE_PARENT_PROCESS("Preferences::ResetUserPrefs", "all prefs");
   NS_ENSURE_TRUE(InitStaticMembers(), NS_ERROR_NOT_AVAILABLE);
   MOZ_ASSERT(NS_IsMainThread());

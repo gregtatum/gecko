@@ -10,6 +10,7 @@
 #include "gtkdrawing.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/PodOperations.h"
+#include "mozilla/ScopeExit.h"
 #include "nsDebug.h"
 #include "nsPrintfCString.h"
 #include "nsString.h"
@@ -26,6 +27,8 @@ enum class CSDStyle {
   Normal,
 };
 
+static bool gHeaderBarShouldDrawContainer = false;
+static bool gMaximizedHeaderBarShouldDrawContainer = false;
 static CSDStyle gCSDStyle = CSDStyle::Unknown;
 static GtkWidget* sWidgetStorage[MOZ_GTK_WIDGET_NODE_COUNT];
 static GtkStyleContext* sStyleStorage[MOZ_GTK_WIDGET_NODE_COUNT];
@@ -440,6 +443,21 @@ static GtkWidget* CreateNotebookWidget() {
   return widget;
 }
 
+static bool HasBackground(GtkStyleContext* aStyle) {
+  GdkRGBA gdkColor;
+  gtk_style_context_get_background_color(aStyle, GTK_STATE_FLAG_NORMAL,
+                                         &gdkColor);
+  if (gdkColor.alpha != 0.0) {
+    return true;
+  }
+
+  GValue value = G_VALUE_INIT;
+  gtk_style_context_get_property(aStyle, "background-image",
+                                 GTK_STATE_FLAG_NORMAL, &value);
+  auto cleanup = mozilla::MakeScopeExit([&] { g_value_unset(&value); });
+  return g_value_get_boxed(&value);
+}
+
 static void CreateHeaderBarWidget(WidgetNodeType aAppearance) {
   GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   GtkStyleContext* windowStyle = gtk_widget_get_style_context(window);
@@ -489,7 +507,27 @@ static void CreateHeaderBarWidget(WidgetNodeType aAppearance) {
   }
 
   gtk_container_add(GTK_CONTAINER(window), fixed);
-  gtk_container_add(GTK_CONTAINER(fixed), sWidgetStorage[aAppearance]);
+  gtk_container_add(GTK_CONTAINER(fixed), headerBar);
+
+  gtk_style_context_invalidate(headerBarStyle);
+  gtk_style_context_invalidate(fixedStyle);
+
+  // Some themes like Elementary's style the container of the headerbar rather
+  // than the header bar itself.
+  bool& shouldDrawContainer = aAppearance == MOZ_GTK_HEADER_BAR
+                                  ? gHeaderBarShouldDrawContainer
+                                  : gMaximizedHeaderBarShouldDrawContainer;
+  shouldDrawContainer = [&] {
+    const bool headerBarHasBackground = HasBackground(headerBarStyle);
+    if (headerBarHasBackground && GetBorderRadius(headerBarStyle)) {
+      return false;
+    }
+    if (HasBackground(fixedStyle) &&
+        (GetBorderRadius(fixedStyle) || !headerBarHasBackground)) {
+      return true;
+    }
+    return false;
+  }();
 }
 
 #define ICON_SCALE_VARIANTS 2
@@ -554,7 +592,7 @@ static void CreateHeaderBarButton(GtkWidget* aParentWidget,
 
   // We bypass GetWidget() here because we create all titlebar
   // buttons at once when a first one is requested.
-  NS_ASSERTION(sWidgetStorage[aAppearance] == nullptr,
+  NS_ASSERTION(!sWidgetStorage[aAppearance],
                "Titlebar button is already created!");
   sWidgetStorage[aAppearance] = widget;
 
@@ -754,6 +792,8 @@ static GtkWidget* CreateWidget(WidgetNodeType aAppearance) {
       return CreateComboBoxEntryArrowWidget();
     case MOZ_GTK_HEADERBAR_WINDOW:
     case MOZ_GTK_HEADERBAR_WINDOW_MAXIMIZED:
+    case MOZ_GTK_HEADERBAR_FIXED:
+    case MOZ_GTK_HEADERBAR_FIXED_MAXIMIZED:
     case MOZ_GTK_HEADER_BAR:
     case MOZ_GTK_HEADER_BAR_MAXIMIZED:
     case MOZ_GTK_HEADER_BAR_BUTTON_CLOSE:
@@ -1459,4 +1499,43 @@ void StyleContextSetScale(GtkStyleContext* style, gint aScaleFactor) {
   if (sGtkStyleContextSetScalePtr && style) {
     sGtkStyleContextSetScalePtr(style, aScaleFactor);
   }
+}
+
+bool HeaderBarShouldDrawContainer(WidgetNodeType aNodeType) {
+  MOZ_ASSERT(aNodeType == MOZ_GTK_HEADER_BAR ||
+             aNodeType == MOZ_GTK_HEADER_BAR_MAXIMIZED);
+  mozilla::Unused << GetWidget(aNodeType);
+  return aNodeType == MOZ_GTK_HEADER_BAR
+             ? gHeaderBarShouldDrawContainer
+             : gMaximizedHeaderBarShouldDrawContainer;
+}
+
+gint GetBorderRadius(GtkStyleContext* aStyle) {
+  GValue value = G_VALUE_INIT;
+  // NOTE(emilio): In an ideal world, we'd query the two longhands
+  // (border-top-left-radius and border-top-right-radius) separately. However,
+  // that doesn't work (GTK rejects the query with:
+  //
+  //   Style property "border-top-left-radius" is not gettable
+  //
+  // However! Getting border-radius does work, and it does return the
+  // border-top-left-radius as a gint:
+  //
+  //   https://docs.gtk.org/gtk3/const.STYLE_PROPERTY_BORDER_RADIUS.html
+  //   https://gitlab.gnome.org/GNOME/gtk/-/blob/gtk-3-20/gtk/gtkcssshorthandpropertyimpl.c#L961-977
+  //
+  // So we abuse this fact, and make the assumption here that the
+  // border-top-{left,right}-radius are the same, and roll with it.
+  gtk_style_context_get_property(aStyle, "border-radius", GTK_STATE_FLAG_NORMAL,
+                                 &value);
+  gint result = 0;
+  auto type = G_VALUE_TYPE(&value);
+  if (type == G_TYPE_INT) {
+    result = g_value_get_int(&value);
+  } else {
+    NS_WARNING(nsPrintfCString("Unknown value type %lu for border-radius", type)
+                   .get());
+  }
+  g_value_unset(&value);
+  return result;
 }

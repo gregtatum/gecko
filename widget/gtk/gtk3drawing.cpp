@@ -2168,18 +2168,6 @@ static gint moz_gtk_check_menu_item_paint(WidgetNodeType widgetType,
   return MOZ_GTK_SUCCESS;
 }
 
-static gint GetBorderRadius(GtkStyleContext* aStyle) {
-  GValue value = G_VALUE_INIT;
-  gtk_style_context_get_property(aStyle, "border-radius", GTK_STATE_FLAG_NORMAL,
-                                 &value);
-  gint result = 0;
-  if (G_VALUE_TYPE(&value) == G_TYPE_INT) {
-    result = g_value_get_int(&value);
-  }
-  g_value_unset(&value);
-  return result;
-}
-
 static gint moz_gtk_header_bar_paint(WidgetNodeType widgetType, cairo_t* cr,
                                      GdkRectangle* rect,
                                      GtkWidgetState* state) {
@@ -2189,15 +2177,12 @@ static gint moz_gtk_header_bar_paint(WidgetNodeType widgetType, cairo_t* cr,
 
   // Some themes like Elementary's style the container of the headerbar rather
   // than the header bar itself.
-  if (!GetBorderRadius(style)) {
+  if (HeaderBarShouldDrawContainer(widgetType)) {
     auto containerType = widgetType == MOZ_GTK_HEADER_BAR
                              ? MOZ_GTK_HEADERBAR_FIXED
                              : MOZ_GTK_HEADERBAR_FIXED_MAXIMIZED;
-    GtkStyleContext* containerStyle = GetStyleContext(
-        containerType, state->scale, GTK_TEXT_DIR_NONE, state_flags);
-    if (GetBorderRadius(containerStyle)) {
-      style = containerStyle;
-    }
+    style = GetStyleContext(containerType, state->scale, GTK_TEXT_DIR_NONE,
+                            state_flags);
   }
 
 // Some themes (Adwaita for instance) draws bold dark line at
