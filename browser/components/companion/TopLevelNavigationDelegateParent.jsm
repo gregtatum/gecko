@@ -6,22 +6,31 @@
 
 var EXPORTED_SYMBOLS = ["TopLevelNavigationDelegateParent"];
 
+ChromeUtils.defineModuleGetter(
+  this,
+  "E10SUtils",
+  "resource://gre/modules/E10SUtils.jsm"
+);
+
 class TopLevelNavigationDelegateParent extends JSWindowActorParent {
   receiveMessage(message) {
     if (message.name == "LoadURI") {
-      let { uriString, triggeringPrincipal } = message.data;
+      let { uriString, triggeringPrincipal, referrerInfo } = message.data;
 
       let gBrowser = this.browsingContext.topChromeWindow.gBrowser;
+      referrerInfo = E10SUtils.deserializeReferrerInfo(referrerInfo);
 
       let tabOptions = {
         skipAnimation: true,
         skipLoad: true,
+        referrerInfo,
       };
 
       let newTab = gBrowser.addTrustedTab(null, tabOptions);
 
       let options = {
         triggeringPrincipal,
+        referrerInfo,
       };
       newTab.linkedBrowser.loadURI(uriString, options);
       gBrowser.selectedTab = newTab;

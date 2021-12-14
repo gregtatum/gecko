@@ -8,6 +8,12 @@ var EXPORTED_SYMBOLS = ["TopLevelNavigationDelegateChild"];
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
+ChromeUtils.defineModuleGetter(
+  this,
+  "E10SUtils",
+  "resource://gre/modules/E10SUtils.jsm"
+);
+
 const SHARED_DATA_KEY = "TopLevelNavigationDelegate:IgnoreList";
 
 class TopLevelNavigationDelegateChild extends JSWindowActorChild {
@@ -15,7 +21,7 @@ class TopLevelNavigationDelegateChild extends JSWindowActorChild {
     docShell,
     uri,
     loadType,
-    referrer,
+    referrerInfo,
     hasPostData,
     triggeringPrincipal,
     csp
@@ -88,6 +94,7 @@ class TopLevelNavigationDelegateChild extends JSWindowActorChild {
       this.sendAsyncMessage("LoadURI", {
         uriString: uri.spec,
         triggeringPrincipal,
+        referrerInfo: E10SUtils.serializeReferrerInfo(referrerInfo),
       });
       return false;
     }
