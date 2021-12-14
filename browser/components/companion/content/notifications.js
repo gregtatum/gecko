@@ -13,12 +13,8 @@ export const timeFormat = new Intl.DateTimeFormat([], {
 let notificationTimers = new Set();
 
 async function showNotification(event) {
-  // 0 = Never
-  // 1 = Always
-  // 2 = Use conditional Logic
   let notificationLevel = window.CompanionUtils.getIntPref(
-    "browser.companion.notifications.level",
-    0
+    "browser.pinebuild.companion.notifications.level"
   );
   let isActiveWindow = await window.CompanionUtils.sendQuery(
     "Companion:IsActiveWindow"
@@ -58,8 +54,7 @@ function processEvents(e) {
     events = e.detail.events;
   }
   let notificationTimeout = window.CompanionUtils.getIntPref(
-    "browser.companion.notifications.minutesBeforeEvent",
-    10
+    "browser.pinebuild.companion.notifications.minutesBeforeEvent"
   );
   for (let event of events) {
     let notificationTime =

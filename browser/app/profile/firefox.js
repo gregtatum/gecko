@@ -2752,6 +2752,9 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
     pref("browser.pinebuild.companion.onboarding.enabled", false);
   #endif
 
+  // 0 = Never, 1 = Always, 2 = Use conditional logic
+  pref("browser.pinebuild.companion.notifications.level", 2);
+  pref("browser.pinebuild.companion.notifications.minutesBeforeEvent", 10);
   // Preferences below here were at one point off by default and now have
   // been enabled (and should likely be removed eventually).
   pref("browser.pinebuild.animateViewTransitions", true);
