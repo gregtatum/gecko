@@ -140,6 +140,9 @@ export default class LoginList extends HTMLElement {
     this.addEventListener("keydown", this);
     this.addEventListener("keyup", this);
     this._createLoginButton.addEventListener("click", this);
+    this.addEventListener("blur", this);
+    window.addEventListener("resize", this);
+    this._list.addEventListener("scroll", this);
   }
 
   render() {
