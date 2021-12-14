@@ -1131,6 +1131,13 @@ def _get_desktop_run_parser():
     group.add_argument(
         "--enable-fission",
         action="store_true",
+        default=True,
+        help="Run the program with Fission (site isolation) enabled.",
+    )
+    group.add_argument(
+        "--disable-fission",
+        dest="enable_fission",
+        action="store_false",
         help="Run the program with Fission (site isolation) enabled.",
     )
     group.add_argument(
