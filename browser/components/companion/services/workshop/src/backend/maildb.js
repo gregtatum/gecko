@@ -1636,6 +1636,9 @@ export class MailDB extends Emitter {
           messageIdComponentFromMessageId(messageId),
         ];
         store.put(message, postKey);
+
+        // Update the cache with the modified message.
+        messageCache.set(messageId, message);
       } else {
         // -- Modification without date change
         store.put(message, preKey);

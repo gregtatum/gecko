@@ -88,6 +88,19 @@ class FakeCalendar {
   }
 
   /**
+   * Change events in using their summary as an uid.
+   * @param events
+   */
+  changeEvents(events) {
+    for (const event of events) {
+      const e = this.events.find(x => x.summary === event.summary);
+      for (const [key, value] of Object.entries(event)) {
+        e[key] = value;
+      }
+    }
+  }
+
+  /**
    * Cancel the event with the given summary starting at the given dates or all
    * the event if no dates.
    * @param {string} summary

@@ -144,6 +144,8 @@ export class BatchManager {
     if (flushMode) {
       if (flushMode === "immediate") {
         this._flushPending(false);
+      } else if (flushMode === "timeWindowShift") {
+        this._flushPending(false, true);
       } else if (this._timer !== true) {
         // therefore: flushMode === 'soon'
         // Our conditioanl means we're only in here if a promise isn't already

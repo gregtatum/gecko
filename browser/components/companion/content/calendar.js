@@ -4,7 +4,12 @@
 
 import { openLink, openMeeting, MozLitElement } from "./widget-utils.js";
 import { css, html, classMap, until, repeat } from "./lit.all.js";
-import { Workshop, workshopAPI } from "./workshopAPI.js";
+import {
+  setExtendedTimeout,
+  Workshop,
+  workshopAPI,
+  workshopEnabled,
+} from "./workshopAPI.js";
 
 var { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
@@ -39,7 +44,19 @@ window.gCalendarEventListener = {
       "Companion:RegisterEvents",
       this.dispatchRefreshEventsEvent
     );
-    setInterval(this.dispatchRefreshEventsEvent, CALENDAR_UPDATE_TIME);
+    window.addEventListener(
+      "Companion:SignIn",
+      this.dispatchRefreshEventsEvent
+    );
+
+    if (workshopEnabled) {
+      setInterval(
+        () => document.dispatchEvent(new CustomEvent("refresh-view", {})),
+        CALENDAR_UPDATE_TIME
+      );
+    } else {
+      setInterval(this.dispatchRefreshEventsEvent, CALENDAR_UPDATE_TIME);
+    }
   },
 
   dispatchRefreshEventsEvent() {
@@ -160,12 +177,11 @@ export class CalendarEventList extends MozLitElement {
 
   connectedCallback() {
     document.addEventListener("refresh-events", this);
+    document.addEventListener("refresh-view", this);
 
-    if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
+    if (workshopEnabled) {
       window.addEventListener("unload", () => {
-        if (this.listView) {
-          this.unloadListView();
-        }
+        this.cleanup();
       });
       workshopAPI.accounts.on("add", this, this.updateCalendarListView);
       workshopAPI.accounts.on("remove", this, this.updateCalendarListView);
@@ -175,7 +191,7 @@ export class CalendarEventList extends MozLitElement {
   }
 
   disconnectedCallback() {
-    if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
+    if (workshopEnabled) {
       this.maybeStopListening();
       workshopAPI.accounts.removeListener(
         "add",
@@ -190,6 +206,7 @@ export class CalendarEventList extends MozLitElement {
     }
 
     document.removeEventListener("refresh-events", this);
+    document.removeEventListener("refresh-view", this);
     super.disconnectedCallback();
   }
 
@@ -197,8 +214,7 @@ export class CalendarEventList extends MozLitElement {
     let plainEvents = this.getRelevantEvents(
       this.listView.items.filter(event => event)
     );
-    let eventsAndBreaks = this.getEventsAndBreaks(plainEvents);
-    this.events = eventsAndBreaks;
+    this.events = this.getEventsAndBreaks(plainEvents);
     if (this.events.length) {
       this.dispatchOnUpdateComplete(new CustomEvent("calendar-events-updated"));
     }
@@ -217,6 +233,7 @@ export class CalendarEventList extends MozLitElement {
   }
 
   getRelevantEvents(events) {
+    // TODO: remove this method: this stuff is done in workshop.
     if (debugEnabled()) {
       return events;
     }
@@ -236,13 +253,15 @@ export class CalendarEventList extends MozLitElement {
 
   handleEvent(e) {
     if (e.type == "refresh-events") {
-      if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
+      if (workshopEnabled) {
         this.updateCalendarListView();
       } else {
         let plainEvents = this.getRelevantEvents(e.detail.events);
         let eventsAndBreaks = this.getEventsAndBreaks(plainEvents);
         this.events = eventsAndBreaks;
       }
+    } else if (e.type === "refresh-view") {
+      this.refreshView();
     }
   }
 
@@ -278,11 +297,12 @@ export class CalendarEventList extends MozLitElement {
     return eventsAndBreaks;
   }
 
+  refreshView() {
+    this.listView?.refresh();
+  }
+
   async updateCalendarListView() {
-    if (this.listView) {
-      this.maybeStopListening();
-      this.unloadListView();
-    }
+    this.cleanup();
 
     let accounts = await Workshop.getConnectedAccounts();
     if (accounts.length) {
@@ -334,6 +354,13 @@ export class CalendarEventList extends MozLitElement {
         <div id="calendar-panel" class="card card-no-hover">${eventItems}</div>
       </div>
     `;
+  }
+
+  cleanup() {
+    if (this.listView) {
+      this.maybeStopListening();
+      this.unloadListView();
+    }
   }
 }
 customElements.define("calendar-event-list", CalendarEventList);
@@ -955,19 +982,21 @@ class CalendarEvent extends MozLitElement {
   // If an event is less than 10 minutes away or has already started,
   // we show the join button.
   setUpcomingStatus(start, end) {
-    clearTimeout(this._eventUpcomingTimer);
+    clearTimeout(this._eventUpcomingTimer?.id);
     let endDate = new Date(end);
     let eventStartTimeMinus10 = new Date(start) - 60 * 10 * 1000;
     let now = new Date();
     if (eventStartTimeMinus10 > now) {
       this.upcoming = false;
-      this._eventUpcomingTimer = setTimeout(
+      this._eventUpcomingTimer = setExtendedTimeout(
         () => (this.upcoming = true),
         eventStartTimeMinus10 - now
       );
     } else if (now >= eventStartTimeMinus10 && now <= endDate) {
       this.upcoming = true;
-      this._eventUpcomingTimer = setTimeout(
+      // The endDate can be in more than 24 days... so we must use setExtendedTimeout
+      // in order to avoid to have a delay considered as a 0!
+      this._eventUpcomingTimer = setExtendedTimeout(
         () => (this.upcoming = false),
         endDate - now
       );

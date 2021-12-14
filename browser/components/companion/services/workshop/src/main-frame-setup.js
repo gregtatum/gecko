@@ -54,6 +54,9 @@ import $devicestorage from "./worker-support/devicestorage-main";
 import $net from "./worker-support/net-main";
 import $wakelocks from "./worker-support/wakelocks-main";
 
+import { setExtendedTimeout } from "./utils/timeout";
+export { setExtendedTimeout };
+
 /**
  * Builder/loader/runtime specific mechanism for worker instantiation.
  */

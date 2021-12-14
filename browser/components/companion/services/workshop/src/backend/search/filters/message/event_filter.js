@@ -52,11 +52,6 @@ EventFilter.prototype = {
     const now = new Date().valueOf();
     const dayInMillis = 24 * 60 * 60 * 1000;
 
-    if (startDate > now + dayInMillis) {
-      // Event is in more than 24h.
-      return false;
-    }
-
     if (endDate <= now) {
       // Event is finished.
       return false;

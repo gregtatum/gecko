@@ -2,7 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { MailAPIFactory } from "chrome://browser/content/companion/workshop-api-built.js";
+import {
+  MailAPIFactory,
+  setExtendedTimeout,
+} from "chrome://browser/content/companion/workshop-api-built.js";
 import { ServiceUtils } from "chrome://browser/content/companion/service-utils.js";
 
 const OnlineServicesHelper = ChromeUtils.import(
@@ -92,7 +95,9 @@ if (workshopEnabled) {
       let { account } = await workshopAPI.tryToCreateAccount({}, domainInfo);
 
       if (account) {
-        account.syncFolderList();
+        // Wait to be sure we've the folders before starting to refresh the
+        // contents of those folders (else we need to wait for the next refresh).
+        await account.syncFolderList();
         this.companionActor.sendAsyncMessage("Companion:AccountCreated", {
           type,
         });
@@ -141,4 +146,4 @@ if (workshopEnabled) {
   };
 }
 
-export { Workshop, workshopAPI, workshopEnabled };
+export { setExtendedTimeout, Workshop, workshopAPI, workshopEnabled };

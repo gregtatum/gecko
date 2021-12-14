@@ -4544,6 +4544,33 @@ var me4 = {
 };
 var net_main_default = me4;
 
+// src/utils/timeout.js
+function setExtendedTimeout(callback, delay) {
+  if (delay > Number.MAX_SAFE_INTEGER) {
+    throw new Error("Delay is a way too large.");
+  }
+  const result = { id: -1 };
+  const MAX = 2 ** 31 - 1;
+  if (delay <= MAX) {
+    result.id = setTimeout(callback, delay);
+    return result;
+  }
+  const gen = function* (maxDelay) {
+    let sum = 0;
+    while (sum + MAX < maxDelay) {
+      sum += MAX;
+      yield MAX;
+    }
+    return maxDelay - sum;
+  }(delay);
+  const nextIteration = () => {
+    const value = gen.next();
+    result.id = setTimeout(value.done ? callback : nextIteration, value.value);
+  };
+  result.id = setTimeout(nextIteration, gen.next().value);
+  return result;
+}
+
 // src/app_logic/worker_maker.js
 function makeWorker() {
   return new SharedWorker("chrome://browser/content/companion/workshop-worker-built.js");
@@ -4644,5 +4671,6 @@ function MailAPIFactory(mainThreadService) {
   return MailAPI2;
 }
 export {
-  MailAPIFactory
+  MailAPIFactory,
+  setExtendedTimeout
 };

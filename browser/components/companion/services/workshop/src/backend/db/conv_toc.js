@@ -115,8 +115,19 @@ export class ConversationTOC extends BaseTOC {
    *   modified draft.)  If the message has been deleted, this is null.
    * @param {MessageInfo} item
    * @param {Boolean} freshlyAdded
+   * @param {Boolean} timeWindowShift
+   *   If it's a time window shift (an event was not a part of the results of a
+   *   a query but "now" it is) we must flush in coherentSnapshot mode.
    */
-  onTOCChange({ id, preDate, postDate, item, freshlyAdded, matchInfo }) {
+  onTOCChange({
+    id,
+    preDate,
+    postDate,
+    item,
+    freshlyAdded,
+    matchInfo,
+    timeWindowShift,
+  }) {
     let metadataOnly = item && !freshlyAdded;
 
     if (freshlyAdded) {
@@ -159,7 +170,7 @@ export class ConversationTOC extends BaseTOC {
       metadataOnly = false;
     }
 
-    this.emit("change", id, metadataOnly);
+    this.emit("change", id, metadataOnly, timeWindowShift);
   }
 
   /**

@@ -232,8 +232,13 @@ WindowedListProxy.prototype = {
    *   ideally evolve into something less hacky.
    * @param {Boolean} dataOnly
    *   Is this only a data change AKA the item ordering did not change?
+   * @param {Boolean} timeWindowShift
+   *   If true, it means that this change is the result of new records becoming
+   *   relevant (or irrelevant) to a time-based query due to the passing of
+   *   time. This inherently happens orthogonally to tasks and the
+   *   BatchManager's concept of coherent snapshots.
    */
-  onChange(id, dataOnly) {
+  onChange(id, dataOnly, timeWindowShift) {
     if (id === true) {
       this.validDataSet.clear();
     } else if (id !== null) {
@@ -251,7 +256,10 @@ WindowedListProxy.prototype = {
     }
     this.dirty = true;
     this.needsCoherentFlush = true;
-    this.batchManager.registerDirtyView(this);
+    this.batchManager.registerDirtyView(
+      this,
+      timeWindowShift ? "timeWindowShift" : undefined
+    );
   },
 
   /**

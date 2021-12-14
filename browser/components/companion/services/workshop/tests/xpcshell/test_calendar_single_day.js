@@ -1,7 +1,7 @@
 /* Any copyright is dedicated to the Public Domain.
    http://creativecommons.org/publicdomain/zero/1.0/ */
 
-/* globals WorkshopHelper, GapiConfigurator, MapiConfigurator */
+/* globals DEFAULT_FAKE_NOW_TS, WorkshopHelper, GapiConfigurator, MapiConfigurator */
 
 "use strict";
 
@@ -12,6 +12,7 @@ async function check_single_day_for_account_type({
   configurator,
   initialEventSketches,
   addEventSketches,
+  changeEventSketches,
 }) {
   const initialEvents = WorkshopHelper.deriveFullEvents({
     eventSketches: initialEventSketches,
@@ -19,6 +20,10 @@ async function check_single_day_for_account_type({
   // (These will get scheduled sequentially after the ones above.)
   const addEvents = WorkshopHelper.deriveFullEvents({
     eventSketches: addEventSketches,
+  });
+
+  const changeEvents = WorkshopHelper.deriveFullEvents({
+    eventSketches: changeEventSketches,
   });
 
   const fakeServer = await WorkshopHelper.createFakeServer({
@@ -77,8 +82,26 @@ async function check_single_day_for_account_type({
   fakeServer.defaultCalendar.addEvents(addEvents);
   await calView.refresh();
 
-  WorkshopHelper.eventsEqual(calView.items, [...initialEvents, ...addEvents]);
+  const currentEvents = [...initialEvents, ...addEvents];
+
+  WorkshopHelper.eventsEqual(calView.items, currentEvents);
+
+  fakeServer.defaultCalendar.changeEvents(changeEvents);
+  fakeServer.invalidateCalendarTokens();
+  await calView.refresh();
+
+  // Apply the changes to currentEvents.
+  for (const event of changeEventSketches) {
+    const e = currentEvents.find(x => x.summary === event.summary);
+    for (const [key, value] of Object.entries(event)) {
+      e[key] = value;
+    }
+  }
+  // and then verify that changes are correct.
+  WorkshopHelper.eventsEqual(calView.items, currentEvents);
 }
+
+const oneHour = 60 * 60 * 1000;
 
 const INITIAL_EVENTS = [
   {
@@ -93,6 +116,11 @@ const INITIAL_EVENTS = [
   {
     summary: "Afternoon Meeting",
   },
+  {
+    summary: "Moving Meeting",
+    startDate: new Date(DEFAULT_FAKE_NOW_TS + 8 * oneHour),
+    endDate: new Date(DEFAULT_FAKE_NOW_TS + 9 * oneHour),
+  },
 ];
 
 const ADD_EVENTS = [
@@ -101,11 +129,20 @@ const ADD_EVENTS = [
   },
 ];
 
+const CHANGE_EVENTS = [
+  {
+    summary: "Moving Meeting",
+    startDate: new Date(DEFAULT_FAKE_NOW_TS + 10 * oneHour),
+    endDate: new Date(DEFAULT_FAKE_NOW_TS + 11 * oneHour),
+  },
+];
+
 add_task(async function test_gapi_calendar_single_day() {
   await check_single_day_for_account_type({
     configurator: GapiConfigurator,
     initialEventSketches: INITIAL_EVENTS,
     addEventSketches: ADD_EVENTS,
+    changeEventSketches: CHANGE_EVENTS,
   });
 });
 
@@ -114,5 +151,6 @@ add_task(async function test_mapi_calendar_single_day() {
     configurator: MapiConfigurator,
     initialEventSketches: INITIAL_EVENTS,
     addEventSketches: ADD_EVENTS,
+    changeEventSketches: CHANGE_EVENTS,
   });
 });

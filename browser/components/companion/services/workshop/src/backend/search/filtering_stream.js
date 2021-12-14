@@ -18,6 +18,7 @@ import logic from "logic";
 
 import { TransformStream, WritableStream, CountQueuingStrategy } from "streams";
 import { shallowClone } from "shared/util";
+import { setExtendedTimeout } from "../../utils/timeout";
 
 /**
  * The filtering stream is fed TOC change events consisting of
@@ -183,11 +184,16 @@ export default function FilteringStream({
             if (matchInfo?.event.durationBeforeToBeValid) {
               // The change will be filtered in the future.
               const newChange = shallowClone(change);
-              const id = setTimeout(() => {
-                timeoutIds.delete(id);
-                consider(newChange);
-              }, matchInfo.event.durationBeforeToBeValid);
-              timeoutIds.add(id);
+              newChange.timeWindowShift = true;
+              try {
+                const xid = setExtendedTimeout(() => {
+                  timeoutIds.delete(xid);
+                  consider(newChange);
+                }, matchInfo.event.durationBeforeToBeValid);
+                timeoutIds.add(xid);
+              } catch {
+                // The delay is a way too high so ignore the change.
+              }
               done();
               return;
             }
@@ -196,11 +202,16 @@ export default function FilteringStream({
               // The event is displayed but we must remove it once
               // it's finished.
               const newChange = shallowClone(change);
-              const id = setTimeout(() => {
-                timeoutIds.delete(id);
-                consider(newChange);
-              }, matchInfo.event.durationBeforeToBeInvalid);
-              timeoutIds.add(id);
+              newChange.timeWindowShift = true;
+              try {
+                const xid = setExtendedTimeout(() => {
+                  timeoutIds.delete(xid);
+                  consider(newChange);
+                }, matchInfo.event.durationBeforeToBeInvalid);
+                timeoutIds.add(xid);
+              } catch {
+                // The delay is a way too high so ignore the change.
+              }
             }
 
             // - Match!
@@ -259,7 +270,7 @@ export default function FilteringStream({
      */
     consider,
     destroy: () => {
-      for (const id of timeoutIds) {
+      for (const { id } of timeoutIds) {
         clearTimeout(id);
       }
       gatherStream.writable.close();

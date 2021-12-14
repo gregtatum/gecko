@@ -14753,6 +14753,8 @@ var WorkshopBackend = (() => {
       if (flushMode) {
         if (flushMode === "immediate") {
           this._flushPending(false);
+        } else if (flushMode === "timeWindowShift") {
+          this._flushPending(false, true);
         } else if (this._timer !== true) {
           if (this._timer) {
             globalThis.clearTimeout(this._timer);
@@ -14974,7 +14976,7 @@ var WorkshopBackend = (() => {
       this.needsCoherentFlush = true;
       this.batchManager.registerDirtyView(this, "immediate");
     },
-    onChange(id, dataOnly) {
+    onChange(id, dataOnly, timeWindowShift) {
       if (id === true) {
         this.validDataSet.clear();
       } else if (id !== null) {
@@ -14988,7 +14990,7 @@ var WorkshopBackend = (() => {
       }
       this.dirty = true;
       this.needsCoherentFlush = true;
-      this.batchManager.registerDirtyView(this);
+      this.batchManager.registerDirtyView(this, timeWindowShift ? "timeWindowShift" : void 0);
     },
     onOverlayPush(id) {
       if (!this.validOverlaySet.has(id)) {
@@ -16397,6 +16399,7 @@ var WorkshopBackend = (() => {
             messageIdComponentFromMessageId(messageId)
           ];
           store.put(message, postKey);
+          messageCache.set(messageId, message);
         } else {
           store.put(message, preKey);
           messageCache.set(messageId, message);
@@ -18396,7 +18399,15 @@ var WorkshopBackend = (() => {
     get totalHeight() {
       return this.idsWithDates.length;
     }
-    onTOCChange({ id, preDate, postDate, item, freshlyAdded, matchInfo }) {
+    onTOCChange({
+      id,
+      preDate,
+      postDate,
+      item,
+      freshlyAdded,
+      matchInfo,
+      timeWindowShift
+    }) {
       let metadataOnly = item && !freshlyAdded;
       if (freshlyAdded) {
         const newKey = { date: postDate, id, matchInfo };
@@ -18415,7 +18426,7 @@ var WorkshopBackend = (() => {
         this.idsWithDates.splice(newIndex, 0, newKey);
         metadataOnly = false;
       }
-      this.emit("change", id, metadataOnly);
+      this.emit("change", id, metadataOnly, timeWindowShift);
     }
     onConvChange(convId, convInfo) {
       if (convInfo === null) {
@@ -19864,6 +19875,35 @@ var WorkshopBackend = (() => {
   init_logic();
   var import_streams = __toModule(require_streams());
   init_util();
+
+  // src/utils/timeout.js
+  function setExtendedTimeout(callback, delay) {
+    if (delay > Number.MAX_SAFE_INTEGER) {
+      throw new Error("Delay is a way too large.");
+    }
+    const result = { id: -1 };
+    const MAX = 2 ** 31 - 1;
+    if (delay <= MAX) {
+      result.id = setTimeout(callback, delay);
+      return result;
+    }
+    const gen = function* (maxDelay) {
+      let sum = 0;
+      while (sum + MAX < maxDelay) {
+        sum += MAX;
+        yield MAX;
+      }
+      return maxDelay - sum;
+    }(delay);
+    const nextIteration = () => {
+      const value = gen.next();
+      result.id = setTimeout(value.done ? callback : nextIteration, value.value);
+    };
+    result.id = setTimeout(nextIteration, gen.next().value);
+    return result;
+  }
+
+  // src/backend/search/filtering_stream.js
   function FilteringStream({
     ctx,
     filterRunner,
@@ -19947,21 +19987,29 @@ var WorkshopBackend = (() => {
             if (matchInfo) {
               if (matchInfo?.event.durationBeforeToBeValid) {
                 const newChange = shallowClone2(change);
-                const id = setTimeout(() => {
-                  timeoutIds.delete(id);
-                  consider(newChange);
-                }, matchInfo.event.durationBeforeToBeValid);
-                timeoutIds.add(id);
+                newChange.timeWindowShift = true;
+                try {
+                  const xid = setExtendedTimeout(() => {
+                    timeoutIds.delete(xid);
+                    consider(newChange);
+                  }, matchInfo.event.durationBeforeToBeValid);
+                  timeoutIds.add(xid);
+                } catch {
+                }
                 done();
                 return;
               }
               if (matchInfo?.event.durationBeforeToBeInvalid) {
                 const newChange = shallowClone2(change);
-                const id = setTimeout(() => {
-                  timeoutIds.delete(id);
-                  consider(newChange);
-                }, matchInfo.event.durationBeforeToBeInvalid);
-                timeoutIds.add(id);
+                newChange.timeWindowShift = true;
+                try {
+                  const xid = setExtendedTimeout(() => {
+                    timeoutIds.delete(xid);
+                    consider(newChange);
+                  }, matchInfo.event.durationBeforeToBeInvalid);
+                  timeoutIds.add(xid);
+                } catch {
+                }
               }
               change = shallowClone2(change);
               if (!knownFilteredSet.has(change.id)) {
@@ -19999,7 +20047,7 @@ var WorkshopBackend = (() => {
     return {
       consider,
       destroy: () => {
-        for (const id of timeoutIds) {
+        for (const { id } of timeoutIds) {
           clearTimeout(id);
         }
         gatherStream.writable.close();
@@ -20642,9 +20690,6 @@ var WorkshopBackend = (() => {
       const { startDate, endDate } = message;
       const now = new Date().valueOf();
       const dayInMillis = 24 * 60 * 60 * 1e3;
-      if (startDate > now + dayInMillis) {
-        return false;
-      }
       if (endDate <= now) {
         return false;
       }

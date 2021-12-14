@@ -149,6 +149,19 @@ class WorkshopHelperClass {
   }
 
   /**
+   * Sort from the greater to the smaller startDate.
+   * @param {Array<Object>} events - Array of events
+   * @returns {integer}
+   */
+  sortByStartDate(events) {
+    events = events.concat();
+    events.sort(
+      (e1, e2) => e2.startDate - e1.startDate || e2.endDate - e1.endDate
+    );
+    return events;
+  }
+
+  /**
    * Helper to compare events, with output being reported in terms of the
    * originally provided sketches rather than potentially verbose fully
    * populated events.
@@ -164,14 +177,14 @@ class WorkshopHelperClass {
    * possible that logic could adopt an entirely custom `toVerboseJSON` approach
    * or something.
    *
-   * TODO: Address fundamental sorting/ordering issues.  Right now we reverse
-   * the received "actual".
+   * Since events are happening in the time line, they're fundamentally ordered
+   * by their starting/ending dates, so arrays are sorted by (startDate, endDate)
+   * before being compared.
    */
   eventsEqual(actual, expected) {
-    const reversedActual = actual.concat().reverse();
     deepEqual(
-      this.eventFactory.mapEventsToSketches(reversedActual),
-      this.eventFactory.mapEventsToSketches(expected),
+      this.eventFactory.mapEventsToSketches(actual),
+      this.eventFactory.mapEventsToSketches(this.sortByStartDate(expected)),
       "events arrays are equal (per sketches)"
     );
   }
