@@ -1187,7 +1187,6 @@ richlistitem .text-link:hover {
 #moreFromMozillaCategory .subtitle {
   color: var(--in-content-deemphasized-text);
   margin: 4px 0 10px;
-  font-size: .87em;
   line-height: 1.4em;
 }
 
@@ -1219,8 +1218,8 @@ richlistitem .text-link:hover {
 
 #moreFromMozillaCategory .product-img {
   background-repeat: no-repeat;
-  background-size: 150px;
-  padding-inline-start: 174px;
+  background-size: 170px;
+  padding-inline-start: 184px;
 }
 
 #moreFromMozillaCategory .product-title:-moz-locale-dir(rtl),
@@ -1232,7 +1231,6 @@ richlistitem .text-link:hover {
   color: var(--in-content-deemphasized-text);
   padding-inline-start: 30px;
   margin: 2px 0;
-  font-size: .87em;
   line-height: 1.4em;
 }
 
@@ -1358,7 +1356,7 @@ richlistitem .text-link:hover {
 }
 
 .qr-code-box-title {
-  font-size: .675em;
+  font-size: .87em;
   font-weight: 600;
   line-height: 1.42em;
 
@@ -1375,7 +1373,7 @@ richlistitem .text-link:hover {
 }
 
 #moreFromMozillaCategory .qr-code-button {
-  font-size: .675em;
+  font-size: .87em;
   font-weight: 400;
   line-height: 1.42em;
   text-decoration: underline;

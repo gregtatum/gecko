@@ -936,8 +936,7 @@ void nsCocoaWindow::Show(bool bState) {
               behavior = NSWindowAnimationBehaviorDocumentWindow;
               break;
             default:
-              MOZ_ASSERT_UNREACHABLE("unexpected mAnimationType value");
-              // fall through
+              MOZ_FALLTHROUGH_ASSERT("unexpected mAnimationType value");
             case nsIWidget::eGenericWindowAnimation:
               behavior = NSWindowAnimationBehaviorDefault;
               break;
