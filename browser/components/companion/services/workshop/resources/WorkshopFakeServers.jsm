@@ -232,6 +232,10 @@ class BaseFakeServer {
     return this.calendars.find(x => x.id === id);
   }
 
+  resetCalendars() {
+    this.calendars = [];
+  }
+
   // old, maybe reuse
   _makeNowDate() {
     if (this._useNowTimestamp) {
@@ -523,9 +527,9 @@ class GapiFakeServer extends BaseFakeServer {
       const mapPeep = peep => {
         return {
           email: peep.email,
-          displayName: peep.displayName,
+          displayName: peep.displayName || peep.name,
           organizer: peep.email === event.organizer.email,
-          self: peep.email === cal.calendarOwner.email,
+          self: peep.isSelf || peep.email === cal.calendarOwner.email,
         };
       };
       return {
@@ -537,7 +541,7 @@ class GapiFakeServer extends BaseFakeServer {
         // of the emails... probably again yeah.)
         attendees: event.attendees.map(mapPeep),
         created: backdatedISOString(event.startDate, { days: 7 }),
-        creator: mapPeep(event.creator),
+        creator: event.creator ? mapPeep(event.creator) : null,
         description: event.description,
         end: {
           dateTime: event.endDate.toISOString(),

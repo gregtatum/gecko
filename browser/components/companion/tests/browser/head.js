@@ -46,6 +46,9 @@ registerCleanupFunction(async () => {
   // No matter what happens, blow away window history after tests run
   // in this directory to avoid leaking state between tests.
   gGlobalHistory.reset();
+
+  // Cleanup the Workshop object used in the tests.
+  sharedWorkshopAPI?.willDie();
 });
 
 const redirectHook = "http-on-modify-request";
@@ -89,15 +92,27 @@ class Redirector {
  */
 const DEFAULT_FIRST_EVENT_TS = new Date().valueOf();
 
+/**
+ * We want to share our server and Workshop object between tests in a suite.
+ * Spinning up a new server per test eventually leads to the fake server path handlers
+ * returning data created for a prior test. This is likely due to the fact that the
+ * httpd servers don't get stopped until all tests in a suite have been run.
+ *
+ * Deleting accounts and clearing calendars on the server between tests seems to
+ * give us a clean slate for events, but is definitely a bit of a workaround.
+ * We may run into issues with this when we need to support different fake server types.
+ */
+let sharedWorkshopAPI;
+let sharedRedirector;
+let sharedServer;
+
 class WorkshopHelper {
-  #redirector;
   #apiContentPage;
   #logicLogger;
   #logicScopeBacklog;
   #logicLogBacklog;
 
   constructor() {
-    this.#redirector = null;
     this.#apiContentPage = null;
     this.#logicLogger = null;
     this.#logicScopeBacklog = [];
@@ -110,14 +125,6 @@ class WorkshopHelper {
 
     this.eventFactory = new FakeEventFactory({
       firstEventTS: DEFAULT_FIRST_EVENT_TS,
-    });
-
-    // Clear accounts between test runs.
-    // This will need to change when we support multiple account types.
-    registerCleanupFunction(async () => {
-      if (this.account) {
-        await this.deleteAccount();
-      }
     });
   }
 
@@ -162,29 +169,34 @@ class WorkshopHelper {
   }
 
   createFakeServer({ hosts }) {
-    if (!this.#redirector) {
-      this.#redirector = new Redirector();
+    if (!sharedRedirector) {
+      sharedRedirector = new Redirector();
     }
 
-    // We use XPCShellContentUtils.createHttpServer to create a
-    // server and set up a proxy mapping so that we can have a more real-world
-    // looking domain name.
-    const httpServer = this.#createHttpServer({
-      hosts,
-    });
+    if (!sharedServer) {
+      // We use XPCShellContentUtils.createHttpServer to create a
+      // server and set up a proxy mapping so that we can have a more real-world
+      // looking domain name.
+      const httpServer = this.#createHttpServer({
+        hosts,
+      });
 
-    // Hardcoding the server type for now.
-    // In the future we will need to make this work with any server type.
-    const serverScope = {};
-    this.#defineLoggerScope(serverScope, "GapiFakeServer", {});
-    this.fakeServer = new GapiFakeServer({
-      httpServer,
-      logRequest: (logType, details) => {
-        this.#log(serverScope, logType, details);
-      },
-    });
+      // Hardcoding the server type for now.
+      // In the future we will need to make this work with any server type.
+      const serverScope = {};
+      this.#defineLoggerScope(serverScope, "GapiFakeServer", {});
+      sharedServer = new GapiFakeServer({
+        httpServer,
+        logRequest: (logType, details) => {
+          this.#log(serverScope, logType, details);
+        },
+      });
 
-    this.fakeServer.start();
+      this.fakeServer = sharedServer;
+      this.fakeServer.start();
+    }
+
+    this.fakeServer = sharedServer;
   }
 
   async createAccount() {
@@ -209,8 +221,10 @@ class WorkshopHelper {
       eventSketches: eventsData,
     });
 
-    this.fakeServer.defaultCalendar = this.fakeServer.populateCalendar({
-      id: "default",
+    this.fakeServer.populateCalendar({
+      // This might be overkill, but want to ensure unique cal IDs
+      // so that Workshop can differentiate between the calendars.
+      id: Services.uuid.generateUUID().number.slice(1, -1),
       name: "Default Calendar",
       events: standardizedEvents,
       // Note that this is a name I just made up, not from gapi/mapi.
@@ -220,9 +234,10 @@ class WorkshopHelper {
     await this.account.syncFolderList();
   }
 
-  async deleteAccount() {
+  async clearAccountAndCalendars() {
     await this.account.deleteAccount();
     this.account = null;
+    this.fakeServer.resetCalendars();
   }
 
   /**
@@ -252,6 +267,10 @@ class WorkshopHelper {
    * create a chrome-privileged about:blank that we use.
    */
   async startBackend({ waitFor = "accountsLoaded" }) {
+    if (sharedWorkshopAPI) {
+      return sharedWorkshopAPI;
+    }
+
     if (this.#apiContentPage) {
       this.#apiContentPage.close();
       this.#apiContentPage = null;
@@ -306,6 +325,7 @@ class WorkshopHelper {
     await workshopAPI.promisedLatestOnce(waitFor);
     console.log("done waiting for", waitFor);
 
+    sharedWorkshopAPI = workshopAPI;
     return workshopAPI;
   }
 }
@@ -350,6 +370,12 @@ class CompanionHelper {
     await helper.companionReady;
 
     await taskFn(helper);
+
+    // Ensure we are clearing the account and calendars between tests.
+    // This enables us to start fresh with events.
+    if (workshopEnabled) {
+      await helper.clearWorkshopData();
+    }
 
     helper.closeCompanion();
   }
@@ -428,6 +454,10 @@ class CompanionHelper {
       },
       [start, diff]
     );
+  }
+
+  async clearWorkshopData() {
+    await this.workshopHelper.clearAccountAndCalendars();
   }
 
   get companionReady() {

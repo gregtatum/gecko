@@ -11460,7 +11460,7 @@ var WorkshopBackend = (() => {
                 endDate = new Date(gapiEvent.end.dateTime).valueOf();
               }
               const summary = gapiEvent.summary;
-              const creator = this._chewCalIdentity(gapiEvent.creator);
+              const creator = gapiEvent.creator ? this._chewCalIdentity(gapiEvent.creator) : null;
               const organizer = this._chewCalIdentity(gapiEvent.organizer);
               const location = gapiEvent.location || "";
               const attendees = (gapiEvent.attendees || []).map((who) => this._chewCalAttendee(who));

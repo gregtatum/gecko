@@ -100,6 +100,10 @@ class FakeEventFactory {
         attendees = [];
       }
 
+      // Allow tests to specify that creator is not available
+      const eventCreator =
+        sketch.creator === null || sketch.creator ? sketch.creator : creator;
+      const eventOrganizer = sketch.organizer || organizer;
       const location = sketch.location || undefined;
       const every = sketch.every || undefined;
       const url = sketch.url || undefined;
@@ -109,8 +113,8 @@ class FakeEventFactory {
         summary,
         description,
         // TODO: improve fidelity of the creator and organizer semantics
-        creator,
-        organizer,
+        creator: eventCreator,
+        organizer: eventOrganizer,
         attendees,
         location,
         every,
@@ -298,11 +302,7 @@ class FakeEventFactory {
       prose += "\n\n";
     }
     for (const link of links) {
-      if (link.text) {
-        prose += `<a href="${link.url}>${link.text}</a>\n`;
-      } else {
-        prose += `${link.url}\n`;
-      }
+      prose += `<a href="${link.url}">${link.text || link.url}</a>`;
     }
 
     return prose;

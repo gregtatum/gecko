@@ -177,7 +177,12 @@ export class GapiCalEventChewer {
         }
 
         const summary = gapiEvent.summary;
-        const creator = this._chewCalIdentity(gapiEvent.creator);
+        // This conditional fallback was added to support UI testing.
+        // We expect Google events to always have a creator and so may be able
+        // to remove this when testing supports different server types.
+        const creator = gapiEvent.creator
+          ? this._chewCalIdentity(gapiEvent.creator)
+          : null;
         const organizer = this._chewCalIdentity(gapiEvent.organizer);
         const location = gapiEvent.location || "";
 
