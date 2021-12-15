@@ -103,10 +103,7 @@ const HistoryCarousel = {
    * These get event listeners set up for them, and are then handled in
    * handleMessageEvent.
    */
-  MESSAGE_EVENTS: [
-    "HistoryCarousel:Setup",
-    "HistoryCarousel:SelectCurrentIndex",
-  ],
+  MESSAGE_EVENTS: ["HistoryCarousel:Setup", "HistoryCarousel:SelectIndex"],
 
   /**
    * The list of DOM events that we listen for on this page. These get event
@@ -134,6 +131,13 @@ const HistoryCarousel = {
    * -1 until setup is complete.
    */
   originalIndex: -1,
+
+  /**
+   * This is set to the index that the user has selected either via the
+   * scrubber or the AVM. Once the associated preview has intersected
+   * the viewport, this is reset to -1.
+   */
+  selectedIndex: -1,
 
   /**
    * A convenience getter for the main <ol> element that contains each
@@ -223,8 +227,8 @@ const HistoryCarousel = {
         this.setup();
         break;
       }
-      case "HistoryCarousel:SelectCurrentIndex": {
-        this.selectCurrentIndex(event.detail.index);
+      case "HistoryCarousel:SelectIndex": {
+        this.selectIndex(event.detail.index);
         break;
       }
     }
@@ -271,6 +275,7 @@ const HistoryCarousel = {
     let currentPreview = null;
 
     this.originalIndex = currentIndex;
+
     this.totalPreviews = previews.length;
     let root = document.documentElement;
     root.style.setProperty("--total-previews", this.totalPreviews);
@@ -328,8 +333,22 @@ const HistoryCarousel = {
       if (entry.isIntersecting) {
         let previewEl = entry.target;
         let index = parseInt(previewEl.getAttribute("index"), 10);
+
+        // If selectedIndex is not -1, this means that the user has selected
+        // a preview either via the scrubber or the AVM. If then the index of
+        // what has just intersected doesn't match selectedIndex, that means
+        // we're in the midst of smooth scrolling to that index, and we should
+        // just ignore the intersection.
+        if (this.selectedIndex > -1 && this.selectedIndex != index) {
+          continue;
+        }
+
+        // If we get here, then either the user caused the intersection by
+        // scrolling, or we reached the selectedIndex.
+        this.selectedIndex = -1;
+
         if (CarouselUtils.getCurrentIndex() != index) {
-          CarouselUtils.selectCurrentIndex(index);
+          CarouselUtils.setCurrentIndex(index);
         }
         this.updateCurrentIndex(index);
         // We presume only 1 entry can be considered current at a time,
@@ -429,7 +448,9 @@ const HistoryCarousel = {
 
   /**
    * Scrolls the PreviewElement with a particular index into the center
-   * of the viewport.
+   * of the viewport. This is called whenever the selection isn't occurring
+   * via the "natural" scrolling of the previews, but is instead performed
+   * by either the scrubber or via the AVM.
    *
    * @param {Number} index
    *   The index of the PreviewElement to scroll into view.
@@ -437,10 +458,11 @@ const HistoryCarousel = {
    *   If set to true, the selected index does an instant scroll into the
    *   viewport.
    */
-  selectCurrentIndex(index, instant = false) {
+  selectIndex(index, instant = false) {
     let previewEl = document.querySelector(`li[index="${index}"]`);
     let behavior = instant ? "instant" : "smooth";
     previewEl.scrollIntoView({ behavior, inline: "center" });
+    this.selectedIndex = index;
   },
 
   // DOM event handlers
@@ -454,7 +476,7 @@ const HistoryCarousel = {
   onInput(event) {
     if (event.target == this.scrubber) {
       let index = Math.round(this.scrubber.value);
-      this.selectCurrentIndex(index, true /* instant */);
+      this.selectIndex(index, false /* instant */);
     }
   },
 
@@ -469,14 +491,14 @@ const HistoryCarousel = {
       case this.previousBtn: {
         let index = CarouselUtils.getCurrentIndex();
         if (index > 0) {
-          this.selectCurrentIndex(index - 1, true /* instant */);
+          this.selectIndex(index - 1, false /* instant */);
         }
         break;
       }
       case this.nextBtn: {
         let index = CarouselUtils.getCurrentIndex();
         if (index < this.totalPreviews - 1) {
-          this.selectCurrentIndex(index + 1, true /* instant */);
+          this.selectIndex(index + 1, false /* instant */);
         }
         break;
       }
@@ -501,7 +523,7 @@ const HistoryCarousel = {
   onKeyDown(event) {
     switch (event.keyCode) {
       case KeyEvent.DOM_VK_ESCAPE: {
-        this.selectCurrentIndex(this.originalIndex, true /* instant */);
+        this.selectIndex(this.originalIndex, true /* instant */);
         // We need to ensure that the IntersectionObserver fires, and the
         // parent has acknowledged receipt of the updated index before we
         // finally exit.

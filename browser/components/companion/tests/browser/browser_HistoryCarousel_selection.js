@@ -82,5 +82,27 @@ add_task(async function selection_change() {
   // We're at the earliest view, so going back should no longer be possible.
   Assert.ok(!gGlobalHistory.canGoBack, "Should not be able to go back");
 
+  // Now make sure that by selecting the last View, we only cause a
+  // single HistoryCarouselIndexUpdated event to fire in content, rather
+  // than one for each intermediary View on the way to the last one.
+  let indexUpdatedCount = 0;
+  let indexUpdatedHandler = event => indexUpdatedCount++;
+  let removeContentEventListener = BrowserTestUtils.addContentEventListener(
+    browser,
+    "HistoryCarouselIndexUpdated",
+    indexUpdatedHandler
+  );
+  selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 3);
+  await gGlobalHistory.setView(view4);
+  await selected;
+
+  removeContentEventListener();
+
+  Assert.equal(
+    indexUpdatedCount,
+    1,
+    "Should have only seen 1 HistoryCarouselIndexUpdated event"
+  );
+
   await PinebuildTestUtils.exitHistoryCarousel();
 });
