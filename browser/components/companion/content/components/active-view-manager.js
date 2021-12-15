@@ -254,10 +254,6 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         this.#overflow.hidden = count == 0;
         break;
       }
-      case "TopViewOverflow": {
-        this.#river.addViews(event.detail.views);
-        break;
-      }
       case "ViewPinned": {
         let view = event.view;
         let index = event.detail.index;
