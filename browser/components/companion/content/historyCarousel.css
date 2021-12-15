@@ -29,9 +29,11 @@ li {
   scroll-snap-align: center;
   min-height: 100vh;
   min-width: 100vw;
-  opacity: 1;
   margin-block: 0;
   padding: 0;
+  opacity: 1;
+  transition: opacity 500ms ease-in;
+  transition-delay: 200ms;
 }
 
 figure {
@@ -54,8 +56,7 @@ nav {
 }
 
 .preview-image {
-  transition: scale 500ms, opacity 500ms;
-  transition-timing-function: var(--transition-timing-function);
+  transition: scale 500ms var(--transition-timing-function);
   scale: 0.8;
   border-radius: 12px;
   box-shadow: 0px 4px 12px 0px rgba(0.23, 0.22, 0.27, 0.2);
@@ -65,8 +66,14 @@ body:is([invisible],[exiting]) .preview-image {
   scale: 1.0;
 }
 
-body:is([exiting]) li:not([current="true"]) .preview-image {
+body:is([invisible], [exiting]) li:not([current="true"]) {
   opacity: 0;
+  transition-duration: 0ms;
+  transition-delay: 0ms;
+}
+
+body:is([invisible], [exiting]) li[current="true"] {
+  z-index: 1;
 }
 
 .favicon {
@@ -79,8 +86,7 @@ nav {
   position: absolute;
   bottom: 0;
   transform: translateY(0);
-  transition: transform 500ms;
-  transition-timing-function: var(--transition-timing-function);
+  transition: transform 500ms var(--transition-timing-function);
   /**
    * We set pointer-events: none; here so that swipe gestures can
    * got through the majority of the <nav> element to the underlying
@@ -111,7 +117,6 @@ button {
   min-width: 45px;
   min-height: 20px;
   margin-inline: 12px;
-
 }
 
 #previous,
@@ -136,8 +141,7 @@ button {
 #scrubber::-moz-range-thumb {
   border-radius: 50px;
   transform: scaleY(0.5);
-  transition: transform 50ms;
-  transition-timing-function: var(--transition-timing-function);
+  transition: transform 50ms var(--transition-timing-function);
   height: 8px;
 }
 
@@ -163,4 +167,12 @@ button {
 
 #scrubber:hover:active::-moz-range-thumb {
   background-color: var(--in-content-primary-button-background-active);
+}
+
+li:not(:first-child) {
+  margin-inline-start: -8%;
+}
+
+li:not(:last-child) {
+  margin-inline-end: -8%;
 }
