@@ -858,6 +858,19 @@ class GlobalHistory extends EventTarget {
   #historyCarouselMode = false;
 
   /**
+   * True if we're in the midst of transitioning in or out of the history
+   * carousel.
+   */
+  #historyCarouselTransitioning = false;
+
+  /**
+   * While in history carousel mode, this member tracks which InternalView
+   * the user currently has selected. This is mainly used to power the back
+   * button while in the history carousel mode.
+   */
+  #currentHistoryCarouselInternalView = null;
+
+  /**
    * @param {DOMWindow} window
    *   The top level window to track history for.
    */
@@ -1757,6 +1770,7 @@ class GlobalHistory extends EventTarget {
       let tab = gBrowser.getTabForBrowser(browser);
       gBrowser.warmupTab(tab);
 
+      this.#currentHistoryCarouselInternalView = internalView;
       this.#notifyEvent("ViewChanged", internalView);
       return;
     }
@@ -1945,7 +1959,14 @@ class GlobalHistory extends EventTarget {
    * @type {boolean}
    */
   get canGoBack() {
-    let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
+    if (this.#historyCarouselTransitioning) {
+      return false;
+    }
+
+    let currentView = this.#historyCarouselMode
+      ? this.#currentHistoryCarouselInternalView
+      : this.#currentInternalView;
+    let currentIndex = this.#viewStack.indexOf(currentView);
     return currentIndex > 0 && !this.#viewStack[currentIndex - 1].pinned;
   }
 
@@ -1954,7 +1975,15 @@ class GlobalHistory extends EventTarget {
    * @type {boolean}
    */
   get canGoForward() {
-    let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
+    if (this.#historyCarouselTransitioning) {
+      return false;
+    }
+
+    let currentView = this.#historyCarouselMode
+      ? this.#currentHistoryCarouselInternalView
+      : this.#currentInternalView;
+
+    let currentIndex = this.#viewStack.indexOf(currentView);
     return currentIndex < this.#viewStack.length - 1;
   }
 
@@ -1967,7 +1996,11 @@ class GlobalHistory extends EventTarget {
       return false;
     }
 
-    let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
+    let currentView = this.#historyCarouselMode
+      ? this.#currentHistoryCarouselInternalView
+      : this.#currentInternalView;
+
+    let currentIndex = this.#viewStack.indexOf(currentView);
     this.setView(this.#viewStack[currentIndex - 1].view);
     return true;
   }
@@ -1981,7 +2014,11 @@ class GlobalHistory extends EventTarget {
       return false;
     }
 
-    let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
+    let currentView = this.#historyCarouselMode
+      ? this.#currentHistoryCarouselInternalView
+      : this.#currentInternalView;
+
+    let currentIndex = this.#viewStack.indexOf(currentView);
     this.setView(this.#viewStack[currentIndex + 1].view);
     return true;
   }
@@ -2089,6 +2126,9 @@ class GlobalHistory extends EventTarget {
     let gBrowser = this.#window.gBrowser;
 
     if (shouldShow) {
+      this.#currentHistoryCarouselInternalView = this.#currentInternalView;
+      this.#setHistoryCarouselTransitioning(true);
+
       this.#historyCarouselMode = shouldShow;
       gBrowser.tabbox.setAttribute("disable-history-animations", "true");
       logConsole.debug("Adding history carousel browser");
@@ -2115,9 +2155,11 @@ class GlobalHistory extends EventTarget {
         }
       }
     } else {
-      if (gBrowser.selectedBrowser.currentURI.spec != "about:historycarousel") {
-        throw new Error("Selected <browser> should be the carousel.");
-      }
+      logConsole.assert(
+        gBrowser.selectedBrowser.currentURI.spec == "about:historycarousel",
+        "Should only be able to exit when history carousel is in the foreground."
+      );
+      this.#setHistoryCarouselTransitioning(true);
       let carouselTab = gBrowser.selectedTab;
       let actor = gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
         "HistoryCarousel"
@@ -2155,7 +2197,23 @@ class GlobalHistory extends EventTarget {
 
       logConsole.debug("Removing history carousel browser.");
       gBrowser.removeTab(carouselTab, { animate: false });
+
+      this.#currentHistoryCarouselInternalView = null;
     }
+
+    this.#setHistoryCarouselTransitioning(false);
+  }
+
+  /**
+   * Puts the window into, or takes it out of, the history carousel transition
+   * state.
+   *
+   * @param {boolean} isTransitioning
+   *   True if the transition is starting to occur, false if it has ended.
+   */
+  #setHistoryCarouselTransitioning(isTransitioning) {
+    this.#historyCarouselTransitioning = isTransitioning;
+    this.#window.UpdateBackForwardCommands(this);
   }
 
   /**

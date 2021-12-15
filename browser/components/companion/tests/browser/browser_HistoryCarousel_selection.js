@@ -27,6 +27,7 @@ add_task(async function selection_change() {
     browser
   );
   Assert.equal(currentIndex, 3, "Should have the last preview index selected.");
+  Assert.ok(gGlobalHistory.canGoBack, "Should be able to go back");
 
   // First, check that changing selections within the carousel update
   // the selected view in GlobalHistory.
@@ -46,8 +47,8 @@ add_task(async function selection_change() {
   await PinebuildTestUtils.selectHistoryCarouselIndex(browser, 3);
   await selected;
 
-  // And finally, check that updating the selected view in GlobalHistory
-  // changes the selection within the carousel.
+  // Check that updating the selected view in GlobalHistory changes the
+  // selection within the carousel.
   selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 1);
   await gGlobalHistory.setView(view2);
   await selected;
@@ -63,6 +64,23 @@ add_task(async function selection_change() {
   selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 3);
   await gGlobalHistory.setView(view4);
   await selected;
+
+  // Now make sure we can use the back button to go back through the
+  // carousel.
+  selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 2);
+  await gGlobalHistory.goBack();
+  await selected;
+
+  selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 1);
+  await gGlobalHistory.goBack();
+  await selected;
+
+  selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 0);
+  await gGlobalHistory.goBack();
+  await selected;
+
+  // We're at the earliest view, so going back should no longer be possible.
+  Assert.ok(!gGlobalHistory.canGoBack, "Should not be able to go back");
 
   await PinebuildTestUtils.exitHistoryCarousel();
 });
