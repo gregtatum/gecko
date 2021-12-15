@@ -2126,6 +2126,12 @@ class GlobalHistory extends EventTarget {
 
       this.#historyCarouselMode = shouldShow;
 
+      for (let backgroundTab of gBrowser.tabs) {
+        if (backgroundTab != gBrowser.selectedTab) {
+          backgroundTab.linkedBrowser.leaveModalState();
+        }
+      }
+
       let internalView = this.#viewStack[finalIndex];
       let browserSwitched = new Promise(resolve => {
         this.#window.addEventListener("TabSwitched", resolve, { once: true });
@@ -2133,10 +2139,6 @@ class GlobalHistory extends EventTarget {
 
       this.setView(internalView.view);
       await browserSwitched;
-
-      for (let backgroundTab of gBrowser.tabs) {
-        backgroundTab.linkedBrowser.leaveModalState();
-      }
 
       // Switching to the underlying <browser> is unlikely to happen synchronously,
       // so we wait for the next tick of the refresh driver to remove the
