@@ -1744,10 +1744,19 @@ class GlobalHistory extends EventTarget {
       throw new Error("Unknown View.");
     }
 
+    let browser = internalView.getBrowser();
+
     // If we're showing the history carousel, then we don't actually want
     // to change the staged View - but we do want to update the AVM with the
     // selection.
     if (this.#historyCarouselMode) {
+      // The user might choose this view shortly, so we pre-emptively
+      // "warm it up" to send its DisplayList down to the compositor,
+      // to improve perceived performance when switching to it.
+      let gBrowser = this.#window.gBrowser;
+      let tab = gBrowser.getTabForBrowser(browser);
+      gBrowser.warmupTab(tab);
+
       this.#notifyEvent("ViewChanged", internalView);
       return;
     }
@@ -1760,8 +1769,6 @@ class GlobalHistory extends EventTarget {
       logConsole.debug("View is already the current view.");
       return;
     }
-
-    let browser = internalView.getBrowser();
 
     if (browser) {
       if (!browser.browsingContext) {
@@ -2083,6 +2090,7 @@ class GlobalHistory extends EventTarget {
 
     if (shouldShow) {
       this.#historyCarouselMode = shouldShow;
+      gBrowser.tabbox.setAttribute("disable-history-animations", "true");
       logConsole.debug("Adding history carousel browser");
       let tab = gBrowser.addTrustedTab("about:historycarousel", {
         skipAnimation: true,
@@ -2119,13 +2127,32 @@ class GlobalHistory extends EventTarget {
       this.#historyCarouselMode = shouldShow;
 
       let internalView = this.#viewStack[finalIndex];
-      this.setView(internalView.view);
+      let browserSwitched = new Promise(resolve => {
+        this.#window.addEventListener("TabSwitched", resolve, { once: true });
+      });
 
-      logConsole.debug("Removing history carousel browser.");
-      gBrowser.removeTab(carouselTab, { animate: false });
+      this.setView(internalView.view);
+      await browserSwitched;
+
       for (let backgroundTab of gBrowser.tabs) {
         backgroundTab.linkedBrowser.leaveModalState();
       }
+
+      // Switching to the underlying <browser> is unlikely to happen synchronously,
+      // so we wait for the next tick of the refresh driver to remove the
+      // disable-history-animations attribute so that there's a much higher
+      // likelihood that the switch to the selected view has been started without
+      // the animation. That's the right time to remove the attribute so that
+      // subsequent switches continue to have the animations.
+      await new Promise(resolve => {
+        this.#window.requestAnimationFrame(() => {
+          this.#window.requestAnimationFrame(resolve);
+        });
+      });
+      gBrowser.tabbox.removeAttribute("disable-history-animations");
+
+      logConsole.debug("Removing history carousel browser.");
+      gBrowser.removeTab(carouselTab, { animate: false });
     }
   }
 

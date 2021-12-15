@@ -43,6 +43,10 @@ add_task(async function test_modal_state() {
     (await gatherModalStates()).every(state => !state),
     "No browser elements should start in the modal state."
   );
+  Assert.ok(
+    !gBrowser.tabbox.hasAttribute("disable-history-animations"),
+    "The window should not have view transitions disabled."
+  );
 
   let carouselBrowser = await PinebuildTestUtils.enterHistoryCarousel();
   let states = await gatherModalStates();
@@ -57,10 +61,19 @@ add_task(async function test_modal_state() {
     }
   }
 
+  Assert.ok(
+    gBrowser.tabbox.hasAttribute("disable-history-animations"),
+    "The window should have view transitions disabled."
+  );
+
   await PinebuildTestUtils.exitHistoryCarousel();
 
   Assert.ok(
     (await gatherModalStates()).every(state => !state),
     "No browser elements should remain in the modal state."
+  );
+  Assert.ok(
+    !gBrowser.tabbox.hasAttribute("disable-history-animations"),
+    "The window should not still have view transitions disabled."
   );
 });
