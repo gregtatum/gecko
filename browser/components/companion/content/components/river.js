@@ -57,17 +57,12 @@ export default class River extends MozLitElement {
     this.#groupViews();
   }
 
+  /**
+   * Called when the river has been replaced with a new state.
+   * For example, after session restore has ended.
+   */
   setViews(views) {
-    this.#views = [];
-    this.addViews(views);
-  }
-
-  addViews(views) {
-    if (this.#views.length) {
-      this.#views = [...this.#views, ...views];
-    } else {
-      this.#views = [...views];
-    }
+    this.#views = [...views];
     this.#groupViews();
   }
 

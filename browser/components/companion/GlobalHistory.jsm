@@ -1184,7 +1184,7 @@ class GlobalHistory extends EventTarget {
 
     // Mark the correct view.
     this.#currentInternalView = selectedView;
-    this.#notifyEvent("RiverRebuilt", selectedView);
+    this.#notifyEvent("RiverRebuilt");
 
     this.startActivationTimer();
     this.#updateSessionStore();
