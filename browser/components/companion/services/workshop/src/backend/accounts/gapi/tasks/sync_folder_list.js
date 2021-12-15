@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import logic from "logic";
+import { NOW } from "shared/date";
 import TaskDefiner from "../../../task_infra/task_definer";
 
 import MixinSyncFolderList from "../../../task_mixins/mix_sync_folder_list";
@@ -41,6 +43,8 @@ export default TaskDefiner.defineSimpleTask([
         rawSyncState,
         account.id
       );
+
+      logic(ctx, "syncFolderListStart", { syncDate: NOW() });
 
       const foldersTOC = account.foldersTOC;
 
@@ -134,6 +138,8 @@ export default TaskDefiner.defineSimpleTask([
           }
         }
       }
+
+      logic(ctx, "syncFolderListEnd", {});
 
       // Infer deletions by checking for folders we know about but that aren't
       // in `observedFolderServerIds`.

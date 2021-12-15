@@ -504,6 +504,16 @@ MailBridge.prototype = {
     await ctx.acquire(ctx.proxy);
   },
 
+  async _promised_refreshAllFoldersList(msg, replyFunc) {
+    const allAccountIds = this.universe.getAllAccountIdsWithKind(msg.spec.kind);
+    await Promise.all(
+      allAccountIds.map(accountId =>
+        this.universe.syncFolderList(accountId, "bridge")
+      )
+    );
+    replyFunc(null);
+  },
+
   async _cmd_searchAllMessages(msg) {
     const ctx = this.bridgeContext.createNamedContext(
       msg.handle,

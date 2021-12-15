@@ -3570,6 +3570,12 @@ var MailAPI = class extends import_evt14.Emitter {
       }
     });
   }
+  refreshAllFoldersList(spec) {
+    return this._sendPromisedRequest({
+      type: "refreshAllFoldersList",
+      spec
+    });
+  }
   viewFolderMessages(folder) {
     const handle = this._nextHandle++;
     let view;

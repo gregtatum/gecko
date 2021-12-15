@@ -923,11 +923,11 @@ MailUniverse.prototype = {
    * returning a promise that will be resolved when the task has completed
    * executing.
    */
-  syncFolderList(accountId, why) {
+  async syncFolderList(accountId, why) {
     // Because sync_folder_list is a simple task, the executed task will have
     // the same id as the planned task and so it's okay to use this method, but
     // this doesn't hold for more complex tasks like sync_grow/sync_refresh.
-    return this.taskManager.scheduleTaskAndWaitForExecutedResult(
+    await this.taskManager.scheduleTaskAndWaitForExecutedResult(
       {
         type: "sync_folder_list",
         accountId,

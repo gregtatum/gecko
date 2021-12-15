@@ -1230,6 +1230,13 @@ export class MailAPI extends Emitter {
     });
   }
 
+  refreshAllFoldersList(spec) {
+    return this._sendPromisedRequest({
+      type: "refreshAllFoldersList",
+      spec,
+    });
+  }
+
   /**
    * View the messages/events in a folder.  If the folder is a `calendar`
    * folder, than a `CalEventsListView` will be returned, otherwise a

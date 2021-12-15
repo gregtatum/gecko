@@ -68,10 +68,16 @@ export class GapiCalEventChewer {
   }
 
   _chewCalIdentity(raw) {
+    // raw can be undefined, for example when called with gapiEvent.creator
+    // and the creator isn't here. It can happen when the event has a private
+    // visibility (see https://developers.google.com/calendar/api/v3/reference/events#visibility)
+    // `The event is private and only event attendees may view event details`.
+    // So in case a property is missing or raw itself is missing, we just
+    // return an Object with some default values.
     return makeIdentityInfo({
-      displayName: raw.displayName,
-      email: raw.email,
-      isSelf: raw.self,
+      displayName: raw?.displayName || "",
+      email: raw?.email || "",
+      isSelf: !!raw?.self,
     });
   }
 
@@ -81,15 +87,16 @@ export class GapiCalEventChewer {
    * path,
    */
   _chewCalAttendee(raw) {
+    // See commet for _chewCalIdentity.
     return makeAttendeeInfo({
-      displayName: raw.displayName,
-      email: raw.email,
-      isSelf: raw.self,
-      isOrganizer: raw.organizer,
-      isResource: raw.resource,
-      responseStatus: raw.responseStatus,
-      comment: raw.comment,
-      isOptional: raw.optional,
+      displayName: raw.displayName || "",
+      email: raw?.email || "",
+      isSelf: !!raw?.self,
+      isOrganizer: !!raw?.organizer,
+      isResource: !!raw?.resource,
+      responseStatus: raw?.responseStatus || "",
+      comment: raw?.comment || "",
+      isOptional: !!raw?.optional,
     });
   }
 

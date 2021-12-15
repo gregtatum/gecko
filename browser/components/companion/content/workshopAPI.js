@@ -139,8 +139,9 @@ if (workshopEnabled) {
       return listView;
     },
 
-    refreshServices() {
+    async refreshServices() {
       const spec = this.getCalendarEventQuery();
+      await workshopAPI.refreshAllFoldersList(spec);
       return workshopAPI.refreshAllMessages(spec);
     },
   };

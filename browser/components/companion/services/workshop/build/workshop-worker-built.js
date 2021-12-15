@@ -11207,6 +11207,8 @@ var WorkshopBackend = (() => {
   var sync_folder_list_default2;
   var init_sync_folder_list2 = __esm({
     "src/backend/accounts/gapi/tasks/sync_folder_list.js"() {
+      init_logic();
+      init_date();
       init_task_definer();
       init_mix_sync_folder_list();
       init_folder_info_rep();
@@ -11221,6 +11223,7 @@ var WorkshopBackend = (() => {
             });
             const rawSyncState = fromDb.syncStates.get(account.id);
             const syncState = new GapiAccountSyncStateHelper(ctx, rawSyncState, account.id);
+            logic(ctx, "syncFolderListStart", { syncDate: NOW() });
             const foldersTOC = account.foldersTOC;
             const clResult = await account.client.pagedApiGetCall("https://www.googleapis.com/calendar/v3/users/me/calendarList", {}, "items", (result) => {
             });
@@ -11278,6 +11281,7 @@ var WorkshopBackend = (() => {
                 }
               }
             }
+            logic(ctx, "syncFolderListEnd", {});
             for (const folderInfo of foldersTOC.items.filter((x) => x.type === "calendar")) {
               if (!observedFolderServerIds.has(folderInfo.serverId)) {
                 modifiedFolders.set(folderInfo.id, null);
@@ -11381,21 +11385,21 @@ var WorkshopBackend = (() => {
         }
         _chewCalIdentity(raw) {
           return makeIdentityInfo({
-            displayName: raw.displayName,
-            email: raw.email,
-            isSelf: raw.self
+            displayName: raw?.displayName || "",
+            email: raw?.email || "",
+            isSelf: !!raw?.self
           });
         }
         _chewCalAttendee(raw) {
           return makeAttendeeInfo({
-            displayName: raw.displayName,
-            email: raw.email,
-            isSelf: raw.self,
-            isOrganizer: raw.organizer,
-            isResource: raw.resource,
-            responseStatus: raw.responseStatus,
-            comment: raw.comment,
-            isOptional: raw.optional
+            displayName: raw.displayName || "",
+            email: raw?.email || "",
+            isSelf: !!raw?.self,
+            isOrganizer: !!raw?.organizer,
+            isResource: !!raw?.resource,
+            responseStatus: raw?.responseStatus || "",
+            comment: raw?.comment || "",
+            isOptional: !!raw?.optional
           });
         }
         async chewEventBundle() {
@@ -15412,6 +15416,11 @@ var WorkshopBackend = (() => {
       const toc = await this.universe.acquireSearchAccountMessagesTOC(ctx, msg.spec);
       ctx.proxy = new WindowedListProxy(toc, ctx);
       await ctx.acquire(ctx.proxy);
+    },
+    async _promised_refreshAllFoldersList(msg, replyFunc) {
+      const allAccountIds = this.universe.getAllAccountIdsWithKind(msg.spec.kind);
+      await Promise.all(allAccountIds.map((accountId) => this.universe.syncFolderList(accountId, "bridge")));
+      replyFunc(null);
     },
     async _cmd_searchAllMessages(msg) {
       const ctx = this.bridgeContext.createNamedContext(msg.handle, "AllSearchView");
@@ -22967,8 +22976,8 @@ var WorkshopBackend = (() => {
         callback();
       }
     },
-    syncFolderList(accountId, why) {
-      return this.taskManager.scheduleTaskAndWaitForExecutedResult({
+    async syncFolderList(accountId, why) {
+      await this.taskManager.scheduleTaskAndWaitForExecutedResult({
         type: "sync_folder_list",
         accountId
       }, why);
