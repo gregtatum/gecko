@@ -529,7 +529,7 @@ class GapiFakeServer extends BaseFakeServer {
           email: peep.email,
           displayName: peep.displayName || peep.name,
           organizer: peep.email === event.organizer.email,
-          self: peep.isSelf || peep.email === cal.calendarOwner.email,
+          self: peep.isSelf || false,
         };
       };
       return {

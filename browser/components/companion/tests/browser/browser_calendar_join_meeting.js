@@ -35,7 +35,7 @@ const checkJoinBtnVisibility = async ({ helper, expectedVisibility }) => {
   );
 };
 
-add_task(async function test_joinMeetingButtonVisibility() {
+add_task(async function test_joinMeetingButtonShown() {
   await CompanionHelper.whenReady(async helper => {
     let now = new Date();
 
@@ -50,9 +50,7 @@ add_task(async function test_joinMeetingButtonVisibility() {
     let events = [
       {
         summary: "Join my fun meeting",
-        conference: {
-          url: "http://example.com/joinme",
-        },
+        location: "http://meet.google.com/join",
         startDate: start,
         endDate: end,
       },
@@ -61,30 +59,34 @@ add_task(async function test_joinMeetingButtonVisibility() {
     info("Test button is visible for event starting within 10 mins");
     await helper.setCalendarEvents(events);
     await checkJoinBtnVisibility({ helper, expectedVisibility: true });
+  });
+});
+
+add_task(async function test_joinMeetingButtonHidden() {
+  await CompanionHelper.whenReady(async helper => {
+    let now = new Date();
 
     // generate start and end times for event starting in 30 mins.
-    let {
-      start: newStart,
-      end: newEnd,
-    } = PinebuildTestUtils.generateEventTimes(
+    let { start, end } = PinebuildTestUtils.generateEventTimes(
       0,
       30,
       now.getHours(),
       now.getMinutes() + 30
     );
 
-    let newEvents = [
+    let events = [
       {
-        ...events[0],
-        startDate: newStart,
-        endDate: newEnd,
+        summary: "Join my fun meeting",
+        location: "http://meet.google.com/join",
+        startDate: start,
+        endDate: end,
       },
     ];
 
     info(
       "Test button is hidden when event changes to start in more than 10 mins"
     );
-    await helper.setCalendarEvents(newEvents);
+    await helper.setCalendarEvents(events);
     await checkJoinBtnVisibility({ helper, expectedVisibility: false });
   });
 });
