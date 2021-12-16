@@ -152,11 +152,15 @@ def yield_all_platform_jobs(config, jobs):
         platforms = ("linux", "macosx64", "win32", "win64")
         if "devedition" in job["attributes"]["build_platform"]:
             platforms = (f"{plat}-devedition" for plat in platforms)
+        if "pinebuild" in job["attributes"]["build_platform"]:
+            # no linux32 or win32 builds for pinebuild
+            platforms = (f"{plat}-pinebuild" for plat in ("macosx64", "win64"))
         for platform in platforms:
             platform_job = copy.deepcopy(job)
             if "ja" in platform_job["attributes"]["chunk_locales"] and platform in (
                 "macosx64",
                 "macosx64-devedition",
+                "macosx64-pinebuild",
             ):
                 platform_job = _strip_ja_data_from_linux_job(platform_job)
 
@@ -201,6 +205,8 @@ def _change_platform_data(config, platform_job, platform):
     orig_platform = "linux64"
     if "devedition" in platform:
         orig_platform = "linux64-devedition"
+    if "pinebuild" in platform:
+        orig_platform = "linux64-pinebuild"
     platform_job["attributes"]["build_platform"] = platform
     platform_job["label"] = platform_job["label"].replace(orig_platform, platform)
     platform_job["description"] = platform_job["description"].replace(
@@ -223,6 +229,9 @@ def _change_platform_data(config, platform_job, platform):
         "macosx64-devedition": "mac",
         "win32-devedition": "win32",
         "win64-devedition": "win64",
+        "linux64-pinebuild": "linux-x86_64",
+        "macosx64-pinebuild": "mac",
+        "win64-pinebuild": "win64",
     }
     orig_platform = platform_mapping.get(orig_platform, orig_platform)
     platform = platform_mapping.get(platform, platform)

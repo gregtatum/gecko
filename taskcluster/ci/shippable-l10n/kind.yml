@@ -33,6 +33,9 @@ only-for-build-platforms:
     - win32-devedition/opt
     - win64-devedition/opt
     - win64-aarch64-devedition/opt
+    - linux64-pinebuild/opt
+    - macosx64-pinebuild/opt
+    - win64-pinebuild/opt
 
 job-template:
     description: Localization
@@ -75,6 +78,7 @@ job-template:
         product:
             by-build-platform:
                 default: firefox
+                .*-pinebuild: pinebuild
                 .*-devedition: devedition
         job-name:
             by-build-platform:
@@ -90,6 +94,9 @@ job-template:
                 win32-devedition: win32-devedition-opt
                 win64-devedition: win64-devedition-opt
                 win64-aarch64-devedition: win64-aarch64-devedition-opt
+                linux64-pinebuild: linux64-pinebuild-opt
+                macosx64-pinebuild: macosx64-pinebuild-opt
+                win64-pinebuild: win64-pinebuild-opt
     worker-type: b-linux
     docker-image: {in-tree: debian11-amd64-build}
     treeherder:
@@ -109,6 +116,9 @@ job-template:
                 win32-devedition: windows2012-32-devedition/opt
                 win64-devedition: windows2012-64-devedition/opt
                 win64-aarch64-devedition: windows2012-aarch64-devedition/opt
+                linux64-pinebuild: linux64-pinebuild/opt
+                macosx64-pinebuild: osx-cross-pinebuild/opt
+                win64-pinebuild: windows2012-64-pinebuild/opt
     env:
         by-build-platform:
             linux.*:    # linux64 and 32 get same treatment here
@@ -195,6 +205,24 @@ job-template:
                 win64-aarch64-devedition:
                     - single_locale/devedition.py
                     - single_locale/win64-aarch64.py
+                    - single_locale/tc_common.py
+                    - single_locale/tc_win64.py
+                    - taskcluster_nightly.py
+                linux64-pinebuild:
+                    - single_locale/pinebuild.py
+                    - single_locale/linux64.py
+                    - single_locale/tc_common.py
+                    - single_locale/tc_linux_common.py
+                    - taskcluster_nightly.py
+                macosx64-pinebuild:
+                    - single_locale/pinebuild.py
+                    - single_locale/macosx64.py
+                    - single_locale/tc_common.py
+                    - single_locale/tc_macosx64.py
+                    - taskcluster_nightly.py
+                win64-pinebuild:
+                    - single_locale/pinebuild.py
+                    - single_locale/win64.py
                     - single_locale/tc_common.py
                     - single_locale/tc_win64.py
                     - taskcluster_nightly.py
