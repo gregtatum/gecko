@@ -36,6 +36,10 @@ li {
   transition-delay: 200ms;
 }
 
+li[pinned] {
+  visibility: hidden;
+}
+
 figure {
   text-align: center;
   margin: 0;

@@ -13,12 +13,18 @@ add_task(async function test_scrubber() {
     set: [["browser.pagethumbnails.capturing_disabled", false]],
   });
 
-  await PinebuildTestUtils.loadViews([
+  let views = await PinebuildTestUtils.loadViews([
     "https://example.com/",
     "https://example.com/browser/browser",
     "https://example.org/browser",
     "https://example.org/browser/browser/components",
   ]);
+
+  // Test for MR2-1598 - currently, we're choosing not to show previews
+  // for pinned views. The scrubber should reflect that.
+  await PinebuildTestUtils.setCurrentView(views[0]);
+  gGlobalHistory.setViewPinnedState(views[0], true);
+  await PinebuildTestUtils.setCurrentView(views[3]);
 
   let browser = await PinebuildTestUtils.enterHistoryCarousel();
 
@@ -38,8 +44,8 @@ add_task(async function test_scrubber() {
     let step = parseInt(scrubber.getAttribute("step"), 0);
     Assert.equal(
       min,
-      0,
-      "Should not be able to select a negative index from the scrubber."
+      1,
+      "The pinned view should have been accounted for when setting scrubber min."
     );
     Assert.equal(
       max,
@@ -86,17 +92,13 @@ add_task(async function test_scrubber() {
       await waitForSelectedIndex(index);
     };
 
-    await selectIndex(0);
-    // Because the first preview is currently selected, the "previous" button
-    // should now be disabled.
+    await selectIndex(1);
+    // Because the first unpinned preview is currently selected, the "previous"
+    // button should now be disabled.
     Assert.ok(!nextBtn.disabled, "Next button is not disabled.");
     Assert.ok(previousBtn.disabled, "Previous button is disabled.");
 
     await selectIndex(2);
-    Assert.ok(!nextBtn.disabled, "Next button is not disabled.");
-    Assert.ok(!previousBtn.disabled, "Previous button is not disabled.");
-
-    await selectIndex(1);
     Assert.ok(!nextBtn.disabled, "Next button is not disabled.");
     Assert.ok(!previousBtn.disabled, "Previous button is not disabled.");
 
@@ -118,22 +120,10 @@ add_task(async function test_scrubber() {
     await selected;
     Assert.ok(true, "Selected previous index with previous button.");
 
-    info("Selecting index 0 in test via previous button");
-    selected = waitForSelectedIndex(0);
-    previousBtn.click();
-    await selected;
-    Assert.ok(true, "Selected previous index with previous button.");
-
-    // Because the first preview is currently selected, the "previous" button
-    // should now be disabled.
+    // Because the first non-pinned preview is currently selected, the "previous"
+    // button should now be disabled.
     Assert.ok(!nextBtn.disabled, "Next button is not disabled.");
     Assert.ok(previousBtn.disabled, "Previous button is disabled.");
-
-    info("Selecting index 1 from next button");
-    selected = waitForSelectedIndex(1);
-    nextBtn.click();
-    await selected;
-    Assert.ok(true, "Selected next index with next button.");
 
     info("Selected index 2 from next button");
     selected = waitForSelectedIndex(2);
