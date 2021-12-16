@@ -22,6 +22,10 @@ var PineBuildUIUtils = {
 
   delayedStartup() {
     HistoryCarouselUI.init();
+
+    // Disable navbar overflow so the AVM doesn't vanish. MR2-1592
+    let navbar = window.document.getElementById("nav-bar");
+    navbar.removeAttribute("overflowable");
   },
 
   copy(anchor, string) {
