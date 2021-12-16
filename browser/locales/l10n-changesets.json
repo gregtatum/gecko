@@ -1,1 +1,10 @@
-{}
+{
+    "ar": {
+        "platforms": [
+            "linux64-pinebuild",
+            "macosx64-pinebuild",
+            "win64-pinebuild"
+        ],
+        "revision": "default"
+    }
+}
