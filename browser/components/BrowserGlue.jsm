@@ -1687,7 +1687,7 @@ BrowserGlue.prototype = {
 
     ProcessHangMonitor.init();
 
-    UrlbarPrefs.updateFirefoxSuggestScenario(true);
+    UrlbarPrefs.updateFirefoxSuggestScenario();
 
     // A channel for "remote troubleshooting" code...
     let channel = new WebChannel(
