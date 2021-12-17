@@ -694,6 +694,7 @@ var AddonRepository = {
     // This should be the API endpoint documented at:
     // http://addons-server.readthedocs.io/en/latest/topics/api/addons.html#language-tools
     let url = this._formatURLPref(PREF_GET_LANGPACKS);
+    console.log(`!!! getAvailableLangpacks`, url);
 
     let response = await fetch(url, { credentials: "omit" });
     if (!response.ok) {

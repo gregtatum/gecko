@@ -736,6 +736,7 @@ class MozIntl {
   NumberFormat = Intl.NumberFormat;
   PluralRules = Intl.PluralRules;
   RelativeTimeFormat = MozRelativeTimeFormat;
+  prefs = osPrefs;
 
   constructor() {
     this._cache = {};
@@ -940,6 +941,8 @@ class MozIntl {
     return this._cache.DisplayNames;
   }
 }
+
+console.log("Inside toolkit/components/mozintl/mozIntl.jsm");
 
 MozIntl.prototype.classID = Components.ID(
   "{35ec195a-e8d0-4300-83af-c8a2cc84b4a3}"

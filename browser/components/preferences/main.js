@@ -1165,7 +1165,7 @@ var gMainPane = {
     let locales = Array.from(
       new Set([locale, ...Services.locale.requestedLocales]).values()
     );
-    this.showConfirmLanguageChangeMessageBar(locales);
+    Services.locale.requestedLocales = locales;
   },
 
   /**

@@ -47,6 +47,7 @@ document
  */
 
 async function installFromUrl(url, hash, callback) {
+  console.log("installFromUrl");
   let telemetryInfo = {
     source: "about:preferences",
   };
@@ -62,6 +63,7 @@ async function installFromUrl(url, hash, callback) {
 }
 
 async function dictionaryIdsForLocale(locale) {
+  console.log("dictionaryIdsForLocale");
   let entries = await RemoteSettings("language-dictionaries").get({
     filters: { id: locale },
   });
@@ -93,6 +95,7 @@ class OrderedListBox {
     this.upButton.addEventListener("command", () => this.moveUp());
     this.downButton.addEventListener("command", () => this.moveDown());
     this.removeButton.addEventListener("command", () => this.removeItem());
+    console.log("OrderedListBox", this);
   }
 
   get selectedItem() {
@@ -184,6 +187,7 @@ class OrderedListBox {
   }
 
   populate() {
+    console.log("OrderedListBox.prototype.populate");
     this.richlistbox.textContent = "";
 
     let frag = document.createDocumentFragment();
@@ -238,6 +242,8 @@ class SortedItemSelectList {
 
       onSelect(item);
     });
+
+    console.log("SortedItemSelectList constructor", this);
   }
 
   setItems(items) {
@@ -246,6 +252,7 @@ class SortedItemSelectList {
   }
 
   populate() {
+    console.log("SortedItemSelect.prototype.populate");
     let { button, items, menulist, popup } = this;
     popup.textContent = "";
 
@@ -319,6 +326,7 @@ class SortedItemSelectList {
 }
 
 async function getLocaleDisplayInfo(localeCodes) {
+  console.log("getLocaleDisplayInfo");
   let availableLocales = new Set(await getAvailableLocales());
   let packagedLocales = new Set(Services.locale.packagedLocales);
   let localeNames = Services.intl.getLocaleDisplayNames(undefined, localeCodes);
@@ -368,6 +376,7 @@ var gBrowserLanguagesDialog = {
   },
 
   recordTelemetry(method, extra = null) {
+    console.log(`!!! recordTelemetry "intl.ui.browserLanguage"`, method, extra);
     Services.telemetry.recordEvent(
       "intl.ui.browserLanguage",
       method,
@@ -383,8 +392,9 @@ var gBrowserLanguagesDialog = {
   },
 
   async onLoad() {
+    console.log("gBrowserLanguagesDialog.onLoad");
     document
-      .getElementById("BrowserLanguagesDialog")
+      .getElementById("BrowserLanguagesDialog", window.arguments[0])
       .addEventListener("beforeaccept", () => this.beforeAccept());
     // Maintain the previously selected locales even if we cancel out.
     let { telemetryId, selected, search } = window.arguments[0];
@@ -458,6 +468,7 @@ var gBrowserLanguagesDialog = {
   },
 
   async loadLocalesFromAMO() {
+    console.log(`!!! loadLocalesFromAMO`);
     if (!this.downloadEnabled) {
       return;
     }
@@ -468,7 +479,9 @@ var gBrowserLanguagesDialog = {
     // Fetch the available langpacks from AMO.
     let availableLangpacks;
     try {
+      console.log(`!!! loadLocalesFromAMO - before getAvailableLangpacks`);
       availableLangpacks = await AddonRepository.getAvailableLangpacks();
+      console.log(`!!! loadLocalesFromAMO - after getAvailableLangpacks`, availableLangpacks);
     } catch (e) {
       this.showError();
       return;
@@ -510,6 +523,7 @@ var gBrowserLanguagesDialog = {
   },
 
   async loadLocalesFromInstalled(available) {
+    debugger
     let items;
     if (available.length) {
       items = await getLocaleDisplayInfo(available);
@@ -527,6 +541,7 @@ var gBrowserLanguagesDialog = {
   },
 
   async availableLanguageSelected(item) {
+    debugger
     if ((await getAvailableLocales()).includes(item.value)) {
       this.recordTelemetry("add");
       await this.requestLocalLanguage(item);
@@ -539,9 +554,11 @@ var gBrowserLanguagesDialog = {
   },
 
   async requestLocalLanguage(item, available) {
+    console.log("!!! requestLocalLanguage", { item, available });
     this._selectedLocales.addItem(item);
     let selectedCount = this._selectedLocales.items.length;
     let availableCount = (await getAvailableLocales()).length;
+    console.log(`!!! requestLocalLanguage - getAvailableLocales`, (await getAvailableLocales()));
     if (selectedCount == availableCount) {
       // Remove the installed label, they're all installed.
       this._availableLocales.items.shift();
@@ -554,6 +571,7 @@ var gBrowserLanguagesDialog = {
   },
 
   async requestRemoteLanguage(item) {
+    console.log("!!! requestRemoteLanguage", item);
     this._availableLocales.disableWithMessageId(
       "browser-languages-downloading"
     );
@@ -588,6 +606,7 @@ var gBrowserLanguagesDialog = {
   },
 
   async installDictionariesForLanguage(locale) {
+    console.log(`!!! installDictionariesForLanguage`, { locale });
     try {
       let ids = await dictionaryIdsForLocale(locale);
       let addonInfos = await AddonRepository.getAddonsByIDs(ids);
