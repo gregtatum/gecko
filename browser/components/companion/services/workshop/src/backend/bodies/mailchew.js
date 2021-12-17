@@ -549,6 +549,7 @@ export async function processEventContent({
   content,
   type,
   processAsText = false,
+  attachments = {},
 }) {
   // TODO: think about a cache here.
   //
@@ -563,7 +564,6 @@ export async function processEventContent({
   // And it doesn't make sense to keep the data in the cache for ever,
   // so we need to have a strategy to clean it up (when we're almost done
   // with an full update/creation of a new calendar).
-
   const { links, document, snippet } =
     type === "html"
       ? await $htmlchew.sanitizeSnippetAndExtractLinks(content)
@@ -572,7 +572,7 @@ export async function processEventContent({
   const contentBlob = new Blob([document], { type: `text/${type}` });
   const authoredBodySize = snippet.length;
   const processedLinks = $urlchew.processLinks(
-    links,
+    { ...attachments, ...links },
     (processAsText || type === "plain") && content
   );
   const conference = $urlchew.getConferenceInfo(data, processedLinks);

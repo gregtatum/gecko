@@ -10408,12 +10408,13 @@ var WorkshopBackend = (() => {
     data,
     content,
     type,
-    processAsText = false
+    processAsText = false,
+    attachments = {}
   }) {
     const { links, document, snippet } = type === "html" ? await sanitizeSnippetAndExtractLinks(content) : { links: {}, document: content, snippet: content };
     const contentBlob = new Blob([document], { type: `text/${type}` });
     const authoredBodySize = snippet.length;
-    const processedLinks = processLinks(links, (processAsText || type === "plain") && content);
+    const processedLinks = processLinks({ ...attachments, ...links }, (processAsText || type === "plain") && content);
     const conference = getConferenceInfo(data, processedLinks);
     return {
       conference,
@@ -11402,6 +11403,18 @@ var WorkshopBackend = (() => {
             isOptional: !!raw?.optional
           });
         }
+        _getAttachmentInfo(data) {
+          const attachments = Object.create(null);
+          if (!data?.length) {
+            return attachments;
+          }
+          for (const attachment of data) {
+            if (!attachments[attachment.fileUrl]) {
+              attachments[attachment.fileUrl] = attachment.title;
+            }
+          }
+          return attachments;
+        }
         async chewEventBundle() {
           const oldById = this.oldById;
           for (const oldInfo of this.oldEvents) {
@@ -11423,9 +11436,10 @@ var WorkshopBackend = (() => {
               logic(this.ctx, "event", { _event: gapiEvent });
               let contentBlob, snippet, authoredBodySize, links, conference;
               const bodyReps = [];
+              const attachments = this._getAttachmentInfo(gapiEvent.attachments);
               let description = gapiEvent.description;
-              if (description) {
-                description = description.trim().replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/<wbr>/g, "");
+              if (description || attachments) {
+                description = description?.trim().replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/<wbr>/g, "") || "";
                 ({
                   contentBlob,
                   snippet,
@@ -11436,7 +11450,8 @@ var WorkshopBackend = (() => {
                   data: gapiEvent,
                   content: description,
                   type: "html",
-                  processAsText: true
+                  processAsText: true,
+                  attachments
                 }));
                 bodyReps.push(makeBodyPart({
                   type: "html",

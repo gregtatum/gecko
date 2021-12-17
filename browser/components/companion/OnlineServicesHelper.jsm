@@ -133,6 +133,19 @@ function getLinkInfo(result) {
   return [...links.values()];
 }
 
+function getAttachmentInfo(data) {
+  const attachments = new Map();
+  if (data?.length) {
+    for (const item of data) {
+      let attachment = processLink(item.fileUrl, item.title);
+      if (attachment?.text && !attachments.has(attachment.url)) {
+        attachments.set(attachment.url, attachment);
+      }
+    }
+  }
+  return [...attachments.values()];
+}
+
 const conferencingInfo = [
   {
     name: "Zoom",
@@ -252,8 +265,11 @@ function parseGoogleCalendarResult(result, primaryEmail) {
   event.startDate = new Date(result.start?.dateTime);
   event.endDate = new Date(result.end?.dateTime);
   let links = getLinkInfo(result);
+  let attachments = getAttachmentInfo(result.attachments);
+  event.links = [...attachments, ...links].filter(
+    link => link.type != "conferencing"
+  );
   event.conference = getConferenceInfo(result, links);
-  event.links = links.filter(link => link.type != "conferencing");
   event.attendees =
     result.attendees?.filter(a => !a.self && a.responseStatus !== "declined") ||
     [];
@@ -375,7 +391,6 @@ function MainThreadServices(window) {
         }
         links[anchor.href] = anchor.textContent;
       }
-
       return {
         links,
         document: serializer.serializeToString(docFragment).trim(),

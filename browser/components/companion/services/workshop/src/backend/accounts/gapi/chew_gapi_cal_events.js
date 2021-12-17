@@ -100,6 +100,19 @@ export class GapiCalEventChewer {
     });
   }
 
+  _getAttachmentInfo(data) {
+    const attachments = Object.create(null);
+    if (!data?.length) {
+      return attachments;
+    }
+    for (const attachment of data) {
+      if (!attachments[attachment.fileUrl]) {
+        attachments[attachment.fileUrl] = attachment.title;
+      }
+    }
+    return attachments;
+  }
+
   async chewEventBundle() {
     // ## Remove any old messages that no longer fit within the sync window.
     const oldById = this.oldById;
@@ -129,15 +142,17 @@ export class GapiCalEventChewer {
 
         let contentBlob, snippet, authoredBodySize, links, conference;
         const bodyReps = [];
+        const attachments = this._getAttachmentInfo(gapiEvent.attachments);
 
         // ## Generate an HTML body part for the description
         let description = gapiEvent.description;
-        if (description) {
-          description = description
-            .trim()
-            .replace(/&amp;/g, "&")
-            .replace(/&nbsp;/g, " ")
-            .replace(/<wbr>/g, "");
+        if (description || attachments) {
+          description =
+            description
+              ?.trim()
+              .replace(/&amp;/g, "&")
+              .replace(/&nbsp;/g, " ")
+              .replace(/<wbr>/g, "") || "";
           ({
             contentBlob,
             snippet,
@@ -149,6 +164,7 @@ export class GapiCalEventChewer {
             content: description,
             type: "html",
             processAsText: true,
+            attachments,
           }));
 
           bodyReps.push(
