@@ -153,3 +153,7 @@ session-section-header = Sessions
 # The title of the tab buttons at the top of the companion.
 companion-deck-now = Now
 companion-deck-browse = Browse
+
+# The < back arrow to go back to the root Browse view.
+companion-header-back-button =
+    .title = Go back

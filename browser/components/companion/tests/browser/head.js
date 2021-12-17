@@ -428,6 +428,23 @@ class CompanionHelper {
     await this.companionReady;
   }
 
+  async selectCompanionTab(name) {
+    if (name != "now" && name != "browse") {
+      throw new Error("Must select 'now' or 'browse' tab");
+    }
+
+    await this.runCompanionTask(
+      async _name => {
+        let deck = content.document.getElementById("companion-deck");
+        let tabBtn = content.document.querySelector(`[name="${_name}"]`);
+        let tabShown = ContentTaskUtils.waitForEvent(deck, "view-changed");
+        tabBtn.click();
+        await tabShown;
+      },
+      [name]
+    );
+  }
+
   runCompanionTask(taskFn, args = []) {
     return SpecialPowers.spawn(this.browser, args, taskFn);
   }

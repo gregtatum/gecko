@@ -477,7 +477,7 @@ e-global-nav-debugging h2 {
   position: relative;
   padding-inline-start: 35px;
   text-align: start;
-  background: center left 10px / 16px no-repeat url("chrome://global/skin/icons/defaultFavicon.svg");
+  background: center left 8px / 16px no-repeat url("chrome://global/skin/icons/defaultFavicon.svg");
   margin-inline: 0;
   font-weight: normal;
 }
@@ -497,13 +497,14 @@ toolbarbutton.subviewbutton-back:hover:active,
   position: absolute;
   width: 16px;
   height: 16px;
-  background: center left no-repeat url(chrome://global/skin/icons/arrow-right.svg);
+  padding: 2px;
+  background: center no-repeat url(chrome://global/skin/icons/arrow-right.svg);
   inset-inline-end: 0;
+  margin-inline-end: 8px;
 }
 
 .browse button::after:dir(rtl) {
   background-image: url(chrome://global/skin/icons/arrow-left.svg);
-  background-position-x: right;
 }
 
 .browse button.groups {
@@ -532,6 +533,10 @@ toolbarbutton.subviewbutton-back:hover:active,
 
 .browse button.passwords {
   background-image: url("chrome://browser/skin/login.svg");
+}
+
+.browse button.calendar {
+  background-image: url("calendar.svg");
 }
 
 /*** PASSWORD PANEL ***/

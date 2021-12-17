@@ -19,15 +19,9 @@ add_task(async function testPocketCardsDisplay() {
 
   await CompanionHelper.whenReady(async helper => {
     await helper.reload();
+    await helper.selectCompanionTab("browse");
 
     await helper.runCompanionTask(async () => {
-      // switch to the "Browse" view in the companion
-      let deck = content.document.getElementById("companion-deck");
-      let browseBtn = content.document.querySelector('[name="browse"]');
-      let browseShown = ContentTaskUtils.waitForEvent(deck, "view-changed");
-      browseBtn.click();
-      await browseShown;
-
       let pocketList = content.document.querySelector("pocket-list");
       ok(pocketList, "List of pocket recommendations is visible");
 

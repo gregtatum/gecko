@@ -223,13 +223,21 @@
       <button class="downloads">Downloads</button>
       <button class="notifications">Notifications</button>
       <button class="passwords" hidden="true">Passwords</button>
+      <button class="calendar" hidden="true">Calendar</button>
     </div>
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-passwords-panel">
-    <div class="passwords-panel" hidden="true">
+    <div class="passwords-panel browse-section-panel" hidden="true">
       <xul:browser id="companion-login-browser" type="content" src="about:logins"></xul:browser>
     </div>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-calendar-panel">
+    <section-panel class="calendar-panel browse-section-panel" hidden="true">
+      <h1 slot="heading">Calendar</h1>
+      <div class="card">Calendar Placeholder</div>
+    </section-panel>
   </template>
 
   <div class="companion-main">

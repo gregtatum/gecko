@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import "./section-panel.js";
 import { CalendarEventList } from "./calendar.js";
 import { BrowseList } from "./browse.js";
 import { MediaList } from "./media.js";
@@ -78,11 +79,34 @@ function maybeInitializeUI() {
     document.querySelector(".passwords").hidden = false;
 
     browseList.querySelector(".passwords").addEventListener("click", () => {
-      togglePasswordPanel(false);
+      showPanel("passwords");
     });
 
     window.addEventListener("Companion:BrowsePanel", () => {
-      togglePasswordPanel(true);
+      hidePanel();
+    });
+  }
+
+  if (
+    Services.prefs.getBoolPref(
+      "browser.pinebuild.calendar.browseEnabled",
+      false
+    )
+  ) {
+    if (!document.querySelector(".calendar-panel")) {
+      let template = document.getElementById("template-calendar-panel");
+      let fragment = template.content.cloneNode(true);
+      browseContent.appendChild(fragment);
+    }
+
+    document.querySelector(".calendar").hidden = false;
+
+    browseList.querySelector(".calendar").addEventListener("click", () => {
+      showPanel("calendar");
+    });
+
+    document.addEventListener("section-panel-back", () => {
+      hidePanel();
     });
   }
 
@@ -99,13 +123,17 @@ function maybeInitializeUI() {
   });
 }
 
-function togglePasswordPanel(hidePasswordPanel) {
-  for (let child of document.querySelector("#scroll-browse .content")
-    .children) {
-    child.hidden = child.classList.contains("passwords-panel")
-      ? hidePasswordPanel
-      : !hidePasswordPanel;
+function showPanel(name) {
+  for (let child of document.querySelectorAll("#scroll-browse .content > *")) {
+    child.hidden = !child.classList.contains(`${name}-panel`);
   }
+  document.dispatchEvent(new Event("browse-panel-shown"));
+}
+function hidePanel() {
+  for (let child of document.querySelectorAll("#scroll-browse .content > *")) {
+    child.hidden = child.classList.contains("browse-section-panel");
+  }
+  document.dispatchEvent(new Event("browse-panel-hidden"));
 }
 
 window.addEventListener(
