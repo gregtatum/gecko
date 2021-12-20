@@ -110,6 +110,12 @@ function maybeInitializeUI() {
     });
   }
 
+  if (
+    Services.prefs.getBoolPref("browser.pinebuild.downloads.enabled", false)
+  ) {
+    document.querySelector(".downloads").hidden = false;
+  }
+
   initSessionUI();
 
   initNotifications();

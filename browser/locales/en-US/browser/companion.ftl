@@ -144,11 +144,16 @@ snapshot-not-relevant = Not relevant
 snapshot-options =
   .aria-label = Options
 
-# The list of sections in the browse tab of the companion.
+## The names of sections in the Browse tab of the companion.
+
 browse-list-sessions = Sessions
+browse-list-downloads = Downloads
 
 # Title of the Sessions section.
 session-section-header = Sessions
+
+# Title of the Download section.
+downloads-section-header = Downloads
 
 # The title of the tab buttons at the top of the companion.
 companion-deck-now = Now
