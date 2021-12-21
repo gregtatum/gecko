@@ -18,7 +18,6 @@ body {
   justify-content: start;
   height: 100vh;
   width: 100vw;
-  background-color: var(--in-content-page-background);
 }
 
 h2 {
@@ -38,6 +37,12 @@ button {
 
 a {
   cursor: pointer;
+}
+
+/* For this to work it needs to be applied directly to the html element, via
+   ID (putting it in the html block above will not apply.) */
+#companion {
+  background: none;
 }
 
 .companion-main {

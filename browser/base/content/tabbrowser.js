@@ -58,14 +58,21 @@
       this.tabContainer.init();
       this._setupInitialBrowserAndTab();
 
-      if (Services.prefs.getBoolPref("browser.display.use_system_colors")) {
-        this.tabpanels.style.backgroundColor = "-moz-default-background-color";
-      } else if (
-        Services.prefs.getIntPref("browser.display.document_color_use") == 2
-      ) {
-        this.tabpanels.style.backgroundColor = Services.prefs.getCharPref(
-          "browser.display.background_color"
-        );
+      // In PINEBUILD we use one global background which can show through some
+      // content. We want to be controlling the background color of the
+      // tabbrowser at that level and not here, but presently we do not support
+      // theming or non-default colors for PINEBUILD.
+      if (!AppConstants.PINEBUILD) {
+        if (Services.prefs.getBoolPref("browser.display.use_system_colors")) {
+          this.tabpanels.style.backgroundColor =
+            "-moz-default-background-color";
+        } else if (
+          Services.prefs.getIntPref("browser.display.document_color_use") == 2
+        ) {
+          this.tabpanels.style.backgroundColor = Services.prefs.getCharPref(
+            "browser.display.background_color"
+          );
+        }
       }
 
       this._setFindbarData();

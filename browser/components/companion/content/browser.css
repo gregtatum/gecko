@@ -9,8 +9,15 @@
   --companion-min-width: 300px;
   --companion-max-width: 600px;
   --companion-background: var(--in-content-page-background);
+  --shared-ui-background: white;
 
   --urlbar-border-radius: 20px;
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --shared-ui-background: -moz-default-background-color;
+  }
 }
 
 #urlbar[breakout][breakout-extend] {
@@ -19,6 +26,28 @@
 
 :root:not([chromehidden~="toolbar"]) {
   min-width: 1024px;
+}
+
+body {
+  background: var(--shared-ui-background);
+}
+
+#navigator-toolbox {
+  /* The !important here is because we include this file before the traditional
+     Firefox styles. See MR2-1550. */
+  background: none !important;
+}
+
+#tabbrowser-tabpanels {
+  /* The !important here is because we include this file before the traditional
+     Firefox styles. See MR2-1550. */
+  background: none !important;
+}
+
+.browser-toolbar:not(.titlebar-color) {
+  /* The !important here is because we include this file before the traditional
+     Firefox styles. See MR2-1550. */
+  background: none !important;
 }
 
 #titlebar:not([hidden]) + #nav-bar > #pinebuild-window-controls {
@@ -545,10 +574,6 @@
 
 .browser-toolbar:not(.titlebar-color) {
   --toolbar-bgcolor: white;
-}
-
-#appcontent {
-  background-color: #F9F9FB;
 }
 
 #session-setaside-button {

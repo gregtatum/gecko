@@ -392,6 +392,7 @@ menuitem.bookmark-item {
 
 %include ../shared/tabs.inc.css
 
+%ifndef PINEBUILD
 @media (-moz-windows-default-theme: 0) {
   /* For high contrast themes. */
   #tabbrowser-tabpanels,
@@ -399,6 +400,7 @@ menuitem.bookmark-item {
     background-color: -moz-default-background-color;
   }
 }
+%endif
 
 /* All tabs menupopup */
 
