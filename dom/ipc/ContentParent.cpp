@@ -752,6 +752,10 @@ bool IsPrivilegedMozillaRemoteType(const nsACString& aContentProcessType) {
   return aContentProcessType == PRIVILEGEDMOZILLA_REMOTE_TYPE;
 }
 
+bool IsPrivilegedAboutRemoteType(const nsACString& aContentProcessType) {
+  return aContentProcessType == PRIVILEGEDABOUT_REMOTE_TYPE;
+}
+
 bool IsExtensionRemoteType(const nsACString& aContentProcessType) {
   return aContentProcessType == EXTENSION_REMOTE_TYPE;
 }

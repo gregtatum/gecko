@@ -5305,6 +5305,14 @@ void PresShell::AddCanvasBackgroundColorItem(
 }
 
 static bool IsTransparentContainerElement(nsPresContext* aPresContext) {
+#ifdef PINEBUILD
+  if (XRE_IsContentProcess() &&
+      IsPrivilegedAboutRemoteType(
+          ContentChild::GetSingleton()->GetRemoteType())) {
+    return true;
+  }
+#endif
+
   nsIDocShell* docShell = aPresContext->GetDocShell();
   if (!docShell) {
     return false;
