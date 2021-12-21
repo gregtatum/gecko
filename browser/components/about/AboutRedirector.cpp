@@ -137,6 +137,7 @@ static const RedirEntry kRedirMap[] = {
     {"ion", "chrome://browser/content/ion.html",
      nsIAboutModule::ALLOW_SCRIPT | nsIAboutModule::HIDE_FROM_ABOUTABOUT |
          nsIAboutModule::IS_SECURE_CHROME_UI},
+#ifdef PINEBUILD
     {"companion-workshop-internals",
      "chrome://browser/content/about-workshop-internals/"
      "about-workshop-internals.html",
@@ -149,6 +150,7 @@ static const RedirEntry kRedirMap[] = {
      nsIAboutModule::ALLOW_SCRIPT | nsIAboutModule::HIDE_FROM_ABOUTABOUT |
          nsIAboutModule::URI_MUST_LOAD_IN_CHILD |
          nsIAboutModule::URI_CAN_LOAD_IN_PRIVILEGEDABOUT_PROCESS},
+#endif
 };
 
 static nsAutoCString GetAboutModuleName(nsIURI* aURI) {
