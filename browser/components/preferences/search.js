@@ -203,11 +203,13 @@ var gSearchPane = {
       false
     );
 
-    await this._buildEngineDropDown(
-      document.getElementById("defaultEngineSimple"),
-      (await Services.search.getDefault()).name,
-      false
-    );
+    if (AppConstants.PINEBUILD) {
+      await this._buildEngineDropDown(
+        document.getElementById("defaultEngineSimple"),
+        (await Services.search.getDefault()).name,
+        false
+      );
+    }
 
     if (this._separatePrivateDefaultEnabledPref.value) {
       await this._buildEngineDropDown(
@@ -372,7 +374,10 @@ var gSearchPane = {
           // dropdown may still be open (eg. on Windows) when engine-default is
           // fired, so rebuilding the list unconditionally would get in the way.
           let engineDropDownList = document.getElementById("defaultEngine");
-          if (document.documentElement.classList.contains("simple")) {
+          if (
+            AppConstants.PINEBUILD &&
+            document.documentElement.classList.contains("simple")
+          ) {
             engineDropDownList = document.getElementById("defaultEngineSimple");
           }
           let selectedEngine = engineDropDownList.selectedItem.engine;
@@ -542,7 +547,10 @@ var gSearchPane = {
 
   async setDefaultEngine() {
     let engineDropDownList = document.getElementById("defaultEngine");
-    if (document.documentElement.classList.contains("simple")) {
+    if (
+      AppConstants.PINEBUILD &&
+      document.documentElement.classList.contains("simple")
+    ) {
       engineDropDownList = document.getElementById("defaultEngineSimple");
     }
     await Services.search.setDefault(engineDropDownList.selectedItem.engine);

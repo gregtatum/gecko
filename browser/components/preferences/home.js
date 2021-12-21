@@ -112,7 +112,10 @@ var gHomePane = {
       if (newValue !== menulist.value) {
         menulist.value = newValue;
       }
-      if (Services.prefs.prefIsLocked(this.NEWTAB_ENABLED_PREF)) {
+      if (
+        AppConstants.PINEBUILD &&
+        Services.prefs.prefIsLocked(this.NEWTAB_ENABLED_PREF)
+      ) {
         menulist.disabled = true;
       }
 

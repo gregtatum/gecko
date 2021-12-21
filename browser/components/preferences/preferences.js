@@ -190,7 +190,9 @@ function init_all() {
   register_module("paneGeneral", gMainPane);
   register_module("paneHome", gHomePane);
   register_module("paneSearch", gSearchPane);
-  register_module("paneSimple", gSimplePane);
+  if (AppConstants.PINEBUILD) {
+    register_module("paneSimple", gSimplePane);
+  }
   register_module("panePrivacy", gPrivacyPane);
   register_module("paneContainers", gContainersPane);
   if (Services.prefs.getBoolPref("browser.preferences.experimental")) {
