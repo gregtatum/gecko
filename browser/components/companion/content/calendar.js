@@ -82,6 +82,7 @@ export class CalendarEventList extends MozLitElement {
   static get properties() {
     return {
       events: { type: Array },
+      listType: { type: String },
     };
   }
 
@@ -164,6 +165,7 @@ export class CalendarEventList extends MozLitElement {
     super();
     this.events = [];
     this.listView = null;
+    this.listType = "";
   }
 
   maybeStopListening() {
@@ -234,21 +236,22 @@ export class CalendarEventList extends MozLitElement {
 
   getRelevantEvents(events) {
     // TODO: remove this method: this stuff is done in workshop.
-    if (debugEnabled()) {
-      return events;
-    }
-    // Return all meetings that start in the next hour or are currently in
-    // progress.
-    let now = new Date();
-    let oneHourFromNow = new Date();
-    oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
-    return events
-      .filter(event => {
+    let filteredEvents = events.filter(e => !e.isAllDay);
+    if (!debugEnabled() && this.listType != "browse") {
+      // Return all meetings that start in the next hour or are currently in
+      // progress.
+      let now = new Date();
+      let oneHourFromNow = new Date();
+      oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
+      filteredEvents = events.filter(event => {
         let startDate = new Date(event.startDate);
         let endDate = new Date(event.endDate);
         return startDate <= oneHourFromNow && endDate >= now;
-      })
-      .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+      });
+    }
+    return filteredEvents.sort(
+      (a, b) => new Date(a.startDate) - new Date(b.startDate)
+    );
   }
 
   handleEvent(e) {
@@ -306,7 +309,11 @@ export class CalendarEventList extends MozLitElement {
 
     let accounts = await Workshop.getConnectedAccounts();
     if (accounts.length) {
-      this.listView = Workshop.createCalendarListView();
+      if (this.listType === "browse") {
+        this.listView = Workshop.createBrowseListView();
+      } else {
+        this.listView = Workshop.createCalendarListView();
+      }
       this.listenToListView();
     } else {
       // If there arent't any connected accounts, just clear the events list.

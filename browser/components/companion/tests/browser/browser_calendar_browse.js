@@ -28,7 +28,14 @@ add_task(async function testBrowseOpenBack() {
   });
 
   await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "Super simple event",
+      },
+    ];
+
     await helper.reload();
+    await helper.setCalendarEvents(events);
     await helper.selectCompanionTab("browse");
 
     await helper.runCompanionTask(async () => {
@@ -45,18 +52,13 @@ add_task(async function testBrowseOpenBack() {
       calendarEntry.click();
       await calendarShown;
 
-      let calendarPlaceholder = content.document.querySelector(
-        ".calendar-panel .card"
+      let browseEventList = content.document.getElementById(
+        "browse-event-list"
       );
-      ok(
-        ContentTaskUtils.is_visible(calendarPlaceholder),
-        "Placeholder is visible"
-      );
-      is(
-        calendarPlaceholder.textContent,
-        "Calendar Placeholder",
-        "Placeholder has content"
-      );
+      ok(browseEventList, "Browse event list is shown.");
+
+      let event = browseEventList.shadowRoot.querySelector("calendar-event");
+      ok(event, "An event is displayed in the browse section.");
 
       let calendarPanel = content.document.querySelector(".calendar-panel");
       let { backButton } = calendarPanel;

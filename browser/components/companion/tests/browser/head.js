@@ -235,8 +235,10 @@ class WorkshopHelper {
   }
 
   async clearAccountAndCalendars() {
-    await this.account.deleteAccount();
-    this.account = null;
+    if (this.account) {
+      await this.account.deleteAccount();
+      this.account = null;
+    }
     this.fakeServer.resetCalendars();
   }
 

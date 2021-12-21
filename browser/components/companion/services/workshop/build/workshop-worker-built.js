@@ -20713,7 +20713,6 @@ var WorkshopBackend = (() => {
       }
       const { startDate, endDate } = message;
       const now = new Date().valueOf();
-      const dayInMillis = 24 * 60 * 60 * 1e3;
       if (endDate <= now) {
         return false;
       }
@@ -20728,7 +20727,7 @@ var WorkshopBackend = (() => {
           durationBeforeToBeInvalid: endDate - now
         };
       }
-      const tomorrow = dayInMillis * Math.floor(1 + now / dayInMillis);
+      const tomorrow = new Date().setHours(24, 0, 0, 0).valueOf();
       if (startDate >= tomorrow) {
         return false;
       }

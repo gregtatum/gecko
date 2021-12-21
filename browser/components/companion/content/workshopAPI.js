@@ -139,6 +139,22 @@ if (workshopEnabled) {
       return listView;
     },
 
+    createBrowseListView() {
+      const spec = {
+        kind: "calendar",
+        filter: {
+          tag: "",
+          event: {
+            type: "browse",
+            durationBeforeInMinutes: 15,
+          },
+        },
+      };
+      let listView = workshopAPI.searchAllMessages(spec);
+      listView.refresh();
+      return listView;
+    },
+
     async refreshServices() {
       const spec = this.getCalendarEventQuery();
       await workshopAPI.refreshAllFoldersList(spec);
