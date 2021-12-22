@@ -9,7 +9,13 @@ var Services = ChromeUtils.import("resource://gre/modules/Services.jsm")
   .Services;
 
 function pinebuildBackground() {
-  if (!Services.prefs.getBoolPref("browser.startup.launchOnOSLogin", false)) {
+  if (
+    !Services.prefs.getBoolPref("browser.startup.launchOnOSLogin", false) &&
+    !Services.prefs.getBoolPref(
+      "browser.startup.launchOnOSLogin.enabledForTesting",
+      false
+    )
+  ) {
     return;
   }
 
