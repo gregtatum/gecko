@@ -76,12 +76,24 @@ function exitDetailView() {
       detail: { newHeaderL10nId: "about-logins-header-login-list" },
     })
   );
-  gElements.loginItem.setLogin(gElements.loginItem._login);
+
+  if (gElements.loginItem.dataset.hasOwnProperty("editing")) {
+    delete gElements.loginItem.dataset.editing;
+  }
+
   gElements.loginList.classList.remove("editing");
+  gElements.loginList.classList.remove("create-login-selected");
+  gElements.loginList.classList.remove("login-selected");
 }
 
 gElements.backButton.addEventListener("click", event => {
-  if (document.documentElement.classList.contains("login-item-view")) {
+  // If in the login list view, go back to companion browse.
+  // If in any other login view, go back to password list.
+  if (
+    document.documentElement.classList.contains("login-item-view") ||
+    document.documentElement.classList.contains("login-selected") ||
+    document.documentElement.classList.contains("initialized")
+  ) {
     // If user has changed login details, confirm whether to discard
     // before moving back to the list.
     if (gElements.loginItem.hasPendingChanges()) {
