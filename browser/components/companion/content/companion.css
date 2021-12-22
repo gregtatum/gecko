@@ -568,6 +568,10 @@ toolbarbutton.subviewbutton-back {
   width: 100%;
 }
 
+.passwords-panel {
+  overflow-y: hidden;
+}
+
 #scroll {
   height: calc(100% - 30px);
 }
