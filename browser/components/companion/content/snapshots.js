@@ -3,6 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { timeSince } from "./time-since.js";
+import { noteTelemetryTimestamp } from "./telemetry-helpers.js";
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
@@ -170,10 +171,14 @@ export class SuggestedSnapshotList extends SnapshotList {
   constructor(snapshotTitle) {
     super(snapshotTitle);
 
-    this.dbListener = () =>
+    this.dbListener = () => {
       this.updateSnapshots(
         window.CompanionUtils.snapshots.slice(0, MAX_SNAPSHOTS)
       );
+      noteTelemetryTimestamp("Companion:SuggestedSnapshotsPainted", {
+        numberOfSnapshots: window.CompanionUtils.snapshots.length,
+      });
+    };
   }
 
   async connectedCallback() {
@@ -181,6 +186,14 @@ export class SuggestedSnapshotList extends SnapshotList {
     this.updateSnapshots(
       window.CompanionUtils.snapshots.slice(0, MAX_SNAPSHOTS)
     );
+    // This should generally be false. However, in case anything changes in the
+    // future and we're able to get snapshots by the time of connectedCallback,
+    // we want to be able to see it in our telemetry.
+    if (window.CompanionUtils.snapshots.length) {
+      noteTelemetryTimestamp("Companion:SuggestedSnapshotsPainted", {
+        numberOfSnapshots: window.CompanionUtils.snapshots.length,
+      });
+    }
   }
 
   disconnectedCallback() {

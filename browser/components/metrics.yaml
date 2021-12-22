@@ -4,3 +4,72 @@
 
 ---
 $schema: moz://mozilla.org/schemas/glean/metrics/2-0-0
+
+pinebuild:
+  suggested_snapshots_painted:
+    type: timespan
+    time_unit: millisecond
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-514
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-514
+    description: >
+      Time between parent process creation and the calendar events in the
+      companion being initialized.
+    data_sensitivity:
+      - technical
+    notification_emails:
+      - dothayer@mozilla.com
+    expires: never
+    telemetry_mirror: PINEBUILD_SUGGESTED_SNAPSHOTS_PAINTED
+  suggested_snapshots_count:
+    type: counter
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-514
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-514
+    description: >
+      Number of suggested snapshots in the initial list sent to the companion.
+      This number helps us stay on top of ensuring that we're correctly
+      measuring suggested_snapshots_painted - if a large number of
+      zeroes start showing up for this metric, it's likely we've changed
+      something in such a way that suggested_snapshots_painted is
+      incorrect.
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - dothayer@mozilla.com
+    expires: never
+    telemetry_mirror: PINEBUILD_SUGGESTED_SNAPSHOTS_COUNT
+  calendar_painted:
+    type: timespan
+    time_unit: millisecond
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-514
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-514
+    description: >
+      Time between parent process creation and the calendar events in the
+      companion being initialized.
+    data_sensitivity:
+      - technical
+    notification_emails:
+      - dothayer@mozilla.com
+    expires: never
+    telemetry_mirror: PINEBUILD_CALENDAR_PAINTED
+  calendar_event_count:
+    type: counter
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-514
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-514
+    description: >
+      Number of calendar events in the initial list sent to the companion.
+      See the description of companion_suggested_snapshots_init_count for more
+      information.
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - dothayer@mozilla.com
+    expires: never
+    telemetry_mirror: PINEBUILD_CALENDAR_EVENT_COUNT

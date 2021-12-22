@@ -7309,6 +7309,70 @@ migration:
       - windows
 
 
+pinebuild:
+  suggested_snapshots_painted:
+    bug_numbers:
+      - -1
+    description: >
+      Time in milliseconds between parent process creation and the suggested
+      snapshots section of the companion being initialized.
+    expires: never
+    kind: uint
+    notification_emails:
+      - dothayer@mozilla.com
+    products:
+      - 'firefox'
+    record_in_processes:
+      - main
+  suggested_snapshots_count:
+    bug_numbers:
+      - -1
+    description: >
+      Number of suggested snapshots in the initial list sent to the companion.
+      This number helps us stay on top of ensuring that we're correctly
+      measuring suggested_snapshots_painted - if a large number of
+      zeroes start showing up for this metric, it's likely we've changed
+      something in such a way that suggested_snapshots_painted is
+      incorrect.
+    expires: never
+    kind: uint
+    notification_emails:
+      - dothayer@mozilla.com
+    products:
+      - 'firefox'
+    record_in_processes:
+      - main
+  calendar_painted:
+    bug_numbers:
+      - -1
+    description: >
+      Time in milliseconds between parent process creation and the calendar
+      events in the companion being initialized.
+    expires: never
+    kind: uint
+    notification_emails:
+      - dothayer@mozilla.com
+    products:
+      - 'firefox'
+    record_in_processes:
+      - main
+  calendar_event_count:
+    bug_numbers:
+      - -1
+    description: >
+      Number of calendar events in the initial list sent to the companion.
+      See the description of companion_suggested_snapshots_init_count for more
+      information.
+    expires: never
+    kind: uint
+    notification_emails:
+      - dothayer@mozilla.com
+    products:
+      - 'firefox'
+    record_in_processes:
+      - main
+
+
 contextual.services.topsites:
   impression:
     bug_numbers:

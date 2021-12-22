@@ -60,6 +60,11 @@ const DOMAIN_TYPES = {
   ],
 };
 
+// We need this to be a global so that we only record this for the first
+// window created. There's also an identical check in telemetry-helpers in the
+// child.
+let gTimestampsRecorded = new Set();
+
 class CompanionParent extends JSWindowActorParent {
   constructor() {
     super();
@@ -997,6 +1002,34 @@ class CompanionParent extends JSWindowActorParent {
       }
       case "Companion:IsActiveWindow": {
         return !!Services.focus.activeWindow;
+      }
+      case "Companion:SuggestedSnapshotsPainted": {
+        if (gTimestampsRecorded.has(message.name)) {
+          break;
+        }
+        gTimestampsRecorded.add(message.name);
+
+        let { time, extraData } = message.data;
+        let processStart = Services.startup.getStartupInfo().process.getTime();
+        let delta = time - processStart;
+        Glean.pinebuild.suggestedSnapshotsPainted.setRaw(delta);
+        Glean.pinebuild.suggestedSnapshotsCount.add(
+          extraData.numberOfSnapshots
+        );
+        break;
+      }
+      case "Companion:CalendarPainted": {
+        if (gTimestampsRecorded.has(message.name)) {
+          break;
+        }
+        gTimestampsRecorded.add(message.name);
+
+        let { time, extraData } = message.data;
+        let processStart = Services.startup.getStartupInfo().process.getTime();
+        let delta = time - processStart;
+        Glean.pinebuild.calendarPainted.setRaw(delta);
+        Glean.pinebuild.calendarEventCount.add(extraData.numberOfEvents);
+        break;
       }
     }
     return null;

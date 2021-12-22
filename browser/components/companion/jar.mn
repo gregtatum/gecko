@@ -61,6 +61,7 @@ browser.jar:
     content/browser/companion/jitsi.png (content/jitsi.png)
     content/browser/companion/meet.png (content/meet.png)
     content/browser/companion/teams.png (content/teams.png)
+    content/browser/companion/telemetry-helpers.js (content/telemetry-helpers.js)
     content/browser/companion/time-since.js (content/time-since.js)
     content/browser/companion/viewLoading.svg (content/viewLoading.svg)
     content/browser/companion/vpn.svg (content/vpn.svg)

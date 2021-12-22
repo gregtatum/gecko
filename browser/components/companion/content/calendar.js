@@ -10,6 +10,7 @@ import {
   workshopAPI,
   workshopEnabled,
 } from "./workshopAPI.js";
+import { noteTelemetryTimestamp } from "./telemetry-helpers.js";
 
 var { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
@@ -220,6 +221,9 @@ export class CalendarEventList extends MozLitElement {
     if (this.events.length) {
       this.dispatchOnUpdateComplete(new CustomEvent("calendar-events-updated"));
     }
+    noteTelemetryTimestamp("Companion:CalendarPainted", {
+      numberOfEvents: this.events.length,
+    });
   }
 
   unloadListView() {
@@ -262,6 +266,9 @@ export class CalendarEventList extends MozLitElement {
         let plainEvents = this.getRelevantEvents(e.detail.events);
         let eventsAndBreaks = this.getEventsAndBreaks(plainEvents);
         this.events = eventsAndBreaks;
+        noteTelemetryTimestamp("Companion:CalendarPainted", {
+          numberOfEvents: this.events.length,
+        });
       }
     } else if (e.type === "refresh-view") {
       this.refreshView();
