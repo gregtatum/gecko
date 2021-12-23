@@ -173,7 +173,7 @@ class AboutLoginsParent extends JSWindowActorParent {
         break;
       }
       case "AboutLogins:CopyLoginDetail": {
-        ownerGlobal.ConfirmationHint.show(null, "copyURL", {
+        this.#ownerGlobal.ConfirmationHint.show(null, "copyURL", {
           rect: message.data.rect,
           position: "after_end",
         });
