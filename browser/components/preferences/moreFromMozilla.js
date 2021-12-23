@@ -35,11 +35,12 @@ var gMoreFromMozillaPane = {
     return this._option;
   },
 
-  getURL(url, option) {
+  getURL(url, option, hasEmail) {
     const URL_PARAMS = {
       utm_source: "about-prefs",
       utm_campaign: "morefrommozilla",
       utm_medium: "firefox-desktop",
+      entrypoint_experiment: "morefrommozilla-experiment-1846",
     };
     // UTM content param used in analytics to record
     // UI template used to open URL
@@ -53,8 +54,14 @@ var gMoreFromMozillaPane = {
     for (let [key, val] of Object.entries(URL_PARAMS)) {
       pageUrl.searchParams.append(key, val);
     }
+    // Append '-email' to utm_content when URL is opened
+    // from send email link in QRCode box
     if (option) {
-      pageUrl.searchParams.set("utm_content", utm_content[option]);
+      pageUrl.searchParams.set(
+        "utm_content",
+        `${utm_content[option]}${hasEmail ? "-email" : ""}`
+      );
+      pageUrl.searchParams.set("entrypoint_variation", `treatment-${option}`);
     }
     return pageUrl.toString();
   },
@@ -86,7 +93,10 @@ var gMoreFromMozillaPane = {
           },
         },
       },
-      {
+    ];
+
+    if (BrowserUtils.shouldShowVPNPromo()) {
+      const vpn = {
         id: "mozilla-vpn",
         title_string_id: "mozilla-vpn-title",
         description_string_id: "mozilla-vpn-description",
@@ -95,18 +105,22 @@ var gMoreFromMozillaPane = {
           label_string_id: "button-mozilla-vpn",
           actionURL: "https://www.mozilla.org/products/vpn/",
         },
+      };
+      products.push(vpn);
+    }
+
+    const rally = {
+      id: "mozilla-rally",
+      title_string_id: "mozilla-rally-title",
+      description_string_id: "mozilla-rally-description",
+      button: {
+        id: "mozillaRally",
+        label_string_id: "button-mozilla-rally",
+        actionURL: "https://rally.mozilla.org/",
       },
-      {
-        id: "mozilla-rally",
-        title_string_id: "mozilla-rally-title",
-        description_string_id: "mozilla-rally-description",
-        button: {
-          id: "mozillaRally",
-          label_string_id: "button-mozilla-rally",
-          actionURL: "https://rally.mozilla.org/",
-        },
-      },
-    ];
+    };
+    products.push(rally);
+
     this._productsContainer = document.getElementById(
       "moreFromMozillaCategory"
     );
@@ -203,7 +217,7 @@ var gMoreFromMozillaPane = {
         );
         qrc_btn.setAttribute(
           "href",
-          this.getURL(product.qrcode.button.actionURL, this.option)
+          this.getURL(product.qrcode.button.actionURL, this.option, true)
         );
       }
 
@@ -219,6 +233,9 @@ var gMoreFromMozillaPane = {
     this.initialized = true;
     document
       .getElementById("moreFromMozillaCategory")
+      .removeAttribute("data-hidden-from-search");
+    document
+      .getElementById("moreFromMozillaCategory-header")
       .removeAttribute("data-hidden-from-search");
 
     this.renderProducts();

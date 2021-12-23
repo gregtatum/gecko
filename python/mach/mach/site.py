@@ -24,10 +24,15 @@ from typing import Optional, Callable
 
 from mach.requirements import (
     MachEnvRequirements,
+    UnexpectedFlexibleRequirementException,
 )
 
 PTH_FILENAME = "mach.pth"
 METADATA_FILENAME = "moz_virtualenv_metadata.json"
+# The following virtualenvs *may* be used in a context where they aren't allowed to
+# install pip packages over the network. In such a case, they must access unvendored
+# python packages via the system environment.
+PIP_NETWORK_INSTALL_RESTRICTED_VIRTUALENVS = ("mach", "build")
 
 
 class VirtualenvOutOfDateException(Exception):
@@ -228,7 +233,7 @@ class MachSiteManager:
         """
         Args:
             topsrcdir: The path to the Firefox repo
-            get_state_dir: A function that resolve the path to the checkout-scoped
+            get_state_dir: A function that resolves the path to the checkout-scoped
                 state_dir, generally ~/.mozbuild/srcdirs/<checkout-based-dir>/
         """
 
@@ -440,15 +445,15 @@ class CommandSiteManager:
     def from_environment(
         cls,
         topsrcdir: str,
-        checkout_scoped_state_dir: Optional[str],
+        get_state_dir: Callable[[], Optional[str]],
         site_name: str,
         command_virtualenvs_dir: str,
     ):
         """
         Args:
             topsrcdir: The path to the Firefox repo
-            checkout_scoped_state_dir: The path to the checkout-scoped state_dir,
-                generally ~/.mozbuild/srcdirs/<checkout-based-dir>/
+            get_state_dir: A function that resolves the path to the checkout-scoped
+                state_dir, generally ~/.mozbuild/srcdirs/<checkout-based-dir>/
             site_name: The name of this site, such as "build"
             command_virtualenvs_dir: The location under which this site's virtualenv
             should be created
@@ -459,7 +464,10 @@ class CommandSiteManager:
         ), "A Mach-managed site must be active before doing work with command sites"
 
         requirements = resolve_requirements(topsrcdir, site_name)
-        if not _system_python_env_variable_present() or site_name != "build":
+        if (
+            not _system_python_env_variable_present()
+            or site_name not in PIP_NETWORK_INSTALL_RESTRICTED_VIRTUALENVS
+        ):
             source = SitePackagesSource.VENV
         elif not active_metadata.external_python.has_pip():
             if requirements.pypi_requirements:
@@ -478,6 +486,12 @@ class CommandSiteManager:
                 )
                 else SitePackagesSource.NONE
             )
+
+        checkout_scoped_state_dir = (
+            get_state_dir()
+            if active_metadata.mach_site_packages_source == SitePackagesSource.VENV
+            else None
+        )
 
         return cls(
             topsrcdir,
@@ -631,13 +645,17 @@ class CommandSiteManager:
         return lines
 
     def _up_to_date(self):
-        if self._site_packages_source == SitePackagesSource.SYSTEM:
-            _assert_pip_check(self._topsrcdir, self._pthfile_lines(), self._site_name)
+        pthfile_lines = self._pthfile_lines()
+        if (
+            self._site_packages_source == SitePackagesSource.SYSTEM
+            or self._mach_site_packages_source == SitePackagesSource.SYSTEM
+        ):
+            _assert_pip_check(self._topsrcdir, pthfile_lines, self._site_name)
 
         return _is_venv_up_to_date(
             self._topsrcdir,
             self._virtualenv,
-            self._pthfile_lines(),
+            pthfile_lines,
             self._requirements,
             self._metadata,
         )
@@ -837,12 +855,20 @@ def resolve_requirements(topsrcdir, virtualenv_name):
     is_thunderbird = os.path.exists(thunderbird_dir) and bool(
         os.listdir(thunderbird_dir)
     )
-    return MachEnvRequirements.from_requirements_definition(
-        topsrcdir,
-        is_thunderbird,
-        virtualenv_name in ("mach", "build"),
-        manifest_path,
-    )
+    try:
+        return MachEnvRequirements.from_requirements_definition(
+            topsrcdir,
+            is_thunderbird,
+            virtualenv_name not in PIP_NETWORK_INSTALL_RESTRICTED_VIRTUALENVS,
+            manifest_path,
+        )
+    except UnexpectedFlexibleRequirementException as e:
+        raise Exception(
+            f'The "{virtualenv_name}" virtualenv does not have all pypi packages pinned '
+            f'in the format "package==version" (found "{e.raw_requirement}").\n'
+            f"Only the {PIP_NETWORK_INSTALL_RESTRICTED_VIRTUALENVS} virtualenvs are "
+            "allowed to have unpinned packages."
+        )
 
 
 def _virtualenv_py_path(topsrcdir):

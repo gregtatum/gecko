@@ -171,12 +171,23 @@ imply_option("--enable-replace-malloc", dmd, when=compile_environment)
 
 # ALSA cubeb backend
 # ==============================================================
-system_lib_option("--enable-alsa", env="MOZ_ALSA", help="Enable ALSA audio backend.")
+@depends(target)
+def alsa_default_check(target):
+    return target.kernel == "Linux" and target.os != "Android"
 
-alsa = pkg_check_modules("MOZ_ALSA", "alsa", when="--enable-alsa")
 
-set_config("MOZ_ALSA", depends_if(alsa)(lambda _: True))
-set_define("MOZ_ALSA", depends_if(alsa)(lambda _: True))
+option("--enable-alsa", env="MOZ_ALSA", help="Enable ALSA audio backend.")
+
+
+@depends("--enable-alsa", alsa_default_check)
+def enable_alsa_or_alsa_default_check(alsa_enabled, alsa_default_check):
+    return alsa_enabled or alsa_default_check
+
+
+pkg_check_modules("MOZ_ALSA", "alsa", when=enable_alsa_or_alsa_default_check)
+
+set_config("MOZ_ALSA", True, when="--enable-alsa")
+set_define("MOZ_ALSA", True, when="--enable-alsa")
 
 # JACK cubeb backend
 # ==============================================================
@@ -471,7 +482,6 @@ def applemedia(toolkit):
 
 set_config("MOZ_APPLEMEDIA", applemedia)
 set_define("MOZ_APPLEMEDIA", applemedia)
-add_old_configure_assignment("MOZ_APPLEMEDIA", applemedia)
 
 # Windows Media Foundation support
 # ==============================================================
@@ -1408,7 +1418,6 @@ def accessibility(value, check_for_midl, midl, c_compiler):
 
 set_config("ACCESSIBILITY", accessibility)
 set_define("ACCESSIBILITY", accessibility)
-add_old_configure_assignment("ACCESSIBILITY", accessibility)
 
 
 # Addon signing
@@ -2670,6 +2679,24 @@ with only_when(compile_environment):
         )
 
 
+# Gtk+
+# ==============================================================
+with only_when(toolkit_gtk):
+    pkg_check_modules(
+        "MOZ_GTK3",
+        "gtk+-3.0 >= 3.14.0 gtk+-unix-print-3.0 glib-2.0 gobject-2.0 gio-unix-2.0",
+    )
+
+    set_define("GDK_VERSION_MIN_REQUIRED", "GDK_VERSION_3_14")
+    set_define("GDK_VERSION_MAX_ALLOWED", "GDK_VERSION_3_14")
+
+    pkg_check_modules("GLIB", "glib-2.0 >= 2.42 gobject-2.0")
+
+    set_define("GLIB_VERSION_MIN_REQUIRED", "GLIB_VERSION_2_42")
+    set_define("GLIB_VERSION_MAX_ALLOWED", "GLIB_VERSION_2_42")
+
+    set_define("MOZ_ACCESSIBILITY_ATK", True, when=accessibility)
+
 # DBus
 # ==============================================================
 with only_when(toolkit_gtk):
@@ -2734,3 +2761,157 @@ set_define(
     ),
 )
 set_define("MOZ_LAYERS_HAVE_LOG", True, when="--enable-dump-painting")
+
+
+# libproxy support
+# ==============================================================
+with only_when(toolkit_gtk):
+    system_lib_option("--enable-libproxy", help="Enable libproxy support")
+
+    with only_when("--enable-libproxy"):
+        pkg_check_modules("MOZ_LIBPROXY", "libproxy-1.0")
+
+        set_config("MOZ_ENABLE_LIBPROXY", True)
+        set_define("MOZ_ENABLE_LIBPROXY", True)
+
+
+# Enable runtime logging
+# ==============================================================
+set_define("MOZ_LOGGING", True)
+set_define("FORCE_PR_LOG", True)
+
+# This will enable logging of addref, release, ctor, dtor.
+# ==============================================================
+option(
+    "--enable-logrefcnt",
+    default=moz_debug,
+    help="{Enable|Disable} logging of refcounts",
+)
+
+set_define("NS_BUILD_REFCNT_LOGGING", True, when="--enable-logrefcnt")
+
+
+# NegotiateAuth
+# ==============================================================
+option("--disable-negotiateauth", help="Disable GSS-API negotiation")
+
+set_config("MOZ_AUTH_EXTENSION", True, when="--enable-negotiateauth")
+set_define("MOZ_AUTH_EXTENSION", True, when="--enable-negotiateauth")
+
+
+# Parental control
+# ==============================================================
+option("--disable-parental-controls", help="Do not build parental controls")
+
+set_config(
+    "MOZ_DISABLE_PARENTAL_CONTROLS",
+    True,
+    when=depends("--enable-parental-controls")(lambda x: not x),
+)
+set_define(
+    "MOZ_DISABLE_PARENTAL_CONTROLS",
+    True,
+    when=depends("--enable-parental-controls")(lambda x: not x),
+)
+
+
+# Sandboxing support
+# ==============================================================
+@depends(target, tsan, asan)
+def sandbox_default(target, tsan, asan):
+    # Only enable the sandbox by default on Linux, OpenBSD, macOS, and Windows
+    if target.kernel == "Linux" and target.os == "GNU":
+        # Bug 1182565: TSan conflicts with sandboxing on Linux.
+        # Bug 1287971: LSan also conflicts with sandboxing on Linux.
+        if tsan or asan:
+            return False
+        # Linux sandbox is only available on x86{,_64} and arm{,64}.
+        return target.cpu in ("x86", "x86_64", "arm", "aarch64")
+    return target.kernel in ("WINNT", "Darwin", "OpenBSD")
+
+
+option(
+    "--enable-sandbox",
+    default=sandbox_default,
+    help="{Enable|Disable} sandboxing support",
+)
+
+set_config("MOZ_SANDBOX", True, when="--enable-sandbox")
+set_define("MOZ_SANDBOX", True, when="--enable-sandbox")
+
+
+# Searching of system directories for extensions.
+# ==============================================================
+# Note: this switch is meant to be used for test builds whose behavior should
+# not depend on what happens to be installed on the local machine.
+option(
+    "--disable-system-extension-dirs",
+    help="Disable searching system- and account-global directories for extensions"
+    " of any kind; use only profile-specific extension directories",
+)
+
+set_define("ENABLE_SYSTEM_EXTENSION_DIRS", True, when="--enable-system-extension-dirs")
+
+
+# Pixman
+# ==============================================================
+with only_when(compile_environment):
+    system_lib_option(
+        "--enable-system-pixman", help="Use system pixman (located with pkgconfig)"
+    )
+
+    @depends("--enable-system-pixman")
+    def in_tree_pixman(pixman):
+        return not pixman
+
+    set_config("MOZ_TREE_PIXMAN", True, when=in_tree_pixman)
+    set_define("MOZ_TREE_PIXMAN", True, when=in_tree_pixman)
+
+    pkg_check_modules("MOZ_PIXMAN", "pixman-1 >= 0.36.0", when="--enable-system-pixman")
+    # Set MOZ_PIXMAN_CFLAGS to an explicit empty value when --enable-system-pixman is *not* used,
+    # for layout/style/extra-bindgen-flags
+    set_config("MOZ_PIXMAN_CFLAGS", [], when=in_tree_pixman)
+
+
+# Universalchardet
+# ==============================================================
+with only_when(compile_environment):
+    option("--disable-universalchardet", help="Disable universal encoding detection")
+
+    set_config("MOZ_UNIVERSALCHARDET", True, when="--enable-universalchardet")
+
+
+# Disable zipwriter
+# ==============================================================
+with only_when(compile_environment):
+    option("--disable-zipwriter", help="Disable zipwriter component")
+
+    set_config("MOZ_ZIPWRITER", True, when="--enable-zipwriter")
+
+
+# Location of the mozilla user directory
+# ==============================================================
+with only_when(compile_environment):
+
+    @depends(target)
+    def default_user_appdir(target):
+        if target.kernel in ("WINNT", "Darwin"):
+            return "Mozilla"
+        return ".mozilla"
+
+    option(
+        "--with-user-appdir",
+        nargs=1,
+        default=default_user_appdir,
+        help="Set user-specific appdir",
+    )
+
+    @depends("--with-user-appdir")
+    def user_appdir(appdir):
+        if not appdir:
+            die("--without-user-appdir is not a valid option.")
+        if "/" in appdir[0]:
+            die("--with-user-appdir must be a single relative path.")
+        return '"{}"'.format(appdir[0])
+
+    set_define("MOZ_USER_DIR", user_appdir)

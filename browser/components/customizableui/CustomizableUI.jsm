@@ -1008,7 +1008,7 @@ var CustomizableUIInternal = {
         gDirtyAreaCache.add(area);
       }
 
-      if (areaProperties.has("overflowable")) {
+      if (areaProperties.get("overflowable")) {
         aToolbar.overflowable = new OverflowableToolbar(aToolbar);
       }
 

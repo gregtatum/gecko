@@ -375,44 +375,6 @@ static void UpdateLastInputEventTime(void* aGdkEvent) {
   sLastUserInputTime = timestamp;
 }
 
-void GetWindowOrigin(GdkWindow* aWindow, int* aX, int* aY) {
-  *aX = 0;
-  *aY = 0;
-
-  if (aWindow) {
-    gdk_window_get_origin(aWindow, aX, aY);
-  }
-  // GetWindowOrigin / gdk_window_get_origin is very fast on Wayland as the
-  // window position is cached by Gtk.
-
-  // TODO(bug 1655924): gdk_window_get_origin is can block waiting for the X
-  // server for a long time, we would like to use the implementation below
-  // instead. However, removing the synchronous x server queries causes a race
-  // condition to surface, causing issues such as bug 1652743 and bug 1653711.
-#if 0
-  *aX = 0;
-  *aY = 0;
-  if (!aWindow) {
-    return;
-  }
-
-  GdkWindow* current = aWindow;
-  while (GdkWindow* parent = gdk_window_get_parent(current)) {
-    if (parent == current) {
-      break;
-    }
-
-    int x = 0;
-    int y = 0;
-    gdk_window_get_position(current, &x, &y);
-    *aX += x;
-    *aY += y;
-
-    current = parent;
-  }
-#endif
-}
-
 nsWindow::nsWindow()
     : mIsDestroyed(false),
       mNeedsDispatchResized(false),
@@ -482,13 +444,6 @@ nsWindow::nsWindow()
 #ifdef ACCESSIBILITY
       ,
       mRootAccessible(nullptr)
-#endif
-#ifdef MOZ_X11
-      ,
-      mXWindow(X11None),
-      mXVisual(nullptr),
-      mXDepth(0),
-      mIsShaped(false)
 #endif
 #ifdef MOZ_WAYLAND
       ,
@@ -1555,7 +1510,7 @@ void nsWindow::WaylandPopupHierarchyCalculatePositions() {
       popup->mRelativePopupPosition = popup->mPopupPosition;
     } else {
       int parentX, parentY;
-      GetParentPosition(&parentX, &parentY);
+      WaylandGetParentPosition(&parentX, &parentY);
 
       LOG("  popup [%p] uses transformed coordinates\n", popup);
       LOG("    parent position [%d, %d]\n", parentX, parentY);
@@ -1617,14 +1572,24 @@ bool nsWindow::IsWidgetOverflowWindow() {
   return false;
 }
 
-void nsWindow::GetParentPosition(int* aX, int* aY) {
+void nsWindow::WaylandGetParentPosition(int* aX, int* aY) {
+  // Don't call WaylandGetParentPosition on X11 as it causes X11 roundtrips.
+  // gdk_window_get_origin is very fast on Wayland as the
+  // window position is cached by Gtk.
+  MOZ_DIAGNOSTIC_ASSERT(GdkIsWaylandDisplay());
+
   *aX = *aY = 0;
   GtkWindow* parentGtkWindow = gtk_window_get_transient_for(GTK_WINDOW(mShell));
   if (!parentGtkWindow || !GTK_IS_WIDGET(parentGtkWindow)) {
     NS_WARNING("Popup has no parent!");
     return;
   }
-  GetWindowOrigin(gtk_widget_get_window(GTK_WIDGET(parentGtkWindow)), aX, aY);
+  GdkWindow* window = gtk_widget_get_window(GTK_WIDGET(parentGtkWindow));
+  if (!window) {
+    NS_WARNING("Popup parrent is not mapped!");
+    return;
+  }
+  gdk_window_get_origin(window, aX, aY);
 }
 
 #ifdef MOZ_LOGGING
@@ -1947,7 +1912,7 @@ void nsWindow::NativeMoveResizeWaylandPopupCallback(
 
   LayoutDeviceIntRect newBounds(0, 0, 0, 0);
   int parentX, parentY;
-  GetParentPosition(&parentX, &parentY);
+  WaylandGetParentPosition(&parentX, &parentY);
   newBounds.x = GdkCoordToDevicePixels(aFinalSize->x + parentX);
   newBounds.y = GdkCoordToDevicePixels(aFinalSize->y + parentY);
 
@@ -2413,7 +2378,7 @@ void nsWindow::WaylandPopupMove() {
                        1);
   } else if (mWaylandPopupPrev->mWaylandToplevel != nullptr) {
     int parentX, parentY;
-    GetParentPosition(&parentX, &parentY);
+    WaylandGetParentPosition(&parentX, &parentY);
     LOG("  subtract parent position [%d, %d]\n", parentX, parentY);
     anchorRect.x -= parentX;
     anchorRect.y -= parentY;
@@ -2870,6 +2835,7 @@ void nsWindow::RequestFocusWaylandWindow(RefPtr<nsWindow> aWindow) {
 
   if (!gFocusWindow || gFocusWindow->IsDestroyed()) {
     LOGW("  missing gFocusWindow, quit.");
+    return;
   }
 
   RefPtr<nsWaylandDisplay> display = WaylandDisplayGet();
@@ -3380,10 +3346,40 @@ void nsWindow::SetIcon(const nsAString& aIconSpec) {
   }
 }
 
+/* TODO(bug 1655924): gdk_window_get_origin is can block waiting for the X
+   server for a long time, we would like to use the implementation below
+   instead. However, removing the synchronous x server queries causes a race
+   condition to surface, causing issues such as bug 1652743 and bug 1653711.
+
+
+   This code can be used instead of gdk_window_get_origin() but it cuases
+   such issues:
+
+    *aX = 0;
+    *aY = 0;
+    if (!aWindow) {
+      return;
+    }
+
+    GdkWindow* current = aWindow;
+    while (GdkWindow* parent = gdk_window_get_parent(current)) {
+      if (parent == current) {
+        break;
+      }
+
+      int x = 0;
+      int y = 0;
+      gdk_window_get_position(current, &x, &y);
+      *aX += x;
+      *aY += y;
+
+      current = parent;
+    }
+*/
 LayoutDeviceIntPoint nsWindow::WidgetToScreenOffset() {
   nsIntPoint origin(0, 0);
   if (mGdkWindow) {
-    GetWindowOrigin(mGdkWindow, &origin.x, &origin.y);
+    gdk_window_get_origin(mGdkWindow, &origin.x, &origin.y);
   }
   return GdkPointToDevicePixels({origin.x, origin.y});
 }
@@ -3503,7 +3499,11 @@ static bool ExtractExposeRegion(LayoutDeviceIntRegion& aRegion, cairo_t* cr) {
 
 #ifdef MOZ_WAYLAND
 void nsWindow::CreateCompositorVsyncDispatcher() {
+  LOG_VSYNC("nsWindow::CreateCompositorVsyncDispatcher()");
   if (!mWaylandVsyncSource) {
+    LOG_VSYNC(
+        "  mWaylandVsyncSource is missing, create "
+        "nsBaseWidget::CompositorVsyncDispatcher()");
     nsBaseWidget::CreateCompositorVsyncDispatcher();
     return;
   }
@@ -3515,6 +3515,7 @@ void nsWindow::CreateCompositorVsyncDispatcher() {
     }
     MutexAutoLock lock(*mCompositorVsyncDispatcherLock);
     if (!mCompositorVsyncDispatcher) {
+      LOG_VSYNC("  create CompositorVsyncDispatcher()");
       mCompositorVsyncDispatcher =
           new CompositorVsyncDispatcher(mWaylandVsyncSource);
     }
@@ -5223,7 +5224,8 @@ void nsWindow::EnableRenderingToWindow() {
   LOG("nsWindow::EnableRenderingToWindow()");
 
   if (mCompositorWidgetDelegate) {
-    mCompositorWidgetDelegate->EnableRendering(mXWindow, mIsShaped);
+    mCompositorWidgetDelegate->EnableRendering(GetX11Window(),
+                                               GetShapedState());
   }
 
   if (GdkIsWaylandDisplay()) {
@@ -5252,23 +5254,35 @@ void nsWindow::DisableRenderingToWindow() {
   }
 }
 
+Window nsWindow::GetX11Window() {
+  return GdkIsX11Display() ? gdk_x11_window_get_xid(mGdkWindow) : X11None;
+}
+
+void nsWindow::EnsureGdkWindow() {
+  if (!mGdkWindow) {
+    mGdkWindow = gtk_widget_get_window(mDrawToContainer ? GTK_WIDGET(mContainer)
+                                                        : mShell);
+    g_object_set_data(G_OBJECT(mGdkWindow), "nsWindow", this);
+  }
+  MOZ_DIAGNOSTIC_ASSERT(mGdkWindow, "We're missing GdkWindow!");
+}
+
+bool nsWindow::GetShapedState() {
+  return mIsTransparent && !mHasAlphaVisual && !mTransparencyBitmapForTitlebar;
+}
+
 void nsWindow::ConfigureGdkWindow() {
   LOG("nsWindow::ConfigureGdkWindow() [%p]", this);
 
-  mGdkWindow =
-      gtk_widget_get_window(mDrawToContainer ? GTK_WIDGET(mContainer) : mShell);
-  g_object_set_data(G_OBJECT(mGdkWindow), "nsWindow", this);
+  EnsureGdkWindow();
 
 #ifdef MOZ_X11
   if (GdkIsX11Display()) {
-    mXWindow = gdk_x11_window_get_xid(mGdkWindow);
-
     GdkVisual* gdkVisual = gdk_window_get_visual(mGdkWindow);
-    mXVisual = gdk_x11_visual_get_xvisual(gdkVisual);
-    mXDepth = gdk_visual_get_depth(gdkVisual);
-    mIsShaped =
-        mIsTransparent && !mHasAlphaVisual && !mTransparencyBitmapForTitlebar;
-    mSurfaceProvider.Initialize(mXWindow, mXVisual, mXDepth, mIsShaped);
+    Visual* visual = gdk_x11_visual_get_xvisual(gdkVisual);
+    int depth = gdk_visual_get_depth(gdkVisual);
+    mSurfaceProvider.Initialize(GetX11Window(), visual, depth,
+                                GetShapedState());
 
     // Set window manager hint to keep fullscreen windows composited.
     //
@@ -5345,15 +5359,6 @@ void nsWindow::ReleaseGdkWindow() {
   }
 
   mSurfaceProvider.CleanupResources();
-
-#ifdef MOZ_X11
-  if (GdkIsX11Display()) {
-    mXWindow = X11None;
-    mXVisual = nullptr;
-    mXDepth = 0;
-    mIsShaped = false;
-  }
-#endif
 }
 
 nsresult nsWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
@@ -5835,6 +5840,18 @@ nsresult nsWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
     }
   }
 #endif
+#ifdef MOZ_WAYLAND
+  // Initialize the window specific VsyncSource early in order to avoid races
+  // with BrowserParent::UpdateVsyncParentVsyncSource().
+  // Only use for toplevel windows for now, see bug 1619246.
+  if (GdkIsWaylandDisplay() &&
+      StaticPrefs::widget_wayland_vsync_enabled_AtStartup() &&
+      mWindowType == eWindowType_toplevel) {
+    mWaylandVsyncSource = new WaylandVsyncSource();
+    LOG_VSYNC("  created WaylandVsyncSource)");
+    MOZ_RELEASE_ASSERT(mWaylandVsyncSource);
+  }
+#endif
 
   // We create input contexts for all containers, except for
   // toplevel popup windows
@@ -5865,8 +5882,8 @@ nsresult nsWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
   g_signal_connect(eventWidget, "touch-event", G_CALLBACK(touch_event_cb),
                    nullptr);
 
-  LOG("nsWindow type %d %s\n", mWindowType, mIsPIPWindow ? "PIP window" : "");
-  LOG("\tmShell %p mContainer %p mGdkWindow %p XID 0x%lx\n", mShell, mContainer,
+  LOG("  nsWindow type %d %s\n", mWindowType, mIsPIPWindow ? "PIP window" : "");
+  LOG("  mShell %p mContainer %p mGdkWindow %p XID 0x%lx\n", mShell, mContainer,
       mGdkWindow,
       (GdkIsX11Display() && mGdkWindow) ? gdk_x11_window_get_xid(mGdkWindow)
                                         : 0);
@@ -6142,18 +6159,11 @@ void nsWindow::ResumeCompositorFromCompositorThread() {
 
 void nsWindow::WaylandStartVsync() {
 #ifdef MOZ_WAYLAND
-  // only use for toplevel windows for now - see bug 1619246
-  if (!GdkIsWaylandDisplay() ||
-      !StaticPrefs::widget_wayland_vsync_enabled_AtStartup() ||
-      mWindowType != eWindowType_toplevel) {
+  if (!mWaylandVsyncSource) {
     return;
   }
 
-  LOG("nsWindow::WaylandStartVsync()");
-
-  if (!mWaylandVsyncSource) {
-    mWaylandVsyncSource = new WaylandVsyncSource();
-  }
+  LOG_VSYNC("nsWindow::WaylandStartVsync");
 
   WaylandVsyncSource::WaylandDisplay& display =
       static_cast<WaylandVsyncSource::WaylandDisplay&>(
@@ -6163,8 +6173,10 @@ void nsWindow::WaylandStartVsync() {
     if (RefPtr<layers::NativeLayerRoot> nativeLayerRoot =
             mCompositorWidgetDelegate->AsGtkCompositorWidget()
                 ->GetNativeLayerRoot()) {
+      LOG_VSYNC("  use source NativeLayerRootWayland");
       display.MaybeUpdateSource(nativeLayerRoot->AsNativeLayerRootWayland());
     } else {
+      LOG_VSYNC("  use source mContainer");
       display.MaybeUpdateSource(mContainer);
     }
   }
@@ -6174,16 +6186,19 @@ void nsWindow::WaylandStartVsync() {
 
 void nsWindow::WaylandStopVsync() {
 #ifdef MOZ_WAYLAND
-  if (mWaylandVsyncSource) {
-    LOG("nsWindow::WaylandStopVsync()");
-    // The widget is going to be hidden, so clear the surface of our
-    // vsync source.
-    WaylandVsyncSource::WaylandDisplay& display =
-        static_cast<WaylandVsyncSource::WaylandDisplay&>(
-            mWaylandVsyncSource->GetGlobalDisplay());
-    display.DisableMonitor();
-    display.MaybeUpdateSource(nullptr);
+  if (!mWaylandVsyncSource) {
+    return;
   }
+
+  LOG_VSYNC("nsWindow::WaylandStopVsync");
+
+  // The widget is going to be hidden, so clear the surface of our
+  // vsync source.
+  WaylandVsyncSource::WaylandDisplay& display =
+      static_cast<WaylandVsyncSource::WaylandDisplay&>(
+          mWaylandVsyncSource->GetGlobalDisplay());
+  display.DisableMonitor();
+  display.MaybeUpdateSource(nullptr);
 #endif
 }
 
@@ -8960,12 +8975,12 @@ nsWindow::GtkWindowDecoration nsWindow::GetSystemGtkWindowDecoration() {
         strstr(currentDesktop, "LXDE") ||
         strstr(currentDesktop, "openbox") ||
         strstr(currentDesktop, "MATE") ||
+        strstr(currentDesktop, "X-Cinnamon") ||
         strstr(currentDesktop, "Pantheon") ||
         strstr(currentDesktop, "Deepin")) {
       return GTK_DECORATION_CLIENT;
     }
     if (strstr(currentDesktop, "GNOME") ||
-        strstr(currentDesktop, "X-Cinnamon") ||
         strstr(currentDesktop, "LXQt") ||
         strstr(currentDesktop, "Unity")) {
       return GTK_DECORATION_SYSTEM;
@@ -9011,17 +9026,14 @@ void nsWindow::GetCompositorWidgetInitData(
   nsCString displayName;
 
   LOG("nsWindow::GetCompositorWidgetInitData");
+  EnsureGdkWindow();
+
+  *aInitData = mozilla::widget::GtkCompositorWidgetInitData(
+      GetX11Window(), displayName, GetShapedState(), GdkIsX11Display(),
+      GetClientSize());
+
 #ifdef MOZ_X11
-  if (GdkIsX11Display() && !mGdkWindow) {
-    LOG("  create mGdkWindow/mXWindow\n");
-    mGdkWindow = gtk_widget_get_window(mDrawToContainer ? GTK_WIDGET(mContainer)
-                                                        : mShell);
-    if (mGdkWindow) {
-      g_object_set_data(G_OBJECT(mGdkWindow), "nsWindow", this);
-      mXWindow = gdk_x11_window_get_xid(mGdkWindow);
-    }
-  }
-  if (GdkIsX11Display() && mXWindow != X11None) {
+  if (GdkIsX11Display()) {
     // Make sure the window XID is propagated to X server, we can fail otherwise
     // in GPU process (Bug 1401634).
     Display* display = DefaultXDisplay();
@@ -9029,9 +9041,6 @@ void nsWindow::GetCompositorWidgetInitData(
     displayName = nsCString(XDisplayString(display));
   }
 #endif
-  *aInitData = mozilla::widget::GtkCompositorWidgetInitData(
-      (mXWindow != X11None) ? mXWindow : (uintptr_t) nullptr, displayName,
-      mIsShaped, GdkIsX11Display(), GetClientSize());
 }
 
 #ifdef MOZ_X11

@@ -50,6 +50,7 @@
 extern mozilla::LazyLogModule gWidgetLog;
 extern mozilla::LazyLogModule gWidgetDragLog;
 extern mozilla::LazyLogModule gWidgetPopupLog;
+extern mozilla::LazyLogModule gWidgetVsync;
 
 #  define LOG(str, ...)                               \
     MOZ_LOG(IsPopup() ? gWidgetPopupLog : gWidgetLog, \
@@ -60,6 +61,8 @@ extern mozilla::LazyLogModule gWidgetPopupLog;
     MOZ_LOG(gWidgetDragLog, mozilla::LogLevel::Debug, (__VA_ARGS__))
 #  define LOG_POPUP(...) \
     MOZ_LOG(gWidgetPopupLog, mozilla::LogLevel::Debug, (__VA_ARGS__))
+#  define LOG_VSYNC(...) \
+    MOZ_LOG(gWidgetVsync, mozilla::LogLevel::Debug, (__VA_ARGS__))
 #  define LOG_ENABLED()                                         \
     (MOZ_LOG_TEST(gWidgetPopupLog, mozilla::LogLevel::Debug) || \
      MOZ_LOG_TEST(gWidgetLog, mozilla::LogLevel::Debug))
@@ -502,6 +505,9 @@ class nsWindow final : public nsBaseWidget {
   void DestroyChildWindows();
   GtkWidget* GetToplevelWidget();
   nsWindow* GetContainerWindow();
+  Window GetX11Window();
+  bool GetShapedState();
+  void EnsureGdkWindow();
   void SetUrgencyHint(GtkWidget* top_window, bool state);
   void SetDefaultIcon(void);
   void SetWindowDecoration(nsBorderStyle aStyle);
@@ -649,9 +655,8 @@ class nsWindow final : public nsBaseWidget {
 
   void ApplySizeConstraints(void);
 
-  void GetParentPosition(int* aX, int* aY);
-
   // Wayland Popup section
+  void WaylandGetParentPosition(int* aX, int* aY);
   bool WaylandPopupNeedsTrackInHierarchy();
   bool WaylandPopupIsAnchored();
   bool WaylandPopupIsMenu();
@@ -880,11 +885,6 @@ class nsWindow final : public nsBaseWidget {
                 GTK_WIDGET_COMPOSIDED_ENABLED = 2} WindowComposeRequest;
   void SetCompositorHint(WindowComposeRequest aState);
   bool ConfigureX11GLVisual();
-
-  Window mXWindow;
-  Visual* mXVisual;
-  int mXDepth;
-  bool mIsShaped;
 #endif
 #ifdef MOZ_WAYLAND
   RefPtr<mozilla::gfx::VsyncSource> mWaylandVsyncSource;

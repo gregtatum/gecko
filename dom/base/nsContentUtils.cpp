@@ -3808,6 +3808,24 @@ bool nsContentUtils::IsExactSitePermDeny(nsIPrincipal* aPrincipal,
                       true);
 }
 
+bool nsContentUtils::HasExactSitePerm(nsIPrincipal* aPrincipal,
+                                      const nsACString& aType) {
+  if (!aPrincipal) {
+    return false;
+  }
+
+  nsCOMPtr<nsIPermissionManager> permMgr =
+      components::PermissionManager::Service();
+  NS_ENSURE_TRUE(permMgr, false);
+
+  uint32_t perm;
+  nsresult rv =
+      permMgr->TestExactPermissionFromPrincipal(aPrincipal, aType, &perm);
+  NS_ENSURE_SUCCESS(rv, false);
+
+  return perm != nsIPermissionManager::UNKNOWN_ACTION;
+}
+
 static const char* gEventNames[] = {"event"};
 static const char* gSVGEventNames[] = {"evt"};
 // for b/w compat, the first name to onerror is still 'event', even though it
@@ -10526,7 +10544,8 @@ ScreenIntMargin nsContentUtils::GetWindowSafeAreaInsets(
 /* static */
 nsContentUtils::SubresourceCacheValidationInfo
 nsContentUtils::GetSubresourceCacheValidationInfo(nsIRequest* aRequest,
-                                                  nsIURI* aURI) {
+                                                  nsIURI* aURI,
+                                                  SubresourceKind aKind) {
   SubresourceCacheValidationInfo info;
   if (nsCOMPtr<nsICacheInfoChannel> cache = do_QueryInterface(aRequest)) {
     uint32_t value = 0;
@@ -10555,9 +10574,13 @@ nsContentUtils::GetSubresourceCacheValidationInfo(nsIRequest* aRequest,
     if (!aURI) {
       return false;
     }
-    if (aURI->SchemeIs("data") || aURI->SchemeIs("moz-page-thumb") ||
-        aURI->SchemeIs("moz-extension")) {
+    if (aURI->SchemeIs("data") || aURI->SchemeIs("moz-page-thumb")) {
       return true;
+    }
+    if (aURI->SchemeIs("moz-extension")) {
+      // TODO(bug 1746841): This should be true always, but we force style to be
+      // revalidated until bug 1746841 is fixed.
+      return aKind != SubresourceKind::Style;
     }
     if (dom::IsChromeURI(aURI)) {
       return !StaticPrefs::nglayout_debug_disable_xul_cache();
