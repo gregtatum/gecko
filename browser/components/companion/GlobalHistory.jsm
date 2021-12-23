@@ -928,7 +928,9 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
-   * Clears all the current tabs, and ensures the history is blank.
+   * Clears all the current tabs, and ensures the history is blank. Will create
+   * an initial tab and returns a promise that resolves when that tab completes
+   * loading.
    *
    * @param {object} [options]
    * @param {string} [options.url]
@@ -936,12 +938,36 @@ class GlobalHistory extends EventTarget {
    * @param {boolean} [options.skipPermitUnload]
    *   Set to true if it is ok to skip the before unload handlers when closing
    *   tabs (e.g. tabbrowser.runBeforeUnloadForTabs() has been called).
+   *  @returns {Promise} Resolves when the default tab has finished loading.
    */
   reset({
     url = this.#window.BROWSER_NEW_TAB_URL,
     skipPermitUnload = false,
   } = {}) {
     let newTab = this.#window.gBrowser.addTrustedTab(url);
+    let loadPromise = new Promise(resolve => {
+      let listener = {
+        onStateChange(webProgress, request, stateFlags, status) {
+          let targetState =
+            Ci.nsIWebProgressListener.STATE_IS_NETWORK +
+            Ci.nsIWebProgressListener.STATE_IS_WINDOW +
+            Ci.nsIWebProgressListener.STATE_STOP;
+
+          if (stateFlags == targetState && request.originalURI.spec == url) {
+            newTab.linkedBrowser.removeProgressListener(listener);
+            resolve();
+          }
+        },
+
+        QueryInterface: ChromeUtils.generateQI([
+          Ci.nsIWebProgressListener,
+          Ci.nsISupportsWeakReference,
+        ]),
+      };
+
+      newTab.linkedBrowser.addProgressListener(listener);
+    });
+
     this.#window.gBrowser.selectedTab = newTab;
     this.#window.gBrowser.removeAllTabsBut(newTab, {
       animate: false,
@@ -951,6 +977,7 @@ class GlobalHistory extends EventTarget {
     this.#historyViews.clear();
     this.#currentInternalView = null;
     this.#notifyEvent("RiverRebuilt");
+    return loadPromise;
   }
 
   onSecurityChange(browser, webProgress, request, status) {
