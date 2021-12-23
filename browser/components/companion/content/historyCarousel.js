@@ -140,16 +140,6 @@ const HistoryCarousel = {
   selectedIndex: -1,
 
   /**
-   * GlobalHistory current keeps pinned views at the start of the list
-   * that gets sent down to the carousel. For MR2-1598, we're choosing
-   * to (at least for now) not show pinned views in the carousel, so
-   * we use the lastPinnedIndex to know what to treat as the preview
-   * index minimum. If there are no pinned views, this should be -1,
-   * which is the default value.
-   */
-  lastPinnedIndex: -1,
-
-  /**
    * A convenience getter for the main <ol> element that contains each
    * PreviewElement.
    *
@@ -302,12 +292,6 @@ const HistoryCarousel = {
       previewEl.setAttribute("title", previews[i].title);
       previewEl.setAttribute("url", previews[i].url);
       previewEl.setAttribute("iconURL", previews[i].iconURL);
-
-      if (previews[i].pinned) {
-        previewEl.setAttribute("pinned", "true");
-        this.lastPinnedIndex = i;
-      }
-
       frag.appendChild(previewEl);
       this.intersectionObserver.observe(previewEl);
 
@@ -333,7 +317,6 @@ const HistoryCarousel = {
     currentPreview.setBlob(previews[currentIndex].image);
     currentPreview.scrollIntoView({ behavior: "instant", inline: "center" });
 
-    this.scrubber.setAttribute("min", this.lastPinnedIndex + 1);
     this.scrubber.setAttribute("max", previews.length - 1);
     this.scrubber.value = currentIndex;
   },
@@ -424,10 +407,7 @@ const HistoryCarousel = {
     );
 
     this.scrubber.value = index;
-    this.previousBtn.toggleAttribute(
-      "disabled",
-      index == this.lastPinnedIndex + 1
-    );
+    this.previousBtn.toggleAttribute("disabled", index == 0);
     this.nextBtn.toggleAttribute("disabled", index == this.totalPreviews - 1);
     document.dispatchEvent(
       new CustomEvent("HistoryCarouselIndexUpdated", {
