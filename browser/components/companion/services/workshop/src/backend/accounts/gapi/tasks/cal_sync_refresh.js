@@ -23,6 +23,7 @@ import TaskDefiner from "../../../task_infra/task_definer";
 
 import { syncNormalOverlay } from "../../../task_helpers/sync_overlay_helpers";
 import GapiCalFolderSyncStateHelper from "../cal_folder_sync_state_helper";
+import { GapiBackoffInst } from "../account";
 
 /**
  * Sync a Google API Calendar, which under our scheme corresponds to a single
@@ -114,7 +115,7 @@ export default TaskDefiner.defineAtMostOnceTask([
       // presentation.
       params.maxAttendees = 50;
 
-      const results = await account.client.pagedApiGetCall(
+      const apiCallArguments = [
         endpoint,
         params,
         "items",
@@ -123,8 +124,22 @@ export default TaskDefiner.defineAtMostOnceTask([
             ? {
                 params: { pageToken: result.nextPageToken },
               }
-            : null
-      );
+            : null,
+        GapiBackoffInst,
+      ];
+      let results = await account.client.pagedApiGetCall(...apiCallArguments);
+
+      if (results.error?.code === 410) {
+        // 410: Gone
+        // Sync token is no longer valid, a full sync is required.
+        // https://developers.google.com/calendar/api/guides/errors#410_gone
+        apiCallArguments[1] = {
+          singleEvents: true,
+          timeMin: syncState.timeMinDateStr,
+          timeMax: syncState.timeMaxDateStr,
+        };
+        results = await account.client.pagedApiGetCall(...apiCallArguments);
+      }
 
       let syncInfoClobbers;
       if (results.error) {

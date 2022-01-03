@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-import ApiClient from "../../utils/api_client";
+import { ApiClient } from "../../utils/api_client";
+import { MapiBackoffInst } from "./account";
+
+/**
 
 /**
  * The Phabricator validator validates the server/API key information while
@@ -32,7 +35,7 @@ export default async function validateMapi({
 
   try {
     // ## Get the user's email address so we can identify the account
-    const whoami = await client.apiGetCall(endpoint, {});
+    const whoami = await client.apiGetCall(endpoint, {}, MapiBackoffInst);
 
     // TODO: Figure out:
     // 1. Whether we need the user's display name anymore.  Our original need

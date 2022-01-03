@@ -13,6 +13,7 @@ async function check_single_day_for_account_type({
   initialEventSketches,
   addEventSketches,
   changeEventSketches,
+  errors,
 }) {
   const initialEvents = WorkshopHelper.deriveFullEvents({
     eventSketches: initialEventSketches,
@@ -82,7 +83,7 @@ async function check_single_day_for_account_type({
   fakeServer.defaultCalendar.addEvents(addEvents);
   await calView.refresh();
 
-  const currentEvents = [...initialEvents, ...addEvents];
+  let currentEvents = [...initialEvents, ...addEvents];
 
   WorkshopHelper.eventsEqual(calView.items, currentEvents);
 
@@ -98,6 +99,18 @@ async function check_single_day_for_account_type({
     }
   }
   // and then verify that changes are correct.
+  WorkshopHelper.eventsEqual(calView.items, currentEvents);
+
+  const eventAfterErrors = WorkshopHelper.deriveFullEvents({
+    eventSketches: [errors.pop()],
+  });
+
+  fakeServer.addErrors(errors);
+  fakeServer.defaultCalendar.addEvents(eventAfterErrors);
+
+  await calView.refresh();
+
+  currentEvents = [...currentEvents, ...eventAfterErrors];
   WorkshopHelper.eventsEqual(calView.items, currentEvents);
 }
 
@@ -137,12 +150,28 @@ const CHANGE_EVENTS = [
   },
 ];
 
+const ERRORS = [
+  {
+    code: 429,
+    message: "Rate Limit Exceeded",
+  },
+  {
+    code: 429,
+    message: "Rate Limit Exceeded",
+  },
+  {
+    // The event to add after adding the errors.
+    summary: "An event after some errors",
+  },
+];
+
 add_task(async function test_gapi_calendar_single_day() {
   await check_single_day_for_account_type({
     configurator: GapiConfigurator,
     initialEventSketches: INITIAL_EVENTS,
     addEventSketches: ADD_EVENTS,
     changeEventSketches: CHANGE_EVENTS,
+    errors: ERRORS.slice(),
   });
 });
 
@@ -152,5 +181,6 @@ add_task(async function test_mapi_calendar_single_day() {
     initialEventSketches: INITIAL_EVENTS,
     addEventSketches: ADD_EVENTS,
     changeEventSketches: CHANGE_EVENTS,
+    errors: ERRORS.slice(),
   });
 });

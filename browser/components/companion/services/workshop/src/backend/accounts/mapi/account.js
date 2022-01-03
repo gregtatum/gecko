@@ -14,7 +14,31 @@
  * limitations under the License.
  */
 
-import ApiClient from "../../utils/api_client";
+import { ApiClient, Backoff } from "../../utils/api_client";
+
+class MapiBackoff extends Backoff {
+  isCandidateForBackoff(status, { error }) {
+    // https://docs.microsoft.com/en-us/graph/errors
+    return [
+      423, // The resource that is being accessed is locked.
+      429 /* Client application has been throttled and should not attempt to
+                    repeat the request until an amount of time has elapsed. */,
+      500, // There was an internal server error while processing the request.
+      503 /* The service is temporarily unavailable for maintenance or is
+                    overloaded. You may repeat the request after a delay, the length
+                    of which may be specified in a Retry-After header. */,
+      504 /* The server, while acting as a proxy, did not receive a timely
+                    response from the upstream server it needed to access in
+                    attempting to complete the request. May occur together with
+                    503. */,
+      509 /* Your app has been throttled for exceeding the maximum bandwidth
+                    cap. Your app can retry the request again after more time has
+                    elapsed. */,
+    ].includes(status);
+  }
+}
+
+export const MapiBackoffInst = new MapiBackoff();
 
 export default class MapiAccount {
   constructor(universe, accountDef, foldersTOC, dbConn /*, receiveProtoConn*/) {

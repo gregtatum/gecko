@@ -213,6 +213,7 @@ class BaseFakeServer {
 
     this.pageSize = 10;
     this.useNowTS = nowTs();
+    this.errorQueue = [];
   }
 
   /**
@@ -226,6 +227,21 @@ class BaseFakeServer {
     for (const calendar of this.calendars) {
       calendar.serial++;
     }
+  }
+
+  /**
+   *
+   * @typedef {Object} FakeServerError
+   * @property {number} code - Code of the error.
+   * @property {string} message - Message for the error.
+   */
+
+  /**
+   * Until the error queue (fifo) is empty, the server will return those errors.
+   * @param {Array<FakeServerError>} errors - The errors to push in the queue.
+   */
+  addErrors(errors) {
+    this.errorQueue.push(...errors);
   }
 
   getCalendarById(id) {
@@ -311,6 +327,15 @@ class BaseFakeServer {
    * complete set of results should be retrieved and then paged.
    */
   apiWrapper(handlerInfo, pathOrPrefix, req, resp) {
+    if (this.errorQueue.length) {
+      const error = this.errorQueue.shift();
+      this.logRequest("requestError on purpose", { error });
+      resp.setStatusLine(null, error.code, "Fake Server Error");
+      resp.setHeader("Content-Type", "application/json");
+      resp.write(JSON.stringify({ error }));
+      return;
+    }
+
     try {
       this.logRequest("request", { path: req.path });
       const args = {};

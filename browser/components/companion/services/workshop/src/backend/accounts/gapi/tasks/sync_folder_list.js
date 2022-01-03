@@ -21,6 +21,7 @@ import TaskDefiner from "../../../task_infra/task_definer";
 import MixinSyncFolderList from "../../../task_mixins/mix_sync_folder_list";
 import { makeFolderMeta } from "backend/db/folder_info_rep";
 import GapiAccountSyncStateHelper from "../account_sync_state_helper";
+import { GapiBackoffInst } from "../account";
 
 /**
  * Sync the folder list for an ActiveSync account.  We leverage IMAP's mix-in
@@ -57,8 +58,14 @@ export default TaskDefiner.defineSimpleTask([
         // we're okay with clearing out all existing calendar state).
         {},
         "items",
-        result => {}
+        result => {},
+        GapiBackoffInst
       );
+
+      if (clResult.error) {
+        logic(ctx, "syncError", { error: clResult.error });
+        return {};
+      }
 
       const newFolders = [];
       const modifiedFolders = new Map();

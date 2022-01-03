@@ -3131,11 +3131,28 @@ var WorkshopBackend = (() => {
   });
 
   // src/backend/utils/api_client.js
-  var ApiClient;
+  var FETCH_TIMEOUT, Backoff, ApiClient;
   var init_api_client = __esm({
     "src/backend/utils/api_client.js"() {
       init_logic();
       init_oauth();
+      FETCH_TIMEOUT = 32e3;
+      Backoff = class {
+        constructor() {
+          this.max_backoff_ms = 32e3;
+          this.max_retries = 6;
+        }
+        isCandidateForBackoff(status, result) {
+          return true;
+        }
+        getErrorMessage(result) {
+          return result.error.message;
+        }
+        waitAMoment(step) {
+          const time_ms = Math.min(this.max_backoff_ms, Math.ceil((2 ** step + Math.random()) * 1e3));
+          return new Promise((resolve) => setTimeout(resolve, time_ms));
+        }
+      };
       ApiClient = class {
         constructor(credentials, accountId) {
           logic.defineScope(this, "ApiClient", { accountId });
@@ -3145,7 +3162,7 @@ var WorkshopBackend = (() => {
         credentialsUpdated() {
           this._dirtyCredentials = true;
         }
-        async apiGetCall(endpointUrl, params) {
+        async apiGetCall(endpointUrl, params, backoff) {
           await ensureUpdatedCredentials(this.credentials, () => {
             this.credentialsUpdated();
           });
@@ -3157,20 +3174,35 @@ var WorkshopBackend = (() => {
           const headers = {
             Authorization: `Bearer ${accessToken}`
           };
-          const resp = await fetch(url, {
-            credentials: "omit",
-            headers
-          });
-          const result = await resp.json();
+          let result;
+          for (let retries = 0; retries < backoff.max_retries; retries++) {
+            try {
+              const resp = await Promise.race([
+                fetch(url, {
+                  credentials: "omit",
+                  headers
+                }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("Fetch is too long")), FETCH_TIMEOUT))
+              ]);
+              result = await resp.json();
+              if (backoff.isCandidateForBackoff(resp.status, result)) {
+                throw new Error(backoff.getErrorMessage(result));
+              }
+              break;
+            } catch (e) {
+              logic(this, "fetchError", { error: e.message });
+              await backoff.waitAMoment(retries);
+            }
+          }
           logic(this, "apiCall", { endpointUrl, _params: params, _result: result });
           return result;
         }
-        async pagedApiGetCall(url, params, resultPropertyName, nextPageGetter) {
+        async pagedApiGetCall(url, params, resultPropertyName, nextPageGetter, backoff) {
           let apiUrl = url;
           let useParams = Object.assign({}, params);
           const resultsSoFar = [];
           while (true) {
-            const thisResult = await this.apiGetCall(apiUrl, useParams);
+            const thisResult = await this.apiGetCall(apiUrl, useParams, backoff);
             if (thisResult.error) {
               return thisResult;
             }
@@ -3188,6 +3220,58 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/backend/accounts/gapi/account.js
+  var account_exports = {};
+  __export(account_exports, {
+    GapiBackoffInst: () => GapiBackoffInst,
+    default: () => GapiAccount
+  });
+  var GapiBackoff, GapiBackoffInst, GapiAccount;
+  var init_account = __esm({
+    "src/backend/accounts/gapi/account.js"() {
+      init_api_client();
+      GapiBackoff = class extends Backoff {
+        isCandidateForBackoff(status, { error }) {
+          return error && (error.code === 403 && [
+            "User Rate Limit Exceeded",
+            "Rate Limit Exceeded",
+            "Calendar usage limits exceeded."
+          ].includes(error.errors[0].reason) || error.code === 429 || error.code === 500);
+        }
+      };
+      GapiBackoffInst = new GapiBackoff();
+      GapiAccount = class {
+        constructor(universe2, accountDef, foldersTOC, dbConn) {
+          this.universe = universe2;
+          this.id = accountDef.id;
+          this.accountDef = accountDef;
+          this._db = dbConn;
+          this.enabled = true;
+          this.problems = [];
+          this.identities = accountDef.identities;
+          this.foldersTOC = foldersTOC;
+          this.folders = this.foldersTOC.items;
+          this.client = new ApiClient(accountDef.credentials, this.id);
+        }
+        toString() {
+          return `[GapiAccount: ${this.id}]`;
+        }
+        __acquire() {
+          return Promise.resolve(this);
+        }
+        __release() {
+        }
+        async checkAccount() {
+          return null;
+        }
+        shutdown() {
+        }
+      };
+      GapiAccount.type = "gapi";
+      GapiAccount.supportsServerFolders = false;
+    }
+  });
+
   // src/backend/accounts/gapi/validator.js
   var validator_exports2 = {};
   __export(validator_exports2, {
@@ -3201,7 +3285,7 @@ var WorkshopBackend = (() => {
     const client = new ApiClient(credentials);
     const endpoint = "https://gmail.googleapis.com/gmail/v1/users/me/profile";
     try {
-      const whoami = await client.apiGetCall(endpoint, {});
+      const whoami = await client.apiGetCall(endpoint, {}, GapiBackoffInst);
       userDetails.displayName = "";
       userDetails.emailAddress = whoami.emailAddress;
     } catch (ex) {
@@ -3225,6 +3309,62 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/gapi/validator.js"() {
       init_normalize_err();
       init_api_client();
+      init_account();
+    }
+  });
+
+  // src/backend/accounts/mapi/account.js
+  var account_exports2 = {};
+  __export(account_exports2, {
+    MapiBackoffInst: () => MapiBackoffInst,
+    default: () => MapiAccount
+  });
+  var MapiBackoff, MapiBackoffInst, MapiAccount;
+  var init_account2 = __esm({
+    "src/backend/accounts/mapi/account.js"() {
+      init_api_client();
+      MapiBackoff = class extends Backoff {
+        isCandidateForBackoff(status, { error }) {
+          return [
+            423,
+            429,
+            500,
+            503,
+            504,
+            509
+          ].includes(status);
+        }
+      };
+      MapiBackoffInst = new MapiBackoff();
+      MapiAccount = class {
+        constructor(universe2, accountDef, foldersTOC, dbConn) {
+          this.universe = universe2;
+          this.id = accountDef.id;
+          this.accountDef = accountDef;
+          this._db = dbConn;
+          this.enabled = true;
+          this.problems = [];
+          this.identities = accountDef.identities;
+          this.foldersTOC = foldersTOC;
+          this.folders = this.foldersTOC.items;
+          this.client = new ApiClient(accountDef.credentials, this.id);
+        }
+        toString() {
+          return `[MapiAccount: ${this.id}]`;
+        }
+        __acquire() {
+          return Promise.resolve(this);
+        }
+        __release() {
+        }
+        async checkAccount() {
+          return null;
+        }
+        shutdown() {
+        }
+      };
+      MapiAccount.type = "mapi";
+      MapiAccount.supportsServerFolders = false;
     }
   });
 
@@ -3241,7 +3381,7 @@ var WorkshopBackend = (() => {
     const client = new ApiClient(credentials);
     const endpoint = "https://graph.microsoft.com/v1.0/me";
     try {
-      const whoami = await client.apiGetCall(endpoint, {});
+      const whoami = await client.apiGetCall(endpoint, {}, MapiBackoffInst);
       userDetails.displayName = whoami.displayName;
       userDetails.emailAddress = whoami.userPrincipalName;
     } catch (ex) {
@@ -3264,6 +3404,7 @@ var WorkshopBackend = (() => {
   var init_validator3 = __esm({
     "src/backend/accounts/mapi/validator.js"() {
       init_api_client();
+      init_account2();
     }
   });
 
@@ -8432,12 +8573,12 @@ var WorkshopBackend = (() => {
   });
 
   // src/backend/accounts/feed/account.js
-  var account_exports = {};
-  __export(account_exports, {
+  var account_exports3 = {};
+  __export(account_exports3, {
     default: () => FeedAccount
   });
   var FeedAccount;
-  var init_account = __esm({
+  var init_account3 = __esm({
     "src/backend/accounts/feed/account.js"() {
       FeedAccount = class {
         constructor(universe2, accountDef, foldersTOC, dbConn) {
@@ -8469,88 +8610,6 @@ var WorkshopBackend = (() => {
       };
       FeedAccount.type = "Feed";
       FeedAccount.supportsServerFolders = false;
-    }
-  });
-
-  // src/backend/accounts/gapi/account.js
-  var account_exports2 = {};
-  __export(account_exports2, {
-    default: () => GapiAccount
-  });
-  var GapiAccount;
-  var init_account2 = __esm({
-    "src/backend/accounts/gapi/account.js"() {
-      init_api_client();
-      GapiAccount = class {
-        constructor(universe2, accountDef, foldersTOC, dbConn) {
-          this.universe = universe2;
-          this.id = accountDef.id;
-          this.accountDef = accountDef;
-          this._db = dbConn;
-          this.enabled = true;
-          this.problems = [];
-          this.identities = accountDef.identities;
-          this.foldersTOC = foldersTOC;
-          this.folders = this.foldersTOC.items;
-          this.client = new ApiClient(accountDef.credentials, this.id);
-        }
-        toString() {
-          return `[GapiAccount: ${this.id}]`;
-        }
-        __acquire() {
-          return Promise.resolve(this);
-        }
-        __release() {
-        }
-        async checkAccount() {
-          return null;
-        }
-        shutdown() {
-        }
-      };
-      GapiAccount.type = "gapi";
-      GapiAccount.supportsServerFolders = false;
-    }
-  });
-
-  // src/backend/accounts/mapi/account.js
-  var account_exports3 = {};
-  __export(account_exports3, {
-    default: () => MapiAccount
-  });
-  var MapiAccount;
-  var init_account3 = __esm({
-    "src/backend/accounts/mapi/account.js"() {
-      init_api_client();
-      MapiAccount = class {
-        constructor(universe2, accountDef, foldersTOC, dbConn) {
-          this.universe = universe2;
-          this.id = accountDef.id;
-          this.accountDef = accountDef;
-          this._db = dbConn;
-          this.enabled = true;
-          this.problems = [];
-          this.identities = accountDef.identities;
-          this.foldersTOC = foldersTOC;
-          this.folders = this.foldersTOC.items;
-          this.client = new ApiClient(accountDef.credentials, this.id);
-        }
-        toString() {
-          return `[MapiAccount: ${this.id}]`;
-        }
-        __acquire() {
-          return Promise.resolve(this);
-        }
-        __release() {
-        }
-        async checkAccount() {
-          return null;
-        }
-        shutdown() {
-        }
-      };
-      MapiAccount.type = "mapi";
-      MapiAccount.supportsServerFolders = false;
     }
   });
 
@@ -11214,6 +11273,7 @@ var WorkshopBackend = (() => {
       init_mix_sync_folder_list();
       init_folder_info_rep();
       init_account_sync_state_helper();
+      init_account();
       sync_folder_list_default2 = task_definer_default.defineSimpleTask([
         mix_sync_folder_list_default,
         {
@@ -11227,7 +11287,11 @@ var WorkshopBackend = (() => {
             logic(ctx, "syncFolderListStart", { syncDate: NOW() });
             const foldersTOC = account.foldersTOC;
             const clResult = await account.client.pagedApiGetCall("https://www.googleapis.com/calendar/v3/users/me/calendarList", {}, "items", (result) => {
-            });
+            }, GapiBackoffInst);
+            if (clResult.error) {
+              logic(ctx, "syncError", { error: clResult.error });
+              return {};
+            }
             const newFolders = [];
             const modifiedFolders = new Map();
             const observedFolderServerIds = new Set();
@@ -11705,6 +11769,7 @@ var WorkshopBackend = (() => {
       init_task_definer();
       init_sync_overlay_helpers();
       init_cal_folder_sync_state_helper();
+      init_account();
       cal_sync_refresh_default = task_definer_default.defineAtMostOnceTask([
         {
           name: "sync_refresh",
@@ -11758,9 +11823,24 @@ var WorkshopBackend = (() => {
               };
             }
             params.maxAttendees = 50;
-            const results = await account.client.pagedApiGetCall(endpoint, params, "items", (result) => result.nextPageToken ? {
-              params: { pageToken: result.nextPageToken }
-            } : null);
+            const apiCallArguments = [
+              endpoint,
+              params,
+              "items",
+              (result) => result.nextPageToken ? {
+                params: { pageToken: result.nextPageToken }
+              } : null,
+              GapiBackoffInst
+            ];
+            let results = await account.client.pagedApiGetCall(...apiCallArguments);
+            if (results.error?.code === 410) {
+              apiCallArguments[1] = {
+                singleEvents: true,
+                timeMin: syncState.timeMinDateStr,
+                timeMax: syncState.timeMaxDateStr
+              };
+              results = await account.client.pagedApiGetCall(...apiCallArguments);
+            }
             let syncInfoClobbers;
             if (results.error) {
               logic(ctx, "syncError", { error: results.error });
@@ -11922,10 +12002,12 @@ var WorkshopBackend = (() => {
   var sync_folder_list_default3;
   var init_sync_folder_list3 = __esm({
     "src/backend/accounts/mapi/tasks/sync_folder_list.js"() {
+      init_logic();
       init_task_definer();
       init_mix_sync_folder_list();
       init_folder_info_rep();
       init_account_sync_state_helper2();
+      init_account2();
       sync_folder_list_default3 = task_definer_default.defineSimpleTask([
         mix_sync_folder_list_default,
         {
@@ -11938,7 +12020,11 @@ var WorkshopBackend = (() => {
             const syncState = new MapiAccountSyncStateHelper(ctx, rawSyncState, account.id);
             const foldersTOC = account.foldersTOC;
             const clResult = await account.client.pagedApiGetCall("https://graph.microsoft.com/v1.0/me/calendars", {}, "value", (result) => {
-            });
+            }, MapiBackoffInst);
+            if (clResult.error) {
+              logic(ctx, "syncError", { error: clResult.error });
+              return {};
+            }
             const newFolders = [];
             const modifiedFolders = new Map();
             const observedFolderServerIds = new Set();
@@ -12352,6 +12438,7 @@ var WorkshopBackend = (() => {
       init_task_definer();
       init_sync_overlay_helpers();
       init_cal_folder_sync_state_helper2();
+      init_account2();
       cal_sync_refresh_default2 = task_definer_default.defineAtMostOnceTask([
         {
           name: "sync_refresh",
@@ -12402,17 +12489,46 @@ var WorkshopBackend = (() => {
                 params.endDateTime = syncState.timeMaxDateStr;
               }
             }
-            const results = await account.client.pagedApiGetCall(endpoint, params, "value", (result) => result["@odata.nextLink"] ? {
-              url: result["@odata.nextLink"]
-            } : null);
-            for (const event of results.value) {
-              syncState.ingestEvent(event);
+            const apiCallArguments = [
+              endpoint,
+              params,
+              "value",
+              (result) => result["@odata.nextLink"] ? {
+                url: result["@odata.nextLink"]
+              } : null,
+              MapiBackoffInst
+            ];
+            let results = await account.client.pagedApiGetCall(...apiCallArguments);
+            if (syncState.syncUrl && results.error) {
+              apiCallArguments[0] = `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/calendarView/delta`;
+              if (syncState.timeMinDateStr && syncState.timeMaxDateStr) {
+                params.startDateTime = syncState.timeMinDateStr;
+                params.endDateTime = syncState.timeMaxDateStr;
+              }
+              results = await account.client.pagedApiGetCall(...apiCallArguments);
             }
-            syncState.syncUrl = results["@odata.deltaLink"];
-            syncState.updatedTime = results.updatedTime;
-            syncState.updatedTime = syncDate;
-            syncState.processEvents();
-            logic(ctx, "syncEnd", {});
+            let syncInfoClobbers;
+            if (results.error) {
+              logic(ctx, "syncError", { error: results.error });
+              syncInfoClobbers = {
+                lastAttemptedSyncAt: syncDate,
+                failedSyncsSinceLastSuccessfulSync: folderInfo.failedSyncsSinceLastSuccessfulSync + 1
+              };
+            } else {
+              for (const event of results.value) {
+                syncState.ingestEvent(event);
+              }
+              syncState.syncUrl = results["@odata.deltaLink"];
+              syncState.updatedTime = results.updatedTime;
+              syncState.updatedTime = syncDate;
+              syncState.processEvents();
+              logic(ctx, "syncEnd", {});
+              syncInfoClobbers = {
+                lastSuccessfulSyncAt: syncDate,
+                lastAttemptedSyncAt: syncDate,
+                failedSyncsSinceLastSuccessfulSync: 0
+              };
+            }
             return {
               mutations: {
                 syncStates: new Map([[req.folderId, syncState.rawSyncState]])
@@ -12425,11 +12541,7 @@ var WorkshopBackend = (() => {
                   [
                     req.folderId,
                     {
-                      syncInfo: {
-                        lastSuccessfulSyncAt: syncDate,
-                        lastAttemptedSyncAt: syncDate,
-                        failedSyncsSinceLastSuccessfulSync: 0
-                      }
+                      syncInfo: syncInfoClobbers
                     }
                   ]
                 ])
@@ -16781,21 +16893,21 @@ var WorkshopBackend = (() => {
     [
       "feed",
       async function() {
-        const mod = await Promise.resolve().then(() => (init_account(), account_exports));
+        const mod = await Promise.resolve().then(() => (init_account3(), account_exports3));
         return mod.default;
       }
     ],
     [
       "gapi",
       async function() {
-        const mod = await Promise.resolve().then(() => (init_account2(), account_exports2));
+        const mod = await Promise.resolve().then(() => (init_account(), account_exports));
         return mod.default;
       }
     ],
     [
       "mapi",
       async function() {
-        const mod = await Promise.resolve().then(() => (init_account3(), account_exports3));
+        const mod = await Promise.resolve().then(() => (init_account2(), account_exports2));
         return mod.default;
       }
     ],

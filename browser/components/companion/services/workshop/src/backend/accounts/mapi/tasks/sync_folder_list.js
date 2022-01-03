@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
+import logic from "logic";
+
 import TaskDefiner from "../../../task_infra/task_definer";
 
 import MixinSyncFolderList from "../../../task_mixins/mix_sync_folder_list";
 import { makeFolderMeta } from "backend/db/folder_info_rep";
 import MapiAccountSyncStateHelper from "../account_sync_state_helper";
+import { MapiBackoffInst } from "../account";
 
 /**
  * Sync the folder list for an ActiveSync account.  We leverage IMAP's mix-in
@@ -49,8 +52,14 @@ export default TaskDefiner.defineSimpleTask([
         "https://graph.microsoft.com/v1.0/me/calendars",
         {},
         "value",
-        result => {}
+        result => {},
+        MapiBackoffInst
       );
+
+      if (clResult.error) {
+        logic(ctx, "syncError", { error: clResult.error });
+        return {};
+      }
 
       const newFolders = [];
       const modifiedFolders = new Map();

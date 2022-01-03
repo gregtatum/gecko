@@ -14,7 +14,26 @@
  * limitations under the License.
  */
 
-import ApiClient from "../../utils/api_client";
+import { ApiClient, Backoff } from "../../utils/api_client";
+
+class GapiBackoff extends Backoff {
+  isCandidateForBackoff(status, { error }) {
+    // https://developers.google.com/calendar/api/guides/errors
+    return (
+      error &&
+      ((error.code === 403 &&
+        [
+          "User Rate Limit Exceeded",
+          "Rate Limit Exceeded",
+          "Calendar usage limits exceeded.",
+        ].includes(error.errors[0].reason)) ||
+        error.code === 429 ||
+        error.code === 500)
+    );
+  }
+}
+
+export const GapiBackoffInst = new GapiBackoff();
 
 export default class GapiAccount {
   constructor(universe, accountDef, foldersTOC, dbConn /*, receiveProtoConn*/) {
