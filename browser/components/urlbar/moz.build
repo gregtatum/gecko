@@ -31,9 +31,7 @@ EXTRA_JS_MODULES += [
     "UrlbarProviderPlaces.jsm",
     "UrlbarProviderPreloadedSites.jsm",
     "UrlbarProviderPrivateSearch.jsm",
-    "UrlbarProviderQuickActions.jsm",
     "UrlbarProviderQuickSuggest.jsm",
-    "UrlbarProviderRecentSearches.jsm",
     "UrlbarProviderRemoteTabs.jsm",
     "UrlbarProviderSearchSuggestions.jsm",
     "UrlbarProviderSearchTips.jsm",
@@ -41,7 +39,6 @@ EXTRA_JS_MODULES += [
     "UrlbarProviderTabToSearch.jsm",
     "UrlbarProviderTokenAliasEngines.jsm",
     "UrlbarProviderTopSites.jsm",
-    "UrlbarProviderTopSitesButtons.jsm",
     "UrlbarProviderUnitConversion.jsm",
     "UrlbarQuickSuggest.jsm",
     "UrlbarResult.jsm",
@@ -52,6 +49,13 @@ EXTRA_JS_MODULES += [
     "UrlbarValueFormatter.jsm",
     "UrlbarView.jsm",
 ]
+
+if CONFIG["PINEBUILD"]:
+    EXTRA_JS_MODULES += [
+        "UrlbarProviderQuickActions.jsm",
+        "UrlbarProviderRecentSearches.jsm",
+        "UrlbarProviderTopSitesButtons.jsm",
+    ]
 
 TESTING_JS_MODULES += [
     "tests/quicksuggest/QuickSuggestTestUtils.jsm",

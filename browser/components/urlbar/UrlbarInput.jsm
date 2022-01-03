@@ -374,6 +374,8 @@ class UrlbarInput {
       this.value = this.window.gBrowser.userTypedValue
         ? this.window.gBrowser.userTypedValue
         : "";
+    } else {
+      this.value = value;
     }
     this.valueIsTyped = !valid;
     this.removeAttribute("usertyping");
@@ -1781,9 +1783,7 @@ class UrlbarInput {
 
     this.setAttribute("pageproxystate", state);
     this._inputContainer.setAttribute("pageproxystate", state);
-    if (this._identityBox) {
-      this._identityBox.setAttribute("pageproxystate", state);
-    }
+    this._identityBox?.setAttribute("pageproxystate", state);
 
     if (state == "valid") {
       this._lastValidURLStr = this.value;

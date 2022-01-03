@@ -12,6 +12,9 @@
 
 var EXPORTED_SYMBOLS = ["UrlbarPrefs", "UrlbarPrefsObserver"];
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
@@ -211,7 +214,7 @@ const PREF_URLBAR_DEFAULTS = new Map([
   ["suggest.topsites", true],
 
   // Whether results will include QuickActions.
-  ["suggest.quickactions", true],
+  ["suggest.quickactions", AppConstants.PINEBUILD],
 
   // Global toggle for whether the quick suggest feature is enabled, i.e.,
   // sponsored and recommended results related to the user's search string.

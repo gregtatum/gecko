@@ -653,6 +653,7 @@ class UrlbarView {
       });
 
       // Show the one-off search buttons unless any of the following are true:
+      //  * This is a PINEBUILD instance
       //  * The first result is a search tip
       //  * The search string is empty
       //  * The search string starts with an `@` or a search restriction

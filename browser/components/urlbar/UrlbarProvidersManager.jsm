@@ -56,10 +56,6 @@ var localProviderModules = {
     "resource:///modules/UrlbarProviderPreloadedSites.jsm",
   UrlbarProviderPrivateSearch:
     "resource:///modules/UrlbarProviderPrivateSearch.jsm",
-  UrlbarProviderQuickActionsEmpty:
-    "resource:///modules/UrlbarProviderQuickActions.jsm",
-  UrlbarProviderQuickActionsFilter:
-    "resource:///modules/UrlbarProviderQuickActions.jsm",
   UrlbarProviderQuickSuggest:
     "resource:///modules/UrlbarProviderQuickSuggest.jsm",
   UrlbarProviderRemoteTabs: "resource:///modules/UrlbarProviderRemoteTabs.jsm",
@@ -70,18 +66,21 @@ var localProviderModules = {
     "resource:///modules/UrlbarProviderTabToSearch.jsm",
   UrlbarProviderTokenAliasEngines:
     "resource:///modules/UrlbarProviderTokenAliasEngines.jsm",
+  UrlbarProviderTopSites: "resource:///modules/UrlbarProviderTopSites.jsm",
   UrlbarProviderUnitConversion:
     "resource:///modules/UrlbarProviderUnitConversion.jsm",
 };
 
 if (AppConstants.PINEBUILD) {
+  localProviderModules.UrlbarProviderQuickActionsEmpty =
+    "resource:///modules/UrlbarProviderQuickActions.jsm";
+  localProviderModules.UrlbarProviderQuickActionsFilter =
+    "resource:///modules/UrlbarProviderQuickActions.jsm";
   localProviderModules.UrlbarProviderTopSitesButtons =
     "resource:///modules/UrlbarProviderTopSitesButtons.jsm";
   localProviderModules.UrlbarProviderRecentSearches =
     "resource:///modules/UrlbarProviderRecentSearches.jsm";
-} else {
-  localProviderModules.UrlbarProviderTopSites =
-    "resource:///modules/UrlbarProviderTopSites.jsm";
+  delete localProviderModules.UrlbarProviderTopSites;
 }
 
 // List of available local muxers, each is implemented in its own jsm module.

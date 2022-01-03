@@ -7,5 +7,7 @@ browser.jar:
    content/browser/urlbar/quicksuggestOnboarding.xhtml (content/quicksuggestOnboarding.xhtml)
    content/browser/urlbar/quicksuggestOnboarding.js    (content/quicksuggestOnboarding.js)
    content/browser/urlbar/quicksuggestOnboarding.css   (content/quicksuggestOnboarding.css)
+#ifdef PINEBUILD
    content/browser/urlbar/quickactions/                (quickactions/*)
+#endif
    content/browser/urlbar/quicksuggestOnboarding_illustration.svg (content/quicksuggestOnboarding_illustration.svg)
