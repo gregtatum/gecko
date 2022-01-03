@@ -934,6 +934,19 @@ def target_tasks_daily_releases(full_task_graph, parameters, graph_config):
 
 @_target_task("nightly_pinebuild")
 def target_tasks_nightly_pinebuild(full_task_graph, parameters, graph_config):
+    index_path = (
+        f"{graph_config['trust-domain']}.v2.{parameters['project']}.revision."
+        f"{parameters['head_rev']}.taskgraph.decision-nightly-pinebuild"
+    )
+    if os.environ.get("MOZ_AUTOMATION") and retry(
+        index_exists,
+        args=(index_path,),
+        kwargs={
+            "reason": "to avoid triggering multiple nightlies off the same revision",
+        },
+    ):
+        return []
+
     indep_filter = make_desktop_nightly_filter({None})
     platform_filter = make_desktop_nightly_filter(
         {"macosx64-pinebuild", "win64-pinebuild", "linux64-pinebuild"}
