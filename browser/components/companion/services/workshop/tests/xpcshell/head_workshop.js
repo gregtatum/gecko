@@ -22,6 +22,15 @@ Cu.importGlobalProperties(["fetch"]);
 // Relevant subsystems like profile-after-change.
 do_get_profile(true);
 
+// Temporarily force Places to come into existence because under DEBUG builds
+// test_feed_parsers.js can cause Places to be created asynchronously in a way
+// that ends up racing the shutdown of xpcshell that induces assertions about
+// the shutdown phase.
+const { PlacesUtils } = ChromeUtils.import(
+  "resource://gre/modules/PlacesUtils.jsm"
+);
+PlacesUtils.favicons;
+
 function readFileData(path) {
   const file = do_get_file(path, false);
   return IOUtils.readUTF8(file.path);
@@ -253,7 +262,15 @@ class WorkshopHelperClass {
       this.#apiContentPage = null;
     }
 
-    this.windowlessBrowser = Services.appShell.createWindowlessBrowser(true, 0);
+    const browser = (this.windowlessBrowser = Services.appShell.createWindowlessBrowser(
+      true,
+      0
+    ));
+    // Ensure that we clean up every browser we create, which we can create more
+    // than one of.
+    registerCleanupFunction(() => {
+      browser.close();
+    });
 
     let system = Services.scriptSecurityManager.getSystemPrincipal();
 
@@ -263,22 +280,14 @@ class WorkshopHelperClass {
 
     this.chromeShell.createAboutBlankContentViewer(system, system);
 
-    const scriptUrl =
-      "chrome://browser/content/companion/workshop-api-built.js";
-    const scriptModule = `
-      import { MailAPIFactory } from "${scriptUrl}";
-      const OnlineServicesHelper = ChromeUtils.import(
-        "resource:///modules/OnlineServicesHelper.jsm"
-      );
-      const workshopAPI = (window.WORKSHOP_API = MailAPIFactory(
-        OnlineServicesHelper.MainThreadServices(window)
-      ));
-      window.dispatchEvent(new CustomEvent("apiLoaded"));
-`.replace(/\n/g, "");
     const doc = this.chromeShell.document;
     const scriptElem = doc.createElement("script");
     scriptElem.setAttribute("type", "module");
-    scriptElem.textContent = scriptModule;
+    // Previously the contents of this script were inline, but this ran afoul
+    // of the checks in `nsContentSecurityUtils::ValidateScriptFilename`
+    // (quite reasonably) not liking the inline / dynamic JS, so we now use a
+    // resource URI which is explicitly allowed.
+    scriptElem.setAttribute("src", "resource://test/bootstrap_workshop.js");
     doc.body.appendChild(scriptElem);
     const win = doc.defaultView;
 
