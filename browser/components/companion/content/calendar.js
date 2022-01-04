@@ -355,7 +355,10 @@ export class CalendarEventList extends MozLitElement {
             `
           : html`
               <div class="calendar-event">
-                <calendar-event .event=${event}></calendar-event>
+                <calendar-event
+                  .event=${event}
+                  .serial=${event.serial}
+                ></calendar-event>
               </div>
             `
     );
@@ -393,6 +396,7 @@ class CalendarEvent extends MozLitElement {
       linksCollapsed: { type: Boolean },
       upcoming: { type: Boolean },
       detailsCollapsed: { type: Boolean },
+      serial: { type: Number },
     };
   }
 
