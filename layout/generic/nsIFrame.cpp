@@ -171,13 +171,11 @@ const nsIFrame::FrameClassBits nsIFrame::sFrameClassBits[
     0] = {
 #define Leaf eFrameClassBitsLeaf
 #define NotLeaf eFrameClassBitsNone
-#define DynamicLeaf eFrameClassBitsDynamicLeaf
 #define FRAME_ID(class_, type_, leaf_, ...) leaf_,
 #define ABSTRACT_FRAME_ID(...)
 #include "mozilla/FrameIdList.h"
 #undef Leaf
 #undef NotLeaf
-#undef DynamicLeaf
 #undef FRAME_ID
 #undef ABSTRACT_FRAME_ID
 };
@@ -2559,7 +2557,7 @@ auto nsIFrame::ComputeShouldPaintBackground() const -> ShouldPaintBackground {
   }
 
   if (!HonorPrintBackgroundSettings() ||
-      StyleVisibility()->mColorAdjust == StyleColorAdjust::Exact) {
+      StyleVisibility()->mPrintColorAdjust == StylePrintColorAdjust::Exact) {
     return {true, true};
   }
 
@@ -8796,7 +8794,9 @@ nsresult nsIFrame::PeekOffsetForLine(nsPeekOffsetStruct* aPos) {
     blockFrame = newBlock;
     nsAutoLineIterator iter = blockFrame->GetLineIterator();
     int32_t thisLine = iter->FindLineContaining(lineFrame);
-    MOZ_ASSERT(thisLine >= 0, "Failed to find line!");
+    if (NS_WARN_IF(thisLine < 0)) {
+      return NS_ERROR_FAILURE;
+    }
 
     int edgeCase = 0;  // no edge case. this should look at thisLine
 

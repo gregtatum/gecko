@@ -2817,12 +2817,6 @@ BrowserGlue.prototype = {
       },
 
       {
-        task: () => {
-          PlacesUIUtils.ensureBookmarkToolbarTelemetryListening();
-        },
-      },
-
-      {
         condition: AppConstants.PINEBUILD,
         task: () => {
           // Use an increasing number to keep track of the current feature

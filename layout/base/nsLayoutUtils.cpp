@@ -5447,7 +5447,8 @@ static bool ShouldDarkenColors(nsIFrame* aFrame) {
   if (pc->GetBackgroundColorDraw() || pc->GetBackgroundImageDraw()) {
     return false;
   }
-  return aFrame->StyleVisibility()->mColorAdjust != StyleColorAdjust::Exact;
+  return aFrame->StyleVisibility()->mPrintColorAdjust !=
+         StylePrintColorAdjust::Exact;
 }
 
 nscolor nsLayoutUtils::DarkenColorIfNeeded(nsIFrame* aFrame, nscolor aColor) {
@@ -8498,13 +8499,17 @@ void nsLayoutUtils::SetBSizeFromFontMetrics(const nsIFrame* aFrame,
 }
 
 /* static */
-bool nsLayoutUtils::HasDocumentLevelListenersForApzAwareEvents(
+// _BOUNDARY because Dispatch() with `targets` must not handle the event.
+MOZ_CAN_RUN_SCRIPT_BOUNDARY bool
+nsLayoutUtils::HasDocumentLevelListenersForApzAwareEvents(
     PresShell* aPresShell) {
   if (Document* doc = aPresShell->GetDocument()) {
     WidgetEvent event(true, eVoidEvent);
     nsTArray<EventTarget*> targets;
-    nsresult rv = EventDispatcher::Dispatch(
-        ToSupports(doc), nullptr, &event, nullptr, nullptr, nullptr, &targets);
+    // TODO: Bug 1506441
+    nsresult rv =
+        EventDispatcher::Dispatch(MOZ_KnownLive(ToSupports(doc)), nullptr,
+                                  &event, nullptr, nullptr, nullptr, &targets);
     NS_ENSURE_SUCCESS(rv, false);
     for (size_t i = 0; i < targets.Length(); i++) {
       if (targets[i]->IsApzAware()) {

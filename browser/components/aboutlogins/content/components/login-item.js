@@ -683,7 +683,7 @@ export default class LoginItem extends HTMLElement {
         }
       );
     } else {
-      this.setLogin(login);
+      this.setLogin(login, { skipFocusChange: true });
     }
   }
 

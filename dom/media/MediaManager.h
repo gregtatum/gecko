@@ -278,19 +278,15 @@ class MediaManager final : public nsIMediaManagerService,
 
   RefPtr<LocalDeviceSetPromise> EnumerateDevices(nsPIDOMWindowInner* aWindow);
 
-  enum class DeviceEnumerationType : uint8_t {
-    Normal,  // Enumeration should not return loopback or fake devices
-    Fake,    // Enumeration should return fake device(s)
-    Loopback /* Enumeration should return loopback device(s) (possibly in
-             addition to normal devices) */
+  enum class EnumerationFlag {
+    AllowPermissionRequest,
+    EnumerateAudioOutputs,
+    ForceFakes,
   };
-  enum class EnumerationFlag { AllowPermissionRequest, EnumerateAudioOutputs };
   using EnumerationFlags = EnumSet<EnumerationFlag>;
   RefPtr<LocalDeviceSetPromise> EnumerateDevicesImpl(
       nsPIDOMWindowInner* aWindow, dom::MediaSourceEnum aVideoInputType,
-      dom::MediaSourceEnum aAudioInputType,
-      DeviceEnumerationType aVideoInputEnumType,
-      DeviceEnumerationType aAudioInputEnumType, EnumerationFlags aFlags);
+      dom::MediaSourceEnum aAudioInputType, EnumerationFlags aFlags);
 
   RefPtr<LocalDevicePromise> SelectAudioOutput(
       nsPIDOMWindowInner* aWindow, const dom::AudioOutputOptions& aOptions,
@@ -304,16 +300,14 @@ class MediaManager final : public nsIMediaManagerService,
   MediaEventSource<void>& DeviceListChangeEvent() {
     return mDeviceListChangeEvent;
   }
+  RefPtr<LocalDeviceSetPromise> AnonymizeDevices(
+      nsPIDOMWindowInner* aWindow, RefPtr<const MediaDeviceSetRefCnt> aDevices);
 
   MediaEnginePrefs mPrefs;
 
  private:
   static nsresult GenerateUUID(nsAString& aResult);
   static nsresult AnonymizeId(nsAString& aId, const nsACString& aOriginKey);
-
-  static RefPtr<LocalMediaDeviceSetRefCnt> AnonymizeDevices(
-      const MediaDeviceSet& aDevices, const nsACString& aOriginKey,
-      const uint64_t aWindowId);
 
  public:
   /**
@@ -331,9 +325,7 @@ class MediaManager final : public nsIMediaManagerService,
  private:
   RefPtr<DeviceSetPromise> EnumerateRawDevices(
       dom::MediaSourceEnum aVideoInputType,
-      dom::MediaSourceEnum aAudioInputType,
-      DeviceEnumerationType aVideoInputEnumType,
-      DeviceEnumerationType aAudioInputEnumType, EnumerationFlags aFlags);
+      dom::MediaSourceEnum aAudioInputType, EnumerationFlags aFlags);
 
   RefPtr<LocalDeviceSetPromise> SelectSettings(
       const dom::MediaStreamConstraints& aConstraints,

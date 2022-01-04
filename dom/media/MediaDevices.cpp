@@ -27,7 +27,6 @@
 namespace mozilla::dom {
 
 using EnumerationFlag = MediaManager::EnumerationFlag;
-using DeviceEnumerationType = MediaManager::DeviceEnumerationType;
 using LocalMediaDeviceSetRefCnt = MediaManager::LocalMediaDeviceSetRefCnt;
 
 MediaDevices::MediaDevices(nsPIDOMWindowInner* aWindow)
@@ -457,8 +456,6 @@ RefPtr<MediaDevices::SinkInfoPromise> MediaDevices::GetSinkDevice(
 
   return MediaManager::Get()
       ->EnumerateDevicesImpl(GetOwner(), MediaSourceEnum::Other, audioInputType,
-                             DeviceEnumerationType::Normal,
-                             DeviceEnumerationType::Normal,
                              EnumerationFlag::EnumerateAudioOutputs)
       ->Then(
           GetCurrentSerialEventTarget(), __func__,
@@ -587,7 +584,6 @@ void MediaDevices::SetupDeviceChangeListener() {
 void MediaDevices::SetOndevicechange(
     mozilla::dom::EventHandlerNonNull* aCallback) {
   SetEventHandler(nsGkAtoms::ondevicechange, aCallback);
-  SetupDeviceChangeListener();
 }
 
 void MediaDevices::EventListenerAdded(nsAtom* aType) {

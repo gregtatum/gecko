@@ -133,9 +133,9 @@ dependencies = [
 
 [[package]]
 name = "ashmem"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b43da58b19e1c6ffb1859b10766a2049cefa15f613c42dfeab8423701e8b76b6"
+checksum = "b947f77692187a29daa2768b6644e589cef61e7434bb96300197acfb876105ac"
 dependencies = [
  "ioctl-sys",
  "libc",
@@ -267,7 +267,7 @@ dependencies = [
 [[package]]
 name = "audioipc2"
 version = "0.5.0"
-source = "git+https://github.com/kinetiknz/audioipc-2?rev=e9eac9d7fe3ea93261f8f277cdbefd15b9418edd#e9eac9d7fe3ea93261f8f277cdbefd15b9418edd"
+source = "git+https://github.com/kinetiknz/audioipc-2?rev=49e4ba52ba911aa9c6a499f30e849de2a972ec82#49e4ba52ba911aa9c6a499f30e849de2a972ec82"
 dependencies = [
  "ashmem",
  "audio_thread_priority",
@@ -292,7 +292,7 @@ dependencies = [
 [[package]]
 name = "audioipc2-client"
 version = "0.5.0"
-source = "git+https://github.com/kinetiknz/audioipc-2?rev=e9eac9d7fe3ea93261f8f277cdbefd15b9418edd#e9eac9d7fe3ea93261f8f277cdbefd15b9418edd"
+source = "git+https://github.com/kinetiknz/audioipc-2?rev=49e4ba52ba911aa9c6a499f30e849de2a972ec82#49e4ba52ba911aa9c6a499f30e849de2a972ec82"
 dependencies = [
  "audio_thread_priority",
  "audioipc2",
@@ -303,7 +303,7 @@ dependencies = [
 [[package]]
 name = "audioipc2-server"
 version = "0.5.0"
-source = "git+https://github.com/kinetiknz/audioipc-2?rev=e9eac9d7fe3ea93261f8f277cdbefd15b9418edd#e9eac9d7fe3ea93261f8f277cdbefd15b9418edd"
+source = "git+https://github.com/kinetiknz/audioipc-2?rev=49e4ba52ba911aa9c6a499f30e849de2a972ec82#49e4ba52ba911aa9c6a499f30e849de2a972ec82"
 dependencies = [
  "audio_thread_priority",
  "audioipc2",
@@ -678,7 +678,7 @@ checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 [[package]]
 name = "chardetng"
 version = "0.1.9"
-source = "git+https://github.com/hsivonen/chardetng?rev=302c995f91f44cf26e77dc4758ad56c3ff0153ad#302c995f91f44cf26e77dc4758ad56c3ff0153ad"
+source = "git+https://github.com/hsivonen/chardetng?rev=3484d3e3ebdc8931493aa5df4d7ee9360a90e76b#3484d3e3ebdc8931493aa5df4d7ee9360a90e76b"
 dependencies = [
  "encoding_rs",
  "memchr",
@@ -1075,9 +1075,9 @@ dependencies = [
 
 [[package]]
 name = "cssparser"
-version = "0.29.1"
+version = "0.29.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6907f2a003b6abf3a1688f4f74469c6f54d0916dbbbbb9813f89eabe5bc74e3c"
+checksum = "031d29b6d1ea84f63436e45fb6f3c1a3d62dc1650018c53fa7165e108d35d88f"
 dependencies = [
  "cssparser-macros",
  "dtoa-short",
@@ -2020,7 +2020,6 @@ dependencies = [
  "log",
  "mapped_hyph",
  "mdns_service",
- "midir",
  "midir_impl",
  "mozurl",
  "mp4parse_capi",
@@ -2576,7 +2575,7 @@ source = "git+https://github.com/kvark/dummy-web#5731e569d865a1ebaf116f48dad781f
 [[package]]
 name = "jsparagus"
 version = "0.1.0"
-source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=23a37b0881b20f923f952b3c0648f2cd4a6acc9f#23a37b0881b20f923f952b3c0648f2cd4a6acc9f"
+source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=a1a6ba41f0c610ebe751639f25f037474ca52941#a1a6ba41f0c610ebe751639f25f037474ca52941"
 dependencies = [
  "jsparagus-ast",
  "jsparagus-emitter",
@@ -2590,7 +2589,7 @@ dependencies = [
 [[package]]
 name = "jsparagus-ast"
 version = "0.1.0"
-source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=23a37b0881b20f923f952b3c0648f2cd4a6acc9f#23a37b0881b20f923f952b3c0648f2cd4a6acc9f"
+source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=a1a6ba41f0c610ebe751639f25f037474ca52941#a1a6ba41f0c610ebe751639f25f037474ca52941"
 dependencies = [
  "bumpalo",
  "indexmap",
@@ -2599,7 +2598,7 @@ dependencies = [
 [[package]]
 name = "jsparagus-emitter"
 version = "0.1.0"
-source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=23a37b0881b20f923f952b3c0648f2cd4a6acc9f#23a37b0881b20f923f952b3c0648f2cd4a6acc9f"
+source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=a1a6ba41f0c610ebe751639f25f037474ca52941#a1a6ba41f0c610ebe751639f25f037474ca52941"
 dependencies = [
  "bumpalo",
  "byteorder",
@@ -2612,7 +2611,7 @@ dependencies = [
 [[package]]
 name = "jsparagus-generated-parser"
 version = "0.1.0"
-source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=23a37b0881b20f923f952b3c0648f2cd4a6acc9f#23a37b0881b20f923f952b3c0648f2cd4a6acc9f"
+source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=a1a6ba41f0c610ebe751639f25f037474ca52941#a1a6ba41f0c610ebe751639f25f037474ca52941"
 dependencies = [
  "bumpalo",
  "jsparagus-ast",
@@ -2622,12 +2621,12 @@ dependencies = [
 [[package]]
 name = "jsparagus-json-log"
 version = "0.1.0"
-source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=23a37b0881b20f923f952b3c0648f2cd4a6acc9f#23a37b0881b20f923f952b3c0648f2cd4a6acc9f"
+source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=a1a6ba41f0c610ebe751639f25f037474ca52941#a1a6ba41f0c610ebe751639f25f037474ca52941"
 
 [[package]]
 name = "jsparagus-parser"
 version = "0.1.0"
-source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=23a37b0881b20f923f952b3c0648f2cd4a6acc9f#23a37b0881b20f923f952b3c0648f2cd4a6acc9f"
+source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=a1a6ba41f0c610ebe751639f25f037474ca52941#a1a6ba41f0c610ebe751639f25f037474ca52941"
 dependencies = [
  "arrayvec 0.5.2",
  "bumpalo",
@@ -2639,7 +2638,7 @@ dependencies = [
 [[package]]
 name = "jsparagus-scope"
 version = "0.1.0"
-source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=23a37b0881b20f923f952b3c0648f2cd4a6acc9f#23a37b0881b20f923f952b3c0648f2cd4a6acc9f"
+source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=a1a6ba41f0c610ebe751639f25f037474ca52941#a1a6ba41f0c610ebe751639f25f037474ca52941"
 dependencies = [
  "indexmap",
  "jsparagus-ast",
@@ -2649,7 +2648,7 @@ dependencies = [
 [[package]]
 name = "jsparagus-stencil"
 version = "0.1.0"
-source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=23a37b0881b20f923f952b3c0648f2cd4a6acc9f#23a37b0881b20f923f952b3c0648f2cd4a6acc9f"
+source = "git+https://github.com/mozilla-spidermonkey/jsparagus?rev=a1a6ba41f0c610ebe751639f25f037474ca52941#a1a6ba41f0c610ebe751639f25f037474ca52941"
 dependencies = [
  "jsparagus-ast",
 ]
@@ -2947,7 +2946,6 @@ dependencies = [
  "servo_arc",
  "smallbitvec",
  "smallvec",
- "thin-slice",
  "void",
 ]
 
@@ -4820,7 +4818,6 @@ dependencies = [
  "static_prefs",
  "style_derive",
  "style_traits",
- "thin-slice",
  "time",
  "to_shmem",
  "to_shmem_derive",
@@ -5003,12 +5000,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "thin-slice"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8eaa81235c7058867fa8c0e7314f33dcce9c215f535d1913822a2b3f5e289f3c"
-
-[[package]]
 name = "thin-vec"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5064,7 +5055,6 @@ dependencies = [
  "servo_arc",
  "smallbitvec",
  "smallvec",
- "thin-slice",
 ]
 
 [[package]]

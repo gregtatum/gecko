@@ -1514,7 +1514,18 @@ pref("browser.newtabpage.activity-stream.discoverystream.loadMore.enabled", fals
 pref("browser.newtabpage.activity-stream.discoverystream.lastCardMessage.enabled", false);
 pref("browser.newtabpage.activity-stream.discoverystream.newFooterSection.enabled", false);
 pref("browser.newtabpage.activity-stream.discoverystream.saveToPocketCard.enabled", false);
+pref("browser.newtabpage.activity-stream.discoverystream.hideDescriptions.enabled", false);
+pref("browser.newtabpage.activity-stream.discoverystream.compactGrid.enabled", false);
+pref("browser.newtabpage.activity-stream.discoverystream.compactImages.enabled", false);
+pref("browser.newtabpage.activity-stream.discoverystream.imageGradient.enabled", false);
+pref("browser.newtabpage.activity-stream.discoverystream.titleLines", 3);
+pref("browser.newtabpage.activity-stream.discoverystream.descLines", 3);
+pref("browser.newtabpage.activity-stream.discoverystream.readTime.enabled", false);
+pref("browser.newtabpage.activity-stream.discoverystream.newSponsoredLabel.enabled", false);
+pref("browser.newtabpage.activity-stream.discoverystream.essentialReadsHeader.enabled", false);
+pref("browser.newtabpage.activity-stream.discoverystream.editorsPicksHeader.enabled", false);
 pref("browser.newtabpage.activity-stream.discoverystream.spoc-positions", "2,4,11,20");
+
 pref("browser.newtabpage.activity-stream.discoverystream.spocs-endpoint", "");
 pref("browser.newtabpage.activity-stream.discoverystream.spocs-endpoint-query", "");
 pref("browser.newtabpage.activity-stream.discoverystream.sponsored-collections.enabled", false);
@@ -1724,6 +1735,7 @@ pref("media.autoplay.default", 1); // 0=Allowed, 1=Blocked, 5=All Blocked
 
 pref("media.videocontrols.picture-in-picture.enabled", true);
 pref("media.videocontrols.picture-in-picture.video-toggle.enabled", true);
+pref("media.videocontrols.picture-in-picture.video-toggle.visibility-threshold", "0.9");
 pref("media.videocontrols.picture-in-picture.keyboard-controls.enabled", true);
 
 #ifdef NIGHTLY_BUILD

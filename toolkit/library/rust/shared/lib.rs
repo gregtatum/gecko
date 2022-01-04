@@ -5,13 +5,13 @@
 extern crate geckoservo;
 
 extern crate app_services_logger;
-#[cfg(all(feature = "cubeb-remoting", target_os = "macos"))]
+#[cfg(feature = "cubeb-remoting")]
 extern crate audioipc2_client;
-#[cfg(all(feature = "cubeb-remoting", target_os = "macos"))]
+#[cfg(feature = "cubeb-remoting")]
 extern crate audioipc2_server;
-#[cfg(all(feature = "cubeb-remoting", not(target_os = "macos")))]
+#[cfg(feature = "cubeb-remoting")]
 extern crate audioipc_client;
-#[cfg(all(feature = "cubeb-remoting", not(target_os = "macos")))]
+#[cfg(feature = "cubeb-remoting")]
 extern crate audioipc_server;
 extern crate authenticator;
 #[cfg(feature = "bitsdownload")]
@@ -79,16 +79,13 @@ extern crate localization_ffi;
 #[cfg(not(target_os = "android"))]
 extern crate viaduct;
 
-#[cfg(not(target_os = "android"))]
-extern crate midir;
-
-#[cfg(not(target_os = "android"))]
-extern crate midir_impl;
-
 extern crate gecko_logger;
 
 #[cfg(feature = "oxidized_breakpad")]
 extern crate rust_minidump_writer_linux;
+
+#[cfg(feature = "webmidi_midir_impl")]
+extern crate midir_impl;
 
 extern crate log;
 use log::info;
