@@ -50,11 +50,6 @@ export class CalEvent extends Emitter {
     this.id = wireRep.id;
 
     this.attendees = [];
-    this.conference = wireRep.conference;
-    this.creator = wireRep.creator;
-    this.links = wireRep.links;
-    this.organizer = wireRep.organizer;
-
     this.bodyReps = wireRep.bodyReps;
 
     this.__update(wireRep);
@@ -110,6 +105,12 @@ export class CalEvent extends Emitter {
       changeEvent: "attendee:change",
       removeEvent: "attendee:remove",
     });
+
+    this.links = wireRep.links;
+    this.conference = wireRep.conference;
+
+    this.creator = wireRep.creator;
+    this.organizer = wireRep.organizer;
   }
 
   __updateOverlays(overlays) {

@@ -2940,10 +2940,6 @@ var CalEvent = class extends import_evt13.Emitter {
     this._wireRep = wireRep;
     this.id = wireRep.id;
     this.attendees = [];
-    this.conference = wireRep.conference;
-    this.creator = wireRep.creator;
-    this.links = wireRep.links;
-    this.organizer = wireRep.organizer;
     this.bodyReps = wireRep.bodyReps;
     this.__update(wireRep);
     this.__updateOverlays(overlays);
@@ -2985,6 +2981,10 @@ var CalEvent = class extends import_evt13.Emitter {
       changeEvent: "attendee:change",
       removeEvent: "attendee:remove"
     });
+    this.links = wireRep.links;
+    this.conference = wireRep.conference;
+    this.creator = wireRep.creator;
+    this.organizer = wireRep.organizer;
   }
   __updateOverlays(overlays) {
   }
