@@ -251,16 +251,17 @@ var CustomizableUIInternal = {
       "fxa-toolbar-menu-button",
     ].filter(name => name);
 
-    this.registerArea(
-      CustomizableUI.AREA_NAVBAR,
-      {
-        type: CustomizableUI.TYPE_TOOLBAR,
-        overflowable: !AppConstants.PINEBUILD,
-        defaultPlacements: navbarPlacements,
-        defaultCollapsed: false,
-      },
-      true
-    );
+    let navbarProperties = {
+      type: CustomizableUI.TYPE_TOOLBAR,
+      defaultPlacements: navbarPlacements,
+      defaultCollapsed: false,
+    };
+
+    if (!AppConstants.PINEBUILD) {
+      navbarProperties.overflowable = true;
+    }
+
+    this.registerArea(CustomizableUI.AREA_NAVBAR, navbarProperties, true);
 
     if (AppConstants.MENUBAR_CAN_AUTOHIDE) {
       this.registerArea(
