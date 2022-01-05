@@ -85,8 +85,14 @@ add_task(async function setup() {
   }
   await Interactions.store.flush();
 
-  await Snapshots.add({ url: TEST_URLS[0].uri, userPersisted: true });
-  await Snapshots.add({ url: TEST_URLS[3].uri, userPersisted: true });
+  await Snapshots.add({
+    url: TEST_URLS[0].uri,
+    userPersisted: Snapshots.USER_PERSISTED.MANUAL,
+  });
+  await Snapshots.add({
+    url: TEST_URLS[3].uri,
+    userPersisted: Snapshots.USER_PERSISTED.MANUAL,
+  });
 
   // Run test in a new window to avoid affecting the main test window.
   win = await BrowserTestUtils.openNewBrowserWindow();
@@ -109,7 +115,10 @@ add_task(async function test_suggested_snapshots_displayed() {
   await CompanionHelper.whenReady(async helper => {
     await testSnapshotTitles(helper, [TEST_URLS[0].title]);
 
-    await Snapshots.add({ url: TEST_URLS[1].uri, userPersisted: true });
+    await Snapshots.add({
+      url: TEST_URLS[1].uri,
+      userPersisted: Snapshots.USER_PERSISTED.MANUAL,
+    });
 
     // Snapshots are display with most recent first.
     await testSnapshotTitles(helper, [TEST_URLS[1].title, TEST_URLS[0].title]);
@@ -119,11 +128,17 @@ add_task(async function test_suggested_snapshots_displayed() {
 add_task(async function test_suggested_snapshots_filter_adult() {
   await CompanionHelper.whenReady(async helper => {
     FilterAdult.addDomainToList(TEST_URLS[2].uri);
-    await Snapshots.add({ url: TEST_URLS[2].uri, userPersisted: true });
+    await Snapshots.add({
+      url: TEST_URLS[2].uri,
+      userPersisted: Snapshots.USER_PERSISTED.MANUAL,
+    });
     // Wait a little bit to ensure that the URLs are separated in time.
     // eslint-disable-next-line mozilla/no-arbitrary-setTimeout
     await new Promise(r => setTimeout(r, 100));
-    await Snapshots.add({ url: TEST_URLS[3].uri, userPersisted: true });
+    await Snapshots.add({
+      url: TEST_URLS[3].uri,
+      userPersisted: Snapshots.USER_PERSISTED.MANUAL,
+    });
 
     await testSnapshotTitles(helper, [TEST_URLS[1].title, TEST_URLS[0].title]);
 
