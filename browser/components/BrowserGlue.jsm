@@ -196,13 +196,10 @@ let JSWINDOWACTORS = {
     child: {
       moduleURI: "resource:///actors/AboutLoginsChild.jsm",
       events: {
-        AboutLoginsBrowsePanel: { wantUntrusted: true },
-        AboutLoginsClearSelection: { wantUntrusted: true },
         AboutLoginsCopyLoginDetail: { wantUntrusted: true },
         AboutLoginsCreateLogin: { wantUntrusted: true },
         AboutLoginsDeleteLogin: { wantUntrusted: true },
         AboutLoginsDismissBreachAlert: { wantUntrusted: true },
-        AboutLoginsLoginEditLogin: { wantUntrusted: true },
         AboutLoginsImportFromBrowser: { wantUntrusted: true },
         AboutLoginsImportFromFile: { wantUntrusted: true },
         AboutLoginsImportReportInit: { wantUntrusted: true },
@@ -213,19 +210,14 @@ let JSWINDOWACTORS = {
         AboutLoginsOpenSite: { wantUntrusted: true },
         AboutLoginsRecordTelemetryEvent: { wantUntrusted: true },
         AboutLoginsRemoveAllLogins: { wantUntrusted: true },
-        AboutLoginsRemoveUpdateState: { wantUntrusted: true },
-        AboutLoginsShowBlankLogin: { wantUntrusted: true },
         AboutLoginsSortChanged: { wantUntrusted: true },
         AboutLoginsSyncEnable: { wantUntrusted: true },
         AboutLoginsSyncOptions: { wantUntrusted: true },
         AboutLoginsUpdateLogin: { wantUntrusted: true },
         AboutLoginsExportPasswords: { wantUntrusted: true },
-        contextmenu: { capture: true },
       },
     },
     matches: ["about:logins", "about:logins?*", "about:loginsimportreport"],
-    allFrames: true,
-    remoteTypes: ["privilegedabout"],
   },
 
   AboutNewTab: {
@@ -412,22 +404,6 @@ let JSWINDOWACTORS = {
     allFrames: true,
   },
 
-  Companion: {
-    parent: {
-      moduleURI: "resource:///actors/CompanionParent.jsm",
-    },
-    child: {
-      moduleURI: "resource:///actors/CompanionChild.jsm",
-      events: {
-        CompanionInit: { wantUntrusted: true },
-      },
-    },
-    matches: [
-      "chrome://browser/content/companion/companion.xhtml",
-      "about:preferences",
-    ],
-  },
-
   ContentSearch: {
     parent: {
       moduleURI: "resource:///actors/ContentSearchParent.jsm",
@@ -527,20 +503,6 @@ let JSWINDOWACTORS = {
     },
 
     allFrames: true,
-  },
-
-  FlowReset: {
-    parent: {
-      moduleURI: "resource:///actors/FlowResetParent.jsm",
-    },
-    child: {
-      moduleURI: "resource:///actors/FlowResetChild.jsm",
-      events: {
-        ViewCompanionBrowseTab: { wantUntrusted: true },
-        RestoreLastSession: { wantUntrusted: true },
-      },
-    },
-    matches: ["about:flow-reset"],
   },
 
   LightweightTheme: {
@@ -1308,6 +1270,55 @@ BrowserGlue.prototype = {
         messageManagerGroups: ["browsers"],
         enablePreference: "browser.tabs.openNewTabForMostNavigations",
       };
+
+      JSWINDOWACTORS.Companion = {
+        parent: {
+          moduleURI: "resource:///actors/CompanionParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/CompanionChild.jsm",
+          events: {
+            CompanionInit: { wantUntrusted: true },
+          },
+        },
+        matches: [
+          "chrome://browser/content/companion/companion.xhtml",
+          "about:preferences",
+        ],
+      };
+
+      JSWINDOWACTORS.FlowReset = {
+        parent: {
+          moduleURI: "resource:///actors/FlowResetParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/FlowResetChild.jsm",
+          events: {
+            ViewCompanionBrowseTab: { wantUntrusted: true },
+            RestoreLastSession: { wantUntrusted: true },
+          },
+        },
+        matches: ["about:flow-reset"],
+      };
+
+      JSWINDOWACTORS.AboutLogins.child.allFrames = true;
+      JSWINDOWACTORS.AboutLogins.child.remoteTypes = ["privilegedabout"];
+      JSWINDOWACTORS.AboutLogins.child.events.AboutLoginsBrowsePanel = {
+        wantUntrusted: true,
+      };
+      JSWINDOWACTORS.AboutLogins.child.events.AboutLoginsClearSelection = {
+        wantUntrusted: true,
+      };
+      JSWINDOWACTORS.AboutLogins.child.events.AboutLoginsLoginEditLogin = {
+        wantUntrusted: true,
+      };
+      JSWINDOWACTORS.AboutLogins.child.events.AboutLoginsRemoveUpdateState = {
+        wantUntrusted: true,
+      };
+      JSWINDOWACTORS.AboutLogins.child.events.AboutLoginsShowBlankLogin = {
+        wantUntrusted: true,
+      };
+      JSWINDOWACTORS.AboutLogins.child.events.contextmenu = { capture: true };
     }
 
     let os = Services.obs;
@@ -1771,6 +1782,7 @@ BrowserGlue.prototype = {
     DoHController.init();
 
     if (AppConstants.PINEBUILD) {
+      SessionManager.init();
       OnnxRuntimeService.init();
       PyodideService.init();
     }
@@ -2377,7 +2389,6 @@ BrowserGlue.prototype = {
     SearchSERPTelemetry.init();
 
     Interactions.init();
-    SessionManager.init();
     PageDataService.init();
     ExtensionsUI.init();
 

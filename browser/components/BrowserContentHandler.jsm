@@ -891,7 +891,6 @@ function handURIToExistingBrowser(
   // windows only if we're in perma-private mode.
   var allowPrivate =
     forcePrivate || PrivateBrowsingUtils.permanentPrivateBrowsing;
-
   var navWin = BrowserWindowTracker.getTopWindow({ private: allowPrivate });
   if (!navWin) {
     // if we couldn't load it in an existing window, open a new one
