@@ -784,6 +784,23 @@ function UpdateBackForwardCommands(aWebNavigation) {
       forwardCommand.setAttribute("disabled", true);
     }
   }
+
+  if (AppConstants.PINEBUILD) {
+    let hasViews = !!gGlobalHistory.views.length;
+    UpdateSetAsideButton(hasViews);
+  }
+}
+
+function UpdateSetAsideButton(hasViews) {
+  let setAsideButton = document.getElementById("session-setaside-button");
+  let setAsideDisabled = setAsideButton.hasAttribute("disabled");
+  if (setAsideDisabled == hasViews) {
+    if (setAsideDisabled) {
+      setAsideButton.removeAttribute("disabled");
+    } else {
+      setAsideButton.setAttribute("disabled", true);
+    }
+  }
 }
 
 /**
