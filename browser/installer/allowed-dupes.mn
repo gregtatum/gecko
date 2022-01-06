@@ -118,11 +118,3 @@ chrome/toolkit/skin/classic/global/icons/lightbulb.svg
 # We plan to remove this duplicity after Firefox Translations become pref'd on
 browser/chrome/browser/builtin-addons/translations/wasm/cld-worker.js.mem
 browser/modules/translation/cld-worker.js.mem
-
-# Added media controls to pinebuild
-browser/chrome/browser/content/browser/companion/play.svg
-browser/chrome/browser/content/browser/companion/playing.svg
-browser/chrome/browser/content/browser/companion/mute.svg
-chrome/toolkit/skin/classic/global/media/audio.svg
-browser/chrome/browser/content/browser/companion/muted.svg
-chrome/toolkit/skin/classic/global/media/audio-muted.svg

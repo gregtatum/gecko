@@ -293,19 +293,19 @@ a {
 }
 
 .play-pause button[data-state=playing] {
-  background-image: url("pause.svg");
+  background-image: url("chrome://global/skin/media/pause-fill.svg");
 }
 
 .play-pause button[data-state=paused] {
-  background-image: url("play.svg");
+  background-image: url("chrome://global/skin/media/play-fill.svg");
 }
 
 .media .mute {
-  background-image: url("mute.svg");
+  background-image: url("chrome://global/skin/media/audio-muted.svg");
 }
 
 .media .unmute {
-  background-image: url("muted.svg");
+  background-image: url("chrome://global/skin/media/audio.svg");
 }
 
 .media .prev {
