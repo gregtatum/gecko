@@ -48,7 +48,6 @@
 #include "mozilla/Services.h"
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/StaticPrefs_fission.h"
-#include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/Telemetry.h"
 #include "mozilla/TextEvents.h"
@@ -83,6 +82,7 @@
 #include "mozilla/ipc/PBackgroundChild.h"
 #include "mozilla/ipc/URIUtils.h"
 #include "mozilla/layers/APZCCallbackHelper.h"
+#include "mozilla/layers/TouchActionHelper.h"
 #include "mozilla/layers/APZCTreeManagerChild.h"
 #include "mozilla/layers/APZChild.h"
 #include "mozilla/layers/APZEventState.h"
@@ -347,18 +347,6 @@ BrowserChild::BrowserChild(ContentChild* aManager, const TabId& aTabId,
       mCancelContentJSEpoch(0) {
   mozilla::HoldJSObjects(this);
 
-  nsWeakPtr weakPtrThis(do_GetWeakReference(
-      static_cast<nsIBrowserChild*>(this)));  // for capture by the lambda
-  mSetAllowedTouchBehaviorCallback =
-      [weakPtrThis](uint64_t aInputBlockId,
-                    const nsTArray<TouchBehaviorFlags>& aFlags) {
-        if (nsCOMPtr<nsIBrowserChild> browserChild =
-                do_QueryReferent(weakPtrThis)) {
-          static_cast<BrowserChild*>(browserChild.get())
-              ->SetAllowedTouchBehavior(aInputBlockId, aFlags);
-        }
-      };
-
   // preloaded BrowserChild should not be added to child map
   if (mUniqueId) {
     MOZ_ASSERT(NestedBrowserChildMap().find(mUniqueId) ==
@@ -423,14 +411,6 @@ void BrowserChild::SetTargetAPZC(
     const nsTArray<ScrollableLayerGuid>& aTargets) const {
   if (mApzcTreeManager) {
     mApzcTreeManager->SetTargetAPZC(aInputBlockId, aTargets);
-  }
-}
-
-void BrowserChild::SetAllowedTouchBehavior(
-    uint64_t aInputBlockId,
-    const nsTArray<TouchBehaviorFlags>& aTargets) const {
-  if (mApzcTreeManager) {
-    mApzcTreeManager->SetAllowedTouchBehavior(aInputBlockId, aTargets);
   }
 }
 
@@ -1933,11 +1913,11 @@ mozilla::ipc::IPCResult BrowserChild::RecvRealTouchEvent(
   nsTArray<TouchBehaviorFlags> allowedTouchBehaviors;
   if (localEvent.mMessage == eTouchStart && AsyncPanZoomEnabled()) {
     nsCOMPtr<Document> document = GetTopLevelDocument();
-    if (StaticPrefs::layout_css_touch_action_enabled()) {
-      allowedTouchBehaviors =
-          APZCCallbackHelper::SendSetAllowedTouchBehaviorNotification(
-              mPuppetWidget, document, localEvent, aInputBlockId,
-              mSetAllowedTouchBehaviorCallback);
+    allowedTouchBehaviors = TouchActionHelper::GetAllowedTouchBehavior(
+        mPuppetWidget, document, localEvent);
+    if (!allowedTouchBehaviors.IsEmpty() && mApzcTreeManager) {
+      mApzcTreeManager->SetAllowedTouchBehavior(aInputBlockId,
+                                                allowedTouchBehaviors);
     }
     RefPtr<DisplayportSetListener> postLayerization =
         APZCCallbackHelper::SendSetTargetAPZCNotification(
@@ -2091,8 +2071,9 @@ mozilla::ipc::IPCResult BrowserChild::RecvNativeSynthesisResponse(
 }
 
 mozilla::ipc::IPCResult BrowserChild::RecvUpdateEpoch(const uint32_t& aEpoch) {
-  mSessionStoreListener->SetEpoch(aEpoch);
-
+  if (mSessionStoreListener) {
+    mSessionStoreListener->SetEpoch(aEpoch);
+  }
   return IPC_OK();
 }
 

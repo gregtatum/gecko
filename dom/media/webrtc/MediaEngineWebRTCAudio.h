@@ -109,8 +109,7 @@ class MediaEngineWebRTCMicrophoneSource : public MediaEngineSource {
 // All communication is done via message passing using MTG ControlMessages
 class AudioInputProcessing : public AudioDataListener {
  public:
-  AudioInputProcessing(uint32_t aMaxChannelCount,
-                       const PrincipalHandle& aPrincipalHandle);
+  explicit AudioInputProcessing(uint32_t aMaxChannelCount);
   void Process(MediaTrackGraphImpl* aGraph, GraphTime aFrom, GraphTime aTo,
                AudioSegment* aInput, AudioSegment* aOutput);
 
@@ -163,12 +162,11 @@ class AudioInputProcessing : public AudioDataListener {
 
   bool IsEnded() const { return mEnded; }
 
-  const PrincipalHandle& GetPrincipalHandle() const { return mPrincipal; }
-
  private:
   ~AudioInputProcessing() = default;
   void EnsureAudioProcessing(MediaTrackGraphImpl* aGraph, uint32_t aChannels);
   void ResetAudioProcessing(MediaTrackGraphImpl* aGraph);
+  PrincipalHandle GetCheckedPrincipal(const AudioSegment& aSegment);
   // This implements the processing algoritm to apply to the input (e.g. a
   // microphone). If all algorithms are disabled, this class in not used. This
   // class only accepts audio chunks of 10ms. It has two inputs and one output:
@@ -200,8 +198,6 @@ class AudioInputProcessing : public AudioDataListener {
   AlignedFloatBuffer mInputDownmixBuffer;
   // Stores data waiting to be pulled.
   AudioSegment mSegment;
-  // Principal for the data that flows through this class.
-  const PrincipalHandle mPrincipal;
   // Whether or not this MediaEngine is enabled. If it's not enabled, it
   // operates in "pull" mode, and we append silence only, releasing the audio
   // input track.
@@ -217,6 +213,8 @@ class AudioInputProcessing : public AudioDataListener {
   AutoTArray<AudioDataValue,
              SilentChannel::AUDIO_PROCESSING_FRAMES * GUESS_AUDIO_CHANNELS>
       mInterleavedBuffer;
+  // Tracks the pending frames with paired principals piled up in packetizer.
+  std::deque<std::pair<TrackTime, PrincipalHandle>> mChunksInPacketizer;
 };
 
 // MediaTrack subclass tailored for MediaEngineWebRTCMicrophoneSource.
@@ -249,7 +247,8 @@ class AudioInputTrack : public ProcessedMediaTrack {
   // last track referencing an input goes away, so it can close the cubeb
   // input. Main thread only.
   nsresult OpenAudioInput(CubebUtils::AudioDeviceID aId,
-                          AudioDataListener* aListener);
+                          AudioDataListener* aListener,
+                          const PrincipalHandle& aPrincipal);
   void CloseAudioInput();
   Maybe<CubebUtils::AudioDeviceID> DeviceId() const;
   void Destroy() override;
@@ -268,7 +267,6 @@ class AudioInputTrack : public ProcessedMediaTrack {
   // Get the data in [aFrom, aTo) from aPort->GetSource() to aOutput. aOutput
   // needs to be empty.
   void GetInputSourceData(AudioSegment& aOutput,
-                          const PrincipalHandle& aPrincipal,
                           const MediaInputPort* aPort, GraphTime aFrom,
                           GraphTime aTo) const;
 

@@ -4004,6 +4004,12 @@
   value: false
   mirror: always
 
+# midi permission is addon-gated
+- name: dom.webmidi.gated
+  type: bool
+  value: true
+  mirror: always
+
 - name: dom.webnotifications.allowinsecure
   type: RelaxedAtomicBool
   value: false
@@ -7556,16 +7562,6 @@
   mirror: always
   rust: true
 
-# W3C touch-action css property (related to touch and pointer events)
-# Note that we turn this on even on platforms/configurations where touch
-# events are not supported (e.g. OS X, or Windows with e10s disabled). For
-# those platforms we don't handle touch events anyway so it's conceptually
-# a no-op.
-- name: layout.css.touch_action.enabled
-  type: RelaxedAtomicBool
-  value: true
-  mirror: always
-
 # Are counters for implemented CSS properties enabled?
 - name: layout.css.use-counters.enabled
   type: bool
@@ -9239,6 +9235,40 @@
   value: true
   mirror: always
 #endif
+
+# When the playback rate of an HTMLMediaElement is greater than this value, or
+# lower than the inverse of this value, the audio is muted.
+- name: media.audio.playbackrate.muting_threshold
+  type: uint32_t
+  value: 8
+  mirror: always
+
+# Time-stretch algorithm single processing sequence length in milliseconds.
+# This determines to how long sequences the original sound is chopped in the
+# time-stretch algorithm.
+- name: media.audio.playbackrate.soundtouch_sequence_ms
+  type: RelaxedAtomicInt32
+  value: 10
+  mirror: always
+
+# Time-stretch algorithm seeking window length in milliseconds for algorithm
+# that finds the best possible overlapping location. This determines from how
+# wide window the algorithm may look for an optimal joining location when mixing
+# the sound sequences back together.
+- name: media.audio.playbackrate.soundtouch_seekwindow_ms
+  type: RelaxedAtomicInt32
+  value: 15
+  mirror: always
+
+# Time-stretch algorithm overlap length in milliseconds. When the chopped sound
+# sequences are mixed back together, to form a continuous sound stream, this
+# parameter defines over how long period the two consecutive sequences are let
+# to overlap each other.
+- name: media.audio.playbackrate.soundtouch_overlap_ms
+  type: RelaxedAtomicInt32
+  value: 8
+  mirror: always
+
 
 #---------------------------------------------------------------------------
 # Prefs starting with "midi."
@@ -12451,6 +12481,36 @@
   type: bool
   value: true
   mirror: once
+#endif
+
+#ifdef MOZ_WIDGET_GTK
+#
+# Whether to use gtk portal for the file picker.
+#  - 0: never
+#  - 1: always
+#  - 2: auto (true for flatpak or GTK_USE_PORTAL=1, false otherwise)
+- name: widget.use-xdg-desktop-portal.file-picker
+  type: int32_t
+  value: 2
+  mirror: always
+
+# Whether to use gtk portal for the mime handler.
+#  - 0: never
+#  - 1: always
+#  - 2: auto (true for flatpak or GTK_USE_PORTAL=1, false otherwise)
+- name: widget.use-xdg-desktop-portal.mime-handler
+  type: int32_t
+  value: 2
+  mirror: always
+
+# Whether to use gtk portal for the print dialog.
+#  - 0: never
+#  - 1: always
+#  - 2: auto (for now only true for flatpak, since it needs work, see bug 1688720).
+- name: widget.use-xdg-desktop-portal.print
+  type: int32_t
+  value: 2
+  mirror: always
 #endif
 
 #ifdef XP_WIN

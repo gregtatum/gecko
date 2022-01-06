@@ -3716,9 +3716,6 @@ pref("network.psl.onUpdate_notify", false);
   pref("widget.disable-workspace-management", false);
   pref("widget.titlebar-x11-use-shape-mask", false);
 #endif
-#ifdef MOZ_WAYLAND
-  pref("widget.use-xdg-desktop-portal", false);
-#endif
 
 // All the Geolocation preferences are here.
 //
@@ -4111,8 +4108,6 @@ pref("dom.wakelock.enabled", false);
 // Search service settings
 pref("browser.search.log", false);
 pref("browser.search.update", true);
-pref("browser.search.update.log", false);
-pref("browser.search.update.interval", 21600);
 pref("browser.search.suggest.enabled", true);
 pref("browser.search.suggest.enabled.private", false);
 pref("browser.search.separatePrivateDefault", false);
@@ -4610,7 +4605,7 @@ pref("extensions.formautofill.addresses.capture.enabled", false);
 pref("extensions.formautofill.addresses.supportedCountries", "US,CA");
 pref("extensions.formautofill.creditCards.available", "detect");
 pref("extensions.formautofill.creditCards.enabled", true);
-pref("extensions.formautofill.creditCards.supportedCountries", "US,CA");
+pref("extensions.formautofill.creditCards.supportedCountries", "US,CA,UK,FR,DE");
 // Temporary preference to control displaying the UI elements for
 // credit card autofill used for the duration of the A/B test.
 pref("extensions.formautofill.creditCards.hideui", false);
