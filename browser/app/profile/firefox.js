@@ -2731,6 +2731,7 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   // Preferences below here were at one point off by default and now have
   // been enabled (and should likely be removed eventually).
   pref("browser.pinebuild.animateViewTransitions", true);
+  pref("browser.pinebuild.megaback.enabled", true);
 
   // Preferences below here are still being experimented with are in the
   // unlocked state to allow for manual testing.
@@ -2741,7 +2742,6 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.pinebuild.interstitial-view-overwriting.enabled", true);
   pref("browser.pinebuild.interstitial-view-overwriting.threshold_ms", 5000);
   pref("browser.pinebuild.ignoreBeforeUnloadOnExit", true);
-  pref("browser.pinebuild.megaback.enabled", false);
   pref("browser.pinebuild.megaback.click-count-timeout-ms", 3000);
   pref("browser.pinebuild.megaback.click-count-threshold", 5);
   pref("browser.pinebuild.snapshots.relevancy.enabled", false);
