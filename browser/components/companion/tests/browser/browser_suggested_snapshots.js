@@ -52,6 +52,7 @@ function testSnapshotTitles(helper, expectedTitles, excludedTitle) {
       }, "Should be the correct number of links displayed");
 
       let snapshots = suggestedSnapshots.querySelectorAll("e-snapshot");
+
       for (let i = 0; i < PAGE_TITLES.length; i++) {
         Assert.equal(
           snapshots[i].querySelector(".title").textContent,
@@ -64,6 +65,23 @@ function testSnapshotTitles(helper, expectedTitles, excludedTitle) {
 }
 
 add_task(async function setup() {
+  // Add a file URI to test.
+  const TEST_FILE = "file_pdfjs_object_stream.pdf";
+  let testFileUri = getChromeDir(getResolvedURI(gTestPath));
+  testFileUri.append(TEST_FILE);
+  // The test file URI above will be a symlink, which will cause the test to fail
+  // since the browser will follow the symlink when we load it. To work around
+  // this, copy the file to the tmp directory so we have a non symlink file URI.
+  let tmpDir = Services.dirsvc.get("TmpD", Ci.nsIFile);
+  testFileUri.copyToFollowingLinks(tmpDir, null);
+  let tmpFile = tmpDir.clone();
+  tmpFile.append(TEST_FILE);
+  testFileUri = Services.io.newFileURI(tmpFile).spec;
+
+  TEST_URLS.push({
+    uri: testFileUri,
+    title: "file_bug852909 - file_pdfjs_object_stream.pdf",
+  });
   await Interactions.reset();
   await PlacesUtils.history.clear();
   await PlacesTestUtils.addVisits(TEST_URLS);
@@ -105,6 +123,7 @@ add_task(async function setup() {
   );
 
   registerCleanupFunction(async () => {
+    tmpFile.remove(false);
     await BrowserTestUtils.closeWindow(win);
     await Snapshots.reset();
     await PlacesUtils.history.clear();
@@ -166,7 +185,7 @@ add_task(async function test_current_snapshot_hidden() {
 
     await testSnapshotTitles(
       helper,
-      TEST_URLS.slice(0, -1)
+      TEST_URLS.slice(0, -2)
         .map(t => t.title)
         .reverse()
     );
@@ -178,6 +197,61 @@ add_task(async function test_current_snapshot_hidden() {
     await testSnapshotTitles(
       helper,
       [TEST_URLS[2].title, TEST_URLS[1].title, TEST_URLS[0].title],
+      TEST_URLS[3].title
+    );
+  }, win);
+});
+
+add_task(async function test_file_snapshot_hidden() {
+  await CompanionHelper.whenReady(async helper => {
+    await Snapshots.add({
+      url: TEST_URLS[5].uri,
+      userPersisted: Snapshots.USER_PERSISTED.MANUAL,
+    });
+    await testSnapshotTitles(
+      helper,
+      [
+        TEST_URLS[5].title,
+        TEST_URLS[2].title,
+        TEST_URLS[1].title,
+        TEST_URLS[0].title,
+      ],
+      // The page we're on shouldn't be displayed.
+      TEST_URLS[3].title
+    );
+
+    let originalTab = win.gBrowser.selectedTab;
+
+    // Switch to the PDF to make sure it disappears.
+    await BrowserTestUtils.openNewForegroundTab({
+      gBrowser: win.gBrowser,
+      opening: TEST_URLS[5].uri,
+      waitForStateStop: true,
+    });
+
+    await testSnapshotTitles(
+      helper,
+      [
+        TEST_URLS[3].title,
+        TEST_URLS[2].title,
+        TEST_URLS[1].title,
+        TEST_URLS[0].title,
+      ],
+      TEST_URLS[5].title
+    );
+
+    // Now switch back to the original tab and make sure the snapshot is hidden
+    // again.
+    win.gBrowser.selectedTab = originalTab;
+
+    await testSnapshotTitles(
+      helper,
+      [
+        TEST_URLS[5].title,
+        TEST_URLS[2].title,
+        TEST_URLS[1].title,
+        TEST_URLS[0].title,
+      ],
       TEST_URLS[3].title
     );
   }, win);
@@ -228,6 +302,7 @@ add_task(async function test_scorer() {
       helper,
       [
         TEST_URLS[3].title,
+        TEST_URLS[5].title,
         TEST_URLS[2].title,
         TEST_URLS[1].title,
         TEST_URLS[0].title,
