@@ -380,7 +380,7 @@ export default class LoginItem extends HTMLElement {
       }
       case "auxclick": {
         if (event.button == 1) {
-          this._handleOriginClick();
+          this._handleOriginClick(event);
         }
         break;
       }
@@ -564,7 +564,7 @@ export default class LoginItem extends HTMLElement {
           return;
         }
         if (classList.contains("origin-input")) {
-          this._handleOriginClick();
+          this._handleOriginClick(event);
         }
         if (classList.contains("alert-learn-more-link")) {
           if (event.currentTarget.closest(".breach-alert")) {
@@ -829,7 +829,17 @@ export default class LoginItem extends HTMLElement {
     this._toggleEditing(false);
   }
 
-  _handleOriginClick() {
+  _handleOriginClick(event) {
+    event.preventDefault();
+
+    window.dispatchEvent(
+      new CustomEvent("AboutLoginsOpenOriginLink", {
+        bubbles: true,
+        composed: true,
+        detail: { url: event.target.href },
+      })
+    );
+
     this._recordTelemetryEvent({
       object: "existing_login",
       method: "open_site",

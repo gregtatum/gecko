@@ -215,6 +215,8 @@ let JSWINDOWACTORS = {
         AboutLoginsSyncOptions: { wantUntrusted: true },
         AboutLoginsUpdateLogin: { wantUntrusted: true },
         AboutLoginsExportPasswords: { wantUntrusted: true },
+        AboutLoginsOpenOriginLink: { wantUntrusted: true },
+        contextmenu: { capture: true },
       },
     },
     matches: ["about:logins", "about:logins?*", "about:loginsimportreport"],

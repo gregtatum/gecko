@@ -125,6 +125,10 @@ class AboutLoginsChild extends JSWindowActorChild {
         this.sendAsyncMessage("AboutLogins:BrowsePanel");
         break;
       }
+      case "AboutLoginsOpenOriginLink": {
+        this.onAboutLoginsOpenOriginLink(event.detail.url);
+        break;
+      }
       case "AboutLoginsRemoveUpdateState":
       case "AboutLoginsLoginEditLogin":
       case "AboutLoginsClearSelection":
@@ -312,6 +316,12 @@ class AboutLoginsChild extends JSWindowActorChild {
   onAboutLoginsUpdateLogin(login) {
     this.sendAsyncMessage("AboutLogins:UpdateLogin", {
       login,
+    });
+  }
+
+  onAboutLoginsOpenOriginLink(url) {
+    this.sendAsyncMessage("AboutLogins:OpenOriginLink", {
+      url,
     });
   }
 

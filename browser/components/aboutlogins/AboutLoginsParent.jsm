@@ -177,6 +177,12 @@ class AboutLoginsParent extends JSWindowActorParent {
           rect: message.data.rect,
           position: "after_end",
         });
+        break;
+      }
+      case "AboutLogins:OpenOriginLink": {
+        let uri = Services.io.newURI(message.data.url);
+        this.browsingContext.topChromeWindow.openPinebuildCompanionLink(uri);
+        break;
       }
     }
   }
