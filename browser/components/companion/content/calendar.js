@@ -855,7 +855,10 @@ class CalendarEvent extends MozLitElement {
         @keydown=${this.toggleDetails}
       >
         ${!this.detailsCollapsed
-          ? [this.eventHostTemplate(), this.eventLinksTemplate()]
+          ? [
+              this.eventHostTemplate(this._eventHost()),
+              this.eventLinksTemplate(),
+            ]
           : fallbackDetailTemplate}
       </div>
     `;
@@ -869,12 +872,13 @@ class CalendarEvent extends MozLitElement {
       : "";
   }
 
-  eventHostTemplate() {
-    let { creator, organizer } = this.event;
+  _isSecondaryCalendarEmail(email) {
     // Don't display auto generated emails from GCal
-    let isSecondaryCalendarEmail = e => {
-      return e.includes("group.calendar.google.com");
-    };
+    return email.endsWith("calendar.google.com");
+  }
+
+  _eventHost() {
+    let { creator, organizer } = this.event;
 
     // Determine the type of host to display. This can either be an
     // "organizer" or "creator". In general, we want to display the organizer
@@ -882,13 +886,13 @@ class CalendarEvent extends MozLitElement {
     // we should try showing the creator instead.
     let host;
     let hostType;
-    if (!isSecondaryCalendarEmail(organizer.email)) {
+    if (!this._isSecondaryCalendarEmail(organizer.email)) {
       host = organizer;
       hostType = "organizer";
-    } else if (creator && !isSecondaryCalendarEmail(creator.email)) {
+    } else if (creator && !this._isSecondaryCalendarEmail(creator.email)) {
       host = creator;
       hostType = "creator";
-    } else if (isSecondaryCalendarEmail(organizer.email)) {
+    } else if (this._isSecondaryCalendarEmail(organizer.email)) {
       // Still don't have a host. Since this is a secondary calendar, the host
       // type is a "creator", but we display the calendar's name instead of the
       // email.
@@ -896,6 +900,10 @@ class CalendarEvent extends MozLitElement {
       hostType = "creator";
     }
 
+    return { host, hostType };
+  }
+
+  eventHostTemplate({ host, hostType }) {
     if (!host) {
       return "";
     }
@@ -952,15 +960,15 @@ class CalendarEvent extends MozLitElement {
 
   // Get the event detail to display when the card is collapsed.
   detailsCollapsedTemplate() {
-    let { links, organizer, creator } = this.event;
+    let { links } = this.event;
 
     if (links?.length) {
       return this.eventLinksTemplate();
     }
 
-    let host = organizer || creator;
-    if (!host.isSelf) {
-      return this.eventHostTemplate();
+    let hostInfo = this._eventHost();
+    if (hostInfo.host && !hostInfo.host.isSelf) {
+      return this.eventHostTemplate(hostInfo);
     }
 
     return "";
@@ -974,6 +982,7 @@ class CalendarEvent extends MozLitElement {
       return (
         user &&
         !user.isSelf &&
+        !this._isSecondaryCalendarEmail(user.email) &&
         // If there are no attendees treat all users as attending.
         (!attendees?.length || attendees.some(a => a.email == user.email))
       );
@@ -994,7 +1003,9 @@ class CalendarEvent extends MozLitElement {
     }
     // This is a self-hosted meeting, or the organizer and creator don't seem
     // like good addresses to message.
-    return attendees;
+    return attendees.filter(
+      a => !this._isSecondaryCalendarEmail(a.email) && !a.isSelf
+    );
   }
 
   // If an event is less than 10 minutes away or has already started,

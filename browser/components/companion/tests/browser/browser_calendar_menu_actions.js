@@ -168,3 +168,30 @@ add_task(async function testOpenInCalendar() {
     await checkOpenedUrl(helper, EVENT_URL, ".event-item-open-calendar-action");
   });
 });
+
+add_task(async function testRunningLateSecondaryPersonal() {
+  await CompanionHelper.whenReady(async helper => {
+    await helper.setCalendarEvents([
+      {
+        summary: "Focus Time",
+        organizer: { email: "123abc@calendar.google.com", isSelf: false },
+        creator: { email: "me@example.com", isSelf: true },
+      },
+    ]);
+
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let visibleEvents = calendarEventList.shadowRoot.querySelectorAll(
+        "calendar-event"
+      );
+      is(visibleEvents.length, 1, "There's an event");
+      let event = visibleEvents[0];
+      let runningLateButton = event.shadowRoot.querySelector(
+        ".event-item-running-late-action"
+      );
+      ok(runningLateButton.hidden, "The running late button is hidden");
+    });
+  });
+});

@@ -203,9 +203,11 @@ add_task(async function testHostDetailsWithSecondaryGCalOrganizerData() {
         summary: "Firefox rules",
         organizer: {
           email: "auto-generated-test123@group.calendar.google.com",
+          isSelf: false,
         },
         creator: {
           email: "test123@gmail.com",
+          isSelf: false,
         },
       },
     ];
@@ -227,6 +229,59 @@ add_task(async function testHostDetailsWithSecondaryGCalOrganizerData() {
 
       info("Ensure correct host type is displayed");
       let hostType = eventDetailsSection.querySelector(".event-host-type");
+      is(
+        hostType.getAttribute("data-l10n-id"),
+        "companion-event-creator",
+        "Host type should be 'creator'"
+      );
+    });
+  });
+});
+
+add_task(async function testNoHostSecondaryAndSelf() {
+  await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "Firefox rules",
+        organizer: {
+          email: "auto-generated-test123@group.calendar.google.com",
+          isSelf: false,
+        },
+        creator: {
+          email: "me@example.com",
+          isSelf: true,
+        },
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      info("Ensure there is no host displayed when collapsed");
+      let eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector(".event-details");
+      });
+      let email = eventDetailsSection.querySelector(".event-host-email");
+      ok(!email, "There is no host email");
+      let hostType = eventDetailsSection.querySelector(".event-host-type");
+      ok(!hostType, "There is no host type");
+
+      info("Expand the card");
+      EventUtils.sendMouseEvent(
+        {
+          type: "mousedown",
+        },
+        eventDetailsSection,
+        content
+      );
+      await event.updateComplete;
+
+      email = eventDetailsSection.querySelector(".event-host-email");
+      is(email.textContent, "me@example.com", "Creator email shown");
+      hostType = eventDetailsSection.querySelector(".event-host-type");
       is(
         hostType.getAttribute("data-l10n-id"),
         "companion-event-creator",
@@ -387,6 +442,50 @@ add_task(async function testHostNameMatchesHostEmail() {
       info("Ensure the host name is not displayed");
       let name = eventDetailsSection.querySelector(".event-host-name");
       ok(!name, "No host name is displayed");
+    });
+  });
+});
+
+add_task(async function testHostDetailsWeirdNonSecondaryGCalOrganizerData() {
+  await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "Firefox rules",
+        organizer: {
+          email: "my.group.calendar.google.com@example.com",
+          isSelf: false,
+        },
+        creator: {
+          email: "test123@gmail.com",
+          isSelf: true,
+        },
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      info("Ensure the organizer email is displayed, since it's just weird");
+      let eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector(".event-details");
+      });
+      let email = eventDetailsSection.querySelector(".event-host-email");
+      is(
+        email.textContent,
+        "my.group.calendar.google.com@example.com",
+        "Organizer email is displayed"
+      );
+
+      info("Ensure correct host type is displayed");
+      let hostType = eventDetailsSection.querySelector(".event-host-type");
+      is(
+        hostType.getAttribute("data-l10n-id"),
+        "companion-event-organizer",
+        "Host type should be 'organizer'"
+      );
     });
   });
 });
