@@ -29,6 +29,8 @@ const BACKGROUND_UPDATE_CHANGED_TOPIC =
   UpdateUtils.PER_INSTALLATION_PREFS["app.update.background.enabled"]
     .observerTopic;
 
+dump("!!! browser/components/preferences/main.js\n");
+
 const ICON_URL_APP =
   AppConstants.platform == "linux"
     ? "moz-icon://dummy.exe?size=16"
@@ -396,6 +398,7 @@ var gMainPane = {
       Services.prefs.clearUserPref("browser.ctrlTab.migrated");
     });
     setEventListener("manageBrowserLanguagesButton", "command", function() {
+      dump("!!! manageBrowserLanguagesButton - showBrowserLanguages\n");
       gMainPane.showBrowserLanguages({ search: false });
     });
     if (AppConstants.MOZ_UPDATER) {
@@ -1158,6 +1161,7 @@ var gMainPane = {
   /* Show or hide the confirm change message bar based on the new locale. */
   onBrowserLanguageChange(event) {
     let locale = event.target.value;
+    dump("!!! onBrowserLanguageMenuChange\n");
 
     if (locale == "search") {
       gMainPane.showBrowserLanguages({ search: true });
@@ -1342,6 +1346,8 @@ var gMainPane = {
   },
 
   showBrowserLanguages({ search }) {
+    dump(`!!! showBrowserLanguages {search:${search}}\n`);
+
     // Record the telemetry event with an id to associate related actions.
     let telemetryId = parseInt(
       Services.telemetry.msSinceProcessStart(),
@@ -1360,6 +1366,7 @@ var gMainPane = {
 
   /* Show or hide the confirm change message bar based on the updated ordering. */
   browserLanguagesClosed() {
+    dump(`!!! browserLanguagesClosed {accepted: ${accepted}, selected: [${selected.join(",")}]}\n`);
     let { accepted, selected } = this.gBrowserLanguagesDialog;
     let active = Services.locale.appLocalesAsBCP47;
 
@@ -2586,6 +2593,7 @@ var gMainPane = {
   },
 
   focusFilterBox() {
+    dump("!!! focusFilterBox\n");
     this._filter.focus();
     this._filter.select();
   },

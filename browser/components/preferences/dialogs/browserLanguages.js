@@ -88,6 +88,7 @@ class OrderedListBox {
     this.onReorder = onReorder;
 
     this.items = [];
+    dump(`!!! OrderedListBox constructor\n`);
 
     this.richlistbox.addEventListener("select", () => this.setButtonState());
     this.upButton.addEventListener("command", () => this.moveUp());
@@ -174,6 +175,7 @@ class OrderedListBox {
    * @param {object} item The item to insert.
    */
   addItem(item) {
+    dump(`!!! OrderedListBox.addItem item` + item + "\n");
     this.items.unshift(item);
     this.richlistbox.insertBefore(
       this.createItem(item),
@@ -200,6 +202,10 @@ class OrderedListBox {
     let listitem = document.createXULElement("richlistitem");
     listitem.id = id;
     listitem.setAttribute("value", value);
+
+    dump(
+      `!!! OrderedListBox.createItem: ` + [id, label, value].join(", ") + "\n"
+    );
 
     let labelEl = document.createXULElement("label");
     labelEl.textContent = label;
@@ -228,6 +234,7 @@ class SortedItemSelectList {
       if (!menulist.selectedItem) {
         return;
       }
+      dump(`!!! SortedItemSelectList button command\n`);
 
       let [item] = this.items.splice(menulist.selectedIndex, 1);
       menulist.selectedItem.remove();
@@ -280,6 +287,7 @@ class SortedItemSelectList {
   createItem({ label, value, className, disabled }) {
     let item = document.createXULElement("menuitem");
     item.setAttribute("label", label);
+    dump(`!!! SortedItemSelectList createItem\n`);
     if (value) {
       item.value = value;
     }
@@ -359,6 +367,8 @@ function compareItems(a, b) {
   return -1;
 }
 
+dump("!!! browser/components/preferences/dialogs/browserLanguages.js\n");
+
 var gBrowserLanguagesDialog = {
   telemetryId: null,
   accepted: false,
@@ -379,6 +389,8 @@ var gBrowserLanguagesDialog = {
       this.telemetryId,
       extra
     );
+
+    dump(`!!! gBrowserLanguagesDialog.recordTelemetry: ` + [method, extra].join(",") + "\n");
   },
 
   beforeAccept() {
@@ -387,9 +399,11 @@ var gBrowserLanguagesDialog = {
   },
 
   async onLoad() {
-    document
-      .getElementById("BrowserLanguagesDialog")
-      .addEventListener("beforeaccept", () => this.beforeAccept());
+    dump(`!!! gBrowserLanguagesDialog.onLoad\n`);
+    dump(
+      `!!! gBrowserLanguagesDialog.onLoad this.accepted: ${this.accepted} \n`
+    );
+
     // Maintain the previously selected locales even if we cancel out.
     let { telemetryId, selected, search } = window.arguments[0];
     this.telemetryId = telemetryId;
@@ -417,9 +431,11 @@ var gBrowserLanguagesDialog = {
     await this.initAvailableLocales(available, search);
 
     this.initialized = true;
+    dump(`!!! gBrowserLanguagesDialog.onLoad initialized` + "\n");
   },
 
   async initSelectedLocales(selectedLocales) {
+    dump(`!!! gBrowserLanguagesDialog.selectedLocales` + selectedLocales + "\n");
     this._selectedLocales = new OrderedListBox({
       richlistbox: document.getElementById("selectedLocales"),
       upButton: document.getElementById("up"),
@@ -462,6 +478,7 @@ var gBrowserLanguagesDialog = {
   },
 
   async loadLocalesFromAMO() {
+    dump(`!!! gBrowserLanguagesDialog.loadLocalesFromAMO\n`);
     if (!this.downloadEnabled) {
       return;
     }
@@ -542,7 +559,7 @@ var gBrowserLanguagesDialog = {
     }
   },
 
-  async requestLocalLanguage(item, available) {
+  async requestLocalLanguage(item) {
     this._selectedLocales.addItem(item);
     let selectedCount = this._selectedLocales.items.length;
     let availableCount = (await getAvailableLocales()).length;
