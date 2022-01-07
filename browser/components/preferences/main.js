@@ -1014,7 +1014,11 @@ var gMainPane = {
    */
   async setBrowserLocales(selected) {
     let available = await getAvailableLocales();
-    let localeNames = Services.intl.getLocaleDisplayNames(undefined, available);
+    let localeNames = Services.intl.getLocaleDisplayNames(
+      undefined,
+      available,
+      { preferNative: true }
+    );
     let locales = available.map((code, i) => ({ code, name: localeNames[i] }));
     locales.sort((a, b) => a.name > b.name);
 
@@ -1387,9 +1391,11 @@ var gMainPane = {
       return;
     }
     let systemLocale = regionalPrefsLocales[0];
-    let localeDisplayname = Services.intl.getLocaleDisplayNames(undefined, [
-      systemLocale,
-    ]);
+    let localeDisplayname = Services.intl.getLocaleDisplayNames(
+      undefined,
+      [systemLocale],
+      { preferNative: true }
+    );
     if (!localeDisplayname.length) {
       return;
     }

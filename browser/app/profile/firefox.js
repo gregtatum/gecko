@@ -300,7 +300,7 @@ pref("browser.startup.preXulSkeletonUI", true);
 #endif
 
 // Show an upgrade dialog on major upgrades.
-pref("browser.startup.upgradeDialog.enabled", true);
+pref("browser.startup.upgradeDialog.enabled", false);
 
 // Don't create the hidden window during startup on
 // platforms that don't always need it (Win/Linux).
@@ -2054,6 +2054,11 @@ pref("extensions.pocket.showHome", true);
 // Control what version of the logged out doorhanger is displayed
 // Possibilities are: `control`, `control-one-button`, `variant_a`, `variant_b`, `variant_c`
 pref("extensions.pocket.loggedOutVariant", "control");
+
+// Enable the new Pocket panels.
+pref("extensions.pocket.refresh.layout.enabled", false);
+// Just for the new Pocket panels, enables the email signup button.
+pref("extensions.pocket.refresh.emailButton.enabled", false);
 
 pref("signon.management.page.fileImport.enabled", false);
 
