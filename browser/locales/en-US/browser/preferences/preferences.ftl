@@ -265,8 +265,6 @@ choose-browser-language-description = Choose the languages used to display menus
 manage-browser-languages-button =
   .label = Set Alternatives…
   .accesskey = l
-confirm-browser-language-change-description = Restart { -brand-short-name } to apply these changes
-confirm-browser-language-change-button = Apply and Restart
 
 translate-web-pages =
     .label = Translate web content
