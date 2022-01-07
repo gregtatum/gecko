@@ -223,6 +223,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     }
     setAsideBtn.disabled = true;
     await this.replaceSession(window);
+    setAsideBtn.removeAttribute("disabled");
   }
 
   /**
