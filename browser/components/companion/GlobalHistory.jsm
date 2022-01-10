@@ -2112,14 +2112,16 @@ class GlobalHistory extends EventTarget {
 
     this.setView(viewToSwitchTo.view);
 
-    let { browser } = internalView;
+    let browser = internalView.getBrowser();
     // If the associated <browser> only had a single entry in it,
     // then presumably it was for the history entry of the View
     // that just removed. In that case, we can get rid of that
-    // <browser>.
+    // <browser> - but only if we weren't already closing it.
     if (browser?.browsingContext.sessionHistory.count == 1) {
       let tab = this.#window.gBrowser.getTabForBrowser(browser);
-      this.#window.gBrowser.removeTab(tab, { animate: false });
+      if (!tab.closing) {
+        this.#window.gBrowser.removeTab(tab, { animate: false });
+      }
     }
 
     this.#viewStack.splice(index, 1);
