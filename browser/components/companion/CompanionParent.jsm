@@ -778,10 +778,19 @@ class CompanionParent extends JSWindowActorParent {
             "browser.pinebuild.snapshots.relevancy.enabled",
             false
           ),
+          selectCommonReferrer: Services.prefs.getBoolPref(
+            "browser.pinebuild.snapshots.relevancy.enabled",
+            false
+          ),
           getCurrentSessionUrls: () =>
             new Set(gGlobalHistory.views.map(view => view.url)),
         });
-        this.snapshotSelector.setUrlAndRebuildNow(gBrowser.currentURI.spec);
+        let referrerUrl =
+          gBrowser.selectedBrowser.referrerInfo?.computedReferrerSpec;
+        this.snapshotSelector.setUrlAndRebuildNow(
+          gBrowser.currentURI.spec,
+          referrerUrl
+        );
 
         gBrowser.addProgressListener(this);
 
@@ -1047,7 +1056,11 @@ class CompanionParent extends JSWindowActorParent {
       return;
     }
 
-    this.snapshotSelector.setUrl(aLocationURI.spec);
+    let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
+    let referrerUrl =
+      gBrowser.selectedBrowser.referrerInfo?.computedReferrerSpec;
+
+    this.snapshotSelector.setUrl(aLocationURI.spec, referrerUrl);
 
     if (!selectByType) {
       return;
