@@ -999,10 +999,10 @@ var gMainPane = {
     // This will register the "command" listener.
     let menulist = document.getElementById("defaultBrowserLanguage");
     new SelectionChangedMenulist(menulist, event => {
-      gMainPane.onBrowserLanguageChange(event);
+      gMainPane.onBrowserLanguageMenuChange(event);
     });
 
-    gMainPane.setBrowserLocales(Services.locale.appLocaleAsBCP47);
+    gMainPane.updateBrowserLocalesUI(Services.locale.appLocaleAsBCP47);
   },
 
   /**
@@ -1010,7 +1010,7 @@ var gMainPane = {
    * is "selecting". This could be the currently requested locale or a locale
    * that the user would like to switch to after confirmation.
    */
-  async setBrowserLocales(selected) {
+  async updateBrowserLocalesUI(selected) {
     let available = await getAvailableLocales();
     let localeNames = Services.intl.getLocaleDisplayNames(
       undefined,
@@ -1159,7 +1159,7 @@ var gMainPane = {
   },
 
   /* Show or hide the confirm change message bar based on the new locale. */
-  onBrowserLanguageChange(event) {
+  onBrowserLanguageMenuChange(event) {
     let locale = event.target.value;
     dump("!!! onBrowserLanguageMenuChange\n");
 
@@ -1377,12 +1377,12 @@ var gMainPane = {
     // Prepare for changing the locales if they are different than the current locales.
     if (selected && selected.join(",") != active.join(",")) {
       gMainPane.showConfirmLanguageChangeMessageBar(selected);
-      gMainPane.setBrowserLocales(selected[0]);
+      gMainPane.updateBrowserLocalesUI(selected[0]);
       return;
     }
 
     // They matched, so we can reset the UI.
-    gMainPane.setBrowserLocales(Services.locale.appLocaleAsBCP47);
+    gMainPane.updateBrowserLocalesUI(Services.locale.appLocaleAsBCP47);
     gMainPane.hideConfirmLanguageChangeMessageBar();
   },
 
