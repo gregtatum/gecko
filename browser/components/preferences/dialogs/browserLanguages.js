@@ -554,7 +554,7 @@ var gBrowserLanguagesDialog = {
     }
   },
 
-  async requestLocalLanguage(item, available) {
+  async requestLocalLanguage(item) {
     this._selectedLocales.addItem(item);
     let selectedCount = this._selectedLocales.items.length;
     let availableCount = (await getAvailableLocales()).length;

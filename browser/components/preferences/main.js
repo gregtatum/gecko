@@ -999,10 +999,10 @@ var gMainPane = {
     // This will register the "command" listener.
     let menulist = document.getElementById("defaultBrowserLanguage");
     new SelectionChangedMenulist(menulist, event => {
-      gMainPane.onBrowserLanguageMenuChange(event);
+      gMainPane.onBrowserLanguageChange(event);
     });
 
-    gMainPane.updateBrowserLocalesUI();
+    gMainPane.setBrowserLocales(Services.locale.appLocaleAsBCP47);
   },
 
   /**
@@ -1010,7 +1010,7 @@ var gMainPane = {
    * is "selecting". This could be the currently requested locale or a locale
    * that the user would like to switch to after confirmation.
    */
-  async updateBrowserLocalesUI() {
+  async setBrowserLocales(selected) {
     let available = await getAvailableLocales();
     let localeNames = Services.intl.getLocaleDisplayNames(
       undefined,
@@ -1044,18 +1044,130 @@ var gMainPane = {
     let menupopup = menulist.querySelector("menupopup");
     menupopup.textContent = "";
     menupopup.appendChild(fragment);
-    menulist.value = Services.locale.appLocaleAsBCP47;
+    menulist.value = selected;
 
     document.getElementById("browserLanguagesBox").hidden = false;
   },
 
-  /* The language menu list changed. */
-  onBrowserLanguageMenuChange(event) {
+  /* Show the confirmation message bar to allow a restart into the new locales. */
+  async showConfirmLanguageChangeMessageBar(locales) {
+    let messageBar = document.getElementById("confirmBrowserLanguage");
+
+    // Get the bundle for the new locale.
+    let newBundle = getBundleForLocales(locales);
+
+    // Find the messages and labels.
+    let messages = await Promise.all(
+      [newBundle, document.l10n].map(async bundle =>
+        bundle.formatValue("confirm-browser-language-change-description")
+      )
+    );
+    let buttonLabels = await Promise.all(
+      [newBundle, document.l10n].map(async bundle =>
+        bundle.formatValue("confirm-browser-language-change-button")
+      )
+    );
+
+    // If both the message and label are the same, just include one row.
+    if (messages[0] == messages[1] && buttonLabels[0] == buttonLabels[1]) {
+      messages.pop();
+      buttonLabels.pop();
+    }
+
+    let contentContainer = messageBar.querySelector(
+      ".message-bar-content-container"
+    );
+    contentContainer.textContent = "";
+
+    for (let i = 0; i < messages.length; i++) {
+      let messageContainer = document.createXULElement("hbox");
+      messageContainer.classList.add("message-bar-content");
+      messageContainer.setAttribute("flex", "1");
+      messageContainer.setAttribute("align", "center");
+
+      let description = document.createXULElement("description");
+      description.classList.add("message-bar-description");
+
+      // TODO: This should preferably use `Intl.LocaleInfo` when bug 1693576 is fixed.
+      if (
+        i == 0 &&
+        (locales[0] == "ar" ||
+          locales[0] == "ckb" ||
+          locales[0] == "fa" ||
+          locales[0] == "he" ||
+          locales[0] == "ur")
+      ) {
+        description.classList.add("rtl-locale");
+      }
+      description.setAttribute("flex", "1");
+      description.textContent = messages[i];
+      messageContainer.appendChild(description);
+
+      let button = document.createXULElement("button");
+      button.addEventListener(
+        "command",
+        gMainPane.confirmBrowserLanguageChange
+      );
+      button.classList.add("message-bar-button");
+      button.setAttribute("locales", locales.join(","));
+      button.setAttribute("label", buttonLabels[i]);
+      messageContainer.appendChild(button);
+
+      contentContainer.appendChild(messageContainer);
+    }
+
+    messageBar.hidden = false;
+    gMainPane.selectedLocales = locales;
+  },
+
+  hideConfirmLanguageChangeMessageBar() {
+    let messageBar = document.getElementById("confirmBrowserLanguage");
+    messageBar.hidden = true;
+    let contentContainer = messageBar.querySelector(
+      ".message-bar-content-container"
+    );
+    contentContainer.textContent = "";
+    gMainPane.requestingLocales = null;
+  },
+
+  /* Confirm the locale change and restart the browser in the new locale. */
+  confirmBrowserLanguageChange(event) {
+    let localesString = (event.target.getAttribute("locales") || "").trim();
+    if (!localesString || !localesString.length) {
+      return;
+    }
+    let locales = localesString.split(",");
+    Services.locale.requestedLocales = locales;
+
+    // Record the change in telemetry before we restart.
+    gMainPane.recordBrowserLanguagesTelemetry("apply");
+
+    // Restart with the new locale.
+    let cancelQuit = Cc["@mozilla.org/supports-PRBool;1"].createInstance(
+      Ci.nsISupportsPRBool
+    );
+    Services.obs.notifyObservers(
+      cancelQuit,
+      "quit-application-requested",
+      "restart"
+    );
+    if (!cancelQuit.data) {
+      Services.startup.quit(
+        Services.startup.eAttemptQuit | Services.startup.eRestart
+      );
+    }
+  },
+
+  /* Show or hide the confirm change message bar based on the new locale. */
+  onBrowserLanguageChange(event) {
     let locale = event.target.value;
     dump("!!! onBrowserLanguageMenuChange\n");
 
     if (locale == "search") {
       gMainPane.showBrowserLanguages({ search: true });
+      return;
+    } else if (locale == Services.locale.appLocaleAsBCP47) {
+      this.hideConfirmLanguageChangeMessageBar();
       return;
     }
 
@@ -1065,7 +1177,7 @@ var gMainPane = {
     let locales = Array.from(
       new Set([locale, ...Services.locale.requestedLocales]).values()
     );
-    Services.locale.requestedLocales = locales;
+    this.showConfirmLanguageChangeMessageBar(locales);
   },
 
   /**
@@ -1262,13 +1374,16 @@ var gMainPane = {
       accepted ? "accept" : "cancel"
     );
 
-    if (accepted && selected && selected.join(",") != active.join(",")) {
-      dump("!!! setting the locales to: " + locales.join(",") + "\n");
-      // The user changed the locale selection, update the browser.
-      Services.locale.requestedLocales = locales;
+    // Prepare for changing the locales if they are different than the current locales.
+    if (selected && selected.join(",") != active.join(",")) {
+      gMainPane.showConfirmLanguageChangeMessageBar(selected);
+      gMainPane.setBrowserLocales(selected[0]);
+      return;
     }
 
-    gMainPane.updateBrowserLocalesUI();
+    // They matched, so we can reset the UI.
+    gMainPane.setBrowserLocales(Services.locale.appLocaleAsBCP47);
+    gMainPane.hideConfirmLanguageChangeMessageBar();
   },
 
   displayUseSystemLocale() {
