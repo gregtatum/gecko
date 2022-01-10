@@ -15,14 +15,8 @@ user_pref("browser.sessionstore.resume_from_crash", false);
 // be confusing for tests that send click events before the first paint.
 user_pref("nglayout.initialpaint.unsuppress_with_no_background", true);
 
-// Explicitly turn off fission so we don't accidentally use the wrong default
-// value. This can be removed once harnesses and tasks assume fission by
-// default.
-user_pref("fission.autostart", false);
-
 // Disable quick-navigation overwriting of Views for Pinebuild. Navigations
 // in tests are overwhelmingly quick, and so this View-recycling infrastructure
 // would get used unexpectedly if enabled. Instead, we explicitly enable
 // and test the quick navigation case in its own test.
 user_pref("browser.pinebuild.interstitial-view-overwriting.enabled", false);
-

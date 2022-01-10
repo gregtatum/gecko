@@ -855,7 +855,7 @@ dependencies = [
 [[package]]
 name = "coremidi"
 version = "0.6.0"
-source = "git+https://github.com/chris-zen/coremidi.git?rev=753163a8e5aeb8d69d2e0558301fd34a3d04327a#753163a8e5aeb8d69d2e0558301fd34a3d04327a"
+source = "git+https://github.com/chris-zen/coremidi.git?rev=fc68464b5445caf111e41f643a2e69ccce0b4f83#fc68464b5445caf111e41f643a2e69ccce0b4f83"
 dependencies = [
  "core-foundation",
  "core-foundation-sys",
@@ -2021,6 +2021,7 @@ dependencies = [
  "mapped_hyph",
  "mdns_service",
  "midir_impl",
+ "moz_asserts",
  "mozurl",
  "mp4parse_capi",
  "neqo_glue",
@@ -2570,7 +2571,6 @@ dependencies = [
 [[package]]
 name = "js-sys"
 version = "0.3.100"
-source = "git+https://github.com/kvark/dummy-web#5731e569d865a1ebaf116f48dad781f355a99243"
 
 [[package]]
 name = "jsparagus"
@@ -3068,14 +3068,17 @@ dependencies = [
 [[package]]
 name = "midir"
 version = "0.7.0"
-source = "git+https://github.com/mozilla/midir.git?rev=dc87afbd4361ae5ec192e1fab0a6409dd13d4011#dc87afbd4361ae5ec192e1fab0a6409dd13d4011"
+source = "git+https://github.com/mozilla/midir.git?rev=4c11f0ffb5d6a10de4aff40a7b81218b33b94e6f#4c11f0ffb5d6a10de4aff40a7b81218b33b94e6f"
 dependencies = [
  "alsa",
  "bitflags",
  "coremidi",
+ "js-sys",
  "libc",
  "memalloc",
  "nix",
+ "wasm-bindgen",
+ "web-sys",
  "winapi",
 ]
 
@@ -3201,6 +3204,10 @@ checksum = "b9f1c5b025cda876f66ef43a113f91ebc9f4ccef34843000e0adf6ebbab84e21"
 dependencies = [
  "winapi",
 ]
+
+[[package]]
+name = "moz_asserts"
+version = "0.1.0"
 
 [[package]]
 name = "moz_cbor"
@@ -4671,7 +4678,6 @@ checksum = "9def91fd1e018fe007022791f865d0ccc9b3a0d5001e01aabb8b40e46000afb5"
 [[package]]
 name = "slotmap"
 version = "1.100.0"
-source = "git+https://github.com/kvark/dummy-web#5731e569d865a1ebaf116f48dad781f355a99243"
 
 [[package]]
 name = "smallbitvec"
@@ -5523,7 +5529,6 @@ checksum = "cccddf32554fecc6acb585f82a32a72e28b48f8c4c1883ddfeeeaa96f7d8e519"
 [[package]]
 name = "wasm-bindgen"
 version = "0.2.100"
-source = "git+https://github.com/kvark/dummy-web#5731e569d865a1ebaf116f48dad781f355a99243"
 
 [[package]]
 name = "wasm-encoder"
@@ -5573,7 +5578,6 @@ dependencies = [
 [[package]]
 name = "web-sys"
 version = "0.3.100"
-source = "git+https://github.com/kvark/dummy-web#5731e569d865a1ebaf116f48dad781f355a99243"
 
 [[package]]
 name = "webdriver"

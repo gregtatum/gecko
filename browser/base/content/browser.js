@@ -4791,7 +4791,7 @@ let gFileMenu = {
         document.getElementById("menu_savePage")
       );
     }
-    PrintUtils.updatePrintPreviewMenuHiddenState();
+    PrintUtils.updatePrintSetupMenuHiddenState();
   },
 };
 
