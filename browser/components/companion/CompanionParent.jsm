@@ -14,6 +14,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   clearTimeout: "resource://gre/modules/Timer.jsm",
   _LastSession: "resource:///modules/sessionstore/SessionStore.jsm",
+  InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.jsm"
   OAuth2: "resource:///modules/OAuth2.jsm",
   OnlineServices: "resource:///modules/OnlineServices.jsm",
   PageDataSchema: "resource:///modules/pagedata/PageDataSchema.jsm",
@@ -1049,7 +1050,7 @@ class CompanionParent extends JSWindowActorParent {
       return;
     }
 
-    if (!Snapshots.canSnapshotUrl(aLocationURI)) {
+    if (!InteractionsBlocklist.canRecordUrl(aLocationURI)) {
       // Reset the current URL for the snapshot selector, as this is a
       // non-web page, and we want to allow all snapshots to be displayed.
       this.snapshotSelector.setUrl();
