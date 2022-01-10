@@ -14,7 +14,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   clearTimeout: "resource://gre/modules/Timer.jsm",
   _LastSession: "resource:///modules/sessionstore/SessionStore.jsm",
-  InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.jsm"
+  InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.jsm",
   OAuth2: "resource:///modules/OAuth2.jsm",
   OnlineServices: "resource:///modules/OnlineServices.jsm",
   PageDataSchema: "resource:///modules/pagedata/PageDataSchema.jsm",
