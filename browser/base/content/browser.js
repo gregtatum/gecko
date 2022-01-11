@@ -40,6 +40,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   NimbusFeatures: "resource://nimbus/ExperimentAPI.jsm",
   ExtensionsUI: "resource:///modules/ExtensionsUI.jsm",
   HomePage: "resource:///modules/HomePage.jsm",
+  InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.jsm",
   LightweightThemeConsumer:
     "resource://gre/modules/LightweightThemeConsumer.jsm",
   Log: "resource://gre/modules/Log.jsm",
@@ -5321,7 +5322,7 @@ var XULBrowserWindow = {
 
     if (AppConstants.PINEBUILD) {
       let saveSnapshot = document.getElementById("Browser:SaveSnapshot");
-      if (!Snapshots.canSnapshotUrl(aLocationURI)) {
+      if (!InteractionsBlocklist.canRecordUrl(aLocationURI)) {
         saveSnapshot.setAttribute("disabled", "true");
       } else {
         saveSnapshot.removeAttribute("disabled");

@@ -301,8 +301,8 @@ add_task(async function test_scorer() {
     await testSnapshotTitles(
       helper,
       [
-        TEST_URLS[3].title,
         TEST_URLS[5].title,
+        TEST_URLS[3].title,
         TEST_URLS[2].title,
         TEST_URLS[1].title,
         TEST_URLS[0].title,
