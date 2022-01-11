@@ -6,7 +6,6 @@ import "./section-panel.js";
 import { CalendarEventList } from "./calendar.js";
 import { BrowseList } from "./browse.js";
 import { MediaList } from "./media.js";
-import { PocketList } from "./pocket.js";
 import { FullSessionList, LastSessionList, initSessionUI } from "./sessions.js";
 import { ServicesOnboarding } from "./onboarding-services.js";
 import {
@@ -62,7 +61,6 @@ function maybeInitializeUI() {
   browseContent.appendChild(browseList);
   browseContent.appendChild(new LastSessionList({ showTitle: true }));
   browseContent.appendChild(new RecentlyClosedSnapshotList("Recently Closed"));
-  browseContent.appendChild(new PocketList());
 
   let sessionContent = document.querySelector("#sessions .content");
   sessionContent.appendChild(new FullSessionList());

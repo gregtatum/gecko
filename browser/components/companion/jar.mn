@@ -41,7 +41,6 @@ browser.jar:
 #endif
     content/browser/companion/pinebuildBackground.js (content/pinebuildBackground.js)
     content/browser/companion/pinebuildBackground.xhtml (content/pinebuildBackground.xhtml)
-    content/browser/companion/pocket.js (content/pocket.js)
     content/browser/companion/rally.svg (content/rally.svg)
     content/browser/companion/refresh-services-button.js (content/refresh-services-button.js)
     content/browser/companion/relative-time.js (content/relative-time.js)
