@@ -30,7 +30,6 @@ DIRS += [
     "about",
     "aboutlogins",
     "attribution",
-    "companion",
     "contextualidentity",
     "customizableui",
     "doh",
@@ -66,6 +65,11 @@ DIRS += ["build"]
 if CONFIG["NIGHTLY_BUILD"]:
     DIRS += [
         "payments",
+    ]
+
+if CONFIG["PINEBUILD"]:
+    DIRS += [
+        "companion",
     ]
 
 if CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":
