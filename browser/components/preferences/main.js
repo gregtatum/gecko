@@ -330,7 +330,7 @@ var gMainPane = {
     initializeProxyUI(gMainPane);
 
     if (Services.prefs.getBoolPref("intl.multilingual.enabled")) {
-      gMainPane.initBrowserLocale();
+      gMainPane.initPrimaryBrowserLanguageUI();
     }
 
     // We call `initDefaultZoomValues` to set and unhide the
@@ -398,8 +398,10 @@ var gMainPane = {
       Services.prefs.clearUserPref("browser.ctrlTab.migrated");
     });
     setEventListener("manageBrowserLanguagesButton", "command", function() {
-      dump("!!! manageBrowserLanguagesButton - showBrowserLanguages\n");
-      gMainPane.showBrowserLanguages({ search: false });
+      dump(
+        "!!! manageBrowserLanguagesButton - showBrowserLanguagesSubDialog\n"
+      );
+      gMainPane.showBrowserLanguagesSubDialog({ search: false });
     });
     if (AppConstants.MOZ_UPDATER) {
       // These elements are only compiled in when the updater is enabled
@@ -989,7 +991,7 @@ var gMainPane = {
     document.getElementById("zoomBox").hidden = false;
   },
 
-  initBrowserLocale() {
+  initPrimaryBrowserLanguageUI() {
     // Enable telemetry.
     Services.telemetry.setEventRecordingEnabled(
       "intl.ui.browserLanguage",
@@ -997,20 +999,26 @@ var gMainPane = {
     );
 
     // This will register the "command" listener.
-    let menulist = document.getElementById("defaultBrowserLanguage");
+    let menulist = document.getElementById("primaryBrowserLocale");
     new SelectionChangedMenulist(menulist, event => {
-      gMainPane.onBrowserLanguageMenuChange(event);
+      gMainPane.onPrimaryBrowserLanguageMenuChange(event);
     });
 
-    gMainPane.updateBrowserLocalesUI(Services.locale.appLocaleAsBCP47);
+    dump(`!!! gMainPane.updatePrimaryBrowserLanguageUI\n`);
+    gMainPane.updatePrimaryBrowserLanguageUI(Services.locale.appLocaleAsBCP47);
   },
 
   /**
    * Update the available list of locales and select the locale that the user
    * is "selecting". This could be the currently requested locale or a locale
    * that the user would like to switch to after confirmation.
+   *
+   * @param {string} selected - The selected locale.
    */
-  async updateBrowserLocalesUI(selected) {
+  async updatePrimaryBrowserLanguageUI(selected) {
+    dump(
+      `!!! gMainPane.updatePrimaryBrowserLanguageUI selected:` + selected + "\n"
+    );
     let available = await getAvailableLocales();
     let localeNames = Services.intl.getLocaleDisplayNames(
       undefined,
@@ -1031,7 +1039,7 @@ var gMainPane = {
     // Add an option to search for more languages if downloading is supported.
     if (Services.prefs.getBoolPref("intl.multilingual.downloadEnabled")) {
       let menuitem = document.createXULElement("menuitem");
-      menuitem.id = "defaultBrowserLanguageSearch";
+      menuitem.id = "primaryBrowserLocaleSearch";
       menuitem.setAttribute(
         "label",
         await document.l10n.formatValue("browser-languages-search")
@@ -1040,7 +1048,7 @@ var gMainPane = {
       fragment.appendChild(menuitem);
     }
 
-    let menulist = document.getElementById("defaultBrowserLanguage");
+    let menulist = document.getElementById("primaryBrowserLocale");
     let menupopup = menulist.querySelector("menupopup");
     menupopup.textContent = "";
     menupopup.appendChild(fragment);
@@ -1159,25 +1167,49 @@ var gMainPane = {
   },
 
   /* Show or hide the confirm change message bar based on the new locale. */
-  onBrowserLanguageMenuChange(event) {
-    let locale = event.target.value;
-    dump("!!! onBrowserLanguageMenuChange\n");
+  onPrimaryBrowserLanguageMenuChange(event) {
+    try {
+      let locale = event.target.value;
+      dump("!!! onPrimaryBrowserLanguageMenuChange\n");
 
-    if (locale == "search") {
-      gMainPane.showBrowserLanguages({ search: true });
-      return;
-    } else if (locale == Services.locale.appLocaleAsBCP47) {
-      this.hideConfirmLanguageChangeMessageBar();
-      return;
+      if (locale == "search") {
+        gMainPane.showBrowserLanguagesSubDialog({ search: true });
+        return;
+      } else if (locale == Services.locale.appLocaleAsBCP47) {
+        this.hideConfirmLanguageChangeMessageBar();
+        return;
+      }
+
+      let newLocales = Array.from(
+        new Set([locale, ...Services.locale.requestedLocales]).values()
+      );
+
+      switch (gMainPane.getLanguageSwitchTransitionType(newLocales)) {
+        case "requires-restart":
+          // Prepare to change the locales, as they were different.
+          gMainPane.showConfirmLanguageChangeMessageBar(newLocales);
+          gMainPane.updatePrimaryBrowserLanguageUI(newLocales[0]);
+          break;
+        case "live-reload":
+          Services.locale.requestedLocales = newLocales;
+          gMainPane.updatePrimaryBrowserLanguageUI(
+            Services.locale.appLocaleAsBCP47
+          );
+          gMainPane.hideConfirmLanguageChangeMessageBar();
+          break;
+        case "locales-match":
+          // They matched, so we can reset the UI.
+          gMainPane.updatePrimaryBrowserLanguageUI(
+            Services.locale.appLocaleAsBCP47
+          );
+          gMainPane.hideConfirmLanguageChangeMessageBar();
+          break;
+        default:
+          throw new Error("Unhandled transition type.");
+      }
+    } catch (error) {
+      dump(`!!! error ${error.message}\n\n${error.stack}\n`);
     }
-
-    // Note the change in telemetry.
-    gMainPane.recordBrowserLanguagesTelemetry("reorder");
-
-    let locales = Array.from(
-      new Set([locale, ...Services.locale.requestedLocales]).values()
-    );
-    this.showConfirmLanguageChangeMessageBar(locales);
   },
 
   /**
@@ -1345,8 +1377,15 @@ var gMainPane = {
     );
   },
 
-  showBrowserLanguages({ search }) {
-    dump(`!!! showBrowserLanguages {search:${search}}\n`);
+  /**
+   * Open the browser languages sub dialog in either the normal mode, or search mode.
+   * The search mode is only available from the menu to change the primary browser
+   * language.
+   *
+   * @param {{ search: boolean }}
+   */
+  showBrowserLanguagesSubDialog({ search }) {
+    dump(`!!! gMainPane.showBrowserLanguagesSubDialog {search:${search}}\n`);
 
     // Record the telemetry event with an id to associate related actions.
     let telemetryId = parseInt(
@@ -1364,26 +1403,104 @@ var gMainPane = {
     );
   },
 
-  /* Show or hide the confirm change message bar based on the updated ordering. */
-  browserLanguagesClosed() {
-    dump(`!!! browserLanguagesClosed {accepted: ${accepted}, selected: [${selected.join(",")}]}\n`);
-    let { accepted, selected } = this.gBrowserLanguagesDialog;
-    let active = Services.locale.appLocalesAsBCP47;
+  /**
+   * @param {string} locale
+   */
+  getTextDirection(locale) {
+    const rtl = new Set(["ar", "he"]);
+    return rtl.has(locale) ? "rtl" : "ltr";
+  },
 
-    this.gBrowserLanguagesDialog.recordTelemetry(
-      accepted ? "accept" : "cancel"
-    );
-
-    // Prepare for changing the locales if they are different than the current locales.
-    if (selected && selected.join(",") != active.join(",")) {
-      gMainPane.showConfirmLanguageChangeMessageBar(selected);
-      gMainPane.updateBrowserLocalesUI(selected[0]);
-      return;
+  /**
+   * Determine the transition strategy for switching the locale based on prefs
+   * and the switched locales.
+   *
+   * @param {Array<string>} newLocales
+   * @returns {"locales-match" | "requires-restart" | "live-reload"}
+   */
+  getLanguageSwitchTransitionType(newLocales) {
+    const { appLocalesAsBCP47 } = Services.locale;
+    if (appLocalesAsBCP47.join(",") === newLocales.join(",")) {
+      // The selected locales match.
+      return "locales-match";
     }
 
-    // They matched, so we can reset the UI.
-    gMainPane.updateBrowserLocalesUI(Services.locale.appLocaleAsBCP47);
-    gMainPane.hideConfirmLanguageChangeMessageBar();
+    // https://searchfox.org/mozilla-central/rev/618f9970972adc5a21194d39d690ec0865f26024/browser/app/profile/firefox.js#2153
+    if (Services.prefs.getBoolPref("intl.multilingual.live-reload", true)) {
+      if (
+        gMainPane.getTextDirection(newLocales[0]) !==
+          gMainPane.getTextDirection(appLocalesAsBCP47[0]) &&
+        !Services.prefs.getBoolPref(
+          "intl.multilingual.live-reload-bidirectional",
+          false
+        )
+      ) {
+        // Bug XXXX: The directionality of the text changed, which requires a restart
+        // until the quality of the switch can be improved.
+        return "requires-restart";
+      }
+
+      return "live-reload";
+    }
+
+    return "requires-restart";
+  },
+
+  /* Show or hide the confirm change message bar based on the updated ordering. */
+  browserLanguagesClosed() {
+    try {
+      // When the subdialog is closed, settings are stored on gBrowserLanguagesDialog.
+      // The next time the dialog is opened, a new gBrowserLanguagesDialog is created.
+      let { selected } = this.gBrowserLanguagesDialog;
+      dump(
+        `!!! gMainPane.browserLanguagesClosed selected: [${selected.join(
+          ","
+        )}]}\n`
+      );
+
+      this.gBrowserLanguagesDialog.recordTelemetry(
+        selected ? "accept" : "cancel"
+      );
+
+      if (!selected) {
+        // No locales were selected. Cancel the operation.
+        return;
+      }
+
+      dump(
+        `!!! gMainPane.browserLanguagesClosed transition: ${gMainPane.getLanguageSwitchTransitionType(
+          selected
+        )}\n`
+      );
+
+      switch (gMainPane.getLanguageSwitchTransitionType(selected)) {
+        case "requires-restart":
+          // Note the change in telemetry.
+          gMainPane.recordBrowserLanguagesTelemetry("reorder");
+          this.showConfirmLanguageChangeMessageBar(selected);
+          break;
+        case "live-reload":
+          Services.locale.requestedLocales = selected;
+          gMainPane.updatePrimaryBrowserLanguageUI(
+            Services.locale.appLocaleAsBCP47
+          );
+          gMainPane.hideConfirmLanguageChangeMessageBar();
+          break;
+        case "locales-match":
+          // They matched, so we can reset the UI.
+          gMainPane.updatePrimaryBrowserLanguageUI(
+            Services.locale.appLocaleAsBCP47
+          );
+          gMainPane.hideConfirmLanguageChangeMessageBar();
+          break;
+        default:
+          throw new Error("Unhandled transition type.");
+      }
+    } catch (error) {
+      // Errors here are not propagated unless manually reported.
+      dump(`!!! error ${error.message}\n\n${error.stack}\n`);
+      Cu.reportError(error);
+    }
   },
 
   displayUseSystemLocale() {
