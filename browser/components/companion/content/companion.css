@@ -512,28 +512,12 @@ toolbarbutton.subviewbutton-back:hover:active,
   background-image: url(chrome://global/skin/icons/arrow-left.svg);
 }
 
-.browse button.groups {
-  background-image: url("chrome://global/skin/icons/defaultFavicon.svg");
-}
-
 .browse button.sessions {
   background-image: url("sessions.svg");
 }
 
-.browse button.activities {
-  background-image: url("chrome://activity-stream/content/data/content/assets/glyph-topsites-16.svg");
-}
-
-.browse button.shopping {
-  background-image: url("resource://usercontext-content/cart.svg");
-}
-
 .browse button.downloads {
   background-image: url("chrome://browser/skin/downloads/downloads.svg");
-}
-
-.browse button.notifications {
-  background-image: url("chrome://browser/skin/notification-icons/desktop-notification.svg");
 }
 
 .browse button.passwords {
