@@ -2316,6 +2316,7 @@ class GlobalHistory extends EventTarget {
         title: this.#viewStack[i].view.title,
         url: this.#viewStack[i].url.spec,
         iconURL: this.#viewStack[i].iconURL,
+        pinned: this.#viewStack[i].pinned,
         image: null,
       };
     }

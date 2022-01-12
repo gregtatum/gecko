@@ -1008,13 +1008,17 @@ var PinebuildTestUtils = {
       let previews = previewEls.map(p => {
         let faviconSrc = p.querySelector(".favicon").src;
         let iconURL = faviconSrc == "null" ? null : faviconSrc;
+        let pinned = p.getAttribute("pinned") == "true";
 
         return {
           title: p.querySelector(".caption").textContent,
           titleTooltip: p.querySelector(".caption").title,
           iconURL,
-          hasBlob: p.querySelector(".preview-image").src.startsWith("blob:"),
-          hasWireframe: !!p.querySelector("svg"),
+          pinned,
+          hasBlob:
+            !pinned &&
+            p.querySelector(".preview-image").src.startsWith("blob:"),
+          hasWireframe: !pinned && !!p.querySelector("svg"),
         };
       });
       let currentPreview = content.document.querySelector("li[current]");
