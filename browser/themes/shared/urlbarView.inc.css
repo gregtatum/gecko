@@ -100,7 +100,7 @@
   display: flex;
   flex-wrap: nowrap;
   overflow: hidden;
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbarbutton-border-radius);
   padding-inline: var(--urlbarView-item-inline-padding);
   padding-block: 6px;
 }
@@ -314,7 +314,7 @@
   margin-inline-end: 4px;
   fill-opacity: 1;
   -moz-context-properties: fill, fill-opacity;
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbarbutton-border-radius);
 }
 
 .urlbarView-help[selected] {
@@ -369,7 +369,7 @@
 /* The tip button is a Photon default button when unfocused and a
    primary button in all other states. */
 .urlbarView-tip-button {
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbarbutton-border-radius);
   font-size: 0.93em;
   background-color: var(--button-bgcolor);
   font-weight: 600;
@@ -624,7 +624,7 @@
 .urlbarView-row:is([type=switchtab], [type=remotetab]) > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-action {
   color: var(--urlbar-box-text-color);
   background-color: var(--urlbar-box-focus-bgcolor);
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbarbutton-border-radius);
   padding: 6px 8px;
   margin-block: -6px;
   margin-inline-start: 8px;
@@ -710,7 +710,7 @@
   min-width: 28px;
   height: 28px;
   margin-inline: 0 12px;
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbarbutton-border-radius);
 }
 
 #urlbar .searchbar-engine-one-off-item:last-child {

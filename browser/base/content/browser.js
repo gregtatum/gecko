@@ -1791,6 +1791,21 @@ var gBrowserInit = {
     this._setInitialFocus();
 
     this.domContentLoaded = true;
+
+    if (
+      AppConstants.PINEBUILD &&
+      Services.prefs.getBoolPref("browser.pinebuild.lavender.enabled", false)
+    ) {
+      // These should just be removed from the xhtml once the pref is cleaned up:
+      document.getElementById("pinebuild-reload-button").remove();
+      document.getElementById("pinebuild-stop-button").remove();
+
+      // This can also just be set directly in the xhtml
+      document.body.setAttribute("flow-reset", "true");
+      this.firstContentWindowPaintPromise.then(() =>
+        document.body.setAttribute("browser-ready", "true")
+      );
+    }
   },
 
   onLoad() {

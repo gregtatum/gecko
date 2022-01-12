@@ -241,8 +241,8 @@ var CustomizableUIInternal = {
         ? null
         : "home-button",
       "spring",
+      AppConstants.PINEBUILD ? "session-setaside-button" : null,
       "urlbar-container",
-      AppConstants.PINEBUILD ? null : "session-setaside-button",
       "spring",
       "save-to-pocket-button",
       "downloads-button",
@@ -671,7 +671,7 @@ var CustomizableUIInternal = {
       return;
     }
 
-    const VERSION = 1;
+    const VERSION = 2;
     let currentVersion = Services.prefs.getIntPref(
       kPrefPinebuildToolbarVersion,
       0
@@ -698,6 +698,19 @@ var CustomizableUIInternal = {
         placements.splice(toolbarIndex, 1);
       }
       placements.unshift("pinebuild-toolbar");
+    }
+    if (currentVersion < 2) {
+      let setAsideSessionIndex = placements.indexOf("session-setaside-button");
+      let urlbarIndex = placements.indexOf("urlbar-container");
+      if (setAsideSessionIndex == urlbarIndex + 1) {
+        // If the set aside session button is immediately after the urlbar,
+        // which was the old style, swap them, since it's supposed to be right
+        // before it. Otherwise, it's in a state we don't recognize, so just
+        // leave it.
+        let tmp = placements[urlbarIndex];
+        placements[urlbarIndex] = placements[setAsideSessionIndex];
+        placements[setAsideSessionIndex] = tmp;
+      }
     }
 
     Services.prefs.setIntPref(kPrefPinebuildToolbarVersion, VERSION);

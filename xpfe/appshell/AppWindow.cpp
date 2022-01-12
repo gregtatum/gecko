@@ -1806,7 +1806,7 @@ nsresult AppWindow::MaybeSaveEarlyWindowPersistentValues(
   }
 
   if (!windowElementId.EqualsLiteral("main-window") ||
-      !uri.EqualsLiteral("chrome://browser/content/browser.xhtml")) {
+      !uri.EqualsLiteral(BROWSER_CHROME_URL_QUOTED)) {
     return NS_OK;
   }
 

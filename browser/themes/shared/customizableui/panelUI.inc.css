@@ -547,17 +547,19 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
   fill: currentColor;
 }
 
-#PanelUI-menu-button {
+:root:[fxastatus="signedin"] #PanelUI-menu-button {
   list-style-image: var(--avatar-image-url);
   -moz-context-properties: fill;
   fill: currentColor;
 }
 
-:root:not([fxastatus="signedin"]) #PanelUI-menu-button {
-   --avatar-image-url: url(chrome://browser/skin/fxa/avatar-empty.svg);
+#PanelUI-menu-button.toolbarbutton-1 > .toolbarbutton-badge-stack > .toolbarbutton-icon {
+  width: 16px;
+  height: 16px;
+  margin: 8px;
 }
 
-#PanelUI-menu-button.toolbarbutton-1 > .toolbarbutton-badge-stack > .toolbarbutton-icon {
+:root:[fxastatus="signedin"] #PanelUI-menu-button.toolbarbutton-1 > .toolbarbutton-badge-stack > .toolbarbutton-icon {
   border-radius: 50%;
   width: 32px;
   height: 32px;

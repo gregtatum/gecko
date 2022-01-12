@@ -2668,7 +2668,8 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("startup.homepage_welcome_url", "", locked);
   pref("startup.homepage_override_url", "", locked);
   pref("browser.startup.page", 1, locked);
-  pref("browser.startup.homepage", "about:blank", locked);
+  pref("browser.startup.homepage", "about:blank");
+  pref("browser.startup.preXulSkeletonUI", false);
   pref("pref.browser.homepage.disable_button.current_page", true, locked);
   pref("pref.browser.homepage.disable_button.bookmark_page", true, locked);
   pref("pref.browser.homepage.disable_button.restore_default", true, locked);
@@ -2751,4 +2752,11 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.pinebuild.megaback.click-count-threshold", 5);
   pref("browser.pinebuild.snapshots.relevancy.enabled", false);
   pref("browser.pinebuild.downloads.enabled", false);
+
+  // When we turn this pref on, we'll also want to uncomment the following
+  // two pref values (and place them where appropriate)
+  pref("browser.pinebuild.lavender.enabled", false);
+  // pref("browser.startup.homepage", "about:flow-reset", locked);
+  // pref("browser.startup.preXulSkeletonUI", true, locked);
+
 #endif

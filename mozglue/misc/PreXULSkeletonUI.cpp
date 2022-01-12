@@ -674,6 +674,25 @@ Result<Ok, PreXULSkeletonUIError> DrawSkeletonUI(
     HWND hWnd, CSSPixelSpan urlbarCSSSpan, CSSPixelSpan searchbarCSSSpan,
     Vector<CSSPixelSpan>& springs, const ThemeColors& currentTheme,
     const EnumSet<SkeletonUIFlag, uint32_t>& flags) {
+#ifdef PINEBUILD
+  HDC hdc = sGetWindowDC(hWnd);
+  if (!hdc) {
+    return Err(PreXULSkeletonUIError::FailedGettingDC);
+  }
+  auto cleanupDC = MakeScopeExit([=] { sReleaseDC(hWnd, hdc); });
+  RECT rect = {0, 0, sWindowWidth, sWindowHeight};
+  HBRUSH brush =
+      sCreateSolidBrush(RGB((currentTheme.backgroundColor & 0xff0000) >> 16,
+                            (currentTheme.backgroundColor & 0x00ff00) >> 8,
+                            (currentTheme.backgroundColor & 0x0000ff) >> 0));
+  int fillRectResult = sFillRect(hdc, &rect, brush);
+
+  sDeleteObject(brush);
+
+  if (fillRectResult == 0) {
+    return Err(PreXULSkeletonUIError::FailedFillingBottomRect);
+  }
+#else
   // NOTE: we opt here to paint a pixel buffer for the application chrome by
   // hand, without using native UI library methods. Why do we do this?
   //
@@ -1093,6 +1112,7 @@ Result<Ok, PreXULSkeletonUIError> DrawSkeletonUI(
   }
 
   scopeExit.release();
+#endif
   return Ok();
 }
 
@@ -1328,6 +1348,9 @@ bool IsSystemDarkThemeEnabled() {
 
 ThemeColors GetTheme(ThemeMode themeId) {
   ThemeColors theme = {};
+#ifdef PINEBUILD
+  theme.backgroundColor = 0x8d77b4;
+#else
   switch (themeId) {
     case ThemeMode::Dark:
       // Dark theme or default theme when in dark mode
@@ -1345,7 +1368,6 @@ ThemeColors GetTheme(ThemeMode themeId) {
       theme.urlbarColor = 0x42414d;
       theme.urlbarBorderColor = 0x42414d;
       theme.animationColor = theme.urlbarColor;
-      return theme;
     case ThemeMode::Light:
     case ThemeMode::Default:
     default:
@@ -1363,8 +1385,9 @@ ThemeColors GetTheme(ThemeMode themeId) {
       theme.urlbarColor = 0xffffff;
       theme.urlbarBorderColor = 0xdddde1;
       theme.animationColor = theme.backgroundColor;
-      return theme;
   }
+#endif
+  return theme;
 }
 
 Result<HKEY, PreXULSkeletonUIError> OpenPreXULSkeletonUIRegKey() {

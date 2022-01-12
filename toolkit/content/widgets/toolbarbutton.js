@@ -47,7 +47,9 @@
     static get fragment() {
       let frag = document.importNode(
         MozXULElement.parseXULToFragment(`
-        <image class="toolbarbutton-icon"></image>
+        <vbox class="toolbarbutton-icon">
+          <image></image>
+        </vbox>
         <label class="toolbarbutton-text" crop="right" flex="1"></label>
         `),
         true

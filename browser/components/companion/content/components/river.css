@@ -12,6 +12,16 @@
   --light-bg-color: #42414D;
 }
 
+@supports -moz-bool-pref("browser.pinebuild.lavender.enabled") {
+  :host {
+    --light-bg-color: var(--colors-cafe-02);
+  }
+
+  :host:-moz-lwtheme-brighttext {
+    --light-bg-color: var(--colors-cafe-02);
+  }
+}
+
 #river {
   display: flex;
   background-color: var(--light-bg-color);

@@ -6309,7 +6309,10 @@
      * @returns {HideAnimationReturnType}
      */
     doPinebuildSessionHideAnimation() {
-      if (window.matchMedia("(prefers-reduced-motion)").matches) {
+      if (
+        window.matchMedia("(prefers-reduced-motion)").matches ||
+        Services.prefs.getBoolPref("browser.pinebuild.lavender.enabled", false)
+      ) {
         return {
           animationCompletePromise: Promise.resolve(),
           timerCompletePromise: Promise.resolve(),
@@ -6363,7 +6366,10 @@
      * @returns {Promise}
      */
     async doPinebuildSessionShowAnimation() {
-      if (window.matchMedia("(prefers-reduced-motion)").matches) {
+      if (
+        window.matchMedia("(prefers-reduced-motion)").matches ||
+        Services.prefs.getBoolPref("browser.pinebuild.lavender.enabled", false)
+      ) {
         return;
       }
 

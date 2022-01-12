@@ -204,6 +204,13 @@
         </toolbarbutton>
       </toolbaritem>
       <toolbarspring cui-areatype="toolbar" class="chromeclass-toolbar-additional"/>
+#ifdef PINEBUILD
+      <toolbarbutton id="session-setaside-button" class="toolbarbutton-1"
+                     hidden="true"
+                     data-l10n-id="toolbar-button-setaside-session"
+                     tooltip="dynamic-shortcut-tooltip"
+                     onclick="SessionManager.setAsideBtnPressed(window)"/>
+#endif
       <toolbaritem id="urlbar-container" flex="400" persist="width"
                    removable="false"
                    class="chromeclass-location" overflows="false">
@@ -432,14 +439,6 @@
         </hbox>
         <toolbartabstop/>
       </toolbaritem>
-
-#ifdef PINEBUILD
-      <toolbarbutton id="session-setaside-button" class="toolbarbutton-1"
-                     hidden="true"
-                     data-l10n-id="toolbar-button-setaside-session"
-                     tooltip="dynamic-shortcut-tooltip"
-                     onclick="SessionManager.setAsideBtnPressed(window)"/>
-#endif
 
       <toolbarspring cui-areatype="toolbar" class="chromeclass-toolbar-additional"/>
 
