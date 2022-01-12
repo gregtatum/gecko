@@ -13,7 +13,6 @@ const { XPCOMUtils } = ChromeUtils.import(
 XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   clearTimeout: "resource://gre/modules/Timer.jsm",
-  _LastSession: "resource:///modules/sessionstore/SessionStore.jsm",
   InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.jsm",
   OAuth2: "resource:///modules/OAuth2.jsm",
   OnlineServices: "resource:///modules/OnlineServices.jsm",
@@ -38,9 +37,6 @@ const workshopEnabled = Services.prefs.getBoolPref(
   "browser.pinebuild.workshop.enabled",
   false
 );
-
-let sessionStart = new Date();
-let lastSessionEnd = _LastSession.getState()?.session?.lastUpdate;
 
 const PLACES_CACHE_EVICT_AFTER = 60 * 6 * 1000; // 6 minutes
 // Give ourselves a little bit of a buffer when calling setTimeout to evict
@@ -74,6 +70,7 @@ class CompanionParent extends JSWindowActorParent {
     this._cachedFavicons = [];
     this._cachedPlacesTitles = new Map();
     this._pageType = null;
+    // Used to stop async events occuring after destruction.
     this._destroyed = true;
 
     this._observer = this.observe.bind(this);
@@ -298,7 +295,10 @@ class CompanionParent extends JSWindowActorParent {
     let metadata = null;
     try {
       metadata = controller.getMetadata();
-    } catch (e) {}
+    } catch (e) {
+      // The tab has no associated media data.
+      return {};
+    }
 
     return {
       metadata,
@@ -308,18 +308,20 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   getTabData(tab) {
-    // TODO: this getActor call will create the actor for every tab. If it doesn't exist,
-    // we don't want to create it. I think we need to add a hasActor method for this, as
-    // getExistingActor crashes (I don't think it's meant for that).
-    let pipToggleParent = tab.linkedBrowser?.browsingContext?.currentWindowGlobal?.getActor(
+    let tabBrowser = tab.linkedBrowser;
+    // TODO: this getActor call will create the actor for every tab. If it
+    // doesn't exist, we don't want to create it. I think we need to add a
+    // hasActor method for this, as getExistingActor crashes (I don't think it's
+    // meant for that). See MR2-1636.
+    let pipToggleParent = tabBrowser?.browsingContext?.currentWindowGlobal?.getActor(
       "PictureInPictureToggle"
     );
 
     return {
-      browserId: tab.linkedBrowser?.browserId,
+      browserId: tabBrowser?.browserId,
       media: this.getMediaData(tab),
-      audioMuted: tab.linkedBrowser?.audioMuted,
-      title: tab.linkedBrowser?.contentTitle,
+      audioMuted: tabBrowser?.audioMuted,
+      title: tabBrowser?.contentTitle,
       canTogglePip: !!pipToggleParent?.trackingMouseOverVideos,
       soundPlaying: tab.soundPlaying,
     };
@@ -481,33 +483,10 @@ class CompanionParent extends JSWindowActorParent {
     this.ensureCacheCleanupRunning();
   }
 
-  today() {
-    let today = new Date();
-    today.setHours(0);
-    today.setMinutes(0);
-    today.setSeconds(0);
-    today.setMilliseconds(0);
-    return today;
-  }
-
-  yesterday() {
-    let yesterday = new Date(this.today() - 24 * 60 * 60 * 1000);
-    // If yesterday is before the start of the session then push back by the time since the end of the
-    // the last session
-    if (yesterday < sessionStart && lastSessionEnd) {
-      yesterday = new Date(yesterday - (sessionStart - lastSessionEnd));
-    }
-    return yesterday;
-  }
-
   consumeCachedFaviconsToSend() {
     let result = this._cachedFavicons;
     this._cachedFavicons = [];
     return result;
-  }
-
-  getCurrentURI() {
-    return this.browsingContext.topChromeWindow.gBrowser.currentURI.spec;
   }
 
   async populateAdditionalEventData(events) {
@@ -752,304 +731,110 @@ class CompanionParent extends JSWindowActorParent {
   async receiveMessage(message) {
     switch (message.name) {
       case "Companion:Subscribe": {
-        // If this doesn't exist, the companion has been closed already.
-        // Return early to avoid test failures.
-        if (!this.browsingContext.top.embedderElement?.ownerGlobal) {
-          return null;
-        }
-        let tabs = BrowserWindowTracker.orderedWindows.flatMap(w =>
-          w.gBrowser.tabs.map(t => this.getTabData(t))
-        );
-        let newFavicons = this.consumeCachedFaviconsToSend();
-        let currentURI = this.getCurrentURI();
-        let servicesConnected = !!OnlineServices.getAllServices().length;
-        let globalHistory = this.maybeGetGlobalHistory();
-        this.sendAsyncMessage("Companion:Setup", {
-          tabs,
-          connectedServices: OnlineServices.connectedServiceTypes,
-          servicesConnected,
-          newFavicons,
-          currentURI,
-          globalHistory,
-        });
-
-        let {
-          gBrowser,
-          gGlobalHistory,
-        } = this.browsingContext.top.embedderElement.ownerGlobal;
-        this.snapshotSelector = new SnapshotSelector({
-          count: 5,
-          filterAdult: true,
-          selectOverlappingVisits: Services.prefs.getBoolPref(
-            "browser.pinebuild.snapshots.relevancy.enabled",
-            false
-          ),
-          selectCommonReferrer: Services.prefs.getBoolPref(
-            "browser.pinebuild.snapshots.relevancy.enabled",
-            false
-          ),
-          getCurrentSessionUrls: () =>
-            new Set(gGlobalHistory.views.map(view => view.url)),
-        });
-        let referrerUrl =
-          gBrowser.selectedBrowser.referrerInfo?.computedReferrerSpec;
-        this.snapshotSelector.setUrlAndRebuildNow(
-          gBrowser.currentURI.spec,
-          referrerUrl
-        );
-
-        gBrowser.addProgressListener(this);
-
-        PageDataService.on("page-data", this._pageDataFound);
-
-        this.snapshotSelector.on("snapshots-updated", async (_, snapshots) => {
-          await this.ensureFaviconsCached(snapshots.map(s => s.url));
-          let snapshotList = await Promise.all(
-            snapshots.map(async s => ({
-              snapshot: s,
-              preview: await Snapshots.getSnapshotImageURL(s),
-            }))
-          );
-
-          if (!this._destroyed) {
-            this.sendAsyncMessage("Companion:SnapshotsChanged", {
-              snapshots: snapshotList,
-              newFavicons: this.consumeCachedFaviconsToSend(),
-            });
-          }
-        });
-
-        // To avoid a significant delay in initializing other parts of the UI,
-        // we register the events separately.
-        let events = await this.getEvents();
-        this.sendAsyncMessage("Companion:RegisterEvents", {
-          events,
-          newFavicons: this.consumeCachedFaviconsToSend(),
-        });
-
-        Services.obs.notifyObservers(
-          this.browsingContext.top.embedderElement.ownerGlobal,
-          "companion-open"
-        );
+        await this._onSubscribe();
         break;
       }
       case "Companion:MuteAllTabs": {
-        for (let tab of this._browserIdsToTabs.values()) {
-          if (tab.soundPlaying && !tab.muted) {
-            tab.toggleMuteAudio();
-          }
-        }
+        this._onMuteAllTabs();
         break;
       }
       case "Companion:MediaControl": {
-        let { browserId, command } = message.data;
-
-        let tab = this._browserIdsToTabs.get(browserId);
-        let mediaController =
-          tab.linkedBrowser?.browsingContext?.mediaController;
-        switch (command) {
-          case "togglePlay": {
-            if (mediaController.isPlaying) {
-              mediaController.pause();
-            } else {
-              mediaController.play();
-            }
-            break;
-          }
-          case "toggleMute": {
-            tab.toggleMuteAudio();
-            break;
-          }
-          case "nextTrack": {
-            mediaController.nextTrack();
-            break;
-          }
-          case "prevTrack": {
-            mediaController.prevTrack();
-            break;
-          }
-        }
+        this._onMediaControl(message);
         break;
       }
       case "Companion:PauseAllMedia": {
-        for (let tab of this._browserIdsToTabs.values()) {
-          let mediaController =
-            tab.linkedBrowser?.browsingContext?.mediaController;
-          if (mediaController.isPlaying) {
-            mediaController.pause();
-          }
-        }
+        this._onPauseAllMedia();
         break;
       }
-      case "Companion:FocusBrowser": {
-        let { browserId } = message.data;
-        let tab = this._browserIdsToTabs.get(browserId);
-        tab.ownerGlobal.gBrowser.selectedTab = tab;
-        tab.ownerGlobal.focus();
+      case "Companion:FocusTab": {
+        this._onFocusTab(message);
         break;
       }
       case "Companion:LaunchPip": {
-        let { browserId } = message.data;
-        let tab = this._browserIdsToTabs.get(browserId);
-        let actor = tab.linkedBrowser?.browsingContext.currentWindowGlobal.getActor(
-          "PictureInPictureLauncher"
-        );
-        actor?.sendAsyncMessage("PictureInPicture:CompanionToggle");
+        this._onLaunchPip(message);
         break;
       }
       case "Companion:OpenURL": {
-        let { url } = message.data;
-        let uri = Services.io.newURI(url);
-        if (!uri.scheme.startsWith("http")) {
-          let extProtocolSvc = Cc[
-            "@mozilla.org/uriloader/external-protocol-service;1"
-          ].getService(Ci.nsIExternalProtocolService);
-          let handlerInfo = extProtocolSvc.getProtocolHandlerInfo(uri.scheme);
-          if (
-            (handlerInfo.preferredAction == Ci.nsIHandlerInfo.useHelperApp ||
-              handlerInfo.preferredAction ==
-                Ci.nsIHandlerInfo.useSystemDefault) &&
-            !handlerInfo.alwaysAskBeforeHandling
-          ) {
-            handlerInfo.launchWithURI(uri, null);
-            return null;
-          }
-        }
-        this.browsingContext.topChromeWindow.openPinebuildCompanionLink(uri);
+        this._onOpenURL(message);
         break;
       }
       case "Companion:DeleteSnapshot": {
-        let { url } = message.data;
-        await Snapshots.delete(url);
+        await this._onDeleteSnapshot(message);
         break;
       }
       case "Companion:RestoreSession": {
-        let { guid } = message.data;
-        SessionManager.replaceSession(
-          this.browsingContext.topChromeWindow,
-          guid
-        );
+        this._onRestoreSession(message);
         break;
       }
       case "Companion:setCharPref": {
-        let { name, value } = message.data;
-        if (!this.validateCompanionPref(name)) {
-          return null;
-        }
-        Services.prefs.setCharPref(name, value);
+        this._onSetCharPref(message);
         break;
       }
       case "Companion:setBoolPref": {
-        let { name, value } = message.data;
-        if (!this.validateCompanionPref(name)) {
-          return null;
-        }
-        Services.prefs.setBoolPref(name, value);
+        this._onSetBoolPref(message);
         break;
       }
       case "Companion:setIntPref": {
-        let { name, value } = message.data;
-        if (!this.validateCompanionPref(name)) {
-          return null;
-        }
-        Services.prefs.setIntPref(name, value);
+        this._onSetIntPref(message);
         break;
       }
       case "Companion:SetGlobalHistoryViewIndex": {
-        let { index } = message.data;
-        let hist = this.browsingContext.topChromeWindow.gGlobalHistory;
-        hist.setView(hist.views[index]);
+        this._onSetGlobalHistoryViewIndex(message);
         break;
       }
       case "Companion:GetDocumentTitle": {
-        let { url } = message.data;
-        return OnlineServices.getDocumentTitle(url);
+        return this._onGetDocumentTitle(message);
       }
       case "Companion:ConnectService": {
-        let { type } = message.data;
-        OnlineServices.createService(type);
+        this._onConnectService(message);
         break;
       }
       case "Companion:GetOAuth2Tokens": {
-        let {
-          endpoint,
-          tokenEndpoint,
-          scopes,
-          clientId,
-          clientSecret,
-          type,
-        } = message.data;
-        const authorizer = new OAuth2(
-          endpoint,
-          tokenEndpoint,
-          scopes,
-          clientId,
-          clientSecret,
-          null,
-          type
-        );
-        await authorizer.connect();
-        return authorizer.toJSON();
+        return this._onGetOAuth2Tokens(message);
       }
       case "Companion:AccountCreated": {
-        Services.obs.notifyObservers(
-          null,
-          "companion-signin",
-          message.data.type
-        );
+        this._onAccountCreated(message);
         break;
       }
       case "Companion:AccountDeleted": {
-        Services.obs.notifyObservers(
-          null,
-          "companion-signout",
-          message.data.type
-        );
+        this._onAccountDeleted(message);
         break;
       }
       case "Companion:Open": {
-        let win = this.browsingContext.topChromeWindow;
-        let companion = win.document.getElementById("companion-box");
-        if (!companion.isOpen) {
-          companion.toggleVisible();
-        }
+        this._onOpen();
         break;
       }
       case "Companion:IsActiveWindow": {
-        return !!Services.focus.activeWindow;
+        return this._onIsActiveWindow();
       }
       case "Companion:SuggestedSnapshotsPainted": {
-        if (gTimestampsRecorded.has(message.name)) {
-          break;
-        }
-        gTimestampsRecorded.add(message.name);
-
-        let { time, extraData } = message.data;
-        let processStart = Services.startup.getStartupInfo().process.getTime();
-        let delta = time - processStart;
-        Glean.pinebuild.suggestedSnapshotsPainted.setRaw(delta);
-        Glean.pinebuild.suggestedSnapshotsCount.add(
-          extraData.numberOfSnapshots
-        );
+        this._onSuggestedSnapshotsPainted(message);
         break;
       }
       case "Companion:CalendarPainted": {
-        if (gTimestampsRecorded.has(message.name)) {
-          break;
-        }
-        gTimestampsRecorded.add(message.name);
-
-        let { time, extraData } = message.data;
-        let processStart = Services.startup.getStartupInfo().process.getTime();
-        let delta = time - processStart;
-        Glean.pinebuild.calendarPainted.setRaw(delta);
-        Glean.pinebuild.calendarEventCount.add(extraData.numberOfEvents);
+        this._onCalendarPainted(message);
         break;
       }
     }
     return null;
   }
 
+  /**
+   * Updates the snapshot URL and type for focused snapshots.
+   * @param {nsIWebProgress} aWebProgress
+   *   The nsIWebProgress instance that fired the notification.
+   * @param {nsIRequest} aRequest
+   *   The associated nsIRequest.  This may be null in some cases.
+   * @param {nsIURI} aLocationURI
+   *   The URI of the location that is being loaded.
+   * @param {integer} aFlags
+   *   Flags that indicate the reason the location changed.  See the
+   *   nsIWebProgressListener.LOCATION_CHANGE_* values.
+   * @param {boolean} aIsSimulated
+   *   True when this is called by tabbrowser due to switching tabs and
+   *   undefined otherwise.  This parameter is not declared in
+   *   nsIWebProgressListener.onLocationChange; see bug 1478348.
+   */
   onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags, aIsSimulated) {
     if (!aWebProgress.isTopLevel || !this.snapshotSelector) {
       return;
@@ -1084,6 +869,290 @@ class CompanionParent extends JSWindowActorParent {
     }
 
     this._pageType = null;
+  }
+
+  async _onSubscribe() {
+    // If this doesn't exist, the companion has been closed already.
+    // Return early to avoid test failures.
+    if (!this.browsingContext.top.embedderElement?.ownerGlobal) {
+      return;
+    }
+    let tabs = BrowserWindowTracker.orderedWindows.flatMap(w =>
+      w.gBrowser.tabs.map(t => this.getTabData(t))
+    );
+    let newFavicons = this.consumeCachedFaviconsToSend();
+    let currentURI = this.browsingContext.topChromeWindow.gBrowser.currentURI
+      .spec;
+    let servicesConnected = !!OnlineServices.getAllServices().length;
+    let globalHistory = this.maybeGetGlobalHistory();
+    this.sendAsyncMessage("Companion:Setup", {
+      tabs,
+      connectedServices: OnlineServices.connectedServiceTypes,
+      servicesConnected,
+      newFavicons,
+      currentURI,
+      globalHistory,
+    });
+
+    let {
+      gBrowser,
+      gGlobalHistory,
+    } = this.browsingContext.top.embedderElement.ownerGlobal;
+    this.snapshotSelector = new SnapshotSelector({
+      count: 5,
+      filterAdult: true,
+      selectOverlappingVisits: Services.prefs.getBoolPref(
+        "browser.pinebuild.snapshots.relevancy.enabled",
+        false
+      ),
+      selectCommonReferrer: Services.prefs.getBoolPref(
+        "browser.pinebuild.snapshots.relevancy.enabled",
+        false
+      ),
+      getCurrentSessionUrls: () =>
+        new Set(gGlobalHistory.views.map(view => view.url)),
+    });
+    let referrerUrl =
+      gBrowser.selectedBrowser.referrerInfo?.computedReferrerSpec;
+    this.snapshotSelector.setUrlAndRebuildNow(
+      gBrowser.currentURI.spec,
+      referrerUrl
+    );
+
+    gBrowser.addProgressListener(this);
+
+    PageDataService.on("page-data", this._pageDataFound);
+
+    this.snapshotSelector.on("snapshots-updated", async (_, snapshots) => {
+      await this.ensureFaviconsCached(snapshots.map(s => s.url));
+      let snapshotList = await Promise.all(
+        snapshots.map(async s => ({
+          snapshot: s,
+          preview: await Snapshots.getSnapshotImageURL(s),
+        }))
+      );
+
+      if (!this._destroyed) {
+        this.sendAsyncMessage("Companion:SnapshotsChanged", {
+          snapshots: snapshotList,
+          newFavicons: this.consumeCachedFaviconsToSend(),
+        });
+      }
+    });
+
+    // To avoid a significant delay in initializing other parts of the UI,
+    // we register the events separately.
+    let events = await this.getEvents();
+    this.sendAsyncMessage("Companion:RegisterEvents", {
+      events,
+      newFavicons: this.consumeCachedFaviconsToSend(),
+    });
+
+    Services.obs.notifyObservers(
+      this.browsingContext.top.embedderElement.ownerGlobal,
+      "companion-open"
+    );
+  }
+
+  _onMuteAllTabs() {
+    for (let tab of this._browserIdsToTabs.values()) {
+      if (tab.soundPlaying && !tab.muted) {
+        tab.toggleMuteAudio();
+      }
+    }
+  }
+
+  _onMediaControl(message) {
+    let { browserId, command } = message.data;
+
+    let tab = this._browserIdsToTabs.get(browserId);
+    let mediaController = tab.linkedBrowser?.browsingContext?.mediaController;
+    switch (command) {
+      case "togglePlay": {
+        if (mediaController.isPlaying) {
+          mediaController.pause();
+        } else {
+          mediaController.play();
+        }
+        break;
+      }
+      case "toggleMute": {
+        tab.toggleMuteAudio();
+        break;
+      }
+      case "nextTrack": {
+        mediaController.nextTrack();
+        break;
+      }
+      case "prevTrack": {
+        mediaController.prevTrack();
+        break;
+      }
+    }
+  }
+
+  _onPauseAllMedia() {
+    for (let tab of this._browserIdsToTabs.values()) {
+      let mediaController = tab.linkedBrowser?.browsingContext?.mediaController;
+      if (mediaController.isPlaying) {
+        mediaController.pause();
+      }
+    }
+  }
+
+  _onFocusTab(message) {
+    let { browserId } = message.data;
+    let tab = this._browserIdsToTabs.get(browserId);
+    tab.ownerGlobal.gBrowser.selectedTab = tab;
+    tab.ownerGlobal.focus();
+  }
+
+  _onLaunchPip(message) {
+    let { browserId } = message.data;
+    let tab = this._browserIdsToTabs.get(browserId);
+    let actor = tab.linkedBrowser?.browsingContext.currentWindowGlobal.getActor(
+      "PictureInPictureLauncher"
+    );
+    actor?.sendAsyncMessage("PictureInPicture:CompanionToggle");
+  }
+
+  _onOpenURL(message) {
+    let { url } = message.data;
+    let uri = Services.io.newURI(url);
+    if (!uri.scheme.startsWith("http")) {
+      let extProtocolSvc = Cc[
+        "@mozilla.org/uriloader/external-protocol-service;1"
+      ].getService(Ci.nsIExternalProtocolService);
+      let handlerInfo = extProtocolSvc.getProtocolHandlerInfo(uri.scheme);
+      if (
+        (handlerInfo.preferredAction == Ci.nsIHandlerInfo.useHelperApp ||
+          handlerInfo.preferredAction == Ci.nsIHandlerInfo.useSystemDefault) &&
+        !handlerInfo.alwaysAskBeforeHandling
+      ) {
+        // Avoiding a blank tab in the helper-app case.
+        handlerInfo.launchWithURI(uri, null);
+        return;
+      }
+    }
+    this.browsingContext.topChromeWindow.openPinebuildCompanionLink(uri);
+  }
+
+  async _onDeleteSnapshot(message) {
+    let { url } = message.data;
+    await Snapshots.delete(url);
+  }
+
+  _onRestoreSession(message) {
+    let { guid } = message.data;
+    SessionManager.replaceSession(this.browsingContext.topChromeWindow, guid);
+  }
+
+  _onSetCharPref(message) {
+    let { name, value } = message.data;
+    if (!this.validateCompanionPref(name)) {
+      return;
+    }
+    Services.prefs.setCharPref(name, value);
+  }
+
+  _onSetBoolPref(message) {
+    let { name, value } = message.data;
+    if (!this.validateCompanionPref(name)) {
+      return;
+    }
+    Services.prefs.setBoolPref(name, value);
+  }
+
+  _onSetIntPref(message) {
+    let { name, value } = message.data;
+    if (!this.validateCompanionPref(name)) {
+      return;
+    }
+    Services.prefs.setIntPref(name, value);
+  }
+
+  _onSetGlobalHistoryViewIndex(message) {
+    let { index } = message.data;
+    let hist = this.browsingContext.topChromeWindow.gGlobalHistory;
+    hist.setView(hist.views[index]);
+  }
+
+  _onGetDocumentTitle(message) {
+    let { url } = message.data;
+    return OnlineServices.getDocumentTitle(url);
+  }
+
+  _onConnectService(message) {
+    let { type } = message.data;
+    OnlineServices.createService(type);
+  }
+
+  async _onGetOAuth2Tokens(message) {
+    let {
+      endpoint,
+      tokenEndpoint,
+      scopes,
+      clientId,
+      clientSecret,
+      type,
+    } = message.data;
+    const authorizer = new OAuth2(
+      endpoint,
+      tokenEndpoint,
+      scopes,
+      clientId,
+      clientSecret,
+      null,
+      type
+    );
+    await authorizer.connect();
+    return authorizer.toJSON();
+  }
+
+  _onAccountCreated(message) {
+    Services.obs.notifyObservers(null, "companion-signin", message.data.type);
+  }
+
+  _onAccountDeleted(message) {
+    Services.obs.notifyObservers(null, "companion-signout", message.data.type);
+  }
+
+  _onOpen() {
+    let win = this.browsingContext.topChromeWindow;
+    let companion = win.document.getElementById("companion-box");
+    if (!companion.isOpen) {
+      companion.toggleVisible();
+    }
+  }
+
+  _onIsActiveWindow() {
+    return !!Services.focus.activeWindow;
+  }
+
+  _onSuggestedSnapshotsPainted(message) {
+    if (gTimestampsRecorded.has(message.name)) {
+      return;
+    }
+    gTimestampsRecorded.add(message.name);
+
+    let { time, extraData } = message.data;
+    let processStart = Services.startup.getStartupInfo().process.getTime();
+    let delta = time - processStart;
+    Glean.pinebuild.suggestedSnapshotsPainted.setRaw(delta);
+    Glean.pinebuild.suggestedSnapshotsCount.add(extraData.numberOfSnapshots);
+  }
+
+  _onCalendarPainted(message) {
+    if (gTimestampsRecorded.has(message.name)) {
+      return;
+    }
+    gTimestampsRecorded.add(message.name);
+
+    let { time, extraData } = message.data;
+    let processStart = Services.startup.getStartupInfo().process.getTime();
+    let delta = time - processStart;
+    Glean.pinebuild.calendarPainted.setRaw(delta);
+    Glean.pinebuild.calendarEventCount.add(extraData.numberOfEvents);
   }
 
   QueryInterface = ChromeUtils.generateQI([

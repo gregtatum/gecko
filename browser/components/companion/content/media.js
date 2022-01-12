@@ -211,7 +211,7 @@ export class Media extends HTMLElement {
         return;
       }
 
-      window.CompanionUtils.sendAsyncMessage("Companion:FocusBrowser", {
+      window.CompanionUtils.sendAsyncMessage("Companion:FocusTab", {
         browserId: this.tab.browserId,
       });
     });
