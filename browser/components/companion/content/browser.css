@@ -32,22 +32,11 @@ body {
   background: var(--shared-ui-background);
 }
 
-#navigator-toolbox {
-  /* The !important here is because we include this file before the traditional
-     Firefox styles. See MR2-1550. */
-  background: none !important;
-}
-
-#tabbrowser-tabpanels {
-  /* The !important here is because we include this file before the traditional
-     Firefox styles. See MR2-1550. */
-  background: none !important;
-}
-
+#navigator-toolbox,
+#navigator-toolbox:not(:-moz-lwtheme),
+#tabbrowser-tabpanels,
 .browser-toolbar:not(.titlebar-color) {
-  /* The !important here is because we include this file before the traditional
-     Firefox styles. See MR2-1550. */
-  background: none !important;
+  background: none;
 }
 
 #titlebar:not([hidden]) + #nav-bar > #pinebuild-window-controls {
@@ -144,10 +133,6 @@ body {
   margin-left: -25px;
   z-index: -1;
   display: none;
-}
-
-#navigator-toolbox {
-  border-bottom: 0px none;
 }
 
 #pinebuild-mac-buttonbox                {
