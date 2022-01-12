@@ -128,6 +128,9 @@ marionette-headless:
 desktop-screenshot-capture:
     - browser-screenshots
 
+pinebuild:
+    - mochitest-browser-chrome-pinebuild
+
 ### Specific platform test sets
 
 # Linux
@@ -148,7 +151,6 @@ linux1804-tests:
     - marionette
     - mochitest-a11y
     - mochitest-browser-chrome
-    - mochitest-browser-chrome-pinebuild
     - mochitest-chrome
     - mochitest-chrome-gpu
     - mochitest-devtools-chrome
@@ -182,7 +184,6 @@ linux-talos-flex:
 
 windows-7-tests:
     - mochitest-browser-chrome
-    - mochitest-browser-chrome-pinebuild
     - mochitest-webgpu
     - reftest
     - xpcshell
@@ -217,7 +218,6 @@ windows10-2004-tests:
     - marionette
     - mochitest-a11y
     - mochitest-browser-chrome
-    - mochitest-browser-chrome-pinebuild
     - mochitest-chrome
     - mochitest-chrome-gpu
     - mochitest-devtools-chrome
@@ -323,7 +323,6 @@ macosx1100-64-qr-tests:
     - crashtest
     - jsreftest
     - mochitest-browser-chrome
-    - mochitest-browser-chrome-pinebuild
     - mochitest-chrome-gpu
     - mochitest-media
     - mochitest-webgpu
@@ -345,7 +344,6 @@ macosx1015-64-qr-tests:
     - marionette
     - mochitest-a11y
     - mochitest-browser-chrome
-    - mochitest-browser-chrome-pinebuild
     - mochitest-chrome
     - mochitest-chrome-gpu
     - mochitest-devtools-chrome

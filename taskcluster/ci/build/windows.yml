@@ -1426,8 +1426,7 @@ win64-pinebuild/debug:
         max-run-time: 7200
         env:
             TOOLTOOL_MANIFEST: "browser/config/tooltool-manifests/vs2017-15.9.manifest"
-            # Comment out until we have tests to run
-            # MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+            MOZ_AUTOMATION_PACKAGE_TESTS: "1"
     run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine']
     run:
         options: [append-env-variables-from-configs]

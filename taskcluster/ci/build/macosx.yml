@@ -188,8 +188,7 @@ macosx64-pinebuild/debug:
     worker:
         max-run-time: 5400
         env:
-            # Comment out until we have tests to run
-            # MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+            MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             PERFHERDER_EXTRA_OPTIONS: pinebuild
     run:
         config:

@@ -113,6 +113,16 @@ linux1804-64-clang-trunk-qr/opt:
         - awsy
         - browsertime
 
+linux1804-64-pinebuild-qr/debug:
+    build-platform: linux64-pinebuild/debug
+    test-sets:
+        - pinebuild
+
+linux1804-64-pinebuild-qr/opt:
+    build-platform: linux64-pinebuild/opt
+    test-sets:
+        - pinebuild
+
 ##
 # Windows platforms (matching /windows.*/)
 
@@ -262,6 +272,16 @@ windows10-64-2004-mingwclang-qr/opt:
     test-sets:
         - mingwclang-tests-opt
 
+windows10-64-2004-pinebuild-qr/debug:
+    build-platform: win64-pinebuild/debug
+    test-sets:
+        - pinebuild
+
+windows10-64-2004-pinebuild-qr/opt:
+    build-platform: win64-pinebuild/opt
+    test-sets:
+        - pinebuild
+
 ##
 # MacOS X platforms (matching /macosx.*/)
 
@@ -278,6 +298,11 @@ macosx1100-64-shippable-qr/opt:
         # - macosx64-talos
         # - browsertime-high-priority
         # - raptor-firefox
+
+macosx1100-64-pinebuild-qr/opt:
+    build-platform: macosx64-pinebuild/opt
+    test-sets:
+        - pinebuild
 
 macosx1015-64-shippable-qr/opt:
     build-platform: macosx64-shippable/opt
@@ -319,6 +344,16 @@ macosx1015-64-ccov-qr/opt:
     build-platform: macosx64-ccov/opt
     test-sets:
         - macosx1015-64-qr-tests
+
+macosx1015-64-pinebuild-qr/debug:
+    build-platform: macosx64-pinebuild/debug
+    test-sets:
+        - pinebuild
+
+macosx1015-64-pinebuild-qr/opt:
+    build-platform: macosx64-pinebuild/opt
+    test-sets:
+        - pinebuild
 
 ##
 # Android platforms (matching /android-em.*/)

@@ -408,8 +408,7 @@ linux64-pinebuild/debug:
     worker:
         max-run-time: 5400
         env:
-            # Comment out until we have tests to run
-            # MOZ_AUTOMATION_PACKAGE_TESTS: "1"
+            MOZ_AUTOMATION_PACKAGE_TESTS: "1"
             # bug 1690154 - enable full symbols on all branches, but only
             # upload them on the official set. In conjunction with
             # `enable-full-crashsymbols`.
