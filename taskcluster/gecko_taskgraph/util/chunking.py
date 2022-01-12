@@ -53,7 +53,6 @@ def guess_mozinfo_from_task(task):
         "fission": any("fission" in key for key in setting["runtime"].keys()),
         "headless": "-headless" in task["test-name"],
         "tsan": setting["build"].get("tsan", False),
-        "webrender": task.get("webrender", True),
         # XXX pine only
         "pinebuild": True,
     }

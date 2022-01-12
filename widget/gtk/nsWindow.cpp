@@ -2184,6 +2184,12 @@ static ResolvedPopupMargin ResolveMargin(nsMenuPopupFrame* aFrame,
 
   auto popupSides = SidesForPopupAlignment(aPopupAlign);
   auto anchorSides = SidesForPopupAlignment(aAnchorAlign);
+  // Matched sides: Invert the margin, so that we pull in the right direction.
+  // Popup not aligned to any anchor side: We give up and use the offset,
+  // applying the margin from the popup side.
+  // Mismatched sides: We swap the margins so that we pull in the right
+  // direction, e.g. margin-left: -10px should shrink 10px the _right_ of the
+  // box, not the left of the box.
   if (popupSides.mHorizontal == anchorSides.mHorizontal) {
     margin.left = -margin.left;
     margin.right = -margin.right;
@@ -2192,8 +2198,11 @@ static ResolvedPopupMargin ResolveMargin(nsMenuPopupFrame* aFrame,
     offset.x += popupSide == eSideRight ? -margin.Side(popupSide)
                                         : margin.Side(popupSide);
     margin.left = margin.right = 0;
+  } else {
+    std::swap(margin.left, margin.right);
   }
 
+  // Same logic as above, but in the vertical direction.
   if (popupSides.mVertical == anchorSides.mVertical) {
     margin.top = -margin.top;
     margin.bottom = -margin.bottom;
@@ -2202,6 +2211,8 @@ static ResolvedPopupMargin ResolveMargin(nsMenuPopupFrame* aFrame,
     offset.y += popupSide == eSideBottom ? -margin.Side(popupSide)
                                          : margin.Side(popupSide);
     margin.top = margin.bottom = 0;
+  } else {
+    std::swap(margin.top, margin.bottom);
   }
 
   return {margin, offset};
@@ -3525,7 +3536,7 @@ gboolean nsWindow::OnExposeEvent(cairo_t* cr) {
   KnowsCompositor* knowsCompositor = renderer->AsKnowsCompositor();
 
   if (knowsCompositor && layerManager && mCompositorSession) {
-    if (!mConfiguredClearColor && !mParent) {
+    if (!mConfiguredClearColor && !IsPopup()) {
       layerManager->WrBridge()->SendSetDefaultClearColor(LookAndFeel::Color(
           LookAndFeel::ColorID::Window, LookAndFeel::ColorSchemeForChrome(),
           LookAndFeel::UseStandins::No));
@@ -4612,7 +4623,7 @@ void nsWindow::OnScrollEvent(GdkEventScroll* aEvent) {
         }
 
         // Older GTK doesn't support stop events, so we can't support fling
-        wheelEvent.mScrollType = WidgetWheelEvent::SCROLL_ASYNCHRONOUSELY;
+        wheelEvent.mScrollType = WidgetWheelEvent::SCROLL_ASYNCHRONOUSLY;
       }
 
       // TODO - use a more appropriate scrolling unit than lines.
