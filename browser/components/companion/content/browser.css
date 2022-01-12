@@ -172,14 +172,6 @@ body {
   display: none;
 }
 
-#pinebuild-copy-button {
-  list-style-image: url("chrome://global/skin/icons/link.svg");
-}
-
-#pinebuild-copy-button {
-  display: none;
-}
-
 @supports not -moz-bool-pref("browser.companion.snapshots") {
   #pinebuild-snapshot-button {
     display: none;
