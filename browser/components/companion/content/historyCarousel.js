@@ -209,6 +209,10 @@ const HistoryCarousel = {
       addEventListener(domEventType, this);
     }
     this.scrubber.focus({ preventFocusRing: true });
+
+    this.whenVisible = new Promise(resolve => {
+      this.whenVisibleResolver = resolve;
+    });
   },
 
   /**
@@ -460,9 +464,11 @@ const HistoryCarousel = {
         this.kickTaskQueue();
       });
     } else {
-      document.dispatchEvent(
-        new CustomEvent("HistoryCarouselReady", { bubbles: true })
-      );
+      this.whenVisible.then(() => {
+        document.dispatchEvent(
+          new CustomEvent("HistoryCarouselReady", { bubbles: true })
+        );
+      });
     }
   },
 
@@ -574,6 +580,13 @@ const HistoryCarousel = {
   onVisibilityChange(event) {
     if (!document.hidden) {
       document.body.removeAttribute("invisible");
+      addEventListener(
+        "transitionend",
+        () => {
+          this.whenVisibleResolver();
+        },
+        { once: true }
+      );
     }
   },
 };
