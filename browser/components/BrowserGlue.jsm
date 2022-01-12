@@ -1303,8 +1303,8 @@ BrowserGlue.prototype = {
         matches: ["about:flow-reset"],
       };
 
-      JSWINDOWACTORS.AboutLogins.child.allFrames = true;
-      JSWINDOWACTORS.AboutLogins.child.remoteTypes = ["privilegedabout"];
+      JSWINDOWACTORS.AboutLogins.allFrames = true;
+      JSWINDOWACTORS.AboutLogins.remoteTypes = ["privilegedabout"];
       JSWINDOWACTORS.AboutLogins.child.events.AboutLoginsBrowsePanel = {
         wantUntrusted: true,
       };
