@@ -2383,6 +2383,8 @@ class GlobalHistory extends EventTarget {
       };
     }
 
+    await this.#window.promiseDocumentFlushed(() => {});
+
     let currentBrowser = this.#currentInternalView.getBrowser();
     data.previews[currentIndex].image = await PageThumbs.captureToBlob(
       currentBrowser,
