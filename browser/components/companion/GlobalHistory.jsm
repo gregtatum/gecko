@@ -975,6 +975,7 @@ class GlobalHistory extends EventTarget {
     });
     this.#viewStack = [];
     this.#historyViews.clear();
+    logConsole.trace(`Setting #currentInternalView to NULL`);
     this.#currentInternalView = null;
     this.#notifyEvent("RiverRebuilt");
     return loadPromise;
@@ -1210,6 +1211,9 @@ class GlobalHistory extends EventTarget {
     }
 
     // Mark the correct view.
+    logConsole.trace(
+      `Setting #currentInternalView to ${selectedView.toString()}`
+    );
     this.#currentInternalView = selectedView;
     this.#notifyEvent("RiverRebuilt");
 
@@ -1439,6 +1443,7 @@ class GlobalHistory extends EventTarget {
         newEntry.URI.spec
       );
       logConsole.groupEnd();
+      logConsole.trace(`Setting #currentInternalView to NULL`);
       this.#currentInternalView = null;
       return;
     }
@@ -1472,6 +1477,9 @@ class GlobalHistory extends EventTarget {
 
       // This is a new view.
       internalView = new InternalView(this.#window, browser, newEntry);
+      logConsole.trace(
+        `Setting #currentInternalView to NEW ${internalView.toString()}`
+      );
       this.#currentInternalView = internalView;
       this.#viewStack.push(internalView);
       this.#historyViews.set(newEntry.ID, internalView);
@@ -1489,12 +1497,15 @@ class GlobalHistory extends EventTarget {
       });
 
       if (internalView == this.#currentInternalView) {
-        logConsole.debug(`Updated InternalView is the current index.`);
+        logConsole.trace(`Updated InternalView is the current index.`);
         logConsole.groupEnd();
         this.#notifyEvent("ViewUpdated", internalView);
         return;
       }
 
+      logConsole.trace(
+        `Setting #currentInternalView to EXISTING ${internalView.toString()}`
+      );
       this.#currentInternalView = internalView;
       let pos = this.#viewStack.indexOf(internalView);
       if (pos < 0) {
@@ -1701,6 +1712,7 @@ class GlobalHistory extends EventTarget {
           // Don't store initial pages in the river.
           this.#viewStack.splice(pos, 1);
           if (previousView == this.#currentInternalView) {
+            logConsole.trace(`Setting #currentInternalView to NULL`);
             this.#currentInternalView = null;
           }
           this.#notifyEvent("ViewRemoved", previousView);
@@ -1848,9 +1860,18 @@ class GlobalHistory extends EventTarget {
           if (currentIndex != historyIndex) {
             logConsole.debug(
               `Navigating browser ${browser.browsingContext.id} to SHistory ` +
-                `index ${historyIndex}.`
+                `index ${historyIndex}, ID ${internalView.historyId}.`
+            );
+            let sh = browser.browsingContext.sessionHistory;
+            logConsole.debug(
+              `INDEX: ${sh.index}, REQUESTED INDEX: ${sh.requestedIndex}`
             );
             browser.gotoIndex(historyIndex);
+          } else {
+            logConsole.debug(
+              `NOT navigating browser ${browser.browsingContext.id} to SHistory ` +
+                `index ${historyIndex}, ID ${internalView.historyId} - it's already there!`
+            );
           }
 
           // Tab switch if necessary.
@@ -1923,6 +1944,8 @@ class GlobalHistory extends EventTarget {
     if (!internalView) {
       throw new Error("Unknown view.");
     }
+
+    logConsole.log("Pinning view ", internalView.toString());
 
     let pinnedViewCount = this.pinnedViewCount;
     if (index > pinnedViewCount) {
