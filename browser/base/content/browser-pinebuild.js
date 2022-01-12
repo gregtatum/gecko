@@ -65,6 +65,7 @@ PineBuildUIUtils.init();
 var HistoryCarouselUI = {
   _timerID: null,
   _clickCount: 0,
+  _openedByLongPress: false,
 
   /**
    * Sets up the event handlers on the back button.
@@ -77,11 +78,20 @@ var HistoryCarouselUI = {
     }
 
     let pbBackButton = document.getElementById("pinebuild-back-button");
+
+    // We need to add this capturing click event handler before adding
+    // to the gClickAndHoldListenersOnElement to ensure the click event
+    // handler is called first. That gives us an opportunity to cancel
+    // the back button click command from running if the user long
+    // presses on the back button.
+    pbBackButton.addEventListener("click", this, { capture: true });
+
     gClickAndHoldListenersOnElement.add(pbBackButton, () => {
+      // The user longpressed, so set this flag to prevent the back
+      // command from being fired on click.
+      this._openedByLongPress = true;
       gGlobalHistory.showHistoryCarousel(true);
     });
-
-    pbBackButton.addEventListener("click", this, { capture: true });
 
     XPCOMUtils.defineLazyPreferenceGetter(
       this,
@@ -100,6 +110,18 @@ var HistoryCarouselUI = {
 
   handleEvent(event) {
     if (event.type != "click") {
+      return;
+    }
+    // This is kind of a hack, but if this flag is set, then we
+    // prevent the click event from continuing to propagate, and
+    // call preventDefault. This prevents both the
+    // gClickAndHoldListenersOnElement command and the default
+    // XUL command machinery from firing. We then clear the flag
+    // to make sure that clicks continue to work.
+    if (this._openedByLongPress) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this._openedByLongPress = false;
       return;
     }
 
