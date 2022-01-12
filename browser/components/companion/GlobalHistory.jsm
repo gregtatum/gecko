@@ -605,6 +605,7 @@ class InternalView {
  * `RiverRebuilt` - The river has been replaced with a new state and should be rebuilt.
  * `ViewPinned` - A view has transitioned from the unpinned to pinned state.
  * `ViewUnpinned` - A view has transitioned from the pinned to unpinned state.
+ * `ViewLoaded` - A view has finished loading.
  */
 class GlobalHistoryEvent extends Event {
   #view;
@@ -798,6 +799,7 @@ class BrowserListener {
  * `ViewUpdated` - An existing view has changed in some way.
  * `ViewPinned` - A view has transitioned from the unpinned to pinned state.
  * `ViewUnpinned` - A view has transitioned from the pinned to unpinned state.
+ * `ViewLoaded` - A view has finished loading.
  *    The view will be included in the event detail
  */
 class GlobalHistory extends EventTarget {
@@ -996,6 +998,28 @@ class GlobalHistory extends EventTarget {
     this.dispatchEvent(
       new GlobalHistoryEvent("ViewUpdated", internalView.view)
     );
+  }
+
+  onStateChange(browser, webProgress, request, stateFlags, status) {
+    if (
+      stateFlags & Ci.nsIWebProgressListener.STATE_IS_WINDOW &&
+      stateFlags & Ci.nsIWebProgressListener.STATE_STOP
+    ) {
+      let entry = getCurrentEntry(browser);
+      if (!entry) {
+        return;
+      }
+
+      let internalView = this.#historyViews.get(entry.ID);
+      if (!internalView) {
+        return;
+      }
+
+      internalView.update(browser, entry);
+      this.dispatchEvent(
+        new GlobalHistoryEvent("ViewLoaded", internalView.view)
+      );
+    }
   }
 
   /**
@@ -1416,8 +1440,14 @@ class GlobalHistory extends EventTarget {
    *
    * @param {Browser} browser
    * @param {nsISHEntry} newEntry
+   * @param {boolean} viaTabSwitch
+   *   True if the "navigation" is actually a tab switch.
    */
-  _onBrowserNavigate(browser, newEntry = getCurrentEntry(browser)) {
+  _onBrowserNavigate(
+    browser,
+    newEntry = getCurrentEntry(browser),
+    viaTabSwitch = false
+  ) {
     logConsole.group(
       `_onBrowserNavigate for browser(${browser.browsingContext.id}), ` +
         `SHEntry(${newEntry?.ID})`
@@ -1518,7 +1548,10 @@ class GlobalHistory extends EventTarget {
 
     this.startActivationTimer();
     this.#updateSessionStore();
-    this.#notifyEvent("ViewChanged", internalView);
+    this.#notifyEvent("ViewChanged", internalView, {
+      navigating: !viaTabSwitch,
+      browser,
+    });
 
     logConsole.groupEnd();
   }
@@ -1718,7 +1751,10 @@ class GlobalHistory extends EventTarget {
           this.#notifyEvent("ViewRemoved", previousView);
 
           if (this.#currentInternalView === null) {
-            this.#notifyEvent("ViewChanged", null);
+            this.#notifyEvent("ViewChanged", null, {
+              navigating: true,
+              browser,
+            });
           }
           return;
         }
@@ -1810,7 +1846,10 @@ class GlobalHistory extends EventTarget {
       gBrowser.warmupTab(tab);
 
       this.#currentHistoryCarouselInternalView = internalView;
-      this.#notifyEvent("ViewChanged", internalView);
+      this.#notifyEvent("ViewChanged", internalView, {
+        navigating: false,
+        browser,
+      });
       return;
     }
 

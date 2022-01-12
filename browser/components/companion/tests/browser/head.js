@@ -596,7 +596,8 @@ var PinebuildTestUtils = {
   },
 
   /**
-   * Waits for a particular View to be made current in GlobalHistory.
+   * Waits for a particular View to be made current in GlobalHistory. If
+   * this view needs to load, then that will be waited for too.
    *
    * @param {View} view The View that is expected to become current.
    * @param {Window?} win
@@ -604,13 +605,32 @@ var PinebuildTestUtils = {
    * @return {Promise}
    * @resolves With the ViewChanged event that fired after setting the View.
    */
-  waitForSelectedView(view, win = window) {
-    return BrowserTestUtils.waitForEvent(
+  async waitForSelectedView(view, win = window) {
+    let viewChanged = BrowserTestUtils.waitForEvent(
       win.gGlobalHistory,
       "ViewChanged",
       false,
       event => event.view == view
     );
+    let controller = new AbortController();
+    let viewLoaded = BrowserTestUtils.waitForEvent(
+      win.gGlobalHistory,
+      "ViewLoaded",
+      false,
+      event => event.view == view,
+      false,
+      controller.signal
+    );
+    let viewChangedEvent = await viewChanged;
+    if (viewChangedEvent.detail.navigating) {
+      // We're actually loading this view, so we need to wait for
+      // the ViewLoaded event to fire.
+      await viewLoaded;
+    } else {
+      // There's not going to be a ViewLoaded event, to tear down the
+      // ViewLoaded event listener.
+      controller.abort();
+    }
   },
 
   /**
