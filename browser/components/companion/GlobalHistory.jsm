@@ -1948,8 +1948,6 @@ class GlobalHistory extends EventTarget {
     //
     // This way, we can keep pinned Views within #viewStack and not have
     // to treat them specially throughout GlobalHistory.
-
-    this.#currentInternalView = internalView;
     let viewIndex = this.#viewStack.indexOf(internalView);
     this.#viewStack.splice(viewIndex, 1);
     let eventName;
