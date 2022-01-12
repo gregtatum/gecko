@@ -708,10 +708,7 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
             if task.attributes.get("unittest_variant", "") != "":
                 return False
 
-            if task.attributes["unittest_suite"] == "xpcshell":
-                return True
-
-            if not task.attributes["unittest_suite"].endswith("-pinebuild"):
+            if "pinebuild" not in task.attributes.get("test_platform", ""):
                 return False
 
         return True
