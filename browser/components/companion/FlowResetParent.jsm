@@ -17,22 +17,22 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 class FlowResetParent extends JSWindowActorParent {
   async receiveMessage(message) {
     let window = this.browsingContext.topChromeWindow;
-    let browser = window.document.getElementById("companion-browser");
-    let actor = browser?.browsingContext?.currentWindowGlobal?.getActor(
-      "Companion"
-    );
     switch (message.name) {
       case "ViewCompanionBrowseTab":
         let companion = window.document.getElementById("companion-box");
         if (!companion.isOpen) {
           companion.toggleVisible();
         }
-        actor?.viewTab("browse");
+        let browser = window.document.getElementById("companion-browser");
+        let actor = browser?.browsingContext?.currentWindowGlobal?.getActor(
+          "Companion"
+        );
+        if (actor) {
+          actor.viewTab("browse");
+        }
         break;
       case "RestoreLastSession":
-        await SessionManager.restoreLastSession(window);
-        actor?.viewTab("now");
-        break;
+        SessionManager.restoreLastSession(window);
     }
   }
 }
