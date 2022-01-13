@@ -21,16 +21,6 @@
  * gets to decide on.  This module provides a means of requiring/loading the
  * givenengine modules on demand, as well as providing metadata about engines.
  *
- * Currently we use two type of identifiers:
- * - Account Type Strings (old, but not going away):
- *   - imap+smtp
- *   - pop3+smtp
- *   - activesync
- * - Engine Id Strings (new):
- *   - gmailImap
- *   - vanillaImap
- *   - activesync
- *   - pop3
  **/
 
 /**
@@ -38,15 +28,6 @@
  * module requiring them is under ./tasks.
  */
 export const configuratorModules = new Map([
-  /*
-  [
-    "activesync",
-    async function() {
-      const mod = await import("./accounts/activesync/configurator");
-      return mod.default;
-    },
-  ],
-  */
   [
     "feed",
     async function() {
@@ -69,20 +50,6 @@ export const configuratorModules = new Map([
     },
   ],
   /*
-     [
-     "imap+smtp",
-     async function() {
-     const mod = await import("./accounts/composite/configurator");
-     return mod.default;
-     },
-     ],
-     [
-     "pop3+smtp",
-     async function() {
-     const mod = await import("./accounts/composite/configurator");
-     return mod.default;
-     },
-     ],
      [
      "phabricator",
      async function() {
@@ -112,15 +79,6 @@ export const configuratorModules = new Map([
  * module requiring them is under ./tasks.
  */
 export const validatorModules = new Map([
-  /*
-  [
-    "activesync",
-    async function() {
-      const mod = await import("./accounts/activesync/validator");
-      return mod.default;
-    },
-  ],
-  */
   [
     "feed",
     async function() {
@@ -143,20 +101,6 @@ export const validatorModules = new Map([
     },
   ],
   /*
-     [
-     "imap+smtp",
-     async function() {
-     const mod = await import("./accounts/composite/validator");
-     return mod.default;
-     },
-     ],
-     [
-     "pop3+smtp",
-     async function() {
-     const mod = await import("./accounts/composite/validator");
-     return mod.default;
-     },
-     ],
      [
      "phabricator",
      async function() {
@@ -186,15 +130,6 @@ export const validatorModules = new Map([
  * module requiring them is ./universe/account_manager.
  */
 export const accountModules = new Map([
-  /*
-  [
-    "activesync",
-    async function() {
-      const mod = await import("./accounts/activesync/account");
-      return mod.default;
-    },
-  ],
-  */
   [
     "feed",
     async function() {
@@ -217,20 +152,6 @@ export const accountModules = new Map([
     },
   ],
   /*
-     [
-     "imap+smtp",
-     async function() {
-     const mod = await import("./accounts/composite/account");
-     return mod.default;
-     },
-     ],
-     [
-     "pop3+smtp",
-     async function() {
-     const mod = await import("./accounts/composite/account");
-     return mod.default;
-     },
-     ],
      [
      "phabricator",
      async function() {
@@ -260,29 +181,6 @@ export const accountModules = new Map([
  * requiring them is ./universe/account_manager, or something equally nested.
  */
 export const engineTaskMappings = new Map([
-  /*
-  [
-    'gmailImap',
-    async function() {
-      const mod = await import('./accounts/imap/gmail_tasks');
-      return mod.default;
-    }
-  ],
-  [
-    'vanillaImap',
-    async function() {
-      const mod = await import('./accounts/imap/vanilla_tasks');
-      return mod.default;
-    }
-  ],
-  [
-    "activesync",
-    async function() {
-      const mod = await import("./accounts/activesync/activesync_tasks");
-      return mod.default;
-    },
-  ],
-  */
   [
     "feed",
     async function() {
@@ -305,13 +203,6 @@ export const engineTaskMappings = new Map([
     },
   ],
   /*
-     [
-     "pop3",
-     async function() {
-     const mod = await import("./accounts/pop3/pop3_tasks");
-     return mod.default;
-     },
-     ],
      [
      "phabricator",
      async function() {
@@ -341,36 +232,6 @@ export const engineTaskMappings = new Map([
  * current engine limitations, put it here.  All the guilt in one place.
  */
 export const engineHacks = new Map([
-  /*
-  [
-    'gmailImap',
-    {
-      // For various reasons of things not exploding, we are disabling
-      // certain folder types.  See below for details.
-      unselectableFolderTypes: new Set([
-        // Currently if the user ever enters the "all mail" folder, we will
-        // end up synchronizing every new message the user ever receives after
-        // this point.  This will turn out badly.
-        'all',
-        // The sync engine doesn't know how to deal with folders that aren't
-        // covered by all mail (yet).
-        'junk', 'trash'
-      ])
-    }
-  ],
-  [
-    'vanillaImap',
-    {
-      unselectableFolderTypes: new Set(),
-    }
-  ],
-  [
-    "activesync",
-    {
-      unselectableFolderTypes: new Set(),
-    },
-  ],
-  */
   [
     "feed",
     {
@@ -390,12 +251,6 @@ export const engineHacks = new Map([
     },
   ],
   /*
-     [
-     "pop3",
-     {
-     unselectableFolderTypes: new Set(),
-     },
-     ],
      [
      "phabricator",
      {
@@ -428,26 +283,6 @@ export const engineHacks = new Map([
  * cavalier in our naming for the back-end since it's all internal API.
  */
 export const engineBackEndFacts = new Map([
-  /*
-  [
-    'gmailImap',
-    {
-      syncGranularity: 'account',
-    }
-  ],
-  [
-    'vanillaImap',
-    {
-      syncGranularity: 'folder',
-    }
-  ],
-  [
-    "activesync",
-    {
-      syncGranularity: "folder",
-    },
-  ],
-  */
   [
     "feed",
     {
@@ -467,12 +302,6 @@ export const engineBackEndFacts = new Map([
     },
   ],
   /*
-     [
-     "pop3",
-     {
-     syncGranularity: "folder",
-     },
-     ],
      [
      "phabricator",
      {
@@ -508,35 +337,6 @@ export const engineBackEndFacts = new Map([
  * try and cluster things into things like `engineFacts`.
  */
 export const engineFrontEndAccountMeta = new Map([
-  /*
-  [
-    'gmailImap',
-    {
-      engineFacts: {
-        syncGranularity: 'account',
-      },
-      usesArchiveMetaphor: true
-    }
-  ],
-  [
-    'vanillaImap',
-    {
-      engineFacts: {
-        syncGranularity: 'folder',
-      },
-      usesArchiveMetaphor: false
-    }
-  ],
-  [
-    "activesync",
-    {
-      engineFacts: {
-        syncGranularity: "folder",
-      },
-      usesArchiveMetaphor: false,
-    },
-  ],
-  */
   [
     "feed",
     {
@@ -582,18 +382,6 @@ export const engineFrontEndAccountMeta = new Map([
   ],
   /*
      [
-     "pop3",
-     {
-     engineFacts: {
-     // This could arguably be 'account' too, but that would hinge on us
-     // having some type of local folder stuff going on.  We can of course
-     // revisit this as needed.
-     syncGranularity: "folder",
-     },
-     usesArchiveMetaphor: false,
-     },
-     ],
-     [
      "phabricator",
      {
      engineFacts: {
@@ -634,26 +422,6 @@ export const engineFrontEndAccountMeta = new Map([
  * rep is already a big soupy mess of stuff.)
  */
 export const engineFrontEndFolderMeta = new Map([
-  /*
-  [
-    'gmailImap',
-    {
-      syncGranularity: 'account',
-    }
-  ],
-  [
-    'vanillaImap',
-    {
-      syncGranularity: 'folder',
-    }
-  ],
-  [
-    "activesync",
-    {
-      syncGranularity: "folder",
-    },
-  ],
-  */
   [
     "feed",
     {
@@ -673,12 +441,6 @@ export const engineFrontEndFolderMeta = new Map([
     },
   ],
   /*
-     [
-     "pop3",
-     {
-     syncGranularity: "folder",
-     },
-     ],
      [
      "phabricator",
      {

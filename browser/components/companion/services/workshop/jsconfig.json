@@ -5,10 +5,7 @@
       "*": ["vendor/*", "*"],
       "gelam/*": ["*"],
       "logic": ["shared/logic"],
-      "equal": ["vendor/equal"],
-      "imap-formal-syntax": ["vendor/imap-handler/src/imap-formal-syntax"],
-      "smtpclient-response-parser": ["vendor/smtpclient/src/smtpclient-response-parser"]
-    }
+      "equal": ["vendor/equal"]    }
   },
   "exclude": ["node_modules"]
 }
