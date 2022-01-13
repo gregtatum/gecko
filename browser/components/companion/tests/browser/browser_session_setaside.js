@@ -100,3 +100,106 @@ add_task(async function setup() {
     );
   }, win);
 });
+
+add_task(async function pickSessionBackUpFromFlowReset() {
+  // Run test in a new window to avoid affecting the main test window.
+  let win = await BrowserTestUtils.openNewBrowserWindow();
+
+  registerCleanupFunction(async () => {
+    await BrowserTestUtils.closeWindow(win);
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    await helper.runCompanionTask(() => {
+      let companionDeck = content.document.getElementById("companion-deck");
+      companionDeck.selectedViewName = "browse";
+    });
+
+    await PinebuildTestUtils.loadViews(["https://example.com/"], win);
+
+    let flowResetLoaded = BrowserTestUtils.waitForNewTab(
+      win.gBrowser,
+      "about:flow-reset",
+      true
+    );
+    win.document.getElementById("session-setaside-button").click();
+    await flowResetLoaded;
+
+    await helper.runCompanionTask(() => {
+      let companionDeck = content.document.getElementById("companion-deck");
+      companionDeck.selectedViewName = "browse";
+    });
+
+    await SpecialPowers.spawn(win.gBrowser.selectedBrowser, [], () => {
+      content.document.getElementById("restore").click();
+    });
+
+    await BrowserTestUtils.browserLoaded(
+      win.gBrowser.selectedBrowser,
+      false,
+      "https://example.com/"
+    );
+
+    let currentView = await helper.runCompanionTask(
+      () => content.document.getElementById("companion-deck").selectedViewName
+    );
+    Assert.equal(currentView, "now", "Companion has switched to now tab");
+  }, win);
+});
+
+add_task(async function pickSessionBackUpFromCompanion() {
+  // Run test in a new window to avoid affecting the main test window.
+  let win = await BrowserTestUtils.openNewBrowserWindow();
+
+  registerCleanupFunction(async () => {
+    await BrowserTestUtils.closeWindow(win);
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    await helper.runCompanionTask(() => {
+      let companionDeck = content.document.getElementById("companion-deck");
+      companionDeck.selectedViewName = "browse";
+    });
+
+    await PinebuildTestUtils.loadViews(["https://example.com/"], win);
+
+    let flowResetLoaded = BrowserTestUtils.waitForNewTab(
+      win.gBrowser,
+      "about:flow-reset",
+      true
+    );
+    win.document.getElementById("session-setaside-button").click();
+    await flowResetLoaded;
+
+    await helper.runCompanionTask(() => {
+      let companionDeck = content.document.getElementById("companion-deck");
+      companionDeck.selectedViewName = "browse";
+    });
+
+    await SpecialPowers.spawn(win.gBrowser.selectedBrowser, [], () => {
+      content.document.getElementById("restore").click();
+    });
+
+    await PinebuildTestUtils.loadViews(["https://example.com/test"], win);
+
+    await helper.runCompanionTask(() => {
+      let companionDeck = content.document.getElementById("companion-deck");
+      companionDeck.selectedViewName = "browse";
+    });
+
+    await helper.runCompanionTask(() => {
+      content.document.querySelector("e-session-card").click();
+      content.document.querySelector(".restore-button").click();
+    });
+    await BrowserTestUtils.browserLoaded(
+      win.gBrowser.selectedBrowser,
+      false,
+      "https://example.com/"
+    );
+
+    let currentView = await helper.runCompanionTask(
+      () => content.document.getElementById("companion-deck").selectedViewName
+    );
+    Assert.equal(currentView, "now", "Companion has switched to now tab");
+  }, win);
+});
