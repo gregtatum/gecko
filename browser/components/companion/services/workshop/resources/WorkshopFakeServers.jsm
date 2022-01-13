@@ -763,7 +763,7 @@ class MapiFakeServer extends BaseFakeServer {
         attendees: event.attendees.map(mapPeep),
         body: {
           content: event.description,
-          contentType: "plain",
+          contentType: event.descriptionType,
         },
         bodyPreview: event.description,
         cancelledOccurrences: [],

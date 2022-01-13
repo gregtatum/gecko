@@ -83,6 +83,7 @@ class FakeEventFactory {
       const description =
         sketch.description ||
         this.#generateDescription({ links: sketch.links });
+      const descriptionType = sketch.descriptionType || "plain";
 
       let attendees;
       if (sketch.attendees) {
@@ -112,6 +113,7 @@ class FakeEventFactory {
         endDate,
         summary,
         description,
+        descriptionType,
         // TODO: improve fidelity of the creator and organizer semantics
         creator: eventCreator,
         organizer: eventOrganizer,

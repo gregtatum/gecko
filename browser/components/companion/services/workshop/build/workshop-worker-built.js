@@ -9653,18 +9653,23 @@ var WorkshopBackend = (() => {
   }
   function processLinks(links, description) {
     const map = new Map();
+    const anchorText = new Set();
     for (const [href, content] of Object.entries(links)) {
       const link = processLink(href, content);
-      if (link?.text !== "") {
+      if (link && link.text !== "") {
         map.set(link.url, link);
+        anchorText.add(link.text);
       }
     }
     if (description) {
       const descriptionURLs = description.match(URL_REGEX);
       if (descriptionURLs?.length) {
         for (const descriptionURL of descriptionURLs) {
+          if (anchorText.has(descriptionURL)) {
+            continue;
+          }
           const descriptionLink = processLink(descriptionURL);
-          if (descriptionLink?.text && !map.has(descriptionLink.url)) {
+          if (descriptionLink && descriptionLink.text !== "" && !map.has(descriptionLink.url)) {
             map.set(descriptionLink.url, descriptionLink);
           }
         }
