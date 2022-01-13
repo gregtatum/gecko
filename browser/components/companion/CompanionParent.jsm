@@ -647,6 +647,9 @@ class CompanionParent extends JSWindowActorParent {
         }
       // Intentional fallthrough: eslint-disable-next-line no-fallthrough
       case "session-replaced":
+        this.getSessionData();
+        this.viewTab("now");
+        break;
       case "sessions-updated": {
         this.getSessionData();
         break;
