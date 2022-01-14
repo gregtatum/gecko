@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { parseFeed } from "./xml/feed_parser.js";
+import { parseGmailFeed, parseFeed } from "./xml/feed_parser.js";
 import { parseJsonFeed } from "./json/feed_parser.js";
 import { parseHFeed } from "./html/feed_parser.js";
 
@@ -26,6 +26,8 @@ export async function TEST_parseFeed(parserType, code, url) {
       return parseHFeed(code, url);
     case "jsonfeed":
       return parseJsonFeed(code, url);
+    case "gmailfeed":
+      return parseGmailFeed(code);
   }
   return null;
 }

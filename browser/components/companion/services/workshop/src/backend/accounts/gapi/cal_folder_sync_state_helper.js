@@ -45,6 +45,10 @@ export default class GapiCalFolderSyncStateHelper {
       rawSyncState = {
         syncToken: null,
         etag: null,
+        // Stores the etag/lastModified state for the gmail inbox feed
+        // (see tasks/sync_inbox_count.js) so a conditional fetch can be
+        // performed; the contents are not cached.
+        inboxFeedCacheState: null,
         // The timestamp of the most recent `updated` value for the calendar.
         // This should be used in preference to locally generated wall-clock
         // values when trying to ask the server for things that have changed,

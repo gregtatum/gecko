@@ -22,8 +22,6 @@ import feed_syncRefresh from "./tasks/sync_refresh";
 import CommonAccountModify from "../../tasks/account_modify";
 import CommonIdentityModify from "../../tasks/identity_modify";
 
-import CommonNewTracking from "../../tasks/new_tracking";
-
 export default [
   feed_syncFolderList,
 
@@ -32,6 +30,4 @@ export default [
 
   CommonAccountModify,
   CommonIdentityModify,
-
-  CommonNewTracking,
 ];

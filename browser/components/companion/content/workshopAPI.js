@@ -28,6 +28,7 @@ if (workshopEnabled) {
 
   Workshop = {
     _calendarListView: null,
+    _workshopAccountCache: new Map(),
     get connectedAccounts() {
       let workshopAccounts = workshopAPI.accounts?.items;
       if (workshopAccounts?.length) {
@@ -37,6 +38,22 @@ if (workshopEnabled) {
         });
       }
       return [];
+    },
+
+    _getWorkshopAccount(accountType) {
+      let workshopAccount = this._workshopAccountCache.get(accountType);
+      if (workshopAccount) {
+        return workshopAccount;
+      }
+      workshopAccount = workshopAPI.accounts?.items.find(
+        account =>
+          ServiceUtils.getServiceByApi(account.type)?.type === accountType
+      );
+
+      if (workshopAccount) {
+        this._workshopAccountCache.set(accountType, workshopAccount);
+      }
+      return workshopAccount;
     },
 
     async getConnectedAccounts() {
@@ -159,6 +176,19 @@ if (workshopEnabled) {
       const spec = this.getCalendarEventQuery();
       await workshopAPI.refreshAllFoldersList(spec);
       return workshopAPI.refreshAllMessages(spec);
+    },
+
+    /**
+     * Get the number of unread emails for the given account.
+     * @param {String} accountType
+     * @returns A positive integer or zero if the value exists or -1.
+     */
+    getUnreadMessageCount(accountType) {
+      const account = this._getWorkshopAccount(accountType);
+      const inboxSummaryFolder = account?.folders.getFirstFolderWithType(
+        "inbox-summary"
+      );
+      return inboxSummaryFolder?.unreadMessageCount ?? -1;
     },
   };
 }

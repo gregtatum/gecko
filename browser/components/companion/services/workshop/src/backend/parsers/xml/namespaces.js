@@ -35,6 +35,13 @@ const NamespaceIds = new Map([
       check: ns => ns === "http://www.w3.org/1999/xhtml",
     },
   ],
+  [
+    "gmail",
+    {
+      id: 3,
+      check: ns => ns === "http://purl.org/atom/ns#",
+    },
+  ],
 ]);
 
 export { NamespaceIds };

@@ -431,7 +431,10 @@ class AtomNamespace {
   static $buildXMLObject(name, attributes) {
     // For now, only local namespace is supported for attributes.
     attributes = attributes.get("");
-    if (AtomNamespace.hasOwnProperty(name)) {
+    if (
+      AtomNamespace.hasOwnProperty(name) &&
+      typeof AtomNamespace[name] === "function"
+    ) {
       return AtomNamespace[name](attributes);
     }
     if (["rights", "subtitle", "summary", "title"].includes(name)) {

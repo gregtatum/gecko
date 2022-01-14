@@ -14,6 +14,7 @@
  */
 
 import { AtomNamespace } from "./atom";
+import { GmailNamespace } from "./gmail_feed";
 import { NamespaceIds } from "./namespaces";
 import { NodeBuilder } from "./node_builder";
 import { RssNamespace } from "./rss";
@@ -69,4 +70,44 @@ function parseFeed(str) {
   return parser.parse(str);
 }
 
-export { parseFeed };
+/**
+ * The root for gmail feed.
+ */
+class GmailFeedRoot extends XMLObject {
+  constructor() {
+    super(-1, "root");
+  }
+
+  $onChild(child) {
+    const name = child.$nodeName;
+    if (
+      name === "feed" &&
+      child.$namespaceId === NamespaceIds.get("gmail").id &&
+      !this.feed
+    ) {
+      this.feed = child;
+    }
+  }
+}
+
+/**
+ * Parse a gmail feed: https://mail.google.com/mail/u/0/feed/atom
+ *
+ * @param {String} str
+ * @returns
+ */
+function parseGmailFeed(str) {
+  const nsSetUp = {
+    gmail: GmailNamespace,
+  };
+
+  const nodeBuilder = new NodeBuilder(
+    nsSetUp,
+    new GmailFeedRoot(),
+    /* localNamespace = */ GmailNamespace
+  );
+  const parser = new XMLParser(nodeBuilder);
+  return parser.parse(str);
+}
+
+export { parseGmailFeed, parseFeed };

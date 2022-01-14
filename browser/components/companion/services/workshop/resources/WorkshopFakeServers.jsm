@@ -45,7 +45,7 @@ class FakeCalendar {
     this.serverOwner = serverOwner;
     this.id = id;
     this.name = name;
-    this.events = this.#convertEvents(events);
+    this.events = this.#convertEvents(events || []);
     this.calendarOwner = calendarOwner;
     this.serial = 0;
   }
@@ -252,6 +252,14 @@ class BaseFakeServer {
     this.calendars = [];
   }
 
+  /**
+   * Set the feed to use if any.
+   * @param {string} feedStr - A string representation of the xml/html to serve.
+   */
+  setFeed(feedStr) {
+    this.feed = feedStr;
+  }
+
   // old, maybe reuse
   _makeNowDate() {
     if (this._useNowTimestamp) {
@@ -423,6 +431,10 @@ class GapiFakeServer extends BaseFakeServer {
           events: this.paged(this.paged_calendarEvents),
         },
       },
+      {
+        path: "/mail/u/0/feed/atom",
+        handler: this.unpaged(this.unpaged_gmail_feed),
+      },
     ];
 
     this.registerAPIHandlers(API_HANDLERS);
@@ -456,6 +468,10 @@ class GapiFakeServer extends BaseFakeServer {
   }
 
   wrapResults(results, isPaged, args) {
+    if (results.strResults && results.mimeType) {
+      // Already wrapped so nothing to do.
+      return results;
+    }
     if (isPaged) {
       return super.wrapResults(
         {
@@ -469,6 +485,14 @@ class GapiFakeServer extends BaseFakeServer {
       );
     }
     return super.wrapResults(results, isPaged, args);
+  }
+
+  unpaged_gmail_feed() {
+    return {
+      results: this.feed,
+      strResults: this.feed,
+      mimeType: "application/xml",
+    };
   }
 
   /**

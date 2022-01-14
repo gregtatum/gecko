@@ -209,6 +209,14 @@ class WorkshopHelperClass {
       this.#redirector = new Redirector();
     }
 
+    // Make mail.google.com and few others accessible.
+    // This domain is in security/manager/ssl/nsSTSPreloadList.inc.
+    // See remote/marionette/cert.js
+    Services.prefs.setBoolPref(
+      "network.stricttransportsecurity.preloadlist",
+      false
+    );
+
     // Note: We could use XPCShellContentUtils.createHttpServer to create a
     // server and set up a proxy mapping so that we can have a more real-world
     // looking domain name.
@@ -333,6 +341,7 @@ class GapiConfiguratorHelperClass {
       "sheets.googleapis.com",
       "slides.googleapis.com",
       "www.googleapis.com",
+      "mail.google.com",
     ];
   }
 

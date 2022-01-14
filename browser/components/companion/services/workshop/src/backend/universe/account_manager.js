@@ -235,14 +235,16 @@ export class AccountManager {
     });
   }
 
-  acquireAccountFoldersTOC(ctx, accountId) {
+  acquireAccountFoldersTOC(ctx, accountId, folderType) {
     const foldersTOC = this.accountFoldersTOCs.get(accountId);
     if (foldersTOC) {
       return ctx.acquire(foldersTOC);
     }
-    return this._ensureAccountFoldersTOC(accountId).then(_foldersTOC => {
-      return ctx.acquire(_foldersTOC);
-    });
+    return this._ensureAccountFoldersTOC(accountId, folderType).then(
+      _foldersTOC => {
+        return ctx.acquire(_foldersTOC);
+      }
+    );
   }
 
   /**

@@ -1008,6 +1008,7 @@ var MailFolder = class extends import_evt2.Emitter {
     this._wireRep = wireRep;
     this.localUnreadConversations = wireRep.localUnreadConversations;
     this.localMessageCount = wireRep.localMessageCount;
+    this.unreadMessageCount = wireRep.unreadMessageCount;
     let datify = (maybeDate) => maybeDate ? new Date(maybeDate) : null;
     this.lastSuccessfulSyncAt = datify(wireRep.lastSuccessfulSyncAt);
     this.lastAttemptedSyncAt = datify(wireRep.lastAttemptedSyncAt);
@@ -1041,6 +1042,12 @@ var MailFolder = class extends import_evt2.Emitter {
     this.syncBlocked = syncOverlay.blocked || null;
   }
   release() {
+  }
+  async refresh() {
+    await this.api._sendPromisedRequest({
+      type: "refreshFolder",
+      folderId: this.id
+    });
   }
 };
 

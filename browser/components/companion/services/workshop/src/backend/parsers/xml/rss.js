@@ -280,7 +280,10 @@ class Source extends StringObject {
 class RssNamespace {
   static $buildXMLObject(name, attributes) {
     attributes = attributes.get("");
-    if (RssNamespace.hasOwnProperty(name)) {
+    if (
+      RssNamespace.hasOwnProperty(name) &&
+      typeof RssNamespace[name] === "function"
+    ) {
       return RssNamespace[name](attributes);
     }
 

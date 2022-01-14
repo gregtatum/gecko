@@ -407,6 +407,11 @@ MailBridge.prototype = {
     await ctx.acquire(ctx.proxy);
   },
 
+  async _promised_refreshFolder(msg, replyFunc) {
+    await this.universe.syncRefreshFolder(msg.folderId, "refreshFolder");
+    replyFunc(null);
+  },
+
   async _cmd_viewFolderConversations(msg) {
     let ctx = this.bridgeContext.createNamedContext(
       msg.handle,

@@ -48,6 +48,7 @@ export class MailFolder extends Emitter {
 
     this.localUnreadConversations = wireRep.localUnreadConversations;
     this.localMessageCount = wireRep.localMessageCount;
+    this.unreadMessageCount = wireRep.unreadMessageCount;
 
     let datify = maybeDate => (maybeDate ? new Date(maybeDate) : null);
 
@@ -181,5 +182,12 @@ export class MailFolder extends Emitter {
 
   release() {
     // currently nothing to clean up
+  }
+
+  async refresh() {
+    await this.api._sendPromisedRequest({
+      type: "refreshFolder",
+      folderId: this.id,
+    });
   }
 }

@@ -77,6 +77,8 @@
  *   whatever the overhead is.  However, it *is* useful for our gmail sync_grow
  *   implementation and should allow us to help vanilla IMAP generate internal
  *   consistency checks.
+ * @property {Number|null} unreadMessageCount
+ *   The number of unread messages.
  * @property {Number|null} estimatedUnsyncedMessages
  *   The number of messages we think are not yet synchronized in this folder or
  *   null if we have no idea.
@@ -120,6 +122,7 @@ export function makeFolderMeta(raw) {
     syncGranularity: raw.syncGranularity || null,
     calendarInfo: raw.calendarInfo || null,
     localMessageCount: 0,
+    unreadMessageCount: raw.unreadMessageCount || 0,
     estimatedUnsyncedMessages: null,
     syncedThrough: null,
 

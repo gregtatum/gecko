@@ -1006,6 +1006,13 @@ var WorkshopBackend = (() => {
             id: 2,
             check: (ns) => ns === "http://www.w3.org/1999/xhtml"
           }
+        ],
+        [
+          "gmail",
+          {
+            id: 3,
+            check: (ns) => ns === "http://purl.org/atom/ns#"
+          }
         ]
       ]);
     }
@@ -1511,7 +1518,7 @@ var WorkshopBackend = (() => {
       AtomNamespace = class {
         static $buildXMLObject(name, attributes) {
           attributes = attributes.get("");
-          if (AtomNamespace.hasOwnProperty(name)) {
+          if (AtomNamespace.hasOwnProperty(name) && typeof AtomNamespace[name] === "function") {
             return AtomNamespace[name](attributes);
           }
           if (["rights", "subtitle", "summary", "title"].includes(name)) {
@@ -1582,6 +1589,67 @@ var WorkshopBackend = (() => {
         }
         static updated(attributes) {
           return new Updated(attributes);
+        }
+      };
+    }
+  });
+
+  // src/backend/parsers/xml/gmail_feed.js
+  var GMAIL_NS_ID, Atom2, StringAtom2, IntegerAtom, Fullcount, Feed2, GmailNamespace;
+  var init_gmail_feed = __esm({
+    "src/backend/parsers/xml/gmail_feed.js"() {
+      init_namespaces();
+      init_xml_object();
+      GMAIL_NS_ID = NamespaceIds.get("gmail").id;
+      Atom2 = class extends XMLObject {
+        constructor(name, attributes) {
+          super(GMAIL_NS_ID, name);
+        }
+        $onChildCheck(child) {
+          return !child.$isInvalid && super.$onChildCheck(child);
+        }
+      };
+      StringAtom2 = class extends Atom2 {
+        constructor(name, attributes) {
+          super(name, attributes);
+          this.$content = "";
+        }
+        $onChild(child) {
+        }
+        $onText(text) {
+          this.$content += text;
+        }
+      };
+      IntegerAtom = class extends StringAtom2 {
+        $finalize() {
+          this.$content = parseInt(this.$content);
+          this.$isInvalid = isNaN(this.$content);
+        }
+      };
+      Fullcount = class extends IntegerAtom {
+        constructor(attributes) {
+          super("fullcount", attributes);
+        }
+      };
+      Feed2 = class extends Atom2 {
+        constructor(attributes) {
+          super("feed", attributes);
+          this.fullcount = null;
+        }
+      };
+      GmailNamespace = class {
+        static $buildXMLObject(name, attributes) {
+          attributes = attributes.get("");
+          if (GmailNamespace.hasOwnProperty(name) && typeof GmailNamespace[name] === "function") {
+            return GmailNamespace[name](attributes);
+          }
+          return void 0;
+        }
+        static feed(attributes) {
+          return new Feed2(attributes);
+        }
+        static fullcount(attributes) {
+          return new Fullcount(attributes);
         }
       };
     }
@@ -1882,7 +1950,7 @@ var WorkshopBackend = (() => {
       RssNamespace = class {
         static $buildXMLObject(name, attributes) {
           attributes = attributes.get("");
-          if (RssNamespace.hasOwnProperty(name)) {
+          if (RssNamespace.hasOwnProperty(name) && typeof RssNamespace[name] === "function") {
             return RssNamespace[name](attributes);
           }
           if ([
@@ -2293,10 +2361,19 @@ var WorkshopBackend = (() => {
     const parser = new XMLParser(nodeBuilder);
     return parser.parse(str);
   }
-  var Root;
+  function parseGmailFeed(str) {
+    const nsSetUp = {
+      gmail: GmailNamespace
+    };
+    const nodeBuilder = new NodeBuilder(nsSetUp, new GmailFeedRoot(), GmailNamespace);
+    const parser = new XMLParser(nodeBuilder);
+    return parser.parse(str);
+  }
+  var Root, GmailFeedRoot;
   var init_feed_parser = __esm({
     "src/backend/parsers/xml/feed_parser.js"() {
       init_atom();
+      init_gmail_feed();
       init_namespaces();
       init_node_builder();
       init_rss();
@@ -2321,6 +2398,17 @@ var WorkshopBackend = (() => {
                 this.rss = child;
               }
               break;
+          }
+        }
+      };
+      GmailFeedRoot = class extends XMLObject {
+        constructor() {
+          super(-1, "root");
+        }
+        $onChild(child) {
+          const name = child.$nodeName;
+          if (name === "feed" && child.$namespaceId === NamespaceIds.get("gmail").id && !this.feed) {
+            this.feed = child;
           }
         }
       };
@@ -8897,6 +8985,7 @@ var WorkshopBackend = (() => {
       syncGranularity: raw.syncGranularity || null,
       calendarInfo: raw.calendarInfo || null,
       localMessageCount: 0,
+      unreadMessageCount: raw.unreadMessageCount || 0,
       estimatedUnsyncedMessages: null,
       syncedThrough: null,
       lastSuccessfulSyncAt: raw.lastSuccessfulSyncAt || 0,
@@ -10462,137 +10551,6 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/app_logic/new_message_summarizer.js
-  function extractRelevantMessageInfoForChurning(message) {
-    return {
-      date: message.date,
-      authorNameish: message.author.name || message.author.address,
-      subject: message.subject
-    };
-  }
-  var init_new_message_summarizer = __esm({
-    "src/app_logic/new_message_summarizer.js"() {
-    }
-  });
-
-  // src/backend/tasks/new_tracking.js
-  var new_tracking_default;
-  var init_new_tracking = __esm({
-    "src/backend/tasks/new_tracking.js"() {
-      init_task_definer();
-      init_new_message_summarizer();
-      init_id_conversions();
-      new_tracking_default = task_definer_default.defineComplexTask([
-        {
-          name: "new_tracking",
-          initPersistentState() {
-            return {
-              compareDate: null,
-              pendingDate: 0,
-              newByConv: new Map()
-            };
-          },
-          deriveMemoryStateFromPersistentState(persistentState, accountId, accountInfo, foldersTOC) {
-            let inboxFolder = foldersTOC.getCanonicalFolderByType("inbox");
-            return {
-              memoryState: {
-                inboxFolderId: inboxFolder && inboxFolder.id,
-                foldersTOC,
-                pendingTaskGroupId: null,
-                complexStateMap: new Map([[[accountId, this.name], persistentState]]),
-                newFlushTaskReq: {
-                  type: "new_flush"
-                }
-              },
-              markers: []
-            };
-          },
-          async plan(ctx, persistentState, memoryState, req) {
-            if (!persistentState.newByConv.size) {
-              await ctx.finishTask({});
-              return;
-            }
-            let newTasks = [];
-            if (req.op === "clear") {
-              if (!req.silent) {
-                newTasks.push({
-                  type: "new_flush"
-                });
-              }
-              persistentState.newByConv.clear();
-            }
-            await ctx.finishTask({
-              newData: { tasks: newTasks },
-              complexTaskState: persistentState
-            });
-          },
-          execute: null,
-          consult(askingCtx, persistentState) {
-            return persistentState.newByConv;
-          },
-          "trigger_msg!*!add": function(persistentState, memoryState, triggerCtx, message) {
-            if (!memoryState.inboxFolderId) {
-              let inboxFolder = memoryState.foldersTOC.getCanonicalFolderByType("inbox");
-              memoryState.inboxFolderId = inboxFolder && inboxFolder.id;
-              if (!memoryState.inboxFolderId) {
-                return;
-              }
-            }
-            if (!message.folderIds.has(memoryState.inboxFolderId)) {
-              return;
-            }
-            if (message.flags.includes("\\Seen")) {
-              return;
-            }
-            let curTaskGroupId = triggerCtx.rootTaskGroupId;
-            let dirty = false;
-            if (curTaskGroupId !== memoryState.pendingTaskGroupId) {
-              persistentState.compareDate = persistentState.pendingDate;
-              memoryState.pendingTaskGroupId = curTaskGroupId;
-              dirty = true;
-            }
-            if (message.date >= persistentState.pendingDate) {
-              dirty = true;
-              persistentState.pendingDate = Math.max(persistentState.pendingDate, message.date);
-              let convId = convIdFromMessageId(message.id);
-              let summary = extractRelevantMessageInfoForChurning(message);
-              let messageMap = persistentState.newByConv.get(convId);
-              if (!messageMap) {
-                messageMap = new Map();
-                persistentState.newByConv.set(convId, messageMap);
-              }
-              messageMap.set(message.id, summary);
-            }
-            if (dirty) {
-              triggerCtx.modify({
-                complexTaskStates: memoryState.complexStateMap,
-                rootGroupDeferredTask: memoryState.newFlushTaskReq
-              });
-            }
-          },
-          "trigger_msg!*!change": function(persistentState, memoryState, triggerCtx, messageId, preInfo, message, added, kept, removed) {
-            if (removed.has(memoryState.inboxFolderId) || message && message.flags.includes("\\Seen")) {
-              let convId = convIdFromMessageId(messageId);
-              let messageMap = persistentState.newByConv.get(convId);
-              if (!messageMap) {
-                return;
-              }
-              if (messageMap.delete(messageId)) {
-                if (messageMap.size === 0) {
-                  persistentState.newByConv.delete(convId);
-                }
-                triggerCtx.modify({
-                  complexTaskStates: memoryState.complexStateMap,
-                  rootGroupDeferredTask: memoryState.newFlushTaskReq
-                });
-              }
-            }
-          }
-        }
-      ]);
-    }
-  });
-
   // src/backend/accounts/feed/feed_tasks.js
   var feed_tasks_exports = {};
   __export(feed_tasks_exports, {
@@ -10606,14 +10564,12 @@ var WorkshopBackend = (() => {
       init_sync_refresh();
       init_account_modify();
       init_identity_modify();
-      init_new_tracking();
       feed_tasks_default = [
         sync_folder_list_default,
         sync_item_default,
         sync_refresh_default,
         account_modify_default,
-        identity_modify_default,
-        new_tracking_default
+        identity_modify_default
       ];
     }
   });
@@ -10651,7 +10607,12 @@ var WorkshopBackend = (() => {
       sync_folder_list_default2 = task_definer_default.defineSimpleTask([
         mix_sync_folder_list_default,
         {
-          essentialOfflineFolders: [],
+          essentialOfflineFolders: [
+            {
+              type: "inbox-summary",
+              displayName: "Gmail Summary"
+            }
+          ],
           async syncFolders(ctx, account) {
             const fromDb = await ctx.beginMutate({
               syncStates: new Map([[account.id, null]])
@@ -11052,6 +11013,7 @@ var WorkshopBackend = (() => {
             rawSyncState = {
               syncToken: null,
               etag: null,
+              inboxFeedCacheState: null,
               calUpdatedTS: null,
               rangeOldestTS: makeDaysAgo(15),
               rangeNewestTS: makeDaysAgo(-60)
@@ -11133,10 +11095,10 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/gapi/tasks/cal_sync_refresh.js
-  var cal_sync_refresh_default;
-  var init_cal_sync_refresh = __esm({
-    "src/backend/accounts/gapi/tasks/cal_sync_refresh.js"() {
+  // src/backend/accounts/gapi/tasks/sync_refresh.js
+  var sync_refresh_default2;
+  var init_sync_refresh2 = __esm({
+    "src/backend/accounts/gapi/tasks/sync_refresh.js"() {
       init_logic();
       init_util();
       init_date();
@@ -11144,7 +11106,7 @@ var WorkshopBackend = (() => {
       init_sync_overlay_helpers();
       init_cal_folder_sync_state_helper();
       init_account();
-      cal_sync_refresh_default = task_definer_default.defineAtMostOnceTask([
+      sync_refresh_default2 = task_definer_default.defineAtMostOnceTask([
         {
           name: "sync_refresh",
           binByArg: "folderId",
@@ -11180,9 +11142,22 @@ var WorkshopBackend = (() => {
             const syncState = new GapiCalFolderSyncStateHelper(ctx, rawSyncState, req.accountId, req.folderId, "refresh");
             const account = await ctx.universe.acquireAccount(ctx, req.accountId);
             const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
-            const calendarId = folderInfo.serverId;
             let syncDate = NOW();
             logic(ctx, "syncStart", { syncDate });
+            if (folderInfo.type === "inbox-summary") {
+              return {
+                newData: {
+                  tasks: [
+                    {
+                      type: "sync_inbox_refresh",
+                      accountId: account.id,
+                      folderId: req.folderId
+                    }
+                  ]
+                }
+              };
+            }
+            const calendarId = folderInfo.serverId;
             const endpoint = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`;
             let params;
             if (syncState.syncToken) {
@@ -11251,6 +11226,88 @@ var WorkshopBackend = (() => {
                     {
                       syncInfo: syncInfoClobbers
                     }
+                  ]
+                ])
+              }
+            };
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/accounts/gapi/tasks/sync_inbox_count.js
+  var sync_inbox_count_default;
+  var init_sync_inbox_count = __esm({
+    "src/backend/accounts/gapi/tasks/sync_inbox_count.js"() {
+      init_logic();
+      init_util();
+      init_date();
+      init_task_definer();
+      init_feed_parser();
+      init_network();
+      init_sync_overlay_helpers();
+      init_cal_folder_sync_state_helper();
+      sync_inbox_count_default = task_definer_default.defineAtMostOnceTask([
+        {
+          name: "sync_inbox_refresh",
+          binByArg: "folderId",
+          helped_overlay_folders: syncNormalOverlay,
+          helped_invalidate_overlays(folderId, dataOverlayManager) {
+            dataOverlayManager.announceUpdatedOverlayData("folders", folderId);
+          },
+          helped_already_planned(ctx, rawTask) {
+            return Promise.resolve({
+              result: ctx.trackMeInTaskGroup("sync_inbox_refresh:" + rawTask.folderId)
+            });
+          },
+          helped_plan(ctx, rawTask) {
+            let plannedTask = shallowClone2(rawTask);
+            plannedTask.resources = [
+              "online",
+              `credentials!${rawTask.accountId}`,
+              `happy!${rawTask.accountId}`
+            ];
+            plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
+            let groupPromise = ctx.trackMeInTaskGroup("sync_inbox_refresh:" + rawTask.folderId);
+            return {
+              taskState: plannedTask,
+              remainInProgressUntil: groupPromise,
+              result: groupPromise
+            };
+          },
+          async helped_execute(ctx, req) {
+            const fromDb = await ctx.beginMutate({
+              syncStates: new Map([[req.folderId, null]])
+            });
+            const rawSyncState = fromDb.syncStates.get(req.folderId);
+            const syncState = new GapiCalFolderSyncStateHelper(ctx, rawSyncState, req.accountId, req.folderId, "refresh");
+            const syncDate = NOW();
+            logic(ctx, "syncStart", { syncDate });
+            const { response, requestCacheState } = await fetchCacheAware("https://mail.google.com/mail/u/0/feed/atom", syncState.rawSyncState.inboxFeedCacheState);
+            syncState.rawSyncState.inboxFeedCacheState = requestCacheState;
+            if (!response) {
+              logic(ctx, "syncEnd", {});
+              return {
+                atomicClobbers: {
+                  folders: new Map([
+                    [req.folderId, { lastAttemptedSyncAt: syncDate }]
+                  ])
+                }
+              };
+            }
+            let unreadMessageCount = 0;
+            if (response.ok) {
+              const feedText = await response.text();
+              unreadMessageCount = parseGmailFeed(feedText)?.feed?.fullcount || 0;
+            }
+            logic(ctx, "syncEnd", {});
+            return {
+              atomicClobbers: {
+                folders: new Map([
+                  [
+                    req.folderId,
+                    { unreadMessageCount, lastAttemptedSyncAt: syncDate }
                   ]
                 ])
               }
@@ -11336,19 +11393,19 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/gapi/gapi_tasks.js"() {
       init_sync_folder_list2();
       init_cal_sync_conv();
-      init_cal_sync_refresh();
+      init_sync_refresh2();
+      init_sync_inbox_count();
       init_account_modify();
       init_folder_modify();
       init_identity_modify();
-      init_new_tracking();
       gapi_tasks_default = [
         sync_folder_list_default2,
         cal_sync_conv_default,
-        cal_sync_refresh_default,
+        sync_refresh_default2,
+        sync_inbox_count_default,
         account_modify_default,
         CommonFolderModify,
-        identity_modify_default,
-        new_tracking_default
+        identity_modify_default
       ];
     }
   });
@@ -11803,8 +11860,8 @@ var WorkshopBackend = (() => {
   });
 
   // src/backend/accounts/mapi/tasks/cal_sync_refresh.js
-  var cal_sync_refresh_default2;
-  var init_cal_sync_refresh2 = __esm({
+  var cal_sync_refresh_default;
+  var init_cal_sync_refresh = __esm({
     "src/backend/accounts/mapi/tasks/cal_sync_refresh.js"() {
       init_logic();
       init_util();
@@ -11813,7 +11870,7 @@ var WorkshopBackend = (() => {
       init_sync_overlay_helpers();
       init_cal_folder_sync_state_helper2();
       init_account2();
-      cal_sync_refresh_default2 = task_definer_default.defineAtMostOnceTask([
+      cal_sync_refresh_default = task_definer_default.defineAtMostOnceTask([
         {
           name: "sync_refresh",
           binByArg: "folderId",
@@ -11927,6 +11984,137 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/app_logic/new_message_summarizer.js
+  function extractRelevantMessageInfoForChurning(message) {
+    return {
+      date: message.date,
+      authorNameish: message.author.name || message.author.address,
+      subject: message.subject
+    };
+  }
+  var init_new_message_summarizer = __esm({
+    "src/app_logic/new_message_summarizer.js"() {
+    }
+  });
+
+  // src/backend/tasks/new_tracking.js
+  var new_tracking_default;
+  var init_new_tracking = __esm({
+    "src/backend/tasks/new_tracking.js"() {
+      init_task_definer();
+      init_new_message_summarizer();
+      init_id_conversions();
+      new_tracking_default = task_definer_default.defineComplexTask([
+        {
+          name: "new_tracking",
+          initPersistentState() {
+            return {
+              compareDate: null,
+              pendingDate: 0,
+              newByConv: new Map()
+            };
+          },
+          deriveMemoryStateFromPersistentState(persistentState, accountId, accountInfo, foldersTOC) {
+            let inboxFolder = foldersTOC.getCanonicalFolderByType("inbox");
+            return {
+              memoryState: {
+                inboxFolderId: inboxFolder && inboxFolder.id,
+                foldersTOC,
+                pendingTaskGroupId: null,
+                complexStateMap: new Map([[[accountId, this.name], persistentState]]),
+                newFlushTaskReq: {
+                  type: "new_flush"
+                }
+              },
+              markers: []
+            };
+          },
+          async plan(ctx, persistentState, memoryState, req) {
+            if (!persistentState.newByConv.size) {
+              await ctx.finishTask({});
+              return;
+            }
+            let newTasks = [];
+            if (req.op === "clear") {
+              if (!req.silent) {
+                newTasks.push({
+                  type: "new_flush"
+                });
+              }
+              persistentState.newByConv.clear();
+            }
+            await ctx.finishTask({
+              newData: { tasks: newTasks },
+              complexTaskState: persistentState
+            });
+          },
+          execute: null,
+          consult(askingCtx, persistentState) {
+            return persistentState.newByConv;
+          },
+          "trigger_msg!*!add": function(persistentState, memoryState, triggerCtx, message) {
+            if (!memoryState.inboxFolderId) {
+              let inboxFolder = memoryState.foldersTOC.getCanonicalFolderByType("inbox");
+              memoryState.inboxFolderId = inboxFolder && inboxFolder.id;
+              if (!memoryState.inboxFolderId) {
+                return;
+              }
+            }
+            if (!message.folderIds.has(memoryState.inboxFolderId)) {
+              return;
+            }
+            if (message.flags.includes("\\Seen")) {
+              return;
+            }
+            let curTaskGroupId = triggerCtx.rootTaskGroupId;
+            let dirty = false;
+            if (curTaskGroupId !== memoryState.pendingTaskGroupId) {
+              persistentState.compareDate = persistentState.pendingDate;
+              memoryState.pendingTaskGroupId = curTaskGroupId;
+              dirty = true;
+            }
+            if (message.date >= persistentState.pendingDate) {
+              dirty = true;
+              persistentState.pendingDate = Math.max(persistentState.pendingDate, message.date);
+              let convId = convIdFromMessageId(message.id);
+              let summary = extractRelevantMessageInfoForChurning(message);
+              let messageMap = persistentState.newByConv.get(convId);
+              if (!messageMap) {
+                messageMap = new Map();
+                persistentState.newByConv.set(convId, messageMap);
+              }
+              messageMap.set(message.id, summary);
+            }
+            if (dirty) {
+              triggerCtx.modify({
+                complexTaskStates: memoryState.complexStateMap,
+                rootGroupDeferredTask: memoryState.newFlushTaskReq
+              });
+            }
+          },
+          "trigger_msg!*!change": function(persistentState, memoryState, triggerCtx, messageId, preInfo, message, added, kept, removed) {
+            if (removed.has(memoryState.inboxFolderId) || message && message.flags.includes("\\Seen")) {
+              let convId = convIdFromMessageId(messageId);
+              let messageMap = persistentState.newByConv.get(convId);
+              if (!messageMap) {
+                return;
+              }
+              if (messageMap.delete(messageId)) {
+                if (messageMap.size === 0) {
+                  persistentState.newByConv.delete(convId);
+                }
+                triggerCtx.modify({
+                  complexTaskStates: memoryState.complexStateMap,
+                  rootGroupDeferredTask: memoryState.newFlushTaskReq
+                });
+              }
+            }
+          }
+        }
+      ]);
+    }
+  });
+
   // src/backend/accounts/mapi/mapi_tasks.js
   var mapi_tasks_exports = {};
   __export(mapi_tasks_exports, {
@@ -11937,7 +12125,7 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/mapi/mapi_tasks.js"() {
       init_sync_folder_list3();
       init_cal_sync_conv2();
-      init_cal_sync_refresh2();
+      init_cal_sync_refresh();
       init_account_modify();
       init_folder_modify();
       init_identity_modify();
@@ -11945,7 +12133,7 @@ var WorkshopBackend = (() => {
       mapi_tasks_default = [
         sync_folder_list_default3,
         cal_sync_conv_default2,
-        cal_sync_refresh_default2,
+        cal_sync_refresh_default,
         account_modify_default,
         CommonFolderModify,
         identity_modify_default,
@@ -12315,8 +12503,8 @@ var WorkshopBackend = (() => {
   });
 
   // src/backend/accounts/ical/tasks/sync_refresh.js
-  var import_ical3, sync_refresh_default2;
-  var init_sync_refresh2 = __esm({
+  var import_ical3, sync_refresh_default3;
+  var init_sync_refresh3 = __esm({
     "src/backend/accounts/ical/tasks/sync_refresh.js"() {
       init_logic();
       import_ical3 = __toModule(require_ical());
@@ -12326,7 +12514,7 @@ var WorkshopBackend = (() => {
       init_sync_state_helper2();
       init_id_conversions();
       init_sync_overlay_helpers();
-      sync_refresh_default2 = task_definer_default.defineAtMostOnceTask([
+      sync_refresh_default3 = task_definer_default.defineAtMostOnceTask([
         {
           name: "sync_refresh",
           binByArg: "accountId",
@@ -12412,14 +12600,14 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/ical/ical_tasks.js"() {
       init_sync_folder_list4();
       init_sync_uid();
-      init_sync_refresh2();
+      init_sync_refresh3();
       init_account_modify();
       init_identity_modify();
       init_new_tracking();
       ical_tasks_default = [
         sync_folder_list_default4,
         sync_uid_default,
-        sync_refresh_default2,
+        sync_refresh_default3,
         account_modify_default,
         identity_modify_default,
         new_tracking_default
@@ -14611,6 +14799,8 @@ var WorkshopBackend = (() => {
         return parseHFeed(code, url);
       case "jsonfeed":
         return parseJsonFeed(code, url);
+      case "gmailfeed":
+        return parseGmailFeed(code);
     }
     return null;
   }
@@ -14854,6 +15044,10 @@ var WorkshopBackend = (() => {
       let toc = await this.universe.acquireExtensionTOC(ctx, msg.namespace, msg.name);
       ctx.proxy = new WindowedListProxy(toc, ctx);
       await ctx.acquire(ctx.proxy);
+    },
+    async _promised_refreshFolder(msg, replyFunc) {
+      await this.universe.syncRefreshFolder(msg.folderId, "refreshFolder");
+      replyFunc(null);
     },
     async _cmd_viewFolderConversations(msg) {
       let ctx = this.bridgeContext.createNamedContext(msg.handle, "FolderConversationsView");
@@ -16919,12 +17113,12 @@ var WorkshopBackend = (() => {
         return ctx.acquire(_account);
       });
     }
-    acquireAccountFoldersTOC(ctx, accountId) {
+    acquireAccountFoldersTOC(ctx, accountId, folderType) {
       const foldersTOC = this.accountFoldersTOCs.get(accountId);
       if (foldersTOC) {
         return ctx.acquire(foldersTOC);
       }
-      return this._ensureAccountFoldersTOC(accountId).then((_foldersTOC) => {
+      return this._ensureAccountFoldersTOC(accountId, folderType).then((_foldersTOC) => {
         return ctx.acquire(_foldersTOC);
       });
     }

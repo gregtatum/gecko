@@ -17,23 +17,21 @@
 import gapi_syncFolderList from "./tasks/sync_folder_list";
 
 import gapi_syncConv from "./tasks/cal_sync_conv";
-import gapi_cal_syncRefresh from "./tasks/cal_sync_refresh";
+import gapi_cal_syncRefresh from "./tasks/sync_refresh";
+import gapi_inbox_count_syncRefresh from "./tasks/sync_inbox_count";
 
 import CommonAccountModify from "../../tasks/account_modify";
 import { CommonFolderModify } from "../../tasks/folder_modify";
 import CommonIdentityModify from "../../tasks/identity_modify";
-
-import CommonNewTracking from "../../tasks/new_tracking";
 
 export default [
   gapi_syncFolderList,
 
   gapi_syncConv,
   gapi_cal_syncRefresh,
+  gapi_inbox_count_syncRefresh,
 
   CommonAccountModify,
   CommonFolderModify,
   CommonIdentityModify,
-
-  CommonNewTracking,
 ];

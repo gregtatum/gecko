@@ -43,3 +43,12 @@ add_task(async function test_check_jsonfeed_parser() {
     "test_jsonfeed_expected.json"
   );
 });
+
+add_task(async function test_check_gmail_feed_parser() {
+  await check_parser(
+    "gmailfeed",
+    "",
+    "test_gmail_feed.xml",
+    "test_gmail_feed_expected.json"
+  );
+});
