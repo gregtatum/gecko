@@ -1828,7 +1828,6 @@ class GlobalHistory extends EventTarget {
     );
 
     let pos = this.#viewStack.indexOf(internalView);
-    let pinnedState = internalView.pinned;
     if (pos == -1) {
       throw new Error("Unknown View.");
     }
@@ -1855,12 +1854,7 @@ class GlobalHistory extends EventTarget {
     }
 
     let currentViewIndex = this.#viewStack.indexOf(this.#currentInternalView);
-    let currentPinnedState = this.#currentInternalView.pinned;
-    if (pinnedState == currentPinnedState) {
-      this.#navigatingForward = pos > currentViewIndex;
-    } else {
-      this.#navigatingForward = pinnedState;
-    }
+    this.#navigatingForward = pos > currentViewIndex;
 
     if (this.#currentInternalView == internalView) {
       // Nothing to do.
