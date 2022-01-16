@@ -3509,6 +3509,36 @@
   value: false
   mirror: always
 
+# DOM Streams Prefs
+
+## Exposure Prefs: To ensure the DOM Streams don't expose more
+# than existing JS Streams implementation, we want to hide some
+# interfaces from the global until later.
+- name: dom.streams.expose.ReadableByteStreamController
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
+- name: dom.streams.expose.ReadableStreamBYOBReader
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
+- name: dom.streams.expose.ReadableStreamBYOBRequest
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
+- name: dom.streams.expose.ReadableStreamDefaultController
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
+- name: dom.streams.expose.ReadableStreamDefaultReader
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
 # For area and anchor elements with target=_blank and no rel set to
 # opener/noopener.
 - name: dom.targetBlankNoOpener.enabled
@@ -3529,6 +3559,12 @@
 
 - name: dom.testing.sync-content-blocking-notifications
   type: bool
+  value: false
+  mirror: always
+
+# To enable TestUtils interface on WPT
+- name: dom.testing.testutils.enabled
+  type: RelaxedAtomicBool
   value: false
   mirror: always
 
@@ -4873,6 +4909,11 @@
 - name: general.smoothScroll.msdPhysics.regularSpringConstant
   type: RelaxedAtomicInt32
   value: 1000
+  mirror: always
+
+- name: general.utility-process.startup_timeout_ms
+  type: RelaxedAtomicInt32
+  value: 5000
   mirror: always
 
 #---------------------------------------------------------------------------
@@ -6550,6 +6591,17 @@
     mirror: always
 #endif
 
+#if defined(ENABLE_WASM_SIMD)
+#if defined(JS_CODEGEN_X64) || defined(JS_CODEGEN_X86)
+  # Enables AVX instructions support on X86/X64 platforms.
+  # Changing these prefs requires a restart.
+-   name: javascript.options.wasm_simd_avx
+    type: bool
+    value: false
+    mirror: always
+#endif
+#endif
+
 #if defined(ENABLE_WASM_MEMORY64)
 -   name: javascript.options.wasm_memory64
     type: bool
@@ -8140,7 +8192,11 @@
 - name: media.cubeb.sandbox_v2
   type: bool
   mirror: always
-#if defined(XP_MACOSX)
+#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
+  value: true
+#elif defined(XP_WIN) && !defined(_ARM64_)
+  value: true
+#elif defined(XP_MACOSX)
   value: true
 #else
   value: false
@@ -10347,9 +10403,9 @@
   value: 12582912
   mirror: always
 
-# Enable http3 network priorization as described in
+# Enable http3 network priority as described in
 # https://httpwg.org/http-extensions/draft-ietf-httpbis-priority.html
-- name: network.http.http3.priorization
+- name: network.http.http3.priority
   type: RelaxedAtomicBool
   value: true
   mirror: always
@@ -10359,7 +10415,7 @@
 # improve performance when switching to an tab with a website using the same
 # QUIC connection. On the other hand it sends more data to the website and
 # might be a privacy concern.
-- name: network.http.http3.send_background_tabs_depriorization
+- name: network.http.http3.send_background_tabs_deprioritization
   type: RelaxedAtomicBool
   value: false
   mirror: always

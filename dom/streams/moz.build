@@ -8,8 +8,11 @@ with Files("**"):
     BUG_COMPONENT = ("Core", "DOM: Streams")
 
 EXPORTS.mozilla.dom += [
+    "BaseQueuingStrategy.h",
+    "ByteLengthQueuingStrategy.h",
     "ByteStreamHelpers.h",
     "CountQueuingStrategy.h",
+    "NativeUnderlyingSource.h",
     "QueueWithSizes.h",
     "ReadableByteStreamController.h",
     "ReadableStream.h",
@@ -32,6 +35,7 @@ EXPORTS.mozilla.dom += [
 ]
 
 UNIFIED_SOURCES += [
+    "ByteLengthQueuingStrategy.cpp",
     "ByteStreamHelpers.cpp",
     "CountQueuingStrategy.cpp",
     "ReadableByteStreamController.cpp",
