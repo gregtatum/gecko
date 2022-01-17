@@ -15,6 +15,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   PageThumbs: "resource://gre/modules/PageThumbs.jsm",
   SessionManager: "resource:///modules/SessionManager.jsm",
   Services: "resource://gre/modules/Services.jsm",
+  Snapshots: "resource:///modules/Snapshots.jsm",
 });
 
 ChromeUtils.defineModuleGetter(
@@ -2019,6 +2020,10 @@ class GlobalHistory extends EventTarget {
       this.#viewStack.splice(index, 0, internalView);
       eventName = "ViewPinned";
       detail.index = index;
+      Snapshots.add({
+        url: internalView.url.spec,
+        userPersisted: Snapshots.USER_PERSISTED.PINNED,
+      });
     } else {
       this.#viewStack.push(internalView);
       eventName = "ViewUnpinned";
