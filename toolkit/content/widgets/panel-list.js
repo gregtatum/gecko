@@ -412,6 +412,12 @@
       style.rel = "stylesheet";
       style.href = "chrome://global/content/elements/panel-item.css";
 
+      // When click listeners are added to the panel-item it creates a node in
+      // the a11y tree for this element. This breaks the association between the
+      // menu and the button[role="menuitem"] in this shadow DOM and causes
+      // announcement issues with screen readers. (bug 995064)
+      this.setAttribute("role", "presentation");
+
       this.button = document.createElement("button");
       this.button.setAttribute("role", "menuitem");
 
