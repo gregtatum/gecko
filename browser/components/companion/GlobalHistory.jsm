@@ -1318,14 +1318,14 @@ class GlobalHistory extends EventTarget {
     // associated with it.
     if (closingTab.getAttribute("pinebuild-oauth-flow")) {
       let browser = closingTab.linkedBrowser;
-      // We iterate the Views in reverse order because we're going to
-      // be removing some along the way, and we don't want to worry
-      // about shifting indexes while we do it.
-      for (let i = this.#viewStack.length - 1; i >= 0; --i) {
-        let view = this.#viewStack[i];
-        if (view.browserId == browser.browserId) {
-          this.#closeInternalView(view);
-        }
+      // We need to find all the views to close first, since closing a view may
+      // cause changes to other related views. Specifically, new browsers/tabs
+      // may be created when the browser/tab related to a view is removed.
+      let viewsToRemove = this.#viewStack.filter(
+        view => view.browserId == browser.browserId
+      );
+      for (let view of viewsToRemove) {
+        this.#closeInternalView(view);
       }
     }
   }
