@@ -7749,8 +7749,14 @@
   value: false
   mirror: always
 
-# Enables the Show Password button inside a <input type=password>.
-- name: layout.forms.input-type-show-password-button.enabled
+# Enables the Reveal Password button inside a <input type=password>.
+- name: layout.forms.reveal-password-button.enabled
+  type: bool
+  value: false
+  mirror: always
+
+# Enables the Reveal Password context-menu entry.
+- name: layout.forms.reveal-password-context-menu.enabled
   type: bool
   value: false
   mirror: always
@@ -12585,6 +12591,16 @@
 #  - 1: always
 #  - 2: auto (for now only true for flatpak, since it needs work, see bug 1688720).
 - name: widget.use-xdg-desktop-portal.print
+  type: int32_t
+  value: 2
+  mirror: always
+
+# Whether to try to use XDG portal for settings / look-and-feel information.
+# https://flatpak.github.io/xdg-desktop-portal/#gdbus-org.freedesktop.portal.Settings
+#  - 0: never
+#  - 1: always
+#  - 2: auto
+- name: widget.use-xdg-desktop-portal.settings
   type: int32_t
   value: 2
   mirror: always
