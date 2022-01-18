@@ -88,15 +88,15 @@ add_task(async function testCreateLogin() {
         let morePopup = moreDropdown.nextElementSibling;
         is(
           morePopup.localName,
-          "menupopup",
+          "panel-list",
           "The dropdown should be adjacent to the popup"
         );
-        let morePopupShowing = ContentTaskUtils.waitForCondition(
-          () => morePopup.classList.contains("popupShowing"),
-          "waiting for popupShowing class"
+        let popupIsOpen = ContentTaskUtils.waitForCondition(
+          () => morePopup.hasAttribute("open"),
+          "waiting for popup to open"
         );
         moreDropdown.click();
-        await morePopupShowing;
+        await popupIsOpen;
 
         let editButton = morePopup.querySelector(".edit");
         editButton.click();
