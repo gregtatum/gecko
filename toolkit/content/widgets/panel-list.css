@@ -6,6 +6,10 @@
   visibility: hidden;
 }
 
+:host(:not([open])) {
+  display: none;
+}
+
 :host {
   position: absolute;
   background: var(--in-content-box-background);

@@ -90,10 +90,13 @@
     }
 
     hide(triggeringEvent, { force = false } = {}) {
-      if (
-        Services.prefs.getBoolPref("ui.popup.disable_autohide", false) &&
-        !force
-      ) {
+      // It's possible this is being used in an unprivileged context, in which
+      // case it won't have access to Services / Services will be undeclared.
+      const autohideDisabled = this.hasServices()
+        ? Services.prefs.getBoolPref("ui.popup.disable_autohide", false)
+        : false;
+
+      if (autohideDisabled && !force) {
         // Don't hide if this wasn't "forced" (using escape or click in menu).
         return;
       }
@@ -113,6 +116,18 @@
       } else {
         this.show(triggeringEvent);
       }
+    }
+
+    hasServices() {
+      // Safely check for Services without throwing a ReferenceError.
+      return typeof Services !== "undefined";
+    }
+
+    isDocumentRTL() {
+      if (this.hasServices()) {
+        return Services.locale.isAppLocaleRTL;
+      }
+      return document.dir === "rtl";
     }
 
     async setAlign() {
@@ -142,11 +157,15 @@
           setTimeout(() => {
             let target = this.getTargetForEvent(this.triggeringEvent);
             let anchorNode = target || this.parentNode;
+            // It's possible this is being used in a context where windowUtils is
+            // not available. In that case, fallback to using the element.
+            let getBounds = el =>
+              window.windowUtils
+                ? window.windowUtils.getBoundsWithoutFlushing(el)
+                : el.getBoundingClientRect();
             // Use y since top is reserved.
-            let anchorBounds = window.windowUtils.getBoundsWithoutFlushing(
-              anchorNode
-            );
-            let panelBounds = window.windowUtils.getBoundsWithoutFlushing(this);
+            let anchorBounds = getBounds(anchorNode);
+            let panelBounds = getBounds(this);
             resolve({
               anchorHeight: anchorBounds.height,
               anchorLeft: anchorBounds.left,
@@ -169,7 +188,7 @@
       let leftAlignX = anchorLeft;
       let rightAlignX = anchorLeft + anchorWidth - panelWidth;
 
-      if (Services.locale.isAppLocaleRTL) {
+      if (this.isDocumentRTL()) {
         // Prefer aligning on the right.
         align = rightAlignX < 0 ? "left" : "right";
       } else {
@@ -251,6 +270,12 @@
             e.stopPropagation();
           }
           break;
+        case "mousedown":
+          // Close if there's a click started outside the panel.
+          if (!inPanelList) {
+            this.hide();
+          }
+          break;
         case "keydown":
           if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Tab") {
             // Ignore tabbing with a modifer other than shift.
@@ -301,7 +326,6 @@
             }
           }
           break;
-        case "mousedown":
         case "focusin":
           if (
             this.triggeringEvent &&
@@ -314,8 +338,7 @@
             this.focusHasChanged = true;
           } else if (!target || !inPanelList) {
             // If the target isn't in the panel, hide. This will close when focus
-            // moves out of the panel, or there's a click started outside the
-            // panel.
+            // moves out of the panel.
             this.hide();
           } else {
             // Just record that there was a focusin event.
@@ -421,8 +444,10 @@
       this.button = document.createElement("button");
       this.button.setAttribute("role", "menuitem");
 
-      // Use a XUL label element to show the accesskey.
-      this.label = document.createXULElement("label");
+      // Use a XUL label element if possible to show the accesskey.
+      this.label = document.createXULElement
+        ? document.createXULElement("label")
+        : document.createElement("span");
       this.button.appendChild(this.label);
 
       let supportLinkSlot = document.createElement("slot");

@@ -285,19 +285,6 @@ export default class LoginList extends HTMLElement {
   }
 
   handleEvent(event) {
-    // Ensure the dropdown menu (if any) does not persist if the user tries to click
-    // on a different portion of the login list element.
-    if (
-      event.type != "keydown" &&
-      event.type != "keyup" &&
-      this._currentMenuPopup
-    ) {
-      this.classList.remove("popupShowing");
-      this._currentMenuPopup.classList.remove("popupShowing");
-      this._currentMenuPopup.closest("li").classList.remove("popupShowing");
-      this._currentMenuPopup = null;
-    }
-
     switch (event.type) {
       case "click": {
         if (event.originalTarget == this._createLoginButton) {
@@ -313,56 +300,51 @@ export default class LoginList extends HTMLElement {
           return;
         }
 
-        let listItem = event.originalTarget.closest(".login-list-item");
+        let listItem =
+          event.originalTarget.closest(".login-list-item") ||
+          event.originalTarget.getRootNode().host.closest(".login-list-item");
         if (!listItem || !listItem.dataset.guid) {
           return;
         }
 
         if (event.originalTarget.classList.contains("more-dropdown")) {
-          let menuPopup = event.originalTarget.nextElementSibling;
-          this._currentMenuPopup = menuPopup;
-          this.classList.add("popupShowing");
-          this._currentMenuPopup.classList.add("popupShowing");
-          listItem.classList.add("popupShowing");
-          for (let child of menuPopup.children) {
-            child.addEventListener("click", this);
-          }
+          let menuPopup = listItem.querySelector("panel-list");
+          menuPopup.toggle(event);
           return;
         }
 
         let { login } = this._logins[listItem.dataset.guid];
 
-        let isPassword = event.originalTarget.classList.contains(
-          "copyPassword"
-        );
-        if (
-          isPassword ||
-          event.originalTarget.classList.contains("copyUsername")
-        ) {
-          listItem.dispatchEvent(
-            new CustomEvent("AboutLoginsCopyLoginDetail", {
-              bubbles: true,
-              detail: isPassword ? login.password : login.username,
-            })
-          );
-          this.classList.remove("popupShowing");
-          return;
-        } else if (event.originalTarget.classList.contains("edit")) {
-          event.stopPropagation();
-          window.dispatchEvent(
-            new CustomEvent("AboutLoginsLoginEditLogin", {
-              detail: {
-                login,
-                newHeaderL10nId: "about-logins-header-edit-password",
-              },
-              cancelable: true,
-              bubbles: true,
-            })
-          );
-          this.classList.add("editing");
-          return;
-        } else if (this.classList.contains("in-companion")) {
-          return;
+        // Handle clicks on the different popup menu items.
+        const action = event.target.dataset.action;
+        switch (action) {
+          case "copy-password":
+          case "copy-username": {
+            const isPassword = action === "copy-password";
+            listItem.dispatchEvent(
+              new CustomEvent("AboutLoginsCopyLoginDetail", {
+                bubbles: true,
+                detail: isPassword ? login.password : login.username,
+              })
+            );
+            break;
+          }
+          case "edit-password": {
+            event.stopPropagation();
+            window.dispatchEvent(
+              new CustomEvent("AboutLoginsLoginEditLogin", {
+                detail: {
+                  login,
+                  newHeaderL10nId: "about-logins-header-edit-password",
+                },
+                cancelable: true,
+                bubbles: true,
+              })
+            );
+            this.classList.add("editing");
+            break;
+          }
+          default:
         }
 
         this.dispatchEvent(

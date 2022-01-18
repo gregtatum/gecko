@@ -13,6 +13,7 @@
     <link rel="localization" href="browser/branding/sync-brand.ftl">
     <link rel="localization" href="browser/branding/brandings.ftl">
     <link rel="localization" href="browser/aboutLogins.ftl">
+    <script src="chrome://global/content/elements/panel-list.js"></script>
     <script type="module" src="chrome://browser/content/aboutlogins/components/confirmation-dialog.js"></script>
     <script type="module" src="chrome://browser/content/aboutlogins/components/remove-logins-dialog.js"></script>
     <script type="module" src="chrome://browser/content/aboutlogins/components/import-summary-dialog.js"></script>
@@ -232,14 +233,14 @@
           <span class="title" dir="auto"></span>
           <span class="username" dir="ltr"></span>
         </div>
-        <img class="alert-icon" title="" src=""/>
+        <img class="alert-icon" title="" src="" />
         <div class="more-dropdown-container">
           <button class="more-dropdown"></button>
-          <menupopup>
-            <menuitem class="copyPassword" data-l10n-id="pro-client-copy-password"></menuitem>
-            <menuitem class="copyUsername" data-l10n-id="pro-client-copy-username"></menuitem>
-            <menuitem class="edit" data-l10n-id="login-item-edit-button"></menuitem>
-          </menupopup>
+          <panel-list data-action="list" data-l10n-id="menu">
+            <panel-item data-l10n-id="pro-client-copy-password" data-action="copy-password"></panel-item>
+            <panel-item data-l10n-id="pro-client-copy-username" data-action="copy-username"></panel-item>
+            <panel-item data-l10n-id="login-item-edit-button" data-action="edit-password"></panel-item>
+          </panel-list>
         </div>
       </li>
     </template>

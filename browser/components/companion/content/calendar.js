@@ -428,6 +428,7 @@ class CalendarEvent extends MozLitElement {
         background-repeat: no-repeat;
         background-position: center;
         fill: currentColor;
+        -moz-context-properties: fill;
       }
 
       .event-info {
@@ -538,12 +539,6 @@ class CalendarEvent extends MozLitElement {
         justify-content: space-between;
         margin-block-end: 8px;
         height: 16px;
-      }
-
-      .event-options-button {
-        min-width: auto;
-        -moz-context-properties: fill;
-        fill: currentColor;
       }
 
       .event-details {
