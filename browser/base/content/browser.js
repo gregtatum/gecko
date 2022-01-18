@@ -798,6 +798,16 @@ function UpdateBackForwardCommands(aWebNavigation) {
       forwardCommand.setAttribute("disabled", true);
     }
   }
+
+  if (AppConstants.PINEBUILD) {
+    let hasViews = !!gGlobalHistory.views.length;
+    UpdateSetAsideButton(hasViews);
+  }
+}
+
+function UpdateSetAsideButton(hasViews) {
+  let setAsideButton = document.getElementById("session-setaside-button");
+  setAsideButton.disabled = !hasViews;
 }
 
 /**

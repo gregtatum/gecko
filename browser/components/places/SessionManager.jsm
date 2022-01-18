@@ -223,7 +223,6 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     }
     setAsideBtn.disabled = true;
     await this.replaceSession(window);
-    setAsideBtn.removeAttribute("disabled");
   }
 
   /**
@@ -251,6 +250,9 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       window.gBrowser.visibleTabs
     );
     if (abort) {
+      window.document.getElementById(
+        "session-setaside-button"
+      ).disabled = false;
       return;
     }
 
