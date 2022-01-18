@@ -1039,10 +1039,11 @@ var PinebuildTestUtils = {
             !pinned &&
             p.querySelector(".preview-image").src.startsWith("blob:"),
           hasWireframe: !pinned && !!p.querySelector("svg"),
+          index: p.index,
         };
       });
       let currentPreview = content.document.querySelector("li[current]");
-      let currentIndex = previewEls.indexOf(currentPreview);
+      let currentIndex = currentPreview.index;
       return {
         previews,
         currentIndex,
@@ -1092,11 +1093,10 @@ var PinebuildTestUtils = {
    */
   async waitForSelectedHistoryCarouselIndex(browser, previewIndex) {
     await SpecialPowers.spawn(browser, [previewIndex], async index => {
-      let previewEls = Array.from(content.document.querySelectorAll("li"));
       let oldSelectedPreview = content.document.querySelector("li[current]");
       Assert.notEqual(
         index,
-        previewEls.indexOf(oldSelectedPreview),
+        oldSelectedPreview.index,
         "Selected index wasn't initially the current one."
       );
       await ContentTaskUtils.waitForEvent(
@@ -1109,8 +1109,8 @@ var PinebuildTestUtils = {
       let newSelectedPreview = content.document.querySelector("li[current]");
       Assert.notEqual(oldSelectedPreview, newSelectedPreview);
       Assert.equal(
-        previewEls.indexOf(newSelectedPreview),
         index,
+        newSelectedPreview.index,
         "Selected preview element has the right index."
       );
     });

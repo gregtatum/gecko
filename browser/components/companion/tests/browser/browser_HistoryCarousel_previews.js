@@ -44,12 +44,11 @@ add_task(async function preview_construction() {
     currentIndex,
   } = await PinebuildTestUtils.getHistoryCarouselPreviews(browser);
 
-  Assert.equal(previews.length, 4, "There should be 4 previews.");
+  Assert.equal(previews.length, 3, "There should be 3 previews.");
   Assert.equal(currentIndex, 3, "The last preview should be current.");
 
-  for (let i = 0; i < previews.length; ++i) {
-    let view = views[i];
-    let preview = previews[i];
+  for (let preview of previews) {
+    let view = views[preview.index];
 
     Assert.equal(
       view.title,
@@ -72,7 +71,7 @@ add_task(async function preview_construction() {
       "The pinned attribute should be set properly."
     );
 
-    if (i == currentIndex) {
+    if (preview.index == currentIndex) {
       Assert.ok(
         preview.hasBlob,
         "A blob image should be set on the preview for the current index."

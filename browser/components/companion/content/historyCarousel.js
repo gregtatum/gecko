@@ -79,6 +79,10 @@ class PreviewElement extends HTMLLIElement {
     }
   }
 
+  get index() {
+    return parseInt(this.getAttribute("index"), 10);
+  }
+
   #updateFromAttributes() {
     this.#caption.textContent = this.getAttribute("title");
     this.#caption.title = this.getAttribute("url");
@@ -140,14 +144,11 @@ const HistoryCarousel = {
   selectedIndex: -1,
 
   /**
-   * GlobalHistory current keeps pinned views at the start of the list
-   * that gets sent down to the carousel. For MR2-1598, we're choosing
-   * to (at least for now) not show pinned views in the carousel, so
-   * we use the lastPinnedIndex to know what to treat as the preview
-   * index minimum. If there are no pinned views, this should be -1,
-   * which is the default value.
+   * These are set to the min/max index property on the previews sent down
+   * from the parent process.
    */
-  lastPinnedIndex: -1,
+  minIndex: -1,
+  maxIndex: -1,
 
   /**
    * A convenience getter for the main <ol> element that contains each
@@ -286,7 +287,6 @@ const HistoryCarousel = {
     let frag = document.createDocumentFragment();
     let previews = CarouselUtils.getInitialPreviews();
     let currentIndex = CarouselUtils.getCurrentIndex();
-    let currentPreview = null;
 
     this.originalIndex = currentIndex;
 
@@ -300,31 +300,34 @@ const HistoryCarousel = {
       threshold: INTERSECTION_THRESHOLD_FOR_CURRENT,
     });
 
-    for (let i = 0; i < previews.length; ++i) {
-      let previewEl = document.createElement("li", { is: "preview-element" });
-      previewEl.setAttribute("index", i);
-      previewEl.setAttribute("title", previews[i].title);
-      previewEl.setAttribute("url", previews[i].url);
-      previewEl.setAttribute("iconURL", previews[i].iconURL);
+    // We'll populate the previewTaskQueue with the indexes of each preview
+    // during the next loop. This queue will get re-sorted in the subsequent
+    // updateCurrentIndex call.
+    this.previewTaskQueue = [];
+    let currentPreview = null;
+    let currentPreviewEl = null;
 
-      if (previews[i].pinned) {
-        previewEl.setAttribute("pinned", "true");
-        this.lastPinnedIndex = i;
-      }
+    for (let preview of previews) {
+      let previewEl = document.createElement("li", { is: "preview-element" });
+
+      let index = preview.index;
+      previewEl.setAttribute("index", index);
+      this.previewTaskQueue.push(index);
+
+      previewEl.setAttribute("title", preview.title);
+      previewEl.setAttribute("url", preview.url);
+      previewEl.setAttribute("iconURL", preview.iconURL);
 
       frag.appendChild(previewEl);
       this.intersectionObserver.observe(previewEl);
 
-      if (i == currentIndex) {
-        currentPreview = previewEl;
+      if (index == currentIndex) {
+        currentPreview = preview;
+        currentPreviewEl = previewEl;
       }
     }
 
     this.list.appendChild(frag);
-
-    // Pre-populate the previewTaskQueue with the indexes of each preview.
-    // This will get re-sorted in updateCurrentIndex.
-    this.previewTaskQueue = Array.from(Array(previews.length).keys());
     this.updateCurrentIndex(currentIndex);
 
     // Now start fetching the first item in the task queue. This kicks off
@@ -334,11 +337,14 @@ const HistoryCarousel = {
 
     // We have enough information at this point to render the current preview,
     // so do so and snap it into the viewport if it's not already there.
-    currentPreview.setBlob(previews[currentIndex].image);
-    currentPreview.scrollIntoView({ behavior: "instant", inline: "center" });
+    currentPreviewEl.setBlob(currentPreview.image);
+    currentPreviewEl.scrollIntoView({ behavior: "instant", inline: "center" });
 
-    this.scrubber.setAttribute("min", this.lastPinnedIndex + 1);
-    this.scrubber.setAttribute("max", previews.length - 1);
+    this.minIndex = previews[0].index;
+    this.maxIndex = previews[previews.length - 1].index;
+
+    this.scrubber.setAttribute("min", this.minIndex);
+    this.scrubber.setAttribute("max", this.maxIndex);
     this.scrubber.value = currentIndex;
   },
 
@@ -353,7 +359,7 @@ const HistoryCarousel = {
     for (let entry of entries) {
       if (entry.isIntersecting) {
         let previewEl = entry.target;
-        let index = parseInt(previewEl.getAttribute("index"), 10);
+        let index = previewEl.index;
 
         // If selectedIndex is not -1, this means that the user has selected
         // a preview either via the scrubber or the AVM. If then the index of
@@ -428,11 +434,8 @@ const HistoryCarousel = {
     );
 
     this.scrubber.value = index;
-    this.previousBtn.toggleAttribute(
-      "disabled",
-      index == this.lastPinnedIndex + 1
-    );
-    this.nextBtn.toggleAttribute("disabled", index == this.totalPreviews - 1);
+    this.previousBtn.toggleAttribute("disabled", index == this.minIndex);
+    this.nextBtn.toggleAttribute("disabled", index == this.maxIndex);
     document.dispatchEvent(
       new CustomEvent("HistoryCarouselIndexUpdated", {
         bubbles: true,
@@ -523,7 +526,7 @@ const HistoryCarousel = {
       }
       case this.nextBtn: {
         let index = CarouselUtils.getCurrentIndex();
-        if (index < this.totalPreviews - 1) {
+        if (index < this.maxIndex) {
           this.selectIndex(index + 1, false /* instant */);
         }
         break;
@@ -531,8 +534,7 @@ const HistoryCarousel = {
       default: {
         let previewEl = event.target.closest("li");
         if (previewEl) {
-          let index = parseInt(previewEl.getAttribute("index"), 10);
-          if (CarouselUtils.getCurrentIndex() == index) {
+          if (CarouselUtils.getCurrentIndex() == previewEl.index) {
             CarouselUtils.requestExit();
           }
         }

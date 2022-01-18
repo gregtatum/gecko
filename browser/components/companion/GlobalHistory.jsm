@@ -1851,6 +1851,15 @@ class GlobalHistory extends EventTarget {
         navigating: false,
         browser,
       });
+
+      if (internalView.pinned) {
+        // Currently, pinned views are not shown in the carousel, so
+        // if we select one in the AVM while showing the carousel,
+        // we avoid user confusion by then immediately exiting the
+        // carousel.
+        this.showHistoryCarousel(false);
+      }
+
       return;
     }
 
@@ -2368,36 +2377,39 @@ class GlobalHistory extends EventTarget {
    *   selected state).
    */
   async getInitialHistoryCarouselData() {
-    let viewCount = this.#viewStack.length - this.pinnedViewCount;
     let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
 
     let data = {
       currentIndex,
-      previews: new Array(viewCount),
+      previews: [],
     };
 
-    for (let i = 0; i < this.#viewStack.length; ++i) {
+    for (
+      let index = this.pinnedViewCount;
+      index < this.#viewStack.length;
+      ++index
+    ) {
       // We use the title of the View rather than the InternalView since
       // we want to show the user-edited title if one exists.
-      data.previews[i] = {
-        title: this.#viewStack[i].view.title,
-        url: this.#viewStack[i].url.spec,
-        iconURL: this.#viewStack[i].iconURL,
-        pinned: this.#viewStack[i].pinned,
+      let preview = {
+        index,
+        title: this.#viewStack[index].view.title,
+        url: this.#viewStack[index].url.spec,
+        iconURL: this.#viewStack[index].iconURL,
         image: null,
       };
-    }
 
-    await this.#window.promiseDocumentFlushed(() => {});
-
-    let currentBrowser = this.#currentInternalView.getBrowser();
-    data.previews[currentIndex].image = await PageThumbs.captureToBlob(
-      currentBrowser,
-      {
-        fullScale: true,
-        fullViewport: true,
+      if (index == currentIndex) {
+        await this.#window.promiseDocumentFlushed(() => {});
+        let currentBrowser = this.#currentInternalView.getBrowser();
+        preview.image = await PageThumbs.captureToBlob(currentBrowser, {
+          fullScale: true,
+          fullViewport: true,
+        });
       }
-    );
+
+      data.previews.push(preview);
+    }
 
     return data;
   }
