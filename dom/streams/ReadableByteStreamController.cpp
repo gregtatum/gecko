@@ -15,6 +15,7 @@
 #include "mozilla/AlreadyAddRefed.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/ErrorResult.h"
+#include "mozilla/HoldDropJSObjects.h"
 #include "mozilla/dom/ByteStreamHelpers.h"
 #include "mozilla/dom/Promise.h"
 #include "mozilla/dom/PromiseNativeHandler.h"
@@ -74,11 +75,14 @@ NS_INTERFACE_MAP_END_INHERITING(ReadableStreamController)
 
 ReadableByteStreamController::ReadableByteStreamController(
     nsIGlobalObject* aGlobal)
-    : ReadableStreamController(aGlobal) {}
+    : ReadableStreamController(aGlobal) {
+  mozilla::HoldJSObjects(this);
+}
 
 ReadableByteStreamController::~ReadableByteStreamController() {
   ClearPendingPullIntos();
   ClearQueue();
+  mozilla::DropJSObjects(this);
 }
 
 void ReadableByteStreamController::ClearQueue() {
@@ -396,10 +400,6 @@ bool ReadableByteStreamControllerShouldCallPull(
   // Step 10.
   return false;
 }
-
-MOZ_CAN_RUN_SCRIPT void ReadableByteStreamControllerCallPullIfNeeded(
-    JSContext* aCx, ReadableByteStreamController* aController,
-    ErrorResult& aRv);
 
 // MG:XXX: There's a template hiding here for handling the difference between
 // default and byte stream, eventually?
@@ -1765,7 +1765,6 @@ void SetUpReadableByteStreamController(
 // implementation.
 //
 // https://streams.spec.whatwg.org/#set-up-readable-byte-stream-controller-from-underlying-source
-MOZ_CAN_RUN_SCRIPT
 void SetUpReadableByteStreamControllerFromUnderlyingSource(
     JSContext* aCx, ReadableStream* aStream,
     BodyStreamHolder* aUnderlyingSource, ErrorResult& aRv) {

@@ -12,7 +12,6 @@
 #include "mozilla/Attributes.h"
 #include "mozilla/ErrorResult.h"
 #include "mozilla/dom/BindingDeclarations.h"
-#include "mozilla/dom/NativeUnderlyingSource.h"
 #include "mozilla/dom/QueuingStrategyBinding.h"
 #include "mozilla/dom/ReadableStreamController.h"
 #include "mozilla/dom/ReadableStreamDefaultController.h"
@@ -104,7 +103,7 @@ class ReadableStream final : public nsISupports, public nsWrapperCache {
   JSObject* WrapObject(JSContext* aCx,
                        JS::Handle<JSObject*> aGivenProto) override;
 
-  static already_AddRefed<ReadableStream> Create(
+  MOZ_CAN_RUN_SCRIPT static already_AddRefed<ReadableStream> Create(
       JSContext* aCx, nsIGlobalObject* aGlobal,
       BodyStreamHolder* aUnderlyingSource, ErrorResult& aRv);
 

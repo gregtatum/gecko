@@ -20,7 +20,6 @@
 #include "mozilla/dom/ByteStreamHelpers.h"
 #include "mozilla/dom/BodyStream.h"
 #include "mozilla/dom/ModuleMapKey.h"
-#include "mozilla/dom/NativeUnderlyingSource.h"
 #include "mozilla/dom/QueueWithSizes.h"
 #include "mozilla/dom/QueuingStrategyBinding.h"
 #include "mozilla/dom/ReadIntoRequest.h"
@@ -878,7 +877,6 @@ already_AddRefed<ReadableStream> CreateReadableByteStream(
   return stream.forget();
 }
 
-MOZ_CAN_RUN_SCRIPT
 already_AddRefed<ReadableStream> ReadableStream::Create(
     JSContext* aCx, nsIGlobalObject* aGlobal,
     BodyStreamHolder* aUnderlyingSource, ErrorResult& aRv) {

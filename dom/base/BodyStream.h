@@ -12,7 +12,6 @@
 #include "mozilla/AlreadyAddRefed.h"
 #ifdef MOZ_DOM_STREAMS
 #  include "mozilla/dom/BindingDeclarations.h"
-#  include "mozilla/dom/NativeUnderlyingSource.h"
 #endif
 #include "nsIAsyncInputStream.h"
 #include "nsCycleCollectionParticipant.h"
@@ -34,6 +33,9 @@ namespace dom {
 class BodyStream;
 class WeakWorkerRef;
 class ReadableStream;
+#ifdef MOZ_DOM_STREAMS
+class ReadableStreamController;
+#endif
 
 class BodyStreamUnderlyingSourcePullCallbackHelper;
 class BodyStreamUnderlyingSourceCancelCallbackHelper;
@@ -93,11 +95,10 @@ class BodyStreamHolder : public nsISupports {
 
 class BodyStream final : public nsIInputStreamCallback,
                          public nsIObserver,
-                         public nsSupportsWeakReference,
+                         public nsSupportsWeakReference
 #ifndef MOZ_DOM_STREAMS
+    ,
                          private JS::ReadableStreamUnderlyingSource
-#else
-                         public NativeUnderlyingSource
 #endif
 {
   friend class BodyStreamHolder;
@@ -109,6 +110,7 @@ class BodyStream final : public nsIInputStreamCallback,
 
   // This method creates a JS ReadableStream object and it assigns it to the
   // aStreamHolder calling SetReadableStreamBody().
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY
   static void Create(JSContext* aCx, BodyStreamHolder* aStreamHolder,
                      nsIGlobalObject* aGlobal, nsIInputStream* aInputStream,
                      ErrorResult& aRv);
@@ -138,16 +140,16 @@ class BodyStream final : public nsIInputStreamCallback,
 #ifdef MOZ_DOM_STREAMS
  public:
   // Cancel Callback
-  virtual already_AddRefed<Promise> CancelCallback(
+  already_AddRefed<Promise> CancelCallback(
       JSContext* aCx, const Optional<JS::Handle<JS::Value>>& aReason,
-      ErrorResult& aRv) override;
+      ErrorResult& aRv);
 
   // Pull Callback
-  virtual already_AddRefed<Promise> PullCallback(
-      JSContext* aCx, ReadableStreamController& aController,
-      ErrorResult& aRv) override;
+  already_AddRefed<Promise> PullCallback(JSContext* aCx,
+                                         ReadableStreamController& aController,
+                                         ErrorResult& aRv);
 
-  void ErrorCallback() override;
+  void ErrorCallback();
 
  private:
   // Fills a buffer with bytes from the stream.
@@ -155,8 +157,11 @@ class BodyStream final : public nsIInputStreamCallback,
                                   void* aBuffer, size_t aLength,
                                   size_t* aByteWritten);
 
-  void EnqueueChunkWithSizeIntoStream(JSContext* aCx, ReadableStream* aStream,
-                                      uint64_t bytes, ErrorResult& aRv);
+  // This is a script boundary until Bug 1750605 is resolved and allows us
+  // to replace this with MOZ_CAN_RUN_SCRIPT.
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY void EnqueueChunkWithSizeIntoStream(
+      JSContext* aCx, ReadableStream* aStream, uint64_t bytes,
+      ErrorResult& aRv);
 
   void ErrorPropagation(JSContext* aCx, const MutexAutoLock& aProofOfLock,
                         ReadableStream* aStream, nsresult aRv);

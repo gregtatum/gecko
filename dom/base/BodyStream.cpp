@@ -9,7 +9,6 @@
 #include "mozilla/dom/AutoEntryScript.h"
 #include "mozilla/dom/DOMException.h"
 #ifdef MOZ_DOM_STREAMS
-#  include "mozilla/dom/NativeUnderlyingSource.h"
 #  include "mozilla/dom/ReadableStream.h"
 #  include "mozilla/dom/ReadableByteStreamController.h"
 #endif
@@ -525,7 +524,6 @@ void BodyStream::ErrorPropagation(JSContext* aCx,
 }
 
 #ifdef MOZ_DOM_STREAMS
-//
 void BodyStream::EnqueueChunkWithSizeIntoStream(JSContext* aCx,
                                                 ReadableStream* aStream,
                                                 uint64_t aAvailableData,
@@ -552,7 +550,7 @@ void BodyStream::EnqueueChunkWithSizeIntoStream(JSContext* aCx,
   }
 
   MOZ_ASSERT(aStream->Controller()->IsByte());
-  ReadableByteStreamController* byteStreamController =
+  RefPtr<ReadableByteStreamController> byteStreamController =
       aStream->Controller()->AsByte();
 
   ReadableByteStreamControllerEnqueue(aCx, byteStreamController, chunk, aRv);
