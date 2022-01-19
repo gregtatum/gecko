@@ -76,6 +76,29 @@ body {
   display: none;
 }
 
+@media (-moz-windows-compositor) {
+  /* If we have the titlebar hidden, then we want to have the nav-bar act as the
+     titlebar. This will cause us to properly adjust the size and margins of it
+     based on OS-settings. For example, without this, the top few pixels of the
+     browser will be cut off when maximized. This amount varies based on things
+     like screen DPI, so we need to trust the widget code to handle it. To
+     accomplish this, we use the adjacent sibling combinator to see if the
+     titlebar (which should immediately precede the nav-bar) has the hidden
+     attribute. This is a little fragile, but due to the way we toggle this
+     attribute based on menubar visibility in browser.js:setToolbarVisibility
+     only when changed, and rely on xulstore to persist it, this is probably
+     our least fragile option. */
+  :root[sizemode="normal"] #titlebar[hidden] + #nav-bar {
+    appearance: auto;
+    -moz-default-appearance: -moz-window-titlebar;
+  }
+
+  :root[sizemode="maximized"] #titlebar[hidden] + #nav-bar {
+    appearance: auto;
+    -moz-default-appearance: -moz-window-titlebar-maximized;
+  }
+}
+
 #urlbar:not(.searchButton) > #urlbar-input-container > #pinebuild-search-icon-box {
   /* Ensure that when the user clicks on the contents of this box, it focuses the url bar */
   pointer-events: none;
