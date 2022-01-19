@@ -89,11 +89,7 @@ function exitDetailView() {
 gElements.backButton.addEventListener("click", event => {
   // If in the login list view, go back to companion browse.
   // If in any other login view, go back to password list.
-  if (
-    document.documentElement.classList.contains("login-item-view") ||
-    document.documentElement.classList.contains("login-selected") ||
-    document.documentElement.classList.contains("initialized")
-  ) {
+  if (gElements.loginItem.dataset.hasOwnProperty("editing")) {
     // If user has changed login details, confirm whether to discard
     // before moving back to the list.
     if (gElements.loginItem.hasPendingChanges()) {
