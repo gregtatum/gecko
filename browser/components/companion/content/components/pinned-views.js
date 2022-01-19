@@ -9,12 +9,6 @@ import ActiveViewManager from "chrome://browser/content/companion/components/act
 class PinnedViews extends MozLitElement {
   #dragOverElement;
 
-  static get queries() {
-    return {
-      pinIcon: "#pin-icon",
-    };
-  }
-
   static get properties() {
     return {
       _views: { type: Array, state: true },

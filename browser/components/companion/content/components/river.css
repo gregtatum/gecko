@@ -5,11 +5,6 @@
 :host {
   display: flex;
   align-items: center;
-  --light-bg-color: #F0F0F4;
-}
-
-:host:-moz-lwtheme-brighttext {
-  --light-bg-color: #42414D;
 }
 
 @supports -moz-bool-pref("browser.pinebuild.lavender.enabled") {
@@ -24,11 +19,15 @@
 
 #river {
   display: flex;
-  background-color: var(--light-bg-color);
+  background-color: #FFFFFF;
   padding: 4px;
+  margin: 4px;
+  margin-inline-end: 0;
   padding-inline-end: 0;
   border-start-start-radius: 25px;
   border-end-start-radius: 25px;
+  --river-collapse-amount: 16px;
+  overflow: hidden;
 }
 
 #river:not([containsActive]) {
@@ -48,18 +47,9 @@
 
 #river[hidden],
 view-group[top][hidden] {
-  visibility: collapse;
-  min-height: 32px;
-}
-
-#river[hidden] + view-group[top] {
-  border-start-start-radius: 25px;
-  border-end-start-radius: 25px;
-}
-
-#river {
-  --river-collapse-amount: 16px;
-  overflow: hidden;
+  display: none;
+  padding: 0;
+  margin: 0;
 }
 
 .view-groups-wrapper {
@@ -94,13 +84,19 @@ view-group[top][hidden] {
 }
 
 view-group[top] {
-  background-color: var(--light-bg-color);
+  background-color: #FFFFFF;
   border-start-end-radius: 25px;
   border-end-end-radius: 25px;
-  padding-block: 4px;
-  padding-inline-start: 4px;
+  padding: 4px;
+  margin: 4px;
 }
 
 #river:not([hidden]) + view-group[top] {
   padding-inline-start: 12px;
+  margin-inline-start: 0;
+}
+
+#river[hidden] + view-group[top] {
+  border-start-start-radius: 25px;
+  border-end-start-radius: 25px;
 }

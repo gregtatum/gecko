@@ -82,6 +82,8 @@ browser.jar:
 #else
     content/browser/companion/components/view-group.css (content/components/view-group-linux.css)
 #endif
+    content/browser/companion/components/workspace.js (content/components/workspace.js)
+    content/browser/companion/components/workspace.css (content/components/workspace.css)
     content/browser/companion/components/river.css  (content/components/river.css)
     content/browser/companion/components/river.js   (content/components/river.js)
     content/browser/companion/components/pinned-views.js (content/components/pinned-views.js)

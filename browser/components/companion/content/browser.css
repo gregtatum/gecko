@@ -62,17 +62,11 @@ body {
   visibility: hidden;
 }
 
-#nav-bar pinned-views {
-  padding-inline-start: 8px;
-}
-
-#nav-bar:hover river-el::part(history),
-#nav-bar:hover pinned-views::part(history) {
+#nav-bar:hover river-el::part(history) {
   display: flex;
 }
 
-#nav-bar:hover river-el::part(domain),
-#nav-bar:hover pinned-views::part(domain) {
+#nav-bar:hover river-el::part(domain) {
   display: none;
 }
 
@@ -141,6 +135,10 @@ body {
 [urlbar-exceeds-toolbar-bounds=true] #pinebuild-toolbar {
   width: 270px;
   overflow: hidden;
+}
+
+#pinebuild-toolbar {
+  min-height: 64px;
 }
 
 [urlbar-exceeds-toolbar-bounds=true] .chromeclass-toolbar-additional {

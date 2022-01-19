@@ -10,21 +10,36 @@
   display: flex;
   border: 1px dashed var(--button-active-bgcolor);
   border-radius: 100px;
-  padding: 3px;
   align-items: center;
+  margin: 4px;
 }
 
 #pinned-views[hasviews] {
-  background-color: var(--toolbar-field-background-color);
-  border-color: var(--toolbar-field-background-color);
-  border-style: solid;
+  border: none;
 }
 
 #pin-icon {
   -moz-context-properties: fill;
   fill: var(--toolbarbutton-icon-fill);
-  margin-inline: 9px 10px;
-  margin-block: 10px;
+  margin: 10px;
+  width: 15px;
+  height: 15px;
+}
+
+view-group {
+  background-color: #FFFFFF;
+  margin-inline: 4px;
+  border-radius: 100px;
+  height: 32px;
+  padding: 4px;
+}
+
+view-group:first-of-type {
+  margin-inline-start: 0;
+}
+
+view-group:last-of-type {
+  margin-inline-end: 0;
 }
 
 view-group[dragging] {

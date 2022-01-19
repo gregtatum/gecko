@@ -31,9 +31,9 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   #securityIconClass;
   /** @type {<xul:menupopup>} */
   #contextMenuPopup;
+  /** @type {Workspace} */
+  #defaultWorkspace;
 
-  #river;
-  #pinnedViews;
   #pageActionView;
   #contextMenuView;
 
@@ -43,7 +43,6 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     "ViewRemoved",
     "ViewMoved",
     "ViewUpdated",
-    "RiverRebuilt",
     "ViewPinned",
     "ViewUnpinned",
   ];
@@ -57,9 +56,8 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     let fragment = template.content.cloneNode(true);
     this.appendChild(fragment);
 
+    this.#defaultWorkspace = this.querySelector("workspace-el");
     this.#overflow = this.querySelector("#river-overflow-button");
-    this.#river = this.querySelector("river-el");
-    this.#pinnedViews = this.querySelector("pinned-views");
     this.#contextMenuPopup = document.getElementById(
       "active-view-manager-context-menu"
     );
@@ -76,7 +74,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     this.addEventListener("contextmenu", this);
     this.addEventListener("dragstart", this);
     this.addEventListener("dragend", this);
-    this.#river.addEventListener("RiverRegrouped", this);
+    this.addEventListener("RiverRegrouped", this);
     this.#overflow.addEventListener("click", this);
     this.#contextMenuPopup.addEventListener("popupshowing", this);
     this.#contextMenuPopup.addEventListener("popuphiding", this);
@@ -107,80 +105,26 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     this.removeEventListener("contextmenu", this);
     this.removeEventListener("dragstart", this);
     this.removeEventListener("dragend", this);
-    this.#river.removeEventListener("RiverRegrouped", this);
+    this.removeEventListener("RiverRegrouped", this);
     this.#overflow.removeEventListener("click", this);
-  }
-
-  isRiverView(view) {
-    return this.#river.hasView(view);
-  }
-
-  isPinnedView(view) {
-    return this.#pinnedViews.hasView(view);
-  }
-
-  viewChanged(view) {
-    this.#river.activeView = null;
-    this.#pinnedViews.activeView = null;
-
-    if (this.isRiverView(view)) {
-      this.#river.activeView = view;
-    } else if (this.isPinnedView(view)) {
-      this.#pinnedViews.activeView = view;
-    } else {
-      console.warn("Saw ViewChanged for an unknown view.");
-    }
-  }
-
-  viewMoved(view) {
-    // TODO: Show a moving animation.
-    this.#river.addView(view);
-    this.#river.activeView = view;
-  }
-
-  viewRemoved(view) {
-    if (this.isRiverView(view)) {
-      this.#river.removeView(view);
-    } else if (this.isPinnedView(view)) {
-      this.#pinnedViews.removeView(view);
-    } else {
-      console.warn("Saw ViewRemoved for an unknown view.");
-    }
-  }
-
-  viewUpdated(view) {
-    if (this.isRiverView(view)) {
-      this.#river.viewUpdated();
-    } else {
-      console.warn("Saw ViewUpdated for an unknown view.");
-    }
-  }
-
-  rebuild() {
-    this.#river.setViews(window.gGlobalHistory.views);
-    this.#pinnedViews.clear();
-    this.viewChanged(window.gGlobalHistory.currentView);
   }
 
   handleEvent(event) {
     switch (event.type) {
       case "ViewAdded":
-        this.#river.addView(event.view);
+        this.#defaultWorkspace.addView(event.view);
         break;
       case "ViewChanged":
-        this.viewChanged(event.view);
+        this.#defaultWorkspace.setActiveView(event.view);
         break;
       case "ViewMoved":
-        this.viewMoved(event.view);
+        this.#defaultWorkspace.moveView(event.view);
         break;
       case "ViewRemoved":
-        this.viewRemoved(event.view);
+        this.#defaultWorkspace.removeView(event.view);
         break;
       case "ViewUpdated":
-        this.viewUpdated(event.view);
-        break;
-      case "RiverRebuilt":
-        this.rebuild();
+        this.#defaultWorkspace.updateView(event.view);
         break;
       case "UserAction:ViewSelected": {
         let view = event.detail.clickedView;
@@ -257,30 +201,23 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       case "ViewPinned": {
         let view = event.view;
         let index = event.detail.index;
-        if (this.isRiverView(view)) {
-          this.#river.removeView(view);
+        if (this.#defaultWorkspace.isRiverView(view)) {
+          this.#defaultWorkspace.removeView(view);
         }
-        this.#pinnedViews.addView(view, index);
+        this.#defaultWorkspace.addView(view, true, index);
         break;
       }
       case "ViewUnpinned": {
         let view = event.view;
-        this.#pinnedViews.removeView(view);
-        this.#river.addView(event.view);
+        this.#defaultWorkspace.removeView(view);
+        this.#defaultWorkspace.addView(event.view);
         break;
       }
     }
   }
 
   #viewSelected(view) {
-    this.#river.activeView = null;
-    this.#pinnedViews.activeView = null;
-
-    if (this.isRiverView(view)) {
-      this.#river.activeView = view;
-    } else if (this.isPinnedView(view)) {
-      this.#pinnedViews.activeView = view;
-    }
+    this.#defaultWorkspace.setActiveView(view);
     window.gGlobalHistory.setView(view);
   }
 
@@ -334,7 +271,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     }
 
     let fragment = document.createDocumentFragment();
-    let overflowedViews = this.#river.overflowedViews;
+    let overflowedViews = this.#defaultWorkspace.overflowedViews;
 
     for (let view of overflowedViews) {
       let item = document.createXULElement("toolbarbutton");
@@ -570,7 +507,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         draggedViewGroup.setAttribute("dragging", "true");
       });
 
-    this.#pinnedViews.dragging = true;
+    this.#defaultWorkspace.dragging = true;
 
     let dt = event.dataTransfer;
 
@@ -605,7 +542,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     );
     draggedViewGroup.removeAttribute("dragging");
 
-    this.#pinnedViews.dragging = false;
+    this.#defaultWorkspace.dragging = false;
   }
 
   #getEventViewGroup(event) {

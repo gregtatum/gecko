@@ -115,12 +115,18 @@
            context="toolbar-context-menu">
 
 #ifdef PINEBUILD
+    <html:template id="template-workspace">
+      <div id="workspace">
+        <html:river-el/>
+        <html:pinned-views/>
+      </div>
+    </html:template>
+
     <html:template id="template-active-view-manager"
       xmlns="http://www.w3.org/1999/xhtml"
       xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
       <toolbarbutton class="subviewbutton" id="river-overflow-button" data-l10n-id="active-view-manager-overflow-button-text" data-l10n-args='{ "count": 0 }' hidden="true"></toolbarbutton>
-      <river-el/>
-      <pinned-views/>
+      <workspace-el/>
     </html:template>
 
     <vbox pack="center">
@@ -160,7 +166,7 @@
                         command="Browser:BackOrBackDuplicate"
                         onclick="checkForMiddleClick(this, event);"
                         tooltip="back-button-tooltip"/>
-        <active-view-manager id="active-view-manager"/>
+        <html:active-view-manager id="active-view-manager"/>
       </hbox>
 #endif
       <toolbarbutton id="back-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
