@@ -758,7 +758,7 @@ body[flow-reset] #urlbar[open] #urlbar-background {
     transition: border-color var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
   }
 
-  body:not([flow-reset]) .browserStack > browser {
+  :root[companion] body:not([flow-reset]) .browserStack > browser {
     border-inline-start: 1px solid var(--colors-cafe-04);
     border-start-start-radius: 8px;
     border-top: 1px solid var(--colors-cafe-04);
