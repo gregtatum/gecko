@@ -457,7 +457,7 @@ var MigratorPrototype = {
         if (!AppConstants.PINEBUILD) {
           // Import the default bookmarks. We ignore whether or not we succeed.
           await BookmarkHTMLUtils.importFromURL(
-            "chrome://browser/locale/bookmarks.html",
+            "chrome://browser/content/default-bookmarks.html",
             {
               replace: true,
               source: PlacesUtils.bookmarks.SOURCES.RESTORE_ON_STARTUP,

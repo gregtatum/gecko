@@ -55,6 +55,7 @@ def guess_mozinfo_from_task(task):
         "tsan": setting["build"].get("tsan", False),
         # XXX pine only
         "pinebuild": True,
+        "xorigin": any("xorigin" in key for key in setting["runtime"].keys()),
     }
     for platform in ("android", "linux", "mac", "win"):
         if p_os["name"].startswith(platform):
