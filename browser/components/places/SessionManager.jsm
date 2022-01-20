@@ -314,7 +314,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    */
   async restoreLastSession(window) {
     let results = await this.query({ limit: 1 });
-    await this.replaceSession(window, results?.[0].guid);
+    this.replaceSession(window, results?.[0].guid);
   }
 
   /**
