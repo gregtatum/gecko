@@ -74,7 +74,6 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     this.addEventListener("contextmenu", this);
     this.addEventListener("dragstart", this);
     this.addEventListener("dragend", this);
-    this.addEventListener("RiverRegrouped", this);
     this.#overflow.addEventListener("click", this);
     this.#contextMenuPopup.addEventListener("popupshowing", this);
     this.#contextMenuPopup.addEventListener("popuphiding", this);
@@ -105,7 +104,6 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     this.removeEventListener("contextmenu", this);
     this.removeEventListener("dragstart", this);
     this.removeEventListener("dragend", this);
-    this.removeEventListener("RiverRegrouped", this);
     this.#overflow.removeEventListener("click", this);
   }
 
@@ -191,13 +189,6 @@ export default class ActiveViewManager extends window.MozHTMLElement {
           this.#contextMenuPopupShowing(event);
         }
         break;
-      case "RiverRegrouped": {
-        let l10nId = this.#overflow.getAttribute("data-l10n-id");
-        let count = event.detail.overflowCount;
-        document.l10n.setAttributes(this.#overflow, l10nId, { count });
-        this.#overflow.hidden = count == 0;
-        break;
-      }
       case "ViewPinned": {
         let view = event.view;
         let index = event.detail.index;

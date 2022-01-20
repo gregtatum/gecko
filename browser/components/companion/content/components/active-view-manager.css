@@ -8,9 +8,3 @@ active-view-manager {
   margin-block: 8px;
   -moz-window-dragging: no-drag;
 }
-
-#river-overflow-button {
-  border-radius: 50%;
-  min-height: 0;
-  min-width: 16px;
-}

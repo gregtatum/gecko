@@ -17,3 +17,11 @@
   display: flex;
   border-radius: 100px;
 }
+
+#river-overflow-button {
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  margin-block: auto;
+  margin-inline-end: 18px;
+}

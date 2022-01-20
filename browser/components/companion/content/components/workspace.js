@@ -5,6 +5,7 @@
 export default class Workspace extends window.MozHTMLElement {
   #river;
   #pinnedViews;
+  #overflow;
 
   get overflowedViews() {
     return this.#river.overflowedViews;
@@ -21,11 +22,14 @@ export default class Workspace extends window.MozHTMLElement {
 
     this.#river = this.querySelector("river-el");
     this.#pinnedViews = this.querySelector("pinned-views");
+    this.#overflow = this.querySelector("#river-overflow-button");
     window.gGlobalHistory.addEventListener("RiverRebuilt", this);
+    this.addEventListener("RiverRegrouped", this);
   }
 
   disconnectedCallback() {
     window.gGlobalHistory.removeEventListener("RiverRebuilt", this);
+    this.removeEventListener("RiverRegrouped");
   }
 
   setActiveView(view) {
@@ -90,6 +94,11 @@ export default class Workspace extends window.MozHTMLElement {
       this.#river.setViews(window.gGlobalHistory.views);
       this.#pinnedViews.clear();
       this.setActiveView(window.gGlobalHistory.currentView);
+    } else if (event.type == "RiverRegrouped") {
+      let l10nId = this.#overflow.getAttribute("data-l10n-id");
+      let count = event.detail.overflowCount;
+      document.l10n.setAttributes(this.#overflow, l10nId, { count });
+      this.#overflow.hidden = count == 0;
     }
   }
 }
