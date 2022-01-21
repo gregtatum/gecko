@@ -282,7 +282,6 @@ nsPresContext::nsPresContext(dom::Document* aDocument, nsPresContextType aType)
       mHadContentfulPaint(false),
       mHadNonTickContentfulPaint(false),
       mHadContentfulPaintComposite(false),
-      mWantsExtraTick(false),
 #ifdef DEBUG
       mInitialized(false),
 #endif
