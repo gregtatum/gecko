@@ -855,4 +855,9 @@ body[flow-reset] #urlbar[open] #urlbar-background {
     width: 32px;
     height: 32px;
   }
+
+  toolbar .toolbarbutton-1 {
+    margin: 12px var(--toolbarbutton-outer-padding);
+    padding: 0;
+  }
 }
