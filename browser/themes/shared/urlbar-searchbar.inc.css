@@ -1,16 +1,13 @@
-%if 0
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-%endif
-
-%define urlbarSearchButtonWidth calc(16px + 2 * var(--urlbar-icon-padding))
 
 :root {
   --toolbar-field-border-color: hsla(240,5%,5%,.25);
   --toolbar-field-focus-border-color: var(--focus-outline-color);
   --urlbar-container-padding: 1px;
   --urlbar-margin-inline: 5px;
+  --urlbar-search-button-width: calc(16px + 2 * var(--urlbar-icon-padding));
   --urlbarbutton-border-radius: var(--toolbarbutton-border-radius);
 }
 
@@ -145,7 +142,7 @@
 }
 
 #urlbar.searchButton > #urlbar-input-container > #urlbar-search-button {
-  width: @urlbarSearchButtonWidth@;
+  width: var(--urlbar-search-button-width);
   background-image: url(chrome://global/skin/icons/search-glass.svg);
   background-repeat: no-repeat;
   background-position: center;
@@ -177,7 +174,7 @@
 
 :root:not([chromehidden~="toolbar"]) #urlbar.searchButton:not([breakout]) > #urlbar-background,
 :root:not([chromehidden~="toolbar"]) #urlbar.searchButton:not([breakout-extend]) > #urlbar-background {
-  inset-inline-start: @urlbarSearchButtonWidth@;
+  inset-inline-start: var(--urlbar-search-button-width);
 }
 
 #urlbar-input-container {

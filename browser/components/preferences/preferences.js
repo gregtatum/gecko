@@ -13,8 +13,8 @@
 /* import-globals-from experimental.js */
 /* import-globals-from moreFromMozilla.js */
 /* import-globals-from findInPage.js */
-/* import-globals-from ../../base/content/utilityOverlay.js */
-/* import-globals-from ../../../toolkit/content/preferencesBindings.js */
+/* import-globals-from /browser/base/content/utilityOverlay.js */
+/* import-globals-from /toolkit/content/preferencesBindings.js */
 
 "use strict";
 
