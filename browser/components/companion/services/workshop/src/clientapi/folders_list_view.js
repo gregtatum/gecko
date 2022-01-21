@@ -34,6 +34,8 @@ export class FoldersListView extends EntireListView {
       }
     };
     this.on("add", inboxListener);
+
+    this._firstWithTypeCache = new Map();
   }
   /**
    * Get a folder with the given id right now, returning null if we can't find it.
@@ -78,10 +80,15 @@ export class FoldersListView extends EntireListView {
       this.on("complete", completeListener);
     });
   }
-  getFirstFolderWithType(type, items) {
+  getFirstFolderWithType(type) {
     // allow an explicit list of items to be provided, specifically for use in
     // onsplice handlers where the items have not yet been spliced in.
-    return (items || this.items).find(folder => folder.type === type) || null;
+    let item = this._firstWithTypeCache.get(type);
+    if (!item) {
+      item = this.items.find(folder => folder.type === type) || null;
+      this._firstWithTypeCache.set(type, item);
+    }
+    return item;
   }
   getFirstFolderWithName(name, items) {
     return (items || this.items).find(folder => folder.name === name) || null;

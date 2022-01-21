@@ -30,7 +30,12 @@ import { MapiBackoffInst } from "../account";
 export default TaskDefiner.defineSimpleTask([
   MixinSyncFolderList,
   {
-    essentialOfflineFolders: [],
+    essentialOfflineFolders: [
+      {
+        type: "inbox-summary",
+        displayName: "Outlook Summary",
+      },
+    ],
 
     async syncFolders(ctx, account) {
       const fromDb = await ctx.beginMutate({

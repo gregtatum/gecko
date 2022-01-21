@@ -8986,6 +8986,7 @@ var WorkshopBackend = (() => {
       calendarInfo: raw.calendarInfo || null,
       localMessageCount: 0,
       unreadMessageCount: raw.unreadMessageCount || 0,
+      webLink: raw.webLink || null,
       estimatedUnsyncedMessages: null,
       syncedThrough: null,
       lastSuccessfulSyncAt: raw.lastSuccessfulSyncAt || 0,
@@ -11142,8 +11143,6 @@ var WorkshopBackend = (() => {
             const syncState = new GapiCalFolderSyncStateHelper(ctx, rawSyncState, req.accountId, req.folderId, "refresh");
             const account = await ctx.universe.acquireAccount(ctx, req.accountId);
             const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
-            let syncDate = NOW();
-            logic(ctx, "syncStart", { syncDate });
             if (folderInfo.type === "inbox-summary") {
               return {
                 newData: {
@@ -11157,6 +11156,8 @@ var WorkshopBackend = (() => {
                 }
               };
             }
+            let syncDate = NOW();
+            logic(ctx, "syncStart", { syncDate });
             const calendarId = folderInfo.serverId;
             const endpoint = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`;
             let params;
@@ -11442,7 +11443,12 @@ var WorkshopBackend = (() => {
       sync_folder_list_default3 = task_definer_default.defineSimpleTask([
         mix_sync_folder_list_default,
         {
-          essentialOfflineFolders: [],
+          essentialOfflineFolders: [
+            {
+              type: "inbox-summary",
+              displayName: "Outlook Summary"
+            }
+          ],
           async syncFolders(ctx, account) {
             const fromDb = await ctx.beginMutate({
               syncStates: new Map([[account.id, null]])
@@ -11906,6 +11912,19 @@ var WorkshopBackend = (() => {
             const syncState = new MapiCalFolderSyncStateHelper(ctx, rawSyncState, req.accountId, req.folderId, "refresh");
             const account = await ctx.universe.acquireAccount(ctx, req.accountId);
             const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
+            if (folderInfo.type === "inbox-summary") {
+              return {
+                newData: {
+                  tasks: [
+                    {
+                      type: "sync_inbox_refresh",
+                      accountId: account.id,
+                      folderId: req.folderId
+                    }
+                  ]
+                }
+              };
+            }
             const calendarId = folderInfo.serverId;
             let syncDate = NOW();
             logic(ctx, "syncStart", { syncDate });
@@ -11974,6 +11993,76 @@ var WorkshopBackend = (() => {
                     {
                       syncInfo: syncInfoClobbers
                     }
+                  ]
+                ])
+              }
+            };
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/accounts/mapi/tasks/sync_inbox_count.js
+  var sync_inbox_count_default2;
+  var init_sync_inbox_count2 = __esm({
+    "src/backend/accounts/mapi/tasks/sync_inbox_count.js"() {
+      init_logic();
+      init_util();
+      init_date();
+      init_task_definer();
+      init_sync_overlay_helpers();
+      init_cal_folder_sync_state_helper2();
+      init_account2();
+      sync_inbox_count_default2 = task_definer_default.defineAtMostOnceTask([
+        {
+          name: "sync_inbox_refresh",
+          binByArg: "folderId",
+          helped_overlay_folders: syncNormalOverlay,
+          helped_invalidate_overlays(folderId, dataOverlayManager) {
+            dataOverlayManager.announceUpdatedOverlayData("folders", folderId);
+          },
+          helped_already_planned(ctx, rawTask) {
+            return Promise.resolve({
+              result: ctx.trackMeInTaskGroup("sync_inbox_refresh:" + rawTask.folderId)
+            });
+          },
+          helped_plan(ctx, rawTask) {
+            let plannedTask = shallowClone2(rawTask);
+            plannedTask.resources = [
+              "online",
+              `credentials!${rawTask.accountId}`,
+              `happy!${rawTask.accountId}`
+            ];
+            plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
+            let groupPromise = ctx.trackMeInTaskGroup("sync_inbox_refresh:" + rawTask.folderId);
+            return {
+              taskState: plannedTask,
+              remainInProgressUntil: groupPromise,
+              result: groupPromise
+            };
+          },
+          async helped_execute(ctx, req) {
+            const fromDb = await ctx.beginMutate({
+              syncStates: new Map([[req.folderId, null]])
+            });
+            const rawSyncState = fromDb.syncStates.get(req.folderId);
+            const syncState = new MapiCalFolderSyncStateHelper(ctx, rawSyncState, req.accountId, req.folderId, "refresh");
+            const account = await ctx.universe.acquireAccount(ctx, req.accountId);
+            const syncDate = NOW();
+            logic(ctx, "syncStart", { syncDate });
+            const endpoint = "https://graph.microsoft.com/v1.0/me/mailFolders/Inbox/messages?$filter=isRead ne true&$count=true&$select=id,webLink&top=1";
+            const results = await account.client.apiGetCall(endpoint, {}, MapiBackoffInst);
+            const unreadMessageCount = results?.["@odata.count"] ?? 0;
+            const webLink = results?.value?.[0]?.webLink?.split("?", 1)?.[0] || null;
+            syncState.updatedTime = syncDate;
+            logic(ctx, "syncEnd", {});
+            return {
+              atomicClobbers: {
+                folders: new Map([
+                  [
+                    req.folderId,
+                    { unreadMessageCount, webLink, lastAttemptedSyncAt: syncDate }
                   ]
                 ])
               }
@@ -12126,6 +12215,7 @@ var WorkshopBackend = (() => {
       init_sync_folder_list3();
       init_cal_sync_conv2();
       init_cal_sync_refresh();
+      init_sync_inbox_count2();
       init_account_modify();
       init_folder_modify();
       init_identity_modify();
@@ -12134,6 +12224,7 @@ var WorkshopBackend = (() => {
         sync_folder_list_default3,
         cal_sync_conv_default2,
         cal_sync_refresh_default,
+        sync_inbox_count_default2,
         account_modify_default,
         CommonFolderModify,
         identity_modify_default,

@@ -79,6 +79,8 @@
  *   consistency checks.
  * @property {Number|null} unreadMessageCount
  *   The number of unread messages.
+ * @property {String|null} webLink
+ *   The web link of the folder if any.
  * @property {Number|null} estimatedUnsyncedMessages
  *   The number of messages we think are not yet synchronized in this folder or
  *   null if we have no idea.
@@ -123,6 +125,7 @@ export function makeFolderMeta(raw) {
     calendarInfo: raw.calendarInfo || null,
     localMessageCount: 0,
     unreadMessageCount: raw.unreadMessageCount || 0,
+    webLink: raw.webLink || null,
     estimatedUnsyncedMessages: null,
     syncedThrough: null,
 

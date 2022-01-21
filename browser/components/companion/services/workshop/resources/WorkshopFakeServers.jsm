@@ -665,6 +665,11 @@ class MapiFakeServer extends BaseFakeServer {
           delta: this.paged(this.paged_delta),
         },
       },
+      // https://graph.microsoft.com/v1.0/me/mailFolders/Inbox/messages?$filter=isRead ne true&$count=true&$select=id&top=1
+      {
+        path: "/v1.0/me/mailFolders/Inbox/messages",
+        handler: this.unpaged(this.unpaged_messages),
+      },
     ];
 
     this.registerAPIHandlers(API_HANDLERS);
@@ -700,7 +705,26 @@ class MapiFakeServer extends BaseFakeServer {
     };
   }
 
+  /**
+   * Set the number of unread messages to return throw the mail api.
+   * @param {number} num
+   */
+  setUnreadMessageCount(num) {
+    this.unreadMessageCount = num;
+  }
+
+  /**
+   * Set the webLink url.
+   * @param {String} url
+   */
+  setWeblink(url) {
+    this.webLink = url;
+  }
+
   wrapResults(results, isPaged, args) {
+    if ("value" in results) {
+      return super.wrapResults(results);
+    }
     return super.wrapResults(
       {
         value: results,
@@ -737,6 +761,16 @@ class MapiFakeServer extends BaseFakeServer {
       access_token: nextAccessToken,
       expires_in: 60 * 60,
       token_type: "Bearer",
+    };
+  }
+
+  unpaged_messages() {
+    // For now search params are supposed to be:
+    // ?$filter=isRead ne true&$count=true&$select=id&top=1
+    // It's used to get the number of unread emails.
+    return {
+      "@odata.count": this.unreadMessageCount,
+      value: [{ webLink: this.webLink }],
     };
   }
 

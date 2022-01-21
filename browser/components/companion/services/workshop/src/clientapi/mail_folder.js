@@ -49,6 +49,7 @@ export class MailFolder extends Emitter {
     this.localUnreadConversations = wireRep.localUnreadConversations;
     this.localMessageCount = wireRep.localMessageCount;
     this.unreadMessageCount = wireRep.unreadMessageCount;
+    this.webLink = wireRep.webLink;
 
     let datify = maybeDate => (maybeDate ? new Date(maybeDate) : null);
 

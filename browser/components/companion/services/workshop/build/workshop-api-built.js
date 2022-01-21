@@ -1009,6 +1009,7 @@ var MailFolder = class extends import_evt2.Emitter {
     this.localUnreadConversations = wireRep.localUnreadConversations;
     this.localMessageCount = wireRep.localMessageCount;
     this.unreadMessageCount = wireRep.unreadMessageCount;
+    this.webLink = wireRep.webLink;
     let datify = (maybeDate) => maybeDate ? new Date(maybeDate) : null;
     this.lastSuccessfulSyncAt = datify(wireRep.lastSuccessfulSyncAt);
     this.lastAttemptedSyncAt = datify(wireRep.lastAttemptedSyncAt);
@@ -2245,6 +2246,7 @@ var FoldersListView = class extends EntireListView {
       }
     };
     this.on("add", inboxListener);
+    this._firstWithTypeCache = new Map();
   }
   getFolderById(id) {
     return this.items.find((folder) => folder.id === id) || null;
@@ -2275,8 +2277,13 @@ var FoldersListView = class extends EntireListView {
       this.on("complete", completeListener);
     });
   }
-  getFirstFolderWithType(type, items) {
-    return (items || this.items).find((folder) => folder.type === type) || null;
+  getFirstFolderWithType(type) {
+    let item = this._firstWithTypeCache.get(type);
+    if (!item) {
+      item = this.items.find((folder) => folder.type === type) || null;
+      this._firstWithTypeCache.set(type, item);
+    }
+    return item;
   }
   getFirstFolderWithName(name, items) {
     return (items || this.items).find((folder) => folder.name === name) || null;

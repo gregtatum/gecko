@@ -190,6 +190,19 @@ if (workshopEnabled) {
       );
       return inboxSummaryFolder?.unreadMessageCount ?? -1;
     },
+
+    /**
+     * Get the web link for the inbox.
+     * @param {String} accountType
+     * @returns A string or null.
+     */
+    getInboxUrl(accountType) {
+      const account = this._getWorkshopAccount(accountType);
+      const inboxSummaryFolder = account?.folders.getFirstFolderWithType(
+        "inbox-summary"
+      );
+      return inboxSummaryFolder?.webLink || null;
+    },
   };
 }
 

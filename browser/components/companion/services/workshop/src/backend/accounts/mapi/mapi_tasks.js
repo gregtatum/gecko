@@ -18,6 +18,7 @@ import mapi_syncFolderList from "./tasks/sync_folder_list";
 
 import mapi_syncConv from "./tasks/cal_sync_conv";
 import mapi_cal_syncRefresh from "./tasks/cal_sync_refresh";
+import mapi_inbox_count_syncRefresh from "./tasks/sync_inbox_count";
 
 import CommonAccountModify from "../../tasks/account_modify";
 import { CommonFolderModify } from "../../tasks/folder_modify";
@@ -30,6 +31,7 @@ export default [
 
   mapi_syncConv,
   mapi_cal_syncRefresh,
+  mapi_inbox_count_syncRefresh,
 
   CommonAccountModify,
   CommonFolderModify,

@@ -89,9 +89,6 @@ export default TaskDefiner.defineAtMostOnceTask([
       const account = await ctx.universe.acquireAccount(ctx, req.accountId);
       const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
 
-      let syncDate = NOW();
-      logic(ctx, "syncStart", { syncDate });
-
       if (folderInfo.type === "inbox-summary") {
         return {
           newData: {
@@ -105,6 +102,9 @@ export default TaskDefiner.defineAtMostOnceTask([
           },
         };
       }
+
+      let syncDate = NOW();
+      logic(ctx, "syncStart", { syncDate });
 
       const calendarId = folderInfo.serverId;
       const endpoint = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`;
