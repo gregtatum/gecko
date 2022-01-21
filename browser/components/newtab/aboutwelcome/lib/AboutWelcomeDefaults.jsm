@@ -14,7 +14,11 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   AppConstants: "resource://gre/modules/AppConstants.jsm",
   AttributionCode: "resource:///modules/AttributionCode.jsm",
   Services: "resource://gre/modules/Services.jsm",
+  setTimeout: "resource://gre/modules/Timer.jsm",
 });
+
+// TODO - Remove this when sending in for review. It makes it easier to test this feature.
+setTimeout(() => Services.locale.requestedLocales = ["en-US"], 1000);
 
 const DEFAULT_WELCOME_CONTENT = {
   id: "DEFAULT_ABOUTWELCOME_PROTON",
@@ -99,8 +103,49 @@ const DEFAULT_WELCOME_CONTENT = {
       },
     },
     {
-      id: "AW_IMPORT_SETTINGS",
+      id: "AW_LIVE_LANGUAGE",
       order: 2,
+      content: {
+        title: {
+          string_id: "onboarding-live-language-language-header",
+        },
+        subtitle: {
+          string_id: "onboarding-live-language-language-subtitle",
+          args: {
+            // These need to be looked up.
+            systemLanguage: "",
+            appLanguage: "",
+          },
+        },
+        primary_button: {
+          label: {
+            string_id: "onboarding-live-language-language-primary-button-label",
+            args: {
+              systemLanguage: "", // This need to be looked up.
+            },
+          },
+          action: {
+            type: "SWITCH_TO_OS_LANGUAGE",
+            data: {
+              locale: null,
+            },
+            navigate: true,
+          },
+        },
+        secondary_button: {
+          label: {
+            string_id:
+              "onboarding-live-language-language-secondary-button-label",
+          },
+          action: {
+            navigate: true,
+          },
+        },
+      },
+    },
+    {
+      id: "AW_IMPORT_SETTINGS",
+      order: 3,
       content: {
         title: {
           string_id: "mr1-onboarding-import-header",
@@ -131,7 +176,7 @@ const DEFAULT_WELCOME_CONTENT = {
     },
     {
       id: "AW_CHOOSE_THEME",
-      order: 3,
+      order: 4,
       content: {
         title: {
           string_id: "mr1-onboarding-theme-header",
@@ -302,6 +347,78 @@ function getLocalizedUA(ua) {
   return null;
 }
 
+/**
+ * In telemetry data, some of the system locales show up as blank. Guard against this
+ * and any other malformed locale information provided by the system by wrapping the call
+ * into a catch/try.
+ *
+ * @param {string} locale
+ * @returns {Intl.Locale | null}
+ */
+function getStructuredLocaleOrNull(localeString) {
+  try {
+    return new Services.intl.Locale(localeString);
+  } catch (_err) {
+    return null;
+  }
+}
+
+/**
+ * A seralized Intl.Locale.
+ *
+ * @typedef SerializedLocale
+ * @type {object}
+ * @property {string} baseName
+ * @property {string} language
+ * @property {string} region
+ */
+/**
+ * @returns {{
+ *  systemLocale: SerializedLocale,
+ *  appLocale: SerializedLocale,
+ *  matchType: "unknown" | "language-mismatch" | "region-mismatch" | "match",
+ * }}
+ */
+function getAppAndSystemLocaleInfo() {
+  const osPrefs = Cc["@mozilla.org/intl/ospreferences;1"].getService(
+    Ci.mozIOSPreferences
+  );
+
+  // Convert locale strings into structured locale objects.
+  const systemLocaleRaw = osPrefs.systemLocale;
+  const appLocaleRaw = Services.locale.appLocaleAsBCP47;
+  const systemLocale = getStructuredLocaleOrNull(systemLocaleRaw);
+  const appLocale = getStructuredLocaleOrNull(appLocaleRaw);
+
+  let matchType = "unknown";
+  if (systemLocale && appLocale) {
+    if (systemLocale.language !== appLocale.language) {
+      matchType = "language-mismatch";
+    } else if (systemLocale.region !== appLocale.region) {
+      matchType = "region-mismatch";
+    } else {
+      matchType = "match";
+    }
+  }
+
+  return {
+    // Return the Intl.Locale in a serializable form.
+    systemLocale: {
+      raw: systemLocaleRaw,
+      baseName: systemLocale.baseName,
+      language: systemLocale.language,
+      region: systemLocale.region,
+    },
+    appLocale: {
+      raw: appLocaleRaw,
+      baseName: appLocale.baseName,
+      language: appLocale.language,
+      region: appLocale.region,
+    },
+    matchType,
+  };
+}
+
 async function prepareContentForReact(content) {
   if (content?.template === "return_to_amo") {
     return content;
@@ -403,6 +520,33 @@ async function prepareContentForReact(content) {
     delete content.screens?.find(
       screen => screen.content?.help_text?.deleteIfNotEn
     )?.content.help_text.text;
+  }
+
+  const localeInfo = getAppAndSystemLocaleInfo();
+  if (localeInfo.matchType === "language-mismatch") {
+    const screen = content.screens.find(({ id }) => id === "AW_LIVE_LANGUAGE");
+    if (screen) {
+      screen.content.primary_button.action.data = localeInfo;
+
+      // Convert the BCP 47 identifiers into the proper display names.
+      // e.g. "fr-CA" -> "Canadian French".
+      const displayNames = new Services.intl.DisplayNames(
+        Services.locale.appLocaleAsBCP47,
+        { type: "language" }
+      );
+      const systemLanguage = displayNames.of(localeInfo.systemLocale.raw);
+      const appLanguage = displayNames.of(localeInfo.appLocale.raw);
+
+      screen.content.subtitle.args.systemLanguage = systemLanguage;
+      screen.content.subtitle.args.appLanguage = appLanguage;
+      screen.content.primary_button.label.args.systemLanguage = systemLanguage;
+      screen.content.primary_button.action.data.requestSystemLocales = [
+        localeInfo.systemLocale.raw,
+        localeInfo.appLocale.raw,
+      ];
+    }
+  } else {
+    removeScreens(screen => screen.id === "AW_LIVE_LANGUAGE");
   }
 
   return content;
