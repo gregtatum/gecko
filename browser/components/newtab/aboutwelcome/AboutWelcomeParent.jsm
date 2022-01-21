@@ -11,6 +11,9 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+console.log(
+  "!!! AboutWelcomeParent.jsm defineLazyModuleGetters LangPackMatcher"
+);
 XPCOMUtils.defineLazyModuleGetters(this, {
   AddonManager: "resource://gre/modules/AddonManager.jsm",
   BuiltInThemes: "resource:///modules/BuiltInThemes.jsm",
@@ -25,6 +28,8 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   PromiseUtils: "resource://gre/modules/PromiseUtils.jsm",
   Region: "resource://gre/modules/Region.jsm",
   ShellService: "resource:///modules/ShellService.jsm",
+  setTimeout: "resource://gre/modules/Timer.jsm",
+  LangPackMatcher: "resource://gre/modules/LangPackMatcher.jsm",
 });
 
 XPCOMUtils.defineLazyGetter(this, "log", () => {
@@ -304,6 +309,18 @@ class AboutWelcomeParent extends JSWindowActorParent {
             }
           })
         );
+      case "AWPage:GET_APP_AND_SYSTEM_LOCALE_INFO":
+        console.log("!!! AboutWelcomeParent.jsm calling LangPackMatcher");
+        return LangPackMatcher.getAppAndSystemLocaleInfo();
+      case "AWPage:NEGOTIATE_LANGPACK":
+        console.log("!!! AboutWelcomeParent.jsm calling LangPackMatcher");
+        return LangPackMatcher.negotiateLangPackForLanguageMismatch(data);
+      case "AWPage:ENSURE_LANG_PACK_INSTALLED":
+        console.log("!!! AboutWelcomeParent.jsm calling LangPackMatcher");
+        return LangPackMatcher.ensureLangPackInstalled(data);
+      case "AWPage:SET_REQUESTED_LOCALES":
+        console.log("!!! AboutWelcomeParent.jsm calling LangPackMatcher");
+        return LangPackMatcher.setRequestedAppLocales(data);
       default:
         log.debug(`Unexpected event ${type} was not handled.`);
     }

@@ -324,6 +324,13 @@ const SpecialMessageActions = {
           true
         );
         break;
+      case "SWITCH_TO_OS_LANGUAGE":
+        console.log(
+          "action.data.requestSystemLocales",
+          action.data.requestSystemLocales
+        );
+        Services.locale.requestedLocales = action.data.requestSystemLocales;
+        break;
       default:
         throw new Error(
           `Special message action with type ${action.type} is unsupported.`

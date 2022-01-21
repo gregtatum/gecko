@@ -99,8 +99,47 @@ const DEFAULT_WELCOME_CONTENT = {
       },
     },
     {
-      id: "AW_IMPORT_SETTINGS",
+      id: "AW_LANGUAGE_MISMATCH",
       order: 2,
+      content: {
+        title: { string_id: "onboarding-live-language-header" },
+        subtitle: { string_id: "onboarding-live-language-subtitle" },
+        secondary_button: {
+          label: { string_id: "onboarding-live-language-not-now-button-label" },
+          action: { navigate: true },
+        },
+        preloader: {
+          title: { string_id: "onboarding-live-language-header" },
+          subtitle: { string_id: "onboarding-live-language-waiting-subtitle" },
+          primary_button: {
+            label: { string_id: "onboarding-live-language-waiting-button" },
+            disabled: true,
+          },
+          secondary_button: {
+            label: { string_id: "onboarding-live-language-skip-button-label" },
+            action: { navigate: true },
+          },
+        },
+        languageSwitcher: {
+          switch: { string_id: "onboarding-live-language-switch-button-label" },
+          downloading: {
+            string_id: "onboarding-live-language-button-label-downloading",
+          },
+          cancel: {
+            string_id: "onboarding-live-language-secondary-cancel-download",
+          },
+          notNow: {
+            string_id: "onboarding-live-language-secondary-button-label",
+          },
+          action: {
+            navigate: true,
+          },
+        },
+      },
+    },
+    {
+      id: "AW_IMPORT_SETTINGS",
+      order: 3,
       content: {
         title: {
           string_id: "mr1-onboarding-import-header",
@@ -131,7 +170,7 @@ const DEFAULT_WELCOME_CONTENT = {
     },
     {
       id: "AW_CHOOSE_THEME",
-      order: 3,
+      order: 4,
       content: {
         title: {
           string_id: "mr1-onboarding-theme-header",
@@ -303,7 +342,7 @@ function getLocalizedUA(ua) {
   return null;
 }
 
-async function prepareContentForReact(content) {
+async function prepareContentForReact(aboutWelcomeChild, content) {
   if (content?.template === "return_to_amo") {
     return content;
   }
@@ -404,6 +443,26 @@ async function prepareContentForReact(content) {
     delete content.screens?.find(
       screen => screen.content?.help_text?.deleteIfNotEn
     )?.content.help_text.text;
+  }
+
+  if (
+    // This is using a pref rather than Nimbus as only ~5% of users will be affected
+    // and there is no need to roll out the feature. It is being developed under
+    // a flag to allow easy enabling when the features are ready.
+    Services.prefs.getBoolPref(
+      "intl.multilingual.aboutWelcome.languageMismatchEnabled"
+    )
+  ) {
+    const screen = content?.screens?.find(
+      screen => screen.id === "AW_LANGUAGE_MISMATCH"
+    );
+    if (screen) {
+      console.log("!!! screen", screen);
+      screen.content.languageSwitcher.appAndSystemLocaleInfo = await aboutWelcomeChild.getAppAndSystemLocaleInfo();
+    }
+  } else {
+    console.log("!!! Remove screen.");
+    removeScreens(screen => screen.id === "AW_LANGUAGE_MISMATCH");
   }
 
   return content;

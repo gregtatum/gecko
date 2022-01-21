@@ -97,6 +97,7 @@ export class ReturnToAMO extends React.PureComponent {
           }
           addonName={this.props.name}
           handleAction={this.handleAction}
+          navigate={this.props.navigate}
           addExtension={this.onClickAddExtension}
         />
       </div>

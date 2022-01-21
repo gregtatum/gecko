@@ -5,6 +5,10 @@
 import React from "react";
 import { Localized } from "./MSLocalized";
 import { Colorways } from "./Colorways";
+import {
+  LanguageSwitcher,
+  languageSwitcherShouldPreload,
+} from "./LanguageSwitcher";
 import { Themes } from "./Themes";
 import { SecondaryCTA, StepsIndicator } from "./MultiStageAboutWelcome";
 
@@ -16,11 +20,20 @@ export class MultiStageProtonScreen extends React.PureComponent {
   render() {
     const {
       autoClose,
-      content,
       isRtamo,
       isTheme,
       totalNumberOfScreens: total,
     } = this.props;
+
+    let { content } = this.props;
+    if (
+      content.preloader &&
+      // Perform any pre-loading checks.
+      languageSwitcherShouldPreload(this.props.langPackInstallPhase)
+    ) {
+      content = content.preloader;
+    }
+
     const windowObj = this.props.windowObj || window;
     const isWelcomeScreen = this.props.order === 0;
     const isLastScreen = this.props.order === total;
@@ -117,6 +130,7 @@ export class MultiStageProtonScreen extends React.PureComponent {
                     <h2
                       data-l10n-args={JSON.stringify({
                         "addon-name": this.props.addonName,
+                        ...this.props.negotiatedLanguage?.messageArgs,
                       })}
                     />
                   </Localized>
@@ -140,6 +154,15 @@ export class MultiStageProtonScreen extends React.PureComponent {
                   handleAction={this.props.handleAction}
                 />
               ) : null}
+              {content.languageSwitcher ? (
+                <LanguageSwitcher
+                  content={content}
+                  langPackInstalled={this.props.langPackInstalled}
+                  handleAction={this.props.handleAction}
+                  negotiatedLanguage={this.props.negotiatedLanguage}
+                  langPackInstallPhase={this.props.langPackInstallPhase}
+                />
+              ) : null}
               <div>
                 <Localized
                   text={
@@ -149,6 +172,7 @@ export class MultiStageProtonScreen extends React.PureComponent {
                   <button
                     className="primary"
                     value="primary_button"
+                    disabled={content.primary_button?.disabled === true}
                     onClick={this.props.handleAction}
                   />
                 </Localized>

@@ -12,6 +12,16 @@ const TEST_MULTISTAGE_JSON = [
   },
 ];
 
+const { Preferences } = ChromeUtils.import(
+  "resource://gre/modules/Preferences.jsm"
+);
+const prefs = new Preferences();
+prefs.set(
+  "extensions.getAddons.get.url",
+  "http://localhost:8888/search/guid:%IDS%"
+);
+prefs.set("extensions.install.requireSecureOrigin", false);
+
 async function setAboutWelcomeOverrideContent(value) {
   return pushPrefs([ABOUT_WELCOME_OVERRIDE_CONTENT_PREF, value]);
 }

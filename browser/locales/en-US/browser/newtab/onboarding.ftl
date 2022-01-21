@@ -222,3 +222,19 @@ mr2-onboarding-default-theme-label = Explore default themes.
 mr2-onboarding-thank-you-header = Thank you for choosing us
 mr2-onboarding-thank-you-text = { -brand-short-name } is an independent browser backed by a non-profit. Together, we’re making the web safer, healthier, and more private.
 mr2-onboarding-start-browsing-button-label = Start browsing
+
+## Multistage live language reloading onboarding strings (about:welcome pages)
+## This was added between major releases, so the IDs dont start with "mr".
+
+onboarding-live-language-header = Choose Your Language
+onboarding-live-language-subtitle = Your system is using { $systemLanguage }, while { -brand-short-name } is using { $appLanguage }.
+
+onboarding-live-language-switch-button-label = Switch to { $negotiatedLanguage }
+onboarding-live-language-button-label-downloading = Downloading { $negotiatedLanguage }…
+onboarding-live-language-waiting-subtitle = It looks like your system and { -brand-short-name } don’t use the same language.
+onboarding-live-language-waiting-button = Getting available languages…
+onboarding-live-language-installing = Installing the { $negotiatedLanguage } …
+onboarding-live-language-secondary-cancel-download = Cancel
+
+onboarding-live-language-not-now-button-label = Not now
+onboarding-live-language-skip-button-label = Skip
