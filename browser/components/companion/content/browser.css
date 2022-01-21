@@ -784,8 +784,9 @@ body[flow-reset] #urlbar[open] #urlbar-background {
     box-shadow: inset 0 2px 4px rgba(183, 155, 242, 0.8);
   }
 
-  body[flow-reset] #companion-sidebar-button {
-    fill: white;
+  body[flow-reset] {
+    --toolbarbutton-icon-fill: white;
+    --toolbarbutton-hover-background: rgba(0,0,0, 0.2);
   }
 
   body[flow-reset] #companion-sidebar-button > .toolbarbutton-icon {
