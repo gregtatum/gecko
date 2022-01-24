@@ -90,11 +90,6 @@ class PreviewElement extends HTMLLIElement {
   }
 }
 
-// With mousewheel.autodir.enabled set to `true`, we get the vertical scroll
-// behaviour that we want, but in the opposite direction. Need to work with
-// APZ folks to sort this out. Tracked by
-// https://mozilla-hub.atlassian.net/browse/MR2-1336
-
 customElements.define("preview-element", PreviewElement, { extends: "li" });
 
 /**
@@ -214,6 +209,10 @@ const HistoryCarousel = {
     this.whenVisible = new Promise(resolve => {
       this.whenVisibleResolver = resolve;
     });
+
+    // Forcing autodir behaviour on the list allows users to scroll it
+    // horizontally while using vertical mousewheel events.
+    window.windowUtils.setMousewheelAutodir(this.list, true, true);
   },
 
   /**
