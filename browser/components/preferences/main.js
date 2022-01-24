@@ -2621,6 +2621,9 @@ var gMainPane = {
    * Sort the list when the user clicks on a column header.
    */
   sort(event) {
+    if (event.button != 0) {
+      return;
+    }
     var column = event.target;
 
     // If the user clicked on a new sort column, remove the direction indicator
