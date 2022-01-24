@@ -904,13 +904,6 @@ XPCOMUtils.defineLazyGetter(this, "gIsXPCShell", function() {
   return env.exists("XPCSHELL_TEST_PROFILE_DIR");
 });
 
-if (AppConstants.PINEBUILD) {
-  const { WorkshopBootstrap } = ChromeUtils.import(
-    "resource:///modules/WorkshopBootstrap.jsm"
-  );
-  WorkshopBootstrap.createHiddenWindow();
-}
-
 if (
   AppConstants.PINEBUILD &&
   AppConstants.platform == "win" &&
