@@ -138,6 +138,7 @@ body {
 }
 
 #pinebuild-toolbar {
+  display: flex;
   min-height: 64px;
 }
 
@@ -205,6 +206,16 @@ body {
 
 #companion-sidebar-button {
   list-style-image: url("chrome://browser/skin/sidebars-right.svg");
+  margin-block: auto;
+  margin-inline: 40px 16px;
+  width: 32px;
+  height: 32px;
+}
+
+@media (-moz-windows-compositor) {
+  #companion-sidebar-button {
+    margin-inline: 16px;
+  }
 }
 
 #pinebuild-view-manager {
@@ -777,11 +788,23 @@ body[flow-reset] #urlbar[open] #urlbar-background {
     top: calc((var(--urlbar-toolbar-height) - var(--urlbar-height)) / 2 - 8px);
   }
 
-  #companion-sidebar-button > .toolbarbutton-icon {
+  #companion-sidebar-button {
     background-color: var(--pinebuild-highlight-color);
     border: 0.5px solid var(--colors-lavender-06);
+    border-radius: 50%;
     box-sizing: border-box;
     box-shadow: inset 0 2px 4px rgba(183, 155, 242, 0.8);
+  }
+
+  #companion-sidebar-button > .toolbarbutton-icon {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  #companion-sidebar-button:hover > .toolbarbutton-icon {
+    background-color: transparent;
   }
 
   body[flow-reset] {
@@ -789,7 +812,7 @@ body[flow-reset] #urlbar[open] #urlbar-background {
     --toolbarbutton-hover-background: rgba(0,0,0, 0.2);
   }
 
-  body[flow-reset] #companion-sidebar-button > .toolbarbutton-icon {
+  body[flow-reset] #companion-sidebar-button {
     background-color: var(--colors-lavender-06);
   }
 
