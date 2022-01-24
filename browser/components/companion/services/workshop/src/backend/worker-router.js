@@ -19,6 +19,7 @@ let onConnectHandler = null;
 // A map from ports to { resolveCleanupPromise, cleanupPromise }
 const allPorts = new Map();
 const callbackSenders = new Map();
+let hiddenWindowPort = null;
 
 /**
  * Some APIs live in the main thread and consequently they cannot
@@ -45,6 +46,12 @@ const listeners = new Map([
       for (const { message, resolve, reject } of port._messages.values()) {
         _eventuallySendToDefaultHelper(message, resolve, reject);
       }
+    },
+  ],
+  [
+    "hiddenWindow",
+    (data, port) => {
+      hiddenWindowPort = port;
     },
   ],
 ]);
@@ -96,7 +103,7 @@ export function runOnConnect(handler) {
 }
 
 function getFirstPort() {
-  return allPorts.keys().next().value;
+  return hiddenWindowPort || allPorts.keys().next().value;
 }
 
 function _eventuallySendToDefaultHelper(message, resolve, reject) {

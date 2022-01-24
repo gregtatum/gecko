@@ -19,6 +19,7 @@ EXTRA_JS_MODULES += [
     "OnlineServicesHelper.jsm",
     "OnnxRuntimeService.jsm",
     "PyodideService.jsm",
+    "WorkshopBootstrap.jsm",
 ]
 
 FINAL_TARGET_FILES.actors += [
