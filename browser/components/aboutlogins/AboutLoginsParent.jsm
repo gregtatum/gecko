@@ -87,6 +87,11 @@ const augmentVanillaLoginObject = login => {
 
 class AboutLoginsParent extends JSWindowActorParent {
   async receiveMessage(message) {
+    // Do nothing if messages arrive after the browser element is gone.
+    if (!this.browsingContext.top.embedderElement) {
+      return;
+    }
+
     if (this.browsingContext.top.embedderElement.id != "companion-browser") {
       if (!this.browsingContext.embedderElement) {
         return;
