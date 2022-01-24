@@ -2695,6 +2695,7 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   // Disable product promos delivered via messaging system
   pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features", false);
   pref("browser.places.perwindowsessions.enabled", true);
+  pref("browser.companion.passwords.enabled", true);
 
 
   // Pinebuild specific configurations
@@ -2727,7 +2728,6 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   // Preferences below here are still being experimented with are in the
   // unlocked state to allow for manual testing.
   pref("browser.companion.snapshots", false);
-  pref("browser.companion.passwords.enabled", false);
   pref("browser.companion.onnx", false);
   pref("browser.companion.pyodide", false);
   pref("browser.pinebuild.interstitial-view-overwriting.enabled", true);
