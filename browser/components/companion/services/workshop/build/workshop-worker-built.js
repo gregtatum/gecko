@@ -796,7 +796,7 @@ var WorkshopBackend = (() => {
     onConnectHandler = handler;
   }
   function getFirstPort() {
-    return allPorts.keys().next().value;
+    return hiddenWindowPort || allPorts.keys().next().value;
   }
   function _eventuallySendToDefaultHelper(message, resolve, reject) {
     const port = getFirstPort();
@@ -869,13 +869,14 @@ var WorkshopBackend = (() => {
     });
     return result;
   }
-  var nextMessageUid, onConnectHandler, allPorts, callbackSenders, listeners;
+  var nextMessageUid, onConnectHandler, allPorts, callbackSenders, hiddenWindowPort, listeners;
   var init_worker_router = __esm({
     "src/backend/worker-router.js"() {
       nextMessageUid = 0;
       onConnectHandler = null;
       allPorts = new Map();
       callbackSenders = new Map();
+      hiddenWindowPort = null;
       listeners = new Map([
         [
           "willDie",
@@ -886,6 +887,12 @@ var WorkshopBackend = (() => {
             for (const { message, resolve, reject } of port._messages.values()) {
               _eventuallySendToDefaultHelper(message, resolve, reject);
             }
+          }
+        ],
+        [
+          "hiddenWindow",
+          (data, port) => {
+            hiddenWindowPort = port;
           }
         ]
       ]);

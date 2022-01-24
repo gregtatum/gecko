@@ -1496,6 +1496,20 @@ BrowserGlue.prototype = {
 
     AboutHomeStartupCache.init();
 
+    if (AppConstants.PINEBUILD) {
+      // The Workshop's hidden window is running in the privileged about content
+      // process.
+      // AboutHomeStartupCache needs to deal with some stuff in the same
+      // privileged content process.
+      // Consequently, in order to avoid any failures with AboutHomeStartupCache,
+      // the hidden window creation has to be done after
+      // AboutHomeStartupCache.init().
+      const { WorkshopBootstrap } = ChromeUtils.import(
+        "resource:///modules/WorkshopBootstrap.jsm"
+      );
+      WorkshopBootstrap.createHiddenWindow();
+    }
+
     Services.obs.notifyObservers(null, "browser-ui-startup-complete");
   },
 

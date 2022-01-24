@@ -88,7 +88,7 @@ const control = {
 
  */
 
-export function MailAPIFactory(mainThreadService) {
+export function MailAPIFactory(mainThreadService, isHiddenWindow = false) {
   const MailAPI = new $mailapi.MailAPI();
   const worker = makeWorker();
   logic.defineScope(worker, "Worker");
@@ -116,6 +116,12 @@ export function MailAPIFactory(mainThreadService) {
             console.error("Presumed DataCloneError on:", sendMsg, "ex:", ex);
           }
         };
+
+        if (isHiddenWindow) {
+          workerPort.postMessage({
+            type: "hiddenWindow",
+          });
+        }
 
         MailAPI.willDie = () => {
           workerPort.postMessage({
