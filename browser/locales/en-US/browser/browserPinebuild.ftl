@@ -35,3 +35,9 @@ active-view-manager-context-menu-toggle-pinning =
      [true] Unpin
     *[other] Pin
   }
+
+active-view-manager-context-menu-close-view-group =
+  .label = { $viewCount ->
+     [1] Close View
+    *[other] Close View Group
+  }

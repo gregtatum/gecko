@@ -35,6 +35,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   #defaultWorkspace;
 
   #pageActionView;
+  #contextMenuViewGroup;
   #contextMenuView;
 
   static EVENTS = [
@@ -446,6 +447,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       return;
     }
 
+    this.#contextMenuViewGroup = viewGroup;
     // It's possible to open the context menu on a ViewGroup that is not
     // active, so in that case, we'll just assume we're opening the menu
     // on the last View in the group.
@@ -471,9 +473,19 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     document.l10n.setAttributes(pinViewMenuItem, pinL10nId, {
       isPinned: this.#contextMenuView.pinned,
     });
+
+    let closeViewGroupMenuItem = document.getElementById(
+      "active-view-manager-context-menu-close-view-group"
+    );
+    let closeViewGroupL10nId =
+      "active-view-manager-context-menu-close-view-group";
+    document.l10n.setAttributes(closeViewGroupMenuItem, closeViewGroupL10nId, {
+      viewCount: this.#contextMenuViewGroup.views.length,
+    });
   }
 
   #contextMenuPopupHiding(event) {
+    this.#contextMenuViewGroup = null;
     this.#contextMenuView = null;
   }
 
@@ -482,6 +494,13 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       this.#contextMenuView,
       !this.#contextMenuView.pinned
     );
+  }
+
+  contextMenuCloseViewGroup(event) {
+    let views = this.#contextMenuViewGroup.views;
+    for (let view of views) {
+      window.gGlobalHistory.closeView(view);
+    }
   }
 
   #onDragStart(event) {
