@@ -784,8 +784,13 @@ export default class LoginItem extends HTMLElement {
    *
    * @param {login} login The login that was modified in storage. The login object is
    *                      a plain JS object representation of nsILoginInfo/nsILoginMetaInfo.
+   * @param {boolean} skipPrompt An optional parameter. If present & true, will skip showing
+   *                             the confirmation dialog. Used from the LoginModified chrome-
+   *                             to-content event, in order to cleanly exit the edit view
+   *                             when a login is modified behind the scenes, rather than by
+   *                             user input.
    */
-  loginModified(login) {
+  loginModified(login, { skipPrompt } = {}) {
     if (this._login.guid != login.guid) {
       return;
     }
@@ -798,7 +803,7 @@ export default class LoginItem extends HTMLElement {
     let valuesChanged =
       this.dataset.editing &&
       !window.AboutLoginsUtils.doLoginsMatch(login, this._loginFromForm());
-    if (valuesChanged) {
+    if (valuesChanged && !skipPrompt) {
       showConfirmationDialog(
         {
           type: "discard-changes",
