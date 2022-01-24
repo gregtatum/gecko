@@ -19,16 +19,6 @@ const { FakeEventFactory } = ChromeUtils.import(
   "resource:///modules/WorkshopFakeEvents.jsm"
 );
 
-const { LoginHelper } = ChromeUtils.import(
-  "resource://gre/modules/LoginHelper.jsm"
-);
-
-let nsLoginInfo = new Components.Constructor(
-  "@mozilla.org/login-manager/loginInfo;1",
-  Ci.nsILoginInfo,
-  "init"
-);
-
 // Facilitates creating a server using XPCShellContentUtils.createHttpServer
 XPCShellContentUtils.initMochitest(this);
 

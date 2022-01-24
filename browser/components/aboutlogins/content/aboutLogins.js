@@ -142,12 +142,7 @@ window.addEventListener("AboutLoginsChromeToContent", event => {
     }
     case "LoginModified": {
       gElements.loginList.loginModified(event.detail.value);
-      gElements.loginItem.loginModified(event.detail.value, {
-        skipPrompt: true,
-      });
-      // Ensure clean exit from edit view if this is called by
-      // autofill to increment the login's usage count.
-      exitDetailView();
+      gElements.loginItem.loginModified(event.detail.value);
       break;
     }
     case "LoginRemoved": {
