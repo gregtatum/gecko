@@ -212,3 +212,69 @@ export function getConferenceInfo(data, links) {
   }
   return null;
 }
+
+/**
+ * Get document title for a given url.
+ * @param {string} url - the url to parse to guess a title.
+ * @param {Object} gapi - the google api stuff with a client and a backoff.
+ * @param {Map<string, Promise>} docTitleCache - a cache to use which maps
+ * apiTarget and the fetch Promise.
+ * @returns {Promise<Object|null>} containing the type of the document and its title
+ * if any.
+ */
+export async function getDocumentTitle(url, gapi, docTitleCache) {
+  url = new URL(url);
+  if (!url.hostname.endsWith(".google.com")) {
+    return null;
+  }
+
+  // TODO: some urls are not handled here:
+  //  - https://drive.google.com/open?id=Whatever_ID&authuser=0
+  //  - https://docs.google.com/document/u/0/d/Whatever_ID/edit
+
+  // The expected url looks like
+  //  - https://docs.google.com/document/d/Whatever_ID/edit
+  const [, type, , id] = url.pathname.split("/", 4);
+  if (!id || !type) {
+    return null;
+  }
+
+  let apiTarget;
+  switch (type) {
+    case "document":
+      apiTarget = `https://docs.googleapis.com/v1/documents/${id}`;
+      break;
+    case "spreadsheets":
+      apiTarget = `https://sheets.googleapis.com/v4/spreadsheets/${id}`;
+      break;
+    case "presentation":
+      apiTarget = `https://slides.googleapis.com/v1/presentations/${id}`;
+      break;
+    case "drive":
+    case "file":
+      apiTarget = `https://www.googleapis.com/drive/v2/files/${id}`;
+      break;
+    default:
+      return null;
+  }
+
+  const cached = docTitleCache.get(apiTarget);
+  if (cached) {
+    return cached;
+  }
+
+  const { apiClient, backoff } = gapi;
+  const resultPromise = apiClient
+    .apiGetCall(apiTarget, /* params */ {}, backoff)
+    .then(results => {
+      if (results.error) {
+        return { type, title: null };
+      }
+
+      const title =
+        type == "spreadsheets" ? results.properties.title : results.title;
+      return { type, title };
+    });
+  docTitleCache.set(apiTarget, resultPromise);
+  return resultPromise;
+}

@@ -292,6 +292,15 @@ export class AccountManager {
     return ids;
   }
 
+  getFirstAccountIdWithType(type) {
+    for (const accountDef of this.getAllAccountDefs()) {
+      if (accountDef.type === type) {
+        return accountDef.id;
+      }
+    }
+    return null;
+  }
+
   /**
    * Return the FolderInfo for the given FolderId.  This is only safe to call
    * after the universe has fully loaded.

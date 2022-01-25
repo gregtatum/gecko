@@ -3330,7 +3330,7 @@ var WorkshopBackend = (() => {
             "User Rate Limit Exceeded",
             "Rate Limit Exceeded",
             "Calendar usage limits exceeded."
-          ].includes(error.errors[0].reason) || error.code === 429 || error.code === 500);
+          ].includes(error.errors?.[0]?.reason) || error.code === 429 || error.code === 500);
         }
       };
       GapiBackoffInst = new GapiBackoff();
@@ -9835,6 +9835,48 @@ var WorkshopBackend = (() => {
     }
     return null;
   }
+  async function getDocumentTitle(url, gapi, docTitleCache) {
+    url = new URL(url);
+    if (!url.hostname.endsWith(".google.com")) {
+      return null;
+    }
+    const [, type, , id] = url.pathname.split("/", 4);
+    if (!id || !type) {
+      return null;
+    }
+    let apiTarget;
+    switch (type) {
+      case "document":
+        apiTarget = `https://docs.googleapis.com/v1/documents/${id}`;
+        break;
+      case "spreadsheets":
+        apiTarget = `https://sheets.googleapis.com/v4/spreadsheets/${id}`;
+        break;
+      case "presentation":
+        apiTarget = `https://slides.googleapis.com/v1/presentations/${id}`;
+        break;
+      case "drive":
+      case "file":
+        apiTarget = `https://www.googleapis.com/drive/v2/files/${id}`;
+        break;
+      default:
+        return null;
+    }
+    const cached = docTitleCache.get(apiTarget);
+    if (cached) {
+      return cached;
+    }
+    const { apiClient, backoff } = gapi;
+    const resultPromise = apiClient.apiGetCall(apiTarget, {}, backoff).then((results) => {
+      if (results.error) {
+        return { type, title: null };
+      }
+      const title = type == "spreadsheets" ? results.properties.title : results.title;
+      return { type, title };
+    });
+    docTitleCache.set(apiTarget, resultPromise);
+    return resultPromise;
+  }
   var URL_REGEX, linksToIgnore, conferencingInfo;
   var init_urlchew = __esm({
     "src/backend/bodies/urlchew.js"() {
@@ -9941,16 +9983,26 @@ var WorkshopBackend = (() => {
     content,
     type,
     processAsText = false,
-    attachments = {}
+    attachments = {},
+    gapi,
+    docTitleCache = new Map()
   }) {
     const { links, document, snippet } = type === "html" ? await sanitizeSnippetAndExtractLinks(content) : { links: {}, document: content, snippet: content };
     const contentBlob = new Blob([document], { type: `text/${type}` });
     const authoredBodySize = snippet.length;
     const processedLinks = processLinks({ ...attachments, ...links }, (processAsText || type === "plain") && content);
     const conference = getConferenceInfo(data, processedLinks);
+    const notConferenceLinks = processedLinks.filter((link) => link.type != "conferencing");
+    if (gapi) {
+      await Promise.all(notConferenceLinks.map((link) => getDocumentTitle(link.url, gapi, docTitleCache).then((info) => {
+        if (info) {
+          link.docInfo = info;
+        }
+      })));
+    }
     return {
       conference,
-      links: processedLinks.filter((link) => link.type != "conferencing"),
+      links: notConferenceLinks,
       contentBlob,
       snippet,
       authoredBodySize
@@ -10774,7 +10826,8 @@ var WorkshopBackend = (() => {
           eventMap,
           oldConvInfo,
           oldEvents,
-          foldersTOC
+          foldersTOC,
+          gapi
         }) {
           this.ctx = ctx;
           this.convId = convId;
@@ -10785,11 +10838,13 @@ var WorkshopBackend = (() => {
           this.oldConvInfo = oldConvInfo;
           this.oldEvents = oldEvents;
           this.foldersTOC = foldersTOC;
+          this.gapi = gapi;
           this.oldById = new Map();
           this.unifiedEvents = [];
           this.modifiedEventMap = new Map();
           this.newEvents = [];
           this.allEvents = [];
+          this.docTitleCache = new Map();
         }
         _chewCalIdentity(raw) {
           return makeIdentityInfo({
@@ -10858,7 +10913,9 @@ var WorkshopBackend = (() => {
                   content: description,
                   type: "html",
                   processAsText: true,
-                  attachments
+                  attachments,
+                  gapi: this.gapi,
+                  docTitleCache: this.docTitleCache
                 }));
                 bodyReps.push(makeBodyPart({
                   type: "html",
@@ -10942,6 +10999,7 @@ var WorkshopBackend = (() => {
       init_task_definer();
       init_conv_churn_driver();
       init_chew_gapi_cal_events();
+      init_account();
       cal_sync_conv_default = task_definer_default.defineSimpleTask([
         {
           name: "cal_sync_conv",
@@ -10971,7 +11029,8 @@ var WorkshopBackend = (() => {
               eventMap: req.eventMap,
               oldConvInfo,
               oldEvents,
-              foldersTOC
+              foldersTOC,
+              gapi: { apiClient: account.client, backoff: GapiBackoffInst }
             });
             await eventChewer.chewEventBundle();
             logic(ctx, "debuggy", {
@@ -11549,7 +11608,8 @@ var WorkshopBackend = (() => {
           eventMap,
           oldConvInfo,
           oldEvents,
-          foldersTOC
+          foldersTOC,
+          gapi
         }) {
           this.ctx = ctx;
           this.convId = convId;
@@ -11561,11 +11621,13 @@ var WorkshopBackend = (() => {
           this.oldConvInfo = oldConvInfo;
           this.oldEvents = oldEvents;
           this.foldersTOC = foldersTOC;
+          this.gapi = gapi;
           this.oldById = new Map();
           this.unifiedEvents = [];
           this.modifiedEventMap = new Map();
           this.newEvents = [];
           this.allEvents = [];
+          this.docTitleCache = new Map();
         }
         _chewCalIdentity(raw) {
           const email = raw.emailAddress;
@@ -11634,7 +11696,9 @@ var WorkshopBackend = (() => {
                 } = await processEventContent({
                   data: mapiEvent,
                   content,
-                  type
+                  type,
+                  gapi: this.gapi,
+                  docTitleCache: this.docTitleCache
                 }));
                 bodyReps.push(makeBodyPart({
                   type,
@@ -11714,6 +11778,7 @@ var WorkshopBackend = (() => {
       init_task_definer();
       init_conv_churn_driver();
       init_chew_mapi_cal_events();
+      init_account();
       cal_sync_conv_default2 = task_definer_default.defineSimpleTask([
         {
           name: "cal_sync_conv",
@@ -11727,6 +11792,8 @@ var WorkshopBackend = (() => {
           },
           async execute(ctx, req) {
             let account = await ctx.universe.acquireAccount(ctx, req.accountId);
+            const gapiAccountId = ctx.universe.getFirstAccountIdWithType("gapi");
+            const gapiAccount = gapiAccountId ? await ctx.universe.acquireAccount(ctx, gapiAccountId) : null;
             let foldersTOC = await ctx.universe.acquireAccountFoldersTOC(ctx, account.id);
             let fromDb = await ctx.beginMutate({
               conversations: new Map([[req.convId, null]]),
@@ -11744,7 +11811,8 @@ var WorkshopBackend = (() => {
               eventMap: req.eventMap,
               oldConvInfo,
               oldEvents,
-              foldersTOC
+              foldersTOC,
+              gapi: gapiAccount ? { apiClient: gapiAccount.client, backoff: GapiBackoffInst } : null
             });
             await eventChewer.chewEventBundle();
             logic(ctx, "debuggy", {
@@ -17239,6 +17307,14 @@ var WorkshopBackend = (() => {
       }
       return ids;
     }
+    getFirstAccountIdWithType(type) {
+      for (const accountDef of this.getAllAccountDefs()) {
+        if (accountDef.type === type) {
+          return accountDef.id;
+        }
+      }
+      return null;
+    }
     getFolderById(folderId) {
       const accountId = accountIdFromFolderId(folderId);
       const foldersTOC = this.accountFoldersTOCs.get(accountId);
@@ -21684,6 +21760,9 @@ var WorkshopBackend = (() => {
     },
     getAllAccountIdsWithKind(kind) {
       return this.accountManager.getAllAccountIdsWithKind(kind);
+    },
+    getFirstAccountIdWithType(type) {
+      return this.accountManager.getFirstAccountIdWithType(type);
     },
     _bindStandardBroadcasts() {
       this.db.on("config", () => {

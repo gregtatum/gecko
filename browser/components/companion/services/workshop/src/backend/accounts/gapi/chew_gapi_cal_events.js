@@ -43,6 +43,7 @@ export class GapiCalEventChewer {
     oldConvInfo,
     oldEvents,
     foldersTOC,
+    gapi,
   }) {
     this.ctx = ctx;
     this.convId = convId;
@@ -54,6 +55,7 @@ export class GapiCalEventChewer {
     this.oldConvInfo = oldConvInfo;
     this.oldEvents = oldEvents;
     this.foldersTOC = foldersTOC;
+    this.gapi = gapi;
 
     // This is a mapping from the event id we synthesize.  Populated during
     // `chewEventBundle` where we first identify events outside the specified
@@ -65,6 +67,7 @@ export class GapiCalEventChewer {
     this.modifiedEventMap = new Map();
     this.newEvents = [];
     this.allEvents = [];
+    this.docTitleCache = new Map();
   }
 
   _chewCalIdentity(raw) {
@@ -165,6 +168,8 @@ export class GapiCalEventChewer {
             type: "html",
             processAsText: true,
             attachments,
+            gapi: this.gapi,
+            docTitleCache: this.docTitleCache,
           }));
 
           bodyReps.push(

@@ -334,6 +334,10 @@ MailUniverse.prototype = {
     return this.accountManager.getAllAccountIdsWithKind(kind);
   },
 
+  getFirstAccountIdWithType(type) {
+    return this.accountManager.getFirstAccountIdWithType(type);
+  },
+
   /**
    * The home for thin bindings of back-end events to be front-end events.
    *

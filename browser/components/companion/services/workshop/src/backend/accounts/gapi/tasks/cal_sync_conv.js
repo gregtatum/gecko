@@ -21,6 +21,7 @@ import TaskDefiner from "../../../task_infra/task_definer";
 
 import churnConversation from "../../../churn_drivers/conv_churn_driver";
 import { GapiCalEventChewer } from "../chew_gapi_cal_events";
+import { GapiBackoffInst } from "../account";
 
 export default TaskDefiner.defineSimpleTask([
   {
@@ -79,6 +80,7 @@ export default TaskDefiner.defineSimpleTask([
         oldConvInfo,
         oldEvents,
         foldersTOC,
+        gapi: { apiClient: account.client, backoff: GapiBackoffInst },
       });
       await eventChewer.chewEventBundle();
       logic(ctx, "debuggy", {

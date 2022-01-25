@@ -435,6 +435,18 @@ class GapiFakeServer extends BaseFakeServer {
         path: "/mail/u/0/feed/atom",
         handler: this.unpaged(this.unpaged_gmail_feed),
       },
+      {
+        // prefix for `https://docs.googleapis.com/v1/documents/${id}`
+        prefix: "/v1/documents/",
+        extraPathSegments: ["id"],
+        handler: this.unpaged(this.unpaged_document),
+      },
+      {
+        // prefix for `https://sheets.googleapis.com/v4/spreadsheets/${id}`
+        prefix: "/v4/spreadsheets/",
+        extraPathSegments: ["id"],
+        handler: this.unpaged(this.unpaged_spreadsheets),
+      },
     ];
 
     this.registerAPIHandlers(API_HANDLERS);
@@ -535,6 +547,24 @@ class GapiFakeServer extends BaseFakeServer {
     }
 
     throw new HttpError(400, "Only 'me' is implemented.");
+  }
+
+  unpaged_document({ id }) {
+    if (id === "invalid") {
+      return {
+        error: "Invalid id",
+        title: "why not having a title if I want",
+      };
+    }
+    return {
+      title: `document: id is ${id}`,
+    };
+  }
+
+  unpaged_spreadsheets({ id }) {
+    return {
+      properties: { title: `spreadsheets: id is ${id}` },
+    };
   }
 
   etagFromEvent(event) {

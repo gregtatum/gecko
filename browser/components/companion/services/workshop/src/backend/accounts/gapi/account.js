@@ -26,7 +26,7 @@ class GapiBackoff extends Backoff {
           "User Rate Limit Exceeded",
           "Rate Limit Exceeded",
           "Calendar usage limits exceeded.",
-        ].includes(error.errors[0].reason)) ||
+        ].includes(error.errors?.[0]?.reason)) ||
         error.code === 429 ||
         error.code === 500)
     );

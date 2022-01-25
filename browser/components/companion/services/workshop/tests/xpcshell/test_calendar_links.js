@@ -139,6 +139,42 @@ const GAPI_DESCRIPTION_TEST = [
       },
     ],
   },
+  {
+    description: `https://docs.google.com/document/d/foobar`,
+    links: [
+      {
+        url: "https://docs.google.com/document/d/foobar",
+        docInfo: {
+          type: "document",
+          title: "document: id is foobar",
+        },
+      },
+    ],
+  },
+  {
+    description: `https://docs.google.com/spreadsheets/d/raboof`,
+    links: [
+      {
+        url: "https://docs.google.com/spreadsheets/d/raboof",
+        docInfo: {
+          type: "spreadsheets",
+          title: "spreadsheets: id is raboof",
+        },
+      },
+    ],
+  },
+  {
+    description: `https://docs.google.com/document/d/invalid`,
+    links: [
+      {
+        url: "https://docs.google.com/document/d/invalid",
+        docInfo: {
+          type: "document",
+          title: null,
+        },
+      },
+    ],
+  },
 ];
 
 const MAPI_DESCRIPTION_TEST = [

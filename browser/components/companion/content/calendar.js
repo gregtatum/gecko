@@ -700,23 +700,29 @@ class CalendarEvent extends MozLitElement {
     return this._cachedDocumentTitles.get(url) || text;
   }
 
-  getDocumentIcon(url) {
-    url = new URL(url);
-    if (url.hostname.endsWith(".google.com")) {
-      let type = url.href.split("/")[3];
-      switch (type) {
-        case "document":
-          return GOOGLE_DOCS_ICON;
-        case "spreadsheets":
-          return GOOGLE_SHEETS_ICON;
-        case "presentation":
-          return GOOGLE_SLIDES_ICON;
-        case "drive":
-        case "file":
-          return GOOGLE_DRIVE_ICON;
-      }
+  getDocumentIcon(link) {
+    const url = new URL(link.url);
+    const { href } = url;
+
+    let type;
+    if (workshopEnabled) {
+      type = link.docInfo?.type;
+    } else if (url.hostname.endsWith(".google.com")) {
+      type = href.split("/")[3];
     }
-    return window.CompanionUtils.getFavicon(url.href) || DEFAULT_ICON;
+    switch (type) {
+      case "document":
+        return GOOGLE_DOCS_ICON;
+      case "spreadsheets":
+        return GOOGLE_SHEETS_ICON;
+      case "presentation":
+        return GOOGLE_SLIDES_ICON;
+      case "drive":
+      case "file":
+        return GOOGLE_DRIVE_ICON;
+    }
+
+    return window.CompanionUtils.getFavicon(href) || DEFAULT_ICON;
   }
 
   async getDocumentTitle(url) {
@@ -736,7 +742,19 @@ class CalendarEvent extends MozLitElement {
 
   eventLinkTemplate(link) {
     let url = link.url;
-    let text = link.title || link.text || link.url;
+    let text, title, intermediate;
+    if (workshopEnabled) {
+      title = link.docInfo?.title;
+      text = title || link.title || link.text || link.url;
+      intermediate = title;
+      // In the else clause `title` is a Promise so for consistency we use
+      // a Promise here too.
+      title = Promise.resolve(title);
+    } else {
+      title = this.getDocumentTitle(link.url);
+      text = link.title || link.text || link.url;
+      intermediate = this.getCachedDocumentTitle(url, text);
+    }
 
     return html`
       <a
@@ -745,13 +763,9 @@ class CalendarEvent extends MozLitElement {
         title=${url}
         @click=${openLink}
       >
-        <img src=${this.getDocumentIcon(link.url)} />
+        <img src=${this.getDocumentIcon(link)} />
         <span class="line-clamp">
-          ${until(
-            this.getDocumentTitle(link.url),
-            this.getCachedDocumentTitle(link.url, text),
-            text
-          )}
+          ${until(title, intermediate, text)}
         </span>
       </a>
     `;

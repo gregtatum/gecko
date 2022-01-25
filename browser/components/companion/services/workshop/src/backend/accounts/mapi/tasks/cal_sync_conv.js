@@ -21,6 +21,7 @@ import TaskDefiner from "../../../task_infra/task_definer";
 
 import churnConversation from "../../../churn_drivers/conv_churn_driver";
 import { MapiCalEventChewer } from "../chew_mapi_cal_events";
+import { GapiBackoffInst } from "../../gapi/account";
 
 export default TaskDefiner.defineSimpleTask([
   {
@@ -52,6 +53,11 @@ export default TaskDefiner.defineSimpleTask([
      */
     async execute(ctx, req) {
       let account = await ctx.universe.acquireAccount(ctx, req.accountId);
+      const gapiAccountId = ctx.universe.getFirstAccountIdWithType("gapi");
+      const gapiAccount = gapiAccountId
+        ? await ctx.universe.acquireAccount(ctx, gapiAccountId)
+        : null;
+
       let foldersTOC = await ctx.universe.acquireAccountFoldersTOC(
         ctx,
         account.id
@@ -80,6 +86,9 @@ export default TaskDefiner.defineSimpleTask([
         oldConvInfo,
         oldEvents,
         foldersTOC,
+        gapi: gapiAccount
+          ? { apiClient: gapiAccount.client, backoff: GapiBackoffInst }
+          : null,
       });
 
       await eventChewer.chewEventBundle();
