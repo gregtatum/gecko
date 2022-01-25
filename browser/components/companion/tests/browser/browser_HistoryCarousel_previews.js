@@ -30,7 +30,7 @@ add_task(async function preview_construction() {
   // This will be verified in the loop, since views[1].title should then
   // match TEST_USER_TITLE.
   const TEST_USER_TITLE = "This is a user-provided title";
-  gGlobalHistory.setUserTitle(views[1], TEST_USER_TITLE);
+  gGlobalHistory.updateUserTitle(views[1], TEST_USER_TITLE);
   Assert.equal(
     views[1].title,
     TEST_USER_TITLE,

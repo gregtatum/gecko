@@ -424,7 +424,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   }
 
   pageActionEditViewTitle(event) {
-    window.gGlobalHistory.setUserTitle(
+    window.gGlobalHistory.updateUserTitle(
       this.#pageActionView,
       event.target.value
     );
