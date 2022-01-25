@@ -19,7 +19,7 @@
 }
 
 #river-overflow-button {
-  border-radius: 50%;
+  border-radius: 9999px;
   width: 16px;
   height: 16px;
   margin-block: auto;
