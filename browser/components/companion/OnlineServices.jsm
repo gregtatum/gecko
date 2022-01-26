@@ -768,7 +768,13 @@ const OnlineServices = {
   async deleteService(service) {
     // Delete events specific to this service from the cache
     this.data = this.data.filter(e => e.serviceId != service.id);
-    await service.disconnect();
+    try {
+      // Try to clean up our token, this could fail if the user already revoked
+      // the credentials with the service.
+      await service.disconnect();
+    } catch (e) {
+      Cu.reportError(e);
+    }
     ServiceInstances.delete(service);
     this.persist();
     Services.obs.notifyObservers(this.data, "companion-services-refresh");
