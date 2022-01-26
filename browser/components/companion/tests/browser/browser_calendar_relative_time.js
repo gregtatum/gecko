@@ -6,6 +6,8 @@
 const FIVE_MINUTES = 5 * 60 * 1000;
 const ONE_HOUR = 1000 * 60 * 60;
 
+const { generateEventTimes } = PinebuildTestUtils;
+
 add_task(async function setup() {
   await SpecialPowers.pushPrefEnv({
     set: [["browser.companion.debugUI", true]],
@@ -14,7 +16,7 @@ add_task(async function setup() {
 
 add_task(async function testRelativeTimeMinutesBeforeEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = PinebuildTestUtils.generateEventTimes();
+    let { start, end } = generateEventTimes(0, 30, new Date());
 
     let events = [
       {
@@ -56,7 +58,7 @@ add_task(async function testRelativeTimeMinutesBeforeEvent() {
 
 add_task(async function testRelativeTimeMinutesAfterEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = PinebuildTestUtils.generateEventTimes();
+    let { start, end } = generateEventTimes(0, 30, new Date());
 
     let events = [
       {
@@ -100,7 +102,7 @@ add_task(async function testRelativeTimeMinutesAfterEvent() {
 
 add_task(async function testRelativeTimeHoursAndMinutesAfterEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = PinebuildTestUtils.generateEventTimes(1);
+    let { start, end } = generateEventTimes(1, 30, new Date());
     let events = [
       {
         summary: "My meeting",
@@ -144,7 +146,7 @@ add_task(async function testRelativeTimeHoursAndMinutesAfterEvent() {
 
 add_task(async function testRelativeTimeHoursBeforeEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = PinebuildTestUtils.generateEventTimes(1);
+    let { start, end } = generateEventTimes(1, 30, new Date());
     let events = [
       {
         summary: "My meeting",
@@ -183,7 +185,7 @@ add_task(async function testRelativeTimeHoursBeforeEvent() {
 
 add_task(async function testRelativeTimeHoursAndMinutesBeforeEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = PinebuildTestUtils.generateEventTimes(1);
+    let { start, end } = generateEventTimes(1, 30, new Date());
     let events = [
       {
         summary: "My meeting",
