@@ -145,9 +145,8 @@ class View {
   }
 
   /** @type {string} */
-  /** Always return user edited title if present **/
   get title() {
-    return this.#internalView.userTitle || this.#internalView.title;
+    return this.#internalView.title;
   }
 
   /** @type {string} **/
@@ -279,6 +278,11 @@ class InternalView {
   /** @type Wireframe **/
   #wireframe;
 
+  /** @type {String} **/
+  #title;
+  /** @type {String} **/
+  #userTitle;
+
   /**
    * The internal representation of a view. Each view maps to a history entry though the actual
    * history entry may no longer exist.
@@ -342,7 +346,7 @@ class InternalView {
       this.cachedEntry = historyEntry;
 
       this.url = Services.io.newURI(historyEntry.url);
-      this.title = historyEntry.title;
+      this.#title = historyEntry.title;
       this.iconURL = browser?.mIconURL;
     }
   }
@@ -424,9 +428,8 @@ class InternalView {
     this.browserKey = browser.permanentKey;
     this.historyId = historyEntry.ID;
     this.cachedEntry = null;
-
     this.url = historyEntry.URI;
-    this.title = historyEntry.title;
+    this.#title = historyEntry.title;
     this.iconURL = browser.mIconURL;
     this.busy = this.#window.gBrowser
       .getTabForBrowser(browser)
@@ -492,9 +495,23 @@ class InternalView {
     this.#wireframe = wireframe;
   }
 
+  setTitle(title) {
+    this.#title = title;
+  }
+
+  setUserTitle(title) {
+    let trimmedTitle = title.trim();
+    Snapshots.add({ url: this.url.spec, title: trimmedTitle });
+    this.#userTitle = trimmedTitle;
+  }
+
   /** @type {Number} */
   get id() {
     return this.#id;
+  }
+
+  get title() {
+    return this.#userTitle || this.#title;
   }
 
   /** @type {boolean} */
@@ -1378,7 +1395,7 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
-    internalView.title = entry.title;
+    internalView.setTitle(entry.title);
     this.#notifyEvent("ViewUpdated", internalView);
   }
 
@@ -1389,13 +1406,13 @@ class GlobalHistory extends EventTarget {
    * @param {String} userTitle
    *        Contains updated title provided by the user.
    */
-  updateUserTitle(view, userTitle) {
+  setUserTitle(view, userTitle) {
     let internalView = InternalView.viewMap.get(view);
     if (!internalView) {
       return;
     }
 
-    internalView.userTitle = userTitle;
+    internalView.setUserTitle(userTitle);
     this.#notifyEvent("ViewUpdated", internalView);
   }
 
