@@ -93,10 +93,6 @@ class AboutLoginsParent extends JSWindowActorParent {
     }
 
     if (this.browsingContext.top.embedderElement.id != "companion-browser") {
-      if (!this.browsingContext.embedderElement) {
-        return;
-      }
-
       // Only respond to messages sent from a privlegedabout process. Ideally
       // we would also check the contentPrincipal.originNoSuffix but this
       // check has been removed due to bug 1576722.
