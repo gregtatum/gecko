@@ -49,6 +49,7 @@ class GoogleService {
     this.id = ++nextServiceId;
     this.hasConnectionError = false;
     this.listeners = new Map([["status", new Set()]]);
+    this.emailAddress = config.emailAddress;
 
     let scopes = [
       "https://www.googleapis.com/auth/gmail.readonly",
@@ -126,7 +127,7 @@ class GoogleService {
     return this.auth.getToken();
   }
 
-  async getAccountAddress() {
+  getAccountAddress() {
     return this.emailAddress;
   }
 
@@ -181,6 +182,7 @@ class GoogleService {
         // auth scopes.
         if (result.primary) {
           this.emailAddress = result.id;
+          OnlineServices.persist();
         }
         calendar.backgroundColor = result.backgroundColor;
         calendar.foregroundColor = result.foregroundColor;
@@ -345,6 +347,7 @@ class GoogleService {
     return {
       type: this.app,
       auth: this.auth,
+      emailAddress: this.emailAddress,
     };
   }
 }

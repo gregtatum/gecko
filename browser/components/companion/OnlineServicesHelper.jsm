@@ -296,7 +296,9 @@ function parseGoogleCalendarResult(result, primaryEmail) {
   if (event.creator?.email == primaryEmail) {
     event.creator.isSelf = true;
   }
-  event.url = result.htmlLink;
+  let formattedURL = new URL(result.htmlLink);
+  formattedURL.searchParams.set("authuser", primaryEmail);
+  event.url = formattedURL.href;
   return event;
 }
 

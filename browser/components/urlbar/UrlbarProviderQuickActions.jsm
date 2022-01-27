@@ -36,6 +36,26 @@ XPCOMUtils.defineLazyPreferenceGetter(
 
 const hideExtra = () => !extraActions;
 
+const GOOGLE_ACTION_URLS = {
+  email: "https://mail.google.com/mail/u/?authuser={email}",
+  sheets: "https://docs.google.com/spreadsheets/create?authuser={email}",
+  docs: "https://docs.google.com/document/create?authuser={email}",
+  slides: "https://docs.google.com/presentation/create?authuser={email}",
+  meeting: "https://calendar.google.com/calendar/u/{email}/r/eventedit",
+};
+
+const formatGoogleURL = (type, fallbackURL) => {
+  let url = fallbackURL;
+  // Force call to load() in OnlineService to retrieve stored service data
+  OnlineServices.getAllServices();
+  if (OnlineServices.hasService("google")) {
+    const service = OnlineServices.getServices("google")[0];
+    const email = service.getAccountAddress();
+    url = GOOGLE_ACTION_URLS[type].replace("{email}", email);
+  }
+  return url;
+};
+
 // These prefs are relative to the `browser.urlbar` branch.
 const ENABLED_PREF = "suggest.quickactions";
 const DYNAMIC_TYPE_NAME = "quickActions";
@@ -47,7 +67,7 @@ const COMMANDS = {
     commands: ["inbox", "email", "gmail", "check gmail", "google mail"],
     icon: "chrome://browser/content/urlbar/quickactions/gmail.svg",
     label: "Go to Inbox",
-    url: "https://gmail.com",
+    url: formatGoogleURL("email", "https://gmail.com"),
     title: "Gmail",
     hide(isDefault) {
       if (isDefault) {
@@ -82,28 +102,28 @@ const COMMANDS = {
     commands: ["create-meeting", "calendar", "google calendar"],
     icon: "chrome://browser/content/urlbar/quickactions/createmeeting.svg",
     label: "Schedule a meeting",
-    url: "https://meeting.new",
+    url: formatGoogleURL("meeting", "https://meeting.new"),
     title: "Google Calendar",
   },
   createslides: {
     commands: ["create-slides", "slides", "google slides"],
     icon: "chrome://browser/content/urlbar/quickactions/createslides.svg",
     label: "Create Google slides",
-    url: "https://slides.new",
+    url: formatGoogleURL("slides", "https://slides.new"),
     title: "Google Slides",
   },
   createsheet: {
     commands: ["create-sheet", "spreadsheet", "sheet", "google sheets"],
     icon: "chrome://browser/content/urlbar/quickactions/createsheet.svg",
     label: "Create a Google Sheet",
-    url: "https://sheets.new",
+    url: formatGoogleURL("sheets", "https://sheets.new"),
     title: "Google Sheets",
   },
   createdoc: {
     commands: ["create-doc", "document", "google docs"],
     icon: "chrome://browser/content/urlbar/quickactions/createdoc.svg",
     label: "Create a Google doc",
-    url: "https://docs.new",
+    url: formatGoogleURL("docs", "https://docs.new"),
     title: "Google Docs",
   },
   screenshot: {

@@ -40,7 +40,7 @@ if (workshopEnabled) {
       return [];
     },
 
-    _getWorkshopAccount(accountType) {
+    getAccountByType(accountType) {
       let workshopAccount = this._workshopAccountCache.get(accountType);
       if (workshopAccount) {
         return workshopAccount;
@@ -184,7 +184,7 @@ if (workshopEnabled) {
      * @returns A positive integer or zero if the value exists or -1.
      */
     getUnreadMessageCount(accountType) {
-      const account = this._getWorkshopAccount(accountType);
+      const account = this.getAccountByType(accountType);
       const inboxSummaryFolder = account?.folders.getFirstFolderWithType(
         "inbox-summary"
       );
@@ -197,7 +197,7 @@ if (workshopEnabled) {
      * @returns A string or null.
      */
     getInboxUrl(accountType) {
-      const account = this._getWorkshopAccount(accountType);
+      const account = this.getAccountByType(accountType);
       const inboxSummaryFolder = account?.folders.getFirstFolderWithType(
         "inbox-summary"
       );

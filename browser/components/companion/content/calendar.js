@@ -626,7 +626,16 @@ class CalendarEvent extends MozLitElement {
 
   openCalendar(e) {
     e.preventDefault();
-    window.openUrl(this.event.url);
+    let url = this.event.url;
+    if (workshopEnabled && url.includes("google")) {
+      const account = Workshop.getAccountByType("google");
+      if (account) {
+        let formattedURL = new URL(url);
+        formattedURL.searchParams.set("authuser", account.name);
+        url = formattedURL.href;
+      }
+    }
+    window.openUrl(url);
   }
 
   openRunningLate(e) {
