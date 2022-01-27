@@ -44,27 +44,17 @@ export class MediaList extends HTMLElement {
   }
 
   connectedCallback() {
-    window.addEventListener("Companion:TabAdded", this.windowListener);
+    window.addEventListener("Companion:TabAddedOrUpdated", this.windowListener);
     window.addEventListener("Companion:TabRemoved", this.windowListener);
-    window.addEventListener("Companion:TabAttrModified", this.windowListener);
-    window.addEventListener(
-      "Companion:TabPipToggleChanged",
-      this.windowListener
-    );
     this.render();
   }
 
   disconnectedCallback() {
-    window.removeEventListener("Companion:TabAdded", this.windowListener);
+    window.removeEventListener(
+      "Companion:TabAddedOrUpdated",
+      this.windowListener
+    );
     window.removeEventListener("Companion:TabRemoved", this.windowListener);
-    window.removeEventListener(
-      "Companion:TabAttrModified",
-      this.windowListener
-    );
-    window.removeEventListener(
-      "Companion:TabPipToggleChanged",
-      this.windowListener
-    );
   }
 
   get tabs() {

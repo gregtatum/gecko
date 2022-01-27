@@ -49,9 +49,7 @@ class CompanionChild extends JSWindowActorChild {
         let self = this;
         let CompanionUtils = {
           _tabs: new Map(),
-          _observedPrefs: new Map(),
 
-          isInAutomation: Cu.isInAutomation,
           tabs() {
             return this._tabs.values();
           },
@@ -59,7 +57,6 @@ class CompanionChild extends JSWindowActorChild {
           getFavicon(url) {
             return self._cachedFavicons.get(url);
           },
-          services: [],
           events: [],
           sendAsyncMessage(name, detail) {
             self.sendAsyncMessage(name, detail);
@@ -113,15 +110,14 @@ class CompanionChild extends JSWindowActorChild {
     waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
   }
 
+  // Note: unhandled/unknown messages are forwarded to content
   receiveMessage(message) {
     switch (message.name) {
       case "Companion:Setup": {
         let {
           tabs,
           newFavicons,
-          currentURI,
           connectedServices,
-          servicesConnected,
           globalHistory,
         } = message.data;
 
@@ -131,15 +127,13 @@ class CompanionChild extends JSWindowActorChild {
           waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
         }
         waivedContent.CompanionUtils.connectedServices = connectedServices;
-        waivedContent.CompanionUtils.servicesConnected = servicesConnected;
-        waivedContent.CompanionUtils.currentURI = currentURI;
         waivedContent.CompanionUtils.globalHistory = globalHistory;
 
         this.updateFaviconCache(newFavicons);
 
         break;
       }
-      case "Companion:RegisterEvents": {
+      case "Companion:RegisterCalendarEvents": {
         let { events, newFavicons } = message.data;
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
         waivedContent.CompanionUtils.events = events;
@@ -152,14 +146,7 @@ class CompanionChild extends JSWindowActorChild {
         this.evictFaviconEntries(evictions);
         break;
       }
-      case "Companion:ServiceDisconnected": {
-        let { servicesConnected } = message.data;
-
-        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
-        waivedContent.CompanionUtils.servicesConnected = servicesConnected;
-        break;
-      }
-      case "Companion:TabAdded": {
+      case "Companion:TabAddedOrUpdated": {
         this.updateTab(message.data);
         break;
       }
@@ -175,14 +162,10 @@ class CompanionChild extends JSWindowActorChild {
         this.updateFaviconCache(newFavicons);
         break;
       }
-      case "Companion:TabAttrModified":
-      case "Companion:TabPipToggleChanged": {
-        this.updateTab(message.data.tab);
-        break;
-      }
       case "Companion:GlobalHistoryEvent": {
         let { globalHistory } = message.data;
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+        // Used for debugging.
         waivedContent.CompanionUtils.globalHistory = globalHistory;
         break;
       }
@@ -194,10 +177,6 @@ class CompanionChild extends JSWindowActorChild {
         break;
     }
 
-    this.passMessageDataToContent(message);
-  }
-
-  passMessageDataToContent(message) {
     this.sendToContent(message.name, message.data);
   }
 

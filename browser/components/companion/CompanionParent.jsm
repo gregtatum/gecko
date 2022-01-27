@@ -509,13 +509,6 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   async getEvents() {
-    let services = OnlineServices.getAllServices();
-    if (!services.length) {
-      this.sendAsyncMessage("Companion:ServiceDisconnected", {
-        servicesConnected: false,
-      });
-    }
-
     let events = OnlineServices.getEventsFromCache();
     await this.populateAdditionalEventData(events);
     return events;
@@ -527,7 +520,10 @@ class CompanionParent extends JSWindowActorParent {
         this.registerWindow(subj);
         for (let tab of subj.gBrowser.tabs) {
           this.registerTab(tab);
-          this.sendAsyncMessage("Companion:TabAdded", this.getTabData(tab));
+          this.sendAsyncMessage(
+            "Companion:TabAddedOrUpdated",
+            this.getTabData(tab)
+          );
         }
         break;
       }
@@ -541,7 +537,10 @@ class CompanionParent extends JSWindowActorParent {
       }
       case "browser-window-tracker-tab-added": {
         this.registerTab(subj);
-        this.sendAsyncMessage("Companion:TabAdded", this.getTabData(subj));
+        this.sendAsyncMessage(
+          "Companion:TabAddedOrUpdated",
+          this.getTabData(subj)
+        );
         break;
       }
       case "browser-window-tracker-tab-removed": {
@@ -570,7 +569,7 @@ class CompanionParent extends JSWindowActorParent {
       case "companion-services-refresh":
         let events = subj.wrappedJSObject;
         await this.populateAdditionalEventData(events);
-        this.sendAsyncMessage("Companion:RegisterEvents", {
+        this.sendAsyncMessage("Companion:RegisterCalendarEvents", {
           events,
           newFavicons: this.consumeCachedFaviconsToSend(),
         });
@@ -623,17 +622,12 @@ class CompanionParent extends JSWindowActorParent {
 
   handleTabEvent(event) {
     switch (event.type) {
-      case "TabAttrModified": {
-        this.sendAsyncMessage("Companion:TabAttrModified", {
-          tab: this.getTabData(event.target),
-          changed: event.detail.changed,
-        });
-        break;
-      }
+      case "TabAttrModified":
       case "TabPipToggleChanged": {
-        this.sendAsyncMessage("Companion:TabPipToggleChanged", {
-          tab: this.getTabData(event.target),
-        });
+        this.sendAsyncMessage(
+          "Companion:TabAddedOrUpdated",
+          this.getTabData(event.target)
+        );
         break;
       }
     }
@@ -884,16 +878,11 @@ class CompanionParent extends JSWindowActorParent {
       w.gBrowser.tabs.map(t => this.getTabData(t))
     );
     let newFavicons = this.consumeCachedFaviconsToSend();
-    let currentURI = this.browsingContext.topChromeWindow.gBrowser.currentURI
-      .spec;
-    let servicesConnected = !!OnlineServices.getAllServices().length;
     let globalHistory = this.maybeGetGlobalHistory();
     this.sendAsyncMessage("Companion:Setup", {
       tabs,
       connectedServices: OnlineServices.connectedServiceTypes,
-      servicesConnected,
       newFavicons,
-      currentURI,
       globalHistory,
     });
 
@@ -946,7 +935,7 @@ class CompanionParent extends JSWindowActorParent {
     // To avoid a significant delay in initializing other parts of the UI,
     // we register the events separately.
     let events = await this.getEvents();
-    this.sendAsyncMessage("Companion:RegisterEvents", {
+    this.sendAsyncMessage("Companion:RegisterCalendarEvents", {
       events,
       newFavicons: this.consumeCachedFaviconsToSend(),
     });

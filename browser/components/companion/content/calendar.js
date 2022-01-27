@@ -42,7 +42,7 @@ window.gCalendarEventListener = {
     });
 
     window.addEventListener(
-      "Companion:RegisterEvents",
+      "Companion:RegisterCalendarEvents",
       this.dispatchRefreshEventsEvent
     );
     window.addEventListener(
