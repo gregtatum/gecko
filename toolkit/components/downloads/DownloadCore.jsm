@@ -1294,6 +1294,14 @@ const kPlainSerializableDownloadProperties = [
   "launchWhenSucceeded",
   "contentType",
   "handleInternally",
+
+  "stopped",
+  "hasProgress",
+  "progress",
+  "endTime",
+  "currentBytes",
+  "speed",
+  "uuid",
 ];
 
 /**
@@ -1700,7 +1708,12 @@ DownloadTarget.prototype = {
       return this.path;
     }
 
-    let serializable = { path: this.path, partFilePath: this.partFilePath };
+    let serializable = {
+      path: this.path,
+      partFilePath: this.partFilePath,
+      exists: this.exists,
+      size: this.size,
+    };
     serializeUnknownProperties(this, serializable);
     return serializable;
   },

@@ -1854,8 +1854,10 @@ bool nsXULPopupManager::MayShowPopup(nsMenuPopupFrame* aPopup) {
 
   nsCOMPtr<nsPIDOMWindowOuter> rootWin = root->GetWindow();
 
+#ifndef PINEBUILD
   MOZ_RELEASE_ASSERT(XRE_IsParentProcess(),
                      "Cannot have XUL in content process showing popups.");
+#endif
 
   // chrome shells can always open popups, but other types of shells can only
   // open popups when they are focused and visible

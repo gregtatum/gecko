@@ -26,6 +26,9 @@
     <html:link rel="localization" href="browser/downloads.ftl" />
   </linkset>
 
+#ifdef PINEBUILD
+  <script src="chrome://global/content/customElements.js"/>
+#endif
   <script src="chrome://global/content/globalOverlay.js"/>
   <script src="chrome://browser/content/downloads/contentAreaDownloadsView.js"/>
   <script src="chrome://browser/content/downloads/allDownloadsView.js"/>

@@ -72,7 +72,10 @@ HistoryDownloadElementShell.prototype = {
     }
   },
 
-  onChanged() {
+  onChanged(download) {
+    if (download) {
+      this._download = download;
+    }
     // There is nothing to do if the item has always been invisible.
     if (!this.active) {
       return;
@@ -149,7 +152,14 @@ HistoryDownloadElementShell.prototype = {
       }
     }
 
-    if (command && this.isCommandEnabled(command)) {
+    if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
+      window.dispatchEvent(
+        new CustomEvent("DownloadLaunchDownload", {
+          detail: { download: this.download },
+          bubbles: true,
+        })
+      );
+    } else if (command && this.isCommandEnabled(command)) {
       this.doCommand(command);
     }
   },
@@ -175,7 +185,7 @@ HistoryDownloadElementShell.prototype = {
     // called again before the information is collected.
     if (!this._targetFileChecked) {
       this.download
-        .refresh()
+        .refresh?.()
         .catch(Cu.reportError)
         .then(() => {
           // Do not try to check for existence again even if this failed.
@@ -218,7 +228,11 @@ function DownloadsPlacesView(
   window.controllers.insertControllerAt(0, this);
 
   // Map downloads to their element shells.
-  this._viewItemsForDownloads = new WeakMap();
+  if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
+    this._viewItemsForDownloads = new Map();
+  } else {
+    this._viewItemsForDownloads = new WeakMap();
+  }
 
   this._searchTerm = "";
 
@@ -227,16 +241,52 @@ function DownloadsPlacesView(
   // Register as a downloads view. The places data will be initialized by
   // the places setter.
   this._initiallySelectedElement = null;
-  this._downloadsData = DownloadsCommon.getData(window.opener || window, true);
   this._waitingForInitialData = true;
-  this._downloadsData.addView(this);
 
-  // Pause the download indicator as user is interacting with downloads. This is
-  // skipped on about:downloads because it handles this by itself.
-  if (aSuppressionFlag === DownloadsCommon.SUPPRESS_ALL_DOWNLOADS_OPEN) {
-    DownloadsCommon.getIndicatorData(
-      window
-    ).attentionSuppressed |= aSuppressionFlag;
+  if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
+    window.dispatchEvent(new CustomEvent("DownloadGetData", { bubbles: true }));
+
+    window.addEventListener(
+      "DownloadToContent",
+      evt => {
+        switch (evt.detail.type) {
+          case "onDownloadBatchStarting": {
+            this.onDownloadBatchStarting();
+            break;
+          }
+          case "onDownloadBatchEnded": {
+            this.onDownloadBatchEnded();
+            break;
+          }
+          case "onDownloadAdded": {
+            this.onDownloadAdded(evt.detail.download);
+            break;
+          }
+          case "onDownloadChanged": {
+            this.onDownloadChanged(evt.detail.download);
+            break;
+          }
+          case "onDownloadRemoved": {
+            this.onDownloadRemoved(evt.detail.download);
+            break;
+          }
+        }
+      },
+      true
+    );
+  } else {
+    this._downloadsData = DownloadsCommon.getData(
+      window.opener || window,
+      true
+    );
+    this._downloadsData.addView(this);
+    // Pause the download indicator as user is interacting with downloads. This is
+    // skipped on about:downloads because it handles this by itself.
+    if (aSuppressionFlag === DownloadsCommon.SUPPRESS_ALL_DOWNLOADS_OPEN) {
+      DownloadsCommon.getIndicatorData(
+        window
+      ).attentionSuppressed |= aSuppressionFlag;
+    }
   }
 
   // Make sure to unregister the view if the window is closed.
@@ -248,7 +298,7 @@ function DownloadsPlacesView(
       DownloadsCommon.getIndicatorData(
         window
       ).attentionSuppressed &= ~aSuppressionFlag;
-      this._downloadsData.removeView(this);
+      this._downloadsData?.removeView(this);
       this.result = null;
     },
     true
@@ -513,7 +563,11 @@ DownloadsPlacesView.prototype = {
 
   onDownloadAdded(download, { insertBefore } = {}) {
     let shell = new HistoryDownloadElementShell(download);
-    this._viewItemsForDownloads.set(download, shell);
+    let key =
+      Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT
+        ? download.uuid
+        : download;
+    this._viewItemsForDownloads.set(key, shell);
 
     // Since newest downloads are displayed at the top, either prepend the new
     // element or insert it after the one indicated by the insertBefore option.
@@ -537,11 +591,19 @@ DownloadsPlacesView.prototype = {
   },
 
   onDownloadChanged(download) {
-    this._viewItemsForDownloads.get(download).onChanged();
+    let key =
+      Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT
+        ? download.uuid
+        : download;
+    this._viewItemsForDownloads.get(key).onChanged(download);
   },
 
   onDownloadRemoved(download) {
-    let element = this._viewItemsForDownloads.get(download).element;
+    let key =
+      Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT
+        ? download.uuid
+        : download;
+    let element = this._viewItemsForDownloads.get(key).element;
 
     // If the element was selected exclusively, select its next
     // sibling first, if not, try for previous sibling, if any.
@@ -821,6 +883,10 @@ DownloadsPlacesView.prototype = {
   },
 
   onDragStart(aEvent) {
+    if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
+      return;
+    }
+
     // TODO Bug 831358: Support d&d for multiple selection.
     // For now, we just drag the first element.
     let selectedItem = this._richlistbox.selectedItem;

@@ -496,6 +496,21 @@ let JSWINDOWACTORS = {
     allFrames: true,
   },
 
+  DownloadsCommon: {
+    parent: {
+      moduleURI: "resource:///actors/DownloadsCommonParent.jsm",
+    },
+    child: {
+      moduleURI: "resource:///actors/DownloadsCommonChild.jsm",
+      events: {
+        DownloadGetData: { wantUntrusted: true },
+        DownloadLaunchDownload: { wantUntrusted: true },
+        DownloadDoCommand: { wantUntrusted: true },
+      },
+    },
+    matches: ["about:downloads"],
+  },
+
   EncryptedMedia: {
     parent: {
       moduleURI: "resource:///actors/EncryptedMediaParent.jsm",

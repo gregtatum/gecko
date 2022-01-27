@@ -2686,6 +2686,10 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("fission.autostart", true, locked);
   pref("browser.aboutwelcome.enabled", false);
   pref("browser.tabs.openNewTabForMostNavigations", true);
+  // This pref being enabled removes the download prompt that is shown
+  // to the user on triggering a download. In pine that would mean
+  // the user was given no indication a download had been triggered.
+  pref("browser.download.improvements_to_download_panel", false);
   #ifdef MOZILLA_OFFICIAL
     pref("browser.startup.launchOnOSLogin", true);
   #else

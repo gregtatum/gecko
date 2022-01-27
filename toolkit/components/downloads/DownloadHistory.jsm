@@ -476,6 +476,27 @@ HistoryDownload.prototype = {
 
     this.slot.list._notifyAllViews("onDownloadChanged", this);
   },
+
+  /**
+   * Returns a static representation of the current object state.
+   *
+   * @return A JavaScript object that can be serialized via structuredClone.
+   */
+  toSerializable() {
+    return {
+      source: this.source,
+      target: this.target,
+      stopped: this.stopped,
+      succeeded: this.succeeded,
+      canceled: this.canceled,
+      hasProgress: this.hasProgress,
+      launcherPath: this.launcherPath,
+      contentType: this.contentType,
+      progress: this.progress,
+      endTime: this.endTime,
+      uuid: this.uuid,
+    };
+  },
 };
 
 /**
