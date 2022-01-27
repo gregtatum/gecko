@@ -594,7 +594,7 @@ class GapiFakeServer extends BaseFakeServer {
     // timeMax are provided to get all the events with the the time range.
     // Then a syncToken is issued with the events in order to be able to get
     // only the "new" events in the next calls.
-    const { syncToken, events } = params.get("singleEvents")
+    const { syncToken, events } = !params.get("syncToken")
       ? cal.getEventsInRange({
           start: params.get("timeMin"),
           end: params.get("timeMax"),

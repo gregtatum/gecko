@@ -11229,6 +11229,7 @@ var WorkshopBackend = (() => {
             let params;
             if (syncState.syncToken) {
               params = {
+                singleEvents: true,
                 syncToken: syncState.syncToken
               };
             } else {

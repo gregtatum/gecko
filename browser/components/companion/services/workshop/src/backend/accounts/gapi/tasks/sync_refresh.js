@@ -112,6 +112,10 @@ export default TaskDefiner.defineAtMostOnceTask([
       let params;
       if (syncState.syncToken) {
         params = {
+          // syncToken doesn't take into account the singleEvents passed in the
+          // original query, so we must pass it again.
+          // See issue https://mozilla-hub.atlassian.net/browse/MR2-1689.
+          singleEvents: true,
           syncToken: syncState.syncToken,
         };
       } else {
