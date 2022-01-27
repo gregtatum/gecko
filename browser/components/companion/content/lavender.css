@@ -6,9 +6,24 @@
   --colors-cafe-01: #fffefc;
   --colors-cafe-02: #faf7f2;
   --colors-cafe-04: #f5f0e6;
-  --inset-shadow-cafe: inset 0px 2px 4px rgba(242, 236, 225, 0.8);
-  --outset-shadow-cafe: 0px 0px 2px rgba(122, 94, 63, 0.15);
 
   --colors-lavender-05: #cfbcf7;
   --colors-lavender-06: #b79bf2;
+  --colors-lavender-07: #9974e8;
+
+  --colors-warm-hover-02: #f0e6d5;
+  --colors-warm-pressed-02: #ebdec7;
+
+  --colors-border-focus: #637cff;
+
+  --inset-shadow-cafe: inset 0px 2px 4px rgba(242, 236, 225, 0.8);
+  --outset-shadow-cafe: 0px 0px 2px rgba(122, 94, 63, 0.15);
+
+  --urlbar-default-border: 1px solid var(--colors-warm-pressed-02);
+  --urlbar-hover-border: unset;
+  --urlbar-selected-border: 1px solid var(--colors-lavender-07);
+  --urlbar-focus-border: 2px solid var(--colors-border-focus);
+
+  --pam-btn-focus-border: 2px solid var(--colors-border-focus);
+
 }

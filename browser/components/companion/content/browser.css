@@ -17,6 +17,7 @@
   --urlbar-min-height: 40px;
   --urlbarbutton-border-radius: 4px;
   --toolbarbutton-hover-background: var(--colors-cafe-02);
+  --toolbarbutton-active-background: var(--colors-warm-pressed-02);
 
   /* pinebuild-specific variables: */
   --companion-width: 340px;
@@ -673,6 +674,11 @@ body[flow-reset] #urlbar-container {
 
 #urlbar-background {
   border-radius: var(--urlbar-border-radius);
+  border: var(--urlbar-default-border);
+}
+
+#urlbar:focus #urlbar-background {
+  border: var(--urlbar-focus-border);
 }
 
 #urlbar[breakout][breakout-extend] > #urlbar-input-container {

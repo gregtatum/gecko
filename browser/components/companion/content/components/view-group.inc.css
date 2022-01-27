@@ -241,15 +241,15 @@
 }
 
 .page-action-button:focus-visible {
-  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline: var(--pam-btn-focus-border);
   outline-offset: var(--focus-outline-offset);
 }
 
 :host([open="true"]) .page-action-button,
 .page-action-button:hover {
-  background-color: #CFCFD8;
+  background-color: var(--colors-warm-hover-02);
 }
 
 .page-action-button:active {
-  background-color: gray;
+  background-color: var(--colors-warm-pressed-02);
 }

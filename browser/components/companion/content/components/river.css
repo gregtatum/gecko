@@ -14,7 +14,7 @@
 
 #river {
   display: flex;
-  background-color: #FFFFFF;
+  background-color: var(--colors-cafe-02);
   padding: 4px;
   margin: 4px;
   margin-inline-end: 0;
@@ -79,7 +79,7 @@ view-group[top][hidden] {
 }
 
 view-group[top] {
-  background-color: #FFFFFF;
+  background-color: var(--colors-cafe-02);
   border-start-end-radius: 25px;
   border-end-end-radius: 25px;
   padding: 4px;
