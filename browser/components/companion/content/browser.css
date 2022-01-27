@@ -14,6 +14,7 @@
   --pinebuild-global-background: white;
 
   --urlbar-border-radius: 20px;
+  --urlbar-min-height: 40px;
 }
 
 @media (prefers-contrast: more) {
