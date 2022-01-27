@@ -3949,9 +3949,6 @@ pref("network.trr.custom_uri", "");
 // Before TRR is widely used the NS record for this host is fetched
 // from the DOH end point to ensure proper configuration
 pref("network.trr.confirmationNS", "example.com");
-// TRR blacklist entry expire time (in seconds). Default is one minute.
-// Meant to survive basically a page load.
-pref("network.trr.blacklist-duration", 60);
 // Comma separated list of domains that we should not use TRR for
 pref("network.trr.excluded-domains", "");
 pref("network.trr.builtin-excluded-domains", "localhost,local");
@@ -4597,14 +4594,22 @@ pref("browser.privatebrowsing.autostart", false);
 pref("security.external_protocol_requires_permission", true);
 
 // Preferences for the form autofill toolkit component.
-// The truthy values of "extensions.formautofill.available" are "on" and "detect",
+// The truthy values of "extensions.formautofill.addresses.available"
+// and "extensions.formautofill.creditCards.available" are "on" and "detect",
 // any other value means autofill isn't available.
 // "detect" means it's enabled if conditions defined in the extension are met.
+// Note: "extensions.formautofill.available" and "extensions.formautofill.creditCards.available"
+// are not being used in form autofill, but need to exist for migration purposes.
 pref("extensions.formautofill.available", "detect");
+pref("extensions.formautofill.addresses.supported", "detect");
 pref("extensions.formautofill.addresses.enabled", true);
 pref("extensions.formautofill.addresses.capture.enabled", false);
+pref("extensions.formautofill.addresses.supportedCountries", "US,CA");
+// Note: this ".available" pref is only used for migration purposes and will be removed/replaced later.
 pref("extensions.formautofill.creditCards.available", true);
+pref("extensions.formautofill.creditCards.supported", "detect");
 pref("extensions.formautofill.creditCards.enabled", true);
+pref("extensions.formautofill.creditCards.supportedCountries", "US,CA");
 // Temporary preference to control displaying the UI elements for
 // credit card autofill used for the duration of the A/B test.
 pref("extensions.formautofill.creditCards.hideui", false);
@@ -4623,5 +4628,4 @@ pref("extensions.formautofill.loglevel", "Warn");
 
 pref("toolkit.osKeyStore.loglevel", "Warn");
 
-pref("extensions.formautofill.supportedCountries", "US,CA");
 pref("extensions.formautofill.supportRTL", false);

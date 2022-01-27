@@ -825,6 +825,10 @@ void CanonicalBrowsingContext::SessionHistoryCommit(
           // XXX Synchronize browsing context tree and session history tree?
           shistory->InternalSetRequestedIndex(indexOfHistoryLoad);
           shistory->UpdateIndex();
+
+          if (IsTop()) {
+            mActiveEntry->SetWireframe(Nothing());
+          }
         } else if (addEntry) {
           shistory->AddEntry(mActiveEntry, aPersist);
           shistory->InternalSetRequestedIndex(-1);
@@ -1015,6 +1019,10 @@ void CanonicalBrowsingContext::ReplaceActiveSessionHistoryEntry(
   }
 
   ResetSHEntryHasUserInteractionCache();
+
+  if (IsTop()) {
+    mActiveEntry->SetWireframe(Nothing());
+  }
 
   // FIXME Need to do the equivalent of EvictContentViewersOrReplaceEntry.
 }
@@ -2421,6 +2429,21 @@ void CanonicalBrowsingContext::SetCrossGroupOpenerId(uint64_t aOpenerId) {
   MOZ_DIAGNOSTIC_ASSERT(mCrossGroupOpenerId == 0,
                         "Can only set CrossGroupOpenerId once");
   mCrossGroupOpenerId = aOpenerId;
+}
+
+void CanonicalBrowsingContext::SetCrossGroupOpener(
+    CanonicalBrowsingContext& aCrossGroupOpener, ErrorResult& aRv) {
+  if (!IsTopContent()) {
+    aRv.ThrowNotAllowedError(
+        "Can only set crossGroupOpener on toplevel content");
+    return;
+  }
+  if (mCrossGroupOpenerId != 0) {
+    aRv.ThrowNotAllowedError("Can only set crossGroupOpener once");
+    return;
+  }
+
+  SetCrossGroupOpenerId(aCrossGroupOpener.Id());
 }
 
 auto CanonicalBrowsingContext::FindUnloadingHost(uint64_t aChildID)

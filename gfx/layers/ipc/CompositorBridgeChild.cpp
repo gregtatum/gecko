@@ -87,11 +87,7 @@ CompositorBridgeChild::CompositorBridgeChild(CompositorManagerChild* aManager)
       mThread(NS_GetCurrentThread()),
       mProcessToken(0),
       mSectionAllocator(nullptr),
-      mPaintLock("CompositorBridgeChild.mPaintLock"),
-      mTotalAsyncPaints(0),
-      mIsDelayingForAsyncPaints(false),
-      mSlowFlushCount(0),
-      mTotalFlushCount(0) {
+      mPaintLock("CompositorBridgeChild.mPaintLock") {
   MOZ_ASSERT(NS_IsMainThread());
 }
 
@@ -555,15 +551,10 @@ CompositorBridgeChild::GetTileLockAllocator() {
 PTextureChild* CompositorBridgeChild::CreateTexture(
     const SurfaceDescriptor& aSharedData, ReadLockDescriptor&& aReadLock,
     LayersBackend aLayersBackend, TextureFlags aFlags, uint64_t aSerial,
-    wr::MaybeExternalImageId& aExternalImageId, nsISerialEventTarget* aTarget) {
+    wr::MaybeExternalImageId& aExternalImageId) {
   PTextureChild* textureChild =
       AllocPTextureChild(aSharedData, aReadLock, aLayersBackend, aFlags,
                          LayersId{0} /* FIXME */, aSerial, aExternalImageId);
-
-  // Do the DOM labeling.
-  if (aTarget) {
-    SetEventTargetForActor(textureChild, aTarget);
-  }
 
   return SendPTextureConstructor(
       textureChild, aSharedData, std::move(aReadLock), aLayersBackend, aFlags,
