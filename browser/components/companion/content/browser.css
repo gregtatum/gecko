@@ -7,19 +7,43 @@
 :root {
   /* XXX: should these (and all the other companion stuff for that matter) be
   expressed in em / some other unit? */
+
+  /* Overrides of traditional browser variables: */
+  --toolbarbutton-inner-padding: 7px;
+  --toolbarbutton-outer-padding: 7px;
+  --toolbarbutton-border-radius: 50%;
+  --urlbarbutton-border-radius: 4px;
+  --urlbar-border-radius: 20px;
+  --urlbar-min-height: 40px;
+  --urlbarbutton-border-radius: 4px;
+  --toolbarbutton-hover-background: var(--colors-cafe-02);
+
+  /* pinebuild-specific variables: */
   --companion-width: 340px;
   --companion-min-width: 300px;
   --companion-max-width: 600px;
-  --companion-background: var(--in-content-page-background);
-  --pinebuild-global-background: white;
-
-  --urlbar-border-radius: 20px;
-  --urlbar-min-height: 40px;
+  --pinebuild-global-background: var(--colors-cafe-01);
+  --pinebuild-highlight-color: var(--colors-lavender-05);
+  --pinebuild-highlight-text-color: #562ea6;
+  --pinebuild-flow-reset-transition-duration: 1s;
+  /* I tried using --animation-timing-function for this, but it was too steep
+     a curve. We may want to define a different curve than ease-out though. */
+  --pinebuild-flow-reset-transition-timing: ease-out;
+  --pinebuild-pre-flow-reset-background-color: #8d77b4;
 }
 
 @media (prefers-contrast: more) {
   :root {
     --pinebuild-global-background: -moz-default-background-color;
+  }
+}
+
+/* TODO: check this all in high-contrast mode */
+@media not (prefers-contrast) {
+  /* Awkwardly, we need the more specific selector here in order to ensure we
+     override it. */
+  :root:not(:-moz-lwtheme) {
+    --toolbar-field-background-color: var(--colors-cafe-02);
   }
 }
 
@@ -31,8 +55,112 @@
   min-width: 1024px;
 }
 
+/* So, this is a bit awkward. Here's the problem: we have a big image, which
+   we want to use as a background, and which could take more than a frame to
+   upload to the GPU. So, we want to display something in its place before
+   it's ready. In our case, we want to display a flat color in its place.
+   What we *could* do, is just have a background-color set on body, as well
+   as a background-image, and until the image is loaded, Gecko will show the
+   background-color. However, this isn't a nice experience, because the
+   background image will pop in all at once on top of the color. What would
+   be nicer is if we could fade the background image in on top of the color
+   over time once it's ready. Unfortunately, things get weird when you want
+   to do that. Read on in the comments below for more! */
 body {
-  background: var(--pinebuild-global-background);
+  /* We start with a transparent background color on the body. This will let
+     #global-background and #global-background-inner show through (since they
+     have a low z-index). This means we have a transparent-backgrounded body
+     sitting on top of a background image which sits on top of a background
+     color. We add a transition here so when we go out of flow-reset mode,
+     we can just fade our background color to solid, causing the image to
+     nicely transition out. If we tried to just animate the background image
+     itself, it would just pop away. */
+  background-color: transparent;
+  transition-property: opacity, background-color;
+  transition-duration: var(--pinebuild-flow-reset-transition-duration);
+  transition-timing-function: var(--pinebuild-flow-reset-transition-timing);
+}
+
+body[browser-ready]:not([flow-reset]) {
+  /* This is just our normal solid color background */
+  background-color: var(--pinebuild-global-background);
+}
+
+#global-background {
+  /* This is just a container with a background color that holds the div
+     that holds the image. We use position:absolute and a negative z-index
+     to have it sit behind all content. */
+  z-index: -100;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: var(--pinebuild-pre-flow-reset-background-color);
+}
+
+#global-background-inner {
+  height: 100%;
+  width: 100%;
+  /* This is where the magic happens. The opacity of 0.01 kicks off the load
+     of the image, since it's *technically* visible, but it won't actually be
+     perceivable until we set the browser-ready attribute on the body, at
+     which point it will fade in per the transition: opacity rule. We could
+     implement this as an html:image, however, we get some nice logic for
+     free with it being a background through the background-size and
+     background-position attributes, which are awkward to achieve through
+     HTML/JS. */
+  opacity: 0.01;
+  background-color: transparent;
+  background-image: url("chrome://browser/content/companion/timeofdaybackground.png");
+  background-size: cover;
+  background-position: center;
+  transition: opacity var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --pinebuild-flow-reset-transition-duration: 0s;
+  }
+}
+
+/* We set the browser-ready attribute the frame after we detect our first
+   paint of content in about:flow-reset. This actually is a bit awkward and
+   not 100% correct, but it's the best I could figure out. This will nicely
+   let us fade everything in all together, but it becomes tricky if
+   timeofdaybackground.png hasn't been loaded off disk yet, because then
+   we'll start our opacity fade in before we've started to upload the image
+   to the GPU. If this is the case, the GPU upload could take long enough
+   that the animation drops a bunch of frames and the image just kind of
+   pops in anyway. I don't have a better solution here. I haven't had this
+   show up in practice, but it could happen on machines with old school
+   platter drives. */
+body[browser-ready] #global-background-inner {
+  opacity: 1;
+}
+
+/* We also fade these things in during startup to get a smooth experience. */
+body[flow-reset]:not([browser-ready]) #navigator-toolbox,
+body[flow-reset]:not([browser-ready]) companion-manager,
+body[flow-reset]:not([browser-ready]) .browserStack > browser {
+  transition: opacity var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
+}
+
+body:not([browser-ready]) #navigator-toolbox,
+body:not([browser-ready]) companion-manager,
+body:not([browser-ready]) .browserStack > browser {
+  opacity: 0;
+}
+
+/* Oddly, despite the browser transitioning opacity above, the browser's
+   border immediately pops in. These two blocks fix that. */
+.browserStack > browser {
+  border-color: transparent;
+  transition: border-color var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
+}
+
+:root[companion] body:not([flow-reset]) .browserStack > browser {
+  border-inline-start: 1px solid var(--colors-cafe-04);
+  border-start-start-radius: 8px;
+  border-top: 1px solid var(--colors-cafe-04);
 }
 
 #navigator-toolbox,
@@ -40,6 +168,11 @@ body {
 #tabbrowser-tabpanels,
 .browser-toolbar:not(.titlebar-color) {
   background: none;
+}
+
+#navigator-toolbox {
+  padding-inline-start: 8px;
+  border-bottom: none;
 }
 
 #titlebar:not([hidden]) + #nav-bar > #pinebuild-window-controls {
@@ -56,11 +189,19 @@ body {
   -moz-box-flex: 1;
 }
 
-[flow-reset] #pinebuild-back-button,
-[flow-reset] #pinebuild-reload-button,
-[flow-reset] #session-setaside-button,
-[flow-reset] active-view-manager {
-  visibility: hidden;
+body[flow-reset] #pinebuild-back-button,
+body[flow-reset] #pinebuild-reload-button,
+body[flow-reset] #session-setaside-button,
+body[flow-reset] active-view-manager {
+  display: none;
+}
+
+/* When we're in flow reset mode, the urlbar is detached from its container,
+   but still a child of it, so we can't make the container display: none.
+   However, if we leave it at its normal width, it creates an region of the
+   toolbar that can't be used to drag the window.  */
+body[flow-reset] #urlbar-container {
+  max-width: 0;
 }
 
 #nav-bar:hover river-el::part(history) {
@@ -118,6 +259,7 @@ body {
 #urlbar-container {
   min-width: 50px;
   max-width: 450px;
+  padding: 12px 0;
   transition-property: max-width;
   transition-timing-function: var(--animation-timing-function);
   transition-duration: 0s;
@@ -164,7 +306,7 @@ body {
   position: relative;
   appearance: auto;
   -moz-default-appearance: -moz-window-button-box;
-  margin-left: 12px;
+  margin-inline: 12px;
 }
 
 #pinebuild-back-button {
@@ -520,7 +662,7 @@ body {
 #urlbar[breakout][breakout-extend] {
   /* -6px because we want to leave a bit of space between the top of the toolbar
      and the Urlbar. */
-  top: calc((var(--urlbar-toolbar-height) - var(--urlbar-height)) / 2 - 6px);
+  top: calc((var(--urlbar-toolbar-height) - var(--urlbar-height)) / 2 - 8px);
   /* We shift the Urlbar right by the same size as its top border-radius.
      If we didn't, when the Urlbar overlaps the AVM, we'd show a notch of
      toolbar in the space between the Urlbar's rounded border and the edge of
@@ -548,24 +690,29 @@ body {
   margin-block-start: calc(-1 * var(--urlbar-view-padding-block));
 }
 
+body[flow-reset] {
+  --toolbarbutton-icon-fill: white;
+  --toolbarbutton-hover-background: rgba(0,0,0, 0.2);
+}
+
 body[flow-reset] #urlbar[breakout],
 body[flow-reset] #urlbar[breakout][breakout-extend] {
   display: block;
   position: fixed;
-  top: calc((var(--urlbar-toolbar-height) + 15%));
+  top: calc((var(--urlbar-toolbar-height) + 35%));
   left: var(--companion-width);
   right: 0;
   width: -moz-available;
-  box-shadow: 0px 4px 4px 0px #00000040;
   border-radius: calc(var(--urlbar-border-radius) * 2);
   z-index: 999;
-  max-width: 750px;
+  max-width: 600px;
   margin: 0 auto;
 }
 
 body[flow-reset] #urlbar:not([open])[breakout] > #urlbar-background,
 body[flow-reset] #urlbar[breakout] > #urlbar-input-container {
-  height: calc(2 * var(--urlbar-height));
+  height: calc(1.5 * var(--urlbar-height));
+  font-size: 16px;
   /* We use a margin variable in a padding rule because the Pro Client Urlbar
      shifts some of the Firefox Urlbar global margin rules to instead apply to
      individual elements. We must reflect that margin in the unopened flow-reset
@@ -574,7 +721,7 @@ body[flow-reset] #urlbar[breakout] > #urlbar-input-container {
 }
 
 body[flow-reset] #urlbar-background {
-  background: white;
+  background: rgba(255,255,255,0.74);
   border-radius: calc(var(--urlbar-border-radius) * 2);
 }
 
@@ -615,179 +762,6 @@ body[flow-reset] #urlbar[open] #urlbar-background {
   opacity: 0;
 }
 
-:root {
-  /* Overrides of traditional browser variables: */
-  --toolbarbutton-inner-padding: 7px;
-  --toolbarbutton-outer-padding: 7px;
-  --toolbarbutton-border-radius: 50%;
-  --urlbarbutton-border-radius: 4px;
-  --urlbar-border-radius: 20px;
-  --urlbar-min-height: 40px;
-  --urlbarbutton-border-radius: 4px;
-  --toolbarbutton-hover-background: var(--colors-cafe-02);
-
-  /* New/modified pinebuild-specific variables: */
-  --companion-background: var(--in-content-page-background);
-  --pinebuild-global-background: var(--colors-cafe-01);
-  --pinebuild-highlight-color: var(--colors-lavender-05);
-  --pinebuild-highlight-text-color: #562ea6;
-  --pinebuild-flow-reset-transition-duration: 1s;
-  /* I tried using --animation-timing-function for this, but it was too steep
-     a curve. We may want to define a different curve than ease-out though. */
-  --pinebuild-flow-reset-transition-timing: ease-out;
-  --pinebuild-pre-flow-reset-background-color: #8d77b4;
-}
-
-/* Above, these are simply marked visibility: hidden. Unfortunately, that
-   does not cause us to modify the draggable region of the toolbar, meaning
-   that the location where the urlbar and other buttons were doesn't let the
-   user drag the window, despite being visibly identical to the areas that DO
-   let the user drag the window. This fixes that. */
-body[flow-reset] #pinebuild-back-button,
-body[flow-reset] #pinebuild-reload-button,
-body[flow-reset] #session-setaside-button,
-body[flow-reset] active-view-manager {
-  display: none;
-}
-
-/* When we're in flow reset mode, the urlbar is detached from its container,
-   but still a child of it, so we can't make the container display: none.
-   However, if we leave it at its normal width, it creates an region of the
-   toolbar that can't be used to drag the window.  */
-body[flow-reset] #urlbar-container {
-  max-width: 0;
-}
-
-/* TODO: check this all in high-contrast mode */
-@media not (prefers-contrast) {
-  /* Awkwardly, we need the more specific selector here in order to ensure we
-     override it. */
-  :root:not(:-moz-lwtheme) {
-    --toolbar-field-background-color: var(--colors-cafe-02);
-  }
-}
-
-/* So, this is a bit awkward. Here's the problem: we have a big image, which
-   we want to use as a background, and which could take more than a frame to
-   upload to the GPU. So, we want to display something in its place before
-   it's ready. In our case, we want to display a flat color in its place.
-   What we *could* do, is just have a background-color set on body, as well
-   as a background-image, and until the image is loaded, Gecko will show the
-   background-color. However, this isn't a nice experience, because the
-   background image will pop in all at once on top of the color. What would
-   be nicer is if we could fade the background image in on top of the color
-   over time once it's ready. Unfortunately, things get weird when you want
-   to do that. Read on in the comments below for more! */
-body {
-  /* We start with a transparent background color on the body. This will let
-     #global-background and #global-background-inner show through (since they
-     have a low z-index). This means we have a transparent-backgrounded body
-     sitting on top of a background image which sits on top of a background
-     color. We add a transition here so when we go out of flow-reset mode,
-     we can just fade our background color to solid, causing the image to
-     nicely transition out. If we tried to just animate the background image
-     itself, it would just pop away. */
-  background-color: transparent;
-  transition-property: opacity, background-color;
-  transition-duration: var(--pinebuild-flow-reset-transition-duration);
-  transition-timing-function: var(--pinebuild-flow-reset-transition-timing);
-}
-
-body[browser-ready]:not([flow-reset]) {
-  /* This is just our normal solid color background */
-  background-color: var(--pinebuild-global-background);
-}
-
-#global-background {
-  /* This is just a container with a background color that holds the div
-     that holds the image. We use position:absolute and a negative z-index
-     to have it sit behind all content. */
-  z-index: -100;
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background: var(--pinebuild-pre-flow-reset-background-color);
-}
-
-#global-background-inner {
-  height: 100%;
-  width: 100%;
-  /* This is where the magic happens. The opacity of 0.01 kicks off the load
-     of the image, since it's *technically* visible, but it won't actually be
-     perceivable until we set the browser-ready attribute on the body, at
-     which point it will fade in per the transition: opacity rule. We could
-     implement this as an html:image, however, we get some nice logic for
-     free with it being a background through the background-size and
-     background-position attributes, which are awkward to achieve through
-     HTML/JS. */
-  opacity: 0.01;
-  background-color: transparent;
-  background-image: url("chrome://browser/content/companion/timeofdaybackground.png");
-  background-size: cover;
-  background-position: center;
-  transition: opacity var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --pinebuild-flow-reset-transition-duration: 0s;
-  }
-}
-
-/* We set the browser-ready attribute the frame after we detect our first
-   paint of content in about:flow-reset. This actually is a bit awkward and
-   not 100% correct, but it's the best I could figure out. This will nicely
-   let us fade everything in all together, but it becomes tricky if
-   timeofdaybackground.png hasn't been loaded off disk yet, because then
-   we'll start our opacity fade in before we've started to upload the image
-   to the GPU. If this is the case, the GPU upload could take long enough
-   that the animation drops a bunch of frames and the image just kind of
-   pops in anyway. I don't have a better solution here. I haven't had this
-   show up in practice, but it could happen on machines with old school
-   platter drives. */
-body[browser-ready] #global-background-inner {
-  opacity: 1;
-}
-
-/* We also fade these things in during startup to get a smooth experience. */
-body[flow-reset]:not([browser-ready]) #navigator-toolbox,
-body[flow-reset]:not([browser-ready]) companion-manager,
-body[flow-reset]:not([browser-ready]) .browserStack > browser {
-  transition: opacity var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
-}
-
-body:not([browser-ready]) #navigator-toolbox,
-body:not([browser-ready]) companion-manager,
-body:not([browser-ready]) .browserStack > browser {
-  opacity: 0;
-}
-
-/* Oddly, despite the browser transitioning opacity above, the browser's
-   border immediately pops in. These two blocks fix that. */
-.browserStack > browser {
-  border-color: transparent;
-  transition: border-color var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
-}
-
-:root[companion] body:not([flow-reset]) .browserStack > browser {
-  border-inline-start: 1px solid var(--colors-cafe-04);
-  border-start-start-radius: 8px;
-  border-top: 1px solid var(--colors-cafe-04);
-}
-
-#navigator-toolbox {
-  padding-inline-start: 8px;
-  border-bottom: none;
-}
-
-#urlbar-container {
-  padding: 12px 0;
-}
-
-#urlbar[breakout][breakout-extend] {
-  top: calc((var(--urlbar-toolbar-height) - var(--urlbar-height)) / 2 - 8px);
-}
-
 #companion-sidebar-button {
   background-color: var(--pinebuild-highlight-color);
   border: 0.5px solid var(--colors-lavender-06);
@@ -807,30 +781,8 @@ body:not([browser-ready]) .browserStack > browser {
   background-color: transparent;
 }
 
-body[flow-reset] {
-  --toolbarbutton-icon-fill: white;
-  --toolbarbutton-hover-background: rgba(0,0,0, 0.2);
-}
-
 body[flow-reset] #companion-sidebar-button {
   background-color: var(--colors-lavender-06);
-}
-
-body[flow-reset] #urlbar[breakout],
-body[flow-reset] #urlbar[breakout][breakout-extend] {
-  top: calc((var(--urlbar-toolbar-height) + 35%));
-  max-width: 600px;
-  box-shadow: none;
-}
-
-body[flow-reset] #urlbar:not([open])[breakout] > #urlbar-background,
-body[flow-reset] #urlbar[breakout] > #urlbar-input-container {
-  height: calc(1.5 * var(--urlbar-height));
-  font-size:  16px;
-}
-
-body[flow-reset] #urlbar-background {
-  background: rgba(255,255,255,0.74);
 }
 
 companion-manager {
@@ -868,11 +820,6 @@ body[flow-reset] companion-manager {
   .titlebar-buttonbox-container {
     margin-inline: 16px 20px;
   }
-}
-
-
-#pinebuild-mac-buttonbox {
-  margin-inline: 12px;
 }
 
 toolbar .toolbarbutton-1 > .toolbarbutton-icon {
