@@ -25,3 +25,13 @@
   text-align: center;
   color: var(--in-content-deemphasized-text);
 }
+
+@supports -moz-bool-pref("browser.companion.passwords.enabled") {
+  #contentAreaDownloadsView {
+    padding: 0;
+  }
+
+  #downloadsRichListBox {
+    border: 0;
+  }
+}

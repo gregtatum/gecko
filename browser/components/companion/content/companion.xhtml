@@ -265,7 +265,9 @@
           <button class="back" data-action="viewtab" data-tab="browse"></button>
           <h2 data-l10n-id="downloads-section-header"></h2>
         </header>
-        <div class="content"></div>
+        <div class="content">
+          <xul:browser id="companion-downloads-browser" type="content" src="about:downloads"></xul:browser>
+        </div>
       </div>
     </html:named-deck>
   </div>

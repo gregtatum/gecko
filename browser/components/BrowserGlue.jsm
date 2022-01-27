@@ -1332,6 +1332,9 @@ BrowserGlue.prototype = {
         matches: ["about:flow-reset"],
       };
 
+      JSWINDOWACTORS.DownloadsCommon.allFrames = true;
+      JSWINDOWACTORS.DownloadsCommon.remoteTypes = ["privilegedabout"];
+
       JSWINDOWACTORS.AboutLogins.allFrames = true;
       JSWINDOWACTORS.AboutLogins.remoteTypes = ["privilegedabout"];
       JSWINDOWACTORS.AboutLogins.child.events.AboutLoginsBrowsePanel = {
