@@ -14,11 +14,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   AppConstants: "resource://gre/modules/AppConstants.jsm",
   AttributionCode: "resource:///modules/AttributionCode.jsm",
   Services: "resource://gre/modules/Services.jsm",
-  setTimeout: "resource://gre/modules/Timer.jsm",
 });
-
-// TODO - Remove this when sending in for review. It makes it easier to test this feature.
-setTimeout(() => Services.locale.requestedLocales = ["en-US"], 1000);
 
 const DEFAULT_WELCOME_CONTENT = {
   id: "DEFAULT_ABOUTWELCOME_PROTON",
@@ -103,14 +99,14 @@ const DEFAULT_WELCOME_CONTENT = {
       },
     },
     {
-      id: "AW_LIVE_LANGUAGE",
+      id: "AW_LANGUAGE_MISMATCH",
       order: 2,
       content: {
         title: {
-          string_id: "onboarding-live-language-language-header",
+          string_id: "onboarding-live-language-header",
         },
         subtitle: {
-          string_id: "onboarding-live-language-language-subtitle",
+          string_id: "onboarding-live-language-subtitle",
           args: {
             // These need to be looked up.
             systemLanguage: "",
@@ -119,23 +115,21 @@ const DEFAULT_WELCOME_CONTENT = {
         },
         primary_button: {
           label: {
-            string_id: "onboarding-live-language-language-primary-button-label",
+            loading_string_id: "onboarding-live-language-primary-button-label-loading",
+            string_id: "onboarding-live-language-primary-button-label",
             args: {
               systemLanguage: "", // This need to be looked up.
             },
           },
           action: {
             type: "SWITCH_TO_OS_LANGUAGE",
-            data: {
-              locale: null,
-            },
+            data: {},
             navigate: true,
           },
         },
         secondary_button: {
           label: {
-            string_id:
-              "onboarding-live-language-language-secondary-button-label",
+            string_id: "onboarding-live-language-secondary-button-label",
           },
           action: {
             navigate: true,
@@ -403,20 +397,66 @@ function getAppAndSystemLocaleInfo() {
 
   return {
     // Return the Intl.Locale in a serializable form.
-    systemLocale: {
-      raw: systemLocaleRaw,
-      baseName: systemLocale.baseName,
-      language: systemLocale.language,
-      region: systemLocale.region,
-    },
-    appLocale: {
-      raw: appLocaleRaw,
-      baseName: appLocale.baseName,
-      language: appLocale.language,
-      region: appLocale.region,
-    },
+    systemLocaleRaw,
+    systemLocale,
+    appLocaleRaw,
+    appLocale,
     matchType,
   };
+}
+
+/**
+ * Attempts to find an appropriate langpack for a given language. The async function
+ * is infallible, but may not return a langpack.
+ *
+ * @returns {LangPack | null}
+ */
+async function negotiateLangPackForLanguageMismatch(localeInfo) {
+  console.log("AboutWelcomeDefaults.jsm - negotiateLangPackForLanguageMismatch");
+
+  /**
+   * Fetch the available langpacks from AMO.
+   *
+   * @type {Array<LangPack>}
+   */
+  let availableLangpacks;
+
+  try {
+    availableLangpacks = await AddonRepository.getAvailableLangpacks();
+  } catch (e) {
+    Cu.reportError(
+      `Failed to get the list of available language packs: ${error?.message}`
+    );
+    return null;
+  }
+  if (!availableLangpacks) {
+    return null;
+  }
+
+  /**
+   * Figure out a langpack to recommend.
+   * @type {LangPack | null}
+   */
+  return (
+    // First look for a langpack that matches the baseName.
+    // e.g. system "fr-FR" matches langpack "fr-FR"
+    //      system "en-GB" matches langpack "en-GB".
+    availableLangpacks.find(
+      ({ target_locale }) => target_locale === localeInfo.systemLocale.baseName
+    ) ||
+    // Next look for langpacks that just match the language.
+    // e.g. system "fr-FR" matches langpack "fr".
+    //      system "en-AU" matches langpack "en".
+    availableLangpacks.find(
+      ({ target_locale }) => target_locale === localeInfo.systemLocale.language
+    ) ||
+    // Next look for a langpack that matches the language, but not the region.
+    // e.g. "es-CL" (Chilean Spanish) as a system language matching
+    //      "en-ES" (European Spanish)
+    availableLangpacks.find(({ target_locale }) =>
+      target_locale.startsWith(`${localeInfo.systemLocale.language}-`)
+    )
+  );
 }
 
 async function prepareContentForReact(content) {
@@ -523,30 +563,49 @@ async function prepareContentForReact(content) {
   }
 
   const localeInfo = getAppAndSystemLocaleInfo();
-  if (localeInfo.matchType === "language-mismatch") {
-    const screen = content.screens.find(({ id }) => id === "AW_LIVE_LANGUAGE");
-    if (screen) {
-      screen.content.primary_button.action.data = localeInfo;
-
+  let showLiveLanguage = false;
+  if (
+    // This is using a pref rather than Nimbus as only ~5% of users will be affected
+    // and there is no need to roll out the feature. It is being developed under
+    // a flag to allow easy enabling when the features are ready.
+    Services.prefs.getBoolPref(
+      "intl.multilingual.aboutWelcome.languageMismatchEnabled"
+    ) &&
+    localeInfo.matchType === "language-mismatch"
+  ) {
+    const langPack = await negotiateLangPackForLanguageMismatch(localeInfo);
+    if (langPack) {
       // Convert the BCP 47 identifiers into the proper display names.
       // e.g. "fr-CA" -> "Canadian French".
       const displayNames = new Services.intl.DisplayNames(
         Services.locale.appLocaleAsBCP47,
         { type: "language" }
       );
-      const systemLanguage = displayNames.of(localeInfo.systemLocale.raw);
-      const appLanguage = displayNames.of(localeInfo.appLocale.raw);
+      const systemLanguage = displayNames.of(localeInfo.systemLocale.baseName);
+      const appLanguage = displayNames.of(localeInfo.appLocale.baseName);
 
-      screen.content.subtitle.args.systemLanguage = systemLanguage;
-      screen.content.subtitle.args.appLanguage = appLanguage;
-      screen.content.primary_button.label.args.systemLanguage = systemLanguage;
-      screen.content.primary_button.action.data.requestSystemLocales = [
-        localeInfo.systemLocale.raw,
-        localeInfo.appLocale.raw,
+      const screen = content.screens.find(
+        ({ id }) => id === "AW_LANGUAGE_MISMATCH"
+      );
+      const { subtitle, primary_button } = screen.content;
+
+      subtitle.args.systemLanguage = systemLanguage;
+      subtitle.args.appLanguage = appLanguage;
+      primary_button.label.args.systemLanguage = systemLanguage;
+
+      primary_button.action.data.langPack = langPack;
+      primary_button.action.data.requestSystemLocales = [
+        langPack.target_locale,
+        localeInfo.appLocaleRaw,
       ];
+
+      showLiveLanguage = true;
     }
-  } else {
-    removeScreens(screen => screen.id === "AW_LIVE_LANGUAGE");
+  }
+
+  if (!showLiveLanguage) {
+    console.log("Remove screen.");
+    removeScreens(screen => screen.id === "AW_LANGUAGE_MISMATCH");
   }
 
   return content;

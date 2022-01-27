@@ -113,6 +113,41 @@ async function getImportableSites() {
   return sites;
 }
 
+/**
+ * @param {{
+ *  target_locale: string,
+ *  url: string,
+ *  hash: string,
+ * }} langPack
+ * @returns {boolean} Success or failure.
+ */
+async function installLangpack(langPack) {
+  console.log("AboutWelcomeParent.jsm - installLangpack", langPack);
+  let install;
+  try {
+    install = await AddonManager.getInstallForURL(langPack.url, {
+      hash: langPack.hash,
+      telemetryInfo: {
+        source: "about:welcome",
+      },
+    });
+  } catch (error) {
+    Cu.reportError(
+      `Unable to get the installer for the langpack: ${error?.message}`
+    );
+    return false;
+  }
+
+  try {
+    await install.install();
+  } catch (error) {
+    Cu.reportError(`Failed to install the langpack: ${error?.message}`);
+    return false;
+  }
+
+  return true;
+}
+
 class AboutWelcomeObserver {
   constructor() {
     Services.obs.addObserver(this, "quit-application");
@@ -304,6 +339,8 @@ class AboutWelcomeParent extends JSWindowActorParent {
             }
           })
         );
+      case "AWPage:INSTALL_LANGPACK":
+        return installLangpack(data);
       default:
         log.debug(`Unexpected event ${type} was not handled.`);
     }

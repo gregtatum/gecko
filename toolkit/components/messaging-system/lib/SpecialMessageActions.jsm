@@ -325,6 +325,7 @@ const SpecialMessageActions = {
         );
         break;
       case "SWITCH_TO_OS_LANGUAGE":
+        console.log("action.data.requestSystemLocales", action.data.requestSystemLocales);
         Services.locale.requestedLocales = action.data.requestSystemLocales;
         break;
       default:

@@ -158,6 +158,10 @@ class AboutWelcomeChild extends JSWindowActorChild {
     Cu.exportFunction(this.AWWaitForMigrationClose.bind(this), window, {
       defineAs: "AWWaitForMigrationClose",
     });
+
+    Cu.exportFunction(this.AWInstallLangPack.bind(this), window, {
+      defineAs: "AWInstallLangPack",
+    });
   }
 
   /**
@@ -267,6 +271,12 @@ class AboutWelcomeChild extends JSWindowActorChild {
 
   AWGetRegion() {
     return this.wrapPromise(this.sendQuery("AWPage:GET_REGION"));
+  }
+
+  AWInstallLangPack(langPack) {
+    return this.wrapPromise(
+      this.sendQuery("AWPage:INSTALL_LANGPACK", langPack)
+    );
   }
 
   /**

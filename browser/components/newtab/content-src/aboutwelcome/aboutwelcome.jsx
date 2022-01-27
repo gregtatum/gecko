@@ -10,7 +10,10 @@ import { ReturnToAMO } from "./components/ReturnToAMO";
 class AboutWelcome extends React.PureComponent {
   constructor(props) {
     super(props);
-    this.state = { metricsFlowUri: null };
+    this.state = {
+      metricsFlowUri: null,
+      installedLangPack: null,
+    };
     this.fetchFxAFlowUri = this.fetchFxAFlowUri.bind(this);
   }
 

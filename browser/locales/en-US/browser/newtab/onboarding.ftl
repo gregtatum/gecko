@@ -226,9 +226,12 @@ mr2-onboarding-start-browsing-button-label = Start browsing
 ## Multistage live language reloading onboarding strings (about:welcome pages)
 ## This was added between major releases, so the IDs dont start with "mr".
 
-onboarding-live-language-language-header = Choose Your Language
-onboarding-live-language-language-subtitle = Your system is using { $systemLanguage }, while { -brand-short-name } is using { $appLanguage }.
+onboarding-live-language-header = Choose Your Language
+onboarding-live-language-subtitle = Your system is using { $systemLanguage }, while { -brand-short-name } is using { $appLanguage }.
 
 # This string will be used in cases where we can't detect the previous browser name.
-onboarding-live-language-language-primary-button-label = Switch to { $systemLanguage }
-onboarding-live-language-language-secondary-button-label = Not now
+onboarding-live-language-primary-button-label = Switch to { $systemLanguage }
+onboarding-live-language-primary-button-label-loading = Downloading { $systemLanguage }…
+
+onboarding-live-language-secondary-button-label = Not now
+onboarding-live-language-secondary-button-label-loading = Cancel

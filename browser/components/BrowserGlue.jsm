@@ -1029,6 +1029,22 @@ BrowserGlue.prototype = {
         break;
       case "final-ui-startup":
         this._beforeUIStartup();
+
+        // TODO - Remove this when sending in for review. It makes it easier to test this feature.
+        Services.locale.requestedLocales = ["en-US"];
+
+        const active = await AddonManager.getActiveAddons();
+        for (const addon of active.addons) {
+          console.log("addon", addon.id);
+        }
+
+        const addon = await AddonManager.getAddonByID(
+          "langpack-es-ES@firefox.mozilla.org"
+        );
+        await addon?.uninstall();
+
+        console.log("es-ES removed!");
+
         break;
       case "browser-delayed-startup-finished":
         this._onFirstWindowLoaded(subject);

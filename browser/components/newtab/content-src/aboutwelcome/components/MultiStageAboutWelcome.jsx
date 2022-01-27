@@ -139,6 +139,16 @@ export const MultiStageAboutWelcome = props => {
     })();
   }, [useImportable, region]);
 
+  // Pre-emptively kick off installing the desired langpack.
+  const [langPackInstalled, setLangPackInstalled] = useState(null);
+  useEffect(() => {
+    const screen = props.screens.find(screen => screen.id === "AW_LANGUAGE_MISMATCH");
+    if (screen) {
+      // There is a language mismatch, pre-emptively install the desired language pack.
+      setLangPackInstalled(window.AWInstallLangPack(primary_button.action.data.langPack));
+    }
+  });
+
   return (
     <React.Fragment>
       <div
@@ -164,6 +174,7 @@ export const MultiStageAboutWelcome = props => {
               activeTheme={activeTheme}
               initialTheme={initialTheme}
               setActiveTheme={setActiveTheme}
+              langPackInstalled={langPackInstalled}
             />
           ) : null;
         })}
@@ -258,6 +269,10 @@ export class WelcomeScreen extends React.PureComponent {
     if (["OPEN_URL", "SHOW_FIREFOX_ACCOUNTS"].includes(action.type)) {
       this.handleOpenURL(action, props.flowParams, props.UTMTerm);
     } else if (action.type) {
+      if (action.type === "SWITCH_TO_OS_LANGUAGE") {
+        // TODO - Should this pause be reflected in the UI?
+        await this.props.langPackInstalled;
+      }
       AboutWelcomeUtils.handleUserAction(action);
       // Wait until migration closes to complete the action
       if (action.type === "SHOW_MIGRATION_WIZARD") {
