@@ -69,22 +69,6 @@
   opacity: 0;
 }
 
-#tabbrowser-tabpanels[session-change] {
-  transform: scale(0.96);
-  border-radius: 12px;
-  box-shadow: 0px 2px 6px 0px rgba(0.23, 0.22, 0.27, 0.2);
-}
-
-#tabbrowser-tabpanels[session-change] browser {
-  border-radius: 12px;
-}
-
-#tabbrowser-tabpanels[session-change="2"] {
-  transition-duration: 250ms;
-  transform: translateX(-100%) scale(0.96);
-  opacity: 0;
-}
-
 #tabbrowser-tabbox:not([disable-history-animations]) > #tabbrowser-tabpanels[multideck] > hbox[deactivated] {
   transition-property: none;
   transform: translateX(-100%);

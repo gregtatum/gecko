@@ -6317,59 +6317,18 @@
     /**
      * Runs the first part of an animation which shrinks the current view and
      * slide it to the left. doPinebuildSessionShowAnimation must be called
-     * after this to clear the "session-change" attribute. See also the notes
-     * on `HideAnimationReturnType`.
+     * after this. See also the notes on `HideAnimationReturnType`.
      *
      * @returns {HideAnimationReturnType}
      */
     doPinebuildSessionHideAnimation() {
-      if (
-        window.matchMedia("(prefers-reduced-motion)").matches ||
-        Services.prefs.getBoolPref("browser.pinebuild.lavender.enabled", false)
-      ) {
-        return {
-          animationCompletePromise: Promise.resolve(),
-          timerCompletePromise: Promise.resolve(),
-        };
-      }
-      // These times reflect the animation time plus a little longer per UX
-      // requirements.
-      const sessionChangePreSwipeTime = 750;
-      const sessionChangeSwipeAnimationTime = 400;
-
-      let tabpanels = this.tabpanels;
-      tabpanels.setAttribute("session-change", "1");
-
-      let resolveAnimation = PromiseUtils.defer();
-      let resolveTimer = PromiseUtils.defer();
-
-      this._delayDOMChange(() => {
-        // This tracks when the animation is complete, and allows the caller
-        // to start work before the full required animation time is up.
-        function transitionEnd() {
-          tabpanels.removeEventListener("transitionend", transitionEnd);
-          tabpanels.removeEventListener("transitioncancel", transitionEnd);
-
-          resolveAnimation.resolve();
-        }
-        // As soon as the animation is complete, allow this function to return
-        // and the caller to continue. However, we still want to ensure the
-        // show animation does not happen until after `sessionChangeSwipeAnimationTime`,
-        // so save that in a promise for the show animation function to await
-        // upon.
-        tabpanels.addEventListener("transitionend", transitionEnd);
-        tabpanels.addEventListener("transitioncancel", transitionEnd);
-
-        tabpanels.setAttribute("session-change", "2");
-        this._slideOutWaitPromise = this._delayDOMChange(
-          resolveTimer.resolve,
-          sessionChangeSwipeAnimationTime
-        );
-      }, sessionChangePreSwipeTime);
-
+      // NOTE: this is a stub for what will eventually be a real animation. The
+      // old animation didn't make any sense given the lavender changes, so it
+      // was just removed, but we're leaving this here because the structure is
+      // still correct.
       return {
-        animationCompletePromise: resolveAnimation.promise,
-        timerCompletePromise: resolveTimer.promise,
+        animationCompletePromise: Promise.resolve(),
+        timerCompletePromise: Promise.resolve(),
       };
     },
 
@@ -6380,23 +6339,10 @@
      * @returns {Promise}
      */
     async doPinebuildSessionShowAnimation() {
-      if (
-        window.matchMedia("(prefers-reduced-motion)").matches ||
-        Services.prefs.getBoolPref("browser.pinebuild.lavender.enabled", false)
-      ) {
-        return;
-      }
-
-      const sessionChangePostSwipeTime = 750;
-      let tabpanels = this.tabpanels;
-
-      await new Promise(resolve => {
-        tabpanels.setAttribute("session-change", "3");
-        this._delayDOMChange(() => {
-          tabpanels.removeAttribute("session-change");
-          resolve();
-        }, sessionChangePostSwipeTime);
-      });
+      // NOTE: this is a stub for what will eventually be a real animation. The
+      // old animation didn't make any sense given the lavender changes, so it
+      // was just removed, but we're leaving this here because the structure is
+      // still correct.
     },
 
     /**

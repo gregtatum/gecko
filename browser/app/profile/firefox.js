@@ -270,7 +270,8 @@ pref("browser.shell.setDefaultPDFHandler", false);
 // 0 = blank, 1 = home (browser.startup.homepage), 2 = last visited page, 3 = resume previous browser session
 // The behavior of option 3 is detailed at: http://wiki.mozilla.org/Session_Restore
 pref("browser.startup.page",                1);
-pref("browser.startup.homepage",            "about:home");
+pref("browser.startup.homepage", "about:flow-reset", locked);
+pref("browser.startup.preXulSkeletonUI", true, locked);
 #ifdef NIGHTLY_BUILD
 pref("browser.startup.homepage.abouthome_cache.enabled", true);
 #else
@@ -2740,11 +2741,5 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.pinebuild.megaback.click-count-threshold", 5);
   pref("browser.pinebuild.snapshots.relevancy.enabled", false);
   pref("browser.pinebuild.downloads.enabled", false);
-
-  // When we turn this pref on, we'll also want to uncomment the following
-  // two pref values (and place them where appropriate)
-  pref("browser.pinebuild.lavender.enabled", false);
-  // pref("browser.startup.homepage", "about:flow-reset", locked);
-  // pref("browser.startup.preXulSkeletonUI", true, locked);
 
 #endif

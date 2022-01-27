@@ -636,14 +636,12 @@ header h2 {
   margin-inline-start: 4px;
 }
 
-@supports -moz-bool-pref("browser.pinebuild.lavender.enabled") {
-  /* NOTE: these border radii on the now/browse buttons are not final styles;
-     they're just a stopgap while lavender is being worked on. */
-  #companion-deck-button-now {
-    border-start-start-radius: 16px;
-  }
+/* NOTE: these border radii on the now/browse buttons are not final styles;
+   they're just a stopgap while lavender is being worked on. */
+#companion-deck-button-now {
+  border-start-start-radius: 16px;
+}
 
-  #companion-deck-button-browse {
-    border-start-end-radius: 16px;
-  }
+#companion-deck-button-browse {
+  border-start-end-radius: 16px;
 }

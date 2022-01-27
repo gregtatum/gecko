@@ -5,16 +5,11 @@
 :host {
   display: flex;
   align-items: center;
+  --light-bg-color: var(--colors-cafe-02);
 }
 
-@supports -moz-bool-pref("browser.pinebuild.lavender.enabled") {
-  :host {
-    --light-bg-color: var(--colors-cafe-02);
-  }
-
-  :host:-moz-lwtheme-brighttext {
-    --light-bg-color: var(--colors-cafe-02);
-  }
+:host:-moz-lwtheme-brighttext {
+  --light-bg-color: var(--colors-cafe-02);
 }
 
 #river {

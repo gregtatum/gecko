@@ -1735,24 +1735,6 @@ BrowserGlue.prototype = {
     }
   },
 
-  // Lavender needs these two prefs to function correctly. The homepage pref is
-  // changed because lavender wants to start up to about:flow-reset, and the
-  // skeleton UI pref because it allows us to do an early purple background
-  // instead of a white background, which would feel gross when replaced with
-  // the usual lavender purple.
-  _setLavenderSiblingPrefs() {
-    if (Services.prefs.getBoolPref("browser.pinebuild.lavender.enabled")) {
-      Services.prefs.setCharPref(
-        "browser.startup.homepage",
-        "about:flow-reset"
-      );
-      Services.prefs.setBoolPref("browser.startup.preXulSkeletonUI", true);
-    } else {
-      Services.prefs.clearUserPref("browser.startup.homepage");
-      Services.prefs.clearUserPref("browser.startup.preXulSkeletonUI");
-    }
-  },
-
   // the first browser window has finished initializing
   _onFirstWindowLoaded: function BG__onFirstWindowLoaded(aWindow) {
     AboutNewTab.init();
@@ -1906,13 +1888,6 @@ BrowserGlue.prototype = {
       PREF_DFPI_ENABLED_BY_DEFAULT,
       this._setDefaultCookieBehavior
     );
-
-    if (AppConstants.PINEBUILD) {
-      Services.prefs.addObserver(
-        "browser.pinebuild.lavender.enabled",
-        this._setLavenderSiblingPrefs
-      );
-    }
   },
 
   _updateAutoplayPref() {

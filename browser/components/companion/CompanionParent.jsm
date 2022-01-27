@@ -138,11 +138,7 @@ class CompanionParent extends JSWindowActorParent {
     SessionManager.on("sessions-updated", this._handleSessionUpdate);
     // Initialise the display of the last session UI.
     this.getSessionData();
-    if (
-      Services.prefs.getBoolPref("browser.pinebuild.lavender.enabled", false)
-    ) {
-      this.sessionSetAside();
-    }
+    this.sessionSetAside();
   }
 
   setUpGlobalHistoryDebuggingObservers() {

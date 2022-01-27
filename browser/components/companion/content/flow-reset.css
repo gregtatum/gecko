@@ -3,8 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 html {
-  background: url("chrome://browser/content/companion/flow-reset-bg.jpg") no-repeat center center fixed;
-  background-size: cover;
+  background: none;
 }
 
 html, body {
@@ -13,7 +12,6 @@ html, body {
 }
 
 body {
-  font-family: sans-serif;
   font-size: 13px;
   color: white;
   display: flex;
@@ -44,25 +42,16 @@ a {
 
 button {
   cursor: pointer;
+  background: #9982C9;
+  color: white;
+  border: none;
+  padding: 8px 14px;
 }
 
-@supports -moz-bool-pref("browser.pinebuild.lavender.enabled") {
-  html {
-    background: none;
-  }
+p {
+  text-shadow: 0px 2px 14px rgba(0,0,0, 0.6);
+}
 
-  button {
-    background: #9982C9;
-    color: white;
-    border: none;
-    padding: 8px 14px;
-  }
-
-  p {
-    text-shadow: 0px 2px 14px rgba(0,0,0, 0.6);
-  }
-
-  * {
-    font-family: "Inter", system-ui;
-  }
+* {
+  font-family: "Inter", system-ui;
 }
