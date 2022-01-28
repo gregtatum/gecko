@@ -191,7 +191,6 @@ body:not([browser-ready]) .browserStack > browser {
 }
 
 body[flow-reset] #pinebuild-back-button,
-body[flow-reset] #pinebuild-reload-button,
 body[flow-reset] #session-setaside-button,
 body[flow-reset] active-view-manager {
   display: none;
@@ -323,19 +322,6 @@ body[flow-reset] #urlbar-container {
   #pinebuild-forward-button {
     display: -moz-box;
   }
-}
-
-#pinebuild-reload-button {
-  list-style-image: url("chrome://global/skin/icons/reload.svg");
-}
-
-#pinebuild-stop-button {
-  list-style-image: url("chrome://global/skin/icons/close.svg");
-}
-
-#pinebuild-reload-button[displaystop],
-#pinebuild-reload-button:not([displaystop]) + #pinebuild-stop-button {
-  display: none;
 }
 
 @supports not -moz-bool-pref("browser.companion.snapshots") {

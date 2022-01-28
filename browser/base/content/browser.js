@@ -5804,6 +5804,9 @@ var CombinedStopReload = {
   // Try to initialize. Returns whether initialization was successful, which
   // may mean we had already initialized.
   ensureInitialized() {
+    if (AppConstants.PINEBUILD) {
+      return false;
+    }
     if (this._initialized) {
       return true;
     }
@@ -5813,11 +5816,6 @@ var CombinedStopReload = {
 
     let reload = document.getElementById("reload-button");
     let stop = document.getElementById("stop-button");
-
-    if (AppConstants.PINEBUILD) {
-      reload = document.getElementById("pinebuild-reload-button");
-      stop = document.getElementById("pinebuild-stop-button");
-    }
 
     // It's possible the stop/reload buttons have been moved to the palette.
     // They may be reinserted later, so we will retry initialization if/when
@@ -6961,8 +6959,6 @@ const nodeToTooltipMap = {
 };
 
 if (AppConstants.PINEBUILD) {
-  nodeToTooltipMap["pinebuild-reload-button"] = "reloadButton.tooltip";
-  nodeToTooltipMap["pinebuild-stop-button"] = "stopButton.tooltip";
   nodeToTooltipMap["session-setaside-button"] = "sessionSetAsideButton.tooltip";
 }
 
@@ -6985,11 +6981,6 @@ const nodeToShortcutMap = {
   "reader-mode-button": "key_toggleReaderMode",
   "reader-mode-button-icon": "key_toggleReaderMode",
 };
-
-if (AppConstants.PINEBUILD) {
-  nodeToShortcutMap["pinebuild-reload-button"] = "key_reload";
-  nodeToShortcutMap["pinebuild-stop-button"] = "key_stop";
-}
 
 const gDynamicTooltipCache = new Map();
 function GetDynamicShortcutTooltipText(nodeId) {
