@@ -2152,8 +2152,16 @@ BrowserGlue.prototype = {
       () => Normandy.uninit(),
       () => RFPHelper.uninit(),
       () => ASRouterNewTabHook.destroy(),
-      () => OnnxRuntimeService.uninit(),
-      () => PyodideService.uninit(),
+      () => {
+        if (AppConstants.PINEBUILD) {
+          OnnxRuntimeService.uninit();
+        }
+      },
+      () => {
+        if (AppConstants.PINEBUILD) {
+          PyodideService.uninit();
+        }
+      },
     ];
 
     tasks.push(
