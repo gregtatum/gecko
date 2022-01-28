@@ -13,6 +13,8 @@ import {
 import getViewSecurityState from "../siteSecurity.js";
 
 export default class ViewGroup extends MozLitElement {
+  #slidingWindowIndex;
+
   static get queries() {
     return {
       iconContainer: ".view-icon-container",
@@ -40,6 +42,7 @@ export default class ViewGroup extends MozLitElement {
     this.activeView = null;
     this.busyAnimationTimeout = null;
     this.addEventListener("click", this.#onClick);
+    this.#slidingWindowIndex = -1;
   }
 
   #onClick(event) {
@@ -111,19 +114,22 @@ export default class ViewGroup extends MozLitElement {
     } catch (e) {}
 
     let history = [];
-    for (let i = 0; i < this.views.length; ++i) {
+    let viewGroupHistory = this.computeHistoryVisualization(view);
+
+    for (let { view: historyView, size } of viewGroupHistory) {
       let classes = {
         history: true,
-        active: this.active && this.views[i] == this.activeView,
+        active: this.active && historyView == this.activeView,
       };
 
       history.push(
         html`
           <button
             class=${classMap(classes)}
-            .view=${this.views[i]}
+            .view=${historyView}
             @click=${this.#onHistoryClick}
-            title=${this.views[i].title}
+            title=${historyView.title}
+            size=${size}
           ></button>
         `
       );
@@ -223,6 +229,224 @@ export default class ViewGroup extends MozLitElement {
         viewA.iconURL == null ||
         viewB.iconURL == null)
     );
+  }
+
+  /**
+   * @typedef {object} ViewGroupHistory
+   *   An object that contains information to render a single history
+   *   button within the ViewGroup.
+   * @property {View} view
+   *   The View being represented by the button.
+   * @property {String} size
+   *   The size that the button should be.
+   */
+
+  /**
+   * Returns an array of ViewGroupHistory items that can then be
+   * used to show a visualization of history within the ViewGroup.
+   *
+   * Note that this function is stateful, as it stashes the array
+   * index of the sliding window it has computed around the selected
+   * view, since that will influence the visualization of history
+   * if the selected view changes.
+   *
+   * @param {View} view
+   *   The selected view.
+   * @returns {ViewGroupHistory[]}
+   */
+  computeHistoryVisualization(view) {
+    if (!view || !this.views.length) {
+      return [];
+    }
+
+    let selectedViewIndex = this.views.indexOf(view);
+
+    if (this.#slidingWindowIndex == -1) {
+      // We've never set a sliding window for this ViewGroup,
+      // so create a new one based on where view is in the views
+      // array.
+      this.#slidingWindowIndex = ViewGroup.#findSlidingWindowIndexCenteredAt(
+        this.views.length,
+        selectedViewIndex
+      );
+    } else if (selectedViewIndex < this.#slidingWindowIndex) {
+      // We have a pre-existing sliding window, and we need to figure
+      // out where to slide it. Let's deal with the harder cases first:
+      //
+      // Case 1: The view is before the sliding window.
+      //
+      // We slide the sliding window index so that it's offset by
+      // -1 from the selected view index, or just 0 if the selected
+      // index is 0.
+      this.#slidingWindowIndex = Math.max(0, selectedViewIndex - 1);
+    } else if (
+      selectedViewIndex >
+      this.#slidingWindowIndex + ViewGroup.SLIDING_WINDOW_WIDTH - 1
+    ) {
+      // Case 2: The view is after the sliding window.
+      //
+      // We slide the sliding window index so that it's offset from
+      // the selectedViewIndex by the SLIDING_WINDOW_PADDING, or to
+      // just the SLIDING_WINDOW_WIDTH at the end of the views array -
+      // whichever is smaller.
+      this.#slidingWindowIndex = Math.min(
+        this.views.length - ViewGroup.SLIDING_WINDOW_WIDTH,
+        selectedViewIndex - ViewGroup.SLIDING_WINDOW_PADDING - 1
+      );
+    } else if (selectedViewIndex == this.#slidingWindowIndex) {
+      // Case 3: The view is at the very start of the sliding window.
+      //
+      // We slide the sliding window -1 index, or to 0 if we're at the
+      // start of the views array.
+      this.#slidingWindowIndex = Math.max(0, this.#slidingWindowIndex - 1);
+    } else if (
+      selectedViewIndex ==
+      this.#slidingWindowIndex + ViewGroup.SLIDING_WINDOW_WIDTH - 1
+    ) {
+      // Case 4: The view is at the very end of the sliding window
+      //
+      // We slide the sliding window +1 index, or to the sliding window
+      // width at the end of the views array - whichever is smaller.
+      this.#slidingWindowIndex = Math.min(
+        this.views.length - ViewGroup.SLIDING_WINDOW_WIDTH,
+        this.#slidingWindowIndex + 1
+      );
+    }
+    // else Case 5: The view is within the sliding window and the window doesn't
+    // need to be moved.
+
+    let slidingWindowEndIndex = Math.min(
+      this.#slidingWindowIndex + ViewGroup.SLIDING_WINDOW_WIDTH - 1,
+      this.views.length - 1
+    );
+    let viewGroupHistory = [];
+
+    // Now, for each item in the sliding window, default to styling them
+    // as large.
+    for (
+      let index = this.#slidingWindowIndex;
+      index <= slidingWindowEndIndex;
+      ++index
+    ) {
+      viewGroupHistory.push({
+        view: this.views[index],
+        size: "large",
+      });
+    }
+
+    // If there are any items before the sliding window, set the styling
+    // of the first view in the window to medium, and then add an extra
+    // history item for the previous view styled to small.
+    if (this.#slidingWindowIndex > 0) {
+      viewGroupHistory[0].size = "medium";
+      viewGroupHistory.unshift({
+        view: this.views[this.#slidingWindowIndex - 1],
+        size: "small",
+      });
+    }
+
+    // Similarly, if there are any items after the sliding window, set
+    // the styling of the last item in the window to medium, and then add
+    // an extra history item for the next view styled to small.
+    if (slidingWindowEndIndex < this.views.length - 1) {
+      viewGroupHistory[viewGroupHistory.length - 1].size = "medium";
+      viewGroupHistory.push({
+        view: this.views[slidingWindowEndIndex + 1],
+        size: "small",
+      });
+    }
+
+    return viewGroupHistory;
+  }
+
+  /**
+   * Given an array length and an index, this will return the starting
+   * index of a "sliding window" slice of the array centered around
+   * the passed in index. This uses the SLIDING_WINDOW_PADDING and
+   * SLIDING_WINDOW_WIDTH static values to define the sliding window
+   * it's calculating.
+   *
+   * So, for example, suppose we have these values:
+   *
+   * SLIDING_WINDOW_PADDING = 2
+   * SLIDING_WINDOW_WIDTH = 5
+   *
+   * and then:
+   *
+   * arrayLength = 12
+   * index = 1
+   *
+   * The sliding window index returned should be 0 since the passed index
+   * is SLIDING_WINDOW_PADDING indexes away from 0.
+   *
+   * Here's a visual representation, with curly braces around the sliding
+   * window, where x represents an array item and X represents the array
+   * item at the passed index.
+   *
+   * [{x,X,x,x,x},x,x,x,x,x,x,x]
+   *
+   *
+   * Let's do another example with these values:
+   *
+   * arrayLength = 12
+   * index = 4
+   *
+   * The sliding window index returned should then be 2.
+   *
+   * Here's a visual representation, with curly braces around the sliding
+   * window.
+   *
+   * [x,x,{x,x,X,x,x},x,x,x,x,x]
+   *
+   *
+   * One more example with these values:
+   *
+   * arrayLength = 12
+   * index = 11
+   *
+   * The sliding window index returned should be 7.
+   *
+   * Here's a visual representation, with curly braces around the sliding
+   * window.
+   *
+   * [x,x,x,x,x,x,x,{x,x,x,x,X}]
+   *
+   * @param {number} arrayLength
+   *   The length of the array to find the sliding window index for.
+   * @param {number} index
+   *   The index of the selected item within the array to try to fit
+   *   the sliding window around.
+   * @return {number}
+   */
+  static #findSlidingWindowIndexCenteredAt(arrayLength, index) {
+    if (
+      arrayLength <= ViewGroup.SLIDING_WINDOW_WIDTH ||
+      index <= ViewGroup.SLIDING_WINDOW_PADDING
+    ) {
+      return 0;
+    }
+
+    if (index >= arrayLength - ViewGroup.SLIDING_WINDOW_PADDING) {
+      return arrayLength - ViewGroup.SLIDING_WINDOW_WIDTH;
+    }
+
+    return index - ViewGroup.SLIDING_WINDOW_PADDING;
+  }
+
+  /**
+   * Returns the number of breadcrumbs that should ideally exist
+   * in the sliding window, assuming the selected breadcrumb is
+   * centered in the sliding window.
+   */
+  static get SLIDING_WINDOW_PADDING() {
+    return 2;
+  }
+
+  /**
+   * Returns the total expected width of the sliding window.
+   */
+  static get SLIDING_WINDOW_WIDTH() {
+    return ViewGroup.SLIDING_WINDOW_PADDING * 2 + 1;
   }
 }
 

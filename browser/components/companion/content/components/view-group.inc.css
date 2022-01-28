@@ -193,33 +193,42 @@
   border: none;
   padding: 0;
   background-color: transparent;
-  background-image: url("resource://usercontext-content/circle.svg");
   background-repeat: no-repeat;
-  background-size: 6px 6px;
   background-position: center center;
   background-repeat: no-repeat;
-  width: 6px;
-  height: 6px;
-  -moz-context-properties: fill;
-  fill: #8F8F9D;
+  -moz-context-properties: stroke;
+  stroke: #AFAFBA;
   cursor: pointer;
+  height: 12px;
+}
+
+.view-history > .history[size="large"] {
+  background-image: url("chrome://browser/content/companion/breadcrumb.svg#large");
+  width: 16px;
+}
+
+.view-history > .history[size="medium"] {
+  background-image: url("chrome://browser/content/companion/breadcrumb.svg#medium");
+  width: 8px;
+}
+
+.view-history > .history[size="small"] {
+  background-image: url("chrome://browser/content/companion/breadcrumb.svg#small");
+  width: 4px;
 }
 
 .view-history > .history:focus-visible {
-  outline: 1px solid var(--focus-outline-color);
+  outline: 2px solid var(--focus-outline-color);
   outline-offset: 1px;
-  border-radius: 50%;
 }
 
 .view-history > .history:not(:first-of-type) {
-  margin-inline-start: 4px;
+  margin-inline-start: 6px;
 }
 
+.view-history > .history:hover,
 .view-history > .active {
-  fill: var(--button-primary-bgcolor);
-  background-size: 8px 8px;
-  width: 8px;
-  height: 8px;
+  stroke: var(--button-primary-bgcolor);
 }
 
 .page-action-button[hidden] {

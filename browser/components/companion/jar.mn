@@ -4,6 +4,7 @@
 
 browser.jar:
     content/browser/companion/breakTime.svg (content/breakTime.svg)
+    content/browser/companion/breadcrumb.svg (content/breadcrumb.svg)
     content/browser/companion/browse.js (content/browse.js)
 *   content/browser/companion/browser.css (content/browser.css)
     content/browser/companion/calendar.js (content/calendar.js)

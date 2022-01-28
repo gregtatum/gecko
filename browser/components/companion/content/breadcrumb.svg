@@ -1,0 +1,17 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<!--
+  This image defines three versions of the breadcrumb:
+  #large = 16 x 4
+  #medium = 8 x 4
+  #small = 4 x 4
+-->
+<svg height="4" xmlns="http://www.w3.org/2000/svg" stroke="context-stroke">
+  <view id="large" viewBox="0 0 16 4"/>
+  <path stroke-width="4" stroke-linecap="round" d="M2 2h12"/>
+  <view id="medium" viewBox="0 4 8 4"/>
+  <path stroke-width="4" stroke-linecap="round" d="M2 6h4"/>
+  <view id="small" viewBox="0 8 4 4"/>
+  <path stroke-width="4" stroke-linecap="round" d="M2 10h0"/>
+</svg>
