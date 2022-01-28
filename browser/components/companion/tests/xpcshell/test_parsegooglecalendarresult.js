@@ -7,6 +7,9 @@ const { parseGoogleCalendarResult } = ChromeUtils.import(
   "resource:///modules/OnlineServicesHelper.jsm"
 );
 
+const htmlLink = "https://calendar.google.com/calendar/somekey";
+const creatorEmail = "creator@example.com";
+
 const GOOGLE_TEST = [
   {
     result: {
@@ -14,7 +17,7 @@ const GOOGLE_TEST = [
         email: "organizer@example.com",
       },
       creator: {
-        email: "creator@example.com",
+        email: creatorEmail,
       },
       attendees: [
         {
@@ -34,6 +37,7 @@ const GOOGLE_TEST = [
           responseStatus: "accepted",
         },
       ],
+      htmlLink,
     },
     test_result: {
       attendees: [
@@ -53,14 +57,16 @@ const GOOGLE_TEST = [
           email: "organizer@example.com",
         },
       ],
+      url: `${htmlLink}?authuser=${encodeURIComponent(creatorEmail)}`,
     },
   },
 ];
 
 add_task(async function test_parseGoogleCalendarResult() {
   for (let test of GOOGLE_TEST) {
-    let event = parseGoogleCalendarResult(test.result, "creator@example.com");
+    let event = parseGoogleCalendarResult(test.result, creatorEmail);
     deepEqual(event.attendees, test.test_result.attendees);
     equal(event.creator.isSelf, true);
+    equal(event.url, test.test_result.url);
   }
 });
