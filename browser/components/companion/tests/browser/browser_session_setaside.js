@@ -66,6 +66,8 @@ add_task(async function setup() {
     );
     Assert.equal(currentView, "now", "Companion has switched to now tab");
 
+    Assert.ok(isHidden(win, "pinebuild-back-button"), "Back button hidden");
+    Assert.ok(isHidden(win, "pinebuild-reload-button"), "Reload button hidden");
     Assert.ok(
       isHidden(win, "session-setaside-button"),
       "Setaside button hidden"
@@ -87,8 +89,14 @@ add_task(async function setup() {
     let element = await UrlbarTestUtils.waitForAutocompleteResultAt(win, 0);
     EventUtils.synthesizeMouseAtCenter(element, {}, win);
 
-    BrowserTestUtils.waitForCondition(
-      () => !isHidden(win, "session-setaside-button")
+    await BrowserTestUtils.waitForCondition(
+      () => !isHidden(win, "pinebuild-reload-button")
+    );
+    Assert.ok(!isHidden(win, "pinebuild-back-button"), "Back button shown");
+    Assert.ok(!isHidden(win, "pinebuild-reload-button"), "Reload button shown");
+    Assert.ok(
+      !isHidden(win, "session-setaside-button"),
+      "Setaside button shown"
     );
   }, win);
 });
