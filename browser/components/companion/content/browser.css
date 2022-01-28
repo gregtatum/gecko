@@ -828,6 +828,11 @@ body[flow-reset] companion-manager {
   }
 }
 
+:root[chromehidden~="toolbar"] #pinebuild-toolbar,
+:root[chromehidden~="toolbar"] #session-setaside-button {
+  display: none;
+}
+
 toolbar .toolbarbutton-1 > .toolbarbutton-icon {
   width: 32px;
   height: 32px;

@@ -6,6 +6,10 @@
   display: none;
 }
 
+:root[chromehidden~="toolbar"] companion-manager {
+  display: none;
+}
+
 :root[companion][inDOMFullscreen] companion-manager {
   visibility: collapse;
 }
