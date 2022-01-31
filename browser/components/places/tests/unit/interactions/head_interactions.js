@@ -14,6 +14,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   Services: "resource://gre/modules/Services.jsm",
   SnapshotGroups: "resource:///modules/SnapshotGroups.jsm",
   Snapshots: "resource:///modules/Snapshots.jsm",
+  SnapshotMonitor: "resource:///modules/SnapshotMonitor.jsm",
   SnapshotScorer: "resource:///modules/SnapshotScorer.jsm",
   SnapshotSelector: "resource:///modules/SnapshotSelector.jsm",
   TestUtils: "resource://testing-common/TestUtils.jsm",
@@ -318,6 +319,13 @@ function assertSnapshotGroup(group, expected) {
       group.snapshotCount,
       expected.snapshotCount,
       "Should have the expected snapshotCount"
+    );
+  }
+  if (expected.lastAccessed != null) {
+    Assert.equal(
+      group.lastAccessed,
+      expected.lastAccessed,
+      "Should have the expected lastAccessed value"
     );
   }
 }

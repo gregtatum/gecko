@@ -19,11 +19,13 @@ JAR_MANIFESTS += ["jar.mn"]
 
 EXTRA_JS_MODULES += [
     "CommonNames.jsm",
+    "DomainGroupBuilder.jsm",
     "Interactions.jsm",
     "InteractionsBlocklist.jsm",
     "PlacesUIUtils.jsm",
     "SessionManager.jsm",
     "SnapshotGroups.jsm",
+    "SnapshotMonitor.jsm",
     "Snapshots.jsm",
     "SnapshotScorer.jsm",
     "SnapshotSelector.jsm",

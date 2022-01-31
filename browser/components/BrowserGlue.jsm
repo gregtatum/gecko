@@ -88,6 +88,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
   ShellService: "resource:///modules/ShellService.jsm",
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.jsm",
+  SnapshotMonitor: "resource:///modules/SnapshotMonitor.jsm",
   TabCrashHandler: "resource:///modules/ContentCrashHandlers.jsm",
   TabUnloader: "resource:///modules/TabUnloader.jsm",
   TelemetryUtils: "resource://gre/modules/TelemetryUtils.jsm",
@@ -1829,6 +1830,8 @@ BrowserGlue.prototype = {
     PageActions.init();
 
     DoHController.init();
+
+    SnapshotMonitor.init();
 
     if (AppConstants.PINEBUILD) {
       SessionManager.init();

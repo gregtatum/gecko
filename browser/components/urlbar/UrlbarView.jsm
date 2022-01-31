@@ -1773,7 +1773,7 @@ class UrlbarView {
           if (row.result.providerName == "RecentSearches") {
             return { id: "urlbar-group-recent-searches" };
           }
-          // Show "{ $engine } Suggestions" if it's not the first label.
+          // Show "{ $engine } suggestions" if it's not the first label.
           if (currentLabel && row.result.payload.suggestion) {
             let engineName =
               row.result.payload.engine || Services.search.defaultEngine.name;
