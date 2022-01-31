@@ -107,25 +107,29 @@ const DEFAULT_WELCOME_CONTENT = {
         },
         subtitle: {
           string_id: "onboarding-live-language-subtitle",
+          // These need to be looked up:
           args: {
-            // These need to be looked up.
-            systemLanguage: "",
-            appLanguage: "",
+            systemLanguage: null,
+            appLanguage: null,
           },
         },
-        primary_button: {
+        tiles: {
+          type: "language",
           label: {
-            loading_string_id: "onboarding-live-language-primary-button-label-loading",
             string_id: "onboarding-live-language-primary-button-label",
+            // These need to be looked up:
             args: {
-              systemLanguage: "", // This need to be looked up.
+              systemLanguage: null,
             },
           },
           action: {
             type: "SWITCH_TO_OS_LANGUAGE",
-            data: {},
+            data: {
+              requestSystemLocales: null,
+            },
             navigate: true,
           },
+          langPack: null,
         },
         secondary_button: {
           label: {
@@ -412,7 +416,9 @@ function getAppAndSystemLocaleInfo() {
  * @returns {LangPack | null}
  */
 async function negotiateLangPackForLanguageMismatch(localeInfo) {
-  console.log("AboutWelcomeDefaults.jsm - negotiateLangPackForLanguageMismatch");
+  console.log(
+    "AboutWelcomeDefaults.jsm - negotiateLangPackForLanguageMismatch"
+  );
 
   /**
    * Fetch the available langpacks from AMO.
@@ -423,7 +429,7 @@ async function negotiateLangPackForLanguageMismatch(localeInfo) {
 
   try {
     availableLangpacks = await AddonRepository.getAvailableLangpacks();
-  } catch (e) {
+  } catch (error) {
     Cu.reportError(
       `Failed to get the list of available language packs: ${error?.message}`
     );
@@ -587,14 +593,13 @@ async function prepareContentForReact(content) {
       const screen = content.screens.find(
         ({ id }) => id === "AW_LANGUAGE_MISMATCH"
       );
-      const { subtitle, primary_button } = screen.content;
+      const { subtitle, tiles } = screen.content;
 
       subtitle.args.systemLanguage = systemLanguage;
       subtitle.args.appLanguage = appLanguage;
-      primary_button.label.args.systemLanguage = systemLanguage;
-
-      primary_button.action.data.langPack = langPack;
-      primary_button.action.data.requestSystemLocales = [
+      tiles.label.args.systemLanguage = systemLanguage;
+      tiles.langPack = langPack;
+      tiles.action.data.requestSystemLocales = [
         langPack.target_locale,
         localeInfo.appLocaleRaw,
       ];

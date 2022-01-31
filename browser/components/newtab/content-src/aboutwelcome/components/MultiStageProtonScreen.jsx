@@ -5,6 +5,7 @@
 import React from "react";
 import { Localized } from "./MSLocalized";
 import { Colorways } from "./Colorways";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Themes } from "./Themes";
 import { SecondaryCTA, StepsIndicator } from "./MultiStageAboutWelcome";
 
@@ -132,6 +133,13 @@ export class MultiStageProtonScreen extends React.PureComponent {
                   content={content}
                   activeTheme={this.props.activeTheme}
                   handleAction={this.props.handleAction}
+                />
+              ) : null}
+              {content.tiles?.type === "language" ? (
+                <LanguageSwitcher
+                  content={content}
+                  langPackInstalled={this.props.langPackInstalled}
+                  navigate={this.props.navigate}
                 />
               ) : null}
               <div>

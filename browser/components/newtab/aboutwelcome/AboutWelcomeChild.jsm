@@ -162,6 +162,10 @@ class AboutWelcomeChild extends JSWindowActorChild {
     Cu.exportFunction(this.AWInstallLangPack.bind(this), window, {
       defineAs: "AWInstallLangPack",
     });
+
+    Cu.exportFunction(this.AWSetRequestedLocales.bind(this), window, {
+      defineAs: "AWSetRequestedLocales",
+    });
   }
 
   /**
@@ -274,8 +278,16 @@ class AboutWelcomeChild extends JSWindowActorChild {
   }
 
   AWInstallLangPack(langPack) {
+    dump("!!! AWInstallLangPack - AboutWelcomeChild\n");
     return this.wrapPromise(
       this.sendQuery("AWPage:INSTALL_LANGPACK", langPack)
+    );
+  }
+
+  AWSetRequestedLocales(requestSystemLocales) {
+    dump("!!! AWSetRequestedLocales - AboutWelcomeChild\n");
+    return this.wrapPromise(
+      this.sendQuery("AWPage:SET_REQUESTED_LOCALES", requestSystemLocales)
     );
   }
 

@@ -92,6 +92,7 @@ export class ReturnToAMO extends React.PureComponent {
           iconURL={this.props.iconURL}
           addonName={this.props.name}
           handleAction={this.handleAction}
+          navigate={this.props.navigate}
           addExtension={this.onClickAddExtension}
         />
       </div>

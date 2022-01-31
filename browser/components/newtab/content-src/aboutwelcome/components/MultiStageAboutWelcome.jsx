@@ -142,12 +142,16 @@ export const MultiStageAboutWelcome = props => {
   // Pre-emptively kick off installing the desired langpack.
   const [langPackInstalled, setLangPackInstalled] = useState(null);
   useEffect(() => {
-    const screen = props.screens.find(screen => screen.id === "AW_LANGUAGE_MISMATCH");
+    const screen = props.screens.find(
+      screen => screen.id === "AW_LANGUAGE_MISMATCH"
+    );
     if (screen) {
       // There is a language mismatch, pre-emptively install the desired language pack.
-      setLangPackInstalled(window.AWInstallLangPack(primary_button.action.data.langPack));
+      setLangPackInstalled(
+        window.AWInstallLangPack(screen.content.tiles.langPack)
+      );
     }
-  });
+  }, []);
 
   return (
     <React.Fragment>
@@ -306,6 +310,8 @@ export class WelcomeScreen extends React.PureComponent {
         autoClose={this.props.autoClose}
         activeTheme={this.props.activeTheme}
         totalNumberOfScreens={this.props.totalNumberOfScreens - 1}
+        langPackInstalled={this.props.langPackInstalled}
+        navigate={this.props.navigate}
         handleAction={this.handleAction}
       />
     );

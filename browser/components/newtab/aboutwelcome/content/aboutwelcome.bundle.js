@@ -116,7 +116,8 @@ class AboutWelcome extends react__WEBPACK_IMPORTED_MODULE_0___default.a.PureComp
   constructor(props) {
     super(props);
     this.state = {
-      metricsFlowUri: null
+      metricsFlowUri: null,
+      installedLangPack: null
     };
     this.fetchFxAFlowUri = this.fetchFxAFlowUri.bind(this);
   }
@@ -403,7 +404,17 @@ const MultiStageAboutWelcome = props => {
         showImportable
       });
     })();
-  }, [useImportable, region]);
+  }, [useImportable, region]); // Pre-emptively kick off installing the desired langpack.
+
+  const [langPackInstalled, setLangPackInstalled] = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(null);
+  Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
+    const screen = props.screens.find(screen => screen.id === "AW_LANGUAGE_MISMATCH");
+
+    if (screen) {
+      // There is a language mismatch, pre-emptively install the desired language pack.
+      setLangPackInstalled(window.AWInstallLangPack(screen.content.tiles.langPack));
+    }
+  }, []);
   return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(react__WEBPACK_IMPORTED_MODULE_0___default.a.Fragment, null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
     className: `outer-wrapper onboardingContainer proton transition-${transition}`,
     style: {
@@ -424,7 +435,8 @@ const MultiStageAboutWelcome = props => {
       flowParams: flowParams,
       activeTheme: activeTheme,
       initialTheme: initialTheme,
-      setActiveTheme: setActiveTheme
+      setActiveTheme: setActiveTheme,
+      langPackInstalled: langPackInstalled
     }) : null;
   })));
 };
@@ -521,6 +533,11 @@ class WelcomeScreen extends react__WEBPACK_IMPORTED_MODULE_0___default.a.PureCom
     if (["OPEN_URL", "SHOW_FIREFOX_ACCOUNTS"].includes(action.type)) {
       this.handleOpenURL(action, props.flowParams, props.UTMTerm);
     } else if (action.type) {
+      if (action.type === "SWITCH_TO_OS_LANGUAGE") {
+        // TODO - Should this pause be reflected in the UI?
+        await this.props.langPackInstalled;
+      }
+
       _lib_aboutwelcome_utils__WEBPACK_IMPORTED_MODULE_2__["AboutWelcomeUtils"].handleUserAction(action); // Wait until migration closes to complete the action
 
       if (action.type === "SHOW_MIGRATION_WIZARD") {
@@ -549,6 +566,8 @@ class WelcomeScreen extends react__WEBPACK_IMPORTED_MODULE_0___default.a.PureCom
       autoClose: this.props.autoClose,
       activeTheme: this.props.activeTheme,
       totalNumberOfScreens: this.props.totalNumberOfScreens - 1,
+      langPackInstalled: this.props.langPackInstalled,
+      navigate: this.props.navigate,
       handleAction: this.handleAction
     });
   }
@@ -763,11 +782,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _MSLocalized__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(4);
 /* harmony import */ var _Colorways__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(7);
-/* harmony import */ var _Themes__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(8);
-/* harmony import */ var _MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(3);
+/* harmony import */ var _LanguageSwitcher__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(11);
+/* harmony import */ var _Themes__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(8);
+/* harmony import */ var _MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(3);
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 
 
 
@@ -779,6 +800,8 @@ class MultiStageProtonScreen extends react__WEBPACK_IMPORTED_MODULE_0___default.
   }
 
   render() {
+    var _content$tiles;
+
     const {
       autoClose,
       content,
@@ -829,7 +852,7 @@ class MultiStageProtonScreen extends react__WEBPACK_IMPORTED_MODULE_0___default.
       className: "attrib-text"
     })) : null) : null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", {
       className: "section-main"
-    }, content.secondary_button_top ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_4__["SecondaryCTA"], {
+    }, content.secondary_button_top ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_5__["SecondaryCTA"], {
       content: content,
       handleAction: this.props.handleAction,
       position: "top"
@@ -873,17 +896,21 @@ class MultiStageProtonScreen extends react__WEBPACK_IMPORTED_MODULE_0___default.
       content: content,
       activeTheme: this.props.activeTheme,
       handleAction: this.props.handleAction
-    }) : null, content.tiles && content.tiles.type === "theme" && content.tiles.data ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_Themes__WEBPACK_IMPORTED_MODULE_3__["Themes"], {
+    }) : null, content.tiles && content.tiles.type === "theme" && content.tiles.data ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_Themes__WEBPACK_IMPORTED_MODULE_4__["Themes"], {
       content: content,
       activeTheme: this.props.activeTheme,
       handleAction: this.props.handleAction
+    }) : null, ((_content$tiles = content.tiles) === null || _content$tiles === void 0 ? void 0 : _content$tiles.type) === "language" ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_LanguageSwitcher__WEBPACK_IMPORTED_MODULE_3__["LanguageSwitcher"], {
+      content: content,
+      langPackInstalled: this.props.langPackInstalled,
+      navigate: this.props.navigate
     }) : null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_MSLocalized__WEBPACK_IMPORTED_MODULE_1__["Localized"], {
       text: content.primary_button ? content.primary_button.label : null
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("button", {
       className: "primary",
       value: "primary_button",
       onClick: this.props.handleAction
-    })), content.secondary_button ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_4__["SecondaryCTA"], {
+    })), content.secondary_button ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_5__["SecondaryCTA"], {
       content: content,
       handleAction: this.props.handleAction
     }) : null)), !(isWelcomeScreen || autoClose && isLastScreen) ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("nav", {
@@ -893,7 +920,7 @@ class MultiStageProtonScreen extends react__WEBPACK_IMPORTED_MODULE_0___default.
         current: this.props.order,
         total
       })
-    }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("br", null), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("p", null), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_4__["StepsIndicator"], {
+    }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("br", null), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("p", null), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_5__["StepsIndicator"], {
       order: this.props.order - 1,
       totalNumberOfScreens: total
     })) : null)));
@@ -1303,12 +1330,75 @@ class ReturnToAMO extends react__WEBPACK_IMPORTED_MODULE_0___default.a.PureCompo
       iconURL: this.props.iconURL,
       addonName: this.props.name,
       handleAction: this.handleAction,
+      navigate: this.props.navigate,
       addExtension: this.onClickAddExtension
     }));
   }
 
 }
 ReturnToAMO.defaultProps = _lib_aboutwelcome_utils__WEBPACK_IMPORTED_MODULE_1__["DEFAULT_RTAMO_CONTENT"];
+
+/***/ }),
+/* 11 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "LanguageSwitcher", function() { return LanguageSwitcher; });
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(1);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _MSLocalized__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(4);
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function LanguageSwitcher(props) {
+  const {
+    content,
+    langPackInstalled,
+    navigate
+  } = props;
+  /**
+   * @type {"installing" | "installed" | "error"}
+   */
+
+  const [langPackState, setLangpackState] = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])("installing"); // Determine the status of the langpack installation.
+
+  Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(async () => {
+    try {
+      await langPackInstalled;
+      setLangpackState("installed");
+    } catch (error) {
+      console.error("Failed to install langpack.", error);
+      setLangpackState("error");
+    }
+  }, []);
+  const [isAwaitingLangpack, setIsAwaitingLangpack] = Object(react__WEBPACK_IMPORTED_MODULE_0__["useState"])(false); // Determine the status of the langpack installation.
+
+  Object(react__WEBPACK_IMPORTED_MODULE_0__["useEffect"])(() => {
+    if (isAwaitingLangpack && langPackState !== "installing") {
+      AWSetRequestedLocales(content.tiles.requestSystemLocales);
+      requestAnimationFrame(() => {
+        navigate();
+      });
+    }
+  }, [isAwaitingLangpack, langPackState]);
+  return isAwaitingLangpack ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", null, "Downloading the language pack\u2026"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setIsAwaitingLangpack(false);
+    }
+  }, "Cancel"))) : /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_MSLocalized__WEBPACK_IMPORTED_MODULE_1__["Localized"], {
+    text: content.tiles.label
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement("button", {
+    className: "primary",
+    value: "primary_button",
+    onClick: () => {
+      setIsAwaitingLangpack(true);
+    }
+  })));
+}
 
 /***/ })
 /******/ ]);

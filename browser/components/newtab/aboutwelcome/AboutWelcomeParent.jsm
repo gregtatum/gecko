@@ -25,6 +25,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   PromiseUtils: "resource://gre/modules/PromiseUtils.jsm",
   Region: "resource://gre/modules/Region.jsm",
   ShellService: "resource:///modules/ShellService.jsm",
+  setTimeout: "resource://gre/modules/Timer.jsm",
 });
 
 XPCOMUtils.defineLazyGetter(this, "log", () => {
@@ -113,6 +114,9 @@ async function getImportableSites() {
   return sites;
 }
 
+// If a langpack is being installed, allow blocking on that.
+let installingLangpack = null;
+
 /**
  * @param {{
  *  target_locale: string,
@@ -122,7 +126,15 @@ async function getImportableSites() {
  * @returns {boolean} Success or failure.
  */
 async function installLangpack(langPack) {
-  console.log("AboutWelcomeParent.jsm - installLangpack", langPack);
+  dump(
+    `AboutWelcomeParent.jsm - installLangpack ${JSON.stringify(langPack)}\n`
+  );
+  let countdown = 10;
+  for (let i = countdown; i > 0; i--) {
+    dump(`AboutWelcomeParent.jsm - countdown ${i}\n`);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  dump("AboutWelcomeParent.jsm - it's go time\n");
   let install;
   try {
     install = await AddonManager.getInstallForURL(langPack.url, {
@@ -340,8 +352,17 @@ class AboutWelcomeParent extends JSWindowActorParent {
           })
         );
       case "AWPage:INSTALL_LANGPACK":
-        return installLangpack(data);
-      default:
+        if (installingLangpack) {
+          return installingLangpack;
+        }
+        // Guard against a page refresh where this event could fire twice.
+        installingLangpack = installLangpack(data);
+        const result = await installingLangpack;
+        installingLangpack = null;
+        return result;
+      case "AWPage:INSTALL_LANGPACK":
+        Services.locales.requestedLocales = data;
+        default:
         log.debug(`Unexpected event ${type} was not handled.`);
     }
 
