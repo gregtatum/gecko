@@ -33,8 +33,6 @@ FINAL_TARGET_FILES.actors += [
     "HistoryCarouselParent.jsm",
     "ORTChild.jsm",
     "ORTParent.jsm",
-    "PageWireframeChild.jsm",
-    "PageWireframeParent.jsm",
     "PyodideChild.jsm",
     "PyodideParent.jsm",
     "TopLevelNavigationDelegateChild.jsm",

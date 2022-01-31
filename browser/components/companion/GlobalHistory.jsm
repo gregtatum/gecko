@@ -246,38 +246,6 @@ class InternalView {
   /** @type {Number} **/
   #creationTime;
 
-  /**
-   * @typedef {object} WireframeRect
-   *   An object representing a single rectangle captured via
-   *   document.getWireframe().
-   * @property {string} color
-   *   The color value of the rectangle in rgb format. Example: "rgb(255,0,0)"
-   * @property {DOMRectReadOnly} rect
-   *   The rectangle geometry.
-   * @property {string} type
-   *   The type of the rectangle. Currently, these should only be "text"
-   *   or "background".
-   */
-
-  /**
-   * @typedef {object} Wireframe
-   *   An object that contains enough information to generate a low-fidelity
-   *   visual representation of a webpage.
-   * @property {string} canvasBackground
-   *   The color value of the page background represented as a string in
-   *   the rgb format. Example: "rgb(255,0,0)".
-   * @property {WireframeRect[]} rects
-   *   The rectangles that were visible in the viewport at the time of
-   *   wireframe capture. These are ordered from back to front.
-   * @property {number} width
-   *   The width of the content area at the time of wireframe capture.
-   * @property {number} height
-   *   The height of the content area at the time of wireframe capture.
-   */
-
-  /** @type Wireframe **/
-  #wireframe;
-
   /** @type {String} **/
   #title;
   /** @type {String} **/
@@ -323,7 +291,6 @@ class InternalView {
       {}
     );
     this.#creationTime = Cu.now();
-    this.#wireframe = null;
 
     InternalView.viewMap.set(this.#view, this);
 
@@ -491,10 +458,6 @@ class InternalView {
     this.browserKey = undefined;
   }
 
-  updateWireframe(wireframe) {
-    this.#wireframe = wireframe;
-  }
-
   setTitle(title) {
     this.#title = title;
   }
@@ -592,10 +555,6 @@ class InternalView {
    */
   get creationTime() {
     return this.#creationTime;
-  }
-
-  get wireframe() {
-    return this.#wireframe;
   }
 
   toString() {
@@ -2364,6 +2323,19 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
+   * @typedef {object} WireframeData
+   *   An object that contains enough information to generate a low-fidelity
+   *   visual representation of a webpage.
+   * @property {Wireframe} wireframe
+   *   A wireframe collected from a document. See Document.webidl for the
+   *   full structure.
+   * @property {number} width
+   *   The width of the content area at the time of wireframe capture.
+   * @property {number} height
+   *   The height of the content area at the time of wireframe capture.
+   */
+
+  /**
    * @typedef {object} HistoryCarouselData
    *   An object that contains information to render a single View in the
    *   history carousel.
@@ -2373,8 +2345,9 @@ class GlobalHistory extends EventTarget {
    *   The View's URL as a string.
    * @property {String} iconURL
    *   The View's favicon URL as a string.
-   * @property {Blob} image
-   *   A viewport screenshot of the View as a blob.
+   * @property {Blob|WireframeData} image
+   *   A visual representation of the view - either a Blob image, or a
+   *   wireframe.
    */
 
   /**
@@ -2459,27 +2432,29 @@ class GlobalHistory extends EventTarget {
       image: null,
     };
 
+    let browser = internalView.getBrowser();
+
     if (internalView.state == "open") {
-      let blob = await PageThumbs.captureToBlob(internalView.getBrowser(), {
+      let blob = await PageThumbs.captureToBlob(browser, {
         fullScale: true,
         fullViewport: true,
       });
       result.image = { blob };
     } else {
-      result.image = { wireframe: internalView.wireframe };
+      let rect = this.#window.windowUtils.getBoundsWithoutFlushing(browser);
+      let historyIndex = getHistoryIndex(browser, internalView.historyId);
+      let historyEntry = browser.browsingContext.sessionHistory.getEntryAtIndex(
+        historyIndex
+      );
+      let wireframe = historyEntry.wireframe;
+      result.image = {
+        wireframe,
+        width: rect.width,
+        height: rect.height,
+      };
     }
 
     return result;
-  }
-
-  updateWireframe(browser, wireframe) {
-    let entry = getCurrentEntry(browser);
-    let internalView = this.#historyViews.get(entry.ID);
-    if (!internalView) {
-      return;
-    }
-
-    internalView.updateWireframe(wireframe);
   }
 }
 

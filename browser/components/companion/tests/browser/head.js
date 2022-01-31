@@ -1047,7 +1047,7 @@ var PinebuildTestUtils = {
           pinned,
           hasBlob:
             !pinned &&
-            p.querySelector(".preview-image").src.startsWith("blob:"),
+            p.querySelector(".preview-image").src?.startsWith("blob:"),
           hasWireframe: !pinned && !!p.querySelector("svg"),
           index: p.index,
         };

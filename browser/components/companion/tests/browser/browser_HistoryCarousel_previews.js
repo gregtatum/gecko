@@ -81,10 +81,11 @@ add_task(async function preview_construction() {
         preview.hasBlob,
         "A blob image should be set on the preview for the current index."
       );
-    } else {
-      // MR2-1390 - These other views don't have wireframes set up for them
-      // yet.
-      todo(preview.hasWireframe, "A wireframe should be set on the preview.");
+    } else if (!view.pinned) {
+      Assert.ok(
+        preview.hasWireframe,
+        "A wireframe should be set on preview " + preview.index
+      );
     }
   }
 

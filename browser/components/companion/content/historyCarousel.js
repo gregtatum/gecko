@@ -39,24 +39,24 @@ class PreviewElement extends HTMLLIElement {
     this.#image.src = URL.createObjectURL(blob);
   }
 
-  setWireframe(wireframe) {
+  setWireframe(wireframe, width, height) {
     const SVG_NS = "http://www.w3.org/2000/svg";
     let svg = document.createElementNS(SVG_NS, "svg");
     svg.classList.add("preview-image");
 
-    svg.setAttributeNS(
-      null,
-      "viewBox",
-      `0 0 ${wireframe.width} ${wireframe.height}`
-    );
+    svg.setAttributeNS(null, "viewBox", `0 0 ${width} ${height}`);
     svg.style.backgroundColor = wireframe.canvasBackground;
 
     for (let rectObj of wireframe.rects) {
+      if (rectObj.type != "background" && rectObj.type != "text") {
+        continue;
+      }
+
       let rectEl = document.createElementNS(SVG_NS, "rect");
-      rectEl.setAttribute("x", rectObj.rect.x);
-      rectEl.setAttribute("y", rectObj.rect.y);
-      rectEl.setAttribute("width", rectObj.rect.width);
-      rectEl.setAttribute("height", rectObj.rect.height);
+      rectEl.setAttribute("x", rectObj.x);
+      rectEl.setAttribute("y", rectObj.y);
+      rectEl.setAttribute("width", rectObj.width);
+      rectEl.setAttribute("height", rectObj.height);
 
       if (rectObj.type == "background") {
         rectEl.setAttribute("fill", rectObj.color);
@@ -460,7 +460,11 @@ const HistoryCarousel = {
           if (result.image.blob) {
             preview.setBlob(result.image.blob);
           } else if (result.image.wireframe) {
-            preview.setWireframe(result.image.wireframe);
+            preview.setWireframe(
+              result.image.wireframe,
+              result.image.width,
+              result.image.height
+            );
           }
         }
         this.kickTaskQueue();
