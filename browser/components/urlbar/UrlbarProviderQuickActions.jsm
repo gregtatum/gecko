@@ -51,7 +51,10 @@ const formatGoogleURL = (type, fallbackURL) => {
   if (OnlineServices.hasService("google")) {
     const service = OnlineServices.getServices("google")[0];
     const email = service.getAccountAddress();
-    url = GOOGLE_ACTION_URLS[type].replace("{email}", email);
+    url = GOOGLE_ACTION_URLS[type].replace(
+      "{email}",
+      type === "meeting" ? email : encodeURIComponent(email)
+    );
   }
   return url;
 };
@@ -62,7 +65,7 @@ const DYNAMIC_TYPE_NAME = "quickActions";
 
 const MAX_RESULTS = 5;
 
-const COMMANDS = {
+const createCommands = () => ({
   checkgmail: {
     commands: ["inbox", "email", "gmail", "check gmail", "google mail"],
     icon: "chrome://browser/content/urlbar/quickactions/gmail.svg",
@@ -196,7 +199,7 @@ const COMMANDS = {
     callback: restartBrowser,
     title: "Pro Client",
   },
-};
+});
 
 function openUrl(url) {
   let window = BrowserWindowTracker.getTopWindow();
@@ -240,6 +243,10 @@ class ProviderQuickActionsBase extends UrlbarProvider {
 
   constructor() {
     super();
+    this.getCommands = this.getCommands.bind(this);
+    this.getCommands();
+    Services.obs.addObserver(this.getCommands, "companion-signin");
+    Services.obs.addObserver(this.getCommands, "companion-signout");
     UrlbarResult.addDynamicResultType(DYNAMIC_TYPE_NAME);
 
     let children = [...Array(MAX_RESULTS).keys()].map(i => {
@@ -293,8 +300,8 @@ class ProviderQuickActionsBase extends UrlbarProvider {
       children,
     });
 
-    for (const key in COMMANDS) {
-      for (const command of COMMANDS[key].commands) {
+    for (const key in this.commands) {
+      for (const command of this.commands[key].commands) {
         for (let i = 0; i <= command.length; i++) {
           let prefix = command.substring(0, command.length - i);
           let result = this._tree.get(prefix);
@@ -355,7 +362,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
       return;
     }
     results = results.filter(key => {
-      let data = COMMANDS?.[key];
+      let data = this.commands?.[key];
       if (data && data.hasOwnProperty("hide")) {
         return !data.hide(!queryContext.searchString);
       }
@@ -383,7 +390,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     let viewUpdate = {};
     [...Array(MAX_RESULTS).keys()].forEach(i => {
       let key = result.payload.results?.[i];
-      let data = COMMANDS?.[key] || { icon: "", label: " " };
+      let data = this.commands?.[key] || { icon: "", label: " " };
       let buttonAttributes = { "data-key": key };
       let hidden = !result.payload.results?.[i];
       buttonAttributes.hidden = hidden ? true : null;
@@ -413,7 +420,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
 
   setBadge(document, name, number) {
     let index = 0;
-    for (let command in COMMANDS) {
+    for (let command in this.commands) {
       if (command == name) {
         let badge = document.querySelector(`label[name="badge-${index}"]`);
         badge.textContent = number;
@@ -424,7 +431,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
   }
 
   async pickResult(results, itemPicked) {
-    let result = COMMANDS[itemPicked.dataset.key];
+    let result = this.commands[itemPicked.dataset.key];
     if (result.url) {
       openUrl(result.url);
     } else {
@@ -438,8 +445,16 @@ class ProviderQuickActionsBase extends UrlbarProvider {
    * @param {string} definition An object that describes the command.
    */
   addAction(command, definition) {
-    COMMANDS[command] = definition;
+    this.commands[command] = definition;
     this._tree.set(command, [command]);
+  }
+
+  /**
+   * Trigger an update for the list of commands to ensure they use accurate
+   * connected account information.
+   */
+  getCommands() {
+    this.commands = createCommands();
   }
 }
 
