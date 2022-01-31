@@ -114,6 +114,22 @@ EnterprisePoliciesManager.prototype = {
       }
       Services.prefs.clearUserPref(PREF_POLICIES_APPLIED);
     }
+    if (AppConstants.PINEBUILD && !(Cu.isInAutomation || isXpcshell)) {
+      let policies = {
+        ExtensionSettings: {
+          "*": {
+            installation_mode: "blocked",
+          },
+          "quitter@mozilla.org": {
+            installation_mode: "allowed",
+          },
+        },
+      };
+      this._parsedPolicies = {};
+      this._activatePolicies(policies);
+      Services.prefs.setBoolPref(PREF_POLICIES_APPLIED, true);
+      return;
+    }
 
     let provider = this._chooseProvider();
 
@@ -433,16 +449,6 @@ let DisallowedFeatures = {};
 let SupportMenu = null;
 let ExtensionPolicies = null;
 let ExtensionSettings = null;
-if (AppConstants.PINEBUILD && !(Cu.isInAutomation || isXpcshell)) {
-  ExtensionSettings = {
-    "*": {
-      installation_mode: "blocked",
-    },
-    "quitter@mozilla.org": {
-      installation_mode: "allowed",
-    },
-  };
-}
 let InstallSources = null;
 
 /**
