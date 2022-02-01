@@ -12,7 +12,6 @@ const { XPCOMUtils } = ChromeUtils.import(
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   AboutNewTab: "resource:///modules/AboutNewTab.jsm",
-  BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   Services: "resource://gre/modules/Services.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
   UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
@@ -28,14 +27,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 
 const DYNAMIC_TYPE_NAME = "topSitesButtons";
 const MAX_BUTTONS = 8;
-
-function openUrl(url) {
-  let window = BrowserWindowTracker.getTopWindow();
-  window.gBrowser.loadOneTab(url, {
-    inBackground: false,
-    triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
-  });
-}
 
 /**
  * A provider that returns the Top Sites shown on about:newtab.
@@ -201,7 +192,7 @@ class ProviderTopSitesButtons extends UrlbarProvider {
   }
 
   async pickResult(results, itemPicked) {
-    openUrl(itemPicked.dataset.url);
+    UrlbarUtils.openUrl(itemPicked.dataset.url);
   }
 }
 

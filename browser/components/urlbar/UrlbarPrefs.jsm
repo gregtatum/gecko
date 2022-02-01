@@ -57,6 +57,10 @@ const PREF_URLBAR_DEFAULTS = new Map([
   // this value.  See UrlbarProviderPlaces.
   ["autoFill.stddevMultiplier", [0.0, "float"]],
 
+  // Whether to show a link for using the search functionality provided by the
+  // active view if the the view utilizes OpenSearch.
+  ["contextualSearch.enabled", false],
+
   // Whether using `ctrl` when hitting return/enter in the URL bar
   // (or clicking 'go') should prefix 'www.' and suffix
   // browser.fixup.alternate.suffix to the URL bar value prior to

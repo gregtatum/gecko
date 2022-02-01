@@ -65,12 +65,18 @@ class OpenSearchEngine extends SearchEngine {
   // The data describing the engine, in the form of an XML document element.
   _data = null;
 
-  constructor() {
+  constructor({ shouldPersist = true } = {}) {
     super({
       isAppProvided: false,
       // We don't know what this is until after it has loaded, so add a placeholder.
       loadPath: "[opensearch]loading",
     });
+
+    // Flag indicating whether the engine should be persisted to disk and made
+    // available wherever engines are used (e.g. it can be set as the default
+    // search engine, used for search shortcuts, etc.). Non-persisted engines
+    // are intended for more limited or temporary use.
+    this._shouldPersist = shouldPersist;
   }
 
   /**
@@ -198,9 +204,11 @@ class OpenSearchEngine extends SearchEngine {
       );
     }
 
-    // Notify the search service of the successful load. It will deal with
-    // updates by checking this._engineToUpdate.
-    SearchUtils.notifyAction(this, SearchUtils.MODIFIED_TYPE.LOADED);
+    if (this._shouldPersist) {
+      // Notify the search service of the successful load. It will deal with
+      // updates by checking this._engineToUpdate.
+      SearchUtils.notifyAction(this, SearchUtils.MODIFIED_TYPE.LOADED);
+    }
 
     callback?.();
   }

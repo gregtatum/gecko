@@ -85,7 +85,7 @@ const COMMANDS = {
     label: "Go to Inbox",
     callback: () => {
       let inboxURL = OnlineServices.getInboxURL("microsoft");
-      openUrl(inboxURL);
+      UrlbarUtils.openUrl(inboxURL);
     },
     title: "Outlook",
     hide(isDefault) {
@@ -168,7 +168,7 @@ const COMMANDS = {
     callback: () => {
       let window = BrowserWindowTracker.getTopWindow();
       let spec = window.gBrowser.selectedTab.linkedBrowser.documentURI.spec;
-      openUrl("view-source:" + spec);
+      UrlbarUtils.openUrl("view-source:" + spec);
     },
     title: "Pro Client",
   },
@@ -197,14 +197,6 @@ const COMMANDS = {
     title: "Pro Client",
   },
 };
-
-function openUrl(url) {
-  let window = BrowserWindowTracker.getTopWindow();
-  window.gBrowser.loadOneTab(url, {
-    inBackground: false,
-    triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
-  });
-}
 
 function restartBrowser() {
   // Notify all windows that an application quit has been requested.
@@ -426,7 +418,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
   async pickResult(results, itemPicked) {
     let result = COMMANDS[itemPicked.dataset.key];
     if (result.url) {
-      openUrl(result.url);
+      UrlbarUtils.openUrl(result.url);
     } else {
       result.callback();
     }

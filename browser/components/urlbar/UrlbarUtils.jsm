@@ -1192,6 +1192,19 @@ var UrlbarUtils = {
       ? uri
       : Services.textToSubURI.unEscapeURIForUI(uri);
   },
+
+  /**
+   * Open the provided url in the most recent browser window.
+   *
+   * @param {string} url The url to open.
+   */
+  openUrl(url) {
+    let window = BrowserWindowTracker.getTopWindow();
+    window.gBrowser.loadOneTab(url, {
+      inBackground: false,
+      triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+    });
+  },
 };
 
 XPCOMUtils.defineLazyGetter(UrlbarUtils.ICON, "DEFAULT", () => {
