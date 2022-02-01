@@ -68,6 +68,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     }
 
     this.addEventListener("UserAction:ViewSelected", this);
+    this.addEventListener("UserAction:ViewClosed", this);
     this.addEventListener("UserAction:OpenPageActionMenu", this);
     this.addEventListener("UserAction:PinView", this);
     this.addEventListener("UserAction:UnpinView", this);
@@ -98,6 +99,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       window.gGlobalHistory.removeEventListener(event, this);
     }
     this.removeEventListener("UserAction:ViewSelected", this);
+    this.removeEventListener("UserAction:ViewClosed", this);
     this.removeEventListener("UserAction:OpenPageActionMenu", this);
     this.removeEventListener("UserAction:PinView", this);
     this.removeEventListener("UserAction:UnpinView", this);
@@ -144,6 +146,11 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       case "UserAction:UnpinView": {
         let view = event.detail.view;
         this.#setViewPinnedState(view, false);
+        break;
+      }
+      case "UserAction:ViewClosed": {
+        let view = event.detail.clickedView;
+        this.#viewClosed(view);
         break;
       }
       case "click":
@@ -211,6 +218,10 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   #viewSelected(view) {
     this.#defaultWorkspace.setActiveView(view);
     window.gGlobalHistory.setView(view);
+  }
+
+  #viewClosed(view) {
+    window.gGlobalHistory.closeView(view);
   }
 
   /**

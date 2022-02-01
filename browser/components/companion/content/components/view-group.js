@@ -42,6 +42,7 @@ export default class ViewGroup extends MozLitElement {
     this.activeView = null;
     this.busyAnimationTimeout = null;
     this.addEventListener("click", this.#onClick);
+    this.addEventListener("auxclick", this.#onAuxClick);
     this.#slidingWindowIndex = -1;
   }
 
@@ -52,6 +53,22 @@ export default class ViewGroup extends MozLitElement {
       detail: { clickedView: this.lastView },
     });
     this.dispatchEvent(e);
+  }
+
+  #onAuxClick(event) {
+    let selectEvent = new CustomEvent("UserAction:ViewSelected", {
+      bubbles: true,
+      composed: true,
+      detail: { clickedView: this.lastView },
+    });
+    this.dispatchEvent(selectEvent);
+
+    let closeEvent = new CustomEvent("UserAction:ViewClosed", {
+      bubbles: true,
+      composed: true,
+      detail: { clickedView: this.lastView },
+    });
+    this.dispatchEvent(closeEvent);
   }
 
   #onHistoryClick(event) {
