@@ -115,9 +115,14 @@ class ProviderContextualSearch extends UrlbarProvider {
     let engine;
     const hostname = new URL(queryContext.currentPage).hostname;
 
+    // This happens on about pages, which won't have associated engines
+    if (!hostname) {
+      return;
+    }
+
     // First check to see if there's a cached search engine for the host.
     // If not, check to see if an installed engine matches the current view.
-    if (hostname && this.engines.has(hostname)) {
+    if (this.engines.has(hostname)) {
       engine = this.engines.get(hostname);
     } else {
       // Strip www. to allow for partial matches when looking for an engine.
