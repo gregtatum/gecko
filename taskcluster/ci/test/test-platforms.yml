@@ -116,6 +116,11 @@ linux1804-64-pinebuild-qr/opt:
     test-sets:
         - pinebuild
 
+linux1804-64-domstreams-qr/debug:
+    build-platform: linux64-domstreams/debug
+    test-sets:
+        - domstreams-tests
+
 ##
 # Windows platforms (matching /windows.*/)
 

@@ -584,6 +584,12 @@ pref("browser.privacySegmentation.enabled", false);
 // sets darkTheme data.
 pref("browser.theme.dark-private-windows", false);
 
+// Controls visibility of the privacy segmentation preferences section.
+pref("browser.privacySegmentation.preferences.show", false);
+
+// Suffix for the SUMO learn more link for the privacy segmentation checkbox.
+pref("browser.privacySegmentation.preferences.learnMoreURLSuffix", "data-features");
+
 pref("browser.sessionhistory.max_entries", 50);
 
 // Built-in default permissions.
@@ -2507,12 +2513,8 @@ pref("devtools.browserconsole.input.editorWidth", 0);
 // Display an onboarding UI for the Editor mode.
 pref("devtools.webconsole.input.editorOnboarding", true);
 
-// Enable the new performance recording panel in Nightly and Beta/DevEdition builds.
-#if defined(NIGHTLY_BUILD) || defined(MOZ_DEV_EDITION)
-  pref("devtools.performance.new-panel-enabled", true);
-#else
-  pref("devtools.performance.new-panel-enabled", false);
-#endif
+// Enable the new performance panel in all channels of Firefox.
+pref("devtools.performance.new-panel-enabled", true);
 
 // Enable message grouping in the console, true by default
 pref("devtools.webconsole.groupWarningMessages", true);

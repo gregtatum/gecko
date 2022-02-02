@@ -98,6 +98,7 @@ def build_dict(config, env=os.environ):
     d["cc_type"] = substs.get("CC_TYPE")
     d["non_native_theme"] = True
     d["pinebuild"] = substs.get("PINEBUILD") == "1"
+    d["domstreams"] = substs.get("MOZ_DOM_STREAMS") == "1"
 
     def guess_platform():
         if d["buildapp"] == "browser":

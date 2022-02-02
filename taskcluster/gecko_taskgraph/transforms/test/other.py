@@ -774,6 +774,7 @@ test_setting_description_schema = Schema(
                 "ccov",
                 "clang-trunk",
                 "devedition",
+                "domstreams",
                 "lite",
                 "mingwclang",
                 "pinebuild",
