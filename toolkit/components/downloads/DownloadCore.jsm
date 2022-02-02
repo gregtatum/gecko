@@ -1283,7 +1283,7 @@ Download.prototype = {
 /**
  * Defines which properties of the Download object are serializable.
  */
-const kPlainSerializableDownloadProperties = [
+let kPlainSerializableDownloadProperties = [
   "succeeded",
   "canceled",
   "totalBytes",
@@ -1294,15 +1294,21 @@ const kPlainSerializableDownloadProperties = [
   "launchWhenSucceeded",
   "contentType",
   "handleInternally",
-
-  "stopped",
-  "hasProgress",
-  "progress",
-  "endTime",
-  "currentBytes",
-  "speed",
-  "uuid",
 ];
+
+if (AppConstants.PINEBUILD) {
+  kPlainSerializableDownloadProperties = kPlainSerializableDownloadProperties.concat(
+    [
+      "stopped",
+      "hasProgress",
+      "progress",
+      "endTime",
+      "currentBytes",
+      "speed",
+      "uuid",
+    ]
+  );
+}
 
 /**
  * Creates a new Download object from a serializable representation.  This
@@ -1711,9 +1717,13 @@ DownloadTarget.prototype = {
     let serializable = {
       path: this.path,
       partFilePath: this.partFilePath,
-      exists: this.exists,
-      size: this.size,
     };
+
+    if (AppConstants.PINEBUILD) {
+      serializable.exists = this.exists;
+      serializable.size = this.size;
+    }
+
     serializeUnknownProperties(this, serializable);
     return serializable;
   },
