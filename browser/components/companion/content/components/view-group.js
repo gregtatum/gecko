@@ -56,6 +56,10 @@ export default class ViewGroup extends MozLitElement {
   }
 
   #onAuxClick(event) {
+    if (event.button != 1) {
+      return;
+    }
+
     let selectEvent = new CustomEvent("UserAction:ViewSelected", {
       bubbles: true,
       composed: true,
