@@ -24,6 +24,7 @@ import {
   makeIdentityInfo,
 } from "backend/db/cal_event_rep";
 import logic from "logic";
+import { CriticalError } from "backend/utils/api_client";
 
 /**
  * Process events as provided by the `cal_sync_refresh` task (which may be new,
@@ -44,7 +45,7 @@ export class MapiCalEventChewer {
     oldConvInfo,
     oldEvents,
     foldersTOC,
-    gapi,
+    gapiClient,
   }) {
     this.ctx = ctx;
     this.convId = convId;
@@ -57,7 +58,7 @@ export class MapiCalEventChewer {
     this.oldConvInfo = oldConvInfo;
     this.oldEvents = oldEvents;
     this.foldersTOC = foldersTOC;
-    this.gapi = gapi;
+    this.gapiClient = gapiClient;
 
     // This is a mapping from the event id we synthesize.  Populated during
     // `chewEventBundle` where we first identify events outside the specified
@@ -164,7 +165,7 @@ export class MapiCalEventChewer {
             data: mapiEvent,
             content,
             type,
-            gapi: this.gapi,
+            gapiClient: this.gapiClient,
             docTitleCache: this.docTitleCache,
           }));
 
@@ -247,6 +248,9 @@ export class MapiCalEventChewer {
         }
       } catch (ex) {
         logic(this.ctx, "eventChewingError", { ex });
+        if (ex instanceof CriticalError) {
+          throw ex;
+        }
       }
     }
 

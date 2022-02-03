@@ -222,7 +222,7 @@ export function getConferenceInfo(data, links) {
  * @returns {Promise<Object|null>} containing the type of the document and its title
  * if any.
  */
-export async function getDocumentTitle(url, gapi, docTitleCache) {
+export async function getDocumentTitle(url, gapiClient, docTitleCache) {
   url = new URL(url);
   if (!url.hostname.endsWith(".google.com")) {
     return null;
@@ -263,11 +263,10 @@ export async function getDocumentTitle(url, gapi, docTitleCache) {
     return cached;
   }
 
-  const { apiClient, backoff } = gapi;
-  const resultPromise = apiClient
-    .apiGetCall(apiTarget, /* params */ {}, backoff)
+  const resultPromise = gapiClient
+    .apiGetCall(apiTarget, /* params */ {})
     .then(results => {
-      if (results.error) {
+      if (!results || results.error) {
         return { type, title: null };
       }
 

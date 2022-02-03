@@ -23,7 +23,7 @@ import TaskDefiner from "../../../task_infra/task_definer";
 
 import { syncNormalOverlay } from "../../../task_helpers/sync_overlay_helpers";
 import MapiCalFolderSyncStateHelper from "../cal_folder_sync_state_helper";
-import { MapiBackoffInst } from "../account";
+import { prepareChangeForProblems } from "../../../utils/tools";
 
 /**
  * Sync a Google API Calendar, which under our scheme corresponds to a single
@@ -53,10 +53,13 @@ export default TaskDefiner.defineAtMostOnceTask([
     helped_plan(ctx, rawTask) {
       // - Plan!
       let plannedTask = shallowClone(rawTask);
+      const { accountId } = rawTask;
       plannedTask.resources = [
         "online",
-        `credentials!${rawTask.accountId}`,
-        `happy!${rawTask.accountId}`,
+        `credentials!${accountId}`,
+        `happy!${accountId}`,
+        `permissions!${accountId}`,
+        `queries!${accountId}`,
       ];
       plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
 
@@ -103,12 +106,28 @@ export default TaskDefiner.defineAtMostOnceTask([
        */
       const endpoint =
         "https://graph.microsoft.com/v1.0/me/mailFolders/Inbox/messages?$filter=isRead ne true&$count=true&$select=id,webLink&top=1";
+      const changes = {
+        atomicClobbers: {},
+      };
+      let results;
 
-      const results = await account.client.apiGetCall(
-        endpoint,
-        {} /* params */,
-        MapiBackoffInst
-      );
+      try {
+        results = await account.client.apiGetCall(endpoint, {} /* params */);
+      } catch (e) {
+        // Critical error.
+        logic(ctx, "syncError", { error: e.message });
+        changes.atomicClobbers.accounts = prepareChangeForProblems(
+          account,
+          e.problem
+        );
+
+        return changes;
+      }
+
+      if (!results || results.error) {
+        logic(ctx, "syncError", { error: results?.error || "No data" });
+        return {};
+      }
 
       const unreadMessageCount = results?.["@odata.count"] ?? 0;
       const webLink = results?.value?.[0]?.webLink?.split("?", 1)?.[0] || null;
@@ -116,16 +135,25 @@ export default TaskDefiner.defineAtMostOnceTask([
 
       logic(ctx, "syncEnd", {});
 
-      return {
-        atomicClobbers: {
-          folders: new Map([
-            [
-              req.folderId,
-              { unreadMessageCount, webLink, lastAttemptedSyncAt: syncDate },
-            ],
-          ]),
-        },
-      };
+      if (account.problems) {
+        changes.atomicClobbers.accounts = prepareChangeForProblems(
+          account,
+          null
+        );
+      }
+
+      changes.atomicClobbers.folders = new Map([
+        [
+          req.folderId,
+          {
+            unreadMessageCount,
+            webLink,
+            lastAttemptedSyncAt: syncDate,
+          },
+        ],
+      ]);
+
+      return changes;
     },
   },
 ]);

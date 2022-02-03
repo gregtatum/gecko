@@ -3225,38 +3225,94 @@ var WorkshopBackend = (() => {
   });
 
   // src/backend/utils/api_client.js
-  var FETCH_TIMEOUT, Backoff, ApiClient;
+  var FETCH_TIMEOUT, CriticalError, SuperCriticalError, Backoff, ApiClient;
   var init_api_client = __esm({
     "src/backend/utils/api_client.js"() {
       init_logic();
       init_oauth();
       FETCH_TIMEOUT = 32e3;
+      CriticalError = class extends Error {
+        constructor(problem) {
+          super(problem.credentials || problem.permissions || problem.queries);
+          this.name = "CriticalError";
+          this.problem = problem;
+        }
+      };
+      SuperCriticalError = class extends CriticalError {
+        constructor(problem) {
+          super(problem);
+          this.name = "SuperCriticalError";
+        }
+      };
       Backoff = class {
-        constructor() {
-          this.max_backoff_ms = 32e3;
-          this.max_retries = 6;
+        constructor(account) {
+          this.account = account;
+          this.max_backoff_ms = 3200;
+          this.max_retries = 3;
+          this.criticalErrorsCounter = 0;
+          this.maxCriticalError = 4;
+          this.criticalBackoffStep = 0;
+          this.maxCriticalBackoffSteps = 7;
+          this.max_backoff_ms_critical = 1 * 60 * 60 * 1e3;
         }
         isCandidateForBackoff(status, result) {
           return true;
+        }
+        handleError(status, result) {
+          this.handleCriticalError(null, null);
+        }
+        handleCriticalError(problem, resource) {
+          if (!problem) {
+            this.criticalErrorsCounter = Math.max(this.criticalErrorsCounter - 1, 0);
+            return;
+          }
+          const isSuperCritical = !!problem.superCritical;
+          delete problem.superCritical;
+          if (!this.account) {
+            if (isSuperCritical) {
+              throw new SuperCriticalError(problem);
+            } else {
+              throw new CriticalError(problem);
+            }
+          }
+          if (isSuperCritical) {
+            this.account.universe.taskResources.resourcesNoLongerAvailable([
+              resource
+            ]);
+            throw new SuperCriticalError(problem);
+          }
+          this.criticalErrorsCounter++;
+          if (this.criticalErrorsCounter === this.maxCriticalError) {
+            const exponent = this.criticalBackoffStep;
+            this.criticalBackoffStep = Math.max(this.criticalBackoffStep + 1, this.maxCriticalBackoffSteps);
+            const time_ms = Math.min(this.max_backoff_ms_critical, Math.ceil((2 ** exponent + Math.random()) * 60 * 1e3));
+            this.criticalErrorsCounter = 0;
+            this.account.universe.taskResources.resourcesNoLongerAvailable([
+              resource
+            ]);
+            setTimeout(() => this.account.universe.taskResources.resourceAvailable([resource]), time_ms);
+          }
+          throw new CriticalError(problem);
         }
         getErrorMessage(result) {
           return result.error.message;
         }
         waitAMoment(step) {
-          const time_ms = Math.min(this.max_backoff_ms, Math.ceil((2 ** step + Math.random()) * 1e3));
+          const time_ms = Math.min(this.max_backoff_ms, Math.ceil((2 ** step + Math.random()) * 100));
           return new Promise((resolve) => setTimeout(resolve, time_ms));
         }
       };
       ApiClient = class {
-        constructor(credentials, accountId) {
+        constructor(credentials, accountId, backoff) {
           logic.defineScope(this, "ApiClient", { accountId });
           this.credentials = credentials;
           this._dirtyCredentials = false;
+          this.backoff = backoff;
         }
         credentialsUpdated() {
           this._dirtyCredentials = true;
         }
-        async apiGetCall(endpointUrl, params, backoff) {
+        async apiGetCall(endpointUrl, params) {
           await ensureUpdatedCredentials(this.credentials, () => {
             this.credentialsUpdated();
           });
@@ -3268,10 +3324,11 @@ var WorkshopBackend = (() => {
           const headers = {
             Authorization: `Bearer ${accessToken}`
           };
-          let result;
-          for (let retries = 0; retries < backoff.max_retries; retries++) {
+          let result, resp;
+          for (let retries = 0; retries < this.backoff.max_retries; retries++) {
+            result = resp = void 0;
             try {
-              const resp = await Promise.race([
+              resp = await Promise.race([
                 fetch(url, {
                   credentials: "omit",
                   headers
@@ -3279,24 +3336,33 @@ var WorkshopBackend = (() => {
                 new Promise((_, reject) => setTimeout(() => reject(new Error("Fetch is too long")), FETCH_TIMEOUT))
               ]);
               result = await resp.json();
-              if (backoff.isCandidateForBackoff(resp.status, result)) {
-                throw new Error(backoff.getErrorMessage(result));
+              if (this.backoff.isCandidateForBackoff(resp.status, result)) {
+                throw new Error(this.backoff.getErrorMessage(result));
               }
+              this.backoff.handleError(resp.status, result);
               break;
             } catch (e) {
+              if (e instanceof CriticalError) {
+                logic(this, "apiCall", {
+                  endpointUrl,
+                  _params: params,
+                  _result: e.message
+                });
+                throw e;
+              }
               logic(this, "fetchError", { error: e.message });
-              await backoff.waitAMoment(retries);
+              await this.backoff.waitAMoment(retries);
             }
           }
           logic(this, "apiCall", { endpointUrl, _params: params, _result: result });
           return result;
         }
-        async pagedApiGetCall(url, params, resultPropertyName, nextPageGetter, backoff) {
+        async pagedApiGetCall(url, params, resultPropertyName, nextPageGetter) {
           let apiUrl = url;
           let useParams = Object.assign({}, params);
           const resultsSoFar = [];
           while (true) {
-            const thisResult = await this.apiGetCall(apiUrl, useParams, backoff);
+            const thisResult = await this.apiGetCall(apiUrl, useParams);
             if (thisResult.error) {
               return thisResult;
             }
@@ -3317,10 +3383,10 @@ var WorkshopBackend = (() => {
   // src/backend/accounts/gapi/account.js
   var account_exports = {};
   __export(account_exports, {
-    GapiBackoffInst: () => GapiBackoffInst,
+    GapiBackoff: () => GapiBackoff,
     default: () => GapiAccount
   });
-  var GapiBackoff, GapiBackoffInst, GapiAccount;
+  var GapiBackoff, GapiAccount;
   var init_account = __esm({
     "src/backend/accounts/gapi/account.js"() {
       init_api_client();
@@ -3330,10 +3396,26 @@ var WorkshopBackend = (() => {
             "User Rate Limit Exceeded",
             "Rate Limit Exceeded",
             "Calendar usage limits exceeded."
-          ].includes(error.errors?.[0]?.reason) || error.code === 429 || error.code === 500);
+          ].includes(error.errors?.[0]?.reason) || error.code === 404 || error.code === 429 || error.code === 500);
+        }
+        handleError(status, results) {
+          if (!results || !results.error) {
+            return;
+          }
+          let resource = null, problem = null;
+          const id = this.account?.id ?? -1;
+          switch (results.error.code) {
+            case 401:
+              resource = `credentials!${id}`;
+              problem = {
+                superCritical: true,
+                credentials: "Invalid Credentials"
+              };
+              break;
+          }
+          this.handleCriticalError(problem, resource);
         }
       };
-      GapiBackoffInst = new GapiBackoff();
       GapiAccount = class {
         constructor(universe2, accountDef, foldersTOC, dbConn) {
           this.universe = universe2;
@@ -3341,17 +3423,20 @@ var WorkshopBackend = (() => {
           this.accountDef = accountDef;
           this._db = dbConn;
           this.enabled = true;
-          this.problems = [];
           this.identities = accountDef.identities;
           this.foldersTOC = foldersTOC;
           this.folders = this.foldersTOC.items;
-          this.client = new ApiClient(accountDef.credentials, this.id);
+          const backoff = new GapiBackoff(this);
+          this.client = new ApiClient(accountDef.credentials, this.id, backoff);
+        }
+        get problems() {
+          return this.accountDef.problems;
         }
         toString() {
           return `[GapiAccount: ${this.id}]`;
         }
-        __acquire() {
-          return Promise.resolve(this);
+        async __acquire() {
+          return this;
         }
         __release() {
         }
@@ -3376,10 +3461,11 @@ var WorkshopBackend = (() => {
     credentials,
     connInfoFields
   }) {
-    const client = new ApiClient(credentials);
+    const backoff = new GapiBackoff(null);
+    const client = new ApiClient(credentials, "unknown gapi account id", backoff);
     const endpoint = "https://gmail.googleapis.com/gmail/v1/users/me/profile";
     try {
-      const whoami = await client.apiGetCall(endpoint, {}, GapiBackoffInst);
+      const whoami = await client.apiGetCall(endpoint, {}, backoff);
       userDetails.displayName = "";
       userDetails.emailAddress = whoami.emailAddress;
     } catch (ex) {
@@ -3410,10 +3496,10 @@ var WorkshopBackend = (() => {
   // src/backend/accounts/mapi/account.js
   var account_exports2 = {};
   __export(account_exports2, {
-    MapiBackoffInst: () => MapiBackoffInst,
+    MapiBackoff: () => MapiBackoff,
     default: () => MapiAccount
   });
-  var MapiBackoff, MapiBackoffInst, MapiAccount;
+  var MapiBackoff, MapiAccount;
   var init_account2 = __esm({
     "src/backend/accounts/mapi/account.js"() {
       init_api_client();
@@ -3428,8 +3514,90 @@ var WorkshopBackend = (() => {
             509
           ].includes(status);
         }
+        handleError(status, results) {
+          let resource = null, problem = null;
+          const id = this.account?.id ?? -1;
+          switch (status) {
+            case 401:
+              resource = `credentials!${id}`;
+              problem = {
+                superCritical: true,
+                credentials: "Required authentication information is either missing or not valid for the resource."
+              };
+              break;
+            case 403:
+              resource = `permissions!${id}`;
+              problem = {
+                superCritical: true,
+                permissions: "Access is denied to the requested resource. The user might not have enough permission."
+              };
+              break;
+            case 404:
+              resource = `queries!${id}`;
+              problem = { queries: "The requested resource doesn't exist" };
+              break;
+            case 405:
+              resource = `queries!${id}`;
+              problem = {
+                queries: "The HTTP method in the request is not allowed on the resource."
+              };
+              break;
+            case 406:
+              resource = `queries!${id}`;
+              problem = {
+                queries: "This service doesn't support the format requested in the Accept header."
+              };
+              break;
+            case 409:
+              resource = `queries!${id}`;
+              problem = {
+                queries: "The current state conflicts with what the request expects. For example, the specified parent folder might not exist."
+              };
+              break;
+            case 410:
+              resource = `queries!${id}`;
+              problem = {
+                queries: "The requested resource is no longer available at the server."
+              };
+              break;
+            case 411:
+              resource = `queries!${id}`;
+              problem = {
+                queries: "A Content-Length header is required on the request."
+              };
+              break;
+            case 412:
+              resource = `queries!${id}`;
+              problem = {
+                queries: "A precondition provided in the request (such as an if-match header) does not match the resource's current state."
+              };
+              break;
+            case 413:
+              resource = `queries!${id}`;
+              problem = { queries: "The request size exceeds the maximum limit." };
+              break;
+            case 415:
+              resource = `queries!${id}`;
+              problem = {
+                queries: "The content type of the request is a format that is not supported by the service."
+              };
+              break;
+            case 416:
+              resource = `queries!${id}`;
+              problem = {
+                queries: "The specified byte range is invalid or unavailable."
+              };
+              break;
+            case 422:
+              resource = `queries!${id}`;
+              problem = {
+                queries: "Cannot process the request because it is semantically incorrect."
+              };
+              break;
+          }
+          this.handleCriticalError(problem, resource);
+        }
       };
-      MapiBackoffInst = new MapiBackoff();
       MapiAccount = class {
         constructor(universe2, accountDef, foldersTOC, dbConn) {
           this.universe = universe2;
@@ -3437,17 +3605,20 @@ var WorkshopBackend = (() => {
           this.accountDef = accountDef;
           this._db = dbConn;
           this.enabled = true;
-          this.problems = [];
           this.identities = accountDef.identities;
           this.foldersTOC = foldersTOC;
           this.folders = this.foldersTOC.items;
-          this.client = new ApiClient(accountDef.credentials, this.id);
+          const backoff = new MapiBackoff(this);
+          this.client = new ApiClient(accountDef.credentials, this.id, backoff);
+        }
+        get problems() {
+          return this.accountDef.problems;
         }
         toString() {
           return `[MapiAccount: ${this.id}]`;
         }
-        __acquire() {
-          return Promise.resolve(this);
+        async __acquire() {
+          return this;
         }
         __release() {
         }
@@ -3472,21 +3643,20 @@ var WorkshopBackend = (() => {
     credentials,
     connInfoFields
   }) {
-    const client = new ApiClient(credentials);
+    const backoff = new MapiBackoff(null);
+    const client = new ApiClient(credentials, "unknown mapi account id", backoff);
     const endpoint = "https://graph.microsoft.com/v1.0/me";
-    try {
-      const whoami = await client.apiGetCall(endpoint, {}, MapiBackoffInst);
-      userDetails.displayName = whoami.displayName;
-      userDetails.emailAddress = whoami.userPrincipalName;
-    } catch (ex) {
+    const results = await client.apiGetCall(endpoint, {}, backoff);
+    if (results.error) {
       return {
         error: "unknown",
         errorDetails: {
-          endpoint,
-          ex
+          endpoint
         }
       };
     }
+    userDetails.displayName = results.displayName;
+    userDetails.emailAddress = results.userPrincipalName;
     return {
       engineFields: {
         engine: "mapi",
@@ -9055,8 +9225,12 @@ var WorkshopBackend = (() => {
             newFolders
           });
         },
+        getResources(ctx, rawTask) {
+          return void 0;
+        },
         async plan(ctx, rawTask) {
           let decoratedTask = shallowClone2(rawTask);
+          decoratedTask.resources = this.getResources(ctx, rawTask);
           decoratedTask.exclusiveResources = [
             `folderInfo:${rawTask.accountId}`
           ];
@@ -9073,7 +9247,7 @@ var WorkshopBackend = (() => {
             newData: {
               folders: newFolders
             },
-            taskState: this.execute ? decoratedTask : null
+            taskState: decoratedTask
           });
         },
         async execute(ctx, planned) {
@@ -9082,7 +9256,8 @@ var WorkshopBackend = (() => {
             modifiedFolders,
             newFolders,
             newTasks,
-            modifiedSyncStates
+            modifiedSyncStates,
+            accountProblems
           } = await this.syncFolders(ctx, account);
           await ctx.finishTask({
             mutations: {
@@ -9093,7 +9268,10 @@ var WorkshopBackend = (() => {
               folders: newFolders,
               tasks: newTasks
             },
-            taskState: null
+            taskState: null,
+            atomicClobbers: {
+              account: accountProblems
+            }
           });
         }
       };
@@ -9835,7 +10013,7 @@ var WorkshopBackend = (() => {
     }
     return null;
   }
-  async function getDocumentTitle(url, gapi, docTitleCache) {
+  async function getDocumentTitle(url, gapiClient, docTitleCache) {
     url = new URL(url);
     if (!url.hostname.endsWith(".google.com")) {
       return null;
@@ -9866,9 +10044,8 @@ var WorkshopBackend = (() => {
     if (cached) {
       return cached;
     }
-    const { apiClient, backoff } = gapi;
-    const resultPromise = apiClient.apiGetCall(apiTarget, {}, backoff).then((results) => {
-      if (results.error) {
+    const resultPromise = gapiClient.apiGetCall(apiTarget, {}).then((results) => {
+      if (!results || results.error) {
         return { type, title: null };
       }
       const title = type == "spreadsheets" ? results.properties.title : results.title;
@@ -9984,7 +10161,7 @@ var WorkshopBackend = (() => {
     type,
     processAsText = false,
     attachments = {},
-    gapi,
+    gapiClient,
     docTitleCache = new Map()
   }) {
     const { links, document, snippet } = type === "html" ? await sanitizeSnippetAndExtractLinks(content) : { links: {}, document: content, snippet: content };
@@ -9993,8 +10170,8 @@ var WorkshopBackend = (() => {
     const processedLinks = processLinks({ ...attachments, ...links }, (processAsText || type === "plain") && content);
     const conference = getConferenceInfo(data, processedLinks);
     const notConferenceLinks = processedLinks.filter((link) => link.type != "conferencing");
-    if (gapi) {
-      await Promise.all(notConferenceLinks.map((link) => getDocumentTitle(link.url, gapi, docTitleCache).then((info) => {
+    if (gapiClient) {
+      await Promise.all(notConferenceLinks.map((link) => getDocumentTitle(link.url, gapiClient, docTitleCache).then((info) => {
         if (info) {
           link.docInfo = info;
         }
@@ -10490,8 +10667,10 @@ var WorkshopBackend = (() => {
         {
           name: "account_modify",
           async plan(ctx, rawTask) {
-            const accountDef = ctx.readSingle("accounts", rawTask.accountId);
+            const { accountId } = rawTask;
+            const accountDef = ctx.readSingle("accounts", accountId);
             const accountClobbers = new Map();
+            let hasNewCredentials = false;
             for (let key in rawTask.mods) {
               const val = rawTask.mods[key];
               switch (key) {
@@ -10523,6 +10702,7 @@ var WorkshopBackend = (() => {
                   accountClobbers.set(["credentials", "outgoingPassword"], val);
                   break;
                 case "oauthTokens":
+                  hasNewCredentials = true;
                   accountClobbers.set(["credentials", "oauth2", "accessToken"], val.accessToken);
                   accountClobbers.set(["credentials", "oauth2", "refreshToken"], val.refreshToken);
                   accountClobbers.set(["credentials", "oauth2", "tokenExpires"], val.tokenExpires);
@@ -10553,9 +10733,13 @@ var WorkshopBackend = (() => {
                   break;
               }
             }
+            if (hasNewCredentials) {
+              ctx.universe.taskResources.resourceAvailable(`credentials!${accountId}`);
+              ctx.universe.taskResources.resourceAvailable(`permissions!${accountId}`);
+            }
             await ctx.finishTask({
               atomicClobbers: {
-                accounts: new Map([[rawTask.accountId, accountClobbers]])
+                accounts: new Map([[accountId, accountClobbers]])
               }
             });
           }
@@ -10653,6 +10837,27 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/backend/utils/tools.js
+  function prepareChangeForProblems(account, problem) {
+    if (!problem) {
+      return new Map([[account.id, { problems: null }]]);
+    }
+    const newProblems = account.problems ? Object.assign({}, account.problems) : Object.create(null);
+    for (const [key, value] of Object.entries(problem)) {
+      if (!newProblems[key]) {
+        newProblems[key] = [];
+      }
+      if (!newProblems[key].includes(value)) {
+        newProblems[key].push(value);
+      }
+    }
+    return new Map([[account.id, { problems: newProblems }]]);
+  }
+  var init_tools = __esm({
+    "src/backend/utils/tools.js"() {
+    }
+  });
+
   // src/backend/accounts/gapi/tasks/sync_folder_list.js
   var sync_folder_list_default2;
   var init_sync_folder_list2 = __esm({
@@ -10663,7 +10868,7 @@ var WorkshopBackend = (() => {
       init_mix_sync_folder_list();
       init_folder_info_rep();
       init_account_sync_state_helper();
-      init_account();
+      init_tools();
       sync_folder_list_default2 = task_definer_default.defineSimpleTask([
         mix_sync_folder_list_default,
         {
@@ -10673,6 +10878,16 @@ var WorkshopBackend = (() => {
               displayName: "Gmail Summary"
             }
           ],
+          getResources(ctx, rawTask) {
+            const { accountId } = rawTask;
+            return [
+              "online",
+              `credentials!${accountId}`,
+              `happy!${accountId}`,
+              `permissions!${accountId}`,
+              `queries!${accountId}`
+            ];
+          },
           async syncFolders(ctx, account) {
             const fromDb = await ctx.beginMutate({
               syncStates: new Map([[account.id, null]])
@@ -10681,16 +10896,23 @@ var WorkshopBackend = (() => {
             const syncState = new GapiAccountSyncStateHelper(ctx, rawSyncState, account.id);
             logic(ctx, "syncFolderListStart", { syncDate: NOW() });
             const foldersTOC = account.foldersTOC;
-            const clResult = await account.client.pagedApiGetCall("https://www.googleapis.com/calendar/v3/users/me/calendarList", {}, "items", (result) => {
-            }, GapiBackoffInst);
-            if (clResult.error) {
-              logic(ctx, "syncError", { error: clResult.error });
+            let results;
+            try {
+              results = await account.client.pagedApiGetCall("https://www.googleapis.com/calendar/v3/users/me/calendarList", {}, "items", (result) => {
+              });
+            } catch (e) {
+              logic(ctx, "syncError", { error: e.message });
+              const accountProblems2 = prepareChangeForProblems(account, e.problem);
+              return { accountProblems: accountProblems2 };
+            }
+            if (!results) {
+              logic(ctx, "syncError", { error: "No data" });
               return {};
             }
             const newFolders = [];
             const modifiedFolders = new Map();
             const observedFolderServerIds = new Set();
-            for (const calInfo of clResult.items) {
+            for (const calInfo of results.items) {
               let wantFolder = calInfo.selected;
               let calFolder = foldersTOC.items.find((f) => f.serverId === calInfo.id);
               if (!wantFolder) {
@@ -10747,10 +10969,12 @@ var WorkshopBackend = (() => {
                 modifiedFolders.set(folderInfo.id, null);
               }
             }
+            const accountProblems = account.problems ? prepareChangeForProblems(account, null) : null;
             return {
               newFolders,
               modifiedFolders,
-              modifiedSyncStates: new Map([[account.id, syncState.rawSyncState]])
+              modifiedSyncStates: new Map([[account.id, syncState.rawSyncState]]),
+              accountProblems
             };
           }
         }
@@ -10816,6 +11040,7 @@ var WorkshopBackend = (() => {
       init_id_conversions();
       init_cal_event_rep();
       init_logic();
+      init_api_client();
       GapiCalEventChewer = class {
         constructor({
           ctx,
@@ -10827,7 +11052,7 @@ var WorkshopBackend = (() => {
           oldConvInfo,
           oldEvents,
           foldersTOC,
-          gapi
+          gapiClient
         }) {
           this.ctx = ctx;
           this.convId = convId;
@@ -10838,7 +11063,7 @@ var WorkshopBackend = (() => {
           this.oldConvInfo = oldConvInfo;
           this.oldEvents = oldEvents;
           this.foldersTOC = foldersTOC;
-          this.gapi = gapi;
+          this.gapiClient = gapiClient;
           this.oldById = new Map();
           this.unifiedEvents = [];
           this.modifiedEventMap = new Map();
@@ -10914,7 +11139,7 @@ var WorkshopBackend = (() => {
                   type: "html",
                   processAsText: true,
                   attachments,
-                  gapi: this.gapi,
+                  gapiClient: this.gapiClient,
                   docTitleCache: this.docTitleCache
                 }));
                 bodyReps.push(makeBodyPart({
@@ -10976,6 +11201,9 @@ var WorkshopBackend = (() => {
               }
             } catch (ex) {
               logic(this.ctx, "eventChewingError", { ex });
+              if (ex instanceof CriticalError) {
+                throw ex;
+              }
             }
           }
           const allExistingEvents = [];
@@ -10999,7 +11227,7 @@ var WorkshopBackend = (() => {
       init_task_definer();
       init_conv_churn_driver();
       init_chew_gapi_cal_events();
-      init_account();
+      init_tools();
       cal_sync_conv_default = task_definer_default.defineSimpleTask([
         {
           name: "cal_sync_conv",
@@ -11030,9 +11258,22 @@ var WorkshopBackend = (() => {
               oldConvInfo,
               oldEvents,
               foldersTOC,
-              gapi: { apiClient: account.client, backoff: GapiBackoffInst }
+              gapiClient: account.client
             });
-            await eventChewer.chewEventBundle();
+            try {
+              await eventChewer.chewEventBundle();
+            } catch (e) {
+              const newTask = Object.assign({}, req);
+              ctx.finishTask({
+                atomicClobbers: {
+                  account: prepareChangeForProblems(account, e.problem)
+                },
+                newData: {
+                  tasks: [newTask]
+                }
+              });
+              return;
+            }
             logic(ctx, "debuggy", {
               eventMap: eventChewer.eventMap,
               allEvents: eventChewer.allEvents
@@ -11057,6 +11298,9 @@ var WorkshopBackend = (() => {
               newData: {
                 conversations: newConversations,
                 messages: eventChewer.newEvents
+              },
+              atomicClobbers: {
+                accounts: account.problem ? prepareChangeForProblems(account, null) : null
               }
             });
           }
@@ -11172,7 +11416,7 @@ var WorkshopBackend = (() => {
       init_task_definer();
       init_sync_overlay_helpers();
       init_cal_folder_sync_state_helper();
-      init_account();
+      init_tools();
       sync_refresh_default2 = task_definer_default.defineAtMostOnceTask([
         {
           name: "sync_refresh",
@@ -11188,10 +11432,13 @@ var WorkshopBackend = (() => {
           },
           helped_plan(ctx, rawTask) {
             let plannedTask = shallowClone2(rawTask);
+            const { accountId } = rawTask;
             plannedTask.resources = [
               "online",
-              `credentials!${rawTask.accountId}`,
-              `happy!${rawTask.accountId}`
+              `credentials!${accountId}`,
+              `happy!${accountId}`,
+              `permissions!${accountId}`,
+              `queries!${accountId}`
             ];
             plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
             let groupPromise = ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.folderId);
@@ -11222,7 +11469,7 @@ var WorkshopBackend = (() => {
                 }
               };
             }
-            let syncDate = NOW();
+            const syncDate = NOW();
             logic(ctx, "syncStart", { syncDate });
             const calendarId = folderInfo.serverId;
             const endpoint = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`;
@@ -11246,41 +11493,9 @@ var WorkshopBackend = (() => {
               "items",
               (result) => result.nextPageToken ? {
                 params: { pageToken: result.nextPageToken }
-              } : null,
-              GapiBackoffInst
+              } : null
             ];
-            let results = await account.client.pagedApiGetCall(...apiCallArguments);
-            if (results.error?.code === 410) {
-              apiCallArguments[1] = {
-                singleEvents: true,
-                timeMin: syncState.timeMinDateStr,
-                timeMax: syncState.timeMaxDateStr
-              };
-              results = await account.client.pagedApiGetCall(...apiCallArguments);
-            }
-            let syncInfoClobbers;
-            if (results.error) {
-              logic(ctx, "syncError", { error: results.error });
-              syncInfoClobbers = {
-                lastAttemptedSyncAt: syncDate,
-                failedSyncsSinceLastSuccessfulSync: folderInfo.failedSyncsSinceLastSuccessfulSync + 1
-              };
-            } else {
-              for (const event of results.items) {
-                syncState.ingestEvent(event);
-              }
-              syncState.syncToken = results.nextSyncToken;
-              syncState.etag = results.etag;
-              syncState.updatedTime = results.updatedTime;
-              syncState.processEvents();
-              logic(ctx, "syncEnd", {});
-              syncInfoClobbers = {
-                lastSuccessfulSyncAt: syncDate,
-                lastAttemptedSyncAt: syncDate,
-                failedSyncsSinceLastSuccessfulSync: 0
-              };
-            }
-            return {
+            const changes = {
               mutations: {
                 syncStates: new Map([[req.folderId, syncState.rawSyncState]])
               },
@@ -11288,16 +11503,66 @@ var WorkshopBackend = (() => {
                 tasks: syncState.tasksToSchedule
               },
               atomicClobbers: {
-                folders: new Map([
-                  [
-                    req.folderId,
-                    {
-                      syncInfo: syncInfoClobbers
-                    }
-                  ]
-                ])
+                folders: new Map()
               }
             };
+            let results;
+            const handleError = ({ e, error }) => {
+              logic(ctx, "syncError", { error: e.message || error });
+              changes.atomicClobbers.folders.set(req.folderId, {
+                lastAttemptedSyncAt: syncDate,
+                failedSyncsSinceLastSuccessfulSync: folderInfo.failedSyncsSinceLastSuccessfulSync + 1
+              });
+              if (e.problem) {
+                changes.atomicClobbers.accounts = prepareChangeForProblems(account, e.problem);
+              }
+              syncState.syncToken = null;
+              syncState.etag = null;
+            };
+            try {
+              results = await account.client.pagedApiGetCall(...apiCallArguments);
+            } catch (e) {
+              handleError({ e });
+              return changes;
+            }
+            if (!results) {
+              handleError({ error: "No data" });
+              return changes;
+            }
+            if (results.error?.code === 410) {
+              apiCallArguments[1] = {
+                singleEvents: true,
+                timeMin: syncState.timeMinDateStr,
+                timeMax: syncState.timeMaxDateStr
+              };
+              try {
+                results = await account.client.pagedApiGetCall(...apiCallArguments);
+              } catch (e) {
+                handleError({ e });
+                return changes;
+              }
+            }
+            if (!results || results.error) {
+              handleError({ error: results?.error || "No data" });
+              return changes;
+            }
+            for (const event of results.items) {
+              syncState.ingestEvent(event);
+            }
+            syncState.syncToken = results.nextSyncToken;
+            syncState.etag = results.etag;
+            syncState.updatedTime = results.updatedTime;
+            syncState.processEvents();
+            if (account.problems) {
+              changes.atomicClobbers.accounts = prepareChangeForProblems(account, null);
+            }
+            changes.atomicClobbers.folders.set(req.folderId, {
+              lastSuccessfulSyncAt: syncDate,
+              lastAttemptedSyncAt: syncDate,
+              failedSyncsSinceLastSuccessfulSync: 0
+            });
+            logic(ctx, "syncEnd", {});
+            return changes;
           }
         }
       ]);
@@ -11331,11 +11596,8 @@ var WorkshopBackend = (() => {
           },
           helped_plan(ctx, rawTask) {
             let plannedTask = shallowClone2(rawTask);
-            plannedTask.resources = [
-              "online",
-              `credentials!${rawTask.accountId}`,
-              `happy!${rawTask.accountId}`
-            ];
+            const { accountId } = rawTask;
+            plannedTask.resources = ["online", `happy!${accountId}`];
             plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
             let groupPromise = ctx.trackMeInTaskGroup("sync_inbox_refresh:" + rawTask.folderId);
             return {
@@ -11506,7 +11768,7 @@ var WorkshopBackend = (() => {
       init_mix_sync_folder_list();
       init_folder_info_rep();
       init_account_sync_state_helper2();
-      init_account2();
+      init_tools();
       sync_folder_list_default3 = task_definer_default.defineSimpleTask([
         mix_sync_folder_list_default,
         {
@@ -11516,6 +11778,16 @@ var WorkshopBackend = (() => {
               displayName: "Outlook Summary"
             }
           ],
+          getResources(ctx, rawTask) {
+            const { accountId } = rawTask;
+            return [
+              "online",
+              `credentials!${accountId}`,
+              `happy!${accountId}`,
+              `permissions!${accountId}`,
+              `queries!${accountId}`
+            ];
+          },
           async syncFolders(ctx, account) {
             const fromDb = await ctx.beginMutate({
               syncStates: new Map([[account.id, null]])
@@ -11523,16 +11795,23 @@ var WorkshopBackend = (() => {
             const rawSyncState = fromDb.syncStates.get(account.id);
             const syncState = new MapiAccountSyncStateHelper(ctx, rawSyncState, account.id);
             const foldersTOC = account.foldersTOC;
-            const clResult = await account.client.pagedApiGetCall("https://graph.microsoft.com/v1.0/me/calendars", {}, "value", (result) => {
-            }, MapiBackoffInst);
-            if (clResult.error) {
-              logic(ctx, "syncError", { error: clResult.error });
+            let results;
+            try {
+              results = await account.client.pagedApiGetCall("https://graph.microsoft.com/v1.0/me/calendars", {}, "value", (result) => {
+              });
+            } catch (e) {
+              logic(ctx, "syncError", { error: e.message });
+              const accountProblems2 = prepareChangeForProblems(account, e.problem);
+              return { accountProblems: accountProblems2 };
+            }
+            if (!results || results.error) {
+              logic(ctx, "syncError", { error: results?.error || "No data" });
               return {};
             }
             const newFolders = [];
             const modifiedFolders = new Map();
             const observedFolderServerIds = new Set();
-            for (const calInfo of clResult.value) {
+            for (const calInfo of results.value) {
               observedFolderServerIds.add(calInfo.id);
               const desiredCalendarInfo = {
                 color: calInfo.hexColor || null
@@ -11577,10 +11856,12 @@ var WorkshopBackend = (() => {
                 modifiedFolders.set(folderInfo.id, null);
               }
             }
+            const accountProblems = account.problems ? prepareChangeForProblems(account, null) : null;
             return {
               newFolders,
               modifiedFolders,
-              modifiedSyncStates: new Map([[account.id, syncState.rawSyncState]])
+              modifiedSyncStates: new Map([[account.id, syncState.rawSyncState]]),
+              accountProblems
             };
           }
         }
@@ -11598,6 +11879,7 @@ var WorkshopBackend = (() => {
       init_id_conversions();
       init_cal_event_rep();
       init_logic();
+      init_api_client();
       MapiCalEventChewer = class {
         constructor({
           ctx,
@@ -11610,7 +11892,7 @@ var WorkshopBackend = (() => {
           oldConvInfo,
           oldEvents,
           foldersTOC,
-          gapi
+          gapiClient
         }) {
           this.ctx = ctx;
           this.convId = convId;
@@ -11622,7 +11904,7 @@ var WorkshopBackend = (() => {
           this.oldConvInfo = oldConvInfo;
           this.oldEvents = oldEvents;
           this.foldersTOC = foldersTOC;
-          this.gapi = gapi;
+          this.gapiClient = gapiClient;
           this.oldById = new Map();
           this.unifiedEvents = [];
           this.modifiedEventMap = new Map();
@@ -11698,7 +11980,7 @@ var WorkshopBackend = (() => {
                   data: mapiEvent,
                   content,
                   type,
-                  gapi: this.gapi,
+                  gapiClient: this.gapiClient,
                   docTitleCache: this.docTitleCache
                 }));
                 bodyReps.push(makeBodyPart({
@@ -11756,6 +12038,9 @@ var WorkshopBackend = (() => {
               }
             } catch (ex) {
               logic(this.ctx, "eventChewingError", { ex });
+              if (ex instanceof CriticalError) {
+                throw ex;
+              }
             }
           }
           const allExistingEvents = [];
@@ -11779,7 +12064,7 @@ var WorkshopBackend = (() => {
       init_task_definer();
       init_conv_churn_driver();
       init_chew_mapi_cal_events();
-      init_account();
+      init_tools();
       cal_sync_conv_default2 = task_definer_default.defineSimpleTask([
         {
           name: "cal_sync_conv",
@@ -11813,9 +12098,22 @@ var WorkshopBackend = (() => {
               oldConvInfo,
               oldEvents,
               foldersTOC,
-              gapi: gapiAccount ? { apiClient: gapiAccount.client, backoff: GapiBackoffInst } : null
+              gapiClient: gapiAccount?.client || null
             });
-            await eventChewer.chewEventBundle();
+            try {
+              await eventChewer.chewEventBundle();
+            } catch (e) {
+              const newTask = Object.assign({}, req);
+              ctx.finishTask({
+                atomicClobbers: {
+                  account: prepareChangeForProblems(account, e.problem)
+                },
+                newData: {
+                  tasks: [newTask]
+                }
+              });
+              return;
+            }
             logic(ctx, "debuggy", {
               event: eventChewer.event,
               allEvents: eventChewer.allEvents
@@ -11840,6 +12138,9 @@ var WorkshopBackend = (() => {
               newData: {
                 conversations: newConversations,
                 messages: eventChewer.newEvents
+              },
+              atomicClobbers: {
+                accounts: account.problem ? prepareChangeForProblems(account, null) : null
               }
             });
           }
@@ -11951,7 +12252,7 @@ var WorkshopBackend = (() => {
       init_task_definer();
       init_sync_overlay_helpers();
       init_cal_folder_sync_state_helper2();
-      init_account2();
+      init_tools();
       cal_sync_refresh_default = task_definer_default.defineAtMostOnceTask([
         {
           name: "sync_refresh",
@@ -11965,12 +12266,15 @@ var WorkshopBackend = (() => {
               result: ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.folderId)
             });
           },
-          helped_plan(ctx, rawTask) {
+          async helped_plan(ctx, rawTask) {
             let plannedTask = shallowClone2(rawTask);
+            const { accountId } = rawTask;
             plannedTask.resources = [
               "online",
-              `credentials!${rawTask.accountId}`,
-              `happy!${rawTask.accountId}`
+              `credentials!${accountId}`,
+              `happy!${accountId}`,
+              `permissions!${accountId}`,
+              `queries!${accountId}`
             ];
             plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
             let groupPromise = ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.folderId);
@@ -11982,7 +12286,10 @@ var WorkshopBackend = (() => {
           },
           async helped_execute(ctx, req) {
             const fromDb = await ctx.beginMutate({
-              syncStates: new Map([[req.folderId, null]])
+              syncStates: new Map([
+                [req.folderId, null],
+                [req.accountId, null]
+              ])
             });
             const rawSyncState = fromDb.syncStates.get(req.folderId);
             const syncState = new MapiCalFolderSyncStateHelper(ctx, rawSyncState, req.accountId, req.folderId, "refresh");
@@ -12021,41 +12328,9 @@ var WorkshopBackend = (() => {
               "value",
               (result) => result["@odata.nextLink"] ? {
                 url: result["@odata.nextLink"]
-              } : null,
-              MapiBackoffInst
+              } : null
             ];
-            let results = await account.client.pagedApiGetCall(...apiCallArguments);
-            if (syncState.syncUrl && results.error) {
-              apiCallArguments[0] = `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/calendarView/delta`;
-              if (syncState.timeMinDateStr && syncState.timeMaxDateStr) {
-                params.startDateTime = syncState.timeMinDateStr;
-                params.endDateTime = syncState.timeMaxDateStr;
-              }
-              results = await account.client.pagedApiGetCall(...apiCallArguments);
-            }
-            let syncInfoClobbers;
-            if (results.error) {
-              logic(ctx, "syncError", { error: results.error });
-              syncInfoClobbers = {
-                lastAttemptedSyncAt: syncDate,
-                failedSyncsSinceLastSuccessfulSync: folderInfo.failedSyncsSinceLastSuccessfulSync + 1
-              };
-            } else {
-              for (const event of results.value) {
-                syncState.ingestEvent(event);
-              }
-              syncState.syncUrl = results["@odata.deltaLink"];
-              syncState.updatedTime = results.updatedTime;
-              syncState.updatedTime = syncDate;
-              syncState.processEvents();
-              logic(ctx, "syncEnd", {});
-              syncInfoClobbers = {
-                lastSuccessfulSyncAt: syncDate,
-                lastAttemptedSyncAt: syncDate,
-                failedSyncsSinceLastSuccessfulSync: 0
-              };
-            }
-            return {
+            const changes = {
               mutations: {
                 syncStates: new Map([[req.folderId, syncState.rawSyncState]])
               },
@@ -12063,16 +12338,64 @@ var WorkshopBackend = (() => {
                 tasks: syncState.tasksToSchedule
               },
               atomicClobbers: {
-                folders: new Map([
-                  [
-                    req.folderId,
-                    {
-                      syncInfo: syncInfoClobbers
-                    }
-                  ]
-                ])
+                folders: new Map()
               }
             };
+            let results;
+            const handleError = ({ e, error }) => {
+              logic(ctx, "syncError", { error: e.message || error });
+              changes.atomicClobbers.folders.set(req.folderId, {
+                lastAttemptedSyncAt: syncDate,
+                failedSyncsSinceLastSuccessfulSync: folderInfo.failedSyncsSinceLastSuccessfulSync + 1
+              });
+              if (e.problem) {
+                changes.atomicClobbers.accounts = prepareChangeForProblems(account, e.problem);
+              }
+              syncState.syncUrl = null;
+            };
+            try {
+              results = await account.client.pagedApiGetCall(...apiCallArguments);
+            } catch (e) {
+              handleError({ e });
+              return changes;
+            }
+            if (!results) {
+              handleError({ error: "No data" });
+              return changes;
+            }
+            if (syncState.syncUrl && results.error) {
+              apiCallArguments[0] = `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/calendarView/delta`;
+              if (syncState.timeMinDateStr && syncState.timeMaxDateStr) {
+                params.startDateTime = syncState.timeMinDateStr;
+                params.endDateTime = syncState.timeMaxDateStr;
+              }
+              try {
+                results = await account.client.pagedApiGetCall(...apiCallArguments);
+              } catch (e) {
+                handleError({ e });
+                return changes;
+              }
+            }
+            if (!results || results.error) {
+              handleError({ error: results?.error || "No data" });
+              return changes;
+            }
+            for (const event of results.value) {
+              syncState.ingestEvent(event);
+            }
+            syncState.syncUrl = results["@odata.deltaLink"];
+            syncState.updatedTime = syncDate;
+            syncState.processEvents();
+            if (account.problems) {
+              changes.atomicClobbers.accounts = prepareChangeForProblems(account, null);
+            }
+            changes.atomicClobbers.folders.set(req.folderId, {
+              lastSuccessfulSyncAt: syncDate,
+              lastAttemptedSyncAt: syncDate,
+              failedSyncsSinceLastSuccessfulSync: 0
+            });
+            logic(ctx, "syncEnd", {});
+            return changes;
           }
         }
       ]);
@@ -12089,7 +12412,7 @@ var WorkshopBackend = (() => {
       init_task_definer();
       init_sync_overlay_helpers();
       init_cal_folder_sync_state_helper2();
-      init_account2();
+      init_tools();
       sync_inbox_count_default2 = task_definer_default.defineAtMostOnceTask([
         {
           name: "sync_inbox_refresh",
@@ -12105,10 +12428,13 @@ var WorkshopBackend = (() => {
           },
           helped_plan(ctx, rawTask) {
             let plannedTask = shallowClone2(rawTask);
+            const { accountId } = rawTask;
             plannedTask.resources = [
               "online",
-              `credentials!${rawTask.accountId}`,
-              `happy!${rawTask.accountId}`
+              `credentials!${accountId}`,
+              `happy!${accountId}`,
+              `permissions!${accountId}`,
+              `queries!${accountId}`
             ];
             plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
             let groupPromise = ctx.trackMeInTaskGroup("sync_inbox_refresh:" + rawTask.folderId);
@@ -12128,21 +12454,39 @@ var WorkshopBackend = (() => {
             const syncDate = NOW();
             logic(ctx, "syncStart", { syncDate });
             const endpoint = "https://graph.microsoft.com/v1.0/me/mailFolders/Inbox/messages?$filter=isRead ne true&$count=true&$select=id,webLink&top=1";
-            const results = await account.client.apiGetCall(endpoint, {}, MapiBackoffInst);
+            const changes = {
+              atomicClobbers: {}
+            };
+            let results;
+            try {
+              results = await account.client.apiGetCall(endpoint, {});
+            } catch (e) {
+              logic(ctx, "syncError", { error: e.message });
+              changes.atomicClobbers.accounts = prepareChangeForProblems(account, e.problem);
+              return changes;
+            }
+            if (!results || results.error) {
+              logic(ctx, "syncError", { error: results?.error || "No data" });
+              return {};
+            }
             const unreadMessageCount = results?.["@odata.count"] ?? 0;
             const webLink = results?.value?.[0]?.webLink?.split("?", 1)?.[0] || null;
             syncState.updatedTime = syncDate;
             logic(ctx, "syncEnd", {});
-            return {
-              atomicClobbers: {
-                folders: new Map([
-                  [
-                    req.folderId,
-                    { unreadMessageCount, webLink, lastAttemptedSyncAt: syncDate }
-                  ]
-                ])
-              }
-            };
+            if (account.problems) {
+              changes.atomicClobbers.accounts = prepareChangeForProblems(account, null);
+            }
+            changes.atomicClobbers.folders = new Map([
+              [
+                req.folderId,
+                {
+                  unreadMessageCount,
+                  webLink,
+                  lastAttemptedSyncAt: syncDate
+                }
+              ]
+            ]);
+            return changes;
           }
         }
       ]);
@@ -15609,9 +15953,7 @@ var WorkshopBackend = (() => {
         effObj[keyPath.slice(-1)[0]] = value;
       }
     } else {
-      for (const key of Object.keys(clobbers)) {
-        obj[key] = clobbers[key];
-      }
+      Object.assign(obj, clobbers);
     }
   };
   function valueIterator(arrayOrMap) {
@@ -16884,7 +17226,7 @@ var WorkshopBackend = (() => {
         engine: accountDef.engine,
         defaultPriority: accountDef.defaultPriority,
         enabled: true,
-        problems: [],
+        problems: accountDef.problems,
         kind: accountDef.kind,
         syncRange: accountDef.syncRange,
         syncInterval: accountDef.syncInterval,
@@ -17336,17 +17678,20 @@ var WorkshopBackend = (() => {
       }
     }
     _accountAdded(accountDef) {
-      logic(this, "accountExists", { accountId: accountDef.id });
-      this.taskResources.resourceAvailable(`credentials!${accountDef.id}`);
-      this.taskResources.resourceAvailable(`happy!${accountDef.id}`);
-      this._immediateAccountDefsById.set(accountDef.id, accountDef);
+      const { id } = accountDef;
+      logic(this, "accountExists", { accountId: id });
+      this.taskResources.resourceAvailable(`credentials!${id}`);
+      this.taskResources.resourceAvailable(`happy!${id}`);
+      this.taskResources.resourceAvailable(`permissions!${id}`);
+      this.taskResources.resourceAvailable(`queries!${id}`);
+      this._immediateAccountDefsById.set(id, accountDef);
       const waitFor = [
         this._ensureTasksLoaded(accountDef.engine),
-        this._ensureAccountFoldersTOC(accountDef.id)
+        this._ensureAccountFoldersTOC(id)
       ];
       return Promise.all(waitFor).then(() => {
-        if (this._stashedConnectionsByAccountId.has(accountDef.id)) {
-          this._ensureAccount(accountDef.id);
+        if (this._stashedConnectionsByAccountId.has(id)) {
+          this._ensureAccount(id);
         }
         this.accountsTOC.__addAccount(accountDef);
       });
@@ -19520,35 +19865,31 @@ var WorkshopBackend = (() => {
       if (!taskThing) {
         return null;
       }
-      const blockedBy = [];
-      for (let resource of taskThing.resources) {
-        if (!this._availableResources.has(resource)) {
-          blockedBy.push(resource);
-        }
-      }
+      const blockedBy = taskThing.resources.filter((resource) => !this._availableResources.has(resource));
       return blockedBy;
     },
     ownOrRelayTaskThing(taskThing) {
       if (this._blockedTasksById.has(taskThing.id)) {
         this.removeTaskThing(taskThing.id);
       }
-      if (taskThing.resources) {
-        for (let resourceId of taskThing.resources) {
-          if (!this._availableResources.has(resourceId)) {
-            this._priorities.removeTaskThing(taskThing.id);
-            logic(this, "taskBlockedOnResource", {
-              taskId: taskThing.id,
-              resourceId
-            });
-            this._blockedTasksById.set(taskThing.id, taskThing);
-            if (this._blockedTasksByResource.has(resourceId)) {
-              this._blockedTasksByResource.get(resourceId).push(taskThing);
-            } else {
-              this._blockedTasksByResource.set(resourceId, [taskThing]);
-            }
-            return false;
-          }
+      const resources = taskThing.resources || taskThing.plannedTask.resources || [];
+      for (const resourceId of resources) {
+        if (this._availableResources.has(resourceId)) {
+          continue;
         }
+        this._priorities.removeTaskThing(taskThing.id);
+        logic(this, "taskBlockedOnResource", {
+          taskId: taskThing.id,
+          resourceId
+        });
+        this._blockedTasksById.set(taskThing.id, taskThing);
+        let blockedTasks = this._blockedTasksByResource.get(resourceId);
+        if (!blockedTasks) {
+          blockedTasks = [];
+          this._blockedTasksByResource.set(resourceId, blockedTasks);
+        }
+        blockedTasks.push(taskThing);
+        return false;
       }
       this._priorities.prioritizeTaskThing(taskThing);
       return true;
@@ -21339,6 +21680,7 @@ var WorkshopBackend = (() => {
       type: infra.type,
       engine: engineFields.engine,
       engineData: engineFields.engineData,
+      problems: null,
       credentials,
       identities,
       kind
@@ -21422,7 +21764,8 @@ var WorkshopBackend = (() => {
           engineFields: validationResult.engineFields,
           connInfoFields: fragments.connInfoFields,
           identities: [identity],
-          kind: fragments.kind
+          kind: fragments.kind,
+          problems: null
         });
         await ctx.finishTask({
           newData: {

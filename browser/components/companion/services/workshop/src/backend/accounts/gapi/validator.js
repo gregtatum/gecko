@@ -16,7 +16,7 @@
 
 import { normalizeError } from "../../utils/normalize_err";
 import { ApiClient } from "../../utils/api_client";
-import { GapiBackoffInst } from "./account";
+import { GapiBackoff } from "./account";
 
 /**
  * The Phabricator validator validates the server/API key information while
@@ -29,12 +29,13 @@ export default async function validateGapi({
   credentials,
   connInfoFields,
 }) {
-  const client = new ApiClient(credentials);
+  const backoff = new GapiBackoff(null);
+  const client = new ApiClient(credentials, "unknown gapi account id", backoff);
   const endpoint = "https://gmail.googleapis.com/gmail/v1/users/me/profile";
 
   try {
     // ## Get the user's email address so we can identify the account
-    const whoami = await client.apiGetCall(endpoint, {}, GapiBackoffInst);
+    const whoami = await client.apiGetCall(endpoint, {}, backoff);
 
     // TODO: Figure out:
     // 1. Whether we need the user's display name anymore.  Our original need

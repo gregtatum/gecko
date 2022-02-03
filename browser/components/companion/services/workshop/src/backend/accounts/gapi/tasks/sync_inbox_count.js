@@ -55,11 +55,8 @@ export default TaskDefiner.defineAtMostOnceTask([
     helped_plan(ctx, rawTask) {
       // - Plan!
       let plannedTask = shallowClone(rawTask);
-      plannedTask.resources = [
-        "online",
-        `credentials!${rawTask.accountId}`,
-        `happy!${rawTask.accountId}`,
-      ];
+      const { accountId } = rawTask;
+      plannedTask.resources = ["online", `happy!${accountId}`];
       plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
 
       // Create a task group that follows this task and all its offspring.  This

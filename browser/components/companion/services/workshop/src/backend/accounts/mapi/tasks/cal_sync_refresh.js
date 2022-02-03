@@ -23,7 +23,7 @@ import TaskDefiner from "../../../task_infra/task_definer";
 
 import { syncNormalOverlay } from "../../../task_helpers/sync_overlay_helpers";
 import MapiCalFolderSyncStateHelper from "../cal_folder_sync_state_helper";
-import { MapiBackoffInst } from "../account";
+import { prepareChangeForProblems } from "../../../utils/tools";
 
 /**
  * Sync a Google API Calendar, which under our scheme corresponds to a single
@@ -48,13 +48,16 @@ export default TaskDefiner.defineAtMostOnceTask([
       });
     },
 
-    helped_plan(ctx, rawTask) {
+    async helped_plan(ctx, rawTask) {
       // - Plan!
       let plannedTask = shallowClone(rawTask);
+      const { accountId } = rawTask;
       plannedTask.resources = [
         "online",
-        `credentials!${rawTask.accountId}`,
-        `happy!${rawTask.accountId}`,
+        `credentials!${accountId}`,
+        `happy!${accountId}`,
+        `permissions!${accountId}`,
+        `queries!${accountId}`,
       ];
       plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
 
@@ -73,7 +76,10 @@ export default TaskDefiner.defineAtMostOnceTask([
     async helped_execute(ctx, req) {
       // -- Exclusively acquire the sync state for the folder
       const fromDb = await ctx.beginMutate({
-        syncStates: new Map([[req.folderId, null]]),
+        syncStates: new Map([
+          [req.folderId, null],
+          [req.accountId, null],
+        ]),
       });
 
       const rawSyncState = fromDb.syncStates.get(req.folderId);
@@ -130,57 +136,9 @@ export default TaskDefiner.defineAtMostOnceTask([
                 url: result["@odata.nextLink"],
               }
             : null,
-        MapiBackoffInst,
       ];
-      let results = await account.client.pagedApiGetCall(...apiCallArguments);
 
-      if (syncState.syncUrl && results.error) {
-        // Maybe the something expired here so just retry without using the
-        // @odata.nextLink.
-        apiCallArguments[0] = `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/calendarView/delta`;
-        if (syncState.timeMinDateStr && syncState.timeMaxDateStr) {
-          params.startDateTime = syncState.timeMinDateStr;
-          params.endDateTime = syncState.timeMaxDateStr;
-        }
-        results = await account.client.pagedApiGetCall(...apiCallArguments);
-      }
-
-      let syncInfoClobbers;
-      if (results.error) {
-        logic(ctx, "syncError", { error: results.error });
-
-        syncInfoClobbers = {
-          lastAttemptedSyncAt: syncDate,
-          // XXX this should theoretically be an atomicDelta, not a clobber...
-          // That said, this is harmless since we have exclusive ownership over
-          // this field, as opposed to unread counts for folders which can have
-          // multiple incidental writers, etc.
-          failedSyncsSinceLastSuccessfulSync:
-            folderInfo.failedSyncsSinceLastSuccessfulSync + 1,
-        };
-      } else {
-        for (const event of results.value) {
-          syncState.ingestEvent(event);
-        }
-
-        // Update sync state before processing the batch; things like the
-        // calUpdatedTS need to be available.
-        syncState.syncUrl = results["@odata.deltaLink"];
-        syncState.updatedTime = results.updatedTime;
-        syncState.updatedTime = syncDate;
-
-        syncState.processEvents();
-
-        logic(ctx, "syncEnd", {});
-
-        syncInfoClobbers = {
-          lastSuccessfulSyncAt: syncDate,
-          lastAttemptedSyncAt: syncDate,
-          failedSyncsSinceLastSuccessfulSync: 0,
-        };
-      }
-
-      return {
+      const changes = {
         mutations: {
           syncStates: new Map([[req.folderId, syncState.rawSyncState]]),
         },
@@ -188,16 +146,100 @@ export default TaskDefiner.defineAtMostOnceTask([
           tasks: syncState.tasksToSchedule,
         },
         atomicClobbers: {
-          folders: new Map([
-            [
-              req.folderId,
-              {
-                syncInfo: syncInfoClobbers,
-              },
-            ],
-          ]),
+          folders: new Map(),
         },
       };
+
+      let results;
+
+      const handleError = ({ e, error }) => {
+        logic(ctx, "syncError", { error: e.message || error });
+
+        changes.atomicClobbers.folders.set(req.folderId, {
+          lastAttemptedSyncAt: syncDate,
+          // XXX this should theoretically be an atomicDelta, not a clobber...
+          // That said, this is harmless since we have exclusive ownership over
+          // this field, as opposed to unread counts for folders which can have
+          // multiple incidental writers, etc.
+          failedSyncsSinceLastSuccessfulSync:
+            folderInfo.failedSyncsSinceLastSuccessfulSync + 1,
+        });
+
+        if (e.problem) {
+          changes.atomicClobbers.accounts = prepareChangeForProblems(
+            account,
+            e.problem
+          );
+        }
+
+        // In case of error, reset the syncUrl in order to have a full sync
+        // in the next refresh.
+        syncState.syncUrl = null;
+      };
+
+      try {
+        results = await account.client.pagedApiGetCall(...apiCallArguments);
+      } catch (e) {
+        // Critical error
+        handleError({ e });
+        return changes;
+      }
+
+      if (!results) {
+        handleError({ error: "No data" });
+        return changes;
+      }
+
+      if (syncState.syncUrl && results.error) {
+        // Maybe the token expired here so just retry without using the
+        // @odata.nextLink.
+        apiCallArguments[0] = `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/calendarView/delta`;
+        if (syncState.timeMinDateStr && syncState.timeMaxDateStr) {
+          params.startDateTime = syncState.timeMinDateStr;
+          params.endDateTime = syncState.timeMaxDateStr;
+        }
+
+        try {
+          results = await account.client.pagedApiGetCall(...apiCallArguments);
+        } catch (e) {
+          // Critical error
+          handleError({ e });
+          return changes;
+        }
+      }
+
+      if (!results || results.error) {
+        handleError({ error: results?.error || "No data" });
+        return changes;
+      }
+
+      for (const event of results.value) {
+        syncState.ingestEvent(event);
+      }
+
+      // Update sync state before processing the batch; things like the
+      // calUpdatedTS need to be available.
+      syncState.syncUrl = results["@odata.deltaLink"];
+      syncState.updatedTime = syncDate;
+
+      syncState.processEvents();
+
+      if (account.problems) {
+        changes.atomicClobbers.accounts = prepareChangeForProblems(
+          account,
+          null
+        );
+      }
+
+      changes.atomicClobbers.folders.set(req.folderId, {
+        lastSuccessfulSyncAt: syncDate,
+        lastAttemptedSyncAt: syncDate,
+        failedSyncsSinceLastSuccessfulSync: 0,
+      });
+
+      logic(ctx, "syncEnd", {});
+
+      return changes;
     },
   },
 ]);

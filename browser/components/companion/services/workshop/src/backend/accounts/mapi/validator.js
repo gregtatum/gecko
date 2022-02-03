@@ -15,7 +15,7 @@
  */
 
 import { ApiClient } from "../../utils/api_client";
-import { MapiBackoffInst } from "./account";
+import { MapiBackoff } from "./account";
 
 /**
 
@@ -30,34 +30,33 @@ export default async function validateMapi({
   credentials,
   connInfoFields,
 }) {
-  const client = new ApiClient(credentials);
+  const backoff = new MapiBackoff(null);
+  const client = new ApiClient(credentials, "unknown mapi account id", backoff);
   const endpoint = "https://graph.microsoft.com/v1.0/me";
 
-  try {
-    // ## Get the user's email address so we can identify the account
-    const whoami = await client.apiGetCall(endpoint, {}, MapiBackoffInst);
-
-    // TODO: Figure out:
-    // 1. Whether we need the user's display name anymore.  Our original need
-    //    for it was because we had to know it to be able to compose emails and
-    //    send them via SMTP.  But if we're using a higher level email sending
-    //    API, we only need this to the extent we expose identities for the
-    //    purpose of switching between them (if the server handles the lower
-    //    level composition/sending aspects).
-    // 2. If we need it, we probably want to figure out the gmail identity
-    //    setup and use that even though it seems like the core OAuth ident
-    //    stuff might provide it based on the implications of the oauth flows.
-    userDetails.displayName = whoami.displayName;
-    userDetails.emailAddress = whoami.userPrincipalName;
-  } catch (ex) {
+  // ## Get the user's email address so we can identify the account
+  const results = await client.apiGetCall(endpoint, {}, backoff);
+  if (results.error) {
     return {
       error: "unknown",
       errorDetails: {
         endpoint,
-        ex,
       },
     };
   }
+
+  // TODO: Figure out:
+  // 1. Whether we need the user's display name anymore.  Our original need
+  //    for it was because we had to know it to be able to compose emails and
+  //    send them via SMTP.  But if we're using a higher level email sending
+  //    API, we only need this to the extent we expose identities for the
+  //    purpose of switching between them (if the server handles the lower
+  //    level composition/sending aspects).
+  // 2. If we need it, we probably want to figure out the gmail identity
+  //    setup and use that even though it seems like the core OAuth ident
+  //    stuff might provide it based on the implications of the oauth flows.
+  userDetails.displayName = results.displayName;
+  userDetails.emailAddress = results.userPrincipalName;
 
   return {
     engineFields: {

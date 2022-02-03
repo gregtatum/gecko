@@ -23,7 +23,7 @@ import TaskDefiner from "../../../task_infra/task_definer";
 
 import { syncNormalOverlay } from "../../../task_helpers/sync_overlay_helpers";
 import GapiCalFolderSyncStateHelper from "../cal_folder_sync_state_helper";
-import { GapiBackoffInst } from "../account";
+import { prepareChangeForProblems } from "../../../utils/tools";
 
 /**
  * Sync a Google API Calendar, which under our scheme corresponds to a single
@@ -51,10 +51,13 @@ export default TaskDefiner.defineAtMostOnceTask([
     helped_plan(ctx, rawTask) {
       // - Plan!
       let plannedTask = shallowClone(rawTask);
+      const { accountId } = rawTask;
       plannedTask.resources = [
         "online",
-        `credentials!${rawTask.accountId}`,
-        `happy!${rawTask.accountId}`,
+        `credentials!${accountId}`,
+        `happy!${accountId}`,
+        `permissions!${accountId}`,
+        `queries!${accountId}`,
       ];
       plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
 
@@ -103,7 +106,7 @@ export default TaskDefiner.defineAtMostOnceTask([
         };
       }
 
-      let syncDate = NOW();
+      const syncDate = NOW();
       logic(ctx, "syncStart", { syncDate });
 
       const calendarId = folderInfo.serverId;
@@ -142,9 +145,69 @@ export default TaskDefiner.defineAtMostOnceTask([
                 params: { pageToken: result.nextPageToken },
               }
             : null,
-        GapiBackoffInst,
       ];
-      let results = await account.client.pagedApiGetCall(...apiCallArguments);
+
+      const changes = {
+        mutations: {
+          syncStates: new Map([[req.folderId, syncState.rawSyncState]]),
+        },
+        newData: {
+          tasks: syncState.tasksToSchedule,
+        },
+        atomicClobbers: {
+          folders: new Map(),
+        },
+      };
+
+      let results;
+
+      const handleError = ({ e, error }) => {
+        // TODO: Improved error handling; MR2-1326 should be the core of this.
+        //
+        // So far we've seen this with:
+        // { code: 403, errors: [ { message: "Insufficient Permission",
+        //   domain: "global", reason: "insufficientPermissions" }],
+        //   status: "PERMISSION_DENIED" }.
+        //
+        // That's a permanent failure on a single calendar; it's not clear that
+        // this should generate a permanent problem for the account.
+        logic(ctx, "syncError", { error: e.message || error });
+
+        changes.atomicClobbers.folders.set(req.folderId, {
+          lastAttemptedSyncAt: syncDate,
+          // XXX this should theoretically be an atomicDelta, not a clobber...
+          // That said, this is harmless since we have exclusive ownership over
+          // this field, as opposed to unread counts for folders which can have
+          // multiple incidental writers, etc.
+          failedSyncsSinceLastSuccessfulSync:
+            folderInfo.failedSyncsSinceLastSuccessfulSync + 1,
+        });
+
+        if (e.problem) {
+          changes.atomicClobbers.accounts = prepareChangeForProblems(
+            account,
+            e.problem
+          );
+        }
+
+        // In case of errors just reset the token and etag in order to have
+        // a full sync in the next refresh.
+        syncState.syncToken = null;
+        syncState.etag = null;
+      };
+
+      try {
+        results = await account.client.pagedApiGetCall(...apiCallArguments);
+      } catch (e) {
+        // Critical error.
+        handleError({ e });
+        return changes;
+      }
+
+      if (!results) {
+        handleError({ error: "No data" });
+        return changes;
+      }
 
       if (results.error?.code === 410) {
         // 410: Gone
@@ -155,71 +218,49 @@ export default TaskDefiner.defineAtMostOnceTask([
           timeMin: syncState.timeMinDateStr,
           timeMax: syncState.timeMaxDateStr,
         };
-        results = await account.client.pagedApiGetCall(...apiCallArguments);
-      }
 
-      let syncInfoClobbers;
-      if (results.error) {
-        // TODO: Improved error handling; MR2-1326 should be the core of this.
-        //
-        // So far we've seen this with:
-        // { code: 403, errors: [ { message: "Insufficient Permission",
-        //   domain: "global", reason: "insufficientPermissions" }],
-        //   status: "PERMISSION_DENIED" }.
-        //
-        // That's a permanent failure on a single calendar; it's not clear that
-        // this should generate a permanent problem for the account.
-        logic(ctx, "syncError", { error: results.error });
-
-        syncInfoClobbers = {
-          lastAttemptedSyncAt: syncDate,
-          // XXX this should theoretically be an atomicDelta, not a clobber...
-          // That said, this is harmless since we have exclusive ownership over
-          // this field, as opposed to unread counts for folders which can have
-          // multiple incidental writers, etc.
-          failedSyncsSinceLastSuccessfulSync:
-            folderInfo.failedSyncsSinceLastSuccessfulSync + 1,
-        };
-      } else {
-        for (const event of results.items) {
-          syncState.ingestEvent(event);
+        try {
+          results = await account.client.pagedApiGetCall(...apiCallArguments);
+        } catch (e) {
+          // Critical error.
+          handleError({ e });
+          return changes;
         }
-
-        // Update sync state before processing the batch; things like the
-        // calUpdatedTS need to be available.
-        syncState.syncToken = results.nextSyncToken;
-        syncState.etag = results.etag;
-        syncState.updatedTime = results.updatedTime;
-
-        syncState.processEvents();
-
-        logic(ctx, "syncEnd", {});
-
-        syncInfoClobbers = {
-          lastSuccessfulSyncAt: syncDate,
-          lastAttemptedSyncAt: syncDate,
-          failedSyncsSinceLastSuccessfulSync: 0,
-        };
       }
 
-      return {
-        mutations: {
-          syncStates: new Map([[req.folderId, syncState.rawSyncState]]),
-        },
-        newData: {
-          tasks: syncState.tasksToSchedule,
-        },
-        atomicClobbers: {
-          folders: new Map([
-            [
-              req.folderId,
-              {
-                syncInfo: syncInfoClobbers,
-              },
-            ],
-          ]),
-        },
-      };
+      if (!results || results.error) {
+        handleError({ error: results?.error || "No data" });
+        return changes;
+      }
+
+      for (const event of results.items) {
+        syncState.ingestEvent(event);
+      }
+
+      // Update sync state before processing the batch; things like the
+      // calUpdatedTS need to be available.
+      syncState.syncToken = results.nextSyncToken;
+      syncState.etag = results.etag;
+      syncState.updatedTime = results.updatedTime;
+
+      syncState.processEvents();
+
+      if (account.problems) {
+        changes.atomicClobbers.accounts = prepareChangeForProblems(
+          account,
+          null
+        );
+      }
+
+      changes.atomicClobbers.folders.set(req.folderId, {
+        lastSuccessfulSyncAt: syncDate,
+        lastAttemptedSyncAt: syncDate,
+        failedSyncsSinceLastSuccessfulSync: 0,
+      });
+
+      logic(ctx, "syncEnd", {});
+
+      return changes;
     },
   },
 ]);

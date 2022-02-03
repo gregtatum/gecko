@@ -1,3 +1,4 @@
+/* eslint-disable no-fallthrough */
 /**
  * Copyright 2021 Mozilla Foundation
  *
@@ -16,7 +17,7 @@
 
 import { ApiClient, Backoff } from "../../utils/api_client";
 
-class MapiBackoff extends Backoff {
+export class MapiBackoff extends Backoff {
   isCandidateForBackoff(status, { error }) {
     // https://docs.microsoft.com/en-us/graph/errors
     return [
@@ -36,9 +37,103 @@ class MapiBackoff extends Backoff {
                     elapsed. */,
     ].includes(status);
   }
-}
 
-export const MapiBackoffInst = new MapiBackoff();
+  handleError(status, results) {
+    let resource = null,
+      problem = null;
+    const id = this.account?.id ?? -1;
+
+    switch (status) {
+      case 401:
+        resource = `credentials!${id}`;
+        problem = {
+          superCritical: true,
+          credentials:
+            "Required authentication information is either missing or not valid for the resource.",
+        };
+        break;
+      case 403:
+        resource = `permissions!${id}`;
+        problem = {
+          superCritical: true,
+          permissions:
+            "Access is denied to the requested resource. The user might not have enough permission.",
+        };
+        break;
+      case 404:
+        resource = `queries!${id}`;
+        problem = { queries: "The requested resource doesn't exist" };
+        break;
+      case 405:
+        resource = `queries!${id}`;
+        problem = {
+          queries:
+            "The HTTP method in the request is not allowed on the resource.",
+        };
+        break;
+      case 406:
+        resource = `queries!${id}`;
+        problem = {
+          queries:
+            "This service doesn't support the format requested in the Accept header.",
+        };
+        break;
+      case 409:
+        resource = `queries!${id}`;
+        problem = {
+          queries:
+            "The current state conflicts with what the request expects. For example, the specified parent folder might not exist.",
+        };
+        break;
+      case 410:
+        resource = `queries!${id}`;
+        problem = {
+          queries:
+            "The requested resource is no longer available at the server.",
+        };
+        break;
+      case 411:
+        resource = `queries!${id}`;
+        problem = {
+          queries: "A Content-Length header is required on the request.",
+        };
+        break;
+      case 412:
+        resource = `queries!${id}`;
+        problem = {
+          queries:
+            "A precondition provided in the request (such as an if-match header) does not match the resource's current state.",
+        };
+        break;
+      case 413:
+        resource = `queries!${id}`;
+        problem = { queries: "The request size exceeds the maximum limit." };
+        break;
+      case 415:
+        resource = `queries!${id}`;
+        problem = {
+          queries:
+            "The content type of the request is a format that is not supported by the service.",
+        };
+        break;
+      case 416:
+        resource = `queries!${id}`;
+        problem = {
+          queries: "The specified byte range is invalid or unavailable.",
+        };
+        break;
+      case 422:
+        resource = `queries!${id}`;
+        problem = {
+          queries:
+            "Cannot process the request because it is semantically incorrect.",
+        };
+        break;
+    }
+
+    this.handleCriticalError(problem, resource);
+  }
+}
 
 export default class MapiAccount {
   constructor(universe, accountDef, foldersTOC, dbConn /*, receiveProtoConn*/) {
@@ -49,14 +144,17 @@ export default class MapiAccount {
     this._db = dbConn;
 
     this.enabled = true;
-    this.problems = [];
-
     this.identities = accountDef.identities;
 
     this.foldersTOC = foldersTOC;
     this.folders = this.foldersTOC.items;
 
-    this.client = new ApiClient(accountDef.credentials, this.id);
+    const backoff = new MapiBackoff(this);
+    this.client = new ApiClient(accountDef.credentials, this.id, backoff);
+  }
+
+  get problems() {
+    return this.accountDef.problems;
   }
 
   toString() {
@@ -66,8 +164,8 @@ export default class MapiAccount {
   // TODO: evaluate whether the account actually wants to be a RefedResource
   // with some kind of reaping if all references die and no one re-acquires it
   // within some timeout horizon.
-  __acquire() {
-    return Promise.resolve(this);
+  async __acquire() {
+    return this;
   }
   __release() {}
 

@@ -353,18 +353,21 @@ export class AccountManager {
    *   we have announced the existence of the account via the AccountsTOC.
    */
   _accountAdded(accountDef) {
-    logic(this, "accountExists", { accountId: accountDef.id });
+    const { id } = accountDef;
+    logic(this, "accountExists", { accountId: id });
 
     // XXX put these resources into place that we don't actually properly
     // control yet.
-    this.taskResources.resourceAvailable(`credentials!${accountDef.id}`);
-    this.taskResources.resourceAvailable(`happy!${accountDef.id}`);
+    this.taskResources.resourceAvailable(`credentials!${id}`);
+    this.taskResources.resourceAvailable(`happy!${id}`);
+    this.taskResources.resourceAvailable(`permissions!${id}`);
+    this.taskResources.resourceAvailable(`queries!${id}`);
 
-    this._immediateAccountDefsById.set(accountDef.id, accountDef);
+    this._immediateAccountDefsById.set(id, accountDef);
 
     const waitFor = [
       this._ensureTasksLoaded(accountDef.engine),
-      this._ensureAccountFoldersTOC(accountDef.id),
+      this._ensureAccountFoldersTOC(id),
     ];
 
     return Promise.all(waitFor).then(() => {
@@ -379,8 +382,8 @@ export class AccountManager {
       // a more explicit "things to do for freshly created accounts" mechanism.
       // (Maybe a task "account_created" that's per account so the accounts can
       // hang everything they want to do off that.
-      if (this._stashedConnectionsByAccountId.has(accountDef.id)) {
-        this._ensureAccount(accountDef.id);
+      if (this._stashedConnectionsByAccountId.has(id)) {
+        this._ensureAccount(id);
       }
 
       this.accountsTOC.__addAccount(accountDef);

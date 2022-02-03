@@ -21,7 +21,7 @@ import TaskDefiner from "../../../task_infra/task_definer";
 
 import churnConversation from "../../../churn_drivers/conv_churn_driver";
 import { MapiCalEventChewer } from "../chew_mapi_cal_events";
-import { GapiBackoffInst } from "../../gapi/account";
+import { prepareChangeForProblems } from "backend/utils/tools";
 
 export default TaskDefiner.defineSimpleTask([
   {
@@ -86,12 +86,25 @@ export default TaskDefiner.defineSimpleTask([
         oldConvInfo,
         oldEvents,
         foldersTOC,
-        gapi: gapiAccount
-          ? { apiClient: gapiAccount.client, backoff: GapiBackoffInst }
-          : null,
+        gapiClient: gapiAccount?.client || null,
       });
 
-      await eventChewer.chewEventBundle();
+      try {
+        await eventChewer.chewEventBundle();
+      } catch (e) {
+        // Critical error, we need to re-run this task.
+        const newTask = Object.assign({}, req);
+        ctx.finishTask({
+          atomicClobbers: {
+            account: prepareChangeForProblems(account, e.problem),
+          },
+          newData: {
+            tasks: [newTask],
+          },
+        });
+        return;
+      }
+
       logic(ctx, "debuggy", {
         event: eventChewer.event,
         allEvents: eventChewer.allEvents,
@@ -129,6 +142,11 @@ export default TaskDefiner.defineSimpleTask([
         newData: {
           conversations: newConversations,
           messages: eventChewer.newEvents,
+        },
+        atomicClobbers: {
+          accounts: account.problem
+            ? prepareChangeForProblems(account, null)
+            : null,
         },
       });
     },

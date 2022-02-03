@@ -2141,6 +2141,7 @@ var MailAccount = class extends import_evt8.Emitter {
     };
   }
   __update(wireRep) {
+    const prevProblems = this.problems;
     this._wireRep = wireRep;
     this.enabled = wireRep.enabled;
     this.problems = wireRep.problems;
@@ -2154,6 +2155,23 @@ var MailAccount = class extends import_evt8.Emitter {
       } else {
         this.identities.push(new MailSenderIdentity(this._api, wireRep.identities[i]));
       }
+    }
+    let hasNewProblems = false;
+    if (prevProblems && this.problems) {
+      const prevValues = prevProblems.values().flat();
+      const newValues = this.problems.values().flat();
+      if (prevValues.length !== newValues.length) {
+        hasNewProblems = true;
+      } else {
+        prevValues.sort();
+        newValues.sort();
+        hasNewProblems = prevValues.some((x, i) => x !== newValues[i]);
+      }
+    } else {
+      hasNewProblems = prevProblems !== this.problems;
+    }
+    if (hasNewProblems) {
+      this.emit("problems", this.problems);
     }
   }
   __updateOverlays(overlays) {

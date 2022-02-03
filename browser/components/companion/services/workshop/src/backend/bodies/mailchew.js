@@ -550,7 +550,7 @@ export async function processEventContent({
   type,
   processAsText = false,
   attachments = {},
-  gapi,
+  gapiClient,
   docTitleCache = new Map(),
 }) {
   // TODO: think about a cache here.
@@ -581,14 +581,16 @@ export async function processEventContent({
   const notConferenceLinks = processedLinks.filter(
     link => link.type != "conferencing"
   );
-  if (gapi) {
+  if (gapiClient) {
     await Promise.all(
       notConferenceLinks.map(link =>
-        $urlchew.getDocumentTitle(link.url, gapi, docTitleCache).then(info => {
-          if (info) {
-            link.docInfo = info;
-          }
-        })
+        $urlchew
+          .getDocumentTitle(link.url, gapiClient, docTitleCache)
+          .then(info => {
+            if (info) {
+              link.docInfo = info;
+            }
+          })
       )
     );
   }

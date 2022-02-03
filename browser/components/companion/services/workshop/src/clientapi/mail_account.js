@@ -20,13 +20,9 @@ import { MailSenderIdentity } from "./mail_sender_identity";
 /**
  *
  */
-/**
- *
- */
 export class MailAccount extends Emitter {
   constructor(api, wireRep, overlays, matchInfo, acctsSlice) {
     super();
-
     this._api = api;
     this.id = wireRep.id;
     this.matchInfo = matchInfo;
@@ -55,25 +51,17 @@ export class MailAccount extends Emitter {
      * rest of the day.
      */
     this.enabled = wireRep.enabled;
+
     /**
-     * @listof[@oneof[
-     *   @case['bad-user-or-pass']
-     *   @case['bad-address']
-     *   @case['needs-oauth-reauth']
-     *   @case['imap-disabled']
-     *   @case['pop-server-not-great']{
-     *     The POP3 server doesn't support IDLE and TOP, so we can't use it.
-     *   }
-     *   @case['connection']{
-     *     Generic connection problem; this problem can quite possibly be present
-     *     in conjunction with more specific problems such as a bad username /
-     *     password.
-     *   }
-     * ]]{
-     *   A list of known problems with the account which explain why the account
-     *   might not be `enabled`.  Once a problem is believed to have been
-     *   addressed, `clearProblems` should be called.
+     * Problems are an object where keys are the type of the problems and
+     * values are an array of error messages.
+     * For example it could be:
+     * {
+     *   credentials: ["Required authentication ..."],
+     *   permissions: ["Access is denied..."]
      * }
+     * The different possible meesages and type of issues are describe can be
+     * found in the account definition (e.g. backend/accounts/mapi/account.js).
      */
     this.problems = wireRep.problems;
 
@@ -107,6 +95,7 @@ export class MailAccount extends Emitter {
   }
 
   __update(wireRep) {
+    const prevProblems = this.problems;
     this._wireRep = wireRep;
     this.enabled = wireRep.enabled;
     this.problems = wireRep.problems;
@@ -123,6 +112,24 @@ export class MailAccount extends Emitter {
           new MailSenderIdentity(this._api, wireRep.identities[i])
         );
       }
+    }
+
+    let hasNewProblems = false;
+    if (prevProblems && this.problems) {
+      const prevValues = prevProblems.values().flat();
+      const newValues = this.problems.values().flat();
+      if (prevValues.length !== newValues.length) {
+        hasNewProblems = true;
+      } else {
+        prevValues.sort();
+        newValues.sort();
+        hasNewProblems = prevValues.some((x, i) => x !== newValues[i]);
+      }
+    } else {
+      hasNewProblems = prevProblems !== this.problems;
+    }
+    if (hasNewProblems) {
+      this.emit("problems", this.problems);
     }
   }
 
@@ -177,6 +184,10 @@ export class MailAccount extends Emitter {
    * @param {String} [mods.incomingUsername]
    * @param {String} [mods.outgoingUsername]
    * @param {Boolean} [mods.setAsDefault]
+   * @param {Object} [mods.oauthTokens]
+   * @param {String} [mods.oauthTokens.accessToken]
+   * @param {String} [mods.oauthTokens.refreshToken]
+   * @param {number} [mods.oauthTokens.tokenExpires]
    *
    * @return {Promise}
    *   A promise that is resolved when the back-end has applied the changes to

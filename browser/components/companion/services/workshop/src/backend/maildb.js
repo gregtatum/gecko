@@ -388,9 +388,7 @@ const applyClobbersToObj = function(clobbers, obj) {
     }
   } else {
     // -- Simple case: object with single string key and value.
-    for (const key of Object.keys(clobbers)) {
-      obj[key] = clobbers[key];
-    }
+    Object.assign(obj, clobbers);
   }
 };
 

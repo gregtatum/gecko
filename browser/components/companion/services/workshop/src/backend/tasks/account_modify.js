@@ -35,8 +35,11 @@ export default TaskDefiner.defineSimpleTask([
       // prettier/more explicit logging and also have unit tests that more
       // directly ensure what we're doing in here is correct as it relates to
       // to our conditionalized username/password logic.
-      const accountDef = ctx.readSingle("accounts", rawTask.accountId);
+      const { accountId } = rawTask;
+      const accountDef = ctx.readSingle("accounts", accountId);
       const accountClobbers = new Map();
+      let hasNewCredentials = false;
+
       for (let key in rawTask.mods) {
         const val = rawTask.mods[key];
 
@@ -89,6 +92,7 @@ export default TaskDefiner.defineSimpleTask([
             accountClobbers.set(["credentials", "outgoingPassword"], val);
             break;
           case "oauthTokens":
+            hasNewCredentials = true;
             accountClobbers.set(
               ["credentials", "oauth2", "accessToken"],
               val.accessToken
@@ -146,9 +150,18 @@ export default TaskDefiner.defineSimpleTask([
         }
       }
 
+      if (hasNewCredentials) {
+        ctx.universe.taskResources.resourceAvailable(
+          `credentials!${accountId}`
+        );
+        ctx.universe.taskResources.resourceAvailable(
+          `permissions!${accountId}`
+        );
+      }
+
       await ctx.finishTask({
         atomicClobbers: {
-          accounts: new Map([[rawTask.accountId, accountClobbers]]),
+          accounts: new Map([[accountId, accountClobbers]]),
         },
       });
     },

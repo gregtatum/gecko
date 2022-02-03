@@ -16,7 +16,7 @@
 
 import { ApiClient, Backoff } from "../../utils/api_client";
 
-class GapiBackoff extends Backoff {
+export class GapiBackoff extends Backoff {
   isCandidateForBackoff(status, { error }) {
     // https://developers.google.com/calendar/api/guides/errors
     return (
@@ -27,13 +27,35 @@ class GapiBackoff extends Backoff {
           "Rate Limit Exceeded",
           "Calendar usage limits exceeded.",
         ].includes(error.errors?.[0]?.reason)) ||
+        // It's very likely a temporary issue.
+        error.code === 404 ||
         error.code === 429 ||
         error.code === 500)
     );
   }
-}
 
-export const GapiBackoffInst = new GapiBackoff();
+  handleError(status, results) {
+    if (!results || !results.error) {
+      return;
+    }
+
+    let resource = null,
+      problem = null;
+    const id = this.account?.id ?? -1;
+
+    switch (results.error.code) {
+      case 401:
+        resource = `credentials!${id}`;
+        problem = {
+          superCritical: true,
+          credentials: "Invalid Credentials",
+        };
+        break;
+    }
+
+    this.handleCriticalError(problem, resource);
+  }
+}
 
 export default class GapiAccount {
   constructor(universe, accountDef, foldersTOC, dbConn /*, receiveProtoConn*/) {
@@ -44,14 +66,18 @@ export default class GapiAccount {
     this._db = dbConn;
 
     this.enabled = true;
-    this.problems = [];
 
     this.identities = accountDef.identities;
 
     this.foldersTOC = foldersTOC;
     this.folders = this.foldersTOC.items;
 
-    this.client = new ApiClient(accountDef.credentials, this.id);
+    const backoff = new GapiBackoff(this);
+    this.client = new ApiClient(accountDef.credentials, this.id, backoff);
+  }
+
+  get problems() {
+    return this.accountDef.problems;
   }
 
   toString() {
@@ -61,8 +87,8 @@ export default class GapiAccount {
   // TODO: evaluate whether the account actually wants to be a RefedResource
   // with some kind of reaping if all references die and no one re-acquires it
   // within some timeout horizon.
-  __acquire() {
-    return Promise.resolve(this);
+  async __acquire() {
+    return this;
   }
   __release() {}
 

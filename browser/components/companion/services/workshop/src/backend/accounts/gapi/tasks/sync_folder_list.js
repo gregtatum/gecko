@@ -21,7 +21,7 @@ import TaskDefiner from "../../../task_infra/task_definer";
 import MixinSyncFolderList from "../../../task_mixins/mix_sync_folder_list";
 import { makeFolderMeta } from "backend/db/folder_info_rep";
 import GapiAccountSyncStateHelper from "../account_sync_state_helper";
-import { GapiBackoffInst } from "../account";
+import { prepareChangeForProblems } from "../../../utils/tools";
 
 /**
  * Sync the folder list for an ActiveSync account.  We leverage IMAP's mix-in
@@ -36,6 +36,17 @@ export default TaskDefiner.defineSimpleTask([
         displayName: "Gmail Summary",
       },
     ],
+
+    getResources(ctx, rawTask) {
+      const { accountId } = rawTask;
+      return [
+        "online",
+        `credentials!${accountId}`,
+        `happy!${accountId}`,
+        `permissions!${accountId}`,
+        `queries!${accountId}`,
+      ];
+    },
 
     async syncFolders(ctx, account) {
       const fromDb = await ctx.beginMutate({
@@ -55,20 +66,28 @@ export default TaskDefiner.defineSimpleTask([
       const foldersTOC = account.foldersTOC;
 
       // ## Calendars
-      const clResult = await account.client.pagedApiGetCall(
-        "https://www.googleapis.com/calendar/v3/users/me/calendarList",
-        // We currently don't pass `syncToken` because we expect this list to be
-        // short and the 410 GONE response indicating an expired syncToken means
-        // that we do need to be able to resolve any deltas ourselves (unless
-        // we're okay with clearing out all existing calendar state).
-        {},
-        "items",
-        result => {},
-        GapiBackoffInst
-      );
+      let results;
 
-      if (clResult.error) {
-        logic(ctx, "syncError", { error: clResult.error });
+      try {
+        results = await account.client.pagedApiGetCall(
+          "https://www.googleapis.com/calendar/v3/users/me/calendarList",
+          // We currently don't pass `syncToken` because we expect this list to be
+          // short and the 410 GONE response indicating an expired syncToken means
+          // that we do need to be able to resolve any deltas ourselves (unless
+          // we're okay with clearing out all existing calendar state).
+          {},
+          "items",
+          result => {}
+        );
+      } catch (e) {
+        // Critical error.
+        logic(ctx, "syncError", { error: e.message });
+        const accountProblems = prepareChangeForProblems(account, e.problem);
+        return { accountProblems };
+      }
+
+      if (!results) {
+        logic(ctx, "syncError", { error: "No data" });
         return {};
       }
 
@@ -79,7 +98,7 @@ export default TaskDefiner.defineSimpleTask([
       // used when the syncToken is declared invalid!
       const observedFolderServerIds = new Set();
 
-      for (const calInfo of clResult.items) {
+      for (const calInfo of results.items) {
         // Currently we only want folders that the user has selected in the UI.
         let wantFolder = calInfo.selected;
 
@@ -166,10 +185,15 @@ export default TaskDefiner.defineSimpleTask([
         }
       }
 
+      const accountProblems = account.problems
+        ? prepareChangeForProblems(account, null)
+        : null;
+
       return {
         newFolders,
         modifiedFolders,
         modifiedSyncStates: new Map([[account.id, syncState.rawSyncState]]),
+        accountProblems,
       };
     },
   },

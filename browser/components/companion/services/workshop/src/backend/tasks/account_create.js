@@ -195,6 +195,7 @@ export default TaskDefiner.defineSimpleTask([
         connInfoFields: fragments.connInfoFields,
         identities: [identity],
         kind: fragments.kind,
+        problems: null,
       });
 
       await ctx.finishTask({

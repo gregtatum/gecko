@@ -139,7 +139,7 @@ export class AccountsTOC extends Emitter {
         defaultPriority: accountDef.defaultPriority,
 
         enabled: true,
-        problems: [],
+        problems: accountDef.problems,
 
         kind: accountDef.kind,
 

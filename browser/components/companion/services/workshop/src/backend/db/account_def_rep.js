@@ -96,6 +96,7 @@ export function makeAccountDef({
     type: infra.type,
     engine: engineFields.engine,
     engineData: engineFields.engineData,
+    problems: null,
     // receiveType/sendType come from typeFields (if relevant)
 
     credentials,

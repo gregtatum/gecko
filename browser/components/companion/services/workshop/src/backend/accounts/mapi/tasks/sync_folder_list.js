@@ -21,7 +21,7 @@ import TaskDefiner from "../../../task_infra/task_definer";
 import MixinSyncFolderList from "../../../task_mixins/mix_sync_folder_list";
 import { makeFolderMeta } from "backend/db/folder_info_rep";
 import MapiAccountSyncStateHelper from "../account_sync_state_helper";
-import { MapiBackoffInst } from "../account";
+import { prepareChangeForProblems } from "../../../utils/tools";
 
 /**
  * Sync the folder list for an ActiveSync account.  We leverage IMAP's mix-in
@@ -36,6 +36,17 @@ export default TaskDefiner.defineSimpleTask([
         displayName: "Outlook Summary",
       },
     ],
+
+    getResources(ctx, rawTask) {
+      const { accountId } = rawTask;
+      return [
+        "online",
+        `credentials!${accountId}`,
+        `happy!${accountId}`,
+        `permissions!${accountId}`,
+        `queries!${accountId}`,
+      ];
+    },
 
     async syncFolders(ctx, account) {
       const fromDb = await ctx.beginMutate({
@@ -53,16 +64,24 @@ export default TaskDefiner.defineSimpleTask([
       const foldersTOC = account.foldersTOC;
 
       // ## Calendars
-      const clResult = await account.client.pagedApiGetCall(
-        "https://graph.microsoft.com/v1.0/me/calendars",
-        {},
-        "value",
-        result => {},
-        MapiBackoffInst
-      );
+      let results;
 
-      if (clResult.error) {
-        logic(ctx, "syncError", { error: clResult.error });
+      try {
+        results = await account.client.pagedApiGetCall(
+          "https://graph.microsoft.com/v1.0/me/calendars",
+          {},
+          "value",
+          result => {}
+        );
+      } catch (e) {
+        // Critical error.
+        logic(ctx, "syncError", { error: e.message });
+        const accountProblems = prepareChangeForProblems(account, e.problem);
+        return { accountProblems };
+      }
+
+      if (!results || results.error) {
+        logic(ctx, "syncError", { error: results?.error || "No data" });
         return {};
       }
 
@@ -73,7 +92,7 @@ export default TaskDefiner.defineSimpleTask([
       // used when the syncToken is declared invalid!
       const observedFolderServerIds = new Set();
 
-      for (const calInfo of clResult.value) {
+      for (const calInfo of results.value) {
         // We're only setting the folder as observed since we want it; this may
         // result in a redundant deletion between the above call to
         // modifiedFolders.set and our deletion inference pass after this loop.
@@ -141,10 +160,15 @@ export default TaskDefiner.defineSimpleTask([
         }
       }
 
+      const accountProblems = account.problems
+        ? prepareChangeForProblems(account, null)
+        : null;
+
       return {
         newFolders,
         modifiedFolders,
         modifiedSyncStates: new Map([[account.id, syncState.rawSyncState]]),
+        accountProblems,
       };
     },
   },

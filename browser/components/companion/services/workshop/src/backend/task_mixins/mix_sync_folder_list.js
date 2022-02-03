@@ -111,12 +111,17 @@ const MixinSyncFolderList = {
     });
   },
 
+  getResources(ctx, rawTask) {
+    return undefined;
+  },
+
   /**
    * Ensure offline folders.
    */
   async plan(ctx, rawTask) {
     let decoratedTask = shallowClone(rawTask);
 
+    decoratedTask.resources = this.getResources(ctx, rawTask);
     decoratedTask.exclusiveResources = [
       // Nothing else that touches folder info is allowed in here.
       `folderInfo:${rawTask.accountId}`,
@@ -137,8 +142,7 @@ const MixinSyncFolderList = {
       newData: {
         folders: newFolders,
       },
-      // If we don't have an execute method, we're all done already. (POP3)
-      taskState: this.execute ? decoratedTask : null,
+      taskState: decoratedTask,
     });
   },
 
@@ -150,6 +154,7 @@ const MixinSyncFolderList = {
       newFolders,
       newTasks,
       modifiedSyncStates,
+      accountProblems,
     } = await this.syncFolders(ctx, account);
 
     // XXX migrate ensureEssentialOnlineFolders to be something the actual
@@ -172,6 +177,9 @@ const MixinSyncFolderList = {
       },
       // all done!
       taskState: null,
+      atomicClobbers: {
+        account: accountProblems,
+      },
     });
   },
 };

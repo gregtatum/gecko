@@ -194,12 +194,10 @@ TaskResources.prototype = {
     }
     // (we are blocked by something if we're here)
 
-    const blockedBy = [];
-    for (let resource of taskThing.resources) {
-      if (!this._availableResources.has(resource)) {
-        blockedBy.push(resource);
-      }
-    }
+    const blockedBy = taskThing.resources.filter(
+      resource => !this._availableResources.has(resource)
+    );
+
     return blockedBy;
   },
 
@@ -218,30 +216,33 @@ TaskResources.prototype = {
       this.removeTaskThing(taskThing.id);
     }
 
-    if (taskThing.resources) {
-      for (let resourceId of taskThing.resources) {
-        if (!this._availableResources.has(resourceId)) {
-          // Since we're going to make this block, and as alluded to above,
-          // task markers can get updated, make sure to tell the priorities
-          // implementation to forget about this task if it knows about its
-          // previous incarnation.  (We didn't do it above because in the
-          // event we don't block it, TaskPriorities is smart enough to
-          // efficiently update in place.)
-          this._priorities.removeTaskThing(taskThing.id);
-
-          logic(this, "taskBlockedOnResource", {
-            taskId: taskThing.id,
-            resourceId,
-          });
-          this._blockedTasksById.set(taskThing.id, taskThing);
-          if (this._blockedTasksByResource.has(resourceId)) {
-            this._blockedTasksByResource.get(resourceId).push(taskThing);
-          } else {
-            this._blockedTasksByResource.set(resourceId, [taskThing]);
-          }
-          return false;
-        }
+    const resources =
+      taskThing.resources || taskThing.plannedTask.resources || [];
+    for (const resourceId of resources) {
+      if (this._availableResources.has(resourceId)) {
+        continue;
       }
+      // Since we're going to make this block, and as alluded to above,
+      // task markers can get updated, make sure to tell the priorities
+      // implementation to forget about this task if it knows about its
+      // previous incarnation.  (We didn't do it above because in the
+      // event we don't block it, TaskPriorities is smart enough to
+      // efficiently update in place.)
+      this._priorities.removeTaskThing(taskThing.id);
+
+      logic(this, "taskBlockedOnResource", {
+        taskId: taskThing.id,
+        resourceId,
+      });
+      this._blockedTasksById.set(taskThing.id, taskThing);
+      let blockedTasks = this._blockedTasksByResource.get(resourceId);
+      if (!blockedTasks) {
+        blockedTasks = [];
+        this._blockedTasksByResource.set(resourceId, blockedTasks);
+      }
+      blockedTasks.push(taskThing);
+
+      return false;
     }
 
     this._priorities.prioritizeTaskThing(taskThing);
