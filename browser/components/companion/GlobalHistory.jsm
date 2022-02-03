@@ -1912,6 +1912,10 @@ class GlobalHistory extends EventTarget {
             );
             let tab = this.#window.gBrowser.getTabForBrowser(browser);
             this.#window.gBrowser.selectedTab = tab;
+            // If we're bringing a browser into the foreground, we'll make
+            // sure it's then allowed to continue playing media once its
+            // backgrounded again.
+            browser.suspendMediaWhenInactive = false;
           }
 
           // The history navigation/tab switch should be detected and send out the ViewChanged
@@ -2169,14 +2173,49 @@ class GlobalHistory extends EventTarget {
     this.setView(viewToSwitchTo.view);
 
     let browser = internalView.getBrowser();
-    // If the associated <browser> only had a single entry in it,
-    // then presumably it was for the history entry of the View
-    // that just removed. In that case, we can get rid of that
-    // <browser> - but only if we weren't already closing it.
-    if (browser?.browsingContext.sessionHistory.count == 1) {
-      let tab = this.#window.gBrowser.getTabForBrowser(browser);
-      if (!tab.closing) {
-        this.#window.gBrowser.removeTab(tab, { animate: false });
+
+    if (browser) {
+      // Check to see if the view we're closing is the last one for the
+      // associated <browser>. In that case, we can get rid of that
+      // <browser> - but only if we weren't already closing it.
+      if (
+        this.#viewStack.every((view, i) => {
+          return (
+            view.getBrowser() != browser ||
+            (view.getBrowser() == browser && index == i)
+          );
+        })
+      ) {
+        let tab = this.#window.gBrowser.getTabForBrowser(browser);
+        if (!tab.closing) {
+          this.#window.gBrowser.removeTab(tab, { animate: false });
+        }
+      } else {
+        // Work our way back through the history of the browser we're
+        // about to close the View for and try to find another View.
+        // If we find one, pre-emptively navigate the underlying <browser>
+        // to that one, and put it into the "block autoplay" state so that
+        // any autoplaying media requires the user to select the background
+        // view before playing.
+        let historyIndex = getHistoryIndex(browser, internalView.historyId);
+        console.assert(
+          historyIndex > 0,
+          "The sessionHistory count has gone out of sync."
+        );
+        for (let i = historyIndex - 1; i >= 0; --i) {
+          let previousEntry = browser.browsingContext.sessionHistory.getEntryAtIndex(
+            i
+          );
+          let previousView = this.#historyViews.get(previousEntry.ID);
+          if (previousView && viewToSwitchTo.getBrowser() != browser) {
+            // We're navigating a browser in the background. We don't want to
+            // surprise the user with autoplaying media, so we'll suspend the
+            // media until the page is foregrounded again.
+            browser.suspendMediaWhenInactive = true;
+            browser.gotoIndex(i);
+            break;
+          }
+        }
       }
     }
 
