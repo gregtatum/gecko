@@ -41,14 +41,10 @@ window.gCalendarEventListener = {
       this._resolveHasInitialized = resolve;
     });
 
-    window.addEventListener(
-      "Companion:RegisterCalendarEvents",
-      this.dispatchRefreshEventsEvent
-    );
-    window.addEventListener(
-      "Companion:SignIn",
-      this.dispatchRefreshEventsEvent
-    );
+    this._calendarEvents = [];
+
+    window.addEventListener("Companion:RegisterCalendarEvents", this);
+    window.addEventListener("Companion:SignIn", this);
 
     if (workshopEnabled) {
       setInterval(
@@ -64,12 +60,26 @@ window.gCalendarEventListener = {
     // Just fire an event to tell the list to check the cached events again.
     document.dispatchEvent(
       new CustomEvent("refresh-events", {
-        detail: { events: window.CompanionUtils.events },
+        detail: { events: this._calendarEvents },
       })
     );
     if (this._resolveHasInitialized) {
       this._resolveHasInitialized();
       this._resolveHasInitialized = null;
+    }
+  },
+
+  handleEvent({ type, detail }) {
+    switch (type) {
+      case "Companion:RegisterCalendarEvents": {
+        this._calendarEvents = detail.events;
+        this.dispatchRefreshEventsEvent();
+        break;
+      }
+      case "Companion:SignIn": {
+        this.dispatchRefreshEventsEvent();
+        break;
+      }
     }
   },
 };

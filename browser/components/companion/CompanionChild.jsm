@@ -53,11 +53,9 @@ class CompanionChild extends JSWindowActorChild {
           tabs() {
             return this._tabs.values();
           },
-          snapshots: [],
           getFavicon(url) {
             return self._cachedFavicons.get(url);
           },
-          events: [],
           sendAsyncMessage(name, detail) {
             self.sendAsyncMessage(name, detail);
           },
@@ -133,11 +131,9 @@ class CompanionChild extends JSWindowActorChild {
 
         break;
       }
-      case "Companion:RegisterCalendarEvents": {
-        let { events, newFavicons } = message.data;
-        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
-        waivedContent.CompanionUtils.events = events;
-
+      case "Companion:RegisterCalendarEvents":
+      case "Companion:SnapshotsChanged": {
+        let { newFavicons } = message.data;
         this.updateFaviconCache(newFavicons);
         break;
       }
@@ -153,13 +149,6 @@ class CompanionChild extends JSWindowActorChild {
       case "Companion:TabRemoved": {
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
         waivedContent.CompanionUtils._tabs.delete(message.data.browserId);
-        break;
-      }
-      case "Companion:SnapshotsChanged": {
-        let { snapshots, newFavicons } = message.data;
-        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
-        waivedContent.CompanionUtils.snapshots = snapshots;
-        this.updateFaviconCache(newFavicons);
         break;
       }
       case "Companion:GlobalHistoryEvent": {

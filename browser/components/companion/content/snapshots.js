@@ -170,34 +170,38 @@ export class SnapshotList extends HidableElement {
 export class SuggestedSnapshotList extends SnapshotList {
   constructor(snapshotTitle) {
     super(snapshotTitle);
-
-    this.dbListener = () => {
-      this.updateSnapshots(
-        window.CompanionUtils.snapshots.slice(0, MAX_SNAPSHOTS)
-      );
-      noteTelemetryTimestamp("Companion:SuggestedSnapshotsPainted", {
-        numberOfSnapshots: window.CompanionUtils.snapshots.length,
-      });
-    };
+    this.snapshots = [];
   }
 
-  async connectedCallback() {
-    window.addEventListener("Companion:SnapshotsChanged", this.dbListener);
-    this.updateSnapshots(
-      window.CompanionUtils.snapshots.slice(0, MAX_SNAPSHOTS)
-    );
+  handleEvent({ type, detail }) {
+    switch (type) {
+      case "Companion:SnapshotsChanged": {
+        let { snapshots } = detail;
+        this.snapshots = snapshots;
+        this.updateSnapshots(this.snapshots.slice(0, MAX_SNAPSHOTS));
+        noteTelemetryTimestamp("Companion:SuggestedSnapshotsPainted", {
+          numberOfSnapshots: this.snapshots.length,
+        });
+        break;
+      }
+    }
+  }
+
+  connectedCallback() {
+    window.addEventListener("Companion:SnapshotsChanged", this);
+    this.updateSnapshots(this.snapshots.slice(0, MAX_SNAPSHOTS));
     // This should generally be false. However, in case anything changes in the
     // future and we're able to get snapshots by the time of connectedCallback,
     // we want to be able to see it in our telemetry.
-    if (window.CompanionUtils.snapshots.length) {
+    if (this.snapshots.length) {
       noteTelemetryTimestamp("Companion:SuggestedSnapshotsPainted", {
-        numberOfSnapshots: window.CompanionUtils.snapshots.length,
+        numberOfSnapshots: this.snapshots.length,
       });
     }
   }
 
   disconnectedCallback() {
-    window.removeEventListener("Companion:SnapshotsChanged", this.dbListener);
+    window.removeEventListener("Companion:SnapshotsChanged", this);
   }
 }
 
