@@ -51,7 +51,10 @@ const formatGoogleURL = (type, fallbackURL) => {
   if (OnlineServices.hasService("google")) {
     const service = OnlineServices.getServices("google")[0];
     const email = service.getAccountAddress();
-    url = GOOGLE_ACTION_URLS[type].replace("{email}", email);
+    url = GOOGLE_ACTION_URLS[type].replace(
+      "{email}",
+      type === "meeting" ? email : encodeURIComponent(email)
+    );
   }
   return url;
 };
@@ -67,7 +70,6 @@ const COMMANDS = {
     commands: ["inbox", "email", "gmail", "check gmail", "google mail"],
     icon: "chrome://browser/content/urlbar/quickactions/gmail.svg",
     label: "Go to Inbox",
-    url: formatGoogleURL("email", "https://gmail.com"),
     title: "Gmail",
     hide(isDefault) {
       if (isDefault) {
@@ -77,6 +79,10 @@ const COMMANDS = {
     },
     showBadge() {
       return !!OnlineServices.getMailCount("google");
+    },
+    callback: () => {
+      const url = formatGoogleURL("email", "https://gmail.com");
+      openUrl(url);
     },
   },
   checkoutlook: {
@@ -102,29 +108,41 @@ const COMMANDS = {
     commands: ["create-meeting", "calendar", "google calendar"],
     icon: "chrome://browser/content/urlbar/quickactions/createmeeting.svg",
     label: "Schedule a meeting",
-    url: formatGoogleURL("meeting", "https://meeting.new"),
     title: "Google Calendar",
+    callback: () => {
+      const url = formatGoogleURL("meeting", "https://meeting.new");
+      openUrl(url);
+    },
   },
   createslides: {
     commands: ["create-slides", "slides", "google slides"],
     icon: "chrome://browser/content/urlbar/quickactions/createslides.svg",
     label: "Create Google slides",
-    url: formatGoogleURL("slides", "https://slides.new"),
     title: "Google Slides",
+    callback: () => {
+      const url = formatGoogleURL("slides", "https://slides.new");
+      openUrl(url);
+    },
   },
   createsheet: {
     commands: ["create-sheet", "spreadsheet", "sheet", "google sheets"],
     icon: "chrome://browser/content/urlbar/quickactions/createsheet.svg",
     label: "Create a Google Sheet",
-    url: formatGoogleURL("sheets", "https://sheets.new"),
     title: "Google Sheets",
+    callback: () => {
+      const url = formatGoogleURL("sheets", "https://sheets.new");
+      openUrl(url);
+    },
   },
   createdoc: {
     commands: ["create-doc", "document", "google docs"],
     icon: "chrome://browser/content/urlbar/quickactions/createdoc.svg",
     label: "Create a Google doc",
-    url: formatGoogleURL("docs", "https://docs.new"),
     title: "Google Docs",
+    callback: () => {
+      const url = formatGoogleURL("docs", "https://docs.new");
+      openUrl(url);
+    },
   },
   screenshot: {
     commands: ["screenshot"],
