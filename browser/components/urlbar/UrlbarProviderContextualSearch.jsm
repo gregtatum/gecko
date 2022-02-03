@@ -68,7 +68,6 @@ class ProviderContextualSearch extends UrlbarProvider {
   constructor() {
     super();
     this.engines = new Map();
-    this.window = BrowserWindowTracker.getTopWindow();
     UrlbarResult.addDynamicResultType(DYNAMIC_RESULT_TYPE);
     UrlbarView.addDynamicViewTemplate(DYNAMIC_RESULT_TYPE, VIEW_TEMPLATE);
   }
@@ -163,7 +162,8 @@ class ProviderContextualSearch extends UrlbarProvider {
 
     // If the current view has engines that haven't been added, return a result
     // that will first add an engine, then use it to search.
-    const engineToAdd = this.window.gBrowser.selectedBrowser?.engines[0];
+    const window = BrowserWindowTracker.getTopWindow();
+    const engineToAdd = window?.gBrowser.selectedBrowser?.engines[0];
 
     if (engineToAdd) {
       const result = this.makeResult({
