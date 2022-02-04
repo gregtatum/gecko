@@ -82,7 +82,7 @@ const COMMANDS = {
     },
     callback: () => {
       const url = formatGoogleURL("email", "https://gmail.com");
-      openUrl(url);
+      UrlbarUtils.openUrl(url);
     },
   },
   checkoutlook: {
@@ -111,7 +111,7 @@ const COMMANDS = {
     title: "Google Calendar",
     callback: () => {
       const url = formatGoogleURL("meeting", "https://meeting.new");
-      openUrl(url);
+      UrlbarUtils.openUrl(url);
     },
   },
   createslides: {
@@ -121,7 +121,7 @@ const COMMANDS = {
     title: "Google Slides",
     callback: () => {
       const url = formatGoogleURL("slides", "https://slides.new");
-      openUrl(url);
+      UrlbarUtils.openUrl(url);
     },
   },
   createsheet: {
@@ -131,7 +131,7 @@ const COMMANDS = {
     title: "Google Sheets",
     callback: () => {
       const url = formatGoogleURL("sheets", "https://sheets.new");
-      openUrl(url);
+      UrlbarUtils.openUrl(url);
     },
   },
   createdoc: {
@@ -141,7 +141,7 @@ const COMMANDS = {
     title: "Google Docs",
     callback: () => {
       const url = formatGoogleURL("docs", "https://docs.new");
-      openUrl(url);
+      UrlbarUtils.openUrl(url);
     },
   },
   screenshot: {
