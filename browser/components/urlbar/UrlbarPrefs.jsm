@@ -61,6 +61,9 @@ const PREF_URLBAR_DEFAULTS = new Map([
   // active view if the the view utilizes OpenSearch.
   ["contextualSearch.enabled", false],
 
+  // Whether best match results are enabled.
+  ["bestMatch.enabled", true],
+
   // Whether using `ctrl` when hitting return/enter in the URL bar
   // (or clicking 'go') should prefix 'www.' and suffix
   // browser.fixup.alternate.suffix to the URL bar value prior to

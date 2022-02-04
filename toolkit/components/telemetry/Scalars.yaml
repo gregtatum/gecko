@@ -2365,24 +2365,6 @@ media:
     record_in_processes:
       - 'content'
 
-  wmf_process_usage:
-    bug_numbers:
-      - 1690372
-      - 1720616
-    description: >
-      Record whether the WMF decoder module is used in content or chrome process.
-    expires: "99"
-    kind: boolean
-    notification_emails:
-      - alwu@mozilla.com
-      - bvandyk@mozilla.com
-    release_channel_collection: opt-out
-    products:
-      - 'firefox'
-    record_in_processes:
-      - 'main'
-      - 'content'
-
   video_hardware_decoding_support:
     bug_numbers:
       - 1733722
@@ -5038,6 +5020,29 @@ update:
       - application-update-telemetry-alerts@mozilla.com
       - bytesized@mozilla.com
     release_channel_collection: opt-out
+    products:
+      - 'firefox'
+    record_in_processes:
+      - main
+
+  suppress_prompts:
+    bug_numbers:
+      - 1749155
+    description: >
+      When an update is available and app.update.auto is disabled, a popup is
+      opened prompting the user to download and install the update. The pref
+      app.update.suppressPrompts causes Firefox Nightly to wait up to 7 days
+      before showing the prompt, instead showing a badge and banner in the
+      meantime. It also prevents Nightly from showing update restart prompts,
+      instead showing a badge and banner immediately. This value is set for
+      the users who set this pref to true.
+    expires: never
+    kind: boolean
+    keyed: false
+    notification_emails:
+      - application-update-telemetry-alerts@mozilla.com
+      - bytesized@mozilla.com
+    release_channel_collection: opt-in
     products:
       - 'firefox'
     record_in_processes:
