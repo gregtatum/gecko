@@ -1525,7 +1525,7 @@
 
 # Add support for canvas path objects
 - name: canvas.path.enabled
-  type: bool
+  type: RelaxedAtomicBool
   value: true
   mirror: always
 
@@ -5572,6 +5572,11 @@
   value: false
   mirror: always
 
+- name: gfx.will-change.ignore-opacity
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
 # We expose two prefs: gfx.webrender.all and gfx.webrender.enabled.
 # The first enables WR+additional features, and the second just enables WR.
 # For developer convenience, building with --enable-webrender=true or just
@@ -7686,11 +7691,6 @@
   value: true
   mirror: always
 
-- name: layout.css.resizeobserver.enabled
-  type: bool
-  value: true
-  mirror: always
-
 # Are inter-character ruby annotations enabled?
 - name: layout.css.ruby.intercharacter.enabled
   type: bool
@@ -9213,6 +9213,15 @@
   value: true
   mirror: always
 
+# This pref turns off window-focus checks on the navigator.mediaDevices methods,
+# for partner testing frameworks.
+# Prefer "focusmanager.testmode", which is already set by default for
+# web-platform tests.
+- name: media.devices.unfocused.enabled
+  type: bool
+  value: false
+  mirror: always
+
 # This pref turns off [SecureContext] on the navigator.mediaDevices object, for
 # more compatible legacy behavior.
 - name: media.devices.insecure.enabled
@@ -10628,12 +10637,6 @@
 - name: network.dns.httpssvc.http3_fast_fallback_timeout
   type: RelaxedAtomicUint32
   value: 50
-  mirror: always
-
-# Whether to use https rr for speculative connections.
-- name: network.dns.use_https_rr_for_speculative_connection
-  type: RelaxedAtomicBool
-  value: false
   mirror: always
 
 # Whether to force a transaction to wait https rr.
