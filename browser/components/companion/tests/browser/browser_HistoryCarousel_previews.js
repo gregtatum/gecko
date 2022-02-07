@@ -42,6 +42,29 @@ add_task(async function preview_construction() {
     "User title should be set on the first view."
   );
 
+  // Wait until wireframes have been sent up for each of the unselected
+  // views before proceeding. For now, we'll assume that all of the views
+  // have been loaded in the same browser (the selected one).
+  await BrowserTestUtils.waitForCondition(() => {
+    let browser = gBrowser.selectedBrowser;
+    let sessionHistory = browser.browsingContext.sessionHistory;
+    let selectedIndex = sessionHistory.index;
+    let entryCount = sessionHistory.count;
+    // Go through each SHEntry and for any entry that's not the selected
+    // one, if it doesn't have a wireframe, return false.
+    for (let i = 0; i < entryCount; ++i) {
+      if (i != selectedIndex) {
+        let entry = sessionHistory.getEntryAtIndex(i);
+        if (!entry.wireframe) {
+          return false;
+        }
+      }
+    }
+    // All non-selected entries appear to have a wireframe, so we're okay
+    // to proceed.
+    return true;
+  }, "Waiting for all non-selected SHEntries to have wireframes.");
+
   let browser = await PinebuildTestUtils.enterHistoryCarousel();
 
   let {
