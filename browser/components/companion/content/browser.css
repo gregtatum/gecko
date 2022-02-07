@@ -16,7 +16,7 @@
   --urlbar-border-radius: 20px;
   --urlbar-min-height: 40px;
   --urlbarbutton-border-radius: 4px;
-  --toolbarbutton-hover-background: var(--colors-cafe-02);
+  --toolbarbutton-hover-background: var(--colors-warm-hover-02);
   --toolbarbutton-active-background: var(--colors-warm-pressed-02);
 
   /* pinebuild-specific variables: */
@@ -248,7 +248,7 @@ body[flow-reset] #urlbar-container {
 
 #urlbar:not(.searchButton) > #urlbar-input-container > #pinebuild-search-icon-box #search-icon {
   -moz-context-properties: fill, fill-opacity;
-  list-style-image: url(chrome://global/skin/icons/search-glass.svg);
+  background: url(chrome://global/skin/icons/search-glass.svg) no-repeat center;
 }
 
 @supports not -moz-bool-pref("browser.companion.tabdebugging") {
@@ -310,12 +310,12 @@ body[flow-reset] #urlbar-container {
   margin-inline: 12px;
 }
 
-#pinebuild-back-button {
-  list-style-image: url("chrome://browser/skin/back.svg");
+#pinebuild-back-button > .toolbarbutton-icon {
+  background: url("chrome://browser/skin/back.svg") no-repeat center;
 }
 
-#pinebuild-forward-button {
-  list-style-image: url("chrome://browser/skin/forward.svg");
+#pinebuild-forward-button > .toolbarbutton-icon {
+  background: url("chrome://browser/skin/forward.svg") no-repeat center;
   display: none;
 }
 
@@ -325,12 +325,22 @@ body[flow-reset] #urlbar-container {
   }
 }
 
-#pinebuild-reload-button {
-  list-style-image: url("chrome://global/skin/icons/reload.svg");
+#pinebuild-toolbar toolbarbutton:not(#companion-sidebar-button):not([disabled]):hover .toolbarbutton-icon,
+#session-setaside-button:hover .toolbarbutton-icon {
+  background-color: var(--colors-warm-hover-02);
 }
 
-#pinebuild-stop-button {
-  list-style-image: url("chrome://global/skin/icons/close.svg");
+#pinebuild-toolbar toolbarbutton:not(#companion-sidebar-button):not([disabled]):active .toolbarbutton-icon,
+#session-setaside-button:active .toolbarbutton-icon {
+  background-color: var(--colors-warm-pressed-02);
+}
+
+#pinebuild-reload-button > .toolbarbutton-icon {
+  background: url("chrome://global/skin/icons/reload.svg") no-repeat center;
+}
+
+#pinebuild-stop-button > .toolbarbutton-icon {
+  background: url("chrome://global/skin/icons/close.svg") no-repeat center;
 }
 
 #pinebuild-reload-button[displaystop],
@@ -345,11 +355,11 @@ body[flow-reset] #urlbar-container {
 }
 
 #pinebuild-snapshot-button {
-  list-style-image: url("chrome://global/skin/icons/highlights.svg");
+  background: url("chrome://global/skin/icons/highlights.svg") no-repeat center;
 }
 
 #companion-sidebar-button {
-  list-style-image: url("chrome://browser/skin/sidebars-right.svg");
+  background: url("chrome://browser/skin/sidebars-right.svg") no-repeat center;
   margin-block: auto;
   margin-inline: 40px 16px;
   width: 32px;
@@ -741,8 +751,8 @@ body[flow-reset] #urlbar[open] #urlbar-background {
   --toolbar-bgcolor: white;
 }
 
-#session-setaside-button {
-  list-style-image: url(chrome://browser/skin/session-setaside.svg);
+#session-setaside-button > .toolbarbutton-icon {
+  background: url(chrome://browser/skin/session-setaside.svg) no-repeat center;
 }
 
 .confirmation {
@@ -774,13 +784,6 @@ body[flow-reset] #urlbar[open] #urlbar-background {
   border-radius: 50%;
   box-sizing: border-box;
   box-shadow: inset 0 2px 4px rgba(183, 155, 242, 0.8);
-}
-
-#companion-sidebar-button > .toolbarbutton-icon {
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border-radius: 0;
 }
 
 #companion-sidebar-button:hover > .toolbarbutton-icon {
