@@ -2761,7 +2761,9 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   // been enabled (and should likely be removed eventually).
   pref("browser.pinebuild.animateViewTransitions", true);
   pref("browser.pinebuild.megaback.enabled", true);
-  pref("browser.history.collectWireframes", true);
+  // Temporarily disable collecting wireframes in production until
+  // we find a proper solution to MR2-1831.
+  // pref("browser.history.collectWireframes", true);
 
   // Preferences below here are still being experimented with are in the
   // unlocked state to allow for manual testing.
