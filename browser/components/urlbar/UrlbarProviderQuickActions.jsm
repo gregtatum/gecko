@@ -125,7 +125,7 @@ const COMMANDS = {
     },
   },
   createsheet: {
-    commands: ["create-sheet", "spreadsheet", "sheet", "google sheets"],
+    commands: ["create-sheet", "spreadsheet", "sheets", "google sheets"],
     icon: "chrome://browser/content/urlbar/quickactions/createsheet.svg",
     label: "Create a Google Sheet",
     title: "Google Sheets",
@@ -135,7 +135,7 @@ const COMMANDS = {
     },
   },
   createdoc: {
-    commands: ["create-doc", "document", "google docs"],
+    commands: ["create-doc", "document", "docs", "google docs"],
     icon: "chrome://browser/content/urlbar/quickactions/createdoc.svg",
     label: "Create a Google doc",
     title: "Google Docs",
