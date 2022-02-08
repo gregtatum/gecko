@@ -1705,10 +1705,6 @@ nsresult Database::InitTempEntities() {
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = mMainConn->ExecuteSimpleSQL(
-      CREATE_PLACES_METADATA_SNAPSHOTS_GROUPS_AFTERDELETE_TRIGGER);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  rv = mMainConn->ExecuteSimpleSQL(
       CREATE_PLACES_SESSION_TO_PLACE_AFTERINSERT_TRIGGER);
   NS_ENSURE_SUCCESS(rv, rv);
   rv = mMainConn->ExecuteSimpleSQL(
