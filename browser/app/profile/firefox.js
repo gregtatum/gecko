@@ -2761,6 +2761,7 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   // been enabled (and should likely be removed eventually).
   pref("browser.pinebuild.animateViewTransitions", true);
   pref("browser.pinebuild.megaback.enabled", true);
+  pref("browser.pinebuild.downloads.enabled", true);
   // Temporarily disable collecting wireframes in production until
   // we find a proper solution to MR2-1831.
   // pref("browser.history.collectWireframes", true);
@@ -2776,6 +2777,5 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.pinebuild.megaback.click-count-timeout-ms", 3000);
   pref("browser.pinebuild.megaback.click-count-threshold", 5);
   pref("browser.pinebuild.snapshots.relevancy.enabled", false);
-  pref("browser.pinebuild.downloads.enabled", false);
 
 #endif
