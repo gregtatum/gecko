@@ -71,7 +71,7 @@ bool ScrollbarDrawing::IsParentScrollbarHoveredOrActive(nsIFrame* aFrame) {
 
 /*static*/
 bool ScrollbarDrawing::IsScrollbarWidthThin(const ComputedStyle& aStyle) {
-  auto scrollbarWidth = aStyle.StyleUIReset()->mScrollbarWidth;
+  auto scrollbarWidth = aStyle.StyleUIReset()->ScrollbarWidth();
   return scrollbarWidth == StyleScrollbarWidth::Thin;
 }
 
@@ -97,7 +97,7 @@ auto ScrollbarDrawing::GetScrollbarSizes(nsPresContext* aPresContext,
 auto ScrollbarDrawing::GetScrollbarSizes(nsPresContext* aPresContext,
                                          nsIFrame* aFrame) -> ScrollbarSizes {
   auto* style = nsLayoutUtils::StyleForScrollbar(aFrame);
-  auto width = style->StyleUIReset()->mScrollbarWidth;
+  auto width = style->StyleUIReset()->ScrollbarWidth();
   auto overlay =
       aPresContext->UseOverlayScrollbars() ? Overlay::Yes : Overlay::No;
   return GetScrollbarSizes(aPresContext, width, overlay);
@@ -124,12 +124,15 @@ sRGBColor ScrollbarDrawing::ComputeScrollbarTrackColor(
     return sRGBColor::FromABGR(
         ui->mScrollbarColor.AsColors().track.CalcColor(aStyle));
   }
-  if (aDocumentState.HasAllStates(NS_DOCUMENT_STATE_WINDOW_INACTIVE)) {
-    return aColors.SystemOrElse(StyleSystemColor::ThemedScrollbarInactive,
-                                [] { return sScrollbarColor; });
-  }
-  return aColors.SystemOrElse(StyleSystemColor::ThemedScrollbar,
-                              [] { return sScrollbarColor; });
+
+  static constexpr gfx::sRGBColor sDefaultTrackColor(
+      gfx::sRGBColor::UnusualFromARGB(0xfff0f0f0));
+
+  auto systemColor =
+      aDocumentState.HasAllStates(NS_DOCUMENT_STATE_WINDOW_INACTIVE)
+          ? StyleSystemColor::ThemedScrollbarInactive
+          : StyleSystemColor::ThemedScrollbar;
+  return aColors.SystemOrElse(systemColor, [] { return sDefaultTrackColor; });
 }
 
 // Don't use the theme color for dark scrollbars if it's not a color (if it's
@@ -191,7 +194,7 @@ sRGBColor ScrollbarDrawing::ComputeScrollbarThumbColor(
 
   return aColors.SystemOrElse(systemColor, [&] {
     return sRGBColor::FromABGR(ThemeColors::AdjustUnthemedScrollbarThumbColor(
-        sScrollbarThumbColor.ToABGR(), aElementState));
+        NS_RGB(0xcd, 0xcd, 0xcd), aElementState));
   });
 }
 
@@ -203,7 +206,7 @@ ScrollbarParams ScrollbarDrawing::ComputeScrollbarParams(
       nsLookAndFeel::GetInt(LookAndFeel::IntID::UseOverlayScrollbars) != 0;
   params.isRolledOver = IsParentScrollbarRolledOver(aFrame);
   params.isSmall =
-      aStyle.StyleUIReset()->mScrollbarWidth == StyleScrollbarWidth::Thin;
+      aStyle.StyleUIReset()->ScrollbarWidth() == StyleScrollbarWidth::Thin;
   params.isRtl = nsNativeTheme::IsFrameRTL(aFrame);
   params.isHorizontal = aIsHorizontal;
   params.isOnDarkBackground = !StaticPrefs::widget_disable_dark_scrollbar() &&
