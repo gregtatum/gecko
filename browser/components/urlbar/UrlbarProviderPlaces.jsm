@@ -13,7 +13,9 @@
  */
 var EXPORTED_SYMBOLS = ["UrlbarProviderPlaces"];
 
-// Constants
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 // AutoComplete query type constants.
 // Describes the various types of queries that we can process rows for.
@@ -32,25 +34,37 @@ const QUERYINDEX_TITLE = 2;
 const QUERYINDEX_BOOKMARKED = 3;
 const QUERYINDEX_BOOKMARKTITLE = 4;
 const QUERYINDEX_TAGS = 5;
-//    QUERYINDEX_VISITCOUNT    = 6;
-//    QUERYINDEX_TYPED         = 7;
-const QUERYINDEX_PLACEID = 8;
-const QUERYINDEX_SWITCHTAB = 9;
-const QUERYINDEX_FRECENCY = 10;
+const QUERYINDEX_SNAPSHOTTITLE = 6;
+//    QUERYINDEX_VISITCOUNT    = 7;
+//    QUERYINDEX_TYPED         = 8;
+const QUERYINDEX_PLACEID = 9;
+const QUERYINDEX_SWITCHTAB = 10;
+const QUERYINDEX_FRECENCY = 11;
 
 // This SQL query fragment provides the following:
 //   - whether the entry is bookmarked (QUERYINDEX_BOOKMARKED)
 //   - the bookmark title, if it is a bookmark (QUERYINDEX_BOOKMARKTITLE)
 //   - the tags associated with a bookmarked entry (QUERYINDEX_TAGS)
-const SQL_BOOKMARK_TAGS_FRAGMENT = `EXISTS(SELECT 1 FROM moz_bookmarks WHERE fk = h.id) AS bookmarked,
-   ( SELECT title FROM moz_bookmarks WHERE fk = h.id AND title NOTNULL
-     ORDER BY lastModified DESC LIMIT 1
-   ) AS btitle,
-   ( SELECT GROUP_CONCAT(t.title, ', ')
-     FROM moz_bookmarks b
-     JOIN moz_bookmarks t ON t.id = +b.parent AND t.parent = :parent
-     WHERE b.fk = h.id
-   ) AS tags`;
+//   - the snapshot title
+let snapshotTitleFragment = `, NULL AS stitle`;
+let fallbackTitleFragment = `NULL`;
+if (AppConstants.PINEBUILD) {
+  snapshotTitleFragment = `, (
+    SELECT title FROM moz_places_metadata_snapshots s WHERE s.place_id = h.id
+  ) AS stitle`;
+  fallbackTitleFragment = "CASE WHEN stitle NOTNULL THEN h.title ELSE NULL END";
+}
+const SQL_BOOKMARK_TAGS_FRAGMENT = `
+  EXISTS(SELECT 1 FROM moz_bookmarks WHERE fk = h.id) AS bookmarked,
+  ( SELECT title FROM moz_bookmarks WHERE fk = h.id AND title NOTNULL
+    ORDER BY lastModified DESC LIMIT 1
+  ) AS btitle,
+  ( SELECT GROUP_CONCAT(t.title, ', ')
+    FROM moz_bookmarks b
+    JOIN moz_bookmarks t ON t.id = +b.parent AND t.parent = :parent
+    WHERE b.fk = h.id
+  ) AS tags
+  ${snapshotTitleFragment}`;
 
 // TODO bug 412736: in case of a frecency tie, we might break it with h.typed
 // and h.visit_count.  That is slower though, so not doing it yet...
@@ -67,16 +81,18 @@ function defaultQuery(conditions = "") {
        AND CASE WHEN bookmarked
          THEN
            AUTOCOMPLETE_MATCH(:searchString, h.url,
-                              IFNULL(btitle, h.title), tags,
+                              COALESCE(stitle, btitle, h.title), tags,
                               h.visit_count, h.typed,
                               1, t.open_count,
-                              :matchBehavior, :searchBehavior, NULL)
+                              :matchBehavior, :searchBehavior,
+                              ${fallbackTitleFragment})
          ELSE
            AUTOCOMPLETE_MATCH(:searchString, h.url,
-                              h.title, '',
+                              IFNULL(stitle, h.title), '',
                               h.visit_count, h.typed,
                               0, t.open_count,
-                              :matchBehavior, :searchBehavior, NULL)
+                              :matchBehavior, :searchBehavior,
+                              ${fallbackTitleFragment})
          END
        ${conditions ? "AND" : ""} ${conditions}
      ORDER BY h.frecency DESC, h.id DESC
@@ -1121,6 +1137,7 @@ Search.prototype = {
     let url = row.getResultByIndex(QUERYINDEX_URL);
     let openPageCount = row.getResultByIndex(QUERYINDEX_SWITCHTAB) || 0;
     let historyTitle = row.getResultByIndex(QUERYINDEX_TITLE) || "";
+    let snapshotTitle = row.getResultByIndex(QUERYINDEX_SNAPSHOTTITLE) || "";
     let bookmarked = row.getResultByIndex(QUERYINDEX_BOOKMARKED);
     let bookmarkTitle = bookmarked
       ? row.getResultByIndex(QUERYINDEX_BOOKMARKTITLE)
@@ -1131,7 +1148,7 @@ Search.prototype = {
     let match = {
       placeId,
       value: url,
-      comment: bookmarkTitle || historyTitle,
+      comment: snapshotTitle || bookmarkTitle || historyTitle,
       icon: UrlbarUtils.getIconForUrl(url),
       frecency: frecency || FRECENCY_DEFAULT,
     };

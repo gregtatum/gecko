@@ -17,6 +17,7 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 XPCOMUtils.defineLazyModuleGetters(this, {
+  AppConstants: "resource://gre/modules/AppConstants.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
   UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
@@ -32,22 +33,34 @@ const QUERYINDEX = {
   BOOKMARKED: 2,
   BOOKMARKTITLE: 3,
   TAGS: 4,
-  SWITCHTAB: 8,
+  SNAPSHOTTITLE: 5,
+  SWITCHTAB: 9,
 };
 
 // This SQL query fragment provides the following:
 //   - whether the entry is bookmarked (QUERYINDEX_BOOKMARKED)
 //   - the bookmark title, if it is a bookmark (QUERYINDEX_BOOKMARKTITLE)
 //   - the tags associated with a bookmarked entry (QUERYINDEX_TAGS)
-const SQL_BOOKMARK_TAGS_FRAGMENT = `EXISTS(SELECT 1 FROM moz_bookmarks WHERE fk = h.id) AS bookmarked,
-   ( SELECT title FROM moz_bookmarks WHERE fk = h.id AND title NOTNULL
-     ORDER BY lastModified DESC LIMIT 1
-   ) AS btitle,
-   ( SELECT GROUP_CONCAT(t.title, ', ')
-     FROM moz_bookmarks b
-     JOIN moz_bookmarks t ON t.id = +b.parent AND t.parent = :parent
-     WHERE b.fk = h.id
-   ) AS tags`;
+//   - the snapshot title
+let snapshotTitleFragment = `, NULL AS stitle`;
+let fallbackTitleFragment = `NULL`;
+if (AppConstants.PINEBUILD) {
+  snapshotTitleFragment = `, (
+    SELECT title FROM moz_places_metadata_snapshots s WHERE s.place_id = h.id
+  ) AS stitle`;
+  fallbackTitleFragment = "CASE WHEN stitle NOTNULL THEN h.title ELSE NULL END";
+}
+const SQL_BOOKMARK_TAGS_FRAGMENT = `
+  EXISTS(SELECT 1 FROM moz_bookmarks WHERE fk = h.id) AS bookmarked,
+  ( SELECT title FROM moz_bookmarks WHERE fk = h.id AND title NOTNULL
+    ORDER BY lastModified DESC LIMIT 1
+  ) AS btitle,
+  ( SELECT GROUP_CONCAT(t.title, ', ')
+    FROM moz_bookmarks b
+    JOIN moz_bookmarks t ON t.id = +b.parent AND t.parent = :parent
+    WHERE b.fk = h.id
+  ) AS tags
+  ${snapshotTitleFragment}`;
 
 const SQL_ADAPTIVE_QUERY = `/* do not warn (bug 487789) */
    SELECT h.url, h.title, ${SQL_BOOKMARK_TAGS_FRAGMENT}, h.visit_count,
@@ -64,11 +77,11 @@ const SQL_ADAPTIVE_QUERY = `/* do not warn (bug 487789) */
           ON t.url = h.url
          AND t.userContextId = :userContextId
    WHERE AUTOCOMPLETE_MATCH(NULL, h.url,
-                            IFNULL(btitle, h.title), tags,
+                            COALESCE(stitle, btitle, h.title), tags,
                             h.visit_count, h.typed, bookmarked,
                             t.open_count,
                             :matchBehavior, :searchBehavior,
-                            NULL)
+                            ${fallbackTitleFragment})
    ORDER BY rank DESC, h.frecency DESC
    LIMIT :maxResults`;
 
@@ -137,8 +150,10 @@ class ProviderInputHistory extends UrlbarProvider {
         ? row.getResultByIndex(QUERYINDEX.BOOKMARKTITLE)
         : null;
       const tags = row.getResultByIndex(QUERYINDEX.TAGS) || "";
+      const snapshotTitle =
+        row.getResultByIndex(QUERYINDEX.SNAPSHOTTITLE) || "";
 
-      let resultTitle = historyTitle;
+      let resultTitle = snapshotTitle || historyTitle;
       if (openPageCount > 0 && UrlbarPrefs.get("suggest.openpage")) {
         if (url == queryContext.currentPage) {
           // Don't suggest switching to the current page.
@@ -160,7 +175,7 @@ class ProviderInputHistory extends UrlbarProvider {
       let resultSource;
       if (bookmarked && UrlbarPrefs.get("suggest.bookmark")) {
         resultSource = UrlbarUtils.RESULT_SOURCE.BOOKMARKS;
-        resultTitle = bookmarkTitle || historyTitle;
+        resultTitle = snapshotTitle || bookmarkTitle || historyTitle;
       } else if (UrlbarPrefs.get("suggest.history")) {
         resultSource = UrlbarUtils.RESULT_SOURCE.HISTORY;
       } else {
