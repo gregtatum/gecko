@@ -41,13 +41,14 @@ const DURATIONS = new Map([
 ]);
 
 class FakeCalendar {
-  constructor(serverOwner, { id, name, events, calendarOwner }) {
+  constructor(serverOwner, isMapi, { id, name, events, calendarOwner }) {
     this.serverOwner = serverOwner;
     this.id = id;
     this.name = name;
     this.events = this.#convertEvents(events || []);
     this.calendarOwner = calendarOwner;
     this.serial = 0;
+    this.isMapi = isMapi;
   }
 
   /**
@@ -63,6 +64,8 @@ class FakeCalendar {
    * - recurringId: base id to identify the main event and its derivated.
    */
   #convertEvents(events) {
+    let previousSummary = "";
+    let recurringId;
     return events.map(rawEvent => {
       const { serverId, icalId } = this.serverOwner.issueEventIds();
       const result = Object.assign(
@@ -76,7 +79,11 @@ class FakeCalendar {
         rawEvent
       );
       if (rawEvent.every) {
-        result.recurringId = this.serverOwner.issueRecurringEventId();
+        if (previousSummary !== rawEvent.summary) {
+          recurringId = serverId;
+          previousSummary = rawEvent.summary;
+        }
+        result.recurringId = recurringId;
       }
       return result;
     });
@@ -105,8 +112,9 @@ class FakeCalendar {
    * the event if no dates.
    * @param {string} summary
    * @param {Array<Date>|undefined} nths
+   * @param {boolean} removeRecurrentId
    */
-  cancelEvent(summary, startDates) {
+  cancelEvent(summary, startDates, removeRecurrentId) {
     const event = this.events.find(x => x.summary === summary);
     if (!event.every || !startDates || startDates.length === 0) {
       event.cancelled = true;
@@ -125,14 +133,24 @@ class FakeCalendar {
         id,
         iCalUID: id,
         serial: this.serial,
-        recurringId: event.recurringId,
+        recurringId: removeRecurrentId ? undefined : event.recurringId,
         cancelled: true,
         alterationTs: nowTs(),
       });
 
       // Add these fake events (fake because they've been cancelled).
       this.events.push(newEvent);
+
+      if (this.isMapi) {
+        // When an instance of a recurring event is cancelled then we must
+        // push all the instances except the cancelled one in the next update.
+        event.alterationTs = nowTs();
+      }
     }
+  }
+
+  getEventWithId(id) {
+    return this.events.find(x => x.id === id);
   }
 
   getEventsInRange({ start, end, token }) {
@@ -179,13 +197,19 @@ class FakeCalendar {
           newEvent.startDate.valueOf() + eventDuration
         );
         const id = `${event.recurringId}-${newEvent.startDate.valueOf()}`;
-        Object.assign(newEvent, {
-          id,
-          iCalUID: id,
-          serial: this.serial,
-          recurringId: event.recurringId,
-        });
-        events.push(newEvent);
+        const index = this.events.findIndex(x => x.id === id);
+        if (!this.isMapi || index === -1) {
+          // In MAPI case if the event exist in the list it means that it
+          // has been cancelled and so we don't push it.
+
+          Object.assign(newEvent, {
+            id,
+            iCalUID: id,
+            serial: this.serial,
+            recurringId: event.recurringId,
+          });
+          events.push(newEvent);
+        }
       }
     }
 
@@ -214,6 +238,7 @@ class BaseFakeServer {
     this.pageSize = 10;
     this.useNowTS = nowTs();
     this.errorQueue = [];
+    this.isMapi = false;
   }
 
   /**
@@ -283,7 +308,7 @@ class BaseFakeServer {
   }
 
   populateCalendar(calendarArgs) {
-    const fakeCalendar = new FakeCalendar(this, calendarArgs);
+    const fakeCalendar = new FakeCalendar(this, this.isMapi, calendarArgs);
     this.calendars.push(fakeCalendar);
     return fakeCalendar;
   }
@@ -424,9 +449,9 @@ class GapiFakeServer extends BaseFakeServer {
         handler: this.paged(this.paged_calendarList),
       },
       {
-        // prefix for `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/METHOD`
+        // prefix for `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/METHOD/${eventId}`
         prefix: "/calendar/v3/calendars/",
-        extraPathSegments: ["calendarId", "*METHOD*"],
+        extraPathSegments: ["calendarId", "*METHOD*", "eventId"],
         methodHandlers: {
           events: this.paged(this.paged_calendarEvents),
         },
@@ -590,19 +615,26 @@ class GapiFakeServer extends BaseFakeServer {
     const params = new URLSearchParams(req._queryString);
     const cal = this.getCalendarById(args.calendarId);
 
-    // The first time events are got, singleEvents (set to true), timeMin and
-    // timeMax are provided to get all the events with the the time range.
-    // Then a syncToken is issued with the events in order to be able to get
-    // only the "new" events in the next calls.
-    const { syncToken, events } = !params.get("syncToken")
-      ? cal.getEventsInRange({
-          start: params.get("timeMin"),
-          end: params.get("timeMax"),
-        })
-      : cal.getEventsInRange({ token: params.get("syncToken") });
-    args.syncToken = syncToken;
+    let allEvents;
+    if (args.eventId) {
+      // We're getting a particular event.
+      allEvents = [cal.getEventWithId(args.eventId)];
+    } else {
+      // The first time events are got, singleEvents (set to true), timeMin and
+      // timeMax are provided to get all the events with the the time range.
+      // Then a syncToken is issued with the events in order to be able to get
+      // only the "new" events in the next calls.
+      const { syncToken, events } = !params.get("syncToken")
+        ? cal.getEventsInRange({
+            start: params.get("timeMin"),
+            end: params.get("timeMax"),
+          })
+        : cal.getEventsInRange({ token: params.get("syncToken") });
+      args.syncToken = syncToken;
+      allEvents = events;
+    }
 
-    return events.map(event => {
+    return allEvents.map(event => {
       const mapPeep = peep => {
         return {
           email: peep.email,
@@ -660,6 +692,11 @@ class GapiFakeServer extends BaseFakeServer {
 
 // eslint-disable-next-line no-unused-vars
 class MapiFakeServer extends BaseFakeServer {
+  constructor(data) {
+    super(data);
+    this.isMapi = true;
+  }
+
   /**
    * Start the server on the first available port.  Port information will be
    * made available on the `domain`, `origin`, and `domainInfo` properties.

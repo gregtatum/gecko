@@ -175,6 +175,32 @@ export function makeGlobalNamespacedConvId(accountId, convIdComponent) {
 }
 
 /**
+ * @param {FolderId} folderId
+ * @param {MessageIdComponent} MessageIdComponent
+ * @returns {UniqueMessageId}
+ */
+export function makeUmidWithinFolder(folderId, messageIdComponent) {
+  const pieces = folderId.split(/\0/g);
+  if (pieces.length !== 2) {
+    throw new Error(`Malformed FolderId: ${folderId}`);
+  }
+  return `${folderId}\0${messageIdComponent}`;
+}
+
+/**
+ * @param {MessageId} messageId
+ * @returns {UniqueMessageId}
+ */
+export function getUmidWithinFolderForMessageId(messageId) {
+  const pieces = messageId.split(/\0/g);
+  if (pieces.length !== 4) {
+    throw new Error(`Malformed messageId: ${messageId}`);
+  }
+
+  return `${pieces[0]}\0${pieces[1]}\0${pieces[3]}`;
+}
+
+/**
  * @param {ConversationId} convId
  * @returns {AccountId}
  */

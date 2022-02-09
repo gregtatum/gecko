@@ -72,6 +72,7 @@ export default TaskDefiner.defineSimpleTask([
 
       const eventChewer = new GapiCalEventChewer({
         ctx,
+        accountId: req.accountId,
         convId: req.convId,
         folderId: req.folderId,
         rangeOldestTS: req.rangeOldestTS,
@@ -132,6 +133,7 @@ export default TaskDefiner.defineSimpleTask([
         mutations: {
           conversations: modifiedConversations,
           messages: eventChewer.modifiedEventMap,
+          umidNames: eventChewer.uniqueIds,
         },
         newData: {
           conversations: newConversations,

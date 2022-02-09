@@ -17,7 +17,11 @@
 import * as mailRep from "../../db/mail_rep";
 import { processEventContent } from "../../bodies/mailchew";
 import { EVENT_OUTSIDE_SYNC_RANGE } from "shared/date";
-import { makeMessageId } from "shared/id_conversions";
+import {
+  makeMessageId,
+  makeUmidWithinFolder,
+  getUmidWithinFolderForMessageId,
+} from "shared/id_conversions";
 import {
   makeAttendeeInfo,
   makeCalendarEventInfo,
@@ -36,6 +40,7 @@ import { CriticalError } from "backend/utils/api_client";
 export class GapiCalEventChewer {
   constructor({
     ctx,
+    accountId,
     convId,
     folderId,
     rangeOldestTS,
@@ -47,6 +52,7 @@ export class GapiCalEventChewer {
     gapiClient,
   }) {
     this.ctx = ctx;
+    this.accountId = accountId;
     this.convId = convId;
     this.folderId = folderId;
     this.rangeOldestTS = rangeOldestTS;
@@ -66,6 +72,7 @@ export class GapiCalEventChewer {
     this.unifiedEvents = [];
 
     this.modifiedEventMap = new Map();
+    this.uniqueIds = new Map();
     this.newEvents = [];
     this.allEvents = [];
     this.docTitleCache = new Map();
@@ -124,6 +131,8 @@ export class GapiCalEventChewer {
       if (EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
         // Mark the event for deletion.
         this.modifiedEventMap.set(oldInfo.id, null);
+        const uniqueId = getUmidWithinFolderForMessageId(oldInfo.id);
+        this.uniqueIds.set(uniqueId, null);
       } else {
         // We're keeping the event.  Hooray!
         oldById.set(oldInfo.id, oldInfo);
@@ -137,7 +146,24 @@ export class GapiCalEventChewer {
         const eventId = makeMessageId(this.convId, gapiEvent.id);
         if (gapiEvent.status === "cancelled") {
           // The event is now deleted!
-          this.modifiedEventMap.set(eventId, null);
+          if (oldById.has(eventId)) {
+            this.modifiedEventMap.set(eventId, null);
+            const uniqueId = makeUmidWithinFolder(this.folderId, gapiEvent.id);
+            this.uniqueIds.set(uniqueId, null);
+          } else {
+            // We've here a main recurring event (not an instance).
+            // So we must delete all the events in this conversation.
+            for (const oldId of oldById.keys()) {
+              this.modifiedEventMap.set(oldId, null);
+              const uniqueId = getUmidWithinFolderForMessageId(oldId);
+              this.uniqueIds.set(uniqueId, null);
+            }
+            this.allEvents.length = 0;
+            this.newEvents.length = 0;
+
+            logic(this.ctx, "recurring event cancelled", { _event: gapiEvent });
+            return;
+          }
           logic(this.ctx, "cancelled", { _event: gapiEvent });
           continue;
         }
@@ -254,6 +280,8 @@ export class GapiCalEventChewer {
           // This didn't get added to allEvents previously.
           this.allEvents.push(eventInfo);
         } else {
+          const uniqueId = makeUmidWithinFolder(this.folderId, gapiEvent.id);
+          this.uniqueIds.set(uniqueId, eventId);
           this.newEvents.push(eventInfo);
           this.allEvents.push(eventInfo);
         }

@@ -87,8 +87,16 @@ async function check_recurring_events_for_account_type({
   await getAndCompare(workshopAPI, calFolder, expectedCounts, rounds + 1);
 
   // Remove some events.
-  for (const { summary, startDates } of cancelledEventSketches) {
-    fakeServer.defaultCalendar.cancelEvent(summary, startDates);
+  for (const {
+    summary,
+    startDates,
+    removeRecurrentId,
+  } of cancelledEventSketches) {
+    fakeServer.defaultCalendar.cancelEvent(
+      summary,
+      startDates,
+      !!removeRecurrentId
+    );
     const i = expectedCounts.findIndex(x => x[0] === summary);
     if (!startDates || startDates.length === 0) {
       expectedCounts.splice(i, 1);
@@ -166,6 +174,11 @@ const CANCELLED_EVENTS = [
   },
   {
     summary: "Meeting with Karl and Leonhard",
+  },
+  {
+    summary: "Weekly Meeting",
+    startDates: [new Date(weeklyMeetingStart + 3 * weekInMs)],
+    removeRecurrentId: true,
   },
 ];
 

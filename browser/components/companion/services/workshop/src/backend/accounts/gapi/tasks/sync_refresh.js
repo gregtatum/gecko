@@ -24,6 +24,11 @@ import TaskDefiner from "../../../task_infra/task_definer";
 import { syncNormalOverlay } from "../../../task_helpers/sync_overlay_helpers";
 import GapiCalFolderSyncStateHelper from "../cal_folder_sync_state_helper";
 import { prepareChangeForProblems } from "../../../utils/tools";
+import {
+  convIdComponentFromMessageId,
+  makeUmidWithinFolder,
+  messageIdComponentFromMessageId,
+} from "shared/id_conversions";
 
 /**
  * Sync a Google API Calendar, which under our scheme corresponds to a single
@@ -233,8 +238,76 @@ export default TaskDefiner.defineAtMostOnceTask([
         return changes;
       }
 
+      const cancelledEventUniqueIds = new Map();
+      const cancelledEvents = new Map();
       for (const event of results.items) {
-        syncState.ingestEvent(event);
+        if (event.status === "cancelled" && !event.recurringEventId) {
+          // When some instance of a recurring event are cancelled it's possible
+          // to not always have the recurringEventId which was used to build
+          // the messageId of the event.
+          // So in order to have everything at the right place, we need to
+          // figure out the recurringEventId (if any).
+          const uniqueId = makeUmidWithinFolder(req.folderId, event.id);
+          cancelledEventUniqueIds.set(uniqueId, null);
+          cancelledEvents.set(uniqueId, event);
+        } else {
+          syncState.ingestEvent(event);
+        }
+      }
+
+      if (cancelledEvents.size) {
+        const recurringIds = new Set();
+        await ctx.read({ umidNames: cancelledEventUniqueIds });
+        for (const [uniqueId, eventId] of cancelledEventUniqueIds) {
+          if (!eventId) {
+            // Some events which shouldn't be there are there !
+            // So in case we didn't add them to the db, just skip.
+            continue;
+          }
+          // convId is built with either recurringEventId or id (it depends
+          // if the event is recurring or not).
+          const convId = convIdComponentFromMessageId(eventId);
+          const messageId = messageIdComponentFromMessageId(eventId);
+          const event = cancelledEvents.get(uniqueId);
+          if (convId !== messageId) {
+            // We're cheating in adding the recurringEventId and everybody
+            // is happy.
+            event.recurringEventId = convId;
+            recurringIds.add(convId);
+          }
+          syncState.ingestEvent(event);
+        }
+
+        for (const recurringId of recurringIds) {
+          // It should be pretty rare to hit this path: people don't delete a
+          // recurring event every 2 seconds !!
+          // Else, we should have very likely one maybe two events so it doesn't
+          // hurt to wait for each of them (instead of using a Promise.all).
+          // If we've 100 deleted events, using a Promise.all could lead to a
+          // "Too many requests" error and we'd need to handle that... To avoid
+          // such issues, just fetch sequentially.
+          let event;
+
+          try {
+            event = await account.client.apiGetCall(
+              `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${recurringId}`,
+              null
+            );
+          } catch (e) {
+            // Critical Error.
+            handleError({ e });
+            return changes;
+          }
+
+          if (!event || event.error) {
+            handleError({ error: event?.error | "No data" });
+            return changes;
+          }
+
+          if (event.status === "cancelled") {
+            syncState.ingestEvent(event);
+          }
+        }
       }
 
       // Update sync state before processing the batch; things like the

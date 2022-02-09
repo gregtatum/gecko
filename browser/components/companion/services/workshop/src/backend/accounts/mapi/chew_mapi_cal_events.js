@@ -107,11 +107,15 @@ export class MapiCalEventChewer {
   async chewEventBundle() {
     // ## Remove any old messages that no longer fit within the sync window.
     const oldById = this.oldById;
+    const cancelledEventIds = new Set();
     for (const oldInfo of this.oldEvents) {
       if (EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
         // Mark the event for deletion.
         this.modifiedEventMap.set(oldInfo.id, null);
       } else {
+        // Non-cancelled events will be removed from this set.
+        cancelledEventIds.add(oldInfo.id);
+
         // We're keeping the event.  Hooray!
         oldById.set(oldInfo.id, oldInfo);
         this.allEvents.push(oldInfo);
@@ -129,6 +133,11 @@ export class MapiCalEventChewer {
     for (const mapiEvent of this.eventMap.values()) {
       try {
         const eventId = makeMessageId(this.convId, mapiEvent.id);
+
+        // The event is "there" so it isn't cancelled or if it is
+        // it'll be handled thanks to its isCancelled property.
+        cancelledEventIds.delete(eventId);
+
         if (mainEvent && mapiEvent !== mainEvent) {
           // The main event can contain some fields (like organizer) that
           // the occurences haven't.
@@ -139,7 +148,7 @@ export class MapiCalEventChewer {
           }
         }
 
-        if (mapiEvent.isCancelled) {
+        if (mapiEvent.isCancelled || mapiEvent["@removed"]) {
           // The event is now deleted!
           this.modifiedEventMap.set(eventId, null);
           logic(this.ctx, "cancelled", { _event: mapiEvent });
@@ -252,6 +261,11 @@ export class MapiCalEventChewer {
           throw ex;
         }
       }
+    }
+
+    for (const cancelledEventId of cancelledEventIds) {
+      this.modifiedEventMap.set(cancelledEventId, null);
+      logic(this.ctx, "cancelled", { _eventId: cancelledEventId });
     }
 
     // Remove the cancelled events.

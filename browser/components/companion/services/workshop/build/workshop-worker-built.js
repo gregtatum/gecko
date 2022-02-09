@@ -2821,6 +2821,20 @@ var WorkshopBackend = (() => {
     }
     return `${accountId}\0\0${convIdComponent}`;
   }
+  function makeUmidWithinFolder(folderId, messageIdComponent) {
+    const pieces = folderId.split(/\0/g);
+    if (pieces.length !== 2) {
+      throw new Error(`Malformed FolderId: ${folderId}`);
+    }
+    return `${folderId}\0${messageIdComponent}`;
+  }
+  function getUmidWithinFolderForMessageId(messageId) {
+    const pieces = messageId.split(/\0/g);
+    if (pieces.length !== 4) {
+      throw new Error(`Malformed messageId: ${messageId}`);
+    }
+    return `${pieces[0]}\0${pieces[1]}\0${pieces[3]}`;
+  }
   function accountIdFromConvId(convId) {
     const pieces = convId.split(/\0/g);
     if (pieces.length !== 3) {
@@ -2851,6 +2865,13 @@ var WorkshopBackend = (() => {
       throw new Error(`Malformed MessageId: ${messageId}`);
     }
     return pieces.slice(0, 3).join("\0");
+  }
+  function convIdComponentFromMessageId(messageId) {
+    const pieces = messageId.split(/\0/g);
+    if (pieces.length !== 4) {
+      throw new Error(`Malformed MessageId: ${messageId}`);
+    }
+    return pieces[2];
   }
   function messageIdComponentFromMessageId(messageId) {
     const pieces = messageId.split(/\0/g);
@@ -11044,6 +11065,7 @@ var WorkshopBackend = (() => {
       GapiCalEventChewer = class {
         constructor({
           ctx,
+          accountId,
           convId,
           folderId,
           rangeOldestTS,
@@ -11055,6 +11077,7 @@ var WorkshopBackend = (() => {
           gapiClient
         }) {
           this.ctx = ctx;
+          this.accountId = accountId;
           this.convId = convId;
           this.folderId = folderId;
           this.rangeOldestTS = rangeOldestTS;
@@ -11067,6 +11090,7 @@ var WorkshopBackend = (() => {
           this.oldById = new Map();
           this.unifiedEvents = [];
           this.modifiedEventMap = new Map();
+          this.uniqueIds = new Map();
           this.newEvents = [];
           this.allEvents = [];
           this.docTitleCache = new Map();
@@ -11107,6 +11131,8 @@ var WorkshopBackend = (() => {
           for (const oldInfo of this.oldEvents) {
             if (EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
               this.modifiedEventMap.set(oldInfo.id, null);
+              const uniqueId = getUmidWithinFolderForMessageId(oldInfo.id);
+              this.uniqueIds.set(uniqueId, null);
             } else {
               oldById.set(oldInfo.id, oldInfo);
               this.allEvents.push(oldInfo);
@@ -11116,7 +11142,21 @@ var WorkshopBackend = (() => {
             try {
               const eventId = makeMessageId(this.convId, gapiEvent.id);
               if (gapiEvent.status === "cancelled") {
-                this.modifiedEventMap.set(eventId, null);
+                if (oldById.has(eventId)) {
+                  this.modifiedEventMap.set(eventId, null);
+                  const uniqueId = makeUmidWithinFolder(this.folderId, gapiEvent.id);
+                  this.uniqueIds.set(uniqueId, null);
+                } else {
+                  for (const oldId of oldById.keys()) {
+                    this.modifiedEventMap.set(oldId, null);
+                    const uniqueId = getUmidWithinFolderForMessageId(oldId);
+                    this.uniqueIds.set(uniqueId, null);
+                  }
+                  this.allEvents.length = 0;
+                  this.newEvents.length = 0;
+                  logic(this.ctx, "recurring event cancelled", { _event: gapiEvent });
+                  return;
+                }
                 logic(this.ctx, "cancelled", { _event: gapiEvent });
                 continue;
               }
@@ -11196,6 +11236,8 @@ var WorkshopBackend = (() => {
                 this.modifiedEventMap.set(eventId, eventInfo);
                 this.allEvents.push(eventInfo);
               } else {
+                const uniqueId = makeUmidWithinFolder(this.folderId, gapiEvent.id);
+                this.uniqueIds.set(uniqueId, eventId);
                 this.newEvents.push(eventInfo);
                 this.allEvents.push(eventInfo);
               }
@@ -11250,6 +11292,7 @@ var WorkshopBackend = (() => {
             const oldConvInfo = fromDb.conversations.get(req.convId);
             const eventChewer = new GapiCalEventChewer({
               ctx,
+              accountId: req.accountId,
               convId: req.convId,
               folderId: req.folderId,
               rangeOldestTS: req.rangeOldestTS,
@@ -11293,7 +11336,8 @@ var WorkshopBackend = (() => {
             await ctx.finishTask({
               mutations: {
                 conversations: modifiedConversations,
-                messages: eventChewer.modifiedEventMap
+                messages: eventChewer.modifiedEventMap,
+                umidNames: eventChewer.uniqueIds
               },
               newData: {
                 conversations: newConversations,
@@ -11417,6 +11461,7 @@ var WorkshopBackend = (() => {
       init_sync_overlay_helpers();
       init_cal_folder_sync_state_helper();
       init_tools();
+      init_id_conversions();
       sync_refresh_default2 = task_definer_default.defineAtMostOnceTask([
         {
           name: "sync_refresh",
@@ -11546,8 +11591,49 @@ var WorkshopBackend = (() => {
               handleError({ error: results?.error || "No data" });
               return changes;
             }
+            const cancelledEventUniqueIds = new Map();
+            const cancelledEvents = new Map();
             for (const event of results.items) {
-              syncState.ingestEvent(event);
+              if (event.status === "cancelled" && !event.recurringEventId) {
+                const uniqueId = makeUmidWithinFolder(req.folderId, event.id);
+                cancelledEventUniqueIds.set(uniqueId, null);
+                cancelledEvents.set(uniqueId, event);
+              } else {
+                syncState.ingestEvent(event);
+              }
+            }
+            if (cancelledEvents.size) {
+              const recurringIds = new Set();
+              await ctx.read({ umidNames: cancelledEventUniqueIds });
+              for (const [uniqueId, eventId] of cancelledEventUniqueIds) {
+                if (!eventId) {
+                  continue;
+                }
+                const convId = convIdComponentFromMessageId(eventId);
+                const messageId = messageIdComponentFromMessageId(eventId);
+                const event = cancelledEvents.get(uniqueId);
+                if (convId !== messageId) {
+                  event.recurringEventId = convId;
+                  recurringIds.add(convId);
+                }
+                syncState.ingestEvent(event);
+              }
+              for (const recurringId of recurringIds) {
+                let event;
+                try {
+                  event = await account.client.apiGetCall(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${recurringId}`, null);
+                } catch (e) {
+                  handleError({ e });
+                  return changes;
+                }
+                if (!event || event.error) {
+                  handleError({ error: event?.error | "No data" });
+                  return changes;
+                }
+                if (event.status === "cancelled") {
+                  syncState.ingestEvent(event);
+                }
+              }
             }
             syncState.syncToken = results.nextSyncToken;
             syncState.etag = results.etag;
@@ -11936,10 +12022,12 @@ var WorkshopBackend = (() => {
         }
         async chewEventBundle() {
           const oldById = this.oldById;
+          const cancelledEventIds = new Set();
           for (const oldInfo of this.oldEvents) {
             if (EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
               this.modifiedEventMap.set(oldInfo.id, null);
             } else {
+              cancelledEventIds.add(oldInfo.id);
               oldById.set(oldInfo.id, oldInfo);
               this.allEvents.push(oldInfo);
             }
@@ -11952,6 +12040,7 @@ var WorkshopBackend = (() => {
           for (const mapiEvent of this.eventMap.values()) {
             try {
               const eventId = makeMessageId(this.convId, mapiEvent.id);
+              cancelledEventIds.delete(eventId);
               if (mainEvent && mapiEvent !== mainEvent) {
                 for (const [key, value] of Object.entries(mainEvent)) {
                   if (!(key in mapiEvent)) {
@@ -11959,7 +12048,7 @@ var WorkshopBackend = (() => {
                   }
                 }
               }
-              if (mapiEvent.isCancelled) {
+              if (mapiEvent.isCancelled || mapiEvent["@removed"]) {
                 this.modifiedEventMap.set(eventId, null);
                 logic(this.ctx, "cancelled", { _event: mapiEvent });
                 continue;
@@ -12042,6 +12131,10 @@ var WorkshopBackend = (() => {
                 throw ex;
               }
             }
+          }
+          for (const cancelledEventId of cancelledEventIds) {
+            this.modifiedEventMap.set(cancelledEventId, null);
+            logic(this.ctx, "cancelled", { _eventId: cancelledEventId });
           }
           const allExistingEvents = [];
           for (const event of this.allEvents) {
