@@ -3397,7 +3397,7 @@
 
 - name: dom.serviceWorkers.navigationPreload.enabled
   type: RelaxedAtomicBool
-  value: false
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
 
 # Mitigates ServiceWorker navigation faults by bypassing the ServiceWorker on
@@ -5408,7 +5408,7 @@
 #   1 - use DWrite bold for installed fonts, multi-strike for webfont resources
 #   2 - use DWrite bold for all fonts
 - name: gfx.font_rendering.directwrite.bold_simulation
-  type: uint32_t
+  type: RelaxedAtomicUint32
   value: 1
   mirror: always
 #endif
@@ -6925,7 +6925,7 @@
 
 - name: layers.gpu-process.enabled
   type: bool
-#if defined(XP_WIN)
+#if defined(XP_WIN) || defined(MOZ_WIDGET_ANDROID)
   value: true
 #else
   value: false
@@ -12551,10 +12551,16 @@
   value: 0
   mirror: always
 
+# Whether we should use themed values for dark scrollbars.
+- name: widget.non-native-theme.scrollbar.dark-themed
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
+
 # Whether the active thumb color should always use the themed colors, even if
 # dark scrollbars are in use.
 - name: widget.non-native-theme.scrollbar.active-always-themed
-  type: bool
+  type: RelaxedAtomicBool
   value: true
   mirror: always
 
@@ -12685,15 +12691,6 @@
 - name: widget.gtk.alt-theme.scrollbar_active
   type: bool
   value: true
-  mirror: always
-
-# Whether other scrollbar colors get passed from the real GTK theme.
-#
-# This is default false because light scrollbars usually match better websites,
-# and we have automatic scrollbar darkening.
-- name: widget.gtk.alt-theme.scrollbar
-  type: bool
-  value: false
   mirror: always
 
 # Whether to use gtk high contrast themes to disable content styling like on
