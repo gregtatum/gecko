@@ -656,6 +656,10 @@ body[flow-reset] #urlbar-container {
   }
 }
 
+#urlbar-input {
+  text-overflow: ellipsis;
+}
+
 #urlbar[breakout][breakout-extend] #urlbar-page-overlay {
   display: block;
   position: fixed;
