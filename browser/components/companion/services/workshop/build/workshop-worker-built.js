@@ -3276,10 +3276,10 @@ var WorkshopBackend = (() => {
           this.maxCriticalBackoffSteps = 7;
           this.max_backoff_ms_critical = 1 * 60 * 60 * 1e3;
         }
-        isCandidateForBackoff(status, result) {
+        isCandidateForBackoff(status, result, context) {
           return true;
         }
-        handleError(status, result) {
+        handleError(status, result, context) {
           this.handleCriticalError(null, null);
         }
         handleCriticalError(problem, resource) {
@@ -3329,15 +3329,19 @@ var WorkshopBackend = (() => {
           this.credentials = credentials;
           this._dirtyCredentials = false;
           this.backoff = backoff;
+          this.abortController = null;
         }
         credentialsUpdated() {
           this._dirtyCredentials = true;
         }
-        async apiGetCall(endpointUrl, params) {
+        async apiGetCall(endpointUrl, params, context) {
           await ensureUpdatedCredentials(this.credentials, () => {
             this.credentialsUpdated();
           });
           const accessToken = this.credentials.oauth2.accessToken;
+          if (!this.abortController) {
+            this.abortController = new AbortController();
+          }
           const url = new URL(endpointUrl);
           for (const [key, value] of Object.entries(params || {})) {
             url.searchParams.set(key, value);
@@ -3352,15 +3356,16 @@ var WorkshopBackend = (() => {
               resp = await Promise.race([
                 fetch(url, {
                   credentials: "omit",
-                  headers
+                  headers,
+                  signal: this.abortController.signal
                 }),
                 new Promise((_, reject) => setTimeout(() => reject(new Error("Fetch is too long")), FETCH_TIMEOUT))
               ]);
               result = await resp.json();
-              if (this.backoff.isCandidateForBackoff(resp.status, result)) {
+              if (this.backoff.isCandidateForBackoff(resp.status, result, context)) {
                 throw new Error(this.backoff.getErrorMessage(result));
               }
-              this.backoff.handleError(resp.status, result);
+              this.backoff.handleError(resp.status, result, context);
               break;
             } catch (e) {
               if (e instanceof CriticalError) {
@@ -3369,6 +3374,8 @@ var WorkshopBackend = (() => {
                   _params: params,
                   _result: e.message
                 });
+                this.abortController.abort(e);
+                this.abortController = null;
                 throw e;
               }
               logic(this, "fetchError", { error: e.message });
@@ -3378,12 +3385,12 @@ var WorkshopBackend = (() => {
           logic(this, "apiCall", { endpointUrl, _params: params, _result: result });
           return result;
         }
-        async pagedApiGetCall(url, params, resultPropertyName, nextPageGetter) {
+        async pagedApiGetCall(url, params, resultPropertyName, nextPageGetter, context) {
           let apiUrl = url;
           let useParams = Object.assign({}, params);
           const resultsSoFar = [];
           while (true) {
-            const thisResult = await this.apiGetCall(apiUrl, useParams);
+            const thisResult = await this.apiGetCall(apiUrl, useParams, context);
             if (thisResult.error) {
               return thisResult;
             }
@@ -3412,25 +3419,26 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/gapi/account.js"() {
       init_api_client();
       GapiBackoff = class extends Backoff {
-        isCandidateForBackoff(status, { error }) {
+        isCandidateForBackoff(status, { error }, context) {
           return error && (error.code === 403 && [
             "User Rate Limit Exceeded",
             "Rate Limit Exceeded",
             "Calendar usage limits exceeded."
-          ].includes(error.errors?.[0]?.reason) || error.code === 404 || error.code === 429 || error.code === 500);
+          ].includes(error.errors?.[0]?.reason) || error.code === 404 && context !== "document-title" || error.code === 429 || error.code === 500);
         }
-        handleError(status, results) {
-          if (!results || !results.error) {
+        handleError(status, result, context) {
+          if (!result || !result.error) {
             return;
           }
           let resource = null, problem = null;
           const id = this.account?.id ?? -1;
-          switch (results.error.code) {
+          const { error } = result;
+          switch (error.code) {
             case 401:
               resource = `credentials!${id}`;
               problem = {
                 superCritical: true,
-                credentials: "Invalid Credentials"
+                credentials: error.message || "Invalid Credentials"
               };
               break;
           }
@@ -3486,7 +3494,7 @@ var WorkshopBackend = (() => {
     const client = new ApiClient(credentials, "unknown gapi account id", backoff);
     const endpoint = "https://gmail.googleapis.com/gmail/v1/users/me/profile";
     try {
-      const whoami = await client.apiGetCall(endpoint, {}, backoff);
+      const whoami = await client.apiGetCall(endpoint, {});
       userDetails.displayName = "";
       userDetails.emailAddress = whoami.emailAddress;
     } catch (ex) {
@@ -3525,7 +3533,7 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/mapi/account.js"() {
       init_api_client();
       MapiBackoff = class extends Backoff {
-        isCandidateForBackoff(status, { error }) {
+        isCandidateForBackoff(status, results, context) {
           return [
             423,
             429,
@@ -3535,7 +3543,7 @@ var WorkshopBackend = (() => {
             509
           ].includes(status);
         }
-        handleError(status, results) {
+        handleError(status, results, context) {
           let resource = null, problem = null;
           const id = this.account?.id ?? -1;
           switch (status) {
@@ -3667,7 +3675,7 @@ var WorkshopBackend = (() => {
     const backoff = new MapiBackoff(null);
     const client = new ApiClient(credentials, "unknown mapi account id", backoff);
     const endpoint = "https://graph.microsoft.com/v1.0/me";
-    const results = await client.apiGetCall(endpoint, {}, backoff);
+    const results = await client.apiGetCall(endpoint, {});
     if (results.error) {
       return {
         error: "unknown",
@@ -10065,7 +10073,7 @@ var WorkshopBackend = (() => {
     if (cached) {
       return cached;
     }
-    const resultPromise = gapiClient.apiGetCall(apiTarget, {}).then((results) => {
+    const resultPromise = gapiClient.apiGetCall(apiTarget, {}, "document-title").then((results) => {
       if (!results || results.error) {
         return { type, title: null };
       }
@@ -11275,8 +11283,16 @@ var WorkshopBackend = (() => {
           name: "cal_sync_conv",
           async plan(ctx, rawTask) {
             let plannedTask = shallowClone2(rawTask);
-            plannedTask.exclusiveResources = [`conv:${rawTask.convId}`];
-            plannedTask.priorityTags = [`view:conv:${rawTask.convId}`];
+            const { accountId, convId } = rawTask;
+            plannedTask.exclusiveResources = [`conv:${convId}`];
+            plannedTask.resources = [
+              "online",
+              `credentials!${accountId}`,
+              `happy!${accountId}`,
+              `permissions!${accountId}`,
+              `queries!${accountId}`
+            ];
+            plannedTask.priorityTags = [`view:conv:${convId}`];
             await ctx.finishTask({
               taskState: plannedTask
             });

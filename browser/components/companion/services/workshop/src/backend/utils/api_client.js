@@ -63,9 +63,11 @@ export class Backoff {
    * Some api errors can lead to immediate retries.
    * @param {number} status - response status.
    * @param {Object|undefined} result - returned by the REST api.
+   * @param {string|undefined} context - gives an hint to know the context where the error
+   * occured.
    * @returns {boolean}
    */
-  isCandidateForBackoff(status, result) {
+  isCandidateForBackoff(status, result, context) {
     return true;
   }
 
@@ -73,9 +75,11 @@ export class Backoff {
    * Some errors can be potentially more severe.
    * @param {number} status - response status.
    * @param {Object|undefined} result - returned by the REST api.
+   * @param {string|undefined} context - gives an hint to know the context where the error
+   * occured.
    * @returns {Object|null} a problem if any.
    */
-  handleError(status, result) {
+  handleError(status, result, context) {
     this.handleCriticalError(null, null);
   }
 
@@ -207,6 +211,7 @@ export class ApiClient {
     this.credentials = credentials;
     this._dirtyCredentials = false;
     this.backoff = backoff;
+    this.abortController = new AbortController();
   }
 
   credentialsUpdated() {
@@ -221,10 +226,12 @@ export class ApiClient {
    *   gmail uses https://gmail.googleapis.com/) so we need the full URL.
    * @param {Object} params
    *   Object dictionary whose keys/values will be encoded into the GET url.
+   * @param {string|undefined} context
+   *   The context of this api call (could be calendar, docs, ...)
    * @returns {Promise}
    * @throws {CriticalError} in case something really wrong happens.
    */
-  async apiGetCall(endpointUrl, params) {
+  async apiGetCall(endpointUrl, params, context) {
     await ensureUpdatedCredentials(this.credentials, () => {
       this.credentialsUpdated();
     });
@@ -247,6 +254,7 @@ export class ApiClient {
           fetch(url, {
             credentials: "omit",
             headers,
+            signal: this.abortController.signal,
           }),
           new Promise((_, reject) =>
             setTimeout(
@@ -257,11 +265,11 @@ export class ApiClient {
         ]);
 
         result = await resp.json();
-        if (this.backoff.isCandidateForBackoff(resp.status, result)) {
+        if (this.backoff.isCandidateForBackoff(resp.status, result, context)) {
           throw new Error(this.backoff.getErrorMessage(result));
         }
 
-        this.backoff.handleError(resp.status, result);
+        this.backoff.handleError(resp.status, result, context);
         break;
       } catch (e) {
         if (e instanceof CriticalError) {
@@ -271,6 +279,8 @@ export class ApiClient {
             _params: params,
             _result: e.message,
           });
+          this.abortController.abort(e);
+          this.abortController = new AbortController();
           throw e;
         }
 
@@ -299,17 +309,25 @@ export class ApiClient {
    *   actual set of results in each individual request.
    * @param {Function} nextPageGetter
    *   Get the next { url, params } to use from the result from an api call.
+   * @param {string|undefined} context
+   *   The context of this api call (could be calendar, docs, ...)
    * @returns {Promise}
    *   The last network result with the contents of the `resultPropertyName`
    *   property replaced by the concatenated contents of that field across all
    *   network results.
    */
-  async pagedApiGetCall(url, params, resultPropertyName, nextPageGetter) {
+  async pagedApiGetCall(
+    url,
+    params,
+    resultPropertyName,
+    nextPageGetter,
+    context
+  ) {
     let apiUrl = url;
     let useParams = Object.assign({}, params);
     const resultsSoFar = [];
     while (true) {
-      const thisResult = await this.apiGetCall(apiUrl, useParams);
+      const thisResult = await this.apiGetCall(apiUrl, useParams, context);
       if (thisResult.error) {
         return thisResult;
       }

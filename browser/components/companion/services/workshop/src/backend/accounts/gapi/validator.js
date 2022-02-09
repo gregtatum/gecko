@@ -35,7 +35,7 @@ export default async function validateGapi({
 
   try {
     // ## Get the user's email address so we can identify the account
-    const whoami = await client.apiGetCall(endpoint, {}, backoff);
+    const whoami = await client.apiGetCall(endpoint, {});
 
     // TODO: Figure out:
     // 1. Whether we need the user's display name anymore.  Our original need

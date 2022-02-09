@@ -264,7 +264,7 @@ export async function getDocumentTitle(url, gapiClient, docTitleCache) {
   }
 
   const resultPromise = gapiClient
-    .apiGetCall(apiTarget, /* params */ {})
+    .apiGetCall(apiTarget, /* params */ {}, "document-title")
     .then(results => {
       if (!results || results.error) {
         return { type, title: null };

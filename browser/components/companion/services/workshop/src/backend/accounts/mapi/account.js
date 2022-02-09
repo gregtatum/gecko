@@ -18,7 +18,7 @@
 import { ApiClient, Backoff } from "../../utils/api_client";
 
 export class MapiBackoff extends Backoff {
-  isCandidateForBackoff(status, { error }) {
+  isCandidateForBackoff(status, results, context) {
     // https://docs.microsoft.com/en-us/graph/errors
     return [
       423, // The resource that is being accessed is locked.
@@ -38,7 +38,7 @@ export class MapiBackoff extends Backoff {
     ].includes(status);
   }
 
-  handleError(status, results) {
+  handleError(status, results, context) {
     let resource = null,
       problem = null;
     const id = this.account?.id ?? -1;

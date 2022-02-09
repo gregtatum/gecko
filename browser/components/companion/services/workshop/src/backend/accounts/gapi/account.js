@@ -17,7 +17,7 @@
 import { ApiClient, Backoff } from "../../utils/api_client";
 
 export class GapiBackoff extends Backoff {
-  isCandidateForBackoff(status, { error }) {
+  isCandidateForBackoff(status, { error }, context) {
     // https://developers.google.com/calendar/api/guides/errors
     return (
       error &&
@@ -28,27 +28,28 @@ export class GapiBackoff extends Backoff {
           "Calendar usage limits exceeded.",
         ].includes(error.errors?.[0]?.reason)) ||
         // It's very likely a temporary issue.
-        error.code === 404 ||
+        (error.code === 404 && context !== "document-title") ||
         error.code === 429 ||
         error.code === 500)
     );
   }
 
-  handleError(status, results) {
-    if (!results || !results.error) {
+  handleError(status, result, context) {
+    if (!result || !result.error) {
       return;
     }
 
     let resource = null,
       problem = null;
     const id = this.account?.id ?? -1;
+    const { error } = result;
 
-    switch (results.error.code) {
+    switch (error.code) {
       case 401:
         resource = `credentials!${id}`;
         problem = {
           superCritical: true,
-          credentials: "Invalid Credentials",
+          credentials: error.message || "Invalid Credentials",
         };
         break;
     }

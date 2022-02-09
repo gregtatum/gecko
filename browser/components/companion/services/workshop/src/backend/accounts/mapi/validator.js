@@ -35,7 +35,7 @@ export default async function validateMapi({
   const endpoint = "https://graph.microsoft.com/v1.0/me";
 
   // ## Get the user's email address so we can identify the account
-  const results = await client.apiGetCall(endpoint, {}, backoff);
+  const results = await client.apiGetCall(endpoint, {});
   if (results.error) {
     return {
       error: "unknown",
