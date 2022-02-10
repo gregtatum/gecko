@@ -228,7 +228,9 @@ export class CalendarEventList extends MozLitElement {
       this.listView.items.filter(event => event)
     );
     this.events = this.getEventsAndBreaks(plainEvents);
-    if (this.events.length) {
+
+    if (this.serial !== this.listView.serial) {
+      this.serial = this.listView.serial;
       this.dispatchOnUpdateComplete(new CustomEvent("calendar-events-updated"));
     }
     noteTelemetryTimestamp("Companion:CalendarPainted", {
@@ -260,7 +262,8 @@ export class CalendarEventList extends MozLitElement {
       filteredEvents = events.filter(event => {
         let startDate = new Date(event.startDate);
         let endDate = new Date(event.endDate);
-        return startDate <= oneHourFromNow && endDate >= now;
+
+        return startDate <= oneHourFromNow && endDate >= now && !event.isAllDay;
       });
     }
     return filteredEvents.sort(

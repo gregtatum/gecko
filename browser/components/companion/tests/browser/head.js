@@ -23,6 +23,10 @@ const { LoginHelper } = ChromeUtils.import(
   "resource://gre/modules/LoginHelper.jsm"
 );
 
+const { isAllDayEvent } = ChromeUtils.import(
+  "resource:///modules/OnlineServicesHelper.jsm"
+);
+
 let nsLoginInfo = new Components.Constructor(
   "@mozilla.org/login-manager/loginInfo;1",
   Ci.nsILoginInfo,
@@ -536,19 +540,28 @@ class CompanionHelper {
       let oneHourFromNow = new Date();
       oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
       let standardizedEvents = eventsData
-        .map(event => ({
-          id: new Date(), // guarantee a unique id for this event
-          startDate: new Date(),
-          endDate: oneHourFromNow,
-          links: [],
-          conference: {},
-          calendar: { id: "primary" },
-          attendees: [],
-          organizer: { email: "organizer@example.com", isSelf: false },
-          creator: { email: "creator@example.com", isSelf: false },
-          serviceId: 0,
-          ...event,
-        }))
+        .map(event => {
+          let startDate = event.startDate || new Date();
+          let endDate = event.endDate || oneHourFromNow;
+
+          // TODO: We should remove this once workshop is enabled.
+          let isAllDay = isAllDayEvent(startDate, endDate);
+
+          return {
+            id: new Date(), // guarantee a unique id for this event
+            startDate,
+            endDate,
+            links: [],
+            conference: {},
+            calendar: { id: "primary" },
+            attendees: [],
+            organizer: { email: "organizer@example.com", isSelf: false },
+            creator: { email: "creator@example.com", isSelf: false },
+            serviceId: 0,
+            isAllDay,
+            ...event,
+          };
+        })
         .sort((a, b) => a.startDate - b.startDate);
       await this.runCompanionTask(
         async events => {

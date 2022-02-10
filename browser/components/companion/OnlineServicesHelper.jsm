@@ -7,6 +7,7 @@ const EXPORTED_SYMBOLS = [
   "parseGoogleCalendarResult",
   "parseMicrosoftCalendarResult",
   "MainThreadServices",
+  "isAllDayEvent",
 ];
 
 const parserUtils = Cc["@mozilla.org/parserutils;1"].getService(
@@ -20,6 +21,8 @@ const { parseHFromStr, parseHFromUrl } = ChromeUtils.import(
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 const URL_REGEX = /(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])/gim;
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 // Some common links provide nothing useful in the companion,
 // so we just ignore them.
@@ -299,6 +302,7 @@ function parseGoogleCalendarResult(result, primaryEmail) {
   let formattedURL = new URL(result.htmlLink);
   formattedURL.searchParams.set("authuser", primaryEmail);
   event.url = formattedURL.href;
+  event.isAllDay = isAllDayEvent(result.start?.dateTime, result.end?.dateTime);
   return event;
 }
 
@@ -327,6 +331,9 @@ function parseMicrosoftCalendarResult(result) {
   event.attendees = result.attendees
     .filter(a => a.status.response != "declined")
     .map(a => _normalizeUser(a));
+  event.isAllDay =
+    result.isAllDay ??
+    isAllDayEvent(result.start?.dateTime, result.end?.dateTime);
   return event;
 }
 
@@ -408,4 +415,22 @@ function MainThreadServices(window) {
     parseHFromUrl,
     parseHFromStr,
   };
+}
+
+/**
+ * TODO: Remove this when making the final transition to workshop.
+ *
+ * Helper function that takes an event start and end date and outputs
+ * whether or not it spans one day or more. An optional `upperBound`
+ * (in hours) can be provided to specify a limit on how many hours
+ * an event spans until it's considered an all day event.
+ */
+function isAllDayEvent(startDate, endDate, upperBound = 12) {
+  startDate = new Date(startDate);
+  endDate = new Date(endDate);
+
+  let durationInMs = endDate.getTime() - startDate.getTime();
+  let durationInHours = durationInMs / ONE_HOUR_MS;
+
+  return durationInHours >= upperBound;
 }

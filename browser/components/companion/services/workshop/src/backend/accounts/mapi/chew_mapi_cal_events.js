@@ -16,6 +16,7 @@
 
 import * as mailRep from "../../db/mail_rep";
 import { processEventContent } from "../../bodies/mailchew";
+import { isAllDayEvent } from "../../../utils/is_all_day";
 import { EVENT_OUTSIDE_SYNC_RANGE } from "shared/date";
 import { makeMessageId } from "shared/id_conversions";
 import {
@@ -192,7 +193,9 @@ export class MapiCalEventChewer {
           );
         }
 
-        const isAllDay = mapiEvent.isAllDay;
+        const isAllDay =
+          mapiEvent.isAllDay ??
+          isAllDayEvent(mapiEvent.start.dateTime, mapiEvent.end.dateTime);
 
         // TODO: use the timeZone field to set the correct timezone.
         // For now, consider that all dates are UTC.

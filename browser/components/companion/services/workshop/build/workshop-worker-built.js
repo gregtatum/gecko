@@ -11008,6 +11008,21 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/utils/is_all_day.js
+  function isAllDayEvent(startDate, endDate, upperBound = 12) {
+    startDate = new Date(startDate);
+    endDate = new Date(endDate);
+    let durationInMs = endDate.getTime() - startDate.getTime();
+    let durationInHours = durationInMs / ONE_HOUR_MS;
+    return durationInHours >= upperBound;
+  }
+  var ONE_HOUR_MS;
+  var init_is_all_day = __esm({
+    "src/utils/is_all_day.js"() {
+      ONE_HOUR_MS = 60 * 60 * 1e3;
+    }
+  });
+
   // src/backend/db/cal_event_rep.js
   function makeIdentityInfo(raw) {
     return {
@@ -11062,6 +11077,7 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/gapi/chew_gapi_cal_events.js"() {
       init_mail_rep();
       init_mailchew();
+      init_is_all_day();
       init_date();
       init_id_conversions();
       init_cal_event_rep();
@@ -11204,7 +11220,7 @@ var WorkshopBackend = (() => {
                 startDate = new Date(gapiEvent.start.date).valueOf();
                 endDate = new Date(gapiEvent.end.date).valueOf();
               } else {
-                isAllDay = false;
+                isAllDay = isAllDayEvent(gapiEvent.start.dateTime, gapiEvent.end.dateTime);
                 startDate = new Date(gapiEvent.start.dateTime).valueOf();
                 endDate = new Date(gapiEvent.end.dateTime).valueOf();
               }
@@ -11974,6 +11990,7 @@ var WorkshopBackend = (() => {
     "src/backend/accounts/mapi/chew_mapi_cal_events.js"() {
       init_mail_rep();
       init_mailchew();
+      init_is_all_day();
       init_date();
       init_id_conversions();
       init_cal_event_rep();
@@ -12096,7 +12113,7 @@ var WorkshopBackend = (() => {
                   authoredBodySize
                 }));
               }
-              const isAllDay = mapiEvent.isAllDay;
+              const isAllDay = mapiEvent.isAllDay ?? isAllDayEvent(mapiEvent.start.dateTime, mapiEvent.end.dateTime);
               const startDate = new Date(mapiEvent.start.dateTime + "Z").valueOf();
               const endDate = new Date(mapiEvent.end.dateTime + "Z").valueOf();
               const summary = mapiEvent.subject;
@@ -21013,7 +21030,7 @@ var WorkshopBackend = (() => {
       if (!message || !("startDate" in message)) {
         return true;
       }
-      const { startDate, endDate } = message;
+      const { startDate, endDate, isAllDay } = message;
       const now = new Date().valueOf();
       if (endDate <= now) {
         return false;
@@ -21031,6 +21048,9 @@ var WorkshopBackend = (() => {
       }
       const tomorrow = new Date().setHours(24, 0, 0, 0).valueOf();
       if (startDate >= tomorrow) {
+        return false;
+      }
+      if (this.type == "now" && isAllDay) {
         return false;
       }
       return {

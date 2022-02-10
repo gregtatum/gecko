@@ -48,7 +48,7 @@ EventFilter.prototype = {
       return true;
     }
 
-    const { startDate, endDate } = message;
+    const { startDate, endDate, isAllDay } = message;
     const now = new Date().valueOf();
 
     if (endDate <= now) {
@@ -74,6 +74,11 @@ EventFilter.prototype = {
     // Keep events which are happening today.
     const tomorrow = new Date().setHours(24, 0, 0, 0).valueOf();
     if (startDate >= tomorrow) {
+      return false;
+    }
+
+    // Keep allDay events if the list query is "browse"
+    if (this.type == "now" && isAllDay) {
       return false;
     }
 

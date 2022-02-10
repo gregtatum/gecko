@@ -16,6 +16,7 @@
 
 import * as mailRep from "../../db/mail_rep";
 import { processEventContent } from "../../bodies/mailchew";
+import { isAllDayEvent } from "../../../utils/is_all_day";
 import { EVENT_OUTSIDE_SYNC_RANGE } from "shared/date";
 import {
   makeMessageId,
@@ -219,7 +220,10 @@ export class GapiCalEventChewer {
           startDate = new Date(gapiEvent.start.date).valueOf();
           endDate = new Date(gapiEvent.end.date).valueOf();
         } else {
-          isAllDay = false;
+          isAllDay = isAllDayEvent(
+            gapiEvent.start.dateTime,
+            gapiEvent.end.dateTime
+          );
           startDate = new Date(gapiEvent.start.dateTime).valueOf();
           endDate = new Date(gapiEvent.end.dateTime).valueOf();
         }
