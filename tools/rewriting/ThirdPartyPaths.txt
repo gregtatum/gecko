@@ -4,6 +4,7 @@ browser/components/companion/services/workshop/src/vendor/
 browser/components/companion/content/lit.all.js
 browser/components/companion/vendor/ort/
 browser/components/companion/vendor/pyodide/
+browser/components/companion/storybook/node_modules/
 browser/components/newtab/vendor/
 browser/components/pocket/content/panels/js/vendor/
 browser/components/translation/cld2/
