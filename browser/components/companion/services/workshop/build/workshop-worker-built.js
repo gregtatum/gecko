@@ -3329,7 +3329,7 @@ var WorkshopBackend = (() => {
           this.credentials = credentials;
           this._dirtyCredentials = false;
           this.backoff = backoff;
-          this.abortController = null;
+          this.abortController = new AbortController();
         }
         credentialsUpdated() {
           this._dirtyCredentials = true;
@@ -3339,9 +3339,6 @@ var WorkshopBackend = (() => {
             this.credentialsUpdated();
           });
           const accessToken = this.credentials.oauth2.accessToken;
-          if (!this.abortController) {
-            this.abortController = new AbortController();
-          }
           const url = new URL(endpointUrl);
           for (const [key, value] of Object.entries(params || {})) {
             url.searchParams.set(key, value);
@@ -3375,7 +3372,7 @@ var WorkshopBackend = (() => {
                   _result: e.message
                 });
                 this.abortController.abort(e);
-                this.abortController = null;
+                this.abortController = new AbortController();
                 throw e;
               }
               logic(this, "fetchError", { error: e.message });
