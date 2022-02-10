@@ -69,8 +69,9 @@ class nsDeckFrame final : public nsBoxFrame {
   void ShowBox(nsIFrame* aBox);
 
  private:
-  int32_t mIndex;
-  int32_t mPrevIndex;
+  int32_t mIndex = 0;
+  int32_t mPrevIndex = -1;
+  nsIFrame* mSelectedBoxCache = nullptr;
 
   void Animate(nsIFrame*, bool);
 

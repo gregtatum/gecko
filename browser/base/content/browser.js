@@ -1971,6 +1971,14 @@ var gBrowserInit = {
       gXPInstallObserver,
       "addon-install-origin-blocked"
     );
+    Services.obs.addObserver(
+      gXPInstallObserver,
+      "addon-install-webapi-blocked-policy"
+    );
+    Services.obs.addObserver(
+      gXPInstallObserver,
+      "addon-install-webapi-blocked"
+    );
     Services.obs.addObserver(gXPInstallObserver, "addon-install-failed");
     Services.obs.addObserver(gXPInstallObserver, "addon-install-confirmation");
     Services.obs.addObserver(gXPInstallObserver, "addon-install-complete");
@@ -2602,6 +2610,14 @@ var gBrowserInit = {
       Services.obs.removeObserver(
         gXPInstallObserver,
         "addon-install-origin-blocked"
+      );
+      Services.obs.removeObserver(
+        gXPInstallObserver,
+        "addon-install-webapi-blocked-policy"
+      );
+      Services.obs.removeObserver(
+        gXPInstallObserver,
+        "addon-install-webapi-blocked"
       );
       Services.obs.removeObserver(gXPInstallObserver, "addon-install-failed");
       Services.obs.removeObserver(
