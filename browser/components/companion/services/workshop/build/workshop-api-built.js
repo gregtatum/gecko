@@ -4617,7 +4617,10 @@ function makeWorker() {
 // src/main-frame-setup.js
 window.LOGIC = logic;
 logic.tid = "api?";
-logic.bc = new BroadcastChannel("logic");
+try {
+  logic.bc = new BroadcastChannel("logic");
+} catch {
+}
 var SCOPE = {};
 logic.defineScope(SCOPE, "MainFrameSetup");
 var control = {

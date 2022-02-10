@@ -22750,7 +22750,10 @@ var WorkshopBackend = (() => {
 
   // src/backend/worker-setup.js
   logic.tid = "worker";
-  logic.bc = new BroadcastChannel("logic");
+  try {
+    logic.bc = new BroadcastChannel("logic");
+  } catch {
+  }
   var SCOPE = {};
   logic.defineScope(SCOPE, "WorkerSetup");
   var routerBridgeMaker = registerInstanceType("bridge");

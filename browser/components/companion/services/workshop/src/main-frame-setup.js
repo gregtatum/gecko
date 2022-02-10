@@ -37,7 +37,12 @@ import logic from "logic";
 // backend.
 window.LOGIC = logic;
 logic.tid = "api?";
-logic.bc = new BroadcastChannel("logic");
+try {
+  logic.bc = new BroadcastChannel("logic");
+} catch {
+  // It's okay to not have logging if BroadcastChannel is not available.  We'll
+  // improve things in MR2-1852.
+}
 
 const SCOPE = {};
 logic.defineScope(SCOPE, "MainFrameSetup");

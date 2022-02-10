@@ -15,33 +15,38 @@ export class BroadcastCollector {
     this.listener = null;
     this.pendingTimeout = null;
 
-    this.bc = new BroadcastChannel("logic");
-    this.bc.onmessage = evt => {
-      if (evt.data.mode === "clear") {
-        this.clear();
-        return;
-      }
-      if (evt.data.mode !== "append") {
-        return;
-      }
-      this.serial++;
+    try {
+      this.bc = new BroadcastChannel("logic");
+      this.bc.onmessage = evt => {
+        if (evt.data.mode === "clear") {
+          this.clear();
+          return;
+        }
+        if (evt.data.mode !== "append") {
+          return;
+        }
+        this.serial++;
 
-      const logicEvent = evt.data.event;
-      // For now the BroadcastChannel wrapper payload includes a "tid" that was
-      // also clobbered onto the logic object like the `bc`.  If/when the data
-      // moves to being buffered in the worker itself, this could be assigned
-      // based on assigning a unique id to the MessagePort via WeakMap / via the
-      // mailbridge.
-      logicEvent.tid = evt.data.tid;
-      logicEvent.guid = `${evt.data.tid}:${logicEvent.id}`;
-      this.entries.push(logicEvent);
+        const logicEvent = evt.data.event;
+        // For now the BroadcastChannel wrapper payload includes a "tid" that was
+        // also clobbered onto the logic object like the `bc`.  If/when the data
+        // moves to being buffered in the worker itself, this could be assigned
+        // based on assigning a unique id to the MessagePort via WeakMap / via the
+        // mailbridge.
+        logicEvent.tid = evt.data.tid;
+        logicEvent.guid = `${evt.data.tid}:${logicEvent.id}`;
+        this.entries.push(logicEvent);
 
-      if (this.pendingTimeout) {
-        return;
-      }
+        if (this.pendingTimeout) {
+          return;
+        }
 
-      this.scheduleTimer();
-    };
+        this.scheduleTimer();
+      };
+    } catch {
+      // It's okay to not have logging if BroadcastChannel is not available.  We'll
+      // improve things in MR2-1852.
+    }
   }
 
   attachListener(listener, fire = false) {
