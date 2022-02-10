@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import "./simple-notification.js";
 import { MozLitElement } from "../widget-utils.js";
 import { css, html, classMap } from "../lit.all.js";
 
@@ -18,7 +19,7 @@ class ConnectServiceNotification extends MozLitElement {
 
   static get queries() {
     return {
-      connectButton: ".connect-service-button",
+      connectButton: "button",
     };
   }
 
@@ -26,41 +27,7 @@ class ConnectServiceNotification extends MozLitElement {
     return css`
       @import url("chrome://global/skin/in-content/common.css");
 
-      .card {
-        box-shadow: 0 2px 6px 0 rgba(58, 57, 68, 0.2);
-        padding: 16px;
-        margin: 16px;
-        border: none;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .connect-service-icon {
-        width: 24px;
-        height: 24px;
-      }
-
-      .connect-service-description {
-        flex-grow: 1;
-      }
-
-      .connect-service-name {
-        font-size: 1em;
-        line-height: 1;
-        margin: 0;
-        margin-block-end: 8px;
-        word-break: break-word;
-      }
-
-      .connect-service-services {
-        font-size: 0.75em;
-        color: var(--in-content-deemphasized-text);
-        margin: 0;
-      }
-
-      .connect-service-button {
+      button {
         /* flex for the green connected dot. */
         display: flex;
         align-items: center;
@@ -69,7 +36,7 @@ class ConnectServiceNotification extends MozLitElement {
         flex-shrink: 0;
       }
 
-      .connect-service-button.connected::before {
+      button.connected::before {
         display: inline-block;
         content: "";
         padding: 2px;
@@ -101,15 +68,14 @@ class ConnectServiceNotification extends MozLitElement {
 
   render() {
     return html`
-      <div class="card card-no-hover">
-        <img class="connect-service-icon" src=${this.icon} />
-        <div class="connect-service-description">
-          <h2 class="connect-service-name">${this.name}</h2>
-          <p class="connect-service-services">${this.services}</p>
-        </div>
+      <simple-notification
+        .heading=${this.name}
+        .icon=${this.icon}
+        .description=${this.services}
+      >
         <button
+          slot="primary-button"
           class=${classMap({
-            "connect-services-button": true,
             primary: !this.connected,
             connected: this.connected,
           })}
@@ -118,7 +84,7 @@ class ConnectServiceNotification extends MozLitElement {
         >
           ${this.getString(this.connectButtonLabelId)}
         </button>
-      </div>
+      </simple-notification>
     `;
   }
 }
