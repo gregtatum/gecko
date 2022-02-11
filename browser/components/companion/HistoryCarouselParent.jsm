@@ -26,6 +26,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
   5
 );
 
+XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
+  return console.createInstance({
+    prefix: "HistoryCarousel",
+    maxLogLevelPref: "browser.pinebuild.megaback.logLevel",
+  });
+});
+
 /**
  * The HistoryCarousel class is responsible for interpreting whether or not
  * the user has interacted with the back button in a way that indicates
@@ -42,6 +49,8 @@ class HistoryCarousel {
   #clickCount;
   #openedByLongPress;
   #window;
+  #enabled;
+  #containerCache;
 
   /**
    * Sets up the event handlers on the back button.
@@ -51,6 +60,8 @@ class HistoryCarousel {
     this.#clickCount = 0;
     this.#openedByLongPress = false;
     this.#window = window;
+    this.#enabled = false;
+    this.#containerCache = null;
   }
 
   init() {
@@ -72,8 +83,8 @@ class HistoryCarousel {
     this.#window.gClickAndHoldListenersOnElement.add(pbBackButton, () => {
       // The user longpressed, so set this flag to prevent the back
       // command from being fired on click.
-      this._openedByLongPress = true;
-      this.#window.gGlobalHistory.showHistoryCarousel(true);
+      this.#openedByLongPress = true;
+      this.showHistoryCarousel(true);
     });
   }
 
@@ -104,7 +115,7 @@ class HistoryCarousel {
       if (this.#clickCount >= CLICK_COUNT_THRESHOLD) {
         this.#window.clearTimeout(this._timerID);
         this.resetCount();
-        this.#window.gGlobalHistory.showHistoryCarousel(true);
+        this.showHistoryCarousel(true);
       }
     }
   }
@@ -117,6 +128,148 @@ class HistoryCarousel {
     this.#clickCount = 0;
     this.#timerID = null;
   }
+
+  get enabled() {
+    return this.#enabled;
+  }
+
+  get #container() {
+    if (!this.#containerCache) {
+      let doc = this.#window.document;
+      let template = doc.getElementById("historyCarouselPanel");
+      template.replaceWith(template.content);
+      this.#containerCache = doc.getElementById("historycarousel-container");
+    }
+    return this.#containerCache;
+  }
+
+  /**
+   * Sets up or tears down the history carousel for the current window.
+   *
+   * @param {Boolean} shouldShow
+   *   True if the carousel should be shown.
+   * @returns {Promise}
+   * @resolves {undefined}
+   *   Resolves once the state has been entered (or if we're already in the
+   *   selected state).
+   */
+  async showHistoryCarousel(shouldShow) {
+    if (this.#enabled == shouldShow) {
+      return;
+    }
+
+    logConsole.debug("Show history carousel: ", shouldShow);
+
+    if (this.#window.top.gGlobalHistory.views.length <= 1) {
+      throw new Error(
+        "Cannot enter history carousel mode without multiple views"
+      );
+    }
+
+    let gBrowser = this.#window.gBrowser;
+    let carouselBrowser = this.#container.querySelector(
+      "#historycarousel-browser"
+    );
+
+    this.#notify("HistoryCarousel:TransitionStart");
+
+    if (shouldShow) {
+      this.#enabled = shouldShow;
+      logConsole.debug(
+        "Navigating history carousel browser to about:historycarousel"
+      );
+      carouselBrowser.loadURI("about:historycarousel", {
+        triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+      });
+      // If this is the first time we've bound the <browser> to the DOM, then the
+      // docShell is active by default, despite being invisible (since the container
+      // is still hidden). We deactivate it here so that we can activate it in the
+      // same step as making its container visible. Activating the docShell causes
+      // the visibilitystatechange event to fire in the underlying document which
+      // is what kicks off the initial animation.
+      this.#window.document.body.setAttribute("historycarousel", "loading");
+      this.#container.hidden = false;
+      carouselBrowser.docShellIsActive = false;
+      carouselBrowser.renderLayers = true;
+
+      logConsole.debug("Waiting for history carousel browser to be ready");
+
+      // To reduce flicker, we'll wait until:
+      // 1. the underlying history carousel <browser> has reported that its ready
+      // 2. the compositor has reported that its received the displaylist
+      //
+      // before proceeding.
+      let composited = await new Promise(resolve => {
+        carouselBrowser.addEventListener("MozLayerTreeReady", resolve, {
+          once: true,
+        });
+      });
+      let ready = await new Promise(resolve => {
+        this.#window.addEventListener("HistoryCarousel:Ready", resolve, {
+          once: true,
+        });
+      });
+      await Promise.all([composited, ready]);
+      // Finally, we'll wait until we've completed the next paint and composite
+      // on the whole window before doing the switch.
+      let lastTransactionId = this.#window.windowUtils.lastTransactionId;
+      await new Promise(resolve => {
+        let listener = event => {
+          if (event.transactionId > lastTransactionId) {
+            this.#window.removeEventListener("MozAfterPaint", listener);
+            resolve();
+          }
+        };
+        this.#window.addEventListener("MozAfterPaint", listener);
+      });
+
+      this.#window.document.body.setAttribute("historycarousel", "ready");
+
+      logConsole.debug(
+        "History carousel browser is ready. Making visible and focusing."
+      );
+      carouselBrowser.focus();
+
+      for (let backgroundTab of gBrowser.tabs) {
+        backgroundTab.linkedBrowser.enterModalState();
+      }
+
+      carouselBrowser.docShellIsActive = true;
+    } else {
+      let actor = carouselBrowser.browsingContext.currentWindowGlobal.getActor(
+        "HistoryCarousel"
+      );
+      let finalIndex = await actor.sendQuery("Exit");
+      logConsole.debug("Got back final index: ", finalIndex);
+
+      this.#notify("HistoryCarousel:Exit", { finalIndex });
+
+      this.#enabled = shouldShow;
+
+      for (let backgroundTab of gBrowser.tabs) {
+        backgroundTab.linkedBrowser.leaveModalState();
+      }
+
+      this.#window.document.body.removeAttribute("historycarousel");
+      this.#container.hidden = true;
+
+      logConsole.debug("Unloading history carousel document.");
+      carouselBrowser.loadURI("about:blank", {
+        triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+      });
+    }
+
+    this.#notify("HistoryCarousel:TransitionEnd");
+  }
+
+  #notify(eventType, detail = {}) {
+    let carouselBrowser = this.#container.querySelector(
+      "#historycarousel-browser"
+    );
+    carouselBrowser.dispatchEvent(
+      new this.#window.CustomEvent(eventType, { bubbles: true, detail })
+    );
+  }
 }
 
 /**
@@ -127,10 +280,12 @@ class HistoryCarouselParent extends JSWindowActorParent {
   // We hold a reference to GlobalHistory because accessing the browsingContext
   // embedderElement won't work in didDestroy.
   #globalHistory;
+  #historyCarousel;
 
   actorCreated() {
     let window = this.browsingContext.embedderElement.ownerGlobal;
     this.#globalHistory = window.gGlobalHistory;
+    this.#historyCarousel = window.gHistoryCarousel;
     this.#globalHistory.addEventListener("ViewChanged", this);
   }
 
@@ -192,11 +347,12 @@ class HistoryCarouselParent extends JSWindowActorParent {
       // The HistoryCarouselChild has received a user input event requesting
       // that it exit.
       case "RequestExit": {
-        return this.#globalHistory.showHistoryCarousel(false);
+        return this.#historyCarousel.showHistoryCarousel(false);
       }
       // The selection inside of the carousel has changed.
       case "SetVisibleIndex": {
-        this.#globalHistory.setHistoryCarouselIndex(message.data.index);
+        let view = this.#globalHistory.views[message.data.index];
+        this.#globalHistory.setView(view);
         break;
       }
     }

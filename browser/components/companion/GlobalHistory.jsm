@@ -903,6 +903,22 @@ class GlobalHistory extends EventTarget {
       this.#sessionRestoreStarted()
     );
 
+    this.#window.addEventListener("HistoryCarousel:Ready", event =>
+      this.#historyCarouselReady()
+    );
+
+    this.#window.addEventListener("HistoryCarousel:TransitionStart", event =>
+      this.#setHistoryCarouselTransitioning(true)
+    );
+
+    this.#window.addEventListener("HistoryCarousel:TransitionEnd", event =>
+      this.#setHistoryCarouselTransitioning(false)
+    );
+
+    this.#window.addEventListener("HistoryCarousel:Exit", event =>
+      this.#historyCarouselExit(event.detail)
+    );
+
     this.#window.gBrowser.addTabsProgressListener(this);
   }
 
@@ -1834,7 +1850,7 @@ class GlobalHistory extends EventTarget {
         // if we select one in the AVM while showing the carousel,
         // we avoid user confusion by then immediately exiting the
         // carousel.
-        this.showHistoryCarousel(false);
+        this.#window.gHistoryCarousel.showHistoryCarousel(false);
       }
 
       return;
@@ -2225,110 +2241,6 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
-   * Sets up or tears down the history carousel for the current window.
-   *
-   * @param {Boolean} shouldShow
-   *   True if the carousel should be shown.
-   * @returns {Promise}
-   * @resolves {undefined}
-   *   Resolves once the state has been entered (or if we're already in the
-   *   selected state).
-   */
-  async showHistoryCarousel(shouldShow) {
-    if (this.#historyCarouselMode == shouldShow) {
-      return;
-    }
-
-    logConsole.debug("Show history carousel: ", shouldShow);
-
-    if (this.#viewStack.length <= 1) {
-      throw new Error(
-        "Cannot enter history carousel mode without multiple views"
-      );
-    }
-
-    let gBrowser = this.#window.gBrowser;
-
-    if (shouldShow) {
-      this.#currentHistoryCarouselInternalView = this.#currentInternalView;
-      this.#setHistoryCarouselTransitioning(true);
-
-      this.#historyCarouselMode = shouldShow;
-      gBrowser.tabbox.setAttribute("disable-history-animations", "true");
-      logConsole.debug("Adding history carousel browser");
-      let tab = gBrowser.addTrustedTab("about:historycarousel", {
-        skipAnimation: true,
-      });
-
-      logConsole.debug("Waiting for history carousel browser to be ready");
-
-      await new Promise(resolve => {
-        let listener = e => {
-          resolve();
-        };
-        this.#window.addEventListener("HistoryCarousel:Ready", listener, {
-          once: true,
-        });
-      });
-
-      logConsole.debug("History carousel browser is ready. Making visible.");
-      gBrowser.selectedTab = tab;
-      for (let backgroundTab of gBrowser.tabs) {
-        if (backgroundTab != gBrowser.selectedTab) {
-          backgroundTab.linkedBrowser.enterModalState();
-        }
-      }
-    } else {
-      logConsole.assert(
-        gBrowser.selectedBrowser.currentURI.spec == "about:historycarousel",
-        "Should only be able to exit when history carousel is in the foreground."
-      );
-      this.#setHistoryCarouselTransitioning(true);
-      let carouselTab = gBrowser.selectedTab;
-      let actor = gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
-        "HistoryCarousel"
-      );
-      let finalIndex = await actor.sendQuery("Exit");
-
-      this.#historyCarouselMode = shouldShow;
-
-      for (let backgroundTab of gBrowser.tabs) {
-        if (backgroundTab != gBrowser.selectedTab) {
-          backgroundTab.linkedBrowser.leaveModalState();
-        }
-      }
-
-      let internalView = this.#viewStack[finalIndex];
-      let browserSwitched = new Promise(resolve => {
-        this.#window.addEventListener("TabSwitched", resolve, { once: true });
-      });
-
-      this.setView(internalView.view);
-      await browserSwitched;
-
-      // Switching to the underlying <browser> is unlikely to happen synchronously,
-      // so we wait for the next tick of the refresh driver to remove the
-      // disable-history-animations attribute so that there's a much higher
-      // likelihood that the switch to the selected view has been started without
-      // the animation. That's the right time to remove the attribute so that
-      // subsequent switches continue to have the animations.
-      await new Promise(resolve => {
-        this.#window.requestAnimationFrame(() => {
-          this.#window.requestAnimationFrame(resolve);
-        });
-      });
-      gBrowser.tabbox.removeAttribute("disable-history-animations");
-
-      logConsole.debug("Removing history carousel browser.");
-      gBrowser.removeTab(carouselTab, { animate: false });
-
-      this.#currentHistoryCarouselInternalView = null;
-    }
-
-    this.#setHistoryCarouselTransitioning(false);
-  }
-
-  /**
    * Puts the window into, or takes it out of, the history carousel transition
    * state.
    *
@@ -2338,6 +2250,43 @@ class GlobalHistory extends EventTarget {
   #setHistoryCarouselTransitioning(isTransitioning) {
     this.#historyCarouselTransitioning = isTransitioning;
     this.#window.UpdateBackForwardCommands(this);
+  }
+
+  #historyCarouselReady() {
+    this.#window.gBrowser.tabbox.setAttribute(
+      "disable-history-animations",
+      "true"
+    );
+    this.#historyCarouselMode = true;
+    this.#currentHistoryCarouselInternalView = this.#currentInternalView;
+  }
+
+  async #historyCarouselExit({ finalIndex }) {
+    logConsole.debug(
+      "Exiting history carousel mode, selecting index ",
+      finalIndex
+    );
+    this.#historyCarouselMode = false;
+    this.#currentHistoryCarouselInternalView = null;
+    let internalView = this.#viewStack[finalIndex];
+    logConsole.debug(`Selecting view: ${internalView.toString()}`);
+    this.setView(internalView.view);
+
+    await this.#window.promiseDocumentFlushed(() => {});
+    // Finally, we'll wait until we've completed the next paint and composite
+    // on the whole window before re-enabling history animations.
+    let lastTransactionId = this.#window.windowUtils.lastTransactionId;
+    await new Promise(resolve => {
+      let listener = event => {
+        if (event.transactionId > lastTransactionId) {
+          this.#window.removeEventListener("MozAfterPaint", listener);
+          resolve();
+        }
+      };
+      this.#window.addEventListener("MozAfterPaint", listener);
+    });
+
+    this.#window.gBrowser.tabbox.removeAttribute("disable-history-animations");
   }
 
   /**

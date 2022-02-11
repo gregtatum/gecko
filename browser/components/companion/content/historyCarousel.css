@@ -5,6 +5,7 @@
 :root {
   --total-previews: 0;
   --transition-timing-function: cubic-bezier(0.20, 0.00, 0.00, 1.00);
+  background: none;
 }
 
 body {

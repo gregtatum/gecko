@@ -65,8 +65,9 @@ add_task(async function test_keyboard_controls() {
   // Next, test that if we select a view that wasn't the original, and then
   // hit Escape, that we exit the HistoryCarousel and show the original view.
   // The original view is view3.
-  let historyCarouselClosed = BrowserTestUtils.waitForTabClosing(
-    gBrowser.selectedTab
+  let historyCarouselClosed = BrowserTestUtils.waitForEvent(
+    window,
+    "HistoryCarousel:Exit"
   );
   testKey("KEY_Escape", view3, 3);
   await historyCarouselClosed;
@@ -74,12 +75,15 @@ add_task(async function test_keyboard_controls() {
   // Now re-enter HistoryCarousel, select view2, and hit Enter. This should
   // cause view2 to be the selected view.
   browser = await PinebuildTestUtils.enterHistoryCarousel();
-  historyCarouselClosed = BrowserTestUtils.waitForTabClosing(
-    gBrowser.selectedTab
-  );
   await testKey("KEY_ArrowLeft", view2, 2);
+  historyCarouselClosed = BrowserTestUtils.waitForEvent(
+    window,
+    "HistoryCarousel:Exit"
+  );
+  let viewChangedPromise = PinebuildTestUtils.waitForSelectedView(view2);
   await BrowserTestUtils.synthesizeKey("KEY_Enter", {}, browser);
   await historyCarouselClosed;
+  await viewChangedPromise;
 
   Assert.equal(gGlobalHistory.currentView, view2);
 });

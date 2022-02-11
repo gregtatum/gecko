@@ -33,6 +33,15 @@ class PreviewElement extends HTMLLIElement {
     this.#caption = this.querySelector(".caption");
     this.#favicon = this.querySelector(".favicon");
     this.#updateFromAttributes();
+    this.#image.addEventListener("load", this);
+  }
+
+  handleEvent(event) {
+    if (event.type != "load") {
+      return;
+    }
+
+    this.dispatchEvent(new CustomEvent("load"));
   }
 
   setBlob(blob) {
@@ -282,7 +291,7 @@ const HistoryCarousel = {
    * process to construct the initial state of the carousel. This function
    * does any initial setting up of the DOM for the PreviewElement list.
    */
-  setup() {
+  async setup() {
     let frag = document.createDocumentFragment();
     let previews = CarouselUtils.getInitialPreviews();
     let currentIndex = CarouselUtils.getCurrentIndex();
@@ -338,13 +347,20 @@ const HistoryCarousel = {
     // so do so and snap it into the viewport if it's not already there.
     currentPreviewEl.setBlob(currentPreview.image);
     currentPreviewEl.scrollIntoView({ behavior: "instant", inline: "center" });
-
     this.minIndex = previews[0].index;
     this.maxIndex = previews[previews.length - 1].index;
 
     this.scrubber.setAttribute("min", this.minIndex);
     this.scrubber.setAttribute("max", this.maxIndex);
     this.scrubber.value = currentIndex;
+
+    await new Promise(resolve => {
+      currentPreviewEl.addEventListener("load", resolve, {
+        once: true,
+      });
+    });
+
+    CarouselUtils.ready();
   },
 
   /**
