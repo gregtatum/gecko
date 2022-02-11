@@ -29,7 +29,21 @@ export class RefreshServicesButton extends MozLitElement {
       @import url("chrome://global/skin/in-content/common.css");
 
       .refresh-services-button {
-        --icon: url("chrome://browser/skin/sync.svg");
+        min-width: auto;
+        width: 16px;
+      }
+
+      .refresh-services-button::after {
+        content: "";
+        display: block;
+        background-image: url("chrome://browser/skin/sync.svg");
+        background-repeat: no-repeat;
+        background-size: 16px;
+        fill: currentColor;
+        height: 16px;
+        width: 16px;
+        /* Center icon by offsetting it 8px */
+        margin-inline-start: -8px;
       }
 
       .refresh-services-button.syncing::after {
@@ -137,7 +151,6 @@ export class RefreshServicesButton extends MozLitElement {
         ?disabled=${this.isRefreshing}
         class=${classMap({
           "ghost-button": true,
-          "icon-button": true,
           "refresh-services-button": true,
           syncing: this.isRefreshing,
         })}

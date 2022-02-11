@@ -63,13 +63,13 @@ async function assertConnectCard(helper, _opts) {
       }
 
       is(
-        servicesOnboarding.connectServiceNotifications.length,
+        servicesOnboarding.connectServiceElements.length,
         opts.length,
-        `${opts.length} connect-service-notification elements are shown`
+        `${opts.length} connect-service elements are shown`
       );
 
       if (opts.length == 1) {
-        let connectService = servicesOnboarding.connectServiceNotifications[0];
+        let connectService = servicesOnboarding.connectServiceElements[0];
         is(
           connectService.type,
           opts.service,

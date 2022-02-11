@@ -40,7 +40,7 @@ class ServiceUtilsClass {
     this.serviceByType = new Map();
     this.serviceByAPI = new Map();
 
-    if (!window.Cu?.isInAutomation) {
+    if (!Cu.isInAutomation) {
       this.registerService(GOOGLE_SERVICE);
       this.registerService(MICROSOFT_SERVICE);
     } else {
