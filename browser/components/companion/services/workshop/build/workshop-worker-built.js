@@ -11408,7 +11408,6 @@ var WorkshopBackend = (() => {
           this.rawSyncState = rawSyncState;
           this.eventChangesByRecurringEventId = new Map();
           this.tasksToSchedule = [];
-          this.convMutations = null;
         }
         get syncToken() {
           return this.rawSyncState.syncToken;
@@ -11523,13 +11522,16 @@ var WorkshopBackend = (() => {
             };
           },
           async helped_execute(ctx, req) {
+            const account = await ctx.universe.acquireAccount(ctx, req.accountId);
+            const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
+            if (!folderInfo) {
+              return {};
+            }
             const fromDb = await ctx.beginMutate({
               syncStates: new Map([[req.folderId, null]])
             });
             const rawSyncState = fromDb.syncStates.get(req.folderId);
             const syncState = new GapiCalFolderSyncStateHelper(ctx, rawSyncState, req.accountId, req.folderId, "refresh");
-            const account = await ctx.universe.acquireAccount(ctx, req.accountId);
-            const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
             if (folderInfo.type === "inbox-summary") {
               return {
                 newData: {
@@ -11620,27 +11622,49 @@ var WorkshopBackend = (() => {
               handleError({ error: results?.error || "No data" });
               return changes;
             }
-            const cancelledEventUniqueIds = new Map();
+            const umidNames = new Map();
             const cancelledEvents = new Map();
+            const metadatas = new WeakMap();
             for (const event of results.items) {
+              const uniqueId = makeUmidWithinFolder(req.folderId, event.id);
+              umidNames.set(uniqueId, null);
+              let cancelled = false;
               if (event.status === "cancelled" && !event.recurringEventId) {
-                const uniqueId = makeUmidWithinFolder(req.folderId, event.id);
-                cancelledEventUniqueIds.set(uniqueId, null);
                 cancelledEvents.set(uniqueId, event);
-              } else {
-                syncState.ingestEvent(event);
+                cancelled = true;
+              }
+              metadatas.set(event, { uniqueId, cancelled });
+            }
+            await ctx.read({ umidNames });
+            for (const event of results.items) {
+              const { uniqueId, cancelled } = metadatas.get(event);
+              if (cancelled) {
+                continue;
+              }
+              syncState.ingestEvent(event);
+              const eventId = umidNames.get(uniqueId);
+              if (!eventId) {
+                continue;
+              }
+              const prevRecurringId = convIdComponentFromMessageId(eventId);
+              if (event.recurringEventId && prevRecurringId !== event.recurringEventId) {
+                const messageId = messageIdComponentFromMessageId(eventId);
+                syncState.ingestEvent({
+                  recurringEventId: prevRecurringId,
+                  status: "cancelled",
+                  id: messageId
+                });
               }
             }
             if (cancelledEvents.size) {
               const recurringIds = new Set();
-              await ctx.read({ umidNames: cancelledEventUniqueIds });
-              for (const [uniqueId, eventId] of cancelledEventUniqueIds) {
+              for (const [uniqueId, event] of cancelledEvents) {
+                const eventId = umidNames.get(uniqueId);
                 if (!eventId) {
                   continue;
                 }
                 const convId = convIdComponentFromMessageId(eventId);
                 const messageId = messageIdComponentFromMessageId(eventId);
-                const event = cancelledEvents.get(uniqueId);
                 if (convId !== messageId) {
                   event.recurringEventId = convId;
                   recurringIds.add(convId);

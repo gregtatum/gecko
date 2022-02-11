@@ -149,6 +149,30 @@ class FakeCalendar {
     }
   }
 
+  changeSecondInstAndFollowing(summary, newSummary) {
+    const event = this.events.find(x => x.summary === summary);
+    const duration = DURATIONS.get(event.every);
+    const secondStartDate = new Date(event.startDate.valueOf() + duration);
+
+    const eventDuration = event.endDate - event.startDate;
+    const { serverId } = this.serverOwner.issueEventIds();
+    const newEvent = Object.assign({}, event);
+    newEvent.startDate = secondStartDate;
+    newEvent.endDate = new Date(secondStartDate.valueOf() + eventDuration);
+    Object.assign(newEvent, {
+      summary: newSummary,
+      serial: this.serial,
+      recurringId: serverId,
+      alterationTs: nowTs(),
+      baseId: event.recurringId,
+    });
+
+    this.events.push(newEvent);
+    delete event.every;
+    event.id = `${event.recurringId}-${secondStartDate.valueOf()}`;
+    event.alterationTs = nowTs();
+  }
+
   getEventWithId(id) {
     return this.events.find(x => x.id === id);
   }
@@ -196,7 +220,8 @@ class FakeCalendar {
         newEvent.endDate = new Date(
           newEvent.startDate.valueOf() + eventDuration
         );
-        const id = `${event.recurringId}-${newEvent.startDate.valueOf()}`;
+        const baseId = event.baseId || event.recurringId;
+        const id = `${baseId}-${newEvent.startDate.valueOf()}`;
         const index = this.events.findIndex(x => x.id === id);
         if (!this.isMapi || index === -1) {
           // In MAPI case if the event exist in the list it means that it

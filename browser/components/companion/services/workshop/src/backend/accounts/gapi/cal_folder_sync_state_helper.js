@@ -72,8 +72,6 @@ export default class GapiCalFolderSyncStateHelper {
 
     // A running list of tasks to spin-off
     this.tasksToSchedule = [];
-    // A running list of conversations to delete
-    this.convMutations = null;
   }
 
   get syncToken() {

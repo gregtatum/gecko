@@ -79,6 +79,12 @@ export default TaskDefiner.defineAtMostOnceTask([
     },
 
     async helped_execute(ctx, req) {
+      const account = await ctx.universe.acquireAccount(ctx, req.accountId);
+      const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
+      if (!folderInfo) {
+        return {};
+      }
+
       // -- Exclusively acquire the sync state for the folder
       const fromDb = await ctx.beginMutate({
         syncStates: new Map([[req.folderId, null]]),
@@ -93,9 +99,6 @@ export default TaskDefiner.defineAtMostOnceTask([
         req.folderId,
         "refresh"
       );
-
-      const account = await ctx.universe.acquireAccount(ctx, req.accountId);
-      const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
 
       if (folderInfo.type === "inbox-summary") {
         return {
@@ -238,27 +241,70 @@ export default TaskDefiner.defineAtMostOnceTask([
         return changes;
       }
 
-      const cancelledEventUniqueIds = new Map();
+      const umidNames = new Map();
       const cancelledEvents = new Map();
+
+      // Attach some metadata to the event in order to avoid to have to recompute
+      // them but without adding them to the object directly (to avoid any name
+      // conflicts): hence a WeakMap.
+      const metadatas = new WeakMap();
+
       for (const event of results.items) {
+        const uniqueId = makeUmidWithinFolder(req.folderId, event.id);
+        umidNames.set(uniqueId, null);
+        let cancelled = false;
         if (event.status === "cancelled" && !event.recurringEventId) {
           // When some instance of a recurring event are cancelled it's possible
           // to not always have the recurringEventId which was used to build
           // the messageId of the event.
           // So in order to have everything at the right place, we need to
           // figure out the recurringEventId (if any).
-          const uniqueId = makeUmidWithinFolder(req.folderId, event.id);
-          cancelledEventUniqueIds.set(uniqueId, null);
           cancelledEvents.set(uniqueId, event);
-        } else {
-          syncState.ingestEvent(event);
+          cancelled = true;
+        }
+        metadatas.set(event, { uniqueId, cancelled });
+      }
+
+      await ctx.read({ umidNames });
+
+      for (const event of results.items) {
+        // We check that the recurringEventId didn't change.
+        // When an instance and its successors of a recurring event are changed
+        // then a new recurring event is created but the instances have the same
+        // ids.
+        // And therefore we need to clean up the previous database state. We do
+        // this by creating a synthetic cancellation of the previous version of
+        // the event which will be processed by GapiCalEventChewer in the
+        // "cal_sync_conv" task.
+        const { uniqueId, cancelled } = metadatas.get(event);
+        if (cancelled) {
+          continue;
+        }
+
+        syncState.ingestEvent(event);
+
+        const eventId = umidNames.get(uniqueId);
+        if (!eventId) {
+          continue;
+        }
+        const prevRecurringId = convIdComponentFromMessageId(eventId);
+        if (
+          event.recurringEventId &&
+          prevRecurringId !== event.recurringEventId
+        ) {
+          const messageId = messageIdComponentFromMessageId(eventId);
+          syncState.ingestEvent({
+            recurringEventId: prevRecurringId,
+            status: "cancelled",
+            id: messageId,
+          });
         }
       }
 
       if (cancelledEvents.size) {
         const recurringIds = new Set();
-        await ctx.read({ umidNames: cancelledEventUniqueIds });
-        for (const [uniqueId, eventId] of cancelledEventUniqueIds) {
+        for (const [uniqueId, event] of cancelledEvents) {
+          const eventId = umidNames.get(uniqueId);
           if (!eventId) {
             // Some events which shouldn't be there are there !
             // So in case we didn't add them to the db, just skip.
@@ -268,7 +314,6 @@ export default TaskDefiner.defineAtMostOnceTask([
           // if the event is recurring or not).
           const convId = convIdComponentFromMessageId(eventId);
           const messageId = messageIdComponentFromMessageId(eventId);
-          const event = cancelledEvents.get(uniqueId);
           if (convId !== messageId) {
             // We're cheating in adding the recurringEventId and everybody
             // is happy.

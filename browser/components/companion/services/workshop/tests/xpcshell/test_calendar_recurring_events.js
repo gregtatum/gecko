@@ -32,6 +32,7 @@ async function check_recurring_events_for_account_type({
   initialEventSketches,
   addEventSketches,
   cancelledEventSketches,
+  changingEventSketches,
 }) {
   const initialEvents = WorkshopHelper.deriveFullEvents({
     eventSketches: initialEventSketches,
@@ -106,6 +107,22 @@ async function check_recurring_events_for_account_type({
   }
 
   await getAndCompare(workshopAPI, calFolder, expectedCounts, rounds + 2);
+
+  if (changingEventSketches) {
+    // Remove the second event of some recurring events.
+    for (const { summary, newSummary } of changingEventSketches) {
+      fakeServer.defaultCalendar.changeSecondInstAndFollowing(
+        summary,
+        newSummary
+      );
+      const i = expectedCounts.findIndex(x => x[0] === summary);
+      const total = expectedCounts[i][1];
+      expectedCounts[i][1] = 1;
+      expectedCounts.splice(i + 1, 0, [newSummary, total - 1]);
+    }
+
+    await getAndCompare(workshopAPI, calFolder, expectedCounts, rounds + 3);
+  }
 }
 
 const today = new Date(DEFAULT_FAKE_NOW_TS).toISOString().split("T")[0];
@@ -141,6 +158,15 @@ const INITIAL_EVENTS = [
     summary: "Meeting with Karl and Leonhard",
     start: `${inTwoDays}T03:14:15.000Z`,
     end: `${inTwoDays}T09:26:53.000Z`,
+  },
+  {
+    summary: "Weekly Cold Meeting with an Hawaiian shirt",
+    start: `${today}T09:00:00.000Z`,
+    end: `${today}T09:30:00.000Z`,
+
+    every: "week",
+    // Same as above for "Weekly Meeting"
+    expectedNumber: 9,
   },
 ];
 
@@ -182,12 +208,20 @@ const CANCELLED_EVENTS = [
   },
 ];
 
+const CHANGING_EVENTS = [
+  {
+    summary: "Weekly Cold Meeting with an Hawaiian shirt",
+    newSummary: "Weekly Hot meeting with an Hawaiian shirt",
+  },
+];
+
 add_task(async function test_gapi_calendar_single_day() {
   await check_recurring_events_for_account_type({
     configurator: GapiConfigurator,
     initialEventSketches: INITIAL_EVENTS,
     addEventSketches: ADD_EVENTS,
     cancelledEventSketches: CANCELLED_EVENTS,
+    changingEventSketches: CHANGING_EVENTS,
   });
 });
 
