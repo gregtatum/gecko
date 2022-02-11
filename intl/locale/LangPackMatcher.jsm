@@ -146,6 +146,17 @@ const mockable = {
    * @returns {LangPack[] | null}
    */
   async getAvailableLangpacks() {
+    {
+      const seconds = 0;
+      const message = "";
+      for (let i = seconds; i > 0; i--) {
+        dump(`!!! Countdown - ${message} ${i}
+    `);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      dump(`!!! Countdown ${message} done.`);
+    }
+
     try {
       return AddonRepository.getAvailableLangpacks();
     } catch (error) {
@@ -163,6 +174,16 @@ const mockable = {
   async installLangPack(langPack) {
     let install;
     console.log("!!! installLangPack", langPack);
+    {
+      const seconds = 10;
+      const message = "installLangPack";
+      for (let i = seconds; i > 0; i--) {
+        dump(`!!! Countdown - ${message} ${i}
+    `);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      dump(`!!! Countdown ${message} done.`);
+    }
     try {
       install = await AddonManager.getInstallForURL(langPack.url, {
         hash: langPack.hash,
@@ -283,6 +304,10 @@ function getAppAndSystemLocaleInfo() {
     }
   }
 
+  const displayNames = new Services.intl.DisplayNames(appLocaleRaw, {
+    type: "language",
+  });
+
   return {
     // Return the Intl.Locale in a serializable form.
     systemLocaleRaw,
@@ -290,6 +315,12 @@ function getAppAndSystemLocaleInfo() {
     appLocaleRaw,
     appLocale,
     matchType,
+
+    // These can be used as Fluent message args.
+    displayNames: {
+      systemLanguage: displayNames.of(systemLocale.baseName),
+      appLanguage: displayNames.of(appLocale.baseName),
+    },
   };
 }
 

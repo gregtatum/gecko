@@ -104,33 +104,21 @@ const DEFAULT_WELCOME_CONTENT = {
       content: {
         title: { string_id: "onboarding-live-language-header" },
         subtitle: { string_id: "onboarding-live-language-subtitle" },
-        secondary_button: {
-          label: { string_id: "onboarding-live-language-not-now-button-label" },
-          action: { navigate: true },
-        },
-        preloader: {
-          title: { string_id: "onboarding-live-language-header" },
-          subtitle: { string_id: "onboarding-live-language-waiting-subtitle" },
-          primary_button: {
-            label: { string_id: "onboarding-live-language-waiting-button" },
-            disabled: true,
-          },
-          secondary_button: {
-            label: { string_id: "onboarding-live-language-skip-button-label" },
-            action: { navigate: true },
-          },
-        },
         languageSwitcher: {
-          switch: { string_id: "onboarding-live-language-switch-button-label" },
+          switch: {
+            string_id: "onboarding-live-language-switch-button-label",
+          },
           downloading: {
             string_id: "onboarding-live-language-button-label-downloading",
           },
           cancel: {
             string_id: "onboarding-live-language-secondary-cancel-download",
           },
-          notNow: {
-            string_id: "onboarding-live-language-secondary-button-label",
+          not_now: {
+            string_id: "onboarding-live-language-not-now-button-label",
           },
+          waiting: { string_id: "onboarding-live-language-waiting-button" },
+          skip: { string_id: "onboarding-live-language-skip-button-label" },
           action: {
             navigate: true,
           },
@@ -458,7 +446,13 @@ async function prepareContentForReact(aboutWelcomeChild, content) {
     );
     if (screen) {
       console.log("!!! screen", screen);
-      screen.content.languageSwitcher.appAndSystemLocaleInfo = await aboutWelcomeChild.getAppAndSystemLocaleInfo();
+      const { languageSwitcher } = screen.content;
+      languageSwitcher.appAndSystemLocaleInfo = await aboutWelcomeChild.getAppAndSystemLocaleInfo();
+      for (const value of Object.values(languageSwitcher)) {
+        if (value?.string_id) {
+          value.args = languageSwitcher.appAndSystemLocaleInfo.displayNames;
+        }
+      }
     }
   } else {
     console.log("!!! Remove screen.");

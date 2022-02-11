@@ -15,6 +15,9 @@ export function useLanguageSwitcher(screens, screenIndex, setScreenIndex) {
     ({ id }) => id === "AW_LANGUAGE_MISMATCH"
   );
   const screen = screens[languageMismatchScreenIndex];
+  const appAndSystemLocaleInfo = screen
+    ? screen.content.languageSwitcher.appAndSystemLocaleInfo
+    : null;
 
   useEffect(() => {
     console.log("useEffect ----------------------");
@@ -26,13 +29,12 @@ export function useLanguageSwitcher(screens, screenIndex, setScreenIndex) {
   useEffect(
     function getNegotiatedLanguage() {
       console.log("useEffect getNegotiatedLanguage");
-      if (!screen) {
+      if (!appAndSystemLocaleInfo) {
         console.log(
-          "useEffect getNegotiatedLanguage - languageMismatchScreen."
+          "useEffect getNegotiatedLanguage - no appAndSystemLocaleInfo."
         );
         return;
       }
-      const { appAndSystemLocaleInfo } = screen.content.languageSwitcher;
       console.log(
         "useEffect getNegotiatedLanguage",
         appAndSystemLocaleInfo.matchType
@@ -40,7 +42,7 @@ export function useLanguageSwitcher(screens, screenIndex, setScreenIndex) {
       if (appAndSystemLocaleInfo.matchType !== "language-mismatch") {
         // There is no language mismatch, so there is no need to negotiate a langpack.
         console.log(
-          "useEffect not ready for negotiatedLanguage",
+          "useEffect getNegotiatedLanguage not ready for negotiatedLanguage",
           appAndSystemLocaleInfo,
           appAndSystemLocaleInfo.matchType
         );
@@ -49,7 +51,9 @@ export function useLanguageSwitcher(screens, screenIndex, setScreenIndex) {
 
       console.log("useEffect getNegotiatedLanguage before async");
       (async () => {
-        console.log("useEffect AWNegotiateLangPackForLanguageMismatch");
+        console.log(
+          "useEffect getNegotiatedLanguage AWNegotiateLangPackForLanguageMismatch"
+        );
         const langPack = await AWNegotiateLangPackForLanguageMismatch(
           appAndSystemLocaleInfo
         );
@@ -57,26 +61,22 @@ export function useLanguageSwitcher(screens, screenIndex, setScreenIndex) {
           // Convert the BCP 47 identifiers into the proper display names.
           // e.g. "fr-CA" -> "Canadian French".
           console.log(
-            "!!!",
+            "!!! getNegotiatedLanguage",
             appAndSystemLocaleInfo,
             appAndSystemLocaleInfo.appLocaleRaw
           );
-          console.log("!!!", langPack, langPack.target_locale);
+          console.log(
+            "!!! getNegotiatedLanguage",
+            langPack,
+            langPack.target_locale
+          );
           const displayNames = new Intl.DisplayNames(
             appAndSystemLocaleInfo.appLocaleRaw,
             { type: "language" }
           );
 
           setNegotiatedLanguage({
-            messageArgs: {
-              systemLanguage: displayNames.of(
-                appAndSystemLocaleInfo.systemLocale.baseName
-              ),
-              appLanguage: displayNames.of(
-                appAndSystemLocaleInfo.appLocale.baseName
-              ),
-              negotiatedLanguage: displayNames.of(langPack.target_locale),
-            },
+            displayName: displayNames.of(langPack.target_locale),
             langPack,
             requestSystemLocales: [
               langPack.target_locale,
@@ -86,32 +86,12 @@ export function useLanguageSwitcher(screens, screenIndex, setScreenIndex) {
         }
       })();
     },
-    [screen]
+    [appAndSystemLocaleInfo]
   );
 
-  // // Only allow this screen to show up when there is a language mismatch.
-  // const [prevScreenIndex, setPrevScreenIndex] = useState(screenIndex);
-  // useEffect(
-  //   function adjustScreenIndex() {
-  //     let nextScreenIndex = screenIndex;
-  //     if (
-  //       shouldHideLanguageSwitcher &&
-  //       nextScreenIndex === languageMismatchScreenIndex
-  //     ) {
-  //       const direction = screenIndex - prevScreenIndex >= 0 ? 1 : -1;
-  //       nextScreenIndex = screenIndex + direction;
-  //       console.log("!!!", { screenIndex, prevScreenIndex, nextScreenIndex });
-  //       setScreenIndex(nextScreenIndex);
-  //     }
-  //     setPrevScreenIndex(nextScreenIndex);
-  //   },
-  //   [screenIndex, appAndSystemLocaleInfo]
-  // );
-
-  // "before-installation"
-  // "installing"
-  // "installed"
-  // "installation-error"
+  /**
+   * @type {"before-installation" | "installing" | "installed" | "installation-error"}
+   */
   const [langPackInstallPhase, setLangPackInstallPhase] = useState(
     "before-installation"
   );
@@ -165,6 +145,7 @@ export function useLanguageSwitcher(screens, screenIndex, setScreenIndex) {
   );
 
   return {
+    appAndSystemLocaleInfo,
     negotiatedLanguage,
     langPackInstallPhase,
     languageFilteredScreens,
@@ -202,21 +183,76 @@ export function LanguageSwitcher(props) {
   }, [isAwaitingLangpack, langPackInstallPhase]);
 
   // The message args are the localized language names.
-  const withMessageArgs = obj => ({
-    ...obj,
-    args: negotiatedLanguage?.messageArgs,
-  });
+  const withMessageArgs = obj => {
+    const displayName = negotiatedLanguage?.displayName;
+    console.log({ displayName, negotiatedLanguage });
+    if (displayName) {
+      return {
+        ...obj,
+        args: {
+          ...obj.args,
+          negotiatedLanguage: displayName,
+        },
+      };
+    }
+    return obj;
+  };
 
-  if (isAwaitingLangpack && langPackInstallPhase !== "installed") {
-    return (
-      <div>
-        <Localized text={withMessageArgs(content.languageSwitcher.downloading)}>
-          <div></div>
-        </Localized>
-        <div>
+  const showWaitingScreen =
+    isAwaitingLangpack && langPackInstallPhase !== "installed";
+  const showPreloadingScreen = languageSwitcherShouldPreload(
+    langPackInstallPhase
+  );
+  const showReadyScreen = !showWaitingScreen && !showPreloadingScreen;
+  console.log("!!! render " + langPackInstallPhase);
+
+  // Use {display: "none"} rather than if statements to prevent layout thrashing with
+  // the localized text elements rendering as blank, then filling in the text.
+  return (
+    <>
+      <div style={{ display: showPreloadingScreen ? "block" : "none" }}>
+        <button
+          className="primary"
+          value="primary_button"
+          disabled={true}
+          type="button"
+        >
+          <img
+            className="language-loader"
+            src="chrome://browser/skin/tabbrowser/tab-connecting.png"
+          />
+          <Localized text={content.languageSwitcher.waiting} />
+        </button>
+        <div className="secondary-cta">
+          <Localized text={content.languageSwitcher.skip}>
+            <button
+              type="button"
+              className="secondary text-link"
+              onClick={props.handleAction}
+            />
+          </Localized>
+        </div>
+      </div>
+      <div style={{ display: showWaitingScreen ? "block" : "none" }}>
+        <button
+          className="primary"
+          value="primary_button"
+          disabled={true}
+          type="button"
+        >
+          <img
+            className="language-loader"
+            src="chrome://browser/skin/tabbrowser/tab-connecting.png"
+          />
+          <Localized
+            text={withMessageArgs(content.languageSwitcher.downloading)}
+          />
+        </button>
+        <div className="secondary-cta">
           <Localized text={content.languageSwitcher.cancel}>
             <button
               type="button"
+              className="secondary text-link"
               onClick={() => {
                 setIsAwaitingLangpack(false);
               }}
@@ -224,20 +260,28 @@ export function LanguageSwitcher(props) {
           </Localized>
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div>
-      <Localized text={withMessageArgs(content.languageSwitcher.switch)}>
-        <button
-          className="primary"
-          value="primary_button"
-          onClick={() => {
-            setIsAwaitingLangpack(true);
-          }}
-        />
-      </Localized>
-    </div>
+      <div style={{ display: showReadyScreen ? "block" : "none" }}>
+        <div>
+          <Localized text={withMessageArgs(content.languageSwitcher.switch)}>
+            <button
+              className="primary"
+              value="primary_button"
+              onClick={() => {
+                setIsAwaitingLangpack(true);
+              }}
+            />
+          </Localized>
+        </div>
+        <div className="secondary-cta">
+          <Localized text={content.languageSwitcher.not_now}>
+            <button
+              type="button"
+              className="secondary text-link"
+              onClick={props.handleAction}
+            />
+          </Localized>
+        </div>
+      </div>
+    </>
   );
 }

@@ -143,10 +143,10 @@ export const MultiStageAboutWelcome = props => {
   }, [useImportable, region]);
 
   const {
+    appAndSystemLocaleInfo,
     negotiatedLanguage,
     langPackInstallPhase,
     languageFilteredScreens,
-    shouldHideLanguageSwitcher,
   } = useLanguageSwitcher(screens, index, setScreenIndex);
 
   screens = languageFilteredScreens;
@@ -176,6 +176,7 @@ export const MultiStageAboutWelcome = props => {
               activeTheme={activeTheme}
               initialTheme={initialTheme}
               setActiveTheme={setActiveTheme}
+              appAndSystemLocaleInfo={appAndSystemLocaleInfo}
               negotiatedLanguage={negotiatedLanguage}
               langPackInstallPhase={langPackInstallPhase}
             />
@@ -307,6 +308,7 @@ export class WelcomeScreen extends React.PureComponent {
         autoClose={this.props.autoClose}
         activeTheme={this.props.activeTheme}
         totalNumberOfScreens={this.props.totalNumberOfScreens - 1}
+        appAndSystemLocaleInfo={this.props.appAndSystemLocaleInfo}
         negotiatedLanguage={this.props.negotiatedLanguage}
         langPackInstallPhase={this.props.langPackInstallPhase}
         navigate={this.props.navigate}

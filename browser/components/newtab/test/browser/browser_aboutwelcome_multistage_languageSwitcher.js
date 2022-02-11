@@ -22,12 +22,75 @@ async function openAboutWelcome() {
     true
   );
 
-  // With registerCleanupFunction the tabs will accumulate until the end of the entire
-  // test suite, not the end of the task run.
-  registerCleanupFunction(() => {
+  registerCleanupFunction(async () => {
     BrowserTestUtils.removeTab(tab);
   });
-  return tab.linkedBrowser;
+
+  return {
+    browser: tab.linkedBrowser,
+  };
+}
+
+async function clickVisibleButton(browser, selector) {
+  await ContentTask.spawn(
+    browser,
+    { selector },
+    async ({ selector }) => {
+      function getVisibleElement() {
+        for (const el of content.document.querySelectorAll(selector)) {
+          if (el.offsetParent !== null) {
+            return el;
+          }
+        }
+        return null;
+      }
+
+      await ContentTaskUtils.waitForCondition(
+        getVisibleElement,
+        selector
+      );
+      getVisibleElement().click();
+    }
+  );
+}
+
+/**
+ * Test that selectors are present and visible.
+ */
+async function testScreenContent(
+  browser,
+  name,
+  expectedSelectors = [],
+  unexpectedSelectors = []
+) {
+  await ContentTask.spawn(
+    browser,
+    { expectedSelectors, name, unexpectedSelectors },
+    async ({
+      expectedSelectors: expected,
+      name: experimentName,
+      unexpectedSelectors: unexpected,
+    }) => {
+      function selectorIsVisible(selector) {
+        const el = content.document.querySelector(selector);
+        // The offsetParent will be null if element is hidden through "display: none;"
+        return el && el.offsetParent !== null;
+      }
+
+      for (let selector of expected) {
+        await ContentTaskUtils.waitForCondition(
+          () => selectorIsVisible(selector),
+          `Should render ${selector} in ${experimentName}`
+        );
+      }
+      for (let selector of unexpected) {
+        ok(
+          !selectorIsVisible(selector),
+          `Should not render ${selector} in ${experimentName}`
+        );
+      }
+    }
+  );
 }
 
 /**
@@ -76,9 +139,9 @@ function mockAddonAndLocaleAPIs({ systemLocale, appLocale }) {
   let resolveInstaller;
   const installerPromise = new Promise(resolve => {
     resolveInstaller = () => {
-      info("LangPack install finished.")
+      info("LangPack install finished.");
       resolve();
-    }
+    };
   });
 
   const { LangPackMatcher } = ChromeUtils.import(
@@ -106,7 +169,9 @@ function mockAddonAndLocaleAPIs({ systemLocale, appLocale }) {
   });
 
   sandbox.stub(mockable, "setRequestedAppLocales").callsFake(locales => {
-    info(`Changing the browser's requested locales to: ${JSON.stringify(locales)}`);
+    info(
+      `Changing the browser's requested locales to: ${JSON.stringify(locales)}`
+    );
   });
 
   return {
@@ -124,6 +189,11 @@ function mockAddonAndLocaleAPIs({ systemLocale, appLocale }) {
      * @type {() => {}}
      */
     resolveInstaller,
+
+    /**
+     * The mocked APIs.
+     */
+    mockable,
   };
 }
 
@@ -132,7 +202,6 @@ const liveLanguageSwitchSelectors = [
   `[data-l10n-id*="onboarding-live-language"]`,
   `[data-l10n-id="onboarding-live-language-header"]`,
 ];
-
 
 /**
  * Accept the about:welcome offer to change the Firefox language when
@@ -145,19 +214,19 @@ add_task(async function test_aboutwelcome_languageSwitcher_accept() {
     appLocale: "en-US",
   });
 
-  let browser = await openAboutWelcome();
+  const { browser } = await openAboutWelcome();
 
   info("Clicking the primary button to start the onboarding process.");
-  await onButtonClick(browser, "button.primary");
+  await clickVisibleButton(browser, "button.primary");
 
-  await test_screen_content(
+  await testScreenContent(
     browser,
     "Live language switching (waiting for languages)",
     // Expected selectors:
     [
       ...liveLanguageSwitchSelectors,
       `[data-l10n-id="onboarding-live-language-header"]`,
-      `[data-l10n-id="onboarding-live-language-waiting-button"][disabled]`,
+      `button[disabled] [data-l10n-id="onboarding-live-language-waiting-button"]`,
       `[data-l10n-id="onboarding-live-language-skip-button-label"]`,
     ],
     // Unexpected selectors:
@@ -166,7 +235,7 @@ add_task(async function test_aboutwelcome_languageSwitcher_accept() {
 
   resolveLangPacks(["es-MX", "es-ES", "fr-FR"]);
 
-  await test_screen_content(
+  await testScreenContent(
     browser,
     "Live language switching, asking for a language",
     // Expected selectors:
@@ -177,15 +246,16 @@ add_task(async function test_aboutwelcome_languageSwitcher_accept() {
     ],
     // Unexpected selectors:
     [
-      `[data-l10n-id="onboarding-live-language-waiting-button"][disabled]`,
+      `button[disabled] [data-l10n-id="onboarding-live-language-waiting-button"]`,
       `[data-l10n-id="onboarding-live-language-skip-button-label"]`,
     ]
   );
 
-  info("Clicking the primary button to start installing the langpack.");
-  await onButtonClick(browser, "button.primary");
 
-  await test_screen_content(
+  info("Clicking the primary button to start installing the langpack.");
+  await clickVisibleButton(browser, "button.primary");
+
+  await testScreenContent(
     browser,
     "Live language switching, waiting for langpack to download",
     // Expected selectors:
@@ -193,17 +263,94 @@ add_task(async function test_aboutwelcome_languageSwitcher_accept() {
       ...liveLanguageSwitchSelectors,
       `[data-l10n-id="onboarding-live-language-button-label-downloading"]`,
       `[data-l10n-id="onboarding-live-language-secondary-cancel-download"]`,
-      `[data-l10n-id="onboarding-live-language-not-now-button-label"]`,
     ],
     // Unexpected selectors:
     [
-      `[data-l10n-id="onboarding-live-language-waiting-button"][disabled]`,
+      `button[disabled] [data-l10n-id="onboarding-live-language-waiting-button"]`,
     ]
   );
 
   await resolveInstaller();
 
-  await test_screen_content(
+  await testScreenContent(
+    browser,
+    "Language selection declined",
+    // Expected selectors:
+    [`.screen-2`],
+    // Unexpected selectors:
+    liveLanguageSwitchSelectors
+  );
+});
+
+/**
+ * Accept the about:welcome offer to change the Firefox language when
+ * there is a mismatch between the operating system language and the Firefox
+ * language.
+ */
+add_task(async function test_aboutwelcome_languageSwitcher_accept() {
+  const { resolveLangPacks, resolveInstaller } = mockAddonAndLocaleAPIs({
+    systemLocale: "es-ES",
+    appLocale: "en-US",
+  });
+
+  const { browser } = await openAboutWelcome();
+
+  info("Clicking the primary button to start the onboarding process.");
+  await clickVisibleButton(browser, "button.primary");
+
+  await testScreenContent(
+    browser,
+    "Live language switching (waiting for languages)",
+    // Expected selectors:
+    [
+      ...liveLanguageSwitchSelectors,
+      `[data-l10n-id="onboarding-live-language-header"]`,
+      `button[disabled] [data-l10n-id="onboarding-live-language-waiting-button"]`,
+      `[data-l10n-id="onboarding-live-language-skip-button-label"]`,
+    ],
+    // Unexpected selectors:
+    []
+  );
+
+  resolveLangPacks(["es-MX", "es-ES", "fr-FR"]);
+
+  await testScreenContent(
+    browser,
+    "Live language switching, asking for a language",
+    // Expected selectors:
+    [
+      ...liveLanguageSwitchSelectors,
+      `[data-l10n-id="onboarding-live-language-switch-button-label"]`,
+      `[data-l10n-id="onboarding-live-language-not-now-button-label"]`,
+    ],
+    // Unexpected selectors:
+    [
+      `button[disabled] [data-l10n-id="onboarding-live-language-waiting-button"]`,
+      `[data-l10n-id="onboarding-live-language-skip-button-label"]`,
+    ]
+  );
+
+  info("Clicking the primary button to start installing the langpack.");
+  await clickVisibleButton(browser, "button.primary");
+
+  await testScreenContent(
+    browser,
+    "Live language switching, waiting for langpack to download",
+    // Expected selectors:
+    [
+      ...liveLanguageSwitchSelectors,
+      `[data-l10n-id="onboarding-live-language-button-label-downloading"]`,
+      `[data-l10n-id="onboarding-live-language-secondary-cancel-download"]`,
+    ],
+    // Unexpected selectors:
+    [
+      `button[disabled] [data-l10n-id="onboarding-live-language-waiting-button"]`,
+    ]
+  );
+
+  await resolveInstaller();
+
+  await testScreenContent(
     browser,
     "Language selection declined",
     // Expected selectors:
@@ -219,26 +366,24 @@ add_task(async function test_aboutwelcome_languageSwitcher_accept() {
  * language.
  */
 add_task(async function test_aboutwelcome_languageSwitcher_decline() {
-  const { resolveLangPacks } = mockAddonAndLocaleAPIs({
+  const { resolveLangPacks, resolveInstaller } = mockAddonAndLocaleAPIs({
     systemLocale: "es-ES",
     appLocale: "en-US",
   });
 
-  let browser = await openAboutWelcome();
-  let aboutWelcomeActor = await getAboutWelcomeParent(browser);
-  sandbox.spy(aboutWelcomeActor, "onContentMessage");
+  const { browser } = await openAboutWelcome();
 
   info("Clicking the primary button to start installing the langpack.");
-  await onButtonClick(browser, "button.primary");
+  await clickVisibleButton(browser, "button.primary");
 
-  await test_screen_content(
+  await testScreenContent(
     browser,
     "Live language switching (waiting for languages)",
     // Expected selectors:
     [
       ...liveLanguageSwitchSelectors,
       `[data-l10n-id="onboarding-live-language-header"]`,
-      `[data-l10n-id="onboarding-live-language-waiting-button"][disabled]`,
+      `button[disabled] [data-l10n-id="onboarding-live-language-waiting-button"]`,
       `[data-l10n-id="onboarding-live-language-skip-button-label"]`,
     ],
     // Unexpected selectors:
@@ -246,8 +391,9 @@ add_task(async function test_aboutwelcome_languageSwitcher_decline() {
   );
 
   resolveLangPacks(["es-MX", "es-ES", "fr-FR"]);
+  resolveInstaller()
 
-  await test_screen_content(
+  await testScreenContent(
     browser,
     "Live language switching, asking for a language",
     // Expected selectors:
@@ -258,15 +404,15 @@ add_task(async function test_aboutwelcome_languageSwitcher_decline() {
     ],
     // Unexpected selectors:
     [
-      `[data-l10n-id="onboarding-live-language-waiting-button"][disabled]`,
+      `button[disabled] [data-l10n-id="onboarding-live-language-waiting-button"]`,
       `[data-l10n-id="onboarding-live-language-skip-button-label"]`,
     ]
   );
 
   info("Clicking the secondary button to skip installing the langpack.");
-  await onButtonClick(browser, "button.secondary");
+  await clickVisibleButton(browser, "button.secondary");
 
-  await test_screen_content(
+  await testScreenContent(
     browser,
     "Language selection declined",
     // Expected selectors:
@@ -274,4 +420,37 @@ add_task(async function test_aboutwelcome_languageSwitcher_decline() {
     // Unexpected selectors:
     liveLanguageSwitchSelectors
   );
+});
+
+/**
+ * Ensure the langpack can be installed before the user gets to the language screen.
+ */
+add_task(async function test_aboutwelcome_languageSwitcher_asyncCalls() {
+  const {
+    resolveLangPacks,
+    resolveInstaller,
+    mockable,
+  } = mockAddonAndLocaleAPIs({
+    systemLocale: "es-ES",
+    appLocale: "en-US",
+  });
+
+  await openAboutWelcome();
+
+  info("Waiting for getAvailableLangpacks to be called.");
+  await TestUtils.waitForCondition(
+    () => mockable.getAvailableLangpacks.called,
+    "getAvailableLangpacks called once"
+  );
+  ok(mockable.installLangPack.notCalled);
+
+  resolveLangPacks(["es-MX", "es-ES", "fr-FR"]);
+
+  await TestUtils.waitForCondition(
+    () => mockable.installLangPack.called,
+    "installLangPack was called once"
+  );
+  ok(mockable.getAvailableLangpacks.called);
+
+  resolveInstaller();
 });

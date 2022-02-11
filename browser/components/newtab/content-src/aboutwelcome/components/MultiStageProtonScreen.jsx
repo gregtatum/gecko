@@ -31,7 +31,7 @@ export class MultiStageProtonScreen extends React.PureComponent {
       // Perform any pre-loading checks.
       languageSwitcherShouldPreload(this.props.langPackInstallPhase)
     ) {
-      content = content.preloader;
+      content = { ...content, ...content.preloader };
     }
 
     const windowObj = this.props.windowObj || window;
@@ -130,7 +130,7 @@ export class MultiStageProtonScreen extends React.PureComponent {
                     <h2
                       data-l10n-args={JSON.stringify({
                         "addon-name": this.props.addonName,
-                        ...this.props.negotiatedLanguage?.messageArgs,
+                        ...this.props.appAndSystemLocaleInfo?.displayNames,
                       })}
                     />
                   </Localized>
