@@ -143,27 +143,6 @@ class HistoryCarousel {
     return this.#containerCache;
   }
 
-  #getOrCreateCarouselBrowser() {
-    const BROWSER_ID = "historycarousel-browser";
-    let browser = this.#container.querySelector(`#${BROWSER_ID}`);
-    if (!browser) {
-      browser = this.#window.document.createXULElement("browser");
-      browser.setAttribute("id", BROWSER_ID);
-      browser.setAttribute("disablehistory", "true");
-      browser.setAttribute("autoscroll", "false");
-      browser.setAttribute("disablefullscreen", "true");
-      browser.setAttribute("flex", "1");
-      browser.setAttribute("message", "true");
-      browser.setAttribute("remoteType", "privilegedabout");
-      browser.setAttribute("remote", "true");
-      browser.setAttribute("src", "about:blank");
-      browser.setAttribute("type", "content");
-      this.#container.appendChild(browser);
-    }
-
-    return browser;
-  }
-
   /**
    * Sets up or tears down the history carousel for the current window.
    *
@@ -188,7 +167,9 @@ class HistoryCarousel {
     }
 
     let gBrowser = this.#window.gBrowser;
-    let carouselBrowser = this.#getOrCreateCarouselBrowser();
+    let carouselBrowser = this.#container.querySelector(
+      "#historycarousel-browser"
+    );
 
     this.#notify("HistoryCarousel:TransitionStart");
 
@@ -272,15 +253,20 @@ class HistoryCarousel {
       this.#window.document.body.removeAttribute("historycarousel");
       this.#container.hidden = true;
 
-      logConsole.debug("Destroying history carousel browser.");
-      carouselBrowser.remove();
+      logConsole.debug("Unloading history carousel document.");
+      carouselBrowser.loadURI("about:blank", {
+        triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+      });
     }
 
     this.#notify("HistoryCarousel:TransitionEnd");
   }
 
   #notify(eventType, detail = {}) {
-    this.#window.dispatchEvent(
+    let carouselBrowser = this.#container.querySelector(
+      "#historycarousel-browser"
+    );
+    carouselBrowser.dispatchEvent(
       new this.#window.CustomEvent(eventType, { bubbles: true, detail })
     );
   }
