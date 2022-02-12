@@ -6478,7 +6478,7 @@
 # NOTE: This must match JitOptions defaults.
 - name: javascript.options.watchtower.megamorphic
   type: bool
-  value: false
+  value: true
   mirror: always  # LoadStartupJSPrefs
   do_not_use_directly: true
 
@@ -8392,7 +8392,7 @@
 
 # ClockDrift desired buffering in milliseconds
 - name: media.clockdrift.buffering
-  type: int32_t
+  type: uint32_t
   mirror: always
   value: 50
 
@@ -10755,6 +10755,13 @@
 - name: network.http.early_data_max_error
   type: RelaxedAtomicUint32
   value: 5
+  mirror: always
+
+# The maximum count that we allow socket prrocess to crash. If this count is
+# reached, we won't use networking over socket process.
+- name: network.max_socket_process_failed_count
+  type: RelaxedAtomicUint32
+  value: 1
   mirror: always
 
 #---------------------------------------------------------------------------
