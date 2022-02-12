@@ -205,32 +205,6 @@ body[flow-reset] #urlbar-container {
   max-width: 0;
 }
 
-body[historycarousel] #browser-outer > vbox {
-  display: grid;
-}
-
-body[historycarousel] #browser-outer > vbox > * {
-  grid-area: 1 / 1;
-}
-
-/**
- * Instead of collapsing the other items in the vbox, we reduce the opacity to
- * fully transparent. This is because we need the tabbrowser to still have
- * dimensions in order to properly generate thumbnails for the history carousel.
- */
-body[historycarousel="ready"] #browser-outer > vbox > :not(#historycarousel-container) {
-  opacity: 0;
-}
-
-/**
- * We bump the z-index to ensure that other transparent items in the vbox don't
- * accidentally capture user input events.
- */
-body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container {
-  position: relative;
-  z-index: 1;
-}
-
 #nav-bar:hover river-el::part(history) {
   display: flex;
 }

@@ -72,7 +72,8 @@ add_task(async function test_modal_state() {
     (await gatherModalStates()).every(state => !state),
     "No browser elements should remain in the modal state."
   );
-  await BrowserTestUtils.waitForCondition(() => {
-    return !gBrowser.tabbox.hasAttribute("disable-history-animations");
-  }, "The window re-enables history view transitions.");
+  Assert.ok(
+    !gBrowser.tabbox.hasAttribute("disable-history-animations"),
+    "The window should not still have view transitions disabled."
+  );
 });

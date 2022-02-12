@@ -2768,7 +2768,6 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   // been enabled (and should likely be removed eventually).
   pref("browser.pinebuild.animateViewTransitions", true);
   pref("browser.pinebuild.megaback.enabled", true);
-  pref("browser.pinebuild.megaback.logLevel", "Warn");
   pref("browser.history.collectWireframes", true);
   pref("browser.pinebuild.downloads.enabled", true);
 

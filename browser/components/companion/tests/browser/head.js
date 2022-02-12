@@ -979,14 +979,18 @@ var PinebuildTestUtils = {
    *   document once it has fired the event declaring itself as "ready".
    */
   async enterHistoryCarousel(win = window) {
-    let entered = win.gHistoryCarousel.showHistoryCarousel(true);
-    let browser = win.document.getElementById("historycarousel-browser");
+    let tabPromise = BrowserTestUtils.waitForNewTab(
+      win.gBrowser,
+      "about:historycarousel"
+    );
+    let entered = win.gGlobalHistory.showHistoryCarousel(true);
+    let tab = await tabPromise;
     let ready = BrowserTestUtils.waitForContentEvent(
-      browser,
+      tab.linkedBrowser,
       "HistoryCarouselReady"
     );
     await Promise.all([entered, ready]);
-    return browser;
+    return tab.linkedBrowser;
   },
 
   /**
@@ -1001,9 +1005,7 @@ var PinebuildTestUtils = {
    *   and the current View is staged.
    */
   async exitHistoryCarousel(win = window) {
-    let exitEvent = BrowserTestUtils.waitForEvent(win, "HistoryCarousel:Exit");
-    await win.gHistoryCarousel.showHistoryCarousel(false);
-    await exitEvent;
+    await win.gGlobalHistory.showHistoryCarousel(false);
   },
 
   /**
