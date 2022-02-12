@@ -1295,10 +1295,6 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
-    if (this.#window.gHistoryCarousel.enabled) {
-      this.#window.gHistoryCarousel.showHistoryCarousel(false);
-    }
-
     let browser = newTab.linkedBrowser;
 
     logConsole.debug(`Browser(${browser.browsingContext.id}) created.`);
