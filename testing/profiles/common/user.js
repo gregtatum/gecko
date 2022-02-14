@@ -80,3 +80,10 @@ user_pref("browser.topsites.contile.enabled", false);
 user_pref("telemetry.fog.test.localhost_port", -1);
 // Disable pinebuild onboarding in automation.
 user_pref("browser.pinebuild.companion.onboarding.enabled", false);
+// Disable overlay scrollbars on GTK for testing. A bunch of tests (specially
+// mochitests) assume scrollbars take space. We disable them on macOS (where
+// overlay is also the default) at the system level as well, so this is
+// probably ok.
+//
+// We test the relevant overlay scrollbar code-paths on Android.
+user_pref("widget.gtk.overlay-scrollbars.enabled", false);
