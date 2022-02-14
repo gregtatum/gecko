@@ -300,21 +300,25 @@ class GoogleService {
     let apiTarget;
     switch (type) {
       case "document":
-        apiTarget = new URL(`https://docs.googleapis.com/v1/documents/${id}`);
+        apiTarget = new URL(
+          `https://docs.googleapis.com/v1/documents/${id}?fields=title`
+        );
         break;
       case "spreadsheets":
         apiTarget = new URL(
-          `https://sheets.googleapis.com/v4/spreadsheets/${id}`
+          `https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=properties.title`
         );
         break;
       case "presentation":
         apiTarget = new URL(
-          `https://slides.googleapis.com/v1/presentations/${id}`
+          `https://slides.googleapis.com/v1/presentations/${id}?fields=title`
         );
         break;
       case "drive":
       case "file":
-        apiTarget = new URL(`https://www.googleapis.com/drive/v2/files/${id}`);
+        apiTarget = new URL(
+          `https://www.googleapis.com/drive/v2/files/${id}?fields=name`
+        );
         break;
       default:
         return null;

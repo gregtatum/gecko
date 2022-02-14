@@ -10051,17 +10051,17 @@ var WorkshopBackend = (() => {
     let apiTarget;
     switch (type) {
       case "document":
-        apiTarget = `https://docs.googleapis.com/v1/documents/${id}`;
+        apiTarget = `https://docs.googleapis.com/v1/documents/${id}?fields=title`;
         break;
       case "spreadsheets":
-        apiTarget = `https://sheets.googleapis.com/v4/spreadsheets/${id}`;
+        apiTarget = `https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=properties.title`;
         break;
       case "presentation":
-        apiTarget = `https://slides.googleapis.com/v1/presentations/${id}`;
+        apiTarget = `https://slides.googleapis.com/v1/presentations/${id}?fields=title`;
         break;
       case "drive":
       case "file":
-        apiTarget = `https://www.googleapis.com/drive/v2/files/${id}`;
+        apiTarget = `https://www.googleapis.com/drive/v2/files/${id}?fields=name`;
         break;
       default:
         return null;
