@@ -139,6 +139,11 @@ class View {
     this.#internalView = internalView;
   }
 
+  /** @type {Number} */
+  get id() {
+    return this.#internalView.id;
+  }
+
   /** @type {string} */
   get url() {
     return this.#internalView.url;
