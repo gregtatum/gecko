@@ -5,6 +5,17 @@
 /* global CarouselUtils */
 // CarouselUtils is exposed to us from HistoryCarouselChild.jsm.
 
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
+);
+
+XPCOMUtils.defineLazyGetter(globalThis, "logConsole", function() {
+  return console.createInstance({
+    prefix: "historyCarousel.js",
+    maxLogLevelPref: "browser.pinebuild.megaback.logLevel",
+  });
+});
+
 /**
  * The INTERSECTION_THRESHOLD_FOR_CURRENT is the threshold value passed to
  * the IntersectionObserver for PreviewElements. An intersection amount
@@ -19,7 +30,7 @@ const INTERSECTION_THRESHOLD_FOR_CURRENT = 0.6; // From 0.0 to 1.0
  */
 class PreviewElement extends HTMLLIElement {
   static get observedAttributes() {
-    return ["title", "url", "iconURL"];
+    return ["title", "url", "icon-url"];
   }
 
   #image = null;
@@ -96,7 +107,7 @@ class PreviewElement extends HTMLLIElement {
   #updateFromAttributes() {
     this.#caption.textContent = this.getAttribute("title");
     this.#caption.title = this.getAttribute("url");
-    this.#favicon.src = this.getAttribute("iconURL");
+    this.#favicon.src = this.getAttribute("icon-url");
   }
 }
 
@@ -112,7 +123,11 @@ const HistoryCarousel = {
    * These get event listeners set up for them, and are then handled in
    * handleMessageEvent.
    */
-  MESSAGE_EVENTS: ["HistoryCarousel:Setup", "HistoryCarousel:SelectIndex"],
+  MESSAGE_EVENTS: [
+    "HistoryCarousel:Setup",
+    "HistoryCarousel:SelectIndex",
+    "HistoryCarousel:RemovePreview",
+  ],
 
   /**
    * The list of DOM events that we listen for on this page. These get event
@@ -132,7 +147,7 @@ const HistoryCarousel = {
    * A cache of the total number of previews that comes down from the parent
    * process during setup. Defaults to -1 until setup is complete.
    */
-  totalPreviews: -1,
+  _totalPreviews: -1,
 
   /**
    * A cache of the originally selected index. We hold onto this in case the
@@ -201,6 +216,26 @@ const HistoryCarousel = {
   },
 
   /**
+   * Returns the total number of previews currently shown in the carousel.
+   *
+   * @type {Number}
+   */
+  get totalPreviews() {
+    return this._totalPreviews;
+  },
+
+  /**
+   * Updates the total number of previews currently shown in the carousel.
+   *
+   * @param {Number} val
+   *   The new total number of previews.
+   */
+  set totalPreviews(val) {
+    this._totalPreviews = val;
+    document.documentElement.style.setProperty("--total-previews", val);
+  },
+
+  /**
    * The initialization function for HistoryCarousel. This should be called
    * once the document and its resources have finished loading.
    */
@@ -253,6 +288,10 @@ const HistoryCarousel = {
       }
       case "HistoryCarousel:SelectIndex": {
         this.selectIndex(event.detail.index);
+        break;
+      }
+      case "HistoryCarousel:RemovePreview": {
+        this.removePreview(event.detail.viewID);
         break;
       }
     }
@@ -323,9 +362,13 @@ const HistoryCarousel = {
       previewEl.setAttribute("index", index);
       this.previewTaskQueue.push(index);
 
+      // setAttribute ignores case, so setAttribute("viewID", preview.viewID)
+      // would result in an attribute "viewid" being set. To avoid confusion,
+      // we'll use dash delimeters.
+      previewEl.setAttribute("view-id", preview.viewID);
       previewEl.setAttribute("title", preview.title);
       previewEl.setAttribute("url", preview.url);
-      previewEl.setAttribute("iconURL", preview.iconURL);
+      previewEl.setAttribute("icon-url", preview.iconURL);
 
       frag.appendChild(previewEl);
       this.intersectionObserver.observe(previewEl);
@@ -470,10 +513,10 @@ const HistoryCarousel = {
     if (index !== undefined) {
       CarouselUtils.requestPreview(index).then(result => {
         if (result) {
-          let preview = document.querySelector(`li[index="${index}"`);
+          let preview = document.querySelector(`li[view-id="${result.viewID}"`);
           preview.setAttribute("title", result.title);
           preview.setAttribute("url", result.url);
-          preview.setAttribute("iconURL", result.iconURL);
+          preview.setAttribute("icon-url", result.iconURL);
           if (result.image.blob) {
             preview.setBlob(result.image.blob);
           } else if (result.image.wireframe) {
@@ -508,10 +551,58 @@ const HistoryCarousel = {
    *   viewport.
    */
   selectIndex(index, instant = false) {
+    logConsole.trace("Selecting index ", index);
     let previewEl = document.querySelector(`li[index="${index}"]`);
+    logConsole.debug("Found preview el: ", previewEl);
     let behavior = instant ? "instant" : "smooth";
     previewEl.scrollIntoView({ behavior, inline: "center" });
     this.selectedIndex = index;
+  },
+
+  /**
+   * Removes a preview element with a particular viewID.
+   *
+   * @param {Number} viewID
+   *   The ID of the View to remove.
+   */
+  removePreview(viewID) {
+    // Halt any in-progress scrolls because we're about to change the layout
+    // of the page and scroll to a new location.
+    this.list.mozScrollSnap();
+    logConsole.debug("Removing preview with view ID: ", viewID);
+    let selectedEl = document.querySelector(
+      `li[index="${this.selectedIndex}"]`
+    );
+    logConsole.debug(
+      "At the time of removePreview, selectedIndex is: ",
+      this.selectedIndex,
+      selectedEl
+    );
+
+    // First find the preview we're removing.
+    let previewEl = document.querySelector(`li[view-id="${viewID}"]`);
+    // Then, for each preview after the one being removed, decrement their
+    // index attribute.
+    let sibling = previewEl.nextElementSibling;
+    while (sibling) {
+      sibling.setAttribute("index", sibling.index - 1);
+      sibling = sibling.nextElementSibling;
+    }
+    previewEl.remove();
+
+    // Recompute our internal state variables.
+    this.maxIndex--;
+    this.totalPreviews--;
+    this.scrubber.setAttribute("max", this.maxIndex);
+    // It's possible that the originally selected preview has had its
+    // index updated, so we get it now.
+    let newSelectedIndex = selectedEl.index;
+
+    logConsole.debug(
+      "Scrolling to originally selected element with index",
+      newSelectedIndex
+    );
+    this.selectIndex(newSelectedIndex);
   },
 
   // DOM event handlers

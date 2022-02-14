@@ -138,6 +138,12 @@ class HistoryCarouselChild extends JSWindowActorChild {
         }
         break;
       }
+      case "RemovePreview": {
+        this.sendMessageEvent("HistoryCarousel:RemovePreview", {
+          viewID: message.data.viewID,
+        });
+        break;
+      }
     }
 
     return null;

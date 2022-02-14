@@ -2144,6 +2144,16 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
+   * Closes the currently selected view.
+   */
+  closeCurrentView() {
+    let currentView = this.#historyCarouselMode
+      ? this.#currentHistoryCarouselInternalView
+      : this.#currentInternalView;
+    this.#closeInternalView(currentView);
+  }
+
+  /**
    * Public method for removing a View from GlobalHistory.
    *
    * @param {View} view The View to close.
@@ -2389,6 +2399,7 @@ class GlobalHistory extends EventTarget {
       // we want to show the user-edited title if one exists.
       let preview = {
         index,
+        viewID: this.#viewStack[index].id,
         title: this.#viewStack[index].view.title,
         url: this.#viewStack[index].url.spec,
         iconURL: this.#viewStack[index].iconURL,
@@ -2426,6 +2437,7 @@ class GlobalHistory extends EventTarget {
     // We use the title of the View rather than the InternalView since
     // we want to show the user-edited title if one exists.
     let result = {
+      viewID: internalView.id,
       title: internalView.view.title,
       url: internalView.url.spec,
       iconURL: internalView.iconURL,

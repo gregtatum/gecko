@@ -40,11 +40,6 @@ var PineBuildUIUtils = {
     anchor.ownerGlobal.ConfirmationHint.show(anchor, "copyURL");
   },
 
-  closeCurrentView() {
-    let gHistory = window.top.gGlobalHistory;
-    gHistory.closeView(gHistory.currentView);
-  },
-
   handleEvent(event) {
     switch (event.type) {
       case "deactivate": {

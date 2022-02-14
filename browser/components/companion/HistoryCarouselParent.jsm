@@ -183,7 +183,7 @@ class HistoryCarousel {
 
     logConsole.debug("Show history carousel: ", shouldShow);
 
-    if (this.#window.top.gGlobalHistory.views.length <= 1) {
+    if (shouldShow && this.#window.top.gGlobalHistory.views.length <= 1) {
       throw new Error(
         "Cannot enter history carousel mode without multiple views"
       );
@@ -295,10 +295,12 @@ class HistoryCarouselParent extends JSWindowActorParent {
     this.#globalHistory = window.gGlobalHistory;
     this.#historyCarousel = window.gHistoryCarousel;
     this.#globalHistory.addEventListener("ViewChanged", this);
+    this.#globalHistory.addEventListener("ViewRemoved", this);
   }
 
   didDestroy() {
     this.#globalHistory.removeEventListener("ViewChanged", this);
+    this.#globalHistory.removeEventListener("ViewRemoved", this);
   }
 
   /**
@@ -310,9 +312,17 @@ class HistoryCarouselParent extends JSWindowActorParent {
    *   View selection in the parent process.
    */
   handleEvent(event) {
-    if (event.type == "ViewChanged") {
-      let index = this.#globalHistory.views.indexOf(event.view);
-      this.sendAsyncMessage("SelectIndex", { index });
+    switch (event.type) {
+      case "ViewChanged": {
+        let index = this.#globalHistory.views.indexOf(event.view);
+        this.sendAsyncMessage("SelectIndex", { index });
+        break;
+      }
+      case "ViewRemoved": {
+        let viewID = event.view.id;
+        this.sendAsyncMessage("RemovePreview", { viewID });
+        break;
+      }
     }
   }
 
