@@ -819,7 +819,7 @@ function SetClickAndHoldHandlers() {
   gClickAndHoldListenersOnElement.add(forwardButton);
 }
 
-const gClickAndHoldListenersOnElement = {
+var gClickAndHoldListenersOnElement = {
   _timers: new Map(),
   _callbacks: new WeakMap(),
 
