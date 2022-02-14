@@ -6,7 +6,7 @@ import {
   MailAPIFactory,
   setExtendedTimeout,
 } from "chrome://browser/content/companion/workshop-api-built.js";
-import { ServiceUtils } from "chrome://browser/content/companion/service-utils.js";
+import { ServiceUtils } from "./service-utils.js";
 
 const OnlineServicesHelper = ChromeUtils.import(
   "resource:///modules/OnlineServicesHelper.jsm"

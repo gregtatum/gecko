@@ -76,7 +76,14 @@
       if (!event) {
         return null;
       }
-      return event.composed ? event.composedTarget : event.target;
+      if (event.composed) {
+        event._savedComposedTarget =
+          event.composedTarget || event.composedPath()[0];
+      }
+      if (event._savedComposedTarget) {
+        return event._savedComposedTarget;
+      }
+      return event.target;
     }
 
     show(triggeringEvent) {
@@ -443,6 +450,7 @@
 
       this.button = document.createElement("button");
       this.button.setAttribute("role", "menuitem");
+      this.button.setAttribute("part", "button");
 
       // Use a XUL label element if possible to show the accesskey.
       this.label = document.createXULElement

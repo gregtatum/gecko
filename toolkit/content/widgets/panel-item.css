@@ -12,15 +12,17 @@
 }
 
 :host([checked]) {
-  --icon: url("chrome://global/skin/icons/check.svg");
   -moz-context-properties: fill;
   fill: currentColor;
+}
+
+:host([checked]) button {
+  background-image: url("chrome://global/skin/icons/check.svg");
 }
 
 button {
   background-color: transparent;
   color: inherit;
-  background-image: var(--icon);
   background-position: 8px center;
   background-repeat: no-repeat;
   background-size: 16px;
