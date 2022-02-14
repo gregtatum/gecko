@@ -28,8 +28,16 @@ export class RefreshServicesButton extends MozLitElement {
     return css`
       @import url("chrome://global/skin/in-content/common.css");
 
-      .refresh-services-button {
-        --icon: url("chrome://browser/skin/sync.svg");
+      .refresh-services-button::after {
+        content: "";
+        display: block;
+        width: 16px;
+        height: 16px;
+        background-image: url("chrome://browser/skin/sync.svg");
+        background-repeat: no-repeat;
+        background-size: 16px;
+        /* Center icon by offsetting it 8px */
+        margin-inline-start: -8px;
       }
 
       .refresh-services-button.syncing::after {
