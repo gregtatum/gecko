@@ -2743,7 +2743,7 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features", false);
   pref("browser.places.perwindowsessions.enabled", true);
   pref("browser.companion.passwords.enabled", true);
-
+  pref("browser.places.session_file_expire_time_days", 30);
 
   // Pinebuild specific configurations
   pref("browser.companion.globalhistorydebugging", false);

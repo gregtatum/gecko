@@ -39,8 +39,16 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "session_file_expire_time_days",
+  "browser.places.session_file_expire_time_days",
+  -1
+);
+
 const SESSION_CLOSED_OBJECTS_CHANGED = "sessionstore-closed-objects-changed";
 const SESSION_WRITE_COMPLETE_TOPIC = "sessionstore-state-write-complete";
+const IDLE_DAILY_TOPIC = "idle-daily";
 
 /**
  * @typedef {object} SessionPageRecord
@@ -113,6 +121,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     }
     Services.obs.addObserver(this, SESSION_CLOSED_OBJECTS_CHANGED, true);
     Services.obs.addObserver(this, SESSION_WRITE_COMPLETE_TOPIC, true);
+    Services.obs.addObserver(this, IDLE_DAILY_TOPIC);
 
     PlacesUtils.history.shutdownClient.jsclient.addBlocker(
       "SessionManager: flushing sessions",
@@ -135,6 +144,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     this.#pendingSaves.clear();
     Services.obs.removeObserver(this, SESSION_CLOSED_OBJECTS_CHANGED);
     Services.obs.removeObserver(this, SESSION_WRITE_COMPLETE_TOPIC);
+    Services.obs.removeObserver(this, IDLE_DAILY_TOPIC);
   }
 
   /**
@@ -397,8 +407,10 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    * @param {boolean} [options.includePages]
    *    Optionally include the pages associated with the session in the query
    *    results. This is a more expensive lookup, so is off by default.
-   * @param {string} [options.limit]
-   *    A limit to the number of query results to return.
+   * @param {number} [options.limit]
+   *    A limit to the number of query results to return. Use -1 for unlimited.
+   * @param {number} [options.beforeDate]
+   *    Optionally only include sessions before this date (in ms).
    * @returns {Session[]}
    */
   async query({
@@ -407,6 +419,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     includeActive = false,
     includePages = false,
     limit = 10,
+    beforeDate = null,
   } = {}) {
     if (!perWindowEnabled) {
       return [];
@@ -424,11 +437,18 @@ const SessionManager = new (class SessionManager extends EventEmitter {
 
     // The limit is increased by the number of active sessions, in case we
     // need to remove those from the results.
-    let bindings = { limit: limit + activeSessions.length };
+    let bindings = {
+      limit: limit === -1 ? limit : limit + activeSessions.length,
+    };
 
     if (guid) {
       clauses.push("guid = :guid");
       bindings.guid = guid;
+    }
+
+    if (beforeDate) {
+      clauses.push("last_saved_at < :beforeDate");
+      bindings.beforeDate = beforeDate;
     }
 
     let whereStatement = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
@@ -454,7 +474,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
 
     // Ensure we still only return the limit, e.g. if active sessions were not
     // in the result.
-    if (sessionData.length > limit) {
+    if (limit !== -1 && sessionData.length > limit) {
       sessionData.length = limit;
     }
 
@@ -497,6 +517,13 @@ const SessionManager = new (class SessionManager extends EventEmitter {
         break;
       case SESSION_WRITE_COMPLETE_TOPIC:
         this.#savePendingWindowData();
+        break;
+      case IDLE_DAILY_TOPIC:
+        if (session_file_expire_time_days !== -1) {
+          this.cleanup(
+            Date.now() - session_file_expire_time_days * 24 * 60 * 60 * 1000
+          );
+        }
         break;
     }
   }
@@ -768,6 +795,17 @@ const SessionManager = new (class SessionManager extends EventEmitter {
   }
 
   /**
+   * Deletes the JSON session file stored on disk.
+   *
+   * @param {string} guid
+   *    The specific guid to delete session file for.
+   */
+  async #deleteSessionFile(guid) {
+    let path = await this.#getSessionFilePath(guid);
+    await IOUtils.remove(path, { ignoreAbsent: true });
+  }
+
+  /**
    * Removes from a SessionStore session any data that should not be restored.
    * For example, we don't want to save complete window state, as some of it
    * should not apply to per-window sessions.
@@ -791,11 +829,18 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     }
   }
 
-  async #getSessionFilePath(guid) {
+  async #getSessionFolderPath() {
     if (!this.#profileDir) {
       this.#profileDir = await PathUtils.getProfileDir();
     }
-    return PathUtils.join(this.#profileDir, "sessions", `${guid}.jsonlz4`);
+    return PathUtils.join(this.#profileDir, "sessions");
+  }
+
+  async #getSessionFilePath(guid) {
+    return PathUtils.join(
+      await this.#getSessionFolderPath(),
+      `${guid}.jsonlz4`
+    );
   }
 
   #getActiveSessions() {
@@ -828,6 +873,35 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    */
   #hasActiveSession(window) {
     return !!SessionStore.getCustomWindowValue(window, "SessionManagerGuid");
+  }
+
+  /**
+   * Remove session files are older than the expiration time.
+   *
+   * @param {number} expirationTime Any sessions created before this time(ms)
+   *   will have their session file removed.
+   */
+  async cleanup(expirationTime) {
+    let children = await IOUtils.getChildren(
+      await this.#getSessionFolderPath()
+    );
+    let fileGuids = new Set(
+      children
+        .map(f => PathUtils.filename(f).match(/([^.]+).jsonlz4/i)?.[1])
+        .filter(f => !!f)
+    );
+    let expireGuids = (
+      await this.query({ beforeDate: expirationTime, limit: -1 })
+    ).map(s => s.guid);
+    for (let guid of expireGuids) {
+      if (fileGuids.has(guid)) {
+        try {
+          await this.#deleteSessionFile(guid);
+        } catch (ex) {
+          logConsole.error("Failed to delete session store file for", guid, ex);
+        }
+      }
+    }
   }
 
   QueryInterface = ChromeUtils.generateQI([
