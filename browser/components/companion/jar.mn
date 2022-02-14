@@ -73,6 +73,7 @@ browser.jar:
     content/browser/companion/workshopAPIHiddenWindow.js (content/workshopAPIHiddenWindow.js)
     content/browser/companion/zoom.png (content/zoom.png)
     content/browser/companion/widgets/connect-service.js (content/widgets/connect-service.js)
+    content/browser/companion/widgets/simple-notification.js (content/widgets/simple-notification.js)
     content/browser/companion/components/companion-manager.js (content/components/companion-manager.js)
     content/browser/companion/components/companion-manager.css (content/components/companion-manager.css)
     content/browser/companion/components/active-view-manager.js (content/components/active-view-manager.js)
