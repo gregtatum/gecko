@@ -17,6 +17,7 @@ class HistoryCarouselChild extends JSWindowActorChild {
   actorCreated() {
     this.previews = [];
     this.currentIndex = -1;
+    this.ready = false;
   }
 
   /**
@@ -49,6 +50,12 @@ class HistoryCarouselChild extends JSWindowActorChild {
         self.currentIndex = index;
         self.sendAsyncMessage("SetVisibleIndex", { index });
       },
+      ready() {
+        if (!self.ready) {
+          self.ready = true;
+          self.sendAsyncMessage("Ready");
+        }
+      },
       requestExit() {
         self.sendAsyncMessage("RequestExit");
       },
@@ -79,8 +86,6 @@ class HistoryCarouselChild extends JSWindowActorChild {
     this.previews = initData.previews;
     this.currentIndex = initData.currentIndex;
     this.sendMessageEvent("HistoryCarousel:Setup");
-
-    this.sendAsyncMessage("Ready");
   }
 
   /**

@@ -26,6 +26,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
   5
 );
 
+XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
+  return console.createInstance({
+    prefix: "HistoryCarousel",
+    maxLogLevelPref: "browser.pinebuild.megaback.logLevel",
+  });
+});
+
 /**
  * The HistoryCarousel class is responsible for interpreting whether or not
  * the user has interacted with the back button in a way that indicates
@@ -42,6 +49,9 @@ class HistoryCarousel {
   #clickCount;
   #openedByLongPress;
   #window;
+  #enabled;
+  #containerCache;
+  #suspendedBrowsers;
 
   /**
    * Sets up the event handlers on the back button.
@@ -51,6 +61,9 @@ class HistoryCarousel {
     this.#clickCount = 0;
     this.#openedByLongPress = false;
     this.#window = window;
+    this.#enabled = false;
+    this.#containerCache = null;
+    this.#suspendedBrowsers = new WeakSet();
   }
 
   init() {
@@ -72,8 +85,8 @@ class HistoryCarousel {
     this.#window.gClickAndHoldListenersOnElement.add(pbBackButton, () => {
       // The user longpressed, so set this flag to prevent the back
       // command from being fired on click.
-      this._openedByLongPress = true;
-      this.#window.gGlobalHistory.showHistoryCarousel(true);
+      this.#openedByLongPress = true;
+      this.showHistoryCarousel(true);
     });
   }
 
@@ -104,7 +117,7 @@ class HistoryCarousel {
       if (this.#clickCount >= CLICK_COUNT_THRESHOLD) {
         this.#window.clearTimeout(this._timerID);
         this.resetCount();
-        this.#window.gGlobalHistory.showHistoryCarousel(true);
+        this.showHistoryCarousel(true);
       }
     }
   }
@@ -117,6 +130,154 @@ class HistoryCarousel {
     this.#clickCount = 0;
     this.#timerID = null;
   }
+
+  get enabled() {
+    return this.#enabled;
+  }
+
+  get #container() {
+    if (!this.#containerCache) {
+      let doc = this.#window.document;
+      let template = doc.getElementById("historyCarouselPanel");
+      template.replaceWith(template.content);
+      this.#containerCache = doc.getElementById("historycarousel-container");
+    }
+    return this.#containerCache;
+  }
+
+  #getOrCreateCarouselBrowser() {
+    const BROWSER_ID = "historycarousel-browser";
+    let browser = this.#container.querySelector(`#${BROWSER_ID}`);
+    if (!browser) {
+      browser = this.#window.document.createXULElement("browser");
+      browser.setAttribute("id", BROWSER_ID);
+      browser.setAttribute("disablehistory", "true");
+      browser.setAttribute("autoscroll", "false");
+      browser.setAttribute("disablefullscreen", "true");
+      browser.setAttribute("flex", "1");
+      browser.setAttribute("message", "true");
+      browser.setAttribute("remoteType", "privilegedabout");
+      browser.setAttribute("remote", "true");
+      browser.setAttribute("src", "about:blank");
+      browser.setAttribute("type", "content");
+      this.#container.appendChild(browser);
+    }
+
+    return browser;
+  }
+
+  /**
+   * Sets up or tears down the history carousel for the current window.
+   *
+   * @param {Boolean} shouldShow
+   *   True if the carousel should be shown.
+   * @returns {Promise}
+   * @resolves {undefined}
+   *   Resolves once the state has been entered (or if we're already in the
+   *   selected state).
+   */
+  async showHistoryCarousel(shouldShow) {
+    if (this.#enabled == shouldShow) {
+      return;
+    }
+
+    logConsole.debug("Show history carousel: ", shouldShow);
+
+    if (this.#window.top.gGlobalHistory.views.length <= 1) {
+      throw new Error(
+        "Cannot enter history carousel mode without multiple views"
+      );
+    }
+
+    let gBrowser = this.#window.gBrowser;
+    let carouselBrowser = this.#getOrCreateCarouselBrowser();
+
+    this.#notify("HistoryCarousel:TransitionStart");
+
+    if (shouldShow) {
+      this.#enabled = shouldShow;
+      logConsole.debug(
+        "Navigating history carousel browser to about:historycarousel"
+      );
+      carouselBrowser.loadURI("about:historycarousel", {
+        triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+      });
+      let ready = new Promise(resolve => {
+        this.#window.addEventListener("HistoryCarousel:Ready", resolve, {
+          once: true,
+        });
+      });
+      // If this is the first time we've bound the <browser> to the DOM, then the
+      // docShell is active by default, despite being invisible (since the container
+      // is still hidden). We deactivate it here so that we can activate it in the
+      // same step as making its container visible. Activating the docShell causes
+      // the visibilitystatechange event to fire in the underlying document which
+      // is what kicks off the initial animation.
+      this.#window.document.body.setAttribute("historycarousel", "loading");
+      this.#container.hidden = false;
+      carouselBrowser.docShellIsActive = false;
+      carouselBrowser.renderLayers = true;
+
+      logConsole.debug("Waiting for history carousel browser to be ready");
+
+      // To reduce flicker, we'll wait until the underlying history carousel
+      // <browser> has reported that its ready, and that the initial preview
+      // image is decoded before proceeding.
+      await ready;
+
+      this.#window.document.body.setAttribute("historycarousel", "ready");
+
+      logConsole.debug(
+        "History carousel browser is ready. Making visible and focusing."
+      );
+      carouselBrowser.focus();
+
+      for (let browser of gBrowser.browsers) {
+        browser.enterModalState();
+        this.#suspendedBrowsers.add(browser);
+      }
+
+      carouselBrowser.docShellIsActive = true;
+    } else {
+      let actor = carouselBrowser.browsingContext.currentWindowGlobal.getActor(
+        "HistoryCarousel"
+      );
+      let finalIndex = await actor.sendQuery("Exit");
+      logConsole.debug("Got back final index: ", finalIndex);
+
+      this.#notify("HistoryCarousel:Exit", { finalIndex });
+      this.#enabled = shouldShow;
+
+      for (let browser of gBrowser.browsers) {
+        if (this.#suspendedBrowsers.has(browser)) {
+          browser.leaveModalState();
+          this.#suspendedBrowsers.delete(browser);
+        }
+      }
+
+      this.#window.document.body.removeAttribute("historycarousel");
+      this.#container.hidden = true;
+
+      await new Promise(resolve => {
+        this.#window.gGlobalHistory.addEventListener(
+          "ExitedHistoryCarousel",
+          resolve,
+          { once: true }
+        );
+      });
+
+      logConsole.debug("Destroying history carousel browser.");
+      carouselBrowser.remove();
+    }
+
+    this.#notify("HistoryCarousel:TransitionEnd");
+  }
+
+  #notify(eventType, detail = {}) {
+    this.#window.dispatchEvent(
+      new this.#window.CustomEvent(eventType, { bubbles: true, detail })
+    );
+  }
 }
 
 /**
@@ -127,10 +288,12 @@ class HistoryCarouselParent extends JSWindowActorParent {
   // We hold a reference to GlobalHistory because accessing the browsingContext
   // embedderElement won't work in didDestroy.
   #globalHistory;
+  #historyCarousel;
 
   actorCreated() {
     let window = this.browsingContext.embedderElement.ownerGlobal;
     this.#globalHistory = window.gGlobalHistory;
+    this.#historyCarousel = window.gHistoryCarousel;
     this.#globalHistory.addEventListener("ViewChanged", this);
   }
 
@@ -162,6 +325,9 @@ class HistoryCarouselParent extends JSWindowActorParent {
    */
   async receiveMessage(message) {
     let browser = this.browsingContext.top.embedderElement;
+    if (!browser) {
+      return null;
+    }
     let window = browser.ownerGlobal;
 
     switch (message.name) {
@@ -192,11 +358,12 @@ class HistoryCarouselParent extends JSWindowActorParent {
       // The HistoryCarouselChild has received a user input event requesting
       // that it exit.
       case "RequestExit": {
-        return this.#globalHistory.showHistoryCarousel(false);
+        return this.#historyCarousel.showHistoryCarousel(false);
       }
       // The selection inside of the carousel has changed.
       case "SetVisibleIndex": {
-        this.#globalHistory.setHistoryCarouselIndex(message.data.index);
+        let view = this.#globalHistory.views[message.data.index];
+        this.#globalHistory.setView(view);
         break;
       }
     }
