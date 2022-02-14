@@ -65,6 +65,17 @@ registerCleanupFunction(async () => {
   sharedWorkshopAPI?.willDie();
 });
 
+const redirectHosts = [
+  "accounts.google.com",
+  "docs.googleapis.com",
+  "gmail.com",
+  "gmail.googleapis.com",
+  "mail.google.com",
+  "oauth2.googleapis.com",
+  "sheets.googleapis.com",
+  "slides.googleapis.com",
+  "www.googleapis.com",
+];
 const redirectHook = "http-on-modify-request";
 class Redirector {
   constructor() {
@@ -81,6 +92,13 @@ class Redirector {
       if (!(subject instanceof Ci.nsIHttpChannel)) {
         throw new Error(redirectHook + " observed a non-HTTP channel");
       }
+
+      // Only redirect requests for specific host we care about for Workshop.
+      let host = new URL(subject.URI.spec)?.host;
+      if (!redirectHosts.includes(host)) {
+        return;
+      }
+
       let channel = subject.QueryInterface(Ci.nsIHttpChannel);
       let target = null;
       if (channel.URI.scheme === "https") {
