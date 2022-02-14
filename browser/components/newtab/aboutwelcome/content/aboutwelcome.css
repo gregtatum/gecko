@@ -208,10 +208,6 @@ body[lwt-newtab-brighttext] {
     filter: invert(0);
   }
 }
-.onboardingContainer .language-spacer {
-  /* Prevents layout shift when clicking to install a language. */
-  height: 43px;
-}
 .onboardingContainer .tiles-theme-container {
   display: flex;
   flex-direction: column;

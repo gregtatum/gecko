@@ -19,57 +19,26 @@ export function useLanguageSwitcher(screens, screenIndex, setScreenIndex) {
     ? screen.content.languageSwitcher.appAndSystemLocaleInfo
     : null;
 
-  useEffect(() => {
-    console.log("useEffect ----------------------");
-  });
-
   // If there is a mismatch, then Firefox can negotiate a better langpack to offer
   // the user.
   const [negotiatedLanguage, setNegotiatedLanguage] = useState(null);
   useEffect(
     function getNegotiatedLanguage() {
-      console.log("useEffect getNegotiatedLanguage");
       if (!appAndSystemLocaleInfo) {
-        console.log(
-          "useEffect getNegotiatedLanguage - no appAndSystemLocaleInfo."
-        );
         return;
       }
-      console.log(
-        "useEffect getNegotiatedLanguage",
-        appAndSystemLocaleInfo.matchType
-      );
       if (appAndSystemLocaleInfo.matchType !== "language-mismatch") {
         // There is no language mismatch, so there is no need to negotiate a langpack.
-        console.log(
-          "useEffect getNegotiatedLanguage not ready for negotiatedLanguage",
-          appAndSystemLocaleInfo,
-          appAndSystemLocaleInfo.matchType
-        );
         return;
       }
 
-      console.log("useEffect getNegotiatedLanguage before async");
       (async () => {
-        console.log(
-          "useEffect getNegotiatedLanguage AWNegotiateLangPackForLanguageMismatch"
-        );
         const langPack = await AWNegotiateLangPackForLanguageMismatch(
           appAndSystemLocaleInfo
         );
         if (langPack) {
           // Convert the BCP 47 identifiers into the proper display names.
           // e.g. "fr-CA" -> "Canadian French".
-          console.log(
-            "!!! getNegotiatedLanguage",
-            appAndSystemLocaleInfo,
-            appAndSystemLocaleInfo.appLocaleRaw
-          );
-          console.log(
-            "!!! getNegotiatedLanguage",
-            langPack,
-            langPack.target_locale
-          );
           const displayNames = new Intl.DisplayNames(
             appAndSystemLocaleInfo.appLocaleRaw,
             { type: "language" }
@@ -102,17 +71,12 @@ export function useLanguageSwitcher(screens, screenIndex, setScreenIndex) {
         return;
       }
       setLangPackInstallPhase("installing");
-      console.log("useEffect AWEnsureLangPackInstalled 'installing'");
       AWEnsureLangPackInstalled(negotiatedLanguage.langPack).then(
         () => {
-          console.log("useEffect AWEnsureLangPackInstalled 'installed'");
           setLangPackInstallPhase("installed");
         },
         error => {
           console.error(error);
-          console.log(
-            "useEffect AWEnsureLangPackInstalled 'installation-error'"
-          );
           setLangPackInstallPhase("installation-error");
         }
       );
@@ -171,7 +135,6 @@ export function LanguageSwitcher(props) {
   // Determine the status of the langpack installation.
   useEffect(() => {
     if (isAwaitingLangpack && langPackInstallPhase !== "installing") {
-      console.log("useEffect AWSetRequestedLocales");
       AWSetRequestedLocales(negotiatedLanguage.requestSystemLocales);
       requestAnimationFrame(() => {
         props.handleAction(
@@ -185,7 +148,6 @@ export function LanguageSwitcher(props) {
   // The message args are the localized language names.
   const withMessageArgs = obj => {
     const displayName = negotiatedLanguage?.displayName;
-    console.log({ displayName, negotiatedLanguage });
     if (displayName) {
       return {
         ...obj,
@@ -204,7 +166,6 @@ export function LanguageSwitcher(props) {
     langPackInstallPhase
   );
   const showReadyScreen = !showWaitingScreen && !showPreloadingScreen;
-  console.log("!!! render " + langPackInstallPhase);
 
   // Use {display: "none"} rather than if statements to prevent layout thrashing with
   // the localized text elements rendering as blank, then filling in the text.

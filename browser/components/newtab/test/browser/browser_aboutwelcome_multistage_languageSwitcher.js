@@ -159,11 +159,7 @@ function mockAddonAndLocaleAPIs({ systemLocale, appLocale }) {
 
   sandbox.stub(mockable, "installLangPack").callsFake(langPack => {
     info(
-      `LangPack install started, but pending: ${JSON.stringify(
-        langPack,
-        null,
-        2
-      )}`
+      `LangPack install started, but pending: ${langPack.target_locale}`
     );
     return installerPromise;
   });

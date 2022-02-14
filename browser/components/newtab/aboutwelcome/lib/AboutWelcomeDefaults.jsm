@@ -445,7 +445,6 @@ async function prepareContentForReact(aboutWelcomeChild, content) {
       screen => screen.id === "AW_LANGUAGE_MISMATCH"
     );
     if (screen) {
-      console.log("!!! screen", screen);
       const { languageSwitcher } = screen.content;
       languageSwitcher.appAndSystemLocaleInfo = await aboutWelcomeChild.getAppAndSystemLocaleInfo();
       for (const value of Object.values(languageSwitcher)) {
@@ -455,7 +454,6 @@ async function prepareContentForReact(aboutWelcomeChild, content) {
       }
     }
   } else {
-    console.log("!!! Remove screen.");
     removeScreens(screen => screen.id === "AW_LANGUAGE_MISMATCH");
   }
 

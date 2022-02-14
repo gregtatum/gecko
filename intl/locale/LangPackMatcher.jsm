@@ -3,8 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 "use strict";
 
-console.log("!!! In LangPackMatcher.jsm");
-
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
@@ -36,14 +34,6 @@ async function negotiateLangPackForLanguageMismatch() {
    *
    * @type {Array<LangPack>}
    */
-
-  let countdown = 0;
-  for (let i = countdown; i > 0; i--) {
-    dump(`LangPackMatcher.jsm - negotiateLangPackForLanguageMismatch ${i}\n`);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-  dump("LangPackMatcher.jsm - negotiateLangPackForLanguageMismatch done\n");
-
   const availableLangpacks = await mockable.getAvailableLangpacks();
   if (!availableLangpacks) {
     return null;
@@ -113,22 +103,6 @@ function ensureLangPackInstalled(langPack) {
  * @returns {boolean} Success or failure.
  */
 async function _ensureLangPackInstalledImpl(langPack) {
-  dump(
-    `!!! LangPackMatcher.jsm - ensureLangPackInstalled ${JSON.stringify(
-      langPack
-    )}\n`
-  );
-  {
-    const seconds = 0;
-    const message = "_ensureLangPackInstalledImpl";
-    for (let i = seconds; i > 0; i--) {
-      dump(`!!! Countdown - ${message} ${i}
-  `);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    dump(`!!! Countdown ${message} done.`);
-  }
-  dump("LangPackMatcher.jsm - _ensureLangPackInstalledImpl done\n");
   if (mockable.getAvailableLocales().includes(langPack.target_locale)) {
     // The langpack is already installed.
     return true;
@@ -146,17 +120,6 @@ const mockable = {
    * @returns {LangPack[] | null}
    */
   async getAvailableLangpacks() {
-    {
-      const seconds = 0;
-      const message = "";
-      for (let i = seconds; i > 0; i--) {
-        dump(`!!! Countdown - ${message} ${i}
-    `);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      dump(`!!! Countdown ${message} done.`);
-    }
-
     try {
       return AddonRepository.getAvailableLangpacks();
     } catch (error) {
@@ -173,17 +136,6 @@ const mockable = {
    */
   async installLangPack(langPack) {
     let install;
-    console.log("!!! installLangPack", langPack);
-    {
-      const seconds = 10;
-      const message = "installLangPack";
-      for (let i = seconds; i > 0; i--) {
-        dump(`!!! Countdown - ${message} ${i}
-    `);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      dump(`!!! Countdown ${message} done.`);
-    }
     try {
       install = await AddonManager.getInstallForURL(langPack.url, {
         hash: langPack.hash,
