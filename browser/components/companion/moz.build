@@ -20,6 +20,7 @@ EXTRA_JS_MODULES += [
     "OnnxRuntimeService.jsm",
     "PyodideService.jsm",
     "WorkshopBootstrap.jsm",
+    "WorkshopParentAccess.jsm",
 ]
 
 FINAL_TARGET_FILES.actors += [
