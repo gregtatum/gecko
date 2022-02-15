@@ -45,7 +45,9 @@ const GOOGLE_ACTION_URLS = {
 };
 
 const formatGoogleURL = (type, fallbackURL) => {
-  let url = fallbackURL;
+  let url = Cu.isInAutomation
+    ? Services.prefs.getStringPref("browser.pinebuild.quickactions.testURL", "")
+    : fallbackURL;
   // Force call to load() in OnlineService to retrieve stored service data
   OnlineServices.getAllServices();
   if (OnlineServices.hasService("google")) {

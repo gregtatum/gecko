@@ -102,15 +102,6 @@ async function assertConnectCard(helper, _opts) {
   );
 }
 
-async function withNewBrowserWindow(fn) {
-  let win = await BrowserTestUtils.openNewBrowserWindow();
-  try {
-    await fn(win);
-  } finally {
-    await BrowserTestUtils.closeWindow(win);
-  }
-}
-
 async function waitForDomainHandled(helper, domain) {
   await helper.runCompanionTask(
     async _domain => {
@@ -136,7 +127,7 @@ async function loadURI(gBrowser, url) {
 }
 
 add_task(async function testConnectOptionNotShown() {
-  await withNewBrowserWindow(async win => {
+  await PinebuildTestUtils.withNewBrowserWindow(async win => {
     const { gBrowser } = win;
 
     await CompanionHelper.whenReady(async helper => {
@@ -154,7 +145,7 @@ add_task(async function testConnectOptionNotShown() {
 });
 
 add_task(async function testConnectOptionShown() {
-  await withNewBrowserWindow(async win => {
+  await PinebuildTestUtils.withNewBrowserWindow(async win => {
     const { gBrowser } = win;
 
     await CompanionHelper.whenReady(async helper => {
@@ -195,7 +186,7 @@ add_task(async function testConnectOptionShown() {
 });
 
 add_task(async function testDuplicateServiceTypeHidden() {
-  await withNewBrowserWindow(async win => {
+  await PinebuildTestUtils.withNewBrowserWindow(async win => {
     const { gBrowser } = win;
 
     await CompanionHelper.whenReady(async helper => {
@@ -224,7 +215,7 @@ add_task(async function testDuplicateServiceTypeHidden() {
 });
 
 add_task(async function testOauthFlow() {
-  await withNewBrowserWindow(async win => {
+  await PinebuildTestUtils.withNewBrowserWindow(async win => {
     const { gBrowser } = win;
 
     await CompanionHelper.whenReady(async helper => {
@@ -263,7 +254,7 @@ add_task(async function testOauthFlow() {
 });
 
 add_task(async function testMultipleOauthFlow() {
-  await withNewBrowserWindow(async win => {
+  await PinebuildTestUtils.withNewBrowserWindow(async win => {
     const { gBrowser } = win;
 
     await CompanionHelper.whenReady(async helper => {
@@ -356,7 +347,7 @@ add_task(async function testMultipleOauthFlow() {
 });
 
 add_task(async function testOauthFlowError() {
-  await withNewBrowserWindow(async win => {
+  await PinebuildTestUtils.withNewBrowserWindow(async win => {
     const { gBrowser } = win;
 
     await CompanionHelper.whenReady(async helper => {

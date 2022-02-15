@@ -1154,4 +1154,24 @@ var PinebuildTestUtils = {
       );
     });
   },
+
+  /**
+   * Opens a new browser window and runs the specified test function
+   * in that window.
+   *
+   * @param {Function} fn
+   *   The test function to run in the new window.
+   * @return {Promise}
+   * @resolves {undefined}
+   *   Resolves once both the test function has run and the newly
+   *   opened window has been closed.
+   */
+  async withNewBrowserWindow(fn) {
+    let win = await BrowserTestUtils.openNewBrowserWindow();
+    try {
+      await fn(win);
+    } finally {
+      await BrowserTestUtils.closeWindow(win);
+    }
+  },
 };

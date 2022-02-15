@@ -18,29 +18,98 @@ XPCOMUtils.defineLazyGetter(this, "UrlbarTestUtils", () => {
   return module;
 });
 
-add_task(async function test_basic() {
-  // Run test in a new window to avoid affecting the main test window.
-  let win = await BrowserTestUtils.openNewBrowserWindow();
+async function validateQuickAction(action) {
+  await PinebuildTestUtils.withNewBrowserWindow(async win => {
+    await SpecialPowers.pushPrefEnv({
+      set: [["browser.pinebuild.quickactions.testURL", action.url]],
+    });
+    await CompanionHelper.whenReady(async helper => {
+      await UrlbarTestUtils.promiseAutocompleteResultPopup({
+        window: win,
+        value: action.command,
+      });
 
-  registerCleanupFunction(async () => {
-    await BrowserTestUtils.closeWindow(win);
+      const result = await UrlbarTestUtils.getDetailsOfResultAt(win, 1);
+      is(
+        result.dynamicType,
+        "quickActions",
+        "Second Urlbar result is a quick action."
+      );
+
+      is(
+        result.payload.results[0],
+        action.type,
+        `${action.type} quick action is displayed.`
+      );
+
+      await assertActionOpensUrl(action.url, win);
+    }, win);
   });
+}
 
-  await CompanionHelper.whenReady(async helper => {
-    UrlbarProviderQuickActionsFilter.addAction("test", {
-      title: "Test Action",
-      label: "testing",
-      icon: "chrome://global/skin/icons/settings.svg",
-      url: "about:blank",
-    });
+async function assertActionOpensUrl(url, win) {
+  EventUtils.synthesizeKey("KEY_ArrowDown", {}, win);
+  EventUtils.synthesizeKey("KEY_Enter", {}, win);
+  await BrowserTestUtils.browserLoaded(win.gBrowser.selectedBrowser);
+  is(win.gBrowser.currentURI.spec, url, `Opened ${url}`);
+}
 
-    await UrlbarTestUtils.promiseAutocompleteResultPopup({
-      window: win,
-      value: "test",
-    });
+add_task(async function test_basic() {
+  await PinebuildTestUtils.withNewBrowserWindow(async win => {
+    await CompanionHelper.whenReady(async helper => {
+      UrlbarProviderQuickActionsFilter.addAction("test", {
+        title: "Test Action",
+        label: "testing",
+        icon: "chrome://global/skin/icons/settings.svg",
+        url: "about:blank",
+      });
 
-    EventUtils.synthesizeKey("KEY_ArrowDown", {}, win);
-    EventUtils.synthesizeKey("KEY_Enter", {}, win);
-    is(win.gBrowser.currentURI.spec, "about:blank", "Opened about:blank");
-  }, win);
+      await UrlbarTestUtils.promiseAutocompleteResultPopup({
+        window: win,
+        value: "test",
+      });
+
+      await assertActionOpensUrl("about:blank", win);
+    }, win);
+  });
+});
+
+add_task(async function test_createmeeting() {
+  const action = {
+    type: "createmeeting",
+    command: "calendar",
+    url: "https://example.com/new-meeting",
+  };
+
+  await validateQuickAction(action);
+});
+
+add_task(async function test_createslides() {
+  const action = {
+    type: "createslides",
+    command: "slides",
+    url: "https://example.com/slides",
+  };
+
+  await validateQuickAction(action);
+});
+
+add_task(async function test_createsheet() {
+  const action = {
+    type: "createsheet",
+    command: "spreadsheet",
+    url: "https://example.com/spreadsheet",
+  };
+
+  await validateQuickAction(action);
+});
+
+add_task(async function test_createdoc() {
+  const action = {
+    type: "createdoc",
+    command: "document",
+    url: "https://example.com/document",
+  };
+
+  await validateQuickAction(action);
 });

@@ -39,51 +39,48 @@ add_task(async function init() {
 });
 
 add_task(async function test_selectContextualSearchResult() {
-  let win = await BrowserTestUtils.openNewBrowserWindow();
-  BrowserTestUtils.loadURI(
-    win.gBrowser.selectedBrowser,
-    "http://mochi.test:8888/"
-  );
-  await BrowserTestUtils.browserLoaded(win.gBrowser.selectedBrowser);
-
-  registerCleanupFunction(async () => {
-    await BrowserTestUtils.closeWindow(win);
-  });
-
-  await CompanionHelper.whenReady(async () => {
-    const query = "search";
-    const [expectedUrl] = UrlbarUtils.getSearchQueryUrl(engine, query);
-
-    ok(
-      expectedUrl.includes(`?search&test=${query}`),
-      "Expected URL should be a search URL"
+  await PinebuildTestUtils.withNewBrowserWindow(async win => {
+    BrowserTestUtils.loadURI(
+      win.gBrowser.selectedBrowser,
+      "http://mochi.test:8888/"
     );
-
-    await UrlbarTestUtils.promiseAutocompleteResultPopup({
-      window: win,
-      value: query,
-    });
-    const lastResultIndex = UrlbarTestUtils.getResultCount(win) - 1;
-    const result = await UrlbarTestUtils.getDetailsOfResultAt(
-      win,
-      lastResultIndex
-    );
-
-    is(
-      result.dynamicType,
-      "contextualSearch",
-      "Last result is a contextual search result"
-    );
-
-    info("Focus and select the contextual search result");
-    UrlbarTestUtils.setSelectedRowIndex(win, lastResultIndex);
-    EventUtils.synthesizeKey("KEY_Enter", {}, win);
     await BrowserTestUtils.browserLoaded(win.gBrowser.selectedBrowser);
 
-    is(
-      win.gBrowser.selectedBrowser.currentURI.spec,
-      expectedUrl,
-      "Selecting the contextual search result opens the search URL"
-    );
-  }, win);
+    await CompanionHelper.whenReady(async () => {
+      const query = "search";
+      const [expectedUrl] = UrlbarUtils.getSearchQueryUrl(engine, query);
+
+      ok(
+        expectedUrl.includes(`?search&test=${query}`),
+        "Expected URL should be a search URL"
+      );
+
+      await UrlbarTestUtils.promiseAutocompleteResultPopup({
+        window: win,
+        value: query,
+      });
+      const lastResultIndex = UrlbarTestUtils.getResultCount(win) - 1;
+      const result = await UrlbarTestUtils.getDetailsOfResultAt(
+        win,
+        lastResultIndex
+      );
+
+      is(
+        result.dynamicType,
+        "contextualSearch",
+        "Last result is a contextual search result"
+      );
+
+      info("Focus and select the contextual search result");
+      UrlbarTestUtils.setSelectedRowIndex(win, lastResultIndex);
+      EventUtils.synthesizeKey("KEY_Enter", {}, win);
+      await BrowserTestUtils.browserLoaded(win.gBrowser.selectedBrowser);
+
+      is(
+        win.gBrowser.selectedBrowser.currentURI.spec,
+        expectedUrl,
+        "Selecting the contextual search result opens the search URL"
+      );
+    }, win);
+  });
 });
