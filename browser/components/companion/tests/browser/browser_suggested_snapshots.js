@@ -17,6 +17,9 @@ const { FilterAdult } = ChromeUtils.import(
 const { Interactions } = ChromeUtils.import(
   "resource:///modules/Interactions.jsm"
 );
+const { SnapshotSelector } = ChromeUtils.import(
+  "resource:///modules/SnapshotSelector.jsm"
+);
 
 let win;
 
@@ -162,6 +165,9 @@ add_task(async function test_suggested_snapshots_filter_adult() {
     await testSnapshotTitles(helper, [TEST_URLS[1].title, TEST_URLS[0].title]);
 
     FilterAdult.removeDomainFromList(TEST_URLS[2].uri);
+    // Removing from the domain list doesn't guarantee an update, so trigger
+    // it manually.
+    SnapshotSelector.rebuildAll();
   }, win);
 });
 

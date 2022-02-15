@@ -2689,9 +2689,11 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("privacy.trackingprotection.enabled", true, locked);
   pref("privacy.trackingprotection.socialtracking.enabled", true, locked);
   pref("browser.places.interactions.enabled", true, locked);
-  // Enable Places storage for previews images.
+  // Enable Places storage for previews images. This is not locked, to allow it
+  // to be able to be disabled for tests.
   pref("places.previews.enabled", true);
-  pref("browser.pagedata.enabled", true, locked);
+  // This is not locked, to allow it to be able to be disabled for tests.
+  pref("browser.pagedata.enabled", true);
   pref("startup.homepage_welcome_url", "", locked);
   pref("startup.homepage_override_url", "", locked);
   pref("browser.startup.page", 1, locked);
