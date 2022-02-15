@@ -300,6 +300,10 @@ class LoginManagerParent extends JSWindowActorParent {
           "passwordmgr-form-submission-detected",
           context.origin
         );
+        let browser = this.getRootBrowser();
+        browser.dispatchEvent(
+          new browser.ownerGlobal.CustomEvent("PasswordManager:onFormSubmit")
+        );
         break;
       }
 

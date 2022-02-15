@@ -57,6 +57,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
   5000
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "LOGIN_VIEW_OVERWRITING",
+  "browser.pinebuild.login-view-overwriting.enabled",
+  false
+);
+
 const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
 /**
  * @typedef {object} ViewHistoryData
@@ -255,6 +262,8 @@ class InternalView {
   #title;
   /** @type {String} **/
   #userTitle;
+  /** @type {boolean} **/
+  #submittedPassword;
 
   /**
    * The internal representation of a view. Each view maps to a history entry though the actual
@@ -296,6 +305,7 @@ class InternalView {
       {}
     );
     this.#creationTime = Cu.now();
+    this.#submittedPassword = false;
 
     InternalView.viewMap.set(this.#view, this);
 
@@ -471,6 +481,31 @@ class InternalView {
     let trimmedTitle = title.trim();
     Snapshots.add({ url: this.url.spec, title: trimmedTitle });
     this.#userTitle = trimmedTitle;
+  }
+
+  /**
+   * Set to true if a password submission form has been submitted via
+   * this View. This is a one-way setting - it's not possible to set this
+   * back to false after it has been set to true.
+   *
+   * @param {boolean} val
+   *   True if the user submitted a password form from this view.
+   */
+  set submittedPassword(val) {
+    if (!val) {
+      // submittedPassword can only ever be set to true from the initial false state,
+      // and not the other way around.
+      logConsole.error(
+        `Cannot set submittedPassword to false for ${this.toString()}`
+      );
+      return;
+    }
+    this.#submittedPassword = val;
+  }
+
+  /** @type {boolean} */
+  get submittedPassword() {
+    return this.#submittedPassword;
   }
 
   /** @type {Number} */
@@ -649,11 +684,20 @@ class BrowserListener {
     this.#browser = browser;
 
     this.#browser.addEventListener("pagetitlechanged", this);
+    this.#browser.addEventListener("PasswordManager:onFormSubmit", this);
   }
 
-  handleEvent() {
-    // Title changed.
-    this.#globalHistory._onNewTitle(this.#browser);
+  handleEvent(event) {
+    switch (event.type) {
+      case "pagetitlechanged": {
+        this.#globalHistory._onNewTitle(this.#browser);
+        break;
+      }
+      case "PasswordManager:onFormSubmit": {
+        this.#globalHistory._onPasswordFormSubmit(this.#browser);
+        break;
+      }
+    }
   }
 
   /**
@@ -1383,6 +1427,20 @@ class GlobalHistory extends EventTarget {
     this.#notifyEvent("ViewUpdated", internalView);
   }
 
+  _onPasswordFormSubmit(browser) {
+    let entry = getCurrentEntry(browser);
+    let internalView = this.#historyViews.get(entry.ID);
+    if (!internalView) {
+      return;
+    }
+
+    logConsole.debug(
+      `Saw password form submission for ${internalView.toString()}`
+    );
+
+    internalView.submittedPassword = true;
+  }
+
   /**
    * Called when a user changes a page's title.
    * @param {View} view
@@ -1616,13 +1674,13 @@ class GlobalHistory extends EventTarget {
       return { internalView, overwriting: false };
     }
 
-    if (INTERSTITIAL_VIEW_OVERWRITING) {
-      // For quick navigations (for example, bounces through an OAuth
-      // provider), we want to avoid creating extra InternalViews
-      // unnecessarily, as the user is unlikely to want to return to
-      // them. We check to see if the previous InternalView for this
-      // browser is considered a quick navigation, and if so, we return
-      // that for overwriting.
+    if (INTERSTITIAL_VIEW_OVERWRITING || LOGIN_VIEW_OVERWRITING) {
+      let makeOverwritingObject = (previousView, overwritingEntry) => {
+        this.#historyViews.delete(previousView.historyId);
+        this.#historyViews.set(overwritingEntry.ID, previousView);
+        return { internalView: previousView, overwriting: true };
+      };
+
       let newEntryHistoryIndex = getHistoryIndex(browser, newEntry.ID);
       let previousEntryHistoryIndex = newEntryHistoryIndex - 1;
 
@@ -1634,21 +1692,37 @@ class GlobalHistory extends EventTarget {
         if (previousEntry) {
           let previousView = this.#historyViews.get(previousEntry.ID);
           if (previousView) {
-            let timeSinceCreation = Cu.now() - previousView.creationTime;
-            if (
-              !currentWindowGlobal.isInitialDocument &&
-              !previousEntry.hasUserInteraction &&
-              timeSinceCreation < INTERSTITIAL_VIEW_OVERWRITING_THRESHOLD_MS
-            ) {
+            if (INTERSTITIAL_VIEW_OVERWRITING) {
+              // For quick navigations (for example, bounces through an OAuth
+              // provider), we want to avoid creating extra InternalViews
+              // unnecessarily, as the user is unlikely to want to return to
+              // them. We check to see if the previous InternalView for this
+              // browser is considered a quick navigation, and if so, we return
+              // that for overwriting.
+              let timeSinceCreation = Cu.now() - previousView.creationTime;
+              if (
+                !currentWindowGlobal.isInitialDocument &&
+                !previousEntry.hasUserInteraction &&
+                timeSinceCreation < INTERSTITIAL_VIEW_OVERWRITING_THRESHOLD_MS
+              ) {
+                logConsole.debug(
+                  `Overwriting InternalView ${previousView.toString()} due to quick ` +
+                    `navigation`
+                );
+                return makeOverwritingObject(previousView, newEntry);
+              }
+            }
+            if (LOGIN_VIEW_OVERWRITING && previousView.submittedPassword) {
+              // For navigations away from pages where the user has submitted a
+              // password through a form, we'll assume that the user has gone through
+              // some kind of login flow and overwrite that view, since it's unlikely
+              // the user will want to go back to the login page (or that the login
+              // page will let them login again without first logging out).
               logConsole.debug(
-                `Overwriting InternalView ${previousView.toString()} due to quick ` +
-                  `navigation`
+                `Overwriting InternalView ${previousView.toString()} due to the ` +
+                  `previous view having submitted a password form`
               );
-              // We're going to be calling into `update` again shortly in
-              // _onBrowserNavigate anyways
-              this.#historyViews.delete(previousView.historyId);
-              this.#historyViews.set(newEntry.ID, previousView);
-              return { internalView: previousView, overwriting: true };
+              return makeOverwritingObject(previousView, newEntry);
             }
           }
         }

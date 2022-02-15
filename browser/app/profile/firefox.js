@@ -2789,5 +2789,5 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.pinebuild.megaback.click-count-timeout-ms", 3000);
   pref("browser.pinebuild.megaback.click-count-threshold", 5);
   pref("browser.pinebuild.snapshots.relevancy.enabled", false);
-
+  pref("browser.pinebuild.login-view-overwriting.enabled", true);
 #endif
