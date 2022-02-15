@@ -120,6 +120,7 @@ export default TaskDefiner.defineSimpleTask([
             depth: 0,
             syncGranularity: "folder",
             calendarInfo: desiredCalendarInfo,
+            primary: calInfo.isDefaultCalendar,
           });
           newFolders.push(calFolder);
         } else {

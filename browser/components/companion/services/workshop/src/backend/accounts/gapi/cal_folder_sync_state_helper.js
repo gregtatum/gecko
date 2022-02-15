@@ -62,7 +62,7 @@ export default class GapiCalFolderSyncStateHelper {
     }
 
     this._accountId = accountId;
-    this._folderId = folderId;
+    this.folderId = folderId;
     this.rawSyncState = rawSyncState;
 
     // A map grouping events by their `recurringEventId` or for non-recurring
@@ -105,6 +105,7 @@ export default class GapiCalFolderSyncStateHelper {
   _makeUidConvTask({
     convId,
     eventMap,
+    priority,
     calUpdatedTS,
     rangeOldestTS,
     rangeNewestTS,
@@ -112,25 +113,27 @@ export default class GapiCalFolderSyncStateHelper {
     let task = {
       type: "cal_sync_conv",
       accountId: this._accountId,
-      folderId: this._folderId,
+      folderId: this.folderId,
       convId,
       calUpdatedTS,
       rangeOldestTS,
       rangeNewestTS,
       eventMap,
+      priority,
     };
     this.tasksToSchedule.push(task);
     return task;
   }
 
-  ingestEvent(event) {
+  ingestEvent(event, priority = 0) {
     const recurringId = event.recurringEventId || event.id;
-    let eventMap = this.eventChangesByRecurringEventId.get(recurringId);
-    if (!eventMap) {
-      eventMap = new Map();
-      this.eventChangesByRecurringEventId.set(recurringId, eventMap);
+    let data = this.eventChangesByRecurringEventId.get(recurringId);
+    if (!data) {
+      data = { eventMap: new Map(), priority };
+      this.eventChangesByRecurringEventId.set(recurringId, data);
     }
-    eventMap.set(event.id, event);
+    data.eventMap.set(event.id, event);
+    data.priority = priority > data.priority ? priority : data.priority;
   }
 
   /**
@@ -140,16 +143,18 @@ export default class GapiCalFolderSyncStateHelper {
   processEvents() {
     for (const [
       recurringId,
-      eventMap,
+      { eventMap, priority },
     ] of this.eventChangesByRecurringEventId.entries()) {
-      const convId = makeFolderNamespacedConvId(this._folderId, recurringId);
+      const convId = makeFolderNamespacedConvId(this.folderId, recurringId);
       this._makeUidConvTask({
         convId,
         eventMap,
+        priority,
         calUpdatedTS: this.rawSyncState.calUpdatedTS,
         rangeOldestTS: this.rawSyncState.rangeOldestTS,
         rangeNewestTS: this.rawSyncState.rangeNewestTS,
       });
     }
+    this.eventChangesByRecurringEventId.clear();
   }
 }

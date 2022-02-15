@@ -69,6 +69,8 @@
  *   User specified (or assigned by default) #000000 style hex color encoding.
  * @property {Boolean} fullySynced
  *   Is this folder fully synchronized?
+ * @property {Boolean} primary
+ *   Is this calendar the primary one?
  * @property {Number|null} localMessageCount
  *   The number of messages locally present in this folder.  This is tracked by
  *   a database trigger and so will be valid for local-only folders as well
@@ -123,6 +125,7 @@ export function makeFolderMeta(raw) {
     depth: raw.depth || 0,
     syncGranularity: raw.syncGranularity || null,
     calendarInfo: raw.calendarInfo || null,
+    primary: !!raw.primary,
     localMessageCount: 0,
     unreadMessageCount: raw.unreadMessageCount || 0,
     webLink: raw.webLink || null,

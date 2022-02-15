@@ -28,7 +28,7 @@ export default TaskDefiner.defineSimpleTask([
     name: "cal_sync_conv",
 
     async plan(ctx, rawTask) {
-      let plannedTask = shallowClone(rawTask);
+      const plannedTask = shallowClone(rawTask);
       const { accountId, convId } = rawTask;
 
       plannedTask.exclusiveResources = [`conv:${convId}`];
@@ -39,7 +39,8 @@ export default TaskDefiner.defineSimpleTask([
         `permissions!${accountId}`,
         `queries!${accountId}`,
       ];
-      plannedTask.priorityTags = [`view:conv:${convId}`];
+      plannedTask.priorityTags = [`view:account:${accountId}`];
+      plannedTask.relPriority = rawTask.priority;
 
       // For now there's no reason to prioritize this sync task based on its own
       // date or `calUpdatedTS`, noting that we potentially could have

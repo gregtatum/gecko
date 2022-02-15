@@ -97,6 +97,7 @@ export default class MapiCalFolderSyncStateHelper {
     convId,
     recurringId,
     eventMap,
+    priority,
     calUpdatedTS,
     rangeOldestTS,
     rangeNewestTS,
@@ -111,19 +112,21 @@ export default class MapiCalFolderSyncStateHelper {
       rangeOldestTS,
       rangeNewestTS,
       eventMap,
+      priority,
     };
     this.tasksToSchedule.push(task);
     return task;
   }
 
-  ingestEvent(event) {
+  ingestEvent(event, priority = 0) {
     const recurringId = event.seriesMasterId || event.id;
-    let eventMap = this.eventChangesByRecurringEventId.get(recurringId);
-    if (!eventMap) {
-      eventMap = new Map();
-      this.eventChangesByRecurringEventId.set(recurringId, eventMap);
+    let data = this.eventChangesByRecurringEventId.get(recurringId);
+    if (!data) {
+      data = { eventMap: new Map(), priority };
+      this.eventChangesByRecurringEventId.set(recurringId, data);
     }
-    eventMap.set(event.id, event);
+    data.eventMap.set(event.id, event);
+    data.priority = priority > data.priority ? priority : data.priority;
   }
 
   /**
@@ -133,13 +136,14 @@ export default class MapiCalFolderSyncStateHelper {
   processEvents() {
     for (const [
       recurringId,
-      eventMap,
+      { eventMap, priority },
     ] of this.eventChangesByRecurringEventId.entries()) {
       const convId = makeFolderNamespacedConvId(this._folderId, recurringId);
       this._makeUidConvTask({
         convId,
         recurringId,
         eventMap,
+        priority,
         calUpdatedTS: this.rawSyncState.calUpdatedTS,
         rangeOldestTS: this.rawSyncState.rangeOldestTS,
         rangeNewestTS: this.rawSyncState.rangeNewestTS,

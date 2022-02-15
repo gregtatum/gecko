@@ -123,9 +123,11 @@ export default TaskDefiner.defineSimpleTask([
           color: calInfo.backgroundColor || null,
         };
 
+        const primary = !!calInfo.primary;
+
         if (!calFolder) {
           calFolder = makeFolderMeta({
-            id: foldersTOC.issueFolderId(),
+            id: foldersTOC.issueFolderId(primary),
             serverId: calInfo.id,
             name: calInfo.summary,
             description: calInfo.description,
@@ -139,6 +141,7 @@ export default TaskDefiner.defineSimpleTask([
             depth: 0,
             syncGranularity: "folder",
             calendarInfo: desiredCalendarInfo,
+            primary: !!calInfo.primary,
           });
           newFolders.push(calFolder);
         } else {

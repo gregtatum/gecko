@@ -17,7 +17,7 @@
 import logic from "logic";
 
 import { shallowClone } from "shared/util";
-import { NOW } from "shared/date";
+import { EVENT_OUTSIDE_SYNC_RANGE, NOW, makeDaysAgo } from "shared/date";
 
 import TaskDefiner from "../../../task_infra/task_definer";
 
@@ -26,6 +26,7 @@ import GapiCalFolderSyncStateHelper from "../cal_folder_sync_state_helper";
 import { prepareChangeForProblems } from "../../../utils/tools";
 import {
   convIdComponentFromMessageId,
+  isPrimaryFolder,
   makeUmidWithinFolder,
   messageIdComponentFromMessageId,
 } from "shared/id_conversions";
@@ -49,13 +50,13 @@ export default TaskDefiner.defineAtMostOnceTask([
       // The group should already exist; opt into its membership to get a
       // Promise
       return Promise.resolve({
-        result: ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.folderId),
+        result: ctx.trackMeInTaskGroup(`sync_refresh:${rawTask.folderId}`),
       });
     },
 
     helped_plan(ctx, rawTask) {
       // - Plan!
-      let plannedTask = shallowClone(rawTask);
+      const plannedTask = shallowClone(rawTask);
       const { accountId } = rawTask;
       plannedTask.resources = [
         "online",
@@ -64,12 +65,15 @@ export default TaskDefiner.defineAtMostOnceTask([
         `permissions!${accountId}`,
         `queries!${accountId}`,
       ];
-      plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
+      plannedTask.priorityTags = [`view:account:${rawTask.accountId}`];
+
+      // Give a higher priority to primary calendar
+      plannedTask.relPriority = isPrimaryFolder(rawTask.folderId) ? 1000 : 0;
 
       // Create a task group that follows this task and all its offspring.  This
       // will define the lifetime of our overlay as well.
-      let groupPromise = ctx.trackMeInTaskGroup(
-        "sync_refresh:" + rawTask.folderId
+      const groupPromise = ctx.trackMeInTaskGroup(
+        `sync_refresh:${rawTask.folderId}`
       );
       return {
         taskState: plannedTask,
@@ -115,6 +119,7 @@ export default TaskDefiner.defineAtMostOnceTask([
       }
 
       const syncDate = NOW();
+
       logic(ctx, "syncStart", { syncDate });
 
       const calendarId = folderInfo.serverId;
@@ -249,7 +254,37 @@ export default TaskDefiner.defineAtMostOnceTask([
       // conflicts): hence a WeakMap.
       const metadatas = new WeakMap();
 
+      const todayTS = makeDaysAgo(0);
+      const tomorrowTS = makeDaysAgo(-1);
+
       for (const event of results.items) {
+        const startDate = new Date(
+          event.start.dateTime || event.start.date
+        ).valueOf();
+        const endDate = new Date(
+          event.end.dateTime || event.end.date
+        ).valueOf();
+
+        if (
+          EVENT_OUTSIDE_SYNC_RANGE(
+            { startDate, endDate },
+            syncState.rawSyncState
+          )
+        ) {
+          // It's a mystery but some events aren't in the requested range.
+          // It's possible to have some events happening in 23 years!!
+          continue;
+        }
+
+        if (event.visibility === "private" && !event.attendees) {
+          // From documentation:
+          //   The event is private and only event attendees may view event
+          //   details.
+          // So if attendees is empty there are no chance to have something
+          // interesting.
+          continue;
+        }
+
         const uniqueId = makeUmidWithinFolder(req.folderId, event.id);
         umidNames.set(uniqueId, null);
         let cancelled = false;
@@ -262,7 +297,11 @@ export default TaskDefiner.defineAtMostOnceTask([
           cancelledEvents.set(uniqueId, event);
           cancelled = true;
         }
-        metadatas.set(event, { uniqueId, cancelled });
+
+        // Give a higher priority to events which are happening today.
+        const priority =
+          startDate <= tomorrowTS && todayTS <= endDate ? 1001 : 0;
+        metadatas.set(event, { uniqueId, cancelled, priority });
       }
 
       await ctx.read({ umidNames });
@@ -276,12 +315,12 @@ export default TaskDefiner.defineAtMostOnceTask([
         // this by creating a synthetic cancellation of the previous version of
         // the event which will be processed by GapiCalEventChewer in the
         // "cal_sync_conv" task.
-        const { uniqueId, cancelled } = metadatas.get(event);
+        const { uniqueId, cancelled, priority } = metadatas.get(event);
         if (cancelled) {
           continue;
         }
 
-        syncState.ingestEvent(event);
+        syncState.ingestEvent(event, priority);
 
         const eventId = umidNames.get(uniqueId);
         if (!eventId) {

@@ -2791,6 +2791,9 @@ var WorkshopBackend = (() => {
     }
     return `${accountId}\0${encodeInt(folderNum)}`;
   }
+  function isPrimaryFolder(folderId) {
+    return folderId.endsWith("\x000");
+  }
   function accountIdFromFolderId(folderId) {
     const pieces = folderId.split(/\0/g);
     if (pieces.length !== 2) {
@@ -9187,6 +9190,7 @@ var WorkshopBackend = (() => {
       depth: raw.depth || 0,
       syncGranularity: raw.syncGranularity || null,
       calendarInfo: raw.calendarInfo || null,
+      primary: !!raw.primary,
       localMessageCount: 0,
       unreadMessageCount: raw.unreadMessageCount || 0,
       webLink: raw.webLink || null,
@@ -10844,6 +10848,200 @@ var WorkshopBackend = (() => {
     }
   });
 
+  // src/backend/accounts/gapi/cal_folder_sync_state_helper.js
+  var GapiCalFolderSyncStateHelper;
+  var init_cal_folder_sync_state_helper = __esm({
+    "src/backend/accounts/gapi/cal_folder_sync_state_helper.js"() {
+      init_logic();
+      init_date();
+      init_id_conversions();
+      GapiCalFolderSyncStateHelper = class {
+        constructor(ctx, rawSyncState, accountId, folderId, why) {
+          logic.defineScope(this, "GapiSyncState", { ctxId: ctx.id, why });
+          if (!rawSyncState) {
+            logic(ctx, "creatingDefaultSyncState", {});
+            rawSyncState = {
+              syncToken: null,
+              etag: null,
+              inboxFeedCacheState: null,
+              calUpdatedTS: null,
+              rangeOldestTS: makeDaysAgo(15),
+              rangeNewestTS: makeDaysAgo(-60)
+            };
+          }
+          this._accountId = accountId;
+          this.folderId = folderId;
+          this.rawSyncState = rawSyncState;
+          this.eventChangesByRecurringEventId = new Map();
+          this.tasksToSchedule = [];
+        }
+        get syncToken() {
+          return this.rawSyncState.syncToken;
+        }
+        set syncToken(nextSyncToken) {
+          this.rawSyncState.syncToken = nextSyncToken;
+        }
+        get etag() {
+          return this.rawSyncState.etag;
+        }
+        set etag(etag) {
+          this.rawSyncState.etag = etag;
+        }
+        set updatedTime(updatedTimeDateStr) {
+          this.rawSyncState.calUpdatedTS = Date.parse(updatedTimeDateStr);
+        }
+        get timeMinDateStr() {
+          return new Date(this.rawSyncState.rangeOldestTS).toISOString();
+        }
+        get timeMaxDateStr() {
+          return new Date(this.rawSyncState.rangeNewestTS).toISOString();
+        }
+        _makeUidConvTask({
+          convId,
+          eventMap,
+          priority,
+          calUpdatedTS,
+          rangeOldestTS,
+          rangeNewestTS
+        }) {
+          let task = {
+            type: "cal_sync_conv",
+            accountId: this._accountId,
+            folderId: this.folderId,
+            convId,
+            calUpdatedTS,
+            rangeOldestTS,
+            rangeNewestTS,
+            eventMap,
+            priority
+          };
+          this.tasksToSchedule.push(task);
+          return task;
+        }
+        ingestEvent(event, priority = 0) {
+          const recurringId = event.recurringEventId || event.id;
+          let data = this.eventChangesByRecurringEventId.get(recurringId);
+          if (!data) {
+            data = { eventMap: new Map(), priority };
+            this.eventChangesByRecurringEventId.set(recurringId, data);
+          }
+          data.eventMap.set(event.id, event);
+          data.priority = priority > data.priority ? priority : data.priority;
+        }
+        processEvents() {
+          for (const [
+            recurringId,
+            { eventMap, priority }
+          ] of this.eventChangesByRecurringEventId.entries()) {
+            const convId = makeFolderNamespacedConvId(this.folderId, recurringId);
+            this._makeUidConvTask({
+              convId,
+              eventMap,
+              priority,
+              calUpdatedTS: this.rawSyncState.calUpdatedTS,
+              rangeOldestTS: this.rawSyncState.rangeOldestTS,
+              rangeNewestTS: this.rawSyncState.rangeNewestTS
+            });
+          }
+          this.eventChangesByRecurringEventId.clear();
+        }
+      };
+    }
+  });
+
+  // src/backend/accounts/gapi/tasks/account_init.js
+  var account_init_default;
+  var init_account_init = __esm({
+    "src/backend/accounts/gapi/tasks/account_init.js"() {
+      init_logic();
+      init_date();
+      init_util();
+      init_date();
+      init_task_definer();
+      init_cal_folder_sync_state_helper();
+      account_init_default = task_definer_default.defineSimpleTask([
+        {
+          name: "account_init",
+          args: ["accountId"],
+          plan(ctx, rawTask) {
+            let plannedTask = shallowClone2(rawTask);
+            const { accountId } = rawTask;
+            plannedTask.resources = [
+              "online",
+              `credentials!${accountId}`,
+              `happy!${accountId}`,
+              `permissions!${accountId}`,
+              `queries!${accountId}`
+            ];
+            plannedTask.priorityTags = [`view:account:${rawTask.accountId}`];
+            const groupPromise = ctx.trackMeInTaskGroup(`account_init:${accountId}`);
+            return ctx.finishTask({
+              taskState: plannedTask,
+              remainInProgressUntil: groupPromise,
+              result: groupPromise
+            });
+          },
+          async execute(ctx, req) {
+            const account = await ctx.universe.acquireAccount(ctx, req.accountId);
+            const folders = account.foldersTOC.items;
+            const syncDate = NOW();
+            const todayTS = makeDaysAgo(0);
+            const tomorrowTS = makeDaysAgo(-1);
+            logic(ctx, "accountInitialization", { syncDate });
+            const syncState = new GapiCalFolderSyncStateHelper(ctx, null, req.accountId, "", "init");
+            syncState.rawSyncState.rangeNewestTS = tomorrowTS;
+            syncState.rawSyncState.rangeOldestTS = todayTS;
+            const params = {
+              singleEvents: true,
+              timeMin: syncState.timeMinDateStr,
+              timeMax: syncState.timeMaxDateStr,
+              maxAttendees: 50
+            };
+            const allResults = await Promise.allSettled(folders.map(async (folder) => {
+              if (!folder.serverId) {
+                return null;
+              }
+              const endpoint = `https://www.googleapis.com/calendar/v3/calendars/${folder.serverId}/events`;
+              return account.client.pagedApiGetCall(endpoint, params, "items", (result) => result.nextPageToken ? {
+                params: { pageToken: result.nextPageToken }
+              } : null);
+            }));
+            for (let i = 0; i < folders.length; i++) {
+              if (allResults[i].status !== "fulfilled") {
+                continue;
+              }
+              const results = allResults[i].value;
+              if (!results) {
+                continue;
+              }
+              const folder = folders[i];
+              syncState.folderId = folder.id;
+              const priority = folder.primary ? 99999 : 99998;
+              for (const event of results.items) {
+                const startDate = new Date(event.start.dateTime || event.start.date).valueOf();
+                const endDate = new Date(event.end.dateTime || event.end.date).valueOf();
+                if (EVENT_OUTSIDE_SYNC_RANGE({ startDate, endDate }, syncState.rawSyncState)) {
+                  continue;
+                }
+                if (event.visibility === "private" && !event.attendees) {
+                  continue;
+                }
+                syncState.ingestEvent(event, priority);
+              }
+              syncState.processEvents();
+            }
+            logic(ctx, "accountInitializationEnd", {});
+            await ctx.finishTask({
+              newData: {
+                tasks: syncState.tasksToSchedule
+              }
+            });
+          }
+        }
+      ]);
+    }
+  });
+
   // src/backend/accounts/gapi/account_sync_state_helper.js
   var GapiAccountSyncStateHelper;
   var init_account_sync_state_helper = __esm({
@@ -10952,9 +11150,10 @@ var WorkshopBackend = (() => {
                 timeZone: calInfo.timeZone,
                 color: calInfo.backgroundColor || null
               };
+              const primary = !!calInfo.primary;
               if (!calFolder) {
                 calFolder = makeFolderMeta({
-                  id: foldersTOC.issueFolderId(),
+                  id: foldersTOC.issueFolderId(primary),
                   serverId: calInfo.id,
                   name: calInfo.summary,
                   description: calInfo.description,
@@ -10965,7 +11164,8 @@ var WorkshopBackend = (() => {
                   delim: null,
                   depth: 0,
                   syncGranularity: "folder",
-                  calendarInfo: desiredCalendarInfo
+                  calendarInfo: desiredCalendarInfo,
+                  primary: !!calInfo.primary
                 });
                 newFolders.push(calFolder);
               } else {
@@ -11295,7 +11495,7 @@ var WorkshopBackend = (() => {
         {
           name: "cal_sync_conv",
           async plan(ctx, rawTask) {
-            let plannedTask = shallowClone2(rawTask);
+            const plannedTask = shallowClone2(rawTask);
             const { accountId, convId } = rawTask;
             plannedTask.exclusiveResources = [`conv:${convId}`];
             plannedTask.resources = [
@@ -11305,7 +11505,8 @@ var WorkshopBackend = (() => {
               `permissions!${accountId}`,
               `queries!${accountId}`
             ];
-            plannedTask.priorityTags = [`view:conv:${convId}`];
+            plannedTask.priorityTags = [`view:account:${accountId}`];
+            plannedTask.relPriority = rawTask.priority;
             await ctx.finishTask({
               taskState: plannedTask
             });
@@ -11382,102 +11583,6 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/gapi/cal_folder_sync_state_helper.js
-  var GapiCalFolderSyncStateHelper;
-  var init_cal_folder_sync_state_helper = __esm({
-    "src/backend/accounts/gapi/cal_folder_sync_state_helper.js"() {
-      init_logic();
-      init_date();
-      init_id_conversions();
-      GapiCalFolderSyncStateHelper = class {
-        constructor(ctx, rawSyncState, accountId, folderId, why) {
-          logic.defineScope(this, "GapiSyncState", { ctxId: ctx.id, why });
-          if (!rawSyncState) {
-            logic(ctx, "creatingDefaultSyncState", {});
-            rawSyncState = {
-              syncToken: null,
-              etag: null,
-              inboxFeedCacheState: null,
-              calUpdatedTS: null,
-              rangeOldestTS: makeDaysAgo(15),
-              rangeNewestTS: makeDaysAgo(-60)
-            };
-          }
-          this._accountId = accountId;
-          this._folderId = folderId;
-          this.rawSyncState = rawSyncState;
-          this.eventChangesByRecurringEventId = new Map();
-          this.tasksToSchedule = [];
-        }
-        get syncToken() {
-          return this.rawSyncState.syncToken;
-        }
-        set syncToken(nextSyncToken) {
-          this.rawSyncState.syncToken = nextSyncToken;
-        }
-        get etag() {
-          return this.rawSyncState.etag;
-        }
-        set etag(etag) {
-          this.rawSyncState.etag = etag;
-        }
-        set updatedTime(updatedTimeDateStr) {
-          this.rawSyncState.calUpdatedTS = Date.parse(updatedTimeDateStr);
-        }
-        get timeMinDateStr() {
-          return new Date(this.rawSyncState.rangeOldestTS).toISOString();
-        }
-        get timeMaxDateStr() {
-          return new Date(this.rawSyncState.rangeNewestTS).toISOString();
-        }
-        _makeUidConvTask({
-          convId,
-          eventMap,
-          calUpdatedTS,
-          rangeOldestTS,
-          rangeNewestTS
-        }) {
-          let task = {
-            type: "cal_sync_conv",
-            accountId: this._accountId,
-            folderId: this._folderId,
-            convId,
-            calUpdatedTS,
-            rangeOldestTS,
-            rangeNewestTS,
-            eventMap
-          };
-          this.tasksToSchedule.push(task);
-          return task;
-        }
-        ingestEvent(event) {
-          const recurringId = event.recurringEventId || event.id;
-          let eventMap = this.eventChangesByRecurringEventId.get(recurringId);
-          if (!eventMap) {
-            eventMap = new Map();
-            this.eventChangesByRecurringEventId.set(recurringId, eventMap);
-          }
-          eventMap.set(event.id, event);
-        }
-        processEvents() {
-          for (const [
-            recurringId,
-            eventMap
-          ] of this.eventChangesByRecurringEventId.entries()) {
-            const convId = makeFolderNamespacedConvId(this._folderId, recurringId);
-            this._makeUidConvTask({
-              convId,
-              eventMap,
-              calUpdatedTS: this.rawSyncState.calUpdatedTS,
-              rangeOldestTS: this.rawSyncState.rangeOldestTS,
-              rangeNewestTS: this.rawSyncState.rangeNewestTS
-            });
-          }
-        }
-      };
-    }
-  });
-
   // src/backend/accounts/gapi/tasks/sync_refresh.js
   var sync_refresh_default2;
   var init_sync_refresh2 = __esm({
@@ -11500,11 +11605,11 @@ var WorkshopBackend = (() => {
           },
           helped_already_planned(ctx, rawTask) {
             return Promise.resolve({
-              result: ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.folderId)
+              result: ctx.trackMeInTaskGroup(`sync_refresh:${rawTask.folderId}`)
             });
           },
           helped_plan(ctx, rawTask) {
-            let plannedTask = shallowClone2(rawTask);
+            const plannedTask = shallowClone2(rawTask);
             const { accountId } = rawTask;
             plannedTask.resources = [
               "online",
@@ -11513,8 +11618,9 @@ var WorkshopBackend = (() => {
               `permissions!${accountId}`,
               `queries!${accountId}`
             ];
-            plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
-            let groupPromise = ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.folderId);
+            plannedTask.priorityTags = [`view:account:${rawTask.accountId}`];
+            plannedTask.relPriority = isPrimaryFolder(rawTask.folderId) ? 1e3 : 0;
+            const groupPromise = ctx.trackMeInTaskGroup(`sync_refresh:${rawTask.folderId}`);
             return {
               taskState: plannedTask,
               remainInProgressUntil: groupPromise,
@@ -11625,7 +11731,17 @@ var WorkshopBackend = (() => {
             const umidNames = new Map();
             const cancelledEvents = new Map();
             const metadatas = new WeakMap();
+            const todayTS = makeDaysAgo(0);
+            const tomorrowTS = makeDaysAgo(-1);
             for (const event of results.items) {
+              const startDate = new Date(event.start.dateTime || event.start.date).valueOf();
+              const endDate = new Date(event.end.dateTime || event.end.date).valueOf();
+              if (EVENT_OUTSIDE_SYNC_RANGE({ startDate, endDate }, syncState.rawSyncState)) {
+                continue;
+              }
+              if (event.visibility === "private" && !event.attendees) {
+                continue;
+              }
               const uniqueId = makeUmidWithinFolder(req.folderId, event.id);
               umidNames.set(uniqueId, null);
               let cancelled = false;
@@ -11633,15 +11749,16 @@ var WorkshopBackend = (() => {
                 cancelledEvents.set(uniqueId, event);
                 cancelled = true;
               }
-              metadatas.set(event, { uniqueId, cancelled });
+              const priority = startDate <= tomorrowTS && todayTS <= endDate ? 1001 : 0;
+              metadatas.set(event, { uniqueId, cancelled, priority });
             }
             await ctx.read({ umidNames });
             for (const event of results.items) {
-              const { uniqueId, cancelled } = metadatas.get(event);
+              const { uniqueId, cancelled, priority } = metadatas.get(event);
               if (cancelled) {
                 continue;
               }
-              syncState.ingestEvent(event);
+              syncState.ingestEvent(event, priority);
               const eventId = umidNames.get(uniqueId);
               if (!eventId) {
                 continue;
@@ -11860,6 +11977,7 @@ var WorkshopBackend = (() => {
   var gapi_tasks_default;
   var init_gapi_tasks = __esm({
     "src/backend/accounts/gapi/gapi_tasks.js"() {
+      init_account_init();
       init_sync_folder_list2();
       init_cal_sync_conv();
       init_sync_refresh2();
@@ -11868,6 +11986,7 @@ var WorkshopBackend = (() => {
       init_folder_modify();
       init_identity_modify();
       gapi_tasks_default = [
+        account_init_default,
         sync_folder_list_default2,
         cal_sync_conv_default,
         sync_refresh_default2,
@@ -11876,6 +11995,186 @@ var WorkshopBackend = (() => {
         CommonFolderModify,
         identity_modify_default
       ];
+    }
+  });
+
+  // src/backend/accounts/mapi/cal_folder_sync_state_helper.js
+  var MapiCalFolderSyncStateHelper;
+  var init_cal_folder_sync_state_helper2 = __esm({
+    "src/backend/accounts/mapi/cal_folder_sync_state_helper.js"() {
+      init_logic();
+      init_date();
+      init_id_conversions();
+      MapiCalFolderSyncStateHelper = class {
+        constructor(ctx, rawSyncState, accountId, folderId, why) {
+          logic.defineScope(this, "MapiSyncState", { ctxId: ctx.id, why });
+          if (!rawSyncState) {
+            logic(ctx, "creatingDefaultSyncState", {});
+            rawSyncState = {
+              syncUrl: null,
+              calUpdatedTS: null,
+              rangeOldestTS: makeDaysAgo(15),
+              rangeNewestTS: makeDaysAgo(-60)
+            };
+          }
+          this._accountId = accountId;
+          this._folderId = folderId;
+          this.rawSyncState = rawSyncState;
+          this.eventChangesByRecurringEventId = new Map();
+          this.allEvents = [];
+          this.tasksToSchedule = [];
+          this.convMutations = null;
+        }
+        get syncUrl() {
+          return this.rawSyncState.syncUrl;
+        }
+        set syncUrl(nextSyncUrl) {
+          this.rawSyncState.syncUrl = nextSyncUrl;
+        }
+        set updatedTime(updatedTimeDateStr) {
+          this.rawSyncState.calUpdatedTS = Date.parse(updatedTimeDateStr);
+        }
+        get timeMinDateStr() {
+          return new Date(this.rawSyncState.rangeOldestTS).toISOString();
+        }
+        get timeMaxDateStr() {
+          return new Date(this.rawSyncState.rangeNewestTS).toISOString();
+        }
+        _makeUidConvTask({
+          convId,
+          recurringId,
+          eventMap,
+          priority,
+          calUpdatedTS,
+          rangeOldestTS,
+          rangeNewestTS
+        }) {
+          const task = {
+            type: "cal_sync_conv",
+            accountId: this._accountId,
+            folderId: this._folderId,
+            convId,
+            recurringId,
+            calUpdatedTS,
+            rangeOldestTS,
+            rangeNewestTS,
+            eventMap,
+            priority
+          };
+          this.tasksToSchedule.push(task);
+          return task;
+        }
+        ingestEvent(event, priority = 0) {
+          const recurringId = event.seriesMasterId || event.id;
+          let data = this.eventChangesByRecurringEventId.get(recurringId);
+          if (!data) {
+            data = { eventMap: new Map(), priority };
+            this.eventChangesByRecurringEventId.set(recurringId, data);
+          }
+          data.eventMap.set(event.id, event);
+          data.priority = priority > data.priority ? priority : data.priority;
+        }
+        processEvents() {
+          for (const [
+            recurringId,
+            { eventMap, priority }
+          ] of this.eventChangesByRecurringEventId.entries()) {
+            const convId = makeFolderNamespacedConvId(this._folderId, recurringId);
+            this._makeUidConvTask({
+              convId,
+              recurringId,
+              eventMap,
+              priority,
+              calUpdatedTS: this.rawSyncState.calUpdatedTS,
+              rangeOldestTS: this.rawSyncState.rangeOldestTS,
+              rangeNewestTS: this.rawSyncState.rangeNewestTS
+            });
+          }
+        }
+      };
+    }
+  });
+
+  // src/backend/accounts/mapi/tasks/account_init.js
+  var account_init_default2;
+  var init_account_init2 = __esm({
+    "src/backend/accounts/mapi/tasks/account_init.js"() {
+      init_logic();
+      init_date();
+      init_util();
+      init_date();
+      init_task_definer();
+      init_cal_folder_sync_state_helper2();
+      account_init_default2 = task_definer_default.defineSimpleTask([
+        {
+          name: "account_init",
+          args: ["accountId"],
+          plan(ctx, rawTask) {
+            let plannedTask = shallowClone2(rawTask);
+            const { accountId } = rawTask;
+            plannedTask.resources = [
+              "online",
+              `credentials!${accountId}`,
+              `happy!${accountId}`,
+              `permissions!${accountId}`,
+              `queries!${accountId}`
+            ];
+            plannedTask.priorityTags = [`view:account:${rawTask.accountId}`];
+            const groupPromise = ctx.trackMeInTaskGroup(`account_init:${accountId}`);
+            return ctx.finishTask({
+              taskState: plannedTask,
+              remainInProgressUntil: groupPromise,
+              result: groupPromise
+            });
+          },
+          async execute(ctx, req) {
+            const account = await ctx.universe.acquireAccount(ctx, req.accountId);
+            const folders = account.foldersTOC.items;
+            const syncDate = NOW();
+            const todayTS = makeDaysAgo(0);
+            const tomorrowTS = makeDaysAgo(-1);
+            logic(ctx, "accountInitialization", { syncDate });
+            const syncState = new MapiCalFolderSyncStateHelper(ctx, null, req.accountId, "", "init");
+            syncState.rawSyncState.rangeNewestTS = tomorrowTS;
+            syncState.rawSyncState.rangeOldestTS = todayTS;
+            const params = {
+              startDateTime: syncState.timeMinDateStr,
+              endDateTime: syncState.timeMaxDateStr
+            };
+            const allResults = await Promise.allSettled(folders.map(async (folder) => {
+              if (!folder.serverId) {
+                return null;
+              }
+              const endpoint = `https://graph.microsoft.com/v1.0/me/calendars/${folder.serverId}/calendarView`;
+              return account.client.pagedApiGetCall(endpoint, params, "value", (result) => result["@odata.nextLink"] ? {
+                url: result["@odata.nextLink"]
+              } : null);
+            }));
+            for (let i = 0; i < folders.length; i++) {
+              if (allResults[i].status !== "fulfilled") {
+                continue;
+              }
+              const results = allResults[i].value;
+              if (!results) {
+                continue;
+              }
+              const folder = folders[i];
+              syncState.folderId = folder.id;
+              const priority = folder.primary ? 99999 : 99998;
+              for (const event of results.items) {
+                syncState.ingestEvent(event, priority);
+              }
+              syncState.processEvents();
+            }
+            logic(ctx, "accountInitializationEnd", {});
+            await ctx.finishTask({
+              newData: {
+                tasks: syncState.tasksToSchedule
+              }
+            });
+          }
+        }
+      ]);
     }
   });
 
@@ -11970,7 +12269,8 @@ var WorkshopBackend = (() => {
                   delim: null,
                   depth: 0,
                   syncGranularity: "folder",
-                  calendarInfo: desiredCalendarInfo
+                  calendarInfo: desiredCalendarInfo,
+                  primary: calInfo.isDefaultCalendar
                 });
                 newFolders.push(calFolder);
               } else {
@@ -12216,9 +12516,18 @@ var WorkshopBackend = (() => {
         {
           name: "cal_sync_conv",
           async plan(ctx, rawTask) {
-            let plannedTask = shallowClone2(rawTask);
-            plannedTask.exclusiveResources = [`conv:${rawTask.convId}`];
-            plannedTask.priorityTags = [`view:conv:${rawTask.convId}`];
+            const plannedTask = shallowClone2(rawTask);
+            const { accountId, convId } = rawTask;
+            plannedTask.exclusiveResources = [`conv:${convId}`];
+            plannedTask.resources = [
+              "online",
+              `credentials!${accountId}`,
+              `happy!${accountId}`,
+              `permissions!${accountId}`,
+              `queries!${accountId}`
+            ];
+            plannedTask.priorityTags = [`view:conv:${accountId}`];
+            plannedTask.relPriority = rawTask.priority;
             await ctx.finishTask({
               taskState: plannedTask
             });
@@ -12296,99 +12605,6 @@ var WorkshopBackend = (() => {
     }
   });
 
-  // src/backend/accounts/mapi/cal_folder_sync_state_helper.js
-  var MapiCalFolderSyncStateHelper;
-  var init_cal_folder_sync_state_helper2 = __esm({
-    "src/backend/accounts/mapi/cal_folder_sync_state_helper.js"() {
-      init_logic();
-      init_date();
-      init_id_conversions();
-      MapiCalFolderSyncStateHelper = class {
-        constructor(ctx, rawSyncState, accountId, folderId, why) {
-          logic.defineScope(this, "MapiSyncState", { ctxId: ctx.id, why });
-          if (!rawSyncState) {
-            logic(ctx, "creatingDefaultSyncState", {});
-            rawSyncState = {
-              syncUrl: null,
-              calUpdatedTS: null,
-              rangeOldestTS: makeDaysAgo(15),
-              rangeNewestTS: makeDaysAgo(-60)
-            };
-          }
-          this._accountId = accountId;
-          this._folderId = folderId;
-          this.rawSyncState = rawSyncState;
-          this.eventChangesByRecurringEventId = new Map();
-          this.allEvents = [];
-          this.tasksToSchedule = [];
-          this.convMutations = null;
-        }
-        get syncUrl() {
-          return this.rawSyncState.syncUrl;
-        }
-        set syncUrl(nextSyncUrl) {
-          this.rawSyncState.syncUrl = nextSyncUrl;
-        }
-        set updatedTime(updatedTimeDateStr) {
-          this.rawSyncState.calUpdatedTS = Date.parse(updatedTimeDateStr);
-        }
-        get timeMinDateStr() {
-          return new Date(this.rawSyncState.rangeOldestTS).toISOString();
-        }
-        get timeMaxDateStr() {
-          return new Date(this.rawSyncState.rangeNewestTS).toISOString();
-        }
-        _makeUidConvTask({
-          convId,
-          recurringId,
-          eventMap,
-          calUpdatedTS,
-          rangeOldestTS,
-          rangeNewestTS
-        }) {
-          const task = {
-            type: "cal_sync_conv",
-            accountId: this._accountId,
-            folderId: this._folderId,
-            convId,
-            recurringId,
-            calUpdatedTS,
-            rangeOldestTS,
-            rangeNewestTS,
-            eventMap
-          };
-          this.tasksToSchedule.push(task);
-          return task;
-        }
-        ingestEvent(event) {
-          const recurringId = event.seriesMasterId || event.id;
-          let eventMap = this.eventChangesByRecurringEventId.get(recurringId);
-          if (!eventMap) {
-            eventMap = new Map();
-            this.eventChangesByRecurringEventId.set(recurringId, eventMap);
-          }
-          eventMap.set(event.id, event);
-        }
-        processEvents() {
-          for (const [
-            recurringId,
-            eventMap
-          ] of this.eventChangesByRecurringEventId.entries()) {
-            const convId = makeFolderNamespacedConvId(this._folderId, recurringId);
-            this._makeUidConvTask({
-              convId,
-              recurringId,
-              eventMap,
-              calUpdatedTS: this.rawSyncState.calUpdatedTS,
-              rangeOldestTS: this.rawSyncState.rangeOldestTS,
-              rangeNewestTS: this.rawSyncState.rangeNewestTS
-            });
-          }
-        }
-      };
-    }
-  });
-
   // src/backend/accounts/mapi/tasks/cal_sync_refresh.js
   var cal_sync_refresh_default;
   var init_cal_sync_refresh = __esm({
@@ -12400,6 +12616,7 @@ var WorkshopBackend = (() => {
       init_sync_overlay_helpers();
       init_cal_folder_sync_state_helper2();
       init_tools();
+      init_id_conversions();
       cal_sync_refresh_default = task_definer_default.defineAtMostOnceTask([
         {
           name: "sync_refresh",
@@ -12423,7 +12640,8 @@ var WorkshopBackend = (() => {
               `permissions!${accountId}`,
               `queries!${accountId}`
             ];
-            plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
+            plannedTask.priorityTags = [`view:folder:${accountId}`];
+            plannedTask.relPriority = isPrimaryFolder(rawTask.folderId) ? 1e3 : 0;
             let groupPromise = ctx.trackMeInTaskGroup("sync_refresh:" + rawTask.folderId);
             return {
               taskState: plannedTask,
@@ -12527,8 +12745,13 @@ var WorkshopBackend = (() => {
               handleError({ error: results?.error || "No data" });
               return changes;
             }
+            const todayTS = makeDaysAgo(0);
+            const tomorrowTS = makeDaysAgo(-1);
             for (const event of results.value) {
-              syncState.ingestEvent(event);
+              const startDate = new Date(event.start.dateTime + "Z").valueOf();
+              const endDate = new Date(event.end.dateTime + "Z").valueOf();
+              const priority = startDate <= tomorrowTS && todayTS <= endDate ? 1001 : 0;
+              syncState.ingestEvent(event, priority);
             }
             syncState.syncUrl = results["@odata.deltaLink"];
             syncState.updatedTime = syncDate;
@@ -12779,6 +13002,7 @@ var WorkshopBackend = (() => {
   var mapi_tasks_default;
   var init_mapi_tasks = __esm({
     "src/backend/accounts/mapi/mapi_tasks.js"() {
+      init_account_init2();
       init_sync_folder_list3();
       init_cal_sync_conv2();
       init_cal_sync_refresh();
@@ -12788,6 +13012,7 @@ var WorkshopBackend = (() => {
       init_identity_modify();
       init_new_tracking();
       mapi_tasks_default = [
+        account_init_default2,
         sync_folder_list_default3,
         cal_sync_conv_default2,
         cal_sync_refresh_default,
@@ -15619,6 +15844,10 @@ var WorkshopBackend = (() => {
         replyFunc(result);
       });
     },
+    async _promised_fillEmptyAccount(msg, replyFunc) {
+      await this.universe.fillEmptyAccount(msg.accountId, "bridge");
+      replyFunc(null);
+    },
     async _promised_syncFolderList(msg, replyFunc) {
       await this.universe.syncFolderList(msg.accountId, "bridge");
       replyFunc(null);
@@ -17443,6 +17672,7 @@ var WorkshopBackend = (() => {
       this.engineHacks = engineHacks.get(accountDef.engine);
       this.accountId = accountDef.id;
       this._dataOverlayManager = dataOverlayManager;
+      this.hasPrimary = false;
       this.foldersById = this.itemsById = new Map();
       this.foldersByPath = new Map();
       this.foldersByTag = new Map();
@@ -17450,7 +17680,7 @@ var WorkshopBackend = (() => {
       this._pendingTaskContextIdsToPendingPaths = new Map();
       this.items = this.folders = [];
       this.folderSortStrings = [];
-      let nextFolderNum = 0;
+      let nextFolderNum = 1;
       for (const folderInfo of folders) {
         this._addFolder(folderInfo);
         nextFolderNum = Math.max(nextFolderNum, decodeFolderIdComponentFromFolderId(folderInfo.id) + 1);
@@ -17465,7 +17695,11 @@ var WorkshopBackend = (() => {
     }
     __release() {
     }
-    issueFolderId() {
+    issueFolderId(primary = false) {
+      if (primary && !this.hasPrimary) {
+        this.hasPrimary = true;
+        return makeFolderId(this.accountId, 0);
+      }
       return makeFolderId(this.accountId, this._nextFolderNum++);
     }
     ensureLocalVirtualFolder(taskContext, folderPath) {
@@ -22607,6 +22841,12 @@ var WorkshopBackend = (() => {
       if (!this.accounts.length) {
         callback();
       }
+    },
+    async fillEmptyAccount(accountId, why) {
+      await this.taskManager.scheduleTaskAndWaitForExecutedResult({
+        type: "account_init",
+        accountId
+      }, why);
     },
     async syncFolderList(accountId, why) {
       await this.taskManager.scheduleTaskAndWaitForExecutedResult({

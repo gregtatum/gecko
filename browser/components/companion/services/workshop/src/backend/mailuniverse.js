@@ -923,6 +923,19 @@ MailUniverse.prototype = {
   },
 
   /**
+   * Quickly feed a newly created account with the events of the day.
+   */
+  async fillEmptyAccount(accountId, why) {
+    await this.taskManager.scheduleTaskAndWaitForExecutedResult(
+      {
+        type: "account_init",
+        accountId,
+      },
+      why
+    );
+  },
+
+  /**
    * Schedule synchronization of the folder list for the given account,
    * returning a promise that will be resolved when the task has completed
    * executing.

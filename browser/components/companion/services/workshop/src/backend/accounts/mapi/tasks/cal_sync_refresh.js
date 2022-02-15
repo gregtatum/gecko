@@ -17,13 +17,14 @@
 import logic from "logic";
 
 import { shallowClone } from "shared/util";
-import { NOW } from "shared/date";
+import { NOW, makeDaysAgo } from "shared/date";
 
 import TaskDefiner from "../../../task_infra/task_definer";
 
 import { syncNormalOverlay } from "../../../task_helpers/sync_overlay_helpers";
 import MapiCalFolderSyncStateHelper from "../cal_folder_sync_state_helper";
 import { prepareChangeForProblems } from "../../../utils/tools";
+import { isPrimaryFolder } from "shared/id_conversions";
 
 /**
  * Sync a Google API Calendar, which under our scheme corresponds to a single
@@ -59,7 +60,10 @@ export default TaskDefiner.defineAtMostOnceTask([
         `permissions!${accountId}`,
         `queries!${accountId}`,
       ];
-      plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
+      plannedTask.priorityTags = [`view:folder:${accountId}`];
+
+      // Give a higher priority to primary calendar
+      plannedTask.relPriority = isPrimaryFolder(rawTask.folderId) ? 1000 : 0;
 
       // Create a task group that follows this task and all its offspring.  This
       // will define the lifetime of our overlay as well.
@@ -213,8 +217,18 @@ export default TaskDefiner.defineAtMostOnceTask([
         return changes;
       }
 
+      const todayTS = makeDaysAgo(0);
+      const tomorrowTS = makeDaysAgo(-1);
+
       for (const event of results.value) {
-        syncState.ingestEvent(event);
+        const startDate = new Date(event.start.dateTime + "Z").valueOf();
+        const endDate = new Date(event.end.dateTime + "Z").valueOf();
+
+        // Give a higher priority to events which are happening today.
+        const priority =
+          startDate <= tomorrowTS && todayTS <= endDate ? 1001 : 0;
+
+        syncState.ingestEvent(event, priority);
       }
 
       // Update sync state before processing the batch; things like the

@@ -85,6 +85,7 @@ export class FoldersTOC extends Emitter {
     this.engineHacks = engineHacks.get(accountDef.engine);
     this.accountId = accountDef.id;
     this._dataOverlayManager = dataOverlayManager;
+    this.hasPrimary = false;
 
     /**
      * Folder information keyed by unique id.
@@ -149,7 +150,7 @@ export class FoldersTOC extends Emitter {
      */
     this.folderSortStrings = [];
 
-    let nextFolderNum = 0;
+    let nextFolderNum = 1;
     for (const folderInfo of folders) {
       this._addFolder(folderInfo);
       nextFolderNum = Math.max(
@@ -232,7 +233,13 @@ export class FoldersTOC extends Emitter {
    * It's definitely okay to revisit this informed by time and implementation
    * regret.
    */
-  issueFolderId() {
+  issueFolderId(primary = false) {
+    // The primary folder will be refreshed with a higher priority but we can
+    // have only one.
+    if (primary && !this.hasPrimary) {
+      this.hasPrimary = true;
+      return makeFolderId(this.accountId, 0);
+    }
     return makeFolderId(this.accountId, this._nextFolderNum++);
   }
 

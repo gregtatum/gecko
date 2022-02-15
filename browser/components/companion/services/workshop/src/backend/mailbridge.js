@@ -281,6 +281,11 @@ MailBridge.prototype = {
       });
   },
 
+  async _promised_fillEmptyAccount(msg, replyFunc) {
+    await this.universe.fillEmptyAccount(msg.accountId, "bridge");
+    replyFunc(null);
+  },
+
   async _promised_syncFolderList(msg, replyFunc) {
     await this.universe.syncFolderList(msg.accountId, "bridge");
     replyFunc(null);

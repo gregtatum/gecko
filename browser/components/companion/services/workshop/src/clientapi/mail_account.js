@@ -233,6 +233,18 @@ export class MailAccount extends Emitter {
   }
 
   /**
+   * Once the account has been created and the folder list created, this method
+   * can be used in order to feed the folders with the events of the day.
+   * It allows to fastly have something to view in the companion bar.
+   */
+  async fillEmptyAccount() {
+    await this._api._sendPromisedRequest({
+      type: "fillEmptyAccount",
+      accountId: this.id,
+    });
+  }
+
+  /**
    * Clear the new-tracking state for this account.  Also accessible as
    * `MailAPI.clearNewTrackingForAccount`.
    */

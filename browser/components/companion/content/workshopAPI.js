@@ -115,6 +115,7 @@ if (workshopEnabled) {
         // Wait to be sure we've the folders before starting to refresh the
         // contents of those folders (else we need to wait for the next refresh).
         await account.syncFolderList();
+        await account.fillEmptyAccount();
         this.companionActor.sendAsyncMessage("Companion:AccountCreated", {
           type,
         });

@@ -117,6 +117,10 @@ export function makeFolderId(accountId, folderNum) {
   return `${accountId}\0${encodeInt(folderNum)}`;
 }
 
+export function isPrimaryFolder(folderId) {
+  return folderId.endsWith("\x000");
+}
+
 /**
  * @param {FolderId} folderId
  * @returns {AccountId}

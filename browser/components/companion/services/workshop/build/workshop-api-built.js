@@ -2200,6 +2200,12 @@ var MailAccount = class extends import_evt8.Emitter {
       accountId: this.id
     });
   }
+  async fillEmptyAccount() {
+    await this._api._sendPromisedRequest({
+      type: "fillEmptyAccount",
+      accountId: this.id
+    });
+  }
   clearNewTracking(opts) {
     this._api.clearNewTrackingForAccount({
       accountId: this.id,
