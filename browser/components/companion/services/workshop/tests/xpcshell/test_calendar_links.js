@@ -14,11 +14,12 @@ async function check_links_extracted_from_description({
 }) {
   const initialEventSketches = [];
   let i = 0;
-  for (const { description, descriptionType } of descriptions) {
+  for (const description of descriptions) {
+    const clone = Object.assign({}, description);
+    delete clone.links;
     initialEventSketches.push({
       summary: `Test Event - Number ${i++}`,
-      description,
-      descriptionType,
+      ...clone,
     });
   }
   const initialEvents = WorkshopHelper.deriveFullEvents({
@@ -68,9 +69,15 @@ async function check_links_extracted_from_description({
   // completed.
   await calView.promisedOnce("seeked");
 
-  WorkshopHelper.eventsEqual(calView.items, initialEvents);
-  const calviewLinks = calView.items.map(event => event.links).reverse();
-  const expectedLinks = descriptions.map(({ links }) => links);
+  const cmp = (x, y) => x.url.localeCompare(y.url);
+  const calviewLinks = calView.items
+    .map(event => event.links)
+    .flat()
+    .sort(cmp);
+  const expectedLinks = descriptions
+    .map(({ links }) => links)
+    .flat()
+    .sort(cmp);
 
   deepEqual(calviewLinks, expectedLinks);
 }
@@ -194,6 +201,27 @@ const MAPI_DESCRIPTION_TEST = [
       `,
     descriptionType: "html",
     links: [{ url: "http://example.com/", text: "An example" }],
+  },
+  // Other places with links
+  {
+    onlineMeetingUrl: "http://mozilla.com",
+    location: {
+      displayName: "http://allizom.com",
+    },
+    locations: [
+      {
+        displayName: "http://allizom.org",
+      },
+    ],
+    onlineMeeting: {
+      joinUrl: "http://mozilla.org",
+    },
+    links: [
+      { url: "http://mozilla.com/" },
+      { url: "http://allizom.com/" },
+      { url: "http://allizom.org/" },
+      { url: "http://mozilla.org/" },
+    ],
   },
 ];
 

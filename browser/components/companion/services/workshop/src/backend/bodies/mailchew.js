@@ -540,6 +540,8 @@ export async function processMessageContent(
  *   become a stream.
  * @param {'plain'|'html'} type
  *   The body type, so we know what to do.
+ * @param {Array<string>} extraContents
+ *   An array of strings (plain text) where to search for links.
  * @param {Boolean} processAsText
  *   Process links in the content (see as plain text).
  * @return {Promise<{ contentBlob, snippet, authoredBodySize }>}
@@ -548,6 +550,7 @@ export async function processEventContent({
   data,
   content,
   type,
+  extraContents = [],
   processAsText = false,
   attachments = {},
   gapiClient,
@@ -573,9 +576,10 @@ export async function processEventContent({
 
   const contentBlob = new Blob([document], { type: `text/${type}` });
   const authoredBodySize = snippet.length;
+  extraContents.push((processAsText || type === "plain") && content);
   const processedLinks = $urlchew.processLinks(
     { ...attachments, ...links },
-    (processAsText || type === "plain") && content
+    extraContents
   );
   const conference = $urlchew.getConferenceInfo(data, processedLinks);
   const notConferenceLinks = processedLinks.filter(

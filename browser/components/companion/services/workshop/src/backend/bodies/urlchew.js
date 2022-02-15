@@ -91,7 +91,7 @@ function processLink(url, text) {
   return link;
 }
 
-export function processLinks(links, description) {
+export function processLinks(links, descriptions) {
   const map = new Map();
   const anchorText = new Set();
   for (const [href, content] of Object.entries(links)) {
@@ -102,27 +102,33 @@ export function processLinks(links, description) {
     }
   }
 
-  if (description) {
-    const descriptionURLs = description.match(URL_REGEX);
-    if (descriptionURLs?.length) {
-      for (const descriptionURL of descriptionURLs) {
-        // skip processing if URL is the textContent of an anchor element
-        if (anchorText.has(descriptionURL)) {
-          continue;
-        }
-        const descriptionLink = processLink(descriptionURL);
-        if (
-          descriptionLink &&
-          descriptionLink.text !== "" &&
-          !map.has(descriptionLink.url)
-        ) {
-          map.set(descriptionLink.url, descriptionLink);
-        }
-      }
+  for (const description of descriptions) {
+    if (description) {
+      _processLinks(description, map, anchorText);
     }
   }
 
   return Array.from(map.values());
+}
+
+function _processLinks(description, map, anchorText) {
+  const descriptionURLs = description.match(URL_REGEX);
+  if (descriptionURLs?.length) {
+    for (const descriptionURL of descriptionURLs) {
+      // skip processing if URL is the textContent of an anchor element
+      if (anchorText.has(descriptionURL)) {
+        continue;
+      }
+      const descriptionLink = processLink(descriptionURL);
+      if (
+        descriptionLink &&
+        descriptionLink.text !== "" &&
+        !map.has(descriptionLink.url)
+      ) {
+        map.set(descriptionLink.url, descriptionLink);
+      }
+    }
+  }
 }
 
 function getConferencingDetails(url) {

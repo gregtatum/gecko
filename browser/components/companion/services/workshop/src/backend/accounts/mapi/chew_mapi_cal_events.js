@@ -134,7 +134,6 @@ export class MapiCalEventChewer {
     for (const mapiEvent of this.eventMap.values()) {
       try {
         const eventId = makeMessageId(this.convId, mapiEvent.id);
-
         // The event is "there" so it isn't cancelled or if it is
         // it'll be handled thanks to its isCancelled property.
         cancelledEventIds.delete(eventId);
@@ -161,6 +160,16 @@ export class MapiCalEventChewer {
         let contentBlob, snippet, authoredBodySize, links, conference;
         const bodyReps = [];
 
+        const eventLocation = mapiEvent.location;
+        const location = `${eventLocation.displayName}@${eventLocation.address}`;
+        const extraContents =
+          mapiEvent.locations?.map?.(loc => loc.displayName) || [];
+        extraContents.push(
+          mapiEvent.onlineMeetingUrl,
+          eventLocation?.displayName,
+          mapiEvent.onlineMeeting?.joinUrl
+        );
+
         // ## Generate an HTML body part for the description
         const body = mapiEvent.body;
         if (body?.content) {
@@ -175,6 +184,7 @@ export class MapiCalEventChewer {
             data: mapiEvent,
             content,
             type,
+            extraContents,
             gapiClient: this.gapiClient,
             docTitleCache: this.docTitleCache,
           }));
@@ -206,8 +216,6 @@ export class MapiCalEventChewer {
 
         const organizer = this._chewCalIdentity(mapiEvent.organizer);
         const creator = organizer;
-        const eventLocation = mapiEvent.location;
-        const location = `${eventLocation.displayName}@${eventLocation.address}`;
 
         const attendees = (mapiEvent.attendees || []).map(who => {
           return this._chewCalAttendee(who, organizer);

@@ -9956,7 +9956,7 @@ var WorkshopBackend = (() => {
     }
     return link;
   }
-  function processLinks(links, description) {
+  function processLinks(links, descriptions) {
     const map = new Map();
     const anchorText = new Set();
     for (const [href, content] of Object.entries(links)) {
@@ -9966,21 +9966,26 @@ var WorkshopBackend = (() => {
         anchorText.add(link.text);
       }
     }
-    if (description) {
-      const descriptionURLs = description.match(URL_REGEX);
-      if (descriptionURLs?.length) {
-        for (const descriptionURL of descriptionURLs) {
-          if (anchorText.has(descriptionURL)) {
-            continue;
-          }
-          const descriptionLink = processLink(descriptionURL);
-          if (descriptionLink && descriptionLink.text !== "" && !map.has(descriptionLink.url)) {
-            map.set(descriptionLink.url, descriptionLink);
-          }
-        }
+    for (const description of descriptions) {
+      if (description) {
+        _processLinks(description, map, anchorText);
       }
     }
     return Array.from(map.values());
+  }
+  function _processLinks(description, map, anchorText) {
+    const descriptionURLs = description.match(URL_REGEX);
+    if (descriptionURLs?.length) {
+      for (const descriptionURL of descriptionURLs) {
+        if (anchorText.has(descriptionURL)) {
+          continue;
+        }
+        const descriptionLink = processLink(descriptionURL);
+        if (descriptionLink && descriptionLink.text !== "" && !map.has(descriptionLink.url)) {
+          map.set(descriptionLink.url, descriptionLink);
+        }
+      }
+    }
   }
   function getConferencingDetails(url) {
     if (!url) {
@@ -10189,6 +10194,7 @@ var WorkshopBackend = (() => {
     data,
     content,
     type,
+    extraContents = [],
     processAsText = false,
     attachments = {},
     gapiClient,
@@ -10197,7 +10203,8 @@ var WorkshopBackend = (() => {
     const { links, document, snippet } = type === "html" ? await sanitizeSnippetAndExtractLinks(content) : { links: {}, document: content, snippet: content };
     const contentBlob = new Blob([document], { type: `text/${type}` });
     const authoredBodySize = snippet.length;
-    const processedLinks = processLinks({ ...attachments, ...links }, (processAsText || type === "plain") && content);
+    extraContents.push((processAsText || type === "plain") && content);
+    const processedLinks = processLinks({ ...attachments, ...links }, extraContents);
     const conference = getConferenceInfo(data, processedLinks);
     const notConferenceLinks = processedLinks.filter((link) => link.type != "conferencing");
     if (gapiClient) {
@@ -12410,6 +12417,10 @@ var WorkshopBackend = (() => {
               logic(this.ctx, "event", { _event: mapiEvent });
               let contentBlob, snippet, authoredBodySize, links, conference;
               const bodyReps = [];
+              const eventLocation = mapiEvent.location;
+              const location = `${eventLocation.displayName}@${eventLocation.address}`;
+              const extraContents = mapiEvent.locations?.map?.((loc) => loc.displayName) || [];
+              extraContents.push(mapiEvent.onlineMeetingUrl, eventLocation?.displayName, mapiEvent.onlineMeeting?.joinUrl);
               const body = mapiEvent.body;
               if (body?.content) {
                 const { content, contentType: type } = body;
@@ -12423,6 +12434,7 @@ var WorkshopBackend = (() => {
                   data: mapiEvent,
                   content,
                   type,
+                  extraContents,
                   gapiClient: this.gapiClient,
                   docTitleCache: this.docTitleCache
                 }));
@@ -12443,8 +12455,6 @@ var WorkshopBackend = (() => {
               const summary = mapiEvent.subject;
               const organizer = this._chewCalIdentity(mapiEvent.organizer);
               const creator = organizer;
-              const eventLocation = mapiEvent.location;
-              const location = `${eventLocation.displayName}@${eventLocation.address}`;
               const attendees = (mapiEvent.attendees || []).map((who) => {
                 return this._chewCalAttendee(who, organizer);
               });

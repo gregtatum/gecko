@@ -122,6 +122,9 @@ class FakeEventFactory {
         every,
         url,
         cancelled: false,
+        onlineMeetingUrl: sketch.onlineMeetingUrl,
+        locations: sketch.locations,
+        onlineMeeting: sketch.onlineMeeting,
       };
 
       this.sketchToFullMap.set(sketch, fullEvent);
