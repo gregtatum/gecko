@@ -8,6 +8,8 @@
 var Services = ChromeUtils.import("resource://gre/modules/Services.jsm")
   .Services;
 
+import { initNotifications } from "./notifications.js";
+
 function pinebuildBackground() {
   if (
     !Services.prefs.getBoolPref("browser.startup.launchOnOSLogin", false) &&
@@ -100,6 +102,10 @@ function pinebuildBackground() {
     ensureWindowInvisible();
     openOrFocusWindow();
   });
+
+  // If we ever switch to loading this file every time on Windows, we can
+  // remove the corresponding code in companion.js.
+  initNotifications();
 }
 
 pinebuildBackground();
