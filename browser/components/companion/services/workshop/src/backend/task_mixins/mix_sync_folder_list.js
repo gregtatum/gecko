@@ -157,6 +157,19 @@ const MixinSyncFolderList = {
       accountProblems,
     } = await this.syncFolders(ctx, account);
 
+    const deletedFolderIds = new Map();
+    for (const [folderId, value] of modifiedFolders) {
+      if (!value) {
+        deletedFolderIds.set(folderId, null);
+      }
+    }
+
+    let deletedMessages;
+    if (deletedFolderIds.size !== 0) {
+      await ctx.read({ messageKeysByFolder: deletedFolderIds });
+      deletedMessages = [...deletedFolderIds.values()].flat();
+    }
+
     // XXX migrate ensureEssentialOnlineFolders to be something the actual
     // instance provides and that we convert into a list of create_folder tasks.
     // (Which implies that mailuniverse should be using task_recipe helpers or
@@ -169,6 +182,7 @@ const MixinSyncFolderList = {
     await ctx.finishTask({
       mutations: {
         folders: modifiedFolders,
+        deletedFolderMessages: deletedMessages,
         syncStates: modifiedSyncStates,
       },
       newData: {

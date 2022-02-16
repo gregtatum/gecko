@@ -48,6 +48,7 @@ import {
   convIdFromMessageId,
   accountIdFromIdentityId,
 } from "shared/id_conversions";
+import { VirtualConversationTOC } from "./db/virtual_conv_toc";
 
 /**
  * The root of the backend, coordinating/holding everything together.  It is the
@@ -288,6 +289,10 @@ MailUniverse.prototype = {
     this._mode = "interactive";
   },
 
+  async getDBCounts(id) {
+    return this.db.getDBCounts(id);
+  },
+
   //////////////////////////////////////////////////////////////////////////////
   _onConnectionChange(isOnline) {
     var wasOnline = this.online;
@@ -456,14 +461,8 @@ MailUniverse.prototype = {
         db: this.db,
         query: this.queryManager.queryConversations(ctx, { folderId }),
         dataOverlayManager: this.dataOverlayManager,
-        metaHelpers: [
-          new SyncLifecycleMetaHelper({
-            folderId,
-            syncStampSource,
-            dataOverlayManager: this.dataOverlayManager,
-          }),
-        ],
-        refreshHelpers: [why => this.syncRefreshFolder(folderId, why)],
+        metaHelpers: [this.__makeMetaHelper(folderId, syncStampSource)],
+        refreshHelpers: [this.__makeRefreshHelper(folderId)],
         onForgotten: () => {
           this._folderConvsTOCs.delete(folderId);
         },
@@ -492,14 +491,8 @@ MailUniverse.prototype = {
       db: this.db,
       query: this.queryManager.queryConversations(ctx, spec),
       dataOverlayManager: this.dataOverlayManager,
-      metaHelpers: [
-        new SyncLifecycleMetaHelper({
-          folderId,
-          syncStampSource,
-          dataOverlayManager: this.dataOverlayManager,
-        }),
-      ],
-      refreshHelpers: [why => this.syncRefreshFolder(folderId, why)],
+      metaHelpers: [this.__makeMetaHelper(folderId, syncStampSource)],
+      refreshHelpers: [this.__makeRefreshHelper(folderId)],
       onForgotten: () => {},
     });
     return ctx.acquire(toc);
@@ -527,14 +520,8 @@ MailUniverse.prototype = {
         db: this.db,
         query: this.queryManager.queryMessages(ctx, { folderId }),
         dataOverlayManager: this.dataOverlayManager,
-        metaHelpers: [
-          new SyncLifecycleMetaHelper({
-            folderId,
-            syncStampSource,
-            dataOverlayManager: this.dataOverlayManager,
-          }),
-        ],
-        refreshHelpers: [why => this.syncRefreshFolder(folderId, why)],
+        metaHelpers: [this.__makeMetaHelper(folderId, syncStampSource)],
+        refreshHelpers: [this.__makeRefreshHelper(folderId)],
         onForgotten: () => {
           this._folderMessagesTOCs.delete(folderId);
         },
@@ -559,21 +546,30 @@ MailUniverse.prototype = {
     } else {
       syncStampSource = this.accountManager.getFolderById(folderId);
     }
+
     const toc = new ConversationTOC({
       db: this.db,
       query: this.queryManager.queryMessages(ctx, spec),
       dataOverlayManager: this.dataOverlayManager,
-      metaHelpers: [
-        new SyncLifecycleMetaHelper({
-          folderId,
-          syncStampSource,
-          dataOverlayManager: this.dataOverlayManager,
-        }),
-      ],
-      refreshHelpers: [why => this.syncRefreshFolder(folderId, why)],
+      metaHelpers: [this.__makeMetaHelper(folderId, syncStampSource)],
+      refreshHelpers: [this.__makeRefreshHelper(folderId)],
+
       onForgotten: () => {},
     });
     return ctx.acquire(toc);
+  },
+
+  __makeRefreshHelper(folderId) {
+    return why => this.syncRefreshFolder(folderId, why);
+  },
+
+  __makeMetaHelper(folderId, syncStampSource) {
+    return new SyncLifecycleMetaHelper({
+      folderId,
+      syncStampSource:
+        syncStampSource || this.accountManager.getFolderById(folderId),
+      dataOverlayManager: this.dataOverlayManager,
+    });
   },
 
   __acquireSearchFoldersHelper(accountId, spec, metaHelpers, refreshHelpers) {
@@ -596,23 +592,21 @@ MailUniverse.prototype = {
     spec.folderIds.push(...folderIds);
 
     for (const folderId of folderIds) {
-      metaHelpers.push(
-        new SyncLifecycleMetaHelper({
+      if (metaHelpers) {
+        metaHelpers.set(
           folderId,
-          syncStampSource:
-            syncStampSource || this.accountManager.getFolderById(folderId),
-          dataOverlayManager: this.dataOverlayManager,
-        })
-      );
-      refreshHelpers.push(why => this.syncRefreshFolder(folderId, why));
+          this.__makeMetaHelper(folderId, syncStampSource)
+        );
+      }
+      refreshHelpers.set(folderId, this.__makeRefreshHelper(folderId));
     }
   },
 
   acquireSearchAccountMessagesTOC(ctx, spec) {
     const { accountId } = spec;
     spec.folderIds = [];
-    const metaHelpers = [];
-    const refreshHelpers = [];
+    const metaHelpers = new Map();
+    const refreshHelpers = new Map();
     this.__acquireSearchFoldersHelper(
       accountId,
       spec,
@@ -620,12 +614,14 @@ MailUniverse.prototype = {
       refreshHelpers
     );
 
-    const toc = new ConversationTOC({
+    const toc = new VirtualConversationTOC({
       db: this.db,
       query: this.queryManager.queryAccountMessages(ctx, spec),
       dataOverlayManager: this.dataOverlayManager,
       metaHelpers,
       refreshHelpers,
+      refreshHelperMaker: this.__makeRefreshHelper.bind(this),
+      metaHelperMaker: this.__makeMetaHelper.bind(this),
       // TODO: add a comment to explain why we do nothing here.
       onForgotten: () => {},
     });
@@ -638,8 +634,8 @@ MailUniverse.prototype = {
   acquireSearchAllAccountsMessagesTOC(ctx, spec) {
     const { accountIds } = spec;
     spec.folderIds = [];
-    const metaHelpers = [];
-    const refreshHelpers = [];
+    const metaHelpers = new Map();
+    const refreshHelpers = new Map();
     for (const accountId of accountIds) {
       this.__acquireSearchFoldersHelper(
         accountId,
@@ -649,12 +645,14 @@ MailUniverse.prototype = {
       );
     }
 
-    const toc = new ConversationTOC({
+    const toc = new VirtualConversationTOC({
       db: this.db,
       query: this.queryManager.queryAccountMessages(ctx, spec),
       dataOverlayManager: this.dataOverlayManager,
       metaHelpers,
       refreshHelpers,
+      refreshHelperMaker: this.__makeRefreshHelper.bind(this),
+      metaHelperMaker: this.__makeMetaHelper.bind(this),
       // TODO: add a comment to explain why we do nothing here.
       onForgotten: () => {},
     });

@@ -193,6 +193,7 @@ export class CalendarEventList extends MozLitElement {
     document.addEventListener("refresh-view", this);
 
     if (workshopEnabled) {
+      this.updateCalendarListView();
       window.addEventListener("unload", () => {
         this.cleanup();
       });

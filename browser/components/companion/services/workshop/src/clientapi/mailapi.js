@@ -1878,6 +1878,12 @@ export class MailAPI extends Emitter {
     });
   }
 
+  TEST_getDBCounts() {
+    return this._sendPromisedRequest({
+      type: "TEST_getDBCounts",
+    });
+  }
+
   /**
    * Cause the 'newMessagesUpdate' message to be re-derived and re-broadcast.
    * This should only be used in exceptional circumstances because the whole

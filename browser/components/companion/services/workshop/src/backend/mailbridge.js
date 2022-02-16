@@ -240,6 +240,11 @@ MailBridge.prototype = {
     });
   },
 
+  async _promised_TEST_getDBCounts(msg, replyFunc) {
+    const data = await this.universe.getDBCounts(msg?.id);
+    replyFunc(data);
+  },
+
   _cmd_TEST_timeWarp(msg) {
     logic(this, "timeWarp", { fakeNow: msg.fakeNow });
     TEST_LetsDoTheTimewarpAgain(msg.fakeNow);
@@ -547,20 +552,21 @@ MailBridge.prototype = {
   async _promised_refreshAllMessages(msg, replyFunc) {
     const spec = msg.spec;
     const accountIds = this.universe.getAllAccountIdsWithKind(spec.kind);
-    const metaHelpers = [];
-    const refreshHelpers = [];
+    const refreshHelpers = new Map();
     spec.folderIds = [];
 
-    for (let accountId of accountIds) {
+    for (const accountId of accountIds) {
       this.universe.__acquireSearchFoldersHelper(
         accountId,
         spec,
-        metaHelpers,
+        /* metaHelpers */ null,
         refreshHelpers
       );
     }
 
-    let promises = refreshHelpers.map(helper => helper("sync-all-messages"));
+    const promises = [...refreshHelpers.values()].map(helper =>
+      helper("sync-all-messages")
+    );
     await Promise.all(promises);
     replyFunc(null);
   },

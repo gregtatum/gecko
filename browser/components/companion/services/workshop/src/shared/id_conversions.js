@@ -89,7 +89,7 @@ export function accountIdFromIdentityId(identityId) {
   return pieces[0];
 }
 
-export function getAccountIdBounds(accountId) {
+export function getIdBounds(id) {
   // Build a range that covers our family of keys where we use an
   // array whose first item is a string id that is a concatenation of
   // `AccountId`, the string "\0", and then some more array parts.  Our
@@ -98,8 +98,8 @@ export function getAccountIdBounds(accountId) {
   // greater than any legal suffix (\ufff0 not being a legal suffix
   // in our key-space.)
   return {
-    lower: accountId + "\0",
-    upper: accountId + "\0\ufff0",
+    lower: id + "\0",
+    upper: id + "\0\ufff0",
   };
 }
 

@@ -34,3 +34,11 @@ export function prepareChangeForProblems(account, problem) {
 
   return new Map([[account.id, { problems: newProblems }]]);
 }
+
+/**
+ * @param {Array|Map} obj - An array or a Map.
+ * @returns the same array or an array from the values.
+ */
+export function toArray(obj) {
+  return Array.isArray(obj) ? obj : [...obj.values()];
+}

@@ -139,21 +139,25 @@ export class AccountManager {
      */
     this._ensureAccountFoldersTOC = prereqify(
       "_accountFoldersTOCLoads",
-      accountId => {
-        return this.db.loadFoldersByAccount(accountId).then(folders => {
+      async accountId => {
+        // If we already have a foldersTOC no need to create a new one.
+        let foldersTOC = this.accountFoldersTOCs.get(accountId);
+        if (!foldersTOC) {
+          const folders = await this.db.loadFoldersByAccount(accountId);
+
           // The FoldersTOC wants this so it can mix in per-account data to the
           // folders so they can stand alone without needing to have references and
           // weird cascades in the front-end.
           const accountDef = this.getAccountDefById(accountId);
-          const foldersTOC = new FoldersTOC({
+          foldersTOC = new FoldersTOC({
             db: this.db,
             accountDef,
             folders,
             dataOverlayManager: this.universe.dataOverlayManager,
           });
           this.accountFoldersTOCs.set(accountId, foldersTOC);
-          return foldersTOC;
-        });
+        }
+        return foldersTOC;
       },
       true
     );
@@ -163,32 +167,26 @@ export class AccountManager {
      */
     this._ensureAccount = prereqify(
       "_accountLoads",
-      accountId => {
-        return this._ensureAccountFoldersTOC(accountId).then(foldersTOC => {
-          const accountDef = this.getAccountDefById(accountId);
-          return accountModules
-            .get(accountDef.type)()
-            .then(accountConstructor => {
-              const stashedConn = this._stashedConnectionsByAccountId.get(
-                accountId
-              );
-              this._stashedConnectionsByAccountId.delete(accountId);
+      async accountId => {
+        const foldersTOC = await this._ensureAccountFoldersTOC(accountId);
+        const accountDef = this.getAccountDefById(accountId);
+        const accountConstructor = await accountModules.get(accountDef.type)();
+        const stashedConn = this._stashedConnectionsByAccountId.get(accountId);
+        this._stashedConnectionsByAccountId.delete(accountId);
 
-              const account = new accountConstructor(
-                this.universe,
-                accountDef,
-                foldersTOC,
-                this.db,
-                stashedConn
-              );
-              this.accounts.set(accountId, account);
-              // If we're online, issue a syncFolderList task.
-              if (this.universe.online) {
-                this.universe.syncFolderList(accountId, "loadAccount");
-              }
-              return account;
-            });
-        });
+        const account = new accountConstructor(
+          this.universe,
+          accountDef,
+          foldersTOC,
+          this.db,
+          stashedConn
+        );
+        this.accounts.set(accountId, account);
+        // If we're online, issue a syncFolderList task.
+        if (this.universe.online) {
+          this.universe.syncFolderList(accountId, "loadAccount");
+        }
+        return account;
       },
       true
     );
@@ -352,7 +350,7 @@ export class AccountManager {
    *   A promise that's resolved onced our pre-reqs have completed loading and
    *   we have announced the existence of the account via the AccountsTOC.
    */
-  _accountAdded(accountDef) {
+  async _accountAdded(accountDef) {
     const { id } = accountDef;
     logic(this, "accountExists", { accountId: id });
 
@@ -365,29 +363,27 @@ export class AccountManager {
 
     this._immediateAccountDefsById.set(id, accountDef);
 
-    const waitFor = [
+    await Promise.all([
       this._ensureTasksLoaded(accountDef.engine),
       this._ensureAccountFoldersTOC(id),
-    ];
+    ]);
 
-    return Promise.all(waitFor).then(() => {
-      // If we have a stashed connection, then immediately instantiate the
-      // account so that we will also issue a syncFolderList call when an
-      // account has just been created.
-      //
-      // Although this does not seem, nor is it, super clean, we really do not
-      // want account_create creating tasks for the freshly created account
-      // until after our promises above have run, so this is arguably an okay
-      // place to do this.  We probably just want to refactor this out into
-      // a more explicit "things to do for freshly created accounts" mechanism.
-      // (Maybe a task "account_created" that's per account so the accounts can
-      // hang everything they want to do off that.
-      if (this._stashedConnectionsByAccountId.has(id)) {
-        this._ensureAccount(id);
-      }
+    // If we have a stashed connection, then immediately instantiate the
+    // account so that we will also issue a syncFolderList call when an
+    // account has just been created.
+    //
+    // Although this does not seem, nor is it, super clean, we really do not
+    // want account_create creating tasks for the freshly created account
+    // until after our promises above have run, so this is arguably an okay
+    // place to do this.  We probably just want to refactor this out into
+    // a more explicit "things to do for freshly created accounts" mechanism.
+    // (Maybe a task "account_created" that's per account so the accounts can
+    // hang everything they want to do off that.
+    if (this._stashedConnectionsByAccountId.has(id)) {
+      this._ensureAccount(id);
+    }
 
-      this.accountsTOC.__addAccount(accountDef);
-    });
+    this.accountsTOC.__addAccount(accountDef);
   }
 
   /**

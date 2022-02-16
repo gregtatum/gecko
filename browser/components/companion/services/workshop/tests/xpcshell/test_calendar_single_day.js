@@ -112,6 +112,8 @@ async function check_single_day_for_account_type({
 
   currentEvents = [...currentEvents, ...eventAfterErrors];
   WorkshopHelper.eventsEqual(calView.items, currentEvents);
+
+  await WorkshopHelper.cleanBackend(workshopAPI);
 }
 
 const oneHour = 60 * 60 * 1000;

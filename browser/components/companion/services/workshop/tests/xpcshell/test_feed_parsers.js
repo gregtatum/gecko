@@ -16,6 +16,7 @@ async function check_parser(parserType, url, sourcePath, expectedJsonPath) {
   expected = JSON.parse(expected);
 
   Assert.deepEqual(expected, feed);
+  await WorkshopHelper.cleanBackend(workshopAPI);
 }
 
 add_task(async function test_check_rss_parser() {

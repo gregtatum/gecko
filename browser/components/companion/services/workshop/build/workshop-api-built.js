@@ -3889,6 +3889,11 @@ var MailAPI = class extends import_evt14.Emitter {
       url
     });
   }
+  TEST_getDBCounts() {
+    return this._sendPromisedRequest({
+      type: "TEST_getDBCounts"
+    });
+  }
   flushNewAggregates() {
     this.__bridgeSend({
       type: "flushNewAggregates"

@@ -195,6 +195,8 @@ These events provide the maximum amount of information possible to the listener.
   convoluted and so false positives seem quite possible and the cost is also
   not entirely trivial.  (Immutable reps would be ideal and maybe a good idea,
   but scope-wise not appropriate at this instant.)
+- `fldr!*!add`: folder add.
+- `fldr!*!remove`: folder remove.
 
 ### Cache events ###
 

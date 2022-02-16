@@ -80,6 +80,8 @@ async function check_links_extracted_from_description({
     .sort(cmp);
 
   deepEqual(calviewLinks, expectedLinks);
+
+  await WorkshopHelper.cleanBackend(workshopAPI);
 }
 
 const GAPI_DESCRIPTION_TEST = [

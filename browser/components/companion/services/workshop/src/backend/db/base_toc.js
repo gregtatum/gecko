@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { toArray } from "backend/utils/tools";
 import { Emitter } from "evt";
 import logic from "logic";
 import { RefedResource } from "../refed_resource";
@@ -27,12 +28,17 @@ import { RefedResource } from "../refed_resource";
  * (Most of the code was also subtly different for each TOC up to this point.)
  */
 export class BaseTOC extends Emitter {
+  /**
+   * @param {Array<Array<function>|Map<function>>} metaHelpers
+   * @param {Array<Array<function>|Map<function>>} refreshHelpers
+   * @param {function} onForgotten
+   */
   constructor({ metaHelpers = [], refreshHelpers = [], onForgotten }) {
     super();
     RefedResource.call(this, onForgotten);
 
-    this._metaHelpers = metaHelpers;
-    this._refreshHelpers = refreshHelpers;
+    this.metaHelpers = metaHelpers;
+    this.refreshHelpers = refreshHelpers;
 
     this.tocMeta = {};
     this._everActivated = false;
@@ -59,7 +65,7 @@ export class BaseTOC extends Emitter {
 
   __activate() {
     this._everActivated = true;
-    for (const metaHelper of this._metaHelpers) {
+    for (const metaHelper of toArray(this.metaHelpers)) {
       logic(this, "activatingMetaHelper", {
         name: metaHelper.constructor && metaHelper.constructor.name,
       });
@@ -71,7 +77,7 @@ export class BaseTOC extends Emitter {
 
   __deactivate() {
     if (this._everActivated) {
-      for (const metaHelper of this._metaHelpers) {
+      for (const metaHelper of toArray(this.metaHelpers)) {
         metaHelper.deactivate(this);
       }
     }
@@ -119,7 +125,7 @@ export class BaseTOC extends Emitter {
    * reject.  (Promise.all semantics for now unless we need to change it.)
    */
   refresh(why) {
-    const refreshPromises = this._refreshHelpers.map(x => x(why));
+    const refreshPromises = toArray(this.refreshHelpers).map(x => x(why));
     return Promise.all(refreshPromises);
   }
 }

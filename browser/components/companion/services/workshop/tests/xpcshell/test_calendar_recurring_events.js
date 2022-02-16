@@ -123,6 +123,8 @@ async function check_recurring_events_for_account_type({
 
     await getAndCompare(workshopAPI, calFolder, expectedCounts, rounds + 3);
   }
+
+  await WorkshopHelper.cleanBackend(workshopAPI);
 }
 
 const today = new Date(DEFAULT_FAKE_NOW_TS).toISOString().split("T")[0];

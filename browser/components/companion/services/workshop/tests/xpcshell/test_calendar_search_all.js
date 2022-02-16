@@ -38,6 +38,7 @@ async function check_searchAllMessages_with_accounts({
   accountConfigs,
   initialEventSketches,
   addEventSketches,
+  secondCalEventSketches,
 }) {
   // XXX Currently this marks the events as having the WorkshopHelperClass.user
   // as both the `creator` and `organizer` but this is conceptually a little
@@ -51,6 +52,10 @@ async function check_searchAllMessages_with_accounts({
   // (These will get scheduled sequentially after the ones above.)
   const addEvents = WorkshopHelper.deriveFullEvents({
     eventSketches: addEventSketches,
+  });
+
+  const secondCalEvents = WorkshopHelper.deriveFullEvents({
+    eventSketches: secondCalEventSketches,
   });
 
   let totalCalendarCount = 0;
@@ -135,7 +140,70 @@ async function check_searchAllMessages_with_accounts({
   }
   await workshopAPI.refreshAllMessages(spec);
 
-  WorkshopHelper.eventsEqual(calView.items, [...initialEvents, ...addEvents]);
+  const currentEvents = [...initialEvents, ...addEvents];
+  WorkshopHelper.eventsEqual(calView.items, currentEvents);
+
+  // Get the db stats in order to compare its state with after adding & removing
+  // a folder.
+  const baseStats = await workshopAPI.TEST_getDBCounts();
+  ok(
+    baseStats.folderInfo === 4,
+    "We must have 4 folders: the 2 defined here and" +
+      "the 2 fake ones for the account summary"
+  );
+
+  // Add a new calendar.
+  for (const fakeServer of allFakeServers) {
+    // Only gapi supports selected/unselected calendar.
+    if (fakeServer.domainInfo.type !== "gapi") {
+      continue;
+    }
+
+    fakeServer.secondCalendar = fakeServer.populateCalendar({
+      id: "second",
+      name: "What a Calendar",
+      events: secondCalEvents,
+      calendarOwner: "What an owner",
+    });
+  }
+
+  await Promise.all(
+    workshopAPI.accounts.items.map(acct => acct.syncFolderList())
+  );
+
+  let stats = await workshopAPI.TEST_getDBCounts();
+  ok(stats.folderInfo === 5, "We must have 5 folders");
+
+  await workshopAPI.refreshAllMessages(spec);
+  WorkshopHelper.eventsEqual(calView.items, [
+    ...currentEvents,
+    ...secondCalEvents,
+  ]);
+
+  // Unselected the newly added folder.
+  for (const fakeServer of allFakeServers) {
+    if (fakeServer.domainInfo.type !== "gapi") {
+      continue;
+    }
+    fakeServer.secondCalendar.selected = false;
+  }
+
+  await Promise.all(
+    workshopAPI.accounts.items.map(acct => acct.syncFolderList())
+  );
+
+  // The folder has been removed from the db so the db must be in the exact
+  // same state as before.
+  stats = await workshopAPI.TEST_getDBCounts();
+  deepEqual(
+    stats,
+    baseStats,
+    "A folder deletion must bring back the db in the same state as before"
+  );
+
+  // Newly added events have been removed, so check that everything is fine.
+  await workshopAPI.refreshAllMessages(spec);
+  WorkshopHelper.eventsEqual(calView.items, currentEvents);
 
   // ## Cleanup
   // ### Delete the accounts.
@@ -153,6 +221,8 @@ async function check_searchAllMessages_with_accounts({
   deepEqual(workshopAPI.accounts.items, [], "no more accounts after deletion!");
 
   // TODO: This is where we'd decomission the fake-servers and/or their users.
+
+  await WorkshopHelper.cleanBackend(workshopAPI);
 }
 
 const INITIAL_EVENTS = [
@@ -182,6 +252,15 @@ const ADD_EVENTS = [
   },
 ];
 
+const EXTRA_GAPI_EVENTS = [
+  {
+    summary: "Ace dale oval",
+  },
+  {
+    summary: "An original maths nut",
+  },
+];
+
 add_task(async function test_all_types_single_calendar() {
   await check_searchAllMessages_with_accounts({
     accountConfigs: [
@@ -196,5 +275,6 @@ add_task(async function test_all_types_single_calendar() {
     ],
     initialEventSketches: INITIAL_EVENTS,
     addEventSketches: ADD_EVENTS,
+    secondCalEventSketches: EXTRA_GAPI_EVENTS,
   });
 });

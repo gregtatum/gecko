@@ -65,6 +65,11 @@ export default function FilteringAccountMessagesQuery({
   });
 
   this._bound_filteringTOCChange = this._filteringTOCChange.bind(this);
+
+  this._bound_onFolderRemove = this.onFolderRemove.bind(this);
+  this._db.on("fldr!*!remove", this._bound_onFolderRemove);
+  this._bound_onFolderAdd = this.onFolderAdd.bind(this);
+  this._db.on("fldr!*!add", this._bound_onFolderAdd);
 }
 FilteringAccountMessagesQuery.prototype = {
   /**
@@ -119,6 +124,47 @@ FilteringAccountMessagesQuery.prototype = {
     this._drainEvents = null;
   },
 
+  onFolderRemove(folderId) {
+    let idx = this.folderIds.indexOf(folderId);
+    if (idx !== -1) {
+      this.folderIds.splice(idx, 1);
+    }
+
+    const eventId = this._db.messageEventForFolderId(folderId);
+    idx = this._eventId.indexOf(eventId);
+    if (idx !== -1) {
+      this._eventId.splice(idx, 1);
+      this._db.removeListener(eventId, this._bound_filteringTOCChange);
+    }
+  },
+
+  async onFolderAdd(folderId) {
+    const idx = this.folderIds.indexOf(folderId);
+    if (idx === -1) {
+      this.folderIds.push(folderId);
+      const {
+        idsWithDates,
+        drainEvents,
+        eventId,
+      } = await this._db.loadFolderMessageIdsAndListen(folderId);
+
+      drainEvents(this._bound_filteringTOCChange);
+      this._eventId.push(eventId);
+      this._db.on(eventId, this._bound_filteringTOCChange);
+
+      for (const { id, date } of idsWithDates) {
+        this._filteringStream.consider({
+          id,
+          preDate: null,
+          postDate: date,
+          item: null,
+          freshlyAdded: true,
+          matchInfo: null,
+        });
+      }
+    }
+  },
+
   /**
    * Events from the database about the folder we're filtering on.  We cram
    * these into the filtering stream.
@@ -135,5 +181,7 @@ FilteringAccountMessagesQuery.prototype = {
       this._db.removeListener(eventId, this._bound_filteringTOCChange);
     }
     this._filteringStream.destroy();
+    this._db.removeListener("fldr!*!remove", this._bound_onFolderRemove);
+    this._db.removeListener("fldr!*!add", this._bound_onFolderAdd);
   },
 };

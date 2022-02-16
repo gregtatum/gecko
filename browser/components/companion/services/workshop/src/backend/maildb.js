@@ -20,7 +20,7 @@ import logic from "logic";
 import {
   accountIdFromFolderId,
   convIdFromMessageId,
-  getAccountIdBounds,
+  getIdBounds,
   messageIdComponentFromMessageId,
 } from "shared/id_conversions";
 
@@ -407,8 +407,6 @@ function valueIterator(arrayOrMap) {
 
 const convEventForFolderId = folderId =>
   "fldr!" + folderId + "!convs!tocChange";
-const messageEventForFolderId = folderId =>
-  "fldr!" + folderId + "!messages!tocChange";
 
 /**
  * Wrap a (read) request into a
@@ -635,6 +633,10 @@ export class MailDB extends Emitter {
     });
   }
 
+  messageEventForFolderId(folderId) {
+    return `fldr!${folderId}!messages!tocChange`;
+  }
+
   emit(eventName) {
     const listenerCount = this._events[eventName]?.length || 0;
     logic(this, "emit", { name: eventName, listenerCount });
@@ -680,6 +682,25 @@ export class MailDB extends Emitter {
     db.createObjectStore(TBL_UMID_NAME);
     db.createObjectStore(TBL_UMID_LOCATION);
     db.createObjectStore(TBL_BOUNDED_LOGS);
+  }
+
+  async getDBCounts(id) {
+    const trans = this._db.transaction(TASK_MUTATION_STORES, "readonly");
+    const promises = [];
+    const range = id
+      ? IDBKeyRange.bound([id], [id, []], true, true)
+      : undefined;
+    for (const storeName of TASK_MUTATION_STORES) {
+      const store = trans.objectStore(storeName);
+      promises.push(wrapReq(store.count(range)));
+    }
+    const counts = await Promise.all(promises);
+    const results = Object.create(null);
+    for (let i = 0; i < TASK_MUTATION_STORES.length; i++) {
+      results[TASK_MUTATION_STORES[i]] = counts[i];
+    }
+
+    return results;
   }
 
   close() {
@@ -1065,6 +1086,32 @@ export class MailDB extends Emitter {
           this.convCache
         );
       }
+
+      if (requests.messageKeysByFolder) {
+        const messageKeysStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
+        const requestsMap = requests.messageKeysByFolder;
+
+        for (const folderId of requestsMap.keys()) {
+          const messageKeysRange = IDBKeyRange.bound(
+            [folderId],
+            [folderId, []],
+            true,
+            true
+          );
+          dbReqCount++;
+          const req = messageKeysStore.getAll(messageKeysRange);
+          const handler = event => {
+            if (req.error) {
+              analyzeAndLogErrorEvent(event);
+            } else {
+              requestsMap.set(folderId, req.result);
+            }
+          };
+          req.onsuccess = handler;
+          req.onerror = handler;
+        }
+      }
+
       // messagesByConversation requires special logic and can't use the helpers
       if (requests.messagesByConversation) {
         const messageStore = trans.objectStore(TBL_MESSAGES);
@@ -1292,7 +1339,7 @@ export class MailDB extends Emitter {
   loadFoldersByAccount(accountId) {
     const trans = this._db.transaction(TBL_FOLDER_INFO, "readonly");
     const store = trans.objectStore(TBL_FOLDER_INFO);
-    const accountIdBounds = getAccountIdBounds(accountId);
+    const accountIdBounds = getIdBounds(accountId);
     const accountStringPrefix = IDBKeyRange.bound(
       accountIdBounds.lower,
       accountIdBounds.upper,
@@ -1510,7 +1557,7 @@ export class MailDB extends Emitter {
   }
 
   async loadFolderMessageIdsAndListen(folderId) {
-    const eventId = "fldr!" + folderId + "!messages!tocChange";
+    const eventId = this.messageEventForFolderId(folderId);
     const retval = this._bufferChangeEventsIdiom(eventId);
 
     const trans = this._db.transaction(TBL_MSG_IDS_BY_FOLDER, "readonly");
@@ -1590,7 +1637,7 @@ export class MailDB extends Emitter {
       this.emit(convTocEventId, eventDeltaInfo);
       // emit in all its folders as well
       for (const folderId of message.folderIds) {
-        this.emit(messageEventForFolderId(folderId), eventDeltaInfo);
+        this.emit(this.messageEventForFolderId(folderId), eventDeltaInfo);
 
         // TODO: As covered elsewhere, we want to remove the redundant value
         // if possible, although if we end up storing more data in the value,
@@ -1661,7 +1708,7 @@ export class MailDB extends Emitter {
       this.emit(messageEventId, messageId, message);
 
       for (const folderId of added) {
-        this.emit(messageEventForFolderId(folderId), {
+        this.emit(this.messageEventForFolderId(folderId), {
           id: messageId,
           preDate,
           postDate,
@@ -1671,7 +1718,7 @@ export class MailDB extends Emitter {
         });
       }
       for (const folderId of kept) {
-        this.emit(messageEventForFolderId(folderId), {
+        this.emit(this.messageEventForFolderId(folderId), {
           id: messageId,
           preDate,
           postDate,
@@ -1681,7 +1728,7 @@ export class MailDB extends Emitter {
         });
       }
       for (const folderId of removed) {
-        this.emit(messageEventForFolderId(folderId), {
+        this.emit(this.messageEventForFolderId(folderId), {
           id: messageId,
           preDate,
           postDate,
@@ -1733,6 +1780,59 @@ export class MailDB extends Emitter {
           );
         }
       }
+    }
+  }
+
+  /**
+   * Message key as it's contained in TBL_MSG_IDS_BY_FOLDER store.
+   * @typedef MessageKey
+   * @type {Array}
+   * @property {string} 0 - Folder id.
+   * @property {number} 1 - Date timestamp.
+   * @property {string} 2 - Message id.
+   */
+
+  /**
+   * Emit events for message removal.
+   * @param {Array<MessageKey>} - message keys.
+   */
+  _emitEventsBeforeMessageDeletions(messageKeys) {
+    if (!messageKeys) {
+      return;
+    }
+
+    const { messageCache } = this;
+
+    for (const messageKey of messageKeys) {
+      const [folderId, preDate, messageId] = messageKey;
+      const convId = convIdFromMessageId(messageId);
+      const postDate = 0;
+
+      messageCache.delete(messageId);
+
+      const convEventId = `conv!${convId}!messages!tocChange`;
+      this.emit(convEventId, {
+        id: messageId,
+        preDate,
+        postDate,
+        item: null,
+        freshlyAdded: false,
+        matchInfo: null,
+      });
+
+      const messageEventId = `msg!${messageId}!change`;
+      this.emit(messageEventId, messageId, null);
+      this.emit(this.messageEventForFolderId(folderId), {
+        id: messageId,
+        preDate,
+        postDate,
+        item: null,
+        freshlyAdded: false,
+        matchInfo: null,
+      });
+
+      this.emit(`msg!${messageId}!remove`, messageId);
+      this.emit("msg!*!remove", messageId);
     }
   }
 
@@ -1830,7 +1930,7 @@ export class MailDB extends Emitter {
   }
 
   _processAccountDeletion(trans, accountId) {
-    const accountIdBounds = getAccountIdBounds(accountId);
+    const accountIdBounds = getIdBounds(accountId);
     const accountStringPrefix = IDBKeyRange.bound(
       accountIdBounds.lower,
       accountIdBounds.upper,
@@ -1892,6 +1992,62 @@ export class MailDB extends Emitter {
     trans.objectStore(TBL_HEADER_ID_MAP).delete(accountFirstElementArray);
     trans.objectStore(TBL_UMID_LOCATION).delete(accountStringPrefix);
     trans.objectStore(TBL_UMID_NAME).delete(accountStringPrefix);
+  }
+
+  _processFolderDeletion(trans, folderId) {
+    const idBounds = getIdBounds(folderId);
+    const stringPrefix = IDBKeyRange.bound(
+      idBounds.lower,
+      idBounds.upper,
+      true,
+      true
+    );
+    // A key range where the key is an array and the first item is a string that
+    // is a namespaced-suffix of the accountId.  For example, FolderId and
+    // ConversationId and MessageId are all suffixes.  If the first item is
+    // *only* the accountId,
+    const arrayItemPrefix = IDBKeyRange.bound(
+      [idBounds.lower],
+      [idBounds.upper],
+      true,
+      true
+    );
+    // A key range where the key is an array and the first item is the
+    // AccountId.
+    const firstElementArray = IDBKeyRange.bound(
+      [folderId],
+      // We use an array as the second element since arrays are greater than
+      // all other key values.  We do this instead of suffixing the (variable
+      // length) AccountId because although this way is slightly more magic,
+      // I believe it's significantly easier to intuitively understand as
+      // correct.  If only because everyone should be innately terrified of
+      // string comparisons and unicode.  (It does, however forbid any of our
+      // data types from using nested arrays as the second element.  This is
+      // currently the case.)
+      [folderId, []],
+      true,
+      true
+    );
+
+    // Sync state: delete the accountId and any delimited suffixes
+    trans.objectStore(TBL_SYNC_STATES).delete(folderId);
+    trans.objectStore(TBL_SYNC_STATES).delete(stringPrefix);
+
+    trans.objectStore(TBL_COMPLEX_TASKS).delete(firstElementArray);
+
+    // Folders: Just delete by accountId
+    trans.objectStore(TBL_FOLDER_INFO).delete(folderId);
+
+    // Conversation: string ordering unicode tricks
+    trans.objectStore(TBL_CONV_INFO).delete(stringPrefix);
+    trans.objectStore(TBL_CONV_IDS_BY_FOLDER).delete(firstElementArray);
+
+    // Messages: string ordering unicode tricks
+    trans.objectStore(TBL_MESSAGES).delete(arrayItemPrefix);
+    trans.objectStore(TBL_MSG_IDS_BY_FOLDER).delete(firstElementArray);
+
+    trans.objectStore(TBL_UMID_LOCATION).delete(stringPrefix);
+    trans.objectStore(TBL_UMID_NAME).delete(stringPrefix);
   }
 
   _addRawTasks(trans, wrappedTasks) {
@@ -1972,6 +2128,7 @@ export class MailDB extends Emitter {
             folderInfo,
             true
           );
+          this.emit("fldr!*!add", folderInfo.id);
         }
       }
       if (newData.conversations) {
@@ -2053,6 +2210,7 @@ export class MailDB extends Emitter {
       }
     }
 
+    const deletedFolderIds = [];
     if (mutations.folders) {
       const store = trans.objectStore(TBL_FOLDER_INFO);
       for (const [folderId, folderInfo] of mutations.folders) {
@@ -2060,7 +2218,13 @@ export class MailDB extends Emitter {
         if (folderInfo !== null) {
           store.put(folderInfo, folderId);
         } else {
-          store.delete(folderId);
+          // - Folder Deletion!
+          logic(this, "Folder deletion", { folderId });
+          this._processFolderDeletion(trans, folderId);
+          deletedFolderIds.push(folderId);
+
+          // Don't emit folder removal here because potentially we still have
+          // some events to trigger (see deletedFolderMessages below).
         }
         this.emit(`fldr!${folderId}!change`, folderId, folderInfo);
         this.emit(
@@ -2070,6 +2234,16 @@ export class MailDB extends Emitter {
           false
         );
       }
+    }
+
+    if (mutations.deletedFolderMessages) {
+      this._emitEventsBeforeMessageDeletions(mutations.deletedFolderMessages);
+    }
+
+    // Now we triggered events for messages deletion, we can finally trigger
+    // ones for folder deletion.
+    for (const folderId of deletedFolderIds) {
+      this.emit("fldr!*!remove", folderId);
     }
 
     if (mutations.accounts) {

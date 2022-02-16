@@ -83,6 +83,8 @@ async function check_token_revocation_for_account_type({
 
   problems = account.problems;
   ok(!problems, "No more problems");
+
+  await WorkshopHelper.cleanBackend(workshopAPI);
 }
 
 const INITIAL_EVENTS = [

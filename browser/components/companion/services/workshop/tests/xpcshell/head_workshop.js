@@ -323,6 +323,19 @@ class WorkshopHelperClass {
 
     return workshopAPI;
   }
+
+  async cleanBackend(workshopAPI) {
+    for (const account of workshopAPI.accounts.items) {
+      await account.deleteAccount();
+    }
+    const stats = await workshopAPI.TEST_getDBCounts();
+    for (const [key, value] of Object.entries(stats)) {
+      if (key === "config") {
+        continue;
+      }
+      ok(value === 0, `From db: count for ${key} must be zero!`);
+    }
+  }
 }
 
 class GapiConfiguratorHelperClass {

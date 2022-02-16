@@ -81,6 +81,8 @@ async function check_feed_account({
     item.summary = item.subject;
   }
   WorkshopHelper.eventsEqual(feedView.items, [...initialEvents, ...addEvents]);
+
+  await WorkshopHelper.cleanBackend(workshopAPI);
 }
 
 const INITIAL_EVENTS = [

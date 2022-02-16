@@ -49,6 +49,7 @@ class FakeCalendar {
     this.calendarOwner = calendarOwner;
     this.serial = 0;
     this.isMapi = isMapi;
+    this.selected = true;
   }
 
   /**
@@ -631,7 +632,7 @@ class GapiFakeServer extends BaseFakeServer {
         kind: "calendar#calendar",
         // TODO: add the timeZone here for fidelity purposes, etc.
         // Currently all known calendars will be of interest for sync purposes.
-        selected: true,
+        selected: cal.selected,
       };
     });
   }

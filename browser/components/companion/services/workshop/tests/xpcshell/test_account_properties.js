@@ -48,6 +48,8 @@ async function check_unread_message_count({
   );
 
   equal(inboxSummaryFolder.webLink, expectedWebLink, "webLink is correct");
+
+  await WorkshopHelper.cleanBackend(workshopAPI);
 }
 
 add_task(async function test_gapi_unread_message_count() {
