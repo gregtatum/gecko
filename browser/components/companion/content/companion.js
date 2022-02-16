@@ -116,14 +116,7 @@ function maybeInitializeUI() {
 
   initSessionUI();
 
-  // When "browser.startup.launchOnOSLogin" is true, pinebuildBackground() will
-  // initialize itself and our notification implementation, so we can rely on
-  // that. However, if it's not enabled, we need to initialize notifications here.
-  if (
-    !window.CompanionUtils.getBoolPref("browser.startup.launchOnOSLogin", false)
-  ) {
-    initNotifications();
-  }
+  initNotifications();
 
   // This is used for tests to ensure that the various components have initialized.
   // If your component has delayed initialization, then you will want to add something

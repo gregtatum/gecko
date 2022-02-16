@@ -4,7 +4,7 @@
 
 "use strict";
 
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+var { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
@@ -12,26 +12,14 @@ export const timeFormat = new Intl.DateTimeFormat([], {
 
 let notificationTimers = new Set();
 
-async function isActiveWindow() {
-  if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
-    let result = await window.CompanionUtils.sendQuery(
-      "Companion:IsActiveWindow"
-    );
-    return result;
-  }
-  return !!Services.focus.activeWindow;
-}
-
 async function showNotification(event) {
-  let notificationLevel = Services.prefs.getIntPref(
+  let notificationLevel = window.CompanionUtils.getIntPref(
     "browser.pinebuild.companion.notifications.level"
   );
-  // Show notifications if always enabled (1) or conditionally enabled (2)
-  // and we have no active windows.
-  if (
-    notificationLevel == 0 ||
-    (notificationLevel == 2 && (await isActiveWindow()))
-  ) {
+  let isActiveWindow = await window.CompanionUtils.sendQuery(
+    "Companion:IsActiveWindow"
+  );
+  if (notificationLevel == 0 || (notificationLevel == 2 && isActiveWindow)) {
     return;
   }
 
@@ -46,34 +34,26 @@ async function showNotification(event) {
     icon: "chrome://branding/content/icon64.png",
     tag: event.id,
   });
-  notification.onclick = function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
-      window.CompanionUtils.openCompanion();
-    } else {
-      let browserWindow = Services.wm.getMostRecentWindow("navigator:browser");
-      if (browserWindow) {
-        browserWindow.focus();
-      } else {
-        const { openBrowserWindow } = ChromeUtils.import(
-          "resource:///modules/BrowserContentHandler.jsm"
-        );
-        openBrowserWindow();
-      }
-    }
+  notification.onclick = function() {
+    window.CompanionUtils.openCompanion();
   };
 }
 
-function processEvents(events) {
+function processEvents(e) {
+  if (e.type != "refresh-events") {
+    return;
+  }
   for (let timer of notificationTimers) {
     clearTimeout(timer);
   }
   notificationTimers = new Set();
+  let events;
   if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
     /* Add workshop support here */
+  } else {
+    events = e.detail.events;
   }
-  let notificationTimeout = Services.prefs.getIntPref(
+  let notificationTimeout = window.CompanionUtils.getIntPref(
     "browser.pinebuild.companion.notifications.minutesBeforeEvent"
   );
   for (let event of events) {
@@ -92,16 +72,10 @@ function processEvents(events) {
 }
 
 export function initNotifications() {
-  if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
-    document.addEventListener("refresh-events", function(e) {
-      processEvents(e.detail.events);
-    });
-  } else {
-    Services.obs.addObserver(function observe(subject) {
-      let events = subject.wrappedJSObject;
-      processEvents(events);
-    }, "companion-services-refresh");
-  }
+  // Getting refresh-events events from calendar.js
+  document.addEventListener("refresh-events", processEvents);
 }
 
-export function uninitNotifications() {}
+export function uninitNotifications() {
+  document.removeEventListener("refresh-events", processEvents);
+}
