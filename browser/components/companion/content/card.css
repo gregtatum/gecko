@@ -45,7 +45,8 @@
 }
 
 .subtitle {
-  white-space: nowrap;
+  display: flex;
+  gap: 5px;
 }
 
 .title {
@@ -121,9 +122,9 @@
   background: var(--light-bg-color) no-repeat center url("chrome://global/skin/icons/more.svg");
 }
 
-.card:is(:hover, :focus-within) .options-button,
+.snapshot.card:is(:hover, :focus-within):not(.prevent-hover-panel) .options-button,
 .popupshowing .options-button,
-.card:is(:hover, :focus-within) .contents::before,
+.snapshot.card:is(:hover, :focus-within):not(.prevent-hover-panel) .contents::before,
 .popupshowing .contents::before {
   display: block;
 }

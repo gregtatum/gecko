@@ -12,7 +12,7 @@ export class BrowseList extends HTMLElement {
 
     this.addEventListener("click", this);
 
-    document.querySelectorAll("[data-tab=browse]").forEach(el => {
+    document.querySelectorAll("[data-tab]").forEach(el => {
       el.addEventListener("click", this);
     });
   }

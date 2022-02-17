@@ -182,7 +182,6 @@ a {
 .favicon {
   height: 16px;
   width: 16px;
-  padding-right: 5px;
 }
 
 #email {
@@ -512,6 +511,20 @@ toolbarbutton.subviewbutton-back:hover:active,
   background-image: url(chrome://global/skin/icons/arrow-left.svg);
 }
 
+.browse button.groups {
+  background-image: url("chrome://global/skin/icons/defaultFavicon.svg");
+}
+
+.browse button.snapshot-groups {
+  background-image: url("snapshot-groups.svg");
+}
+
+@supports not -moz-bool-pref("browser.companion.snapshot-groups.enabled") {
+  .browse button.snapshot-groups {
+    display: none;
+  }
+}
+
 .browse button.sessions {
   background-image: url("sessions.svg");
 }
@@ -646,4 +659,31 @@ header h2 {
 
 #companion-deck-button-browse {
   border-start-end-radius: 16px;
+}
+
+#snapshot-groups-detail .details {
+  text-align: center;
+}
+
+#snapshot-groups-detail .details h2 {
+  font-weight: 600;
+  margin-block-end: 0;
+}
+
+#snapshot-groups-detail .details h3 {
+  border-bottom: 1px solid #CFCFD8;
+  font-weight: normal;
+  padding-block-end: 1em;
+  margin: 1em;
+  margin-block-start: 0;
+}
+
+#snapshot-groups-detail .details img {
+  background: center center no-repeat url(chrome://global/skin/icons/defaultFavicon.svg);
+  background-color: #F9F9FB;
+  border: 0.5px solid #AFAFBA;
+  border-radius: 12px;
+  width: 124px;
+  height: 124px;
+  object-fit: cover;
 }

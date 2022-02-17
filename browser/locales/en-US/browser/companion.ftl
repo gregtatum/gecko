@@ -144,13 +144,14 @@ snapshot-not-relevant = Not relevant
 snapshot-options =
   .aria-label = Options
 
-## The names of sections in the Browse tab of the companion.
-
+# The names of sections in the Browse tab of the companion.
+browse-list-snapshot-groups = Snapshot Groups
 browse-list-sessions = Sessions
 browse-list-downloads = Downloads
 
-# Title of the Sessions section.
+# Titles of the browse sections.
 session-section-header = Sessions
+snapshot-group-section-header = Snapshot Groups
 
 # Title of the Download section.
 downloads-section-header = Downloads
@@ -162,3 +163,8 @@ companion-deck-browse = Browse
 # The < back arrow to go back to the root Browse view.
 companion-header-back-button =
     .title = Go back
+
+# Shows the number of snapshots within a group.
+# Variables:
+#   $snapshotCount (Number) - Number of snapshots.
+snapshot-count = { $snapshotCount } Snapshots

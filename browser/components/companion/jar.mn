@@ -54,6 +54,8 @@ browser.jar:
     content/browser/companion/sessions.svg (content/sessions.svg)
     content/browser/companion/siteSecurity.js (content/siteSecurity.js)
     content/browser/companion/snapshots.js (content/snapshots.js)
+    content/browser/companion/snapshot-groups.js (content/snapshot-groups.js)
+    content/browser/companion/snapshot-groups.svg (content/snapshot-groups.svg)
     content/browser/companion/next.svg (content/next.svg)
     content/browser/companion/gotomeeting.png (content/gotomeeting.png)
     content/browser/companion/jitsi.png (content/jitsi.png)

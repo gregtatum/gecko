@@ -7,6 +7,10 @@ import { CalendarEventList } from "./calendar.js";
 import { BrowseList } from "./browse.js";
 import { MediaList } from "./media.js";
 import { FullSessionList, LastSessionList, initSessionUI } from "./sessions.js";
+import {
+  SnapshotGroupList,
+  SnapshotGroupListDetail,
+} from "./snapshot-groups.js";
 import { ServicesOnboarding } from "./onboarding-services.js";
 import {
   SuggestedSnapshotList,
@@ -64,6 +68,16 @@ function maybeInitializeUI() {
 
   let sessionContent = document.querySelector("#sessions .content");
   sessionContent.appendChild(new FullSessionList());
+
+  let snapshotGroupsContent = document.querySelector(
+    "#snapshot-groups .content"
+  );
+  snapshotGroupsContent.appendChild(new SnapshotGroupList());
+
+  let snapshotGroupsDetailContent = document.querySelector(
+    "#snapshot-groups-detail .content"
+  );
+  snapshotGroupsDetailContent.appendChild(new SnapshotGroupListDetail());
 
   if (
     Services.prefs.getBoolPref("browser.companion.passwords.enabled", false)

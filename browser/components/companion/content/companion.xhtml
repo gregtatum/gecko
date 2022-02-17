@@ -141,15 +141,25 @@
     <div class="snapshots-panel"/>
   </template>
 
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-snapshot-list-details">
+    <section class="details">
+      <img/>
+      <h2></h2>
+      <h3></h3>
+    </section>
+    <div id="snapshot-list"></div>
+  </template>
+
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-snapshot">
     <div class="card-content-wrapper">
-      <a class="snapshot-contents contents" href="#">
+      <a class="snapshot-contents contents">
         <div class="card-image">
-          <img class="favicon"/>
+          <img class="favicon" hidden="hidden"/>
         </div>
         <div class="info">
           <span class="title"/>
           <div class="subtitle">
+            <img class="inline-favicon favicon" hidden="hidden"/>
             <span class="snapshot-sitetitle sub"/>
             <span class="info-divider sub"/>
             <span class="snapshot-date sub"/>
@@ -198,6 +208,7 @@
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-browse-list">
     <div class="browse">
+      <button class="snapshot-groups" data-l10n-id="browse-list-snapshot-groups" data-action="viewtab" data-tab="snapshot-groups"></button>
       <button class="sessions" data-l10n-id="browse-list-sessions" data-action="viewtab" data-tab="sessions"></button>
       <button class="downloads" data-l10n-id="browse-list-downloads" data-action="viewtab" data-tab="downloads" hidden="true"></button>
       <button class="passwords" hidden="true">Passwords</button>
@@ -268,6 +279,19 @@
         <div class="content">
           <xul:browser id="companion-downloads-browser" type="content" src="about:downloads"></xul:browser>
         </div>
+      </div>
+      <div xmlns="http://www.w3.org/1999/xhtml" id="snapshot-groups" name="snapshot-groups">
+        <header>
+          <button class="back" data-action="viewtab" data-tab="browse"></button>
+          <h2 data-l10n-id="snapshot-group-section-header"></h2>
+        </header>
+        <div class="content"></div>
+      </div>
+      <div xmlns="http://www.w3.org/1999/xhtml" id="snapshot-groups-detail" name="snapshot-groups-detail">
+        <header>
+          <button class="back" data-action="viewtab" data-tab="snapshot-groups"></button>
+        </header>
+        <div class="content"></div>
       </div>
     </html:named-deck>
   </div>

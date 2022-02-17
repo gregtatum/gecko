@@ -21,6 +21,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   requestIdleCallback: "resource://gre/modules/Timer.jsm",
   SessionManager: "resource:///modules/SessionManager.jsm",
+  SnapshotGroups: "resource:///modules/SnapshotGroups.jsm",
   Services: "resource://gre/modules/Services.jsm",
   setTimeout: "resource://gre/modules/Timer.jsm",
   Snapshots: "resource:///modules/Snapshots.jsm",
@@ -112,6 +113,9 @@ class CompanionParent extends JSWindowActorParent {
     Services.obs.addObserver(this._observer, "oauth-refresh-token-received");
     Services.obs.addObserver(this._observer, "oauth-access-token-received");
     Services.obs.addObserver(this._observer, "oauth-access-token-error");
+    Services.obs.addObserver(this._observer, "places-snapshot-group-added");
+    Services.obs.addObserver(this._observer, "places-snapshot-group-updated");
+    Services.obs.addObserver(this._observer, "places-snapshot-group-deleted");
 
     Services.prefs.addObserver(
       "browser.companion.globalhistorydebugging",
@@ -209,6 +213,15 @@ class CompanionParent extends JSWindowActorParent {
     Services.obs.removeObserver(this._observer, "oauth-refresh-token-received");
     Services.obs.removeObserver(this._observer, "oauth-access-token-received");
     Services.obs.removeObserver(this._observer, "oauth-access-token-error");
+    Services.obs.removeObserver(this._observer, "places-snapshot-group-added");
+    Services.obs.removeObserver(
+      this._observer,
+      "places-snapshot-group-updated"
+    );
+    Services.obs.removeObserver(
+      this._observer,
+      "places-snapshot-group-deleted"
+    );
 
     Services.prefs.removeObserver(
       "browser.companion.globalhistorydebugging",
@@ -400,6 +413,27 @@ class CompanionParent extends JSWindowActorParent {
     }
   }
 
+  async getSnapshotGroups() {
+    let groups = await SnapshotGroups.query({ includeMetadata: true });
+
+    // TODO: filed https://mozilla-hub.atlassian.net/browse/MR2-1869 to remove when
+    // dependency is fulfilled.
+    for (let group of groups) {
+      let firstResult = await SnapshotGroups.getSnapshots({
+        id: group.id,
+        count: 1,
+      });
+      group.url = firstResult[0].url;
+      group.image = firstResult[0].image;
+    }
+    this.sendAsyncMessage("Companion:SnapshotGroupsData", groups);
+  }
+
+  async getSnapshotGroupData(message) {
+    let result = await SnapshotGroups.getSnapshots({ id: message.data.id });
+    this.sendAsyncMessage("Companion:SnapshotGroupsDetails", result);
+  }
+
   getFavicons(pages) {
     if (this._destroyed) {
       return [];
@@ -584,6 +618,14 @@ class CompanionParent extends JSWindowActorParent {
           service: data,
         });
         break;
+      case "places-snapshot-group-added":
+      case "places-snapshot-group-updated":
+      case "places-snapshot-group-deleted":
+        this.sendAsyncMessage("Companion:SnapshotGroupsChanged", {
+          topic,
+          service: data,
+        });
+        break;
     }
   }
 
@@ -753,6 +795,14 @@ class CompanionParent extends JSWindowActorParent {
       }
       case "Companion:DeleteSnapshot": {
         await this._onDeleteSnapshot(message);
+        break;
+      }
+      case "Companion:FetchSnapshotGroups": {
+        this.getSnapshotGroups().catch(console.error);
+        break;
+      }
+      case "Companion:FetchSnapshotGroupDetails": {
+        this.getSnapshotGroupData(message).catch(console.error);
         break;
       }
       case "Companion:RestoreSession": {

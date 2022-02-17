@@ -48,7 +48,7 @@ class HidableElement extends HTMLElement {
 }
 
 export class Snapshot extends HTMLElement {
-  constructor(data, preview) {
+  constructor(data) {
     super();
     this.data = data;
     this.className = "snapshot card";
@@ -56,35 +56,42 @@ export class Snapshot extends HTMLElement {
     let template = document.getElementById("template-snapshot");
     let fragment = template.content.cloneNode(true);
 
-    let url = new URL(this.data.url);
     let titleEl = fragment.querySelector(".title");
-    titleEl.textContent = this.data.title || url.href;
+    titleEl.textContent = this.data.title;
 
     let siteTitleEl = fragment.querySelector(".snapshot-sitetitle");
-    siteTitleEl.textContent = this.data.commonName;
+    siteTitleEl.textContent = this.data.commonName || this.data.subTitle;
 
     let dateEl = fragment.querySelector(".snapshot-date");
     dateEl.textContent = timeSince(this.data.lastInteractionAt);
 
-    let iconEl = fragment.querySelector(".card-image > img.favicon");
-    let iconSrc = window.CompanionUtils.getFavicon(url.href);
-    iconEl.src = iconSrc ?? DEFAULT_FAVICON;
+    if (!this.data.faviconImage) {
+      let url = new URL(this.data.url);
+      this.data.faviconImage = window.CompanionUtils.getFavicon(url.href);
+    }
+
+    let iconEl = fragment.querySelector(
+      this.data.faviconSelector || "img.favicon"
+    );
+    iconEl.src = this.data.faviconImage ?? DEFAULT_FAVICON;
+    iconEl.hidden = false;
 
     let previewEl = fragment.querySelector(".card-image");
-    if (preview) {
-      previewEl.style.backgroundImage = "url('" + preview + "')";
+    if (data.image) {
+      previewEl.style.backgroundImage = "url('" + data.image + "')";
     } else {
       this.classList.add("nopreview");
     }
 
-    let contents = fragment.querySelector(".snapshot-contents");
-    contents.href = this.data.url;
+    if (data.preventHoverPanel) {
+      this.classList.add("prevent-hover-panel");
+    }
 
     this.appendChild(fragment);
     this.addEventListener("click", this);
     this.addEventListener("contextmenu", this);
 
-    if (!preview && iconSrc) {
+    if (!data.image && this.data.faviconImage) {
       let primaryIconColor = pickColorFromImage(iconEl);
       if (primaryIconColor) {
         previewEl.style.backgroundColor = `rgb(${primaryIconColor})`;
@@ -126,9 +133,7 @@ export class Snapshot extends HTMLElement {
             });
             break;
           default:
-            window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
-              url: this.data.url,
-            });
+            this.cardClicked();
         }
         break;
       }
@@ -139,6 +144,12 @@ export class Snapshot extends HTMLElement {
     }
 
     event.preventDefault();
+  }
+
+  cardClicked() {
+    window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", {
+      url: this.data.url,
+    });
   }
 }
 
@@ -160,7 +171,8 @@ export class SnapshotList extends HidableElement {
     let nodes = [];
     this.hidden = !snapshots.length;
     for (let { snapshot, preview } of snapshots) {
-      nodes.push(new Snapshot(snapshot, preview));
+      snapshot.image = preview;
+      nodes.push(new Snapshot(snapshot));
     }
 
     panel.replaceChildren(...nodes);
