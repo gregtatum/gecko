@@ -126,10 +126,61 @@ export class GapiCalEventChewer {
   }
 
   async chewEventBundle() {
+    // Function to remove everything.
+    const fullCleanUp = () => {
+      for (const old of this.oldEvents) {
+        this.modifiedEventMap.set(old.id, null);
+        const uniqueId = getUmidWithinFolderForMessageId(old.id);
+        this.uniqueIds.set(uniqueId, null);
+      }
+      this.oldEvents.length = 0;
+    };
+
+    const newEvents = [...this.eventMap.values()];
+    const rootEvent = this.oldEvents.find(event => !!event.recurrenceRules);
+    if (rootEvent && newEvents.every(event => !event.recurrence)) {
+      // We had a recurring event which is no more recurring
+      fullCleanUp();
+    }
+
+    for (const gapiEvent of newEvents) {
+      if (!gapiEvent.recurrence) {
+        continue;
+      }
+      if (gapiEvent.status === "cancelled") {
+        // We've here a main recurring event (not an instance).
+        // So we must delete all the events in this conversation.
+        fullCleanUp();
+
+        logic(this.ctx, "recurring event cancelled", { _event: gapiEvent });
+        return;
+      }
+
+      const rootRules = rootEvent?.recurrenceRules;
+      if (
+        !rootRules ||
+        rootRules.size !== gapiEvent.recurrence.length ||
+        gapiEvent.recurrence.some(x => !rootRules.has(x))
+      ) {
+        // The recurrence rules have changed.
+        fullCleanUp();
+        break;
+      }
+
+      const startDate = new Date(
+        gapiEvent.start?.dateTime || gapiEvent.start?.date
+      ).valueOf();
+      if (startDate !== rootEvent.startDate) {
+        // Event ids are built in using the start date.
+        fullCleanUp();
+      }
+      break;
+    }
+
     // ## Remove any old messages that no longer fit within the sync window.
     const oldById = this.oldById;
     for (const oldInfo of this.oldEvents) {
-      if (EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
+      if (!oldInfo.recurrenceRules && EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
         // Mark the event for deletion.
         this.modifiedEventMap.set(oldInfo.id, null);
         const uniqueId = getUmidWithinFolderForMessageId(oldInfo.id);
@@ -142,7 +193,7 @@ export class GapiCalEventChewer {
     }
 
     // ## Process the new/modified/deleted events
-    for (const gapiEvent of this.eventMap.values()) {
+    for (const gapiEvent of newEvents) {
       try {
         const eventId = makeMessageId(this.convId, gapiEvent.id);
         if (gapiEvent.status === "cancelled") {
@@ -151,19 +202,6 @@ export class GapiCalEventChewer {
             this.modifiedEventMap.set(eventId, null);
             const uniqueId = makeUmidWithinFolder(this.folderId, gapiEvent.id);
             this.uniqueIds.set(uniqueId, null);
-          } else {
-            // We've here a main recurring event (not an instance).
-            // So we must delete all the events in this conversation.
-            for (const oldId of oldById.keys()) {
-              this.modifiedEventMap.set(oldId, null);
-              const uniqueId = getUmidWithinFolderForMessageId(oldId);
-              this.uniqueIds.set(uniqueId, null);
-            }
-            this.allEvents.length = 0;
-            this.newEvents.length = 0;
-
-            logic(this.ctx, "recurring event cancelled", { _event: gapiEvent });
-            return;
           }
           logic(this.ctx, "cancelled", { _event: gapiEvent });
           continue;
@@ -244,6 +282,8 @@ export class GapiCalEventChewer {
 
         const oldInfo = oldById.get(eventId);
         const url = gapiEvent.htmlLink || "";
+        const recurrenceRules =
+          gapiEvent.recurrence?.length && new Set(gapiEvent.recurrence);
 
         const eventInfo = makeCalendarEventInfo({
           id: eventId,
@@ -267,6 +307,7 @@ export class GapiCalEventChewer {
           links,
           conference,
           url,
+          recurrenceRules,
         });
 
         if (oldInfo) {

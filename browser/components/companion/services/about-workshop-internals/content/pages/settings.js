@@ -48,7 +48,7 @@ export default class SettingsPage extends Page {
   }
 
   onLoggingToggle(evt) {
-    const enabled = evt.target;
+    const enabled = evt.target.checked;
     console.log("Setting logging to", enabled);
     this.workshopAPI.modifyConfig({
       debugLogging: enabled ? "realtime" : null,

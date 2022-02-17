@@ -80,6 +80,7 @@ class FakeCalendar {
         rawEvent
       );
       if (rawEvent.every) {
+        result.recurrenceRules = [rawEvent.every];
         if (previousSummary !== rawEvent.summary) {
           recurringId = serverId;
           previousSummary = rawEvent.summary;
@@ -130,6 +131,7 @@ class FakeCalendar {
       newEvent.startDate = startDate;
       newEvent.endDate = new Date(startDate.valueOf() + eventDuration);
       delete newEvent.every;
+      delete newEvent.recurrenceRules;
       Object.assign(newEvent, {
         id,
         iCalUID: id,
@@ -157,25 +159,45 @@ class FakeCalendar {
 
     const eventDuration = event.endDate - event.startDate;
     const { serverId } = this.serverOwner.issueEventIds();
-    const newEvent = Object.assign({}, event);
-    newEvent.startDate = secondStartDate;
-    newEvent.endDate = new Date(secondStartDate.valueOf() + eventDuration);
-    Object.assign(newEvent, {
+
+    const newEvent = Object.assign({}, event, {
       summary: newSummary,
       serial: this.serial,
+      id: serverId,
       recurringId: serverId,
       alterationTs: nowTs(),
       baseId: event.recurringId,
+      startDate: secondStartDate,
+      endDate: new Date(secondStartDate.valueOf() + eventDuration),
     });
 
     this.events.push(newEvent);
+
     delete event.every;
-    event.id = `${event.recurringId}-${secondStartDate.valueOf()}`;
+    delete event.recurrenceRules;
+    delete event.recurringId;
     event.alterationTs = nowTs();
   }
 
+  changeStartingDate(summary, isMapi) {
+    const event = this.events.find(x => x.summary === summary);
+    event.alterationTs = nowTs();
+    if (isMapi || !event.every) {
+      event.startDate + 1000;
+      return;
+    }
+
+    const { serverId } = this.serverOwner.issueEventIds();
+    Object.assign(event, {
+      serial: this.serial,
+      id: serverId,
+      startDate: event.startDate + 1000,
+    });
+  }
+
   getEventWithId(id) {
-    return this.events.find(x => x.id === id);
+    const event = this.events.find(x => x.id === id);
+    return Object.assign({}, event, { recurringId: undefined });
   }
 
   getEventsInRange({ start, end, token }) {
@@ -217,6 +239,7 @@ class FakeCalendar {
 
       for (let n = lowerN; n <= upperN; n++) {
         const newEvent = Object.assign({}, event);
+        delete newEvent.recurrenceRules;
         newEvent.startDate = new Date(startDate.valueOf() + n * duration);
         newEvent.endDate = new Date(
           newEvent.startDate.valueOf() + eventDuration
@@ -536,11 +559,23 @@ class GapiFakeServer extends BaseFakeServer {
       return results;
     }
     if (isPaged) {
+      if (Array.isArray(results)) {
+        return super.wrapResults(
+          {
+            kind: "not-a-real-type",
+            etag: "not-a-real-etag",
+            items: results,
+            nextSyncToken: args.syncToken || "not-a-real-sync-token-yet",
+          },
+          isPaged,
+          args
+        );
+      }
       return super.wrapResults(
         {
           kind: "not-a-real-type",
           etag: "not-a-real-etag",
-          items: results,
+          ...results,
           nextSyncToken: args.syncToken || "not-a-real-sync-token-yet",
         },
         isPaged,
@@ -642,9 +677,11 @@ class GapiFakeServer extends BaseFakeServer {
     const cal = this.getCalendarById(args.calendarId);
 
     let allEvents;
+    let isSingle = false;
     if (args.eventId) {
       // We're getting a particular event.
       allEvents = [cal.getEventWithId(args.eventId)];
+      isSingle = true;
     } else {
       // The first time events are got, singleEvents (set to true), timeMin and
       // timeMax are provided to get all the events with the the time range.
@@ -660,7 +697,7 @@ class GapiFakeServer extends BaseFakeServer {
       allEvents = events;
     }
 
-    return allEvents.map(event => {
+    const result = allEvents.map(event => {
       const mapPeep = peep => {
         return {
           email: peep.email,
@@ -669,6 +706,7 @@ class GapiFakeServer extends BaseFakeServer {
           self: peep.isSelf || false,
         };
       };
+
       return {
         attachments: [],
         // XXX more fidelity on organizer/creator here too, with decision of
@@ -711,8 +749,14 @@ class GapiFakeServer extends BaseFakeServer {
         transparency: "opaque",
         updated: backdatedISOString(event.startDate, { days: 6 }),
         visibility: "default",
+        recurrence: event.recurrenceRules,
       };
     });
+
+    if (isSingle) {
+      return result[0];
+    }
+    return result;
   }
 }
 

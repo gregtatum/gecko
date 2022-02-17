@@ -33,6 +33,8 @@ async function check_recurring_events_for_account_type({
   addEventSketches,
   cancelledEventSketches,
   changingEventSketches,
+  changingDateEventSketches,
+  isMapi,
 }) {
   const initialEvents = WorkshopHelper.deriveFullEvents({
     eventSketches: initialEventSketches,
@@ -64,12 +66,14 @@ async function check_recurring_events_for_account_type({
   const calFolder = account.folders.getFirstFolderWithType("calendar");
   ok(calFolder, "have calendar folder");
 
-  const mapEventFn = item => [item.summary, item.expectedNumber || 1];
+  const mapEventFn = isMapi
+    ? item => [item.summary, item.expectedNumber - 1 || 1]
+    : item => [item.summary, item.expectedNumber || 1];
   const expectedCounts = initialEventSketches.map(mapEventFn).sort();
 
   const rounds = 2;
   for (let i = 0; i <= rounds; i++) {
-    // When i === counts all the events are sent without taking into account the
+    // When i === rounds all the events are sent without taking into account the
     // sync token.
     // For example, the server could have some failures and resend the same
     // events two times even if there are no modifications between.
@@ -124,6 +128,12 @@ async function check_recurring_events_for_account_type({
     await getAndCompare(workshopAPI, calFolder, expectedCounts, rounds + 3);
   }
 
+  for (const { summary } of changingDateEventSketches) {
+    fakeServer.defaultCalendar.changeStartingDate(summary, isMapi);
+  }
+
+  await getAndCompare(workshopAPI, calFolder, expectedCounts, rounds + 4);
+
   await WorkshopHelper.cleanBackend(workshopAPI);
 }
 
@@ -143,8 +153,9 @@ const INITIAL_EVENTS = [
 
     every: "week",
     // We've an event for today and one every week until today + 56
-    // (today, today + 7, .... today + 56) so we've 9 events.
-    expectedNumber: 9,
+    // (today, today + 7, .... today + 56) so we've 9 events + 1 for the root
+    // event.
+    expectedNumber: 10,
   },
   {
     summary: "Fortnightly Coffee Meeting",
@@ -153,8 +164,9 @@ const INITIAL_EVENTS = [
 
     every: "2-weeks",
     // We've an event for today and one every week until today + 56
-    // (today, today + 14, .... today + 56) so we've 5 events.
-    expectedNumber: 5,
+    // (today, today + 14, .... today + 56) so we've 5 events + 1 for the root
+    // event.
+    expectedNumber: 6,
   },
   {
     summary: "Meeting with Karl and Leonhard",
@@ -168,7 +180,7 @@ const INITIAL_EVENTS = [
 
     every: "week",
     // Same as above for "Weekly Meeting"
-    expectedNumber: 9,
+    expectedNumber: 10,
   },
 ];
 
@@ -181,7 +193,7 @@ const ADD_EVENTS = [
     every: "week",
     // We've an event for today and one every week until today + 56
     // (today, today + 7, .... today + 56) so we've 9 events.
-    expectedNumber: 9,
+    expectedNumber: 10,
   },
 ];
 
@@ -217,6 +229,12 @@ const CHANGING_EVENTS = [
   },
 ];
 
+const CHANGING_DATE_EVENTS = [
+  {
+    summary: "Weekly Meeting",
+  },
+];
+
 add_task(async function test_gapi_calendar_single_day() {
   await check_recurring_events_for_account_type({
     configurator: GapiConfigurator,
@@ -224,6 +242,7 @@ add_task(async function test_gapi_calendar_single_day() {
     addEventSketches: ADD_EVENTS,
     cancelledEventSketches: CANCELLED_EVENTS,
     changingEventSketches: CHANGING_EVENTS,
+    changingDateEventSketches: CHANGING_DATE_EVENTS,
   });
 });
 
@@ -233,5 +252,7 @@ add_task(async function test_mapi_calendar_single_day() {
     initialEventSketches: INITIAL_EVENTS,
     addEventSketches: ADD_EVENTS,
     cancelledEventSketches: CANCELLED_EVENTS,
+    changingDateEventSketches: CHANGING_DATE_EVENTS,
+    isMapi: true,
   });
 });

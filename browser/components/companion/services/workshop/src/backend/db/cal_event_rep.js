@@ -130,5 +130,6 @@ export function makeCalendarEventInfo(raw) {
     conference: raw.conference || null,
     links: raw.links || [],
     url: raw.url,
+    recurrenceRules: raw.recurrenceRules || null,
   };
 }

@@ -48,6 +48,10 @@ EventFilter.prototype = {
       return true;
     }
 
+    if (message.recurrenceRules) {
+      return false;
+    }
+
     const { startDate, endDate, isAllDay } = message;
     const now = new Date().valueOf();
 

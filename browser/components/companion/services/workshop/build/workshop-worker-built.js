@@ -11285,7 +11285,8 @@ var WorkshopBackend = (() => {
       authoredBodySize: raw.authoredBodySize || 0,
       conference: raw.conference || null,
       links: raw.links || [],
-      url: raw.url
+      url: raw.url,
+      recurrenceRules: raw.recurrenceRules || null
     };
   }
   var init_cal_event_rep = __esm({
@@ -11370,9 +11371,42 @@ var WorkshopBackend = (() => {
           return attachments;
         }
         async chewEventBundle() {
+          const fullCleanUp = () => {
+            for (const old of this.oldEvents) {
+              this.modifiedEventMap.set(old.id, null);
+              const uniqueId = getUmidWithinFolderForMessageId(old.id);
+              this.uniqueIds.set(uniqueId, null);
+            }
+            this.oldEvents.length = 0;
+          };
+          const newEvents = [...this.eventMap.values()];
+          const rootEvent = this.oldEvents.find((event) => !!event.recurrenceRules);
+          if (rootEvent && newEvents.every((event) => !event.recurrence)) {
+            fullCleanUp();
+          }
+          for (const gapiEvent of newEvents) {
+            if (!gapiEvent.recurrence) {
+              continue;
+            }
+            if (gapiEvent.status === "cancelled") {
+              fullCleanUp();
+              logic(this.ctx, "recurring event cancelled", { _event: gapiEvent });
+              return;
+            }
+            const rootRules = rootEvent?.recurrenceRules;
+            if (!rootRules || rootRules.size !== gapiEvent.recurrence.length || gapiEvent.recurrence.some((x) => !rootRules.has(x))) {
+              fullCleanUp();
+              break;
+            }
+            const startDate = new Date(gapiEvent.start?.dateTime || gapiEvent.start?.date).valueOf();
+            if (startDate !== rootEvent.startDate) {
+              fullCleanUp();
+            }
+            break;
+          }
           const oldById = this.oldById;
           for (const oldInfo of this.oldEvents) {
-            if (EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
+            if (!oldInfo.recurrenceRules && EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
               this.modifiedEventMap.set(oldInfo.id, null);
               const uniqueId = getUmidWithinFolderForMessageId(oldInfo.id);
               this.uniqueIds.set(uniqueId, null);
@@ -11381,7 +11415,7 @@ var WorkshopBackend = (() => {
               this.allEvents.push(oldInfo);
             }
           }
-          for (const gapiEvent of this.eventMap.values()) {
+          for (const gapiEvent of newEvents) {
             try {
               const eventId = makeMessageId(this.convId, gapiEvent.id);
               if (gapiEvent.status === "cancelled") {
@@ -11389,16 +11423,6 @@ var WorkshopBackend = (() => {
                   this.modifiedEventMap.set(eventId, null);
                   const uniqueId = makeUmidWithinFolder(this.folderId, gapiEvent.id);
                   this.uniqueIds.set(uniqueId, null);
-                } else {
-                  for (const oldId of oldById.keys()) {
-                    this.modifiedEventMap.set(oldId, null);
-                    const uniqueId = getUmidWithinFolderForMessageId(oldId);
-                    this.uniqueIds.set(uniqueId, null);
-                  }
-                  this.allEvents.length = 0;
-                  this.newEvents.length = 0;
-                  logic(this.ctx, "recurring event cancelled", { _event: gapiEvent });
-                  return;
                 }
                 logic(this.ctx, "cancelled", { _event: gapiEvent });
                 continue;
@@ -11453,6 +11477,7 @@ var WorkshopBackend = (() => {
               const attendees = (gapiEvent.attendees || []).map((who) => this._chewCalAttendee(who));
               const oldInfo = oldById.get(eventId);
               const url = gapiEvent.htmlLink || "";
+              const recurrenceRules = gapiEvent.recurrence?.length && new Set(gapiEvent.recurrence);
               const eventInfo = makeCalendarEventInfo({
                 id: eventId,
                 date: startDate,
@@ -11471,7 +11496,8 @@ var WorkshopBackend = (() => {
                 authoredBodySize,
                 links,
                 conference,
-                url
+                url,
+                recurrenceRules
               });
               if (oldInfo) {
                 this.modifiedEventMap.set(eventId, eventInfo);
@@ -11755,6 +11781,7 @@ var WorkshopBackend = (() => {
             const metadatas = new WeakMap();
             const todayTS = makeDaysAgo(0);
             const tomorrowTS = makeDaysAgo(-1);
+            const recurringIds = new Set();
             for (const event of results.items) {
               const startDate = new Date(event.start.dateTime || event.start.date).valueOf();
               const endDate = new Date(event.end.dateTime || event.end.date).valueOf();
@@ -11767,6 +11794,9 @@ var WorkshopBackend = (() => {
               const uniqueId = makeUmidWithinFolder(req.folderId, event.id);
               umidNames.set(uniqueId, null);
               let cancelled = false;
+              if (event.recurringEventId) {
+                recurringIds.add(event.recurringEventId);
+              }
               if (event.status === "cancelled" && !event.recurringEventId) {
                 cancelledEvents.set(uniqueId, event);
                 cancelled = true;
@@ -11776,7 +11806,11 @@ var WorkshopBackend = (() => {
             }
             await ctx.read({ umidNames });
             for (const event of results.items) {
-              const { uniqueId, cancelled, priority } = metadatas.get(event);
+              const metadata = metadatas.get(event);
+              if (!metadata) {
+                continue;
+              }
+              const { uniqueId, cancelled, priority } = metadata;
               if (cancelled) {
                 continue;
               }
@@ -11795,37 +11829,32 @@ var WorkshopBackend = (() => {
                 });
               }
             }
-            if (cancelledEvents.size) {
-              const recurringIds = new Set();
-              for (const [uniqueId, event] of cancelledEvents) {
-                const eventId = umidNames.get(uniqueId);
-                if (!eventId) {
-                  continue;
-                }
-                const convId = convIdComponentFromMessageId(eventId);
-                const messageId = messageIdComponentFromMessageId(eventId);
-                if (convId !== messageId) {
-                  event.recurringEventId = convId;
-                  recurringIds.add(convId);
-                }
-                syncState.ingestEvent(event);
+            for (const [uniqueId, event] of cancelledEvents) {
+              const eventId = umidNames.get(uniqueId);
+              if (!eventId) {
+                continue;
               }
-              for (const recurringId of recurringIds) {
-                let event;
-                try {
-                  event = await account.client.apiGetCall(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${recurringId}`, null);
-                } catch (e) {
-                  handleError({ e });
-                  return changes;
-                }
-                if (!event || event.error) {
-                  handleError({ error: event?.error | "No data" });
-                  return changes;
-                }
-                if (event.status === "cancelled") {
-                  syncState.ingestEvent(event);
-                }
+              const convId = convIdComponentFromMessageId(eventId);
+              const messageId = messageIdComponentFromMessageId(eventId);
+              if (convId !== messageId) {
+                event.recurringEventId = convId;
+                recurringIds.add(convId);
               }
+              syncState.ingestEvent(event);
+            }
+            let recurringEvents;
+            try {
+              recurringEvents = await Promise.all([...recurringIds].map((recurringId) => account.client.apiGetCall(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${recurringId}`, null)));
+            } catch (e) {
+              handleError({ e });
+              return changes;
+            }
+            for (const event of recurringEvents) {
+              if (!event || event.error) {
+                handleError({ error: event?.error | "No data" });
+                return changes;
+              }
+              syncState.ingestEvent(event);
             }
             syncState.syncToken = results.nextSyncToken;
             syncState.etag = results.etag;
@@ -21450,6 +21479,9 @@ var WorkshopBackend = (() => {
       const message = gathered?.message;
       if (!message || !("startDate" in message)) {
         return true;
+      }
+      if (message.recurrenceRules) {
+        return false;
       }
       const { startDate, endDate, isAllDay } = message;
       const now = new Date().valueOf();

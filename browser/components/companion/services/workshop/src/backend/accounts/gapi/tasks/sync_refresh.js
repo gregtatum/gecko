@@ -257,6 +257,8 @@ export default TaskDefiner.defineAtMostOnceTask([
       const todayTS = makeDaysAgo(0);
       const tomorrowTS = makeDaysAgo(-1);
 
+      const recurringIds = new Set();
+
       for (const event of results.items) {
         const startDate = new Date(
           event.start.dateTime || event.start.date
@@ -288,6 +290,9 @@ export default TaskDefiner.defineAtMostOnceTask([
         const uniqueId = makeUmidWithinFolder(req.folderId, event.id);
         umidNames.set(uniqueId, null);
         let cancelled = false;
+        if (event.recurringEventId) {
+          recurringIds.add(event.recurringEventId);
+        }
         if (event.status === "cancelled" && !event.recurringEventId) {
           // When some instance of a recurring event are cancelled it's possible
           // to not always have the recurringEventId which was used to build
@@ -315,7 +320,12 @@ export default TaskDefiner.defineAtMostOnceTask([
         // this by creating a synthetic cancellation of the previous version of
         // the event which will be processed by GapiCalEventChewer in the
         // "cal_sync_conv" task.
-        const { uniqueId, cancelled, priority } = metadatas.get(event);
+        const metadata = metadatas.get(event);
+        if (!metadata) {
+          continue;
+        }
+
+        const { uniqueId, cancelled, priority } = metadata;
         if (cancelled) {
           continue;
         }
@@ -340,58 +350,55 @@ export default TaskDefiner.defineAtMostOnceTask([
         }
       }
 
-      if (cancelledEvents.size) {
-        const recurringIds = new Set();
-        for (const [uniqueId, event] of cancelledEvents) {
-          const eventId = umidNames.get(uniqueId);
-          if (!eventId) {
-            // Some events which shouldn't be there are there !
-            // So in case we didn't add them to the db, just skip.
-            continue;
-          }
-          // convId is built with either recurringEventId or id (it depends
-          // if the event is recurring or not).
-          const convId = convIdComponentFromMessageId(eventId);
-          const messageId = messageIdComponentFromMessageId(eventId);
-          if (convId !== messageId) {
-            // We're cheating in adding the recurringEventId and everybody
-            // is happy.
-            event.recurringEventId = convId;
-            recurringIds.add(convId);
-          }
-          syncState.ingestEvent(event);
+      for (const [uniqueId, event] of cancelledEvents) {
+        const eventId = umidNames.get(uniqueId);
+        if (!eventId) {
+          // Some events which shouldn't be there are there !
+          // So in case we didn't add them to the db, just skip.
+          continue;
         }
+        // convId is built with either recurringEventId or id (it depends
+        // if the event is recurring or not).
+        const convId = convIdComponentFromMessageId(eventId);
+        const messageId = messageIdComponentFromMessageId(eventId);
+        if (convId !== messageId) {
+          // We're cheating in adding the recurringEventId and everybody
+          // is happy.
+          event.recurringEventId = convId;
+          recurringIds.add(convId);
+        }
+        syncState.ingestEvent(event);
+      }
 
-        for (const recurringId of recurringIds) {
-          // It should be pretty rare to hit this path: people don't delete a
-          // recurring event every 2 seconds !!
-          // Else, we should have very likely one maybe two events so it doesn't
-          // hurt to wait for each of them (instead of using a Promise.all).
-          // If we've 100 deleted events, using a Promise.all could lead to a
-          // "Too many requests" error and we'd need to handle that... To avoid
-          // such issues, just fetch sequentially.
-          let event;
-
-          try {
-            event = await account.client.apiGetCall(
+      let recurringEvents;
+      try {
+        // We must get informations about the root event of a recurring one in
+        // order to apply correctly changes to the instances.
+        // For example when the start time changed then all the instances have
+        // a different id (because the id is built in using a uuid + starting
+        // date), consequently in such a case we must remove all the previous
+        // instances.
+        recurringEvents = await Promise.all(
+          [...recurringIds].map(recurringId =>
+            account.client.apiGetCall(
               `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${recurringId}`,
               null
-            );
-          } catch (e) {
-            // Critical Error.
-            handleError({ e });
-            return changes;
-          }
+            )
+          )
+        );
+      } catch (e) {
+        // Critical Error.
+        handleError({ e });
+        return changes;
+      }
 
-          if (!event || event.error) {
-            handleError({ error: event?.error | "No data" });
-            return changes;
-          }
-
-          if (event.status === "cancelled") {
-            syncState.ingestEvent(event);
-          }
+      for (const event of recurringEvents) {
+        if (!event || event.error) {
+          handleError({ error: event?.error | "No data" });
+          return changes;
         }
+
+        syncState.ingestEvent(event);
       }
 
       // Update sync state before processing the batch; things like the
