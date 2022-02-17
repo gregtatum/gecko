@@ -164,6 +164,11 @@ body:not([browser-ready]) .browserStack > browser {
   border-top: 1px solid var(--colors-cafe-04);
 }
 
+:root[inDOMFullscreen] body:not([flow-reset]) .browserStack > browser {
+  border: none;
+  border-radius: 0;
+}
+
 #navigator-toolbox,
 #navigator-toolbox:not(:-moz-lwtheme),
 #tabbrowser-tabpanels,
