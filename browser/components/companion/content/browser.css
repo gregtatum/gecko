@@ -498,18 +498,19 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 
 #page-action-panel {
   margin-inline-end: -20px;
+  margin-block-start: 10px;
   min-width: 285px;
+  border-radius: 16px;
 }
 
 #page-action-panel-sections {
   display: flex;
   flex-direction: column;
-  padding: 8px;
+  padding: 18px;
 }
 
 #page-actions-section {
   display: flex;
-  margin-block: 8px 4px;
 }
 
 #page-actions-section > toolbarbutton {
@@ -525,15 +526,14 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 }
 
 #page-actions-section > toolbarbutton > .toolbarbutton-icon {
-  padding: 20px;
+  padding: 16px;
   border-radius: 100px;
   -moz-context-properties: fill;
-  fill: var(--toolbarbutton-icon-fill);
+  fill: var(--colors-icons);
   background-size: 15px;
   background-repeat: no-repeat;
   background-position: center;
-  background-color: rgb(249,249,251);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background-color: var(--colors-lightgrey-30);
 }
 
 #page-actions-section > toolbarbutton:hover > .toolbarbutton-icon {
@@ -579,6 +579,7 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 
 #page-actions-section > toolbarbutton > .toolbarbutton-text {
   margin-block-start: 8px;
+  color: var(--colors-icons);
 }
 
 #site-info-section {
@@ -590,7 +591,10 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 #site-info-url-section,
 #site-info-title-section {
   display: flex;
-  margin-block-start: 6px;
+}
+
+#site-info-title-section {
+  margin-block-start: 28px;
 }
 
 #site-info-edit-icon {
@@ -609,7 +613,7 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 
 #site-info-url:focus-visible,
 #site-info-title:focus-visible {
-  outline: 1px solid var(--focus-outline-color);
+  outline: 0.5px solid var(--colors-lavender-90);
   border-radius: 4px;
   background: #F0F0F4;
   text-overflow: unset;
@@ -618,7 +622,7 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 #site-info-title {
   font-size: 14px;
   margin: 0;
-  padding-block: 7px;
+  padding-block: 6px;
   border: none;
   flex: 1;
   overflow: hidden;
@@ -634,8 +638,11 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
   flex: 1;
   margin: 0;
   border: 0;
-  padding-block: 8px;
-  background-color: var(--toolbar-field-background-color);
+  padding-block: 4px;
+  background-color: var(--colors-lavender-10);
+  color: var(--colors-lavender-90);
+  font-size: 11px;
+  line-height: 14px;
 }
 
 #site-security-info-section,
@@ -645,13 +652,14 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 }
 
 #site-security-info-section {
-  margin-block: 12px 8px;
+  margin-block: 6px;
 }
 
 #site-security-icon {
-  height: 16px;
-  width: 16px;
+  height: 12px;
+  width: 12px;
   background-repeat: no-repeat;
+  background-size: contain;
   /**
    * Our site security icons have a 2px margin around them, which
    * makes aligning them to the spec a bit difficult. We work around
