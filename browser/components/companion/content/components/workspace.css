@@ -10,6 +10,7 @@
   background-color: var(--workspace-background);
   display: flex;
   border-radius: 100px;
+  padding: 4px;
 }
 
 #river-overflow-button {
