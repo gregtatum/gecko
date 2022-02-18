@@ -31,6 +31,7 @@ static const char SandboxPolicyContent[] = R"SANDBOX_LITERAL(
   (define testingReadPath4 (param "TESTING_READ_PATH4"))
   (define crashPort (param "CRASH_PORT"))
   (define isRosettaTranslated (param "IS_ROSETTA_TRANSLATED"))
+  (define has-icon-services (param "HAS_ICON_SERVICES"))
 
   (define (moz-deny feature)
     (if (string=? should-log "TRUE")
@@ -179,6 +180,9 @@ static const char SandboxPolicyContent[] = R"SANDBOX_LITERAL(
     (global-name "com.apple.CoreServices.coreservicesd")
     (global-name "com.apple.coreservices.launchservicesd")
     (global-name "com.apple.lsd.mapdb"))
+
+  (if (string=? has-icon-services "TRUE")
+    (allow mach-lookup (global-name "com.apple.iconservices")))
 
   (if (>= macosVersion 1013)
     (allow mach-lookup

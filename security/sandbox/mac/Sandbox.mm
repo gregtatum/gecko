@@ -418,6 +418,12 @@ bool StartMacSandbox(MacSandboxInfo const& aInfo, std::string& aErrorMessage) {
       if (aInfo.hasFilePrivileges) {
         profile.append(SandboxPolicyContentFileAddend);
       }
+// Can be removed when https://bugzilla.mozilla.org/show_bug.cgi?id=1755777 is fixed.
+#ifdef PINEBUILD
+      params.push_back("HAS_ICON_SERVICES");
+      params.push_back("TRUE");
+#endif  // PINEBUILD
+
       if (aInfo.hasAudio) {
         profile.append(SandboxPolicyContentAudioAddend);
       }
