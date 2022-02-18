@@ -695,6 +695,7 @@ nsIXULRuntime::ContentWin32kLockdownState GetLiveWin32kLockdownState() {
   // HasUserValue The Pref functions can only be called on main thread
   MOZ_ASSERT(NS_IsMainThread());
   mozilla::EnsureWin32kInitialized();
+  gfx::gfxVars::Initialize();
 
   if (gSafeMode) {
     return nsIXULRuntime::ContentWin32kLockdownState::DisabledBySafeMode;
@@ -708,7 +709,10 @@ nsIXULRuntime::ContentWin32kLockdownState GetLiveWin32kLockdownState() {
     return nsIXULRuntime::ContentWin32kLockdownState::DisabledByE10S;
   }
 
-  if (!IsWin8OrLater()) {
+  // Win32k lockdown is available on Win8+, but we are initially limiting it to
+  // Windows 10 v1709 (build 16299) or later. Before this COM initialization
+  // currently fails if user32.dll has loaded before it is called.
+  if (!IsWin10FallCreatorsUpdateOrLater()) {
     return nsIXULRuntime::ContentWin32kLockdownState::
         OperatingSystemNotSupported;
   }

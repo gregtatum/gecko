@@ -186,6 +186,29 @@ class RemoteAccessibleBase : public Accessible, public HyperTextAccessibleBase {
 
   virtual bool DoAction(uint8_t aIndex) const override;
 
+  //////////////////////////////////////////////////////////////////////////////
+  // SelectAccessible
+
+  virtual void SelectedItems(nsTArray<Accessible*>* aItems) override;
+
+  virtual uint32_t SelectedItemCount() override;
+
+  virtual Accessible* GetSelectedItem(uint32_t aIndex) override;
+
+  virtual bool IsItemSelected(uint32_t aIndex) override;
+
+  virtual bool AddItemToSelection(uint32_t aIndex) override;
+
+  virtual bool RemoveItemFromSelection(uint32_t aIndex) override;
+
+  virtual bool SelectAll() override;
+
+  virtual bool UnselectAll() override;
+
+  virtual void TakeSelection() override;
+
+  virtual void SetSelected(bool aSelect) override;
+
   // Methods that interact with content.
 
   virtual void TakeFocus() const override;
@@ -301,6 +324,10 @@ class RemoteAccessibleBase : public Accessible, public HyperTextAccessibleBase {
   virtual AccGroupInfo* GetGroupInfo() const override;
 
   virtual AccGroupInfo* GetOrCreateGroupInfo() override;
+
+  virtual bool HasPrimaryAction() const override;
+
+  nsAtom* GetPrimaryAction() const;
 
  private:
   uintptr_t mParent;

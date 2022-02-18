@@ -17,6 +17,7 @@
 #include "mozilla/dom/DocumentInlines.h"
 #include "mozilla/Unused.h"
 #include "nsAccUtils.h"
+#include "Pivot.h"
 #include "RelationType.h"
 #include "xpcAccessibleDocument.h"
 
@@ -522,10 +523,23 @@ nsAtom* RemoteAccessibleBase<Derived>::TagName() const {
 }
 
 template <class Derived>
+nsAtom* RemoteAccessibleBase<Derived>::GetPrimaryAction() const {
+  if (mCachedFields) {
+    if (auto action =
+            mCachedFields->GetAttribute<RefPtr<nsAtom>>(nsGkAtoms::action)) {
+      return *action;
+    }
+  }
+
+  return nullptr;
+}
+
+template <class Derived>
 uint8_t RemoteAccessibleBase<Derived>::ActionCount() const {
   uint8_t actionCount = 0;
   if (mCachedFields) {
-    if (mCachedFields->HasAttribute(nsGkAtoms::action)) {
+    if (HasPrimaryAction() ||
+        ((IsTextLeaf() || IsImage()) && ActionAncestor())) {
       actionCount++;
     }
 
@@ -543,19 +557,26 @@ void RemoteAccessibleBase<Derived>::ActionNameAt(uint8_t aIndex,
                                                  nsAString& aName) {
   if (mCachedFields) {
     aName.Truncate();
-    auto action =
-        mCachedFields->GetAttribute<RefPtr<nsAtom>>(nsGkAtoms::action);
-    bool haslongdesc = mCachedFields->HasAttribute(nsGkAtoms::longdesc);
+    nsAtom* action = GetPrimaryAction();
+    if (!action && (IsTextLeaf() || IsImage())) {
+      const Accessible* actionAcc = ActionAncestor();
+      Derived* acc =
+          actionAcc ? const_cast<Accessible*>(actionAcc)->AsRemote() : nullptr;
+      if (acc) {
+        action = acc->GetPrimaryAction();
+      }
+    }
+
     switch (aIndex) {
       case 0:
         if (action) {
-          (*action)->ToString(aName);
-        } else if (haslongdesc) {
+          action->ToString(aName);
+        } else if (mCachedFields->HasAttribute(nsGkAtoms::longdesc)) {
           aName.AssignLiteral("showlongdesc");
         }
         break;
       case 1:
-        if (action && haslongdesc) {
+        if (action && mCachedFields->HasAttribute(nsGkAtoms::longdesc)) {
           aName.AssignLiteral("showlongdesc");
         }
         break;
@@ -644,8 +665,146 @@ void RemoteAccessibleBase<Derived>::InvalidateGroupInfo() {
 }
 
 template <class Derived>
+bool RemoteAccessibleBase<Derived>::HasPrimaryAction() const {
+  return mCachedFields && mCachedFields->HasAttribute(nsGkAtoms::action);
+}
+
+template <class Derived>
 void RemoteAccessibleBase<Derived>::TakeFocus() const {
   Unused << mDoc->SendTakeFocus(mID);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SelectAccessible
+
+template <class Derived>
+void RemoteAccessibleBase<Derived>::SelectedItems(
+    nsTArray<Accessible*>* aItems) {
+  Pivot p = Pivot(this);
+  PivotStateRule rule(states::SELECTED);
+  for (Accessible* selected = p.First(rule); selected;
+       selected = p.Next(selected, rule)) {
+    aItems->AppendElement(selected);
+  }
+}
+
+template <class Derived>
+uint32_t RemoteAccessibleBase<Derived>::SelectedItemCount() {
+  uint32_t count = 0;
+  Pivot p = Pivot(this);
+  PivotStateRule rule(states::SELECTED);
+  for (Accessible* selected = p.First(rule); selected;
+       selected = p.Next(selected, rule)) {
+    count++;
+  }
+
+  return count;
+}
+
+template <class Derived>
+Accessible* RemoteAccessibleBase<Derived>::GetSelectedItem(uint32_t aIndex) {
+  uint32_t index = 0;
+  Accessible* selected = nullptr;
+  Pivot p = Pivot(this);
+  PivotStateRule rule(states::SELECTED);
+  for (selected = p.First(rule); selected && index < aIndex;
+       selected = p.Next(selected, rule)) {
+    index++;
+  }
+
+  return selected;
+}
+
+template <class Derived>
+bool RemoteAccessibleBase<Derived>::IsItemSelected(uint32_t aIndex) {
+  uint32_t index = 0;
+  Accessible* selectable = nullptr;
+  Pivot p = Pivot(this);
+  PivotStateRule rule(states::SELECTABLE);
+  for (selectable = p.First(rule); selectable && index < aIndex;
+       selectable = p.Next(selectable, rule)) {
+    index++;
+  }
+
+  return selectable && selectable->State() & states::SELECTED;
+}
+
+template <class Derived>
+bool RemoteAccessibleBase<Derived>::AddItemToSelection(uint32_t aIndex) {
+  uint32_t index = 0;
+  Accessible* selectable = nullptr;
+  Pivot p = Pivot(this);
+  PivotStateRule rule(states::SELECTABLE);
+  for (selectable = p.First(rule); selectable && index < aIndex;
+       selectable = p.Next(selectable, rule)) {
+    index++;
+  }
+
+  if (selectable) selectable->SetSelected(true);
+
+  return static_cast<bool>(selectable);
+}
+
+template <class Derived>
+bool RemoteAccessibleBase<Derived>::RemoveItemFromSelection(uint32_t aIndex) {
+  uint32_t index = 0;
+  Accessible* selectable = nullptr;
+  Pivot p = Pivot(this);
+  PivotStateRule rule(states::SELECTABLE);
+  for (selectable = p.First(rule); selectable && index < aIndex;
+       selectable = p.Next(selectable, rule)) {
+    index++;
+  }
+
+  if (selectable) selectable->SetSelected(false);
+
+  return static_cast<bool>(selectable);
+}
+
+template <class Derived>
+bool RemoteAccessibleBase<Derived>::SelectAll() {
+  if ((State() & states::MULTISELECTABLE) == 0) {
+    return false;
+  }
+
+  bool success = false;
+  Accessible* selectable = nullptr;
+  Pivot p = Pivot(this);
+  PivotStateRule rule(states::SELECTABLE);
+  for (selectable = p.First(rule); selectable;
+       selectable = p.Next(selectable, rule)) {
+    success = true;
+    selectable->SetSelected(true);
+  }
+  return success;
+}
+
+template <class Derived>
+bool RemoteAccessibleBase<Derived>::UnselectAll() {
+  if ((State() & states::MULTISELECTABLE) == 0) {
+    return false;
+  }
+
+  bool success = false;
+  Accessible* selectable = nullptr;
+  Pivot p = Pivot(this);
+  PivotStateRule rule(states::SELECTABLE);
+  for (selectable = p.First(rule); selectable;
+       selectable = p.Next(selectable, rule)) {
+    success = true;
+    selectable->SetSelected(false);
+  }
+  return success;
+}
+
+template <class Derived>
+void RemoteAccessibleBase<Derived>::TakeSelection() {
+  Unused << mDoc->SendTakeSelection(mID);
+}
+
+template <class Derived>
+void RemoteAccessibleBase<Derived>::SetSelected(bool aSelect) {
+  Unused << mDoc->SendSetSelected(mID, aSelect);
 }
 
 template class RemoteAccessibleBase<RemoteAccessible>;

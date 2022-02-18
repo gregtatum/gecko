@@ -55,12 +55,6 @@ class LSDatabase final {
     mActor = nullptr;
   }
 
-  bool HasActiveSnapshot() const {
-    AssertIsOnOwningThread();
-
-    return !!mSnapshot;
-  }
-
   bool IsAllowedToClose() const {
     AssertIsOnOwningThread();
 
@@ -90,7 +84,9 @@ class LSDatabase final {
 
   nsresult BeginExplicitSnapshot(LSObject* aObject);
 
-  nsresult EndExplicitSnapshot(LSObject* aObject);
+  nsresult EndExplicitSnapshot();
+
+  bool HasSnapshot() const;
 
  private:
   ~LSDatabase();

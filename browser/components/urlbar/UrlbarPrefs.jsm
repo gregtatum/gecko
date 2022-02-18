@@ -61,7 +61,7 @@ const PREF_URLBAR_DEFAULTS = new Map([
   // active view if the the view utilizes OpenSearch.
   ["contextualSearch.enabled", false],
 
-  // Whether best match results are enabled.
+  // Whether the best match feature is enabled.
   ["bestMatch.enabled", true],
 
   // Whether using `ctrl` when hitting return/enter in the URL bar
@@ -188,6 +188,10 @@ const PREF_URLBAR_DEFAULTS = new Map([
 
   // Whether speculative connections should be enabled.
   ["speculativeConnect.enabled", true],
+
+  // When `bestMatch.enabled` is true, this controls whether results will
+  // include best matches.
+  ["suggest.bestmatch", true],
 
   // Whether results will include the user's bookmarks.
   ["suggest.bookmark", true],
