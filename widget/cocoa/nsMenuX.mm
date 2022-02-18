@@ -79,8 +79,6 @@ nsMenuX::nsMenuX(nsMenuParentX* aParent, nsMenuGroupOwnerX* aMenuGroupOwner, nsI
     : mContent(aContent), mParent(aParent), mMenuGroupOwner(aMenuGroupOwner) {
   NS_OBJC_BEGIN_TRY_ABORT_BLOCK;
 
-  MOZ_COUNT_CTOR(nsMenuX);
-
   SwizzleDynamicIndexingMethods();
 
   mMenuDelegate = [[MenuDelegate alloc] initWithGeckoMenu:this];
@@ -123,11 +121,19 @@ nsMenuX::nsMenuX(nsMenuParentX* aParent, nsMenuGroupOwnerX* aMenuGroupOwner, nsI
     SetupIcon();
   }
 
+  nsCOMPtr<nsIObserverService> obs = mozilla::services::GetObserverService();
+  if (obs) {
+    printf("!!! nsMenuX::nsMenuX obs->AddObserver %p\n", this);
+    obs->AddObserver(this, "intl:app-locales-changed", false);
+  }
+
   NS_OBJC_END_TRY_ABORT_BLOCK;
 }
 
 nsMenuX::~nsMenuX() {
   NS_OBJC_BEGIN_TRY_ABORT_BLOCK;
+
+  printf("!!! nsMenuX::~nsMenuX %p\n", this);
 
   // Make sure a pending popupshown event isn't dropped.
   FlushMenuOpenedRunnable();
@@ -151,8 +157,6 @@ nsMenuX::~nsMenuX() {
   [mNativeMenuItem autorelease];
 
   DetachFromGroupOwnerRecursive();
-
-  MOZ_COUNT_DTOR(nsMenuX);
 
   NS_OBJC_END_TRY_ABORT_BLOCK;
 }
@@ -1115,6 +1119,21 @@ void nsMenuX::Dump(uint32_t aIndent) const {
                   [=](const RefPtr<nsMenuItemX>& aMenuItem) { aMenuItem->Dump(aIndent + 1); });
   }
 }
+
+
+NS_IMETHODIMP
+nsMenuX::Observe(nsISupports* aSubject, const char* aTopic,
+                         const char16_t* aData) {
+  printf("!!! nsMenuX::Observe Topic: %s\n", aTopic);
+  if (!strcmp(aTopic, "intl:app-locales-changed")) {
+    printf("!!! Rebuild menu\n");
+    // Rebuild the menu with the new locale strings.
+    SetRebuild(true);
+  }
+  return NS_OK;
+}
+
+NS_IMPL_ISUPPORTS(nsMenuX, nsIObserver)
 
 //
 // MenuDelegate Objective-C class, used to set up Carbon events

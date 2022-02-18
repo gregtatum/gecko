@@ -20,6 +20,7 @@
 #include "nsCOMPtr.h"
 #include "nsChangeObserver.h"
 #include "nsThreadUtils.h"
+#include "nsIObserver.h"
 
 class nsMenuX;
 class nsMenuItemX;
@@ -61,21 +62,22 @@ class nsMenuXObserver {
 class nsMenuX final : public nsMenuParentX,
                       public nsChangeObserver,
                       public nsMenuItemIconX::Listener,
-                      public nsMenuXObserver {
+                      public nsMenuXObserver,
+                      public nsIObserver {
  public:
   using Observer = nsMenuXObserver;
 
   // aParent is optional.
   nsMenuX(nsMenuParentX* aParent, nsMenuGroupOwnerX* aMenuGroupOwner, nsIContent* aContent);
 
-  NS_INLINE_DECL_REFCOUNTING(nsMenuX)
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIOBSERVER
+  NS_DECL_CHANGEOBSERVER
 
   // If > 0, the OS is indexing all the app's menus (triggered by opening
   // Help menu on Leopard and higher).  There are some things that are
   // unsafe to do while this is happening.
   static int32_t sIndexingMenuLevel;
-
-  NS_DECL_CHANGEOBSERVER
 
   // nsMenuItemIconX::Listener
   void IconUpdated() override;
