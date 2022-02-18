@@ -188,6 +188,10 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     if (!url || url.schemeIs("about") || url.schemeIs("chrome")) {
       return;
     }
+    let windowData = SessionStore.getWindowState(window);
+    if (windowData.windows[0].isPopup) {
+      return;
+    }
 
     let guid = this.makeGuid();
     logConsole.debug("Starting new session", guid);
@@ -535,6 +539,9 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     let data = SessionStore.getClosedWindowData(false);
     let highestWindowId = -1;
     for (let windowData of data) {
+      if (windowData.isPopup) {
+        continue;
+      }
       if (windowData.closedId > this.#lastClosedWindowId) {
         await this.#saveSessionData(windowData).catch(console.error);
         // Keep track of the highest window Id we saved, so that we can
