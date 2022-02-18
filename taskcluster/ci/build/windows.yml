@@ -1392,7 +1392,7 @@ win64-pinebuild/opt:
     fetches:
         toolchain:
             - linux64-binutils
-            - linux64-clang-win-cross
+            - linux64-clang
             - linux64-rust-cross
             - linux64-rust-size
             - linux64-nasm
@@ -1447,7 +1447,7 @@ win64-pinebuild/debug:
     fetches:
         toolchain:
             - linux64-binutils
-            - linux64-clang-win-cross
+            - linux64-clang
             - linux64-rust-cross
             - linux64-rust-size
             - linux64-nasm
