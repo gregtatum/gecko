@@ -150,22 +150,24 @@ export default TaskDefiner.defineSimpleTask([
         const priority = folder.primary ? 99999 : 99998;
 
         for (const event of results.items) {
-          const startDate = new Date(
-            event.start.dateTime || event.start.date
-          ).valueOf();
-          const endDate = new Date(
-            event.end.dateTime || event.end.date
-          ).valueOf();
+          if (event.start && event.end) {
+            const startDate = new Date(
+              event.start.dateTime || event.start.date
+            ).valueOf();
+            const endDate = new Date(
+              event.end.dateTime || event.end.date
+            ).valueOf();
 
-          if (
-            EVENT_OUTSIDE_SYNC_RANGE(
-              { startDate, endDate },
-              syncState.rawSyncState
-            )
-          ) {
-            // It's a mystery but some events aren't in the requested range.
-            // It's possible to have some events happening in 23 years!!
-            continue;
+            if (
+              EVENT_OUTSIDE_SYNC_RANGE(
+                { startDate, endDate },
+                syncState.rawSyncState
+              )
+            ) {
+              // It's a mystery but some events aren't in the requested range.
+              // It's possible to have some events happening in 23 years!!
+              continue;
+            }
           }
 
           if (event.visibility === "private" && !event.attendees) {

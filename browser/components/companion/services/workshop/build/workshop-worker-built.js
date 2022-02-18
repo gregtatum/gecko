@@ -11037,10 +11037,12 @@ var WorkshopBackend = (() => {
               syncState.folderId = folder.id;
               const priority = folder.primary ? 99999 : 99998;
               for (const event of results.items) {
-                const startDate = new Date(event.start.dateTime || event.start.date).valueOf();
-                const endDate = new Date(event.end.dateTime || event.end.date).valueOf();
-                if (EVENT_OUTSIDE_SYNC_RANGE({ startDate, endDate }, syncState.rawSyncState)) {
-                  continue;
+                if (event.start && event.end) {
+                  const startDate = new Date(event.start.dateTime || event.start.date).valueOf();
+                  const endDate = new Date(event.end.dateTime || event.end.date).valueOf();
+                  if (EVENT_OUTSIDE_SYNC_RANGE({ startDate, endDate }, syncState.rawSyncState)) {
+                    continue;
+                  }
                 }
                 if (event.visibility === "private" && !event.attendees) {
                   continue;
@@ -11783,10 +11785,14 @@ var WorkshopBackend = (() => {
             const tomorrowTS = makeDaysAgo(-1);
             const recurringIds = new Set();
             for (const event of results.items) {
-              const startDate = new Date(event.start.dateTime || event.start.date).valueOf();
-              const endDate = new Date(event.end.dateTime || event.end.date).valueOf();
-              if (EVENT_OUTSIDE_SYNC_RANGE({ startDate, endDate }, syncState.rawSyncState)) {
-                continue;
+              let priority = 0;
+              if (event.start && event.end) {
+                const startDate = new Date(event.start.dateTime || event.start.date).valueOf();
+                const endDate = new Date(event.end.dateTime || event.end.date).valueOf();
+                if (EVENT_OUTSIDE_SYNC_RANGE({ startDate, endDate }, syncState.rawSyncState)) {
+                  continue;
+                }
+                priority = startDate <= tomorrowTS && todayTS <= endDate ? 1001 : 0;
               }
               if (event.visibility === "private" && !event.attendees) {
                 continue;
@@ -11801,7 +11807,6 @@ var WorkshopBackend = (() => {
                 cancelledEvents.set(uniqueId, event);
                 cancelled = true;
               }
-              const priority = startDate <= tomorrowTS && todayTS <= endDate ? 1001 : 0;
               metadatas.set(event, { uniqueId, cancelled, priority });
             }
             await ctx.read({ umidNames });
@@ -12802,9 +12807,12 @@ var WorkshopBackend = (() => {
             const todayTS = makeDaysAgo(0);
             const tomorrowTS = makeDaysAgo(-1);
             for (const event of results.value) {
-              const startDate = new Date(event.start.dateTime + "Z").valueOf();
-              const endDate = new Date(event.end.dateTime + "Z").valueOf();
-              const priority = startDate <= tomorrowTS && todayTS <= endDate ? 1001 : 0;
+              let priority;
+              if (event.start && event.end) {
+                const startDate = new Date(event.start.dateTime + "Z").valueOf();
+                const endDate = new Date(event.end.dateTime + "Z").valueOf();
+                priority = startDate <= tomorrowTS && todayTS <= endDate ? 1001 : 0;
+              }
               syncState.ingestEvent(event, priority);
             }
             syncState.syncUrl = results["@odata.deltaLink"];

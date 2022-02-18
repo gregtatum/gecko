@@ -739,10 +739,12 @@ class GapiFakeServer extends BaseFakeServer {
         // XXX iCal sequence mapping (which is distinct from our serial concept)
         sequence: 0,
         // XXX source is maybe interesting to include
-        start: {
-          dateTime: event.startDate.toISOString(),
-          // XXX timeZone fidelity
-        },
+        start: !event.cancelled
+          ? {
+              dateTime: event.startDate.toISOString(),
+              // XXX timeZone fidelity
+            }
+          : undefined,
         // XXX handle tentative
         status: event.cancelled ? "cancelled" : "confirmed",
         summary: event.summary,
@@ -1008,10 +1010,12 @@ class MapiFakeServer extends BaseFakeServer {
         sensitivity: "normal",
         seriesMasterId: event.recurringId || "",
         showAs: "unknown",
-        start: {
-          dateTime: event.startDate.toISOString().replace("Z", ""),
-          // XXX timeZone fidelity
-        },
+        start: !event.cancelled
+          ? {
+              dateTime: event.startDate.toISOString().replace("Z", ""),
+              // XXX timeZone fidelity
+            }
+          : undefined,
         subject: event.summary,
         status: "confirmed",
         summary: event.summary,

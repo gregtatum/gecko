@@ -260,22 +260,27 @@ export default TaskDefiner.defineAtMostOnceTask([
       const recurringIds = new Set();
 
       for (const event of results.items) {
-        const startDate = new Date(
-          event.start.dateTime || event.start.date
-        ).valueOf();
-        const endDate = new Date(
-          event.end.dateTime || event.end.date
-        ).valueOf();
+        let priority = 0;
+        if (event.start && event.end) {
+          const startDate = new Date(
+            event.start.dateTime || event.start.date
+          ).valueOf();
+          const endDate = new Date(
+            event.end.dateTime || event.end.date
+          ).valueOf();
 
-        if (
-          EVENT_OUTSIDE_SYNC_RANGE(
-            { startDate, endDate },
-            syncState.rawSyncState
-          )
-        ) {
-          // It's a mystery but some events aren't in the requested range.
-          // It's possible to have some events happening in 23 years!!
-          continue;
+          if (
+            EVENT_OUTSIDE_SYNC_RANGE(
+              { startDate, endDate },
+              syncState.rawSyncState
+            )
+          ) {
+            // It's a mystery but some events aren't in the requested range.
+            // It's possible to have some events happening in 23 years!!
+            continue;
+          }
+          // Give a higher priority to events which are happening today.
+          priority = startDate <= tomorrowTS && todayTS <= endDate ? 1001 : 0;
         }
 
         if (event.visibility === "private" && !event.attendees) {
@@ -303,9 +308,6 @@ export default TaskDefiner.defineAtMostOnceTask([
           cancelled = true;
         }
 
-        // Give a higher priority to events which are happening today.
-        const priority =
-          startDate <= tomorrowTS && todayTS <= endDate ? 1001 : 0;
         metadatas.set(event, { uniqueId, cancelled, priority });
       }
 

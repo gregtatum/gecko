@@ -221,12 +221,14 @@ export default TaskDefiner.defineAtMostOnceTask([
       const tomorrowTS = makeDaysAgo(-1);
 
       for (const event of results.value) {
-        const startDate = new Date(event.start.dateTime + "Z").valueOf();
-        const endDate = new Date(event.end.dateTime + "Z").valueOf();
+        let priority;
+        if (event.start && event.end) {
+          const startDate = new Date(event.start.dateTime + "Z").valueOf();
+          const endDate = new Date(event.end.dateTime + "Z").valueOf();
 
-        // Give a higher priority to events which are happening today.
-        const priority =
-          startDate <= tomorrowTS && todayTS <= endDate ? 1001 : 0;
+          // Give a higher priority to events which are happening today.
+          priority = startDate <= tomorrowTS && todayTS <= endDate ? 1001 : 0;
+        }
 
         syncState.ingestEvent(event, priority);
       }
