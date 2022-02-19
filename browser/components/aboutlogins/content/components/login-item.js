@@ -4,7 +4,7 @@
 
 import {
   recordTelemetryEvent,
-  promptForMasterPassword,
+  promptForPrimaryPassword,
   showConfirmationDialog,
 } from "../aboutLoginsUtils.js";
 
@@ -239,7 +239,7 @@ export default class LoginItem extends HTMLElement {
     if (this._login.password) {
       // We use .value instead of .defaultValue since the latter updates the
       // content attribute making the password easily viewable with Inspect
-      // Element even when Master Password is enabled. This is only run when
+      // Element even when Primary Password is enabled. This is only run when
       // the password is non-empty since setting the field to an empty value
       // would mark the field as 'dirty' for form validation and thus trigger
       // the error styling since the password field is 'required'.
@@ -328,10 +328,10 @@ export default class LoginItem extends HTMLElement {
   }
 
   async handleEditButton() {
-    let masterPasswordAuth = await promptForMasterPassword(
+    let primaryPasswordAuth = await promptForPrimaryPassword(
       "about-logins-edit-login-os-auth-dialog-message"
     );
-    if (!masterPasswordAuth) {
+    if (! primaryPasswordAuth) {
       return;
     }
 
@@ -398,12 +398,12 @@ export default class LoginItem extends HTMLElement {
       case "click": {
         let classList = event.currentTarget.classList;
         if (classList.contains("reveal-password-checkbox")) {
-          // We prompt for the master password when entering edit mode already.
+          // We prompt for the primary password when entering edit mode already.
           if (this._revealCheckbox.checked && !this.dataset.editing) {
-            let masterPasswordAuth = await promptForMasterPassword(
+            let primaryPasswordAuth = await promptForPrimaryPassword(
               "about-logins-reveal-password-os-auth-dialog-message"
             );
-            if (!masterPasswordAuth) {
+            if (!primaryPasswordAuth) {
               this._revealCheckbox.checked = false;
               return;
             }
@@ -481,10 +481,10 @@ export default class LoginItem extends HTMLElement {
               ? this._copyUsernameButton
               : this._copyPasswordButton;
           if (copyButton.dataset.copyLoginProperty == "password") {
-            let masterPasswordAuth = await promptForMasterPassword(
+            let primaryPasswordAuth = await promptForPrimaryPassword(
               "about-logins-copy-password-os-auth-dialog-message"
             );
-            if (!masterPasswordAuth) {
+            if (!primaryPasswordAuth) {
               return;
             }
           }
@@ -959,7 +959,7 @@ export default class LoginItem extends HTMLElement {
     this._passwordInput.type = inputType;
 
     // Swap which <input> is in the document depending on whether we need the
-    // real .value (which means that the master password was already entered,
+    // real .value (which means that the primary password was already entered,
     // if applicable)
     if (checked || this.dataset.editing) {
       this._passwordDisplayInput.replaceWith(this._passwordInput);

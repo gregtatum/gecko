@@ -114,7 +114,7 @@ window.addEventListener("AboutLoginsChromeToContent", event => {
   switch (event.detail.messageType) {
     case "AllLogins": {
       document.documentElement.classList.remove(
-        "master-password-auth-required"
+        "primary-password-auth-required"
       );
       setKeyboardAccessForNonDialogElements(true);
       handleAllLogins(event.detail.value);
@@ -160,8 +160,8 @@ window.addEventListener("AboutLoginsChromeToContent", event => {
       updateNoLogins();
       break;
     }
-    case "MasterPasswordAuthRequired": {
-      document.documentElement.classList.add("master-password-auth-required");
+    case "PrimaryPasswordAuthRequired": {
+      document.documentElement.classList.add("primary-password-auth-required");
       setKeyboardAccessForNonDialogElements(false);
       break;
     }

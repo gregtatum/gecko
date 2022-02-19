@@ -62,11 +62,6 @@ DIRS += [
 
 DIRS += ["build"]
 
-if CONFIG["NIGHTLY_BUILD"]:
-    DIRS += [
-        "payments",
-    ]
-
 if CONFIG["PINEBUILD"]:
     DIRS += [
         "companion",
