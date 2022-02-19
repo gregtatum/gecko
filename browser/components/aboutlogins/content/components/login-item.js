@@ -331,7 +331,7 @@ export default class LoginItem extends HTMLElement {
     let primaryPasswordAuth = await promptForPrimaryPassword(
       "about-logins-edit-login-os-auth-dialog-message"
     );
-    if (! primaryPasswordAuth) {
+    if (!primaryPasswordAuth) {
       return;
     }
 
