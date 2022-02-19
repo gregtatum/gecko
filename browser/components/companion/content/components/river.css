@@ -6,9 +6,6 @@
   display: flex;
   align-items: center;
   --light-bg-color: var(--colors-cafe-02);
-  background-color: var(--colors-cafe-02);
-  border-radius: 25px;
-  box-shadow: var(--inset-shadow-cafe);
 }
 
 :host:-moz-lwtheme-brighttext {
@@ -17,7 +14,9 @@
 
 #river {
   display: flex;
+  background-color: var(--colors-cafe-02);
   padding: 4px;
+  margin: 4px;
   margin-inline-end: 0;
   padding-inline-end: 0;
   border-start-start-radius: 25px;
@@ -33,6 +32,7 @@
 }
 
 #river[containsActive]::after {
+  border-inline-start: 1px solid var(--button-hover-bgcolor);
   margin-inline-start: 12px;
   content: "";
   /* When hovering the river, view-group icons will expand. Put the border on
@@ -79,9 +79,11 @@ view-group[top][hidden] {
 }
 
 view-group[top] {
+  background-color: var(--colors-cafe-02);
   border-start-end-radius: 25px;
   border-end-end-radius: 25px;
   padding: 4px;
+  margin: 4px;
 }
 
 #river:not([hidden]) + view-group[top] {

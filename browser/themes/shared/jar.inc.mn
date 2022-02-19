@@ -187,8 +187,6 @@
 #ifdef PINEBUILD
   skin/classic/browser/session-setaside.svg           (../shared/icons/session-setaside.svg)
   skin/classic/browser/session-confirm-checkmark.svg  (../shared/icons/session-confirm-checkmark.svg)
-  skin/classic/browser/companion.svg                  (../shared/icons/companion.svg)
-  skin/classic/browser/companion-selected.svg         (../shared/icons/companion-selected.svg)
 #endif
 
   skin/classic/browser/search-engine-placeholder.png           (../shared/search/search-engine-placeholder.png)
