@@ -12,14 +12,26 @@ export const timeFormat = new Intl.DateTimeFormat([], {
 
 let notificationTimers = new Set();
 
+async function isActiveWindow() {
+  if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
+    let result = await window.CompanionUtils.sendQuery(
+      "Companion:IsActiveWindow"
+    );
+    return result;
+  }
+  return !!Services.focus.activeWindow;
+}
+
 async function showNotification(event) {
-  let notificationLevel = window.CompanionUtils.getIntPref(
+  let notificationLevel = Services.prefs.getIntPref(
     "browser.pinebuild.companion.notifications.level"
   );
-  let isActiveWindow = await window.CompanionUtils.sendQuery(
-    "Companion:IsActiveWindow"
-  );
-  if (notificationLevel == 0 || (notificationLevel == 2 && isActiveWindow)) {
+  // Show notifications if always enabled (1) or conditionally enabled (2)
+  // and we have no active windows.
+  if (
+    notificationLevel == 0 ||
+    (notificationLevel == 2 && (await isActiveWindow()))
+  ) {
     return;
   }
 
@@ -34,26 +46,34 @@ async function showNotification(event) {
     icon: "chrome://branding/content/icon64.png",
     tag: event.id,
   });
-  notification.onclick = function() {
-    window.CompanionUtils.openCompanion();
+  notification.onclick = function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
+      window.CompanionUtils.openCompanion();
+    } else {
+      let browserWindow = Services.wm.getMostRecentWindow("navigator:browser");
+      if (browserWindow) {
+        browserWindow.focus();
+      } else {
+        const { openBrowserWindow } = ChromeUtils.import(
+          "resource:///modules/BrowserContentHandler.jsm"
+        );
+        openBrowserWindow();
+      }
+    }
   };
 }
 
-function processEvents(e) {
-  if (e.type != "refresh-events") {
-    return;
-  }
+function processEvents(events) {
   for (let timer of notificationTimers) {
     clearTimeout(timer);
   }
   notificationTimers = new Set();
-  let events;
   if (Services.prefs.getBoolPref("browser.pinebuild.workshop.enabled")) {
     /* Add workshop support here */
-  } else {
-    events = e.detail.events;
   }
-  let notificationTimeout = window.CompanionUtils.getIntPref(
+  let notificationTimeout = Services.prefs.getIntPref(
     "browser.pinebuild.companion.notifications.minutesBeforeEvent"
   );
   for (let event of events) {
@@ -71,11 +91,27 @@ function processEvents(e) {
   }
 }
 
-export function initNotifications() {
-  // Getting refresh-events events from calendar.js
-  document.addEventListener("refresh-events", processEvents);
-}
+let observer = {
+  observe(subject, topic, data) {
+    switch (topic) {
+      case "companion-services-refresh":
+        let events = subject.wrappedJSObject;
+        processEvents(events);
+        break;
+    }
+  },
+  QueryInterface: ChromeUtils.generateQI([
+    "nsISupportsWeakReference",
+    "nsIObserver",
+  ]),
+};
 
-export function uninitNotifications() {
-  document.removeEventListener("refresh-events", processEvents);
+export function initNotifications() {
+  if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
+    document.addEventListener("refresh-events", function(e) {
+      processEvents(e.detail.events);
+    });
+  } else {
+    Services.obs.addObserver(observer, "companion-services-refresh", true);
+  }
 }

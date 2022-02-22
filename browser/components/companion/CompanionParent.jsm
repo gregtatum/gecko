@@ -1161,6 +1161,7 @@ class CompanionParent extends JSWindowActorParent {
     if (!companion.isOpen) {
       companion.toggleVisible();
     }
+    win.focus();
   }
 
   _onIsActiveWindow() {

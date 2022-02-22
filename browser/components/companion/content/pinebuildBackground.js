@@ -100,6 +100,10 @@ function pinebuildBackground() {
     ensureWindowInvisible();
     openOrFocusWindow();
   });
+
+  import("chrome://browser/content/companion/notifications.js").then(module => {
+    module.initNotifications();
+  });
 }
 
 pinebuildBackground();
