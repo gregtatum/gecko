@@ -592,10 +592,10 @@ toolbarbutton.subviewbutton-back {
 #flow-reset-placeholder::after {
   content: "";
   position: absolute;
-  top: -30px;
-  left: -30px;
+  top: -50px;
+  left: -50px;
   bottom: 300px;
-  right: -30px;
+  right: -50px;
   background: radial-gradient(481.74% 98.84% at 50% 83.12%, rgba(255, 255, 255, 0) 39.42%, rgba(0, 197, 224, 0.02) 60.44%, rgba(0, 184, 224, 0.145) 73.89%, rgba(132, 89, 255, 0.4) 94.52%);
   border-radius: 16px;
   opacity: .7;
