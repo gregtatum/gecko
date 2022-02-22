@@ -81,7 +81,7 @@ class FakeEventFactory {
       const summary = sketch.summary || this.#makeSummary();
 
       const description =
-        sketch.description ||
+        sketch.description ??
         this.#generateDescription({ links: sketch.links });
       const descriptionType = sketch.descriptionType || "plain";
 

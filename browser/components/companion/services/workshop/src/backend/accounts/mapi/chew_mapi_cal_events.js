@@ -162,18 +162,20 @@ export class MapiCalEventChewer {
 
         const eventLocation = mapiEvent.location;
         const location = `${eventLocation.displayName}@${eventLocation.address}`;
-        const extraContents =
+        let extraContents =
           mapiEvent.locations?.map?.(loc => loc.displayName) || [];
         extraContents.push(
           mapiEvent.onlineMeetingUrl,
           eventLocation?.displayName,
           mapiEvent.onlineMeeting?.joinUrl
         );
+        extraContents = extraContents.filter(content => !!content);
 
         // ## Generate an HTML body part for the description
         const body = mapiEvent.body;
-        if (body?.content) {
-          const { content, contentType: type } = body;
+        if (body?.content || extraContents.length !== 0) {
+          const content = body.content || "";
+          const type = body.contentType || "plain";
           ({
             contentBlob,
             snippet,

@@ -76,10 +76,14 @@ export function generateSnippet(htmlString, includeQuotes) {
 }
 
 export function sanitizeSnippetAndExtractLinks(htmlString) {
-  return callOnMainThread({
-    cmd: "sanitizeSnippetAndExtractLinks",
-    args: [htmlString],
-  });
+  htmlString = htmlString.trim();
+  if (htmlString) {
+    return callOnMainThread({
+      cmd: "sanitizeSnippetAndExtractLinks",
+      args: [htmlString],
+    });
+  }
+  return null;
 }
 
 const entities = {

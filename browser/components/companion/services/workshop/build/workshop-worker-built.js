@@ -9931,10 +9931,14 @@ var WorkshopBackend = (() => {
     });
   }
   function sanitizeSnippetAndExtractLinks(htmlString) {
-    return callOnMainThread({
-      cmd: "sanitizeSnippetAndExtractLinks",
-      args: [htmlString]
-    });
+    htmlString = htmlString.trim();
+    if (htmlString) {
+      return callOnMainThread({
+        cmd: "sanitizeSnippetAndExtractLinks",
+        args: [htmlString]
+      });
+    }
+    return null;
   }
   var init_htmlchew = __esm({
     "src/backend/bodies/htmlchew.js"() {
@@ -12468,11 +12472,13 @@ var WorkshopBackend = (() => {
               const bodyReps = [];
               const eventLocation = mapiEvent.location;
               const location = `${eventLocation.displayName}@${eventLocation.address}`;
-              const extraContents = mapiEvent.locations?.map?.((loc) => loc.displayName) || [];
+              let extraContents = mapiEvent.locations?.map?.((loc) => loc.displayName) || [];
               extraContents.push(mapiEvent.onlineMeetingUrl, eventLocation?.displayName, mapiEvent.onlineMeeting?.joinUrl);
+              extraContents = extraContents.filter((content) => !!content);
               const body = mapiEvent.body;
-              if (body?.content) {
-                const { content, contentType: type } = body;
+              if (body?.content || extraContents.length !== 0) {
+                const content = body.content || "";
+                const type = body.contentType || "plain";
                 ({
                   contentBlob,
                   snippet,

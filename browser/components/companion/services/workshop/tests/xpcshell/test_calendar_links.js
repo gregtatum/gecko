@@ -204,7 +204,29 @@ const MAPI_DESCRIPTION_TEST = [
     descriptionType: "html",
     links: [{ url: "http://example.com/", text: "An example" }],
   },
-  // Other places with links
+  // Other places with links and no description
+  {
+    description: "",
+    onlineMeetingUrl: "http://mozilla.com",
+    location: {
+      displayName: "http://allizom.com",
+    },
+    locations: [
+      {
+        displayName: "http://allizom.org",
+      },
+    ],
+    onlineMeeting: {
+      joinUrl: "http://mozilla.org",
+    },
+    links: [
+      { url: "http://mozilla.com/" },
+      { url: "http://allizom.com/" },
+      { url: "http://allizom.org/" },
+      { url: "http://mozilla.org/" },
+    ],
+  },
+  // Other places with links and with default description
   {
     onlineMeetingUrl: "http://mozilla.com",
     location: {
