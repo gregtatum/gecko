@@ -751,10 +751,7 @@ class UrlbarInput {
     }
 
     if (element?.classList.contains("urlbarView-button-block")) {
-      this.controller.notify(
-        this.controller.NOTIFICATIONS.QUERY_RESULT_REMOVED,
-        result.rowIndex
-      );
+      this.controller.handleDeleteEntry(result);
       return;
     }
 

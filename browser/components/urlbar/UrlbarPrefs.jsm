@@ -227,6 +227,9 @@ const PREF_URLBAR_DEFAULTS = new Map([
   // Whether results will include QuickActions.
   ["suggest.quickactions", AppConstants.PINEBUILD],
 
+  // JSON'ed array of blocked quick suggest URL digests.
+  ["quickSuggest.blockedDigests", ""],
+
   // Global toggle for whether the quick suggest feature is enabled, i.e.,
   // sponsored and recommended results related to the user's search string.
   ["quicksuggest.enabled", false],

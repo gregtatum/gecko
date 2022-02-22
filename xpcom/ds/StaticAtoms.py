@@ -959,6 +959,7 @@ STATIC_ATOMS = [
     Atom("order", "order"),
     Atom("orient", "orient"),
     Atom("orientation", "orientation"),
+    Atom("origin_trial", "origin-trial"),
     Atom("otherwise", "otherwise"),
     Atom("output", "output"),
     Atom("overflow", "overflow"),
