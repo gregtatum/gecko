@@ -183,6 +183,7 @@ class nsContextMenu {
       context = this.contentData.context;
       nsContextMenu.contentData = null;
     }
+    console.log("!!! Context", context);
 
     this.shouldDisplay = context.shouldDisplay;
     this.timeStamp = context.timeStamp;
@@ -586,7 +587,9 @@ class nsContextMenu {
     this.showItem("context-copyimage-contents", this.onImage);
 
     // Copy image location depends on whether we're on an image.
-    this.showItem("context-copyimage", this.onImage || showBGImage);
+    this.showItem("context-imagetext", this.onImage || showBGImage);
+
+    this.showItem("context-copyimage-contents", this.onImage || showBGImage);
 
     // Send media URL (but not for canvas, since it's a big data: URL)
     this.showItem("context-sendimage", this.onImage || showBGImage);
@@ -2125,6 +2128,25 @@ class nsContextMenu {
       Ci.nsIClipboardHelper
     );
     clipboard.copyString(this.originalMediaURL);
+  }
+
+  getImageText() {
+    const url =
+      "data:text/plain;charset=utf-8," +
+      encodeURIComponent(this.imageInfo?.imageText);
+    const clipboard = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(
+      Ci.nsIClipboardHelper
+    );
+    clipboard.copyString(url);
+
+    let referrerInfo = this.contentData.referrerInfo;
+    let systemPrincipal = Services.scriptSecurityManager.getSystemPrincipal();
+    openLinkIn(url, "tab", {
+      referrerInfo,
+      triggeringPrincipal: systemPrincipal,
+    });
+
+    console.log(this);
   }
 
   drmLearnMore(aEvent) {
