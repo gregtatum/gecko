@@ -704,6 +704,11 @@ class BrowserListener {
    * See nsISHistoryListener
    */
   async OnHistoryNewEntry(newURI, oldIndex) {
+    if (!this.#browser.browsingContext) {
+      // In some cases we are called after the browser has died.
+      return;
+    }
+
     logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryNewEntry: ` +
         `${newURI.spec}`

@@ -5416,15 +5416,6 @@ var XULBrowserWindow = {
 
     UpdateBackForwardCommands(gBrowser.webNavigation);
 
-    if (AppConstants.PINEBUILD) {
-      let saveSnapshot = document.getElementById("Browser:SaveSnapshot");
-      if (!InteractionsBlocklist.canRecordUrl(aLocationURI)) {
-        saveSnapshot.setAttribute("disabled", "true");
-      } else {
-        saveSnapshot.removeAttribute("disabled");
-      }
-    }
-
     Services.obs.notifyObservers(
       aWebProgress,
       "touchbar-location-change",
@@ -5437,6 +5428,15 @@ var XULBrowserWindow = {
 
     if (!aWebProgress.isTopLevel) {
       return;
+    }
+
+    if (AppConstants.PINEBUILD) {
+      let saveSnapshot = document.getElementById("Browser:SaveSnapshot");
+      if (!InteractionsBlocklist.canRecordUrl(aLocationURI)) {
+        saveSnapshot.setAttribute("disabled", "true");
+      } else {
+        saveSnapshot.removeAttribute("disabled");
+      }
     }
 
     this.hideOverLinkImmediately = true;
