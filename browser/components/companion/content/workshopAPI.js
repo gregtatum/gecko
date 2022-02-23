@@ -72,11 +72,38 @@ if (workshopEnabled) {
       }
     },
 
+    getOauthInfo(type) {
+      if (Cu.isInAutomation && type.startsWith("testservice")) {
+        let html = `
+          <a href="http://example.net/login">Login</a>
+          <script>
+            document.querySelector("a").href = "https://localhost/oauth?state=".concat(
+              new URL(window.location.href).searchParams.get("state")
+            );
+          </script>
+        `.replace(new RegExp("\\n *", "g"), "");
+        const url = `https://example.net/document-builder.sjs?html=${html}`;
+        return {
+          endpoint: url,
+          tokenEndpoint: `data:application/json,${JSON.stringify({
+            access_token: "testservice-token",
+            refresh_token: "testservice-refresh",
+          })}`,
+          scopes: ["all"],
+          clientId: "client-id",
+          clientSecret: "client-secret",
+          type,
+        };
+      }
+
+      return workshopAPI.oauthBindings[type];
+    },
+
     async connectAccount(type) {
       // Ensure this account type doesn't exist before prompting for log in.
       await this.assertNoAccountOfType(type);
 
-      const oauthInfo = workshopAPI.oauthBindings[type];
+      const oauthInfo = this.getOauthInfo(type);
       let oauth2Tokens = await this.companionActor.sendQuery(
         "Companion:GetOAuth2Tokens",
         {
@@ -88,6 +115,10 @@ if (workshopEnabled) {
           type,
         }
       );
+
+      if (!oauth2Tokens) {
+        throw new Error("No oauth tokens");
+      }
 
       // If more than one login was started prior to one completing, there could
       // now be an account of this type. Abort if that's the case.

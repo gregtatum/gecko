@@ -49,6 +49,18 @@ export const configuratorModules = new Map([
       return mod.default;
     },
   ],
+  [
+    "testservice",
+    async function() {
+      return () => ({
+        userDetails: "",
+        credentials: "",
+        typeFields: {},
+        connInfoFields: {},
+        kind: "calendar",
+      });
+    },
+  ],
   /*
      [
      "phabricator",
@@ -100,6 +112,18 @@ export const validatorModules = new Map([
       return mod.default;
     },
   ],
+  [
+    "testservice",
+    async function() {
+      return () => ({
+        engineFields: {
+          engine: "gapi",
+          engineData: {},
+        },
+        receiveProtoConn: null,
+      });
+    },
+  ],
   /*
      [
      "phabricator",
@@ -149,6 +173,31 @@ export const accountModules = new Map([
     async function() {
       const mod = await import("./accounts/mapi/account");
       return mod.default;
+    },
+  ],
+  [
+    "testservice",
+    async function() {
+      return class WorkshopTestService {
+        get __isTestService() {
+          return true;
+        }
+
+        toString() {
+          return "[WorkshopTestService testservice]";
+        }
+
+        async __acquire() {
+          return this;
+        }
+        __release() {}
+
+        async checkAccount() {
+          return null;
+        }
+
+        shutdown() {}
+      };
     },
   ],
   /*

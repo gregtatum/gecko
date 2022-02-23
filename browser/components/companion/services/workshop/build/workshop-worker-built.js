@@ -9234,6 +9234,12 @@ var WorkshopBackend = (() => {
           }
         ],
         ensureEssentialOfflineFolders(ctx, account) {
+          if (account.__isTestService) {
+            return {
+              newFolders: [],
+              modifiedFolders: []
+            };
+          }
           let foldersTOC = account.foldersTOC;
           let newFolders = [];
           for (let desired of this.essentialOfflineFolders) {
@@ -17470,6 +17476,18 @@ var WorkshopBackend = (() => {
       }
     ],
     [
+      "testservice",
+      async function() {
+        return () => ({
+          userDetails: "",
+          credentials: "",
+          typeFields: {},
+          connInfoFields: {},
+          kind: "calendar"
+        });
+      }
+    ],
+    [
       "ical",
       async function() {
         const mod = await Promise.resolve().then(() => (init_configurator4(), configurator_exports4));
@@ -17500,6 +17518,18 @@ var WorkshopBackend = (() => {
       }
     ],
     [
+      "testservice",
+      async function() {
+        return () => ({
+          engineFields: {
+            engine: "gapi",
+            engineData: {}
+          },
+          receiveProtoConn: null
+        });
+      }
+    ],
+    [
       "ical",
       async function() {
         const mod = await Promise.resolve().then(() => (init_validator4(), validator_exports4));
@@ -17527,6 +17557,29 @@ var WorkshopBackend = (() => {
       async function() {
         const mod = await Promise.resolve().then(() => (init_account2(), account_exports2));
         return mod.default;
+      }
+    ],
+    [
+      "testservice",
+      async function() {
+        return class WorkshopTestService {
+          get __isTestService() {
+            return true;
+          }
+          toString() {
+            return "[WorkshopTestService testservice]";
+          }
+          async __acquire() {
+            return this;
+          }
+          __release() {
+          }
+          async checkAccount() {
+            return null;
+          }
+          shutdown() {
+          }
+        };
       }
     ],
     [

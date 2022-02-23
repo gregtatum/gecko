@@ -593,6 +593,65 @@ class CompanionHelper {
       );
     }
   }
+
+  async loginToTestService(serviceType) {
+    const clickLoginLink = () =>
+      SpecialPowers.spawn(
+        this.browserWindow.gBrowser.selectedBrowser,
+        [],
+        async () => {
+          let link = await ContentTaskUtils.waitForCondition(() =>
+            content.document.querySelector("a")
+          );
+          link.click();
+        }
+      );
+    const authStarted = BrowserTestUtils.waitForNewTab(
+      this.browserWindow.gBrowser
+    );
+
+    if (this.workshopEnabled) {
+      const companionActor = this.browserWindow.document
+        .getElementById("companion-browser")
+        .browsingContext.currentWindowGlobal.getActor("Companion");
+      companionActor.sendAsyncMessage("Companion:TestCreateAccount", {
+        type: serviceType,
+      });
+      let authenticated = TestUtils.topicObserved(
+        "companion-signin",
+        (_, data) => data == serviceType
+      );
+      await authStarted;
+      await clickLoginLink();
+      await authenticated;
+    } else {
+      let created = OnlineServices.createService(serviceType);
+      await authStarted;
+      await clickLoginLink();
+      await created;
+    }
+  }
+
+  async logoutFromTestService(serviceType) {
+    if (this.workshopEnabled) {
+      const companionActor = this.browserWindow.document
+        .getElementById("companion-browser")
+        .browsingContext.currentWindowGlobal.getActor("Companion");
+      companionActor.sendAsyncMessage("Companion:TestDeleteAccount", {
+        type: serviceType,
+      });
+      await TestUtils.topicObserved(
+        "companion-signout",
+        (_, data) => data == serviceType
+      );
+    } else {
+      await Promise.all(
+        OnlineServices.getServices(serviceType).map(service =>
+          OnlineServices.deleteService(service)
+        )
+      );
+    }
+  }
 }
 
 var PinebuildTestUtils = {
@@ -946,18 +1005,6 @@ var PinebuildTestUtils = {
     );
     pageActionMenu.hidePopup();
     await popuphidden;
-  },
-
-  async loginToTestService(serviceType) {
-    await OnlineServices.createService(serviceType);
-  },
-
-  async logoutFromTestService(serviceType) {
-    await Promise.all(
-      OnlineServices.getServices(serviceType).map(service =>
-        OnlineServices.deleteService(service)
-      )
-    );
   },
 
   /**

@@ -67,6 +67,8 @@ export class ServicesOnboarding extends MozLitElement {
     } else if (e.type == "Companion:SignOut") {
       this.onSignOut(e);
     } else if (e.type == "Companion:OAuthRefreshTokenReceived") {
+      // This service is waiting to get its access token, keep it in the
+      // "connecting" state for now.
       this.currentlyAuthorizingServices.add(e.detail.service);
       this.requestUpdate();
     } else if (e.type == "Companion:OAuthAccessTokenError") {

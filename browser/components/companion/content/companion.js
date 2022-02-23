@@ -18,6 +18,7 @@ import {
 } from "./snapshots.js";
 import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
 import { initNotifications } from "./notifications.js";
+import { Workshop, workshopEnabled } from "./workshopAPI.js";
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 // Helper to open a URL in the main browser pane.
@@ -119,6 +120,16 @@ function maybeInitializeUI() {
 
     document.addEventListener("section-panel-back", () => {
       hidePanel();
+    });
+  }
+
+  if (workshopEnabled && Cu.isInAutomation) {
+    window.addEventListener("Companion:TestCreateAccount", e => {
+      Workshop.connectAccount(e.detail.type);
+    });
+    window.addEventListener("Companion:TestDeleteAccount", e => {
+      let account = Workshop.getAccountByType(e.detail.type);
+      Workshop.deleteAccount(account);
     });
   }
 

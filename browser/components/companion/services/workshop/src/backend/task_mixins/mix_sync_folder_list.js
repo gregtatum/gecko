@@ -85,6 +85,13 @@ const MixinSyncFolderList = {
   ],
 
   ensureEssentialOfflineFolders(ctx, account) {
+    if (account.__isTestService) {
+      return {
+        newFolders: [],
+        modifiedFolders: [],
+      };
+    }
+
     let foldersTOC = account.foldersTOC;
     let newFolders = [];
 

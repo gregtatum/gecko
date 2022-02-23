@@ -7,11 +7,9 @@ registerCleanupFunction(async () => {
   // No matter what happens, blow away window history after this file runs
   // to avoid leaking state between tests.
   gGlobalHistory.reset();
-  await PinebuildTestUtils.logoutFromTestService("testservice");
-  await PinebuildTestUtils.logoutFromTestService("testserviceauth");
 });
 
-add_task(async function setup() {
+add_setup(async function setup() {
   await SpecialPowers.pushPrefEnv({
     set: [
       ["browser.pinebuild.companion-service-onboarding.enabled", true],
@@ -22,15 +20,9 @@ add_task(async function setup() {
             icon: "chrome://browser/content/companion/googleAccount.png",
             name: "Test service",
             services: "Test calendar things",
-            domains: ["www.example.com", "test2.example.com"],
-            type: "testservice",
-          },
-          {
-            icon: "chrome://browser/content/companion/googleAccount.png",
-            name: "Test service",
-            services: "Test calendar things",
             domains: ["example.net"],
-            type: "testserviceauth",
+            type: "testservice",
+            api: "testservice",
           },
         ]),
       ],
@@ -126,6 +118,15 @@ async function loadURI(gBrowser, url) {
   await newViewCreated;
 }
 
+async function clickLoginLink(browser) {
+  await SpecialPowers.spawn(browser, [], async () => {
+    let link = await ContentTaskUtils.waitForCondition(() =>
+      content.document.querySelector("a")
+    );
+    link.click();
+  });
+}
+
 add_task(async function testConnectOptionNotShown() {
   await PinebuildTestUtils.withNewBrowserWindow(async win => {
     const { gBrowser } = win;
@@ -149,8 +150,8 @@ add_task(async function testConnectOptionShown() {
     const { gBrowser } = win;
 
     await CompanionHelper.whenReady(async helper => {
-      let testUrl = "https://test2.example.com/";
-      let domain = "test2.example.com";
+      let testUrl = "https://example.net/";
+      let domain = "example.net";
 
       await assertConnectCard(helper, { length: 0 });
 
@@ -159,6 +160,7 @@ add_task(async function testConnectOptionShown() {
       await loadURI(gBrowser, testUrl);
       await urlHandled;
 
+      let authStarted = BrowserTestUtils.waitForNewTab(gBrowser);
       let connected = TestUtils.topicObserved(
         "companion-signin",
         (_, data) => data == "testservice"
@@ -171,6 +173,15 @@ add_task(async function testConnectOptionShown() {
         clickConnect: true,
       });
 
+      await authStarted;
+      await assertConnectCard(helper, {
+        service: "testservice",
+        length: 1,
+        connected: false,
+        authenticating: true,
+      });
+      await clickLoginLink(gBrowser.selectedBrowser);
+
       await connected;
       await assertConnectCard(helper, {
         service: "testservice",
@@ -180,7 +191,7 @@ add_task(async function testConnectOptionShown() {
         hideService: true,
       });
 
-      await PinebuildTestUtils.logoutFromTestService("testservice");
+      await helper.logoutFromTestService("testservice");
     }, win);
   });
 });
@@ -191,7 +202,7 @@ add_task(async function testDuplicateServiceTypeHidden() {
 
     await CompanionHelper.whenReady(async helper => {
       await assertConnectCard(helper, { length: 0 });
-      await PinebuildTestUtils.loginToTestService("testservice-connect");
+      await helper.loginToTestService("testservice");
       await assertConnectCard(helper, {
         service: "testservice",
         length: 1,
@@ -201,15 +212,18 @@ add_task(async function testDuplicateServiceTypeHidden() {
       });
       await assertConnectCard(helper, { length: 0 });
 
-      let testUrl = "https://test2.example.com/";
-      let domain = "test2.example.com";
+      let testUrl = "https://example.net/";
+      let domain = "example.net";
 
       let urlHandled = waitForDomainHandled(helper, domain);
 
       await loadURI(gBrowser, testUrl);
       await urlHandled;
-      await assertConnectCard(helper, { service: "testservice", length: 0 });
-      await PinebuildTestUtils.logoutFromTestService("testservice-connect");
+      await assertConnectCard(helper, {
+        service: "testservice",
+        length: 0,
+      });
+      await helper.logoutFromTestService("testservice");
     }, win);
   });
 });
@@ -232,7 +246,7 @@ add_task(async function testOauthFlow() {
       let authStarted = BrowserTestUtils.waitForNewTab(gBrowser);
 
       await assertConnectCard(helper, {
-        service: "testserviceauth",
+        service: "testservice",
         length: 1,
         connected: false,
         authenticating: false,
@@ -242,7 +256,7 @@ add_task(async function testOauthFlow() {
       await authStarted;
 
       await assertConnectCard(helper, {
-        service: "testserviceauth",
+        service: "testservice",
         length: 1,
         connected: false,
         authenticating: true,
@@ -273,7 +287,7 @@ add_task(async function testMultipleOauthFlow() {
       let authStarted = BrowserTestUtils.waitForNewTab(gBrowser);
 
       await assertConnectCard(helper, {
-        service: "testserviceauth",
+        service: "testservice",
         length: 1,
         connected: false,
         authenticating: false,
@@ -283,7 +297,7 @@ add_task(async function testMultipleOauthFlow() {
       await authStarted;
 
       await assertConnectCard(helper, {
-        service: "testserviceauth",
+        service: "testservice",
         length: 1,
         connected: false,
         authenticating: true,
@@ -294,7 +308,7 @@ add_task(async function testMultipleOauthFlow() {
       let authStartedAgain = BrowserTestUtils.waitForNewTab(gBrowser);
 
       await assertConnectCard(helper, {
-        service: "testserviceauth",
+        service: "testservice",
         length: 1,
         connected: false,
         authenticating: false,
@@ -305,7 +319,7 @@ add_task(async function testMultipleOauthFlow() {
       is(gBrowser.tabs.length, initialTabCount + 2, "Two OAuth tabs created");
 
       await assertConnectCard(helper, {
-        service: "testserviceauth",
+        service: "testservice",
         length: 1,
         connected: false,
         authenticating: true,
@@ -313,7 +327,7 @@ add_task(async function testMultipleOauthFlow() {
 
       let authenticated = TestUtils.topicObserved(
         "companion-signin",
-        (_, data) => data == "testserviceauth"
+        (_, data) => data == "testservice"
       );
 
       const delayPref = "pinebuild.testing.OAuthDelayAccessToken";
@@ -321,16 +335,11 @@ add_task(async function testMultipleOauthFlow() {
 
       let tabClosed = BrowserTestUtils.waitForTabClosing(gBrowser.selectedTab);
 
-      await SpecialPowers.spawn(gBrowser.selectedBrowser, [], async () => {
-        let link = await ContentTaskUtils.waitForCondition(() =>
-          content.document.querySelector("a")
-        );
-        link.click();
-      });
+      await clickLoginLink(gBrowser.selectedBrowser);
 
       await tabClosed;
       await assertConnectCard(helper, {
-        service: "testserviceauth",
+        service: "testservice",
         length: 1,
         connected: false,
         authenticating: true,
@@ -341,7 +350,7 @@ add_task(async function testMultipleOauthFlow() {
 
       is(gBrowser.tabs.length, initialTabCount, "OAuth tabs have been removed");
 
-      await PinebuildTestUtils.logoutFromTestService("testserviceauth");
+      await helper.logoutFromTestService("testservice");
     }, win);
   });
 });
@@ -364,7 +373,7 @@ add_task(async function testOauthFlowError() {
       let authStarted = BrowserTestUtils.waitForNewTab(gBrowser);
 
       await assertConnectCard(helper, {
-        service: "testserviceauth",
+        service: "testservice",
         length: 1,
         connected: false,
         authenticating: false,
@@ -374,7 +383,7 @@ add_task(async function testOauthFlowError() {
       await authStarted;
 
       await assertConnectCard(helper, {
-        service: "testserviceauth",
+        service: "testservice",
         length: 1,
         connected: false,
         authenticating: true,
@@ -382,7 +391,7 @@ add_task(async function testOauthFlowError() {
       });
 
       await assertConnectCard(helper, {
-        service: "testserviceauth",
+        service: "testservice",
         length: 1,
         connected: false,
         authenticating: true,
@@ -393,24 +402,16 @@ add_task(async function testOauthFlowError() {
 
       let tabClosed = BrowserTestUtils.waitForTabClosing(gBrowser.selectedTab);
 
-      await SpecialPowers.spawn(gBrowser.selectedBrowser, [], async () => {
-        let link = await ContentTaskUtils.waitForCondition(() =>
-          content.document.querySelector("a")
-        );
-        link.click();
-      });
-
+      await clickLoginLink(gBrowser.selectedBrowser);
       await tabClosed;
       await assertConnectCard(helper, {
-        service: "testserviceauth",
+        service: "testservice",
         length: 1,
         connected: false,
         authenticating: false,
       });
 
       Services.prefs.clearUserPref(errorPref);
-
-      await PinebuildTestUtils.logoutFromTestService("testserviceauth");
     }, win);
   });
 });

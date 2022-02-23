@@ -596,7 +596,7 @@ class TestService {
     this.app = config.type;
     this.id = ++nextServiceId;
     this.hasConnectionError = false;
-    if (this.app == "testserviceauth") {
+    if (this.app == "testservice") {
       let html = `
         <a href="http://example.net/login">Login</a>
         <script>
@@ -608,7 +608,10 @@ class TestService {
       const url = `https://example.net/document-builder.sjs?html=${html}`;
       this.auth = new OAuth2(
         url,
-        'data:application/json,{"accesstoken":"testserviceauth-token"}',
+        `data:application/json,${JSON.stringify({
+          access_token: "testservice-token",
+          refresh_token: "testservice-refresh",
+        })}`,
         "all",
         "client-id",
         "client-secret",
