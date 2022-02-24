@@ -173,6 +173,30 @@ const GAPI_DESCRIPTION_TEST = [
     ],
   },
   {
+    description: `https://docs.google.com/spreadsheets/u/1/d/boofar`,
+    links: [
+      {
+        url: "https://docs.google.com/spreadsheets/u/1/d/boofar",
+        docInfo: {
+          type: "spreadsheets",
+          title: "spreadsheets: id is boofar",
+        },
+      },
+    ],
+  },
+  {
+    description: `https://drive.google.com/open?id=rafoob&authuser=0`,
+    links: [
+      {
+        url: "https://drive.google.com/open?id=rafoob&authuser=0",
+        docInfo: {
+          type: "drive",
+          title: "drive: id is rafoob",
+        },
+      },
+    ],
+  },
+  {
     description: `https://docs.google.com/document/d/invalid`,
     links: [
       {

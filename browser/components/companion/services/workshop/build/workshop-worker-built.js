@@ -10075,7 +10075,17 @@ var WorkshopBackend = (() => {
     if (!url.hostname.endsWith(".google.com")) {
       return null;
     }
-    const [, type, , id] = url.pathname.split("/", 4);
+    let type, id;
+    if (url.hostname === "drive.google.com") {
+      type = "drive";
+      id = url.searchParams.get("id");
+    } else {
+      const match = url.pathname.match(DOCS_PAT);
+      if (!match) {
+        return null;
+      }
+      [, type, id] = match;
+    }
     if (!id || !type) {
       return null;
     }
@@ -10092,7 +10102,7 @@ var WorkshopBackend = (() => {
         break;
       case "drive":
       case "file":
-        apiTarget = `https://www.googleapis.com/drive/v2/files/${id}?fields=name`;
+        apiTarget = `https://www.googleapis.com/drive/v3/files/${id}?fields=name`;
         break;
       default:
         return null;
@@ -10105,13 +10115,24 @@ var WorkshopBackend = (() => {
       if (!results || results.error) {
         return { type, title: null };
       }
-      const title = type == "spreadsheets" ? results.properties.title : results.title;
-      return { type, title };
+      let title;
+      switch (type) {
+        case "spreadsheets":
+          title = results.properties.title;
+          break;
+        case "file":
+        case "drive":
+          title = results.name;
+          break;
+        default:
+          title = results.title;
+      }
+      return { type, title: title || null };
     });
     docTitleCache.set(apiTarget, resultPromise);
     return resultPromise;
   }
-  var URL_REGEX, linksToIgnore, conferencingInfo;
+  var URL_REGEX, linksToIgnore, conferencingInfo, DOCS_PAT;
   var init_urlchew = __esm({
     "src/backend/bodies/urlchew.js"() {
       URL_REGEX = /(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])/gim;
@@ -10150,6 +10171,7 @@ var WorkshopBackend = (() => {
           icon: "chrome://browser/content/companion/webex.png"
         }
       ];
+      DOCS_PAT = new RegExp("/([^/]+)/(?:u/[^/]+/)?d/([^/]+)");
     }
   });
 
@@ -17693,7 +17715,8 @@ var WorkshopBackend = (() => {
               "https://www.googleapis.com/auth/gmail.readonly",
               "https://www.googleapis.com/auth/calendar.events.readonly",
               "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
-              "https://www.googleapis.com/auth/documents.readonly"
+              "https://www.googleapis.com/auth/documents.readonly",
+              "https://www.googleapis.com/auth/drive.readonly"
             ]
           }
         },

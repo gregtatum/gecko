@@ -521,6 +521,12 @@ class GapiFakeServer extends BaseFakeServer {
         extraPathSegments: ["id"],
         handler: this.unpaged(this.unpaged_spreadsheets),
       },
+      {
+        // prefix for https://www.googleapis.com/drive/v3/files/${id}
+        prefix: "/drive/v3/files/",
+        extraPathSegments: ["id"],
+        handler: this.unpaged(this.unpaged_drive),
+      },
     ];
 
     this.registerAPIHandlers(API_HANDLERS);
@@ -650,6 +656,12 @@ class GapiFakeServer extends BaseFakeServer {
   unpaged_spreadsheets({ id }) {
     return {
       properties: { title: `spreadsheets: id is ${id}` },
+    };
+  }
+
+  unpaged_drive({ id }) {
+    return {
+      name: `drive: id is ${id}`,
     };
   }
 

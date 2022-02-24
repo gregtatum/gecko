@@ -219,6 +219,11 @@ export function getConferenceInfo(data, links) {
   return null;
 }
 
+// Must catch type and id for:
+//  - /document/u/0/d/Whatever_ID/edit
+//  - /spreadcheets/d/Whatever_ID/edit
+const DOCS_PAT = new RegExp("/([^/]+)/(?:u/[^/]+/)?d/([^/]+)");
+
 /**
  * Get document title for a given url.
  * @param {string} url - the url to parse to guess a title.
@@ -234,13 +239,20 @@ export async function getDocumentTitle(url, gapiClient, docTitleCache) {
     return null;
   }
 
-  // TODO: some urls are not handled here:
-  //  - https://drive.google.com/open?id=Whatever_ID&authuser=0
-  //  - https://docs.google.com/document/u/0/d/Whatever_ID/edit
+  let type, id;
 
-  // The expected url looks like
-  //  - https://docs.google.com/document/d/Whatever_ID/edit
-  const [, type, , id] = url.pathname.split("/", 4);
+  if (url.hostname === "drive.google.com") {
+    type = "drive";
+    id = url.searchParams.get("id");
+  } else {
+    const match = url.pathname.match(DOCS_PAT);
+    if (!match) {
+      return null;
+    }
+
+    [, type, id] = match;
+  }
+
   if (!id || !type) {
     return null;
   }
@@ -258,7 +270,7 @@ export async function getDocumentTitle(url, gapiClient, docTitleCache) {
       break;
     case "drive":
     case "file":
-      apiTarget = `https://www.googleapis.com/drive/v2/files/${id}?fields=name`;
+      apiTarget = `https://www.googleapis.com/drive/v3/files/${id}?fields=name`;
       break;
     default:
       return null;
@@ -276,9 +288,20 @@ export async function getDocumentTitle(url, gapiClient, docTitleCache) {
         return { type, title: null };
       }
 
-      const title =
-        type == "spreadsheets" ? results.properties.title : results.title;
-      return { type, title };
+      let title;
+      switch (type) {
+        case "spreadsheets":
+          title = results.properties.title;
+          break;
+        case "file":
+        case "drive":
+          title = results.name;
+          break;
+        default:
+          title = results.title;
+      }
+
+      return { type, title: title || null };
     });
   docTitleCache.set(apiTarget, resultPromise);
   return resultPromise;
