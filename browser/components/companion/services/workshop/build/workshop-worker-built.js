@@ -9944,7 +9944,7 @@ var WorkshopBackend = (() => {
         args: [htmlString]
       });
     }
-    return null;
+    return { links: {}, document: "", snippet: "" };
   }
   var init_htmlchew = __esm({
     "src/backend/bodies/htmlchew.js"() {

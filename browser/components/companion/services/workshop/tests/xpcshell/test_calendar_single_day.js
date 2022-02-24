@@ -148,6 +148,8 @@ const oneHour = 60 * 60 * 1000;
 const INITIAL_EVENTS = [
   {
     summary: "Morning Meeting",
+    description: "",
+    descriptionType: "html",
     organizer: {
       displayName: "Phil Connors",
       email: "pconnors@mozilla.com",

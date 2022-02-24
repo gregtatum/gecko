@@ -83,7 +83,7 @@ export function sanitizeSnippetAndExtractLinks(htmlString) {
       args: [htmlString],
     });
   }
-  return null;
+  return { links: {}, document: "", snippet: "" };
 }
 
 const entities = {
