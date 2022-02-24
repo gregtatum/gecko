@@ -11430,7 +11430,7 @@ var WorkshopBackend = (() => {
           for (const gapiEvent of newEvents) {
             try {
               const eventId = makeMessageId(this.convId, gapiEvent.id);
-              if (gapiEvent.status === "cancelled") {
+              if (gapiEvent.status === "cancelled" || gapiEvent.attendees?.some((attendee) => attendee.self && attendee.responseStatus === "declined")) {
                 if (oldById.has(eventId)) {
                   this.modifiedEventMap.set(eventId, null);
                   const uniqueId = makeUmidWithinFolder(this.folderId, gapiEvent.id);

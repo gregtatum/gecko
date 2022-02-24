@@ -196,7 +196,13 @@ export class GapiCalEventChewer {
     for (const gapiEvent of newEvents) {
       try {
         const eventId = makeMessageId(this.convId, gapiEvent.id);
-        if (gapiEvent.status === "cancelled") {
+        if (
+          gapiEvent.status === "cancelled" ||
+          gapiEvent.attendees?.some(
+            // The calendar's owner is an attendee but he declined.
+            attendee => attendee.self && attendee.responseStatus === "declined"
+          )
+        ) {
           // The event is now deleted!
           if (oldById.has(eventId)) {
             this.modifiedEventMap.set(eventId, null);

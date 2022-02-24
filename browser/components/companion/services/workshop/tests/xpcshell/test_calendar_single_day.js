@@ -13,6 +13,7 @@ async function check_single_day_for_account_type({
   initialEventSketches,
   addEventSketches,
   changeEventSketches,
+  declinedEvents,
   errors,
 }) {
   const initialEvents = WorkshopHelper.deriveFullEvents({
@@ -98,6 +99,7 @@ async function check_single_day_for_account_type({
       e[key] = value;
     }
   }
+
   // and then verify that changes are correct.
   WorkshopHelper.eventsEqual(calView.items, currentEvents);
 
@@ -112,6 +114,17 @@ async function check_single_day_for_account_type({
 
   currentEvents = [...currentEvents, ...eventAfterErrors];
   WorkshopHelper.eventsEqual(calView.items, currentEvents);
+
+  if (declinedEvents) {
+    fakeServer.defaultCalendar.changeEvents(declinedEvents);
+    for (const event of declinedEvents) {
+      const idx = currentEvents.findIndex(x => x.summary === event.summary);
+      currentEvents.splice(idx, 1);
+    }
+    fakeServer.invalidateCalendarTokens();
+    await calView.refresh();
+    WorkshopHelper.eventsEqual(calView.items, currentEvents);
+  }
 
   await WorkshopHelper.cleanBackend(workshopAPI);
 }
@@ -130,6 +143,18 @@ const INITIAL_EVENTS = [
   },
   {
     summary: "Afternoon Meeting",
+  },
+  {
+    summary: "Meeting to decline",
+    attendees: [
+      {
+        displayName: "Dick Line",
+        email: "dline@mozilla.com",
+        isSelf: true,
+        organizer: false,
+        responseStatus: "accepted",
+      },
+    ],
   },
   {
     summary: "Moving Meeting",
@@ -167,6 +192,21 @@ const ERRORS = [
   },
 ];
 
+const GAPI_DECLINED = [
+  {
+    summary: "Meeting to decline",
+    attendees: [
+      {
+        displayName: "Dick Line",
+        email: "dline@mozilla.com",
+        isSelf: true,
+        organizer: false,
+        responseStatus: "declined",
+      },
+    ],
+  },
+];
+
 add_task(async function test_gapi_calendar_single_day() {
   await check_single_day_for_account_type({
     configurator: GapiConfigurator,
@@ -174,6 +214,7 @@ add_task(async function test_gapi_calendar_single_day() {
     addEventSketches: ADD_EVENTS,
     changeEventSketches: CHANGE_EVENTS,
     errors: ERRORS.slice(),
+    declinedEvents: GAPI_DECLINED,
   });
 });
 

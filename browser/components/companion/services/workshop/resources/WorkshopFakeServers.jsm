@@ -704,6 +704,7 @@ class GapiFakeServer extends BaseFakeServer {
           displayName: peep.displayName || peep.name,
           organizer: peep.email === event.organizer.email,
           self: peep.isSelf || false,
+          responseStatus: peep.responseStatus || "accepted",
         };
       };
 
@@ -946,8 +947,10 @@ class MapiFakeServer extends BaseFakeServer {
     return events.map(event => {
       const mapPeep = peep => {
         return {
-          address: peep.email,
-          name: peep.displayName,
+          emailAddress: {
+            address: peep.email,
+            name: peep.displayName,
+          },
         };
       };
 
