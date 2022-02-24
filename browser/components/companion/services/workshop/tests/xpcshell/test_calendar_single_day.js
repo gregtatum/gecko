@@ -73,6 +73,20 @@ async function check_single_day_for_account_type({
 
   WorkshopHelper.eventsEqual(calView.items, initialEvents);
 
+  const eventWithAttendees = initialEvents.find(e => !!e.attendees);
+  const sameEventInView = calView.items.find(
+    e => e.summary === eventWithAttendees.summary
+  );
+  const keys = Object.keys(eventWithAttendees.attendees[0]);
+  const filtered = sameEventInView.attendees.map(a =>
+    Object.fromEntries(keys.map(k => [k, a[k]]))
+  );
+  deepEqual(
+    filtered,
+    eventWithAttendees.attendees,
+    "must have the same attendees"
+  );
+
   // ### Release the review and reload its contents from disk
   calView.release();
   calView = workshopAPI.viewFolderMessages(calFolder);
@@ -134,6 +148,25 @@ const oneHour = 60 * 60 * 1000;
 const INITIAL_EVENTS = [
   {
     summary: "Morning Meeting",
+    organizer: {
+      displayName: "Phil Connors",
+      email: "pconnors@mozilla.com",
+      isSelf: true,
+    },
+    attendees: [
+      {
+        displayName: "Phil Connors",
+        email: "pconnors@mozilla.com",
+        isSelf: true,
+        isOrganizer: true,
+      },
+      {
+        displayName: "Connors Phil",
+        email: "cphil@mozilla.com",
+        isSelf: false,
+        isOrganizer: false,
+      },
+    ],
   },
   {
     summary: "Coffee Meeting",

@@ -12418,22 +12418,23 @@ var WorkshopBackend = (() => {
           this.allEvents = [];
           this.docTitleCache = new Map();
         }
-        _chewCalIdentity(raw) {
+        _chewCalIdentity(raw, self2) {
           const email = raw.emailAddress;
           return makeIdentityInfo({
             displayName: email.name,
             email: email.address,
-            isSelf: false
+            isSelf: !!self2
           });
         }
         _chewCalAttendee(raw, organizer) {
           const email = raw.emailAddress;
           const type = raw.type;
+          const isOrganizer = email.address === organizer.email && email.name === organizer.displayName;
           return makeAttendeeInfo({
             displayName: email.name,
             email: email.address,
-            isSelf: false,
-            isOrganizer: email.address === organizer.email && email.name === organizer.displayName,
+            isSelf: isOrganizer && organizer.isSelf,
+            isOrganizer,
             isResource: type === "resource",
             responseStatus: raw.status,
             comment: "",
@@ -12514,7 +12515,7 @@ var WorkshopBackend = (() => {
               const startDate = new Date(mapiEvent.start.dateTime + "Z").valueOf();
               const endDate = new Date(mapiEvent.end.dateTime + "Z").valueOf();
               const summary = mapiEvent.subject;
-              const organizer = this._chewCalIdentity(mapiEvent.organizer);
+              const organizer = this._chewCalIdentity(mapiEvent.organizer, mapiEvent.isOrganizer);
               const creator = organizer;
               const attendees = (mapiEvent.attendees || []).map((who) => {
                 return this._chewCalAttendee(who, organizer);

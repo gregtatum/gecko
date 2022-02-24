@@ -984,7 +984,7 @@ class MapiFakeServer extends BaseFakeServer {
         isCancelled: event.cancelled,
         isDraft: false,
         isOnlineMeeting: false,
-        isOrganizer: false,
+        isOrganizer: !!event.organizer.isSelf,
         isReminderOn: false,
         lastModifiedDateTime: backdatedISOString(event.startDate, { days: 7 }),
         location: event.location || {
@@ -1000,9 +1000,7 @@ class MapiFakeServer extends BaseFakeServer {
         onlineMeeting: event.onlineMeeting || null,
         onlineMeetingProvider: "unknown",
         onlineMeetingUrl: event.onlineMeetingUrl || null,
-        organizer: {
-          emailAddress: mapPeep(event.organizer),
-        },
+        organizer: mapPeep(event.organizer),
         originalEndTimeZone: "",
         originalStart: "",
         originalStartTimeZone: "",

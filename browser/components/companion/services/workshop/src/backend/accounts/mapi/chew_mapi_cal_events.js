@@ -74,12 +74,12 @@ export class MapiCalEventChewer {
     this.docTitleCache = new Map();
   }
 
-  _chewCalIdentity(raw) {
+  _chewCalIdentity(raw, self) {
     const email = raw.emailAddress;
     return makeIdentityInfo({
       displayName: email.name,
       email: email.address,
-      isSelf: false,
+      isSelf: !!self,
     });
   }
 
@@ -91,13 +91,13 @@ export class MapiCalEventChewer {
   _chewCalAttendee(raw, organizer) {
     const email = raw.emailAddress;
     const type = raw.type;
+    const isOrganizer =
+      email.address === organizer.email && email.name === organizer.displayName;
     return makeAttendeeInfo({
       displayName: email.name,
       email: email.address,
-      isSelf: false,
-      isOrganizer:
-        email.address === organizer.email &&
-        email.name === organizer.displayName,
+      isSelf: isOrganizer && organizer.isSelf,
+      isOrganizer,
       isResource: type === "resource",
       responseStatus: raw.status,
       comment: "",
@@ -216,7 +216,10 @@ export class MapiCalEventChewer {
 
         const summary = mapiEvent.subject;
 
-        const organizer = this._chewCalIdentity(mapiEvent.organizer);
+        const organizer = this._chewCalIdentity(
+          mapiEvent.organizer,
+          mapiEvent.isOrganizer
+        );
         const creator = organizer;
 
         const attendees = (mapiEvent.attendees || []).map(who => {
