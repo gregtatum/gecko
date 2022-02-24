@@ -5,14 +5,14 @@
 import { MozLitElement } from "./widget-utils.js";
 import { classMap, html, css } from "./lit.all.js";
 
-// Update time stamp every minute
-const UPDATE_TIME = 60 * 1000;
-
-setInterval(dispatchUpdateRelativeTime, UPDATE_TIME);
-
 function dispatchUpdateRelativeTime() {
   document.dispatchEvent(new CustomEvent("update-relative-time", {}));
+  let newTimeout = new Date();
+  // Update time stamp every minute
+  newTimeout.setMinutes(newTimeout.getMinutes() + 1, 0, 0);
+  setTimeout(dispatchUpdateRelativeTime, newTimeout.getTime() - Date.now());
 }
+dispatchUpdateRelativeTime();
 
 export class RelativeTime extends MozLitElement {
   static get properties() {
@@ -78,7 +78,7 @@ export class RelativeTime extends MozLitElement {
     let hours = Math.trunc(
       (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
     );
-    let minutes = Math.trunc((distance / 1000 / 60) % 60);
+    let minutes = Math.round((distance / 1000 / 60) % 60);
 
     this.isHappeningNow = isHappeningNow;
     let { id, args } = this.getFormattedRelativeTime(hours, minutes);
