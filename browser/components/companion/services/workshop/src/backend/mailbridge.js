@@ -564,10 +564,11 @@ MailBridge.prototype = {
       );
     }
 
-    const promises = [...refreshHelpers.values()].map(helper =>
-      helper("sync-all-messages")
-    );
+    const why = "sync-all-messages";
+    const promises = [...refreshHelpers.values()].map(helper => helper(why));
     await Promise.all(promises);
+    await this.universe.refreshMetadata(why);
+
     replyFunc(null);
   },
 

@@ -76,7 +76,6 @@ export class GapiCalEventChewer {
     this.uniqueIds = new Map();
     this.newEvents = [];
     this.allEvents = [];
-    this.docTitleCache = new Map();
   }
 
   _chewCalIdentity(raw) {
@@ -136,8 +135,22 @@ export class GapiCalEventChewer {
       this.oldEvents.length = 0;
     };
 
+    // Collect link metadata if any.
+    let rootEvent;
+    const oldLinks = new Map();
+    for (const event of this.oldEvents) {
+      if (event.recurrenceRules) {
+        rootEvent = event;
+      }
+      for (const link of event.links) {
+        const { url, docInfo } = link;
+        if (!oldLinks.has(url) && docInfo) {
+          oldLinks.set(url, docInfo);
+        }
+      }
+    }
+
     const newEvents = [...this.eventMap.values()];
-    const rootEvent = this.oldEvents.find(event => !!event.recurrenceRules);
     if (rootEvent && newEvents.every(event => !event.recurrence)) {
       // We had a recurring event which is no more recurring
       fullCleanUp();
@@ -240,8 +253,6 @@ export class GapiCalEventChewer {
             type: "html",
             processAsText: true,
             attachments,
-            gapiClient: this.gapiClient,
-            docTitleCache: this.docTitleCache,
           }));
 
           bodyReps.push(
@@ -290,6 +301,16 @@ export class GapiCalEventChewer {
         const url = gapiEvent.htmlLink || "";
         const recurrenceRules =
           gapiEvent.recurrence?.length && new Set(gapiEvent.recurrence);
+
+        if (links) {
+          // Information from links are got in an other task so use those if any.
+          for (const link of links) {
+            const oldLinkInfo = oldLinks.get(link.url);
+            if (oldLinkInfo) {
+              link.docInfo = oldLinkInfo;
+            }
+          }
+        }
 
         const eventInfo = makeCalendarEventInfo({
           id: eventId,

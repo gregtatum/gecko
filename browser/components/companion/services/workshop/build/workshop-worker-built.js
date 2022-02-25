@@ -6,6 +6,7 @@ var WorkshopBackend = (() => {
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __getProtoOf = Object.getPrototypeOf;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
   var __markAsModule = (target) => __defProp(target, "__esModule", { value: true });
   var __require = (x) => {
     if (typeof require !== "undefined")
@@ -33,6 +34,28 @@ var WorkshopBackend = (() => {
   };
   var __toModule = (module) => {
     return __reExport(__markAsModule(__defProp(module != null ? __create(__getProtoOf(module)) : {}, "default", module && module.__esModule && "default" in module ? { get: () => module.default, enumerable: true } : { value: module, enumerable: true })), module);
+  };
+  var __publicField = (obj, key, value) => {
+    __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+    return value;
+  };
+  var __accessCheck = (obj, member, msg) => {
+    if (!member.has(obj))
+      throw TypeError("Cannot " + msg);
+  };
+  var __privateGet = (obj, member, getter) => {
+    __accessCheck(obj, member, "read from private field");
+    return getter ? getter.call(obj) : member.get(obj);
+  };
+  var __privateAdd = (obj, member, value) => {
+    if (member.has(obj))
+      throw TypeError("Cannot add the same private member more than once");
+    member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+  };
+  var __privateSet = (obj, member, value, setter) => {
+    __accessCheck(obj, member, "write to private field");
+    setter ? setter.call(obj, value) : member.set(obj, value);
+    return value;
   };
 
   // src/vendor/evt.js
@@ -3256,15 +3279,16 @@ var WorkshopBackend = (() => {
       init_oauth();
       FETCH_TIMEOUT = 32e3;
       CriticalError = class extends Error {
-        constructor(problem) {
+        constructor(account, problem) {
           super(problem.credentials || problem.permissions || problem.queries);
           this.name = "CriticalError";
+          this.account = account;
           this.problem = problem;
         }
       };
       SuperCriticalError = class extends CriticalError {
-        constructor(problem) {
-          super(problem);
+        constructor(account, problem) {
+          super(account, problem);
           this.name = "SuperCriticalError";
         }
       };
@@ -3294,16 +3318,16 @@ var WorkshopBackend = (() => {
           delete problem.superCritical;
           if (!this.account) {
             if (isSuperCritical) {
-              throw new SuperCriticalError(problem);
+              throw new SuperCriticalError(null, problem);
             } else {
-              throw new CriticalError(problem);
+              throw new CriticalError(null, problem);
             }
           }
           if (isSuperCritical) {
             this.account.universe.taskResources.resourcesNoLongerAvailable([
               resource
             ]);
-            throw new SuperCriticalError(problem);
+            throw new SuperCriticalError(this.account, problem);
           }
           this.criticalErrorsCounter++;
           if (this.criticalErrorsCounter === this.maxCriticalError) {
@@ -3316,7 +3340,7 @@ var WorkshopBackend = (() => {
             ]);
             setTimeout(() => this.account.universe.taskResources.resourceAvailable([resource]), time_ms);
           }
-          throw new CriticalError(problem);
+          throw new CriticalError(this.account, problem);
         }
         getErrorMessage(result) {
           return result.error.message;
@@ -9054,6 +9078,11 @@ var WorkshopBackend = (() => {
             if (this.helped_already_planned) {
               logic(ctx, "alreadyPlanned");
               rval2 = await this.helped_already_planned(ctx, req);
+            } else if (this.helped_update_marker) {
+              logic(ctx, "updateMarker");
+              const marker = persistentState.binToMarker.get(binId);
+              this.helped_update_marker(ctx, marker, req);
+              rval2 = {};
             } else {
               rval2 = {};
             }
@@ -10070,11 +10099,7 @@ var WorkshopBackend = (() => {
     }
     return null;
   }
-  async function getDocumentTitle(url, gapiClient, docTitleCache) {
-    url = new URL(url);
-    if (!url.hostname.endsWith(".google.com")) {
-      return null;
-    }
+  async function getDocumentTitleForGoogle(url, gapiClient, docTitleCache) {
     let type, id;
     if (url.hostname === "drive.google.com") {
       type = "drive";
@@ -10107,6 +10132,9 @@ var WorkshopBackend = (() => {
       default:
         return null;
     }
+    if (!gapiClient) {
+      return { type, title: null };
+    }
     const cached = docTitleCache.get(apiTarget);
     if (cached) {
       return cached;
@@ -10131,6 +10159,13 @@ var WorkshopBackend = (() => {
     });
     docTitleCache.set(apiTarget, resultPromise);
     return resultPromise;
+  }
+  async function getDocumentTitle(url, clients, docTitleCache) {
+    url = new URL(url);
+    if (url.hostname.endsWith(".google.com")) {
+      return getDocumentTitleForGoogle(url, clients.get("gapi"), docTitleCache);
+    }
+    return null;
   }
   var URL_REGEX, linksToIgnore, conferencingInfo, DOCS_PAT;
   var init_urlchew = __esm({
@@ -10240,9 +10275,7 @@ var WorkshopBackend = (() => {
     type,
     extraContents = [],
     processAsText = false,
-    attachments = {},
-    gapiClient,
-    docTitleCache = new Map()
+    attachments = {}
   }) {
     const { links, document, snippet } = type === "html" ? await sanitizeSnippetAndExtractLinks(content) : { links: {}, document: content, snippet: content };
     const contentBlob = new Blob([document], { type: `text/${type}` });
@@ -10251,13 +10284,6 @@ var WorkshopBackend = (() => {
     const processedLinks = processLinks({ ...attachments, ...links }, extraContents);
     const conference = getConferenceInfo(data, processedLinks);
     const notConferenceLinks = processedLinks.filter((link) => link.type != "conferencing");
-    if (gapiClient) {
-      await Promise.all(notConferenceLinks.map((link) => getDocumentTitle(link.url, gapiClient, docTitleCache).then((info) => {
-        if (info) {
-          link.docInfo = info;
-        }
-      })));
-    }
     return {
       conference,
       links: notConferenceLinks,
@@ -11371,7 +11397,6 @@ var WorkshopBackend = (() => {
           this.uniqueIds = new Map();
           this.newEvents = [];
           this.allEvents = [];
-          this.docTitleCache = new Map();
         }
         _chewCalIdentity(raw) {
           return makeIdentityInfo({
@@ -11413,8 +11438,20 @@ var WorkshopBackend = (() => {
             }
             this.oldEvents.length = 0;
           };
+          let rootEvent;
+          const oldLinks = new Map();
+          for (const event of this.oldEvents) {
+            if (event.recurrenceRules) {
+              rootEvent = event;
+            }
+            for (const link of event.links) {
+              const { url, docInfo } = link;
+              if (!oldLinks.has(url) && docInfo) {
+                oldLinks.set(url, docInfo);
+              }
+            }
+          }
           const newEvents = [...this.eventMap.values()];
-          const rootEvent = this.oldEvents.find((event) => !!event.recurrenceRules);
           if (rootEvent && newEvents.every((event) => !event.recurrence)) {
             fullCleanUp();
           }
@@ -11479,9 +11516,7 @@ var WorkshopBackend = (() => {
                   content: description,
                   type: "html",
                   processAsText: true,
-                  attachments,
-                  gapiClient: this.gapiClient,
-                  docTitleCache: this.docTitleCache
+                  attachments
                 }));
                 bodyReps.push(makeBodyPart({
                   type: "html",
@@ -11512,6 +11547,14 @@ var WorkshopBackend = (() => {
               const oldInfo = oldById.get(eventId);
               const url = gapiEvent.htmlLink || "";
               const recurrenceRules = gapiEvent.recurrence?.length && new Set(gapiEvent.recurrence);
+              if (links) {
+                for (const link of links) {
+                  const oldLinkInfo = oldLinks.get(link.url);
+                  if (oldLinkInfo) {
+                    link.docInfo = oldLinkInfo;
+                  }
+                }
+              }
               const eventInfo = makeCalendarEventInfo({
                 id: eventId,
                 date: startDate,
@@ -12106,7 +12149,7 @@ var WorkshopBackend = (() => {
             };
           }
           this._accountId = accountId;
-          this._folderId = folderId;
+          this.folderId = folderId;
           this.rawSyncState = rawSyncState;
           this.eventChangesByRecurringEventId = new Map();
           this.allEvents = [];
@@ -12140,7 +12183,7 @@ var WorkshopBackend = (() => {
           const task = {
             type: "cal_sync_conv",
             accountId: this._accountId,
-            folderId: this._folderId,
+            folderId: this.folderId,
             convId,
             recurringId,
             calUpdatedTS,
@@ -12167,7 +12210,7 @@ var WorkshopBackend = (() => {
             recurringId,
             { eventMap, priority }
           ] of this.eventChangesByRecurringEventId.entries()) {
-            const convId = makeFolderNamespacedConvId(this._folderId, recurringId);
+            const convId = makeFolderNamespacedConvId(this.folderId, recurringId);
             this._makeUidConvTask({
               convId,
               recurringId,
@@ -12178,6 +12221,7 @@ var WorkshopBackend = (() => {
               rangeNewestTS: this.rawSyncState.rangeNewestTS
             });
           }
+          this.eventChangesByRecurringEventId.clear();
         }
       };
     }
@@ -12249,7 +12293,7 @@ var WorkshopBackend = (() => {
               const folder = folders[i];
               syncState.folderId = folder.id;
               const priority = folder.primary ? 99999 : 99998;
-              for (const event of results.items) {
+              for (const event of results.value) {
                 syncState.ingestEvent(event, priority);
               }
               syncState.processEvents();
@@ -12438,7 +12482,6 @@ var WorkshopBackend = (() => {
           this.modifiedEventMap = new Map();
           this.newEvents = [];
           this.allEvents = [];
-          this.docTitleCache = new Map();
         }
         _chewCalIdentity(raw, self2) {
           const email = raw.emailAddress;
@@ -12466,7 +12509,14 @@ var WorkshopBackend = (() => {
         async chewEventBundle() {
           const oldById = this.oldById;
           const cancelledEventIds = new Set();
+          const oldLinks = new Map();
           for (const oldInfo of this.oldEvents) {
+            for (const link of oldInfo.links) {
+              const { url, docInfo } = link;
+              if (!oldLinks.has(url) && docInfo) {
+                oldLinks.set(url, docInfo);
+              }
+            }
             if (EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
               this.modifiedEventMap.set(oldInfo.id, null);
             } else {
@@ -12518,9 +12568,7 @@ var WorkshopBackend = (() => {
                   data: mapiEvent,
                   content,
                   type,
-                  extraContents,
-                  gapiClient: this.gapiClient,
-                  docTitleCache: this.docTitleCache
+                  extraContents
                 }));
                 bodyReps.push(makeBodyPart({
                   type,
@@ -12532,6 +12580,14 @@ var WorkshopBackend = (() => {
                   contentBlob,
                   authoredBodySize
                 }));
+              }
+              if (links) {
+                for (const link of links) {
+                  const oldLinkInfo = oldLinks.get(link.url);
+                  if (oldLinkInfo) {
+                    link.docInfo = oldLinkInfo;
+                  }
+                }
               }
               const isAllDay = mapiEvent.isAllDay ?? isAllDayEvent(mapiEvent.start.dateTime, mapiEvent.end.dateTime);
               const startDate = new Date(mapiEvent.start.dateTime + "Z").valueOf();
@@ -16124,8 +16180,10 @@ var WorkshopBackend = (() => {
       for (const accountId of accountIds) {
         this.universe.__acquireSearchFoldersHelper(accountId, spec, null, refreshHelpers);
       }
-      const promises = [...refreshHelpers.values()].map((helper) => helper("sync-all-messages"));
+      const why = "sync-all-messages";
+      const promises = [...refreshHelpers.values()].map((helper) => helper(why));
       await Promise.all(promises);
+      await this.universe.refreshMetadata(why);
       replyFunc(null);
     },
     async _cmd_viewConversationMessages(msg) {
@@ -19222,7 +19280,7 @@ var WorkshopBackend = (() => {
       this.type = "ConversationTOC";
       this.overlayNamespace = "messages";
       this.heightAware = false;
-      this._db = db;
+      this.db = db;
       this.query = query;
       this._overlayResolver = dataOverlayManager.makeBoundResolver(this.overlayNamespace, null);
       this.__deactivate(true);
@@ -19316,7 +19374,7 @@ var WorkshopBackend = (() => {
       let needData = new Map();
       const newKnownSet = new Set();
       const idsWithDates = this.idsWithDates;
-      const messageCache = this._db.messageCache;
+      const messageCache = this.db.messageCache;
       const ids = [];
       for (let i = beginInclusive; i < endExclusive; i++) {
         const id = idsWithDates[i].id;
@@ -19343,7 +19401,7 @@ var WorkshopBackend = (() => {
       }
       let readPromise = null;
       if (needData.size) {
-        readPromise = this._db.read(this, {
+        readPromise = this.db.read(this, {
           messages: needData
         });
       } else {
@@ -19641,9 +19699,11 @@ var WorkshopBackend = (() => {
         if (!finishData.mutations) {
           finishData.mutations = {};
         }
-        finishData.mutations.complexTaskStates = new Map([
-          [[this.accountId, this.taskType], finishData.complexTaskState]
-        ]);
+        if (this.accountId) {
+          finishData.mutations.complexTaskStates = new Map([
+            [[this.accountId, this.taskType], finishData.complexTaskState]
+          ]);
+        }
       }
       if (finishData.taskMarkers) {
         for (let [markerId, taskMarker] of finishData.taskMarkers) {
@@ -20800,43 +20860,58 @@ var WorkshopBackend = (() => {
         }
       }
     };
-    const timeoutIds = new Set();
+    const timeoutIds = new Map();
+    const clearTimeouts = (changeId) => {
+      const ids = timeoutIds.get(changeId);
+      if (ids) {
+        clearTimeout(ids.validId);
+        clearTimeout(ids.invalidId);
+        timeoutIds.delete(changeId);
+      }
+    };
     const filterStream = new import_streams.TransformStream({
       flush(enqueue, close) {
         close();
       },
       transform({ change, gather }, enqueue, done) {
+        const changeId = change.id;
+        clearTimeouts(changeId);
         if (!gather) {
           enqueue(change);
-          notifyRemoved(preDerivers, change.id);
-          if (knownFilteredSet.delete(change.id)) {
-            notifyRemoved(postDerivers, change.id);
+          notifyRemoved(preDerivers, changeId);
+          if (knownFilteredSet.delete(changeId)) {
+            notifyRemoved(postDerivers, changeId);
           }
           done();
         } else {
-          logic(ctx, "gatherWait", { id: change.id });
+          logic(ctx, "gatherWait", { id: changeId });
           gather.then((gathered) => {
-            logic(ctx, "gathered", { id: change.id });
-            if (!queuedSet.has(change.id)) {
+            logic(ctx, "gathered", { id: changeId });
+            if (!queuedSet.has(changeId)) {
               logic(ctx, "notInQueuedSet");
               done();
               return;
             }
-            queuedSet.delete(change.id);
+            queuedSet.delete(changeId);
             notifyAdded(preDerivers, gathered);
             let matchInfo = filterRunner.filter(gathered);
             logic(ctx, "maybeMatch", { matched: !!matchInfo });
             if (matchInfo) {
+              const xids = { validId: null, invalidId: null };
               if (matchInfo?.event.durationBeforeToBeValid) {
                 const newChange = shallowClone2(change);
                 newChange.timeWindowShift = true;
                 try {
-                  const xid = setExtendedTimeout(() => {
-                    timeoutIds.delete(xid);
+                  xids.validId = setExtendedTimeout(() => {
                     consider(newChange);
                   }, matchInfo.event.durationBeforeToBeValid);
-                  timeoutIds.add(xid);
+                  timeoutIds.set(changeId, xids);
                 } catch {
+                }
+                if (knownFilteredSet.has(changeId)) {
+                  enqueue(change);
+                  notifyRemoved(preDerivers, changeId);
+                  notifyRemoved(postDerivers, changeId);
                 }
                 done();
                 return;
@@ -20845,27 +20920,27 @@ var WorkshopBackend = (() => {
                 const newChange = shallowClone2(change);
                 newChange.timeWindowShift = true;
                 try {
-                  const xid = setExtendedTimeout(() => {
-                    timeoutIds.delete(xid);
+                  xids.invalidId = setExtendedTimeout(() => {
                     consider(newChange);
                   }, matchInfo.event.durationBeforeToBeInvalid);
-                  timeoutIds.add(xid);
+                  timeoutIds.set(changeId, xids);
                 } catch {
                 }
               }
               change = shallowClone2(change);
-              if (!knownFilteredSet.has(change.id)) {
+              if (!knownFilteredSet.has(changeId)) {
                 mutateChangeToResembleAdd(change);
-                knownFilteredSet.add(change.id);
+                knownFilteredSet.add(changeId);
                 notifyAdded(postDerivers, gathered);
               }
               change.matchInfo = matchInfo;
               enqueue(change);
-            } else if (knownFilteredSet.delete(change.id)) {
+            } else if (knownFilteredSet.delete(changeId)) {
               change = shallowClone2(change);
               mutateChangeToResembleDeletion(change);
               enqueue(change);
-              notifyRemoved(postDerivers, change.id);
+              notifyRemoved(postDerivers, changeId);
+              clearTimeouts(changeId);
             }
             done();
           });
@@ -20889,8 +20964,9 @@ var WorkshopBackend = (() => {
     return {
       consider,
       destroy: () => {
-        for (const { id } of timeoutIds) {
-          clearTimeout(id);
+        for (const { validId, invalidId } of timeoutIds.values()) {
+          clearTimeout(validId?.id);
+          clearTimeout(invalidId?.id);
         }
         gatherStream.writable.close();
       }
@@ -20912,6 +20988,7 @@ var WorkshopBackend = (() => {
     this._eventId = null;
     this._drainEvents = null;
     this._boundListener = null;
+    this._postDerivers = postDerivers;
     this._filteringStream = new FilteringStream({
       ctx,
       filterRunner,
@@ -20967,6 +21044,9 @@ var WorkshopBackend = (() => {
         }
       }
       return [];
+    },
+    addPostDeriver(deriver) {
+      this._postDerivers.push(deriver);
     },
     bind(listenerObj, listenerMethod) {
       this._boundListener = listenerMethod.bind(listenerObj);
@@ -22527,6 +22607,99 @@ var WorkshopBackend = (() => {
     }
   ]);
 
+  // src/backend/tasks/metadata_refresh.js
+  init_logic();
+  init_task_definer();
+  init_urlchew();
+  init_util();
+  init_tools();
+  var metadata_refresh_default = task_definer_default.defineAtMostOnceTask([
+    {
+      name: "sync_refresh_metadata",
+      binByArg: "baseAccountId",
+      helped_update_marker(ctx, marker, req) {
+        marker.itemsById.set(req.convId, req.items);
+      },
+      helped_plan(ctx, rawTask) {
+        const plannedTask = shallowClone2(rawTask);
+        const { baseAccountId, accountIds, convId, items } = rawTask;
+        plannedTask.resources = ["online"];
+        for (const accountId of accountIds) {
+          plannedTask.resources.push(`credentials!${accountId}`, `happy!${accountId}`, `permissions!${accountId}`, `queries!${accountId}`);
+        }
+        plannedTask.priorityTags = [`view:account:${baseAccountId}`];
+        plannedTask.relPriority = 99997;
+        plannedTask.itemsById = new Map([[convId, items]]);
+        delete plannedTask.convId;
+        delete plannedTask.items;
+        return {
+          taskState: plannedTask
+        };
+      },
+      async helped_execute(ctx, req) {
+        logic(ctx, "syncRefreshMetadata", {});
+        const { accountIds, itemsById } = req;
+        const accounts = await Promise.all(accountIds.map((id) => ctx.universe.acquireAccount(ctx, id)));
+        const clients = new Map(accounts.map((account) => [account.constructor.type, account.client]));
+        const docTitleCache = new Map();
+        let messages = new Map();
+        for (const items of itemsById.values()) {
+          for (const [id, message] of items) {
+            messages.set([id, message.date], null);
+          }
+        }
+        const fromDb = await ctx.beginMutate({ messages });
+        messages = fromDb.messages;
+        const promises = [];
+        const newMessages = new Map();
+        const changes = {
+          mutations: {
+            messages: newMessages
+          }
+        };
+        for (const [id, message] of messages) {
+          for (const link of message.links) {
+            promises.push(getDocumentTitle(link.url, clients, docTitleCache).then((data) => {
+              if (!data) {
+                return;
+              }
+              const { title, type } = data;
+              const oldInfo = Object.assign({}, link.docInfo || {});
+              let hasChanged = false;
+              if (type !== oldInfo.type) {
+                oldInfo.type = type;
+                hasChanged = true;
+              }
+              if (title !== null && title !== oldInfo.title || title === null && oldInfo.title === void 0) {
+                oldInfo.title = title;
+                hasChanged = true;
+              }
+              if (hasChanged) {
+                link.docInfo = oldInfo;
+                newMessages.set(id, message);
+              }
+            }));
+          }
+        }
+        const results = await Promise.allSettled(promises);
+        for (const result of results) {
+          if (result.status === "fulfilled") {
+            continue;
+          }
+          const ex = result.reason;
+          logic(ctx, "syncError", { error: ex.message });
+          if (ex.account && ex.problem) {
+            changes.atomicClobbers = {
+              accounts: prepareChangeForProblems(ex.account, ex.problem)
+            };
+          }
+        }
+        logic(ctx, "syncRefreshMetadataEnd", {});
+        return changes;
+      }
+    }
+  ]);
+
   // src/backend/tasks/new_flush.js
   init_task_definer();
 
@@ -22615,7 +22788,8 @@ var WorkshopBackend = (() => {
     account_create_default,
     account_delete_default,
     account_migrate_default,
-    new_flush_default
+    new_flush_default,
+    metadata_refresh_default
   ];
 
   // src/backend/mailuniverse.js
@@ -22623,14 +22797,15 @@ var WorkshopBackend = (() => {
 
   // src/backend/db/virtual_conv_toc.js
   init_logic();
-  var VirtualConversationTOC = class extends ConversationTOC {
-    #refreshHelperMaker;
-    #metaHelperMaker;
+  init_id_conversions();
+  var _refreshHelperMaker, _metadataRefresher, _metaHelperMaker, _visibleItemIds, _onFolderDeletion_bound, _onFolderAddition_bound, _onItemAdded_bound, _onItemRemoved_bound, _onAccountChange_bound, _id;
+  var _VirtualConversationTOC = class extends ConversationTOC {
     constructor({
       db,
       query,
       dataOverlayManager,
       metaHelpers,
+      metadataRefresher,
       refreshHelpers = null,
       refreshHelperMaker,
       metaHelperMaker,
@@ -22644,11 +22819,63 @@ var WorkshopBackend = (() => {
         refreshHelpers,
         onForgotten
       });
-      db.on("fldr!*!remove", this.onFolderDeletion.bind(this));
-      db.on("fldr!*!add", this.onFolderAddition.bind(this));
-      this.#refreshHelperMaker = refreshHelperMaker;
-      this.#metaHelperMaker = metaHelperMaker;
+      __privateAdd(this, _refreshHelperMaker, void 0);
+      __privateAdd(this, _metadataRefresher, void 0);
+      __privateAdd(this, _metaHelperMaker, void 0);
+      __privateAdd(this, _visibleItemIds, void 0);
+      __privateAdd(this, _onFolderDeletion_bound, void 0);
+      __privateAdd(this, _onFolderAddition_bound, void 0);
+      __privateAdd(this, _onItemAdded_bound, void 0);
+      __privateAdd(this, _onItemRemoved_bound, void 0);
+      __privateAdd(this, _onAccountChange_bound, void 0);
+      __privateAdd(this, _id, void 0);
+      __privateSet(this, _id, _VirtualConversationTOC._globalId++);
+      __privateSet(this, _onFolderDeletion_bound, this.onFolderDeletion.bind(this));
+      __privateSet(this, _onFolderAddition_bound, this.onFolderAddition.bind(this));
+      __privateSet(this, _onAccountChange_bound, this.onAccountChange.bind(this));
+      db.on("fldr!*!remove", __privateGet(this, _onFolderDeletion_bound));
+      db.on("fldr!*!add", __privateGet(this, _onFolderAddition_bound));
+      db.on("accounts!tocChange", __privateGet(this, _onAccountChange_bound));
+      __privateSet(this, _refreshHelperMaker, refreshHelperMaker);
+      __privateSet(this, _metaHelperMaker, metaHelperMaker);
+      __privateSet(this, _metadataRefresher, metadataRefresher);
+      __privateSet(this, _visibleItemIds, new Map());
+      __privateSet(this, _onItemAdded_bound, this.onItemAdded.bind(this));
+      __privateSet(this, _onItemRemoved_bound, this.onItemRemoved.bind(this));
       logic.defineScope(this, "VirtualConversationTOC");
+    }
+    async __activateTOC() {
+      this.query.addPostDeriver({
+        itemAdded: __privateGet(this, _onItemAdded_bound),
+        itemRemoved: __privateGet(this, _onItemRemoved_bound)
+      });
+      await super.__activateTOC();
+    }
+    __deactivateTOC(firstTime) {
+      super.__deactivateTOC(firstTime);
+      if (!firstTime) {
+        this.db.removeListener("fldr!*!remove", __privateGet(this, _onFolderDeletion_bound));
+        this.db.removeListener("fldr!*!add", __privateGet(this, _onFolderAddition_bound));
+        this.db.removeListener("accounts!tocChange", __privateGet(this, _onAccountChange_bound));
+        __privateGet(this, _visibleItemIds).clear();
+      }
+    }
+    onAccountChange(accountId, accountDef) {
+      if (accountDef) {
+        return;
+      }
+      for (const id of [...__privateGet(this, _visibleItemIds).keys()]) {
+        if (accountIdFromMessageId(id) === accountId) {
+          __privateGet(this, _visibleItemIds).delete(id);
+        }
+      }
+    }
+    onItemAdded(gathered) {
+      __privateGet(this, _visibleItemIds).set(gathered.message.id, gathered.message);
+      this.refreshMetadata();
+    }
+    onItemRemoved(id) {
+      __privateGet(this, _visibleItemIds).delete(id);
     }
     onFolderDeletion(folderId) {
       this.refreshHelpers.delete(folderId);
@@ -22659,15 +22886,33 @@ var WorkshopBackend = (() => {
     }
     onFolderAddition(folderId) {
       if (!this.refreshHelpers.has(folderId)) {
-        this.refreshHelpers.set(folderId, this.#refreshHelperMaker(folderId));
+        this.refreshHelpers.set(folderId, __privateGet(this, _refreshHelperMaker).call(this, folderId));
       }
       if (this._everActivated && !this.metaHelpers.has(folderId)) {
-        const metaHelper = this.#metaHelperMaker(folderId);
+        const metaHelper = __privateGet(this, _metaHelperMaker).call(this, folderId);
         this.metaHelpers.set(folderId, metaHelper);
         metaHelper.activate(this);
       }
     }
+    async refreshMetadata(why) {
+      await __privateGet(this, _metadataRefresher).call(this, __privateGet(this, _visibleItemIds), __privateGet(this, _id), why);
+    }
+    async refresh(why) {
+      await Promise.all([this.refreshMetadata(why), super.refresh(why)]);
+    }
   };
+  var VirtualConversationTOC = _VirtualConversationTOC;
+  _refreshHelperMaker = new WeakMap();
+  _metadataRefresher = new WeakMap();
+  _metaHelperMaker = new WeakMap();
+  _visibleItemIds = new WeakMap();
+  _onFolderDeletion_bound = new WeakMap();
+  _onFolderAddition_bound = new WeakMap();
+  _onItemAdded_bound = new WeakMap();
+  _onItemRemoved_bound = new WeakMap();
+  _onAccountChange_bound = new WeakMap();
+  _id = new WeakMap();
+  __publicField(VirtualConversationTOC, "_globalId", 0);
 
   // src/backend/mailuniverse.js
   function MailUniverse({ online, testOptions, appExtensions }) {
@@ -22692,6 +22937,7 @@ var WorkshopBackend = (() => {
     this._folderConvsTOCs = new Map();
     this._folderMessagesTOCs = new Map();
     this._conversationTOCs = new Map();
+    this._virtualConversationTOCs = new Map();
     const dataOverlayManager = this.dataOverlayManager = new DataOverlayManager();
     const taskPriorities = this.taskPriorities = new TaskPriorities();
     const taskResources = this.taskResources = new TaskResources(this.taskPriorities);
@@ -22985,6 +23231,7 @@ var WorkshopBackend = (() => {
         query: this.queryManager.queryAccountMessages(ctx, spec),
         dataOverlayManager: this.dataOverlayManager,
         metaHelpers,
+        metadataRefresher: this.syncRefreshMetadataForMessages.bind(this),
         refreshHelpers,
         refreshHelperMaker: this.__makeRefreshHelper.bind(this),
         metaHelperMaker: this.__makeMetaHelper.bind(this),
@@ -22998,6 +23245,12 @@ var WorkshopBackend = (() => {
     },
     acquireSearchAllAccountsMessagesTOC(ctx, spec) {
       const { accountIds } = spec;
+      accountIds.sort();
+      const keyAccountIds = accountIds.join("");
+      const virtualConvTOC = this._virtualConversationTOCs.get(keyAccountIds);
+      if (virtualConvTOC) {
+        return virtualConvTOC;
+      }
       spec.folderIds = [];
       const metaHelpers = new Map();
       const refreshHelpers = new Map();
@@ -23009,16 +23262,22 @@ var WorkshopBackend = (() => {
         query: this.queryManager.queryAccountMessages(ctx, spec),
         dataOverlayManager: this.dataOverlayManager,
         metaHelpers,
+        metadataRefresher: this.syncRefreshMetadataForMessages.bind(this),
         refreshHelpers,
         refreshHelperMaker: this.__makeRefreshHelper.bind(this),
         metaHelperMaker: this.__makeMetaHelper.bind(this),
         onForgotten: () => {
+          this._virtualConversationTOCs.delete(keyAccountIds);
         }
       });
+      this._virtualConversationTOCs.set(keyAccountIds, toc);
       if (spec.refresh) {
         toc.refresh("searchAllAccountsMessages");
       }
       return ctx.acquire(toc);
+    },
+    async refreshMetadata(why) {
+      await Promise.all([...this._virtualConversationTOCs.values()].map((toc) => toc.refreshMetadata(why)));
     },
     acquireConversationTOC(ctx, conversationId) {
       let toc;
@@ -23188,6 +23447,22 @@ var WorkshopBackend = (() => {
         accountId,
         folderId
       }, why);
+    },
+    async syncRefreshMetadataForMessages(items, convId, why) {
+      if (!items?.size) {
+        return;
+      }
+      const gapiAccountId = this.getFirstAccountIdWithType("gapi");
+      const baseAccountId = gapiAccountId;
+      if (baseAccountId) {
+        await this.taskManager.scheduleNonPersistentTaskAndWaitForPlannedResult({
+          type: "sync_refresh_metadata",
+          accountIds: [gapiAccountId],
+          baseAccountId,
+          items,
+          convId
+        }, why);
+      }
     },
     async syncRefreshFolder(folderId, why) {
       const accountId = accountIdFromFolderId(folderId);

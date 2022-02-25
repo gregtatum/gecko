@@ -125,6 +125,11 @@ export default {
       if (this.helped_already_planned) {
         logic(ctx, "alreadyPlanned");
         rval = await this.helped_already_planned(ctx, req);
+      } else if (this.helped_update_marker) {
+        logic(ctx, "updateMarker");
+        const marker = persistentState.binToMarker.get(binId);
+        this.helped_update_marker(ctx, marker, req);
+        rval = {};
       } else {
         rval = {};
       }

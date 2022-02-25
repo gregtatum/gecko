@@ -71,7 +71,6 @@ export class MapiCalEventChewer {
     this.modifiedEventMap = new Map();
     this.newEvents = [];
     this.allEvents = [];
-    this.docTitleCache = new Map();
   }
 
   _chewCalIdentity(raw, self) {
@@ -109,7 +108,16 @@ export class MapiCalEventChewer {
     // ## Remove any old messages that no longer fit within the sync window.
     const oldById = this.oldById;
     const cancelledEventIds = new Set();
+    const oldLinks = new Map();
     for (const oldInfo of this.oldEvents) {
+      // Collect link metadata if any.
+      for (const link of oldInfo.links) {
+        const { url, docInfo } = link;
+        if (!oldLinks.has(url) && docInfo) {
+          oldLinks.set(url, docInfo);
+        }
+      }
+
       if (EVENT_OUTSIDE_SYNC_RANGE(oldInfo, this)) {
         // Mark the event for deletion.
         this.modifiedEventMap.set(oldInfo.id, null);
@@ -187,8 +195,6 @@ export class MapiCalEventChewer {
             content,
             type,
             extraContents,
-            gapiClient: this.gapiClient,
-            docTitleCache: this.docTitleCache,
           }));
 
           bodyReps.push(
@@ -203,6 +209,16 @@ export class MapiCalEventChewer {
               authoredBodySize,
             })
           );
+        }
+
+        if (links) {
+          // Information from links are got in an other task so use those if any.
+          for (const link of links) {
+            const oldLinkInfo = oldLinks.get(link.url);
+            if (oldLinkInfo) {
+              link.docInfo = oldLinkInfo;
+            }
+          }
         }
 
         const isAllDay =

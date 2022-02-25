@@ -18,6 +18,7 @@ import AccountCreate from "./tasks/account_create";
 import AccountDelete from "./tasks/account_delete";
 import AccountMigrate from "./tasks/account_migrate";
 import ConfigModify from "./tasks/config_modify";
+import MetadataRefresh from "./tasks/metadata_refresh";
 import NewFlush from "./tasks/new_flush";
 
 /**
@@ -34,4 +35,6 @@ export default [
 
   // - Aggregate state stuff
   NewFlush,
+
+  MetadataRefresh,
 ];

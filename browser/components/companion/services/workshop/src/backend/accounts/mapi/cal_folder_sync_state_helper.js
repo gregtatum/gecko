@@ -57,7 +57,7 @@ export default class MapiCalFolderSyncStateHelper {
     }
 
     this._accountId = accountId;
-    this._folderId = folderId;
+    this.folderId = folderId;
     this.rawSyncState = rawSyncState;
 
     // A map grouping events by their `recurringEventId` or for non-recurring
@@ -105,7 +105,7 @@ export default class MapiCalFolderSyncStateHelper {
     const task = {
       type: "cal_sync_conv",
       accountId: this._accountId,
-      folderId: this._folderId,
+      folderId: this.folderId,
       convId,
       recurringId,
       calUpdatedTS,
@@ -138,7 +138,7 @@ export default class MapiCalFolderSyncStateHelper {
       recurringId,
       { eventMap, priority },
     ] of this.eventChangesByRecurringEventId.entries()) {
-      const convId = makeFolderNamespacedConvId(this._folderId, recurringId);
+      const convId = makeFolderNamespacedConvId(this.folderId, recurringId);
       this._makeUidConvTask({
         convId,
         recurringId,
@@ -149,5 +149,6 @@ export default class MapiCalFolderSyncStateHelper {
         rangeNewestTS: this.rawSyncState.rangeNewestTS,
       });
     }
+    this.eventChangesByRecurringEventId.clear();
   }
 }

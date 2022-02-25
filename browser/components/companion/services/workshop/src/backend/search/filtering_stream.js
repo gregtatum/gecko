@@ -148,51 +148,70 @@ export default function FilteringStream({
     }
   };
 
-  const timeoutIds = new Set();
+  const timeoutIds = new Map();
+  const clearTimeouts = changeId => {
+    const ids = timeoutIds.get(changeId);
+    if (ids) {
+      clearTimeout(ids.validId);
+      clearTimeout(ids.invalidId);
+      timeoutIds.delete(changeId);
+    }
+  };
 
   const filterStream = new TransformStream({
     flush(enqueue, close) {
       close();
     },
     transform({ change, gather }, enqueue, done) {
+      const changeId = change.id;
+      clearTimeouts(changeId);
+
       if (!gather) {
         // This is a deletion.  And we care about it or we wouldn't be here.
         enqueue(change);
-        notifyRemoved(preDerivers, change.id);
-        if (knownFilteredSet.delete(change.id)) {
-          notifyRemoved(postDerivers, change.id);
+        notifyRemoved(preDerivers, changeId);
+        if (knownFilteredSet.delete(changeId)) {
+          notifyRemoved(postDerivers, changeId);
         }
         done();
       } else {
-        logic(ctx, "gatherWait", { id: change.id });
+        logic(ctx, "gatherWait", { id: changeId });
         gather.then(gathered => {
-          logic(ctx, "gathered", { id: change.id });
+          logic(ctx, "gathered", { id: changeId });
           // It's possible the item got removed after we kicked off the gather.
           // Don't report the item in that case.  (Note that explicit deletion
           // of things already reported triggered the first branch of this if,
           // so we don't need to be worrying about that here.)
-          if (!queuedSet.has(change.id)) {
+          if (!queuedSet.has(changeId)) {
             logic(ctx, "notInQueuedSet");
             done();
             return;
           }
-          queuedSet.delete(change.id);
+          queuedSet.delete(changeId);
           notifyAdded(preDerivers, gathered);
           let matchInfo = filterRunner.filter(gathered);
           logic(ctx, "maybeMatch", { matched: !!matchInfo });
           if (matchInfo) {
+            const xids = { validId: null, invalidId: null };
             if (matchInfo?.event.durationBeforeToBeValid) {
               // The change will be filtered in the future.
               const newChange = shallowClone(change);
               newChange.timeWindowShift = true;
               try {
-                const xid = setExtendedTimeout(() => {
-                  timeoutIds.delete(xid);
+                xids.validId = setExtendedTimeout(() => {
                   consider(newChange);
                 }, matchInfo.event.durationBeforeToBeValid);
-                timeoutIds.add(xid);
+                timeoutIds.set(changeId, xids);
               } catch {
                 // The delay is a way too high so ignore the change.
+              }
+
+              if (knownFilteredSet.has(changeId)) {
+                // The change will be visible but for now it must be filtered
+                // out.
+                enqueue(change);
+                notifyRemoved(preDerivers, changeId);
+                notifyRemoved(postDerivers, changeId);
               }
               done();
               return;
@@ -204,11 +223,10 @@ export default function FilteringStream({
               const newChange = shallowClone(change);
               newChange.timeWindowShift = true;
               try {
-                const xid = setExtendedTimeout(() => {
-                  timeoutIds.delete(xid);
+                xids.invalidId = setExtendedTimeout(() => {
                   consider(newChange);
                 }, matchInfo.event.durationBeforeToBeInvalid);
-                timeoutIds.add(xid);
+                timeoutIds.set(changeId, xids);
               } catch {
                 // The delay is a way too high so ignore the change.
               }
@@ -219,22 +237,23 @@ export default function FilteringStream({
             // make our own mutable copy.
             change = shallowClone(change);
             // We match now, we may or may not have previously matched.
-            if (!knownFilteredSet.has(change.id)) {
+            if (!knownFilteredSet.has(changeId)) {
               // Didn't have it before, have it now.  Make sure this resembles
               // an add.  (If this actually is an add, this is a no-op.)
               mutateChangeToResembleAdd(change);
-              knownFilteredSet.add(change.id);
+              knownFilteredSet.add(changeId);
               notifyAdded(postDerivers, gathered);
             }
             // And this is how the matchInfo actually gets into the TOC...
             change.matchInfo = matchInfo;
             enqueue(change);
-          } else if (knownFilteredSet.delete(change.id)) {
+          } else if (knownFilteredSet.delete(changeId)) {
             // We need to issue a retraction... delete and check RV.
             change = shallowClone(change);
             mutateChangeToResembleDeletion(change);
             enqueue(change);
-            notifyRemoved(postDerivers, change.id);
+            notifyRemoved(postDerivers, changeId);
+            clearTimeouts(changeId);
           }
           done();
         });
@@ -270,8 +289,9 @@ export default function FilteringStream({
      */
     consider,
     destroy: () => {
-      for (const { id } of timeoutIds) {
-        clearTimeout(id);
+      for (const { validId, invalidId } of timeoutIds.values()) {
+        clearTimeout(validId?.id);
+        clearTimeout(invalidId?.id);
       }
       gatherStream.writable.close();
     },

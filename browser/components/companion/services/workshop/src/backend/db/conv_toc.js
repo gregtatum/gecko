@@ -56,7 +56,7 @@ export class ConversationTOC extends BaseTOC {
     this.overlayNamespace = "messages";
     this.heightAware = false;
 
-    this._db = db;
+    this.db = db;
     this.query = query;
 
     // We share responsibility for providing overlay data with the list proxy.
@@ -258,7 +258,7 @@ export class ConversationTOC extends BaseTOC {
     const newKnownSet = new Set();
 
     const idsWithDates = this.idsWithDates;
-    const messageCache = this._db.messageCache;
+    const messageCache = this.db.messageCache;
     const ids = [];
     for (let i = beginInclusive; i < endExclusive; i++) {
       const id = idsWithDates[i].id;
@@ -288,7 +288,7 @@ export class ConversationTOC extends BaseTOC {
 
     let readPromise = null;
     if (needData.size) {
-      readPromise = this._db.read(this, {
+      readPromise = this.db.read(this, {
         messages: needData,
       });
     } else {

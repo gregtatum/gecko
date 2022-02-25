@@ -119,7 +119,7 @@ export default TaskDefiner.defineSimpleTask([
         // event got here are treated before any other tasks.
         const priority = folder.primary ? 99999 : 99998;
 
-        for (const event of results.items) {
+        for (const event of results.value) {
           syncState.ingestEvent(event, priority);
         }
 

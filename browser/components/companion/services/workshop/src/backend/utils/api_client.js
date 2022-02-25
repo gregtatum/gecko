@@ -21,16 +21,17 @@ import { ensureUpdatedCredentials } from "../oauth";
 const FETCH_TIMEOUT = 32000;
 
 export class CriticalError extends Error {
-  constructor(problem) {
+  constructor(account, problem) {
     super(problem.credentials || problem.permissions || problem.queries);
     this.name = "CriticalError";
+    this.account = account;
     this.problem = problem;
   }
 }
 
 export class SuperCriticalError extends CriticalError {
-  constructor(problem) {
-    super(problem);
+  constructor(account, problem) {
+    super(account, problem);
     this.name = "SuperCriticalError";
   }
 }
@@ -113,9 +114,9 @@ export class Backoff {
 
     if (!this.account) {
       if (isSuperCritical) {
-        throw new SuperCriticalError(problem);
+        throw new SuperCriticalError(null, problem);
       } else {
-        throw new CriticalError(problem);
+        throw new CriticalError(null, problem);
       }
     }
 
@@ -125,7 +126,7 @@ export class Backoff {
       this.account.universe.taskResources.resourcesNoLongerAvailable([
         resource,
       ]);
-      throw new SuperCriticalError(problem);
+      throw new SuperCriticalError(this.account, problem);
     }
 
     this.criticalErrorsCounter++;
@@ -157,7 +158,7 @@ export class Backoff {
       );
     }
 
-    throw new CriticalError(problem);
+    throw new CriticalError(this.account, problem);
   }
 
   /**

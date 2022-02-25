@@ -128,6 +128,8 @@ TaskDefiner.prototype = {
    *   to be used to return a Promise created via `ctx.trackMeInTaskGroup` so
    *   things like refresh requests can be consolidated while still having
    *   useful promises returned.
+   *  - helped_update_marker: Optional method to be invoked to update a marker
+   *    with new data.
    * - helped_invalidate_overlays(binId): Optional, but required if
    *   `remainInProgressUntil` is provided.  Very useful for avoiding tons of
    *   redundant-ish data overlay invalidation calls.  Invoked when:

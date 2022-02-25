@@ -602,9 +602,13 @@ TaskContext.prototype = {
       if (!finishData.mutations) {
         finishData.mutations = {};
       }
-      finishData.mutations.complexTaskStates = new Map([
-        [[this.accountId, this.taskType], finishData.complexTaskState],
-      ]);
+      if (this.accountId) {
+        // A null accountId leads to a wrong key in the IDBStore: so in the null
+        // case we don't save anything.
+        finishData.mutations.complexTaskStates = new Map([
+          [[this.accountId, this.taskType], finishData.complexTaskState],
+        ]);
+      }
     }
 
     // (Complex) task markers can be immediately prioritized.

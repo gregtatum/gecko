@@ -97,6 +97,9 @@ export default function MailUniverse({ online, testOptions, appExtensions }) {
   /** @type{Map<ConversationId, ConversationTOC>} */
   this._conversationTOCs = new Map();
 
+  /** @type{Map<Array<AccountId>, VirtualConversationTOC>} */
+  this._virtualConversationTOCs = new Map();
+
   const dataOverlayManager = (this.dataOverlayManager = new DataOverlayManager());
 
   const taskPriorities = (this.taskPriorities = new TaskPriorities());
@@ -619,12 +622,14 @@ MailUniverse.prototype = {
       query: this.queryManager.queryAccountMessages(ctx, spec),
       dataOverlayManager: this.dataOverlayManager,
       metaHelpers,
+      metadataRefresher: this.syncRefreshMetadataForMessages.bind(this),
       refreshHelpers,
       refreshHelperMaker: this.__makeRefreshHelper.bind(this),
       metaHelperMaker: this.__makeMetaHelper.bind(this),
       // TODO: add a comment to explain why we do nothing here.
       onForgotten: () => {},
     });
+
     if (spec.refresh) {
       toc.refresh("searchAccountMessages");
     }
@@ -633,6 +638,13 @@ MailUniverse.prototype = {
 
   acquireSearchAllAccountsMessagesTOC(ctx, spec) {
     const { accountIds } = spec;
+    accountIds.sort();
+    const keyAccountIds = accountIds.join("");
+    const virtualConvTOC = this._virtualConversationTOCs.get(keyAccountIds);
+    if (virtualConvTOC) {
+      return virtualConvTOC;
+    }
+
     spec.folderIds = [];
     const metaHelpers = new Map();
     const refreshHelpers = new Map();
@@ -650,16 +662,28 @@ MailUniverse.prototype = {
       query: this.queryManager.queryAccountMessages(ctx, spec),
       dataOverlayManager: this.dataOverlayManager,
       metaHelpers,
+      metadataRefresher: this.syncRefreshMetadataForMessages.bind(this),
       refreshHelpers,
       refreshHelperMaker: this.__makeRefreshHelper.bind(this),
       metaHelperMaker: this.__makeMetaHelper.bind(this),
-      // TODO: add a comment to explain why we do nothing here.
-      onForgotten: () => {},
+      onForgotten: () => {
+        this._virtualConversationTOCs.delete(keyAccountIds);
+      },
     });
+
+    this._virtualConversationTOCs.set(keyAccountIds, toc);
     if (spec.refresh) {
       toc.refresh("searchAllAccountsMessages");
     }
     return ctx.acquire(toc);
+  },
+
+  async refreshMetadata(why) {
+    await Promise.all(
+      [...this._virtualConversationTOCs.values()].map(toc =>
+        toc.refreshMetadata(why)
+      )
+    );
   },
 
   acquireConversationTOC(ctx, conversationId) {
@@ -970,6 +994,35 @@ MailUniverse.prototype = {
       },
       why
     );
+  },
+
+  /**
+   * Schedule a sync for the given items, returning a promise that will be
+   * resolved when the task group associated with the request completes.
+   *
+   * @param {Map<string,Object>} items - A map messageId => message.
+   */
+  async syncRefreshMetadataForMessages(items, convId, why) {
+    // We only have metadata for gapi accounts, and we only expect to support
+    // use of a single gapi account right now.
+    // TODO support multiple gapi accounts.
+    if (!items?.size) {
+      return;
+    }
+    const gapiAccountId = this.getFirstAccountIdWithType("gapi");
+    const baseAccountId = gapiAccountId;
+    if (baseAccountId) {
+      await this.taskManager.scheduleNonPersistentTaskAndWaitForPlannedResult(
+        {
+          type: "sync_refresh_metadata",
+          accountIds: [gapiAccountId],
+          baseAccountId,
+          items,
+          convId,
+        },
+        why
+      );
+    }
   },
 
   /**

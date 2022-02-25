@@ -33,6 +33,7 @@ export default function FilteringAccountMessagesQuery({
   this._eventId = null;
   this._drainEvents = null;
   this._boundListener = null;
+  this._postDerivers = postDerivers;
 
   this._filteringStream = new FilteringStream({
     ctx,
@@ -106,6 +107,10 @@ FilteringAccountMessagesQuery.prototype = {
     }
 
     return [];
+  },
+
+  addPostDeriver(deriver) {
+    this._postDerivers.push(deriver);
   },
 
   /**

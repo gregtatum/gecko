@@ -17,6 +17,7 @@
 import logic from "logic";
 
 import { ConversationTOC } from "./conv_toc";
+import { accountIdFromMessageId } from "../../shared/id_conversions";
 
 /**
  * A virtual conversation is like a conversation but with some messages coming
@@ -28,13 +29,23 @@ import { ConversationTOC } from "./conv_toc";
  */
 export class VirtualConversationTOC extends ConversationTOC {
   #refreshHelperMaker;
+  #metadataRefresher;
   #metaHelperMaker;
+  #visibleItemIds;
+  #onFolderDeletion_bound;
+  #onFolderAddition_bound;
+  #onItemAdded_bound;
+  #onItemRemoved_bound;
+  #onAccountChange_bound;
+  #id;
+  static _globalId = 0;
 
   constructor({
     db,
     query,
     dataOverlayManager,
     metaHelpers,
+    metadataRefresher,
     refreshHelpers = null,
     refreshHelperMaker,
     metaHelperMaker,
@@ -48,13 +59,68 @@ export class VirtualConversationTOC extends ConversationTOC {
       refreshHelpers,
       onForgotten,
     });
-    db.on("fldr!*!remove", this.onFolderDeletion.bind(this));
-    db.on("fldr!*!add", this.onFolderAddition.bind(this));
+
+    this.#id = VirtualConversationTOC._globalId++;
+
+    this.#onFolderDeletion_bound = this.onFolderDeletion.bind(this);
+    this.#onFolderAddition_bound = this.onFolderAddition.bind(this);
+    this.#onAccountChange_bound = this.onAccountChange.bind(this);
+    db.on("fldr!*!remove", this.#onFolderDeletion_bound);
+    db.on("fldr!*!add", this.#onFolderAddition_bound);
+    db.on("accounts!tocChange", this.#onAccountChange_bound);
 
     this.#refreshHelperMaker = refreshHelperMaker;
     this.#metaHelperMaker = metaHelperMaker;
+    this.#metadataRefresher = metadataRefresher;
+
+    this.#visibleItemIds = new Map();
+    this.#onItemAdded_bound = this.onItemAdded.bind(this);
+    this.#onItemRemoved_bound = this.onItemRemoved.bind(this);
 
     logic.defineScope(this, "VirtualConversationTOC");
+  }
+
+  async __activateTOC() {
+    this.query.addPostDeriver({
+      itemAdded: this.#onItemAdded_bound,
+      itemRemoved: this.#onItemRemoved_bound,
+    });
+    await super.__activateTOC();
+  }
+
+  __deactivateTOC(firstTime) {
+    super.__deactivateTOC(firstTime);
+    if (!firstTime) {
+      this.db.removeListener("fldr!*!remove", this.#onFolderDeletion_bound);
+      this.db.removeListener("fldr!*!add", this.#onFolderAddition_bound);
+      this.db.removeListener("accounts!tocChange", this.#onAccountChange_bound);
+      this.#visibleItemIds.clear();
+    }
+  }
+
+  onAccountChange(accountId, accountDef) {
+    if (accountDef) {
+      return;
+    }
+
+    // We've an account deletion, so we must remove all the messages which
+    // could be there.
+    for (const id of [...this.#visibleItemIds.keys()]) {
+      if (accountIdFromMessageId(id) === accountId) {
+        this.#visibleItemIds.delete(id);
+      }
+    }
+  }
+
+  onItemAdded(gathered) {
+    // When an event is brought into the view.
+    this.#visibleItemIds.set(gathered.message.id, gathered.message);
+    this.refreshMetadata();
+  }
+
+  onItemRemoved(id) {
+    // When an event is removed from the view.
+    this.#visibleItemIds.delete(id);
   }
 
   onFolderDeletion(folderId) {
@@ -74,5 +140,13 @@ export class VirtualConversationTOC extends ConversationTOC {
       this.metaHelpers.set(folderId, metaHelper);
       metaHelper.activate(this);
     }
+  }
+
+  async refreshMetadata(why) {
+    await this.#metadataRefresher(this.#visibleItemIds, this.#id, why);
+  }
+
+  async refresh(why) {
+    await Promise.all([this.refreshMetadata(why), super.refresh(why)]);
   }
 }

@@ -207,7 +207,7 @@ if (workshopEnabled) {
     async refreshServices() {
       const spec = this.getCalendarEventQuery();
       await workshopAPI.refreshAllFoldersList(spec);
-      return workshopAPI.refreshAllMessages(spec);
+      await workshopAPI.refreshAllMessages(spec);
     },
 
     /**

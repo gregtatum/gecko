@@ -48,26 +48,30 @@ async function check_links_extracted_from_description({
   const calFolder = account.folders.getFirstFolderWithType("calendar");
   ok(calFolder, "have calendar folder");
 
+  const spec = {
+    kind: "calendar",
+    filter: {
+      refresh: true,
+      tag: "",
+      event: {
+        type: "now",
+        durationBeforeInMinutes: -1,
+      },
+    },
+  };
+
   // ### View the contents of the folder in its entirety
-  let calView = workshopAPI.viewFolderMessages(calFolder);
+  const calView = workshopAPI.searchAllMessages(spec);
 
   // ## Sync Tests Proper
 
   // ### Initially, there should be no events.
-  // viewFolderMessages will trigger a "sync_refresh" task automatically for us.
-  // Note that the seek should also result in an update to the list, but it will
-  // not be marked as a `coherentSnapshot` so we will not receive a "seeked"
-  // event until the sync_refresh completes.
   calView.seekToTop(10, 990);
   WorkshopHelper.eventsEqual(calView.items, []);
 
   // ### Then we sync/refresh and we should have today's events.
 
-  // The automatically scheduled "sync_refresh" from above should result in a
-  // single "seeked" update at which time we should have all of our data.  The
-  // BatchManager should have delayed flushing until the sync_refresh task group
-  // completed.
-  await calView.promisedOnce("seeked");
+  await Promise.all([calView.refresh(), calView.promisedOnce("seeked")]);
 
   const cmp = (x, y) => x.url.localeCompare(y.url);
   const calviewLinks = calView.items

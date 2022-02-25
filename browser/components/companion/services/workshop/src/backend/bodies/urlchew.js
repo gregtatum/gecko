@@ -233,12 +233,7 @@ const DOCS_PAT = new RegExp("/([^/]+)/(?:u/[^/]+/)?d/([^/]+)");
  * @returns {Promise<Object|null>} containing the type of the document and its title
  * if any.
  */
-export async function getDocumentTitle(url, gapiClient, docTitleCache) {
-  url = new URL(url);
-  if (!url.hostname.endsWith(".google.com")) {
-    return null;
-  }
-
+async function getDocumentTitleForGoogle(url, gapiClient, docTitleCache) {
   let type, id;
 
   if (url.hostname === "drive.google.com") {
@@ -276,6 +271,10 @@ export async function getDocumentTitle(url, gapiClient, docTitleCache) {
       return null;
   }
 
+  if (!gapiClient) {
+    return { type, title: null };
+  }
+
   const cached = docTitleCache.get(apiTarget);
   if (cached) {
     return cached;
@@ -305,4 +304,12 @@ export async function getDocumentTitle(url, gapiClient, docTitleCache) {
     });
   docTitleCache.set(apiTarget, resultPromise);
   return resultPromise;
+}
+
+export async function getDocumentTitle(url, clients, docTitleCache) {
+  url = new URL(url);
+  if (url.hostname.endsWith(".google.com")) {
+    return getDocumentTitleForGoogle(url, clients.get("gapi"), docTitleCache);
+  }
+  return null;
 }
