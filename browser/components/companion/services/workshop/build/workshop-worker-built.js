@@ -12589,7 +12589,7 @@ var WorkshopBackend = (() => {
                   }
                 }
               }
-              const isAllDay = mapiEvent.isAllDay ?? isAllDayEvent(mapiEvent.start.dateTime, mapiEvent.end.dateTime);
+              const isAllDay = mapiEvent.isAllDay || isAllDayEvent(mapiEvent.start.dateTime, mapiEvent.end.dateTime);
               const startDate = new Date(mapiEvent.start.dateTime + "Z").valueOf();
               const endDate = new Date(mapiEvent.end.dateTime + "Z").valueOf();
               const summary = mapiEvent.subject;

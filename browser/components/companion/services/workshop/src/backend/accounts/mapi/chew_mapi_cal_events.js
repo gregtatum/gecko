@@ -222,7 +222,7 @@ export class MapiCalEventChewer {
         }
 
         const isAllDay =
-          mapiEvent.isAllDay ??
+          mapiEvent.isAllDay ||
           isAllDayEvent(mapiEvent.start.dateTime, mapiEvent.end.dateTime);
 
         // TODO: use the timeZone field to set the correct timezone.

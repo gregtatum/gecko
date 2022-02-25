@@ -332,7 +332,7 @@ function parseMicrosoftCalendarResult(result) {
     .filter(a => a.status.response != "declined")
     .map(a => _normalizeUser(a));
   event.isAllDay =
-    result.isAllDay ??
+    result.isAllDay ||
     isAllDayEvent(result.start?.dateTime, result.end?.dateTime);
   return event;
 }
