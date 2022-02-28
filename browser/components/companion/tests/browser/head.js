@@ -588,6 +588,10 @@ class CompanionHelper {
               detail: { events },
             })
           );
+          let calendarEventList = content.document.querySelector(
+            "calendar-event-list"
+          );
+          await calendarEventList.updateComplete;
         },
         [standardizedEvents]
       );
