@@ -985,6 +985,9 @@ class MapiFakeServer extends BaseFakeServer {
             address: peep.email,
             name: peep.displayName,
           },
+          status: {
+            response: peep.responseStatus,
+          },
         };
       };
 

@@ -293,9 +293,15 @@ export class GapiCalEventChewer {
         const organizer = this._chewCalIdentity(gapiEvent.organizer);
         const location = gapiEvent.location || "";
 
-        const attendees = (gapiEvent.attendees || []).map(who =>
-          this._chewCalAttendee(who)
-        );
+        const attendees = [];
+        if (gapiEvent.attendees) {
+          // Get attendees and filter out ones who declined.
+          for (const attendee of gapiEvent.attendees) {
+            if (attendee.responseStatus !== "declined") {
+              attendees.push(this._chewCalAttendee(attendee));
+            }
+          }
+        }
 
         const oldInfo = oldById.get(eventId);
         const url = gapiEvent.htmlLink || "";

@@ -11607,7 +11607,14 @@ var WorkshopBackend = (() => {
               const creator = gapiEvent.creator ? this._chewCalIdentity(gapiEvent.creator) : null;
               const organizer = this._chewCalIdentity(gapiEvent.organizer);
               const location = gapiEvent.location || "";
-              const attendees = (gapiEvent.attendees || []).map((who) => this._chewCalAttendee(who));
+              const attendees = [];
+              if (gapiEvent.attendees) {
+                for (const attendee of gapiEvent.attendees) {
+                  if (attendee.responseStatus !== "declined") {
+                    attendees.push(this._chewCalAttendee(attendee));
+                  }
+                }
+              }
               const oldInfo = oldById.get(eventId);
               const url = gapiEvent.htmlLink || "";
               const recurrenceRules = gapiEvent.recurrence?.length && new Set(gapiEvent.recurrence);
@@ -12565,7 +12572,7 @@ var WorkshopBackend = (() => {
             isSelf: isOrganizer && organizer.isSelf,
             isOrganizer,
             isResource: type === "resource",
-            responseStatus: raw.status,
+            responseStatus: raw.status.response,
             comment: "",
             isOptional: type === "optional"
           });
@@ -12659,9 +12666,14 @@ var WorkshopBackend = (() => {
               const summary = mapiEvent.subject;
               const organizer = this._chewCalIdentity(mapiEvent.organizer, mapiEvent.isOrganizer);
               const creator = organizer;
-              const attendees = (mapiEvent.attendees || []).map((who) => {
-                return this._chewCalAttendee(who, organizer);
-              });
+              const attendees = [];
+              if (mapiEvent.attendees) {
+                for (const attendee of mapiEvent.attendees) {
+                  if (attendee.status.response !== "declined") {
+                    attendees.push(this._chewCalAttendee(attendee, organizer));
+                  }
+                }
+              }
               const oldInfo = this.oldById.get(eventId);
               const url = mapiEvent.webLink || "";
               const eventInfo = makeCalendarEventInfo({

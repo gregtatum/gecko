@@ -98,7 +98,7 @@ export class MapiCalEventChewer {
       isSelf: isOrganizer && organizer.isSelf,
       isOrganizer,
       isResource: type === "resource",
-      responseStatus: raw.status,
+      responseStatus: raw.status.response,
       comment: "",
       isOptional: type === "optional",
     });
@@ -238,9 +238,15 @@ export class MapiCalEventChewer {
         );
         const creator = organizer;
 
-        const attendees = (mapiEvent.attendees || []).map(who => {
-          return this._chewCalAttendee(who, organizer);
-        });
+        const attendees = [];
+        if (mapiEvent.attendees) {
+          // Get attendees and filter out ones who declined.
+          for (const attendee of mapiEvent.attendees) {
+            if (attendee.status.response !== "declined") {
+              attendees.push(this._chewCalAttendee(attendee, organizer));
+            }
+          }
+        }
 
         const oldInfo = this.oldById.get(eventId);
         const url = mapiEvent.webLink || "";
