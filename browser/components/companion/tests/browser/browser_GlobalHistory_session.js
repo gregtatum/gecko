@@ -9,6 +9,8 @@ const TEST_URL3 = "https://example.com/";
 const TEST_URL4 = "https://example.com/browser/browser/";
 const TEST_URL5 = "http://mochi.test:8888/";
 
+const DEFAULT_WORKSPACE_ID = 0;
+
 function assertTabUrls(win, urls) {
   let tabUrls = win.gBrowser.browsers.map(b => b.currentURI.spec);
   Assert.deepEqual(tabUrls, urls);
@@ -39,11 +41,15 @@ add_task(async function testSessionRestore() {
   let windowState = {
     extData: {
       GlobalHistoryState: JSON.stringify([
-        { id: 2, cachedEntry: null },
-        { id: 3, cachedEntry: null },
-        { id: 4, cachedEntry: null },
-        { id: 5, cachedEntry: { ID: 5, url: TEST_URL5 } },
-        { id: 1, cachedEntry: null },
+        { id: 2, cachedEntry: null, workspaceId: DEFAULT_WORKSPACE_ID },
+        { id: 3, cachedEntry: null, workspaceId: DEFAULT_WORKSPACE_ID },
+        { id: 4, cachedEntry: null, workspaceId: DEFAULT_WORKSPACE_ID },
+        {
+          id: 5,
+          cachedEntry: { ID: 5, url: TEST_URL5 },
+          workspaceId: DEFAULT_WORKSPACE_ID,
+        },
+        { id: 1, cachedEntry: null, workspaceId: DEFAULT_WORKSPACE_ID },
       ]),
     },
     tabs: [

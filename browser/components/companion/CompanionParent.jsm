@@ -747,6 +747,7 @@ class CompanionParent extends JSWindowActorParent {
       isCurrent: v.view === currentView,
       index: i,
       historyState: v.historyState,
+      workspaceId: v.workspaceId,
     }));
   }
 

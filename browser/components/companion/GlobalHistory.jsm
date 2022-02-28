@@ -5,7 +5,7 @@ const EXPORTED_SYMBOLS = ["GlobalHistory"];
 
 /**
  * This component tracks the views that a user visits. Instances of GlobalHistory track the views
- * for a single top-level window
+ * for a single top-level window.
  */
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
@@ -64,6 +64,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
+const DEFAULT_WORKSPACE_ID = 0;
 const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
 /**
  * @typedef {object} ViewHistoryData
@@ -156,6 +157,12 @@ class View {
     return this.#internalView.url;
   }
 
+  /** @type {Number} */
+  /** The workspaceId matches the userContextId of the tab this view belongs to. **/
+  get workspaceId() {
+    return this.#internalView.workspaceId;
+  }
+
   /** @type {string} */
   get title() {
     return this.#internalView.title;
@@ -238,6 +245,15 @@ class InternalView {
   /** @type {Number} **/
   #id;
 
+  /** @type {Number} **/
+  #workspaceId;
+
+  /** @type {Number} */
+  /** The workspaceId matches the userContextId of the tab this view belongs to. **/
+  get workspaceId() {
+    return this.#workspaceId;
+  }
+
   /** @type {View} */
   #view;
 
@@ -260,8 +276,10 @@ class InternalView {
 
   /** @type {String} **/
   #title;
+
   /** @type {String} **/
   #userTitle;
+
   /** @type {boolean} **/
   #submittedPassword;
 
@@ -295,10 +313,17 @@ class InternalView {
    * @param {nsISHEntry | object} historyEntry
    *   The nsISHEntry for this view or the serialized version if this view is for a lazy or
    *   dropped entry.
+   * @param {Number} workspaceId
+   *   ID representing the workspace this view belongs to. We ignore this argument
+   *   if browser is not null because that allows us to fetch the userContextId from
+   *   the browser'r tab.
    */
-  constructor(window, browser, historyEntry) {
+  constructor(window, browser, historyEntry, workspaceId) {
     this.#id = InternalView.nextInternalViewID++;
     this.#window = window;
+    this.#workspaceId = browser
+      ? this.#window.gBrowser.getTabForBrowser(browser).userContextId
+      : workspaceId;
     this.#view = new View(this);
     this.#pinned = false;
     this.#contentPrincipal = Services.scriptSecurityManager.createNullPrincipal(
@@ -611,17 +636,17 @@ class InternalView {
 }
 
 /**
- * An event fired from GlobalHistory to inform about changes to the view stack. Can be one of the
- * following types:
+ * An event fired from GlobalHistory to inform about changes
+ * to the view stack. Can be one of the following types:
  *
  * `ViewChanged` - The current view has changed.
- * `ViewAdded` - A new view has been added to the top of the stack.
- * `ViewRemoved` - An existing view has been removed.
- * `ViewMoved` - An existing view has been moved to the top of the stack.
+ * `ViewAdded` - A new view has been added to the top of the stack in a workspace.
+ * `ViewRemoved` - An existing view has been removed from a workspace.
+ * `ViewMoved` - An existing view has been moved to the top of the stack in a workspace.
  * `ViewUpdated` - An existing view has changed in some way.
- * `RiverRebuilt` - The river has been replaced with a new state and should be rebuilt.
- * `ViewPinned` - A view has transitioned from the unpinned to pinned state.
- * `ViewUnpinned` - A view has transitioned from the pinned to unpinned state.
+ * `RiverRebuilt` - The rivers have been replaced with a new state and should be rebuilt.
+ * `ViewPinned` - A view has transitioned from the unpinned to pinned state in a workspace.
+ * `ViewUnpinned` - A view has transitioned from the pinned to unpinned state in a workspace.
  * `ViewLoaded` - A view has finished loading.
  */
 class GlobalHistoryEvent extends Event {
@@ -670,17 +695,18 @@ class GlobalHistoryEvent extends Event {
  * to happen before we do anything.
  */
 class BrowserListener {
-  /** @type {GlobalHistory} */
-  #globalHistory;
+  /** @type {WorkspaceHistory} */
+  #workspaceHistory;
+
   /** @type {Browser} */
   #browser;
 
   /**
-   * @param {GlobalHistory} globalHistory
+   * @param {WorkspaceHistory} workspaceHistory
    * @param {Browser} browser
    */
-  constructor(globalHistory, browser) {
-    this.#globalHistory = globalHistory;
+  constructor(workspaceHistory, browser) {
+    this.#workspaceHistory = workspaceHistory;
     this.#browser = browser;
 
     this.#browser.addEventListener("pagetitlechanged", this);
@@ -690,11 +716,11 @@ class BrowserListener {
   handleEvent(event) {
     switch (event.type) {
       case "pagetitlechanged": {
-        this.#globalHistory._onNewTitle(this.#browser);
+        this.#workspaceHistory._onNewTitle(this.#browser);
         break;
       }
       case "PasswordManager:onFormSubmit": {
-        this.#globalHistory._onPasswordFormSubmit(this.#browser);
+        this.#workspaceHistory._onPasswordFormSubmit(this.#browser);
         break;
       }
     }
@@ -717,7 +743,7 @@ class BrowserListener {
     // Wait for SessionHistory to get updated before proceeding.
     await Promise.resolve();
 
-    this.#globalHistory._onBrowserNavigate(this.#browser);
+    this.#workspaceHistory._onBrowserNavigate(this.#browser);
   }
 
   /**
@@ -753,7 +779,7 @@ class BrowserListener {
     // Wait for SessionHistory to get updated before proceeding.
     await Promise.resolve();
 
-    this.#globalHistory._onBrowserNavigate(this.#browser);
+    this.#workspaceHistory._onBrowserNavigate(this.#browser);
   }
 
   /**
@@ -777,7 +803,9 @@ class BrowserListener {
       )
     );
 
-    this.#globalHistory._onHistoryEntriesRemoved(entries.slice(0, numEntries));
+    this.#workspaceHistory._onHistoryEntriesRemoved(
+      entries.slice(0, numEntries)
+    );
   }
 
   /**
@@ -802,7 +830,7 @@ class BrowserListener {
       )
     );
 
-    this.#globalHistory._onHistoryEntriesRemoved(
+    this.#workspaceHistory._onHistoryEntriesRemoved(
       entries.slice(entries.length - numEntries)
     );
   }
@@ -829,7 +857,7 @@ class BrowserListener {
 
     let newEntry = getCurrentEntry(this.#browser);
 
-    this.#globalHistory._onBrowserReplace(
+    this.#workspaceHistory._onBrowserReplace(
       this.#browser,
       previousEntry,
       newEntry
@@ -843,39 +871,28 @@ class BrowserListener {
 }
 
 /**
- * A "Most Recently Used" stack of history entries scoped to a top-level window. Each time the user
- * browses to a new view that view is put on the top of the stack.
- *
- * Can emit the following events:
- *
- * `ViewChanged` - The current view has changed. The new view will be included in the event detail.
- * `ViewAdded` - A new view has been added to the top of the stack.
- * `ViewMoved` - An existing view has been moved to the top of the stack.
- * `ViewRemoved` - An existing view has been removed.
- * `ViewUpdated` - An existing view has changed in some way.
- * `ViewPinned` - A view has transitioned from the unpinned to pinned state.
- * `ViewUnpinned` - A view has transitioned from the pinned to unpinned state.
- * `ViewLoaded` - A view has finished loading.
- *    The view will be included in the event detail
+ * This class manages a stack of history entries scoped to a specific workspace.
  */
-class GlobalHistory extends EventTarget {
+class WorkspaceHistory extends EventTarget {
   /**
    * The window this instance is tracking the history for.
    * @type {DOMWindow}
    */
   #window;
 
+  /** @type {GlobalHistory} */
+  #globalHistory;
+
+  /**
+   * @type {Number}
+   */
+  #workspaceId = null;
+
   /**
    * The stack of views. Most recent is at the end of the list.
    * @type {InternalView[]}
    */
-  #viewStack = [];
-
-  /**
-   * Currently staged view's internal view object.
-   * @type {InternalView | null}
-   */
-  #currentInternalView = null;
+  viewStack = [];
 
   /**
    * Maintains a reference to the browser listener as long as the browser is alive.
@@ -887,7 +904,641 @@ class GlobalHistory extends EventTarget {
    * A map from session history identifiers to views.
    * @type {Map<number, InternalView>}
    */
-  #historyViews = new Map();
+  historyViews = new Map();
+
+  constructor(workspaceId, window) {
+    super();
+    if (!(Number.isInteger(workspaceId) && workspaceId >= 0)) {
+      logConsole.error(
+        `Could not create workspace history object. Invalid workspace id.`
+      );
+      return;
+    }
+
+    this.#workspaceId = workspaceId;
+    this.#window = window;
+    this.#globalHistory = window.gGlobalHistory;
+
+    for (let tab of this.#window.gBrowser.tabs) {
+      if (tab.userContextId !== this.#workspaceId) {
+        return;
+      }
+
+      this.#watchBrowser(tab.linkedBrowser);
+    }
+  }
+
+  /**
+   * Called by GlobalHistory to handle tab events such as "TabSelect",
+   * "TabOpen", "TabClose", "TabAttrModified", "TabBrowserDiscarded" and "SSTabRestoring"
+   * for tabs belonging to this workspace.
+   *
+   * @param {String} type
+   *        Event type
+   * @param {Tab} tab
+   *        Tab object relating to the event
+   * @param {String} changedAttr
+   *         If event type is "TabAttrChanged", this indicates what's changed.
+   */
+  handleTabEvent(type, tab, changedAttr = "") {
+    if (tab.userContextId != this.#workspaceId) {
+      logConsole.error(
+        "A tab event was routed to the wrong workspace to handle"
+      );
+      return;
+    }
+
+    let browser = tab.linkedBrowser;
+    switch (type) {
+      case "TabSelect":
+        if (this.#globalHistory.windowRestoring) {
+          return;
+        }
+
+        logConsole.debug(`Browser(${browser.browsingContext.id}) staged.`);
+        this._onBrowserNavigate(browser);
+        break;
+      case "TabOpen":
+        if (this.#globalHistory.windowRestoring) {
+          return;
+        }
+
+        logConsole.debug(`Browser(${browser.browsingContext.id}) created.`);
+        this.#watchBrowser(browser);
+        this._onBrowserNavigate(browser);
+        break;
+      case "TabClose":
+        if (this.#globalHistory.windowRestoring) {
+          return;
+        }
+
+        // If we're closing the special OAuth tab, blow away any Views
+        // associated with it.
+        if (tab.getAttribute("pinebuild-oauth-flow")) {
+          let viewsToRemove = this.viewStack.filter(
+            view => view.browserId == browser.browserId
+          );
+          for (let internalView of viewsToRemove) {
+            this.#globalHistory.closeView(internalView.view);
+          }
+        }
+        break;
+      case "TabAttrModified":
+        if (this.#globalHistory.windowRestoring) {
+          return;
+        }
+
+        if (changedAttr.includes("image")) {
+          this.#onNewIcon(browser);
+        } else if (changedAttr.includes("busy")) {
+          this.#onBusyChanged(browser, tab.hasAttribute("busy"));
+        }
+        break;
+      case "TabBrowserDiscarded":
+        logConsole.debug("Saw a tab discarded");
+
+        // At this point the browser has already lost its history state so update from session store.
+        let state = JSON.parse(SessionStore.getTabState(tab));
+        for (let entry of state.entries) {
+          let internalView = this.historyViews.get(entry.ID);
+          if (internalView) {
+            internalView.discard(entry);
+          }
+        }
+        break;
+      case "SSTabRestoring":
+        logConsole.debug("Saw a tab restored");
+
+        let { sessionHistory } = browser.browsingContext;
+        for (let i = 0; i < sessionHistory.count; i++) {
+          let entry = sessionHistory.getEntryAtIndex(i);
+          let entryId = SessionHistory.getPreviousID(entry) ?? entry.ID;
+
+          let internalView = this.historyViews.get(entryId);
+          if (internalView) {
+            if (entry.ID != entryId) {
+              this.historyViews.delete(entryId);
+              this.historyViews.set(entry.ID, internalView);
+            }
+
+            internalView.update(browser, entry);
+          }
+        }
+
+        this.#watchBrowser(browser);
+        break;
+    }
+  }
+
+  /**
+   * This function attaches listeners to a browser element
+   * that listen to changes to its session history.
+   * @param {Browser} browser
+   */
+  #watchBrowser(browser) {
+    if (this.#browsers.has(browser)) {
+      logConsole.debug(
+        `Browser(${browser.browserId}) does not exist in this workspace`
+      );
+      return;
+    }
+
+    let listener = new BrowserListener(this, browser);
+    this.#browsers.set(browser, listener);
+
+    try {
+      browser.browsingContext.sessionHistory.addSHistoryListener(listener);
+    } catch (e) {
+      logConsole.error("Failed to add listener", e);
+    }
+  }
+
+  activateView(internalView) {
+    if (!this.viewStack.includes(internalView)) {
+      logConsole.error(
+        `View cannot be activated. It does not exist in this workspace.`
+      );
+      return;
+    }
+
+    let lastIndex = this.viewStack.length - 1;
+    if (internalView == this.viewStack[lastIndex]) {
+      logConsole.debug(`View is already active`);
+      return;
+    }
+
+    this.viewStack.splice(this.#globalHistory.currentIndex, 1);
+    this.viewStack.push(internalView);
+  }
+
+  /**
+   * Called by GlobalHistory to remove browser listeners.
+   */
+  clean() {
+    let browsers =
+      ChromeUtils.nondeterministicGetWeakMapKeys(this.#browsers) || [];
+    browsers.forEach(browser => {
+      let listener = this.#browsers.get(browser);
+      if (listener) {
+        try {
+          browser.browsingContext?.sessionHistory.removeSHistoryListener(
+            listener
+          );
+        } catch (e) {
+          logConsole.error("Failed to remove listener", e);
+        }
+      }
+    });
+
+    this.#browsers = new WeakMap();
+  }
+
+  /**
+   * Called when the document in a browser has changed its favicon.
+   * @param {Browser} browser
+   *        Underlying browser of a view whose icon was updated by
+   *        its publishing website.
+   */
+  #onNewIcon(browser) {
+    let entry = getCurrentEntry(browser);
+    if (!entry) {
+      return;
+    }
+    let internalView = this.historyViews.get(entry.ID);
+    if (!internalView) {
+      return;
+    }
+
+    internalView.iconURL = browser.mIconURL;
+    this.#globalHistory.notifyEvent("ViewUpdated", internalView);
+  }
+
+  /**
+   * Called when the browser's busy state has changed.
+   */
+  #onBusyChanged(browser, busy) {
+    let entry = getCurrentEntry(browser);
+    if (!entry) {
+      return;
+    }
+    let internalView = this.historyViews.get(entry.ID);
+    if (!internalView) {
+      return;
+    }
+
+    internalView.busy = busy;
+    this.#globalHistory.notifyEvent("ViewUpdated", internalView);
+  }
+
+  /**
+   * Called when the document in a browser has changed title.
+   * @param {Browser} browser
+   *    Underlying browser element of a view whose title was updated by
+   *    its publishing website.
+   */
+  _onNewTitle(browser) {
+    let entry = getCurrentEntry(browser);
+    let internalView = this.historyViews.get(entry.ID);
+    if (!internalView) {
+      return;
+    }
+
+    internalView.setTitle(entry.title);
+    this.#globalHistory.notifyEvent("ViewUpdated", internalView);
+  }
+
+  _onPasswordFormSubmit(browser) {
+    let entry = getCurrentEntry(browser);
+    let internalView = this.historyViews.get(entry.ID);
+    if (!internalView) {
+      return;
+    }
+
+    logConsole.debug(
+      `Saw password form submission for ${internalView.toString()}`
+    );
+
+    internalView.submittedPassword = true;
+  }
+
+  /**
+   * Called when a new history entry replaces an older one.
+   *
+   * @param {Browser} browser
+   * @param {nsISHEntry} previousEntry
+   * @param {nsISHEntry} newEntry
+   */
+  _onBrowserReplace(browser, previousEntry, newEntry) {
+    logConsole.debug(
+      `_onBrowserReplace for browser(${browser.browsingContext.id}), ` +
+        `previous SHEntry(${previousEntry.ID}), new SHEntry(${newEntry.ID})`
+    );
+    let previousView = this.historyViews.get(previousEntry.ID);
+    if (previousView) {
+      logConsole.debug(
+        `Found previous InternalView: ${previousView.toString()}`
+      );
+      this.historyViews.delete(previousEntry.ID);
+
+      let pos = this.viewStack.indexOf(previousView);
+      if (pos >= 0) {
+        if (this.#window.isInitialPage(newEntry.URI)) {
+          logConsole.debug(
+            `Previous InternalView was an internal page - discarding.`
+          );
+          // Don't store initial pages in the river.
+          this.viewStack.splice(pos, 1);
+          let currentInternalView = InternalView.viewMap.get(
+            this.#globalHistory.currentView
+          );
+          if (previousView == currentInternalView) {
+            logConsole.trace(`Setting currentInternalView to NULL`);
+            let event = new CustomEvent("SetCurrentInternalView", {
+              detail: { internalView: null },
+            });
+            this.dispatchEvent(event);
+          }
+          this.#globalHistory.notifyEvent("ViewRemoved", previousView);
+
+          currentInternalView = InternalView.viewMap.get(
+            this.#globalHistory.currentView
+          );
+          if (currentInternalView === null) {
+            this.#globalHistory.notifyEvent("ViewChanged", null, {
+              navigating: true,
+              browser,
+            });
+          }
+          return;
+        }
+
+        previousView.update(browser, newEntry);
+        this.historyViews.set(newEntry.ID, previousView);
+
+        this.#globalHistory.notifyEvent("ViewUpdated", previousView);
+        this.#globalHistory.updateSessionStore();
+        return;
+      }
+      logConsole.error(
+        `Could not find InternalView ${previousView.toString()} in ` +
+          `the viewStack.`
+      );
+    }
+
+    // Fallback in the event that the previous entry is not present in the stack.
+    logConsole.debug("Falling back to _onBrowserNavigate.");
+    this._onBrowserNavigate(browser, newEntry);
+  }
+
+  /**
+   * Called when a browser loads a view.
+   *
+   * @param {Browser} browser
+   * @param {nsISHEntry} newEntry
+   * @param {boolean} viaTabSwitch
+   *   True if the "navigation" is actually a tab switch.
+   */
+  _onBrowserNavigate(
+    browser,
+    newEntry = getCurrentEntry(browser),
+    viaTabSwitch = false
+  ) {
+    logConsole.group(
+      `_onBrowserNavigate for browser(${browser.browsingContext.id}), ` +
+        `SHEntry(${newEntry?.ID})`
+    );
+    if (!newEntry) {
+      logConsole.debug("No newEntry");
+      logConsole.groupEnd();
+      // Happens before anything has been loaded into the browser.
+      return;
+    }
+
+    if (this.#window.gBrowser.selectedBrowser !== browser) {
+      // Only care about the currently visible browser. We will re-visit if the tab is selected.
+      logConsole.debug("Browser is not selected.");
+      logConsole.groupEnd();
+      return;
+    }
+
+    if (this.#window.isInitialPage(newEntry.URI)) {
+      // Don't store initial pages in the river.
+      logConsole.debug(
+        "SHEntry is pointed at an initial or ignored page: ",
+        newEntry.URI.spec
+      );
+      logConsole.groupEnd();
+      logConsole.trace(`Setting #currentInternalView to NULL`);
+      let event = new CustomEvent("SetCurrentInternalView", {
+        detail: { internalView: null },
+      });
+      this.dispatchEvent(event);
+      return;
+    }
+
+    let { internalView, overwriting } = this.#findInternalViewToNavigate(
+      browser,
+      newEntry
+    );
+
+    if (!internalView) {
+      // More than once, we've stumbled onto some bugs where a new InternalView
+      // gets created with an SHEntry that maps to a pre-existing InternalView.
+      // While we've fixed a good number of these cases, to make it easier to
+      // detect if more cases exist, we make a little bit of noise when debugging
+      // when that duplication arises.
+      if (DEBUG) {
+        let preexisting = this.viewStack.find(v => v.historyId == newEntry.ID);
+        logConsole.assert(
+          !preexisting,
+          `Should not find a pre-existing InternalView with SHEntry ID ${newEntry.ID}`
+        );
+        if (preexisting) {
+          logConsole.debug(JSON.parse(JSON.stringify(this.viewStack)));
+          logConsole.debug(
+            JSON.parse(JSON.stringify([...this.historyViews.entries()]))
+          );
+        }
+      }
+
+      logConsole.debug(`Creating a new InternalView.`);
+
+      // This is a new view.
+      internalView = new InternalView(this.#window, browser, newEntry);
+      logConsole.trace(
+        `Setting #currentInternalView to NEW ${internalView.toString()}`
+      );
+      let event = new CustomEvent("SetCurrentInternalView", {
+        detail: { internalView },
+      });
+      this.dispatchEvent(event);
+      this.viewStack.push(internalView);
+      this.historyViews.set(newEntry.ID, internalView);
+
+      SessionManager.register(this.#window, internalView.url).catch(
+        logConsole.error
+      );
+
+      this.#globalHistory.notifyEvent("ViewAdded", internalView);
+    } else {
+      logConsole.debug(`Updating InternalView ${internalView.toString()}.`);
+      // This is a navigation to an existing view.
+      internalView.update(browser, newEntry, {
+        resetCreationTime: overwriting,
+      });
+
+      let currentInternalView = InternalView.viewMap.get(
+        this.#globalHistory.currentView
+      );
+      if (internalView == currentInternalView) {
+        logConsole.trace(`Updated InternalView is the current index.`);
+        logConsole.groupEnd();
+        this.#globalHistory.notifyEvent("ViewUpdated", internalView);
+        return;
+      }
+
+      logConsole.trace(
+        `Setting #currentInternalView to EXISTING ${internalView.toString()}`
+      );
+      let event = new CustomEvent("SetCurrentInternalView", {
+        detail: { internalView },
+      });
+      this.dispatchEvent(event);
+      let pos = this.viewStack.indexOf(internalView);
+      if (pos < 0) {
+        logConsole.warn("Navigated to a view not in the existing stack.");
+        this.viewStack.push(internalView);
+
+        this.#globalHistory.notifyEvent("ViewAdded", internalView);
+      }
+    }
+
+    this.#globalHistory.startActivationTimer();
+    this.#globalHistory.updateSessionStore();
+    this.#globalHistory.notifyEvent("ViewChanged", internalView, {
+      navigating: !viaTabSwitch,
+      browser,
+    });
+
+    logConsole.groupEnd();
+  }
+
+  /**
+   * @typedef {object} FindInternalViewResult
+   *   A result returned from #findInternalViewToNavigate when searching for
+   *   the right InternalView to navigate.
+   * @property {InternalView|null} browser
+   *   The InternalView that was found to navigate. Null if no appropriate
+   *   InternalView was found.
+   * @property {boolean} overwriting
+   *   True if the InternalView that was found qualifies for overwriting due
+   *   to a quick navigation.
+   */
+
+  /**
+   * Determines which, if any, pre-existing InternalView should be updated
+   * for a navigation to newEntry from browser. If it can't find an
+   * appropriate InternalView to update, this will return null.
+   *
+   * @param {Browser} browser
+   * @param {nsISHEntry} newEntry
+   * @returns {FindInternalViewResult}
+   */
+  #findInternalViewToNavigate(browser, newEntry) {
+    let internalView = this.historyViews.get(newEntry.ID);
+    if (internalView) {
+      return { internalView, overwriting: false };
+    }
+
+    logConsole.debug(
+      `Did not initially find InternalView with ID: ${newEntry.ID}.`
+    );
+    // It's possible that a session restoration has resulted in a new
+    // nsISHEntry being created with a new ID that doesn't match the one
+    // we're looking for. Thankfully, SessionHistory keeps track of this,
+    // so we can try to map the new nsISHEntry's ID to the previous ID,
+    // and then update our references to use the new ID.
+    let previousID = SessionHistory.getPreviousID(newEntry);
+    if (previousID) {
+      logConsole.debug(`Found previous SHEntry ID: ${previousID}`);
+      internalView = this.historyViews.get(previousID);
+      if (internalView) {
+        logConsole.debug(`Found InternalView ${internalView.toString()}`);
+        this.historyViews.delete(previousID);
+        this.historyViews.set(newEntry.ID, internalView);
+        return { internalView, overwriting: false };
+      }
+    }
+
+    if (this.#globalHistory.pendingView?.url.spec == newEntry.URI.spec) {
+      logConsole.debug(
+        `Found pending View ${this.#globalHistory.pendingView.toString()}.`
+      );
+      internalView = InternalView.viewMap.get(this.#globalHistory.pendingView);
+      this.historyViews.delete(internalView.historyId);
+      this.historyViews.set(newEntry.ID, internalView);
+      let event = new CustomEvent("ClearPendingInternalView");
+      this.dispatchEvent(event);
+      return { internalView, overwriting: false };
+    }
+
+    if (INTERSTITIAL_VIEW_OVERWRITING || LOGIN_VIEW_OVERWRITING) {
+      let makeOverwritingObject = (previousView, overwritingEntry) => {
+        this.historyViews.delete(previousView.historyId);
+        this.historyViews.set(overwritingEntry.ID, previousView);
+        return { internalView: previousView, overwriting: true };
+      };
+
+      let newEntryHistoryIndex = getHistoryIndex(browser, newEntry.ID);
+      let previousEntryHistoryIndex = newEntryHistoryIndex - 1;
+
+      if (previousEntryHistoryIndex >= 0) {
+        let { sessionHistory, currentWindowGlobal } = browser.browsingContext;
+        let previousEntry = sessionHistory.getEntryAtIndex(
+          previousEntryHistoryIndex
+        );
+        if (previousEntry) {
+          let previousView = this.historyViews.get(previousEntry.ID);
+          if (previousView) {
+            if (INTERSTITIAL_VIEW_OVERWRITING) {
+              // For quick navigations (for example, bounces through an OAuth
+              // provider), we want to avoid creating extra InternalViews
+              // unnecessarily, as the user is unlikely to want to return to
+              // them. We check to see if the previous InternalView for this
+              // browser is considered a quick navigation, and if so, we return
+              // that for overwriting.
+              let timeSinceCreation = Cu.now() - previousView.creationTime;
+              if (
+                !currentWindowGlobal.isInitialDocument &&
+                !previousEntry.hasUserInteraction &&
+                timeSinceCreation < INTERSTITIAL_VIEW_OVERWRITING_THRESHOLD_MS
+              ) {
+                logConsole.debug(
+                  `Overwriting InternalView ${previousView.toString()} due to quick ` +
+                    `navigation`
+                );
+                return makeOverwritingObject(previousView, newEntry);
+              }
+            }
+            if (LOGIN_VIEW_OVERWRITING && previousView.submittedPassword) {
+              // For navigations away from pages where the user has submitted a
+              // password through a form, we'll assume that the user has gone through
+              // some kind of login flow and overwrite that view, since it's unlikely
+              // the user will want to go back to the login page (or that the login
+              // page will let them login again without first logging out).
+              logConsole.debug(
+                `Overwriting InternalView ${previousView.toString()} due to the ` +
+                  `previous view having submitted a password form`
+              );
+              return makeOverwritingObject(previousView, newEntry);
+            }
+          }
+        }
+      }
+    }
+
+    return { internalView: null, overwriting: false };
+  }
+
+  /**
+   * @param {object[]} entries The serialized entries that were removed.
+   */
+  _onHistoryEntriesRemoved(entries) {
+    for (let entry of entries) {
+      let internalView = this.historyViews.get(entry.ID);
+      if (internalView) {
+        internalView.drop(entry);
+      }
+    }
+
+    this.#globalHistory.updateSessionStore();
+  }
+
+  /**
+   * @type {number} The number of pinned Views in this workspace.
+   */
+  getPinnedViewCount() {
+    let index;
+    for (index = 0; index < this.viewStack.length; index++) {
+      if (!this.viewStack[index].pinned) {
+        break;
+      }
+    }
+    return index;
+  }
+}
+
+/**
+ * This class manages several workspaces scoped to a specific window.
+ *
+ * Can emit the following events:
+ * `ViewChanged` - The current view has changed.
+ * `ViewAdded` - A new view has been added to the top of the stack in a workspace.
+ * `ViewRemoved` - An existing view has been removed from a workspace.
+ * `ViewMoved` - An existing view has been moved to the top of the stack in a workspace.
+ * `ViewUpdated` - An existing view has changed in some way.
+ * `RiverRebuilt` - The rivers have been replaced with a new state and should be rebuilt.
+ * `ViewPinned` - A view has transitioned from the unpinned to pinned state in a workspace.
+ * `ViewUnpinned` - A view has transitioned from the pinned to unpinned state in a workspace.
+ * `ViewLoaded` - A view has finished loading.
+ */
+class GlobalHistory extends EventTarget {
+  /**
+   * The window this instance is managing workspaces for.
+   * @type {DOMWindow}
+   */
+  #window;
+
+  /**
+   * A map from workspaceIds to WorkspaceHistory objects.
+   */
+  #workspaces = new Map();
+
+  /**
+   * Currently staged view's internal view object.
+   * @type {InternalView | null}
+   */
+  #currentInternalView = null;
 
   /**
    * A timer to track when to activate the current view.
@@ -901,9 +1552,23 @@ class GlobalHistory extends EventTarget {
   #pendingView = null;
 
   /**
+   * @type {View}
+   */
+  get pendingView() {
+    return this.#pendingView?.view;
+  }
+
+  /**
    * True if the window is currently being restored from a saved session.
    */
   #windowRestoring = false;
+
+  /**
+   * @type {boolean}
+   */
+  get windowRestoring() {
+    return this.#windowRestoring;
+  }
 
   /**
    * True if our most recent navigation was forward in the global history.
@@ -947,36 +1612,26 @@ class GlobalHistory extends EventTarget {
    * Called once the DOM is ready, and we know that gBrowser is available.
    */
   init() {
-    for (let { linkedBrowser: browser } of this.#window.gBrowser.tabs) {
-      this.#watchBrowser(browser);
-    }
-
-    this.#window.gBrowser.tabContainer.addEventListener("TabSelect", event =>
-      this.#tabSelected(event.target)
+    let workspaceHistory = new WorkspaceHistory(
+      DEFAULT_WORKSPACE_ID,
+      this.#window
     );
+    workspaceHistory.addEventListener("SetCurrentInternalView", this);
+    workspaceHistory.addEventListener("ClearPendingInternalView", this);
+    this.#workspaces.set(DEFAULT_WORKSPACE_ID, workspaceHistory);
 
-    this.#window.gBrowser.tabContainer.addEventListener("TabOpen", event =>
-      this.#tabOpened(event.target)
-    );
-
-    this.#window.gBrowser.tabContainer.addEventListener("TabClose", event =>
-      this.#tabClosed(event.target)
-    );
-
+    this.#window.gBrowser.tabContainer.addEventListener("TabSelect", this);
+    this.#window.gBrowser.tabContainer.addEventListener("TabOpen", this);
+    this.#window.gBrowser.tabContainer.addEventListener("TabClose", this);
     this.#window.gBrowser.tabContainer.addEventListener(
       "TabAttrModified",
-      event => this.#tabAttrModified(event.target, event.detail.changed)
+      this
     );
-
-    this.#window.gBrowser.tabContainer.addEventListener(
-      "SSTabRestoring",
-      event => this.#tabRestored(event.target)
-    );
-
     this.#window.gBrowser.tabContainer.addEventListener(
       "TabBrowserDiscarded",
-      event => this.#tabDiscarded(event.target)
+      this
     );
+    this.#window.gBrowser.tabContainer.addEventListener("SSTabRestoring", this);
 
     this.#window.addEventListener("SSWindowRestoring", () =>
       this.#sessionRestoreStarted()
@@ -999,6 +1654,83 @@ class GlobalHistory extends EventTarget {
     );
 
     this.#window.gBrowser.addTabsProgressListener(this);
+  }
+
+  handleEvent(event) {
+    switch (event.type) {
+      case "TabSelect":
+      case "TabOpen":
+      case "TabClose":
+      case "TabAttrModified":
+      case "TabBrowserDiscarded":
+      case "SSTabRestoring":
+        let tab = event.target;
+        let workspace = this.#workspaces.get(tab.userContextId);
+        if (!workspace) {
+          logConsole.error("Tab is not associated with a workspace.");
+          return;
+        }
+        workspace.handleTabEvent(
+          event.type,
+          event.target,
+          event.detail?.changed
+        );
+        break;
+      case "SetCurrentInternalView":
+        let internalView = event.detail.internalView;
+        if (internalView === null || internalView instanceof InternalView) {
+          this.#currentInternalView = internalView;
+        } else {
+          logConsole.error(
+            "Tried setting an invalid value into #currentInternalView"
+          );
+        }
+        break;
+      case "ClearPendingInternalView":
+        this.#pendingView = null;
+        break;
+    }
+  }
+
+  onSecurityChange(browser, webProgress, request, status) {
+    let entry = getCurrentEntry(browser);
+    if (!entry) {
+      return;
+    }
+
+    let tab = this.#window.gBrowser.getTabForBrowser(browser);
+    let workspaceId = tab.userContextId;
+    let workspace = this.#workspaces.get(workspaceId);
+    let internalView = workspace.historyViews.get(entry.ID);
+    if (!internalView) {
+      return;
+    }
+
+    internalView.update(browser, entry);
+    this.notifyEvent("ViewUpdated", internalView);
+  }
+
+  onStateChange(browser, webProgress, request, stateFlags, status) {
+    if (
+      stateFlags & Ci.nsIWebProgressListener.STATE_IS_WINDOW &&
+      stateFlags & Ci.nsIWebProgressListener.STATE_STOP
+    ) {
+      let entry = getCurrentEntry(browser);
+      if (!entry) {
+        return;
+      }
+
+      let tab = this.#window.gBrowser.getTabForBrowser(browser);
+      let workspaceId = tab.userContextId;
+      let workspace = this.#workspaces.get(workspaceId);
+      let internalView = workspace.historyViews.get(entry.ID);
+      if (!internalView) {
+        return;
+      }
+
+      internalView.update(browser, entry);
+      this.notifyEvent("ViewLoaded", internalView);
+    }
   }
 
   /**
@@ -1047,51 +1779,14 @@ class GlobalHistory extends EventTarget {
       animate: false,
       skipPermitUnload,
     });
-    this.#viewStack = [];
-    this.#historyViews.clear();
+    for (let workspace of this.#workspaces.values()) {
+      workspace.historyViews.clear();
+      workspace.viewStack = [];
+    }
     logConsole.trace(`Setting #currentInternalView to NULL`);
     this.#currentInternalView = null;
-    this.#notifyEvent("RiverRebuilt");
+    this.notifyEvent("RiverRebuilt");
     return loadPromise;
-  }
-
-  onSecurityChange(browser, webProgress, request, status) {
-    let entry = getCurrentEntry(browser);
-    if (!entry) {
-      return;
-    }
-
-    let internalView = this.#historyViews.get(entry.ID);
-    if (!internalView) {
-      return;
-    }
-
-    internalView.update(browser, entry);
-    this.dispatchEvent(
-      new GlobalHistoryEvent("ViewUpdated", internalView.view)
-    );
-  }
-
-  onStateChange(browser, webProgress, request, stateFlags, status) {
-    if (
-      stateFlags & Ci.nsIWebProgressListener.STATE_IS_WINDOW &&
-      stateFlags & Ci.nsIWebProgressListener.STATE_STOP
-    ) {
-      let entry = getCurrentEntry(browser);
-      if (!entry) {
-        return;
-      }
-
-      let internalView = this.#historyViews.get(entry.ID);
-      if (!internalView) {
-        return;
-      }
-
-      internalView.update(browser, entry);
-      this.dispatchEvent(
-        new GlobalHistoryEvent("ViewLoaded", internalView.view)
-      );
-    }
   }
 
   /**
@@ -1104,7 +1799,7 @@ class GlobalHistory extends EventTarget {
    * @param {Object | null} detail Optional detail information to include with
    *   the event.
    */
-  #notifyEvent(type, internalView, detail) {
+  notifyEvent(type, internalView, detail) {
     this.dispatchEvent(
       new GlobalHistoryEvent(type, internalView?.view, detail)
     );
@@ -1120,20 +1815,9 @@ class GlobalHistory extends EventTarget {
       this.clearActivationTimer();
     }
 
-    for (let { linkedBrowser: browser } of this.#window.gBrowser.tabs) {
-      let listener = this.#browsers.get(browser);
-      if (listener) {
-        try {
-          browser.browsingContext.sessionHistory.removeSHistoryListener(
-            listener
-          );
-        } catch (e) {
-          logConsole.error("Failed to remove listener", e);
-        }
-      }
+    for (let workspace of this.#workspaces.values()) {
+      workspace.clean();
     }
-
-    this.#browsers = new WeakMap();
 
     this.#window.addEventListener(
       "SSWindowRestored",
@@ -1142,41 +1826,6 @@ class GlobalHistory extends EventTarget {
       },
       { once: true }
     );
-  }
-
-  #tabRestored(tab) {
-    logConsole.debug("Saw a tab restored");
-
-    let { sessionHistory } = tab.linkedBrowser.browsingContext;
-    for (let i = 0; i < sessionHistory.count; i++) {
-      let entry = sessionHistory.getEntryAtIndex(i);
-      let entryId = SessionHistory.getPreviousID(entry) ?? entry.ID;
-
-      let internalView = this.#historyViews.get(entryId);
-      if (internalView) {
-        if (entry.ID != entryId) {
-          this.#historyViews.delete(entryId);
-          this.#historyViews.set(entry.ID, internalView);
-        }
-
-        internalView.update(tab.linkedBrowser, entry);
-      }
-    }
-
-    this.#watchBrowser(tab.linkedBrowser);
-  }
-
-  #tabDiscarded(tab) {
-    logConsole.debug("Saw a tab discarded");
-
-    // At this point the browser has already lost its history state so update from session store.
-    let state = JSON.parse(SessionStore.getTabState(tab));
-    for (let entry of state.entries) {
-      let internalView = this.#historyViews.get(entry.ID);
-      if (internalView) {
-        internalView.discard(entry);
-      }
-    }
   }
 
   #sessionRestoreEnded() {
@@ -1189,8 +1838,10 @@ class GlobalHistory extends EventTarget {
       SESSIONSTORE_STATE_KEY
     );
 
-    this.#viewStack = [];
-    this.#historyViews.clear();
+    for (let workspace of this.#workspaces.values()) {
+      workspace.historyViews.clear();
+      workspace.viewStack = [];
+    }
 
     // Tabs are not yet functional so build a set of views from cached history state.
     let state = [];
@@ -1213,10 +1864,15 @@ class GlobalHistory extends EventTarget {
 
     let missingIds = new Set();
     let previousIdMap = new Map();
-    for (let { id, cachedEntry } of state) {
+    for (let { id, cachedEntry, workspaceId } of state) {
       if (cachedEntry) {
-        let internalView = new InternalView(this.#window, null, cachedEntry);
-        this.#historyViews.set(id, internalView);
+        let internalView = new InternalView(
+          this.#window,
+          null,
+          cachedEntry,
+          workspaceId
+        );
+        this.#workspaces.get(workspaceId).historyViews.set(id, internalView);
         previousIdMap.set(id, internalView);
       } else {
         missingIds.add(id);
@@ -1232,6 +1888,7 @@ class GlobalHistory extends EventTarget {
     let restoredIds = [];
     let pendingIds = [];
     for (let tab of this.#window.gBrowser.tabs) {
+      let userContextId = tab.userContextId;
       if (tab.linkedBrowser.browsingContext) {
         // This browser is already restored
         let { sessionHistory } = tab.linkedBrowser.browsingContext;
@@ -1245,7 +1902,9 @@ class GlobalHistory extends EventTarget {
               tab.linkedBrowser,
               entry
             );
-            this.#historyViews.set(entry.ID, internalView);
+            this.#workspaces
+              .get(userContextId)
+              .historyViews.set(entry.ID, internalView);
             previousIdMap.set(entryId, internalView);
             restoredIds.push(entryId);
             missingIds.delete(entryId);
@@ -1260,7 +1919,9 @@ class GlobalHistory extends EventTarget {
               tab.linkedBrowser,
               entry
             );
-            this.#historyViews.set(entry.ID, internalView);
+            this.#workspaces
+              .get(userContextId)
+              .historyViews.set(entry.ID, internalView);
             previousIdMap.set(entry.ID, internalView);
             pendingIds.push(entry.ID);
             missingIds.delete(entry.ID);
@@ -1280,30 +1941,32 @@ class GlobalHistory extends EventTarget {
     }
 
     // Push those views onto the stack and to the river.
-    for (let { id } of state) {
+    for (let { id, workspaceId } of state) {
       let internalView = previousIdMap.get(id);
       if (!internalView) {
         logConsole.warn("Missing history entry for river entry.");
         continue;
       }
 
-      this.#viewStack.push(internalView);
+      this.#workspaces.get(workspaceId).viewStack.push(internalView);
     }
 
     let selectedBrowser = this.#window.gBrowser.selectedBrowser;
     let selectedEntry = getCurrentEntry(selectedBrowser);
-    let selectedView = this.#historyViews.get(selectedEntry.ID);
+    let selectedWorkspaceId = this.#window.gBrowser.selectedTab.userContextId;
+    let selectedWorkspace = this.#workspaces.get(selectedWorkspaceId);
+    let selectedView = selectedWorkspace.historyViews.get(selectedEntry.ID);
 
     if (!selectedView) {
       logConsole.warn("Selected entry was not in state.");
       selectedView = new InternalView(
         this.#window,
         selectedBrowser,
-        selectedEntry
+        selectedEntry,
+        selectedWorkspaceId
       );
-      this.#historyViews.set(selectedEntry.ID, selectedView);
-
-      this.#viewStack.push(selectedView);
+      selectedWorkspace.historyViews.set(selectedEntry.ID, selectedView);
+      selectedWorkspace.viewStack.push(selectedView);
     }
 
     // Mark the correct view.
@@ -1311,164 +1974,30 @@ class GlobalHistory extends EventTarget {
       `Setting #currentInternalView to ${selectedView.toString()}`
     );
     this.#currentInternalView = selectedView;
-    this.#notifyEvent("RiverRebuilt");
+    this.notifyEvent("RiverRebuilt");
 
     this.startActivationTimer();
-    this.#updateSessionStore();
+    this.updateSessionStore();
   }
 
-  #updateSessionStore() {
+  updateSessionStore() {
     // Stash the view order into session store.
-    let state = this.#viewStack.map(internalView => ({
-      id: internalView.historyId,
-      cachedEntry: internalView.cachedEntry,
-    }));
+    let state = [];
+    for (let workspace of this.#workspaces.values()) {
+      for (let internalView of workspace.viewStack) {
+        state.push({
+          id: internalView.historyId,
+          cachedEntry: internalView.cachedEntry,
+          workspaceId: internalView.workspaceId,
+        });
+      }
+    }
 
     SessionStore.setCustomWindowValue(
       this.#window,
       SESSIONSTORE_STATE_KEY,
       JSON.stringify(state)
     );
-  }
-
-  /**
-   * This function attaches listeners to a browser element
-   * that listen to changes to its session history.
-   * @param {Browser} browser
-   */
-  #watchBrowser(browser) {
-    if (this.#browsers.has(browser)) {
-      return;
-    }
-
-    let listener = new BrowserListener(this, browser);
-    this.#browsers.set(browser, listener);
-
-    try {
-      browser.browsingContext.sessionHistory.addSHistoryListener(listener);
-    } catch (e) {
-      logConsole.error("Failed to add listener", e);
-    }
-  }
-
-  /**
-   * @param {Tab} newTab
-   */
-  #tabSelected(newTab) {
-    if (this.#windowRestoring) {
-      return;
-    }
-
-    logConsole.debug(
-      `Browser(${newTab.linkedBrowser.browsingContext.id}) staged.`
-    );
-
-    this._onBrowserNavigate(newTab.linkedBrowser);
-  }
-
-  /**
-   * @param {Tab} newTab
-   */
-  #tabOpened(newTab) {
-    if (this.#windowRestoring) {
-      return;
-    }
-
-    if (this.#window.gHistoryCarousel.enabled) {
-      this.#window.gHistoryCarousel.showHistoryCarousel(false);
-    }
-
-    let browser = newTab.linkedBrowser;
-
-    logConsole.debug(`Browser(${browser.browsingContext.id}) created.`);
-
-    this.#watchBrowser(browser);
-    this._onBrowserNavigate(browser);
-  }
-
-  /**
-   * @param {Tab} closingTab
-   */
-  #tabClosed(closingTab) {
-    // If we're closing the special OAuth tab, blow away any Views
-    // associated with it.
-    if (closingTab.getAttribute("pinebuild-oauth-flow")) {
-      let browser = closingTab.linkedBrowser;
-      // We need to find all the views to close first, since closing a view may
-      // cause changes to other related views. Specifically, new browsers/tabs
-      // may be created when the browser/tab related to a view is removed.
-      let viewsToRemove = this.#viewStack.filter(
-        view => view.browserId == browser.browserId
-      );
-      for (let view of viewsToRemove) {
-        this.#closeInternalView(view);
-      }
-    }
-  }
-
-  /**
-   * @param {Tab} tab
-   * @param {Array} changed
-   */
-  #tabAttrModified(tab, changed) {
-    if (this.#windowRestoring) {
-      return;
-    }
-
-    let browser = tab.linkedBrowser;
-    if (changed.includes("image")) {
-      this._onNewIcon(browser);
-    } else if (changed.includes("busy")) {
-      this._onBusyChanged(browser, tab.hasAttribute("busy"));
-    }
-  }
-
-  /**
-   * Called when some nsISHEntry's have been removed from a browser
-   * being listened to.
-   *
-   * @param {object[]} entries The serialized entries that were removed.
-   */
-  _onHistoryEntriesRemoved(entries) {
-    for (let entry of entries) {
-      let internalView = this.#historyViews.get(entry.ID);
-      if (internalView) {
-        internalView.drop(entry);
-      }
-    }
-
-    this.#updateSessionStore();
-  }
-
-  /**
-   * Called when the document in a browser has changed title.
-   * @param {Browser} browser
-   *    Underlying browser element of a view whose title was updated by
-   *    its publishing website.
-   */
-  _onNewTitle(browser) {
-    let entry = getCurrentEntry(browser);
-    let internalView = this.#historyViews.get(entry.ID);
-    if (!internalView) {
-      return;
-    }
-
-    internalView.setTitle(entry.title);
-    this.#notifyEvent("ViewUpdated", internalView);
-  }
-
-  _onPasswordFormSubmit(browser) {
-    let entry = getCurrentEntry(browser);
-    let internalView = this.#historyViews.get(entry.ID);
-    if (!internalView) {
-      return;
-    }
-
-    logConsole.debug(
-      `Saw password form submission for ${internalView.toString()}`
-    );
-
-    internalView.submittedPassword = true;
   }
 
   /**
@@ -1485,281 +2014,7 @@ class GlobalHistory extends EventTarget {
     }
 
     internalView.setUserTitle(userTitle);
-    this.#notifyEvent("ViewUpdated", internalView);
-  }
-
-  /**
-   * Called when the document in a browser has changed its favicon.
-   * @param {Browser} browser
-   *        Underlying browser of a view whose icon was updated by
-   *        its publishing website.
-   */
-  _onNewIcon(browser) {
-    let entry = getCurrentEntry(browser);
-    if (!entry) {
-      return;
-    }
-    let internalView = this.#historyViews.get(entry.ID);
-    if (!internalView) {
-      return;
-    }
-
-    internalView.iconURL = browser.mIconURL;
-    this.#notifyEvent("ViewUpdated", internalView);
-  }
-
-  /**
-   * Called when the browser's busy state has changed.
-   */
-  _onBusyChanged(browser, busy) {
-    let entry = getCurrentEntry(browser);
-    if (!entry) {
-      return;
-    }
-    let internalView = this.#historyViews.get(entry.ID);
-    if (!internalView) {
-      return;
-    }
-
-    internalView.busy = busy;
-    this.#notifyEvent("ViewUpdated", internalView);
-  }
-
-  /**
-   * Called when a browser loads a view.
-   *
-   * @param {Browser} browser
-   * @param {nsISHEntry} newEntry
-   * @param {boolean} viaTabSwitch
-   *   True if the "navigation" is actually a tab switch.
-   */
-  _onBrowserNavigate(
-    browser,
-    newEntry = getCurrentEntry(browser),
-    viaTabSwitch = false
-  ) {
-    logConsole.group(
-      `_onBrowserNavigate for browser(${browser.browsingContext.id}), ` +
-        `SHEntry(${newEntry?.ID})`
-    );
-    if (!newEntry) {
-      logConsole.debug("No newEntry");
-      logConsole.groupEnd();
-      // Happens before anything has been loaded into the browser.
-      return;
-    }
-
-    if (this.#window.gBrowser.selectedBrowser !== browser) {
-      // Only care about the currently visible browser. We will re-visit if the tab is selected.
-      logConsole.debug("Browser is not selected.");
-      logConsole.groupEnd();
-      return;
-    }
-
-    if (this.#window.isInitialPage(newEntry.URI)) {
-      // Don't store initial pages in the river.
-      logConsole.debug(
-        "SHEntry is pointed at an initial or ignored page: ",
-        newEntry.URI.spec
-      );
-      logConsole.groupEnd();
-      logConsole.trace(`Setting #currentInternalView to NULL`);
-      this.#currentInternalView = null;
-      return;
-    }
-
-    let { internalView, overwriting } = this.#findInternalViewToNavigate(
-      browser,
-      newEntry
-    );
-
-    if (!internalView) {
-      // More than once, we've stumbled onto some bugs where a new InternalView
-      // gets created with an SHEntry that maps to a pre-existing InternalView.
-      // While we've fixed a good number of these cases, to make it easier to
-      // detect if more cases exist, we make a little bit of noise when debugging
-      // when that duplication arises.
-      if (DEBUG) {
-        let preexisting = this.#viewStack.find(v => v.historyId == newEntry.ID);
-        logConsole.assert(
-          !preexisting,
-          `Should not find a pre-existing InternalView with SHEntry ID ${newEntry.ID}`
-        );
-        if (preexisting) {
-          logConsole.debug(JSON.parse(JSON.stringify(this.#viewStack)));
-          logConsole.debug(
-            JSON.parse(JSON.stringify([...this.#historyViews.entries()]))
-          );
-        }
-      }
-
-      logConsole.debug(`Creating a new InternalView.`);
-
-      // This is a new view.
-      internalView = new InternalView(this.#window, browser, newEntry);
-      logConsole.trace(
-        `Setting #currentInternalView to NEW ${internalView.toString()}`
-      );
-      this.#currentInternalView = internalView;
-      this.#viewStack.push(internalView);
-      this.#historyViews.set(newEntry.ID, internalView);
-
-      SessionManager.register(this.#window, internalView.url).catch(
-        logConsole.error
-      );
-
-      this.#notifyEvent("ViewAdded", internalView);
-    } else {
-      logConsole.debug(`Updating InternalView ${internalView.toString()}.`);
-      // This is a navigation to an existing view.
-      internalView.update(browser, newEntry, {
-        resetCreationTime: overwriting,
-      });
-
-      if (internalView == this.#currentInternalView) {
-        logConsole.trace(`Updated InternalView is the current index.`);
-        logConsole.groupEnd();
-        this.#notifyEvent("ViewUpdated", internalView);
-        return;
-      }
-
-      logConsole.trace(
-        `Setting #currentInternalView to EXISTING ${internalView.toString()}`
-      );
-      this.#currentInternalView = internalView;
-      let pos = this.#viewStack.indexOf(internalView);
-      if (pos < 0) {
-        logConsole.warn("Navigated to a view not in the existing stack.");
-        this.#viewStack.push(internalView);
-
-        this.#notifyEvent("ViewAdded", internalView);
-      }
-    }
-
-    this.startActivationTimer();
-    this.#updateSessionStore();
-    this.#notifyEvent("ViewChanged", internalView, {
-      navigating: !viaTabSwitch,
-      browser,
-    });
-
-    logConsole.groupEnd();
-  }
-
-  /**
-   * @typedef {object} FindInternalViewResult
-   *   A result returned from #findInternalViewToNavigate when searching for
-   *   the right InternalView to navigate.
-   * @property {InternalView|null} browser
-   *   The InternalView that was found to navigate. Null if no appropriate
-   *   InternalView was found.
-   * @property {boolean} overwriting
-   *   True if the InternalView that was found qualifies for overwriting due
-   *   to a quick navigation.
-   */
-
-  /**
-   * Determines which, if any, pre-existing InternalView should be updated
-   * for a navigation to newEntry from browser. If it can't find an
-   * appropriate InternalView to update, this will return null.
-   *
-   * @param {Browser} browser
-   * @param {nsISHEntry} newEntry
-   * @returns {FindInternalViewResult}
-   */
-  #findInternalViewToNavigate(browser, newEntry) {
-    let internalView = this.#historyViews.get(newEntry.ID);
-    if (internalView) {
-      return { internalView, overwriting: false };
-    }
-
-    logConsole.debug(
-      `Did not initially find InternalView with ID: ${newEntry.ID}.`
-    );
-    // It's possible that a session restoration has resulted in a new
-    // nsISHEntry being created with a new ID that doesn't match the one
-    // we're looking for. Thankfully, SessionHistory keeps track of this,
-    // so we can try to map the new nsISHEntry's ID to the previous ID,
-    // and then update our references to use the new ID.
-    let previousID = SessionHistory.getPreviousID(newEntry);
-    if (previousID) {
-      logConsole.debug(`Found previous SHEntry ID: ${previousID}`);
-      internalView = this.#historyViews.get(previousID);
-      if (internalView) {
-        logConsole.debug(`Found InternalView ${internalView.toString()}`);
-        this.#historyViews.delete(previousID);
-        this.#historyViews.set(newEntry.ID, internalView);
-        return { internalView, overwriting: false };
-      }
-    }
-
-    if (this.#pendingView?.url.spec == newEntry.URI.spec) {
-      logConsole.debug(
-        `Found pending InternalView ${this.#pendingView.toString()}.`
-      );
-      internalView = this.#pendingView;
-      this.#historyViews.delete(internalView.historyId);
-      this.#historyViews.set(newEntry.ID, internalView);
-      this.#pendingView = null;
-      return { internalView, overwriting: false };
-    }
-
-    if (INTERSTITIAL_VIEW_OVERWRITING || LOGIN_VIEW_OVERWRITING) {
-      let makeOverwritingObject = (previousView, overwritingEntry) => {
-        this.#historyViews.delete(previousView.historyId);
-        this.#historyViews.set(overwritingEntry.ID, previousView);
-        return { internalView: previousView, overwriting: true };
-      };
-
-      let newEntryHistoryIndex = getHistoryIndex(browser, newEntry.ID);
-      let previousEntryHistoryIndex = newEntryHistoryIndex - 1;
-
-      if (previousEntryHistoryIndex >= 0) {
-        let { sessionHistory, currentWindowGlobal } = browser.browsingContext;
-        let previousEntry = sessionHistory.getEntryAtIndex(
-          previousEntryHistoryIndex
-        );
-        if (previousEntry) {
-          let previousView = this.#historyViews.get(previousEntry.ID);
-          if (previousView) {
-            if (INTERSTITIAL_VIEW_OVERWRITING) {
-              // For quick navigations (for example, bounces through an OAuth
-              // provider), we want to avoid creating extra InternalViews
-              // unnecessarily, as the user is unlikely to want to return to
-              // them. We check to see if the previous InternalView for this
-              // browser is considered a quick navigation, and if so, we return
-              // that for overwriting.
-              let timeSinceCreation = Cu.now() - previousView.creationTime;
-              if (
-                !currentWindowGlobal.isInitialDocument &&
-                !previousEntry.hasUserInteraction &&
-                timeSinceCreation < INTERSTITIAL_VIEW_OVERWRITING_THRESHOLD_MS
-              ) {
-                logConsole.debug(
-                  `Overwriting InternalView ${previousView.toString()} due to quick ` +
-                    `navigation`
-                );
-                return makeOverwritingObject(previousView, newEntry);
-              }
-            }
-            if (LOGIN_VIEW_OVERWRITING && previousView.submittedPassword) {
-              // For navigations away from pages where the user has submitted a
-              // password through a form, we'll assume that the user has gone through
-              // some kind of login flow and overwrite that view, since it's unlikely
-              // the user will want to go back to the login page (or that the login
-              // page will let them login again without first logging out).
-              logConsole.debug(
-                `Overwriting InternalView ${previousView.toString()} due to the ` +
-                  `previous view having submitted a password form`
-              );
-              return makeOverwritingObject(previousView, newEntry);
-            }
-          }
-        }
-      }
-    }
-
-    return { internalView: null, overwriting: false };
+    this.notifyEvent("ViewUpdated", internalView);
   }
 
   /**
@@ -1799,14 +2054,13 @@ class GlobalHistory extends EventTarget {
     logConsole.debug(`Activating current InternalView.`);
     this.#activationTimer = null;
 
-    if (!this.#currentInternalView) {
-      logConsole.debug(`We don't have a view to activate`);
+    if (this.#historyCarouselMode) {
+      logConsole.debug(`Not activating views since we're in mega back mode`);
       return;
     }
 
-    let lastIndex = this.#viewStack.length - 1;
-    if (this.#currentInternalView == this.#viewStack[lastIndex]) {
-      logConsole.debug(`View is already active`);
+    if (!this.#currentInternalView) {
+      logConsole.debug(`We don't have a view to activate`);
       return;
     }
 
@@ -1815,80 +2069,30 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
-    let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
-    let [internalView] = this.#viewStack.splice(currentIndex, 1);
-    this.#viewStack.push(internalView);
-    this.#notifyEvent("ViewMoved", internalView);
-    this.#updateSessionStore();
-    logConsole.debug(`Activated InternalView ${internalView.toString()}`);
-  }
-
-  /**
-   * Called when a new history entry replaces an older one.
-   *
-   * @param {Browser} browser
-   * @param {nsISHEntry} previousEntry
-   * @param {nsISHEntry} newEntry
-   */
-  _onBrowserReplace(browser, previousEntry, newEntry) {
+    this.currentWorkspace.activateView(this.#currentInternalView);
+    this.notifyEvent("ViewMoved", this.#currentInternalView);
+    this.updateSessionStore();
     logConsole.debug(
-      `_onBrowserReplace for browser(${browser.browsingContext.id}), ` +
-        `previous SHEntry(${previousEntry.ID}), new SHEntry(${newEntry.ID})`
+      `Activated InternalView ${this.#currentInternalView.toString()}`
     );
-    let previousView = this.#historyViews.get(previousEntry.ID);
-    if (previousView) {
-      logConsole.debug(
-        `Found previous InternalView: ${previousView.toString()}`
-      );
-      this.#historyViews.delete(previousEntry.ID);
-
-      let pos = this.#viewStack.indexOf(previousView);
-      if (pos >= 0) {
-        if (this.#window.isInitialPage(newEntry.URI)) {
-          logConsole.debug(
-            `Previous InternalView was an internal page - discarding.`
-          );
-          // Don't store initial pages in the river.
-          this.#viewStack.splice(pos, 1);
-          if (previousView == this.#currentInternalView) {
-            logConsole.trace(`Setting #currentInternalView to NULL`);
-            this.#currentInternalView = null;
-          }
-          this.#notifyEvent("ViewRemoved", previousView);
-
-          if (this.#currentInternalView === null) {
-            this.#notifyEvent("ViewChanged", null, {
-              navigating: true,
-              browser,
-            });
-          }
-          return;
-        }
-
-        previousView.update(browser, newEntry);
-        this.#historyViews.set(newEntry.ID, previousView);
-
-        this.#notifyEvent("ViewUpdated", previousView);
-        this.#updateSessionStore();
-        return;
-      }
-      logConsole.error(
-        `Could not find InternalView ${previousView.toString()} in ` +
-          `the #viewStack.`
-      );
-    }
-
-    // Fallback in the event that the previous entry is not present in the stack.
-    logConsole.debug("Falling back to _onBrowserNavigate.");
-    this._onBrowserNavigate(browser, newEntry);
   }
 
   /**
-   * Returns a snapshot of the current stack of views.
+   * Returns a snapshot of currently visible views in the window. If in
+   * history carousel mode, it returns a snapshot of views from the currently
+   * selected workspace only.
    * @type {View[]}
    */
   get views() {
-    return this.#viewStack.map(internalView => internalView.view);
+    let views = [];
+    if (this.#historyCarouselMode) {
+      views.push(...this.currentWorkspace.viewStack);
+    } else {
+      for (let workspace of this.#workspaces.values()) {
+        views.push(...workspace.viewStack);
+      }
+    }
+    return views.map(internalView => internalView.view);
   }
 
   /**
@@ -1905,15 +2109,36 @@ class GlobalHistory extends EventTarget {
       return null;
     }
 
-    return [...this.#viewStack];
+    let views = [];
+    for (let workspace of this.#workspaces.values()) {
+      views.push(...workspace.viewStack);
+    }
+    return views;
   }
 
   /**
    * Returns currently staged view.
-   * @type {View | null} view
+   * @type {View | null}
    */
   get currentView() {
     return this.#currentInternalView?.view || null;
+  }
+
+  /**
+   * @type {WorkspaceHistory | null}
+   */
+  get currentWorkspace() {
+    let currentWorkspaceId = this.currentView?.workspaceId;
+    return this.#workspaces.get(currentWorkspaceId) || null;
+  }
+
+  /**
+   * Returns currently staged view's index in
+   * its workspace history stack.
+   * @type {Number}
+   */
+  get currentIndex() {
+    return this.currentWorkspace.viewStack.indexOf(this.#currentInternalView);
   }
 
   /**
@@ -1933,8 +2158,8 @@ class GlobalHistory extends EventTarget {
       `Setting current InternalView to ${internalView.toString()}`
     );
 
-    let pos = this.#viewStack.indexOf(internalView);
-    let pinnedState = internalView.pinned;
+    let workspace = this.#workspaces.get(internalView.workspaceId);
+    let pos = workspace.viewStack.indexOf(internalView);
     if (pos == -1) {
       throw new Error("Unknown View.");
     }
@@ -1953,7 +2178,7 @@ class GlobalHistory extends EventTarget {
       gBrowser.warmupTab(tab);
 
       this.#currentHistoryCarouselInternalView = internalView;
-      this.#notifyEvent("ViewChanged", internalView, {
+      this.notifyEvent("ViewChanged", internalView, {
         navigating: false,
         browser,
       });
@@ -1969,16 +2194,21 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
-    let currentViewIndex = this.#viewStack.indexOf(this.#currentInternalView);
-    let currentPinnedState = this.#currentInternalView?.pinned;
-    if (pinnedState == currentPinnedState) {
-      this.#navigatingForward = pos > currentViewIndex;
+    if (internalView.workspaceId > this.#currentInternalView.workspaceId) {
+      this.#navigatingForward = true;
+    } else if (
+      internalView.workspaceId == this.#currentInternalView.workspaceId
+    ) {
+      if (internalView.pinned == this.#currentInternalView.pinned) {
+        this.#navigatingForward = pos > this.currentIndex;
+      } else {
+        this.#navigatingForward = internalView.pinned;
+      }
     } else {
-      this.#navigatingForward = pinnedState;
+      this.#navigatingForward = false;
     }
 
     if (this.#currentInternalView == internalView) {
-      // Nothing to do.
       logConsole.debug("View is already the current view.");
       return;
     }
@@ -2101,7 +2331,7 @@ class GlobalHistory extends EventTarget {
    * @param {View} view The View to set the pinned state on.
    * @param {boolean} shouldPin True if the View should be pinned.
    * @param {Number | null} index The index within the Pinned Views section
-   *   of the #viewStack to put the Pinned View. Defaults to 0.
+   *   of the viewStack to put the Pinned View. Defaults to 0.
    */
   setViewPinnedState(view, shouldPin, index = 0) {
     let internalView = InternalView.viewMap.get(view);
@@ -2111,37 +2341,38 @@ class GlobalHistory extends EventTarget {
 
     logConsole.log("Pinning view ", internalView.toString());
 
-    let pinnedViewCount = this.pinnedViewCount;
+    let workspace = this.#workspaces.get(internalView.workspaceId);
+    let pinnedViewCount = workspace.getPinnedViewCount();
     if (index > pinnedViewCount) {
       throw new Error(
         "Cannot pin at an index greater than the number of pinned Views"
       );
     }
 
-    // We don't want to remove Pinned Views from the #viewStack Array,
+    // We don't want to remove Pinned Views from the viewStack Array,
     // since so much of GlobalHistory relies on all available Views
     // existing in it.
     //
     // To accommodate Pinned Views, we borrow the organizational model
     // of Pinned Tabs from tabbrowser: Views that are pinned are moved
-    // to the beginning of the #viewStack Array. So if we started with
-    // this #viewStack:
+    // to the beginning of the viewStack Array. So if we started with
+    // this viewStack:
     //
     // [Unpinned View 1, Unpinned View 2, Unpinned View 3]
     //
-    // and then pinned View 3, #viewStack would become:
+    // and then pinned View 3, viewStack would become:
     //
     // [Pinned View 3, Unpinned View 1, Unpinned View 2]
     //
     // This way, we can keep pinned Views within #viewStack and not have
     // to treat them specially throughout GlobalHistory.
-    let viewIndex = this.#viewStack.indexOf(internalView);
-    this.#viewStack.splice(viewIndex, 1);
+    let viewIndex = workspace.viewStack.indexOf(internalView);
+    workspace.viewStack.splice(viewIndex, 1);
     let eventName;
     let detail = {};
 
     if (shouldPin) {
-      this.#viewStack.splice(index, 0, internalView);
+      workspace.viewStack.splice(index, 0, internalView);
       eventName = "ViewPinned";
       detail.index = index;
       Snapshots.add({
@@ -2149,29 +2380,16 @@ class GlobalHistory extends EventTarget {
         userPersisted: Snapshots.USER_PERSISTED.PINNED,
       });
     } else {
-      this.#viewStack.push(internalView);
+      workspace.viewStack.push(internalView);
       eventName = "ViewUnpinned";
     }
 
     internalView.pinned = shouldPin;
-    this.#notifyEvent(eventName, internalView, detail);
+    this.notifyEvent(eventName, internalView, detail);
   }
 
   /**
-   * @type {number} The number of pinned Views in this window.
-   */
-  get pinnedViewCount() {
-    let index;
-    for (index = 0; index < this.#viewStack.length; index++) {
-      if (!this.#viewStack[index].pinned) {
-        break;
-      }
-    }
-    return index;
-  }
-
-  /**
-   * Whether it is possible to navigate back in the global history.
+   * Whether it is possible to navigate back in the workspace history.
    * @type {boolean}
    */
   get canGoBack() {
@@ -2182,12 +2400,17 @@ class GlobalHistory extends EventTarget {
     let currentView = this.#historyCarouselMode
       ? this.#currentHistoryCarouselInternalView
       : this.#currentInternalView;
-    let currentIndex = this.#viewStack.indexOf(currentView);
-    return currentIndex > 0 && !this.#viewStack[currentIndex - 1].pinned;
+
+    let currentIndex =
+      this.currentWorkspace?.viewStack.indexOf(currentView) || null;
+    return (
+      currentIndex > 0 &&
+      !this.currentWorkspace?.viewStack[currentIndex - 1].pinned
+    );
   }
 
   /**
-   * Whether it is possible to navigate forwards in the global history.
+   * Whether it is possible to navigate forwards in the workspace history.
    * @type {boolean}
    */
   get canGoForward() {
@@ -2199,12 +2422,13 @@ class GlobalHistory extends EventTarget {
       ? this.#currentHistoryCarouselInternalView
       : this.#currentInternalView;
 
-    let currentIndex = this.#viewStack.indexOf(currentView);
-    return currentIndex < this.#viewStack.length - 1;
+    let currentIndex =
+      this.currentWorkspace?.viewStack.indexOf(currentView) || null;
+    return currentIndex < this.currentWorkspace?.viewStack.length - 1;
   }
 
   /**
-   * Navigates back in the global history. Returns true if navigation began.
+   * Navigates back in the workspace history. Returns true if navigation began.
    * @returns {boolean}
    */
   goBack() {
@@ -2216,13 +2440,13 @@ class GlobalHistory extends EventTarget {
       ? this.#currentHistoryCarouselInternalView
       : this.#currentInternalView;
 
-    let currentIndex = this.#viewStack.indexOf(currentView);
-    this.setView(this.#viewStack[currentIndex - 1].view);
+    let currentIndex = this.currentWorkspace.viewStack.indexOf(currentView);
+    this.setView(this.currentWorkspace.viewStack[currentIndex - 1].view);
     return true;
   }
 
   /**
-   * Navigates forward in the global history. Returns true if navigation began.
+   * Navigates forward in the workspace history. Returns true if navigation began.
    * @returns {boolean}
    */
   goForward() {
@@ -2234,8 +2458,8 @@ class GlobalHistory extends EventTarget {
       ? this.#currentHistoryCarouselInternalView
       : this.#currentInternalView;
 
-    let currentIndex = this.#viewStack.indexOf(currentView);
-    this.setView(this.#viewStack[currentIndex + 1].view);
+    let currentIndex = this.currentWorkspace.viewStack.indexOf(currentView);
+    this.setView(this.currentWorkspace.viewStack[currentIndex + 1].view);
     return true;
   }
 
@@ -2272,25 +2496,25 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
-   * Removes the passed in InternalView from the current #viewStack,
-   * cleans up any leftover resources from the InternalView, and then
-   * fires the ViewRemoved event so that the UI can update the
-   * visualization of Views.
+   * Removes the passed in InternalView from the corresponding workspace's viewStack,
+   * cleans up any leftover resources from the InternalView, and then fires the
+   * ViewRemoved event so that the UI can update the visualization of Views.
    *
    * @param {InternalView} internalView The InternalView to close.
    */
   #closeInternalView(internalView) {
-    let index = this.#viewStack.indexOf(internalView);
+    let workspace = this.#workspaces.get(internalView.workspaceId);
+    let index = workspace.viewStack.indexOf(internalView);
     if (index == -1) {
       throw new Error("Could not find the View in the #viewStack");
     }
 
     // First, attempt to switch to the next View
-    let viewToSwitchTo = this.#viewStack[index + 1];
+    let viewToSwitchTo = workspace.viewStack[index + 1];
 
     // If no such View exists, then go to the previous View instead.
     if (!viewToSwitchTo) {
-      viewToSwitchTo = this.#viewStack[index - 1];
+      viewToSwitchTo = workspace.viewStack[index - 1];
     }
 
     // If the View we're closing is pinned, and the View that
@@ -2298,13 +2522,23 @@ class GlobalHistory extends EventTarget {
     // have run out of pinned Views. In that case, just switch
     // to the last View in the River.
     if (internalView.pinned && viewToSwitchTo && !viewToSwitchTo.pinned) {
-      viewToSwitchTo = this.#viewStack[this.#viewStack.length - 1];
+      viewToSwitchTo = workspace.viewStack[workspace.viewStack.length - 1];
+    }
+
+    // If none of the above was possible, we conclude that we're closing
+    // the last View in this workspace, so attempt switching to a view
+    // from a different workspace.
+    if (internalView.workspaceId > 0) {
+      let prevWorkspaceId = internalView.workspaceId - 1;
+      let prevWorkspace = this.#workspaces.get(prevWorkspaceId);
+      let lastIndex = prevWorkspace.viewStack.size - 1;
+      viewToSwitchTo = prevWorkspace.viewStack[lastIndex];
     }
 
     // If none of that was possible, then we conclude that we're closing
     // the last View and do a reset.
     if (!viewToSwitchTo) {
-      this.#notifyEvent("ViewRemoved", internalView);
+      this.notifyEvent("ViewRemoved", internalView);
       this.reset();
       return;
     }
@@ -2312,13 +2546,12 @@ class GlobalHistory extends EventTarget {
     this.setView(viewToSwitchTo.view);
 
     let browser = internalView.getBrowser();
-
     if (browser) {
       // Check to see if the view we're closing is the last one for the
       // associated <browser>. In that case, we can get rid of that
       // <browser> - but only if we weren't already closing it.
       if (
-        this.#viewStack.every((view, i) => {
+        workspace.viewStack.every((view, i) => {
           return (
             view.getBrowser() != browser ||
             (view.getBrowser() == browser && index == i)
@@ -2345,7 +2578,7 @@ class GlobalHistory extends EventTarget {
           let previousEntry = browser.browsingContext.sessionHistory.getEntryAtIndex(
             i
           );
-          let previousView = this.#historyViews.get(previousEntry.ID);
+          let previousView = workspace.historyViews.get(previousEntry.ID);
           if (previousView && viewToSwitchTo.getBrowser() != browser) {
             // We're navigating a browser in the background. We don't want to
             // surprise the user with autoplaying media, so we'll suspend the
@@ -2358,9 +2591,9 @@ class GlobalHistory extends EventTarget {
       }
     }
 
-    this.#viewStack.splice(index, 1);
-    this.#historyViews.delete(internalView.historyId);
-    this.#notifyEvent("ViewRemoved", internalView);
+    workspace.viewStack.splice(index, 1);
+    workspace.historyViews.delete(internalView.historyId);
+    this.notifyEvent("ViewRemoved", internalView);
   }
 
   /**
@@ -2391,7 +2624,7 @@ class GlobalHistory extends EventTarget {
     );
     this.#historyCarouselMode = false;
     this.#currentHistoryCarouselInternalView = null;
-    let internalView = this.#viewStack[finalIndex];
+    let internalView = this.currentWorkspace.viewStack[finalIndex];
     logConsole.debug(`Selecting view: ${internalView.toString()}`);
     this.setView(internalView.view);
 
@@ -2412,28 +2645,7 @@ class GlobalHistory extends EventTarget {
     await Promise.all([flushed, painted]);
 
     this.#window.gBrowser.tabbox.removeAttribute("disable-history-animations");
-    this.#notifyEvent("ExitedHistoryCarousel");
-  }
-
-  /**
-   * Sets the currently selected View, but only works if we're currently
-   * viewing the history carousel. This is the correct way for the carousel
-   * to update the current View selection.
-   *
-   * @param {Number} index
-   *   The index of the View to make the current selection.
-   */
-  setHistoryCarouselIndex(index) {
-    logConsole.assert(
-      this.#historyCarouselMode,
-      "Should only receive this in History Carousel mode"
-    );
-    if (!this.#historyCarouselMode) {
-      return;
-    }
-
-    let internalView = this.#viewStack[index];
-    this.setView(internalView.view);
+    this.notifyEvent("ExitedHistoryCarousel");
   }
 
   /**
@@ -2479,7 +2691,7 @@ class GlobalHistory extends EventTarget {
   /**
    * Returns a Promise that resolves with enough information for the history
    * carousel to render the currently selected View and empty slots for every
-   * other View.
+   * other View in the currently selected workspace.
    *
    * @returns {Promise}
    * @resolves {InitialHistoryCarouselData}
@@ -2487,30 +2699,27 @@ class GlobalHistory extends EventTarget {
    *   selected state).
    */
   async getInitialHistoryCarouselData() {
-    let currentIndex = this.#viewStack.indexOf(this.#currentInternalView);
-
     let data = {
-      currentIndex,
+      currentIndex: this.currentIndex,
       previews: [],
     };
 
     for (
-      let index = this.pinnedViewCount;
-      index < this.#viewStack.length;
+      let index = this.currentWorkspace.getPinnedViewCount();
+      index < this.currentWorkspace.viewStack.length;
       ++index
     ) {
-      // We use the title of the View rather than the InternalView since
-      // we want to show the user-edited title if one exists.
+      let internalView = this.currentWorkspace.viewStack[index];
       let preview = {
         index,
-        viewID: this.#viewStack[index].id,
-        title: this.#viewStack[index].view.title,
-        url: this.#viewStack[index].url.spec,
-        iconURL: this.#viewStack[index].iconURL,
+        viewID: internalView.id,
+        title: internalView.title,
+        url: internalView.url.spec,
+        iconURL: internalView.iconURL,
         image: null,
       };
 
-      if (index == currentIndex) {
+      if (index == this.currentIndex) {
         await this.#window.promiseDocumentFlushed(() => {});
         let currentBrowser = this.#currentInternalView.getBrowser();
         preview.image = await PageThumbs.captureToBlob(currentBrowser, {
@@ -2527,7 +2736,7 @@ class GlobalHistory extends EventTarget {
 
   /**
    * Returns a Promise that resolves with HistoryCarouselData for a View at
-   * a particular View in the #viewStack.
+   * a particular View in the viewStack.
    *
    * @param {Number} index
    *   The index of the View to get the HistoryCarouselData for.
@@ -2537,12 +2746,10 @@ class GlobalHistory extends EventTarget {
    *   with null if the View is not currently loaded in memory.
    */
   async getHistoryCarouselDataForIndex(index) {
-    let internalView = this.#viewStack[index];
-    // We use the title of the View rather than the InternalView since
-    // we want to show the user-edited title if one exists.
+    let internalView = this.currentWorkspace.viewStack[index];
     let result = {
       viewID: internalView.id,
-      title: internalView.view.title,
+      title: internalView.title,
       url: internalView.url.spec,
       iconURL: internalView.iconURL,
       image: null,

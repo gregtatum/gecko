@@ -58,6 +58,7 @@ export class GlobalHistoryDebugging extends HTMLElement {
       let tooltip =
         `URI: ${view.urlSpec}\n` +
         `Index: ${view.index}\n` +
+        `Workspace: ${view.workspaceId}\n` +
         `${JSON.stringify(view.historyState, null, "\n")}`;
 
       item.title = tooltip;
