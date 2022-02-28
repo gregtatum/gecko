@@ -1010,12 +1010,14 @@ MailUniverse.prototype = {
       return;
     }
     const gapiAccountId = this.getFirstAccountIdWithType("gapi");
-    const baseAccountId = gapiAccountId;
-    if (baseAccountId) {
+    const mapiAccountId = this.getFirstAccountIdWithType("mapi");
+    const accountIds = [gapiAccountId, mapiAccountId].filter(id => !!id);
+    if (accountIds.length !== 0) {
+      const baseAccountId = accountIds[0];
       await this.taskManager.scheduleNonPersistentTaskAndWaitForPlannedResult(
         {
           type: "sync_refresh_metadata",
-          accountIds: [gapiAccountId],
+          accountIds,
           baseAccountId,
           items,
           convId,

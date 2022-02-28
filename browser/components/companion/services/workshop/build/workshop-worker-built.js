@@ -3373,7 +3373,7 @@ var WorkshopBackend = (() => {
           const headers = {
             Authorization: `Bearer ${accessToken}`
           };
-          let result, resp;
+          let result, resp, status;
           for (let retries = 0; retries < this.backoff.max_retries; retries++) {
             result = resp = void 0;
             try {
@@ -3385,11 +3385,12 @@ var WorkshopBackend = (() => {
                 }),
                 new Promise((_, reject) => setTimeout(() => reject(new Error("Fetch is too long")), FETCH_TIMEOUT))
               ]);
+              status = resp.status;
               result = await resp.json();
-              if (this.backoff.isCandidateForBackoff(resp.status, result, context)) {
+              if (this.backoff.isCandidateForBackoff(status, result, context)) {
                 throw new Error(this.backoff.getErrorMessage(result));
               }
-              this.backoff.handleError(resp.status, result, context);
+              this.backoff.handleError(status, result, context);
               break;
             } catch (e) {
               if (e instanceof CriticalError) {
@@ -3402,11 +3403,16 @@ var WorkshopBackend = (() => {
                 this.abortController = new AbortController();
                 throw e;
               }
-              logic(this, "fetchError", { error: e.message });
+              logic(this, "fetchError", { endpointUrl, status, error: e.message });
               await this.backoff.waitAMoment(retries);
             }
           }
-          logic(this, "apiCall", { endpointUrl, _params: params, _result: result });
+          logic(this, "apiCall", {
+            endpointUrl,
+            status,
+            _params: params,
+            _result: result
+          });
           return result;
         }
         async pagedApiGetCall(url, params, resultPropertyName, nextPageGetter, context) {
@@ -3568,6 +3574,9 @@ var WorkshopBackend = (() => {
           ].includes(status);
         }
         handleError(status, results, context) {
+          if (context === "document-title") {
+            return;
+          }
           let resource = null, problem = null;
           const id = this.account?.id ?? -1;
           switch (status) {
@@ -10099,7 +10108,7 @@ var WorkshopBackend = (() => {
     }
     return null;
   }
-  async function getDocumentTitleForGoogle(url, gapiClient, docTitleCache) {
+  async function getDocumentTitleFromGoogle(url, gapiClient, docTitleCache) {
     let type, id;
     if (url.hostname === "drive.google.com") {
       type = "drive";
@@ -10160,10 +10169,65 @@ var WorkshopBackend = (() => {
     docTitleCache.set(apiTarget, resultPromise);
     return resultPromise;
   }
+  function encodeURLForGraph(url) {
+    const base64Url = globalThis.btoa(encodeURI(url));
+    const encodedUrl = base64Url.replace(/(\/)|(\+)|(=+$)/g, (_, p1, p2) => p1 && "_" || p2 && "-" || "");
+    return `u!${encodedUrl}`;
+  }
+  async function getDocumentTitleFromMicrosoft(url, mapiClient, docTitleCache) {
+    if (!mapiClient) {
+      return null;
+    }
+    if (url.hostname === "onedrive.live.com") {
+      const resid = url.searchParams.get("resid");
+      const authkey = url.searchParams.get("authkey");
+      if (!resid || !authkey) {
+        return null;
+      }
+      url = `https://onedrive.live.com/redir?resid=${resid}&authkey=${authkey}`;
+    } else if (url.hostname === "1drv.ms") {
+      url = url.toString();
+    }
+    const encoded = encodeURLForGraph(url);
+    const apiTarget = `https://graph.microsoft.com/v1.0/shares/${encoded}`;
+    const cached = docTitleCache.get(apiTarget);
+    if (cached) {
+      return cached;
+    }
+    const resultPromise = mapiClient.apiGetCall(apiTarget, {}, "document-title").then((results) => {
+      let type = "ms-drive";
+      if (!results || results.error || !results.name) {
+        return { type, title: null };
+      }
+      const { name } = results;
+      const fileParts = name.split(".");
+      if (fileParts.length === 1) {
+        return { type, title: name };
+      }
+      const extension = fileParts.at(-1);
+      switch (extension) {
+        case "docx":
+          type = "ms-document";
+          break;
+        case "xlsx":
+          type = "ms-spreadsheets";
+          break;
+        case "pptx":
+          type = "ms-presentation";
+          break;
+      }
+      return { type, title: name };
+    });
+    docTitleCache.set(apiTarget, resultPromise);
+    return resultPromise;
+  }
   async function getDocumentTitle(url, clients, docTitleCache) {
     url = new URL(url);
     if (url.hostname.endsWith(".google.com")) {
-      return getDocumentTitleForGoogle(url, clients.get("gapi"), docTitleCache);
+      return getDocumentTitleFromGoogle(url, clients.get("gapi"), docTitleCache);
+    }
+    if (["1drv.ms", "onedrive.live.com"].includes(url.hostname)) {
+      return getDocumentTitleFromMicrosoft(url, clients.get("mapi"), docTitleCache);
     }
     return null;
   }
@@ -23453,11 +23517,13 @@ var WorkshopBackend = (() => {
         return;
       }
       const gapiAccountId = this.getFirstAccountIdWithType("gapi");
-      const baseAccountId = gapiAccountId;
-      if (baseAccountId) {
+      const mapiAccountId = this.getFirstAccountIdWithType("mapi");
+      const accountIds = [gapiAccountId, mapiAccountId].filter((id) => !!id);
+      if (accountIds.length !== 0) {
+        const baseAccountId = accountIds[0];
         await this.taskManager.scheduleNonPersistentTaskAndWaitForPlannedResult({
           type: "sync_refresh_metadata",
-          accountIds: [gapiAccountId],
+          accountIds,
           baseAccountId,
           items,
           convId

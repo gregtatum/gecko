@@ -39,6 +39,13 @@ export class MapiBackoff extends Backoff {
   }
 
   handleError(status, results, context) {
+    if (context === "document-title") {
+      // If we don't manage to get a document title, it isn't so important.
+      // If something is really wrong with the account we'll a critical error
+      // on the next account sync.
+      return;
+    }
+
     let resource = null,
       problem = null;
     const id = this.account?.id ?? -1;

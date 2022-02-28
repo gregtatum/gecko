@@ -822,6 +822,12 @@ class MapiFakeServer extends BaseFakeServer {
         path: "/v1.0/me/mailFolders/Inbox/messages",
         handler: this.unpaged(this.unpaged_messages),
       },
+      // https://graph.microsoft.com/v1.0/shares/{$id}
+      {
+        prefix: "/v1.0/shares/",
+        extraPathSegments: ["id"],
+        handler: this.unpaged(this.unpaged_shares),
+      },
     ];
 
     this.registerAPIHandlers(API_HANDLERS);
@@ -914,6 +920,22 @@ class MapiFakeServer extends BaseFakeServer {
       expires_in: 60 * 60,
       token_type: "Bearer",
     };
+  }
+
+  unpaged_shares({ id }) {
+    const encoded = id.slice("u!".length);
+    const base64Url = encoded.replace(
+      /(_)|(-)/g,
+      (_, p1) => (p1 && "/") || "+"
+    );
+    const url = new URL(decodeURI(atob(base64Url)));
+    if (url.hostname === "onedrive.live.com") {
+      const resid = url.searchParams.get("resid");
+      const authkey = url.searchParams.get("authkey");
+      return { value: null, name: `${resid}.${authkey}` };
+    }
+    const name = url.pathname.slice("/".length);
+    return { value: null, name };
   }
 
   unpaged_messages() {

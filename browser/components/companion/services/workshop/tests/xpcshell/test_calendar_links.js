@@ -73,6 +73,15 @@ async function check_links_extracted_from_description({
 
   await Promise.all([calView.refresh(), calView.promisedOnce("seeked")]);
 
+  // Once we got a "seeked", it means we've all the event in the view but a
+  // refreshMetadata task has been triggered and it can be unfinished when
+  // "seeked" happens.
+  // Refresh to be sure we've everything.
+  await workshopAPI.refreshAllMessages({
+    kind: "calendar",
+    filter: { tag: "" },
+  });
+
   const cmp = (x, y) => x.url.localeCompare(y.url);
   const calviewLinks = calView.items
     .map(event => event.links)
@@ -273,6 +282,30 @@ const MAPI_DESCRIPTION_TEST = [
       { url: "http://allizom.com/" },
       { url: "http://allizom.org/" },
       { url: "http://mozilla.org/" },
+    ],
+  },
+  {
+    description: `https://onedrive.live.com/edit?resid=foo&authkey=xlsx`,
+    links: [
+      {
+        url: "https://onedrive.live.com/edit?resid=foo&authkey=xlsx",
+        docInfo: {
+          type: "ms-spreadsheets",
+          title: "foo.xlsx",
+        },
+      },
+    ],
+  },
+  {
+    description: `https://1drv.ms/foo.js`,
+    links: [
+      {
+        url: "https://1drv.ms/foo.js",
+        docInfo: {
+          type: "ms-drive",
+          title: "foo.js",
+        },
+      },
     ],
   },
 ];

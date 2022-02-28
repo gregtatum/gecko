@@ -226,14 +226,14 @@ const DOCS_PAT = new RegExp("/([^/]+)/(?:u/[^/]+/)?d/([^/]+)");
 
 /**
  * Get document title for a given url.
- * @param {string} url - the url to parse to guess a title.
- * @param {Object} gapi - the google api stuff with a client and a backoff.
+ * @param {URL} url - the url to parse to guess a title.
+ * @param {Object} gapiClient - the google api stuff with a client and a backoff.
  * @param {Map<string, Promise>} docTitleCache - a cache to use which maps
  * apiTarget and the fetch Promise.
  * @returns {Promise<Object|null>} containing the type of the document and its title
  * if any.
  */
-async function getDocumentTitleForGoogle(url, gapiClient, docTitleCache) {
+async function getDocumentTitleFromGoogle(url, gapiClient, docTitleCache) {
   let type, id;
 
   if (url.hostname === "drive.google.com") {
@@ -306,10 +306,112 @@ async function getDocumentTitleForGoogle(url, gapiClient, docTitleCache) {
   return resultPromise;
 }
 
+/**
+ * Encode an url to be used as an id to get file info in using graph api.
+ * See https://docs.microsoft.com/en-us/graph/api/shares-get?view=graph-rest-1.0&tabs=http#encoding-sharing-urls.
+ * @param {string} url
+ * @returns {string} the encoded url.
+ */
+function encodeURLForGraph(url) {
+  const base64Url = globalThis.btoa(encodeURI(url));
+  const encodedUrl = base64Url.replace(
+    /(\/)|(\+)|(=+$)/g,
+    (_, p1, p2) => (p1 && "_") || (p2 && "-") || ""
+  );
+
+  return `u!${encodedUrl}`;
+}
+
+/**
+ * Get document title for a given url.
+ * @param {URL} url - the url to parse to guess a title.
+ * @param {Object} mapiClient - the ms api stuff with a client and a backoff.
+ * @param {Map<string, Promise>} docTitleCache - a cache to use which maps
+ * apiTarget and the fetch Promise.
+ * @returns {Promise<Object|null>} containing the type of the document and its title
+ * if any.
+ */
+async function getDocumentTitleFromMicrosoft(url, mapiClient, docTitleCache) {
+  if (!mapiClient) {
+    return null;
+  }
+
+  if (url.hostname === "onedrive.live.com") {
+    // We could have an url to edit the file:
+    // https://onedrive.live.com/edit?...
+    // So just get resid and authkey parameters in order to build a "redir" url.
+    const resid = url.searchParams.get("resid");
+    const authkey = url.searchParams.get("authkey");
+    if (!resid || !authkey) {
+      return null;
+    }
+    url = `https://onedrive.live.com/redir?resid=${resid}&authkey=${authkey}`;
+  } else if (url.hostname === "1drv.ms") {
+    url = url.toString();
+  }
+
+  const encoded = encodeURLForGraph(url);
+  const apiTarget = `https://graph.microsoft.com/v1.0/shares/${encoded}`;
+  const cached = docTitleCache.get(apiTarget);
+  if (cached) {
+    return cached;
+  }
+
+  const resultPromise = mapiClient
+    .apiGetCall(apiTarget, /* params */ {}, "document-title")
+    .then(results => {
+      let type = "ms-drive";
+      if (!results || results.error || !results.name) {
+        return { type, title: null };
+      }
+
+      const { name } = results;
+      const fileParts = name.split(".");
+      if (fileParts.length === 1) {
+        return { type, title: name };
+      }
+
+      const extension = fileParts.at(-1);
+      switch (extension) {
+        case "docx":
+          type = "ms-document";
+          break;
+        case "xlsx":
+          type = "ms-spreadsheets";
+          break;
+        case "pptx":
+          type = "ms-presentation";
+          break;
+      }
+
+      return { type, title: name };
+    });
+  docTitleCache.set(apiTarget, resultPromise);
+  return resultPromise;
+}
+
+/**
+ * Get document title for a given url.
+ * @param {string} url - the url to parse to guess a title.
+ * @param {Array<Object>} clients - the clients to use.
+ * @param {Map<string, Promise>} docTitleCache - a cache to use which maps
+ * apiTarget and the fetch Promise.
+ * @returns {Promise<Object|null>} containing the type of the document and its title
+ * if any.
+ */
 export async function getDocumentTitle(url, clients, docTitleCache) {
   url = new URL(url);
   if (url.hostname.endsWith(".google.com")) {
-    return getDocumentTitleForGoogle(url, clients.get("gapi"), docTitleCache);
+    return getDocumentTitleFromGoogle(url, clients.get("gapi"), docTitleCache);
   }
+
+  if (["1drv.ms", "onedrive.live.com"].includes(url.hostname)) {
+    return getDocumentTitleFromMicrosoft(
+      url,
+      clients.get("mapi"),
+      docTitleCache
+    );
+  }
+
   return null;
 }

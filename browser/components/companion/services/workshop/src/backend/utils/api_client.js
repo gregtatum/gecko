@@ -247,7 +247,7 @@ export class ApiClient {
       Authorization: `Bearer ${accessToken}`,
     };
 
-    let result, resp;
+    let result, resp, status;
     for (let retries = 0; retries < this.backoff.max_retries; retries++) {
       result = resp = undefined;
       try {
@@ -265,12 +265,13 @@ export class ApiClient {
           ),
         ]);
 
+        status = resp.status;
         result = await resp.json();
-        if (this.backoff.isCandidateForBackoff(resp.status, result, context)) {
+        if (this.backoff.isCandidateForBackoff(status, result, context)) {
           throw new Error(this.backoff.getErrorMessage(result));
         }
 
-        this.backoff.handleError(resp.status, result, context);
+        this.backoff.handleError(status, result, context);
         break;
       } catch (e) {
         if (e instanceof CriticalError) {
@@ -287,12 +288,17 @@ export class ApiClient {
 
         // We got an error but it's likely not a drama so just wait a little
         // and try again.
-        logic(this, "fetchError", { error: e.message });
+        logic(this, "fetchError", { endpointUrl, status, error: e.message });
         await this.backoff.waitAMoment(retries);
       }
     }
 
-    logic(this, "apiCall", { endpointUrl, _params: params, _result: result });
+    logic(this, "apiCall", {
+      endpointUrl,
+      status,
+      _params: params,
+      _result: result,
+    });
     return result;
   }
 
