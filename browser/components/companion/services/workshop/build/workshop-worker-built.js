@@ -12057,6 +12057,7 @@ var WorkshopBackend = (() => {
             const { accountId } = rawTask;
             plannedTask.resources = ["online", `happy!${accountId}`];
             plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
+            plannedTask.relPriority = -1;
             let groupPromise = ctx.trackMeInTaskGroup("sync_inbox_refresh:" + rawTask.folderId);
             return {
               taskState: plannedTask,
@@ -13036,6 +13037,7 @@ var WorkshopBackend = (() => {
               `queries!${accountId}`
             ];
             plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
+            plannedTask.relPriority = -1;
             let groupPromise = ctx.trackMeInTaskGroup("sync_inbox_refresh:" + rawTask.folderId);
             return {
               taskState: plannedTask,

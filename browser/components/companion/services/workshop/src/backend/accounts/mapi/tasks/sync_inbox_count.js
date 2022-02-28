@@ -62,6 +62,7 @@ export default TaskDefiner.defineAtMostOnceTask([
         `queries!${accountId}`,
       ];
       plannedTask.priorityTags = [`view:folder:${rawTask.folderId}`];
+      plannedTask.relPriority = -1;
 
       // Create a task group that follows this task and all its offspring.  This
       // will define the lifetime of our overlay as well.
