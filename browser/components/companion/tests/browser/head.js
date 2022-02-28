@@ -63,6 +63,9 @@ registerCleanupFunction(async () => {
 
   // Cleanup the Workshop object used in the tests.
   sharedWorkshopAPI?.willDie();
+
+  // Move the cursor out of the companion area to avoid messing with other tests.
+  EventUtils.synthesizeMouse(gNavToolbox, 0, 0, { type: "mousemove" });
 });
 
 const redirectHosts = [
