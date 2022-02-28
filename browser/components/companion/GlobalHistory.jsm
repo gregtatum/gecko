@@ -724,6 +724,11 @@ class BrowserListener {
    * See nsISHistoryListener
    */
   async OnHistoryReload() {
+    if (!this.#browser.browsingContext) {
+      // In some cases we are called after the browser has died.
+      return;
+    }
+
     logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryReload`
     );
@@ -736,6 +741,11 @@ class BrowserListener {
    * See nsISHistoryListener
    */
   async OnHistoryGotoIndex() {
+    if (!this.#browser.browsingContext) {
+      // In some cases we are called after the browser has died.
+      return;
+    }
+
     logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryGotoIndex`
     );
@@ -750,6 +760,11 @@ class BrowserListener {
    * See nsISHistoryListener
    */
   OnHistoryPurge(numEntries) {
+    if (!this.#browser.browsingContext) {
+      // In some cases we are called after the browser has died.
+      return;
+    }
+
     logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryPurge: ` +
         numEntries
@@ -769,6 +784,11 @@ class BrowserListener {
    * See nsISHistoryListener
    */
   OnHistoryTruncate(numEntries) {
+    if (!this.#browser.browsingContext) {
+      // In some cases we are called after the browser has died.
+      return;
+    }
+
     logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryTruncate: ` +
         numEntries
@@ -791,6 +811,11 @@ class BrowserListener {
    * See nsISHistoryListener
    */
   async OnHistoryReplaceEntry() {
+    if (!this.#browser.browsingContext) {
+      // In some cases we are called after the browser has died.
+      return;
+    }
+
     logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryReplaceEntry`
     );
