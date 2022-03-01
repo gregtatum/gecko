@@ -210,7 +210,8 @@ export default class ViewGroup extends MozLitElement {
           }>${history}</div>
         </div>
         <button class="page-action-button" ?hidden=${!this.active}
-             @click="${this.#pageActionButtonClicked}"
+                @click="${this.#pageActionButtonClicked}"
+                data-l10n-id="page-action-menu-button"
         ></button>
       </div>
     `;

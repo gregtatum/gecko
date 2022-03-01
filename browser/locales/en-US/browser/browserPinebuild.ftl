@@ -5,6 +5,9 @@
 active-view-manager-overflow-button-text = +{$count}
 
 # Page action menu strings.
+page-action-menu-button =
+  .title = Open Page Action Menu
+
 page-action-toggle-pinning =
   .label = { $isPinned ->
      [true] Unpin
