@@ -36,7 +36,7 @@ const { ObjectUtils } = ChromeUtils.import(
  * because they may still run in the parent process.
  */
 
-class AssertionError {
+class AssertionError extends Error {
   /**
    * @param {{
    *   message: string,
@@ -46,6 +46,7 @@ class AssertionError {
    * }} options
    */
   constructor(options) {
+    super();
     this.name = "AssertionError";
     this.actual = options.actual;
     this.expected = options.expected;
@@ -89,18 +90,15 @@ class AssertLibrary {
 
   /**
    * @param {ReporterFunction} [reporterFunc]
+   * @param {bool} [isDefault]
    */
-  constructor(reporterFunc) {
+  constructor(reporterFunc, isDefault) {
     if (reporterFunc) {
       this.#reporter = reporterFunc;
     }
-  }
-
-  /**
-   * @param {ReporterFunction} reporterFunc
-   */
-  setDefaultReporter(reporterFunc) {
-    #defaultReporter = reporterFunc;
+    if (isDefault) {
+      AssertLibrary.#defaultReporter = reporterFunc;
+    }
   }
 
   /**
@@ -165,7 +163,7 @@ class AssertLibrary {
       expected,
       operator,
     });
-    const reporter = this.#reporter || _defaultReporter;
+    const reporter = this.#reporter || AssertLibrary.#defaultReporter;
     if (!reporter) {
       // If no custom reporter is set, throw the error.
       if (failed) {

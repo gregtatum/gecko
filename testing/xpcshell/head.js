@@ -6,7 +6,7 @@
 
 /*
  * This file contains common code that is loaded before each test file(s).
- * See https://developer.mozilla.org/en-US/docs/Mozilla/QA/Writing_xpcshell-based_unit_tests
+ * See https://firefox-source-docs.mozilla.org/testing/xpcshell/index.html
  * for more information.
  */
 
@@ -65,12 +65,12 @@ let { XPCOMUtils: _XPCOMUtils } = ChromeUtils.import(
 let { OS: _OS } = ChromeUtils.import("resource://gre/modules/osfile.jsm");
 
 // Support a common assertion library, Assert.jsm.
-var { Assert: AssertCls } = ChromeUtils.import(
+var { AssertLibrary } = ChromeUtils.import(
   "resource://testing-common/Assert.jsm"
 );
 
 // Pass a custom report function for xpcshell-test style reporting.
-var Assert = new AssertCls(function(err, message, stack) {
+var Assert = new AssertLibrary(function(err, message, stack) {
   if (err) {
     do_report_result(false, err.message, err.stack);
   } else {
@@ -577,8 +577,10 @@ function _execute_test() {
 
   // Tack Assert.jsm methods to the current scope.
   this.Assert = Assert;
-  for (let func in Assert) {
-    this[func] = Assert[func].bind(Assert);
+  for (let func of Object.getOwnPropertyNames(AssertLibrary.prototype)) {
+    if (typeof Assert[func] === "function" && func !== "constructor") {
+      this[func] = Assert[func].bind(Assert);
+    }
   }
 
   const { PerTestCoverageUtils } = ChromeUtils.import(
