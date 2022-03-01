@@ -522,11 +522,9 @@ export default class ActiveViewManager extends window.MozHTMLElement {
 
     // Hack needed so that the dragimage will still show the
     // item as it appeared before it was hidden.
-    window
-      .promiseDocumentFlushed(() => {})
-      .then(() => {
-        draggedViewGroup.setAttribute("dragging", "true");
-      });
+    window.requestAnimationFrame(() => {
+      draggedViewGroup.setAttribute("dragging", "true");
+    });
 
     this.#defaultWorkspace.dragging = true;
 
