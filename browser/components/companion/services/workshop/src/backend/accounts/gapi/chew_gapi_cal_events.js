@@ -51,6 +51,7 @@ export class GapiCalEventChewer {
     oldEvents,
     foldersTOC,
     gapiClient,
+    accountEmail,
   }) {
     this.ctx = ctx;
     this.accountId = accountId;
@@ -64,6 +65,7 @@ export class GapiCalEventChewer {
     this.oldEvents = oldEvents;
     this.foldersTOC = foldersTOC;
     this.gapiClient = gapiClient;
+    this.accountEmail = accountEmail;
 
     // This is a mapping from the event id we synthesize.  Populated during
     // `chewEventBundle` where we first identify events outside the specified
@@ -301,6 +303,27 @@ export class GapiCalEventChewer {
               attendees.push(this._chewCalAttendee(attendee));
             }
           }
+
+          // Add organizer to attendees list if:
+          // 1. They aren't the owner of this calendar.
+          // 2. They aren't a group calendar email.
+          // 3. They aren't already in the list.
+          // This is needed because outlook doesn't put organizers as attendees.
+          if (
+            !organizer.isSelf &&
+            !organizer.email.endsWith("@group.calendar.google.com") &&
+            !attendees.some(attendee => attendee.email === organizer.email)
+          ) {
+            attendees.push(organizer);
+          }
+        }
+
+        if (!organizer.isSelf && organizer.email === this.accountEmail) {
+          organizer.isSelf = true;
+        }
+
+        if (creator && !creator.isSelf && creator.email === this.accountEmail) {
+          creator.isSelf = true;
         }
 
         const oldInfo = oldById.get(eventId);

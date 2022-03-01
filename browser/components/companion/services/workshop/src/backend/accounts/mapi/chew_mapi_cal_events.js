@@ -236,7 +236,7 @@ export class MapiCalEventChewer {
           mapiEvent.organizer,
           mapiEvent.isOrganizer
         );
-        const creator = organizer;
+        const creator = null;
 
         const attendees = [];
         if (mapiEvent.attendees) {

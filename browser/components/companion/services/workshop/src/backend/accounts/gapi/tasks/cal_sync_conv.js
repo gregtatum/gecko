@@ -81,6 +81,7 @@ export default TaskDefiner.defineSimpleTask([
       const eventChewer = new GapiCalEventChewer({
         ctx,
         accountId: req.accountId,
+        accountEmail: account.identities[0].address,
         convId: req.convId,
         folderId: req.folderId,
         rangeOldestTS: req.rangeOldestTS,

@@ -11442,7 +11442,8 @@ var WorkshopBackend = (() => {
           oldConvInfo,
           oldEvents,
           foldersTOC,
-          gapiClient
+          gapiClient,
+          accountEmail
         }) {
           this.ctx = ctx;
           this.accountId = accountId;
@@ -11455,6 +11456,7 @@ var WorkshopBackend = (() => {
           this.oldEvents = oldEvents;
           this.foldersTOC = foldersTOC;
           this.gapiClient = gapiClient;
+          this.accountEmail = accountEmail;
           this.oldById = new Map();
           this.unifiedEvents = [];
           this.modifiedEventMap = new Map();
@@ -11614,6 +11616,15 @@ var WorkshopBackend = (() => {
                     attendees.push(this._chewCalAttendee(attendee));
                   }
                 }
+                if (!organizer.isSelf && !organizer.email.endsWith("@group.calendar.google.com") && !attendees.some((attendee) => attendee.email === organizer.email)) {
+                  attendees.push(organizer);
+                }
+              }
+              if (!organizer.isSelf && organizer.email === this.accountEmail) {
+                organizer.isSelf = true;
+              }
+              if (creator && !creator.isSelf && creator.email === this.accountEmail) {
+                creator.isSelf = true;
               }
               const oldInfo = oldById.get(eventId);
               const url = gapiEvent.htmlLink || "";
@@ -11719,6 +11730,7 @@ var WorkshopBackend = (() => {
             const eventChewer = new GapiCalEventChewer({
               ctx,
               accountId: req.accountId,
+              accountEmail: account.identities[0].address,
               convId: req.convId,
               folderId: req.folderId,
               rangeOldestTS: req.rangeOldestTS,
@@ -12666,7 +12678,7 @@ var WorkshopBackend = (() => {
               const endDate = new Date(mapiEvent.end.dateTime + "Z").valueOf();
               const summary = mapiEvent.subject;
               const organizer = this._chewCalIdentity(mapiEvent.organizer, mapiEvent.isOrganizer);
-              const creator = organizer;
+              const creator = null;
               const attendees = [];
               if (mapiEvent.attendees) {
                 for (const attendee of mapiEvent.attendees) {

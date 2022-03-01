@@ -44,10 +44,7 @@ async function check_attendees({ configurator, initialEventSketches }) {
 
   const fieldNames = ["email", "displayName"];
   const extractor = a =>
-    Object.assign(
-      {},
-      fieldNames.map(name => [name, a[name]])
-    );
+    Object.fromEntries(fieldNames.map(name => [name, a[name]]));
 
   const calviewAttendees = calView.items.flatMap(({ attendees }) =>
     attendees.map(extractor)
@@ -55,6 +52,11 @@ async function check_attendees({ configurator, initialEventSketches }) {
   const expectedAttendees = INITIAL_EVENTS.flatMap(({ attendees }) =>
     attendees.filter(a => a.responseStatus !== "declined").map(extractor)
   );
+
+  if (configurator.name === "Gapi") {
+    // Add the organizer as an attendee.
+    expectedAttendees.push(INITIAL_EVENTS[0].organizer);
+  }
 
   deepEqual(calviewAttendees, expectedAttendees);
 
@@ -64,6 +66,14 @@ async function check_attendees({ configurator, initialEventSketches }) {
 const INITIAL_EVENTS = [
   {
     summary: "Morning Meeting",
+    organizer: {
+      displayName: "Hi Jee",
+      email: "hjee@mozilla.com",
+    },
+    creator: {
+      displayName: "Jay Kay",
+      email: "jkay@mozilla.com",
+    },
     attendees: [
       {
         displayName: "Ay Bee",
