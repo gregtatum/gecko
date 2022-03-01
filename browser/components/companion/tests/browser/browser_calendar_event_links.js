@@ -35,6 +35,13 @@ add_task(async function testEventWithLinks() {
         "chrome://global/skin/icons/defaultFavicon.svg",
         "The default icon should be defaultFavicon.svg"
       );
+
+      let text = [...links].map(link => link.innerText);
+      Assert.deepEqual(
+        text,
+        ["https://example.com/", "https://example.com/2"],
+        "The text content must be the urls themselves."
+      );
     });
   });
 });

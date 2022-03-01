@@ -769,10 +769,10 @@ class CalendarEvent extends MozLitElement {
     if (workshopEnabled) {
       title = link.docInfo?.title;
       text = title || link.title || link.text || link.url;
-      intermediate = title;
-      // In the else clause `title` is a Promise so for consistency we use
-      // a Promise here too.
-      title = Promise.resolve(title);
+      intermediate = text;
+      title = title
+        ? Promise.resolve(title)
+        : Promise.reject(new Error("No title"));
     } else {
       title = this.getDocumentTitle(link.url);
       text = link.title || link.text || link.url;
